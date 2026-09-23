@@ -13,6 +13,14 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 
+**(23/09/2026)** 🎯 **Fase 1 (vender), PR A: carril de LEADS de Vencimientos, solo lectura.** Hallazgo: `seguros.oportunidades`
+(legacy, nadie la leía) guarda 3.676 pólizas de leads en OTRA compañía con `fecha_fin_vigencia` real de 2023-24 → **3.546
+contactables y no clientes en vigor, 874 con aniversario en ≤90 días** (vs 216 del volcado 2013-18). Reglas puras en
+`module-seguros/lead-competencia.ts` (aniversario ESTIMADO, ventanas, puntuación, secuencia 60d/+7/+14/aparcar a 3 intentos);
+`GET /api/operador/leads-competencia?dias=` en asegura. No envía nada. ⚠️ Antes de escribir en masa a estos leads Alberto
+debe decidir la base legal (LSSI 21.2). Siguiente: PR B (escrituras: estado + motivo de pérdida, tareas en `gestiones`,
+auditoría; revisión de agente-architect) y UI tras la revisión de maquetas del 24/09 10:00.
+
 **(23/09/2026)** 🚨 **Invitar al portal dio 0/25: el dominio de envío `envios.grupoasegura.es` NO tenía sus registros DNS en IONOS**
 (DKIM `resend._domainkey.envios`, MX+SPF `send.envios`); Resend rechazaba con `550 domain is not verified`. Alberto los creó
 y está `verified` (08:50 UTC). Ese dominio también manda los códigos del portal: hasta entonces nadie podía entrar. Código:
