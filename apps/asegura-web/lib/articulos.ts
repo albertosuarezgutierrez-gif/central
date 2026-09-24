@@ -572,7 +572,7 @@ export const ARTICULOS: readonly Articulo[] = [
       {
         titulo: 'Cómo entra un corredor en la tramitación',
         parrafos: [
-          'Tu correduría es el intermediario entre tú y la compañía: lo que comunicas a tu corredor cuenta como comunicado a la aseguradora. Así que el parte y las fotos los puedes mandar a la correduría primero, y la compañía los recibe igual.',
+          'Tu correduría es el intermediario entre tú y la compañía, pero avisar al corredor no es avisar a la aseguradora: el plazo para dar el parte cuenta hasta que lo recibe la compañía. Lo que sí vale es que el corredor se lo comunique en tu nombre, porque entonces tiene el mismo efecto que si lo hicieras tú. Así que puedes mandarnos el parte y las fotos para que lo traslademos; si vas justo de plazo, llama también a la compañía.',
           'Un corredor también ve el expediente de la aseguradora y puede gestionar los tiempos de peritación, las llamadas y los pasos siguientes sin que tengas que estar encima de cada correo.',
         ],
       },
