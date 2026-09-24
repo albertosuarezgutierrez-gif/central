@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** — Enlace de datos: el cliente sube documentos (Alberto lo probó y pidió «que suba DNI, carné, documentación de la moto, se archive y la IA rellene y verifique»). En `/datos/<token>`, «📎 Súbenos tus documentos» (foto o PDF, varios, encogidos en el móvil): cada uno se ARCHIVA en su ficha (`documentos`, subido por el cliente, tipo dni/permiso/ficha técnica) y la IA lo lee; solo se proponen los campos pedidos que pasan la validación del formulario, sin pisar lo tecleado. Lo leído queda cifrado en `solicitud_datos.lecturas` (aplicada, tope 6 por enlace) y en la ficha de la oportunidad sale «coincide con sus documentos» o «⚠️ no casa: escribió X, el permiso dice Y». Nada leído se escribe en la ficha. DNI y fecha de nacimiento se piden SIEMPRE y llegan rellenos con los de su ficha, editables (decisión de Alberto: «es su DNI, no hay problema», avisado de que el enlace no lleva código); si los cambia, la oportunidad avisa «escribió X, la ficha dice Y». Revisión: la foto va a Gemini por Vertex con `data_collection=deny`, el tope se reserva atómico y un fallo al descifrar lecturas no las machaca.
+
 **(24/09/2026)** — «Pídele los datos al cliente por enlace» (moto/auto). Desde la oportunidad abierta, «📝 Pedir datos» crea un enlace de un solo uso (14 días) a `clientes.grupoasegura.es/datos/<token>`; el cliente rellena solo lo que la ficha no tiene (DNI, nacimiento, CP, carné y su fecha, matrícula, marca/modelo, garaje, seguro actual…) y la página NO enseña ningún dato suyo (decisión de Alberto: enlace directo sin código). Al enviarlo: oportunidad → en negociación, tarea «Tarificar» para hoy y aviso por Telegram vía el feed de actividad (prefijo `PREFIJO_HISTORIAL_DATOS_PRESUPUESTO`). Token solo como sha256, respuestas cifradas y **no se escriben en la ficha** (declarado, se verifica al emitir). Tabla `seguros.solicitud_datos` (aplicada, una viva por oportunidad). El enlace lo copia/manda Alberto (botón WhatsApp o copiar), nunca sale solo.
 
 **(24/09/2026)** — Ficha de cliente: presupuesto = oportunidad (Alberto: «dos botones de presupuesto, que es lo mismo que oportunidad»). Una sola puerta, el menú «➕ Nueva oportunidad ▾» (ramos con precio + «sin precio, solo seguimiento»). Cada precio REAL guardado se cuelga solo de la oportunidad abierta del cliente para ese ramo o la abre (en negociación + llamada a 2 días): `lib/codeoscopic/oportunidad-presupuesto.ts`, llamado desde `cotizar()` tras guardar, nunca tumba la copia; columna `tarificaciones.oportunidad_id` (aplicada). El formulario de oportunidad rellena ramo/compañía/vencimiento/prima leyendo póliza, recibo o foto (puerto `leer-documento`). Reproceso de los 36 POL de CIMA hecho: las 44 pólizas de inmueble vivas tienen dirección. Pendiente de Alberto: borrar la rama `rescate/cima-lote-20260924` y el run 36029395224 de `asegura`. PR #3514.
@@ -537,6 +539,14 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (24/09/2026) sivra: el agente de huéspedes y los mensajes programados, en TODOS los idiomas
+Antes: el agente solo reconocía es/en/fr/de/it (un chino o un portugués recibía la respuesta en inglés) y los
+mensajes programados traducían a 18. Ahora hay una tabla única, `lib/sivra/agente-huesped/idiomas.ts` (~55 idiomas),
+que usan decidir/retoque/idioma-salida/mensajes-prog; `detectLang` reconoce las escrituras no latinas (zh/ja/ko/
+cirílico/griego/árabe/hebreo/thai/hindi/georgiano/armenio; si la escritura es compartida manda el idioma de la reserva)
++ pt/nl por palabras, y acepta como fallback cualquier idioma de la reserva. La guarda `conservaDatos` sigue:
+si una traducción cambia dígitos o URLs, sale en español.
 
 ## (24/09/2026) core-ai: el razonamiento se comía el `max_tokens` → «no he podido traducirlo» y QC caído
 Síntoma (Duplex, reserva 150035011, repetido): borrador sin traducción + «control de calidad no respondió». Logs de

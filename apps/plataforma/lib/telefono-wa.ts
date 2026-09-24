@@ -80,3 +80,9 @@ export function urlWhatsapp(telefono: string): string | null {
   if (!/^\d{8,15}$/.test(digitos)) return null
   return `https://wa.me/${digitos}`
 }
+
+/** El `wa.me` del número con el mensaje ya escrito, o `null` si no es un móvil. */
+export function enlaceWhatsappConMensaje(telefono: string, texto: string): string | null {
+  const base = urlWhatsapp(telefono)
+  return base === null ? null : `${base}?text=${encodeURIComponent(texto)}`
+}

@@ -1,14 +1,26 @@
 'use client'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { CampoSolicitud } from '@central/module-seguros'
+import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
+import { interpretarDocSubido } from '@/lib/solicitud-datos'
 
 type Estado = { tipo: 'editando' } | { tipo: 'enviando' } | { tipo: 'hecho' } | { tipo: 'fallo'; texto: string }
+type Subida = { id: number; nombre: string; estado: 'subiendo' | 'ok' | 'fallo'; texto: string }
 
 /** El formulario del enlace de datos. Pinta los campos que manda asegura y nada más. */
 export default function Formulario({ token, campos }: { token: string; campos: CampoSolicitud[] }) {
-  const [valores, setValores] = useState<Record<string, string | boolean>>({})
+  // DNI y nacimiento llegan rellenos con lo de su ficha (`actual`): los confirma o los corrige.
+  const [valores, setValores] = useState<Record<string, string | boolean>>(
+    () => Object.fromEntries(campos.flatMap((c) => (c.actual ? [[c.clave, c.actual]] : []))),
+  )
+  const valoresRef = useRef(valores)
+  valoresRef.current = valores
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [estado, setEstado] = useState<Estado>({ tipo: 'editando' })
+  const [subidas, setSubidas] = useState<Subida[]>([])
+  const [leidos, setLeidos] = useState<Set<string>>(new Set())
+  const siguienteId = useRef(0)
+  const subiendo = subidas.some((x) => x.estado === 'subiendo')
 
   if (estado.tipo === 'hecho') {
     return <p><strong>¡Gracias!</strong> Ya tenemos tus datos. Te escribimos en cuanto tengamos el precio.</p>
@@ -16,6 +28,44 @@ export default function Formulario({ token, campos }: { token: string; campos: C
 
   const poner = (clave: string, v: string | boolean) => setValores((p) => ({ ...p, [clave]: v }))
   const visible = (c: CampoSolicitud) => !c.siMarcado || valores[c.siMarcado] === true
+
+  /** Sube de uno en uno: si uno falla, los demás ya están dentro y se dice cuál. */
+  async function subir(ficheros: File[]) {
+    for (const original of ficheros) {
+      const id = siguienteId.current++
+      setSubidas((p) => [...p, { id, nombre: original.name, estado: 'subiendo', texto: 'Subiendo y leyendo…' }])
+      const fijar = (cambio: Pick<Subida, 'estado' | 'texto'>) => setSubidas((p) => p.map((y) => (y.id === id ? { ...y, ...cambio } : y)))
+      let status = 0
+      let json: unknown = null
+      try {
+        const fichero = await encogerSiHaceFalta(original)
+        const form = new FormData()
+        form.set('token', token)
+        form.set('documento', fichero, fichero.name)
+        const res = await fetch('/api/datos/documento', { method: 'POST', body: form })
+        status = res.status
+        json = await res.json().catch(() => null)
+      } catch {
+        /* sin conexión */
+      }
+      const r = interpretarDocSubido(status, json)
+      if (r.estado === 'fallo') {
+        fijar({ estado: 'fallo', texto: r.texto })
+        continue
+      }
+      // Solo rellena lo que está vacío: lo que el cliente ya escribió (o traía su ficha) manda.
+      const actuales = valoresRef.current
+      const claves = Object.keys(r.valores).filter((k) => actuales[k] === undefined || actuales[k] === '')
+      const nuevos = Object.fromEntries(claves.map((k) => [k, r.valores[k]]))
+      valoresRef.current = { ...actuales, ...nuevos }
+      setValores((p) => ({ ...p, ...nuevos }))
+      setLeidos((p) => new Set([...p, ...claves]))
+      fijar({
+        estado: 'ok',
+        texto: r.aviso ?? `${r.etiqueta}: ${claves.length} dato${claves.length === 1 ? '' : 's'} rellenado${claves.length === 1 ? '' : 's'}. Revísalo abajo.`,
+      })
+    }
+  }
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault()
@@ -47,6 +97,34 @@ export default function Formulario({ token, campos }: { token: string; campos: C
 
   return (
     <form onSubmit={enviar} noValidate style={{ display: 'grid', gap: 14 }}>
+      <div className="editor-campo" style={{ border: '1px dashed currentColor', borderRadius: 12, padding: 14 }}>
+        <label htmlFor="docs" style={{ fontWeight: 600 }}>📎 Súbenos tus documentos y te rellenamos el formulario</label>
+        <span className="editor-ayuda">
+          DNI, carné de conducir, permiso de circulación o ficha técnica (y tu póliza actual si la tienes). Foto o PDF, uno o varios. Los guardamos para tu contratación.
+        </span>
+        <input
+          id="docs"
+          type="file"
+          accept="image/*,application/pdf"
+          multiple
+          disabled={subiendo || estado.tipo === 'enviando'}
+          onChange={(e) => {
+            const ficheros = Array.from(e.target.files ?? [])
+            e.target.value = ''
+            void subir(ficheros)
+          }}
+          style={{ minHeight: 44, maxWidth: '100%' }}
+        />
+        {subidas.length > 0 && (
+          <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+            {subidas.map((x) => (
+              <li key={x.id} className={x.estado === 'fallo' ? 'editor-error' : undefined} style={{ fontSize: 14, overflowWrap: 'anywhere' }}>
+                {x.estado === 'ok' ? '✅' : x.estado === 'fallo' ? '⚠️' : '⏳'} {x.nombre}: {x.texto}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
       {campos.filter(visible).map((c) => {
         const id = `c-${c.clave}`
         const err = errores[c.clave]
@@ -92,6 +170,8 @@ export default function Formulario({ token, campos }: { token: string; campos: C
                 onChange={(e) => poner(c.clave, e.target.value)}
               />
             )}
+            {leidos.has(c.clave) && <span className="editor-ayuda">📄 Leído de tu documento: compruébalo.</span>}
+            {c.actual && !leidos.has(c.clave) && <span className="editor-ayuda">Es el que tenemos en tu ficha: si no es correcto, cámbialo.</span>}
             {c.ayuda && <span className="editor-ayuda">{c.ayuda}</span>}
             {err && <span className="editor-error" role="alert">{err}</span>}
           </div>
@@ -101,8 +181,8 @@ export default function Formulario({ token, campos }: { token: string; campos: C
       <p className="suave" style={{ margin: 0, fontSize: 13 }}>
         Usamos estos datos solo para prepararte el presupuesto (Grupo ASegura, correduría de seguros).
       </p>
-      <button type="submit" className="boton" style={{ minHeight: 48 }} disabled={estado.tipo === 'enviando'}>
-        {estado.tipo === 'enviando' ? 'Enviando…' : 'Enviar mis datos'}
+      <button type="submit" className="boton" style={{ minHeight: 48 }} disabled={estado.tipo === 'enviando' || subiendo}>
+        {estado.tipo === 'enviando' ? 'Enviando…' : subiendo ? 'Leyendo tus documentos…' : 'Enviar mis datos'}
       </button>
     </form>
   )

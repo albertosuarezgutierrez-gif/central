@@ -11,11 +11,7 @@ import { conservaDatos } from './traduccion-guarda.ts'
 
 export { conservaDatos }
 
-const NOMBRE_IDIOMA: Record<string, string> = {
-  en: 'inglés', fr: 'francés', de: 'alemán', it: 'italiano', pt: 'portugués', nl: 'neerlandés',
-  pl: 'polaco', tr: 'turco', ru: 'ruso', sv: 'sueco', da: 'danés', no: 'noruego', cs: 'checo',
-  sl: 'esloveno', ro: 'rumano', hu: 'húngaro', el: 'griego', ca: 'catalán',
-}
+import { NOMBRE_IDIOMA } from '../agente-huesped/idiomas.ts'
 
 // Traduce `texto` al idioma dado. Devuelve el texto FINAL a enviar y el idioma real en que va.
 // `es`, vacío o desconocido → español tal cual. Fallo de IA o datos corrompidos → español.
