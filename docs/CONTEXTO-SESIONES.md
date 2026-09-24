@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 📮 **Registro de quejas y reclamaciones del SAC (PR #3458).** La web y el portal publican «el SAC
+contesta en un mes» y no había dónde anotar una queja. Tabla `seguros.queja` (detalle y respuesta cifrados; 4 CHECK vistos
+morder; sin acceso de `crm_seguros` ni del portal), regla en `module-seguros/queja.ts` (mes natural, estados, informe anual),
+puerto `/api/operador/quejas` (auditado) y bloque «Quejas y reclamaciones» en Hoy de `/correduria` (registrar, trámite,
+contestar con respuesta obligatoria, desistir). El agente mecánico escribió la parte de plataforma contra un contrato
+inventado (copiado de supresiones): reescrita por la sesión. Pendiente de Alberto: validar el plazo con la asesoría.
+
 **(24/09/2026)** 🧮 **Comisiones: el «deudor» de Occident cuadra contra el banco (Fase 3).** Investigado `banco_total`:
 el casado por concepto ya estaba en #3418 (la 1ª pasada con él, 07:30 UTC de hoy; simulado 3→11 periodos casados).
 Arreglado lo que seguía mal: Occident abr-ago salía «deudor» y el banco cobra |bruto|−retención al céntimo →

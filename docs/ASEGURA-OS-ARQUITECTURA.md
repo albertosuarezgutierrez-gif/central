@@ -406,7 +406,7 @@ Ya existe y es la parte más madura: `core-ai` (cadena de fallback) + gateway (c
 ## N. Lo que faltaba (revisión del 23/09)
 
 1. **Obligaciones regulatorias como workflows con plazo** (no como agente de compliance). El sistema debería producirlas, no solo guardar datos. Las que conviene modelar [Probable, a validar con la asesoría]:
-   - **Servicio de Atención al Cliente / registro de quejas y reclamaciones** (Orden ECO/734/2004): plazo de respuesta e informe anual.
+   - **Servicio de Atención al Cliente / registro de quejas y reclamaciones** (Orden ECO/734/2004): plazo de respuesta e informe anual. ✅ Hecho el 24/09/2026 (PR #3458): `seguros.queja` + puerto `/api/operador/quejas` + bloque en Hoy.
    - **Documentación estadístico-contable anual a la DGSFP**: sale casi entera del libro de comisiones y de la cartera.
    - **Libro registro de operaciones / pólizas intermediadas**.
    - **IDD antes de vender**: test de demandas y necesidades, entrega del IPID, información previa del mediador. Todo con evidencia enlazada al presupuesto (PR 4-6 del spec).
