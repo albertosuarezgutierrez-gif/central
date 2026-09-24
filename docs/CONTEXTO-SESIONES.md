@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🧮 **Comisiones: el «deudor» de Occident cuadra contra el banco (Fase 3).** Investigado `banco_total`:
+el casado por concepto ya estaba en #3418 (la 1ª pasada con él, 07:30 UTC de hoy; simulado 3→11 periodos casados).
+Arreglado lo que seguía mal: Occident abr-ago salía «deudor» y el banco cobra |bruto|−retención al céntimo →
+`remesaInferida`/`remesaEfectiva`/`brutoEfectivo` en `cuadre.ts` (sin abono = liquidado-sin-cobrar; el total bruto
+del cuadre deja de restar lo cobrado). Además
+DNI/NIE nunca como clave de regla y Pelayo tras «TRANSFERENCIAS //». Pendiente de Alberto: dónde cobra Allianz
+(0 abonos en ninguna cuenta) y Mapfre abr-ago sin periodos en el libro (CIMA no trae su devengo).
+
 **(24/09/2026)** 🧾 **Alta manual por SQL de Mapfre 2002600520435** (auto, Antonio Cruz Martínez, póliza `c981968f…`) en la
 ficha `8016986c…` (antes «Antonio» sin apellidos; ya tenía Cuñado/a con Gabriel Cabrera `3146922c…`). `id_poliza_entidad`
 y hash a NULL (sin confirmar por CIMA, que no recibe nada de Mapfre desde el 23/06). + oportunidad `e9c155e4…` de su Allianz

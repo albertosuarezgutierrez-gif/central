@@ -1495,6 +1495,15 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
   libro, no se regala al siguiente. La compañía, con la MISMA cascada que la matriz (manual → regla →
   concepto). 🚨 **Y la cuenta del libro ya no es `SELECT id FROM cuentas LIMIT 1`**: sin orden, desde el
   20/09 escribía en una cuenta sin bancos y el libro de Alberto se congeló. Sale de `CORREDURIA_EMAILS`.
+- 🧮 **El «deudor» de Occident era el SIGNO del EIAC, no una deuda (24/09/2026).** Occident manda bruto negativo
+  con remesa 0 y el banco recibe |bruto| − retención AL CÉNTIMO (abr 233,04€ · may 477,62€ · jul 294,30€).
+  `estadoCuadre` contrasta ya con `remesaInferida`: casa → `cuadra`; otra cifra → `descuadra`; sin abono →
+  `liquidado-sin-cobrar`, como cualquier compañía (`deudor` queda solo si ni invirtiendo el signo hay nada que
+  ingresar). El cron casa por `remesaEfectiva` y el TOTAL bruto del cuadre suma `brutoEfectivo` (|bruto|): antes
+  restaba lo cobrado mientras la retención sumaba. La estimación de `lib/finanzas.ts` (renta) sigue sin tocarse.
+  De paso, `claveReferencia`/`claveComercio` ya no devuelven un DNI/NIE como clave (una nómina con destino seguros
+  habría enseñado una regla que mandaba todas las nóminas a una compañía) y `detectarCompania` reconoce el
+  «COMISIONES …» de Pelayo tras el prefijo «TRANSFERENCIAS // … //».
 - 🚨 **PENDIENTE — la cifra fiscal de comisiones sigue siendo una ESTIMACIÓN.** `lib/finanzas.ts:594`
   eleva el neto del banco al bruto con `× (0,15/0,85)` y da por hecho que TODO abono de seguros es una
   comisión neta al 15 %; un periodo deudor de Occident rompe el supuesto. El bruto y la retención
