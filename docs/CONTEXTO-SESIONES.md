@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 📮 **Registro de quejas y reclamaciones del SAC (PR #3458).** La web y el portal publican «el SAC
+contesta en un mes» y no había dónde anotar una queja. Tabla `seguros.queja` (detalle y respuesta cifrados; 4 CHECK vistos
+morder; sin acceso de `crm_seguros` ni del portal), regla en `module-seguros/queja.ts` (mes natural, estados, informe anual),
+puerto `/api/operador/quejas` (auditado) y bloque «Quejas y reclamaciones» en Hoy de `/correduria` (registrar, trámite,
+contestar con respuesta obligatoria, desistir). El agente mecánico escribió la parte de plataforma contra un contrato
+inventado (copiado de supresiones): reescrita por la sesión. Pendiente de Alberto: validar el plazo con la asesoría.
+
+
 **(24/09/2026)** 📱 **iarrhh (`apps/rrhh`) responsive: el panel del responsable NO tenía menú en móvil.** Medido con Playwright
 (banco de datos ficticios, 15 pantallas × 320/375/768): el cambiador de empresa se comía la fila y el `nav` quedaba a 0 px;
 el `<button>` global teñía el cambiador de teal (texto oscuro ilegible). Desbordes arreglados en contrato, nóminas, distribuir

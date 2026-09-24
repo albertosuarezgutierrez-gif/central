@@ -1653,6 +1653,10 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   middleware, así que la exención de `/seguros` en `middleware.ts::PUBLIC` se retiró: no protegía ya
   ninguna ruta alcanzable). El endpoint `/api/publico/correduria/lead` de arriba sigue vivo — hoy lo
   alimenta `apps/asegura-web` (`POST /api/lead`, que reenvía aquí), no una página de esta app.
+- **📮 Quejas y reclamaciones del SAC (24/09/2026).** Bloque `Quejas.tsx` en Hoy (siempre visible: es también donde se
+  REGISTRA la queja que llega por correo o teléfono) sobre `/api/correduria/quejas` → puerto de asegura, `actor` = sesión y el
+  último. Lector puro `lib/quejas-asegura.ts`; sus listas son copia de `module-seguros/queja.ts` y
+  `test/regression-quejas-asegura.test.ts` falla si divergen. Contador `null` (no 0) si no se pudo leer.
 - **🗑️ Supresiones RGPD — el reloj del art. 12.3 se contesta AQUÍ (05/09/2026).** Desde el bloque legal
   0.5, un cliente puede pedir la supresión de sus datos desde `apps/asegura-portal` (`/boveda`). Eso
   arranca un plazo legal de **30 días** (prorrogable a 60 **motivando la prórroga**, art. 12.3 RGPD), y

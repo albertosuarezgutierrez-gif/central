@@ -22,6 +22,7 @@ import Companias from './Companias'
 import RadarRecibos from './RadarRecibos'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
+import Quejas from './Quejas'
 import Bloque from './Bloque'
 import Redes from './Redes'
 import Blog from './Blog'
@@ -159,6 +160,7 @@ export default function CorreduriaClient() {
   const [nPartes, setNPartes] = useState<number | null | undefined>(undefined)
   const [nLeads, setNLeads] = useState<number | null | undefined>(undefined)
   const [nSupresiones, setNSupresiones] = useState<number | null | undefined>(undefined)
+  const [nQuejas, setNQuejas] = useState<number | null | undefined>(undefined)
   const [nRetencion, setNRetencion] = useState<number | null | undefined>(undefined)
   const [nSustituciones, setNSustituciones] = useState<number | null | undefined>(undefined)
   const [nSinCanal, setNSinCanal] = useState<number | null | undefined>(undefined)
@@ -252,7 +254,7 @@ export default function CorreduriaClient() {
       // `nLeads`); `DeclaradasVencer` se conserva SOLO como vista de llamada
       // rápida (teléfono/email en claro) para las ya vinculadas ≤60 días, pero
       // ya no suma un segundo aviso de lo mismo.
-      contador: agregarContadores([nPartes, nSupresiones, nRetencion, nRenovaciones, nLeads, nSustituciones, nTareasHoy]),
+      contador: agregarContadores([nPartes, nSupresiones, nQuejas, nRetencion, nRenovaciones, nLeads, nSustituciones, nTareasHoy]),
       tono: 'malo',
       title: 'Tareas de seguimiento para hoy, partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra, declaradas de otra compañía a punto de renovar y sustituciones pendientes de que CIMA confirme la nueva',
     },
@@ -369,6 +371,7 @@ export default function CorreduriaClient() {
             porque hasta que existió este bloque ese plazo se incumplía solo, sin
             que nada fallara ni saliera en ninguna pantalla. */}
         <Supresiones onContador={setNSupresiones} />
+        <Quejas onContador={setNQuejas} />
 
         {/* Si lo que mandan las compañías por CIMA NO está entrando. Se pinta
             SOLO cuando hay algo que decir —incidencia o «no se ha podido
