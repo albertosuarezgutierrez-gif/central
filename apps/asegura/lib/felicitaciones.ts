@@ -63,7 +63,8 @@ export async function felicitarCumpleanos(
   })
 
   const anio = anioCumpleanos(ahora)
-  const dia = new Date(`${diaMadrid(ahora)}T00:00:00Z`)
+  // El día va como TEXTO a `::date`: con un `Date` el cast dependería del huso de la sesión.
+  const dia = diaMadrid(ahora)
   const r: ResumenFelicitaciones = { cumpleHoy: 0, enviados: 0, soloApp: 0, yaFelicitados: 0, ilegibles: 0, fallidos: 0, soloContar }
 
   for (const f of fichas) {
@@ -84,7 +85,12 @@ export async function felicitarCumpleanos(
     const destino = destinatarioDeCliente(f)
     if (!destino) { r.soloApp += 1; continue }
     const res = await enviarFelicitacion(destino, { nombre: nombreDePila(f.nombre), enlace })
-    if (res === 'sin_proveedor') throw new Error('sin_correo_configurado')
+    if (res === 'sin_proveedor') {
+      // Avería de configuración, no del cliente: se suelta la reserva para que el reintento de hoy
+      // (con la env ya puesta) sí le mande el correo. Si no, perdería su felicitación del año.
+      await db.$executeRaw`delete from felicitacion where cliente_id = ${f.id}::uuid and anio = ${anio} and canal = 'solo_app'`
+      throw new Error('sin_correo_configurado')
+    }
     if (res !== 'enviado') { r.fallidos += 1; continue }
     r.enviados += 1
     await db.felicitacion.updateMany({ where: { clienteId: f.id, anio }, data: { canal: 'correo' } })

@@ -20,6 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_felicitacion_dia ON seguros.felicitacion (dia);
 -- Los privilegios por defecto del schema se la darían al CRM de Manuel.
 REVOKE ALL ON seguros.felicitacion FROM crm_seguros;
 REVOKE ALL ON seguros.felicitacion FROM prisma_seguros;
-GRANT SELECT, INSERT ON seguros.felicitacion TO prisma_seguros;
+-- DELETE: solo para soltar la reserva cuando falta el proveedor de correo (avería de config).
+GRANT SELECT, INSERT, DELETE ON seguros.felicitacion TO prisma_seguros;
 GRANT UPDATE (canal) ON seguros.felicitacion TO prisma_seguros;
 GRANT SELECT (id, cliente_id, dia) ON seguros.felicitacion TO prisma_asegura_portal;

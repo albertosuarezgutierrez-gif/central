@@ -33,3 +33,9 @@ test('el correo felicita y no vende: sin pólizas, compañías, precios ni ofert
   assert.match(c.texto, /dejamos de enviarlas/)
   assert.throws(() => cuerpoFelicitacion({ nombre: null, enlace: 'http://x.es' }), /enlace_no_https/)
 })
+
+test('🚨 sin proveedor de correo se SUELTA la reserva: el reintento del día aún felicita', () => {
+  const cuerpo = src.slice(src.indexOf("if (res === 'sin_proveedor')"))
+  const borra = cuerpo.indexOf('delete from felicitacion')
+  assert.ok(borra >= 0 && borra < cuerpo.indexOf("throw new Error('sin_correo_configurado')"))
+})
