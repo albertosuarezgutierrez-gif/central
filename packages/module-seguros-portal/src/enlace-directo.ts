@@ -4,7 +4,8 @@
 // Es el código de un solo uso de siempre, pero largo y metido en el enlace: el correo va al mismo
 // buzón al que iría el código, así que quien tiene el buzón ya podía entrar. Lo que cambia es el
 // REENVÍO: un correo reenviado lleva la llave. Por eso:
-//   - UN SOLO USO y 72 horas; caducado o usado, se cae al acceso de siempre (código al correo).
+//   - UN SOLO USO y 24 horas (una sesión abierta con la llave puede cambiar el correo de la ficha:
+//     cuanto menos viva en un buzón, mejor); caducado o usado, se cae al acceso de siempre (código al correo).
 //   - Se canjea con un clic en «Entrar» (POST), nunca al abrir el enlace (GET): los antivirus y
 //     las vistas previas del correo abren los enlaces y lo gastarían.
 //   - El token no se guarda: solo su SHA-256. Y además tiene que casar el correo del enlace con el
@@ -15,7 +16,7 @@
 // 🚨 Web Crypto y NO `node:crypto`: este barril lo importan componentes de cliente del portal y un
 // import `node:` revienta su build de producción (lo vigila `regression-portal-autorizacion`).
 
-export const HORAS_ENLACE_DIRECTO = 72
+export const HORAS_ENLACE_DIRECTO = 24
 
 /** 32 bytes aleatorios en base64url: no se adivina ni se prueba por fuerza bruta. */
 export function generarTokenEnlace(): string {
@@ -53,14 +54,16 @@ export function destinoSeguro(r: unknown): string {
   return r
 }
 
-/** El enlace completo: `base` https del portal, con el correo, el token y el destino. */
-export function urlEnlaceDirecto(base: string, correo: string, token: string, destino: string): string {
+/**
+ * El enlace completo: `base` https del portal y, en el FRAGMENTO (`#`), el correo y el token. El
+ * fragmento no viaja al servidor ni en el Referer: la llave no queda en los logs de Vercel ni de
+ * ningún proxy. A dónde lleva tras entrar lo decide el servidor al canjear (fila guardada), no el enlace.
+ */
+export function urlEnlaceDirecto(base: string, correo: string, token: string): string {
   const u = new URL(base)
   if (u.protocol !== 'https:') throw new Error('enlace_no_https')
   u.pathname = '/'
   u.search = ''
-  u.searchParams.set('d', correo)
-  u.searchParams.set('e', token)
-  u.searchParams.set('r', destinoSeguro(destino))
+  u.hash = new URLSearchParams({ d: correo, e: token }).toString()
   return u.toString()
 }

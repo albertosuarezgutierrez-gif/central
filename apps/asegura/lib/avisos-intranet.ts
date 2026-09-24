@@ -421,9 +421,10 @@ async function contarSinFicha(correduriaId: string, hoy: Date, conFicha: Readonl
  * el portal, porque «no he podido» no puede leerse como «hoy no tocaba nadie».
  */
 /**
- * El enlace del correo con ACCESO DIRECTO (Alberto, 24/09/2026): una llave de un solo uso y 72 h,
+ * El enlace del correo con ACCESO DIRECTO (Alberto, 24/09/2026): una llave de un solo uso y 24 h,
  * atada al correo de la ficha por su índice ciego. Sin `PII_LOOKUP_KEY` no se puede atar, y
- * entonces va el enlace de siempre (entrar con código): nunca una llave suelta.
+ * entonces va el enlace de siempre (entrar con código): nunca una llave suelta. Tampoco si no se
+ * puede guardar la llave: un fallo aquí no puede dejar sin correo al resto de la pasada.
  */
 async function enlaceDirecto(
   correduriaId: string, clienteId: string, correo: string, tipos: readonly (keyof typeof HREF_POR_TIPO)[], base: string,
@@ -439,13 +440,21 @@ async function enlaceDirecto(
   const destinos = new Set(tipos.map((t) => HREF_POR_TIPO[t]))
   const destino = destinos.size === 1 ? [...destinos][0]! : '/boveda'
   const token = generarTokenEnlace()
-  await prismaAsegura().portalEnlaceDirecto.create({
-    data: {
-      correduriaId, clienteId, emailLookupHash: hash, tokenHash: await hashTokenEnlace(token), destino,
-      expiraEn: new Date(Date.now() + HORAS_ENLACE_DIRECTO * 3_600_000),
-    },
-  })
-  return { enlace: urlEnlaceDirecto(base, correo, token, destino), directo: true }
+  try {
+    // Una llave viva por cliente: la nueva sustituye a las anteriores sin usar (no se acumulan
+    // tres válidas a la vez en el buzón).
+    await prismaAsegura().portalEnlaceDirecto.deleteMany({ where: { correduriaId, clienteId, usadoEn: null } })
+    await prismaAsegura().portalEnlaceDirecto.create({
+      data: {
+        correduriaId, clienteId, emailLookupHash: hash, tokenHash: await hashTokenEnlace(token), destino,
+        expiraEn: new Date(Date.now() + HORAS_ENLACE_DIRECTO * 3_600_000),
+      },
+    })
+  } catch (e) {
+    console.error('[avisos-intranet] no se pudo guardar el enlace directo; va el de siempre', e instanceof Error ? e.message : e)
+    return { enlace: base, directo: false }
+  }
+  return { enlace: urlEnlaceDirecto(base, correo, token), directo: true }
 }
 
 export async function avisarIntranet(

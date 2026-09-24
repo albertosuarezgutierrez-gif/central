@@ -34,9 +34,11 @@ export function Entrada() {
   // arrastrar la página entera a render dinámico por leer dos parámetros.
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
-    const d = q.get('d')
+    // La llave del enlace directo viaja en el FRAGMENTO (`#d=…&e=…`), que no llega al servidor.
+    const f = new URLSearchParams(window.location.hash.slice(1))
+    const d = f.get('d') ?? q.get('d')
     const c = q.get('c')
-    const e = q.get('e')
+    const e = f.get('e')
     if (d && e) {
       setDestino(d)
       setEnlace(e)
@@ -85,7 +87,7 @@ export function Entrada() {
       return setError(cuerpo.error ?? 'error')
     }
     // A dónde ir lo decide el servidor (ruta interna validada); por defecto, la bóveda.
-    const irA = typeof cuerpo.irA === 'string' && cuerpo.irA.startsWith('/') && !cuerpo.irA.startsWith('//') ? cuerpo.irA : '/boveda'
+    const irA = typeof cuerpo.irA === 'string' && /^\/(?![/\\])/.test(cuerpo.irA) ? cuerpo.irA : '/boveda'
     // El vínculo con la cartera no bloquea la entrada, pero si no se ha podido
     // resolver se dice antes de irse: un «no tienes pólizas» sin esta línea
     // sería una afirmación sobre algo que no se ha mirado.

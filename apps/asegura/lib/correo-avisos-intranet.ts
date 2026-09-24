@@ -37,7 +37,7 @@
  * etiqueta**. Es a propósito: un tipo nuevo sin etiqueta saldría como «algo
  * pendiente» y nadie se enteraría de la omisión.
  */
-import type { TipoAviso } from '@central/module-seguros-portal'
+import { HORAS_ENLACE_DIRECTO, type TipoAviso } from '@central/module-seguros-portal'
 import { remitenteCorreo } from '@central/module-seguros'
 
 /** Cómo se nombra cada clase de aviso en el correo. Singular y plural, en minúscula. */
@@ -101,7 +101,7 @@ export type DatosAvisosIntranet = {
   total: number
   /** A dónde entra. Siempre https y siempre presente: sin enlace no se manda nada. */
   enlace: string
-  /** `true` = el enlace lleva una llave de acceso directo (un solo uso, 72 h). */
+  /** `true` = el enlace lleva una llave de acceso directo (un solo uso, `HORAS_ENLACE_DIRECTO`). */
   directo?: boolean
 }
 
@@ -150,7 +150,7 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
     throw new Error('enlace_no_https')
   }
   const comoSeEntra = d.directo
-    ? 'Con este enlace entras directamente, una sola vez y durante 72 horas. Si ya lo usaste o ha caducado, entras con tu correo y un código de un solo uso. No lo reenvíes.'
+    ? `Con este enlace entras directamente, una sola vez y durante ${HORAS_ENLACE_DIRECTO} horas. Si ya lo usaste o ha caducado, entras con tu correo y un código de un solo uso. No lo reenvíes.`
     : 'Se entra con tu correo y un código de un solo uso; no hay contraseña que recordar.'
   const saludo = d.nombre?.trim() ? `Hola, ${d.nombre.trim()}:` : 'Hola:'
   const n = d.avisos.length

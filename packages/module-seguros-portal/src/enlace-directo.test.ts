@@ -28,9 +28,13 @@ test('🚨 tras entrar solo se va a una ruta del portal: nunca un redirector a o
   assert.equal(destinoSeguro(null), '/boveda')
 })
 
-test('la URL es https, lleva correo, token y destino, y nada más', () => {
-  const u = new URL(urlEnlaceDirecto('https://clientes.grupoasegura.es/?x=1', 'a@b.es', 'T'.repeat(43), '/autorizaciones'))
+test('🚨 la llave va en el FRAGMENTO: la query sale vacía y no llega al servidor', () => {
+  const u = new URL(urlEnlaceDirecto('https://clientes.grupoasegura.es/?x=1', 'a@b.es', 'T'.repeat(43)))
   assert.equal(u.origin + u.pathname, 'https://clientes.grupoasegura.es/')
-  assert.deepEqual([...u.searchParams.keys()], ['d', 'e', 'r'])
-  assert.throws(() => urlEnlaceDirecto('http://x.es', 'a@b.es', 't', '/'), /enlace_no_https/)
+  assert.equal(u.search, '')
+  const f = new URLSearchParams(u.hash.slice(1))
+  assert.deepEqual([...f.keys()], ['d', 'e'])
+  assert.equal(f.get('d'), 'a@b.es')
+  assert.equal(f.get('e'), 'T'.repeat(43))
+  assert.throws(() => urlEnlaceDirecto('http://x.es', 'a@b.es', 't'), /enlace_no_https/)
 })

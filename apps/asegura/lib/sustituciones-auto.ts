@@ -100,7 +100,7 @@ export async function liberarPresupuestosEmitidos(tx: Tx, correduriaId: string):
       select distinct on (pr.id) pr.id, n.id as nueva
       from presupuesto pr
         join presupuesto_opcion o on o.id = pr.opcion_elegida_id
-        join polizas n on n.poliza_origen_id = pr.poliza_id and n.cliente_id = pr.cliente_id and n.merged_into_poliza_id is null
+        join polizas n on n.poliza_origen_id = pr.poliza_id and n.correduria_id = pr.correduria_id and n.cliente_id = pr.cliente_id and n.merged_into_poliza_id is null
         join companias_dgs cd on cd.codigo_dgs = n.codigo_entidad_dgs
       where pr.correduria_id = ${correduriaId}::uuid and pr.poliza_id is not null
         and pr.aceptado_at is not null and pr.emitido_at is null and pr.retirado_at is null
@@ -129,7 +129,7 @@ export async function abrirAnulacionesPorSustitucion(tx: Tx, correduriaId: strin
            to_char(v.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento, to_char(n.fecha_inicio, 'YYYY-MM-DD') as inicio,
            coalesce(v.codigo_entidad_dgs = n.codigo_entidad_dgs, false) as misma, n.aseguradora as compania, n.numero_poliza as numero
     from polizas v
-      join polizas n on n.poliza_origen_id = v.id and n.merged_into_poliza_id is null and n.estado::text = any(${VIGENTES}::text[])
+      join polizas n on n.poliza_origen_id = v.id and n.correduria_id = v.correduria_id and n.merged_into_poliza_id is null and n.estado::text = any(${VIGENTES}::text[])
     where v.correduria_id = ${correduriaId}::uuid and v.sustituida_at is not null and v.merged_into_poliza_id is null
       and v.estado::text = any(${VIGENTES}::text[])
       and not exists (select 1 from anulacion a where a.poliza_id = v.id)
