@@ -202,6 +202,15 @@ test('parsearRespuesta aguanta lo que devuelven los modelos, y se rinde en voz a
 // avisaría antes de tiempo, o —peor— se «arreglaría» renombrando el slug y
 // entonces sí saldrían dos páginas compitiendo por la misma búsqueda.
 //
+// ⚠️ Pero un tema publicado POR EL AGENTE sigue en la cola, y es lo normal:
+// el agente solo escribe `articulos.ts` y `elegirTema` lo salta desde ese
+// momento. Hasta el 24/09/2026 este cepo exigía «ningún tema publicado» y por
+// eso ponía en rojo el PR de CADA artículo que escribía el agente (#2966 llevó
+// nueve días sin poderse publicar). Lo que distingue un tema consumido de uno
+// muerto es la POSICIÓN: el agente coge siempre el primero pendiente, así que
+// lo que él publica forma un PREFIJO de la cola. Un publicado DESPUÉS de un
+// pendiente es el caso que este cepo existe para cazar.
+//
 // Se lee el FUENTE de la otra app en vez de importarlo: son dos apps separadas
 // (lo vigila `test/regression-retarificar-plataforma.test.ts`) y este test
 // corre sin instalar nada. Mismo patrón que `contrato-lead.test.ts` de
@@ -216,6 +225,8 @@ test('ningún tema de la cola repite un artículo ya publicado', () => {
   // en silencio: sin nada con que comparar, el cepo no está comprobando nada.
   assert.ok(publicados.size > 0, 'no se ha leído ningún slug publicado: el cepo no vigila nada')
 
-  const chocan = TEMAS.filter(t => publicados.has(t.slug)).map(t => t.slug)
-  assert.deepEqual(chocan, [], `temas en cola que ya están publicados:\n${chocan.join('\n')}`)
+  const primerPendiente = TEMAS.findIndex(t => !publicados.has(t.slug))
+  const tras = primerPendiente === -1 ? [] : TEMAS.slice(primerPendiente)
+  const chocan = tras.filter(t => publicados.has(t.slug)).map(t => t.slug)
+  assert.deepEqual(chocan, [], `temas en cola que ya están publicados (y nunca se escribirán):\n${chocan.join('\n')}`)
 })
