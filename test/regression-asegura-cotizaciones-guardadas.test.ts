@@ -610,3 +610,29 @@ test('🚨 `lib/db.ts` construye el cliente al USARLO, no al importarlo', () => 
     'la construcción diferida vive en `cliente()`: si desaparece, algo ha vuelto a hacerse en la carga',
   )
 })
+
+// ─── 4. El presupuesto cuelga de su oportunidad (24/09/2026) ─────────────────
+// Alberto: «dos botones de presupuesto, que es lo mismo que oportunidad». Tras
+// guardar la copia de un precio REAL, `cotizar()` la engancha a la oportunidad
+// del cliente para ese ramo (o la abre). Un precio simulado no abre nada.
+
+test('un presupuesto SIMULADO no abre ni enlaza oportunidades', async () => {
+  const llamadas: unknown[] = []
+  const r = await cotizarSimulando({
+    guardar: async () => ({ estado: 'guardada', cotizacionId: 'cot-9' }),
+    enlazar: async (e) => { llamadas.push(e); return { estado: 'creada', oportunidadId: 'o-1' } },
+  })
+  assert.ok(r.ok)
+  assert.deepEqual(llamadas, [], 'una oportunidad nacida de un precio inventado ensucia el embudo')
+  assert.equal(r.guardado.estado === 'guardada' ? r.guardado.oportunidad : 'x', undefined)
+})
+
+test('el enlace va DESPUÉS de guardar, solo con precio real, y nunca tumba la copia', () => {
+  const src = readFileSync(join(import.meta.dirname, '../apps/asegura/lib/codeoscopic/cotizar.ts'), 'utf8')
+  const anotar = src.slice(src.indexOf('async function anotar('), src.indexOf('export async function probarConexion('))
+  const iGuardar = anotar.indexOf('await guardar(')
+  const iEnlazar = anotar.indexOf('await enlazar(')
+  assert.ok(iGuardar > 0 && iEnlazar > iGuardar, 'primero la copia del precio, luego el enlace')
+  assert.match(anotar, /g\.estado === 'guardada' && !extra\.simulado/, 'solo con la copia guardada y un precio real')
+  assert.match(anotar, /catch \(e\) \{\s*g\.oportunidad = \{ estado: 'no_enlazada'/, 'un fallo del enlace se dice y no tumba la copia')
+})

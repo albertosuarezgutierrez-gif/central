@@ -60,6 +60,19 @@ export {
 } from './vencimientos.ts'
 
 export {
+  leerDatosCompaniaCima,
+  leerDatosCompaniaPuerto,
+  rotuloAnulacionCima,
+  type DatosCompaniaCima,
+  type AnulacionCima,
+  type PolizaReemplazadaCima,
+  type SuplementoCima,
+  type OtroDatoCima,
+  type InmuebleCima,
+  type EmbarcacionCima,
+} from './datos-compania-cima.ts'
+
+export {
   objetoAsegurado,
   pareceMatricula,
   formatCapitales,

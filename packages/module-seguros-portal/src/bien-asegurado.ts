@@ -157,7 +157,8 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   // él), así que se calculan igual sea cual sea el ramo.
   const metros = entero(d, 'metrosCuadrados')
   if (metros !== null) detalles.push(`${metros} m²`)
-  const anio = entero(d, 'anioConstruccion')
+  // Respaldo: el año que manda la compañía por CIMA (`anioConstruccionCima`).
+  const anio = entero(d, 'anioConstruccion') ?? entero(d, 'anioConstruccionCima')
   // Un año de cuatro cifras o no es un año. Sin esto, un `1` de una columna mal
   // migrada saldría como «Construido en 1».
   if (anio !== null && anio >= 1000 && anio <= 2999) detalles.push(`Construido en ${anio}`)

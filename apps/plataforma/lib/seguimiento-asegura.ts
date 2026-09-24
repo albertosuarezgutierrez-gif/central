@@ -599,3 +599,72 @@ export function interpretarContactosMovil(status: number, j: unknown): { contact
 export function tareasHoyAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/tareas-hoy', { method: 'GET' })
 }
+
+// ─── Rellenar la oportunidad leyendo un documento (24/09/2026) ──────────────
+// Alberto: «subir póliza, recibo o alguna imagen y que el agente con IA busque los
+// datos que haya». Lo leído RELLENA el formulario; lo guarda él al pulsar «Abrir».
+
+export type LecturaDocumentoOportunidad =
+  | {
+      estado: 'ok'
+      ramo: RamoOportunidad | null
+      compania: string | null
+      numeroPoliza: string | null
+      vence: string | null
+      prima: number | null
+    }
+  | { estado: 'error'; motivo: string }
+
+/**
+ * Lo que devuelve el puerto `leer-documento`. Un campo con forma rara se queda en
+ * `null` («no se leyó»), nunca en un valor plausible: una prima 0 o una fecha
+ * que no es fecha no rellenan nada. Si no se leyó NADA, es un error con motivo:
+ * un formulario que no cambia sin explicación parece que el botón no funciona.
+ */
+export function interpretarLecturaOportunidad(status: number, json: unknown): LecturaDocumentoOportunidad {
+  const o = json !== null && typeof json === 'object' && !Array.isArray(json) ? (json as Record<string, unknown>) : null
+  if (status !== 200 || !o || o.leido !== true) {
+    if (status === 503) return { estado: 'error', motivo: 'la cartera no está conectada' }
+    const m = typeof o?.error === 'string' ? o.error : typeof o?.motivo === 'string' ? o.motivo : `HTTP ${status}`
+    return { estado: 'error', motivo: m }
+  }
+  const txt = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim().slice(0, 120) : null)
+  const ramo = RAMOS_OPORTUNIDAD.find(r => r === o.ramo) ?? null
+  const vence = typeof o.fechaVencimiento === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.fechaVencimiento)
+    && !Number.isNaN(Date.parse(`${o.fechaVencimiento}T00:00:00Z`)) ? o.fechaVencimiento : null
+  const prima = typeof o.primaAnual === 'number' && Number.isFinite(o.primaAnual) && o.primaAnual > 0 && o.primaAnual < 1_000_000
+    ? Math.round(o.primaAnual * 100) / 100 : null
+  const r = { ramo, compania: txt(o.compania), numeroPoliza: txt(o.numeroPoliza), vence, prima }
+  if (Object.values(r).every(v => v === null)) {
+    return { estado: 'error', motivo: 'el documento se ha leído pero no trae ramo, compañía, vencimiento ni prima' }
+  }
+  return { estado: 'ok', ...r }
+}
+
+/** La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50». */
+export function primaParaCampo(n: number): string {
+  return n.toFixed(2).replace('.', ',')
+}
+
+// ─── De qué oportunidad cuelga un presupuesto recién pedido (24/09/2026) ─────
+// asegura engancha cada precio real a la oportunidad del cliente para ese ramo (o
+// la abre) y lo manda en `guardado.oportunidad`. Ausente = no se intentó
+// (simulación o asegura más vieja): entonces no se dice nada, ni bueno ni malo.
+
+export type EnlacePresupuesto =
+  | { estado: 'creada' | 'enlazada'; oportunidadId: string }
+  | { estado: 'fallo'; motivo: string }
+
+export function enlaceOportunidadDe(guardado: unknown): EnlacePresupuesto | null {
+  if (typeof guardado !== 'object' || guardado === null) return null
+  const o = (guardado as Record<string, unknown>).oportunidad
+  if (typeof o !== 'object' || o === null) return null
+  const e = o as Record<string, unknown>
+  if ((e.estado === 'creada' || e.estado === 'enlazada') && typeof e.oportunidadId === 'string' && e.oportunidadId !== '') {
+    return { estado: e.estado, oportunidadId: e.oportunidadId }
+  }
+  if (e.estado === 'no_enlazada' || e.estado === 'omitida') {
+    return { estado: 'fallo', motivo: typeof e.motivo === 'string' ? e.motivo : 'sin motivo' }
+  }
+  return null
+}

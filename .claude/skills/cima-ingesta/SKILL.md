@@ -215,6 +215,12 @@ estabilidad de la forma son la evidencia) antes de tocar el parser.
 - **`docs/ASEGURA-CIMA-COBERTURAS.md`** — qué coberturas manda cada compañía, la
   semántica de `capital_asegurado` (`0` ≠ sin cobertura, `INF` = ilimitado, NULL =
   no informado) y la consulta para regenerar el catálogo.
+- **`docs/CIMA-CAMPOS.md`** — TODOS los campos que trae CIMA (POL/REC/SIN/CEF) y qué
+  compañía manda cada uno, sacado de los XML reales. Regla de Alberto (24/09/2026): CIMA
+  trae casi todo el PDF de la póliza, así que un campo que está ahí y no se lee es un dato
+  tirado. **Copia de TODO lo de CIMA en Google Drive, carpeta «CIMA»** (zips del Portal
+  CIMA): es lo que permite reprocesar con `cima-rescate-lote` (repo `asegura`) cuando el
+  lector aprende un campo, porque TIREA no reentrega lo confirmado.
 - Negocio y ciclo semanal → skill **`agente-correduria`**.
 - Pantallas y escrituras del CRM → skill **`correduria-crm`**.
 - Infra y traspaso → `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md`.

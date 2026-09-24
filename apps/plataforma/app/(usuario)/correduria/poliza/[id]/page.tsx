@@ -6,6 +6,7 @@ import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import AnulacionPoliza from './AnulacionPoliza'
 import HistorialRiesgo from './HistorialRiesgo'
+import CimaPoliza from './CimaPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
 import CartaMediadorPoliza from './CartaMediadorPoliza'
 import Siniestros from '../../Siniestros'
@@ -101,6 +102,9 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
 
       {/* ── Historial del riesgo ─────────────────────────────────────────── */}
       <HistorialRiesgo lista={p.historialRiesgo} />
+
+      {/* ── Lo que dice la compañía por CIMA ─────────────────────────────── */}
+      <CimaPoliza d={p.datosCompania} vigente={!cancelada} />
 
       {/* ── Coberturas ──────────────────────────────────────────────────── */}
       <Coberturas lista={p.coberturas} />

@@ -368,7 +368,8 @@ export function hogarDeDatos(
     localidad: limpio(typeof datos.localidad === 'string' ? datos.localidad : null),
     direccion: direccionDescifrada,
     metrosCuadrados: num(datos.metrosCuadrados),
-    anioConstruccion: entero(datos.anioConstruccion),
+    // Respaldo: el año que manda la compañía por CIMA (Antiguedad del EIAC).
+    anioConstruccion: entero(datos.anioConstruccion) ?? entero(datos.anioConstruccionCima),
     capitalContinente: num(datos.continente),
     capitalContenido: num(datos.contenido),
     fuente,

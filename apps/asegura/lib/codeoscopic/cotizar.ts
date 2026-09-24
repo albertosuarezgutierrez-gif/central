@@ -28,6 +28,7 @@ import { consumoActual, reservar, cerrarFacturable, cerrarDescartado } from './c
 import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
 import { cotizacionSimulada } from './simulacion.ts'
+import { enlazarPresupuestoConOportunidad } from './oportunidad-presupuesto.ts'
 import {
   guardarSinTumbar,
   type ContextoCotizacion,
@@ -81,7 +82,11 @@ export type PeticionCotizacion = {
  * llamada al vendor y el libro de consumo NO se doblan aquí a propósito, para
  * que no exista un camino por el que alguien pueda saltarse el tope.
  */
-export type DepsCotizar = { guardar?: GuardarCotizacion }
+export type DepsCotizar = {
+  guardar?: GuardarCotizacion
+  /** Colgar el presupuesto de su oportunidad. Con `guardar` doblado y sin esto, no se enlaza (test). */
+  enlazar?: typeof enlazarPresupuestoConOportunidad
+}
 
 /**
  * Guarda la cotización sin poder tumbarla.
@@ -106,13 +111,29 @@ async function anotar(
   }
   try {
     const guardar = deps.guardar ?? guardarSinTumbar
-    return await guardar({
+    const g = await guardar({
       correduriaId: p.correduriaId,
       contexto: p.contexto,
       peticion: p.cuerpo,
       solicitadoPor: p.solicitadoPor,
       ...extra,
     })
+    // El presupuesto cuelga de su oportunidad (la abre si no hay). Solo con un precio
+    // REAL: uno simulado abriría oportunidades de mentira en el embudo de Alberto.
+    const enlazar = deps.enlazar ?? (deps.guardar ? null : enlazarPresupuestoConOportunidad)
+    if (g.estado === 'guardada' && !extra.simulado && enlazar) {
+      try {
+        g.oportunidad = await enlazar({
+          correduriaId: p.correduriaId,
+          contexto: p.contexto,
+          cotizacionId: g.cotizacionId,
+          solicitadoPor: p.solicitadoPor,
+        })
+      } catch (e) {
+        g.oportunidad = { estado: 'no_enlazada', motivo: e instanceof Error ? e.message : String(e) }
+      }
+    }
+    return g
   } catch (e) {
     // `guardarSinTumbar` ya no lanza; este `catch` cubre cualquier futura
     // implementación que sí lo haga. Una cotización pagada no se pierde nunca

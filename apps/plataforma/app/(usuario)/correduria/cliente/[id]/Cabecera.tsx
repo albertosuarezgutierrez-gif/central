@@ -284,6 +284,13 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 // cierra sin JS, así que la cabecera sigue siendo Server Component. Ninguno de
 // estos enlaces tarifica: llevan a un formulario (regla 20 de `correduria-crm`).
 //
+// 🔀 UNA sola puerta para vender (24/09/2026). Alberto, con la ficha delante:
+// «dos botones de presupuesto, que es lo mismo que oportunidad». Había tres
+// —este menú, «➕ Nueva oportunidad» en la tarjeta de Oportunidades y
+// «➕ Presupuestar auto» bajo Pólizas vivas— para la misma intención. Queda
+// este menú: con precio (un ramo tarificable) o sin precio (solo seguimiento,
+// que abre el formulario de la tarjeta por `?oportunidad=nueva`).
+//
 // El menú va PRIMERO a propósito: su desplegable se ancla a la izquierda del
 // botón, y medido a 360px con Playwright, en segunda posición se salía de la
 // pantalla por la derecha (right=427 > 360). En primera cabe hasta en 320.
@@ -295,7 +302,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
       <details style={{ position: 'relative' }}>
         <summary style={{ ...btnStyle('primario', 'sm'), listStyle: 'none', userSelect: 'none' }}>
-          ➕ Presupuestar ▾
+          ➕ Nueva oportunidad ▾
         </summary>
         <div
           role="menu"
@@ -306,6 +313,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
             borderRadius: 10, padding: 6, boxShadow: 'var(--shadow)',
           }}
         >
+          <p style={{ margin: '4px 4px 4px', fontSize: 11, color: 'var(--muted)' }}>Con precio</p>
           {RAMOS_PRESUPUESTO.map(r => (
             <Link
               key={r.etiqueta}
@@ -318,6 +326,14 @@ function Acciones({ clienteId }: { clienteId: string }) {
               {r.sinVerificar && <span aria-label="esquema sin verificar" style={{ marginLeft: 'auto', fontSize: 12 }}>🚧</span>}
             </Link>
           ))}
+          <Link
+            role="menuitem"
+            href={`/correduria/cliente/${clienteId}?oportunidad=nueva#oportunidades`}
+            title="Le interesa pero aún no hay que tarificar (u otro ramo): se apunta con su primer paso, sin gastar nada"
+            style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 10px', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none', borderTop: '1px solid var(--border)', marginTop: 4 }}
+          >
+            📝 Sin precio, solo seguimiento
+          </Link>
           <p style={{ margin: '6px 4px 2px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }} title={AVISO_SIN_VERIFICAR}>
             🚧 = esquema sin verificar
           </p>

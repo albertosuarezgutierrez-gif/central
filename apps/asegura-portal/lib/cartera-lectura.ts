@@ -42,6 +42,8 @@ import {
   camposDeAlcances,
   camposVisibles,
   describirBienConGemela,
+  describirBien,
+  bienTieneAlgo,
   esAlcance,
   etiquetaNivelAlcances,
   NIVELES,
@@ -571,7 +573,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   //
   // Esto NO arregla el duplicado: lo tapa para que el dato deje de estar
   // escondido. El duplicado se arregla en la ingesta.
-  const huerfanas = polizas.filter((p) => p.datosEspecificos == null && p.numeroPoliza !== null)
+  // «Huérfana» = no describe ningún bien, NO «datos NULL»: desde el 24/09/2026
+  // CIMA escribe también suplementos, anulación u «otros datos», y una póliza
+  // con solo eso en `datos_especificos` dejaba de buscar su gemela y perdía la
+  // dirección que venía de ella (7 hogares medidos ese día).
+  const huerfanas = polizas.filter(
+    (p) => p.numeroPoliza !== null && !bienTieneAlgo(describirBien(p.tipo, descifrarDireccion(p.datosEspecificos))),
+  )
   const gemelas =
     huerfanas.length === 0
       ? []

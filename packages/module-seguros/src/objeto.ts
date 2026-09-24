@@ -211,7 +211,9 @@ function objetoInmueble(d: Record<string, unknown>, tipo: string): ObjetoAsegura
   const localidad = claro(d.localidad)
   const cp = claro(d.cp)
   const metros = numero(d.metrosCuadrados)
-  const anio = numero(d.anioConstruccion)
+  // `anioConstruccionCima` es el año que manda la compañía (Antiguedad del EIAC):
+  // solo de respaldo, lo declarado por el cliente o sacado del Catastro manda.
+  const anio = numero(d.anioConstruccion) ?? numero(d.anioConstruccionCima)
   const viviendas = numero(d.nViviendas)
   const bloques = numero(d.nBloques)
   const direccionCifrada = texto(d.direccion) === 'cifrado'

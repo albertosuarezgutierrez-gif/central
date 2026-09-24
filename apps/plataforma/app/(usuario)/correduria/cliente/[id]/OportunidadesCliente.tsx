@@ -1,14 +1,18 @@
 'use client'
 import Link from 'next/link'
-import { useCallback, useEffect, useState } from 'react'
+import { useSearchParams } from 'next/navigation'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
+import { prepararAdjunto } from '@/lib/imagen-cliente'
 import {
   RAMOS_OPORTUNIDAD_UI,
   ROTULO_ESTADO,
   TIPOS_TAREA_UI,
+  interpretarLecturaOportunidad,
   interpretarOportunidadesCliente,
   parsearPrima,
+  primaParaCampo,
   rotuloMotivo,
   rotuloRamo,
   textoAltaOportunidad,
@@ -86,11 +90,28 @@ export default function OportunidadesCliente({ clienteId, polizas }: { clienteId
 
   useEffect(() => { void cargar() }, [cargar])
 
+  // La única puerta para abrir una es el menú «➕ Nueva oportunidad ▾» de la cabecera; su opción
+  // «sin precio» llega aquí con `?oportunidad=nueva`. Con useSearchParams y no leyendo
+  // `window.location` una vez: si ya estás en la ficha, el enlace es una navegación suave que NO
+  // remonta este componente, y un efecto de montaje no se enteraría.
+  const pideNueva = useSearchParams().get('oportunidad') === 'nueva'
+  useEffect(() => {
+    if (!pideNueva) return
+    setAviso(null)
+    setAbriendo(true)
+    document.getElementById('oportunidades')?.scrollIntoView({ block: 'start' })
+    // Se quita el parámetro: si se quedara, un segundo clic en el menú no cambiaría la URL
+    // y el formulario ya cerrado no volvería a abrirse.
+    const url = new URL(window.location.href)
+    url.searchParams.delete('oportunidad')
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
+  }, [pideNueva])
+
   const abiertas = lectura?.estado === 'ok' ? lectura.oportunidades.filter(o => o.estado !== 'ganada' && o.estado !== 'perdida') : []
   const cerradas = lectura?.estado === 'ok' ? lectura.oportunidades.filter(o => o.estado === 'ganada' || o.estado === 'perdida') : []
 
   return (
-    <div style={{ display: 'grid', gap: 10, fontSize: 13 }}>
+    <div id="oportunidades" style={{ display: 'grid', gap: 10, fontSize: 13, scrollMarginTop: 80 }}>
       {aviso && (
         <div role="status" style={{ color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>
           {aviso.texto}
@@ -109,7 +130,7 @@ export default function OportunidadesCliente({ clienteId, polizas }: { clienteId
 
       {lectura?.estado === 'ok' && (
         <>
-          {abiertas.length === 0 && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta.</div>}
+          {abiertas.length === 0 && !abriendo && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta. Se abre desde «➕ Nueva oportunidad ▾», arriba.</div>}
           {abiertas.map(o => (
             <FilaAbierta key={o.id} o={o} polizas={polizas} onHecho={(t) => { setAviso(t); void cargar() }} />
           ))}
@@ -131,18 +152,12 @@ export default function OportunidadesCliente({ clienteId, polizas }: { clienteId
         </>
       )}
 
-      {abriendo ? (
+      {abriendo && (
         <FormAlta
           clienteId={clienteId}
           onCancelar={() => setAbriendo(false)}
           onHecho={(t) => { setAviso(t); if (t.ok) setAbriendo(false); void cargar() }}
         />
-      ) : (
-        <div>
-          <button type="button" onClick={() => { setAviso(null); setAbriendo(true) }} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
-            ➕ Nueva oportunidad
-          </button>
-        </div>
       )}
     </div>
   )
@@ -278,6 +293,49 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
   const [nota, setNota] = useState('')
   const [ocupado, setOcupado] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [leyendo, setLeyendo] = useState(false)
+  const [lectura, setLectura] = useState<{ ok: boolean; texto: string } | null>(null)
+  const fichero = useRef<HTMLInputElement>(null)
+
+  // Lo leído RELLENA lo vacío y no pisa lo que Alberto ya ha tecleado: si él escribió
+  // la prima que le dijo el cliente, esa manda sobre la del papel.
+  async function leerDocumento(f: File) {
+    setLeyendo(true)
+    setLectura(null)
+    let status = 0
+    let json: unknown = null
+    try {
+      const a = await prepararAdjunto(f)
+      const res = await fetch('/api/correduria/oportunidad/leer', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName }),
+      })
+      status = res.status
+      json = await res.json().catch(() => null)
+    } catch {
+      json = { error: 'sin conexión' }
+    }
+    setLeyendo(false)
+    const l = interpretarLecturaOportunidad(status, json)
+    if (l.estado === 'error') { setLectura({ ok: false, texto: `No se ha podido leer: ${l.motivo}. Rellénalo a mano.` }); return }
+    const puestos: string[] = []
+    const respetados: string[] = []
+    const poner = (nombre: string, valor: unknown, actual: string, fijar: () => void) => {
+      if (valor === null) return
+      if (actual.trim() === '') { fijar(); puestos.push(nombre) } else respetados.push(nombre)
+    }
+    poner('ramo', l.ramo, ramo, () => setRamo(l.ramo!))
+    poner('vencimiento', l.vence, vence, () => setVence(l.vence!))
+    poner('compañía', l.compania, compania, () => setCompania(l.compania!))
+    poner('prima', l.prima, prima, () => setPrima(primaParaCampo(l.prima!)))
+    poner('nº de póliza', l.numeroPoliza, nota, () => setNota(`Póliza actual nº ${l.numeroPoliza}`))
+    setLectura({
+      ok: true,
+      texto: (puestos.length ? `Leído del documento: ${puestos.join(', ')}. Revísalo antes de abrir.` : 'El documento no añade nada a lo que ya habías escrito.')
+        + (respetados.length ? ` No he tocado lo que ya habías escrito (${respetados.join(', ')}).` : ''),
+    })
+  }
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault()
@@ -299,6 +357,22 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
 
   return (
     <form onSubmit={guardar} style={{ display: 'grid', gap: 10, border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
+      <div style={{ display: 'grid', gap: 6 }}>
+        <input
+          ref={fichero}
+          type="file"
+          accept="application/pdf,image/*"
+          hidden
+          onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void leerDocumento(f) }}
+        />
+        <button type="button" disabled={leyendo} onClick={() => fichero.current?.click()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, justifySelf: 'start' }}>
+          {leyendo ? 'Leyendo el documento…' : '📎 Rellenar desde póliza, recibo o foto'}
+        </button>
+        {lectura && <div role="status" style={{ color: lectura.ok ? 'var(--positive)' : 'var(--negative)' }}>{lectura.texto}</div>}
+        {!lectura && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento y prima. No se guarda el documento.</div>}
+      </div>
+      {/* Bloqueado mientras lee: lo leído solo rellena lo vacío, y eso se decide con lo que había al pulsar. */}
+      <fieldset disabled={leyendo} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'grid', gap: 10 }}>
       <div style={rejilla}>
         <label style={etiqueta}>
           Ramo
@@ -344,9 +418,10 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
         Nota para el primer paso (opcional)
         <textarea value={nota} onChange={e => setNota(e.target.value)} maxLength={2000} rows={2} style={{ ...campo, minHeight: 64, padding: 8 }} />
       </label>
+      </fieldset>
       {error && <div role="alert" style={{ color: 'var(--negative)' }}>{error}</div>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="submit" disabled={ocupado} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>{ocupado ? 'Guardando…' : 'Abrir oportunidad'}</button>
+        <button type="submit" disabled={ocupado || leyendo} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>{ocupado ? 'Guardando…' : 'Abrir oportunidad'}</button>
         <button type="button" onClick={onCancelar} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Cancelar</button>
       </div>
     </form>
