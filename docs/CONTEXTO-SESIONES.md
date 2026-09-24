@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 📱 **iarrhh (`apps/rrhh`) responsive: el panel del responsable NO tenía menú en móvil.** Medido con Playwright
+(banco de datos ficticios, 15 pantallas × 320/375/768): el cambiador de empresa se comía la fila y el `nav` quedaba a 0 px;
+el `<button>` global teñía el cambiador de teal (texto oscuro ilegible). Desbordes arreglados en contrato, nóminas, distribuir
+PDF, portal del empleado (un `<select>` con opción larga arrastraba la tarjeta), login y asistente; a 768 las tablas de
+fichajes/obras/empleados ensanchaban la página (`1fr` → `minmax(0,1fr)`). Táctil ≥44 px en `pointer:coarse`; wordmark
+legible sobre el color de marca del portal. Tablas siguen con scroll horizontal (válido por la regla). PR en esta sesión.
+
 **(24/09/2026)** 📄 **La carta y la anulación firmadas van a la compañía en PDF + el original en texto.** Un `.txt` suelto
 arriesgaba que la compañía no lo archivara: ahora sale un PDF (`apps/asegura/lib/documento-firmado-pdf.ts`, pdf-lib) con la
 carta y debajo el justificante (firmante, método OTP, hora de Madrid, huella SHA-256) y ADEMÁS el `.txt`, que es el que

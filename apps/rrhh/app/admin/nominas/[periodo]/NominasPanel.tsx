@@ -109,15 +109,15 @@ export default function NominasPanel({ periodo, inicial, logoUrl, nombreEmpresa,
           <ul className="grid gap-3 list-none p-0">
             {borradores.map(n => (
               <li key={n.id} className="rounded-card border border-line bg-card p-4">
-                <div className="flex items-center justify-between">
-                  <div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
                     <strong>{n.empleado_nombre}</strong>
                     <span className="ml-3 text-ink-3 text-sm">
                       Devengado: {fmt(n.datos_calculo?.devengos?.total ?? 0)} ·
                       Neto: {fmt(n.datos_calculo?.netoAPagar ?? 0)}
                     </span>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="ml-auto flex gap-2">
                     <button className="text-sm" onClick={() => setExpanded(expanded === n.id ? null : n.id)}>
                       {expanded === n.id ? 'Cerrar' : 'Incidencias'}
                     </button>
@@ -166,7 +166,7 @@ export default function NominasPanel({ periodo, inicial, logoUrl, nombreEmpresa,
           <h2 className="text-lg mb-2">Confirmadas ({confirmadas.length})</h2>
           <ul className="grid gap-2 list-none p-0">
             {confirmadas.map(n => (
-              <li key={n.id} className="rounded-card border border-line bg-card p-3 flex items-center justify-between">
+              <li key={n.id} className="rounded-card border border-line bg-card p-3 flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <strong>{n.empleado_nombre}</strong>
                   <span className="ml-3 text-ink-3 text-sm">
