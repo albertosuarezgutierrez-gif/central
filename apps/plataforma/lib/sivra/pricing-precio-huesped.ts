@@ -43,7 +43,7 @@
 //
 // Módulo PURO (sin BD ni `@/`), testeable con `node --test`.
 
-import { guestDesdeBase, fijoPorNoche, type ParametrosCanal } from './pricing-canal.ts'
+import { guestDesdeBase, fijoPorNoche, markupEnFecha, type ParametrosCanal } from './pricing-canal.ts'
 
 export interface FechaHuesped {
   /** YYYY-MM-DD */
@@ -143,7 +143,11 @@ export const SUELO_BARATO = 0.75
 export function precioHuesped(
   fechas: FechaHuesped[],
   params: ParametrosCanal,
-  opts: { topeCaro?: number; sueloBarato?: number; maxPeores?: number } = {},
+  opts: {
+    topeCaro?: number; sueloBarato?: number; maxPeores?: number
+    /** tramo de última hora: recargo de la pendiente y el día desde el que se cuenta la antelación */
+    ultimaHora?: { recargo: number; hoy: string }
+  } = {},
 ): ResumenHuesped {
   const topeCaro = opts.topeCaro ?? TOPE_CARO
   const sueloBarato = opts.sueloBarato ?? SUELO_BARATO
@@ -153,7 +157,12 @@ export function precioHuesped(
   const veredictos: VeredictoHuesped[] = (fechas ?? [])
     .filter(f => Number(f.baseAplicada) > 0)
     .map(f => {
-      const guest = guestDesdeBase(Number(f.baseAplicada), params)
+      const antelacion = opts.ultimaHora
+        ? Math.round((Date.parse(f.fecha) - Date.parse(opts.ultimaHora.hoy)) / 86_400_000)
+        : null
+      const guest = guestDesdeBase(Number(f.baseAplicada), {
+        ...params, markup: markupEnFecha(params.markup, opts.ultimaHora?.recargo, antelacion),
+      })
       const mercado = f.medMercadoGuest != null && Number(f.medMercadoGuest) > 0
         ? Number(f.medMercadoGuest) : null
       const ratio = mercado != null ? Number((guest / mercado).toFixed(3)) : null

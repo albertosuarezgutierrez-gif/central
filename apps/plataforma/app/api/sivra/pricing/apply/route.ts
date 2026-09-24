@@ -12,7 +12,7 @@ import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
 import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro, esDescensoNuestro } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
-import { baseDesdeGuestConFijo } from "@/lib/sivra/pricing-canal"
+import { baseDesdeGuestConFijo, markupEnFecha } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
 import { sqlCompPlausible } from "@/lib/sivra/pricing-comps-plausibles"
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     fechas_anc: number; corpus_fiable: boolean | null
     demand_factor: number; quality_factor: number
     occupancy_global: number; demand_baseline: number; demand_k: number
-    channel_markup: number; cuota_fija: number; noches_ref: number
+    channel_markup: number; cuota_fija: number; noches_ref: number; canal_recargo_uh: number
     max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
     liga_encarece: boolean | null; sample_liga: number
@@ -213,6 +213,7 @@ export async function POST(req: NextRequest) {
       anc.corpus_fiable,
       COALESCE(s.channel_markup, 1.20)::float8 AS channel_markup,
       COALESCE(s.cuota_fija, 0)::float8 AS cuota_fija,
+      COALESCE(s.canal_recargo_uh, 1)::float8 AS canal_recargo_uh,
       GREATEST(COALESCE(s.noches_ref, 2), 1)::int AS noches_ref,
       s.max_change_pct::float8 AS max_change_pct,
       s.min_price, s.max_price,
@@ -853,6 +854,7 @@ export async function POST(req: NextRequest) {
     const fijoNoche = Number(r.cuota_fija) > 0 ? Number(r.cuota_fija) / nochesRef : 0
     /** mercado (guest/noche) → base de Smoobu, con la cuota fija descontada. Única conversión. */
     const aBase = (guestNoche: number) => baseDesdeGuestConFijo(guestNoche, markup, fijoNoche)
+    const recargoUh = Number(r.canal_recargo_uh) > 0 ? Number(r.canal_recargo_uh) : 1
     const demandFactor = Number(r.demand_factor) > 0 ? Number(r.demand_factor) : 1
     const qualityFactor = Number(r.quality_factor) > 0 ? Number(r.quality_factor) : 1
     // ─── ANCLA GLOBAL: corpus ACUMULADO, no el barrido de esta mañana ────────────────────
@@ -938,6 +940,11 @@ export async function POST(req: NextRequest) {
       const date = fmt(cur); cur.setDate(cur.getDate() + 1)
       dayIndex++
       const daysOut = dayIndex // 0 = hoy; días vista de la fecha (idea #2/#3)
+      // Tramo de última hora del canal (ver `DIAS_ULTIMA_HORA` en pricing-canal.ts): en algunos pisos
+      // el escaparate de las fechas a ≤6 días sube la pendiente, así que el mismo precio de mercado
+      // pide menos base. Fuera del tramo, `markupD === markup` y nada cambia.
+      const markupD = markupEnFecha(markup, recargoUh, daysOut)
+      const aBaseD = (guestNoche: number) => baseDesdeGuestConFijo(guestNoche, markupD, fijoNoche)
       const info = plRates[date]
       if (!info || !info.available) continue
       const old = info.price != null ? Math.round(info.price) : null
@@ -960,11 +967,11 @@ export async function POST(req: NextRequest) {
       demFuentes[dGate.fuente]++
       if (dGate.gateado) demGateadas++
       const dqDate = dGate.factor * qualityFactor
-      const baseGlobalD = aBase(medGuestGlobal * dqDate)
+      const baseGlobalD = aBaseD(medGuestGlobal * dqDate)
       // El bucket del mes solo vale si hay comps SUFICIENTES y de VARIAS fechas: 10 anuncios del mismo
       // dia describen ese dia, no el mes (lección de junio 2027, ver la nota de la consulta).
       const useMonth = !!mb && mb.n >= MIN_BUCKET && mb.fechas >= MIN_FECHAS_MES
-      const baseD = useMonth ? aBase(mb!.med * dqDate) : baseGlobalD
+      const baseD = useMonth ? aBaseD(mb!.med * dqDate) : baseGlobalD
       // 🚨 El suelo y el techo llevan `dqDate` igual que la base (04/09/2026). Antes NO lo llevaban,
       // y el `clamp` de la línea siguiente acotaba un valor ajustado por demanda y calidad entre dos
       // límites SIN ajustar: en cuanto el descuento empujaba la base por debajo del `floor_pctl`, el
@@ -978,8 +985,8 @@ export async function POST(req: NextRequest) {
       //
       // Se ajustan LOS DOS, no solo el suelo: el clamp es un intervalo y bajar una sola punta lo
       // sesga. Con `dqDate > 1` (demanda alta) el techo tiene que subir por la misma razón.
-      const floorD = useMonth ? aBase(mb!.flo * dqDate) : aBase(floorGuestGlobal * dqDate)
-      const ceilD = useMonth ? aBase(mb!.cei * dqDate) : aBase(ceilGuestGlobal * dqDate)
+      const floorD = useMonth ? aBaseD(mb!.flo * dqDate) : aBaseD(floorGuestGlobal * dqDate)
+      const ceilD = useMonth ? aBaseD(mb!.cei * dqDate) : aBaseD(ceilGuestGlobal * dqDate)
       const normalBase = baseD // "precio normal" del día (mes/global), referencia del outlier (idea #2)
       let target = clamp(baseD, floorD, ceilD)
       let eventTarget = 0
@@ -1022,12 +1029,12 @@ export async function POST(req: NextRequest) {
           const baseEv = baseSaltoEvento({
             baseMes: useMonth ? clamp(baseD, floorD, ceilD) : null,
             // Mismos límites ajustados que arriba: `baseGlobalD` ya lleva `dqDate`.
-            baseGlobal: clamp(baseGlobalD, aBase(floorGuestGlobal * dqDate), aBase(ceilGuestGlobal * dqDate)),
+            baseGlobal: clamp(baseGlobalD, aBaseD(floorGuestGlobal * dqDate), aBaseD(ceilGuestGlobal * dqDate)),
           })
           if (baseEv.origen === "global") saltosEventoSinMes++
           const globalEvent = Math.round(baseEv.base * ev)
           const bestEvent = useFecha
-            ? Math.max(globalEvent, aBase(fb!.med * dqDate))
+            ? Math.max(globalEvent, aBaseD(fb!.med * dqDate))
             : globalEvent
           target = Math.max(target, bestEvent)
           eventTarget = bestEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
@@ -1040,7 +1047,7 @@ export async function POST(req: NextRequest) {
         const fbMkt = fechaProp?.get(date)
         if (fbMkt) {
           const premio = premioMercadoFecha(
-            { medFechaGuest: fbMkt.med, comps: fbMkt.n, normalBase, markup, fijoNoche, dqFactor: dqDate },
+            { medFechaGuest: fbMkt.med, comps: fbMkt.n, normalBase, markup: markupD, fijoNoche, dqFactor: dqDate },
             { minComps: MIN_FECHA_BUCKET, ratio: PREMIO_MERCADO_RATIO },
           )
           if (premio > target) { target = premio; eventTarget = Math.max(eventTarget, premio) }
@@ -1064,7 +1071,7 @@ export async function POST(req: NextRequest) {
         const fbA = fechaProp?.get(date)
         if (fbA) {
           anclaF = anclaMercadoFecha({
-            medFechaGuest: fbA.med, comps: fbA.n, fuente: fbA.fuente, markup, fijoNoche, dqFactor: dqDate,
+            medFechaGuest: fbA.med, comps: fbA.n, fuente: fbA.fuente, markup: markupD, fijoNoche, dqFactor: dqDate,
           })
           if (anclaF > target) target = anclaF
         }
@@ -1189,7 +1196,7 @@ export async function POST(req: NextRequest) {
       const tMkt = techoMercado({
         medFechaGuest: fbT?.med ?? null, compsFecha: fbT?.n ?? 0, fuenteFecha: fbT?.fuente ?? null,
         medMesGuest: useMonth ? mb!.med : null, fuenteMes: useMonth ? mb!.fuente : null,
-        factorEvento: evFactor, markup, fijoNoche, dqFactor: dqDate,
+        factorEvento: evFactor, markup: markupD, fijoNoche, dqFactor: dqDate,
       })
       const acote = acotarPorTecho({
         target, techo: tMkt.techo, old, railLo, minPrice: r.min_price,
@@ -1215,7 +1222,7 @@ export async function POST(req: NextRequest) {
         const aq = adrMes.get(r.property_id)?.get(Number(ym.slice(5, 7)))
         const tAdr = aplicarTechoAdr({
           objetivo: target,
-          adrBase: aq ? aBase(aq.adr) : null,
+          adrBase: aq ? aBaseD(aq.adr) : null,
           nochesMuestra: aq?.nights ?? 0,
           factorEvento: evFactor,
           suelo: r.min_price,
@@ -1242,7 +1249,7 @@ export async function POST(req: NextRequest) {
         }
         if (tAdr.motivo === 'aplicado' && tAdr.techo != null) {
           const acA = acotarPorTecho({ target, techo: tAdr.techo, old, railLo, minPrice: r.min_price })
-          if (acA.acotado) adrAcotadas.push({ fecha: date, techo: tAdr.techo, adr: Math.round(aBase(aq!.adr)) })
+          if (acA.acotado) adrAcotadas.push({ fecha: date, techo: tAdr.techo, adr: Math.round(aBaseD(aq!.adr)) })
           target = acA.target
           // En una fecha de EVENTO sin mercado medido, este techo es el único juicio que hay: si el
           // precio vivo lo supera, la guarda «evento a ciegas» no puede retenerlo (si no, el techo

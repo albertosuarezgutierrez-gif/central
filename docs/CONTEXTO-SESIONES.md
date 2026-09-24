@@ -511,6 +511,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) sivra: el MOTOR ya tarifica con dos tramos de canal (antelación / última hora)
+- Recta principal (`channel_markup`, `cuota_fija`) ajustada SOLO con ventanas de antelación ≥7 días; el tramo ≤6 días es un recargo sobre la pendiente, columna nueva `pricing_settings.canal_recargo_uh` (default 1 = sin tramo; migración aplicada en prod, neutra). Lo escribe el calibrador `/api/sivra/pricing/canal`, acotado a ±15 % por pasada.
+- `apply` usa por fecha `markupEnFecha()`; el centinela del huésped también. El plan de escaparate separa tramos (antes todo se medía con check-in «mañana» y la recta principal se iba a quedar sin ventanas).
+- Esperado: Luxury sube ~14 % las fechas con antelación en 1-2 pasadas del calibrador. PENDIENTE: saber quién pone el +10 % de última hora en los Busto (Smoobu o extranet).
+
 ## (24/09/2026) sivra: la «fuga de canal» de Luxury Busto y Busto Reform era FALSA ALARMA
 - El escaparate de Booking de los dos Busto tiene 2 regímenes por antelación (≤6 días: ~1,108×base; ≥7: 0,994×base; R²=1,000, cuota real ~28€/~35€). `pricing_settings` guarda UNA recta mezclada (Luxury 0,987×base+64,1€) y `fuga-canal` restaba esa ordenada como si fuera la limpieza → 0,72/0,78. Contra su lista medida: ~0,82/~0,84 → ok.
 - Arreglo: `canalPorAntelacion()` en `lib/sivra/pricing-fuga-canal.ts` mide la lista por tramo en el escaparate (fallback a la recta del motor, y lo dice en el aviso); descarta ventanas >3× base.
