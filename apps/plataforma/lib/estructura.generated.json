@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-24T14:24:38Z",
+  "generadoEn": "2026-09-24T15:34:19Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 84
+        "evidencias": 85
       },
       "rrhh": {
         "estado": "no",
@@ -2442,7 +2442,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 37
+        "evidencias": 38
       },
       "rrhh": {
         "estado": "no",
@@ -3146,7 +3146,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 8
+        "evidencias": 9
       },
       "rrhh": {
         "presente": false,
@@ -4962,6 +4962,7 @@
       "/api/correduria/cliente/[id]/dni-codigo",
       "/api/correduria/cliente/[id]/dni-revelar",
       "/api/correduria/cliente/contactos",
+      "/api/correduria/cliente/nota",
       "/api/correduria/cliente/portal",
       "/api/correduria/cliente/portal/vista",
       "/api/correduria/cliente/relaciones",
@@ -5239,6 +5240,7 @@
       "/api/subastas/documentos",
       "/api/subastas/fase3-debug",
       "/api/subastas/mapa",
+      "/api/subastas/mercado/idealista",
       "/api/subastas/nota-simple",
       "/api/subastas/oferta",
       "/api/subastas/radar",
@@ -5958,6 +5960,11 @@
       "description": ">"
     },
     {
+      "id": "idealista-radar",
+      "name": "idealista-radar",
+      "description": "Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa en la costa de Huelva con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide \"mira Idealista en la costa\". Sin secretos."
+    },
+    {
       "id": "inversion-inmueble",
       "name": "inversion-inmueble",
       "description": "Analiza si comprar UN inmueble concreto renta como piso turístico (VUT). Mide el mercado real por fecha y aforo con el conector de Booking, resuelve la puerta legal (licencia + Registro Único), llama al motor de underwriting de plataforma y devuelve veredicto con los dos escenarios —entero y segregado—. Úsala cuando Alberto pase un anuncio (\"¿me interesa esto?\", \"hazme el estudio de este piso\", \"¿cuánto rentaría?\"). NO decide compras. Sin secretos - solo nombres de variable."
@@ -6525,8 +6532,8 @@
     "verticales": 13,
     "packages": 42,
     "capacidades": 23,
-    "skills": 42,
-    "apis": 1469,
+    "skills": 43,
+    "apis": 1471,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
