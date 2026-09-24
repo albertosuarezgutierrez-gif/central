@@ -10,6 +10,7 @@ import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/corred
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
 import InformeMediacion from './InformeMediacion'
+import Formacion from './Formacion'
 import BuscadorCartera from './BuscadorCartera'
 import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
@@ -168,6 +169,7 @@ export default function CorreduriaClient() {
   const [nCalidad, setNCalidad] = useState<number | null | undefined>(undefined)
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
   const [nExportRgpd, setNExportRgpd] = useState<number | null | undefined>(undefined)
+  const [nFormacion, setNFormacion] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
   const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
@@ -272,7 +274,7 @@ export default function CorreduriaClient() {
       title: 'Periodos de comisiones sin cuadrar',
     },
     datos: {
-      contador: agregarContadores([nCalidad, nDuplicadas, nSinCanal, nExportRgpd]),
+      contador: agregarContadores([nCalidad, nDuplicadas, nSinCanal, nExportRgpd, nFormacion]),
       tono: 'aviso',
       title: 'Pólizas duplicadas y clientes a los que no se puede avisar',
     },
@@ -609,6 +611,9 @@ export default function CorreduriaClient() {
 
         {/* Pólizas duplicadas en la cartera viva (guardián Codeoscopic↔CIMA). */}
         <Duplicadas onContador={setNDuplicadas} />
+
+        {/* Formación continua IDD: horas por persona y año; el contador sube con los atrasados. */}
+        <Formacion onContador={setNFormacion} />
 
         {/* El reverso de la cola de retención: los clientes de la cartera viva
             sin email ni teléfono. No hay nada que enviarles —el aviso de

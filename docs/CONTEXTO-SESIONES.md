@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🎓 **Formación continua IDD.** Tabla `seguros.formacion` (aplicada), regla `resumenFormacion` en module-seguros
+(15 h/año por persona, «atrasado» desde el 1/10, «incumplido» si el año cerró sin las horas; mínimo por nivel pendiente de la
+asesoría), puerto `/api/operador/formacion` y bloque en Datos de `/correduria` para anotar cursos. #3464 (informe DGSFP) mergeado.
+
 **(24/09/2026)** 📊 **Informe anual de mediación (DGSFP), hoja de trabajo.** Puerto de asegura `/api/operador/informe-mediacion`
 (primas cobradas por compañía y ramo según CIMA, cartera en vigor hoy, SAC) + comisiones del libro en plataforma → bloque plegado
 en Comisiones de `/correduria` con CSV. No es el modelo oficial y lo dice; declara compañías sin recibos (Mapfre no manda
