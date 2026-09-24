@@ -14,6 +14,14 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-24 · trading-analista** · hizo: repesca 23:15 UTC (la de las 20:15 abortó por IBKR caído,
+  ver entrada anterior). PASO 0: sin huella de hoy → pasada completa. NAV 33.370,60€ empujado a
+  /banca+/trading; cartera real (CVX 6, VWCE 188) y libro (0 nuevas, DAYS_7) empujados con latido.
+  Watchlist 24 símbolos, velas 1 a 1 (protocolo anti-barajado respetado) → `/analizar` 23/24 (META
+  vetada por suplantación de precio, contraste desfasado normal tras cierre) → `/puntuar` 88 tesis,
+  1 cerrada por vencimiento de ventana. Top 5 ideas, ninguna operada (concentración/SMA50/posición ya
+  abierta). Telegram enviado (messageId 5231). dudas: —; fallos: META suplantada (no analizada, ya
+  cantada); PRs/commits: — (solo BD/Telegram vía canal-aviso).
 - **2026-09-24 · trading-analista** · hizo: PASO 0 sin huella (saldo refrescado hace ~24h, sin fila en
   `trading_pasadas` de hoy) → siguió con la pasada de las 20:15 UTC. Preflight `/api/internal/alerta`
   200 OK. Conector IBKR caído: `get_account_summary`/`get_account_positions`/`get_account_trades`

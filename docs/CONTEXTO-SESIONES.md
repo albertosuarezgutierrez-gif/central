@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** — Pasada `trading-analista` (repesca 23:15 UTC, la de las 20:15 abortó por IBKR caído).
+Cartera real (NAV 33.370,60€, CVX+VWCE) y libro empujados a plataforma; `/analizar` 23/24 símbolos
+(META vetada por suplantación de precio) + `/puntuar` 88 tesis, 1 cerrada por vencimiento de ventana.
+Ninguna orden real, todo paper/simulado. Detalle en `docs/AGENTES-BITACORA.md`.
+
 **(24/09/2026)** — Revisión de textos de `apps/asegura-web` (grupoasegura.es): ~45 correcciones de gramática, concordancia y frases sin sentido en artículos, ramos, cambiar-de-correduria, siniestro, quiénes somos y aviso legal (p. ej. el plazo del parte alineado con el art. 16 LCS: 7 días salvo que la póliza dé más). Sin tocar datos ni afirmaciones comerciales. Después, a petición de Alberto: el artículo ya no dice que avisar al corredor cuente como avisar a la compañía, y el aviso legal dice que el área privada está en el portal de clientes (VERSION_TEXTOS_WEB → w3). Quedan las dudas de fondo que se listan en el PR #3542 (botones que prometen subir el parte a un área privada que /siniestro no tiene, el aviso legal dice «no hay área privada», preaviso «un mes» frente a 30 días, V-16, comisión igual en todas las compañías).
 
 **(24/09/2026)** — `/banca` adelgazada. Salen de «Dinero» la banda «Pide acción hoy» y el P&L de pisos del mes, que ya enseña `/inicio`; así desaparece también la llamada de 8 s al puerto de la correduría. El resumen del periodo se carga en streaming (`BloquesDiferidos.tsx`). La tesorería y el benchmark de pisos no se calculan hasta que se abre el plegable de IA (`AnalisisPerezoso` → `GET /api/banca/analisis`); antes, `getTesoreria` recorría todo el histórico en cada visita. Hay `loading.tsx` y un guardián nuevo, `test/regression-banca-ligera.test.ts`.
