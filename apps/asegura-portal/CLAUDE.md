@@ -332,6 +332,10 @@ marcó —con razón, porque una consulta sin `identidadId` a la vista es indist
 La lectura vive en `lib/hojas.ts`, que además expone `crearHojaDeSesion`/`anularHojaDeSesion` (misma
 forma que `lib/supresion.ts`) para que las rutas de API no lleven fontanería de sesión.
 
+🔒 **Solo pólizas PROPIAS (24/09/2026).** Las que otro te autorizó a ver no entran ni en el selector
+ni en la página: te lo consintió a ti, no a quien escanee el papel. Cepo en
+`test/regression-portal-endurecimiento.test.ts`.
+
 📄 Lo que la hoja enseña: compañía, ramo, qué está asegurado, nº de póliza, vencimiento y a quién
 llamar **con la fecha de verificación impresa**. Nada de prima, recibos, siniestros, DNI ni dirección
 del riesgo — con cepo. Las aportadas salen sin teléfono y diciendo que no las lleva la correduría:
@@ -1120,6 +1124,16 @@ Cepos: `siniestro-historial.test.ts` (17) y tres en `test/regression-portal-visi
 la recorte—, **vistos morder** con las tres mutaciones (sacarla del historial, recortarla a 80
 caracteres y colar `reservaImporte` en el schema).
 
+## 🧭 Cómo va el siniestro según la COMPAÑÍA (24/09/2026)
+
+El CRM guarda desde el 24/09/2026 lo que la compañía manda por EIAC (`situaciones_cima`, `acciones_cima`,
+`pagos_cima`, `total_pagos_cima`, `indemnizacion_cima`; repo `asegura`, migración 0099). La ficha de cada
+siniestro lo pinta como «Lo que nos cuenta tu compañía»: pasos con fecha y lo pagado. Traduce
+`tramitacionSiniestro()` (`module-seguros-portal/src/siniestro-tramitacion.ts`), que **nunca** deja pasar la
+descripción libre ni las figuras (nombres de perito/tramitador). `reserva_cima` y `posicion_cima` no tienen
+GRANT ni se declaran. «Lleva pagado», no «te ha pagado»: el total incluye pagos al perito o al taller. No todas las
+compañías lo mandan (visto en Occident y Allianz), y solo en lo ingerido o reprocesado desde ese día. Cepo en `test/regression-portal-visibilidad.test.ts`.
+
 ## 🚑 El parte de siniestro (03/09/2026) — y la frase que NO se puede decir
 
 El cliente da parte desde `/boveda` (`ParteSiniestro.tsx` → `POST /api/siniestros` →
@@ -1159,9 +1173,13 @@ distintos del mismo siniestro sin que ninguna pantalla falle. Y `fueraDePlazo` *
 cobertura**: el art. 16 solo permite reclamar los daños del retraso, y perder el derecho exige dolo o
 culpa grave. Un portal que asuste a quien avisa tarde consigue que no avise nunca.
 
-**Se puede dar parte de una póliza AUTORIZADA** (de las que alguien te deja ver). Ver no es gestionar,
-pero bloquearlo sería peor: quien conducía el coche de su padre es justo el que sabe qué pasó. La
-salida no es prohibirlo sino que Alberto lo vea — el puerto del corredor marca esos partes.
+**Dar parte de una póliza AUTORIZADA exige el alcance `partes` (decisión de Alberto, 24/09/2026).**
+Hasta ese día bastaba con verla, y el alcance `partes` no protegía nada. Ahora decide
+`puedeDarParte()` (módulo puro: `partes` Y otorgante jurídico, porque de una física no se delega
+actuar) póliza a póliza, y `polizasParaParte()` (`lib/cartera-lectura.ts`) es la ÚNICA fuente para la
+ruta, la bóveda y el botón de la ficha. Las autorizadas sin ese alcance siguen dando sus TELÉFONOS
+(`soloTelefonos`): llamar a la grúa del coche de tu padre no es actuar en su nombre. Cepo en
+`test/regression-portal-autorizacion.test.ts`.
 
 Lo protege **`test/regression-portal-parte-siniestro.test.ts`** (raíz, `node --test`): la forma de
 `comunicadoACompania`, el atajo `\.estado !== 'enviado'`, las frases afirmativas prohibidas, el
@@ -1465,7 +1483,7 @@ además `PATCH /api/polizas/[id]` (corregir una póliza), `POST /api/siniestros`
 | Ruta | Entrada | Salida | Notas |
 |---|---|---|---|
 | `POST /api/acceso/solicitar` | `{ tipo: 'whatsapp'\|'email', destino }` (zod) | `{ ok }` · `400 datos_invalidos` · **`400 destino_invalido`** · **`429 demasiadas_peticiones`** (+ `retry-after`) · **`503 canal_no_disponible`** · **`502 envio_fallido`** | Guarda el código con `hashCanal(destino)`, nunca el email en claro. **Es pública y sin sesión: lleva dos topes** — ver «El amplificador de correo» |
-| `POST /api/acceso/verificar` | `{ tipo, destino, codigo }` (6 chars) | `{ ok, vinculo }` + cookie · `400 datos_invalidos\|sin_codigo` · `401 incorrecto\|caducado\|ya_usado\|bloqueado` | Coge el código **más reciente** de ese canal; el intento se cuenta siempre que sea `incorrecto`; crea la identidad si no la había; marca `usado_en` y `ultimo_acceso_en` en una transacción; **Fase 4:** llama a `vincularIdentidad()` con el email en claro y devuelve `vinculo` (`ok`/`ya_vinculada`/`sin_ficha`/`ambiguo`/`sin_clave`/`error`) sin bloquear |
+| `POST /api/acceso/verificar` | `{ tipo, destino, codigo }` (6 chars) | `{ ok, vinculo }` + cookie · `400 datos_invalidos\|sin_codigo` · `401 incorrecto\|caducado\|ya_usado\|bloqueado` | Tope **30/15 min por IP** (`429 demasiados_intentos`); coge el código **más reciente** de ese canal; el intento se **reserva con un `updateMany` condicionado ANTES de comparar** (24/09/2026: leer-comparar-sumar dejaba que una ráfaga en paralelo se saltara los 5 intentos; cepo `test/regression-portal-endurecimiento.test.ts`); crea la identidad si no la había; marca `usado_en` y `ultimo_acceso_en` en una transacción; **Fase 4:** llama a `vincularIdentidad()` con el email en claro y devuelve `vinculo` (`ok`/`ya_vinculada`/`sin_ficha`/`ambiguo`/`sin_clave`/`error`) sin bloquear |
 | `POST /api/polizas` | `multipart`, campo `documento` (PDF o imagen) | `{ id, datos, fuente }` · `401 sin_sesion` · `400 sin_fichero` · `413 fichero_grande` | `runtime = 'nodejs'`; tope **10 MB**; la identidad sale de `requireIdentidad()`, nunca del cuerpo |
 | `POST /api/catastro` | `{ direccion, municipio, provincia }` **o** `{ referencia }` (zod, con topes) | `200 ok` · **`300 elegir`** (varios inmuebles) · `401 sin_sesion` · `400 datos_invalidos` · `404 no_encontrado` · `409 via_ambigua` · `422 direccion_ilegible\|referencia_invalida` · **`502 catastro_no_responde`** | **Exige sesión**: sin ella sería un proxy anónimo contra el Catastro con nuestra IP. Solo CONSULTA (no escribe en la BD) y **no registra la dirección en ningún log**. Mira el `estado`, no el número |
 
@@ -2320,10 +2338,9 @@ Lo que **ya funcionaba** y conviene no volver a construir: el enlace de la ficha
 `?vista=siniestro&poliza=cartera:<id>` y `ParteSiniestro` ya nacía ABIERTO con esa póliza puesta (y
 su matrícula autorrellenada). Lo que fallaba era todo lo que se veía ANTES de llegar ahí.
 
-- **El ORDEN de la pantalla depende de con qué intención se llega.** Con `?poliza=` válida, el canal
-  de la compañía y el formulario van PRIMERO y el historial de siniestros detrás; sin él —quien entra
-  por la pestaña— se conserva el orden de siempre, porque mirar es mayoría. Antes, quien acababa de
-  tener un golpe aterrizaba por delante del historial de TODA su cartera.
+- **El canal de la compañía y el parte van SIEMPRE primero** y el historial detrás (24/09/2026; hasta
+  ese día solo con `?poliza=`, y quien entraba por la pestaña veía el historial antes que el teléfono).
+  El formulario nace plegado, así que el historial sigue a un paso de scroll.
 - **La compañía de esa póliza se pinta la PRIMERA y marcada** («La compañía de la póliza que traes
   elegida», con filete de acento — no del rojo de alarma: aquí no ha fallado nada). Lo decide
   `canalesConCompaniaPrimero()` de `canal-compania.ts`, puro y con test.

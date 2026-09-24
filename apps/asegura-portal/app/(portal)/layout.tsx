@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
 
 import { NavPortal } from './NavPortal'
 import { BandaCorredor } from './BandaCorredor'
@@ -25,7 +26,7 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="portal-shell">
       <BandaCorredor />
       <Suspense fallback={<div className="portal-nav-hueco" aria-hidden />}>
-        <NavPortal />
+        <NavPortal llamar={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }} />
       </Suspense>
       <main className="portal-contenido">
         {children}

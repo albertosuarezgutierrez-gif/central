@@ -118,3 +118,18 @@ test('el singular concuerda: «hace 1 día», no «hace 1 días»', () => {
   const msg = mensajeRenovaciones([e])
   assert.match(String(msg), /hace 1 día(?!s)/)
 })
+
+test('una póliza ya vencida va a «Ya vencida sin renovar», nunca a «Vence esta semana»', () => {
+  const [e] = emisionesDeHoy([con({ dias: -107, fechaVencimiento: '2026-06-05' })], vacio)
+  assert.equal(e.hito, 'vencida')
+  const msg = String(mensajeRenovaciones([e]))
+  assert.match(msg, /Ya vencida sin renovar/)
+  assert.doesNotMatch(msg, /Vence esta semana/)
+  // Una futura nunca cae en «vencida».
+  assert.notEqual(emisionesDeHoy([con({ dias: 0 })], vacio)[0].hito, 'vencida')
+})
+
+test('una vencida de la que ya se avisó (con cualquier hito) no se repite', () => {
+  const p = con({ dias: -107, fechaVencimiento: '2026-06-05' })
+  assert.deepEqual(emisionesDeHoy([p], new Set([claveAviso(p, 'vence_7')])), [])
+})

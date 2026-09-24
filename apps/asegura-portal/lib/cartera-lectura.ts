@@ -40,6 +40,7 @@ import {
   siniestroAbierto,
   autorizacionVigente,
   camposDeAlcances,
+  puedeDarParte,
   camposVisibles,
   describirBienConGemela,
   describirBien,
@@ -50,9 +51,11 @@ import {
   type Alcance,
   type BienAsegurado,
   type TipoOtorgante,
+  type TramitacionSiniestro,
   lugarSiniestro,
   tipoSiniestroLegible,
   descripcionSiniestro,
+  tramitacionSiniestro,
   ordenarRecibos,
   estadoRecibos,
   resumirRecibos,
@@ -138,6 +141,13 @@ export type SiniestroPortal = {
    * nunca se pinta el código crudo.
    */
   tipoLegible: string | null
+  /**
+   * Cómo va, según la COMPAÑÍA (EIAC): pasos con fecha y lo pagado. `null` = la
+   * compañía no lo manda (no todas lo hacen; visto en Occident y Allianz) o el
+   * fichero es anterior al 24/09/2026 y no se ha reprocesado. Sin reserva ni culpa, y sin nombres: ver
+   * `siniestro-tramitacion.ts` de `@central/module-seguros-portal`.
+   */
+  tramitacion: TramitacionSiniestro | null
 }
 
 export type PolizaPortal = {
@@ -244,7 +254,17 @@ export type TitularPortal = {
    */
   nivel: Nivel
   /** Presente SOLO en `autorizadas`: de qué consentimiento viene y hasta cuándo. */
-  autorizacion?: { ids: string[]; alcances: Alcance[]; caducaEn: Date }
+  autorizacion?: {
+    ids: string[]
+    alcances: Alcance[]
+    caducaEn: Date
+    /**
+     * Pólizas sobre las que esta identidad puede DAR UN PARTE (`puedeDarParte`).
+     * Por póliza y no por ficha: una concesión suelta con `partes` abre esa póliza,
+     * no las demás de quien la dio. Ver no basta para declarar.
+     */
+    partes: string[]
+  }
   polizas: PolizaPortal[]
 }
 
@@ -677,6 +697,14 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               // desde el 24/09/2026 porque ya se traduce con la tabla oficial de
               // TIREA (`tipoSiniestroLegible`); el código crudo no sale de aquí.
               tipo: true,
+              // La tramitación que manda la compañía (GRANT por columnas del
+              // 24/09/2026). `reserva_cima` y `posicion_cima` NO: ni tienen
+              // grant ni son del cliente.
+              situacionesCima: true,
+              accionesCima: true,
+              pagosCima: true,
+              indemnizacionCima: true,
+              totalPagosCima: true,
               // No hay hay columna con la fecha de CIERRE: `updated_at` es la
               // última vez que se tocó la fila, no el día que se cerró, y
               // pintarlo como tal sería inventarse una fecha.
@@ -723,6 +751,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             descripcion: descripcionSiniestro(x.comentario),
             lugar: lugarSiniestro({ ciudad: x.lugarCiudad, provincia: x.lugarProvincia }),
             tipoLegible: tipoSiniestroLegible(x.tipo),
+            tramitacion: tramitacionSiniestro({
+              situaciones: x.situacionesCima,
+              acciones: x.accionesCima,
+              pagos: x.pagosCima,
+              totalPagos: x.totalPagosCima,
+              indemnizacion: x.indemnizacionCima,
+            }),
           })),
         )
       : null
@@ -819,7 +854,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     clienteId: string,
     nivel: Nivel,
     ve: CamposVisibles | ((polizaId: string) => CamposVisibles | null),
-    autorizacion?: { ids: string[]; alcances: Alcance[]; caducaEn: Date },
+    autorizacion?: TitularPortal['autorizacion'],
   ): TitularPortal | null => {
     // Una ficha fusionada o que ya no existe no se pinta: sin nombre no hay titular.
     const nombre = nombrePor.get(clienteId)
@@ -881,6 +916,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     // alguien miró algo.
     const usadas = new Set<string>()
     const alcancesServidos = new Set<Alcance>()
+    const conPartes = new Set<string>()
 
     const veDe = (polizaId: string): CamposVisibles | null => {
       // La suelta solo cuenta si la concedió ESTA ficha: dos otorgantes pueden
@@ -895,6 +931,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       for (const id of deLaFicha?.ids ?? []) usadas.add(id)
       for (const id of suelta?.ids ?? []) usadas.add(id)
       for (const a of alcances) alcancesServidos.add(a)
+      if (puedeDarParte(alcances, tipo)) conPartes.add(polizaId)
       return campos
     }
 
@@ -919,7 +956,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     autorizadas.push({
       ...t,
       nivel: etiquetaNivelAlcances(alcancesFinales),
-      autorizacion: { ids: idsFinales, alcances: alcancesFinales, caducaEn: caduca },
+      autorizacion: { ids: idsFinales, alcances: alcancesFinales, caducaEn: caduca, partes: [...conPartes] },
     })
     autorizacionesUsadas.push(...idsFinales)
   }
@@ -968,4 +1005,17 @@ function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
     estado: estadoRecibos(crudos),
     historial,
   }
+}
+
+/**
+ * Las pólizas sobre las que esta cartera puede DAR UN PARTE: todas las propias y,
+ * de las autorizadas, solo las que traen el alcance `partes` (`puedeDarParte`).
+ * Una sola fuente para la ruta que lo crea y la pantalla que lo ofrece: si
+ * divergen, se ofrece una póliza que luego se rechaza con 403.
+ */
+export function polizasParaParte(c: Pick<CarteraPortal, 'propias' | 'autorizadas'>): Set<string> {
+  return new Set([
+    ...c.propias.flatMap((t) => t.polizas.map((p) => p.id)),
+    ...c.autorizadas.flatMap((t) => t.autorizacion?.partes ?? []),
+  ])
 }

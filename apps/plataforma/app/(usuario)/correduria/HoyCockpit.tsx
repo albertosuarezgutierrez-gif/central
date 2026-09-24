@@ -8,7 +8,7 @@ import { btnStyle } from '@/components/ui'
 import { interpretarActividad } from '@/lib/actividad-asegura'
 import { colaLlamadas, TIPOS_TAREA_UI, type LeadsVencimientos, type TareasDeHoy } from '@/lib/seguimiento-asegura'
 import type { VistaIngesta } from '@/lib/correduria/ingesta-pantalla'
-import { agregarContadores, type Contador, type Seccion } from './secciones'
+import { agregarContadores, type Contador, type Destino } from './secciones'
 import { cuandoTarea, lineaEstadoIngesta, sinInvitar } from './hoy-cockpit'
 import PerdidasCartera from './PerdidasCartera'
 import Aprobaciones from './Aprobaciones'
@@ -56,7 +56,7 @@ export default function HoyCockpit({
   nIncidencias: Contador | null | undefined
   nRecaptacion: N
   nBlog: N
-  onIr: (s: Seccion) => void
+  onIr: (s: Destino) => void
   onContadorTareas: (n: number | null) => void
 }) {
   const [tareas, setTareas] = useState<TareasDeHoy | null>(null)

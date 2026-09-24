@@ -2099,6 +2099,10 @@ mirar mientras tanto (la ficha oficial, el portal del banco…).
 `/banca` no estaba vacío, estaba **saturado**: 512 líneas de saldo, cuentas, bróker, gráficas, P&L, fiscal,
 antifraude, fugas, benchmark y el libro entero, con lo accionable enterrado bajo cuatro secciones de consulta.
 
+- **(24/09/2026) `/banca` adelgazada:** la banda «Pide acción hoy» y el P&L de pisos del mes salen de «Dinero» (ya los enseña
+  `/inicio`; el componente `HoyAccionable` sigue vivo porque lo monta `inicio/BandaInicio.tsx`). El resumen del periodo va en
+  `banca/BloquesDiferidos.tsx` con su `<Suspense>`; la tesorería y el benchmark de pisos ni se calculan hasta abrir el plegable
+  de IA (`AnalisisPerezoso.tsx` → `GET /api/banca/analisis`), y hay `loading.tsx`: la página ya no espera a `getTesoreria`. Lo vigila `test/regression-banca-ligera.test.ts`.
 - **Banda «Pide acción hoy»** (`banca/HoyAccionable.tsx`) encima de todo, con la lógica PURA en
   `lib/inicio-acciones.ts` (14 tests). Orden fijo: **banco viejo PRIMERO** (`BANCO_STALE_H = 48`; si el feed
   está parado, el resto de números de la pantalla están envenenados y decir cualquier otra cosa antes es

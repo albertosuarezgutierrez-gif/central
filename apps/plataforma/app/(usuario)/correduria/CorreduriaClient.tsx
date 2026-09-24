@@ -4,8 +4,8 @@ import ContactosMovil from './ContactosMovil'
 import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
-import { CalendarClock, Landmark, FolderOpen } from 'lucide-react'
-import { Pagina, Badge } from '@/components/ui'
+import { CalendarClock, Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity } from 'lucide-react'
+import { Pagina, Badge, btnStyle } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
@@ -46,7 +46,8 @@ import {
 } from '@/lib/correduria/ingesta-pantalla'
 import { MOTIVOS, type MotivoError } from './estado-puerto'
 import {
-  agregarContadores, contarAccionables, seccionDeParametro, type Seccion,
+  agregarContadores, combinarContadores, contarAccionables, destinoDeParametro,
+  type BloqueMas, type Destino, type Seccion,
 } from './secciones'
 
 /**
@@ -196,15 +197,41 @@ export default function CorreduriaClient() {
   // `history.replaceState`: un enlace sigue llevando donde debe, pero cambiar
   // de pestaña NO navega —eso remontaría la pantalla y volvería a pedirle todo
   // al puerto de asegura en cada clic.
+  // Un destino que es un bloque de «Más» (`?s=ingesta`, el botón «Ver» de la
+  // avería de CIMA…) abre esa pestaña y baja al bloque. El scroll espera a que
+  // el panel se haya montado y pintado: antes no existe el ancla.
+  const [bajarA, setBajarA] = useState<BloqueMas | null>(null)
+  // La actividad NO se monta al abrir «Más»: al montarse marca la visita como
+  // vista (`correduria:actividad:visto`), y abrir «Más» para mirar la ingesta
+  // se comería los puntos de «nuevo desde tu última visita». Se monta al ir a
+  // ella (`?s=actividad`, el «Todo» de «Hoy») o al pulsar su botón.
+  const [verActividad, setVerActividad] = useState(false)
+  useEffect(() => {
+    if (!bajarA) return
+    if (bajarA === 'actividad') setVerActividad(true)
+    // Varios intentos: los bloques de encima cargan sus datos DESPUÉS de abrir
+    // la pestaña y empujan el ancla hacia abajo. Un solo scroll a los 60 ms
+    // dejaría a la vista el bloque de arriba, no el pedido.
+    const ir = () => document.getElementById(`mas-${bajarA}`)?.scrollIntoView({ block: 'start' })
+    const ts = [60, 600, 1500].map(ms => window.setTimeout(ir, ms))
+    const fin = window.setTimeout(() => setBajarA(null), 1600)
+    return () => { ts.forEach(window.clearTimeout); window.clearTimeout(fin) }
+  }, [bajarA, seccion])
+
   useEffect(() => {
     const s = new URLSearchParams(window.location.search).get('s')
-    if (s) setSeccion(seccionDeParametro(s))
+    if (!s) return
+    const d = destinoDeParametro(s)
+    setSeccion(d.seccion)
+    setBajarA(d.bloque)
   }, [])
 
-  const cambiarSeccion = useCallback((s: Seccion) => {
-    setSeccion(s)
+  const cambiarSeccion = useCallback((destino: Destino) => {
+    const d = destinoDeParametro(destino)
+    setSeccion(d.seccion)
+    setBajarA(d.bloque)
     const url = new URL(window.location.href)
-    url.searchParams.set('s', s)
+    url.searchParams.set('s', destino)
     window.history.replaceState(null, '', url)
   }, [])
 
@@ -253,6 +280,12 @@ export default function CorreduriaClient() {
       : null
 
   const cIngesta = contadorIngesta(ingesta)
+  // Datos solo cuenta cuando se ha abierto «Más» (se monta perezoso): antes, sus
+  // colas no han contestado y no pueden sumar ni restar.
+  const cDatos = montada('mas')
+    ? agregarContadores([nCalidad, nDuplicadas, nSinCanal, nExportRgpd, nFormacion])
+    : undefined
+  const cMas = combinarContadores([cIngesta, cDatos, nBlog === undefined ? undefined : agregarContadores([nBlog])])
 
   // Lo que la franja de «Hoy» llama incidencias: lo que ya está roto o con un
   // plazo corriendo. `undefined` mientras cargan; `null` si ninguna se pudo leer.
@@ -286,39 +319,22 @@ export default function CorreduriaClient() {
       tono: 'aviso',
       title: 'Periodos de comisiones sin cuadrar',
     },
-    datos: {
-      contador: agregarContadores([nCalidad, nDuplicadas, nSinCanal, nExportRgpd, nFormacion]),
-      tono: 'aviso',
-      title: 'Pólizas duplicadas y clientes a los que no se puede avisar',
-    },
+    // «Más» agrupa cuatro bloques (ver `BLOQUES_MAS`) y su badge SUMA los que
+    // son trabajo: la calidad del dato, las señales de pérdida de la ingesta de
+    // CIMA y los artículos del blog que esperan tu OK. Actividad no cuenta: no
+    // es una cola. Los borradores de LinkedIn tampoco (ver `secciones.ts`).
     // 🚨 La ingesta NO suma en «Hoy» aunque su tarjeta se pinte allí: contar lo
-    // mismo en dos badges haría que atender la avería no bajara el número de
-    // ninguno de los dos, que es como se deja de creer un contador. Su cuenta
-    // vive solo aquí, y `{n, parcial}` distingue el total exacto del SUELO
-    // («2+») cuando alguna de las cuatro puertas de la ingesta no se ha podido
-    // mirar. `null` = «!»: la lectura entera falló, que nunca es un 0.
-    // ⚠️ Mientras la lectura está en vuelo, `contadorIngesta` devuelve
-    // `undefined` y la clave NO se pone: un badge no puede gritar «!» durante
-    // el segundo que tarda en contestar, o se aprende a ignorarlo.
-    ...(cIngesta === undefined ? {} : {
-      ingesta: {
-        contador: cIngesta,
-        // Rojo solo cuando hay pérdida MEDIDA. Un «0+» (no se ha podido mirar
-        // alguna de las cuatro puertas) es ámbar: es un hueco de conocimiento,
-        // no una alarma, y pintarlo igual que una pérdida enseña a ignorar el
-        // color.
-        tono: (cIngesta !== null && cIngesta.n > 0 ? 'malo' : 'aviso') as 'malo' | 'aviso',
-        title: 'Señales de que se están perdiendo datos de CIMA: ficheros atascados, pólizas huérfanas, envíos rechazados y compañías que han dejado de mandar',
+    // mismo en dos badges haría que atender la avería no bajara ninguno.
+    // Mientras nada ha contestado, `combinarContadores` da `undefined` y la
+    // clave no se pone: un badge no puede gritar «!» el segundo que tarda.
+    ...(cMas === undefined ? {} : {
+      mas: {
+        contador: cMas,
+        // Rojo solo con pérdida MEDIDA en la ingesta; lo demás es ámbar.
+        tono: (cIngesta != null && cIngesta.n > 0 ? 'malo' : 'aviso') as 'malo' | 'aviso',
+        title: 'Señales de pérdida de datos de CIMA, artículos del blog pendientes de tu OK, pólizas duplicadas y clientes a los que no se puede avisar',
       },
     }),
-    // Solo el blog: los borradores de LinkedIn no se pueden contar como
-    // pendientes (ver `secciones.ts`). Es lo que impide que un artículo escrito
-    // se quede meses esperando en la pestaña que menos se abre.
-    redes: {
-      contador: agregarContadores([nBlog]),
-      tono: 'aviso',
-      title: 'Artículos del blog escritos y pendientes de tu OK',
-    },
   }
 
   // Estilo común de toda celda clicable con importe.
@@ -428,7 +444,7 @@ export default function CorreduriaClient() {
 
         {/* La pantalla de VENDER: los dos carriles (clientes y leads) con su
             seguimiento. Aquí solo el acceso: la lista vive en su página. */}
-        <Link href="/correduria/vencimientos" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '14px 16px', minHeight: 44, borderRadius: 14, background: 'var(--primary-light)', color: 'var(--primary)', textDecoration: 'none' }}>
+        <Link href="/correduria/vencimientos" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '14px 16px', minHeight: 44, borderRadius: 'var(--radius)', background: 'var(--primary-light)', color: 'var(--primary)', textDecoration: 'none' }}>
           <span style={{ display: 'grid', gap: 2 }}>
             <span style={{ fontSize: 15, fontWeight: 700 }}>Vencimientos · clientes y leads</span>
             <span style={{ fontSize: 13 }}>Próximos 90 días, por probabilidad de venta × prima, con su seguimiento</span>
@@ -442,21 +458,6 @@ export default function CorreduriaClient() {
             en otra pestaña porque caduca igual — pasado el mes de preaviso el
             cliente ya no puede oponerse a la prórroga. */}
         <LeadsPortal onContador={setNLeads} />
-      </div>
-
-      {/* ══ ACTIVIDAD ════════════════════════════════════════════════════════
-          Qué hacen los clientes, incluida su entrada en la intranet. Es la única
-          sección que mira al PORTAL en conjunto: el resto de la pantalla mira la
-          cartera, y lo que hace un cliente por su cuenta solo se veía entrando
-          en su ficha de una en una.
-
-          🚨 No reporta contador a la pestaña, a propósito: esto NO es una cola
-          de trabajo. Lo que sí lo es —partes, supresiones, leads— ya tiene su
-          badge en «Hoy», y contarlo dos veces haría que atender un parte no
-          bajara el número de aquí, que es como se deja de creer un badge. Lo
-          nuevo desde la última visita se marca dentro, con un punto. */}
-      <div role="tabpanel" aria-label="Actividad" className="corr-panel" style={panel('actividad')}>
-        {montada('actividad') && <Actividad />}
       </div>
 
       {/* ══ CLIENTES ═════════════════════════════════════════════════════════
@@ -621,11 +622,24 @@ export default function CorreduriaClient() {
         </>)}
       </div>
 
-      {/* ══ DATOS ════════════════════════════════════════════════════════════
-          Calidad del dato: no caduca hoy, pero decide si mañana se puede avisar
-          a alguien. Fuera de «Hoy» para que no compita con lo que sí urge. */}
-      <div role="tabpanel" aria-label="Datos" className="corr-panel" style={panel('datos')}>
-        {montada('datos') && (<>
+      {/* ══ MÁS ═══════════════════════════════════════════════════════════════
+          Lo que no se trabaja a diario, en cuatro bloques con ancla (ver
+          `BLOQUES_MAS`): la ingesta de CIMA (lo que urge ya sube a «Hoy» como
+          tarjeta), lo que se va a publicar, la calidad del dato y lo que hacen
+          los clientes en el portal. `?s=ingesta` y compañía bajan a su bloque. */}
+      <div role="tabpanel" aria-label="Más" className="corr-panel" style={panel('mas')}>
+        {/* El panel de la ingesta y el blog se montan siempre: la ingesta ya
+            está leída arriba (alimenta la tarjeta de «Hoy») y el blog reporta
+            el contador de «esperan tu OK». El resto espera a que se abra. */}
+        <SubMas id="ingesta" Icono={Antenna} titulo="Ingesta de CIMA" primero />
+        <PanelIngesta datos={ingesta} />
+
+        <SubMas id="redes" Icono={Megaphone} titulo="Redes y blog" />
+        <Blog onContador={setNBlog} />
+        {montada('mas') && <Redes />}
+
+        {montada('mas') && (<>
+        <SubMas id="datos" Icono={TriangleAlert} titulo="Calidad del dato" />
         {/* Incidencias de calidad del dato (sin prima, DNI duplicado, vencida sin
             renovar, etc.): hallazgos medidos que el scanner detecta en la cartera
             en vigor. */}
@@ -661,26 +675,18 @@ export default function CorreduriaClient() {
         {/* Qué compañías reconocidas nunca han avisado de un recibo por correo
             (20/09/2026). Sin contador: es radar, no trabajo pendiente. */}
         <RadarRecibos />
+
+        {/* Qué hacen los clientes en el portal. Sin contador a propósito: no es
+            una cola de trabajo (partes, supresiones y leads ya cuentan en «Hoy»). */}
+        <SubMas id="actividad" Icono={Activity} titulo="Actividad de los clientes" />
+        {verActividad
+          ? <Actividad />
+          : (
+            <button type="button" onClick={() => setVerActividad(true)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, marginTop: 8 }}>
+              Ver lo que han hecho los clientes en el portal
+            </button>
+          )}
         </>)}
-      </div>
-
-      {/* ══ INGESTA ══════════════════════════════════════════════════════════
-          El porqué de la tarjeta de «Hoy»: qué ficheros están atascados y de
-          qué clave de mediador, qué pólizas hay que pedirle a cada compañía,
-          qué nos mandan y rechazamos, y quién ha dejado de mandar. Está aquí
-          porque el panel equivalente vive en el CRM de origen, que es una app
-          en la que Alberto no entra. */}
-      <div role="tabpanel" aria-label="Ingesta" className="corr-panel" style={panel('ingesta')}>
-        <PanelIngesta datos={ingesta} />
-      </div>
-
-      {/* ══ REDES ════════════════════════════════════════════════════════════
-          Lo único de esta pantalla que mira hacia FUERA. Sin contador a
-          propósito: mediría «borradores sin publicar», y eso solo lo sabe
-          LinkedIn (ver `secciones.ts`). */}
-      <div role="tabpanel" aria-label="Redes" className="corr-panel" style={panel('redes')}>
-        <Blog onContador={setNBlog} />
-        {montada('redes') && <Redes />}
       </div>
 
       {modal && (
@@ -692,6 +698,31 @@ export default function CorreduriaClient() {
         />
       )}
     </Pagina>
+  )
+}
+
+// ── Rótulo de un bloque de «Más» ─────────────────────────────────────────────
+// Lleva el ancla (`mas-<bloque>`) a la que bajan `?s=ingesta` y los botones de
+// «Hoy». El `scrollMarginTop` deja sitio a la barra de secciones, que es
+// pegajosa: sin él el rótulo quedaría tapado justo debajo de ella.
+function SubMas({ id, titulo, Icono, primero = false }: {
+  id: BloqueMas
+  titulo: string
+  Icono: typeof Antenna
+  primero?: boolean
+}) {
+  return (
+    <h2
+      id={`mas-${id}`}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 8, scrollMarginTop: 64,
+        fontSize: 17, fontWeight: 700, color: 'var(--text)',
+        margin: primero ? '0 0 4px' : '36px 0 4px',
+      }}
+    >
+      <Icono size={18} strokeWidth={1.75} aria-hidden style={{ color: 'var(--primary)' }} />
+      {titulo}
+    </h2>
   )
 }
 

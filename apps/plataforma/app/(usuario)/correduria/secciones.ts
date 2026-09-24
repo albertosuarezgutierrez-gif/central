@@ -16,6 +16,8 @@
  *               vencimiento o hueco de venta cruzada, y sacar la lista.
  *   Cartera   → la foto: cuántos hay y qué vence (los 90 días enteros).
  *   Comisiones→ el dinero: devengado, liquidado y lo que entró al banco.
+ *   (Desde el 24/09/2026 Datos, Ingesta, Redes y Actividad viven juntas en
+ *   «Más»: ver `BLOQUES_MAS`.)
  *   Datos     → la calidad del dato (duplicadas, gente sin canal). No urge.
  *   Ingesta   → si lo que mandan las compañías por CIMA está ENTRANDO: ficheros
  *               atascados, pólizas que CIMA nombra y no tenemos, envíos que
@@ -56,17 +58,42 @@
  * exactamente lo que impide que esta pantalla repita aquel fallo.
  */
 
-export type Seccion =
-  | 'hoy' | 'actividad' | 'clientes' | 'cartera' | 'comisiones' | 'datos' | 'ingesta' | 'redes'
+export type Seccion = 'hoy' | 'clientes' | 'cartera' | 'comisiones' | 'mas'
 
-export const SECCIONES: readonly Seccion[] = [
-  'hoy', 'actividad', 'clientes', 'cartera', 'comisiones', 'datos', 'ingesta', 'redes',
-]
+export const SECCIONES: readonly Seccion[] = ['hoy', 'clientes', 'cartera', 'comisiones', 'mas']
 
-/** Un `?s=` desconocido (o ausente) no deja la pantalla en blanco: cae a «Hoy». */
-export function seccionDeParametro(v: string | string[] | undefined): Seccion {
+/**
+ * ─── De ocho pestañas a cinco (24/09/2026) ──────────────────────────────────
+ * Actividad, Datos, Ingesta y Redes fueron ganando pestaña propia hasta que la
+ * barra tenía ocho, y en un móvil las cuatro últimas quedaban fuera de la
+ * pantalla: se escondían detrás de un scroll lateral que nadie hace. Ninguna
+ * urge a diario (lo que SÍ urge de la ingesta ya sube solo a «Hoy»), así que
+ * viven juntas en «Más», cada una en su bloque con ancla.
+ *
+ * Nada se pierde: `?s=ingesta` (o datos, redes, actividad) sigue funcionando —
+ * abre «Más» y baja a ese bloque— y el badge de «Más» SUMA los de las cuatro,
+ * así que una avería de CIMA o un artículo del blog esperando se siguen viendo
+ * desde cualquier pestaña.
+ */
+export type BloqueMas = 'actividad' | 'datos' | 'ingesta' | 'redes'
+
+export const BLOQUES_MAS: readonly BloqueMas[] = ['ingesta', 'redes', 'datos', 'actividad']
+
+/** Adónde puede mandar un enlace o un botón: una sección, o un bloque de «Más». */
+export type Destino = Seccion | BloqueMas
+
+/**
+ * Un `?s=` desconocido (o ausente) no deja la pantalla en blanco: cae a «Hoy».
+ * Los nombres de las pestañas antiguas abren «Más» y dicen a qué bloque bajar.
+ */
+export function destinoDeParametro(v: string | string[] | undefined): { seccion: Seccion; bloque: BloqueMas | null } {
   const s = Array.isArray(v) ? v[0] : v
-  return SECCIONES.includes(s as Seccion) ? (s as Seccion) : 'hoy'
+  if (BLOQUES_MAS.includes(s as BloqueMas)) return { seccion: 'mas', bloque: s as BloqueMas }
+  return { seccion: SECCIONES.includes(s as Seccion) ? (s as Seccion) : 'hoy', bloque: null }
+}
+
+export function seccionDeParametro(v: string | string[] | undefined): Seccion {
+  return destinoDeParametro(v).seccion
 }
 
 /**
@@ -152,6 +179,32 @@ export function agregarContadores(
   }
   if (conocidas === 0) return ilegibles > 0 ? null : { n: 0, parcial: false }
   return { n, parcial: ilegibles > 0 }
+}
+
+/**
+ * Junta los contadores de varias sub-colas en el badge de UNA pestaña (la de
+ * «Más», que agrupa cuatro bloques). Mismas reglas que `agregarContadores`:
+ *   `undefined` = aún no ha contestado → no cuenta.
+ *   `null`      = no se ha podido leer → si nada más se sabe, `null` («!»);
+ *                 si algo sí, el total pasa a ser un SUELO (`parcial`).
+ * Todo `undefined` → `undefined`: la pestaña no pinta nada todavía.
+ */
+export function combinarContadores(
+  partes: readonly (Contador | null | undefined)[],
+): Contador | null | undefined {
+  let n = 0
+  let conocidas = 0
+  let ilegibles = 0
+  let parcial = false
+  for (const p of partes) {
+    if (p === undefined) continue
+    if (p === null) { ilegibles++; continue }
+    n += p.n
+    parcial ||= p.parcial
+    conocidas++
+  }
+  if (conocidas === 0) return ilegibles > 0 ? null : undefined
+  return { n, parcial: parcial || ilegibles > 0 }
 }
 
 /**

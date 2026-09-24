@@ -8,6 +8,7 @@ import {
   resumirHistorialSiniestros,
   tonoEstadoSiniestro,
   type BienAsegurado,
+  type TramitacionSiniestro,
   tonoSituacionRecibo,
   etiquetaSituacionRecibo,
 } from '@central/module-seguros-portal'
@@ -608,13 +609,54 @@ export function HistorialSiniestros({
                   descripción» no le añade nada a quien ya ve la referencia. */}
               {s.descripcion && <p className="siniestro-desc">{s.descripcion}</p>}
               {/* El estado en lenguaje claro y qué hacer (plan ASegura OS §Q.8). Solo
-                  lo que consta: CIMA no manda perito ni pagos, así que no se afirman. */}
+                  lo que consta; lo que manda la compañía va debajo. */}
+              {/* Cómo va según la COMPAÑÍA (EIAC), antes de qué hacer: primero
+                  los hechos. Solo si la manda: callarse es lo correcto, porque
+                  la explicación de abajo ya dice que se pregunte al corredor. */}
+              {s.tramitacion && <TramitacionCompania t={s.tramitacion} />}
               <SiniestroExplicado estado={s.estado} fechaHora={s.fechaHora} />
             </li>
           )
         })}
       </ul>
     </>
+  )
+}
+
+/**
+ * La línea de tiempo que manda la compañía. Sin reserva, sin culpa y sin
+ * nombres (lo garantiza `tramitacionSiniestro`, que ni los trae). «Lleva
+ * pagado» y no «te ha pagado»: el total incluye lo que paga al perito o al
+ * taller, que no es dinero del cliente.
+ */
+function TramitacionCompania({ t }: { t: TramitacionSiniestro }) {
+  if (t.pasos.length === 0 && t.totalPagado === null && t.indemnizacion === null) return null
+  return (
+    <div className="siniestro-tramite">
+      <p className="siniestro-tramite-titulo">Lo que nos cuenta tu compañía</p>
+      {t.pasos.length > 0 && (
+        <ol>
+          {t.pasos.map((p, i) => {
+            const cuando = p.fecha ? fechaEs(new Date(`${p.fecha}T00:00:00Z`)) : null
+            return (
+              <li key={i} data-tipo={p.tipo}>
+                <span className="siniestro-tramite-fecha">{cuando ?? 'Sin fecha'}</span>
+                <span>
+                  {p.texto}
+                  {p.importe !== null && `: ${eur(p.importe)}`}
+                </span>
+              </li>
+            )
+          })}
+        </ol>
+      )}
+      {t.indemnizacion !== null && (
+        <p className="siniestro-tramite-cifra">Indemnización informada: {eur(t.indemnizacion)}</p>
+      )}
+      {t.totalPagado !== null && (
+        <p className="siniestro-tramite-cifra">La compañía lleva pagado en este siniestro: {eur(t.totalPagado)}</p>
+      )}
+    </div>
   )
 }
 

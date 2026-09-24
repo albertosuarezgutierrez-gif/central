@@ -617,10 +617,20 @@ function ViaCanalEnlace({ via }: { via: ViaCanal }) {
 
 export function ParteSiniestro({
   polizas,
+  soloTelefonos = [],
+  corredor,
   partes,
   polizaInicial,
 }: {
   polizas: readonly PolizaOpcionParte[]
+  /**
+   * Pólizas AUTORIZADAS sin el alcance `partes`: se pintan sus teléfonos de
+   * compañía (llamar a la grúa no es actuar en nombre de nadie), pero NO se
+   * pueden elegir para dar un parte — la ruta las rechazaría con 403.
+   */
+  soloTelefonos?: readonly PolizaOpcionParte[]
+  /** El teléfono del corredor, del servidor (`MEDIADOR`), para que «llámanos» se pueda pulsar. */
+  corredor?: { tel: string; numero: string }
   partes: readonly ParteEnviado[]
   /**
    * El `valor` (`cartera:<id>`) de la póliza desde cuya ficha se llegó aquí
@@ -1098,7 +1108,7 @@ export function ParteSiniestro({
     <section className="seccion" aria-labelledby={`${uid}-titulo`}>
       <h2 id={`${uid}-titulo`}>Un siniestro</h2>
 
-      <CanalesCompania polizas={polizas} destacada={companiaElegida} />
+      <CanalesCompania polizas={[...polizas, ...soloTelefonos]} destacada={companiaElegida} />
 
       {/* La confirmación vive FUERA del formulario, así sigue en pantalla cuando
           el formulario ya se ha cerrado. */}
@@ -1111,7 +1121,8 @@ export function ParteSiniestro({
           <strong>Lo hemos recibido nosotros.</strong>
           <p className="recibido-clave">
             Todavía no está comunicado a tu compañía: lo abrimos nosotros con ella y{' '}
-            <strong>te avisamos en cuanto esté abierto</strong>. Si es urgente, llámanos.
+            <strong>te avisamos en cuanto esté abierto</strong>. Si es urgente,{' '}
+            {corredor ? <a href={`tel:${corredor.tel}`}>llámanos al {corredor.numero}</a> : 'llámanos'}.
           </p>
           {recibido && (
             <p className={recibido.fueraDePlazo ? 'recibido-plazo ojo' : 'recibido-plazo'}>
@@ -1165,6 +1176,12 @@ export function ParteSiniestro({
           <p className="editor-ayuda" style={{ marginBottom: 10 }}>
             Cuéntanoslo aquí y lo tramitamos con tu compañía. No hace falta que sepas qué póliza lo cubre.
           </p>
+          {soloTelefonos.length > 0 && (
+            <p className="editor-ayuda" style={{ marginBottom: 10 }}>
+              Los seguros que otra persona comparte contigo salen arriba para que tengas sus teléfonos, pero el
+              parte de esos lo tiene que dar su titular.
+            </p>
+          )}
           <button type="button" className="boton" onClick={abrir}>
             Dar parte de un siniestro
           </button>

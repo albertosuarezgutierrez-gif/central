@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
-  SECCIONES, seccionDeParametro, esAccionable, contarAccionables, agregarContadores,
+  SECCIONES, BLOQUES_MAS, seccionDeParametro, destinoDeParametro, combinarContadores, esAccionable, contarAccionables, agregarContadores,
   textoVencidasAntiguas,
   textoListaTruncada,
 } from './secciones.ts'
@@ -24,7 +24,7 @@ test('un ?s= desconocido o ausente cae en «Hoy», no en blanco', () => {
   assert.equal(seccionDeParametro('inventada'), 'hoy')
   assert.equal(seccionDeParametro('comisiones'), 'comisiones')
   // Next puede entregar el parámetro repetido como array.
-  assert.equal(seccionDeParametro(['datos', 'hoy']), 'datos')
+  assert.equal(seccionDeParametro(['cartera', 'hoy']), 'cartera')
 })
 
 test('todas las secciones declaradas se resuelven a sí mismas', () => {
@@ -40,8 +40,33 @@ test('la salud de la ingesta de CIMA tiene sección propia en esta pantalla', ()
   // (`app.grupoasegura.com/salud-cima`), una app en la que Alberto no entra. Si
   // esta sección desaparece, la única forma de enterarse de que CIMA ha dejado
   // de traer datos vuelve a ser un Telegram que se pierde entre otros.
-  assert.ok(SECCIONES.includes('ingesta'))
-  assert.equal(seccionDeParametro('ingesta'), 'ingesta')
+  // Desde el 24/09/2026 vive como bloque de «Más» (con ancla propia), y el
+  // enlace de siempre sigue llevando a ella.
+  assert.ok(BLOQUES_MAS.includes('ingesta'))
+  assert.deepEqual(destinoDeParametro('ingesta'), { seccion: 'mas', bloque: 'ingesta' })
+})
+
+test('las pestañas antiguas (actividad, datos, ingesta, redes) abren «Más» y bajan a su bloque', () => {
+  // Un enlace guardado, un Telegram viejo o un botón de «Hoy» con `?s=datos`
+  // no puede caer en «Hoy» sin decir nada: el trabajo que buscaba se perdería.
+  for (const b of ['actividad', 'datos', 'ingesta', 'redes'] as const) {
+    assert.deepEqual(destinoDeParametro(b), { seccion: 'mas', bloque: b })
+  }
+  assert.deepEqual(destinoDeParametro(['redes', 'hoy']), { seccion: 'mas', bloque: 'redes' })
+  assert.deepEqual(destinoDeParametro('comisiones'), { seccion: 'comisiones', bloque: null })
+  assert.deepEqual(SECCIONES, ['hoy', 'clientes', 'cartera', 'comisiones', 'mas'])
+})
+
+test('combinarContadores: el badge de «Más» nunca convierte un «no se sabe» en 0', () => {
+  // Nada ha contestado → no se pinta nada (ni un «!» de alarma prematuro).
+  assert.equal(combinarContadores([undefined, undefined]), undefined)
+  // Solo huecos → «!».
+  assert.equal(combinarContadores([null, undefined]), null)
+  // Suma exacta cuando todo se ha leído.
+  assert.deepEqual(combinarContadores([{ n: 2, parcial: false }, { n: 3, parcial: false }]), { n: 5, parcial: false })
+  // Un hueco convierte el total en SUELO, igual que una sub-cola parcial.
+  assert.deepEqual(combinarContadores([{ n: 2, parcial: false }, null]), { n: 2, parcial: true })
+  assert.deepEqual(combinarContadores([{ n: 1, parcial: true }, { n: 0, parcial: false }]), { n: 1, parcial: true })
 })
 
 test('«a tiempo» NO es trabajo de hoy; las tres urgencias del preaviso sí', () => {

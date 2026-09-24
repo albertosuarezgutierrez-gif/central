@@ -311,6 +311,10 @@ GitHub Actions (cron 5:30 y 11:30)
   en orden de fecha del dato). Qué campos trae cada compañía: **`docs/CIMA-CAMPOS.md`** (941 rutas,
   sin valores). Regla de Alberto: CIMA trae casi todo el PDF de la póliza; antes de decir «no consta»
   o de pedir un dato a mano, mira si CIMA lo manda.
+  🚨 **Todo desarrollo de CIMA empieza en esa carpeta** (regla de Alberto, 24/09/2026): la norma EIAC
+  V07.1 y la copia de lo recibido están ahí. Y **los siniestros son unidireccionales**: el proceso 841
+  (alta de siniestros mediador → compañía) no existe por CIMA ni está planificado (TIREA, 03/09/2026);
+  solo se pueden enviar recibos (761/77X, `enviarFichero`). Detalle en la skill `cima-ingesta`.
 - **Codeoscopic — LA fuente de tarificación y EMISIÓN de pólizas nuevas (01/09/2026):** Avant2 Sales
   Manager operativo a nombre de ALBERTO (no de Manuel) desde 09/06; compañías vivas Reale y Fidelidade,
   claves entregadas de Mapfre/Allianz/Occident; DPA art. 28 firmado. La integración API de la web quedó

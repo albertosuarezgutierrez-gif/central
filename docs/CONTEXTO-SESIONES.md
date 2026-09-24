@@ -12,9 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** — `/banca` adelgazada. Salen de «Dinero» la banda «Pide acción hoy» y el P&L de pisos del mes, que ya enseña `/inicio`; así desaparece también la llamada de 8 s al puerto de la correduría. El resumen del periodo se carga en streaming (`BloquesDiferidos.tsx`). La tesorería y el benchmark de pisos no se calculan hasta que se abre el plegable de IA (`AnalisisPerezoso` → `GET /api/banca/analisis`); antes, `getTesoreria` recorría todo el histórico en cada visita. Hay `loading.tsx` y un guardián nuevo, `test/regression-banca-ligera.test.ts`. En el mismo PR (#3541) se corrigió que las pólizas ya vencidas (el puerto mira una anualidad atrás, `dias<0`) salieran como «próximos vencimientos»: pasaba en la tarjeta del Inicio (`repartoVencimientos`), en el Telegram de renovaciones, que las titulaba «Vence esta semana» (ahora hito `vencida`, sin repetir las ya avisadas), y en la banda de acción. «Oportunidades hoy» pasa a «Tareas de hoy»; la cola de llamadas (609 leads) se muestra aparte.
+
+**(24/09/2026)** — Correduría con el criterio de la ficha de cliente. `/correduria` pasa de 8 pestañas a 5 (Hoy · Clientes · Cartera · Comisiones · **Más**): Más agrupa ingesta, redes/blog, calidad del dato y actividad en bloques con ancla. Los `?s=ingesta|datos|redes|actividad` de antes siguen funcionando y bajan a su bloque (`destinoDeParametro`). El badge de Más suma sus colas (`combinarContadores`, a tres estados). En Hoy, Sustituciones y Declaradas ya no ocupan sitio cuando están vacías. Las renovaciones de la ventana entera van paginadas de 50 en 50 y en móvil se apilan como tarjetas (`tabla-polizas`), igual que el cuadre y la recaptación. La actividad solo se monta al ir a ella, porque al montarse marca la visita como vista. Ficha de póliza reordenada por uso: datos, qué asegura, recibos (los 12 últimos; el resto plegado), siniestros, estimación, coberturas, documentación y anulación. Intervinientes, evolución de la prima, historial, CIMA y referencias van plegados (`Plegable`, que no se monta hasta que se abre). Usa el panel de `cliente/[id]/piezas`. Lo vigila `test/regression-correduria-secciones.test.ts`.
 **(24/09/2026)** — Portal cliente, «Un siniestro»: el bloque de canales de compañía pasa a **lista plegable por compañía con logo** (abierta solo la de la póliza elegida o la única; buscador solo con ≥5 compañías) y texto de cabecera recortado a una línea. Logos copiados de `asegura-web` a `apps/asegura-portal/public/logos/` + `lib/logos-companias.ts` (sin logo → inicial, nunca se esconde). Cepos de `regression-portal-canal-compania` intactos.
 
 **(24/09/2026)** — Plataforma: **nuevo Inicio `/inicio`** (antes se aterrizaba en `/banca`, 15 consultas sin Suspense). Cuatro tarjetas en Suspense propio: Correduría = lo que se está tratando (tareas/llamadas, vencimientos ≤60 d, siniestros) · Pisos = calendario 14 d + entradas/salidas + noches libres + **estimación del mes entero** (reservas del mes − max(imputados, media 3 meses)) · Bolsa = solo IBKR por divisa · Banco = saldo, mes, por revisar y próximos cargos 7 d. Lateral reordenado (Día a día / Pisos / Oportunidades / Ajustes, sin borrar páginas). Estilo de la correduría (Quicksand+Nunito+cobalto) en TODO el panel; logo y nombre Grupo ASegura siguen solo en `/correduria` (resto = «Mi grupo»). **Intranet instalable**: manifest + SW que no cachea; el manifest viejo nunca instaló porque el middleware exigía sesión para él. Idea descartada: «limpieza no pedida» (la intranet de Vanesa ya deriva una limpieza por cada salida). Maqueta aprobada: artifact KDmajP69L2GyZxAEAxbvMW.
+
+**(24/09/2026)** — Portal del cliente: revisión (UX + código) y PR de endurecimiento. Dar parte de una póliza AUTORIZADA exige ya el alcance `partes` (decisión de Alberto): `puedeDarParte()` en el módulo + `polizasParaParte()` como fuente única de ruta, bóveda y ficha; sin alcance solo se ven los teléfonos de la compañía. Verificar código: intento reservado atómicamente antes de comparar (una ráfaga se saltaba el tope de 5), tope 30/15 min por IP, y el código se gasta con `usadoEn: null` en el where. Hoja QR pública: solo pólizas propias. Entrada accesible (form/Enter, labels, one-time-code, reenviar/otro correo), «Llamar a tu corredor» en la navegación, botones en Quicksand, parte y teléfonos siempre arriba en Siniestros. Pendiente de la revisión: sesión de 30 días sin revocación (pide columna en BD), descargar póliza/recibos, `loading/error.tsx`, partir ParteSiniestro/Autorizaciones, jerga («cartera», «ficha»).
 
 **(24/09/2026)** — Enlace de datos: el cliente sube documentos (Alberto lo probó y pidió «que suba DNI, carné, documentación de la moto, se archive y la IA rellene y verifique»). En `/datos/<token>`, «📎 Súbenos tus documentos» (foto o PDF, varios, encogidos en el móvil): cada uno se ARCHIVA en su ficha (`documentos`, subido por el cliente, tipo dni/permiso/ficha técnica) y la IA lo lee; solo se proponen los campos pedidos que pasan la validación del formulario, sin pisar lo tecleado. Lo leído queda cifrado en `solicitud_datos.lecturas` (aplicada, tope 6 por enlace) y en la ficha de la oportunidad sale «coincide con sus documentos» o «⚠️ no casa: escribió X, el permiso dice Y». Nada leído se escribe en la ficha. DNI y fecha de nacimiento se piden SIEMPRE y llegan rellenos con los de su ficha, editables (decisión de Alberto: «es su DNI, no hay problema», avisado de que el enlace no lleva código); si los cambia, la oportunidad avisa «escribió X, la ficha dice Y». Revisión: la foto va a Gemini por Vertex con `data_collection=deny`, el tope se reserva atómico y un fallo al descifrar lecturas no las machaca.
 
@@ -544,6 +549,15 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) ASegura: tramitación del siniestro que manda la compañía → portal
+- CRM (repo asegura, PR #852): el mapper EIAC lee situaciones, acciones, pagos, reserva, total pagado y posición; se guardan
+  en `siniestros.*_cima` FUSIONANDO (EIAC manda solo lo nuevo por periodo) sin tocar los campos manuales del corredor. Migración 0099 aplicada.
+- Portal: «Lo que nos cuenta tu compañía» en cada siniestro (`tramitacionSiniestro`, sin descripción libre ni figuras; sin reserva ni culpa).
+- Solo afecta a lo ingerido tras el deploy del CRM (o reprocesado). SIN recibidos: 47 (Occident, Allianz, 2 Mapfre de abril, 1 Generali).
+- Regla de Alberto: todo desarrollo de CIMA empieza en la carpeta «CIMA» de Drive (norma + zips). Siniestros = solo compañía→nosotros:
+  el 841 no existe por CIMA (TIREA 03/09/2026). Reproceso de los 46 SIN de los zips: bloqueado por permisos, pendiente de Alberto.
+- Pendiente conocido (PR aparte): `mapSiniestroEstado` trata PosicionSiniestro `IN` como en_tramitacion, y oficialmente IN = Indeterminado (culpa).
+
 ## (24/09/2026) sivra: el agente de huéspedes y los mensajes programados, en TODOS los idiomas
 Antes: el agente solo reconocía es/en/fr/de/it (un chino o un portugués recibía la respuesta en inglés) y los
 mensajes programados traducían a 18. Ahora hay una tabla única, `lib/sivra/agente-huesped/idiomas.ts` (~55 idiomas),
@@ -559,6 +573,13 @@ Vercel: `OpenRouter: respuesta vacía` + `Groq: respuesta vacía` en la misma ll
 `max_tokens` y agotaba los 300 de la traducción y los 4 de `debeEscalar`. Arreglo en `@central/core-ai`: OpenRouter manda
 `reasoning:{enabled:false}` salvo `razonar:true` (reintento sin él si el modelo lo exige); Groq/Cerebras gpt-oss con
 `reasoning_effort:'low'` + 1024 de margen; el error «vacía» dice `finish_reason`/`reasoning_tokens`. PR en esta rama.
+
+## (24/09/2026) sivra: en fecha de evento MEDIDA manda el mercado, no mes × factor
+Verificación del PR #3344: bajan 08/22/25-nov de Luxury, pero 01/11 y 16/11 volvieron a 215/204€ en
+una pasada al medirlas Booking (16/11: mediana 121€ = 1,69×). Causa: `bestEvent = max(mes×factor,
+mediana fecha)` + salto de evento sin raíl. Fix: `objetivoSaltoEvento` (pricing-base-evento.ts) —
+con ≥5 comps fiables de la fecha manda su mediana. Plan de mercado: caducados 68→20 (aún 24/24
+ventanas de evento, se vacía en ~2 días). Booking 2 tandas OK, latidos OK.
 
 ## (24/09/2026) Recaptación: cola ordenada por próximo vencimiento
 - La cola de `/correduria` → Recaptación salía por apellidos (el `order by` del SQL de asegura). Ahora

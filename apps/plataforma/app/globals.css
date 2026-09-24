@@ -731,6 +731,8 @@ em { font-style: normal; }
   .tabla-polizas td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: 6px; width: 92px; font-size: 12px; color: var(--muted); }
   .tabla-polizas td[data-rol="cabeza"] { font-weight: 700; font-size: 15px; }
   .tabla-polizas td[data-rol="accion"] { padding-top: 8px !important; border-top: 1px solid var(--border); margin-top: 6px; }
+  /* Una celda de acción vacía (fila sin botón) no pinta una raya suelta en la tarjeta. */
+  .tabla-polizas td:empty { display: none; }
 }
 
 /* === Armazón como el portal del cliente (24/09/2026) =======================================

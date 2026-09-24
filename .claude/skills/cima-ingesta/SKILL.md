@@ -16,6 +16,31 @@ correduría ficheros **EIAC** en XML — pólizas (POL), siniestros (SIN), recib
 y cuentas/comisiones (CEF). Es la fuente de la que sale la cartera viva: por eso la
 regla de Alberto «lo que entra por CIMA es cliente actual; el resto son leads».
 
+## 📁 Antes de desarrollar NADA de CIMA: la carpeta «CIMA» de Google Drive
+
+Regla de Alberto (24/09/2026): **todo desarrollo de CIMA empieza en la carpeta «CIMA» de Drive**
+(id `1DoHnkMj2gYepUKR3A3SmkBE4JIE9iwM1`). Ahí están:
+- **La norma**: `209_IAC_ESP_DOC_NORMAS-USO-V07-1_V03-1.pdf` (normas de uso EIAC V07.1: p. ej. §6.1.3,
+  los bloques de historial traen solo lo NUEVO del periodo → se fusionan, no se sustituyen). Los
+  Documentos Estándar V07.1 y el Diccionario de datos V06 están en Drive fuera de esa carpeta
+  (`209_IAC_ESP_DOC_DOCS-ESTANDAR-EIAC-V07-1_V05`, `209_IAC_ESP_DOC_DICCIONARIO_DATOS_V06`): las claves
+  oficiales (situación, acción, figura, posición…) salen de ahí, **nunca se adivinan**.
+- **Copia de lo recibido**: zips por trimestre del Portal CIMA (`28-03-26a26-06-26.zip`,
+  `26-06-26a24-09-26.zip`; POL, REC, SIN, CEF). Sirven para validar el lector contra ficheros REALES
+  (no fixtures escritos a mano) y para reprocesar con `cima-rescate-lote` cuando el lector aprende un campo.
+
+⚠️ **Reprocesar SIN viejos después de uno más nuevo RETROCEDE el siniestro**: `persist-siniestro` pisa
+los campos mutables (estado, fecha, tipo, lugar, daños) sin mirar la fecha del fichero. El lote va en
+orden (fecha del dato, luego 311 < 361 < 399) y, si la BD tiene SIN posteriores al último zip
+(`cima_ficheros`), esos siniestros se restauran a mano al terminar.
+
+🚫 **Los siniestros van SOLO de la compañía a nosotros.** TIREA (accesos.cima@tirea.es, 03/09/2026):
+el proceso **841 «alta de nuevos siniestros» (mediador → entidad) NO está disponible por CIMA**, las
+compañías no lo tienen integrado y **no hay fecha planificada**. Lo único que un corredor puede enviar
+hoy son los procesos **761 y 77X de recibos**, por el método `enviarFichero`. O sea: un parte se abre
+por teléfono/web/correo de la compañía (o el cliente llama); nosotros nos enteramos por el SIN que
+llega después. No se diseña nada que «mande el siniestro a la compañía por CIMA».
+
 ## 🚨 Lo que NO se toca ni se hace
 
 1. **Confirmar un fichero a TIREA lo saca de la cola PARA SIEMPRE.** `POST

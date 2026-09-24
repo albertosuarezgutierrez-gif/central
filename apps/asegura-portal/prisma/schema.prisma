@@ -977,6 +977,14 @@ model Siniestro {
   lugarCp            String?            @map("lugar_cp") @db.VarChar(10)
   lugarCiudad        String?            @map("lugar_ciudad") @db.VarChar(100)
   lugarProvincia     String?            @map("lugar_provincia") @db.VarChar(100)
+  /// Tramitación que manda la COMPAÑÍA por EIAC (la escribe el CRM, repo asegura,
+  /// migración 0099). GRANT por columnas del 24/09/2026. `reserva_cima` y
+  /// `posicion_cima` NO se declaran a propósito: sin grant, y no son del cliente.
+  situacionesCima    Json?              @map("situaciones_cima")
+  accionesCima       Json?              @map("acciones_cima")
+  pagosCima          Json?              @map("pagos_cima")
+  indemnizacionCima  Decimal?           @map("indemnizacion_cima") @db.Decimal(12, 2)
+  totalPagosCima     Decimal?           @map("total_pagos_cima") @db.Decimal(12, 2)
   tramitadorNombre   String?            @map("tramitador_nombre") @db.VarChar(255)
   tramitadorTelefono String?            @map("tramitador_telefono") @db.VarChar(30)
   tramitadorEmail    String?            @map("tramitador_email") @db.VarChar(255)
