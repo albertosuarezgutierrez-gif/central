@@ -60,6 +60,13 @@ export const SELECT_SINIESTRO = {
   updatedAt: true,
   datosRamo: true,
   danosCima: true,
+  situacionesCima: true,
+  accionesCima: true,
+  pagosCima: true,
+  reservaCima: true,
+  indemnizacionCima: true,
+  totalPagosCima: true,
+  posicionCima: true,
   intervinientes: {
     select: {
       id: true,
@@ -113,6 +120,13 @@ type FilaSiniestro = {
   updatedAt: Date
   datosRamo: unknown
   danosCima: unknown
+  situacionesCima: unknown
+  accionesCima: unknown
+  pagosCima: unknown
+  reservaCima: unknown
+  indemnizacionCima: unknown
+  totalPagosCima: unknown
+  posicionCima: string | null
   intervinientes: FilaInterviniente[]
 }
 
@@ -159,6 +173,25 @@ function mapInterviniente(i: FilaInterviniente): SiniestroIntervinienteFicha {
   }
 }
 
+/**
+ * Las columnas `*_cima` de tramitación, tal cual (importes a número). `null` = la
+ * compañía no manda nada de esto para este siniestro. La LECTURA (claves
+ * oficiales, dedupe de acciones, orden) la hace `tramitacionCompania()` de
+ * `@central/module-seguros` en la pantalla, no aquí.
+ */
+function tramitacionDeFila(s: FilaSiniestro): SiniestroFicha['tramitacionCima'] {
+  const t = {
+    situaciones: Array.isArray(s.situacionesCima) ? s.situacionesCima : null,
+    acciones: Array.isArray(s.accionesCima) ? s.accionesCima : null,
+    pagos: Array.isArray(s.pagosCima) ? s.pagosCima : null,
+    reserva: num(s.reservaCima),
+    indemnizacion: num(s.indemnizacionCima),
+    totalPagos: num(s.totalPagosCima),
+    posicion: limpio(s.posicionCima),
+  }
+  return Object.values(t).every((v) => v === null) ? null : t
+}
+
 /** Fila de Prisma → `SiniestroFicha`. `null` en reserva/indemnización = no informada, nunca 0. */
 export function mapSiniestro(s: FilaSiniestro): SiniestroFicha {
   const origen = (String(s.origen) === 'cima' ? 'cima' : 'gestionado_correduria') as OrigenSiniestro
@@ -189,6 +222,7 @@ export function mapSiniestro(s: FilaSiniestro): SiniestroFicha {
     actualizado: s.updatedAt.toISOString(),
     datosRamo: datosRamoDeFila(s.datosRamo),
     danosCima: danosCimaDeFila(s.danosCima),
+    tramitacionCima: tramitacionDeFila(s),
     terceros: s.intervinientes.map(mapInterviniente),
   }
 }

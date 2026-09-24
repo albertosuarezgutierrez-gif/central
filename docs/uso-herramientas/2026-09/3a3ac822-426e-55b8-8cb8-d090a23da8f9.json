@@ -1,8 +1,8 @@
 {
  "sesion": "3a3ac822-426e-55b8-8cb8-d090a23da8f9",
  "inicio": "2026-09-23T05:11:15.768Z",
- "fin": "2026-09-24T20:46:31.333Z",
- "llamadas": 6763,
+ "fin": "2026-09-24T23:06:28.197Z",
+ "llamadas": 6937,
  "categorias": {
   "agente:Explore": {
    "llamadas": 12,
@@ -16,14 +16,14 @@
    }
   },
   "bash": {
-   "llamadas": 4179,
-   "chars_in": 3152096,
-   "chars_out": 13715660,
+   "llamadas": 4283,
+   "chars_in": 3217215,
+   "chars_out": 13997811,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 4179
+    "Bash": 4283
    }
   },
   "lectura-directa": {
@@ -40,18 +40,18 @@
    }
   },
   "otro": {
-   "llamadas": 709,
-   "chars_in": 368740,
-   "chars_out": 9167747,
+   "llamadas": 726,
+   "chars_in": 369331,
+   "chars_out": 9387179,
    "errores": 0,
    "archivos_citados": 277,
    "chars_citados": 5669874,
    "tools": {
     "AskUserQuestion": 6,
-    "Skill": 8,
-    "ToolSearch": 178,
+    "Skill": 9,
+    "ToolSearch": 184,
     "ExitPlanMode": 10,
-    "ReadNotifications": 358,
+    "ReadNotifications": 368,
     "SubagentHandback": 58,
     "Artifact": 25,
     "ArtifactComments": 2,
@@ -64,67 +64,67 @@
    }
   },
   "escritura": {
-   "llamadas": 267,
-   "chars_in": 1173135,
-   "chars_out": 6438000,
+   "llamadas": 269,
+   "chars_in": 1186270,
+   "chars_out": 6464968,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 167,
+    "Write": 169,
     "Edit": 100
    }
   },
   "sql": {
-   "llamadas": 365,
-   "chars_in": 202595,
-   "chars_out": 673034,
+   "llamadas": 377,
+   "chars_in": 206502,
+   "chars_out": 687006,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 365
+    "mcp__Supabase__execute_sql": 377
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 183,
-   "chars_in": 30676,
-   "chars_out": 152522,
+   "llamadas": 191,
+   "chars_in": 31678,
+   "chars_out": 156810,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 1596,
    "tools": {
     "mcp__Claude_Code_Remote__add_repo": 5,
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 24,
-    "mcp__Claude_Code_Remote__send_later": 69,
-    "mcp__Claude_Code_Remote__delete_trigger": 62,
-    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 18,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 26,
+    "mcp__Claude_Code_Remote__send_later": 70,
+    "mcp__Claude_Code_Remote__delete_trigger": 64,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 21,
     "mcp__Claude_Code_Remote__update_trigger": 4,
     "mcp__Claude_Code_Remote__register_repo_root": 1
    }
   },
   "mcp:github": {
-   "llamadas": 552,
-   "chars_in": 275492,
-   "chars_out": 1458453,
+   "llamadas": 575,
+   "chars_in": 283118,
+   "chars_out": 1536008,
    "errores": 7,
    "archivos_citados": 18,
    "chars_citados": 1287755,
    "tools": {
-    "mcp__github__actions_list": 50,
-    "mcp__github__get_job_logs": 6,
-    "mcp__github__actions_get": 4,
+    "mcp__github__actions_list": 51,
+    "mcp__github__get_job_logs": 10,
+    "mcp__github__actions_get": 5,
     "mcp__github__get_check_run": 5,
     "mcp__github__get_file_contents": 1,
     "mcp__github__list_pull_requests": 7,
-    "mcp__github__create_pull_request": 66,
-    "mcp__github__update_pull_request": 70,
-    "mcp__github__pull_request_read": 161,
-    "mcp__github__merge_pull_request": 64,
+    "mcp__github__create_pull_request": 68,
+    "mcp__github__update_pull_request": 72,
+    "mcp__github__pull_request_read": 168,
+    "mcp__github__merge_pull_request": 67,
     "mcp__github__subscribe_pr_activity": 45,
     "mcp__github__unsubscribe_pr_activity": 47,
-    "mcp__github__add_issue_comment": 22,
-    "mcp__github__actions_run_trigger": 3,
+    "mcp__github__add_issue_comment": 23,
+    "mcp__github__actions_run_trigger": 5,
     "mcp__github__search_pull_requests": 1
    }
   },
@@ -140,14 +140,14 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 19,
-   "chars_in": 2404,
-   "chars_out": 108528,
+   "llamadas": 22,
+   "chars_in": 2767,
+   "chars_out": 113678,
    "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Vercel__list_deployments": 7,
+    "mcp__Vercel__list_deployments": 10,
     "mcp__Vercel__list_projects": 1,
     "mcp__Vercel__get_runtime_logs": 8,
     "mcp__Vercel__filter_project_envs": 2,
@@ -224,25 +224,27 @@
    }
   },
   "mcp:Gmail": {
-   "llamadas": 1,
-   "chars_in": 939,
-   "chars_out": 55,
+   "llamadas": 3,
+   "chars_in": 1112,
+   "chars_out": 51466,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Gmail__send_message": 1
+    "mcp__Gmail__send_message": 1,
+    "mcp__Gmail__search_threads": 1,
+    "mcp__Gmail__get_thread": 1
    }
   },
   "mcp:Google_Drive": {
-   "llamadas": 13,
-   "chars_in": 1221,
-   "chars_out": 66562,
+   "llamadas": 16,
+   "chars_in": 1611,
+   "chars_out": 70191,
    "errores": 5,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Google_Drive__search_files": 6,
+    "mcp__Google_Drive__search_files": 9,
     "mcp__Google_Drive__read_file_content": 3,
     "mcp__Google_Drive__download_file_content": 4
    }
