@@ -13,6 +13,7 @@ import InformeMediacion from './InformeMediacion'
 import Formacion from './Formacion'
 import FichasIpid from './FichasIpid'
 import LineaBase from './LineaBase'
+import DescuadresComisiones from './DescuadresComisiones'
 import BuscadorCartera from './BuscadorCartera'
 import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
@@ -165,6 +166,7 @@ export default function CorreduriaClient() {
   const [nLeads, setNLeads] = useState<number | null | undefined>(undefined)
   const [nSupresiones, setNSupresiones] = useState<number | null | undefined>(undefined)
   const [nQuejas, setNQuejas] = useState<number | null | undefined>(undefined)
+  const [nDescuadres, setNDescuadres] = useState<number | null | undefined>(undefined)
   const [nRetencion, setNRetencion] = useState<number | null | undefined>(undefined)
   const [nSustituciones, setNSustituciones] = useState<number | null | undefined>(undefined)
   const [nSinCanal, setNSinCanal] = useState<number | null | undefined>(undefined)
@@ -247,7 +249,7 @@ export default function CorreduriaClient() {
   // plazo corriendo. `undefined` mientras cargan; `null` si ninguna se pudo leer.
   // Hasta que contestan las cuatro no se pinta nada: un «0» con tres colas
   // aún cargando sería una afirmación que nadie ha comprobado.
-  const colasIncid = [nPartes, nSupresiones, nRetencion, nSustituciones]
+  const colasIncid = [nPartes, nSupresiones, nRetencion, nSustituciones, nDescuadres]
   const nIncidencias = colasIncid.some(n => n === undefined) ? undefined : agregarContadores(colasIncid)
 
   const contadores: ContadoresSeccion = {
@@ -259,7 +261,7 @@ export default function CorreduriaClient() {
       // `nLeads`); `DeclaradasVencer` se conserva SOLO como vista de llamada
       // rápida (teléfono/email en claro) para las ya vinculadas ≤60 días, pero
       // ya no suma un segundo aviso de lo mismo.
-      contador: agregarContadores([nPartes, nSupresiones, nQuejas, nRetencion, nRenovaciones, nLeads, nSustituciones, nTareasHoy]),
+      contador: agregarContadores([nPartes, nSupresiones, nQuejas, nRetencion, nRenovaciones, nLeads, nSustituciones, nTareasHoy, nDescuadres]),
       tono: 'malo',
       title: 'Tareas de seguimiento para hoy, partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra, declaradas de otra compañía a punto de renovar y sustituciones pendientes de que CIMA confirme la nueva',
     },
@@ -395,6 +397,9 @@ export default function CorreduriaClient() {
             el cliente paga la nueva. Justo después de Retención porque es la
             otra cara del mismo teléfono: aquí no se llama, se comprueba. */}
         <Sustituciones onContador={setNSustituciones} />
+
+        {/* Comisiones por reclamar (descuadre, o liquidadas y sin llegar al banco pasado el plazo). */}
+        <DescuadresComisiones onContador={setNDescuadres} onIr={cambiarSeccion} />
 
         {/* Pólizas que el cliente declaró de OTRA compañía y vencen pronto:
             la venta cruzada, con el teléfono en la mano en vez de un precio
