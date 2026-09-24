@@ -282,3 +282,44 @@ test('🚨 con VARIAS fichas vinculadas no se escribe a ninguna, y el corredor n
     'no puede volver el desempate por el vínculo más antiguo',
   )
 })
+
+test('🚨 con enlace directo el correo dice que vale una vez, 24 h, y que no se reenvíe', () => {
+  const c = cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'anulacion_por_firmar' }], total: 1, enlace: 'https://x.es/?e=t', directo: true })
+  assert.match(c.texto, /una sola vez y durante 24 horas/)
+  assert.match(c.texto, /No lo reenvíes/)
+  assert.doesNotMatch(cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'anulacion_por_firmar' }], total: 1, enlace: 'https://x.es/' }).texto, /24 horas/)
+})
+
+test('🚨 la llave del enlace directo se ata al correo de la ficha y, sin clave, no se manda suelta', () => {
+  const src = readFileSync(new URL('../apps/asegura/lib/avisos-intranet.ts', import.meta.url), 'utf8')
+  assert.match(src, /if \(hash === null\) return \{ enlace: base, directo: false \}/)
+  assert.match(src, /tokenHash: await hashTokenEnlace\(token\)/)
+  assert.doesNotMatch(src, /tokenHash: token\b/, 'el token nunca se guarda en claro')
+})
+
+test('🚨 el portal solo canjea la llave si el correo casa con el de la ficha, y la gasta ANTES de abrir sesión', () => {
+  const src = readFileSync(new URL('../apps/asegura-portal/app/api/acceso/verificar/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /hash !== fila\.emailLookupHash\) return \{ error: 'incorrecto' \}/)
+  assert.match(src, /if \(!\(await e\.marcar\(\)\)\) return NextResponse\.json\(\{ error: 'ya_usado' \}/)
+  assert.ok(src.indexOf('await e.marcar()') < src.indexOf('return abrirSesion(req, tipo, destino, valorHash, null, irA)'))
+  assert.match(src, /updateMany\(\{ where: \{ id: fila\.id, usadoEn: null/)
+})
+
+test('🚨 ni el CRM ni la copia de seguridad pueden fabricar llaves: el SQL les revoca la tabla', () => {
+  const sql = fuente('apps/asegura/prisma/sql/2026-09-24_portal_enlace_directo.sql')
+  assert.match(sql, /REVOKE ALL ON seguros\.portal_enlace_directo FROM crm_seguros;/)
+  assert.match(sql, /REVOKE ALL ON seguros\.portal_enlace_directo FROM backup_seguros;/)
+  assert.doesNotMatch(sql, /GRANT[^;]*(UPDATE|ALL)[^;]*portal_enlace_directo TO prisma_seguros/, 'el cron no marca usos: sin UPDATE')
+  assert.doesNotMatch(sql, /GRANT[^;]*portal_enlace_directo TO crm_seguros/)
+})
+
+test('🚨 la llave va en el fragmento (no llega al servidor) y un fallo al guardarla no tumba la pasada', () => {
+  const entrada = fuente('apps/asegura-portal/app/Entrada.tsx')
+  assert.match(entrada, /window\.location\.hash/)
+  assert.doesNotMatch(entrada, /const e = q\.get\('e'\)/, 'la llave no se lee de la query')
+  const src = fuente('apps/asegura/lib/avisos-intranet.ts')
+  const cuerpo = src.slice(src.indexOf('async function enlaceDirecto('), src.indexOf('export async function avisarIntranet('))
+  assert.match(cuerpo, /catch \(e\) \{[\s\S]*return \{ enlace: base, directo: false \}/)
+  assert.ok(cuerpo.indexOf('try {') < cuerpo.indexOf('portalEnlaceDirecto.create('), 'el create va dentro del try')
+  assert.match(fuente('apps/asegura-portal/next.config.ts'), /Referrer-Policy[\s\S]*same-origin/)
+})

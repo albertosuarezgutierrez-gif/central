@@ -12,6 +12,36 @@ import { leerDocumentos } from './documentos-asegura.ts'
 import type { CapitalAsegurado, DetalleCobertura } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
+export type EslabonRiesgoFicha = {
+  id: string
+  aseguradora: string | null
+  numeroPoliza: string | null
+  fechaInicio: string | null
+  fechaVencimiento: string | null
+  estado: string
+  sustituida: boolean
+  via: 'enlace' | 'matricula'
+  actual: boolean
+}
+
+/** Lee el historial del riesgo del puerto; ausente o mal formado = `null` (no «no hay»). */
+export function leerHistorialRiesgo(v: unknown): EslabonRiesgoFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: EslabonRiesgoFicha[] = []
+  for (const x of v) {
+    if (typeof x !== 'object' || x === null) continue
+    const o = x as Record<string, unknown>
+    if (typeof o.id !== 'string') continue
+    const txt = (y: unknown) => (typeof y === 'string' && y.trim() ? y : null)
+    out.push({
+      id: o.id, aseguradora: txt(o.aseguradora), numeroPoliza: txt(o.numeroPoliza), fechaInicio: txt(o.fechaInicio),
+      fechaVencimiento: txt(o.fechaVencimiento), estado: txt(o.estado) ?? 'sin_informar', sustituida: o.sustituida === true,
+      via: o.via === 'enlace' ? 'enlace' : 'matricula', actual: o.actual === true,
+    })
+  }
+  return out
+}
+
 export type CoberturaFicha = {
   orden: number | null
   codigo: string | null
@@ -88,6 +118,11 @@ export type Poliza = {
   listaRecibos: ReciboFicha[]
   /** `null` = asegura no manda la lista (no es «sin siniestros», que es `[]`). */
   siniestros: SiniestroCartera[] | null
+  /**
+   * Las demás pólizas del MISMO bien (sustituciones, renovaciones, misma matrícula), de la más
+   * antigua a la más reciente. `[]` = no hay otras; `null` = no se pudo consultar o asegura no lo manda.
+   */
+  historialRiesgo: EslabonRiesgoFicha[] | null
   intervinientes: IntervinienteFicha[] | null
   /** `null` = no se pudo contar. `0` = se contó y no hay. */
   documentos: number | null
@@ -414,6 +449,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       recibos: leerRecibos(p.recibos),
       listaRecibos,
       siniestros,
+      historialRiesgo: leerHistorialRiesgo(p.historialRiesgo),
       intervinientes: leerIntervinientes(p.intervinientes),
       documentos: 'documentos' in p ? entero(p.documentos) : null,
       listaDocumentos: leerDocumentos(p.listaDocumentos),

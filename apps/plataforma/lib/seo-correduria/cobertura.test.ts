@@ -169,3 +169,21 @@ test('leerCobertura: sin presupuesto de tiempo, las URLs restantes se declaran (
     assert.match(p.detalle ?? '', /sin tiempo/)
   }
 })
+
+test('leerCobertura: en paralelo (tope `concurrencia`) y conserva el orden de entrada', async () => {
+  let enVuelo = 0
+  let maximo = 0
+  const fetch: FetchLike = async (_url, init) => {
+    enVuelo++
+    maximo = Math.max(maximo, enVuelo)
+    const b = JSON.parse(String(init?.body))
+    // La primera tarda más: si el orden dependiera de quién acaba antes, saldría la última.
+    await new Promise((r) => setTimeout(r, b.inspectionUrl.endsWith('/0') ? 30 : 5))
+    enVuelo--
+    return new Response(JSON.stringify({ inspectionResult: { indexStatusResult: { verdict: 'PASS' } } }), { status: 200 })
+  }
+  const urls = Array.from({ length: 7 }, (_, i) => `https://a/${i}`)
+  const datos = await leerCobertura({ token: 't', propiedad: 'p', urls, presupuestoMs: 5_000, concurrencia: 3 }, fetch)
+  assert.deepEqual(datos.paginas.map((p) => p.url), urls)
+  assert.equal(maximo, 3, 'nunca más de 3 a la vez, y sí 3 (no en serie)')
+})

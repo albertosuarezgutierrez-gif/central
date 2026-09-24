@@ -478,9 +478,25 @@ Solo Reale (900 455 900) y Occident (917 83 83 83, voz y WhatsApp) publican voz 
 ✅ **Y su artículo hermano `/blog/dar-parte-seguro-por-whatsapp`** (idea de Alberto): qué compañías
 aceptan el parte por WhatsApp, sin copiar ningún número (un cepo lo impide: enlaza la página).
 
+✅ **24/09/2026 — «Guardar en mis contactos»** (vCard) por compañía en `/telefonos-siniestros`
+(`/telefonos-siniestros/contacto/<slug>`, estática, `noindex`) y en el parte del portal
+(`/api/contacto-compania/<nombre>`). Sale de `vcardCompania()` del mismo catálogo. ✅ **Caducidad:**
+`telefonosPorRevisar()` (más de 270 días sin comprobar) sale en el Telegram semanal de
+`seo-correduria`; no es un test con fecha a propósito (pondría rojo cualquier PR un día cualquiera).
+✅ Los datos estructurados FAQ ya estaban en las dos páginas desde que se crearon.
+
+✅ **24/09/2026 — que Google (y Bing) se entere solo.** El cron `seo-correduria` (lunes) ahora: lee el
+**sitemap real** y con él inspecciona TODAS las páginas (antes solo las de `consultas.ts`; y en paralelo,
+que en serie 17 URLs ya no cabían); el aviso de «solicitar indexación» por Claude Chrome cubre cualquier
+página no legal (antes solo `/blog/`), con tope de 10 al día; **reenvía el sitemap a Search Console por
+API** (`sitemaps.submit`, que sí existe; pide permiso «Completo» a la cuenta de servicio, si no → 403
+dicho en el Telegram); y avisa a **IndexNow** (Bing) solo de lo nuevo o cambiado (fila `indexnow`).
+«Solicitar indexación» de Google sigue sin API: es la única parte manual. `/telefonos-siniestros` entra
+en el pie. Caso que lo motivó: 4 URLs que SÍ estaban en el sitemap salían «Google no reconoce esta URL».
+
 ⏭️ **Siguiente, sin hacer:** una página por compañía (`/telefonos-siniestros/mapfre`…) para las
-navegacionales de abajo; medir antes su volumen con OpenSEO. Y datos estructurados FAQ en las dos
-páginas. Pendiente de Alberto: capturas de Fidelidade (emergencias y auto), la línea de voz de
+navegacionales de abajo; medir antes su volumen con OpenSEO. Solo Mapfre tiene volumen claro
+(1.300/mes): una página por compañía sin volumen sería doorway. Pendiente de Alberto: capturas de Fidelidade (emergencias y auto), la línea de voz de
 Mapfre para dar parte y el 900 300 250 de Allianz.
 
 💡 Idea de origen: una página de «teléfonos de siniestros por compañía». Lo que sí tiene
@@ -527,8 +543,8 @@ para la rutina. Donde sí suma: **SERP en vivo** (~5 créditos/consulta) y **vol
   fail-closed pasan en sesión limpia (cero PostHog antes de aceptar). PostHog EU registra visitas
   reales. El [Probable] de arriba se escribió sin mirar el HTML vivo ni las envs: es un caso más de
   «dato que NO hay ≠ dato que NO se ha mirado» (PR #2618).
-- ⏳ **Cookiebot en Premium Trial, 12 días restantes** (a 07/09/2026), y el trial solo admite 1
-  dominio. Cuando caduque, mirar qué pasa con el banner.
+- ✅ ~~Cookiebot en Premium Trial~~: **sustituido el 14/09/2026 por `@central/core-consent`**
+  (PR #2925), antes de que caducara el trial. Ya no hay nada que vigilar aquí.
 - 🔁 **Google Analytics SÍ se añadió, y es una REVERSIÓN explícita de la decisión de abajo
   (14/09/2026, PR #2942).** Alberto pidió verlo «en la misma app que housesevillana e ia-rest» — no
   es un descuido, es información nueva (quiere las tres webs en la MISMA cuenta de GA) que no existía

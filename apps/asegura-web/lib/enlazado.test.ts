@@ -18,7 +18,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { MARCA_ASEGURA } from '../../../packages/brand/src/marcas/asegura.ts'
 import { ARTICULOS, entradasSitemapBlog } from './articulos.ts'
 import { RAMOS } from './ramos.ts'
-import { NAV, NAV_CABECERA, url } from './sitio.ts'
+import { INDEXNOW_CLAVE, NAV, NAV_CABECERA, url } from './sitio.ts'
 
 test('ningún ramo se queda sin enlace en el pie (nada huérfano)', () => {
   // `Set<string>` explícito: `NAV` es `as const`, así que su `href` es una unión
@@ -100,6 +100,18 @@ test('la página de siniestros sigue existiendo, en el sitemap y enlazada', () =
     NAV.some((n) => n.href === '/siniestro'),
     '/siniestro se ha quedado sin enlaces entrantes: vuelve a ser huérfana',
   )
+})
+
+test('/telefonos-siniestros se enlaza desde el pie (todas las páginas)', () => {
+  assert.ok(
+    NAV.some((n) => n.href === '/telefonos-siniestros'),
+    '/telefonos-siniestros sin enlace en el pie: Google tarda semanas en descubrirla',
+  )
+})
+
+test('la clave de IndexNow está publicada donde la busca Bing', () => {
+  const clave = readFileSync(new URL(`../public/${INDEXNOW_CLAVE}.txt`, import.meta.url), 'utf8')
+  assert.equal(clave, INDEXNOW_CLAVE, 'el fichero de la clave tiene que contener exactamente la clave')
 })
 
 test('la 301 de /mejoramos-tu-seguro sigue puesta', () => {

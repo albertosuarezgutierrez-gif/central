@@ -1146,6 +1146,37 @@ model PortalAvisoEnviado {
   @@map("portal_aviso_enviado")
 }
 
+/// Enlace de acceso directo del correo de avisos (un solo uso, 72 h; solo el hash del token).
+model PortalEnlaceDirecto {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId    String    @map("correduria_id") @db.Uuid
+  clienteId       String    @map("cliente_id") @db.Uuid
+  emailLookupHash String    @map("email_lookup_hash")
+  tokenHash       String    @unique(map: "portal_enlace_directo_token_unico") @map("token_hash")
+  destino         String
+  creadoEn        DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  expiraEn        DateTime  @map("expira_en") @db.Timestamptz(6)
+  usadoEn         DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@index([expiraEn], map: "idx_portal_enlace_directo_expira")
+  @@map("portal_enlace_directo")
+}
+
+/// Felicitación de cumpleaños: sello anual por persona y lo que la campana del portal lee ese día.
+model Felicitacion {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  anio         Int      @db.SmallInt
+  dia          DateTime @db.Date
+  canal        String
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([clienteId, anio], map: "felicitacion_una_por_anio")
+  @@index([dia], map: "idx_felicitacion_dia")
+  @@map("felicitacion")
+}
+
 enum CanalRecaptacion {
   whatsapp
   email

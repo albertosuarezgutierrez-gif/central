@@ -736,6 +736,12 @@ compañía elegida, por código DGS) → su anulación FIRMADA en la aceptación
 `anulacion_por_firmar` en la campana y en el correo de la intranet; el correo a la compañía sigue pasando por el OK. Portal: `sustituidasARetirar` la quita de la LISTA (no del acceso) por lector, con la
 nueva empezada y sin siniestros/devueltos pendientes. ⚠️ Medido: CIMA casi no manda el dato del riesgo fuera de motor
 (hogar 7/34 con dirección, 0 refcat, 0 DNI de asegurado en personas) → capturarlo al emitir es lo que falta.
+🎂 **Felicitación de cumpleaños (24/09/2026, `lib/felicitaciones.ts`, cron `/api/cron/felicitaciones` 07:00 UTC).** Alberto:
+«felicitar por mail y app los cumpleaños». Solo cartera EN VIGOR y personas físicas (la fecha de nacimiento va cifrada: por eso
+vive aquí). Regla pura `esCumpleanos` (día de Madrid; 29/02 → 28/02 en año no bisiesto). Tabla `seguros.felicitacion` (una fila
+por persona y año, se RESERVA antes de enviar): es el sello y lo que la campana del portal lee ese día. Correo sin nada que vender
+(si lleva oferta es comunicación comercial, art. 21 LSSI). ⏸️ **Apagado**: sin `ASEGURA_FELICITACIONES_ACTIVAS=1` solo cuenta.
+Cepo `lib/felicitaciones.test.ts`.
 ✉️ **Cola de aprobaciones (`seguros.aprobacion`, `lib/aprobaciones.ts`, puerto `/api/operador/aprobaciones`).** Un recibo
 que pasa a `devuelto` deja un correo PROPUESTO al cliente; solo sale con `decision:'aprobar'` desde plataforma. El envío
 reclama la fila (`pendiente → enviando`) ANTES de mandar y lee el correo de la ficha en ese momento; `enviando` viejo =

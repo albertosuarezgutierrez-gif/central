@@ -36,8 +36,11 @@ import { tokenCuentaServicio } from '@/lib/seo-correduria/google-sa'
 import { leerGsc } from '@/lib/seo-correduria/gsc'
 import { leerCobertura, urlsPropias } from '@/lib/seo-correduria/cobertura'
 import { leerPosthog } from '@/lib/seo-correduria/posthog'
-import { urlsBlogPendientesIndexar, promptClaudeChromeIndexacion } from '@/lib/seo-correduria/indexacion-pendiente'
-import { accionPropuesta, redactarInforme } from '@/lib/seo-correduria/informe'
+import { urlsPendientesIndexar, promptClaudeChromeIndexacion } from '@/lib/seo-correduria/indexacion-pendiente'
+import { enviarSitemapGsc, leerSitemap, urlsAInspeccionar, type EntradaSitemap } from '@/lib/seo-correduria/sitemap'
+import { avisadasTras, enviarIndexNow, urlsParaIndexNow, type AvisadasIndexNow } from '@/lib/seo-correduria/indexnow'
+import { accionPropuesta, bloqueDescubrimiento, bloqueTelefonosPorRevisar, redactarInforme, type PasoDescubrimiento } from '@/lib/seo-correduria/informe'
+import { telefonosPorRevisar } from '@central/module-seguros'
 import { lunesDe } from '@/lib/seo-correduria/semana'
 
 export const dynamic = 'force-dynamic'
@@ -87,6 +90,16 @@ async function handler(req: NextRequest) {
     return tokenGscPromesa
   }
 
+  // Las URLs reales de la web: con ellas se inspeccionan TODAS sus páginas (no solo las de
+  // `consultas.ts`) y se avisa a IndexNow. Si no se puede leer, se sigue con las de consultas.
+  let sitemap: EntradaSitemap[] | null = null
+  let errorSitemap = ''
+  try {
+    sitemap = await leerSitemap(DOMINIO_PROPIO, f, 8_000)
+  } catch (e) {
+    errorSitemap = e instanceof Error ? e.message : String(e)
+  }
+
   const [gsc, posthog, cobertura] = await Promise.all([
     conEstado(secretosGsc, async () => leerGsc({ token: await tokenGsc(), propiedad: PROPIEDAD_GSC, hoy }, f)),
     conEstado(ausentes(['POSTHOG_PERSONAL_API_KEY']), () =>
@@ -102,7 +115,12 @@ async function handler(req: NextRequest) {
     // Misma cuenta de servicio que GSC (mismo scope de Search Console): sin secreto nuevo.
     conEstado(secretosGsc, async () =>
       leerCobertura(
-        { token: await tokenGsc(), propiedad: PROPIEDAD_GSC, urls: urlsPropias(CONSULTAS, DOMINIO_PROPIO), presupuestoMs: 90_000 },
+        {
+          token: await tokenGsc(),
+          propiedad: PROPIEDAD_GSC,
+          urls: urlsAInspeccionar(urlsPropias(CONSULTAS, DOMINIO_PROPIO), sitemap),
+          presupuestoMs: 80_000,
+        },
         f,
       ),
     ),
@@ -126,8 +144,76 @@ async function handler(req: NextRequest) {
     })
   }
 
+  // ── Aviso a buscadores ─────────────────────────────────────────────────────────────────
+  // (a) Reenviar el sitemap a Google: la única parte del «que Google se entere» con API oficial.
+  //     Scope de ESCRITURA y permiso «Completo» de la cuenta de servicio; sin él, 403 y se dice.
+  let pasoSitemap: PasoDescubrimiento
+  if (secretosGsc.length) {
+    pasoSitemap = { estado: 'error', detalle: `falta ${secretosGsc.join(' y ')}` }
+  } else {
+    try {
+      const tokenEscritura = await tokenCuentaServicio(
+        {
+          clientEmail: process.env.GSC_SA_CLIENT_EMAIL!,
+          privateKey: process.env.GSC_SA_PRIVATE_KEY!,
+          scope: 'https://www.googleapis.com/auth/webmasters',
+        },
+        f,
+      )
+      await enviarSitemapGsc(tokenEscritura, PROPIEDAD_GSC, `https://${DOMINIO_PROPIO}/sitemap.xml`, f)
+      pasoSitemap = { estado: 'ok', texto: 'reenviado' }
+    } catch (e) {
+      pasoSitemap = { estado: 'error', detalle: (e instanceof Error ? e.message : String(e)).slice(0, 300) }
+    }
+  }
+
+  // (b) IndexNow: solo lo nuevo o cambiado respecto a lo ya avisado (fila `indexnow` anterior).
+  let pasoIndexNow: PasoDescubrimiento
+  if (sitemap === null) {
+    pasoIndexNow = { estado: 'error', detalle: `no se pudo leer el sitemap (${errorSitemap})` }
+  } else {
+    // Todo el paso va dentro del try, BD incluida: un fallo aquí (tabla, pool, CHECK) tiene que
+    // quedarse en una línea ⚠️ del informe, no tumbar el cron y callar el Telegram de la semana.
+    const fechaSemana = new Date(`${semana}T00:00:00Z`)
+    try {
+      const previa = await prisma.seoCorreduriaSemana.findFirst({
+        where: { fuente: 'indexnow', estado: 'ok' },
+        orderBy: { semana: 'desc' },
+      })
+      const previas = ((previa?.datos as { avisadas?: AvisadasIndexNow } | null)?.avisadas ?? {}) as AvisadasIndexNow
+      const urls = urlsParaIndexNow(sitemap, previas)
+      const status = urls.length ? await enviarIndexNow(DOMINIO_PROPIO, urls, f) : null
+      const datos = { avisadas: avisadasTras(previas, sitemap), enviadas: urls }
+      await prisma.seoCorreduriaSemana.upsert({
+        where: { semana_fuente: { semana: fechaSemana, fuente: 'indexnow' } },
+        create: { semana: fechaSemana, fuente: 'indexnow', estado: 'ok', datos },
+        update: { estado: 'ok', detalle: null, datos },
+      })
+      pasoIndexNow = { estado: 'ok', texto: urls.length ? `${urls.length} URL avisadas (HTTP ${status})` : 'nada nuevo que avisar' }
+    } catch (e) {
+      const detalle = (e instanceof Error ? e.message : String(e)).slice(0, 300)
+      pasoIndexNow = { estado: 'error', detalle }
+      // Sin `datos`: la semana que viene se compara con la última fila BUENA y se reintenta lo mismo.
+      // Si la BD es lo que falla, este registro también fallará: se ignora, el informe ya lo dice.
+      await prisma.seoCorreduriaSemana
+        .upsert({
+          where: { semana_fuente: { semana: fechaSemana, fuente: 'indexnow' } },
+          create: { semana: fechaSemana, fuente: 'indexnow', estado: 'error', detalle },
+          update: { estado: 'error', detalle },
+        })
+        .catch(() => undefined)
+    }
+  }
+
   const accion = accionPropuesta(resultados, CONSULTAS)
-  const texto = redactarInforme(semana, resultados, accion, DOMINIO_PROPIO)
+  const telefonos = bloqueTelefonosPorRevisar(telefonosPorRevisar(hoy))
+  const texto = [
+    redactarInforme(semana, resultados, accion, DOMINIO_PROPIO),
+    bloqueDescubrimiento(pasoSitemap, pasoIndexNow),
+    telefonos,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
   // El id va LITERAL (no en una const): el guardián lib/telegram/catalogo.test.ts lee el fuente.
   await tgAviso('correduria.seo-semana', texto, { html: true })
 
@@ -135,7 +221,7 @@ async function handler(req: NextRequest) {
   // Console, con sesión OAuth de Alberto): si algún artículo del blog sigue sin indexar, se manda
   // el prompt de Claude Chrome ya armado en vez de dejar que cada semana haya que redactarlo a mano.
   if (cobertura.estado === 'ok') {
-    const pendientes = urlsBlogPendientesIndexar(cobertura.datos)
+    const pendientes = urlsPendientesIndexar(cobertura.datos)
     const prompt = promptClaudeChromeIndexacion(pendientes)
     if (prompt) {
       // El id va LITERAL, igual que arriba: el guardián lee el fuente.
