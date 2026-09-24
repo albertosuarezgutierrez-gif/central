@@ -607,7 +607,7 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
    la mitad de la foto. */
 @media (max-width: 559px) {
   .hero {
-    padding-bottom: calc(var(--e8) + 76px);
+    padding-bottom: calc(var(--e8) + 92px);
   }
 }
 
@@ -616,8 +616,10 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
    banda de arriba no lo cubre, y esa es la lección: `padding-bottom` reserva
    sitio al FINAL del hero, pero una burbuja `fixed` se pega al VIEWPORT, así
    que pisa lo que quede a su altura pase lo que pase. Aquí se aparta el texto
-   de su columna (52 px de botón + su margen), que es lo único que funciona. */
-@media (max-width: 359px) {
+   de su columna (52 px de botón + su margen), que es lo único que funciona.
+   Desde el 24/09/2026 vale para todo el móvil, no solo 320: al subir la burbuja
+   rozaba «Sin compromiso» a 390×800. */
+@media (max-width: 559px) {
   .hero .garantias {
     padding-right: 68px;
   }
@@ -1854,7 +1856,10 @@ textarea.f-in {
        mordía la línea de texto que tenía justo detrás. No arregla el hero por
        sí sola —para eso está la banda reservada arriba—, pero le devuelve aire
        en TODAS las páginas, que es donde no hay banda que reservar. */
-    bottom: calc(var(--e4) + env(safe-area-inset-bottom, 0px));
+    /* Y otro peldaño más (24/09/2026, Alberto): pegada al borde tapaba la esquina inferior
+       derecha de lo que se estuviera leyendo, formularios incluidos. 🚨 Si se sube, la banda
+       reservada del `.hero` (más arriba) tiene que crecer lo mismo: mide `bottom + 52 px`. */
+    bottom: calc(var(--e6) + env(safe-area-inset-bottom, 0px));
     width: 52px;
     height: 52px;
   }

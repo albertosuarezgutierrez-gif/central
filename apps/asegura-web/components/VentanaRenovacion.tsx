@@ -20,7 +20,7 @@ import { calcularVentana, POS, type Ventana } from '@/lib/ventana-renovacion'
 import { PORTAL_URL } from '@/lib/sitio'
 import { medir } from '@/lib/medir'
 import EnlaceMedido from '@/components/EnlaceMedido'
-import { llamarAviso } from '@/lib/aviso'
+import { llamarAviso, RAMO_OTRO } from '@/lib/aviso'
 
 /**
  * El paso «avísame por correo» se enseña SOLO con `NEXT_PUBLIC_AVISOS_CORREO=1`. Se enciende a la vez
@@ -69,6 +69,8 @@ function Mensaje({ v }: { v: Ventana }) {
 
 export default function VentanaRenovacion({ ramo: ramoFijo, opciones }: Props) {
   const [ramoElegido, setRamoElegido] = useState('')
+  // «Otro seguro» (patinete, mascota, viaje…): no tiene página propia, así que se escribe cuál.
+  const [cual, setCual] = useState('')
   const ramo = ramoFijo ?? ramoElegido
   const origen = `ramo_ventana_${ramoFijo ?? 'portada'}`
   const [vence, setVence] = useState('')
@@ -115,7 +117,23 @@ export default function VentanaRenovacion({ ramo: ramoFijo, opciones }: Props) {
                   {o.nombre}
                 </option>
               ))}
+              <option value={RAMO_OTRO}>Otro seguro</option>
             </select>
+          </div>
+        )}
+        {ramo === RAMO_OTRO && (
+          <div>
+            <label className="f-lab" htmlFor="ventana-cual">
+              ¿Cuál?
+            </label>
+            <input
+              id="ventana-cual"
+              className="f-in"
+              value={cual}
+              maxLength={40}
+              placeholder="Patinete, mascota, viaje…"
+              onChange={(e) => setCual(e.target.value)}
+            />
           </div>
         )}
         <div>
@@ -166,7 +184,7 @@ export default function VentanaRenovacion({ ramo: ramoFijo, opciones }: Props) {
           <Mensaje v={v} />
 
           {AVISO_CORREO_ACTIVO ? (
-            <AvisoPorCorreo ramo={ramo} vence={vence} origen={origen} />
+            <AvisoPorCorreo ramo={ramo} cual={ramo === RAMO_OTRO ? cual : ''} vence={vence} origen={origen} />
           ) : (
             <div className="hero-cta" style={{ marginTop: 16 }}>
               <EnlaceMedido href={PORTAL_URL} origen={origen} className="btn btn-brand" style={{ minHeight: 44 }}>
@@ -187,7 +205,8 @@ type EstadoAviso = { fase: 'idle' } | { fase: 'enviando' } | { fase: 'ok'; email
  * premarcada no es consentimiento). Lo que sale de aquí es un correo de confirmación: hasta que la
  * persona no lo confirma no se le escribe nada más ni entra en la cartera.
  */
-function AvisoPorCorreo({ ramo, vence, origen }: { ramo: string; vence: string; origen: string }) {
+function AvisoPorCorreo({ ramo, cual, vence, origen }: { ramo: string; cual: string; vence: string; origen: string }) {
+  const faltaCual = ramo === RAMO_OTRO && cual.trim().length < 2
   const [estado, setEstado] = useState<EstadoAviso>({ fase: 'idle' })
   const [consentimiento, setConsentimiento] = useState(false)
 
@@ -197,7 +216,7 @@ function AvisoPorCorreo({ ramo, vence, origen }: { ramo: string; vence: string; 
     const fd = new FormData(e.currentTarget)
     const email = String(fd.get('email') ?? '').trim()
     setEstado({ fase: 'enviando' })
-    const r = await llamarAviso('solicitar', { nombre: fd.get('nombre'), email, ramo, vence, consentimiento, web: fd.get('web') })
+    const r = await llamarAviso('solicitar', { nombre: fd.get('nombre'), email, ramo, cual, vence, consentimiento, web: fd.get('web') })
     if (r.ok) {
       medir('aviso_solicitado', { ramo })
       setEstado({ fase: 'ok', email })
@@ -265,13 +284,13 @@ function AvisoPorCorreo({ ramo, vence, origen }: { ramo: string; vence: string; 
           {estado.motivo}
         </p>
       )}
-      {!ramo && (
+      {(!ramo || faltaCual) && (
         <p className="tenue" style={{ fontSize: 14, margin: '0 0 10px' }}>
-          Elige arriba de qué seguro se trata para poder avisarte.
+          {faltaCual ? 'Escribe arriba qué seguro es para poder avisarte.' : 'Elige arriba de qué seguro se trata para poder avisarte.'}
         </p>
       )}
       <div className="hero-cta" style={{ marginTop: 0 }}>
-        <button type="submit" className="btn btn-brand" style={{ minHeight: 44 }} disabled={!ramo || !consentimiento || estado.fase === 'enviando'}>
+        <button type="submit" className="btn btn-brand" style={{ minHeight: 44 }} disabled={!ramo || faltaCual || !consentimiento || estado.fase === 'enviando'}>
           {estado.fase === 'enviando' ? 'Enviando…' : 'Avisadme por correo'}
         </button>
         <EnlaceMedido href={PORTAL_URL} origen={origen} className="btn btn-outline" style={{ minHeight: 44 }}>

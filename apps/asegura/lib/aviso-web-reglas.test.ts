@@ -6,6 +6,7 @@ import {
   cuerpoAviso,
   cuerpoConfirmacion,
   enlaceWeb,
+  nombreDelSeguro,
   parsearFecha,
   revisarSolicitud,
   vencimientoDelCiclo,
@@ -36,6 +37,20 @@ test('🚨 el nombre no admite URLs ni texto libre (iría dentro de un correo a 
     assert.equal(revisarSolicitud({ ...BASE, nombre: n }).ok, false, n)
   }
   assert.equal(revisarSolicitud({ ...BASE, nombre: "María José O'Neill-Pérez" }).ok, true)
+})
+
+test('«otro seguro»: se guarda lo que escribió, solo letras, y cada uno se nombra por lo suyo', () => {
+  const r = revisarSolicitud({ ...BASE, ramo: 'otro', cual: '  Patinete   eléctrico ' })
+  assert.ok(r.ok)
+  assert.equal(r.solicitud.ramo, 'otros')
+  assert.equal(r.solicitud.ramoWeb, 'otro:patinete eléctrico')
+  assert.equal(nombreDelSeguro(r.solicitud.ramo, r.solicitud.ramoWeb), 'patinete eléctrico')
+  assert.equal(nombreDelSeguro('responsabilidad_civil', 'responsabilidad-civil-autonomos'), 'responsabilidad civil')
+  for (const c of [undefined, '', 'x', 'entra en http://malo.tld', 'moto 125', '<b>perro</b>', 'a'.repeat(41)]) {
+    const m = revisarSolicitud({ ...BASE, ramo: 'otro', cual: c })
+    assert.equal(m.ok, false, `cual=${String(c)}`)
+    if (!m.ok) assert.equal(m.campo, 'cual')
+  }
 })
 
 test('vida y salud no entra: su renovación tiene reglas propias', () => {

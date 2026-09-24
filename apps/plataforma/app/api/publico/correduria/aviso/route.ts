@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     if (r.status !== 200) return NextResponse.json({ ok: false, motivo: 'Ahora mismo no podemos confirmarlo. Inténtalo en unos minutos.' }, { status: 502 })
     const ficha = j.ficha as { id: string; nueva: boolean; nombre: string; varias: boolean } | undefined
     if (j.yaEstaba !== true && ficha) {
-      const ramo = NOMBRE_RAMO[String(j.ramo)] ?? String(j.ramo)
+      const ramo = typeof j.seguro === 'string' && j.seguro ? j.seguro : (NOMBRE_RAMO[String(j.ramo)] ?? String(j.ramo))
       const lineas = [
         '🔔 <b>Aviso de vencimiento confirmado desde la web</b>',
         `Seguro de ${escapeHtml(ramo)} · vence el ${escapeHtml(String(j.vence))}`,
