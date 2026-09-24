@@ -684,6 +684,11 @@ export type SolicitudDatos = {
   /** `null` = sin completar o ilegible (entonces `ilegible` lo dice). */
   respuestas: Record<string, string | number | boolean | null> | null
   ilegible: boolean
+  /** Documentos que subió por el enlace (en su ficha → Documentos). */
+  /** `null` = no se ha podido saber qué subió (asegura vieja o lecturas ilegibles) ≠ `[]` «no subió nada». */
+  documentos: { id: string; tipo: string }[] | null
+  /** Lo declarado que no casa con sus papeles. `null` = no se ha podido contrastar (≠ «todo cuadra»). */
+  discrepancias: { clave: string; declarado: string; documento: string; tipoDocumento: string }[] | null
 }
 
 export type SolicitudesDatos = { estado: 'ok'; solicitudes: SolicitudDatos[] } | { estado: 'error'; motivo: string }
@@ -716,7 +721,19 @@ export function interpretarSolicitudesDatos(status: number, json: unknown): Soli
     const respuestas = r
       ? Object.fromEntries(Object.entries(r).filter(([, v]) => v === null || ['string', 'number', 'boolean'].includes(typeof v))) as Record<string, string | number | boolean | null>
       : null
-    solicitudes.push({ id, ramo, estado, caduca: texto(s.caduca) ?? '', completada: texto(s.completada), campos, respuestas, ilegible: s.ilegible === true })
+    const documentos = Array.isArray(s.documentos)
+      ? s.documentos.flatMap((d) => { const dd = objeto(d); const did = texto(dd?.id); return did ? [{ id: did, tipo: texto(dd?.tipo) ?? 'otro' }] : [] })
+      : null
+    // Una asegura que aún no manda el contraste → `null` («sin contrastar»), nunca `[]` («todo cuadra»).
+    const discrepancias = Array.isArray(s.discrepancias)
+      ? s.discrepancias.flatMap((d) => {
+          const dd = objeto(d)
+          const clave = texto(dd?.clave)
+          if (!clave) return []
+          return [{ clave, declarado: String(dd?.declarado ?? ''), documento: String(dd?.documento ?? ''), tipoDocumento: texto(dd?.tipoDocumento) ?? 'otro' }]
+        })
+      : null
+    solicitudes.push({ id, ramo, estado, caduca: texto(s.caduca) ?? '', completada: texto(s.completada), campos, respuestas, ilegible: s.ilegible === true, documentos, discrepancias })
   }
   return { estado: 'ok', solicitudes }
 }

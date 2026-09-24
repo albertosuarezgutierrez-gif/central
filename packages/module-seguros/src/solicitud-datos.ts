@@ -30,6 +30,8 @@ export type CampoSolicitud = {
   opciones?: readonly { valor: string; etiqueta: string }[]
   /** Solo se enseña si el campo `si_no` indicado vale `true`. */
   siMarcado?: string
+  /** Lo que ya consta en su ficha: el formulario lo trae relleno y el cliente lo puede corregir. */
+  actual?: string
 }
 
 /** Lo que la ficha YA tiene: eso no se le vuelve a pedir. */
@@ -55,12 +57,27 @@ export const GARAJES_SOLICITUD = [
   { valor: 'calle', etiqueta: 'En la calle' },
 ] as const
 
-/** Qué se le pide al cliente para ese ramo, quitando lo que la ficha ya sabe. */
+const CAMPOS_IDENTIDAD_SOLICITUD: readonly CampoSolicitud[] = [
+  { clave: 'dni', etiqueta: 'DNI o NIE del conductor principal', tipo: 'texto', obligatorio: true },
+  { clave: 'fechaNacimiento', etiqueta: 'Fecha de nacimiento', tipo: 'fecha', obligatorio: true },
+]
+
+/**
+ * Los campos de un enlace ya creado + DNI y nacimiento si le faltan (los enlaces
+ * anteriores al 24/09/2026 no los pedían cuando la ficha ya los tenía).
+ */
+export function conIdentidad(campos: readonly CampoSolicitud[]): CampoSolicitud[] {
+  const faltan = CAMPOS_IDENTIDAD_SOLICITUD.filter((c) => !campos.some((x) => x.clave === c.clave))
+  return [...faltan, ...campos]
+}
+
+/** Qué se le pide al cliente para ese ramo, quitando lo que la ficha ya sabe (salvo DNI y nacimiento). */
 export function camposSolicitud(ramo: RamoSolicitud, conocido: ConocidoFicha): CampoSolicitud[] {
   const moto = ramo === 'moto'
   const campos: CampoSolicitud[] = []
-  if (!conocido.dni) campos.push({ clave: 'dni', etiqueta: 'DNI o NIE del conductor principal', tipo: 'texto', obligatorio: true })
-  if (!conocido.fechaNacimiento) campos.push({ clave: 'fechaNacimiento', etiqueta: 'Fecha de nacimiento', tipo: 'fecha', obligatorio: true })
+  // DNI y nacimiento se piden SIEMPRE (Alberto, 24/09/2026): si la ficha los tiene, llegan
+  // rellenos (`actual`) para que el cliente los confirme o los corrija.
+  campos.push(...CAMPOS_IDENTIDAD_SOLICITUD)
   if (!conocido.codigoPostal) {
     campos.push({ clave: 'codigoPostal', etiqueta: `Código postal donde duerme ${moto ? 'la moto' : 'el coche'}`, tipo: 'texto', obligatorio: true })
   }
@@ -169,7 +186,7 @@ export function validarRespuestas(
           else errores[c.clave] = r.motivo
         } else if (c.clave === 'matricula') {
           const m = s.toUpperCase().replace(/[^A-Z0-9]/g, '')
-          if (m.length < 4 || m.length > 10) errores[c.clave] = 'Revisa la matrícula.'
+          if (m.length < 4 || m.length > 10 || !/\d/.test(m) || !/[A-Z]/.test(m)) errores[c.clave] = 'Revisa la matrícula.'
           else respuestas[c.clave] = m
         } else if (s.length > max) {
           errores[c.clave] = `Máximo ${max} caracteres.`
@@ -189,4 +206,115 @@ export const DIAS_SOLICITUD = 14
 export function mensajeSolicitud(ramo: RamoSolicitud, url: string): string {
   const que = ramo === 'moto' ? 'tu moto' : 'tu coche'
   return `Hola, soy Alberto de Grupo ASegura. Para prepararte el presupuesto de ${que} necesito unos datos; te lleva dos minutos: ${url}`
+}
+
+// ─── Documentos que sube el cliente por el enlace (24/09/2026) ───────────────
+// Alberto: «que pueda subir el DNI, el carné, la documentación de la moto; se
+// archiva y la IA rellena el formulario y verifica que los datos están bien».
+// La IA LEE; lo que decide qué es un dato válido es este código (las mismas
+// reglas que el formulario), y lo que se guarda en la ficha es el FICHERO, no
+// lo leído: lo leído solo propone valores al cliente y sirve de contraste.
+
+export const TIPOS_DOC_SOLICITUD = ['dni', 'carnet', 'permiso_circulacion', 'ficha_tecnica', 'poliza', 'otro'] as const
+export type TipoDocSolicitud = (typeof TIPOS_DOC_SOLICITUD)[number]
+
+/** Máximo de documentos por enlace: de sobra para DNI, carné y los dos papeles del vehículo. */
+export const MAX_DOCS_SOLICITUD = 6
+
+export function etiquetaDocSolicitud(t: TipoDocSolicitud): string {
+  switch (t) {
+    case 'dni': return 'DNI / NIE'
+    case 'carnet': return 'Carné de conducir'
+    case 'permiso_circulacion': return 'Permiso de circulación'
+    case 'ficha_tecnica': return 'Ficha técnica'
+    case 'poliza': return 'Póliza o recibo del seguro actual'
+    default: return 'Otro documento'
+  }
+}
+
+/** Tipo con el que se ARCHIVA en `seguros.documentos` (esa lista no tiene carné). */
+export function tipoArchivoDocSolicitud(t: TipoDocSolicitud): 'dni' | 'permiso_circulacion' | 'ficha_tecnica' | 'poliza' | 'otro' {
+  return t === 'carnet' ? 'otro' : t
+}
+
+const ORDEN_CARNET_MOTO = ['A', 'A2', 'A1', 'AM'] as const
+
+function texto(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+/**
+ * Lo que devolvió la IA → valores para los campos QUE SE PIDIERON, cada uno
+ * pasado por la misma validación que el formulario. Lo que no valida se tira:
+ * un valor dudoso propuesto al cliente se lo acaba aceptando sin mirar.
+ */
+export function normalizarLecturaSolicitud(
+  bruto: unknown,
+  ramo: RamoSolicitud,
+  campos: readonly CampoSolicitud[],
+  hoy: Date = new Date(),
+): { tipo: TipoDocSolicitud; valores: Record<string, Respuesta> } {
+  const o = bruto !== null && typeof bruto === 'object' && !Array.isArray(bruto) ? (bruto as Record<string, unknown>) : {}
+  const tipo = (TIPOS_DOC_SOLICITUD as readonly string[]).includes(String(o.tipo)) ? (o.tipo as TipoDocSolicitud) : 'otro'
+  const candidato: Record<string, unknown> = {
+    dni: texto(o.dni),
+    fechaNacimiento: texto(o.fechaNacimiento),
+    matricula: texto(o.matricula),
+    marca: texto(o.marca),
+    modelo: texto(o.modelo),
+    fechaMatriculacion: texto(o.fechaMatriculacion),
+    companiaActual: texto(o.companiaActual),
+    vencimientoActual: texto(o.vencimientoActual),
+  }
+  if (candidato.companiaActual || candidato.vencimientoActual) candidato.tieneSeguro = true
+  // Carné: en moto, la clase de moto más alta que tenga fecha; en coche, la B.
+  const carnets = Array.isArray(o.carnets) ? o.carnets : []
+  const conFecha = carnets
+    .map((c) => (c && typeof c === 'object' ? (c as Record<string, unknown>) : {}))
+    .map((c) => ({ clase: texto(c.clase)?.toUpperCase() ?? '', fecha: texto(c.fecha) }))
+    .filter((c) => c.fecha !== null)
+  if (ramo === 'moto') {
+    const c = ORDEN_CARNET_MOTO.map((k) => conFecha.find((x) => x.clase === k)).find(Boolean)
+    if (c) { candidato.tipoCarnet = c.clase; candidato.fechaCarnet = c.fecha }
+  } else {
+    const b = conFecha.find((x) => x.clase === 'B')
+    if (b) candidato.fechaCarnet = b.fecha
+  }
+
+  const valores: Record<string, Respuesta> = {}
+  for (const c of campos) {
+    const v = candidato[c.clave]
+    if (v === null || v === undefined) continue
+    const r = validarRespuestas([{ ...c, obligatorio: true, siMarcado: undefined }], { [c.clave]: v }, hoy)
+    if (r.ok && r.respuestas[c.clave] !== null && r.respuestas[c.clave] !== undefined) valores[c.clave] = r.respuestas[c.clave]
+  }
+  return { tipo, valores }
+}
+
+/** Campos en los que un papel manda: si lo declarado no coincide, se avisa a Alberto. */
+const CONTRASTABLES = ['dni', 'fechaNacimiento', 'tipoCarnet', 'fechaCarnet', 'matricula', 'fechaMatriculacion'] as const
+
+/** `ficha` = lo que constaba en su ficha al contestar (va la última: un papel manda más). */
+export type LecturaDocSolicitud = { documentoId: string; tipo: TipoDocSolicitud | 'ficha'; valores: Record<string, Respuesta> }
+export type DiscrepanciaSolicitud = { clave: string; declarado: Respuesta; documento: Respuesta; tipoDocumento: TipoDocSolicitud | 'ficha' }
+
+const canon = (v: Respuesta): string => String(v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+
+/**
+ * Lo que el cliente mandó contra lo que dicen sus propios papeles. Solo avisa
+ * (no bloquea): el papel puede estar mal leído y el cliente puede tener razón.
+ */
+export function contrastarConDocumentos(
+  respuestas: Record<string, Respuesta>,
+  lecturas: readonly LecturaDocSolicitud[],
+): DiscrepanciaSolicitud[] {
+  const out: DiscrepanciaSolicitud[] = []
+  for (const clave of CONTRASTABLES) {
+    const declarado = respuestas[clave]
+    if (declarado === null || declarado === undefined || declarado === '') continue
+    const l = lecturas.find((x) => x.valores[clave] !== undefined && x.valores[clave] !== null)
+    if (!l) continue
+    if (canon(l.valores[clave]) !== canon(declarado)) out.push({ clave, declarado, documento: l.valores[clave], tipoDocumento: l.tipo })
+  }
+  return out
 }

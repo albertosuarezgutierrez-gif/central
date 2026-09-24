@@ -1,14 +1,18 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { camposSolicitud, mensajeSolicitud, validarRespuestas } from './solicitud-datos.ts'
+import { camposSolicitud, conIdentidad, contrastarConDocumentos, mensajeSolicitud, normalizarLecturaSolicitud, validarRespuestas } from './solicitud-datos.ts'
 
 const nadaConocido = { dni: false, fechaNacimiento: false, codigoPostal: false, carnetMoto: false, carnetCoche: false }
 const todoConocido = { dni: true, fechaNacimiento: true, codigoPostal: true, carnetMoto: true, carnetCoche: true }
 const HOY = new Date('2026-09-24T10:00:00Z')
 
-test('no se le vuelve a pedir lo que la ficha ya tiene', () => {
+test('no se le vuelve a pedir lo que la ficha ya tiene, salvo DNI y nacimiento (se confirman)', () => {
   const claves = camposSolicitud('moto', todoConocido).map((c) => c.clave)
-  for (const k of ['dni', 'fechaNacimiento', 'codigoPostal', 'tipoCarnet', 'fechaCarnet']) assert.ok(!claves.includes(k), k)
+  for (const k of ['codigoPostal', 'tipoCarnet', 'fechaCarnet']) assert.ok(!claves.includes(k), k)
+  for (const k of ['dni', 'fechaNacimiento']) assert.ok(claves.includes(k), `${k} se pide siempre`)
+  const viejo = conIdentidad([{ clave: 'matricula', etiqueta: 'Matrícula', tipo: 'texto', obligatorio: true }]).map((c) => c.clave)
+  assert.deepEqual(viejo, ['dni', 'fechaNacimiento', 'matricula'], 'un enlace viejo gana DNI y nacimiento')
+  assert.equal(conIdentidad(camposSolicitud('moto', nadaConocido)).filter((c) => c.clave === 'dni').length, 1, 'sin duplicar')
   assert.ok(claves.includes('matricula') && claves.includes('marca'))
   const todo = camposSolicitud('moto', nadaConocido).map((c) => c.clave)
   for (const k of ['dni', 'fechaNacimiento', 'codigoPostal', 'tipoCarnet', 'fechaCarnet']) assert.ok(todo.includes(k), k)
@@ -59,4 +63,31 @@ test('el mensaje para el cliente no lleva ningún dato suyo, solo el enlace', ()
   const m = mensajeSolicitud('moto', 'https://x/datos/abc')
   assert.match(m, /tu moto/)
   assert.match(m, /https:\/\/x\/datos\/abc$/)
+})
+
+test('lo leído de un documento solo propone campos pedidos y válidos', () => {
+  const campos = camposSolicitud('moto', nadaConocido)
+  const r = normalizarLecturaSolicitud({
+    tipo: 'carnet', dni: '12345678Z', fechaNacimiento: '1990-02-01',
+    carnets: [{ clase: 'B', fecha: '2010-01-01' }, { clase: 'A2', fecha: '2015-03-15' }, { clase: 'AM', fecha: '2006-01-01' }],
+    matricula: 'dudoso', marca: '',
+  }, 'moto', campos, HOY)
+  assert.equal(r.tipo, 'carnet')
+  assert.equal(r.valores.dni, '12345678Z')
+  assert.equal(r.valores.tipoCarnet, 'A2', 'la clase de moto más alta con fecha')
+  assert.equal(r.valores.fechaCarnet, '2015-03-15')
+  assert.equal('matricula' in r.valores, false, 'una matrícula que no valida no se propone')
+  assert.equal('marca' in r.valores, false)
+  const conocido = normalizarLecturaSolicitud({ tipo: 'carnet', carnets: [{ clase: 'A2', fecha: '2015-03-15' }] }, 'moto', camposSolicitud('moto', todoConocido), HOY)
+  assert.equal('fechaCarnet' in conocido.valores, false, 'lo que no se pidió no se propone')
+  assert.equal(normalizarLecturaSolicitud({ tipo: 'pasaporte' }, 'moto', campos, HOY).tipo, 'otro')
+})
+
+test('el contraste avisa si lo declarado no casa con el papel, sin tener en cuenta espacios ni guiones', () => {
+  const lecturas = [{ documentoId: 'd1', tipo: 'permiso_circulacion' as const, valores: { matricula: '1234ABC', fechaMatriculacion: '2020-05-01' } }]
+  assert.deepEqual(contrastarConDocumentos({ matricula: '1234 abc', fechaMatriculacion: '2020-05-01' }, lecturas), [])
+  const d = contrastarConDocumentos({ matricula: '1234ABD' }, lecturas)
+  assert.equal(d.length, 1)
+  assert.equal(d[0].clave, 'matricula')
+  assert.equal(d[0].documento, '1234ABC')
 })
