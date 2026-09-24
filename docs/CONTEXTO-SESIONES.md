@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
+**(24/09/2026)** 📨 **SEO correduría: descubrimiento automático.** Cron `seo-correduria`: lee el sitemap e inspecciona
+todas las páginas (en paralelo), prompt de indexación para cualquier página no legal (máx 10/día), **reenvía el sitemap
+por API** (necesita permiso «Completo» de la cuenta de servicio en GSC; sin él, 403 dicho en Telegram) e **IndexNow**
+(clave pública en `apps/asegura-web/public/`, estado en fila `indexnow`; CHECK de `fuente` ampliado, migración aplicada y
+vista morder). `/telefonos-siniestros` en el pie. Alberto pidió a mano la indexación de 5 URLs; 4 eran «Google no reconoce»
+aunque SÍ estaban en el sitemap (Google no lo había releído).
+
 **(24/09/2026)** 🔁 **Historial del riesgo en la ficha de póliza** (plataforma): las pólizas por las que ha pasado el mismo bien
 (red de `poliza_origen_id`/`poliza_padre_id` + misma matrícula del cliente), la copia del volcado de la misma póliza deduplicada.
 Regla pura `ordenarHistorialRiesgo`; lectura `lib/cartera-historial-riesgo.ts`. Caso Kona de José: Mapfre 2020 → Reale 2026.
