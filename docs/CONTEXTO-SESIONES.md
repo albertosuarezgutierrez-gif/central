@@ -17,7 +17,8 @@ ficha `8016986c…` (antes «Antonio» sin apellidos; ya tenía Cuñado/a con Ga
 y hash a NULL (sin confirmar por CIMA, que no recibe nada de Mapfre desde el 23/06). + oportunidad `e9c155e4…` de su Allianz
 058366323 (Grupo PACC, fin 31/01/2027). Intervinientes NO cargados (columnas cifradas). Pendiente de Alberto: DNI de Antonio
 en la ficha desde la UI; revisar si `edc7248d…` «Antonio Cruz Sánchez» es un duplicado; la póliza Mapfre lleva el email de
-Alberto como email del tomador.
+Alberto como email del tomador. ➕ Mismo día: `edc7248d` FUSIONADA en `8016986c` (OK de Alberto, `prisma/sql/2026-09-24_fusion_antonio_cruz.sql`,
+hereda DNI+hash) y Gabriel añadido a la póliza como propietario + conductor ocasional (filas `manual`, solo `cliente_id`).
 
 **(23/09/2026)** 🔁 **PR 10 (#3422): sustitución AUTOMÁTICA, duplicidades y aviso a la compañía al emitir.** Clave del
 riesgo por ramo (matrícula · refcat/dirección · DNI asegurado); la sustituida sale de «en vigor» para siempre («se anula y
