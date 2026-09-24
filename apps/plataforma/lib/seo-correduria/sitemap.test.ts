@@ -70,3 +70,8 @@ test('soloDelDominio: fuera las URLs de otro host, http o mal formadas', () => {
   )
   assert.deepEqual(r.map((e) => e.url), ['https://grupoasegura.es/a', 'https://www.grupoasegura.es/b'])
 })
+
+test('parsearSitemap: <url> con atributos también cuenta; <urlset> no se confunde con <url>', () => {
+  const xml = '<urlset xmlns="x"><url data-x="1"><loc>https://grupoasegura.es/a</loc></url></urlset>'
+  assert.deepEqual(parsearSitemap(xml), [{ url: 'https://grupoasegura.es/a', lastmod: null }])
+})

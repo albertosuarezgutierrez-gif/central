@@ -12,7 +12,7 @@ export type EntradaSitemap = { url: string; lastmod: string | null }
 /** `<url><loc>…</loc><lastmod>…</lastmod></url>` → entradas. Tolerante: sin `lastmod` → `null`. */
 export function parsearSitemap(xml: string): EntradaSitemap[] {
   const entradas: EntradaSitemap[] = []
-  for (const bloque of xml.match(/<url>[\s\S]*?<\/url>/g) ?? []) {
+  for (const bloque of xml.match(/<url(?:\s[^>]*)?>[\s\S]*?<\/url>/g) ?? []) {
     const loc = bloque.match(/<loc>\s*([^<\s]+)\s*<\/loc>/)?.[1]
     if (!loc) continue
     const lastmod = bloque.match(/<lastmod>\s*([^<\s]+)\s*<\/lastmod>/)?.[1] ?? null
