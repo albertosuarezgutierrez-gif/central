@@ -4,7 +4,7 @@ import { Receipt } from 'lucide-react'
 import { eur } from '@/lib/dinero'
 import { btnStyle } from '@/components/ui'
 import Bloque from './Bloque'
-import type { Seccion } from './secciones'
+import type { Destino } from './secciones'
 import { contadorDescuadres, descuadresParaHoy, type DescuadresHoy, type PeriodoCuadre } from '@/lib/correduria/descuadres-hoy'
 
 /**
@@ -18,7 +18,7 @@ function fecha(iso: string): string {
 
 export default function DescuadresComisiones({ onContador, onIr }: {
   onContador?: (n: number | null) => void
-  onIr: (s: Seccion) => void
+  onIr: (s: Destino) => void
 }) {
   const [datos, setDatos] = useState<DescuadresHoy | null>(null)
   const [fallo, setFallo] = useState(false)

@@ -85,7 +85,7 @@ export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
             </span>
             {p.clienteId && p.estado !== 'retirado' && p.estado !== 'emitido' && p.estado !== 'caducado' && (() => {
               const d = fraseDatosEmision(datosEmision[p.clienteId])
-              return <span style={{ fontSize: 13, color: d.alerta ? 'var(--negative, #c0392b)' : 'var(--muted, #666)' }}>{d.texto}</span>
+              return <span style={{ fontSize: 13, color: d.alerta ? 'var(--negative)' : 'var(--muted)' }}>{d.texto}</span>
             })()}
             <Necesidades p={p} deshabilitado={!libre} onGuardar={(texto) => void patch(p, { accion: 'necesidades', texto })} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -128,7 +128,7 @@ export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
           </div>
         )
       })}
-      {aviso && <span role="status" style={{ fontSize: 13, color: aviso.ok ? 'var(--positive, #1e7e34)' : 'var(--negative, #c0392b)' }}>{aviso.texto}</span>}
+      {aviso && <span role="status" style={{ fontSize: 13, color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>{aviso.texto}</span>}
       <span style={NOTA}>El aviso no lleva precio ni compañía: el cliente los ve en su portal entrando con un código a su correo.</span>
     </section>
   )

@@ -127,7 +127,7 @@ export default function Documentos({
 
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      <div style={{ fontSize: 13, color: resumen.estado === 'sin_consultar' ? '#c96' : 'var(--muted)' }}>
+      <div style={{ fontSize: 13, color: resumen.estado === 'sin_consultar' ? 'var(--warning)' : 'var(--muted)' }}>
         {resumen.estado === 'sin_consultar' ? '❔ ' : ''}
         {resumen.titular}
       </div>
@@ -168,7 +168,7 @@ export default function Documentos({
                     ✅ Revisado
                   </button>
                 )}
-                <button type="button" onClick={() => borrar(d.id)} disabled={ocupado} style={{ ...btn, color: '#c44' }}>
+                <button type="button" onClick={() => borrar(d.id)} disabled={ocupado} style={{ ...btn, color: 'var(--negative)' }}>
                   🗑
                 </button>
               </span>
@@ -211,7 +211,7 @@ export default function Documentos({
               ⏳ Anotar como pedido (sin fichero)
             </button>
           </div>
-          {aviso && <div style={{ fontSize: 13, color: '#c96' }}>{aviso}</div>}
+          {aviso && <div style={{ fontSize: 13, color: 'var(--warning)' }}>{aviso}</div>}
         </div>
       </details>
     </div>

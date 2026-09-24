@@ -316,7 +316,7 @@ function CeldaPago({ p }: { p: PolizaFicha }) {
       {etiquetaFraccionamiento(fraccionamiento)}
       {formaCobro && <div style={sub}>{formaCobro}</div>}
       {recargo.estado === 'calculado' && (
-        <div style={{ ...sub, color: '#c96' }} title={`${eur(recargo.sumaRecibos)} en ${recargo.recibos} recibos frente a ${eur(recargo.primaAnual)} de prima anual`}>
+        <div style={{ ...sub, color: 'var(--warning)' }} title={`${eur(recargo.sumaRecibos)} en ${recargo.recibos} recibos frente a ${eur(recargo.primaAnual)} de prima anual`}>
           +{eur(recargo.recargoEur)} ({recargo.recargoPct.toLocaleString('es-ES')}%) por fraccionar
         </div>
       )}
@@ -337,7 +337,7 @@ function Anulacion({ vencimiento, viva }: { vencimiento: string | null; viva: bo
   const v = ventanaAnulacion(vencimiento)
   if (v === null || v.diasParaAvisar > 60) return null
   return (
-    <div style={{ ...sub, color: v.enPlazo ? '#c96' : 'var(--muted)' }} title="Contrato anual: solo se anula al vencimiento, con 30 días de preaviso">
+    <div style={{ ...sub, color: v.enPlazo ? 'var(--warning)' : 'var(--muted)' }} title="Contrato anual: solo se anula al vencimiento, con 30 días de preaviso">
       {v.enPlazo ? `avisar antes del ${fmt(v.limiteAviso)} para no renovar` : 'plazo de aviso pasado: renueva otro año'}
     </div>
   )
@@ -362,8 +362,8 @@ export function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
       </span>
     )
   }
-  if (r.devueltos > 0) return <span style={{ color: '#d66' }}>🔴 {r.devueltos} devuelto(s)</span>
-  if (r.pendientes > 0) return <span style={{ color: '#c96' }} title="Emitido por la compañía y aún sin cargar en cuenta. No es un impago.">🟡 {r.pendientes} al cobro</span>
+  if (r.devueltos > 0) return <span style={{ color: 'var(--negative)' }}>🔴 {r.devueltos} devuelto(s)</span>
+  if (r.pendientes > 0) return <span style={{ color: 'var(--warning)' }} title="Emitido por la compañía y aún sin cargar en cuenta. No es un impago.">🟡 {r.pendientes} al cobro</span>
   // 🚨 Todos anulados (20 de 109 vivas) se pintaba «🟢 0 cobrado(s)»: cero
   // cobros no es estar al día — es una póliza cancelada o sustituida.
   if (r.cobrados === 0 && r.anulados > 0) {
@@ -373,7 +373,7 @@ export function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
     <span style={{ color: 'var(--muted)' }}>
       🟢 {r.cobrados} cobrado(s)
       {r.cobradoEur !== null && <div style={sub}>{eur(r.cobradoEur)}</div>}
-      {r.ilegibles > 0 && <div style={{ ...sub, color: '#c96' }}>{r.ilegibles} importe(s) sin poder leer</div>}
+      {r.ilegibles > 0 && <div style={{ ...sub, color: 'var(--warning)' }}>{r.ilegibles} importe(s) sin poder leer</div>}
     </span>
   )
 }
