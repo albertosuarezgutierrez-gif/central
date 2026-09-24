@@ -5,6 +5,7 @@ import Documentos from '../../Documentos'
 import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import AnulacionPoliza from './AnulacionPoliza'
+import HistorialRiesgo from './HistorialRiesgo'
 import PresupuestosPoliza from './PresupuestosPoliza'
 import CartaMediadorPoliza from './CartaMediadorPoliza'
 import Siniestros from '../../Siniestros'
@@ -97,6 +98,9 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         Contrato anual: solo se deja al vencimiento, avisando 30 días antes (LCS art. 22). Fraccionar es que la
         compañía financia el pago y cobra por ello.
       </p>
+
+      {/* ── Historial del riesgo ─────────────────────────────────────────── */}
+      <HistorialRiesgo lista={p.historialRiesgo} />
 
       {/* ── Coberturas ──────────────────────────────────────────────────── */}
       <Coberturas lista={p.coberturas} />
