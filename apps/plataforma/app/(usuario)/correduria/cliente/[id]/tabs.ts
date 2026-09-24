@@ -6,10 +6,16 @@
  * `?tab=` inventado (o un enlace viejo) deje la ficha en blanco.
  */
 
-export type TabFicha = 'resumen' | 'polizas' | 'contactos' | 'mensajes' | 'documentos' | 'historial'
+export type TabFicha =
+  | 'resumen' | 'oportunidades' | 'pendiente' | 'polizas' | 'contactos' | 'mensajes' | 'documentos' | 'notas' | 'historial'
 
+/**
+ * Desde el 24/09/2026 no son pestañas sino ACCESOS directos (Alberto: «tiene que ser todo
+ * accesos directos»): «resumen» es la ficha con los seguros en tres cubos, y cada acceso
+ * carga su sección debajo.
+ */
 export const TABS_FICHA: readonly TabFicha[] = [
-  'resumen', 'polizas', 'contactos', 'mensajes', 'documentos', 'historial',
+  'resumen', 'oportunidades', 'pendiente', 'polizas', 'contactos', 'mensajes', 'documentos', 'notas', 'historial',
 ]
 
 /**

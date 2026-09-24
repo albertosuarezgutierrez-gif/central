@@ -70,7 +70,8 @@ test('un contador nulo NO se pinta (0 diría «se miró y no hay»)', () => {
 test('las pestañas no se prefetchean: cada una repite la llamada al puerto', () => {
   // `fichaAsegura` trae la ficha entera de una vez; prefetchear las siete serían
   // siete consultas a la cartera por pasar el ratón por encima.
-  assert.match(leer('FichaTabs.tsx'), /prefetch=\{false\}/)
+  const accesos = readFileSync(path.join(process.cwd(), 'apps/plataforma/app/(usuario)/correduria/Accesos.tsx'), 'utf8')
+  assert.match(accesos, /<Link key=\{a\.id\} href=\{a\.href\} prefetch=\{false\}/)
 })
 
 test('la sección lleva el acento de Grupo ASegura por TOKENS, no por hex sueltos', () => {
@@ -81,7 +82,7 @@ test('la sección lleva el acento de Grupo ASegura por TOKENS, no por hex suelto
   // Desde el 24/09/2026 el cobalto es el acento de TODO el panel: vive en :root y en el tema oscuro.
   assert.match(css, /:root\s*\{[^}]*--primary:\s*#3364ee/)
   assert.match(css, /\[data-theme="dark"\]\s*\{[^}]*--primary:\s*#497cfd/)
-  for (const f of ['Cabecera.tsx', 'FichaTabs.tsx', 'TabResumen.tsx']) {
+  for (const f of ['Cabecera.tsx', 'FichaTabs.tsx', 'TabPendiente.tsx', 'SegurosCliente.tsx']) {
     assert.doesNotMatch(leer(f), /#[0-9a-fA-F]{3,6}\b/, `${f}: solo tokens var(--…), sin hex`)
   }
 })
