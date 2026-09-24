@@ -511,6 +511,9 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) sivra: `apply-auto` pasa a 4 pasadas/día (+00:30 UTC)
+- Por el tramo de última hora del canal: la fecha que cruza a ≤6 días a medianoche ya no se ve ~11 % cara hasta las 08:30. El raíl diario no se abre (ancla `ref24` = precio de antes de hoy). `PASADAS_POR_DIA_APPLY` = 4 (su cepo contra el cron sigue vivo).
+
 ## (24/09/2026) sivra: el MOTOR ya tarifica con dos tramos de canal (antelación / última hora)
 - Recta principal (`channel_markup`, `cuota_fija`) ajustada SOLO con ventanas de antelación ≥7 días; el tramo ≤6 días es un recargo sobre la pendiente, columna nueva `pricing_settings.canal_recargo_uh` (default 1 = sin tramo; migración aplicada en prod, neutra). Lo escribe el calibrador `/api/sivra/pricing/canal`, acotado a ±15 % por pasada.
 - `apply` usa por fecha `markupEnFecha()`; el centinela del huésped también. El plan de escaparate separa tramos (antes todo se medía con check-in «mañana» y la recta principal se iba a quedar sin ventanas).
