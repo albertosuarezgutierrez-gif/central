@@ -29,7 +29,11 @@ import { llamarAviso } from '@/lib/aviso'
  */
 const AVISO_CORREO_ACTIVO = process.env.NEXT_PUBLIC_AVISOS_CORREO === '1'
 
-type Props = { ramo: string }
+/**
+ * En una página de ramo, `ramo` viene fijo. En la portada no hay ramo: llegan `opciones` (desde el
+ * servidor, para no meter todo `lib/ramos.ts` en el bundle del cliente) y el visitante elige.
+ */
+type Props = { ramo: string; opciones?: undefined } | { ramo?: undefined; opciones: readonly { slug: string; nombre: string }[] }
 
 function dias(n: number): string {
   return n === 1 ? '1 día' : `${n} días`
@@ -63,7 +67,10 @@ function Mensaje({ v }: { v: Ventana }) {
   )
 }
 
-export default function VentanaRenovacion({ ramo }: Props) {
+export default function VentanaRenovacion({ ramo: ramoFijo, opciones }: Props) {
+  const [ramoElegido, setRamoElegido] = useState('')
+  const ramo = ramoFijo ?? ramoElegido
+  const origen = `ramo_ventana_${ramoFijo ?? 'portada'}`
   const [vence, setVence] = useState('')
   const [hoy, setHoy] = useState<Date | null>(null)
   useEffect(() => setHoy(new Date()), [])
@@ -76,8 +83,8 @@ export default function VentanaRenovacion({ ramo }: Props) {
   useEffect(() => {
     if (medido.current || !fase) return
     medido.current = true
-    medir('ventana_calculo', { ramo, fase })
-  }, [fase, ramo])
+    medir('ventana_calculo', { ramo: ramo || 'sin_ramo', origen, fase })
+  }, [fase, ramo, origen])
 
   const hito = (pos: number): CSSProperties => ({ left: `${pos}%` })
 
@@ -95,17 +102,29 @@ export default function VentanaRenovacion({ ramo }: Props) {
         margen para decidir.
       </p>
 
-      <label className="f-lab" htmlFor="ventana-fecha">
-        Fecha de vencimiento (la de tu póliza o tu último recibo)
-      </label>
-      <input
-        id="ventana-fecha"
-        className="f-in"
-        type="date"
-        value={vence}
-        onChange={(e) => setVence(e.target.value)}
-        style={{ maxWidth: 260 }}
-      />
+      <div className="ventana-campos">
+        {opciones && (
+          <div>
+            <label className="f-lab" htmlFor="ventana-ramo">
+              ¿Qué seguro es?
+            </label>
+            <select id="ventana-ramo" className="f-in" value={ramoElegido} onChange={(e) => setRamoElegido(e.target.value)}>
+              <option value="">Elige uno</option>
+              {opciones.map((o) => (
+                <option key={o.slug} value={o.slug}>
+                  {o.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        <div>
+          <label className="f-lab" htmlFor="ventana-fecha">
+            Fecha de vencimiento (la de tu póliza o tu último recibo)
+          </label>
+          <input id="ventana-fecha" className="f-in" type="date" value={vence} onChange={(e) => setVence(e.target.value)} />
+        </div>
+      </div>
 
       {v && (
         <div aria-live="polite" style={{ marginTop: 20 }}>
@@ -147,10 +166,10 @@ export default function VentanaRenovacion({ ramo }: Props) {
           <Mensaje v={v} />
 
           {AVISO_CORREO_ACTIVO ? (
-            <AvisoPorCorreo ramo={ramo} vence={vence} />
+            <AvisoPorCorreo ramo={ramo} vence={vence} origen={origen} />
           ) : (
             <div className="hero-cta" style={{ marginTop: 16 }}>
-              <EnlaceMedido href={PORTAL_URL} origen={`ramo_ventana_${ramo}`} className="btn btn-brand" style={{ minHeight: 44 }}>
+              <EnlaceMedido href={PORTAL_URL} origen={origen} className="btn btn-brand" style={{ minHeight: 44 }}>
                 Guardar esta fecha en mi área
               </EnlaceMedido>
             </div>
@@ -168,7 +187,7 @@ type EstadoAviso = { fase: 'idle' } | { fase: 'enviando' } | { fase: 'ok'; email
  * premarcada no es consentimiento). Lo que sale de aquí es un correo de confirmación: hasta que la
  * persona no lo confirma no se le escribe nada más ni entra en la cartera.
  */
-function AvisoPorCorreo({ ramo, vence }: { ramo: string; vence: string }) {
+function AvisoPorCorreo({ ramo, vence, origen }: { ramo: string; vence: string; origen: string }) {
   const [estado, setEstado] = useState<EstadoAviso>({ fase: 'idle' })
   const [consentimiento, setConsentimiento] = useState(false)
 
@@ -246,11 +265,16 @@ function AvisoPorCorreo({ ramo, vence }: { ramo: string; vence: string }) {
           {estado.motivo}
         </p>
       )}
+      {!ramo && (
+        <p className="tenue" style={{ fontSize: 14, margin: '0 0 10px' }}>
+          Elige arriba de qué seguro se trata para poder avisarte.
+        </p>
+      )}
       <div className="hero-cta" style={{ marginTop: 0 }}>
-        <button type="submit" className="btn btn-brand" style={{ minHeight: 44 }} disabled={!consentimiento || estado.fase === 'enviando'}>
+        <button type="submit" className="btn btn-brand" style={{ minHeight: 44 }} disabled={!ramo || !consentimiento || estado.fase === 'enviando'}>
           {estado.fase === 'enviando' ? 'Enviando…' : 'Avisadme por correo'}
         </button>
-        <EnlaceMedido href={PORTAL_URL} origen={`ramo_ventana_${ramo}`} className="btn btn-outline" style={{ minHeight: 44 }}>
+        <EnlaceMedido href={PORTAL_URL} origen={origen} className="btn btn-outline" style={{ minHeight: 44 }}>
           O guárdala en mi área
         </EnlaceMedido>
       </div>

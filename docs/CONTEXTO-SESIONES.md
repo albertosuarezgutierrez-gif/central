@@ -426,7 +426,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (24/09/2026) asegura: fase 2 «avísame por correo» (doble opt-in → ficha lead + oportunidad + avisos a 70/45 días)
 - Decisión de Alberto: todo en asegura y la ficha nace al CONFIRMAR. Web → plataforma (`/api/publico/correduria/aviso`, límite IP + Telegram) → asegura (`/api/operador/aviso-web`, `lib/aviso-web.ts`, cron `avisos-web` 08:30).
 - Tabla `seguros.aviso_web` APLICADA en prod (migración `seguros_aviso_web`). Revisión agente-architect: 0 bloqueantes; 6 arreglos aplicados (anti-spam, baja por correo, purga, llave directa). APAGADO: `ASEGURA_AVISOS_WEB_ACTIVOS` + `NEXT_PUBLIC_AVISOS_CORREO`; orden de encendido en `apps/asegura/CLAUDE.md`.
-- Cepos vistos fallar: contrato de ramos web↔asegura, consentimiento explícito, ventana de avisos. Mismo PR que la fase 1.
+- Widget también en la PORTADA (`#vencimiento`, con selector de ramo). Cepos vistos fallar: contrato de ramos web↔asegura, consentimiento explícito, ventana de avisos. Mismo PR que la fase 1.
 
 ## (24/09/2026) asegura-web: widget «Tu ventana para decidir» en las páginas de ramo (captación por vencimiento)
 - Decisión: NO comparador tipo Rastreator (0,50 €/consulta Avant2 + análisis objetivo/IPID). Modelo Clark/Jerry: revisar pólizas + aviso de renovación + tramitar baja. Estudio de mercado en el PR.

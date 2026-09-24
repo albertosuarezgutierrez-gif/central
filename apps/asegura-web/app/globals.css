@@ -1978,3 +1978,9 @@ textarea.f-in {
   padding-top: 18px;
   border-top: 1px solid var(--border);
 }
+.ventana-campos {
+  display: grid;
+  gap: 12px;
+  align-items: end;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 260px));
+}

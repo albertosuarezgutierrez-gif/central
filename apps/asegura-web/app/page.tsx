@@ -11,6 +11,8 @@ import PanelDemo from '@/components/PanelDemo'
 import Cifras from '@/components/Cifras'
 import Escaneo from '@/components/Escaneo'
 import EnlaceMedido from '@/components/EnlaceMedido'
+import VentanaRenovacion from '@/components/VentanaRenovacion'
+import { ramoTieneVentana } from '@/lib/ventana-renovacion'
 
 export const metadata: Metadata = {
   // Sin `title`: la portada es el segmento raíz, donde la plantilla `%s · Grupo ASegura`
@@ -292,6 +294,18 @@ export default function Home() {
               })}
             </ul>
           </div>
+        </div>
+      </section>
+
+      {/* ── Ventana de renovación ───────────────────────────────────────── */}
+      {/* El mismo widget de las páginas de ramo; aquí el visitante elige el
+          ramo. Las opciones se calculan en el servidor para no meter
+          `lib/ramos.ts` entero (todo el copy) en el bundle del cliente. */}
+      <section className="seccion" id="vencimiento" aria-label="Cuándo vence tu seguro">
+        <div className="wrap">
+          <VentanaRenovacion
+            opciones={RAMOS.filter((r) => ramoTieneVentana(r.slug)).map((r) => ({ slug: r.slug, nombre: r.nombre }))}
+          />
         </div>
       </section>
 
