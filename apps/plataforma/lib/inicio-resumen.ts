@@ -231,3 +231,21 @@ export function proximosCargos(recurrentes: RecurrenteBanco[], hoy: string, dias
   }
   return out.sort((a, b) => a.fecha.localeCompare(b.fecha) || Math.abs(b.importe) - Math.abs(a.importe))
 }
+
+/**
+ * Vencimientos de la correduría para la tarjeta del Inicio.
+ *
+ * El puerto mira también una anualidad HACIA ATRÁS (para que una póliza vencida sin gestionar no
+ * desaparezca), así que `dias` puede ser negativo. Mezclarlas con las futuras y ordenar por días
+ * ponía arriba las MÁS ATRASADAS (junio, en septiembre) bajo el rótulo «Próximos vencimientos».
+ * Se separan: las próximas son las de 0..`ventana` días, y las vencidas se cuentan aparte.
+ */
+export function repartoVencimientos<T extends { dias: number }>(polizas: T[], ventana = 60): {
+  proximas: T[]
+  vencidas: T[]
+  en30: number
+} {
+  const proximas = polizas.filter(p => p.dias >= 0 && p.dias <= ventana).sort((a, b) => a.dias - b.dias)
+  const vencidas = polizas.filter(p => p.dias < 0).sort((a, b) => b.dias - a.dias)
+  return { proximas, vencidas, en30: proximas.filter(p => p.dias <= 30).length }
+}
