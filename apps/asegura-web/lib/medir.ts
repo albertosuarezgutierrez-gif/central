@@ -3,6 +3,7 @@ export const EVENTOS = {
   calculadora_calculo: 'calculadora_calculo', // la persona pulsó calcular en la calculadora de vencimientos
   cta_portal_click: 'cta_portal_click', // clic en cualquier botón que lleva al portal (prop `origen`)
   lead_enviado: 'lead_enviado', // el formulario de contacto respondió ok (prop `ramo`)
+  ventana_calculo: 'ventana_calculo', // primera fecha válida en el widget de ventana de renovación (props `ramo`, `fase`)
 } as const
 
 export type Evento = keyof typeof EVENTOS

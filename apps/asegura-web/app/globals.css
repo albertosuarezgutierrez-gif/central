@@ -1866,3 +1866,110 @@ textarea.f-in {
   line-height: 1.5;
   color: var(--muted);
 }
+
+/* ── Ventana de renovación (páginas de ramo) ─────────────────────────────
+   Barra de los 90 días antes del vencimiento: tramo en que la compañía aún
+   puede avisar, la ventana para decidir (resaltada) y el tramo en que ya se
+   renueva sola. Por debajo de 560 px los hitos pasan a lista vertical: tres
+   fechas con su texto no caben en fila en 320 px sin pisarse. */
+.ventana-barra {
+  position: relative;
+  height: 14px;
+  margin: 28px 0 0;
+  border-radius: var(--pill);
+  background: var(--border);
+}
+.ventana-tramo {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+.ventana-tramo--antes {
+  left: 0;
+  border-radius: var(--pill) 0 0 var(--pill);
+  background: color-mix(in oklab, var(--muted) 30%, transparent);
+}
+.ventana-tramo--ventana {
+  background: var(--brand);
+}
+.ventana-tramo--tarde {
+  border-radius: 0 var(--pill) var(--pill) 0;
+  background: repeating-linear-gradient(
+    135deg,
+    color-mix(in oklab, var(--muted) 35%, transparent) 0 6px,
+    transparent 6px 12px
+  );
+}
+.ventana-hoy {
+  position: absolute;
+  top: -8px;
+  bottom: -8px;
+  width: 2px;
+  transform: translateX(-1px);
+  background: var(--text);
+}
+.ventana-hoy span {
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.ventana-hitos {
+  list-style: none;
+  margin: 0 0 16px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+/* Cada columna es un tramo de 30 días y el hito cae en su borde derecho,
+   así que el texto se alinea a la derecha, bajo su marca. */
+.ventana-hitos li {
+  position: relative;
+  display: grid;
+  gap: 2px;
+  align-content: start;
+  padding: 12px 10px 0 0;
+  font-size: 13px;
+  text-align: right;
+  color: var(--muted);
+}
+.ventana-hitos li::before {
+  content: '';
+  position: absolute;
+  top: 2px;
+  right: 0;
+  width: 1px;
+  height: 8px;
+  background: var(--border);
+}
+.ventana-hitos li:last-child {
+  padding-right: 0;
+}
+.ventana-hitos strong {
+  color: var(--text);
+}
+.ventana-hito--clave strong {
+  color: var(--brand);
+}
+@media (max-width: 559px) {
+  .ventana-hitos {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .ventana-hitos li,
+  .ventana-hitos li:last-child {
+    text-align: left;
+    padding: 0 0 0 12px;
+    border-left: 3px solid var(--border);
+  }
+  .ventana-hitos li.ventana-hito--clave {
+    border-left-color: var(--brand);
+  }
+  .ventana-hitos li::before {
+    display: none;
+  }
+}

@@ -415,6 +415,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) asegura-web: widget «Tu ventana para decidir» en las páginas de ramo (captación por vencimiento)
+- Decisión: NO comparador tipo Rastreator (0,50 €/consulta Avant2 + análisis objetivo/IPID). Modelo Clark/Jerry: revisar pólizas + aviso de renovación + tramitar baja. Estudio de mercado en el PR.
+- Art. 22 LCS: compañía avisa cambios ≥2 meses; tomador se opone ≥1 mes. Widget pinta los 90 días previos con esa ventana (`lib/ventana-renovacion.ts` + test; vida-y-salud excluido). CTA al portal; NO guarda nada.
+- Pendiente (fase 2): «avísame por correo» con doble opt-in = alta en el portal (enlace mágico, endpoint nuevo) + cron avisos a 70 y 45 días. NO afirmar consecuencia de que la compañía no avise a tiempo (sin confirmar jurídicamente).
+
 ## (24/09/2026) blog ASegura: corregida la FAQ «cancelar sin penalización» del artículo publicado
 El artículo `cuando-empieza-a-cubrir-un-seguro` (#2966) prometía cancelar «sin penalización» antes de la fecha de
 efecto. Ahora dice que depende: desistimiento en contratación a distancia (y plazo mayor en vida); si no, lo marcan
