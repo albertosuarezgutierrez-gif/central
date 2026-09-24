@@ -6,6 +6,7 @@
 // recuadros de error distintos diciendo lo mismo.
 
 import type { Retarificabilidad, IncidenciaCalidad } from '@central/module-seguros'
+import { esReglaCalidad } from '@central/module-seguros'
 import { leerRetarificacion } from './ficha-asegura.ts'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
@@ -1070,13 +1071,13 @@ export function interpretarCalidad(status: number, json: unknown): CalidadDato {
   for (const f of r.filas) {
     if (typeof f !== 'object' || f === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
     const o = f as Record<string, unknown>
-    const regla = cadena(o.regla)
+    const regla = o.regla
     // Sin regla válida no hay incidencia.
-    if (regla === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    if (!esReglaCalidad(regla)) return { estado: 'error', motivo: 'respuesta_ilegible' }
     // Las demás se pueden leer tranquilamente con helpers que devuelven null:
     // la regla existe y eso basta para la agrupación.
     incidencias.push({
-      regla: regla as any, // ya se valida que sea cadena
+      regla,
       clienteId: cadena(o.clienteId) || '',
       cliente: cadena(o.cliente),
       polizaId: cadena(o.polizaId),
