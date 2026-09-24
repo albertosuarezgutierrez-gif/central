@@ -59,13 +59,8 @@ export default function DeclaradasVencer({
       })
   }, [])
 
-  if (datos === null) {
-    return (
-      <Bloque titulo="Otras compañías por vencer" Icono={PhoneOutgoing} primero={primero}>
-        <span style={{ color: 'var(--muted)', fontSize: 13 }}>Cargando…</span>
-      </Bloque>
-    )
-  }
+  // Sin respuesta todavía: no ocupa sitio, como el resto de colas de «Hoy».
+  if (datos === null) return null
 
   if (datos.estado === 'sin_configurar') {
     return (
@@ -91,6 +86,8 @@ export default function DeclaradasVencer({
   const { declaradas, sinVincular } = datos
   const visibles = declaradas.slice(0, ver)
   const hayTrabajo = declaradas.length > 0
+  // Leída y vacía: nada que llamar hoy (el error sí se pinta, arriba).
+  if (!hayTrabajo && sinVincular === 0) return null
 
   return (
     <Bloque

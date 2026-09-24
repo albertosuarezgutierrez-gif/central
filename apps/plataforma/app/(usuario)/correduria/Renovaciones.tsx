@@ -3,12 +3,14 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { descripcionDias, enCooldownRenovacion, textoAvisoRenovacionWhatsapp, type Retarificabilidad } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
-import { TablaScroll, Badge, BtnLink, type Tono } from '@/components/ui'
+import { TablaScroll, Badge, BtnLink, btnStyle, type Tono } from '@/components/ui'
 import { esAccionable, textoListaTruncada, textoVencidasAntiguas } from './secciones'
 import AccionesContacto from './AccionesContacto'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from './rotulo-retarificar'
 import { ordenarRenovaciones, resumenSinRecibir, textoCompaniaSinRecibir } from './renovacion-sin-recibir'
+
+const POR_PAGINA = 50
 
 /**
  * Las pólizas que vencen: la máquina comercial de una correduría.
@@ -233,6 +235,9 @@ export default function Renovaciones({ datos, filtro }: {
   // abajo son early returns, y React exige que los hooks se llamen siempre en
   // el mismo orden.
   const [ocultarContactadas, setOcultarContactadas] = useState(true)
+  // La ventana entera (90 días + una anualidad hacia atrás) puede traer cientos
+  // de filas: se pintan de 50 en 50 (regla de rendimiento UI del repo).
+  const [ver, setVer] = useState(POR_PAGINA)
 
   if (datos === null) {
     return <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Cargando renovaciones…</p>
@@ -362,7 +367,9 @@ export default function Renovaciones({ datos, filtro }: {
       )}
 
       <TablaScroll>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 720 }}>
+        {/* `tabla-polizas`: en móvil cada fila se apila como tarjeta con su
+            rótulo (`data-label`), igual que las pólizas de la ficha del cliente. */}
+        <table className="tabla-polizas" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 720 }}>
           <thead>
             <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
               <th style={{ padding: '6px 8px', fontWeight: 600 }}>Vence</th>
@@ -376,7 +383,7 @@ export default function Renovaciones({ datos, filtro }: {
             </tr>
           </thead>
           <tbody>
-            {ordenadas.map(p => {
+            {ordenadas.slice(0, ver).map(p => {
               const u = URGENCIAS[p.urgencia] ?? URGENCIAS.a_tiempo
               // Una renovación sin recibir no puede parecer una que vence dentro
               // de 40 días: además del badge, la fila va sobre fondo de aviso.
@@ -389,7 +396,7 @@ export default function Renovaciones({ datos, filtro }: {
                     ...(vencida ? { background: 'var(--warning-bg)' } : {}),
                   }}
                 >
-                  <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
+                  <td data-label="Vence" style={{ padding: '8px', whiteSpace: 'nowrap' }}>
                     {fmtFecha(p.fechaVencimiento)}
                     <div
                       style={{
@@ -403,7 +410,7 @@ export default function Renovaciones({ datos, filtro }: {
                       {descripcionDias(p.dias)}
                     </div>
                   </td>
-                  <td style={{ padding: '8px' }}>
+                  <td data-rol="cabeza" style={{ padding: '8px' }}>
                     {/* El acceso directo: un clic y está la ficha entera del
                         cliente (pólizas, recibos, siniestros). Sin volver a
                         buscarlo por su nombre, que es lo que había antes. */}
@@ -462,18 +469,18 @@ export default function Renovaciones({ datos, filtro }: {
                       <div style={{ fontSize: 11, color: 'var(--muted)' }}>nº {p.numeroPoliza}</div>
                     )}
                   </td>
-                  <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>{TIPOS[p.tipo] ?? p.tipo}</td>
-                  <td style={{ padding: '8px', minWidth: 150 }}><CeldaObjeto objeto={p.objeto} /></td>
-                  <td style={{ padding: '8px' }}>{p.aseguradora}</td>
-                  <td style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                  <td data-label="Ramo" style={{ padding: '8px', whiteSpace: 'nowrap' }}>{TIPOS[p.tipo] ?? p.tipo}</td>
+                  <td data-label="Qué asegura" style={{ padding: '8px', minWidth: 150 }}><CeldaObjeto objeto={p.objeto} /></td>
+                  <td data-label="Compañía" style={{ padding: '8px' }}>{p.aseguradora}</td>
+                  <td data-label="Prima" style={{ padding: '8px', textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                     {p.prima === null
                       ? <span style={{ color: 'var(--muted)' }} title="La compañía no informa la prima">sin dato</span>
                       : eur(p.prima)}
                   </td>
-                  <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
+                  <td data-label="Estado" style={{ padding: '8px', whiteSpace: 'nowrap' }}>
                     <Badge tono={u.tono}>{u.label}</Badge>
                   </td>
-                  <td style={{ padding: '8px', whiteSpace: 'nowrap' }}>
+                  <td data-rol="accion" style={{ padding: '8px', whiteSpace: 'nowrap' }}>
                     {/* El botón que Alberto pedía sin tener que entrar en la
                         ficha del cliente: retarificar gasta 0,50€ reales, así
                         que sigue habiendo pantalla de confirmación detrás —
@@ -498,6 +505,15 @@ export default function Renovaciones({ datos, filtro }: {
           </tbody>
         </table>
       </TablaScroll>
+      {ordenadas.length > ver && (
+        <button
+          type="button"
+          onClick={() => setVer(v => v + POR_PAGINA)}
+          style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, marginTop: 10 }}
+        >
+          Ver {Math.min(POR_PAGINA, ordenadas.length - ver)} más ({ordenadas.length - ver} sin mostrar)
+        </button>
+      )}
 
       <p style={{ fontSize: 11, color: 'var(--muted)', margin: '8px 0 0' }}>
         El tomador puede oponerse a la prórroga hasta un mes antes del vencimiento (LCS art. 22): pasada esa

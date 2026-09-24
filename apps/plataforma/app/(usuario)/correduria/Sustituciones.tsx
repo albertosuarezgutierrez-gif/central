@@ -43,13 +43,8 @@ export default function Sustituciones({
       })
   }, [])
 
-  if (datos === null) {
-    return (
-      <Bloque titulo="Seguimiento de sustituciones" Icono={RefreshCw} primero={primero}>
-        <span style={{ color: 'var(--muted)', fontSize: 13 }}>Cargando…</span>
-      </Bloque>
-    )
-  }
+  // Como el resto de colas de «Hoy»: sin respuesta todavía o sin trabajo, no ocupa sitio.
+  if (datos === null) return null
 
   if (datos.estado === 'sin_configurar') {
     return (
@@ -73,26 +68,23 @@ export default function Sustituciones({
   }
 
   const { filas } = datos
-  const hayTrabajo = filas.length > 0
+  // Leída y vacía: nada que hacer hoy. Un error SÍ se pinta (arriba), nunca se calla.
+  if (filas.length === 0) return null
 
   return (
     <Bloque
-      titulo={hayTrabajo ? `Sustituidas pendientes de confirmar · ${filas.length}` : 'Sin sustituciones pendientes'}
+      titulo={`Sustituidas pendientes de confirmar · ${filas.length}`}
       sub="Pólizas retarificadas y emitidas en otra compañía, a la espera de que CIMA confirme que el cliente la paga."
       Icono={RefreshCw}
-      tono={hayTrabajo ? 'aviso' : 'neutral'}
-      destacado={hayTrabajo}
+      tono="aviso"
+      destacado
       primero={primero}
     >
-      {filas.length === 0 ? (
-        <p style={pMuted}>Ninguna sustitución lleva más de 3 días sin que CIMA la haya confirmado.</p>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
-          {filas.map((f) => (
-            <Fila key={f.polizaVieja.id} f={f} />
-          ))}
-        </div>
-      )}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+        {filas.map((f) => (
+          <Fila key={f.polizaVieja.id} f={f} />
+        ))}
+      </div>
     </Bloque>
   )
 }

@@ -202,18 +202,18 @@ export default function CuadreComisiones({ año, onContador, primero }: {
         </div>
       ) : (
         <div className="cuadre-wrap">
-          <table className="cuadre-tabla">
+          <table className="cuadre-tabla tabla-polizas">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                <th style={{ textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Compañía</th>
-                <th style={{ textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Periodo</th>
-                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Devengado</th>
-                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Liquidado</th>
-                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Retención</th>
-                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Remesa</th>
-                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }}>Banco</th>
-                <th style={{ textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }}>Estado</th>
-                <th />
+                <th style={{ textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }} data-label="Compañía">Compañía</th>
+                <th style={{ textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }} data-label="Periodo">Periodo</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }} data-label="Devengado">Devengado</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }} data-label="Liquidado">Liquidado</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }} data-label="Retención">Retención</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }} data-label="Remesa">Remesa</th>
+                <th className="num" style={{ color: 'var(--muted)', fontWeight: 600 }} data-label="Banco">Banco</th>
+                <th style={{ textAlign: 'left', color: 'var(--muted)', fontWeight: 600 }} data-label="Estado">Estado</th>
+                <th data-label="Acciones" />
               </tr>
             </thead>
             <tbody>
@@ -221,12 +221,12 @@ export default function CuadreComisiones({ año, onContador, primero }: {
                 const s = SEMAFORO[p.estado]
                 return (
                   <tr key={`${p.companiaCodigo}-${p.inicio}-${p.fin}`} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td style={{ fontWeight: 600 }}>{p.compania}</td>
-                    <td style={{ color: 'var(--muted)' }}>{fmt(p.inicio)} → {fmt(p.fin)}</td>
-                    <td className="num" title={p.recibos != null ? `${p.recibos} recibo(s) cobrado(s)` : 'sin recibos leídos'}>
+                    <td style={{ fontWeight: 600 }} data-label="Compañía">{p.compania}</td>
+                    <td style={{ color: 'var(--muted)' }} data-label="Periodo">{fmt(p.inicio)} → {fmt(p.fin)}</td>
+                    <td className="num" data-label="Devengado" title={p.recibos != null ? `${p.recibos} recibo(s) cobrado(s)` : 'sin recibos leídos'}>
                       {imp(p.esperado)}
                     </td>
-                    <td className="num" style={{ fontWeight: 600 }}>
+                    <td className="num" data-label="Liquidado" style={{ fontWeight: 600 }}>
                       {imp(p.liqBruto)}
                       {p.liqOrigen === 'manual' && (
                         <span
@@ -238,13 +238,13 @@ export default function CuadreComisiones({ año, onContador, primero }: {
                         </span>
                       )}
                     </td>
-                    <td className="num">{imp(p.liqRetencion)}</td>
-                    <td className="num">{imp(p.liqRemesa)}</td>
-                    <td className="num">{imp(p.banco)}</td>
-                    <td>
+                    <td className="num" data-label="Retención">{imp(p.liqRetencion)}</td>
+                    <td className="num" data-label="Remesa">{imp(p.liqRemesa)}</td>
+                    <td className="num" data-label="Banco">{imp(p.banco)}</td>
+                    <td data-label="Estado">
                       <Badge tono={s.tono} title={AYUDA[p.estado] ?? undefined}>{s.texto}</Badge>
                     </td>
-                    <td>
+                    <td data-label="Acciones">
                       <button
                         className="cuadre-btn"
                         onClick={() => setConfirmando(p)}

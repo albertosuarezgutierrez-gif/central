@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ROTULO_ESTADO_CARTA, accionesCarta, type CartaMediador } from '@/lib/carta-mediador-asegura'
 import { btnStyle } from '@/components/ui'
 
-const NOTA = { fontSize: 12, color: 'var(--muted, #666)' } as const
+const NOTA = { fontSize: 12, color: 'var(--muted)' } as const
 
 /**
  * Cartas de nombramiento de mediador de esta póliza (salida B del presupuesto, PR 6). La firma el
@@ -94,7 +94,7 @@ export default function CartaMediadorPoliza({ polizaId }: { polizaId: string }) 
           </div>
         )
       })}
-      {aviso && <span role="status" style={{ fontSize: 13, color: aviso.ok ? 'var(--positive, #1e7e34)' : 'var(--negative, #c0392b)' }}>{aviso.texto}</span>}
+      {aviso && <span role="status" style={{ fontSize: 13, color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>{aviso.texto}</span>}
       <span style={NOTA}>La carta no sale sola: mándala tú a la compañía (por su buzón de mediadores) y márcala aquí.</span>
     </section>
   )
