@@ -237,3 +237,99 @@ export function telefonoVerificadoPorCodigo(codigoDgs: string): TelefonoCompania
   const c = TELEFONOS_COMPANIAS.find((t) => t.codigoDgs === codigoDgs)
   return c !== undefined && esTelefonoPublicable(c) ? c : null
 }
+
+/** La ficha VERIFICADA por su nombre (`Mapfre`, sin distinguir mayúsculas) o por su `slug`, o `null`. */
+export function telefonoVerificadoPorNombre(nombreOSlug: string): TelefonoCompania | null {
+  const clave = nombreOSlug.trim().toLowerCase()
+  const c = TELEFONOS_COMPANIAS.find((t) => t.slug === clave || t.nombre.toLowerCase() === clave)
+  return c !== undefined && esTelefonoPublicable(c) ? c : null
+}
+
+// ── «Guardar en contactos» (24/09/2026) ────────────────────────────────────
+// El texto de la web pide tener el número «a mano antes de necesitarlo»; esto
+// lo convierte en un botón. Sale del MISMO catálogo, así que un número que se
+// corrige aquí se corrige también en la tarjeta que se descarga. Lo que ya está
+// guardado en el móvil de alguien NO se corrige: por eso la tarjeta lleva la
+// fecha de comprobación y la página oficial en la nota.
+
+/** Escapa un valor de texto de vCard 3.0 (RFC 2426 §4): `\`, `,`, `;` y saltos de línea. */
+function escaparVcard(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/,/g, '\\,').replace(/;/g, '\;').replace(/\r?\n/g, '\\n')
+}
+
+function e164(numero: string): string {
+  return hrefTel(numero).slice('tel:'.length)
+}
+
+/**
+ * La tarjeta de contacto (vCard 3.0, la que abren iOS y Android) de una compañía
+ * VERIFICADA. Cada número va con su rótulo (`X-ABLabel`, que Android ignora sin
+ * romper): con varias líneas, un número sin rótulo es el que no se sabe cuál marcar.
+ * Un número repetido en dos rótulos se guarda UNA vez, con el primero.
+ * Lanza si la compañía no es publicable: la puerta es la misma que la de la web.
+ */
+export function vcardCompania(c: TelefonoCompania): string {
+  if (!esTelefonoPublicable(c)) throw new Error(`vcardCompania: ${c.slug} no está verificada`)
+  const telefonos: Array<{ numero: string; rotulo: string }> = []
+  const vistos = new Set<string>()
+  const añadir = (numero: string, rotulo: string) => {
+    const n = e164(numero)
+    if (vistos.has(n)) return
+    vistos.add(n)
+    telefonos.push({ numero: n, rotulo })
+  }
+  if (c.siniestros !== null) añadir(c.siniestros, 'Dar parte')
+  if (c.whatsapp !== null) añadir(c.whatsapp, 'WhatsApp partes')
+  for (const a of c.asistencia) for (const n of a.numeros) añadir(n, `Asistencia ${a.para}`)
+
+  const nota = [
+    c.whatsapp !== null && c.whatsappRamos?.length ? `WhatsApp solo para partes de ${c.whatsappRamos.join(' y ')}.` : null,
+    c.whatsapp !== null && c.whatsappNota ? `WhatsApp: ${c.whatsappNota}.` : null,
+    c.horario !== null ? `Horario para dar parte: ${c.horario}.` : null,
+    `Comprobado el ${c.verificadoEl} en ${c.fuente}. Si ha cambiado, manda lo que diga tu póliza.`,
+  ]
+    .filter((x): x is string => x !== null)
+    .join(' ')
+
+  const nombre = `${c.nombre} · Siniestros`
+  const lineas = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${escaparVcard(nombre)}`,
+    `N:${escaparVcard(nombre)};;;;`,
+    `ORG:${escaparVcard(c.nombre)}`,
+    ...telefonos.flatMap((t, i) => [`item${i + 1}.TEL;TYPE=VOICE:${t.numero}`, `item${i + 1}.X-ABLabel:${escaparVcard(t.rotulo)}`]),
+    `URL:${c.fuente}`,
+    `NOTE:${escaparVcard(nota)}`,
+    'END:VCARD',
+  ]
+  return `${lineas.join('\r\n')}\r\n`
+}
+
+// ── Caducidad de la verificación (24/09/2026) ──────────────────────────────
+// Un número se comprueba una vez y se da por bueno para siempre: nada avisaba
+// si una compañía lo cambiaba. Esto NO es un test que se ponga rojo un día
+// cualquiera (rompería los PR de todo el repo): lo lee el informe semanal de
+// SEO de plataforma y lo dice por Telegram.
+
+export const DIAS_REVISION_TELEFONOS = 270
+
+/** Las compañías verificadas cuya comprobación tiene más de `dias` días a `hoy`, de la más vieja a la más nueva. */
+export function telefonosPorRevisar(
+  hoy: Date,
+  dias: number = DIAS_REVISION_TELEFONOS,
+  companias: readonly TelefonoCompania[] = TELEFONOS_COMPANIAS,
+): Array<{ nombre: string; verificadoEl: string; diasDesde: number; fuente: string }> {
+  const dia = 86_400_000
+  const hoyUtc = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate())
+  return companias
+    .filter(esTelefonoPublicable)
+    .map((c) => ({
+      nombre: c.nombre,
+      verificadoEl: c.verificadoEl!,
+      diasDesde: Math.floor((hoyUtc - Date.parse(`${c.verificadoEl}T00:00:00Z`)) / dia),
+      fuente: c.fuente,
+    }))
+    .filter((c) => c.diasDesde > dias)
+    .sort((a, b) => b.diasDesde - a.diasDesde)
+}

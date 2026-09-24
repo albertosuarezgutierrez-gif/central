@@ -519,6 +519,15 @@ function BloqueCanal({ canal, deLaElegida }: { canal: CanalCompania; deLaElegida
           {canal.vias.map((v) => (
             <ViaCanalEnlace key={`${v.tipo}-${v.tipo === 'telefono' ? `${v.uso}-${v.para ?? ''}` : 'wa'}-${v.numero}`} via={v} />
           ))}
+          {/* El número, guardado en el móvil ANTES de necesitarlo: la tarjeta sale
+              del mismo catálogo verificado que estas vías. */}
+          <a
+            className="canal-via"
+            href={`/api/contacto-compania/${encodeURIComponent(canal.nombre)}`}
+            download
+          >
+            <span className="canal-via-que">Guardar en mis contactos</span>
+          </a>
           {canal.verificadoEn !== null && (
             // Un número comprobado hace tres años falla igual que uno
             // equivocado, y en el mismo momento. Se dice cuándo se miró.

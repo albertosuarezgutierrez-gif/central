@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { accionPropuesta, redactarInforme, normalizarConsulta, type ConsultaObjetivo } from './informe.ts'
+import { accionPropuesta, bloqueTelefonosPorRevisar, redactarInforme, normalizarConsulta, type ConsultaObjetivo } from './informe.ts'
 import type { DatosCobertura, DatosGsc, DatosPosthog, FilaGsc, Resultados } from './tipos.ts'
 
 // Lista propia y pequeña: NO se importa `CONSULTAS` (la escribe otro agente en paralelo).
@@ -220,4 +220,16 @@ test('informe completo con las dos fuentes ok: bloques, etiqueta literal de Post
 
 test('normalizarConsulta: minúsculas, sin tildes, trim y espacios colapsados', () => {
   assert.equal(normalizarConsulta('  Cómo   CAMBIAR de Correduría '), 'como cambiar de correduria')
+})
+
+test('teléfonos por revisar: nada que decir si no hay ninguno', () => {
+  assert.equal(bloqueTelefonosPorRevisar([]), null)
+})
+
+test('teléfonos por revisar: una línea por compañía, con fecha, días y fuente escapados', () => {
+  const t = bloqueTelefonosPorRevisar([
+    { nombre: 'A&B', verificadoEl: '2025-01-01', diasDesde: 631, fuente: 'https://a.example/?x=1&y=2' },
+  ])!
+  assert.match(t, /Teléfonos de siniestros por revisar<\/b> \(1\)/)
+  assert.match(t, /• A&amp;B: comprobado el 2025-01-01 \(hace 631 días\) — https:\/\/a\.example\/\?x=1&amp;y=2/)
 })

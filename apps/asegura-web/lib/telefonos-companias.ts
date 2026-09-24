@@ -2,6 +2,6 @@
 // única fuente, y la leen también el portal del cliente y el puerto de asegura.
 // Este fichero solo lo reexporta para que la web no cambie sus imports.
 export {
-  TELEFONOS_COMPANIAS, hrefTel, telefonosParaPublicar, whatsappLegible,
+  TELEFONOS_COMPANIAS, hrefTel, telefonoVerificadoPorNombre, telefonosParaPublicar, vcardCompania, whatsappLegible,
   type LineaAsistencia, type TelefonoCompania,
 } from '@central/module-seguros'
