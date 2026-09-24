@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutGrid, FileText, Receipt, TriangleAlert, Users, Paperclip, History } from 'lucide-react'
+import { LayoutGrid, FileText, Receipt, TriangleAlert, Users, MessageSquare, Paperclip, History } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { TABS_FICHA, type TabFicha } from './tabs'
 
@@ -27,6 +27,7 @@ const TABS: { k: TabFicha; label: string; Icono: LucideIcon }[] = [
   { k: 'recibos', label: 'Recibos', Icono: Receipt },
   { k: 'siniestros', label: 'Siniestros', Icono: TriangleAlert },
   { k: 'contactos', label: 'Contactos', Icono: Users },
+  { k: 'mensajes', label: 'Mensajes', Icono: MessageSquare },
   { k: 'documentos', label: 'Documentos', Icono: Paperclip },
   { k: 'historial', label: 'Historial', Icono: History },
 ]

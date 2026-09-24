@@ -572,7 +572,7 @@ Enviar la invitación a los **51 clientes invitables**. El botón ya existe en l
    Cada elemento con su botón. **Es el sustituto del «te mando un email y espero»**: menos trabajo administrativo en los dos lados.
 5. **Presupuesto completo** (PR 4-6 del spec): comparar opciones, elegir, **firmar con código** (core-firma, como rrhh) y firmar la carta de nombramiento de mediador. Estado visible hasta «emitida».
 6. **Anulación**: pendiente de tu firma → enviada a la compañía → anulada con efecto dd/mm (§O).
-7. **Mensajes con tu corredor**: un hilo por tema (póliza o siniestro), trazable y guardado en la ficha. Cubre lo que WhatsApp cubrirá más adelante. Cada mensaje que entra dispara `MENSAJE_PORTAL_RECIBIDO` y cae en tu Hoy.
+7. ✅ **(24/09/2026: pestaña «Mensajes» del portal + tabla `seguros.portal_mensaje`; Alberto lee en Hoy y contesta en la ficha → «Mensajes», con correo de aviso opcional sin el texto; Telegram por cada mensaje que entra)** **Mensajes con tu corredor**: un hilo por tema (póliza o siniestro), trazable y guardado en la ficha. Cubre lo que WhatsApp cubrirá más adelante. Cada mensaje que entra dispara `MENSAJE_PORTAL_RECIBIDO` y cae en tu Hoy.
 8. **Siniestros vivos**: el estado que llega de CIMA traducido a lenguaje claro («la compañía ha asignado perito», «pendiente de pago») y lo que se espera del cliente. Menos llamadas preguntando «¿cómo va lo mío?».
 9. **Recibo devuelto**: aviso con qué pasa si no se paga (reloj del art. 15 LCS, ya calculado en `retencion.ts`) y cómo pagarlo con la compañía.
 10. **Recomienda a alguien**: un invitado con consentimiento propio entra como lead con canal y con quién lo recomendó. Más adelante, reseña en Google tras una buena gestión de siniestro o de renovación.

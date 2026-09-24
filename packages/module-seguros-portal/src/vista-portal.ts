@@ -161,6 +161,9 @@ export function pestanasPortal(): PestanaPortal[] {
     // contactos» y la pantalla ya era eso: la gente a la que das acceso, la que
     // te lo da y la que invitas. La ruta NO cambia: los enlaces guardados a
     // `/autorizaciones` siguen llegando.
+    // 24/09/2026: «Mensajes» con el corredor (§Q.7), otra RUTA como Contactos. Va antes de
+    // Contactos porque es lo que se usa: un hilo por póliza en vez de un correo que se pierde.
+    { vista: null, etiqueta: 'Mensajes', href: '/mensajes' },
     { vista: null, etiqueta: 'Contactos', href: '/autorizaciones' },
     // 09/09/2026: «Mis datos», la última. Es sobre la persona, no sobre sus
     // seguros, y por eso va al final: quien entra viene a mirar pólizas, y su

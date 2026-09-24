@@ -20,7 +20,7 @@ import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
  * anterior.** Hasta hoy aquí ponía que no había hamburguesa a propósito: «son
  * cuatro secciones, y un botón que las esconde las hace menos visibles». La
  * decisión era correcta con su premisa y la premisa ya no se cumple:
- * `pestanasPortal()` devuelve **siete** entradas (Seguros, Mi QR, Recibos,
+ * `pestanasPortal()` devuelve **ocho** entradas (Seguros, Mi QR, Recibos,
  * Siniestros, Recordatorios, Contactos, Datos). Con siete, el carril horizontal
  * no enseñaba las secciones: las amontonaba y las cortaba — que es justo lo que
  * Alberto vio en su móvil, y lo que ya había obligado a bajar de cuatro a tres
@@ -64,8 +64,10 @@ export function NavPortal() {
   const enBoveda = ruta === '/boveda'
   const activa = enBoveda ? vistaDeBoveda(params.get('vista') ?? undefined) : null
   const pestanas = pestanasPortal()
-  const esActivaDe = (vista: string | null) =>
-    vista === null ? !enBoveda : enBoveda && vista === activa
+  // Las pestañas que son otra RUTA (Contactos, Mensajes) se casan por su href: con dos,
+  // «no estoy en la bóveda» encendería las dos a la vez.
+  const esActivaDe = (p: { vista: string | null; href: string }) =>
+    p.vista === null ? ruta === p.href || ruta.startsWith(`${p.href}/`) : enBoveda && p.vista === activa
 
   // 🚨 El cajón se DERIVA de en qué pantalla se abrió, no es un booleano suelto:
   // se guarda la ruta+parámetro del momento en que se abrió y está abierto solo
@@ -108,7 +110,7 @@ export function NavPortal() {
     }
   }, [abierto])
 
-  const etiquetaActiva = pestanas.find((p) => esActivaDe(p.vista))?.etiqueta ?? null
+  const etiquetaActiva = pestanas.find((p) => esActivaDe(p))?.etiqueta ?? null
 
   // El slot vive en el layout RAÍZ (`app/layout.tsx`), fuera del árbol de este
   // componente. `document.getElementById` no existe en el servidor, así que
@@ -176,7 +178,7 @@ export function NavPortal() {
           </button>
         </div>
         {pestanas.map((p) => {
-          const esActiva = esActivaDe(p.vista)
+          const esActiva = esActivaDe(p)
           return (
             <Link
               key={p.href}
