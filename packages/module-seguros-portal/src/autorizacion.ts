@@ -236,6 +236,18 @@ export function camposDeAlcances(
 }
 
 /**
+ * ¿Puede quien RECIBE la autorización dar un parte sobre esa póliza?
+ *
+ * Solo con el alcance `partes` y solo si quien lo concede es una SOCIEDAD: de una
+ * persona física no se delega actuar (`ALCANCES_CONCEDIBLES`). Una fila `partes`
+ * de una física —escrita por otro camino— no abre nada: lado restrictivo. Ver la
+ * póliza NO basta para declarar un siniestro en nombre de su tomador.
+ */
+export function puedeDarParte(alcances: readonly Alcance[], tipo: TipoOtorgante): boolean {
+  return tipo === 'juridica' && alcances.includes('partes')
+}
+
+/**
  * Etiqueta de nivel para pintar («ve la tarjeta» / «ve también lo económico»).
  * Es SOLO para el texto: lo que de verdad decide qué se sirve es
  * `camposDeAlcances`, que va capado. Nunca uses esto para autorizar nada.

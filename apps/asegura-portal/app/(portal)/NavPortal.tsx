@@ -56,7 +56,7 @@ import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
  * de la ruta y del parámetro, y no baja como prop desde cada página — así el
  * `layout` puede pintar la navegación una sola vez para todas.
  */
-export function NavPortal() {
+export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string } }) {
   const ruta = usePathname()
   const params = useSearchParams()
   // `/autorizaciones` es otra RUTA, no un panel de la bóveda; por eso la ruta
@@ -196,6 +196,15 @@ export function NavPortal() {
             </Link>
           )
         })}
+        {/* Llamar al corredor, a un toque desde cualquier sección (24/09/2026). El
+            número llega del servidor (`MEDIADOR`): importar `@central/module-seguros`
+            aquí arrastraría la cartera entera al bundle del navegador. */}
+        {llamar && (
+          <a className="portal-nav-llamar" href={`tel:${llamar.tel}`}>
+            <span>Llamar a tu corredor</span>
+            <span className="portal-nav-llamar-numero">{llamar.numero}</span>
+          </a>
+        )}
       </nav>
 
       {/* 🚨 Sin JavaScript no hay `createPortal` ni ☰ que abrir (el botón ni
@@ -221,6 +230,7 @@ export function NavPortal() {
               box-shadow: none;
             }
             .portal-nav-item { flex: 1 1 0; min-width: 76px; justify-content: center; text-align: center; }
+            .portal-nav-llamar { margin-top: 0; border-top: 0; }
           }
         `}</style>
       </noscript>

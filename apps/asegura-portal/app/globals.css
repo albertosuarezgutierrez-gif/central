@@ -845,7 +845,7 @@ input, select, textarea, button { font: inherit; }
   text-transform: uppercase;
 }
 .seccion h2 {
-  /* 🚨 `--display` (Fraunces), NO `--serif`: en esta marca `--serif` es Inter y
+  /* 🚨 `--display` (Quicksand), NO `--serif`: en esta marca `--serif` es Inter y
    * el nombre engaña — la misma trampa que ya documenta el h1. El h2 era el
    * último titular del portal que seguía en la fuente de cuerpo. */
   font-family: var(--display, var(--serif));
@@ -868,7 +868,7 @@ input, select, textarea, button { font: inherit; }
 }
 
 /* ── El titular de página ──────────────────────────────────────────────────
-   Va en `--display` (Fraunces, la misma serif que la web pública) y no en
+   Va en `--display` (Quicksand, la misma que la web pública) y no en
    `--serif`, que en esta marca es Inter. Lo pide `app/layout.tsx`: ver su
    cabecera para por qué la fuente se decide en la app y no en `@central/brand`.
 
@@ -1765,6 +1765,9 @@ h1 em {
   padding: 11px 16px;
   font-size: 14px;
   font-weight: 600;
+  /* Botones en Quicksand, como titulares y menús (regla de marca del 24/09/2026).
+   * Sin esto heredaban el cuerpo (Nunito Sans). */
+  font-family: var(--display, inherit);
   /* 💊 Píldora. En su app **no hay un solo botón con esquina cuadrada**, y es
    * de los cambios que más se notan por menos: un radio de 10px sobre una
    * tarjeta de 22 px de radio es lo que hace que una pantalla parezca
@@ -3689,3 +3692,55 @@ h1 em {
 /* El input de fichero va invisible dentro de su <label>: el anillo de foco lo pinta la etiqueta. */
 .boton-fichero { position: relative; }
 .boton-fichero:focus-within { outline: 3px solid color-mix(in oklab, var(--primary) 50%, transparent); outline-offset: 2px; }
+
+/* ── Entrada: etiquetas visibles y las dos salidas del código ─────────────
+ * La etiqueta no puede ser solo el placeholder: desaparece al escribir, y
+ * quien entra aquí puede tener 70 años. «Reenviar» y «Usar otro correo» son
+ * enlaces-botón de 44 px táctiles, no texto pequeño. */
+.entrada-etiqueta {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.entrada-otras {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 8px 0 0;
+}
+.enlace-boton {
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--primary);
+  font: inherit;
+  font-size: 15px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.enlace-boton:disabled { opacity: 0.6; cursor: progress; }
+
+/* El «Llamar a tu corredor» del final de la navegación: separado de las
+ * secciones por un filete, porque no es una sección sino una salida. */
+.portal-nav-llamar {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 44px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  color: var(--primary);
+  font-family: var(--display, inherit);
+  font-weight: 600;
+  text-decoration: none;
+}
+.portal-nav-llamar-numero {
+  color: var(--text);
+  font-family: var(--sans, inherit);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  white-space: nowrap;
+}

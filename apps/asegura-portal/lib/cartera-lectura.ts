@@ -40,6 +40,7 @@ import {
   siniestroAbierto,
   autorizacionVigente,
   camposDeAlcances,
+  puedeDarParte,
   camposVisibles,
   describirBienConGemela,
   describirBien,
@@ -244,7 +245,17 @@ export type TitularPortal = {
    */
   nivel: Nivel
   /** Presente SOLO en `autorizadas`: de qué consentimiento viene y hasta cuándo. */
-  autorizacion?: { ids: string[]; alcances: Alcance[]; caducaEn: Date }
+  autorizacion?: {
+    ids: string[]
+    alcances: Alcance[]
+    caducaEn: Date
+    /**
+     * Pólizas sobre las que esta identidad puede DAR UN PARTE (`puedeDarParte`).
+     * Por póliza y no por ficha: una concesión suelta con `partes` abre esa póliza,
+     * no las demás de quien la dio. Ver no basta para declarar.
+     */
+    partes: string[]
+  }
   polizas: PolizaPortal[]
 }
 
@@ -819,7 +830,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     clienteId: string,
     nivel: Nivel,
     ve: CamposVisibles | ((polizaId: string) => CamposVisibles | null),
-    autorizacion?: { ids: string[]; alcances: Alcance[]; caducaEn: Date },
+    autorizacion?: TitularPortal['autorizacion'],
   ): TitularPortal | null => {
     // Una ficha fusionada o que ya no existe no se pinta: sin nombre no hay titular.
     const nombre = nombrePor.get(clienteId)
@@ -881,6 +892,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     // alguien miró algo.
     const usadas = new Set<string>()
     const alcancesServidos = new Set<Alcance>()
+    const conPartes = new Set<string>()
 
     const veDe = (polizaId: string): CamposVisibles | null => {
       // La suelta solo cuenta si la concedió ESTA ficha: dos otorgantes pueden
@@ -895,6 +907,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       for (const id of deLaFicha?.ids ?? []) usadas.add(id)
       for (const id of suelta?.ids ?? []) usadas.add(id)
       for (const a of alcances) alcancesServidos.add(a)
+      if (puedeDarParte(alcances, tipo)) conPartes.add(polizaId)
       return campos
     }
 
@@ -919,7 +932,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     autorizadas.push({
       ...t,
       nivel: etiquetaNivelAlcances(alcancesFinales),
-      autorizacion: { ids: idsFinales, alcances: alcancesFinales, caducaEn: caduca },
+      autorizacion: { ids: idsFinales, alcances: alcancesFinales, caducaEn: caduca, partes: [...conPartes] },
     })
     autorizacionesUsadas.push(...idsFinales)
   }
@@ -968,4 +981,17 @@ function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
     estado: estadoRecibos(crudos),
     historial,
   }
+}
+
+/**
+ * Las pólizas sobre las que esta cartera puede DAR UN PARTE: todas las propias y,
+ * de las autorizadas, solo las que traen el alcance `partes` (`puedeDarParte`).
+ * Una sola fuente para la ruta que lo crea y la pantalla que lo ofrece: si
+ * divergen, se ofrece una póliza que luego se rechaza con 403.
+ */
+export function polizasParaParte(c: Pick<CarteraPortal, 'propias' | 'autorizadas'>): Set<string> {
+  return new Set([
+    ...c.propias.flatMap((t) => t.polizas.map((p) => p.id)),
+    ...c.autorizadas.flatMap((t) => t.autorizacion?.partes ?? []),
+  ])
 }

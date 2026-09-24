@@ -87,10 +87,10 @@ test('🚨 con una poliza en la URL, el parte va ANTES del historial', () => {
   )
 })
 
-test('🚨 el orden depende de la poliza, y la poliza se comprueba contra la lista de la sesion', () => {
-  // Un id inventado en la barra de direcciones no puede reordenar la pantalla
-  // ni sugerir que hay una póliza detrás: se filtra contra `polizasParte`, que
-  // ya está acotada a esta identidad.
+test('🚨 el parte va SIEMPRE antes del historial, y la poliza se comprueba contra la lista de la sesion', () => {
+  // Un id inventado en la barra de direcciones no puede preseleccionar nada ni
+  // sugerir que hay una póliza detrás: se filtra contra `polizasParte`, que ya
+  // está acotada a esta identidad.
   assert.match(
     BOVEDA,
     /polizasParte\.some\(\(p\) => p\.valor === polizaInicial\)/,
@@ -98,9 +98,17 @@ test('🚨 el orden depende de la poliza, y la poliza se comprueba contra la lis
   )
   assert.match(
     BOVEDA,
-    /polizaEnLista !== null &&/,
-    'el orden de la pantalla sale de esa comprobación, no del parámetro crudo',
+    /polizaInicial=\{polizaEnLista\}/,
+    'la preselección sale de esa comprobación, no del parámetro crudo',
   )
+  // 24/09/2026: desde la pestaña también. Los teléfonos de la compañía no pueden
+  // quedar debajo del historial para quien acaba de tener un golpe.
+  const vista = BOVEDA.slice(BOVEDA.indexOf("vista === 'siniestro' && ("))
+  const parte = vista.indexOf('<ParteSiniestro')
+  const historial = vista.indexOf('<VistaPorPoliza')
+  assert.ok(parte !== -1 && historial !== -1, 'la vista de siniestros pinta el parte y el historial')
+  assert.ok(parte < historial, 'el parte (con los teléfonos) va antes que el historial')
+  assert.equal(vista.slice(0, historial).split('<ParteSiniestro').length - 1, 1, 'un solo parte, siempre arriba')
 })
 
 test('🚨 la compañia de la poliza elegida se pone DELANTE, con el helper que tiene cepo', () => {

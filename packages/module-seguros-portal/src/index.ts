@@ -161,6 +161,7 @@ export {
   esAlcance,
   estadoAutorizacion,
   etiquetaNivelAlcances,
+  puedeDarParte,
   puedeAutorizar,
 } from './autorizacion.ts'
 export type {
