@@ -78,7 +78,7 @@ export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes,
     <>
       {nota && <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>{nota}</p>}
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 880 }}>
+        <table className="tabla-polizas" style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 880 }}>
           <thead>
             <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
               <th style={th}>Ramo</th>
@@ -96,17 +96,17 @@ export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes,
               const p = g.poliza
               return (
               <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={td}>{TIPOS[p.tipo] ?? p.tipo}</td>
-                <td style={{ ...td, minWidth: 140 }}>
+                <td style={td} data-rol="cabeza">{TIPOS[p.tipo] ?? p.tipo}</td>
+                <td style={{ ...td, minWidth: 140 }} data-label="Qué asegura">
                   <ObjetoCelda p={p} />
                   <Intervinientes lista={intervinientes} polizaIds={g.filas.map(f => f.id)} />
                   <FilasIguales grupo={g} />
                 </td>
-                <td style={td}>
+                <td style={td} data-label="Compañía">
                   <Link href={`/correduria/poliza/${p.id}`} style={{ fontWeight: 600 }}>{p.aseguradora}</Link>
                   <div style={sub}>{p.numeroPoliza ? `nº ${p.numeroPoliza}` : 'sin número'} · <Link href={`/correduria/poliza/${p.id}`}>ver póliza →</Link></div>
                 </td>
-                <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                <td style={{ ...td, whiteSpace: 'nowrap' }} data-label="Vence">
                   {p.fechaVencimiento ? (
                     fmt(p.fechaVencimiento)
                   ) : (
@@ -118,16 +118,16 @@ export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes,
                   </div>
                   <Anulacion vencimiento={p.fechaVencimiento} viva={p.viva} />
                 </td>
-                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }} data-label="Prima">
                   <PrimaGrupo grupo={g} />
                   {/* Solo en las vivas: en el volcado histórico no hay anualidades que comparar. */}
                   {p.viva && p.estado !== 'cancelada' && (
                     <div style={{ marginTop: 4 }}><EvolucionPrima modo="chip" evolucion={p.evolucionPrima} /></div>
                   )}
                 </td>
-                <td style={td}><CeldaPago p={p} /></td>
-                <td style={td}><CeldaRecibos r={p.recibos} /></td>
-                <td style={td}>
+                <td style={td} data-label="Pago"><CeldaPago p={p} /></td>
+                <td style={td} data-label="Recibos"><CeldaRecibos r={p.recibos} /></td>
+                <td style={td} data-rol="accion">
                   {p.retarificable && p.estado !== 'cancelada' ? (
                     // Interna desde el 03/09/2026: la pantalla que gasta los
                     // 0,50€ vive en /correduria, con su confirmación delante.

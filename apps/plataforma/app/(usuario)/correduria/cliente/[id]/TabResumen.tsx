@@ -26,32 +26,13 @@ export default function TabResumen({ accion, resumen, porClase, intervinientes, 
   /** `undefined` = el llamante no las pasa; `null` = no se pudieron leer. */
   notas?: NotasFicha | null
 }) {
+  // Orden dictado por Alberto (24/09/2026): «prioridad pólizas y oportunidades». Lo pendiente va
+  // justo detrás en UNA tarjeta (antes «Siguiente acción» y «Pide acción» eran dos), y las notas
+  // al final. Lo urgente de verdad (recibos devueltos, siniestros) ya grita en la cabecera.
   return (
     <>
-      <Tarjeta titulo="👉 Siguiente acción">
-        <SiguienteAccionFicha accion={accion} />
-      </Tarjeta>
-
-      <Tarjeta titulo="💼 Oportunidades">
-        <OportunidadesCliente
-          clienteId={clienteId}
-          telefono={telefono ?? null}
-          polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
-        />
-      </Tarjeta>
-
-      {notas !== undefined && (
-        <Tarjeta titulo="📝 Notas">
-          <NotasCliente clienteId={clienteId} notas={notas} />
-        </Tarjeta>
-      )}
-
-      <Tarjeta titulo="🔔 Pide acción">
-        <PideAccion resumen={resumen} vivas={porClase.viva} clienteId={clienteId} />
-      </Tarjeta>
-
       <Polizas
-        titulo="Pólizas vivas"
+        titulo={`Pólizas vivas (${porClase.viva.length})`}
         polizas={porClase.viva}
         vacio="Ninguna póliza activa entra hoy por CIMA."
         intervinientes={intervinientes}
@@ -77,6 +58,27 @@ export default function TabResumen({ accion, resumen, porClase, intervinientes, 
           {' → '}
           <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>ver en Pólizas</Link>
         </p>
+      )}
+
+      <Tarjeta titulo="💼 Oportunidades">
+        <OportunidadesCliente
+          clienteId={clienteId}
+          telefono={telefono ?? null}
+          polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
+        />
+      </Tarjeta>
+
+      <Tarjeta titulo="🔔 Pendiente">
+        <div style={{ display: 'grid', gap: 10 }}>
+          <SiguienteAccionFicha accion={accion} />
+          <PideAccion resumen={resumen} vivas={porClase.viva} clienteId={clienteId} />
+        </div>
+      </Tarjeta>
+
+      {notas !== undefined && (
+        <Tarjeta titulo="📝 Notas">
+          <NotasCliente clienteId={clienteId} notas={notas} />
+        </Tarjeta>
       )}
     </>
   )
@@ -111,7 +113,7 @@ function PideAccion({ resumen, vivas, clienteId }: {
     items.push(
       <>
         🔴 <b>{recibos.devueltos} recibo(s) devuelto(s)</b>: hay dinero que reclamar.{' '}
-        <Link href={`/correduria/cliente/${clienteId}?tab=recibos`}>ver recibos →</Link>
+        <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>ver en sus pólizas →</Link>
       </>,
     )
   }
@@ -119,7 +121,7 @@ function PideAccion({ resumen, vivas, clienteId }: {
     items.push(
       <>
         🟠 <b>{siniestrosAbiertos} siniestro(s) abierto(s)</b> en tramitación.{' '}
-        <Link href={`/correduria/cliente/${clienteId}?tab=siniestros`}>ver siniestros →</Link>
+        <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>ver siniestros →</Link>
       </>,
     )
   }

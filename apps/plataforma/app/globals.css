@@ -704,3 +704,23 @@ em { font-style: normal; }
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
+
+/* === Pólizas de la ficha del cliente en MÓVIL: de tabla a fichas apiladas (24/09/2026) ===
+   La tabla declara `minWidth: 880` y en un móvil obligaba a desplazarse de lado para ver la prima
+   o los recibos. Por debajo de 768 px cada fila es una ficha: el ramo arriba, cada dato con su
+   rótulo (`data-label`) y la acción al pie. Mismo DOM, sin duplicar la lista (regla de
+   rendimiento: el volcado histórico puede tener cientos de filas). `!important` solo para ganar
+   al estilo inline de la tabla, que no admite media queries. */
+@media (max-width: 768px) {
+  .tabla-polizas { min-width: 0 !important; }
+  .tabla-polizas thead { display: none; }
+  .tabla-polizas, .tabla-polizas tbody, .tabla-polizas tr, .tabla-polizas td { display: block; width: 100%; }
+  .tabla-polizas tr { border: 1px solid var(--border) !important; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+  .tabla-polizas td { padding: 4px 0 !important; min-width: 0 !important; white-space: normal !important; text-align: left !important; }
+  /* Rótulo a la izquierda por posición absoluta, no por grid: cada celda tiene varios hijos (fecha +
+     estado + aviso) y en un grid se repartirían entre las dos columnas. */
+  .tabla-polizas td[data-label] { position: relative; padding-left: 100px !important; }
+  .tabla-polizas td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: 6px; width: 92px; font-size: 12px; color: var(--muted); }
+  .tabla-polizas td[data-rol="cabeza"] { font-weight: 700; font-size: 15px; }
+  .tabla-polizas td[data-rol="accion"] { padding-top: 8px !important; border-top: 1px solid var(--border); margin-top: 6px; }
+}

@@ -11,7 +11,6 @@ import FichaTabs, { tabDeParametro } from './FichaTabs'
 import TabContactos from './TabContactos'
 import TabMensajes from './TabMensajes'
 import TabPolizas from './TabPolizas'
-import TabRecibos from './TabRecibos'
 import TabResumen from './TabResumen'
 import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
 
@@ -110,8 +109,6 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         activa={tab}
         contadores={{
           polizas: { n: porClase.viva.length, title: 'pólizas vivas confirmadas por CIMA' },
-          recibos: { n: resumen.recibos.devueltos, tono: 'malo', title: 'recibos devueltos' },
-          siniestros: { n: resumen.siniestrosAbiertos, tono: 'aviso', title: 'siniestros abiertos' },
           contactos: { n: personas === null ? null : personas.length, title: 'personas en sus pólizas' },
           documentos: { n: resumen.documentosPendientes, tono: 'aviso', title: 'documentos pedidos y aún sin recibir' },
         }}
@@ -121,18 +118,17 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         <TabResumen accion={accion} resumen={resumen} porClase={porClase} intervinientes={ficha.intervinientes} clienteId={ficha.id} telefono={contacto.telefono} declaradas={ficha.declaradas} notas={ficha.notas} />
       )}
 
-      {tab === 'polizas' && <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} />}
-
-      {tab === 'recibos' && <TabRecibos polizas={ficha.polizas} />}
-
-      {/* Siniestros: ver, abrir sobre una póliza viva de CIMA, seguimiento, estado y parte.
-          `null` = no se han podido leer, y se dice; los documentos del parte salen de los de la ficha. */}
-      {tab === 'siniestros' && (
-        <Siniestros
-          lista={ficha.siniestros}
-          polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
-          documentos={ficha.documentos}
-        />
+      {/* Pólizas: cada una abre su ficha con recibos, siniestros, coberturas y documentos. Los
+          siniestros del cliente van aquí mismo (antes eran pestaña propia, igual que los recibos). */}
+      {tab === 'polizas' && (
+        <>
+          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} />
+          <Siniestros
+            lista={ficha.siniestros}
+            polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
+            documentos={ficha.documentos}
+          />
+        </>
       )}
 
       {tab === 'contactos' && <TabContactos ficha={ficha} personas={personas} />}

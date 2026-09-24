@@ -96,7 +96,7 @@ function RamosContratados({ tiposVivos }: { tiposVivos: string[] }) {
 function Titulares({ resumen }: { resumen: ResumenFicha }) {
   const { conteo, recibos, siniestrosAbiertos: abiertos, proximo } = resumen
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 8 }}>
       <Kpi label="Pólizas vivas" valor={String(conteo.vivas)} sub={`${conteo.total} en total`} />
       <Kpi
         label="Recibos devueltos"
@@ -176,14 +176,19 @@ function ProximoVencimiento({ proximo, vivas, sinFecha }: {
 
 function Kpi({ label, valor, sub, color, pequeno }: {
   label: string; valor: string; sub?: string; color?: string
-  /** Para un valor que es una fecha: 22px se sale de la tarjeta en móvil. */
+  /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */
   pequeno?: boolean
 }) {
+  // Compacto (24/09/2026): los cinco titulares ocupaban media pantalla del móvil. Se quedan en la
+  // cabecera —es la promesa del guardián: lo que exige una llamada no se esconde tras un clic—,
+  // pero en fichas bajas. El texto de apoyo va debajo en 11 px y el `title` lo repite entero.
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
-      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>
-      <div style={{ fontSize: pequeno ? 17 : 22, fontWeight: 800, color: color ?? 'var(--text)' }}>{valor}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{sub}</div>}
+    <div title={sub ? `${label}: ${valor} · ${sub}` : undefined} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '7px 10px', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: pequeno ? 14 : 18, fontWeight: 800, color: color ?? 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</span>
+      </div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>}
     </div>
   )
 }
