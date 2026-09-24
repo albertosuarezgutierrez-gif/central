@@ -1657,6 +1657,10 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   REGISTRA la queja que llega por correo o teléfono) sobre `/api/correduria/quejas` → puerto de asegura, `actor` = sesión y el
   último. Lector puro `lib/quejas-asegura.ts`; sus listas son copia de `module-seguros/queja.ts` y
   `test/regression-quejas-asegura.test.ts` falla si divergen. Contador `null` (no 0) si no se pudo leer.
+- **📊 Informe anual para la DGSFP (24/09/2026).** `InformeMediacion.tsx` en Comisiones (plegado, carga al abrir) sobre
+  `/api/correduria/informe-mediacion` = puerto de asegura + comisiones del libro (`brutoEfectivo`, `null` si no se lee). Lector
+  puro `lib/informe-mediacion-asegura.ts` (+ `test/regression-informe-mediacion.test.ts`); CSV cuya 1ª línea dice que NO es el
+  modelo oficial. Compañías con pólizas y sin recibos de CIMA se declaran: sus primas no son 0, no constan.
 - **🗑️ Supresiones RGPD — el reloj del art. 12.3 se contesta AQUÍ (05/09/2026).** Desde el bloque legal
   0.5, un cliente puede pedir la supresión de sus datos desde `apps/asegura-portal` (`/boveda`). Eso
   arranca un plazo legal de **30 días** (prorrogable a 60 **motivando la prórroga**, art. 12.3 RGPD), y

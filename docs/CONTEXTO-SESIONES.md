@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 📊 **Informe anual de mediación (DGSFP), hoja de trabajo.** Puerto de asegura `/api/operador/informe-mediacion`
+(primas cobradas por compañía y ramo según CIMA, cartera en vigor hoy, SAC) + comisiones del libro en plataforma → bloque plegado
+en Comisiones de `/correduria` con CSV. No es el modelo oficial y lo dice; declara compañías sin recibos (Mapfre no manda
+liquidaciones), periodos sin extracto y que la cartera es de hoy, no a 31/12. Pendiente de Alberto: contrastar con la asesoría.
+
 **(24/09/2026)** 📮 **Registro de quejas y reclamaciones del SAC (PR #3458).** La web y el portal publican «el SAC
 contesta en un mes» y no había dónde anotar una queja. Tabla `seguros.queja` (detalle y respuesta cifrados; 4 CHECK vistos
 morder; sin acceso de `crm_seguros` ni del portal), regla en `module-seguros/queja.ts` (mes natural, estados, informe anual),

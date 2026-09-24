@@ -137,6 +137,15 @@ export async function colaQuejas(correduriaId: string, todas = false): Promise<R
   }
 }
 
+/** El informe del SAC de un año cualquiera (el de `colaQuejas` es siempre el del año en curso). */
+export async function informeQuejas(correduriaId: string, año: number): Promise<InformeSac> {
+  const filas = await leer(correduriaId, { año })
+  return informeSac(
+    filas.map((f) => ({ estado: f.estado as EstadoQueja, motivo: f.motivo as MotivoQueja, recibidaEl: f.recibidaEl, plazoEl: f.plazoEl, resueltaEl: f.resueltaEl })),
+    año,
+  )
+}
+
 export type ResultadoAlta =
   | { estado: 'creada'; queja: QuejaVista }
   | { estado: 'invalida'; motivos: string[] }
