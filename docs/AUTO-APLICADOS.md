@@ -13,6 +13,13 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-24** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · sección "Pasada
+  ligera — 24/09/2026" añadida (🔴 `cima_pull_respaldo` en HTTP 401 desde ayer 14:00 UTC, sin
+  causa confirmada — acción manual de Alberto en el panel de Vercel de `asegura`; 🟡
+  `sivra_mercado_booking` en rojo 2º día; 🟠 `oscilantes=6` en pricing) · pasada ligera diaria,
+  rango 43 commits desde `6a35189` · Telegram enviado por el 🔴 de heartbeat · commit de esta
+  auditoría
+
 - **2026-09-23** · `docs/AUDITORIA-2026-09.md` · sección "Pasada ligera — 23/09/2026" añadida
   (heartbeat, correduría, pricing, backlog de PRs — todo consistente con la pasada de ayer, sin
   🔴 nuevo) · pasada ligera diaria, rango 8 commits desde `bb0401b` · commit de esta auditoría
