@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil } from './seguimiento-asegura.ts'
+import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -180,4 +180,25 @@ test('abrir oportunidad: 409 duplicada enlaza la que ya hay', async () => {
   assert.equal(d.id, 'x')
   assert.equal(textoAltaOportunidad(201, { estado: 'ok', id: 'y' }).ok, true)
   assert.equal(textoAltaOportunidad(503, { estado: 'sin_configurar' }).ok, false)
+})
+
+test('lectura para oportunidad: rellena lo leído y deja en null lo que no tiene forma', () => {
+  const r = interpretarLecturaOportunidad(200, {
+    leido: true, ramo: 'hogar', compania: 'MAPFRE', numeroPoliza: '0732400243186',
+    fechaVencimiento: '2026-09-25', primaAnual: 312.456,
+  })
+  assert.deepEqual(r, { estado: 'ok', ramo: 'hogar', compania: 'MAPFRE', numeroPoliza: '0732400243186', vence: '2026-09-25', prima: 312.46 })
+  const raro = interpretarLecturaOportunidad(200, { leido: true, ramo: 'barco', compania: 'Allianz', fechaVencimiento: '25/09/2026', primaAnual: 0 })
+  assert.deepEqual(raro, { estado: 'ok', ramo: null, compania: 'Allianz', numeroPoliza: null, vence: null, prima: null })
+})
+
+test('lectura para oportunidad: nada leído o fallo = error con motivo, nunca un formulario mudo', () => {
+  assert.equal(interpretarLecturaOportunidad(200, { leido: true }).estado, 'error')
+  assert.deepEqual(interpretarLecturaOportunidad(422, { error: 'El PDF no tiene texto' }), { estado: 'error', motivo: 'El PDF no tiene texto' })
+  assert.deepEqual(interpretarLecturaOportunidad(503, { estado: 'sin_configurar' }), { estado: 'error', motivo: 'la cartera no está conectada' })
+  assert.equal(interpretarLecturaOportunidad(0, null).estado, 'error')
+})
+
+test('la prima leída se escribe en el campo en formato que parsearPrima acepta', () => {
+  for (const n of [312.46, 1200.5, 99, 45678.9]) assert.equal(parsearPrima(primaParaCampo(n)), n)
 })
