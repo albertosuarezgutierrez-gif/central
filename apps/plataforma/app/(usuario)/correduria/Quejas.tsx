@@ -178,6 +178,11 @@ export default function Quejas({ onContador }: {
           {mensaje.texto}
         </p>
       )}
+      {ok.truncada && (
+        <p style={{ fontSize: 12, color: 'var(--warning)', margin: '0 0 10px' }}>
+          ⚠️ asegura ha devuelto solo las primeras 500: <strong>hay más quejas de las que se ven aquí</strong>.
+        </p>
+      )}
       {ok.ilegibles > 0 && (
         <p style={{ fontSize: 12, color: 'var(--warning)', margin: '0 0 10px' }}>
           ⚠️ {ok.ilegibles} queja{ok.ilegibles === 1 ? '' : 's'} llegó con una forma que esta pantalla no entiende. <strong>Está ahí</strong>: míralas en asegura.
@@ -196,7 +201,7 @@ export default function Quejas({ onContador }: {
         </button>
         {inf && (
           <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-            {inf.año}: {inf.total} recibida{inf.total === 1 ? '' : 's'} · {inf.cerradasEnPlazo} contestada{inf.cerradasEnPlazo === 1 ? '' : 's'} en plazo
+            {inf.año}: {inf.total} recibida{inf.total === 1 ? '' : 's'} · {inf.cerradasEnPlazo} cerrada{inf.cerradasEnPlazo === 1 ? '' : 's'} en plazo
             {inf.cerradasFueraDePlazo > 0 && <> · <strong style={{ color: 'var(--negative)' }}>{inf.cerradasFueraDePlazo} fuera de plazo</strong></>}
           </span>
         )}
@@ -245,7 +250,7 @@ function FilaQueja({ q, ocupado, onCambiar }: {
         </button>
       </div>
       <details style={{ marginTop: 8 }}>
-        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>Contestar y cerrar</summary>
+        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, padding: '12px 0' }}>Contestar y cerrar</summary>
         <FormularioRespuesta q={q} ocupado={ocupado} onCambiar={onCambiar} />
       </details>
     </li>
@@ -259,7 +264,9 @@ function FormularioRespuesta({ q, ocupado, onCambiar }: {
 }) {
   const [estado, setEstado] = useState<string>(ESTADOS_QUEJA_RESUELTA[0])
   const [respuesta, setRespuesta] = useState('')
-  const puede = respuesta.trim().length > 0 && !ocupado
+  // La fecha en que se CONTESTÓ: si se respondió por correo hace días, esa es la que cuenta para el plazo.
+  const [resueltaEl, setResueltaEl] = useState(hoy())
+  const puede = respuesta.trim().length > 0 && !!resueltaEl && !ocupado
   return (
     <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
       <label style={{ fontSize: 12, fontWeight: 600 }}>
@@ -272,8 +279,12 @@ function FormularioRespuesta({ q, ocupado, onCambiar }: {
         Qué se le contestó (obligatorio: sin texto no queda constancia)
         <textarea value={respuesta} onChange={(e) => setRespuesta(e.target.value)} rows={4} maxLength={8000} style={{ ...input, resize: 'vertical' }} />
       </label>
+      <label style={{ fontSize: 12, fontWeight: 600 }}>
+        Contestada el (la fecha real de la respuesta, no la de hoy si fue antes)
+        <input type="date" value={resueltaEl} min={q.recibidaEl} max={hoy()} onChange={(e) => setResueltaEl(e.target.value)} style={input} />
+      </label>
       <button type="button" disabled={!puede} style={{ ...btnStyle('primario', 'md'), minHeight: 44, justifySelf: 'start' }}
-        onClick={() => onCambiar('PATCH', { id: q.id, estado, respuesta }, 'Queja contestada y cerrada.')}>
+        onClick={() => onCambiar('PATCH', { id: q.id, estado, respuesta, resueltaEl }, 'Queja contestada y cerrada.')}>
         Guardar la respuesta
       </button>
     </div>

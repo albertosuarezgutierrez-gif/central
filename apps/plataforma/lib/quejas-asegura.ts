@@ -105,7 +105,9 @@ export type Queja = {
   plazo: PlazoQueja | null
   /** Negativo si ya venció; `null` en las cerradas. NO se colapsa a 0. */
   diasRestantes: number | null
+  /** `null` con `respuestaIlegible` = la clave no la abre; NO es «sin respuesta». */
   respuesta: string | null
+  respuestaIlegible: boolean
   resueltaEl: string | null
   creadaPor: string
 }
@@ -157,6 +159,7 @@ export function leerQueja(fila: unknown): Queja | null {
     plazo: plazo && (PLAZOS_QUEJA as readonly string[]).includes(plazo) ? (plazo as PlazoQueja) : null,
     diasRestantes: entero(o.diasRestantes),
     respuesta: cadena(o.respuesta),
+    respuestaIlegible: o.respuestaIlegible === true,
     resueltaEl: cadena(o.resueltaEl),
     creadaPor: cadena(o.creadaPor) ?? '',
   }
@@ -186,6 +189,8 @@ export type RespuestaQuejas =
       quejas: Queja[]
       /** Filas con forma rara. Se declaran; no se esconden. */
       ilegibles: number
+      /** asegura cortó la cola en su tope: hay más de las que se ven. */
+      truncada: boolean
       /** `null` = asegura no mandó el informe con forma legible. */
       informe: InformeSac | null
     }
@@ -208,7 +213,7 @@ export function interpretarColaQuejas(status: number, json: unknown): RespuestaQ
       if (q === null) ilegibles++
       else quejas.push(q)
     }
-    return { estado: 'ok', quejas, ilegibles, informe: leerInforme(o.informe) }
+    return { estado: 'ok', quejas, ilegibles, truncada: o.truncada === true, informe: leerInforme(o.informe) }
   }
   return {
     estado: 'error',

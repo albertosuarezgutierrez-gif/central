@@ -72,6 +72,14 @@ test('🪤 un plazo que no se sabe queda en null, no en «en plazo»', () => {
   assert.equal(leerQueja({ ...fila, plazo: undefined })?.plazo, null)
 })
 
+test('🪤 respuesta ilegible y cola truncada se leen tal cual, no se pierden', () => {
+  const r = interpretarColaQuejas(200, { estado: 'ok', truncada: true, quejas: [{ ...fila, respuestaIlegible: true }], informe })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.truncada, true)
+  assert.equal(r.quejas[0].respuestaIlegible, true)
+})
+
 test('las cerradas no cuentan como pendientes', () => {
   const r = interpretarColaQuejas(200, { estado: 'ok', quejas: [{ ...fila, estado: 'resuelta_parcial', plazo: 'cerrada' }], informe })
   assert.equal(contadorQuejas(r), 0)

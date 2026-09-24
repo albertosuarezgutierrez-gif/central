@@ -25,3 +25,12 @@ test('🪤 el plazo NO lo pone quien llama: sale de la regla del módulo', () =>
   assert.match(src, /const plazo = plazoQueja\(alta\.recibidaEl\)/)
   assert.doesNotMatch(src, /cuerpo\?\.\s*plazo/)
 })
+
+test('🪤 la fecha de respuesta que manda quien llama se valida contra la recepción antes de escribirla', () => {
+  assert.match(src, /validarFechaResolucion\(actual\.recibidaEl, resueltaPedida, hoy\)/)
+  assert.match(src, /then \$\{resueltaEl\}::date/)
+})
+
+test('🪤 una respuesta que la clave no abre se declara, no se pinta como «sin respuesta»', () => {
+  assert.match(src, /respuestaIlegible: campoIlegible\(f\.respuesta\)/)
+})

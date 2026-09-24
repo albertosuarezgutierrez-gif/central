@@ -7,6 +7,7 @@ import {
   transicionQuejaValida,
   validarAltaQueja,
   validarCierreQueja,
+  validarFechaResolucion,
   informeSac,
 } from './queja.ts'
 import { CANALES_RECLAMACION } from './mediador.ts'
@@ -53,6 +54,16 @@ test('alta: sin reclamante, sin detalle, fecha futura o valores fuera de lista n
   assert.equal(validarAltaQueja({ ...ok, recibidaEl: '2026-09-25' }, '2026-09-24').length, 1)
   assert.equal(validarAltaQueja({ ...ok, canal: 'fax' }, '2026-09-24').length, 1)
   assert.equal(validarAltaQueja({ ...ok, motivo: 'x' }, '2026-09-24').length, 1)
+  // 🪤 Una queja de hace más de un año nace vencida: casi siempre es una errata en la fecha.
+  assert.equal(validarAltaQueja({ ...ok, recibidaEl: '2025-09-24' }, '2026-09-24').length, 0)
+  assert.equal(validarAltaQueja({ ...ok, recibidaEl: '2025-09-23' }, '2026-09-24').length, 1)
+})
+
+test('🪤 la fecha de respuesta es la real (entre la recepción y hoy), no la del clic', () => {
+  assert.equal(validarFechaResolucion('2026-09-01', '2026-09-30', '2026-10-03'), null)
+  assert.ok(validarFechaResolucion('2026-09-01', '2026-08-31', '2026-10-03'))
+  assert.ok(validarFechaResolucion('2026-09-01', '2026-10-04', '2026-10-03'))
+  assert.ok(validarFechaResolucion('2026-09-01', '2026-02-30', '2026-10-03'))
 })
 
 test('🪤 resolverla exige la respuesta que se dio; desistir no', () => {

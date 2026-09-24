@@ -150,7 +150,28 @@ export function validarAltaQueja(a: AltaQueja, hoy: string): string[] {
   const r = fechaValida(a.recibidaEl)
   if (!r) e.push('La fecha de recepción no es válida.')
   else if (a.recibidaEl > hoy) e.push('La fecha de recepción no puede ser futura.')
+  else if (a.recibidaEl < haceUnAño(hoy)) e.push('La fecha de recepción es de hace más de un año: revísala.')
   return e
+}
+
+/** Hoy menos un año (el 29/02 cae al 28/02). Más atrás, una queja nace vencida y suele ser una errata. */
+function haceUnAño(hoy: string): string {
+  const d = fechaValida(hoy)
+  if (!d) return hoy
+  const año = d.getUTCFullYear() - 1
+  const ultimo = new Date(Date.UTC(año, d.getUTCMonth() + 1, 0)).getUTCDate()
+  return new Date(Date.UTC(año, d.getUTCMonth(), Math.min(d.getUTCDate(), ultimo))).toISOString().slice(0, 10)
+}
+
+/**
+ * La fecha en que se CONTESTÓ, no la del clic: el informe anual mide si se contestó en plazo, y una
+ * respuesta dada por correo el día 30 y anotada el 33 no está fuera de plazo. Entre la recepción y hoy.
+ */
+export function validarFechaResolucion(recibidaEl: string, resueltaEl: string, hoy: string): string | null {
+  if (!fechaValida(resueltaEl)) return 'La fecha de respuesta no es válida.'
+  if (resueltaEl < recibidaEl) return 'La fecha de respuesta no puede ser anterior a la recepción.'
+  if (resueltaEl > hoy) return 'La fecha de respuesta no puede ser futura.'
+  return null
 }
 
 /**
