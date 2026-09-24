@@ -65,3 +65,25 @@
     input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]) { min-height: 44px; }
   }
 }
+
+/* Tabla → cards apiladas en móvil. Una sola tabla (sin duplicar marcado ni lógica de
+   edición): por debajo de md cada <tr> es una tarjeta y cada <td data-label="…"> una fila
+   «ETIQUETA  valor». La 1.ª celda hace de título; las celdas sin etiqueta (acciones) van
+   alineadas a la derecha; las de colspan (edición, historial, vacío) ocupan todo el ancho. */
+@media (max-width: 767px) {
+  .tabla-cards, .tabla-cards tbody { display: block; width: 100%; }
+  .tabla-cards thead { display: none; }
+  .tabla-cards tr { display: block; padding: 12px 16px; }
+  .tabla-cards td { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 3px 0; text-align: right; }
+  .tabla-cards td[data-label]::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-family: var(--font-sans), system-ui, sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase;
+    color: var(--ink-3); text-align: left;
+  }
+  .tabla-cards td:first-child:not([colspan]) { display: block; padding-bottom: 6px; text-align: left; font-size: 15px; }
+  .tabla-cards td:not([data-label]):not(:first-child):not([colspan]) { justify-content: flex-end; padding-top: 8px; }
+  .tabla-cards td[colspan] { display: block; text-align: left; }
+  .tabla-cards td:empty { display: none; }
+}

@@ -17,6 +17,14 @@
 en Comisiones de `/correduria` con CSV. No es el modelo oficial y lo dice; declara compañías sin recibos (Mapfre no manda
 liquidaciones), periodos sin extracto y que la cartera es de hoy, no a 31/12. Pendiente de Alberto: contrastar con la asesoría.
 
+**(24/09/2026)** 🐛 **iarrhh: el filtro por trabajador de Fichajes estaba vacío (lo reportó Pilar).** `GET /api/admin/empleados` daba 500
+SIEMPRE: `EXTRACT(DAY FROM (date - date))` no existe en Postgres (`date - date` ya es integer). Mismo fallo en `resumenVacaciones`
+(saldo del portal del empleado). Arreglado en `lib/solicitudes.ts` + cepo `lib/solicitudes-sql.test.ts` (visto en rojo antes).
+⚠️ Dato: fichaje de RUBEN 15/09 06:02 → 22/09 08:43 = 170,70 h (se dejó abierto una semana); infla el total del mes. Lo corrige el
+responsable con ✏️ (queda en la auditoría), no se ha tocado la BD.
+**(24/09/2026)** 🗂️ **iarrhh: las tablas de empleados, fichajes y obras son cards apiladas en móvil (<768 px).** Sin duplicar
+marcado: clase `.tabla-cards` en `apps/rrhh/app/globals.css` + `data-label` por celda (1.ª celda = título, acciones a la
+derecha, `colspan` de edición/historial a todo ancho). En escritorio la tabla no cambia. Medido con Playwright a 320/375/768.
 **(24/09/2026)** 📮 **Registro de quejas y reclamaciones del SAC (PR #3458).** La web y el portal publican «el SAC
 contesta en un mes» y no había dónde anotar una queja. Tabla `seguros.queja` (detalle y respuesta cifrados; 4 CHECK vistos
 morder; sin acceso de `crm_seguros` ni del portal), regla en `module-seguros/queja.ts` (mes natural, estados, informe anual),

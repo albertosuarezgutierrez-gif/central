@@ -70,7 +70,7 @@ export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrim
       </form>
 
       <div className="overflow-x-auto rounded-card border border-line bg-card">
-        <table className="w-full min-w-[520px] border-collapse text-sm">
+        <table className="tabla-cards w-full border-collapse text-sm md:min-w-[520px]">
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Nombre</th>
@@ -99,10 +99,10 @@ export default function ObrasClient({ inicial, logoUrl, nombreEmpresa, colorPrim
                 ) : (
                   <>
                     <td className="px-3 py-2 font-medium">{o.nombre}</td>
-                    <td className="px-3 py-2 text-ink-2 text-xs">{o.direccion ?? <span className="text-ink-3">—</span>}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-ink-3">{o.lat != null ? `${o.lat}, ${o.lng}` : '—'}</td>
-                    <td className="px-3 py-2 text-xs">{o.radio_m} m</td>
-                    <td className="px-3 py-2">
+                    <td data-label="Dirección" className="px-3 py-2 text-ink-2 text-xs">{o.direccion ?? <span className="text-ink-3">—</span>}</td>
+                    <td data-label="Coords" className="px-3 py-2 font-mono text-xs text-ink-3">{o.lat != null ? `${o.lat}, ${o.lng}` : '—'}</td>
+                    <td data-label="Radio" className="px-3 py-2 text-xs">{o.radio_m} m</td>
+                    <td data-label="Estado" className="px-3 py-2">
                       <button onClick={() => toggleActiva(o)} className={`rounded-full px-2 py-0.5 text-xs ${o.activa ? 'bg-ok/20 text-ok' : 'bg-paper-2 text-ink-3'}`}>
                         {o.activa ? 'Activa' : 'Inactiva'}
                       </button>

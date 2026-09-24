@@ -86,7 +86,7 @@ export async function resumenVacaciones(empresaId: string, empleadoId: string, a
 
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT estado,
-           SUM(EXTRACT(DAY FROM (fecha_fin::date - fecha_inicio::date)) + 1)::int AS dias
+           SUM((fecha_fin::date - fecha_inicio::date) + 1)::int AS dias
     FROM rrhh.solicitudes
     WHERE empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid
       AND tipo = 'vacaciones' AND fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL
@@ -116,7 +116,7 @@ export async function saldoVacacionesEmpleados(empresaId: string, anio: number) 
 
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT empleado_id::text, estado,
-           SUM(EXTRACT(DAY FROM (fecha_fin::date - fecha_inicio::date)) + 1)::int AS dias
+           SUM((fecha_fin::date - fecha_inicio::date) + 1)::int AS dias
     FROM rrhh.solicitudes
     WHERE empresa_id = ${empresaId}::uuid
       AND tipo = 'vacaciones' AND fecha_inicio IS NOT NULL AND fecha_fin IS NOT NULL

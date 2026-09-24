@@ -121,7 +121,7 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
       )}
 
       <div className="overflow-x-auto rounded-card border border-line bg-card">
-        <table className="w-full min-w-[600px] border-collapse text-sm">
+        <table className="tabla-cards w-full border-collapse text-sm md:min-w-[600px]">
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-3 py-2 text-left text-xs font-semibold uppercase text-ink-3">Empleado</th>
@@ -164,11 +164,11 @@ export default function FichajesClient({ logoUrl, nombreEmpresa, colorPrimario, 
                   ) : (
                     <>
                       <td className="px-3 py-2 font-medium">{f.empleado_nombre ?? '—'}</td>
-                      <td className="px-3 py-2 text-ink-2">{fmtFecha(f.entrada_at)}</td>
-                      <td className="px-3 py-2">{fmt(f.entrada_at)}</td>
-                      <td className="px-3 py-2">{f.salida_at ? fmt(f.salida_at) : <span className="rounded-full bg-ok/20 px-1.5 text-xs text-ok">activo</span>}</td>
-                      <td className="px-3 py-2 text-right font-mono text-xs">{f.horas_totales != null ? Number(f.horas_totales).toFixed(2) : '—'}</td>
-                      <td className="px-3 py-2 text-xs">
+                      <td data-label="Fecha" className="px-3 py-2 text-ink-2">{fmtFecha(f.entrada_at)}</td>
+                      <td data-label="Entrada" className="px-3 py-2">{fmt(f.entrada_at)}</td>
+                      <td data-label="Salida" className="px-3 py-2">{f.salida_at ? fmt(f.salida_at) : <span className="rounded-full bg-ok/20 px-1.5 text-xs text-ok">activo</span>}</td>
+                      <td data-label="Horas" className="px-3 py-2 text-right font-mono text-xs">{f.horas_totales != null ? Number(f.horas_totales).toFixed(2) : '—'}</td>
+                      <td data-label="Obra" className="px-3 py-2 text-xs">
                         {f.obra_nombre
                           ? <span className="text-ink-2">{f.obra_nombre}</span>
                           : f.lat_entrada != null && f.lng_entrada != null
