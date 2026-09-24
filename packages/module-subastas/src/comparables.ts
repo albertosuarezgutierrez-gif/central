@@ -61,6 +61,13 @@ export interface Comparable {
    * dice. `null`/ausente = no se sabe — que es lo normal, no un «no».
    */
   aReformar?: boolean | null
+  /**
+   * Precio ANTERIOR que declara el propio portal (Idealista: `priceDropInfo.formerPrice`).
+   * Es la bajada que ocurrió ANTES de que nosotros viéramos el anuncio: sin esto,
+   * un anuncio que entra ya rebajado no cuenta como bajada nunca. Solo lo trae
+   * el conector; `null`/ausente = el portal no dice nada (no «no ha bajado»).
+   */
+  precioAnteriorPortal?: number | null
 }
 
 function texto(html: string): string {

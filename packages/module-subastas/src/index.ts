@@ -100,6 +100,8 @@ export type { DatosCatastro, CoordenadasCatastro, DireccionCatastro, InmuebleCat
 // €/m² por zona que sirve de valor de mercado cuando el BOE publica «Tasación 0,00 €»
 export { parsearAlertaIdealista, esAlertaIdealista, precioM2Zona, velocidadZona, DIAS_DESAPARICION } from './comparables.ts'
 export type { Comparable } from './comparables.ts'
+export { esBuenaBajada, pctUltimaBajada, pctBajadaAcumulada, BAJADA_BUENA_PCT, BAJADA_BUENA_ACUMULADA_PCT } from './bajadas.ts'
+export type { DatosBajada } from './bajadas.ts'
 // Chollos de venta directa: el mismo corpus de anuncios, mirado al revés —
 // ¿qué anuncio está muy por debajo de la mediana €/m² de su zona?
 export { detectarChollos, referenciaZona, zonasDeComparable, estimarAntiguedad, pareceRuina, esParcela, CHOLLO_DESCUENTO_MIN, CHOLLO_DESCUENTO_SOSPECHOSO, RECONSTRUIR_EUR_M2 } from './comparables.ts'
@@ -133,6 +135,8 @@ export type { ParamsFinanciacion, CosteFinanciacion } from './financiacion.ts'
 // mismo corpus y mismo dedupe que las alertas de correo
 export { comparablesDesdeApiIdealista, tipoDesdePropertyType, centroBusquedaIdealista, llamadasPermitidasIdealista, IDEALISTA_LIMITE_MENSUAL, IDEALISTA_MARGEN_MENSUAL, IDEALISTA_DIAS_CACHE_ZONA } from './idealista-api.ts'
 export type { AnuncioIdealistaApi, RespuestaIdealistaApi, CentroBusqueda } from './idealista-api.ts'
+export { comparablesDesdeMcpIdealista, barrioDesdeTitulo, IDEALISTA_MCP_HOLGURA_RADIO } from './idealista-mcp.ts'
+export type { AnuncioIdealistaMcp, ResultadoMcpIdealista } from './idealista-mcp.ts'
 // Fotocasa: mismas zonas, más particulares — segunda fuente de comparables
 export { parsearAlertaFotocasa, esAlertaFotocasa, datosFichaFotocasa, PORTAL_FOTOCASA } from './fotocasa.ts'
 export type { FichaFotocasa } from './fotocasa.ts'

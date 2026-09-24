@@ -113,6 +113,7 @@ export const LATIDOS_POR_AGENTE: Record<string, string[]> = {
   'fiscal-novedades': ['fiscal_novedades'],
   'rrhh-compliance-calendar': ['rrhh_compliance'],
   'github-vigia': ['github_vigia'],
+  'idealista-radar': ['subastas_idealista'],
 }
 
 const PEOR: Record<EstadoSalud, number> = { verde: 0, gris: 1, ambar: 2, rojo: 3 }
