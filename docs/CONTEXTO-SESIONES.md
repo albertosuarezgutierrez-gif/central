@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🤝 **Carta de nombramiento de mediador: con DNI y por la cola de aprobaciones.** Alberto: «es necesario dni
+cliente». La carta lleva el DNI/NIF del tomador (validado); sin él en la ficha no se ofrece firmarla; `carta_texto` cifrado.
+La firmada sale como `enviar_correo_compania` (`aprobacion.carta_mediador_id`, CHECK anulación O carta; migración
+`seguros_aprobacion_carta_mediador` aplicada) al buzón que elige Alberto (`recibe_nombramientos`); al salir → `enviada`.
+0 cartas existentes: nada firmado sin DNI. Validez legal: firma avanzada vale, la aceptación la decide cada compañía.
+
 **(24/09/2026)** 🧾 **Rescatados los 39 recibos de Occident del 15/09 (8.230,20€ de prima) y archivo de CIMA en Drive.**
 Alberto bajó del Portal CIMA los ficheros 28/03–24/09 a Drive `asegura/CIMA` (id 1DoHnkMj2gYepUKR3A3SmkBE4JIE9iwM1),
 que queda como archivo largo de CIMA. Contraste: 153/154 ya en `cima_ficheros`. Los dos REC 299 del 15/09 entraron

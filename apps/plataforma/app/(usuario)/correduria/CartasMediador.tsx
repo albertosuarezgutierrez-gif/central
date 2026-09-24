@@ -1,7 +1,7 @@
 'use client'
 
 // «Hoy» → cartas de nombramiento de mediador (presupuesto, salida B, PR 6). Las firmadas por el cliente
-// esperan a que Alberto las mande a la compañía; las enviadas, a que la compañía responda. Sin esta
+// esperan su OK en «Esperan tu OK» (el correo a la compañía con la carta adjunta); las enviadas, a que la compañía responda. Sin esta
 // lista una carta firmada solo se veía entrando en la ficha de su póliza. Se trabajan desde esa ficha.
 
 import { useEffect, useState } from 'react'
@@ -40,7 +40,7 @@ export default function CartasMediador() {
           </span>
           <span style={{ fontSize: 12, color: c.estado === 'firmada' ? 'var(--negative)' : 'var(--muted)', overflowWrap: 'anywhere' }}>
             {c.estado === 'firmada'
-              ? `Firmada el ${fechaEs(c.firmadaAt)} · falta mandarla a la compañía`
+              ? `Firmada el ${fechaEs(c.firmadaAt)} · el correo a la compañía espera tu OK arriba`
               : `Enviada${c.enviadaAt ? ` el ${fechaEs(c.enviadaAt)}` : ''} · esperando que la compañía la acepte`}
           </span>
         </Link>

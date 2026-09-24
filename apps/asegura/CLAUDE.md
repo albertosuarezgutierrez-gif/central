@@ -757,6 +757,11 @@ guarda en `carta_texto` y se mandará a la compañía. Cepo `lib/anulacion-porta
 📨 **Aviso a la compañía (2-d-3, `proponerAnulacionesFirmadas` + `decidirAprobacion` en `lib/aprobaciones.ts`).** Acción
 `enviar_correo_compania`: el buzón lo ELIGE Alberto en la tarjeta entre los contactos activos de ESA compañía (nunca por área: medido, «administración» es a veces cobros o rebota) y queda recordado en `compania_contactos.recibe_anulaciones` para la siguiente; carta firmada adjunta tal cual; la
 anulación pasa a `comunicada` SOLO si el correo salió. Cepo `lib/aprobaciones.test.ts`.
+🤝 **Carta de nombramiento de mediador por la misma cola (24/09/2026, `proponerCartasFirmadas`).** La firmada en el portal sale
+como `enviar_correo_compania` con `carta_mediador_id` (CHECK `aprobacion_compania_con_objeto`: anulación O carta, nunca las dos);
+el buzón se recuerda aparte en `recibe_nombramientos`; al salir → `enviada`. 🚨 La carta lleva el **DNI/NIF del tomador**
+(`documentoParaCarta`, letra comprobada): sin uno válido en la ficha no se ofrece firmar, y por eso `carta_mediador.carta_texto`
+se guarda **cifrado** (`encryptField`) y se descifra solo para la pantalla y el adjunto.
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 

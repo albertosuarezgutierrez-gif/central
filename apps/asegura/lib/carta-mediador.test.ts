@@ -47,5 +47,19 @@ test('🪤 el puente aplica las guardas del botón: ni retirado, ni sin enviar, 
   assert.match(b, /if \(b\.aceptado \|\| b\.emitido \|\| b\.anulacionAbierta\) \{/)
   assert.match(b, /if \(b\.cartaAceptada\) return/)
   // Y las guardas van ANTES de devolver la base: si no, no guardan nada.
-  assert.ok(b.indexOf('b.anulacionAbierta) {') < b.indexOf('return { b }'))
+  assert.ok(b.indexOf('b.anulacionAbierta) {') < b.indexOf('return { b: '))
+})
+
+test('🪤 sin DNI/NIF válido en la ficha no hay carta; un cifrado que no abre no se confunde con «no lo tienes»', () => {
+  const b = src.slice(src.indexOf('async function base('), src.indexOf('function componer('))
+  const ilegible = b.indexOf('if (campoIlegible(b.dniCifrado))')
+  const falta = b.indexOf('if (!documento) {')
+  assert.ok(ilegible > 0 && falta > ilegible && falta < b.indexOf('return { b: { ...b, documento } }'))
+  assert.match(src, /cartaNombramientoMediador\(\{ tomador: b\.tomador, documento: b\.documento,/)
+})
+
+test('🪤 la carta lleva el DNI: se guarda CIFRADA y se descifra solo para enseñarla', () => {
+  assert.match(firmar, /carta_texto = \$\{encryptField\(texto\)\}/)
+  assert.doesNotMatch(firmar, /carta_texto = \$\{texto\}/)
+  assert.match(src, /cartaTexto: campoIlegible\(f\.cartaTexto\) \? .* : descifrarCampo\(f\.cartaTexto\)/)
 })

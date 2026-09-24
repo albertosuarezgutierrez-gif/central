@@ -4,19 +4,23 @@
 // la carta para su póliza actual — preparar → código al correo → firmar. Mismo patrón que la firma de
 // la anulación (`anulacion-portal.ts`): solo el TOMADOR, código obligatorio, se firma el texto exacto.
 // Operador (`/api/operador/carta-mediador`): Alberto la ve en la ficha de la póliza y marca a mano
-// «enviada» (la manda él), «aceptada» o «rechazada». Nada sale solo hacia la compañía.
+// «enviada», «aceptada» o «rechazada». La firmada sale a la compañía por la cola de aprobaciones
+// (`aprobaciones.ts`, con su clic); también puede mandarla él por fuera y marcarla aquí.
+// La carta lleva el DNI/NIF del tomador, así que `carta_texto` se guarda CIFRADO (como el resto de PII).
 //
 // El SQL crudo no prefija `seguros.`: la conexión ya trae `?schema=seguros`.
 
 import { createHash, randomInt } from 'node:crypto'
 import { FirmaPropia, TEXTO_CONSENTIMIENTO, nombreCoincide } from '@central/core-firma'
 import {
-  ESTADOS_ANULACION_ABIERTA, cartaNombramientoMediador, remitenteCorreo, sqlCarteraEnVigor, sqlCarteraViva, transicionCartaMediador,
+  ESTADOS_ANULACION_ABIERTA, cartaNombramientoMediador, documentoParaCarta, remitenteCorreo, sqlCarteraEnVigor, sqlCarteraViva, transicionCartaMediador,
   type AccionCartaMediador, type EstadoCartaMediador,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { campoIlegible, descifrarCampo } from './cartera-edicion'
+import { encryptField } from '@central/module-seguros-pii'
 import { fichaPropiaDe } from './contacto-portal'
 import { estadoEmailDeFicha } from './email-ficha'
 
@@ -33,12 +37,15 @@ const hoyMadrid = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Euro
 
 type Base = {
   presupuestoId: string; polizaId: string; clienteId: string; tomador: string
+  /** DNI/NIF del tomador ya descifrado y validado (ver `base`). */
+  documento: string | null
   numeroPoliza: string | null; compania: string | null; ramo: string | null
   /** Lo que la póliza dice de sí misma: del volcado de 2013-2018 no es fiable, se enseña a Alberto, no se decide con ello. */
   estadoPoliza: string | null; vence: string | null
 }
 
 type Guardas = {
+  dniCifrado: string | null
   presClienteId: string; yaNuestra: boolean; enVigor: boolean
   retirado: boolean; aceptado: boolean; emitido: boolean; enviado: boolean
   anulacionAbierta: boolean; cartaAceptada: boolean
@@ -61,7 +68,7 @@ async function base(correduriaId: string, identidadId: string, presupuestoId: st
   const [b] = await prismaAsegura().$queryRaw<(Base & Guardas)[]>`
     select pr.id::text as "presupuestoId", pol.id::text as "polizaId", pol.cliente_id::text as "clienteId",
            pr.cliente_id::text as "presClienteId",
-           trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
+           trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador, c.dni as "dniCifrado",
            pol.numero_poliza as "numeroPoliza", coalesce(cda.nombre_comun, pol.aseguradora) as compania, pol.tipo::text as ramo,
            pol.estado::text as "estadoPoliza", to_char(pol.fecha_vencimiento, 'YYYY-MM-DD') as vence,
            ${Prisma.raw(sqlCarteraViva('pol'))} as "yaNuestra",
@@ -88,11 +95,21 @@ async function base(correduriaId: string, identidadId: string, presupuestoId: st
   if (b.yaNuestra) {
     return { estado: 'no_disponible', motivo: b.enVigor ? 'Esta póliza ya la gestionamos nosotros.' : 'Esta póliza nos consta como no vigente: escríbenos y lo miramos.' }
   }
-  return { b }
+  // 🚨 La compañía identifica al tomador por su DNI/NIF: sin uno válido en la ficha no hay carta. Un
+  // cifrado que no abre NO es «no lo tienes»: se dice distinto, porque subirlo otra vez no lo arregla.
+  if (campoIlegible(b.dniCifrado)) {
+    console.error('[carta-mediador] el DNI de la ficha no se puede descifrar: revisa PII_ENCRYPTION_KEY')
+    return { estado: 'no_disponible', motivo: 'Ahora mismo no podemos leer tu DNI de tu ficha: escríbenos y lo resolvemos.' }
+  }
+  const documento = documentoParaCarta(descifrarCampo(b.dniCifrado))
+  if (!documento) {
+    return { estado: 'no_disponible', motivo: 'La carta tiene que llevar tu DNI y no lo tenemos en tu ficha. Súbelo en «Lo que falta para emitir»; en cuanto lo revisemos podrás firmarla.' }
+  }
+  return { b: { ...b, documento } }
 }
 
 function componer(b: Base, hoy: string): string | null {
-  return cartaNombramientoMediador({ tomador: b.tomador, compania: b.compania, numeroPoliza: b.numeroPoliza, ramo: b.ramo, fechaCarta: hoy })
+  return cartaNombramientoMediador({ tomador: b.tomador, documento: b.documento, compania: b.compania, numeroPoliza: b.numeroPoliza, ramo: b.ramo, fechaCarta: hoy })
 }
 
 async function abierta(polizaId: string): Promise<{ id: string; estado: EstadoCartaMediador; clienteId: string } | null> {
@@ -253,7 +270,7 @@ export async function firmarCarta(
       returning id::text as id`
     if (!fila) return false
     const n = await tx.$executeRaw`
-      update carta_mediador set estado = 'firmada', firmada_at = now(), firma_id = ${fila.id}::uuid, carta_texto = ${texto},
+      update carta_mediador set estado = 'firmada', firmada_at = now(), firma_id = ${fila.id}::uuid, carta_texto = ${encryptField(texto)},
              firma_otp_hash = null, firma_otp_expira = null, updated_at = now()
       where id = ${a.id}::uuid and estado = 'pendiente'`
     if (n === 0) throw new Error('la carta cambió mientras se firmaba')
@@ -277,7 +294,7 @@ export async function firmarCarta(
     ? ` En la ficha consta${b.estadoPoliza ? ` «${b.estadoPoliza}»` : ''}${b.vence ? `, vencimiento ${b.vence.split('-').reverse().join('/')}` : ''}: si es del volcado antiguo, confírmalo con la compañía antes.`
     : ''
   const aviso = `🤝 ${b.tomador} ha FIRMADO la carta de nombramiento de mediador de su póliza de ${b.compania} (nº ${b.numeroPoliza}).${situacion} ` +
-    'Mándala a la compañía desde la ficha de la póliza y márcala como enviada: la póliza no es nuestra hasta que la acepten.'
+    'Tienes el correo a la compañía en Hoy · «Esperan tu OK»: la póliza no es nuestra hasta que la acepten.'
   return { estado: 'firmada', firmadaEl: hoy, aviso }
 }
 
@@ -292,11 +309,13 @@ export type CartaEnLista = {
 export async function cartasDePoliza(correduriaId: string, polizaId: string): Promise<CartaEnLista[] | null> {
   if (!UUID.test(polizaId)) return []
   try {
-    return await prismaAsegura().$queryRaw<CartaEnLista[]>`
+    const filas = await prismaAsegura().$queryRaw<CartaEnLista[]>`
       select id::text as id, estado, created_at as "creadaAt", firmada_at as "firmadaAt", enviada_at as "enviadaAt",
              aceptada_at as "aceptadaAt", rechazada_at as "rechazadaAt", rechazo_motivo as "rechazoMotivo", carta_texto as "cartaTexto"
       from carta_mediador where correduria_id = ${correduriaId}::uuid and poliza_id = ${polizaId}::uuid
       order by created_at desc limit 10`
+    // Descifrada solo para la pantalla de Alberto; un cifrado que no abre se enseña como tal, no como «sin carta».
+    return filas.map((f) => ({ ...f, cartaTexto: campoIlegible(f.cartaTexto) ? '(no se puede descifrar la carta: revisa PII_ENCRYPTION_KEY)' : descifrarCampo(f.cartaTexto) }))
   } catch (e) {
     console.error('[carta-mediador] no se pudo leer:', e instanceof Error ? e.message : e)
     return null

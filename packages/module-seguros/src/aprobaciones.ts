@@ -167,11 +167,51 @@ export function borradorAnulacionCompania(e: EntradaAnulacionCompania): Borrador
   }
 }
 
+export type EntradaCartaMediadorCompania = {
+  tomador: string
+  compania: string
+  numeroPoliza: string
+  /** Cuándo firmó el cliente, `YYYY-MM-DD`. */
+  firmadaEl: string
+  /** Huella SHA-256 del texto firmado (la de `seguros.firma.doc_hash`). */
+  docHash: string
+  mediador: string
+  hoy: Date
+}
+
+/**
+ * El correo a la compañía con la carta de nombramiento de mediador firmada (PR 6, salida B). La carta
+ * va ADJUNTA y no se edita; esto es la nota que la acompaña. Sin fecha de efecto que apriete: caduca
+ * a los 30 días, y si caduca se repropone (como la anulación).
+ */
+export function borradorCartaMediadorCompania(e: EntradaCartaMediadorCompania): Borrador {
+  const texto = [
+    'Buenos días:',
+    '',
+    `Nuestro cliente ${e.tomador}, tomador de la póliza nº ${e.numeroPoliza}, nos ha designado mediador de dicha póliza.`,
+    '',
+    `Adjuntamos la carta de nombramiento firmada por el tomador el ${fechaEs(e.firmadaEl)} con firma electrónica ` +
+      `(huella SHA-256 del documento: ${e.docHash}). El nombramiento no modifica el contrato.`,
+    '',
+    'Les rogamos que lo apliquen y nos confirmen la fecha desde la que figuramos como mediador.',
+    '',
+    'Un saludo,',
+    e.mediador,
+  ].join('\n')
+  return {
+    asunto: `Nombramiento de mediador · póliza nº ${e.numeroPoliza} · ${e.tomador}`,
+    texto,
+    urgente: false,
+    caduca: caducaEn(e.hoy, 30),
+  }
+}
+
 export type BuzonCompania = { id: string; activo: boolean; email: string | null; orden: number; recibeAnulaciones: boolean }
 
 /**
- * El buzón de la compañía que se PRESELECCIONA para mandarle una anulación: el que ya recibió una
- * (lo marca el envío que Alberto aprueba). NO se deduce por área: con los contactos reales, el de
+ * El buzón de la compañía que se PRESELECCIONA para mandarle una anulación (o una carta de
+ * nombramiento: el llamador pasa en `recibeAnulaciones` la marca de ESE tipo de envío): el que ya
+ * recibió uno (lo marca el envío que Alberto aprueba). NO se deduce por área: con los contactos reales, el de
  * «administración» de una compañía es el de recibos impagados y el de otra rebota. `null` = no hay
  * ninguno marcado, y lo elige Alberto en la tarjeta.
  */
