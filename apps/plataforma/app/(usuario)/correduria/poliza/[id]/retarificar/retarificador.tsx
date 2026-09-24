@@ -27,6 +27,7 @@ import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
 import PrepararPresupuesto from './PrepararPresupuesto'
+import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
 import { SelectorBuscable } from '../../../SelectorBuscable'
@@ -1918,6 +1919,7 @@ function Precios({
           congela las opciones de esta misma consulta, que ya está pagada.
           Sin `cotizacionId` no hay de dónde congelarlas, y entonces no se
           ofrece el botón en vez de ofrecer uno que falla al pulsarlo. */}
+      <EnlaceOportunidad guardado={r.guardado} />
       {cotizacionIdDe(r.guardado) !== null && (
         <PrepararPresupuesto
           tarificacionId={cotizacionIdDe(r.guardado) as string}

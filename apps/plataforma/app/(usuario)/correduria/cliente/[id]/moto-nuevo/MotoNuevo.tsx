@@ -23,6 +23,7 @@ import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
+import EnlaceOportunidad from '../../../EnlaceOportunidad'
 
 function euroODash(n: number | null | undefined): string {
   return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
@@ -733,6 +734,7 @@ function Precios({
   const puedeEmitir = emitible && !r.simulado && cotizacionId !== null
   return (
     <div style={{ marginTop: 12 }}>
+      <EnlaceOportunidad guardado={r.guardado} />
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
           <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>

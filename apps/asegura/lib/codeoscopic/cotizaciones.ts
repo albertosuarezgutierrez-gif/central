@@ -96,7 +96,12 @@ export type EntradaCotizacion = {
  *                      equivocado.
  */
 export type Guardado =
-  | { estado: 'guardada'; cotizacionId: string }
+  | {
+      estado: 'guardada'
+      cotizacionId: string
+      /** De qué oportunidad cuelga (24/09/2026). Ausente = no se intentó (simulación, o test con doble). */
+      oportunidad?: import('./oportunidad-presupuesto.ts').EnlaceOportunidad
+    }
   | { estado: 'no_guardada'; motivo: string }
   | { estado: 'no_intentada'; motivo: string }
 

@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo } from './seguimiento-asegura.ts'
+import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -201,4 +201,12 @@ test('lectura para oportunidad: nada leído o fallo = error con motivo, nunca un
 
 test('la prima leída se escribe en el campo en formato que parsearPrima acepta', () => {
   for (const n of [312.46, 1200.5, 99, 45678.9]) assert.equal(parsearPrima(primaParaCampo(n)), n)
+})
+
+test('enlace del presupuesto: creada/enlazada con id; fallo con motivo; ausente = nada', () => {
+  assert.deepEqual(enlaceOportunidadDe({ estado: 'guardada', cotizacionId: 'c', oportunidad: { estado: 'creada', oportunidadId: 'o1' } }), { estado: 'creada', oportunidadId: 'o1' })
+  assert.deepEqual(enlaceOportunidadDe({ estado: 'guardada', oportunidad: { estado: 'no_enlazada', motivo: 'boom' } }), { estado: 'fallo', motivo: 'boom' })
+  assert.equal(enlaceOportunidadDe({ estado: 'guardada', cotizacionId: 'c' }), null)
+  assert.equal(enlaceOportunidadDe({ estado: 'guardada', oportunidad: { estado: 'creada' } }), null, 'sin id no se enlaza a nada')
+  assert.equal(enlaceOportunidadDe(null), null)
 })

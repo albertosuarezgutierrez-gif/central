@@ -100,6 +100,11 @@ export default function OportunidadesCliente({ clienteId, polizas }: { clienteId
     setAviso(null)
     setAbriendo(true)
     document.getElementById('oportunidades')?.scrollIntoView({ block: 'start' })
+    // Se quita el parámetro: si se quedara, un segundo clic en el menú no cambiaría la URL
+    // y el formulario ya cerrado no volvería a abrirse.
+    const url = new URL(window.location.href)
+    url.searchParams.delete('oportunidad')
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
   }, [pideNueva])
 
   const abiertas = lectura?.estado === 'ok' ? lectura.oportunidades.filter(o => o.estado !== 'ganada' && o.estado !== 'perdida') : []
@@ -366,6 +371,8 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
         {lectura && <div role="status" style={{ color: lectura.ok ? 'var(--positive)' : 'var(--negative)' }}>{lectura.texto}</div>}
         {!lectura && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento y prima. No se guarda el documento.</div>}
       </div>
+      {/* Bloqueado mientras lee: lo leído solo rellena lo vacío, y eso se decide con lo que había al pulsar. */}
+      <fieldset disabled={leyendo} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, display: 'grid', gap: 10 }}>
       <div style={rejilla}>
         <label style={etiqueta}>
           Ramo
@@ -411,9 +418,10 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
         Nota para el primer paso (opcional)
         <textarea value={nota} onChange={e => setNota(e.target.value)} maxLength={2000} rows={2} style={{ ...campo, minHeight: 64, padding: 8 }} />
       </label>
+      </fieldset>
       {error && <div role="alert" style={{ color: 'var(--negative)' }}>{error}</div>}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="submit" disabled={ocupado} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>{ocupado ? 'Guardando…' : 'Abrir oportunidad'}</button>
+        <button type="submit" disabled={ocupado || leyendo} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>{ocupado ? 'Guardando…' : 'Abrir oportunidad'}</button>
         <button type="button" onClick={onCancelar} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Cancelar</button>
       </div>
     </form>

@@ -645,3 +645,26 @@ export function interpretarLecturaOportunidad(status: number, json: unknown): Le
 export function primaParaCampo(n: number): string {
   return n.toFixed(2).replace('.', ',')
 }
+
+// ─── De qué oportunidad cuelga un presupuesto recién pedido (24/09/2026) ─────
+// asegura engancha cada precio real a la oportunidad del cliente para ese ramo (o
+// la abre) y lo manda en `guardado.oportunidad`. Ausente = no se intentó
+// (simulación o asegura más vieja): entonces no se dice nada, ni bueno ni malo.
+
+export type EnlacePresupuesto =
+  | { estado: 'creada' | 'enlazada'; oportunidadId: string }
+  | { estado: 'fallo'; motivo: string }
+
+export function enlaceOportunidadDe(guardado: unknown): EnlacePresupuesto | null {
+  if (typeof guardado !== 'object' || guardado === null) return null
+  const o = (guardado as Record<string, unknown>).oportunidad
+  if (typeof o !== 'object' || o === null) return null
+  const e = o as Record<string, unknown>
+  if ((e.estado === 'creada' || e.estado === 'enlazada') && typeof e.oportunidadId === 'string' && e.oportunidadId !== '') {
+    return { estado: e.estado, oportunidadId: e.oportunidadId }
+  }
+  if (e.estado === 'no_enlazada' || e.estado === 'omitida') {
+    return { estado: 'fallo', motivo: typeof e.motivo === 'string' ? e.motivo : 'sin motivo' }
+  }
+  return null
+}
