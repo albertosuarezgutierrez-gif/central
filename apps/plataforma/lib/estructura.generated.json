@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-24T07:49:54Z",
+  "generadoEn": "2026-09-24T09:21:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 106
+        "evidencias": 109
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4037,12 +4037,15 @@
       "/api/operador/eventos",
       "/api/operador/eventos/detectar",
       "/api/operador/export-rgpd",
+      "/api/operador/formacion",
       "/api/operador/huerfanas",
       "/api/operador/impagados",
+      "/api/operador/informe-mediacion",
       "/api/operador/ingesta",
       "/api/operador/leads",
       "/api/operador/leads-competencia",
       "/api/operador/leads-web",
+      "/api/operador/libro-registro",
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/llamada",
       "/api/operador/oportunidad/tarea",
@@ -4972,13 +4975,16 @@
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
       "/api/correduria/export-rgpd",
+      "/api/correduria/formacion",
       "/api/correduria/fugas",
       "/api/correduria/impagados",
+      "/api/correduria/informe-mediacion",
       "/api/correduria/ingesta",
       "/api/correduria/intervinientes",
       "/api/correduria/leads",
       "/api/correduria/leads-competencia",
       "/api/correduria/leads-web",
+      "/api/correduria/libro-registro",
       "/api/correduria/oportunidad",
       "/api/correduria/oportunidad/llamada",
       "/api/correduria/oportunidad/tarea",
@@ -5478,6 +5484,7 @@
       "seguros.evento",
       "seguros.felicitacion",
       "seguros.firma",
+      "seguros.formacion",
       "seguros.gestiones",
       "seguros.historial_interno",
       "seguros.interviniente_purga_log",
@@ -6506,7 +6513,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1453,
+    "apis": 1459,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
