@@ -26,6 +26,7 @@ export const TIPOS_AVISO = [
   'carnet_en_ventana',
   'carnet_caducado',
   'anulacion_por_firmar',
+  'felicitacion',
 ] as const
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
 
@@ -63,7 +64,7 @@ export type Aviso = {
   href: string
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -144,6 +145,13 @@ export type EntradaAvisos = {
    * si nadie se lo dice, la vieja se renueva y se cobra.
    */
   firmas: FirmaParaAviso[] | null
+  /**
+   * La felicitación de cumpleaños de HOY (la escribe el cron de asegura, que es quien puede leer la
+   * fecha de nacimiento). `null` = no se ha podido mirar. Ausente = esta superficie no felicita: el
+   * emisor de correo de la intranet no la cuenta como «novedad» porque el cumpleaños ya tiene su
+   * propio correo.
+   */
+  felicitaciones?: { id: string }[] | null
   hoy: Date
 }
 
@@ -179,6 +187,7 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   carnet_caducado: '/boveda?vista=recordatorios',
   // «Pendiente de tu firma» vive en la bóveda (vista de seguros), que es donde se firma.
   anulacion_por_firmar: '/boveda',
+  felicitacion: '/boveda',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -398,9 +407,24 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     }
   }
 
+  if (x.felicitaciones === null) {
+    fuentesIlegibles.push('felicitaciones')
+  } else {
+    for (const f of x.felicitaciones ?? []) {
+      avisos.push({
+        tipo: 'felicitacion',
+        id: f.id,
+        titulo: '¡Feliz cumpleaños! 🎂',
+        detalle: 'Todo el equipo de Grupo ASegura te desea un gran día.',
+        href: HREF_POR_TIPO.felicitacion,
+      })
+    }
+  }
+
   return {
     avisos,
     fuentesIlegibles,
-    globo: textoGlobo(avisos.length, fuentesIlegibles.length, FUENTES_AVISO.length),
+    // Las fuentes que ESTA superficie consulta: una ausente (`undefined`) no cuenta para el «!».
+    globo: textoGlobo(avisos.length, fuentesIlegibles.length, FUENTES_AVISO.length - (x.felicitaciones === undefined ? 1 : 0)),
   }
 }

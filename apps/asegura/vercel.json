@@ -19,6 +19,10 @@
       "schedule": "15 8 * * *"
     },
     {
+      "path": "/api/cron/felicitaciones",
+      "schedule": "0 7 * * *"
+    },
+    {
       "path": "/api/cron/revision-anual",
       "schedule": "0 9 1 * *"
     }

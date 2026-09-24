@@ -278,3 +278,19 @@ test('🚨 una anulación que espera SU firma sale en la campana: sin firma no s
   // Ilegible ≠ «no tienes nada que firmar».
   assert.ok(avisosDe({ autorizaciones: null, obligaciones: [], peticiones: [], datos: [], carnets: [], firmas: null, hoy: HOY }).fuentesIlegibles.includes('firmas'))
 })
+
+test('🎂 la felicitación de hoy sale en la campana y lleva a la bóveda', () => {
+  const r = avisosDe({ autorizaciones: null, obligaciones: [], peticiones: [], datos: [], carnets: [], firmas: [], felicitaciones: [{ id: 'f1' }], hoy: HOY })
+  const f = r.avisos.find((a) => a.tipo === 'felicitacion')
+  assert.ok(f)
+  assert.equal(f.href, '/boveda')
+  assert.match(f.titulo, /Feliz cumpleaños/)
+})
+
+test('felicitaciones ilegibles se declaran; ausentes (el emisor de correo) no cuentan como fuente', () => {
+  const ilegible = avisosDe({ autorizaciones: { otorgadas: [], recibidas: [] }, obligaciones: [], peticiones: [], datos: [], carnets: [], firmas: [], felicitaciones: null, hoy: HOY })
+  assert.deepEqual(ilegible.fuentesIlegibles, ['felicitaciones'])
+  assert.equal(ilegible.globo, '0+')
+  const todas = avisosDe({ autorizaciones: null, obligaciones: null, peticiones: null, datos: null, carnets: null, firmas: null, felicitaciones: null, hoy: HOY })
+  assert.equal(todas.globo, '!')
+})

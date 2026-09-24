@@ -4,6 +4,7 @@ import { autorizacionesDeIdentidad } from '@/lib/autorizaciones'
 import { avisosDe, type Avisos } from '@/lib/avisos'
 import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { carnetsDeIdentidad } from '@/lib/carnets'
+import { felicitacionesDeIdentidad } from '@/lib/felicitaciones'
 import { reparosDeMisDatos } from '@/lib/mis-datos'
 import { obligacionesDeIdentidad } from '@/lib/obligaciones'
 import { peticionesDeIdentidad } from '@/lib/peticiones'
@@ -35,7 +36,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -47,6 +48,8 @@ export async function GET() {
     carnetsDeIdentidad(identidad.id),
     // Sexta, mismo puente: las anulaciones que esperan su firma (solo del tomador, lo decide asegura).
     anulacionesPendientes(identidad.id),
+    // Séptima: la felicitación de cumpleaños de hoy (la escribe el cron de asegura).
+    felicitacionesDeIdentidad(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -57,6 +60,7 @@ export async function GET() {
   if (datos.status === 'rejected') console.error('[avisos] datos de contacto ilegibles', datos.reason)
   if (carnets.status === 'rejected') console.error('[avisos] carnés ilegibles', carnets.reason)
   if (firmas.status === 'rejected') console.error('[avisos] firmas pendientes ilegibles', firmas.reason)
+  if (felicitaciones.status === 'rejected') console.error('[avisos] felicitaciones ilegibles', felicitaciones.reason)
   // `null` del puente = no se pudo mirar (no «no hay»).
   const firmasLeidas = firmas.status === 'fulfilled' && firmas.value !== null
     ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
@@ -69,6 +73,7 @@ export async function GET() {
     datos: datos.status === 'fulfilled' ? datos.value : null,
     carnets: carnets.status === 'fulfilled' ? carnets.value : null,
     firmas: firmasLeidas,
+    felicitaciones: felicitaciones.status === 'fulfilled' ? felicitaciones.value : null,
     hoy: new Date(),
   })
 
