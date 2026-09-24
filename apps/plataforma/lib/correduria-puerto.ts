@@ -1063,22 +1063,24 @@ export function interpretarCalidad(status: number, json: unknown): CalidadDato {
   const r = json as Record<string, unknown>
   if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
   if (r.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
-  if (r.estado !== 'ok' || !Array.isArray(r.filas)) {
+  if (r.estado !== 'ok' || !Array.isArray(r.incidencias)) {
     return { estado: 'error', motivo: 'respuesta_ilegible' }
   }
 
   const incidencias: IncidenciaCalidad[] = []
-  for (const f of r.filas) {
+  for (const f of r.incidencias) {
     if (typeof f !== 'object' || f === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
     const o = f as Record<string, unknown>
     const regla = o.regla
-    // Sin regla válida no hay incidencia.
-    if (!esReglaCalidad(regla)) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const clienteId = cadena(o.clienteId)
+    // Sin regla del catálogo o sin ficha a la que llevar, la fila no se entiende: la lista entera
+    // pasa a error antes que pintar una incidencia a medias.
+    if (!esReglaCalidad(regla) || !clienteId) return { estado: 'error', motivo: 'respuesta_ilegible' }
     // Las demás se pueden leer tranquilamente con helpers que devuelven null:
     // la regla existe y eso basta para la agrupación.
     incidencias.push({
       regla,
-      clienteId: cadena(o.clienteId) || '',
+      clienteId,
       cliente: cadena(o.cliente),
       polizaId: cadena(o.polizaId),
       numeroPoliza: cadena(o.numeroPoliza),

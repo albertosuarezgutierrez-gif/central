@@ -41,7 +41,7 @@ export default function Calidad({
 
   useEffect(() => {
     fetch('/api/correduria/calidad')
-      .then((r) => r.json())
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d: CalidadDato) => {
         setDatos(d)
         // Una sola vez por carga, dentro del `.then` (en el render sería bucle).
@@ -134,46 +134,50 @@ function Grupo({
   ver: Record<string, number>
   setVer: React.Dispatch<React.SetStateAction<Record<string, number>>>
 }) {
-  const visibles = grupo.filas.slice(0, ver[grupo.regla] ?? POR_PAGINA)
-  const tieneMs = grupo.filas.length > (ver[grupo.regla] ?? POR_PAGINA)
+  // Cerrado por defecto y montaje perezoso: las filas solo existen en el DOM al abrir
+  // (un `<details>` cerrado las crearía igual).
+  const [abierto, setAbierto] = useState(false)
+  const limite = ver[grupo.regla] ?? POR_PAGINA
+  const visibles = grupo.filas.slice(0, limite)
+  const tieneMas = grupo.filas.length > limite
 
   return (
-    <details style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, minWidth: 0 }}>
-      <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 15, marginBottom: 12 }}>
-        {grupo.titulo} · {grupo.filas.length}
-      </summary>
-      <div style={{ fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
-        {grupo.queHacer}
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
-        {visibles.map((f) => (
-          <Fila key={`${f.clienteId}-${f.polizaId}-${f.regla}`} f={f} />
-        ))}
-      </div>
-      {tieneMs && (
-        <button
-          onClick={() =>
-            setVer((v) => ({
-              ...v,
-              [grupo.regla]: (v[grupo.regla] ?? POR_PAGINA) + POR_PAGINA,
-            }))
-          }
-          style={{
-            marginTop: 10,
-            minHeight: 44,
-            padding: '0 16px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            color: 'var(--text)',
-            cursor: 'pointer',
-            fontWeight: 600,
-          }}
-        >
-          Ver {Math.min(POR_PAGINA, grupo.filas.length - (ver[grupo.regla] ?? POR_PAGINA))} más
-        </button>
+    <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 12, minWidth: 0 }}>
+      <button
+        type="button"
+        onClick={() => setAbierto((a) => !a)}
+        aria-expanded={abierto}
+        style={{
+          width: '100%', minHeight: 44, textAlign: 'left', background: 'none', border: 'none',
+          padding: 0, cursor: 'pointer', fontWeight: 700, fontSize: 15, color: 'var(--text)',
+        }}
+      >
+        {abierto ? '▾' : '▸'} {grupo.titulo} · {grupo.filas.length}
+      </button>
+      {abierto && (
+        <>
+          <div style={{ fontSize: 13, lineHeight: 1.5, margin: '8px 0 12px' }}>{grupo.queHacer}</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+            {visibles.map((f) => (
+              <Fila key={`${f.regla}-${f.clienteId}-${f.polizaId ?? ''}-${f.relacionadoId ?? ''}`} f={f} />
+            ))}
+          </div>
+          {tieneMas && (
+            <button
+              type="button"
+              onClick={() => setVer((v) => ({ ...v, [grupo.regla]: limite + POR_PAGINA }))}
+              style={{
+                marginTop: 10, minHeight: 44, padding: '0 16px', borderRadius: 8,
+                border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)',
+                cursor: 'pointer', fontWeight: 600,
+              }}
+            >
+              Ver {Math.min(POR_PAGINA, grupo.filas.length - limite)} más
+            </button>
+          )}
+        </>
       )}
-    </details>
+    </div>
   )
 }
 
@@ -193,7 +197,7 @@ function Fila({ f }: { f: IncidenciaCalidad }) {
               {f.numeroPoliza && f.compania && ' · '}
               {f.compania}
             </span>
-            <Link href={`/correduria/poliza/${f.polizaId}`} style={{ fontSize: 13, color: 'var(--link)' }}>
+            <Link href={`/correduria/poliza/${f.polizaId}`} style={{ fontSize: 13, color: 'var(--primary)' }}>
               Ver póliza
             </Link>
           </>

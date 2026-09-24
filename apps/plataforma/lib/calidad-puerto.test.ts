@@ -5,7 +5,7 @@ import { interpretarCalidad } from './correduria-puerto.ts'
 test('calidad: respuesta ok con incidencias válidas', () => {
   const json = {
     estado: 'ok',
-    filas: [
+    incidencias: [
       {
         regla: 'sin_prima',
         clienteId: 'c1',
@@ -40,7 +40,7 @@ test('calidad: respuesta ok con incidencias válidas', () => {
 test('calidad: fila con regla desconocida invalida toda la respuesta', () => {
   const json = {
     estado: 'ok',
-    filas: [
+    incidencias: [
       {
         regla: 'desconocida_inventada',
         clienteId: 'c1',
@@ -76,4 +76,17 @@ test('calidad: sin_configurar', () => {
   const json = { estado: 'sin_configurar' }
   const result = interpretarCalidad(200, json)
   assert.equal(result.estado, 'sin_configurar')
+})
+
+test('calidad: una fila sin ficha a la que llevar invalida la lista entera', () => {
+  const r = interpretarCalidad(200, { estado: 'ok', incidencias: [{ regla: 'sin_dni', clienteId: null }] })
+  assert.equal(r.estado, 'error')
+})
+
+test('🚨 contrato: el campo que manda asegura es el que lee plataforma', async () => {
+  // Si divergen, la pantalla dice «error» siempre y nadie ve una sola incidencia.
+  const { readFileSync } = await import('node:fs')
+  const ruta = readFileSync(new URL('../../asegura/app/api/operador/calidad/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /estado: 'ok', incidencias: await calidadCartera\(/)
+  assert.equal(interpretarCalidad(200, { estado: 'ok', incidencias: [] }).estado, 'ok')
 })
