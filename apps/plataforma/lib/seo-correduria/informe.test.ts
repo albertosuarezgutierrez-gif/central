@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { accionPropuesta, bloqueTelefonosPorRevisar, redactarInforme, normalizarConsulta, type ConsultaObjetivo } from './informe.ts'
+import { accionPropuesta, bloqueDescubrimiento, bloqueTelefonosPorRevisar, redactarInforme, normalizarConsulta, type ConsultaObjetivo } from './informe.ts'
 import type { DatosCobertura, DatosGsc, DatosPosthog, FilaGsc, Resultados } from './tipos.ts'
 
 // Lista propia y pequeña: NO se importa `CONSULTAS` (la escribe otro agente en paralelo).
@@ -232,4 +232,13 @@ test('teléfonos por revisar: una línea por compañía, con fecha, días y fuen
   ])!
   assert.match(t, /Teléfonos de siniestros por revisar<\/b> \(1\)/)
   assert.match(t, /• A&amp;B: comprobado el 2025-01-01 \(hace 631 días\) — https:\/\/a\.example\/\?x=1&amp;y=2/)
+})
+
+test('aviso a buscadores: el fallo se dice con su motivo, escapado', () => {
+  const t = bloqueDescubrimiento(
+    { estado: 'ok', texto: 'reenviado' },
+    { estado: 'error', detalle: 'IndexNow 403: <key>' },
+  )
+  assert.match(t, /• Sitemap a Google: reenviado/)
+  assert.match(t, /• IndexNow \(Bing\): ⚠️ no se hizo — IndexNow 403: &lt;key&gt;/)
 })

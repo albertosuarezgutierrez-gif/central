@@ -1,9 +1,28 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { urlsBlogPendientesIndexar, promptClaudeChromeIndexacion } from './indexacion-pendiente.ts'
+import { MAX_SOLICITUDES_DIA, urlsPendientesIndexar, promptClaudeChromeIndexacion } from './indexacion-pendiente.ts'
 import type { DatosCobertura } from './tipos.ts'
 
-test('urlsBlogPendientesIndexar: filtra solo /blog/, estado ok y verdicto != PASS', () => {
+test('urlsPendientesIndexar: cualquier página propia no legal sin indexar, no solo el blog', () => {
+  const cobertura: DatosCobertura = {
+    paginas: [
+      { url: 'https://grupoasegura.es/seguros/comunidades', estado: 'ok', verdicto: 'NEUTRAL' },
+      { url: 'https://grupoasegura.es/legal/privacidad', estado: 'ok', verdicto: 'NEUTRAL' },
+      { url: 'https://grupoasegura.es/', estado: 'ok', verdicto: 'PASS' },
+    ],
+  }
+  assert.deepEqual(urlsPendientesIndexar(cobertura), ['https://grupoasegura.es/seguros/comunidades'])
+})
+
+test('promptClaudeChromeIndexacion: no pide más de las que admite Search Console al día', () => {
+  const urls = Array.from({ length: MAX_SOLICITUDES_DIA + 3 }, (_, i) => `https://grupoasegura.es/p${i}`)
+  const p = promptClaudeChromeIndexacion(urls)!
+  assert.match(p, new RegExp(`${MAX_SOLICITUDES_DIA}\\. https://grupoasegura\\.es/p${MAX_SOLICITUDES_DIA - 1}\\n`))
+  assert.doesNotMatch(p, new RegExp(`/p${MAX_SOLICITUDES_DIA}\\b`))
+  assert.match(p, /Quedan 3 más/)
+})
+
+test('urlsPendientesIndexar: filtra estado ok y verdicto != PASS', () => {
   const cobertura: DatosCobertura = {
     paginas: [
       { url: 'https://grupoasegura.es/blog/como-dar-de-baja-un-seguro-a-tiempo', estado: 'ok', verdicto: 'NEUTRAL' },
@@ -12,24 +31,24 @@ test('urlsBlogPendientesIndexar: filtra solo /blog/, estado ok y verdicto != PAS
       { url: 'https://grupoasegura.es/blog/siniestro-denegado-que-hacer', estado: 'ok', verdicto: 'NEUTRAL' },
     ],
   }
-  assert.deepEqual(urlsBlogPendientesIndexar(cobertura), [
+  assert.deepEqual(urlsPendientesIndexar(cobertura), [
     'https://grupoasegura.es/blog/como-dar-de-baja-un-seguro-a-tiempo',
     'https://grupoasegura.es/blog/siniestro-denegado-que-hacer',
   ])
 })
 
-test('urlsBlogPendientesIndexar: un error de lectura no se cuenta como pendiente (no se ha mirado, no hace falta pedirlo)', () => {
+test('urlsPendientesIndexar: un error de lectura no se cuenta como pendiente (no se ha mirado, no hace falta pedirlo)', () => {
   const cobertura: DatosCobertura = {
     paginas: [{ url: 'https://grupoasegura.es/blog/preaviso-un-mes-no-renovar-seguro', estado: 'error', detalle: 'sin tiempo' }],
   }
-  assert.deepEqual(urlsBlogPendientesIndexar(cobertura), [])
+  assert.deepEqual(urlsPendientesIndexar(cobertura), [])
 })
 
-test('urlsBlogPendientesIndexar: vacío si todo el blog está indexado', () => {
+test('urlsPendientesIndexar: vacío si todo el blog está indexado', () => {
   const cobertura: DatosCobertura = {
     paginas: [{ url: 'https://grupoasegura.es/blog/x', estado: 'ok', verdicto: 'PASS' }],
   }
-  assert.deepEqual(urlsBlogPendientesIndexar(cobertura), [])
+  assert.deepEqual(urlsPendientesIndexar(cobertura), [])
 })
 
 test('promptClaudeChromeIndexacion: null sin URLs', () => {

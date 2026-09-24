@@ -233,6 +233,19 @@ export function bloqueTelefonosPorRevisar(
   ].join('\n')
 }
 
+/** Resultado de un paso de «descubrimiento» (reenvío del sitemap, IndexNow): hecho, sin nada que hacer, o fallo con motivo. */
+export type PasoDescubrimiento = { estado: 'ok'; texto: string } | { estado: 'error'; detalle: string }
+
+/**
+ * Las dos líneas de cómo se avisó a los buscadores esta semana. Un fallo se DICE (con su motivo):
+ * un sitemap que no se reenvió no es lo mismo que uno reenviado, aunque los dos «no den error» en el cron.
+ */
+export function bloqueDescubrimiento(sitemap: PasoDescubrimiento, indexnow: PasoDescubrimiento): string {
+  const linea = (nombre: string, p: PasoDescubrimiento) =>
+    p.estado === 'ok' ? `• ${nombre}: ${escapeHtml(p.texto)}` : `• ${nombre}: ⚠️ no se hizo — ${escapeHtml(p.detalle)}`
+  return ['📨 <b>Aviso a buscadores</b>', linea('Sitemap a Google', sitemap), linea('IndexNow (Bing)', indexnow)].join('\n')
+}
+
 export function redactarInforme(semana: string, r: Resultados, accion: Accion, dominio: string): string {
   const partes = [
     `🔎 <b>SEO ${escapeHtml(dominio)}</b> · semana ${escapeHtml(semana)}`,
