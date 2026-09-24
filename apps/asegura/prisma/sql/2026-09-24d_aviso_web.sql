@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS seguros.aviso_web (
   CONSTRAINT aviso_web_confirmado_con_ficha CHECK (confirmado_en IS NULL OR cliente_id IS NOT NULL)
 );
 CREATE INDEX IF NOT EXISTS idx_aviso_web_email ON seguros.aviso_web (email_lookup_hash, creado_en);
+CREATE INDEX IF NOT EXISTS idx_aviso_web_creado ON seguros.aviso_web (creado_en);
 CREATE INDEX IF NOT EXISTS idx_aviso_web_activos ON seguros.aviso_web (correduria_id) WHERE confirmado_en IS NOT NULL AND baja_en IS NULL;
 
 -- 🚨 Los privilegios por defecto del schema dan DML a `crm_seguros` (el CRM de Manuel) y lectura a
@@ -50,4 +51,5 @@ CREATE INDEX IF NOT EXISTS idx_aviso_web_activos ON seguros.aviso_web (correduri
 REVOKE ALL ON seguros.aviso_web FROM crm_seguros;
 REVOKE ALL ON seguros.aviso_web FROM backup_seguros;
 REVOKE ALL ON seguros.aviso_web FROM prisma_seguros;
-GRANT SELECT, INSERT, UPDATE ON seguros.aviso_web TO prisma_seguros;
+-- DELETE solo para purgar las solicitudes que nunca se confirmaron (lo promete la web).
+GRANT SELECT, INSERT, UPDATE, DELETE ON seguros.aviso_web TO prisma_seguros;

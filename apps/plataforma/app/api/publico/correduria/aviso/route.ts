@@ -32,13 +32,22 @@ export async function POST(req: NextRequest) {
   if (!rateLimit(`${clave}:${ip}`, tope, 60 * 60 * 1000).allowed) {
     return NextResponse.json({ ok: false, motivo: 'Demasiadas solicitudes desde esta conexión. Inténtalo más tarde.' }, { status: 429 })
   }
-  const body = await req.json().catch(() => null)
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
+  // Campo trampa: un humano no lo ve ni lo rellena. Al bot se le contesta «ok» sin hacer nada.
+  if (accion === 'solicitar' && typeof body?.web === 'string' && body.web.trim() !== '') return NextResponse.json({ ok: true })
   const r = await avisoWebAsegura(accion, body)
   const j = (r.json ?? {}) as Record<string, unknown>
 
   if (accion === 'solicitar') {
     if (r.status === 200) return NextResponse.json({ ok: true })
     if (r.status === 422) return NextResponse.json({ ok: false, motivo: String(j.motivo ?? 'Datos no válidos.'), campo: j.campo ?? null }, { status: 422 })
+    if (j.estado === 'saturado') {
+      await tgAviso(
+        'correduria.aviso-web',
+        '🚨 <b>Avisos de la web: tope por hora alcanzado</b>\nSe han dejado de enviar correos de confirmación. Si no es una campaña tuya, puede ser alguien usando el formulario para mandar correos.',
+      ).catch(() => {})
+      return NextResponse.json({ ok: false, motivo: 'Ahora mismo no podemos enviarte el correo. Inténtalo en un rato.' }, { status: 503 })
+    }
     if (j.estado === 'desactivado') {
       return NextResponse.json({ ok: false, motivo: 'Los avisos por correo aún no están disponibles. Guarda la fecha en tu área de clientes.' }, { status: 503 })
     }
@@ -47,6 +56,7 @@ export async function POST(req: NextRequest) {
 
   if (accion === 'confirmar') {
     if (r.status === 404) return NextResponse.json({ ok: false, motivo: 'El enlace no es válido o ha caducado.' }, { status: 404 })
+    if (j.estado === 'desactivado') return NextResponse.json({ ok: false, motivo: 'Los avisos por correo no están disponibles ahora mismo.' }, { status: 503 })
     if (r.status !== 200) return NextResponse.json({ ok: false, motivo: 'Ahora mismo no podemos confirmarlo. Inténtalo en unos minutos.' }, { status: 502 })
     const ficha = j.ficha as { id: string; nueva: boolean; nombre: string; varias: boolean } | undefined
     if (j.yaEstaba !== true && ficha) {

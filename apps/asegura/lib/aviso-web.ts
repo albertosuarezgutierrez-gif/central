@@ -24,7 +24,9 @@ import { Prisma } from './generated/asegura-client'
 import {
   CONSENTIMIENTO_VERSION,
   HORAS_CONFIRMACION,
+  DIAS_PURGA_SIN_CONFIRMAR,
   MAX_SOLICITUDES_DIA,
+  MAX_SOLICITUDES_HORA,
   avisoQueToca,
   avisosWebActivos,
   cuerpoAviso,
@@ -59,7 +61,9 @@ async function enviar(destino: string, c: CuerpoCorreo): Promise<Envio> {
     })
     return 'enviado'
   } catch (e) {
-    console.error('[aviso-web] fallo enviando:', e instanceof Error ? e.message : e)
+    // Solo el código: el mensaje de un SMTP suele traer la dirección rechazada («550 <x@y> …»).
+    const c = e as { code?: unknown; responseCode?: unknown }
+    console.error('[aviso-web] fallo enviando:', String(c?.responseCode ?? c?.code ?? 'sin_codigo'))
     return 'rechazado'
   }
 }
@@ -71,6 +75,8 @@ export type ResultadoSolicitud =
   | { estado: 'invalido'; motivo: string; campo: string }
   | { estado: 'desactivado' }
   | { estado: 'sin_envio' }
+  /** Se ha superado el tope global por hora: no se envía nada y plataforma avisa a Alberto. */
+  | { estado: 'saturado' }
 
 /**
  * Responde `ok` también cuando se ha llegado al tope de solicitudes de ese correo: no se le dice a
@@ -89,6 +95,9 @@ export async function solicitarAviso(correduriaId: string, body: unknown): Promi
     select count(*)::int as n from aviso_web
     where email_lookup_hash = ${hash} and creado_en > now() - interval '24 hours'`)
   if (n >= MAX_SOLICITUDES_DIA) return { estado: 'ok' }
+  const [{ h }] = await db.$queryRaw<{ h: number }[]>(Prisma.sql`
+    select count(*)::int as h from aviso_web where creado_en > now() - interval '1 hour'`)
+  if (h >= MAX_SOLICITUDES_HORA) return { estado: 'saturado' }
 
   const tokenConfirmar = generarTokenEnlace()
   const tokenBaja = generarTokenEnlace()
@@ -123,6 +132,7 @@ export type ResultadoConfirmacion =
       vence: string
     }
   | { estado: 'no_valido' }
+  | { estado: 'desactivado' }
 
 type FilaAviso = {
   id: string
@@ -137,6 +147,8 @@ type FilaAviso = {
 }
 
 export async function confirmarAviso(correduriaId: string, token: unknown): Promise<ResultadoConfirmacion> {
+  // Apagado de urgencia: tampoco se crean fichas ni oportunidades de las confirmaciones pendientes.
+  if (!avisosWebActivos()) return { estado: 'desactivado' }
   if (!tokenEnlaceValido(token)) return { estado: 'no_valido' }
   const db = prismaAsegura()
   const [f] = await db.$queryRaw<FilaAviso[]>(Prisma.sql`
@@ -155,6 +167,9 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
   if (!email) throw new Error('aviso_web_email_ilegible')
 
   // Ficha: nueva como lead, o la que ya tiene ese correo. Con varias, la primera — y se avisa.
+  // ⚠️ `altaCliente` abre su propia transacción, así que va FUERA de la de abajo: si esa fallara,
+  // queda un lead sin oportunidad. El reintento del mismo enlace lo recupera (la ficha se encuentra
+  // por el correo) y la respuesta de error pide reintentar; no se deja silencioso.
   let ficha: { id: string; nueva: boolean; nombre: string; varias: boolean }
   const alta = await altaCliente(
     correduriaId,
@@ -186,6 +201,13 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
     await tx.$executeRaw(Prisma.sql`
       update aviso_web set confirmado_en = now(), cliente_id = ${ficha.id}::uuid, oportunidad_id = ${o!.id}::uuid
       where id = ${f.id}::uuid`)
+    // Una suscripción viva por correo y ramo: si ya había otra confirmada, esta la sustituye. Si no,
+    // le llegarían dos avisos de lo mismo y la baja de uno dejaría el otro vivo.
+    await tx.$executeRaw(Prisma.sql`
+      update aviso_web set baja_en = now()
+      where correduria_id = ${correduriaId}::uuid and id <> ${f.id}::uuid and ramo = cast(${f.ramo} as tipo_seguro)
+        and email_lookup_hash = (select email_lookup_hash from aviso_web where id = ${f.id}::uuid)
+        and confirmado_en is not null and baja_en is null`)
     await tx.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${ficha.id}::uuid, cast('contacto' as tipo_historial_interno),
@@ -200,9 +222,14 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
 /** Siempre «ok» hacia fuera: no se revela si la llave existía. */
 export async function bajaAviso(correduriaId: string, token: unknown): Promise<{ estado: 'ok' }> {
   if (!tokenEnlaceValido(token)) return { estado: 'ok' }
+  // La baja es por CORREO, no por fila: quien pulsa «no quiero más avisos» no los quiere de ningún
+  // ramo (art. 22.1 LSSI). Se busca la fila por su llave y se dan de baja todas las de esa dirección.
   await prismaAsegura().$executeRaw(Prisma.sql`
     update aviso_web set baja_en = now()
-    where correduria_id = ${correduriaId}::uuid and token_baja_hash = ${await hashTokenEnlace(token)} and baja_en is null`)
+    where correduria_id = ${correduriaId}::uuid and baja_en is null
+      and email_lookup_hash = (
+        select email_lookup_hash from aviso_web
+        where correduria_id = ${correduriaId}::uuid and token_baja_hash = ${await hashTokenEnlace(token)})`)
   return { estado: 'ok' }
 }
 
@@ -215,6 +242,8 @@ export type ResumenAvisosWeb = {
   aviso2: number
   enviados: number
   fallidos: number
+  /** Solicitudes sin confirmar borradas en esta pasada. */
+  purgadas: number
 }
 
 type Suscrito = {
@@ -244,7 +273,14 @@ export async function pasadaAvisosWeb(correduriaId: string, opciones: { hoy?: Da
     where a.correduria_id = ${correduriaId}::uuid and a.confirmado_en is not null and a.baja_en is null
       and c.email_opt_out_at is null`)
 
-  const r: ResumenAvisosWeb = { soloContar, suscritos: filas.length, aviso1: 0, aviso2: 0, enviados: 0, fallidos: 0 }
+  const r: ResumenAvisosWeb = { soloContar, suscritos: filas.length, aviso1: 0, aviso2: 0, enviados: 0, fallidos: 0, purgadas: 0 }
+  // Lo que la web promete: una solicitud sin confirmar no se guarda. Se borra pasado el margen.
+  if (!soloContar) {
+    r.purgadas = await db.$executeRaw(Prisma.sql`
+      delete from aviso_web
+      where correduria_id = ${correduriaId}::uuid and confirmado_en is null
+        and confirmacion_expira_en < now() - make_interval(days => ${DIAS_PURGA_SIN_CONFIRMAR}::int)`)
+  }
   for (const f of filas) {
     const toca = avisoQueToca({ vence: f.vence, hoy, aviso1Para: f.aviso1Para, aviso2Para: f.aviso2Para })
     if (!toca) continue
@@ -257,7 +293,10 @@ export async function pasadaAvisosWeb(correduriaId: string, opciones: { hoy?: Da
       r.fallidos++
       continue
     }
-    const { enlace, directo } = await crearEnlaceDirecto(correduriaId, f.clienteId, email, hash, '/boveda', portal)
+    // Si el cliente ya tiene una llave viva (p. ej. la del correo de la intranet de hoy), no se crea
+    // otra: `crearEnlaceDirecto` borraría la anterior y dejaría muerto el enlace que ya le llegó.
+    const viva = await db.portalEnlaceDirecto.count({ where: { correduriaId, clienteId: f.clienteId, usadoEn: null, expiraEn: { gt: new Date() } } })
+    const { enlace, directo } = viva > 0 ? { enlace: portal, directo: false } : await crearEnlaceDirecto(correduriaId, f.clienteId, email, hash, '/boveda', portal)
     const envio = await enviar(
       email,
       cuerpoAviso({

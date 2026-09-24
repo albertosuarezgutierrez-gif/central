@@ -178,7 +178,7 @@ function AvisoPorCorreo({ ramo, vence }: { ramo: string; vence: string }) {
     const fd = new FormData(e.currentTarget)
     const email = String(fd.get('email') ?? '').trim()
     setEstado({ fase: 'enviando' })
-    const r = await llamarAviso('solicitar', { nombre: fd.get('nombre'), email, ramo, vence, consentimiento })
+    const r = await llamarAviso('solicitar', { nombre: fd.get('nombre'), email, ramo, vence, consentimiento, web: fd.get('web') })
     if (r.ok) {
       medir('aviso_solicitado', { ramo })
       setEstado({ fase: 'ok', email })
@@ -217,6 +217,11 @@ function AvisoPorCorreo({ ramo, vence }: { ramo: string; vence: string }) {
           <input id="aviso-email" name="email" type="email" inputMode="email" autoComplete="email" className="f-in" style={mal('email')} />
         </div>
       </div>
+      {/* Campo trampa: fuera de pantalla, sin tabulación. Solo un bot lo rellena. */}
+      <div aria-hidden style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
+        <label htmlFor="aviso-web">No rellenar</label>
+        <input id="aviso-web" name="web" tabIndex={-1} autoComplete="off" />
+      </div>
       <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5, margin: '14px 0 10px', cursor: 'pointer' }}>
         <input
           type="checkbox"
@@ -232,8 +237,8 @@ function AvisoPorCorreo({ ramo, vence }: { ramo: string; vence: string }) {
       <p style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--muted)', margin: '0 0 14px' }}>
         <strong>Responsable:</strong> {MEDIADOR.identidad.nombre} (Grupo ASegura). <strong>Finalidad:</strong> avisarte
         antes del vencimiento y, al confirmar tu correo, abrirte ficha para poder ayudarte con la renovación.{' '}
-        <strong>Legitimación:</strong> tu consentimiento. <strong>Conservación:</strong> hasta que te des de baja; sin
-        confirmar, la solicitud no se usa. <strong>Derechos:</strong> escribiendo a {MEDIADOR.identidad.email}, y
+        <strong>Legitimación:</strong> tu consentimiento. <strong>Conservación:</strong> los avisos, hasta que te des de baja; tu
+        ficha, un año desde el último contacto si no llegamos a trabajar juntos; sin confirmar, la solicitud se borra. <strong>Derechos:</strong> escribiendo a {MEDIADOR.identidad.email}, y
         reclamación ante la AEPD. <Link href="/legal/privacidad">Información completa</Link>.
       </p>
       {estado.fase === 'error' && (

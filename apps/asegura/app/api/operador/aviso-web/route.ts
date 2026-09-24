@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic'
 // límite por IP y avisa por Telegram; aquí solo entra con el secreto de operador.
 //
 //   solicitar  { nombre, email, ramo, vence, consentimiento }  → 200 ok · 422 invalido ·
-//              503 desactivado (sin ASEGURA_AVISOS_WEB_ACTIVOS=1) · 502 sin_envio
+//              503 desactivado (sin ASEGURA_AVISOS_WEB_ACTIVOS=1) o saturado (tope global/hora) · 502 sin_envio
 //   confirmar  { token }  → 200 ok (con la ficha, para el Telegram) · 404 no_valido
 //   baja       { token }  → 200 ok siempre
 export const POST = auditado(async (req: Request) => {
@@ -27,12 +27,12 @@ export const POST = auditado(async (req: Request) => {
 
     if (accion === 'solicitar') {
       const r = await solicitarAviso(correduria.id, body)
-      const status = r.estado === 'ok' ? 200 : r.estado === 'invalido' ? 422 : r.estado === 'desactivado' ? 503 : 502
+      const status = r.estado === 'ok' ? 200 : r.estado === 'invalido' ? 422 : r.estado === 'desactivado' || r.estado === 'saturado' ? 503 : 502
       return NextResponse.json(r, { status })
     }
     if (accion === 'confirmar') {
       const r = await confirmarAviso(correduria.id, body?.token)
-      return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : 404 })
+      return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : r.estado === 'desactivado' ? 503 : 404 })
     }
     if (accion === 'baja') return NextResponse.json(await bajaAviso(correduria.id, body?.token))
     return NextResponse.json({ estado: 'invalido', motivo: 'accion' }, { status: 400 })

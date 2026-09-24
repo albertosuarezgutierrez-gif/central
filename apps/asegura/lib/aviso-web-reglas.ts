@@ -21,6 +21,19 @@ export const DIAS_TOMADOR = 30
 export const HORAS_CONFIRMACION = 72
 /** Máximo de solicitudes por correo en 24 h: frena que alguien use el formulario para bombardear un buzón ajeno. */
 export const MAX_SOLICITUDES_DIA = 3
+/**
+ * Tope GLOBAL por hora de solicitudes (todas las direcciones). El límite por IP de plataforma es por
+ * instancia y se esquiva rotando IPs; sin este techo el formulario serviría para mandar miles de
+ * correos firmados por Grupo ASegura y quemar el dominio del que salen también los del portal.
+ */
+export const MAX_SOLICITUDES_HORA = 30
+/** Días que se guarda una solicitud que nunca se confirmó antes de borrarla. */
+export const DIAS_PURGA_SIN_CONFIRMAR = 30
+/**
+ * El nombre va dentro de un correo que sale a una dirección que tecleó un desconocido: solo letras,
+ * espacios y signos de nombre, sin URLs ni texto libre. Si no, sería un campo para meter phishing.
+ */
+const NOMBRE_SEGURO = /^[\p{L} .'-]{1,60}$/u
 /** Versión del texto de consentimiento que muestra la web. Si cambia el texto, cambia la versión. */
 export const CONSENTIMIENTO_VERSION = 'web-aviso-v1'
 
@@ -67,6 +80,7 @@ export function revisarSolicitud(body: unknown): Revision {
   const b = (body && typeof body === 'object' ? body : {}) as Record<string, unknown>
   const nombre = normalizarNombre(b.nombre, 'nombre')
   if (!nombre.ok) return { ok: false, motivo: nombre.motivo, campo: 'nombre' }
+  if (!NOMBRE_SEGURO.test(nombre.valor)) return { ok: false, motivo: 'Escribe solo tu nombre, con letras.', campo: 'nombre' }
   const email = normalizarEmail(b.email)
   if (!email.ok) return { ok: false, motivo: email.motivo, campo: 'email' }
   const ramoWeb = typeof b.ramo === 'string' ? b.ramo.trim() : ''
@@ -161,7 +175,7 @@ export function cuerpoConfirmacion(d: { nombre: string; ramo: string; vence: Dat
   const saludo = `Hola, ${d.nombre}:`
   const que = `Has pedido que te avisemos antes de que venza tu seguro de ${ramo} (vencimiento: ${fechaLarga(d.vence)}).`
   const confirma = `Para activar los avisos, confirma tu correo en las próximas ${HORAS_CONFIRMACION} horas.`
-  const noFuiste = 'Si no lo has pedido tú, ignora este mensaje: sin confirmar no te escribiremos más y no guardamos tus datos en nuestra cartera.'
+  const noFuiste = 'Si no lo has pedido tú, ignora este mensaje: sin confirmar no te escribiremos más, no te damos de alta en nuestra cartera y borramos la solicitud.'
   return {
     asunto: 'Confirma tu correo para recibir el aviso de vencimiento',
     texto: [saludo, '', que, '', confirma, `Confirmar: ${d.enlaceConfirmar}`, '', noFuiste, '', 'Un saludo,', 'Grupo ASegura'].join('\n'),

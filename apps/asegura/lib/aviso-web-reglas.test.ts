@@ -31,6 +31,13 @@ test('🚨 sin consentimiento EXPLÍCITO no hay suscripción', () => {
   }
 })
 
+test('🚨 el nombre no admite URLs ni texto libre (iría dentro de un correo a una dirección ajena)', () => {
+  for (const n of ['Tu póliza está anulada, entra en http://malo.tld', 'Ana <b>', 'x'.repeat(61), 'Ana 123']) {
+    assert.equal(revisarSolicitud({ ...BASE, nombre: n }).ok, false, n)
+  }
+  assert.equal(revisarSolicitud({ ...BASE, nombre: "María José O'Neill-Pérez" }).ok, true)
+})
+
 test('vida y salud no entra: su renovación tiene reglas propias', () => {
   const r = revisarSolicitud({ ...BASE, ramo: 'vida-y-salud' })
   assert.equal(r.ok, false)

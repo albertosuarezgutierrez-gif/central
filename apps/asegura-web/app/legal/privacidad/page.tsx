@@ -217,7 +217,7 @@ const BASES = [
   },
   {
     finalidad: 'Avisarte por correo antes del vencimiento de tu seguro si lo pides en la web (dos avisos por renovación) y, al confirmar tu correo, abrirte ficha para ayudarte con esa renovación',
-    base: 'Tu consentimiento, que confirmas desde el enlace que te enviamos (art. 6.1.a RGPD). Puedes retirarlo con un clic en cada aviso; sin confirmar, la solicitud no se usa.',
+    base: 'Tu consentimiento, que confirmas desde el enlace que te enviamos (art. 6.1.a RGPD). Puedes retirarlo con un clic en cada aviso, y la baja vale para todos los avisos de esa dirección. Sin confirmar, la solicitud no se usa y se borra en un mes.',
   },
   {
     finalidad: 'Conservar la documentación de la mediación y atender a los organismos que la exijan',
