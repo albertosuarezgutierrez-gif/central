@@ -538,6 +538,14 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) core-ai: el razonamiento se comía el `max_tokens` → «no he podido traducirlo» y QC caído
+Síntoma (Duplex, reserva 150035011, repetido): borrador sin traducción + «control de calidad no respondió». Logs de
+Vercel: `OpenRouter: respuesta vacía` + `Groq: respuesta vacía` en la misma llamada. Causa: `deepseek-v4.1-flash`
+(primario desde el 14/09) trae `reasoning.default_enabled: true` y gpt-oss razona siempre; el pensamiento cuenta contra
+`max_tokens` y agotaba los 300 de la traducción y los 4 de `debeEscalar`. Arreglo en `@central/core-ai`: OpenRouter manda
+`reasoning:{enabled:false}` salvo `razonar:true` (reintento sin él si el modelo lo exige); Groq/Cerebras gpt-oss con
+`reasoning_effort:'low'` + 1024 de margen; el error «vacía» dice `finish_reason`/`reasoning_tokens`. PR en esta rama.
+
 ## (24/09/2026) Recaptación: cola ordenada por próximo vencimiento
 - La cola de `/correduria` → Recaptación salía por apellidos (el `order by` del SQL de asegura). Ahora
   `ordenarPorVencimiento` (plataforma, `lib/recaptacion-asegura.ts`) la ordena por días hasta el próximo
