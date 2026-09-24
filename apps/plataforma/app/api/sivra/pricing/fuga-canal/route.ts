@@ -5,7 +5,10 @@ import { Prisma } from "@prisma/client"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { tgAviso } from "@/lib/telegram"
 import { eur } from "@/lib/dinero"
-import { fugaCanal, type FugaCanal, type ReservaCobrada } from "@/lib/sivra/pricing-fuga-canal"
+import {
+  fugaCanal, canalPorAntelacion, type CanalPorAntelacion, type FugaCanal, type ReservaCobrada,
+  type VentanaConAntelacion,
+} from "@/lib/sivra/pricing-fuga-canal"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -31,6 +34,8 @@ const VENTANA_DIAS = 90
  * algo que ya se decidió. Ventana efectiva = max(DESDE, hoy − 90 días).
  */
 const DESDE = "2026-09-07"
+/** Días de escaparate con los que se mide la lista pública (los mismos que usa `pricing/canal`). */
+const VENTANA_ESCAPARATE_DIAS = 45
 const PROP_NAMES: Record<string, string> = {
   prop_house_sevillana: "House Sevillana",
   prop_duplex_center: "Duplex Center",
@@ -48,22 +53,39 @@ export async function GET(req: NextRequest) {
   }
 
   const settings = await prisma.$queryRaw<{
-    property_id: string; channel_markup: number; cuota_fija: number; noches_ref: number
+    property_id: string; channel_markup: number; cuota_fija: number; noches_ref: number; aforo: number
   }[]>(Prisma.sql`
-    SELECT property_id, channel_markup::float8 AS channel_markup,
-           COALESCE(cuota_fija, 0)::float8 AS cuota_fija, COALESCE(noches_ref, 2)::int AS noches_ref
-    FROM pricing_settings WHERE enabled = true ORDER BY property_id`)
+    SELECT s.property_id, s.channel_markup::float8 AS channel_markup,
+           COALESCE(s.cuota_fija, 0)::float8 AS cuota_fija, COALESCE(s.noches_ref, 2)::int AS noches_ref,
+           COALESCE(z.max_guests, 4)::int AS aforo
+    FROM pricing_settings s
+    LEFT JOIN pricing_piso_zona z ON z.property_id = s.property_id
+    WHERE s.enabled = true ORDER BY s.property_id`)
+
+  // La lista pública se MIDE en el escaparate por tramo de antelación (ver `canalPorAntelacion`):
+  // la recta única de `pricing_settings` mezcla los dos tramos de los Busto y su ordenada no es la
+  // limpieza. El ::int de los intervalos no es decorativo (date − bigint no existe en Postgres).
+  const escaparate = await prisma.$queryRaw<{
+    property_id: string; checkin: string; noches: number; guests: number
+    precio_total: number; base_total: number | null; portal: string; antelacion: number
+  }[]>(Prisma.sql`
+    SELECT property_id, checkin::text AS checkin, noches, guests,
+           precio_total::float8 AS precio_total, base_total::float8 AS base_total, portal,
+           (checkin - medido_el::date)::int AS antelacion
+    FROM pricing_escaparate
+    WHERE medido_el >= CURRENT_DATE - ${VENTANA_ESCAPARATE_DIAS}::int AND portal = 'booking'`)
 
   // Base MEDIA del motor en las noches de la reserva, tomada de la última escritura real ANTERIOR a
   // `reserved_at`: lo que Smoobu tenía puesto cuando el huésped compró. Sin escritura → NULL → la
   // reserva se cuenta aparte (`nSinBase`), no se juzga.
   const filas = await prisma.$queryRaw<{
     property_id: string; reservation_id: string; check_in: string; nights: number
-    bruto: number; base_media: number | null
+    bruto: number; base_media: number | null; antelacion: number | null
   }[]>(Prisma.sql`
     WITH r AS (
       SELECT i."propertyId" AS property_id, i."reservationId" AS reservation_id,
-             i."checkIn"::date AS check_in, i.nights, i.amount_gross AS bruto, i.reserved_at
+             i."checkIn"::date AS check_in, i.nights, i.amount_gross AS bruto, i.reserved_at,
+             (i."checkIn"::date - i.reserved_at::date)::int AS antelacion
       FROM incomes i
       WHERE i.portal::text = 'BOOKING' AND i.amount_gross > 0
         AND i.nights BETWEEN 1 AND 14
@@ -83,22 +105,34 @@ export async function GET(req: NextRequest) {
       FROM noches n
     )
     SELECT r.property_id, r.reservation_id, r.check_in::text AS check_in, r.nights::int AS nights,
-           r.bruto::float8 AS bruto,
+           r.bruto::float8 AS bruto, r.antelacion,
            (SELECT AVG(b.base)::float8 FROM base b
              WHERE b.reservation_id = r.reservation_id AND b.property_id = r.property_id) AS base_media
     FROM r ORDER BY r.property_id, r.reserved_at DESC`)
 
   const porPiso: Record<string, FugaCanal> = {}
+  const listas: Record<string, CanalPorAntelacion> = {}
   for (const s of settings) {
+    const ventanas: VentanaConAntelacion[] = escaparate
+      .filter(v => v.property_id === s.property_id)
+      .map(v => ({
+        checkin: v.checkin, noches: Number(v.noches), guests: Number(v.guests),
+        precioTotal: Number(v.precio_total), baseTotal: v.base_total == null ? null : Number(v.base_total),
+        portal: v.portal, antelacionDias: Number(v.antelacion),
+      }))
+    const lista = canalPorAntelacion(ventanas, {
+      aforo: Number(s.aforo), portal: "booking",
+      motor: { markup: Number(s.channel_markup), cuotaFija: Number(s.cuota_fija), nochesRef: Number(s.noches_ref) },
+    })
+    listas[s.property_id] = lista
     const reservas: ReservaCobrada[] = filas
       .filter(f => f.property_id === s.property_id)
       .map(f => ({
         reservationId: f.reservation_id, checkIn: f.check_in, nights: Number(f.nights),
         brutoTotal: Number(f.bruto), baseMedia: f.base_media == null ? null : Number(f.base_media),
+        antelacionDias: f.antelacion == null ? null : Number(f.antelacion),
       }))
-    porPiso[s.property_id] = fugaCanal(reservas, {
-      markup: Number(s.channel_markup), cuotaFija: Number(s.cuota_fija), nochesRef: Number(s.noches_ref),
-    })
+    porPiso[s.property_id] = fugaCanal(reservas, lista.antelacion, { canalUltimaHora: lista.ultimaHora })
   }
 
   const conFuga = Object.entries(porPiso).filter(([, f]) => f.estado === "fuga")
@@ -116,7 +150,8 @@ export async function GET(req: NextRequest) {
         `(alojamiento, limpieza aparte) en ${f.n} reservas de Booking de ${VENTANA_DIAS} días` +
         (f.nSinBase ? ` (+${f.nSinBase} sin base del motor, no juzgadas)` : "") +
         (f.nBrutoRaro ? ` (+${f.nBrutoRaro} con bruto raro)` : "") +
-        `\n  ${eur(f.eurosBajoLista ?? 0)} de alojamiento por debajo de la lista en el periodo\n${peores}`
+        `\n  ${eur(f.eurosBajoLista ?? 0)} de alojamiento por debajo de la lista en el periodo\n${peores}` +
+        `\n  _Lista: ${fuenteLista(listas[p])}_`
     })
     const nota = sinDato.length
       ? `\n\n⚪ Sin dato suficiente: ${sinDato.map(([p, f]) => `${PROP_NAMES[p] ?? p} (${f.estado}, n=${f.n})`).join(", ")}`
@@ -126,10 +161,19 @@ export async function GET(req: NextRequest) {
         `🟡 *Fuga de canal en Booking*\n\nEl motor lista al p60 del mercado y el huésped compra por debajo: ` +
         `la diferencia vive en el extranet de Booking (Genius, tarifa móvil, ofertas apiladas), no en el motor.\n\n` +
         bloques.join("\n\n") + nota +
-        `\n\n_Umbral ${porPiso[conFuga[0][0]].umbral} sobre la lista pública (base × markup = Standard Rate). Aceptado: Genius 10 % × country rate 10 % = 0,81; por debajo hay un descuento que nadie ha pedido. Reservas desde el ${DESDE}._`)
+        `\n\n_Umbral ${porPiso[conFuga[0][0]].umbral} sobre la lista pública (la que ve un huésped sin Genius, medida en el escaparate por tramo de antelación). Aceptado: Genius 10 % × country rate 10 % = 0,81; por debajo hay un descuento que nadie ha pedido. Reservas desde el ${DESDE}._`)
     } catch { /* el aviso no puede tumbar la medición */ }
   }
 
   await registrarLatido("sivra_fuga_canal", true, `${conFuga.length} piso(s) con fuga · ${resumen}`.slice(0, 300))
-  return NextResponse.json({ ok: true, ventana_dias: VENTANA_DIAS, con_fuga: conFuga.map(([p]) => p), por_piso: porPiso })
+  return NextResponse.json({
+    ok: true, ventana_dias: VENTANA_DIAS, con_fuga: conFuga.map(([p]) => p), por_piso: porPiso, listas,
+  })
+}
+
+/** Qué recta se usó como lista pública, para que el aviso no presente una suposición como medida. */
+function fuenteLista(l: CanalPorAntelacion): string {
+  const t = (c: { markup: number; cuotaFija: number }, f: "medido" | "motor") =>
+    `${c.markup.toFixed(3)} × base + ${eur(c.cuotaFija)}${f === "motor" ? " (recta del motor, sin ventanas del tramo)" : ""}`
+  return `con antelación ${t(l.antelacion, l.fuente.antelacion)} · última hora ${t(l.ultimaHora, l.fuente.ultimaHora)}`
 }

@@ -44,7 +44,22 @@
 //   ve; lo que sí se ve es cualquier pila como la de arriba (0,67-0,77). La reserva 154638741,
 //   con la lista de hoy, habría pagado 565,20€ + 585,90€ = 1.151,10€ + limpieza (+33,6 %).
 
-import { type ParametrosCanal } from './pricing-canal.ts'
+// 🪞 Y LA LISTA NO ES UNA RECTA en todos los pisos (24/09/2026, falsa alarma en Luxury Busto y Busto
+// Reform). Su escaparate de Booking tiene DOS regímenes según la antelación, cada uno exacto (R² =
+// 1,000 en los dos, 45 días de ventanas):
+//
+//   piso           antelación ≤ 6 días        antelación ≥ 7 días
+//   Busto Reform   1,109 × base + 26,8€       0,994 × base + 28,2€
+//   Luxury Busto   1,107 × base + 33,6€       0,994 × base + 34,9€
+//
+// `pricing_settings` guarda UNA recta ajustada sobre las dos mezcladas (0,987 × base + 64,1€ en
+// Luxury): la pendiente sale en medio y el exceso se lo come la ordenada. Y aquí la ordenada se
+// resta como si fuera la limpieza, así que a una reserva de 2 noches le quitaba 15€/noche que el
+// huésped sí pagó por dormir: Luxury salía a 0,72 cuando, contra su lista real, está en 0,82.
+// Por eso la lista se mide en el escaparate POR TRAMO de antelación (`canalPorAntelacion`) y la
+// recta del motor solo es el último recurso cuando un tramo no tiene ventanas suficientes.
+
+import { ajusteCanal, type ParametrosCanal, type VentanaEscaparate } from './pricing-canal.ts'
 
 export interface ReservaCobrada {
   reservationId: string
@@ -59,6 +74,8 @@ export interface ReservaCobrada {
   baseMedia: number | null
   /** YYYY-MM-DD del check-in, solo para el informe */
   checkIn?: string
+  /** días entre la reserva y el check-in: decide contra qué tramo de la lista se juzga */
+  antelacionDias?: number | null
 }
 
 export type EstadoFuga = 'sin_reservas' | 'muestra_corta' | 'ok' | 'fuga'
@@ -69,7 +86,7 @@ export interface ReservaJuzgada {
   nights: number
   /** (bruto − limpieza) / noches: lo que el huésped pagó por DORMIR cada noche */
   cobradoNoche: number
-  /** base × markup: la lista pública (sin Genius, sin móvil, sin limpieza) que el motor creía vender */
+  /** base × markup del tramo de antelación: la lista pública (sin Genius, sin móvil, sin limpieza) */
   listaNoche: number
   /** cobradoNoche / listaNoche */
   ratio: number
@@ -100,6 +117,48 @@ export interface FugaCanalOpts {
   umbral?: number
   /** cuántas reservas listar en `peores` */
   maxPeores?: number
+  /**
+   * Lista de las reservas de ÚLTIMA HORA (antelación ≤ `DIAS_ULTIMA_HORA`). Sin ella, o sin
+   * antelación conocida, se juzga todo contra `canal`.
+   */
+  canalUltimaHora?: ParametrosCanal
+}
+
+/** Escaparate/base por encima de esto no es una tarifa del canal (House, el más caro, va a ~1,5×). */
+const RATIO_VENTANA_MAX = 3
+
+/** Última antelación (días) que el escaparate de Booking pone en el tramo de última hora. */
+export const DIAS_ULTIMA_HORA = 6
+
+export type VentanaConAntelacion = VentanaEscaparate & { antelacionDias: number }
+
+export interface CanalPorAntelacion {
+  antelacion: ParametrosCanal
+  ultimaHora: ParametrosCanal
+  /** de dónde sale cada tramo: `medido` = recta del escaparate de ese tramo; `motor` = pricing_settings */
+  fuente: { antelacion: 'medido' | 'motor'; ultimaHora: 'medido' | 'motor' }
+}
+
+/**
+ * La lista pública de cada tramo de antelación, medida en el escaparate. Un tramo sin ajuste fiable
+ * (`ajusteCanal` ≠ `medido`) cae a la recta del motor, y se dice (`fuente`).
+ */
+export function canalPorAntelacion(
+  ventanas: VentanaConAntelacion[],
+  opts: { aforo: number; portal?: string; motor: ParametrosCanal },
+): CanalPorAntelacion {
+  const tramo = (ultimaHora: boolean): [ParametrosCanal, 'medido' | 'motor'] => {
+    const vs = ventanas.filter(v => (Number(v.antelacionDias) <= DIAS_ULTIMA_HORA) === ultimaHora &&
+      // Una ventana a 13× la base (Busto Reform, 25/03/2027: 3.329€ sobre 250€) no es el canal: es
+      // el portal enseñando otra cosa. Una sola hunde el R² del tramo y lo manda a la recta del motor.
+      !(v.baseTotal != null && v.baseTotal > 0 && v.precioTotal / v.baseTotal > RATIO_VENTANA_MAX))
+    const a = ajusteCanal(vs, { aforo: opts.aforo, portal: opts.portal })
+    if (a.estado !== 'medido' || a.markup == null || a.cuotaFija == null) return [opts.motor, 'motor']
+    return [{ markup: a.markup, cuotaFija: a.cuotaFija, nochesRef: opts.motor.nochesRef }, 'medido']
+  }
+  const [antelacion, fa] = tramo(false)
+  const [ultimaHora, fu] = tramo(true)
+  return { antelacion, ultimaHora, fuente: { antelacion: fa, ultimaHora: fu } }
 }
 
 function mediana(xs: number[]): number | null {
@@ -120,8 +179,12 @@ export function fugaCanal(reservas: ReservaCobrada[], canal: ParametrosCanal, o:
   const minReservas = o.minReservas ?? 5
   const umbral = o.umbral ?? UMBRAL_FUGA
   const maxPeores = o.maxPeores ?? 3
-  const markup = Number(canal.markup) > 0 ? Number(canal.markup) : 1
-  const cuota = Number(canal.cuotaFija) > 0 ? Number(canal.cuotaFija) : 0
+  const params = (c: ParametrosCanal) => ({
+    markup: Number(c.markup) > 0 ? Number(c.markup) : 1,
+    cuota: Number(c.cuotaFija) > 0 ? Number(c.cuotaFija) : 0,
+  })
+  const lejos = params(canal)
+  const cerca = o.canalUltimaHora ? params(o.canalUltimaHora) : lejos
 
   const juzgadas: ReservaJuzgada[] = []
   let nSinBase = 0
@@ -131,6 +194,7 @@ export function fugaCanal(reservas: ReservaCobrada[], canal: ParametrosCanal, o:
     const nights = Number(r.nights)
     if (!(nights >= 1) || !(r.brutoTotal > 0)) continue
     if (r.baseMedia == null || !(r.baseMedia > 0)) { nSinBase++; continue }
+    const { markup, cuota } = r.antelacionDias != null && r.antelacionDias <= DIAS_ULTIMA_HORA ? cerca : lejos
     const alojamiento = r.brutoTotal - cuota
     if (!(alojamiento > 0)) { nBrutoRaro++; continue }
     const cobradoNoche = alojamiento / nights
