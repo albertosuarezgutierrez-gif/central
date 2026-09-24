@@ -37,7 +37,7 @@ test('🪤 a la compañía: el buzón es el que ELIGE Alberto entre los de ESA c
   // Una sola propuesta viva por anulación: el índice parcial manda, así que el conflicto no va atado a `clave`.
   assert.match(src, /values \(\$\{correduriaId\}::uuid, 'enviar_correo_compania'[\s\S]{0,600}on conflict do nothing/)
   // Lo que se adjunta es la carta GUARDADA al firmar, nunca un texto recompuesto.
-  assert.match(src, /adjunto: \{ nombre: `solicitud-anulacion-\$\{num\}\.txt`, texto: n\.carta \}/)
+  assert.match(src, /adjuntos: await adjuntosFirmados\(`solicitud-anulacion-\$\{num\}`, n\.carta, n\)/)
 })
 
 test('antes de decidir se retira lo obsoleto: no se manda «no consta pagado» de un recibo ya cobrado', () => {
@@ -69,7 +69,7 @@ test('🪤 carta de nombramiento: sale por la cola como la anulación, adjunta l
   assert.match(src, /update carta_mediador set estado = 'enviada'[^`]*estado = 'firmada'`/)
   // El buzón, entre los activos de ESA compañía; y la carta es la guardada (cifrada), nunca recompuesta.
   assert.match(src, /async function destinoCarta[\s\S]*compania_codigo_dgs = \$\{n\.dgs\} and activo/)
-  assert.match(src, /const carta = descifrarCampo\(n\.carta\)[\s\S]{0,900}texto: carta \}/)
+  assert.match(src, /const carta = descifrarCampo\(n\.carta\)[\s\S]{0,900}adjuntosFirmados\(`nombramiento-mediador-\$\{num\}`, carta, n\)/)
   // Cada tipo recuerda su propio buzón.
   assert.match(decidir, /update compania_contactos set recibe_nombramientos = \(id = \$\{contactoElegido\}::uuid\)/)
   assert.match(src, /f\.origen === ORIGEN_CARTA_MEDIADOR \? c\.recibeNombramientos : c\.recibe/)
@@ -80,4 +80,15 @@ test('🪤 carta de nombramiento: sale por la cola como la anulación, adjunta l
 test('🪤 no se propone el nombramiento de una póliza que se está anulando', () => {
   const p = src.slice(src.indexOf('export async function proponerCartasFirmadas'), src.indexOf('export type BuzonPropuesto'))
   assert.match(p, /not exists \(select 1 from anulacion n where n\.poliza_id = cm\.poliza_id and n\.estado = any\(\$\{\[\.\.\.ESTADOS_ANULACION_ABIERTA\]\}::text\[\]\)\)/)
+})
+
+test('🪤 a la compañía va SIEMPRE el original en texto (el de la huella); el PDF va además, nunca en su lugar', () => {
+  const f = src.slice(src.indexOf('async function adjuntosFirmados'), src.indexOf('async function enviarCorreo'))
+  assert.match(f, /const original: Adjunto = \{ nombre: `\$\{base\}\.txt`, contenido: texto/)
+  assert.match(f, /return \[\{ nombre: `\$\{base\}\.pdf`[\s\S]*?\}, original\]/)
+  // Sin evidencia, o si el PDF falla, sale el original: la presentación no bloquea un envío.
+  assert.match(f, /if \(!f\?\.docHash \|\| !f\.sello\) return \[original\]/)
+  assert.match(f, /catch \(e\) \{[\s\S]*return \[original\]/)
+  // El justificante no certifica una huella que el texto adjunto no cumple.
+  assert.match(f, /createHash\('sha256'\)\.update\(texto, 'utf8'\)\.digest\('hex'\) !== f\.docHash[\s\S]*?return \[original\]/)
 })

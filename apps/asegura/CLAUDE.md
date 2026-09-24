@@ -762,6 +762,9 @@ como `enviar_correo_compania` con `carta_mediador_id` (CHECK `aprobacion_compani
 el buzón se recuerda aparte en `recibe_nombramientos`; al salir → `enviada`. 🚨 La carta lleva el **DNI/NIF del tomador**
 (`documentoParaCarta`, letra comprobada): sin uno válido en la ficha no se ofrece firmar, y por eso `carta_mediador.carta_texto`
 se guarda **cifrado** (`encryptField`) y se descifra solo para la pantalla y el adjunto.
+📄 **Adjuntos a la compañía (24/09/2026, `adjuntosFirmados`):** PDF (carta + justificante de la firma, `lib/documento-firmado-pdf.ts`)
+**y** el original `.txt`. La huella de `seguros.firma.doc_hash` es la del TEXTO, así que el `.txt` va SIEMPRE; el PDF es
+presentación y, si falla o no hay evidencia, se omite sin bloquear el envío (cepo en `aprobaciones.test.ts`).
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 

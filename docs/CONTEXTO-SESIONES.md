@@ -24,6 +24,12 @@ hereda DNI+hash) y Gabriel añadido a la póliza como propietario + conductor oc
 del padre (Navara 5655DSM, Mapfre 2002500565564 → Reale 276,69€ / 332,42€ con lunas). `cliente_merge_log` es append-only.
 Presupuesto del padre ACEPTADO (24/09): oportunidad → `pendiente_cliente` + tarea alta «emitir cuando el hijo confirme el IBAN».
 
+**(24/09/2026)** 📄 **La carta y la anulación firmadas van a la compañía en PDF + el original en texto.** Un `.txt` suelto
+arriesgaba que la compañía no lo archivara: ahora sale un PDF (`apps/asegura/lib/documento-firmado-pdf.ts`, pdf-lib) con la
+carta y debajo el justificante (firmante, método OTP, hora de Madrid, huella SHA-256) y ADEMÁS el `.txt`, que es el que
+respalda la huella (el PDF cambia de bytes; el texto no). Sin evidencia o si el PDF falla, sale solo el `.txt`: la
+presentación nunca bloquea un envío. Cepo visto fallar. Pendiente de Alberto: preguntar a la primera compañía si lo acepta.
+
 **(24/09/2026)** 🤝 **Carta de nombramiento de mediador: con DNI y por la cola de aprobaciones.** Alberto: «es necesario dni
 cliente». La carta lleva el DNI/NIF del tomador (validado); sin él en la ficha no se ofrece firmarla; `carta_texto` cifrado.
 La firmada sale como `enviar_correo_compania` (`aprobacion.carta_mediador_id`, CHECK anulación O carta; migración
@@ -440,6 +446,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (24/09/2026) asegura-web: botón desactivado que se lea como tal + campos del widget a todo el ancho en móvil
+Tras la prueba en producción de Alberto: «Avisadme por correo» parecía activo sin marcar la casilla. `.btn:disabled`
+(opacidad 0,45, `not-allowed`, hover congelado por variante) en `globals.css`; `.ventana-campos` a una columna bajo 560 px.
+Medido con Playwright a 375/1280. Pendiente de opinión: el botón flotante de WhatsApp tapa la esquina inferior derecha.
 
 ## (24/09/2026) asegura: fase 2 «avísame por correo» (doble opt-in → ficha lead + oportunidad + avisos a 70/45 días)
 - Decisión de Alberto: todo en asegura y la ficha nace al CONFIRMAR. Web → plataforma (`/api/publico/correduria/aviso`, límite IP + Telegram) → asegura (`/api/operador/aviso-web`, `lib/aviso-web.ts`, cron `avisos-web` 08:30).
