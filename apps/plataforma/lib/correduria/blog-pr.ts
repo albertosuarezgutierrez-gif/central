@@ -82,7 +82,7 @@ export function motivoMerge(status: number, mensaje: string): string {
   const m = mensaje.toLowerCase()
   if (status === 405 && m.includes('conflict')) return 'GitHub dice que la rama tiene conflictos con main.'
   if (status === 405 && (m.includes('check') || m.includes('required'))) {
-    return 'Faltan checks del repo por pasar. Suele resolverse solo en unos minutos; vuelve a intentarlo.'
+    return 'Algún check obligatorio del repo no está en verde: o sigue corriendo o ha FALLADO. Si ha fallado no se arregla solo; ábrelo en GitHub.'
   }
   if (status === 405) return 'GitHub no deja mezclar todavía.'
   if (status === 409) return 'La rama ha cambiado desde que se cargó esta pantalla. Recarga y vuelve a mirarla.'

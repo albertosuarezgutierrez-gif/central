@@ -19,9 +19,16 @@ Regla pura `ordenarHistorialRiesgo`; lectura `lib/cartera-historial-riesgo.ts`. 
 **(24/09/2026)** 🎂 **PR 12: felicitar cumpleaños por correo y en la app** (Alberto). Cron de asegura 07:00 UTC sobre cartera en
 vigor (personas físicas; 54 de 72 tienen fecha, cifrada): reserva fila en `seguros.felicitacion` (una por persona y año) y manda un
 correo sin nada comercial; sin correo o de baja → solo en la app. La campana del portal lee la fila del día (aviso `felicitacion`).
-⏸️ Apagado hasta `ASEGURA_FELICITACIONES_ACTIVAS=1` en `central-asegura` (lo pone Alberto). #3426 mergeado (+ revocado el DML del
+✅ Encendido (`ASEGURA_FELICITACIONES_ACTIVAS=1` en `central-asegura`, pedido por Alberto). Leads NO: sin base legal (LSSI 21). #3426 mergeado (+ revocado el DML del
 CRM de Manuel en las 21 tablas `portal_*`).
 >
+**(24/09/2026)** 📇 **Teléfonos de siniestros: «Guardar en mis contactos» + aviso de caducidad.** `vcardCompania()` y
+`telefonosPorRevisar()` en `module-seguros/telefonos-companias.ts` (mismo catálogo único). Botón en `/telefonos-siniestros`
+(ruta estática `/telefonos-siniestros/contacto/<slug>`, noindex) y en el parte del portal (`/api/contacto-compania/<nombre>`).
+Más de 270 días sin comprobar → línea en el Telegram semanal de `seo-correduria` (no es test con fecha: pondría rojo
+cualquier PR). Indexación medida (cobertura 21/09): 7 páginas indexadas, 4 «descubiertas sin indexar», 3 desconocidas
+(+ las nuevas de teléfonos/WhatsApp); web con ~3 semanas en el apex → Alberto puede pedir indexación a mano en GSC.
+
 **(24/09/2026)** 🔑 **PR 11: el correo de avisos lleva ACCESO DIRECTO al portal.** Alberto: «aviso por mail con token de
 acceso a la app». Llave de un solo uso y 24 h (en el `#` del enlace: no llega a logs) en `seguros.portal_enlace_directo` (solo SHA-256; atada al índice ciego del
 correo de la ficha; destino = ruta interna, CHECK SQL). Se canjea con un clic en «Entrar» (POST, no el GET: antivirus) por el
@@ -400,6 +407,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (24/09/2026) blog ASegura: «Publicar» fallaba porque el cepo ponía rojo CADA artículo del agente
+El test «ningún tema de la cola repite un artículo publicado» (#2505) chocaba con el diseño: el agente solo escribe
+`articulos.ts` y deja el tema en `TEMAS`, así que su PR siempre salía con Tests en rojo (#2966, 9 días atascado; la
+pantalla decía «Tests en marcha / suele resolverse solo»). Ahora exige que lo publicado sea PREFIJO de la cola, y el
+405 ya no promete que se arregle solo. PR #3433. Pendiente: tras mergear, actualizar la rama de #2966 con main.
 
 ## (23/09/2026) correduría: calle + número → el Catastro propone el piso (verifica la dirección)
 - `DireccionConfirmable` (alta/edición de cliente y dirección del riesgo de la póliza): con calle+número+CP+ciudad aparece «Comprobar en el Catastro y elegir el piso» → lista de pisos del portal (o ✅ si es una sola vivienda, o ⚠️ «el Catastro no tiene ese número»). Con BOTÓN, no al teclear (el Catastro corta si se le pregunta seguido). Nunca bloquea el guardado.
