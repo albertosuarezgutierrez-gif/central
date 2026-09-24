@@ -12,6 +12,7 @@ import CuadreComisiones from './CuadreComisiones'
 import InformeMediacion from './InformeMediacion'
 import Formacion from './Formacion'
 import FichasIpid from './FichasIpid'
+import LineaBase from './LineaBase'
 import BuscadorCartera from './BuscadorCartera'
 import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
@@ -616,6 +617,7 @@ export default function CorreduriaClient() {
         {/* Formación continua IDD: horas por persona y año; el contador sube con los atrasados. */}
         <Formacion onContador={setNFormacion} />
         <FichasIpid />
+        <LineaBase />
 
         {/* El reverso de la cola de retención: los clientes de la cartera viva
             sin email ni teléfono. No hay nada que enviarles —el aviso de
