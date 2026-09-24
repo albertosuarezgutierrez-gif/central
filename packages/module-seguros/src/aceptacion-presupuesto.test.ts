@@ -28,6 +28,7 @@ const base = {
   tomador: 'José Suárez Salas', mediador: 'Grupo ASegura', claveDgsfp: 'CS-F/0170', ramo: 'auto',
   opcion: { compania: 'Allianz', producto: 'Todo riesgo', primaEur: 412.5, franquiciaEur: null, firmeza: 'estimado' as const },
   calculadoEl: '2026-09-20', venceEl: '2026-10-05', fechaFirma: '2026-09-23', anula: null,
+  vistoAntes: { opciones: 3, companias: 2, informacionMediador: 'https://clientes.grupoasegura.es/legal/mediador', versionTextos: '2026-09-v5' },
 }
 
 test('🪤 el documento dice en su cara que NO es la contratación', () => {
@@ -42,4 +43,16 @@ test('🪤 con cambio de compañía, la anulación va en el documento y dice que
   const t = documentoAceptacion({ ...base, anula: { compania: 'Mapfre', numeroPoliza: '0981', fechaEfecto: '2026-12-31' } })
   assert.match(t, /anule mi póliza actual de Mapfre, nº 0981, con efecto el 31\/12\/2026/)
   assert.match(t, /solo se comunicará a la compañía cuando la nueva póliza esté emitida/)
+})
+
+test('🪤 lo firmado deja constancia de lo que vio antes: opciones, compañías, versión y dónde está la información del mediador', () => {
+  const t = documentoAceptacion(base)
+  assert.match(t, /Antes de aceptar he tenido delante las 3 opciones de 2 compañías/)
+  assert.match(t, /textos legales 2026-09-v5, en https:\/\/clientes\.grupoasegura\.es\/legal\/mediador/)
+  assert.match(t, /vínculo exclusivo/)
+  // Una sola opción se dice en singular; sin recuento no se inventa ninguno.
+  assert.match(documentoAceptacion({ ...base, vistoAntes: { ...base.vistoAntes, opciones: 1, companias: 1 } }), /he tenido delante la opción de 1 compañía/)
+  const sin = documentoAceptacion({ ...base, vistoAntes: { ...base.vistoAntes, opciones: 0, companias: 0 } })
+  assert.doesNotMatch(sin, /tenido delante l/)
+  assert.match(sin, /su información como mediador/)
 })

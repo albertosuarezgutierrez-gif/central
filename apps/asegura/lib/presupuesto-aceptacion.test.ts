@@ -51,3 +51,10 @@ test('🪤 retirar un presupuesto aceptado desiste su anulación en la MISMA tra
   assert.ok(tx > 0 && desiste > tx && desiste < retirar.indexOf('return { estado: \'ok\' }'), 'la anulación se desiste dentro de la tx del retiro')
   assert.match(retirar, /where presupuesto_id = \$\{fila\.id\}::uuid and correduria_id = \$\{correduriaId\}::uuid and estado in \('solicitada', 'firmada'\)/)
 })
+
+test('🪤 lo firmado cita lo que el cliente tuvo delante: recuento del presupuesto y versión vigente de los textos', () => {
+  assert.match(src, /count\(\*\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id\) as "nOpciones"/)
+  assert.match(src, /count\(distinct lower\(trim\(x\.compania\)\)\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id\) as "nCompanias"/)
+  assert.match(src, /versionTextos: VERSION_TEXTOS_LEGALES/)
+  assert.match(src, /informacionMediador: `\$\{MEDIADOR\.identidad\.portal\}\/legal\/mediador`/)
+})

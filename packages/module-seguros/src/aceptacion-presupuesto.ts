@@ -37,6 +37,12 @@ export type DatosAceptacion = {
   fechaFirma: string
   /** La póliza que sustituye, si se va a anular en el mismo acto. `null` = no se anula ninguna. */
   anula: { compania: string; numeroPoliza: string; fechaEfecto: string } | null
+  /**
+   * Lo que el cliente tuvo delante ANTES de firmar (IDD: la carga de probar que se informó antes es
+   * del mediador). Las opciones y compañías son las del presupuesto, no las consultadas: ese recuento
+   * no se guarda y no se afirma.
+   */
+  vistoAntes: { opciones: number; companias: number; informacionMediador: string; versionTextos: string }
 }
 
 const FIRMEZA: Record<OpcionAceptada['firmeza'], string> = {
@@ -96,6 +102,20 @@ export function anulacionPorCambio(actual: PolizaActual, hoy: Date): AnulacionPo
   return { ok: true, tipo: 'sustitucion', fechaEfecto: actual.vencimiento.slice(0, 10), advertencia }
 }
 
+function plural(n: number, uno: string, varios: string): string {
+  return `${n} ${n === 1 ? uno : varios}`
+}
+
+/** La frase que deja constancia, dentro de lo firmado, de lo que se le enseñó antes. */
+export function lineaVistoAntes(v: DatosAceptacion['vistoAntes']): string {
+  const opciones = v.opciones >= 1 && v.companias >= 1
+    ? `${v.opciones === 1 ? 'la opción' : `las ${v.opciones} opciones`} de ${plural(v.companias, 'compañía', 'compañías')} que me presentó mi corredor y `
+    : ''
+  return `Antes de aceptar he tenido delante ${opciones}su información como mediador: identidad y clave DGSFP, que no tiene ` +
+    'vínculo exclusivo con ninguna compañía, cómo cobra y cómo reclamar ' +
+    `(textos legales ${v.versionTextos}, en ${v.informacionMediador}).`
+}
+
 /**
  * El texto EXACTO que el cliente firma. Lo que se hashea es esto; cambiar la redacción cambia la
  * huella de las aceptaciones futuras, nunca la de las firmadas (guardan su texto).
@@ -111,6 +131,8 @@ export function documentoAceptacion(d: DatosAceptacion): string {
     '',
     `Con esta aceptación encargo a mi corredor, ${d.mediador} (DGSFP ${d.claveDgsfp}), que tramite la contratación. ` +
       'NO es todavía el contrato: la compañía tiene que confirmar el precio y emitir la póliza, y no hay cobertura hasta que la emita y se me comunique.',
+    '',
+    lineaVistoAntes(d.vistoAntes),
   ]
   if (d.anula) {
     lineas.push(
