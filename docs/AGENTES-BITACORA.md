@@ -14,6 +14,14 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-24 · trading-analista** · hizo: PASO 0 sin huella (saldo refrescado hace ~24h, sin fila en
+  `trading_pasadas` de hoy) → siguió con la pasada de las 20:15 UTC. Preflight `/api/internal/alerta`
+  200 OK. Conector IBKR caído: `get_account_summary`/`get_account_positions`/`get_account_trades`
+  devolvieron `-32400 "An error occurred. Please try again later."` (reintentado una vez, mismo
+  error). Regla de oro respetada: no se inventó NAV ni cifras, no se llamó a `/analizar` ni
+  `/puntuar`, no se empujó nada a plataforma. Avisó por Telegram (messageId 5226) y dejó latido
+  `trading_operaciones` con `ok:false`. dudas: —; fallos: conector IBKR no disponible en toda la
+  pasada; PRs/commits: — (solo BD/Telegram vía canal-aviso).
 - **2026-09-24 · mercado-booking** · hizo: pasada de 24 ventanas (max=24, tope dejó fuera 488 de 512
   candidatas totales, casi todas rondas de profundidad 2-3) → 238 comps reales escritos (evento
   confirmado nov-dic, ronda 1). Escaparate propio: 1/4 medido (Busto Reform, 237,31€/2n 1-oct);
