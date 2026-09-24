@@ -106,7 +106,7 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
       </div>
 
       <div className="overflow-x-auto rounded-[12px] border border-line bg-card">
-        <table className="w-full min-w-[560px] border-collapse text-sm">
+        <table className="tabla-cards w-full border-collapse text-sm md:min-w-[560px]">
           <thead>
             <tr className="border-b border-line bg-paper-2">
               <th className="px-4 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ink-3">Nombre</th>
@@ -143,14 +143,14 @@ export default function EmpleadosClient({ inicial, nombreUsuario, nombreEmpresa,
                       </a>
                       {(() => { const d = diasParaCaducarReconocimiento(e.fecha_reconocimiento_medico); return d !== null && d <= 15 ? <span className={`ml-2 rounded-full px-2 py-0.5 text-xs ${d < 0 ? 'bg-alert/10 text-alert' : 'bg-warn/10 text-warn'}`} title="Reconocimiento médico">{d < 0 ? `Reconoc. caducado (${Math.abs(d)}d)` : `Reconoc. caduca en ${d}d`}</span> : null })()}
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</td>
-                    <td className="px-4 py-3 font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</td>
-                    <td className="px-4 py-3">
+                    <td data-label="DNI / NIE" className="px-4 py-3 font-mono text-xs text-ink-2">{e.dni ?? <span className="text-ink-3">—</span>}</td>
+                    <td data-label="Nº SS" className="px-4 py-3 font-mono text-xs text-ink-3">{e.nss ?? <span className="text-ink-3">—</span>}</td>
+                    <td data-label="Estado" className="px-4 py-3">
                       {e.estado === 'baja'
                         ? <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">Baja</span>
                         : <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-2">Activo</span>}
                     </td>
-                    <td className="px-4 py-3 text-xs">
+                    <td data-label="Vacaciones" className="px-4 py-3 text-xs">
                       {e.vacaciones && e.estado !== 'baja' && (
                         <span title={`Aprobados: ${e.vacaciones.aprobados} · En trámite: ${e.vacaciones.en_tramite}`}>
                           <span className="text-ok">{e.vacaciones.aprobados}</span>
