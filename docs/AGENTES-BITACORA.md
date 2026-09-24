@@ -14,6 +14,19 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-23 · trading-analista** · hizo: pasada normal de las 20:15 UTC (sin repesca; PASO 0
+  confirmó que no había corrido hoy). Preflight OK. NAV IBKR 33.391,36€ (sin salto) empujado a
+  `/api/trading/saldo`; cartera real (CVX 6u, VWCE 188u) y operaciones (0 nuevas) empujadas con
+  latido. Watchlist de 24 símbolos: velas descargadas una por una (llamada individual, nunca en
+  lote paralelo) para cumplir el protocolo anti-baraje. `/api/trading/analizar`: 22/24 analizados,
+  0 comprados en paper (bloqueos: posición ya abierta, concentración 20%, tendencia bajista).
+  `/api/trading/puntuar`: 0 puntuadas/cerradas. Resumen enviado por Telegram. dudas: META y ABNB
+  salieron vetados por `suplantados` (precio no cuadra con su propia referencia pero sí con la de
+  OTRO símbolo del payload, QQQ/ORCL) — mi transcripción fue verificada llamada por llamada y
+  coincide exactamente con lo que devolvió IBKR, así que no puedo descartar que sea el guardián
+  reaccionando a un movimiento de precio real fuerte más que a un baraje; se cantó en el Telegram
+  y quedan sin analizar hoy. fallos: —. PRs/commits: —.
+
 - **2026-09-23 · facturas-correo** · hizo: pasada disparada por el trigger diario. Paso 0: Vía B sana
   (`_buzon_pdf` con copia de hoy), `PDF-pendiente`/`Revisar` vacíos antes de empezar. **Paso 4.0
   (backlog `facturas_drive` sin cargo, obligatorio):** de 20 filas en `v_facturas_sin_cargo` solo 1
