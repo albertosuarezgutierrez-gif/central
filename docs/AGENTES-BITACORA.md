@@ -14,6 +14,22 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-24 · facturas-correo** · hizo: pasada disparada por el trigger diario. Paso 0: Vía B sana
+  (copia más reciente en `_buzon_pdf` de hoy, 0 días caída); `Facturas/Extraccion-fallida` mostraba
+  `messagesTotal:1` en `list_labels` pero `search_threads` dio 0 hilos — el gotcha ya documentado (el
+  contador de esa etiqueta queda desincronizado), no backlog real. **Paso 4.0:** las 20 filas de
+  `v_facturas_sin_cargo` están todas `revisada_sin_cargo`, 0 `sin_revisar` — nada que barrer. Los 2
+  hilos en `Facturas/PDF-pendiente` (Endesa Socorro, contrato 130139486193) siguen igual que ayer:
+  P26CON034910794 (19/08, 36 días) ya conciliado por banco -37,87€, solo falta el PDF que Endesa nunca
+  adjunta; P26CON039980996 (22/09, 2 días) sin cargo bancario todavía (no ha entrado en Kutxa). **Paso
+  1** (12 hilos de 2 días): ningún candidato nuevo — Global2 (factura de un tercero, AVANZASI SL, por
+  un siniestro de correduría, no gasto de Alberto), PACTREBOL/APROMES/colegio (informativos, no
+  factura), Booking (mensajes operativos de huéspedes, no recibo), herencia (documentación de póliza,
+  no compra). **Paso 1-bis:** `_subir_aqui` vacío; 3 PDFs sueltos en la raíz 2026 (2×"FACTURA JULIO
+  SOCORRO" = SIQUE julio, "FACTURA 055 Castuera", Endesa Bustos Luxury feb-mar) ya tenían aviso en
+  `_DUPLICADOS_BORRAR` de pasadas anteriores — nada que registrar de nuevo. dudas: —; fallos: —.
+  PRs/commits: (este commit).
+
 - **2026-09-23 · facturas-correo** · hizo: pasada disparada por el trigger diario. Paso 0: Vía B sana
   (`_buzon_pdf` con copia de hoy), `PDF-pendiente`/`Revisar` vacíos antes de empezar. **Paso 4.0
   (backlog `facturas_drive` sin cargo, obligatorio):** de 20 filas en `v_facturas_sin_cargo` solo 1
