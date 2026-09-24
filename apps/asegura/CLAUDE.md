@@ -770,6 +770,10 @@ llegó antes). Cepo `lib/quejas.test.ts`.
 de la documentación estadístico-contable a la DGSFP: primas COBRADAS del año por compañía y ramo (recibos de cartera viva, año
 en hora de Madrid; suma pura `informeMediacion` de module-seguros), pólizas en vigor HOY (no a 31/12: no se reconstruye) e informe
 del SAC. Solo lectura, sin datos personales. Cepo `lib/informe-mediacion.test.ts`.
+🎓 **Formación continua IDD (24/09/2026, `seguros.formacion`, `lib/formacion.ts`, puerto `/api/operador/formacion`).** Un registro
+por curso terminado; resumen por persona y año contra 15 h (art. 10.2 IDD, mínimo por nivel PENDIENTE_REVISION_LEGAL) con la
+regla pura `resumenFormacion` de module-seguros. Se leen 3 años atrás para que quien no se ha formado este año salga con 0 h.
+Cepo `lib/formacion.test.ts`.
 📄 **Adjuntos a la compañía (24/09/2026, `adjuntosFirmados`):** PDF (carta + justificante de la firma, `lib/documento-firmado-pdf.ts`)
 **y** el original `.txt`. La huella de `seguros.firma.doc_hash` es la del TEXTO, así que el `.txt` va SIEMPRE; el PDF es
 presentación y, si falla o no hay evidencia, se omite sin bloquear el envío (cepo en `aprobaciones.test.ts`).
