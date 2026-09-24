@@ -243,6 +243,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   github_vigia: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'github_vigia'`,
+  subastas_idealista: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'subastas_idealista'`,
 }
 
 /**

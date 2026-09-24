@@ -964,4 +964,18 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'que nadie mira es la clase de aviso que solo se echa en falta después. Huella: ' +
       'agente_latidos.github_vigia.',
   },
+  {
+    id: 'subastas_idealista',
+    vigiladoDesde: '2026-09-24',
+    etiqueta: '🏖️ Radar de Idealista por conector (rutina diaria, costa de Huelva)',
+    // Diaria → 30 h, mismo criterio que la rutina de Booking.
+    maxHoras: 30,
+    nota:
+      'Desde el 24/09/2026 las alertas de correo de Idealista están QUITADAS: esta rutina es la ' +
+      'única vía por la que entran anuncios de Idealista al corpus. Si calla, el radar de casas de ' +
+      'playa (lente 🌊) y los chollos de Idealista se quedan mudos y se leen como «no hay nada». ' +
+      '«sin respuesta del conector» NO es «no hay casas». Revisa en claude.ai → Rutinas que corre, ' +
+      'que lleva el conector de Idealista y que su env tiene PLATAFORMA_URL + ALERTA_TOKEN. ' +
+      'Huella: agente_latidos.subastas_idealista.',
+  },
 ]

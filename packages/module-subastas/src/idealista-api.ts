@@ -139,12 +139,17 @@ const CENTROS: Array<[RegExp, CentroBusqueda]> = [
   // Huelva — costa (el radar principal de Alberto)
   [/matalascanas/, { lat: 37.013, lng: -6.567, distancia: 4000 }],
   [/mazagon/, { lat: 37.131, lng: -6.837, distancia: 5000 }],
+  // Núcleos de playa ANTES que su municipio (mismo criterio que Cádiz): El
+  // Portil queda a ~8 km del casco de Punta Umbría e Isla Canela a ~6 km del de
+  // Ayamonte — con el centro del municipio la búsqueda se sale de su mercado.
+  [/el portil|nuevo portil/, { lat: 37.212, lng: -7.05, distancia: 4000 }],
   [/punta umbria/, { lat: 37.181, lng: -6.966, distancia: 5000 }],
   [/isla cristina/, { lat: 37.199, lng: -7.321, distancia: 5000 }],
   [/islantilla/, { lat: 37.203, lng: -7.24, distancia: 4000 }],
   [/la antilla|lepe/, { lat: 37.208, lng: -7.176, distancia: 6000 }],
   [/el rompido/, { lat: 37.221, lng: -7.128, distancia: 4000 }],
   [/cartaya/, { lat: 37.283, lng: -7.152, distancia: 6000 }],
+  [/isla canela|punta del moral/, { lat: 37.183, lng: -7.345, distancia: 4000 }],
   [/ayamonte/, { lat: 37.213, lng: -7.407, distancia: 6000 }],
   [/aljaraque/, { lat: 37.269, lng: -7.021, distancia: 5000 }],
   [/almonte/, { lat: 37.264, lng: -6.516, distancia: 6000 }],
