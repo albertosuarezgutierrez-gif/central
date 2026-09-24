@@ -37,6 +37,7 @@ export type TipoActividad =
   | 'acceso_fallido'
   | 'direccion'
   | 'sugerencia'
+  | 'datos_presupuesto'
   | 'parte'
   | 'poliza_declarada'
   | 'supresion'
@@ -84,6 +85,12 @@ export const ACTIVIDADES: readonly Definicion[] = [
     label: 'Pidió el código y no llegó a entrar',
     origen: 'cliente',
     riesgo: 'O no le llegó el correo, o caducó: comprueba antes de que lo deje.',
+  },
+  {
+    v: 'datos_presupuesto',
+    label: 'Completó los datos para su presupuesto',
+    origen: 'cliente',
+    riesgo: 'Está esperando precio: tarifícalo hoy.',
   },
   { v: 'poliza_declarada', label: 'Subió una póliza de otra compañía', origen: 'cliente', riesgo: null },
   { v: 'sugerencia', label: 'Escribió una sugerencia', origen: 'cliente', riesgo: null },

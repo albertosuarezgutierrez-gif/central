@@ -418,7 +418,7 @@ export type CarnetFicha = {
 
 const ORDEN_CARNET = ['A', 'A2', 'A1', 'AM', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE']
 
-async function listarCarnets(
+export async function listarCarnets(
   correduriaId: string,
   clienteId: string,
   fechaNacimiento: string | null,

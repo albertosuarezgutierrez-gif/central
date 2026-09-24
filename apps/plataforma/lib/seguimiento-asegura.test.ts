@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { MOTIVOS_PERDIDA } from '@central/module-seguros'
-import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe } from './seguimiento-asegura.ts'
+import { colaLlamadas, guionLlamada, interpretarLeads, interpretarTareasHoy, interpretarOportunidad, MOTIVOS_PERDIDA_UI, parsearPrima, rotuloCanal, whatsappDeLead, interpretarContactosMovil, interpretarLecturaOportunidad, primaParaCampo, enlaceOportunidadDe, interpretarSolicitudesDatos, valorLegible } from './seguimiento-asegura.ts'
 
 const lead = {
   oportunidadId: 'o1', estado: 'competencia', clienteId: 'c1', cliente: 'Ana', ramo: 'auto', aseguradora: 'Mapfre',
@@ -209,4 +209,23 @@ test('enlace del presupuesto: creada/enlazada con id; fallo con motivo; ausente 
   assert.equal(enlaceOportunidadDe({ estado: 'guardada', cotizacionId: 'c' }), null)
   assert.equal(enlaceOportunidadDe({ estado: 'guardada', oportunidad: { estado: 'creada' } }), null, 'sin id no se enlaza a nada')
   assert.equal(enlaceOportunidadDe(null), null)
+})
+
+test('solicitudes de datos: se leen las válidas y las respuestas se pintan legibles', () => {
+  const r = interpretarSolicitudesDatos(200, { estado: 'ok', solicitudes: [
+    { id: 's1', ramo: 'moto', estado: 'completada', caduca: '2026-10-08', completada: '2026-09-25', ilegible: false,
+      campos: [{ clave: 'garaje', etiqueta: '¿Dónde duerme?', opciones: [{ valor: 'calle', etiqueta: 'En la calle' }] }, { clave: 'fechaCarnet', etiqueta: 'Fecha' }],
+      respuestas: { garaje: 'calle', fechaCarnet: '2015-03-15', tieneSeguro: false, raro: { x: 1 } } },
+    { id: 's2', ramo: 'barco', estado: 'pendiente', campos: [] },
+  ] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.solicitudes.length, 1, 'un ramo que no es moto/coche no se pinta')
+  const s = r.solicitudes[0]
+  assert.equal('raro' in (s.respuestas ?? {}), false)
+  assert.equal(valorLegible(s.campos[0], s.respuestas?.garaje), 'En la calle')
+  assert.equal(valorLegible(s.campos[1], s.respuestas?.fechaCarnet), '15/03/2015')
+  assert.equal(valorLegible(s.campos[1], null), '—')
+  assert.equal(valorLegible(s.campos[1], false), 'No')
+  assert.equal(interpretarSolicitudesDatos(503, null).estado, 'error')
 })

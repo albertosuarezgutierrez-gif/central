@@ -668,3 +668,73 @@ export function enlaceOportunidadDe(guardado: unknown): EnlacePresupuesto | null
   }
   return null
 }
+
+// ─── «Pídele los datos al cliente» (24/09/2026) ──────────────────────────────
+// Enlace directo (sin código) para que el cliente complete lo que falta para
+// presupuestar moto o coche. asegura guarda el hash del token y las respuestas
+// cifradas; aquí se leen para verlas y tarificar.
+
+export type SolicitudDatos = {
+  id: string
+  ramo: 'moto' | 'auto'
+  estado: 'pendiente' | 'completada' | 'anulada' | 'caducada'
+  caduca: string
+  completada: string | null
+  campos: { clave: string; etiqueta: string; opciones?: { valor: string; etiqueta: string }[] }[]
+  /** `null` = sin completar o ilegible (entonces `ilegible` lo dice). */
+  respuestas: Record<string, string | number | boolean | null> | null
+  ilegible: boolean
+}
+
+export type SolicitudesDatos = { estado: 'ok'; solicitudes: SolicitudDatos[] } | { estado: 'error'; motivo: string }
+
+const ESTADOS_SOLICITUD = ['pendiente', 'completada', 'anulada', 'caducada'] as const
+
+export function interpretarSolicitudesDatos(status: number, json: unknown): SolicitudesDatos {
+  const o = objeto(json)
+  if (status !== 200 || o?.estado !== 'ok' || !Array.isArray(o.solicitudes)) {
+    return { estado: 'error', motivo: texto(o?.motivo) ?? (status === 503 ? 'la cartera no responde' : `HTTP ${status}`) }
+  }
+  const solicitudes: SolicitudDatos[] = []
+  for (const x of o.solicitudes) {
+    const s = objeto(x)
+    const id = texto(s?.id)
+    const estado = uno(ESTADOS_SOLICITUD, s?.estado)
+    const ramo = s?.ramo === 'moto' || s?.ramo === 'auto' ? s.ramo : null
+    if (!s || !id || !estado || !ramo || !Array.isArray(s.campos)) continue
+    const campos = s.campos.flatMap((c) => {
+      const co = objeto(c)
+      const clave = texto(co?.clave)
+      const etiqueta = texto(co?.etiqueta)
+      if (!clave || !etiqueta) return []
+      const opciones = Array.isArray(co?.opciones)
+        ? co.opciones.flatMap((op) => { const oo = objeto(op); const v = texto(oo?.valor); const e = texto(oo?.etiqueta); return v && e ? [{ valor: v, etiqueta: e }] : [] })
+        : undefined
+      return [{ clave, etiqueta, ...(opciones ? { opciones } : {}) }]
+    })
+    const r = objeto(s.respuestas)
+    const respuestas = r
+      ? Object.fromEntries(Object.entries(r).filter(([, v]) => v === null || ['string', 'number', 'boolean'].includes(typeof v))) as Record<string, string | number | boolean | null>
+      : null
+    solicitudes.push({ id, ramo, estado, caduca: texto(s.caduca) ?? '', completada: texto(s.completada), campos, respuestas, ilegible: s.ilegible === true })
+  }
+  return { estado: 'ok', solicitudes }
+}
+
+/** Una respuesta como la lee Alberto: opción → su etiqueta, sí/no, fecha española; `null` → «—». */
+export function valorLegible(campo: SolicitudDatos['campos'][number], v: string | number | boolean | null | undefined): string {
+  if (v === null || v === undefined || v === '') return '—'
+  if (typeof v === 'boolean') return v ? 'Sí' : 'No'
+  if (typeof v === 'number') return v.toLocaleString('es-ES')
+  const op = campo.opciones?.find((o) => o.valor === v)
+  if (op) return op.etiqueta
+  const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v)
+  return f ? `${f[3]}/${f[2]}/${f[1]}` : v
+}
+
+export function solicitudesDatosAsegura(oportunidadId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/solicitud-datos?oportunidadId=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
+}
+export function accionSolicitudDatosAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/solicitud-datos', { method: 'POST', body: JSON.stringify(body) })
+}

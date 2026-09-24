@@ -20,6 +20,7 @@ import {
   type OportunidadesCliente as Lectura,
 } from '@/lib/seguimiento-asegura'
 import { fmt } from './piezas'
+import PedirDatos from './PedirDatos'
 
 /**
  * Las oportunidades de ESTE cliente, en su ficha (Fase 1 del rediseño, 24/09/2026). Hasta hoy solo
@@ -132,7 +133,7 @@ export default function OportunidadesCliente({ clienteId, polizas }: { clienteId
         <>
           {abiertas.length === 0 && !abriendo && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta. Se abre desde «➕ Nueva oportunidad ▾», arriba.</div>}
           {abiertas.map(o => (
-            <FilaAbierta key={o.id} o={o} polizas={polizas} onHecho={(t) => { setAviso(t); void cargar() }} />
+            <FilaAbierta key={o.id} o={o} clienteId={clienteId} polizas={polizas} onHecho={(t) => { setAviso(t); void cargar() }} />
           ))}
           {lectura.descartadas > 0 && (
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>{lectura.descartadas} oportunidad(es) llegaron incompletas y no se pintan.</div>
@@ -171,8 +172,9 @@ function Resumen({ o }: { o: OportunidadDeCliente }) {
   return <span style={{ color: 'var(--muted)' }}>{partes.join(' · ')}</span>
 }
 
-function FilaAbierta({ o, polizas, onHecho }: {
+function FilaAbierta({ o, clienteId, polizas, onHecho }: {
   o: OportunidadDeCliente
+  clienteId: string
   polizas: Poliza[]
   onHecho: (t: { ok: boolean; texto: string }) => void
 }) {
@@ -215,6 +217,8 @@ function FilaAbierta({ o, polizas, onHecho }: {
         )}
         <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'descartar' ? null : 'descartar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Descartar</button>
       </div>
+
+      {(o.ramo === 'moto' || o.ramo === 'auto') && <PedirDatos oportunidadId={o.id} clienteId={clienteId} ramo={o.ramo} />}
 
       {modo === 'editar' && (
         <FormEdicion o={o} onCancelar={() => setModo(null)} onHecho={(t) => { if (t.ok) setModo(null); onHecho(t) }} />
