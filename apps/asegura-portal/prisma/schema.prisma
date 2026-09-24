@@ -1275,3 +1275,21 @@ model Felicitacion {
   @@map("felicitacion")
   @@schema("seguros")
 }
+
+/// Ficha IPID por compañía + producto (tabla de `apps/asegura`, `2026-09-24i_seguros_ipid.sql`). Documento
+/// PÚBLICO de la compañía: el portal solo la lee y la sirve dentro del presupuesto del cliente.
+model Ipid {
+  id            String    @id @db.Uuid
+  correduriaId  String    @map("correduria_id") @db.Uuid
+  clave         String
+  compania      String
+  producto      String
+  nombreFichero String    @map("nombre_fichero")
+  contenido     Bytes
+  sha256        String
+  createdAt     DateTime  @map("created_at") @db.Timestamptz(6)
+  retiradoAt    DateTime? @map("retirado_at") @db.Timestamptz(6)
+
+  @@map("ipid")
+  @@schema("seguros")
+}

@@ -193,6 +193,11 @@ export function Garantias({ o, actual }: { o: OpcionCliente; actual: ActualClien
         </ul>
       )}
 
+      {/* La ficha IPID es la que cita la aceptación firmada: se enseña con la opción, no aparte. */}
+      {o.ipidId
+        ? <p style={{ margin: '8px 0 0' }}><a href={`/api/ipid/${o.ipidId}`} target="_blank" rel="noopener noreferrer">Ficha de información del producto (IPID) de {o.compania} ↗</a></p>
+        : <p className="suave" style={{ margin: '8px 0 0' }}>Todavía no tengo la ficha de información del producto (IPID) de esta opción. Pídemela antes de aceptar.</p>}
+
       {/* La comparación es de NOMBRES de garantía, no de capitales: el snapshot
           congela las coberturas como textos sueltos. Decirlo es la diferencia
           entre una comparativa y una promesa. */}

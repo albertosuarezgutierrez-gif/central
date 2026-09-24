@@ -44,7 +44,7 @@
 // desde fuera de este fichero.
 
 import { formatoTokenVistaValido, hashTokenVista } from '@central/module-seguros-portal'
-import { WHERE_CARTERA_VIVA } from '@central/module-seguros'
+import { WHERE_CARTERA_VIVA, claveProducto } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 
 import { hashCanal } from './auth'
@@ -75,6 +75,8 @@ export type OpcionCliente = {
   /** La de menor importe NO comparte cobertura con la actual. Se pinta. */
   coberturaDistinta: boolean
   esPortada: boolean
+  /** Ficha IPID vigente de esta compañía + producto. `null` = no hay ninguna subida. */
+  ipidId: string | null
 }
 
 /** Lo que el cliente tiene HOY. `null` entero = venta nueva (`poliza_id IS NULL`). */
@@ -271,7 +273,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
     const caducado = p.venceEl.getTime() < hoy.getTime()
 
     const [opciones, actual] = await Promise.all([
-      leerOpciones(p.id),
+      leerOpciones(p.id, p.correduriaId),
       p.polizaId === null ? Promise.resolve(null) : leerActual(p.polizaId, p.clienteId, p.correduriaId),
     ])
 
@@ -331,7 +333,10 @@ function motivoSinEquivalenteDe(opciones: OpcionCliente[], actual: ActualCliente
   return leerSinEquivalente(sinDesglose ? 'actual_sin_coberturas' : 'sin_equivalente')
 }
 
-async function leerOpciones(presupuestoId: string): Promise<OpcionCliente[]> {
+async function leerOpciones(presupuestoId: string, correduriaId: string): Promise<OpcionCliente[]> {
+  // Solo id y clave: el PDF se sirve aparte, en /api/ipid/[id].
+  const fichas = await prisma.ipid.findMany({ where: { correduriaId, retiradoAt: null }, select: { id: true, clave: true } })
+  const ipidPorClave = new Map(fichas.map((f) => [f.clave, f.id]))
   const filas = await prisma.presupuestoOpcion.findMany({
     where: { presupuestoId },
     orderBy: { orden: 'asc' },
@@ -373,6 +378,7 @@ async function leerOpciones(presupuestoId: string): Promise<OpcionCliente[]> {
       coberturaDistinta:
         papeles.includes('mas_barata') && !filas.some((o) => o.papeles.includes('equivalente')),
       esPortada: papeles.length > 0,
+      ipidId: ipidPorClave.get(claveProducto(f.compania, f.producto) ?? '') ?? null,
     }
   })
 }

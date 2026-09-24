@@ -30,6 +30,7 @@ const base = {
   calculadoEl: '2026-09-20', venceEl: '2026-10-05', fechaFirma: '2026-09-23', anula: null,
   vistoAntes: { opciones: 3, companias: 2, informacionMediador: 'https://clientes.grupoasegura.es/legal/mediador', versionTextos: '2026-09-v5' },
   necesidades: 'Coche de uso diario; quiere lunas y asistencia en viaje; prioriza precio.' as string | null,
+  ipid: { huella: 'a'.repeat(64) } as { huella: string } | null,
 }
 
 test('🪤 el documento dice en su cara que NO es la contratación', () => {
@@ -69,4 +70,9 @@ test('las necesidades se validan: ni vacías ni un «ok», ni kilométricas; se 
   assert.equal(validarNecesidades(null).ok, false)
   assert.equal(validarNecesidades('x'.repeat(1501)).ok, false)
   assert.deepEqual(validarNecesidades('  Hogar  en Sevilla,\n contenido y RC  '), { ok: true, valor: 'Hogar en Sevilla, contenido y RC' })
+})
+
+test('🪤 lo firmado cita la ficha IPID que vio, o dice que no consta', () => {
+  assert.match(documentoAceptacion(base), /ficha de información del producto \(IPID\) de esta opción \(huella aaaaaaaaaaaaaaaa\)/)
+  assert.match(documentoAceptacion({ ...base, ipid: null }), /No consta que se me haya puesto a disposición la ficha/)
 })
