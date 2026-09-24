@@ -31,6 +31,11 @@ function mes(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 12 ? v : null
 }
 
+/** 1-31, o `null` si no es un día válido. */
+function dia(v: unknown): number | null {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 31 ? v : null
+}
+
 // ── Cola ─────────────────────────────────────────────────────────────────────
 
 /**
@@ -60,6 +65,8 @@ export type LeadRecaptacion = {
   origen: OrigenLeadRecaptacion
   /** Mes (1-12) del vencimiento antiguo. `null` cuando `origen==='sin_vencimiento'`. */
   mesVencimientoAntiguo: number | null
+  /** Día (1-31) del vencimiento antiguo. `null` si no consta (o puerto viejo que no lo manda). */
+  diaVencimientoAntiguo: number | null
 }
 
 export type ContadoresRecaptacion = {
@@ -113,6 +120,9 @@ function leerLead(v: unknown): LeadRecaptacion | null {
     // mes) no debe colar un mes que la UI luego trataría como real. La
     // invariante se fuerza AQUÍ, no se confía en que el emisor la respete.
     mesVencimientoAntiguo: origenLead(o.origen) === 'vencimiento_antiguo' ? mes(o.mesVencimientoAntiguo) : null,
+    diaVencimientoAntiguo: origenLead(o.origen) === 'vencimiento_antiguo' && mes(o.mesVencimientoAntiguo) !== null
+      ? dia(o.diaVencimientoAntiguo)
+      : null,
   }
 }
 
@@ -201,7 +211,51 @@ export function agruparLeadsPorCliente(leads: readonly LeadRecaptacion[]): Grupo
       tieneVencimientoAntiguo: l.origen === 'vencimiento_antiguo',
     })
   }
-  return [...mapa.values()]
+  return ordenarPorVencimiento([...mapa.values()])
+}
+
+/**
+ * Días hasta el próximo aniversario de ese mes/día (0 = hoy). Sin día, se
+ * toma el ÚLTIMO del mes: con el 1 un mes ya empezado saltaría al año que
+ * viene y se iría al final de la cola, justo cuando está en su ventana.
+ * Misma cuenta que `proximoAniversario` de apps/asegura/lib/recaptacion-ventana.ts.
+ */
+export function diasHastaVencimiento(mesV: number, diaV: number | null, hoy: Date = new Date()): number {
+  const base = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate())
+  const fecha = (anio: number) => {
+    const ultimo = new Date(Date.UTC(anio, mesV, 0)).getUTCDate()
+    return Date.UTC(anio, mesV - 1, Math.min(diaV ?? ultimo, ultimo))
+  }
+  let f = fecha(hoy.getUTCFullYear())
+  if (f < base) f = fecha(hoy.getUTCFullYear() + 1)
+  return Math.round((f - base) / 86_400_000)
+}
+
+/** Días hasta el vencimiento más cercano del grupo; `null` si ninguna póliza tiene mes. */
+function diasGrupo(g: GrupoLeadRecaptacion, hoy: Date): number | null {
+  let min: number | null = null
+  for (const p of g.polizas) {
+    if (p.mesVencimientoAntiguo === null) continue
+    const d = diasHastaVencimiento(p.mesVencimientoAntiguo, p.diaVencimientoAntiguo, hoy)
+    if (min === null || d < min) min = d
+  }
+  return min
+}
+
+/**
+ * Primero lo que vence antes (su ventana se cierra); los `sin_vencimiento`
+ * detrás, porque se pueden captar en cualquier momento. Empates y sin fecha
+ * conservan el orden del puerto (apellidos). Dentro del grupo, las pólizas
+ * también van por vencimiento: la primera es la que usa el mensaje sugerido.
+ */
+export function ordenarPorVencimiento(grupos: GrupoLeadRecaptacion[], hoy: Date = new Date()): GrupoLeadRecaptacion[] {
+  const clave = (p: LeadRecaptacion) =>
+    p.mesVencimientoAntiguo === null ? Infinity : diasHastaVencimiento(p.mesVencimientoAntiguo, p.diaVencimientoAntiguo, hoy)
+  for (const g of grupos) g.polizas.sort((a, b) => clave(a) - clave(b) || 0)
+  return grupos
+    .map((g, i) => ({ g, i, d: diasGrupo(g, hoy) }))
+    .sort((a, b) => (a.d ?? Infinity) - (b.d ?? Infinity) || a.i - b.i)
+    .map((x) => x.g)
 }
 
 /** El motivo del puerto, en castellano de pantalla. */

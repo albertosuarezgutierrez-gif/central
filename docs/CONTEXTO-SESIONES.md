@@ -511,6 +511,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) Recaptación: cola ordenada por próximo vencimiento
+- La cola de `/correduria` → Recaptación salía por apellidos (el `order by` del SQL de asegura). Ahora
+  `ordenarPorVencimiento` (plataforma, `lib/recaptacion-asegura.ts`) la ordena por días hasta el próximo
+  aniversario (mes+día, que asegura ya mandaba y plataforma tiraba); los `sin_vencimiento` van al final.
+  Dentro de un cliente, la póliza más cercana va primera (es la que usa el mensaje sugerido). El badge dice el día.
+
 ## (24/09/2026) sivra: `apply-auto` pasa a 4 pasadas/día (+00:30 UTC)
 - Por el tramo de última hora del canal: la fecha que cruza a ≤6 días a medianoche ya no se ve ~11 % cara hasta las 08:30. El raíl diario no se abre (ancla `ref24` = precio de antes de hoy). `PASADAS_POR_DIA_APPLY` = 4 (su cepo contra el cron sigue vivo).
 
