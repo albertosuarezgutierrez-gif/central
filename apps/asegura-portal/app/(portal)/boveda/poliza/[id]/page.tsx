@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
 import { esRamoInmueble } from '@central/module-seguros-portal'
-import { carteraDeIdentidad, type PolizaPortal } from '@/lib/cartera-lectura'
+import { carteraDeIdentidad, polizasParaParte, type PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
@@ -201,9 +201,17 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
             un seguro concreto no debería tener que volver a encontrarlo en un
             desplegable con las demás. */}
         <p style={{ margin: 0 }}>
-          <Link className="boton auto" href={`/boveda?vista=siniestro&poliza=cartera:${p.id}`}>
-            Ver los teléfonos de {p.compania} y dar parte
-          </Link>
+          {/* Sin el alcance `partes`, una póliza de otro solo da sus teléfonos: el
+              parte no se le ofrece porque la ruta lo rechazaría (`polizasParaParte`). */}
+          {polizasParaParte(cartera).has(p.id) ? (
+            <Link className="boton auto" href={`/boveda?vista=siniestro&poliza=cartera:${p.id}`}>
+              Ver los teléfonos de {p.compania} y dar parte
+            </Link>
+          ) : (
+            <Link className="boton auto" href="/boveda?vista=siniestro">
+              Ver los teléfonos de {p.compania}
+            </Link>
+          )}
         </p>
       </section>
 

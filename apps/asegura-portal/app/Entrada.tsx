@@ -1,5 +1,5 @@
 'use client'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
 
 import { MarcaAsegura } from './MarcaAsegura'
 
@@ -57,19 +57,68 @@ export function Entrada() {
     window.history.replaceState(null, '', window.location.pathname)
   }, [])
 
-  async function pedir() {
+  // Mientras una petición va, el botón no se puede volver a pulsar: un doble toque
+  // mandaría dos códigos (y el primero dejaría de valer) o gastaría dos intentos.
+  const [enviando, setEnviando] = useState(false)
+
+  /** `accion` devuelve `true` si ya se está yendo de la página: entonces el botón
+   *  NO se reactiva — un segundo toque durante la redirección daría `ya_usado`. */
+  async function enviar(e: FormEvent | MouseEvent, accion: () => Promise<boolean | void>) {
+    e.preventDefault()
+    if (enviando) return
+    setEnviando(true)
+    let seVa = false
+    try {
+      seVa = (await accion()) === true
+    } catch {
+      setError('error')
+    } finally {
+      if (!seVa) setEnviando(false)
+    }
+  }
+
+  async function reenviar() {
+    setAviso(null)
+    // Sin esta línea un reenvío correcto no cambia nada visible y se vuelve a pulsar.
+    if (await pedir()) setAviso('Te hemos enviado otro código. Usa el último que te llegue.')
+  }
+
+  /** Volver a escribir el correo: el código pedido se queda sin usar y caduca solo. */
+  function otroCorreo() {
+    setEnlace(null)
+    setCodigo('')
+    setDesdeEnlace(false)
+    setError(null)
+    setFase('pedir')
+  }
+
+  /** `true` si el código salió. No navega: para `enviar` es siempre «me quedo». */
+  async function pedir(): Promise<boolean> {
     setError(null)
     const r = await fetch('/api/acceso/solicitar', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ tipo: 'email', destino }),
     })
-    if (r.ok) setFase('verificar')
-    else setError((await r.json()).error ?? 'error')
+    if (r.ok) {
+      setCodigo('')
+      setDesdeEnlace(false)
+      setFase('verificar')
+      return true
+    }
+    setError(((await r.json().catch(() => ({}))) as { error?: string }).error ?? 'error')
+    return false
   }
 
-  async function verificar() {
+  async function verificar(): Promise<boolean> {
     setError(null)
+    setAviso(null)
+    // `noValidate` salta la comprobación del navegador: sin esto, un código corto
+    // viaja al servidor, vuelve `datos_invalidos` y no gasta nada, pero confunde.
+    if (!enlace && codigo.length !== 6) {
+      setError('codigo_corto')
+      return false
+    }
     const r = await fetch('/api/acceso/verificar', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
@@ -82,9 +131,11 @@ export function Entrada() {
       if (enlace) {
         setEnlace(null)
         setFase('pedir')
-        return setError(`enlace_${cuerpo.error ?? 'error'}`)
+        setError(`enlace_${cuerpo.error ?? 'error'}`)
+        return false
       }
-      return setError(cuerpo.error ?? 'error')
+      setError(cuerpo.error ?? 'error')
+      return false
     }
     // A dónde ir lo decide el servidor (ruta interna validada); por defecto, la bóveda.
     const irA = typeof cuerpo.irA === 'string' && /^\/(?![/\\])/.test(cuerpo.irA) ? cuerpo.irA : '/boveda'
@@ -98,6 +149,7 @@ export function Entrada() {
     } else {
       window.location.href = irA
     }
+    return true
   }
 
   return (
@@ -116,20 +168,28 @@ export function Entrada() {
         </p>
 
       {fase === 'pedir' ? (
-        <>
+        <form onSubmit={(e) => enviar(e, async () => void (await pedir()))} noValidate>
+          <label htmlFor="entrada-correo" className="entrada-etiqueta">
+            Tu correo electrónico
+          </label>
           <input
+            id="entrada-correo"
             type="email"
+            name="email"
+            autoComplete="email"
+            required
             value={destino}
             onChange={(e) => setDestino(e.target.value)}
             placeholder="tu@email.com"
             className="campo"
+            aria-describedby={error ? 'entrada-error' : undefined}
           />
-          <button onClick={pedir} className="boton" style={{ marginTop: 12 }}>
-            Enviarme un código
+          <button type="submit" className="boton" style={{ marginTop: 12 }} disabled={enviando}>
+            {enviando ? 'Enviando…' : 'Enviarme un código'}
           </button>
-        </>
+        </form>
       ) : (
-        <>
+        <form onSubmit={(e) => enviar(e, verificar)} noValidate>
           <p className="suave" style={{ marginTop: 0 }}>
             {enlace
               ? `Pulsa «Entrar» para acceder como ${destino}. El enlace vale una sola vez.`
@@ -138,17 +198,39 @@ export function Entrada() {
                 : `Te hemos enviado un código a ${destino}. Caduca en 10 minutos.`}
           </p>
           {!enlace && (
-            <input
-              inputMode="numeric"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-              placeholder="123456"
-              className="campo"
-            />
+            <>
+              <label htmlFor="entrada-codigo" className="entrada-etiqueta">
+                Código de 6 cifras
+              </label>
+              <input
+                id="entrada-codigo"
+                name="codigo"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={6}
+                required
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                placeholder="123456"
+                className="campo"
+                aria-describedby={error ? 'entrada-error' : undefined}
+              />
+            </>
           )}
-          <button onClick={verificar} className="boton" style={{ marginTop: 12 }}>
-            Entrar
+          <button type="submit" className="boton" style={{ marginTop: 12 }} disabled={enviando}>
+            {enviando ? 'Entrando…' : 'Entrar'}
           </button>
+          {!enlace && (
+            <p className="entrada-otras">
+              <button type="button" className="enlace-boton" onClick={(e) => enviar(e, reenviar)} disabled={enviando}>
+                Reenviar el código
+              </button>
+              <button type="button" className="enlace-boton" onClick={otroCorreo} disabled={enviando}>
+                Usar otro correo
+              </button>
+            </p>
+          )}
           {/* Esta línea NO es adorno legal: es lo que hace verdadera la fila
               `lds_art19` que el canje escribe en `portal_consentimiento`. Si se
               quita, el registro pasa a acreditar algo que no ocurrió. Va DEBAJO
@@ -170,10 +252,14 @@ export function Entrada() {
             . Guardamos la fecha, la versión del texto, tu IP y tu navegador como
             prueba de que se te informó.
           </p>
-        </>
+        </form>
       )}
 
-        {error && <p style={{ color: 'var(--negative)', marginTop: 12 }}>{textoError(error)}</p>}
+        {error && (
+          <p id="entrada-error" role="alert" style={{ color: 'var(--negative)', marginTop: 12 }}>
+            {textoError(error)}
+          </p>
+        )}
         {aviso && <p className="aviso-linea" role="status">{aviso}</p>}
       </div>
     </main>
@@ -189,6 +275,10 @@ function textoError(codigo: string): string {
     caducado: 'El código ha caducado. Pide uno nuevo.',
     ya_usado: 'Ese código ya se usó. Pide uno nuevo.',
     bloqueado: 'Demasiados intentos. Pide un código nuevo.',
+    demasiados_intentos: 'Demasiados intentos desde esta conexión. Espera unos minutos y vuelve a probar.',
+    enlace_demasiados_intentos: 'Demasiados intentos desde esta conexión. Espera unos minutos y vuelve a probar.',
+    codigo_corto: 'El código tiene 6 cifras. Revisa que esté completo.',
+    datos_invalidos: 'Revisa el correo y el código.',
     incorrecto: 'El código no es correcto.',
     sin_codigo: 'Pide un código primero.',
     enlace_ya_usado: 'Ese enlace ya se usó. Pide un código y entras igual.',

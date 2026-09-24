@@ -123,7 +123,9 @@ export async function polizasElegibles(
   const dePoliza = (p: PolizaPortal) =>
     [p.compania, p.ramo, p.numeroPoliza ? `nº ${p.numeroPoliza}` : null].filter(Boolean).join(' · ')
   return {
-    cartera: [...cartera.propias, ...cartera.autorizadas].flatMap((t) =>
+    // Solo las PROPIAS: la hoja es pública para quien tenga el papel, y quien te
+    // autorizó a ver su póliza te lo consintió a TI, no a quien lo escanee.
+    cartera: cartera.propias.flatMap((t) =>
       t.polizas.filter(polizaEnVigorParaHoja).map((p) => ({ id: p.id, etiqueta: dePoliza(p) })),
     ),
     declaradas: declaradas
