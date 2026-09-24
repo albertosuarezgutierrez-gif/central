@@ -328,6 +328,8 @@ export {
   explicarSiniestro,
 } from './siniestro-historial.ts'
 export type { EstadoSiniestro, SiniestroHistorial, ExplicacionSiniestro } from './siniestro-historial.ts'
+export { tramitacionSiniestro, importeNumero } from './siniestro-tramitacion.ts'
+export type { PasoTramitacion, TramitacionSiniestro } from './siniestro-tramitacion.ts'
 export {
   SITUACIONES_RECIBO,
   reciboAnulado,

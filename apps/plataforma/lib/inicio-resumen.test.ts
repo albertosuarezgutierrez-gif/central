@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { estimacionMes, proximosCargos, ventanaCalendario, resumenBolsa, bolsaVieja, importeDivisa, sumarDias, type ReservaCal } from './inicio-resumen.ts'
+import { estimacionMes, proximosCargos, ventanaCalendario, resumenBolsa, bolsaVieja, importeDivisa, sumarDias, repartoVencimientos, type ReservaCal } from './inicio-resumen.ts'
 
 // ─── Estimación del mes ──────────────────────────────────────────────────────────────────────────
 
@@ -133,4 +133,15 @@ test('un recurrente atrasado no se pinta como «hoy»: salta al siguiente ciclo,
   const r = proximosCargos([{ concepto: 'Luz', importeMedio: -60, intervaloDias: 30, ultimaFecha: '2026-07-20' }], '2026-09-24')
   // 19/08 y 18/09 ya pasaron; el siguiente es 18/10, fuera de la semana.
   assert.equal(r.length, 0)
+})
+
+test('«Próximos vencimientos» no incluye las ya vencidas: se cuentan aparte', () => {
+  const r = repartoVencimientos([
+    { id: 'jun', dias: -111 }, { id: 'hoy', dias: 0 }, { id: 'oct', dias: 20 },
+    { id: 'nov', dias: 45 }, { id: 'ayer', dias: -1 }, { id: 'lejos', dias: 80 },
+  ])
+  assert.deepEqual(r.proximas.map(p => p.id), ['hoy', 'oct', 'nov'])
+  // La más reciente primero: es la que aún se puede salvar.
+  assert.deepEqual(r.vencidas.map(p => p.id), ['ayer', 'jun'])
+  assert.equal(r.en30, 2)
 })

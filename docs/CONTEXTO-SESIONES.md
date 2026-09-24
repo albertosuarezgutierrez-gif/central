@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** — `/banca` adelgazada. Salen de «Dinero» la banda «Pide acción hoy» y el P&L de pisos del mes, que ya enseña `/inicio`; así desaparece también la llamada de 8 s al puerto de la correduría. El resumen del periodo se carga en streaming (`BloquesDiferidos.tsx`). La tesorería y el benchmark de pisos no se calculan hasta que se abre el plegable de IA (`AnalisisPerezoso` → `GET /api/banca/analisis`); antes, `getTesoreria` recorría todo el histórico en cada visita. Hay `loading.tsx` y un guardián nuevo, `test/regression-banca-ligera.test.ts`.
+
 **(24/09/2026)** — Correduría con el criterio de la ficha de cliente. `/correduria` pasa de 8 pestañas a 5 (Hoy · Clientes · Cartera · Comisiones · **Más**): Más agrupa ingesta, redes/blog, calidad del dato y actividad en bloques con ancla. Los `?s=ingesta|datos|redes|actividad` de antes siguen funcionando y bajan a su bloque (`destinoDeParametro`). El badge de Más suma sus colas (`combinarContadores`, a tres estados). En Hoy, Sustituciones y Declaradas ya no ocupan sitio cuando están vacías. Las renovaciones de la ventana entera van paginadas de 50 en 50 y en móvil se apilan como tarjetas (`tabla-polizas`), igual que el cuadre y la recaptación. La actividad solo se monta al ir a ella, porque al montarse marca la visita como vista. Ficha de póliza reordenada por uso: datos, qué asegura, recibos (los 12 últimos; el resto plegado), siniestros, estimación, coberturas, documentación y anulación. Intervinientes, evolución de la prima, historial, CIMA y referencias van plegados (`Plegable`, que no se monta hasta que se abre). Usa el panel de `cliente/[id]/piezas`. Lo vigila `test/regression-correduria-secciones.test.ts`.
 
 **(24/09/2026)** — Plataforma: **nuevo Inicio `/inicio`** (antes se aterrizaba en `/banca`, 15 consultas sin Suspense). Cuatro tarjetas en Suspense propio: Correduría = lo que se está tratando (tareas/llamadas, vencimientos ≤60 d, siniestros) · Pisos = calendario 14 d + entradas/salidas + noches libres + **estimación del mes entero** (reservas del mes − max(imputados, media 3 meses)) · Bolsa = solo IBKR por divisa · Banco = saldo, mes, por revisar y próximos cargos 7 d. Lateral reordenado (Día a día / Pisos / Oportunidades / Ajustes, sin borrar páginas). Estilo de la correduría (Quicksand+Nunito+cobalto) en TODO el panel; logo y nombre Grupo ASegura siguen solo en `/correduria` (resto = «Mi grupo»). **Intranet instalable**: manifest + SW que no cachea; el manifest viejo nunca instaló porque el middleware exigía sesión para él. Idea descartada: «limpieza no pedida» (la intranet de Vanesa ya deriva una limpieza por cada salida). Maqueta aprobada: artifact KDmajP69L2GyZxAEAxbvMW.
@@ -545,6 +547,15 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (24/09/2026) ASegura: tramitación del siniestro que manda la compañía → portal
+- CRM (repo asegura, PR #852): el mapper EIAC lee situaciones, acciones, pagos, reserva, total pagado y posición; se guardan
+  en `siniestros.*_cima` FUSIONANDO (EIAC manda solo lo nuevo por periodo) sin tocar los campos manuales del corredor. Migración 0099 aplicada.
+- Portal: «Lo que nos cuenta tu compañía» en cada siniestro (`tramitacionSiniestro`, sin descripción libre ni figuras; sin reserva ni culpa).
+- Solo afecta a lo ingerido tras el deploy del CRM (o reprocesado). SIN recibidos: 47 (Occident, Allianz, 2 Mapfre de abril, 1 Generali).
+- Regla de Alberto: todo desarrollo de CIMA empieza en la carpeta «CIMA» de Drive (norma + zips). Siniestros = solo compañía→nosotros:
+  el 841 no existe por CIMA (TIREA 03/09/2026). Reproceso de los 46 SIN de los zips: bloqueado por permisos, pendiente de Alberto.
+- Pendiente conocido (PR aparte): `mapSiniestroEstado` trata PosicionSiniestro `IN` como en_tramitacion, y oficialmente IN = Indeterminado (culpa).
 
 ## (24/09/2026) sivra: el agente de huéspedes y los mensajes programados, en TODOS los idiomas
 Antes: el agente solo reconocía es/en/fr/de/it (un chino o un portugués recibía la respuesta en inglés) y los

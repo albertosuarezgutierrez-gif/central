@@ -1124,6 +1124,16 @@ Cepos: `siniestro-historial.test.ts` (17) y tres en `test/regression-portal-visi
 la recorte—, **vistos morder** con las tres mutaciones (sacarla del historial, recortarla a 80
 caracteres y colar `reservaImporte` en el schema).
 
+## 🧭 Cómo va el siniestro según la COMPAÑÍA (24/09/2026)
+
+El CRM guarda desde el 24/09/2026 lo que la compañía manda por EIAC (`situaciones_cima`, `acciones_cima`,
+`pagos_cima`, `total_pagos_cima`, `indemnizacion_cima`; repo `asegura`, migración 0099). La ficha de cada
+siniestro lo pinta como «Lo que nos cuenta tu compañía»: pasos con fecha y lo pagado. Traduce
+`tramitacionSiniestro()` (`module-seguros-portal/src/siniestro-tramitacion.ts`), que **nunca** deja pasar la
+descripción libre ni las figuras (nombres de perito/tramitador). `reserva_cima` y `posicion_cima` no tienen
+GRANT ni se declaran. «Lleva pagado», no «te ha pagado»: el total incluye pagos al perito o al taller. No todas las
+compañías lo mandan (visto en Occident y Allianz), y solo en lo ingerido o reprocesado desde ese día. Cepo en `test/regression-portal-visibilidad.test.ts`.
+
 ## 🚑 El parte de siniestro (03/09/2026) — y la frase que NO se puede decir
 
 El cliente da parte desde `/boveda` (`ParteSiniestro.tsx` → `POST /api/siniestros` →

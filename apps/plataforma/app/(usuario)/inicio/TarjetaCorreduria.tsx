@@ -6,6 +6,7 @@ import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { colaLlamadas, interpretarLeads, interpretarTareasHoy, leadsCompetenciaAsegura, tareasHoyAsegura } from '@/lib/seguimiento-asegura'
 import { cuandoTarea } from '../correduria/hoy-cockpit'
 import { Badge } from '@/components/ui'
+import { repartoVencimientos } from '@/lib/inicio-resumen'
 import { Cifra, Cifras, NoDisponible, Tarjeta, fila, subTitulo } from './piezas'
 
 // Correduría = lo que Alberto está TRATANDO (dictado 24/09/2026): oportunidades en curso,
@@ -56,27 +57,30 @@ export default async function TarjetaCorreduria() {
   }
 
   const vencidas = tareas.estado === 'ok' ? tareas.tareas.filter(t => cuandoTarea(t.fechaLimite, hoy).vencida).length : 0
-  const nOportunidades = tareas.estado === 'ok' && llamadas ? tareas.tareas.length + llamadas.length : null
   const vencOk = venc?.estado === 'ok' ? venc : null
-  const esteMes = vencOk ? vencOk.polizas.filter(p => p.dias <= 30).length : null
+  // Las vencidas sin renovar (el puerto mira una anualidad atrás) NO son «próximas»: van aparte.
+  const reparto = vencOk ? repartoVencimientos(vencOk.polizas) : null
   const siniestros = cartera?.estado === 'ok' ? cartera.siniestrosAbiertos : null
 
   const top = tareas.estado === 'ok' ? tareas.tareas.slice(0, 3) : []
-  const proximas = vencOk ? [...vencOk.polizas].sort((a, b) => a.dias - b.dias).slice(0, 3) : []
+  const proximas = reparto ? reparto.proximas.slice(0, 3) : []
 
   return (
     <Tarjeta titulo="Correduría · lo que tienes entre manos" href="/correduria" enlace="Abrir Hoy">
       <Cifras>
+        {/* Tareas y llamadas NO se suman: la cola de llamadas son leads de otras compañías por
+            probabilidad (cientos), y sumarlas a las tareas de seguimiento daba un «609 oportunidades
+            hoy» que no dice cuánto trabajo propio hay. */}
         <Cifra
-          label="Oportunidades hoy"
-          valor={nOportunidades ?? '—'}
-          sub={nOportunidades == null ? 'no se pudo contar' : vencidas > 0 ? `${vencidas} van tarde` : `${llamadas?.length ?? 0} llamadas`}
+          label="Tareas de hoy"
+          valor={tareas.estado === 'ok' ? tareas.tareas.length : '—'}
+          sub={tareas.estado !== 'ok' ? 'no se pudo leer' : vencidas > 0 ? `${vencidas} van tarde` : llamadas ? `${llamadas.length} llamadas en cola` : 'llamadas: no se pudo leer'}
           color={vencidas > 0 ? 'var(--negative)' : undefined}
         />
         <Cifra
           label="Vencen ≤60 días"
-          valor={vencOk ? vencOk.polizas.length + (vencOk.truncado ? '+' : '') : '—'}
-          sub={esteMes == null ? 'no se pudo leer' : `${esteMes} en 30 días`}
+          valor={reparto ? reparto.proximas.length + (vencOk?.truncado ? '+' : '') : '—'}
+          sub={reparto == null ? 'no se pudo leer' : `${reparto.en30} en 30 días`}
         />
         <Cifra
           label="Siniestros abiertos"
@@ -84,6 +88,14 @@ export default async function TarjetaCorreduria() {
           sub={siniestros == null ? 'no se pudo leer' : undefined}
           color={siniestros ? 'var(--warning)' : undefined}
         />
+        {reparto && reparto.vencidas.length > 0 && (
+          <Cifra
+            label="Vencidas sin renovar"
+            valor={reparto.vencidas.length}
+            sub={`la última hace ${-reparto.vencidas[0].dias} día(s)`}
+            color="var(--negative)"
+          />
+        )}
       </Cifras>
 
       <div>
@@ -121,7 +133,7 @@ export default async function TarjetaCorreduria() {
                     <span style={{ display: 'block', fontWeight: 600, overflowWrap: 'anywhere' }}>{p.cliente}</span>
                     <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)' }}>{p.tipo} · {p.aseguradora}</span>
                   </span>
-                  <Badge tono={p.dias <= 15 ? 'negativo' : p.dias <= 30 ? 'aviso' : 'info'}>{p.fechaVencimiento.split('-').reverse().slice(0, 2).join('/')}</Badge>
+                  <Badge tono={p.dias <= 15 ? 'negativo' : p.dias <= 30 ? 'aviso' : 'info'}>{p.fechaVencimiento.slice(0, 10).split('-').reverse().join('/')}</Badge>
                 </>
               )
               return p.clienteId
