@@ -50,9 +50,11 @@ import {
   type Alcance,
   type BienAsegurado,
   type TipoOtorgante,
+  type TramitacionSiniestro,
   lugarSiniestro,
   tipoSiniestroLegible,
   descripcionSiniestro,
+  tramitacionSiniestro,
   ordenarRecibos,
   estadoRecibos,
   resumirRecibos,
@@ -138,6 +140,13 @@ export type SiniestroPortal = {
    * nunca se pinta el código crudo.
    */
   tipoLegible: string | null
+  /**
+   * Cómo va, según la COMPAÑÍA (EIAC): pasos con fecha y lo pagado. `null` = la
+   * compañía no lo manda (no todas lo hacen; visto en Occident y Allianz) o el
+   * fichero es anterior al 24/09/2026 y no se ha reprocesado. Sin reserva ni culpa, y sin nombres: ver
+   * `siniestro-tramitacion.ts` de `@central/module-seguros-portal`.
+   */
+  tramitacion: TramitacionSiniestro | null
 }
 
 export type PolizaPortal = {
@@ -677,6 +686,14 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               // desde el 24/09/2026 porque ya se traduce con la tabla oficial de
               // TIREA (`tipoSiniestroLegible`); el código crudo no sale de aquí.
               tipo: true,
+              // La tramitación que manda la compañía (GRANT por columnas del
+              // 24/09/2026). `reserva_cima` y `posicion_cima` NO: ni tienen
+              // grant ni son del cliente.
+              situacionesCima: true,
+              accionesCima: true,
+              pagosCima: true,
+              indemnizacionCima: true,
+              totalPagosCima: true,
               // No hay hay columna con la fecha de CIERRE: `updated_at` es la
               // última vez que se tocó la fila, no el día que se cerró, y
               // pintarlo como tal sería inventarse una fecha.
@@ -723,6 +740,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             descripcion: descripcionSiniestro(x.comentario),
             lugar: lugarSiniestro({ ciudad: x.lugarCiudad, provincia: x.lugarProvincia }),
             tipoLegible: tipoSiniestroLegible(x.tipo),
+            tramitacion: tramitacionSiniestro({
+              situaciones: x.situacionesCima,
+              acciones: x.accionesCima,
+              pagos: x.pagosCima,
+              totalPagos: x.totalPagosCima,
+              indemnizacion: x.indemnizacionCima,
+            }),
           })),
         )
       : null

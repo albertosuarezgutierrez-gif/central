@@ -1516,6 +1516,53 @@ h1 em {
   min-height: 44px;
   line-height: 44px;
 }
+/* La tramitación que manda la compañía: lista con fecha a la izquierda; en
+   móvil la fecha va encima para no dejar el texto en una columna de 150 px. */
+.siniestro-tramite {
+  flex-basis: 100%;
+  min-width: 0;
+  margin: 4px 0 0;
+  padding: 10px 12px;
+  border-left: 2px solid var(--border);
+  font-size: 14px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.siniestro-tramite-titulo {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: var(--text);
+}
+.siniestro-tramite ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+.siniestro-tramite li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}
+.siniestro-tramite-fecha {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@media (min-width: 480px) {
+  .siniestro-tramite li {
+    grid-template-columns: 88px minmax(0, 1fr);
+    gap: 10px;
+  }
+  .siniestro-tramite-fecha {
+    font-size: 14px;
+  }
+}
+.siniestro-tramite-cifra {
+  margin: 6px 0 0;
+  font-variant-numeric: tabular-nums;
+}
 .siniestro-lugar {
   flex-basis: 100%;
   min-width: 0;

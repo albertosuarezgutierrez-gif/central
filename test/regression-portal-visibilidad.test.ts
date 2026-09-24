@@ -516,3 +516,28 @@ test('la descripción se pinta ENTERA: nada de recortarla en la vista', () => {
   assert.match(bloque, /\{s\.descripcion && <p className="siniestro-desc">\{s\.descripcion\}<\/p>\}/, 
     'la descripción se pinta tal cual: media frase de un siniestro es otro relato')
 })
+
+test('🚨 la tramitación de la compañía llega TRADUCIDA, sin reserva ni culpa', () => {
+  // El CRM guarda desde el 24/09/2026 las situaciones, acciones y pagos que
+  // manda la compañía por EIAC. Llevan texto libre y FIGURAS (perito,
+  // tramitador): solo pueden llegar a la pantalla pasando por
+  // `tramitacionSiniestro`, que descarta ambas. La reserva y la posición de
+  // culpa no son del cliente y el rol ni tiene GRANT: declararlas en el schema
+  // revienta la lectura ENTERA de `Siniestro` con 42501.
+  const src = leer(LECTURA)
+  const bloque = src.slice(src.indexOf('prisma.siniestro.findMany'), src.indexOf('orderBy: { fechaHora'))
+  for (const campo of ['reservaCima', 'posicionCima']) {
+    assert.doesNotMatch(bloque, new RegExp(campo), `${campo} no puede entrar en el select de siniestros`)
+  }
+  const schema = leer('apps/asegura-portal/prisma/schema.prisma')
+  const modelo = schema.slice(schema.indexOf('model Siniestro {'), schema.indexOf('@@map("siniestros")'))
+  for (const col of ['reserva_cima', 'posicion_cima']) {
+    assert.doesNotMatch(modelo, new RegExp(`@map\\("${col}"\\)`), `${col} no puede declararse en el schema del portal`)
+  }
+  const usos = src.match(/x\.(situacionesCima|accionesCima|pagosCima|totalPagosCima|indemnizacionCima)/g) ?? []
+  assert.equal(usos.length, 5, 'cada columna de tramitación se usa UNA vez: dentro de `tramitacionSiniestro`')
+  const llamada = src.slice(src.indexOf('tramitacionSiniestro({'), src.indexOf('})', src.indexOf('tramitacionSiniestro({')))
+  assert.equal((llamada.match(/x\.\w+Cima/g) ?? []).length, 5, 'las cinco columnas van dentro de la llamada al traductor')
+  const tipoPortal = src.slice(src.indexOf('export type SiniestroPortal'), src.indexOf('export type PolizaPortal'))
+  assert.doesNotMatch(tipoPortal, /^\s*(situaciones|acciones|pagos|reserva|posicion)\w*\??:/m, 'el tipo del portal no lleva el jsonb crudo')
+})

@@ -544,6 +544,15 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) ASegura: tramitación del siniestro que manda la compañía → portal
+- CRM (repo asegura, PR #852): el mapper EIAC lee situaciones, acciones, pagos, reserva, total pagado y posición; se guardan
+  en `siniestros.*_cima` FUSIONANDO (EIAC manda solo lo nuevo por periodo) sin tocar los campos manuales del corredor. Migración 0099 aplicada.
+- Portal: «Lo que nos cuenta tu compañía» en cada siniestro (`tramitacionSiniestro`, sin descripción libre ni figuras; sin reserva ni culpa).
+- Solo afecta a lo ingerido tras el deploy del CRM (o reprocesado). SIN recibidos: 47 (Occident, Allianz, 2 Mapfre de abril, 1 Generali).
+- Regla de Alberto: todo desarrollo de CIMA empieza en la carpeta «CIMA» de Drive (norma + zips). Siniestros = solo compañía→nosotros:
+  el 841 no existe por CIMA (TIREA 03/09/2026). Reproceso de los 46 SIN de los zips: bloqueado por permisos, pendiente de Alberto.
+- Pendiente conocido (PR aparte): `mapSiniestroEstado` trata PosicionSiniestro `IN` como en_tramitacion, y oficialmente IN = Indeterminado (culpa).
+
 ## (24/09/2026) sivra: el agente de huéspedes y los mensajes programados, en TODOS los idiomas
 Antes: el agente solo reconocía es/en/fr/de/it (un chino o un portugués recibía la respuesta en inglés) y los
 mensajes programados traducían a 18. Ahora hay una tabla única, `lib/sivra/agente-huesped/idiomas.ts` (~55 idiomas),
