@@ -51,10 +51,11 @@ test('🪤 el puente aplica las guardas del botón: ni retirado, ni sin enviar, 
 })
 
 test('🪤 sin DNI/NIF válido en la ficha no hay carta; un cifrado que no abre no se confunde con «no lo tienes»', () => {
-  const b = src.slice(src.indexOf('async function base('), src.indexOf('function componer('))
-  const ilegible = b.indexOf('if (campoIlegible(b.dniCifrado))')
-  const falta = b.indexOf('if (!documento) {')
-  assert.ok(ilegible > 0 && falta > ilegible && falta < b.indexOf('return { b: { ...b, documento } }'))
+  const m = src.slice(src.indexOf('function motivoSinCarta('), src.indexOf('function componer('))
+  const ilegible = m.indexOf('if (b.dniIlegible) return')
+  const falta = m.indexOf('if (!b.documento) return')
+  assert.ok(ilegible > 0 && falta > ilegible, 'primero «no se puede leer», después «no lo tienes»')
+  assert.match(src, /documento: dniIlegible \? null : documentoParaCarta\(descifrarCampo\(b\.dniCifrado\)\)/)
   assert.match(src, /cartaNombramientoMediador\(\{ tomador: b\.tomador, documento: b\.documento,/)
 })
 
@@ -62,4 +63,15 @@ test('🪤 la carta lleva el DNI: se guarda CIFRADA y se descifra solo para ense
   assert.match(firmar, /carta_texto = \$\{encryptField\(texto\)\}/)
   assert.doesNotMatch(firmar, /carta_texto = \$\{texto\}/)
   assert.match(src, /cartaTexto: campoIlegible\(f\.cartaTexto\) \? .* : descifrarCampo\(f\.cartaTexto\)/)
+})
+
+test('🪤 a quien ya firmó se le dice «ya firmada», no «sube tu DNI»: la guarda del DNI va DETRÁS de mirar la carta abierta', () => {
+  const b = src.slice(src.indexOf('async function base('), src.indexOf('function componer('))
+  assert.doesNotMatch(b, /return \{ estado: 'no_disponible', motivo: 'La carta tiene que llevar tu DNI/)
+  for (const fn of ['prepararCarta', 'pedirCodigoCarta', 'firmarCarta']) {
+    const cuerpo = src.slice(src.indexOf(`export async function ${fn}`))
+    const ya = cuerpo.search(/estado !== 'pendiente'\) return \{ estado: 'ya_firmada'/)
+    const dni = cuerpo.indexOf('motivoSinCarta(')
+    assert.ok(ya > 0 && dni > ya, `${fn}: «ya firmada» antes que el motivo del DNI`)
+  }
 })

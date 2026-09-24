@@ -37,8 +37,10 @@ const hoyMadrid = () => new Date().toLocaleDateString('en-CA', { timeZone: 'Euro
 
 type Base = {
   presupuestoId: string; polizaId: string; clienteId: string; tomador: string
-  /** DNI/NIF del tomador ya descifrado y validado (ver `base`). */
+  /** DNI/NIF del tomador ya descifrado y validado (ver `base`); `null` = no hay uno válido. */
   documento: string | null
+  /** El DNI está guardado pero la clave no lo abre: no es lo mismo que no tenerlo. */
+  dniIlegible: boolean
   numeroPoliza: string | null; compania: string | null; ramo: string | null
   /** Lo que la póliza dice de sí misma: del volcado de 2013-2018 no es fiable, se enseña a Alberto, no se decide con ello. */
   estadoPoliza: string | null; vence: string | null
@@ -95,17 +97,21 @@ async function base(correduriaId: string, identidadId: string, presupuestoId: st
   if (b.yaNuestra) {
     return { estado: 'no_disponible', motivo: b.enVigor ? 'Esta póliza ya la gestionamos nosotros.' : 'Esta póliza nos consta como no vigente: escríbenos y lo miramos.' }
   }
-  // 🚨 La compañía identifica al tomador por su DNI/NIF: sin uno válido en la ficha no hay carta. Un
-  // cifrado que no abre NO es «no lo tienes»: se dice distinto, porque subirlo otra vez no lo arregla.
-  if (campoIlegible(b.dniCifrado)) {
-    console.error('[carta-mediador] el DNI de la ficha no se puede descifrar: revisa PII_ENCRYPTION_KEY')
-    return { estado: 'no_disponible', motivo: 'Ahora mismo no podemos leer tu DNI de tu ficha: escríbenos y lo resolvemos.' }
-  }
-  const documento = documentoParaCarta(descifrarCampo(b.dniCifrado))
-  if (!documento) {
-    return { estado: 'no_disponible', motivo: 'La carta tiene que llevar tu DNI y no lo tenemos en tu ficha. Súbelo en «Lo que falta para emitir»; en cuanto lo revisemos podrás firmarla.' }
-  }
-  return { b: { ...b, documento } }
+  // El DNI se lee aquí pero NO corta: a quien ya firmó hay que decirle «ya firmada», no «sube tu DNI».
+  // La guarda vive en `motivoSinCarta`, detrás de mirar si hay una carta abierta.
+  const dniIlegible = campoIlegible(b.dniCifrado)
+  if (dniIlegible) console.error('[carta-mediador] el DNI de la ficha no se puede descifrar: revisa PII_ENCRYPTION_KEY')
+  return { b: { ...b, dniIlegible, documento: dniIlegible ? null : documentoParaCarta(descifrarCampo(b.dniCifrado)) } }
+}
+
+/**
+ * Por qué no hay carta que firmar. 🚨 La compañía identifica al tomador por su DNI/NIF: sin uno válido
+ * no hay carta. Un cifrado que no abre NO es «no lo tienes»: subirlo otra vez no lo arregla.
+ */
+function motivoSinCarta(b: Base): string {
+  if (b.dniIlegible) return 'Ahora mismo no podemos leer tu DNI de tu ficha: escríbenos y lo resolvemos.'
+  if (!b.documento) return 'La carta tiene que llevar tu DNI y no lo tenemos en tu ficha. Súbelo en «Lo que falta para emitir»; en cuanto lo revisemos podrás firmarla.'
+  return 'Nos falta el número o la compañía de tu póliza para la carta: escríbenos y la completamos.'
 }
 
 function componer(b: Base, hoy: string): string | null {
@@ -132,7 +138,7 @@ export async function prepararCarta(correduriaId: string, identidadId: string, p
   const a = await abierta(r.b.polizaId)
   if (a && a.estado !== 'pendiente') return { estado: 'ya_firmada', enviada: a.estado === 'enviada' }
   const carta = componer(r.b, hoyMadrid())
-  if (!carta) return { estado: 'no_disponible', motivo: 'Nos falta el número o la compañía de tu póliza para la carta: escríbenos y la completamos.' }
+  if (!carta) return { estado: 'no_disponible', motivo: motivoSinCarta(r.b) }
   return { estado: 'ok', carta, cartaHash: huella(carta), consentimiento: TEXTO_CONSENTIMIENTO, compania: r.b.compania!, numeroPoliza: r.b.numeroPoliza! }
 }
 
@@ -154,7 +160,9 @@ const enmascarar = (email: string) => {
 export async function pedirCodigoCarta(correduriaId: string, identidadId: string, presupuestoId: string): Promise<ResultadoCodigo> {
   const r = await base(correduriaId, identidadId, presupuestoId)
   if (!('b' in r)) return r
-  if (!componer(r.b, hoyMadrid())) return { estado: 'no_disponible', motivo: 'Nos falta el número o la compañía de tu póliza para la carta.' }
+  const previa = await abierta(r.b.polizaId)
+  if (previa && previa.estado !== 'pendiente') return { estado: 'ya_firmada', enviada: previa.estado === 'enviada' }
+  if (!componer(r.b, hoyMadrid())) return { estado: 'no_disponible', motivo: motivoSinCarta(r.b) }
   const ficha = await estadoEmailDeFicha(correduriaId, r.b.clienteId)
   if (ficha.estado === 'ilegible') return { estado: 'sin_correo_configurado', motivo: 'no se puede leer el correo de tu ficha' }
   if (ficha.estado !== 'ok') return { estado: 'sin_email', motivo: ficha.estado === 'baja_de_correo' ? 'te diste de baja del correo' : 'no tenemos tu correo' }
@@ -246,7 +254,7 @@ export async function firmarCarta(
 
   const hoy = hoyMadrid()
   const texto = componer(b, hoy)
-  if (!texto) return { estado: 'no_disponible', motivo: 'Nos falta el número o la compañía de tu póliza para la carta.' }
+  if (!texto) return { estado: 'no_disponible', motivo: motivoSinCarta(b) }
   // Se firma lo que se leyó.
   if (huella(texto) !== datos.cartaHash) return { estado: 'carta_cambiada' }
   const ficha = await estadoEmailDeFicha(correduriaId, b.clienteId)
@@ -325,6 +333,8 @@ export async function cartasDePoliza(correduriaId: string, polizaId: string): Pr
 export type CartaPorTramitar = {
   id: string; estado: 'firmada' | 'enviada'; polizaId: string; cliente: string | null
   compania: string | null; numeroPoliza: string | null; firmadaAt: Date; enviadaAt: Date | null
+  /** Hay un correo a la compañía esperando el OK (o saliendo). `false` en una firmada = hay que mandarla a mano. */
+  enCola: boolean
 }
 
 /**
@@ -337,7 +347,8 @@ export async function cartasPorTramitar(correduriaId: string): Promise<CartaPorT
       select cm.id::text as id, cm.estado, cm.poliza_id::text as "polizaId",
              nullif(trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))), '') as cliente,
              coalesce(cda.nombre_comun, pol.aseguradora) as compania, pol.numero_poliza as "numeroPoliza",
-             cm.firmada_at as "firmadaAt", cm.enviada_at as "enviadaAt"
+             cm.firmada_at as "firmadaAt", cm.enviada_at as "enviadaAt",
+             exists (select 1 from aprobacion x where x.carta_mediador_id = cm.id and x.estado in ('pendiente', 'enviando')) as "enCola"
       from carta_mediador cm
         join polizas pol on pol.id = cm.poliza_id
         left join clientes c on c.id = cm.cliente_id

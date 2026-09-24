@@ -12,7 +12,7 @@
 // El SQL crudo no prefija `seguros.`: la conexión ya trae `?schema=seguros`.
 
 import {
-  MEDIADOR, POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, importeEiac, remitenteCorreo,
+  ESTADOS_ANULACION_ABIERTA, MEDIADOR, POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, importeEiac, remitenteCorreo,
   type BuzonCompania, type Decision,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
@@ -126,6 +126,8 @@ export async function proponerCartasFirmadas(correduriaId: string): Promise<numb
       join firma f on f.id = cm.firma_id
       left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
     where cm.correduria_id = ${correduriaId}::uuid and cm.estado = 'firmada' and cm.carta_texto is not null
+      -- Una póliza que se está anulando no se nombra: la carta la decide Alberto desde la ficha.
+      and not exists (select 1 from anulacion n where n.poliza_id = cm.poliza_id and n.estado = any(${[...ESTADOS_ANULACION_ABIERTA]}::text[]))
       and not exists (select 1 from aprobacion x where x.carta_mediador_id = cm.id
                       and x.estado in ('pendiente', 'enviando', 'ejecutada', 'rechazada'))`
   let n = 0

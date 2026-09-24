@@ -76,3 +76,8 @@ test('🪤 carta de nombramiento: sale por la cola como la anulación, adjunta l
   // Carta ya no firmada → la propuesta pendiente se retira.
   assert.match(src, /cm\.id = a\.carta_mediador_id and cm\.estado <> 'firmada'/)
 })
+
+test('🪤 no se propone el nombramiento de una póliza que se está anulando', () => {
+  const p = src.slice(src.indexOf('export async function proponerCartasFirmadas'), src.indexOf('export type BuzonPropuesto'))
+  assert.match(p, /not exists \(select 1 from anulacion n where n\.poliza_id = cm\.poliza_id and n\.estado = any\(\$\{\[\.\.\.ESTADOS_ANULACION_ABIERTA\]\}::text\[\]\)\)/)
+})

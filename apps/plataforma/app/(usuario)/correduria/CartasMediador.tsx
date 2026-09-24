@@ -40,7 +40,7 @@ export default function CartasMediador() {
           </span>
           <span style={{ fontSize: 12, color: c.estado === 'firmada' ? 'var(--negative)' : 'var(--muted)', overflowWrap: 'anywhere' }}>
             {c.estado === 'firmada'
-              ? `Firmada el ${fechaEs(c.firmadaAt)} · el correo a la compañía espera tu OK arriba`
+              ? `Firmada el ${fechaEs(c.firmadaAt)} · ${c.enCola === true ? 'el correo a la compañía espera tu OK arriba' : c.enCola === false ? 'falta mandarla: no está en la cola, hazlo desde la ficha' : 'falta mandarla a la compañía'}`
               : `Enviada${c.enviadaAt ? ` el ${fechaEs(c.enviadaAt)}` : ''} · esperando que la compañía la acepte`}
           </span>
         </Link>
