@@ -1,8 +1,8 @@
 {
  "sesion": "b94d7e21-4a41-5eb4-b15c-1433d220a816",
  "inicio": "2026-09-24T18:53:25.923Z",
- "fin": "2026-09-24T18:53:25.923Z",
- "llamadas": 1,
+ "fin": "2026-09-24T19:36:05.524Z",
+ "llamadas": 68,
  "categorias": {
   "agente:Explore": {
    "llamadas": 1,
@@ -13,6 +13,54 @@
    "chars_citados": 0,
    "tools": {
     "Agent": 1
+   }
+  },
+  "bash": {
+   "llamadas": 32,
+   "chars_in": 15323,
+   "chars_out": 79675,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 32
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 9,
+   "chars_in": 1294,
+   "chars_out": 817771,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 3,
+    "Grep": 6
+   }
+  },
+  "escritura": {
+   "llamadas": 19,
+   "chars_in": 42981,
+   "chars_out": 195115,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 2,
+    "Edit": 17
+   }
+  },
+  "otro": {
+   "llamadas": 7,
+   "chars_in": 1919,
+   "chars_out": 23106,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 499586,
+   "tools": {
+    "ToolSearch": 1,
+    "ExitPlanMode": 2,
+    "Artifact": 4
    }
   }
  }
