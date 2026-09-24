@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+
+**(24/09/2026)** 📇 **Teléfonos de siniestros: «Guardar en mis contactos» + aviso de caducidad.** `vcardCompania()` y
+`telefonosPorRevisar()` en `module-seguros/telefonos-companias.ts` (mismo catálogo único). Botón en `/telefonos-siniestros`
+(ruta estática `/telefonos-siniestros/contacto/<slug>`, noindex) y en el parte del portal (`/api/contacto-compania/<nombre>`).
+Más de 270 días sin comprobar → línea en el Telegram semanal de `seo-correduria` (no es test con fecha: pondría rojo
+cualquier PR). Indexación medida (cobertura 21/09): 7 páginas indexadas, 4 «descubiertas sin indexar», 3 desconocidas
+(+ las nuevas de teléfonos/WhatsApp); web con ~3 semanas en el apex → Alberto puede pedir indexación a mano en GSC.
+
 **(24/09/2026)** 🔑 **PR 11: el correo de avisos lleva ACCESO DIRECTO al portal.** Alberto: «aviso por mail con token de
 acceso a la app». Llave de un solo uso y 24 h (en el `#` del enlace: no llega a logs) en `seguros.portal_enlace_directo` (solo SHA-256; atada al índice ciego del
 correo de la ficha; destino = ruta interna, CHECK SQL). Se canjea con un clic en «Entrar» (POST, no el GET: antivirus) por el

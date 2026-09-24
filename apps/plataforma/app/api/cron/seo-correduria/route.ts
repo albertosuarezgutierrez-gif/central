@@ -37,7 +37,8 @@ import { leerGsc } from '@/lib/seo-correduria/gsc'
 import { leerCobertura, urlsPropias } from '@/lib/seo-correduria/cobertura'
 import { leerPosthog } from '@/lib/seo-correduria/posthog'
 import { urlsBlogPendientesIndexar, promptClaudeChromeIndexacion } from '@/lib/seo-correduria/indexacion-pendiente'
-import { accionPropuesta, redactarInforme } from '@/lib/seo-correduria/informe'
+import { accionPropuesta, bloqueTelefonosPorRevisar, redactarInforme } from '@/lib/seo-correduria/informe'
+import { telefonosPorRevisar } from '@central/module-seguros'
 import { lunesDe } from '@/lib/seo-correduria/semana'
 
 export const dynamic = 'force-dynamic'
@@ -127,7 +128,8 @@ async function handler(req: NextRequest) {
   }
 
   const accion = accionPropuesta(resultados, CONSULTAS)
-  const texto = redactarInforme(semana, resultados, accion, DOMINIO_PROPIO)
+  const telefonos = bloqueTelefonosPorRevisar(telefonosPorRevisar(hoy))
+  const texto = [redactarInforme(semana, resultados, accion, DOMINIO_PROPIO), telefonos].filter(Boolean).join('\n\n')
   // El id va LITERAL (no en una const): el guardián lib/telegram/catalogo.test.ts lee el fuente.
   await tgAviso('correduria.seo-semana', texto, { html: true })
 

@@ -789,7 +789,7 @@ export type {
 export { anulacionPorCambio, documentoAceptacion, esCambioCompania, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'
 export { datosDelTomador, huecosParaEmitirDesdeFicha, type CampoEmision, type DatoEmision, type DatoPropioEnPoliza, type DatosParaEmitir, type EstadoDatoEmision, type FichaParaEmitir, type QuienAporta, type ValorLeido } from './datos-para-emitir.ts'
 export {
-  TELEFONOS_COMPANIAS, esTelefonoPublicable, hrefTel, telefonoVerificadoPorCodigo, telefonosParaPublicar, whatsappLegible,
+  DIAS_REVISION_TELEFONOS, TELEFONOS_COMPANIAS, esTelefonoPublicable, hrefTel, telefonoVerificadoPorCodigo, telefonoVerificadoPorNombre, telefonosParaPublicar, telefonosPorRevisar, vcardCompania, whatsappLegible,
   type LineaAsistencia, type TelefonoCompania,
 } from './telefonos-companias.ts'
 export { ACCIONES_CARTA_MEDIADOR, ESTADOS_CARTA_ABIERTA, cartaNombramientoMediador, esCompaniaDeRelleno, transicionCartaMediador, type AccionCartaMediador, type DatosCartaMediador, type EstadoCartaMediador } from './carta-mediador.ts'

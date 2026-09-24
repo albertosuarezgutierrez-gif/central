@@ -111,6 +111,7 @@ export default function TelefonosSiniestros() {
         El número para dar un parte es de la compañía, no del corredor, y conviene tenerlo a mano antes de necesitarlo.
         Solo publicamos los que hemos <strong style={{ color: 'var(--text)' }}>comprobado en la web oficial</strong> de
         cada compañía, con la fecha en que lo hicimos. Si el tuyo no está, el bueno es el que figura en tu póliza.
+        Guárdalo ahora en tus contactos: después de un golpe no es el momento de buscarlo.
       </p>
 
       <ul style={{ margin: '24px 0', padding: 0, listStyle: 'none', display: 'grid', gap: 12 }}>
@@ -158,6 +159,16 @@ export default function TelefonosSiniestros() {
                         }${x.c.whatsappNota ? `, ${x.c.whatsappNota}` : ''}.`}
                   </p>
                 )}
+                <p style={{ margin: '4px 0 0' }}>
+                  <a
+                    href={`/telefonos-siniestros/contacto/${x.c.slug}`}
+                    download={`${x.c.slug}-siniestros.vcf`}
+                    rel="nofollow"
+                    style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44 }}
+                  >
+                    Guardar en mis contactos
+                  </a>
+                </p>
                 <p style={{ margin: '8px 0 0', fontSize: 14, color: 'var(--muted)' }}>
                   {x.c.siniestros && (x.c.horario ? `Horario: ${x.c.horario}. ` : 'Horario: no lo hemos podido comprobar. ')}
                   {!x.c.siniestros && 'Para dar parte, el número de tu póliza o pídenoslo. '}
