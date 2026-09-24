@@ -85,7 +85,7 @@ export async function GET(req: NextRequest) {
     WITH r AS (
       SELECT i."propertyId" AS property_id, i."reservationId" AS reservation_id,
              i."checkIn"::date AS check_in, i.nights, i.amount_gross AS bruto, i.reserved_at,
-             (i."checkIn"::date - i.reserved_at::date)::int AS antelacion
+             (i."checkIn"::date - (i.reserved_at AT TIME ZONE 'Europe/Madrid')::date)::int AS antelacion
       FROM incomes i
       WHERE i.portal::text = 'BOOKING' AND i.amount_gross > 0
         AND i.nights BETWEEN 1 AND 14
