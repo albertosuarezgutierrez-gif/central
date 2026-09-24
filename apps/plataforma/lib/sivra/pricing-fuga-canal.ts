@@ -59,7 +59,7 @@
 // Por eso la lista se mide en el escaparate POR TRAMO de antelación (`canalPorAntelacion`) y la
 // recta del motor solo es el último recurso cuando un tramo no tiene ventanas suficientes.
 
-import { ajusteCanal, DIAS_ULTIMA_HORA, type ParametrosCanal, type VentanaEscaparate } from './pricing-canal.ts'
+import { ajusteCanal, esUltimaHora, markupEnFecha, DIAS_ULTIMA_HORA, type ParametrosCanal, type VentanaEscaparate } from './pricing-canal.ts'
 
 export { DIAS_ULTIMA_HORA }
 
@@ -144,15 +144,24 @@ export interface CanalPorAntelacion {
  */
 export function canalPorAntelacion(
   ventanas: VentanaConAntelacion[],
-  opts: { aforo: number; portal?: string; motor: ParametrosCanal },
+  opts: {
+    aforo: number; portal?: string; motor: ParametrosCanal
+    /** `pricing_settings.canal_recargo_uh`: con él, la recta del motor para la última hora */
+    recargoUh?: number | null
+  },
 ): CanalPorAntelacion {
   const tramo = (ultimaHora: boolean): [ParametrosCanal, 'medido' | 'motor'] => {
-    const vs = ventanas.filter(v => (Number(v.antelacionDias) <= DIAS_ULTIMA_HORA) === ultimaHora &&
+    const vs = ventanas.filter(v => esUltimaHora(v.antelacionDias) === ultimaHora &&
       // Una ventana a 13× la base (Busto Reform, 25/03/2027: 3.329€ sobre 250€) no es el canal: es
       // el portal enseñando otra cosa. Una sola hunde el R² del tramo y lo manda a la recta del motor.
       !(v.baseTotal != null && v.baseTotal > 0 && v.precioTotal / v.baseTotal > RATIO_VENTANA_MAX))
     const a = ajusteCanal(vs, { aforo: opts.aforo, portal: opts.portal })
-    if (a.estado !== 'medido' || a.markup == null || a.cuotaFija == null) return [opts.motor, 'motor']
+    // La recta del motor para la última hora lleva SU recargo: sin él, la lista de esas reservas
+    // saldría ~10 % baja en los Busto y una fuga real se leería como «ok».
+    const motor = ultimaHora
+      ? { ...opts.motor, markup: markupEnFecha(opts.motor.markup, opts.recargoUh, 0) }
+      : opts.motor
+    if (a.estado !== 'medido' || a.markup == null || a.cuotaFija == null) return [motor, 'motor']
     return [{ markup: a.markup, cuotaFija: a.cuotaFija, nochesRef: opts.motor.nochesRef }, 'medido']
   }
   const [antelacion, fa] = tramo(false)
@@ -193,7 +202,7 @@ export function fugaCanal(reservas: ReservaCobrada[], canal: ParametrosCanal, o:
     const nights = Number(r.nights)
     if (!(nights >= 1) || !(r.brutoTotal > 0)) continue
     if (r.baseMedia == null || !(r.baseMedia > 0)) { nSinBase++; continue }
-    const { markup, cuota } = r.antelacionDias != null && r.antelacionDias <= DIAS_ULTIMA_HORA ? cerca : lejos
+    const { markup, cuota } = esUltimaHora(r.antelacionDias) ? cerca : lejos
     const alojamiento = r.brutoTotal - cuota
     if (!(alojamiento > 0)) { nBrutoRaro++; continue }
     const cobradoNoche = alojamiento / nights

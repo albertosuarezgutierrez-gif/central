@@ -54,10 +54,11 @@ export async function GET(req: NextRequest) {
 
   const settings = await prisma.$queryRaw<{
     property_id: string; channel_markup: number; cuota_fija: number; noches_ref: number; aforo: number
+    recargo_uh: number
   }[]>(Prisma.sql`
     SELECT s.property_id, s.channel_markup::float8 AS channel_markup,
            COALESCE(s.cuota_fija, 0)::float8 AS cuota_fija, COALESCE(s.noches_ref, 2)::int AS noches_ref,
-           COALESCE(z.max_guests, 4)::int AS aforo
+           COALESCE(z.max_guests, 4)::int AS aforo, COALESCE(s.canal_recargo_uh, 1)::float8 AS recargo_uh
     FROM pricing_settings s
     LEFT JOIN pricing_piso_zona z ON z.property_id = s.property_id
     WHERE s.enabled = true ORDER BY s.property_id`)
@@ -121,7 +122,7 @@ export async function GET(req: NextRequest) {
         portal: v.portal, antelacionDias: Number(v.antelacion),
       }))
     const lista = canalPorAntelacion(ventanas, {
-      aforo: Number(s.aforo), portal: "booking",
+      aforo: Number(s.aforo), portal: "booking", recargoUh: Number(s.recargo_uh),
       motor: { markup: Number(s.channel_markup), cuotaFija: Number(s.cuota_fija), nochesRef: Number(s.noches_ref) },
     })
     listas[s.property_id] = lista

@@ -155,3 +155,10 @@ test("lista por antelación: una ventana absurda (13× la base) no tumba el tram
   const l = canalPorAntelacion(conBasura, { aforo: 5, portal: "booking", motor: LUXURY_MOTOR })
   assert.equal(l.fuente.antelacion, "medido")
 })
+
+test("lista por antelación: sin ventanas de última hora, la recta del motor lleva SU recargo", () => {
+  const l = canalPorAntelacion(ESCAPARATE_LUXURY.filter(v => v.antelacionDias > DIAS_ULTIMA_HORA),
+    { aforo: 5, portal: "booking", motor: LUXURY_MOTOR, recargoUh: 1.1 })
+  assert.equal(l.fuente.ultimaHora, "motor")
+  assert.ok(Math.abs(l.ultimaHora.markup - LUXURY_MOTOR.markup * 1.1) < 1e-9, `${l.ultimaHora.markup}`)
+})

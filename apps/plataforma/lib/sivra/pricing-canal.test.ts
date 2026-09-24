@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   ajusteCanal, baseDesdeGuest, guestDesdeBase, fijoPorNoche, desviacionCanal,
   pasoCanal, validarCanal, MIN_VENTANAS_CANAL, RECORRIDO_MINIMO, MAX_SALTO_CANAL, TOL_SESGO_CANAL,
-  repartirCambios, ventanasAConsumir, esUltimaHora, markupEnFecha, medirRecargoUltimaHora, pasoRecargo,
+  repartirCambios, ventanasAConsumir, esUltimaHora, markupEnFecha, medirRecargoUltimaHora, pasoRecargo, repartirRecargos,
   type VentanaEscaparate, type PisoParaCambio,
 } from './pricing-canal.ts'
 
@@ -424,4 +424,29 @@ test("tramo: la validación juzga cada ventana con SU pendiente — sin recargo,
   const con = validarCanal(nuevas, { markup: 0.994, cuotaFija: 34.9, recargoUh: 1.107 }, { aforo: 5 })
   assert.ok(Math.abs(con.sesgo!) < Math.abs(sin.sesgo!), `con ${con.sesgo} sin ${sin.sesgo}`)
   assert.equal(con.estado, "ok")
+})
+
+test("tramo: el recargo se mide contra la recta que QUEDA escrita, no contra la ajustada", () => {
+  const ventanas = new Map([["prop_luxury_busto", [...LUXURY_LEJOS, ...LUXURY_CERCA].map((v, i) => ({ ...v, id: i }))]])
+  const piso = {
+    property_id: "prop_luxury_busto", nombre: "Luxury Busto", aforo_max: 5, canal_auto: true,
+    configurado: { markup: 0.987, cuotaFija: 64.1, nochesRef: 2 }, recargo_uh_cfg: 1,
+  }
+  // La recta vieja (ordenada 64€) se queda escrita: el recargo contra ella NO es el de la recta ajustada.
+  const sinCambio = repartirRecargos([piso], [], ventanas, { portal: "booking" })
+  const conCambio = repartirRecargos([piso], [{ property_id: piso.property_id, a: { markup: 0.994, cuotaFija: 34.9, nochesRef: 2 } }], ventanas, { portal: "booking" })
+  assert.equal(conCambio.recargos.length, 1)
+  assert.ok(Math.abs(conCambio.recargos[0].medido - 1.11) < 0.03, `con ${conCambio.recargos[0].medido}`)
+  assert.ok(sinCambio.recargos[0].medido < conCambio.recargos[0].medido - 0.03, `sin ${sinCambio.recargos[0].medido}`)
+  // se marcan las ventanas de última hora que lo produjeron, y solo ellas
+  assert.deepEqual(conCambio.recargos[0].ventanas, [5, 6, 7, 8, 9])
+})
+
+test("tramo: con el calibrado apagado el recargo NO se escribe y se declara", () => {
+  const ventanas = new Map([["p", LUXURY_CERCA.map((v, i) => ({ ...v, id: i }))]])
+  const piso = { property_id: "p", nombre: "P", aforo_max: 5, canal_auto: false,
+    configurado: { markup: 0.994, cuotaFija: 34.9, nochesRef: 2 }, recargo_uh_cfg: 1 }
+  const r = repartirRecargos([piso], [], ventanas, { portal: "booking" })
+  assert.equal(r.recargos.length, 0)
+  assert.equal(r.noTocados[0].anomalo, true)
 })

@@ -495,6 +495,71 @@ export function validarCanal(
   }
 }
 
+/** Un cambio del recargo de última hora. Va aparte de la recta: puede moverse sin que ella se mueva. */
+export type CambioRecargo = {
+  property_id: string; nombre: string; de: number; a: number; medido: number; muestras: number
+  /** ventanas de última hora que lo han producido: se marcan usadas al escribir */
+  ventanas: number[]
+}
+/** Un piso cuyo recargo NO se ha tocado, y por qué. «No lo he podido medir» no es «ya cuadra». */
+export type RecargoNoTocado = { property_id: string; nombre: string; motivo: string; anomalo: boolean }
+
+/**
+ * Qué recargos se escriben. Mismas puertas que la recta (`canal_auto`, `SIVRA_CANAL_AUTO`,
+ * `?property=`) y el mismo tope por pasada: el recargo mueve el precio de las fechas de los próximos
+ * `DIAS_ULTIMA_HORA` días exactamente en de/a − 1. Sin medición fiable NO se toca: se queda el que
+ * hay (1 = sin tramo), que es «no lo sé», no «no hay tramo».
+ */
+export function repartirRecargos(
+  pisos: {
+    property_id: string; nombre: string; aforo_max: number; canal_auto: boolean
+    configurado: ParametrosCanal; recargo_uh_cfg: number
+  }[],
+  cambios: { property_id: string; a: ParametrosCanal }[],
+  ventanas: Map<string, (VentanaEscaparate & { id: number })[]>,
+  o: { soloProp?: string | null; autoGlobal?: boolean; portal?: string },
+): { recargos: CambioRecargo[]; noTocados: RecargoNoTocado[] } {
+  const recargos: CambioRecargo[] = []
+  const noTocados: RecargoNoTocado[] = []
+  for (const p of pisos) {
+    if (o.soloProp && p.property_id !== o.soloProp) continue
+    // 🚨 El recargo se mide contra la recta que QUEDA escrita tras esta pasada: la del cambio (que
+    // puede ser solo un tramo acotado) o la vigente si no se ha tocado. Medirlo contra la recta
+    // ajustada cuando lo escrito es otra sumaría dos errores en las fechas de última hora.
+    const c = cambios.find(x => x.property_id === p.property_id)
+    const recta = c ? c.a : p.configurado
+    const vs = ventanas.get(p.property_id) ?? []
+    const m = medirRecargoUltimaHora(vs, { aforo: p.aforo_max, markup: recta.markup, cuotaFija: recta.cuotaFija, portal: o.portal })
+    if (m.estado !== "medido" || m.recargo == null) {
+      // Sin ventanas es lo normal en House y Duplex (no tienen tramo): no se avisa. Una medición
+      // FUERA de cotas sí: el portal está haciendo algo que el modelo no explica.
+      if (m.estado === "inconsistente") {
+        noTocados.push({ property_id: p.property_id, nombre: p.nombre, anomalo: true,
+          motivo: `recargo medido ×${m.recargo} fuera de cotas (${m.muestras} ventanas): se mantiene ×${p.recargo_uh_cfg}` })
+      } else {
+        noTocados.push({ property_id: p.property_id, nombre: p.nombre, anomalo: false,
+          motivo: `recargo ${m.estado} (${m.muestras} ventanas): se mantiene ×${p.recargo_uh_cfg}` })
+      }
+      continue
+    }
+    const a = pasoRecargo(p.recargo_uh_cfg, m.recargo)
+    if (Math.abs(a - p.recargo_uh_cfg) < 0.01) continue
+    if (o.autoGlobal === false || !p.canal_auto) {
+      noTocados.push({ property_id: p.property_id, nombre: p.nombre, anomalo: true,
+        motivo: `recargo medido ×${m.recargo} frente a ×${p.recargo_uh_cfg} vigente, pero el calibrado automático está apagado` })
+      continue
+    }
+    recargos.push({
+      property_id: p.property_id, nombre: p.nombre, de: p.recargo_uh_cfg, a,
+      medido: m.recargo, muestras: m.muestras,
+      ventanas: vs.filter(v => esUltimaHora(v.antelacionDias) && v.guests === p.aforo_max &&
+        (!o.portal || !v.portal || v.portal === o.portal) && v.baseTotal != null).map(v => v.id),
+    })
+  }
+  return { recargos, noTocados }
+}
+
+
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 // QUÉ PISOS SE AJUSTAN — y, sobre todo, QUÉ PASA CON LOS QUE NO
 // ─────────────────────────────────────────────────────────────────────────────────────────────

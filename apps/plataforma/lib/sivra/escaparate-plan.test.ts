@@ -153,3 +153,15 @@ test('⏱️ sin ventanas de última hora vigentes se pide UNA a ≤6 días; con
   const con = planEscaparate([piso(tres, candidatas)], HOY)
   assert.equal(con.peticiones.filter(p => p.motivo === 'ultima_hora').length, 0)
 })
+
+test('⏱️ tres ventanas de última hora VIEJAS no bastan: se refresca una', () => {
+  const candidatas = [...CANDIDATAS, { checkin: '2026-08-22', noches: 2, baseTotal: 950 }]
+  const viejas = [0, 1, 2].map(i => ({ checkin: `2026-07-2${i + 1}`, noches: 2, guests: 12, baseTotal: 900 + i * 400, medidoEl: `2026-07-2${i}` }))
+  const r = planEscaparate([piso(viejas, candidatas)], HOY)
+  assert.equal(r.peticiones.filter(p => p.motivo === 'ultima_hora').length, 1)
+})
+
+test('🕳️ sin ninguna candidata a ≥7 días se dice que falta la base lejana, no que «ya se midió»', () => {
+  const r = planEscaparate([piso([], [{ checkin: '2026-08-22', noches: 2, baseTotal: 950 }])], HOY)
+  assert.ok(r.huecos.some(h => h.motivo.includes('≥7 días')), JSON.stringify(r.huecos))
+})

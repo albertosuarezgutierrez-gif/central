@@ -211,9 +211,13 @@ export function planEscaparate(
       })
     }
 
-    // Tramo corto: basta con tener MIN_VENTANAS_CANAL vigentes (solo mide un recargo, no separa m
-    // de F). Sin ellas, UNA ventana por pasada; con ellas, nada: no se gasta el conector de más.
-    if (vigentesUh.length < MIN_VENTANAS_CANAL) {
+    // Tramo corto: solo mide un recargo, así que con MIN_VENTANAS_CANAL vigentes basta — pero no se
+    // deja envejecer: si la más nueva tiene ≥`refrescoDias`, se pide otra. Sin eso, un cambio de la
+    // regla de última hora en el portal tardaría hasta 45 días en verse, y esas fechas se tarifarían
+    // con un recargo que ya no existe.
+    const ultimaUh = vigentesUh.reduce((max, m) => (m.medidoEl > max ? m.medidoEl : max), '')
+    const uhViejo = !ultimaUh || diasEntre(ultimaUh, hoy) >= refrescoDias
+    if (vigentesUh.length < MIN_VENTANAS_CANAL || uhViejo) {
       const c = utilesUh.find(c => !recienMedida.has(`${c.checkin}|${c.noches}|${piso.aforo}`))
       if (c) {
         peticiones.push({
@@ -224,7 +228,11 @@ export function planEscaparate(
       }
     }
 
-    if (!peticiones.some(p => p.property_id === piso.propertyId && p.motivo !== 'ultima_hora') && motivo !== 'refresco') {
+    if (!utiles.length) {
+      // Sin candidatas a ≥7 días la recta principal no puede recibir ventanas: el motivo es la
+      // falta de snapshots lejanos, no que «ya se midieron», y así se dice.
+      huecos.push({ property_id: piso.propertyId, motivo: 'ninguna fecha a ≥7 días tiene base conocida: la recta principal no se puede medir' })
+    } else if (!peticiones.some(p => p.property_id === piso.propertyId && p.motivo !== 'ultima_hora') && motivo !== 'refresco') {
       huecos.push({
         property_id: piso.propertyId,
         motivo: `hacen falta ventanas (${vigentes.length}/${MIN_VENTANAS_CANAL}) pero todas las candidatas se midieron hace <${refrescoDias}d`,

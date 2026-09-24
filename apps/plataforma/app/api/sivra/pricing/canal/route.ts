@@ -7,9 +7,8 @@ import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { eur } from "@/lib/dinero"
 import {
   ajusteCanal, desviacionCanal, baseDesdeGuest, validarCanal,
-  repartirCambios, ventanasAConsumir, esUltimaHora, medirRecargoUltimaHora, pasoRecargo,
-  DIAS_ULTIMA_HORA,
-  type RecargoUltimaHora,
+  repartirCambios, ventanasAConsumir, esUltimaHora, repartirRecargos,
+  DIAS_ULTIMA_HORA, type CambioRecargo, type RecargoNoTocado,
   MIN_VENTANAS_CANAL, MAX_SALTO_CANAL,
   type VentanaEscaparate, type ParametrosCanal, type ValidacionCanal,
   type CambioCanal, type NoTocado,
@@ -121,10 +120,9 @@ export type MedicionCanal = {
   ventanas_usadas: number[]
   /** recargo de la pendiente en el tramo de última hora: el vigente y el medido en esta pasada */
   recargo_uh_cfg: number
-  recargo_uh: RecargoUltimaHora
 }
 
-async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, VentanaEscaparate[]> }> {
+async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, (VentanaEscaparate & { id: number; usada: boolean })[]> }> {
   const pisos = await prisma.$queryRaw<FilaPiso[]>(Prisma.sql`
     SELECT s.property_id,
            COALESCE(z.max_guests, 4)::int           AS aforo_max,
@@ -214,12 +212,6 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
           guestRef, guestMin, guestMax,
         })
       : { estado: "sin_datos" as const, sesgo: null, sesgoMax: null }
-    // El recargo se mide contra la recta con la que se VA a tarificar: la medida si es fiable, la
-    // vigente si no. Medirlo contra otra dejaría las fechas de última hora con dos errores sumados.
-    const recta = ajuste.estado === "medido" && ajuste.markup != null && ajuste.cuotaFija != null
-      ? { markup: ajuste.markup, cuotaFija: ajuste.cuotaFija }
-      : { markup: Number(p.markup_cfg), cuotaFija: Number(p.cuota_cfg) }
-    const recargoUh = medirRecargoUltimaHora(todas, { aforo, portal: PORTAL_CANAL, ...recta })
     return {
       property_id: p.property_id,
       nombre: PROP_NAMES[p.property_id] ?? p.property_id,
@@ -240,11 +232,12 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
       desviacion: d.estado,
       canal_auto: Boolean(p.canal_auto),
       validacion,
+      // Solo las que ha visto la recta: las de última hora son la muestra del RECARGO, y marcarlas
+      // aquí lo dejaría sin validación fuera de muestra en la pasada siguiente.
       ventanas_usadas: ajuste.estado === "medido"
-        ? todas.filter(v => v.guests === aforo && v.portal === PORTAL_CANAL && v.baseTotal != null).map(v => v.id)
+        ? conAntelacion.filter(v => v.guests === aforo && v.portal === PORTAL_CANAL && v.baseTotal != null).map(v => v.id)
         : [],
       recargo_uh_cfg: Number(p.recargo_uh_cfg),
-      recargo_uh: recargoUh,
     }
   })
 
@@ -393,14 +386,15 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
     })
     porPiso.set(f.property_id, l)
   }
-  // Mismo «hoy» que usa el motor al contar la antelación de cada fecha (España, no UTC).
-  const hoyMadrid = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" })
+  // El MISMO «hoy» con el que `apply` cuenta los días vista (`new Date()` formateado en UTC): si
+  // aquí fuera otro, entre las 22:00 y las 24:00 UTC una fecha tarifada sin recargo se juzgaría con él.
+  const hoyMotor = new Date().toISOString().slice(0, 10)
   const salida = new Map<string, ResumenHuesped>()
   for (const p of pisos) {
     const fechas = porPiso.get(p.property_id)
     if (!fechas?.length) continue
     salida.set(p.property_id, precioHuesped(fechas, p.configurado, {
-      ultimaHora: { recargo: p.recargo_uh_cfg, hoy: hoyMadrid },
+      ultimaHora: { recargo: p.recargo_uh_cfg, hoy: hoyMotor },
     }))
   }
   return { huesped: salida, eventosIlegibles }
@@ -411,29 +405,6 @@ function etiquetaEvento(v: VeredictoHuesped | undefined): string {
   return v?.hayEvento === true ? "🎪 con evento: el mercado entero sube esa noche"
     : v?.hayEvento === false ? "sin evento"
     : "evento sin comprobar"
-}
-
-/** Un cambio del recargo de última hora. Va aparte de la recta: puede moverse sin que ella se mueva. */
-type CambioRecargo = { property_id: string; nombre: string; de: number; a: number; medido: number; muestras: number }
-
-/**
- * Qué recargos se escriben. Mismas puertas que la recta (`canal_auto`, `SIVRA_CANAL_AUTO`,
- * `?property=`) y el mismo tope por pasada: el recargo mueve el precio de las fechas de los próximos
- * `DIAS_ULTIMA_HORA` días exactamente en de/a − 1. Sin medición fiable NO se toca: se queda el que
- * hay (1 = sin tramo), que es «no lo sé», no «no hay tramo».
- */
-function cambiosRecargo(pisos: MedicionCanal[], o: { soloProp: string | null; autoGlobal: boolean }): CambioRecargo[] {
-  const out: CambioRecargo[] = []
-  for (const p of pisos) {
-    if (o.soloProp && p.property_id !== o.soloProp) continue
-    if (!o.autoGlobal || !p.canal_auto) continue
-    if (p.recargo_uh.estado !== "medido" || p.recargo_uh.recargo == null) continue
-    const a = pasoRecargo(p.recargo_uh_cfg, p.recargo_uh.recargo)
-    if (Math.abs(a - p.recargo_uh_cfg) < 0.01) continue
-    out.push({ property_id: p.property_id, nombre: p.nombre, de: p.recargo_uh_cfg, a,
-      medido: p.recargo_uh.recargo, muestras: p.recargo_uh.muestras })
-  }
-  return out
 }
 
 async function escribirRecargos(cambios: CambioRecargo[]) {
@@ -476,6 +447,7 @@ export async function GET(req: NextRequest) {
   let pisos: MedicionCanal[] = []
   let cambios: Cambio[] = []
   let recargos: CambioRecargo[] = []
+  let recargosNoTocados: RecargoNoTocado[] = []
   let frenados: NoTocado[] = []
   let sinCambio: NoTocado[] = []
   let huesped = new Map<string, ResumenHuesped>()
@@ -490,12 +462,13 @@ export async function GET(req: NextRequest) {
     const r = repartirCambios(pisos, { soloProp, autoGlobal })
     cambios = r.cambios; frenados = r.frenados; sinCambio = r.sinCambio
     if (!simulacro && cambios.length > 0) await escribir(cambios)
-    recargos = cambiosRecargo(pisos, { soloProp, autoGlobal })
+    const rr = repartirRecargos(pisos, cambios, m.ventanas, { soloProp, autoGlobal, portal: PORTAL_CANAL })
+    recargos = rr.recargos; recargosNoTocados = rr.noTocados
     if (!simulacro && recargos.length > 0) await escribirRecargos(recargos)
     // Las ventanas se marcan DESPUÉS de escribir y SOLO las de los pisos que se han ajustado de
     // verdad — no las de los que simplemente se pudieron medir. Ver `ventanasAConsumir`: marcar de
     // más deja al piso sin muestra limpia con la que corregirse en la pasada siguiente.
-    if (!simulacro) await marcarUsadas(ventanasAConsumir(pisos, cambios))
+    if (!simulacro) await marcarUsadas([...ventanasAConsumir(pisos, cambios), ...recargos.flatMap(r => r.ventanas)])
     // Los dos centinelas van en su propio try: son vigilancia, no pueden tumbar la corrección.
     try {
       const c = await centinelaHuesped(pisos)
@@ -537,6 +510,8 @@ export async function GET(req: NextRequest) {
       ? ` · 🛑 ${frenadosReales.length} SIN corregir (${frenadosReales.map(f => `${f.property_id}: ${f.motivo}`).join(" | ")})`
       : "") +
     (sinCambio.length ? ` · ${sinCambio.length} ya cuadraban` : "") +
+    (recargos.length ? ` · ⏱️ ${recargos.length} recargo(s) de última hora` : "") +
+    (recargosNoTocados.some(r => r.anomalo) ? ` · ⏱️ ${recargosNoTocados.filter(r => r.anomalo).length} recargo(s) SIN corregir` : "") +
     (sinMedir.length ? ` · ${sinMedir.length} sin ajuste fiable (${sinMedir.map(p => p.estado).join(",")})` : "") +
     ` · validación: ${pisos.length - desviados.length - sinValidar.length} ok, ${desviados.length} desviados, ` +
     `${sinValidar.length} sin ventanas nuevas` +
@@ -570,6 +545,11 @@ export async function GET(req: NextRequest) {
         recargos.map(c => `• ${c.nombre}: pendiente ×${c.de.toFixed(3)} → ×${c.a.toFixed(3)} sobre la recta ` +
           `(medido ×${c.medido.toFixed(3)} en ${c.muestras} ventanas)` +
           (Math.abs(c.a - c.medido) >= 0.01 ? " · tramo acotado, sigue en la próxima pasada" : "")).join("\n"))
+    }
+    const recargosAnomalos = recargosNoTocados.filter(r => r.anomalo)
+    if (recargosAnomalos.length > 0) {
+      bloques.push(`⏱️ *Tramo de última hora SIN recalibrar* — no es «cuadra»\n\n` +
+        recargosAnomalos.map(r => `• ${r.nombre}: ${r.motivo}`).join("\n"))
     }
     // 🚨 El modelo FALLANDO en ventanas nuevas es más grave que un parámetro desfasado: significa
     // que la recta ya no describe al portal y que reajustarla volvería a dar un R² inmejorable
@@ -631,6 +611,7 @@ export async function GET(req: NextRequest) {
     pisos,
     cambios,
     recargos_uh: recargos,
+    recargos_uh_no_tocados: recargosNoTocados,
     // Se declaran los huecos: «sin ajuste fiable» no es «cuadra», y un piso frenado por su
     // interruptor tiene que verse (si no, un `canal_auto=false` olvidado es invisible para siempre).
     frenados,
