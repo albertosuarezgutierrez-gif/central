@@ -36,6 +36,10 @@
     border: 1px solid var(--line-2);
     border-radius: 10px;
     padding: 9px 12px;
+    /* Un <select> con una opción larga o un <input type=date> miden su ancho
+       intrínseco; sin tope arrastran la tarjeta —y la página— fuera del móvil. */
+    max-width: 100%;
+    min-width: 0;
   }
   input::placeholder, textarea::placeholder { color: var(--ink-3); }
   input:focus, select:focus, textarea:focus {
@@ -53,4 +57,11 @@
     font-weight: 600;
   }
   button:hover { background: var(--accent-ink); }
+
+  /* Objetivo táctil mínimo de 44 px en pantallas táctiles (regla responsive del monorepo).
+     En escritorio se conserva la densidad del diseño. */
+  @media (pointer: coarse) {
+    button, select,
+    input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=range]) { min-height: 44px; }
+  }
 }
