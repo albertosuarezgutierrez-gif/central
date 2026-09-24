@@ -105,7 +105,7 @@ export const ARTICULOS: readonly Articulo[] = [
         parrafos: [
           'Coge la fecha de vencimiento de la póliza y réstale un mes. Ese es el último día en que puedes decidir.',
           'Si tu seguro vence el 15 de marzo, tu fecha es el 13 de febrero. El 20 de febrero la conversación ya no es «me quedo o me voy»: es «me quedo un año más y lo miro el que viene».',
-          'Es la fecha que más se pasa, y no por descuido: el recibo llega después, así que muchas personas se enteran de que la póliza se ha renovado cuando ya no podían evitarlo.',
+          'Es la fecha que más se pasa, y no por descuido: el recibo llega después, así que muchas personas se enteran de que la póliza se ha renovado cuando ya no pueden evitarlo.',
         ],
       },
       {
@@ -119,7 +119,7 @@ export const ARTICULOS: readonly Articulo[] = [
       {
         titulo: 'Qué hacemos nosotros con esta fecha',
         parrafos: [
-          'Cuando llevamos una póliza, la fecha que avisamos al cliente no es la del vencimiento: es la accionable, la de un mes antes. Avisar el día del vencimiento es avisar cuando ya no se puede hacer nada.',
+          'Cuando llevamos una póliza, la fecha de la que avisamos al cliente no es la del vencimiento: es la accionable, la de un mes antes. Avisar el día del vencimiento es avisar cuando ya no se puede hacer nada.',
           'Si tienes varias pólizas repartidas entre compañías, ese calendario es justo lo que se pierde. Merece la pena tenerlas apuntadas en algún sitio con la fecha corregida, aunque sea en un papel.',
         ],
       },
@@ -163,7 +163,7 @@ export const ARTICULOS: readonly Articulo[] = [
       {
         titulo: 'Primero: distinguir una subida de un cambio de contrato',
         parrafos: [
-          'No es lo mismo que suba la prima manteniendo lo mismo, que la compañía modifique las condiciones para el periodo siguiente. Lo segundo tiene que comunicártelo con antelación al vencimiento, y entonces la decisión que tienes delante no es solo de precio: es de contenido.',
+          'Una cosa es que suba la prima con el mismo contrato, y otra que la compañía modifique las condiciones para el periodo siguiente. Lo segundo tiene que comunicártelo con antelación al vencimiento, y entonces la decisión que tienes delante no es solo de precio: es de contenido.',
           'Así que la primera pregunta no es «cuánto ha subido», sino «qué ha cambiado». Compara el recibo nuevo con las condiciones particulares: capitales, franquicias, garantías incluidas y excluidas.',
         ],
       },
@@ -300,7 +300,7 @@ export const ARTICULOS: readonly Articulo[] = [
     fecha: '2026-09-15',
     consulta: 'qué cubre de verdad mi seguro de hogar',
     resumen:
-      'Un seguro de hogar no cubre "la casa": cubre lo que has declarado, del modo en que lo has declarado. La mayoría de sorpresas en un siniestro salen de dos sitios: confundir continente con contenido, y un capital que no se revisó desde que se contrató.',
+      'Un seguro de hogar no cubre «la casa»: cubre lo que has declarado, del modo en que lo has declarado. La mayoría de sorpresas en un siniestro salen de dos sitios: confundir continente con contenido, y un capital que no se revisó desde que se contrató.',
     ramos: ['hogar', 'comunidades'],
     secciones: [
       {
@@ -308,14 +308,14 @@ export const ARTICULOS: readonly Articulo[] = [
         parrafos: [
           'El continente es la vivienda en sí: paredes, suelos, techos, instalaciones fijas y la cocina que viene empotrada. El contenido es todo lo que te llevarías si te mudaras: muebles, electrodomésticos, ropa, menaje.',
           'Si eres propietario y vives en la vivienda, normalmente necesitas los dos. Si vives de alquiler, el continente suele ser cosa de quien te alquila, y lo tuyo es el contenido —además de la responsabilidad civil, para lo que puedas causar sin querer a un vecino—.',
-          'La confusión más cara pasa al revés de lo que parece: alguien asegura bien el continente y dice "ya está protegido", y el día que se estropea el sofá, el frigorífico o el portátil descubre que eso vivía en la otra póliza, la que no contrató.',
+          'La confusión más cara pasa al revés de lo que parece: alguien asegura bien el continente y dice «ya está protegido», y el día que se estropea el sofá, el frigorífico o el portátil descubre que eso vivía en la otra póliza, la que no contrató.',
         ],
       },
       {
-        titulo: 'Los objetos que llevan límite propio, aunque la póliza diga "todo riesgo"',
+        titulo: 'Los objetos que llevan límite propio, aunque la póliza diga «todo riesgo»',
         parrafos: [
           'Joyas, relojes, dinero en efectivo, obras de arte, instrumentos musicales, bicicletas o el portátil que sacas de casa todos los días: casi ninguna póliza los cubre por su valor real sin más. Llevan un sublímite —una cantidad tope, mucho más baja que el capital general del contenido— salvo que se declaren aparte.',
-          '"Todo riesgo" describe el tipo de cobertura —cualquier daño accidental, no solo una lista cerrada de causas—, no el importe. Un anillo de herencia o una cámara profesional pueden superar ese sublímite sin que nadie se haya dado cuenta hasta que hace falta reclamarlo.',
+          '«Todo riesgo» describe el tipo de cobertura —cualquier daño accidental, no solo una lista cerrada de causas—, no el importe. Un anillo de herencia o una cámara profesional pueden superar ese sublímite sin que nadie se haya dado cuenta hasta que hace falta reclamarlo.',
           'Si tienes algo así en casa, es una pregunta concreta que hacer antes de firmar, no una duda para el día del siniestro: cuál es el límite para esa categoría y si compensa declararlo aparte.',
         ],
       },
@@ -328,11 +328,11 @@ export const ARTICULOS: readonly Articulo[] = [
         ],
       },
       {
-        titulo: 'El capital asegurado: por qué "de menos" sale más caro que "de más"',
+        titulo: 'El capital asegurado: por qué «de menos» sale más caro que «de más»',
         parrafos: [
           'El continente se asegura por el valor de reconstrucción —lo que costaría volver a levantar la vivienda—, no por el precio al que se vendería ni por lo que se pagó al comprarla: el suelo no hay que reconstruirlo. El contenido se asegura por el valor de reposición: lo que costaría comprar hoy algo equivalente a lo que tienes.',
           'Un capital que se queda corto no solo limita lo que se cobra en un siniestro total: en muchas pólizas, si el capital declarado es menor que el valor real, la indemnización de un daño PARCIAL también se reduce en la misma proporción, no solo la de un siniestro que se lo lleve todo.',
-          'Y un capital revisado hace años suele quedarse corto sin que nadie lo note: una reforma, una cocina nueva, un salón que se ha ido llenando. Es de las pocas cosas de la póliza que conviene mirar aunque no haya pasado nada, no solo cuando cambia de vencimiento.',
+          'Y un capital revisado hace años suele quedarse corto sin que nadie lo note: una reforma, una cocina nueva, un salón que se ha ido llenando. Es de las pocas cosas de la póliza que conviene mirar aunque no haya pasado nada, no solo cuando llega el vencimiento.',
         ],
       },
       {
@@ -424,7 +424,7 @@ export const ARTICULOS: readonly Articulo[] = [
     h1: 'Cómo dar de baja un seguro a tiempo, paso a paso',
     title: 'Cómo dar de baja un seguro a tiempo',
     description:
-      'Para no renovar un seguro hay que avisar por escrito un mes antes del vencimiento. Qué lleva la carta, por dónde enviarla y qué hacer después. Vale para todas.',
+      'Para no renovar un seguro hay que avisar por escrito un mes antes del vencimiento. Qué lleva la carta, por dónde enviarla y qué hacer después.',
     fecha: '2026-09-19',
     consulta: 'cómo dar de baja un seguro',
     resumen:
@@ -519,7 +519,7 @@ export const ARTICULOS: readonly Articulo[] = [
     fecha: '2026-09-20',
     consulta: 'qué hacer si tengo un accidente de coche parte amistoso',
     resumen:
-      'Los minutos después de un accidente importan. Lo que hagas en el lugar, cómo rellenar el parte y cuándo avisar a la compañía son los pasos que después reclaman tiempo y dinero.',
+      'Los minutos después de un accidente importan. Lo que hagas en el lugar, cómo rellenar el parte y cuándo avisar a la compañía son los pasos que después ahorran tiempo y dinero.',
     ramos: ['auto'],
     cta: {
       titulo: 'Si ya tienes el parte, nosotros lo tramitamos',
@@ -532,7 +532,7 @@ export const ARTICULOS: readonly Articulo[] = [
       {
         titulo: 'Los primeros minutos: seguridad antes que pruebas',
         parrafos: [
-          'El primer paso es asegurarse de que todos están ilesos y que no hay un riesgo mayor. Si hay heridos, lesión o peligro —por ejemplo, un coche boca abajo o tráfico peligroso—, avisa a emergencias sin esperar.',
+          'El primer paso es comprobar que todos están bien y que no hay un riesgo mayor. Si hay heridos o peligro —por ejemplo, un coche boca abajo o tráfico peligroso—, avisa a emergencias sin esperar.',
           'Cuando todos estén seguros, si es posible, coloca un chaleco reflectante y los triángulos de preseñalización a una distancia suficiente del lugar, siguiendo las indicaciones de la póliza o el código de circulación de tu comunidad. Si no puedes hacerlo —por peligro o porque hay que ayudar a alguien— no lo hagas.',
           'No muevas los vehículos de su posición a menos que impidan la circulación y sea seguro hacerlo. Un desplazamiento pequeño puede cambiar toda la versión de cómo pasó el accidente.',
         ],
@@ -546,17 +546,17 @@ export const ARTICULOS: readonly Articulo[] = [
         ],
       },
       {
-        titulo: 'El parte amistoso: a dónde van los datos',
+        titulo: 'El parte amistoso: qué datos lleva',
         parrafos: [
           'Es un documento que rellenan los dos conductores juntos en el lugar del accidente. Lleva los datos de los dos vehículos, de los conductores, de las aseguradoras y una descripción de cómo pasó. Ambos lo firman.',
           'Importante: no admitas culpa por escrito en el parte. Una descripción es «salí de un garaje» o «venía en el carril derecho». Lo que NO es: «fue culpa mía» o «no vi venir el coche». Lo segundo acaba la discusión sobre responsabilidad antes de que empiece.',
-          'Si el otro conductor no quiere firmar o no quiere hacer un parte amistoso, anota en tu móvil: su matrícula, su nombre, su teléfono, la de su aseguradora si la tienes a mano, el número de su póliza si lo dice. Busca testigos que vieron el accidente y anota también sus datos. Eso sustituye al parte cuando no lo hay.',
+          'Si el otro conductor no quiere firmar o no quiere hacer un parte amistoso, anota en tu móvil: su matrícula, su nombre, su teléfono, el nombre de su aseguradora si lo tienes a mano y el número de su póliza si te lo da. Busca testigos que hayan visto el accidente y anota también sus datos. Eso sustituye al parte cuando no lo hay.',
         ],
       },
       {
         titulo: 'Cuándo avisar a la aseguradora',
         parrafos: [
-          'La ley obliga a comunicar el accidente a la compañía en el plazo que figure en tu póliza. Como regla general, ese plazo es de siete días desde el accidente, aunque muchas pólizas dan más tiempo. Comprueba el tuyo en el condicionado.',
+          'La ley obliga a comunicar el accidente a la compañía en un plazo máximo de siete días desde que lo conoces, salvo que tu póliza dé más tiempo. Comprueba el tuyo en el condicionado.',
           'No esperes a que te lo pidan: envía un correo con el parte y las fotos tan pronto como puedas, aunque sea el mismo día. Es beneficioso para ti: cuanto antes la compañía tenga la información, antes puede actuar.',
           'Guarda el comprobante de que lo has enviado: la captura del correo, el acuse de recibo, lo que sea que demuestre CUÁNDO se lo comunicaste.',
         ],
@@ -581,7 +581,7 @@ export const ARTICULOS: readonly Articulo[] = [
       {
         pregunta: '¿Tengo que rellenar un parte si no hay culpa clara?',
         respuesta:
-          'Sí. El parte amistoso es lo que describe qué pasó según lo que los dos vieron. Que no haya culpa clara no significa que no haya parte: solo que los dos conductores describen su versión sin echarle la culpa al otro. La compañía y el seguro del otro es quien decide después qué fue de verdad.',
+          'Sí. El parte amistoso es lo que describe qué pasó según lo que los dos vieron. Que no haya culpa clara no significa que no haya parte: solo que los dos conductores describen su versión sin echarle la culpa al otro. Son las dos compañías las que deciden después qué pasó de verdad.',
       },
       {
         pregunta: '¿Qué pasa si paso el plazo de los siete días sin avisar a la compañía?',
@@ -591,7 +591,7 @@ export const ARTICULOS: readonly Articulo[] = [
       {
         pregunta: '¿Los datos de tráfico se usan para subirme la prima?',
         respuesta:
-          'Un siniestro declarado y resuelto entra en tu histórico de siniestralidad, y eso es lo que consulta la compañía al renovar la póliza. Si el otro fue culpable y la compañía es la suya quien paga, muchas pólizas no penalizan tu renovación. Si no hay culpable claro, tu prima puede verse afectada.',
+          'Un siniestro declarado y resuelto entra en tu histórico de siniestralidad, y eso es lo que consulta la compañía al renovar la póliza. Si el otro fue culpable y es su compañía la que paga, muchas pólizas no penalizan tu renovación. Si no hay culpable claro, tu prima puede verse afectada.',
       },
     ],
   },
@@ -600,7 +600,7 @@ export const ARTICULOS: readonly Articulo[] = [
     h1: 'Tienes una fuga de agua en casa: qué hacer y qué cubre el seguro',
     title: 'Fuga de agua: qué hacer y qué cubre',
     description:
-      'Una fuga de agua puede ser un gasto enorme o estar cubierto. Qué pasos dar, a quién avisar y cómo saber si la póliza lo cubre.',
+      'Una fuga de agua puede ser un gasto enorme o estar cubierta. Qué pasos dar, a quién avisar y cómo saber si la póliza lo cubre.',
     fecha: '2026-09-20',
     consulta: 'fuga de agua daños por agua en casa qué hacer seguro hogar',
     resumen:
@@ -609,7 +609,7 @@ export const ARTICULOS: readonly Articulo[] = [
     cta: {
       titulo: 'Si tienes una fuga, nosotros la tramitamos con la compañía',
       texto:
-        'Sube las fotos del daño y el presupuesto de reparación a tu área privada, y nos encargamos de gestionar la reclamación con la aseguradora. Tú solo tienes que reparar; nosotros miramos si lo paga la póliza.',
+        'Sube las fotos del daño y el presupuesto de reparación a tu área privada, y nos encargamos de gestionar la reclamación con la aseguradora. No repares nada hasta que la compañía lo apruebe; nosotros miramos si lo paga la póliza.',
       boton: 'Comunicar mi fuga',
       href: '/siniestro',
     },
@@ -642,15 +642,15 @@ export const ARTICULOS: readonly Articulo[] = [
         titulo: 'Daños a un vecino: responsabilidad civil del hogar',
         parrafos: [
           'Si el agua llegó al piso de abajo o mojó algo del vecino, aquí entra la cobertura de responsabilidad civil de tu hogar. Es la garantía que responde si causas un daño sin querer a un tercero.',
-          'Lo que tiene que saber tu aseguradora es que el agua mojó el piso de abajo, qué le hizo daño exactamente y si el vecino ya tiene una factura de reparación. Eso va en la reclamación: es daño indirecto que tu fuga causó.',
-          'Si el vecino presenta la factura, puede reclamar a tu aseguradora directamente. La responsabilidad civil es para eso: para que el tercero damnificado no tenga que litigar contigo, sino que la aseguradora lo resuelve.',
+          'Lo que tiene que saber tu aseguradora es que el agua mojó el piso de abajo, qué daños tiene exactamente y si el vecino ya tiene una factura de reparación. Eso va en la reclamación: es daño indirecto que tu fuga causó.',
+          'Si el vecino presenta la factura, puede reclamar a tu aseguradora directamente. La responsabilidad civil es para eso: para que el tercero damnificado no tenga que litigar contigo, sino que lo resuelva la aseguradora.',
         ],
       },
       {
         titulo: 'La comunidad y sus tuberías: dónde termina tu responsabilidad',
         parrafos: [
           'Si la fuga salió de una tubería común —la bajante que sube por el edificio, la acometida general—, es responsabilidad de la comunidad y su seguro. Si salió de una instalación dentro de tu vivienda —tus tuberías, tu grifo—, es cosa tuya.',
-          'El problema es que a menudo no está claro: el agua viene de un elemento común pero el daño que causa es en una vivienda privada. Ahí es donde se pone complejo y es justo lo que vigila un perito.',
+          'El problema es que a menudo no está claro: el agua viene de un elemento común pero el daño que causa es en una vivienda privada. Ahí es donde se complica, y es justo lo que determina un perito.',
           'Cuando avises a la aseguradora de tu fuga, menciona si crees que el origen es común o privativo. Si es común, la aseguradora hablará con la de la comunidad. No es tu problema resolver entre las dos: es cosa de seguros.',
         ],
       },
@@ -667,7 +667,7 @@ export const ARTICULOS: readonly Articulo[] = [
       {
         pregunta: '¿Debo arreglar la fuga ya o esperar a que la aseguradora lo apruebe?',
         respuesta:
-          'Si es una fuga activa —sigue saliendo agua—, corta la llave y no hagas nada más hasta que la aseguradora la vea o la apruebe. Una reparación que hiciste sin avisar puede quedar fuera de cobertura. Si tienes que actuar por urgencia —por ejemplo, hay riesgo de inundación— hazlo, pero comunícaselo a la aseguradora en el acto y guarda la factura.',
+          'Si es una fuga activa —sigue saliendo agua—, corta la llave y no repares nada hasta que la aseguradora la vea o lo apruebe. Una reparación que hiciste sin avisar puede quedar fuera de cobertura. Si tienes que actuar por urgencia —por ejemplo, hay riesgo de inundación— hazlo, pero comunícaselo a la aseguradora en el acto y guarda la factura.',
       },
       {
         pregunta: '¿Cómo sé si es tubería de la comunidad o mía?',
@@ -677,7 +677,7 @@ export const ARTICULOS: readonly Articulo[] = [
       {
         pregunta: '¿Tengo que pagar algo de mi bolsillo si se aprueba el daño?',
         respuesta:
-          'Depende de tu póliza. La mayoría tienen una franquicia —una cantidad que pagas tú como participación en el daño—. Eso lo descubre la aseguradora cuando valora el daño. Si la factura es por debajo de la franquicia, sales al 100 % de tu bolsillo; si es por encima, tú pagas la franquicia y la aseguradora el resto.',
+          'Depende de tu póliza. La mayoría tienen una franquicia —una cantidad que pagas tú como participación en el daño—. Su importe figura en tu póliza y se aplica cuando la aseguradora valora el daño. Si la factura está por debajo de la franquicia, la pagas entera tú; si es por encima, tú pagas la franquicia y la aseguradora el resto.',
       },
       {
         pregunta: '¿Se me puede subir la prima por una fuga?',
@@ -695,11 +695,11 @@ export const ARTICULOS: readonly Articulo[] = [
     fecha: '2026-09-20',
     consulta: 'cómo pedir autorización seguro de salud reembolso',
     resumen:
-      'No todas las pruebas y tratamientos de un seguro de salud son automáticos. Algunas necesitan aprobación previa de la aseguradora. Aquí está cómo se pide, qué tiempo tarda, y qué hacer si te dicen que no.',
+      'No todas las pruebas y tratamientos de un seguro de salud son automáticos. Algunas necesitan aprobación previa de la aseguradora. Aquí explicamos cómo se pide, cuánto tarda y qué hacer si te dicen que no.',
     base: ['orden-ecc-2502-2012'],
     ramos: ['vida-y-salud'],
     cta: {
-      titulo: 'Si tu aseguradora te deniega, nosotros te ayudamos a reclamar',
+      titulo: 'Si tu aseguradora te deniega una autorización, te ayudamos a reclamar',
       texto:
         'Una denegación de autorización o reembolso no es la última palabra. Reclamar ante la aseguradora es el primer paso, y si no responden en plazo, hay vías ante la DGSFP. Cuéntanos qué pasó.',
       boton: 'He recibido una denegación',
@@ -711,13 +711,13 @@ export const ARTICULOS: readonly Articulo[] = [
         parrafos: [
           'En el cuadro médico, el médico es de la red de la aseguradora y ya está acreditado. No necesitas autorización para cada visita, aunque sí para algunas pruebas o cirugías especiales. Tu médico pide la autorización directamente a la aseguradora; la mayoría de las veces es automática.',
           'En reembolso, tú eliges el médico y el centro donde quieras. Luego presentas la factura a la aseguradora para que te devuelva el importe. Esto también puede necesitar aprobación previa en algunos tratamientos.',
-          'La diferencia importa: en cuadro médico no sacas dinero del bolsillo; en reembolso adelantas tú y luego esperas a que te lo devuelvan. Por eso vale la pena entender cuándo hace falta autorización.',
+          'La diferencia importa: en cuadro médico no adelantas el coste, salvo el copago si tu póliza lo tiene; en reembolso adelantas tú y luego esperas a que te lo devuelvan. Por eso vale la pena entender cuándo hace falta autorización.',
         ],
       },
       {
         titulo: 'Qué pruebas necesitan autorización previa',
         parrafos: [
-          'Casi nunca una consulta con el médico. Muchas veces una prueba que cuesta dinero: resonancia magnética, tomografía, análisis genéticos, algunas cirugías. Carencias y preexistencias también pueden necesitar comprobación.',
+          'Casi nunca una consulta con el médico; muchas veces, las pruebas de coste elevado: resonancia magnética, tomografía, análisis genéticos, algunas cirugías. Carencias y preexistencias también pueden necesitar comprobación.',
           'Cada aseguradora tiene su lista: lo que cubre directamente y lo que primero hay que autorizar. Eso sale en tu póliza, en el condicionado o en el apartado de «pruebas que necesitan autorización».',
           'Si no está claro si tu prueba necesita autorización, llama a la aseguradora ANTES de hacerla. Una prueba hecha sin autorización puede quedar fuera de cobertura.',
         ],
@@ -727,23 +727,23 @@ export const ARTICULOS: readonly Articulo[] = [
         parrafos: [
           'La forma depende de la aseguradora: a veces tu médico llama por teléfono y obtiene respuesta en el acto, a veces hay que presentar un formulario escrito, a veces el médico la pide por una plataforma en línea.',
           'El plazo suele ser de unos pocos días para algo urgente, o de una o dos semanas para algo más rutinario. Si no tienes respuesta en el plazo que dice la póliza, insiste: una autorización que no llega es lo mismo que si te la negaran.',
-          'Lo importante es que cuando vaya a hacerse la prueba, ya tengas el sí por escrito. Una autorización verbal puede ser un "no se aprobó" cuando después reclamas.',
+          'Lo importante es que cuando vaya a hacerse la prueba, ya tengas el sí por escrito. Una autorización verbal puede acabar en un «no consta que se aprobara» cuando después reclamas.',
         ],
       },
       {
         titulo: 'Qué hacer si te la deniegan',
         parrafos: [
-          'Primero, pide por escrito al servicio de atención al cliente de la aseguradora que te explique por escrito por qué la deniegan. La razón puede ser: no entra en tu póliza, está en período de carencia, es una preexistencia que excluye, o no reúne los requisitos. Sin la razón por escrito, no puedes reclamar de verdad.',
-          'Luego, contesta a esa denegación con los argumentos que creas que tienes: si necesitas la prueba por urgencia médica, si el médico cree que es necesaria, si ha habido un cambio en tu situación médica desde que contrató la póliza. Eso va al servicio de atención al cliente de la aseguradora.',
-          'Si la aseguradora no te contesta en dos meses, o si su respuesta sigue siendo no y tú no estás de acuerdo, puedes acudir al Servicio de Reclamaciones de la Dirección General de Seguros y Fondos de Pensiones. Es gratis, no necesitas abogado, y la aseguradora tiene que responder. Su informe no te vincula a ganar, pero pesa, y muchas veces acaba en acuerdo.',
+          'Primero, pide al servicio de atención al cliente de la aseguradora que te explique por escrito por qué la deniegan. La razón puede ser que no entra en tu póliza, que estás en periodo de carencia, que es una preexistencia excluida o que no reúne los requisitos. Sin la razón por escrito, no puedes reclamar de verdad.',
+          'Luego, contesta a esa denegación con los argumentos que creas que tienes: si necesitas la prueba por urgencia médica, si el médico cree que es necesaria, si ha habido un cambio en tu situación médica desde que contrataste la póliza. Eso va al servicio de atención al cliente de la aseguradora.',
+          'Si la aseguradora no te contesta en dos meses, o si su respuesta sigue siendo no y tú no estás de acuerdo, puedes acudir al Servicio de Reclamaciones de la Dirección General de Seguros y Fondos de Pensiones. Es gratis, no necesitas abogado, y la aseguradora tiene que responder. Su informe no es vinculante para la compañía, pero pesa, y muchas veces acaba en acuerdo.',
         ],
       },
       {
         titulo: 'Períodos de carencia y preexistencias',
         parrafos: [
-          'Carencia es el tiempo que tienes que esperar desde que entra en vigor la póliza hasta poder usar ciertas prestaciones. Varían: hay algunos servicios que puedes usar ya, otros necesitan de tres a seis meses. Eso depende de la aseguradora y del tipo de póliza.',
+          'Carencia es el tiempo que tienes que esperar desde que entra en vigor la póliza hasta poder usar ciertas prestaciones. Varía según la prestación: algunos servicios se pueden usar desde el primer día y otros necesitan de tres a seis meses. Eso depende de la aseguradora y del tipo de póliza.',
           'Si tienes una enfermedad anterior a contratar la póliza, hay que declararla en el cuestionario de salud. La aseguradora decide entonces si la acepta, la excluye o aplica un recargo. Eso queda por escrito en tu póliza. No declararla no la convierte en cubierta después: es justo el motivo más frecuente de denegación de una prestación.',
-          'Si tu carencia todavía está en curso, o si tienes una preexistencia excluida y pides cobertura para eso, la denegación es probable que sea automática. Ahí la vía de reclamación es más corta porque la respuesta es casi segura. Mejor revisarlo antes de pedir la autorización.',
+          'Si tu carencia todavía está en curso, o si tienes una preexistencia excluida y pides cobertura para eso, lo más probable es que la denegación sea automática, y reclamar tiene poco recorrido. Mejor revisarlo antes de pedir la autorización.',
         ],
       },
     ],
@@ -895,7 +895,7 @@ export const ARTICULOS: readonly Articulo[] = [
         titulo: 'Si tu compañía no tiene WhatsApp, o no sabes cuál es',
         parrafos: [
           'Del resto de compañías con las que trabajamos no hemos encontrado un WhatsApp de siniestros publicado en su web. Eso no quiere decir que no lo tengan para algún producto concreto: mira el dorso de tu póliza o la app de la compañía.',
-          'Y si tu seguro lo llevamos nosotros, escríbenos a nosotros. Damos el parte con la compañía, te decimos qué documentos hacen falta y seguimos el expediente hasta que se cierra. Para eso está el corredor.',
+          'Y si tu seguro lo llevamos nosotros, escríbenos a nosotros. Damos el parte a la compañía, te decimos qué documentos hacen falta y seguimos el expediente hasta que se cierra. Para eso está el corredor.',
         ],
       },
     ],

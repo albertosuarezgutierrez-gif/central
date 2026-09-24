@@ -192,7 +192,7 @@ export default function AvisoLegal() {
             2. Objeto del sitio
           </h2>
           <p style={parrafo}>
-            Este sitio informa sobre los seguros que medía la correduría y permite pedir un
+            Este sitio informa sobre los seguros que media la correduría y permite pedir un
             presupuesto o ponerse en contacto. Nada más.
           </p>
           <p style={parrafoUltimo}>
@@ -285,7 +285,7 @@ export default function AvisoLegal() {
               {identidad.email}
             </a>
             , que responde en el plazo máximo de un mes. Solo si no se resuelven, a la DGSFP. El
-            detalle y el orden de los canales está en{' '}
+            detalle y el orden de los canales están en{' '}
             <Link href="/legal/informacion-mediador" style={enlace}>
               información del mediador
             </Link>
