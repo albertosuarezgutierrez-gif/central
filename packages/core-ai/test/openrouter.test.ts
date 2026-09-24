@@ -141,3 +141,46 @@ test('openrouterEmbed acepta dimensions custom y lanza sin apiKey, con texto vac
     /sin vector/,
   )
 })
+
+test('razonamiento APAGADO por defecto (se comía el max_tokens de las llamadas cortas)', async () => {
+  const calls: Call[] = []
+  await openrouterChat({ apiKey: 'k' }, [{ role: 'user', content: 'x' }], { maxTokens: 4, fetchImpl: fakeFetch(RESP, calls) })
+  assert.deepEqual(calls[0].body.reasoning, { enabled: false })
+})
+
+test('razonar:true no manda el apagado', async () => {
+  const calls: Call[] = []
+  await openrouterChat({ apiKey: 'k' }, [{ role: 'user', content: 'x' }], { razonar: true, fetchImpl: fakeFetch(RESP, calls) })
+  assert.equal(calls[0].body.reasoning, undefined)
+})
+
+test('modelo de razonamiento obligatorio: 400 → reintenta UNA vez sin el apagado', async () => {
+  const calls: Call[] = []
+  const f = (async (url: string, init: { headers: Record<string, string>; body: string }) => {
+    calls.push({ url, headers: init.headers, body: JSON.parse(init.body) })
+    if (calls.length === 1) return { ok: false, status: 400, text: async () => 'Reasoning is mandatory for this endpoint and cannot be disabled.' }
+    return { ok: true, status: 200, json: async () => RESP }
+  }) as unknown as typeof fetch
+  const out = await openrouterChat({ apiKey: 'k' }, [{ role: 'user', content: 'x' }], { fetchImpl: f })
+  assert.equal(out, 'hola')
+  assert.equal(calls.length, 2)
+  assert.equal(calls[1].body.reasoning, undefined)
+})
+
+test('otro 400 NO se reintenta', async () => {
+  const calls: Call[] = []
+  await assert.rejects(
+    openrouterChat({ apiKey: 'k' }, [{ role: 'user', content: 'x' }], { fetchImpl: fakeFetch({ error: 'bad' }, calls, false, 400) }),
+    /HTTP 400/,
+  )
+  assert.equal(calls.length, 1)
+})
+
+test('respuesta vacía dice POR QUÉ (finish_reason + reasoning_tokens)', async () => {
+  const calls: Call[] = []
+  const vacia = { choices: [{ message: { content: '' }, finish_reason: 'length' }], usage: { completion_tokens_details: { reasoning_tokens: 300 } } }
+  await assert.rejects(
+    openrouterChat({ apiKey: 'k' }, [{ role: 'user', content: 'x' }], { fetchImpl: fakeFetch(vacia, calls) }),
+    /respuesta vacía \(finish_reason=length, reasoning_tokens=300\)/,
+  )
+})

@@ -10,7 +10,7 @@
 // texto corto, no para prompts largos.
 
 import type { NimChatMessage } from './nim'
-import { fetchAI } from './http.ts'
+import { fetchAI, motivoVacio, paramsRazonador } from './http.ts'
 
 const DEFAULT_BASE_URL = 'https://api.cerebras.ai/v1/chat/completions'
 const DEFAULT_TEXT_MODEL = 'gpt-oss-120b'
@@ -41,19 +41,20 @@ export async function cerebrasChat(
     ...(opts.system ? [{ role: 'system' as const, content: opts.system }] : []),
     ...messages,
   ]
+  const modelo = opts.model ?? config.textModel ?? DEFAULT_TEXT_MODEL
   const res = await fetchAI(config.baseUrl ?? DEFAULT_BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
-      model: opts.model ?? config.textModel ?? DEFAULT_TEXT_MODEL,
+      model: modelo,
       messages: msgs,
-      max_tokens: opts.maxTokens ?? 800,
+      ...paramsRazonador(modelo, opts.maxTokens ?? 800),
       temperature: opts.temperature ?? 0.3,
       stream: false,
     }),
   }, { provider: 'Cerebras', signal: opts.signal })
   const data = await res.json()
   const text = data?.choices?.[0]?.message?.content
-  if (!text) throw new Error('Cerebras: respuesta vacía')
+  if (!text) throw new Error(`Cerebras: respuesta vacía${motivoVacio(data)}`)
   return text
 }
