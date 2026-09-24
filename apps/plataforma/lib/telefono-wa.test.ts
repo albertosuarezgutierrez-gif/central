@@ -54,3 +54,9 @@ test('null cuando NO se puede afirmar que sea un móvil: la UI no pinta nada', (
   assert.equal(urlWhatsapp('cifrado'), null)
   assert.equal(urlWhatsapp('912345678'), null, 'un fijo NO se cuela por la puerta del extranjero')
 })
+
+test('el enlace con mensaje va al CHAT del móvil, no a la lista de chats', async () => {
+  const { enlaceWhatsappConMensaje } = await import('./telefono-wa.ts')
+  assert.equal(enlaceWhatsappConMensaje('612 34 56 78', 'hola y adiós'), 'https://wa.me/34612345678?text=hola%20y%20adi%C3%B3s')
+  assert.equal(enlaceWhatsappConMensaje('954123456', 'x'), null)
+})

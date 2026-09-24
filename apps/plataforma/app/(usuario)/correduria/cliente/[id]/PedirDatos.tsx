@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { btnStyle } from '@/components/ui'
 import { interpretarSolicitudesDatos, valorLegible, type SolicitudDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
+import { enlaceWhatsappConMensaje } from '@/lib/telefono-wa'
 import { fmt } from './piezas'
 
 /**
@@ -14,7 +15,7 @@ import { fmt } from './piezas'
  * El enlace solo se ve al crearlo: asegura guarda su huella, no el enlace. Si se
  * pierde, se anula y se crea otro.
  */
-export default function PedirDatos({ oportunidadId, clienteId, ramo }: { oportunidadId: string; clienteId: string; ramo: 'moto' | 'auto' }) {
+export default function PedirDatos({ oportunidadId, clienteId, telefono = null, ramo }: { oportunidadId: string; clienteId: string; telefono?: string | null; ramo: 'moto' | 'auto' }) {
   const [lectura, setLectura] = useState<SolicitudesDatos | null>(null)
   const [nuevo, setNuevo] = useState<{ url: string; mensaje: string; caduca: string } | null>(null)
   const [ocupado, setOcupado] = useState(false)
@@ -68,6 +69,8 @@ export default function PedirDatos({ oportunidadId, clienteId, ramo }: { oportun
     try { await navigator.clipboard.writeText(texto); setCopiado(true) } catch { setCopiado(false) }
   }
 
+  // Al chat del CLIENTE, no a la lista de chats; sin móvil en la ficha se cae al genérico y se dice.
+  const waDirecto = nuevo && telefono ? enlaceWhatsappConMensaje(telefono, nuevo.mensaje) : null
   const solicitudes = lectura?.estado === 'ok' ? lectura.solicitudes : []
   const completada = solicitudes.find((s) => s.estado === 'completada')
   const pendiente = solicitudes.find((s) => s.estado === 'pendiente')
@@ -83,8 +86,13 @@ export default function PedirDatos({ oportunidadId, clienteId, ramo }: { oportun
           <input readOnly value={nuevo.url} onFocus={(e) => e.currentTarget.select()} style={{ minHeight: 44, padding: '0 8px', borderRadius: 8, border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }} />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" onClick={() => void copiar(nuevo.mensaje)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>{copiado ? '✅ Copiado' : '📋 Copiar mensaje'}</button>
-            <a href={`https://wa.me/?text=${encodeURIComponent(nuevo.mensaje)}`} target="_blank" rel="noreferrer" style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>💬 WhatsApp</a>
+            <a href={waDirecto ?? `https://wa.me/?text=${encodeURIComponent(nuevo.mensaje)}`} target="_blank" rel="noreferrer" style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>💬 WhatsApp</a>
           </div>
+          {!waDirecto && (
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+              {telefono ? 'Su teléfono de la ficha no es un móvil: WhatsApp te pedirá elegir el chat.' : 'No tiene teléfono en su ficha: WhatsApp te pedirá elegir el chat.'}
+            </div>
+          )}
           <div style={{ fontSize: 11, color: 'var(--muted)' }}>El enlace no enseña nada del cliente: solo le pide lo que falta. Lo que conteste se verifica al emitir.</div>
         </div>
       )}
