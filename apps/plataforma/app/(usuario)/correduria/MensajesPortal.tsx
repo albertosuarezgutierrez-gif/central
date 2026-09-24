@@ -43,6 +43,7 @@ export default function MensajesPortal({ onContador }: {
     })().then((r) => {
       if (!vivo) return
       setLectura(r)
+      // Con 51 filas asegura avisa de que hay más de 50: el contador no se queda corto en silencio.
       avisar.current?.(r.estado === 'ok' ? r.pendientes.length : null)
     })
     return () => { vivo = false }
@@ -61,12 +62,13 @@ export default function MensajesPortal({ onContador }: {
 
   if (lectura.pendientes.length === 0) return null
 
+  const hayMas = lectura.pendientes.length > 50
   return (
     <Bloque destacado tono="aviso" Icono={MessageSquare}
-      titulo={`${lectura.pendientes.length} cliente(s) te han escrito en el portal`}
-      sub="Esperan respuesta. Se contesta en su ficha → Mensajes, y el cliente la ve en su portal.">
+      titulo={`${hayMas ? 'Más de 50' : lectura.pendientes.length} cliente(s) te han escrito en el portal`}
+      sub="Esperan respuesta. Se contesta en su ficha → Mensajes (o se marca «no necesita respuesta»), y el cliente la ve en su portal.">
       <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
-        {lectura.pendientes.map((p) => (
+        {lectura.pendientes.slice(0, 50).map((p) => (
           <li key={p.clienteId} style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ minWidth: 0, flex: '1 1 240px' }}>
               <strong>{p.nombre ?? 'Cliente sin nombre en la ficha'}</strong>{' '}

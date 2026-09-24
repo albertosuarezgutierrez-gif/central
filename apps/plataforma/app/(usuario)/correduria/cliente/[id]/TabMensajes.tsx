@@ -13,7 +13,11 @@ import {
 
 /**
  * La conversación con el cliente (ASegura OS §Q.7): lo que escribió en su portal y lo que se le
- * contestó, por tema (póliza o general). Abrir la pestaña da por leído lo suyo.
+ * contestó, por tema (póliza o general).
+ *
+ * 🚨 Abrir la pestaña NO lo da por leído: mirar y cerrar sin contestar haría desaparecer de «Hoy» a
+ * alguien que espera. Sella contestar o «No necesita respuesta», y solo hasta el último mensaje que
+ * había en pantalla (`hasta`): lo que entre mientras tanto sigue pendiente.
  *
  * - Contestar guarda la respuesta en su portal. El correo de aviso es OPCIONAL y va desmarcado:
  *   sale con este mismo clic, y no copia el texto (solo «tienes una respuesta», con el enlace).
@@ -23,6 +27,7 @@ import {
 type Lectura = { estado: 'ok'; mensajes: MensajeCorredor[] } | { estado: 'sin_datos'; causa: string }
 
 const MAX = 4000
+const POR_PAGINA = 50
 
 export default function TabMensajes({ clienteId, polizas }: {
   clienteId: string
@@ -35,6 +40,7 @@ export default function TabMensajes({ clienteId, polizas }: {
   const [avisar, setAvisar] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [resultado, setResultado] = useState<{ ok: boolean; texto: string } | null>(null)
+  const [ver, setVer] = useState(POR_PAGINA)
 
   const leer = useCallback(async (): Promise<Lectura> => {
     try {
@@ -53,20 +59,34 @@ export default function TabMensajes({ clienteId, polizas }: {
 
   useEffect(() => {
     let vivo = true
-    leer().then((r) => {
-      if (!vivo) return
-      setLectura(r)
-      // Abrirla es leerlo. Best-effort: si falla, seguirá en «Hoy» y no se pierde nada.
-      if (r.estado === 'ok' && r.mensajes.some(m => m.autor === 'cliente' && m.leidoAt === null)) {
-        fetch('/api/correduria/mensajes', {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ accion: 'leidos', clienteId }),
-        }).catch(() => {})
-      }
-    })
+    leer().then((r) => { if (vivo) setLectura(r) })
     return () => { vivo = false }
-  }, [leer, clienteId])
+  }, [leer])
+
+  // El último mensaje que hay en pantalla: sellar más allá sería dar por visto lo que nadie ha visto.
+  const hasta = lectura?.estado === 'ok' && lectura.mensajes.length > 0 ? lectura.mensajes[lectura.mensajes.length - 1].creadoAt : null
+  const pendientes = lectura?.estado === 'ok' ? lectura.mensajes.filter(m => m.autor === 'cliente' && m.leidoAt === null).length : 0
+
+  async function sinRespuesta() {
+    if (!hasta) return
+    setOcupado(true)
+    setResultado(null)
+    let ok = false
+    try {
+      const res = await fetch('/api/correduria/mensajes', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accion: 'leidos', clienteId, hasta }),
+      })
+      ok = res.ok
+    } catch { /* ok = false */ }
+    setResultado({ ok, texto: ok ? 'Marcado como atendido: deja de salir en Hoy.' : 'NO se ha marcado: no se ha podido hablar con asegura. Recarga antes de repetir.' })
+    if (ok) {
+      const r = await leer()
+      if (r.estado === 'ok') setLectura(r)
+    }
+    setOcupado(false)
+  }
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault()
@@ -79,7 +99,7 @@ export default function TabMensajes({ clienteId, polizas }: {
       const res = await fetch('/api/correduria/mensajes', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ accion: 'responder', clienteId, polizaId: tema || null, cuerpo, avisar }),
+        body: JSON.stringify({ accion: 'responder', clienteId, polizaId: tema || null, cuerpo, avisar, hasta }),
       })
       const j = (await res.json().catch(() => null)) as { desenlace?: DesenlaceRespuesta; aviso?: AvisoRespuesta } | null
       desenlace = j?.desenlace ?? 'error'
@@ -112,8 +132,14 @@ export default function TabMensajes({ clienteId, polizas }: {
         ) : lectura.mensajes.length === 0 ? (
           <p style={{ color: 'var(--muted)', margin: 0 }}>No ha escrito nada por el portal todavía.</p>
         ) : (
+          <>
+          {lectura.mensajes.length > ver && (
+            <button type="button" onClick={() => setVer(v => v + POR_PAGINA)} style={{ ...btnStyle('sutil'), minHeight: 44, marginBottom: 8 }}>
+              Ver {Math.min(POR_PAGINA, lectura.mensajes.length - ver)} anteriores
+            </button>
+          )}
           <ol style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8, opacity: ocupado ? 0.6 : 1 }}>
-            {lectura.mensajes.map((m) => (
+            {lectura.mensajes.slice(-ver).map((m) => (
               <li key={m.id} style={{
                 justifySelf: m.autor === 'corredor' ? 'end' : 'start',
                 maxWidth: 'min(620px, 92%)',
@@ -124,12 +150,19 @@ export default function TabMensajes({ clienteId, polizas }: {
               }}>
                 <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)' }}>
                   {m.autor === 'cliente' ? 'Cliente' : `Tú${m.actor ? ` (${m.actor})` : ''}`} · {fechaHoraEs(m.creadoAt)} · {nombreTema(m.polizaId)}
-                  {m.autor === 'corredor' && (m.leidoAt ? ' · leído' : ' · aún no lo ha abierto')}
+                  {m.autor === 'corredor' && (m.leidoAt ? ' · leído' : ' · sin constancia de lectura')}
+                  {m.autor === 'cliente' && m.leidoAt === null && ' · pendiente'}
                 </span>
                 <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{m.cuerpo}</span>
               </li>
             ))}
           </ol>
+          {pendientes > 0 && (
+            <button type="button" onClick={sinRespuesta} disabled={ocupado} style={{ ...btnStyle('secundario'), minHeight: 44, marginTop: 10 }}>
+              No necesita respuesta ({pendientes})
+            </button>
+          )}
+          </>
         )}
       </section>
 

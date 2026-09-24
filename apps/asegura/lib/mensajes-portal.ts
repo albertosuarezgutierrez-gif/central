@@ -66,7 +66,11 @@ export type PendienteMensaje = {
   ultimo: string
 }
 
-/** Las fichas con mensajes del cliente sin leer: la cola de «Hoy». La más antigua primero (espera más). */
+/**
+ * Las fichas con mensajes del cliente sin leer: la cola de «Hoy». La más antigua primero (espera más).
+ * Abrir la ficha NO sella: sella contestar o «no necesita respuesta», para que mirar no lo haga desaparecer.
+ * `limit 51`: si vuelven 51, hay más de 50 y la pantalla lo dice en vez de dar un número corto.
+ */
 export async function mensajesSinLeer(correduriaId: string): Promise<PendienteMensaje[]> {
   const filas = await prismaAsegura().$queryRaw<
     { cliente_id: string; nombre: string | null; sin_leer: bigint; ultimo_at: Date; ultimo: string; primero_at: Date }[]
@@ -82,7 +86,7 @@ export async function mensajesSinLeer(correduriaId: string): Promise<PendienteMe
     where m.correduria_id = ${correduriaId}::uuid and m.autor = 'cliente' and m.leido_at is null
     group by m.cliente_id, c.nombre, c.apellidos
     order by min(m.creado_at) asc
-    limit 50`
+    limit 51`
   return filas.map((f) => ({
     clienteId: f.cliente_id,
     nombre: f.nombre,
@@ -92,12 +96,17 @@ export async function mensajesSinLeer(correduriaId: string): Promise<PendienteMe
   }))
 }
 
-/** Sella como leído lo que escribió el cliente en esa ficha. Devuelve cuántos se han sellado. */
-export async function marcarLeidos(correduriaId: string, clienteId: string): Promise<number> {
+/**
+ * Sella como leído lo que escribió el cliente en esa ficha HASTA `hasta` (el último que vio el
+ * corredor en pantalla). Lo que entre después no se sella: nadie lo ha visto. Devuelve cuántos.
+ */
+export async function marcarLeidos(correduriaId: string, clienteId: string, hasta: Date): Promise<number> {
   return prismaAsegura().$executeRaw`
     update portal_mensaje set leido_at = now()
     where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid
-      and autor = 'cliente' and leido_at is null`
+      and autor = 'cliente' and leido_at is null
+      -- +1 ms: hasta viaja en ISO (milisegundos) y creado_at guarda microsegundos; sin él, el último no se sella.
+      and creado_at < ${hasta}::timestamptz + interval '1 millisecond'`
 }
 
 export type ResultadoRespuesta =
@@ -109,7 +118,10 @@ export type ResultadoRespuesta =
 /** Qué pasó con el correo al cliente. Cualquier cosa distinta de `enviado` NO borra la respuesta: ya está guardada. */
 export type AvisoRespuesta = ResultadoEnvioCorreo | 'no_pedido' | 'sin_email' | 'baja_de_correo' | 'ilegible' | 'sin_enlace'
 
-/** Guarda la respuesta del corredor, da por leído lo que escribió el cliente y, si se pide, le avisa por correo. */
+/**
+ * Guarda la respuesta del corredor, da por leído lo que escribió el cliente hasta `hasta` (lo que
+ * tenía en pantalla; `null` = no sella nada) y, si se pide, le avisa por correo.
+ */
 export async function responder(
   correduriaId: string,
   clienteId: string,
@@ -117,6 +129,7 @@ export async function responder(
   cuerpoCrudo: unknown,
   actor: string,
   avisar: boolean,
+  hasta: Date | null,
 ): Promise<ResultadoRespuesta> {
   const cuerpo = normalizarCuerpo(cuerpoCrudo)
   if (cuerpo === null || !actor.trim()) return { estado: 'invalido' }
@@ -138,7 +151,7 @@ export async function responder(
     if (err.meta?.code === '23503' || /23503|foreign key/i.test(err.message ?? '')) return { estado: 'poliza_no_valida' }
     throw e
   }
-  await marcarLeidos(correduriaId, clienteId)
+  if (hasta) await marcarLeidos(correduriaId, clienteId, hasta)
 
   let aviso: AvisoRespuesta = 'no_pedido'
   if (avisar) aviso = await avisarAlCliente(correduriaId, clienteId)

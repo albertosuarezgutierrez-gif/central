@@ -43,8 +43,20 @@ export default async function PaginaMensajes() {
       ? agruparHilos(lectura.mensajes, 'cliente', (id) => (id === null ? 'General' : etiquetaDe.get(id) ?? 'Una de tus pólizas'))
       : []
 
-  // Se sella DESPUÉS de leer: así la pantalla aún marca como nuevo lo que el corredor contestó.
-  if (lectura.estado === 'ok') await marcarLeidosDeSesion()
+  // Se sella DESPUÉS de leer (la pantalla aún marca como nuevo lo que el corredor contestó) y solo lo
+  // enseñado. Un fallo al sellar no tumba la página: el mensaje sigue como no leído y ya está.
+  if (lectura.estado === 'ok') {
+    const vistos = lectura.mensajes.filter((m) => m.autor === 'corredor' && m.leidoAt === null).map((m) => m.id)
+    await marcarLeidosDeSesion(vistos).catch((e) => {
+      console.error('[mensajes] no se pudo sellar como leído:', e instanceof Error ? e.message : e)
+    })
+  }
+
+  // Un hilo sobre una póliza que ya no se ofrece (vencida, o abierta por el corredor) sigue pudiendo
+  // contestarse: se añade como tema para que el desplegable diga a dónde va el mensaje.
+  for (const h of hilos) {
+    if (h.polizaId !== null && !etiquetaDe.has(h.polizaId)) polizas.push({ id: h.polizaId, etiqueta: h.titulo })
+  }
 
   return (
     <>
@@ -55,6 +67,7 @@ export default async function PaginaMensajes() {
         hilos={hilos}
         polizas={polizas}
         puedeEscribir={lectura.estado === 'ok' && lectura.puedeEscribir}
+        noPuede={lectura.estado === 'ok' ? lectura.noPuede : null}
         sinFicha={lectura.estado === 'sin_ficha'}
       />
     </>

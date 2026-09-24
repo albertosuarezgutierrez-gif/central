@@ -23,7 +23,7 @@ import { getIdentidad } from './session'
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 export type LecturaMensajes =
-  | { estado: 'ok'; mensajes: Mensaje[]; puedeEscribir: boolean }
+  | { estado: 'ok'; mensajes: Mensaje[]; puedeEscribir: boolean; noPuede: 'modo_corredor' | 'varias_fichas' | null }
   | { estado: 'sin_ficha' }
   | { estado: 'sin_sesion' }
 
@@ -42,10 +42,13 @@ export async function mensajesDeSesion(): Promise<LecturaMensajes> {
     take: 300,
   })
   const propias = vinculos.filter((v) => v.origen !== 'corredor').map((v) => v.clienteId)
-  const puedeEscribir = identidad.corredor === null && decidirFichaPropia(propias).estado === 'ok'
+  // El motivo viaja: «estás viendo el portal como el cliente» y «tu correo está en dos fichas» son
+  // dos cosas distintas, y pintar una en lugar de la otra afirma algo falso.
+  const noPuede = identidad.corredor !== null ? 'modo_corredor' : decidirFichaPropia(propias).estado === 'ok' ? null : 'varias_fichas'
   return {
     estado: 'ok',
-    puedeEscribir,
+    puedeEscribir: noPuede === null,
+    noPuede,
     mensajes: filas.map((f) => ({
       id: f.id,
       autor: f.autor === 'corredor' ? 'corredor' : 'cliente',
@@ -58,12 +61,13 @@ export async function mensajesDeSesion(): Promise<LecturaMensajes> {
 }
 
 /**
- * Sella como leídas las respuestas del corredor. La vista del corredor NO sella: si lo hiciera, su
- * propia bandeja diría que el cliente ya leyó lo que abrió Alberto.
+ * Sella como leídas las respuestas del corredor QUE SE HAN ENSEÑADO (`ids`), no todo lo que haya sin
+ * leer: una respuesta que llegue mientras se pinta la página no la ha visto nadie. La vista del
+ * corredor NO sella: si lo hiciera, su propia bandeja diría que el cliente ya leyó lo que abrió Alberto.
  */
-export async function marcarLeidosDeSesion(): Promise<void> {
+export async function marcarLeidosDeSesion(ids: string[]): Promise<void> {
   const identidad = await getIdentidad()
-  if (!identidad || identidad.corredor !== null) return
+  if (!identidad || identidad.corredor !== null || ids.length === 0) return
   const vinculos = await prisma.portalVinculo.findMany({
     where: { identidadId: identidad.id },
     select: { clienteId: true, correduriaId: true },
@@ -71,6 +75,7 @@ export async function marcarLeidosDeSesion(): Promise<void> {
   if (vinculos.length === 0) return
   await prisma.portalMensaje.updateMany({
     where: {
+      id: { in: ids },
       OR: vinculos.map((v) => ({ clienteId: v.clienteId, correduriaId: v.correduriaId })),
       autor: 'corredor',
       leidoAt: null,

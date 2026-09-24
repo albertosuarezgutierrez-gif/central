@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { useRouter } from 'next/navigation'
 
 import { MAX_CUERPO_MENSAJE, type Hilo } from '@central/module-seguros-portal'
@@ -29,11 +29,13 @@ export function Mensajes({
   hilos,
   polizas,
   puedeEscribir,
+  noPuede,
   sinFicha,
 }: {
   hilos: Hilo[]
   polizas: PolizaOpcion[]
   puedeEscribir: boolean
+  noPuede: 'modo_corredor' | 'varias_fichas' | null
   sinFicha: boolean
 }) {
   const router = useRouter()
@@ -76,7 +78,7 @@ export function Mensajes({
         {sinFicha ? (
           <p className="suave" style={{ margin: 0 }}>{ERRORES.sin_ficha}</p>
         ) : !puedeEscribir ? (
-          <p className="suave" style={{ margin: 0 }}>{ERRORES.varias_fichas}</p>
+          <p className="suave" style={{ margin: 0 }}>{ERRORES[noPuede ?? 'varias_fichas']}</p>
         ) : (
           <form className="editor-form" onSubmit={enviar} noValidate>
             <div className="editor-campo">
@@ -117,7 +119,7 @@ export function Mensajes({
         ) : (
           <div style={{ display: 'grid', gap: 12 }}>
             {hilos.map((h) => (
-              <details key={h.polizaId ?? 'general'} open={h.sinLeer > 0} style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px' }}>
+              <HiloPlegable key={h.polizaId ?? 'general'} abiertoDeSalida={h.sinLeer > 0}>
                 <summary style={{ cursor: 'pointer', minHeight: 44, display: 'list-item' }}>
                   <strong>{h.titulo}</strong>{' '}
                   <span className="suave" style={{ fontSize: 13 }}>· {h.mensajes.length} mensaje(s) · último {cuando(h.ultimoAt)}</span>
@@ -149,11 +151,29 @@ export function Mensajes({
                     Responder aquí
                   </button>
                 )}
-              </details>
+              </HiloPlegable>
             ))}
           </div>
         )}
       </section>
     </>
+  )
+}
+
+/**
+ * Un hilo que nace abierto si trae respuestas nuevas y DESPUÉS lo gobierna quien lo mira. Con `open`
+ * atado a `sinLeer`, el refresco tras enviar (que ya ha sellado lo leído) lo cerraría con el propio
+ * mensaje dentro.
+ */
+function HiloPlegable({ abiertoDeSalida, children }: { abiertoDeSalida: boolean; children: ReactNode }) {
+  const [abierto, setAbierto] = useState(abiertoDeSalida)
+  return (
+    <details
+      open={abierto}
+      onToggle={(e) => setAbierto(e.currentTarget.open)}
+      style={{ border: '1px solid var(--border)', borderRadius: 12, padding: '10px 12px' }}
+    >
+      {children}
+    </details>
   )
 }

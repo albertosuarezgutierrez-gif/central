@@ -18,6 +18,7 @@ test('🪤 toda consulta a portal_mensaje filtra por correduría Y ficha (un id 
     }
     assert.match(where, /correduria_id = \$\{correduriaId\}::uuid and cliente_id = \$\{clienteId\}::uuid/, where.slice(0, 80))
   }
+  assert.match(src, /and creado_at < \$\{hasta\}::timestamptz \+ interval '1 millisecond'`/, 'solo se sella lo que el corredor tenía en pantalla')
   assert.match(src, /from clientes where id = \$\{clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid and merged_into_cliente_id is null/,
     'responder comprueba que la ficha es de esta correduría antes de escribir')
 })

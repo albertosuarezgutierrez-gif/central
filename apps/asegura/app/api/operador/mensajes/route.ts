@@ -13,9 +13,10 @@ export const dynamic = 'force-dynamic'
  * Mensajes con el cliente (ASegura OS §Q.7), el lado del corredor.
  *
  *   GET   ?clienteId= → { estado:'ok', mensajes } de esa ficha; sin él, { estado:'ok', pendientes } (sin leer)
- *   POST  { accion:'responder', clienteId, polizaId?, cuerpo, avisar?, actor }
+ *   POST  { accion:'responder', clienteId, polizaId?, cuerpo, avisar?, hasta?, actor }
  *         → 201 { estado:'enviado', id, aviso } · 404 · 422 invalido|poliza_no_valida
- *         { accion:'leidos', clienteId } → { estado:'hecho', marcados }
+ *         { accion:'leidos', clienteId, hasta } → { estado:'hecho', marcados }
+ *   `hasta` = el último mensaje que el corredor tenía en pantalla: lo posterior no se sella.
  */
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -48,12 +49,15 @@ export const POST = auditado(async (req: Request) => {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' })
+    const hastaTxt = typeof c?.hasta === 'string' ? c.hasta : null
+    const hasta = hastaTxt && !Number.isNaN(Date.parse(hastaTxt)) ? new Date(hastaTxt) : null
     if (c?.accion === 'leidos') {
-      return NextResponse.json({ estado: 'hecho', marcados: await marcarLeidos(correduria.id, clienteId) })
+      if (!hasta) return NextResponse.json({ estado: 'invalido', motivo: 'falta hasta' }, { status: 422 })
+      return NextResponse.json({ estado: 'hecho', marcados: await marcarLeidos(correduria.id, clienteId, hasta) })
     }
     if (c?.accion !== 'responder') return NextResponse.json({ estado: 'invalido' }, { status: 422 })
     const actor = typeof c.actor === 'string' && c.actor.trim() ? c.actor.trim() : 'corredor'
-    const r = await responder(correduria.id, clienteId, polizaId, c.cuerpo, actor, c.avisar === true)
+    const r = await responder(correduria.id, clienteId, polizaId, c.cuerpo, actor, c.avisar === true, hasta)
     return NextResponse.json(r, { status: STATUS_RESPUESTA[r.estado] ?? 500 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/mensajes', e) }, { status: 500 })
