@@ -11,7 +11,7 @@ import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
 import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro, esDescensoNuestro } from "@/lib/sivra/pricing-descongelar"
-import { baseSaltoEvento } from "@/lib/sivra/pricing-base-evento"
+import { baseSaltoEvento, objetivoSaltoEvento } from "@/lib/sivra/pricing-base-evento"
 import { baseDesdeGuestConFijo, markupEnFecha } from "@/lib/sivra/pricing-canal"
 import { factorDemandaFecha, type DemandaFechaResult } from "@/lib/sivra/pricing-demanda"
 import { elegirBucket } from "@/lib/sivra/pricing-bucket-fuente"
@@ -1025,7 +1025,6 @@ export async function POST(req: NextRequest) {
           // el raíl ±%/día a propósito, esa inestabilidad viajaba entera al precio en UNA pasada:
           // Duplex 16/09/2026 hizo 158€→289€ (+83%) el 24/08 y volvió a caer al día siguiente.
           const fb = fechaProp?.get(date)
-          const useFecha = !!fb && fb.n >= MIN_FECHA_BUCKET
           const baseEv = baseSaltoEvento({
             baseMes: useMonth ? clamp(baseD, floorD, ceilD) : null,
             // Mismos límites ajustados que arriba: `baseGlobalD` ya lleva `dqDate`.
@@ -1033,9 +1032,14 @@ export async function POST(req: NextRequest) {
           })
           if (baseEv.origen === "global") saltosEventoSinMes++
           const globalEvent = Math.round(baseEv.base * ev)
-          const bestEvent = useFecha
-            ? Math.max(globalEvent, aBaseD(fb!.med * dqDate))
-            : globalEvent
+          // Con la fecha MEDIDA y fiable manda su mediana, no mes × factor (ver `objetivoSaltoEvento`).
+          const bestEvent = objetivoSaltoEvento({
+            porFactor: globalEvent,
+            fechaBase: fb ? aBaseD(fb.med * dqDate) : null,
+            compsFecha: fb?.n ?? 0,
+            fuenteFecha: fb?.fuente ?? null,
+            minFecha: MIN_FECHA_BUCKET,
+          }).objetivo
           target = Math.max(target, bestEvent)
           eventTarget = bestEvent // capturado para saltar el raíl ±20% al ALZA (ver abajo)
         }
@@ -1043,7 +1047,7 @@ export async function POST(req: NextRequest) {
         // el mercado del propio día va ≥PREMIO_MERCADO_RATIO× su base normal, es premium aunque
         // Ticketmaster/websearch no lo hayan flagueado (el hueco por el que Karol G/Feria se vendieron
         // baratas). Ancla al mercado de ESA fecha TAL CUAL (helper puro, sin ×factor → sin doble
-        // conteo). Coincide con la rama `useFecha` de arriba cuando también hay evento (MAX, idempotente).
+        // conteo). Coincide con la rama de fecha de `objetivoSaltoEvento` cuando también hay evento (MAX, idempotente).
         const fbMkt = fechaProp?.get(date)
         if (fbMkt) {
           const premio = premioMercadoFecha(

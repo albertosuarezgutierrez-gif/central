@@ -558,6 +558,13 @@ Vercel: `OpenRouter: respuesta vacía` + `Groq: respuesta vacía` en la misma ll
 `reasoning:{enabled:false}` salvo `razonar:true` (reintento sin él si el modelo lo exige); Groq/Cerebras gpt-oss con
 `reasoning_effort:'low'` + 1024 de margen; el error «vacía» dice `finish_reason`/`reasoning_tokens`. PR en esta rama.
 
+## (24/09/2026) sivra: en fecha de evento MEDIDA manda el mercado, no mes × factor
+Verificación del PR #3344: bajan 08/22/25-nov de Luxury, pero 01/11 y 16/11 volvieron a 215/204€ en
+una pasada al medirlas Booking (16/11: mediana 121€ = 1,69×). Causa: `bestEvent = max(mes×factor,
+mediana fecha)` + salto de evento sin raíl. Fix: `objetivoSaltoEvento` (pricing-base-evento.ts) —
+con ≥5 comps fiables de la fecha manda su mediana. Plan de mercado: caducados 68→20 (aún 24/24
+ventanas de evento, se vacía en ~2 días). Booking 2 tandas OK, latidos OK.
+
 ## (24/09/2026) Recaptación: cola ordenada por próximo vencimiento
 - La cola de `/correduria` → Recaptación salía por apellidos (el `order by` del SQL de asegura). Ahora
   `ordenarPorVencimiento` (plataforma, `lib/recaptacion-asegura.ts`) la ordena por días hasta el próximo
