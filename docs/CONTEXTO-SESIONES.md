@@ -18,7 +18,8 @@ correo de la ficha; destino = ruta interna, CHECK SQL). Se canjea con un clic en
 mismo `/api/acceso/verificar` que el código; usada o caducada → acceso por código de siempre. Firmar sigue pidiendo su código.
 Migración aplicada (4 CHECK vistos morder). 🚨 El guardián `regression-portal-autorizacion` cazó un `node:crypto` en el barril
 de module-seguros-portal (habría roto el build del portal): Web Crypto. 🚨 La revisión cazó que los privilegios por defecto del
-schema daban INSERT a `crm_seguros` (fabricar llaves de cualquier cliente): revocado en BD y en el SQL, con cepo.
+schema daban DML a `crm_seguros` en las 21 tablas `portal_*` (p. ej. atar identidad↔ficha y ver carteras ajenas);
+el CRM no usa ninguna (0/101 consultas medidas): revocado en BD y en el SQL, con cepo para las tablas nuevas.
 
 **(23/09/2026)** 🔁 **PR 10 (#3422): sustitución AUTOMÁTICA, duplicidades y aviso a la compañía al emitir.** Clave del
 riesgo por ramo (matrícula · refcat/dirección · DNI asegurado); la sustituida sale de «en vigor» para siempre («se anula y

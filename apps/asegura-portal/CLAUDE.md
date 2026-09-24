@@ -1709,6 +1709,12 @@ ruleset de ese repo está bloqueado — no se hizo aquí a propósito.
 
 ## 🧨 Landmines
 
+- **🚨 Toda tabla `portal_*` nueva lleva `REVOKE ALL ON seguros.<tabla> FROM crm_seguros` en su SQL
+  (24/09/2026).** Los privilegios por defecto del schema dan DML a `crm_seguros` (el CRM de Manuel,
+  que nunca toca el portal: 0 de sus 101 consultas medidas) en cada tabla nueva, y con INSERT en
+  `portal_vinculo` o `portal_enlace_directo` se abre la sesión de cualquier cliente. Las 21 que había
+  se revocaron ese día (`apps/asegura/prisma/sql/2026-09-24b_portal_sin_crm.sql`); las nuevas las
+  vigila `test/regression-portal-sin-crm.test.ts`.
 - **🚨 Un `SELECT` de una columna NO concedida falla en la BD — la consulta ENTERA.** El rol tiene
   `GRANT SELECT (col, col, …)` por tabla, y Prisma pide cada columna del modelo por su nombre. Añadir
   `dni` al modelo `Cliente` del portal no «lee el DNI»: hace que **todas** las lecturas de `Cliente`
