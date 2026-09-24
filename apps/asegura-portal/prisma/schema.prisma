@@ -1249,3 +1249,17 @@ model PresupuestoEvento {
   @@map("presupuesto_evento")
   @@schema("seguros")
 }
+
+/// Enlace de acceso directo del correo de avisos: el portal solo lo lee y marca `usado_en`
+/// (GRANT de columnas, 24/09/2026). Lo crea asegura.
+model PortalEnlaceDirecto {
+  id              String    @id @db.Uuid
+  emailLookupHash String    @map("email_lookup_hash")
+  tokenHash       String    @unique(map: "portal_enlace_directo_token_unico") @map("token_hash")
+  destino         String
+  expiraEn        DateTime  @map("expira_en") @db.Timestamptz(6)
+  usadoEn         DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@map("portal_enlace_directo")
+  @@schema("seguros")
+}

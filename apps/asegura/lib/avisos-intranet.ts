@@ -39,7 +39,10 @@
  * entra, resuelve dos y se va tranquilo. Se cuenta en `ilegibles` y se reintenta
  * en la pasada siguiente.
  */
-import { estadoPeticion, entraEnVentana, DIAS_VENTANA_AVISO } from '@central/module-seguros-portal'
+import {
+  estadoPeticion, entraEnVentana, DIAS_VENTANA_AVISO, HORAS_ENLACE_DIRECTO, HREF_POR_TIPO, generarTokenEnlace, hashTokenEnlace, urlEnlaceDirecto,
+} from '@central/module-seguros-portal'
+import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import { WHERE_CARTERA_VIVA, leerSitio, textoReparoSitio, caducidadCarnet } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { avisosActivos, destinatarioDeCliente, esSoloContar } from './avisos-vencimiento'
@@ -417,6 +420,43 @@ async function contarSinFicha(correduriaId: string, hoy: Date, conFicha: Readonl
  * Una pasada. Devuelve el resumen; **lanza** si falta el proveedor de correo o
  * el portal, porque «no he podido» no puede leerse como «hoy no tocaba nadie».
  */
+/**
+ * El enlace del correo con ACCESO DIRECTO (Alberto, 24/09/2026): una llave de un solo uso y 24 h,
+ * atada al correo de la ficha por su índice ciego. Sin `PII_LOOKUP_KEY` no se puede atar, y
+ * entonces va el enlace de siempre (entrar con código): nunca una llave suelta. Tampoco si no se
+ * puede guardar la llave: un fallo aquí no puede dejar sin correo al resto de la pasada.
+ */
+async function enlaceDirecto(
+  correduriaId: string, clienteId: string, correo: string, tipos: readonly (keyof typeof HREF_POR_TIPO)[], base: string,
+): Promise<{ enlace: string; directo: boolean }> {
+  let hash: string | null = null
+  try {
+    hash = computeEmailLookupHash(correo)
+  } catch {
+    hash = null
+  }
+  if (hash === null) return { enlace: base, directo: false }
+  // Si todos los avisos llevan al mismo sitio, allí; si no, a la bóveda.
+  const destinos = new Set(tipos.map((t) => HREF_POR_TIPO[t]))
+  const destino = destinos.size === 1 ? [...destinos][0]! : '/boveda'
+  const token = generarTokenEnlace()
+  try {
+    // Una llave viva por cliente: la nueva sustituye a las anteriores sin usar (no se acumulan
+    // tres válidas a la vez en el buzón).
+    await prismaAsegura().portalEnlaceDirecto.deleteMany({ where: { correduriaId, clienteId, usadoEn: null } })
+    await prismaAsegura().portalEnlaceDirecto.create({
+      data: {
+        correduriaId, clienteId, emailLookupHash: hash, tokenHash: await hashTokenEnlace(token), destino,
+        expiraEn: new Date(Date.now() + HORAS_ENLACE_DIRECTO * 3_600_000),
+      },
+    })
+  } catch (e) {
+    console.error('[avisos-intranet] no se pudo guardar el enlace directo; va el de siempre', e instanceof Error ? e.message : e)
+    return { enlace: base, directo: false }
+  }
+  return { enlace: urlEnlaceDirecto(base, correo, token), directo: true }
+}
+
 export async function avisarIntranet(
   correduriaId: string,
   opciones: { hoy?: Date; forzarContar?: boolean } = {},
@@ -445,6 +485,8 @@ export async function avisarIntranet(
   // identidad no tiene ficha vinculada. Se calcula aquí y no dentro del bucle
   // porque ese bucle recorre CLIENTES, y estos por definición no tienen uno.
   resumen.sinFicha = await contarSinFicha(correduriaId, hoy, identidadesServidas)
+  // Las llaves de acceso directo caducadas hace más de 30 días no sirven ni de rastro: fuera.
+  if (!soloContar) await db.portalEnlaceDirecto.deleteMany({ where: { expiraEn: { lt: new Date(hoy.getTime() - 30 * 86_400_000) } } })
 
   for (const p of pendientes) {
     const sellos = await db.portalAvisoEnviado.findMany({
@@ -486,7 +528,7 @@ export async function avisarIntranet(
       // «tienes 1 aviso» sobre una campana que marca 4 manda a resolver uno y
       // deja los otros tres donde estaban.
       total,
-      enlace,
+      ...(await enlaceDirecto(correduriaId, p.clienteId, destino, nuevos.map((a) => a.tipo), enlace)),
     })
     if (resultado === 'sin_proveedor') throw new Error('sin_correo_configurado')
     if (resultado !== 'enviado') {

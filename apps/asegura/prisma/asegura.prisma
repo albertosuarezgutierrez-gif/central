@@ -1146,6 +1146,22 @@ model PortalAvisoEnviado {
   @@map("portal_aviso_enviado")
 }
 
+/// Enlace de acceso directo del correo de avisos (un solo uso, 72 h; solo el hash del token).
+model PortalEnlaceDirecto {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId    String    @map("correduria_id") @db.Uuid
+  clienteId       String    @map("cliente_id") @db.Uuid
+  emailLookupHash String    @map("email_lookup_hash")
+  tokenHash       String    @unique(map: "portal_enlace_directo_token_unico") @map("token_hash")
+  destino         String
+  creadoEn        DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  expiraEn        DateTime  @map("expira_en") @db.Timestamptz(6)
+  usadoEn         DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@index([expiraEn], map: "idx_portal_enlace_directo_expira")
+  @@map("portal_enlace_directo")
+}
+
 enum CanalRecaptacion {
   whatsapp
   email

@@ -12,6 +12,15 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🔑 **PR 11: el correo de avisos lleva ACCESO DIRECTO al portal.** Alberto: «aviso por mail con token de
+acceso a la app». Llave de un solo uso y 24 h (en el `#` del enlace: no llega a logs) en `seguros.portal_enlace_directo` (solo SHA-256; atada al índice ciego del
+correo de la ficha; destino = ruta interna, CHECK SQL). Se canjea con un clic en «Entrar» (POST, no el GET: antivirus) por el
+mismo `/api/acceso/verificar` que el código; usada o caducada → acceso por código de siempre. Firmar sigue pidiendo su código.
+Migración aplicada (4 CHECK vistos morder). 🚨 El guardián `regression-portal-autorizacion` cazó un `node:crypto` en el barril
+de module-seguros-portal (habría roto el build del portal): Web Crypto. 🚨 La revisión cazó que los privilegios por defecto del
+schema daban DML a `crm_seguros` en las 21 tablas `portal_*` (p. ej. atar identidad↔ficha y ver carteras ajenas);
+el CRM no usa ninguna (0/101 consultas medidas): revocado en BD y en el SQL, con cepo para las tablas nuevas.
+
 **(23/09/2026)** 🔁 **PR 10 (#3422): sustitución AUTOMÁTICA, duplicidades y aviso a la compañía al emitir.** Clave del
 riesgo por ramo (matrícula · refcat/dirección · DNI asegurado); la sustituida sale de «en vigor» para siempre («se anula y
 se anula»); el portal la retira de la LISTA, no del acceso. Al constar la nueva: presupuesto aceptado → emitido solo y su
