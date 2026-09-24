@@ -167,21 +167,21 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 114 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 115 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 109 | 15.796 | 10.096.057 | 0 | 0 |
-| `otro` | 107 | 4.026 | 14.513.825 | 6.953.264 | 0 |
-| `mcp:github` | 98 | 3.565 | 3.286.527 | 40.490.048 | 58 |
-| `lectura-directa` | 100 | 3.449 | 6.767.577 | 0 | 0 |
-| `escritura` | 87 | 2.274 | 38.252.234 | 0 | 0 |
-| `sql` | 72 | 1.644 | 761.247 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 60 | 745 | 191.695 | 2.997.396 | 10 |
+| `bash` | 110 | 15.982 | 10.217.451 | 0 | 0 |
+| `otro` | 108 | 4.054 | 14.576.749 | 7.078.160 | 0 |
+| `mcp:github` | 99 | 3.584 | 3.298.082 | 40.490.048 | 58 |
+| `lectura-directa` | 101 | 3.460 | 6.997.368 | 0 | 0 |
+| `escritura` | 88 | 2.300 | 38.325.201 | 0 | 0 |
+| `sql` | 73 | 1.646 | 761.610 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 61 | 751 | 193.170 | 2.997.396 | 10 |
 | `mcp:Vercel` | 26 | 319 | 546.346 | 198.719 | 4 |
 | `mcp:Booking-com` | 10 | 297 | 1.215.858 | 0 | 0 |
 | `mcp:Gmail` | 16 | 229 | 371.581 | 0 | 2 |
-| `mcp:Supabase` | 43 | 153 | 17.927 | 0 | 1 |
+| `mcp:Supabase` | 44 | 154 | 18.024 | 0 | 1 |
 | `agente:general-purpose` | 17 | 67 | 45.044 | 682.882 | 0 |
 | `mcp:Google-Drive` | 7 | 58 | 61.436 | 0 | 2 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
@@ -189,7 +189,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `agente:agente-architect` | 9 | 44 | 39.002 | 1.227.454 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
-| `agente:Explore` | 12 | 32 | 15.543 | 726.021 | 0 |
+| `agente:Explore` | 13 | 33 | 15.985 | 726.021 | 0 |
 | `mcp:Google_Drive` | 6 | 31 | 45.391 | 0 | 7 |
 | `mcp:OpenSEO` | 1 | 30 | 20.595 | 0 | 0 |
 | `agente:agente-mecanico` | 10 | 29 | 29.409 | 488.084 | 0 |
