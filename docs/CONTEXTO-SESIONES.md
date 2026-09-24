@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🐛 **iarrhh: el filtro por trabajador de Fichajes estaba vacío (lo reportó Pilar).** `GET /api/admin/empleados` daba 500
+SIEMPRE: `EXTRACT(DAY FROM (date - date))` no existe en Postgres (`date - date` ya es integer). Mismo fallo en `resumenVacaciones`
+(saldo del portal del empleado). Arreglado en `lib/solicitudes.ts` + cepo `lib/solicitudes-sql.test.ts` (visto en rojo antes).
+⚠️ Dato: fichaje de RUBEN 15/09 06:02 → 22/09 08:43 = 170,70 h (se dejó abierto una semana); infla el total del mes. Lo corrige el
+responsable con ✏️ (queda en la auditoría), no se ha tocado la BD.
 **(24/09/2026)** 🗂️ **iarrhh: las tablas de empleados, fichajes y obras son cards apiladas en móvil (<768 px).** Sin duplicar
 marcado: clase `.tabla-cards` en `apps/rrhh/app/globals.css` + `data-label` por celda (1.ª celda = título, acciones a la
 derecha, `colspan` de edición/historial a todo ancho). En escritorio la tabla no cambia. Medido con Playwright a 320/375/768.
