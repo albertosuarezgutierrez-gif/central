@@ -7,8 +7,8 @@ import type { ItemPendiente } from '@/lib/pendiente-de-ti'
 /** Lo que dispara un bloque de la misma página cuando la persona resuelve algo sin recargar. */
 export const EVENTO_PENDIENTE_RESUELTO = 'portal:pendiente-resuelto'
 
-export function avisarPendienteResuelto(clave: 'contacto' | 'anulacion'): void {
-  window.dispatchEvent(new CustomEvent(EVENTO_PENDIENTE_RESUELTO, { detail: clave }))
+export function avisarPendienteResuelto(clave: 'contacto' | 'anulacion', id?: string): void {
+  window.dispatchEvent(new CustomEvent(EVENTO_PENDIENTE_RESUELTO, { detail: { clave, id } }))
 }
 
 /**
@@ -27,20 +27,21 @@ export function PendienteDeTi({
   sinComprobar: string[]
 }) {
   const [items, setItems] = useState(iniciales)
-  const porFirmar = useRef(anulaciones)
+  // Por id: un evento repetido (reintento, doble clic) no puede descontar dos veces.
+  const firmadas = useRef(new Set<string>())
 
   useEffect(() => {
     function resuelto(e: Event) {
-      const clave = (e as CustomEvent<string>).detail
+      const { clave, id } = (e as CustomEvent<{ clave: string; id?: string }>).detail ?? {}
       if (clave === 'contacto') setItems((xs) => xs.filter((x) => x.clave !== 'contacto'))
-      if (clave === 'anulacion') {
-        porFirmar.current -= 1
-        if (porFirmar.current <= 0) setItems((xs) => xs.filter((x) => x.clave !== 'anulacion'))
+      if (clave === 'anulacion' && id) {
+        firmadas.current.add(id)
+        if (firmadas.current.size >= anulaciones) setItems((xs) => xs.filter((x) => x.clave !== 'anulacion'))
       }
     }
     window.addEventListener(EVENTO_PENDIENTE_RESUELTO, resuelto)
     return () => window.removeEventListener(EVENTO_PENDIENTE_RESUELTO, resuelto)
-  }, [])
+  }, [anulaciones])
 
   if (items.length === 0 && sinComprobar.length === 0) return null
 

@@ -572,7 +572,7 @@ export { hashCanal }
 // Hasta hoy un presupuesto solo se abría desde el enlace del correo: quien lo borraba no lo
 // encontraba en su portal. Aquí se listan los de SUS fichas (por `portal_vinculo` de la sesión,
 // nunca un id de fuera) que siguen vivos: avisados, sin retirar ni emitir, y —si no se han
-// aceptado— sin caducar. Un aceptado sin emitir sigue aquí aunque venza: es el que espera sus datos.
+// aceptado— sin caducar. Un aceptado sin emitir sigue aquí aunque venza (hasta 90 días): es el que espera sus datos.
 
 export type PresupuestoParaPendientes = { id: string; ramo: string; venceEl: Date; aceptado: boolean }
 
@@ -591,7 +591,8 @@ export async function presupuestosPendientesDeIdentidad(identidadId: string): Pr
         enviadoAt: { not: null },
         retiradoAt: null,
         emitidoAt: null,
-        AND: [{ OR: [{ aceptadoAt: { not: null } }, { venceEl: { gte: ahora } }] }],
+        // Aceptado sin emitir: 90 días como mucho — más allá ya no es algo que espere al cliente.
+        AND: [{ OR: [{ aceptadoAt: { gte: new Date(ahora.getTime() - 90 * 86_400_000) } }, { venceEl: { gte: ahora } }] }],
       },
       select: { id: true, ramo: true, venceEl: true, aceptadoAt: true },
       orderBy: { venceEl: 'asc' },

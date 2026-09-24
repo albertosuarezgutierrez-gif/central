@@ -150,24 +150,26 @@ export default async function Boveda({
   // `null` = no se pudo saber: no se pinta nada, pero tampoco se afirma que no haya.
   const firmasP = vista === 'seguros' ? anulacionesPendientes(identidad.id) : Promise.resolve(null)
 
-  // «Pendiente de ti» (§Q.4): sus presupuestos vivos. Solo en «Mis seguros», que es donde se pinta.
-  const presupuestosP = vista === 'seguros' ? presupuestosPendientesDeIdentidad(identidad.id) : Promise.resolve(null)
+  // «Pendiente de ti» (§Q.4): sus presupuestos vivos, y a los aceptados qué datos les faltan para
+  // contratar (puente). Encadenado para que corra en paralelo con firmas y peticiones. Un fallo del
+  // puente —o una respuesta que no es `ok`— queda en `null`: la lista dice «compruébalo», nunca «nada».
+  const presupuestosP =
+    vista === 'seguros'
+      ? presupuestosPendientesDeIdentidad(identidad.id).then((vivos) =>
+          vivos === null
+            ? null
+            : Promise.all(
+                vivos.map(async (p) => {
+                  if (!p.aceptado) return { ...p, faltan: null }
+                  const d = await datosParaContratar(identidad.id, p.id).catch(() => null)
+                  return { ...p, faltan: d?.estado === 'ok' ? d.faltanCliente : null }
+                }),
+              ),
+        )
+      : Promise.resolve(null)
 
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
-  const [peticiones, firmas, presupuestosVivos] = await Promise.all([peticionesP, firmasP, presupuestosP])
-
-  // A los aceptados se les pregunta qué datos faltan para contratar (puente; suelen ser 0-1).
-  // Un fallo del puente queda en `null`: la lista dice «compruébalo», nunca «no falta nada».
-  const presupuestosPend =
-    presupuestosVivos === null
-      ? null
-      : await Promise.all(
-          presupuestosVivos.map(async (p) => {
-            if (!p.aceptado) return { ...p, faltan: null }
-            const d = await datosParaContratar(identidad.id, p.id).catch(() => null)
-            return { ...p, faltan: d?.estado === 'ok' ? d.faltanCliente : d === null ? null : 0 }
-          }),
-        )
+  const [peticiones, firmas, presupuestosPend] = await Promise.all([peticionesP, firmasP, presupuestosP])
 
   const pendientes =
     vista === 'seguros'
