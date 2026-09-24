@@ -18,7 +18,8 @@ y hash a NULL (sin confirmar por CIMA, que no recibe nada de Mapfre desde el 23/
 058366323 (Grupo PACC, fin 31/01/2027). Intervinientes NO cargados (columnas cifradas). Pendiente de Alberto: DNI de Antonio
 en la ficha desde la UI; revisar si `edc7248d…` «Antonio Cruz Sánchez» es un duplicado; la póliza Mapfre lleva el email de
 Alberto como email del tomador. ➕ Mismo día: `edc7248d` FUSIONADA en `8016986c` (OK de Alberto, `prisma/sql/2026-09-24_fusion_antonio_cruz.sql`,
-hereda DNI+hash) y Gabriel añadido a la póliza como propietario + conductor ocasional (filas `manual`, solo `cliente_id`).
+hereda DNI+hash) y Gabriel añadido a la póliza como propietario + conductor ocasional (filas `manual`, solo `cliente_id`). 🚨 El DNI heredado de la fusión acababa en 335B ≠ 77321266G de las pólizas → quitado
+(dni/hash a NULL). Editar identidad exige un documento tipo DNI recibido en la ficha: por eso la UI «no deja modificar».
 
 **(23/09/2026)** 🔁 **PR 10 (#3422): sustitución AUTOMÁTICA, duplicidades y aviso a la compañía al emitir.** Clave del
 riesgo por ramo (matrícula · refcat/dirección · DNI asegurado); la sustituida sale de «en vigor» para siempre («se anula y
