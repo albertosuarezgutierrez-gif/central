@@ -22,95 +22,72 @@ import { activoPorRuta, activoEnLista } from '@/lib/nav-activo'
 /** Una entrada del menú. `tab` solo lo llevan los segmentos de /banca, que comparten ruta. */
 type NavItem = { href: string; icon: LucideIcon; label: string; tab?: string }
 
+// 🧭 Lateral reordenado el 24/09/2026 (Alberto: «limpieza no la uso, avisos de Telegram no es
+// importante para estar de los primeros… hay cosas duplicadas»). Arriba, abierto, solo lo del DÍA
+// A DÍA; lo demás plegado en Pisos · Oportunidades · Ajustes. No se borra ninguna página: todas
+// siguen en su URL y en el Cmd+K. El historial de por qué existe cada entrada está en git.
 const NAV_NEGOCIO: NavItem[] = [
-  // 🏠 Inicio = Resumen + Banca FUSIONADOS (Fase 2). Una sola entrada: /banca con control
-  // 💶 Dinero (saldos+movimientos+IA) | 🏢 Negocios (holding, antiguo Resumen). Absorbe también la
-  // «Radiografía» y las entradas fiscales sueltas (rutas vivas, alcanzables desde sus enlaces).
-  // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
-  { href: '/banca', icon: House, label: 'Inicio' },
-  // Los CINCO segmentos de /banca (Dinero · Ingresos · Negocios · Fiscal · Personal) vivían solo en
-  // la fila de pestañas de la propia página: desde el menú eran invisibles. Alberto fue a buscar
-  // «Ingresos» al menú —que es donde uno lo busca— y no estaba (02/09/2026). Se sacan aquí como
-  // sub-entradas de Inicio, igual que «Pisos · detalle» tiene las suyas.
-  //
-  // `tab` es la marca de cuál está activo: `usePathname()` devuelve `/banca` para todos, así que
-  // sin esto se pintarían todos a la vez.
-  //
-  // El segmento «Dinero» NO tiene entrada propia a posta: es el que responde a /banca sin query,
-  // o sea exactamente lo que ya hace «Inicio». Ponerlo sería una segunda entrada a la misma URL —
-  // la duplicidad que este mismo panel lleva todo el día quitándose de encima.
-  { href: '/banca?tab=ingresos', icon: Banknote, label: 'Ingresos', tab: 'ingresos' },
+  // 🏠 Inicio = resumen de los cuatro negocios (`/inicio`, 24/09/2026). Banca pasa a ser una
+  // entrada más; sus segmentos (`?tab=`) cuelgan de ella. «Dinero» NO tiene entrada propia: es
+  // `/banca` sin query, o sea la propia entrada «Banca» (ver lib/nav-activo.ts).
+  { href: '/inicio', icon: House, label: 'Inicio' },
+  { href: '/correduria', icon: Shield, label: 'Correduría' },
+  { href: '/sivra/calendario', icon: CalendarDays, label: 'Calendario pisos' },
+  { href: '/sivra/mensajes', icon: MessageCircle, label: 'Mensajes pisos' },
+  { href: '/banca', icon: Banknote, label: 'Banca' },
+  { href: '/banca?tab=ingresos', icon: Coins, label: 'Ingresos', tab: 'ingresos' },
   { href: '/banca?tab=negocios', icon: Building2, label: 'Negocios', tab: 'negocios' },
   { href: '/banca?tab=fiscal', icon: Receipt, label: 'Fiscal', tab: 'fiscal' },
-  { href: '/banca?tab=personal', icon: House, label: 'Personal', tab: 'personal' },
-  // Bandeja del agente de facturas. Es el destino del aviso de Telegram, que hasta el 29/08/2026
-  // enlazaba a una página inexistente; sin esta entrada, lo acumulado solo se ve al llegar una
-  // factura nueva (el aviso cuenta las de ESA pasada, no la bandeja entera).
+  { href: '/banca?tab=personal', icon: User, label: 'Personal', tab: 'personal' },
+  // Destino del aviso de Telegram del agente de facturas (29/08/2026).
   { href: '/expenses/pendientes', icon: Receipt, label: 'Facturas por revisar' },
-  // 🤖 Los dos chats (contable y precios) viven juntos en /asistentes desde el 02/09/2026;
-  // /contable y /agente siguen respondiendo como redirect. Una entrada, no dos.
-  { href: '/asistentes', icon: Bot, label: 'Asistentes' },
-  { href: '/limpiezas', icon: Sparkles, label: 'Limpiezas' },
-  // 🛡️ Correduría: la matriz de comisiones + la cartera en vivo de central-asegura. Vivía
-  // SOLO como enlace desde las tarjetas de /banca (31/08/2026: «no me sale correduría»), así
-  // que si no pasabas por Inicio la sección era invisible.
-  { href: '/correduria', icon: Shield, label: 'Correduría' },
-  { href: '/comunicacion', icon: MessageSquare, label: 'Comunicación' },
-  // 🔔 Qué te manda el bot por su cuenta, y el interruptor de cada aviso (01/09/2026:
-  // «revisa las notificaciones de Telegram, son muchas»).
-  { href: '/telegram', icon: Bell, label: 'Avisos Telegram' },
+  { href: '/trading', icon: TrendingUp, label: 'Bolsa' },
 ]
 
-// ─── 🔭 Oportunidades — separadas de «Mi negocio» el 02/09/2026 ───────────────────────────────
-// Alberto, sobre el panel entero: «creo q tb están mal organizado». El inventario dio la forma
-// del problema: 76 páginas y 51 entradas de menú para UNA persona. Y dentro de «Mi negocio»
-// convivían dos modos mentales distintos: GESTIONAR lo que ya tienes (banca, facturas por
-// revisar, correduría, limpiezas) y BUSCAR algo nuevo (concursos, subastas, analizar una compra,
-// empresas en dificultad, bolsa, patrimonio). Mezclados, «Facturas por revisar» —que es trabajo
-// pendiente de HOY— pesaba lo mismo que «Subastas», que se mira cuando se tiene un rato.
-// Separarlas no quita ninguna página: cambia cuál te encuentras al abrir el panel a resolver
-// algo. Es reversible en un PR (mover las 6 entradas de vuelta y borrar la sección).
+// ─── 🔭 Oportunidades (02/09/2026): BUSCAR algo nuevo, separado de GESTIONAR lo que ya tienes.
+// La bolsa subió a «Día a día» el 24/09/2026; el patrimonio se queda aquí (cambia poco).
 const NAV_OPORTUNIDADES = [
   { href: '/concursos', icon: Landmark, label: 'Concursos' },
   { href: '/subastas', icon: Gavel, label: 'Subastas y chollos' },
   { href: '/inversion', icon: SearchCheck, label: 'Analizar compra' },
   { href: '/empresas', icon: Building2, label: 'Empresas' },
-  { href: '/trading', icon: TrendingUp, label: 'Inversión' },
   { href: '/patrimonio', icon: Briefcase, label: 'Patrimonio' },
 ]
 
+// ⚙️ Ajustes y administración: lo que se configura de vez en cuando, al final y plegado.
+// «Limpiezas» y «Avisos Telegram» estaban entre las primeras entradas y no se usan a diario.
+const NAV_AJUSTES = [
+  // 🔔 Qué te manda el bot por su cuenta, y el interruptor de cada aviso (01/09/2026).
+  { href: '/telegram', icon: Bell, label: 'Avisos Telegram' },
+  { href: '/asistentes', icon: Bot, label: 'Asistentes' },
+  { href: '/comunicacion', icon: MessageSquare, label: 'Comunicación' },
+  { href: '/limpiezas', icon: Sparkles, label: 'Limpiezas' },
+  { href: '/sivra/limpiadoras', icon: Wrench, label: 'Admin limpiezas' },
+  { href: '/sivra/domotica', icon: Fan, label: 'Domótica' },
+  { href: '/sivra/seo', icon: Search, label: 'SEO' },
+  // 🚨 Destino del aviso del cron `ses-latido` (02/09/2026): sin entrada era inalcanzable.
+  { href: '/sivra/partes/establecimientos', icon: BookUser, label: 'Partes de viajeros' },
+]
+
 // Entrada única para una cuenta acotada a la sección Empresas (rol='empresas').
-// 🚨 Se pinta en el hueco de «Mi negocio» aunque `/empresas` viva ahora en Oportunidades: esa
+// 🚨 Se pinta en el hueco de «Día a día» aunque `/empresas` viva ahora en Oportunidades: esa
 // sección NO se renderiza para estas cuentas, así que su única entrada tiene que estar donde sí
 // se pinta. Por eso `seccionDeRuta` no puede decidir sola aquí — ver `seccionActiva()`.
 const NAV_SOLO_EMPRESAS: NavItem[] = [{ href: '/empresas', icon: Building2, label: 'Empresas' }]
 
 const NAV_PISOS = [
-  // 🏨 Apartamentos vivía en «Mi negocio» y se quedó sin entrada al fusionar Resumen+Banca
-  // (16/07/2026): la página nunca se borró, pero solo se llegaba por el Cmd+K o por un
-  // «Detalle →» suelto, así que en la práctica era invisible. Restaurada aquí, que es donde
-  // Alberto busca los pisos, y es la que lleva el resumen del ciclo de mensajes al huésped.
+  // 🏨 Apartamentos lleva el resumen del ciclo de mensajes al huésped (restaurada 16/07/2026).
   { href: '/apartamentos', icon: BedDouble, label: 'Apartamentos' },
   { href: '/sivra/resultado-pisos', icon: ChartLine, label: 'Resultado pisos' },
-  { href: '/sivra/calendario', icon: CalendarDays, label: 'Calendario' },
   { href: '/sivra/income', icon: Coins, label: 'Ingresos' },
   { href: '/sivra/expenses', icon: CreditCard, label: 'Gastos' },
   { href: '/sivra/gastos-fijos', icon: ClipboardList, label: 'Gastos fijos' },
   { href: '/sivra/facturas-control', icon: FileText, label: 'Facturas' },
   { href: '/sivra/fiscal', icon: ChartPie, label: 'Fiscal IRPF' },
-  { href: '/sivra/mensajes', icon: MessageCircle, label: 'Mensajes' },
   { href: '/sivra/mercado', icon: ChartColumn, label: 'Competencia' },
   { href: '/sivra/pricing', icon: FlaskConical, label: 'Pricing Lab' },
   { href: '/sivra/pricing-auto', icon: Cog, label: 'Pricing auto' },
   { href: '/sivra/pricing-rentabilidad', icon: Scale, label: 'Motor vs PL' },
-  { href: '/sivra/seo', icon: Search, label: 'SEO' },
-  { href: '/sivra/limpiadoras', icon: Wrench, label: 'Admin limpiezas' },
-  { href: '/sivra/domotica', icon: Fan, label: 'Domótica' },
-  // 🚨 Estaba INALCANZABLE pulsando (02/09/2026): ningún enlace del repo llevaba aquí y, sin
-  // embargo, el cron `ses-latido` avisa por Telegram de que «no hay ningún establecimiento dado
-  // de alta en /sivra/partes/establecimientos». Un aviso que señala una pantalla que no se puede
-  // abrir es un aviso que no se puede atender — la regla de «¿en qué pantalla lo va a ver?».
-  { href: '/sivra/partes/establecimientos', icon: BookUser, label: 'Partes de viajeros' },
 ]
 
 const NAV_OPERADOR = [
@@ -140,11 +117,12 @@ const NAV_OPERADOR_RESTRINGIDO = new Set(['/operador/clientes', '/operador/rrhh'
 
 // Secciones PLEGABLES (01/09/2026). El lateral tenía 52 entradas planas y no lo navegaba
 // nadie: al entrar se ve un menú corto (la sección donde estás) y el resto a un clic.
-type ClaveSeccion = 'negocio' | 'oportunidades' | 'pisos' | 'operador'
+type ClaveSeccion = 'negocio' | 'oportunidades' | 'pisos' | 'ajustes' | 'operador'
 const LS_SECCION: Record<ClaveSeccion, string> = {
   negocio: 'nav-seccion-negocio',
   oportunidades: 'nav-seccion-oportunidades',
   pisos: 'nav-seccion-pisos',
+  ajustes: 'nav-seccion-ajustes',
   operador: 'nav-seccion-operador',
 }
 
@@ -158,13 +136,14 @@ function seccionDeRuta(path: string): ClaveSeccion | null {
   if (enLista(NAV_PISOS, path)) return 'pisos'
   if (enLista(NAV_OPERADOR, path)) return 'operador'
   if (enLista(NAV_OPORTUNIDADES, path)) return 'oportunidades'
+  if (enLista(NAV_AJUSTES, path)) return 'ajustes'
   if (enLista(NAV_NEGOCIO, path)) return 'negocio'
   return null
 }
 
-// 🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Mi negocio».
+// 🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Día a día».
 // Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta
-// NO se le renderiza— y «Mi negocio» se quedaría plegado con su única entrada dentro: el menú
+// NO se le renderiza— y «Día a día» se quedaría plegado con su única entrada dentro: el menú
 // entero vacío, sin error y sin nada que pulsar.
 function seccionActiva(path: string, soloEmpresas: boolean): ClaveSeccion | null {
   if (soloEmpresas) return 'negocio'
@@ -199,6 +178,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
       negocio: activa === null || activa === 'negocio',
       oportunidades: activa === 'oportunidades',
       pisos: activa === 'pisos',
+      ajustes: activa === 'ajustes',
       operador: activa === 'operador',
     }
   })
@@ -295,7 +275,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
     const listaNegocio = soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO
     return (
       <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
-        <CabeceraSeccion clave="negocio" titulo="Mi negocio" primera />
+        <CabeceraSeccion clave="negocio" titulo="Día a día" primera />
         <div id="nav-grupo-negocio" className="nav-grupo" data-colapsado={abiertas.negocio ? undefined : '1'}>
           {listaNegocio.map(({ href, icon, label, tab }) => {
             // Las sub-entradas de /banca comparten `path`, así que el activo lo decide el ?tab=.
@@ -310,7 +290,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
                 borderRadius: '10px', marginBottom: '2px',
                 fontWeight: active ? 600 : 400,
                 background: active ? 'var(--primary-light)' : 'transparent',
-                color: active ? 'var(--primary)' : 'var(--text)',
+                color: active ? 'var(--primary-hover)' : 'var(--text)',
                 fontSize: esSegmento ? '13px' : '14px', textDecoration: 'none',
               }}>
                 <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
@@ -319,28 +299,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
           })}
         </div>
 
-        {!soloEmpresas && <CabeceraSeccion clave="oportunidades" titulo="Oportunidades" />}
-        {!soloEmpresas && (
-          <div id="nav-grupo-oportunidades" className="nav-grupo" data-colapsado={abiertas.oportunidades ? undefined : '1'}>
-            {NAV_OPORTUNIDADES.map(({ href, icon, label }) => {
-              const active = activoPorRuta(href, path)
-              return (
-                <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
-                  fontWeight: active ? 600 : 400,
-                  background: active ? 'var(--primary-light)' : 'transparent',
-                  color: active ? 'var(--primary)' : 'var(--text)',
-                  fontSize: '14px', textDecoration: 'none',
-                }}>
-                  <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
-                </Link>
-              )
-            })}
-          </div>
-        )}
-
-        {!soloEmpresas && <CabeceraSeccion clave="pisos" titulo="Pisos · detalle" />}
+        {!soloEmpresas && <CabeceraSeccion clave="pisos" titulo="Pisos" />}
         {!soloEmpresas && (
           <div id="nav-grupo-pisos" className="nav-grupo" data-colapsado={abiertas.pisos ? undefined : '1'}>
             {NAV_PISOS.map(({ href, icon, label }) => {
@@ -353,7 +312,49 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
                   padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
                   fontWeight: active ? 600 : 400,
                   background: active ? 'var(--primary-light)' : 'transparent',
-                  color: active ? 'var(--primary)' : 'var(--text)',
+                  color: active ? 'var(--primary-hover)' : 'var(--text)',
+                  fontSize: '14px', textDecoration: 'none',
+                }}>
+                  <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+
+        {!soloEmpresas && <CabeceraSeccion clave="oportunidades" titulo="Oportunidades" />}
+        {!soloEmpresas && (
+          <div id="nav-grupo-oportunidades" className="nav-grupo" data-colapsado={abiertas.oportunidades ? undefined : '1'}>
+            {NAV_OPORTUNIDADES.map(({ href, icon, label }) => {
+              const active = activoPorRuta(href, path)
+              return (
+                <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
+                  fontWeight: active ? 600 : 400,
+                  background: active ? 'var(--primary-light)' : 'transparent',
+                  color: active ? 'var(--primary-hover)' : 'var(--text)',
+                  fontSize: '14px', textDecoration: 'none',
+                }}>
+                  <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+
+        {!soloEmpresas && <CabeceraSeccion clave="ajustes" titulo="Ajustes y admin" />}
+        {!soloEmpresas && (
+          <div id="nav-grupo-ajustes" className="nav-grupo" data-colapsado={abiertas.ajustes ? undefined : '1'}>
+            {NAV_AJUSTES.map(({ href, icon, label }) => {
+              const active = activoPorRuta(href, path)
+              return (
+                <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
+                  fontWeight: active ? 600 : 400,
+                  background: active ? 'var(--primary-light)' : 'transparent',
+                  color: active ? 'var(--primary-hover)' : 'var(--text)',
                   fontSize: '14px', textDecoration: 'none',
                 }}>
                   <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
@@ -378,7 +379,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
                     borderRadius: '10px', marginBottom: '2px',
                     fontWeight: exactActive ? 600 : 400,
                     background: exactActive ? 'var(--primary-light)' : 'transparent',
-                    color: exactActive ? 'var(--primary)' : (sub ? 'var(--muted)' : 'var(--text)'),
+                    color: exactActive ? 'var(--primary-hover)' : (sub ? 'var(--muted)' : 'var(--text)'),
                     fontSize: sub ? '13px' : '14px', textDecoration: 'none',
                   }}>
                     <Icono de={icon} sub={sub} /><span className="nav-solo-abierto">{label}</span>
@@ -414,7 +415,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
         {/* Barra superior de ancho completo: el contenido desplazado pasa limpio por debajo
             (antes el ☰ era un chip flotante que tapaba a medias los títulos al scrollear).
             z-index por debajo del backdrop (40) y el drawer (50) → el menú abierto la cubre. */}
-        <div style={{
+        <div className="barra-movil" style={{
           position: 'fixed', top: 0, left: 0, right: 0, height: 52, zIndex: 30,
           background: 'var(--surface)', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', gap: '10px', padding: '0 12px',
@@ -429,8 +430,8 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
             }}
           >☰</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px', minWidth: 0 }}>
-            <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '6px', padding: '1px 7px', fontSize: '12px' }}>ia</span>
-            <span>plataforma</span>
+            <img src="/icon.svg" alt="" width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />
+            <span>Mi grupo</span>
           </div>
           {/* Subir una factura desde CUALQUIER pantalla, sin pasar por /asistentes: es la acción que
               Alberto hace con el móvil en la mano delante del papel. `marginLeft:auto` la pega a la
@@ -459,8 +460,8 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
         }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '16px' }}>
-              <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '8px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
-              <span>plataforma</span>
+              <img src="/icon.svg" alt="" width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />
+              <span>Mi grupo</span>
             </div>
             <button onClick={() => setOpen(false)} aria-label="Cerrar menú"
               style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '22px', lineHeight: 1, cursor: 'pointer' }}>×</button>
@@ -484,8 +485,8 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
     }}>
       <div className="nav-cabecera" style={{ padding: '20px 12px 16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '16px', minWidth: 0 }}>
-          <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '8px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
-          <span className="nav-solo-abierto">plataforma</span>
+          <img src="/icon.svg" alt="" width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />
+          <span className="nav-solo-abierto">Mi grupo</span>
         </div>
         <button
           onClick={alternarPlegado}

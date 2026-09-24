@@ -18,18 +18,13 @@
  * pantalla con lo que hay que configurar. Redirigir en ese caso dejaría a
  * Alberto fuera de su propia correduría sin una sola pista de por qué.
  */
-import { Nunito_Sans, Quicksand } from 'next/font/google'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { ENV_LISTA_CORREDURIA, resolverAccesoCorreduria } from '@/lib/correduria-acceso'
 
-// Tipografía de Grupo ASegura (24/09/2026, regla de Alberto para TODA superficie de la
-// correduría): titulares, menús y botones en Quicksand; cuerpo en Nunito Sans. La misma que
-// la web y el portal. Por next/font, como la Inter del resto de plataforma: self-hosted y solo
-// en esta sección, que es la única que lleva la marca de la correduría.
-const titulares = Quicksand({ subsets: ['latin'], weight: ['500', '600', '700'], display: 'swap', variable: '--font-correduria-display' })
-const cuerpo = Nunito_Sans({ subsets: ['latin'], weight: ['400', '600', '700', '800'], display: 'swap', variable: '--font-correduria-sans' })
-const FUENTES = `correduria-tipografia ${titulares.variable} ${cuerpo.variable}`
+// La tipografía de Grupo ASegura (Quicksand + Nunito Sans) la carga el layout raíz para TODO
+// plataforma desde el 24/09/2026; aquí solo queda el gancho de clase.
+const FUENTES = 'correduria-tipografia'
 
 export default async function CorreduriaLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession()
@@ -37,7 +32,7 @@ export default async function CorreduriaLayout({ children }: { children: React.R
 
   const acceso = await resolverAccesoCorreduria(session)
 
-  if (acceso.estado === 'no-autorizado') redirect('/banca')
+  if (acceso.estado === 'no-autorizado') redirect('/inicio')
 
   if (acceso.estado === 'sin-comprobar') {
     return (

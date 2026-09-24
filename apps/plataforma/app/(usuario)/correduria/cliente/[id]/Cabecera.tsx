@@ -29,17 +29,15 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
   // el enum `tipo` no basta. Si el rótulo dice «Cliente» y el WhatsApp le trata
   // de desconocido (o al revés), el fallo se ve en la pantalla y en el chat.
   const esCliente = ficha.tipo === 'cliente' || resumen.conteo.vivas > 0
-  // Ramos con alguna póliza VIVA (no canceladas, no volcado): lo que alimenta
-  // la rueda. `ficha.polizas` siempre es array (nunca null), así que esto no
-  // necesita un tercer estado — a diferencia de casi todo lo demás de la ficha.
+  // Ramos con alguna póliza VIVA (no canceladas, no volcado). `ficha.polizas`
+  // siempre es array (nunca null), así que esto no necesita un tercer estado.
   const tiposVivos = ficha.polizas.filter(p => p.viva).map(p => p.tipo)
   return (
     <>
       <div>
         <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
-        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-          <RuedaRamos nombre={ficha.nombre} tiposVivos={tiposVivos} />
-          <div style={{ flex: 1, minWidth: 0 }}>
+        <div>
+          <div style={{ minWidth: 0 }}>
             <PageHeader
               titulo={ficha.nombre}
               sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -49,6 +47,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                     puede seguir `lead`, y con pólizas vivas ES cliente, diga lo que
                     diga el enum. */}
                 <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
+                <RamosContratados tiposVivos={tiposVivos} />
                 <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
                 <Identidad identidad={ficha.identidad} clienteId={ficha.id} />
                 <Carnets carnets={ficha.carnets} />
@@ -70,67 +69,22 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
   )
 }
 
-// ── Rueda de ramos ──────────────────────────────────────────────────────────
-// Avant2 (Codeoscopic) pone un anillo de iconos de ramo alrededor del avatar
-// del cliente: de un vistazo se ve qué tiene contratado y qué no, sin leer una
-// sola palabra (capturas en Drive, carpeta INTRANET, 11/09/2026). Es la pieza
-// más fuerte de esa referencia y hoy no existe nada parecido aquí — el filtro
-// «Auto sin Hogar» de `ListaCartera` ya hace esta misma pregunta en texto.
-//
-// Los siete ramos son los presupuestables desde la ficha (`RAMOS_PRESUPUESTO`
-// de `Acciones`, más R. Civil por ser el tercero más frecuente en cartera viva
-// — 9 de 110 pólizas, medido 03/09/2026). El emoji sale de `TIPOS` (piezas.tsx)
-// para no mantener un segundo mapeo ramo→icono en este mismo archivo.
-const RUEDA_RAMOS = ['auto', 'hogar', 'moto', 'vida', 'salud', 'decesos', 'responsabilidad_civil'] as const
-
-function inicialesDe(nombre: string): string {
-  const partes = nombre.trim().split(/\s+/).filter(Boolean)
-  return partes.length === 0 ? '?'
-    : partes.length === 1 ? partes[0]!.slice(0, 2).toUpperCase()
-      : (partes[0]![0] + partes[1]![0]).toUpperCase()
-}
-
-function RuedaRamos({ nombre, tiposVivos }: { nombre: string; tiposVivos: string[] }) {
-  const activos = new Set(tiposVivos)
-  const n = RUEDA_RAMOS.length
-  const radio = 40
-  const tam = 96
+// ── Ramos contratados ───────────────────────────────────────────────────────
+// Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que
+// sea necesario»): en móvil se comía media pantalla para decir lo mismo que esta línea. Solo
+// los ramos CON póliza viva; los que faltan se ven en «Nueva oportunidad» y en el filtro
+// «Auto sin Hogar» de la cartera.
+function RamosContratados({ tiposVivos }: { tiposVivos: string[] }) {
+  const ramos = [...new Set(tiposVivos)]
+  if (ramos.length === 0) return null
   return (
-    <div
-      aria-hidden
-      style={{ position: 'relative', width: tam, height: tam, flexShrink: 0 }}
-    >
-      <div style={{
-        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-        width: 40, height: 40, borderRadius: '50%',
-        background: 'var(--primary-light)', color: 'var(--primary)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 14, fontWeight: 800,
-      }}>{inicialesDe(nombre)}</div>
-      {RUEDA_RAMOS.map((tipo, i) => {
-        const angulo = (i / n) * 2 * Math.PI - Math.PI / 2
-        const x = Math.cos(angulo) * radio
-        const y = Math.sin(angulo) * radio
-        const activo = activos.has(tipo)
-        const etiqueta = TIPOS[tipo] ?? tipo
-        return (
-          <span
-            key={tipo}
-            title={`${etiqueta} — ${activo ? 'contratado' : 'no contratado'}`}
-            style={{
-              position: 'absolute', top: `calc(50% + ${y}px)`, left: `calc(50% + ${x}px)`,
-              transform: 'translate(-50%, -50%)',
-              width: 22, height: 22, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 12, lineHeight: 1,
-              background: activo ? 'var(--primary-light)' : 'var(--surface)',
-              border: `1px solid ${activo ? 'var(--primary)' : 'var(--border)'}`,
-              opacity: activo ? 1 : 0.55,
-            }}
-          >{etiqueta.split(' ')[0]}</span>
-        )
-      })}
-    </div>
+    <span style={{ display: 'inline-flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }} aria-label="Ramos contratados">
+      {ramos.map(t => (
+        <span key={t} style={{ fontSize: 12, padding: '3px 9px', borderRadius: 999, background: 'var(--primary-light)', color: 'var(--primary)', fontWeight: 600 }}>
+          {TIPOS[t] ?? t}
+        </span>
+      ))}
+    </span>
   )
 }
 
@@ -142,7 +96,7 @@ function RuedaRamos({ nombre, tiposVivos }: { nombre: string; tiposVivos: string
 function Titulares({ resumen }: { resumen: ResumenFicha }) {
   const { conteo, recibos, siniestrosAbiertos: abiertos, proximo } = resumen
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 8 }}>
       <Kpi label="Pólizas vivas" valor={String(conteo.vivas)} sub={`${conteo.total} en total`} />
       <Kpi
         label="Recibos devueltos"
@@ -222,14 +176,19 @@ function ProximoVencimiento({ proximo, vivas, sinFecha }: {
 
 function Kpi({ label, valor, sub, color, pequeno }: {
   label: string; valor: string; sub?: string; color?: string
-  /** Para un valor que es una fecha: 22px se sale de la tarjeta en móvil. */
+  /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */
   pequeno?: boolean
 }) {
+  // Compacto (24/09/2026): los cinco titulares ocupaban media pantalla del móvil. Se quedan en la
+  // cabecera —es la promesa del guardián: lo que exige una llamada no se esconde tras un clic—,
+  // pero en fichas bajas. El texto de apoyo va debajo en 11 px y el `title` lo repite entero.
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
-      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>
-      <div style={{ fontSize: pequeno ? 17 : 22, fontWeight: 800, color: color ?? 'var(--text)' }}>{valor}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{sub}</div>}
+    <div title={sub ? `${label}: ${valor} · ${sub}` : undefined} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '7px 10px', minWidth: 0 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
+        <span style={{ fontSize: pequeno ? 14 : 18, fontWeight: 800, color: color ?? 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</span>
+      </div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</div>}
     </div>
   )
 }

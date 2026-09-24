@@ -1,19 +1,21 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter } from 'next/font/google'
+import { Nunito_Sans, Quicksand } from 'next/font/google'
 import './globals.css'
+import { RegistrarSW } from './RegistrarSW'
 
 // Tipografía del sistema de diseño (self-hosted por next/font: cero peticiones externas
-// en runtime). Expuesta como var(--font-inter) y aplicada en globals.css.
-const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  variable: '--font-inter',
-})
+// en runtime). Desde el 24/09/2026 TODA plataforma usa el lenguaje visual de la correduría
+// (decisión de Alberto: «para que todo sea igual»): titulares, menús y botones en Quicksand,
+// cuerpo en Nunito Sans. Solo el lenguaje visual: el logo y el nombre «Grupo ASegura» siguen
+// siendo exclusivos de /correduria. Variables aplicadas en globals.css.
+const titulares = Quicksand({ subsets: ['latin'], weight: ['500', '600', '700'], display: 'swap', variable: '--font-marca-display' })
+const cuerpo = Nunito_Sans({ subsets: ['latin'], weight: ['400', '600', '700', '800'], display: 'swap', variable: '--font-marca-sans' })
 
 export const metadata: Metadata = {
-  title: 'ia plataforma',
+  title: 'Mi grupo',
   description: 'Cuadro de mando consolidado',
-  manifest: '/manifest.json',
+  // El manifiesto lo publica `app/manifest.ts` (Next lo enlaza solo). Icono de pestaña e iOS:
+  icons: { icon: '/icon.svg', apple: '/icono-app' },
 }
 
 // Next 15 exige themeColor en el export `viewport`, no en `metadata` (antes
@@ -24,12 +26,12 @@ export const viewport: Viewport = {
   // batería). El tema por defecto es CLARO; el oscuro solo existe elegido a mano
   // (el script anti-parpadeo y el toggle reescriben la meta a "dark" en ese caso).
   colorScheme: 'only light',
-  themeColor: '#4f46e5',
+  themeColor: '#3364ee',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={inter.variable} suppressHydrationWarning>
+    <html lang="es" className={`${titulares.variable} ${cuerpo.variable}`} suppressHydrationWarning>
       <body>
         {/* Anti-parpadeo: aplica el tema OSCURO elegido (localStorage) antes del
             primer pintado; sin elección (o con 'light') se queda el claro por defecto.
@@ -46,6 +48,7 @@ try{if(localStorage.getItem('nav-plegado')==='1'){document.documentElement.datas
           }}
         />
         {children}
+        <RegistrarSW />
       </body>
     </html>
   )

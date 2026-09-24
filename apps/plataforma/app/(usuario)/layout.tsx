@@ -20,7 +20,7 @@ export default async function UsuarioLayout({ children }: { children: React.Reac
   const isOperator = !!admin
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: 'var(--bg)' }}>
+    <div className="app-shell" style={{ display: 'flex', minHeight: '100vh' }}>
       <UserSidebar email={session.email} nombre={session.nombre} isOperator={isOperator} operadorRol={admin?.rol} rol={session.rol} />
       <LayoutShell>{children}</LayoutShell>
       <CommandPalette isOperator={isOperator} />

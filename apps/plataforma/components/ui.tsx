@@ -100,8 +100,10 @@ export function PageHeader({ titulo, sub, icono, acciones }: {
 // ─── Tarjetas ────────────────────────────────────────────────────────────────────────────────
 // Ojo con estamparle `cardStyle` a todo: borde + fondo + radio + sombra dicen «objeto aparte», y
 // si todo es una tarjeta no hay jerarquía. Úsala para agrupar, no para decorar.
+// Sin `border` desde el 24/09/2026: la sombra del portal (`--shadow`) ya lleva su filete de 1 px,
+// y borde + filete se leían como doble línea.
 export const cardStyle: CSSProperties = {
-  background: 'var(--surface)', border: '1px solid var(--border)',
+  background: 'var(--surface)',
   borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)',
 }
 
@@ -221,7 +223,7 @@ export function btnStyle(variante: 'primario' | 'secundario' | 'sutil' = 'secund
     padding: tam === 'sm' ? '7px 12px' : '11px 16px',
     minHeight: tam === 'sm' ? 34 : 44,
     fontSize: tam === 'sm' ? 13 : 14, fontWeight: 600,
-    borderRadius: 10, cursor: 'pointer', whiteSpace: 'nowrap',
+    borderRadius: 999, cursor: 'pointer', whiteSpace: 'nowrap',
     transition: 'background .12s ease, border-color .12s ease',
   }
   if (variante === 'primario') return { ...base, background: 'var(--primary)', color: '#fff', border: '1px solid var(--primary)' }
