@@ -127,6 +127,9 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next({ request: { headers: requestHeaders } })
 }
 
+// 📱 Lo que el navegador pide para INSTALAR la app va SIN sesión: Chrome descarga el manifiesto sin
+// cookie, y si el gate lo redirige a /login la oferta de instalar desaparece EN SILENCIO (24/09/2026).
+// No expone nada: manifiesto, SW que no cachea e iconos. Lo vigila `lib/pwa.test.ts`.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon\\.ico).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon\\.ico|manifest\\.webmanifest|sw\\.js|icono-app|icon\\.svg).*)'],
 }

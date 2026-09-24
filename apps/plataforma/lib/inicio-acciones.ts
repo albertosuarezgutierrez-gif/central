@@ -52,6 +52,9 @@ export type EstadoInicio = {
     | { estado: 'ok'; enDias: number; polizas: { cliente: string; dias: number }[] }
     | { estado: 'sin_configurar' }
     | { estado: 'error'; motivo: string }
+    /** La página ya los enseña en otro sitio (la tarjeta de Correduría de `/inicio`): no se repiten
+     *  aquí, y su fallo lo declara esa tarjeta. Cuenta como comprobado. */
+    | { estado: 'en_tarjeta' }
     | null
 }
 
@@ -92,7 +95,9 @@ export function accionesDeInicio(e: EstadoInicio): Accion[] {
   }
 
   // ── Pólizas ─────────────────────────────────────────────────────────────────────────────────
-  if (e.polizas == null || e.polizas.estado === 'error') {
+  if (e.polizas != null && e.polizas.estado === 'en_tarjeta') {
+    // La tarjeta de Correduría de /inicio los pinta (y declara su fallo): aquí se repetirían.
+  } else if (e.polizas == null || e.polizas.estado === 'error') {
     const motivo = e.polizas && e.polizas.estado === 'error' ? e.polizas.motivo : 'no se pudo consultar'
     out.push({
       clave: 'polizas-error', urgencia: 'ambar',

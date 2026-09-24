@@ -53,9 +53,13 @@ test('la fecha grande del quinto tile es el LÍMITE DE AVISO, no el vencimiento'
 test('un ?tab= desconocido cae en «Resumen» en vez de dejar la ficha en blanco', async () => {
   const { tabDeParametro } = await import('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts')
   assert.equal(tabDeParametro(undefined), 'resumen')
-  assert.equal(tabDeParametro('recibos'), 'recibos')
+  // Recibos y Siniestros ya no son pestañas (24/09/2026): un enlace viejo lleva a Pólizas, donde viven.
+  assert.equal(tabDeParametro('recibos'), 'polizas')
+  assert.equal(tabDeParametro('siniestros'), 'polizas')
   assert.equal(tabDeParametro('inventada'), 'resumen')
-  assert.equal(tabDeParametro(['polizas', 'recibos']), 'polizas')
+  // Claves heredadas de Object no pueden colarse como pestaña (dejarían la ficha en blanco).
+  for (const t of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) assert.equal(tabDeParametro(t), 'resumen', t)
+  assert.equal(tabDeParametro(['contactos', 'recibos']), 'contactos')
 })
 
 test('un contador nulo NO se pinta (0 diría «se miró y no hay»)', () => {
@@ -74,9 +78,18 @@ test('la sección lleva el acento de Grupo ASegura por TOKENS, no por hex suelto
   assert.match(layout, /className="correduria"/)
   const css = readFileSync(path.join(process.cwd(), 'apps/plataforma/app/globals.css'), 'utf8')
   // #3364ee = oklch(0.555 0.215 265), el cobalto de app.grupoasegura.com.
-  assert.match(css, /\.correduria\s*\{[^}]*--primary:\s*#3364ee/)
-  assert.match(css, /\[data-theme="dark"\]\s*\.correduria/)
-  for (const f of ['Cabecera.tsx', 'FichaTabs.tsx', 'TabResumen.tsx', 'TabRecibos.tsx']) {
+  // Desde el 24/09/2026 el cobalto es el acento de TODO el panel: vive en :root y en el tema oscuro.
+  assert.match(css, /:root\s*\{[^}]*--primary:\s*#3364ee/)
+  assert.match(css, /\[data-theme="dark"\]\s*\{[^}]*--primary:\s*#497cfd/)
+  for (const f of ['Cabecera.tsx', 'FichaTabs.tsx', 'TabResumen.tsx']) {
     assert.doesNotMatch(leer(f), /#[0-9a-fA-F]{3,6}\b/, `${f}: solo tokens var(--…), sin hex`)
   }
+})
+
+test('los siniestros del cliente siguen alcanzables: se montan en la pestaña Pólizas', () => {
+  // Al quitar la pestaña propia, el único sitio de la ficha donde abrir o seguir un siniestro es
+  // Pólizas. Si alguien lo quita de ahí, el siniestro solo se vería entrando póliza a póliza.
+  const page = leer('page.tsx')
+  const bloque = page.slice(page.indexOf("tab === 'polizas'"), page.indexOf("tab === 'contactos'"))
+  assert.match(bloque, /<Siniestros\b/)
 })

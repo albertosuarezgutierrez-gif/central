@@ -13,7 +13,7 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
   }, [])
 
   return (
-    <div style={{
+    <div className="contenido-isla" style={{
       flex: 1,
       minWidth: 0,
       overflowY: 'auto',

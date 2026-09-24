@@ -4,6 +4,7 @@ import { rutaDe, activoPorRuta, activoEnLista, type EntradaNav } from './nav-act
 
 // Las dos listas reales que tenían el fallo, recortadas a lo que importa.
 const NEGOCIO: EntradaNav[] = [
+  { href: '/inicio' },
   { href: '/banca' },
   { href: '/banca?tab=ingresos', tab: 'ingresos' },
   { href: '/banca?tab=negocios', tab: 'negocios' },
@@ -71,9 +72,14 @@ test('una subruta de Pisos enciende su entrada padre y ninguna más', () => {
 
 test('ninguna ruta del panel enciende dos entradas a la vez', () => {
   const rutas: [string, string | null][] = [
-    ['/banca', null], ['/banca', 'ingresos'], ['/banca', 'negocios'], ['/banca', 'fiscal'],
+    ['/inicio', null], ['/banca', null], ['/banca', 'ingresos'], ['/banca', 'negocios'], ['/banca', 'fiscal'],
     ['/banca', 'personal'], ['/expenses/pendientes', null], ['/correduria', null],
   ]
   for (const [p, t] of rutas) assert.equal(activas(NEGOCIO, p, t).length, 1, `${p}?tab=${t}`)
   for (const e of PISOS) assert.equal(activas(PISOS, rutaDe(e.href)).length, 1, e.href)
+})
+
+test('/inicio (home desde 24/09/2026) enciende solo «Inicio», y /banca pelada solo «Banca»', () => {
+  assert.deepEqual(activas(NEGOCIO, '/inicio'), ['/inicio'])
+  assert.deepEqual(activas(NEGOCIO, '/banca'), ['/banca'])
 })

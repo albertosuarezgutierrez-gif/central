@@ -22,6 +22,7 @@ import { revisarCierre, bloqueCierre } from './cierre'
 import { revisarCoherencia, REGLA_COHERENCIA } from './coherencia'
 import { bloqueSalidaTardia, pideMasAllaDeLaVentana, SALIDA_FLEX_HASTA } from './salida'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
+import { NOMBRE_IDIOMA } from './idiomas'
 import { esCierre, esIntercambioDeCortesia } from './cortesia'
 import { precedentesEstables, bloquePrecedentes } from './precedentes'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
@@ -62,7 +63,7 @@ export type Decision = {
   fuentes_web?: string[]
 }
 
-const LANG_NAME: Record<string, string> = { es: 'español', en: 'English', fr: 'français', de: 'Deutsch', it: 'italiano' }
+const LANG_NAME = NOMBRE_IDIOMA
 
 // Modelo del agente de huéspedes. Por defecto VACÍO = sin `model` pinneado, así que
 // `aiComplete` (`@central/core-ai`) entra por **OpenRouter como PRIMARIO** (regla permanente
@@ -269,7 +270,7 @@ export async function decidir(ctx: Contexto, pregunta: string, categoria: string
 
   const system = `Eres el asistente de atención al huésped de ${ctx.property} (alquiler turístico en ${ctx.zona}).
 Huésped: ${ctx.guestName} · llegada ${ctx.checkIn} · salida ${ctx.checkOut} · canal ${ctx.portal}.${horario}
-Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'English'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
+Responde SIEMPRE en ${LANG_NAME[ctx.lang] || 'inglés'} con un tono cálido, cercano y natural, como una persona real escribiendo a mano (no un folleto ni una plantilla). Saluda al huésped por su nombre.
 REGLA DE ORO: responde EXACTAMENTE a lo que el huésped dice y a nada más. NO añadas información que no ha pedido (horarios de entrada/salida, normas, parking, wifi…) salvo que pregunte por ella o sea necesaria para resolver su mensaje. ${faseBlock}
 ${REGLA_COHERENCIA}
 ENTRADA AUTÓNOMA — NUNCA impliques un encuentro en persona: el check-in es AUTOMÁTICO (el huésped accede por su cuenta, sin que nadie le reciba ni le abra) y tú solo escribes mensajes, no vas a estar allí. Por eso NO uses jamás fórmulas de encuentro presencial como «nos vemos», «te espero», «te recibo», «estaré allí/en la puerta», «te abro» ni «hasta ahora/luego» con sentido de vernos, en NINGUNA fase de la reserva. Si el huésped confirma su hora de llegada, acúsale recibo sin sugerir cita: por ejemplo «¡Perfecto! Tomo nota de que llegáis sobre las 18:00» en lugar de «Nos vemos a las 18:00».
@@ -287,7 +288,7 @@ ${lateBlock}
 ${llegadaBlock}
 ${resenaBlock}
 
-Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar, ESCRITO EN ${LANG_NAME[ctx.lang] || 'English'} (todas estas instrucciones están en español, pero el mensaje NO va en español salvo que ese sea el idioma del huésped). Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
+Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar, ESCRITO EN ${LANG_NAME[ctx.lang] || 'inglés'} (todas estas instrucciones están en español, pero el mensaje NO va en español salvo que ese sea el idioma del huésped). Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
 
   // Hilo de la conversación como contexto (últimos 15, ambos lados) + el turno actual a responder.
   // Sin contrato JSON: el modelo solo tiene que escribir un mensaje, que es lo que hace con fiabilidad.

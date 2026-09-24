@@ -1,6 +1,7 @@
 // lib/sivra/agente-huesped/orquestador.ts — procesa el último mensaje del huésped de una reserva.
 import { construirContexto } from './contexto'
 import { detectLang, detectCategory, tipoHueco } from './reglas'
+import { idiomaConocido } from './idiomas'
 import { decidir, type Decision } from './decidir'
 import { decidirAutoEnvio } from './auto'
 import { esModoNoche } from './noche'
@@ -101,8 +102,7 @@ export async function procesarMensajeHuesped(
   try {
     // Idioma de respuesta: el idioma en que ESCRIBE el huésped (lo pidió Alberto — se le responde en
     // SU idioma). Si el mensaje no da señal clara, se cae al idioma de la reserva en Smoobu.
-    const IDIOMAS_OK = new Set(['es', 'en', 'fr', 'de', 'it'])
-    const fallbackLang = (IDIOMAS_OK.has(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en') as 'es' | 'en' | 'fr' | 'de' | 'it'
+    const fallbackLang = idiomaConocido(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en'
     const lang = detectLang(pregunta, fallbackLang)
     const categoria = detectCategory(pregunta) || 'general'
     // 1-ter) Recuperar lo ya aprendido que se PAREZCA a esta pregunta. `construirContexto` no puede

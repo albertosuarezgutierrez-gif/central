@@ -248,7 +248,7 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   `:root` (el `only` además VETA el oscurecimiento forzado de Chrome/Samsung Internet con batería baja);
   el bloque oscuro vive solo en `[data-theme="dark"]` (elección manual, botón ☀️/🌙 del sidebar, binario,
   persiste en `localStorage('theme')`). `layout.tsx`: meta `color-scheme` = `only light` de serie y
-  `themeColor` fijo `#4f46e5`; el script anti-parpadeo solo actúa con `theme='dark'` guardado (y repinta
+  `themeColor` fijo `#3364ee` (cobalto desde el 24/09/2026; antes índigo `#4f46e5`); el script anti-parpadeo solo actúa con `theme='dark'` guardado (y repinta
   `theme-color` a `#0b1220`). ⚠️ NO reintroducir un modo "auto" que siga al sistema ni media queries de
   `prefers-color-scheme` — fue la causa del bug. Componentes: colores SIEMPRE por tokens (`--warning-bg`,
   `--positive`…), nunca hex fijos mezclados con `var(--text)` (así quedó ilegible el AlertasBanner en oscuro).
@@ -1996,6 +1996,34 @@ debajo del corte de la plataforma — un tope por encima no es un tope, es una f
 mensaje de error **distingue el status**: un genérico convierte tres averías distintas en una sola frase
 que no dice dónde mirar. Cepos en `lib/imagen-cliente.test.ts` (leen el FUENTE del route: el valor vive en
 una constante que ni `tsc` ni el build contrastan con nada).
+
+## 🏠 `/inicio` = la home, resumen de los cuatro negocios (24/09/2026)
+Sustituye a `/banca` como aterrizaje (login, `/`, `/dashboard`, Cmd+K y la app instalada van a `/inicio`).
+Cuatro tarjetas, cada una en su PROPIO `<Suspense>` (la de correduría espera al puerto de asegura hasta
+8 s y no puede bloquear el resto) + la banda «Pide acción hoy» de siempre + `loading.tsx`:
+- **Correduría** = lo que se está TRATANDO (tareas de hoy + llamadas, vencimientos ≤60 d, siniestros
+  abiertos), no la foto de cartera. Oculta para quien no pasa `resolverAccesoCorreduria`.
+- **Pisos** = calendario 14 días + entradas/salidas + noches libres, y la **estimación del mes entero**:
+  reservas con entrada en el mes − `max(imputados, media de 3 meses cerrados)`; sin histórico se dice.
+- **Bolsa** = solo IBKR, POR DIVISA (nunca suma $ con €); avisa pasadas 72 h sin leer IBKR.
+- **Banco** = saldo, entradas/salidas del mes, por revisar y próximos cargos 7 días (misma regla que
+  `proyectar()` de la tesorería, en su propio Suspense).
+Lógica pura en `lib/inicio-resumen.ts` (+ test). La banda recibe `polizas: {estado:'en_tarjeta'}` para no
+repetir los vencimientos. `/banca` queda intacta por dentro (su adelgazamiento es otro PR).
+
+**Y en el mismo cambio:** lateral reordenado (Día a día abierto · Pisos · Oportunidades · Ajustes y admin
+plegados; no se borró ninguna página), el lenguaje visual de la correduría en todo el panel (ver
+`globals.css` y `app/layout.tsx`; logo/nombre de Grupo ASegura siguen solo en `/correduria`), y **la
+intranet ya es instalable**: `app/manifest.ts` + `public/sw.js` (NO cachea nada) + `app/icono-app`.
+🚨 El `public/manifest.json` de junio nunca instaló: no había SW, su icono era SVG y — lo más mudo — el
+**middleware exigía sesión para el manifiesto**, que Chrome descarga sin cookie. El matcher excluye ahora
+manifiesto, SW e iconos; lo vigila `lib/pwa.test.ts`.
+
+**Armazón y tarjetas como el portal del cliente (mismo día):** neutros sin tinte azul, `--radius` 16,
+`--shadow` en capas con su filete de 1 px (por eso `cardStyle` y la `tarjeta` de la ficha ya no llevan
+borde), fondo `--shell-bg` (7 % de marca) alrededor del contenido, que en escritorio es una «isla»
+(`.contenido-isla`), barra móvil con filete de acento y botones en píldora. Ficha del cliente: pólizas y
+oportunidades primero; Recibos y Siniestros dejan de ser pestañas (viven en cada póliza y en Pólizas).
 
 ## 🎨 Sistema de diseño — `components/ui.tsx` (02/09/2026)
 Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pasó a solo REDIRIGIR a

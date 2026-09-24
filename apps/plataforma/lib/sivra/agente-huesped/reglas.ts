@@ -50,15 +50,41 @@ export function detectCategory(text: string): string | null {
 // Detecta el idioma en que ESCRIBE el huésped (es lo que mandará la respuesta). El regex anterior
 // solo miraba tildes/keywords → "Nos iremos sobre las 10.30" (español sin tildes) caía a inglés.
 // Ahora puntúa marcadores ES vs EN; si no hay señal clara, usa `fallback` (p.ej. idioma de Smoobu).
-export function detectLang(
-  text: string,
-  fallback: 'es' | 'en' | 'fr' | 'de' | 'it' = 'en',
-): 'es' | 'en' | 'fr' | 'de' | 'it' {
+// Escritura no latina → idioma casi seguro. Si la escritura la comparten varios idiomas (cirílico,
+// árabe), manda el de la reserva cuando es uno de ellos. Umbral de 2 letras: un símbolo suelto no cuenta.
+const ESCRITURAS: Array<{ re: RegExp; lang: string; hermanos?: string[] }> = [
+  { re: /[\u3040-\u30ff]/g, lang: 'ja' },                       // hiragana/katakana (antes que el han)
+  { re: /[\uac00-\ud7af\u1100-\u11ff]/g, lang: 'ko' },
+  { re: /[\u4e00-\u9fff\u3400-\u4dbf]/g, lang: 'zh' },
+  { re: /[\u0400-\u04ff]/g, lang: 'ru', hermanos: ['uk', 'bg', 'sr', 'mk', 'be', 'kk'] },
+  { re: /[\u0370-\u03ff]/g, lang: 'el' },
+  { re: /[\u0590-\u05ff]/g, lang: 'he' },
+  { re: /[\u0600-\u06ff]/g, lang: 'ar', hermanos: ['fa', 'ur'] },
+  { re: /[\u0e00-\u0e7f]/g, lang: 'th' },
+  { re: /[\u0900-\u097f]/g, lang: 'hi' },
+  { re: /[\u10a0-\u10ff]/g, lang: 'ka' },
+  { re: /[\u0530-\u058f]/g, lang: 'hy' },
+]
+
+// Palabras sueltas con acentos: `\b` de JS no ve la frontera tras «ã»/«é», así que se delimita por letras.
+const palabras = (lista: string) => new RegExp(`(?<!\\p{L})(${lista})(?!\\p{L})`, 'iu')
+const PT = palabras('obrigad[oa]|olá|você|vocês|não|bom dia|boa tarde|boa noite|chegada|chegar|chegaremos|chegamos|gostaria|muito|também|estadia')
+const NL = palabras('bedankt|dank je|dank u|goedemorgen|goedemiddag|goedenavond|graag|hoe laat|wij|sleutel|aankomst|alvast')
+
+// Idioma en que ESCRIBE el huésped. `fallback` = idioma de la reserva (o 'en'): es lo que se devuelve
+// cuando el texto no da señal propia. Cualquier código vale; los que no se detectan por texto (sueco,
+// polaco…) solo pueden llegar por el fallback.
+export function detectLang(text: string, fallback: string = 'en'): string {
   const t = text || ''
+  for (const e of ESCRITURAS) {
+    if ((t.match(e.re) || []).length >= 2) return e.hermanos?.includes(fallback) ? fallback : e.lang
+  }
   // Idiomas menos frecuentes: marcadores distintivos (van primero).
   if (/\b(bonjour|merci|est-ce|vous|nous|comment|quand|où|je voudrais)\b/i.test(t)) return 'fr'
   if (/\b(guten|danke|bitte|ich|wir|haben|sind|wie|wann|wo|möchte|können)\b/i.test(t)) return 'de'
   if (/\b(ciao|grazie|prego|buongiorno|buonasera|come|quando|dove|vorrei|posso|hai|sì|così|però|che|questo|questa|molto|scusa|scusi)\b/i.test(t)) return 'it'
+  if (PT.test(t)) return 'pt'
+  if (NL.test(t)) return 'nl'
 
   // Español vs inglés por puntuación + palabras frecuentes.
   let es = 0, en = 0

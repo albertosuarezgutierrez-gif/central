@@ -102,22 +102,21 @@ test('los siniestros pasan por el NIVEL, como la prima y los recibos', () => {
   )
 })
 
-test('el historial NO trae el `tipo`: es un código numérico de la compañía', () => {
-  // 🚨 Medido en la cartera viva el 05/09/2026: `siniestros.tipo` vale `1107`,
-  // `1915`, `1312`, `17`, `2102`… Es el código de la compañía, no una palabra.
-  // Pintarlo sería peor que no pintar nada: «Tipo 1107» parece un dato que
-  // significa algo. El cepo mira el bloque del `select` de siniestros, no el
-  // fichero entero, porque `tipo` es también el nombre de la columna del RAMO
-  // de una póliza y ahí sí se lee.
+test('el `tipo` del siniestro solo llega TRADUCIDO: nunca el código crudo de la compañía', () => {
+  // 🚨 `siniestros.tipo` vale `1107`, `1915`, `1312`… (medido 05/09/2026). «Tipo
+  // 1107» parece un dato y no dice nada. Desde el 24/09/2026 existe la tabla
+  // oficial de TIREA (`descripcionEiacSiniestro`), así que se puede leer — pero
+  // SOLO pasándolo por `tipoSiniestroLegible`, que devuelve `null` para un
+  // código fuera de tabla. El tipo que ve la pantalla no lleva el código.
   const src = leer(LECTURA)
   const i = src.indexOf('prisma.siniestro.findMany')
   assert.ok(i > 0, 'no encuentro la consulta de siniestros')
   const bloque = src.slice(i, src.indexOf('}),', i))
-  assert.doesNotMatch(
-    bloque,
-    /^\s*tipo:\s*true/m,
-    'el `select` de siniestros no puede pedir `tipo` mientras sea un código sin traducir',
-  )
+  if (/^\s*tipo:\s*true/m.test(bloque)) {
+    assert.match(src, /tipoSiniestroLegible\(x\.tipo\)/, 'si se pide `tipo`, tiene que pasar por `tipoSiniestroLegible`')
+  }
+  const tipoPortal = src.slice(src.indexOf('export type SiniestroPortal'), src.indexOf('export type PolizaPortal'))
+  assert.doesNotMatch(tipoPortal, /^\s*tipo\??:/m, 'el tipo del portal no puede llevar el código crudo')
 })
 
 test('el `estado` de los recibos se calcula sobre la lista CRUDA, no sobre la limpia', () => {

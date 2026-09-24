@@ -6,6 +6,7 @@ import { aiComplete } from '@central/core-ai'
 import { smoobuFetch } from '@/lib/smoobu'
 import { registrarAvisoHuesped } from '@/lib/limpiadoras-early'
 import { PARKING_SPOTS, extractEarlyTime, detectCategory, detectLang } from '@/lib/sivra/agente-huesped/reglas'
+import { nombreIdioma } from '@/lib/sivra/agente-huesped/idiomas'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -66,7 +67,7 @@ async function lookupKB(category: string, propertyId: string, lang: string): Pro
     if (!rows.length) return null
     const r = rows[0]
     prisma.$executeRaw(Prisma.sql`UPDATE knowledge_base SET uses = uses + 1 WHERE id = ${r.id}`).catch(() => {})
-    const ans = lang === 'fr' ? r.answer_fr : lang === 'de' ? r.answer_de : lang === 'it' ? r.answer_it : lang === 'en' ? r.answer_en : r.answer_es
+    const ans = lang === 'fr' ? r.answer_fr : lang === 'de' ? r.answer_de : lang === 'it' ? r.answer_it : lang === 'es' ? r.answer_es : r.answer_en
     return ans || r.answer_es
   } catch { return null }
 }
@@ -134,7 +135,7 @@ export async function POST(req: NextRequest) {
   const guestUrl     = await getSmoobuGuestUrl(smoobuReservationId || null)
   const stayCategories = ['wifi','acceso','checkin','checkout','parking','normas','contacto']
   const isStayQ      = category ? stayCategories.includes(category) : false
-  const langName     = { es:'español', en:'English', fr:'français', de:'Deutsch', it:'italiano' }[lang] || 'English'
+  const langName     = lang === 'en' ? 'English' : nombreIdioma(lang)
 
   const hintInstruction = hint
     ? `\n\nINSTRUCCIÓN ESPECIAL DEL ANFITRIÓN: El anfitrión te da esta idea/respuesta base: "${hint}". Redacta un mensaje profesional, cálido y completo basándote en esta idea. Adapta el tono y el idioma al huésped.`

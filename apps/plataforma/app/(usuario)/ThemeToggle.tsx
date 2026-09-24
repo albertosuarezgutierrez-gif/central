@@ -17,7 +17,7 @@ function aplicar(t: Tema) {
   const meta = document.querySelector('meta[name="color-scheme"]')
   if (meta) meta.setAttribute('content', t === 'light' ? 'only light' : 'dark')
   const color = document.querySelector('meta[name="theme-color"]')
-  if (color) color.setAttribute('content', t === 'light' ? '#4f46e5' : '#0b1220')
+  if (color) color.setAttribute('content', t === 'light' ? '#3364ee' : '#0b1220')
 }
 
 export default function ThemeToggle() {

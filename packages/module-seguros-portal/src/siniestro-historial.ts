@@ -150,7 +150,7 @@ export function resumirHistorialSiniestros(
 // recortarlo por la mitad daría un relato falso, y «limpiarlo» con una heurística
 // borraría datos buenos y dejaría pasar los malos.
 
-import { provinciaPorCp } from '@central/module-seguros'
+import { descripcionEiacSiniestro, provinciaPorCp } from '@central/module-seguros'
 
 /**
  * DÓNDE pasó, en una línea legible.
@@ -225,4 +225,86 @@ export function descripcionSiniestro(v: string | null | undefined): string | nul
   const t = (v ?? '').trim()
   if (t === '') return null
   return /^[-–—.·_]+$/.test(t) ? null : t
+}
+
+// ─── Siniestros vivos en lenguaje claro (24/09/2026) ─────────────────────────
+//
+// Plan ASegura OS §Q.8: «el estado que llega de CIMA traducido a lenguaje claro
+// y lo que se espera del cliente». Menos llamadas preguntando «¿cómo va lo mío?».
+//
+// 🚨 Medido antes de escribir esto (100 siniestros de CIMA, 24/09/2026): la
+// compañía NO manda perito, tramitador, reserva, indemnización ni pagos (0 de
+// 100 en cada columna). El EIAC trae un historial de «situaciones» y, solo
+// Allianz, «acciones»; la ingesta del CRM las reduce a los cuatro estados y
+// descarta el resto. Así que aquí NO se dice «ha asignado perito» ni
+// «pendiente de pago»: sería inventar. Se traduce lo que SÍ consta —el tipo y
+// el estado— y se dice qué puede hacer el cliente con eso.
+
+/**
+ * QUÉ TIPO de siniestro fue, en palabras de la tabla oficial de TIREA
+ * («Daños por agua - Responsabilidad civil»). `null` = el código no está en la
+ * tabla (o no vino): entonces NO se pinta nada, porque «Tipo 1107» parece un
+ * dato y no le dice nada a nadie.
+ */
+export function tipoSiniestroLegible(codigo: string | null | undefined): string | null {
+  return descripcionEiacSiniestro(codigo)
+}
+
+export type ExplicacionSiniestro = {
+  /** Qué está pasando, en una frase. */
+  situacion: string
+  /** Qué puede o debe hacer el cliente ahora. */
+  queHacer: string
+}
+
+const DIA_MS = 86_400_000
+
+/**
+ * El estado, explicado a quien no sabe de seguros, y el paso siguiente.
+ *
+ * - **abierto / en tramitación**: lo lleva la compañía; lo útil para el cliente
+ *   es saber que le pueden pedir papeles o mandar un perito, y que la
+ *   referencia es con lo que se le identifica. Si el hecho tiene más de 30
+ *   días, se le invita a escribirnos: no sabemos cuándo fue la última noticia
+ *   (CIMA no la manda), así que no se afirma que esté «parado».
+ * - **cerrado**: se cerró; si no está conforme con cómo se resolvió, que nos lo
+ *   diga — el corredor puede reclamar.
+ * - **rechazado**: la compañía no lo asumió. No es «cerrado» y no se suaviza.
+ * - **desconocido**: no se adivina; se dice que no sabemos interpretarlo.
+ */
+export function explicarSiniestro(
+  estado: string,
+  fechaHora: Date | null,
+  hoy: Date = new Date(),
+): ExplicacionSiniestro {
+  const e = estado.trim().toLowerCase()
+  if (siniestroAbierto(e)) {
+    const dias = fechaHora === null ? null : Math.floor((hoy.getTime() - fechaHora.getTime()) / DIA_MS)
+    const largo = dias !== null && dias > 30
+    return {
+      situacion:
+        e === 'en_tramitacion'
+          ? 'Tu compañía lo está tramitando.'
+          : 'Tu compañía lo tiene abierto y lo está gestionando.',
+      queHacer: largo
+        ? 'Si te piden fotos, facturas o presupuestos, o te llama un perito, atiéndelos cuanto antes. Si no has tenido noticias en las últimas semanas, escríbenos y lo miramos con la compañía.'
+        : 'Si te piden fotos, facturas o presupuestos, o te llama un perito, atiéndelos cuanto antes. Si tienes dudas, escríbenos.',
+    }
+  }
+  if (e === 'cerrado') {
+    return {
+      situacion: 'La compañía lo ha cerrado.',
+      queHacer: 'Si no estás conforme con cómo se resolvió, escríbenos y lo revisamos contigo.',
+    }
+  }
+  if (e === 'rechazado') {
+    return {
+      situacion: 'La compañía no lo ha asumido.',
+      queHacer: 'Si quieres que revisemos el motivo o reclamemos, escríbenos.',
+    }
+  }
+  return {
+    situacion: 'No sabemos interpretar el estado que nos ha mandado tu compañía.',
+    queHacer: 'Escríbenos y te decimos cómo va.',
+  }
 }

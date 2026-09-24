@@ -4,6 +4,7 @@ import {
   coberturaEspecificaDeRamo,
   describirBien,
   etiquetaEstadoSiniestro,
+  explicarSiniestro,
   resumirHistorialSiniestros,
   tonoEstadoSiniestro,
   type BienAsegurado,
@@ -596,6 +597,8 @@ export function HistorialSiniestros({
               {s.referencia && <span className="siniestro-ref">Ref. {s.referencia}</span>}
               {/* DÓNDE pasó. Solo consta en 8 de los 69 de la cartera, así que
                   cuando falta no se pinta nada: un «Lugar: —» no informa. */}
+              {/* QUÉ TIPO fue, con la tabla oficial de TIREA. Sin traducción no se pinta. */}
+              {s.tipoLegible && <span className="siniestro-tipo">{s.tipoLegible}</span>}
               {s.lugar && <span className="siniestro-lugar">{s.lugar}</span>}
               {/* QUÉ pasó, en las palabras de quien lo tramitó y SIN recortar:
                   media frase de un siniestro es otro relato. Es lo que Alberto
@@ -604,10 +607,23 @@ export function HistorialSiniestros({
                   compañía no lo contó, y entonces se calla: decir «sin
                   descripción» no le añade nada a quien ya ve la referencia. */}
               {s.descripcion && <p className="siniestro-desc">{s.descripcion}</p>}
+              {/* El estado en lenguaje claro y qué hacer (plan ASegura OS §Q.8). Solo
+                  lo que consta: CIMA no manda perito ni pagos, así que no se afirman. */}
+              <SiniestroExplicado estado={s.estado} fechaHora={s.fechaHora} />
             </li>
           )
         })}
       </ul>
     </>
+  )
+}
+
+function SiniestroExplicado({ estado, fechaHora }: { estado: string; fechaHora: Date | null }) {
+  const x = explicarSiniestro(estado, fechaHora)
+  return (
+    <p className="siniestro-explica">
+      <strong>{x.situacion}</strong> {x.queHacer}{' '}
+      <a href="/mensajes">Escribir a tu corredor</a>
+    </p>
   )
 }

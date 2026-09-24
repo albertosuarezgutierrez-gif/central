@@ -323,8 +323,10 @@ export {
   resumirHistorialSiniestros,
   lugarSiniestro,
   descripcionSiniestro,
+  tipoSiniestroLegible,
+  explicarSiniestro,
 } from './siniestro-historial.ts'
-export type { EstadoSiniestro, SiniestroHistorial } from './siniestro-historial.ts'
+export type { EstadoSiniestro, SiniestroHistorial, ExplicacionSiniestro } from './siniestro-historial.ts'
 export {
   SITUACIONES_RECIBO,
   reciboAnulado,

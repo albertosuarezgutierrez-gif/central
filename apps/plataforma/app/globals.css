@@ -4,17 +4,25 @@
    Los componentes SOLO usan estas variables (nunca hex directos para semántica):
    así el modo oscuro sale gratis y cambiar la marca es tocar un bloque. */
 :root {
-  --bg: #f6f7f9;
+  /* Lenguaje visual del portal del cliente (24/09/2026, «que siga lo que has hecho con la app de
+     los clientes»): neutros SIN tinte azul (los del portal en oklch, aquí en hex), radio 16,
+     sombras suaves en capas, fondo tintado de marca alrededor del contenido. */
+  --bg: #fcfcfc;
   --surface: #ffffff;
-  --border: #e5e7eb;
-  --text: #0f172a;
-  --muted: #64748b;
-  --primary: #4f46e5;
-  --primary-light: #eef2ff;
-  --primary-hover: #4338ca;
-  --radius: 14px;
-  --shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
-  --shadow-lift: 0 4px 12px rgba(15,23,42,.08), 0 12px 32px -12px rgba(15,23,42,.14);
+  --border: #e1e1e1;
+  --text: #161616;
+  --muted: #6f6f6f;
+  /* Fondo del armazón (lateral + marco de la isla): 7 % de marca sobre gris, como el portal. */
+  --shell-bg: color-mix(in oklab, #3364ee 7%, #f3f3f3);
+  --acento-marca: #497cfd;
+  /* Cobalto de Grupo ASegura en TODO el panel desde el 24/09/2026 (antes índigo #4f46e5
+     aquí y cobalto solo dentro de /correduria). */
+  --primary: #3364ee;
+  --primary-light: #e3efff;
+  --primary-hover: #16307a;
+  --radius: 16px;
+  --shadow: 0 0 0 1px rgba(20,20,20,.05), 0 1px 2px rgba(20,20,20,.05), 0 8px 22px -10px rgba(20,20,20,.10);
+  --shadow-lift: 0 2px 4px rgba(20,20,20,.05), 0 8px 20px -6px rgba(20,20,20,.10), 0 0 0 1px rgba(20,20,20,.05);
   /* Semánticos (éxito / error / aviso / info) — texto y fondo suave por cada uno */
   --positive: #059669;
   --positive-bg: #ecfdf5;
@@ -40,10 +48,12 @@
   --border: #1f2a3c;
   --text: #e6eaf2;
   --muted: #8b98ad;
-  --primary: #818cf8;
-  --primary-light: rgba(99, 102, 241, .16);
-  --primary-hover: #a5b4fc;
-  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
+  --primary: #497cfd;
+  --primary-light: rgba(73, 124, 253, .16);
+  --primary-hover: #9fbcff;
+  --shell-bg: color-mix(in oklab, #497cfd 7%, #0b1220);
+  /* El filete de 1 px va DENTRO de la sombra (las tarjetas ya no llevan borde): en oscuro, claro. */
+  --shadow: 0 0 0 1px rgba(255,255,255,.07), 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
   --shadow-lift: 0 4px 12px rgba(0,0,0,.5), 0 12px 32px -12px rgba(0,0,0,.6);
   --positive: #34d399;
   --positive-bg: rgba(16, 185, 129, .14);
@@ -58,7 +68,7 @@
 
 html, body {
   height: 100%;
-  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
+  font-family: var(--font-marca-sans), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
@@ -675,30 +685,20 @@ html[data-saldo-oculto='1'] .saldo-privado {
 
    Se redefinen los TOKENS, no se pintan hex en los componentes (regla del
    bloque de arriba): así toda la sección hereda el acento y el modo oscuro sale
-   solo. Y se queda acotado a /correduria a propósito: plataforma es el cuadro
-   de mando de TODOS los negocios de Alberto, no el de la correduría. */
-.correduria {
-  --primary: #3364ee;
-  --primary-light: #e0efff;
-  --primary-hover: #16307a;
-}
-[data-theme="dark"] .correduria {
-  --primary: #497cfd;
-  --primary-light: rgba(73, 124, 253, .16);
-  --primary-hover: #9fbcff;
-}
-/* Tipografía de la correduría (24/09/2026): la misma que grupoasegura.es y el portal.
+   solo. Estuvo acotado a /correduria hasta el 24/09/2026; ese día Alberto lo
+   extendió a todo el panel («para que todo sea igual»): el cobalto vive ahora en
+   :root y en [data-theme="dark"]. El logo y el nombre «Grupo ASegura» siguen
+   siendo SOLO de la correduría. */
+.correduria { /* los tokens de marca viven ya en :root; la clase se queda como gancho de sección */ }
+/* Tipografía (24/09/2026): la de grupoasegura.es y el portal, en TODO el panel.
    Titulares, pestañas y botones en Quicksand; cuerpo en Nunito Sans; sin cursivas
    (Quicksand no tiene itálica y el navegador la sintetizaría). Las variables las pone
-   el layout de /correduria con next/font. */
-.correduria-tipografia {
-  font-family: var(--font-correduria-sans), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+   el layout raíz con next/font. */
+:is(h1, h2, h3, h4, button, summary, [role="tab"], [role="menuitem"]) {
+  font-family: var(--font-marca-display), ui-rounded, system-ui, sans-serif;
 }
-.correduria-tipografia :is(h1, h2, h3, h4, button, summary, [role="tab"], [role="menuitem"]) {
-  font-family: var(--font-correduria-display), ui-rounded, system-ui, sans-serif;
-}
-.correduria-tipografia :is(h1, h2, h3) { font-weight: 700; }
-.correduria-tipografia em { font-style: normal; }
+:is(h1, h2, h3) { font-weight: 700; }
+em { font-style: normal; }
 
 /* === Solo para lectores de pantalla ===
    Un rótulo que la vista no necesita pero la accesibilidad sí. Nació al quitar
@@ -712,3 +712,49 @@ html[data-saldo-oculto='1'] .saldo-privado {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
+
+/* === Pólizas de la ficha del cliente en MÓVIL: de tabla a fichas apiladas (24/09/2026) ===
+   La tabla declara `minWidth: 880` y en un móvil obligaba a desplazarse de lado para ver la prima
+   o los recibos. Por debajo de 768 px cada fila es una ficha: el ramo arriba, cada dato con su
+   rótulo (`data-label`) y la acción al pie. Mismo DOM, sin duplicar la lista (regla de
+   rendimiento: el volcado histórico puede tener cientos de filas). `!important` solo para ganar
+   al estilo inline de la tabla, que no admite media queries. */
+@media (max-width: 768px) {
+  .tabla-polizas { min-width: 0 !important; }
+  .tabla-polizas thead { display: none; }
+  .tabla-polizas, .tabla-polizas tbody, .tabla-polizas tr, .tabla-polizas td { display: block; width: 100%; }
+  .tabla-polizas tr { border: 1px solid var(--border) !important; border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+  .tabla-polizas td { padding: 4px 0 !important; min-width: 0 !important; white-space: normal !important; text-align: left !important; }
+  /* Rótulo a la izquierda por posición absoluta, no por grid: cada celda tiene varios hijos (fecha +
+     estado + aviso) y en un grid se repartirían entre las dos columnas. */
+  .tabla-polizas td[data-label] { position: relative; padding-left: 100px !important; }
+  .tabla-polizas td[data-label]::before { content: attr(data-label); position: absolute; left: 0; top: 6px; width: 92px; font-size: 12px; color: var(--muted); }
+  .tabla-polizas td[data-rol="cabeza"] { font-weight: 700; font-size: 15px; }
+  .tabla-polizas td[data-rol="accion"] { padding-top: 8px !important; border-top: 1px solid var(--border); margin-top: 6px; }
+}
+
+/* === Armazón como el portal del cliente (24/09/2026) =======================================
+   Lateral sobre el fondo tintado de marca y el contenido como «isla» (radio amplio + sombra
+   plana + 8 px de margen) en escritorio. En móvil la isla ocupa todo y la barra de arriba lleva
+   el filete de acento del portal. Las clases las ponen `(usuario)/layout.tsx`, `LayoutShell` y
+   `UserSidebar`. */
+.app-shell { background: var(--shell-bg); }
+.sidebar-desktop { background: transparent !important; border-right: 0 !important; }
+.sidebar-desktop .nav-cabecera, .sidebar-desktop .nav-pie { border-color: transparent !important; }
+.contenido-isla { background: var(--bg); }
+@media (min-width: 769px) {
+  .contenido-isla {
+    margin: 8px 8px 8px 0;
+    border-radius: calc(var(--radius) * 1.8);
+    box-shadow: var(--shadow);
+    min-height: calc(100vh - 16px);
+  }
+}
+.nav-link { border-radius: 999px !important; }
+.nav-link:hover { background: color-mix(in oklab, var(--primary) 8%, transparent); }
+.barra-movil {
+  background: color-mix(in oklab, var(--primary) 4%, var(--surface)) !important;
+  border-top: 3px solid var(--acento-marca);
+  border-bottom: 1px solid color-mix(in oklab, var(--primary) 12%, var(--border)) !important;
+}
+:focus-visible { outline: 3px solid color-mix(in oklab, var(--primary) 50%, transparent); outline-offset: 2px; }

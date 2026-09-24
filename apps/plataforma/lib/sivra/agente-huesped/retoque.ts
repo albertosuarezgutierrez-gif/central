@@ -2,7 +2,7 @@
 
 import { asegurarIdioma } from './idioma-salida.ts'
 
-const NOMBRE_IDIOMA: Record<string, string> = { es: 'español', en: 'inglés', fr: 'francés', de: 'alemán', it: 'italiano' }
+import { NOMBRE_IDIOMA } from './idiomas.ts'
 
 // Tipo de la función de completado (inyectable para test; por defecto aiComplete de @central/core-ai).
 type Complete = (messages: { role: 'user'; content: string }[], opts: { system: string; maxTokens: number }) => Promise<string>

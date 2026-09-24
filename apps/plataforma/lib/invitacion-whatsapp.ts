@@ -34,7 +34,7 @@
  * del repo; aquí no se vuelve a normalizar ningún número.
  */
 import { nombreDePila } from '@central/module-seguros'
-import { urlWhatsapp } from './telefono-wa.ts'
+import { enlaceWhatsappConMensaje, urlWhatsapp } from './telefono-wa.ts'
 import type { AccionPortal, PortalCartera } from './portal-cliente-asegura.ts'
 
 /** Quita saltos de línea de lo que se mete dentro del mensaje. */
@@ -110,12 +110,7 @@ export function mensajeInvitacionWhatsapp(d: DatosMensajeWhatsapp): string {
   ].join('\n')
 }
 
-/** El `wa.me` con el mensaje ya escrito, o `null` si ese número no es un móvil. */
-export function enlaceWhatsappConMensaje(telefono: string, texto: string): string | null {
-  const base = urlWhatsapp(telefono)
-  if (base === null) return null
-  return `${base}?text=${encodeURIComponent(texto)}`
-}
+export { enlaceWhatsappConMensaje }
 
 /**
  * Qué se puede ofrecer hoy por WhatsApp. Los cinco desenlaces están separados
