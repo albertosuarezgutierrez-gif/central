@@ -106,7 +106,7 @@ export default function Aprobaciones({ onContador }: { onContador?: (n: number |
                 </label>
                 {a.para === 'compania' && (
                   a.buzones.length === 0
-                    ? <span style={{ fontSize: 13, color: 'var(--negative, #c0392b)' }}>
+                    ? <span style={{ fontSize: 13, color: 'var(--negative)' }}>
                         {a.destinatario ?? 'Esta compañía'} no tiene ningún contacto activo con correo en Compañías: añádelo allí o mándala a mano y márcala «Comunicada» en la póliza.
                       </span>
                     : <label style={{ display: 'grid', gap: 4, fontSize: 12, color: 'var(--muted)' }}>

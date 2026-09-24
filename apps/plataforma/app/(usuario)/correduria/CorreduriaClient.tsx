@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useState, useEffect, useCallback } from 'react'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { CalendarClock, Landmark, FolderOpen, Antenna, Megaphone, TriangleAlert, Activity } from 'lucide-react'
-import { Pagina, Badge } from '@/components/ui'
+import { Pagina, Badge, btnStyle } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
@@ -201,13 +201,21 @@ export default function CorreduriaClient() {
   // avería de CIMA…) abre esa pestaña y baja al bloque. El scroll espera a que
   // el panel se haya montado y pintado: antes no existe el ancla.
   const [bajarA, setBajarA] = useState<BloqueMas | null>(null)
+  // La actividad NO se monta al abrir «Más»: al montarse marca la visita como
+  // vista (`correduria:actividad:visto`), y abrir «Más» para mirar la ingesta
+  // se comería los puntos de «nuevo desde tu última visita». Se monta al ir a
+  // ella (`?s=actividad`, el «Todo» de «Hoy») o al pulsar su botón.
+  const [verActividad, setVerActividad] = useState(false)
   useEffect(() => {
     if (!bajarA) return
-    const t = window.setTimeout(() => {
-      document.getElementById(`mas-${bajarA}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setBajarA(null)
-    }, 60)
-    return () => window.clearTimeout(t)
+    if (bajarA === 'actividad') setVerActividad(true)
+    // Varios intentos: los bloques de encima cargan sus datos DESPUÉS de abrir
+    // la pestaña y empujan el ancla hacia abajo. Un solo scroll a los 60 ms
+    // dejaría a la vista el bloque de arriba, no el pedido.
+    const ir = () => document.getElementById(`mas-${bajarA}`)?.scrollIntoView({ block: 'start' })
+    const ts = [60, 600, 1500].map(ms => window.setTimeout(ir, ms))
+    const fin = window.setTimeout(() => setBajarA(null), 1600)
+    return () => { ts.forEach(window.clearTimeout); window.clearTimeout(fin) }
   }, [bajarA, seccion])
 
   useEffect(() => {
@@ -671,7 +679,13 @@ export default function CorreduriaClient() {
         {/* Qué hacen los clientes en el portal. Sin contador a propósito: no es
             una cola de trabajo (partes, supresiones y leads ya cuentan en «Hoy»). */}
         <SubMas id="actividad" Icono={Activity} titulo="Actividad de los clientes" />
-        <Actividad />
+        {verActividad
+          ? <Actividad />
+          : (
+            <button type="button" onClick={() => setVerActividad(true)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, marginTop: 8 }}>
+              Ver lo que han hecho los clientes en el portal
+            </button>
+          )}
         </>)}
       </div>
 

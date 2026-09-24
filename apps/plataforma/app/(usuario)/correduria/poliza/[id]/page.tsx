@@ -253,13 +253,13 @@ function Sustitucion({ p }: { p: Poliza }) {
   return (
     <div style={{ display: 'grid', gap: 8 }}>
       {s.origen && (
-        <div style={{ ...tarjeta, borderStyle: 'dashed', fontSize: 13 }}>
+        <div style={{ ...tarjeta, border: '1px dashed var(--border)', boxShadow: 'none', fontSize: 13 }}>
           🔁 Sustituye a la póliza de <strong>{s.origen.aseguradora}</strong>
           {s.origen.numeroPoliza && ` nº ${s.origen.numeroPoliza}`} (<Link href={`/correduria/poliza/${s.origen.polizaId}`}>ver</Link>).
         </div>
       )}
       {s.sustituidaPor && (
-        <div style={{ ...tarjeta, borderColor: s.seguimiento === 'confirmada' ? 'var(--positive)' : 'var(--warning)', fontSize: 13 }}>
+        <div style={{ ...tarjeta, borderLeft: `4px solid ${s.seguimiento === 'confirmada' ? 'var(--positive)' : 'var(--warning)'}`, fontSize: 13 }}>
           {s.seguimiento === 'confirmada' ? (
             <>✅ Sustituida por la póliza en <strong>{s.sustituidaPor.aseguradora}</strong>
               {s.sustituidaPor.numeroPoliza && ` nº ${s.sustituidaPor.numeroPoliza}`} — CIMA ya confirmó que el cliente la está pagando.</>
@@ -533,7 +533,7 @@ function fmt(iso: string): string {
 function Estimacion({ e, retarificar }: { e: Poliza['estimacion']; retarificar: { href: string; rotulo: string } | null }) {
   if (e === null) {
     return (
-      <div style={{ ...tarjeta, borderStyle: 'dashed' }}>
+      <div style={{ ...tarjeta, border: '1px dashed var(--border)', boxShadow: 'none' }}>
         <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>🔮 ¿Merece la pena pedir precio?</div>
         <p style={muted}>La versión desplegada de asegura todavía no manda la estimación: no se sabe si compensa.</p>
       </div>

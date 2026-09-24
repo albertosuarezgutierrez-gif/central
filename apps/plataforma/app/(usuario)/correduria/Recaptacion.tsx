@@ -152,15 +152,15 @@ export default function Recaptacion({ onContador }: {
       ) : (
         <>
           <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }} className="tabla-polizas">
               <thead>
                 <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                  <th style={{ padding: '6px 8px' }}>Cliente</th>
-                  <th style={{ padding: '6px 8px' }}>Ramo</th>
-                  <th style={{ padding: '6px 8px' }}>Antes con</th>
-                  <th style={{ padding: '6px 8px' }}>Cuándo</th>
-                  <th style={{ padding: '6px 8px' }}>Contacto</th>
-                  <th style={{ padding: '6px 8px' }}>Acciones</th>
+                  <th style={{ padding: '6px 8px' }} data-label="Cliente">Cliente</th>
+                  <th style={{ padding: '6px 8px' }} data-label="Ramo">Ramo</th>
+                  <th style={{ padding: '6px 8px' }} data-label="Antes con">Antes con</th>
+                  <th style={{ padding: '6px 8px' }} data-label="Cuándo">Cuándo</th>
+                  <th style={{ padding: '6px 8px' }} data-label="Contacto">Contacto</th>
+                  <th style={{ padding: '6px 8px' }} data-label="Acciones">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -201,7 +201,7 @@ function textoCuando(p: LeadRecaptacion): React.ReactNode {
 function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {
   return (
     <tr style={{ borderBottom: '1px solid var(--border)' }}>
-      <td style={{ padding: '6px 8px' }}>
+      <td style={{ padding: '6px 8px' }} data-label="Cliente">
         <Link href={`/correduria/cliente/${g.clienteId}`}>{g.cliente}</Link>
         {g.enCooldown && (
           <>
@@ -210,21 +210,21 @@ function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {
           </>
         )}
       </td>
-      <td style={{ padding: '6px 8px' }}>
+      <td style={{ padding: '6px 8px' }} data-label="Ramo">
         {g.polizas.map((p) => <div key={p.polizaId}>{p.ramoLegible}</div>)}
       </td>
-      <td style={{ padding: '6px 8px' }}>
+      <td style={{ padding: '6px 8px' }} data-label="Antes con">
         {g.polizas.map((p) => <div key={p.polizaId}>{p.aseguradoraAnterior ?? '—'}</div>)}
       </td>
-      <td style={{ padding: '6px 8px' }}>
+      <td style={{ padding: '6px 8px' }} data-label="Cuándo">
         {g.polizas.map((p) => <div key={p.polizaId}>{textoCuando(p)}</div>)}
       </td>
-      <td style={{ padding: '6px 8px' }}>
+      <td style={{ padding: '6px 8px' }} data-label="Contacto">
         {g.telefono && <span>📞 {g.telefono}</span>}
         {g.email && <span style={{ marginLeft: g.telefono ? 8 : 0 }}>✉️ {g.email}</span>}
         {!g.telefono && !g.email && '—'}
       </td>
-      <td style={{ padding: '6px 8px' }}>
+      <td style={{ padding: '6px 8px' }} data-label="Acciones">
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {g.telefono && <BotonWhatsappRecaptacion grupo={g} />}
           {g.email && <BotonEmailRecaptacion grupo={g} />}
