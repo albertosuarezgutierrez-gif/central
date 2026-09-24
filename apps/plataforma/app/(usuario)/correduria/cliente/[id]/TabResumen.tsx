@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import type { ResumenFicha } from '@central/module-seguros'
+import type { ResumenFicha, SiguienteAccion } from '@central/module-seguros'
 import { urlAutoNuevo, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha } from '@/lib/ficha-asegura'
 import { BtnLink } from '@/components/ui'
 import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
@@ -13,7 +13,8 @@ import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
  * fallo más caro del repo. Aquí, cuando un dato no se ha podido leer se dice
  * —«no se han podido leer los siniestros»— en vez de contarlo como cero.
  */
-export default function TabResumen({ resumen, porClase, intervinientes, clienteId, declaradas }: {
+export default function TabResumen({ accion, resumen, porClase, intervinientes, clienteId, declaradas }: {
+  accion: SiguienteAccion
   resumen: ResumenFicha
   porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]>
   intervinientes: IntervinienteFicha[] | null
@@ -22,6 +23,10 @@ export default function TabResumen({ resumen, porClase, intervinientes, clienteI
 }) {
   return (
     <>
+      <Tarjeta titulo="👉 Siguiente acción">
+        <SiguienteAccionFicha accion={accion} />
+      </Tarjeta>
+
       <Tarjeta titulo="🔔 Pide acción">
         <PideAccion resumen={resumen} vivas={porClase.viva} clienteId={clienteId} />
       </Tarjeta>
@@ -60,6 +65,25 @@ export default function TabResumen({ resumen, porClase, intervinientes, clienteI
         </p>
       )}
     </>
+  )
+}
+
+/** Una sola acción, la que más vale hoy. La decide `siguienteAccion()` (module-seguros), no la pantalla. */
+function SiguienteAccionFicha({ accion }: { accion: SiguienteAccion }) {
+  if (accion.estado === 'nada') {
+    return <div style={{ fontSize: 13, color: 'var(--muted)' }}>Nada pendiente en lo que se ha podido mirar.</div>
+  }
+  if (accion.estado === 'sin_comprobar') {
+    return <div style={{ fontSize: 13, color: 'var(--muted)' }}>No se puede decir que no haya nada: sin comprobar {accion.falta.join(', ')}.</div>
+  }
+  return (
+    <div style={{ display: 'grid', gap: 4, fontSize: 13 }}>
+      <div style={{ fontWeight: 600, color: accion.urgente ? 'var(--negative)' : 'var(--text)' }}>
+        {accion.titulo}
+        {accion.polizaId && <>{' '}<Link href={`/correduria/poliza/${accion.polizaId}`} style={{ fontWeight: 400 }}>ver póliza →</Link></>}
+      </div>
+      <div style={{ color: 'var(--muted)' }}>{accion.porque}</div>
+    </div>
   )
 }
 

@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { clasificarPolizaFicha, personasDePolizas, resumenFicha, type ClasePolizaFicha } from '@central/module-seguros'
+import { clasificarPolizaFicha, personasDePolizas, resumenFicha, siguienteAccion, type ClasePolizaFicha } from '@central/module-seguros'
 import Documentos from '../../Documentos'
 import Historial from '../../Historial'
 import Siniestros from '../../Siniestros'
@@ -67,6 +67,17 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
     documentos: ficha.documentos,
   })
 
+  // La acción que más vale hoy, por reglas (recibo devuelto > renovación > presupuesto > venta).
+  // Sin canal legible (cifrado sin clave) es `null`, no «no tiene»: la regla lo declara sin comprobar.
+  const { contacto } = ficha
+  const accion = siguienteAccion({
+    polizas: ficha.polizas,
+    declaradas: ficha.declaradas,
+    cotizacionesVivas: ficha.cotizacionesVivas,
+    tieneCanal: contacto.telefono || contacto.email ? true : contacto.telefonoIlegible || contacto.emailIlegible ? null : false,
+    hoy: new Date(),
+  })
+
   // Se calculan UNA vez y las usan tres cosas: el contador de la pestaña, la
   // tarjeta 👤 y la 👪 —que ofrece declarar el vínculo de quien sale sin él
   // (Antonio Sevico en la ficha de José Suárez Salas, 03/09/2026)—.
@@ -106,7 +117,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       />
 
       {tab === 'resumen' && (
-        <TabResumen resumen={resumen} porClase={porClase} intervinientes={ficha.intervinientes} clienteId={ficha.id} declaradas={ficha.declaradas} />
+        <TabResumen accion={accion} resumen={resumen} porClase={porClase} intervinientes={ficha.intervinientes} clienteId={ficha.id} declaradas={ficha.declaradas} />
       )}
 
       {tab === 'polizas' && <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} />}
