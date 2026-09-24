@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T07:49:54Z",
-  "sha": "6bc233c2c2274d82a68c4895573d5e042bc02c3e",
+  "generadoEn": "2026-09-24T08:55:24Z",
+  "sha": "90d007a9b9cdccdccd281b0bf23986708a8ba5a5",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10832,9 +10832,9 @@
           "nombre": "AvisoPorCorreo",
           "kind": "function",
           "exportada": false,
-          "params": "{ ramo, vence, origen }: { ramo: string; vence: string; origen: string }",
+          "params": "{ ramo, cual, vence, origen }: { ramo: string; cual: string; vence: string; origen: string }",
           "retorno": null,
-          "linea": 190,
+          "linea": 208,
           "resumen": "Paso 2: «¿Te lo recordamos?». Nombre, correo y un consentimiento que va SIN marcar (una casilla premarcada no es consentimiento). Lo que sale de aquí es un correo de confirmación: hasta que la persona"
         }
       ],
@@ -10843,7 +10843,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "dda5c7d867a7"
+      "hash": "376212da70cd"
     },
     {
       "ruta": "apps/asegura-web/components/Whatsapp.tsx",
@@ -10932,7 +10932,7 @@
           "exportada": true,
           "params": "hash: string",
           "retorno": "string | null",
-          "linea": 12,
+          "linea": 18,
           "resumen": "El token viaja en el fragmento (`#t=…`): no llega al servidor en la petición de la página ni queda en logs."
         },
         {
@@ -10941,12 +10941,12 @@
           "exportada": true,
           "params": "accion: AccionAviso, cuerpo: unknown",
           "retorno": "Promise<",
-          "linea": 25
+          "linea": 31
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dda64048493c"
+      "hash": "d19eef279c23"
     },
     {
       "ruta": "apps/asegura-web/lib/calculadora-vencimientos.ts",
@@ -13624,6 +13624,27 @@
       "hash": "9716dbed673a"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/informe-mediacion/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 15,
+          "resumen": "GET ?año=YYYY → { estado:'ok', primas, companias, carteraHoy, quejas } Base del informe anual a la DGSFP. Solo lectura. Año fuera de [2000, año en curso] → 422."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/informe-mediacion",
+      "hash": "97eb5fe9e21b"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/ingesta/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -15360,6 +15381,7 @@
       "ambito": "apps/asegura",
       "resumen": "Reglas PURAS del «avísame antes de que venza» de la web pública (sin Prisma ni red, para que `node --test` las pruebe). La parte de BD vive en `aviso-web.ts`. Los dos plazos del art. 22 LCS mandan en todo: la compañía comunica cambios con 2 meses (60 días) y el tomador se opone a la prórroga hasta 1",
       "exporta": [
+        "nombreDelSeguro",
         "parsearFecha",
         "revisarSolicitud",
         "vencimientoDelCiclo",
@@ -15374,12 +15396,21 @@
       ],
       "funciones": [
         {
+          "nombre": "nombreDelSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string, ramoWeb: string",
+          "retorno": "string",
+          "linea": 78,
+          "resumen": "Cómo se nombra el seguro en correos, historial y Telegram. Para «otro» es lo que escribió el visitante (guardado en `ramo_web` como `otro:<texto>`); para el resto, el nombre del ramo."
+        },
+        {
           "nombre": "parsearFecha",
           "kind": "function",
           "exportada": true,
           "params": "iso: unknown",
           "retorno": "Date | null",
-          "linea": 70,
+          "linea": 88,
           "resumen": "`AAAA-MM-DD` → medianoche UTC, o `null` si no es una fecha real."
         },
         {
@@ -15388,7 +15419,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "Revision",
-          "linea": 79
+          "linea": 97
         },
         {
           "nombre": "diaUtc",
@@ -15396,7 +15427,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 98
+          "linea": 122
         },
         {
           "nombre": "enAnio",
@@ -15404,7 +15435,7 @@
           "exportada": false,
           "params": "d: Date, anio: number",
           "retorno": "Date",
-          "linea": 103,
+          "linea": 127,
           "resumen": "Mismo día y mes en otro año; un 29 de febrero cae al 28 si el año no es bisiesto."
         },
         {
@@ -15413,7 +15444,7 @@
           "exportada": true,
           "params": "vence: Date, hoy: Date",
           "retorno": "Date",
-          "linea": 113,
+          "linea": 137,
           "resumen": "El vencimiento del ciclo que todavía se puede decidir: el primer aniversario cuyo último día para oponerse (vence − 30) no ha pasado. Una póliza se prorroga cada año el mismo día."
         },
         {
@@ -15422,7 +15453,7 @@
           "exportada": true,
           "params": "d: Date, n: number",
           "retorno": "Date",
-          "linea": 120
+          "linea": 144
         },
         {
           "nombre": "iso",
@@ -15430,7 +15461,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 122
+          "linea": 146
         },
         {
           "nombre": "avisoQueToca",
@@ -15438,7 +15469,7 @@
           "exportada": true,
           "params": "p: { vence: Date; hoy: Date; aviso1Para: string | null; aviso2Para: string | null }",
           "retorno": "AvisoQueToca",
-          "linea": 132,
+          "linea": 156,
           "resumen": "Qué aviso toca hoy, o `null`. `aviso1Para`/`aviso2Para` son los vencimientos (`AAAA-MM-DD`) para los que ya salió cada uno. Si alguien se apunta tarde (a menos de 45 días) solo recibe el 2; si se apun"
         },
         {
@@ -15447,7 +15478,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 147
+          "linea": 171
         },
         {
           "nombre": "fechaLarga",
@@ -15455,7 +15486,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 151
+          "linea": 175
         },
         {
           "nombre": "exigirHttps",
@@ -15463,7 +15494,7 @@
           "exportada": false,
           "params": "...urls: string[]",
           "retorno": "void",
-          "linea": 155
+          "linea": 179
         },
         {
           "nombre": "html",
@@ -15471,7 +15502,7 @@
           "exportada": false,
           "params": "parrafos: string[], boton: { href: string; texto: string } | null, pie: string[]",
           "retorno": "string",
-          "linea": 160
+          "linea": 184
         },
         {
           "nombre": "cuerpoConfirmacion",
@@ -15479,7 +15510,7 @@
           "exportada": true,
           "params": "d: { nombre: string; ramo: string; vence: Date; enlaceConfirmar: string }",
           "retorno": "CuerpoCorreo",
-          "linea": 172
+          "linea": 196
         },
         {
           "nombre": "cuerpoAviso",
@@ -15487,7 +15518,7 @@
           "exportada": true,
           "params": "d: { tipo: 'aviso1' | 'aviso2' nombre: string ramo: string vence: Date hoy: Date enlacePortal: string directo: boolean enlaceBaja: string }",
           "retorno": "CuerpoCorreo",
-          "linea": 190
+          "linea": 214
         },
         {
           "nombre": "urlWeb",
@@ -15495,7 +15526,7 @@
           "exportada": true,
           "params": "base: string | undefined = process.env.ASEGURA_WEB_URL",
           "retorno": "string",
-          "linea": 251,
+          "linea": 275,
           "resumen": "URL pública de la web (donde viven las páginas de confirmar y darse de baja)."
         },
         {
@@ -15504,7 +15535,7 @@
           "exportada": true,
           "params": "base: string, ruta: '/aviso/confirmar' | '/aviso/baja', token: string",
           "retorno": "string",
-          "linea": 256,
+          "linea": 280,
           "resumen": "El token va en el fragmento `#`: no viaja en la petición HTTP, así que no queda en ningún log."
         },
         {
@@ -15513,12 +15544,12 @@
           "exportada": true,
           "params": "env: string | undefined = process.env.ASEGURA_AVISOS_WEB_ACTIVOS",
           "retorno": "boolean",
-          "linea": 260
+          "linea": 284
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9c15914db43f"
+      "hash": "842ba8573db9"
     },
     {
       "ruta": "apps/asegura/lib/aviso-web.ts",
@@ -15537,7 +15568,7 @@
           "exportada": false,
           "params": "destino: string, c: CuerpoCorreo",
           "retorno": "Promise<Envio>",
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "solicitarAviso",
@@ -15545,7 +15576,7 @@
           "exportada": true,
           "params": "correduriaId: string, body: unknown",
           "retorno": "Promise<ResultadoSolicitud>",
-          "linea": 85,
+          "linea": 86,
           "resumen": "Responde `ok` también cuando se ha llegado al tope de solicitudes de ese correo: no se le dice a quien rellena el formulario si ese buzón ya estaba apuntado ni cuántas veces."
         },
         {
@@ -15554,7 +15585,7 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<ResultadoConfirmacion>",
-          "linea": 149
+          "linea": 153
         },
         {
           "nombre": "bajaAviso",
@@ -15562,7 +15593,7 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<",
-          "linea": 223,
+          "linea": 230,
           "resumen": "Siempre «ok» hacia fuera: no se revela si la llave existía."
         },
         {
@@ -15571,7 +15602,7 @@
           "exportada": true,
           "params": "correduriaId: string, opciones: { hoy?: Date; forzarContar?: boolean } = {}",
           "retorno": "Promise<ResumenAvisosWeb>",
-          "linea": 262,
+          "linea": 270,
           "resumen": "Lanza si falta el portal o el correo: «no he podido» no puede leerse como «hoy no tocaba nadie»."
         }
       ],
@@ -15582,7 +15613,7 @@
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "c5a7d3bc11a3"
+      "hash": "b7747d475287"
     },
     {
       "ruta": "apps/asegura/lib/avisos-intranet-reglas.ts",
@@ -23186,6 +23217,31 @@
       "hash": "1d7a00c91256"
     },
     {
+      "ruta": "apps/asegura/lib/informe-mediacion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Informe anual de mediación (base de la documentación estadístico-contable a la DGSFP). Solo lectura. La suma vive en `@central/module-seguros` (informe-mediacion.ts); aquí, las consultas. Tres bloques: primas del año por compañía y ramo (recibos de la cartera viva O que ha mandado CIMA, aunque cuelg",
+      "exporta": [
+        "informeMediacionAnual"
+      ],
+      "funciones": [
+        {
+          "nombre": "informeMediacionAnual",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, año: number",
+          "retorno": "Promise<ResultadoInforme>",
+          "linea": 26
+        }
+      ],
+      "tablas": [
+        "companias_dgs",
+        "poliza_recibos",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "8295fef17dcb"
+    },
+    {
       "ruta": "apps/asegura/lib/ingesta.ts",
       "ambito": "apps/asegura",
       "resumen": "Estado de la INGESTA de CIMA, leído de la BD del CRM de origen. Por qué existe (medido el 01/09/2026): entre el 24/06 y el 30/08 se quedaron 42 ficheros en cuarentena — 23 recibos por 7.721,71€ de prima y 20 siniestros de Occident— y nadie se enteró. El vigía de origen corría a diario con `cuarenten",
@@ -24203,6 +24259,7 @@
       "resumen": "Registro de quejas y reclamaciones del SAC (Servicio de Atención al Cliente del mediador). El plazo de respuesta que se publica al cliente es de un mes; esto es el reloj que lo vigila. La regla vive en `@central/module-seguros` (queja.ts); aquí solo se lee y se escribe `seguros.queja`. 🚨 `detalle` ",
       "exporta": [
         "colaQuejas",
+        "informeQuejas",
         "registrarQueja",
         "cambiarQueja"
       ],
@@ -24241,12 +24298,21 @@
           "resumen": "Las abiertas (o todas con `todas`), ordenadas por el RELOJ, más el informe del año en curso."
         },
         {
+          "nombre": "informeQuejas",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, año: number",
+          "retorno": "Promise<InformeSac>",
+          "linea": 141,
+          "resumen": "El informe del SAC de un año cualquiera (el de `colaQuejas` es siempre el del año en curso)."
+        },
+        {
           "nombre": "registrarQueja",
           "kind": "function",
           "exportada": true,
           "params": "correduriaId: string, cuerpo: Record<string, unknown> | null, actor: string",
           "retorno": "Promise<ResultadoAlta>",
-          "linea": 145
+          "linea": 154
         },
         {
           "nombre": "cambiarQueja",
@@ -24254,7 +24320,7 @@
           "exportada": true,
           "params": "correduriaId: string, cuerpo: Record<string, unknown> | null, actor: string",
           "retorno": "Promise<ResultadoCambio>",
-          "linea": 190,
+          "linea": 199,
           "resumen": "Pasar a trámite, resolver (con la respuesta que se dio) o marcar que el cliente desiste."
         },
         {
@@ -24263,7 +24329,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, polizaId: string | null, texto: string",
           "retorno": "Promise<void>",
-          "linea": 232
+          "linea": 241
         }
       ],
       "tablas": [
@@ -24273,7 +24339,7 @@
         "queja"
       ],
       "rutaApi": null,
-      "hash": "050cb18a629c"
+      "hash": "5180406d69b5"
     },
     {
       "ruta": "apps/asegura/lib/rate-limit.ts",
@@ -71315,7 +71381,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 80
+          "linea": 81
         },
         {
           "nombre": "fmtFecha",
@@ -71323,7 +71389,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 85,
+          "linea": 86,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -71332,7 +71398,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 135
+          "linea": 136
         },
         {
           "nombre": "CorreduriaClient",
@@ -71340,7 +71406,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 137
+          "linea": 138
         },
         {
           "nombre": "CarteraResumen",
@@ -71348,7 +71414,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 671
+          "linea": 673
         },
         {
           "nombre": "btnMini",
@@ -71356,7 +71422,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 788,
+          "linea": 790,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -71365,12 +71431,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 806
+          "linea": 808
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ee2f30e13edb"
+      "hash": "37a87e2c7c29"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -71935,6 +72001,42 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "d4a77376c287"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/InformeMediacion.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "InformeMediacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "porqueNoSeLee",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: LecturaInforme",
+          "retorno": "string",
+          "linea": 29
+        },
+        {
+          "nombre": "Comisiones",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ año, comisiones }: { año: number; comisiones: ComisionCompania[] | null }",
+          "retorno": null,
+          "linea": 36
+        },
+        {
+          "nombre": "InformeMediacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ año }: { año: number }",
+          "retorno": null,
+          "linea": 77
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "933faa7eb67b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Ingesta.tsx",
@@ -82561,6 +82663,31 @@
       "hash": "94b026e98800"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/informe-mediacion/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "GET ?año=YYYY — base del informe anual de mediación (DGSFP): lo que sirve asegura (primas por compañía y ramo según CIMA, pólizas en vigor, quejas) + las comisiones del libro de esta app. `comisiones:"
+        }
+      ],
+      "tablas": [
+        "comisiones_devengo",
+        "next",
+        "periodo_inicio"
+      ],
+      "rutaApi": "/api/correduria/informe-mediacion",
+      "hash": "d750441b9cfc"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/ingesta/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -86197,7 +86324,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/publico/correduria/aviso",
-      "hash": "2aa8f45d15c1"
+      "hash": "a1ae0a4b2752"
     },
     {
       "ruta": "apps/plataforma/app/api/publico/correduria/consentimiento/route.ts",
@@ -103632,6 +103759,83 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "57544626d4f1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/informe-mediacion-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Informe anual de mediación (base de la documentación estadístico-contable a la DGSFP). Junta dos fuentes: lo que sirve asegura por el puerto (primas del año por compañía y ramo según CIMA, pólizas en vigor hoy, quejas del SAC) y el libro de comisiones de esta app (`comisiones_devengo`). NO es el mod",
+      "exporta": [
+        "interpretarInforme",
+        "nombreCompania",
+        "companiasSinPrimas",
+        "csvInforme",
+        "informeMediacionAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "v is number",
+          "linea": 48
+        },
+        {
+          "nombre": "interpretarInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "LecturaInforme",
+          "linea": 51,
+          "resumen": "Valida la forma entera: una respuesta a medias NO se pinta (daría totales falsos)."
+        },
+        {
+          "nombre": "nombreCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "codigo: string | null, nombres: Record<string, string>",
+          "retorno": "string",
+          "linea": 95,
+          "resumen": "Nombre legible de un código DGS; el código tal cual si no hay nombre."
+        },
+        {
+          "nombre": "companiasSinPrimas",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: InformePuerto",
+          "retorno": "string[]",
+          "linea": 105,
+          "resumen": "Compañías con pólizas en vigor HOY de las que CIMA no ha mandado ni un recibo del año: sus primas no son 0, no se saben. Se compara con la cartera de hoy (la de 31/12 no se reconstruye): en un año pas"
+        },
+        {
+          "nombre": "celda",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: string | number | null",
+          "retorno": null,
+          "linea": 110
+        },
+        {
+          "nombre": "csvInforme",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: InformePuerto, comisiones: ComisionCompania[] | null",
+          "retorno": "string",
+          "linea": 122,
+          "resumen": "CSV (separador `;`, decimales con coma: lo abre Excel en español sin tocar nada). La primera línea dice qué es y qué NO es, para que el fichero no viaje sin su advertencia."
+        },
+        {
+          "nombre": "informeMediacionAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "año: number",
+          "retorno": "Promise<",
+          "linea": 152
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "19bc2314f900"
     },
     {
       "ruta": "apps/plataforma/lib/inicio-acciones.ts",
@@ -121715,7 +121919,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "072e73fe2ceb"
+      "hash": "b15bc26dbd72"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -121826,7 +122030,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "849e2c92b309"
+      "hash": "b8e5c3cd7426"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -121956,7 +122160,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2128b44f536a"
+      "hash": "5d202a83ba45"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/page.tsx",
@@ -125648,7 +125852,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "2b0f67f72aef"
+      "hash": "32b6a64052f2"
     },
     {
       "ruta": "apps/rrhh/lib/storage.ts",
@@ -143648,6 +143852,35 @@
       "hash": "b1748e1e2a66"
     },
     {
+      "ruta": "packages/module-seguros/src/informe-mediacion.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Informe anual de mediación: la base para la documentación estadístico-contable que la correduría presenta cada año a la DGSFP (primas intermediadas por compañía y ramo, cartera, quejas del SAC). 🚨 NO es el modelo oficial: es la hoja de trabajo para rellenarlo. Las primas salen de los recibos que ma",
+      "exporta": [
+        "informeMediacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 58
+        },
+        {
+          "nombre": "informeMediacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "recibos: readonly ReciboInforme[], año: number",
+          "retorno": "InformeMediacion",
+          "linea": 60
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "5fb3a9f95784"
+    },
+    {
       "ruta": "packages/module-seguros/src/ingesta.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Salud de la INGESTA de CIMA — el vigía de que los datos de las compañías llegan de verdad. Contexto que justifica este módulo (medido el 01/09/2026): durante más de dos meses se perdieron 23 recibos (7.721,71€ de prima) y 20 siniestros de Occident, y el health-check de origen estuvo TODO ese tiempo ",
@@ -151417,7 +151650,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3645,
-    "funciones": 11544
+    "archivos": 3651,
+    "funciones": 11561
   }
 }
