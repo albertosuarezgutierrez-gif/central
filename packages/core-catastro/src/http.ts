@@ -12,6 +12,7 @@
 import {
   elegirVia,
   elegirViaConTipo,
+  viasParecidas,
   errorCatastro,
   parcelaUnica,
   parsearCatastro,
@@ -185,16 +186,17 @@ export async function resolverNombreVia(
   municipio: string,
   sigla: string,
   calle: string,
-): Promise<{ nombre: string | null; ambigua: boolean }> {
+): Promise<{ nombre: string | null; ambigua: boolean; candidatas: Array<{ tipo: string; nombre: string }> }> {
   const termino = terminoBusquedaVia(calle)
-  if (!termino) return { nombre: null, ambigua: false }
+  if (!termino) return { nombre: null, ambigua: false, candidatas: [] }
   const q = new URLSearchParams({ Provincia: provincia, Municipio: municipio, TipoVia: sigla, NombreVia: termino })
   const vias = parsearVias(await bajarCatastroHttp(`${CATASTRO_VIA}?${q.toString()}`))
   const nombre = elegirVia(vias, calle)
   // Se distingue «el callejero no conoce ese término» de «hay varias vías y
   // ninguna gana»: lo segundo es el `null` DELIBERADO de `elegirVia` y quien
   // llama no puede tirar para adelante con el nombre crudo (ver abajo).
-  return { nombre, ambigua: !nombre && vias.length > 0 }
+  // `candidatas` son las parecidas, para que ELIJA una persona (nunca el código).
+  return { nombre, ambigua: !nombre && vias.length > 0, candidatas: nombre ? [] : viasParecidas(vias, calle) }
 }
 
 /**
@@ -251,7 +253,7 @@ export async function buscarRefPorDireccion(
   // `ref_catastral` (con `COALESCE`, o sea para siempre) y de ella salen los m²
   // con los que se valora la subasta.
   const via = await resolverNombreVia(p.provincia, p.municipio, p.sigla, p.calle)
-    .catch(() => ({ nombre: null, ambigua: false }))
+    .catch(() => ({ nombre: null, ambigua: false, candidatas: [] }))
   if (via.ambigua) return null
   // Sin candidatas (o con el callejero caído) se prueba el nombre del anuncio:
   // `Consulta_DNPLOC` exige coincidencia exacta, así que un nombre que no sea el
@@ -314,7 +316,7 @@ export async function inmueblesPorDireccion(
   p: ParamsDnploc & { provincia: string; municipio: string },
 ): Promise<{ via: string; inmuebles: InmuebleCatastro[] } | null> {
   const via = await resolverNombreVia(p.provincia, p.municipio, p.sigla, p.calle)
-    .catch(() => ({ nombre: null, ambigua: false }))
+    .catch(() => ({ nombre: null, ambigua: false, candidatas: [] }))
   if (via.ambigua) return null
   const calle = via.nombre ?? p.calle
   const q = new URLSearchParams({

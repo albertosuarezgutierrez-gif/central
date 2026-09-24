@@ -102,8 +102,11 @@ export default async function HogarNuevoPage({
     if (r.estado === 'ok') {
       referencia = r.referencia
     } else {
+      const parecidas = (r.estado === 'ambigua' || r.estado === 'no_encontrado') ? r.parecidas ?? [] : []
       const mensaje =
-        r.estado === 'ambigua'
+        parecidas.length > 0
+          ? 'El Catastro no tiene esa calle escrita así. ¿Es alguna de estas? (el nombre oficial a veces cambia o abrevia el nombre de pila; el código postal no hace falta)'
+          : r.estado === 'ambigua'
           ? 'El callejero tiene varias calles parecidas en ese municipio: escribe el nombre completo de la vía, o usa la referencia catastral (recibo del IBI).'
           : r.estado === 'no_encontrado'
           ? 'Se ha consultado y el Catastro no devuelve ningún inmueble con esos datos.'
@@ -113,8 +116,21 @@ export default async function HogarNuevoPage({
       return (
         <Pagina>
           {cabecera}
-          <div style={{ ...cardStyle, borderColor: 'var(--negative)', color: 'var(--negative)', fontSize: 13, marginBottom: 14 }}>
+          <div style={{ ...cardStyle, borderColor: parecidas.length ? 'var(--warning)' : 'var(--negative)', color: parecidas.length ? 'var(--text)' : 'var(--negative)', fontSize: 13, marginBottom: 14 }}>
             {mensaje}
+            {parecidas.length > 0 && (
+              <div style={{ display: 'grid', gap: 8, marginTop: 10 }}>
+                {parecidas.map((c) => (
+                  <Link
+                    key={c.direccion}
+                    href={`/correduria/cliente/${clienteId}/hogar-nuevo?${new URLSearchParams({ direccion: c.direccion, municipio, provincia }).toString()}`}
+                    style={{ ...btnStyle('secundario'), textDecoration: 'none', minHeight: 44, display: 'flex', alignItems: 'center' }}
+                  >
+                    {c.etiqueta}
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
           <FormularioBuscar clienteId={clienteId} direccion={direccion} municipio={municipio} provincia={provincia} />
         </Pagina>
