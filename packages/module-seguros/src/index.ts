@@ -853,6 +853,7 @@ export {
   RAMOS_SOLICITUD,
   TIPOS_DOC_SOLICITUD,
   camposSolicitud,
+  conIdentidad,
   contrastarConDocumentos,
   etiquetaDocSolicitud,
   mensajeSolicitud,

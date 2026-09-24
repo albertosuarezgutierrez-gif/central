@@ -20,6 +20,7 @@ import {
   DIAS_SOLICITUD,
   MAX_DOCS_SOLICITUD,
   camposSolicitud,
+  conIdentidad,
   contrastarConDocumentos,
   etiquetaDocSolicitud,
   normalizarLecturaSolicitud,
@@ -39,6 +40,7 @@ import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { clienteOrigenDe, listarCarnets } from './cartera-ficha'
 import { guardarDocumento } from './cartera-documentos'
+import { revisarDocumento } from '@central/module-seguros'
 import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -62,7 +64,7 @@ export type SolicitudResumen = {
   respuestas: Record<string, Respuesta> | null
   ilegible: boolean
   /** Documentos que subió por el enlace (están en su ficha → Documentos). */
-  documentos: { id: string; tipo: TipoDocSolicitud }[]
+  documentos: { id: string; tipo: TipoDocSolicitud }[] | null
   /** Lo declarado que no casa con sus papeles. `null` = no se ha podido contrastar. */
   discrepancias: DiscrepanciaSolicitud[] | null
 }
@@ -170,7 +172,8 @@ export async function solicitudesDeOportunidad(correduriaId: string, oportunidad
         completada: f.completada ? f.completada.toISOString() : null,
         campos: f.campos,
         ...d,
-        documentos: (lecturas ?? []).map((l) => ({ id: l.documentoId, tipo: l.tipo })),
+        // `null` = no se ha podido leer qué subió (≠ «no subió nada»).
+        documentos: lecturas === null ? null : lecturas.flatMap((l) => (l.tipo === 'ficha' ? [] : [{ id: l.documentoId, tipo: l.tipo }])),
         discrepancias: lecturas === null || d.ilegible ? null : d.respuestas ? contrastarConDocumentos(d.respuestas, lecturas) : [],
       }
     })
@@ -207,8 +210,20 @@ async function porToken(token: string): Promise<FilaToken | null> {
   return f ?? null
 }
 
+/** DNI y nacimiento de su ficha, para traerlos rellenos. Si no se pueden leer, se piden en blanco. */
+async function identidadFicha(f: FilaToken): Promise<{ dni: string | null; fechaNacimiento: string | null }> {
+  try {
+    const o = await clienteOrigenDe(f.correduriaId, f.clienteId)
+    return { dni: o?.cliente.dni ?? null, fechaNacimiento: o?.cliente.fechaNacimiento ?? null }
+  } catch {
+    return { dni: null, fechaNacimiento: null }
+  }
+}
+
 /**
- * Lo que ve la página pública: el ramo y los campos a pedir. NADA del cliente.
+ * Lo que ve la página pública: el ramo y los campos a pedir. Del cliente, SOLO su DNI y su fecha
+ * de nacimiento, rellenos para que los confirme o corrija (decisión de Alberto, 24/09/2026: «es su
+ * DNI, no hay problema»; se le avisó de que el enlace no lleva código). Ningún otro dato de la ficha.
  * No existe, anulada o caducada → «muerta», todas igual (no es un oráculo de tokens).
  */
 export async function solicitudPorToken(token: string): Promise<SolicitudPublica> {
@@ -217,7 +232,13 @@ export async function solicitudPorToken(token: string): Promise<SolicitudPublica
   if (f.estado === 'completada') return { estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { estado: 'muerta' }
   const ramo = ramoSolicitud(f.ramo)
-  return ramo ? { estado: 'ok', ramo, campos: f.campos } : { estado: 'muerta' }
+  if (!ramo) return { estado: 'muerta' }
+  const id = await identidadFicha(f)
+  const campos = conIdentidad(f.campos).map((c) => {
+    const actual = c.clave === 'dni' ? id.dni : c.clave === 'fechaNacimiento' ? id.fechaNacimiento : null
+    return actual ? { ...c, actual } : c
+  })
+  return { estado: 'ok', ramo, campos }
 }
 
 export type ResultadoDocSolicitud =
@@ -242,13 +263,20 @@ export async function subirDocumentoSolicitud(
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
   const ramo = ramoSolicitud(f.ramo)
   if (!ramo) return { ok: false, estado: 'muerta' }
-  const [c] = await prismaAsegura().$queryRaw<{ n: number }[]>(Prisma.sql`
-    select documentos_subidos as n from solicitud_datos where id = ${f.id}::uuid`)
-  if ((c?.n ?? 0) >= MAX_DOCS_SOLICITUD) return { ok: false, estado: 'tope', motivo: `Como máximo ${MAX_DOCS_SOLICITUD} documentos por enlace.` }
+  // Tipo de fichero ANTES de gastar IA o plaza.
+  const reparo = revisarDocumento({ type: fichero.mime, size: fichero.contenido.length, name: fichero.nombre })
+  if (reparo) return { ok: false, estado: 'invalido', motivo: reparo }
+  // La plaza se RESERVA de forma atómica: con subidas en paralelo, leer-y-luego-sumar dejaría pasar
+  // a todas. Si luego algo falla, la plaza queda gastada (preferible a guardar sin tope).
+  const reservada = await prismaAsegura().$queryRaw<{ n: number }[]>(Prisma.sql`
+    update solicitud_datos set documentos_subidos = documentos_subidos + 1
+    where id = ${f.id}::uuid and documentos_subidos < ${MAX_DOCS_SOLICITUD} and estado = 'pendiente' and caduca_at > now()
+    returning documentos_subidos as n`)
+  if (reservada.length === 0) return { ok: false, estado: 'tope', motivo: `Como máximo ${MAX_DOCS_SOLICITUD} documentos por enlace.` }
 
   // Primero se lee (para saber qué es y archivarlo con su tipo); si la IA falla, se archiva como «otro».
   const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre)
-  const leido = lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, f.campos) : { tipo: 'otro' as const, valores: {} }
+  const leido = lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, conIdentidad(f.campos)) : { tipo: 'otro' as const, valores: {} }
   const g = await guardarDocumento(f.correduriaId, {
     clienteId: f.clienteId,
     tipo: tipoArchivoDocSolicitud(leido.tipo),
@@ -263,14 +291,16 @@ export async function subirDocumentoSolicitud(
   await prismaAsegura().$transaction(async (tx) => {
     const [fila] = await tx.$queryRaw<{ lecturas: string | null }[]>(Prisma.sql`
       select lecturas from solicitud_datos where id = ${f.id}::uuid for update`)
-    const previas = descifrarLecturas(fila?.lecturas ?? null) ?? []
+    const previas = descifrarLecturas(fila?.lecturas ?? null)
+    // Ilegibles (clave PII cambiada): no se machacan. El fichero ya está archivado en la ficha.
+    if (previas === null) return
     const nuevas: LecturaDocSolicitud[] = [...previas, { documentoId: g.documento.id, tipo: leido.tipo, valores: leido.valores }]
     await tx.$executeRaw(Prisma.sql`
-      update solicitud_datos set lecturas = ${encryptField(JSON.stringify(nuevas))}, documentos_subidos = documentos_subidos + 1
-      where id = ${f.id}::uuid`)
+      update solicitud_datos set lecturas = ${encryptField(JSON.stringify(nuevas))} where id = ${f.id}::uuid`)
   })
+  if (!lectura.ok) console.warn('[solicitud-datos] documento sin leer:', lectura.motivo)
   const aviso = !lectura.ok
-    ? `Guardado. No lo hemos podido leer (${lectura.motivo}); rellena los datos a mano.`
+    ? 'Guardado. No lo hemos podido leer; rellena los datos a mano.'
     : Object.keys(leido.valores).length === 0
       ? 'Guardado. No hemos sacado de aquí ningún dato de los que faltan.'
       : null
@@ -286,10 +316,15 @@ export async function responderSolicitud(
   if (!f) return { ok: false, estado: 'muerta' }
   if (f.estado === 'completada') return { ok: false, estado: 'completada' }
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
-  const v = validarRespuestas(f.campos, entrada)
+  const v = validarRespuestas(conIdentidad(f.campos), entrada)
   if (!v.ok) return { ok: false, estado: 'errores', errores: v.errores }
 
   const cifradas = encryptField(JSON.stringify(v.respuestas))
+  // Lo que decía su ficha al contestar: si corrige DNI o nacimiento, Alberto lo ve como discrepancia.
+  const id = await identidadFicha(f)
+  const ficha: Record<string, Respuesta> = {}
+  if (id.dni) ficha.dni = id.dni
+  if (id.fechaNacimiento) ficha.fechaNacimiento = id.fechaNacimiento
   const ramoTexto = f.ramo === 'moto' ? 'moto' : 'coche'
   const hecho = await prismaAsegura().$transaction(async (tx) => {
     const [o] = await tx.$queryRaw<{ estado: string }[]>(Prisma.sql`
@@ -305,6 +340,16 @@ export async function responderSolicitud(
       update solicitud_datos set estado = 'completada', respuestas = ${cifradas}, completada_at = now()
       where id = ${f.id}::uuid and estado = 'pendiente' and caduca_at > now()`)
     if (n === 0) return false
+    if (Object.keys(ficha).length > 0) {
+      const [fila] = await tx.$queryRaw<{ lecturas: string | null }[]>(Prisma.sql`
+        select lecturas from solicitud_datos where id = ${f.id}::uuid`)
+      const previas = descifrarLecturas(fila?.lecturas ?? null) ?? null
+      if (previas !== null) {
+      const conFicha: LecturaDocSolicitud[] = [...previas, { documentoId: '', tipo: 'ficha', valores: ficha }]
+      await tx.$executeRaw(Prisma.sql`
+        update solicitud_datos set lecturas = ${encryptField(JSON.stringify(conFicha))} where id = ${f.id}::uuid`)
+      }
+    }
     if (o) {
       const nuevo = o.estado === 'competencia' ? 'en_negociacion' : o.estado
       // Quien ha contestado ya no está aparcado, como con la acción «interesado».

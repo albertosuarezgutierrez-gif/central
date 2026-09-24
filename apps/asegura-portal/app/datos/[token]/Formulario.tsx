@@ -9,7 +9,12 @@ type Subida = { id: number; nombre: string; estado: 'subiendo' | 'ok' | 'fallo';
 
 /** El formulario del enlace de datos. Pinta los campos que manda asegura y nada más. */
 export default function Formulario({ token, campos }: { token: string; campos: CampoSolicitud[] }) {
-  const [valores, setValores] = useState<Record<string, string | boolean>>({})
+  // DNI y nacimiento llegan rellenos con lo de su ficha (`actual`): los confirma o los corrige.
+  const [valores, setValores] = useState<Record<string, string | boolean>>(
+    () => Object.fromEntries(campos.flatMap((c) => (c.actual ? [[c.clave, c.actual]] : []))),
+  )
+  const valoresRef = useRef(valores)
+  valoresRef.current = valores
   const [errores, setErrores] = useState<Record<string, string>>({})
   const [estado, setEstado] = useState<Estado>({ tipo: 'editando' })
   const [subidas, setSubidas] = useState<Subida[]>([])
@@ -48,13 +53,12 @@ export default function Formulario({ token, campos }: { token: string; campos: C
         fijar({ estado: 'fallo', texto: r.texto })
         continue
       }
-      // Solo rellena lo que está vacío: lo que el cliente ya escribió manda.
-      const claves = Object.keys(r.valores)
-      setValores((p) => {
-        const n = { ...p }
-        for (const k of claves) if (n[k] === undefined || n[k] === '') n[k] = r.valores[k]
-        return n
-      })
+      // Solo rellena lo que está vacío: lo que el cliente ya escribió (o traía su ficha) manda.
+      const actuales = valoresRef.current
+      const claves = Object.keys(r.valores).filter((k) => actuales[k] === undefined || actuales[k] === '')
+      const nuevos = Object.fromEntries(claves.map((k) => [k, r.valores[k]]))
+      valoresRef.current = { ...actuales, ...nuevos }
+      setValores((p) => ({ ...p, ...nuevos }))
       setLeidos((p) => new Set([...p, ...claves]))
       fijar({
         estado: 'ok',
@@ -167,6 +171,7 @@ export default function Formulario({ token, campos }: { token: string; campos: C
               />
             )}
             {leidos.has(c.clave) && <span className="editor-ayuda">📄 Leído de tu documento: compruébalo.</span>}
+            {c.actual && !leidos.has(c.clave) && <span className="editor-ayuda">Es el que tenemos en tu ficha: si no es correcto, cámbialo.</span>}
             {c.ayuda && <span className="editor-ayuda">{c.ayuda}</span>}
             {err && <span className="editor-error" role="alert">{err}</span>}
           </div>

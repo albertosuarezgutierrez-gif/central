@@ -30,6 +30,8 @@ export type CampoSolicitud = {
   opciones?: readonly { valor: string; etiqueta: string }[]
   /** Solo se enseña si el campo `si_no` indicado vale `true`. */
   siMarcado?: string
+  /** Lo que ya consta en su ficha: el formulario lo trae relleno y el cliente lo puede corregir. */
+  actual?: string
 }
 
 /** Lo que la ficha YA tiene: eso no se le vuelve a pedir. */
@@ -55,12 +57,27 @@ export const GARAJES_SOLICITUD = [
   { valor: 'calle', etiqueta: 'En la calle' },
 ] as const
 
-/** Qué se le pide al cliente para ese ramo, quitando lo que la ficha ya sabe. */
+const CAMPOS_IDENTIDAD_SOLICITUD: readonly CampoSolicitud[] = [
+  { clave: 'dni', etiqueta: 'DNI o NIE del conductor principal', tipo: 'texto', obligatorio: true },
+  { clave: 'fechaNacimiento', etiqueta: 'Fecha de nacimiento', tipo: 'fecha', obligatorio: true },
+]
+
+/**
+ * Los campos de un enlace ya creado + DNI y nacimiento si le faltan (los enlaces
+ * anteriores al 24/09/2026 no los pedían cuando la ficha ya los tenía).
+ */
+export function conIdentidad(campos: readonly CampoSolicitud[]): CampoSolicitud[] {
+  const faltan = CAMPOS_IDENTIDAD_SOLICITUD.filter((c) => !campos.some((x) => x.clave === c.clave))
+  return [...faltan, ...campos]
+}
+
+/** Qué se le pide al cliente para ese ramo, quitando lo que la ficha ya sabe (salvo DNI y nacimiento). */
 export function camposSolicitud(ramo: RamoSolicitud, conocido: ConocidoFicha): CampoSolicitud[] {
   const moto = ramo === 'moto'
   const campos: CampoSolicitud[] = []
-  if (!conocido.dni) campos.push({ clave: 'dni', etiqueta: 'DNI o NIE del conductor principal', tipo: 'texto', obligatorio: true })
-  if (!conocido.fechaNacimiento) campos.push({ clave: 'fechaNacimiento', etiqueta: 'Fecha de nacimiento', tipo: 'fecha', obligatorio: true })
+  // DNI y nacimiento se piden SIEMPRE (Alberto, 24/09/2026): si la ficha los tiene, llegan
+  // rellenos (`actual`) para que el cliente los confirme o los corrija.
+  campos.push(...CAMPOS_IDENTIDAD_SOLICITUD)
   if (!conocido.codigoPostal) {
     campos.push({ clave: 'codigoPostal', etiqueta: `Código postal donde duerme ${moto ? 'la moto' : 'el coche'}`, tipo: 'texto', obligatorio: true })
   }
@@ -277,8 +294,9 @@ export function normalizarLecturaSolicitud(
 /** Campos en los que un papel manda: si lo declarado no coincide, se avisa a Alberto. */
 const CONTRASTABLES = ['dni', 'fechaNacimiento', 'tipoCarnet', 'fechaCarnet', 'matricula', 'fechaMatriculacion'] as const
 
-export type LecturaDocSolicitud = { documentoId: string; tipo: TipoDocSolicitud; valores: Record<string, Respuesta> }
-export type DiscrepanciaSolicitud = { clave: string; declarado: Respuesta; documento: Respuesta; tipoDocumento: TipoDocSolicitud }
+/** `ficha` = lo que constaba en su ficha al contestar (va la última: un papel manda más). */
+export type LecturaDocSolicitud = { documentoId: string; tipo: TipoDocSolicitud | 'ficha'; valores: Record<string, Respuesta> }
+export type DiscrepanciaSolicitud = { clave: string; declarado: Respuesta; documento: Respuesta; tipoDocumento: TipoDocSolicitud | 'ficha' }
 
 const canon = (v: Respuesta): string => String(v ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
 

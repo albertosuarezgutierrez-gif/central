@@ -17,10 +17,11 @@ test('las respuestas se guardan cifradas y no se escriben en la ficha', () => {
   assert.doesNotMatch(src, /update clientes/, 'lo declarado por el enlace no toca la ficha')
 })
 
-test('la vista pública por token no devuelve nada del cliente', () => {
-  const publica = src.slice(src.indexOf('export async function solicitudPorToken'), src.indexOf('export type ResultadoDocSolicitud'))
-  assert.match(publica, /\{ estado: 'ok', ramo, campos: f\.campos \}/)
-  assert.doesNotMatch(publica, /cliente|nombre|dni|telefono|email/i)
+test('la vista pública por token solo trae de la ficha el DNI y la fecha de nacimiento', () => {
+  const publica = src.slice(src.indexOf('async function identidadFicha'), src.indexOf('export type ResultadoDocSolicitud'))
+  assert.doesNotMatch(publica, /nombre|apellidos|telefono|email|direccion|poliza|cuenta|iban/i)
+  assert.match(publica, /return \{ dni: o\?\.cliente\.dni \?\? null, fechaNacimiento: o\?\.cliente\.fechaNacimiento \?\? null \}/)
+  assert.match(publica, /c\.clave === 'dni' \? id\.dni : c\.clave === 'fechaNacimiento' \? id\.fechaNacimiento : null/)
 })
 
 test('completar solo vale una vez y dentro de plazo', () => {
@@ -40,5 +41,6 @@ test('los documentos del enlace se archivan en su ficha y lo leído no toca la f
   assert.match(sub, /subidoPor: 'cliente'/)
   assert.match(sub, /encryptField\(JSON\.stringify\(nuevas\)\)/, 'lo leído se guarda cifrado')
   assert.doesNotMatch(sub, /update clientes/i)
-  assert.match(sub, /MAX_DOCS_SOLICITUD/, 'hay tope de documentos por enlace')
+  assert.match(sub, /documentos_subidos < \$\{MAX_DOCS_SOLICITUD\}/, 'el tope se reserva de forma atómica en el UPDATE')
+  assert.ok(sub.indexOf('documentos_subidos < ${MAX_DOCS_SOLICITUD}') < sub.indexOf('leerDocSolicitud('), 'la plaza se reserva antes de gastar IA')
 })

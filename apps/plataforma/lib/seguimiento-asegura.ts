@@ -685,7 +685,8 @@ export type SolicitudDatos = {
   respuestas: Record<string, string | number | boolean | null> | null
   ilegible: boolean
   /** Documentos que subió por el enlace (en su ficha → Documentos). */
-  documentos: { id: string; tipo: string }[]
+  /** `null` = no se ha podido saber qué subió (asegura vieja o lecturas ilegibles) ≠ `[]` «no subió nada». */
+  documentos: { id: string; tipo: string }[] | null
   /** Lo declarado que no casa con sus papeles. `null` = no se ha podido contrastar (≠ «todo cuadra»). */
   discrepancias: { clave: string; declarado: string; documento: string; tipoDocumento: string }[] | null
 }
@@ -722,7 +723,7 @@ export function interpretarSolicitudesDatos(status: number, json: unknown): Soli
       : null
     const documentos = Array.isArray(s.documentos)
       ? s.documentos.flatMap((d) => { const dd = objeto(d); const did = texto(dd?.id); return did ? [{ id: did, tipo: texto(dd?.tipo) ?? 'otro' }] : [] })
-      : []
+      : null
     // Una asegura que aún no manda el contraste → `null` («sin contrastar»), nunca `[]` («todo cuadra»).
     const discrepancias = Array.isArray(s.discrepancias)
       ? s.discrepancias.flatMap((d) => {

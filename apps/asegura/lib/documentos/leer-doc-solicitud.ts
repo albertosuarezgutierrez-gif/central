@@ -9,7 +9,7 @@
 import { openrouterVision, cleanJSON } from '@central/core-ai'
 import { iaTexto } from '../ia.ts'
 
-const INSTRUCCION = `Eres un lector de documentos españoles para una correduría de seguros.
+const INSTRUCCION = `Eres un lector de documentos españoles para una correduría de seguros:
 Identifica QUÉ documento es y extrae SOLO lo que aparece escrito en él. No inventes: si un dato no está, déjalo en null.
 Responde ÚNICAMENTE con un JSON así:
 {
@@ -67,9 +67,15 @@ export async function leerDocSolicitud(buffer: Buffer, mime: string, nombre = ''
     const apiKey = process.env.OPENROUTER_API_KEY ?? ''
     if (!apiKey) return { ok: false, motivo: 'La lectura de fotos no está configurada.' }
     try {
+      // Un DNI o un carné: solo proveedores que NO guardan ni entrenan con los datos (data_collection=deny),
+      // y un modelo de visión explícito (Gemini se sirve por Vertex, que cumple esa política).
       const salida = await conTiempo(
-        openrouterVision({ apiKey }, INSTRUCCION, [{ data: buffer.toString('base64'), mediaType: mime }], PETICION),
-        TIEMPO_MS,
+        openrouterVision({ apiKey }, INSTRUCCION, [{ data: buffer.toString('base64'), mediaType: mime }], PETICION, {
+          model: process.env.OPENROUTER_VISION_MODEL || 'google/gemini-2.5-flash',
+          privacidad: true,
+          signal: AbortSignal.timeout(TIEMPO_MS),
+        }),
+        TIEMPO_MS + 1_000,
       )
       const bruto = aJson(salida)
       return bruto ? { ok: true, bruto, fuente: 'vision' } : { ok: false, motivo: 'No se ha entendido la foto.' }
