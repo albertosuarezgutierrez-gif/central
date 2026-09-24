@@ -7,8 +7,8 @@ description: Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de
 
 **Qué haces:** una búsqueda por núcleo de playa con el conector de **Idealista**, mandas los anuncios
 a plataforma y dejas el latido. Nada más. No decides compras, no avisas tú de cada casa (los avisos
-de chollos, 🌊 casas de playa y bajadas los saca el cron `subastas-mercado` sobre el corpus, igual
-que con los correos) y no contactas con ningún anunciante.
+de chollos, 🌊 casas de playa y **buenas bajadas** —última bajada ≥5 %, o ≥10 % acumulado en dos o
+más— los saca el cron `subastas-mercado` sobre el corpus, igual que con los correos) y no contactas con ningún anunciante.
 
 ## Por qué existes (24/09/2026)
 
@@ -23,7 +23,10 @@ playa calla y ese silencio se lee como «no hay nada».
   «…, Almonte». Manda cada búsqueda con su `nucleo` exacto de la tabla de abajo. El servidor zonifica
   con ese nombre y descarta lo que cae fuera de su radio (`fueraDeZona`).
 - **Manda los anuncios TAL CUAL, recortados a estos campos**: `propertyCode, price, size, rooms,
-  priceByArea, status, latitude, longitude, suggestedTexts{title}, detailedType{typology}`.
+  priceByArea, status, latitude, longitude, suggestedTexts{title}, detailedType{typology}` y, **si viene,
+  `priceInfo{price{priceDropInfo{formerPrice}}}`**: es la bajada que ya declara el portal. Sin ella, una
+  casa que entra ya rebajada no genera nunca el aviso de ⬇️ buena bajada, que es de lo que más le importa
+  a Alberto.
   **No inventes ni corrijas nada.** Sin `description`, fotos ni teléfonos: no hacen falta y engordan
   el cuerpo (el script pasa el JSON como argumento, y un argumento de más de ~128 KB revienta).
 - **«El conector no contestó» NO es «no hay casas».** Cuéntalo como `sinRespuesta` y sigue.
@@ -57,7 +60,7 @@ en `porNucleo`).
 
 ### 2. Escribe (una llamada por núcleo)
 ```
-bash scripts/canal-aviso.sh POST /api/subastas/mercado/idealista '{"busquedas":[{"nucleo":"Islantilla","properties":[{"propertyCode":"110709609","price":185000,"size":68,"rooms":3,"priceByArea":2721,"status":"good","latitude":37.2112431,"longitude":-7.2453481,"suggestedTexts":{"title":"Chalet adosado en Avenida del Deporte, Islantilla Golf, Islantilla"},"detailedType":{"typology":"chalet"}}]}]}'
+bash scripts/canal-aviso.sh POST /api/subastas/mercado/idealista '{"busquedas":[{"nucleo":"Islantilla","properties":[{"propertyCode":"110709609","price":185000,"size":68,"rooms":3,"priceByArea":2721,"status":"good","latitude":37.2112431,"longitude":-7.2453481,"suggestedTexts":{"title":"Chalet adosado en Avenida del Deporte, Islantilla Golf, Islantilla"},"detailedType":{"typology":"chalet"},"priceInfo":{"price":{"priceDropInfo":{"formerPrice":199000}}}}]}]}'
 ```
 Devuelve `{comparables, upserts, fueraDeZona, porNucleo[]}`. Es idempotente: repetir un núcleo solo
 actualiza el precio, y si el precio ha bajado lo registra como bajada.

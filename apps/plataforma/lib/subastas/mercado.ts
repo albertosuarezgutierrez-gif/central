@@ -18,6 +18,7 @@
 // ────────────────────────────────────────────────────────────────────────────
 import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
+import { esBuenaBajada, pctBajadaAcumulada, pctUltimaBajada, type DatosBajada } from '@central/module-subastas'
 import { CHOLLO_DESCUENTO_MIN, datosFichaFotocasa, dedupeRelistados, detectarChollos, esCasa, esZonaPreferente, estimarAntiguedad, lentePreferentes, MIN_MUESTRA_ZONA, parsearAlertaFotocasa, parsearAlertaIdealista, precioM2Zona, RECONSTRUIR_EUR_M2, slugDistritoFotocasa, slugNucleoPlaya, slugZonaFotocasa, TOPE_PREFERENTE_EUR, velocidadZona, type Chollo, type Comparable, type Preferente, type VelocidadZona, type ZonaPortal, type ZonaPortalRef } from '@central/module-subastas'
 import { leerAlertasDesde } from '@/lib/subastas/gmail-boe'
 import { guardarCursor, leerCursor } from '@/lib/subastas/correo-cursor'
@@ -99,12 +100,19 @@ export async function ingerirComparables(dias = 30, maxCorreos = 150): Promise<{
  * mismo seguimiento de bajadas venga por donde venga el precio.
  */
 export async function upsertComparable(a: Comparable, vistoEn: Date): Promise<number> {
+  // Bajada que el PORTAL declara (hoy solo el conector de Idealista): ocurrió antes de que viéramos
+  // el anuncio, así que sin esto un anuncio que entra ya rebajado no contaría nunca como bajada.
+  // Entra como `precio_anterior` + 1 bajada; en un anuncio ya conocido, solo si nosotros no hemos
+  // visto ninguna (si ya la seguimos, nuestra observación manda y no se cuenta dos veces).
+  const portalAnterior = a.precioAnteriorPortal != null && a.precioAnteriorPortal > a.precio ? a.precioAnteriorPortal : null
   const r = await prisma.$executeRaw(Prisma.sql`
     INSERT INTO mercado_comparables
-      (portal, ref_anuncio, titulo, tipo, zona, precio, precio_inicial, superficie, habitaciones, precio_m2, url, a_reformar, visto_en)
+      (portal, ref_anuncio, titulo, tipo, zona, precio, precio_inicial, superficie, habitaciones, precio_m2, url, a_reformar, visto_en,
+       precio_anterior, bajadas, ultima_bajada_at)
     VALUES (
-      ${a.portal}, ${a.refAnuncio}, ${a.titulo}, ${a.tipo}, ${a.zona}, ${a.precio}, ${a.precio},
-      ${a.superficie}, ${a.habitaciones}, ${a.precioM2}, ${a.url}, ${a.aReformar ?? null}, ${vistoEn}
+      ${a.portal}, ${a.refAnuncio}, ${a.titulo}, ${a.tipo}, ${a.zona}, ${a.precio}, ${portalAnterior ?? a.precio},
+      ${a.superficie}, ${a.habitaciones}, ${a.precioM2}, ${a.url}, ${a.aReformar ?? null}, ${vistoEn},
+      ${portalAnterior}, ${portalAnterior != null ? 1 : 0}, ${portalAnterior != null ? vistoEn : null}
     )
     ON CONFLICT (portal, ref_anuncio) DO UPDATE SET
       titulo = EXCLUDED.titulo,
@@ -116,11 +124,24 @@ export async function upsertComparable(a: Comparable, vistoEn: Date): Promise<nu
       -- que llegue el precio nuevo. En Postgres los SET ven la fila VIEJA,
       -- así que el orden de las asignaciones no importa.
       precio_anterior = CASE WHEN EXCLUDED.precio <> mercado_comparables.precio
-        THEN mercado_comparables.precio ELSE mercado_comparables.precio_anterior END,
+        THEN mercado_comparables.precio
+        WHEN mercado_comparables.bajadas = 0 AND EXCLUDED.precio_anterior IS NOT NULL
+        THEN EXCLUDED.precio_anterior
+        ELSE mercado_comparables.precio_anterior END,
       bajadas = mercado_comparables.bajadas +
-        CASE WHEN EXCLUDED.precio < mercado_comparables.precio THEN 1 ELSE 0 END,
+        CASE WHEN EXCLUDED.precio < mercado_comparables.precio THEN 1
+        WHEN EXCLUDED.precio = mercado_comparables.precio AND mercado_comparables.bajadas = 0
+          AND EXCLUDED.precio_anterior IS NOT NULL THEN 1
+        ELSE 0 END,
       ultima_bajada_at = CASE WHEN EXCLUDED.precio < mercado_comparables.precio
-        THEN EXCLUDED.visto_en ELSE mercado_comparables.ultima_bajada_at END,
+        THEN EXCLUDED.visto_en
+        WHEN EXCLUDED.precio = mercado_comparables.precio AND mercado_comparables.bajadas = 0
+          AND EXCLUDED.precio_anterior IS NOT NULL THEN EXCLUDED.visto_en
+        ELSE mercado_comparables.ultima_bajada_at END,
+      -- El precio de salida sube al que declara el portal si es mayor (salió más caro de lo que vimos).
+      precio_inicial = CASE WHEN mercado_comparables.bajadas = 0 AND EXCLUDED.precio_anterior IS NOT NULL
+          AND EXCLUDED.precio_anterior > COALESCE(mercado_comparables.precio_inicial, 0)
+        THEN EXCLUDED.precio_anterior ELSE mercado_comparables.precio_inicial END,
       precio = EXCLUDED.precio,
       superficie = COALESCE(EXCLUDED.superficie, mercado_comparables.superficie),
       habitaciones = COALESCE(EXCLUDED.habitaciones, mercado_comparables.habitaciones),
@@ -840,16 +861,29 @@ export async function avisarBajadas(): Promise<{ bajadas: number; avisados: numb
   // no en el SQL porque el «es casa» vive en el módulo puro (`esCasa`, sobre el
   // tipo declarado del título) y no en una columna; el coste es una pasada por
   // una lista de decenas de filas.
-  const casas = filas.filter((f) => esCasa(String(f.titulo)))
+  // Y solo las BUENAS (Alberto, 24/09/2026): una bajada del 1% ahoga el aviso que importa. Las que
+  // no llegan NO se marcan: si el anuncio vuelve a bajar, se reevalúa con lo acumulado.
+  const datos = (f: any): DatosBajada => ({
+    precio: Number(f.precio),
+    anterior: f.precio_anterior == null ? null : Number(f.precio_anterior),
+    inicial: f.precio_inicial == null ? null : Number(f.precio_inicial),
+    bajadas: Number(f.bajadas),
+  })
+  const pctOrden = (f: any) => pctUltimaBajada(datos(f)) ?? pctBajadaAcumulada(datos(f)) ?? 0
+  const casas = filas
+    .filter((f) => esCasa(String(f.titulo)) && esBuenaBajada(datos(f)))
+    // 🌊 zonas preferentes primero; dentro, la bajada más fuerte arriba.
+    .sort((a, b) =>
+      Number(esZonaPreferente(b.zona, b.titulo)) - Number(esZonaPreferente(a.zona, a.titulo)) || pctOrden(b) - pctOrden(a))
   if (!casas.length) return { bajadas: 0, avisados: 0 }
 
-  const lineas: string[] = [`⬇️ <b>Bajadas de precio — casas</b> — ${casas.length} anuncio${casas.length > 1 ? 's' : ''}`, '']
+  const lineas: string[] = [`⬇️ <b>Buenas bajadas de precio — casas</b> — ${casas.length} anuncio${casas.length > 1 ? 's' : ''}`, '']
   for (const f of casas.slice(0, 8)) {
     const precio = Number(f.precio)
     const anterior = f.precio_anterior == null ? null : Number(f.precio_anterior)
     const inicial = f.precio_inicial == null ? null : Number(f.precio_inicial)
     const pct = anterior && anterior > 0 ? ((1 - precio / anterior) * 100).toFixed(1) : null
-    lineas.push(`• <b>${escaparHtml(f.titulo)}</b>`)
+    lineas.push(`• ${esZonaPreferente(f.zona, f.titulo) ? '🌊 ' : ''}<b>${escaparHtml(f.titulo)}</b>`)
     lineas.push(
       `  ${anterior ? `${eur(anterior)} → ` : ''}<b>${eur(precio)}</b>${pct ? ` (−${pct}%)` : ''}` +
         (f.bajadas > 1 && inicial != null && inicial > precio

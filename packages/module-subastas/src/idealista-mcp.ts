@@ -43,6 +43,8 @@ export interface AnuncioIdealistaMcp {
   longitude?: number | null
   suggestedTexts?: { title?: string | null; subtitle?: string | null } | null
   detailedType?: { typology?: string | null; subTypology?: string | null } | null
+  /** La bajada que el portal ya declara (`formerPrice` = precio antes de bajar). */
+  priceInfo?: { price?: { priceDropInfo?: { formerPrice?: number | null } | null } | null } | null
 }
 
 /** Holgura sobre el radio del núcleo: el borde de una urbanización no es otro mercado. */
@@ -143,6 +145,9 @@ export function comparablesDesdeMcpIdealista(
       // la misma que guardan los correos (dedupe visual en la ficha).
       url: `https://www.idealista.com/inmueble/${ref}/`,
       aReformar: a.status == null || !String(a.status).trim() ? null : norm(a.status) === 'renew',
+      precioAnteriorPortal: Number(a.priceInfo?.price?.priceDropInfo?.formerPrice) > precio
+        ? Number(a.priceInfo!.price!.priceDropInfo!.formerPrice)
+        : null,
     })
   }
   return { comparables, fueraDeZona }

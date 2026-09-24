@@ -87,3 +87,14 @@ test('barrioDesdeTitulo: solo con 3+ tramos', () => {
   assert.equal(barrioDesdeTitulo('Chalet en Islantilla'), null)
   assert.equal(barrioDesdeTitulo(null), null)
 })
+
+test('la bajada que declara el portal se conserva (entra ya rebajado)', () => {
+  const rebajado = { ...MATALASCANAS[0], priceInfo: { price: { priceDropInfo: { formerPrice: 279000 } } } }
+  const [c] = comparablesDesdeMcpIdealista([rebajado], 'Matalascañas').comparables
+  assert.equal(c.precioAnteriorPortal, 279000)
+  const [sin] = comparablesDesdeMcpIdealista([MATALASCANAS[0]], 'Matalascañas').comparables
+  assert.equal(sin.precioAnteriorPortal, null)
+  // Un «formerPrice» por debajo del precio actual no es una bajada.
+  const subida = { ...MATALASCANAS[0], priceInfo: { price: { priceDropInfo: { formerPrice: 200000 } } } }
+  assert.equal(comparablesDesdeMcpIdealista([subida], 'Matalascañas').comparables[0].precioAnteriorPortal, null)
+})
