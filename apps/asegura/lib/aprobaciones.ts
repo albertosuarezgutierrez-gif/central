@@ -15,6 +15,7 @@ import {
   ESTADOS_ANULACION_ABIERTA, MEDIADOR, POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, importeEiac, remitenteCorreo,
   type BuzonCompania, type Decision,
 } from '@central/module-seguros'
+import { createHash } from 'node:crypto'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
@@ -299,9 +300,14 @@ type FirmaGuardada = { firmante: string | null; metodo: string | null; sello: Da
 async function adjuntosFirmados(base: string, texto: string, f: FirmaGuardada | undefined): Promise<Adjunto[]> {
   const original: Adjunto = { nombre: `${base}.txt`, contenido: texto, tipo: 'text/plain; charset=utf-8' }
   if (!f?.docHash || !f.sello) return [original]
+  // El justificante CERTIFICA la huella ante la compañía: si el texto que se adjunta no la cumple, no se certifica nada.
+  if (createHash('sha256').update(texto, 'utf8').digest('hex') !== f.docHash.toLowerCase()) {
+    console.error('[aprobaciones] el texto guardado no cumple la huella de su firma; sale solo el original, sin justificante')
+    return [original]
+  }
   try {
     const pdf = await pdfDocumentoFirmado(texto, {
-      firmante: f.firmante ?? '', metodo: f.metodo ?? 'otp_email', selloTiempo: f.sello.toISOString(),
+      firmante: f.firmante?.trim() || 'no consta', metodo: f.metodo ?? 'otp_email', selloTiempo: f.sello.toISOString(),
       docHash: f.docHash, ficheroOriginal: original.nombre,
     })
     return [{ nombre: `${base}.pdf`, contenido: Buffer.from(pdf), tipo: 'application/pdf' }, original]

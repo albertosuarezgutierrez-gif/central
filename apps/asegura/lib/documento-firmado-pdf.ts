@@ -51,12 +51,12 @@ export function lineasJustificante(e: EvidenciaFirma): string[] {
 /** Helvetica solo sabe WinAnsi: lo que no está se cambia por «?» en vez de romper el PDF. */
 function paraFuente(font: PDFFont, t: string): string {
   const validos = new Set(font.getCharacterSet())
-  return Array.from(t.replace(/\r/g, '')).map((c) => (c === '\n' || validos.has(c.codePointAt(0)!) ? c : '?')).join('')
+  return Array.from(t.replace(/\r/g, '').replace(/\t/g, ' ')).map((c) => (c === '\n' || validos.has(c.codePointAt(0)!) ? c : '?')).join('')
 }
 
 function partirLineas(font: PDFFont, texto: string, tam: number, ancho: number): string[] {
   const salida: string[] = []
-  for (const parrafo of texto.replace(/\t/g, ' ').split('\n')) {
+  for (const parrafo of texto.split('\n')) {
     let linea = ''
     for (const palabra of parrafo.split(/\s+/).filter(Boolean)) {
       const prueba = linea ? `${linea} ${palabra}` : palabra

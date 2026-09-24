@@ -89,4 +89,6 @@ test('🪤 a la compañía va SIEMPRE el original en texto (el de la huella); el
   // Sin evidencia, o si el PDF falla, sale el original: la presentación no bloquea un envío.
   assert.match(f, /if \(!f\?\.docHash \|\| !f\.sello\) return \[original\]/)
   assert.match(f, /catch \(e\) \{[\s\S]*return \[original\]/)
+  // El justificante no certifica una huella que el texto adjunto no cumple.
+  assert.match(f, /createHash\('sha256'\)\.update\(texto, 'utf8'\)\.digest\('hex'\) !== f\.docHash[\s\S]*?return \[original\]/)
 })
