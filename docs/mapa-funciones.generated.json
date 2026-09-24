@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T07:49:54Z",
-  "sha": "6bc233c2c2274d82a68c4895573d5e042bc02c3e",
+  "generadoEn": "2026-09-24T08:47:25Z",
+  "sha": "e93870dafa958b08c885bfd8c6e1933bd3dd4d0f",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -10832,9 +10832,9 @@
           "nombre": "AvisoPorCorreo",
           "kind": "function",
           "exportada": false,
-          "params": "{ ramo, vence, origen }: { ramo: string; vence: string; origen: string }",
+          "params": "{ ramo, cual, vence, origen }: { ramo: string; cual: string; vence: string; origen: string }",
           "retorno": null,
-          "linea": 190,
+          "linea": 208,
           "resumen": "Paso 2: «¿Te lo recordamos?». Nombre, correo y un consentimiento que va SIN marcar (una casilla premarcada no es consentimiento). Lo que sale de aquí es un correo de confirmación: hasta que la persona"
         }
       ],
@@ -10843,7 +10843,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "dda5c7d867a7"
+      "hash": "376212da70cd"
     },
     {
       "ruta": "apps/asegura-web/components/Whatsapp.tsx",
@@ -10932,7 +10932,7 @@
           "exportada": true,
           "params": "hash: string",
           "retorno": "string | null",
-          "linea": 12,
+          "linea": 18,
           "resumen": "El token viaja en el fragmento (`#t=…`): no llega al servidor en la petición de la página ni queda en logs."
         },
         {
@@ -10941,12 +10941,12 @@
           "exportada": true,
           "params": "accion: AccionAviso, cuerpo: unknown",
           "retorno": "Promise<",
-          "linea": 25
+          "linea": 31
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dda64048493c"
+      "hash": "d19eef279c23"
     },
     {
       "ruta": "apps/asegura-web/lib/calculadora-vencimientos.ts",
@@ -15360,6 +15360,7 @@
       "ambito": "apps/asegura",
       "resumen": "Reglas PURAS del «avísame antes de que venza» de la web pública (sin Prisma ni red, para que `node --test` las pruebe). La parte de BD vive en `aviso-web.ts`. Los dos plazos del art. 22 LCS mandan en todo: la compañía comunica cambios con 2 meses (60 días) y el tomador se opone a la prórroga hasta 1",
       "exporta": [
+        "nombreDelSeguro",
         "parsearFecha",
         "revisarSolicitud",
         "vencimientoDelCiclo",
@@ -15374,12 +15375,21 @@
       ],
       "funciones": [
         {
+          "nombre": "nombreDelSeguro",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string, ramoWeb: string",
+          "retorno": "string",
+          "linea": 78,
+          "resumen": "Cómo se nombra el seguro en correos, historial y Telegram. Para «otro» es lo que escribió el visitante (guardado en `ramo_web` como `otro:<texto>`); para el resto, el nombre del ramo."
+        },
+        {
           "nombre": "parsearFecha",
           "kind": "function",
           "exportada": true,
           "params": "iso: unknown",
           "retorno": "Date | null",
-          "linea": 70,
+          "linea": 88,
           "resumen": "`AAAA-MM-DD` → medianoche UTC, o `null` si no es una fecha real."
         },
         {
@@ -15388,7 +15398,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "Revision",
-          "linea": 79
+          "linea": 97
         },
         {
           "nombre": "diaUtc",
@@ -15396,7 +15406,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 98
+          "linea": 122
         },
         {
           "nombre": "enAnio",
@@ -15404,7 +15414,7 @@
           "exportada": false,
           "params": "d: Date, anio: number",
           "retorno": "Date",
-          "linea": 103,
+          "linea": 127,
           "resumen": "Mismo día y mes en otro año; un 29 de febrero cae al 28 si el año no es bisiesto."
         },
         {
@@ -15413,7 +15423,7 @@
           "exportada": true,
           "params": "vence: Date, hoy: Date",
           "retorno": "Date",
-          "linea": 113,
+          "linea": 137,
           "resumen": "El vencimiento del ciclo que todavía se puede decidir: el primer aniversario cuyo último día para oponerse (vence − 30) no ha pasado. Una póliza se prorroga cada año el mismo día."
         },
         {
@@ -15422,7 +15432,7 @@
           "exportada": true,
           "params": "d: Date, n: number",
           "retorno": "Date",
-          "linea": 120
+          "linea": 144
         },
         {
           "nombre": "iso",
@@ -15430,7 +15440,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 122
+          "linea": 146
         },
         {
           "nombre": "avisoQueToca",
@@ -15438,7 +15448,7 @@
           "exportada": true,
           "params": "p: { vence: Date; hoy: Date; aviso1Para: string | null; aviso2Para: string | null }",
           "retorno": "AvisoQueToca",
-          "linea": 132,
+          "linea": 156,
           "resumen": "Qué aviso toca hoy, o `null`. `aviso1Para`/`aviso2Para` son los vencimientos (`AAAA-MM-DD`) para los que ya salió cada uno. Si alguien se apunta tarde (a menos de 45 días) solo recibe el 2; si se apun"
         },
         {
@@ -15447,7 +15457,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 147
+          "linea": 171
         },
         {
           "nombre": "fechaLarga",
@@ -15455,7 +15465,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 151
+          "linea": 175
         },
         {
           "nombre": "exigirHttps",
@@ -15463,7 +15473,7 @@
           "exportada": false,
           "params": "...urls: string[]",
           "retorno": "void",
-          "linea": 155
+          "linea": 179
         },
         {
           "nombre": "html",
@@ -15471,7 +15481,7 @@
           "exportada": false,
           "params": "parrafos: string[], boton: { href: string; texto: string } | null, pie: string[]",
           "retorno": "string",
-          "linea": 160
+          "linea": 184
         },
         {
           "nombre": "cuerpoConfirmacion",
@@ -15479,7 +15489,7 @@
           "exportada": true,
           "params": "d: { nombre: string; ramo: string; vence: Date; enlaceConfirmar: string }",
           "retorno": "CuerpoCorreo",
-          "linea": 172
+          "linea": 196
         },
         {
           "nombre": "cuerpoAviso",
@@ -15487,7 +15497,7 @@
           "exportada": true,
           "params": "d: { tipo: 'aviso1' | 'aviso2' nombre: string ramo: string vence: Date hoy: Date enlacePortal: string directo: boolean enlaceBaja: string }",
           "retorno": "CuerpoCorreo",
-          "linea": 190
+          "linea": 214
         },
         {
           "nombre": "urlWeb",
@@ -15495,7 +15505,7 @@
           "exportada": true,
           "params": "base: string | undefined = process.env.ASEGURA_WEB_URL",
           "retorno": "string",
-          "linea": 251,
+          "linea": 275,
           "resumen": "URL pública de la web (donde viven las páginas de confirmar y darse de baja)."
         },
         {
@@ -15504,7 +15514,7 @@
           "exportada": true,
           "params": "base: string, ruta: '/aviso/confirmar' | '/aviso/baja', token: string",
           "retorno": "string",
-          "linea": 256,
+          "linea": 280,
           "resumen": "El token va en el fragmento `#`: no viaja en la petición HTTP, así que no queda en ningún log."
         },
         {
@@ -15513,12 +15523,12 @@
           "exportada": true,
           "params": "env: string | undefined = process.env.ASEGURA_AVISOS_WEB_ACTIVOS",
           "retorno": "boolean",
-          "linea": 260
+          "linea": 284
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9c15914db43f"
+      "hash": "842ba8573db9"
     },
     {
       "ruta": "apps/asegura/lib/aviso-web.ts",
@@ -15537,7 +15547,7 @@
           "exportada": false,
           "params": "destino: string, c: CuerpoCorreo",
           "retorno": "Promise<Envio>",
-          "linea": 47
+          "linea": 48
         },
         {
           "nombre": "solicitarAviso",
@@ -15545,7 +15555,7 @@
           "exportada": true,
           "params": "correduriaId: string, body: unknown",
           "retorno": "Promise<ResultadoSolicitud>",
-          "linea": 85,
+          "linea": 86,
           "resumen": "Responde `ok` también cuando se ha llegado al tope de solicitudes de ese correo: no se le dice a quien rellena el formulario si ese buzón ya estaba apuntado ni cuántas veces."
         },
         {
@@ -15554,7 +15564,7 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<ResultadoConfirmacion>",
-          "linea": 149
+          "linea": 153
         },
         {
           "nombre": "bajaAviso",
@@ -15562,7 +15572,7 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<",
-          "linea": 223,
+          "linea": 230,
           "resumen": "Siempre «ok» hacia fuera: no se revela si la llave existía."
         },
         {
@@ -15571,7 +15581,7 @@
           "exportada": true,
           "params": "correduriaId: string, opciones: { hoy?: Date; forzarContar?: boolean } = {}",
           "retorno": "Promise<ResumenAvisosWeb>",
-          "linea": 262,
+          "linea": 270,
           "resumen": "Lanza si falta el portal o el correo: «no he podido» no puede leerse como «hoy no tocaba nadie»."
         }
       ],
@@ -15582,7 +15592,7 @@
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "c5a7d3bc11a3"
+      "hash": "b7747d475287"
     },
     {
       "ruta": "apps/asegura/lib/avisos-intranet-reglas.ts",
@@ -86197,7 +86207,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/publico/correduria/aviso",
-      "hash": "2aa8f45d15c1"
+      "hash": "a1ae0a4b2752"
     },
     {
       "ruta": "apps/plataforma/app/api/publico/correduria/consentimiento/route.ts",
@@ -121715,7 +121725,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "072e73fe2ceb"
+      "hash": "b15bc26dbd72"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -121826,7 +121836,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "849e2c92b309"
+      "hash": "b8e5c3cd7426"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -121956,7 +121966,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2128b44f536a"
+      "hash": "5d202a83ba45"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/page.tsx",
@@ -125648,7 +125658,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "2b0f67f72aef"
+      "hash": "32b6a64052f2"
     },
     {
       "ruta": "apps/rrhh/lib/storage.ts",
@@ -151418,6 +151428,6 @@
   ],
   "resumen": {
     "archivos": 3645,
-    "funciones": 11544
+    "funciones": 11545
   }
 }
