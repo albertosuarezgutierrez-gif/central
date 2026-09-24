@@ -14,7 +14,7 @@
 // positivo reescribiría una respuesta correcta.
 import { pareceEspanol } from './reglas.ts'
 
-const NOMBRE_IDIOMA: Record<string, string> = { es: 'español', en: 'inglés', fr: 'francés', de: 'alemán', it: 'italiano' }
+import { NOMBRE_IDIOMA } from './idiomas.ts'
 
 type Complete = (messages: { role: 'user'; content: string }[], opts: { system: string; maxTokens: number }) => Promise<string>
 

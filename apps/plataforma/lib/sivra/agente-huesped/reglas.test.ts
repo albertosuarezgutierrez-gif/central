@@ -142,3 +142,32 @@ test('interpretarDestilado: una frase limpia sí se guarda, sin comillas', () =>
     'Solo se contacta a los huéspedes por los mensajes de Booking, nunca por WhatsApp.',
   )
 })
+
+// Todos los idiomas (24/09/2026): antes solo se reconocían es/en/fr/de/it y el resto caía a
+// inglés — a un huésped chino o portugués se le contestaba en inglés sin que nada lo avisara.
+test('detectLang: escrituras no latinas', () => {
+  assert.equal(detectLang('你好，请问几点可以入住？'), 'zh')
+  assert.equal(detectLang('こんにちは、チェックインは何時ですか？'), 'ja')
+  assert.equal(detectLang('안녕하세요, 체크인은 몇 시인가요?'), 'ko')
+  assert.equal(detectLang('Здравствуйте, во сколько заезд?'), 'ru')
+  assert.equal(detectLang('Γεια σας, τι ώρα είναι το check-in;'), 'el')
+  assert.equal(detectLang('مرحبا، متى تسجيل الوصول؟'), 'ar')
+  assert.equal(detectLang('שלום, מתי הצ׳ק-אין?'), 'he')
+})
+test('detectLang: escritura compartida → manda el idioma de la reserva si es hermano', () => {
+  assert.equal(detectLang('Добрий день, коли заїзд?', 'uk'), 'uk')
+  assert.equal(detectLang('Добрий день, коли заїзд?', 'en'), 'ru')
+  assert.equal(detectLang('سلام، ساعت ورود چند است؟', 'fa'), 'fa')
+})
+test('detectLang: portugués y neerlandés', () => {
+  assert.equal(detectLang('Olá! Muito obrigado, vamos chegar por volta das 22h', 'en'), 'pt')
+  assert.equal(detectLang('Não encontro a chave', 'en'), 'pt')
+  assert.equal(detectLang('Goedemorgen, hoe laat kunnen we de sleutel ophalen?', 'en'), 'nl')
+})
+test('detectLang: sin señal propia vale cualquier idioma de reserva (sueco, polaco…)', () => {
+  assert.equal(detectLang('👍', 'sv'), 'sv')
+  assert.equal(detectLang('👍', 'pl'), 'pl')
+})
+test('detectLang: un carácter suelto de otra escritura no decide', () => {
+  assert.equal(detectLang('Hello, is it 5€ or 5円 for the laundry?', 'en'), 'en')
+})
