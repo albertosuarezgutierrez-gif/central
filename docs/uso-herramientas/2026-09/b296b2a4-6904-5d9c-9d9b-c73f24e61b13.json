@@ -1,0 +1,53 @@
+{
+ "sesion": "b296b2a4-6904-5d9c-9d9b-c73f24e61b13",
+ "inicio": "2026-09-24T13:32:20.132Z",
+ "fin": "2026-09-24T13:33:02.000Z",
+ "llamadas": 11,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 131,
+   "chars_out": 251,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 155,
+   "chars_out": 4240,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1
+   }
+  },
+  "bash": {
+   "llamadas": 7,
+   "chars_in": 2002,
+   "chars_out": 28926,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 7
+   }
+  },
+  "mcp:Google_Calendar": {
+   "llamadas": 1,
+   "chars_in": 729,
+   "chars_out": 1232,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Calendar__create_event": 1
+   }
+  }
+ }
+}
