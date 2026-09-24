@@ -152,6 +152,10 @@ export const NAV = [
   // portada— mientras la servía un 404. Va al pie por lo mismo que RC: la
   // cabecera está medida al límite y una entrada más la desborda.
   { href: '/siniestro', texto: 'Tengo un siniestro' },
+  // 24/09/2026: el pie es el único enlace que sale de TODAS las páginas, y es
+  // por donde Google descubre antes una URL nueva. Hasta hoy solo la enlazaban
+  // `/siniestro` y un artículo, y Google no sabía ni que existía.
+  { href: '/telefonos-siniestros', texto: 'Teléfonos para dar parte' },
 ] as const
 
 /**
@@ -223,3 +227,12 @@ export const HORARIO: { schema: readonly string[]; texto: string } | null = {
   schema: ['Mo-Fr 09:00-18:00'],
   texto: 'Lunes a viernes, de 9:00 a 18:00',
 }
+
+/**
+ * Clave de IndexNow (Bing, Yandex, Seznam…; Google NO lo usa). Es pública por
+ * diseño: el protocolo la verifica leyendo `/<clave>.txt` en la raíz del sitio
+ * (`public/`). La usa el cron `seo-correduria` de plataforma para avisar de URLs
+ * nuevas o cambiadas; allí se repite en `INDEXNOW_CLAVE` de `tipos.ts`, y un test
+ * de cada lado comprueba que coincide con el fichero.
+ */
+export const INDEXNOW_CLAVE = 'ffa5eb8e9b6bd9192f772dc833b742d3'

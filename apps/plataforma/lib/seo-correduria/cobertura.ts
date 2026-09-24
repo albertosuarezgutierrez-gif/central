@@ -92,28 +92,37 @@ export async function inspeccionarUrl(
 }
 
 /**
- * Inspecciona una lista de URLs EN SERIE — la API no ofrece lote — dentro de un presupuesto de
- * tiempo (el cron reparte `maxDuration` entre GSC/PostHog/esto). Lo que no llega a tiempo se
- * declara `error:'sin tiempo'`, nunca se omite en silencio: una URL ausente de la lista se leería
- * como «no hacía falta comprobarla».
+ * Inspecciona una lista de URLs —la API no ofrece lote— con `concurrencia` peticiones a la vez
+ * (4 por defecto; la cuota de la API es 600/min) y dentro de un presupuesto de tiempo (el cron
+ * reparte `maxDuration` entre GSC/PostHog/esto). En serie, el 21/09/2026 17 URLs ya no cabían en
+ * 90 s y 4 se quedaron sin mirar. Lo que no llega a tiempo se declara `error:'sin tiempo'`, nunca
+ * se omite en silencio: una URL ausente de la lista se leería como «no hacía falta comprobarla».
+ * El orden de salida es el de entrada.
  */
 export async function leerCobertura(
-  cfg: { token: string; propiedad: string; urls: string[]; presupuestoMs?: number },
+  cfg: { token: string; propiedad: string; urls: string[]; presupuestoMs?: number; concurrencia?: number },
   fetch: FetchLike,
 ): Promise<DatosCobertura> {
   const inicio = Date.now()
   const presupuesto = cfg.presupuestoMs ?? PRESUPUESTO_MS_DEFECTO
-  const paginas: FilaCobertura[] = []
-  for (const url of cfg.urls) {
-    const restante = presupuesto - (Date.now() - inicio)
-    if (restante <= 0) {
-      paginas.push({ url, estado: 'error', detalle: 'sin tiempo: presupuesto del cron agotado' })
-      continue
+  const paginas: FilaCobertura[] = new Array(cfg.urls.length)
+  let siguiente = 0
+  const trabajador = async () => {
+    while (siguiente < cfg.urls.length) {
+      const i = siguiente++
+      const url = cfg.urls[i]
+      const restante = presupuesto - (Date.now() - inicio)
+      if (restante <= 0) {
+        paginas[i] = { url, estado: 'error', detalle: 'sin tiempo: presupuesto del cron agotado' }
+        continue
+      }
+      // El tope de ESTA petición nunca supera lo que queda del presupuesto: sin esto, una URL colgada
+      // se comería el resto del lote entero antes de que el bucle pudiera volver a comprobar el reloj.
+      const timeoutMs = Math.min(TIMEOUT_PETICION_MS_DEFECTO, restante)
+      paginas[i] = await inspeccionarUrl(cfg.token, cfg.propiedad, url, fetch, timeoutMs)
     }
-    // El tope de ESTA petición nunca supera lo que queda del presupuesto: sin esto, una URL colgada
-    // se comería el resto del lote entero antes de que el bucle pudiera volver a comprobar el reloj.
-    const timeoutMs = Math.min(TIMEOUT_PETICION_MS_DEFECTO, restante)
-    paginas.push(await inspeccionarUrl(cfg.token, cfg.propiedad, url, fetch, timeoutMs))
   }
+  const n = Math.max(1, Math.min(cfg.concurrencia ?? 4, cfg.urls.length))
+  await Promise.all(Array.from({ length: n }, trabajador))
   return { paginas }
 }
