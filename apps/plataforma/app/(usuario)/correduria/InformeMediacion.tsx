@@ -78,20 +78,30 @@ export default function InformeMediacion({ año }: { año: number }) {
   const [datos, setDatos] = useState<Respuesta | null>(null)
   const [cargando, setCargando] = useState(false)
   const [fallo, setFallo] = useState<string | null>(null)
+  const [falloLibro, setFalloLibro] = useState<string | null>(null)
   const abierto = useRef(false)
 
+  const pedido = useRef<number | null>(null)
+
   async function cargar() {
-    if (cargando || datos?.año === año) return
+    // Sin candado por «cargando»: si el año cambia a mitad, se pide el nuevo y la respuesta vieja se descarta.
+    if (datos?.año === año || pedido.current === año) return
+    const a = año
+    pedido.current = a
     setCargando(true)
     setFallo(null)
     try {
-      const res = await fetch(`/api/correduria/informe-mediacion?a%C3%B1o=${año}`)
+      const res = await fetch(`/api/correduria/informe-mediacion?a%C3%B1o=${a}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      setDatos((await res.json()) as Respuesta)
+      const j = (await res.json()) as Respuesta
+      if (pedido.current === a) setDatos(j)
     } catch (e) {
-      setFallo(e instanceof Error ? e.message : 'red')
+      if (pedido.current === a) setFallo(e instanceof Error ? e.message : 'red')
     }
-    setCargando(false)
+    if (pedido.current === a) {
+      pedido.current = null
+      setCargando(false)
+    }
   }
 
   // Cambiar el año con el informe abierto lo vuelve a pedir: onToggle no se dispara otra vez.
@@ -106,6 +116,21 @@ export default function InformeMediacion({ año }: { año: number }) {
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
     a.download = `informe-mediacion-${datos.año}.csv`
+    a.click()
+    URL.revokeObjectURL(a.href)
+  }
+
+  async function descargarLibro() {
+    setFalloLibro(null)
+    const res = await fetch(`/api/correduria/libro-registro?a%C3%B1o=${año}`).catch(() => null)
+    if (!res?.ok) {
+      const j = (res ? await res.json().catch(() => null) : null) as { error?: string } | null
+      setFalloLibro(j?.error ?? 'red')
+      return
+    }
+    const a = document.createElement('a')
+    a.href = URL.createObjectURL(await res.blob())
+    a.download = `libro-registro-${año}.csv`
     a.click()
     URL.revokeObjectURL(a.href)
   }
@@ -206,9 +231,15 @@ export default function InformeMediacion({ año }: { año: number }) {
                       {i.quejas.abiertas > 0 && <> · {i.quejas.abiertas} abierta(s)</>}
                     </p>
                   </div>
-                  <button type="button" onClick={descargar} style={{ ...btnStyle('secundario', 'md'), minHeight: 44, justifySelf: 'start' }}>
-                    Descargar CSV
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button type="button" onClick={descargar} style={{ ...btnStyle('secundario', 'md'), minHeight: 44 }}>
+                      Descargar CSV
+                    </button>
+                    <button type="button" onClick={() => void descargarLibro()} style={{ ...btnStyle('secundario', 'md'), minHeight: 44 }}>
+                      Libro registro de pólizas {año} (CSV)
+                    </button>
+                  </div>
+                  {falloLibro && <p style={{ fontSize: 13, color: 'var(--negative)', margin: 0 }}>No se ha podido generar el libro registro ({falloLibro}).</p>}
                 </>
               )
             })()}

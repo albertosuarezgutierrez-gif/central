@@ -1664,6 +1664,9 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
 - **🎓 Formación continua IDD (24/09/2026).** `Formacion.tsx` en Datos sobre `/api/correduria/formacion` → puerto de asegura:
   horas por persona y año, anotar/borrar cursos; el contador de Datos sube con los atrasados (`null` si no se lee). Lector puro
   `lib/formacion-asegura.ts` + `test/regression-formacion-asegura.test.ts` (compara los estados con el módulo).
+- **📚 Libro registro de pólizas (24/09/2026).** Botón junto al CSV del informe anual → `/api/correduria/libro-registro?año=` devuelve
+  el CSV (o 502 con motivo). Lector puro `lib/libro-registro-asegura.ts` + `test/regression-libro-registro.test.ts` (fila rara tumba
+  la lectura, prima vacía = «no consta», fórmulas neutralizadas). Los topes de año usan la hora de Madrid.
 - **🗑️ Supresiones RGPD — el reloj del art. 12.3 se contesta AQUÍ (05/09/2026).** Desde el bloque legal
   0.5, un cliente puede pedir la supresión de sus datos desde `apps/asegura-portal` (`/boveda`). Eso
   arranca un plazo legal de **30 días** (prorrogable a 60 **motivando la prórroga**, art. 12.3 RGPD), y

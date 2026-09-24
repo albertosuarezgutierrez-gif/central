@@ -3,28 +3,24 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { informeMediacionAnual } from '@/lib/informe-mediacion'
+import { libroRegistro } from '@/lib/libro-registro'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-/**
- * GET ?año=YYYY → { estado:'ok', primas, companias, carteraHoy, quejas }
- * Base del informe anual a la DGSFP. Solo lectura. Año fuera de [2000, año en curso] → 422.
- */
+/** GET ?año=YYYY → { estado:'ok', año, filas } — libro registro de pólizas intermediadas en vigor ese año. */
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const año = Number(new URL(req.url).searchParams.get('año'))
-  const actual = Number(new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }).slice(0, 4))
-  if (!Number.isInteger(año) || año < 2000 || año > actual) {
+  if (!Number.isInteger(año) || año < 2000 || año > Number(new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }).slice(0, 4))) {
     return NextResponse.json({ estado: 'invalida', motivo: 'Año no válido.' }, { status: 422 })
   }
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' })
     const correduria = await correduriaUnica()
-    if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
-    return NextResponse.json(await informeMediacionAnual(correduria.id, año))
+    if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
+    return NextResponse.json(await libroRegistro(correduria.id, año))
   } catch (e) {
-    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/informe-mediacion', e) }, { status: 500 })
+    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/libro-registro', e) }, { status: 500 })
   }
 }

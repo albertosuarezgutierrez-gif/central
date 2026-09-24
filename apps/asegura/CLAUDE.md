@@ -774,6 +774,9 @@ del SAC. Solo lectura, sin datos personales. Cepo `lib/informe-mediacion.test.ts
 por curso terminado; resumen por persona y año contra 15 h (art. 10.2 IDD, mínimo por nivel PENDIENTE_REVISION_LEGAL) con la
 regla pura `resumenFormacion` de module-seguros. Se leen 3 años atrás para que quien no se ha formado este año salga con 0 h.
 Cepo `lib/formacion.test.ts`.
+📚 **Libro registro de pólizas (24/09/2026, `lib/libro-registro.ts`, puerto `GET /api/operador/libro-registro?año=`).** Cartera viva
+en vigor en algún momento del año (efecto ≤ 31/12, vencimiento ≥ 1/1): nº, compañía, ramo, tomador, fechas, estado y prima (`nullif`
+0 → no consta). El DNI no cruza el puerto. Cepo `lib/libro-registro.test.ts`.
 📄 **Adjuntos a la compañía (24/09/2026, `adjuntosFirmados`):** PDF (carta + justificante de la firma, `lib/documento-firmado-pdf.ts`)
 **y** el original `.txt`. La huella de `seguros.firma.doc_hash` es la del TEXTO, así que el `.txt` va SIEMPRE; el PDF es
 presentación y, si falla o no hay evidencia, se omite sin bloquear el envío (cepo en `aprobaciones.test.ts`).

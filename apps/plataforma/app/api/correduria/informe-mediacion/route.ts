@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta
   const año = Number(new URL(req.url).searchParams.get('año'))
-  if (!Number.isInteger(año) || año < 2000 || año > new Date().getFullYear()) {
+  if (!Number.isInteger(año) || año < 2000 || año > Number(new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }).slice(0, 4))) {
     return NextResponse.json({ error: 'Año no válido.' }, { status: 422 })
   }
 
