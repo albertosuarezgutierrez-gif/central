@@ -69,7 +69,7 @@ const AYUDA: Partial<Record<EstadoCuadre, string>> = {
   'esperado-sin-liquidar': 'Los recibos se cobraron pero la compañía no ha mandado extracto. Es el caso de Mapfre: confirma el importe a mano cuando llegue.',
   'liquidado-sin-cobrar': 'La compañía reconoce la comisión y todavía no está en el BBVA.',
   'cobrado-sin-liquidar': 'Entró dinero de esa compañía que ninguna fuente explica.',
-  deudor: 'Comisión negativa con remesa 0: la compañía se queda a deber. No hay nada que reclamar.',
+  deudor: 'Comisión negativa con remesa 0 que no deja nada que ingresar. No hay nada que reclamar.',
   descuadra: 'Dos fuentes del mismo periodo no coinciden. Mira el desglose antes de reclamar.',
 }
 

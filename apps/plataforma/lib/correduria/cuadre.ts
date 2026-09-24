@@ -25,7 +25,7 @@ export type EstadoCuadre =
   | 'esperado-sin-liquidar'  // devengaste y la compañía no ha liquidado
   | 'liquidado-sin-cobrar'   // te lo reconoce y no te lo ingresa
   | 'cobrado-sin-liquidar'   // entró dinero que ninguna fuente explica
-  | 'deudor'                 // comisión negativa y remesa 0: saldo a favor de la cía
+  | 'deudor'                 // comisión negativa y remesa 0 que ni invirtiendo el signo deja nada que ingresar
   | 'descuadra'              // dos fuentes del mismo periodo que no coinciden
   | 'cuadra'
 
@@ -49,6 +49,26 @@ export const TOLERANCIA_ARITMETICA = 0.011
 /** Ventana banco↔remesa: aquí sí caben comisiones partidas o gastos de envío. */
 export const TOLERANCIA_BANCO = 1
 
+/** Lo que debería entrar al banco por una liquidación de bruto NEGATIVO con remesa 0
+ *  (convención de signo del EIAC de Occident): |bruto| − retención. */
+export function remesaInferida(liqBruto: number, liqRetencion: number | null): number {
+  return Math.round((Math.abs(liqBruto) - (liqRetencion ?? 0)) * 100) / 100
+}
+
+/** La remesa que CUENTA para casar contra el banco: la del extracto o, con bruto negativo y remesa 0
+ *  (convención de Occident), la inferida. Es la que usa el cron para casar abonos por importe. */
+export function remesaEfectiva(liqBruto: number | null, liqRetencion: number | null, liqRemesa: number | null): number | null {
+  if (liqBruto != null && liqBruto < 0 && (liqRemesa ?? 0) === 0) return remesaInferida(liqBruto, liqRetencion)
+  return liqRemesa
+}
+
+/** El bruto que va al TOTAL (la cifra de la asesoría): con la misma convención, |bruto|. Sumar el
+ *  negativo restaría lo que se cobró, mientras la retención del mismo periodo suma en positivo. */
+export function brutoEfectivo(liqBruto: number | null, liqRemesa: number | null): number | null {
+  if (liqBruto != null && liqBruto < 0 && (liqRemesa ?? 0) === 0) return Math.abs(liqBruto)
+  return liqBruto
+}
+
 export function estadoCuadre(e: EntradaCuadre): EstadoCuadre {
   if (!e.leidoOk) return 'no-comprobado'
   if (!e.tieneCobertura) return 'sin-cobertura'
@@ -59,10 +79,19 @@ export function estadoCuadre(e: EntradaCuadre): EstadoCuadre {
 
   if (!hayLiq && !hayBanco && !hayEsperado) return 'sin-datos'
 
-  // Saldo deudor (Occident lleva cuatro periodos así): la compañía se queda a
-  // deber y no remesa. No es un impago ni un descuadre — pintarlo en rojo sería
-  // mentir sobre quién debe a quién.
-  if (hayLiq && (e.liqBruto as number) < 0 && (e.liqRemesa ?? 0) === 0) return 'deudor'
+  // Comisión negativa con remesa 0 (Occident abr-ago/2026). Se leía como saldo
+  // deudor, pero el banco dice otra cosa: Occident INGRESA |bruto| − retención,
+  // al céntimo (abr 274,16 − 41,12 = 233,04; may 477,62; jul 294,30, medido el
+  // 24/09/2026). El signo es convención del EIAC, no una deuda. Así que el banco
+  // decide: si casa con esa remesa inferida, cuadra; si entró otra cifra,
+  // descuadra; y sin abono es lo mismo que en cualquier otra compañía:
+  // liquidado y todavía sin cobrar (callarlo como «deudor» taparía un impago).
+  if (hayLiq && (e.liqBruto as number) < 0 && (e.liqRemesa ?? 0) === 0) {
+    const inferida = remesaInferida(e.liqBruto as number, e.liqRetencion)
+    if (inferida <= 0) return 'deudor' // ni con el signo invertido queda nada que ingresar
+    if (!hayBanco) return 'liquidado-sin-cobrar'
+    return Math.abs(inferida - (e.bancoTotal as number)) <= TOLERANCIA_BANCO ? 'cuadra' : 'descuadra'
+  }
 
   if (!hayLiq && hayEsperado) return 'esperado-sin-liquidar'
   if (!hayLiq && hayBanco) return 'cobrado-sin-liquidar'

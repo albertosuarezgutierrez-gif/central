@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { prisma } from '@/lib/db'
-import { estadoCuadre, totalEsCerrado, cuantosPendientes, type EstadoCuadre } from '@/lib/correduria/cuadre'
+import { estadoCuadre, brutoEfectivo, totalEsCerrado, cuantosPendientes, type EstadoCuadre } from '@/lib/correduria/cuadre'
 
 export const dynamic = 'force-dynamic'
 
@@ -90,7 +90,9 @@ export async function GET(req: NextRequest) {
   // 🚨 El total anual NO se presenta como cerrado si falta algún periodo: es la
   // cifra que Alberto manda a la asesoría, y con huecos es provisional.
   const estados = periodos.map(p => p.estado)
-  const suma = (k: 'liqBruto' | 'liqRetencion') => periodos.reduce((s, p) => s + (p[k] ?? 0), 0)
+  // Bruto con la convención de signo de Occident resuelta (ver `brutoEfectivo`): el negativo se cobró.
+  const suma = (k: 'liqBruto' | 'liqRetencion') =>
+    periodos.reduce((s, p) => s + ((k === 'liqBruto' ? brutoEfectivo(p.liqBruto, p.liqRemesa) : p[k]) ?? 0), 0)
 
   return NextResponse.json({
     año,

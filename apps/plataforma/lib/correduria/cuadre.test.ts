@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { estadoCuadre, totalEsCerrado, cuantosPendientes, mesEnPeriodo, finDeMes, type EntradaCuadre } from './cuadre.ts'
+import { estadoCuadre, remesaInferida, remesaEfectiva, brutoEfectivo, totalEsCerrado, cuantosPendientes, mesEnPeriodo, finDeMes, type EntradaCuadre } from './cuadre.ts'
 
 const base: EntradaCuadre = {
   leidoOk: true,
@@ -50,20 +50,21 @@ test('Allianz feb/2026 cuadra: 95,03 − 14,26 = 80,77 = banco', () => {
   )
 })
 
-test('Occident jul/2026 es deudor, NO un impago ni un descuadre', () => {
-  // −346,20 de comisión con remesa 0,00: la compañía se queda a deber. Cuatro
-  // periodos seguidos así; pintarlo rojo mandaría a reclamar lo que no toca.
-  assert.equal(
-    estadoCuadre({
-      ...base,
-      esperadoBruto: -346.2,
-      liqBruto: -346.2,
-      liqRetencion: 51.9,
-      liqRemesa: 0,
-      bancoTotal: 0,
-    }),
-    'deudor',
-  )
+test('🪤 Occident con bruto negativo: si el banco trae |bruto| − retención, CUADRA (no es deudor)', () => {
+  const occ = (bruto: number, ret: number, banco: number | null) =>
+    estadoCuadre({ ...base, esperadoBruto: bruto, liqBruto: bruto, liqRetencion: ret, liqRemesa: 0, bancoTotal: banco })
+  assert.equal(occ(-274.16, 41.12, 233.04), 'cuadra')   // abr/2026
+  assert.equal(occ(-561.9, 84.28, 477.62), 'cuadra')    // may/2026 (dos abonos)
+  assert.equal(occ(-346.2, 51.9, 294.3), 'cuadra')      // jul/2026
+  assert.equal(occ(-287.68, 43.15, 279.68), 'descuadra') // jun/2026: +35,15€ sin explicar
+  assert.equal(occ(-144.44, 21.67, 98.85), 'descuadra')  // ago/2026: −23,92€
+  assert.equal(occ(-346.2, 51.9, null), 'liquidado-sin-cobrar') // sin abono: como cualquier otra compañía
+  assert.equal(occ(-10, 15, null), 'deudor')            // ni invirtiendo el signo queda nada que ingresar
+  assert.equal(remesaEfectiva(-274.16, 41.12, 0), 233.04)
+  assert.equal(remesaEfectiva(95.03, 14.26, 80.77), 80.77)
+  assert.equal(brutoEfectivo(-274.16, 0), 274.16)
+  assert.equal(brutoEfectivo(95.03, 80.77), 95.03)
+  assert.equal(remesaInferida(-274.16, 41.12), 233.04)
 })
 
 test('Mapfre: 3.614,65€ devengados y ninguna liquidación', () => {
