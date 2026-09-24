@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-24T11:11:51Z",
+  "generadoEn": "2026-09-24T14:24:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -524,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "asegura-portal": {
         "estado": "usado",
@@ -960,7 +960,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "asegura-web": {
         "estado": "no",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 112
+        "evidencias": 113
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 92
+        "evidencias": 95
       },
       "asegura-web": {
         "estado": "usado",
@@ -2306,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 25
+        "evidencias": 26
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 74
+        "evidencias": 77
       },
       "asegura-web": {
         "estado": "usado",
@@ -4049,6 +4049,7 @@
       "/api/operador/leads-web",
       "/api/operador/libro-registro",
       "/api/operador/linea-base",
+      "/api/operador/mensajes",
       "/api/operador/oportunidad",
       "/api/operador/oportunidad/llamada",
       "/api/operador/oportunidad/tarea",
@@ -4113,6 +4114,7 @@
       "/api/invitaciones/responder",
       "/api/ipid/[id]",
       "/api/mejorar-precio",
+      "/api/mensajes",
       "/api/mis-datos",
       "/api/mis-datos/confirmar",
       "/api/mis-datos/contactos",
@@ -4992,6 +4994,7 @@
       "/api/correduria/leads-web",
       "/api/correduria/libro-registro",
       "/api/correduria/linea-base",
+      "/api/correduria/mensajes",
       "/api/correduria/oportunidad",
       "/api/correduria/oportunidad/llamada",
       "/api/correduria/oportunidad/tarea",
@@ -5547,6 +5550,7 @@
       "seguros.portal_hoja_qr_poliza",
       "seguros.portal_identidad",
       "seguros.portal_invitacion",
+      "seguros.portal_mensaje",
       "seguros.portal_obligacion",
       "seguros.portal_parte_siniestro",
       "seguros.portal_peticion_acceso",
@@ -6522,7 +6526,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1466,
+    "apis": 1469,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

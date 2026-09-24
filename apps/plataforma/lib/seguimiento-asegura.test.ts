@@ -69,7 +69,8 @@ test('oportunidad: 404 es «no encontrada», no un error; el contexto que falta 
 })
 
 test('los motivos de la pantalla son los del módulo, en su orden y con rótulo', () => {
-  assert.deepEqual(MOTIVOS_PERDIDA_UI.map((m) => m.valor), [...MOTIVOS_PERDIDA])
+  // Todos menos el de descartar, que tiene su propio botón (no es una venta perdida).
+  assert.deepEqual(MOTIVOS_PERDIDA_UI.map((m) => m.valor), MOTIVOS_PERDIDA.filter((m) => m !== 'error_alta'))
   for (const m of MOTIVOS_PERDIDA_UI) assert.ok(m.rotulo.length > 0, m.valor)
 })
 
@@ -146,4 +147,37 @@ test('🪤 contactos del móvil: un fallo NO da una lista vacía (se importaría
   assert.ok(r)
   assert.equal(r.contactos.length, 1)
   assert.equal(r.contactos[0].email, null)
+})
+
+// ── Tarjeta «Oportunidades» de la ficha (24/09/2026) ──────────────────────────
+test('oportunidades de un cliente: un fallo NO es «no tiene», y una fila rota se cuenta, no se pinta', async () => {
+  const { interpretarOportunidadesCliente } = await import('./seguimiento-asegura.ts')
+  assert.equal(interpretarOportunidadesCliente(500, { estado: 'error', causa: 'bd' }).estado, 'error')
+  assert.equal(interpretarOportunidadesCliente(200, { estado: 'ok' }).estado, 'error', 'sin lista no es lista vacía')
+  const r = interpretarOportunidadesCliente(200, {
+    estado: 'ok',
+    oportunidades: [
+      { id: 'a', clienteId: 'c', estado: 'en_negociacion', creada: '2026-09-24T10:00:00Z', ramo: 'hogar', prima: null, proximaTarea: { tipo: 'llamada', fechaLimite: '2026-09-25' } },
+      { id: 'b', clienteId: 'c', estado: 'inventado', creada: '2026-09-24T10:00:00Z' },
+    ],
+  })
+  assert.ok(r.estado === 'ok')
+  assert.equal(r.oportunidades.length, 1)
+  assert.equal(r.descartadas, 1)
+  assert.equal(r.oportunidades[0].prima, null, 'sin prima no es 0,00€')
+  assert.deepEqual(r.oportunidades[0].proximaTarea, { tipo: 'llamada', fechaLimite: '2026-09-25' })
+})
+
+test('descartar no se ofrece como motivo de «perder»: no es una venta perdida', async () => {
+  const { MOTIVOS_PERDIDA_UI } = await import('./seguimiento-asegura.ts')
+  assert.equal(MOTIVOS_PERDIDA_UI.some(m => m.valor === 'error_alta'), false)
+})
+
+test('abrir oportunidad: 409 duplicada enlaza la que ya hay', async () => {
+  const { textoAltaOportunidad } = await import('./seguimiento-asegura.ts')
+  const d = textoAltaOportunidad(409, { estado: 'duplicada', motivo: 'Ya tiene una', id: 'x' })
+  assert.equal(d.ok, false)
+  assert.equal(d.id, 'x')
+  assert.equal(textoAltaOportunidad(201, { estado: 'ok', id: 'y' }).ok, true)
+  assert.equal(textoAltaOportunidad(503, { estado: 'sin_configurar' }).ok, false)
 })

@@ -31,7 +31,7 @@ ALTER TABLE seguros.oportunidades
 ALTER TABLE seguros.oportunidades DROP CONSTRAINT IF EXISTS oportunidades_motivo_perdida_ck;
 ALTER TABLE seguros.oportunidades ADD CONSTRAINT oportunidades_motivo_perdida_ck CHECK (
   motivo_perdida IS NULL OR motivo_perdida IN
-    ('precio','competidor','coberturas','cliente_desiste','sin_respuesta','no_contactable','ya_asegurado','otro')
+    ('precio','competidor','coberturas','cliente_desiste','sin_respuesta','no_contactable','ya_asegurado','otro','error_alta')
 );
 
 ALTER TABLE seguros.oportunidades DROP CONSTRAINT IF EXISTS oportunidades_perdida_con_motivo_ck;
