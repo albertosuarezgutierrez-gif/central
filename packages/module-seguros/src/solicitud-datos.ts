@@ -239,6 +239,11 @@ export function tipoArchivoDocSolicitud(t: TipoDocSolicitud): 'dni' | 'permiso_c
 
 const ORDEN_CARNET_MOTO = ['A', 'A2', 'A1', 'AM'] as const
 
+/** Papeles que identifican a quien conduce; los demás no aportan DNI ni fecha de nacimiento. */
+const TIPOS_DOC_PERSONA = ['dni', 'carnet'] as const
+/** Campos de la persona: solo se contrastan contra sus papeles o contra su ficha. */
+const CAMPOS_PERSONA = new Set(['dni', 'fechaNacimiento'])
+
 function texto(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
 }
@@ -256,9 +261,13 @@ export function normalizarLecturaSolicitud(
 ): { tipo: TipoDocSolicitud; valores: Record<string, Respuesta> } {
   const o = bruto !== null && typeof bruto === 'object' && !Array.isArray(bruto) ? (bruto as Record<string, unknown>) : {}
   const tipo = (TIPOS_DOC_SOLICITUD as readonly string[]).includes(String(o.tipo)) ? (o.tipo as TipoDocSolicitud) : 'otro'
+  // DNI y nacimiento solo de papeles DE LA PERSONA: en la póliza o en el permiso
+  // de circulación sale el tomador o el titular, que no tiene por qué ser quien
+  // conduce (el padre paga, el hijo conduce).
+  const dePersona = (TIPOS_DOC_PERSONA as readonly string[]).includes(tipo)
   const candidato: Record<string, unknown> = {
-    dni: texto(o.dni),
-    fechaNacimiento: texto(o.fechaNacimiento),
+    dni: dePersona ? texto(o.dni) : null,
+    fechaNacimiento: dePersona ? texto(o.fechaNacimiento) : null,
     matricula: texto(o.matricula),
     marca: texto(o.marca),
     modelo: texto(o.modelo),
@@ -312,7 +321,10 @@ export function contrastarConDocumentos(
   for (const clave of CONTRASTABLES) {
     const declarado = respuestas[clave]
     if (declarado === null || declarado === undefined || declarado === '') continue
-    const l = lecturas.find((x) => x.valores[clave] !== undefined && x.valores[clave] !== null)
+    const l = lecturas.find((x) =>
+      x.valores[clave] !== undefined && x.valores[clave] !== null
+      // Lecturas guardadas antes de este filtro: una póliza podía traer el DNI del tomador.
+      && (!CAMPOS_PERSONA.has(clave) || x.tipo === 'ficha' || (TIPOS_DOC_PERSONA as readonly string[]).includes(x.tipo)))
     if (!l) continue
     if (canon(l.valores[clave]) !== canon(declarado)) out.push({ clave, declarado, documento: l.valores[clave], tipoDocumento: l.tipo })
   }

@@ -91,3 +91,19 @@ test('el contraste avisa si lo declarado no casa con el papel, sin tener en cuen
   assert.equal(d[0].clave, 'matricula')
   assert.equal(d[0].documento, '1234ABC')
 })
+
+test('el DNI y el nacimiento solo salen del DNI o del carné: la póliza y el permiso traen al tomador o titular', () => {
+  const campos = camposSolicitud('moto', nadaConocido)
+  const poliza = normalizarLecturaSolicitud({ tipo: 'poliza', dni: '12345678Z', fechaNacimiento: '1960-01-01', matricula: '1234ABC', companiaActual: 'Mapfre' }, 'moto', campos, HOY)
+  assert.equal('dni' in poliza.valores, false)
+  assert.equal('fechaNacimiento' in poliza.valores, false)
+  assert.equal(poliza.valores.matricula, '1234ABC', 'lo del vehículo sí vale')
+  const permiso = normalizarLecturaSolicitud({ tipo: 'permiso_circulacion', dni: '12345678Z' }, 'moto', campos, HOY)
+  assert.equal('dni' in permiso.valores, false)
+  // Una lectura guardada de antes (póliza con DNI del padre) no dispara «no casa».
+  const viejas = [{ documentoId: 'd1', tipo: 'poliza' as const, valores: { dni: '12345678Z' } }]
+  assert.deepEqual(contrastarConDocumentos({ dni: '87654321X' }, viejas), [])
+  // El DNI del propio carné sí se contrasta.
+  const carne = [{ documentoId: 'd2', tipo: 'carnet' as const, valores: { dni: '12345678Z' } }]
+  assert.equal(contrastarConDocumentos({ dni: '87654321X' }, carne).length, 1)
+})
