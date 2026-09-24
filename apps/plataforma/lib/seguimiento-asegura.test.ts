@@ -228,4 +228,13 @@ test('solicitudes de datos: se leen las válidas y las respuestas se pintan legi
   assert.equal(valorLegible(s.campos[1], null), '—')
   assert.equal(valorLegible(s.campos[1], false), 'No')
   assert.equal(interpretarSolicitudesDatos(503, null).estado, 'error')
+  assert.equal(s.discrepancias, null, 'una asegura que no manda el contraste es «sin contrastar», no «todo cuadra»')
+  const c = interpretarSolicitudesDatos(200, { estado: 'ok', solicitudes: [
+    { id: 's3', ramo: 'moto', estado: 'completada', caduca: '', campos: [{ clave: 'matricula', etiqueta: 'Matrícula' }], respuestas: { matricula: '1234ABD' },
+      documentos: [{ id: 'd1', tipo: 'permiso_circulacion' }, { tipo: 'dni' }],
+      discrepancias: [{ clave: 'matricula', declarado: '1234ABD', documento: '1234ABC', tipoDocumento: 'permiso_circulacion' }] },
+  ] })
+  if (c.estado !== 'ok') return assert.fail('debía leerse')
+  assert.equal(c.solicitudes[0].documentos.length, 1, 'un documento sin id no se pinta')
+  assert.equal(c.solicitudes[0].discrepancias?.[0].documento, '1234ABC')
 })

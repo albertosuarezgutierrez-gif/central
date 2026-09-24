@@ -18,6 +18,9 @@ Página PÚBLICA (sin sesión, a propósito: enlace directo que manda Alberto) q
 ningún dato de la ficha, porque quien tenga el enlace no tiene por qué ser el cliente. `app/api/datos/route.ts` limita a
 10/h por IP, valida la forma del token y reenvía al puente de asegura. Desenlaces: formulario · `muerta` (caducado o
 anulado) · `completada`. Lógica pura en `lib/solicitud-datos.ts` (+ test).
+**Documentos (24/09/2026):** el cliente puede subir DNI, carné y papeles del vehículo (`/api/datos/documento`, 20/h por IP,
+≤4 MB tras encoger la foto en el navegador con `lib/encoger-imagen.ts`). Asegura los archiva en su ficha y la IA propone
+valores que el formulario solo usa para rellenar lo VACÍO; el cliente los revisa antes de enviar.
 
 ## 📋 «Pendiente de ti» (24/09/2026) — una lista, arriba de «Mis seguros»
 

@@ -18,18 +18,28 @@
 import { createHash, randomBytes } from 'node:crypto'
 import {
   DIAS_SOLICITUD,
+  MAX_DOCS_SOLICITUD,
   camposSolicitud,
+  contrastarConDocumentos,
+  etiquetaDocSolicitud,
+  normalizarLecturaSolicitud,
   ramoSolicitud,
+  tipoArchivoDocSolicitud,
   validarRespuestas,
   type CampoSolicitud,
+  type DiscrepanciaSolicitud,
+  type LecturaDocSolicitud,
   type RamoSolicitud,
   type Respuesta,
+  type TipoDocSolicitud,
 } from '@central/module-seguros'
 import { PREFIJO_HISTORIAL_DATOS_PRESUPUESTO } from '@central/module-seguros-portal'
 import { decryptField, encryptField } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { clienteOrigenDe, listarCarnets } from './cartera-ficha'
+import { guardarDocumento } from './cartera-documentos'
+import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TOKEN = /^[A-Za-z0-9_-]{40,60}$/
@@ -51,6 +61,10 @@ export type SolicitudResumen = {
   /** Descifradas. `null` = sin completar (o no se han podido descifrar: `ilegible`). */
   respuestas: Record<string, Respuesta> | null
   ilegible: boolean
+  /** Documentos que subió por el enlace (están en su ficha → Documentos). */
+  documentos: { id: string; tipo: TipoDocSolicitud }[]
+  /** Lo declarado que no casa con sus papeles. `null` = no se ha podido contrastar. */
+  discrepancias: DiscrepanciaSolicitud[] | null
 }
 
 /** Crea (o devuelve la viva) la solicitud de datos de una oportunidad ABIERTA de moto/coche. */
@@ -113,6 +127,17 @@ function estadoEfectivo(estado: string, caduca: Date): SolicitudResumen['estado'
   return estado === 'completada' || estado === 'anulada' ? estado : 'pendiente'
 }
 
+function descifrarLecturas(v: string | null): LecturaDocSolicitud[] | null {
+  if (v === null) return []
+  try {
+    const o = JSON.parse(decryptField(v)) as unknown
+    if (Array.isArray(o)) return o as LecturaDocSolicitud[]
+  } catch {
+    /* clave PII ausente o distinta */
+  }
+  return null
+}
+
 function descifrarRespuestas(v: string | null): { respuestas: Record<string, Respuesta> | null; ilegible: boolean } {
   if (v === null) return { respuestas: null, ilegible: false }
   try {
@@ -129,13 +154,14 @@ export async function solicitudesDeOportunidad(correduriaId: string, oportunidad
   if (!UUID.test(oportunidadId)) return []
   try {
     const filas = await prismaAsegura().$queryRaw<{
-      id: string; ramo: string; estado: string; caduca: Date; completada: Date | null; campos: CampoSolicitud[]; respuestas: string | null
+      id: string; ramo: string; estado: string; caduca: Date; completada: Date | null; campos: CampoSolicitud[]; respuestas: string | null; lecturas: string | null
     }[]>(Prisma.sql`
-      select id::text as id, ramo, estado, caduca_at as caduca, completada_at as completada, campos, respuestas
+      select id::text as id, ramo, estado, caduca_at as caduca, completada_at as completada, campos, respuestas, lecturas
       from solicitud_datos where oportunidad_id = ${oportunidadId}::uuid and correduria_id = ${correduriaId}::uuid
       order by created_at desc limit 10`)
     return filas.map((f) => {
       const d = descifrarRespuestas(f.respuestas)
+      const lecturas = descifrarLecturas(f.lecturas)
       return {
         id: f.id,
         ramo: ramoSolicitud(f.ramo) ?? 'moto',
@@ -144,6 +170,8 @@ export async function solicitudesDeOportunidad(correduriaId: string, oportunidad
         completada: f.completada ? f.completada.toISOString() : null,
         campos: f.campos,
         ...d,
+        documentos: (lecturas ?? []).map((l) => ({ id: l.documentoId, tipo: l.tipo })),
+        discrepancias: lecturas === null || d.ilegible ? null : d.respuestas ? contrastarConDocumentos(d.respuestas, lecturas) : [],
       }
     })
   } catch (e) {
@@ -190,6 +218,63 @@ export async function solicitudPorToken(token: string): Promise<SolicitudPublica
   if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { estado: 'muerta' }
   const ramo = ramoSolicitud(f.ramo)
   return ramo ? { estado: 'ok', ramo, campos: f.campos } : { estado: 'muerta' }
+}
+
+export type ResultadoDocSolicitud =
+  | { ok: true; tipo: TipoDocSolicitud; etiqueta: string; valores: Record<string, Respuesta>; aviso: string | null }
+  | { ok: false; estado: 'muerta' | 'completada' | 'tope' | 'invalido' | 'error'; motivo?: string }
+
+/**
+ * El cliente sube un documento por el enlace (DNI, carné, papeles del vehículo, su póliza).
+ * 1) Se ARCHIVA en su ficha (`seguros.documentos`, subido por el cliente) — aunque luego no
+ *    se pueda leer: el papel vale para emitir.
+ * 2) La IA lo lee y se proponen al cliente SOLO los campos pedidos que validan.
+ * 3) Lo leído se guarda cifrado en la solicitud para contrastarlo con lo que declare.
+ * Nada de lo leído se escribe en la ficha.
+ */
+export async function subirDocumentoSolicitud(
+  token: string,
+  fichero: { nombre: string; mime: string; contenido: Buffer },
+): Promise<ResultadoDocSolicitud> {
+  const f = await porToken(token)
+  if (!f) return { ok: false, estado: 'muerta' }
+  if (f.estado === 'completada') return { ok: false, estado: 'completada' }
+  if (estadoEfectivo(f.estado, f.caduca) !== 'pendiente') return { ok: false, estado: 'muerta' }
+  const ramo = ramoSolicitud(f.ramo)
+  if (!ramo) return { ok: false, estado: 'muerta' }
+  const [c] = await prismaAsegura().$queryRaw<{ n: number }[]>(Prisma.sql`
+    select documentos_subidos as n from solicitud_datos where id = ${f.id}::uuid`)
+  if ((c?.n ?? 0) >= MAX_DOCS_SOLICITUD) return { ok: false, estado: 'tope', motivo: `Como máximo ${MAX_DOCS_SOLICITUD} documentos por enlace.` }
+
+  // Primero se lee (para saber qué es y archivarlo con su tipo); si la IA falla, se archiva como «otro».
+  const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre)
+  const leido = lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, f.campos) : { tipo: 'otro' as const, valores: {} }
+  const g = await guardarDocumento(f.correduriaId, {
+    clienteId: f.clienteId,
+    tipo: tipoArchivoDocSolicitud(leido.tipo),
+    nombre: fichero.nombre,
+    mime: fichero.mime,
+    contenido: fichero.contenido,
+    notas: `${etiquetaDocSolicitud(leido.tipo)} · subido por el cliente en el enlace de datos del presupuesto`,
+    subidoPor: 'cliente',
+  })
+  if (!g.ok) return { ok: false, estado: g.status === 415 ? 'invalido' : 'error', motivo: g.motivo }
+
+  await prismaAsegura().$transaction(async (tx) => {
+    const [fila] = await tx.$queryRaw<{ lecturas: string | null }[]>(Prisma.sql`
+      select lecturas from solicitud_datos where id = ${f.id}::uuid for update`)
+    const previas = descifrarLecturas(fila?.lecturas ?? null) ?? []
+    const nuevas: LecturaDocSolicitud[] = [...previas, { documentoId: g.documento.id, tipo: leido.tipo, valores: leido.valores }]
+    await tx.$executeRaw(Prisma.sql`
+      update solicitud_datos set lecturas = ${encryptField(JSON.stringify(nuevas))}, documentos_subidos = documentos_subidos + 1
+      where id = ${f.id}::uuid`)
+  })
+  const aviso = !lectura.ok
+    ? `Guardado. No lo hemos podido leer (${lectura.motivo}); rellena los datos a mano.`
+    : Object.keys(leido.valores).length === 0
+      ? 'Guardado. No hemos sacado de aquí ningún dato de los que faltan.'
+      : null
+  return { ok: true, tipo: leido.tipo, etiqueta: etiquetaDocSolicitud(leido.tipo), valores: leido.valores, aviso }
 }
 
 /** El cliente manda sus datos. Una sola vez; lo que no se pidió se ignora. */

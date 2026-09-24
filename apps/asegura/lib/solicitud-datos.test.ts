@@ -18,7 +18,7 @@ test('las respuestas se guardan cifradas y no se escriben en la ficha', () => {
 })
 
 test('la vista pública por token no devuelve nada del cliente', () => {
-  const publica = src.slice(src.indexOf('export async function solicitudPorToken'), src.indexOf('/** El cliente manda sus datos'))
+  const publica = src.slice(src.indexOf('export async function solicitudPorToken'), src.indexOf('export type ResultadoDocSolicitud'))
   assert.match(publica, /\{ estado: 'ok', ramo, campos: f\.campos \}/)
   assert.doesNotMatch(publica, /cliente|nombre|dni|telefono|email/i)
 })
@@ -32,4 +32,13 @@ test('una oportunidad ya cerrada no recibe datos: el enlace se anula antes de co
   const guarda = r.search(/o\.estado === 'ganada' \|\| o\.estado === 'perdida'/)
   const completar = r.indexOf("set estado = 'completada'")
   assert.ok(guarda > 0 && guarda < completar, 'la guarda de cerrada va antes de marcar completada')
+})
+
+test('los documentos del enlace se archivan en su ficha y lo leído no toca la ficha', () => {
+  const sub = src.slice(src.indexOf('export async function subirDocumentoSolicitud'), src.indexOf('/** El cliente manda sus datos'))
+  assert.match(sub, /guardarDocumento\(f\.correduriaId/)
+  assert.match(sub, /subidoPor: 'cliente'/)
+  assert.match(sub, /encryptField\(JSON\.stringify\(nuevas\)\)/, 'lo leído se guarda cifrado')
+  assert.doesNotMatch(sub, /update clientes/i)
+  assert.match(sub, /MAX_DOCS_SOLICITUD/, 'hay tope de documentos por enlace')
 })

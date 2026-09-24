@@ -128,10 +128,46 @@ function Respuestas({ s, tarificar, ramo }: { s: SolicitudDatos; tarificar: stri
           ))}
         </dl>
       )}
+      <Verificacion s={s} />
       <Link href={tarificar} style={{ ...btnStyle('primario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
         Tarificar {ramo === 'moto' ? 'moto' : 'coche'} →
       </Link>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>Declarado por el cliente por el enlace: se verifica al emitir.</div>
     </details>
+  )
+}
+
+const DOC_LEGIBLE: Record<string, string> = {
+  dni: 'DNI', carnet: 'carné', permiso_circulacion: 'permiso de circulación', ficha_tecnica: 'ficha técnica', poliza: 'póliza', otro: 'documento',
+}
+
+/** Documentos que subió y lo que no casa con ellos. Sin contraste posible se dice; nunca «todo cuadra» por defecto. */
+function Verificacion({ s }: { s: SolicitudDatos }) {
+  const n = s.documentos.length
+  return (
+    <div style={{ margin: '6px 0', display: 'grid', gap: 4, fontSize: 13 }}>
+      <div>
+        {n === 0
+          ? '📎 No ha subido documentos: todo es declarado.'
+          : `📎 Subió ${n} documento${n === 1 ? '' : 's'} (${s.documentos.map((d) => DOC_LEGIBLE[d.tipo] ?? 'documento').join(', ')}): los tienes en Documentos.`}
+      </div>
+      {n > 0 && s.discrepancias === null && <div style={{ color: 'var(--muted)' }}>No se ha podido contrastar lo declarado con sus documentos.</div>}
+      {n > 0 && s.discrepancias !== null && s.discrepancias.length === 0 && (
+        <div style={{ color: 'var(--positive)' }}>✔ Lo declarado coincide con lo leído en sus documentos.</div>
+      )}
+      {s.discrepancias && s.discrepancias.length > 0 && (
+        <div role="alert" style={{ color: 'var(--negative)', display: 'grid', gap: 2 }}>
+          <strong>⚠️ No casa con sus documentos:</strong>
+          {s.discrepancias.map((d) => {
+            const campo = s.campos.find((c) => c.clave === d.clave) ?? { clave: d.clave, etiqueta: d.clave }
+            return (
+              <span key={d.clave} style={{ overflowWrap: 'anywhere' }}>
+                {campo.etiqueta}: escribió «{valorLegible(campo, d.declarado)}», el {DOC_LEGIBLE[d.tipoDocumento] ?? 'documento'} dice «{valorLegible(campo, d.documento)}».
+              </span>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { camposSolicitud, mensajeSolicitud, validarRespuestas } from './solicitud-datos.ts'
+import { camposSolicitud, contrastarConDocumentos, mensajeSolicitud, normalizarLecturaSolicitud, validarRespuestas } from './solicitud-datos.ts'
 
 const nadaConocido = { dni: false, fechaNacimiento: false, codigoPostal: false, carnetMoto: false, carnetCoche: false }
 const todoConocido = { dni: true, fechaNacimiento: true, codigoPostal: true, carnetMoto: true, carnetCoche: true }
@@ -59,4 +59,31 @@ test('el mensaje para el cliente no lleva ningún dato suyo, solo el enlace', ()
   const m = mensajeSolicitud('moto', 'https://x/datos/abc')
   assert.match(m, /tu moto/)
   assert.match(m, /https:\/\/x\/datos\/abc$/)
+})
+
+test('lo leído de un documento solo propone campos pedidos y válidos', () => {
+  const campos = camposSolicitud('moto', nadaConocido)
+  const r = normalizarLecturaSolicitud({
+    tipo: 'carnet', dni: '12345678Z', fechaNacimiento: '1990-02-01',
+    carnets: [{ clase: 'B', fecha: '2010-01-01' }, { clase: 'A2', fecha: '2015-03-15' }, { clase: 'AM', fecha: '2006-01-01' }],
+    matricula: 'dudoso', marca: '',
+  }, 'moto', campos, HOY)
+  assert.equal(r.tipo, 'carnet')
+  assert.equal(r.valores.dni, '12345678Z')
+  assert.equal(r.valores.tipoCarnet, 'A2', 'la clase de moto más alta con fecha')
+  assert.equal(r.valores.fechaCarnet, '2015-03-15')
+  assert.equal('matricula' in r.valores, false, 'una matrícula que no valida no se propone')
+  assert.equal('marca' in r.valores, false)
+  const conocido = normalizarLecturaSolicitud({ tipo: 'dni', dni: '12345678Z' }, 'moto', camposSolicitud('moto', todoConocido), HOY)
+  assert.equal('dni' in conocido.valores, false, 'lo que no se pidió no se propone')
+  assert.equal(normalizarLecturaSolicitud({ tipo: 'pasaporte' }, 'moto', campos, HOY).tipo, 'otro')
+})
+
+test('el contraste avisa si lo declarado no casa con el papel, sin tener en cuenta espacios ni guiones', () => {
+  const lecturas = [{ documentoId: 'd1', tipo: 'permiso_circulacion' as const, valores: { matricula: '1234ABC', fechaMatriculacion: '2020-05-01' } }]
+  assert.deepEqual(contrastarConDocumentos({ matricula: '1234 abc', fechaMatriculacion: '2020-05-01' }, lecturas), [])
+  const d = contrastarConDocumentos({ matricula: '1234ABD' }, lecturas)
+  assert.equal(d.length, 1)
+  assert.equal(d[0].clave, 'matricula')
+  assert.equal(d[0].documento, '1234ABC')
 })
