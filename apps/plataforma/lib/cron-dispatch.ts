@@ -88,7 +88,10 @@ export const CRON_JOBS: CronJob[] = [
   // ANTES de `apply-auto` (08:30) para que el motor tarife el mismo día con lo recalibrado.
   { path: '/api/sivra/pricing/canal', schedule: '45 7 * * *' },
   { path: '/api/sivra/pricing/experiments/check-results', schedule: '0 8 * * *' },
-  { path: '/api/sivra/pricing/apply-auto', schedule: '30 8,14,20 * * *' },
+  // La pasada de las 00:30 (24/09/2026) existe por el tramo de última hora del canal
+  // (`DIAS_ULTIMA_HORA` en pricing-canal.ts): a medianoche una fecha pasa de 7 a 6 días vista y
+  // Booking ya le aplica la pendiente corta. Sin esta pasada, hasta las 08:30 se veía ~11 % cara.
+  { path: '/api/sivra/pricing/apply-auto', schedule: '30 0,8,14,20 * * *' },
   { path: '/api/sivra/pricing/resumen-diario', schedule: '0 9 * * *' },
   // Fuga de canal (07/09/2026): lo que el huésped PAGÓ contra lo que el motor tenía LISTADO. Es la capa
   // que ni `canal` ni el centinela del huésped miran — los dos se quedan en el precio de escaparate.
