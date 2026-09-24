@@ -4,7 +4,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { listarPresupuestos, prepararPresupuesto, retirarPresupuesto } from '@/lib/presupuesto'
+import { guardarNecesidades, listarPresupuestos, prepararPresupuesto, retirarPresupuesto } from '@/lib/presupuesto'
 import { auditado } from '@/lib/auditoria'
 import { avisarPresupuesto, confirmarWhatsapp, marcarEmitido, type FalloEnvio } from '@/lib/envio-presupuesto'
 import { datosParaEmitir } from '@/lib/datos-emision'
@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic'
 
 // `sin_enlace`/`sin_proveedor`/`remitente` son averías nuestras (503); `rechazado`, del proveedor (502).
 const STATUS_FALLO: Record<FalloEnvio, number> = {
-  no_encontrado: 404, no_enviable: 409, ocupado: 409, simulado: 422, sin_email: 422, sin_acceso: 422,
+  no_encontrado: 404, no_enviable: 409, ocupado: 409, simulado: 422, sin_email: 422, sin_acceso: 422, sin_necesidades: 422,
   sin_enlace: 503, sin_proveedor: 503, remitente_no_verificado: 503, rechazado: 502,
 }
 
@@ -27,6 +27,7 @@ const STATUS_FALLO: Record<FalloEnvio, number> = {
  *   PATCH { id, accion:'avisar', canal:'email'|'whatsapp_enlace', actor } → avisa al cliente (PR 3)
  *   PATCH { id, accion:'confirmar_whatsapp', actor } → Alberto dice que el WhatsApp ya salió
  *   PATCH { id, accion:'emitido', actor } → la compañía ya emitió la póliza del presupuesto aceptado
+ *   PATCH { id, accion:'necesidades', texto, actor } → anota las exigencias y necesidades del cliente (IDD)
  *
  * 🚨 NADA DE ESTO SALE AL CLIENTE NI CUESTA UN EURO. Prepara la fila y congela
  * las opciones desde una tarificación YA PAGADA; el envío es el PR 3 y la firma
@@ -127,6 +128,11 @@ export const PATCH = auditado(async (req: Request) => {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' })
 
+    if (cuerpo?.accion === 'necesidades') {
+      const r = await guardarNecesidades(correduria.id, { id, texto: cuerpo.texto, actor })
+      const status = r.estado === 'ok' ? 200 : r.motivo === 'no_encontrado' ? 404 : r.motivo === 'cerrado' ? 409 : 422
+      return NextResponse.json(r, { status })
+    }
     if (cuerpo?.accion === 'emitido') {
       const r = await marcarEmitido(correduria.id, { id, actor })
       return NextResponse.json(r, { status: r.estado === 'error' ? (r.motivo === 'no_encontrado' ? 404 : 409) : 200 })

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { anulacionPorCambio, documentoAceptacion, esCambioCompania } from './aceptacion-presupuesto.ts'
+import { anulacionPorCambio, documentoAceptacion, esCambioCompania, validarNecesidades } from './aceptacion-presupuesto.ts'
 
 test('🪤 el cambio de compañía se decide por código DGS; sin código NO se afirma', () => {
   assert.equal(esCambioCompania('C0058', 'C0109'), true)
@@ -29,6 +29,7 @@ const base = {
   opcion: { compania: 'Allianz', producto: 'Todo riesgo', primaEur: 412.5, franquiciaEur: null, firmeza: 'estimado' as const },
   calculadoEl: '2026-09-20', venceEl: '2026-10-05', fechaFirma: '2026-09-23', anula: null,
   vistoAntes: { opciones: 3, companias: 2, informacionMediador: 'https://clientes.grupoasegura.es/legal/mediador', versionTextos: '2026-09-v5' },
+  necesidades: 'Coche de uso diario; quiere lunas y asistencia en viaje; prioriza precio.' as string | null,
 }
 
 test('🪤 el documento dice en su cara que NO es la contratación', () => {
@@ -55,4 +56,17 @@ test('🪤 lo firmado deja constancia de lo que vio antes: opciones, compañías
   const sin = documentoAceptacion({ ...base, vistoAntes: { ...base.vistoAntes, opciones: 0, companias: 0 } })
   assert.doesNotMatch(sin, /tenido delante l/)
   assert.match(sin, /su información como mediador/)
+})
+
+test('🪤 lo firmado cita las necesidades; sin ellas lo DICE, no las calla', () => {
+  assert.match(documentoAceptacion(base), /mis exigencias y necesidades\): «Coche de uso diario; quiere lunas/)
+  assert.match(documentoAceptacion({ ...base, necesidades: null }), /No constan por escrito mis exigencias y necesidades\./)
+  assert.match(documentoAceptacion({ ...base, necesidades: '   ' }), /No constan por escrito/)
+})
+
+test('las necesidades se validan: ni vacías ni un «ok», ni kilométricas; se normalizan los espacios', () => {
+  assert.equal(validarNecesidades('ok').ok, false)
+  assert.equal(validarNecesidades(null).ok, false)
+  assert.equal(validarNecesidades('x'.repeat(1501)).ok, false)
+  assert.deepEqual(validarNecesidades('  Hogar  en Sevilla,\n contenido y RC  '), { ok: true, valor: 'Hogar en Sevilla, contenido y RC' })
 })

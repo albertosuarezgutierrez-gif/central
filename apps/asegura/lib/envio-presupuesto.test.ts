@@ -41,3 +41,11 @@ test('🪤 si el correo no sale, se devuelve la llave anterior; y solo se confir
   const confirmar = src.slice(src.indexOf('export async function confirmarWhatsapp'))
   assert.match(confirmar, /estadoPresupuesto\(p, ahora\) !== 'enlazado' \|\| p\.canalAviso !== 'whatsapp_enlace'/)
 })
+
+test('🪤 sin necesidades escritas no se avisa, y se comprueba ANTES de rotar el token', () => {
+  const src = readFileSync(new URL('./envio-presupuesto.ts', import.meta.url), 'utf8')
+  const avisar = src.slice(src.indexOf('export async function avisarPresupuesto'))
+  const nec = avisar.indexOf("error('sin_necesidades'")
+  const rota = avisar.indexOf('tokenHash: nuevoHash')
+  assert.ok(nec > 0 && rota > nec)
+})

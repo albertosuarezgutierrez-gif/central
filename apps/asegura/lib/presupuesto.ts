@@ -17,6 +17,7 @@ import {
   calcularVencimiento,
   elegirPortada,
   estadoPresupuesto,
+  validarNecesidades,
   type EstadoPresupuesto,
   type PapelPortada,
   type PrecioComparable,
@@ -430,6 +431,8 @@ export type PresupuestoEnLista = {
   emitidoAt: Date | null
   retiradoAt: Date | null
   retiradoMotivo: string | null
+  /** Exigencias y necesidades escritas por el corredor. `null` = aún no constan (y no se avisa). */
+  necesidades: string | null
   opciones: number
   desdeEur: number | null
 }
@@ -474,6 +477,7 @@ export async function listarPresupuestos(
       emitidoAt: p.emitidoAt,
       retiradoAt: p.retiradoAt,
       retiradoMotivo: p.retiradoMotivo,
+      necesidades: p.necesidades,
       opciones: p.opciones.length,
       desdeEur: masBarataDeLaLista(p.opciones),
     }))
@@ -492,6 +496,35 @@ function masBarataDeLaLista(opciones: { primaEur: unknown }[]): number | null {
     if (mejor === null || n < mejor) mejor = n
   }
   return mejor
+}
+
+export type ResultadoNecesidades =
+  | { estado: 'ok' }
+  | { estado: 'error'; motivo: 'no_encontrado' | 'cerrado' | 'invalida'; detalle: string }
+
+/**
+ * Anota (o corrige) las exigencias y necesidades del cliente. Solo mientras no esté aceptado ni
+ * retirado: lo que el cliente firmó cita el texto de ese momento y no se reescribe después.
+ */
+export async function guardarNecesidades(
+  correduriaId: string,
+  entrada: { id: string; texto: unknown; actor: string },
+): Promise<ResultadoNecesidades> {
+  const v = validarNecesidades(entrada.texto)
+  if (!v.ok) return { estado: 'error', motivo: 'invalida', detalle: v.motivo }
+  const db = prismaAsegura()
+  const fila = await db.presupuesto.findFirst({ where: { id: entrada.id, correduriaId }, select: { id: true, necesidades: true } })
+  if (!fila) return { estado: 'error', motivo: 'no_encontrado', detalle: 'Ese presupuesto no existe en esta correduría.' }
+  const n = await db.presupuesto.updateMany({
+    where: { id: fila.id, correduriaId, aceptadoAt: null, retiradoAt: null },
+    data: { necesidades: v.valor, necesidadesAt: new Date() },
+  })
+  if (n.count === 0) return { estado: 'error', motivo: 'cerrado', detalle: 'Ya está aceptado o retirado: lo que se firmó no se reescribe.' }
+  await db.presupuestoEvento.create({
+    data: { presupuestoId: fila.id, tipo: 'necesidades', origen: 'corredor', detalle: { actor: entrada.actor, antes: fila.necesidades === null ? 'vacío' : 'escrito' } },
+  })
+  anotarCambio({ entidad: 'presupuesto', id: fila.id, campo: 'necesidades', antes: fila.necesidades, despues: v.valor })
+  return { estado: 'ok' }
 }
 
 export type ResultadoRetirar =
