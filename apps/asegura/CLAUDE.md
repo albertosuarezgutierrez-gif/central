@@ -721,6 +721,21 @@ sustitución por revisar y su resolución cerrada (pérdida + motivo de `MOTIVOS
 📞 Y una póliza anulada (baja o «anula al vencimiento» — CIMA solo escribe `activa`/`cancelada`, así que una
 anulación a vencimiento llega como baja) sin sustitución y con el vencimiento por delante abre SOLO, en la misma transacción, una retención
 (`oportunidades` `origen=retencion_cima` + llamada alta hoy en `gestiones`); una por póliza abierta. Cepo `lib/eventos-cartera.test.ts`.
+🔁 **Sustitución AUTOMÁTICA (23/09/2026, `lib/sustituciones-auto.ts`, regla pura `detectarSustituciones` en
+module-seguros).** Caso José Suárez: Mapfre→Reale del mismo Kona y el portal pintaba DOS «En vigor». Dentro de
+`detectarYGuardar`, ANTES de la foto y con punto de guardado, se enlaza sola la nueva con la vieja si es determinista y
+única: mismo cliente + ramo + **clave del riesgo por ramo** (`claveRiesgo`: matrícula con formato real en motor;
+referencia catastral de 20 o dirección DESCIFRADA+CP en inmuebles; índice ciego del DNI del asegurado en personas; RC y
+comercio sin dato → nada), efecto a −60/+30 días del aniversario de la vieja (actual o anterior: CIMA puede traerla ya
+renovada), sin `poliza_padre_id` entre ellas. La misma clave cuenta **duplicidades** (dos vigentes solapadas que no se
+suceden). Escribe solo `sustituida_at`/`poliza_origen_id` + historial. «En vigor» excluye la vieja SIEMPRE (Alberto: «esa se
+anula y se anula»; si la nueva cae por impago se avisa como cualquier impago, y el estado real lo trae CIMA). Después, en
+el mismo punto de guardado: `liberarPresupuestosEmitidos` marca emitido el presupuesto aceptado cuya nueva ya consta (de la
+compañía elegida, por código DGS) → su anulación FIRMADA en la aceptación pasa sola a la cola; y
+`abrirAnulacionesPorSustitucion` abre `sustitucion`/`solicitada` para las emitidas fuera de presupuesto (web) → aviso
+`anulacion_por_firmar` en la campana y en el correo de la intranet; el correo a la compañía sigue pasando por el OK. Portal: `sustituidasARetirar` la quita de la LISTA (no del acceso) por lector, con la
+nueva empezada y sin siniestros/devueltos pendientes. ⚠️ Medido: CIMA casi no manda el dato del riesgo fuera de motor
+(hogar 7/34 con dirección, 0 refcat, 0 DNI de asegurado en personas) → capturarlo al emitir es lo que falta.
 ✉️ **Cola de aprobaciones (`seguros.aprobacion`, `lib/aprobaciones.ts`, puerto `/api/operador/aprobaciones`).** Un recibo
 que pasa a `devuelto` deja un correo PROPUESTO al cliente; solo sale con `decision:'aprobar'` desde plataforma. El envío
 reclama la fila (`pendiente → enviando`) ANTES de mandar y lee el correo de la ficha en ese momento; `enviando` viejo =

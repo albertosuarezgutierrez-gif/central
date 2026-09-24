@@ -25,6 +25,7 @@ export const TIPOS_AVISO = [
   'datos_por_revisar',
   'carnet_en_ventana',
   'carnet_caducado',
+  'anulacion_por_firmar',
 ] as const
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
 
@@ -62,7 +63,7 @@ export type Aviso = {
   href: string
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -137,8 +138,16 @@ export type EntradaAvisos = {
   datos: ReparoParaAviso[] | null
   /** `null` = no se ha podido mirar (el puente a `apps/asegura` caído o sin configurar). */
   carnets: CarnetParaAviso[] | null
+  /**
+   * Anulaciones que esperan SU firma (la de una póliza que ya sustituye otra, o una pedida por el
+   * corredor). `null` = no se ha podido mirar. Sin firma no sale el correo a la compañía, así que
+   * si nadie se lo dice, la vieja se renueva y se cobra.
+   */
+  firmas: FirmaParaAviso[] | null
   hoy: Date
 }
+
+export type FirmaParaAviso = { id: string; compania: string | null }
 
 export type Avisos = {
   avisos: Aviso[]
@@ -168,6 +177,8 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   // supresión), así que el enlace mandaría a alguien a buscar un dato que no
   // está. En «Recordatorios» sí aparece, porque es de donde sale su precarga.
   carnet_caducado: '/boveda?vista=recordatorios',
+  // «Pendiente de tu firma» vive en la bóveda (vista de seguros), que es donde se firma.
+  anulacion_por_firmar: '/boveda',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -370,6 +381,20 @@ export function avisosDe(x: EntradaAvisos): Avisos {
           href: HREF_POR_TIPO.carnet_caducado,
         })
       }
+    }
+  }
+
+  if (x.firmas === null) {
+    fuentesIlegibles.push('firmas')
+  } else {
+    for (const f of x.firmas ?? []) {
+      avisos.push({
+        tipo: 'anulacion_por_firmar',
+        id: f.id,
+        titulo: `Falta tu firma para dar de baja tu seguro${f.compania ? ` de ${f.compania}` : ''}`,
+        detalle: 'Sin tu firma no podemos pedir la baja a la compañía, y podría renovarlo y cobrártelo. Se firma con un código que te llega al correo.',
+        href: HREF_POR_TIPO.anulacion_por_firmar,
+      })
     }
   }
 

@@ -8,7 +8,7 @@ import {
 
 import { companiasConCanal } from '@/lib/canales-compania'
 import { carnetsDeIdentidad } from '@/lib/carnets'
-import { carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
+import { carteraALaVista, carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { listarContactosPropios } from '@/lib/contactos-propios'
 import { prisma } from '@/lib/db'
 import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
@@ -113,7 +113,8 @@ export default async function Boveda({
   // automático de «Mis seguros» (`AvisoContacto`) como la pestaña «Mis datos»
   // — el portal no calcula la vigencia (ver la cabecera de ese módulo).
   const [cartera, declaradas, partes, companias, hojas, elegibles, contacto] = await Promise.all([
-    carteraDeIdentidad(identidad.id),
+    // Para pintar: sin las pólizas ya sustituidas por otra (la ficha y los partes usan la entera).
+    carteraDeIdentidad(identidad.id).then(carteraALaVista),
     prisma.portalPolizaDeclarada.findMany({
       where: { identidadId: identidad.id },
       orderBy: { creadaEn: 'desc' },

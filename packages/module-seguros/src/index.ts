@@ -793,3 +793,4 @@ export {
   type LineaAsistencia, type TelefonoCompania,
 } from './telefonos-companias.ts'
 export { ACCIONES_CARTA_MEDIADOR, ESTADOS_CARTA_ABIERTA, cartaNombramientoMediador, esCompaniaDeRelleno, transicionCartaMediador, type AccionCartaMediador, type DatosCartaMediador, type EstadoCartaMediador } from './carta-mediador.ts'
+export { SUSTITUCION_DIAS_ANTES, SUSTITUCION_DIAS_DESPUES, claveRiesgo, detectarSustituciones, solicitudPorSustitucion, sustituidasARetirar, type DuplicidadDetectada, type PolizaParaSustitucion, type ResultadoSustituciones, type RiesgoComun, type SustitucionDetectada } from './sustitucion-auto.ts'

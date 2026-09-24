@@ -80,6 +80,7 @@ export type {
   PeticionParaAviso,
   ReparoParaAviso,
   CarnetParaAviso,
+  FirmaParaAviso,
   EntradaAvisos,
   Avisos,
 } from './avisos.ts'

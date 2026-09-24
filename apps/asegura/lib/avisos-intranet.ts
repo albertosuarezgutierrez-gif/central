@@ -273,6 +273,7 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
       peticiones: [],
       datos: [],
       carnets: [],
+      firmas: [],
     }
     por.set(clienteId, nuevo)
     return nuevo
@@ -372,6 +373,15 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
       dame(c.clienteId).carnets.push({ id: c.id, tipo: c.tipo, fechaCaducidad: r.fechaCaducidad })
     }
   }
+
+  // Anulaciones que esperan la firma del TOMADOR (solo `solicitada`: la firmada ya no le pide nada).
+  // Sin su firma el correo a la compañía no sale y la póliza vieja se renueva y se cobra.
+  const firmas = await db.$queryRaw<{ id: string; clienteId: string; compania: string | null }[]>`
+    select a.id::text as id, a.cliente_id::text as "clienteId", coalesce(cd.nombre_comun, p.aseguradora) as compania
+    from anulacion a join polizas p on p.id = a.poliza_id
+      left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
+    where a.correduria_id = ${correduriaId}::uuid and a.estado = 'solicitada' and a.cliente_id = p.cliente_id`
+  for (const f of firmas) dame(f.clienteId).firmas.push({ id: f.id, compania: f.compania })
 
   return { pendientes: [...por.values()], identidadesServidas }
 }

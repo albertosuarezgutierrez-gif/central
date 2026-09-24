@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { autorizacionesDeIdentidad } from '@/lib/autorizaciones'
 import { avisosDe, type Avisos } from '@/lib/avisos'
+import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { carnetsDeIdentidad } from '@/lib/carnets'
 import { reparosDeMisDatos } from '@/lib/mis-datos'
 import { obligacionesDeIdentidad } from '@/lib/obligaciones'
@@ -34,7 +35,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos, carnets] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -44,6 +45,8 @@ export async function GET() {
     reparosDeMisDatos(identidad.id),
     // Quinta, mismo puente: la fecha de carné y de nacimiento también van cifradas.
     carnetsDeIdentidad(identidad.id),
+    // Sexta, mismo puente: las anulaciones que esperan su firma (solo del tomador, lo decide asegura).
+    anulacionesPendientes(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -53,6 +56,11 @@ export async function GET() {
   if (peticiones.status === 'rejected') console.error('[avisos] peticiones ilegibles', peticiones.reason)
   if (datos.status === 'rejected') console.error('[avisos] datos de contacto ilegibles', datos.reason)
   if (carnets.status === 'rejected') console.error('[avisos] carnés ilegibles', carnets.reason)
+  if (firmas.status === 'rejected') console.error('[avisos] firmas pendientes ilegibles', firmas.reason)
+  // `null` del puente = no se pudo mirar (no «no hay»).
+  const firmasLeidas = firmas.status === 'fulfilled' && firmas.value !== null
+    ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
+    : null
 
   const respuesta: Avisos = avisosDe({
     autorizaciones: autorizaciones.status === 'fulfilled' ? autorizaciones.value : null,
@@ -60,6 +68,7 @@ export async function GET() {
     peticiones: peticiones.status === 'fulfilled' ? peticiones.value.recibidas : null,
     datos: datos.status === 'fulfilled' ? datos.value : null,
     carnets: carnets.status === 'fulfilled' ? carnets.value : null,
+    firmas: firmasLeidas,
     hoy: new Date(),
   })
 

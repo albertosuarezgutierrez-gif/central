@@ -96,6 +96,11 @@ export function sqlVolcadoHistorico(alias = 'p'): string {
 export type EntradaCarteraEnVigor = EntradaCarteraViva & {
   /** `estado_poliza` de la BD. `null`/`undefined` = no vigente (no se supone). */
   estado: string | null | undefined
+  /** `polizas.sustituida_at`. Con valor, otra póliza ocupa su sitio y esta se ANULA: deja de ser
+   *  cartera en vigor para siempre, pase lo que pase con la nueva (Alberto, 23/09/2026: «esa se
+   *  anula y se anula»; si la nueva cae por impago se avisa como cualquier impago, y el estado real
+   *  lo trae CIMA). `undefined` = quien llama no lo lee. */
+  sustituidaAt?: unknown
 }
 
 /**
@@ -107,6 +112,7 @@ export type EntradaCarteraEnVigor = EntradaCarteraViva & {
  */
 export function esCarteraEnVigor(p: EntradaCarteraEnVigor): boolean {
   if (!esCarteraViva(p)) return false
+  if (p.sustituidaAt != null) return false
   return p.estado != null && esEstadoVigente(p.estado)
 }
 
@@ -117,14 +123,15 @@ export function esCarteraNoEnVigor(p: EntradaCarteraEnVigor): boolean {
 
 /** El mismo criterio como `where` de Prisma. Combínalo dentro de un `AND`. */
 export const WHERE_CARTERA_EN_VIGOR = {
-  AND: [WHERE_CARTERA_VIVA, { estado: { in: [...POLIZA_ESTADOS_VIGENTES] } }],
+  AND: [WHERE_CARTERA_VIVA, { estado: { in: [...POLIZA_ESTADOS_VIGENTES] } }, { sustituidaAt: null }],
 }
 
 const SQL_ESTADOS_VIGENTES = POLIZA_ESTADOS_VIGENTES.map((e) => `'${e}'`).join(', ')
 
+
 /** El mismo criterio en SQL crudo. `alias` es el de `polizas`. */
 export function sqlCarteraEnVigor(alias = 'p'): string {
-  return `(${sqlCarteraViva(alias)} and ${alias}.estado::text in (${SQL_ESTADOS_VIGENTES}))`
+  return `(${sqlCarteraViva(alias)} and ${alias}.estado::text in (${SQL_ESTADOS_VIGENTES}) and ${alias}.sustituida_at is null)`
 }
 
 /** El complementario exacto en SQL crudo. `is not true` y no `not (…)`: con

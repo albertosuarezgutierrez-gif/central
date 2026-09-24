@@ -35,3 +35,11 @@ test('no se abre retención si la póliza ya tiene CUALQUIER oportunidad abierta
   const abrir = src.slice(src.indexOf('async function abrirRetencion'), src.indexOf('const ESTADOS_VIGENTES'))
   assert.doesNotMatch(abrir, /info_riesgo->>'origen' = \$\{ORIGEN_RETENCION\}/)
 })
+
+test('🚨 la sustitución se enlaza ANTES de la foto: la baja de la vieja no nace como fuga', () => {
+  const enlace = src.indexOf('await enlazarSustituciones(tx, correduriaId)')
+  assert.ok(enlace > 0, 'detectarYGuardar ya no enlaza sustituciones')
+  assert.ok(enlace < src.indexOf('await fotoActual(correduriaId, tx)'), 'enlazar después de la foto deja la baja como fuga')
+  // Con punto de guardado: un fallo del enlace no puede tumbar la detección de eventos entera.
+  assert.ok(src.lastIndexOf('savepoint sustitucion`', enlace) > 0 && src.indexOf('rollback to savepoint sustitucion', enlace) > enlace)
+})

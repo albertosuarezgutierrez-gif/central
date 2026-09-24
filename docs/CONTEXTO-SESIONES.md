@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(23/09/2026)** 🔁 **PR 10 (#3422): sustitución AUTOMÁTICA, duplicidades y aviso a la compañía al emitir.** Clave del
+riesgo por ramo (matrícula · refcat/dirección · DNI asegurado); la sustituida sale de «en vigor» para siempre («se anula y
+se anula»); el portal la retira de la LISTA, no del acceso. Al constar la nueva: presupuesto aceptado → emitido solo y su
+anulación firmada a la cola; emitida fuera (web) → expediente `sustitucion` pidiendo firma (aviso `anulacion_por_firmar`).
+Correo de no renovación a Mapfre (CCORREDOR@) enviado con OK de Alberto, fuera del mes del art. 22 → vigilar respuesta.
+Drive «POLIZAS EMITIDAS»: Reale de José y Occident moto de Víctor = las sustituciones detectadas; proyecto 40804066 → `emitida`.
+Pendiente: Mapfre 2002600520435 (Antonio Cruz Martínez) no está aún en CIMA y su ficha parece duplicada: verificar DNI.
+
 **(23/09/2026)** 🧾 **Aviso de ingesta: Mapfre muda y 36 recibos de Occident sin guardar.** Mapfre C0058: 0 ficheros desde el
 23/06 (el resto entra a diario) → correo a soporte@cimaseg.es (cc accesos.cima@tirea.es) con OK de Alberto. Recibos: 39 del
 15/09 (dos REC 299) en cuarentena por pólizas duplicadas que se fusionaron el 17/09; no es el mapper (texto del panel

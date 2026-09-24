@@ -31,6 +31,7 @@ import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { proponerReciboDevuelto } from './aprobaciones'
 import { confirmarAnulaciones } from './anulaciones'
+import { abrirAnulacionesPorSustitucion, enlazarSustituciones, liberarPresupuestosEmitidos } from './sustituciones-auto'
 
 type Consultor = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw'>
 
@@ -92,6 +93,18 @@ export type ResultadoDeteccion = {
   anulacionesConfirmadas: number
   /** Retenciones abiertas antes que se cierran porque ya no hacen falta. */
   retencionesCerradas: number
+  /** Pólizas nuevas enlazadas solas con la que sustituyen (mismo cliente, ramo y matrícula). */
+  sustitucionesEnlazadas: number
+  /** Parejas que casaban pero no de forma única: no se enlazan (se mira a mano en la ficha). */
+  sustitucionesAmbiguas: number
+  /** Dos vigentes del mismo riesgo que se solapan sin sucederse (se paga dos veces lo mismo). */
+  duplicidades: number
+  /** El enlace de sustituciones falló en esta pasada (el resto de la detección sí corrió). */
+  sustitucionesFallidas: boolean
+  /** Presupuestos aceptados marcados emitidos solos (su anulación firmada pasa a la cola). */
+  presupuestosEmitidos: number
+  /** Expedientes de anulación abiertos solos por sustitución (falta la firma del cliente). */
+  anulacionesPorSustitucion: number
 }
 
 /** La foto actual parece rota (ha desaparecido de golpe una parte grande de la cartera). */
@@ -104,6 +117,26 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     // pueden comparar una foto vieja contra otra ya guardada. `for update` no basta la primera vez,
     // cuando la fila aún no existe.
     await tx.$executeRaw`select pg_advisory_xact_lock(hashtext(${`cartera_foto:${correduriaId}`}))`
+    // Antes de la foto: una póliza que acaba de sustituirse sale ya como `sustituida`, y su baja
+    // posterior no se anuncia como fuga ni abre una retención a quien simplemente cambió de compañía.
+    // Con punto de guardado: un fallo aquí se cuenta y se dice, y no tumba la detección entera.
+    await tx.$executeRaw`savepoint sustitucion`
+    let sust = { enlazadas: 0, ambiguas: 0, duplicidades: 0 }
+    let presupuestosEmitidos = 0
+    let anulacionesAbiertas = { abiertas: 0, sinDatos: 0 }
+    let sustitucionesFallidas = false
+    try {
+      sust = await enlazarSustituciones(tx, correduriaId)
+      // Con la sustituta ya en cartera: soltar la anulación que el cliente firmó al aceptar el
+      // presupuesto, y pedir la firma de las que se emitieron fuera de él.
+      presupuestosEmitidos = await liberarPresupuestosEmitidos(tx, correduriaId)
+      anulacionesAbiertas = await abrirAnulacionesPorSustitucion(tx, correduriaId, hoyMadrid())
+      await tx.$executeRaw`release savepoint sustitucion`
+    } catch (err) {
+      await tx.$executeRaw`rollback to savepoint sustitucion`
+      sustitucionesFallidas = true
+      console.error('[eventos-cartera] sustituciones no enlazadas:', err instanceof Error ? err.message : err)
+    }
     const actual = await fotoActual(correduriaId, tx)
     const previa = await tx.$queryRaw<{ foto: Foto }[]>`
       select foto from cartera_foto where correduria_id = ${correduriaId}::uuid`
@@ -189,6 +222,12 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       aprobacionesNuevas,
       aprobacionesFallidas,
       anulacionesConfirmadas: anul.confirmadas,
+      sustitucionesEnlazadas: sust.enlazadas,
+      sustitucionesAmbiguas: sust.ambiguas,
+      duplicidades: sust.duplicidades,
+      sustitucionesFallidas,
+      presupuestosEmitidos,
+      anulacionesPorSustitucion: anulacionesAbiertas.abiertas,
     }
   }, { timeout: 30_000 }).then(async (r) => {
     const { retenciones, ...resto } = r

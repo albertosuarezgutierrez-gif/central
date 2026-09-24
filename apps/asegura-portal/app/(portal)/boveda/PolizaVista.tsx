@@ -212,6 +212,18 @@ export function Bien({ bien }: { bien: BienAsegurado }) {
  *  (`PORTAL_MAIL_REPLY_TO`), y no se inventa un endpoint que no existe. */
 const CORREO_CORREDURIA = 'hola@grupoasegura.es'
 
+/**
+ * La póliza que esta sustituye (el cliente se cambió de compañía) ya no sale aparte: lo dice la
+ * nueva, para que no parezca que ha desaparecido un seguro. `null` = no sustituye a ninguna.
+ */
+export function textoSustitucion(p: PolizaPortal, hoy: Date = new Date()): string | null {
+  const v = p.sustituyeA
+  if (v === null) return null
+  const f = fechaEs(v.fechaVencimiento)
+  if (f === null) return `Sustituye a tu seguro de ${v.compania}`
+  return `Sustituye a tu seguro de ${v.compania}, que ${v.fechaVencimiento! < hoy ? 'venció' : 'vence'} el ${f}`
+}
+
 export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
   const devueltos = p.recibos?.devueltos ?? 0
   if (devueltos === 0) return null
