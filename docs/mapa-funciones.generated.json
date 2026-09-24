@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T06:07:43Z",
-  "sha": "ff71ff68f060939a218e9c4b675ab53cc215e1d3",
+  "generadoEn": "2026-09-24T07:30:34Z",
+  "sha": "6a006875bd2656d8598832ea23f767532b9ce4e9",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -14963,7 +14963,7 @@
           "exportada": true,
           "params": "tx: Tx, correduriaId: string, reciboId: string, eventoId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 32,
+          "linea": 34,
           "resumen": "`true` si ha dejado una propuesta nueva. Idempotente por `clave` (una por recibo y vencimiento)."
         },
         {
@@ -14972,7 +14972,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 66,
+          "linea": 68,
           "resumen": "Propone comunicar a la compañía las anulaciones FIRMADAS por el cliente en el portal (pieza 2-d-3) sin propuesta viva. Solo las de firma electrónica (`firma_id` + `carta_texto`): una firma en papel la"
         },
         {
@@ -14981,7 +14981,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 115,
+          "linea": 117,
           "resumen": "Propone mandar a la compañía las cartas de nombramiento de mediador FIRMADAS en el portal sin propuesta viva (mismas reglas que las anulaciones: fallida o caducada se repropone; rechazada no, la manda"
         },
         {
@@ -14990,7 +14990,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<void>",
-          "linea": 180,
+          "linea": 182,
           "resumen": "Retira lo que ya no es verdad: lo caducado, y el aviso de un recibo que ya no consta devuelto (se cobró o la compañía lo rectificó). Escribirle «no consta pagado» a quien ya ha pagado es justo lo que "
         },
         {
@@ -14999,7 +14999,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<AprobacionPendiente[]>",
-          "linea": 208,
+          "linea": 210,
           "resumen": "Pendientes, urgentes primero."
         },
         {
@@ -15008,16 +15008,25 @@
           "exportada": true,
           "params": "mensaje: string",
           "retorno": "boolean",
-          "linea": 279,
+          "linea": 281,
           "resumen": "Cortes de red o de espera: el proveedor pudo haber aceptado el mensaje antes de cortarse."
+        },
+        {
+          "nombre": "adjuntosFirmados",
+          "kind": "function",
+          "exportada": false,
+          "params": "base: string, texto: string, f: FirmaGuardada | undefined",
+          "retorno": "Promise<Adjunto[]>",
+          "linea": 300,
+          "resumen": "Lo que se adjunta a la compañía: el ORIGINAL en texto (el que respalda la huella de la firma) y, si hay evidencia, el mismo texto en PDF con el justificante debajo — un `.txt` suelto se lee como un bo"
         },
         {
           "nombre": "enviarCorreo",
           "kind": "function",
           "exportada": false,
-          "params": "destino: string, asunto: string, texto: string, adjunto?: { nombre: string; texto: string }",
+          "params": "destino: string, asunto: string, texto: string, adjuntos?: Adjunto[]",
           "retorno": "Promise<",
-          "linea": 289
+          "linea": 320
         },
         {
           "nombre": "destinoAnulacion",
@@ -15025,7 +15034,7 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string | null, contactoId: string | undefined",
           "retorno": "Promise<",
-          "linea": 314,
+          "linea": 345,
           "resumen": "A quién y con qué adjunto va la anulación firmada: el buzón de la compañía que Alberto ELIGE en la tarjeta (tiene que ser un contacto activo de la compañía de ESA póliza). No se deduce por área."
         },
         {
@@ -15034,7 +15043,7 @@
           "exportada": false,
           "params": "correduriaId: string, cartaId: string, contactoId: string | undefined",
           "retorno": "Promise<",
-          "linea": 336,
+          "linea": 369,
           "resumen": "Igual que `destinoAnulacion`, para la carta de nombramiento firmada. El adjunto es la carta GUARDADA (cifrada en BD)."
         },
         {
@@ -15043,7 +15052,7 @@
           "exportada": false,
           "params": "correduriaId: string, cartaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 359,
+          "linea": 394,
           "resumen": "La carta pasa a «enviada»: el correo salió. Un fallo aquí no puede invitar a repetir el envío."
         },
         {
@@ -15052,7 +15061,7 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string",
           "retorno": "Promise<boolean>",
-          "linea": 373,
+          "linea": 408,
           "resumen": "La anulación pasa a «comunicada»: el correo salió (o Alberto ha comprobado que salió)."
         },
         {
@@ -15061,7 +15070,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, d: Decision, actor: string",
           "retorno": "Promise<ResultadoDecision>",
-          "linea": 388
+          "linea": 423
         },
         {
           "nombre": "anotarHistorial",
@@ -15069,7 +15078,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, polizaId: string | null, nota: string",
           "retorno": "Promise<void>",
-          "linea": 521
+          "linea": 556
         },
         {
           "nombre": "enviosInciertos",
@@ -15077,7 +15086,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<EnvioIncierto[]>",
-          "linea": 537
+          "linea": 572
         }
       ],
       "tablas": [
@@ -15090,12 +15099,13 @@
         "devuelto",
         "firma",
         "historial_interno",
+        "node",
         "poliza_recibos",
         "polizas",
         "presupuesto"
       ],
       "rutaApi": null,
-      "hash": "b1f0ac446710"
+      "hash": "c3f665a0bf8e"
     },
     {
       "ruta": "apps/asegura/lib/asegura-db.ts",
@@ -22533,6 +22543,63 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "05ede135bb96"
+    },
+    {
+      "ruta": "apps/asegura/lib/documento-firmado-pdf.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El documento firmado en el portal (carta de anulación o de nombramiento de mediador), en PDF para mandarlo a la compañía. Un `.txt` suelto se lee como un borrador; un PDF con el justificante de la firma debajo es lo que una compañía está acostumbrada a archivar. 🚨 La huella SHA-256 de la firma es l",
+      "exporta": [
+        "lineasJustificante",
+        "pdfDocumentoFirmado"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaHoraMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 30
+        },
+        {
+          "nombre": "lineasJustificante",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EvidenciaFirma",
+          "retorno": "string[]",
+          "linea": 40,
+          "resumen": "Las líneas del justificante, puras (lo que se pinta debajo de la carta)."
+        },
+        {
+          "nombre": "paraFuente",
+          "kind": "function",
+          "exportada": false,
+          "params": "font: PDFFont, t: string",
+          "retorno": "string",
+          "linea": 52,
+          "resumen": "Helvetica solo sabe WinAnsi: lo que no está se cambia por «?» en vez de romper el PDF."
+        },
+        {
+          "nombre": "partirLineas",
+          "kind": "function",
+          "exportada": false,
+          "params": "font: PDFFont, texto: string, tam: number, ancho: number",
+          "retorno": "string[]",
+          "linea": 57
+        },
+        {
+          "nombre": "pdfDocumentoFirmado",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, evidencia: EvidenciaFirma",
+          "retorno": "Promise<Uint8Array>",
+          "linea": 80,
+          "resumen": "La carta tal cual y, debajo, el justificante de la firma."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "024d7b2a7f62"
     },
     {
       "ruta": "apps/asegura/lib/documento-portal.ts",
@@ -71242,7 +71309,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "785ba4ca8814"
+      "hash": "061569985d17"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/DeclaradasVencer.tsx",
@@ -81992,7 +82059,7 @@
         "periodo_inicio"
       ],
       "rutaApi": "/api/correduria/comisiones",
-      "hash": "5298446dd9d2"
+      "hash": "ee7be1cc80ff"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/companias/contactado/route.ts",
@@ -83220,7 +83287,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "e4d6ccd48101"
+      "hash": "93faf1817564"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/cima-pull-respaldo/route.ts",
@@ -97159,7 +97226,7 @@
           "exportada": true,
           "params": "concepto: string | null",
           "retorno": "string | null",
-          "linea": 55,
+          "linea": 60,
           "resumen": "\"Clave de referencia\" del concepto: el código que identifica a la compañía pagadora en los abonos de la correduría (p.ej. \"M1454\", \"M00171\", \"8/92361\"). Se usa para APRENDER reglas (clave → compañía):"
         },
         {
@@ -97168,7 +97235,7 @@
           "exportada": true,
           "params": "concepto: string | null",
           "retorno": "string | null",
-          "linea": 84,
+          "linea": 93,
           "resumen": "\"Clave de comercio\": token que identifica al COMERCIO en compras de tarjeta / recibos (\"COMPRA EN PETROPRIX GINES\" → \"PETROPRIX\", \"COMPRA EN PAYPAL *IONOS CLOUD\" → \"IONOS\", \"COMPRA EN NETFLIX.COM\" → \""
         },
         {
@@ -97177,7 +97244,7 @@
           "exportada": true,
           "params": "clave: string | null | undefined",
           "retorno": "boolean",
-          "linea": 127,
+          "linea": 140,
           "resumen": "¿Es SEGURA esta clave para aprender una regla clave→destino (que se aplica por substring)? Rechaza las trampa: demasiado cortas, sin ninguna letra útil, números cortos, o compuestas SOLO de términos g"
         },
         {
@@ -97186,13 +97253,13 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null",
           "retorno": "MotivoSeguros",
-          "linea": 148,
+          "linea": 161,
           "resumen": "Explica POR QUÉ un ABONO en BBVA quedó como 'seguros': porque el concepto trae el nombre de una aseguradora / liquidación de comisiones ('nombre' → alta confianza), o porque cayó por el fallback de de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "18617fc354aa"
+      "hash": "80db7c413c7c"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/blog-agente.ts",
@@ -97576,6 +97643,9 @@
       "ambito": "apps/plataforma",
       "resumen": "Cuadre de comisiones de la correduría. PURO: sin BD ni red, testeable con `node --test`. La UI no decide nada; solo pinta lo que devuelve esto. Patrón de referencia: `lib/subastas/resumen-docs.ts`. 🚨 `null` = no ha llegado. `0` = comprobado y es cero. No se colapsan nunca: es la diferencia entre «M",
       "exporta": [
+        "remesaInferida",
+        "remesaEfectiva",
+        "brutoEfectivo",
         "estadoCuadre",
         "totalEsCerrado",
         "cuantosPendientes",
@@ -97584,12 +97654,39 @@
       ],
       "funciones": [
         {
+          "nombre": "remesaInferida",
+          "kind": "function",
+          "exportada": true,
+          "params": "liqBruto: number, liqRetencion: number | null",
+          "retorno": "number",
+          "linea": 54,
+          "resumen": "Lo que debería entrar al banco por una liquidación de bruto NEGATIVO con remesa 0 (convención de signo del EIAC de Occident): |bruto| − retención."
+        },
+        {
+          "nombre": "remesaEfectiva",
+          "kind": "function",
+          "exportada": true,
+          "params": "liqBruto: number | null, liqRetencion: number | null, liqRemesa: number | null",
+          "retorno": "number | null",
+          "linea": 60,
+          "resumen": "La remesa que CUENTA para casar contra el banco: la del extracto o, con bruto negativo y remesa 0 (convención de Occident), la inferida. Es la que usa el cron para casar abonos por importe."
+        },
+        {
+          "nombre": "brutoEfectivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "liqBruto: number | null, liqRemesa: number | null",
+          "retorno": "number | null",
+          "linea": 67,
+          "resumen": "El bruto que va al TOTAL (la cifra de la asesoría): con la misma convención, |bruto|. Sumar el negativo restaría lo que se cobró, mientras la retención del mismo periodo suma en positivo."
+        },
+        {
           "nombre": "estadoCuadre",
           "kind": "function",
           "exportada": true,
           "params": "e: EntradaCuadre",
           "retorno": "EstadoCuadre",
-          "linea": 52
+          "linea": 72
         },
         {
           "nombre": "totalEsCerrado",
@@ -97597,7 +97694,7 @@
           "exportada": true,
           "params": "estados: readonly EstadoCuadre[]",
           "retorno": "boolean",
-          "linea": 90,
+          "linea": 119,
           "resumen": "¿El total anual se puede presentar como CERRADO? Solo si ningún periodo está pendiente de dato o de comprobación. 🚨 Un total con huecos pintado como definitivo es justo la mentira que este módulo evi"
         },
         {
@@ -97606,7 +97703,7 @@
           "exportada": true,
           "params": "estados: readonly EstadoCuadre[]",
           "retorno": "number",
-          "linea": 95,
+          "linea": 124,
           "resumen": "Cuántos periodos están pendientes, para poder decirlo en la UI."
         },
         {
@@ -97615,7 +97712,7 @@
           "exportada": true,
           "params": "mes: string, inicio: string, fin: string",
           "retorno": "boolean",
-          "linea": 107,
+          "linea": 136,
           "resumen": "¿El mes `YYYY-MM` cae dentro del periodo `inicio`..`fin` (fechas `YYYY-MM-DD`)? Hace falta porque el devengo se agrupa por MES natural (cuándo se cobró el recibo) y la liquidación viene con el periodo"
         },
         {
@@ -97624,13 +97721,13 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "string",
-          "linea": 116,
+          "linea": 145,
           "resumen": "Último día del mes `YYYY-MM`, como `YYYY-MM-DD`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69a7dc8257ee"
+      "hash": "7378e782634c"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/dni-otp.ts",
@@ -141050,7 +141147,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "48231341a637"
+      "hash": "14cac65e4df1"
     },
     {
       "ruta": "packages/module-seguros/src/backfill-contacto.ts",
@@ -150843,7 +150940,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3638,
-    "funciones": 11491
+    "archivos": 3639,
+    "funciones": 11500
   }
 }
