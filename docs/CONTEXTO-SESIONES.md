@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** — Portal: «Mensajes con tu corredor» (ASegura OS §Q.7). Tabla `seguros.portal_mensaje` (aplicada; FK compuesta cliente+póliza, sin DELETE, sin `crm_seguros`), pestaña «Mensajes» del portal con hilos por póliza/general (tope 20/día, Telegram a Alberto), bloque en Hoy de plataforma (cuenta como incidencia) y pestaña «Mensajes» en la ficha para contestar; el correo al cliente es opcional y NO lleva el texto. La vista de corredor ni escribe ni marca leído. Cepos: `apps/asegura/lib/mensajes-portal.test.ts`, `test/regression-portal-mensajes.test.ts`, `apps/plataforma/lib/mensajes-asegura.test.ts` (5 mutaciones vistas morder).
+
 **(24/09/2026)** — Portal: los recibos se ordenan por la fecha que la fila ENSEÑA (`fechaDeRecibo()`: vencimiento si al cobro, emisión si no). Ordenaba por emisión y un pendiente emitido en 2025 que vence el 10/12/2026 salía entre cobrados de 2025. Test con el caso de la captura, visto fallar.
 
 **(24/09/2026)** — Portal: «Pendiente de ti» (ASegura OS §Q.4). Lista única arriba de «Mis seguros» con recibo devuelto, firma de anulación, datos que faltan para contratar, presupuestos por elegir (antes solo por el enlace del correo) y contacto por confirmar. Regla pura `apps/asegura-portal/lib/pendiente-de-ti.ts` (6 tests, 2 cepos vistos fallar); fuente ilegible → «no hemos podido comprobar», nunca «nada pendiente». Siguiente: mensajes con el corredor (§Q.7).

@@ -9,6 +9,7 @@ import Cabecera from './Cabecera'
 import DescartarCliente from './DescartarCliente'
 import FichaTabs, { tabDeParametro } from './FichaTabs'
 import TabContactos from './TabContactos'
+import TabMensajes from './TabMensajes'
 import TabPolizas from './TabPolizas'
 import TabRecibos from './TabRecibos'
 import TabResumen from './TabResumen'
@@ -135,6 +136,11 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       )}
 
       {tab === 'contactos' && <TabContactos ficha={ficha} personas={personas} />}
+
+      {/* Lo que el cliente ha escrito en su portal y lo que se le ha contestado. */}
+      {tab === 'mensajes' && (
+        <TabMensajes clienteId={ficha.id} polizas={porClase.viva.map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))} />
+      )}
 
       {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
       {tab === 'documentos' && (

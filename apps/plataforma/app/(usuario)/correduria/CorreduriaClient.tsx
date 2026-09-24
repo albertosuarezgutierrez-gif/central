@@ -26,6 +26,7 @@ import ExportRgpd from './ExportRgpd'
 import Companias from './Companias'
 import RadarRecibos from './RadarRecibos'
 import PartesPortal from './PartesPortal'
+import MensajesPortal from './MensajesPortal'
 import Supresiones from './Supresiones'
 import Quejas from './Quejas'
 import Bloque from './Bloque'
@@ -166,6 +167,7 @@ export default function CorreduriaClient() {
   const [nLeads, setNLeads] = useState<number | null | undefined>(undefined)
   const [nSupresiones, setNSupresiones] = useState<number | null | undefined>(undefined)
   const [nQuejas, setNQuejas] = useState<number | null | undefined>(undefined)
+  const [nMensajes, setNMensajes] = useState<number | null | undefined>(undefined)
   const [nDescuadres, setNDescuadres] = useState<number | null | undefined>(undefined)
   const [nRetencion, setNRetencion] = useState<number | null | undefined>(undefined)
   const [nSustituciones, setNSustituciones] = useState<number | null | undefined>(undefined)
@@ -249,7 +251,7 @@ export default function CorreduriaClient() {
   // plazo corriendo. `undefined` mientras cargan; `null` si ninguna se pudo leer.
   // Hasta que contestan las cuatro no se pinta nada: un «0» con tres colas
   // aún cargando sería una afirmación que nadie ha comprobado.
-  const colasIncid = [nPartes, nSupresiones, nRetencion, nSustituciones, nDescuadres]
+  const colasIncid = [nPartes, nMensajes, nSupresiones, nRetencion, nSustituciones, nDescuadres]
   const nIncidencias = colasIncid.some(n => n === undefined) ? undefined : agregarContadores(colasIncid)
 
   const contadores: ContadoresSeccion = {
@@ -371,6 +373,9 @@ export default function CorreduriaClient() {
             porque quien lo mandó cree que su compañía ya lo sabe, y hasta que
             se abra allí no lo sabe nadie. */}
         <PartesPortal onContador={setNPartes} />
+
+        {/* Mensajes que el cliente ha escrito en su portal y nadie ha leído: alguien espera respuesta. */}
+        <MensajesPortal onContador={setNMensajes} />
 
         {/* Las solicitudes de supresión (art. 17 RGPD) que abre el cliente en
             el portal. Van aquí arriba porque llevan un reloj legal de UN MES

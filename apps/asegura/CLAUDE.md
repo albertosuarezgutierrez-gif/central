@@ -736,6 +736,9 @@ compañía elegida, por código DGS) → su anulación FIRMADA en la aceptación
 `anulacion_por_firmar` en la campana y en el correo de la intranet; el correo a la compañía sigue pasando por el OK. Portal: `sustituidasARetirar` la quita de la LISTA (no del acceso) por lector, con la
 nueva empezada y sin siniestros/devueltos pendientes. ⚠️ Medido: CIMA casi no manda el dato del riesgo fuera de motor
 (hogar 7/34 con dirección, 0 refcat, 0 DNI de asegurado en personas) → capturarlo al emitir es lo que falta.
+💬 **Mensajes del portal (24/09/2026, `lib/mensajes-portal.ts`, puerto `/api/operador/mensajes`).** GET = hilo de una ficha o la cola
+de sin leer; POST `responder` guarda la respuesta del corredor (y da por leído lo del cliente) y, SOLO si llega `avisar`, manda un
+correo «tienes una respuesta» SIN el texto; `leidos` sella. Toda consulta filtra correduría Y ficha. Cepo `lib/mensajes-portal.test.ts`.
 🎂 **Felicitación de cumpleaños (24/09/2026, `lib/felicitaciones.ts`, cron `/api/cron/felicitaciones` 07:00 UTC).** Alberto:
 «felicitar por mail y app los cumpleaños». Solo cartera EN VIGOR y personas físicas (la fecha de nacimiento va cifrada: por eso
 vive aquí). Regla pura `esCumpleanos` (día de Madrid; 29/02 → 28/02 en año no bisiesto). Tabla `seguros.felicitacion` (una fila

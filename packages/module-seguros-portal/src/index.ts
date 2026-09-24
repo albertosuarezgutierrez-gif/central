@@ -483,3 +483,5 @@ export {
 } from './mejorar-precio.ts'
 export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } from './mejorar-precio.ts'
 export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'
+export { AUTORES_MENSAJE, MAX_CUERPO_MENSAJE, MAX_MENSAJES_DIA, agruparHilos, normalizarCuerpo, sinLeerPara } from './mensaje.ts'
+export type { AutorMensaje, Hilo, Mensaje } from './mensaje.ts'

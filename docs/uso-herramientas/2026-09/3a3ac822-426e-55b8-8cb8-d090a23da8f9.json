@@ -1,8 +1,8 @@
 {
  "sesion": "3a3ac822-426e-55b8-8cb8-d090a23da8f9",
  "inicio": "2026-09-23T05:11:15.768Z",
- "fin": "2026-09-24T11:57:36.070Z",
- "llamadas": 5255,
+ "fin": "2026-09-24T13:39:38.671Z",
+ "llamadas": 5420,
  "categorias": {
   "agente:Explore": {
    "llamadas": 9,
@@ -16,14 +16,14 @@
    }
   },
   "bash": {
-   "llamadas": 3192,
-   "chars_in": 2373520,
-   "chars_out": 10617031,
+   "llamadas": 3323,
+   "chars_in": 2471002,
+   "chars_out": 11101868,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3192
+    "Bash": 3323
    }
   },
   "lectura-directa": {
@@ -40,72 +40,72 @@
    }
   },
   "otro": {
-   "llamadas": 540,
-   "chars_in": 280824,
-   "chars_out": 7521026,
+   "llamadas": 551,
+   "chars_in": 284198,
+   "chars_out": 7617389,
    "errores": 0,
    "archivos_citados": 277,
    "chars_citados": 5669874,
    "tools": {
     "AskUserQuestion": 3,
     "Skill": 8,
-    "ToolSearch": 142,
+    "ToolSearch": 145,
     "ExitPlanMode": 10,
-    "ReadNotifications": 275,
-    "SubagentHandback": 46,
+    "ReadNotifications": 277,
+    "SubagentHandback": 47,
     "Artifact": 23,
     "ArtifactComments": 2,
     "ReportFindings": 2,
-    "TaskCreate": 10,
-    "TaskUpdate": 15,
+    "TaskCreate": 12,
+    "TaskUpdate": 18,
     "SendMessage": 1,
     "TaskStop": 1,
     "SendUserFile": 2
    }
   },
   "escritura": {
-   "llamadas": 247,
-   "chars_in": 1065957,
-   "chars_out": 6207934,
+   "llamadas": 256,
+   "chars_in": 1106278,
+   "chars_out": 6291069,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 148,
+    "Write": 157,
     "Edit": 99
    }
   },
   "sql": {
-   "llamadas": 296,
-   "chars_in": 172300,
-   "chars_out": 515991,
+   "llamadas": 299,
+   "chars_in": 173329,
+   "chars_out": 519219,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 296
+    "mcp__Supabase__execute_sql": 299
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 142,
-   "chars_in": 22761,
-   "chars_out": 110985,
+   "llamadas": 143,
+   "chars_in": 23054,
+   "chars_out": 111093,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 1596,
    "tools": {
     "mcp__Claude_Code_Remote__add_repo": 2,
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 20,
-    "mcp__Claude_Code_Remote__send_later": 52,
+    "mcp__Claude_Code_Remote__send_later": 53,
     "mcp__Claude_Code_Remote__delete_trigger": 48,
     "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 17,
     "mcp__Claude_Code_Remote__update_trigger": 3
    }
   },
   "mcp:github": {
-   "llamadas": 438,
-   "chars_in": 217360,
-   "chars_out": 1197229,
+   "llamadas": 444,
+   "chars_in": 219789,
+   "chars_out": 1205633,
    "errores": 7,
    "archivos_citados": 8,
    "chars_citados": 183360,
@@ -116,26 +116,26 @@
     "mcp__github__get_check_run": 5,
     "mcp__github__get_file_contents": 1,
     "mcp__github__list_pull_requests": 6,
-    "mcp__github__create_pull_request": 50,
-    "mcp__github__update_pull_request": 54,
-    "mcp__github__pull_request_read": 129,
-    "mcp__github__merge_pull_request": 50,
-    "mcp__github__subscribe_pr_activity": 33,
-    "mcp__github__unsubscribe_pr_activity": 34,
+    "mcp__github__create_pull_request": 51,
+    "mcp__github__update_pull_request": 55,
+    "mcp__github__pull_request_read": 130,
+    "mcp__github__merge_pull_request": 51,
+    "mcp__github__subscribe_pr_activity": 34,
+    "mcp__github__unsubscribe_pr_activity": 35,
     "mcp__github__add_issue_comment": 18,
     "mcp__github__actions_run_trigger": 2,
     "mcp__github__search_pull_requests": 1
    }
   },
   "agente:general-purpose": {
-   "llamadas": 12,
-   "chars_in": 24584,
-   "chars_out": 25168,
+   "llamadas": 13,
+   "chars_in": 25930,
+   "chars_out": 25316,
    "errores": 0,
    "archivos_citados": 46,
    "chars_citados": 288527,
    "tools": {
-    "Agent": 12
+    "Agent": 13
    }
   },
   "mcp:Vercel": {
@@ -178,25 +178,25 @@
    }
   },
   "agente:agente-architect": {
-   "llamadas": 19,
-   "chars_in": 38717,
-   "chars_out": 40756,
+   "llamadas": 20,
+   "chars_in": 40589,
+   "chars_out": 42813,
    "errores": 0,
-   "archivos_citados": 99,
-   "chars_citados": 1435485,
+   "archivos_citados": 105,
+   "chars_citados": 1646009,
    "tools": {
-    "Agent": 19
+    "Agent": 20
    }
   },
   "mcp:Supabase": {
-   "llamadas": 43,
-   "chars_in": 30730,
-   "chars_out": 4813,
+   "llamadas": 45,
+   "chars_in": 32957,
+   "chars_out": 4845,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__apply_migration": 32,
+    "mcp__Supabase__apply_migration": 34,
     "mcp__Supabase__list_projects": 11
    }
   },

@@ -6,10 +6,10 @@
  * `?tab=` inventado (o un enlace viejo) deje la ficha en blanco.
  */
 
-export type TabFicha = 'resumen' | 'polizas' | 'recibos' | 'siniestros' | 'contactos' | 'documentos' | 'historial'
+export type TabFicha = 'resumen' | 'polizas' | 'recibos' | 'siniestros' | 'contactos' | 'mensajes' | 'documentos' | 'historial'
 
 export const TABS_FICHA: readonly TabFicha[] = [
-  'resumen', 'polizas', 'recibos', 'siniestros', 'contactos', 'documentos', 'historial',
+  'resumen', 'polizas', 'recibos', 'siniestros', 'contactos', 'mensajes', 'documentos', 'historial',
 ]
 
 /** Un `?tab=` desconocido (o ausente) no falla: cae a «Resumen». */
