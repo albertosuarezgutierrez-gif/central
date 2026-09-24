@@ -9,7 +9,7 @@ import Link from 'next/link'
 import { btnStyle } from '@/components/ui'
 import { textoDesenlace, type Aprobacion, type CuerpoDecision, type Desenlace, type LecturaAprobaciones } from '@/lib/aprobaciones-asegura'
 
-const ORIGEN: Record<string, string> = { recibo_devuelto: 'Recibo devuelto', anulacion: 'Anulación firmada' }
+const ORIGEN: Record<string, string> = { recibo_devuelto: 'Recibo devuelto', anulacion: 'Anulación firmada', carta_mediador: 'Nombramiento de mediador firmado' }
 
 export default function Aprobaciones({ onContador }: { onContador?: (n: number | null) => void }) {
   const [d, setD] = useState<LecturaAprobaciones | null>(null)
@@ -127,7 +127,9 @@ export default function Aprobaciones({ onContador }: { onContador?: (n: number |
                 </div>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>
                   {a.para === 'compania'
-                    ? 'Se envía al buzón que elijas (la próxima anulación de esta compañía lo traerá ya elegido), con la carta que firmó el cliente adjunta: esa no se puede editar. Al salir, la anulación pasa a «comunicada».'
+                    ? a.origen === 'carta_mediador'
+                      ? 'Se envía al buzón que elijas (la próxima carta de nombramiento de esta compañía lo traerá ya elegido), con la carta que firmó el cliente adjunta: esa no se puede editar. Al salir, la carta pasa a «enviada»; la póliza no es nuestra hasta que la compañía la acepte.'
+                      : 'Se envía al buzón que elijas (la próxima anulación de esta compañía lo traerá ya elegido), con la carta que firmó el cliente adjunta: esa no se puede editar. Al salir, la anulación pasa a «comunicada».'
                     : 'Se envía al correo de la ficha.'} Caduca el {new Date(a.caduca).toLocaleDateString('es-ES')} si nadie lo decide.
                 </span>
               </>

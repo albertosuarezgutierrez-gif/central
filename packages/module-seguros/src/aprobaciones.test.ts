@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { POLITICA, borradorAnulacionCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
+import { POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
 
 const hoy = new Date('2026-09-23T10:00:00Z')
 const base = { ramo: 'auto', compania: 'MAPFRE', numeroPoliza: '3021700291186', importe: 225.97, vencimiento: '2026-09-10', hoy }
@@ -96,4 +96,14 @@ test('decidir: el buzón elegido viaja como uuid; otra cosa invalida la decisió
   assert.equal(decisionValida({ ...base, contactoId: '11111111-1111-1111-1111-111111111111' })?.decision, 'aprobar')
   assert.equal(decisionValida({ ...base, contactoId: 'a@b.es' }), null)
   assert.deepEqual(decisionValida(base), { decision: 'aprobar', asunto: 's', texto: 't' })
+})
+
+test('🪤 correo de la carta de nombramiento: identifica póliza y tomador, con la huella, y dura 30 días', () => {
+  const hoy = new Date('2026-09-24T10:00:00Z')
+  const b = borradorCartaMediadorCompania({ tomador: 'María López', compania: 'Mapfre', numeroPoliza: '0732', firmadaEl: '2026-09-24', docHash: 'abc123', mediador: 'Grupo ASegura', hoy })
+  assert.match(b.asunto, /Nombramiento de mediador · póliza nº 0732 · María López/)
+  assert.match(b.texto, /firmada por el tomador el 24\/09\/2026[\s\S]*abc123/)
+  assert.match(b.texto, /no modifica el contrato/)
+  assert.equal(b.urgente, false)
+  assert.equal(b.caduca.getTime(), caducaEn(hoy, 30).getTime())
 })

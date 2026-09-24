@@ -4,7 +4,7 @@ import assert from 'node:assert/strict'
 import { cartaNombramientoMediador, transicionCartaMediador } from './carta-mediador.ts'
 import { MEDIADOR } from './mediador.ts'
 
-const d = { tomador: 'María López', compania: 'Mapfre', numeroPoliza: '0732000113003', ramo: 'hogar', fechaCarta: '2026-09-23' }
+const d = { tomador: 'María López', documento: '12345678-z', compania: 'Mapfre', numeroPoliza: '0732000113003', ramo: 'hogar', fechaCarta: '2026-09-23' }
 
 test('🪤 la carta identifica póliza y mediador, y dice que el contrato NO cambia', () => {
   const t = cartaNombramientoMediador(d)!
@@ -12,7 +12,15 @@ test('🪤 la carta identifica póliza y mediador, y dice que el contrato NO cam
   assert.match(t, /póliza nº 0732000113003 \(hogar\)/)
   assert.match(t, new RegExp(MEDIADOR.identidad.claveDgsfp.replace('/', '\\/')))
   assert.match(t, /no modifica el contrato: la prima, las garantías y las condiciones siguen siendo las mismas/)
-  assert.match(t, /Firmado electrónicamente el 23\/09\/2026\.\nMaría López$/)
+  assert.match(t, /Firmado electrónicamente el 23\/09\/2026\.\nMaría López · DNI\/NIF 12345678Z$/)
+})
+
+test('🪤 la carta lleva el DNI del tomador; sin DNI válido no hay carta que firmar', () => {
+  assert.match(cartaNombramientoMediador(d)!, /Yo, María López, con DNI\/NIF 12345678Z, tomador de/)
+  assert.equal(cartaNombramientoMediador({ ...d, documento: null }), null)
+  assert.equal(cartaNombramientoMediador({ ...d, documento: '12345678A' }), null, 'letra que no cuadra')
+  assert.equal(cartaNombramientoMediador({ ...d, documento: 'no consta' }), null)
+  assert.match(cartaNombramientoMediador({ ...d, documento: 'B12345674' })!, /DNI\/NIF B12345674/, 'un CIF de empresa vale')
 })
 
 test('🪤 sin compañía o sin número no hay carta que firmar', () => {

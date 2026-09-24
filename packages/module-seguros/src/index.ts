@@ -779,7 +779,7 @@ export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, detectarCambios,
 export type { Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
 export { ORIGEN_RETENCION, decidirRetencion } from './retencion-fuga.ts'
 export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
-export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, borradorAnulacionCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
+export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
 export type { AccionAprobacion, Borrador, BuzonCompania, Decision, EntradaAnulacionCompania, EntradaReciboDevuelto, EstadoAprobacion, Politica } from './aprobaciones.ts'
 export {
   ACCIONES_ANULACION, DIAS_ESPERA_CONFIRMACION, ESTADOS_ANULACION, ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION,
@@ -795,5 +795,5 @@ export {
   DIAS_REVISION_TELEFONOS, TELEFONOS_COMPANIAS, esTelefonoPublicable, hrefTel, telefonoVerificadoPorCodigo, telefonoVerificadoPorNombre, telefonosParaPublicar, telefonosPorRevisar, vcardCompania, whatsappLegible,
   type LineaAsistencia, type TelefonoCompania,
 } from './telefonos-companias.ts'
-export { ACCIONES_CARTA_MEDIADOR, ESTADOS_CARTA_ABIERTA, cartaNombramientoMediador, esCompaniaDeRelleno, transicionCartaMediador, type AccionCartaMediador, type DatosCartaMediador, type EstadoCartaMediador } from './carta-mediador.ts'
+export { ACCIONES_CARTA_MEDIADOR, ESTADOS_CARTA_ABIERTA, cartaNombramientoMediador, documentoParaCarta, esCompaniaDeRelleno, transicionCartaMediador, type AccionCartaMediador, type DatosCartaMediador, type EstadoCartaMediador } from './carta-mediador.ts'
 export { SUSTITUCION_DIAS_ANTES, SUSTITUCION_DIAS_DESPUES, claveRiesgo, detectarSustituciones, solicitudPorSustitucion, sustituidasARetirar, type DuplicidadDetectada, type PolizaParaSustitucion, type ResultadoSustituciones, type RiesgoComun, type SustitucionDetectada } from './sustitucion-auto.ts'

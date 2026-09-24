@@ -68,8 +68,8 @@ export default function CartaMediadorPoliza({ polizaId }: { polizaId: string }) 
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {a.enviar && (
                 <button type="button" disabled={ocupado} style={btnStyle('primario')}
-                  onClick={() => { if (window.confirm('¿Ya la has mandado tú a la compañía? Esto solo lo anota.')) void accion(c, 'enviada') }}>
-                  Ya la he enviado
+                  onClick={() => { if (window.confirm('¿Ya la has mandado tú a la compañía por fuera? Esto solo lo anota, y retira el correo que espera tu OK en «Hoy».')) void accion(c, 'enviada') }}>
+                  Ya la mandé por fuera
                 </button>
               )}
               {a.resolver && (
