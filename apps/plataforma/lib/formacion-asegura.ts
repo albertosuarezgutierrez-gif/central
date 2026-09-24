@@ -5,9 +5,9 @@
 //   2. La RED, solo desde la ruta API. Esta app no toca `seguros`: reenvía al puerto de asegura.
 import { cabecerasPuerto } from './puerto-actor.ts'
 
-export type EstadoFormacion = 'cumplido' | 'en_curso' | 'atrasado' | 'incumplido'
+export type EstadoFormacion = 'cumplido' | 'en_curso' | 'atrasado' | 'incumplido' | 'baja'
 /** Copia de `ESTADOS` implícitos en `module-seguros/formacion.ts`; el test compara con el módulo. */
-export const ESTADOS_FORMACION: readonly EstadoFormacion[] = ['cumplido', 'en_curso', 'atrasado', 'incumplido']
+export const ESTADOS_FORMACION: readonly EstadoFormacion[] = ['cumplido', 'en_curso', 'atrasado', 'incumplido', 'baja']
 
 export type CursoFormacion = {
   id: string
@@ -19,7 +19,14 @@ export type CursoFormacion = {
   documentoId: string | null
   creadaPor: string
 }
-export type PersonaFormacion = { persona: string; horas: number; faltan: number; estado: EstadoFormacion }
+export type PersonaFormacion = {
+  persona: string
+  horas: number
+  faltan: number
+  estado: EstadoFormacion
+  /** `YYYY-MM-DD` desde el que dejó de distribuir. Ausente en un asegura anterior → `null`. */
+  bajaDesde: string | null
+}
 export type ResumenFormacion = { año: number; minimo: number; personas: PersonaFormacion[]; pendientes: number }
 
 export type LecturaFormacion =
@@ -44,7 +51,8 @@ function persona(v: unknown): PersonaFormacion | null {
   const o = (v ?? {}) as Record<string, unknown>
   if (!txt(o.persona) || !num(o.horas) || !num(o.faltan)) return null
   if (!ESTADOS_FORMACION.includes(o.estado as EstadoFormacion)) return null
-  return { persona: o.persona, horas: o.horas, faltan: o.faltan, estado: o.estado as EstadoFormacion }
+  if (o.bajaDesde !== undefined && o.bajaDesde !== null && !(txt(o.bajaDesde) && /^\d{4}-\d{2}-\d{2}$/.test(o.bajaDesde))) return null
+  return { persona: o.persona, horas: o.horas, faltan: o.faltan, estado: o.estado as EstadoFormacion, bajaDesde: txt(o.bajaDesde) ? o.bajaDesde : null }
 }
 
 /** Una fila que no se entiende tumba la lectura entera: un resumen con una persona de menos diría que no existe. */
@@ -78,6 +86,7 @@ export const TEXTO_ESTADO: Record<EstadoFormacion, string> = {
   en_curso: 'En curso',
   atrasado: 'Atrasado: apúntate a un curso ya',
   incumplido: 'Año cerrado sin las horas',
+  baja: 'Dejó de distribuir: no se le exigen',
 }
 
 // ─── Red (solo desde la ruta API) ────────────────────────────────────────────
@@ -111,4 +120,12 @@ export function registrarCursoAsegura(body: Record<string, unknown>): Promise<Re
 
 export function borrarCursoAsegura(id: string): Promise<Reenvio> {
   return llamar(`/api/operador/formacion?id=${encodeURIComponent(id)}`, { method: 'DELETE' })
+}
+
+export function anotarBajaAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/formacion/baja', { method: 'POST', body: JSON.stringify(body) })
+}
+
+export function quitarBajaAsegura(persona: string): Promise<Reenvio> {
+  return llamar(`/api/operador/formacion/baja?persona=${encodeURIComponent(persona)}`, { method: 'DELETE' })
 }
