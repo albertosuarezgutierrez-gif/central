@@ -1,5 +1,85 @@
 # Auditoría — septiembre 2026
 
+## 🔴 Pasada ligera — 24/09/2026
+
+**Rango:** 43 commits desde la última auditoría (23/09, `6a35189`) hasta hoy (`6bc233c`) — día
+cargado en `apps/asegura`/correduría (presupuesto PR3-PR6, sustitución automática, cumpleaños,
+ventana de renovación web, carta de nombramiento, quejas del SAC) + `rrhh` (responsive) +
+comisiones (signo de Occident).
+
+### 🔴 Heartbeat (2-bis): `cima_pull_respaldo` en HTTP 401 desde ayer 14:00 UTC
+El respaldo del pull de CIMA (`/api/cron/cima-pull-respaldo`, plataforma → CRM de asegura vía
+`ASEGURA_CRM_CRON_SECRET`) lleva fallando con `HTTP 401 · unauthorized` desde su última pasada
+buena (`agente_latidos.cima_pull_respaldo`, `ultimo_ok_at` 2026-09-23 14:00 UTC, ~18-20h sin OK a
+la hora de esta pasada). Cada fallo ya dispara su propio Telegram (`correduria.cima-respaldo`, sin
+dedupe en fallo — ver `apps/plataforma/app/api/cron/cima-pull-respaldo/route.ts`), así que Alberto
+probablemente ya lo ha visto, pero queda como hallazgo del heartbeat porque sigue sin resolverse.
+
+**Lo comprobado:**
+- El pull PRINCIPAL (GitHub Actions, repo `asegura`, 05:30/11:30 UTC) parece seguir vivo: el latido
+  `correduria_ingesta` de hoy 06:45 UTC dio `ok:true` (con el backlog de cuarentena ya conocido de
+  C0058/C0468/C0072, no relacionado). O sea: el problema parece limitado al CAMINO DE RESPALDO, no
+  a la ingesta completa — pero **`seguros.operational_events` no tiene ningún `cima_pull_*` en las
+  últimas ~17h** (último: 2026-09-23 15:31 UTC), así que no se puede confirmar del todo que el pull
+  de las 11:30 UTC de hoy haya escrito evento.
+- `ASEGURA_CRM_CRON_SECRET` (proyecto Vercel `plataforma`) se CREÓ el 2026-09-23 07:38 UTC y no se
+  ha vuelto a tocar desde entonces (`createdAt == updatedAt`) — descarta una rotación en ESE lado
+  como causa, y además el respaldo funcionó bien varias horas después de esa creación (última OK
+  14:00 UTC del mismo día).
+- El listado de envs del proyecto Vercel `asegura` (CRM) **no devuelve ninguna variable
+  `CRON_SECRET`** con ese nombre exacto. Puede ser la causa real (se renombró/rotó del otro lado,
+  mismo patrón que el incidente de `prisma_seguros` del 02/09) o puede ser un listado incompleto
+  del MCP de Vercel — el propio `CLAUDE.md` ya tiene dos precedentes de que ese MCP no lista todo lo
+  que hay. **No se afirma la causa sin mirar el panel de Vercel directamente.**
+- `agente_reparaciones`: sin intentos en los últimos 7 días — el reparador automático NO está
+  trabajando en esto (no hay PR ni intento en curso que evite duplicar esfuerzo).
+
+**Acción manual de Alberto (o próxima sesión):** abrir el panel de Vercel del proyecto `asegura` →
+Settings → Environment Variables y confirmar el nombre/valor real del secreto que protege
+`/api/crons/cima-pull`, y que coincide con `ASEGURA_CRM_CRON_SECRET` de `plataforma`. Si no
+coincide, es la rotación-sin-avisar-al-otro-lado de siempre.
+
+### 🟡 `sivra_mercado_booking` en rojo por 2º día (47h sin OK)
+`agente_latidos.sivra_mercado_booking`: última OK 2026-09-22 08:40 UTC; la pasada de ayer
+(2026-09-23 08:45) SÍ escribió `market_rates` (223 comps, 24 ventanas) pero se marcó `ok:false` por
+"0/4 escaparate medido (sin disponibilidad Booking esas fechas)" — puede ser una condición benigna
+(fechas de escaparate sin disponibilidad en Booking ese día) más que un fallo real del conector. A
+vigilar si persiste una tercera pasada seguida.
+
+### 🟠 Pricing (2bis): `oscilantes=6` (0 ayer), resto sano
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=1` (mismo patrón que días
+anteriores) · **`oscilantes=6`** (subida desde 0 el 23/09 — ciclo límite, el motor no converge en 6
+combinaciones piso/fecha esta semana). 4 palancas activas y sanas (`enabled`/`apply_enabled=true`,
+`min_price` puesto en las 4, `antelacion_k=0`). `horas_desde_ultima_pasada` 3,7h ·
+`noches_ultima_pasada` 13 — sano. Sin 🔴 en este bloque, no dispara Telegram por sí solo.
+
+### 💶 Correduría — dinero y cobertura CIMA (2-quater)
+`seguros.codeoscopic_consumo` 7d: 13 cotizaciones · 5,50€ · 3 descartadas — sin sorpresas, en línea
+con el volumen habitual. Aislamiento (`regression-asegura-aislamiento`, `regression-portal-*`,
+`regression-correduria-puerto`) no re-derivado esta pasada (ligera); nada en el rango de commits
+sugiere que un PR haya tocado `seguros.*`/`lib/tenant*`/el puerto sin su cepo.
+
+### Backlog de PRs (2-ter): 44 abiertos, automerge sano
+`rutinas-automerge.yml` con runs recientes en verde (varios en la última hora, incluida la fusión
+del PR de radiografía #3461). El backlog de drafts antiguos (varios desde 05/09-20/09, varios con
+`updated_at` agrupado el 20/09 — sincronía mecánica, no actividad real) sigue igual que en pasadas
+anteriores: mismo problema ya reportado, sin cambio de causa raíz ni crecimiento apreciable. No se
+repite el listado completo (ver auditorías previas). `#3299` (fix de `FUENTES-DE-VERDAD.md` para
+`cima-pull-respaldo`) sigue abierto desde ayer, sin mergear.
+
+No se ha podido listar las sesiones del rango (`list_sessions` de Claude Code Remote no está
+disponible en esta pasada) — se dice explícitamente, no se afirma que no hay pendientes de
+conversación.
+
+**Carril 1:** esta entrada + `AUTO-APLICADOS.md` + `CONTEXTO-SESIONES.md`. **Carril 2:** ninguno —
+el hallazgo 🔴 de `cima_pull_respaldo` es una acción manual de Alberto (panel de Vercel), no un fix
+de código; no hay nada que un PR pueda arreglar hoy. **Telegram: sí**, por el 🔴 de heartbeat (regla
+"cualquier 🔴 de 2-bis dispara Telegram siempre"), aunque el propio cron ya avisa por su cuenta en
+cada fallo.
+
+---
+<!-- verificado: 2026-09-24 -->
+
 ## ✅ Pasada ligera — 01/09/2026
 
 **Rango:** 40 commits desde la última auditoría (31/08, `b1f7904`) hasta hoy (`e771dad`), día muy
