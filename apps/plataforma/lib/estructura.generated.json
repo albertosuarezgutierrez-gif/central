@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-24T04:35:43Z",
+  "generadoEn": "2026-09-24T05:32:51Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 102
+        "evidencias": 103
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 80
+        "evidencias": 81
       },
       "rrhh": {
         "estado": "no",
@@ -3983,6 +3983,7 @@
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
+      "/api/operador/calidad",
       "/api/operador/carta-mediador",
       "/api/operador/cartera",
       "/api/operador/cliente",
@@ -4939,6 +4940,7 @@
       "/api/correduria/backfill-dni",
       "/api/correduria/blog",
       "/api/correduria/buscar",
+      "/api/correduria/calidad",
       "/api/correduria/carta-mediador",
       "/api/correduria/cartera",
       "/api/correduria/cartera-lista",
@@ -6496,7 +6498,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1445,
+    "apis": 1447,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

@@ -433,6 +433,17 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Art. 22 LCS: compañía avisa cambios ≥2 meses; tomador se opone ≥1 mes. Widget pinta los 90 días previos con esa ventana (`lib/ventana-renovacion.ts` + test; vida-y-salud excluido). CTA al portal; NO guarda nada.
 - Pendiente (fase 2): «avísame por correo» con doble opt-in = alta en el portal (enlace mágico, endpoint nuevo) + cron avisos a 70 y 45 días. NO afirmar consecuencia de que la compañía no avise a tiempo (sin confirmar jurídicamente).
 
+## (24/09/2026) ASegura OS: «Calidad del dato» en /correduria → Datos (PR #3445)
+- Reglas puras en `module-seguros/calidad-dato.ts`; consulta en `apps/asegura/lib/calidad-cartera.ts` (puerto `GET /api/operador/calidad`, solo lectura, sin DNI/teléfono/correo). Medido hoy: 18 vencidas sin renovación, 20 sin prima, 12 parejas de fichas con el mismo DNI, 9 sin fecha de nacimiento, 1 sin DNI.
+- La pantalla la montó un agente y se integró a mano: leía `filas` cuando asegura manda `incidencias` (siempre habría salido «error») → cepo de contrato que lee la ruta de asegura. `<details>` → montaje perezoso.
+- «Siguiente acción» por cliente NO se construye: ya existe como «🔔 Pide acción» en la ficha. Documentos a Storage descartado por ahora (las tablas de documentos de seguros no están ni en el top 12 de tamaño).
+
+## (24/09/2026) ASegura OS: la oportunidad de venta se cierra sola cuando su póliza entra por CIMA
+- `ganarOportunidadesEmitidas()` (`apps/asegura/lib/sustituciones-auto.ts`), dentro de la pasada de `correduria-eventos`: oportunidad abierta (no retención, no volcado) + póliza viva y vigente del MISMO cliente con la MISMA matrícula, llegada después → `ganada` + `poliza_ganada_id`, tareas cerradas, historial. Con dos candidatas o sin matrícula no se cierra sola (hogar queda manual).
+- Medido: `seguros.presupuesto` tiene **0 filas**; lo que Alberto usa de verdad son `oportunidades` con las ofertas de fuera en `info_riesgo` (2 abiertas hoy). Por eso se cierra ahí.
+- `correduria-renovaciones` falló el 23/09 por «red»: asegura en frío tardó >8 s. El cron pide ahora con 40 s (la pantalla sigue en 8 s).
+- Guardián `regression-cartera-viva`: un `import_ref is null` de OPORTUNIDAD se permite solo con el marcador `-- import_ref de OPORTUNIDAD` en la línea.
+
 ## (24/09/2026) blog ASegura: corregida la FAQ «cancelar sin penalización» del artículo publicado
 El artículo `cuando-empieza-a-cubrir-un-seguro` (#2966) prometía cancelar «sin penalización» antes de la fecha de
 efecto. Ahora dice que depende: desistimiento en contratación a distancia (y plazo mayor en vida); si no, lo marcan
