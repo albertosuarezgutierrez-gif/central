@@ -106,3 +106,10 @@ test('pólizas «en_tarjeta» (las pinta la tarjeta de Correduría de /inicio): 
   assert.equal(accionesDeInicio(e).some(a => a.clave.startsWith('polizas')), false)
   assert.equal(todoComprobado(e), true)
 })
+
+test('las pólizas ya vencidas no se cuentan como «vencen en N días» ni salen como la más próxima', () => {
+  const [a] = accionesDeInicio({ ...LIMPIO, polizas: { estado: 'ok', enDias: 60, polizas: [{ cliente: 'Junio', dias: -107 }, { cliente: 'Octubre', dias: 20 }] } })
+  assert.match(a.titulo, /^1 póliza vence/)
+  assert.match(a.detalle ?? '', /Octubre, en 20 días/)
+  assert.deepEqual(claves({ ...LIMPIO, polizas: { estado: 'ok', enDias: 60, polizas: [{ cliente: 'Junio', dias: -107 }] } }), [])
+})
