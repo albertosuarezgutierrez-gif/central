@@ -51,7 +51,11 @@ export type ResultadoAlta = { estado: 'creado'; id: string } | { estado: 'invali
 export async function registrarCurso(correduriaId: string, cuerpo: Record<string, unknown> | null, actor: string): Promise<ResultadoAlta> {
   const v = validarAltaFormacion(cuerpo, hoyMadrid())
   if (!v.ok) return { estado: 'invalida', motivos: v.motivos }
-  const doc = typeof cuerpo?.documentoId === 'string' && UUID.test(cuerpo.documentoId) ? cuerpo.documentoId : null
+  const docCrudo = cuerpo?.documentoId
+  if (docCrudo != null && docCrudo !== '' && !(typeof docCrudo === 'string' && UUID.test(docCrudo))) {
+    return { estado: 'invalida', motivos: ['El certificado indicado no es un identificador válido.'] }
+  }
+  const doc = typeof docCrudo === 'string' && docCrudo ? docCrudo : null
   const db = prismaAsegura()
   // El certificado, si viene, tiene que ser de esta correduría: con BYPASSRLS un id ajeno no falla.
   if (doc) {

@@ -89,16 +89,21 @@ export function validarAltaFormacion(
   const curso = txt(c?.curso)
   const entidad = txt(c?.entidad)
   const fecha = txt(c?.fecha)
-  const horas = typeof c?.horas === 'number' ? c.horas : Number(txt(c?.horas).replace(',', '.'))
+  // Se valida el TEXTO (hasta 2 decimales) antes de convertir: comprobar `x*100` entero falla por la coma
+  // flotante (2,3 · 1,1 · 8,2 se rechazaban).
+  const horasTxt = typeof c?.horas === 'number' ? String(c.horas) : txt(c?.horas)
+  const horas = /^\d{1,3}([.,]\d{1,2})?$/.test(horasTxt) ? Number(horasTxt.replace(',', '.')) : NaN
   if (!persona || persona.length > 120) motivos.push('Falta la persona (máx. 120 caracteres).')
   if (!curso || curso.length > 200) motivos.push('Falta el curso (máx. 200 caracteres).')
   if (entidad.length > 200) motivos.push('La entidad formadora es demasiado larga.')
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha) || Number.isNaN(Date.parse(`${fecha}T00:00:00Z`)) || fecha < '2000-01-01') {
+  const fechaReal = /^\d{4}-\d{2}-\d{2}$/.test(fecha) && !Number.isNaN(Date.parse(`${fecha}T00:00:00Z`))
+    && new Date(`${fecha}T00:00:00Z`).toISOString().slice(0, 10) === fecha
+  if (!fechaReal || fecha < '2000-01-01') {
     motivos.push('La fecha no es válida.')
   } else if (fecha > hoy) {
     motivos.push('La fecha no puede ser futura: se anota el curso ya terminado.')
   }
-  if (!Number.isFinite(horas) || horas <= 0 || horas > 200 || Math.round(horas * 100) !== horas * 100) {
+  if (!Number.isFinite(horas) || horas <= 0 || horas > 200) {
     motivos.push('Las horas tienen que ser un número entre 0 y 200 (hasta 2 decimales).')
   }
   if (motivos.length) return { ok: false, motivos }

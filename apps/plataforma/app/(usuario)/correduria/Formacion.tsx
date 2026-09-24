@@ -35,10 +35,14 @@ export default function Formacion({ onContador }: { onContador?: (n: number | nu
   const [enviando, setEnviando] = useState(false)
   const contador = useRef(onContador)
   contador.current = onContador
+  const pedido = useRef(año)
 
   const cargar = useCallback(async (a: number) => {
+    pedido.current = a
     const res = await fetch(`/api/correduria/formacion?a%C3%B1o=${a}`).catch(() => null)
     const l = res ? interpretarFormacion(res.status, await res.json().catch(() => null)) : { estado: 'error' as const, motivo: 'red' }
+    // Si se cambió de año mientras llegaba, esta respuesta ya no es la que se pinta.
+    if (a !== pedido.current) return
     setLectura(l)
     if (a === añoHoy) contador.current?.(contadorFormacion(l))
   }, [añoHoy])
@@ -74,7 +78,7 @@ export default function Formacion({ onContador }: { onContador?: (n: number | nu
   const r = lectura?.estado === 'ok' ? lectura.resumen : null
   return (
     <Bloque Icono={GraduationCap} titulo="Formación continua (IDD)"
-      sub={`Mínimo ${r?.minimo ?? 15} h al año por persona que distribuye seguros.`}>
+      sub={`Mínimo ${r?.minimo ?? 15} h al año por persona que distribuye seguros. Cada persona se reconoce por su nombre: escríbelo siempre igual (dos personas con el mismo nombre se sumarían).`}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
         <label style={{ fontSize: 13 }}>
           Año{' '}
@@ -93,7 +97,7 @@ export default function Formacion({ onContador }: { onContador?: (n: number | nu
       {lectura?.estado === 'ok' && (
         <>
           {lectura.resumen.personas.length === 0
-            ? <p style={{ fontSize: 13, color: 'var(--muted)' }}>No hay ningún curso anotado hasta {año}. Anota el primero abajo.</p>
+            ? <p style={{ fontSize: 13, color: 'var(--muted)' }}>No hay ningún curso anotado entre {año - 3} y {año}. Anota el primero abajo.</p>
             : (
               <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 12px', display: 'grid', gap: 6 }}>
                 {lectura.resumen.personas.map((p) => (

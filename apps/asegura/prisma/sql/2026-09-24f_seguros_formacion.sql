@@ -22,5 +22,5 @@ CREATE INDEX IF NOT EXISTS idx_formacion_fecha ON seguros.formacion (correduria_
 REVOKE ALL ON seguros.formacion FROM crm_seguros;
 REVOKE ALL ON seguros.formacion FROM anon, authenticated;
 REVOKE ALL ON seguros.formacion FROM prisma_asegura_portal;
-REVOKE TRUNCATE ON seguros.formacion FROM prisma_seguros;
+REVOKE UPDATE, TRUNCATE ON seguros.formacion FROM prisma_seguros;
 GRANT SELECT, INSERT, DELETE ON seguros.formacion TO prisma_seguros;

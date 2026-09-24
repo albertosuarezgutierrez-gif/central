@@ -52,3 +52,14 @@ test('valida el alta: fecha futura, horas imposibles y campos vacíos se rechaza
 test('clavePersona funde tildes, mayúsculas y espacios', () => {
   assert.equal(clavePersona('  José  PÉREZ '), 'jose perez')
 })
+
+test('🪤 horas con decimales corrientes (2,3 · 1.1 · 8,25) se aceptan; con 3 decimales, no', () => {
+  for (const h of ['2,3', 1.1, '8,25', 2.55]) {
+    assert.equal(validarAltaFormacion({ persona: 'Ana', curso: 'X', fecha: '2026-05-01', horas: h }, '2026-06-01').ok, true, String(h))
+  }
+  assert.equal(validarAltaFormacion({ persona: 'Ana', curso: 'X', fecha: '2026-05-01', horas: '1,234' }, '2026-06-01').ok, false)
+})
+
+test('🪤 una fecha imposible (31 de febrero) se rechaza en vez de llegar a la BD', () => {
+  assert.equal(validarAltaFormacion({ persona: 'Ana', curso: 'X', fecha: '2026-02-31', horas: 2 }, '2026-06-01').ok, false)
+})

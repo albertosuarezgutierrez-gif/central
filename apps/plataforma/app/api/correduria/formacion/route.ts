@@ -15,7 +15,8 @@ export const dynamic = 'force-dynamic'
 export async function GET(req: NextRequest) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta
-  const año = Number(new URL(req.url).searchParams.get('año') ?? new Date().getFullYear())
+  const añoHoy = Number(new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }).slice(0, 4))
+  const año = Number(new URL(req.url).searchParams.get('año') ?? añoHoy)
   const r = await formacionAsegura(año)
   return NextResponse.json(r.json ?? { estado: 'error', motivo: `HTTP ${r.status}` }, { status: r.status })
 }

@@ -25,8 +25,10 @@ async function correduria(): Promise<{ r: NextResponse } | { id: string }> {
 
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-  const año = Number(new URL(req.url).searchParams.get('año') ?? new Date().getFullYear())
-  if (!Number.isInteger(año) || año < 2000 || año > new Date().getFullYear()) {
+  // El año de Madrid, no el de UTC: el 1 de enero a las 00:30 ya es el año nuevo para quien pregunta.
+  const añoHoy = Number(new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' }).slice(0, 4))
+  const año = Number(new URL(req.url).searchParams.get('año') ?? añoHoy)
+  if (!Number.isInteger(año) || año < 2000 || año > añoHoy) {
     return NextResponse.json({ estado: 'invalida', motivo: 'Año no válido.' }, { status: 422 })
   }
   try {
