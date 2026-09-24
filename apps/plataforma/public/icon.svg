@@ -1,4 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="96" fill="#4f46e5"/>
-  <text x="256" y="340" font-family="system-ui,-apple-system,sans-serif" font-size="260" font-weight="800" fill="white" text-anchor="middle">ia</text>
+  <rect width="512" height="512" rx="112" fill="#3364ee"/>
+  <g fill="#ffffff">
+    <rect x="136" y="136" width="104" height="104" rx="24"/>
+    <rect x="272" y="136" width="104" height="104" rx="24" opacity=".72"/>
+    <rect x="136" y="272" width="104" height="104" rx="24" opacity=".72"/>
+    <rect x="272" y="272" width="104" height="104" rx="24"/>
+  </g>
 </svg>

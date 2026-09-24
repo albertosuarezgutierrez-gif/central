@@ -21,7 +21,7 @@ export default function LoginForm() {
         body: JSON.stringify({ email, password }),
       })
       if (res.ok) {
-        router.push('/banca')
+        router.push('/inicio')
         return // el botón sigue en «Entrando…» hasta que cambia la ruta
       }
       const data = await res.json().catch(() => ({}))

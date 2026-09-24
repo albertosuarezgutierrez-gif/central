@@ -74,8 +74,9 @@ test('la sección lleva el acento de Grupo ASegura por TOKENS, no por hex suelto
   assert.match(layout, /className="correduria"/)
   const css = readFileSync(path.join(process.cwd(), 'apps/plataforma/app/globals.css'), 'utf8')
   // #3364ee = oklch(0.555 0.215 265), el cobalto de app.grupoasegura.com.
-  assert.match(css, /\.correduria\s*\{[^}]*--primary:\s*#3364ee/)
-  assert.match(css, /\[data-theme="dark"\]\s*\.correduria/)
+  // Desde el 24/09/2026 el cobalto es el acento de TODO el panel: vive en :root y en el tema oscuro.
+  assert.match(css, /:root\s*\{[^}]*--primary:\s*#3364ee/)
+  assert.match(css, /\[data-theme="dark"\]\s*\{[^}]*--primary:\s*#497cfd/)
   for (const f of ['Cabecera.tsx', 'FichaTabs.tsx', 'TabResumen.tsx', 'TabRecibos.tsx']) {
     assert.doesNotMatch(leer(f), /#[0-9a-fA-F]{3,6}\b/, `${f}: solo tokens var(--…), sin hex`)
   }

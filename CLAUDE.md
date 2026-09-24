@@ -52,7 +52,7 @@
   **Quicksand** (600-700), cuerpo en **Nunito Sans**, sin cursivas (el acento es el azul de marca).
   Logotipo = «Grupo ASegura» en trazo fino con el monograma «AS» oficial dentro:
   `public/brand/logotipo-asegura.svg` (`mask` + `currentColor`). Sustituye a Fraunces + Inter; `@central/brand`
-  sigue en Inter solo para correos. En plataforma la aplica el layout de `/correduria` (next/font, acotado a `.correduria`: el resto del cuadro de mando sigue en Inter). Lo vigilan `apps/asegura-web/lib/tipografia.test.ts` y
+  sigue en Inter solo para correos. En plataforma, desde el 24/09/2026, el lenguaje visual (Quicksand + Nunito Sans + cobalto `#3364ee`) va en TODO el cuadro de mando (layout raíz + `:root`), pero el logo y el nombre «Grupo ASegura» siguen siendo SOLO de `/correduria` — el resto lleva la marca neutra «Mi grupo». Lo vigilan `apps/asegura-web/lib/tipografia.test.ts` y
   `test/regression-portal-cartera-agrupada.test.ts`.
   ✍️ **Se escribe «Grupo ASegura», con A y S mayúsculas** (04/09/2026): el monograma «AS» del logo
   ES el nombre (A de Alberto, S de Suárez), así que escribirlo con la ese minúscula no es una

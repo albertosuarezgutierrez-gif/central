@@ -100,3 +100,9 @@ test('sin banco vinculado NO se avisa de frescura: no aplica ≠ no se sabe', ()
   assert.deepEqual(claves({ ...LIMPIO, horasDesdeBanco: 'no_aplica' }), [])
   assert.equal(todoComprobado({ ...LIMPIO, horasDesdeBanco: 'no_aplica' }), true)
 })
+
+test('pólizas «en_tarjeta» (las pinta la tarjeta de Correduría de /inicio): sin fila y cuenta como comprobado', () => {
+  const e = { ...LIMPIO, polizas: { estado: 'en_tarjeta' as const } }
+  assert.equal(accionesDeInicio(e).some(a => a.clave.startsWith('polizas')), false)
+  assert.equal(todoComprobado(e), true)
+})

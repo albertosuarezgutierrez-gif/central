@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 type Item = { label: string; icon: string; href: string; group: string }
 
 const BASE_ITEMS: Item[] = [
-  { label: 'Inicio', icon: '🏠', href: '/banca', group: 'Mi negocio' },
+  { label: 'Inicio', icon: '🏠', href: '/inicio', group: 'Mi negocio' },
+  { label: 'Banca', icon: '💶', href: '/banca', group: 'Mi negocio' },
   { label: 'Negocios (holding)', icon: '🏢', href: '/banca?tab=negocios', group: 'Mi negocio' },
   { label: 'Ingresos', icon: '💶', href: '/banca?tab=ingresos', group: 'Mi negocio' },
   { label: 'Contable', icon: '🧮', href: '/contable', group: 'Mi negocio' },
