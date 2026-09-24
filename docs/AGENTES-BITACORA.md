@@ -14,6 +14,13 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-24 · mercado-booking** · hizo: pasada de 24 ventanas (max=24, tope dejó fuera 488 de 512
+  candidatas totales, casi todas rondas de profundidad 2-3) → 238 comps reales escritos (evento
+  confirmado nov-dic, ronda 1). Escaparate propio: 1/4 medido (Busto Reform, 237,31€/2n 1-oct);
+  Dúplex Center, Luxury Busto y House Sevillana sin disponibilidad en el portal para esa ventana =
+  hueco, no dato. 2 anuncios propios (HOUSE SEVILLANA 6 habitaciones) aparecieron en resultados de
+  aforo 12 y se descartaron del corpus de comparables (18-nov, 25-nov). dudas: —; fallos: —;
+  PRs/commits: — (solo BD vía `/api/sivra/mercado/ingest` + latido).
 - **2026-09-24 · facturas-correo** · hizo: pasada disparada por el trigger diario. Paso 0: Vía B sana
   (copia más reciente en `_buzon_pdf` de hoy, 0 días caída); `Facturas/Extraccion-fallida` mostraba
   `messagesTotal:1` en `list_labels` pero `search_threads` dio 0 hilos — el gotcha ya documentado (el
