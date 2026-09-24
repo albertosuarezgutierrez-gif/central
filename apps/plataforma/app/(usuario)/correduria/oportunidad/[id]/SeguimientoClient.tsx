@@ -7,6 +7,7 @@ import { Badge, PageHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
   MOTIVOS_PERDIDA_UI,
+  rotuloMotivo,
   ROTULO_ESTADO,
   TIPOS_TAREA_UI,
   parsearPrima,
@@ -123,7 +124,7 @@ export default function SeguimientoClient({ id }: { id: string }) {
 
       {op.estado === 'perdida' && (
         <p style={{ margin: 0, fontSize: 14 }}>
-          Perdida{op.motivoPerdida ? ` · ${MOTIVOS_PERDIDA_UI.find(m => m.valor === op.motivoPerdida)?.rotulo ?? op.motivoPerdida}` : ''}
+          Perdida{op.motivoPerdida ? ` · ${rotuloMotivo(op.motivoPerdida)}` : ''}
           {op.competidor ? ` · contra ${op.competidor}` : ''}
           {op.primaCompetidor !== null ? ` por ${eur(op.primaCompetidor)}` : ''}
         </p>

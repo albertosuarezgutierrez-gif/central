@@ -25,8 +25,14 @@ export const MOTIVOS_PERDIDA = [
   'no_contactable',
   'ya_asegurado',
   'otro',
+  // «Descartar» (24/09/2026): la oportunidad se abrió por error o está
+  // duplicada. NO es una venta perdida, y cualquier estadística de pérdidas
+  // la tiene que excluir (`MOTIVO_DESCARTE`). No se borra: su rastro se queda.
+  'error_alta',
 ] as const
 export type MotivoPerdida = (typeof MOTIVOS_PERDIDA)[number]
+/** El motivo de «descartar»: fuera de toda cuenta de ventas perdidas. */
+export const MOTIVO_DESCARTE: MotivoPerdida = 'error_alta'
 
 export type AccionOportunidad = 'interesado' | 'propuesta_enviada' | 'ganar' | 'perder' | 'aparcar' | 'reabrir'
 
@@ -217,4 +223,114 @@ export function validarTarea(
   if (fechaLimite === null) return { ok: false, motivo: 'Falta la fecha límite (aaaa-mm-dd).' }
   if (diasDesdeHoy(fechaLimite, hoy) < 0) return { ok: false, motivo: 'La fecha límite no puede estar en el pasado.' }
   return { ok: true, tarea: { tipo, prioridad, observaciones, fechaLimite } }
+}
+
+// ── Alta y edición a mano (Fase 1 del rediseño de la ficha, 24/09/2026) ─────
+
+/** Los del enum `tipo_seguro` de la BD, en su orden. */
+export const RAMOS_OPORTUNIDAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] as const
+export type RamoOportunidad = (typeof RAMOS_OPORTUNIDAD)[number]
+/** Con qué estado puede nacer una oportunidad a mano: por contactar o ya interesado. */
+export const ESTADOS_ALTA: readonly EstadoOportunidad[] = ['competencia', 'en_negociacion']
+
+export type AltaValida = {
+  ramo: RamoOportunidad
+  estado: EstadoOportunidad
+  fechaFinVigencia: string | null
+  aseguradora: string | null
+  prima: number | null
+  /** El primer paso: nace con él, o no nace. */
+  tarea: TareaValida
+}
+
+/**
+ * Una oportunidad a mano nace con su PRIMER PASO (tipo + fecha): la regla del
+ * embudo es que nada queda sin siguiente paso, y una oportunidad sin tarea no
+ * sale en «Hoy» ni la mira nadie. Sin fecha de vencimiento es válida (la del
+ * cliente que pide precio de algo nuevo), pero entonces no entra en el carril
+ * de Vencimientos: eso lo dice la pantalla, no se inventa una fecha.
+ */
+export function validarAltaOportunidad(
+  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; tipoTarea?: unknown; fechaTarea?: unknown; nota?: unknown },
+  hoy: Date,
+): { ok: true; alta: AltaValida } | { ok: false; motivo: string } {
+  const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
+  if (!ramo) return { ok: false, motivo: 'Elige el ramo.' }
+  const estado = d.estado === undefined ? 'en_negociacion' : ESTADOS_ALTA.find(e => e === d.estado)
+  if (!estado) return { ok: false, motivo: 'Una oportunidad nueva nace «por contactar» o «interesado».' }
+  const campos = camposEditables(d)
+  if (!campos.ok) return campos
+  const nota = texto(d.nota, 2000)
+  const t = validarTarea(
+    { tipo: d.tipoTarea ?? 'llamada', prioridad: 'media', observaciones: nota ?? `Primer contacto: ${ramo.replace('_', ' ')}`, fechaLimite: d.fechaTarea },
+    hoy,
+  )
+  if (!t.ok) return { ok: false, motivo: `Primer paso: ${t.motivo}` }
+  return {
+    ok: true,
+    alta: {
+      ramo,
+      estado,
+      fechaFinVigencia: campos.valores.fechaFinVigencia ?? null,
+      aseguradora: campos.valores.aseguradora ?? null,
+      prima: campos.valores.prima ?? null,
+      tarea: t.tarea,
+    },
+  }
+}
+
+export type EdicionValida = {
+  ramo?: RamoOportunidad
+  fechaFinVigencia?: string | null
+  aseguradora?: string | null
+  prima?: number | null
+}
+
+/**
+ * Lo que se corrige a mano de una oportunidad ABIERTA: ramo, vencimiento,
+ * compañía y prima actuales. `undefined` = no tocar; `null`/'' = borrar. El
+ * estado NO se edita aquí: para eso están las acciones, que exigen su motivo.
+ */
+export function validarEdicionOportunidad(
+  d: { ramo?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown },
+): { ok: true; cambios: EdicionValida } | { ok: false; motivo: string } {
+  const out: EdicionValida = {}
+  if (d.ramo !== undefined) {
+    const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
+    if (!ramo) return { ok: false, motivo: 'Ramo no válido.' }
+    out.ramo = ramo
+  }
+  const campos = camposEditables(d)
+  if (!campos.ok) return campos
+  Object.assign(out, campos.valores)
+  if (Object.keys(out).length === 0) return { ok: false, motivo: 'No hay nada que cambiar.' }
+  return { ok: true, cambios: out }
+}
+
+function vacio(v: unknown): boolean {
+  return v === null || (typeof v === 'string' && v.trim() === '')
+}
+
+function camposEditables(
+  d: { fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown },
+): { ok: true; valores: Omit<EdicionValida, 'ramo'> } | { ok: false; motivo: string } {
+  const valores: Omit<EdicionValida, 'ramo'> = {}
+  if (d.fechaFinVigencia !== undefined) {
+    if (vacio(d.fechaFinVigencia)) valores.fechaFinVigencia = null
+    else {
+      const f = fechaIso(d.fechaFinVigencia)
+      if (f === null) return { ok: false, motivo: 'La fecha de vencimiento no es válida (aaaa-mm-dd).' }
+      valores.fechaFinVigencia = f
+    }
+  }
+  if (d.aseguradora !== undefined) {
+    if (!vacio(d.aseguradora) && typeof d.aseguradora !== 'string') return { ok: false, motivo: 'La compañía no es un texto.' }
+    valores.aseguradora = texto(d.aseguradora, 120)
+  }
+  if (d.prima !== undefined) {
+    const p = importe(d.prima)
+    if (p === 'invalido') return { ok: false, motivo: 'La prima no es un importe válido (0 no es una prima: si no se sabe, déjala vacía).' }
+    valores.prima = p
+  }
+  return { ok: true, valores }
 }

@@ -23,6 +23,8 @@
 import {
   aplicarAccion,
   planLlamada,
+  validarAltaOportunidad,
+  validarEdicionOportunidad,
   validarTarea,
   type CambiosOportunidad,
   type EstadoOportunidad,
@@ -299,6 +301,7 @@ const ETIQUETA_ACCION: Record<string, string> = {
 function textoCambio(accion: string, antes: OportunidadSeguimiento, despues: OportunidadSeguimiento, actor: string): string {
   const ramo = despues.ramo ?? 'sin ramo'
   let extra = ''
+  if (accion === 'perder' && despues.motivoPerdida === 'error_alta') return `Oportunidad ${ramo} DESCARTADA (abierta por error o duplicada) — por ${actor}`
   if (accion === 'perder') extra = ` (motivo: ${despues.motivoPerdida}${despues.competidor ? `, se fue a ${despues.competidor}` : ''})`
   if (accion === 'aparcar') extra = ` hasta el ${despues.aparcadaHasta}`
   return `Oportunidad ${ramo} ${ETIQUETA_ACCION[accion] ?? accion}${extra} — antes «${antes.estado}», por ${actor}`
@@ -548,6 +551,176 @@ export async function tareasDeHoy(
     order by g.fecha_limite, (g.prioridad::text = 'alta') desc
     limit ${TECHO_TAREAS_HOY + 1}`)
   return { tareas: filas.slice(0, TECHO_TAREAS_HOY), truncado: filas.length > TECHO_TAREAS_HOY }
+}
+
+// ── Alta, edición y lista por cliente (Fase 1 del rediseño de la ficha, 24/09/2026) ──
+
+/** Origen de las oportunidades abiertas a mano desde la ficha. */
+export const ORIGEN_MANUAL = 'ficha:manual'
+
+/**
+ * Abre una oportunidad a mano con su primer paso, en UNA transacción:
+ * oportunidad + tarea + historial. Si el cliente ya tiene una ABIERTA del
+ * mismo ramo, no se abre otra (409 con su id): dos oportunidades del mismo
+ * seguro son dos listas de tareas que se pisan. El candado por cliente+ramo
+ * pone en fila un doble clic.
+ */
+export async function crearOportunidad(
+  correduriaId: string,
+  clienteId: string,
+  datos: Parameters<typeof validarAltaOportunidad>[0],
+  actor: string,
+  hoy: Date = hoyUtc(),
+): Promise<{ ok: true; id: string } | Fallo | { ok: false; estado: 'duplicada'; motivo: string; status: 409; id: string }> {
+  if (!UUID.test(clienteId)) return { ok: false, estado: 'invalido', motivo: 'id de cliente no válido', status: 422 }
+  const v = validarAltaOportunidad(datos, hoy)
+  if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
+  const a = v.alta
+  const r = await prismaAsegura().$transaction(async tx => {
+    const [cli] = await tx.$queryRaw<{ ok: number }[]>(Prisma.sql`
+      select 1 as ok from clientes
+      where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`)
+    if (!cli) return { tipo: 'sin_cliente' as const }
+    await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`oportunidad:${clienteId}:${a.ramo}`}))`)
+    const [ya] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+      select id::text as id from oportunidades
+      where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid
+        and tipo::text = ${a.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      order by created_at limit 1`)
+    if (ya) return { tipo: 'duplicada' as const, id: ya.id }
+    const competencia = a.aseguradora ? JSON.stringify({ aseguradora: a.aseguradora }) : null
+    const [o] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+      insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_competencia, info_riesgo)
+      values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${a.ramo} as tipo_seguro), 'venta_directa',
+              cast(${a.estado} as estado_comercial), ${a.fechaFinVigencia}::date, ${a.prima}::numeric,
+              ${competencia}::jsonb, ${JSON.stringify({ origen: ORIGEN_MANUAL })}::jsonb)
+      returning id::text as id`)
+    await tx.$executeRaw(Prisma.sql`
+      insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, oportunidad_id, origen_trigger)
+      values (${correduriaId}::uuid, cast(${a.tarea.tipo} as gestion_tipo), cast(${a.tarea.prioridad} as gestion_prioridad),
+              'pendiente', ${a.tarea.observaciones}, (${a.tarea.fechaLimite}::date + time '23:59:59') at time zone 'Europe/Madrid',
+              ${clienteId}::uuid, ${o.id}::uuid, 'central:seguimiento')`)
+    // Sin la nota libre: el historial no se puede borrar (supresión RGPD).
+    await tx.$executeRaw(Prisma.sql`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${o.id}::uuid, 'creada_mano', null, cast(${a.estado} as estado_comercial),
+              ${JSON.stringify({ ramo: a.ramo, fechaFinVigencia: a.fechaFinVigencia, prima: a.prima, conCompania: a.aseguradora !== null, primerPaso: { tipo: a.tarea.tipo, fecha: a.tarea.fechaLimite } })}::jsonb,
+              ${actor})`)
+    return { tipo: 'ok' as const, id: o.id }
+  })
+  if (r.tipo === 'sin_cliente') return { ok: false, estado: 'no_encontrado', motivo: 'Ese cliente no es de esta correduría.', status: 404 }
+  if (r.tipo === 'duplicada') {
+    return { ok: false, estado: 'duplicada', motivo: `Ya tiene una oportunidad de ${a.ramo.replace('_', ' ')} abierta: sigue esa.`, status: 409, id: r.id }
+  }
+  await anotarEnFicha(correduriaId, clienteId, `Oportunidad ${a.ramo} abierta a mano; primer paso (${a.tarea.tipo}) el ${a.tarea.fechaLimite} — por ${actor}`)
+  return { ok: true, id: r.id }
+}
+
+/**
+ * Corrige ramo, vencimiento, compañía o prima de una oportunidad ABIERTA. Una
+ * cerrada no se edita: se reabre antes, que es una acción con su rastro.
+ * Cada cambio deja antes/después en el historial (la compañía solo que cambió).
+ */
+export async function editarOportunidad(
+  correduriaId: string,
+  id: string,
+  datos: Parameters<typeof validarEdicionOportunidad>[0],
+  actor: string,
+): Promise<{ ok: true; oportunidad: OportunidadSeguimiento } | Fallo> {
+  if (!UUID.test(id)) return { ok: false, estado: 'invalido', motivo: 'id de oportunidad no válido', status: 422 }
+  const v = validarEdicionOportunidad(datos)
+  if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
+  const c = v.cambios
+  const r = await prismaAsegura().$transaction(async tx => {
+    const [fila] = await tx.$queryRaw<(FilaOportunidad & { prima: number | null; aseguradora: string | null })[]>(Prisma.sql`
+      select id::text as id, cliente_id::text as "clienteId", tipo::text as ramo, estado::text as estado,
+             fecha_fin_vigencia as "fechaFin", prima_bruta::float8 as prima,
+             nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora
+      from oportunidades where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid for update`)
+    if (!fila) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Esa oportunidad no es de esta correduría.', status: 404 as const }
+    if (fila.estado === 'ganada' || fila.estado === 'perdida') {
+      return { ok: false as const, estado: 'conflicto' as const, motivo: `Está ${fila.estado}: reábrela antes de corregirla.`, status: 409 as const }
+    }
+    const detalle: Record<string, unknown> = {}
+    if (c.ramo !== undefined && c.ramo !== fila.ramo) detalle.ramo = { antes: fila.ramo, despues: c.ramo }
+    const finAntes = dia(fila.fechaFin)
+    if (c.fechaFinVigencia !== undefined && c.fechaFinVigencia !== finAntes) detalle.fechaFinVigencia = { antes: finAntes, despues: c.fechaFinVigencia }
+    if (c.prima !== undefined && c.prima !== fila.prima) detalle.prima = { antes: fila.prima, despues: c.prima }
+    if (c.aseguradora !== undefined && c.aseguradora !== fila.aseguradora) detalle.aseguradora = { cambiado: true, vacio: c.aseguradora === null }
+    if (Object.keys(detalle).length === 0) return { ok: true as const, sinCambios: true as const, clienteId: fila.clienteId }
+    await tx.$executeRaw(Prisma.sql`
+      update oportunidades set
+        tipo = case when ${c.ramo !== undefined} then cast(${c.ramo ?? null} as tipo_seguro) else tipo end,
+        fecha_fin_vigencia = case when ${c.fechaFinVigencia !== undefined} then ${c.fechaFinVigencia ?? null}::date else fecha_fin_vigencia end,
+        prima_bruta = case when ${c.prima !== undefined} then ${c.prima ?? null}::numeric else prima_bruta end,
+        poliza_competencia = case
+          when ${c.aseguradora === undefined} then poliza_competencia
+          when ${c.aseguradora ?? null}::text is null then nullif(coalesce(poliza_competencia, '{}'::jsonb) - 'aseguradora', '{}'::jsonb)
+          else jsonb_set(coalesce(poliza_competencia, '{}'::jsonb), '{aseguradora}', to_jsonb(${c.aseguradora ?? ''}::text)) end,
+        updated_at = now()
+      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`)
+    await tx.$executeRaw(Prisma.sql`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${id}::uuid, 'editada', cast(${fila.estado} as estado_comercial), cast(${fila.estado} as estado_comercial),
+              ${JSON.stringify(detalle)}::jsonb, ${actor})`)
+    return { ok: true as const, sinCambios: false as const, clienteId: fila.clienteId, campos: Object.keys(detalle) }
+  })
+  if (!r.ok) return r
+  if (!r.sinCambios) await anotarEnFicha(correduriaId, r.clienteId, `Oportunidad corregida (${r.campos.join(', ')}) — por ${actor}`)
+  const leida = await leerOportunidad(correduriaId, id)
+  if (!leida) return { ok: false, estado: 'no_encontrado', motivo: 'Esa oportunidad no es de esta correduría.', status: 404 }
+  return { ok: true, oportunidad: leida.oportunidad }
+}
+
+export type OportunidadDeCliente = OportunidadSeguimiento & {
+  aseguradora: string | null
+  prima: number | null
+  fuente: string | null
+  creada: string
+  /** La tarea pendiente más próxima; `null` = no tiene ninguna (una abierta así está huérfana). */
+  proximaTarea: { tipo: string; fechaLimite: string } | null
+}
+
+const TECHO_POR_CLIENTE = 50
+
+/** Las oportunidades de UN cliente: abiertas primero (por su próxima tarea), luego las cerradas más recientes. */
+export async function oportunidadesDeCliente(
+  correduriaId: string,
+  clienteId: string,
+): Promise<{ oportunidades: OportunidadDeCliente[]; truncado: boolean } | null> {
+  if (!UUID.test(clienteId)) return null
+  const filas = await prismaAsegura().$queryRaw<(FilaOportunidad & {
+    aseguradora: string | null; prima: number | null; fuente: string | null; creada: Date
+    proximaTarea: { tipo: string; fechaLimite: string } | null
+  })[]>(Prisma.sql`
+    select o.id::text as id, o.cliente_id::text as "clienteId", o.tipo::text as ramo, o.estado::text as estado,
+           o.fecha_fin_vigencia as "fechaFin", o.motivo_perdida as "motivoPerdida",
+           o.motivo_perdida_detalle as "motivoDetalle", o.competidor,
+           o.prima_competidor::float8 as "primaCompetidor", o.aparcada_hasta as "aparcadaHasta",
+           o.aparcada_motivo as "aparcadaMotivo", o.cerrada_at as "cerradaAt", o.poliza_ganada_id::text as "polizaGanadaId",
+           nullif(trim(o.poliza_competencia->>'aseguradora'), '') as aseguradora,
+           o.prima_bruta::float8 as prima, o.fuente::text as fuente, o.created_at as creada,
+           (select json_build_object('tipo', g.tipo::text,
+                     'fechaLimite', to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD'))
+              from gestiones g
+             where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
+               and g.estado::text <> 'cerrada' and g.fecha_limite is not null
+             order by g.fecha_limite limit 1) as "proximaTarea"
+    from oportunidades o
+    where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid
+    order by (o.estado::text in ('ganada', 'perdida')), o.cerrada_at desc nulls last, o.created_at desc
+    limit ${TECHO_POR_CLIENTE + 1}`)
+  return {
+    oportunidades: filas.slice(0, TECHO_POR_CLIENTE).map(f => ({
+      ...mapOportunidad(f),
+      aseguradora: f.aseguradora,
+      prima: f.prima,
+      fuente: f.fuente,
+      creada: f.creada.toISOString(),
+      proximaTarea: f.proximaTarea,
+    })),
+    truncado: filas.length > TECHO_POR_CLIENTE,
+  }
 }
 
 async function anotarEnFicha(correduriaId: string, clienteId: string, texto: string): Promise<void> {

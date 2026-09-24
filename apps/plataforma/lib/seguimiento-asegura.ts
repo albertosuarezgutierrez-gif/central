@@ -16,6 +16,8 @@
 import { cabecerasPuerto } from './puerto-actor.ts'
 import {
   MOTIVOS_PERDIDA,
+  MOTIVO_DESCARTE,
+  RAMOS_OPORTUNIDAD,
   TIPOS_TAREA,
   mensajeRenovacionLeadWhatsapp,
   puedeWhatsappLead,
@@ -24,6 +26,7 @@ import {
   type EstadoOportunidad,
   type MotivoPerdida,
   type PasoLead,
+  type RamoOportunidad,
   type TipoTarea,
   type VentanaLead,
 } from '@central/module-seguros'
@@ -268,6 +271,72 @@ export function interpretarOportunidad(status: number, json: unknown): LecturaOp
   }
 }
 
+// ─── Las oportunidades de un cliente (tarjeta de la ficha) ───────────────────
+
+export type OportunidadDeCliente = Oportunidad & {
+  aseguradora: string | null
+  /** `null` = no consta: nunca 0,00€. */
+  prima: number | null
+  creada: string
+  /** `null` = no tiene tarea pendiente: una abierta así está huérfana y se dice. */
+  proximaTarea: { tipo: string; fechaLimite: string } | null
+}
+
+export type OportunidadesCliente =
+  | { estado: 'ok'; oportunidades: OportunidadDeCliente[]; truncado: boolean; descartadas: number }
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+
+export function interpretarOportunidadesCliente(status: number, json: unknown): OportunidadesCliente {
+  const o = objeto(json)
+  if (o?.estado === 'sin_configurar' || status === 503) return { estado: 'sin_configurar' }
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || !o || o.estado !== 'ok' || !Array.isArray(o.oportunidades)) {
+    return { estado: 'error', motivo: texto(o?.causa) ?? texto(o?.motivo) ?? `HTTP ${status}` }
+  }
+  const oportunidades: OportunidadDeCliente[] = []
+  let descartadas = 0
+  for (const f of o.oportunidades) {
+    const r = objeto(f)
+    const id = texto(r?.id)
+    const clienteId = texto(r?.clienteId)
+    const estado = uno(ESTADOS, r?.estado)
+    const creada = texto(r?.creada)
+    if (!r || !id || !clienteId || !estado || !creada) { descartadas++; continue }
+    const pt = objeto(r.proximaTarea)
+    const ptTipo = texto(pt?.tipo)
+    const ptFecha = texto(pt?.fechaLimite)
+    oportunidades.push({
+      id,
+      clienteId,
+      ramo: texto(r.ramo),
+      estado,
+      fechaFinVigencia: texto(r.fechaFinVigencia),
+      motivoPerdida: texto(r.motivoPerdida),
+      competidor: texto(r.competidor),
+      primaCompetidor: numero(r.primaCompetidor),
+      aparcadaHasta: texto(r.aparcadaHasta),
+      cerradaAt: texto(r.cerradaAt),
+      aseguradora: texto(r.aseguradora),
+      prima: numero(r.prima),
+      creada,
+      proximaTarea: ptTipo && ptFecha ? { tipo: ptTipo, fechaLimite: ptFecha } : null,
+    })
+  }
+  return { estado: 'ok', oportunidades, truncado: o.truncado === true, descartadas }
+}
+
+/** Qué pasa con la respuesta de «abrir oportunidad», en palabras. */
+export function textoAltaOportunidad(status: number, json: unknown): { ok: boolean; texto: string; id: string | null } {
+  const o = objeto(json)
+  const id = texto(o?.id)
+  if (status === 201 && id) return { ok: true, texto: 'Oportunidad abierta, con su primer paso en «Hoy».', id }
+  if (status === 409 && o?.estado === 'duplicada') return { ok: false, texto: texto(o.motivo) ?? 'Ya tiene una abierta de ese ramo.', id }
+  if (status === 503 || o?.estado === 'sin_configurar') return { ok: false, texto: 'La cartera no está conectada: no se ha guardado nada.', id: null }
+  if (status === 422 || status === 404) return { ok: false, texto: texto(o?.motivo) ?? 'Revisa los datos.', id: null }
+  return { ok: false, texto: `No se ha podido guardar (${texto(o?.motivo) ?? `HTTP ${status}`}). Reintenta: si se hubiera guardado, al reintentar te avisará de que ya existe.`, id: null }
+}
+
 // ─── Rótulos ─────────────────────────────────────────────────────────────────
 
 export const ROTULO_VENTANA: Record<VentanaLead, string> = {
@@ -305,10 +374,29 @@ const ROTULO_MOTIVO: Record<MotivoPerdida, string> = {
   no_contactable: 'No se le puede contactar',
   ya_asegurado: 'Ya lo tiene asegurado',
   otro: 'Otro (explica cuál)',
+  error_alta: 'Descartada: abierta por error o duplicada',
 }
-/** Los motivos del módulo, en su orden: un motivo nuevo sin rótulo no compila. */
+/**
+ * Los motivos del módulo, en su orden: un motivo nuevo sin rótulo no compila.
+ * El de descartar NO sale en «perder»: tiene su propio botón, y no es una venta perdida.
+ */
 export const MOTIVOS_PERDIDA_UI: readonly { valor: MotivoPerdida; rotulo: string }[] =
-  MOTIVOS_PERDIDA.map((valor) => ({ valor, rotulo: ROTULO_MOTIVO[valor] }))
+  MOTIVOS_PERDIDA.filter((valor) => valor !== MOTIVO_DESCARTE).map((valor) => ({ valor, rotulo: ROTULO_MOTIVO[valor] }))
+
+/** Rótulo de un motivo leído del puerto; `null` si no es uno conocido (se enseña tal cual). */
+export function rotuloMotivo(m: string | null): string | null {
+  return m === null ? null : (ROTULO_MOTIVO as Record<string, string>)[m] ?? m
+}
+
+const ROTULO_RAMO: Record<RamoOportunidad, string> = {
+  auto: 'Auto', moto: 'Moto', hogar: 'Hogar', vida: 'Vida', salud: 'Salud', decesos: 'Decesos',
+  responsabilidad_civil: 'Resp. civil', comercio: 'Comercio', comunidades: 'Comunidades', accidentes: 'Accidentes', otros: 'Otros',
+}
+export const RAMOS_OPORTUNIDAD_UI: readonly { valor: RamoOportunidad; rotulo: string }[] =
+  RAMOS_OPORTUNIDAD.map((valor) => ({ valor, rotulo: ROTULO_RAMO[valor] }))
+export function rotuloRamo(r: string | null): string {
+  return r === null ? 'Sin ramo' : (ROTULO_RAMO as Record<string, string>)[r] ?? r
+}
 
 const ROTULO_TIPO_TAREA: Record<TipoTarea, string> = { llamada: 'Llamada', email: 'Correo', whatsapp: 'WhatsApp', tarea: 'Tarea' }
 export const TIPOS_TAREA_UI: readonly { valor: TipoTarea; rotulo: string }[] =
@@ -465,6 +553,9 @@ export function leadsCompetenciaAsegura(dias: number): Promise<Reenvio> {
 }
 export function oportunidadAsegura(id: string): Promise<Reenvio> {
   return llamar(`/api/operador/oportunidad?id=${encodeURIComponent(id)}`, { method: 'GET' })
+}
+export function oportunidadesClienteAsegura(clienteId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/oportunidad?clienteId=${encodeURIComponent(clienteId)}`, { method: 'GET' })
 }
 export function accionOportunidadAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad', { method: 'POST', body: JSON.stringify(body) })
