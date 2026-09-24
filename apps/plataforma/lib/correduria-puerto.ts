@@ -5,7 +5,7 @@
 // en dos sitios y, cuando asegura no responde, la pantalla apilaba tres
 // recuadros de error distintos diciendo lo mismo.
 
-import type { Retarificabilidad } from '@central/module-seguros'
+import type { Retarificabilidad, IncidenciaCalidad } from '@central/module-seguros'
 import { leerRetarificacion } from './ficha-asegura.ts'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
@@ -1041,6 +1041,64 @@ export async function sinCanalAsegura(): Promise<SinCanal> {
     const r = await pedir('/api/operador/sin-canal')
     if (r === null) return { estado: 'sin_configurar' }
     return interpretarSinCanal(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ─── Calidad del dato: reglas de la cartera en vigor ──────────────────────────
+
+export type CalidadDato = { estado: 'sin_configurar' } | { estado: 'error'; motivo: MotivoPuerto } | {
+  estado: 'ok'
+  incidencias: IncidenciaCalidad[]
+  truncado: boolean | null
+}
+
+export function interpretarCalidad(status: number, json: unknown): CalidadDato {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  const r = json as Record<string, unknown>
+  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (r.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (r.estado !== 'ok' || !Array.isArray(r.filas)) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+
+  const incidencias: IncidenciaCalidad[] = []
+  for (const f of r.filas) {
+    if (typeof f !== 'object' || f === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const o = f as Record<string, unknown>
+    const regla = cadena(o.regla)
+    // Sin regla válida no hay incidencia.
+    if (regla === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    // Las demás se pueden leer tranquilamente con helpers que devuelven null:
+    // la regla existe y eso basta para la agrupación.
+    incidencias.push({
+      regla: regla as any, // ya se valida que sea cadena
+      clienteId: cadena(o.clienteId) || '',
+      cliente: cadena(o.cliente),
+      polizaId: cadena(o.polizaId),
+      numeroPoliza: cadena(o.numeroPoliza),
+      compania: cadena(o.compania),
+      dato: cadena(o.dato),
+      relacionadoId: cadena(o.relacionadoId),
+    })
+  }
+
+  return {
+    estado: 'ok',
+    incidencias,
+    truncado: leerTruncado(r.truncado),
+  }
+}
+
+export async function calidadAsegura(): Promise<CalidadDato> {
+  try {
+    const r = await pedir('/api/operador/calidad')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarCalidad(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }
