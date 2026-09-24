@@ -17,7 +17,7 @@
 //
 // Módulo PURO (sin BD ni `@/`), testeable con `node --test`.
 
-import { MIN_VENTANAS_CANAL, RECORRIDO_MINIMO } from './pricing-canal.ts'
+import { MIN_VENTANAS_CANAL, RECORRIDO_MINIMO, esUltimaHora } from './pricing-canal.ts'
 
 /** Una fecha candidata del calendario, con lo que costaría esa ventana a precio BASE de hoy. */
 export interface CandidataEscaparate {
@@ -68,7 +68,7 @@ export interface PeticionEscaparate {
   /** lo que cuesta esa ventana a precio base hoy (para poder ordenar y explicar la elección) */
   base_total: number
   /** qué aporta esta ventana al ajuste */
-  motivo: 'sin_ninguna' | 'faltan_ventanas' | 'falta_recorrido' | 'refresco'
+  motivo: 'sin_ninguna' | 'faltan_ventanas' | 'falta_recorrido' | 'refresco' | 'ultima_hora'
 }
 
 export interface HuecoEscaparate {
@@ -137,23 +137,31 @@ export function planEscaparate(
   const huecos: HuecoEscaparate[] = []
 
   for (const piso of pisos) {
-    const utiles = (piso.candidatas ?? []).filter(c =>
+    // 🚨 Dos TRAMOS (24/09/2026, ver `DIAS_ULTIMA_HORA` en pricing-canal.ts): la recta principal
+    // se ajusta SOLO con ventanas de antelación, y el tramo de última hora solo mide un recargo. Si
+    // el plan no las separa, basta con que el refresco caiga siempre en «mañana» —como pasó desde
+    // el 07/09— para que la recta principal se quede sin ventanas y deje de poder ajustarse.
+    const medibles = (piso.candidatas ?? []).filter(c =>
       c.baseTotal != null && Number(c.baseTotal) > 0 && Number(c.noches) > 0 && c.checkin > hoy)
+    const utiles = medibles.filter(c => !esUltimaHora(diasEntre(hoy, c.checkin)))
+    const utilesUh = medibles.filter(c => esUltimaHora(diasEntre(hoy, c.checkin)))
     if (!piso.nombrePortal) {
       // Sin el nombre con el que el portal lo publica no se puede pedir. Es un hueco REAL, no un
       // «ya está medido»: se declara para que alguien lo busque (ver `NOMBRE_PORTAL`).
       huecos.push({ property_id: piso.propertyId, motivo: 'sin nombre de portal: no se puede consultar el anuncio' })
       continue
     }
-    if (!utiles.length) {
+    if (!medibles.length) {
       huecos.push({ property_id: piso.propertyId, motivo: 'ninguna fecha candidata tiene base conocida (faltan snapshots)' })
       continue
     }
 
-    const vigentes = piso.medidas.filter(m =>
+    const delAforo = piso.medidas.filter(m =>
       Number(m.guests) === Number(piso.aforo) &&
       m.baseTotal != null && Number(m.baseTotal) > 0 &&
       diasEntre(m.medidoEl, hoy) <= ventanaDias)
+    const vigentes = delAforo.filter(m => !esUltimaHora(diasEntre(m.medidoEl, m.checkin)))
+    const vigentesUh = delAforo.filter(m => esUltimaHora(diasEntre(m.medidoEl, m.checkin)))
     const basesVigentes = vigentes.map(m => Number(m.baseTotal))
     const nochesVistas = new Set(vigentes.map(m => Number(m.noches)))
     const recienMedida = new Set(
@@ -203,7 +211,20 @@ export function planEscaparate(
       })
     }
 
-    if (!peticiones.some(p => p.property_id === piso.propertyId) && motivo !== 'refresco') {
+    // Tramo corto: basta con tener MIN_VENTANAS_CANAL vigentes (solo mide un recargo, no separa m
+    // de F). Sin ellas, UNA ventana por pasada; con ellas, nada: no se gasta el conector de más.
+    if (vigentesUh.length < MIN_VENTANAS_CANAL) {
+      const c = utilesUh.find(c => !recienMedida.has(`${c.checkin}|${c.noches}|${piso.aforo}`))
+      if (c) {
+        peticiones.push({
+          property_id: piso.propertyId, nombre_portal: piso.nombrePortal,
+          checkin: c.checkin, checkout: sumarDias(c.checkin, c.noches), noches: c.noches,
+          guests: piso.aforo, base_total: Number(c.baseTotal), motivo: 'ultima_hora',
+        })
+      }
+    }
+
+    if (!peticiones.some(p => p.property_id === piso.propertyId && p.motivo !== 'ultima_hora') && motivo !== 'refresco') {
       huecos.push({
         property_id: piso.propertyId,
         motivo: `hacen falta ventanas (${vigentes.length}/${MIN_VENTANAS_CANAL}) pero todas las candidatas se midieron hace <${refrescoDias}d`,
@@ -213,7 +234,7 @@ export function planEscaparate(
 
   // Primero lo que impide ajustar, luego el mantenimiento.
   const orden: Record<PeticionEscaparate['motivo'], number> = {
-    sin_ninguna: 0, faltan_ventanas: 1, falta_recorrido: 2, refresco: 3,
+    sin_ninguna: 0, faltan_ventanas: 1, falta_recorrido: 2, ultima_hora: 3, refresco: 4,
   }
   peticiones.sort((a, b) => orden[a.motivo] - orden[b.motivo] || a.checkin.localeCompare(b.checkin))
   return { peticiones, huecos }

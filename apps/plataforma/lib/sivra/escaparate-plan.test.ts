@@ -132,3 +132,24 @@ test('los pisos que no pueden ajustar van ANTES que los que solo refrescan', () 
   assert.equal(peticiones[0].property_id, 'prop_house_sevillana')
   assert.equal(peticiones.at(-1)!.property_id, 'prop_busto_reform')
 })
+
+test('⏱️ la última hora NO cuenta para la recta principal: con solo ventanas de «mañana» se piden fechas con antelación', () => {
+  // Lo que pasaba desde el 07/09/2026: todo medido con check-in al día siguiente.
+  const manana = [
+    { checkin: '2026-08-20', noches: 2, guests: 12, baseTotal: 900, medidoEl: '2026-08-19' },
+    { checkin: '2026-08-21', noches: 2, guests: 12, baseTotal: 1500, medidoEl: '2026-08-20' },
+    { checkin: '2026-08-22', noches: 2, guests: 12, baseTotal: 2500, medidoEl: '2026-08-21' },
+  ]
+  const { peticiones } = planEscaparate([piso(manana)], HOY, { porPiso: 2 })
+  assert.equal(peticiones[0].motivo, 'sin_ninguna')
+  assert.ok(peticiones.every(p => p.checkin > '2026-08-25'), JSON.stringify(peticiones))
+})
+
+test('⏱️ sin ventanas de última hora vigentes se pide UNA a ≤6 días; con tres, ninguna', () => {
+  const candidatas = [...CANDIDATAS, { checkin: '2026-08-22', noches: 2, baseTotal: 950 }]
+  const sin = planEscaparate([piso([], candidatas)], HOY)
+  assert.equal(sin.peticiones.filter(p => p.motivo === 'ultima_hora').length, 1)
+  const tres = [0, 1, 2].map(i => ({ checkin: `2026-08-1${i + 5}`, noches: 2, guests: 12, baseTotal: 900 + i * 400, medidoEl: `2026-08-1${i + 4}` }))
+  const con = planEscaparate([piso(tres, candidatas)], HOY)
+  assert.equal(con.peticiones.filter(p => p.motivo === 'ultima_hora').length, 0)
+})

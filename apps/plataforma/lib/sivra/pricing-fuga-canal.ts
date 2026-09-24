@@ -59,7 +59,9 @@
 // Por eso la lista se mide en el escaparate POR TRAMO de antelación (`canalPorAntelacion`) y la
 // recta del motor solo es el último recurso cuando un tramo no tiene ventanas suficientes.
 
-import { ajusteCanal, type ParametrosCanal, type VentanaEscaparate } from './pricing-canal.ts'
+import { ajusteCanal, DIAS_ULTIMA_HORA, type ParametrosCanal, type VentanaEscaparate } from './pricing-canal.ts'
+
+export { DIAS_ULTIMA_HORA }
 
 export interface ReservaCobrada {
   reservationId: string
@@ -126,9 +128,6 @@ export interface FugaCanalOpts {
 
 /** Escaparate/base por encima de esto no es una tarifa del canal (House, el más caro, va a ~1,5×). */
 const RATIO_VENTANA_MAX = 3
-
-/** Última antelación (días) que el escaparate de Booking pone en el tramo de última hora. */
-export const DIAS_ULTIMA_HORA = 6
 
 export type VentanaConAntelacion = VentanaEscaparate & { antelacionDias: number }
 

@@ -7,7 +7,9 @@ import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 import { eur } from "@/lib/dinero"
 import {
   ajusteCanal, desviacionCanal, baseDesdeGuest, validarCanal,
-  repartirCambios, ventanasAConsumir,
+  repartirCambios, ventanasAConsumir, esUltimaHora, medirRecargoUltimaHora, pasoRecargo,
+  DIAS_ULTIMA_HORA,
+  type RecargoUltimaHora,
   MIN_VENTANAS_CANAL, MAX_SALTO_CANAL,
   type VentanaEscaparate, type ParametrosCanal, type ValidacionCanal,
   type CambioCanal, type NoTocado,
@@ -74,6 +76,7 @@ type FilaPiso = {
   noches_cfg: number
   canal_auto: boolean
   noches_mediana: number | null
+  recargo_uh_cfg: number
 }
 
 type FilaVentana = {
@@ -87,6 +90,8 @@ type FilaVentana = {
   /** null = ventana NUEVA: es la única que puede validar fuera de muestra la recta vigente */
   usada: Date | null
   id: number
+  /** días entre la medición y el check-in: decide el tramo (ver `DIAS_ULTIMA_HORA`) */
+  antelacion: number
 }
 
 export type MedicionCanal = {
@@ -114,6 +119,9 @@ export type MedicionCanal = {
   validacion: ValidacionCanal
   /** ids de las ventanas que entran en el ajuste de esta pasada (se marcan al escribir) */
   ventanas_usadas: number[]
+  /** recargo de la pendiente en el tramo de última hora: el vigente y el medido en esta pasada */
+  recargo_uh_cfg: number
+  recargo_uh: RecargoUltimaHora
 }
 
 async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, VentanaEscaparate[]> }> {
@@ -124,6 +132,7 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
            COALESCE(s.cuota_fija, 0)::float8        AS cuota_cfg,
            COALESCE(s.noches_ref, 2)::int           AS noches_cfg,
            COALESCE(s.canal_auto, true)             AS canal_auto,
+           COALESCE(s.canal_recargo_uh, 1)::float8  AS recargo_uh_cfg,
            -- Estancia típica REAL del piso: entre esas noches se reparte la cuota fija. Mediana, no
            -- media: una reserva de 14 noches no puede decidir cómo se tarifa un fin de semana.
            (SELECT percentile_disc(0.5) WITHIN GROUP (ORDER BY i.nights)
@@ -136,7 +145,7 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
 
   const medidas = await prisma.$queryRaw<FilaVentana[]>(Prisma.sql`
     SELECT id, property_id, checkin::text AS checkin, noches, guests, precio_total, base_total,
-           portal, usada_en_ajuste_at AS usada
+           portal, usada_en_ajuste_at AS usada, (checkin - medido_el)::int AS antelacion
     FROM pricing_escaparate
     -- 🚨 El ::int NO es decorativo: Prisma manda un número de JS como int8, y en Postgres
     -- el operador «date - bigint» NO EXISTE (42883). Sin el cast la consulta revienta EN
@@ -159,6 +168,7 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
       baseTotal: v.base_total != null ? Number(v.base_total) : null,
       portal: String(v.portal ?? PORTAL_CANAL),
       usada: v.usada != null,
+      antelacionDias: Number(v.antelacion),
     })
     porPiso.set(v.property_id, lista)
   }
@@ -166,13 +176,17 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
   const salida = pisos.map(p => {
     const todas = porPiso.get(p.property_id) ?? []
     const aforo = Number(p.aforo_max)
-    const ajuste = ajusteCanal(todas, { aforo, portal: PORTAL_CANAL })
+    // La recta principal se ajusta SOLO con las ventanas de antelación: las de última hora llevan
+    // otra pendiente en algunos pisos y, mezcladas, la ordenada se come la diferencia y deja de
+    // ser la limpieza (ver `DIAS_ULTIMA_HORA` en `pricing-canal.ts`). Van a su propio recargo.
+    const conAntelacion = todas.filter(v => !esUltimaHora(v.antelacionDias))
+    const ajuste = ajusteCanal(conAntelacion, { aforo, portal: PORTAL_CANAL })
     // 🚨 La validación va ANTES de reajustar y con los parámetros VIGENTES: si se hiciera después,
     // se estaría comprobando la recta contra las mismas ventanas que acaban de producirla, que es
     // justo el círculo que este control existe para romper.
     const validacion = validarCanal(
       todas.filter(v => !v.usada && v.portal === PORTAL_CANAL),
-      { markup: Number(p.markup_cfg), cuotaFija: Number(p.cuota_cfg) },
+      { markup: Number(p.markup_cfg), cuotaFija: Number(p.cuota_cfg), recargoUh: Number(p.recargo_uh_cfg) },
       { aforo })
     // La estancia típica solo se toma del histórico si lo hay; si no, se conserva la guardada (que
     // por defecto es 2) en vez de inventar una duración con la que nunca se ha vendido nada.
@@ -183,7 +197,7 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
     // Precio de referencia = lo que de verdad cuesta una noche nuestra en el portal, en la mediana
     // de las ventanas del aforo medido. Con una cuota fija el sesgo NO es un porcentaje plano, así
     // que decir «nos desviamos un X%» sin decir a qué precio no significa nada.
-    const delAforo = todas.filter(v => v.guests === aforo && v.noches > 0)
+    const delAforo = conAntelacion.filter(v => v.guests === aforo && v.noches > 0)
     const porNoche = delAforo.map(v => v.precioTotal / v.noches).sort((a, b) => a - b)
     const guestRef = porNoche.length ? Math.round(porNoche[Math.floor((porNoche.length - 1) / 2)]) : null
     // Los EXTREMOS del rango medido viajan con la mediana: son los que delatan una recta vigente
@@ -200,6 +214,12 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
           guestRef, guestMin, guestMax,
         })
       : { estado: "sin_datos" as const, sesgo: null, sesgoMax: null }
+    // El recargo se mide contra la recta con la que se VA a tarificar: la medida si es fiable, la
+    // vigente si no. Medirlo contra otra dejaría las fechas de última hora con dos errores sumados.
+    const recta = ajuste.estado === "medido" && ajuste.markup != null && ajuste.cuotaFija != null
+      ? { markup: ajuste.markup, cuotaFija: ajuste.cuotaFija }
+      : { markup: Number(p.markup_cfg), cuotaFija: Number(p.cuota_cfg) }
+    const recargoUh = medirRecargoUltimaHora(todas, { aforo, portal: PORTAL_CANAL, ...recta })
     return {
       property_id: p.property_id,
       nombre: PROP_NAMES[p.property_id] ?? p.property_id,
@@ -223,6 +243,8 @@ async function medir(): Promise<{ pisos: MedicionCanal[]; ventanas: Map<string, 
       ventanas_usadas: ajuste.estado === "medido"
         ? todas.filter(v => v.guests === aforo && v.portal === PORTAL_CANAL && v.baseTotal != null).map(v => v.id)
         : [],
+      recargo_uh_cfg: Number(p.recargo_uh_cfg),
+      recargo_uh: recargoUh,
     }
   })
 
@@ -371,11 +393,15 @@ async function centinelaHuesped(pisos: MedicionCanal[]): Promise<{
     })
     porPiso.set(f.property_id, l)
   }
+  // Mismo «hoy» que usa el motor al contar la antelación de cada fecha (España, no UTC).
+  const hoyMadrid = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Madrid" })
   const salida = new Map<string, ResumenHuesped>()
   for (const p of pisos) {
     const fechas = porPiso.get(p.property_id)
     if (!fechas?.length) continue
-    salida.set(p.property_id, precioHuesped(fechas, p.configurado))
+    salida.set(p.property_id, precioHuesped(fechas, p.configurado, {
+      ultimaHora: { recargo: p.recargo_uh_cfg, hoy: hoyMadrid },
+    }))
   }
   return { huesped: salida, eventosIlegibles }
 }
@@ -385,6 +411,37 @@ function etiquetaEvento(v: VeredictoHuesped | undefined): string {
   return v?.hayEvento === true ? "🎪 con evento: el mercado entero sube esa noche"
     : v?.hayEvento === false ? "sin evento"
     : "evento sin comprobar"
+}
+
+/** Un cambio del recargo de última hora. Va aparte de la recta: puede moverse sin que ella se mueva. */
+type CambioRecargo = { property_id: string; nombre: string; de: number; a: number; medido: number; muestras: number }
+
+/**
+ * Qué recargos se escriben. Mismas puertas que la recta (`canal_auto`, `SIVRA_CANAL_AUTO`,
+ * `?property=`) y el mismo tope por pasada: el recargo mueve el precio de las fechas de los próximos
+ * `DIAS_ULTIMA_HORA` días exactamente en de/a − 1. Sin medición fiable NO se toca: se queda el que
+ * hay (1 = sin tramo), que es «no lo sé», no «no hay tramo».
+ */
+function cambiosRecargo(pisos: MedicionCanal[], o: { soloProp: string | null; autoGlobal: boolean }): CambioRecargo[] {
+  const out: CambioRecargo[] = []
+  for (const p of pisos) {
+    if (o.soloProp && p.property_id !== o.soloProp) continue
+    if (!o.autoGlobal || !p.canal_auto) continue
+    if (p.recargo_uh.estado !== "medido" || p.recargo_uh.recargo == null) continue
+    const a = pasoRecargo(p.recargo_uh_cfg, p.recargo_uh.recargo)
+    if (Math.abs(a - p.recargo_uh_cfg) < 0.01) continue
+    out.push({ property_id: p.property_id, nombre: p.nombre, de: p.recargo_uh_cfg, a,
+      medido: p.recargo_uh.recargo, muestras: p.recargo_uh.muestras })
+  }
+  return out
+}
+
+async function escribirRecargos(cambios: CambioRecargo[]) {
+  for (const c of cambios) {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE pricing_settings SET canal_recargo_uh = ${c.a}, updated_at = now()
+       WHERE property_id = ${c.property_id}`)
+  }
 }
 
 async function escribir(cambios: Cambio[]) {
@@ -418,6 +475,7 @@ export async function GET(req: NextRequest) {
 
   let pisos: MedicionCanal[] = []
   let cambios: Cambio[] = []
+  let recargos: CambioRecargo[] = []
   let frenados: NoTocado[] = []
   let sinCambio: NoTocado[] = []
   let huesped = new Map<string, ResumenHuesped>()
@@ -432,6 +490,8 @@ export async function GET(req: NextRequest) {
     const r = repartirCambios(pisos, { soloProp, autoGlobal })
     cambios = r.cambios; frenados = r.frenados; sinCambio = r.sinCambio
     if (!simulacro && cambios.length > 0) await escribir(cambios)
+    recargos = cambiosRecargo(pisos, { soloProp, autoGlobal })
+    if (!simulacro && recargos.length > 0) await escribirRecargos(recargos)
     // Las ventanas se marcan DESPUÉS de escribir y SOLO las de los pisos que se han ajustado de
     // verdad — no las de los que simplemente se pudieron medir. Ver `ventanasAConsumir`: marcar de
     // más deja al piso sin muestra limpia con la que corregirse en la pasada siguiente.
@@ -504,6 +564,13 @@ export async function GET(req: NextRequest) {
         `📐 *Canal Booking recalibrado* (medido en el escaparate, aplicado solo)\n\n` +
         cambios.map(lineaCambio).join("\n"))
     }
+    if (recargos.length > 0) {
+      bloques.push(
+        `⏱️ *Tramo de última hora recalibrado* (check-in a ≤${DIAS_ULTIMA_HORA} días)\n\n` +
+        recargos.map(c => `• ${c.nombre}: pendiente ×${c.de.toFixed(3)} → ×${c.a.toFixed(3)} sobre la recta ` +
+          `(medido ×${c.medido.toFixed(3)} en ${c.muestras} ventanas)` +
+          (Math.abs(c.a - c.medido) >= 0.01 ? " · tramo acotado, sigue en la próxima pasada" : "")).join("\n"))
+    }
     // 🚨 El modelo FALLANDO en ventanas nuevas es más grave que un parámetro desfasado: significa
     // que la recta ya no describe al portal y que reajustarla volvería a dar un R² inmejorable
     // sobre un modelo equivocado. Va siempre, aunque no se haya cambiado nada.
@@ -563,6 +630,7 @@ export async function GET(req: NextRequest) {
     mercado_min_comps: MIN_COMPS_FECHA,
     pisos,
     cambios,
+    recargos_uh: recargos,
     // Se declaran los huecos: «sin ajuste fiable» no es «cuadra», y un piso frenado por su
     // interruptor tiene que verse (si no, un `canal_auto=false` olvidado es invisible para siempre).
     frenados,

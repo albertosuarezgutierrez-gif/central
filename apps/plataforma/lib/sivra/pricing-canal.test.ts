@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import {
   ajusteCanal, baseDesdeGuest, guestDesdeBase, fijoPorNoche, desviacionCanal,
   pasoCanal, validarCanal, MIN_VENTANAS_CANAL, RECORRIDO_MINIMO, MAX_SALTO_CANAL, TOL_SESGO_CANAL,
-  repartirCambios, ventanasAConsumir,
+  repartirCambios, ventanasAConsumir, esUltimaHora, markupEnFecha, medirRecargoUltimaHora, pasoRecargo,
   type VentanaEscaparate, type PisoParaCambio,
 } from './pricing-canal.ts'
 
@@ -376,4 +376,52 @@ test('con varios pisos solo se consumen las ventanas de los ajustados', () => {
   const no = piso({ property_id: 'prop_house_sevillana', canal_auto: false, ventanas_usadas: [20, 21] })
   const r = repartirCambios([ok, no])
   assert.deepEqual(ventanasAConsumir([ok, no], r.cambios), [10, 11])
+})
+
+// ─── Tramo de última hora (24/09/2026) ───────────────────────────────────────────────────────
+// Escaparate real de Luxury Busto (aforo 5): ≥7 días = 0,994 × base + 34,9€; ≤6 = 1,107 × base + 33,6€.
+const VLB = (baseTotal: number, precioTotal: number, antelacionDias: number) =>
+  ({ checkin: "2026-10-01", noches: 2, guests: 5, precioTotal, baseTotal, portal: "booking", antelacionDias })
+const LUXURY_LEJOS = [VLB(315, 348, 20), VLB(536, 567, 48), VLB(156, 190, 141), VLB(144, 178, 127), VLB(795, 826, 20)]
+const LUXURY_CERCA = [VLB(407, 485, 6), VLB(307, 373, 5), VLB(680, 786, 4), VLB(280, 343, 1), VLB(316, 384, 1)]
+
+test("tramo: la antelación ≤6 días es última hora; sin antelación conocida NO lo es", () => {
+  assert.equal(esUltimaHora(6), true)
+  assert.equal(esUltimaHora(7), false)
+  assert.equal(esUltimaHora(null), false)
+  assert.equal(markupEnFecha(1, 1.1, 3), 1.1)
+  assert.equal(markupEnFecha(1, 1.1, 30), 1)
+  assert.equal(markupEnFecha(1, null, 3), 1)
+})
+
+test("tramo: la recta ajustada solo con antelación recupera la limpieza; mezclada, la ordenada se la come", () => {
+  const lejos = ajusteCanal(LUXURY_LEJOS, { aforo: 5, portal: "booking", minVentanas: 3 })
+  const mezcla = ajusteCanal([...LUXURY_LEJOS, ...LUXURY_CERCA], { aforo: 5, portal: "booking", minVentanas: 3 })
+  assert.ok(lejos.cuotaFija! < 45, `lejos ${lejos.cuotaFija}`)
+  assert.ok(mezcla.cuotaFija! > lejos.cuotaFija! + 5, `mezcla ${mezcla.cuotaFija} vs ${lejos.cuotaFija}`)
+})
+
+test("tramo: el recargo de última hora sale ~1,11 sobre la recta de antelación", () => {
+  const r = medirRecargoUltimaHora([...LUXURY_LEJOS, ...LUXURY_CERCA], { aforo: 5, portal: "booking", markup: 0.994, cuotaFija: 34.9 })
+  assert.equal(r.estado, "medido")
+  assert.ok(Math.abs(r.recargo! - 1.11) < 0.03, `recargo ${r.recargo}`)
+  assert.equal(r.muestras, 5)
+  // sin ventanas cortas no hay recargo: «no lo sé», no 1
+  const sin = medirRecargoUltimaHora(LUXURY_LEJOS, { aforo: 5, portal: "booking", markup: 0.994, cuotaFija: 34.9 })
+  assert.equal(sin.estado, "sin_muestras")
+  assert.equal(sin.recargo, null)
+})
+
+test("tramo: el paso del recargo mueve la base de última hora como mucho MAX_SALTO_CANAL", () => {
+  const a = pasoRecargo(1, 1.4)
+  assert.ok(Math.abs(1 / a - 1) <= MAX_SALTO_CANAL + 1e-3, `a ${a}`)
+  assert.equal(pasoRecargo(1, 1.107), 1.107)
+})
+
+test("tramo: la validación juzga cada ventana con SU pendiente — sin recargo, la última hora sale desviada", () => {
+  const nuevas = [...LUXURY_LEJOS, ...LUXURY_CERCA]
+  const sin = validarCanal(nuevas, { markup: 0.994, cuotaFija: 34.9 }, { aforo: 5 })
+  const con = validarCanal(nuevas, { markup: 0.994, cuotaFija: 34.9, recargoUh: 1.107 }, { aforo: 5 })
+  assert.ok(Math.abs(con.sesgo!) < Math.abs(sin.sesgo!), `con ${con.sesgo} sin ${sin.sesgo}`)
+  assert.equal(con.estado, "ok")
 })

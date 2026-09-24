@@ -19,15 +19,15 @@ const FUENTE = readFileSync(
   new URL('../../app/api/sivra/pricing/apply/route.ts', import.meta.url), 'utf8')
 
 test('floorD y ceilD del bucket de mes llevan dqDate, igual que baseD', () => {
-  const floor = /const floorD = useMonth \? aBase\(mb!\.flo \* dqDate\)/.test(FUENTE)
-  const ceil = /const ceilD = useMonth \? aBase\(mb!\.cei \* dqDate\)/.test(FUENTE)
+  const floor = /const floorD = useMonth \? aBaseD?\(mb!\.flo \* dqDate\)/.test(FUENTE)
+  const ceil = /const ceilD = useMonth \? aBaseD?\(mb!\.cei \* dqDate\)/.test(FUENTE)
   assert.ok(floor, 'floorD debe multiplicar por dqDate (si no, el suelo anula el descuento de calidad)')
   assert.ok(ceil, 'ceilD debe multiplicar por dqDate (el clamp es un intervalo: bajar una sola punta lo sesga)')
 })
 
 test('la rama GLOBAL del clamp tambien ajusta sus dos limites', () => {
-  assert.match(FUENTE, /aBase\(floorGuestGlobal \* dqDate\)/)
-  assert.match(FUENTE, /aBase\(ceilGuestGlobal \* dqDate\)/)
+  assert.match(FUENTE, /aBaseD?\(floorGuestGlobal \* dqDate\)/)
+  assert.match(FUENTE, /aBaseD?\(ceilGuestGlobal \* dqDate\)/)
 })
 
 test('ya no quedan limites SIN ajustar: las constantes crudas no existen', () => {
@@ -38,7 +38,7 @@ test('ya no quedan limites SIN ajustar: las constantes crudas no existen', () =>
 })
 
 test('baseD sigue llevando dqDate (el otro lado del invariante)', () => {
-  assert.match(FUENTE, /const baseD = useMonth \? aBase\(mb!\.med \* dqDate\)/)
+  assert.match(FUENTE, /const baseD = useMonth \? aBaseD?\(mb!\.med \* dqDate\)/)
 })
 
 // ── Guardián de la instrumentación (04/09/2026) ──────────────────────────────────────────────────
