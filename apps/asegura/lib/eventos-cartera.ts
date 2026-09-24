@@ -107,6 +107,8 @@ export type ResultadoDeteccion = {
   anulacionesPorSustitucion: number
   /** Oportunidades de venta cerradas como ganadas porque su póliza ya entró en cartera. */
   oportunidadesGanadas: number
+  /** El cierre de oportunidades ganadas falló en esta pasada (el resto sí corrió). */
+  oportunidadesFallidas: boolean
 }
 
 /** La foto actual parece rota (ha desaparecido de golpe una parte grande de la cartera). */
@@ -125,7 +127,8 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     await tx.$executeRaw`savepoint sustitucion`
     let sust = { enlazadas: 0, ambiguas: 0, duplicidades: 0 }
     let presupuestosEmitidos = 0
-    let oportunidadesGanadas = 0
+    let ganadas: { id: string; estado: string }[] = []
+    let oportunidadesFallidas = false
     let anulacionesAbiertas = { abiertas: 0, sinDatos: 0 }
     let sustitucionesFallidas = false
     try {
@@ -134,12 +137,22 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       // presupuesto, y pedir la firma de las que se emitieron fuera de él.
       presupuestosEmitidos = await liberarPresupuestosEmitidos(tx, correduriaId)
       anulacionesAbiertas = await abrirAnulacionesPorSustitucion(tx, correduriaId, hoyMadrid())
-      oportunidadesGanadas = await ganarOportunidadesEmitidas(tx, correduriaId)
       await tx.$executeRaw`release savepoint sustitucion`
     } catch (err) {
       await tx.$executeRaw`rollback to savepoint sustitucion`
       sustitucionesFallidas = true
       console.error('[eventos-cartera] sustituciones no enlazadas:', err instanceof Error ? err.message : err)
+    }
+    // Con la sustituta ya enlazada (la renovación de lo que ya teníamos no cuenta como venta), y con
+    // su PROPIO punto de guardado: si falla, no arrastra el enlace de sustituciones.
+    await tx.$executeRaw`savepoint ganar_oportunidad`
+    try {
+      ganadas = await ganarOportunidadesEmitidas(tx, correduriaId)
+      await tx.$executeRaw`release savepoint ganar_oportunidad`
+    } catch (err) {
+      await tx.$executeRaw`rollback to savepoint ganar_oportunidad`
+      oportunidadesFallidas = true
+      console.error('[eventos-cartera] oportunidades ganadas no cerradas:', err instanceof Error ? err.message : err)
     }
     const actual = await fotoActual(correduriaId, tx)
     const previa = await tx.$queryRaw<{ foto: Foto }[]>`
@@ -232,11 +245,15 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       sustitucionesFallidas,
       presupuestosEmitidos,
       anulacionesPorSustitucion: anulacionesAbiertas.abiertas,
-      oportunidadesGanadas,
+      oportunidadesGanadas: ganadas.length,
+      oportunidadesFallidas,
+      ganadas,
     }
   }, { timeout: 30_000 }).then(async (r) => {
-    const { retenciones, ...resto } = r
+    const { retenciones, ganadas, ...resto } = r
     for (const x of retenciones) await anotarRetencion(correduriaId, x)
+    // Tras el commit: la auditoría no puede afirmar un cambio que luego se deshizo.
+    for (const g of ganadas) anotarCambio({ entidad: 'oportunidad', id: g.id, campo: 'estado', antes: g.estado, despues: 'ganada' })
     return { ...resto, retencionesAbiertas: retenciones.length }
   })
 }

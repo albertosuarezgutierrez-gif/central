@@ -47,6 +47,7 @@ export async function GET(req: NextRequest) {
   // Una retención que tocaba abrir y falló es una llamada que no aparece en «Hoy»: el latido lo dice.
   const fallo = (d.retencionesFallidas ? `⚠️ ${d.retencionesFallidas} retención(es) NO se pudieron abrir (ver logs de asegura); ` : '') +
     (d.sustitucionesFallidas ? '⚠️ el enlace automático de sustituciones falló en esta pasada (ver logs de asegura); ' : '') +
+    (d.oportunidadesFallidas ? '⚠️ el cierre automático de oportunidades ganadas falló en esta pasada (ver logs de asegura); ' : '') +
     (d.aprobacionesFallidas ? `⚠️ ${d.aprobacionesFallidas} aviso(s) de recibo devuelto NO se pudieron proponer y no se reintentan (ver logs de asegura); ` : '')
   if (d.primeraVez) {
     await registrarLatido(AGENTE, true, `primera pasada: foto anclada (${d.polizasEnFoto} pólizas vivas), sin eventos`)
