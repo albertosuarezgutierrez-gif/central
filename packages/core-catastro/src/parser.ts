@@ -259,7 +259,10 @@ export interface InmuebleCatastro {
  */
 export function parsearInmueblesDnploc(xml: string): InmuebleCatastro[] {
   if (!xml || errorCatastro(xml)) return []
-  const bloques = xml.match(/<rcdnp>[\s\S]*?<\/rcdnp>/gi) ?? []
+  // Con VARIOS inmuebles el Catastro contesta una lista `<lrcdnp><rcdnp>…`; con UNO SOLO (una casa
+  // unifamiliar) contesta la ficha entera `<bico><bi>…`. Leer solo la lista daba «no existe» en toda
+  // vivienda unifamiliar (medido el 24/09/2026: AV JUAN ANT RUIZ 'ESPARTACO' 43, Espartinas).
+  const bloques = xml.match(/<rcdnp>[\s\S]*?<\/rcdnp>/gi) ?? xml.match(/<bi>[\s\S]*?<\/bi>/gi) ?? []
   const salida: InmuebleCatastro[] = []
   for (const b of bloques) {
     const pc1 = etiqueta(b, 'pc1')
@@ -394,6 +397,39 @@ export function parsearVias(xml: string): Array<{ tipo: string; nombre: string }
 }
 
 /**
+ * ¿El token del CALLEJERO `c` es el token buscado `t`? Igual, o una ABREVIATURA suya: el Catastro
+ * recorta nombres de pila por su cuenta («JUAN ANT RUIZ 'ESPARTACO'» por «Juan Antonio Ruiz
+ * Espartaco», medido el 24/09/2026 en Espartinas). Solo en ese sentido y con 3 letras o más: «A» o
+ * «DE» casarían con cualquier cosa.
+ */
+export function casaToken(c: string, t: string): boolean {
+  return c === t || (c.length >= 3 && c.length < t.length && t.startsWith(c))
+}
+
+/**
+ * Las vías del callejero que se PARECEN a la buscada, para que una persona elija cuando
+ * `elegirVia` no puede (ninguna casa entera, o empatan). Ordenadas por cuántas palabras comparten.
+ * No elige nada: una calle con un nombre de pila distinto («José» por «Juan») puede ser la misma o
+ * no serlo, y eso lo decide quien conoce al cliente.
+ */
+export function viasParecidas(
+  vias: Array<{ tipo: string; nombre: string }>,
+  buscada: string,
+  max = 5,
+): Array<{ tipo: string; nombre: string }> {
+  const objetivo = tokensVia(buscada)
+  return vias
+    .map((v) => {
+      const tokens = tokensVia(v.nombre)
+      return { v, comunes: objetivo.filter((t) => tokens.some((c) => casaToken(c, t))).length }
+    })
+    .filter((x) => x.comunes > 0)
+    .sort((a, b) => b.comunes - a.comunes)
+    .slice(0, max)
+    .map((x) => x.v)
+}
+
+/**
  * Elige el nombre OFICIAL entre los candidatos del callejero comparando TOKENS,
  * no cadenas: es la única forma de casar «PACO GANDÍA» con «PACO GANDIA» y
  * «Nuestra Señora de la Oliva» con «NUESTRA SEÑORA D LA OLIVA» a la vez.
@@ -425,7 +461,7 @@ export function elegirViaConTipo(
 
   const candidatas = vias
     .map((v) => ({ tipo: v.tipo, nombre: v.nombre, tokens: tokensVia(v.nombre) }))
-    .filter((v) => objetivo.every((t) => v.tokens.includes(t)))
+    .filter((v) => objetivo.every((t) => v.tokens.some((c) => casaToken(c, t))))
   if (!candidatas.length) return null
 
   candidatas.sort((a, b) => a.tokens.length - b.tokens.length)
