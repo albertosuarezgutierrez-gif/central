@@ -845,3 +845,19 @@ export {
   type SiguienteAccion,
   type TipoSiguienteAccion,
 } from './siguiente-accion.ts'
+export {
+  CARNETS_MOTO_SOLICITUD,
+  DIAS_SOLICITUD,
+  GARAJES_SOLICITUD,
+  RAMOS_SOLICITUD,
+  camposSolicitud,
+  mensajeSolicitud,
+  ramoSolicitud,
+  validarRespuestas,
+  type CampoSolicitud,
+  type ConocidoFicha,
+  type RamoSolicitud,
+  type Respuesta,
+  type TipoCampo,
+  type ValidacionSolicitud,
+} from './solicitud-datos.ts'

@@ -756,6 +756,11 @@ Cepo `lib/felicitaciones.test.ts`.
 lo cuelga de la oportunidad ABIERTA del cliente para ese ramo (por contactar → en negociación) o la abre con su llamada a 2 días;
 mismo candado que el alta a mano. Nunca tumba la copia pagada (`guardado.oportunidad`); lo simulado no abre nada. Cepos en
 `test/regression-asegura-cotizaciones-guardadas.test.ts`.
+📝 **Pedir datos al cliente por enlace (24/09/2026, `lib/solicitud-datos.ts`).** Puerto `/api/operador/solicitud-datos` (crear/anular,
+`auditado`) y puente `/api/portal/solicitud-datos` (leer/responder por token). Token solo como sha256; respuestas con `encryptField`;
+**no toca `clientes`** (lo declarado se verifica al emitir). Al responder: oportunidad → en negociación, tarea «Tarificar» y nota en
+`historial_interno` con `PREFIJO_HISTORIAL_DATOS_PRESUPUESTO` (el feed de actividad la clasifica `datos_presupuesto` → Telegram).
+Cepos de fuente en `lib/solicitud-datos.test.ts`.
 ✉️ **Cola de aprobaciones (`seguros.aprobacion`, `lib/aprobaciones.ts`, puerto `/api/operador/aprobaciones`).** Un recibo
 que pasa a `devuelto` deja un correo PROPUESTO al cliente; solo sale con `decision:'aprobar'` desde plataforma. El envío
 reclama la fila (`pendiente → enviando`) ANTES de mandar y lee el correo de la ficha en ese momento; `enviando` viejo =
