@@ -14,12 +14,14 @@ import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
  * fallo más caro del repo. Aquí, cuando un dato no se ha podido leer se dice
  * —«no se han podido leer los siniestros»— en vez de contarlo como cero.
  */
-export default function TabResumen({ accion, resumen, porClase, intervinientes, clienteId, declaradas, notas }: {
+export default function TabResumen({ accion, resumen, porClase, intervinientes, clienteId, telefono, declaradas, notas }: {
   accion: SiguienteAccion
   resumen: ResumenFicha
   porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]>
   intervinientes: IntervinienteFicha[] | null
   clienteId: string
+  /** Teléfono principal de la ficha: el WhatsApp del enlace de datos va a ÉL, no a la lista de chats. */
+  telefono?: string | null
   declaradas: PolizaDeclaradaFicha[] | null
   /** `undefined` = el llamante no las pasa; `null` = no se pudieron leer. */
   notas?: NotasFicha | null
@@ -33,6 +35,7 @@ export default function TabResumen({ accion, resumen, porClase, intervinientes, 
       <Tarjeta titulo="💼 Oportunidades">
         <OportunidadesCliente
           clienteId={clienteId}
+          telefono={telefono ?? null}
           polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
         />
       </Tarjeta>
