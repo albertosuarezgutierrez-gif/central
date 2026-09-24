@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T07:49:54Z",
-  "sha": "6bc233c2c2274d82a68c4895573d5e042bc02c3e",
+  "generadoEn": "2026-09-24T08:28:10Z",
+  "sha": "091ac2dec811d4ec5546a411dc14917b825e6185",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -121715,7 +121715,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "072e73fe2ceb"
+      "hash": "b15bc26dbd72"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/page.tsx",
@@ -121826,7 +121826,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "849e2c92b309"
+      "hash": "b8e5c3cd7426"
     },
     {
       "ruta": "apps/rrhh/app/admin/fichajes/page.tsx",
@@ -121956,7 +121956,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2128b44f536a"
+      "hash": "5d202a83ba45"
     },
     {
       "ruta": "apps/rrhh/app/admin/obras/page.tsx",
@@ -125648,7 +125648,7 @@
         "rrhh"
       ],
       "rutaApi": null,
-      "hash": "2b0f67f72aef"
+      "hash": "32b6a64052f2"
     },
     {
       "ruta": "apps/rrhh/lib/storage.ts",
