@@ -414,7 +414,7 @@ export const ARTICULOS: readonly Articulo[] = [
     faq: [
       { pregunta: '¿Puedo contratar un seguro con efecto retroactivo?', respuesta: 'No. Un seguro no puede cubrir algo que ya ha pasado. La fecha de efecto siempre es presente o futura. Si ya has tenido un siniestro, no puedes contratar un seguro para cubrirlo después.' },
       { pregunta: '¿Qué pasa si tengo un siniestro el mismo día que contrato pero antes de pagar?', respuesta: 'No está cubierto. Sin pago no hay cobertura, aunque hayas firmado la propuesta. El contrato solo surte efecto cuando se completa el pago y llega la fecha de efecto acordada.' },
-      { pregunta: '¿Puedo cancelar un seguro antes de que empiece a cubrir?', respuesta: 'Sí. Si te arrepientes antes de la fecha de efecto, puedes cancelarlo sin penalización. Una vez que el contrato entra en vigor, ya aplican las condiciones de cancelación normales.' },
+      { pregunta: '¿Puedo cancelar un seguro antes de que empiece a cubrir?', respuesta: 'Depende de cómo lo hayas contratado. Si lo contrataste a distancia, por internet o por teléfono, la ley te da un plazo para desistir sin tener que explicar por qué, y en los seguros de vida ese plazo es más largo. Fuera de esos casos, si puedes anularlo y con qué coste lo marcan las condiciones de tu póliza. Antes de firmar, pregunta cómo se anula y qué pasa con la prima que ya hayas pagado.' },
     ],
   },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.

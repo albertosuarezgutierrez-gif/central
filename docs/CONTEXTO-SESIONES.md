@@ -415,6 +415,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) blog ASegura: corregida la FAQ «cancelar sin penalización» del artículo publicado
+El artículo `cuando-empieza-a-cubrir-un-seguro` (#2966) prometía cancelar «sin penalización» antes de la fecha de
+efecto. Ahora dice que depende: desistimiento en contratación a distancia (y plazo mayor en vida); si no, lo marcan
+las condiciones de la póliza. Sin citar normas (el tema no tiene normas en la lista blanca).
+
 ## (24/09/2026) blog ASegura: «Publicar» fallaba porque el cepo ponía rojo CADA artículo del agente
 El test «ningún tema de la cola repite un artículo publicado» (#2505) chocaba con el diseño: el agente solo escribe
 `articulos.ts` y deja el tema en `TEMAS`, así que su PR siempre salía con Tests en rojo (#2966, 9 días atascado; la
