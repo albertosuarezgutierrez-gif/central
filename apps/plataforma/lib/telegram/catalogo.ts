@@ -619,6 +619,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al llegar un formulario',
   },
   {
+    id: 'correduria.aviso-web', categoria: 'correduria',
+    titulo: 'Aviso de vencimiento confirmado desde la web',
+    que: 'Alguien ha confirmado su correo en «avísame antes de que venza»: ramo, vencimiento y el enlace a su ficha (nueva como lead o la que ya tenía).',
+    cuando: 'Al confirmar el correo',
+  },
+  {
     id: 'correduria.seo-semana', categoria: 'correduria',
     titulo: 'Informe SEO semanal de grupoasegura.es',
     que: 'Posiciones reales en Google (Search Console), quién ocupa el top-10 de cada consulta objetivo (Serper) y visitas medidas (PostHog), con UNA acción propuesta. Si una fuente no está conectada lo dice, no pinta un cero.',

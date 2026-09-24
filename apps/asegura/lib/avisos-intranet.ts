@@ -439,6 +439,16 @@ async function enlaceDirecto(
   // Si todos los avisos llevan al mismo sitio, allí; si no, a la bóveda.
   const destinos = new Set(tipos.map((t) => HREF_POR_TIPO[t]))
   const destino = destinos.size === 1 ? [...destinos][0]! : '/boveda'
+  return crearEnlaceDirecto(correduriaId, clienteId, correo, hash, destino, base)
+}
+
+/**
+ * La llave en sí: sustituye a las vivas del cliente y devuelve el enlace. Exportada para el
+ * aviso de vencimiento de la web (`aviso-web.ts`), que reutiliza la misma llave de un solo uso.
+ */
+export async function crearEnlaceDirecto(
+  correduriaId: string, clienteId: string, correo: string, hash: string, destino: string, base: string,
+): Promise<{ enlace: string; directo: boolean }> {
   const token = generarTokenEnlace()
   try {
     // Una llave viva por cliente: la nueva sustituye a las anteriores sin usar (no se acumulan

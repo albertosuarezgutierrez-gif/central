@@ -216,6 +216,10 @@ const BASES = [
     base: 'Ejecución del contrato de mediación (art. 6.1.b RGPD) y deber de asesoramiento del corredor (Ley 16/2018).',
   },
   {
+    finalidad: 'Avisarte por correo antes del vencimiento de tu seguro si lo pides en la web (dos avisos por renovación) y, al confirmar tu correo, abrirte ficha para ayudarte con esa renovación',
+    base: 'Tu consentimiento, que confirmas desde el enlace que te enviamos (art. 6.1.a RGPD). Puedes retirarlo con un clic en cada aviso; sin confirmar, la solicitud no se usa.',
+  },
+  {
     finalidad: 'Conservar la documentación de la mediación y atender a los organismos que la exijan',
     base: 'Obligación legal (art. 6.1.c RGPD): normativa de distribución de seguros y de prevención del blanqueo de capitales.',
   },

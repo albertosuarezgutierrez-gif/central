@@ -11,13 +11,23 @@
 //
 // `hoy` se fija tras montar (como `CalculadoraVencimientos`) para que el HTML
 // servido no lleve una fecha que ya no es hoy.
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type FormEvent } from 'react'
+import Link from 'next/link'
+import { MEDIADOR } from '@central/module-seguros'
 
 import { fechaCorta } from '@/lib/calculadora-vencimientos'
 import { calcularVentana, POS, type Ventana } from '@/lib/ventana-renovacion'
 import { PORTAL_URL } from '@/lib/sitio'
 import { medir } from '@/lib/medir'
 import EnlaceMedido from '@/components/EnlaceMedido'
+import { llamarAviso } from '@/lib/aviso'
+
+/**
+ * El paso «avísame por correo» se enseña SOLO con `NEXT_PUBLIC_AVISOS_CORREO=1`. Se enciende a la vez
+ * que `ASEGURA_AVISOS_WEB_ACTIVOS=1` en asegura: si no, el visitante rellenaría un formulario que
+ * contesta «no disponible».
+ */
+const AVISO_CORREO_ACTIVO = process.env.NEXT_PUBLIC_AVISOS_CORREO === '1'
 
 type Props = { ramo: string }
 
@@ -136,16 +146,109 @@ export default function VentanaRenovacion({ ramo }: Props) {
           )}
           <Mensaje v={v} />
 
-          <div className="hero-cta" style={{ marginTop: 16 }}>
-            <EnlaceMedido href={PORTAL_URL} origen={`ramo_ventana_${ramo}`} className="btn btn-brand" style={{ minHeight: 44 }}>
-              Guardar esta fecha en mi área
-            </EnlaceMedido>
-          </div>
-          <p className="tenue" style={{ fontSize: 14, margin: '10px 0 0' }}>
-            Aquí la fecha no se guarda. En tu área la tienes siempre a la vista, con la póliza al lado.
-          </p>
+          {AVISO_CORREO_ACTIVO ? (
+            <AvisoPorCorreo ramo={ramo} vence={vence} />
+          ) : (
+            <div className="hero-cta" style={{ marginTop: 16 }}>
+              <EnlaceMedido href={PORTAL_URL} origen={`ramo_ventana_${ramo}`} className="btn btn-brand" style={{ minHeight: 44 }}>
+                Guardar esta fecha en mi área
+              </EnlaceMedido>
+            </div>
+          )}
         </div>
       )}
     </section>
+  )
+}
+
+type EstadoAviso = { fase: 'idle' } | { fase: 'enviando' } | { fase: 'ok'; email: string } | { fase: 'error'; motivo: string; campo: string | null }
+
+/**
+ * Paso 2: «¿Te lo recordamos?». Nombre, correo y un consentimiento que va SIN marcar (una casilla
+ * premarcada no es consentimiento). Lo que sale de aquí es un correo de confirmación: hasta que la
+ * persona no lo confirma no se le escribe nada más ni entra en la cartera.
+ */
+function AvisoPorCorreo({ ramo, vence }: { ramo: string; vence: string }) {
+  const [estado, setEstado] = useState<EstadoAviso>({ fase: 'idle' })
+  const [consentimiento, setConsentimiento] = useState(false)
+
+  async function enviar(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (estado.fase === 'enviando') return
+    const fd = new FormData(e.currentTarget)
+    const email = String(fd.get('email') ?? '').trim()
+    setEstado({ fase: 'enviando' })
+    const r = await llamarAviso('solicitar', { nombre: fd.get('nombre'), email, ramo, vence, consentimiento })
+    if (r.ok) {
+      medir('aviso_solicitado', { ramo })
+      setEstado({ fase: 'ok', email })
+    } else {
+      setEstado({ fase: 'error', motivo: r.motivo ?? 'No hemos podido apuntarte. Inténtalo de nuevo.', campo: r.campo })
+    }
+  }
+
+  if (estado.fase === 'ok') {
+    return (
+      <div className="ventana-aviso" role="status">
+        <p style={{ margin: 0 }}>
+          <strong>Revisa tu correo.</strong> Te hemos enviado un enlace a {estado.email} para confirmar. Hasta que no lo
+          confirmes no te escribiremos nada más.
+        </p>
+      </div>
+    )
+  }
+
+  const mal = (c: string): CSSProperties =>
+    estado.fase === 'error' && estado.campo === c ? { borderColor: 'var(--danger)' } : {}
+
+  return (
+    <form className="ventana-aviso" onSubmit={enviar} noValidate>
+      <h3 style={{ margin: '0 0 4px' }}>¿Te lo recordamos por correo?</h3>
+      <p className="tenue" style={{ margin: '0 0 14px', fontSize: 14 }}>
+        Te escribimos dos veces: a 70 días del vencimiento y a 45, antes de que se cierre el plazo para decidir.
+      </p>
+      <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))' }}>
+        <div>
+          <label className="f-lab" htmlFor="aviso-nombre">Nombre</label>
+          <input id="aviso-nombre" name="nombre" autoComplete="given-name" className="f-in" style={mal('nombre')} />
+        </div>
+        <div>
+          <label className="f-lab" htmlFor="aviso-email">Correo</label>
+          <input id="aviso-email" name="email" type="email" inputMode="email" autoComplete="email" className="f-in" style={mal('email')} />
+        </div>
+      </div>
+      <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5, margin: '14px 0 10px', cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={consentimiento}
+          onChange={(e) => setConsentimiento(e.target.checked)}
+          style={{ width: 20, height: 20, marginTop: 2, flexShrink: 0 }}
+        />
+        <span>
+          Acepto que <strong>{MEDIADOR.identidad.nombre}</strong> (Grupo ASegura) me escriba para avisarme del vencimiento
+          de este seguro. Puedo darme de baja con un clic en cada correo.
+        </span>
+      </label>
+      <p style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--muted)', margin: '0 0 14px' }}>
+        <strong>Responsable:</strong> {MEDIADOR.identidad.nombre} (Grupo ASegura). <strong>Finalidad:</strong> avisarte
+        antes del vencimiento y, al confirmar tu correo, abrirte ficha para poder ayudarte con la renovación.{' '}
+        <strong>Legitimación:</strong> tu consentimiento. <strong>Conservación:</strong> hasta que te des de baja; sin
+        confirmar, la solicitud no se usa. <strong>Derechos:</strong> escribiendo a {MEDIADOR.identidad.email}, y
+        reclamación ante la AEPD. <Link href="/legal/privacidad">Información completa</Link>.
+      </p>
+      {estado.fase === 'error' && (
+        <p role="alert" style={{ color: 'var(--danger)', fontSize: 14, fontWeight: 600, margin: '0 0 12px' }}>
+          {estado.motivo}
+        </p>
+      )}
+      <div className="hero-cta" style={{ marginTop: 0 }}>
+        <button type="submit" className="btn btn-brand" style={{ minHeight: 44 }} disabled={!consentimiento || estado.fase === 'enviando'}>
+          {estado.fase === 'enviando' ? 'Enviando…' : 'Avisadme por correo'}
+        </button>
+        <EnlaceMedido href={PORTAL_URL} origen={`ramo_ventana_${ramo}`} className="btn btn-outline" style={{ minHeight: 44 }}>
+          O guárdala en mi área
+        </EnlaceMedido>
+      </div>
+    </form>
   )
 }

@@ -423,6 +423,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) asegura: fase 2 «avísame por correo» (doble opt-in → ficha lead + oportunidad + avisos a 70/45 días)
+- Decisión de Alberto: todo en asegura y la ficha nace al CONFIRMAR. Web → plataforma (`/api/publico/correduria/aviso`, límite IP + Telegram) → asegura (`/api/operador/aviso-web`, `lib/aviso-web.ts`, cron `avisos-web` 08:30).
+- Tabla `seguros.aviso_web` SIN APLICAR (probada en bloque abortado). APAGADO: `ASEGURA_AVISOS_WEB_ACTIVOS` + `NEXT_PUBLIC_AVISOS_CORREO`; orden de encendido en `apps/asegura/CLAUDE.md`.
+- Cepos vistos fallar: contrato de ramos web↔asegura, consentimiento explícito, ventana de avisos. Mismo PR que la fase 1.
+
 ## (24/09/2026) asegura-web: widget «Tu ventana para decidir» en las páginas de ramo (captación por vencimiento)
 - Decisión: NO comparador tipo Rastreator (0,50 €/consulta Avant2 + análisis objetivo/IPID). Modelo Clark/Jerry: revisar pólizas + aviso de renovación + tramitar baja. Estudio de mercado en el PR.
 - Art. 22 LCS: compañía avisa cambios ≥2 meses; tomador se opone ≥1 mes. Widget pinta los 90 días previos con esa ventana (`lib/ventana-renovacion.ts` + test; vida-y-salud excluido). CTA al portal; NO guarda nada.

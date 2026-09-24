@@ -1973,3 +1973,8 @@ textarea.f-in {
     display: none;
   }
 }
+.ventana-aviso {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
