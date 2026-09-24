@@ -20,6 +20,18 @@ del cuadre deja de restar lo cobrado). Además
 DNI/NIE nunca como clave de regla y Pelayo tras «TRANSFERENCIAS //». Pendiente de Alberto: dónde cobra Allianz
 (0 abonos en ninguna cuenta) y Mapfre abr-ago sin periodos en el libro (CIMA no trae su devengo).
 
+**(24/09/2026)** 🧾 **Alta manual por SQL de Mapfre 2002600520435** (auto, Antonio Cruz Martínez, póliza `c981968f…`) en la
+ficha `8016986c…` (antes «Antonio» sin apellidos; ya tenía Cuñado/a con Gabriel Cabrera `3146922c…`). `id_poliza_entidad`
+y hash a NULL (sin confirmar por CIMA, que no recibe nada de Mapfre desde el 23/06). + oportunidad `e9c155e4…` de su Allianz
+058366323 (Grupo PACC, fin 31/01/2027). Intervinientes NO cargados (columnas cifradas). Pendiente de Alberto: DNI de Antonio
+en la ficha desde la UI; revisar si `edc7248d…` «Antonio Cruz Sánchez» es un duplicado; la póliza Mapfre lleva el email de
+Alberto como email del tomador. ➕ Mismo día: `edc7248d` FUSIONADA en `8016986c` (OK de Alberto, `prisma/sql/2026-09-24_fusion_antonio_cruz.sql`,
+hereda DNI+hash) y Gabriel añadido a la póliza como propietario + conductor ocasional (filas `manual`, solo `cliente_id`). 🚨 El DNI heredado de la fusión acababa en 335B ≠ 77321266G de las pólizas → quitado
+(dni/hash a NULL). Editar identidad exige un documento tipo DNI recibido en la ficha: por eso la UI «no deja modificar».
+⛔ Y la fusión se REVIRTIÓ: `edc7248d` es el PADRE (presupuesto Codeoscopic 40821944). Relación Padre/Hijo + oportunidad
+del padre (Navara 5655DSM, Mapfre 2002500565564 → Reale 276,69€ / 332,42€ con lunas). `cliente_merge_log` es append-only.
+Presupuesto del padre ACEPTADO (24/09): oportunidad → `pendiente_cliente` + tarea alta «emitir cuando el hijo confirme el IBAN».
+
 **(24/09/2026)** 📄 **La carta y la anulación firmadas van a la compañía en PDF + el original en texto.** Un `.txt` suelto
 arriesgaba que la compañía no lo archivara: ahora sale un PDF (`apps/asegura/lib/documento-firmado-pdf.ts`, pdf-lib) con la
 carta y debajo el justificante (firmante, método OTP, hora de Madrid, huella SHA-256) y ADEMÁS el `.txt`, que es el que
