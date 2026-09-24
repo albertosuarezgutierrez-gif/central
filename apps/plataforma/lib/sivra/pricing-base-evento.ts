@@ -92,7 +92,7 @@ export type ObjetivoSalto = { objetivo: number; origen: "factor" | "max" | "fech
 
 export function objetivoSaltoEvento(i: ObjetivoSaltoInput): ObjetivoSalto {
   const fecha = i.fechaBase != null && Number.isFinite(i.fechaBase) && i.fechaBase > 0 ? i.fechaBase : null
-  if (fecha != null && i.fuenteFecha === "fiable" && i.compsFecha >= MIN_COMPS_SALTO_MEDIDO) {
+  if (fecha != null && i.fuenteFecha === "fiable" && i.compsFecha >= Math.max(MIN_COMPS_SALTO_MEDIDO, i.minFecha)) {
     return { objetivo: fecha, origen: "fecha_medida" }
   }
   if (fecha != null && i.compsFecha >= i.minFecha) {
