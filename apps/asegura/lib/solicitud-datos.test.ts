@@ -26,3 +26,10 @@ test('la vista pública por token no devuelve nada del cliente', () => {
 test('completar solo vale una vez y dentro de plazo', () => {
   assert.match(src, /where id = \$\{f\.id\}::uuid and estado = 'pendiente' and caduca_at > now\(\)/)
 })
+
+test('una oportunidad ya cerrada no recibe datos: el enlace se anula antes de completar', () => {
+  const r = src.slice(src.indexOf('export async function responderSolicitud'))
+  const guarda = r.search(/o\.estado === 'ganada' \|\| o\.estado === 'perdida'/)
+  const completar = r.indexOf("set estado = 'completada'")
+  assert.ok(guarda > 0 && guarda < completar, 'la guarda de cerrada va antes de marcar completada')
+})

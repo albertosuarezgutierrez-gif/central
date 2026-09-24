@@ -40,6 +40,7 @@ export default function Formulario({ token, campos }: { token: string; campos: C
       return setEstado({ tipo: 'fallo', texto: 'Revisa los campos marcados.' })
     }
     if (status === 410) return setEstado({ tipo: 'fallo', texto: 'Este enlace ya no sirve (caducado o ya usado). Escríbenos y te mandamos uno nuevo.' })
+    if (status === 403 && typeof json?.mensaje === 'string') return setEstado({ tipo: 'fallo', texto: json.mensaje })
     if (status === 429) return setEstado({ tipo: 'fallo', texto: 'Demasiados intentos. Espera unos minutos.' })
     setEstado({ tipo: 'fallo', texto: 'No se ha podido enviar. Vuelve a probar en un momento.' })
   }

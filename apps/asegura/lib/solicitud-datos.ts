@@ -207,18 +207,25 @@ export async function responderSolicitud(
   const cifradas = encryptField(JSON.stringify(v.respuestas))
   const ramoTexto = f.ramo === 'moto' ? 'moto' : 'coche'
   const hecho = await prismaAsegura().$transaction(async (tx) => {
+    const [o] = await tx.$queryRaw<{ estado: string }[]>(Prisma.sql`
+      select estado::text as estado from oportunidades where id = ${f.oportunidadId}::uuid for update`)
+    // Oportunidad ya ganada o perdida (o descartada): el enlace muere aquí. Si no, llegaría
+    // una tarea «Tarificar» y un aviso sobre algo que Alberto ya cerró.
+    if (o && (o.estado === 'ganada' || o.estado === 'perdida')) {
+      await tx.$executeRaw(Prisma.sql`
+        update solicitud_datos set estado = 'anulada' where id = ${f.id}::uuid and estado = 'pendiente'`)
+      return false
+    }
     const n = await tx.$executeRaw(Prisma.sql`
       update solicitud_datos set estado = 'completada', respuestas = ${cifradas}, completada_at = now()
       where id = ${f.id}::uuid and estado = 'pendiente' and caduca_at > now()`)
     if (n === 0) return false
-    const [o] = await tx.$queryRaw<{ estado: string }[]>(Prisma.sql`
-      select estado::text as estado from oportunidades where id = ${f.oportunidadId}::uuid for update`)
     if (o) {
       const nuevo = o.estado === 'competencia' ? 'en_negociacion' : o.estado
-      if (nuevo !== o.estado) {
-        await tx.$executeRaw(Prisma.sql`
-          update oportunidades set estado = cast(${nuevo} as estado_comercial), updated_at = now() where id = ${f.oportunidadId}::uuid`)
-      }
+      // Quien ha contestado ya no está aparcado, como con la acción «interesado».
+      await tx.$executeRaw(Prisma.sql`
+        update oportunidades set estado = cast(${nuevo} as estado_comercial), aparcada_hasta = null,
+          aparcada_motivo = null, updated_at = now() where id = ${f.oportunidadId}::uuid`)
       await tx.$executeRaw(Prisma.sql`
         insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
         values (${f.correduriaId}::uuid, ${f.oportunidadId}::uuid, 'datos_recibidos', cast(${o.estado} as estado_comercial),
