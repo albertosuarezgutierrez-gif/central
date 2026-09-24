@@ -85,6 +85,16 @@ responsable con ✏️ (queda en la auditoría), no se ha tocado la BD.
 **(24/09/2026)** 🗂️ **iarrhh: las tablas de empleados, fichajes y obras son cards apiladas en móvil (<768 px).** Sin duplicar
 marcado: clase `.tabla-cards` en `apps/rrhh/app/globals.css` + `data-label` por celda (1.ª celda = título, acciones a la
 derecha, `colspan` de edición/historial a todo ancho). En escritorio la tabla no cambia. Medido con Playwright a 320/375/768.
+
+**(24/09/2026)** 🔴 **Auditoría ligera: `cima_pull_respaldo` en HTTP 401 desde ayer 14:00 UTC.**
+El respaldo del pull de CIMA (plataforma → CRM de asegura) lleva ~18-20h fallando con 401. El pull
+PRINCIPAL (GitHub Actions) parece seguir vivo (latido `correduria_ingesta` ok hoy 06:45). No se
+confirma la causa: `ASEGURA_CRM_CRON_SECRET` de plataforma no se ha tocado desde su creación
+(23/09 07:38), y el proyecto Vercel `asegura` no muestra ningún `CRON_SECRET` con ese nombre en el
+listado del MCP (puede ser la causa real o un listado incompleto). Pendiente de Alberto: revisar en
+el panel de Vercel de `asegura` el secreto real de `/api/crons/cima-pull`. Detalle en
+`docs/AUDITORIA-2026-09.md` (24/09).
+
 **(24/09/2026)** 📮 **Registro de quejas y reclamaciones del SAC (PR #3458).** La web y el portal publican «el SAC
 contesta en un mes» y no había dónde anotar una queja. Tabla `seguros.queja` (detalle y respuesta cifrados; 4 CHECK vistos
 morder; sin acceso de `crm_seguros` ni del portal), regla en `module-seguros/queja.ts` (mes natural, estados, informe anual),
