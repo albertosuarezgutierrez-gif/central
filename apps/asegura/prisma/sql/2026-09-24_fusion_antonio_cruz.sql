@@ -1,3 +1,7 @@
+-- ⛔ REVERTIDA el mismo 24/09/2026: «Antonio Cruz Sánchez» es el PADRE (DNI 25925335B, nacido 1954), no un
+-- duplicado. Se restauró su DNI/dirección desde `snapshot_before` y se añadió la relación Padre/Hijo. La fila de
+-- `cliente_merge_log` sigue ahí (tabla append-only) pero NO está vigente. NO volver a ejecutar este script.
+--
 -- Fusión a mano de UN par: «Antonio Cruz Sánchez» (edc7248d…) → «Antonio Cruz Martínez» (8016986c…).
 --
 -- La ficha edc7248d se creó a mano el 21/09/2026 (13:44) con DNI y fecha de nacimiento

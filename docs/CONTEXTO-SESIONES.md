@@ -20,6 +20,8 @@ en la ficha desde la UI; revisar si `edc7248d…` «Antonio Cruz Sánchez» es u
 Alberto como email del tomador. ➕ Mismo día: `edc7248d` FUSIONADA en `8016986c` (OK de Alberto, `prisma/sql/2026-09-24_fusion_antonio_cruz.sql`,
 hereda DNI+hash) y Gabriel añadido a la póliza como propietario + conductor ocasional (filas `manual`, solo `cliente_id`). 🚨 El DNI heredado de la fusión acababa en 335B ≠ 77321266G de las pólizas → quitado
 (dni/hash a NULL). Editar identidad exige un documento tipo DNI recibido en la ficha: por eso la UI «no deja modificar».
+⛔ Y la fusión se REVIRTIÓ: `edc7248d` es el PADRE (presupuesto Codeoscopic 40821944). Relación Padre/Hijo + oportunidad
+del padre (Navara 5655DSM, Mapfre 2002500565564 → Reale 276,69€ / 332,42€ con lunas). `cliente_merge_log` es append-only.
 
 **(23/09/2026)** 🔁 **PR 10 (#3422): sustitución AUTOMÁTICA, duplicidades y aviso a la compañía al emitir.** Clave del
 riesgo por ramo (matrícula · refcat/dirección · DNI asegurado); la sustituida sale de «en vigor» para siempre («se anula y
