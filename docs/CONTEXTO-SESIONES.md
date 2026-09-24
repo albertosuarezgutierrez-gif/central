@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🎂 **PR 12: felicitar cumpleaños por correo y en la app** (Alberto). Cron de asegura 07:00 UTC sobre cartera en
+vigor (personas físicas; 54 de 72 tienen fecha, cifrada): reserva fila en `seguros.felicitacion` (una por persona y año) y manda un
+correo sin nada comercial; sin correo o de baja → solo en la app. La campana del portal lee la fila del día (aviso `felicitacion`).
+⏸️ Apagado hasta `ASEGURA_FELICITACIONES_ACTIVAS=1` en `central-asegura` (lo pone Alberto). #3426 mergeado (+ revocado el DML del
+CRM de Manuel en las 21 tablas `portal_*`).
+>
 **(24/09/2026)** 🔑 **PR 11: el correo de avisos lleva ACCESO DIRECTO al portal.** Alberto: «aviso por mail con token de
 acceso a la app». Llave de un solo uso y 24 h (en el `#` del enlace: no llega a logs) en `seguros.portal_enlace_directo` (solo SHA-256; atada al índice ciego del
 correo de la ficha; destino = ruta interna, CHECK SQL). Se canjea con un clic en «Entrar» (POST, no el GET: antivirus) por el
