@@ -511,6 +511,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) Recaptación: cola ordenada por próximo vencimiento
+- La cola de `/correduria` → Recaptación salía por apellidos (el `order by` del SQL de asegura). Ahora
+  `ordenarPorVencimiento` (plataforma, `lib/recaptacion-asegura.ts`) la ordena por días hasta el próximo
+  aniversario (mes+día, que asegura ya mandaba y plataforma tiraba); los `sin_vencimiento` van al final.
+  Dentro de un cliente, la póliza más cercana va primera (es la que usa el mensaje sugerido). El badge dice el día.
 ## (24/09/2026) sivra: la «fuga de canal» de Luxury Busto y Busto Reform era FALSA ALARMA
 - El escaparate de Booking de los dos Busto tiene 2 regímenes por antelación (≤6 días: ~1,108×base; ≥7: 0,994×base; R²=1,000, cuota real ~28€/~35€). `pricing_settings` guarda UNA recta mezclada (Luxury 0,987×base+64,1€) y `fuga-canal` restaba esa ordenada como si fuera la limpieza → 0,72/0,78. Contra su lista medida: ~0,82/~0,84 → ok.
 - Arreglo: `canalPorAntelacion()` en `lib/sivra/pricing-fuga-canal.ts` mide la lista por tramo en el escaparate (fallback a la recta del motor, y lo dice en el aviso); descarta ventanas >3× base.

@@ -192,7 +192,10 @@ function textoCuando(p: LeadRecaptacion): React.ReactNode {
   if (p.origen !== 'vencimiento_antiguo' || p.mesVencimientoAntiguo === null) {
     return <span style={{ color: 'var(--muted)' }}>sin vencimiento</span>
   }
-  return <Badge tono="neutral">vencía en {MESES[p.mesVencimientoAntiguo - 1]}</Badge>
+  const cuando = p.diaVencimientoAntiguo !== null
+    ? `el ${p.diaVencimientoAntiguo} de ${MESES[p.mesVencimientoAntiguo - 1]}`
+    : `en ${MESES[p.mesVencimientoAntiguo - 1]}`
+  return <Badge tono="neutral">vencía {cuando}</Badge>
 }
 
 function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {

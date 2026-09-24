@@ -5,7 +5,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { agruparLeadsPorCliente, interpretarCola, interpretarEscrituraRecaptacion, type LeadRecaptacion } from './recaptacion-asegura.ts'
+import { agruparLeadsPorCliente, diasHastaVencimiento, interpretarCola, ordenarPorVencimiento, interpretarEscrituraRecaptacion, type LeadRecaptacion } from './recaptacion-asegura.ts'
 
 function lead(p: Partial<LeadRecaptacion>): LeadRecaptacion {
   return {
@@ -23,6 +23,7 @@ function lead(p: Partial<LeadRecaptacion>): LeadRecaptacion {
     ultimoContactoEn: null,
     origen: 'sin_vencimiento',
     mesVencimientoAntiguo: null,
+    diaVencimientoAntiguo: null,
     ...p,
   }
 }
@@ -197,4 +198,50 @@ test('el grupo marca tieneVencimientoAntiguo si CUALQUIERA de sus pólizas lo es
   ]
   const [grupo] = agruparLeadsPorCliente(leads)
   assert.equal(grupo.tieneVencimientoAntiguo, true)
+})
+
+// ── Orden por vencimiento ────────────────────────────────────────────────────
+
+const HOY = new Date(Date.UTC(2026, 8, 24)) // 24/09/2026
+
+test('diasHastaVencimiento: hoy es 0, pasado salta al año siguiente, sin día = último del mes', () => {
+  assert.equal(diasHastaVencimiento(9, 24, HOY), 0)
+  assert.equal(diasHastaVencimiento(10, 1, HOY), 7)
+  assert.equal(diasHastaVencimiento(9, 23, HOY), 364)
+  // Septiembre sin día NO debe irse al año que viene estando a 24/09.
+  assert.equal(diasHastaVencimiento(9, null, HOY), 6)
+})
+
+test('ordena por el vencimiento más cercano y deja los sin vencimiento al final', () => {
+  const v = (clienteId: string, mesV: number | null, diaV: number | null = null) =>
+    lead({ clienteId, polizaId: clienteId, origen: mesV === null ? 'sin_vencimiento' : 'vencimiento_antiguo', mesVencimientoAntiguo: mesV, diaVencimientoAntiguo: diaV })
+  const grupos = ordenarPorVencimiento(agruparLeadsPorCliente([
+    v('sinFecha', null), v('nov', 11, 2), v('oct', 10, 15), v('sep', 9, 28), v('oct1', 10, 1),
+  ]), HOY)
+  assert.deepEqual(grupos.map((g) => g.clienteId), ['sep', 'oct1', 'oct', 'nov', 'sinFecha'])
+})
+
+test('un cliente con varias pólizas se ordena por la más cercana, y esa va primera', () => {
+  const grupos = ordenarPorVencimiento(agruparLeadsPorCliente([
+    lead({ clienteId: 'a', polizaId: 'a1', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 11, diaVencimientoAntiguo: 1 }),
+    lead({ clienteId: 'a', polizaId: 'a2', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 10, diaVencimientoAntiguo: 1 }),
+    lead({ clienteId: 'b', polizaId: 'b1', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 10, diaVencimientoAntiguo: 20 }),
+  ]), HOY)
+  assert.deepEqual(grupos.map((g) => g.clienteId), ['a', 'b'])
+  assert.equal(grupos[0].polizas[0].polizaId, 'a2')
+})
+
+test('interpretarCola lee el día solo junto al mes de un vencimiento antiguo', () => {
+  const r = interpretarCola(200, {
+    estado: 'ok',
+    leads: [
+      { clienteId: 'c', polizaId: 'p', cliente: 'X', origen: 'vencimiento_antiguo', mesVencimientoAntiguo: 10, diaVencimientoAntiguo: 12 },
+      { clienteId: 'd', polizaId: 'q', cliente: 'Y', origen: 'sin_vencimiento', mesVencimientoAntiguo: 10, diaVencimientoAntiguo: 12 },
+    ],
+    contadores: {},
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.leads[0].diaVencimientoAntiguo, 12)
+  assert.equal(r.leads[1].diaVencimientoAntiguo, null)
 })
