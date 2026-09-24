@@ -133,7 +133,7 @@ export function fechaReciboFiable(fecha: Date | null | undefined): Date | null {
 /**
  * Los recibos que el cliente ve, del más reciente al más antiguo.
  *
- * Quita los anulados (punto 1) y ordena por emisión.
+ * Quita los anulados (punto 1) y ordena por `fechaDeRecibo()`.
  *
  * 🚨 Los que **no tienen fecha van al FINAL**, no al principio: en Postgres
  * `DESC` implica `NULLS FIRST`, así que lo que no se sabe se cuela arriba y
@@ -141,17 +141,36 @@ export function fechaReciboFiable(fecha: Date | null | undefined): Date | null {
  * misma trampa que ya mordió en la ficha del corredor (#2346) y en el historial
  * de siniestros.
  */
-export function ordenarRecibos<T extends { situacion: string; fechaEmision: Date | null }>(
-  recibos: readonly T[],
-): T[] {
+export function ordenarRecibos<
+  T extends { situacion: string; fechaEmision: Date | null; fechaVencimiento: Date | null },
+>(recibos: readonly T[]): T[] {
   return recibos
     .filter((r) => !reciboAnulado(r.situacion))
     .sort((a, b) => {
-      if (a.fechaEmision === null && b.fechaEmision === null) return 0
-      if (a.fechaEmision === null) return 1
-      if (b.fechaEmision === null) return -1
-      return b.fechaEmision.getTime() - a.fechaEmision.getTime()
+      const fa = fechaDeRecibo(a)
+      const fb = fechaDeRecibo(b)
+      if (fa === null && fb === null) return 0
+      if (fa === null) return 1
+      if (fb === null) return -1
+      return fb.getTime() - fa.getTime()
     })
+}
+
+/**
+ * La fecha que la fila ENSEÑA, y por la que se ordena: el vencimiento si está
+ * al cobro («Vence el…»), la emisión en el resto («Emitido el…»).
+ *
+ * 🚨 Ordenar por una fecha y pintar otra deja la lista desordenada a la vista
+ * (24/09/2026): un pendiente emitido en 2025 que vence el 10/12/2026 salía
+ * entre dos cobrados de 2025. Sin fallback a la emisión: la fila dice «Sin fecha
+ * de vencimiento», así que ordenar por otra fecha volvería a separar las dos.
+ */
+export function fechaDeRecibo(r: {
+  situacion: string
+  fechaEmision: Date | null
+  fechaVencimiento: Date | null
+}): Date | null {
+  return reciboAlCobro(r.situacion) ? r.fechaVencimiento : r.fechaEmision
 }
 
 /**
