@@ -7,6 +7,7 @@ import { Badge, PageHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import {
   MOTIVOS_PERDIDA_UI,
+  rotuloMotivo,
   ROTULO_ESTADO,
   TIPOS_TAREA_UI,
   parsearPrima,
@@ -52,6 +53,19 @@ async function enviar(url: string, metodo: 'POST' | 'PATCH', body: Record<string
   } catch {
     return AMBIGUO
   }
+}
+
+/** Lo que se hizo cuando el estado no cambió; una acción sin rótulo se enseña tal cual. */
+const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
+  creada_mano: 'Abierta a mano desde la ficha',
+  creada_portal: 'Pedida por el cliente desde su portal',
+  editada: 'Corregida (ramo, vencimiento, compañía o prima)',
+  tarea_creada: 'Tarea creada',
+  tarea_cerrada: 'Tarea cerrada',
+  llamada: 'Llamada registrada',
+  whatsapp: 'WhatsApp abierto',
+  aparcar: 'Aparcada',
+  reabrir: 'Reabierta',
 }
 
 export default function SeguimientoClient({ id }: { id: string }) {
@@ -123,7 +137,7 @@ export default function SeguimientoClient({ id }: { id: string }) {
 
       {op.estado === 'perdida' && (
         <p style={{ margin: 0, fontSize: 14 }}>
-          Perdida{op.motivoPerdida ? ` · ${MOTIVOS_PERDIDA_UI.find(m => m.valor === op.motivoPerdida)?.rotulo ?? op.motivoPerdida}` : ''}
+          Perdida{op.motivoPerdida ? ` · ${rotuloMotivo(op.motivoPerdida)}` : ''}
           {op.competidor ? ` · contra ${op.competidor}` : ''}
           {op.primaCompetidor !== null ? ` por ${eur(op.primaCompetidor)}` : ''}
         </p>
@@ -172,7 +186,7 @@ export default function SeguimientoClient({ id }: { id: string }) {
             <span>
               {h.estadoAntes && h.estadoDespues && h.estadoAntes !== h.estadoDespues
                 ? <>{ROTULO_ESTADO[h.estadoAntes as EstadoOportunidad] ?? h.estadoAntes} → <b>{ROTULO_ESTADO[h.estadoDespues as EstadoOportunidad] ?? h.estadoDespues}</b></>
-                : h.accion}
+                : ROTULO_ACCION_HISTORIAL[h.accion] ?? h.accion}
               {' · '}{h.actor}
             </span>
           </div>

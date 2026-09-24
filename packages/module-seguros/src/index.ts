@@ -743,7 +743,10 @@ export {
   canalLead, diasHasta, pasoConTarea, proximoAniversario, puedeWhatsappLead, puntuarLead, siguientePasoLead, textoPasoLead, ventanaDe,
 } from './lead-competencia.ts'
 export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
-export { MOTIVOS_PERDIDA, PRIORIDADES_TAREA, TIPOS_TAREA, aplicarAccion, validarTarea } from './oportunidad-seguimiento.ts'
+export {
+  ESTADOS_ALTA, MOTIVOS_PERDIDA, MOTIVOS_PERDIDA_VENTA, MOTIVO_DESCARTE, PRIORIDADES_TAREA, RAMOS_OPORTUNIDAD, TIPOS_TAREA, aplicarAccion,
+  validarAltaOportunidad, validarEdicionOportunidad, validarTarea,
+} from './oportunidad-seguimiento.ts'
 export {
   DIAS_APARCAR_NO_INTERESA, DIAS_PREPARAR_PRECIO, MAX_DIAS_RELLAMADA, PREFIJO_LLAMADA_CONTESTADA, PREFIJO_LLAMADA_SIN_RESPUESTA,
   RESULTADOS_LLAMADA, planLlamada,
@@ -751,12 +754,15 @@ export {
 export type { PlanLlamada, ResultadoLlamada } from './llamada-resultado.ts'
 export type {
   AccionOportunidad,
+  AltaValida as AltaOportunidadValida,
   Cambios as CambiosOportunidad,
+  EdicionValida as EdicionOportunidadValida,
   EstadoActual as EstadoActualOportunidad,
   EstadoOportunidad,
   MotivoPerdida,
   PeticionAccion,
   PrioridadTarea,
+  RamoOportunidad,
   ResultadoAccion,
   TareaValida,
   TipoTarea,

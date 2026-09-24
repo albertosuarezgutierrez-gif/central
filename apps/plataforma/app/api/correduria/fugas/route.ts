@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { fugasPendientes, revisarFuga } from '@/lib/fugas-cartera'
-import { MOTIVOS_PERDIDA } from '@central/module-seguros'
+import { MOTIVOS_PERDIDA_VENTA } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,7 +11,7 @@ export async function GET() {
   if (!guarda.ok) return guarda.respuesta
   const r = await fugasPendientes()
   if (r.estado === 'sin_datos') return NextResponse.json({ estado: 'sin_datos', causa: r.causa })
-  return NextResponse.json({ estado: 'ok', fugas: r.dato, motivos: MOTIVOS_PERDIDA })
+  return NextResponse.json({ estado: 'ok', fugas: r.dato, motivos: MOTIVOS_PERDIDA_VENTA })
 }
 
 /** PATCH { id, resolucion: 'perdida' | 'no_es_perdida', motivo? } — el actor sale de la SESIÓN. */

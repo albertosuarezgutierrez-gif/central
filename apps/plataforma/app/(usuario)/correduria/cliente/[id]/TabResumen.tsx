@@ -2,6 +2,7 @@ import Link from 'next/link'
 import type { ResumenFicha, SiguienteAccion } from '@central/module-seguros'
 import { urlAutoNuevo, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha } from '@/lib/ficha-asegura'
 import { BtnLink } from '@/components/ui'
+import OportunidadesCliente from './OportunidadesCliente'
 import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
 
 /**
@@ -25,6 +26,13 @@ export default function TabResumen({ accion, resumen, porClase, intervinientes, 
     <>
       <Tarjeta titulo="👉 Siguiente acción">
         <SiguienteAccionFicha accion={accion} />
+      </Tarjeta>
+
+      <Tarjeta titulo="💼 Oportunidades">
+        <OportunidadesCliente
+          clienteId={clienteId}
+          polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
+        />
       </Tarjeta>
 
       <Tarjeta titulo="🔔 Pide acción">
