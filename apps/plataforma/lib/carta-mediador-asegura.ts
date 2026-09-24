@@ -40,6 +40,8 @@ export function leerCarta(v: unknown): CartaMediador | null {
 export type CartaPorTramitar = {
   id: string; estado: 'firmada' | 'enviada'; polizaId: string; cliente: string | null
   compania: string | null; numeroPoliza: string | null; firmadaAt: string; enviadaAt: string | null
+  /** `true` = su correo espera el OK en la cola; `false` = hay que mandarla desde la ficha; `null` = asegura no lo dice. */
+  enCola: boolean | null
 }
 
 export type LecturaPorTramitar = { estado: 'ok'; cartas: CartaPorTramitar[] } | { estado: 'sin_datos'; causa: string }
@@ -52,7 +54,7 @@ export function leerCartaPorTramitar(v: unknown): CartaPorTramitar | null {
   if (!id || !polizaId || !firmadaAt || (o.estado !== 'firmada' && o.estado !== 'enviada')) return null
   return {
     id, estado: o.estado, polizaId, cliente: t(o.cliente), compania: t(o.compania), numeroPoliza: t(o.numeroPoliza),
-    firmadaAt, enviadaAt: t(o.enviadaAt),
+    firmadaAt, enviadaAt: t(o.enviadaAt), enCola: typeof o.enCola === 'boolean' ? o.enCola : null,
   }
 }
 

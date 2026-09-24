@@ -33,7 +33,7 @@ const AGENTE = 'correduria_renovaciones'
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const cartera = await vencimientosAsegura(DIAS_VENTANA)
+  const cartera = await vencimientosAsegura(DIAS_VENTANA, 40_000)
 
   // «Sin configurar» no es un fallo: el puerto todavía no está conectado. Se
   // registra como pasada NO buena igualmente, para que el vigía no dé por

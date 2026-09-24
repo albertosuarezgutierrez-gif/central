@@ -22,6 +22,13 @@ hereda DNI+hash) y Gabriel añadido a la póliza como propietario + conductor oc
 (dni/hash a NULL). Editar identidad exige un documento tipo DNI recibido en la ficha: por eso la UI «no deja modificar».
 ⛔ Y la fusión se REVIRTIÓ: `edc7248d` es el PADRE (presupuesto Codeoscopic 40821944). Relación Padre/Hijo + oportunidad
 del padre (Navara 5655DSM, Mapfre 2002500565564 → Reale 276,69€ / 332,42€ con lunas). `cliente_merge_log` es append-only.
+Presupuesto del padre ACEPTADO (24/09): oportunidad → `pendiente_cliente` + tarea alta «emitir cuando el hijo confirme el IBAN».
+
+**(24/09/2026)** 🤝 **Carta de nombramiento de mediador: con DNI y por la cola de aprobaciones.** Alberto: «es necesario dni
+cliente». La carta lleva el DNI/NIF del tomador (validado); sin él en la ficha no se ofrece firmarla; `carta_texto` cifrado.
+La firmada sale como `enviar_correo_compania` (`aprobacion.carta_mediador_id`, CHECK anulación O carta; migración
+`seguros_aprobacion_carta_mediador` aplicada) al buzón que elige Alberto (`recibe_nombramientos`); al salir → `enviada`.
+0 cartas existentes: nada firmado sin DNI. Validez legal: firma avanzada vale, la aceptación la decide cada compañía.
 
 **(24/09/2026)** 🧾 **Rescatados los 39 recibos de Occident del 15/09 (8.230,20€ de prima) y archivo de CIMA en Drive.**
 Alberto bajó del Portal CIMA los ficheros 28/03–24/09 a Drive `asegura/CIMA` (id 1DoHnkMj2gYepUKR3A3SmkBE4JIE9iwM1),
@@ -433,6 +440,27 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (24/09/2026) asegura: fase 2 «avísame por correo» (doble opt-in → ficha lead + oportunidad + avisos a 70/45 días)
+- Decisión de Alberto: todo en asegura y la ficha nace al CONFIRMAR. Web → plataforma (`/api/publico/correduria/aviso`, límite IP + Telegram) → asegura (`/api/operador/aviso-web`, `lib/aviso-web.ts`, cron `avisos-web` 08:30).
+- Tabla `seguros.aviso_web` APLICADA en prod (migración `seguros_aviso_web`). Revisión agente-architect: 0 bloqueantes; 6 arreglos aplicados (anti-spam, baja por correo, purga, llave directa). APAGADO: `ASEGURA_AVISOS_WEB_ACTIVOS` + `NEXT_PUBLIC_AVISOS_CORREO`; orden de encendido en `apps/asegura/CLAUDE.md`.
+- Widget también en la PORTADA (`#vencimiento`, con selector de ramo). Cepos vistos fallar: contrato de ramos web↔asegura, consentimiento explícito, ventana de avisos. Mismo PR que la fase 1.
+
+## (24/09/2026) asegura-web: widget «Tu ventana para decidir» en las páginas de ramo (captación por vencimiento)
+- Decisión: NO comparador tipo Rastreator (0,50 €/consulta Avant2 + análisis objetivo/IPID). Modelo Clark/Jerry: revisar pólizas + aviso de renovación + tramitar baja. Estudio de mercado en el PR.
+- Art. 22 LCS: compañía avisa cambios ≥2 meses; tomador se opone ≥1 mes. Widget pinta los 90 días previos con esa ventana (`lib/ventana-renovacion.ts` + test; vida-y-salud excluido). CTA al portal; NO guarda nada.
+- Pendiente (fase 2): «avísame por correo» con doble opt-in = alta en el portal (enlace mágico, endpoint nuevo) + cron avisos a 70 y 45 días. NO afirmar consecuencia de que la compañía no avise a tiempo (sin confirmar jurídicamente).
+
+## (24/09/2026) ASegura OS: «Calidad del dato» en /correduria → Datos (PR #3445)
+- Reglas puras en `module-seguros/calidad-dato.ts`; consulta en `apps/asegura/lib/calidad-cartera.ts` (puerto `GET /api/operador/calidad`, solo lectura, sin DNI/teléfono/correo). Medido hoy: 18 vencidas sin renovación, 20 sin prima, 12 parejas de fichas con el mismo DNI, 9 sin fecha de nacimiento, 1 sin DNI.
+- La pantalla la montó un agente y se integró a mano: leía `filas` cuando asegura manda `incidencias` (siempre habría salido «error») → cepo de contrato que lee la ruta de asegura. `<details>` → montaje perezoso.
+- «Siguiente acción» por cliente NO se construye: ya existe como «🔔 Pide acción» en la ficha. Documentos a Storage descartado por ahora (las tablas de documentos de seguros no están ni en el top 12 de tamaño).
+
+## (24/09/2026) ASegura OS: la oportunidad de venta se cierra sola cuando su póliza entra por CIMA
+- `ganarOportunidadesEmitidas()` (`apps/asegura/lib/sustituciones-auto.ts`), dentro de la pasada de `correduria-eventos`: oportunidad abierta (no retención, no volcado) + póliza viva y vigente del MISMO cliente con la MISMA matrícula, llegada después → `ganada` + `poliza_ganada_id`, tareas cerradas, historial. Con dos candidatas o sin matrícula no se cierra sola (hogar queda manual).
+- Medido: `seguros.presupuesto` tiene **0 filas**; lo que Alberto usa de verdad son `oportunidades` con las ofertas de fuera en `info_riesgo` (2 abiertas hoy). Por eso se cierra ahí.
+- `correduria-renovaciones` falló el 23/09 por «red»: asegura en frío tardó >8 s. El cron pide ahora con 40 s (la pantalla sigue en 8 s).
+- Guardián `regression-cartera-viva`: un `import_ref is null` de OPORTUNIDAD se permite solo con el marcador `-- import_ref de OPORTUNIDAD` en la línea.
 
 ## (24/09/2026) blog ASegura: corregida la FAQ «cancelar sin penalización» del artículo publicado
 El artículo `cuando-empieza-a-cubrir-un-seguro` (#2966) prometía cancelar «sin penalización» antes de la fecha de

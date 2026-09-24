@@ -22,3 +22,10 @@ test('🪤 «Hoy» solo acepta firmadas o enviadas con su póliza; una fila rara
   assert.equal(leerCartaPorTramitar({ ...ok, polizaId: undefined }), null)
   assert.equal(leerCartaPorTramitar({ ...ok, firmadaAt: null }), null)
 })
+
+test('«en cola» tiene tres estados: sin el dato no se afirma que el correo espera el OK', () => {
+  const ok = { id: 'c1', estado: 'firmada', polizaId: 'p1', firmadaAt: '2026-09-24T10:00:00Z' }
+  assert.equal(leerCartaPorTramitar({ ...ok, enCola: true })?.enCola, true)
+  assert.equal(leerCartaPorTramitar({ ...ok, enCola: false })?.enCola, false)
+  assert.equal(leerCartaPorTramitar(ok)?.enCola, null)
+})

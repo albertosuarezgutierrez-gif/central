@@ -757,6 +757,11 @@ guarda en `carta_texto` y se mandará a la compañía. Cepo `lib/anulacion-porta
 📨 **Aviso a la compañía (2-d-3, `proponerAnulacionesFirmadas` + `decidirAprobacion` en `lib/aprobaciones.ts`).** Acción
 `enviar_correo_compania`: el buzón lo ELIGE Alberto en la tarjeta entre los contactos activos de ESA compañía (nunca por área: medido, «administración» es a veces cobros o rebota) y queda recordado en `compania_contactos.recibe_anulaciones` para la siguiente; carta firmada adjunta tal cual; la
 anulación pasa a `comunicada` SOLO si el correo salió. Cepo `lib/aprobaciones.test.ts`.
+🤝 **Carta de nombramiento de mediador por la misma cola (24/09/2026, `proponerCartasFirmadas`).** La firmada en el portal sale
+como `enviar_correo_compania` con `carta_mediador_id` (CHECK `aprobacion_compania_con_objeto`: anulación O carta, nunca las dos);
+el buzón se recuerda aparte en `recibe_nombramientos`; al salir → `enviada`. 🚨 La carta lleva el **DNI/NIF del tomador**
+(`documentoParaCarta`, letra comprobada): sin uno válido en la ficha no se ofrece firmar, y por eso `carta_mediador.carta_texto`
+se guarda **cifrado** (`encryptField`) y se descifra solo para la pantalla y el adjunto.
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
@@ -1659,6 +1664,27 @@ Envs: `ASEGURA_MAIL_FROM` (ya usada por el cron de avisos) + un proveedor de cor
 `ASEGURA_MAIL_REPLY_TO` (el buzón al que escribir si no reconoce a quien le da el acceso) y
 `ASEGURA_PORTAL_URL` (por defecto `https://asegura-portal.vercel.app`, que es donde el portal sirve
 HOY; cuando `clientes.grupoasegura.es` esté repuntado a Vercel se cambia la env y no se toca código).
+
+## 🔔 «Avísame antes de que venza» de la web pública (24/09/2026) — APAGADO
+
+Alberto decidió: todo en asegura y la ficha nace al CONFIRMAR. Web (widget de las páginas de ramo) →
+`plataforma /api/publico/correduria/aviso` (límite por IP + Telegram `correduria.aviso-web`) →
+`POST /api/operador/aviso-web?accion=solicitar|confirmar|baja` (`lib/aviso-web.ts`). Tabla
+`seguros.aviso_web` (`prisma/sql/2026-09-24d_aviso_web.sql`, **APLICADA el 24/09/2026** como migración
+`seguros_aviso_web`; `crm_seguros`, `backup_seguros` y el portal sin acceso). Correo cifrado; la llave de confirmar
+solo en SHA-256 (72 h); la de baja cifrada porque va en cada aviso. Al confirmar: ficha `lead` (o la
+que ya tiene ese correo) + oportunidad `pendiente_cliente` con el vencimiento del ciclo. Cron
+`/api/cron/avisos-web` 08:30 UTC: aviso a **70 días** («tu compañía tiene hasta V−60 para comunicarte
+cambios») y a **45** («quedan N días para V−30»), con la llave directa al portal; ninguno dentro del
+último mes. Reglas y textos puros en `lib/aviso-web-reglas.ts` (solo citan plazos del art. 22 LCS).
+Frenos tras la revisión de alto riesgo: nombre solo letras (≤60, va dentro de un correo a una
+dirección ajena), tope global de 30 solicitudes/hora (`saturado` → Telegram), campo trampa, baja por
+CORREO (todas sus filas), una suscripción viva por correo+ramo, purga de las no confirmadas a 30 días,
+y no se pisa la llave directa viva del correo de la intranet.
+**Para encender, en este orden:** `ASEGURA_AVISOS_WEB_ACTIVOS=1` en `central-asegura`
+(y `ASEGURA_WEB_URL` si la web no es `https://grupoasegura.es`) → `NEXT_PUBLIC_AVISOS_CORREO=1` en
+`asegura-web` → redesplegar las dos. Sin la primera env la solicitud contesta `desactivado` y el cron
+`apagado` sin tocar la BD; sin la segunda la web ni enseña el formulario.
 
 ## 🎯 Recaptación de leads sin vencimiento (12/09/2026)
 

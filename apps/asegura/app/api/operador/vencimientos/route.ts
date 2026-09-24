@@ -6,6 +6,8 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica, vencidasFueraDeVentana, vencimientosProximos } from '@/lib/cartera'
 
 export const dynamic = 'force-dynamic'
+// El cron diario de renovaciones espera hasta 40 s (arranque en frío); sin esto la función se cortaría antes.
+export const maxDuration = 45
 
 // GET /api/operador/vencimientos?dias=90 — pólizas a renovar (read-only).
 // Mismos TRES estados que el resumen: «sin conectar» no puede leerse como

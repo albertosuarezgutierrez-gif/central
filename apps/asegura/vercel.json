@@ -19,6 +19,10 @@
       "schedule": "15 8 * * *"
     },
     {
+      "path": "/api/cron/avisos-web",
+      "schedule": "30 8 * * *"
+    },
+    {
       "path": "/api/cron/felicitaciones",
       "schedule": "0 7 * * *"
     },
