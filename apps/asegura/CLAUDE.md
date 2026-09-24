@@ -766,6 +766,10 @@ se guarda **cifrado** (`encryptField`) y se descifra solo para la pantalla y el 
 en un mes» que publican web y portal: plazo = mes natural desde la RECEPCIÓN (`plazoQueja` de module-seguros, no lo manda quien
 llama), `detalle`/`respuesta` cifrados, resolver exige respuesta (CHECK + 422) y el UPDATE exige el estado leído (409 si otro clic
 llegó antes). Cepo `lib/quejas.test.ts`.
+📊 **Informe anual de mediación (24/09/2026, `lib/informe-mediacion.ts`, puerto `GET /api/operador/informe-mediacion?año=`).** Base
+de la documentación estadístico-contable a la DGSFP: primas COBRADAS del año por compañía y ramo (recibos de cartera viva, año
+en hora de Madrid; suma pura `informeMediacion` de module-seguros), pólizas en vigor HOY (no a 31/12: no se reconstruye) e informe
+del SAC. Solo lectura, sin datos personales. Cepo `lib/informe-mediacion.test.ts`.
 📄 **Adjuntos a la compañía (24/09/2026, `adjuntosFirmados`):** PDF (carta + justificante de la firma, `lib/documento-firmado-pdf.ts`)
 **y** el original `.txt`. La huella de `seguros.firma.doc_hash` es la del TEXTO, así que el `.txt` va SIEMPRE; el PDF es
 presentación y, si falla o no hay evidencia, se omite sin bloquear el envío (cepo en `aprobaciones.test.ts`).

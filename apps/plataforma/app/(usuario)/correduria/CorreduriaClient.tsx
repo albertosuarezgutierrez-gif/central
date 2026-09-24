@@ -9,6 +9,7 @@ import { Pagina, Badge } from '@/components/ui'
 import { companiaLabel, COMPANIA_OTRAS, COMPANIAS_CONOCIDAS } from '@/lib/correduria'
 import { eur } from '@/lib/dinero'
 import CuadreComisiones from './CuadreComisiones'
+import InformeMediacion from './InformeMediacion'
 import BuscadorCartera from './BuscadorCartera'
 import AccionesCabecera from './AccionesCabecera'
 import Retencion from './Retencion'
@@ -498,6 +499,7 @@ export default function CorreduriaClient() {
         </div>
 
         <CuadreComisiones año={año} onContador={setNCuadre} />
+        <InformeMediacion año={año} />
 
         {/* Movimientos de seguros sin confirmar a qué compañía son. Fuera del
             gate `totalAnual > 0` a propósito: ese gate lo escondía un año sin
