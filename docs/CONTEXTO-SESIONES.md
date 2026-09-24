@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🧾 **Alta manual por SQL de Mapfre 2002600520435** (auto, Antonio Cruz Martínez, póliza `c981968f…`) en la
+ficha `8016986c…` (antes «Antonio» sin apellidos; ya tenía Cuñado/a con Gabriel Cabrera `3146922c…`). `id_poliza_entidad`
+y hash a NULL (sin confirmar por CIMA, que no recibe nada de Mapfre desde el 23/06). + oportunidad `e9c155e4…` de su Allianz
+058366323 (Grupo PACC, fin 31/01/2027). Intervinientes NO cargados (columnas cifradas). Pendiente de Alberto: DNI de Antonio
+en la ficha desde la UI; revisar si `edc7248d…` «Antonio Cruz Sánchez» es un duplicado; la póliza Mapfre lleva el email de
+Alberto como email del tomador.
+
 **(23/09/2026)** 🔁 **PR 10 (#3422): sustitución AUTOMÁTICA, duplicidades y aviso a la compañía al emitir.** Clave del
 riesgo por ramo (matrícula · refcat/dirección · DNI asegurado); la sustituida sale de «en vigor» para siempre («se anula y
 se anula»); el portal la retira de la LISTA, no del acceso. Al constar la nueva: presupuesto aceptado → emitido solo y su
