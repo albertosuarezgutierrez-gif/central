@@ -21,12 +21,28 @@ export function parsearSitemap(xml: string): EntradaSitemap[] {
   return entradas
 }
 
+/**
+ * Solo las entradas de NUESTRO dominio (con o sin `www.`). El sitemap es nuestro, pero lo que sale
+ * de aquí acaba en la URL Inspection API y en IndexNow: una URL ajena (un sitemap manipulado o un
+ * error de generación) no debe llegar a ninguno de los dos.
+ */
+export function soloDelDominio(entradas: readonly EntradaSitemap[], dominio: string): EntradaSitemap[] {
+  return entradas.filter(e => {
+    try {
+      const u = new URL(e.url)
+      return u.protocol === 'https:' && (u.hostname === dominio || u.hostname === `www.${dominio}`)
+    } catch {
+      return false
+    }
+  })
+}
+
 /** Lee `https://<dominio>/sitemap.xml`. Lanza si no responde 200 o viene vacío: quien llama decide el fallback. */
 export async function leerSitemap(dominio: string, fetch: FetchLike, timeoutMs = 10_000): Promise<EntradaSitemap[]> {
   const res = await fetch(`https://${dominio}/sitemap.xml`, { signal: AbortSignal.timeout(timeoutMs) })
   if (!res.ok) throw new Error(`sitemap ${res.status}`)
-  const entradas = parsearSitemap(await res.text())
-  if (entradas.length === 0) throw new Error('sitemap sin URLs')
+  const entradas = soloDelDominio(parsearSitemap(await res.text()), dominio)
+  if (entradas.length === 0) throw new Error('sitemap sin URLs del dominio')
   return entradas
 }
 

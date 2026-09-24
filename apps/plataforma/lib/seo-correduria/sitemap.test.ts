@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { parsearSitemap, urlsAInspeccionar } from './sitemap.ts'
+import { parsearSitemap, soloDelDominio, urlsAInspeccionar } from './sitemap.ts'
 
 const XML = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
@@ -54,4 +54,19 @@ test('enviarSitemapGsc: PUT a la propiedad con el sitemap codificado; 403 lanza 
     enviarSitemapGsc('tok', 'p', 'https://x/sitemap.xml', async () => new Response('forbidden', { status: 403 })),
     /403 \(la cuenta de servicio necesita permiso «Completo»/,
   )
+})
+
+test('soloDelDominio: fuera las URLs de otro host, http o mal formadas', () => {
+  const r = soloDelDominio(
+    [
+      { url: 'https://grupoasegura.es/a', lastmod: null },
+      { url: 'https://www.grupoasegura.es/b', lastmod: null },
+      { url: 'https://evil.example/grupoasegura.es', lastmod: null },
+      { url: 'https://grupoasegura.es.evil.example/c', lastmod: null },
+      { url: 'http://grupoasegura.es/d', lastmod: null },
+      { url: 'no-es-una-url', lastmod: null },
+    ],
+    'grupoasegura.es',
+  )
+  assert.deepEqual(r.map((e) => e.url), ['https://grupoasegura.es/a', 'https://www.grupoasegura.es/b'])
 })
