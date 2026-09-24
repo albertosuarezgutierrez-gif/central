@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import { strict as assert } from 'node:assert'
-import { interpretarCalidad } from './correduria-puerto'
+import { interpretarCalidad } from './correduria-puerto.ts'
 
 test('calidad: respuesta ok con incidencias válidas', () => {
   const json = {
@@ -61,10 +61,15 @@ test('calidad: fila con regla desconocida invalida toda la respuesta', () => {
 })
 
 test('calidad: JSON roto o status 500', () => {
-  assert.equal(interpretarCalidad(500, {}).estado, 'error')
-  assert.equal(interpretarCalidad(500, {}).motivo, 'respuesta_ilegible')
-  assert.equal(interpretarCalidad(200, 'no es objeto').estado, 'error')
-  assert.equal(interpretarCalidad(200, null).estado, 'error')
+  const r1 = interpretarCalidad(500, {})
+  assert.equal(r1.estado, 'error')
+  if (r1.estado === 'error') {
+    assert.equal(r1.motivo, 'respuesta_ilegible')
+  }
+  const r2 = interpretarCalidad(200, 'no es objeto')
+  assert.equal(r2.estado, 'error')
+  const r3 = interpretarCalidad(200, null)
+  assert.equal(r3.estado, 'error')
 })
 
 test('calidad: sin_configurar', () => {
