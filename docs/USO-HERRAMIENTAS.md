@@ -171,24 +171,24 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 109 | 15.608 | 9.934.929 | 0 | 0 |
-| `otro` | 107 | 3.983 | 14.411.525 | 6.953.264 | 0 |
-| `mcp:github` | 98 | 3.542 | 3.261.391 | 40.213.950 | 58 |
-| `lectura-directa` | 100 | 3.446 | 6.738.027 | 0 | 0 |
-| `escritura` | 87 | 2.271 | 38.243.591 | 0 | 0 |
-| `sql` | 72 | 1.640 | 759.891 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 60 | 734 | 189.473 | 2.997.396 | 10 |
+| `bash` | 109 | 15.753 | 10.061.611 | 0 | 0 |
+| `otro` | 107 | 4.012 | 14.480.675 | 6.953.264 | 0 |
+| `mcp:github` | 98 | 3.557 | 3.280.987 | 40.490.048 | 58 |
+| `lectura-directa` | 100 | 3.449 | 6.767.577 | 0 | 0 |
+| `escritura` | 87 | 2.274 | 38.252.234 | 0 | 0 |
+| `sql` | 72 | 1.643 | 761.063 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 60 | 742 | 191.116 | 2.997.396 | 10 |
 | `mcp:Vercel` | 26 | 318 | 542.831 | 198.719 | 4 |
 | `mcp:Booking-com` | 10 | 297 | 1.215.858 | 0 | 0 |
 | `mcp:Gmail` | 16 | 229 | 371.581 | 0 | 2 |
-| `mcp:Supabase` | 43 | 149 | 17.723 | 0 | 1 |
+| `mcp:Supabase` | 43 | 152 | 17.829 | 0 | 1 |
 | `agente:general-purpose` | 17 | 67 | 45.044 | 682.882 | 0 |
 | `mcp:Google-Drive` | 7 | 58 | 61.436 | 0 | 2 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 1 | 51 | 73.084 | 0 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
+| `agente:agente-architect` | 9 | 44 | 39.002 | 1.227.454 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
-| `agente:agente-architect` | 9 | 42 | 38.143 | 1.213.520 | 0 |
 | `agente:Explore` | 12 | 32 | 15.543 | 726.021 | 0 |
 | `mcp:Google_Drive` | 6 | 31 | 45.391 | 0 | 7 |
 | `mcp:OpenSEO` | 1 | 30 | 20.595 | 0 | 0 |
@@ -202,8 +202,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `agente:general` | 6 | 8 | 5.205 | 231.483 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:Supabase_asegura` | 5 | 5 | 1.947 | 0 | 0 |
+| `mcp:openrouter` | 2 | 3 | 3.026 | 0 | 0 |
 | `mcp:idealista` | 1 | 3 | 8.773 | 0 | 0 |
-| `mcp:openrouter` | 1 | 2 | 2.366 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
 | `mcp:Google_Calendar` | 1 | 1 | 272 | 0 | 0 |
