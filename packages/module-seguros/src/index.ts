@@ -817,3 +817,12 @@ export {
   type DefinicionSerie,
   type SerieLineaBase,
 } from './linea-base.ts'
+export {
+  VENTANA_DIAS as VENTANA_SIGUIENTE_ACCION,
+  siguienteAccion,
+  type DeclaradaAccion,
+  type EntradaSiguienteAccion,
+  type PolizaAccion,
+  type SiguienteAccion,
+  type TipoSiguienteAccion,
+} from './siguiente-accion.ts'

@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** ASegura OS Fase 6 — «Siguiente acción» en la ficha del cliente: `siguienteAccion()` (module-seguros, puro, 10 tests, 4 cepos vistos fallar) elige UNA acción por reglas (devuelto sin cobertura > devuelto > renovación ≤60 d > presupuesto > declarada que vence > sin canal > venta cruzada auto→hogar) y dice `sin_comprobar` en vez de «nada» si faltaban recibos/declaradas. Tarjeta arriba del Resumen. Pendiente: chip por fila en Clientes.
+
 **(24/09/2026)** ASegura OS §N.2 — línea base semanal antes de automatizar. Módulo puro `linea-base.ts` (module-seguros): semanas por lunes de Madrid, cada serie con su `desde` (antes = `null`, no 0), proporción automática `null` sin cambios. Puerto `GET /api/operador/linea-base` (auditoría a mano/sistema, aprobaciones, documentos, oportunidades) + correos de correduría contados en plataforma; tarjeta plegada en `/correduria` → Datos. Hoy solo hay una semana medida de auditoría (existe desde el 23/09).
 
 **(24/09/2026)** — IDD: fichas IPID. Tabla `seguros.ipid` (aplicada; PDF ≤4 MB, una vigente por `claveProducto`,
