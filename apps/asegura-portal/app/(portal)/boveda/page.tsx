@@ -15,6 +15,9 @@ import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
 import { hojasDeIdentidad, polizasElegibles } from '@/lib/hojas'
 import { leerMisDatos, reparosDeContacto } from '@/lib/mis-datos'
 import { peticionesPrecio } from '@/lib/mejorar-precio'
+import { datosParaContratar } from '@/lib/datos-emision'
+import { pendientesDeTi } from '@/lib/pendiente-de-ti'
+import { presupuestosPendientesDeIdentidad } from '@/lib/presupuesto'
 import { anulacionesPendientes } from '@/lib/anulacion-firma'
 import { partesDeIdentidad, type PartePortal } from '@/lib/partes-siniestro'
 import { recordatoriosDeIdentidad } from '@/lib/recordatorios'
@@ -59,6 +62,7 @@ import { MisDatos } from './MisDatos'
 import { TusDatos } from './TusDatos'
 import { TusVencimientos } from './TusVencimientos'
 import { FirmarAnulacion } from './FirmarAnulacion'
+import { PendienteDeTi } from './PendienteDeTi'
 
 export const dynamic = 'force-dynamic'
 
@@ -146,8 +150,53 @@ export default async function Boveda({
   // `null` = no se pudo saber: no se pinta nada, pero tampoco se afirma que no haya.
   const firmasP = vista === 'seguros' ? anulacionesPendientes(identidad.id) : Promise.resolve(null)
 
+  // «Pendiente de ti» (§Q.4): sus presupuestos vivos. Solo en «Mis seguros», que es donde se pinta.
+  const presupuestosP = vista === 'seguros' ? presupuestosPendientesDeIdentidad(identidad.id) : Promise.resolve(null)
+
   await sincronizarObligacionesDeIdentidad(identidad.id, cartera)
-  const [peticiones, firmas] = await Promise.all([peticionesP, firmasP])
+  const [peticiones, firmas, presupuestosVivos] = await Promise.all([peticionesP, firmasP, presupuestosP])
+
+  // A los aceptados se les pregunta qué datos faltan para contratar (puente; suelen ser 0-1).
+  // Un fallo del puente queda en `null`: la lista dice «compruébalo», nunca «no falta nada».
+  const presupuestosPend =
+    presupuestosVivos === null
+      ? null
+      : await Promise.all(
+          presupuestosVivos.map(async (p) => {
+            if (!p.aceptado) return { ...p, faltan: null }
+            const d = await datosParaContratar(identidad.id, p.id).catch(() => null)
+            return { ...p, faltan: d?.estado === 'ok' ? d.faltanCliente : d === null ? null : 0 }
+          }),
+        )
+
+  const pendientes =
+    vista === 'seguros'
+      ? pendientesDeTi(
+          {
+            // Solo las SUYAS: el recibo devuelto de una póliza que le dejan ver lo paga su titular.
+            recibosDevueltos: cartera.propias.flatMap((t) =>
+              t.polizas
+                .filter((p) => p.vigencia !== 'no_vigente' && (p.recibos?.devueltos ?? 0) > 0)
+                .map((p) => ({
+                  polizaId: p.id,
+                  etiqueta: [RAMO[p.ramo] ?? p.ramo, p.compania, p.bien.matricula ?? p.bien.cosa ?? p.bien.ubicacion]
+                    .filter(Boolean)
+                    .join(' · '),
+                  n: p.recibos?.devueltos ?? 0,
+                })),
+            ),
+            anulaciones: firmas === null ? null : firmas.anulaciones.length,
+            presupuestos: presupuestosPend,
+            contactoPorConfirmar:
+              contacto.estado === 'ok'
+                ? contacto.confirmacion !== 'vigente'
+                : contacto.estado === 'sin_ficha' || contacto.estado === 'varias_fichas'
+                  ? false
+                  : null,
+          },
+          (r) => (RAMO[r] ?? r).toLowerCase(),
+        )
+      : null
 
   // Los recordatorios PROPIOS solo se leen para la pestaña que los pinta —
   // misma regla de rendimiento que el resto de la página (el servidor manda
@@ -423,6 +472,14 @@ export default async function Boveda({
               único de esta pantalla que pide una corrección con fecha, y un
               aviso que se baja por debajo de una acción deja de ser un aviso.
               El alta va justo detrás, que es lo que pidió Alberto. */}
+          {pendientes && (
+            <PendienteDeTi
+              items={pendientes.items}
+              anulaciones={firmas?.anulaciones.length ?? 0}
+              sinComprobar={pendientes.sinComprobar}
+            />
+          )}
+
           <AvisoContacto lectura={contacto} />
 
           {/* Lo único que el cliente TIENE que hacer y que tiene fecha: su firma. */}

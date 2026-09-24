@@ -2,6 +2,7 @@
 import { useState } from 'react'
 
 import type { AnulacionPendiente } from '@/lib/anulacion-firma'
+import { avisarPendienteResuelto } from './PendienteDeTi'
 
 /**
  * «Pendiente de tu firma» (ASegura OS, pieza 2-d-2): la carta de anulación que
@@ -88,7 +89,7 @@ function Tarjeta({ a, consentimiento, corredor }: { a: AnulacionPendiente; conse
     setAviso(null)
     const r = await enviar({ accion: 'firmar', codigo, nombre, cartaHash: a.cartaHash })
     setOcupado(false)
-    if (r?.j.estado === 'firmada' && typeof r.j.firmadaEl === 'string') { setPaso({ paso: 'firmada', firmadaEl: r.j.firmadaEl }); return }
+    if (r?.j.estado === 'firmada' && typeof r.j.firmadaEl === 'string') { setPaso({ paso: 'firmada', firmadaEl: r.j.firmadaEl }); avisarPendienteResuelto('anulacion'); return }
     if ((r?.j.estado === 'reintentar' || r?.j.estado === 'no_disponible') && typeof r.j.motivo === 'string') { setAviso(r.j.motivo); return }
     setAviso('No sabemos si la firma se ha guardado. Recarga la página antes de volver a intentarlo.')
   }

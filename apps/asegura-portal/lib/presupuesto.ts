@@ -566,3 +566,40 @@ function registrar(donde: string, e: unknown): void {
 
 /** `hashCanal` se re-exporta para que el cepo vea que la rama (a) usa ESTA función. */
 export { hashCanal }
+
+// ─── «Pendiente de ti»: los presupuestos que esperan algo de la persona ─────
+//
+// Hasta hoy un presupuesto solo se abría desde el enlace del correo: quien lo borraba no lo
+// encontraba en su portal. Aquí se listan los de SUS fichas (por `portal_vinculo` de la sesión,
+// nunca un id de fuera) que siguen vivos: avisados, sin retirar ni emitir, y —si no se han
+// aceptado— sin caducar. Un aceptado sin emitir sigue aquí aunque venza: es el que espera sus datos.
+
+export type PresupuestoParaPendientes = { id: string; ramo: string; venceEl: Date; aceptado: boolean }
+
+/** `null` = no se ha podido leer. Nunca `[]` por un fallo: eso se leería como «no tienes ninguno». */
+export async function presupuestosPendientesDeIdentidad(identidadId: string): Promise<PresupuestoParaPendientes[] | null> {
+  try {
+    const vinculos = await prisma.portalVinculo.findMany({
+      where: { identidadId },
+      select: { clienteId: true, correduriaId: true },
+    })
+    if (vinculos.length === 0) return []
+    const ahora = new Date()
+    const filas = await prisma.presupuesto.findMany({
+      where: {
+        OR: vinculos.map((v) => ({ clienteId: v.clienteId, correduriaId: v.correduriaId })),
+        enviadoAt: { not: null },
+        retiradoAt: null,
+        emitidoAt: null,
+        AND: [{ OR: [{ aceptadoAt: { not: null } }, { venceEl: { gte: ahora } }] }],
+      },
+      select: { id: true, ramo: true, venceEl: true, aceptadoAt: true },
+      orderBy: { venceEl: 'asc' },
+      take: 10,
+    })
+    return filas.map((p) => ({ id: p.id, ramo: p.ramo, venceEl: p.venceEl, aceptado: p.aceptadoAt !== null }))
+  } catch (e) {
+    console.error('[presupuesto] no se pudieron leer los pendientes:', e instanceof Error ? e.message : e)
+    return null
+  }
+}

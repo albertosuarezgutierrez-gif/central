@@ -563,7 +563,7 @@ Enviar la invitación a los **51 clientes invitables**. El botón ya existe en l
 1. **«Tus vencimientos» como portada.** Qué renueva, cuándo y a qué prima, con un botón **«Quiero que me mejores el precio»**. Crea una oportunidad en el embudo de Vencimientos (§P) con origen `portal`. **Es la venta iniciada por el cliente, la más barata que existe.**
 2. **Seguros de otras compañías → consentimiento y canal.** Al subir una póliza de fuera: «¿Te avisamos un mes antes de que venza con una comparativa?», con casilla de consentimiento comercial. **Resuelve a la vez los dos problemas de §P**: la base legal para escribir y la falta de canal. Esas declaradas entran en el carril de leads con **fecha real**, no estimada.
 3. **Centro de preferencias de comunicación** (RGPD/LSSI): qué acepta recibir y por qué canal, revocable en un clic. Queda auditado (`portal_consentimiento` ya existe) y es la fuente que consulta el workflow antes de enviar nada.
-4. **«Pendiente de ti»**: una sola lista con lo que la correduría necesita del cliente, generada por los workflows:
+4. ✅ **(24/09/2026: `PendienteDeTi.tsx` arriba de «Mis seguros», regla pura `lib/pendiente-de-ti.ts` del portal: recibo devuelto > firma de anulación > datos que faltan para contratar > presupuesto por elegir > confirmar contacto; lo que no se pudo leer se declara)** **«Pendiente de ti»**: una sola lista con lo que la correduría necesita del cliente, generada por los workflows:
    - firmar una anulación o un presupuesto;
    - subir el DNI o el carnet que falta;
    - completar datos de un presupuesto (PR 5 del spec);
