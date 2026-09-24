@@ -142,8 +142,8 @@ export type SiniestroPortal = {
   tipoLegible: string | null
   /**
    * Cómo va, según la COMPAÑÍA (EIAC): pasos con fecha y lo pagado. `null` = la
-   * compañía no lo manda (hoy solo Occident y Allianz, y solo lo ingerido desde
-   * el 24/09/2026). Sin reserva ni culpa, y sin nombres: ver
+   * compañía no lo manda (no todas lo hacen; visto en Occident y Allianz) o el
+   * fichero es anterior al 24/09/2026 y no se ha reprocesado. Sin reserva ni culpa, y sin nombres: ver
    * `siniestro-tramitacion.ts` de `@central/module-seguros-portal`.
    */
   tramitacion: TramitacionSiniestro | null

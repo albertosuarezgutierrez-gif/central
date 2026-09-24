@@ -18,8 +18,8 @@
  *   perito no es dinero para el cliente, y «la compañía ha pagado 500€» a secas
  *   se leería como «me han pagado».
  *
- * Tres estados, como en todo el portal: `null` = la compañía no manda esto (la
- * mayoría: solo Occident y Allianz lo hacen, y solo desde que se guarda) ·
+ * Tres estados, como en todo el portal: `null` = no consta (la compañía no lo informa,
+ * o el fichero es anterior a que se guardara y no se ha reprocesado) ·
  * lista vacía = lo mandó sin pasos · con pasos = la línea.
  */
 

@@ -546,7 +546,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - CRM (repo asegura, PR #852): el mapper EIAC lee situaciones, acciones, pagos, reserva, total pagado y posición; se guardan
   en `siniestros.*_cima` FUSIONANDO (EIAC manda solo lo nuevo por periodo) sin tocar los campos manuales del corredor. Migración 0099 aplicada.
 - Portal: «Lo que nos cuenta tu compañía» en cada siniestro (`tramitacionSiniestro`, sin descripción libre ni figuras; sin reserva ni culpa).
-- Solo afecta a lo ingerido tras el deploy del CRM; solo Occident y Allianz mandan esto (Mapfre: 0 ficheros SIN).
+- Solo afecta a lo ingerido tras el deploy del CRM (o reprocesado). SIN recibidos: 47 (Occident, Allianz, 2 Mapfre de abril, 1 Generali).
+- Regla de Alberto: todo desarrollo de CIMA empieza en la carpeta «CIMA» de Drive (norma + zips). Siniestros = solo compañía→nosotros:
+  el 841 no existe por CIMA (TIREA 03/09/2026). Reproceso de los 46 SIN de los zips: bloqueado por permisos, pendiente de Alberto.
 - Pendiente conocido (PR aparte): `mapSiniestroEstado` trata PosicionSiniestro `IN` como en_tramitacion, y oficialmente IN = Indeterminado (culpa).
 
 ## (24/09/2026) sivra: el agente de huéspedes y los mensajes programados, en TODOS los idiomas

@@ -1127,8 +1127,8 @@ El CRM guarda desde el 24/09/2026 lo que la compañía manda por EIAC (`situacio
 siniestro lo pinta como «Lo que nos cuenta tu compañía»: pasos con fecha y lo pagado. Traduce
 `tramitacionSiniestro()` (`module-seguros-portal/src/siniestro-tramitacion.ts`), que **nunca** deja pasar la
 descripción libre ni las figuras (nombres de perito/tramitador). `reserva_cima` y `posicion_cima` no tienen
-GRANT ni se declaran. «Lleva pagado», no «te ha pagado»: el total incluye pagos al perito o al taller. Solo
-Occident y Allianz lo mandan, y solo lo ingerido desde ese día. Cepo en `test/regression-portal-visibilidad.test.ts`.
+GRANT ni se declaran. «Lleva pagado», no «te ha pagado»: el total incluye pagos al perito o al taller. No todas las
+compañías lo mandan (visto en Occident y Allianz), y solo en lo ingerido o reprocesado desde ese día. Cepo en `test/regression-portal-visibilidad.test.ts`.
 
 ## 🚑 El parte de siniestro (03/09/2026) — y la frase que NO se puede decir
 
