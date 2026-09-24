@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T04:35:43Z",
-  "sha": "8ce50170fef881af01c60ab5175c8f84e15cd687",
+  "generadoEn": "2026-09-24T05:16:31Z",
+  "sha": "5ad5d515d68004969a0383f57b95e0018fbb6b13",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11094,7 +11094,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e9896eca11d0"
+      "hash": "91fe56977cc0"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/hogar-nuevo/page.tsx",
@@ -13932,13 +13932,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 29,
+          "linea": 31,
           "resumen": "GET /api/operador/vencimientos?dias=90 — pólizas a renovar (read-only). Mismos TRES estados que el resumen: «sin conectar» no puede leerse como «no vence nada». Una lista vacía con estado 'ok' sí sign"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/vencimientos",
-      "hash": "8e3a471c0654"
+      "hash": "11f6e1850838"
     },
     {
       "ruta": "apps/asegura/app/api/portal/anulacion/route.ts",
@@ -22292,7 +22292,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResultadoDeteccion>",
-          "linea": 113
+          "linea": 117
         },
         {
           "nombre": "hoyMadrid",
@@ -22300,7 +22300,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 246
+          "linea": 268
         },
         {
           "nombre": "abrirRetencion",
@@ -22308,7 +22308,7 @@
           "exportada": false,
           "params": "tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string, polizaId: string, tipo: string",
           "retorno": "Promise<Retencion | null>",
-          "linea": 255,
+          "linea": 277,
           "resumen": "Pieza 2-b: CIMA anula una póliza con el vencimiento por delante → oportunidad de retención (`en_negociacion`) + llamada de prioridad alta para hoy, que sale en «Hoy · Tareas de hoy». `null` si no toca"
         },
         {
@@ -22317,7 +22317,7 @@
           "exportada": false,
           "params": "tx: Consultor & Pick<ReturnType<typeof prismaAsegura>, '$executeRaw'>, correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 298,
+          "linea": 320,
           "resumen": "Cierra como `ganada` las retenciones abiertas cuya póliza ya no se pierde, y sus tareas."
         },
         {
@@ -22326,7 +22326,7 @@
           "exportada": false,
           "params": "correduriaId: string, r: Retencion",
           "retorno": "Promise<void>",
-          "linea": 339,
+          "linea": 361,
           "resumen": "Best-effort y fuera de la transacción: la oportunidad y la llamada ya están guardadas."
         },
         {
@@ -22335,7 +22335,7 @@
           "exportada": false,
           "params": "db: Consultor, correduriaId: string, claves: string[] | null",
           "retorno": "Promise<FugaNueva[]>",
-          "linea": 351,
+          "linea": 373,
           "resumen": "Lo mínimo para reconocer la póliza: nombre del tomador, número y compañía. Nada de contacto."
         },
         {
@@ -22344,7 +22344,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<FugaNueva[] | null>",
-          "linea": 380
+          "linea": 402
         },
         {
           "nombre": "revisionValida",
@@ -22352,7 +22352,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Revision | null",
-          "linea": 391
+          "linea": 413
         },
         {
           "nombre": "revisarEvento",
@@ -22360,7 +22360,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, r: Revision, actor: string",
           "retorno": "Promise<boolean>",
-          "linea": 402,
+          "linea": 424,
           "resumen": "`true` si se revisó; `false` si no existe o ya estaba revisado (no se pisa una revisión)."
         }
       ],
@@ -22380,7 +22380,7 @@
         "siniestros"
       ],
       "rutaApi": null,
-      "hash": "e246dfd206d3"
+      "hash": "50f5f51f2f08"
     },
     {
       "ruta": "apps/asegura/lib/export-rgpd.ts",
@@ -24204,7 +24204,8 @@
       "exporta": [
         "enlazarSustituciones",
         "liberarPresupuestosEmitidos",
-        "abrirAnulacionesPorSustitucion"
+        "abrirAnulacionesPorSustitucion",
+        "ganarOportunidadesEmitidas"
       ],
       "funciones": [
         {
@@ -24250,13 +24251,25 @@
           "retorno": "Promise<",
           "linea": 126,
           "resumen": "La nueva se emitió FUERA de nuestro presupuesto (web de la compañía o de Codeoscopic) y nadie ha pedido la baja de la vieja: se abre el expediente `sustitucion` en `solicitada`, que el cliente FIRMA e"
+        },
+        {
+          "nombre": "ganarOportunidadesEmitidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "tx: Tx, correduriaId: string",
+          "retorno": "Promise<",
+          "linea": 180,
+          "resumen": "Cierra como `ganada` la oportunidad de venta (lead o presupuesto de otra compañía que Alberto dio de alta) cuando su póliza YA ha entrado en cartera: la del mismo cliente y la misma matrícula, viva, l"
         }
       ],
       "tablas": [
         "anulacion",
         "cand",
         "companias_dgs",
+        "gestiones",
         "historial_interno",
+        "oportunidad_historial",
+        "oportunidades",
         "poliza_intervinientes",
         "polizas",
         "presupuesto",
@@ -24264,7 +24277,7 @@
         "presupuesto_opcion"
       ],
       "rutaApi": null,
-      "hash": "1385196bb47e"
+      "hash": "58bdd73aca3e"
     },
     {
       "ruta": "apps/asegura/lib/tenant-ambito.ts",
@@ -82801,7 +82814,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/correduria-eventos",
-      "hash": "aec291e1d3f5"
+      "hash": "f914a136834b"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-ingesta/route.ts",
@@ -82891,7 +82904,7 @@
         "next"
       ],
       "rutaApi": "/api/cron/correduria-renovaciones",
-      "hash": "c9e58021c74c"
+      "hash": "9090c0e18422"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/correduria-siniestros/route.ts",
@@ -83474,7 +83487,7 @@
           "exportada": false,
           "params": "faltan: string[], leer: () => Promise<T>",
           "retorno": "Promise<ResultadoFuente<T>>",
-          "linea": 52,
+          "linea": 54,
           "resumen": "Envuelve una lectura en el tri-estado: secreto ausente → no_configurado; excepción → error."
         },
         {
@@ -83483,7 +83496,7 @@
           "exportada": false,
           "params": "nombres: string[]",
           "retorno": "string[]",
-          "linea": 62
+          "linea": 64
         },
         {
           "nombre": "handler",
@@ -83491,12 +83504,12 @@
           "exportada": false,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 66
+          "linea": 68
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/seo-correduria",
-      "hash": "1774e07646f2"
+      "hash": "357c3ac9912f"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/ses-latido/route.ts",
@@ -93398,9 +93411,10 @@
           "nombre": "vencimientosAsegura",
           "kind": "function",
           "exportada": true,
-          "params": "dias = 90",
+          "params": "dias = 90, timeoutMs = 8000",
           "retorno": "Promise<VencimientosAsegura>",
-          "linea": 290
+          "linea": 294,
+          "resumen": "`timeoutMs`: 8 s para la pantalla; el cron diario pasa más, porque a las 06:30 asegura arranca en frío y el 23/09 tardó más de 8 s → «red» y ese día no salió ningún aviso de renovación."
         },
         {
           "nombre": "interpretarDeclaradasVencer",
@@ -93408,7 +93422,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "DeclaradasVencerAsegura",
-          "linea": 330,
+          "linea": 334,
           "resumen": "Interpretación PURA de la respuesta del puerto. Una fila con forma inesperada invalida la lista entera, igual que `interpretarVencimientos`."
         },
         {
@@ -93417,12 +93431,12 @@
           "exportada": true,
           "params": "dias = 60",
           "retorno": "Promise<DeclaradasVencerAsegura>",
-          "linea": 366
+          "linea": 370
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f54001fd2f98"
+      "hash": "2d8525723a5d"
     },
     {
       "ruta": "apps/plataforma/lib/cartera-lista-asegura.ts",
@@ -101783,7 +101797,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 54
+          "linea": 58
         },
         {
           "nombre": "leerFuga",
@@ -101791,7 +101805,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Fuga | null",
-          "linea": 58
+          "linea": 62
         },
         {
           "nombre": "llamar",
@@ -101799,7 +101813,7 @@
           "exportada": false,
           "params": "ruta: string, init: { method: 'GET' | 'POST' | 'PATCH'; body?: unknown; timeoutMs?: number }",
           "retorno": "Promise<",
-          "linea": 75
+          "linea": 79
         },
         {
           "nombre": "causa",
@@ -101807,7 +101821,7 @@
           "exportada": false,
           "params": "r: { status: number; json: Record<string, unknown> }",
           "retorno": "string",
-          "linea": 94
+          "linea": 98
         },
         {
           "nombre": "detectarEventos",
@@ -101815,7 +101829,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Lectura<Deteccion>>",
-          "linea": 102,
+          "linea": 106,
           "resumen": "Lanza el detector. Cualquier duda es `sin_datos`, nunca «no ha pasado nada»."
         },
         {
@@ -101824,7 +101838,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Lectura<Fuga[]>>",
-          "linea": 140
+          "linea": 146
         },
         {
           "nombre": "revisarFuga",
@@ -101832,7 +101846,7 @@
           "exportada": true,
           "params": "id: string, resolucion: 'perdida' | 'no_es_perdida', motivo: string | null, actor: string",
           "retorno": "Promise<ResultadoRevision>",
-          "linea": 154
+          "linea": 160
         },
         {
           "nombre": "escapar",
@@ -101840,7 +101854,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 163
+          "linea": 169
         },
         {
           "nombre": "mensajeFugas",
@@ -101848,13 +101862,13 @@
           "exportada": true,
           "params": "fugas: Fuga[], urlFicha: (clienteId: string) => string | null, retenciones: number | null = null",
           "retorno": "string",
-          "linea": 168,
+          "linea": 174,
           "resumen": "Aviso de Telegram (HTML). Nombre del tomador, póliza y compañía; nada de contacto."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6f372a2a853a"
+      "hash": "dac23fc839d3"
     },
     {
       "ruta": "apps/plataforma/lib/gastos-recurrentes.ts",
@@ -107085,15 +107099,15 @@
           "nombre": "leerCobertura",
           "kind": "function",
           "exportada": true,
-          "params": "cfg: { token: string; propiedad: string; urls: string[]; presupuestoMs?: number }, fetch: FetchLike,",
+          "params": "cfg: { token: string; propiedad: string; urls: string[]; presupuestoMs?: number; concurrencia?: number }, fetch: FetchLike,",
           "retorno": "Promise<DatosCobertura>",
-          "linea": 100,
-          "resumen": "Inspecciona una lista de URLs EN SERIE — la API no ofrece lote — dentro de un presupuesto de tiempo (el cron reparte `maxDuration` entre GSC/PostHog/esto). Lo que no llega a tiempo se declara `error:'"
+          "linea": 102,
+          "resumen": "Inspecciona una lista de URLs —la API no ofrece lote— con `concurrencia` peticiones a la vez (4 por defecto; la cuota de la API es 600/min) y dentro de un presupuesto de tiempo (el cron reparte `maxDu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cdeba8fd5ef0"
+      "hash": "27a1b227fff2"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/google-sa.ts",
@@ -107272,18 +107286,18 @@
       "ambito": "apps/plataforma",
       "resumen": "lib/seo-correduria/indexacion-pendiente.ts — qué URLs del blog llevan sin indexar y el prompt de Claude Chrome ya armado para pedir su indexación en Search Console. La Search Console API NO tiene endpoint de «solicitar indexación» para páginas normales (solo Job/BroadcastEvent): ese botón solo exist",
       "exporta": [
-        "urlsBlogPendientesIndexar",
+        "urlsPendientesIndexar",
         "promptClaudeChromeIndexacion"
       ],
       "funciones": [
         {
-          "nombre": "urlsBlogPendientesIndexar",
+          "nombre": "urlsPendientesIndexar",
           "kind": "function",
           "exportada": true,
           "params": "cobertura: DatosCobertura",
           "retorno": "string[]",
-          "linea": 16,
-          "resumen": "URLs del blog que la URL Inspection API AÚN no da por indexadas (verdict !== PASS)."
+          "linea": 20,
+          "resumen": "Páginas propias (no legales) que la URL Inspection API AÚN no da por indexadas (verdict !== PASS). Una fila en `error` no entra: no se ha podido mirar, y pedir a ciegas gasta el cupo diario."
         },
         {
           "nombre": "promptClaudeChromeIndexacion",
@@ -107291,13 +107305,55 @@
           "exportada": true,
           "params": "urls: string[]",
           "retorno": "string | null",
-          "linea": 25,
+          "linea": 32,
           "resumen": "El prompt de Claude Chrome, listo para pegar. `null` si no hay ninguna URL pendiente."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "756d16e9e4a6"
+      "hash": "17eca70be193"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seo-correduria/indexnow.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/indexnow.ts — avisar a Bing (y Yandex, Seznam…) de las URLs nuevas o cambiadas. Google NO usa IndexNow; Bing sí, y Bing alimenta también a ChatGPT y Copilot. El protocolo pide avisar solo de lo que cambia —reenviar todo cada semana enseña al buscador a ignorarte—, así que se guard",
+      "exporta": [
+        "urlsParaIndexNow",
+        "avisadasTras",
+        "enviarIndexNow"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlsParaIndexNow",
+          "kind": "function",
+          "exportada": true,
+          "params": "sitemap: readonly EntradaSitemap[], previas: AvisadasIndexNow",
+          "retorno": "string[]",
+          "linea": 21,
+          "resumen": "Las URLs a avisar: nuevas respecto a `previas` o con `lastmod` distinto."
+        },
+        {
+          "nombre": "avisadasTras",
+          "kind": "function",
+          "exportada": true,
+          "params": "previas: AvisadasIndexNow, sitemap: readonly EntradaSitemap[]",
+          "retorno": "AvisadasIndexNow",
+          "linea": 26,
+          "resumen": "El estado a guardar tras un envío correcto: lo de antes más lo de ahora (lo que salió del sitemap se conserva)."
+        },
+        {
+          "nombre": "enviarIndexNow",
+          "kind": "function",
+          "exportada": true,
+          "params": "dominio: string, urls: readonly string[], fetch: FetchLike",
+          "retorno": "Promise<number>",
+          "linea": 36,
+          "resumen": "POST a IndexNow. 200 y 202 son éxito (202 = recibido, pendiente de verificar la clave). Cualquier otro código lanza con el texto: 403 = la clave no se encuentra en la web, 422 = URL de otro host."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "360266d05299"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/informe.ts",
@@ -107307,6 +107363,7 @@
         "normalizarConsulta",
         "accionPropuesta",
         "bloqueTelefonosPorRevisar",
+        "bloqueDescubrimiento",
         "redactarInforme"
       ],
       "funciones": [
@@ -107395,17 +107452,26 @@
           "resumen": "Los teléfonos de siniestros de `/telefonos-siniestros` que llevan demasiado sin volver a comprobarse (`telefonosPorRevisar` de `@central/module-seguros`). `null` = ninguno pasa del plazo: el informe n"
         },
         {
+          "nombre": "bloqueDescubrimiento",
+          "kind": "function",
+          "exportada": true,
+          "params": "sitemap: PasoDescubrimiento, indexnow: PasoDescubrimiento",
+          "retorno": "string",
+          "linea": 243,
+          "resumen": "Las dos líneas de cómo se avisó a los buscadores esta semana. Un fallo se DICE (con su motivo): un sitemap que no se reenvió no es lo mismo que uno reenviado, aunque los dos «no den error» en el cron."
+        },
+        {
           "nombre": "redactarInforme",
           "kind": "function",
           "exportada": true,
           "params": "semana: string, r: Resultados, accion: Accion, dominio: string",
           "retorno": "string",
-          "linea": 236
+          "linea": 249
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "30a5271f6a15"
+      "hash": "369f2f78f63d"
     },
     {
       "ruta": "apps/plataforma/lib/seo-correduria/posthog.ts",
@@ -107468,6 +107534,68 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f4d4f6a48e06"
+    },
+    {
+      "ruta": "apps/plataforma/lib/seo-correduria/sitemap.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/seo-correduria/sitemap.ts — las URLs reales de la web, leídas de su propio sitemap. Hasta el 24/09/2026 el cron solo inspeccionaba las páginas que cita `consultas.ts`, y así una página nueva (`/telefonos-siniestros`) no la miraba nadie: ni se sabía si Google la conocía ni entraba en el aviso de ",
+      "exporta": [
+        "parsearSitemap",
+        "soloDelDominio",
+        "leerSitemap",
+        "urlsAInspeccionar",
+        "enviarSitemapGsc"
+      ],
+      "funciones": [
+        {
+          "nombre": "parsearSitemap",
+          "kind": "function",
+          "exportada": true,
+          "params": "xml: string",
+          "retorno": "EntradaSitemap[]",
+          "linea": 13,
+          "resumen": "`<url><loc>…</loc><lastmod>…</lastmod></url>` → entradas. Tolerante: sin `lastmod` → `null`."
+        },
+        {
+          "nombre": "soloDelDominio",
+          "kind": "function",
+          "exportada": true,
+          "params": "entradas: readonly EntradaSitemap[], dominio: string",
+          "retorno": "EntradaSitemap[]",
+          "linea": 29,
+          "resumen": "Solo las entradas de NUESTRO dominio (con o sin `www.`). El sitemap es nuestro, pero lo que sale de aquí acaba en la URL Inspection API y en IndexNow: una URL ajena (un sitemap manipulado o un error d"
+        },
+        {
+          "nombre": "leerSitemap",
+          "kind": "function",
+          "exportada": true,
+          "params": "dominio: string, fetch: FetchLike, timeoutMs = 10_000",
+          "retorno": "Promise<EntradaSitemap[]>",
+          "linea": 41,
+          "resumen": "Lee `https://<dominio>/sitemap.xml`. Lanza si no responde 200 o viene vacío: quien llama decide el fallback."
+        },
+        {
+          "nombre": "urlsAInspeccionar",
+          "kind": "function",
+          "exportada": true,
+          "params": "propias: readonly string[], sitemap: readonly EntradaSitemap[] | null",
+          "retorno": "string[]",
+          "linea": 53,
+          "resumen": "Las URLs a inspeccionar: las de `consultas.ts` (siempre, van primero: son las de intención de compra) más las del sitemap que no sean legales, sin repetir."
+        },
+        {
+          "nombre": "enviarSitemapGsc",
+          "kind": "function",
+          "exportada": true,
+          "params": "token: string, propiedad: string, sitemapUrl: string, fetch: FetchLike,",
+          "retorno": "Promise<void>",
+          "linea": 68,
+          "resumen": "Reenvía el sitemap a Search Console (`sitemaps.submit`). A diferencia de «solicitar indexación», esto SÍ tiene API oficial. Pide el scope de escritura `webmasters` y que la cuenta de servicio tenga pe"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7cce3324aa08"
     },
     {
       "ruta": "apps/plataforma/lib/ses/cifrado.ts",
@@ -149981,7 +150109,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3619,
-    "funciones": 11423
+    "archivos": 3621,
+    "funciones": 11433
   }
 }
