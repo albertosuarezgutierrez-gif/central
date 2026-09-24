@@ -42,6 +42,7 @@ export const CAMPOS_CON_VALOR: ReadonlySet<string> = new Set([
   'autorizacion.estado',
   'autorizacion.alcance',
   'supresion.estado',
+  'queja.estado',
   'interviniente.existe',
   'documento.estado',
   'documento.existe',

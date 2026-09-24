@@ -796,4 +796,10 @@ export {
   type LineaAsistencia, type TelefonoCompania,
 } from './telefonos-companias.ts'
 export { ACCIONES_CARTA_MEDIADOR, ESTADOS_CARTA_ABIERTA, cartaNombramientoMediador, documentoParaCarta, esCompaniaDeRelleno, transicionCartaMediador, type AccionCartaMediador, type DatosCartaMediador, type EstadoCartaMediador } from './carta-mediador.ts'
+export {
+  PLAZO_SAC_MESES, DIAS_AVISO_QUEJA, ESTADOS_QUEJA, ESTADOS_QUEJA_CERRADA, ESTADOS_QUEJA_RESUELTA, CANALES_QUEJA, MOTIVOS_QUEJA,
+  ETIQUETA_ESTADO_QUEJA, ETIQUETA_MOTIVO_QUEJA, ETIQUETA_CANAL_QUEJA, plazoQueja, diasHastaPlazo, estadoPlazoQueja,
+  transicionQuejaValida, validarAltaQueja, validarCierreQueja, informeSac,
+  type EstadoQueja, type CanalQueja, type MotivoQueja, type PlazoQueja, type AltaQueja, type QuejaInforme, type InformeSac,
+} from './queja.ts'
 export { SUSTITUCION_DIAS_ANTES, SUSTITUCION_DIAS_DESPUES, claveRiesgo, detectarSustituciones, solicitudPorSustitucion, sustituidasARetirar, type DuplicidadDetectada, type PolizaParaSustitucion, type ResultadoSustituciones, type RiesgoComun, type SustitucionDetectada } from './sustitucion-auto.ts'
