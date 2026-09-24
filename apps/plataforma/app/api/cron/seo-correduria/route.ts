@@ -172,30 +172,36 @@ async function handler(req: NextRequest) {
   if (sitemap === null) {
     pasoIndexNow = { estado: 'error', detalle: `no se pudo leer el sitemap (${errorSitemap})` }
   } else {
-    const previa = await prisma.seoCorreduriaSemana.findFirst({
-      where: { fuente: 'indexnow', estado: 'ok' },
-      orderBy: { semana: 'desc' },
-    })
-    const previas = ((previa?.datos as { avisadas?: AvisadasIndexNow } | null)?.avisadas ?? {}) as AvisadasIndexNow
-    const urls = urlsParaIndexNow(sitemap, previas)
+    // Todo el paso va dentro del try, BD incluida: un fallo aquí (tabla, pool, CHECK) tiene que
+    // quedarse en una línea ⚠️ del informe, no tumbar el cron y callar el Telegram de la semana.
+    const fechaSemana = new Date(`${semana}T00:00:00Z`)
     try {
+      const previa = await prisma.seoCorreduriaSemana.findFirst({
+        where: { fuente: 'indexnow', estado: 'ok' },
+        orderBy: { semana: 'desc' },
+      })
+      const previas = ((previa?.datos as { avisadas?: AvisadasIndexNow } | null)?.avisadas ?? {}) as AvisadasIndexNow
+      const urls = urlsParaIndexNow(sitemap, previas)
       const status = urls.length ? await enviarIndexNow(DOMINIO_PROPIO, urls, f) : null
-      pasoIndexNow = { estado: 'ok', texto: urls.length ? `${urls.length} URL avisadas (HTTP ${status})` : 'nada nuevo que avisar' }
       const datos = { avisadas: avisadasTras(previas, sitemap), enviadas: urls }
       await prisma.seoCorreduriaSemana.upsert({
-        where: { semana_fuente: { semana: new Date(`${semana}T00:00:00Z`), fuente: 'indexnow' } },
-        create: { semana: new Date(`${semana}T00:00:00Z`), fuente: 'indexnow', estado: 'ok', datos },
+        where: { semana_fuente: { semana: fechaSemana, fuente: 'indexnow' } },
+        create: { semana: fechaSemana, fuente: 'indexnow', estado: 'ok', datos },
         update: { estado: 'ok', detalle: null, datos },
       })
+      pasoIndexNow = { estado: 'ok', texto: urls.length ? `${urls.length} URL avisadas (HTTP ${status})` : 'nada nuevo que avisar' }
     } catch (e) {
       const detalle = (e instanceof Error ? e.message : String(e)).slice(0, 300)
       pasoIndexNow = { estado: 'error', detalle }
       // Sin `datos`: la semana que viene se compara con la última fila BUENA y se reintenta lo mismo.
-      await prisma.seoCorreduriaSemana.upsert({
-        where: { semana_fuente: { semana: new Date(`${semana}T00:00:00Z`), fuente: 'indexnow' } },
-        create: { semana: new Date(`${semana}T00:00:00Z`), fuente: 'indexnow', estado: 'error', detalle },
-        update: { estado: 'error', detalle },
-      })
+      // Si la BD es lo que falla, este registro también fallará: se ignora, el informe ya lo dice.
+      await prisma.seoCorreduriaSemana
+        .upsert({
+          where: { semana_fuente: { semana: fechaSemana, fuente: 'indexnow' } },
+          create: { semana: fechaSemana, fuente: 'indexnow', estado: 'error', detalle },
+          update: { estado: 'error', detalle },
+        })
+        .catch(() => undefined)
     }
   }
 
