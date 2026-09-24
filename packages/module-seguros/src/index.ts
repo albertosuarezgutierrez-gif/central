@@ -473,6 +473,7 @@ export {
 export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export { anioCumpleanos, diaMadrid, esCumpleanos } from './cumpleanos.ts'
 export { ordenarHistorialRiesgo, type EslabonHistorial, type EslabonRiesgo } from './historial-riesgo.ts'
+export { agruparCalidad, esReglaCalidad, ORDEN_REGLAS, REGLAS_CALIDAD, type GrupoCalidad, type IncidenciaCalidad, type ReglaCalidad } from './calidad-dato.ts'
 export {
   parseFiltroCartera,
   filtroActivo,

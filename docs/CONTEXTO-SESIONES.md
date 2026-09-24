@@ -423,6 +423,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) ASegura OS: «Calidad del dato» en /correduria → Datos (PR #3445)
+- Reglas puras en `module-seguros/calidad-dato.ts`; consulta en `apps/asegura/lib/calidad-cartera.ts` (puerto `GET /api/operador/calidad`, solo lectura, sin DNI/teléfono/correo). Medido hoy: 18 vencidas sin renovación, 20 sin prima, 12 parejas de fichas con el mismo DNI, 9 sin fecha de nacimiento, 1 sin DNI.
+- La pantalla la montó un agente y se integró a mano: leía `filas` cuando asegura manda `incidencias` (siempre habría salido «error») → cepo de contrato que lee la ruta de asegura. `<details>` → montaje perezoso.
+- «Siguiente acción» por cliente NO se construye: ya existe como «🔔 Pide acción» en la ficha. Documentos a Storage descartado por ahora (las tablas de documentos de seguros no están ni en el top 12 de tamaño).
+
 ## (24/09/2026) ASegura OS: la oportunidad de venta se cierra sola cuando su póliza entra por CIMA
 - `ganarOportunidadesEmitidas()` (`apps/asegura/lib/sustituciones-auto.ts`), dentro de la pasada de `correduria-eventos`: oportunidad abierta (no retención, no volcado) + póliza viva y vigente del MISMO cliente con la MISMA matrícula, llegada después → `ganada` + `poliza_ganada_id`, tareas cerradas, historial. Con dos candidatas o sin matrícula no se cierra sola (hogar queda manual).
 - Medido: `seguros.presupuesto` tiene **0 filas**; lo que Alberto usa de verdad son `oportunidades` con las ofertas de fuera en `info_riesgo` (2 abiertas hoy). Por eso se cierra ahí.

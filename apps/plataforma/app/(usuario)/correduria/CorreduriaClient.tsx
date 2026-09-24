@@ -15,6 +15,7 @@ import Retencion from './Retencion'
 import Sustituciones from './Sustituciones'
 import Actividad from './Actividad'
 import Duplicadas from './Duplicadas'
+import Calidad from './Calidad'
 import SinCanal from './SinCanal'
 import ExportRgpd from './ExportRgpd'
 import Companias from './Companias'
@@ -161,6 +162,7 @@ export default function CorreduriaClient() {
   const [nRetencion, setNRetencion] = useState<number | null | undefined>(undefined)
   const [nSustituciones, setNSustituciones] = useState<number | null | undefined>(undefined)
   const [nSinCanal, setNSinCanal] = useState<number | null | undefined>(undefined)
+  const [nCalidad, setNCalidad] = useState<number | null | undefined>(undefined)
   const [nDuplicadas, setNDuplicadas] = useState<number | null | undefined>(undefined)
   const [nExportRgpd, setNExportRgpd] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
@@ -267,7 +269,7 @@ export default function CorreduriaClient() {
       title: 'Periodos de comisiones sin cuadrar',
     },
     datos: {
-      contador: agregarContadores([nDuplicadas, nSinCanal, nExportRgpd]),
+      contador: agregarContadores([nCalidad, nDuplicadas, nSinCanal, nExportRgpd]),
       tono: 'aviso',
       title: 'Pólizas duplicadas y clientes a los que no se puede avisar',
     },
@@ -595,6 +597,11 @@ export default function CorreduriaClient() {
           Calidad del dato: no caduca hoy, pero decide si mañana se puede avisar
           a alguien. Fuera de «Hoy» para que no compita con lo que sí urge. */}
       <div role="tabpanel" aria-label="Datos" className="corr-panel" style={panel('datos')}>
+        {/* Incidencias de calidad del dato (sin prima, DNI duplicado, vencida sin
+            renovar, etc.): hallazgos medidos que el scanner detecta en la cartera
+            en vigor. */}
+        <Calidad onContador={setNCalidad} />
+
         {/* Pólizas duplicadas en la cartera viva (guardián Codeoscopic↔CIMA). */}
         <Duplicadas onContador={setNDuplicadas} />
 
