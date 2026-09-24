@@ -21,22 +21,30 @@ export async function GET(req: NextRequest) {
 
   const [puerto, comisiones] = await Promise.all([
     informeMediacionAsegura(año).then((r) => interpretarInforme(r.status, r.json)),
-    prisma.$queryRaw<{ compania: string; liq_bruto: number | null; liq_retencion: number | null; liq_remesa: number | null }[]>`
-      SELECT compania, liq_bruto::float AS liq_bruto, liq_retencion::float AS liq_retencion, liq_remesa::float AS liq_remesa
+    prisma.$queryRaw<{ compania: string; compania_codigo: string; liq_bruto: number | null; liq_retencion: number | null; liq_remesa: number | null; leido_ok: boolean | null }[]>`
+      SELECT compania, compania_codigo, liq_bruto::float AS liq_bruto, liq_retencion::float AS liq_retencion,
+             liq_remesa::float AS liq_remesa, leido_ok
       FROM comisiones_devengo
       WHERE cuenta_id = ${guarda.session.id}::uuid AND EXTRACT(year FROM periodo_inicio) = ${año}`
       .then((filas) => {
+        // Se agrupa por el CÓDIGO (la identidad), no por la etiqueta del libro.
         const por = new Map<string, ComisionCompania>()
         for (const f of filas) {
-          const c = por.get(f.compania) ?? { compania: f.compania, bruto: null, retencion: null, periodos: 0, periodosSinExtracto: 0 }
+          const c = por.get(f.compania_codigo) ?? {
+            codigo: f.compania_codigo, compania: f.compania, bruto: null, retencion: null,
+            periodos: 0, periodosSinExtracto: 0, periodosSinComprobar: 0, periodosSinRetencion: 0,
+          }
           c.periodos++
-          if (f.liq_bruto === null) c.periodosSinExtracto++
+          // Si la última pasada no pudo leer, los importes pueden ser viejos: fuera del total, como hace el cuadre.
+          if (f.leido_ok === false) c.periodosSinComprobar++
+          else if (f.liq_bruto === null) c.periodosSinExtracto++
           else {
             // Convención de signo de Occident resuelta como en el cuadre: el negativo con remesa 0 se cobró.
             c.bruto = Math.round(((c.bruto ?? 0) + (brutoEfectivo(f.liq_bruto, f.liq_remesa) ?? 0)) * 100) / 100
-            c.retencion = Math.round(((c.retencion ?? 0) + (f.liq_retencion ?? 0)) * 100) / 100
+            if (f.liq_retencion === null) c.periodosSinRetencion++
+            else c.retencion = Math.round(((c.retencion ?? 0) + f.liq_retencion) * 100) / 100
           }
-          por.set(f.compania, c)
+          por.set(f.compania_codigo, c)
         }
         return [...por.values()].sort((a, b) => a.compania.localeCompare(b.compania))
       })

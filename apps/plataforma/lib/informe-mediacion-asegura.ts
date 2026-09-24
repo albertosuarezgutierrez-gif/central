@@ -21,6 +21,8 @@ export type FilaPrimas = {
   anulados: number
   devueltos: number
   pendientes: number
+  /** Ausente en un asegura anterior: se lee como 0 (no había contador). */
+  sinSituacion?: number
 }
 
 export type InformePuerto = {
@@ -57,21 +59,36 @@ export function interpretarInforme(status: number, json: unknown): LecturaInform
   const p = o.primas as Record<string, unknown> | undefined
   const t = p?.total as Record<string, unknown> | undefined
   const q = o.quejas as Record<string, unknown> | undefined
+  const fila = (f: unknown) => {
+    const x = (f ?? {}) as Record<string, unknown>
+    return ['recibos', 'primas', 'primasNuevaProduccion', 'primasCartera', 'primasOtras', 'anulados', 'devueltos', 'pendientes'].every((k) => num(x[k]))
+  }
+  const cartera = (c: unknown) => num(((c ?? {}) as Record<string, unknown>).polizas)
   const forma =
-    p && Array.isArray(p.filas) && t && num(t.primas) && num(t.recibos) && num(p.ilegibles) && num(p.sinFecha) &&
-    Array.isArray(p.companiasConDatos) && Array.isArray(o.carteraHoy) && typeof o.companias === 'object' && o.companias !== null &&
-    q && num(q.total) && num(q.cerradasEnPlazo) && num(q.cerradasFueraDePlazo)
+    p && Array.isArray(p.filas) && p.filas.every(fila) && t &&
+    ['recibos', 'primas', 'primasNuevaProduccion', 'primasCartera', 'primasOtras'].every((k) => num(t[k])) &&
+    num(p.ilegibles) && num(p.sinFecha) && Array.isArray(p.companiasConDatos) &&
+    Array.isArray(o.carteraHoy) && o.carteraHoy.every(cartera) && typeof o.companias === 'object' && o.companias !== null &&
+    q && num(q.total) && num(q.abiertas) && num(q.cerradasEnPlazo) && num(q.cerradasFueraDePlazo)
   if (!forma) return { estado: 'error', motivo: 'respuesta_ilegible' }
   return { estado: 'ok', informe: o as unknown as InformePuerto }
 }
 
 /** Comisiones del año por compañía, desde el libro. `null` en un importe = ningún periodo con extracto. */
 export type ComisionCompania = {
+  /** Código DGS: la identidad por la que se agrupa. */
+  codigo: string
+  /** Etiqueta del libro, para pintar. */
   compania: string
   bruto: number | null
   retencion: number | null
   periodos: number
+  /** Sin extracto de la compañía: su bruto NO está en el total. */
   periodosSinExtracto: number
+  /** La última pasada del cron no pudo leer el libro (`leido_ok=false`): importes posiblemente viejos, fuera del total. */
+  periodosSinComprobar: number
+  /** Con bruto pero sin retención informada: la retención de la fila se queda corta. */
+  periodosSinRetencion: number
 }
 
 /** Nombre legible de un código DGS; el código tal cual si no hay nombre. */
@@ -80,38 +97,46 @@ export function nombreCompania(codigo: string | null, nombres: Record<string, st
   return nombres[codigo] ?? codigo
 }
 
-/** Compañías con pólizas en vigor de las que CIMA no ha mandado ni un recibo del año: sus primas no son 0, no se saben. */
+/**
+ * Compañías con pólizas en vigor HOY de las que CIMA no ha mandado ni un recibo del año: sus primas no
+ * son 0, no se saben. Se compara con la cartera de hoy (la de 31/12 no se reconstruye): en un año pasado
+ * puede señalar una compañía que entró después, y la UI lo dice.
+ */
 export function companiasSinPrimas(i: InformePuerto): string[] {
   const con = new Set(i.primas.companiasConDatos)
   return [...new Set(i.carteraHoy.map((c) => c.compania).filter((c): c is string => !!c && !con.has(c)))].sort()
 }
 
 const celda = (v: string | number | null) => {
-  const s = v === null ? '' : typeof v === 'number' ? v.toFixed(2).replace('.', ',') : v
-  return /[;"\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  if (v === null) return ''
+  if (typeof v === 'number') return v.toFixed(2).replace('.', ',')
+  // Un texto que Excel leería como fórmula (=, +, -, @, tabulador) se neutraliza con un apóstrofo.
+  const s = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v
+  return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
 }
 
 /**
  * CSV (separador `;`, decimales con coma: lo abre Excel en español sin tocar nada). La primera línea
  * dice qué es y qué NO es, para que el fichero no viaje sin su advertencia.
  */
-export function csvInforme(i: InformePuerto, comisiones: ComisionCompania[]): string {
+export function csvInforme(i: InformePuerto, comisiones: ComisionCompania[] | null): string {
   const n = (c: string | null) => nombreCompania(c, i.companias)
   const l: string[] = []
   l.push(celda(`Borrador informe anual de mediación ${i.primas.año} — hoja de trabajo, NO es el modelo oficial de la DGSFP`))
   l.push('')
-  l.push('PRIMAS COBRADAS SEGÚN CIMA;Compañía;Ramo;Recibos;Primas;Nueva producción;Cartera;Otras;Anulados;Devueltos;Pendientes')
+  l.push('PRIMAS COBRADAS SEGÚN CIMA (prima total, con impuestos);Compañía;Ramo;Recibos;Primas;Nueva producción;Cartera;Otras (suplementos);Anulados;Devueltos;Pendientes;Sin situación')
   for (const f of i.primas.filas) {
-    l.push(['', celda(n(f.compania)), celda(f.ramo ?? 'sin ramo'), String(f.recibos), celda(f.primas), celda(f.primasNuevaProduccion), celda(f.primasCartera), celda(f.primasOtras), String(f.anulados), String(f.devueltos), String(f.pendientes)].join(';'))
+    l.push(['', celda(n(f.compania)), celda(f.ramo ?? 'sin ramo'), String(f.recibos), celda(f.primas), celda(f.primasNuevaProduccion), celda(f.primasCartera), celda(f.primasOtras), String(f.anulados), String(f.devueltos), String(f.pendientes), String(f.sinSituacion ?? 0)].join(';'))
   }
   l.push(['', 'TOTAL', '', String(i.primas.total.recibos), celda(i.primas.total.primas), celda(i.primas.total.primasNuevaProduccion), celda(i.primas.total.primasCartera), celda(i.primas.total.primasOtras)].join(';'))
   const sin = companiasSinPrimas(i)
-  if (sin.length) l.push(celda(`Sin recibos de CIMA este año (sus primas NO son 0, no constan): ${sin.map(n).join(', ')}`))
+  if (sin.length) l.push(celda(`Con pólizas en vigor HOY y sin recibos de CIMA este año (sus primas NO son 0, no constan): ${sin.map(n).join(', ')}`))
   if (i.primas.ilegibles) l.push(celda(`${i.primas.ilegibles} recibo(s) cobrado(s) con importe ilegible: fuera del total`))
   l.push('')
-  l.push('COMISIONES (libro);Compañía;Bruto;Retención IRPF;Periodos;Periodos sin extracto')
-  for (const c of comisiones) {
-    l.push(['', celda(c.compania), celda(c.bruto), celda(c.retencion), String(c.periodos), String(c.periodosSinExtracto)].join(';'))
+  l.push('COMISIONES (libro);Compañía;Bruto;Retención IRPF;Periodos;Sin extracto;Sin comprobar;Sin retención informada')
+  if (comisiones === null) l.push(celda('No se ha podido leer el libro de comisiones: esta sección NO está vacía, falta'))
+  for (const c of comisiones ?? []) {
+    l.push(['', celda(c.compania), celda(c.bruto), celda(c.retencion), String(c.periodos), String(c.periodosSinExtracto), String(c.periodosSinComprobar), String(c.periodosSinRetencion)].join(';'))
   }
   l.push('')
   l.push('PÓLIZAS EN VIGOR (hoy, no a 31/12);Compañía;Ramo;Pólizas')

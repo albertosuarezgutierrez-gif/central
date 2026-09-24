@@ -15,7 +15,8 @@ export type ReciboInforme = {
   compania: string | null
   /** `polizas.tipo`; `null` = no consta. */
   ramo: string | null
-  situacion: string
+  /** `null` = no consta: no es «pendiente», se cuenta aparte. */
+  situacion: string | null
   /** `NP` nueva producción · `CA` cartera (renovación) · `SU` suplemento · otros. */
   clase: string | null
   /** Texto EIAC tal cual (`prima_total`). */
@@ -38,6 +39,8 @@ export type FilaInforme = {
   anulados: number
   devueltos: number
   pendientes: number
+  /** Recibos del año sin situación informada: no se sabe si se cobraron. */
+  sinSituacion: number
 }
 
 export type InformeMediacion = {
@@ -69,9 +72,10 @@ export function informeMediacion(recibos: readonly ReciboInforme[], año: number
     const clave = `${r.compania ?? ''}|${r.ramo ?? ''}`
     let f = filas.get(clave)
     if (!f) {
-      f = { compania: r.compania, ramo: r.ramo, recibos: 0, primas: 0, primasNuevaProduccion: 0, primasCartera: 0, primasOtras: 0, anulados: 0, devueltos: 0, pendientes: 0 }
+      f = { compania: r.compania, ramo: r.ramo, recibos: 0, primas: 0, primasNuevaProduccion: 0, primasCartera: 0, primasOtras: 0, anulados: 0, devueltos: 0, pendientes: 0, sinSituacion: 0 }
       filas.set(clave, f)
     }
+    if (r.situacion === null) { f.sinSituacion++; continue }
     if (r.situacion === 'anulado') { f.anulados++; continue }
     if (r.situacion === 'devuelto') { f.devueltos++; continue }
     if (r.situacion !== 'cobrado') { f.pendientes++; continue }

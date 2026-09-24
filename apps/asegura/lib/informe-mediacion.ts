@@ -1,7 +1,8 @@
 // Informe anual de mediación (base de la documentación estadístico-contable a la DGSFP). Solo
 // lectura. La suma vive en `@central/module-seguros` (informe-mediacion.ts); aquí, las consultas.
 //
-// Tres bloques: primas del año por compañía y ramo (recibos de CIMA de la cartera viva), pólizas en
+// Tres bloques: primas del año por compañía y ramo (recibos de la cartera viva O que ha mandado CIMA,
+// aunque cuelguen de una póliza del volcado: 4 cobrados de Occident medidos el 24/09/2026), pólizas en
 // vigor HOY por compañía y ramo (la cartera a 31/12 de un año pasado no se puede reconstruir: se
 // dice), y el informe del SAC del año. Sin un solo dato personal.
 
@@ -30,11 +31,11 @@ export async function informeMediacionAnual(correduriaId: string, año: number):
     db.$queryRaw<ReciboInforme[]>`
       select coalesce(r.codigo_entidad_dgs, p.codigo_entidad_dgs) as compania, p.tipo::text as ramo,
              r.situacion::text as situacion, r.clase_recibo as clase, r.prima_total as prima,
-             to_char(coalesce(r.fecha_efecto_actual, r.fecha_efecto_inicial) at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto
+             to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto
       from poliza_recibos r join polizas p on p.id = r.poliza_id
-      where p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null and ${viva}
-        and (coalesce(r.fecha_efecto_actual, r.fecha_efecto_inicial) is null
-             or extract(year from coalesce(r.fecha_efecto_actual, r.fecha_efecto_inicial) at time zone 'Europe/Madrid') = ${año}::int)`,
+      where p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null and (${viva} or r.eiac_xml_hash is not null)
+        and (r.fecha_efecto_actual is null
+             or extract(year from r.fecha_efecto_actual at time zone 'Europe/Madrid') = ${año}::int)`,
     db.$queryRaw<CarteraEnVigor[]>`
       select p.codigo_entidad_dgs as compania, p.tipo::text as ramo, count(*)::int as polizas
       from polizas p

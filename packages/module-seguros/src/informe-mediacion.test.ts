@@ -48,3 +48,9 @@ test('una compañía sin recibos del año NO aparece como 0: no está en compani
   assert.deepEqual(i.companiasConDatos, ['C0109'])
   assert.equal(i.filas.length, 1)
 })
+
+test('🪤 una situación que no consta no se pinta como pendiente', () => {
+  const i = informeMediacion([base, { ...base, situacion: null }], 2026)
+  assert.equal(i.filas[0].pendientes, 0)
+  assert.equal(i.filas[0].sinSituacion, 1)
+})

@@ -46,11 +46,27 @@ test('🪤 una compañía con pólizas y sin recibos se declara: sus primas no c
 })
 
 test('🪤 el CSV abre diciendo que NO es el modelo oficial, con coma decimal y los huecos', () => {
-  const csv = csvInforme(informe, [{ compania: 'Mapfre', bruto: 100.5, retencion: null, periodos: 2, periodosSinExtracto: 1 }])
+  const csv = csvInforme(informe, [{ codigo: 'C0058', compania: 'Mapfre', bruto: 100.5, retencion: null, periodos: 2, periodosSinExtracto: 1, periodosSinComprobar: 0, periodosSinRetencion: 1 }])
   const lineas = csv.split('\n')
   assert.match(lineas[0], /NO es el modelo oficial de la DGSFP/)
   assert.match(csv, /;1234,50;/)
-  assert.match(csv, /Sin recibos de CIMA este año.*Allianz/)
+  assert.match(csv, /sin recibos de CIMA este año.*Allianz/)
   assert.match(csv, /importe ilegible/)
   assert.match(csv, /;Mapfre;100,50;;2;1/)
+})
+
+test('🪤 una fila a medias (sin una columna que se pinta) NO se da por buena', () => {
+  const roto = { ...informe, primas: { ...informe.primas, filas: [{ ...informe.primas.filas[0], primasCartera: undefined }] } }
+  assert.deepEqual(interpretarInforme(200, { estado: 'ok', ...roto }), { estado: 'error', motivo: 'respuesta_ilegible' })
+})
+
+test('🪤 el CSV neutraliza un texto que Excel ejecutaría como fórmula, y no toca los números negativos', () => {
+  const trampa = { ...informe, companias: { ...informe.companias, C0058: '=HYPERLINK("x")' }, primas: { ...informe.primas, total: { ...informe.primas.total, primasOtras: -12.5 } } }
+  const csv = csvInforme(trampa, [])
+  assert.match(csv, /;"'=HYPERLINK\(""x""\)";/)
+  assert.match(csv, /;-12,50/)
+})
+
+test('🪤 sin libro de comisiones el CSV lo dice: la sección no está vacía, falta', () => {
+  assert.match(csvInforme(informe, null), /No se ha podido leer el libro de comisiones/)
 })
