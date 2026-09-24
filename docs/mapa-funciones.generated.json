@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T18:03:16Z",
-  "sha": "9c340df9c6ad361e54cb426809d7e576db07b37a",
+  "generadoEn": "2026-09-24T18:55:49Z",
+  "sha": "f211ca2cf13ebf8cd7e85999015d6862be6cd990",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -90025,7 +90025,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 20
+          "linea": 21
         },
         {
           "nombre": "esMensajeAutomatico",
@@ -90033,7 +90033,7 @@
           "exportada": false,
           "params": "subject: string, text: string",
           "retorno": "boolean",
-          "linea": 31,
+          "linea": 32,
           "resumen": "Los mensajes del HOST / automáticos de Smoobu/Booking llevan ASUNTO (RECORDATORIO, WHERE TO COLLECT, 📈 Ayúdanos…) o son el aviso \"Check-in online disponible\". Los del HUÉSPED llegan con asunto vacío "
         },
         {
@@ -90042,7 +90042,7 @@
           "exportada": false,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 37,
+          "linea": 38,
           "resumen": "Despedidas / cortesías que no necesitan respuesta."
         },
         {
@@ -90051,13 +90051,13 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 45,
+          "linea": 46,
           "resumen": "Cron (cada 3 min) + red de seguridad del webhook. Sondea los hilos de Smoobu y enruta cada pregunta NUEVA del huésped al agente (propone por Telegram / auto-envía y deja log). Idempotencia por msgId ("
         }
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/mensajes/auto-reply",
-      "hash": "bf61de8aaf3d"
+      "hash": "33800cedab3e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/diagnostico-guia/route.ts",
@@ -90183,7 +90183,7 @@
           "exportada": false,
           "params": "propertyId: string, checkoutDate: string, type: string, time: string",
           "retorno": null,
-          "linea": 13
+          "linea": 14
         },
         {
           "nombre": "getSmoobuGuestUrl",
@@ -90191,7 +90191,7 @@
           "exportada": false,
           "params": "reservationId: string | null",
           "retorno": "Promise<string | null>",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "getNextCheckin",
@@ -90199,7 +90199,7 @@
           "exportada": false,
           "params": "propertyId: string, fromDate: string",
           "retorno": "Promise<string | null>",
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "getPrevCheckout",
@@ -90207,7 +90207,7 @@
           "exportada": false,
           "params": "propertyId: string, toDate: string",
           "retorno": "Promise<string | null>",
-          "linea": 44
+          "linea": 45
         },
         {
           "nombre": "lookupKB",
@@ -90215,7 +90215,7 @@
           "exportada": false,
           "params": "category: string, propertyId: string, lang: string",
           "retorno": "Promise<string | null>",
-          "linea": 56
+          "linea": 57
         },
         {
           "nombre": "POST",
@@ -90223,7 +90223,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 74
+          "linea": 75
         }
       ],
       "tablas": [
@@ -90232,7 +90232,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/mensajes/reply",
-      "hash": "a6b1ae8d6e37"
+      "hash": "1c78b380701b"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/resumen-diario/route.ts",
@@ -112321,7 +112321,7 @@
           "exportada": false,
           "params": "pregunta: string",
           "retorno": "Decision['sentimiento']",
-          "linea": 92
+          "linea": 93
         },
         {
           "nombre": "limpiarReply",
@@ -112329,7 +112329,7 @@
           "exportada": false,
           "params": "raw: string",
           "retorno": "string",
-          "linea": 100,
+          "linea": 101,
           "resumen": "Limpia adornos por si el modelo, pese a pedírsele texto plano, envuelve la respuesta en JSON, comillas o un prefijo tipo \"Respuesta:\"."
         },
         {
@@ -112338,7 +112338,7 @@
           "exportada": false,
           "params": "ctx: Contexto, pregunta: string, reply: string",
           "retorno": "Promise<Veredicto>",
-          "linea": 123
+          "linea": 124
         },
         {
           "nombre": "decidir",
@@ -112346,12 +112346,12 @@
           "exportada": true,
           "params": "ctx: Contexto, pregunta: string, categoria: string",
           "retorno": "Promise<Decision>",
-          "linea": 173
+          "linea": 174
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "186f75116487"
+      "hash": "4c87bc7730cc"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/destilar.ts",
@@ -113073,7 +113073,39 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b1dfad86092b"
+      "hash": "ee2a8363f72a"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/agente-huesped/idiomas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/agente-huesped/idiomas.ts — tabla ÚNICA de idiomas del huésped. PURO. Hasta el 24/09/2026 había cuatro listas distintas (5 idiomas en el agente, 18 en los mensajes programados) y cualquier huésped fuera de ellas recibía el mensaje en español o en inglés sin que nada lo avisara. Aquí se nom",
+      "exporta": [
+        "idiomaConocido",
+        "nombreIdioma"
+      ],
+      "funciones": [
+        {
+          "nombre": "idiomaConocido",
+          "kind": "function",
+          "exportada": true,
+          "params": "cod: string",
+          "retorno": "boolean",
+          "linea": 22,
+          "resumen": "¿Es un código de idioma que sabemos nombrar? (ISO 639-1, dos letras, minúsculas)."
+        },
+        {
+          "nombre": "nombreIdioma",
+          "kind": "function",
+          "exportada": true,
+          "params": "cod: string",
+          "retorno": "string",
+          "linea": 27,
+          "resumen": "Nombre en español del idioma; si el código no está en la tabla, el propio código."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dc561c2eeb16"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/llegada.ts",
@@ -113277,7 +113309,7 @@
           "exportada": true,
           "params": "bookingId: string, opts: { pregunta?: string; msgId?: string } = {},",
           "retorno": "Promise<",
-          "linea": 26,
+          "linea": 27,
           "resumen": "Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner` y /api/reservations"
         }
       ],
@@ -113286,7 +113318,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "b237e958ce4c"
+      "hash": "25192268740c"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -113559,13 +113591,22 @@
           "linea": 34
         },
         {
+          "nombre": "palabras",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "lista: string",
+          "retorno": null,
+          "linea": 70,
+          "resumen": "Palabras sueltas con acentos: `\\b` de JS no ve la frontera tras «ã»/«é», así que se delimita por letras."
+        },
+        {
           "nombre": "detectLang",
           "kind": "function",
           "exportada": true,
-          "params": "text: string, fallback: 'es' | 'en' | 'fr' | 'de' | 'it' = 'en',",
-          "retorno": "'es' | 'en' | 'fr' | 'de' | 'it'",
-          "linea": 53,
-          "resumen": "Detecta el idioma en que ESCRIBE el huésped (es lo que mandará la respuesta). El regex anterior solo miraba tildes/keywords → \"Nos iremos sobre las 10.30\" (español sin tildes) caía a inglés. Ahora pun"
+          "params": "text: string, fallback: string = 'en'",
+          "retorno": "string",
+          "linea": 77,
+          "resumen": "Idioma en que ESCRIBE el huésped. `fallback` = idioma de la reserva (o 'en'): es lo que se devuelve cuando el texto no da señal propia. Cualquier código vale; los que no se detectan por texto (sueco, "
         },
         {
           "nombre": "pareceEspanol",
@@ -113573,7 +113614,7 @@
           "exportada": true,
           "params": "txt: string",
           "retorno": "boolean",
-          "linea": 80,
+          "linea": 106,
           "resumen": "¿El texto da señal PROPIA de español? detectLang cae al fallback cuando el mensaje no puntúa en ningún idioma (un emoji, «Très bien», «Tack»), así que aquí el fallback es 'en': solo devuelve true si e"
         },
         {
@@ -113582,7 +113623,7 @@
           "exportada": true,
           "params": "pregunta: string, lang: string",
           "retorno": "boolean",
-          "linea": 87,
+          "linea": 113,
           "resumen": "¿Hay que pedir traducción del mensaje del huésped? Se decide por el TEXTO, no solo por el idioma de respuesta: `ctx.lang` hereda el idioma de la reserva cuando el mensaje no da señal, y un «Très bien "
         },
         {
@@ -113591,7 +113632,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 93,
+          "linea": 119,
           "resumen": "Una «traducción» que vuelve igual que el original es que ya estaba en español → sin línea 🔁."
         },
         {
@@ -113600,7 +113641,7 @@
           "exportada": true,
           "params": "original: string, traduccion: string",
           "retorno": "string",
-          "linea": 94
+          "linea": 120
         },
         {
           "nombre": "lineaTraduccion",
@@ -113608,7 +113649,7 @@
           "exportada": true,
           "params": "traduccion: string, imprescindible: boolean, esc: (s: string) => string",
           "retorno": "string",
-          "linea": 102,
+          "linea": 128,
           "resumen": "La línea 🔁 del aviso. `imprescindible` = el texto está seguro en otro idioma (lang ≠ es): si la traducción falló ahí, el hueco se DECLARA en vez de callarse — un aviso sin la línea se lee como «ya es"
         },
         {
@@ -113617,7 +113658,7 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 114
+          "linea": 140
         },
         {
           "nombre": "esDespedida",
@@ -113625,7 +113666,7 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 160
+          "linea": 186
         },
         {
           "nombre": "esHechoDelPiso",
@@ -113633,7 +113674,7 @@
           "exportada": true,
           "params": "pregunta: string, respuesta: string",
           "retorno": "boolean",
-          "linea": 176
+          "linea": 202
         },
         {
           "nombre": "paresPregRespuesta",
@@ -113641,7 +113682,7 @@
           "exportada": true,
           "params": "msgs: MsgMin[]",
           "retorno": "ParQA[]",
-          "linea": 193,
+          "linea": 219,
           "resumen": "Empareja cada pregunta del huésped con la PRIMERA respuesta humana del anfitrión que viene después. Descarta los automáticos de Smoobu (confirmaciones, recordatorios: son plantillas, no conocimiento) "
         },
         {
@@ -113650,7 +113691,7 @@
           "exportada": true,
           "params": "subject: string, text: string",
           "retorno": "boolean",
-          "linea": 208,
+          "linea": 234,
           "resumen": "Los automáticos de Smoobu/Booking llevan ASUNTO; los mensajes escritos a mano, no."
         },
         {
@@ -113659,7 +113700,7 @@
           "exportada": true,
           "params": "dec: EscaladoMin | null | undefined",
           "retorno": "TipoHueco",
-          "linea": 231
+          "linea": 257
         },
         {
           "nombre": "contieneDatoPersonal",
@@ -113667,7 +113708,7 @@
           "exportada": true,
           "params": "txt: string",
           "retorno": "boolean",
-          "linea": 259
+          "linea": 285
         },
         {
           "nombre": "interpretarDestilado",
@@ -113675,12 +113716,12 @@
           "exportada": true,
           "params": "bruto: string",
           "retorno": "string",
-          "linea": 281
+          "linea": 307
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3e68d48b4250"
+      "hash": "60bb5a6a93a4"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/retoque.ts",
@@ -113711,7 +113752,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b579100436b4"
+      "hash": "cc2956d5ab03"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/salida.ts",
@@ -116007,13 +116048,13 @@
           "exportada": true,
           "params": "texto: string, idioma: string",
           "retorno": "Promise<",
-          "linea": 22,
+          "linea": 18,
           "resumen": "Traduce `texto` al idioma dado. Devuelve el texto FINAL a enviar y el idioma real en que va. `es`, vacío o desconocido → español tal cual. Fallo de IA o datos corrompidos → español."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6f80f2ea6eb4"
+      "hash": "bd4135bb3216"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mercado-cobertura.ts",
@@ -154726,7 +154767,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3719,
-    "funciones": 11805
+    "archivos": 3720,
+    "funciones": 11808
   }
 }
