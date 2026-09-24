@@ -43,3 +43,13 @@ test('🚨 la sustitución se enlaza ANTES de la foto: la baja de la vieja no na
   // Con punto de guardado: un fallo del enlace no puede tumbar la detección de eventos entera.
   assert.ok(src.lastIndexOf('savepoint sustitucion`', enlace) > 0 && src.indexOf('rollback to savepoint sustitucion', enlace) > enlace)
 })
+
+test('🚨 el cierre de oportunidades ganadas va en su PROPIO punto de guardado y se audita tras el commit', () => {
+  const d = src.slice(src.indexOf('export async function detectarYGuardar'))
+  const sust = d.slice(d.indexOf('savepoint sustitucion'), d.indexOf('release savepoint sustitucion'))
+  assert.doesNotMatch(sust, /ganarOportunidadesEmitidas/, 'dentro del savepoint de sustituciones, un fallo suyo deshace los enlaces')
+  assert.match(d, /savepoint ganar_oportunidad`\s+try \{\s+ganadas = await ganarOportunidadesEmitidas\(tx, correduriaId\)/)
+  assert.match(d, /rollback to savepoint ganar_oportunidad`\s+oportunidadesFallidas = true/)
+  const tras = d.slice(d.indexOf('}, { timeout: 30_000 }).then('))
+  assert.match(tras, /for \(const g of ganadas\) anotarCambio\(/)
+})

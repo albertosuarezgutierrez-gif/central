@@ -287,13 +287,17 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
   }
 }
 
-export async function vencimientosAsegura(dias = 90): Promise<VencimientosAsegura> {
+/**
+ * `timeoutMs`: 8 s para la pantalla; el cron diario pasa más, porque a las 06:30 asegura arranca en
+ * frío y el 23/09 tardó más de 8 s → «red» y ese día no salió ningún aviso de renovación.
+ */
+export async function vencimientosAsegura(dias = 90, timeoutMs = 8000): Promise<VencimientosAsegura> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/vencimientos?dias=${dias}`, {
       headers: { ...(await cabecerasPuerto(secret)) },
-      cache: 'no-store', signal: AbortSignal.timeout(8000),
+      cache: 'no-store', signal: AbortSignal.timeout(timeoutMs),
     })
     const json = await res.json().catch(() => null)
     return interpretarVencimientos(res.status, json)

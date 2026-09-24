@@ -423,6 +423,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) ASegura OS: la oportunidad de venta se cierra sola cuando su póliza entra por CIMA
+- `ganarOportunidadesEmitidas()` (`apps/asegura/lib/sustituciones-auto.ts`), dentro de la pasada de `correduria-eventos`: oportunidad abierta (no retención, no volcado) + póliza viva y vigente del MISMO cliente con la MISMA matrícula, llegada después → `ganada` + `poliza_ganada_id`, tareas cerradas, historial. Con dos candidatas o sin matrícula no se cierra sola (hogar queda manual).
+- Medido: `seguros.presupuesto` tiene **0 filas**; lo que Alberto usa de verdad son `oportunidades` con las ofertas de fuera en `info_riesgo` (2 abiertas hoy). Por eso se cierra ahí.
+- `correduria-renovaciones` falló el 23/09 por «red»: asegura en frío tardó >8 s. El cron pide ahora con 40 s (la pantalla sigue en 8 s).
+- Guardián `regression-cartera-viva`: un `import_ref is null` de OPORTUNIDAD se permite solo con el marcador `-- import_ref de OPORTUNIDAD` en la línea.
+
 ## (24/09/2026) blog ASegura: corregida la FAQ «cancelar sin penalización» del artículo publicado
 El artículo `cuando-empieza-a-cubrir-un-seguro` (#2966) prometía cancelar «sin penalización» antes de la fecha de
 efecto. Ahora dice que depende: desistimiento en contratación a distancia (y plazo mayor en vida); si no, lo marcan
