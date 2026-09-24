@@ -789,7 +789,7 @@ export {
 export type {
   AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
 } from './anulacion.ts'
-export { anulacionPorCambio, documentoAceptacion, esCambioCompania, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'
+export { anulacionPorCambio, documentoAceptacion, esCambioCompania, lineaVistoAntes, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'
 export { datosDelTomador, huecosParaEmitirDesdeFicha, type CampoEmision, type DatoEmision, type DatoPropioEnPoliza, type DatosParaEmitir, type EstadoDatoEmision, type FichaParaEmitir, type QuienAporta, type ValorLeido } from './datos-para-emitir.ts'
 export {
   DIAS_REVISION_TELEFONOS, TELEFONOS_COMPANIAS, esTelefonoPublicable, hrefTel, telefonoVerificadoPorCodigo, telefonoVerificadoPorNombre, telefonosParaPublicar, telefonosPorRevisar, vcardCompania, whatsappLegible,

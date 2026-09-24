@@ -14,7 +14,7 @@
 import { createHash, randomInt, randomUUID } from 'node:crypto'
 import { FirmaPropia, TEXTO_CONSENTIMIENTO, nombreCoincide } from '@central/core-firma'
 import {
-  MEDIADOR, admiteDecision, anulacionPorCambio, cartaAnulacion, documentoAceptacion, esCambioCompania,
+  MEDIADOR, VERSION_TEXTOS_LEGALES, admiteDecision, anulacionPorCambio, cartaAnulacion, documentoAceptacion, esCambioCompania,
   ESTADOS_ANULACION_ABIERTA, POLIZA_ESTADOS_VIGENTES, estadoPresupuesto, remitenteCorreo,
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
@@ -46,6 +46,9 @@ type Fila = {
   polizaApta: boolean
   /** Ya hay un expediente de anulación abierto para esa póliza (el índice único no admite otro). */
   expedienteAbierto: boolean
+  /** Opciones y compañías del presupuesto: lo que el cliente tuvo delante (no lo consultado). */
+  nOpciones: number
+  nCompanias: number
 }
 
 async function leer(correduriaId: string, clienteId: string, presupuestoId: string, opcionId: string): Promise<Fila | null> {
@@ -63,7 +66,9 @@ async function leer(correduriaId: string, clienteId: string, presupuestoId: stri
            coalesce(pol.correduria_id = p.correduria_id and pol.cliente_id = p.cliente_id and pol.merged_into_poliza_id is null
                     and pol.estado::text = any(${VIGENTES}::text[]), false) as "polizaApta",
            exists (select 1 from anulacion an where an.poliza_id = p.poliza_id
-                     and an.estado = any(${ABIERTAS}::text[])) as "expedienteAbierto"
+                     and an.estado = any(${ABIERTAS}::text[])) as "expedienteAbierto",
+           (select count(*)::int from presupuesto_opcion x where x.presupuesto_id = p.id) as "nOpciones",
+           (select count(distinct lower(trim(x.compania)))::int from presupuesto_opcion x where x.presupuesto_id = p.id) as "nCompanias"
     from presupuesto p
       join clientes c on c.id = p.cliente_id
       join presupuesto_opcion o on o.presupuesto_id = p.id and o.id = ${opcionId}::uuid
@@ -115,6 +120,10 @@ function componer(f: Fila, hoy: string): Compuesto | null {
     opcion: { compania: f.compania, producto: f.producto, primaEur: prima, franquiciaEur: f.franquicia === null ? null : Number(f.franquicia), firmeza },
     calculadoEl: f.creadoAt.toISOString().slice(0, 10), venceEl: f.venceEl.toISOString().slice(0, 10), fechaFirma: hoy,
     anula: anulacion ? { compania: anulacion.compania, numeroPoliza: anulacion.numeroPoliza, fechaEfecto: anulacion.fechaEfecto } : null,
+    vistoAntes: {
+      opciones: f.nOpciones, companias: f.nCompanias,
+      informacionMediador: `${MEDIADOR.identidad.portal}/legal/mediador`, versionTextos: VERSION_TEXTOS_LEGALES,
+    },
   })
   // La huella cubre las DOS cartas: si cambia cualquiera, no se firma lo que no se leyó.
   return { documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion }
