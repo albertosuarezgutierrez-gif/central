@@ -333,6 +333,7 @@ export {
   tonoSituacionRecibo,
   fechaReciboFiable,
   ordenarRecibos,
+  fechaDeRecibo,
   estadoRecibos,
   resumirRecibos,
 } from './recibo-historial.ts'

@@ -9,6 +9,7 @@ import {
   tonoSituacionRecibo,
   fechaReciboFiable,
   ordenarRecibos,
+  fechaDeRecibo,
   estadoRecibos,
   resumirRecibos,
   type ReciboHistorial,
@@ -73,13 +74,30 @@ test('ordenar quita los anulados y deja lo reciente arriba', () => {
   const lista = [
     recibo({ situacion: 'cobrado', fechaEmision: d('2025-01-01T00:00:00Z') }),
     recibo({ situacion: 'anulado', fechaEmision: d('2026-06-01T00:00:00Z') }),
-    recibo({ situacion: 'pendiente', fechaEmision: d('2026-01-01T00:00:00Z') }),
+    recibo({ situacion: 'pendiente', fechaVencimiento: d('2026-01-01T00:00:00Z') }),
   ]
   const orden = ordenarRecibos(lista)
   assert.deepEqual(
     orden.map((r) => r.situacion),
     ['pendiente', 'cobrado'],
   )
+})
+
+test('se ordena por la fecha que ENSEÑA la fila: vencimiento si está al cobro, emisión si no', () => {
+  // El caso de la captura (24/09/2026): el pendiente se emitió en 2025 pero
+  // vence en dic/2026, y ordenado por emisión salía entre dos cobrados.
+  const lista = [
+    recibo({ situacion: 'cobrado', fechaEmision: d('2025-12-31T00:00:00Z') }),
+    recibo({
+      situacion: 'pendiente',
+      fechaEmision: d('2025-11-10T00:00:00Z'),
+      fechaVencimiento: d('2026-12-10T00:00:00Z'),
+    }),
+    recibo({ situacion: 'cobrado', fechaEmision: d('2025-06-30T00:00:00Z') }),
+    recibo({ situacion: 'cobrado', fechaEmision: d('2025-01-01T00:00:00Z') }),
+  ]
+  const orden = ordenarRecibos(lista).map((r) => fechaDeRecibo(r)?.toISOString().slice(0, 10))
+  assert.deepEqual(orden, ['2026-12-10', '2025-12-31', '2025-06-30', '2025-01-01'])
 })
 
 test('un recibo SIN fecha va al final, nunca arriba (el NULLS FIRST de Postgres)', () => {
