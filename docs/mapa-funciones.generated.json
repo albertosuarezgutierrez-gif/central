@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T19:47:04Z",
-  "sha": "261edda2343f22a1d19fc05e5c8bb8813a585d05",
+  "generadoEn": "2026-09-24T20:21:18Z",
+  "sha": "09e9fe1f1b1f2671331ac3f652aef192721f7029",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -70356,12 +70356,12 @@
           "exportada": true,
           "params": "{ isOperator }: { isOperator: boolean }",
           "retorno": null,
-          "linea": 31
+          "linea": 32
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3368215772d6"
+      "hash": "143b109df49a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/comunicacion/ComunicacionClient.tsx",
@@ -71150,20 +71150,13 @@
           "resumen": "La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto. 🚨 Por qué los contadores viven aquí y no dentro de "
         },
         {
-          "nombre": "inicialesDe",
+          "nombre": "RamosContratados",
           "kind": "function",
           "exportada": false,
-          "params": "nombre: string",
-          "retorno": "string",
-          "linea": 86
-        },
-        {
-          "nombre": "RuedaRamos",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ nombre, tiposVivos }: { nombre: string; tiposVivos: string[] }",
+          "params": "{ tiposVivos }: { tiposVivos: string[] }",
           "retorno": null,
-          "linea": 93
+          "linea": 77,
+          "resumen": "── Ramos contratados ─────────────────────────────────────────────────────── Sustituye a la «rueda de ramos» de Avant2 (24/09/2026, Alberto: «ocupa mucho y no creo que sea necesario»): en móvil se com"
         },
         {
           "nombre": "Titulares",
@@ -71171,7 +71164,7 @@
           "exportada": false,
           "params": "{ resumen }: { resumen: ResumenFicha }",
           "retorno": null,
-          "linea": 142
+          "linea": 96
         },
         {
           "nombre": "ProximoVencimiento",
@@ -71179,16 +71172,16 @@
           "exportada": false,
           "params": "{ proximo, vivas, sinFecha }: { proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number }",
           "retorno": null,
-          "linea": 188,
+          "linea": 142,
           "resumen": "La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí: hasta ahora vivía dentro de una celda de la tabla de pólizas. 🚨 No es el vencimiento: es el **último día para oponerse a "
         },
         {
           "nombre": "Kpi",
           "kind": "function",
           "exportada": false,
-          "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: 22px se sale de la tarjeta en móvil. */ pequeno?: boolean }",
+          "params": "{ label, valor, sub, color, pequeno }: { label: string; valor: string; sub?: string; color?: string /** Para un valor que es una fecha: más pequeña para que quepa en móvil. */ pequeno?: boolean }",
           "retorno": null,
-          "linea": 223
+          "linea": 177
         },
         {
           "nombre": "EstadoCabecera",
@@ -71196,7 +71189,7 @@
           "exportada": false,
           "params": "{ estado, cotizacionesVivas, cliente }: { estado: EstadoClienteDerivado | null cotizacionesVivas: number | null /** La regla anterior, para una versión de asegura que no manda `estado`. */ cliente: boolean }",
           "retorno": null,
-          "linea": 241
+          "linea": 200
         },
         {
           "nombre": "Acciones",
@@ -71204,7 +71197,7 @@
           "exportada": false,
           "params": "{ clienteId }: { clienteId: string }",
           "retorno": null,
-          "linea": 300
+          "linea": 259
         },
         {
           "nombre": "Contacto",
@@ -71212,7 +71205,7 @@
           "exportada": false,
           "params": "{ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: { /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */ nombre: string /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el * mismo c",
           "retorno": null,
-          "linea": 367
+          "linea": 326
         },
         {
           "nombre": "Identidad",
@@ -71220,7 +71213,7 @@
           "exportada": false,
           "params": "{ identidad, clienteId }: { identidad: IdentidadFicha | null; clienteId: string }",
           "retorno": null,
-          "linea": 466
+          "linea": 425
         },
         {
           "nombre": "Carnets",
@@ -71228,12 +71221,12 @@
           "exportada": false,
           "params": "{ carnets }: { carnets: CarnetFicha[] | null }",
           "retorno": null,
-          "linea": 501
+          "linea": 460
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9e967771bdfb"
+      "hash": "95556b12e989"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/DatosCompania.tsx",
@@ -71405,7 +71398,7 @@
           "exportada": true,
           "params": "{ clienteId, activa, contadores }: { clienteId: string activa: TabFicha contadores: ContadoresTabs }",
           "retorno": null,
-          "linea": 43
+          "linea": 41
         },
         {
           "nombre": "Contador",
@@ -71413,12 +71406,12 @@
           "exportada": false,
           "params": "{ n, tono, title }: { n: number; tono?: 'aviso' | 'malo'; title?: string }",
           "retorno": null,
-          "linea": 92
+          "linea": 90
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c210167dd913"
+      "hash": "55904bc9fca1"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/acciones.ts",
@@ -71835,7 +71828,7 @@
           "exportada": true,
           "params": "{ params, searchParams }: { params: Promise<{ id: string }> searchParams: Promise<{ tab?: string | string[] }> }",
           "retorno": null,
-          "linea": 43,
+          "linea": 42,
           "resumen": "La ficha del cliente de la correduría, DENTRO del cuadro de mando. Alberto usa una sola pantalla —esta— para todos sus negocios: la correduría es uno más. `apps/asegura` es el back (tiene la BD de la "
         },
         {
@@ -71844,12 +71837,12 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 172
+          "linea": 168
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "703476b379be"
+      "hash": "a157da6aa53c"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PedirDatos.tsx",
@@ -72007,7 +72000,7 @@
           "exportada": true,
           "params": "p: PolizaFicha",
           "retorno": "string",
-          "linea": 489,
+          "linea": 491,
           "resumen": "Cómo se nombra una póliza en una frase: la matrícula si la hay."
         },
         {
@@ -72016,7 +72009,7 @@
           "exportada": true,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 493
+          "linea": 495
         },
         {
           "nombre": "fmt",
@@ -72024,13 +72017,13 @@
           "exportada": true,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 503,
+          "linea": 505,
           "resumen": "Fecha siempre en español: \"2026-06-03\" → \"03/06/2026\"."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "841bfbd01364"
+      "hash": "357c134307e6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/salud-nuevo/acciones.ts",
@@ -72325,35 +72318,6 @@
       "hash": "c81f16e576f5"
     },
     {
-      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabRecibos.tsx",
-      "ambito": "apps/plataforma",
-      "exporta": [
-        "TabRecibos"
-      ],
-      "funciones": [
-        {
-          "nombre": "TabRecibos",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ polizas }: { polizas: PolizaFicha[] }",
-          "retorno": null,
-          "linea": 19,
-          "resumen": "El estado de cobro de TODAS sus pólizas de un vistazo: una fila por póliza. 🚨 No es un extracto de recibos, y la pantalla lo dice en vez de aparentarlo. El puerto de asegura manda por póliza los CONT"
-        },
-        {
-          "nombre": "UltimoRecibo",
-          "kind": "function",
-          "exportada": false,
-          "params": "{ r }: { r: PolizaFicha['recibos'] }",
-          "retorno": null,
-          "linea": 73
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "12b5dd05539f"
-    },
-    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabResumen.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -72375,7 +72339,7 @@
           "exportada": false,
           "params": "{ accion }: { accion: SiguienteAccion }",
           "retorno": null,
-          "linea": 86,
+          "linea": 88,
           "resumen": "Una sola acción, la que más vale hoy. La decide `siguienteAccion()` (module-seguros), no la pantalla."
         },
         {
@@ -72384,12 +72348,12 @@
           "exportada": false,
           "params": "{ resumen, vivas, clienteId }: { resumen: ResumenFicha; vivas: PolizaFicha[]; clienteId: string }",
           "retorno": null,
-          "linea": 104
+          "linea": 106
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "db97397f89ee"
+      "hash": "04aa968e0f08"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts",
@@ -72405,13 +72369,13 @@
           "exportada": true,
           "params": "v: string | string[] | undefined",
           "retorno": "TabFicha",
-          "linea": 16,
+          "linea": 23,
           "resumen": "Un `?tab=` desconocido (o ausente) no falla: cae a «Resumen»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b22627345abd"
+      "hash": "93fd1ff6a253"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/VerDniCompleto.tsx",
@@ -73672,12 +73636,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 34
+          "linea": 29
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1caa189e30a7"
+      "hash": "1ce1e94ad93e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/LeadsPortal.tsx",
@@ -76679,13 +76643,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 8,
-          "resumen": "El «Resumen» se FUSIONÓ con «Banca» en un Inicio único (PR Fase 2): /banca tiene ahora un control 💶 Dinero | 🏢 Negocios, y el contenido de este antiguo dashboard vive en el segmento Negocios (compon"
+          "linea": 6,
+          "resumen": "Ruta heredada: destino de ~15 fallbacks de operador (`redirect('/dashboard')`) y de bookmarks antiguos. Desde el 24/09/2026 la home es `/inicio` (resumen de los cuatro negocios); el antiguo resumen de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "951a799c326d"
+      "hash": "b153b3f0ecef"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/empresas/AgenteEmpresas.tsx",
@@ -77447,6 +77411,369 @@
       "hash": "7bdfb7c0c7d7"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/AvisoInstalar.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "AvisoInstalar"
+      ],
+      "funciones": [
+        {
+          "nombre": "AvisoInstalar",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 8
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6a55e03bb757"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/BandaInicio.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "BandaInicio"
+      ],
+      "funciones": [
+        {
+          "nombre": "BandaInicio",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "La banda «Pide acción hoy» de siempre (lógica en lib/inicio-acciones.ts). Las pólizas van `en_tarjeta`: las pinta la tarjeta de Correduría y aquí se repetirían."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "166ae335d925"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/loading.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Cargando"
+      ],
+      "funciones": [
+        {
+          "nombre": "Cargando",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 6,
+          "resumen": "Pinta al instante mientras el servidor arranca la página (antes, el Inicio no enseñaba nada hasta que terminaba la consulta más lenta)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e873a4927bc5"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/page.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "InicioPage"
+      ],
+      "funciones": [
+        {
+          "nombre": "saludo",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 18
+        },
+        {
+          "nombre": "InicioPage",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "e5d558727047"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/piezas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Tarjeta",
+        "Cifras",
+        "Cifra",
+        "NoDisponible",
+        "Aviso",
+        "Esqueleto"
+      ],
+      "funciones": [
+        {
+          "nombre": "Tarjeta",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titulo, href, enlace, ancha, children }: { titulo: ReactNode href: string enlace: string ancha?: boolean children: ReactNode }",
+          "retorno": null,
+          "linea": 7
+        },
+        {
+          "nombre": "Cifras",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ children }: { children: ReactNode }",
+          "retorno": null,
+          "linea": 28,
+          "resumen": "Cifras de cabecera de una tarjeta: se apilan solas en móvil."
+        },
+        {
+          "nombre": "Cifra",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ label, valor, sub, color }: { label: ReactNode; valor: ReactNode; sub?: ReactNode; color?: string }",
+          "retorno": null,
+          "linea": 36
+        },
+        {
+          "nombre": "NoDisponible",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ que, motivo, donde }: { que: string; motivo: string; donde?: ReactNode }",
+          "retorno": null,
+          "linea": 47,
+          "resumen": "Una fuente que no respondió: se DICE, nunca se pinta como cero."
+        },
+        {
+          "nombre": "Aviso",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ tono, children }: { tono: 'aviso' | 'negativo'; children: ReactNode }",
+          "retorno": null,
+          "linea": 56
+        },
+        {
+          "nombre": "Esqueleto",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ titulo, ancha }: { titulo: string; ancha?: boolean }",
+          "retorno": null,
+          "linea": 73,
+          "resumen": "Esqueleto mientras carga una tarjeta: la página pinta YA y cada tarjeta llega cuando llega."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0c8172ac096b"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/TarjetaBanco.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TarjetaBanco"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 11
+        },
+        {
+          "nombre": "ddmm",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "firmado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "TarjetaBanco",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17
+        },
+        {
+          "nombre": "ProximosCargos",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ cuentaId }: { cuentaId: string }",
+          "retorno": null,
+          "linea": 74,
+          "resumen": "En su propio Suspense: la tesorería recorre TODO el histórico de movimientos."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0065b699fc0a"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/TarjetaBolsa.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TarjetaBolsa"
+      ],
+      "funciones": [
+        {
+          "nombre": "firmado",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number, divisa: string",
+          "retorno": null,
+          "linea": 10
+        },
+        {
+          "nombre": "colorDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number | null",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "fechaHora",
+          "kind": "function",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": "string",
+          "linea": 13
+        },
+        {
+          "nombre": "TarjetaBolsa",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "083b9dee9c9b"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/TarjetaCorreduria.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TarjetaCorreduria"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 14
+        },
+        {
+          "nombre": "motivoCaida",
+          "kind": "function",
+          "exportada": false,
+          "params": "e: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string; causa?: string }",
+          "retorno": "string",
+          "linea": 18
+        },
+        {
+          "nombre": "TarjetaCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "7b8891d6dc39"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/TarjetaPisos.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TarjetaPisos"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 17
+        },
+        {
+          "nombre": "nombre",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "id: string",
+          "retorno": null,
+          "linea": 21
+        },
+        {
+          "nombre": "textoMov",
+          "kind": "function",
+          "exportada": false,
+          "params": "verbo: string, cuando: string, lista: Movimiento[]",
+          "retorno": "string | null",
+          "linea": 23
+        },
+        {
+          "nombre": "TarjetaPisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 30,
+          "resumen": "Calendario y estimación van en Suspense SEPARADOS: la estimación recorre meses de P&L y no puede retrasar el calendario, que es una sola consulta."
+        },
+        {
+          "nombre": "Cargando",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ texto, alto }: { texto: string; alto: number }",
+          "retorno": null,
+          "linea": 39
+        },
+        {
+          "nombre": "CalendarioPisos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 43
+        },
+        {
+          "nombre": "EstimacionMes",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 135
+        }
+      ],
+      "tablas": [
+        "incomes",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "5b3605b827ed"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/inversion/page.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -77558,7 +77885,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1b58c3f3a66c"
+      "hash": "b9183d83f848"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/LayoutShell.tsx",
@@ -77578,7 +77905,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "32baf400b4f1"
+      "hash": "be00e094c37d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/limpiezas/page.tsx",
@@ -80197,7 +80524,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bdd245cab712"
+      "hash": "9f4ba07d6834"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/trading/ActualizarConsulta.tsx",
@@ -80550,7 +80877,7 @@
           "exportada": false,
           "params": "lista: { href: string }[], path: string",
           "retorno": "boolean",
-          "linea": 151
+          "linea": 129
         },
         {
           "nombre": "seccionDeRuta",
@@ -80558,7 +80885,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "ClaveSeccion | null",
-          "linea": 157,
+          "linea": 135,
           "resumen": "Qué sección contiene la ruta activa. Determinista: se calcula igual en el servidor y en el cliente, así que el primer pintado ya trae la sección buena abierta (sin salto al hidratar)."
         },
         {
@@ -80567,8 +80894,8 @@
           "exportada": false,
           "params": "path: string, soloEmpresas: boolean",
           "retorno": "ClaveSeccion | null",
-          "linea": 169,
-          "resumen": "🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Mi negocio». Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta NO se le renderi"
+          "linea": 148,
+          "resumen": "🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Día a día». Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta NO se le renderiz"
         },
         {
           "nombre": "UserSidebar",
@@ -80576,13 +80903,13 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 182,
+          "linea": 161,
           "resumen": "🚨 El lateral tiene DOS plegados distintos y no pueden pisarse: · `html[data-nav-plegado='1']` = tira de solo iconos (globals.css). Ahí las cabeceras de sección NO se ven (llevan `nav-solo-abierto`), "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1267c2e83a00"
+      "hash": "8bda97def75c"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -92790,6 +93117,26 @@
       "hash": "d8072cc8e5f7"
     },
     {
+      "ruta": "apps/plataforma/app/icono-app/route.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 15
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "668f6fc882a9"
+    },
+    {
       "ruta": "apps/plataforma/app/invitado/empresas/page.tsx",
       "ambito": "apps/plataforma",
       "resumen": "Página de acceso INVITADO (Pablo prueba «Empresas» sin cuenta). Fuera del grupo (usuario) → sin sidebar ni guard de sesión. El acceso se valida por token (tabla empresas_acceso_token), vía cookie httpOnly.",
@@ -92959,12 +93306,12 @@
           "exportada": true,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 30
+          "linea": 32
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b0da7fb6ba27"
+      "hash": "2703f752a546"
     },
     {
       "ruta": "apps/plataforma/app/login/LoginForm.tsx",
@@ -92984,7 +93331,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0293f1258d9"
+      "hash": "357d2bb9be93"
     },
     {
       "ruta": "apps/plataforma/app/login/page.tsx",
@@ -93004,7 +93351,28 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b050a2903bde"
+      "hash": "fb7941929619"
+    },
+    {
+      "ruta": "apps/plataforma/app/manifest.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "manifest"
+      ],
+      "funciones": [
+        {
+          "nombre": "manifest",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "MetadataRoute.Manifest",
+          "linea": 13,
+          "resumen": "Manifiesto que hace INSTALABLE la intranet (24/09/2026, «quiero una app como la de los clientes»). Sustituye al `public/manifest.json` de 2026-06, que nunca llegó a instalar: sin service worker Chrome"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "540c23243f8a"
     },
     {
       "ruta": "apps/plataforma/app/page.tsx",
@@ -93024,7 +93392,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bcd731687c1b"
+      "hash": "9b8601151787"
     },
     {
       "ruta": "apps/plataforma/app/register/page.tsx",
@@ -93044,7 +93412,28 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2c5dbaffc44d"
+      "hash": "3da80a2b5111"
+    },
+    {
+      "ruta": "apps/plataforma/app/RegistrarSW.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "RegistrarSW"
+      ],
+      "funciones": [
+        {
+          "nombre": "RegistrarSW",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 5,
+          "resumen": "Registra el service worker (requisito de Chrome para ofrecer instalar). No cachea nada: ver `public/sw.js`."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a7bf36aadc38"
     },
     {
       "ruta": "apps/plataforma/components/ui.tsx",
@@ -93091,7 +93480,7 @@
           "exportada": true,
           "params": "{ title, sub, action }: { title: ReactNode; sub?: ReactNode; action?: ReactNode }",
           "retorno": null,
-          "linea": 109,
+          "linea": 111,
           "resumen": "Cabecera de tarjeta: título discreto a la izquierda, acción/enlace a la derecha."
         },
         {
@@ -93100,7 +93489,7 @@
           "exportada": true,
           "params": "{ label, value, color, delta, bueno, sub }: { label: ReactNode value: ReactNode color?: string delta?: number | null bueno?: boolean sub?: ReactNode }",
           "retorno": null,
-          "linea": 122,
+          "linea": 124,
           "resumen": "Métrica grande: número tabular protagonista + etiqueta muted."
         },
         {
@@ -93109,7 +93498,7 @@
           "exportada": true,
           "params": "{ icono, label, valor, sub, delta, bueno, tono = 'neutral', color }: { icono?: ReactNode label: ReactNode valor: ReactNode sub?: ReactNode delta?: number | null bueno?: boolean tono?: Tono color?: string }",
           "retorno": null,
-          "linea": 148,
+          "linea": 150,
           "resumen": "los emojis se pintan distinto en cada sistema operativo y es lo que hace que un panel parezca casero."
         },
         {
@@ -93118,7 +93507,7 @@
           "exportada": true,
           "params": "{ pct, bueno }: { pct: number | null | undefined; bueno?: boolean }",
           "retorno": null,
-          "linea": 181,
+          "linea": 183,
           "resumen": "Pastilla de variación ▲/▼. `bueno` colorea por SIGNIFICADO (subir gastos = rojo), no por signo."
         },
         {
@@ -93127,7 +93516,7 @@
           "exportada": true,
           "params": "{ tono = 'neutral', children, title }: { tono?: Tono children: ReactNode title?: string }",
           "retorno": null,
-          "linea": 198,
+          "linea": 200,
           "resumen": "Etiqueta de estado. El estado se lee de un vistazo por la FORMA, no solo por el número."
         },
         {
@@ -93136,7 +93525,7 @@
           "exportada": true,
           "params": "variante: 'primario' | 'secundario' | 'sutil' = 'secundario', tam: 'sm' | 'md' = 'md'",
           "retorno": "CSSProperties",
-          "linea": 217,
+          "linea": 219,
           "resumen": "─── Botones ───────────────────────────────────────────────────────────────────────────────── Se exporta el ESTILO, no un componente con `onClick`: este archivo es server-safe y un handler obligaría a"
         },
         {
@@ -93145,7 +93534,7 @@
           "exportada": true,
           "params": "variante: 'primario' | 'secundario' | 'sutil' = 'secundario', tam: 'sm' | 'md' = 'md'",
           "retorno": "CSSProperties",
-          "linea": 251,
+          "linea": 253,
           "resumen": "Botón CUADRADO de un solo icono, para la acción repetida de una fila de lista. 🚨 Existe porque el rótulo es lo que rompe la fila en el móvil, no el botón: medido el 03/09/2026 sobre la captura de Alb"
         },
         {
@@ -93154,7 +93543,7 @@
           "exportada": true,
           "params": "{ href, variante, tam, nuevaPestana, children }: { href: string variante?: 'primario' | 'secundario' | 'sutil' tam?: 'sm' | 'md' /** * Abre en pestaña nueva. No es un capricho: sin esto la primitiva NO servía para tres botones * reales de l",
           "retorno": null,
-          "linea": 257,
+          "linea": 259,
           "resumen": "Botón que en realidad navega. Para acciones con handler usa `btnStyle` en tu client component."
         },
         {
@@ -93163,7 +93552,7 @@
           "exportada": true,
           "params": "{ texto, definitivo, donde }: { texto?: ReactNode definitivo?: boolean donde?: string }",
           "retorno": null,
-          "linea": 299,
+          "linea": 301,
           "resumen": "El hueco, dicho en voz alta. Borde discontinuo = se rellenará; continuo = no lo hará nunca. `donde` dice al usuario dónde mirar mientras tanto (la ficha oficial, el portal del banco…)."
         },
         {
@@ -93172,7 +93561,7 @@
           "exportada": true,
           "params": "{ valor, children, pendiente, vacio, definitivo, donde }: { valor: unknown children?: ReactNode pendiente?: ReactNode vacio?: ReactNode definitivo?: boolean donde?: string }",
           "retorno": null,
-          "linea": 338,
+          "linea": 340,
           "resumen": "Pinta un valor respetando sus tres estados. <Dato valor={f.cargas} vacio=\"Sin cargas\" donde=\"la certificación de cargas\"> {eur(f.cargas)} </Dato> `children` es cómo se pinta el valor cuando LO HAY (ya"
         },
         {
@@ -93181,7 +93570,7 @@
           "exportada": true,
           "params": "{ pct, color, width, alto, track }: { pct: number color?: string width?: number | string alto?: number track?: string }",
           "retorno": null,
-          "linea": 362,
+          "linea": 364,
           "resumen": "Barra fina de progreso. `alto` y `track` son configurables porque cablearlos era justo lo que dejaba la primitiva sin adoptar: de los 11 sitios que pintan esta barra a mano (medido 02/09/2026) solo 3 "
         },
         {
@@ -93190,13 +93579,13 @@
           "exportada": true,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 380,
+          "linea": 382,
           "resumen": "Envoltorio de tabla ancha: scroll horizontal PROPIO, para que el cuerpo de la página nunca scrollee de lado (regla responsive del CLAUDE.md raíz)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bd3a5f577fa5"
+      "hash": "19709dfb954a"
     },
     {
       "ruta": "apps/plataforma/instrumentation.ts",
@@ -105936,7 +106325,7 @@
           "exportada": false,
           "params": "n: number, uno: string, varios: string",
           "retorno": "string",
-          "linea": 61
+          "linea": 64
         },
         {
           "nombre": "accionesDeInicio",
@@ -105944,7 +106333,7 @@
           "exportada": true,
           "params": "e: EstadoInicio",
           "retorno": "Accion[]",
-          "linea": 69,
+          "linea": 72,
           "resumen": "Las acciones ordenadas por urgencia. Devuelve `[]` solo cuando de verdad no hay nada que hacer Y todo se ha podido comprobar; cualquier hueco produce su propia fila «no se ha podido»."
         },
         {
@@ -105953,13 +106342,126 @@
           "exportada": true,
           "params": "e: EstadoInicio",
           "retorno": "boolean",
-          "linea": 149,
+          "linea": 154,
           "resumen": "¿Se ha podido comprobar TODO? Si no, la banda no puede decir «no hay nada pendiente»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f6b4b30365ef"
+      "hash": "1761d2a46664"
+    },
+    {
+      "ruta": "apps/plataforma/lib/inicio-resumen.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lógica PURA de las tarjetas del Inicio (`/inicio`, 24/09/2026). Sin BD ni red: la página lee los datos con los helpers de siempre y aquí solo se combinan, para poder testearlo con node --test. Regla que atraviesa todo el archivo (CLAUDE.md, «dato que no hay ≠ dato que no se ha mirado»): `null` es «n",
+      "exporta": [
+        "estimacionMes",
+        "sumarDias",
+        "ventanaCalendario",
+        "resumenBolsa",
+        "bolsaVieja",
+        "importeDivisa",
+        "textoFuenteCaida",
+        "proximosCargos"
+      ],
+      "funciones": [
+        {
+          "nombre": "r2",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 38
+        },
+        {
+          "nombre": "estimacionMes",
+          "kind": "function",
+          "exportada": true,
+          "params": "pisos: PisoMes[], previstos: Map<string, number | null>,",
+          "retorno": "",
+          "linea": 44,
+          "resumen": "`previstos`: media de gastos por piso (`gastosPrevistos` de la previsión). Un piso que no aparece o que trae `null` es «sin histórico», no «gasto 0»."
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": true,
+          "params": "dia: string, n: number",
+          "retorno": "string",
+          "linea": 103,
+          "resumen": "Suma `n` días a 'AAAA-MM-DD' en UTC (sin saltos por cambio de hora)."
+        },
+        {
+          "nombre": "diffDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: string, b: string",
+          "retorno": "number",
+          "linea": 109
+        },
+        {
+          "nombre": "ventanaCalendario",
+          "kind": "function",
+          "exportada": true,
+          "params": "reservas: ReservaCal[], pisos: string[], hoy: string, n = 14",
+          "retorno": "Ventana",
+          "linea": 113
+        },
+        {
+          "nombre": "sumaONull",
+          "kind": "function",
+          "exportada": false,
+          "params": "xs: (number | null)[]",
+          "retorno": "number | null",
+          "linea": 168
+        },
+        {
+          "nombre": "resumenBolsa",
+          "kind": "function",
+          "exportada": true,
+          "params": "posiciones: PosicionBolsa[]",
+          "retorno": "ResumenDivisaBolsa[]",
+          "linea": 174,
+          "resumen": "Una línea por divisa: sumar dólares con euros daría una cifra plausible y falsa."
+        },
+        {
+          "nombre": "bolsaVieja",
+          "kind": "function",
+          "exportada": true,
+          "params": "actualizado: Date, ahora: Date",
+          "retorno": "boolean",
+          "linea": 186
+        },
+        {
+          "nombre": "importeDivisa",
+          "kind": "function",
+          "exportada": true,
+          "params": "n: number, divisa: string",
+          "retorno": "string",
+          "linea": 191,
+          "resumen": "Importe en su divisa, formato español: `1.234,56€` / `1.234,56 $`."
+        },
+        {
+          "nombre": "textoFuenteCaida",
+          "kind": "function",
+          "exportada": true,
+          "params": "f: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string }",
+          "retorno": "string",
+          "linea": 203
+        },
+        {
+          "nombre": "proximosCargos",
+          "kind": "function",
+          "exportada": true,
+          "params": "recurrentes: RecurrenteBanco[], hoy: string, dias = 7",
+          "retorno": "ProximoCargo[]",
+          "linea": 219,
+          "resumen": "Próximas apariciones de los recurrentes en (hoy, hoy+dias], con la MISMA regla que `proyectar()` de `lib/tesoreria-core.ts` (última fecha + intervalo, saltando lo ya pasado), para que la lista y el sa"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1a32962c3a3f"
     },
     {
       "ruta": "apps/plataforma/lib/intercompany-mapeo.ts",
@@ -124361,7 +124863,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d96fd20f000f"
+      "hash": "9ba37b285329"
     },
     {
       "ruta": "apps/rrhh/app/admin/calendario/CalendarioClient.tsx",
@@ -154988,7 +155490,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3724,
-    "funciones": 11827
+    "archivos": 3736,
+    "funciones": 11868
   }
 }
