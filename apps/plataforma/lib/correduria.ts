@@ -26,6 +26,9 @@ export function companiaLabel(compania: string): string {
 // Lo que no casa con ninguna conocida cae en 'Otras' (cajón por descarte).
 export function detectarCompania(concepto: string, conceptoNorm: string, contraparte: string): string {
   const txt = `${concepto} ${conceptoNorm} ${contraparte}`.toUpperCase()
+  // El banco antepone «TRANSFERENCIAS // … //» al concepto del ordenante: los patrones anclados
+  // al principio (`^COMISIONES`) miran también el último tramo.
+  const tramo = (concepto.toUpperCase().split('//').pop() ?? '').trim()
   if (txt.includes('GENERALI')) return 'Generali'
   if (txt.includes('ALLIANZ')) return 'Allianz'
   if (txt.includes('MAPFRE') || /LIQ\.COMISIONES|LIQ\. COMISIONES/.test(txt)) return 'Mapfre'
@@ -37,7 +40,7 @@ export function detectarCompania(concepto: string, conceptoNorm: string, contrap
   if (txt.includes('LINEA DIRECTA') || txt.includes('LÍNEA DIRECTA')) return 'Línea Directa'
   if (txt.includes('OCCIDENT') || txt.includes('CATALANA') || txt.includes('M00171') || txt.includes('8/92361')) return 'Occident'
   if (txt.includes('HELVETIA')) return 'Helvetia'
-  if (txt.includes('PELAYO') || /^COMISIONES /.test(txt)) return 'Pelayo'
+  if (txt.includes('PELAYO') || /^COMISIONES /.test(txt) || /^COMISIONES /.test(tramo)) return 'Pelayo'
   if (txt.includes('LIBERTY')) return 'Liberty'
   if (txt.includes('PLUS ULTRA')) return 'Plus Ultra'
   if (txt.includes('SANITAS') || txt.includes('ADESLAS') || txt.includes('DKV') || txt.includes('ASISA')) return 'Salud'
@@ -61,6 +64,10 @@ export function claveReferencia(concepto: string | null): string | null {
     .replace(/[.,:;()]/g, ' ')
   for (const tok of s.split(/\s+/)) {
     if (tok.length < 4) continue
+    // 🚨 Un DNI/NIE no identifica a una compañía: identifica a una PERSONA (las nóminas y pensiones
+    // también entran con `destino='seguros'`). Aprender una regla sobre él mandaría todas sus
+    // nóminas a una aseguradora.
+    if (/^(\d{8}|[XYZ]\d{7})[A-Z]$/.test(tok)) continue
     const tieneLetra = /[A-Z]/.test(tok)
     const tieneDigito = /\d/.test(tok)
     const tieneBarra = tok.includes('/')
@@ -92,6 +99,10 @@ export function claveComercio(concepto: string | null): string | null {
   s = s.replace(/\.(COM|ES|NET|ORG)\b/g, ' ').replace(/[^A-ZÁÉÍÓÚÑ0-9 ]/g, ' ')
   for (const tok of s.split(/\s+/)) {
     if (tok.length < 4) continue
+    // 🚨 Un DNI/NIE no identifica a una compañía: identifica a una PERSONA (las nóminas y pensiones
+    // también entran con `destino='seguros'`). Aprender una regla sobre él mandaría todas sus
+    // nóminas a una aseguradora.
+    if (/^(\d{8}|[XYZ]\d{7})[A-Z]$/.test(tok)) continue
     if (/^\d+$/.test(tok)) continue
     if (!/[A-ZÁÉÍÓÚÑ]/.test(tok)) continue
     if (FILLER_COMERCIO.has(tok)) continue

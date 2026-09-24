@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { estadoCuadre, totalEsCerrado, cuantosPendientes, mesEnPeriodo, finDeMes, type EntradaCuadre } from './cuadre.ts'
+import { estadoCuadre, remesaInferida, totalEsCerrado, cuantosPendientes, mesEnPeriodo, finDeMes, type EntradaCuadre } from './cuadre.ts'
 
 const base: EntradaCuadre = {
   leidoOk: true,
@@ -64,6 +64,18 @@ test('Occident jul/2026 es deudor, NO un impago ni un descuadre', () => {
     }),
     'deudor',
   )
+})
+
+test('🪤 Occident con bruto negativo: si el banco trae |bruto| − retención, CUADRA (no es deudor)', () => {
+  const occ = (bruto: number, ret: number, banco: number | null) =>
+    estadoCuadre({ ...base, esperadoBruto: bruto, liqBruto: bruto, liqRetencion: ret, liqRemesa: 0, bancoTotal: banco })
+  assert.equal(occ(-274.16, 41.12, 233.04), 'cuadra')   // abr/2026
+  assert.equal(occ(-561.9, 84.28, 477.62), 'cuadra')    // may/2026 (dos abonos)
+  assert.equal(occ(-346.2, 51.9, 294.3), 'cuadra')      // jul/2026
+  assert.equal(occ(-287.68, 43.15, 279.68), 'descuadra') // jun/2026: +35,15€ sin explicar
+  assert.equal(occ(-144.44, 21.67, 98.85), 'descuadra')  // ago/2026: −23,92€
+  assert.equal(occ(-346.2, 51.9, null), 'deudor')       // sin abono: no se sabe, no se reclama
+  assert.equal(remesaInferida(-274.16, 41.12), 233.04)
 })
 
 test('Mapfre: 3.614,65€ devengados y ninguna liquidación', () => {
