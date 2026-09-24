@@ -101,6 +101,8 @@ export type DatosAvisosIntranet = {
   total: number
   /** A dónde entra. Siempre https y siempre presente: sin enlace no se manda nada. */
   enlace: string
+  /** `true` = el enlace lleva una llave de acceso directo (un solo uso, 72 h). */
+  directo?: boolean
 }
 
 export type CuerpoCorreo = { asunto: string; texto: string; html: string }
@@ -147,6 +149,9 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
   if (!/^https:\/\//.test(d.enlace)) {
     throw new Error('enlace_no_https')
   }
+  const comoSeEntra = d.directo
+    ? 'Con este enlace entras directamente, una sola vez y durante 72 horas. Si ya lo usaste o ha caducado, entras con tu correo y un código de un solo uso. No lo reenvíes.'
+    : 'Se entra con tu correo y un código de un solo uso; no hay contraseña que recordar.'
   const saludo = d.nombre?.trim() ? `Hola, ${d.nombre.trim()}:` : 'Hola:'
   const n = d.avisos.length
   const resumen = resumirAvisos(d.avisos)
@@ -170,7 +175,7 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
     '',
     `Puedes verlo aquí: ${d.enlace}`,
     '',
-    'Se entra con tu correo y un código de un solo uso; no hay contraseña que recordar.',
+    comoSeEntra,
     '',
     'Un saludo,',
     'Grupo ASegura',
@@ -182,7 +187,7 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
     `<p>Te escribimos para avisarte de que tienes <strong>${escapar(resumen)}</strong> en tu área de clientes.</p>`,
     ...(ademas ? [`<p>${escapar(ademas)}</p>`] : []),
     `<p><a href="${escapar(d.enlace)}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none">Entrar en mi área de clientes</a></p>`,
-    '<p style="color:#555;font-size:13px">Se entra con tu correo y un código de un solo uso; no hay contraseña que recordar.</p>',
+    `<p style="color:#555;font-size:13px">${escapar(comoSeEntra)}</p>`,
     '<p>Un saludo,<br>Grupo ASegura</p>',
     '</div>',
   ].join('')

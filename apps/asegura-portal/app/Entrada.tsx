@@ -21,6 +21,9 @@ export function Entrada() {
   const [error, setError] = useState<string | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [desdeEnlace, setDesdeEnlace] = useState(false)
+  // La llave del ENLACE DIRECTO del correo de avisos (un solo uso, 72 h). Mientras la hay, no se
+  // pide código: se entra con un clic en «Entrar» (POST), nunca solo al abrir el enlace.
+  const [enlace, setEnlace] = useState<string | null>(null)
 
   // El enlace del correo trae el email y el código ya puestos, pero NO entra
   // solo: el canje sigue siendo un POST que dispara la persona. Un enlace que
@@ -33,6 +36,15 @@ export function Entrada() {
     const q = new URLSearchParams(window.location.search)
     const d = q.get('d')
     const c = q.get('c')
+    const e = q.get('e')
+    if (d && e) {
+      setDestino(d)
+      setEnlace(e)
+      setFase('verificar')
+      setDesdeEnlace(true)
+      window.history.replaceState(null, '', window.location.pathname)
+      return
+    }
     if (!d || !c) return
 
     setDestino(d)
@@ -59,19 +71,30 @@ export function Entrada() {
     const r = await fetch('/api/acceso/verificar', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ tipo: 'email', destino, codigo }),
+      body: JSON.stringify(enlace ? { tipo: 'email', destino, enlace } : { tipo: 'email', destino, codigo }),
     })
-    const cuerpo = (await r.json().catch(() => ({}))) as { error?: string; vinculo?: string }
-    if (!r.ok) return setError(cuerpo.error ?? 'error')
+    const cuerpo = (await r.json().catch(() => ({}))) as { error?: string; vinculo?: string; irA?: string }
+    if (!r.ok) {
+      // El enlace ya no vale (usado, caducado o no es de este correo): se cae al acceso de siempre,
+      // con el correo ya puesto, y se dice por qué.
+      if (enlace) {
+        setEnlace(null)
+        setFase('pedir')
+        return setError(`enlace_${cuerpo.error ?? 'error'}`)
+      }
+      return setError(cuerpo.error ?? 'error')
+    }
+    // A dónde ir lo decide el servidor (ruta interna validada); por defecto, la bóveda.
+    const irA = typeof cuerpo.irA === 'string' && cuerpo.irA.startsWith('/') && !cuerpo.irA.startsWith('//') ? cuerpo.irA : '/boveda'
     // El vínculo con la cartera no bloquea la entrada, pero si no se ha podido
     // resolver se dice antes de irse: un «no tienes pólizas» sin esta línea
     // sería una afirmación sobre algo que no se ha mirado.
     const texto = textoVinculo(cuerpo.vinculo)
     if (texto) {
       setAviso(texto)
-      setTimeout(() => (window.location.href = '/boveda'), 2500)
+      setTimeout(() => (window.location.href = irA), 2500)
     } else {
-      window.location.href = '/boveda'
+      window.location.href = irA
     }
   }
 
@@ -106,17 +129,21 @@ export function Entrada() {
       ) : (
         <>
           <p className="suave" style={{ marginTop: 0 }}>
-            {desdeEnlace
-              ? `Tu código ya está puesto. Pulsa «Entrar» para acceder como ${destino}.`
-              : `Te hemos enviado un código a ${destino}. Caduca en 10 minutos.`}
+            {enlace
+              ? `Pulsa «Entrar» para acceder como ${destino}. El enlace vale una sola vez.`
+              : desdeEnlace
+                ? `Tu código ya está puesto. Pulsa «Entrar» para acceder como ${destino}.`
+                : `Te hemos enviado un código a ${destino}. Caduca en 10 minutos.`}
           </p>
-          <input
-            inputMode="numeric"
-            value={codigo}
-            onChange={(e) => setCodigo(e.target.value)}
-            placeholder="123456"
-            className="campo"
-          />
+          {!enlace && (
+            <input
+              inputMode="numeric"
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value)}
+              placeholder="123456"
+              className="campo"
+            />
+          )}
           <button onClick={verificar} className="boton" style={{ marginTop: 12 }}>
             Entrar
           </button>
@@ -162,6 +189,9 @@ function textoError(codigo: string): string {
     bloqueado: 'Demasiados intentos. Pide un código nuevo.',
     incorrecto: 'El código no es correcto.',
     sin_codigo: 'Pide un código primero.',
+    enlace_ya_usado: 'Ese enlace ya se usó. Pide un código y entras igual.',
+    enlace_caducado: 'Ese enlace ha caducado. Pide un código y entras igual.',
+    enlace_incorrecto: 'Ese enlace no es válido para este correo. Pide un código.',
   }
   return mapa[codigo] ?? 'Ha ocurrido un error.'
 }

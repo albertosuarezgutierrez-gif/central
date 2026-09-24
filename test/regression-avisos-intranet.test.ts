@@ -282,3 +282,25 @@ test('🚨 con VARIAS fichas vinculadas no se escribe a ninguna, y el corredor n
     'no puede volver el desempate por el vínculo más antiguo',
   )
 })
+
+test('🚨 con enlace directo el correo dice que vale una vez, 72 h, y que no se reenvíe', () => {
+  const c = cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'anulacion_por_firmar' }], total: 1, enlace: 'https://x.es/?e=t', directo: true })
+  assert.match(c.texto, /una sola vez y durante 72 horas/)
+  assert.match(c.texto, /No lo reenvíes/)
+  assert.doesNotMatch(cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'anulacion_por_firmar' }], total: 1, enlace: 'https://x.es/' }).texto, /72 horas/)
+})
+
+test('🚨 la llave del enlace directo se ata al correo de la ficha y, sin clave, no se manda suelta', () => {
+  const src = readFileSync(new URL('../apps/asegura/lib/avisos-intranet.ts', import.meta.url), 'utf8')
+  assert.match(src, /if \(hash === null\) return \{ enlace: base, directo: false \}/)
+  assert.match(src, /tokenHash: await hashTokenEnlace\(token\)/)
+  assert.doesNotMatch(src, /tokenHash: token\b/, 'el token nunca se guarda en claro')
+})
+
+test('🚨 el portal solo canjea la llave si el correo casa con el de la ficha, y la gasta ANTES de abrir sesión', () => {
+  const src = readFileSync(new URL('../apps/asegura-portal/app/api/acceso/verificar/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /hash !== fila\.emailLookupHash\) return \{ error: 'incorrecto' \}/)
+  assert.match(src, /if \(!\(await e\.marcar\(\)\)\) return NextResponse\.json\(\{ error: 'ya_usado' \}/)
+  assert.ok(src.indexOf('await e.marcar()') < src.indexOf('return abrirSesion(req, tipo, destino, valorHash, null, irA)'))
+  assert.match(src, /updateMany\(\{ where: \{ id: fila\.id, usadoEn: null/)
+})
