@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T06:07:43Z",
-  "sha": "ff71ff68f060939a218e9c4b675ab53cc215e1d3",
+  "generadoEn": "2026-09-24T07:49:54Z",
+  "sha": "6bc233c2c2274d82a68c4895573d5e042bc02c3e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -13910,6 +13910,35 @@
       "hash": "fa6d21846124"
     },
     {
+      "ruta": "apps/asegura/app/api/operador/quejas/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 23,
+          "resumen": "Registro de quejas y reclamaciones del SAC. GET [?todas=1] → { estado:'ok', quejas, resumen:{abiertas,urgentes,vencidas}, informe } POST { reclamante, canal, motivo, detalle, recibidaEl?, clienteId?, "
+        },
+        {
+          "nombre": "actorDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Record<string, unknown> | null",
+          "retorno": "string",
+          "linea": 36
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/quejas",
+      "hash": "f7003708238e"
+    },
+    {
       "ruta": "apps/asegura/app/api/operador/recaptacion/email-lote/route.ts",
       "ambito": "apps/asegura",
       "exporta": [],
@@ -14963,7 +14992,7 @@
           "exportada": true,
           "params": "tx: Tx, correduriaId: string, reciboId: string, eventoId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 32,
+          "linea": 34,
           "resumen": "`true` si ha dejado una propuesta nueva. Idempotente por `clave` (una por recibo y vencimiento)."
         },
         {
@@ -14972,7 +15001,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 66,
+          "linea": 68,
           "resumen": "Propone comunicar a la compañía las anulaciones FIRMADAS por el cliente en el portal (pieza 2-d-3) sin propuesta viva. Solo las de firma electrónica (`firma_id` + `carta_texto`): una firma en papel la"
         },
         {
@@ -14981,7 +15010,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 115,
+          "linea": 117,
           "resumen": "Propone mandar a la compañía las cartas de nombramiento de mediador FIRMADAS en el portal sin propuesta viva (mismas reglas que las anulaciones: fallida o caducada se repropone; rechazada no, la manda"
         },
         {
@@ -14990,7 +15019,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<void>",
-          "linea": 180,
+          "linea": 182,
           "resumen": "Retira lo que ya no es verdad: lo caducado, y el aviso de un recibo que ya no consta devuelto (se cobró o la compañía lo rectificó). Escribirle «no consta pagado» a quien ya ha pagado es justo lo que "
         },
         {
@@ -14999,7 +15028,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<AprobacionPendiente[]>",
-          "linea": 208,
+          "linea": 210,
           "resumen": "Pendientes, urgentes primero."
         },
         {
@@ -15008,16 +15037,25 @@
           "exportada": true,
           "params": "mensaje: string",
           "retorno": "boolean",
-          "linea": 279,
+          "linea": 281,
           "resumen": "Cortes de red o de espera: el proveedor pudo haber aceptado el mensaje antes de cortarse."
+        },
+        {
+          "nombre": "adjuntosFirmados",
+          "kind": "function",
+          "exportada": false,
+          "params": "base: string, texto: string, f: FirmaGuardada | undefined",
+          "retorno": "Promise<Adjunto[]>",
+          "linea": 300,
+          "resumen": "Lo que se adjunta a la compañía: el ORIGINAL en texto (el que respalda la huella de la firma) y, si hay evidencia, el mismo texto en PDF con el justificante debajo — un `.txt` suelto se lee como un bo"
         },
         {
           "nombre": "enviarCorreo",
           "kind": "function",
           "exportada": false,
-          "params": "destino: string, asunto: string, texto: string, adjunto?: { nombre: string; texto: string }",
+          "params": "destino: string, asunto: string, texto: string, adjuntos?: Adjunto[]",
           "retorno": "Promise<",
-          "linea": 289
+          "linea": 320
         },
         {
           "nombre": "destinoAnulacion",
@@ -15025,7 +15063,7 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string | null, contactoId: string | undefined",
           "retorno": "Promise<",
-          "linea": 314,
+          "linea": 345,
           "resumen": "A quién y con qué adjunto va la anulación firmada: el buzón de la compañía que Alberto ELIGE en la tarjeta (tiene que ser un contacto activo de la compañía de ESA póliza). No se deduce por área."
         },
         {
@@ -15034,7 +15072,7 @@
           "exportada": false,
           "params": "correduriaId: string, cartaId: string, contactoId: string | undefined",
           "retorno": "Promise<",
-          "linea": 336,
+          "linea": 369,
           "resumen": "Igual que `destinoAnulacion`, para la carta de nombramiento firmada. El adjunto es la carta GUARDADA (cifrada en BD)."
         },
         {
@@ -15043,7 +15081,7 @@
           "exportada": false,
           "params": "correduriaId: string, cartaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 359,
+          "linea": 394,
           "resumen": "La carta pasa a «enviada»: el correo salió. Un fallo aquí no puede invitar a repetir el envío."
         },
         {
@@ -15052,7 +15090,7 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string",
           "retorno": "Promise<boolean>",
-          "linea": 373,
+          "linea": 408,
           "resumen": "La anulación pasa a «comunicada»: el correo salió (o Alberto ha comprobado que salió)."
         },
         {
@@ -15061,7 +15099,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, d: Decision, actor: string",
           "retorno": "Promise<ResultadoDecision>",
-          "linea": 388
+          "linea": 423
         },
         {
           "nombre": "anotarHistorial",
@@ -15069,7 +15107,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, polizaId: string | null, nota: string",
           "retorno": "Promise<void>",
-          "linea": 521
+          "linea": 556
         },
         {
           "nombre": "enviosInciertos",
@@ -15077,7 +15115,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<EnvioIncierto[]>",
-          "linea": 537
+          "linea": 572
         }
       ],
       "tablas": [
@@ -15090,12 +15128,13 @@
         "devuelto",
         "firma",
         "historial_interno",
+        "node",
         "poliza_recibos",
         "polizas",
         "presupuesto"
       ],
       "rutaApi": null,
-      "hash": "b1f0ac446710"
+      "hash": "c3f665a0bf8e"
     },
     {
       "ruta": "apps/asegura/lib/asegura-db.ts",
@@ -15947,7 +15986,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Primitivo | undefined",
-          "linea": 57
+          "linea": 58
         },
         {
           "nombre": "sanearCambio",
@@ -15955,7 +15994,7 @@
           "exportada": true,
           "params": "c: Cambio",
           "retorno": "CambioGuardado",
-          "linea": 66
+          "linea": 67
         },
         {
           "nombre": "cambiosParaGuardar",
@@ -15963,13 +16002,13 @@
           "exportada": true,
           "params": "cambios: Cambio[]",
           "retorno": "CambioGuardado[]",
-          "linea": 76,
+          "linea": 77,
           "resumen": "Saneados, sin los que no cambian (antes === después) y con el tope aplicado."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "128a9e9ac326"
+      "hash": "2c413901599f"
     },
     {
       "ruta": "apps/asegura/lib/carnets-portal.ts",
@@ -22535,6 +22574,63 @@
       "hash": "05ede135bb96"
     },
     {
+      "ruta": "apps/asegura/lib/documento-firmado-pdf.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El documento firmado en el portal (carta de anulación o de nombramiento de mediador), en PDF para mandarlo a la compañía. Un `.txt` suelto se lee como un borrador; un PDF con el justificante de la firma debajo es lo que una compañía está acostumbrada a archivar. 🚨 La huella SHA-256 de la firma es l",
+      "exporta": [
+        "lineasJustificante",
+        "pdfDocumentoFirmado"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaHoraMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 30
+        },
+        {
+          "nombre": "lineasJustificante",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EvidenciaFirma",
+          "retorno": "string[]",
+          "linea": 40,
+          "resumen": "Las líneas del justificante, puras (lo que se pinta debajo de la carta)."
+        },
+        {
+          "nombre": "paraFuente",
+          "kind": "function",
+          "exportada": false,
+          "params": "font: PDFFont, t: string",
+          "retorno": "string",
+          "linea": 52,
+          "resumen": "Helvetica solo sabe WinAnsi: lo que no está se cambia por «?» en vez de romper el PDF."
+        },
+        {
+          "nombre": "partirLineas",
+          "kind": "function",
+          "exportada": false,
+          "params": "font: PDFFont, texto: string, tam: number, ancho: number",
+          "retorno": "string[]",
+          "linea": 57
+        },
+        {
+          "nombre": "pdfDocumentoFirmado",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, evidencia: EvidenciaFirma",
+          "retorno": "Promise<Uint8Array>",
+          "linea": 80,
+          "resumen": "La carta tal cual y, debajo, el justificante de la firma."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "024d7b2a7f62"
+    },
+    {
       "ruta": "apps/asegura/lib/documento-portal.ts",
       "ambito": "apps/asegura",
       "resumen": "El CLIENTE sube un documento desde `apps/asegura-portal` (hoy, la póliza que acaba de leer el portal) y queda en SU ficha para que Alberto lo vea y lo verifique desde `plataforma` → Documentos — el mismo flujo pedido/recibido/ revisado que ya usa para lo que sube él. Mismo patrón que `lib/contacto-p",
@@ -24100,6 +24196,84 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a5be0a8f05fb"
+    },
+    {
+      "ruta": "apps/asegura/lib/quejas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Registro de quejas y reclamaciones del SAC (Servicio de Atención al Cliente del mediador). El plazo de respuesta que se publica al cliente es de un mes; esto es el reloj que lo vigila. La regla vive en `@central/module-seguros` (queja.ts); aquí solo se lee y se escribe `seguros.queja`. 🚨 `detalle` ",
+      "exporta": [
+        "colaQuejas",
+        "registrarQueja",
+        "cambiarQueja"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 24
+        },
+        {
+          "nombre": "vista",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fila, hoy: string",
+          "retorno": "QuejaVista",
+          "linea": 60
+        },
+        {
+          "nombre": "leer",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, where: 'abiertas' | 'todas' | { id: string } | { año: number }",
+          "retorno": "Promise<Fila[]>",
+          "linea": 85
+        },
+        {
+          "nombre": "colaQuejas",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, todas = false",
+          "retorno": "Promise<ResultadoCola>",
+          "linea": 117,
+          "resumen": "Las abiertas (o todas con `todas`), ordenadas por el RELOJ, más el informe del año en curso."
+        },
+        {
+          "nombre": "registrarQueja",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, cuerpo: Record<string, unknown> | null, actor: string",
+          "retorno": "Promise<ResultadoAlta>",
+          "linea": 145
+        },
+        {
+          "nombre": "cambiarQueja",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, cuerpo: Record<string, unknown> | null, actor: string",
+          "retorno": "Promise<ResultadoCambio>",
+          "linea": 190,
+          "resumen": "Pasar a trámite, resolver (con la respuesta que se dio) o marcar que el cliente desiste."
+        },
+        {
+          "nombre": "historial",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, polizaId: string | null, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 232
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "historial_interno",
+        "polizas",
+        "queja"
+      ],
+      "rutaApi": null,
+      "hash": "050cb18a629c"
     },
     {
       "ruta": "apps/asegura/lib/rate-limit.ts",
@@ -71141,7 +71315,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 79
+          "linea": 80
         },
         {
           "nombre": "fmtFecha",
@@ -71149,7 +71323,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 84,
+          "linea": 85,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -71158,7 +71332,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 134
+          "linea": 135
         },
         {
           "nombre": "CorreduriaClient",
@@ -71166,7 +71340,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 136
+          "linea": 137
         },
         {
           "nombre": "CarteraResumen",
@@ -71174,7 +71348,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 668
+          "linea": 671
         },
         {
           "nombre": "btnMini",
@@ -71182,7 +71356,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 785,
+          "linea": 788,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -71191,12 +71365,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 803
+          "linea": 806
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b95847b5e705"
+      "hash": "ee2f30e13edb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -71242,7 +71416,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "785ba4ca8814"
+      "hash": "061569985d17"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/DeclaradasVencer.tsx",
@@ -73551,6 +73725,86 @@
       ],
       "rutaApi": null,
       "hash": "d14dc7aa30c4"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/Quejas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "Quejas"
+      ],
+      "funciones": [
+        {
+          "nombre": "hoy",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 42
+        },
+        {
+          "nombre": "porqueNoSeLee",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: RespuestaQuejas",
+          "retorno": "string",
+          "linea": 46
+        },
+        {
+          "nombre": "textoEscritura",
+          "kind": "function",
+          "exportada": false,
+          "params": "r: RespuestaEscrituraQueja",
+          "retorno": "string",
+          "linea": 52
+        },
+        {
+          "nombre": "EtiquetaPlazo",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ q }: { q: Queja }",
+          "retorno": null,
+          "linea": 61
+        },
+        {
+          "nombre": "Quejas",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ onContador }: { /** Quejas abiertas (+ ilegibles). `null` = no se ha podido saber; nunca 0. */ onContador?: (n: number | null) => void }",
+          "retorno": null,
+          "linea": 75
+        },
+        {
+          "nombre": "FilaQueja",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ q, ocupado, onCambiar }: { q: Queja ocupado: boolean onCambiar: (m: 'PATCH', c: Record<string, unknown>, hecho: string) => Promise<boolean> }",
+          "retorno": null,
+          "linea": 214
+        },
+        {
+          "nombre": "FormularioRespuesta",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ q, ocupado, onCambiar }: { q: Queja ocupado: boolean onCambiar: (m: 'PATCH', c: Record<string, unknown>, hecho: string) => Promise<boolean> }",
+          "retorno": null,
+          "linea": 260
+        },
+        {
+          "nombre": "FormularioAlta",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ ocupado, onGuardar }: { ocupado: boolean onGuardar: (c: Record<string, unknown>) => Promise<void> }",
+          "retorno": null,
+          "linea": 294
+        }
+      ],
+      "tablas": [
+        "lucide",
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "9caf5bf6563d"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/RadarRecibos.tsx",
@@ -81992,7 +82246,7 @@
         "periodo_inicio"
       ],
       "rutaApi": "/api/correduria/comisiones",
-      "hash": "5298446dd9d2"
+      "hash": "ee7be1cc80ff"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/companias/contactado/route.ts",
@@ -82642,6 +82896,45 @@
       "hash": "169159d1677d"
     },
     {
+      "ruta": "apps/plataforma/app/api/correduria/quejas/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST",
+        "PATCH"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "/api/correduria/quejas — el registro de quejas y reclamaciones del SAC. Esta app no toca la BD de la correduría: reenvía al puerto de asegura (`/api/operador/quejas`) y devuelve el MISMO status y json"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 28
+        },
+        {
+          "nombre": "PATCH",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 37
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/quejas",
+      "hash": "39c580360b86"
+    },
+    {
       "ruta": "apps/plataforma/app/api/correduria/radar-recibos/route.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -83220,7 +83513,7 @@
         "set"
       ],
       "rutaApi": "/api/cron/cima-liq",
-      "hash": "e4d6ccd48101"
+      "hash": "93faf1817564"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/cima-pull-respaldo/route.ts",
@@ -97159,7 +97452,7 @@
           "exportada": true,
           "params": "concepto: string | null",
           "retorno": "string | null",
-          "linea": 55,
+          "linea": 60,
           "resumen": "\"Clave de referencia\" del concepto: el código que identifica a la compañía pagadora en los abonos de la correduría (p.ej. \"M1454\", \"M00171\", \"8/92361\"). Se usa para APRENDER reglas (clave → compañía):"
         },
         {
@@ -97168,7 +97461,7 @@
           "exportada": true,
           "params": "concepto: string | null",
           "retorno": "string | null",
-          "linea": 84,
+          "linea": 93,
           "resumen": "\"Clave de comercio\": token que identifica al COMERCIO en compras de tarjeta / recibos (\"COMPRA EN PETROPRIX GINES\" → \"PETROPRIX\", \"COMPRA EN PAYPAL *IONOS CLOUD\" → \"IONOS\", \"COMPRA EN NETFLIX.COM\" → \""
         },
         {
@@ -97177,7 +97470,7 @@
           "exportada": true,
           "params": "clave: string | null | undefined",
           "retorno": "boolean",
-          "linea": 127,
+          "linea": 140,
           "resumen": "¿Es SEGURA esta clave para aprender una regla clave→destino (que se aplica por substring)? Rechaza las trampa: demasiado cortas, sin ninguna letra útil, números cortos, o compuestas SOLO de términos g"
         },
         {
@@ -97186,13 +97479,13 @@
           "exportada": true,
           "params": "banco: string | null, concepto: string | null, contraparte: string | null",
           "retorno": "MotivoSeguros",
-          "linea": 148,
+          "linea": 161,
           "resumen": "Explica POR QUÉ un ABONO en BBVA quedó como 'seguros': porque el concepto trae el nombre de una aseguradora / liquidación de comisiones ('nombre' → alta confianza), o porque cayó por el fallback de de"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "18617fc354aa"
+      "hash": "80db7c413c7c"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/blog-agente.ts",
@@ -97576,6 +97869,9 @@
       "ambito": "apps/plataforma",
       "resumen": "Cuadre de comisiones de la correduría. PURO: sin BD ni red, testeable con `node --test`. La UI no decide nada; solo pinta lo que devuelve esto. Patrón de referencia: `lib/subastas/resumen-docs.ts`. 🚨 `null` = no ha llegado. `0` = comprobado y es cero. No se colapsan nunca: es la diferencia entre «M",
       "exporta": [
+        "remesaInferida",
+        "remesaEfectiva",
+        "brutoEfectivo",
         "estadoCuadre",
         "totalEsCerrado",
         "cuantosPendientes",
@@ -97584,12 +97880,39 @@
       ],
       "funciones": [
         {
+          "nombre": "remesaInferida",
+          "kind": "function",
+          "exportada": true,
+          "params": "liqBruto: number, liqRetencion: number | null",
+          "retorno": "number",
+          "linea": 54,
+          "resumen": "Lo que debería entrar al banco por una liquidación de bruto NEGATIVO con remesa 0 (convención de signo del EIAC de Occident): |bruto| − retención."
+        },
+        {
+          "nombre": "remesaEfectiva",
+          "kind": "function",
+          "exportada": true,
+          "params": "liqBruto: number | null, liqRetencion: number | null, liqRemesa: number | null",
+          "retorno": "number | null",
+          "linea": 60,
+          "resumen": "La remesa que CUENTA para casar contra el banco: la del extracto o, con bruto negativo y remesa 0 (convención de Occident), la inferida. Es la que usa el cron para casar abonos por importe."
+        },
+        {
+          "nombre": "brutoEfectivo",
+          "kind": "function",
+          "exportada": true,
+          "params": "liqBruto: number | null, liqRemesa: number | null",
+          "retorno": "number | null",
+          "linea": 67,
+          "resumen": "El bruto que va al TOTAL (la cifra de la asesoría): con la misma convención, |bruto|. Sumar el negativo restaría lo que se cobró, mientras la retención del mismo periodo suma en positivo."
+        },
+        {
           "nombre": "estadoCuadre",
           "kind": "function",
           "exportada": true,
           "params": "e: EntradaCuadre",
           "retorno": "EstadoCuadre",
-          "linea": 52
+          "linea": 72
         },
         {
           "nombre": "totalEsCerrado",
@@ -97597,7 +97920,7 @@
           "exportada": true,
           "params": "estados: readonly EstadoCuadre[]",
           "retorno": "boolean",
-          "linea": 90,
+          "linea": 119,
           "resumen": "¿El total anual se puede presentar como CERRADO? Solo si ningún periodo está pendiente de dato o de comprobación. 🚨 Un total con huecos pintado como definitivo es justo la mentira que este módulo evi"
         },
         {
@@ -97606,7 +97929,7 @@
           "exportada": true,
           "params": "estados: readonly EstadoCuadre[]",
           "retorno": "number",
-          "linea": 95,
+          "linea": 124,
           "resumen": "Cuántos periodos están pendientes, para poder decirlo en la UI."
         },
         {
@@ -97615,7 +97938,7 @@
           "exportada": true,
           "params": "mes: string, inicio: string, fin: string",
           "retorno": "boolean",
-          "linea": 107,
+          "linea": 136,
           "resumen": "¿El mes `YYYY-MM` cae dentro del periodo `inicio`..`fin` (fechas `YYYY-MM-DD`)? Hace falta porque el devengo se agrupa por MES natural (cuándo se cobró el recibo) y la liquidación viene con el periodo"
         },
         {
@@ -97624,13 +97947,13 @@
           "exportada": true,
           "params": "mes: string",
           "retorno": "string",
-          "linea": 116,
+          "linea": 145,
           "resumen": "Último día del mes `YYYY-MM`, como `YYYY-MM-DD`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69a7dc8257ee"
+      "hash": "7378e782634c"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/dni-otp.ts",
@@ -106098,6 +106421,156 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "879474d3ad41"
+    },
+    {
+      "ruta": "apps/plataforma/lib/quejas-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "El registro de QUEJAS Y RECLAMACIONES del Servicio de Atención al Cliente (SAC) de la correduría, leído y escrito desde la pantalla de Alberto. ───────────────────────────────────────────────────────────────────────────── 🚨 POR QUÉ ESTE FICHERO EXISTE: el portal y la web publican que el SAC contest",
+      "exporta": [
+        "leerQueja",
+        "interpretarColaQuejas",
+        "interpretarEscrituraQueja",
+        "quejasAbiertas",
+        "quejasVencidas",
+        "contadorQuejas",
+        "textoMotivoQueja",
+        "quejasAsegura",
+        "registrarQuejaAsegura",
+        "cambiarQuejaAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "cadena",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 123
+        },
+        {
+          "nombre": "entero",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 127
+        },
+        {
+          "nombre": "leerQueja",
+          "kind": "function",
+          "exportada": true,
+          "params": "fila: unknown",
+          "retorno": "Queja | null",
+          "linea": 132,
+          "resumen": "Una fila del puerto. `null` = llegó con forma rara → se cuenta como ilegible, no se tira."
+        },
+        {
+          "nombre": "leerInforme",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "InformeSac | null",
+          "linea": 168
+        },
+        {
+          "nombre": "interpretarColaQuejas",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaQuejas",
+          "linea": 201
+        },
+        {
+          "nombre": "interpretarEscrituraQueja",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaEscrituraQueja",
+          "linea": 233
+        },
+        {
+          "nombre": "quejasAbiertas",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: readonly Queja[]",
+          "retorno": "Queja[]",
+          "linea": 253,
+          "resumen": "Las que tienen el reloj corriendo. Una con plazo `null` también: no se sabe, así que cuenta."
+        },
+        {
+          "nombre": "quejasVencidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: readonly Queja[]",
+          "retorno": "Queja[]",
+          "linea": 258,
+          "resumen": "El ÚNICO número que autoriza a decir «hay un plazo incumplido»."
+        },
+        {
+          "nombre": "contadorQuejas",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RespuestaQuejas",
+          "retorno": "number | null",
+          "linea": 266,
+          "resumen": "Lo que sube al contador de «Hoy»: abiertas + ilegibles. `null` si no se ha podido leer —un 0 ahí diría «no hay nadie esperando respuesta»—."
+        },
+        {
+          "nombre": "textoMotivoQueja",
+          "kind": "function",
+          "exportada": true,
+          "params": "motivo: string",
+          "retorno": "string",
+          "linea": 272,
+          "resumen": "Motivo del puerto → castellano de pantalla."
+        },
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 295
+        },
+        {
+          "nombre": "llamar",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string, init: RequestInit",
+          "retorno": "Promise<Reenvio>",
+          "linea": 301
+        },
+        {
+          "nombre": "quejasAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "todas = false",
+          "retorno": "Promise<Reenvio>",
+          "linea": 318,
+          "resumen": "`GET /api/operador/quejas[?todas=1]` — la cola, ordenada por el reloj."
+        },
+        {
+          "nombre": "registrarQuejaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 323,
+          "resumen": "`POST /api/operador/quejas` — registrar una queja recibida."
+        },
+        {
+          "nombre": "cambiarQuejaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 328,
+          "resumen": "`PATCH /api/operador/quejas` — pasar a trámite, resolver o desistir."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "00799ac40991"
     },
     {
       "ruta": "apps/plataforma/lib/rate-limit.ts",
@@ -121128,7 +121601,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "06ecca500938"
+      "hash": "2c8c6effe39b"
     },
     {
       "ruta": "apps/rrhh/app/admin/empleados/[id]/contrato/page.tsx",
@@ -121403,7 +121876,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "b90337f2da62"
+      "hash": "7ca60e618e10"
     },
     {
       "ruta": "apps/rrhh/app/admin/nominas/[periodo]/page.tsx",
@@ -123152,7 +123625,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "aed00eaf4d4c"
+      "hash": "80f72f1ed330"
     },
     {
       "ruta": "apps/rrhh/app/e/page.tsx",
@@ -123338,7 +123811,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2d5ec771cbd3"
+      "hash": "0639bda8445e"
     },
     {
       "ruta": "apps/rrhh/components/AsistentePanel.tsx",
@@ -123399,7 +123872,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ab95d2658b56"
+      "hash": "087f6e31481f"
     },
     {
       "ruta": "apps/rrhh/components/ChatPanel.tsx",
@@ -123522,7 +123995,7 @@
           "nombre": "Wordmark",
           "kind": "function",
           "exportada": true,
-          "params": "{ className = \"\" }: { className?: string }",
+          "params": "{ className = \"\", claro = false }: { className?: string; claro?: boolean }",
           "retorno": null,
           "linea": 2,
           "resumen": "Logotipo tipográfico iarrhh: \"ia\" tinta fuerte, punto teal, \"rrhh\" medio."
@@ -123530,7 +124003,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "77ecad9c7a8b"
+      "hash": "c5e24d6730e1"
     },
     {
       "ruta": "apps/rrhh/lib/ai.ts",
@@ -141050,7 +141523,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "48231341a637"
+      "hash": "14cac65e4df1"
     },
     {
       "ruta": "packages/module-seguros/src/backfill-contacto.ts",
@@ -144581,6 +145054,107 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "01020495ff28"
+    },
+    {
+      "ruta": "packages/module-seguros/src/queja.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Registro de **quejas y reclamaciones** del Servicio de Atención al Cliente (SAC) del mediador. El portal y la web publican que el SAC contesta «en un mes desde la presentación» (`CANALES_RECLAMACION` de `mediador.ts`). Publicar un plazo sin llevar la cuenta de nadie es prometer un reloj que no mira ",
+      "exporta": [
+        "plazoQueja",
+        "diasHastaPlazo",
+        "estadoPlazoQueja",
+        "transicionQuejaValida",
+        "validarAltaQueja",
+        "validarFechaResolucion",
+        "validarCierreQueja",
+        "informeSac"
+      ],
+      "funciones": [
+        {
+          "nombre": "fechaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: string",
+          "retorno": "Date | null",
+          "linea": 84,
+          "resumen": "`YYYY-MM-DD` válido (y que existe en el calendario)."
+        },
+        {
+          "nombre": "plazoQueja",
+          "kind": "function",
+          "exportada": true,
+          "params": "recibidaEl: string",
+          "retorno": "string | null",
+          "linea": 95,
+          "resumen": "Fecha límite para contestar: el mismo día del mes siguiente; si no existe (31/01 → febrero), el último día de ese mes. Mes NATURAL, no 30 días: en un plazo legal contar de más es decir que se está a t"
+        },
+        {
+          "nombre": "diasHastaPlazo",
+          "kind": "function",
+          "exportada": true,
+          "params": "plazoEl: string, hoy: string",
+          "retorno": "number | null",
+          "linea": 108,
+          "resumen": "Días hasta el límite (negativo si ya pasó), contando por fecha de Madrid del día `hoy`."
+        },
+        {
+          "nombre": "estadoPlazoQueja",
+          "kind": "function",
+          "exportada": true,
+          "params": "q: { estado: EstadoQueja; plazoEl: string }, hoy: string",
+          "retorno": "PlazoQueja | null",
+          "linea": 119,
+          "resumen": "En qué punto del reloj está. Lo que ordena la cola es el plazo, no el orden de llegada. El día del límite todavía se está a tiempo (vence al acabar ese día)."
+        },
+        {
+          "nombre": "transicionQuejaValida",
+          "kind": "function",
+          "exportada": true,
+          "params": "de: EstadoQueja, a: EstadoQueja",
+          "retorno": "boolean",
+          "linea": 128,
+          "resumen": "Transiciones permitidas. Una cerrada no se reabre: si el cliente vuelve, es una queja nueva."
+        },
+        {
+          "nombre": "validarAltaQueja",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AltaQueja, hoy: string",
+          "retorno": "string[]",
+          "linea": 144,
+          "resumen": "Errores de un alta, en castellano y para pintarlos tal cual. Vacío = válida."
+        },
+        {
+          "nombre": "validarFechaResolucion",
+          "kind": "function",
+          "exportada": true,
+          "params": "recibidaEl: string, resueltaEl: string, hoy: string",
+          "retorno": "string | null",
+          "linea": 170,
+          "resumen": "La fecha en que se CONTESTÓ, no la del clic: el informe anual mide si se contestó en plazo, y una respuesta dada por correo el día 30 y anotada el 33 no está fuera de plazo. Entre la recepción y hoy."
+        },
+        {
+          "nombre": "validarCierreQueja",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: EstadoQueja, respuesta: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 181,
+          "resumen": "Para cerrarla como RESUELTA hace falta la respuesta que se dio: la norma pide una contestación motivada, y sin texto no queda constancia de cuál fue."
+        },
+        {
+          "nombre": "informeSac",
+          "kind": "function",
+          "exportada": true,
+          "params": "quejas: readonly QuejaInforme[], año: number",
+          "retorno": "InformeSac",
+          "linea": 211,
+          "resumen": "El resumen anual del SAC: cuántas, de qué, cómo acabaron y si se contestó a tiempo. Cuenta las RECIBIDAS en el año (una queja de diciembre resuelta en enero es del año en que entró)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6a4e445cd7e2"
     },
     {
       "ruta": "packages/module-seguros/src/rc-modalidad.ts",
@@ -150843,7 +151417,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3638,
-    "funciones": 11491
+    "archivos": 3645,
+    "funciones": 11544
   }
 }
