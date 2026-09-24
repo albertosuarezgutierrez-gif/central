@@ -171,16 +171,16 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 114 | 16.475 | 10.672.021 | 0 | 0 |
-| `otro` | 112 | 4.123 | 14.743.627 | 7.100.590 | 0 |
-| `mcp:github` | 102 | 3.629 | 3.324.209 | 40.490.048 | 59 |
+| `bash` | 114 | 16.579 | 10.742.559 | 0 | 0 |
+| `otro` | 112 | 4.140 | 14.798.485 | 7.100.590 | 0 |
+| `mcp:github` | 102 | 3.652 | 3.343.598 | 40.490.048 | 59 |
 | `lectura-directa` | 105 | 3.503 | 7.248.846 | 0 | 0 |
-| `escritura` | 89 | 2.323 | 38.444.456 | 0 | 0 |
-| `sql` | 75 | 1.663 | 769.293 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 63 | 777 | 198.072 | 3.171.734 | 10 |
-| `mcp:Vercel` | 27 | 320 | 546.709 | 198.719 | 4 |
+| `escritura` | 89 | 2.325 | 38.451.198 | 0 | 0 |
+| `sql` | 75 | 1.675 | 772.786 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 63 | 785 | 199.144 | 3.171.734 | 10 |
+| `mcp:Vercel` | 27 | 323 | 547.996 | 198.719 | 4 |
 | `mcp:Booking-com` | 10 | 297 | 1.215.858 | 0 | 0 |
-| `mcp:Gmail` | 16 | 229 | 371.581 | 0 | 2 |
+| `mcp:Gmail` | 16 | 231 | 384.434 | 0 | 2 |
 | `mcp:Supabase` | 45 | 156 | 18.126 | 0 | 1 |
 | `agente:general-purpose` | 19 | 70 | 46.612 | 775.683 | 0 |
 | `mcp:Google-Drive` | 7 | 58 | 61.436 | 0 | 2 |
@@ -189,8 +189,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `agente:agente-architect` | 10 | 45 | 39.039 | 1.227.454 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
+| `mcp:Google_Drive` | 6 | 38 | 47.752 | 0 | 9 |
 | `agente:Explore` | 13 | 35 | 16.835 | 726.021 | 0 |
-| `mcp:Google_Drive` | 6 | 35 | 46.845 | 0 | 9 |
 | `agente:agente-mecanico` | 11 | 30 | 30.357 | 490.240 | 0 |
 | `mcp:OpenSEO` | 1 | 30 | 20.595 | 0 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
