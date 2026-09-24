@@ -5,12 +5,33 @@
 // en dos sitios y, cuando asegura no responde, la pantalla apilaba tres
 // recuadros de error distintos diciendo lo mismo.
 
+import type { Retarificabilidad, IncidenciaCalidad } from '@central/module-seguros'
+import { esReglaCalidad } from '@central/module-seguros'
+import { leerRetarificacion } from './ficha-asegura.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 export type MotivoPuerto = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
+
+/** Causa que declara asegura cuando su BD falla (`causa` en la respuesta del puerto).
+ *  Cada una se arregla en un sitio distinto; una causa desconocida se muestra tal cual. */
+export const CAUSAS_ASEGURA: Record<string, string> = {
+  credenciales: 'la base de datos rechaza la contraseña de DATABASE_URL (rol prisma_seguros): la URL pegada en Vercel no lleva la contraseña actual del rol',
+  permisos: 'el rol de DATABASE_URL no tiene permiso sobre el schema seguros',
+  conexion: 'no se llega a la base de datos (host, puerto o pooler)',
+  esquema: 'falta una tabla o columna en el schema seguros',
+  sin_correduria: 'la base responde pero no hay ninguna fila en corredurias',
+  otro: 'error no clasificado; mira los logs de central-asegura en Vercel',
+}
+
+export function describirCausaAsegura(causa: string | undefined): string | null {
+  if (!causa) return null
+  return CAUSAS_ASEGURA[causa] ?? causa
+}
 
 export const MOTIVOS_PUERTO: Record<MotivoPuerto, string> = {
   secreto_rechazado:
     'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos).',
-  asegura_error: 'asegura respondió, pero no pudo leer su base de datos.',
+  asegura_error: 'asegura respondió, pero no pudo leer la cartera en central (DATABASE_URL del proyecto Vercel central-asegura, rol prisma_seguros).',
   respuesta_ilegible: 'la respuesta no tenía la forma esperada.',
   red: 'no se pudo llegar a asegura (timeout, DNS o TLS).',
 }
@@ -25,6 +46,27 @@ function numero(v: unknown): number | null {
 
 function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
+}
+
+/**
+ * El campo `truncado` del puerto de asegura, con TRES estados y no dos.
+ *
+ * 🚨 `r.truncado === true` —que es como se leía hasta hoy en `interpretarSinCanal`—
+ * colapsa el ausente a `false`, o sea a «se miró y la lista está completa». Y
+ * ausente significa lo contrario: es una versión desplegada de asegura anterior
+ * al techo, que **no sabe** si recortó. Afirmar que la lista está entera es
+ * exactamente el recorte mudo movido de sitio.
+ *
+ *   `true`  → la criba tocó su techo: falta lista, y se dice.
+ *   `false` → asegura lo comprobó y no recortó.
+ *   `null`  → no se sabe (asegura no manda el campo).
+ *
+ * Vive aquí y se exporta porque los tres lectores del puerto (vencimientos,
+ * impagados y comisiones) tienen que leerlo IGUAL: dos copias de un tri-estado
+ * divergen en el borde, que es el único sitio donde importa.
+ */
+export function leerTruncado(v: unknown): boolean | null {
+  return typeof v === 'boolean' ? v : null
 }
 
 // ── Buscador ────────────────────────────────────────────────────────────────
@@ -57,6 +99,21 @@ export type Hallazgo = {
    *  `[]` = se miró y no hay. Pintarlos igual diría «no hay duplicados». */
   hermanas: Hermana[] | null
   aviso: { clase: 'duplicado' | 'comparte'; texto: string; preferida: Hermana | null } | null
+  /**
+   * Teléfono y email del titular, para llamar/escribir desde el propio
+   * resultado. 🚨 `null` = asegura no lo manda (versión anterior) o no se pudo
+   * consultar. NO es «no tiene»: por eso la UI no pinta nada en ese caso, en
+   * vez de afirmar que no hay forma de contactar.
+   */
+  contacto: Contacto | null
+}
+
+export type Contacto = {
+  telefono: string | null
+  /** Hay valor guardado y la clave no lo abre. Se dice «cifrado», no «no hay». */
+  telefonoIlegible: boolean
+  email: string | null
+  emailIlegible: boolean
 }
 
 const VITALIDADES = new Set(['viva', 'historica', 'sin_fecha', 'desconocida'])
@@ -66,6 +123,23 @@ const VITALIDADES = new Set(['viva', 'historica', 'sin_fecha', 'desconocida'])
  *  (que no manda el campo) sigue sirviendo la búsqueda. */
 function vitalidad(v: unknown): Vitalidad {
   return typeof v === 'string' && VITALIDADES.has(v) ? (v as Vitalidad) : 'desconocida'
+}
+
+/**
+ * El bloque de contacto del hallazgo. Ausente o con forma rara → `null` («no
+ * se sabe»), NUNCA un objeto a ceros: eso diría «se ha mirado y no tiene»
+ * sobre una ficha que quizá sí tiene teléfono. Es la misma degradación que ya
+ * hace el bloque de recibos con una versión anterior de asegura.
+ */
+export function interpretarContacto(v: unknown): Contacto | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  return {
+    telefono: cadena(o.telefono),
+    telefonoIlegible: o.telefonoIlegible === true,
+    email: cadena(o.email),
+    emailIlegible: o.emailIlegible === true,
+  }
 }
 
 function hermanas(v: unknown): Hermana[] | null {
@@ -143,6 +217,7 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
         ultimoVencimiento: cadena(x.ultimoVencimiento),
         vitalidad: vitalidad(x.vitalidad),
         hermanas: hs,
+        contacto: interpretarContacto(x.contacto),
         aviso:
           textoAviso === null || av == null
             ? null
@@ -202,11 +277,19 @@ export type EnRiesgo = {
   prima: number | null
   importeRecibo: number | null
   fechaRecibo: string | null
-  estado: 'en_plazo' | 'suspendida' | 'extinguida' | 'sin_fecha'
+  /**
+   * Lo que AFIRMA la compañía del recibo: `devuelto` = el cobro falló y lo dice
+   * ella; `pendiente` = no consta cobrado, que NO es lo mismo.
+   * `null` = asegura (versión vieja) no lo manda, o sea que tampoco se sabe.
+   */
+  situacionRecibo: 'devuelto' | 'pendiente' | null
+  estado: 'en_plazo' | 'suspendida' | 'extinguida' | 'sin_fecha' | 'sin_confirmar'
   dias: number | null
   diasParaExtincion: number | null
   accion: string
   retarificable: boolean
+  /** Ramo/motivo/fuente del veredicto. `null`/ausente = asegura (versión vieja) no lo manda. */
+  retarificacion?: Retarificabilidad | null
 }
 
 export type Impagados =
@@ -216,10 +299,14 @@ export type Impagados =
       estado: 'ok'
       filas: EnRiesgo[]
       resumen: {
+        /** Impago CONFIRMADO y pasado el mes: los únicos que se pueden dar
+         *  por «sin cobertura». */
         suspendidas: number
         enPlazo: number
         extinguidas: number
         sinFecha: number
+        /** Vencidos sin noticia de la compañía: se miran, no se llaman. */
+        sinConfirmar: number
         /** `null` = ninguna informa prima. NO es 0,00€. */
         primaEnRiesgo: number | null
         sinPrima: number
@@ -228,9 +315,21 @@ export type Impagados =
       sinRecibosInformados: number
       /** Pendientes que aún no han vencido o no traen fecha. */
       pendientesSinJuzgar: number
+      /**
+       * La criba de recibos de asegura tocó su techo: hay MÁS pólizas sin
+       * cobrar de las que trae esta lista. `null` = asegura (versión vieja) no
+       * lo informa, que **no es** «la lista está completa»: ver `leerTruncado`.
+       */
+      truncado: boolean | null
     }
 
-const ESTADOS_RETENCION = new Set(['en_plazo', 'suspendida', 'extinguida', 'sin_fecha'])
+const ESTADOS_RETENCION = new Set([
+  'en_plazo',
+  'suspendida',
+  'extinguida',
+  'sin_fecha',
+  'sin_confirmar',
+])
 
 export function interpretarImpagados(status: number, json: unknown): Impagados {
   if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
@@ -270,11 +369,19 @@ export function interpretarImpagados(status: number, json: unknown): Impagados {
       prima: numero(o.prima),
       importeRecibo: numero(o.importeRecibo),
       fechaRecibo: cadena(o.fechaRecibo),
+      // Cualquier cosa que no sea exactamente una de las dos situaciones se
+      // queda en `null` («no se sabe»), nunca en `devuelto`: inventarse un
+      // impago confirmado es justo lo que esta pantalla no puede hacer.
+      situacionRecibo:
+        o.situacionRecibo === 'devuelto' || o.situacionRecibo === 'pendiente'
+          ? o.situacionRecibo
+          : null,
       estado: o.estado as EnRiesgo['estado'],
       dias: numero(o.dias),
       diasParaExtincion: numero(o.diasParaExtincion),
       accion: cadena(o.accion) ?? '',
       retarificable: o.retarificable === true,
+      retarificacion: leerRetarificacion(o.retarificacion),
     })
   }
 
@@ -287,6 +394,9 @@ export function interpretarImpagados(status: number, json: unknown): Impagados {
       enPlazo: entero(res.enPlazo) ?? 0,
       extinguidas: entero(res.extinguidas) ?? 0,
       sinFecha: entero(res.sinFecha) ?? 0,
+      // 0 aquí sí es correcto contra una versión vieja de asegura: ese estado
+      // no existía, así que no había ninguno.
+      sinConfirmar: entero(res.sinConfirmar) ?? 0,
       primaEnRiesgo: numero(res.primaEnRiesgo),
       sinPrima: entero(res.sinPrima) ?? 0,
     },
@@ -294,6 +404,9 @@ export function interpretarImpagados(status: number, json: unknown): Impagados {
     // puede decir «ninguna póliza está sin recibos», que es lo tranquilizador.
     sinRecibosInformados: entero(r.sinRecibosInformados) ?? -1,
     pendientesSinJuzgar: entero(r.pendientesSinJuzgar) ?? -1,
+    // Sin `?? false`: un puerto que no manda el campo no ha dicho que la lista
+    // esté entera. El tercer hueco de esta pantalla se declara como los otros dos.
+    truncado: leerTruncado(r.truncado),
   }
 }
 
@@ -307,11 +420,56 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
-    headers: { Authorization: `Bearer ${secret}` },
+    headers: { ...(await cabecerasPuerto(secret)) },
     cache: 'no-store',
-    signal: AbortSignal.timeout(8000),
+    // 🚨 Más que el `pool_timeout` de Prisma en asegura (10 s), a propósito
+    // (19/09/2026): con 8 s, cuando asegura se quedaba sin conexión (P2024) esta
+    // llamada se rendía ANTES de que asegura respondiera «conexion», y la
+    // pantalla decía «no se pudo llegar a asegura (timeout, DNS o TLS)» — una
+    // causa falsa, que manda a mirar el DNS cuando lo roto era el pool. Es el
+    // mismo 15 s que usan actividad, comisiones y compañías.
+    signal: AbortSignal.timeout(15_000),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
+}
+
+async function pedirPost(path: string, body: Record<string, unknown>): Promise<{ status: number; json: unknown } | null> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return null
+  const res = await fetch(`${urlAsegura()}${path}`, {
+    method: 'POST',
+    headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+    signal: AbortSignal.timeout(15_000),
+  })
+  return { status: res.status, json: await res.json().catch(() => null) }
+}
+
+export type DescarteRetencion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo?: string }
+
+/**
+ * `POST /api/operador/retencion/descartar` — quita una póliza de "Hay que
+ * llamar" `dias` días (el puerto acota 1-30, por defecto 10). **NO la marca
+ * como resuelta**: si al caducar el plazo el recibo sigue sin cobrar, vuelve a
+ * salir sola. El `actor` lo pone el servidor (`session.email`), nunca la
+ * petición: es quien firma la anotación en el historial de la ficha.
+ */
+export async function descartarRetencionAsegura(
+  polizaId: string,
+  actor: string,
+  motivo: string | null,
+  dias?: number,
+): Promise<DescarteRetencion> {
+  try {
+    const r = await pedirPost('/api/operador/retencion/descartar', { polizaId, actor, motivo, dias })
+    if (r === null) return { estado: 'sin_configurar' }
+    if (r.status === 200) return { estado: 'ok' }
+    const j = (r.json ?? {}) as Record<string, unknown>
+    return { estado: 'error', motivo: typeof j.motivo === 'string' ? j.motivo : `HTTP ${r.status}` }
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
 }
 
 export async function buscarAsegura(q: string): Promise<Busqueda> {
@@ -378,6 +536,99 @@ export async function lineasCodeoscopic(): Promise<LineasCodeoscopic> {
   }
 }
 
+// ─── Diagnóstico puntual de un proyecto Codeoscopic (12/09/2026) ────────────
+//
+// El Submit real de las 09:41:54 sobre el proyecto 40684815 murió a mitad de
+// ejecución (el candado `submit_in_flight_at` quedó puesto y `cerrarEnvio`
+// nunca corrió), así que no hay confirmación de si Codeoscopic llegó a
+// procesar el `POST .../policy-applications` antes del corte. Reenvía al
+// `GET /api/operador/codeoscopic/proyecto` de asegura (gratis, lectura) para
+// comprobarlo desde AQUÍ — la pantalla de Alberto — en vez de un curl suelto
+// o el portal del vendor.
+
+export type DiagnosticoProyecto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; crudo: unknown }
+
+export function interpretarDiagnosticoProyecto(status: number, json: unknown): DiagnosticoProyecto {
+  if (status === 401) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado !== 'ok') {
+    const mensaje = cadena(o.mensaje) ?? cadena(o.error) ?? `HTTP ${status}`
+    return { estado: 'error', motivo: mensaje }
+  }
+  return { estado: 'ok', crudo: o.crudo ?? null }
+}
+
+export async function diagnosticoProyectoCodeoscopic(projectId: string): Promise<DiagnosticoProyecto> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/proyecto?projectId=${encodeURIComponent(projectId)}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarDiagnosticoProyecto(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ─── Compañías abiertas en Avant2 (¿nos han incluido a Fidelidade?) ─────────
+
+export type CompaniaBuscada =
+  | { estado: 'presente'; id: string; nombre: string; ramos: string[] }
+  | { estado: 'ausente'; companias: string[]; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export type CompaniasCodeoscopic =
+  | { estado: 'sin_configurar'; mensaje: string | null }
+  | { estado: 'error'; motivo: string }
+  | { estado: 'ok'; companias: string[]; buscada: CompaniaBuscada }
+
+/**
+ * Puro. Como `interpretarLineas`: `buscada` degrada a `desconocido` ante
+ * cualquier forma rara. Decir «Fidelidade ausente» sobre un JSON que no se
+ * entiende sería afirmar una ausencia sin haberla medido.
+ */
+export function interpretarCompanias(status: number, json: unknown): CompaniasCodeoscopic {
+  if (status === 401) return { estado: 'error', motivo: 'secreto' }
+  if (typeof json !== 'object' || json === null) return { estado: 'error', motivo: `HTTP ${status}` }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje: cadena(o.mensaje) }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: cadena(o.mensaje) ?? `HTTP ${status}` }
+  const companias = Array.isArray(o.companias)
+    ? o.companias.map((c) => cadena((c as Record<string, unknown>)?.nombre)).filter((x): x is string => x !== null)
+    : []
+  return { estado: 'ok', companias, buscada: leerBuscada(o.buscada) }
+}
+
+function leerBuscada(v: unknown): CompaniaBuscada {
+  if (typeof v !== 'object' || v === null) return { estado: 'desconocido' }
+  const b = v as Record<string, unknown>
+  const ramos = Array.isArray(b.ramos) ? b.ramos.map(cadena).filter((x): x is string => x !== null) : []
+  if (b.estado === 'presente') {
+    const id = cadena(b.id)
+    if (id === null) return { estado: 'desconocido' }
+    return { estado: 'presente', id, nombre: cadena(b.nombre) ?? id, ramos }
+  }
+  if (b.estado === 'ausente') {
+    const companias = Array.isArray(b.companias)
+      ? b.companias.map(cadena).filter((x): x is string => x !== null)
+      : []
+    return { estado: 'ausente', companias, ramos }
+  }
+  return { estado: 'desconocido' }
+}
+
+export async function companiasCodeoscopic(buscar: string): Promise<CompaniasCodeoscopic> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/companias?buscar=${encodeURIComponent(buscar)}`)
+    if (r === null) return { estado: 'sin_configurar', mensaje: null }
+    return interpretarCompanias(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
 export async function impagadosAsegura(): Promise<Impagados> {
   try {
     const r = await pedir('/api/operador/impagados')
@@ -385,5 +636,735 @@ export async function impagadosAsegura(): Promise<Impagados> {
     return interpretarImpagados(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Confirmar dirección (alta/edición de cliente) ───────────────────────────
+//
+// «Escribo la calle y me sale confirmar de una lista» (Alberto, 21/09/2026):
+// mientras se teclea la dirección en `NuevoCliente`/`EditarCliente`, un
+// debounce pregunta al callejero oficial del Catastro (gratis, sin sesión
+// del cliente ni gasto) y devuelve un candidato para aceptar con un clic. NO
+// escribe nada en la cartera: es una consulta al formulario, antes de guardar.
+
+export type CandidatoDireccionConfirmable = { texto: string }
+
+export type ConfirmacionDireccion =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'candidato'; candidato: CandidatoDireccionConfirmable }
+  /** No hay provincia+municipio con los que acotar la pregunta al callejero. */
+  | { estado: 'sin_lugar' }
+  | { estado: 'sin_calle' }
+  | { estado: 'ambigua' }
+  | { estado: 'no_encontrada' }
+
+const ESTADOS_DIRECCION_ASEGURA = new Set(['candidato', 'sin_lugar', 'sin_calle', 'ambigua', 'no_encontrada', 'error'])
+
+export function interpretarConfirmacionDireccion(status: number, json: unknown): ConfirmacionDireccion {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  const estado = cadena(o.estado)
+  if (estado === null || !ESTADOS_DIRECCION_ASEGURA.has(estado)) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  if (estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (estado !== 'candidato') return { estado } as ConfirmacionDireccion
+  const c = o.candidato
+  const texto = typeof c === 'object' && c !== null ? cadena((c as Record<string, unknown>).texto) : null
+  if (texto === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+  return { estado: 'candidato', candidato: { texto } }
+}
+
+export async function confirmarDireccionAsegura(
+  direccion: string,
+  codigoPostal: string,
+  municipio: string,
+): Promise<ConfirmacionDireccion> {
+  const qs = new URLSearchParams({ direccion, codigoPostal, municipio })
+  try {
+    const r = await pedir(`/api/operador/direccion/confirmar?${qs.toString()}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarConfirmacionDireccion(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Seguimiento de sustituciones (cambio de compañía) ───────────────────────
+//
+// Pólizas marcadas `sustituida_at` (se retarificó y se EMITIÓ de verdad con
+// otra compañía) que llevan ≥3 días sin que CIMA confirme la nueva. Alberto,
+// 20/09/2026: «hay que hacerle seguimiento a que el cliente la pague, y eso
+// lo confirma CIMA» — esta cola es ese seguimiento, para que no dependa de
+// acordarse de abrir la ficha de cada cliente que cambió de compañía.
+
+export type SustitucionPendiente = {
+  clienteId: string
+  cliente: string
+  diasSustituida: number
+  sustituidaAt: string
+  polizaVieja: { id: string; aseguradora: string; numeroPoliza: string | null }
+  polizaNueva: { id: string; aseguradora: string; numeroPoliza: string | null } | null
+}
+
+export type Sustituciones =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'ok'; filas: SustitucionPendiente[] }
+
+function leerRelacionadaPuerto(v: unknown): { id: string; aseguradora: string; numeroPoliza: string | null } | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const id = cadena(o.id)
+  if (id === null) return null
+  return { id, aseguradora: cadena(o.aseguradora) ?? '', numeroPoliza: cadena(o.numeroPoliza) }
+}
+
+export function interpretarSustituciones(status: number, json: unknown): Sustituciones {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: 'asegura_error' }
+  const filas = Array.isArray(o.sustituciones)
+    ? o.sustituciones
+        .map((f): SustitucionPendiente | null => {
+          if (typeof f !== 'object' || f === null) return null
+          const x = f as Record<string, unknown>
+          const clienteId = cadena(x.clienteId)
+          const polizaVieja = leerRelacionadaPuerto(x.polizaVieja)
+          if (clienteId === null || polizaVieja === null) return null
+          return {
+            clienteId,
+            cliente: cadena(x.cliente) ?? 'sin nombre',
+            diasSustituida: entero(x.diasSustituida) ?? 0,
+            sustituidaAt: cadena(x.sustituidaAt) ?? '',
+            polizaVieja,
+            polizaNueva: leerRelacionadaPuerto(x.polizaNueva),
+          }
+        })
+        .filter((x): x is SustitucionPendiente => x !== null)
+    : []
+  return { estado: 'ok', filas }
+}
+
+export async function sustitucionesAsegura(): Promise<Sustituciones> {
+  try {
+    const r = await pedir('/api/operador/sustituciones')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarSustituciones(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Clientes sin canal de contacto ──────────────────────────────────────────
+//
+// Quién de la cartera VIVA no tiene ni email ni teléfono. Medido el 02/09/2026:
+// 26 de ~79. A esos el aviso de vencimiento no les llega, no pueden entrar al
+// portal (identifica por email) y —lo que hace que nadie se entere— desde el
+// código se ven igual que un cliente al que sí se avisó.
+//
+// 🚨 Los tres estados aquí NO son de adorno:
+//   · `false` → se miró la columna y NO hay nada: no se le puede escribir.
+//   · `true`  → hay algo guardado. Ojo: mide PRESENCIA, no validez.
+//   · `null`  → asegura no lo informa (versión vieja del puerto, o lista
+//               truncada). Es «no comprobado», y NO se pinta como «no tiene»:
+//               esa confusión es justo la que convierte un hueco en una
+//               afirmación tranquilizadora y falsa.
+//
+// 🚨 Y la ficha del tomador NO es el único sitio donde vive su contacto
+// (04/09/2026, lo cazó Alberto: `Esquiansa` salía «ilocalizable» y su contacto
+// de siempre es Juan Manuel López Benjumea). Hay tres sitios:
+//   1. Su ficha.
+//   2. Su propio dato colgado de la PÓLIZA y nunca copiado a la ficha
+//      (`canalEnPoliza`). El cron de avisos lee la ficha → hoy no le sale nada.
+//   3. Otra persona de su póliza (`contactoDeOtros`): hay a quién llamar.
+//   4. 🚨 Un familiar o representante declarado en `cliente_relaciones`
+//      (`contactoDeAllegados`) — el CUARTO sitio, añadido el 05/09/2026 porque
+//      la lista seguía dando 16 ilocalizables cuando eran 6. Alberto: «grupo
+//      elca ya tiene a pablo y aun aparece», «Studium es una empresa y tiene a
+//      victor y berta». Pablo era la «Administración» de ELCA.
+// ⚖️ Tener a quién llamar NO es poder notificar: el preaviso del art. 22 LCS va
+// al TOMADOR. Por eso 2, 3 y 4 son estados propios y no un «localizable» a secas.
+// 🚨 Pero ESO no los convierte en contactos de segunda: «un cliente puede ser
+// muy mayor y no tiene contacto… es mejor contactar con el familiar» (Alberto,
+// 05/09/2026). Para media cartera el hijo o la administración ES el canal.
+
+export type EstadoCanal =
+  | 'sin_ninguno'
+  | 'contacto_via_tercero'
+  | 'canal_en_poliza'
+  | 'solo_telefono'
+  | 'solo_email'
+  | 'con_ambos'
+  | 'no_comprobado'
+
+/**
+ * Si el cliente verá su cartera al entrar al portal. Distinto de `EstadoCanal`,
+ * que dice si se le puede escribir: un «Localizable» cuyo correo es el
+ * principal de otra ficha no se vincula jamás.
+ */
+export type EstadoPortalCliente = 'puede_entrar' | 'sin_email' | 'ambiguo' | 'resuelve_a_otra'
+
+const ESTADOS_PORTAL: readonly string[] = ['puede_entrar', 'sin_email', 'ambiguo', 'resuelve_a_otra']
+
+/**
+ * 🚨 Un valor que no reconocemos es `null` («no comprobado»), no un estado por
+ * defecto. Un asegura más nuevo que esta pantalla mandaría una etiqueta que
+ * aquí no existe, y elegir la optimista diría que el cliente entra sin que
+ * nadie lo haya mirado.
+ */
+function estadoPortal(v: unknown): EstadoPortalCliente | null {
+  return typeof v === 'string' && ESTADOS_PORTAL.includes(v) ? (v as EstadoPortalCliente) : null
+}
+
+/** Ficha de una persona localizable que aparece en las pólizas del cliente.
+ *  El nombre viene de `clientes` (en claro); un interviniente suelto lleva el
+ *  nombre cifrado y por eso solo cuenta, no se nombra. */
+export type FichaContacto = { clienteId: string; nombre: string }
+
+/** Un familiar o representante declarado, CON su parentesco: quien llama tiene
+ *  que saber si habla con el hijo o con la administración de la empresa. */
+export type FichaAllegado = { clienteId: string; nombre: string; parentesco: string }
+
+export type ClienteCanal = {
+  clienteId: string
+  nombre: string
+  /** `null` = asegura no informó el campo. NO es «no tiene email». */
+  tieneEmail: boolean | null
+  tieneTelefono: boolean | null
+  /** Intervinientes de sus pólizas vivas que son ÉL MISMO y traen contacto.
+   *  `null` = el puerto no lo informa; NO es «no hay». */
+  canalEnPoliza: number | null
+  /** Personas distintas de él, localizables, en sus pólizas vivas. `null` = ídem. */
+  contactoDeOtros: number | null
+  /** Familiares o representantes declarados y localizables. `null` = el puerto
+   *  no lo informa (asegura sin desplegar), que NO es «no tiene a nadie». */
+  contactoDeAllegados: number | null
+  /** Las de arriba que tienen ficha (nombre en claro + enlace). Puede venir más
+   *  corta que `contactoDeOtros`: los sueltos no tienen ficha. */
+  fichasContacto: FichaContacto[]
+  /** Los allegados, con parentesco. */
+  fichasAllegado: FichaAllegado[]
+  /** `null` = asegura no lo informó o no se pudo comprobar. NO es «puede entrar». */
+  portal: EstadoPortalCliente | null
+  estado: EstadoCanal
+  /** `null` = no se contó. NO es «no tiene pólizas» (estaría fuera de la lista). */
+  polizasCima: number | null
+  /** De esas, las que siguen en estado que renueva. `0` = ninguna renueva (no
+   *  hay aviso que mandarle); `null` = el puerto no lo informa, que NO es 0. */
+  polizasQueRenuevan: number | null
+  /** Renovación más cercana. `null` = no la hay a futuro o no se sabe; los dos
+   *  contadores de al lado dicen cuál de las dos cosas es. */
+  proximoVencimiento: string | null
+  polizasSinFecha: number | null
+  /** `null` = ninguna póliza suya informa prima. NUNCA 0,00€. */
+  prima: number | null
+  polizasSinPrima: number | null
+}
+
+export type SinCanal =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | {
+      estado: 'ok'
+      filas: ClienteCanal[]
+      resumen: {
+        /** Todos `null` = no comprobado (lista truncada o puerto viejo). */
+        vivos: number | null
+        conEmail: number | null
+        conTelefono: number | null
+        conAlguno: number | null
+        /** Sin contacto EN SU FICHA. No es lo mismo que ilocalizable. */
+        sinNinguno: number | null
+        /** 🚨 El titular: ni ficha, ni póliza, ni nadie. `null` = no comprobado. */
+        ilocalizables: number | null
+        /** Sin nada en la ficha pero con por dónde tirar. */
+        rescatables: number | null
+        /** Ilocalizables cuyas pólizas ya NO renuevan: no hay nada que avisarles. */
+        ilocalizablesSinRenovacion: number | null
+        /** Cuántos entrarían y no verían sus pólizas. `null` = no comprobado. */
+        noVenSuCartera: number | null
+      }
+      truncado: boolean
+    }
+
+/** Tri-estado de verdad: un campo ausente es `null` («no se informó»), no
+ *  `false`. Con `=== true` a secas, un puerto que no manda el campo diría que
+ *  TODOS están sin email. */
+function booleano(v: unknown): boolean | null {
+  return typeof v === 'boolean' ? v : null
+}
+
+/** El estado se DERIVA de dónde hay contacto; no se cree el que venga en el
+ *  JSON. Si falta cualquiera de las cuatro medidas, el resultado es
+ *  `no_comprobado`.
+ *
+ *  🚨 Ojo al último bloque: sin saber lo de la póliza NO se puede declarar a
+ *  nadie ilocalizable. Un puerto viejo (que no manda esos dos recuentos) dejaba
+ *  a los 19 pintados como «no les llega NADA», y de 19 solo 15 lo eran. Ante el
+ *  hueco, el estado conservador es «no comprobado», nunca la afirmación. */
+export function derivarEstadoCanal(
+  email: boolean | null,
+  telefono: boolean | null,
+  canalEnPoliza: number | null,
+  contactoDeOtros: number | null,
+  contactoDeAllegados: number | null,
+): EstadoCanal {
+  if (email === null || telefono === null) return 'no_comprobado'
+  if (email && telefono) return 'con_ambos'
+  if (email) return 'solo_email'
+  if (telefono) return 'solo_telefono'
+  // Sin los TRES recuentos no se puede declarar a nadie ilocalizable. Una
+  // versión de asegura anterior al 05/09/2026 no manda `contactoDeAllegados`:
+  // entonces la pantalla dice «no comprobado» y se cura sola al desplegar, en
+  // vez de repetir el error que trajo aquí (afirmar 16 sobre 6).
+  if (canalEnPoliza === null || contactoDeOtros === null || contactoDeAllegados === null) {
+    return 'no_comprobado'
+  }
+  if (canalEnPoliza > 0) return 'canal_en_poliza'
+  if (contactoDeOtros > 0 || contactoDeAllegados > 0) return 'contacto_via_tercero'
+  return 'sin_ninguno'
+}
+
+/** Las fichas nombradas. Una entrada sin id o con el nombre cifrado (`v1:`) se
+ *  descarta: sigue contada en `contactoDeOtros`, pero no se inventa un nombre. */
+function leerFichasContacto(v: unknown): FichaContacto[] {
+  if (!Array.isArray(v)) return []
+  const out: FichaContacto[] = []
+  for (const f of v) {
+    if (typeof f !== 'object' || f === null) continue
+    const o = f as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    const nombre = cadena(o.nombre)
+    if (id === null || nombre === null || nombre.startsWith('v1:')) continue
+    out.push({ clienteId: id, nombre })
+  }
+  return out
+}
+
+/** Ídem, conservando el parentesco. Sin parentesco legible se descarta: sigue
+ *  contado en `contactoDeAllegados`, pero no se dice «llama a X» a secas. */
+function leerFichasAllegado(v: unknown): FichaAllegado[] {
+  if (!Array.isArray(v)) return []
+  const out: FichaAllegado[] = []
+  for (const f of v) {
+    if (typeof f !== 'object' || f === null) continue
+    const o = f as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    const nombre = cadena(o.nombre)
+    const parentesco = cadena(o.parentesco)
+    if (id === null || nombre === null || parentesco === null || nombre.startsWith('v1:')) continue
+    out.push({ clienteId: id, nombre, parentesco })
+  }
+  return out
+}
+
+export function interpretarSinCanal(status: number, json: unknown): SinCanal {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  const r = json as Record<string, unknown>
+  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (r.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (r.estado !== 'ok' || !Array.isArray(r.filas)) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+
+  const filas: ClienteCanal[] = []
+  for (const f of r.filas) {
+    if (typeof f !== 'object' || f === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const o = f as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    const nombre = cadena(o.nombre)
+    // Sin id no hay ficha a la que ir y sin nombre no se sabe a quién llamar:
+    // una fila así no es «un cliente sin canal», es una respuesta rota.
+    if (id === null || nombre === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const tieneEmail = booleano(o.tieneEmail)
+    const tieneTelefono = booleano(o.tieneTelefono)
+    const canalEnPoliza = entero(o.canalEnPoliza)
+    const contactoDeOtros = entero(o.contactoDeOtros)
+    const contactoDeAllegados = entero(o.contactoDeAllegados)
+    filas.push({
+      clienteId: id,
+      nombre,
+      tieneEmail,
+      tieneTelefono,
+      canalEnPoliza,
+      contactoDeOtros,
+      contactoDeAllegados,
+      fichasContacto: leerFichasContacto(o.fichasContacto),
+      fichasAllegado: leerFichasAllegado(o.fichasAllegado),
+      portal: estadoPortal(o.portal),
+      estado: derivarEstadoCanal(
+        tieneEmail, tieneTelefono, canalEnPoliza, contactoDeOtros, contactoDeAllegados,
+      ),
+      polizasCima: entero(o.polizasCima),
+      polizasQueRenuevan: entero(o.polizasQueRenuevan),
+      proximoVencimiento: cadena(o.proximoVencimiento),
+      polizasSinFecha: entero(o.polizasSinFecha),
+      prima: numero(o.prima),
+      polizasSinPrima: entero(o.polizasSinPrima),
+    })
+  }
+
+  const res = (typeof r.resumen === 'object' && r.resumen !== null ? r.resumen : {}) as Record<string, unknown>
+  return {
+    estado: 'ok',
+    filas,
+    // `entero()` ya devuelve null cuando falta: aquí NO se colapsa a 0, porque
+    // «0 clientes ilocalizables» es la frase tranquilizadora que no se ha medido.
+    resumen: {
+      vivos: entero(res.vivos),
+      conEmail: entero(res.conEmail),
+      conTelefono: entero(res.conTelefono),
+      conAlguno: entero(res.conAlguno),
+      sinNinguno: entero(res.sinNinguno),
+      ilocalizables: entero(res.ilocalizables),
+      rescatables: entero(res.rescatables),
+      ilocalizablesSinRenovacion: entero(res.ilocalizablesSinRenovacion),
+      noVenSuCartera: entero(res.noVenSuCartera),
+    },
+    truncado: r.truncado === true,
+  }
+}
+
+export async function sinCanalAsegura(): Promise<SinCanal> {
+  try {
+    const r = await pedir('/api/operador/sin-canal')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarSinCanal(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ─── Calidad del dato: reglas de la cartera en vigor ──────────────────────────
+
+export type CalidadDato = { estado: 'sin_configurar' } | { estado: 'error'; motivo: MotivoPuerto } | {
+  estado: 'ok'
+  incidencias: IncidenciaCalidad[]
+  truncado: boolean | null
+}
+
+export function interpretarCalidad(status: number, json: unknown): CalidadDato {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  const r = json as Record<string, unknown>
+  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (r.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (r.estado !== 'ok' || !Array.isArray(r.incidencias)) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+
+  const incidencias: IncidenciaCalidad[] = []
+  for (const f of r.incidencias) {
+    if (typeof f !== 'object' || f === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const o = f as Record<string, unknown>
+    const regla = o.regla
+    const clienteId = cadena(o.clienteId)
+    // Sin regla del catálogo o sin ficha a la que llevar, la fila no se entiende: la lista entera
+    // pasa a error antes que pintar una incidencia a medias.
+    if (!esReglaCalidad(regla) || !clienteId) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    // Las demás se pueden leer tranquilamente con helpers que devuelven null:
+    // la regla existe y eso basta para la agrupación.
+    incidencias.push({
+      regla,
+      clienteId,
+      cliente: cadena(o.cliente),
+      polizaId: cadena(o.polizaId),
+      numeroPoliza: cadena(o.numeroPoliza),
+      compania: cadena(o.compania),
+      dato: cadena(o.dato),
+      relacionadoId: cadena(o.relacionadoId),
+    })
+  }
+
+  return {
+    estado: 'ok',
+    incidencias,
+    truncado: leerTruncado(r.truncado),
+  }
+}
+
+export async function calidadAsegura(): Promise<CalidadDato> {
+  try {
+    const r = await pedir('/api/operador/calidad')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarCalidad(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ─── Backfill del blind index de DNI (mantenimiento) ─────────────────────────
+//
+// EL PORQUÉ (03/09/2026, PR #2206): la cartera arrastra 556 grupos de fichas
+// duplicadas y el criterio fuerte para fusionarlas —mismo NIF— está ciego en
+// **15.800 fichas que tienen el DNI guardado y `dni_lookup_hash` a NULL**. Sin
+// ese hash no se puede ni preguntar si dos fichas son la misma persona.
+//
+// 🚨 Y el arreglo NO es un UPDATE: `uq_clientes_dni_lookup_hash` es UNIQUE, así
+// que la segunda ficha de cada DNI repetido revienta al escribir. **El choque no
+// es un estorbo, es el hallazgo.** De ahí los tres pasos, en este orden:
+//   1. CALCULAR en seco (esto, un GET que no escribe nada)
+//   2. FUSIONAR los choques por lote SQL, con los nombres delante de Alberto
+//   3. ESCRIBIR los hashes, ya sin conflicto posible
+//
+// ⚠️ CORREGIDO el 05/09/2026: aquí ponía que el paso 3 no se expone «mientras
+// queden choques, porque un botón que promete escribir y revienta a la mitad es
+// peor que no tenerlo». **La escritura no revienta**: el plan clasifica cada
+// ficha antes de tocar nada y el POST sólo escribe las `rellenable`, así que la
+// segunda ficha de un DNI repetido ni siquiera llega al UPDATE. Con esa frase, y
+// sin botón en ninguna pantalla, «hacer el backfill» no lo podía hacer nadie:
+// exigía un `curl` con el secreto de operador a mano. Fusionar primero sigue
+// siendo mejor —cada fusión convierte un choque en un hash más que se puede
+// escribir— pero es más cobertura, no un requisito.
+//
+// 🚨 Y hay un cuarto estado que no estaba: el DNI CENTINELA. Un documento con
+// letra correcta tecleado en la ficha de varias personas distintas (medido: 20
+// fichas con 20 nombres sin relación y 19 correos distintos). No es un
+// duplicado, así que no se fusiona; y no se escribe NUNCA, tampoco en los
+// `lead` —que son 14.990 de las 15.092 sin hash— donde el índice único no
+// protege y el hash entraría sin que nada fallase.
+
+export type PlanBackfillDni =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | {
+      estado: 'ok'
+      /** Fichas con DNI y sin hash que se pueden escribir sin chocar con nadie. */
+      rellenables: number
+      /** Fichas en un DNI repetido: NO se escriben, se fusionan antes. */
+      enChoque: number
+      /** Grupos de fichas que comparten DNI. Esto es la lista de fusiones. */
+      grupos: number
+      /** DNI que no descifra o que no parece un documento. NO es «sin DNI». */
+      ilegibles: number
+      /** Fichas de un DNI centinela: no se escriben ni se fusionan, se corrigen. */
+      compartidas: number
+      /** Cuántos DNI distintos están así. */
+      gruposCompartidos: number
+      yaTiene: number
+      sinDni: number
+      total: number
+    }
+
+export async function planBackfillDni(): Promise<PlanBackfillDni> {
+  try {
+    const r = await pedir('/api/operador/backfill-dni')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarPlanBackfill(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** Puro: separado para poder probarlo sin red. */
+export function interpretarPlanBackfill(status: number, json: unknown): PlanBackfillDni {
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos)' }
+  }
+  const j = (json ?? {}) as Record<string, unknown>
+  if (j.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (j.estado !== 'ok') {
+    const causa = typeof j.causa === 'string' ? j.causa : typeof j.motivo === 'string' ? j.motivo : `respuesta ${status}`
+    return { estado: 'error', motivo: causa }
+  }
+  const r = (j.resumen ?? {}) as Record<string, unknown>
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  const choques = Array.isArray(j.choques) ? j.choques.length : 0
+  const compartidos = Array.isArray(j.compartidos) ? j.compartidos.length : 0
+  return {
+    estado: 'ok',
+    rellenables: n(r.rellenables),
+    enChoque: n(r.enChoque),
+    grupos: choques,
+    ilegibles: n(r.ilegibles),
+    compartidas: n(r.compartidos),
+    gruposCompartidos: compartidos,
+    yaTiene: n(r.yaTiene),
+    sinDni: n(r.sinDni),
+    total: n(r.total),
+  }
+}
+
+// ─── Paso 3: ESCRIBIR los hashes ─────────────────────────────────────────────
+
+export type EscrituraBackfillDni =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | {
+      estado: 'ok'
+      /** Hashes escritos en esta pasada. */
+      escritos: number
+      /** Cuántos quedan. `0` = terminado. */
+      restantes: number
+      /** Fichas que el plan daba por escribibles y la BD rechazó. Se dicen. */
+      fallidos: number
+    }
+
+/**
+ * Lanza la escritura. `limite` la parte en tandas: descifrar y hashear 32.000
+ * fichas ya consume parte de los 300 s del endpoint de asegura, así que una
+ * pasada sin tope puede no llegar. Se vuelve a pulsar hasta `restantes: 0`.
+ */
+export async function escribirBackfillDni(limite?: number): Promise<EscrituraBackfillDni> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/backfill-dni`, {
+      method: 'POST',
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
+      body: JSON.stringify({ confirmar: 'escribir', limite }),
+      cache: 'no-store',
+      // Muy por encima de los 8 s del resto del puerto: esto descifra la cartera
+      // entera antes de escribir. El endpoint de asegura declara `maxDuration = 300`.
+      signal: AbortSignal.timeout(290_000),
+    })
+    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    return interpretarEscrituraBackfill(res.status, json)
+  } catch {
+    // 🚨 Un timeout aquí NO dice que no se haya escrito nada: la transacción del
+    // otro lado puede haber terminado. Se dice así y se vuelve a mirar el plan.
+    return { estado: 'error', motivo: 'se cortó la conexión antes de recibir el resultado — vuelve a cargar la página para ver cuánto se escribió' }
+  }
+}
+
+/**
+ * Puro: separado para poder probarlo sin red. Para el backfill de CONTACTO la
+ * respuesta trae además `derivadosEscritos`/`derivadosRestantes` (las mitades
+ * del email); se suman a `escritos`/`restantes` para que el botón siga
+ * ofreciéndose mientras quede algo, sea el hash principal o una mitad.
+ */
+export function interpretarEscrituraBackfill(status: number, json: unknown): EscrituraBackfillDni {
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos)' }
+  }
+  const j = (json ?? {}) as Record<string, unknown>
+  if (j.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (j.estado !== 'ok') {
+    const causa = typeof j.causa === 'string' ? j.causa : typeof j.motivo === 'string' ? j.motivo : `respuesta ${status}`
+    return { estado: 'error', motivo: causa }
+  }
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  return {
+    estado: 'ok',
+    escritos: n(j.escritos) + n(j.derivadosEscritos),
+    restantes: n(j.restantes) + n(j.derivadosRestantes),
+    fallidos: Array.isArray(j.fallidos) ? j.fallidos.length : 0,
+  }
+}
+
+// ─── Backfill del índice de CONTACTO (email + teléfono) ──────────────────────
+// Hermano del de DNI, sin fusiones de por medio: lo único que choca es el email
+// de ficha (el índice de la ficha es UNIQUE), y ésos se cuentan y no
+// se escriben. Por qué existe (08/09/2026): 250 fichas con email y 91 con
+// teléfono tenían el dato y no el hash, y el buscador sólo encuentra por hash.
+
+export type CuentaBackfillContacto = {
+  total: number
+  yaTiene: number
+  sinDato: number
+  /** El valor está guardado pero no descifra. NO es «sin dato». */
+  ilegibles: number
+  /** Descifra pero no produce hash (un teléfono sin dígitos). Tampoco es «sin dato». */
+  noHasheables: number
+  rellenables: number
+  /** Fichas que comparten email con otra. Sólo puede ser > 0 en email. */
+  enChoque: number
+  /** Solo email: filas a las que les falta el índice del dominio o del usuario (búsqueda parcial). */
+  derivadosPendientes: number
+}
+
+export type PlanBackfillContacto =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+  | {
+      estado: 'ok'
+      email: CuentaBackfillContacto
+      telefono: CuentaBackfillContacto
+      /** Grupos de fichas que comparten email. */
+      grupos: number
+      /** Total de filas que se van a escribir (los dos campos, ficha + hijas). */
+      rellenables: number
+      /** Filas de email a las que se les va a escribir alguna mitad. */
+      mitadesPendientes: number
+    }
+
+export async function planBackfillContacto(): Promise<PlanBackfillContacto> {
+  try {
+    const r = await pedir('/api/operador/backfill-contacto')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarPlanBackfillContacto(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+/** Puro: separado para poder probarlo sin red. */
+export function interpretarPlanBackfillContacto(status: number, json: unknown): PlanBackfillContacto {
+  if (status === 401 || status === 403) {
+    return { estado: 'error', motivo: 'asegura rechaza el secreto (ASEGURA_OPERADOR_SECRET no coincide entre los dos proyectos)' }
+  }
+  const j = (json ?? {}) as Record<string, unknown>
+  if (j.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (j.estado !== 'ok') {
+    const causa = typeof j.causa === 'string' ? j.causa : typeof j.motivo === 'string' ? j.motivo : `respuesta ${status}`
+    return { estado: 'error', motivo: causa }
+  }
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0)
+  const cuenta = (v: unknown): CuentaBackfillContacto => {
+    const c = (v ?? {}) as Record<string, unknown>
+    return {
+      total: n(c.total),
+      yaTiene: n(c.yaTiene),
+      sinDato: n(c.sinDato),
+      ilegibles: n(c.ilegibles),
+      noHasheables: n(c.noHasheables),
+      rellenables: n(c.rellenables),
+      enChoque: n(c.enChoque),
+      derivadosPendientes: n(c.derivadosPendientes),
+    }
+  }
+  const resumen = (j.resumen ?? {}) as Record<string, unknown>
+  const email = cuenta(resumen.email)
+  const telefono = cuenta(resumen.telefono)
+  return {
+    estado: 'ok',
+    email,
+    telefono,
+    grupos: Array.isArray(j.choques) ? j.choques.length : 0,
+    rellenables: n(j.restantes),
+    mitadesPendientes: n(j.derivadosRestantes),
+  }
+}
+
+/** Lanza la escritura, por tandas. Misma forma de respuesta que la del DNI. */
+export async function escribirBackfillContacto(limite?: number): Promise<EscrituraBackfillDni> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/backfill-contacto`, {
+      method: 'POST',
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
+      body: JSON.stringify({ confirmar: 'escribir', limite }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(290_000),
+    })
+    const json = (await res.json().catch(() => null)) as Record<string, unknown> | null
+    return interpretarEscrituraBackfill(res.status, json)
+  } catch {
+    return { estado: 'error', motivo: 'se cortó la conexión antes de recibir el resultado — vuelve a cargar la página para ver cuánto se escribió' }
   }
 }

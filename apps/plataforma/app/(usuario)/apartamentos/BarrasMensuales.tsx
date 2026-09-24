@@ -22,14 +22,20 @@ export default function BarrasMensuales({ titulo, badge, serie }: { titulo: stri
           <span style={{ fontSize: '14px', fontWeight: 700, color: 'var(--text)' }}>📊 {titulo}</span>
           {badge && <span style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--bg)', padding: '2px 8px', borderRadius: '20px' }}>{badge}</span>}
         </div>
-        <div style={{ display: 'flex', gap: '16px', fontSize: '12px' }}>
+        <div style={{ display: 'flex', gap: '16px', fontSize: '12px', flexWrap: 'wrap' }}>
           <span style={{ color: 'var(--positive)' }}>● Ingresos {fmtEur(totalIng)}</span>
           <span style={{ color: 'var(--negative)' }}>● Gastos {fmtEur(totalGas)}</span>
           <span style={{ fontWeight: 700, color: neto >= 0 ? 'var(--positive)' : 'var(--negative)' }}>Neto {fmtEur(neto)}</span>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '140px' }}>
+      {/* Doce columnas mensuales cuyo min-content (mes + importe) suma ~513 px: por debajo de eso
+          el flex NO se encoge, así que sin scroll propio la gráfica arrastraba la página entera en
+          móvil. Medido el 02/09/2026: en 320 px el contenedor pasaba de 534 a 513 con
+          `minmax(0,1fr)` en el grid de arriba, o sea seguía rompiendo. El scroll va aquí, que es
+          donde está el contenido que de verdad no cabe. */}
+      <div style={{ overflowX: 'auto' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: '6px', height: '140px', minWidth: 480 }}>
         {serie.map(m => {
           const net = m.ingresos - m.gastos
           return (
@@ -43,6 +49,7 @@ export default function BarrasMensuales({ titulo, badge, serie }: { titulo: stri
             </div>
           )
         })}
+        </div>
       </div>
     </div>
   )

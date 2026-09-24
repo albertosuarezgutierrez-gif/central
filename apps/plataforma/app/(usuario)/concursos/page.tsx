@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores, COMUNIDADES, provinciasDeComunidad, encajeConcurso } from '@central/module-concursos';
 import type { Biblioteca } from '@central/module-concursos';
 import { eur as fmtEur } from '@/lib/dinero';
+import { PageHeader, ThinBar } from '@/components/ui';
 
 const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'var(--border)', muted:'var(--muted)' };
 const FONT = 'Nunito, system-ui, sans-serif';
@@ -68,12 +69,14 @@ export default function Concursos() {
 
   return (
     <div style={{ fontFamily:FONT, color:C.text, background:C.bg, minHeight:'100vh', padding:16 }}>
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', maxWidth:760 }}>
-        <h1 style={{ fontWeight:900, fontSize:24, margin:'0 0 4px' }}>Concursos públicos</h1>
-        <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
-          <a href="/concursos/perfil" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>🏢 Perfil de empresa →</a>
-          <a href="/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>📚 Mi biblioteca →</a>
-        </div>
+      <div style={{ maxWidth:760 }}>
+        <PageHeader
+          titulo="Concursos públicos"
+          acciones={<>
+            <a href="/concursos/perfil" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>🏢 Perfil de empresa →</a>
+            <a href="/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>📚 Mi biblioteca →</a>
+          </>}
+        />
       </div>
       <p style={{ color:C.muted, margin:'0 0 16px', fontSize:14 }}>Sube el pliego (PDF) o pega su texto: el agente extrae la ficha, decide si te conviene presentarte y monta el checklist de documentos.</p>
 
@@ -274,8 +277,8 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
           <div style={{ fontSize:13, fontWeight:800, marginBottom:6 }}>
             Cobertura técnica: {memoria.cobertura.puntos_cubiertos}/{memoria.cobertura.puntos_totales} puntos ({memoria.cobertura.pct}%)
           </div>
-          <div style={{ height:8, background:C.soft, borderRadius:4, overflow:'hidden', marginBottom:10 }}>
-            <div style={{ width:`${memoria.cobertura.pct}%`, height:'100%', background:C.indigo }} />
+          <div style={{ marginBottom:10 }}>
+            <ThinBar pct={memoria.cobertura.pct} alto={8} track={C.soft} color={C.indigo} />
           </div>
           {(memoria.memoria?.secciones ?? []).map((s:any,i:number)=>(
             <details key={i} style={{ marginBottom:8 }}>

@@ -7,8 +7,33 @@ import {
   leerFecha,
   emparejar,
   hogarDisponible,
+  CATALOGOS_HOGAR,
+  esCatalogoHogar,
+  catalogoHogar,
   type Opcion,
 } from './catalogos.ts'
+import type { ConfigCodeoscopic } from './config.ts'
+
+// ─── Catálogos de hogar: lista cerrada, nada de paths con texto libre ───────
+
+test('los diez catálogos de hogar del portal están en la lista, y solo esos', () => {
+  assert.deepEqual([...CATALOGOS_HOGAR].sort(), [
+    'alarm-types', 'build-materials', 'build-qualities', 'door-types', 'locations',
+    'occupancy-types', 'person-roles', 'property-types', 'settlement-types', 'uses',
+  ])
+  assert.ok(esCatalogoHogar('uses'))
+  assert.ok(!esCatalogoHogar('recommend-limits'), 'recommend-limits es POST: no es un catálogo')
+  assert.ok(!esCatalogoHogar('../insurances'))
+  assert.ok(!esCatalogoHogar(42))
+})
+
+test('🚫 un nombre fuera de la lista se rechaza ANTES de tocar la red', async () => {
+  const config = {} as ConfigCodeoscopic // si se llegara a la red, reventaría por otro sitio
+  await assert.rejects(
+    () => catalogoHogar(config, '../insurances' as never),
+    /codeoscopic_catalogo_hogar_desconocido/,
+  )
+})
 
 // ─── ¿Tarifica hogar? Tres estados ──────────────────────────────────────────
 
@@ -119,4 +144,66 @@ test('si el catálogo tiene el mismo nombre dos veces NO se elige uno a ciegas',
 test('normalizarTexto quita tildes de verdad', () => {
   assert.equal(normalizarTexto('Alcalá de Guadaíra'), 'alcala de guadaira')
   assert.equal(normalizarTexto('  CÓRDOBA '), 'cordoba')
+})
+
+// ─── Hogar: defectos del portal y tipo de vía ────────────────────────────────
+
+import { DEFECTOS_HOGAR, elegirDefecto, pareceOpcionPropietario } from './catalogos.ts'
+
+test('elegirDefecto: el id del ejemplo del portal si el catálogo lo trae; si no, la primera; vacío → null', () => {
+  const cat: Opcion[] = [{ id: 'ConnectedAlarm', nombre: 'Alarma conectada' }, { id: 'NoAlarm', nombre: 'Sin alarma' }]
+  assert.deepEqual(elegirDefecto(cat, DEFECTOS_HOGAR['alarm-types']), { id: 'NoAlarm', nombre: 'Sin alarma' })
+  assert.deepEqual(elegirDefecto(cat, 'NoExiste'), cat[0])
+  assert.deepEqual(elegirDefecto(cat, null), cat[0])
+  assert.equal(elegirDefecto([], 'NoAlarm'), null)
+})
+
+test('los defectos cubren los nueve desplegables obligatorios del HomeRisk y ninguno más', () => {
+  assert.deepEqual(Object.keys(DEFECTOS_HOGAR).sort(), [
+    'alarm-types', 'build-materials', 'build-qualities', 'door-types', 'locations',
+    'occupancy-types', 'property-types', 'settlement-types', 'uses',
+  ])
+})
+
+test('pareceOpcionPropietario: por id o por nombre, sin tildes; lo demás no', () => {
+  assert.ok(pareceOpcionPropietario({ id: 'Owner', nombre: 'Propietario' }))
+  assert.ok(pareceOpcionPropietario({ id: 'X', nombre: 'Dueño' }))
+  assert.ok(!pareceOpcionPropietario({ id: 'Tenant', nombre: 'Inquilino' }))
+  assert.ok(!pareceOpcionPropietario(null))
+})
+
+// ─── Compañías abiertas (¿nos han incluido a Fidelidade?) ───────────────────
+
+import { companiaDisponible, mencionaCompania } from './catalogos.ts'
+
+test('compañía presente: devuelve el id EXACTO del vendor y su nombre', () => {
+  const r = companiaDisponible(
+    [{ id: 'reale', nombre: 'Reale Seguros' }, { id: 'fid', nombre: 'Fidelidade Seguros' }],
+    'fidelidade',
+  )
+  assert.deepEqual(r, { estado: 'presente', id: 'fid', nombre: 'Fidelidade Seguros' })
+})
+
+test('🚨 lista de compañías vacía NO es «Fidelidade ausente»: es desconocido', () => {
+  assert.deepEqual(companiaDisponible([], 'fidelidade'), { estado: 'desconocido' })
+})
+
+test('lista con compañías pero sin la buscada: ausente, y se dice cuáles hay', () => {
+  const r = companiaDisponible([{ id: 'reale', nombre: 'Reale' }], 'Fidelidade')
+  assert.deepEqual(r, { estado: 'ausente', companias: ['Reale'] })
+})
+
+test('la búsqueda ignora mayúsculas y tildes, y también mira el id', () => {
+  assert.equal(companiaDisponible([{ id: 'FIDELIDADE', nombre: 'E0118' }], 'fidelidáde').estado, 'presente')
+})
+
+test('mencionaCompania encuentra la compañía anidada en un producto, venga donde venga', () => {
+  const producto = { id: 'p1', name: 'Hogar Completo', vendor: { code: 'E0118', name: 'FIDELIDADE' } }
+  assert.equal(mencionaCompania([producto], 'fidelidade'), true)
+  assert.equal(mencionaCompania([producto], 'reale'), false)
+})
+
+test('mencionaCompania NO mira las claves ni acepta búsqueda vacía', () => {
+  assert.equal(mencionaCompania({ fidelidade: 'x' }, 'fidelidade'), false)
+  assert.equal(mencionaCompania({ a: 'Fidelidade' }, ''), false)
 })

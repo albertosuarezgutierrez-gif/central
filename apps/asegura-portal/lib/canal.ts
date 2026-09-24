@@ -1,7 +1,7 @@
 /**
  * Puerto de canal: por dónde sale el código de acceso.
  *
- * WhatsApp es el canal que quiere el negocio, pero la WABA de Grupo Asegura NO
+ * WhatsApp es el canal que quiere el negocio, pero la WABA de Grupo ASegura NO
  * existe todavía. Cablearlo directamente habría dejado esta fase entera
  * bloqueada esperando a Meta. Con el puerto, el día que haya número se añade
  * `canal-whatsapp.ts` y se registra aquí: ni una línea del resto cambia.

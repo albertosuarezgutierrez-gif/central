@@ -1,0 +1,2321 @@
+# CLAUDE.md — apps/asegura-portal (portal del CLIENTE de Grupo ASegura)
+
+> ✍️ **El nombre comercial se escribe «Grupo ASegura», con A y S mayúsculas** (dictado por Alberto,
+> 04/09/2026). El monograma «AS» del logo es el nombre: A de Alberto, S de Suárez. Escribirlo con
+> la ese minúscula no es una errata de estilo — se come la marca, y es lo que el autocorrector
+> escribe solo. Grafía canónica en BD: `seguros.corredurias.nombre`. Guardián en todo el repo:
+> `test/regression-nombre-comercial-asegura.test.ts`.
+
+> **Esta app la ve el ASEGURADO, no Alberto.** El panel del corredor es `apps/asegura` (lee
+> `apps/asegura/CLAUDE.md`) y la pantalla de trabajo de Alberto es `apps/plataforma` → `/correduria`.
+> Aquí entra gente de la calle, cliente o no. Antes de tocar nada lee el spec
+> `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md` (producto completo) y
+> `docs/superpowers/plans/2026-09-01-asegura-portal-fase-1.md` (lo que se construyó de verdad).
+
+## 🔔 Avisos por Web Push (12/09/2026) — canal nuevo, sin pasar por el email
+
+`GET /api/cron/avisos-push` (diario 08:00 UTC, `vercel.json`), hermano de
+`apps/asegura` → `/api/cron/avisos-vencimiento` pero **sin compartir sello ni sitio**: ese cron
+necesita el email en CLARO (`prisma_seguros`, BYPASSRLS) y por eso vive allí; el push no tiene ese
+problema —`endpoint`+claves del navegador no son un dato descifrable— así que vive aquí, sobre la
+misma tabla `seguros.portal_obligacion` que ya sincroniza `lib/obligaciones.ts`.
+
+- **Sello independiente: `avisadaPushAt`, no `avisadaAt`.** Dos canales que fallan por separado
+  (sin suscripción, endpoint muerto, proveedor de correo caído…); compartir sello dejaría que el
+  fallo de uno tapara el envío del otro. Se sella solo si `sendWebPush` acepta al menos un envío
+  —mismo criterio que el correo—; si todos fallan, se reintenta en la siguiente pasada.
+- **Tabla nueva `seguros.portal_push_suscripcion`** (`identidad_id`, `endpoint` UNIQUE, `p256dh`,
+  `auth_key`), aplicada el 12/09/2026 (`prisma/sql/2026-09-12_portal_push_avisos.sql`). Varias
+  filas por identidad = varios dispositivos; un endpoint muerto (404/410 de `sendWebPush`) se borra
+  en el propio cron.
+- **`packages/module-seguros-portal/src/push.ts` (`debeAvisarPush`)** reutiliza la MISMA ventana que
+  el correo (`entraEnVentana`/`DIAS_VENTANA_AVISO` de `obligacion.ts`): un vencimiento entra en
+  ventana una vez, y los dos canales lo ven a la vez.
+- **Cliente:** `app/ActivarPush.tsx`, un interruptor dentro del panel de la campana (`Campana.tsx`)
+  — no se pinta sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` ni sin soporte del navegador, para no ofrecer un
+  botón que no puede funcionar. `public/sw.js` añadió `push`/`notificationclick` (sigue SIN
+  `caches`: el guardián `lib/pwa.test.ts` lo sigue vigilando).
+- **Envs que faltan, de Alberto (Vercel `asegura-portal`):** `NEXT_PUBLIC_VAPID_PUBLIC_KEY` +
+  `VAPID_PRIVATE_KEY` (par VAPID propio de esta app, generado con `npx web-push generate-vapid-keys`
+  o `webpush.generateVAPIDKeys()`) y `CRON_SECRET` (puede ser el mismo valor que el de `asegura`,
+  o uno propio — este cron no lo comparte con nadie). Sin las claves VAPID el endpoint responde 503
+  `sin_vapid` en vez de fingir un `{avisadas:0}`.
+
+## Estado (03/09/2026): DESPLEGADA en Vercel; Fase 1 mergeada + Fase 4 en código; DDL aplicado
+
+Fase 1 entró en `main` el 01/09/2026 con el PR **#1965** (`f12b7b46`): entrar con un código de un solo
+uso y subir una póliza propia, leída por IA, con su procedencia. **Fase 4** (vincular la identidad con
+su ficha de la cartera y enseñarle SUS pólizas vivas) se construyó el 02/09/2026 — ver su sección.
+
+- **Aplicado en la BD el 02/09/2026 (por la sesión principal, contra la Supabase compartida):** el DDL
+  de Fase 1 (`prisma/sql/2026-09-01_portal_fase1.sql`, 3 ENUM + 6 tablas) **y**
+  `prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`: valor `documento` en `portal_procedencia`,
+  tabla **`portal_vinculo`**, rol **`prisma_asegura_portal`** (LOGIN, NOBYPASSRLS) con DML sobre
+  `portal_*` y **`SELECT` por COLUMNAS** sobre la cartera.
+- **Contraseña del rol: PUESTA el 02/09/2026 y guardada en el Vault de Supabase** (secreto
+  `prisma_asegura_portal_password`; `prisma/sql/2026-09-02_portal_rol_password_vault.sql`). Se generó
+  dentro de Postgres y **no ha pasado por ningún chat ni repo**. Verificado con `dblink` desde la BD:
+  entra por el pooler y por el host directo, lee la cartera y `clientes.dni` le da `42501`.
+- **Proyecto Vercel `asegura-portal` CREADO el 02/09/2026** por la API (`prj_MNrsMRVrBft6KLq1skgi8XU9s9y9`,
+  Root Directory `apps/asegura-portal`, sin build). El token del MCP no puede releerlo (solo ve 5
+  proyectos del equipo), pero el **enlace Git está verificado por otro camino**: en el siguiente push
+  el bot de Vercel listó `asegura-portal` con ese Root Directory y el deployment salió «Ignored» por
+  `--sin-previews` (PR #2123, 17:41 UTC). Construirá solo con pushes a `main` que toquen la app.
+- **Falta, y de quién depende (Alberto, panel de Vercel — la API no escribe envs):**
+  1. **`DATABASE_URL`** = `postgresql://prisma_asegura_portal.wswbehlcuxqxyinousql:<VAULT>@aws-0-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true`,
+     con `<VAULT>` leído del secreto de arriba. **Rotar** = repetir el bloque SQL **y** cambiar esta env
+     en el mismo paso: una sin la otra deja la app muerta en silencio con `password authentication
+     failed`, que solo se ve en los logs del pooler (lección de `prisma_seguros`, 02/09/2026).
+     ✅ **PUESTA el 03/09/2026** — ver «Puesta en producción» más abajo: se pegó primero solo la
+     contraseña y el portal devolvía 500 sin nombrarla.
+  2. **`PII_LOOKUP_KEY` en ese proyecto, IDÉNTICA a la de `central-asegura`.** Es la clave del índice
+     ciego (`clientes.email_lookup_hash`): con otra clave el hash no casa y **nadie se vincula nunca**
+     (`sin_clave`/`sin_ficha` para todo el mundo, sin error). Sin ella en producción el módulo lanza y
+     el portal lo degrada a `sin_clave`: se entra, pero sin cartera.
+  3. `ASEGURA_PORTAL_SESSION_SECRET` y `ASEGURA_PORTAL_CANAL_PEPPER` (sin ellas la app no arranca /
+     el hash del canal es reversible), resto de envs (tabla de abajo) y la WABA de WhatsApp (no existe;
+     por eso el canal es un puerto).
+
+## 🚀 Puesta en producción (03/09/2026): las dos trampas, medidas
+
+El proyecto Vercel es `asegura-portal` (`prj_MNrsMRVrBft6KLq1skgi8XU9s9y9`, enlazado al repo
+`central`) y sirve en **https://asegura-portal.vercel.app**. Al enchufar las envs por primera vez
+salieron dos fallos que **no se parecen en nada a lo que son**. Los dos están medidos, no supuestos.
+
+### 1. `DATABASE_URL` no es la contraseña: es la URL entera
+
+El secreto del Vault (`prisma_asegura_portal_password`) es SOLO la contraseña. Pegarlo tal cual como
+valor de `DATABASE_URL` devuelve un 500 en `POST /api/acceso/solicitar` con un error que **no nombra
+ni la contraseña ni el rol**, así que se diagnostica como problema de credenciales y no lo es:
+
+```
+Invalid `prisma.portalCodigo.create()` invocation:
+error: Error validating datasource `db`: the URL must start with the
+protocol `postgresql://` or `postgres://`.   -->  schema.prisma:8
+```
+
+El valor bueno es el de la lista de arriba. Y si la contraseña lleva `/ @ : + # ?` hay que
+**percent-encodearla** (`%2F %40 %3A %2B %23 %3F`) o la URI se parte por la mitad y el error vuelve,
+distinto pero igual de opaco.
+
+### 2. Cambiar una env no basta, y aquí el redeploy a mano puede ser IMPOSIBLE
+
+Las envs se resuelven **en el build**, así que un cambio no llega a producción hasta que haya un
+deployment nuevo. Y en este repo esa puerta se cierra sola:
+
+- Vercel **no deja redesplegar** un deployment de producción si existe otro más nuevo
+  («A more recent Production Deployment has been created»).
+- Cada push a `main` crea uno más nuevo, y el `ignoreCommand` lo **cancela** si el commit no toca
+  `apps/asegura-portal/` ni uno de sus 6 packages.
+
+Como `main` recibe a diario commits de memoria y de la auditoría que no tocan esta app, el último
+deployment READY se queda congelado y **no hay ningún botón que lo desatasque**. Medido el 03/09:
+ocho deployments seguidos en `CANCELED` y el redeploy manual cancelado también, con
+
+```
+⏭ skip: el commit no toca apps/asegura-portal ni ninguno de sus packages (consume 6)
+```
+
+**La salida es un commit REAL que toque la app** — este `CLAUDE.md` sirve, porque vive dentro de
+`apps/asegura-portal/`. No es un commit vacío ni un truco para despertar el CI: es exactamente el
+mecanismo que el `ignoreCommand` declara. Consecuencia práctica: **al cambiar una env de esta app,
+cuenta con que quien la activa es el siguiente PR que toque la app**, no el botón de Redeploy.
+
+### 3. Las claves: dónde viven y cuáles NO se pueden regenerar
+
+Cierre del 03/09. Las envs del portal están puestas en Vercel (`asegura-portal`, Production):
+`DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_FROM`
+(`Grupo ASegura <no-reply@envios.grupoasegura.es>`), `PORTAL_MAIL_REPLY_TO`
+(`hola@grupoasegura.es`, el buzón único de la correduría) y `PORTAL_PUBLIC_URL`.
+
+Lo que costó una noche entera y conviene no repetir:
+
+**Una variable marcada `Sensitive` en Vercel es de ESCRITURA SOLO.** No se puede volver a leer, ni
+por su dueño. Es un buzón, no un almacén. Da igual cuántas veces se recargue la página: el valor no
+vuelve. Por eso hay que separar las claves en dos clases y tratarlas distinto:
+
+| Clase | Cuáles | Si se pierde el valor |
+|---|---|---|
+| Regenerable | `RESEND_API_KEY`, `ASEGURA_PORTAL_SESSION_SECRET`, `ASEGURA_PORTAL_CANAL_PEPPER`, `CRON_SECRET` | se crea otra y ya |
+| **Irreversible** | **`PII_LOOKUP_KEY`**, `PII_ENCRYPTION_KEY`, contraseñas de rol de BD | migración sobre la cartera real |
+
+`PII_LOOKUP_KEY` es la peor de todas: sobre los hashes del índice ciego hay **índices ÚNICOS**, así
+que cambiarla obliga a recalcular `clientes`, `cliente_emails`, `cliente_telefonos` y
+`poliza_intervinientes`. **Nunca se genera una nueva para «arreglar» que no se encuentre.** El mismo
+valor vive hoy en tres proyectos de Vercel —`asegura` (el CRM de Manuel, donde estaba VISIBLE y de
+donde se copió), `central-asegura` y `asegura-portal`— y esa duplicación a mano es justo el problema.
+Lo que toca: subirla una vez a **Shared Environment Variables** del equipo y enlazarla, más una copia
+legible en un gestor de contraseñas para las irreversibles. Sin eso, un despiste deja la cartera
+inaccesible sin un solo error en los logs.
+
+## 🖥 El armazón (05/09/2026): lateral en escritorio, y QUÉ está asegurado
+
+Dos quejas de Alberto sobre la pantalla ya desplegada, el mismo día: *«aprovecha poco la página
+vista en pc»* / *«usar el mismo diseño para cliente como es mi página de plataforma, con ventana
+lateral»*, y después *«poca informacion... ni direccion en hogar, ni datos coche en auto»*.
+
+### El armazón vive en `app/(portal)/layout.tsx`, no en cada página
+
+Cada página abría su propio `<main style={{ maxWidth: 720 }}>` y pintaba la navegación pasándole
+a mano la sección activa. En un monitor de 1440 px eso dejaba **~720 px de márgenes vacíos**.
+Ahora el ancho y la navegación son del armazón y la página solo aporta contenido.
+
+- **`app/(portal)/NavPortal.tsx` es UN SOLO `<nav>` con dos formas**, no dos componentes: **cajón
+  (drawer)** en el móvil, lateral de **256 px** desde 1024 px. Lo decide `globals.css`. Dos árboles
+  distintos para la misma navegación es cómo se llega a que una sección exista en una pantalla y no
+  en la otra sin que nada falle.
+- La activa se deriva de `usePathname()` + `useSearchParams()`, por eso el `layout` lo envuelve en
+  `Suspense`: sin ese límite, `useSearchParams` arrastra toda la rama a renderizarse en cliente.
+- 📌 **Conmuta a 1024 y no a 768, que es donde conmuta la de Manuel.** Con el lateral de 256 px, a
+  768 el contenido se queda en ~500: media tablet gastada en cuatro enlaces. Su panel lo aguanta
+  porque tiene nueve secciones y tablas de doce columnas.
+
+#### 📱 La hamburguesa del móvil (19/09/2026) — y por qué se REVIERTE la decisión de no ponerla
+
+Hasta hoy aquí ponía, y en el comentario del propio componente: *«no hay hamburguesa en el móvil, a
+propósito. Son cuatro secciones; un botón que las esconde detrás de un toque las hace menos visibles
+que enseñarlas»*. **La decisión era correcta y su premisa ya no se cumple**: `pestanasPortal()`
+devuelve **siete** entradas (Seguros · Mi QR · Recibos · Siniestros · Recordatorios · Contactos ·
+Datos). Alberto, con la captura de su móvil, pidió el patrón de `apps/plataforma` (☰ + cajón).
+
+El propio historial del carril es el argumento: con cuatro pestañas desbordaba 48 px a 390 (y se
+repartió el ancho), con seis el reparto **superponía el texto de dos pestañas** (y se le puso un
+suelo de 76 px, por debajo del cual vuelve a deslizarse). Con siete no queda ajuste que valga: **una
+sección que solo encuentra quien arrastre por casualidad está más escondida que una detrás de un
+botón que se ve.** El ☰ lleva al lado el nombre de la sección activa, así que la pantalla sigue
+diciendo dónde estás con el cajón cerrado.
+
+- El ☰ mide **44×44** (es ahora la ÚNICA puerta a las secciones en el móvil), cierra al tocar fuera,
+  con **Escape** y con su aspa; el foco entra al cajón al abrirlo y vuelve al ☰ al cerrarlo.
+- 🚨 **El «abierto» se DERIVA de en qué pantalla se abrió** (`abiertoEn === ruta+parámetro`), no es un
+  booleano con un efecto que lo sincronice. Así cualquier navegación lo cierra sola — incluido el
+  **gesto de «atrás» de Android**, que no toca ninguno de los enlaces y dejaba el menú abierto encima
+  de la pantalla nueva.
+- 🚨 **Cerrado no basta con sacarlo de pantalla: lleva `visibility: hidden`.** Un cajón solo
+  desplazado deja sus siete enlaces enfocables con el teclado, y se tabula por un menú invisible.
+- ⚠️ **Lo que se pierde, dicho en voz alta: el carril era CSS puro y funcionaba sin JavaScript.** Por
+  eso `NavPortal` lleva un `<noscript>` que lo devuelve a su forma de carril — se ve peor con siete
+  pestañas, pero se ve. Un cajón que no se puede abrir es una pantalla sin salida.
+- Cepos en `test/regression-portal-cartera-agrupada.test.ts` (sustituyen a los dos del reparto de
+  ancho del carril, que vigilaban algo que ya no existe), con **cinco mutaciones vistas morder**.
+- ⏸️ **PENDIENTE y declarado: no está medido con Playwright.** El contenedor de esta sesión no puede
+  descargar el navegador (el proxy responde **403 a `playwright.azureedge.net`**), así que las
+  medidas a 320/360/1024 están **sin tomar**, no tomadas y bien. Lo que falta por comprobar delante
+  de un navegador: que el cajón no desborde a 320, que el ☰ mantenga sus 44 px y que a 1024 el
+  lateral siga idéntico (allí el ☰, su barra y el fondo van a `display:none`).
+
+🚨 **Los tokens y las medidas salen del FUENTE de la app de Manuel, no de una captura**: radio
+`1.4rem` en tarjetas, 24/600 el título de página, 18/600 el de sección, 16/500 el de tarjeta,
+14 el cuerpo, 12 lo secundario, ritmo vertical de 24 px, `tabular-nums` en todo lo numérico,
+botones en **píldora** y anillo de foco de 3 px al 50 %.
+
+### 🗂 El historial de siniestros (05/09/2026) — y las tres cosas que se midieron antes
+
+Alberto, mirando el lateral: *«y los recibos? e historial siniestros?»*. **No existía:**
+`lib/cartera-lectura.ts` filtraba `estado IN ('abierto','en_tramitacion')`, así que de los **67
+siniestros de la cartera viva el portal enseñaba 7 y los 60 CERRADOS no los veía nadie**.
+
+Ahora la lectura trae el historial entero y `siniestrosAbiertos` **se deriva** de él, para que la
+guarda de nivel esté en un solo sitio. Reglas puras en
+`@central/module-seguros-portal` (`src/siniestro-historial.ts`, 9 tests).
+
+🚨 **Lo que se midió contra la BD antes de escribir la pantalla, porque cambió el diseño:**
+
+| Hallazgo | Consecuencia |
+|---|---|
+| **`siniestros.tipo` es un CÓDIGO NUMÉRICO** de la compañía (`1107`, `1915`, `1312`, `17`, `2102`…) | **No se pide ni se pinta.** Parecía el campo más útil («qué le pasó»); «Tipo 1107» no dice nada y encima parece un dato que significa algo. Cepo en `test/regression-portal-visibilidad.test.ts` sobre el bloque del `select` |
+| **No existe columna con la fecha de CIERRE.** `updated_at` es la última vez que se tocó la fila | No se dice «cerrado el X»: sería inventarse una fecha con aspecto de dato. Se dice el estado, y la fecha del **hecho** |
+| **El enum tiene CUATRO valores**: `abierto`, `en_tramitacion`, `cerrado`, `rechazado` | `rechazado` **no es** `cerrado` — uno se resolvió y el otro la compañía no lo asumió. Cuatro etiquetas distintas y tres tonos; un estado desconocido sale tal cual, nunca cae a «cerrado» |
+
+Y dos reglas de la casa aplicadas:
+- **El orden se hace en código, no en el `orderBy`**: en Postgres `DESC` implica `NULLS FIRST`, así
+  que los siniestros sin fecha se colarían arriba y enterrarían los que sí la tienen (la misma trampa
+  que ya mordió en la ficha del corredor, PR #2346). Una fecha ausente no es ni reciente ni antigua.
+- **`[] = «no nos consta ninguno»**, jamás «no has tenido ninguno»: la compañía los informa por EIAC
+  y puede no haberlo hecho. Lleva la píldora `.pendiente`, no una frase en gris.
+
+📌 **Va en la FICHA de cada póliza, no en una quinta pestaña**, y es deliberado: a la mayoría de los
+clientes esa pestaña les diría 0, y una sección casi siempre vacía no parece un producto moderno
+sino uno a medio hacer. Mismo razonamiento que la ausencia de hamburguesa.
+
+### 🧾 Los recibos (05/09/2026) — el `anulado` no es «no pagado», y 20 pólizas estaban mudas
+
+La otra mitad de la pregunta de Alberto. Los recibos ya se leían y se resumían, pero el bloque
+mentía por omisión. **Medido sobre los 183 recibos de la cartera viva:**
+
+| Hallazgo | Consecuencia en la pantalla |
+|---|---|
+| **`anulado` son 54, y de esos 25 tienen importe NEGATIVO** (extornos), 8 valen 0 € y 21 son positivos. El mínimo es **−1.268,18 €** y el máximo **+1.268,18 €**: el mismo número con los dos signos, o sea un extorno y su re-emisión | **No entran en la lista y ningún cubo los cuenta.** Un «recibo de −1.268,18 €» no informa a nadie: hace llamar. Pero se DICE que están ahí fuera, porque el cliente cuadra contra su banco y le faltarían movimientos |
+| **20 de las 110 pólizas vivas tienen recibos y TODOS son anulados** | Antes no pintaban **nada**: `total` contaba los anulados (así que no salía el hueco de «sin informar») y no quedaba ninguno que enseñar (así que la función devolvía `null`). Veinte pólizas mudas de ciento diez |
+| **`forma_pago` es un CÓDIGO**: `CC` (117), `OF` (6), `TA` (4), y 56 sin informar | No se pide al `select` ni se pinta. `CC` se adivina, `OF` no — mismo caso que `siniestros.tipo` |
+| **Hay una fecha CENTINELA**: un `pendiente` trae `fecha_emision` `0001-01-01` | `fechaReciboFiable()` la anula al leer. Es un «no lo sé» con forma de dato: pasa por `??`, por `IS NULL` y por cualquier `COALESCE`, y en pantalla saldría «01/01/0001» |
+
+🚨 **De ahí sale la regla de esta pantalla: son TRES estados, no dos.** `sin_informar` (la compañía
+no mandó nada — que NO es «estás al corriente») · `solo_anulados` (mandó, y está todo anulado) ·
+`con_recibos`. Las tres frases son distintas porque las tres situaciones lo son, y colapsar las dos
+primeras le diría a 20 clientes que su compañía no informó nada cuando sí informó. Lo decide
+`estadoRecibos()` de `@central/module-seguros-portal`, **sobre la lista CRUDA**: con la lista ya
+limpia de anulados, «todo anulado» y «no hay ninguno» son indistinguibles.
+
+Todo el vocabulario vive en `packages/module-seguros-portal/src/recibo-historial.ts` (qué es un
+anulado, qué está al cobro, qué fecha es de fiar, en qué orden van); `lib/cartera-lectura.ts` solo
+traduce la fila. **Un `pendiente` NO es un impago**: se pinta en acento, nunca en el rojo del
+devuelto — es la línea que ya se cruzó una vez en `/correduria` (PR #2179).
+
+El bloque entero es **un solo componente** (`RecibosDePoliza` en `PolizaVista.tsx`) a propósito:
+partirlo en «titular» + «lista» dejaba la frase de cada estado en dos ficheros. Va en la ficha de
+cada póliza, **antes** del historial de siniestros: es el dinero, que es lo primero que se mira.
+Cepos en `test/regression-portal-visibilidad.test.ts`.
+
+
+### 🧲 La hoja de la nevera y su QR (05/09/2026) — el token que SÍ se puede regalar
+
+Alberto: *«crear QR y ahí seleccionas si todas las pólizas, una o algunas… y luego se crea el QR»*,
+con *«el qr se puede borrar y se anularía el acceso»*. Hasta ese día la hoja **no existía**: lo único
+que había era la decisión escrita al final de la sección de los teléfonos, redactada como si
+existiera. Ahora sí: `/hoja/[token]`, pública, imprimible.
+
+🔐 **Por qué aquí un token de solo lectura SIN sesión es aceptable, y en otro sitio no.** La objeción
+obvia es «quien fotografíe la hoja entra». Cierto — y da igual: entra a ver **exactamente lo que ya
+está impreso en esa misma hoja**, porque la selección del QR y lo que se imprime son la misma lista.
+El papel es la premisa; el token no añade filtración sobre el papel. Lo que sí haría daño es un QR
+que abriera la cartera ENTERA — y por eso **la selección no es un adorno: es lo que acota el token**.
+Sin ella, esta pieza no se podría hacer.
+
+Las cinco reglas, con su sitio:
+
+| Regla | Dónde vive | Qué pasa si se rompe |
+|---|---|---|
+| **El QR lleva un ENLACE, no los datos** | `lib/enlace-hoja.ts` | Con los datos dentro, la imagen miente en cuanto cambie la póliza, y quien fotografíe la hoja se los lleva |
+| **Lo que enseña se lee EN VIVO** y se vuelve a filtrar por la cartera actual de su dueño | `polizasDeLaHoja()` | Vendes el coche y el imán de la nevera sigue diciendo que está asegurado |
+| **Cero filas de selección = TODAS**, y eso incluye las FUTURAS | tabla + `HojasQr.tsx` | Ensancha el acceso solo cada vez que se contrata algo. **La pantalla lo dice**, con cepo positivo |
+| **Anular NO borra**: `anulada_en`, y el rol no tiene DELETE | SQL + `anularHoja()` | Quien tiene el papel viejo lee «no existe», piensa que le falla el móvil y lo reintenta con prisa |
+| **El token se guarda HASHEADO** | `lib/hojas.ts` | Una tabla de hojas con sus enlaces legibles es una tabla de llaves |
+
+🚨 **Y la trampa del vocabulario, que es la que más cara sale:** como cero filas significa «todas»,
+crear una hoja cuyo formulario traía solo ids ajenos daría **el acceso más amplio a quien pidió el
+más estrecho**. Por eso `crearHoja()` rechaza con `sin_seleccion` en vez de crear, y los ids del
+formulario **nunca se insertan**: se parte de `polizasElegibles()` y la selección solo filtra.
+
+📌 **La página pública no consulta Prisma**, y no es estilo: al hacerlo, el cepo de aislamiento la
+marcó —con razón, porque una consulta sin `identidadId` a la vista es indistinguible de un olvido—.
+La lectura vive en `lib/hojas.ts`, que además expone `crearHojaDeSesion`/`anularHojaDeSesion` (misma
+forma que `lib/supresion.ts`) para que las rutas de API no lleven fontanería de sesión.
+
+📄 Lo que la hoja enseña: compañía, ramo, qué está asegurado, nº de póliza, vencimiento y a quién
+llamar **con la fecha de verificación impresa**. Nada de prima, recibos, siniestros, DNI ni dirección
+del riesgo — con cepo. Las aportadas salen sin teléfono y diciendo que no las lleva la correduría:
+no tenemos su compañía cruzada, así que un número ahí sería inventado.
+
+⚠️ **Y el hueco real, que es de negocio y no de código: Occident no tiene teléfono de voz.** Son 19
+pólizas cuya hoja dirá «WhatsApp, 9h a 21h L-V» donde las demás dicen un 900. En el arcén un sábado
+por la noche eso no sirve. Se arregla llamando a Occident, no aquí.
+
+Tabla `seguros.portal_hoja_qr` + `portal_hoja_qr_poliza`
+(`prisma/sql/2026-09-05_portal_hoja_qr.sql`, **APLICADA el 05/09/2026** — misma sesión que el
+despliegue, que es lo que la lección de `portal_supresion` obliga). **Cinco cepos vistos morder en la
+BD real** con limpieza posterior: token que no es hex (23514), las dos referencias a la vez (23514),
+ninguna (23514), la misma póliza dos veces (23505) y el nombre largo (23514). Reglas puras en
+`packages/module-seguros-portal/src/hoja-qr.ts` (11 tests); cepos de raíz en
+`test/regression-portal-hoja-qr.test.ts` (11, con seis mutaciones comprobadas).
+
+### 🖨 La hoja, corregida (05/09/2026) — y el folio NEGRO SOBRE NEGRO que llegó a producción
+
+Alberto pidió revisar el diseño «a nivel corporativo» y aclaró la cabecera: *«TUS SEGUROS y nombre
+Grupo ASegura»*. La revisión destapó tres fallos que se habían mergeado horas antes.
+
+🚨 **El grave: imprimir desde el TEMA OSCURO daba un folio negro con texto negro.** El bloque
+`@media print` parcheaba `.hoja` con `color:#000` y **no tocaba nada más**, así que el `body` seguía
+en `oklch(0.17 0 0)` —negro a sangre— y ese mismo `#000` dejaba el contenido invisible encima. Con
+los fondos desactivados (el defecto de Chrome) cambiaba de cara pero no se iba: cabecera y pie legal
+en blanco sobre blanco. Todo dependía de una casilla que el usuario no sabe que existe, **con el
+interruptor de tema a un toque en la barra de la propia hoja**.
+
+**El arreglo es re-declarar los TOKENS, no parchear clases**: dentro de `@media print` se redefinen
+`--bg`, `--text`, `--muted`, `--border`… a tinta negra sobre blanco. Así lo que se añada mañana nace
+ya bien sin que nadie se acuerde. ⚠️ El selector va **doblado** (`:root:root`) a propósito:
+`app/layout.tsx` inyecta `emitirRootCss(MARCA)` en un `<style>` del `<head>` SIN capa y DESPUÉS del
+`globals.css`, así que un `:root` normal pierde por orden.
+
+📄 **Y el armazón no va al papel.** `.marca-barra` (64 px, **con el interruptor de tema impreso**) y
+`PieLegal` (131 px, cuatro enlaces muertos) se heredaban a `/hoja/[token]` por estar dentro de
+`app/`: ~195 px y una **segunda página**. Se ocultan con `body:has(> .hoja)` en `@media print`, no con
+un root layout propio — eso obligaría a duplicar `SCRIPT_TEMA`, la tipografía y `emitirRootCss`, que
+es el modo de fallo que este repo persigue. La identificación del mediador del art. 19 **no se
+pierde**: en pantalla sigue el pie, y en el papel la pone el masthead con su clave DGSFP.
+
+🎨 **La cabecera, con la jerarquía que pidió Alberto:** monograma AS a **40 px y en negro pleno** a la
+izquierda (a los 15 px de la barra el contraojo de la «A» se cierra; y en su cuadro de color sería un
+*background*, que Chrome descarta al imprimir), «Grupo ASegura» + `Correduría de seguros · DGSFP
+CS-F/0170` sacado de `MEDIADOR`, **«Tus seguros»** de titular con la fecha del día, y el QR a la
+derecha. Cierra un filete de 2 px: es lo más barato y lo que más cambia — es lo que dice «documento».
+El titular dice QUÉ es el papel, no de quién es: antes ponía «Grupo ASegura» de titular **y** en la
+barra, el nombre dos veces en 40 px y ni una palabra de qué era la hoja.
+
+📞 **La jerarquía del teléfono estaba INVERTIDA:** la palabra `auto` se imprimía a 16 px y el 900 de
+la grúa a 14/400. Ahora el número es **20/700 con `nowrap`** (un teléfono partido en dos renglones se
+marca mal) y su etiqueta baja a versalita de 11 — la inversión etiqueta-pequeña / valor-grande de
+cualquier tarjeta de emergencia. Un filete parte la ficha en dos zonas: arriba *qué es*, abajo *a
+quién llamo*, que es lo que permite encontrar el número **sin leer nada**.
+
+Y dos más, de la misma tanda: **`.boton-tenue` no existía** (Anular y Cancelar salían como botones
+nativos de 25 px, contra los 44 de la regla de la casa) y **la confirmación se pintaba con `.alarma`**,
+o sea «Tu hoja está lista» en el rojo reservado a lo que deja a alguien sin cobertura — mientras el
+error usaba `.hueco` y susurraba en gris. Se añaden `.confirmacion` y `.error-linea`.
+
+📌 Medido con Playwright: sin desbordes de 320 a 1100 px e idéntico imprimiendo desde el tema claro
+y el oscuro. El QR sube a `margin: 2` y corrección `Q`: la zona de silencio importa en un papel que
+va pegado a un imán.
+
+🚨 **Y horas después Alberto cambió el producto, con razón: EN EL PAPEL NO VA NINGÚN DATO.** Dictado:
+*«el que quiera info tiene que escanear; si pone tlf no entra, y puede que quede obsoleto el tlf»*.
+Lo que se imprime es **solo la tarjeta**: monograma, «Grupo ASegura» con su clave DGSFP, «Tus
+seguros» y el QR grande. Ni pólizas, ni teléfonos, ni vencimientos.
+
+El segundo argumento suyo es el que zanja la discusión, y tumba lo que se había construido esa misma
+tarde: **un teléfono impreso ES un dato en papel**, y toda esta pieza existe porque el QR lleva un
+ENLACE y no datos — con el número escrito, el imán miente en cuanto la compañía lo cambie. Imprimir
+el 900 contradecía la regla que sostiene el QR. De paso, el papel deja de enseñarle a quien pase por
+la cocina con qué compañía tienes el coche.
+
+⚠️ **Lo que se pierde, dicho en voz alta:** con el móvil roto o sin cobertura el papel no da ningún
+teléfono. Se asume porque quien no tiene móvil está llamando desde el de otro, y desde el de otro
+también se escanea. (El argumento contrario —«en el arcén el papel es lo único que queda»— se
+sostuvo hasta que se vio que un móvil muerto no impide escanear con otro.)
+
+📌 Se hace en `@media print` ocultando `.hoja-polizas`, `.hoja-pie` y `.hoja-fecha`, y el cabezado
+pasa a ser la tarjeta entera: centrada, con el titular a 30 px y el QR a 200. **En pantalla no cambia
+nada**: quien escanea sigue viéndolo todo. Y por eso la página lleva un aviso `.hoja-solo-pantalla`
+que dice qué se va a imprimir — sin él, la vista previa (un logo y un QR) parece un fallo de carga y
+el usuario cancela. Tres cepos nuevos en `test/regression-portal-hoja-qr.test.ts`, incluido el del
+aviso, que es positivo.
+
+🖼 **Y una segunda revisión, horas después, encontró que la tarjeta estaba PARTIDA EN DOS.** El
+bloque del QR se pintaba como HERMANO del masthead, y `.hoja-qr` se coloca con `grid-area: qr` — una
+regla que solo significa algo si es HIJO de la rejilla. Suelto, no hacía nada: la fila `qr` del
+masthead quedaba vacía, el filete de cierre cortaba entre la marca y el código, y la leyenda
+«Escanea…» arrancaba en el margen IZQUIERDO del folio mientras el QR estaba a 258 px (su
+`max-width: 220px` dentro de un `.hoja-qr` de 716 la convertía en un bloque estrecho pegado a la
+izquierda). En pantalla no se veía porque ahí `.hoja` mide 640. **El QR es ahora hijo del
+`Masthead`**, y el papel es una TARJETA de 96 mm centrada en el folio con contorno: el filete baja a
+hairline dentro de ella. Medido: 363×419 px centrada, leyenda centrada bajo el QR, **una página**, e
+idéntica imprimiendo desde el tema claro y el oscuro.
+
+🚨 **Y lo que se ocultaba era una DENY-LIST de cuatro nombres de clase, que es el fallo estructural.**
+Solo protege de lo que ya existe: se comprobó que **la rama de error** (hoja anulada / sin pólizas /
+no encontrada) **SÍ se imprimía** —«Hoja anulada», su explicación y `hola@grupoasegura.es`— porque sus
+clases no estaban en la lista. No era grave (no es dato del cliente) pero era la prueba: el día que
+alguien añada un `<p>` con el nombre del titular o un chip «2 pólizas», se imprime y nadie se entera.
+Ahora es una **allow-list**: `.hoja > *` a `display:none` y **una sola** excepción, `.hoja-masthead`.
+Lo que se añada mañana nace sin imprimirse, que es el modo de fallo barato. El cepo afirma esa FORMA
+—la regla base existe y el conjunto de excepciones es exactamente `{.hoja-masthead}`— más su
+corolario: **lo que se imprime ES el cuerpo de `Masthead`**, así que ahí no puede entrar ningún
+identificador de dato y sus llamadas solo pasan `titulo` y `qr`. Tres mutaciones vistas morder.
+
+📅 **Lo único de la tarjeta que se quita: «Datos a día …».** En pantalla es honesto (se lee en vivo) y
+en el papel es mentira, porque el papel no lleva ningún dato.
+
+⚠️ **Vía que el CSS no tapa, y hay que no prometer lo contrario:** el navegador imprime **la URL en su
+propio pie de página**, y ahí va el token de 64 hex. No añade filtración —quien tiene el papel puede
+escanear— pero contradice literalmente el «el papel es anónimo, la llave es el QR». Depende de la
+casilla «Encabezados y pies» del usuario, así que no está en nuestra mano.
+
+📞 **Y el teléfono de la ficha pasó a ser pulsable** (`tel:`, con los 44 px táctiles y sin el azul de
+enlace: aquí el dato ES el número). Con el teléfono fuera del papel, la pantalla es la ÚNICA
+superficie donde ese número existe, y se abre en el arcén con una mano. **El WhatsApp NO lleva
+enlace**: un `tel:` sobre él marcaría la línea de voz, que es justo lo que no se promete.
+
+🟠 De la misma revisión, dos cosas que la tanda anterior había roto: los dos botones de `.acciones`
+salían **escalonados 10 px y con dos alturas** desde 420 px (el `align-items: stretch` del grid
+estiraba uno y `.boton.auto` le sumaba a otro su margen, escrito para un botón que sigue a un
+párrafo), y `.hoja-solo-pantalla` usaba **borde discontinuo** — que en este portal es el significado
+reservado de `.pendiente` («esto se rellenará») y gastarlo en una explicación permanente lo devalúa.
+
+🦷 **Y una lección de método que ya va por la tercera vez hoy:** el cepo del mediador mordió por una
+frase de un COMENTARIO —la cabecera que explica por qué la clave DGSFP no se teclea la escribía
+literalmente para explicarlo—. Ahora quita los comentarios antes de mirar, como
+`regression-portal-parte-siniestro.test.ts`. Al escribir un cepo que busca texto plano en un fichero
+de este portal, **asume que tus propios comentarios lo van a disparar**.
+
+### 🔀 «Mis seguros» y «Mis pólizas» eran la misma palabra (05/09/2026)
+
+Alberto, mirando su propio portal en el móvil: *«mis seguros y mis pólizas es lo mismo… tengo lógica
+al desarrollar»*. **No eran lo mismo** —una era su cartera de CIMA y la otra lo que él aporta— **pero
+el fallo era del nombre, no suyo**: en castellano «seguros» y «pólizas» son sinónimos, así que la
+barra ofrecía dos puertas que prometían la misma cosa. Si el dueño de la correduría no las
+distingue, ningún cliente lo va a hacer.
+
+**El arreglo no fue rebautizarla: fue quitarla.** `portal_poliza_declarada` tenía **1 fila en toda la
+BD**, y el argumento en contra ya estaba escrito en `vista-portal.ts` desde el día que se montó —una
+pestaña que casi siempre dice cero parece un producto a medio hacer— justo encima del código que la
+creaba.
+
+Ahora hay **una sola lista** en «Mis seguros»: la cartera y las aportadas, con el mismo aspecto de
+fila. Y por eso el título de la sección ya **no** dice «en Grupo ASegura»: ahí dentro hay ahora
+pólizas que la correduría no lleva.
+
+🚨 **El chip «Añadida por ti» de cada fila NO es decoración, y no se quita.** Para el cliente las dos
+son «un seguro»; para la correduría no: la aportada **no la gestiona nadie de la casa**. Si llama por
+un siniestro de esa, no hay datos, no hay relación con esa compañía y nadie la ha revisado. Va en la
+FILA y no en la ficha porque un cartel que solo se ve tras un clic no existe para quien repasa la
+lista — la misma razón que la etiqueta «De {titular}» de `FilaPoliza`. Y la ficha lo repite entero
+con la píldora «No la gestionamos».
+
+- **`FilaDeclarada.tsx`** — la fila. Sin vencimiento conocido va en `aviso`: es lo único que le puede
+  pasar por encima sin enterarse, **y nadie se lo va a avisar** porque no la gestionamos.
+- **`/boveda/anadida/[id]`** — su ficha, con el editor dentro (antes era una tarjeta con el
+  formulario desplegado, que es lo que Alberto llamó «muy sucia la página» en la cartera).
+  🚨 Aquí la identidad va **DENTRO del `where`** junto al id, no comprobada en la línea siguiente: es
+  una tabla de una sola identidad y la guarda tiene que estar en la consulta. Cepo (con dos
+  mutaciones vistas morder) en `test/regression-portal-aislamiento.test.ts`.
+- **Un `?vista=polizas` viejo** —un correo, un enlace guardado— cae en `seguros` por el
+  comportamiento que `vistaDeBoveda()` ya tenía para valores desconocidos, que es exactamente donde
+  vive ahora ese contenido. No hizo falta redirección.
+- **Cepo nuevo de sinónimos** en `vista-portal.test.ts`: la barra no puede usar a la vez «seguro» y
+  «póliza», ni «siniestro» y «parte». No basta con que las etiquetas sean cadenas distintas.
+
+📱 **Y de paso arregla lo que se veía en su captura: la cuarta pestaña salía CORTADA** («Qu…») en un
+móvil de 390 px. El carril hace scroll horizontal con la barra oculta, así que «Quién me ve» solo la
+encontraba quien arrastrara por casualidad. Medido con Playwright: con tres, a 360/390/412 caben
+enteras; **a 320 seguían saliéndose 39 px**, así que por debajo de 380 se reparten el ancho a partes
+iguales (`flex: 1 1 0`), con los 44 px táctiles intactos. El `overflow-x` se queda como red por si
+algún día vuelve a haber una cuarta.
+
+### 📂 La bóveda nace PLEGADA, y el alta va arriba (19/09/2026)
+
+Alberto, mirando su portal como lo ve un cliente: *«cuando entra un cliente no ve bien los seguros
+autorizados»* · *«que al cargar la pantalla salga todo plegado por defecto»* · *«“Añade una póliza”
+lo primero que se ve arriba, no enterrado en medio»*.
+
+- **Un `GrupoPlegable` por bloque** (`app/(portal)/boveda/GrupoPlegable.tsx`), cerrado de salida:
+  «Tu cartera» primero y después **uno por TITULAR** —no uno por cajón— con su nombre visible con el
+  bloque cerrado («GLOBAL 2 INSTALACIONES TÉCNICAS») y **cuántos seguros esconde**
+  (`textoCuentaSeguros` de `@central/module-seguros-portal`, puro y con test). Sin la cifra, un
+  plegable obliga a abrirlo para saber si merecía la pena abrirlo; sin el nombre, esconde de quién
+  es la cartera de dentro.
+- 🚨 **La cifra cuenta TODAS las pólizas del bloque**, también las que el filtro de vigencia esconde
+  de salida. Contar solo las vigentes haría que «2 seguros» tapara una cancelada sin decirlo; el
+  filtro de dentro ya declara por su cuenta cuántas oculta, que es donde esa distinción significa
+  algo.
+- 🚨 **Un bloque sin lista que plegar nace ABIERTO** (no eres cliente, tu ficha no tiene pólizas
+  vivas, no hemos podido comprobarlo): plegar el mensaje que explica por qué no ves nada lo convierte
+  en una pantalla vacía sin motivo.
+- **Se usa `<details>` y no un botón con estado**: funciona sin JavaScript y el navegador ya lo
+  anuncia como plegable. El titular va dentro del `<summary>` como `<h2>` —lo único de encabezado que
+  el HTML admite ahí— para no perder la navegación por encabezados. ⚠️ El `<summary>` se maqueta con
+  `display: list-item` a propósito: con `flex` desaparece el marcador ▸, que es la única señal de que
+  aquello se abre, **y no falla nada**.
+- ⚠️ **Un `<details>` cerrado crea igualmente todo su DOM.** Se acepta aquí y está medido: la cartera
+  viva entera son 110 pólizas entre 80 titulares. El día que un bloque traiga cientos, esto pide
+  montaje perezoso de verdad, no un `<details>`.
+- **`SubirPoliza` sube al principio**, justo debajo de `AvisoContacto`. Vivía DENTRO de la sección de
+  la cartera y detrás de todas sus filas, así que en un móvil solo la encontraba quien bajase por
+  delante de sus pólizas — y es la acción que trae aquí a quien todavía no tiene ninguna. El aviso de
+  contacto se queda por encima a propósito: es lo único de la pantalla que pide una corrección con
+  fecha, y un aviso que se baja por debajo de una acción deja de ser un aviso.
+- **El bloque propio vuelve a tener titular** («Tu cartera»), después de que el 12/09 se le quitara
+  por repetir «Mis seguros» tres veces. No es una vuelta atrás: un plegable sin nombre es un
+  triángulo sin más, y por eso el título usa otra palabra que la del h1 y la de la pestaña.
+- **`conNombre` pasa a `false` en los bloques ajenos**: el nombre ya lo dice la cabecera del
+  plegable. Lo que NO cambia es el chip de titular de cada FILA, que dice algo distinto —que esa
+  póliza no es tuya— y viaja con ella.
+
+### 🧾 Y «Recibos» y «Siniestros» también nacen PLEGADAS (20/09/2026)
+
+Alberto, mirando «Mis recibos» en su móvil: *«que también salga plegado y siniestro también»*. Con el
+historial entero desplegado, una póliza con cinco recibos ocupaba la pantalla completa y la siguiente
+quedaba a un pantallazo de scroll: la pantalla enseñaba UN recibo en vez de decir qué pólizas hay y
+cómo van. Mismo gesto que la bóveda el 19/09, un piso más abajo — ahora el `<details>` es **cada
+póliza**, dentro de `VistaPorPoliza.tsx`.
+
+- 🚨 **La cabecera contesta sola la pregunta que trae aquí al cliente**, y por eso plegar no es
+  esconder: en «Recibos», lo próximo que se le cobra y lo último que se le cobró; en «Siniestros»,
+  cuántos hay y cuántos siguen sin cerrar. Sale de dos helpers puros (`lineaRecibos` /
+  `lineaSiniestros`, en `PolizaVista.tsx`) que comparten la FICHA de la póliza y la cabecera: con dos
+  copias, una diría una cosa y la otra otra sobre el mismo recibo. En la cabecera lo pinta el
+  `<summary>` y el cuerpo se calla (`sinResumen`); en la ficha, que no tiene cabecera, sigue el cuerpo.
+- 🚨 **`resumen(p) === null` nace ABIERTA**: es la póliza cuya compañía no ha informado recibos, y
+  dentro no hay lista sino la frase que explica que el silencio NO es «estás al corriente». Misma
+  regla que `GrupoPlegable`.
+- ⚠️ El `<summary>` va en `display: list-item` por lo mismo que el de la bóveda: con `flex`
+  desaparece el ▸ y no falla nada.
+- Cepo: `test/regression-portal-recibos-plegados.test.ts` (6, con **seis mutaciones vistas morder**).
+  Medido con Chromium a 320/360/390/1024: sin desbordes y cabecera ≥ 70 px.
+
+### 🚪 La raíz `/` MIRA si ya hay sesión (05/09/2026) — y por qué no hay enlace mágico
+
+Alberto: *«cliente por codigo es un poco coñazo»* y, al preguntarle si le pedía el código cada vez o
+solo la primera: **«cada vez q entra»**.
+
+**No era la sesión: era la puerta.** `app/page.tsx` era el formulario —un componente de CLIENTE— así
+que la raíz **nunca miraba la cookie**. Quien tenía su sesión de 30 días perfectamente viva veía
+igualmente «tu@email.com · Enviarme un código». No fallaba nada; simplemente nadie preguntaba quién
+eras. Ahora `page.tsx` es un componente de SERVIDOR que resuelve `getIdentidad()` y redirige a
+`/boveda`; el formulario vive en `app/Entrada.tsx`.
+
+🚨 **Y por eso NO se hizo el enlace que canjea solo al abrirse**, que era lo que Alberto pedía. Su
+queja era real y esta es la respuesta buena: quien ya entró **no ve ninguna pantalla de acceso**
+durante 30 días. La otra opción —que el enlace del correo abra sesión con el clic— sigue descartada:
+los sandboxes de correo que renderizan la página con un navegador de verdad **ejecutan el
+JavaScript**, se comerían el código y al usuario le saldría `ya_usado`, que parece culpa suya. Un
+auto-POST reduce el riesgo, no lo elimina; arreglar la puerta lo elimina entero.
+
+📌 **El argumento del reenvío NO vale para descartarlo**, y conviene tenerlo claro para no repetir un
+razonamiento falso: «quien reenvíe el correo entraría» es cierto, pero **el código va en ese mismo
+correo**, así que ese riesgo ya existe. Lo único que distingue al enlace mágico es el escáner.
+
+Dos cepos nuevos en `test/regression-portal-enlace-acceso.test.ts` (mutaciones vistas morder): la
+raíz no puede ser `'use client'` y tiene que llamar a `getIdentidad()` y redirigir. Y **dos guardianes
+siguieron al fichero movido** (`…-enlace-acceso` y `…-consentimiento` leen ahora `Entrada.tsx`): si
+alguien devuelve el formulario a `page.tsx`, el `leer()` falla y se entera.
+
+### 🎨 «No lo sabemos» ya tiene forma propia
+
+El portal tenía la doctrina de los tres estados escrita en la capa de datos y **ni un píxel que la
+expresara**: «tu compañía no nos ha informado de ningún recibo» se pintaba con el mismo gris de 13 px
+que el resto. A alguien de 60 años eso se le lee como «todo en orden».
+
+- **`.pendiente`** — píldora de **borde discontinuo**, portada del `Pendiente` de `apps/plataforma`.
+  Discontinuo = «esto se rellenará»; el resto de la interfaz usa borde sólido para datos cerrados. El
+  color va en `--muted` y **no** en `--border`: de noche `--border` sobre el panel es casi invisible,
+  y un aviso invisible no es un aviso.
+- **`.alarma`** — el recibo devuelto sube del ámbar de `.aviso-linea` a tono **negativo con título**.
+  Es lo único de la pantalla que puede dejar a alguien sin cobertura sin que se entere.
+- **Filete izquierdo por ESTADO** en la fila (`data-estado`), además del de «es de otro». Sin estado
+  no hay filete: pintar todas las filas de un color deja de significar nada.
+
+📌 Del inventario de `apps/plataforma` se descartó a propósito: la barra de filtros, el buscador, la
+paginación, la densidad de tabla (`min-width:880`), los contadores en la navegación, `lucide-react`
+(el portal ya hace lo mismo con 4 trazos SVG en línea a `strokeWidth 1.75`) y el `title=` como único
+portador de la explicación — **`title` no existe en táctil**, y aquí el texto va visible.
+
+### La bóveda es una LISTA, y cada póliza tiene su FICHA
+
+Alberto, mirando la pantalla ya rediseñada: *«muy sucia la página… resumen de lo q es, icono de
+ramo, datos principal, y ya pinchando entra en lo q sea»*. Tenía razón en el diagnóstico: `/boveda`
+pintaba coberturas, recibos, prima, vencimiento y chips **de todas** las pólizas a la vez.
+
+Y resuelve la contradicción de sus dos peticiones del mismo día («poca informacion» y «todo más
+sencillo»): **el resumen es simple, la ficha es completa**. Ya no hay que elegir.
+
+- **`FilaPoliza.tsx`** — una fila, no una tarjeta. Titular = **el bien** (la dirección, la
+  matrícula), porque nadie se sabe su número de póliza. El icono de ramo es **decoración y hay que
+  saberlo**: dos pólizas de hogar de la misma compañía llevan el mismo, así que un resumen que se
+  apoye en él no distingue nada.
+- 🚨 **Lo que NO baja a la ficha:** el **recibo devuelto** se queda en la fila, como chip de
+  peligro. Es lo único de una póliza que puede dejar a alguien sin cobertura sin que se entere, y
+  esconderlo detrás de un clic es exactamente el fallo que la regla de la casa persigue. El aviso
+  entero, con la acción al lado, sigue en la ficha. Igual **de quién es** cuando no es tuya.
+- **`PolizaVista.tsx`** — las piezas compartidas por lista y ficha (`Recibos`, `Coberturas`,
+  `AvisoReciboDevuelto`, `Bien`, `IconoRamo`). Están ahí y no duplicadas porque cada una carga una
+  regla que no se puede romper: con dos copias, la segunda pantalla que alguien escriba dirá «no
+  tienes recibos» sin que nada falle.
+
+#### 🚨 `/boveda/poliza/[id]`: el id de la URL NO consulta nada
+
+Es la línea entera de esa página, y el sitio exacto donde se filtra una cartera: buscar la póliza
+por el id de la URL compila, typechequea y devuelve **200 con la póliza de un desconocido** a quien
+cambie el número en la barra de direcciones. No falla. Sale.
+
+Por eso se lee PRIMERO todo lo que la sesión tiene derecho a ver (`carteraDeIdentidad`, que parte de
+`portal_vinculo` y de las autorizaciones vigentes) y DESPUÉS se busca el id **dentro de esa lista**.
+El id no es una clave de consulta: es un filtro sobre un conjunto ya autorizado. Si no está, **404 y
+nunca 403** — un 403 confirmaría que la póliza existe. Y `deOtro` sale de encontrarla en las ajenas,
+nunca de un parámetro.
+
+⚠️ **Dos cosas medidas al construirla, para no repetirlas:**
+1. El guardián de aislamiento **mordió** por una frase de un COMENTARIO: busca el patrón por texto
+   plano y **no quita los comentarios antes de mirar** (a diferencia del de partes). Por eso la
+   cabecera de esa página describe el fallo sin escribir la llamada literal.
+2. Los **teléfonos de la compañía no se repintan** en la ficha: ese bloque vive en
+   `ParteSiniestro.tsx` con cuatro cepos encima (`test/regression-portal-canal-compania.test.ts`).
+   Una segunda copia quedaría fuera de esos cepos, y el fallo sería alguien marcando el número de
+   urgencias de otra compañía a las tres de la mañana. Se enlaza.
+
+📌 **Pendiente conocido, no olvidado:** `registrarUso` (`lib/autorizaciones.ts`) **sigue sin
+llamarse desde ninguna pantalla**, así que el otorgante lee «no ha entrado nadie» sobre alguien que
+sí entró. La ficha es su sitio natural — es donde un tercero ve de verdad la póliza ajena.
+
+### `describirBien()`: qué COSA está asegurada — y la línea que no se cruza
+
+El dato estaba en `polizas.datos_especificos` (jsonb) y el rol **ya tenía el GRANT**: simplemente no
+se enseñaba. Medido en la cartera viva el 05/09/2026: `auto` trae marca/modelo/matrícula en **81 de
+81**, `moto` en 1 de 1, `hogar` trae dirección/localidad/CP en **2 de 2**. Sin eso, las dos pólizas
+de hogar de Occident de Alberto salían como dos tarjetas iguales separadas solo por un número de
+póliza que nadie se sabe de memoria.
+
+Las reglas puras están en `packages/module-seguros-portal/src/bien-asegurado.ts` — **lee su cabecera
+antes de tocarlo**. Lo que no se puede colapsar:
+
+| Campo | Qué es | Quién lo ve |
+|---|---|---|
+| `cosa` | marca, modelo, **matrícula** | Dato del CONTRATO → desde `tarjeta`. Quien conduce la furgoneta necesita saber cuál es |
+| `ubicacion` | la **dirección** del inmueble | Dato de la PERSONA → desde `completo`, y **nunca a un tercero** de una persona física |
+
+🚨 `direccionRiesgo` entra en `NUNCA_A_UN_TERCERO` (`autorizacion.ts`) por la misma razón que los
+siniestros abiertos el 04/09: la dirección de un hogar asegurado es **la casa donde duerme el
+titular**. Ni con `ver_economico`. Una SOCIEDAD sí la cede: la dirección de una nave es un dato de
+la empresa. **Juntar los dos campos en uno regalaría la dirección de una casa a quien solo pidió ver
+de qué compañía es el seguro — y no fallaría nada: saldría.**
+
+Y las dos de siempre: las claves que empiezan por `_` (hay un `_avant` del volcado) **no se leen
+nunca**, y los valores de cajón se anulan con la MISMA lista que el resto del paquete
+(`textoConDato`, exportada de `poliza-leida.ts` ese día para no tener dos listas). `null` = «la
+compañía no lo ha informado», y la pantalla **calla**: no pinta «Matrícula: —».
+
+🏠 **Y las hogar que SOLO han entrado por CIMA no tenían dirección en NINGUNA parte (19/09/2026),
+y esa frase se quedó desfasada un día después.** Hasta el 19/09 sin gemela del volcado,
+`datos_especificos` es `NULL` y la fila sale «Occident · Hogar» dos veces (las de Alberto). Medido
+ese día: **32 hogar solo-CIMA vivas, 2 con dirección**. Camino de reserva, sigue vivo: el corredor la
+anota desde `/correduria/poliza/[id]` de plataforma (`EditarDireccionRiesgo.tsx` → `PATCH
+/api/operador/poliza` con `campo: 'direccion_riesgo'` → `establecerDireccionRiesgo()` en asegura),
+con **las mismas claves y el mismo cifrado que el volcado** (`direccion` en sobre `v1:`, `cp`,
+`localidad`, más `direccionOrigen: 'manual'`), así que este portal la lee sin una rama nueva.
+
+🚨 **Corrección (20/09/2026): «CIMA no manda el riesgo de hogar» era FALSO — lo manda, y el mapper
+simplemente no lo leía.** `RiesgoHogar.SituacionRiesgo.{NombreVia,CodigoPostal,Poblacion,Provincia}`
+llega en el EIAC de Occident/Generali (visto en `cima_cobertura_campos`, veces_visto>0 desde antes)
+y el mapper empezó a leerlo esa misma mañana: tres pólizas de Occident recibieron su primera dirección
+con `direccionOrigen: 'cima'` a las 09:57 UTC. Ver la watchlist de `docs/ASEGURA-CIMA-COBERTURAS.md`
+(«Watchlist curada de campos importantes sin leer») — el equivalente para `RiesgoComercios` (ramo
+«comunidades») seguía sin leerse ese día. Mientras la cobertura del mapper no alcance a todo, la ficha
+propia de un inmueble lo DICE (`esRamoInmueble()`): callar ahí se leía como «no hay nada que ver».
+
+Cepos: `bien-asegurado.test.ts` (11, con dos mutaciones vistas morder: quitar la dirección del suelo
+de terceros → 1 fallo; colar la dirección por `cosa` → 3).
+
+### 🚨 Regla permanente: el nº de póliza NUNCA identifica una póliza para el cliente
+
+**Nadie se sabe su número de póliza de memoria, y menos aún cuando hay que ELEGIR entre varias**
+(caso visto el 13/09/2026: el selector de «A qué póliza» del parte de siniestro los listaba como
+«Occident · Responsabilidad civil · nº 548238086», y Alberto, mirándolo en su propio móvil: *«casi
+nadie sabe el número de póliza»*). Lo que identifica una póliza para una PERSONA es el BIEN, no el
+contrato:
+
+- **Motor** → marca, modelo y **matrícula** (`bien.cosa` de `describirBien()`).
+- **Inmueble** → la **dirección** (`bien.ubicacion`).
+- El nº de póliza queda de **último recurso**, solo cuando no se conoce ni lo uno ni lo otro.
+
+Esto no es solo la regla de la FICHA (arriba): es la regla de **cualquier sitio donde el portal
+identifique o liste pólizas ante el cliente** — filas (`FilaPoliza.tsx`, ya la seguía), y también
+selectores/etiquetas de formularios. El parte de siniestro (`opcionCartera()`/`page.tsx`) se corrigió
+el 13/09/2026 para usar `bien.cosa ?? bien.ubicacion ?? nº de póliza` en vez de `nº de póliza` a
+secas — antes de esa fecha lo incumplía. **Al montar cualquier lista o desplegable nuevo de pólizas,
+sigue este mismo orden**; no reinventar el criterio caso por caso.
+
+### Lo TUYO frente a lo que te DEJAN ver
+
+Hasta ese día la única diferencia entre una póliza propia y una ajena era el `<h2>` de la sección.
+Con las tarjetas en rejilla ese título se sale de la vista. Ahora la tarjeta ajena lleva **filete de
+acento Y etiqueta con el nombre del titular** (`data-de-otro` + `.cartera-de-otro`) — las dos cosas,
+porque el color solo no le dice nada a quien no distingue bien los tonos y el nombre es además el
+dato que hace falta: de quién es.
+
+## Qué es, y por qué es una app APARTE de `apps/asegura`
+
+El producto no es «mira tus pólizas»: es **«aporta tus seguros»**. Mirar sirve a los 80 clientes vivos
+de la cartera; aportar sirve además a los ~32.520 leads. Por eso el portal es **abierto a cualquiera**,
+sea cliente o no, y por eso la bóveda guarda pólizas **que no son de la correduría**.
+
+Que sea un despliegue separado no es gusto por la simetría, es la superficie de ataque
+(spec, decisión 3): `apps/asegura` corre con el rol `prisma_seguros`, que es **BYPASSRLS** y ve toda la
+cartera. Un registro público no puede vivir en esa misma superficie. De ahí, tres separaciones duras:
+
+| | `apps/asegura` (corredor) | `apps/asegura-portal` (cliente) |
+|---|---|---|
+| Rol de BD | `prisma_seguros` (**BYPASSRLS**) | `prisma_asegura_portal` (**SIN BYPASSRLS**) |
+| Cookie | `asegura_session` | `asegura_portal_session` |
+| Secreto de sesión | `ASEGURA_SESSION_SECRET` | `ASEGURA_PORTAL_SESSION_SECRET` |
+
+**Una sesión del portal no debe valer jamás en la app interna** — de ahí que el secreto sea propio y no
+compartido (`lib/auth.ts`).
+
+## Arquitectura y capas
+
+```
+apps/asegura-portal/            Next.js 15 (App Router), React 19, Prisma 5 (multiSchema)
+  app/page.tsx                  Entrada: pedir código → verificar (cliente, 2 fases)
+  app/(portal)/boveda/          Cartera (propias + autorizadas), calendario y bóveda de aportadas
+                                (+ SubirPoliza.tsx, Calendario.tsx)
+  app/api/acceso/solicitar      POST — genera y manda el código
+  app/api/acceso/verificar      POST — canjea el código y pone la cookie
+  app/api/polizas               POST — sube un PDF/foto, lo lee la IA, lo guarda
+  lib/session.ts                🚪 LA PUERTA ÚNICA: de aquí sale de quién es la sesión
+  lib/vinculo.ts                Fase 4: identidad → ficha de la cartera por índice ciego del email
+  lib/cartera-lectura.ts        Fase 4: lo que se LEE de la cartera para una identidad (por portal_vinculo)
+  lib/obligaciones.ts           Calendario: deriva y poda las obligaciones de una identidad
+  lib/enlace-acceso.ts          El enlace de un clic del correo (NO canjea: pre-rellena)
+  lib/fechas.ts                 fechaEs() en UTC (las columnas `date` llegan como medianoche UTC)
+  lib/auth.ts                   cookie, JWT (jose vía core-identity), hashCanal()
+  lib/canal.ts                  el PUERTO de canal (registro de adaptadores)
+  lib/canal-email.ts            adaptador email (producción)
+  lib/canal-consola.ts          adaptador desarrollo (log del servidor)
+  lib/rate-limit.ts             tope por IP EN MEMORIA (por instancia; no es el límite real)
+  lib/extraer-poliza.ts         PDF→texto→IA, o foto→visión
+  lib/db.ts, lib/dinero.ts      cliente Prisma; eur() en formato español
+packages/module-seguros-portal/ lógica PURA: sin BD, sin red, sin Next
+```
+
+Módulos que compone (`package.json`): `@central/module-seguros-portal`, `@central/core-ai`,
+`@central/core-email`, `@central/core-identity` y, desde Fase 4, **`@central/module-seguros`**
+(`clientesVisiblesPara`, `vigenciaPoliza`, `importeEiac`) y **`@central/module-seguros-pii`**
+(`computeEmailLookupHash`, el mismo HMAC que escribe `apps/asegura`).
+
+### Qué vive en el módulo puro y por qué
+
+`packages/module-seguros-portal/src/*` es donde están **las reglas que deciden si un dato existe**, y
+está ahí a propósito: esa decisión no puede depender de qué proveedor de IA respondió ni de qué app lo
+llame. Cuatro piezas, todas con su `.test.ts` (37 tests, `node --test`, verde el 02/09/2026):
+
+- **`acceso.ts`** — los cuatro niveles CRECIENTES (`tarjeta` → `completo` → `gestionar` →
+  `administrar`) sobre la línea que sostiene la seguridad del portal: **dato de la COSA ≠ dato de la
+  PERSONA**. El conductor de la furgoneta ve compañía, nº de póliza y teléfono de siniestros; no ve la
+  prima, ni el IBAN, ni el DNI del tomador. Desde Fase 4 lo aplica `lib/cartera-lectura.ts` (propias con
+  el nivel del vínculo; autorizadas con `completo`); las autorizaciones con nivel propio son Fase 5.
+- **`procedencia.ts`** — de dónde sale un dato, y quién gana cuando dos fuentes dan el mismo campo:
+  `compania` (4) > `documento` (3) > `calculado` (2) > `declarado` (1). `debeSustituir()` existe para
+  que nadie compare procedencias a mano: esa comparación con un `>=` es exactamente cómo un extractor
+  termina pisando lo que mandó la compañía (la lección de `subastas.tipo_bien`).
+- **`codigo.ts`** — `generarCodigo()` (6 dígitos con `randomInt` de `node:crypto`, nunca `Math.random`)
+  y `estadoCodigo()`, con el orden de comprobaciones deliberado: **`ya_usado` → `bloqueado` → `caducado`
+  → acierto**. Comprobar el acierto antes del bloqueo dejaría el contador de intentos de adorno.
+  `VALIDEZ_MINUTOS = 10`, `MAX_INTENTOS = 5`.
+- **`poliza-leida.ts`** — normaliza lo que la IA dice haber leído. `null` = «no se sabe»; los valores
+  de cajón (`''`, `'n/a'`, `'desconocido'`, `'no consta'`, `'pendiente'`…) **se anulan aquí**, antes de
+  que nadie los escriba, porque si no se cuelan por todas las guardas basadas en NULL. Una prima de 0
+  no es una prima: es un hueco. `'otros'` **sí** es una respuesta válida de ramo y NO se anula.
+
+## Identidad y sesión: código de un solo uso sobre un PUERTO de canal
+
+No hay contraseñas. Se pide un código de 6 dígitos a un canal (`whatsapp` | `email`), se canjea, y sale
+una cookie `asegura_portal_session` (httpOnly, secure, sameSite lax, 30 días) firmada con
+`ASEGURA_PORTAL_SESSION_SECRET`. El canje **crea la identidad si no existía**: entrar por primera vez y
+registrarse son el mismo acto (`app/api/acceso/verificar/route.ts`).
+
+**El canal es un puerto, no un `if`.** WhatsApp es el canal que quiere el negocio pero la WABA de Grupo
+Asegura no existe todavía; cablearlo habría bloqueado la fase entera esperando a Meta. `lib/canal.ts`
+define el contrato (`Canal { tipo, enviarCodigo(destino, codigo): Promise<boolean> }`) y un registro;
+el día que haya número se añade `lib/canal-whatsapp.ts` y se registra. **Ni una línea del resto cambia.**
+Hoy se registra `canalEmail` en producción y `canalConsola` fuera de ella — y `canalConsola` devuelve
+`false` si `NODE_ENV === 'production'`, porque un código de acceso en los logs es una credencial regalada.
+
+### 🚨 `canal_no_disponible` (503) NO es «el envío falló» (502)
+
+Es la distinción que más fácil se rompe al tocar `app/api/acceso/solicitar/route.ts`:
+
+| Situación | Respuesta | Qué se le dice al usuario |
+|---|---|---|
+| El canal **no está registrado** (WhatsApp, hoy) | `503 canal_no_disponible` | «Ese canal todavía no está disponible.» |
+| El canal está, y el envío **no salió** | `502 envio_fallido` | «No hemos podido enviarte el código. Inténtalo en un momento.» |
+
+Decirle a alguien que falló el envío cuando en realidad WhatsApp no está montado es mentirle, y desde
+el código las dos cosas se ven idénticas. Por eso `obtenerCanal()` devuelve `null` (no lanza) y
+`enviarCodigo()` devuelve `false` (tampoco lanza): son dos estados distintos y quien llama los separa.
+Los textos de ambos ya están en el mapa de `textoError()` de `app/page.tsx`.
+
+### 📨 El amplificador de correo (07/09/2026): dos topes, y uno solo no vale
+
+`POST /api/acceso/solicitar` es **pública y sin sesión**. Hasta este cambio escribía una fila en
+`portal_codigo` y disparaba un envío con **cualquier cadena de 3 a 200 caracteres**: o sea, cualquiera
+podía usar el portal para meterle correo a un tercero, con nuestro dominio en el remitente y nuestra
+factura de Resend. No hacía falta ser cliente — la fila se escribe para cualquier destino.
+
+Van **tres** guardas, y el orden importa tanto como que existan:
+
+| Orden | Guarda | Respuesta | Por qué ahí |
+|---|---|---|---|
+| 1 | ¿existe el canal? | `503 canal_no_disponible` | Si WhatsApp no está montado el problema es NUESTRO: no se le gasta cuota ni se le echa la culpa a lo que ha escrito. Y no abre agujero: un 503 no escribe fila ni envía |
+| 2 | tope por **IP** (6/h) | `429` + `retry-after` | Barato y en memoria, así que va antes de tocar la BD |
+| 3 | ¿el destino es entregable? | `400 destino_invalido` | Después del tope por IP: una ristra de peticiones con basura es abuso igual, y así no sale gratis |
+| 4 | tope por **DESTINO** (5/h) | `429` + `retry-after` | Cuenta filas en `portal_codigo`, o sea es **global** |
+
+🚨 **El tope por IP NO basta, y confundirlo con «ya está limitado» es el fallo caro.** En Vercel el
+mapa de `lib/rate-limit.ts` vive en la memoria de cada instancia serverless y se recicla: un abusador
+repartido no lo ve nunca, porque cada petición puede caer en otra instancia con el contador a cero. El
+único que de verdad impide llenarle el buzón a una persona es el **de destino**, que cuenta filas en la
+BD. Van los dos: el primero corta el ruido barato antes de tocar la BD, el segundo pone el límite real.
+
+🔎 **El contador por destino NO es un oráculo de «¿es cliente?»**, y eso es deliberado: la fila se
+escribe para CUALQUIER destino que se pida, esté o no en la cartera, así que el contador solo dice
+cuántos códigos se han pedido para ese destino. Si algún día se «optimiza» para no escribir fila
+cuando el destino no está en la cartera, la ruta pasa a responder distinto según quién sea cliente —
+y eso es un enumerador de la cartera servido en abierto.
+
+**La validación del destino vive en `@central/module-seguros-portal` (`src/destino.ts`) y VALIDA PERO
+NO NORMALIZA.** Devuelve `boolean`, no una cadena limpia, y es a propósito: quien busca el código
+después compara `hashCanal(destino)`, y `hashCanal` ya hace su propio `trim().toLowerCase()`
+(`lib/auth.ts`). Dos normalizaciones en dos sitios = el día que una cambie, el hash de escritura y el
+de lectura dejan de coincidir y el código bueno sale `sin_codigo`: un fallo **silencioso**, sin
+excepción y sin log, del que solo se entera el cliente que no puede entrar. Por eso un destino con
+espacios alrededor se **rechaza**, no se limpia. Y un `600123456` sin `+` se rechaza en vez de
+suponerle `+34`: adivinar el país es inventarse un dato de la persona.
+
+🔐 **La columna `portal_codigo.codigo` guarda el HASH del código, no los 6 dígitos (20/09/2026).**
+Hasta la auditoría de la correduría ahí vivía el código en claro: cualquiera con lectura de esa tabla
+—o una copia de seguridad, o un volcado de soporte— podía entrar como cualquier cliente sin tocar su
+correo, que es exactamente lo que el «un solo uso por email» existe para impedir. Ahora se escribe
+`hashCodigo()` de `lib/auth.ts` (SHA-256 con la pimienta del canal) al emitirlo, y `/api/acceso/verificar`
+compara en **tiempo constante** contra `hashCodigo(entrada)`. **El nombre de la columna es histórico y
+NO se renombró a propósito**: renombrarla obliga a una migración coordinada con el emisor, y una
+columna que se llama `codigo` y guarda un hash se explica con un comentario en el schema (está puesto);
+una migración a medias deja a los clientes sin poder entrar. Una fila anterior al hasheado nunca
+casará —guarda 6 dígitos y se compara contra un SHA-256—, así que caduca sola por su ventana en vez de
+seguir siendo válida. Guardián: `test/regression-portal-codigo-hasheado.test.ts`.
+
+⏳ **Cabo suelto conocido:** `portal_codigo` **no tiene índice por `valor_hash`**, así que el `count`
+recorre la tabla. Hoy es diminuta y no se nota; el DDL va en su propio paso, no colado aquí.
+
+Cepos: `test/regression-portal-limite-acceso.test.ts` (mide el **ORDEN** dentro del cuerpo del `POST`,
+no la presencia — un test que solo busque las palabras se pone verde con las guardas DEBAJO del
+`create`, que es justo el fallo que no se vería hasta llegar la factura) y
+`packages/module-seguros-portal/src/destino.test.ts`.
+
+## 🔒 Aislamiento multi-cliente: lo da el CÓDIGO, no RLS
+
+**No hay RLS que rescate un olvido.** El rol del portal conecta como aplicación, así que una consulta
+sin `where` **responde 200 con las pólizas de todo el mundo**. El modo de fallo no es «no se ve nada»
+—eso se nota enseguida— sino **«se ve TODO y nada falla»**.
+
+Las dos reglas, sin excepciones:
+
+1. **La identidad SIEMPRE sale de la cookie, por `lib/session.ts`.** Nunca del cuerpo de la petición,
+   nunca de un query param. `getIdentidad()` devuelve `null` cuando no hay cookie válida — **jamás una
+   identidad de relleno**, y `lib/session.ts` no puede tener un fallback literal para `identidadId`.
+2. **Toda consulta a `prisma.portal*` filtra por `identidadId`.** Importar la puerta y luego consultar
+   sin filtrar es exactamente el fallo que esto persigue.
+
+Lo protege el guardián **`test/regression-portal-aislamiento.test.ts`** (raíz del repo, `node --test`,
+gate en CI vía `pnpm test:guardia`; 4/4 en verde el 02/09/2026). Barre `git ls-files apps/asegura-portal`
+y exige las dos cosas a todo fichero `.ts`/`.tsx` que mencione `prisma.portalX`. Tiene una lista de
+**EXENTOS** —`lib/db.ts`, `lib/session.ts`, `lib/auth.ts` y las dos rutas de `acceso/`, que son la
+puerta de entrada y todavía no tienen identidad que resolver— y un cuarto test que falla si un exento
+deja de existir: un exento fantasma es una puerta abierta esperando a que alguien recree el fichero con
+ese nombre. **Añadir algo a EXENTOS es una decisión, no un trámite.**
+
+Desde Fase 4 el guardián tiene **dos cepos más** (7/7 en verde el 02/09/2026): todo fichero que consulte
+un modelo de CARTERA (`prisma.cliente|clienteEmail|poliza|polizaCobertura|polizaRecibo|siniestro|
+polizaInterviniente|clienteRelacion|correduria`) importa `lib/session` **y** nombra `portalVinculo` — la
+costura; y `prisma/schema.prisma` **no declara** columnas que el rol no puede leer (`Cliente.dni`,
+`PolizaRecibo.iban`, `Siniestro.lugarDireccion`…). `lib/vinculo.ts` es el único exento del import de sesión
+para la cartera: corre en el canje del código, antes de que exista cookie. El listado del guardián
+incluye ficheros **sin commitear** (`git ls-files --others`): el fichero nuevo es justo el que hay que cazar.
+
+📌 **Desviación deliberada respecto al spec:** el spec nombra la puerta `lib/acceso.ts` porque allí
+guarda además la lectura de la CARTERA. La puerta sigue siendo `lib/session.ts` y la lectura de cartera
+vive en `lib/cartera-lectura.ts` (no se renombró el cepo: se le añadieron los dos de arriba).
+
+## 🔗 Fase 4: la cartera (vínculo por email, lectura por columnas, niveles)
+
+**La costura es `seguros.portal_vinculo`** (identidad_id, correduria_id, cliente_id, nivel, origen;
+UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la cartera para esa identidad.
+
+- **Vínculo (`lib/vinculo.ts`, `vincularIdentidad(identidadId, email, tipo)`):** se llama desde
+  `app/api/acceso/verificar/route.ts` justo después de resolver/crear la identidad, porque es **el único
+  momento con el email en claro** (el portal guarda `hashCanal()` con pimienta propia, que no sirve para
+  el índice ciego). Calcula `computeEmailLookupHash(email)` y busca en `clientes.email_lookup_hash` **y**
+  `cliente_emails.email_lookup_hash`, descartando fusionadas (`merged_into_cliente_id IS NULL`).
+  **Exactamente UNA ficha → vínculo `gestionar`/`email_hash`**. Varias → `ambiguo` y **no vincula** (no se
+  adivina). Ninguna → `sin_ficha`. Sin `PII_LOOKUP_KEY` → `sin_clave`, nunca a ciegas. Fallo de BD →
+  `error` (log del motivo, jamás del email ni del hash). **No bloquea el login**: la respuesta del
+  verificar añade `vinculo: <estado>` y `app/page.tsx` avisa una línea en `ambiguo`/`sin_clave`/`error`.
+  Solo `tipo === 'email'`: **un móvil es un hogar** y devuelve `sin_ficha` sin buscar.
+- **Lectura (`lib/cartera-lectura.ts`, `carteraDeIdentidad(identidadId)`):** parte SIEMPRE de
+  `portal_vinculo` filtrado por `identidadId`. Pólizas **vivas** = `WHERE_CARTERA_VIVA` de
+  `@central/module-seguros` (`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`) `AND
+  merged_into_poliza_id IS NULL`; las 28.728 del volcado histórico **no se enseñan**. El segundo brazo se
+  añadió el 03/09/2026: una póliza que ya estaba en el volcado y que CIMA mantiene al día conserva su
+  `import_ref` viejo, y con el filtro anterior desaparecía de la bóveda de su dueño (1 fila hoy, la de Reale).
+  `confirmadaCima = id_poliza_entidad !== null` (si no, chip «pendiente de confirmación por la compañía»).
+  Por póliza: coberturas (total + 4 primeras), recibos (próximo al cobro por `situacion`
+  `pendiente`/`emitido`, devueltos, último cobrado; **`total: 0` = «sin recibos informados», no «al
+  corriente»**), siniestros `abierto`/`en_tramitacion` **sin tramitador ni perito** (regla de visibilidad del 03/09/2026, sección de abajo) y, desde el 07/09/2026, **con QUÉ pasó y DÓNDE** (ver «Toda la información del siniestro»).
+- **Autorizadas:** `cliente_relaciones` fila A→B con `puede_ver_polizas` = **A autoriza a B** (semántica
+  de `clientesVisiblesPara` de `@central/module-seguros`; se le pasa `observaciones: null` porque el rol
+  no la lee y el helper no la usa). Mis fichas son B; las pólizas vivas de cada A salen bajo «Seguros que
+  te han autorizado a ver» con el nombre de A. **Nivel `completo`** (la relación solo tiene un booleano:
+  ve prima y recibos, no gestiona); cuando exista `portal_autorizacion` (Fase 5) el nivel vendrá de ahí.
+- **Niveles (`camposVisibles(nivel)` de `module-seguros-portal`):** propias con el `nivel` del vínculo
+  (`gestionar` por defecto; un valor fuera de `NIVELES` cae a `tarjeta`, el más bajo). Lo que el nivel no
+  permite va a **`null`** en la salida y la UI lo pinta «no visible en tu nivel», **no** «no hay».
+  Tres estados distintos en `/boveda`: sin vínculo («no hemos encontrado ninguna póliza a nombre de este
+  email») ≠ vinculada sin pólizas vivas ≠ campo oculto por nivel. Y `prima_anual` `null` → «—», nunca 0.
+- **Ningún `clienteId` entra desde la request.** Todo id de ficha sale de `portal_vinculo` o de una
+  relación leída a partir de él.
+
+### 🔖 El sello del último vínculo (06/09/2026) — por qué la bóveda no puede recalcularlo
+
+`portal_identidad.ultimo_vinculo` + `ultimo_vinculo_en` (DDL en
+`prisma/sql/2026-09-06_portal_identidad_ultimo_vinculo.sql`, aplicada; CHECK de valor y CHECK de
+«los dos o ninguno»; GRANT de las dos columnas **antes** de declararlas en el schema, porque el rol
+lee por columnas y declarar una sin conceder revienta TODAS las lecturas del modelo con `42501`).
+
+🚨 **Existe porque `/boveda` NO puede volver a preguntarlo.** El vínculo se resuelve por el índice
+ciego del email, y **en la bóveda no hay email en claro**: `portal_canal` guarda un hash con pimienta
+propia, que no sirve para ese índice y no se revierte. El único instante en que el portal ve el correo
+es el canje del código, así que ahí es donde se sella y de ahí lo lee la pantalla.
+
+**Se sella SIEMPRE, también en `ok`.** Un sello escrito solo en los casos malos dejaría a quien acaba
+de vincularse bien con el estado de un intento anterior, y la bóveda le explicaría un problema que ya
+no tiene. Por eso `vincularIdentidad` se partió en dos (`intentarVinculo` + `sellarVinculo`): con el
+`update` repartido por los seis `return`, la primera rama nueva se olvidaría de sellar y **nada
+fallaría**. El sello es **best-effort**: si cae, se registra y el login sigue — lo único que se pierde
+es el motivo.
+
+**Y lo que arregla en pantalla son tres frases, no una** (`test/regression-portal-vinculo-visible.test.ts`):
+- `ambiguo` → «tu email aparece en más de una ficha… lo está revisando el corredor». 🚨 A esta persona
+  **no se le puede decir «no hemos encontrado ninguna póliza»**: sí se ha encontrado, y es justo por eso
+  por lo que no se le enseña ninguna. La frase vieja la mandaba a creer que había perdido sus seguros.
+- `sin_clave` / `error` → «es un problema nuestro, no tuyo». Esto solo se decía en la pantalla de
+  entrada, y **quien vuelve con la sesión viva (30 días) va directo a la bóveda y no lo veía nunca**:
+  un fallo NUESTRO se le enseñaba como «no eres cliente».
+- el resto → la frase de siempre.
+
+⚠️ **`null` = no consta, y NO es `sin_ficha`** (nunca se intentó, el sello falló, o el valor guardado
+no es de la lista: `leerVinculo()` lo trata como desconocido, nunca como el estado que menos molesta).
+Son la misma pantalla vacía y dos frases distintas: una dice «no eres cliente» y la otra no puede
+decir nada.
+
+🚨 **`cliente_emails.es_principal` NO participa en el desempate, y eso NO es un detalle: medido el
+06/09/2026, honrarlo movería 42 de los 80 clientes vivos de «puede entrar» a `ambiguo`.** Tanto el
+portal (`lib/vinculo.ts:119/135`) como el corredor (`apps/asegura/lib/clientes-sin-canal.ts`) marcan
+`principal: true` **solo** al candidato que viene de `clientes.email_lookup_hash`, y `false` a todas
+las filas de `cliente_emails` **aunque la fila diga `es_principal = true`**. O sea, «principal»
+significa aquí «es el correo canónico de la ficha», no «la fila se declara principal». Lo bueno es
+que las dos pantallas lo hacen IGUAL, que es lo que hace fiable la predicción; lo que no consta es
+que alguien lo decidiera a la vista de ese 42. **No se cambie sin medirlo otra vez y sin Alberto**:
+tocar esa línea reetiqueta media cartera de golpe.
+
+⚠️ **Lo que este sello NO caza: `resuelve_a_otra`.** Si el correo de alguien resuelve a la ficha de
+OTRA persona, el portal devuelve `ok` y le enseña esa cartera — para él todo ha ido bien. Ese caso solo
+se ve desde el lado del corredor (`plataforma` → `/correduria` → «Clientes sin canal»), y se arregla
+resolviendo el duplicado, no aquí. Hoy son **5** de los 80 clientes de cartera viva.
+
+## 👁 Regla de visibilidad del portal (03/09/2026) — qué se OCULTA y qué se DICE EN VOZ ALTA
+
+Dictado de Alberto, literal: **«que aparezcan los datos que tengamos, el resto que no aparezca vacío,
+simplemente no se ve… por ejemplo tramitador no, porque esa es función mía».**
+
+Traducido a la regla operativa que implementa `lib/cartera-lectura.ts`:
+
+> **SE OCULTA** si la ausencia del dato **no cambia nada** para el cliente.
+> **SE DICE EN VOZ ALTA** si la ausencia **cambia lo que el cliente haría**.
+
+**Lado «se oculta».** No son datos vacíos: son datos que **no van en la vista del cliente**.
+
+- **Tramitador (nombre y teléfono)** y cualquier **referencia interna de gestión**. El punto de
+  contacto único es **Alberto**: el cliente le llama a él, no al tramitador de la compañía. Saber
+  quién tramita por dentro no le cambia una sola decisión.
+- No se pintan en gris, ni como «pendiente», ni como «—». **Desaparecen del tipo y del `select`**:
+  `SiniestroPortal` ya no los declara y `prisma.siniestro.findMany` ya no los pide. Un campo que no
+  se trae de la BD es un campo que nadie puede pintar por descuido tres meses después.
+- El flag `telefonoSiniestros` de `camposVisibles()` (`@central/module-seguros-portal`) **sigue
+  existiendo** y hoy no lo consume nadie: vive en el módulo puro con su propio test, y quitarlo es
+  tocar el paquete, no esta app. Se deja documentado aquí para que el siguiente que lo mire sepa que
+  es un hueco conocido y no un olvido.
+
+**Lado «se dice en voz alta».** Esta capa **tiene que seguir trayendo el dato** para que la UI pueda
+decirlo; la que lo pinta es `app/(portal)/boveda/`:
+
+| Situación | Lo que NO se puede decir | Por qué |
+|---|---|---|
+| Sin `fechaVencimiento` | «vigente» a secas | `vigenciaPoliza()` da `pendiente`: no se sabe si sigue viva |
+| `recibos.total === 0` | «al corriente de pago» | Es «la compañía no ha informado recibos» |
+| `coberturas.total === 0` | «no tiene coberturas» | Es «no hay coberturas informadas» |
+
+🚨 **Esto NO deroga la regla del `CLAUDE.md` de la RAÍZ («dato que NO hay ≠ dato que NO se ha
+mirado»): la AFINA para el portal del cliente.** Quien lea solo una de las dos se lleva la idea
+contraria: la de la raíz prohíbe convertir un «no lo sé» en un «no hay», y esta añade que hay datos
+que **ni siquiera son del cliente** y que enseñarlos vacíos solo genera preguntas que Alberto tiene
+que contestar. La frontera es **para quién cambia la decisión**, no si el valor es `null`.
+
+🚨 **Y un TERCER lado, descubierto el 04/09/2026: lo que se oculta a un TERCERO.** `prima`,
+`coberturas` y `recibos` preguntaban por `camposVisibles(nivel)` antes de servirse; **los siniestros
+abiertos no**. Se pegaban a la póliza sin mirar el nivel, así que quien te autorizaba con el alcance
+más bajo (`ver` → `tarjeta`) te estaba enseñando **sus siniestros abiertos**: referencia, estado y
+fecha. No fallaba nada. Salían. Ahora `CamposVisibles` tiene `siniestros` (`false` en `tarjeta`,
+`true` desde `completo`) y además entra en `NUNCA_A_UN_TERCERO`, el tope duro de `autorizacion.ts`:
+ni con `ver_economico`, que abre lo ECONÓMICO de la póliza y no los sucesos de quien la tiene. Un
+siniestro abierto no es un dato del contrato — es un hecho de la vida de su dueño.
+
+`siniestrosAbiertos` es por eso `SiniestroPortal[] | null`: **`null` = no visible en tu nivel**,
+`[]` = no hay ninguno abierto. La pantalla no pinta nada en ninguno de los dos casos, y eso es
+deliberado: un chip que dijera «no visible» le contaría a un tercero que hay algo que mirar, que es
+la mitad de la filtración.
+
+Lo protege **`test/regression-portal-visibilidad.test.ts`** (raíz del repo, `node --test`): falla si
+`tramitador*`/`perito*` vuelven a `lib/cartera-lectura.ts`, si desaparecen los tres
+datos del lado «voz alta» o los comentarios que explican que su `0` es un hueco, **y si
+`siniestrosAbiertos` deja de preguntar por `ve.siniestros`** (mutación comprobada: sin la guarda,
+4 pass / 1 fail).
+
+## 🗒 «Toda la información del siniestro» (07/09/2026) — y lo que resultó no existir
+
+Dictado de Alberto: *«también dar acceso a toda la información de los siniestros»*. Lo primero fue
+**medir la tabla**, y el resultado cambió la tarea entera (69 siniestros, 07/09/2026):
+
+| Columna | Filas con dato | Qué se hizo |
+|---|---|---|
+| `comentario` | **66** | **Se abre.** Es lo único que contesta «¿qué pasó?» |
+| `lugar_cp` / `lugar_ciudad` / `lugar_provincia` | 8 | Se pinta. El rol **ya** las podía leer desde el 02/09: sencillamente no se pedían |
+| `tipo` | 69 | Sigue sin pintarse: es un código de compañía (`17`, `1107`, `2102`) |
+| `gravedad`, `reserva_importe`, `indemnizacion_importe`, `se_considera_culpable` | **0** | No hay nada que enseñar. Los dos importes ni tienen grant |
+| `tramitador_*`, `perito_*` | **0** | 🚨 La regla del 03/09 que los oculta **hoy no tapa ningún dato**: la columna está vacía en las 69 |
+
+🚨 **`comentario` NO es un campo saneado, y la decisión se tomó con los ejemplos delante.** Lo escribe
+el tramitador para uso interno y contiene datos personales de TERCEROS — en la cartera real hay un
+«Inquilino piso 5: \<nombre\> \<móvil\>» y un «Contacta \<nombre y apellidos\>, familiar de tomadora».
+Alberto eligió el 07/09/2026, sobre esos dos ejemplos, publicarlo **a todo el que ya puede ver
+siniestros**, no solo al titular. Queda escrito aquí porque la decisión es suya y **no debe
+heredarse por descuido**: quien monte la próxima pantalla que lea esta columna merece saberlo.
+
+Lo que sigue sujetándolo, y que NO lo da el GRANT sino el código:
+- `camposVisibles().siniestros` (nivel `completo` o superior), y la descripción viaja **dentro** del
+  historial ya filtrado — no por un camino propio. Con un `descripcion:` fuera de ese brazo, el texto
+  se serviría a quien solo tiene `tarjeta` y **no fallaría nada: saldría**.
+- `NUNCA_A_UN_TERCERO.siniestros = false` cuando quien cede es una persona FÍSICA. **Una SOCIEDAD sí
+  puede cederlos**, y ese es el único camino por el que este texto llega a alguien ajeno.
+
+📌 **El texto NO se recorta ni se «limpia».** Media frase de un siniestro es otro relato, y una
+heurística que borrara teléfonos borraría también datos buenos dejando pasar los malos. Se pinta
+entero, con cepo.
+
+📌 **Dos traducciones, y las dos salen de mirar la BD** (`lugarSiniestro()` en
+`@central/module-seguros-portal`): la provincia es un **código** (`41` → Sevilla, con la MISMA tabla
+que usa la ficha del cliente, no una segunda lista de 52) y la ciudad viene en **MAYÚSCULAS**
+(«DOS HERMANAS» → «Dos Hermanas»). No se corrigen acentos que la fuente no trae: inventarse «Alcalá»
+es tan fácil como inventarse la provincia equivocada.
+
+Cepos: `siniestro-historial.test.ts` (17) y tres en `test/regression-portal-visibilidad.test.ts`
+—la descripción dentro del brazo del nivel, el `select` sin dirección ni importes, y que la vista no
+la recorte—, **vistos morder** con las tres mutaciones (sacarla del historial, recortarla a 80
+caracteres y colar `reservaImporte` en el schema).
+
+## 🚑 El parte de siniestro (03/09/2026) — y la frase que NO se puede decir
+
+El cliente da parte desde `/boveda` (`ParteSiniestro.tsx` → `POST /api/siniestros` →
+`lib/partes-siniestro.ts` → `seguros.portal_parte_siniestro`). Rellena **solo lo que sabe él**: qué ha
+pasado, cuándo, dónde, si hay heridos y si hay terceros. Tramitador, perito y referencia **no se le
+piden ni se le enseñan**: los pone la compañía y son gestión del corredor (regla de visibilidad).
+
+🚨 **Un parte enviado NO es un siniestro comunicado a la compañía.** Una correduría es mediadora del
+CLIENTE, no del asegurador: contárnoslo a nosotros no es, jurídicamente, comunicárselo a la entidad.
+Entre que el cliente pulsa «enviar» y que Alberto lo abre pasan horas o días, y en ese hueco el
+cliente **cree que ya está hecho y deja de hacer nada**. Es el peor modo de fallo del portal: no se
+ve, no da error, y lo paga quien confió en la pantalla.
+
+- El vocabulario está en el módulo puro (`packages/module-seguros-portal/src/parte-siniestro.ts`):
+  `enviado` → `recibido` (lo hemos leído NOSOTROS) → `abierto_en_compania` → `descartado`.
+- **`comunicadoACompania(estado)` es la ÚNICA fuente de «tu compañía ya lo sabe».** Nunca
+  `estado !== 'enviado'`, que es el atajo de una línea que parece razonable y convierte «lo hemos
+  recibido» en «está comunicado».
+- El cepo está en la BD además de en el código: `CHECK portal_parte_abierto_con_sello` impide poner
+  `abierto_en_compania` sin `abierto_en_compania_at` **y** `siniestro_id`. Probado contra la BD real
+  con un INSERT dentro de un ROLLBACK — un CHECK que nadie ha visto morder es una suposición.
+- **El portal solo INSERTA y LEE**: el rol no tiene UPDATE ni DELETE sobre la tabla. Lo declarado es
+  una comunicación, no un borrador.
+
+**Los dos tri-estados.** `hay_heridos` y `hay_terceros` son `boolean` NULLABLE y la UI ofrece tres
+opciones («Sí» / «No» / **«No lo sé», marcada de salida**), no un checkbox. `null` = «no lo ha
+contestado»; `false` = «ha dicho que no». Colapsarlos deja al corredor leyendo «sin heridos» de un
+accidente sobre el que nadie preguntó, y un parte con heridos se tramita en horas mientras uno de
+chapa espera al lunes. `normalizarTriestado()` normaliza acento, caja y espacios antes de comparar:
+un `<select>` que emitiera `'Sí'` contra una lista de `'si'` dejaría **todos** los partes a `null` y
+nadie vería un error, porque `null` es un estado legítimo.
+
+**El plazo del art. 16 LCS (7 días) no se reimplementa aquí.** `plazoComunicacion()` del módulo del
+portal **delega** en el de `@central/module-seguros`, que es el que ya usa el panel del corredor, y
+solo le cambia la forma. Dos cuentas del mismo plazo legal en el mismo monorepo acaban dando plazos
+distintos del mismo siniestro sin que ninguna pantalla falle. Y `fueraDePlazo` **NO es pérdida de
+cobertura**: el art. 16 solo permite reclamar los daños del retraso, y perder el derecho exige dolo o
+culpa grave. Un portal que asuste a quien avisa tarde consigue que no avise nunca.
+
+**Se puede dar parte de una póliza AUTORIZADA** (de las que alguien te deja ver). Ver no es gestionar,
+pero bloquearlo sería peor: quien conducía el coche de su padre es justo el que sabe qué pasó. La
+salida no es prohibirlo sino que Alberto lo vea — el puerto del corredor marca esos partes.
+
+Lo protege **`test/regression-portal-parte-siniestro.test.ts`** (raíz, `node --test`): la forma de
+`comunicadoACompania`, el atajo `\.estado !== 'enviado'`, las frases afirmativas prohibidas, el
+«ya no te cubren», el colapso del tri-estado y un cepo POSITIVO (alguien tiene que usar `comunicado`,
+o la pantalla pasa todos los negativos sencillamente callándose). ⚠️ El guardián **quita los
+comentarios antes de mirar**: sin eso se muerde a sí mismo, porque el texto correcto de la pantalla
+es «todavía NO está comunicado a tu compañía» y contiene la frase prohibida.
+
+## 📅 El calendario de vencimientos (02/09/2026) — y por qué el aviso NO sale de aquí
+
+🚨 **La sección visible («Lo que vence · Tu calendario») se QUITÓ de `/boveda` el 09/09/2026**
+(Alberto: «no aporta nada» — cada póliza ya dice su vencimiento en su propia fila, `FilaPoliza.tsx`).
+`boveda/Calendario.tsx` se borró y con él la franja `.seccion.acento` del CSS (era su único usuario).
+**Lo de abajo sigue vigente**: la tabla, el derivador y `sincronizarObligacionesDeIdentidad` (llamado
+en `page.tsx` en cada visita) siguen vivos porque los lee la campana de avisos (`lib/avisos.ts` →
+`GET /api/avisos`, chip «puedes actuar hasta…»); su enlace ya no lleva a un ancla (`#calendario-titulo`
+no existe) y apunta a `/boveda` a secas.
+
+La tabla es **`seguros.portal_obligacion`** (`prisma/sql/2026-09-03_portal_obligacion.sql`, aplicada
+el 02/09/2026). Cuelga del **bien**, no de la póliza: `poliza_id` es opcional a propósito para que el
+mismo motor sirva luego a ITV, carnet o revisión de gas de alguien que no tiene ninguna póliza con la
+correduría. `UNIQUE (identidad_id, poliza_id)` es lo que hace idempotente al derivador.
+
+- **La fecha que se enseña NO es la del vencimiento.** `fechaAccionable()` (módulo puro) resta los
+  **30 días de preaviso del tomador** (art. 22 LCS): decirle a alguien «vence el 15 de marzo» le deja
+  creer que tiene hasta el 15, cuando el plazo para oponerse se le pasó el 13 de febrero. Se resta en
+  **días**, no en meses: `setUTCMonth(m-1)` sobre un 31 de marzo da un 31 de febrero que JavaScript
+  normaliza al 3 de marzo sin avisar.
+- **`polizaGeneraObligacion()` es el cepo que evita 28.728 avisos.** Qué es «viva» NO lo decide él: llama
+  a `esCarteraViva()` de `@central/module-seguros` (`packages/module-seguros/src/cartera-viva.ts`,
+  dependencia que ganó `@central/module-seguros-portal` el 03/09/2026) = `import_ref IS NULL` **o**
+  `eiac_xml_hash IS NOT NULL`. Y `''` cuenta como volcado: la cadena vacía es el valor de cajón que se cuela
+  por `IS NULL`, `??` y `COALESCE`. ⚠️ **`confirmadaCima` NO sirve para este cepo** — es `id_poliza_entidad !== null`, que es
+  otra pregunta; usarlo dejaría fuera las pólizas que emitimos nosotros y CIMA aún no confirma.
+- **`lib/obligaciones.ts` también PODA.** Una póliza que deja de estar viva (cancelada, fusionada, fin
+  de riesgo) seguiría pintando su vencimiento para siempre. Solo poda las que vinieron de la cartera
+  (`polizaId` no nulo): las declaradas por la persona son suyas. Y **sin vínculo no toca nada**: «no
+  sabemos qué ficha es la suya» no autoriza ni a crear ni a borrar.
+- **El chip del aviso dice el hecho, no la promesa:** «todavía no te hemos avisado», nunca «te
+  avisaremos». El cron vive en la otra app y no manda nada con su interruptor apagado; esta app no
+  puede comprobarlo desde aquí.
+
+🚨 **El envío vive en `apps/asegura`, y no es una preferencia: está medido.** `portal_canal` guarda
+**solo `valor_hash`** (SHA-256 con pimienta, `lib/auth.ts:28`) y el `ClienteEmail` de este schema solo
+`email_lookup_hash`. El rol `prisma_asegura_portal` **no tiene GRANT sobre la columna del email**. Un
+hash no se revierte: **desde el portal no hay ninguna dirección a la que escribir.** El panel del
+corredor corre con `prisma_seguros` (BYPASSRLS) y sí lee `cliente_emails` cifrado. El portal se queda
+con el aviso **en pantalla** y nunca toca un dato personal. Lo vigila
+`test/regression-portal-obligaciones.test.ts` (ningún fichero del portal importa un transporte de
+correo), para que la corrección no se deshaga sola dentro de tres meses.
+
+## 🔔 Recordatorios propios del cliente (13/09/2026) — la mitad de `portal_obligacion` sin póliza detrás
+
+Dictado de Alberto: «añade [ITV, mantenimiento, caldera, extintores…] todo, inclusive alguno abierto
+para que pueda añadir recordatorios? Texto libre y cuándo quiera que le avise, todo modular 100%.
+Nuestro objetivo es que usen lo máximo nuestra intranet». Pestaña nueva **«Recordatorios»**
+(`?vista=recordatorios`, `Recordatorios.tsx`), sobre el MISMO motor de arriba: la tabla ya nació con
+sitio para esto (`poliza_id` opcional «para que el mismo motor sirva luego a ITV, carnet o revisión de
+gas de alguien que no tiene ninguna póliza con la correduría»), y el enum de tipo ya traía `itv`,
+`carnet`, `mantenimiento`, `revision_gas` y `libre` sin que nadie los usara todavía.
+
+- **Un único mecanismo, no cinco.** `título + fecha + repetir cada X meses (o nunca)`
+  (`lib/recordatorios.ts` + el módulo puro `packages/module-seguros-portal/src/recordatorio-libre.ts`).
+  Las «sugerencias» (`SUGERENCIAS_RECORDATORIO`: ITV, carnet, caldera, gas butano, extintores, boletín
+  eléctrico) son solo atajos que RELLENAN ese mismo formulario — el título sigue siendo editable (dos
+  coches → «ITV del Ibiza» y «ITV de la furgoneta») y «Personalizado» abre el formulario en blanco.
+- **La fecha NO se recorta.** A propósito NO usa `fechaAccionable()` (los 30 días del art. 22 LCS de la
+  sección de arriba): esos son un plazo LEGAL que el cliente no elige; aquí la fecha que teclea la
+  persona YA ES la fecha en la que quiere que le avisen, así que `fechaAccionable = fechaEvento` sin
+  restar nada.
+- **`repite_cada_meses`** (`prisma/sql/2026-09-13_portal_obligacion_recordatorio.sql`, `smallint`, CHECK
+  1-120, aplicada) es la ÚNICA columna nueva — el resto ya existía. `siguienteOcurrencia()` suma meses
+  con clamp de fin de mes (31 de enero + 1 mes → 28/29 de febrero, nunca un 3 de marzo inventado por
+  `setUTCMonth`), mismo criterio que `sumarMesesClamp()` de `cobro-declarado.ts`.
+- 🚨 **`avanzarRecordatoriosRecurrentesDeIdentidad()` mira `avisadaAt` O `avisadaPushAt`, nunca solo
+  `avisadaAt`.** El cron de CORREO (`apps/asegura/lib/avisos-vencimiento.ts`) resuelve el destinatario a
+  través de la PÓLIZA (`o.polizaId ? destinatarioDeCliente(...) : null`); un recordatorio propio no
+  tiene póliza, así que ESE cron lo cuenta `sinCanal` SIEMPRE y `avisadaAt` no se pone jamás en estas
+  filas, tenga o no la persona push activado. Exigir solo `avisadaAt` habría dejado el «se repite solo»
+  sin efecto para SIEMPRE — se vio morder en `code-review` antes de mergear. El único canal que de
+  verdad puede avisar de un recordatorio propio es el push (`/api/cron/avisos-push`); por lo mismo,
+  `RecordatorioVista.avisada` (lo que pinta «ya avisado» en la pantalla) lee `avisadaPushAt`, no
+  `avisadaAt`.
+- **Aislamiento:** `crearRecordatorio`/`borrarRecordatorio` (`app/api/recordatorios/`) filtran SIEMPRE
+  por `identidadId` de la cookie, nunca del cuerpo ni de la URL — mismo patrón que `polizas/[id]`.
+  `borrarRecordatorio` exige además `bienId`/`polizaId`/`polizaDeclaradaId` NULL: ese botón no puede
+  tocar una obligación derivada de póliza aunque alguien mande su id.
+- **Pestaña «Recordatorios», no «Avisos»:** «Avisos» ya es la campana de notificaciones
+  (`Campana.tsx` → `/api/avisos`) — lo que la correduría te avisa a ti, no lo que tú te apuntas. Mismo
+  cepo de sinónimos que mató a «Mis pólizas» el 05/09.
+
+## 🔑 Entrar de un clic: el enlace del correo NO canjea
+
+El correo del código lleva además un enlace `https://<PORTAL_PUBLIC_URL>/?d=<email>&c=<código>` que
+abre la pantalla **con los dos campos ya puestos**. La persona pulsa «Entrar» y ya.
+
+**El enlace no abre sesión por sí mismo, y es deliberado.** Un enlace que canjeara con un GET lo
+consumirían los escáneres antivirus del correo y el prefetch de los clientes antes de que el usuario
+lo tocase: le saldría `ya_usado` y parecería culpa suya. El canje sigue siendo el POST que dispara
+ella; `app/page.tsx` limpia el código de la barra con `replaceState` nada más leerlo.
+
+Sin `PORTAL_PUBLIC_URL`, o si no es **https**, no se manda enlace y el correo sale igual **con el
+código**, que es lo que de verdad abre la puerta — nunca al revés, y nunca con un dominio adivinado.
+Lo vigila `test/regression-portal-enlace-acceso.test.ts`.
+
+## 📲 Instalable en el móvil (PWA, 07/09/2026)
+
+Idea de Alberto: «a veces entro en una web y me sale la opción de instalar; algo así para cuando
+entren nuestros clientes». El asegurado llega por un enlace del correo, así que dentro de tres meses
+tiene que rebuscar ese correo para ver su póliza. Instalado, es un icono en su pantalla de inicio y
+entra directo — la sesión dura 30 días y `/` ya manda a la bóveda si sigue viva.
+
+| Pieza | Qué hace |
+|---|---|
+| `app/manifest.ts` | `standalone`, colores de `MARCA_ASEGURA` **en hex** (el manifiesto lo leen lanzadores que no parsean `oklch`) |
+| `app/icono-app/route.tsx` | El icono de **512 px**. Con menos de 192 Chrome NO ofrece instalar, y no lo dice. El monograma ocupa ~52 % porque Android recorta los `maskable` a la forma del sistema. `force-static` |
+| `lib/monograma.ts` | El dibujo se LEE de `public/brand/marca-asegura.svg`; lo comparten la pestaña (128) y la app instalada (512) |
+| `public/sw.js` + `app/RegistrarSW.tsx` | El service worker que Chrome exige, registrado en el layout raíz |
+| `app/InstalarBoton.tsx` + `app/InstalarEnBarra.tsx` + `app/instalacion.tsx` | El **botón «Instalar» de la barra** (desde el 08/09/2026), su **puerta de sesión** (solo con token VERIFICADO, como `SalirDelPortal`) y el **almacén compartido** del evento `beforeinstallprompt` |
+
+🚨 **El service worker NO CACHEA NADA, y eso es la decisión.** Aquí dentro hay pólizas, recibos y
+partes de siniestro de personas identificadas: una respuesta guardada en el almacén del navegador
+sobrevive al cierre de sesión y se queda legible en el disco del visitante —o del ordenador
+compartido—. El SW existe solo porque Chrome pide un manejador de `fetch` para ofrecer instalar; lo
+que hace con la petición es dejarla pasar. Contrapartida asumida: **sin conexión no enseña nada**.
+
+🚨 **iOS no dispara `beforeinstallprompt` y no lo va a hacer.** Si la oferta solo escuchara el
+evento, en iPhone y iPad **no se vería nada** —ni error ni banner—, que es la forma cara de que esto
+falle. Allí se enseñan las instrucciones y se **dibuja** el glifo de Compartir (`IconoCompartir`):
+«toca Compartir» a secas no le dice nada a quien no sabe cómo se llama ese botón, y esta pantalla la
+abre gente de 50-70 años. Tampoco hay API para hacerlo por él: en iOS lo único posible es explicar
+el gesto.
+
+📌 **Desde el 08/09/2026 instalar es un BOTÓN de la barra fija**, el primero de `.marca-acciones`
+(instalar → avisos → tema → salir). La primera versión fue una franja «Tenlo a mano» al final del
+contenido y la segunda le añadió una entrada en la campana; Alberto, viendo las dos en producción:
+*«el instalador moverlo en el banner fijo de arriba»*. Las dos se borraron (`app/(portal)/InstalarApp.tsx`
+y la entrada de `Campana.tsx`): un solo sitio para instalar es uno menos que se descoordina. Por
+debajo de **480 px** queda solo el icono (44×44 con `aria-label`); en iOS el botón abre un globo
+`role="dialog"` con el gesto y el glifo, que se cierra con «Entendido», fuera o Escape (≤ 480 px va
+`position: fixed` anclado a los bordes). Y **a 320 px cuatro botones no caben al lado del nombre**:
+la barra se salía 28 px (medido con Playwright), así que hasta 380 px los huecos bajan a 6 px y por
+debajo de **340 px se esconde `.marca-nombre`** — queda el monograma, que lleva el `aria-label`. Entre
+341 y ~405 px el nombre va en dos líneas y la barra sigue en 64 px.
+
+⛔ **Sin push todavía**: hacen falta VAPID, permiso del usuario y decidir qué se avisa. Y en iOS las
+notificaciones web solo funcionan si la app está añadida a la pantalla de inicio.
+
+Lo vigila `lib/pwa.test.ts` (manifiesto, icono ≥192 en TODAS sus entradas, SW con `fetch` y sin
+caché, registro montado, rama de iOS con su glifo). Se rompió a mano una por una: 16 mutaciones, 16
+rojos. PR #2581.
+
+## 🔔 La campana de avisos (08/09/2026) — una campana esconde; el globo es lo que la salva
+
+Idea de Alberto, mirando el `confirm()` de «nace pendiente: no abre nada hasta que Gabriel la acepte
+en su portal»: *«un icono de campana de avisos, para autorizaciones, vencimientos, etc.»*. Hasta ese
+día una autorización recibida solo se veía entrando en «Quién me ve»; quien venía a mirar su póliza
+no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`.
+
+| Pieza | Qué hace |
+|---|---|
+| `lib/avisos.ts` | **Puro.** Compone la lista y el globo: autorizaciones pendientes recibidas Y otorgadas (→ `/autorizaciones`), obligaciones en la ventana del módulo (→ `/boveda#calendario-titulo`) |
+| `app/api/avisos/route.ts` | `requireIdentidad()`; **`allSettled`**, no `all`: una fuente caída se declara en `fuentesIlegibles` y la otra se sirve |
+| `app/CampanaAvisos.tsx` → `app/Campana.tsx` | La puerta (sesión VERIFICADA, como `SalirDelPortal`) y la campana. En la cabecera, **entre instalar y el tema**; Salir va a la derecha del todo |
+| `app/instalacion.tsx` | El almacén compartido de la instalación (`beforeinstallprompt` se dispara UNA vez). Desde el 08/09/2026 lo lee solo `InstalarBoton`: la campana ya NO ofrece instalar |
+
+🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
+`!` (ninguna legible, o fallo de red). Un botón que esconde hace las cosas menos visibles que
+enseñarlas, y la campana es exactamente ese botón: sin número, una autorización detrás de ella es
+lo mismo que hoy en `/autorizaciones`. Y «sin avisos» sobre una fuente que no se leyó es la mentira
+que el `CLAUDE.md` de la raíz persigue.
+
+🚨 **Desde la campana NO se acepta ni se revoca nada.** Cada aviso es un enlace a la pantalla donde
+se resuelve, con el alcance y el texto delante. Un «Aceptar» en el panel sería aceptar sin leer y
+duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. Cepo: un solo `fetch` en
+`Campana.tsx`, y es el GET.
+
+### 🏠 Cuarta fuente: «Revisa tu dirección» (15/09/2026), y el correo que sale de ella
+
+`datos_por_revisar` → `/boveda?vista=datos`. Los reparos de la dirección guardada (`leerSitio()` de
+`@central/module-seguros`: CP que no es un CP español, ciudad sin letras, provincia que contradice al
+CP) se veían **solo en la ficha del corredor** desde el 05/09/2026 — o sea, el único que podía
+corregirlos era el único que no se enteraba. Alberto, 15/09/2026: *«es lo que quiero que notifique por
+mail e intranet, explicándole cómo modificar su dirección»*.
+
+- **Sale por el PUENTE**, no de la BD de aquí: la dirección va cifrada y esta app no tiene la clave.
+  `reparosDeMisDatos()` (`lib/mis-datos.ts`) reusa `leerMisDatos()`, que ya se pedía en cada visita a
+  la bóveda. Es la fuente que más fácil falla, razón de más para ir en el `allSettled`.
+- **Lanza si no se pudo mirar** (puente caído, sin configurar, varias fichas) → `fuentesIlegibles`
+  y globo con `+`. `sin_ficha` sí devuelve `[]`: no es que no se sepa, es que no hay ficha nuestra.
+- **Y se ve también DENTRO de «Mis datos»**, encima del formulario, con el valor guardado y qué
+  hacer. El cálculo va en el SERVIDOR (`reparosDeContacto`, prop `reparos`): importar
+  `@central/module-seguros` en un componente de cliente arrastraría la cartera entera al bundle.
+- El **id del aviso es el TIPO de reparo**, no un uuid: es la clave con la que el emisor de correo de
+  `apps/asegura` sella lo ya enviado (ver su `CLAUDE.md`, «El emisor GENÉRICO de la intranet»).
+
+📌 **Sin tabla de «visto», a propósito**: el aviso desaparece al resolverse. Lo que necesita saber
+qué vio ya el cliente (siniestro que cambia de estado, petición respondida, recibo devuelto) es v2 y
+está en `docs/CORREDURIA-INTRANET-IDEAS.md` §N con su bloqueo. Y el número va también al icono de
+la app instalada (`setAppBadge`), que es lo que hace que instalar sirva de algo.
+
+⚠️ **El CSS de la cabecera evolucionó `+` → `~` → contenedor.** Primero `.salir-form + .tema-boton`;
+con la campana en medio el adyacente dejaba al interruptor sin casar, recuperaba su `margin-left:auto`
+y se iba solo al extremo, y pasó a `~`. Y con instalar (que solo existe si el navegador lo ofrece) el
+reparto del hueco cambiaba según el dispositivo sin que nada fallara. Desde el 08/09/2026 (mismo día,
+segunda vuelta) los cuatro botones van dentro de **`.marca-acciones`, que lleva el ÚNICO
+`margin-left:auto`** y los separa por `gap`: la regla `.salir-form ~ .tema-boton` ya no existe. Orden
+(dictado de Alberto): instalar → avisos → tema → **Salir a la derecha del todo** («es lo lógico»). El
+orden en `layout.tsx` sigue sin ser cosmético. El panel del móvil (≤ 480 px) va `position: fixed`
+anclado a los bordes, y es un desplegable que se cierra con Escape o clic fuera: se mide que quepa,
+no que no tape.
+
+Lo vigilan `lib/avisos.test.ts` (9) y `lib/campana.test.ts` (7); `lib/pwa.test.ts` se repuntó al
+almacén. **27 mutaciones, 27 rojos**: dos cepos salieron verdes a la primera porque buscaban la
+PALABRA (`clearAppBadge`, `display-mode: standalone`) y la encontraban en un tipo o en un comentario;
+se endurecieron a la LLAMADA. Medido con Playwright a 320/390/1024 con sesión firmada y BD
+inalcanzable: sin desbordes, 44 px, y con la API caída el globo es `!`.
+
+## Infraestructura
+
+- **BD:** la Supabase **compartida de la casa**, schema **`seguros`** (el mismo donde vive la cartera
+  volcada). Sin Supabase aparte. Prefijo `portal_` en las tablas para no colisionar con el volcado.
+- **Rol:** `prisma_asegura_portal`, **SIN BYPASSRLS**, DML sobre `portal_*` y **`SELECT` por columnas**
+  sobre `corredurias`, `clientes`, `cliente_emails`, `polizas`, `poliza_coberturas`, `poliza_recibos`,
+  `siniestros`, `poliza_intervinientes`, `cliente_relaciones` (`prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`,
+  aplicado 02/09/2026; **sin contraseña** hasta que Alberto la ponga). El 03/09/2026 se añadió
+  `GRANT SELECT (eiac_xml_hash) ON seguros.polizas`, que la regla de cartera viva necesita leer. El
+  07/09/2026, `GRANT SELECT (comentario) ON seguros.siniestros`
+  (`prisma/sql/2026-09-07_portal_siniestro_descripcion.sql`) — la descripción del siniestro; siguen
+  SIN grant `lugar_direccion`, `reserva_importe` e `indemnizacion_importe`. Es lo que toca internet: no lleva
+  la llave maestra.
+- **DDL:** `prisma/sql/2026-09-01_portal_fase1.sql` — 3 ENUM + **6 tablas**: `portal_identidad`,
+  `portal_canal`, `portal_codigo`, `portal_bien`, `portal_poliza_declarada`, `portal_consentimiento`;
+  y `prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql` — **`portal_vinculo`** + rol + grants. `prisma/sql/2026-09-03_portal_obligacion.sql` — **`portal_obligacion`** + su enum
+  (aplicada 02/09/2026); `2026-09-04_portal_peticion_acceso.sql` — **`portal_peticion_acceso`**, y las dos
+  del 04/09 que ensanchan `portal_autorizacion` (**`autorizado_identidad_id`** y **`poliza_id`**), las
+  tres aplicadas ese día. ⚠️ `portal_autorizacion` + `portal_autorizacion_uso` ya existen desde el
+  03/09/2026, así que del spec quedan **2** por llegar: `portal_aviso` y `portal_auditoria`
+  (`portal_revision` tampoco se ha creado). Cuenta los ficheros de `prisma/sql/` antes de citar un
+  número: esta frase se ha quedado corta dos veces. ⚠️ La memoria del
+  01/09/2026 dice «las otras 5»: son 6 — el spec lista 11 y `portal_codigo` ni siquiera está en él.
+- **Vercel:** Root Directory `apps/asegura-portal`, install `npx --yes pnpm@10.33.0 install
+  --no-frozen-lockfile`, región **`fra1`** (la BD está en Europa: no cruzar el Atlántico), y el
+  `ignoreCommand` **obligatorio** con `--sin-previews`. Sin el `ignoreCommand`, cada push del monorepo
+  reconstruye esta app aunque no la toque.
+- **CI:** la app YA está en la matriz de `Typecheck · <app>` de `.github/workflows/tests.yml`. Si se
+  añade otra app hermana, añadirla ahí es parte del alta.
+
+### Envs (solo NOMBRES — ningún valor va nunca al repo ni a un transcript)
+
+| Variable | Para qué |
+|---|---|
+| `DATABASE_URL` | Conexión con el rol `prisma_asegura_portal` |
+| `ASEGURA_PORTAL_SESSION_SECRET` | Firma de la cookie de sesión. **Sin fallback a literal en producción** (`requireSecret`) |
+| `ASEGURA_PORTAL_CANAL_PEPPER` | Pimienta del hash del canal. Sin ella, una tabla de hashes de emails se revierte con un diccionario |
+| `PII_LOOKUP_KEY` | Clave HMAC del índice ciego de la cartera (64 hex). **Idéntica a la de `central-asegura`** o nadie se vincula. Sin ella: `sin_clave`, se entra sin cartera |
+| `PORTAL_MAIL_FROM` | Remitente del correo con el código. Si falta, el envío devuelve `false` (502), no revienta |
+| `PORTAL_PUBLIC_URL` | Dominio **https** del portal, para el enlace de un clic del correo. Si falta o no es https, el correo sale igual **solo con el código**: no se inventa un dominio |
+| `ASEGURA_PUENTE_URL` | Base https de `apps/asegura` para el puerto estrecho (dirección de contacto y notas). Sin ella no se guardan cambios de dirección: se DICE (`sin_puente`), no se falla en silencio |
+| `ASEGURA_PORTAL_PUENTE_SECRET` | Bearer de ese puerto. **MISMO valor en el proyecto Vercel `central-asegura`.** 🚨 NO es `ASEGURA_OPERADOR_SECRET`: aquél abre la cartera entera |
+| `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHAT_ID` | El bot único del monorepo. Los usan el aviso de primer acceso y el botón de sugerencias; sin ellos, `sin_canal` (que NO es «falló el envío») |
+| `OPENROUTER_API_KEY` | Visión (fotos) **y, vía `aiComplete`, también los PDF**. Si falta, la extracción degrada a `none` |
+| Proveedor de correo (lo lee `@central/core-email` solo) | `RESEND_API_KEY`, **o** `SMTP_USER`+`SMTP_PASSWORD` (+`SMTP_HOST`/`SMTP_PORT`), **o** `GMAIL_USER`+`GMAIL_APP_PASSWORD` |
+
+⚠️ **No existen envs `PORTAL_SMTP_*`**: `createMailTransporter()` no recibe credenciales por parámetro,
+las lee él del entorno. Lo único que pone el portal es el `from`.
+
+✅ **`ASEGURA_PORTAL_PUENTE_SECRET` rotado el 09/09/2026** (mismo valor nuevo en las dos apps, tras un
+401 en el primer valor puesto). Este commit es el que fuerza el rebuild de producción de esta app: el
+`Redeploy` del panel reutiliza el último commit de `main`, y si ese commit no toca `apps/asegura-portal/`
+el `ignoreCommand` lo salta — pasó justo con el commit que arregló `central-asegura` (solo tocaba
+`apps/asegura/`), así que esta app se quedó sirviendo el build viejo con el secreto viejo.
+
+## 🤖 Leer una póliza subida: HOY NO LEE NADA, y no es por el PDF (04/09/2026)
+
+`POST /api/polizas` acaba en `fuente: 'none'` («No hemos podido leer el documento») para **todos** los
+documentos, y la causa no está en el código ni en el PDF:
+
+- Medido con una Mapfre HOGAR FAMILIAR real de 6 páginas: `pdf-parse` saca **12.076 caracteres
+  limpios**, con compañía, nº de póliza, fecha de efecto y duración. El documento se lee.
+- La ruta del PDF llama a **`aiComplete`** de `@central/core-ai`, que necesita al menos UNA de
+  `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `GEMINI_API_KEY`, `NVIDIA_API_KEY`, `CEREBRAS_API_KEY` o
+  `MOONSHOT_API_KEY`. El proyecto Vercel `asegura-portal` **no tiene ninguna** (ver «Puesta en
+  producción»: solo `DATABASE_URL`, `PII_LOOKUP_KEY`, `RESEND_API_KEY`, `PORTAL_MAIL_*` y
+  `PORTAL_PUBLIC_URL`). `aiComplete` lanza → `nadaLeido()`.
+
+⚠️ **Antes de tocar el extractor, comprueba la env.** El síntoma —«no hemos podido leer»— es idéntico
+al de un PDF escaneado ilegible, y por eso se diagnostica mal: parece un problema de OCR y es una
+variable vacía.
+
+📌 Y un detalle para el día que se quiera una plantilla determinista por compañía: el texto de Mapfre
+sale con la **codificación rota** (`EspaÒa`, `PÛliza`, `ESPA—A`). Un LLM lee a través de eso; un ancla
+de texto exacto se rompe. Normalizar antes es parte del trabajo, no un pulido posterior.
+
+## Rutas API
+
+⚠️ Esta tabla decía «las tres que hay» hasta el 04/09/2026 y ya se había quedado corta: existen
+además `PATCH /api/polizas/[id]` (corregir una póliza), `POST /api/siniestros` (el parte) y
+`POST /api/catastro`. Cuenta las carpetas de `app/api/` antes de citar un número.
+
+| Ruta | Entrada | Salida | Notas |
+|---|---|---|---|
+| `POST /api/acceso/solicitar` | `{ tipo: 'whatsapp'\|'email', destino }` (zod) | `{ ok }` · `400 datos_invalidos` · **`400 destino_invalido`** · **`429 demasiadas_peticiones`** (+ `retry-after`) · **`503 canal_no_disponible`** · **`502 envio_fallido`** | Guarda el código con `hashCanal(destino)`, nunca el email en claro. **Es pública y sin sesión: lleva dos topes** — ver «El amplificador de correo» |
+| `POST /api/acceso/verificar` | `{ tipo, destino, codigo }` (6 chars) | `{ ok, vinculo }` + cookie · `400 datos_invalidos\|sin_codigo` · `401 incorrecto\|caducado\|ya_usado\|bloqueado` | Coge el código **más reciente** de ese canal; el intento se cuenta siempre que sea `incorrecto`; crea la identidad si no la había; marca `usado_en` y `ultimo_acceso_en` en una transacción; **Fase 4:** llama a `vincularIdentidad()` con el email en claro y devuelve `vinculo` (`ok`/`ya_vinculada`/`sin_ficha`/`ambiguo`/`sin_clave`/`error`) sin bloquear |
+| `POST /api/polizas` | `multipart`, campo `documento` (PDF o imagen) | `{ id, datos, fuente }` · `401 sin_sesion` · `400 sin_fichero` · `413 fichero_grande` | `runtime = 'nodejs'`; tope **10 MB**; la identidad sale de `requireIdentidad()`, nunca del cuerpo |
+| `POST /api/catastro` | `{ direccion, municipio, provincia }` **o** `{ referencia }` (zod, con topes) | `200 ok` · **`300 elegir`** (varios inmuebles) · `401 sin_sesion` · `400 datos_invalidos` · `404 no_encontrado` · `409 via_ambigua` · `422 direccion_ilegible\|referencia_invalida` · **`502 catastro_no_responde`** | **Exige sesión**: sin ella sería un proxy anónimo contra el Catastro con nuestra IP. Solo CONSULTA (no escribe en la BD) y **no registra la dirección en ningún log**. Mira el `estado`, no el número |
+
+Pantallas: `/` (pedir + verificar código) y `/boveda` (`force-dynamic`, redirige a `/` sin sesión).
+**El `middleware.ts` NO resuelve sesión**: cada ruta y cada página la resuelve por su cuenta — que es
+precisamente lo que vigila el guardián. El middleware (08/09/2026) solo veta escrituras en la sesión
+del corredor (sección «Vista de corredor», abajo).
+
+## 👁 Vista de corredor (08/09/2026) — Alberto abre el portal como lo ve un cliente
+
+Dictado: *«el corredor puede acceder a cualquier cosa»* (tras pedir acceso a la intranet de un cliente
+para revisarla antes de invitarle). Desde la ficha en plataforma (Contactos → «👁 Ver su portal») sale
+un enlace de **UN solo uso y 10 minutos** que crea `apps/asegura`
+(`POST /api/operador/cliente/portal/vista`, tabla `seguros.portal_vista_corredor`, token hasheado
+SHA-256 sin pimienta porque las dos apps no la comparten) y consume `GET /corredor/[token]` aquí.
+
+🚨 **Cómo se ve «lo mismo» sin tocar ninguna lectura:** una identidad REAL dedicada al corredor
+(`IDENTIDAD_CORREDOR_ID` de `@central/module-seguros-portal`, sembrada por la migración, **sin
+canales**: nadie entra como ella con un código) recibe un vínculo TEMPORAL con la ficha
+(`portal_vinculo.origen = 'corredor'`), y las diez lecturas que filtran por identidad hacen el resto.
+Solo hay un vínculo de corredor a la vez; `Salir` lo suelta. La sesión lleva el claim `corredor`
+(`lib/auth.ts`, 4 h) y `getIdentidad()` lo devuelve.
+
+Los dos filos, con cepo en `test/regression-portal-vista-corredor.test.ts` (4 mutaciones vistas morder):
+- **asegura EXCLUYE ese origen** en `estadoPortalDeFicha` — si lo contara, mirar una ficha la
+  convertiría en «Ya entra al portal», que es el titular con el que se decide si invitar.
+- **La sesión del corredor NO escribe como el cliente**: `middleware.ts` responde `403 modo_corredor` a
+  todo `POST/PATCH/DELETE` de `/api/*` salvo `/api/salir` y `/api/acceso/*`. Decodifica el JWT sin
+  verificar firma a propósito (protege de un clic de Alberto, no de un atacante; un token falso solo
+  se veta a sí mismo) y por eso importa `lib/auth-cookie.ts` y no `lib/auth.ts` (`node:crypto` no
+  arranca en edge — y el veto desaparecería sin error).
+
+Migración `prisma/sql/2026-09-08_portal_vista_corredor.sql`, **APLICADA el 08/09/2026** en el mismo
+paso que el código (regla de `portal_supresion`).
+
+## 🧩 Los campos PROPIOS de cada tipo de seguro (04/09/2026)
+
+Al elegir el ramo, el formulario despliega SUS campos. El catálogo vive en el módulo puro
+(`packages/module-seguros-portal/src/campos-ramo.ts`) con `normalizarDatosRamo()`; la pantalla solo
+traduce `tipo` → control HTML. Lee su cabecera antes de tocar nada: esto es el resumen.
+
+- **Una columna `datos_ramo` (jsonb), no ~40 columnas.** El conjunto de campos depende del ramo y
+  nadie filtra por ellos: se leen enteros al abrir la ficha. 🚨 **Los identificadores del bien
+  (matrícula, bastidor, fecha de matriculación) NO van ahí: son columnas**, porque se consultan y se
+  indexan. La regla para el siguiente campo: si alguna consulta va a filtrar por él, es una columna.
+- **NULL y nunca `{}`.** Se escribe con `Prisma.DbNull`; `JsonNull` guardaría el literal `null` DENTRO
+  del JSON y se colaría por todas las guardas de NULL.
+- **El ramo que manda al validar un parche es el que la póliza VA A TENER.** El PATCH lee el ramo
+  guardado (filtrando por `identidadId`) antes de validar. Cambiar de ramo sin datos nuevos **borra**
+  los del viejo: sin catálogo en el ramo nuevo quedarían enterrados, invisibles en pantalla y
+  presentes en la columna. Y **sin ramo conocido, mandar `datosRamo` es un ERROR**, no un `null`
+  callado — aceptarlo vaciaría la columna en cada corrección de la prima sin que nada fallara.
+- **Ningún campo es obligatorio**, igual que el vencimiento, y **nada del art. 9 RGPD**: de
+  vida/salud/decesos se piden datos de CONTRATO (capital, modalidad, nº de asegurados), nunca de
+  salud, y `beneficiarios` es el TIPO de designación (herederos / designados / entidad), no nombres
+  de terceros que no han entrado al portal.
+- **Todo booleano es tri-estado, no checkbox**: «no me lo han preguntado» no puede colapsar en «ha
+  dicho que no» (mismo criterio que el parte de siniestro).
+- **`datosRamo`/`escribirRamo` son props OPCIONALES de `CamposPoliza`**, y eso es una salvaguarda: una
+  pantalla que no sabe LEER estos datos no puede ofrecerse a escribirlos, o el primer «guardar» sobre
+  campos vacíos los borraría en silencio.
+- **El orden del formulario importa**: «Tipo de seguro» va el 2º (bajo el vencimiento) porque de él
+  dependen los campos; el bloque específico va el ÚLTIMO, porque primero se pide lo que cualquiera
+  tiene delante y después lo que hay que ir a buscar.
+
+### Autorrelleno desde el Catastro (hogar, comercio, comunidades)
+
+`POST /api/catastro` (ver la tabla de rutas) da **metros, año de construcción y código postal** desde
+la dirección, vía `@central/core-catastro` — el equivalente para hogar de lo que la matrícula hace
+para auto. Los campos que puede rellenar llevan `desdeCatastro: true` en el catálogo.
+
+🚨 **El dato NO entra solo.** Se enseña y solo entra si la persona lo acepta, igual que la fecha
+estimada desde la matrícula: el Catastro puede estar desactualizado y quien firma la póliza es ella.
+Y los cinco estados de la respuesta están separados a propósito —no responde ≠ ahí no hay nada ≠ la
+dirección no se entiende ≠ la calle es ambigua ≠ hay quince pisos y no sabemos cuál es el suyo—
+porque colapsarlos convierte un «no lo sé» en un «no hay».
+
+## 📇 «Mis datos», filtro «en vigor» por panel, y sugerencia a la cabecera (09/09/2026)
+
+Tres pedidos de Alberto sobre la pantalla del cliente, en la misma sesión que ampliaron lo del
+apartado siguiente (que sigue siendo la fuente para la dirección de contacto y el derecho de
+supresión: esto lo REVISA, no lo sustituye).
+
+1. **Nueva pestaña «Mis datos» (5ª), donde el cliente VE y corrige teléfono, correo y dirección.**
+   Hasta hoy `MiDireccion.tsx` (renombrado `MisDatos.tsx`) solo ESCRIBÍA a ciegas y la pantalla salía
+   vacía «porque no podemos descifrar». Ahora hay lectura: `GET /api/portal/contacto?identidadId=` en
+   `apps/asegura` (`leerContactoPropio` en `lib/contacto-portal.ts`) descifra con SU clave —el portal
+   sigue SIN `PII_ENCRYPTION_KEY`— y sirve solo esos seis campos de la ficha vinculada por
+   `portal_vinculo`. Con varias fichas o sin ninguna, no se inventa nada: se dice.
+2. **El cliente ahora edita también SU teléfono y correo, no solo la calle.**
+   `CAMPOS_CONTACTO_PROPIO` (`packages/module-seguros-portal/src/contacto-propio.ts`) se partió en
+   `CAMPOS_DIRECCION_PROPIA` (columnas de `clientes`, vía `editarCliente`) y `CAMPOS_CANAL_PROPIO`
+   (filas de `cliente_telefonos`/`cliente_emails`, vía `anadirContacto` como PRINCIPAL). 🚨 Un canal
+   **se cambia, nunca se borra** desde el portal: sin teléfono ni correo no habría por dónde avisar. Y
+   si el valor ya es el principal de OTRA ficha, `anadirContacto` lo detecta como conflicto y la
+   respuesta es `en_otra_ficha` (409) — no se le quita el número a nadie desde aquí, lo resuelve
+   Alberto. `aplicarContactoPropio` valida TODO antes de escribir NADA: un correo mal escrito no deja
+   la dirección a medio guardar.
+3. **Cada panel de pólizas filtra por defecto a EN VIGOR** (Alberto, mirando el panel de un cliente al
+   que le han dado acceso: «lo suyo es ver solo las pólizas en vigor y ocultar las canceladas porque
+   da confusión… un filtro por cada panel»). `FiltroVigencia.tsx` es un filtro POR TITULAR (no
+   global): dos pastillas «En vigor / Todas» y, mientras el filtro esconde algo, su contador — nunca
+   se esconde sin decir cuánto. `pendiente` (sin fecha, no se sabe) **se enseña**: esconder lo que no
+   se sabe sería decidir por la persona que su póliza caducó.
+4. **«¿Echas algo de menos?» sube de «Mis seguros» a la cabecera**, como botón junto a la campana y
+   Salir (Alberto: «arriba del todo, donde está la campanita, la luna y salir»). Mismo mecanismo que
+   `Campana.tsx` (desplegable, cierra con clic fuera o Escape) y misma puerta que `SalirDelPortal`
+   (sesión VERIFICADA, no solo cookie presente): `app/SugerenciaBarra.tsx`.
+
+🚨 **Pendiente ABIERTO, sin decidir — no tocar `autorizacion.ts` sin el OK de Alberto.** Sobre el aviso
+legal de «cada acceso caduca al año», Alberto primero pidió que NO caduque, y después él mismo lo
+matizó: «o mejor que en la invitación autorice… ejemplo: padre mayor y que el hijo le lleva todo, eso
+hay que darle una vuelta». Es una decisión de las que exige negociar con él (regla de la casa de
+`Task`), no un ajuste mecánico: `DIAS_VIGENCIA = 365` (`packages/module-seguros-portal/src/
+autorizacion.ts`) existe porque el consentimiento tiene que poder demostrarse (art. 7.1 RGPD) y
+renovarse, y el caso que lo empujó a existir es justo el que el propio Alberto cita ahora (el
+divorcio: nadie entra a revocar ese día). Una vía a explorar sin tocar código todavía: que la
+DURACIÓN se declare al invitar (una petición «para gestionar de por vida a mi padre» pide un
+alcance/plazo distinto de «para que mi mujer vea el coche este año»), en vez de un valor fijo para
+todo el mundo. Sin código hasta que Alberto elija.
+
+## 📍 El cliente cambia SU dirección de contacto, y sugiere (08/09/2026)
+
+Dictado de Alberto: *«que el cliente pueda modificar su dirección y tlf»* y, al preguntarle si eso
+pasaba por una solicitud, **«¿solicitar el cambio de algo? si el cliente cambia de dirección…»**.
+Tenía razón: **no hay cola de aprobación.** Su dirección de contacto es suya, y el art. 16 RGPD le da
+derecho a que se rectifique *sin dilación indebida* — una cola que quizá nadie mira es exactamente la
+dilación que ese artículo prohíbe.
+
+🚨 **Pero la dirección de CONTACTO no es la de la PÓLIZA, y la pantalla lo dice dos veces** (antes de
+escribir y en el acuse). Medido el 08/09/2026 sobre `src/lib/integrations/cima/` del CRM: la cadena de
+CIMA es de una sola dirección (`recibir-ficheros-pendientes` + `confirmar-descarga`, cero endpoints de
+envío) y **no toca la dirección en ningún caso** — sobre un cliente que ya existe el pull dice
+literalmente «MATCH legacy: NO se re-escribe PII de contacto». O sea: esto no llega a ninguna
+compañía, y si se ha mudado su seguro de hogar sigue cubriendo la casa anterior. Callarlo sería el
+mismo modo de fallo que «parte enviado ≠ siniestro comunicado», pagado con una casa sin cobertura.
+(La buena noticia del mismo hallazgo: lo que se corrige a mano **no lo pisa el pull de las 05:30**.)
+
+**Cómo se escribe, y por qué no lo escribe esta app.** `clientes.direccion` va cifrada con
+`PII_ENCRYPTION_KEY` y el modelo `Cliente` de este schema ni la declara. Conceder el grant y traer la
+clave sería el peor cambio posible: la app pública podría descifrar la PII de 32.600 fichas para que
+alguien corrija su calle. Sale por un **puerto estrecho** a `apps/asegura`
+(`lib/mis-datos.ts` → `POST /api/portal/contacto`), que **no acepta `clienteId`**: la ficha la resuelve
+allí `portal_vinculo`. Con el secreto filtrado, el daño máximo es cambiarle la calle a alguien que ya
+tiene portal — y queda en su historial.
+
+- **El formulario sale VACÍO y lo dice**: no podemos mostrar lo guardado (no lo podemos descifrar), y
+  un campo vacío sin explicación se lee como «no consta ninguna dirección».
+- **Un hueco NO es un borrado**: solo viajan los campos con algo escrito. Como la pantalla no puede
+  enseñar lo que hay, tratar un blanco como «bórralo» vaciaría la ciudad a quien venía a cambiar la calle.
+- **Con VARIAS fichas vinculadas no se escribe en ninguna** (`decidirFichaPropia`, módulo puro). Para
+  LEER, asegura desempata quedándose con el vínculo más antiguo; **para escribir eso no vale**: meter
+  el domicilio nuevo de una persona en la ficha de su sociedad es un dato falso escrito en silencio.
+- **Las reglas de validación son las MISMAS** que cuando lo corrige Alberto (`revisarEdicion` de
+  `@central/module-seguros`): con dos vocabularios, el portal aceptaría lo que la ficha rechaza.
+
+### ✅ «Comprueba tus datos de contacto» (08/09/2026, integrado con «Mis datos» el 09/09/2026)
+
+Dictado de Alberto: *«tiene que ser automático, un aviso en la intranet; yo no intervengo»*. La
+cartera es un volcado de jun/2026: solo el propio cliente sabe si su contacto sigue siendo el suyo.
+
+🚨 **Nació pensado con datos ENMASCARADOS y se REDISEÑÓ el mismo 09/09/2026, en el mismo momento en
+que otra sesión añadía la pestaña «Mis datos»** (ver el apartado de arriba): esa pestaña ya lee y
+enseña el contacto EN CLARO por su propio puente (`GET /api/portal/contacto`, `leerContactoPropio`),
+así que el enmascarado quedó redundante y se retiró — de aquella pieza solo sobrevive el
+RECORDATORIO. Las dos capas ahora se reparten así:
+
+- **`AvisoContacto.tsx`** (nuevo, en `boveda/`) — el empujón AUTOMÁTICO, arriba del todo en «Mis
+  seguros» (antes que el calendario): solo se pinta si `confirmacion` es `nunca` o `caducada`, con
+  **«Sí, siguen igual»** (sella por `POST /api/mis-datos/confirmar` → `POST
+  /api/portal/contacto-confirmar`, sin leer el cuerpo — la identidad es la de la cookie) y un enlace a
+  `?vista=datos`. No enseña ningún dato ni edita nada: reutiliza la MISMA lectura que ya se pidió para
+  «Mis datos» (una sola llamada al puente por visita), así que si esa lectura falla (`sin_ficha`,
+  `sin_puente`, `error`…) el aviso simplemente no se pinta — el fallo ya lo dice «Mis datos» cuando la
+  persona entra a corregir.
+- **`MisDatos.tsx`** — donde de verdad se corrige (teléfono, correo y dirección, en claro).
+
+`contacto_confirmado_at` (`clientes`) se sella tanto al decir «siguen igual» como al corregir algo
+desde «Mis datos» (`aplicarContactoPropio`): quien acaba de escribir un dato acaba de verificarlo.
+`estadoConfirmacion()` de `@central/module-seguros-portal` decide `nunca`/`vigente`/`caducada` — NUNCA
+en el navegador, para que un «hoy» de aquí y otro del servidor no den dos respuestas. Cepos en
+`test/regression-portal-contacto-propio.test.ts`.
+
+### 💡 El botón de sugerencias
+
+«¿Echas algo de menos?» al final de `/boveda` → Telegram a Alberto (`POST /api/sugerencia`) **y**
+línea en el historial de su ficha por `POST /api/portal/nota`.
+
+🚨 **Aquí Telegram NO es un aviso: es EL REGISTRO.** En `lib/aviso-acceso.ts` el dato de verdad vive en
+`portal_acceso` y Telegram solo adelanta la noticia; una sugerencia no se guarda en ninguna tabla del
+portal, así que para un **lead** —que no tiene ficha donde anotarla— un envío perdido significa que su
+texto no existe en ningún sitio. Por eso **solo `enviada` da las gracias**, y `sin_canal` («no hay
+Telegram montado») no se colapsa con `error` («se intentó y no salió»): uno se arregla en Vercel y el
+otro reintentando.
+
+🚨 **Y el texto de la persona se ESCAPA antes de componer** (`escaparHtml`): `tgSend` manda con
+`parse_mode: 'HTML'`, así que un `<` en «el botón de <ver póliza> no se ve» hace que Telegram
+devuelva 400, `tgSend` conteste `null` y el mensaje se pierda **sin un solo error**.
+
+⚠️ **El tope es por IP y en memoria**, o sea por instancia (lo dice `lib/rate-limit.ts`): corta el
+ruido, no es un límite global. Se acepta aquí porque exige sesión y el destino es un chat nuestro —
+**no se copie el razonamiento** a una ruta pública ni a una que escriba a terceros.
+
+Reglas puras: `packages/module-seguros-portal/src/contacto-propio.ts` y `src/sugerencia.ts`.
+Cepos de raíz: `test/regression-portal-contacto-propio.test.ts` (10, con seis mutaciones vistas morder).
+
+## ⚖️ Bloque legal (04/09/2026) — el pie va en el layout RAÍZ, y por qué
+
+Las cuatro páginas de `app/legal/*` (`mediador`, `privacidad`, `cookies`, `condiciones`) y el
+`PieLegal` del layout raíz **no son relleno**: son el mínimo que la Ley 16/2018 (art. 19) y el RGPD
+(art. 13) exigen ANTES de que el asegurado escriba su correo. De ahí las tres decisiones:
+
+- **El pie está en `app/layout.tsx`, no en `app/(portal)/`.** La única pantalla que ve quien todavía
+  no ha entrado es la que le pide el correo; un pie montado en el grupo `(portal)` desaparece justo
+  de ahí, y el fallo no se ve.
+- **Las páginas se leen SIN sesión** (nada de `@/lib/session` en `app/legal/*`). Pedir sesión para
+  leer la política de privacidad es pedirle el dato antes de contarle qué se hace con él.
+- **Los datos del mediador salen de `@central/module-seguros` (`src/mediador.ts`), no del JSX.** Es la
+  fuente única compartida con el panel del corredor: dos copias de la clave DGSFP `CS-F/0170` es una
+  copia de más. Ahí vive también `VERSION_TEXTOS_LEGALES`, que es lo que se sella en
+  `portal_consentimiento.version_texto` — un consentimiento sin versión no acredita qué se aceptó.
+
+🚨 **Cada frase de `app/legal/privacidad/page.tsx` es una afirmación sobre el código.** Si el código
+cambia (un encargado nuevo, un dato nuevo, una cookie nueva), la página cambia **en el mismo PR** y
+sube `VERSION_TEXTOS_LEGALES`. Una política que describe la versión anterior de la app no es un texto
+viejo: es información falsa al interesado, que es una infracción distinta y peor.
+
+Lo que hoy afirma y hay que no romper sin querer:
+
+| Afirmación | Lo que la sostiene |
+|---|---|
+| «El correo no se guarda en claro» | `portal_canal.valor_hash` (SHA-256 con `ASEGURA_PORTAL_CANAL_PEPPER`) |
+| «Una sola cookie, sin analítica ni terceros» | solo `asegura_portal_session`; cero scripts de terceros |
+| «Tu documento puede procesarse fuera del EEE» | `openrouterVision` de `@central/core-ai` (OpenRouter, EE. UU.) |
+| «La base de datos está en la UE» | proyecto Supabase `central`, `eu-west-1` |
+
+**Sin banner de cookies a propósito**: con una única cookie técnica, el art. 22.2 LSSI exime del
+consentimiento. Encender analítica obliga, en el mismo PR, a reescribir `/legal/cookies`, montar el
+banner con «rechazar» tan fácil como «aceptar» y no cargar nada antes de la aceptación.
+
+Lo vigila `test/regression-portal-legal.test.ts` (9 cepos: que las páginas existan, que el pie esté en
+el layout raíz y enlace a las cuatro, que ninguna copie la clave DGSFP a mano, que ninguna exija
+sesión, que no se cuele analítica ni una segunda cookie, que las condiciones destaquen el plazo del
+art. 16 LCS y que la privacidad siga declarando la salida del documento a OpenRouter).
+
+⚠️ **Dos omisiones DELIBERADAS**, protegidas por su propio test en `packages/module-seguros/src/mediador.test.ts`:
+**no se declara ninguna lista de ramos** (el alcance de la inscripción en el registro público de la
+DGSFP no se ha comprobado; el art. 19 tampoco la exige) y **no se declara ningún DPO**. Lo segundo ya
+no es una duda: Alberto zanjó el 04/09/2026 que **solo usa un correo, `hola@grupoasegura.es`**, así
+que el `dpo@grupoasegura.com` que anuncia la web de Manuel no es un buzón suyo — anunciarlo aquí
+habría sido dar un canal de derechos que rebota. Los ramos siguen pendientes de la ficha del registro.
+
+📧 **UN solo correo, y sale de `MEDIADOR.identidad.email`.** `hola@grupoasegura.es` es a la vez el
+contacto del mediador, el canal de ejercicio de derechos RGPD y el Servicio de Atención al Cliente —
+y es el mismo buzón al que ya responde el `Reply-To` del correo del portal
+(`PORTAL_MAIL_REPLY_TO`), así que quien contesta a su código y quien presenta una queja llegan al
+mismo sitio. Dos buzones repartirían las quejas entre uno que se mira y otro que no, y el que no se
+mira incumple el plazo de un mes del SAC. Lo fija un cepo del test del módulo.
+✅ **El buzón EXISTE — lo confirmó Alberto el 05/09/2026** («ya existe hola@grupoasegura.es»), lo que
+cierra la alerta que quedó abierta el día anterior: la captura de su panel enseñaba los alias en
+`grupoasegura.COM` y ningún `hola@`, así que se dio por posible que el correo publicado en producción
+como SAC y canal de derechos RGPD **no recibiera**. ⚠️ Es su confirmación, **no una prueba de entrega**:
+nadie ha mandado un correo a ese buzón desde aquí y comprobado que llega (y no se hará sin que él lo
+pida — regla de comunicaciones salientes del CLAUDE.md raíz). Si algún día rebota, el sitio a mirar es
+`MEDIADOR.identidad.email` y el `PORTAL_MAIL_REPLY_TO` del proyecto Vercel, que son el mismo buzón.
+🚨 **Cabo suelto conocido:** la web pública (repo `asegura`) sigue publicando `info@grupoasegura.es`
+en sus Términos, en su política de privacidad y en `/info-mediador`. **Dos canales de reclamación
+distintos para el mismo mediador es una contradicción entre documentos legales publicados**, no una
+errata de estilo. Unificarlo allí toca textos con `LegalVersionGate` (forzaría re-aceptación) y el
+ruleset de ese repo está bloqueado — no se hizo aquí a propósito.
+
+## 🧨 Landmines
+
+- **🚨 Toda tabla `portal_*` nueva lleva `REVOKE ALL ON seguros.<tabla> FROM crm_seguros` en su SQL
+  (24/09/2026).** Los privilegios por defecto del schema dan DML a `crm_seguros` (el CRM de Manuel,
+  que nunca toca el portal: 0 de sus 101 consultas medidas) en cada tabla nueva, y con INSERT en
+  `portal_vinculo` o `portal_enlace_directo` se abre la sesión de cualquier cliente. Las 21 que había
+  se revocaron ese día (`apps/asegura/prisma/sql/2026-09-24b_portal_sin_crm.sql`); las nuevas las
+  vigila `test/regression-portal-sin-crm.test.ts`.
+- **🚨 Un `SELECT` de una columna NO concedida falla en la BD — la consulta ENTERA.** El rol tiene
+  `GRANT SELECT (col, col, …)` por tabla, y Prisma pide cada columna del modelo por su nombre. Añadir
+  `dni` al modelo `Cliente` del portal no «lee el DNI»: hace que **todas** las lecturas de `Cliente`
+  devuelvan `permission denied for column dni` (42501) — typecheckea, compila y revienta en producción.
+  Los modelos de cartera de `prisma/schema.prisma` son un **espejo del SQL de grants**, no una elección
+  de UI; lo vigila `test/regression-portal-aislamiento.test.ts`. Para leer una columna nueva: primero
+  el `GRANT`, después el schema, en ese orden. Caso real (03/09/2026): la regla de cartera viva pasó a
+  mirar `eiac_xml_hash`; hasta conceder `GRANT SELECT (eiac_xml_hash) ON seguros.polizas TO
+  prisma_asegura_portal` moría la lectura ENTERA de `Poliza`, no solo esa columna.
+- **El cliente Prisma generado es COMPARTIDO por el `.pnpm` del monorepo** (`node_modules/.pnpm/@prisma+client@5.22.0…/.prisma/client`):
+  un `prisma generate` de otra app lo pisa y el typecheck del portal falla con `Property 'portalIdentidad'
+  does not exist on type 'PrismaClient'`. No es el código: regenera desde `apps/asegura-portal` antes de
+  diagnosticar (medido 02/09/2026).
+- **Los 3 ENUM de Postgres tienen que estar declarados como `enum` en `schema.prisma`, no como
+  `String`.** Tipados `String` **typecheckea y compila** y luego **revienta en el primer INSERT**
+  (Postgres 42804: manda el parámetro como `text` contra una columna de tipo enum). Se arregló con
+  `@@map` el 01/09/2026; **no hay migración**, la BD ya era así.
+- **Las procedencias son CUATRO en el módulo y, desde el 02/09/2026, también en la BD:** `documento` se
+  añadió a `portal_procedencia` (`ALTER TYPE … ADD VALUE`, en el SQL de Fase 4) y a `schema.prisma`.
+  `/api/polizas` sigue escribiendo siempre `'declarado'`.
+- **Una póliza aportada se guarda SIEMPRE como `declarado`, con `confirmada_por_usuario = false`**, y no
+  como «verificada»: que la haya leído una IA no la convierte en dato de contrato — al revés, es donde
+  más se inventa. La UI lo dice con todas las letras («Estos datos los hemos leído nosotros del
+  documento — revísalos»).
+- **`fuente: 'none'` es «no lo hemos podido leer», NUNCA «la póliza no tiene esos datos».** La póliza se
+  guarda igual, para completarla a mano; un fallo de `pdf-parse` o de la IA degrada a `none` y se dice.
+- **`null` en una prima se pinta `—`, jamás `0,00€`** (`lib/dinero.ts`). Y `primaAnual` es un `Decimal`
+  de Prisma: hay que pasarlo por `Number()` **antes** de formatear.
+- **La bóveda de declaradas vacía dice «Todavía no has añadido ninguna póliza», no «no tienes seguros»**:
+  los de la correduría van en la sección de arriba, con sus tres estados propios (sin vínculo ≠ sin
+  pólizas vivas ≠ no visible por nivel).
+- **`portal_vinculo.nivel` y `origen` son `text` con CHECK, no enum de Postgres:** `String` en Prisma.
+  Se validan en código contra `NIVELES`; fuera del vocabulario → `tarjeta`.
+- **`pdf-parse` va en `serverExternalPackages`** (`next.config.ts`) y se importa con `require` dentro de
+  un `try`. Sacarlo de ahí rompe el build.
+- **`hashCanal()` normaliza a minúsculas y hace `trim`**: cambiar esa normalización (o la pimienta)
+  **desvincula a todo el mundo de su identidad** — los hashes guardados dejan de casar y cada usuario
+  crea una identidad nueva vacía. No es un cambio cosmético.
+- **`portal_consentimiento` es APPEND-ONLY** (se añaden filas, nunca se actualizan) y separa «avísame»
+  (`avisos`) de «ofertadme» (`comercial`) más `lds_art19`. Un portal gratis que usa el alta como permiso
+  comercial se muere en tres meses.
+- **`portal_identidad` NO es un cliente.** Quien entra puede no estar en la cartera; ese es el punto del
+  producto. No asumir que existe una ficha detrás.
+
+## Reglas de la casa que aplican aquí (y ya están implementadas)
+
+- **Dinero en formato español** `2.162,49€` con `eur()` de `lib/dinero.ts` (espejo del de `apps/asegura`).
+- **Responsive ≥320 px**: botones de 44 px táctiles, `.boton-subir` (el input de fichero nativo no llega),
+  y `.datos-leidos` apilada por defecto porque a 320 px dos columnas dejan el valor en ~120 px.
+- **Rendimiento UI**: tras subir una póliza se hace `router.refresh()`; la lista **no se desmonta** ni se
+  tapa con un loader a pantalla completa. La bóveda lee `take: 50`.
+- **Secretos**: `requireSecret()` de `@central/core-identity`, nunca `process.env.X || 'literal'`. Lo
+  obliga `test/regression-secrets.test.ts`.
+
+## Lo que falta, y de quién depende
+
+**De Alberto (panel de Vercel; nada de esto bloquea escribir o probar código):** ver la lista numerada
+de «Estado» arriba — `DATABASE_URL` con la contraseña del Vault, `PII_LOOKUP_KEY` idéntica a la de
+`central-asegura`, secretos de sesión/canal, confirmar el enlace Git del proyecto, resto de envs, WABA.
+
+**Fases siguientes (spec):** Fase 3 motor de obligaciones y recordatorios · Fase 4 **hecha en código**
+(vínculo por email + lectura); queda el móvil-como-hogar y el vínculo por DNI verificado · Fase 5
+autorizaciones a terceros (`portal_autorizacion`, con nivel propio) y portal de empresas.
+
+🚨 **Dos reglas del spec que hay que tener delante antes de tocar recordatorios o vinculación:**
+- **Ninguna póliza del volcado histórico genera un aviso** (volcado = `import_ref IS NOT NULL` **y**
+  `eiac_xml_hash IS NULL`; ver `esVolcadoHistorico()`). Si el motor leyera esas fechas mandaría hasta
+  **28.728** «se te venció el seguro» de pólizas de 2013-2018.
+- **Un número de móvil identifica un HOGAR, no a una persona** (740 números compartidos por 1.599
+  fichas, medido 01/09/2026). Un número compartido **nunca resuelve solo** a una ficha. El email sí es
+  identificador limpio: 0 duplicados entre clientes distintos.
+
+Y la regla que sostiene el modelo de permisos cuando llegue: **el papel PROPONE el acceso, no lo
+concede.** Ser conductor habitual del coche de tu padre no abre nada; le da al sistema una razón para
+sugerirle que te autorice.
+
+---
+
+📌 `docs/FUENTES-DE-VERDAD.md` ya apunta a este documento como fuente de verdad de la app
+(actualizado el 02/09/2026); el spec y el plan quedan como detalle de diseño.
+
+## 🔐 Autorizar a un tercero (03/09/2026) — y el booleano que había antes
+
+**«José deja que su mujer María vea su póliza del coche.»** Eso vive en
+`seguros.portal_autorizacion`, con las reglas puras en
+`@central/module-seguros-portal` (`src/autorizacion.ts`). Lee ese fichero antes de
+tocar nada: su cabecera es la fuente, esto es solo el resumen.
+
+🚨 **Lo que había antes y por qué no podía quedarse.** Hasta ese día lo decidía
+`cliente_relaciones.puede_ver_polizas`, un booleano del CRM de Manuel. Medido el
+03/09/2026: **104 filas lo tenían a `true` y las 104 se crearon el 21/06/2026**, el
+día del volcado — mismo día, sin excepción. O sea, **ningún cliente lo otorgó**.
+Y la columna no guarda autor, ni fecha, ni texto aceptado, ni revocación, así que
+tampoco había forma de demostrar lo contrario (art. 7.1 RGPD pide poder
+*demostrarlo*, no solo tenerlo). Encima el portal lo leía como nivel `completo`, y
+`completo` enseña el **IBAN y el DNI** del otorgante: eso no es «ver mis seguros»,
+es ver a la PERSONA.
+
+Se apagaron las 104 **sin perder nada** (foto previa en
+`seguros.cliente_relaciones_permiso_volcado`; revertir es un `UPDATE` desde ahí) y
+**las 1.706 relaciones siguen intactas**: el vínculo es conocimiento de negocio de
+Alberto y es SU dato; el permiso era de José. Son cosas distintas y por eso ahora
+viven en tablas distintas. Se pudo hacer a coste cero porque `portal_vinculo`
+estaba a **0 filas**: nadie había entrado todavía. Un día después de la primera
+invitación, lo mismo habría sido un acceso indebido del art. 33 (72 h).
+
+**Las cinco reglas que sostiene el código, y qué las protege:**
+
+| Regla | Dónde vive | Qué pasa si se rompe |
+|---|---|---|
+| Nace apagada y **caduca al año** | `caducidadPorDefecto`, `DIAS_VIGENCIA` | El caso que revienta esto es el **divorcio**: nadie entra a revocar ese día |
+| **Doble aceptación**: conceder no basta, el autorizado ACEPTA | `estadoAutorizacion` → `pendiente` | María entra en datos ajenos sin saber que hay un registro con su nombre |
+| Un tercero **nunca** ve IBAN, DNI ni documentos, ni actúa en tu nombre | `camposDeAlcance` (tope duro, fuera de la escalera de `acceso.ts`) | Vuelve el agujero del booleano |
+| **Leer ≠ actuar**: `partes` y `documentos` existen pero NO se conceden | `ALCANCES_CONCEDIBLES` | Un tick no es un poder; si María declara mal, art. 16 LCS y no se sabe quién firmó |
+| El otorgante **ve quién miró y cuándo** | `portal_autorizacion_uso` | Sin eso la autorización es un cheque en blanco |
+
+Todo ello con cepo en `test/regression-portal-autorizacion.test.ts` (12 tests, con
+las mutaciones comprobadas: no es un cepo que nunca ha disparado).
+
+⚠️ **`origen` no es contabilidad, es el requisito.** `portal` = lo concedió el
+cliente en su pantalla. `corredor` = Alberto anotó uno que el cliente le dio por
+teléfono. Un consentimiento que la correduría se auto-anota **no puede ser
+indistinguible** del que dio el interesado — y aun así no abre nada hasta que el
+autorizado lo acepte. Un CHECK de la BD obliga a que conste quién lo otorgó, y de
+la forma que corresponda a su origen: nunca los dos campos, nunca ninguno.
+
+🚫 **Al rol `prisma_asegura_portal` se le REVOCÓ el `SELECT` sobre
+`cliente_relaciones.puede_ver_polizas`**, y la columna ya no está en el modelo
+Prisma de esta app. Si alguien la devuelve al modelo, un `findMany` sin `select`
+explícito revienta en la BD — que es donde tiene que reventar. El resto de
+`cliente_relaciones` sí se lee: son las que le ofrecen a José a quién autorizar.
+
+📌 **Leer no escribe.** `carteraDeIdentidad` **no** toca el registro de accesos:
+devuelve `autorizacionesUsadas` y lo anota quien pinta la bóveda
+(`registrarUso`). Un `SELECT` que escribe se cae con el rol equivocado, y además
+no se puede testear.
+
+El estudio legal completo, con la comparativa de cómo lo resuelven la AEAT, la
+banca, el software del sector y sanidad: `docs/ASEGURA-AUTORIZACION-TERCEROS.md`.
+
+## 📨 Pedir acceso (la dirección CONTRARIA) — y el oráculo que hay que tener cerrado
+
+Dictado de Alberto (04/09/2026): *«se pueda mandar solicitudes por mail… José Suárez Salas puede añadir
+el mail de alguien, le diga qué relación tiene, y llega mail con acceso a la intranet»*. O sea, la
+autorización al revés: hasta ahora solo José podía empezar («deja que María vea lo mío»); ahora María
+puede pedirlo.
+
+Vive en `seguros.portal_peticion_acceso` (`prisma/sql/2026-09-04_portal_peticion_acceso.sql`, aplicada
+el 04/09/2026), con las reglas puras en `packages/module-seguros-portal/src/peticion-acceso.ts` y la BD
+en `apps/asegura-portal/lib/peticiones.ts`. **Lee la cabecera del módulo puro antes de tocar nada.**
+
+🚨 **La pieza que sostiene todo esto es `respuestaPublica()`, y no es un detalle de UX.** El portal es
+abierto: entra cualquiera. Un endpoint que conteste distinto según si el correo que le das es de un
+cliente convierte la pantalla en **una máquina de enumerar la cartera** — 32.600 fichas, a razón de un
+correo por intento. Por eso **cuatro resultados internos distintos** (`creada`, `sin_destinatario`,
+`ya_pendiente`, `ya_autorizado`) colapsan en **una sola respuesta**, `registrada`, con un texto que no
+afirma nada:
+
+> «Si esa persona tiene sus seguros con nosotros, le hemos hecho llegar tu petición. Te avisaremos aquí
+> si la concede.»
+
+Y **colapsar el texto no basta: hay que colapsar el TIEMPO y el CUERPO.** Los cuatro caminos hacen el
+mismo trabajo observable y la respuesta no lleva el id de la fila — un 202 que tarda 30 ms cuando no hay
+nadie y 300 ms cuando sí lo hay dice exactamente lo mismo que decirlo con palabras. Los dos únicos
+resultados que SÍ se distinguen son los que no revelan nada de un tercero: `a_si_mismo` (400) y
+`limite_diario` (429, tope de 5 al día).
+
+- **El destinatario se guarda por índice ciego** (`destinatario_email_hash`, el mismo HMAC que
+  `clientes.email_lookup_hash`), nunca el correo en claro: esta tabla la puede llenar cualquiera.
+- **La fila se INSERTA siempre y el índice único es la autoridad**: se intenta el INSERT y un `P2002` se
+  lee como `ya_pendiente`. Nada de un SELECT previo y un `if` — entre los dos cabe otra petición.
+- **Caduca a los 30 días**, contados en DÍAS (`setUTCMonth` sobre un 31 de marzo da un 3 de marzo sin
+  avisar), y **lo resuelto gana a la caducidad**: una concedida no se vuelve caducada al pasar el mes.
+- **Retirar ≠ rechazar.** `retiradaEn` la pone quien pidió («me he arrepentido»); `rechazadaEn`, quien
+  recibió («te he dicho que no»). Colapsarlas borra quién decidió qué.
+- **Sin permiso se contesta 404, nunca 403**: un 403 confirma que esa petición existe, y con ella que
+  existe la persona a la que se le pidió.
+- **Conceder una petición crea la autorización YA ACEPTADA**, con la fecha de la PETICIÓN y no la de hoy:
+  pedirla ES aceptarla (quien pidió ya sabe que existe un registro con su nombre — lo pidió él), pero lo
+  aceptó el día que escribió.
+
+Cepos: `packages/module-seguros-portal/src/peticion-acceso.test.ts` y
+`test/regression-portal-peticion-acceso.test.ts`, con las mutaciones comprobadas.
+
+## 🎟 Autorizar a quien NO es cliente, y autorizar UNA sola póliza (04/09/2026)
+
+Dos techos de `portal_autorizacion` que se levantaron el mismo día, con sus dos migraciones aplicadas
+(`2026-09-04_portal_autorizacion_identidad.sql` y `…_por_poliza.sql`).
+
+### 1. `autorizado_cliente_id` era NOT NULL → solo se podía autorizar a un CLIENTE
+
+Dictado de Alberto: *«la persona puede no estar… pero da igual, dale acceso y así podemos también
+captarlo de cliente. Mi idea de la intranet cliente es que sea para todo el mundo y gratis»*. El techo
+viejo hacía imposible el caso que de verdad pasa —el hijo que quiere ver la póliza de su padre y no es
+cliente de nadie— y contradecía el producto, que es justo donde está la captación.
+
+Ahora una autorización apunta **o a una FICHA (`autorizado_cliente_id`) o a una IDENTIDAD del portal
+(`autorizado_identidad_id`)**, y a exactamente una de las dos: lo obliga el CHECK
+`portal_autorizacion_destinatario_unico` (`num_nonnulls(...) = 1`).
+
+🚨 **Por qué la identidad y NO fabricarle una ficha vacía al invitado.** Quien MIRA es una identidad: es
+lo que hay detrás de la cookie. Una ficha es una persona en la cartera de Alberto, con su historial y
+sus pólizas, y crear una por cada curioso ensucia los **32.520 leads** que ya arrastra el volcado con
+gente que miró la póliza de su padre una vez.
+
+🚨 **Y las dos trampas de hacer nullable una columna que ya tenía cepos**, las dos del tipo que este repo
+persigue (no fallan, no se ven, y dejan de proteger):
+
+| Trampa | Qué pasaba | Cómo se cerró |
+|---|---|---|
+| El CHECK viejo era `otorgante <> autorizado`. En SQL **`algo <> NULL` no es FALSE: es NULL, y un CHECK que da NULL PASA** | «No puedes autorizarte a ti mismo» dejaba de existir para toda fila de identidad | Se sustituyó por `autorizado_cliente_id IS NULL OR otorgante <> autorizado` |
+| El índice único era `(otorgante, autorizado, alcance)`. En Postgres **dos NULL nunca son iguales** | La misma identidad podía acumular autorizaciones vivas infinitas sobre la misma ficha | Un índice gemelo `WHERE autorizado_identidad_id IS NOT NULL` |
+
+⚠️ Y lo que la BD **no puede** comprobar, dicho en voz alta para que no se suponga cubierto: que una
+IDENTIDAD no se autorice a sí misma exige mirar `portal_vinculo`, que es otra tabla, y un CHECK es de
+fila. **Eso lo cierra el código** (`lib/peticiones.ts`, al conceder).
+
+### 2. La autorización abría la FICHA ENTERA → ahora puede abrir UNA póliza
+
+Dictado de Alberto: *«un dueño de empresa solo quiere que una persona vea una sola póliza, no tiene por
+qué ver el resto»*. Medido sobre la cartera viva: 110 pólizas y 80 titulares, de los cuales **15 tienen
+más de una**. Esos 15 son justo los que lo piden.
+
+`poliza_id` **`NULL` = todas las del otorgante** (lo que significaban TODAS las filas anteriores a la
+columna: es un ensanche del vocabulario, no un cambio de significado). Con valor = solo esa.
+
+🦷 **La FK es COMPUESTA `(otorgante_cliente_id, poliza_id) → polizas(cliente_id, id)`, y ese es el cepo
+que de verdad importa.** Una FK normal a `polizas(id)` dejaría conceder CUALQUIER póliza de la cartera,
+incluida la de otra persona: bastaría un id manipulado en el JSON para que José «autorizara» la póliza
+de un desconocido, y la fila quedaría perfectamente válida. Se vio morder antes de darla por buena:
+`23503` con la póliza de otro, y entra con la suya.
+
+**Dos trampas que la BD NO puede vigilar**, y por eso están en el código y en la pantalla:
+
+1. **`NULL` cubre las pólizas FUTURAS.** Quien concede hoy «todas» concede también la que contrate
+   mañana. Para un empleado suele ser lo que se quiere; para un familiar puede que no. **La pantalla
+   tiene que decirlo con esas palabras al conceder** — hay un cepo positivo que falla si nadie lo dice.
+2. **Una póliza FUSIONADA deja la autorización apuntando a una fila muerta** (5 fusionadas hoy, no es
+   teórico) y el autorizado pierde el acceso **sin que nadie se entere**: no falla, deja de funcionar.
+   `lib/cartera-lectura.ts` sigue un salto de `merged_into_poliza_id`; si la fusión se llevó la póliza a
+   otra ficha, ya no es del otorgante y no se sirve.
+
+### Qué cambió en la lectura (`lib/cartera-lectura.ts`)
+
+- Las autorizaciones que me alcanzan se buscan por **mi ficha O mi identidad**. Sin el segundo brazo, el
+  invitado tenía su autorización en la BD y la bóveda ni la miraba: **no fallaba, salía vacía**.
+- **El corte de «aquí no hay nada» usa las DOS listas.** Antes bastaba con no tener `portal_vinculo`
+  para devolver `SIN_VINCULO`, y eso dejaba fuera justo a quien el producto quiere dentro. `vinculada`
+  sigue significando «hemos encontrado tu ficha», que es otra pregunta y por eso no se colapsa.
+- Los alcances de una concesión sobre la ficha entera y los de una sobre una póliza concreta **se
+  SUMAN sobre esa póliza**: quien te deja ver todo y además lo económico de la del coche ve lo económico
+  de esa y solo de esa. Por eso `camposVisibles` se resuelve **póliza a póliza**, no una vez por titular.
+- **Solo cuenta como USO lo que de verdad se ha servido**: una autorización sobre una póliza que ya no
+  está viva no se anota como que alguien miró algo. `registrarUso` y `resolver` miran también la
+  identidad — si no, el invitado no podría aceptar ni revocar, y sus visitas no constarían: el otorgante
+  leería «no ha entrado nadie» sobre alguien que sí entró.
+
+## ✉️ Invitar por correo a quien NO está en la cartera (04/09/2026)
+
+La **tercera** puerta de la autorización, y la que trae gente nueva. Dictado de Alberto: *«se pueda
+mandar solicitudes por mail… José Suárez Salas puede añadir el mail de alguien, le diga qué relación
+tiene, y llega mail con acceso a la intranet»*. Quien entra por aquí no es un cliente: es un futuro
+cliente viendo cómo trabaja la correduría con los seguros de alguien que se fía de él.
+
+Tabla `seguros.portal_invitacion` (`prisma/sql/2026-09-04_portal_invitacion.sql`, aplicada), reglas
+puras en `packages/module-seguros-portal/src/invitacion.ts` (**lee su cabecera antes de tocar el
+token**), BD en `lib/invitaciones.ts`, correo en `lib/correo-invitacion.ts`, rutas en
+`app/api/invitaciones/**`, pantallas en `app/(portal)/autorizaciones/` y `app/invitacion/[token]/`.
+
+### 🚨 El token NO abre sesión, y hay que dejarlo así
+
+La tentación es que el enlace del correo entre de un clic. **No**, por tres razones:
+
+1. **Se lo comen los escáneres.** Un GET que consume estado lo gastan el antivirus del correo y el
+   prefetch antes de que la persona lo toque — la misma lección que `lib/enlace-acceso.ts`.
+2. **Un token en un correo es una llave reenviable.** Quien reenvía el mensaje, o quien lee el buzón
+   compartido de una empresa, entraría en los seguros de un tercero sin que nada falle.
+3. **«Aceptado por el que tenía el enlace» no es una prueba de consentimiento**: es un recibo sin
+   firma, y el art. 7.1 RGPD pide poder demostrarlo.
+
+Reparto: **el token dice QUÉ invitación es; el código de un solo uso al correo invitado dice QUIÉN
+eres.** Y la aceptación se ata al **correo** (se compara el `portal_canal` de quien acepta con
+`destinatario_canal_hash`), no al token: un enlace reenviado no le sirve a nadie más. El token se
+guarda **hasheado** — una tabla de invitaciones con sus tokens legibles es una tabla de llaves.
+
+### La asimetría con `peticion-acceso.ts` es deliberada
+
+Allí los resultados **se colapsan** porque quien pregunta aprendería si el destinatario es cliente, y
+con 32.600 fichas eso es un bucle de enumeración. **Aquí no hay nada que aprender**: se invita igual
+lo sea o no. Lo que sigue sin contestarse —ni aquí ni en ningún sitio— es si ese correo está en la
+cartera: no es que se colapse, es que **no se calcula** (`invitacionRevelaSiEsCliente()` devuelve
+`false` por tipo, y tiene su test sobre TODOS los resultados).
+
+### `sin_enlace` (503) NO escribe la fila; `envio_fallido` (502) SÍ
+
+| | Qué pasó | Qué se dice |
+|---|---|---|
+| `sin_enlace` | falta `PORTAL_PUBLIC_URL` o no es https → **no se toca la BD** | «avería nuestra; no se ha creado ninguna invitación» |
+| `envio_fallido` | la fila EXISTE, lo que falló fue avisar | «la invitación está hecha, pero no hemos podido avisarle» |
+
+Aquí el enlace **es el mecanismo** (a diferencia del correo del código, donde el código abre igual la
+puerta y el enlace solo pre-rellena): una fila cuyo correo no puede salir ocupa el sitio del índice
+único y nadie podría aceptarla nunca. **No se inventa un dominio.** La respuesta lleva `registrada`,
+calculado con `invitacionEscrita()` del módulo puro, para que la pantalla no invite a reintentar algo
+que chocaría con el índice.
+
+### Lo que el correo NO puede decir
+
+Quien lo recibe todavía es un desconocido: José pudo equivocarse de dirección, o el buzón puede ser
+compartido. Dice **quién** invita, su mensaje, que caduca en 30 días y el enlace. **Nunca** compañía,
+número de póliza, matrícula ni importe — `CAMPOS_PROHIBIDOS_EN_INVITACION` vive en el módulo puro con
+un test que recorre el cuerpo del correo, para que ese «poco más» no crezca solo con el tiempo. Por lo
+mismo, la pantalla del invitado dice «solo a una de sus pólizas» **sin nombrarla**.
+
+### Landmines de esta pieza
+
+- **La pantalla de José NO puede decir a quién invitó.** La tabla guarda solo
+  `destinatario_canal_hash` y un hash no se revierte. `InvitacionEnviada` **no lleva destinatario**, y
+  eso es una decisión, no un campo por rellenar: cada invitación se identifica por su fecha, la ficha
+  y lo que ofrece. Enseñar el correo exigiría guardarlo en claro — una agenda de direcciones de
+  terceros que no han consentido nada.
+- **El alcance de una invitación es solo `ver`/`ver_economico`**, aunque la ficha sea jurídica: un
+  apoderamiento no se reparte por un enlace de correo a quien todavía no ha probado quién es. La
+  representación se sigue concediendo por `conceder()`. Lo obliga el CHECK `portal_invitacion_alcance`.
+- **`ya_autorizado` mira LAS DOS ramas** (ficha por índice ciego, identidad por `portal_canal`), con
+  la póliza en la clave. Sin `PII_LOOKUP_KEY` la rama de la ficha se degrada (log del motivo, jamás
+  del correo) en vez de bloquear; el respaldo real es que al ACEPTAR se reutiliza la autorización viva.
+- **`lib/correo-invitacion.ts` importa `@central/core-email` de forma DINÁMICA**, dentro de
+  `enviarInvitacion`. Medido: `node --test` no resuelve ese paquete (su `main` importa
+  `./transporter` sin extensión) y con el import arriba el cepo del cuerpo del correo no podía cargar
+  el módulo — o sea, se probaría leyendo la fuente, que es no probarlo.
+- **Las dos consultas por token son las ÚNICAS del portal sin identidad** (`invitacionPorToken` y
+  `filaPorToken`): la página es pública y ahí el filtro es el token, 256 bits. Están marcadas en voz
+  alta en el código y **no** hizo falta tocar la lista de EXENTOS del guardián de aislamiento.
+- **La sección «invitaciones mandadas» se carga por `GET /api/invitaciones`**, sin `try/catch`: si la
+  consulta falla, que suba. Devolver listas vacías haría pasar un fallo de BD por «no has invitado a
+  nadie» — justo sobre la lista donde José decide si retira algo. La pantalla distingue los tres
+  estados (cargando ≠ no se ha podido mirar ≠ mirado y no hay).
+- ⚠️ **Hueco conocido:** las fichas desde las que invitar salen de `candidatos`, que es lo único que
+  manda `GET /api/autorizaciones` — y `candidatos` sale de `cliente_relaciones`. Quien tenga vínculo
+  pero **ninguna relación registrada** no ve ficha que ofrecer; la pantalla lo dice («no tenemos
+  identificada ninguna ficha tuya… escríbenos») en vez de enseñar un formulario que fallaría con
+  `ficha_no_tuya`. Lo correcto a medio plazo es que el puerto mande «mis fichas» aparte de los
+  candidatos.
+
+Cepos: `packages/module-seguros-portal/src/invitacion.test.ts` (10, con las mutaciones comprobadas:
+colapsar `sin_enlace` con `envio_fallido` y sumar la caducidad en meses hacen fallar los suyos) y
+`apps/asegura-portal/lib/invitaciones.test.ts` (25).
+
+## 👥 «Contactos» (08/09/2026): nombre, relación y la invitación que NO comparte nada
+
+Alberto: *«una pestaña de contactos… nombre, tipo relación y mail, y se le manda un mail de
+presentación»*. La pestaña `/autorizaciones` se llama ahora **«Contactos»** (la RUTA no cambia: los
+enlaces guardados siguen llegando) y la invitación pide **`invitado_nombre`** y **`relacion`**
+(`prisma/sql/2026-09-08_portal_invitacion_contacto.sql`, aplicada; reglas en el apartado «Contactos»
+de `packages/module-seguros-portal/src/invitacion.ts`). Spec:
+`docs/superpowers/specs/2026-09-08-portal-contactos-design.md`.
+
+- **El nombre es para la LISTA de José y el saludo del correo, no una identidad.** Quién es de verdad
+  lo sigue probando el código al correo. Las invitaciones anteriores tienen `NULL` y se pintan por su
+  fecha, como antes (nunca `''`).
+- **La relación usa el vocabulario de `cliente_relaciones.tipo_relacion`** (`TIPOS_RELACION`; el
+  portal ofrece el subconjunto `RELACIONES_INVITACION`) para copiarla tal cual el día que el invitado
+  tenga ficha. Un CHECK repite la lista y `test/regression-portal-contactos.test.ts` obliga a que BD y
+  TypeScript sean la misma: si divergen, el envío moriría con un 23514 **después** de escribir el
+  correo de un tercero.
+- 🚨 **La relación NUNCA va en el correo** (`relacion` y `parentesco` entran en
+  `CAMPOS_PROHIBIDOS_EN_INVITACION`): «su hija» es un dato de la relación entre dos personas y quien
+  abre el buzón puede no ser ninguna de las dos. La pantalla lo promete («No va en el correo») y el
+  cepo de `lib/invitaciones.test.ts` mira el tipo del correo y la llamada que lo manda.
+- 🚨 **`alcance = 'ninguno'` (`SIN_COMPARTIR`) = «solo te presento el portal».** Es el
+  «recomiéndanos»: la misma invitación sin abrir un solo seguro. Al aceptar se sella la invitación y
+  **NO se crea `portal_autorizacion`** (el CHECK `portal_invitacion_acepta_con_sello` exige aquí
+  `autorizacion_id IS NULL`; `poliza_id` va NULL por otro CHECK). El correo dice quién invita y que
+  no se comparte nada, **sin argumento de venta** — un acto entre personas, no una comunicación
+  comercial de la correduría (art. 21 LSSI); el cepo busca «ahorr», «precio», «oferta», «regalo»…
+- 🚫 **Regalos por traer gente: aparcado** (ver `docs/CORREDURIA-INTRANET-IDEAS.md` §M). Un premio
+  por quien contrate convierte al cliente en colaborador externo del mediador (RDL 3/2020).
+- 📌 Pendiente conocido: copiar la relación a `cliente_relaciones` cuando el invitado tenga ficha es
+  trabajo del puerto del corredor (`prisma_asegura_portal` solo tiene `SELECT` sobre esa tabla).
+
+Cepos nuevos con las mutaciones comprobadas (relación colada en el correo, un valor menos en el CHECK,
+la rama sin acceso desactivada, la ruta de la pestaña cambiada: las cuatro en rojo).
+
+## 🗑 «Borradme los datos» (05/09/2026) — la solicitud que NO borra
+
+Tabla `seguros.portal_supresion` (`prisma/sql/2026-09-05_portal_supresion.sql`, **APLICADA el
+05/09/2026**, migración `20260905100234_seguros_portal_supresion`; los 4 cepos vistos morder en la
+BD real con rollback — ver su cabecera). Reglas puras en
+`packages/module-seguros-portal/src/supresion.ts`, BD en `lib/supresion.ts`, ruta
+`app/api/supresion/route.ts`, pantalla `app/(portal)/boveda/TusDatos.tsx`.
+
+🚨 **No borra nada, y esa es la mitad del diseño.** El art. 17.3.b y el 17.3.e del RGPD excluyen la
+supresión cuando el tratamiento hace falta para cumplir una obligación legal o para defender
+reclamaciones, y una correduría tiene las dos (normativa de seguros y prevención del blanqueo). Las
+dos salidas fáciles están mal: un botón que borre de verdad destruye documentación que la ley obliga
+a guardar, y uno que diga «borrado» sin borrar es una mentira que se descubre sola. Lo obligatorio, y
+lo que hay construido, es **recibir, acusar y contestar en un mes** (art. 12.3) diciendo con nombres
+qué se suprime y qué se conserva, con su base legal (art. 12.4: la negativa parcial hay que motivarla).
+
+- **Las DOS listas se enseñan ANTES de pulsar**, no en la respuesta de dentro de un mes, y se
+  **calculan** (`loQueSeSuprime()` / `loQueSeConserva()`): una copia a mano en el JSX se desincroniza
+  en cuanto se añade una categoría, y entonces la pantalla promete un borrado que nadie va a hacer.
+- **El reloj arranca al pulsar**, no al abrirla el corredor: si arrancara al mirarla, no mirarla nunca
+  sería una forma de no incumplir jamás. `estadoPlazo()` da cuatro estados y **`vencido` no se
+  redondea a «urgente»**.
+- **Prorrogar exige motivo** (art. 12.3: hay que avisar dentro del primer mes). Prorrogar en silencio
+  incumple igual que no contestar, así que el sello sin motivo sería una prórroga inventada.
+- **Una pendiente bloquea otra** por índice único parcial en la BD, no por un `SELECT` y un `if`:
+  entre los dos cabe otra solicitud y dos relojes legales sobre el mismo caso. Una **resuelta no**
+  bloquea: el motivo de conservación decae, y una negativa de hace tres años no vale para siempre.
+- **Retirar ≠ denegar**, y no se borra la fila: el rol **no tiene DELETE** sobre la tabla. La
+  solicitud es la prueba de que ejerciste el derecho y de que se te atendió.
+- **El motivo es opcional**: el art. 17 no obliga a justificar la solicitud, y exigirlo sería un peaje.
+
+📌 **Y llega a una pantalla que Alberto abre.** La cola la sirve `apps/asegura` por
+`GET/POST /api/operador/supresiones` a `plataforma` → `/correduria`, **ordenada por el reloj legal y
+no por orden de llegada**, con `resumen.vencidas` aparte. Sin ese puerto la solicitud viviría solo en
+la BD del portal y el plazo de un mes se incumpliría en silencio: es la regla de la casa («un aviso en
+una pantalla que nadie abre no existe») aplicada donde más caro sale.
+
+🚨 **Y la lección que dejó al aplicarla: se desplegó ANTES que la DDL.** El código que consulta la
+tabla entró en `main` y Vercel lo puso en producción (`dpl_Fe3pMt…`) con la tabla todavía sin crear.
+`lib/supresion.ts` consulta **sin `try/catch` a propósito**, así que en esa ventana `/boveda` entera
+habría reventado, no solo la sección nueva. No golpeó a nadie —cero errores de esa ruta en Vercel,
+porque nadie entró—, pero eso fue suerte. **La DDL de una tabla `portal_*` se aplica en el MISMO paso
+que el despliegue que la usa**, y esta cabecera ya lo decía antes de incumplirse.
+
+Cepos: `packages/module-seguros-portal/src/supresion.test.ts` (10) y
+`test/regression-portal-supresion.test.ts` (14). **Tres mutaciones comprobadas**: quitar la lista de
+«lo que se conserva» de la pantalla, dar `DELETE` al rol del portal y permitir resolver sin texto
+hacen fallar el suyo.
+
+⚠️ **Y el guardián de aislamiento mordió al construirlo, con razón.** `correduriaUnica()` se sacó a un
+`lib/correduria.ts` suelto para no duplicarla, y ese fichero toca `prisma.correduria` —o sea, la
+cartera— sin poder nombrar `portalVinculo` ni resolver sesión. Se **deshizo la extracción**: la
+función se exporta desde `lib/peticiones.ts`, donde nació, y `lib/supresion.ts` la importa de ahí. Un
+exento nuevo en el cepo es una puerta abierta para siempre a cambio de nada.
+
+## ☎️ El teléfono de la compañía (05/09/2026) — el sitio existe, los números los pone una persona
+
+> 🔀 **ACTUALIZADO 23/09/2026 — esta sección es HISTORIA: las columnas `telefono_*` de `companias_dgs`
+> ya NO se leen** (están comentadas como OBSOLETAS en la BD). La única fuente es el catálogo verificado
+> `packages/module-seguros/src/telefonos-companias.ts`, el mismo que publica la web; `lib/canales-compania.ts`
+> lo convierte a `FilaCompania` (con varias líneas de asistencia rotuladas y la nota del WhatsApp) y el
+> puerto de asegura pisa esas columnas con él. Motivo: las dos copias se separaron y el portal daba a
+> Mapfre su línea MÉDICA como «dar parte». Lo vigila `test/regression-telefonos-fuente-unica.test.ts`.
+> Cambiar un número = PR a ese catálogo con captura de la web oficial y fecha, nunca un UPDATE.
+
+Alberto quiere una **hoja imprimible** («la del frigorífico») con lo que hace falta después de un
+percance: compañía, nº de póliza, tomador y **a quién llamar**. Ese teléfono no estaba en ninguna
+parte: medido el 04/09/2026, el único `telefono` de todo el schema que no es de una persona es el de
+`corredurias`.
+
+`prisma/sql/2026-09-05_companias_telefonos.sql` (aplicada) añade a `companias_dgs`
+`telefono_siniestros`, `telefono_asistencia`, `telefono_fuente` y `telefono_verificado_en`, con
+`SELECT` por columnas para `prisma_asegura_portal`.
+
+🚨 **Los números se dejaron a NULL a propósito.** Desde el contenedor de la sesión la política de red
+bloquea `mapfre.es`, `allianz.es`, `occident.com` y `reale.es` (comprobado con las cuatro), y lo único
+alcanzable son comparadores que **se contradicen entre sí** — para Mapfre salen 918 366 240,
+918 365 365 y 900 822 822 según quién lo cuente. Un teléfono de siniestros equivocado impreso en un
+imán de nevera es peor que no tener ninguno: alguien lo marca a las 3 de la mañana después de un
+golpe. **No se rellenan desde un agente; los pone una persona contra la fuente.**
+
+🦷 **El cepo `companias_dgs_telefono_con_fuente`** impide guardar un número sin decir de dónde salió y
+cuándo se comprobó. Visto morder: el `UPDATE` con solo el número devuelve **23514**, y el mismo con
+fuente y fecha entra.
+
+**Reglas para cuando se pinte la hoja:**
+
+- **`NULL` = «no lo hemos verificado», NUNCA «esta compañía no tiene»** ni un hueco en blanco. La hoja
+  dice «pídenoslo» — es la regla de la casa aplicada al caso donde más caro sale.
+- **Son DOS números y no se colapsan**: dar parte ≠ asistencia 24h. En el arcén hace falta el segundo.
+- **El teléfono de la CORREDURÍA va primero**, y el de la compañía debajo con su etiqueta de urgencia.
+  El punto de contacto es Alberto (regla de visibilidad del 03/09), pero quitarle a un cliente el
+  número de la grúa para forzar que llame al corredor es un mal negocio el día que le pase de verdad.
+- **La hoja lleva impresa la fecha de verificación.** Un número leído hace tres años falla igual que
+  uno equivocado, y en el mismo momento.
+
+📌 Cartera viva medida el 05/09/2026: **solo cuatro compañías** — Mapfre (64 pólizas, `C0058`),
+Allianz (26, `C0109`), Occident (19, `C0468`) y Reale (1, `C0613`). Las cuatro ya están en
+`companias_dgs` y su `nombre_comun` casa exacto con `polizas.aseguradora`.
+
+### 📲 Occident da parte por WhatsApp (05/09/2026)
+
+Lo trae Alberto con una captura del perfil verificado: *«catalana tiene whassap para apertura
+siniestros!!»*. Tapa exactamente el hueco que este repo tenía anotado ese mismo día en el
+`telefono_fuente` de C0468 — buscado en occident.com, no había número de siniestros.
+
+`prisma/sql/2026-09-05_companias_whatsapp_horario.sql` (aplicada) añade `whatsapp_siniestros` y
+`horario_siniestros`, y rehace el cepo de la fuente para que cubra también el canal nuevo.
+
+🚨 **Y trae dos avisos que NO se pueden perder por el camino:**
+
+1. **El perfil se llama «Plus Ultra Siniestro y asistencia» y la empresa verificada es «Occident».**
+   Plus Ultra es **otra compañía de esta misma tabla** (`C0517`, del mismo grupo). Se atribuye a
+   Occident porque el nombre verificado por Meta y la web del perfil son de Occident, que es la
+   señal fuerte, y **la duda queda escrita en `telefono_fuente`**. Si Occident confirma que esa
+   línea es solo de Plus Ultra, se mueve a `C0517` con un `UPDATE`. Son 19 pólizas: equivocarse
+   aquí manda a 19 clientes a la compañía que no es.
+2. **Atiende de 9h a 21h, de lunes a viernes — o sea, NO es 24 h.** Por eso existe
+   `horario_siniestros`: un canal de siniestros pintado sin horario se lee como «siempre», que es
+   la promesa que se rompe un sábado por la noche. Y por eso este canal **no puede ir a
+   `telefono_asistencia`**, que es la grúa.
+
+🚨 **`whatsapp_siniestros` NO es `telefono_siniestros`, y la línea de VOZ sigue a NULL.** Uno se
+marca y el otro es mensajería. Que un fijo de Madrid publicado como WhatsApp Business atienda además
+llamadas es probable — y «probable» no se imprime en la nevera de nadie. 🦷 `companias_dgs_whatsapp_e164`
+exige E.164 (`+34917838383`) y se vio morder con el número en formato de lectura: **23514**.
+
+🚫 **`telefono_fuente` se REVOCÓ del rol del portal** el mismo día: dejó de ser una nota neutra
+(hoy guarda la duda de Plus Ultra, lo que falta preguntar, y por qué el 900 102 978 —Defensa del
+Cliente— no puede ir ahí). Eso es gestión, y la gestión no llega al cliente. El rol ve **10
+columnas** de esa tabla y ni `notas` ni `telefono_fuente`.
+
+### 🚑 Los DOS caminos del parte, y por qué el primero no somos nosotros
+
+Dictado de Alberto (05/09/2026): *«los siniestros mejor intentar llamen a la compañía; nosotros como
+nos enteraremos por CIMA me avisas y llamar para ver cómo va y hacerle seguimiento»*. Lo implementa
+`CanalesCompania` en `app/(portal)/boveda/ParteSiniestro.tsx`, con las reglas puras en
+`packages/module-seguros-portal/src/canal-compania.ts`.
+
+- **El canal de la compañía se pinta ARRIBA, fuera del formulario y sin elegir póliza.** Si el
+  camino que de verdad abre el siniestro estuviera detrás de «Dar parte» → desplegar → elegir
+  póliza, estaría escondido justo de quien tiene prisa. Se enseñan las compañías de TODAS sus
+  pólizas (`canalesDeLasPolizas`), no la de la póliza seleccionada.
+- **Las cuatro frases prohibidas**, cada una con su cepo: «esta compañía no tiene teléfono»
+  (`null` = no lo hemos verificado → `TEXTO_SIN_CANAL`, «pídenoslo») · «24 h» (no existe ningún
+  dato que signifique «siempre») · un `href="tel:"` sobre un WhatsApp · un cruce
+  póliza→compañía **aproximado**.
+- **El cruce es por nombre EXACTO** y ahí es donde más falla, a propósito: el nombre de una póliza
+  APORTADA lo leyó una IA de un PDF («MAPFRE ESPAÑA S.A.»), así que muchas caen en «pídenoslo». Una
+  coincidencia aproximada acertaría casi siempre y alguna vez daría el teléfono de urgencias de
+  **otra** compañía — un fallo que no se ve hasta que alguien marca.
+- **La asistencia NO hereda `horario_siniestros`**: la grúa puede tener otro horario, y copiárselo
+  es inventarse el dato justo de la vía que se usa a la hora en la que el otro no atiende.
+- **Las compañías `sinDatos` NO se filtran de la lista.** Filtrarlas las hace desaparecer en
+  silencio, y eso se lee como «con esa no hay nada que hacer».
+
+Cepos: `packages/module-seguros-portal/src/canal-compania.test.ts` (11) y
+`test/regression-portal-canal-compania.test.ts` (5). ⚠️ Dos de los cepos de raíz **no mordieron a la
+primera** y se arreglaron: el de «24 h» cazaba «formato de 24 h» del campo de la hora (se acotó al
+bloque del canal), y el de las `sinDatos` dejaba pasar un `.filter()` posterior al helper. Un cepo
+que no se ha visto morder es una suposición.
+
+📌 Cartera viva al 05/09/2026: Mapfre `C0058` (64 pólizas, 900 122 122) · Allianz `C0109` (26,
+**900 300 250, L-V 9-19** — corregido el 08/09/2026: el 900 101 920 que se cargó el 05/09 es la línea
+especial de DANA/catástrofes según `prensa.allianz.es`; **asistencia a NULL a propósito** porque depende
+del ramo —900 117 115 vehículos / 913 255 258 hogar— y la columna admite uno solo) · Occident `C0468`
+(19, **voz + WhatsApp, 917 83 83 83, 24h/365 días** — corregido el 14/09/2026: el 05/09 se cargó ese
+mismo número SOLO como WhatsApp con horario 9-21h L-V, leyendo el badge de WhatsApp Business; Alberto
+confirmó que es la MISMA línea también para voz y 24h/365, contrastado además con tres comparadores
+—Selectra, numeroservicioalcliente.com, segurosmarina.es—, que coinciden en «asistencia en carretera y
+siniestros, 24h/365 días». `telefono_siniestros` ya no es `NULL`) · Reale `C0613` (1, 900 365 900). Y **Generali `C0072`** (sin pólizas vivas;
+una declarada en el portal como «GeneraliSegurosy Reaseguros,S.A.U.», que NO cruza por nombre exacto):
+900 903 433 para dar parte y asistencia, horario NULL; su grúa por WhatsApp (+34 654 033 629) **no se
+pinta** porque es asistencia y `whatsapp_siniestros` se rotula «Dar parte». SQL:
+`prisma/sql/2026-09-08_companias_telefonos_generali_allianz.sql`.
+
+🔗 **Y el QR de esa hoja lleva un ENLACE, no los datos.** Un QR no caduca —es una imagen con un texto
+dentro— pero lo que se mete dentro sí: con los datos escritos, la imagen miente en cuanto cambie la
+póliza, y además cualquiera que fotografíe la hoja se los lleva. Con una URL, el QR es permanente y
+la página detrás está siempre al día. Es la opción simple, no la complicada.
+
+### 🔗 Llegar al parte DESDE una póliza (19/09/2026) — el botón prometía un teléfono y daba una pestaña
+
+Alberto, pulsando «Ver los teléfonos de Allianz y dar parte» en la ficha de una de sus pólizas:
+*«tiene que aparecer tlf y los campos para apertura siniestros, ahora mismo me sale página de
+siniestros. Que revise agente estructura y diseño, hay que dividir mejor»*.
+
+Lo que **ya funcionaba** y conviene no volver a construir: el enlace de la ficha ya llevaba
+`?vista=siniestro&poliza=cartera:<id>` y `ParteSiniestro` ya nacía ABIERTO con esa póliza puesta (y
+su matrícula autorrellenada). Lo que fallaba era todo lo que se veía ANTES de llegar ahí.
+
+- **El ORDEN de la pantalla depende de con qué intención se llega.** Con `?poliza=` válida, el canal
+  de la compañía y el formulario van PRIMERO y el historial de siniestros detrás; sin él —quien entra
+  por la pestaña— se conserva el orden de siempre, porque mirar es mayoría. Antes, quien acababa de
+  tener un golpe aterrizaba por delante del historial de TODA su cartera.
+- **La compañía de esa póliza se pinta la PRIMERA y marcada** («La compañía de la póliza que traes
+  elegida», con filete de acento — no del rojo de alarma: aquí no ha fallado nada). Lo decide
+  `canalesConCompaniaPrimero()` de `canal-compania.ts`, puro y con test.
+- 🚨 **Ordenar NO es recortar: las demás compañías siguen enteras debajo.** Quien tiene prisa puede
+  haber llegado desde la póliza equivocada —el coche de su padre, el piso en vez del local— y una
+  lista recortada a una sola compañía le diría que no hay nadie más a quien llamar. Es la misma razón
+  por la que las `sinDatos` tampoco se filtran.
+- **La destacada sale de la póliza elegida AHORA** (`form.poliza`), no de la del enlace: cambiar de
+  póliza en el desplegable reordena el bloque. Si saliera de `polizaInicial`, el teléfono de la
+  anterior se quedaría arriba y marcado como «la tuya».
+- **El cruce sigue siendo por nombre EXACTO** (normalizado igual que `canalDeCompania`): un nombre que
+  no está en la lista deja el orden intacto. Nunca se promueve «la más parecida», que es la vía por la
+  que alguien acabaría marcando el número de urgencias de otra compañía.
+- La póliza del enlace se comprueba **dos veces contra la lista ya acotada a la sesión**
+  (`polizasParte`): en la página, porque de ella depende el orden, y dentro del componente, porque de
+  ella depende la preselección. Un id manipulado en la URL no reordena nada ni abre nada.
+- 📌 **Lo que NO se ha tocado, y es deliberado: `ParteSiniestro.tsx` sigue siendo un solo fichero.**
+  «Dividir mejor» se ha resuelto en el ORDEN de la pantalla, no partiendo el componente: sus piezas
+  ya existen como funciones internas (`CanalesCompania`, `BloqueCanal`, `ViaCanalEnlace`,
+  `Adjuntar`, `ListaPartes`…) y **sacarlas a otro fichero las dejaría fuera de los cinco cepos de
+  `test/regression-portal-canal-compania.test.ts`**, que leen ESE fuente y vigilan las cuatro frases
+  que no se pueden decir. Mover el canal de sitio es un PR con sus cepos migrados, no un efecto
+  colateral de reordenar una pantalla.
+- Cepos en `test/regression-portal-parte-desde-poliza.test.ts` (6, con **seis mutaciones vistas
+  morder**) y en `canal-compania.test.ts` del módulo.

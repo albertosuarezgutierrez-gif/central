@@ -61,7 +61,16 @@ test('etiquetas: fraccionamiento y forma de cobro EIAC', () => {
   assert.equal(etiquetaFormaPago(null), null)
 })
 
-test('la única salida es el vencimiento, avisando 30 días antes', () => {
+test('el preaviso del art. 22 es un mes NATURAL, no 30 días', () => {
+  assert.equal(ventanaAnulacion('2027-03-31', new Date('2027-01-10T00:00:00Z'))?.limiteAviso, '2027-02-28')
+  assert.equal(ventanaAnulacion('2028-03-31', new Date('2028-01-10T00:00:00Z'))?.limiteAviso, '2028-02-29', 'bisiesto')
+  assert.equal(ventanaAnulacion('2027-05-31', new Date('2027-01-10T00:00:00Z'))?.limiteAviso, '2027-04-30')
+  assert.equal(ventanaAnulacion('2027-01-15', new Date('2026-11-10T00:00:00Z'))?.limiteAviso, '2026-12-15', 'cruza de año')
+  // El 01/03 ya NO está en plazo para un vencimiento del 31/03 (con 30 días sí lo estaba).
+  assert.equal(ventanaAnulacion('2027-03-31', new Date('2027-03-01T00:00:00Z'))?.enPlazo, false)
+})
+
+test('la única salida es el vencimiento, avisando un mes antes', () => {
   const v = ventanaAnulacion('2026-10-05', new Date('2026-09-02T00:00:00Z'))
   assert.equal(v?.limiteAviso, '2026-09-05')
   assert.equal(v?.diasParaAvisar, 3)

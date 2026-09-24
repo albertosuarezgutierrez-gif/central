@@ -6,10 +6,10 @@ import { eur } from '@/lib/dinero'
 
 export const dynamic = 'force-dynamic'
 
-const card: React.CSSProperties = { background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }
+const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }
 const kpi: React.CSSProperties = { ...card, minWidth: 120 }
 const th: React.CSSProperties = { textAlign: 'left', color: 'var(--muted)', fontWeight: 600, fontSize: 12, padding: '6px 8px' }
-const td: React.CSSProperties = { padding: '6px 8px', fontSize: 13, borderTop: '1px solid var(--line)' }
+const td: React.CSSProperties = { padding: '6px 8px', fontSize: 13, borderTop: '1px solid var(--border)' }
 const scroll: React.CSSProperties = { overflowX: 'auto' }
 
 const MODO_LABEL: Record<string, string> = {

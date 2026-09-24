@@ -1,7 +1,7 @@
 # Agente de pricing IA — sivra
 
 > **El cerebro.** La IA decide, pero la escritura a Smoobu pasa SIEMPRE por los raíles del
-> `POST /api/pricing/aplicar-propuesta` (Paso 4) que la IA **no puede saltarse**: suelo de coste,
+> `POST /api/sivra/pricing/aplicar-propuesta` de plataforma (Paso 4; la copia de sivra está retirada) que la IA **no puede saltarse**: suelo de coste,
 > tope ±/día, pausa global, circuit-breaker, auditoría. Lección de los 125€: los raíles van en el
 > código, no en la confianza al LLM. **Arranca SIEMPRE en `dryRun`** y pasa a vivo solo tras revisar.
 
@@ -92,6 +92,15 @@ el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la
   - `mcp__Expedia__search_hotels` y `mcp__lastminute_com__search_only_hotel` como 2ª/3ª fuente.
   - `mcp__Trivago__*` / `mcp__Tripadvisor__search_hotels` solo si las de arriba fallan (Tripadvisor da
     HOTELES, sesga al alza — usa solo el clúster apartamento-style más barato).
+  - 🪤 **`mcp__Expedia__search_hotels` NO acepta parámetro de moneda y devuelve en USD** (verificado
+    07/09/2026: 3 de 4 agentes en paralelo del mismo ciclo ingestaron esos precios en `market_rates`
+    etiquetados `currency:'EUR'` sin convertir — ~8-9% de sobreprecio silencioso justo en las fechas
+    de evento, que es donde más pesa el percentil). Antes de ingestar un comp de Expedia: o se
+    convierte a EUR con un tipo real (no inventar uno), o se etiqueta `currency:'USD'` en el POST y
+    se excluye del cálculo aguas abajo — el motor no distingue divisas, así que un USD sin marcar
+    contamina el percentil como si fuera EUR. Si no hay forma fiable de convertir en la sesión, mejor
+    NO ingestar esos comps: Booking ya da ≥8-10 apartamentos reales por fecha, que basta de sobra
+    para el `MIN_SAMPLE`.
 - **Persiste por el endpoint, NO con SQL a mano:** `POST /api/mercado/ingest` (en plataforma) con
   `{ portal:"booking|expedia|lastminute", scenario:"prop_X", checkin, checkout, guests, apartments:[{name,
   price_night, score, review_count, location}] }`. Es **idempotente** (clave search_date+portal+scenario+
@@ -141,9 +150,11 @@ el 11/07, precio REAL 65-81€ contra un mercado de 80€). El aviso está en la
 - **NUNCA fabriques `pricing_decisiones` a mano** (sería simular una decisión que nunca pasó por los raíles
   reales — peor que dejarlo en blanco). Con la vía de plataforma + `ALERTA_TOKEN` ya no deberías quedarte
   bloqueado; si aun así el Paso 4 falla **dos ciclos seguidos**, no lo dejes solo como «pendiente» en la
-  bitácora: avisa por Telegram (`POST {PLATAFORMA_URL}/api/internal/alerta`, Bearer `ALERTA_TOKEN`, mismo
-  patrón que `psd2-health-check`) — el bloqueo silencioso repetido es peor que una alerta. **Antes de
-  escalar, comprueba el diagnóstico de 3 patas del 27/07:** (1) ¿el dominio que llamas es el de plataforma?
+  bitácora: avisa por Telegram:
+  ```
+  bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "⚠️ pricing-agente: Paso 4 falla dos ciclos seguidos. Último error: [causa]. Revisar en plataforma." }'
+  ```
+  El bloqueo silencioso repetido es peor que una alerta. **Antes de escalar, comprueba el diagnóstico de 3 patas del 27/07:** (1) ¿el dominio que llamas es el de plataforma?
   (2) ¿mandas `ALERTA_TOKEN` por CABECERA? (es header-only a propósito) (3) ¿el 401 viene del endpoint o el
   403 del proxy? — son fallos distintos con arreglos distintos.
 - **El Paso 2 (mercado) también puede hacerse por Supabase** si el endpoint fallara: replica el

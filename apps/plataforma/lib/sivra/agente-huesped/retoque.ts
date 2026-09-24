@@ -1,5 +1,7 @@
 // lib/sivra/agente-huesped/retoque.ts — aplica una instrucción de Alberto sobre el borrador existente.
 
+import { asegurarIdioma } from './idioma-salida.ts'
+
 const NOMBRE_IDIOMA: Record<string, string> = { es: 'español', en: 'inglés', fr: 'francés', de: 'alemán', it: 'italiano' }
 
 // Tipo de la función de completado (inyectable para test; por defecto aiComplete de @central/core-ai).
@@ -27,6 +29,8 @@ export async function aplicarRetoque(
       [{ role: 'user', content: `BORRADOR:\n${txt}\n\nCAMBIO A APLICAR:\n${ins}` }],
       { system: `Eres el anfitrión de un alojamiento. Tienes un BORRADOR de respuesta a un huésped escrito en ${nombre}. Aplica el CAMBIO indicado conservando el resto del mensaje intacto. Devuelve SOLO el mensaje revisado, en ${nombre}, sin comillas ni notas.`, maxTokens: 600 },
     )).trim()
-    return out
+    // Mismo riesgo que en `redactar.ts`: la instrucción va en español y el retoque puede volver en
+    // español aunque el borrador estuviera en el idioma del huésped.
+    return (await asegurarIdioma(out, idioma, complete)).texto
   } catch { return '' }
 }

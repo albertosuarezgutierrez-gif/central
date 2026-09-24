@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { calcOurs, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { smoobuFetch } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -25,7 +25,6 @@ export async function GET(req: NextRequest) {
   if (!(await isCronAuthorized(req))) {
     return NextResponse.json({ error: "no autorizado" }, { status: 401 })
   }
-  const SMOOBU_KEY   = await getSmoobuKey()
   const today        = new Date()
   const startDate    = fmtDate(today)
   const endDay       = new Date(today); endDay.setDate(endDay.getDate() + PRICING_HORIZON_DAYS)
@@ -37,9 +36,9 @@ export async function GET(req: NextRequest) {
 
   for (const prop of PROPS) {
     try {
-      const res = await fetch(
+      const res = await smoobuFetch(
         `${BASE}/rates?apartments[]=${prop.smoobuId}&start_date=${startDate}&end_date=${endDate}`,
-        { headers: { "Api-Key": SMOOBU_KEY, "Cache-Control": "no-cache" }, next: { revalidate: 0 } }
+        { next: { revalidate: 0 } }
       )
       if (!res.ok) { errors.push(`${prop.propId}: HTTP ${res.status}`); continue }
 

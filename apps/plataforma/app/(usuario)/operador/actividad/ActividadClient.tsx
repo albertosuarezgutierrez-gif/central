@@ -1,5 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { Eye } from 'lucide-react'
+import { PageHeader } from '@/components/ui'
 import type { ActorResumen, FilaActividad } from '@/lib/actividad-ialimp'
 
 const TIPO_ICON: Record<string, string> = { owner: '👑', usuario: '🧑‍💼', limpiadora: '🧹', propietario: '🏠' }
@@ -54,7 +56,7 @@ export default function ActividadClient({ actores, desde, total, empresas }: {
 
   return (
     <div style={{ padding: '24px clamp(16px,4vw,40px)', maxWidth: 1100, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>👁️ Actividad ialimp</h1>
+      <PageHeader titulo="Actividad ialimp" icono={<Eye size={20} strokeWidth={1.75} />} />
       <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
         Accesos y actividad de los usuarios del SaaS (dueña, usuarios, limpiadoras y propietarios). {total} eventos registrados.
       </p>

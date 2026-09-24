@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createHash } from 'node:crypto'
-import { requireSession } from '@/lib/session'
-import { leerPolizaAuto, revisarFichero } from '@/lib/documentos/extraer-auto'
-import { camposLeidos, seLeyoAlgoAuto } from '@central/module-seguros'
+import { exigirAccesoCartera } from '@/lib/session'
+import { leerPoliza, revisarFichero } from '@/lib/documentos/extraer-poliza'
+import { camposLeidos, seLeyoAlgoAuto, camposLeidosHogar, seLeyoAlgoHogar } from '@central/module-seguros'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,7 +29,14 @@ export const maxDuration = 120
  *    documento repetido sin conservarlo.
  */
 export async function POST(req: Request) {
-  await requireSession()
+  // 🛡️ Sesión **Y ÁMBITO DE CORREDURÍA**, fail-closed y ANTES de nada.
+  //
+  // `requireSession()` LANZA (500 con traza) en vez de contestar 401, y además
+  // solo acredita «tiene cuenta en la casa de marcas», no «es de esta
+  // correduría»: `public.cuentas` la comparten plataforma, alquiler, transporte,
+  // mariscos, rrhh y almacén. Ver `lib/session.ts`.
+  const acceso = await exigirAccesoCartera()
+  if (!acceso.ok) return NextResponse.json(acceso.cuerpo, { status: acceso.status })
 
   let form: FormData
   try {
@@ -50,27 +57,37 @@ export async function POST(req: Request) {
   const buffer = Buffer.from(await fichero.arrayBuffer())
   const hash = createHash('sha256').update(buffer).digest('hex')
 
-  const r = await leerPolizaAuto(buffer, fichero.type, fichero.name)
+  const r = await leerPoliza(buffer, fichero.type, fichero.name)
 
   // 🚨 «No se pudo leer» NO se devuelve como 200 con todo a null: eso se
   // pintaría como «esta póliza no tiene datos», que es otra cosa.
-  if (r.fuente === 'none') {
+  if (r.fase === 'ninguno') {
     return NextResponse.json(
       { error: r.motivo ?? 'No se ha podido leer el documento.', leido: false, hash },
       { status: 422 },
     )
   }
 
+  const esHogar = r.fase === 'hogar'
+  const campos = esHogar ? camposLeidosHogar(r.datos) : camposLeidos(r.datos)
+  const algoLeido = esHogar ? seLeyoAlgoHogar(r.datos) : seLeyoAlgoAuto(r.datos)
+
   return NextResponse.json({
     leido: true,
     fuente: r.fuente,
     hash,
     nombre: fichero.name,
+    // De qué ramo cree la IA que es la póliza. `null` = no lo pudo decidir.
+    ramo: r.ramo,
+    // `auto` (incluye moto) · `hogar` · `contrato_solo` (otro ramo, o
+    // ninguno: solo se leyó lo común a cualquier póliza, no hay lectura
+    // extendida para ese ramo todavía).
+    tipoLectura: r.fase,
     datos: r.datos,
-    campos: camposLeidos(r.datos),
+    campos,
     // `true` con cero campos es posible: el modelo respondió pero no encontró
     // nada. Es distinto de no haber podido mirar, y la pantalla lo dice distinto.
-    algoLeido: seLeyoAlgoAuto(r.datos),
+    algoLeido,
     // La procedencia viaja con el dato desde el primer momento, para que nadie
     // aguas abajo tenga que acordarse de ponerla.
     procedencia: 'documento' as const,

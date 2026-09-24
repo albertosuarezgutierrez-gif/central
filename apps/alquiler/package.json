@@ -11,10 +11,11 @@
   "dependencies": {
     "@central/core-identity": "workspace:*",
     "@central/module-alquiler": "workspace:*",
+    "@central/module-materiales": "workspace:*",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.3",
-    "next": "^15.5.22",
+    "next": "^15.5.25",
     "prisma": "^5.22.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

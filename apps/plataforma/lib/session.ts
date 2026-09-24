@@ -10,7 +10,7 @@ export async function getSession() {
   if (!payload) return null
 
   const cuenta = await prisma.cuenta.findFirst({
-    where: { id: payload.cuentaId, sessionJti: payload.jti },
+    where: { id: payload.cuentaId, sessionJtis: { has: payload.jti } },
     select: { id: true, nombre: true, email: true, rol: true },
   })
   return cuenta ? { ...cuenta, rol: cuenta.rol ?? null, jti: payload.jti } : null

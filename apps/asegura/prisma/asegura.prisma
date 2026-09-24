@@ -26,6 +26,7 @@ enum TipoSeguro {
   responsabilidad_civil
   comercio
   comunidades
+  accidentes
   otros
 
   @@map("tipo_seguro")
@@ -49,6 +50,8 @@ enum EstadoPoliza {
 enum PolizaOrigen {
   gestionada_correduria
   declarada_usuario
+  /// La emitimos nosotros por Codeoscopic y CIMA aún no la ha traído (spec 2026-09-02, D2).
+  emitida_codeoscopic
 
   @@map("poliza_origen")
 }
@@ -120,6 +123,10 @@ enum FuenteOrigen {
   recomendacion
   renovacion
   otros
+  /// Canales de lead (02/09/2026): formulario público, portal del cliente, WhatsApp (cuando haya WABA).
+  web
+  portal
+  whatsapp
 
   @@map("fuente_origen")
 }
@@ -185,94 +192,119 @@ enum SiniestroGravedad {
 }
 
 model Correduria {
-  id                 String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  nombre             String             @db.VarChar(255)
-  cif                String             @unique @db.VarChar(20)
-  email              String             @db.VarChar(255)
-  telefono           String?            @db.VarChar(20)
-  direccion          String?
-  codigoPostal       String?            @map("codigo_postal") @db.VarChar(10)
-  ciudad             String?            @db.VarChar(100)
-  provincia          String?            @db.VarChar(100)
-  logoUrl            String?            @map("logo_url")
-  web                String?            @db.VarChar(255)
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre              String             @db.VarChar(255)
+  cif                 String             @unique @db.VarChar(20)
+  email               String             @db.VarChar(255)
+  telefono            String?            @db.VarChar(20)
+  direccion           String?
+  codigoPostal        String?            @map("codigo_postal") @db.VarChar(10)
+  ciudad              String?            @db.VarChar(100)
+  provincia           String?            @db.VarChar(100)
+  logoUrl             String?            @map("logo_url")
+  web                 String?            @db.VarChar(255)
   // Credenciales de WhatsApp Business DENTRO de la tabla (hoy NULL): campo de
   // secreto — nunca a un export ni a un log.
-  waPhoneNumberId    String?            @map("wa_phone_number_id") @db.VarChar(100)
-  waBusinessAccountId String?           @map("wa_business_account_id") @db.VarChar(100)
-  waAccessToken      String?            @map("wa_access_token")
-  plan               PlanSuscripcion    @default(trial)
-  planExpiresAt      DateTime?          @map("plan_expires_at") @db.Timestamp(6)
-  maxPolizas         Int                @default(500) @map("max_polizas")
-  recordatoriosDias  Json?              @map("recordatorios_dias")
-  recordatoriosCanal CanalRecordatorio? @map("recordatorios_canal")
-  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt          DateTime           @default(now()) @map("updated_at") @db.Timestamp(6)
+  waPhoneNumberId     String?            @map("wa_phone_number_id") @db.VarChar(100)
+  waBusinessAccountId String?            @map("wa_business_account_id") @db.VarChar(100)
+  waAccessToken       String?            @map("wa_access_token")
+  plan                PlanSuscripcion    @default(trial)
+  planExpiresAt       DateTime?          @map("plan_expires_at") @db.Timestamp(6)
+  maxPolizas          Int                @default(500) @map("max_polizas")
+  recordatoriosDias   Json?              @map("recordatorios_dias")
+  recordatoriosCanal  CanalRecordatorio? @map("recordatorios_canal")
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime           @default(now()) @map("updated_at") @db.Timestamp(6)
 
-  clientes       Cliente[]
-  polizas        Poliza[]
-  siniestros     Siniestro[]
+  clientes   Cliente[]
+  polizas    Poliza[]
+  siniestros Siniestro[]
 
   @@map("corredurias")
 }
 
 model Cliente {
-  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  correduriaId        String            @map("correduria_id") @db.Uuid
-  usuarioId           String?           @map("usuario_id") @db.Uuid
-  nombre              String            @db.VarChar(255)
-  apellidos           String            @db.VarChar(255)
+  id                  String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId        String             @map("correduria_id") @db.Uuid
+  usuarioId           String?            @map("usuario_id") @db.Uuid
+  nombre              String             @db.VarChar(255)
+  apellidos           String             @db.VarChar(255)
   dni                 String? // cifrado
   telefono            String? // cifrado
   email               String? // cifrado
-  fechaNacimiento     String?           @map("fecha_nacimiento") // cifrado (fue date)
+  fechaNacimiento     String?            @map("fecha_nacimiento") // cifrado (fue date)
   direccion           String? // cifrado
-  codigoPostal        String?           @map("codigo_postal") @db.VarChar(10)
-  ciudad              String?           @db.VarChar(100)
-  provincia           String?           @db.VarChar(100)
-  waOptIn             Boolean           @default(false) @map("wa_opt_in")
-  waPhoneNumber       String?           @map("wa_phone_number") @db.VarChar(20)
+  codigoPostal        String?            @map("codigo_postal") @db.VarChar(10)
+  ciudad              String?            @db.VarChar(100)
+  provincia           String?            @db.VarChar(100)
+  waOptIn             Boolean            @default(false) @map("wa_opt_in")
+  waPhoneNumber       String?            @map("wa_phone_number") @db.VarChar(20)
   canalPreferido      CanalRecordatorio? @default(email) @map("canal_preferido")
   notas               String?
-  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt           DateTime          @default(now()) @map("updated_at") @db.Timestamp(6)
-  importRef           String?           @map("import_ref") @db.VarChar(100)
-  waOptOutAt          DateTime?         @map("wa_opt_out_at") @db.Timestamp(6)
-  waOptOutSource      String?           @map("wa_opt_out_source") @db.VarChar(30)
-  emailOptOutAt       DateTime?         @map("email_opt_out_at") @db.Timestamp(6)
-  emailOptOutSource   String?           @map("email_opt_out_source") @db.VarChar(30)
-  emailLookupHash     String?           @map("email_lookup_hash")
-  telefonoLookupHash  String?           @map("telefono_lookup_hash")
-  activo              Boolean           @default(true)
-  segmento            SegmentoCliente   @default(prospecto)
-  tipo                TipoCliente       @default(cliente)
-  dniLookupHash       String?           @map("dni_lookup_hash")
-  tipoPersona         TipoPersona?      @map("tipo_persona")
-  leadEstado          LeadEstado        @default(nuevo) @map("lead_estado")
-  cohortInvitedAt     DateTime?         @map("cohort_invited_at") @db.Timestamp(6)
-  comercialId         String?           @map("comercial_id") @db.Uuid
+  createdAt           DateTime           @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt           DateTime           @default(now()) @map("updated_at") @db.Timestamp(6)
+  importRef           String?            @map("import_ref") @db.VarChar(100)
+  waOptOutAt          DateTime?          @map("wa_opt_out_at") @db.Timestamp(6)
+  waOptOutSource      String?            @map("wa_opt_out_source") @db.VarChar(30)
+  emailOptOutAt       DateTime?          @map("email_opt_out_at") @db.Timestamp(6)
+  emailOptOutSource   String?            @map("email_opt_out_source") @db.VarChar(30)
+  emailLookupHash     String?            @map("email_lookup_hash")
+  emailDominioHash    String?            @map("email_dominio_hash")
+  emailUsuarioHash    String?            @map("email_usuario_hash")
+  telefonoLookupHash  String?            @map("telefono_lookup_hash")
+  activo              Boolean            @default(true)
+  segmento            SegmentoCliente    @default(prospecto)
+  tipo                TipoCliente        @default(cliente)
+  dniLookupHash       String?            @map("dni_lookup_hash")
+  tipoPersona         TipoPersona?       @map("tipo_persona")
+  leadEstado          LeadEstado         @default(nuevo) @map("lead_estado")
+  cohortInvitedAt     DateTime?          @map("cohort_invited_at") @db.Timestamp(6)
+  comercialId         String?            @map("comercial_id") @db.Uuid
   fuente              FuenteOrigen?
-  estadoCivil         String?           @map("estado_civil") @db.VarChar(40)
-  ocupacion           String?           @db.VarChar(120)
-  sector              String?           @db.VarChar(120)
-  cuentaBancaria      String?           @map("cuenta_bancaria") // cifrado, sin hash (no se busca)
-  saludo              String?           @db.VarChar(10)
-  direccionFiscal     String?           @map("direccion_fiscal") // cifrado
-  cpFiscal            String?           @map("cp_fiscal") @db.VarChar(10)
-  ciudadFiscal        String?           @map("ciudad_fiscal") @db.VarChar(100)
-  provinciaFiscal     String?           @map("provincia_fiscal") @db.VarChar(100)
-  mergedIntoClienteId String?           @map("merged_into_cliente_id") @db.Uuid // lápida de fusión
+  estadoCivil         String?            @map("estado_civil") @db.VarChar(40)
+  ocupacion           String?            @db.VarChar(120)
+  sector              String?            @db.VarChar(120)
+  cuentaBancaria      String?            @map("cuenta_bancaria") // cifrado, sin hash (no se busca)
+  saludo              String?            @db.VarChar(10)
+  direccionFiscal     String?            @map("direccion_fiscal") // cifrado
+  cpFiscal            String?            @map("cp_fiscal") @db.VarChar(10)
+  ciudadFiscal        String?            @map("ciudad_fiscal") @db.VarChar(100)
+  provinciaFiscal     String?            @map("provincia_fiscal") @db.VarChar(100)
+  mergedIntoClienteId String?            @map("merged_into_cliente_id") @db.Uuid // lápida de fusión
+  /// NULL = el cliente nunca ha confirmado sus datos de contacto desde el portal
+  /// (todo el volcado nace así). Se sella al confirmar «siguen igual» o al corregir.
+  contactoConfirmadoAt DateTime?         @map("contacto_confirmado_at") @db.Timestamptz(6)
 
-  correduria    Correduria @relation(fields: [correduriaId], references: [id])
-  mergedInto    Cliente?   @relation("FusionCliente", fields: [mergedIntoClienteId], references: [id])
-  absorbidos    Cliente[]  @relation("FusionCliente")
-  telefonos     ClienteTelefono[]
-  emails        ClienteEmail[]
-  polizas       Poliza[]
-  siniestros    Siniestro[]
+  correduria     Correduria            @relation(fields: [correduriaId], references: [id])
+  mergedInto     Cliente?              @relation("FusionCliente", fields: [mergedIntoClienteId], references: [id])
+  absorbidos     Cliente[]             @relation("FusionCliente")
+  telefonos      ClienteTelefono[]
+  emails         ClienteEmail[]
+  relacionesA    ClienteRelacion[]     @relation("RelacionA")
+  relacionesB    ClienteRelacion[]     @relation("RelacionB")
+  polizas        Poliza[]
+  siniestros     Siniestro[]
   intervenciones PolizaInterviniente[]
+  carnets        ClienteCarnetConducir[]
 
   @@map("clientes")
+}
+
+/// Carnés de conducir de un cliente (1:N — la misma persona puede tener B + C,
+/// p. ej.). `fechaCarnet` es la fecha de expedición/última renovación, CIFRADA
+/// (`v1:…`, como `clientes.fecha_nacimiento`); la caducidad se DERIVA con
+/// `caducidadCarnet()` de `@central/module-seguros`, nunca se guarda.
+model ClienteCarnetConducir {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  fechaCarnet  String?  @map("fecha_carnet") // cifrado
+  tipo         String   @db.VarChar(10)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@map("cliente_carnets_conducir")
 }
 
 model ClienteTelefono {
@@ -290,13 +322,35 @@ model ClienteTelefono {
   @@map("cliente_telefonos")
 }
 
+/// Vínculos cliente↔cliente del CRM (dos filas por vínculo, una por sentido).
+/// `tipo_relacion` = B respecto de A; `puede_ver_polizas` = A autoriza a B a ver
+/// las pólizas de A. Reglas en `@central/module-seguros` (relaciones.ts).
+model ClienteRelacion {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId    String   @map("correduria_id") @db.Uuid
+  clienteAId      String   @map("cliente_a_id") @db.Uuid
+  clienteBId      String   @map("cliente_b_id") @db.Uuid
+  tipoRelacion    String   @map("tipo_relacion") @db.VarChar(60)
+  puedeVerPolizas Boolean  @default(false) @map("puede_ver_polizas")
+  observaciones   String?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  clienteA Cliente @relation("RelacionA", fields: [clienteAId], references: [id], onDelete: Cascade)
+  clienteB Cliente @relation("RelacionB", fields: [clienteBId], references: [id], onDelete: Cascade)
+
+  @@unique([clienteAId, clienteBId, tipoRelacion], map: "uq_cliente_relaciones_a_b_tipo")
+  @@map("cliente_relaciones")
+}
+
 model ClienteEmail {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   clienteId       String   @map("cliente_id") @db.Uuid
   correduriaId    String   @map("correduria_id") @db.Uuid
-  email           String // cifrado
-  emailLookupHash String?  @map("email_lookup_hash")
-  etiqueta        String?  @db.VarChar(30)
+  email            String // cifrado
+  emailLookupHash  String?  @map("email_lookup_hash")
+  emailDominioHash String?  @map("email_dominio_hash")
+  emailUsuarioHash String?  @map("email_usuario_hash")
+  etiqueta         String?  @db.VarChar(30)
   esPrincipal     Boolean  @default(false) @map("es_principal")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
@@ -306,51 +360,58 @@ model ClienteEmail {
 }
 
 model Poliza {
-  id                       String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  correduriaId             String           @map("correduria_id") @db.Uuid
-  clienteId                String           @map("cliente_id") @db.Uuid
-  tipo                     TipoSeguro
-  aseguradora              String           @db.VarChar(255)
-  numeroPoliza             String?          @map("numero_poliza") @db.VarChar(100)
+  id                      String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId            String           @map("correduria_id") @db.Uuid
+  clienteId               String           @map("cliente_id") @db.Uuid
+  tipo                    TipoSeguro
+  aseguradora             String           @db.VarChar(255)
+  numeroPoliza            String?          @map("numero_poliza") @db.VarChar(100)
   // fecha_inicio y fecha_vencimiento son NULLABLE (1.194 filas legacy a NULL,
   // medido 31/08). NULL = «pendiente», nunca «no vence».
-  fechaInicio              DateTime?        @map("fecha_inicio") @db.Date
-  fechaVencimiento         DateTime?        @map("fecha_vencimiento") @db.Date
-  primaAnual               Decimal?         @map("prima_anual") @db.Decimal(10, 2)
-  primaMensual             Decimal?         @map("prima_mensual") @db.Decimal(10, 2)
-  estado                   EstadoPoliza     @default(activa)
-  datosEspecificos         Json?            @map("datos_especificos") // contiene direccion CIFRADA
-  coberturas               Json?
-  documentoUrl             String?          @map("documento_url")
-  createdAt                DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
-  updatedAt                DateTime         @default(now()) @map("updated_at") @db.Timestamp(6)
-  importRef                String?          @map("import_ref") @db.VarChar(100)
-  origen                   PolizaOrigen     @default(gestionada_correduria)
-  companiaDeclarada        String?          @map("compania_declarada") @db.VarChar(255)
-  verificadoPorCorreduria  Boolean          @default(false) @map("verificado_por_correduria")
-  idPolizaEntidad          String?          @map("id_poliza_entidad") @db.VarChar(50)
-  codigoEntidadDgs         String?          @map("codigo_entidad_dgs") @db.VarChar(16)
-  ramoDgs                  String?          @map("ramo_dgs") @db.VarChar(8)
-  situacion                String?          @db.VarChar(4)
-  fechaEfectoInicial       DateTime?        @map("fecha_efecto_inicial") @db.Date
-  eiacXmlHash              String?          @map("eiac_xml_hash") @db.VarChar(64)
-  primaBruta               Decimal?         @map("prima_bruta") @db.Decimal(10, 2)
-  fraccionamiento          Fraccionamiento?
-  cuentaBancaria           String?          @map("cuenta_bancaria") // cifrado
-  comercialId              String?          @map("comercial_id") @db.Uuid
-  polizaPadreId            String?          @map("poliza_padre_id") @db.Uuid // cadena de renovaciones
-  auditarSeguimiento       Boolean          @default(false) @map("auditar_seguimiento")
-  oportunidadOrigenId      String?          @map("oportunidad_origen_id") @db.Uuid
-  polizaCompetencia        Json?            @map("poliza_competencia")
-  polizaSustituida         Json?            @map("poliza_sustituida")
-  mergedIntoPolizaId       String?          @map("merged_into_poliza_id") @db.Uuid // lápida de fusión
+  fechaInicio             DateTime?        @map("fecha_inicio") @db.Date
+  fechaVencimiento        DateTime?        @map("fecha_vencimiento") @db.Date
+  primaAnual              Decimal?         @map("prima_anual") @db.Decimal(10, 2)
+  primaMensual            Decimal?         @map("prima_mensual") @db.Decimal(10, 2)
+  estado                  EstadoPoliza     @default(activa)
+  datosEspecificos        Json?            @map("datos_especificos") // contiene direccion CIFRADA
+  coberturas              Json?
+  documentoUrl            String?          @map("documento_url")
+  createdAt               DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt               DateTime         @default(now()) @map("updated_at") @db.Timestamp(6)
+  importRef               String?          @map("import_ref") @db.VarChar(100)
+  origen                  PolizaOrigen     @default(gestionada_correduria)
+  companiaDeclarada       String?          @map("compania_declarada") @db.VarChar(255)
+  verificadoPorCorreduria Boolean          @default(false) @map("verificado_por_correduria")
+  idPolizaEntidad         String?          @map("id_poliza_entidad") @db.VarChar(50)
+  codigoEntidadDgs        String?          @map("codigo_entidad_dgs") @db.VarChar(16)
+  ramoDgs                 String?          @map("ramo_dgs") @db.VarChar(8)
+  situacion               String?          @db.VarChar(4)
+  fechaEfectoInicial      DateTime?        @map("fecha_efecto_inicial") @db.Date
+  eiacXmlHash             String?          @map("eiac_xml_hash") @db.VarChar(64)
+  primaBruta              Decimal?         @map("prima_bruta") @db.Decimal(10, 2)
+  fraccionamiento         Fraccionamiento?
+  cuentaBancaria          String?          @map("cuenta_bancaria") // cifrado
+  comercialId             String?          @map("comercial_id") @db.Uuid
+  polizaPadreId           String?          @map("poliza_padre_id") @db.Uuid // cadena de renovaciones
+  auditarSeguimiento      Boolean          @default(false) @map("auditar_seguimiento")
+  oportunidadOrigenId     String?          @map("oportunidad_origen_id") @db.Uuid
+  polizaCompetencia       Json?            @map("poliza_competencia")
+  polizaSustituida        Json?            @map("poliza_sustituida")
+  mergedIntoPolizaId      String?          @map("merged_into_poliza_id") @db.Uuid // lápida de fusión
+  // Sustitución por retarificación (20/09/2026): al EMITIR con otra compañía,
+  // la vieja se marca sustituidaAt y la nueva guarda polizaOrigenId. Ninguna
+  // ingesta externa las toca — el `estado` de CIMA es cosa aparte.
+  polizaOrigenId          String?          @map("poliza_origen_id") @db.Uuid
+  sustituidaAt            DateTime?        @map("sustituida_at") @db.Timestamptz(6)
 
-  correduria     Correduria @relation(fields: [correduriaId], references: [id])
-  cliente        Cliente    @relation(fields: [clienteId], references: [id])
-  polizaPadre    Poliza?    @relation("Renovacion", fields: [polizaPadreId], references: [id])
-  renovaciones   Poliza[]   @relation("Renovacion")
-  mergedInto     Poliza?    @relation("FusionPoliza", fields: [mergedIntoPolizaId], references: [id])
-  absorbidas     Poliza[]   @relation("FusionPoliza")
+  correduria     Correduria            @relation(fields: [correduriaId], references: [id])
+  cliente        Cliente               @relation(fields: [clienteId], references: [id])
+  polizaPadre    Poliza?               @relation("Renovacion", fields: [polizaPadreId], references: [id])
+  renovaciones   Poliza[]              @relation("Renovacion")
+  mergedInto     Poliza?               @relation("FusionPoliza", fields: [mergedIntoPolizaId], references: [id])
+  absorbidas     Poliza[]              @relation("FusionPoliza")
+  polizaOrigen   Poliza?               @relation("SustitucionPoliza", fields: [polizaOrigenId], references: [id])
+  sustituidas    Poliza[]              @relation("SustitucionPoliza")
   coberturasRel  PolizaCobertura[]
   recibos        PolizaRecibo[]
   intervinientes PolizaInterviniente[]
@@ -412,24 +473,24 @@ model PolizaRecibo {
 }
 
 model PolizaInterviniente {
-  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  polizaId          String              @map("poliza_id") @db.Uuid
-  correduriaId      String              @map("correduria_id") @db.Uuid
-  rol               IntervinienteRol
-  clienteId         String?             @map("cliente_id") @db.Uuid
-  tipoRelacion      String?             @map("tipo_relacion") @db.VarChar(60)
-  nif               String? // cifrado
-  nifLookupHash     String?             @map("nif_lookup_hash")
-  nombre            String? // cifrado
-  apellidos         String? // cifrado
-  fechaNacimiento   String?             @map("fecha_nacimiento") // cifrado
-  telefono          String? // cifrado
-  email             String? // cifrado
-  fechaCarnet       String?             @map("fecha_carnet") // cifrado
-  createdAt         DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
-  respondeA         String?             @map("responde_a") @db.VarChar(120)
-  antiguedadCarnet  Int?                @map("antiguedad_carnet")
-  origen            IntervinienteOrigen @default(manual)
+  id               String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  polizaId         String              @map("poliza_id") @db.Uuid
+  correduriaId     String              @map("correduria_id") @db.Uuid
+  rol              IntervinienteRol
+  clienteId        String?             @map("cliente_id") @db.Uuid
+  tipoRelacion     String?             @map("tipo_relacion") @db.VarChar(60)
+  nif              String? // cifrado
+  nifLookupHash    String?             @map("nif_lookup_hash")
+  nombre           String? // cifrado
+  apellidos        String? // cifrado
+  fechaNacimiento  String?             @map("fecha_nacimiento") // cifrado
+  telefono         String? // cifrado
+  email            String? // cifrado
+  fechaCarnet      String?             @map("fecha_carnet") // cifrado
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(6)
+  respondeA        String?             @map("responde_a") @db.VarChar(120)
+  antiguedadCarnet Int?                @map("antiguedad_carnet")
+  origen           IntervinienteOrigen @default(manual)
 
   poliza  Poliza   @relation(fields: [polizaId], references: [id], onDelete: Cascade)
   cliente Cliente? @relation(fields: [clienteId], references: [id])
@@ -468,12 +529,55 @@ model Siniestro {
   gravedad             SiniestroGravedad?
   reservaImporte       Decimal?           @map("reserva_importe") @db.Decimal(12, 2)
   indemnizacionImporte Decimal?           @map("indemnizacion_importe") @db.Decimal(12, 2)
+  /// Campos PROPIOS del ramo (`@central/module-seguros/siniestro-ramo.ts`), p.
+  /// ej. tipo de colisión, gremio requerido, subramo de RC. `Prisma.DbNull`
+  /// cuando no hay datos, NUNCA `Prisma.JsonNull` (regla ya vigente en el
+  /// `datos_ramo` de pólizas: un `null` DENTRO del JSON se colaría por toda
+  /// guarda `?? `/`COALESCE`). EXCLUSIVO de siniestros `gestionado_correduria`
+  /// — CIMA no manda este detalle (ver `siniestro-ramo.ts`, cabecera).
+  datosRamo            Json?              @map("datos_ramo")
+  /// Desglose de daños del EIAC SIN (`ImplicadoDiversos/DanosSiniestro/DanoSiniestro[]`),
+  /// `[{descripcion,valor}]`. NO es PII. EXCLUSIVO de `origen='cima'` — es justo lo
+  /// contrario de `datosRamo` (ese lo aporta el corredor a mano y CIMA no lo trae).
+  danosCima            Json?              @map("danos_cima")
 
-  correduria Correduria @relation(fields: [correduriaId], references: [id])
-  cliente    Cliente    @relation(fields: [clienteId], references: [id])
-  poliza     Poliza     @relation(fields: [polizaId], references: [id])
+  correduria      Correduria               @relation(fields: [correduriaId], references: [id])
+  cliente         Cliente                  @relation(fields: [clienteId], references: [id])
+  poliza          Poliza                   @relation(fields: [polizaId], references: [id])
+  intervinientes  SiniestroInterviniente[]
 
   @@map("siniestros")
+}
+
+/// Terceros y testigos de un siniestro — el hueco que faltaba frente al CRM
+/// viejo de Manuel (`siniestro_contrarios`/`siniestro_testigos`). 1:N a
+/// propósito: puede haber varios testigos, o un tercero y su propio testigo.
+///
+/// 🚨 EXCLUSIVO de siniestros `gestionado_correduria` (ver `siniestro-ramo.ts`
+/// y `siniestro-intervinientes.ts` de `@central/module-seguros`): CIMA no
+/// manda terceros ni testigos.
+///
+/// PII cifrada con el MISMO mecanismo que `Cliente` (`@central/module-seguros-pii`,
+/// `encryptField`/`decryptField`) — nombre, teléfono y matrícula viajan como
+/// texto plano en el tipo Prisma porque el cifrado es de aplicación, no de
+/// columna (igual que `Siniestro.lugarDireccion`).
+model SiniestroInterviniente {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  siniestroId    String    @map("siniestro_id") @db.Uuid
+  tipo           String    @db.VarChar(20) // 'tercero' | 'testigo' — ver TIPOS_INTERVINIENTE
+  esConductor    Boolean?  @map("es_conductor")
+  nombre         String?   // cifrado
+  telefono       String?   // cifrado
+  matricula      String?   // cifrado; solo 'tercero'
+  marcaModelo    String?   @map("marca_modelo") @db.VarChar(150)
+  companiaNombre String?   @map("compania_nombre") @db.VarChar(150)
+  numeroPoliza   String?   @map("numero_poliza") @db.VarChar(50)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  siniestro Siniestro @relation(fields: [siniestroId], references: [id])
+
+  @@index([siniestroId])
+  @@map("siniestro_intervinientes")
 }
 
 /// Cuenta de efectivo EIAC: el extracto de liquidación de una compañía para un
@@ -516,4 +620,749 @@ model Liquidacion {
 
   @@index([correduriaId, fechaLiquidacion])
   @@map("liquidaciones")
+}
+
+// ─── Documentos de la correduría (tabla PROPIA, 02/09/2026) ──────────────────
+// Una tabla para cliente | póliza | siniestro, con estado «pedido» (sin fichero)
+// / «recibido» / «revisado». El fichero va en `contenido` (bytea ≤ 10 MB). SQL en
+// prisma/sql/2026-09-02_seguros_documentos.sql. Sin relaciones a propósito: se
+// consulta siempre con `correduriaId` explícito y se valida el destino antes de
+// escribir (lib/cartera-documentos.ts).
+// ─── Compañías por código DGS (02/09/2026) ────────────────────────────────────
+// El puente entre Codeoscopic (habla en código DGS) y CIMA (habla en NOMBRE exacto).
+// `nombreCima` NULL = no se ha visto ninguna póliza de CIMA de esa compañía: no se
+// inventa. SQL en prisma/sql/2026-09-02_seguros_companias_dgs.sql.
+model CompaniaDgs {
+  codigoDgs        String    @id @map("codigo_dgs") @db.VarChar(16)
+  nombreComun      String    @map("nombre_comun") @db.VarChar(255)
+  nombreCima       String?   @map("nombre_cima") @db.VarChar(255)
+  enCima           Boolean   @default(false) @map("en_cima")
+  activa           Boolean   @default(true)
+  notas            String?
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt        DateTime  @default(now()) @map("updated_at") @db.Timestamptz(6)
+  // Contacto humano de la compañía (13/09/2026, minado de Gmail — solo metadatos
+  // de negocio, nunca credenciales). `contactoTelefono` es el DIRECTO de la
+  // persona; `telefonoSiniestros`/`telefonoAsistencia` (ya existían) son líneas
+  // de atención al cliente, cosa distinta.
+  telefonoSiniestros    String?   @map("telefono_siniestros")
+  telefonoAsistencia    String?   @map("telefono_asistencia")
+  telefonoFuente        String?   @map("telefono_fuente")
+  telefonoVerificadoEn  DateTime? @map("telefono_verificado_en") @db.Timestamptz(6)
+  whatsappSiniestros    String?   @map("whatsapp_siniestros")
+  // Vacío = el WhatsApp vale para todos los ramos; con valores, SOLO para esos
+  // (Mapfre: solo partes de hogar). NOT NULL DEFAULT '{}' en la BD (23/09/2026).
+  whatsappSiniestrosRamos String[] @default([]) @map("whatsapp_siniestros_ramos")
+  horarioSiniestros     String?   @map("horario_siniestros")
+  claveMediador     String?   @map("clave_mediador")
+  contactos         CompaniaContacto[]
+
+  @@map("companias_dgs")
+}
+
+enum AreaContacto {
+  comercial
+  siniestros
+  administracion
+  tecnico
+  general
+
+  @@map("area_contacto")
+}
+
+model CompaniaContacto {
+  id                  String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  companiaCodigoDgs   String        @map("compania_codigo_dgs") @db.VarChar(16)
+  compania            CompaniaDgs   @relation(fields: [companiaCodigoDgs], references: [codigoDgs])
+  nombre              String
+  cargo               String?
+  area                AreaContacto?
+  email               String?
+  telefono            String?
+  notas               String?
+  orden               Int           @default(0)
+  activo              Boolean       @default(true)
+  ultimoContactoEn    DateTime?     @map("ultimo_contacto_en") @db.Timestamptz(6)
+  createdAt           DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime      @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("compania_contactos")
+}
+
+model Documento {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId      String    @map("correduria_id") @db.Uuid
+  clienteId         String?   @map("cliente_id") @db.Uuid
+  polizaId          String?   @map("poliza_id") @db.Uuid
+  siniestroId       String?   @map("siniestro_id") @db.Uuid
+  /// El parte de siniestro del PORTAL del que cuelga (03/09/2026). Lo escribe
+  /// `apps/asegura-portal` cuando el cliente adjunta fotos o el PDF del
+  /// amistoso; aquí es solo lectura, y es lo que hace que esos ficheros
+  /// aparezcan en la bandeja de partes de Alberto y no en un cajón aparte.
+  portalParteId     String?   @map("portal_parte_id") @db.Uuid
+  tipo              String    @default("otro")
+  estado            String    @default("recibido")
+  nombreFichero     String?   @map("nombre_fichero")
+  mimeType          String?   @map("mime_type")
+  sizeBytes         Int?      @map("size_bytes")
+  sha256            String?
+  contenido         Bytes?
+  notas             String?
+  subidoPor         String    @default("corredor") @map("subido_por")
+  visiblePorCliente Boolean   @default(false) @map("visible_por_cliente")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revisadoAt        DateTime? @map("revisado_at") @db.Timestamptz(6)
+  revisadoPor       String?   @map("revisado_por")
+
+  @@index([correduriaId, clienteId])
+  @@index([correduriaId, polizaId])
+  @@index([portalParteId])
+  @@map("documentos")
+}
+
+// ─── El calendario del PORTAL, visto desde el panel del corredor ────────────
+// Espejo PARCIAL de `seguros.portal_obligacion` (DDL y comentario largo en
+// `apps/asegura-portal/prisma/sql/2026-09-03_portal_obligacion.sql`).
+//
+// 🚨 Aquí es SOLO LECTURA + el sello `avisada_at`: los grants de `prisma_seguros`
+// sobre esa tabla son exactamente `SELECT, UPDATE`. No hay INSERT ni DELETE, y
+// declararlos en el cliente no los concedería: fallaría en la BD, que es donde
+// tiene que fallar. Quien crea obligaciones es el portal, con su propio rol.
+//
+// Se declara sin relaciones a `portal_identidad` / `portal_bien` a propósito:
+// esos modelos no existen en este schema (el corredor no los necesita) y una
+// relación a un modelo ausente no compila. Los ids quedan como escalares.
+enum PortalObligacionTipo {
+  poliza
+  itv
+  carnet
+  recibo
+  mantenimiento
+  revision_gas
+  libre
+
+  @@map("portal_obligacion_tipo")
+}
+
+enum PortalProcedencia {
+  compania
+  calculado
+  declarado
+  documento
+
+  @@map("portal_procedencia")
+}
+
+model PortalObligacion {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId       String               @map("identidad_id") @db.Uuid
+  bienId            String?              @map("bien_id") @db.Uuid
+  /// La póliza de la CARTERA que originó la obligación. Es el ÚNICO camino que
+  /// el corredor tiene hasta el destinatario: póliza → cliente → cliente_emails.
+  /// NULL (una póliza declarada por el usuario) = no hay a quién escribir desde
+  /// aquí; eso se cuenta como «sin canal», nunca como «no hace falta avisar».
+  polizaId          String?              @map("poliza_id") @db.Uuid
+  polizaDeclaradaId String?              @map("poliza_declarada_id") @db.Uuid
+  tipo              PortalObligacionTipo
+  titulo            String
+  fechaEvento       DateTime             @map("fecha_evento") @db.Date
+  /// `fechaEvento` − DIAS_PREAVISO_TOMADOR. Es la fecha que se le dice al cliente.
+  fechaAccionable   DateTime             @map("fecha_accionable") @db.Date
+  procedencia       PortalProcedencia
+  /// Cada cuántos meses se repite el recordatorio propio (`smallint`, CHECK 1-120),
+  /// o NULL si es de una sola vez. Aquí solo se lee: es lo que distingue un aviso
+  /// que tiene ciclo siguiente de uno que no, y de eso depende la forma de la
+  /// clave con la que `portal_aviso_enviado` lo sella.
+  repiteCadaMeses   Int?                 @map("repite_cada_meses") @db.SmallInt
+  confirmadaAt      DateTime?            @map("confirmada_at") @db.Timestamptz(6)
+  /// Sello del envío. Que exista es lo único que impide avisar dos veces.
+  avisadaAt         DateTime?            @map("avisada_at") @db.Timestamptz(6)
+  creadaAt          DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
+  actualizadaAt     DateTime             @default(now()) @map("actualizada_at") @db.Timestamptz(6)
+
+  // 🚨 Incluye `tipo` desde el 13/09/2026 (antes era solo `identidadId` +
+  // `polizaId`): un recordatorio PROPIO del cliente (`itv`, `mantenimiento`…)
+  // se puede colgar de la MISMA póliza que ya genera su obligación `poliza` —
+  // dos filas del mismo seguro, no una. Ver `apps/asegura-portal/prisma/schema.prisma`,
+  // que es quien manda sobre esta restricción (este modelo es de solo lectura).
+  @@unique([identidadId, polizaId, tipo])
+  // Su gemela para las pólizas DECLARADAS (subidas por el cliente, sin `polizaId`
+  // de cartera): ganó `tipo` el 09/09/2026 por el mismo motivo — una declarada
+  // puede generar a la vez `poliza` (renovación) y `recibo` (próximo cobro).
+  @@unique([identidadId, polizaDeclaradaId, tipo])
+  @@index([identidadId])
+  @@map("portal_obligacion")
+}
+
+// ─── El PARTE de siniestro del portal, visto desde el panel del corredor ────
+// Espejo de `seguros.portal_parte_siniestro` (DDL y motivos en
+// `apps/asegura-portal/prisma/sql/2026-09-03_portal_parte_siniestro.sql`).
+//
+// 🚨 Un parte NO es un siniestro: es la DECLARACIÓN de uno. Entre los dos hay
+// un paso humano —Alberto lo abre en la entidad— y mientras no ocurra, la
+// compañía NO sabe nada. Qué estado autoriza a decir lo contrario lo decide
+// `comunicadoACompania()` de `@central/module-seguros-portal`, nunca un
+// `estado !== 'enviado'` escrito a mano aquí o aguas abajo.
+//
+// 🚨 Aquí es LECTURA + el movimiento de estado: los grants de `prisma_seguros`
+// sobre esa tabla son exactamente `SELECT, UPDATE`. Quien INSERTA es el portal,
+// con su propio rol. (Los DEFAULT PRIVILEGES del schema le dan de hecho DML
+// completo; declarar aquí más de lo que toca sería apoyarse en eso.)
+//
+// Sin relaciones a `portal_identidad` ni a `portal_poliza_declarada`: esos
+// modelos no existen en este schema —el corredor no los necesita— y una
+// relación a un modelo ausente no compila. Los ids quedan como escalares, igual
+// que `PortalObligacion.polizaId`.
+enum PortalParteEstado {
+  enviado
+  recibido
+  abierto_en_compania
+  descartado
+
+  @@map("portal_parte_estado")
+}
+
+model PortalParteSiniestro {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  /// Quién lo mandó. La ficha de la cartera detrás (si la hay) sale de
+  /// `portal_vinculo`; sin fila ahí no sabemos quién es, y eso se dice.
+  identidadId         String            @map("identidad_id") @db.Uuid
+  /// Póliza de la CARTERA. Puede ser de OTRO cliente que le autorizó a verla.
+  polizaId            String?           @map("poliza_id") @db.Uuid
+  polizaDeclaradaId   String?           @map("poliza_declarada_id") @db.Uuid
+  descripcion         String
+  /// NOT NULL: sin ella no hay plazo del art. 16 LCS que contar.
+  fechaHecho          DateTime          @map("fecha_hecho") @db.Date
+  /// `HH:MM` y APROXIMADA. Texto, no `time`: una hora inventada es peor que ninguna.
+  horaAproximada      String?           @map("hora_aproximada")
+  lugar               String?
+  /// 🚨 `null` = no lo ha contestado; `false` = ha dicho que no. No se colapsan:
+  /// un parte con heridos se tramita en horas y otro espera al lunes.
+  hayHeridos          Boolean?          @map("hay_heridos")
+  hayTerceros         Boolean?          @map("hay_terceros")
+  estado              PortalParteEstado @default(enviado)
+  /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
+  siniestroId         String?           @map("siniestro_id") @db.Uuid
+  recibidoAt          DateTime?         @map("recibido_at") @db.Timestamptz(6)
+  abiertoEnCompaniaAt DateTime?         @map("abierto_en_compania_at") @db.Timestamptz(6)
+  descartadoAt        DateTime?         @map("descartado_at") @db.Timestamptz(6)
+  motivoDescarte      String?           @map("motivo_descarte")
+  /// 🚨 La FOTO de la póliza APORTADA que el cliente quitó de su bóveda. Es texto
+  /// y no una relación a propósito: vale porque la fila de origen ya NO existe.
+  /// Sin esto, borrar la póliza dejaría el parte huérfano (la FK es
+  /// `ON DELETE SET NULL` y el CHECK admite las dos columnas de póliza nulas):
+  /// una comunicación de siniestro que no dice de qué habla, sin que nada avise.
+  /// La fecha se escribe SIEMPRE que se desliga; las otras tres pueden ser NULL
+  /// porque una póliza aportada puede no tener ni compañía. Un parte sobre un
+  /// siniestro que la compañía ya tramita NO se desliga: ahí el borrado se
+  /// rechaza (`@central/module-seguros-portal`, `puedeBorrarDeclarada`).
+  polizaDesligadaAt       DateTime?         @map("poliza_desligada_at") @db.Timestamptz(6)
+  polizaDesligadaCompania String?           @map("poliza_desligada_compania")
+  polizaDesligadaNumero   String?           @map("poliza_desligada_numero")
+  polizaDesligadaRamo     String?           @map("poliza_desligada_ramo")
+  creadoEn            DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime          @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  @@index([identidadId])
+  @@map("portal_parte_siniestro")
+}
+
+/// El consentimiento de un cliente para que OTRO vea sus seguros
+/// (`seguros.portal_autorizacion`). El corredor la ve, la anota cuando el
+/// cliente se lo da por teléfono, y la puede revocar — pero NO la concede en
+/// nombre de nadie: por eso `origen` distingue de dónde salió, y una anotada
+/// por la correduría sigue sin abrir nada hasta que el autorizado la ACEPTE
+/// en el portal. Reglas puras en `@central/module-seguros-portal/autorizacion`.
+model PortalAutorizacion {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
+  /// 🚨 NULLABLE desde el 04/09/2026: una autorización apunta **o** a una ficha
+  /// **o** a una IDENTIDAD del portal (alguien invitado que no es cliente de
+  /// nadie), y el CHECK `portal_autorizacion_destinatario_unico` obliga a que
+  /// sea exactamente una de las dos. Este modelo lo declaraba obligatorio, así
+  /// que la PRIMERA fila de invitado reventaba toda lectura de la tabla —
+  /// `/correduria/cliente/[id]` y el cron de avisos incluidos. Hoy son 0 filas:
+  /// era un fallo esperando a la primera invitación (visto en `code-review`,
+  /// 15/09/2026). Quien lo lea tiene que mirar el `null`, no darlo por hecho.
+  autorizadoClienteId    String?   @map("autorizado_cliente_id") @db.Uuid
+  /// La otra rama: la identidad del portal a la que se autorizó. Una de las dos
+  /// va con valor y la otra a `null`, nunca las dos.
+  autorizadoIdentidadId  String?   @map("autorizado_identidad_id") @db.Uuid
+  alcance                String
+  /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
+  /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta;
+  /// el CHECK `portal_autorizacion_apoderamiento_con_titulo` lo exige en cuanto el
+  /// alcance es `partes` o `documentos`. Las de una persona física van siempre a `null`.
+  tituloRepresentacion   String?   @map("titulo_representacion")
+  origen                 String    @default("portal")
+  otorgadoEn             DateTime  @default(now()) @map("otorgado_en") @db.Timestamptz(6)
+  otorgadoPorIdentidadId String?   @map("otorgado_por_identidad_id") @db.Uuid
+  otorgadoPorActor       String?   @map("otorgado_por_actor")
+  aceptadoEn             DateTime? @map("aceptado_en") @db.Timestamptz(6)
+  aceptadoPorIdentidadId String?   @map("aceptado_por_identidad_id") @db.Uuid
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  revocadoEn             DateTime? @map("revocado_en") @db.Timestamptz(6)
+  /// `otorgante` | `autorizado` | `corredor` | `caducidad`. `caducidad` no es una
+  /// revocación: cierra una ya caducada para liberar el índice único al renovarla.
+  revocadoPor            String?   @map("revocado_por")
+  revocadoPorIdentidadId String?   @map("revocado_por_identidad_id") @db.Uuid
+  revocadoPorActor       String?   @map("revocado_por_actor")
+  versionTexto           String    @map("version_texto")
+  ip                     String?   @db.Inet
+  userAgent              String?   @map("user_agent")
+
+  @@index([otorganteClienteId])
+  @@index([autorizadoClienteId])
+  @@map("portal_autorizacion")
+}
+
+// ─── Lo que el asegurado tiene EN EL PORTAL, visto desde el panel del corredor ──
+// Espejo de las tablas `portal_*` que llenan `apps/asegura-portal` y su rol
+// `prisma_asegura_portal`. Aquí son **solo lectura**: existen para poder montar
+// el paquete del derecho de acceso (art. 15 RGPD) y de portabilidad (art. 20),
+// que se sirve por `/api/operador/export-rgpd`.
+//
+// 🚨 Por qué lo sirve ESTA app y no el portal: el rol del portal es
+// deliberadamente estrecho (sin BYPASSRLS, con GRANT por columnas) y **no puede
+// leer la cartera entera**. Darle permisos para un export sería abrir de par en
+// par, para un caso al año, lo que está cerrado el resto del tiempo — y un
+// secuestro de sesión se llevaría de golpe todo lo que hoy no alcanza.
+//
+// Sin relaciones, como sus tres hermanos de arriba: ids escalares, porque parte
+// de los modelos del portal no existen en este schema.
+
+enum PortalCanalTipo {
+  email
+  whatsapp
+
+  @@map("portal_canal_tipo")
+}
+
+enum PortalBienTipo {
+  vehiculo
+  vivienda
+  otro
+
+  @@map("portal_bien_tipo")
+}
+
+model PortalIdentidad {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre         String?
+  creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
+  /// Última «revisión anual» enviada por `app/api/cron/revision-anual`. NULL = nunca.
+  revisionAnualEnviadaEn DateTime? @map("revision_anual_enviada_en") @db.Timestamptz(6)
+
+  @@map("portal_identidad")
+}
+
+// 🔒 `valor_hash` NO se declara a propósito: es el correo pasado por HMAC y no
+// se puede deshacer. Enseñárselo al interesado como «tu correo» sería devolver
+// basura; el export lo dice con palabras en su lugar.
+model PortalCanal {
+  id           String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String          @map("identidad_id") @db.Uuid
+  tipo         PortalCanalTipo
+  verificadoEn DateTime?       @map("verificado_en") @db.Timestamptz(6)
+  creadoEn     DateTime        @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_canal")
+}
+
+model PortalBien {
+  id          String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId String         @map("identidad_id") @db.Uuid
+  tipo        PortalBienTipo
+  nombre      String
+  datos       Json           @default("{}")
+  creadoEn    DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_bien")
+}
+
+model PortalPolizaDeclarada {
+  id                   String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId          String            @map("identidad_id") @db.Uuid
+  bienId               String?           @map("bien_id") @db.Uuid
+  compania             String?
+  numeroPoliza         String?           @map("numero_poliza")
+  ramo                 String?
+  primaAnual           Decimal?          @map("prima_anual") @db.Decimal(10, 2)
+  fechaVencimiento     DateTime?         @map("fecha_vencimiento") @db.Date
+  matricula            String?
+  bastidor             String?
+  fechaMatriculacion   DateTime?         @map("fecha_matriculacion") @db.Date
+  referenciaCatastral  String?           @map("referencia_catastral")
+  datosRamo            Json?             @map("datos_ramo")
+  datosRamoOrigen      Json?             @map("datos_ramo_origen")
+  procedencia          PortalProcedencia @default(declarado)
+  confirmadaPorUsuario Boolean           @default(false) @map("confirmada_por_usuario")
+  documentoNombre      String?           @map("documento_nombre")
+  /// 🚨 TRES estados y `null` es uno de ellos: «no se le preguntó». Es lo que
+  /// tienen TODAS las filas anteriores al 07/09/2026. Leerlo como `propio`
+  /// convertiría un hueco en una afirmación sobre de quién es una póliza, y de
+  /// eso depende contra qué ficha se comprueba si la casa ya la lleva.
+  /// Vocabulario cerrado por CHECK: `propio` | `empresa` | null.
+  titularTipo          String?           @map("titular_tipo")
+  /// Obligatorio cuando el tipo es `empresa` (CHECK en la BD): «de mi empresa»
+  /// sin decir cuál no identifica ninguna empresa. Es una DECLARACIÓN del
+  /// cliente, no un vínculo: no crea ficha ni se casa con una existente.
+  titularEmpresaNombre String?           @map("titular_empresa_nombre")
+  /// Puede faltar aunque haya empresa: mucha gente no se lo sabe de memoria.
+  titularEmpresaCif    String?           @map("titular_empresa_cif")
+  /// Garantías leídas del PDF por el portal. NULL = no leídas.
+  coberturas           Json?
+  /// El cliente redactó / envió la carta de no renovación desde el portal.
+  /// La señal de lead más fuerte que hay: la lee `lib/leads-portal.ts`.
+  cartaGeneradaEn      DateTime?         @map("carta_generada_en") @db.Timestamptz(6)
+  cartaEnviadaEn       DateTime?         @map("carta_enviada_en") @db.Timestamptz(6)
+  creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
+  actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
+
+  @@map("portal_poliza_declarada")
+}
+
+model PortalVinculo {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String   @map("identidad_id") @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  nivel        String   @default("gestionar")
+  origen       String
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([identidadId, clienteId])
+  @@map("portal_vinculo")
+}
+
+model PortalConsentimiento {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String   @map("identidad_id") @db.Uuid
+  tipo         String
+  otorgado     Boolean
+  versionTexto String   @map("version_texto")
+  ip           String?  @db.Inet
+  userAgent    String?  @map("user_agent")
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@map("portal_consentimiento")
+}
+
+/// Las solicitudes del derecho de SUPRESIÓN que llegan por el portal del cliente.
+///
+/// 🚨 No es una cola de borrados: es una cola de RESPUESTAS con un plazo legal de
+/// un mes corriendo por debajo (art. 12.3 RGPD). Aquí sí se ESCRIBE —resolverla
+/// es trabajo del corredor, no del portal—, a diferencia del resto de modelos
+/// `portal_*` de este schema, que son de solo lectura.
+model PortalSupresion {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId   String    @map("correduria_id") @db.Uuid
+  identidadId    String    @map("identidad_id") @db.Uuid
+  /// `null` NO es «no es cliente»: es «su acceso no está enlazado con ninguna
+  /// ficha». Un lead también ejerce el derecho.
+  clienteId      String?   @map("cliente_id") @db.Uuid
+  recibidaEn     DateTime  @default(now()) @map("recibida_en") @db.Timestamptz(6)
+  estado         String    @default("recibida")
+  prorrogadaEn   DateTime? @map("prorrogada_en") @db.Timestamptz(6)
+  prorrogaMotivo String?   @map("prorroga_motivo")
+  resueltaEn     DateTime? @map("resuelta_en") @db.Timestamptz(6)
+  respuesta      String?
+  resueltaPor    String?   @map("resuelta_por")
+  motivo         String?
+  versionTextos  String    @map("version_textos")
+  ip             String?   @db.Inet
+  userAgent      String?   @map("user_agent")
+
+  @@index([estado, recibidaEn])
+  @@map("portal_supresion")
+}
+
+/// El enlace de un solo uso con el que el corredor abre el portal como lo ve un
+/// cliente (`seguros.portal_vista_corredor`). Aquí se CREA (puerto
+/// `/api/operador/cliente/portal/vista`); el portal lo consume.
+model PortalVistaCorredor {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  clienteId    String    @map("cliente_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  actor        String
+  creadoEn     DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  usadoEn      DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@index([clienteId, creadoEn])
+  @@map("portal_vista_corredor")
+}
+
+/// La PETICIÓN de acceso que un cliente le hace a otro desde el portal
+/// («papá, ¿me dejas ver tu seguro del coche?»). La escribe y la resuelve
+/// `apps/asegura-portal`; aquí se lee SOLO para avisar por correo a quien la ha
+/// recibido — desde el portal no hay a quién escribir, porque allí el
+/// destinatario es un hash.
+///
+/// 🚨 El estado NO es una columna: se deriva de las cuatro fechas con
+/// `estadoPeticion()` de `@central/module-seguros-portal`. Reimplementar esa
+/// derivación aquí es cómo se acaba avisando de una petición ya rechazada.
+model PortalPeticionAcceso {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  solicitanteIdentidadId String    @map("solicitante_identidad_id") @db.Uuid
+  /// Ficha de quien pide. `null` = no se resolvió a una ficha de la cartera, y
+  /// entonces el correo no dice quién es: no se inventa un nombre.
+  solicitanteClienteId   String?   @map("solicitante_cliente_id") @db.Uuid
+  /// Ficha a la que le piden acceso. `null` = el correo del destinatario no
+  /// casó con ninguna ficha; esa petición no tiene a quién avisar.
+  destinatarioClienteId  String?   @map("destinatario_cliente_id") @db.Uuid
+  alcance                String
+  creadaEn               DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  concedidaEn            DateTime? @map("concedida_en") @db.Timestamptz(6)
+  rechazadaEn            DateTime? @map("rechazada_en") @db.Timestamptz(6)
+  retiradaEn             DateTime? @map("retirada_en") @db.Timestamptz(6)
+
+  @@index([destinatarioClienteId])
+  @@map("portal_peticion_acceso")
+}
+
+/// Sello de los avisos de la intranet que YA se han mandado por correo
+/// (`seguros.portal_aviso_enviado`, DDL en
+/// `apps/asegura/prisma/sql/2026-09-15_portal_aviso_enviado.sql`).
+///
+/// El emisor no tiene cola: deriva lo que hay que avisar del mismo catálogo que
+/// pinta la campana del portal. Sin este sello, cada pasada del cron mandaría
+/// otra vez lo mismo. `clave` es `${tipo}:${id}` — nunca el título del aviso,
+/// que lleva matrícula, número de póliza o el nombre de un tercero.
+model PortalAvisoEnviado {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  clave        String
+  tipo         String
+  enviadoEn    DateTime @default(now()) @map("enviado_en") @db.Timestamptz(6)
+
+  @@unique([clienteId, clave], map: "portal_aviso_enviado_unico")
+  @@index([clienteId])
+  @@map("portal_aviso_enviado")
+}
+
+/// Enlace de acceso directo del correo de avisos (un solo uso, 72 h; solo el hash del token).
+model PortalEnlaceDirecto {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId    String    @map("correduria_id") @db.Uuid
+  clienteId       String    @map("cliente_id") @db.Uuid
+  emailLookupHash String    @map("email_lookup_hash")
+  tokenHash       String    @unique(map: "portal_enlace_directo_token_unico") @map("token_hash")
+  destino         String
+  creadoEn        DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  expiraEn        DateTime  @map("expira_en") @db.Timestamptz(6)
+  usadoEn         DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@index([expiraEn], map: "idx_portal_enlace_directo_expira")
+  @@map("portal_enlace_directo")
+}
+
+/// Felicitación de cumpleaños: sello anual por persona y lo que la campana del portal lee ese día.
+model Felicitacion {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  anio         Int      @db.SmallInt
+  dia          DateTime @db.Date
+  canal        String
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([clienteId, anio], map: "felicitacion_una_por_anio")
+  @@index([dia], map: "idx_felicitacion_dia")
+  @@map("felicitacion")
+}
+
+enum CanalRecaptacion {
+  whatsapp
+  email
+
+  @@map("canal_recaptacion")
+}
+
+enum EstadoEnvioRecaptacion {
+  enviado
+  enlace_abierto
+  abierto
+  pinchado
+  /// Resend confirmó que el proveedor de correo del destinatario RECHAZÓ el
+  /// mensaje (dirección muerta). Aplica opt-out automático — reintentar es
+  /// gastar el cupo del lote en un correo que no existe.
+  rebotado
+  /// El destinatario lo marcó como spam. Aplica opt-out automático: seguir
+  /// escribiéndole daña la reputación del dominio de envío.
+  queja
+
+  @@map("estado_envio_recaptacion")
+}
+
+/// Registro de cada intento de recaptación (WhatsApp manual o email por Resend)
+/// sobre un lead del volcado sin vencimiento. No hay tabla de "cola calculada":
+/// se deriva en cada GET (patrón `polizasSinRecibo()` de lib/cartera-impagados.ts).
+/// Esta tabla es solo el HISTORIAL de contactos, que alimenta el cooldown y el
+/// contador semanal. Ver docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md.
+model RecaptacionEnvio {
+  id               String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String                 @map("correduria_id") @db.Uuid
+  clienteId        String                 @map("cliente_id") @db.Uuid
+  polizaId         String                 @map("poliza_id") @db.Uuid
+  canal            CanalRecaptacion
+  estado           EstadoEnvioRecaptacion
+  mensaje          String
+  resendMessageId  String?                @map("resend_message_id")
+  creadoPor        String                 @map("creado_por")
+  createdAt        DateTime               @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt        DateTime               @default(now()) @map("updated_at") @db.Timestamp(6)
+
+  @@map("recaptacion_envios")
+}
+
+/// Historial de contactos de RENOVACIÓN — un cliente VIVO cuya póliza vence
+/// pronto, distinto de `RecaptacionEnvio` (leads muertos del volcado). No hay
+/// tabla de "cola calculada": se deriva en cada GET de `vencimientosProximos()`.
+/// Solo alimenta el cooldown y el "contactado hace N días" de la pantalla.
+model RenovacionContacto {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  polizaId     String   @map("poliza_id") @db.Uuid
+  canal        String   @default("whatsapp")
+  mensaje      String
+  creadoPor    String   @map("creado_por")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@map("renovacion_contactos")
+}
+
+/// El presupuesto que se le enseña a un CLIENTE (21/09/2026).
+///
+/// NO es `Tarificacion`: aquella responde «qué precio me dio el vendor y cuánto
+/// costó preguntarlo»; esta, «QUÉ LE ENSEÑÉ A ESTA PERSONA, cuándo, cuál eligió
+/// y qué firmó». Por eso las opciones son una COPIA congelada y no un puntero.
+///
+/// 🚨 El estado NO es una columna: se DERIVA de los sellos con
+/// `estadoPresupuesto()` de `@central/module-seguros`. Guardarlo obligaría a
+/// mantenerlo sincronizado, y el día que una transición se olvide la columna
+/// miente sin que nada falle.
+model Presupuesto {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String    @map("correduria_id") @db.Uuid
+  clienteId        String    @map("cliente_id") @db.Uuid
+  /// NULL = venta nueva (no hay póliza que comparar), JAMÁS «no tiene seguro».
+  polizaId         String?   @map("poliza_id") @db.Uuid
+  ramo             String
+  tarificacionId   String    @map("tarificacion_id") @db.Uuid
+  /// El token del enlace, HASHEADO. En claro solo existe en el mensaje que sale.
+  tokenHash        String    @unique @map("token_hash")
+  canalAviso       String?   @map("canal_aviso")
+  destinoHash      String?   @map("destino_hash")
+  venceEl          DateTime  @map("vence_el") @db.Timestamptz(6)
+  creadoAt         DateTime  @default(now()) @map("creado_at") @db.Timestamptz(6)
+  /// Se abrió WhatsApp con el mensaje escrito. NO prueba que se enviara.
+  enlaceGeneradoAt DateTime? @map("enlace_generado_at") @db.Timestamptz(6)
+  enviadoAt        DateTime? @map("enviado_at") @db.Timestamptz(6)
+  /// NULL = NO CONSTA que lo haya abierto. No es «no lo ha abierto».
+  vistoAt          DateTime? @map("visto_at") @db.Timestamptz(6)
+  elegidoAt        DateTime? @map("elegido_at") @db.Timestamptz(6)
+  aceptadoAt       DateTime? @map("aceptado_at") @db.Timestamptz(6)
+  emitidoAt        DateTime? @map("emitido_at") @db.Timestamptz(6)
+  retiradoAt       DateTime? @map("retirado_at") @db.Timestamptz(6)
+  retiradoMotivo   String?   @map("retirado_motivo")
+  salida           String?
+  polizaEmitidaId  String?   @map("poliza_emitida_id") @db.Uuid
+  creadoPor        String    @map("creado_por")
+
+  opciones PresupuestoOpcion[]
+  eventos  PresupuestoEvento[]
+
+  @@index([correduriaId, creadoAt])
+  @@index([clienteId, creadoAt])
+  @@map("presupuesto")
+}
+
+/// SNAPSHOT de una opción tal y como se le enseñó. Si el vendor cambia de
+/// opinión mañana, lo que se enseñó ese día sigue escrito aquí.
+model PresupuestoOpcion {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId    String    @map("presupuesto_id") @db.Uuid
+  /// El orden EXACTO en que se pintaron: parte de lo que se firma.
+  orden            Int       @db.SmallInt
+  compania         String
+  producto         String
+  modalidad        String?
+  categoria        String?
+  /// NULL = no se pudo clasificar el nivel, y entonces no puede ser portada.
+  grupoCobertura   String?   @map("grupo_cobertura")
+  primaEur         Decimal   @map("prima_eur") @db.Decimal(10, 2)
+  entradaEur       Decimal?  @map("entrada_eur") @db.Decimal(10, 2)
+  /// NULL = el producto NO declara franquicia. JAMÁS «sin franquicia».
+  franquiciaEur    Decimal?  @map("franquicia_eur") @db.Decimal(10, 2)
+  firmeza          String
+  requiereRerate   Boolean   @map("requiere_rerate")
+  referenciaVendor String?   @map("referencia_vendor")
+  coberturas       Json      @default("[]")
+  avisos           Json      @default("[]")
+  /// equivalente / mas_barata / mejor_cubierta. ARRAY porque una misma opción
+  /// puede ser dos a la vez, y eso se dice en vez de repartirlo.
+  papeles          String[]  @default([])
+  elegidaAt        DateTime? @map("elegida_at") @db.Timestamptz(6)
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@unique([presupuestoId, orden], map: "presupuesto_opcion_orden_unico")
+  @@index([presupuestoId, orden])
+  @@map("presupuesto_opcion")
+}
+
+/// Telemetría del presupuesto. APPEND-ONLY por trigger: un libro que se puede
+/// editar no prueba nada.
+model PresupuestoEvento {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId String   @map("presupuesto_id") @db.Uuid
+  tipo          String
+  ocurridoAt    DateTime @default(now()) @map("ocurrido_at") @db.Timestamptz(6)
+  /// 'corredor' | 'cliente' | 'sistema'. Sin esto, «visto» y «marcado como
+  /// visto por Alberto» serían la misma fila.
+  origen        String
+  detalle       Json     @default("{}")
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@index([presupuestoId, ocurridoAt])
+  @@map("presupuesto_evento")
+}
+
+/// La evidencia de una firma. Genérica desde el día uno porque la carta de
+/// nombramiento de mediador firma igual, y una segunda tabla de firmas sería un
+/// segundo criterio de qué cuenta como firma.
+///
+/// 🚨 Única por documento: pulsar dos veces devuelve la primera evidencia, no
+/// crea una segunda. Con dos firmas sobre el mismo documento no hay «la firma».
+model Firma {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId   String   @map("correduria_id") @db.Uuid
+  documentoTipo  String   @map("documento_tipo")
+  documentoId    String   @map("documento_id") @db.Uuid
+  clienteId      String   @map("cliente_id") @db.Uuid
+  identidadId    String?  @map("identidad_id") @db.Uuid
+  /// Hash del DOCUMENTO que se enseñó al firmar, no de esta fila.
+  docHash        String   @map("doc_hash")
+  algoritmo      String
+  metodo         String
+  firmanteNombre String?  @map("firmante_nombre")
+  firmanteEmail  String?  @map("firmante_email")
+  firmanteDni    String?  @map("firmante_dni")
+  ip             String?
+  userAgent      String?  @map("user_agent")
+  selloTiempo    DateTime @default(now()) @map("sello_tiempo") @db.Timestamptz(6)
+  evidencia      Json     @default("{}")
+  creadaAt       DateTime @default(now()) @map("creada_at") @db.Timestamptz(6)
+
+  @@unique([documentoTipo, documentoId], map: "firma_documento_unico")
+  @@index([clienteId, creadaAt])
+  @@map("firma")
 }

@@ -1,0 +1,103 @@
+{
+ "sesion": "caf33a43-56fc-5dcb-9dd0-6312cb377e49",
+ "inicio": "2026-09-20T09:04:36.597Z",
+ "fin": "2026-09-20T09:09:13.632Z",
+ "llamadas": 39,
+ "categorias": {
+  "otro": {
+   "llamadas": 4,
+   "chars_in": 500,
+   "chars_out": 983,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 3
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 4,
+   "chars_in": 386,
+   "chars_out": 62886,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 4
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 11,
+   "chars_in": 803,
+   "chars_out": 69131,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 8,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__get_thread": 1,
+    "mcp__Gmail__label_message": 1
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 6,
+   "chars_in": 620,
+   "chars_out": 27112,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 4,
+    "mcp__Google-Drive__get_file_metadata": 2
+   }
+  },
+  "sql": {
+   "llamadas": 5,
+   "chars_in": 2104,
+   "chars_out": 19644,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 5
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1974,
+   "chars_out": 76607,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "bash": {
+   "llamadas": 5,
+   "chars_in": 1282,
+   "chars_out": 1796,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 5
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 2185,
+   "chars_out": 332,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1
+   }
+  }
+ }
+}

@@ -7,7 +7,8 @@ Un dueño con varios negocios de sectores distintos inicia sesión aquí y ve **
 Jerarquía: `Cuenta → Sociedad (CIF) → Negocio (sector)`.
 
 > **🌐 URL producción (web principal):** **`https://plataforma-ten-flame.vercel.app`** (login en `/login`).
-> Es el dashboard + el **chat 🤖 Agente IA** (`/agente`). OJO: **sivra** (motor de pricing dinámico y sus
+> Es el dashboard + los **chats con los que se puede hablar** (`/asistentes`; `/agente` y `/contable`
+> quedaron como redirect desde el 02/09/2026). OJO: **sivra** (motor de pricing dinámico y sus
 > endpoints `/api/pricing/*`) es **otra app**, en `housesevillana.vercel.app` — no confundir dominios.
 
 ## Stack
@@ -73,23 +74,24 @@ de borrar, `smoobu-sync.ts` deja constancia (helper puro y testeado `lib/sivra/c
 | `EB_PIS_ENABLED` | `true` activa el flujo Enable Banking PIS. Dejar vacío/omitido para usar el fallback SEPA XML pain.001. **Pendiente confirmar tier gratuito Enable Banking.** |
 | `EB_DEBTOR_IBAN` | IBAN de Kutxabank desde el que se debitan los pagos PIS. |
 | `NVIDIA_API_KEY` | LLM primario de la pasarela de IA (`/api/ai/*`) y de concursos (NIM, gratis). |
-| `GEMINI_API_KEY` | **🚨 GEMINI APAGADO POR DEFECTO EN TODO (01-02/08/2026)** — la key lleva desde el 16/06 con **429 de cuota permanente** (544 llamadas/30 días, 0 éxitos; Check 12 del health-check) y solo pagaba timeouts antes de caer a OpenRouter. Decisión de Alberto: «usa OpenRouter». Dos gates para reactivar cuando haya key con cuota: **`GEMINI_WEBSEARCH=1`** reengancha el grounding como primario en `lib/websearch.ts::buscarWeb` (si no, la búsqueda — `/api/ai/search`, cron `eventos/websearch`, `seo-refresh` — va directa al **plugin `web` de OpenRouter**, ~0,02€/llamada, respeta presupuesto diario, tarifa override `AI_PRECIO_WEBPLUGIN_EUR`); **`GEMINI_TEXTO=1`** reengancha el eslabón de texto en la cadena clásica de `aiComplete` (`@central/core-ai`) y el último intento de `lib/pasarela.ts`. La key sigue usada por los embeddings de la caché semántica (`IA_CACHE_SEMANTICA`, best-effort). Override de modelo texto: `GEMINI_BRAIN_MODEL`. |
+| `GEMINI_API_KEY` | **🚨 GEMINI APAGADO POR DEFECTO EN TODO (01-02/08/2026)** — la key lleva desde el 16/06 con **429 de cuota permanente** (544 llamadas/30 días, 0 éxitos; Check 12 del health-check) y solo pagaba timeouts antes de caer a OpenRouter. Decisión de Alberto: «usa OpenRouter». Dos gates para reactivar cuando haya key con cuota: **`GEMINI_WEBSEARCH=1`** reengancha el grounding como primario en `lib/websearch.ts::buscarWeb` (si no, la búsqueda — `/api/ai/search`, cron `eventos/websearch`, `seo-refresh` — va directa al **plugin `web` de OpenRouter**, ~0,02€/llamada, respeta presupuesto diario, tarifa override `AI_PRECIO_WEBPLUGIN_EUR`); **`GEMINI_TEXTO=1`** reengancha el eslabón de texto en la cadena clásica de `aiComplete` (`@central/core-ai`) y el último intento de `lib/pasarela.ts`. **07/09/2026: ya NO la usan los embeddings de la caché semántica** (ver `IA_CACHE_SEMANTICA` — `text-embedding-004` fue retirado por Google el 14/01/2026 y el swap fue a OpenRouter). Override de modelo texto: `GEMINI_BRAIN_MODEL`. |
 | `GROQ_API_KEY` | **Fallback de texto gratis de la pasarela** (NIM → **Groq** `openai/gpt-oss-120b`, gratis rate-limited) en `aiComplete`/`aiTools`. Sin ella el fallback queda inactivo (no rompe). Override de modelo: `GROQ_BRAIN_MODEL`. |
 | `CEREBRAS_API_KEY` | **4º fallback de texto gratis** (27/07/2026, entre Groq y Gemini en `aiComplete`): **Cerebras** `gpt-oss-120b`, infra WSE independiente de NIM/Groq (1M tok/día gratis, contexto 8192 tok en tier gratis). Sin ella queda inactivo (no rompe) — hoy INACTIVA, pendiente de que Alberto decida activarla. Override de modelo: `CEREBRAS_MODEL`. |
 | `MOONSHOT_API_KEY` | **Último fallback de texto** (… → **Kimi**/Moonshot, de pago) en `aiComplete`. Sin ella queda inactivo (no rompe). Opcionales: `MOONSHOT_MODEL` (default `kimi-k2.6`), `MOONSHOT_BASE_URL` (usa `.cn` si aplica). |
-| `OPENROUTER_API_KEY` | **Camino PRIMARIO de la pasarela** (09/07/2026): agregador OpenRouter con el **Agente Director** eligiendo modelo por petición + fallback nativo entre modelos. Sin ella todo queda como antes (cadena gratis NIM→Groq→Cerebras→Gemini→Kimi). Opcionales: `OPENROUTER_MODEL` (default `deepseek/deepseek-chat`), `OPENROUTER_FALLBACK_MODELS` (csv de suplentes), `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`/`OPENROUTER_TITLE` (atribución). |
+| `OPENROUTER_API_KEY` | **Camino PRIMARIO de la pasarela** (09/07/2026): agregador OpenRouter con el **Agente Director** eligiendo modelo por petición + fallback nativo entre modelos. Sin ella todo queda como antes (cadena gratis NIM→Groq→Cerebras→Gemini→Kimi). Opcionales: `OPENROUTER_MODEL` (default `deepseek/deepseek-v4.1-flash` desde 14/09/2026 — el anterior `deepseek/deepseek-v4-flash` fue retirado por DeepSeek el 10/09/2026), `OPENROUTER_FALLBACK_MODELS` (csv de suplentes), `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`/`OPENROUTER_TITLE` (atribución). |
 | `DIRECTOR_MODO` | **🟢 En producción `activo` desde el 10/07/2026** (la semana de sombra se acortó a 1 día por decisión de Alberto). `sombra` (el Director decide y se REGISTRA en `ai_usos` pero se sirve con el modelo por defecto) · `activo` (enruta de verdad). Opcionales: `DIRECTOR_MODEL` (modelo barato que decide, default `deepseek/deepseek-chat`), `DIRECTOR_USAR_FLOOR` (`false` desactiva el sufijo `:floor` = proveedor más barato), `DIRECTOR_MAX_PRECIO_OUT` (techo USD/M del cron, default 20). **Guardas en memoria (12/07/2026):** `DIRECTOR_BREAKER_FALLOS` (default 3) fallos SEGUIDOS del hop → se sirve default directo durante `DIRECTOR_BREAKER_PAUSA_MIN` (default 5) min sin pagar el timeout de 4s por petición (se marca `[breaker abierto]` en `ai_usos.error`); `DIRECTOR_DECISION_TTL_MIN` (default 5, `0`=off) memoiza la decisión por forma de petición (app+system+tamaño+versión de catálogo+degradado) — el tráfico repetitivo no paga el hop cada vez. |
 | `DIRECTOR_PRESUPUESTO_UMBRAL` | Degradación GRADUAL del Director por presupuesto (09/07/2026): al superar este ratio del límite diario (gasto de hoy/límite, máx entre global/app/cliente) el Director elige SOLO modelos baratos ANTES del bloqueo duro al 100%. Default `0.8`. Techo de "barato" en `DIRECTOR_PRESUPUESTO_PRECIO_OUT` (USD/M salida, default `1.0`). El filtro (`lib/director-modelos.ts::modelosPermitidos`) también enruta por contexto real de la petición y, si el caller marca datos sensibles, prefiere modelos `eu` (RGPD) cuando el catálogo los ofrece. |
 | `DIRECTOR_APRENDIZAJE_DIAS` | Bucle de aprendizaje del cron `ia-director-refresh` (F4): ventana en días del rendimiento real por modelo desde `ai_usos` (default `7`). Un modelo con mala racha se PENALIZA (se descarta del catálogo nuevo) si `error_rate ≥ DIRECTOR_MAX_ERROR_RATE` (default `0.3`) o `ms_medio ≥ DIRECTOR_MAX_MS` (default `20000`), con muestra `≥ DIRECTOR_MIN_LLAMADAS` (default `20`). Snapshot histórico en la tabla `ia_director_aprendizaje`. Determinista; avisa por Telegram si penaliza un preferido. |
 | `AI_GATEWAY_LIMITE_DIARIO_EUR` | Presupuesto DIARIO en € de la pasarela (default **1**; `0` = sin límite). Al cruzarlo se bloquea SOLO el camino de pago (OpenRouter/Kimi) — la cadena gratis sigue sirviendo — y avisa por Telegram 1x/día. Límites específicos por vertical/cliente en la tabla `ia_presupuestos` (`ambito` `app`/`cliente`); atribución por cliente vía `cliente` en el body → `ai_usos.cliente_ref` (base de refacturación, panel `/operador/ia`). `AI_USD_EUR` (default 0.9) convierte el coste real del catálogo. |
 | `AI_CREDITOS_UMBRAL` | Umbral en $ de créditos OpenRouter restantes bajo el cual el cron semanal `ia-director-refresh` avisa por Telegram (default 5). |
-| `IA_CACHE_SEMANTICA` | `1` activa la caché semántica pgvector de la pasarela (default APAGADA). Además el caller debe mandar `cache:{ambito,ttlHoras?}` (opt-in doble; nunca cachear datos vivos). Umbral `IA_CACHE_UMBRAL` (default 0.97). Embeddings con `GEMINI_API_KEY` (text-embedding-004). |
+| `IA_CACHE_SEMANTICA` | `1` activa la caché semántica pgvector de la pasarela (default APAGADA). Además el caller debe mandar `cache:{ambito,ttlHoras?}` (opt-in doble; nunca cachear datos vivos). Umbral `IA_CACHE_UMBRAL` (default 0.97). **Embeddings por OpenRouter (07/09/2026)** con `OPENROUTER_API_KEY` — `openai/text-embedding-3-small`, `dimensions:768` (mantiene la columna `pgvector(768)` sin migrar). Antes usaba `GEMINI_API_KEY` (`text-embedding-004`, Gemini): retirado por Google el 14/01/2026 (404), sin romper nada gracias al fail-open de `embed()` — la caché nunca sirvió un hit real hasta el swap. Sin `OPENROUTER_API_KEY` el `embed()` devuelve `null` (cache miss silencioso, no rompe). |
 | `CONTABLE_MODEL` | Modelo que RAZONA en el **agente contable** cuando no hay respuesta determinista (`lib/contable/cerebro.ts`). Default `deepseek-ai/deepseek-v4-flash-0731` (NIM, gratis con `NVIDIA_API_KEY`; el anterior `deepseek-v3` fue retirado del API de NIM — verificado 17/08/2026 contra `/v1/models`). Vacío `''` = default de la pasarela. Un id erróneo NO rompe (cae a Groq→Kimi). Para el chat, usar modelo RÁPIDO (no R1) para no agotar el timeout. |
 | `TELEGRAM_BOT_TOKEN` | Bot único del monorepo (`@central/core-telegram`). Avisos automáticos, agente huéspedes SIVRA, agente pago de facturas. **Fuente única del token para todo el monorepo** — las rutinas de Claude Code no lo duplican; llaman a `/api/internal/alerta` con `ALERTA_TOKEN` (token dedicado; el endpoint acepta `CRON_SECRET` solo por compat). |
 | `TELEGRAM_CHAT_ID` | Chat ID de Alberto donde llegan los avisos del bot. Par obligatorio de `TELEGRAM_BOT_TOKEN`. |
 | `TELEGRAM_WEBHOOK_SECRET` | Valida que los callbacks de Telegram llegan del servidor de Telegram (no de terceros). |
 | `CRON_SECRET` | **Llave maestra** que autentica los crons de Vercel y las llamadas servidor→servidor. **NO ponerla en prompts de rutinas** (ver `ALERTA_TOKEN`). El endpoint `/api/internal/alerta` la sigue aceptando solo por compatibilidad. |
 | `ALERTA_TOKEN` | Token **dedicado** de bajo privilegio: SOLO abre `/api/internal/alerta` (aviso Telegram de las rutinas de Claude Code). Es el que va en el prompt de las rutinas — si se filtra, solo permite mandar un Telegram. Si no está definido, el endpoint acepta `CRON_SECRET` (compat). |
+| `SMOOBU_LEGACY_API_KEY` | **🌉 PUENTE TEMPORAL (15/09/2026), vence con el legacy el 25/09/2026.** `GET /api/rates` da 401 con HMAC (ticket Smoobu #1864141 sin resolver: la firma es correcta y funciona en `/reservations`, pero `/rates` la rechaza con `apartments[]`). Verificado a mano: legacy `200`, HMAC `401`, mismo endpoint. `smoobuFetch` (`lib/smoobu.ts`) usa esta key SOLO para el GET a `/api/rates` cuando está puesta — fail-safe: sin ella, sigue por HMAC como siempre. Es la clave de la pestaña **"Legacy Api keys"** de Smoobu (Avanzado → Claves API), NO el par key+secret de `pms_connections`. **Quitar esta rama y el env en cuanto Smoobu resuelva el ticket o el legacy deje de aceptarse** — no dejar que caduque en producción sin más (a partir del 25/09 esta key deja de funcionar y `/rates` volvería a 401 sin aviso si no se ha resuelto lo de fondo). |
 | `EINFORMA_CLIENT_ID` / `EINFORMA_CLIENT_SECRET` | **PENDIENTE (Alberto contrata eInforma).** Credenciales OAuth2 client_credentials de la API de eInforma para el **enriquecimiento de «Empresas en dificultad»** (`lib/empresas-einforma.ts`: informe financiero → patrimonio neto, EBITDA, fondo de maniobra, deuda, CNAE, facturación, incidencias RAI/ASNEF). Sin ellas el enriquecimiento degrada con aviso «pendiente de contratar», no rompe. Opcional `EINFORMA_BASE_URL` (default `https://api.einforma.com`). ⚠️ Al activar, CONFIRMAR las rutas/campos del payload marcados en `empresas-einforma.ts` contra la doc/sandbox. |
 | `IDEALISTA_API_KEY` / `IDEALISTA_API_SECRET` | **PENDIENTE (Idealista debe aprobar el alta — solicitada el 30/07/2026).** Credenciales OAuth2 client_credentials de la **API oficial de Idealista** (developers.idealista.com, tramo gratuito ~100 búsquedas/mes) para la ingesta directa de comparables por zona vigilada (`lib/subastas/idealista-api.ts`, paso del cron `subastas-mercado`). Sin ellas la ingesta API queda **inerte** (el corpus sigue nutriéndose de las alertas de correo). Editables desde el god-panel → 🔑 Secretos. Presupuesto vigilado en la tabla `idealista_api_usos` (margen mensual 15, caché 30 días/zona). |
 | `EMPRESAS_ENRIQUECER_TOPE_MENSUAL_EUR` | Tope de gasto mensual € del enriquecimiento de empresas (default `50`; `0` = sin límite). Se compara contra la suma del ledger `empresas_enriquecimiento_coste` del mes. `EMPRESAS_ENRIQUECER_COSTE_EUR` = coste estimado por empresa (default `12`, ~precio del informe financiero en pack). |
@@ -101,6 +103,11 @@ vender, no como su herramienta. 🚨 **Todo lo que ella tenga que hacer aparece 
 el email a `limpiezascruzz@gmail.com` y la ficha de `/sivra/mensajes` no los abre (ver
 `sivra_ordenes_limpieza.tarea_id`). Cómo funciona: `…/invitado/limpieza?token=<valor>` → lo canjea `/api/sivra/limpieza-intranet/invitado` (cookie httpOnly `limpieza_invitado`, 180 días) → `lib/limpieza-acceso.ts::accesoLimpieza` valida contra BD (acepta también sesión = preview de Alberto). Ve calendario de reservas de los 4 slugs (`incomes`: ocupación + aforo `adults+children`, **NULL = «no se sabe», no 0**; SIN nombres ni importes), limpiezas (`cleaning_sessions` de los 4 slugs, con `nota_propietario` 📌) y **tareas sueltas** (`limpieza_tareas`; solo puede marcar `hecha`). El CRUD de tareas y el enlace con token viven en la pestaña **«Tareas»** de `/sivra/limpiadoras` (sesión). **Revocar/rotar:** `UPDATE limpieza_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
 
+🚨 **`ASEGURA_OPERADOR_SECRET` ROTADO el 20/09/2026** (junto con la `RESEND_API_KEY` de `central-asegura`,
+ver su CLAUDE.md): mismo valor nuevo en los dos proyectos Vercel (`plataforma` y `central-asegura`), y
+los dos redesplegados en el mismo paso — la lección de `prisma_seguros` del 02/09 (rotar sin actualizar
+el otro lado deja el puente muerto en `secreto_rechazado`).
+
 > **Sobre la "BD unificada" de ia-rest:** la unificación quedó **a medias**. El schema
 > El schema `iarest` de la BD compartida ES la producción de ia-rest (runtime POS, Edge Functions
 > y crons) desde el cierre del 19/08/2026; el proyecto Supabase viejo (`efncqyvhniaxsirhdxaa`)
@@ -108,8 +115,39 @@ el email a `limpiezascruzz@gmail.com` y la ficha de `/sivra/mensajes` no los abr
 > sino por el **puerto HTTP** (ver abajo) — patrón de aislamiento entre apps.
 > `IAREST_SUPABASE_URL` / `IAREST_SUPABASE_SERVICE_KEY` ya no se usan en plataforma.
 
+## 💶 Un solo hub financiero (02/09/2026, PR #2083)
+`/finanzas` **ya no es un hub**: es un redirect a `/banca?tab=ingresos`. Los dos coexistían y su pestaña
+«Categorías» montaba `finanzas/CategoriasTab.tsx`, **el mismo fichero** que el segmento Personal de `/banca`.
+Lo que NO era duplicado —los banners de salud de extracción, ayudas y novedad fiscal, y los KPIs propios— se
+trajo entero: `FinanzasClient` se monta en `/banca` con el prop `embebido` (sin su `<main>`, que ya lo pone
+`<Pagina>`) y perdió su sistema de pestañas.
+
+Segmentos de `/banca`: **Dinero · Ingresos · Negocios · Fiscal · Personal** (`banca/SegTabs.tsx`).
+
+⚠️ Las páginas hijas **siguen donde estaban**: `/finanzas/gastos`, `/finanzas/fiscal`, `/finanzas/pilar` y
+`/finanzas/tarjeta-credito` son rutas vivas, solo que ya no cuelgan de un hub. No las borres al ver que su
+padre redirige.
+
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
+
+### 👁 Ver una preview de ESTA app antes de mergear (02/09/2026)
+El `ignoreCommand` de esta app lleva `--sin-previews`, así que **una rama de PR NO construye nada**: el CI
+dice que compila, no cómo queda. Para un cambio que altera el ASPECTO —y aquí eso pasa a menudo: la
+migración de las 43 cabeceras a `PageHeader` cambió el tamaño del título en toda la app— hay que forzarla,
+o esas pantallas se ven por primera vez en producción.
+
+Se fuerza con `[preview]` en el asunto del commit, pero **el marcador solo no basta: hacen falta DOS cosas
+a la vez** (fallaron las dos, una detrás de otra, en el PR #2054):
+1. Va en el asunto del **ÚLTIMO** commit del push (el script lee `VERCEL_GIT_COMMIT_MESSAGE`, que es el HEAD
+   empujado). Si después añades commits, el marcador se pierde.
+2. **Ese mismo commit tiene que tocar `apps/plataforma/`** (o un `packages/*` que esta app declare, o un
+   manifiesto raíz). `[preview]` levanta el veto de `--sin-previews`, pero el filtro por rutas del script
+   salta el build igual. Un commit que solo toca un `.md` de la raíz NO construye, lleve marcador o no.
+
+Y **compruébalo**: el fallo se ve idéntico a un build legítimamente ignorado
+(`Vercel – plataforma: Canceled by Ignored Build Step` en los statuses del PR). Detalle completo en el
+`CLAUDE.md` de la raíz, sección del `ignoreCommand`.
 
 ## ⏰ Crons — dispatcher único (30/07/2026)
 **Vercel Pro admite 40 crons/proyecto y este llegó a 60 → el scheduler omitía disparos en silencio**
@@ -470,6 +508,30 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   `rutas.ts` contra las skills. ⚠️ Vercel NO puede disparar la rutina Claude `facturas-correo`: la
   contabilidad etiquetada se recoge en su pasada de las 08:00.
 
+- **📬 `correduria-recibo` — la categoría que NO puede esperar al digest (03/09/2026).** El correo de
+  aseguradoras iba entero a `correduria` (aviso `digest`, 22:30). Dentro de esos 55 correos había
+  cuatro clases que **caducan**: «Recibos devueltos de banco» y «Resumen de recibos anulados por
+  impago» de `mediadores@occidentinforma.com`, «Relacion anulacion polizas por impago» de
+  `mediador@allianz.es` y —el más valioso— **«Resumen de recibos PRÓXIMOS a la anulación»**, que llega
+  ANTES de que caiga la cobertura (art. 15 LCS: al mes se suspende). Categoría propia con
+  `aviso:'inmediato'`, etiqueta `Triaje/Correduria-Recibos`, id `correo.correduria-recibo` en el
+  catálogo de Telegram (silenciable como el resto).
+- 🚨 **Su regla determinista va PRIMERA y exige DOS condiciones a la vez** (`esReciboAseguradora` en
+  `lib/correo/keywords.ts`): remitente de aseguradora **Y** asunto de recibo. Por dominio a secas,
+  `occidentinforma.com` se lleva al digest los tres tipos de correo que manda el mismo día (siniestro,
+  comunicado comercial y recibos devueltos); por asunto a secas, «Recibo de su pago a IONOS» de PayPal
+  se colaría en la correduría. El asunto se compara **sin tildes**: las compañías escriben «anulacion»
+  y «anulación» el mismo día.
+- ⚠️ **Esto NO cubre a Mapfre para impagos, y conviene saberlo antes de fiarse:** en los 55 correos de
+  correduría medidos (04/07→03/09/2026) Mapfre solo manda comunicados comerciales y un
+  `dmapcccrecibosoperac@mapfre.com` «DELEGACIÓN RECIBO Nº…». **El caso de María Alcalá —56 días con el
+  recibo sin constar cobrado— no habría saltado tampoco por correo.** Para Occident, Allianz y Reale el
+  correo SÍ es una fuente real, y para varias es la única que existe.
+- 🚫 **Lo que NO se pudo cablear y por qué:** anotar el hecho en la ficha del cliente. El único puerto
+  de escritura genérico es `POST /api/operador/cliente/historial` → `seguros.historial_interno`, y esa
+  tabla tiene **`cliente_id NOT NULL`**: sin resolver el correo a un cliente concreto (el detalle va en
+  adjunto o en el cuerpo, sin parsear) no hay a quién colgar la nota. El aviso inmediato es lo que hay.
+
 - [x] **Domótica Tuya — ventilador de techo Socorro (03/07/2026, PR #714):** regla de Alberto: día de
   LLEGADA a las 15:00 hora Madrid, si en Sevilla hace >30°C, ENCIENDE solo el ventilador (nunca la luz);
   día de SALIDA a las 11:30, APAGA siempre (idempotente, cubre el desfase del mando RF). Cron
@@ -478,7 +540,8 @@ declara **UN solo cron**: `/api/cron/dispatch` cada minuto.
   (`DomoticaClient.tsx`). Tablas `domotica_dispositivos` + `domotica_log` (dedupe por
   `${accion}:${reservaRef}`).
 
-- [x] **Agente conversacional de finanzas (`/contable` + Telegram; `lib/contable/`):** chat que responde
+- [x] **Agente conversacional de finanzas (`/asistentes?a=contable` —antes `/contable`, hoy redirect— +
+  Telegram; `lib/contable/`):** chat que responde
   sobre TODAS las cuentas/actividades de Alberto y propone acciones (que él confirma en pantalla). **Dos
   caminos:** (1) DETERMINISTA — `intencion.ts` (puro, sin BD) detecta preguntas estructuradas (gasto del
   mes/año, por concepto, por subcategoría de consumo, **por segmento de negocio nombrado en solitario**
@@ -1040,6 +1103,47 @@ silencio en el mismo eslabón: **el que pone el precio delante del huésped**.
 - Lógica en el módulo PURO `lib/sivra/pricing-latido-apply.ts` (`pasadaFiable`/`detalleApply`/
   `avisoSmoobuRechaza`, 15 tests), no incrustada en el route.
 
+## 🛑 El mismo silencio un eslabón más arriba: la LECTURA de `/rates` (15/09/2026)
+Encontrado al responder «avisarme si Smoobu se cae» (ticket Smoobu #1864141: `GET /api/rates`
+llevaba 4+ días dando 401 con HMAC — ver el puente legacy de `lib/smoobu.ts` más abajo). El fallo
+de escritura de arriba (23/08) ya teñía el latido; el de LECTURA, un paso ANTES de que el motor
+llegue a decidir un precio, seguía viviendo solo en `results[].error` con `ok:true` y latido verde
+— exactamente el mismo patrón, un eslabón más arriba.
+- **`FalloLectura`** (`lib/sivra/pricing-latido-apply.ts`) es el nuevo hermano de `FalloEscritura`:
+  `pasadaFiable()` también se pone roja, `detalleApply()` lo antepone incluso al rechazo de
+  escritura (es el fallo más arriba de la cadena) y `avisoSmoobuLecturaFalla()` manda el 🛑 de
+  Telegram. Va en la respuesta como `smoobu_lecturas_fallidas` y lo lee `apply-auto` igual que
+  `smoobu_rechazos`.
+- **🚨 El gate `dryRun` NO vale aquí sin matiz — hay DOS `dryRun` distintos.** El de arriba
+  (`fallosSmoobu`) nace vacío en simulacro porque la escritura ni se intenta; la LECTURA de
+  `/rates`, en cambio, se hace SIEMPRE, también con «Simular». Sin gate, un blip transitorio en una
+  exploración manual mandaría un 🛑 real. Pero gatear por el `dryRun` que ve el resto del motor
+  (que la pausa global puede forzar a `true`, línea `if (paused && !dryRun) dryRun = true`) callaba
+  el aviso INMEDIATO cuando una pasada REAL de `apply-auto` caía en pausa — Smoobu caído de verdad,
+  con el aviso 3×/día suprimido hasta el latido de las 07:45 del día siguiente. Se distingue
+  `dryRunManual` (el parámetro tal como llegó, ANTES de la pausa) de `dryRun` (después): el aviso y
+  el `ok:` de `fallosLectura` usan `dryRunManual`, no `dryRun`.
+- **`pasadaFiable()` NO usa `dryRunManual`, usa el flujo normal del latido** de `apply-auto`, que
+  ya extrae `fallosLectura` sin gate ninguno — el latido diario se tiñe SIEMPRE que haya un fallo de
+  lectura real, pausa o no. El gate por `dryRunManual` es solo del aviso INMEDIATO de Telegram y del
+  campo `ok:` que ve quien llama a mano.
+
+## 🌉 Puente legacy temporal para `GET /api/rates` (15/09/2026 → 25/09/2026)
+Diagnóstico en vivo (curl manual de Alberto, mismo endpoint/propiedad/parámetros): **legacy `200`,
+HMAC `401`**. La firma HMAC es correcta y funciona en `/reservations`; Smoobu la rechaza solo en
+`/rates` con parámetros array (`apartments[]`) — ticket #1864141 abierto, sin resolver.
+- **`debeUsarPuenteLegacy(method, url, legacyKeyPresente)`** (`lib/smoobu-puente-legacy.ts`, módulo
+  PURO con test propio) decide: solo `GET` a `/api/rates`, y solo si `SMOOBU_LEGACY_API_KEY` está
+  puesta. `smoobuFetch` (`lib/smoobu.ts`) lo llama antes de firmar — fail-safe: sin esa env, todo
+  sigue por HMAC como siempre. Se extrajo a módulo aparte porque `smoobu.ts` importa `@/lib/db` y no
+  es testeable directamente con `node --test`.
+- La env, qué clave usar y cuándo quitarlo: ver la fila `SMOOBU_LEGACY_API_KEY` en la tabla de envs
+  de este mismo archivo.
+- **Vence con el legacy el 25/09/2026.** El check-in programado del 26/09 (ver
+  `docs/CONTEXTO-SESIONES.md`) verifica si el ticket #1864141 se resolvió; si no, el puente deja de
+  funcionar y `/rates` vuelve a 401 — esta vez SIN el aviso mudo de antes, porque el latido de
+  lectura de arriba ya está en pie.
+
 ## 🛑 El raíl CIEGO: si no se puede leer el ancla, NO se tarifa (23/08/2026)
 Hallazgo 🔴 3 de la auditoría. Las dos lecturas que alimentan el ancla (`ref24` = último precio
 aplicado ANTES de hoy; `anclaHoy` = con qué precio empezó el día la fecha) colgaban de un
@@ -1371,6 +1475,35 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
   Agente» lleva el texto en **EBCDIC (cp500)** dentro de los content streams y Node no trae esa
   codificación → tabla explícita en `lib/correduria/pdf-allianz.ts`.
 - UI: pestaña «Cuadre» en `/correduria`. Los importes que no han llegado se pintan **«—», nunca 0,00€**.
+- 🚨 **Un `estado:'error'` del puerto lleva SIEMPRE su CAUSA (02/09/2026, PRs #2029 y #2034).** El aviso
+  decía «no se ha podido leer la cartera (`asegura_error`)» y ahí se acababa: los `catch {}` de asegura
+  colapsaban credenciales, permisos, conexión, schema y fila-que-no-está en el mismo error pelado, sin un
+  `console.error` que lo dejara ni en los logs de la función. Ahora `ComisionesAsegura` trae `causa?` del
+  clasificador único `apps/asegura/lib/error-cartera.ts` y `describirCausaAsegura()` (en
+  `lib/correduria-puerto.ts`) la traduce a la frase que dice dónde tocar; el Telegram la enseña — o dice
+  que asegura no la manda, que es otra cosa.
+  ✅ **La causa REAL resultó ser `credenciales`:** la contraseña de `prisma_seguros` se rotó tres veces ese
+  día y el `DATABASE_URL` del proyecto Vercel `central-asegura` se quedó con la vieja. **No era el schema**
+  — esa hipótesis se escribió aquí como probable y era falsa.
+  ⚠️ Al escribir el aviso de un fallo, la pregunta no es «¿he dicho que falló?» sino **«¿dice dónde mirar?»**.
+- 🏦 **El tramo del BANCO se casa abono a abono (23/09/2026, `lib/correduria/casar-banco.ts`).** El cron
+  sumaba para cada periodo TODOS los abonos de la compañía en `[inicio, fin+45d]`: con periodos mensuales
+  esas ventanas se pisan y el mismo abono contaba en dos o tres periodos (Occident ene/2026: 592,19€ «en
+  banco» contra 300,70€ devengados), y solo miraba la columna `compania_seguros` (vacía en 73 abonos que la
+  matriz sí atribuye). Ahora cada abono va a UN periodo como mucho: mes del concepto («Liq.comisiones
+  202512») → remesa igual ±1€ → último periodo cerrado antes del pago; si el periodo que paga no está en el
+  libro, no se regala al siguiente. La compañía, con la MISMA cascada que la matriz (manual → regla →
+  concepto). 🚨 **Y la cuenta del libro ya no es `SELECT id FROM cuentas LIMIT 1`**: sin orden, desde el
+  20/09 escribía en una cuenta sin bancos y el libro de Alberto se congeló. Sale de `CORREDURIA_EMAILS`.
+- 🧮 **El «deudor» de Occident era el SIGNO del EIAC, no una deuda (24/09/2026).** Occident manda bruto negativo
+  con remesa 0 y el banco recibe |bruto| − retención AL CÉNTIMO (abr 233,04€ · may 477,62€ · jul 294,30€).
+  `estadoCuadre` contrasta ya con `remesaInferida`: casa → `cuadra`; otra cifra → `descuadra`; sin abono →
+  `liquidado-sin-cobrar`, como cualquier compañía (`deudor` queda solo si ni invirtiendo el signo hay nada que
+  ingresar). El cron casa por `remesaEfectiva` y el TOTAL bruto del cuadre suma `brutoEfectivo` (|bruto|): antes
+  restaba lo cobrado mientras la retención sumaba. La estimación de `lib/finanzas.ts` (renta) sigue sin tocarse.
+  De paso, `claveReferencia`/`claveComercio` ya no devuelven un DNI/NIE como clave (una nómina con destino seguros
+  habría enseñado una regla que mandaba todas las nóminas a una compañía) y `detectarCompania` reconoce el
+  «COMISIONES …» de Pelayo tras el prefijo «TRANSFERENCIAS // … //».
 - 🚨 **PENDIENTE — la cifra fiscal de comisiones sigue siendo una ESTIMACIÓN.** `lib/finanzas.ts:594`
   eleva el neto del banco al bruto con `× (0,15/0,85)` y da por hecho que TODO abono de seguros es una
   comisión neta al 15 %; un periodo deudor de Occident rompe el supuesto. El bruto y la retención
@@ -1378,6 +1511,9 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
   entonces, al hablar de esa cifra di «estimada», no «verificada».
 
 ## 🗂️ La correduría se trabaja DESDE AQUÍ — ficha del cliente y accesos directos (01/09/2026)
+
+> 📘 **Visión y orden de trabajo del CRM de la correduría: `docs/CORREDURIA-CRM-VISION.md`** (dictado de
+> Alberto, 02/09/2026; skill router `correduria-crm`). Léelo antes de añadir pantallas o escrituras.
 
 > Alberto: *«asegura hay que meterlo en correduría, yo solo uso UNA página»* · *«pincho en Jose Suárez
 > Salas y directamente me lleva a su ficha, donde tengo todos sus datos, pólizas, recibos, siniestros.
@@ -1419,11 +1555,156 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   `no_encontrado` · `direccion_ilegible` · `error`), API `POST /api/correduria/catastro` (sesión).
   Usa `@central/core-catastro` (extraído de subastas; `lib/subastas/enriquecer.ts` lo re-exporta).
   🚨 La referencia de 14 es el EDIFICIO y no trae m² ni año: se pide la de 20 (`precalificarHogar`
-  lo declara). Pedir precio de hogar a Codeoscopic sigue SIN conectar (solo auto), pero la página ya
-  dice si **hogar tarifica** para nuestra organización: `lineasCodeoscopic()` → puerto
-  `GET /api/operador/codeoscopic/lineas` (= `GET /insurance-lines` del vendor, **gratis**, corre con
-  el interruptor apagado). Tres estados: `disponible` (con el id EXACTO del ramo, que es lo que va en
+  lo declara). La página dice si **hogar tarifica** para nuestra organización: `lineasCodeoscopic()` →
+  puerto `GET /api/operador/codeoscopic/lineas` (= `GET /insurance-lines` del vendor, **gratis**, corre
+  con el interruptor apagado). Tres estados: `disponible` (con el id EXACTO del ramo, que es lo que va en
   `insuranceLine`) · `ausente` (hay que pedírselo a Codeoscopic) · `desconocido` (no se pudo mirar).
+  ✅ **Pedir precio de hogar SÍ conecta desde el 02/09/2026 (tarde):** en la ficha del cliente y de la
+  póliza, «Retarificar hogar ↗» salta a la pantalla de confirmación de asegura, que ramifica por ramo.
+  El puerto manda por póliza `retarificacion: {ramo, retarificable, motivo, fuente}` (helper
+  `retarificabilidad()` de `@central/module-seguros`); `null` si asegura es más viejo → se cae al
+  booleano de antes. `motivo` es la frase del `title` cuando no se puede (ya no vive aquí duplicada).
+  Hogar exige m² + año + CP en la póliza o en su copia gemela del volcado — CIMA no los manda.
+- **📎 Documentos en la ficha del cliente y de la póliza (02/09/2026, tarde):** `Documentos.tsx` (client) sobre
+  `/api/correduria/documentos` (POST multipart = subir · POST json `{pedir:true}` = anotar pedido) y
+  `/api/correduria/documentos/[id]` (GET = el fichero en streaming · PATCH revisar · DELETE), que reenvían al puerto
+  de asegura con el secreto; sesión de plataforma obligatoria. Lector puro `lib/documentos-asegura.ts`
+  (`test/regression-documentos-asegura.test.ts`, 4): `null` = no se pudo consultar ≠ `[]` = no hay. La lista trae
+  el estado **pedido / recibido / revisado** y ofrece primero los tipos que faltan para emitir auto
+  (`NECESARIOS_EMISION_AUTO`). Los ficheros viven en `seguros.documentos` (bytea, ≤10 MB); aquí no se guarda nada.
+- **✏️ Editar y ➕ dar de alta clientes DESDE AQUÍ (02/09/2026).** Alberto: «pero no puedo editar» · «ni
+  añadir; cliente puede tener varios tlf y mails» · «cualquier dato básico, DNI, nombre, fecha de nacimiento…
+  tendrá que solicitarlo documentado». Tarjeta «✏️ Datos del cliente» en la ficha (`EditarCliente.tsx`) y
+  `/correduria/cliente/nuevo` (`NuevoCliente.tsx`), sobre los proxies `/api/correduria/cliente` (POST alta,
+  PATCH edición) y `/api/correduria/cliente/contactos` (GET/POST/PATCH/DELETE), que reenvían al puerto de
+  asegura con `actor = email de la sesión`. Lector puro `lib/cliente-edicion-asegura.ts` (+ test).
+  - **Tres bloques con tres reglas:** teléfonos/emails (varios, etiqueta cerrada, ⭐ principal — el principal
+    es lo que espeja `clientes.telefono/email` y lo que lee todo lo demás) y dirección/CP/ciudad/provincia/
+    notas se cambian **libremente**; la **identidad** (DNI, nombre, apellidos, fecha de nacimiento) **solo
+    con un documento tipo DNI recibido en 📎 Documentos**, que se elige en un `<select>` y viaja como
+    `documentoId`. Sin él, el bloque está deshabilitado y ofrece «Pedir DNI» (anota `pedido`).
+  - **Alta = buscar primero.** El puerto devuelve 409 con las fichas que ya tienen ese DNI/teléfono/email; la
+    pantalla enlaza a ellas. DNI repetido: no se crea. Teléfono/email repetido: «Crear igualmente» (`forzar`).
+    La ficha nueva nace `lead`; «Cliente (CIMA)» lo da tener pólizas vivas, no el `tipo` (CIMA no lo cambia).
+  - `contactos === null` / `identidad === null` = asegura no lo manda (versión anterior o consulta caída): se
+    dice, nunca se pinta «sin teléfonos». Un contacto `ilegible` (clave PII) se enseña como «cifrado».
+- **👪 Relaciones y autorizaciones en la ficha (02/09/2026).** Alberto: «es marido de María Antonia… por si
+  autoriza María Antonia que José vea sus seguros». Tarjeta «👪 Relaciones y autorizaciones» (`Relaciones.tsx`) sobre
+  el proxy `/api/correduria/cliente/relaciones` (GET/POST/PATCH/DELETE); lector puro `lib/relaciones-asegura.ts`
+  (+ test). Un vínculo se lee desde la ficha («María Antonia · Cónyuge/Pareja de Hecho»); 💍 en la cabecera si hay
+  cónyuge. **La autorización es DIRECCIONAL y se da solo desde la ficha de quien autoriza**: en la de José el
+  botón es «Autorizar a María Antonia a ver los seguros de José»; lo contrario «se decide desde la ficha de María
+  Antonia» (enlace). Es un consentimiento del titular: queda quién y cuándo en `historial_interno` de las dos
+  fichas. `relaciones === null` = no se pudo leer (nunca «sin familia»); `[]` sí es «se miró y no hay». Los datos
+  vienen de `cliente_relaciones` (1.708 filas del CRM ya cargadas). El portal del cliente aún NO los usa.
+- **✉️ «Invitar por correo» — la autorización pendiente ya se la cuenta alguien (05/09/2026).** Anotar
+  el consentimiento dejaba la fila `pendiente` y **nadie avisaba al interesado**: o Alberto escribía el
+  correo a mano, o se caducaba sola a los 90 días. Botón en la fila de la persona (solo cuando
+  `autorizacion.estado === 'pendiente'`) → `POST /api/correduria/cliente/relaciones/aviso` → puerto de
+  asegura, que es quien tiene el email descifrado. **`confirm` antes de mandar y `actor` desde la
+  sesión**: es un correo a un tercero, así que sale de un clic de Alberto y de nada más (regla global
+  de comunicaciones salientes) y queda en el historial de las dos fichas quién escribió.
+  🚨 **No acepta nada**: la autorización sigue pendiente. Lo que se gana es que la persona se entere.
+  🚨 **Cinco desenlaces sin colapsar** (`interpretarAviso`/`textoAviso` en `lib/relaciones-asegura.ts`,
+  puros y con test): `ok` · `sin_email` («no tiene correo en su ficha», que es lo único accionable) ·
+  `sin_pendiente` · `sin_portal` · `error_envio`. **Ninguno de los cuatro fallos puede leerse como que
+  el correo salió** —hay cepo que lo comprueba sobre el texto—, y un fallo de red se declara ambiguo en
+  vez de invitar a reintentar a ciegas y que la persona reciba dos. La `caducaEn` es un EXTRA: si no
+  viene o no se puede leer, el aviso SALIÓ igual y decir lo contrario sería negar un correo ya enviado.
+- **🕘 Estado derivado en la cabecera, historial plegado y aviso de duplicadas (02/09/2026).** El rótulo de la
+  ficha sale de `ficha.estado` (asegura lo deriva: cliente / con presupuesto / lead / ex-cliente, con `motivo` en
+  el `title`); las pólizas `viva && !confirmadaCima` van a un bloque «📝 Emitidas, pendientes de confirmación por
+  CIMA» y no cuentan como vivas. Tarjeta «🕘 Historial» al final, plegada y con montaje perezoso (`null` = no se
+  pudo leer ≠ `[]`). `Duplicadas.tsx` bajo la cartera viva avisa de pólizas vivas con el mismo número y compañía
+  (proxy `/api/correduria/duplicados`); si no se pudo comprobar, lo dice, nunca calla.
+- **🚨 Siniestros desde la ficha (02/09/2026, tarde).** `Siniestros.tsx` (ficha de cliente y de póliza; sustituye
+  a las dos tablas de solo lectura): lista con estado, tipo (`etiquetaTipoSiniestro`: los de CIMA son códigos EIAC
+  y se pintan «código CIMA 1107»), referencia, tramitador y reserva (`null` → «sin dato», nunca 0); fila expandida
+  con descripción, lugar, perito, **seguimiento** (tramitador/perito/gravedad/reserva/indemnización/nota; en los
+  nuestros también la referencia de la compañía, que es la llave para que CIMA case), **estado** por transiciones
+  solo en los nuestros (en los de CIMA «lo fija la compañía») y **documentos del parte** (`Documentos` con
+  `siniestroId`). Formulario «➕ Abrir siniestro» solo sobre pólizas `viva && confirmadaCima`; aviso del art. 16
+  LCS (7 días) si se abre tarde, no bloquea. Proxy `/api/correduria/siniestro` (GET · POST · PATCH) → puerto
+  `/api/operador/siniestro`; lector puro `lib/siniestros-asegura.ts` con defaults conservadores para una asegura
+  vieja (`origen` ausente → CIMA). `lista === null` = no se pudo leer, nunca «sin siniestros».
+- **💶 «¿Por qué ha subido la prima?» (02/09/2026, noche).** `EvolucionPrima.tsx`: chip por póliza en la ficha
+  de cliente (`etiquetaVeredictoPrima` + `%`, la explicación en el `title`) y tarjeta en la página de póliza
+  (frase + anualidades: prima del ciclo, recibos/esperados con ⚠️ si el ciclo está incompleto, siniestros del
+  ciclo, variación). TRES cosas distintas en pantalla: `null` (asegura vieja no lo manda) ≠ `sin_datos` (se
+  miró: CIMA no da la anualidad anterior) ≠ `igual`. «Sube sin siniestro» por encima del 5 % enlaza a
+  retarificar. Lectores puros en `lib/poliza-asegura.ts` / `lib/ficha-asegura.ts`.
+- **🧲 Canal de leads web (02/09/2026, noche — `app/seguros/page.tsx` BORRADA el 14/09/2026, ver más
+  abajo).** Nació aquí: `app/seguros/page.tsx` fue la primera **landing pública de Grupo ASegura**
+  (no existía ninguna: la frase de la visión «existe la landing de plataforma» era falsa). Lo que
+  sigue vivo es el endpoint que recibía su formulario, `POST /api/publico/correduria/lead`
+  (sin sesión): rate limit 6/h por IP (`lib/rate-limit.ts`, en memoria, best-effort), honeypot `web` que
+  responde 200 sin hacer nada, consentimiento RGPD obligatorio. Con datos válidos SIEMPRE pasan dos cosas:
+  alta por el puerto de asegura con `fuente: 'web'` / `actor: 'web'` (historial tipo `contacto`) y Telegram
+  `correduria.lead-nuevo` (catálogo) con enlace a la ficha. **Nunca fuerza un duplicado**: si el teléfono/
+  email ya está en una ficha (409 forzable), anota el contacto en ESA ficha (`historialClienteAsegura` →
+  `POST /api/operador/cliente/historial`). Tres estados internos (nueva · existente · no registrado); al
+  usuario `{ok:true}` en los dos primeros y 502 en el tercero — y en el tercero el Telegram lleva los datos
+  del formulario porque es el único rastro. Reglas puras y tests en `lib/leads-web.ts`.
+- **🚫 `app/seguros/page.tsx` y su `Formulario.tsx` YA NO EXISTEN (14/09/2026).** Desde el
+  05/09/2026 esta correduría tiene web de marca propia (`apps/asegura-web`, `grupoasegura.es`), y las
+  dos páginas competían por la misma consulta desde dos dominios del mismo negocio. Decisión de
+  Alberto: `/seguros` **301 (308 en realidad — App Router)** hacia `grupoasegura.es`, en vez de
+  quedarse noindex y viva. El redirect vive en `next.config.ts::redirects()` (corre ANTES que el
+  middleware, así que la exención de `/seguros` en `middleware.ts::PUBLIC` se retiró: no protegía ya
+  ninguna ruta alcanzable). El endpoint `/api/publico/correduria/lead` de arriba sigue vivo — hoy lo
+  alimenta `apps/asegura-web` (`POST /api/lead`, que reenvía aquí), no una página de esta app.
+- **📮 Quejas y reclamaciones del SAC (24/09/2026).** Bloque `Quejas.tsx` en Hoy (siempre visible: es también donde se
+  REGISTRA la queja que llega por correo o teléfono) sobre `/api/correduria/quejas` → puerto de asegura, `actor` = sesión y el
+  último. Lector puro `lib/quejas-asegura.ts`; sus listas son copia de `module-seguros/queja.ts` y
+  `test/regression-quejas-asegura.test.ts` falla si divergen. Contador `null` (no 0) si no se pudo leer.
+- **📊 Informe anual para la DGSFP (24/09/2026).** `InformeMediacion.tsx` en Comisiones (plegado, carga al abrir) sobre
+  `/api/correduria/informe-mediacion` = puerto de asegura + comisiones del libro (`brutoEfectivo`, `null` si no se lee). Lector
+  puro `lib/informe-mediacion-asegura.ts` (+ `test/regression-informe-mediacion.test.ts`); CSV cuya 1ª línea dice que NO es el
+  modelo oficial. Compañías con pólizas y sin recibos de CIMA se declaran: sus primas no son 0, no constan.
+- **🗑️ Supresiones RGPD — el reloj del art. 12.3 se contesta AQUÍ (05/09/2026).** Desde el bloque legal
+  0.5, un cliente puede pedir la supresión de sus datos desde `apps/asegura-portal` (`/boveda`). Eso
+  arranca un plazo legal de **30 días** (prorrogable a 60 **motivando la prórroga**, art. 12.3 RGPD), y
+  hasta este PR **la petición se registraba y no salía en ninguna pantalla que Alberto abra**: el puerto
+  `/api/operador/supresiones` de asegura existía sin consumidor, o sea un reloj legal corriendo a ciegas.
+  Es exactamente la regla global «un aviso que sale por un canal que esa persona no abre es un aviso que
+  no existe», aplicada a un plazo con sanción detrás.
+  - Bloque **`Supresiones.tsx`** en la sección **Hoy** de `/correduria` (junto a partes y retención), con
+    `destacado` **rojo si hay alguna vencida** y ámbar si solo hay pendientes. Contesta (resuelta total /
+    parcial / denegada), y la **prórroga es un formulario aparte que exige motivo** — sin motivo el botón
+    no se habilita, porque una prórroga inmotivada no la ampara el art. 12.3.
+  - **Lectura pura y testeada** en `lib/supresiones-asegura.ts` + `test/regression-supresiones-asegura.test.ts`
+    (17 cepos). Los cuatro «no lo sé» que NO se colapsan: un estado o un plazo que el módulo no conoce
+    devuelve **`null`** (no un valor tranquilizador), **ningún fallo de lectura se convierte en lista
+    vacía** (la pantalla pinta el aviso en vez de callar), las filas ilegibles **se cuentan**, y el
+    contador de la pestaña es `null` —no `0`— cuando no se pudo leer, para que `agregarContadores` pinte
+    `!` en vez de esconder trabajo.
+  - `vencidas()` es el **único** número que autoriza a decir «plazo incumplido»; `pendientes()` es todo lo
+    que no está resuelto. Están separados a propósito: mezclarlos convertiría «tienes trabajo» en «has
+    incumplido la ley».
+  - El **`actor` lo pone el servidor** (`session.email`) y va el ÚLTIMO en el cuerpo que se reenvía al
+    puerto: un cliente que mandara su propio `actor` no puede firmar la respuesta con otro nombre. Mismo
+    patrón que `/api/correduria/partes`. Esta app **no toca la BD de la correduría**: reenvía con
+    `ASEGURA_OPERADOR_SECRET` y devuelve el mismo status y json del puerto.
+  - El vocabulario (estados y plazos) sale de `@central/module-seguros-portal`, no se reescribe aquí: con
+    una lista por app, el día que se añada un estado la pantalla lo pinta como desconocido y el corredor
+    deja de ver una petición **sin un solo error**. Hay cepo que compara ambas listas.
+- **🔑 «Portal del cliente» en la pestaña Contactos de la ficha (05/09/2026).** Alberto: «no aparece el
+  enviar invitación a la intranet». **No aparecía porque no existía**: el portal lleva funcionando desde
+  el 01/09 y la única forma de entrar era que el cliente supiera por su cuenta que está ahí. Bloque nuevo
+  en `cliente/[id]/TabContactos.tsx` sobre el proxy `/api/correduria/cliente/portal` (GET estado · POST
+  invitar) → puerto `/api/operador/cliente/portal` de asegura. Lector puro `lib/portal-cliente-asegura.ts`
+  + `test/regression-portal-cliente-asegura.test.ts` (11 cepos).
+  🚨 **Pregunta ANTES de ofrecer el botón**, y ese es el punto: el portal vincula persona↔ficha por el
+  índice ciego del email y solo si no es ambiguo, así que invitar a quien no resuelve es PEOR que no
+  invitar — recibe el correo, entra, teclea su código y ve una bóveda **vacía sin ningún error**. Los
+  siete estados (`ya_entra` · `invitable` · `ambiguo` · `resuelve_a_otra` · `sin_email` · `ilegible` ·
+  `no_comprobado`) no se colapsan: cada uno se arregla en un sitio distinto, y hay cepo de que las siete
+  frases son DISTINTAS. Medido: **51 invitables · 0 ambiguos · 29 sin correo** de los 80 vivos.
+  ⏳ **Cargando NO es un fallo** (se dice que se está preguntando, sin alarma ni botón) e
+  **`identidades: null` no es 0** («no se ha podido contar» ≠ «no entra nadie»).
+  🔁 Tras un envío con éxito se vuelve a PREGUNTAR en vez de suponer el estado: si era una invitación
+  seguirá diciendo que no entra nadie, **porque el acceso lo abre el cliente con su código, no el botón**.
+  El `actor` lo pone el servidor (`session.email`) y va el ÚLTIMO del cuerpo reenviado.
 - **🔎 El buscador ya mira el RIESGO (02/09/2026):** dos bloques nuevos del puerto, `riesgo` (localidad o CP
   del bien, en claro en `datos_especificos`) y `direccion` (la calle, que asegura DESCIFRA EN MEMORIA
   —son ~170—). «rota» o «san vicente 40» sacan la casa de la playa de un cliente de Sevilla. Si asegura no
@@ -1436,15 +1717,19 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ahorra. Bajo «Vence», `ventanaAnulacion()` recuerda que el contrato es anual y solo se deja al
   vencimiento avisando 30 días antes (se pinta cuando faltan ≤60 días).
 - **📄 «Subir póliza o documento ↗»** (botón en la ficha) salta a `asegura/cartera/subir`: el agente lee
-  el PDF/foto y enseña lo leído. Es gratis. **Hoy solo lee pólizas de AUTO y NO guarda el fichero**
-  (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
+  el PDF/foto y enseña lo leído. Es gratis. **Desde el 09/09/2026 lee cualquier ramo**: detecta el ramo
+  y, si es auto/moto o hogar, lee además sus campos propios (vehículo, o dirección/m²/año/capitales de
+  la vivienda — `lib/documentos/extraer-poliza.ts`, `@central/module-seguros` `documento-auto.ts` /
+  `documento-hogar.ts`); en cualquier otro ramo solo lee lo común a toda póliza (compañía, número,
+  vencimiento, prima) y lo dice, porque hoy no se retarifica ningún otro ramo. **Sigue SIN guardar el
+  fichero** (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
 - **🔎 Buscador de TODO (`BuscadorCartera.tsx`)**: nombre, matrícula, nº de póliza, DNI, teléfono,
   email, ciudad o código postal, en un solo cuadro. Un término se busca por **todos** los criterios que
   encaje (`41003` es CP y nº de póliza plausibles a la vez).
   🚨 **Vive FUERA de `CarteraViva`, nunca dentro.** Estaba anidado ahí y ese bloque hace `return`
   temprano cuando el puerto falla → el buscador desaparecía justo el día que asegura no responde.
   🚨 **DNI, teléfono y email van por índice ciego y solo alcanzan al 12-16% de las fichas**; la
-  dirección va cifrada y **no se puede buscar**. Cada bloque enseña su cobertura y el vacío se explica
+  calle del riesgo la descifra asegura en memoria (~170) y **sí se busca desde el 02/09**. Cada bloque enseña su cobertura y el vacío se explica
   (`explicarVacio()`), porque un «no aparece» ahí NO es «no está en la cartera».
 - **📞 Cola de retención (`Retencion.tsx`)**: los recibos devueltos y los vencidos sin cobrar,
   ordenados por el **reloj** (art. 15 LCS) y no por el importe. 🔴 «sin cobertura» = el cliente circula
@@ -1454,6 +1739,161 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   ningún recibo informado (18 de 109) y los pendientes que aún no han vencido.
 - **El único salto a asegura es «Retarificar ↗»**, porque cuesta 0,50€ reales y tiene que pasar por su
   pantalla de confirmación. `urlRetarificar()` en `lib/ficha-asegura.ts`.
+
+### 📡 Sección «Actividad» — el muro de toda la cartera (12/09/2026)
+Alberto: *«una genérica donde ver resumen de todo, y controlar todo lo que hacen los clientes, incluso
+el acceso a la intranet»*. El historial existía **por ficha**: para saber qué había hecho alguien
+había que entrar en su ficha, y para saber qué había hecho *alguien* había que entrar en las ochenta.
+
+`Actividad.tsx` (sección propia, la 2ª de la barra) sobre `/api/correduria/actividad` → puerto
+`GET /api/operador/actividad`. Lector puro `lib/actividad-asegura.ts` (+ 9 cepos); el vocabulario
+—tipos, rótulos, ventanas, embudo— vive en `@central/module-seguros/actividad.ts` y lo comparten las
+DOS apps, como el filtro de cartera.
+
+🚨 **El embudo va ARRIBA y la cronología debajo, y no es estética.** Medido contra la BD antes de
+escribir la pantalla: **80 clientes → 52 con correo → 5 con acceso → 4 han entrado → 4 activos**. Con
+esas cifras un muro cronológico enseña sobre todo SILENCIO, que no dice qué hacer; el embudo sí, y
+además señala solo dónde está el cuello — que **no es el correo** (28 sin él) sino los **47 clientes
+con correo a los que nadie ha invitado**. `mayorCaidaEmbudo` lo calcula, y devuelve `null` en vez de
+señalar un escalón cuando le falta alguno de los dos extremos.
+
+🚨 **De `historial_interno` NO se afirma autor.** La columna `actor_user_id` existe y **no la escribe
+nadie**: el autor viaja dentro del texto. Así que sus filas se pintan como «anotación en la ficha»
+con su texto entero (que ya nombra a quien la hizo), y solo las dos que compone el portal —cambio de
+dirección y sugerencia— constan como del cliente, reconocidas por los **prefijos constantes** de
+`@central/module-seguros-portal`, no adivinando sobre texto libre. El filtro «Solo el cliente» quita
+la tabla de la ficha pero **conserva esas dos**: si no, escondería justo el cambio de dirección.
+
+🚨 **Un cambio de dirección NO es una notificación, es un aviso de riesgo**: el domicilio tarifica en
+hogar y auto, y si el cliente se muda y la compañía no se entera el problema aparece en el siniestro.
+Sale con su frase (`riesgoActividad`), igual que la supresión con su plazo del art. 17 RGPD.
+
+**Lo que NO sale: ni un dato de contacto.** El puerto no los manda — el muro dice QUÉ pasó y de QUIÉN
+es la ficha, y el dato se mira en la ficha. Una lista cronológica se abre con gente delante.
+
+⚠️ **No reporta contador a la pestaña, a propósito:** no es una cola de trabajo. Lo que sí lo es
+—partes, supresiones, leads— ya tiene su badge en «Hoy», y contarlo dos veces haría que atender un
+parte no bajara el número de aquí, que es como se deja de creer un badge. Lo nuevo desde la última
+visita se marca con un punto, contra un `localStorage` (`nuevosDesde` devuelve **`null`** —no
+`eventos.length`— cuando no hay marca, para no gritar «¡novedades!» en un navegador limpio).
+
+⏸️ **PENDIENTE y declarado, no olvidado:** la lista accionable de «clientes con correo que no han
+entrado» con botón de invitar en la propia fila. El endpoint de invitación ya existe
+(`/api/correduria/cliente/portal`); falta la consulta que los liste. Hoy el embudo enseña el hueco y
+manda a la ficha. Y marcar como visto de verdad (tabla) en vez de por navegador.
+
+🎨 **Rediseño: de una tira de ocho bloques a CINCO SECCIONES (03/09/2026).** Alberto: *«minimalista,
+óptima y productiva»*. La pantalla era un scroll único con ocho bloques del MISMO peso visual —los
+partes que ha abierto un cliente y nadie ha mirado pesaban igual que la matriz de comisiones cobradas
+de hace tres años— y cada bloque pintaba su propia caja (borde 1px + radio 12 + padding 14, repetida
+en seis ficheros), así que ninguno decía «mírame a mí primero».
+
+- **Buscador arriba, siempre**, fuera de las secciones: es lo más usado y además tiene que sobrevivir
+  a que el puerto falle. Cinco secciones: **Hoy** (partes · retención · renovaciones dentro del
+  preaviso) · **Clientes** (el listado filtrable) · **Cartera** (KPIs + los 90 días) · **Comisiones**
+  (cuadre + banda pendiente + matriz del banco, y el selector de AÑO gobierna solo esta) · **Datos**
+  (duplicadas · sin canal).
+- **«Clientes» y «Cartera» no son lo mismo** aunque hablen de la misma gente: una es la herramienta de
+  trabajo (filtrar y sacar una lista para llamar) y la otra el resumen. Compartir pestaña haría que la
+  foto —que se mira una vez al día— compitiera con el filtro, que se usa constantemente.
+- **Mismo idioma visual que `banca/SegTabs.tsx` y `cliente/[id]/FichaTabs.tsx`** —subrayado, iconos
+  lucide, contador— en vez de inventar uno nuevo para esta pantalla. `Secciones.tsx`.
+- 🚨 **Una pestaña ESCONDE, y por eso el contador no es decoración: es lo que impide que esconda
+  TRABAJO.** Cada bloque reporta el suyo hacia arriba (`onContador?: (n: number|null) => void`,
+  llamado en el `.then`, guardado en un `useRef` para que una lambda del padre no relance el fetch en
+  bucle) y `agregarContadores` (`secciones.ts`, puro, 9 tests) da **tres** desenlaces: `{n}` exacto ·
+  **`n+`** cuando alguna cola no se pudo leer (el número es un SUELO, no el total) · **`!`** cuando
+  ninguna se pudo leer. Nunca un 0. Y `undefined` (aún cargando) NO es `null` (ilegible): confundirlos
+  pinta un «!» de alarma en cada pestaña durante la carga, y eso enseña a ignorar el badge.
+- **Todos los bloques se MONTAN siempre**, aunque su sección esté oculta (`display:none`): es de donde
+  salen los contadores, y son los mismos fetch en paralelo que ya se hacían al abrir. Lo que se oculta
+  es el DOM, no la lectura. La sección viaja en `?s=` por `history.replaceState`, **no por `Link`**:
+  navegar remontaría el client component y volvería a pedirle todo al puerto en cada clic.
+- **Un bloque deja de ser una caja** (`Bloque.tsx`): línea fina + título + contenido. Borde, fondo y
+  sombra se gastan POR FUNCIÓN (regla de `components/ui.tsx`) y «soy una sección» no es una función:
+  `destacado` se reserva para alarmas con alguien esperando al otro lado (partes sin atender, recibos
+  suspendidos, clientes sin canal). Si todo destaca, no destaca nada.
+- 🚨 **Cuál es el PRIMER bloque de una sección depende de los DATOS** —`PartesPortal` y `Duplicadas`
+  devuelven `null` cuando su cola está vacía—, así que la línea de separación de arriba la quita CSS
+  (`.corr-panel > section:first-of-type` en `globals.css`), no un prop `primero` en el JSX: solo el
+  navegador sabe quién quedó arriba.
+- **Emojis fuera**: los que eran etiqueta de estado (🔴🟠🟡⚫✅) → `<Badge tono=…>` —🟠 y 🟡 son
+  indistinguibles a 12px, y ahí estaba la diferencia entre «aún puedes moverla» y «ya se prorroga
+  sola»—; los de ramo (🚗🏠🧬) → el texto a secas; los de título → iconos lucide.
+
+🚨 **Y el bug que destapó el rediseño: `Vencimientos` vivía DENTRO de `CarteraViva`**, después de sus
+tres `return` tempranos. O sea: el día que el puerto de central-asegura fallaba, **la tabla de
+renovaciones —la máquina comercial de la correduría— desaparecía en silencio**, y su propio manejo de
+error, que existe, era código muerto. Es EXACTAMENTE el fallo por el que `BuscadorCartera` y
+`Duplicadas` ya se habían sacado fuera; a esta se le había pasado. Ahora es `Renovaciones.tsx`,
+hermana y no hija, y el `fetch` de los vencimientos vive en la pantalla porque la misma lista alimenta
+dos secciones (`filtro: 'accionables' | 'todas'`) y montarla dos veces serían dos llamadas al puerto
+para los mismos datos.
+
+⚠️ **`test/regression-clientes-sin-canal.test.ts` exigía el literal `<SinCanal />`.** Se relajó a
+`/<SinCanal[\s/>]/`: lo que ese test vigila es que el bloque SIGA MONTADO en la pantalla, no su firma.
+
+### 🔎 Listado FILTRABLE de la cartera — el vocabulario, y el campo que MIENTE (03/09/2026)
+Alberto: *«quiero filtro por todo, ramo, tipo cliente (con póliza, leads…), porque quiero filtrar por
+clientes y [que suban] las pólizas en vigor que haya»*. Lo primero que hay que saber: **eso no era un
+filtro, era una pantalla que no existe.** `/correduria` no tiene ninguna LISTA de clientes — solo un
+buscador que exige un término (`/api/operador/clientes?q=`, y con menos de 3 letras devuelve vacío) y
+**no hay ningún endpoint de listado ni en plataforma ni en el puerto de asegura**. Un desplegable de
+ramo no filtra nada si no hay nada que filtrar.
+
+**Lo construido en este PR es el vocabulario compartido:** `filtro-cartera.ts` de
+`@central/module-seguros` (puro, 14 tests) — `RAMOS`, `ESTADOS`, `VENTANAS`, `parseFiltroCartera`,
+`describirFiltro`, `filtroActivo`, `diasDeVentana`. Lo comparten las DOS apps (asegura para construir
+la consulta, plataforma para pintar los desplegables): con una lista por app, el día que se añada un
+ramo la pantalla ofrece un filtro que el puerto no entiende, y **las dos formas de ese desajuste
+devuelven cero resultados sin un solo error**.
+
+🚨 **`clientes.tipo` NO sirve para decidir quién es cliente y quién lead.** Medido el 03/09/2026 contra
+la BD: dice **2.742 «cliente» y 29.860 «lead»** cuando la cartera viva son **80 clientes / 110
+pólizas**. Es un campo del volcado de 2013-2018 que no mantiene nadie. El grupo se DERIVA de tener
+alguna póliza de cartera viva (`esCarteraViva`, `cartera-viva.ts`), que es la única fuente de esa
+verdad en el repo. Filtrar por la columna habría devuelto 2.742 fichas muertas con cara de cartera.
+
+🚨 **Un valor de filtro que no se reconoce NO se ignora en silencio:** `parseFiltroCartera` devuelve
+`descartados[]` y la pantalla lo dice. Ignorarlo convierte «enséñame los de ramo XYZ» en «enséñamelo
+todo» — la respuesta que más se parece a haber funcionado y que nunca es cierta. Mismo criterio con
+`buscable:false` (texto de menos de 3 letras): «no se ha buscado» no es «no hay resultados».
+
+**Venta cruzada (`sinRamo`)**: el cliente no tiene NINGUNA póliza viva de ese ramo. Se anula sobre
+`grupo=leads` a propósito — un lead no tiene ninguna póliza viva, así que TODOS cumplirían «no tiene
+hogar» y el filtro parecería funcionar devolviendo los 29.860 enteros. Sobre la cartera viva sí mide
+el hueco real, que es grande: **81 autos contra 19 hogares**.
+
+**Distribución REAL de la cartera viva (03/09/2026, para no inventarse los desplegables):** ramos
+auto 81 · hogar 19 · responsabilidad_civil 9 · moto 1 · (el resto del enum, 0) — estados activa 68 ·
+cancelada 42 — compañías Mapfre 64 · Allianz 26 · Occident 19 · Reale 1. Los ramos con 0 pólizas **sí
+se ofrecen** en el filtro: un desplegable que solo enseña lo que ya existe no deja buscar un hueco, y
+buscar huecos es para lo que sirve esto.
+
+✅ **CONSTRUIDO ENTERO (03/09/2026, PR #2205):** `GET /api/operador/cartera` en el puerto de asegura
+(`lib/cartera-filtro.ts`, paginado en SQL, con facetas), el proxy `/api/correduria/cartera-lista`
+(`formato=csv`; la primera línea del fichero es `describirFiltro`, o sea el filtro que lo generó),
+el lector `lib/cartera-lista-asegura.ts` (16 tests) y `ListaCartera.tsx` en la sección **Clientes**.
+
+🚨 **Y la trampa que solo salió al EJECUTAR la consulta contra la BD, no al leerla: un `0` GUARDADO
+tampoco es una prima.** De las 110 pólizas vivas, **60 traen importe, 26 lo traen NULL y 24 lo traen
+a 0**. Sin `nullif(coalesce(prima_bruta, prima_anual), 0)` esas 24 filas pintan «0,00€» — una
+afirmación sobre lo que paga el cliente que nadie ha comprobado, que es la regla NULL≠0 por su lado
+menos visible (aquí no hay hueco que delate el fallo: sale un número plausible). Lo fija
+`apps/asegura/lib/cartera-filtro.test.ts`, que lee el **FUENTE** con `readFileSync` a propósito: lo
+que vigila vive dentro de un `Prisma.sql`, donde ni `tsc` ni `next build` miran, y además así no
+importa Prisma — el job `Tests (packages + guardián)` corre `node --test lib/*.test.ts` **sin**
+`prisma generate`, y un import del cliente generado lo tumbaría.
+
+⚠️ **Las facetas se calculan sobre `grupo` + `q`, NO sobre el resto de filtros seleccionados.** Es
+deliberado: así los contadores de los desplegables no bailan al marcar una casilla. Lo que se pierde
+es que un contador puede prometer resultados que otro filtro activo descarta; lo que se gana es que
+el desplegable siga siendo un mapa de la cartera y no del recorte que ya has hecho.
+
+⏸️ **Y la subida MASIVA de PDFs de póliza queda fuera por una decisión pendiente, no por tiempo:**
+`asegura/cartera/subir` lee el PDF pero **no guarda el fichero** porque no está decidido dónde ni
+cuánto tiempo se conservan documentos con un DNI dentro; y en lote falta responder cómo se decide a
+qué póliza pertenece cada archivo (el lector solo entiende AUTO).
 
 🧹 **Reorganización de la pantalla (agente de diseño, 01/09/2026).** Alberto: *«hay duplicidad y ahí
 solo tiene que salir datos importantes»*. Se pasó de 12 KPIs a **4** y el orden es ahora
@@ -1523,6 +1963,34 @@ inventario ni forma de callar uno solo: para bajar ruido había que buscar el `t
 - Migración `prisma/sql/2026-09-01_telegram_avisos.sql` **aplicada** (incluye el `GRANT USAGE` de
   `telegram_avisos_log_id_seq` a `prisma_plataforma`: sin él el `bigserial` no deja insertar).
 
+## 🚨 LANDMINE — el adjunto que muere ANTES de llegar a la función (07/09/2026)
+Alberto subió la foto de una factura desde el móvil y recibió **«Se me ha cortado la conexión»**, dos
+veces. En los logs de runtime: **ni una sola invocación de `/api/contable/chat`**. No falló la función —
+no llegó a ejecutarse.
+
+El adjunto viaja en **base64 dentro del JSON**, que abulta **×1,37**: una foto de 4 MB son ~5,5 MB de
+cuerpo, y **una Serverless Function de Vercel corta el cuerpo muy por debajo de eso**. El corte lo hace la
+PLATAFORMA: sin invocar la función, sin log y con una respuesta que no es JSON → el `r.json()` del cliente
+revienta → cae en el `if (!data)`, cuyo texto genérico («se me ha cortado la conexión») **tapaba por igual
+un 413, un 504 y un 500**, que se arreglan en tres sitios distintos.
+
+**Las dos guardas que había estaban puestas sobre lo que NO viaja, y por eso no protegían nada:**
+- `ContableChat.tsx`: `file.size > 8_000_000` medía el **fichero**, no su base64.
+- `route.ts`: `MAX_BASE64 = 11_000_000` era **inalcanzable** — entre ese número y el corte real había una
+  franja entera en la que el usuario veía un error y aquí no constaba ni el intento.
+
+**Arreglo: la foto se ENCOGE en el navegador antes de salir** (`lib/imagen-cliente.ts`:
+`createImageBitmap` + canvas → JPEG, lado máximo 2200 px ≈ 190 ppp sobre un A4, calidad decreciente hasta
+caber, suelo en 0,45 porque por debajo el OCR deja de leer). Medido en Chromium: **12,4 MB → 1,8 MB**.
+Un **PDF no se toca** (rasterizarlo le quitaría la capa de texto, que es justo lo que se lee bien) y una
+imagen ya pequeña tampoco. Lo consumen las dos bocas web: el botón 🧾 y el 📎 de `/asistentes`.
+
+⚠️ **Al añadir un endpoint que reciba ficheros, la guarda va sobre el CUERPO, no sobre el fichero**, y por
+debajo del corte de la plataforma — un tope por encima no es un tope, es una franja de fallos mudos. Y el
+mensaje de error **distingue el status**: un genérico convierte tres averías distintas en una sola frase
+que no dice dónde mirar. Cepos en `lib/imagen-cliente.test.ts` (leen el FUENTE del route: el valor vive en
+una constante que ni `tsc` ni el build contrastan con nada).
+
 ## 🎨 Sistema de diseño — `components/ui.tsx` (02/09/2026)
 Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pasó a solo REDIRIGIR a
 `/banca`: el sistema de diseño colgaba de una ruta muerta. Y al auditarlo, **ningún archivo lo importaba**
@@ -1536,9 +2004,47 @@ Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pas
 - **Nada de hex.** Colores SIEMPRE por token (`var(--positive)`, `var(--negative)`…); para un importe,
   `colorImporte(n)`. Lo vigila `test/regression-tokens-color.test.ts`.
 - **`btnStyle()` devuelve el ESTILO, no un componente con `onClick`:** el archivo es server-safe y un
-  handler obligaría a `'use client'` en cada pantalla que lo importe.
+  handler obligaría a `'use client'` en cada pantalla que lo importe. **`btnIcono()`** (03/09/2026,
+  PR #2223) es su hermano cuadrado de 44×44 para la acción repetida de una fila de lista: existe porque
+  lo que rompe la fila en móvil es el RÓTULO, no el botón (en la ficha del cliente «Hacer principal»
+  medía ~150px y con `flexWrap` daba dos alturas al mismo dato, ~58px y ~84px).
+  🚨 **NUNCA para una acción destructiva**: un borrado sin rótulo se pulsa por error y no hay ni un
+  precedente en la app; a icono van las inocuas o idempotentes, y siempre con `aria-label` + `title`.
 - **CSS responsive en `globals.css`, no en la página.** Un estilo inline no admite media queries, y ese
   era el motivo de que 47 páginas llevaran un bloque `<style>` incrustado (201 `!important` entre todas).
+
+### El CUERPO del Inicio, migrado (02/09/2026, PR #2024)
+El primer lote (#2011→#2018) tocó el **chrome** de `/banca` —pestañas, migas, ancho, cabecera del libro— y
+Alberto respondió **«no está terminado, ¿no?»**: tenía razón, porque **el cuerpo de la página no lo tocó
+nadie**, y el cuerpo es lo que se ve al abrir. Medido entonces: **7 primitivas con CERO consumidores**, y
+`banca/ResumenPeriodo.tsx` con su propia `card`, su propio `Kpi` y su propio `<style>` — copias de lo que
+`components/ui.tsx` ya ofrecía. **Copiar el estilo en vez de importarlo es por qué arreglar el oscuro o el
+móvil hay que hacerlo N veces y se olvida una.**
+- Ya usan el sistema: `ResumenPeriodo`, `NegociosResumen` y `banca/page.tsx` (`KpiCard`, `CardHeader`,
+  `cardStyle`, `Stat`, `Badge`, `TablaScroll`, `Pendiente`). `IntervaloSelector` —compartido con
+  `/finanzas`— pasa de quince pastillas con borde a segmentado + chips: un control de navegación no puede
+  pesar como las tarjetas de datos que filtra.
+- **`DeltaBadge` colorea por SIGNIFICADO, no por signo** (`bueno`): gastar menos que el año pasado es verde
+  aunque el número sea negativo. Al revés, la pastilla premiaba subir el gasto.
+
+🚨 **Una exención del guardián de tokens puede llevar un motivo FALSO y sobrevivir por eso.** Las barras del
+gráfico de `ResumenPeriodo` estaban exentas de `regression-tokens-color` con el motivo escrito «son series,
+no estados» — y no: ingreso y gasto SON el par semántico, y el hex no cambiaba en modo oscuro. Sobrevivió al
+barrido de ~734 hex precisamente porque su justificación tenía buena pinta. Convertidas a token y exención
+retirada; la dona sí sigue en paleta categórica (ahí el motivo se sostiene). **Regla: una exención razonada
+sigue siendo una exención que hay que releer, no una decisión cerrada.**
+
+⏸️ **Dos cosas PENDIENTES DE DECISIÓN DE ALBERTO, no deuda técnica anónima:**
+1. ~~**`PageHeader`, `BtnLink`, `BarListRow`, `ThinBar` y `LegendDot` siguen con CERO consumidores.**~~
+   ✅ **Medido el 03/09/2026 y esta frase YA ERA FALSA:** `PageHeader` tiene **55** consumidores,
+   `BtnLink` **8** y `ThinBar` **8** — se adoptaron solas por goteo, que es como se pretendía. Siguen a
+   cero **`BarListRow` y `LegendDot`**, y para esas dos la disyuntiva sigue en pie: o se usan donde
+   encajen de verdad, o se borran — un catálogo que nadie importa no es un sistema, es documentación.
+   ⚠️ Lección de método: un recuento escrito en un doc **caduca solo**; antes de citar «tiene N
+   consumidores» vuelve a contarlo (`grep -rl` sobre `app`+`components`), no lo copies de aquí.
+2. **`banca/page.tsx:221` dice «último mov. ninguno» cuando `ultimoMov` es NULL** (`lib/psd2-estado.ts`),
+   que es un «no se ha podido leer» servido como afirmación — la regla del NULL incumplida en la pantalla
+   del banco. Sin tocar porque cambia un texto que Alberto lee a diario.
 
 ### 🚨 `Dato` — los tres estados, por construcción
 La regla raíz «dato que NO hay ≠ dato que NO se ha mirado» se cumplía por VIGILANCIA: cada pantalla nueva
@@ -1553,6 +2059,45 @@ tenía que acordarse. La lógica pura vive en **`lib/dato.ts`** (`estadoDato`/`e
 `<Pendiente>` lo pinta con borde **discontinuo** (se rellenará) o **continuo** (`definitivo`: la fuente no
 lo va a traer nunca — prometer una pasada que no llega es la otra forma de mentir). `donde` dice dónde
 mirar mientras tanto (la ficha oficial, el portal del banco…).
+
+## 🏠 El Inicio: arriba lo que PIDE ACCIÓN, y los tres guardianes de navegación (02/09/2026, PRs #2115 y #2131)
+
+`/banca` no estaba vacío, estaba **saturado**: 512 líneas de saldo, cuentas, bróker, gráficas, P&L, fiscal,
+antifraude, fugas, benchmark y el libro entero, con lo accionable enterrado bajo cuatro secciones de consulta.
+
+- **Banda «Pide acción hoy»** (`banca/HoyAccionable.tsx`) encima de todo, con la lógica PURA en
+  `lib/inicio-acciones.ts` (14 tests). Orden fijo: **banco viejo PRIMERO** (`BANCO_STALE_H = 48`; si el feed
+  está parado, el resto de números de la pantalla están envenenados y decir cualquier otra cosa antes es
+  mentir por omisión), luego pólizas que vencen a ≤60 días desde el puerto de la correduría, y luego lo que
+  falta por clasificar (movimientos, ingresos, duplicados, facturas).
+- 🚨 **`horasDesdeBanco` tiene TRES valores, no dos:** un número (el dato), `null` («no se ha podido
+  comprobar») y `'no_aplica'` («no hay banco vinculado»). Por eso el estado vacío distingue **«Nada pendiente
+  hoy.»** de **«Nada pendiente de lo que se ha podido comprobar.»** — colapsarlos convertiría un fallo de
+  consulta en un 🟢, que es el modo de fallo más caro del repo.
+- **`/asistentes`** reúne los dos chats con los que SE PUEDE hablar (contable y precios). Se movieron con
+  `git mv` **sin reescribirlos** y solo ganaron un prop `cabecera` que se pinta DENTRO de su `<main>` (los dos
+  calculan su alto con `calc(100vh - 8px)`: cualquier cosa por encima los desborda). `/contable` y `/agente`
+  son redirects. No confundirlos con `/operador/agentes`, que son los **29 crons y sesiones efímeras** — ahí
+  no hay nadie al otro lado, y su consulta responde leyendo el EXPEDIENTE del agente
+  (`lib/agentes-expediente.ts`: ficha + semáforo + `agente_latidos` + `agente_salud`).
+
+🚨 **Un token CSS que no existe no da NINGÚN error: CSS invalida la declaración entera.** `var(--card)` y
+`var(--line)` no estaban definidos en ninguna parte y los usaban cuatro pantallas (`/operador/agentes`,
+`/operador/ia`, facturas por revisar, partes de viajeros): se pintaban **sin fondo y sin borde**, como una
+lista sin formato, y nadie las reportaba rotas porque no hay nada que ver fallar. Sustituidos por `--surface`
+y `--border`. Lo vigila **`test/regression-tokens-css.test.ts`**: todo `var(--token)` **sin fallback** tiene
+que apuntar a un token definido. Un token con fallback (`var(--x, #fff)`) no cuenta —ahí el autor ya declaró
+qué pasa si falta— y los tres que se inyectan en caliente están declarados con su motivo (`--brand`,
+`--accent` de `@central/brand`, `--font-inter` de next/font).
+
+**Y dos guardianes más de navegación, del mismo par de PRs:**
+- **`lib/nav-activo.ts`** (puro, 13 tests) decide qué entrada del lateral se enciende. El criterio estaba
+  inline en tres sitios del TSX, de tres formas y **dos mal**: `usePathname()` NO devuelve la query, así que
+  los cinco segmentos de `/banca?tab=*` encendían «Inicio» a la vez que el suyo; y el prefijo sin barra final
+  hacía que `/sivra/pricing` encendiera también `/sivra/pricing-auto`.
+- **`test/regression-panel-alcanzable.test.ts`** recorre las 69 pantallas del panel y exige que a cada una se
+  llegue por un enlace de fuera de su propia carpeta (tercer huérfano en dos días:
+  `/finanzas/tarjeta-credito`). Las excepciones están vacías a propósito.
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

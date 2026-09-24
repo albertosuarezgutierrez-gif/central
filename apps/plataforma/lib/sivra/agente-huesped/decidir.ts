@@ -22,7 +22,12 @@ import { revisarCierre, bloqueCierre } from './cierre'
 import { revisarCoherencia, REGLA_COHERENCIA } from './coherencia'
 import { bloqueSalidaTardia, pideMasAllaDeLaVentana, SALIDA_FLEX_HASTA } from './salida'
 import { esSolicitudLateCheckout, esDespedida } from './reglas'
+import { esCierre, esIntercambioDeCortesia } from './cortesia'
+import { precedentesEstables, bloquePrecedentes } from './precedentes'
 import { esLlegadaFueraDeHorario, HORARIO_ATENCION } from './llegada'
+import { asegurarIdioma } from './idioma-salida'
+import { procedeConsultarWeb, consultarEntorno, bloqueConsulta } from './consulta-web'
+import { buscarWeb } from '@/lib/websearch'
 
 export type Decision = {
   reply: string
@@ -39,23 +44,38 @@ export type Decision = {
   // como dudosa. Es lo que autoriza el auto-envío desde el 20/08/2026: «si está en la guía, contesta
   // solo». Nunca es true si la guía no se pudo leer — eso es «no lo sé todavía», no «no hay guía».
   apoyada_en_fuente?: boolean
+  // true si el control de calidad no dio veredicto (caído o respuesta ininteligible). Normalmente
+  // implica `needs_human`; la ÚNICA excepción es el intercambio de pura cortesía (`cortesia.ts`),
+  // que sale solo aunque el control esté mudo. En ese caso este flag es lo que hace que el aviso de
+  // Telegram lo DECLARE: si no, un control muerto durante días dejaría de notarse justo en los
+  // mensajes que ya no pasan por Alberto.
+  sin_verificar?: boolean
   categoria: string
   sentimiento: 'positivo' | 'neutro' | 'negativo'
   motivo: string
   fuente: 'ia' | 'web' | 'regla'
+  // Se consultó internet porque la guía no cubría la pregunta y el dato era del ENTORNO (ver
+  // `consulta-web.ts`). 'fallida' = se intentó y no se pudo: eso se DECLARA en el aviso, porque no es
+  // lo mismo que «no lo encuentro en la guía» a secas. Un borrador con datos de internet NUNCA se
+  // auto-envía: las URLs viajan en `fuentes_web` para que Alberto las compruebe de un vistazo.
+  consulta_web?: 'ok' | 'fallida'
+  fuentes_web?: string[]
 }
 
 const LANG_NAME: Record<string, string> = { es: 'español', en: 'English', fr: 'français', de: 'Deutsch', it: 'italiano' }
 
-// Modelo del agente de huéspedes. Por defecto VACÍO = usa el modelo por defecto de la pasarela
-// (`meta/llama-3.1-70b-instruct` desde el 22/08/2026 — `z-ai/glm-5.2` murió por EOL real el
-// 21/08/2026), que es el que de verdad sirve NIM y produce los borradores.
+// Modelo del agente de huéspedes. Por defecto VACÍO = sin `model` pinneado, así que
+// `aiComplete` (`@central/core-ai`) entra por **OpenRouter como PRIMARIO** (regla permanente
+// del 24/08/2026: "todo lo que PUEDA ir por OpenRouter, va por OpenRouter") y solo si eso falla
+// cae a la cadena clásica — que además, desde el 28/08/2026, tiene **NIM APAGADO por defecto**
+// (`NVIDIA_TEXTO` sin poner), así que ese eslabón ni se intenta: Groq → Cerebras → Gemini → Kimi.
 // El id "fuerte" `meta/llama-3.1-405b-instruct` que poníamos antes fue RETIRADO del catálogo de
 // NVIDIA NIM → devolvía `HTTP 404: 404 page not found` en CADA mensaje (verificado en logs de
-// producción el 06/07/2026). Quedaba enmascarado porque el reintento con el 70B por defecto
-// respondía; el día que el 70B también falló (timeout) el agente cayó a "IA no disponible".
-// Si en el futuro se quiere un modelo más capaz, poner en AGENTE_HUESPED_MODEL un id VERIFICADO
-// como vivo en NIM: si está puesto, se intenta primero y, si falla, se reintenta con el 70B.
+// producción el 06/07/2026), de la época en que NIM sí era el primario — mantenido como historia,
+// ya no aplica al camino real. Poner un `model` aquí PINEA NIM y SALTA OpenRouter salvo que NIM
+// esté inactivo (ver landmine en `client.ts::aiCompleteConProveedor`): no fijar nada a la ligera.
+// Si en el futuro se quiere un modelo más capaz, usar `OPENROUTER_MODEL`/`OPENROUTER_FALLBACK_MODELS`
+// (el camino real), no `AGENTE_HUESPED_MODEL` — eso reintroduciría el salto de OpenRouter.
 const MODELO_HUESPED = process.env.AGENTE_HUESPED_MODEL || ''
 
 // Timeout por proveedor de la cadena de IA (NIM→Groq→Gemini→Kimi). Más corto que el default (30s)
@@ -65,13 +85,9 @@ const MODELO_HUESPED = process.env.AGENTE_HUESPED_MODEL || ''
 // ~3-10s) y hace el failover a Groq/Gemini mucho más ágil. La ventana del webhook es 300s.
 const HUESPED_TIMEOUT_MS = 15_000
 
-// Cierre de conversación que no pide nada (no requiere respuesta obligatoria; se propone igual
-// como cortesía). Solo cuando el mensaje es ÍNTEGRAMENTE una fórmula de cortesía/cierre.
-const RE_CIERRE = /^(?:muchas\s+)?(?:gracias|graciass+|ok+|vale|perfecto|genial|estupendo|de acuerdo|entendido|recibido|buenas noches|buen día|hasta (?:luego|mañana|pronto)|thanks?|thank you|thx|great|perfect|cheers|merci|grazie|danke)[\s!.,😊👍🙏❤️]*$/i
-
-function esCierre(text: string): boolean {
-  return RE_CIERRE.test((text || '').trim())
-}
+// `esCierre` (cierre de conversación que no pide nada) vive ahora en `cortesia.ts`: la regex de aquí
+// solo admitía «muchas» y nada detrás de la fórmula, así que «Muchísimas gracias, un saludo» no se
+// detectaba como cierre (reserva 152961026, 04/09/2026). Ver la cabecera de ese módulo.
 
 function sentimientoDe(pregunta: string): Decision['sentimiento'] {
   if (/no funciona|aver[ií]a|roto|sucio|fatal|p[eé]simo|terrible|enfad|queja|inacept|asco|horrible|decepcion/i.test(pregunta)) return 'negativo'
@@ -109,22 +125,49 @@ async function debeEscalar(ctx: Contexto, pregunta: string, reply: string): Prom
 Te doy la INFORMACIÓN disponible del alojamiento, el último mensaje del huésped y el BORRADOR de respuesta.
 Responde con UNA sola palabra, sin nada más:
 ESCALAR → si el borrador no resuelve lo que pide el huésped, si la INFORMACIÓN no cubre la pregunta, o si el mensaje es una queja / pide dinero, cambios, cancelación o es una emergencia.
-OK → si el borrador responde correctamente y con datos que están en la INFORMACIÓN.`
+OK → si el borrador responde correctamente y con datos que están en la INFORMACIÓN, o si responde en la misma línea que un PRECEDENTE ya aprobado por el anfitrión.
+Los PRECEDENTES son respuestas que el anfitrión dio por buenas antes: acreditan que el asunto está resuelto, NO acreditan ningún dato concreto (cifras, horas, disponibilidad, importes). Si el borrador afirma un dato así y solo lo respalda un precedente, ESCALAR.`
+  // Los HECHOS del piso van también aquí, no solo al redactor. Si el control de calidad solo ve la
+  // ficha y la guía, todo lo que Alberto enseña le resulta invisible: contesta ESCALAR («la
+  // INFORMACIÓN no cubre la pregunta») por muchas veces que se le haya enseñado el mismo asunto, y
+  // como ese veredicto es el que dispara el aviso «❓ Esto no lo encuentro en la guía», el agente
+  // parece no aprender NUNCA. Medido el 02/09/2026: el phishing por WhatsApp se había enseñado tres
+  // veces (mensajes_hechos id=4 y 5, y una más que cayó en mensajes_aprendizaje) y seguía escalando.
+  const hechosQA = (ctx.hechos || []).map(h => `- ${h}`).join('\n')
+  // Y los PRECEDENTES: lo que Alberto ya aprobó a preguntas parecidas (`ctx.aprendizajes`, que
+  // llega filtrado por parecido desde `similitud.ts`). Sin esto, un asunto respondido a mano varias
+  // veces que nadie destiló a HECHO seguía escalando para siempre — la queja del 04/09/2026.
+  // 🚨 Van en su PROPIO bloque, fuera de INFORMACIÓN, y solo los estables: `precedentes.ts` descarta
+  // lo atado a una reserva («tu reserva está confirmada del 20 al 22 de noviembre», «puedes salir a
+  // las 12:00 porque no entra nadie»), que aprobado como fuente se auto-enviaría a OTRO huésped.
+  const precedentesQA = bloquePrecedentes(precedentesEstables(ctx.aprendizajes))
   const user = `INFORMACIÓN:
 ${ctx.ficha || '(sin ficha)'}
-${ctx.guia ? `\nGUÍA:\n${ctx.guia}` : ''}
+${ctx.guia ? `\nGUÍA:\n${ctx.guia}` : ''}${hechosQA ? `\nHECHOS DE ESTE PISO (los enseñó el anfitrión; valen tanto como la guía):\n${hechosQA}` : ''}
+
+${precedentesQA}
 
 MENSAJE DEL HUÉSPED: ${pregunta}
 
 BORRADOR: ${reply}`
-  try {
-    const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0, timeoutMs: HUESPED_TIMEOUT_MS })
-    if (/escalar/i.test(out || '')) return 'ESCALAR'
-    if (/\bok\b/i.test(out || '')) return 'OK'
-    return 'DESCONOCIDO'
-  } catch {
-    return 'DESCONOCIDO'
+  // Un intento y reintento: el 14/09/2026 un timeout SUELTO de esta llamada (15s) bloqueó un
+  // borrador correcto con «control de calidad caído», sin dejar rastro del error real en logs.
+  // Un segundo intento inmediato absorbe el caso típico (blip puntual de un proveedor) sin
+  // esperar a que decida el humano; si el segundo también falla, SÍ se loguea la causa.
+  for (let intento = 1; intento <= 2; intento++) {
+    try {
+      const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0, timeoutMs: HUESPED_TIMEOUT_MS })
+      if (/escalar/i.test(out || '')) return 'ESCALAR'
+      if (/\bok\b/i.test(out || '')) return 'OK'
+      return 'DESCONOCIDO'
+    } catch (e) {
+      if (intento === 2) {
+        console.error('[agente-huesped] debeEscalar falló tras 2 intentos:', e instanceof Error ? e.message : e)
+        return 'DESCONOCIDO'
+      }
+    }
   }
+  return 'DESCONOCIDO'
 }
 
 export async function decidir(ctx: Contexto, pregunta: string, categoria: string): Promise<Decision> {
@@ -244,31 +287,36 @@ ${lateBlock}
 ${llegadaBlock}
 ${resenaBlock}
 
-Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
+Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar, ESCRITO EN ${LANG_NAME[ctx.lang] || 'English'} (todas estas instrucciones están en español, pero el mensaje NO va en español salvo que ese sea el idioma del huésped). Nada de comillas, ni JSON, ni notas, ni "Respuesta:" — solo el texto del mensaje.`
 
   // Hilo de la conversación como contexto (últimos 15, ambos lados) + el turno actual a responder.
   // Sin contrato JSON: el modelo solo tiene que escribir un mensaje, que es lo que hace con fiabilidad.
   const hilo = hiloComoMensajes(ctx.historial, pregunta)
 
   const mensajes = [...hilo, { role: 'user' as const, content: pregunta }]
-  let reply = ''
-  try {
-    // Por defecto una sola llamada al modelo por defecto de la pasarela (70B), que YA trae su
-    // propia cadena de fallback NIM→Groq→Gemini→Kimi. Si hay un modelo "fuerte" configurado en
-    // AGENTE_HUESPED_MODEL, se intenta ese primero y, si falla, se reintenta con el 70B por
-    // defecto (el modelo fuerte es ADITIVO: nunca debe dejarnos sin respuesta).
-    let raw = ''
+
+  // La generación se reutiliza tal cual en la 2ª pasada (la que lleva los datos de internet): mismo
+  // hilo, mismo system, misma cadena de fallback de modelo. Duplicarla sería la vía rápida para que
+  // una de las dos se quede sin una regla el día que se toque el prompt.
+  const generar = async (sys: string): Promise<string> => {
     if (MODELO_HUESPED) {
       try {
-        raw = await aiComplete(mensajes, { system, maxTokens: 500, model: MODELO_HUESPED, timeoutMs: HUESPED_TIMEOUT_MS })
+        return await aiComplete(mensajes, { system: sys, maxTokens: 500, model: MODELO_HUESPED, timeoutMs: HUESPED_TIMEOUT_MS })
       } catch (e1: any) {
         console.error('[decidir] modelo fuerte falló, reintento con default:', e1?.message)
-        raw = await aiComplete(mensajes, { system, maxTokens: 500, timeoutMs: HUESPED_TIMEOUT_MS })
+        return await aiComplete(mensajes, { system: sys, maxTokens: 500, timeoutMs: HUESPED_TIMEOUT_MS })
       }
-    } else {
-      raw = await aiComplete(mensajes, { system, maxTokens: 500, timeoutMs: HUESPED_TIMEOUT_MS })
     }
-    reply = limpiarReply(raw || '')
+    return await aiComplete(mensajes, { system: sys, maxTokens: 500, timeoutMs: HUESPED_TIMEOUT_MS })
+  }
+
+  let reply = ''
+  try {
+    // Por defecto una sola llamada SIN modelo pinneado → entra por OpenRouter (primario real) y,
+    // si falla, cadena clásica Groq→Cerebras→Gemini→Kimi (NIM inactivo por defecto). Si hay un
+    // modelo "fuerte" en AGENTE_HUESPED_MODEL (pinnea NIM), se intenta ese primero y, si falla, se
+    // reintenta SIN pin (el modelo fuerte es ADITIVO: nunca debe dejarnos sin respuesta).
+    reply = limpiarReply((await generar(system)) || '')
   } catch (e: any) {
     console.error('[decidir] aiComplete error:', e?.message)
     return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'IA no disponible', fuente: 'ia' }
@@ -278,28 +326,98 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     return { reply: '', confidence: 0, needs_human: true, categoria, sentimiento: 'neutro', motivo: 'IA sin respuesta', fuente: 'ia' }
   }
 
+  // RED DE IDIOMA (05/09/2026): todas estas instrucciones están en español y la orden «responde en
+  // inglés» es una línea dentro del muro, así que el modelo deriva al idioma ambiental y devuelve el
+  // borrador en español. Pasaba en silencio: el aviso lo etiquetaba «(en EN)» —`ctx.lang` sí era 'en'—
+  // y la línea 🔁 salía «no he podido traducirlo al español», que se lee como un fallo de traducción y
+  // no como lo que era. Si la categoría permitía auto-envío, al huésped le llegaba en español.
+  const idiomaSalida = await asegurarIdioma(reply, ctx.lang, (m, o) => aiComplete(m, { ...o, timeoutMs: HUESPED_TIMEOUT_MS }))
+  reply = idiomaSalida.texto
+  // La traducción falló y el texto sigue en el idioma equivocado: no se manda solo. Enviar un mensaje
+  // en un idioma que el huésped no eligió es peor que hacer esperar a que Alberto lo mire.
+  const idiomaEquivocado = idiomaSalida.fallo
+
   // Red determinista sobre la DESPEDIDA: si el borrador cierra con una fórmula de viaje o de adiós
   // que no toca en esta fase, se poda cuando va aislada en su frase; si va entretejida con contenido
   // real, no se reescribe y el mensaje pasa por Alberto en vez de auto-enviarse.
-  const revision = revisarCierre(reply, fase, esDiaSalida)
-  reply = revision.texto
-  const cierreFueraDeFase = revision.incoherente
-
+  //
   // Coherencia apertura↔respuesta: «¡claro que sí!» seguido de «no tenemos consigna, ve a estas
   // taquillas» concede lo que niega dos líneas después. Es contenido, no coletilla: no se reescribe
   // solo, se manda a revisar.
-  const coherencia = revisarCoherencia(reply)
+  //
+  // Las tres revisiones van juntas porque hay que repetirlas ENTERAS sobre el borrador de la 2ª
+  // pasada (el que trae datos de internet): reutilizar el veredicto del primero sería juzgar un texto
+  // que ya no es el que se envía.
+  const revisarTexto = (txt: string, src: string) => {
+    const rev = revisarCierre(txt, fase, esDiaSalida)
+    return { texto: rev.texto, cierreFueraDeFase: rev.incoherente, coherencia: revisarCoherencia(rev.texto), inventado: contieneDatoInventado(rev.texto, src) }
+  }
+  let rev = revisarTexto(reply, fuentes)
+  reply = rev.texto
 
   // Decisión de escalado / metadatos, derivada de REGLAS + clasificador de una palabra (no de un JSON).
   const sentimiento = sentimientoDe(pregunta)
   const sensible = esSensible(pregunta)
-  const inventado = contieneDatoInventado(reply, fuentes)
   // Si ya hay motivo firme para escalar, no gastamos la llamada al clasificador.
-  const veredicto: Veredicto = (sensible || sentimiento === 'negativo' || inventado)
+  const veredicto: Veredicto = (sensible || sentimiento === 'negativo' || rev.inventado)
     ? 'ESCALAR'
     : await debeEscalar(ctx, pregunta, reply)
   const escalaIA = veredicto === 'ESCALAR'
   const sinVerificar = veredicto === 'DESCONOCIDO'
+
+  // ── CONSULTA A INTERNET (05/09/2026, dictado de Alberto: «en caso de duda que use la IA para
+  // consultar») ────────────────────────────────────────────────────────────────────────────────
+  // Cuando el control de calidad dice que la INFORMACIÓN no cubre la pregunta Y lo que se pregunta
+  // es del ENTORNO (cómo llegar, horarios de terceros, dónde comer), escalar en blanco no era la
+  // única opción: el dato existe, solo que fuera de la guía. Antes de esto el modelo lo rellenaba de
+  // memoria — de ahí el «25-30€» de taxi y una parada de bus inexistente el 05/09/2026.
+  //
+  // 🚨 Lo consultado NO se auto-envía JAMÁS: `webConsultada` fuerza la revisión de Alberto y las
+  // URLs viajan al aviso. El problema de aquel borrador no fue que faltara el dato, fue afirmarlo sin
+  // fuente; con esto llega el dato Y de dónde sale, y él solo da a ✅ Enviar.
+  let consultaWeb: 'ok' | 'fallida' | undefined
+  let fuentesWeb: string[] = []
+  if (procedeConsultarWeb(pregunta, { escalaPorConocimiento: escalaIA && !rev.inventado, categoria, sensible, sentimiento })) {
+    const res = await consultarEntorno(
+      pregunta,
+      { zona: ctx.zona, direccion: ctx.direccion, checkIn: ctx.checkIn },
+      (sys, usr) => buscarWeb(sys, usr, { app: 'sivra', endpoint: 'huesped-consulta', maxTokens: 700, timeoutMs: 25_000 }).then(r => r.text),
+    )
+    if (res.ok) {
+      consultaWeb = 'ok'
+      fuentesWeb = res.fuentes
+      // El texto consultado entra como FUENTE: si no, el guardrail marcaría como inventado justo el
+      // dato que acabamos de verificar (un precio de dos cifras lo caza `importesNoRespaldados`).
+      const fuentesConWeb = `${fuentes}
+${res.datos}`
+      let segundo = ''
+      try { segundo = limpiarReply((await generar(system + bloqueConsulta(res.datos))) || '') } catch (e: any) {
+        console.error('[decidir] 2ª pasada con datos de internet falló:', e?.message)
+      }
+      if (segundo) {
+        const idioma2 = await asegurarIdioma(segundo, ctx.lang, (m, o) => aiComplete(m, { ...o, timeoutMs: HUESPED_TIMEOUT_MS }))
+        // Solo se adopta si el idioma quedó bien: un borrador correcto en el idioma equivocado es
+        // peor que el anterior, que al menos ya pasó su propia red.
+        if (!idioma2.fallo) {
+          rev = revisarTexto(idioma2.texto, fuentesConWeb)
+          reply = rev.texto
+        }
+      }
+    } else {
+      // «No he podido consultar» ≠ «no lo encuentro en la guía». Se declara en el aviso.
+      consultaWeb = 'fallida'
+      console.warn('[decidir] consulta a internet fallida:', res.error)
+    }
+  }
+  const webConsultada = consultaWeb === 'ok'
+  // Un control de calidad caído bloquea el auto-envío SALVO en el único caso en el que su veredicto
+  // no aportaba nada: el huésped no pide nada («Muchísimas gracias, un saludo») y el borrador no
+  // afirma nada (ni una cifra, hora, enlace o importe). El clasificador juzga si el borrador resuelve
+  // la pregunta con datos de la INFORMACIÓN; sin pregunta y sin datos no hay nada que juzgar, así que
+  // su silencio no es un «no lo sé» sobre esta respuesta. Fuera de ese par, `DESCONOCIDO` sigue
+  // escalando como cualquier duda (dictado de Alberto 04/09/2026 + regla del repo sobre el NULL).
+  const cortesiaSinRiesgo = esIntercambioDeCortesia(pregunta, reply)
+  const bloqueaSinVerificar = sinVerificar && !cortesiaSinRiesgo
   // Salida tardía: desde el 20/08/2026 (decisión de Alberto) el agente puede confirmar SOLO la
   // ventana gratuita —hasta las 12:00— y únicamente con la ocupación YA VERIFICADA. Todo lo demás
   // sigue pasando por él: si nombra una hora posterior entra el coste de la limpieza (dinero), y si
@@ -309,7 +427,7 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   const dentroDeLaVentana = ventanaVerificada && !pideMasAllaDeLaVentana(pregunta, SALIDA_FLEX_HASTA)
   const escalaSalida = lateCheckout && !dentroDeLaVentana
 
-  const needs_human = sensible || sentimiento === 'negativo' || inventado || escalaIA || escalaSalida || sinVerificar || cierreFueraDeFase || coherencia.incoherente
+  const needs_human = sensible || sentimiento === 'negativo' || rev.inventado || escalaIA || escalaSalida || bloqueaSinVerificar || rev.cierreFueraDeFase || rev.coherencia.incoherente || idiomaEquivocado || webConsultada
 
   // ¿Se apoya en una fuente real? Es la condición del auto-envío (regla del 20/08/2026). Exige que la
   // guía se haya PODIDO LEER: con `guiaCargada=false` no sabemos si la respuesta está respaldada o
@@ -323,7 +441,13 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
   // guardas en el orquestador (needs_human=false), así que un mensaje sensible/negativo nunca cuela.
   const es_cortesia = esCierre(pregunta) || esDespedida(pregunta)
 
-  const motivo = inventado
+  const motivo = idiomaEquivocado
+    ? `el borrador salió en español y el huésped escribe en ${LANG_NAME[ctx.lang] || ctx.lang} — no he podido traducirlo, revísalo antes de enviarlo`
+    : webConsultada
+    ? 'esto no está en la guía del piso: lo he consultado en internet y he puesto los datos en el borrador — compruébalos en las fuentes antes de enviarlo'
+    : consultaWeb === 'fallida'
+    ? 'esto no está en la guía del piso y NO he podido consultarlo en internet (la búsqueda falló) — no es que no exista el dato, es que no lo he podido mirar'
+    : rev.inventado
     ? 'guardrail: dato no presente en las fuentes'
     : sensible
       ? 'mensaje sensible (queja/dinero/cambios/emergencia)'
@@ -331,14 +455,14 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
         ? 'sentimiento negativo'
         : escalaIA
           ? 'la respuesta no cubre bien la pregunta — quizá falta en la guía del piso'
-          : sinVerificar
+          : bloqueaSinVerificar
             ? 'no se pudo verificar el borrador (control de calidad caído) — lo reviso yo'
           : escalaSalida
             ? `salida más allá de las ${SALIDA_FLEX_HASTA} o sin poder verificar la ocupación: lo confirma el anfitrión (tiene coste de limpieza)`
-            : cierreFueraDeFase
+            : rev.cierreFueraDeFase
               ? 'la despedida no encaja con el momento de la reserva (habla de viaje/adiós y el huésped sigue alojado)'
-            : coherencia.incoherente
-              ? `la respuesta abre con «${coherencia.concesion}» y a continuación niega el servicio y deriva fuera`
+            : rev.coherencia.incoherente
+              ? `la respuesta abre con «${rev.coherencia.concesion}» y a continuación niega el servicio y deriva fuera`
             : ''
 
   return {
@@ -348,9 +472,12 @@ Escribe ÚNICAMENTE el mensaje que enviarías al huésped, listo para mandar. Na
     requiere_respuesta,
     es_cortesia,
     apoyada_en_fuente,
+    sin_verificar: sinVerificar,
     categoria,
     sentimiento,
     motivo,
-    fuente: 'ia',
+    fuente: webConsultada ? 'web' : 'ia',
+    consulta_web: consultaWeb,
+    fuentes_web: fuentesWeb.length ? fuentesWeb : undefined,
   }
 }

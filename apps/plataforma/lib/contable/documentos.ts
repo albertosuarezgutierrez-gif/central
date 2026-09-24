@@ -17,17 +17,26 @@ import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { esExtractoTarjeta, parseTarjetaPdfTexto } from '@/lib/extracto-tarjeta-pdf'
 import { parseExtractoXls } from '@/lib/extracto-xls'
 import { identificarTarjetaExcel, comoExtractoTarjeta } from '@/lib/extracto-tarjeta-excel'
-import { interpretarExtraccion, fechaEs, type FacturaDoc, type CruceDoc, type CoberturaBanco, type MovCandidato } from './documentos-tipos'
+import { interpretarExtraccion, fechaEs, type FacturaDoc, type CruceDoc, type CoberturaBanco, type MovCandidato, type ArchivoFactura } from './documentos-tipos'
+import { archivarEImputar } from './archivar'
 import { detectarListadoMovimientos } from './documento-clase'
 import { procesarExtractoTarjeta } from './extracto-tarjeta'
 
 export type DocProcesado =
   | { ok: false; motivo: string }
-  | { ok: true; tipo: 'factura'; factura: FacturaDoc; cruce: CruceDoc }
+  | { ok: true; tipo: 'factura'; factura: FacturaDoc; cruce: CruceDoc; archivo: ArchivoFactura }
   | { ok: true; tipo: 'extracto_tarjeta'; resumen: string; driveUrl?: string }
 
 // Ventana ancha para el «existe, pero en otra fecha»: un recibo domiciliado puede cargarse bastante
 // después de la fecha de la factura. Se PREGUNTA, no se concilia solo.
+//
+// 🚨 Y es ASIMÉTRICA, cosa que hasta el 07/09/2026 no era: el SQL usaba `ABS(...)`, o sea aceptaba
+// también cargos ANTERIORES, contradiciendo a este mismo comentario. **Un cargo anterior no puede
+// pagar una factura que todavía no existía.** Caso real: una factura de gasolina de 40,00€ del
+// 07/09 se ofreció contra un cargo del 19/07 —50 días ANTES— y se confirmó; ese cargo era otro
+// repostaje. En esa gasolinera había CINCO cargos de exactamente 40,00€: con un importe redondo y
+// recurrente, casar por importe no identifica nada. Los ±7 días del `match` sí siguen siendo
+// simétricos: ahí un desfase de días para cualquier lado es el retraso normal del feed.
 const VENTANA_ANCHA = 60
 // Una cuenta cuenta como "viva" (su feed está al día) si tiene movimientos recientes. Las cuentas
 // dormidas (N26, las tarjetas que solo se cargan con el PDF mensual) NO deben hacernos decir
@@ -45,7 +54,14 @@ const aCandidato = (m: FilaMov): MovCandidato => ({
 // SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí solo proponemos; el UPDATE lo hace
 // acciones.ts tras confirmar). Todo scoped por cuenta_id. Los ya conciliados vienen marcados, no
 // filtrados: un cargo conciliado es una RESPUESTA («ya está hecho»), no una ausencia.
-async function cargosDelImporte(cuentaId: string, f: FacturaDoc, dias: number): Promise<FilaMov[]> {
+async function cargosDelImporte(
+  cuentaId: string, f: FacturaDoc, dias: number,
+  /** `posterior`: solo cargos del día de la factura en adelante (ver VENTANA_ANCHA). */
+  ventana: 'centrada' | 'posterior' = 'centrada',
+): Promise<FilaMov[]> {
+  const rangoFecha = ventana === 'posterior'
+    ? Prisma.sql`AND mb.fecha_operacion BETWEEN ${f.fecha}::date AND ${f.fecha}::date + ${dias}::int`
+    : Prisma.sql`AND ABS(mb.fecha_operacion - ${f.fecha}::date) <= ${dias}`
   return await prisma.$queryRaw<FilaMov[]>(Prisma.sql`
     SELECT mb.id, mb.fecha_operacion::text AS fecha, mb.concepto, mb.importe,
            coalesce(cb.alias, cb.banco) AS banco, coalesce(mb.conciliado, false) AS conciliado,
@@ -57,7 +73,7 @@ async function cargosDelImporte(cuentaId: string, f: FacturaDoc, dias: number): 
       AND sign(mb.importe) = -1
       AND ABS(ABS(mb.importe) - ${f.total}) < 0.005
       AND mb.fecha_operacion IS NOT NULL
-      AND ABS(mb.fecha_operacion - ${f.fecha}::date) <= ${dias}
+      ${rangoFecha}
     ORDER BY coalesce(mb.conciliado, false) ASC, ABS(mb.fecha_operacion - ${f.fecha}::date) ASC
     LIMIT 5`).catch(() => [])
 }
@@ -91,8 +107,17 @@ async function buscarCruce(cuentaId: string, f: FacturaDoc, tolDias = 7): Promis
   // parecida es un indicio fuerte, pero no es una prueba de que sea ESTA factura (dos recibos
   // gemelos del mismo proveedor lo rompen). Si hay un cargo libre, se ofrece; el conciliado se cuenta
   // como lo que es —un dato— y se deja que Alberto lo desmienta.
-  const lejano = (await cargosDelImporte(cuentaId, f, VENTANA_ANCHA)).find(m => !m.conciliado)
+  // Solo POSTERIORES: ver el porqué en VENTANA_ANCHA.
+  const posteriores = (await cargosDelImporte(cuentaId, f, VENTANA_ANCHA, 'posterior')).filter(m => !m.conciliado)
+  const lejano = posteriores[0]
   if (cercanos[0]) return { estado: 'ya_conciliado', mov: aCandidato(cercanos[0]), otro: lejano ? aCandidato(lejano) : null }
+
+  // 🚨 Varios cargos del MISMO importe = el importe no identifica a ninguno. Ofrecer uno es pedir un
+  // clic a ciegas, y el clic escribe `conciliado` sobre el movimiento equivocado: eso no falla, solo
+  // deja el P&L mal atado en silencio. Se enseñan los candidatos y elige Alberto.
+  if (posteriores.length > 1) {
+    return { estado: 'varios_candidatos', movs: posteriores.map(aCandidato) }
+  }
   if (lejano) {
     return { estado: 'fuera_de_ventana', mov: aCandidato(lejano), dias: diasEntre(lejano.fecha, f.fecha) }
   }
@@ -153,7 +178,9 @@ export async function procesarDocumento(
 
   let extraido
   try {
-    extraido = await extraerDesdeBuffer(buffer, mimeType, fileName)
+    // `ocr: true` — aquí hay alguien esperando delante de la pantalla: si el PDF no trae capa de
+    // texto se rasteriza y se lee por visión, en vez de contestar «prueba con una foto más nítida».
+    extraido = await extraerDesdeBuffer(buffer, mimeType, fileName, { ocr: true })
   } catch {
     return { ok: false, motivo: 'No pude procesar el documento. ¿Es un PDF o una imagen (JPG/PNG)?' }
   }
@@ -164,7 +191,7 @@ export async function procesarDocumento(
     return await procesarExtractoTarjeta(cuentaId, buffer, mimeType, fileName, parseTarjetaPdfTexto(extraido.texto))
   }
 
-  const interp = interpretarExtraccion(extraido.data, extraido.source)
+  const interp = interpretarExtraccion(extraido.data, extraido.source, extraido.motivo)
   if (!interp.ok) {
     // El documento SÍ se lee: lo que pasa es que no es una factura suelta, sino un listado de
     // movimientos (el «movimientos (1).pdf» que Alberto subió tres veces el 07/08/2026). Pedirle
@@ -180,6 +207,13 @@ export async function procesarDocumento(
     return interp
   }
 
-  const cruce = await buscarCruce(cuentaId, interp.factura)
-  return { ok: true, tipo: 'factura', factura: interp.factura, cruce }
+  // Archivar en Drive + imputar al libro de gastos ANTES de cruzar con el banco: es lo que Alberto
+  // da por hecho al subir una factura («que me la lea, me la contabilice y me la archive»), y hasta
+  // el 07/09/2026 no lo hacía nadie salvo el agente de correo. `archivarEImputar` no lanza y ya trae
+  // dentro el dedupe, así que volver a subir la misma factura no la cuenta dos veces.
+  const [archivo, cruce] = await Promise.all([
+    archivarEImputar(cuentaId, buffer, mimeType, fileName, extraido.data, extraido.texto || '', interp.factura),
+    buscarCruce(cuentaId, interp.factura),
+  ])
+  return { ok: true, tipo: 'factura', factura: interp.factura, cruce, archivo }
 }

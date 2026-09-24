@@ -1,4 +1,4 @@
--- Portal de Grupo Asegura — Fase 1. Schema `seguros` de la BD compartida.
+-- Portal de Grupo ASegura — Fase 1. Schema `seguros` de la BD compartida.
 -- Prefijo `portal_` para no colisionar con el volcado de la cartera.
 SET search_path = seguros, public;
 

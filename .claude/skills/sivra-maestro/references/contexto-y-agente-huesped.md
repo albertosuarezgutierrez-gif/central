@@ -8,9 +8,9 @@
 > Finanzas, mensajería, limpiadoras, agente IA, el motor de pricing y **los crons de negocio** viven ya en
 > **plataforma** (`/sivra/*`, `/api/sivra/*`; `apps/plataforma/vercel.json`). `apps/sivra/vercel.json`
 > solo conserva **1 cron** (`/api/seo-refresh` semanal). **Para cualquier feature/fix interno → trabaja en `apps/plataforma`, NO aquí.**
-> **Excepción (consolidación parcial):** `/api/pricing/aplicar-propuesta` y `/api/pricing/pisos-zona`
-> —el raíl que usa el **agente de pricing** (skill `pricing-agente`)— **siguen SOLO en sivra**
-> (`housesevillana.vercel.app`); no se portaron. Razón extra para no apagar sivra.
+> **Excepción (consolidación parcial):** `/api/pricing/pisos-zona` (puebla `pricing_piso_zona`) **sigue
+> SOLO en sivra** (`housesevillana.vercel.app`). El raíl del **agente de pricing** (skill `pricing-agente`)
+> es `POST /api/sivra/pricing/aplicar-propuesta` de **plataforma**; la copia de sivra devuelve 410 desde el 23/09/2026.
 >
 > **🚫 `apps/sivra` NO se borra (decisión de Alberto).** Se mantiene SOLO como **web pública de reserva
 > directa de House Sevillana** (`housesevillana.es`/`.vercel.app`: landing multidioma `app/[locale]`, SEO
@@ -75,6 +75,23 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
     en el idioma del huésped + `🔁` español para verificar) con botones ✅/✏️/🔧 y mantiene el pendiente;
     **solo el botón ✅ Enviar manda al huésped**. Así Alberto ve SIEMPRE lo que sale (incluida la traducción
     de su respuesta es→idioma del huésped) y puede **encadenar varias vueltas**. Decisión de Alberto.
+  - 🔌 **Y desde una sesión de Claude NO se puede enviar (medido 07/09/2026).** El contenedor cloud no
+    tiene ningún env cargado (`SMOOBU_API_KEY`, `DATABASE_URL`, token del bot: ninguno), y aunque se
+    saque la key de `pms_connections`, **la política de red del entorno deniega `login.smoobu.com`**
+    (`CONNECT` → 403 `connect_rejected` en el proxy de egreso). El envío al huésped es SIEMPRE de
+    Alberto por Telegram. 🚨 **No saques la key de `pms_connections`**: no sirve para nada desde aquí
+    y queda volcada en el transcript (pasó ese día, por comprobar la salida a internet DESPUÉS de
+    leer el secreto en vez de antes).
+  - 🔑 **Lo que SÍ puede hacer una sesión: corregir el borrador en BD.** El handler del ✅ envía
+    `pend.borrador` **leído de `mensajes_pendientes_tg`** (`telegram-webhook/route.ts:838`), **no el
+    texto de la burbuja de Telegram**. Un `UPDATE ... SET borrador` deja el texto bueno cargado y
+    Alberto solo pulsa ✅. ⚠️ Avísale de que **la burbuja seguirá mostrando el texto viejo**: lo que
+    sale es lo de la BD. Y si el pendiente se borrara, el ✅ ya no envía nada — responde «ese borrador
+    ya se envió o se gestionó» y retira los botones, así que no hay riesgo de doble envío.
+  - 🚫 **Una postura por mensaje (07/09/2026, reserva 154265696).** El borrador retenía y concedía en
+    el mismo párrafo («No podemos confirmar hasta el día de antes, … no hay ningún inconveniente»).
+    La política estaba BIEN en el prompt: lo que falló fue redactarla a medias. La guarda vive en
+    `salida.ts` (`UNA_POSTURA`, solo en las ramas que NO confirman) con cepos en `salida.test.ts`.
 - **Contexto del hilo (`decidir.ts` + `hilo.ts` — 26/06/2026):** antes de redactar, el agente
   recibe el **hilo de la conversación** (`hiloComoMensajes`: últimos 15 mensajes, ambos lados, huésped=user /
   anfitrión=assistant) como mensajes previos a `aiComplete`, además de ficha+guía+aprendizajes. Regla:
@@ -112,7 +129,7 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   Antes estaba hardcodeado "ya está dentro" para TODAS las reservas → generaba borradores inapropiados
   (p.ej. "¡Disfruta tu estancia!" para un huésped que ya se había ido 2 días antes).
 - **`horarios.ts` (fuente de verdad de horas):** Smoobu graba la hora de check-in POR RESERVA y queda
-  desfasada → override por piso: **todos 15:00 salvo Busto Reform 13:00; salida 11:00**. Fallback a Smoobu
+  desfasada → override por piso: **todos 15:00 salvo Busto Reform 13:00; salida 11:00**. La salida más tarde de las 11:00 se confirma **la VÍSPERA, no el mismo día** (Alberto, 07/09/2026): hasta esa fecha `salida.ts` decía «el mismo día de la salida», que contradecía la política real. Fallback a Smoobu
   si el piso no está en la tabla. Mantener esta tabla cuando cambien horarios.
 - **Llegada tardía (`llegada.ts` — 06/08/2026):** la entrada es AUTÓNOMA → **no hay hora LÍMITE**: a partir
   de la hora oficial se puede llegar a cualquier hora, madrugada incluida. Lo que sí se avisa es que la
@@ -196,6 +213,53 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
   `ctx.lang`, que hereda el idioma de la reserva si el mensaje no da señal), aplica también a la copia
   informativa de auto-envíos (`avisarAutoEnviado`), y un fallo de traducción con idioma ≠ es se DECLARA
   («no he podido traducirlo al español») en vez de omitir la línea en silencio.
+  - **🚨 Y el 05/09/2026 se vio que ese «no he podido traducirlo» tapaba OTRO fallo: el borrador salía
+    en ESPAÑOL con el huésped escribiendo en inglés** (reserva 154375571, House Sevillana, Massimo). Todos
+    los prompts van en español y la orden «responde en inglés» es UNA línea dentro del muro → el modelo
+    deriva al idioma ambiental. Pasaba **mudo**: `ctx.lang` SÍ era `'en'` (la etiqueta «Borrador (en EN)»
+    era correcta y no delataba nada) y la 🔁 pedía traducir al español un texto YA español → el modelo
+    devuelve lo mismo, `traduccionUtil` lo descarta por idéntico y sale «no he podido traducirlo». O sea:
+    **un fallo de REDACCIÓN se leía como uno de traducción**, y con categoría auto-enviable le llegaba al
+    huésped en español. Red nueva **`idioma-salida.ts`** (puro, 7 tests): `derivaAEspanol` detecta **solo la
+    deriva AL ESPAÑOL** —no se arbitra entre `en`/`fr`/`de`/`it`, donde `detectLang` no distingue con
+    fiabilidad y un falso positivo reescribiría un borrador correcto— y traduce; si falla o vuelve igual de
+    española devuelve `fallo` y el aviso dice **«⚠️ Este texto ha salido en ESPAÑOL»**, nunca se maquilla.
+    Cableada en `decidir.ts`, `redactar.ts` y `retoque.ts`. Refuerzo del idioma también en la ÚLTIMA línea
+    del system prompt (no solo en medio del muro). PR #2378.
+- **🔎 Lo que NO está en la guía y es del ENTORNO se consulta en internet (05/09/2026, PR #2378).** Dictado de
+  Alberto: «en caso de duda que use la IA para consultar». Mismo mensaje que el bug del idioma: a «¿cómo
+  llegamos del aeropuerto?» el modelo se inventó **dos** datos —taxi «25-30€» (el real es **tarifa fija
+  municipal**: 26€ L-V 7-21h / 29€ noches, findes y festivos) y una parada del bus EA, «Puerta de Jerez», que
+  **ni existe en esa línea** ni está a 10 min del piso—. **`consulta-web.ts`** (puro, 12 tests): cuando el
+  control de calidad dice que la INFORMACIÓN no cubre la pregunta **y** `preguntaDeEntorno` la reconoce como
+  del entorno (transporte, monumentos y entradas, dónde comer, servicios cercanos, eventos, clima; regex en
+  es/en/fr/de/it), llama a `buscarWeb` y re-redacta el borrador con los datos **y sus URLs**. Cuatro límites
+  deliberados, todos con guardián que lee el fuente (`consulta-web-guardian.test.ts`):
+  - **Solo el entorno, NUNCA el piso.** Internet no sabe si este apartamento tiene plancha: preguntarle es
+    pagar una búsqueda para que el modelo rellene el hueco con más aplomo. Lo del piso escala como hueco de guía.
+  - **Lo consultado NO se auto-envía jamás:** `webConsultada` fuerza `needs_human` y las fuentes viajan al
+    aviso (🔎 + hasta 4 URLs). El problema no fue que faltara el dato, fue **afirmarlo sin fuente**.
+  - **Una búsqueda fallida se DECLARA** («no he podido mirarlo» ≠ «no está en la guía»).
+  - **Nada de esto para lo sensible ni lo negativo**: una queja o un cobro no se resuelven con internet.
+  Sigue contando como **hueco de guía** (`tipoHueco` devuelve `'guia'` también para «no está en la guía del
+  piso»), así que lo que responda Alberto se aprende como hecho y la búsqueda no se paga dos veces.
+- **💶 `importesNoRespaldados` — el guardrail que faltaba (05/09/2026, `guardrail.ts`, +5 tests).**
+  `contieneDatoInventado` solo miraba códigos de 4+ dígitos, teléfonos y URLs: **ninguna cifra en euros**, y
+  por eso el «25-30€» del taxi pasó limpio. Ahora cualquier importe en € que no esté en las fuentes escala
+  —rangos incluidos (`25-30€`), normalizando `26€` == `26,00 €`—. Es estricto a propósito: un falso positivo
+  cuesta que Alberto lea un borrador correcto; un falso negativo es **un precio falso escrito por el anfitrión
+  en el chat oficial de Booking**. No confundir con `importeSospechoso` de `extras.ts`, que es del CATÁLOGO de
+  extras del piso; éste vale para cualquier cifra, venga de donde venga.
+- **🚕 El transporte del aeropuerto YA ESTÁ EN LA GUÍA de los 4 pisos** (`mensajes_hechos`, `confirmado`,
+  insertados a mano por Supabase el 05/09/2026), para que esa pregunta se responda sola sin gastar búsqueda:
+  - **ids 10-11 · `prop_house_sevillana`:** tarifa fija de taxi (26€ / 29€), EA 6€/8€ con sus paradas reales
+    (Santa Justa · San Bernardo · Prado de San Sebastián · Plaza de Armas), 04:30-01:00 cada 12-20 min, **y la
+    advertencia explícita de NO decir «Puerta de Jerez» ni «10 min andando»**.
+  - **ids 12-14 · `prop_busto_reform`, `prop_luxury_busto`, `prop_duplex_center`:** SOLO lo que vale para toda
+    Sevilla (tarifa de taxi y precios/paradas del EA) **más la orden explícita de NO decir en qué parada
+    bajarse ni cuántos minutos se anda hasta ESE piso** — esa distancia no está medida para ellos. El dato que
+    no se tiene se declara, no se estima. ⚠️ Los ~20-25 min de Plaza de Armas a Calle Socorro 24 son una
+    **estimación sin medir**, pendiente de confirmar con Alberto.
 - **Idempotencia:** `claveDedup` + `claimMensaje` (atómico) → no reprocesa/duplica entre sondeo y webhook.
 - **🚨 La «graduación por categorías» YA NO EXISTE (verificado en el código el 28/08/2026).** Este
   apartado decía que había una allowlist en `graduacion.ts` y que «quejas/dinero/cambios NUNCA se
@@ -264,9 +328,22 @@ Smoobu (Booking/Airbnb/directo, todos por igual). **Flujo:** sondeo `GET /api/si
 ## Mensajes PROGRAMADOS a huéspedes (31/08/2026 — sustituto de los automáticos de Smoobu)
 Ciclo de reserva NUESTRO (confirmación → acceso a 7 días → víspera con códigos → bienvenida →
 estancia → víspera de salida → post-salida), cron `/api/sivra/mensajes/programados` cada 30 min
-(`CRON_JOBS`). **Arranca en MODO SOMBRA**: `mensajes_prog_pisos` (fila ausente/`activo=false` =
-sombra → todo va a Telegram, nada al huésped); se activa piso a piso y entonces hay que APAGAR las
-plantillas de Smoobu (el chequeo `equivalentes-smoobu.ts` evita duplicados mientras tanto y avisa).
+(`CRON_JOBS`). Interruptor por piso en `mensajes_prog_pisos` (fila ausente/`activo=false` = MODO
+SOMBRA → todo va a Telegram, nada al huésped).
+🚨 **Desde el 05/09/2026 los CUATRO pisos están activos y las plantillas de Smoobu están APAGADAS**
+(decisión de Alberto tras validar el ciclo entero en House Sevillana): este cron es el ÚNICO que
+habla con el huésped en los hitos del ciclo. Consecuencias, las dos medidas ese día:
+- El chequeo «¿ya lo mandó Smoobu?» (`equivalentes-smoobu.ts`) **se retiró**. Era andamio de la
+  transición y, sin plantillas al otro lado, solo podía silenciar mensajes NUESTROS: su regex
+  `/BIENVENIDO/i` casa con nuestra propia plantilla («¡Bienvenido/a, …»), y de hecho se tragó la
+  bienvenida de la reserva 154265696. Además costaba una llamada a la API de Smoobu por reserva y pasada.
+- 🚨 **Una fila en `sombra` YA NO bloquea el envío real** (`hitosBloqueantes` en `decidir.ts`, y el
+  reclamo del orquestador la reclama con `ON CONFLICT DO UPDATE ... WHERE estado='sombra'`). Antes
+  `cargarYaHechos` no miraba el estado, así que un hito generado mientras el piso validaba quedaba
+  «hecho» para siempre y el huésped no lo recibía nunca. **Caso fundacional (05/09/2026):** la
+  víspera CON LOS CÓDIGOS de la reserva 154265696 (Luxury Busto, llegada ese mismo día) se generó en
+  sombra a las 09:37 del 04/09 y el piso se activó a las 21:34 — 12 horas después. En sombra sigue
+  bloqueando, o Telegram repetiría el mismo borrador en cada pasada.
 - Fuente única de acceso: **`lib/sivra/acceso.ts`** (dirección, pasos, fotos, mapas; Dúplex: llaves
   FUERA, en Javier Lasso de la Vega 7). **Los códigos NO están en el repo**: tabla
   `sivra_codigos_acceso` (BD, rotable; NULL = se declara, no se inventa).

@@ -1,0 +1,517 @@
+import Link from 'next/link'
+import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { estadoCaducidadCarnet, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
+import { PageHeader, BtnLink, Badge, btnStyle, type Tono } from '@/components/ui'
+import AccionesContacto from '../../AccionesContacto'
+import VerDniCompleto from './VerDniCompleto'
+import { fmt, TIPOS } from './piezas'
+
+/**
+ * La cabecera de la ficha: quién es, cómo se le llama y **qué exige una llamada
+ * HOY**. Se pinta igual en las siete pestañas, y ese es justo el punto.
+ *
+ * 🚨 Por qué los contadores viven aquí y no dentro de una pestaña (03/09/2026):
+ * el CRM anterior de Alberto necesita chapitas rojas en sus pestañas porque lo
+ * que no está en la pestaña abierta no existe. Un recibo devuelto escondido
+ * tras un clic es un recibo que no se reclama. Así que lo que dispara una
+ * gestión —cobros, siniestros abiertos y la única fecha sobre la que aún se
+ * puede actuar— se queda FUERA de las pestañas, siempre visible.
+ *
+ * Cada tile tiene tres estados y nunca dos: `—` = no se ha podido mirar ·
+ * `0` = se miró y no hay · el número.
+ */
+export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: ResumenFicha }) {
+  // Solo el cónyuge sube a la cabecera; el resto de vínculos vive en «Contactos».
+  const conyuge = ficha.relaciones?.find(r => r.tipo === 'Cónyuge/Pareja de Hecho') ?? null
+  // 🚨 El MISMO criterio que el rótulo de estado, calculado una sola vez: CIMA
+  // engancha pólizas por DNI a fichas que siguen marcadas como `lead`, así que
+  // el enum `tipo` no basta. Si el rótulo dice «Cliente» y el WhatsApp le trata
+  // de desconocido (o al revés), el fallo se ve en la pantalla y en el chat.
+  const esCliente = ficha.tipo === 'cliente' || resumen.conteo.vivas > 0
+  // Ramos con alguna póliza VIVA (no canceladas, no volcado): lo que alimenta
+  // la rueda. `ficha.polizas` siempre es array (nunca null), así que esto no
+  // necesita un tercer estado — a diferencia de casi todo lo demás de la ficha.
+  const tiposVivos = ficha.polizas.filter(p => p.viva).map(p => p.tipo)
+  return (
+    <>
+      <div>
+        <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
+        <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <RuedaRamos nombre={ficha.nombre} tiposVivos={tiposVivos} />
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <PageHeader
+              titulo={ficha.nombre}
+              sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                {/* El estado lo DERIVA asegura de los hechos (cliente · con presupuesto ·
+                    lead · ex-cliente) y lo trae con su motivo. Sin él (asegura viejo),
+                    la regla de siempre: CIMA engancha pólizas por DNI a una ficha que
+                    puede seguir `lead`, y con pólizas vivas ES cliente, diga lo que
+                    diga el enum. */}
+                <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
+                <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
+                <Identidad identidad={ficha.identidad} clienteId={ficha.id} />
+                <Carnets carnets={ficha.carnets} />
+                {conyuge && (
+                  <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
+                    💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
+                  </span>
+                )}
+              </span>}
+            />
+          </div>
+        </div>
+      </div>
+
+      <Acciones clienteId={ficha.id} />
+
+      <Titulares resumen={resumen} />
+    </>
+  )
+}
+
+// ── Rueda de ramos ──────────────────────────────────────────────────────────
+// Avant2 (Codeoscopic) pone un anillo de iconos de ramo alrededor del avatar
+// del cliente: de un vistazo se ve qué tiene contratado y qué no, sin leer una
+// sola palabra (capturas en Drive, carpeta INTRANET, 11/09/2026). Es la pieza
+// más fuerte de esa referencia y hoy no existe nada parecido aquí — el filtro
+// «Auto sin Hogar» de `ListaCartera` ya hace esta misma pregunta en texto.
+//
+// Los siete ramos son los presupuestables desde la ficha (`RAMOS_PRESUPUESTO`
+// de `Acciones`, más R. Civil por ser el tercero más frecuente en cartera viva
+// — 9 de 110 pólizas, medido 03/09/2026). El emoji sale de `TIPOS` (piezas.tsx)
+// para no mantener un segundo mapeo ramo→icono en este mismo archivo.
+const RUEDA_RAMOS = ['auto', 'hogar', 'moto', 'vida', 'salud', 'decesos', 'responsabilidad_civil'] as const
+
+function inicialesDe(nombre: string): string {
+  const partes = nombre.trim().split(/\s+/).filter(Boolean)
+  return partes.length === 0 ? '?'
+    : partes.length === 1 ? partes[0]!.slice(0, 2).toUpperCase()
+      : (partes[0]![0] + partes[1]![0]).toUpperCase()
+}
+
+function RuedaRamos({ nombre, tiposVivos }: { nombre: string; tiposVivos: string[] }) {
+  const activos = new Set(tiposVivos)
+  const n = RUEDA_RAMOS.length
+  const radio = 40
+  const tam = 96
+  return (
+    <div
+      aria-hidden
+      style={{ position: 'relative', width: tam, height: tam, flexShrink: 0 }}
+    >
+      <div style={{
+        position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+        width: 40, height: 40, borderRadius: '50%',
+        background: 'var(--primary-light)', color: 'var(--primary)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 14, fontWeight: 800,
+      }}>{inicialesDe(nombre)}</div>
+      {RUEDA_RAMOS.map((tipo, i) => {
+        const angulo = (i / n) * 2 * Math.PI - Math.PI / 2
+        const x = Math.cos(angulo) * radio
+        const y = Math.sin(angulo) * radio
+        const activo = activos.has(tipo)
+        const etiqueta = TIPOS[tipo] ?? tipo
+        return (
+          <span
+            key={tipo}
+            title={`${etiqueta} — ${activo ? 'contratado' : 'no contratado'}`}
+            style={{
+              position: 'absolute', top: `calc(50% + ${y}px)`, left: `calc(50% + ${x}px)`,
+              transform: 'translate(-50%, -50%)',
+              width: 22, height: 22, borderRadius: '50%',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, lineHeight: 1,
+              background: activo ? 'var(--primary-light)' : 'var(--surface)',
+              border: `1px solid ${activo ? 'var(--primary)' : 'var(--border)'}`,
+              opacity: activo ? 1 : 0.55,
+            }}
+          >{etiqueta.split(' ')[0]}</span>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Titulares ───────────────────────────────────────────────────────────────
+// Lo que hay que saber ANTES de descolgar el teléfono. Cada número lleva su
+// estado: un contador que no distingue «cero» de «no informado» es justo el que
+// hace decir «está todo al día» sobre lo que no se ha mirado.
+
+function Titulares({ resumen }: { resumen: ResumenFicha }) {
+  const { conteo, recibos, siniestrosAbiertos: abiertos, proximo } = resumen
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+      <Kpi label="Pólizas vivas" valor={String(conteo.vivas)} sub={`${conteo.total} en total`} />
+      <Kpi
+        label="Recibos devueltos"
+        valor={recibos.devueltos === null ? '—' : String(recibos.devueltos)}
+        color={recibos.devueltos ? 'var(--negative)' : undefined}
+        sub={
+          recibos.devueltos === null
+            ? 'asegura aún no manda recibos'
+            : recibos.devueltos > 0 ? 'hay que reclamar el cobro' : 'ninguno devuelto'
+        }
+      />
+      <Kpi
+        label="Recibos al cobro"
+        valor={recibos.pendientes === null ? '—' : String(recibos.pendientes)}
+        color={recibos.pendientes ? 'var(--warning)' : undefined}
+        sub={
+          recibos.polizasSinRecibos > 0 ? `${recibos.polizasSinRecibos} póliza(s) sin recibos informados`
+            : recibos.pendientes ? 'emitidos y aún sin cargar: no es deuda'
+              : 'sobre los recibos informados'
+        }
+      />
+      <Kpi
+        label="Siniestros abiertos"
+        valor={abiertos === null ? '—' : String(abiertos)}
+        color={abiertos ? 'var(--warning)' : undefined}
+        sub={abiertos === null ? 'no se han podido leer' : abiertos > 0 ? 'en tramitación' : 'ninguno abierto'}
+      />
+      <ProximoVencimiento proximo={proximo} vivas={conteo.vivas} sinFecha={resumen.vivasSinFechaVencimiento} />
+    </div>
+  )
+}
+
+/**
+ * La única fecha de la ficha sobre la que se puede ACTUAR, y por eso sube aquí:
+ * hasta ahora vivía dentro de una celda de la tabla de pólizas.
+ *
+ * 🚨 No es el vencimiento: es el **último día para oponerse a la prórroga**
+ * (vencimiento − 30 días, LCS art. 22). Enseñar «vence el 15 de marzo» deja
+ * creer que hay hasta el 15, cuando el plazo se cerró el 13 de febrero. El
+ * vencimiento se dice debajo, para que no falte, pero el número grande es el
+ * día que importa.
+ */
+function ProximoVencimiento({ proximo, vivas, sinFecha }: {
+  proximo: ResumenFicha['proximo']; vivas: number; sinFecha: number
+}) {
+  if (proximo === null) {
+    return (
+      <Kpi
+        label="Hay que avisar antes del"
+        valor="—"
+        sub={
+          vivas === 0 ? 'ninguna póliza viva'
+            // NULL en la fecha es «no se sabe cuándo vence», no «no vence».
+            : sinFecha > 0 ? `${sinFecha} viva(s) sin fecha de vencimiento`
+              : 'sin vencimientos por delante'
+        }
+      />
+    )
+  }
+  const vencido = proximo.diasHastaVencimiento < 0
+  return (
+    <Kpi
+      label="Hay que avisar antes del"
+      valor={fmt(proximo.limiteAviso)}
+      pequeno
+      color={proximo.enPlazo && proximo.diasHastaLimiteAviso <= 30 ? 'var(--warning)' : !proximo.enPlazo ? 'var(--muted)' : undefined}
+      sub={
+        proximo.enPlazo
+          ? `quedan ${proximo.diasHastaLimiteAviso} día(s) · vence el ${fmt(proximo.vencimiento)}`
+          : vencido
+            ? `venció el ${fmt(proximo.vencimiento)}`
+            : `plazo pasado: renueva otro año · vence el ${fmt(proximo.vencimiento)}`
+      }
+    />
+  )
+}
+
+function Kpi({ label, valor, sub, color, pequeno }: {
+  label: string; valor: string; sub?: string; color?: string
+  /** Para un valor que es una fecha: 22px se sale de la tarjeta en móvil. */
+  pequeno?: boolean
+}) {
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</div>
+      <div style={{ fontSize: pequeno ? 17 : 22, fontWeight: 800, color: color ?? 'var(--text)' }}>{valor}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{sub}</div>}
+    </div>
+  )
+}
+
+// ── Estado de la cabecera ───────────────────────────────────────────────────
+// El rótulo no es un acto de fe: el motivo va en el `title`. Y si hay
+// presupuestos vivos sin ser cliente, se dice cuántos.
+
+function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
+  estado: EstadoClienteDerivado | null
+  cotizacionesVivas: number | null
+  /** La regla anterior, para una versión de asegura que no manda `estado`. */
+  cliente: boolean
+}) {
+  const etiqueta = estado ? estado.etiqueta : cliente ? '✅ Cliente (CIMA)' : '🕐 Lead'
+  const esCliente = estado ? estado.estado === 'cliente' : cliente
+  const title = estado ? estado.motivo : cliente ? 'tiene póliza viva por CIMA o su ficha es de tipo cliente' : 'sin póliza viva por CIMA'
+  // Segmentación visual (Occident pinta un badge de segmento junto al nombre,
+  // capturas en Drive 11/09/2026): mismo rótulo de siempre, pero como Badge del
+  // sistema de diseño en vez de texto plano — un vistazo distingue el estado
+  // por FORMA, no solo por leer la palabra.
+  const tono: Tono = !estado
+    ? (cliente ? 'positivo' : 'neutral')
+    : estado.estado === 'cliente' ? 'positivo'
+      : estado.estado === 'con_presupuesto' ? 'info'
+        : 'neutral'
+  return (
+    <Badge tono={tono} title={title}>
+      {etiqueta}
+      {!esCliente && cotizacionesVivas !== null && cotizacionesVivas > 0 && (
+        <> ({cotizacionesVivas} presupuesto{cotizacionesVivas === 1 ? '' : 's'})</>
+      )}
+    </Badge>
+  )
+}
+
+// ── Acciones ────────────────────────────────────────────────────────────────
+// Lo que se puede HACER desde la ficha, además de mirar. Subir un documento es
+// gratis (el agente lo lee; el precio se pide aparte) y vive en asegura porque
+// comparte pantalla con la cotización que sale de lo leído.
+//
+// 🚨 DOS botones, no ocho (08/09/2026). Hasta hoy la cabecera pintaba siete
+// botones del mismo peso —«Subir póliza» y seis «Presupuestar <ramo>
+// + oportunidad nueva»— más dos avisos sueltos en gris, en tres filas que
+// empujaban los titulares (recibos devueltos, siniestros abiertos) fuera de la
+// primera pantalla. Alberto: «esto es una guarrería, tantos botones». Los seis
+// ramos son UNA acción («presupuestar») con un parámetro, así que van en un
+// menú; y los avisos van pegados a lo que avisan (el `title` del botón y una
+// nota al pie del menú), no flotando entre botones.
+//
+// El menú es un `<details>` nativo, como los filtros de `ListaCartera`: abre y
+// cierra sin JS, así que la cabecera sigue siendo Server Component. Ninguno de
+// estos enlaces tarifica: llevan a un formulario (regla 20 de `correduria-crm`).
+//
+// El menú va PRIMERO a propósito: su desplegable se ancla a la izquierda del
+// botón, y medido a 360px con Playwright, en segunda posición se salía de la
+// pantalla por la derecha (right=427 > 360). En primera cabe hasta en 320.
+
+const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para salud no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
+
+function Acciones({ clienteId }: { clienteId: string }) {
+  return (
+    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+      <details style={{ position: 'relative' }}>
+        <summary style={{ ...btnStyle('primario', 'sm'), listStyle: 'none', userSelect: 'none' }}>
+          ➕ Presupuestar ▾
+        </summary>
+        <div
+          role="menu"
+          style={{
+            position: 'absolute', zIndex: 30, top: '100%', left: 0, marginTop: 6,
+            width: 240, maxWidth: '86vw',
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: 10, padding: 6, boxShadow: 'var(--shadow)',
+          }}
+        >
+          {RAMOS_PRESUPUESTO.map(r => (
+            <Link
+              key={r.etiqueta}
+              role="menuitem"
+              href={r.url(clienteId)}
+              title={r.sinVerificar ? AVISO_SIN_VERIFICAR : `Oportunidad nueva de ${r.etiqueta.replace(/^\S+\s/, '').toLowerCase()} para este cliente`}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 10px', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}
+            >
+              {r.etiqueta}
+              {r.sinVerificar && <span aria-label="esquema sin verificar" style={{ marginLeft: 'auto', fontSize: 12 }}>🚧</span>}
+            </Link>
+          ))}
+          <p style={{ margin: '6px 4px 2px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }} title={AVISO_SIN_VERIFICAR}>
+            🚧 = esquema sin verificar
+          </p>
+        </div>
+      </details>
+      <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro.">
+        <BtnLink href={urlSubirPoliza()} variante="secundario" tam="sm" nuevaPestana>
+          📄 Subir póliza ↗
+        </BtnLink>
+      </span>
+    </div>
+  )
+}
+
+// ── Contacto ────────────────────────────────────────────────────────────────
+// 🚨 «Sin teléfono» en la ficha del TOMADOR no es «no hay a quién llamar».
+// Esquiansa (empresa) no tiene teléfono; su conductor habitual —dueño del
+// coche— sí, en su propia ficha enlazada por CIMA. `contactoEfectivo` mira
+// primero al tomador y luego a los intervinientes, y dice DE QUIÉN es el número.
+
+// «cifrado» a secas no dice dónde tocar. asegura manda por qué no abre la clave
+// (02/09/2026: Alberto copió variables en Vercel tres veces a ciegas porque
+// «sin clave», «mal pegada» y «clave distinta» se veían idénticas).
+const CAUSA_PII: Record<string, string> = {
+  sin_clave: 'central-asegura no tiene PII_ENCRYPTION_KEY, o no se ha redesplegado tras añadirla',
+  mal_formada: 'PII_ENCRYPTION_KEY en central-asegura no son 64 caracteres hexadecimales: se pegó mal',
+  no_abre: 'PII_ENCRYPTION_KEY en central-asegura no es la misma que la del proyecto asegura',
+  sin_muestra: 'no hay ningún dato cifrado con el que probar la clave',
+}
+
+function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, polizas }: {
+  /** Para el `aria-label` de los iconos: «Llamar a Jose Suárez». */
+  nombre: string
+  /** Decide QUÉ mensaje se abre en WhatsApp. Lo calcula la cabecera, con el
+   *  mismo criterio que el rótulo de estado. */
+  esCliente: boolean
+  c: { telefono: string | null; email: string | null; telefonoIlegible: boolean; emailIlegible: boolean; ciudad: string | null; provincia: string | null }
+  intervinientes: IntervinienteFicha[] | null
+  piiClave: string | null
+  /** Todos los teléfonos/emails; `null` = asegura no manda el bloque (no se afirma «solo uno»). */
+  contactos: ContactosCliente | null
+  /** Para decir de QUÉ póliza sale el número prestado (la matrícula, si es auto). */
+  polizas: { id: string; matricula: string | null; numeroPoliza: string | null }[]
+}) {
+  // «(+N)» = hay más aparte del principal. Desde el 05/09/2026 se LEEN en la
+  // pestaña Contactos, arriba del todo, sin abrir nada; editarlos sigue siendo
+  // cosa del formulario plegado de esa misma pestaña.
+  const masTel = contactos && contactos.telefonos.length > 1 ? contactos.telefonos.length - 1 : 0
+  const masEmail = contactos && contactos.emails.length > 1 ? contactos.emails.length - 1 : 0
+  const mas = (n: number) => n > 0 ? <span style={{ fontSize: 11, color: 'var(--muted)' }} title={`${n} más, en la pestaña Contactos`}> (+{n})</span> : null
+  const causaPii = piiClave === null ? 'la clave no abre este dato (asegura no dice por qué: versión anterior)' : CAUSA_PII[piiClave] ?? `estado de clave desconocido: ${piiClave}`
+  const sitio = [c.ciudad, c.provincia].filter(Boolean).join(', ')
+  const ef = contactoEfectivo({ telefono: c.telefono, email: c.email }, intervinientes)
+  // 🚨 De QUÉ póliza sale. GLOBAL 2 tiene tres furgonetas con TRES conductores
+  // habituales distintos: sin esto la ficha pinta el número de uno de ellos como
+  // si fuera «el teléfono de la empresa» (Alberto, 02/09/2026).
+  const suya = ef.quien ? polizas.find(x => x.id === ef.quien!.polizaId) ?? null : null
+  const deQue = suya?.matricula ? ` del ${suya.matricula}` : suya?.numeroPoliza ? ` de la nº ${suya.numeroPoliza}` : ''
+  const quien = ef.quien
+    ? `${ef.quien.nombre ?? 'sin nombre legible'}, ${etiquetaRol(ef.quien.rol)}${deQue}`
+    : null
+  // 🚨 `tomador_en_poliza` NO es «de otro»: es SUYO, pero guardado en la póliza y
+  // no en su ficha. Se dice, porque el aviso de vencimiento lee la ficha y hoy no
+  // le llega — se arregla copiándolo aquí, no llamando a nadie (04/09/2026).
+  const deOtro = (via: ContactoEfectivo['viaTelefono']) =>
+    via === 'tomador_en_poliza' ? (
+      <span style={{ fontSize: 11, color: 'var(--warning)' }} title="Está en un interviniente de su póliza, no en su ficha: el aviso de vencimiento lee la ficha, así que hoy no le sale. Cópialo a su ficha.">
+        {' '}(📇 en su póliza, no en su ficha)
+      </span>
+    ) : via === 'interviniente' && quien ? (
+      <span style={{ fontSize: 11 }}>
+        {' '}({ef.quien?.fichaId ? <Link href={`/correduria/cliente/${ef.quien.fichaId}`}>{quien}</Link> : quien})
+      </span>
+    ) : null
+  // Sin intervinientes que mirar, «sin teléfono» solo habla del tomador.
+  const coletilla = ef.intervinientesSinMirar ? ' · intervinientes sin comprobar' : ''
+  // 🚨 SOLO al que todavía no es cliente. A un cliente se le invita al portal
+  // desde el botón «Abrir WhatsApp» del bloque Portal (pestaña Contactos), que
+  // es quien sabe con qué correo entra —el que manda asegura, no el que se vea
+  // aquí— y adjunta el enlace. Un segundo mensaje de invitación redactado desde
+  // la cabecera nombraría un correo elegido por otra regla, y el día que las dos
+  // se separen el cliente teclearía una dirección que el portal no reconoce.
+  const mensajeWa = esCliente ? null : mensajePresentacionWhatsapp(nombre)
+  return (
+    <>
+      {/* Los tres iconos van juntos y al principio: es lo que se TOCA. Detrás
+          sigue el número y de quién es, que es lo que se LEE. El WhatsApp lo
+          pinta ahí dentro `BotonWhatsapp`, y solo si el número es un móvil
+          (ver `lib/telefono-wa.ts`): no se repite suelto al lado del número. */}
+      <AccionesContacto telefono={ef.telefono} email={ef.email} quien={nombre} mensaje={mensajeWa} />
+      {ef.telefono ? (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+          {/* Convención de Occident (capturas Drive, 11/09/2026): lo que se
+              puede TOCAR se pinta en el color de marca y subrayado, para
+              distinguirlo del texto de solo lectura sin depender de un icono. */}
+          <a href={`tel:${ef.telefono.replace(/\s/g, '')}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>📞 {ef.telefono}</a>
+          {deOtro(ef.viaTelefono)}
+          {mas(masTel)}
+        </span>
+      ) : (
+        // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
+        // en sitios distintos (la clave PII vs. pedírselo al cliente).
+        <span title={c.telefonoIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
+          📞 {c.telefonoIlegible ? `cifrado · ${causaPii}` : `sin teléfono${coletilla}`}
+        </span>
+      )}
+      {ef.email ? (
+        <span>
+          <a href={`mailto:${ef.email}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>✉️ {ef.email}</a>
+          {deOtro(ef.viaEmail)}
+          {mas(masEmail)}
+        </span>
+      ) : (
+        <span title={c.emailIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : 'No consta email'}>
+          ✉️ {c.emailIlegible ? `cifrado · ${causaPii}` : 'sin email'}
+        </span>
+      )}
+      {sitio && <span>📍 {sitio}</span>}
+    </>
+  )
+}
+
+// ── Identidad ───────────────────────────────────────────────────────────────
+// DNI y fecha de nacimiento, en lectura directa en la cabecera (antes solo se
+// veían dentro del formulario de «Datos del cliente», que hay que desplegar).
+// El DNI sale SIEMPRE enmascarado (`*****678Z`): el completo no cruza el
+// puerto de asegura por diseño — para cambiarlo hace falta el DNI recibido y
+// documentado en 📎 Documentos (regla de identidad de la correduria-crm).
+
+function Identidad({ identidad, clienteId }: { identidad: IdentidadFicha | null; clienteId: string }) {
+  // `null` = asegura aún no manda el bloque (versión anterior): no se afirma
+  // «sin DNI», se calla — es distinto de «se miró y no hay ninguno».
+  if (identidad === null) return null
+  return (
+    <>
+      {identidad.dniIlegible ? (
+        <span title="Está guardado pero cifrado con una clave que asegura no puede abrir">🪪 DNI cifrado</span>
+      ) : identidad.dniEnmascarado ? (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span title="El DNI completo no sale de asegura por diseño: para verlo entero, pide un código de un solo uso">
+            🪪 {identidad.dniEnmascarado}
+          </span>
+          <VerDniCompleto clienteId={clienteId} />
+        </span>
+      ) : (
+        <span style={{ color: 'var(--muted)' }} title="No consta DNI en la ficha">🪪 sin DNI</span>
+      )}
+      {identidad.fechaNacimientoIlegible ? (
+        <span title="Está guardada pero cifrada con una clave que asegura no puede abrir">🎂 cifrada</span>
+      ) : identidad.fechaNacimiento ? (
+        <span>🎂 {fmt(identidad.fechaNacimiento)}</span>
+      ) : (
+        <span style={{ color: 'var(--muted)' }} title="No consta fecha de nacimiento">🎂 sin fecha</span>
+      )}
+    </>
+  )
+}
+
+
+// ── Carnés de conducir ──────────────────────────────────────────────────────
+// Tipo y fecha de expedición de cada carné (la antigüedad es lo que tarifica,
+// sobre todo en moto) y, al pasar el ratón, la próxima caducidad. Una
+// caducidad vencida o a ≤90 días se pinta en aviso.
+
+function Carnets({ carnets }: { carnets: CarnetFicha[] | null }) {
+  // `null` = asegura no manda el bloque o no pudo leerlo: no se afirma nada.
+  if (carnets === null) return null
+  if (carnets.length === 0) {
+    return <span style={{ color: 'var(--muted)' }} title="No consta ningún carné de conducir en su ficha">🚦 sin carné registrado</span>
+  }
+  const hoy = new Date().toISOString().slice(0, 10)
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      {carnets.map((k) => {
+        const est = estadoCaducidadCarnet(k.fechaCaducidad, hoy)
+        const aviso = est === 'pronto'
+        const cad =
+          k.fechaCaducidad === null
+            ? 'caducidad no calculable (falta la fecha de expedición o la de nacimiento)'
+            : est === 'sin_renovacion'
+              ? `con la fecha guardada caducaba el ${fmt(k.fechaCaducidad)}; si lo ha renovado, la renovación no consta`
+              : `caduca el ${fmt(k.fechaCaducidad)}`
+        return (
+          <span
+            key={k.id}
+            title={`Carné ${k.tipo} · ${cad}`}
+            style={aviso ? { color: 'var(--warning)' } : est === 'sin_renovacion' ? { color: 'var(--muted)' } : undefined}
+          >
+            🚦 {k.tipo} ·{' '}
+            {k.fechaIlegible ? 'fecha cifrada' : k.fechaExpedicion ? fmt(k.fechaExpedicion) : 'sin fecha'}
+            {aviso ? ' (caduca pronto)' : est === 'sin_renovacion' ? ' (renovación no registrada)' : null}
+          </span>
+        )
+      })}
+    </span>
+  )
+}

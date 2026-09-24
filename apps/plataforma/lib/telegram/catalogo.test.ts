@@ -15,15 +15,19 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { AVISOS, AVISOS_POR_ID, CATEGORIAS, avisoDeCategoriaCorreo } from './catalogo.ts'
+import { RUTAS } from '../correo/rutas.ts'
 
 const RAIZ = fileURLToPath(new URL('../..', import.meta.url))
 // `avisoPermitido`/`avisoEnviado` son la vía para lo que `tgAviso` no cubre (p. ej. una foto).
 const EMISOR = /\b(?:tgAviso(?:Botones|Alerta|AlertaBotones)?|avisoPermitido|avisoEnviado)\(\s*'([^']+)'/g
 
-/** Ids que se emiten con un id calculado (mapa en el catálogo), no con literal en la llamada. */
-const POR_MAPA = ['personal-importante', 'huespedes', 'agoda-huespedes', 'leads-negocio', 'seguridad-sospechosa']
-  .map(c => avisoDeCategoriaCorreo(c))
-  .filter((v): v is string => v !== null)
+/**
+ * Ids que se emiten con un id calculado (mapa en el catálogo), no con literal en la llamada.
+ * Se derivan de `RUTAS` en vez de repetir la lista a mano: escrita aquí a mano, una categoría de
+ * correo nueva con aviso inmediato hacía fallar este guardián con un «interruptor que no apaga
+ * nada» que era MENTIRA — el aviso sí se emitía, y lo que estaba desactualizado era el test.
+ */
+const POR_MAPA = RUTAS.map(r => avisoDeCategoriaCorreo(r.categoria)).filter((v): v is string => v !== null)
 
 function fuentes(dir: string, acc: string[] = []): string[] {
   for (const nombre of readdirSync(dir)) {

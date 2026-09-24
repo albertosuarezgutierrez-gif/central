@@ -91,18 +91,186 @@ acabaran con un bloque `<style>{`…`}</style>` incrustado (201 `!important` ent
 
 ### Lo que ya había (sigue vigente)
 Primitivas Tremor-look compartidas y **server-safe** (sin hooks): `cardStyle`, `CardHeader`, `Stat`
-(con `DeltaBadge` ▲/▼), `ThinBar`, `BarListRow`, `LegendDot`, `EMERALD`/`ROSE`. Patrón a copiar
+(con `DeltaBadge` ▲/▼), `ThinBar`, `EMERALD`/`ROSE`. ⚠️ **`BarListRow` y `LegendDot` YA NO EXISTEN**:
+se borraron el 02/09/2026 (PR #2045) tras medir que tenían 0 y 1 sitios reales en toda la app — si
+las ves citadas en algún sitio, esa cita es vieja. Patrón a copiar
 al tocar cualquier otra página de plataforma. Va con una pasada transversal de identidad visual:
 **Inter** vía `next/font` (`var(--font-inter)`), **tokens semánticos** (`--positive/--negative/--warning/--info`
-+ variantes `-bg`, cero hex inline), **modo oscuro automático** (`prefers-color-scheme: dark` +
-`ThemeToggle.tsx` en el pie del sidebar — 🌗 Auto → ☀️ Claro → 🌙 Oscuro, `localStorage('theme')` +
-`html[data-theme]`, script anti-parpadeo en `layout.tsx`) y **veto al oscurecimiento forzado del
-navegador** (`[data-theme="light"] { color-scheme: only light }` — sin esto, Chrome/Samsung Internet
-en ahorro de batería repintan a oscuro aunque el usuario elija Claro). Recharts adaptado por CSS
++ variantes `-bg`, cero hex inline), **modo oscuro SOLO A MANO** (ver 🚨 justo debajo). Recharts adaptado por CSS
 (`.recharts-cartesian-grid line` / `.recharts-cartesian-axis-tick text`) para que la rejilla siga
 los tokens en oscuro. **plataforma NO usa Tailwind** (CSS vars) — este sistema es propio, no Tremor
 copy-paste; sivra/ialimp/rrhh/ia-rest sí tienen Tailwind y ahí Tremor entraría literal. Adopción por
 goteo: traer el patrón cuando una pantalla lo necesite, no migrar todo de golpe.
 
-<!-- verificado: 2026-08-07 -->
+🚨 **CORREGIDO el 02/09/2026 — este documento describía el modo oscuro AL REVÉS, y describía justo el bug.**
+Decía «modo oscuro automático (`prefers-color-scheme: dark`)» y un toggle de TRES estados
+«🌗 Auto → ☀️ Claro → 🌙 Oscuro». Las dos cosas son falsas desde el **PR #707 (03/07/2026)**, y lo que
+describía es exactamente la causa del fallo que Alberto reportó con captura: el ahorro de batería del móvil
+ponía el sistema en oscuro y **el panel se oscurecía solo**. Medido contra el código el 02/09/2026:
+- `grep prefers-color-scheme apps/plataforma/app/globals.css` → **cero coincidencias**.
+- `:root` lleva **`color-scheme: only light`** (el `only` VETA además el oscurecimiento forzado de
+  Chrome/Samsung Internet con batería baja); el bloque oscuro vive solo en `[data-theme="dark"]`.
+- `ThemeToggle.tsx` es **BINARIO**: `type Tema = 'light' | 'dark'`, sin ningún estado «Auto».
+⚠️ **NO reintroducir un modo que siga al sistema ni media queries de `prefers-color-scheme`**: fue la causa
+del bug. Y la lección de método: **una skill puede contradecir al `CLAUDE.md` de su propia app durante dos
+meses sin que nada falle** — ni `tsc` ni los tests leen prosa. Antes de dar por buena una afirmación de este
+documento sobre comportamiento, cotéjala con el código (un `grep` basta).
 
+## El CUERPO del Inicio, migrado (02/09/2026, PR #2024)
+
+El lote #2011→#2018 tocó el **chrome** de `/banca` (pestañas, migas, ancho, cabecera del libro) y Alberto
+respondió **«no está terminado, ¿no?»**. Tenía razón: **el cuerpo de la página no lo tocó nadie**, y el
+cuerpo es lo que se ve al abrir. Su captura además iba desplazada hacia abajo — el sidebar es fijo, así que
+las pestañas nuevas quedaban por encima del recorte.
+
+🚨 **El defecto de fondo, que ya se había cometido una vez el MISMO día:** #2011 diagnosticó que el
+`ui.tsx` viejo «existía como documento, no como código» porque nadie lo importaba… y publicó cuatro
+primitivas nuevas (`PageHeader`, `KpiCard`, `Badge`, `btnStyle`) **también sin ningún consumidor**. Por eso
+Alberto no vio ni un píxel de cambio. Medido antes de #2024: **7 primitivas a cero consumidores**, y
+`ResumenPeriodo.tsx` con su propia `card`, su propio `Kpi` y su propio `<style>` incrustado.
+
+**Estado tras #2024** (`/banca` sigue siendo la implementación de referencia):
+- Usan el sistema: `banca/ResumenPeriodo.tsx`, `banca/NegociosResumen.tsx`, `banca/page.tsx`.
+- `IntervaloSelector.tsx` (compartido con `/finanzas`): segmentado + chips ligeros en vez de quince
+  pastillas con borde. Un control de navegación no puede pesar como el contenido que filtra.
+- Rejillas (`.bk-kpis`, `.bk-neg`, `.bk-graf`, `.neg-grid`) en `globals.css`. Los `!important` que
+  llevaban solo existían para ganarle al estilo EN LÍNEA; sin él, sobran.
+- `DeltaBadge` con `bueno`: colorea por **significado**, no por signo (gastar menos = verde).
+
+🚨 **Una exención del guardián de tokens puede llevar un motivo FALSO y sobrevivir POR ESO.** Las barras del
+`ComposedChart` estaban exentas de `test/regression-tokens-color.test.ts` con el motivo escrito «son series
+de recharts, no estados». Falso: **ingreso y gasto SON el par semántico**, y el hex no cambiaba en modo
+oscuro. Sobrevivió al barrido de ~734 hex precisamente porque su justificación tenía buena pinta.
+Convertidas a `var(--positive)`/`var(--negative)` y exención retirada; la dona sí sigue en paleta
+CATEGÓRICA (ahí el motivo se sostiene: teñir una categoría de rojo diría que ese gasto está mal).
+
+✅ **Las dos pendientes de arriba se CERRARON el 02/09/2026 (PRs #2042 y #2045).** Se dejan escritas
+porque la forma de cerrarlas es el método a repetir, no porque queden abiertas:
+
+**1. Las 5 primitivas a cero consumidores → se MIDIÓ dónde encajaba cada una antes de decidir.** La
+pregunta «¿la uso o la borro?» no se contesta a ojo: se contesta contando sitios reales en toda la app.
+
+| primitiva | sitios | qué se hizo |
+|---|---|---|
+| `PageHeader` | **53** (10 repetían ADEMÁS su propia media query) | adoptada; los 10 en #2045, quedan 43 |
+| `BtnLink` | 11 (4 pares copiados byte a byte) | adoptada; 4 en #2045 |
+| `ThinBar` | 11, pero solo 3 con el alto 6px que tenía cableado | adoptada tras pasar `alto` y `track` a props |
+| `BarListRow` | **0 — ese patrón no existe en la app** | **borrada** |
+| `LegendDot` | **1**, y las 4 gráficas de recharts usan su `<Legend>` | **borrada** |
+
+Dos lecciones: **cablear un valor es lo que deja una primitiva sin adoptar** (`ThinBar` fallaba en 8 de
+11 sitios solo por el alto), y **una primitiva con un consumidor no es sistema de diseño, es un
+componente local**. Adoptar los 10 borró **15 reglas `!important`** de `globals.css`.
+
+🚨 **Y una que parecía muerta y NO lo estaba: `.seo-header`.** Sus dos reglas de `≤480px` ponen los
+botones a ancho completo, y `.page-header` NO hace eso (solo estira el contenedor de acciones, y a
+768px). La cabecera de `/sivra/seo` es ya un `<PageHeader>` **envuelto** en ese div, que sobrevive solo
+como ancestro de esos selectores. Antes de borrar una clase «redundante», compara regla por regla:
+`flex-direction: column` sí lo cubre `.page-header`; `button { width: 100% }` no.
+
+**2. El «último mov. ninguno» sobre un NULL → arreglado en #2042**, con el helper puro
+`lineaCuentasFeed()` y sus tests. Lo que MÁS importa de ese PR es el método: **se miró el dato real
+antes de afirmar la gravedad**. Resultó ser una violación **latente**, no activa (0 filas psd2 sin
+fecha en las 2.123 de la tabla) — o sea, la urgencia que se le había atribuido en esta misma ficha era
+falsa. Mide antes de vender un incendio. El mismo agujero se anotó en la skill `psd2-health-check`,
+donde el fallo sería peor: `MAX(fecha_operacion)` ignora los NULL y declararía **roto** un feed que
+está entregando.
+
+⏸️ **LO QUE SIGUE PENDIENTE DE DECISIÓN DE ALBERTO — no lo resuelvas por tu cuenta:**
+- ~~43 cabeceras más~~ **HECHO el 02/09/2026 (PR #2054): la app está entera sobre `PageHeader`.** Fueron
+  4 tandas de agentes con lista EXPLÍCITA de ficheros por tanda. Al adoptarlas aparecieron **dos huecos que
+  no se ven leyendo la primitiva, solo intentando usarla**: `BtnLink` no soportaba `target`/`rel` (tres
+  botones reales abren pestaña nueva y se quedaban fuera) y `ThinBar` no llevaba transición. Lección: una
+  primitiva no está terminada hasta que la usa la tercera pantalla. Quedan FUERA a propósito
+  `banca/transferencia` (sus 3 `<h1>` son estados de un formulario) e `invitado/limpieza` (única pantalla de
+  Vanesa, intranet de invitado). Y **`--sin-previews` hace que un cambio de aspecto masivo se vea por primera
+  vez en producción**: se fuerza la preview con `[preview]` en el asunto del commit.
+- **Cuál de los dos hubs financieros sobrevive** (`/finanzas` vs `/banca`), cuáles de las 6 pantallas de
+  dinero de pisos caben como pestañas y si sobran 3 de las 4 de pricing. El código ya está compartido:
+  lo que queda son URLs, y elegir cuál desaparece cambia la rutina diaria de Alberto.
+
+⚠️ **Ninguna de estas pantallas se ha visto renderizada** (las apps llevan `--sin-previews` y la sesión no
+tiene navegador): alineaciones y espaciados están razonados sobre el código, no medidos.
+
+## 📱 El primer dato REAL en móvil: cuántas acciones caben en una cabecera (03/09/2026)
+
+El aviso de arriba dejó de ser teórico: Alberto mandó **una captura de `/correduria` en su móvil**
+—«casi siempre uso el móvil»— y es la primera vez que se mide una pantalla de esta app en vez de
+razonarla. Lo que salió:
+
+**~520 px de cabecera sobre ~740 de pantalla: el 70% antes del primer trabajo.** Reparto medido:
+**176 px los botones de acción** · 101 el buscador (campo y botón en dos filas) · 89 el párrafo de
+ayuda · 49 el título.
+
+🚨 **`PageHeader` NO era el culpable, y ese era el diagnóstico intuitivo.** Ya se apila en columna y
+ya da `width:100%` + `flex-wrap` a `.page-header-acciones` a ≤768 (`globals.css:157-167`). El
+problema era del consumidor: **tres `BtnLink` `md` con rótulos largos**. «Presupuesto de hogar»
+mide ~200 px con icono y gap, así que a 332 px útiles (360 − el padding 14+14 de `.pagina`) caben
+**uno y medio por fila → tres filas de 44 px**.
+
+**La regla que sale de aquí, y es contable, no de gusto: máximo DOS acciones en `acciones`.**
+Medido sobre las 56 cabeceras de la app: 36 llevan acciones y **casi todas son 1-2** (un `<select>`,
+un enlace, un «↻ Actualizar»). La única que llegó a siete —`/banca`— las colapsó en `AccionesBanca`.
+A la tercera, colapsa: una visible (la que se usa a diario) y el resto en un `<details>`.
+Precedente a copiar: **`correduria/AccionesCabecera.tsx`** (nativo, cierra al navegar, sin el fallo
+de `AccionesBanca` de desmontar el botón pulsado junto al modal que abre) y el `Multi` de
+`ListaCartera.tsx:410-465`.
+
+Tres cosas más que solo se ven con la pantalla delante:
+- **`autoFocus` en un buscador es hostil en móvil**: abre el teclado al entrar y tapa media pantalla
+  antes de que se lea nada. Se quitó del de la cartera.
+- **Un `flex: '1 1 260px'` con un botón al lado no cabe en 332 px** (260+8+88 = 356) y el botón cae a
+  otra fila: 45 px de alto por un cálculo de nada. `1 1 180px` los deja en la misma línea.
+- **Un texto de ayuda de 6 líneas es útil UNA vez** y ruido las trescientas siguientes: `<details>`.
+
+Y el hallazgo colateral: **9 botones del desglose de comisiones estaban a ~26 px de alto**
+(`padding:'5px 10px'` sin `minHeight`), muy por debajo de los **44 px** que garantiza `btnStyle()`.
+Un estilo escrito a mano se salta el mínimo táctil sin que nada falle — el guardián es usar
+`btnStyle()`, no recordarlo.
+
+## 📱 Segunda captura: el coste NO son los iconos, es que todo es una caja (03/09/2026)
+
+Alberto, sobre `/correduria/cliente/[id]`: «iconos muy grandes… ocupa mucha página». **Los iconos
+no eran el coste** (van a 13px) pero su lectura tenía media razón: eran **emoji**, y un ⭐/📞/✉️ a
+13px pesa mucho más que el trazo lucide del mismo tamaño. Lo que ocupaba la página, medido en
+`EditarCliente.tsx` y **cuadrado por los dos lados** (el CSS y la captura, escalando por el `campo`
+de 44px — la comprobación que faltó en el PR anterior):
+
+| | alto CSS |
+|---|---|
+| formulario «Añadir», **siempre desplegado** | **~246 px** |
+| 3 contactos, cada uno en su caja | ~313 px |
+| *pantalla útil de su móvil* | *~706 px* |
+
+**El 35% de la pantalla para teclear nueve dígitos**, en una ficha que se abre para LEER un teléfono
+y llamar. Un formulario permanente cobra a las trescientas consultas el precio de la vez que se da
+de alta un contacto: **se pliega en `<details>`**, y eso solo ya devuelve 200 px.
+
+🚨 **Un `flexWrap` en la fila de una lista da DOS alturas al mismo tipo de dato**, y se ve a simple
+vista: en la captura el primer teléfono medía ~58 px y el segundo ~84, porque solo el segundo
+llevaba «Hacer principal» (~150 px de rótulo) y a 332 px útiles los botones caían a otra línea.
+Quitar el `flexWrap` obliga a que quepa todo — y lo que hace que quepa es convertir el rótulo en
+icono, no encoger el botón.
+
+**`btnIcono(variante, tam)` en `components/ui.tsx`** es la primitiva para eso: botón cuadrado de
+44×44 (o 34 en `sm`) que **mantiene el mínimo táctil**, que es justo lo que se salta un estilo a
+mano. ⚠️ **NUNCA para una acción destructiva.** «Borrar» conserva su texto: es irreversible, y en
+las 19 pantallas de la correduría no hay **ni un** precedente de icono solo para algo así — lo que
+se gana en alto no compensa inventarlo. A icono van las acciones inocuas o idempotentes (marcar
+principal, fijar, copiar) y **siempre** con `aria-label` y `title`: el icono no es el nombre.
+
+**Y un contacto deja de ser una caja para ser una LÍNEA** con separador fino. Borde, fondo y radio
+se gastan POR FUNCIÓN (regla de este mismo fichero) y «soy un teléfono» no es una función — mismo
+criterio que `Bloque.tsx` en el rediseño de `/correduria`.
+
+⏸️ **Estado de la adopción, para quien siga:** el patrón «una caja por elemento» está en **19
+componentes** de la correduría (~42 `border: 1px solid var(--border)`, ~51 `flexWrap`). Migrado
+**solo `EditarCliente`**, que es el de la captura. NO se barre de golpe: manda la adopción POR
+GOTEO del `CLAUDE.md` de plataforma, y sin poder ver ninguna renderizada un barrido masivo es
+apostar 19 pantallas a ciegas. Las siguientes por uso serían Relaciones, Documentos y Siniestros.
+
+🪤 **Hallazgo colateral sin arreglar:** `className="edicion-fila"` aparece 4 veces en
+`EditarCliente.tsx` y **no tiene ninguna regla en `globals.css`**. Gancho muerto, la misma forma
+que el landmine de `var(--card)`: no falla, no se ve, y quien lo lea creerá que ahí hay responsive.
+
+<!-- verificado: 2026-09-03 -->

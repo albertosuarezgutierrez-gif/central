@@ -25,6 +25,8 @@ enum PortalProcedencia {
   compania
   calculado
   declarado
+  /// Añadida a la BD el 02/09/2026 (`2026-09-02_portal_rol_vinculo_grants.sql`): el módulo la definía y la BD no.
+  documento
 
   @@map("portal_procedencia")
   @@schema("seguros")
@@ -42,17 +44,95 @@ enum PortalBienTipo {
   @@schema("seguros")
 }
 
+/// Qué vence. v1 solo emite `poliza`; el enum nace con sitio para el resto
+/// porque una obligación cuelga del BIEN y el motor es el mismo para la ITV de
+/// un coche que para el vencimiento de su seguro.
+enum PortalObligacionTipo {
+  poliza
+  itv
+  carnet
+  recibo
+  mantenimiento
+  revision_gas
+  libre
+
+  @@map("portal_obligacion_tipo")
+  @@schema("seguros")
+}
+
+/// El ciclo de vida de un parte declarado por el cliente.
+///
+/// 🚨 `enviado` y `recibido` NO significan que la compañía lo sepa: la
+/// correduría es mediadora del cliente, no del asegurador. Solo
+/// `abierto_en_compania` —y la BD exige sello y `siniestro_id` para ponerlo—
+/// autoriza a decírselo. Ver `comunicadoACompania()` en
+/// `@central/module-seguros-portal`.
+enum PortalParteEstado {
+  enviado
+  recibido
+  abierto_en_compania
+  descartado
+
+  @@map("portal_parte_estado")
+  @@schema("seguros")
+}
+
 model PortalIdentidad {
   id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   nombre         String?
   creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
   ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
+  /// Última «revisión anual» enviada por el cron mensual de `apps/asegura`.
+  /// NULL = nunca. La escribe `prisma_seguros`; el portal solo la lee.
+  revisionAnualEnviadaEn DateTime? @map("revision_anual_enviada_en") @db.Timestamptz(6)
 
-  canales PortalCanal[]
-  bienes  PortalBien[]
-  polizas PortalPolizaDeclarada[]
+  // Cómo salió el ÚLTIMO intento de vincular esta identidad con una ficha, y
+  // cuándo. Lo sella `lib/vinculo.ts` en el canje del código —el único momento
+  // en que el portal tiene el correo en claro— y lo lee `/boveda` para no
+  // decirle «no hemos encontrado ninguna póliza» a quien SÍ tiene fichas.
+  //
+  // 🚨 El GRANT por columnas se dio ANTES de declararlas aquí. El rol tiene
+  // SELECT por columnas: declarar una sin conceder revienta TODAS las lecturas
+  // de este modelo con 42501, no solo la de esa columna.
+  ultimoVinculo   String?   @map("ultimo_vinculo")
+  ultimoVinculoEn DateTime? @map("ultimo_vinculo_en") @db.Timestamptz(6)
+
+  canales           PortalCanal[]
+  accesos           PortalAcceso[]
+  bienes            PortalBien[]
+  polizas           PortalPolizaDeclarada[]
+  vinculos          PortalVinculo[]
+  obligaciones      PortalObligacion[]
+  partes            PortalParteSiniestro[]
+  hojas             PortalHojaQr[]
+  pushSuscripciones PortalPushSuscripcion[]
 
   @@map("portal_identidad")
+  @@schema("seguros")
+}
+
+/// Cada ENTRADA al portal. Nace el 07/09/2026 porque `PortalIdentidad` solo
+/// guardaba `ultimoAccesoEn` —un timestamp que se pisa— y por tanto no había
+/// historial ni forma de reconstruirlo: cada día sin esta tabla era un día
+/// perdido.
+///
+/// 🚨 Sin correo, y no por olvido: el portal no tiene ninguna dirección en
+/// claro (solo `PortalCanal.valorHash`). Con qué correo entró alguien se mira
+/// en la ficha con la que está casado, no aquí.
+model PortalAcceso {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId String   @map("identidad_id") @db.Uuid
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  /// Datos personales, guardados como registro de seguridad (art. 32 RGPD).
+  /// Retención pretendida 12 meses; el borrado automático NO existe todavía.
+  ip          String?  @db.Inet
+  userAgent   String?  @map("user_agent")
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@index([identidadId, creadoEn(sort: Desc)])
+  @@index([creadoEn(sort: Desc)])
+  @@map("portal_acceso")
   @@schema("seguros")
 }
 
@@ -75,6 +155,8 @@ model PortalCodigo {
   id        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   tipo      PortalCanalTipo
   valorHash String          @map("valor_hash")
+  // 🚨 Guarda el HASH del código (`hashCodigo()` de `lib/auth.ts`: SHA-256 con
+  // la pimienta del canal), NO los 6 dígitos. El nombre es histórico.
   codigo    String
   intentos  Int             @default(0)
   creadoEn  DateTime        @default(now()) @map("creado_en") @db.Timestamptz(6)
@@ -92,8 +174,9 @@ model PortalBien {
   datos       Json           @default("{}")
   creadoEn    DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
 
-  identidad PortalIdentidad         @relation(fields: [identidadId], references: [id], onDelete: Cascade)
-  polizas   PortalPolizaDeclarada[]
+  identidad    PortalIdentidad         @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  polizas      PortalPolizaDeclarada[]
+  obligaciones PortalObligacion[]
 
   @@map("portal_bien")
   @@schema("seguros")
@@ -107,18 +190,262 @@ model PortalPolizaDeclarada {
   numeroPoliza         String?           @map("numero_poliza")
   ramo                 String?
   primaAnual           Decimal?          @map("prima_anual") @db.Decimal(10, 2)
+  /// Cada cuánto se le pasa el recibo: `anual` | `semestral` | `trimestral` |
+  /// `mensual` (CHECK; mismo vocabulario que `FRACCIONES` de
+  /// `@central/module-seguros`, no una lista propia). `null` = no se sabe, y
+  /// es válido — NINGUNO de los campos de esta tabla es obligatorio salvo la
+  /// identificación (compañía o número). De aquí sale el PRÓXIMO cobro que
+  /// avisa `lib/obligaciones.ts` (`proximoCobroDeclarado()`), aparte de la
+  /// renovación anual que ya avisaba antes.
+  periodicidadPago     String?           @map("periodicidad_pago")
   fechaVencimiento     DateTime?         @map("fecha_vencimiento") @db.Date
+  /// Del BIEN asegurado, no del contrato: viven aquí mientras no haya ficha de
+  /// vehículo propia. `null` = «no se sabe» (nadie lo ha leído ni escrito), que
+  /// NO es «el vehículo no tiene bastidor». Se validan en `lib/poliza-editable.ts`
+  /// (VIN de 17 sin I/O/Q, matrícula compactada) antes de llegar aquí.
+  matricula            String?
+  bastidor             String?
+  fechaMatriculacion   DateTime?         @map("fecha_matriculacion") @db.Date
+  /// Identificador del BIEN inmueble, el equivalente de la matrícula para hogar,
+  /// comercio y comunidades. Es COLUMNA y no una clave de `datosRamo` porque se
+  /// consulta e indexa («¿tengo otra póliza de esta misma vivienda?»).
+  /// 🚨 SOLO la del INMUEBLE (20 caracteres). Una de 14 es la de la FINCA —el
+  /// edificio— y traería los metros del edificio a una póliza de hogar: se
+  /// rechaza en `lib/poliza-editable.ts` con un error propio, no se guarda.
+  referenciaCatastral  String?           @map("referencia_catastral")
+  /// Campos DESCRIPTIVOS propios del ramo (hogar: metros y año; moto: cilindrada…),
+  /// según el catálogo de `@central/module-seguros-portal` (`campos-ramo.ts`). Es
+  /// un `jsonb` y no columnas porque el conjunto DEPENDE del ramo y nadie filtra
+  /// por ellos. `null` = no se ha declarado nada; nunca `{}` ni un `null` dentro
+  /// del JSON, que son «no lo sé» disfrazados de dato: se escribe `Prisma.DbNull`,
+  /// jamás `Prisma.JsonNull`.
+  datosRamo            Json?             @map("datos_ramo")
+  /// De dónde salió CADA campo de `datosRamo`: sus mismas claves → `catastro` |
+  /// `documento` | `declarado` (vocabulario de `@central/module-seguros-portal`).
+  /// 76 m² del Catastro y 76 m² estimados a ojo no valen lo mismo, y la
+  /// `procedencia` de la PÓLIZA no los distingue. Se reescribe SIEMPRE junto a
+  /// `datosRamo`: un origen sin su dato es una afirmación sobre algo que no
+  /// existe. Mismas reglas de NULL que su hermano (`Prisma.DbNull`, nunca
+  /// `JsonNull` ni `{}`).
+  datosRamoOrigen      Json?             @map("datos_ramo_origen")
   procedencia          PortalProcedencia @default(declarado)
   confirmadaPorUsuario Boolean           @default(false) @map("confirmada_por_usuario")
   documentoNombre      String?           @map("documento_nombre")
+  /// 🚨 TRES estados y `null` es uno de ellos: «no se le preguntó». Es lo que
+  /// tienen TODAS las filas anteriores al 07/09/2026. Leerlo como `propio`
+  /// convertiría un hueco en una afirmación sobre de quién es una póliza, y de
+  /// eso depende contra qué ficha se comprueba si la casa ya la lleva.
+  /// Vocabulario cerrado por CHECK: `propio` | `empresa` | null.
+  titularTipo          String?           @map("titular_tipo")
+  /// Obligatorio cuando el tipo es `empresa` (CHECK en la BD): «de mi empresa»
+  /// sin decir cuál no identifica ninguna empresa. Es una DECLARACIÓN del
+  /// cliente, no un vínculo: no crea ficha ni se casa con una existente.
+  titularEmpresaNombre String?           @map("titular_empresa_nombre")
+  /// Puede faltar aunque haya empresa: mucha gente no se lo sabe de memoria.
+  titularEmpresaCif    String?           @map("titular_empresa_cif")
   extraccionBruta      Json?             @map("extraccion_bruta")
+  /// Garantías que la IA leyó en el PDF (lista de textos cortos). NULL = no se
+  /// ha leído (alta a mano o subida anterior al 20/09/2026); `[]` = leído y no
+  /// encontró ninguna. Con esto la póliza declarada entra en el detector de
+  /// solapamientos de `/boveda` junto a las de cartera.
+  coberturas           Json?
+  /// El cliente redactó la carta de no renovación (copiar / imprimir / abrir el
+  /// correo) y, si lo marcó, la envió. Señal de lead para el corredor.
+  cartaGeneradaEn      DateTime?         @map("carta_generada_en") @db.Timestamptz(6)
+  cartaEnviadaEn       DateTime?         @map("carta_enviada_en") @db.Timestamptz(6)
   creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
   actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  bien      PortalBien?            @relation(fields: [bienId], references: [id])
+  partes    PortalParteSiniestro[]
+
+  @@map("portal_poliza_declarada")
+  @@schema("seguros")
+}
+
+model PortalObligacion {
+  id                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId       String               @map("identidad_id") @db.Uuid
+  bienId            String?              @map("bien_id") @db.Uuid
+  /// La póliza de la CARTERA. Sin relación de Prisma: el rol del portal no
+  /// escribe en `polizas` y una FK ataría su borrado.
+  polizaId          String?              @map("poliza_id") @db.Uuid
+  polizaDeclaradaId String?              @map("poliza_declarada_id") @db.Uuid
+  tipo              PortalObligacionTipo
+  titulo            String
+  /// La fecha del hecho. NOT NULL a propósito: sin fecha no hay obligación.
+  fechaEvento       DateTime             @map("fecha_evento") @db.Date
+  /// `fechaEvento` − DIAS_PREAVISO_TOMADOR. Es la que se le enseña al cliente.
+  fechaAccionable   DateTime             @map("fecha_accionable") @db.Date
+  procedencia       PortalProcedencia
+  confirmadaAt      DateTime?            @map("confirmada_at") @db.Timestamptz(6)
+  /// Sello del envío por CORREO (lo sella `apps/asegura`, que es quien tiene el email en claro).
+  /// Que exista es lo que impide avisar dos veces.
+  avisadaAt         DateTime?            @map("avisada_at") @db.Timestamptz(6)
+  /// Sello del envío por PUSH. Independiente de `avisadaAt`: son dos canales que fallan por
+  /// separado (sin suscripción, endpoint muerto…) y compartir sello taparía el envío del otro.
+  avisadaPushAt     DateTime?            @map("avisada_push_at") @db.Timestamptz(6)
+  /// Solo para los recordatorios PROPIOS del cliente (13/09/2026): cada cuántos
+  /// meses se repite, o NULL si es de una sola vez. Las obligaciones derivadas
+  /// de una póliza (`tipo: 'poliza'`/`'recibo'`) no la usan — su ciclo lo
+  /// recalcula `sincronizarObligacionesDeIdentidad()` desde la fuente real en
+  /// cada visita, no desde este número.
+  repiteCadaMeses   Int?                 @map("repite_cada_meses") @db.SmallInt
+  creadaAt          DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
+  actualizadaAt     DateTime             @default(now()) @map("actualizada_at") @db.Timestamptz(6)
 
   identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
   bien      PortalBien?     @relation(fields: [bienId], references: [id])
 
-  @@map("portal_poliza_declarada")
+  /// 🚨 Incluye `tipo` desde el 13/09/2026 (antes era solo `identidadId` +
+  /// `polizaId`, `portal_obligacion_una_por_poliza`): un recordatorio PROPIO
+  /// (`itv`, `mantenimiento`…) se puede colgar de la MISMA póliza de cartera
+  /// que ya genera su obligación `poliza` — «se renueva el 15» y «la ITV es
+  /// el 3» son dos filas del mismo seguro, no una. Con la clave vieja, crear
+  /// el recordatorio habría pisado (o chocado contra) la obligación derivada.
+  @@unique([identidadId, polizaId, tipo], map: "portal_obligacion_una_por_poliza_tipo")
+  /// Su gemela para las pólizas que sube la persona. Existe para poder hacer
+  /// `upsert` y NO perder `avisadaAt` en cada sincronización: sin ella habría
+  /// que borrar y recrear, y el sello del envío se iría con el borrado — o sea,
+  /// cada visita a la bóveda volvería a mandar el mismo aviso.
+  ///
+  /// 🚨 Incluye `tipo` desde el 09/09/2026 (antes era solo `identidadId` +
+  /// `polizaDeclaradaId`): una póliza declarada puede generar DOS obligaciones
+  /// a la vez —`poliza` (la renovación) y `recibo` (el próximo cobro, si hay
+  /// periodicidad)—, y con la clave vieja la segunda upsert pisaba a la
+  /// primera. Sigue siendo idempotente: dos sincronizaciones seguidas no crean
+  /// dos filas del MISMO tipo.
+  @@unique([identidadId, polizaDeclaradaId, tipo], map: "portal_obligacion_una_por_declarada_tipo")
+  @@index([identidadId])
+  @@map("portal_obligacion")
+  @@schema("seguros")
+}
+
+/// Una suscripción de Web Push del navegador (12/09/2026). NO es un dato descifrable como el email
+/// hasheado de `PortalCanal`: `endpoint`+claves son opacos y solo sirven para mandar UNA notificación
+/// a ESE navegador. Varias filas por identidad = varios dispositivos.
+model PortalPushSuscripcion {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId String   @map("identidad_id") @db.Uuid
+  endpoint    String   @unique
+  p256dh      String
+  authKey     String   @map("auth_key")
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@index([identidadId])
+  @@map("portal_push_suscripcion")
+  @@schema("seguros")
+}
+
+/// El parte que abre el CLIENTE. Es una DECLARACIÓN de siniestro, no un
+/// siniestro: `seguros.siniestros` es la cartera que llena CIMA y el rol del
+/// portal no escribe en ella. DDL y motivos en
+/// `prisma/sql/2026-09-03_portal_parte_siniestro.sql`.
+///
+/// El portal solo INSERTA y LEE lo suyo: no hay UPDATE ni DELETE para el
+/// cliente, porque lo declarado es una comunicación y no un borrador.
+model PortalParteSiniestro {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId         String            @map("identidad_id") @db.Uuid
+  /// Póliza de la CARTERA. Sin relación de Prisma: el rol no escribe en `polizas`.
+  polizaId            String?           @map("poliza_id") @db.Uuid
+  polizaDeclaradaId   String?           @map("poliza_declarada_id") @db.Uuid
+  descripcion         String
+  /// NOT NULL: sin ella no hay plazo del art. 16 LCS que contar.
+  fechaHecho          DateTime          @map("fecha_hecho") @db.Date
+  /// `HH:MM` y APROXIMADA. Texto, no `time`: una hora inventada es peor que ninguna.
+  horaAproximada      String?           @map("hora_aproximada")
+  lugar               String?
+  /// 🚨 `null` = no lo ha contestado; `false` = ha dicho que no. No se colapsan.
+  hayHeridos          Boolean?          @map("hay_heridos")
+  hayTerceros         Boolean?          @map("hay_terceros")
+  estado              PortalParteEstado @default(enviado)
+  /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
+  siniestroId         String?           @map("siniestro_id") @db.Uuid
+  recibidoAt          DateTime?         @map("recibido_at") @db.Timestamptz(6)
+  abiertoEnCompaniaAt DateTime?         @map("abierto_en_compania_at") @db.Timestamptz(6)
+  descartadoAt        DateTime?         @map("descartado_at") @db.Timestamptz(6)
+  motivoDescarte      String?           @map("motivo_descarte")
+  /// 🚨 La FOTO de la póliza APORTADA que el cliente quitó de su bóveda. Es texto
+  /// y no una relación a propósito: vale porque la fila de origen ya NO existe.
+  /// Sin esto, borrar la póliza dejaría el parte huérfano (la FK es
+  /// `ON DELETE SET NULL` y el CHECK admite las dos columnas de póliza nulas):
+  /// una comunicación de siniestro que no dice de qué habla, sin que nada avise.
+  /// La fecha se escribe SIEMPRE que se desliga; las otras tres pueden ser NULL
+  /// porque una póliza aportada puede no tener ni compañía. Un parte sobre un
+  /// siniestro que la compañía ya tramita NO se desliga: ahí el borrado se
+  /// rechaza (`@central/module-seguros-portal`, `puedeBorrarDeclarada`).
+  polizaDesligadaAt       DateTime?         @map("poliza_desligada_at") @db.Timestamptz(6)
+  polizaDesligadaCompania String?           @map("poliza_desligada_compania")
+  polizaDesligadaNumero   String?           @map("poliza_desligada_numero")
+  polizaDesligadaRamo     String?           @map("poliza_desligada_ramo")
+  creadoEn            DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime          @default(now()) @map("actualizado_en") @db.Timestamptz(6)
+
+  identidad       PortalIdentidad        @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  polizaDeclarada PortalPolizaDeclarada? @relation(fields: [polizaDeclaradaId], references: [id])
+
+  @@index([identidadId])
+  @@map("portal_parte_siniestro")
+  @@schema("seguros")
+}
+
+/// Los ficheros que el CLIENTE adjunta a un parte de siniestro.
+///
+/// Es la tabla `seguros.documentos` de siempre —la misma que usa el panel del
+/// corredor— más la columna `portal_parte_id` (03/09/2026,
+/// `prisma/sql/2026-09-03_documentos_adjuntos_parte.sql`). No hay tabla propia
+/// del portal a propósito: dos bandejas de documentos serían dos sitios donde
+/// mirar y ninguno completo.
+///
+/// 🚨 El rol `prisma_asegura_portal` tiene aquí `SELECT, INSERT` y **nada más**.
+/// Sin UPDATE y sin DELETE: un adjunto de un parte es prueba de lo que se
+/// declaró, y quien lo mandó no lo retira solo. Declarar un `update`/`delete`
+/// en el código no lo concedería — fallaría en la BD, que es donde tiene que
+/// fallar.
+///
+/// ⚠️ Y aquí el GRANT es de TABLA, no por columnas — es la excepción dentro de
+/// este schema, donde la cartera (`clientes`, `polizas`, `poliza_recibos`…) se
+/// concede columna a columna. El SQL es `grant select, insert on
+/// seguros.documentos`, así que las 19 columnas están cubiertas. Lo que sí sigue
+/// mordiendo es lo otro: este modelo es un ESPEJO EXACTO de las 19 columnas
+/// reales de la tabla (verificado contra la BD el 03/09/2026). Prisma pide cada
+/// columna declarada por su nombre, así que una que no exista —o que un día se
+/// revoque— hace fallar la consulta ENTERA, no solo ese campo.
+model Documento {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId      String    @map("correduria_id") @db.Uuid
+  clienteId         String?   @map("cliente_id") @db.Uuid
+  polizaId          String?   @map("poliza_id") @db.Uuid
+  siniestroId       String?   @map("siniestro_id") @db.Uuid
+  /// El parte del portal del que cuelga. Sin relación de Prisma: el resto de
+  /// modelos de cartera de este schema tampoco las tienen, y una FK declarada
+  /// aquí obligaría a un `include` que el rol no siempre puede resolver.
+  portalParteId     String?   @map("portal_parte_id") @db.Uuid
+  /// `text` con CHECK en la BD, no enum: se valida con `tipoDocumento()` de
+  /// `@central/module-seguros`.
+  tipo              String    @default("otro")
+  estado            String    @default("recibido")
+  nombreFichero     String?   @map("nombre_fichero")
+  /// 🚨 SIEMPRE uno de `MIMES_DOCUMENTO`, nunca el que mandó el navegador: lo
+  /// normaliza `mimeDocumento()` antes de escribir. Es lo que impide que un
+  /// fichero se devuelva luego con un Content-Type que el navegador ejecute.
+  mimeType          String?   @map("mime_type")
+  sizeBytes         Int?      @map("size_bytes")
+  sha256            String?
+  contenido         Bytes?
+  notas             String?
+  subidoPor         String    @default("corredor") @map("subido_por")
+  visiblePorCliente Boolean   @default(false) @map("visible_por_cliente")
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  revisadoAt        DateTime? @map("revisado_at") @db.Timestamptz(6)
+  revisadoPor       String?   @map("revisado_por")
+
+  @@index([portalParteId])
+  @@map("documentos")
   @@schema("seguros")
 }
 
@@ -133,5 +460,816 @@ model PortalConsentimiento {
   creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
 
   @@map("portal_consentimiento")
+  @@schema("seguros")
+}
+
+// ─── Fase 4: la costura identidad ↔ ficha de la cartera ─────────────────────
+// Sin fila aquí, el portal no lee NADA de la cartera para esa identidad. Se
+// crea al canjear el código por índice ciego del email (`lib/vinculo.ts`) o a
+// mano desde plataforma (`origen = manual`). `nivel` y `origen` son `text` con
+// CHECK en la BD (no enum de Postgres): se validan en código contra `NIVELES`.
+model PortalVinculo {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId  String   @map("identidad_id") @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  nivel        String   @default("gestionar")
+  origen       String
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@unique([identidadId, clienteId])
+  @@map("portal_vinculo")
+  @@schema("seguros")
+}
+
+/// El consentimiento de José para que María vea sus seguros. Reglas en
+/// `@central/module-seguros-portal/autorizacion`; nada aquí decide nada.
+model PortalAutorizacion {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
+  /// A quién se autoriza cuando SÍ es cliente de la correduría. `null` cuando lo
+  /// es `autorizadoIdentidadId`: exactamente una de las dos va rellena y lo obliga
+  /// la BD (CHECK `portal_autorizacion_destinatario_unico`, comprobado mordiendo).
+  autorizadoClienteId    String?   @map("autorizado_cliente_id") @db.Uuid
+  /// A quién se autoriza cuando NO es cliente: su identidad del portal, que es lo
+  /// que hay detrás de la cookie y por tanto quien de verdad mira. Se eligió la
+  /// identidad en vez de fabricarle una ficha vacía: una ficha es una persona en
+  /// la cartera, y crear una por cada invitado ensucia los 32.520 leads que ya hay.
+  autorizadoIdentidadId  String?   @map("autorizado_identidad_id") @db.Uuid
+  /// La ÚNICA póliza que abre esta autorización. `null` = todas las del otorgante,
+  /// que es lo que significaban todas las filas anteriores a esta columna — y eso
+  /// incluye las que contrate MAÑANA, cosa que la pantalla tiene que decir con esas
+  /// palabras al conceder. La FK es COMPUESTA con `otorganteClienteId` contra
+  /// `polizas(cliente_id, id)`: la BD exige que la póliza sea DEL OTORGANTE, así que
+  /// un id manipulado no cuela la póliza de un tercero (probado: 23503).
+  polizaId               String?   @map("poliza_id") @db.Uuid
+  alcance                String
+  /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
+  /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta,
+  /// y eso solo es legítimo cuando el alcance es de lectura: un CHECK de la BD
+  /// (`portal_autorizacion_apoderamiento_con_titulo`) exige el título en cuanto
+  /// el alcance es `partes` o `documentos`. Una persona FÍSICA no delega esos
+  /// alcances, así que sus filas lo tienen siempre a `null`.
+  tituloRepresentacion   String?   @map("titulo_representacion")
+  /// `portal` = lo concedió el cliente en su pantalla. `corredor` = la correduría
+  /// anotó uno recibido por otro canal. No son lo mismo y no se pueden confundir.
+  origen                 String    @default("portal")
+  otorgadoEn             DateTime  @default(now()) @map("otorgado_en") @db.Timestamptz(6)
+  otorgadoPorIdentidadId String?   @map("otorgado_por_identidad_id") @db.Uuid
+  otorgadoPorActor       String?   @map("otorgado_por_actor")
+  aceptadoEn             DateTime? @map("aceptado_en") @db.Timestamptz(6)
+  aceptadoPorIdentidadId String?   @map("aceptado_por_identidad_id") @db.Uuid
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  revocadoEn             DateTime? @map("revocado_en") @db.Timestamptz(6)
+  /// `otorgante` | `autorizado` | `corredor` | `caducidad`. 🚨 `caducidad` NO es una
+  /// revocación: es el cierre de una que YA había caducado, para liberar el sitio del
+  /// índice único al renovarla. La fila se queda como historial.
+  revocadoPor            String?   @map("revocado_por")
+  revocadoPorIdentidadId String?   @map("revocado_por_identidad_id") @db.Uuid
+  revocadoPorActor       String?   @map("revocado_por_actor")
+  versionTexto           String    @map("version_texto")
+  ip                     String?   @db.Inet
+  userAgent              String?   @map("user_agent")
+
+  usos PortalAutorizacionUso[]
+
+  @@index([otorganteClienteId])
+  @@index([autorizadoClienteId])
+  @@index([autorizadoIdentidadId])
+  @@index([polizaId])
+  @@map("portal_autorizacion")
+  @@schema("seguros")
+}
+
+/// Registro de accesos que ve el OTORGANTE: una fila por autorización, identidad
+/// y DÍA. Es lo que convierte la autorización en algo real y no un cheque en blanco.
+/// «Papá, ¿me dejas ver tu seguro del coche?» — la dirección CONTRARIA a
+/// `PortalAutorizacion`, y la que de verdad pasa: quien no se maneja con el móvil
+/// no entra a invitar a nadie, pero su hijo sí entra a pedírselo.
+///
+/// 🚨 Tabla APARTE y no una autorización «al revés» a propósito: una autorización
+/// nacida de una petición viene YA aceptada por el autorizado (pedirla es
+/// aceptarla), así que meterlas en la misma tabla haría que «autorizaciones
+/// pendientes de aceptar» contara peticiones que nadie concedió — y esa cuenta es
+/// la prueba del art. 7.1 RGPD.
+///
+/// 🚨 Y el destinatario se guarda por HASH DEL CORREO, no por `cliente_id`: quien
+/// pide no sabe (ni debe saber) si esa persona tiene ficha. Resolver la ficha en
+/// el momento de pedir obligaría a contestar «no existe», y eso convierte el
+/// portal en un oráculo para recorrer correos y sacar quién es cliente de la
+/// correduría. Ver `respuestaPublica()` en @central/module-seguros-portal.
+/// La invitacion por correo: un cliente abre sus seguros a alguien que NO esta
+/// en la cartera. Tabla aparte de `portal_autorizacion` porque al invitado
+/// todavia no se le puede apuntar —no tiene ficha ni identidad hasta que entra—
+/// y una autorizacion exige una de las dos. Se convierte en autorizacion cuando
+/// alguien PRUEBA ser ese correo, y no antes.
+///
+/// 🚨 El token del enlace NO abre sesion: dice QUE invitacion es, y quien eres lo
+/// dice el codigo de un solo uso que llega a ese mismo correo. Lee la cabecera de
+/// `@central/module-seguros-portal/invitacion` antes de tocarlo.
+model PortalInvitacion {
+  id                       String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId             String    @map("correduria_id") @db.Uuid
+  /// La ficha cuyos seguros se abren.
+  otorganteClienteId       String    @map("otorgante_cliente_id") @db.Uuid
+  /// Y la identidad que pulso el boton: una ficha puede tener varias personas
+  /// detras, y el registro tiene que decir CUAL de ellas invito.
+  otorgadaPorIdentidadId   String    @map("otorgada_por_identidad_id") @db.Uuid
+  /// El correo invitado, por `hashCanal()`. El MISMO hash que `portal_canal`, que
+  /// es lo que permite atar la aceptacion al CORREO y no al token. Nunca en claro.
+  destinatarioCanalHash    String    @map("destinatario_canal_hash")
+  /// El token del enlace, HASHEADO. En claro solo existe dentro del correo que
+  /// sale: una tabla de invitaciones con sus tokens legibles es una tabla de llaves.
+  ///
+  /// `@unique` porque la BD lo es (`idx_portal_invitacion_token`) y el modelo de
+  /// esta app es un ESPEJO del SQL, no una elección de UI: declarar menos de lo
+  /// que hay deja a Prisma sin poder usar la clave y empuja a buscar con
+  /// `findFirst`, que es la misma consulta contada peor.
+  tokenHash                String    @unique @map("token_hash")
+  /// `ver` | `ver_economico` | `ninguno`. El tercero (08/09/2026) es «solo le
+  /// presento el portal»: al aceptar NO se crea autorizacion (lo obliga un CHECK).
+  alcance                  String
+  /// La UNICA poliza que abrira. `null` = todas las del otorgante, futuras
+  /// incluidas. FK COMPUESTA con el otorgante: la BD exige que sea suya.
+  polizaId                 String?   @map("poliza_id") @db.Uuid
+  mensaje                  String?
+  /// Como lo escribio quien invita, para SU lista y el saludo del correo. No es
+  /// una identidad: quien es de verdad lo prueba el codigo al correo. `null` en
+  /// las filas anteriores al 08/09/2026.
+  invitadoNombre           String?   @map("invitado_nombre")
+  /// Vocabulario de `cliente_relaciones.tipo_relacion` (CHECK en la BD). NUNCA
+  /// va en el correo.
+  relacion                 String?
+  creadaEn                 DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  caducaEn                 DateTime  @map("caduca_en") @db.Timestamptz(6)
+  aceptadaEn               DateTime? @map("aceptada_en") @db.Timestamptz(6)
+  aceptadaPorIdentidadId   String?   @map("aceptada_por_identidad_id") @db.Uuid
+  /// La costura con la otra tabla. Un CHECK exige que vaya junto con
+  /// `aceptadaEn` y con quien acepto: «aceptado por el que tenia el enlace» no
+  /// es una prueba de consentimiento.
+  autorizacionId           String?   @map("autorizacion_id") @db.Uuid
+  /// Rechaza el INVITADO; retira quien invito. No es lo mismo y no se colapsan.
+  rechazadaEn              DateTime? @map("rechazada_en") @db.Timestamptz(6)
+  rechazadaPorIdentidadId  String?   @map("rechazada_por_identidad_id") @db.Uuid
+  retiradaEn               DateTime? @map("retirada_en") @db.Timestamptz(6)
+  ip                       String?   @db.Inet
+  userAgent                String?   @map("user_agent")
+
+  @@index([destinatarioCanalHash])
+  @@index([otorganteClienteId, creadaEn])
+  @@index([otorgadaPorIdentidadId, creadaEn])
+  @@map("portal_invitacion")
+  @@schema("seguros")
+}
+
+model PortalPeticionAcceso {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  /// Quien PIDE. Siempre hay identidad (ha entrado al portal); la ficha puede no
+  /// existir todavía, y por eso es opcional.
+  solicitanteIdentidadId String    @map("solicitante_identidad_id") @db.Uuid
+  solicitanteClienteId   String?   @map("solicitante_cliente_id") @db.Uuid
+  /// El índice ciego del correo del destinatario (el MISMO HMAC que
+  /// `clientes.email_lookup_hash`). Nunca el correo en claro: esta tabla la puede
+  /// llenar cualquiera que entre al portal.
+  destinatarioEmailHash  String    @map("destinatario_email_hash")
+  /// La ficha del destinatario, resuelta por ese hash EN EL SERVIDOR. `null` = no
+  /// había ninguna, o había varias y no se adivina. Quien pidió no ve la
+  /// diferencia: las dos le contestan lo mismo.
+  destinatarioClienteId  String?   @map("destinatario_cliente_id") @db.Uuid
+  /// Qué pide: `ver` | `ver_economico`. Los otros dos alcances no son concedibles.
+  alcance                String
+  /// Texto libre de quien pide, para que el otro sepa quién le escribe. Va a
+  /// acabar delante de OTRA persona: se escapa al pintarlo y no entra en un
+  /// asunto de correo ni en una cabecera. Máx. 300, `null` si venía vacío.
+  mensaje                String?
+  creadaEn               DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  /// Una pendiente caduca a los 30 días: conceder hoy una pregunta de hace tres
+  /// años es contestar algo que nadie recuerda haber leído.
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  /// Lo RESUELTO gana a la caducidad (ver `estadoPeticion()`): una concedida no
+  /// se convierte en caducada al pasar el mes.
+  concedidaEn            DateTime? @map("concedida_en") @db.Timestamptz(6)
+  /// La autorización que salió de conceder esto. Es la costura entre las dos
+  /// tablas y lo que permite enseñarle al solicitante que su petición sirvió.
+  autorizacionId         String?   @map("autorizacion_id") @db.Uuid
+  rechazadaEn            DateTime? @map("rechazada_en") @db.Timestamptz(6)
+  /// La retira QUIEN PIDIÓ. No es lo mismo que un rechazo y no se colapsan: uno
+  /// dice «me he arrepentido» y el otro «me han dicho que no».
+  retiradaEn             DateTime? @map("retirada_en") @db.Timestamptz(6)
+  resueltaPorIdentidadId String?   @map("resuelta_por_identidad_id") @db.Uuid
+  ip                     String?   @db.Inet
+  userAgent              String?   @map("user_agent")
+
+  @@index([destinatarioClienteId, concedidaEn, rechazadaEn])
+  @@index([solicitanteIdentidadId, creadaEn])
+  @@map("portal_peticion_acceso")
+  @@schema("seguros")
+}
+
+model PortalAutorizacionUso {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  autorizacionId String   @map("autorizacion_id") @db.Uuid
+  identidadId    String   @map("identidad_id") @db.Uuid
+  dia            DateTime @db.Date
+  visitas        Int      @default(1)
+  primeraEn      DateTime @default(now()) @map("primera_en") @db.Timestamptz(6)
+  ultimaEn       DateTime @default(now()) @map("ultima_en") @db.Timestamptz(6)
+
+  autorizacion PortalAutorizacion @relation(fields: [autorizacionId], references: [id], onDelete: Cascade)
+
+  @@unique([autorizacionId, identidadId, dia])
+  @@map("portal_autorizacion_uso")
+  @@schema("seguros")
+}
+
+// ─── Cartera: SOLO LECTURA, y SOLO las columnas que el rol puede leer ───────
+// 🚨 El rol `prisma_asegura_portal` tiene `GRANT SELECT (columnas…)` por tabla
+// (`prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`). Prisma pide cada
+// columna declarada aquí por su nombre: declarar una que NO esté en el GRANT
+// hace fallar la consulta ENTERA en la BD (`permission denied for column`).
+// Es a propósito: DNI, IBAN, teléfono, email, direcciones y comentarios
+// internos no se pueden leer desde el portal ni queriendo. Esta lista es un
+// espejo del SQL, no una elección de UI. Sin relaciones entre modelos: cada
+// lectura es una consulta aparte desde `lib/cartera-lectura.ts`.
+//
+// Los enums se copian de `apps/asegura/prisma/asegura.prisma` con su `@@map`
+// (viven en el schema `seguros`). Tipados como String reventarían al comparar.
+
+enum TipoSeguro {
+  auto
+  moto
+  hogar
+  vida
+  salud
+  decesos
+  responsabilidad_civil
+  comercio
+  comunidades
+  accidentes
+  otros
+
+  @@map("tipo_seguro")
+  @@schema("seguros")
+}
+
+enum EstadoPoliza {
+  activa
+  vencida
+  cancelada
+  en_renovacion
+  en_vigor
+  fin_riesgo
+  recibo_devuelto
+  cambio_clave
+  anula_al_vencimiento
+  competencia
+
+  @@map("estado_poliza")
+  @@schema("seguros")
+}
+
+enum PolizaOrigen {
+  gestionada_correduria
+  declarada_usuario
+  emitida_codeoscopic
+
+  @@map("poliza_origen")
+  @@schema("seguros")
+}
+
+enum Fraccionamiento {
+  anual
+  semestral
+  trimestral
+  mensual
+
+  @@map("fraccionamiento")
+  @@schema("seguros")
+}
+
+enum SegmentoCliente {
+  cliente
+  ex_cliente
+  prospecto
+
+  @@map("segmento_cliente")
+  @@schema("seguros")
+}
+
+enum TipoCliente {
+  cliente
+  lead
+  beneficiario
+
+  @@map("tipo_cliente")
+  @@schema("seguros")
+}
+
+enum TipoPersona {
+  fisica
+  juridica
+
+  @@map("tipo_persona")
+  @@schema("seguros")
+}
+
+enum IntervinienteRol {
+  propietario
+  conductor_habitual
+  conductor_ocasional
+  contacto
+  beneficiario
+  asegurado
+
+  @@map("interviniente_rol")
+  @@schema("seguros")
+}
+
+enum IntervinienteOrigen {
+  manual
+  cima
+
+  @@map("interviniente_origen")
+  @@schema("seguros")
+}
+
+enum ReciboEstado {
+  cobrado
+  pendiente
+  devuelto
+  anulado
+  emitido
+
+  @@map("recibo_estado")
+  @@schema("seguros")
+}
+
+enum EstadoSiniestro {
+  abierto
+  en_tramitacion
+  cerrado
+  rechazado
+
+  @@map("estado_siniestro")
+  @@schema("seguros")
+}
+
+enum SiniestroOrigen {
+  gestionado_correduria
+  cima
+
+  @@map("siniestro_origen")
+  @@schema("seguros")
+}
+
+enum SiniestroGravedad {
+  leve
+  moderado
+  grave
+  muy_grave
+
+  @@map("siniestro_gravedad")
+  @@schema("seguros")
+}
+
+/// GRANT: (id, nombre). Ni email, ni teléfono, ni credenciales de WhatsApp.
+model Correduria {
+  id     String @id @db.Uuid
+  nombre String @db.VarChar(255)
+
+  @@map("corredurias")
+  @@schema("seguros")
+}
+
+/// GRANT: sin dni, telefono, email, direccion, fecha_nacimiento, cuenta_bancaria ni notas.
+model Cliente {
+  id                  String          @id @db.Uuid
+  correduriaId        String          @map("correduria_id") @db.Uuid
+  nombre              String          @db.VarChar(255)
+  apellidos           String          @db.VarChar(255)
+  tipo                TipoCliente
+  segmento            SegmentoCliente
+  tipoPersona         TipoPersona?    @map("tipo_persona")
+  activo              Boolean
+  importRef           String?         @map("import_ref") @db.VarChar(100)
+  emailLookupHash     String?         @map("email_lookup_hash")
+  telefonoLookupHash  String?         @map("telefono_lookup_hash")
+  mergedIntoClienteId String?         @map("merged_into_cliente_id") @db.Uuid
+  createdAt           DateTime        @map("created_at") @db.Timestamp(6)
+
+  @@map("clientes")
+  @@schema("seguros")
+}
+
+/// GRANT: sin la columna `email` (cifrada). Solo el índice ciego.
+model ClienteEmail {
+  id              String  @id @db.Uuid
+  correduriaId    String  @map("correduria_id") @db.Uuid
+  clienteId       String  @map("cliente_id") @db.Uuid
+  emailLookupHash String? @map("email_lookup_hash")
+  esPrincipal     Boolean @map("es_principal")
+  etiqueta        String? @db.VarChar(30)
+
+  @@map("cliente_emails")
+  @@schema("seguros")
+}
+
+/// GRANT: sin cuenta_bancaria, documento_url, comercial_id ni la cadena de renovaciones.
+model Poliza {
+  id                 String           @id @db.Uuid
+  correduriaId       String           @map("correduria_id") @db.Uuid
+  clienteId          String           @map("cliente_id") @db.Uuid
+  tipo               TipoSeguro
+  aseguradora        String           @db.VarChar(255)
+  numeroPoliza       String?          @map("numero_poliza") @db.VarChar(100)
+  fechaInicio        DateTime?        @map("fecha_inicio") @db.Date
+  fechaVencimiento   DateTime?        @map("fecha_vencimiento") @db.Date
+  primaAnual         Decimal?         @map("prima_anual") @db.Decimal(10, 2)
+  primaMensual       Decimal?         @map("prima_mensual") @db.Decimal(10, 2)
+  primaBruta         Decimal?         @map("prima_bruta") @db.Decimal(10, 2)
+  fraccionamiento    Fraccionamiento?
+  estado             EstadoPoliza
+  situacion          String?          @db.VarChar(4)
+  datosEspecificos   Json?            @map("datos_especificos")
+  coberturas         Json?
+  importRef          String?          @map("import_ref") @db.VarChar(100)
+  origen             PolizaOrigen
+  idPolizaEntidad    String?          @map("id_poliza_entidad") @db.VarChar(50)
+  codigoEntidadDgs   String?          @map("codigo_entidad_dgs") @db.VarChar(16)
+  ramoDgs            String?          @map("ramo_dgs") @db.VarChar(8)
+  fechaEfectoInicial DateTime?        @map("fecha_efecto_inicial") @db.Date
+  /// Huella del último EIAC que escribió la fila. Solo la pone el pipeline de
+  /// CIMA, así que es la marca de «la ingesta ha tocado esto» — y con ella se
+  /// decide la cartera VIVA (ver `WHERE_CARTERA_VIVA` de @central/module-seguros).
+  /// GRANT concedido el 03/09/2026; sin él la consulta entera reventaría.
+  eiacXmlHash        String?          @map("eiac_xml_hash") @db.VarChar(64)
+  mergedIntoPolizaId String?          @map("merged_into_poliza_id") @db.Uuid
+  /// Otra póliza ya ocupa su sitio (cambio de compañía). GRANT de columna del 23/09/2026.
+  sustituidaAt       DateTime?        @map("sustituida_at") @db.Timestamptz(6)
+  /// La póliza a la que ESTA sustituye. GRANT de columna del 23/09/2026.
+  polizaOrigenId     String?          @map("poliza_origen_id") @db.Uuid
+  createdAt          DateTime         @map("created_at") @db.Timestamp(6)
+  updatedAt          DateTime         @map("updated_at") @db.Timestamp(6)
+
+  @@map("polizas")
+  @@schema("seguros")
+}
+
+model PolizaCobertura {
+  id                  String    @id @db.Uuid
+  correduriaId        String    @map("correduria_id") @db.Uuid
+  polizaId            String    @map("poliza_id") @db.Uuid
+  numeroOrden         Int?      @map("numero_orden")
+  codigo              String?
+  descripcion         String?
+  capitalAsegurado    String?   @map("capital_asegurado")
+  descripcionCapital  String?   @map("descripcion_capital")
+  franquicia          String?
+  fechaInicio         DateTime? @map("fecha_inicio") @db.Timestamptz(6)
+  fechaFin            DateTime? @map("fecha_fin") @db.Timestamptz(6)
+  modalidadValoracion String?   @map("modalidad_valoracion")
+  datosExtra          Json?     @map("datos_extra")
+
+  @@map("poliza_coberturas")
+  @@schema("seguros")
+}
+
+/// GRANT: sin iban (cifrado) ni comisiones (dato del corredor, no del cliente).
+model PolizaRecibo {
+  id                 String        @id @db.Uuid
+  correduriaId       String        @map("correduria_id") @db.Uuid
+  polizaId           String        @map("poliza_id") @db.Uuid
+  situacion          ReciboEstado?
+  claseRecibo        String?       @map("clase_recibo")
+  fechaEfectoInicial DateTime?     @map("fecha_efecto_inicial") @db.Timestamptz(6)
+  fechaEfectoActual  DateTime?     @map("fecha_efecto_actual") @db.Timestamptz(6)
+  fechaVencimiento   DateTime?     @map("fecha_vencimiento") @db.Timestamptz(6)
+  fechaEmision       DateTime?     @map("fecha_emision") @db.Timestamptz(6)
+  fechaSituacion     DateTime?     @map("fecha_situacion") @db.Timestamptz(6)
+  /// Importes en TEXT tal cual llegan del EIAC: parsear con `importeEiac()`.
+  primaTotal         String?       @map("prima_total")
+  primaNeta          String?       @map("prima_neta")
+  formaPago          String?       @map("forma_pago")
+
+  @@map("poliza_recibos")
+  @@schema("seguros")
+}
+
+/// GRANT: sin lugar_direccion (cifrada), comentario (interno), reservas ni indemnizaciones.
+model Siniestro {
+  id                 String             @id @db.Uuid
+  correduriaId       String             @map("correduria_id") @db.Uuid
+  clienteId          String             @map("cliente_id") @db.Uuid
+  polizaId           String             @map("poliza_id") @db.Uuid
+  estado             EstadoSiniestro
+  tipo               String?            @db.VarChar(60)
+  referencia         String?            @db.VarChar(100)
+  /// QUÉ pasó, en texto libre del tramitador. GRANT concedido el 07/09/2026
+  /// (`prisma/sql/2026-09-07_portal_siniestro_descripcion.sql`): el orden es
+  /// primero el GRANT y después esta línea — al revés, la lectura ENTERA de
+  /// `Siniestro` revienta con `permission denied for column` (42501).
+  comentario         String?
+  fechaHora          DateTime?          @map("fecha_hora") @db.Timestamptz(6)
+  lugarCp            String?            @map("lugar_cp") @db.VarChar(10)
+  lugarCiudad        String?            @map("lugar_ciudad") @db.VarChar(100)
+  lugarProvincia     String?            @map("lugar_provincia") @db.VarChar(100)
+  tramitadorNombre   String?            @map("tramitador_nombre") @db.VarChar(255)
+  tramitadorTelefono String?            @map("tramitador_telefono") @db.VarChar(30)
+  tramitadorEmail    String?            @map("tramitador_email") @db.VarChar(255)
+  peritoNombre       String?            @map("perito_nombre") @db.VarChar(255)
+  peritoTelefono     String?            @map("perito_telefono") @db.VarChar(30)
+  peritoEmail        String?            @map("perito_email") @db.VarChar(255)
+  origen             SiniestroOrigen
+  idSiniestroEntidad String?            @map("id_siniestro_entidad") @db.VarChar(50)
+  gravedad           SiniestroGravedad?
+  createdAt          DateTime           @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime           @map("updated_at") @db.Timestamptz(6)
+
+  @@map("siniestros")
+  @@schema("seguros")
+}
+
+/// GRANT: sin nif, nombre, apellidos, teléfono, email ni fechas (todo cifrado). Solo el papel.
+model PolizaInterviniente {
+  id           String              @id @db.Uuid
+  polizaId     String              @map("poliza_id") @db.Uuid
+  correduriaId String              @map("correduria_id") @db.Uuid
+  rol          IntervinienteRol
+  clienteId    String?             @map("cliente_id") @db.Uuid
+  tipoRelacion String?             @map("tipo_relacion") @db.VarChar(60)
+  origen       IntervinienteOrigen
+
+  @@map("poliza_intervinientes")
+  @@schema("seguros")
+}
+
+/// GRANT: sin `observaciones` (texto libre del corredor). Fila A→B con
+/// `puede_ver_polizas` = A autoriza a B a ver las pólizas de A.
+model ClienteRelacion {
+  id              String   @id @db.Uuid
+  correduriaId    String   @map("correduria_id") @db.Uuid
+  clienteAId      String   @map("cliente_a_id") @db.Uuid
+  clienteBId      String   @map("cliente_b_id") @db.Uuid
+  tipoRelacion    String   @map("tipo_relacion") @db.VarChar(60)
+  // 🚫 `puede_ver_polizas` NO está aquí a propósito (03/09/2026): el consentimiento
+  // vive en `PortalAutorizacion` y el rol del portal ya no puede LEER esa columna.
+  // Si vuelve al modelo, un `findMany` sin `select` explícito revienta en la BD —
+  // que es donde tiene que reventar. Las relaciones se siguen leyendo: son las que
+  // le ofrecen a José a quién puede autorizar.
+  createdAt       DateTime @map("created_at") @db.Timestamptz(6)
+
+  @@map("cliente_relaciones")
+  @@schema("seguros")
+}
+
+/// El catálogo de compañías de la DGSFP, con el canal al que acude el asegurado
+/// después de un percance.
+///
+/// 🚨 GRANT: **sin `notas` ni `telefono_fuente`**. Las dos son gestión del
+/// corredor —la segunda guarda por qué un número no está y qué falta preguntar—
+/// y `telefono_fuente` se REVOCÓ el 05/09/2026 justo para que no se pueda
+/// declarar aquí por descuido. Recordatorio de la landmine: declarar una
+/// columna no concedida revienta la lectura ENTERA de la tabla con
+/// `permission denied for column`, no solo esa columna.
+///
+/// 📌 Esta tabla NO es cartera de nadie: es un catálogo público de códigos DGS y
+/// teléfonos publicados. Por eso su lectura no se filtra por identidad y no
+/// entra en la lista de modelos que vigila `test/regression-portal-aislamiento.test.ts`.
+model CompaniaDgs {
+  codigoDgs            String    @id @map("codigo_dgs") @db.VarChar(16)
+  nombreComun          String    @map("nombre_comun") @db.VarChar(255)
+  activa               Boolean
+  telefonoSiniestros   String?   @map("telefono_siniestros")
+  telefonoAsistencia   String?   @map("telefono_asistencia")
+  whatsappSiniestros   String?   @map("whatsapp_siniestros")
+  /// Ramos para los que vale el WhatsApp (`polizas.tipo`); vacío = todos. Mapfre: solo hogar.
+  whatsappSiniestrosRamos String[] @default([]) @map("whatsapp_siniestros_ramos")
+  horarioSiniestros    String?   @map("horario_siniestros")
+  telefonoVerificadoEn DateTime? @map("telefono_verificado_en") @db.Date
+
+  @@map("companias_dgs")
+  @@schema("seguros")
+}
+
+/// La solicitud del derecho de SUPRESIÓN (art. 17 RGPD).
+///
+/// 🚨 No es un borrado y no debe leerse como tal: el art. 17.3.b y el 17.3.e
+/// excluyen la supresión cuando hace falta cumplir una obligación legal o
+/// defender reclamaciones, y una correduría tiene las dos. Lo que esta tabla
+/// soporta es lo que sí es obligatorio: recibir, acusar y contestar en un mes
+/// (art. 12.3) diciendo qué se borra y qué se conserva, con su base legal
+/// (art. 12.4). Reglas y plazos en `@central/module-seguros-portal/supresion`.
+model PortalSupresion {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId    String    @map("correduria_id") @db.Uuid
+  identidadId     String    @map("identidad_id") @db.Uuid
+  /// La ficha de la cartera, si la hay. `null` NO es «no es cliente»: es «su
+  /// acceso no está enlazado con ninguna ficha». Un lead también puede pedirlo.
+  clienteId       String?   @map("cliente_id") @db.Uuid
+  /// Cuando la persona la envió, NO cuando el corredor la abre: es desde donde
+  /// corre el mes del art. 12.3.
+  recibidaEn      DateTime  @default(now()) @map("recibida_en") @db.Timestamptz(6)
+  estado          String    @default("recibida")
+  /// Sello de la prórroga del art. 12.3. Se pone al AVISAR, no al decidirla.
+  prorrogadaEn    DateTime? @map("prorrogada_en") @db.Timestamptz(6)
+  prorrogaMotivo  String?   @map("prorroga_motivo")
+  resueltaEn      DateTime? @map("resuelta_en") @db.Timestamptz(6)
+  /// Lo que se le contestó. Es lo que acredita el art. 12.4 cuando alguien
+  /// pregunte por qué no se borró todo.
+  respuesta       String?
+  resueltaPor     String?   @map("resuelta_por")
+  motivo          String?
+  /// Qué versión de los textos legales se le enseñó al pedirlo: sin ella no se
+  /// puede reconstruir qué se le dijo que se iba a conservar.
+  versionTextos   String    @map("version_textos")
+  ip              String?   @db.Inet
+  userAgent       String?   @map("user_agent")
+
+  @@index([estado, recibidaEn])
+  @@map("portal_supresion")
+  @@schema("seguros")
+}
+
+/// La HOJA de la nevera y su QR (05/09/2026).
+///
+/// 🚨 `tokenHash` es el HASH, nunca el token: en claro solo existe dentro del
+/// enlace que se mete en el QR. Y no hay `DELETE` concedido sobre estas dos
+/// tablas — anular es poner `anuladaEn`, porque quien tenga el papel viejo tiene
+/// que poder distinguir «esto ya no vale» de «esto no ha existido nunca».
+/// Reglas completas en `packages/module-seguros-portal/src/hoja-qr.ts`.
+model PortalHojaQr {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  identidadId String    @map("identidad_id") @db.Uuid
+  tokenHash   String    @map("token_hash")
+  nombre      String?
+  creadaEn    DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  anuladaEn   DateTime? @map("anulada_en") @db.Timestamptz(6)
+  ultimoUsoEn DateTime? @map("ultimo_uso_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad      @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+  polizas   PortalHojaQrPoliza[]
+
+  @@index([identidadId, creadaEn])
+  @@map("portal_hoja_qr")
+  @@schema("seguros")
+}
+
+/// La selección de una hoja. **Ninguna fila = TODAS**, igual que
+/// `portal_autorizacion.poliza_id` NULL — y eso incluye las pólizas futuras.
+/// Una fila apunta a una de la cartera O a una aportada, nunca a las dos.
+model PortalHojaQrPoliza {
+  id                String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  hojaId            String  @map("hoja_id") @db.Uuid
+  polizaId          String? @map("poliza_id") @db.Uuid
+  polizaDeclaradaId String? @map("poliza_declarada_id") @db.Uuid
+
+  hoja PortalHojaQr @relation(fields: [hojaId], references: [id], onDelete: Cascade)
+
+  @@map("portal_hoja_qr_poliza")
+  @@schema("seguros")
+}
+
+/// El enlace de un solo uso con el que el CORREDOR abre el portal como lo ve un
+/// cliente (`seguros.portal_vista_corredor`). Lo crea asegura; aquí solo se lee
+/// y se sella `usadoEn`. Reglas en `@central/module-seguros-portal/vista-corredor`.
+model PortalVistaCorredor {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  clienteId    String    @map("cliente_id") @db.Uuid
+  tokenHash    String    @unique @map("token_hash")
+  actor        String
+  creadoEn     DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  usadoEn      DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@index([clienteId, creadoEn])
+  @@map("portal_vista_corredor")
+  @@schema("seguros")
+}
+
+/// ─── El presupuesto que se le enseña al cliente (PR 2, 21/09/2026) ──────────
+///
+/// Las tablas las crea `apps/asegura/prisma/sql/2026-09-21_presupuesto.sql` y
+/// las escribe `prisma_seguros`. Aquí se LEEN, con el GRANT por columnas de
+/// `prisma/sql/2026-09-21_portal_presupuesto_grants.sql`, más un único
+/// `UPDATE(visto_at)`.
+///
+/// 🚨 **Lo que NO se declara, porque el rol NO lo puede leer** — y si se
+/// declarara, la consulta ENTERA reventaría con `permission denied for column`:
+///   - `tarificacion_id`  → el origen de los precios es cosa del corredor (el
+///     GRANT sí lo tiene, pero solo para que corra el trigger de asegura; ver
+///     el SQL).
+///   - `creado_por`       → quién lo preparó, dato interno.
+///   - `retirado_motivo`  → la nota con la que Alberto lo retira. Puede decir
+///     cualquier cosa sobre el cliente y no está escrita para él.
+///   - `canal_aviso`, `poliza_emitida_id`, `salida` → no hacen falta para
+///     pintar, y lo que no se pide no se puede colar en una pantalla.
+///   - `presupuesto_opcion.referencia_vendor` → el id del quote del vendor. Es
+///     la llave del ReRate, no un dato del cliente.
+model Presupuesto {
+  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String    @map("correduria_id") @db.Uuid
+  clienteId    String    @map("cliente_id") @db.Uuid
+  /// NULL = venta nueva (no hay póliza que comparar), JAMÁS «no tiene seguro».
+  polizaId     String?   @map("poliza_id") @db.Uuid
+  ramo         String
+  /// El token del enlace, HASHEADO. NO abre sesión: dice QUÉ presupuesto es.
+  tokenHash    String    @unique @map("token_hash")
+  /// A quién se avisó, hasheado con la pimienta del portal. NULL = NO CONSTA.
+  destinoHash  String?   @map("destino_hash")
+  venceEl      DateTime  @map("vence_el") @db.Timestamptz(6)
+  creadoAt     DateTime  @default(now()) @map("creado_at") @db.Timestamptz(6)
+  enviadoAt    DateTime? @map("enviado_at") @db.Timestamptz(6)
+  /// NULL = NO CONSTA que lo haya abierto. No es «no lo ha abierto».
+  vistoAt      DateTime? @map("visto_at") @db.Timestamptz(6)
+  elegidoAt    DateTime? @map("elegido_at") @db.Timestamptz(6)
+  aceptadoAt   DateTime? @map("aceptado_at") @db.Timestamptz(6)
+  emitidoAt    DateTime? @map("emitido_at") @db.Timestamptz(6)
+  retiradoAt   DateTime? @map("retirado_at") @db.Timestamptz(6)
+
+  opciones PresupuestoOpcion[]
+  eventos  PresupuestoEvento[]
+
+  @@map("presupuesto")
+  @@schema("seguros")
+}
+
+/// SNAPSHOT de lo que se le enseñó, en su orden. No es una vista de
+/// `tarificacion_precios`: si el vendor cambia de opinión mañana, lo que se
+/// enseñó ese día sigue escrito aquí.
+model PresupuestoOpcion {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId  String    @map("presupuesto_id") @db.Uuid
+  orden          Int       @db.SmallInt
+  compania       String
+  producto       String
+  modalidad      String?
+  categoria      String?
+  /// NULL = no se pudo clasificar el nivel. No es «sin cobertura».
+  grupoCobertura String?   @map("grupo_cobertura")
+  primaEur       Decimal   @map("prima_eur") @db.Decimal(10, 2)
+  entradaEur     Decimal?  @map("entrada_eur") @db.Decimal(10, 2)
+  /// NULL = el producto NO declara franquicia. JAMÁS «sin franquicia».
+  franquiciaEur  Decimal?  @map("franquicia_eur") @db.Decimal(10, 2)
+  firmeza        String
+  requiereRerate Boolean   @map("requiere_rerate")
+  /// ⚠️ Vacío (`[]`) significa **no se congelaron**, no «no cubre nada»: el
+  /// preparador todavía no las escribe y la columna nace con el default.
+  coberturas     Json      @default("[]")
+  avisos         Json      @default("[]")
+  papeles        String[]  @default([])
+  elegidaAt      DateTime? @map("elegida_at") @db.Timestamptz(6)
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@unique([presupuestoId, orden], map: "presupuesto_opcion_orden_unico")
+  @@index([presupuestoId, orden])
+  @@map("presupuesto_opcion")
+  @@schema("seguros")
+}
+
+/// Telemetría del presupuesto. APPEND-ONLY por trigger. El portal solo escribe
+/// `apertura_ajena` y solo lee para no repetirla en cada recarga.
+model PresupuestoEvento {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId String   @map("presupuesto_id") @db.Uuid
+  tipo          String
+  ocurridoAt    DateTime @default(now()) @map("ocurrido_at") @db.Timestamptz(6)
+  origen        String
+  /// 🚨 `detalle` NO se declara: el portal no tiene SELECT sobre esa columna
+  /// (la escribe el corredor y ahí no hay nada que el portal necesite leer), y
+  /// una columna declarada sin GRANT revienta la consulta ENTERA con 42501.
+  /// Al no mandarla, la BD aplica su `'{}'::jsonb` por defecto.
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@index([presupuestoId, ocurridoAt])
+  @@map("presupuesto_evento")
+  @@schema("seguros")
+}
+
+/// Enlace de acceso directo del correo de avisos: el portal solo lo lee y marca `usado_en`
+/// (GRANT de columnas, 24/09/2026). Lo crea asegura.
+model PortalEnlaceDirecto {
+  id              String    @id @db.Uuid
+  emailLookupHash String    @map("email_lookup_hash")
+  tokenHash       String    @unique(map: "portal_enlace_directo_token_unico") @map("token_hash")
+  destino         String
+  expiraEn        DateTime  @map("expira_en") @db.Timestamptz(6)
+  usadoEn         DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@map("portal_enlace_directo")
+  @@schema("seguros")
+}
+
+/// Felicitación de cumpleaños que escribe el cron de asegura. El rol solo lee estas tres columnas.
+model Felicitacion {
+  id        String   @id @db.Uuid
+  clienteId String   @map("cliente_id") @db.Uuid
+  dia       DateTime @db.Date
+
+  @@map("felicitacion")
   @@schema("seguros")
 }

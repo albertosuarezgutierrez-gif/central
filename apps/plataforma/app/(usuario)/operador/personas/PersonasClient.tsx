@@ -1,5 +1,7 @@
 'use client'
 import { useMemo, useState } from 'react'
+import { User } from 'lucide-react'
+import { PageHeader } from '@/components/ui'
 
 type Rol = { vertical: 'ialimp' | 'rrhh'; rol: string; ref: string; nombre: string; email: string | null; dni: string | null; empresa: string | null; persona_id: string | null }
 type Persona = { persona_id: string | null; nombre: string; roles: Rol[]; multivertical: boolean }
@@ -25,7 +27,7 @@ export default function PersonasClient({ personas, sugerencias, rrhhDisponible }
 
   return (
     <div style={{ padding: '24px clamp(16px,4vw,40px)', maxWidth: 1000, margin: '0 auto' }}>
-      <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>👤 Personas a través de verticales</h1>
+      <PageHeader titulo="Personas a través de verticales" icono={<User size={20} strokeWidth={1.75} />} />
       <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 4 }}>
         Consolidación por <code>persona_id</code> (solo lectura). {personas.length} personas · <b>{multi}</b> en más de una vertical.
         {!rrhhDisponible && <span style={{ color: 'var(--warning)' }}> · ⚠️ iarrhh no disponible (sin RRHH_URL/secret): solo se ven las de ialimp.</span>}

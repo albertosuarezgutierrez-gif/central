@@ -3,6 +3,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, useEffect, useCallback, useTransition } from 'react'
 import GastosTab from '../GastosTab'
 import { eur } from '@/lib/dinero'
+import { BtnLink, PageHeader } from '@/components/ui'
+import { Receipt } from 'lucide-react'
 
 function fmt(n: number) {
   return eur(n)
@@ -84,22 +86,25 @@ export default function GastosPageClient({ year: initYear, quarter: initQuarter,
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, flex: 1 }}>🧾 Control de gastos</h1>
-        <select
-          value={year}
-          onChange={e => {
-            const y = parseInt(e.target.value)
-            if (modo === 'trimestre') navegarTrimestre(y, quarter)
-            else if (modo === 'mes') navegarMes(y, mes)
-            else setYear(y)
-          }}
-          style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '13px' }}
-        >
-          {years.map(y => <option key={y} value={y}>{y}</option>)}
-        </select>
-        {isPending && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Cargando…</span>}
-      </div>
+      <PageHeader
+        titulo="Control de gastos"
+        icono={<Receipt size={20} strokeWidth={1.75} />}
+        acciones={<>
+          <select
+            value={year}
+            onChange={e => {
+              const y = parseInt(e.target.value)
+              if (modo === 'trimestre') navegarTrimestre(y, quarter)
+              else if (modo === 'mes') navegarMes(y, mes)
+              else setYear(y)
+            }}
+            style={{ padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '13px' }}
+          >
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+          {isPending && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Cargando…</span>}
+        </>}
+      />
 
       {/* Filtros de periodo */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px' }}>
@@ -194,14 +199,23 @@ export default function GastosPageClient({ year: initYear, quarter: initQuarter,
         </div>
       </div>
 
-      {/* Export */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
-        <a
+      {/* Export + el control de tarjeta.
+          💳 `/finanzas/tarjeta-credito` es una pantalla VIVA (cargos del mes de la tarjeta de
+          Kutxabank, por destino, con los que faltan por clasificar) y no tenía UN SOLO enlace en
+          todo el repo: ni menú, ni paleta de comandos, ni ninguna otra página. Solo se llegaba
+          escribiendo la URL. Ella sí enlaza aquí («N sin clasificar»), así que este es el enlace
+          de vuelta que faltaba — mismo caso que `/sivra/partes/establecimientos`. */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+        <BtnLink href="/finanzas/tarjeta-credito" variante="secundario" tam="sm">
+          💳 Tarjeta de crédito
+        </BtnLink>
+        <BtnLink
           href={`/api/finanzas/gastos/export?year=${efectivoYear}&quarter=${efectivoQuarter}${efectivoDesde ? `&desde=${efectivoDesde}&hasta=${efectivoHasta}` : ''}`}
-          style={{ fontSize: '12px', padding: '6px 12px', background: 'var(--primary)', color: '#fff', borderRadius: '6px', textDecoration: 'none', fontWeight: 600 }}
+          variante="primario"
+          tam="sm"
         >
           ⬇ CSV para la asesoría
-        </a>
+        </BtnLink>
       </div>
 
       {/* GastosTab con parámetros del filtro */}

@@ -1,7 +1,11 @@
 // lib/sivra/agente-huesped/orquestador.ts — procesa el último mensaje del huésped de una reserva.
 import { construirContexto } from './contexto'
-import { detectLang, detectCategory } from './reglas'
+import { detectLang, detectCategory, tipoHueco } from './reglas'
 import { decidir, type Decision } from './decidir'
+import { decidirAutoEnvio } from './auto'
+import { esModoNoche } from './noche'
+import { acusarNocturno } from './noche-guardia'
+import { aprendizajesRelevantes, hechosRelevantes } from './similitud'
 import { recomendar } from './recomendar'
 import { enviarAlHuesped } from './enviar'
 import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
@@ -101,7 +105,21 @@ export async function procesarMensajeHuesped(
     const fallbackLang = (IDIOMAS_OK.has(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en') as 'es' | 'en' | 'fr' | 'de' | 'it'
     const lang = detectLang(pregunta, fallbackLang)
     const categoria = detectCategory(pregunta) || 'general'
-    const ctx = { ...ctx0, lang }
+    // 1-ter) Recuperar lo ya aprendido que se PAREZCA a esta pregunta. `construirContexto` no puede
+    // hacerlo: se ejecuta antes de saber cuál es la pregunta (puede salir del propio historial). Lo
+    // que traía era «las 8 últimas filas del piso», que es lo que hacía que ocho «gracias a ti»
+    // enterrasen lo enseñado — el «no aprende» de Alberto (04/09/2026). Ver `similitud.ts`.
+    // `null` = no se pudo leer: se conserva lo que vino por recencia, nunca se vacía el prompt.
+    const [aprendRelev, hechosRelev] = await Promise.all([
+      aprendizajesRelevantes(ctx0.propertyId, pregunta),
+      hechosRelevantes(ctx0.propertyId, pregunta),
+    ])
+    const ctx = {
+      ...ctx0,
+      lang,
+      aprendizajes: aprendRelev ?? ctx0.aprendizajes,
+      hechos: hechosRelev ? hechosRelev.map(h => h.hecho) : ctx0.hechos,
+    }
 
     // 1-bis) ¿Es el «sí» a un extra que Alberto ya aprobó en este hilo? Entonces la respuesta es el
     // enlace de pago y no hay borrador que redactar. Todas las guardas viven en `intentarCobroAutomatico`
@@ -125,9 +143,10 @@ export async function procesarMensajeHuesped(
     // Hueco de conocimiento: escalamos porque la respuesta no queda cubierta por las fuentes. Antes
     // solo se anotaba cuando NO había ni ficha ni guía, así que con la guía leída no se anotaría
     // nunca — y el hueco es justo lo que hay que enseñarle. No se anota lo sensible (queja/dinero),
-    // que escala por política y no por ignorancia.
-    if (dec.needs_human && !dec.apoyada_en_fuente && dec.categoria !== 'recomendacion'
-        && dec.sentimiento !== 'negativo' && /no cubre|no se pudo verificar/.test(dec.motivo || '')) {
+    // que escala por política y no por ignorancia. Y `control_caido` TAMPOCO se anota: con el
+    // clasificador mudo no se ha llegado a mirar si la guía lo cubre, así que apuntarlo como hueco
+    // ensucia `mensajes_guia_gaps` con preguntas que sí estaban cubiertas.
+    if (tipoHueco(dec) === 'guia') {
       await registrarGap(ctx.propertyId, pregunta)
     }
 
@@ -160,21 +179,9 @@ export async function procesarMensajeHuesped(
       dec.motivo = `${dec.motivo ? dec.motivo + ' · ' : ''}Habla de un pago (método/datos de cobro) — eso lo autorizas tú; el único cobro automático es el enlace de Stripe.`
     }
 
-    // 3) ¿Auto-envío o propuesta por Telegram?
-    // Guardas comunes: nunca se auto-envía nada que requiera ojo humano (sensible / negativo / dato
-    // inventado / escalado IA) ni sin borrador ni con sentimiento negativo.
-    const guardasOk = !dec.needs_human && !!dec.reply && dec.sentimiento !== 'negativo'
-    // (a) CORTESÍA de fin de estancia (despedidas / agradecimientos / cierres puros): respuestas
-    //     "siempre iguales" y de riesgo mínimo. Decisión de Alberto (26/07/2026).
-    // (b) RESPUESTA APOYADA EN UNA FUENTE (20/08/2026, decisión de Alberto): si lo que contesta sale
-    //     de la guía real del piso, de la ficha de la reserva o de los hechos que él ha enseñado, se
-    //     manda solo. Esto SUSTITUYE a la graduación por categorías (`autoPermitido`), que era un
-    //     contador de aprobaciones y no sabía nada de si la respuesta estaba respaldada: con la guía
-    //     leída, la fuente es mejor criterio que la categoría.
-    //     `apoyada_en_fuente` ya exige que la guía se haya podido leer y que nada la marque dudosa.
-    const autoCortesia = guardasOk && dec.es_cortesia === true
-    const autoApoyada = guardasOk && dec.requiere_respuesta !== false && dec.apoyada_en_fuente === true
-    const puedeAuto = autoCortesia || autoApoyada
+    // 3) ¿Auto-envío o propuesta por Telegram? La regla vive en `auto.ts` (pura y testeada); aquí
+    //    solo se ejecuta. Las dos vías y sus guardas están documentadas en ese módulo.
+    const { auto: puedeAuto } = decidirAutoEnvio(dec)
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
       await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
@@ -188,6 +195,13 @@ export async function procesarMensajeHuesped(
 
     await proponerPorTelegram(ctx, pregunta, dec)
     await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: dec.needs_human, auto_sent: false, edited: false })
+    // 4) MODO NOCHE (05/09/2026). Fuera del horario de atención, el borrador se queda en Telegram
+    //    hasta que Alberto lo vea — y si escala a las 23:30, el huésped no recibe NADA hasta las
+    //    09:00. Ese silencio es indistinguible, desde el código, de una conversación atendida. El
+    //    modo noche NO redacta ni auto-envía respuestas: acusa recibo y, si es urgencia de acceso o
+    //    avería, despierta a Alberto (ver `noche.ts`). Va DESPUÉS de proponer porque el barrido del
+    //    último recurso se apoya en la fila de `mensajes_pendientes_tg` que crea la propuesta.
+    if (esModoNoche()) await acusarNocturno(ctx, pregunta).catch(() => {})
     return { accion: 'propuesto_telegram' }
   } catch (e) {
     // Falló a mitad (IA caída, etc.): liberar el reclamo para no perder el mensaje (se reintenta).

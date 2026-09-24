@@ -18,6 +18,7 @@ export interface RutaCorreo {
   cautela?: boolean         // el aviso va con tono de precaución (no actúa nunca)
   enrutarSivra?: boolean    // pasar al agente de huéspedes de SIVRA
   vigilarReserva?: boolean  // registrar en reservas_correo_booking (vigía Booking↔Smoobu)
+  enrutarCorreduria?: boolean // preguntar a asegura si resuelve a una póliza VIVA y anotarlo en su ficha
   descripcion: string       // para el prompt de clasificación
   ejemplos: string[]        // remitentes/tipos de ejemplo (para el prompt)
 }
@@ -56,8 +57,39 @@ export const RUTAS: RutaCorreo[] = [
     etiqueta: 'Triaje/Correduria',
     archivar: false,
     aviso: 'digest',
+    enrutarCorreduria: true,
     descripcion: 'Correos de la correduría de seguros de Alberto (es mediador): regularizaciones, pólizas, liquidaciones de comisiones de aseguradoras.',
     ejemplos: ['Occident regularización RC', 'Mapfre corredores', 'liquidación de comisiones'],
+  },
+  {
+    // 🚨 Se separa de `correduria` porque es lo ÚNICO del correo de aseguradoras que caduca:
+    // un recibo devuelto suspende la cobertura al mes (art. 15 LCS) y a los seis extingue la
+    // póliza. En el digest de las 22:30 llega tarde y se lee entre veinte comunicados
+    // comerciales. Y hace falta porque CIMA NO lo cuenta todo: el 03/09/2026 un recibo de
+    // Mapfre llevaba 56 días vencido sin que la ingesta trajera ni el cobro ni la devolución
+    // — mientras Occident y Allianz sí mandan por correo su lista de devueltos, con nombre y
+    // fecha. Este correo es, para varias compañías, la ÚNICA señal que existe.
+    categoria: 'correduria-recibo',
+    etiqueta: 'Triaje/Correduria-Recibos',
+    archivar: false,
+    aviso: 'inmediato',
+    enrutarCorreduria: true,
+    descripcion: 'Aviso de una ASEGURADORA sobre recibos que no han entrado: devoluciones de banco, resúmenes de impagados, pólizas anuladas por impago y —lo más valioso— avisos de recibos PRÓXIMOS a la anulación. NO es una liquidación de comisiones ni un comunicado comercial (correduria), ni una factura de un proveedor de Alberto (contabilidad).',
+    ejemplos: ['Recibos devueltos de banco 14-08-2026', 'Resumen de recibos próximos a la anulación', 'Relacion anulacion polizas por impago', 'DELEGACIÓN RECIBO Nº … PÓLIZA MAPFRE'],
+  },
+  {
+    // Respuestas de las asociaciones/agrupaciones de corredores a las que Alberto ha pedido
+    // condiciones para asociarse (AUNNA, Pactrebol, ACSA, APROMES…). Es `inmediato` y NO
+    // `correduria` a propósito: son negociaciones abiertas con plazo —una cotización de cuota,
+    // un cuadro de rappel o un contrato de adhesión— y en el digest de las 22:30 se leerían
+    // junto a veinte comunicados comerciales de aseguradoras, que es justo lo que `correduria`
+    // recoge. Tampoco es `leads-negocio`: ahí Alberto vende, aquí le venden a él.
+    categoria: 'asociacion-corredores',
+    etiqueta: 'Triaje/Asociaciones',
+    archivar: false,
+    aviso: 'inmediato',
+    descripcion: 'Respuesta de una ASOCIACIÓN, agrupación o red de corredores de seguros a la que Alberto ha pedido información para asociarse: cuota, condiciones, panel de compañías, cuadro de rappel, servicio de suscripción, contrato de adhesión o documentación de alta. NO es una aseguradora liquidando comisiones (correduria) ni un aviso de recibo impagado (correduria-recibo).',
+    ejemplos: ['AUNNA Asociación', 'Pactrebol', 'ACSA Andalucía', 'APROMES', 'FECOR', 'condiciones de asociación', 'contrato de adhesión'],
   },
   {
     categoria: 'personal-importante',

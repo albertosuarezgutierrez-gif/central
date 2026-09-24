@@ -1,9 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { interpretarCartera, interpretarObjeto, interpretarVencimientos } from './cartera-asegura.ts'
 
 const RESUMEN_OK = {
-  correduria: { nombre: 'Grupo Asegura' },
+  correduria: { nombre: 'Grupo ASegura' },
   resumen: {
     estado: 'ok', clientes: 2742, leads: 29858, polizasVigentes: 50,
     polizasPendientesFecha: 1194, polizasNoVigentes: 27599, siniestrosAbiertos: 3,
@@ -14,7 +15,7 @@ test('respuesta ok completa → ok con los seis números', () => {
   const r = interpretarCartera(200, RESUMEN_OK)
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
-  assert.equal(r.nombre, 'Grupo Asegura')
+  assert.equal(r.nombre, 'Grupo ASegura')
   assert.equal(r.polizasVigentes, 50)
   assert.equal(r.polizasPendientesFecha, 1194)
 })
@@ -146,4 +147,134 @@ test('objeto: una forma rara degrada a null y NO tumba la fila entera', () => {
   assert.equal(interpretarObjeto(null), null)
   const r = interpretarVencimientos(200, { ...VENC_OK, polizas: [{ ...FILA_OK, objeto: 42 }] })
   assert.equal(r.estado, 'ok')
+})
+
+// ── Contacto en la lista de renovaciones (05/09/2026) ───────────────────────
+// La tabla existe para llamar, así que el teléfono viaja con la fila. Los tres
+// estados no se pueden colapsar: sin bloque = «no se ha podido mirar»; con
+// bloque y todo a null = «se miró y no hay»; ilegible = «está y no se abre».
+
+test('vencimientos: sin bloque de contacto llega null, NUNCA un contacto a ceros', () => {
+  const r = interpretarVencimientos(200, VENC_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.equal(r.polizas[0].contacto, null)
+})
+
+test('vencimientos: un contacto vacío SÍ afirma que no hay teléfono ni email', () => {
+  const con = {
+    ...VENC_OK,
+    polizas: [{ ...FILA_OK, contacto: { telefono: null, telefonoIlegible: false, email: null, emailIlegible: false } }],
+  }
+  const r = interpretarVencimientos(200, con)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') {
+    assert.deepEqual(r.polizas[0].contacto, {
+      telefono: null, telefonoIlegible: false, email: null, emailIlegible: false,
+    })
+  }
+})
+
+test('vencimientos: el teléfono cifrado no se confunde con no tenerlo', () => {
+  const con = {
+    ...VENC_OK,
+    polizas: [{ ...FILA_OK, contacto: { telefono: null, telefonoIlegible: true, email: 'a@b.es', emailIlegible: false } }],
+  }
+  const r = interpretarVencimientos(200, con)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') {
+    assert.equal(r.polizas[0].contacto?.telefonoIlegible, true)
+    assert.equal(r.polizas[0].contacto?.email, 'a@b.es')
+  }
+})
+
+test('vencimientos: un contacto con forma rara degrada a null y NO tumba la lista', () => {
+  const r = interpretarVencimientos(200, { ...VENC_OK, polizas: [{ ...FILA_OK, contacto: 'jose@ejemplo.es' }] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.equal(r.polizas[0].contacto, null)
+})
+
+// ── Último contacto de renovación (WhatsApp) ────────────────────────────────
+
+test('vencimientos: sin `ultimoContactoEn` (versión vieja de asegura) es null, no "nunca contactado"', () => {
+  const r = interpretarVencimientos(200, VENC_OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.equal(r.polizas[0].ultimoContactoEn, null)
+})
+
+test('vencimientos: `ultimoContactoEn` se propaga tal cual cuando el puerto lo manda', () => {
+  const con = { ...VENC_OK, polizas: [{ ...FILA_OK, ultimoContactoEn: '2026-09-14' }] }
+  const r = interpretarVencimientos(200, con)
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.equal(r.polizas[0].ultimoContactoEn, '2026-09-14')
+})
+
+// ── El techo de la lista de renovaciones ────────────────────────────────────
+
+test('🚨 vencimientos: `truncado` ausente es null («no se sabe»), NUNCA false', () => {
+  // Una asegura desplegada más vieja no manda el campo. Leerlo como `false`
+  // afirmaría que la lista de llamadas está completa sin haberlo comprobado,
+  // sobre pólizas que se prorrogan solas pasado el preaviso (LCS art. 22).
+  const viejo = interpretarVencimientos(200, { estado: 'ok', dias: 90, polizas: [] })
+  assert.equal(viejo.estado === 'ok' && viejo.truncado, null)
+
+  // Una forma rara tampoco se cree: tri-estado de verdad.
+  const raro = interpretarVencimientos(200, { estado: 'ok', dias: 90, polizas: [], truncado: 'si' })
+  assert.equal(raro.estado === 'ok' && raro.truncado, null)
+})
+
+test('vencimientos: `false` y `true` se propagan tal cual', () => {
+  const completa = interpretarVencimientos(200, { estado: 'ok', dias: 90, polizas: [], truncado: false })
+  assert.equal(completa.estado === 'ok' && completa.truncado, false)
+  const corta = interpretarVencimientos(200, { estado: 'ok', dias: 90, polizas: [], truncado: true })
+  assert.equal(corta.estado === 'ok' && corta.truncado, true)
+})
+
+// 🚨 20/09/2026. Dos huecos del MISMO camino, encontrados al auditar:
+// (1) el puerto mandaba `vencidasAntiguas` y `diasAtras` y este lector NO los
+//     leía, así que el pie de Renovaciones decía siempre «asegura no lo
+//     informa» sobre un dato que estaba en la respuesta; y
+// (2) la consulta que produce ese número no filtraba cartera viva: medido
+//     contra la BD real devolvía 979 cuando la cartera son 8 (971 del volcado
+//     de 2013-2018, la más antigua venciendo en 1900).
+// Juntos habrían puesto «979 pólizas figuran vigentes con vencimiento
+// anterior…» en la pantalla de Alberto. Se arreglan los dos o no se arregla
+// ninguno: tapar solo el passthrough ENCIENDE la cifra falsa.
+test('🚨 vencidasAntiguas y diasAtras LLEGAN del puerto a la pantalla', () => {
+  const r = interpretarVencimientos(200, {
+    estado: 'ok', dias: 90, diasAtras: 365, vencidasAntiguas: 8, polizas: [],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.vencidasAntiguas, 8)
+  assert.equal(r.diasAtras, 365)
+})
+
+test('🚨 ausentes son null, jamás 0: «no se sabe» ≠ «la cartera está limpia»', () => {
+  const r = interpretarVencimientos(200, { estado: 'ok', dias: 90, polizas: [] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.vencidasAntiguas, null, 'un 0 aquí afirmaría que no queda ninguna vencida antigua')
+  assert.equal(r.diasAtras, null)
+})
+
+test('un 0 SÍ es una afirmación y se conserva: se contó y no hay ninguna', () => {
+  const r = interpretarVencimientos(200, {
+    estado: 'ok', dias: 90, diasAtras: 365, vencidasAntiguas: 0, polizas: [],
+  })
+  assert.equal(r.estado === 'ok' && r.vencidasAntiguas, 0)
+})
+
+test('🚨 el recuento de vencidas antiguas filtra CARTERA VIVA', () => {
+  // Vive en `apps/asegura/lib/cartera.ts` y se lee del FUENTE: la consulta va
+  // en un `where` de Prisma, donde ni `tsc` ni el build comprueban nada contra
+  // la regla de negocio. Sin este filtro la cifra se multiplica por 122.
+  const src = readFileSync(
+    new URL('../../asegura/lib/cartera.ts', import.meta.url), 'utf8',
+  ).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+  const cuerpo = src.slice(src.indexOf('export async function vencidasFueraDeVentana'))
+  assert.match(
+    cuerpo.slice(0, 700),
+    /\.\.\.WHERE_CARTERA_VIVA/,
+    'vencidasFueraDeVentana cuenta el volcado histórico como si fuera cartera',
+  )
 })

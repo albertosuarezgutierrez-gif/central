@@ -1,0 +1,101 @@
+import Link from 'next/link'
+
+import type { PolizaPortal } from '@/lib/cartera-lectura'
+import { fechaEs } from '@/lib/fechas'
+
+import { ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBien } from './PolizaVista'
+
+/**
+ * Una póliza en la LISTA: una fila, no una tarjeta.
+ *
+ * 🚨 Por qué cambió (05/09/2026). Alberto, mirando su propia bóveda: «muy
+ * sucia la página… resumen de lo q es, icono de ramo, datos principal, y ya
+ * pinchando entra en lo q sea». Tenía razón en el diagnóstico: la pantalla
+ * pintaba coberturas, recibos, prima, vencimiento y chips **de todas** las
+ * pólizas a la vez. Eso no se arregla con CSS.
+ *
+ * Y de paso resuelve la contradicción de sus dos peticiones del mismo día
+ * («poca informacion» y «todo más sencillo»): el resumen es simple, la ficha es
+ * completa. Ya no hay que elegir entre las dos.
+ *
+ * Lo que SÍ se queda en la fila, y no es negociable:
+ *
+ * - **El bien como titular.** Nadie se sabe su número de póliza; reconoce su
+ *   coche y su calle. Es lo único que distingue dos pólizas de hogar de la
+ *   misma compañía.
+ * - **El recibo devuelto.** Es lo único de una póliza que puede dejar a alguien
+ *   sin cobertura sin que se entere, así que **no puede quedar detrás de un
+ *   clic**. Va como chip de peligro en la fila; el aviso entero, con la acción
+ *   al lado, sigue en la ficha.
+ * - **De quién es**, cuando no es tuya. Misma razón que la etiqueta de la
+ *   tarjeta: quien cree que la póliza del coche de su padre es suya no llama a
+ *   la compañía cuando hay que llamar.
+ *
+ * Lo que se va a la ficha: prima, recibos, coberturas, siniestros abiertos y
+ * los teléfonos de la compañía.
+ */
+export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | null }) {
+  const vence = fechaEs(p.fechaVencimiento)
+  const ramo = RAMO[p.ramo] ?? p.ramo
+  // Si el titular ya es el bien, la compañía baja a la segunda línea; si no, el
+  // titular YA es «compañía · ramo» y repetirlo debajo sería ruido.
+  //
+  // 🚨 Pero entonces hace falta OTRA cosa que distinga la fila, y por eso entra
+  // el número de póliza. Sin él, dos hogares de la misma compañía salen con el
+  // MISMO título y la misma segunda línea, y solo se diferencian por la fecha
+  // de vencimiento: es justo lo que avisaba el docblock de `tituloDePoliza`
+  // («a casi nadie le dice nada "Occident" a secas cuando tiene dos con
+  // ellos») y pasaba de verdad — visto el 06/09/2026 en dos hogar de Occident.
+  // Le pasa a quien no ve el bien porque la compañía no lo ha informado. (El
+  // otro motivo de aquel día —el nivel no llegaba a la dirección— ya no existe:
+  // desde el 07/09/2026 `direccionRiesgo` se sirve desde el nivel más bajo,
+  // porque en un hogar la dirección hace de matrícula. Ver `acceso.ts`.) El
+  // número NO abre nada nuevo — `numeroPoliza` ya se sirve desde el nivel más
+  // bajo—, y si tampoco lo hay se cae a la fecha, como antes.
+  const identificaSola = tituloEsBien(p) ? `${p.compania} · ${ramo}` : p.numeroPoliza ? `Nº ${p.numeroPoliza}` : null
+  const meta = [identificaSola, vence ? `Vence el ${vence}` : null]
+    .filter(Boolean)
+    .join(' · ')
+  const devueltos = p.recibos?.devueltos ?? 0
+
+  return (
+    <li
+      className="poliza-fila"
+      data-de-otro={deOtro ? 'si' : undefined}
+      // El filete de la izquierda dice el ESTADO de un vistazo. `peligro` solo
+      // para lo que quita cobertura; una póliza vencida o en renovación es
+      // `aviso`. Sin estado no hay filete: la mayoría de las filas están bien y
+      // pintarlas todas de un color deja de significar nada.
+      data-estado={devueltos > 0 ? 'peligro' : p.vigencia !== 'vigente' ? 'aviso' : undefined}
+    >
+      <Link href={`/boveda/poliza/${p.id}`} className="poliza-enlace">
+        <IconoRamo ramo={p.ramo} />
+        <span className="poliza-cuerpo">
+          <span className="poliza-titulo">{tituloDePoliza(p)}</span>
+          {meta && <span className="poliza-meta">{meta}</span>}
+          <span className="chips">
+            {/* 🚨 Arriba de todo lo demás y en rojo: un recibo devuelto es lo
+                único que puede costarle la cobertura, y esconderlo detrás del
+                clic sería exactamente el fallo que la regla de la casa
+                persigue — no falla nada, simplemente no se ve. */}
+            {devueltos > 0 && (
+              <span className="chip peligro">
+                {devueltos === 1 ? 'Recibo devuelto' : `${devueltos} recibos devueltos`}
+              </span>
+            )}
+            <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>
+              {ESTADO[p.estado] ?? p.estado}
+            </span>
+            {deOtro && <span className="chip acento">De {deOtro}</span>}
+            {p.sustituyeA && <span className="chip">Sustituye a {p.sustituyeA.compania}</span>}
+          </span>
+        </span>
+        {/* Decorativo: lo que anuncia que se puede entrar es que la fila ENTERA
+            es un enlace, no esta flecha. */}
+        <span className="poliza-flecha" aria-hidden>
+          ›
+        </span>
+      </Link>
+    </li>
+  )
+}

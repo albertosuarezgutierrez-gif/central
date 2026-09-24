@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
 
 type Restaurante = {
   id: string
@@ -64,21 +65,23 @@ export default function RestauranteDetalleClient({ id }: { id: string }) {
         </Link>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '28px', flexWrap: 'wrap', gap: '12px' }}>
-        <div>
-          <h1 style={{ fontSize: '22px', fontWeight: 700, margin: '0 0 4px' }}>{restaurante.nombre}</h1>
-          {restaurante.nombre_comercial && restaurante.nombre_comercial !== restaurante.nombre && (
-            <div style={{ fontSize: '13px', color: 'var(--muted)' }}>{restaurante.nombre_comercial}</div>
-          )}
-        </div>
-        <span style={{
-          fontSize: '13px', fontWeight: 600, padding: '4px 12px', borderRadius: '8px',
-          background: restaurante.activo ? '#16a34a20' : '#94a3b820',
-          color: restaurante.activo ? 'var(--positive)' : 'var(--muted)',
-        }}>
-          {restaurante.activo ? 'Activo' : 'Inactivo'}
-        </span>
-      </div>
+      <PageHeader
+        titulo={restaurante.nombre}
+        sub={
+          restaurante.nombre_comercial && restaurante.nombre_comercial !== restaurante.nombre
+            ? restaurante.nombre_comercial
+            : undefined
+        }
+        acciones={
+          <span style={{
+            fontSize: '13px', fontWeight: 600, padding: '4px 12px', borderRadius: '8px',
+            background: restaurante.activo ? '#16a34a20' : '#94a3b820',
+            color: restaurante.activo ? 'var(--positive)' : 'var(--muted)',
+          }}>
+            {restaurante.activo ? 'Activo' : 'Inactivo'}
+          </span>
+        }
+      />
 
       {/* Stats del día */}
       {stats && (

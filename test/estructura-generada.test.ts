@@ -9,7 +9,7 @@ import { join } from 'node:path'
 const R = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'apps', 'plataforma', 'lib', 'estructura.generated.json'), 'utf8'))
 
 test('la radiografía tiene los campos enriquecidos del mapa', () => {
-  for (const k of ['depsModulos', 'apisPorVertical', 'tablasPorVertical', 'skills', 'novedades', 'saludRepo']) {
+  for (const k of ['depsModulos', 'apisPorVertical', 'tablasPorVertical', 'skills', 'saludRepo']) {
     assert.ok(k in R, `falta el campo ${k}`)
   }
 })
@@ -33,4 +33,18 @@ test('skills no vacío y bien formado; el resumen cuadra', () => {
     assert.equal(typeof s.description, 'string')
   }
   assert.equal(R.resumen.skills, R.skills.length)
+})
+
+// `novedades` salió a su propio generado (02/09/2026): se deriva de la memoria, no del código,
+// y mezclarla aquí hacía que cada PR que anotara memoria reescribiera este JSON.
+test('las novedades viven en su propio generado, no en la radiografía', () => {
+  assert.ok(!('novedades' in R), 'la radiografía no debe llevar el diario de memoria dentro')
+  const N = JSON.parse(
+    readFileSync(join(import.meta.dirname, '..', 'apps', 'plataforma', 'lib', 'novedades.generated.json'), 'utf8'),
+  )
+  assert.ok(Array.isArray(N.novedades) && N.novedades.length > 0, 'no hay novedades generadas')
+  for (const n of N.novedades) {
+    assert.equal(typeof n.titulo, 'string')
+    assert.equal(typeof n.fecha, 'string')
+  }
 })

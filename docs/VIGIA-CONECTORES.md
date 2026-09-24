@@ -9,7 +9,7 @@
 
 ## Última pasada
 
-`—` (sin pasada aún; sembrado a mano el 21/08/2026 con lo verificado esa sesión)
+**05/09/2026** — primera pasada real de la rutina programada. Ver hallazgos abajo.
 
 ## Veredictos
 
@@ -56,8 +56,34 @@
 
 ## Higiene de los conectados
 
-*(lo rellena la primera pasada — paso 4: sin uso, `installState: unknown`, con herramientas de escritura)*
+> ⚠️ Alcance real: `ListConnectors` solo ve el estado A NIVEL DE CUENTA (`installState`), no qué
+> conectores lleva adjuntos cada rutina — eso solo se verifica abriendo la rutina en la UI (ver
+> `docs/RUTINAS-PROGRAMADAS.md`). Esta tabla es higiene de cuenta, no auditoría por rutina.
+
+| Conector | `installState` | Uso real (evidencia en el repo) | Acción |
+|---|---|---|---|
+| **Expedia** | `needs_reconnect` (roto, sin re-auth) | **SÍ** — `pricing-agente` lo usa como 2ª fuente de mercado (`mcp__Expedia__search_hotels`, `ciclo.md` Paso 2) y como única fuente de demanda por vuelos (`mcp__Expedia__search_flights`, Fase 3 opcional). Diseño resiliente («triangula 2-3 OTAs: si una falla, las otras cubren»), así que no rompe el ciclo, pero lo deja triangulando con 1 fuente menos y sin la señal de vuelos, en silencio. | Reconectar (requiere OAuth de Alberto). |
+| Google Cloud BigQuery | `needs_reconnect` | No se encontró uso en skills/docs. | Ninguna (no urgente). |
+| Linear | `needs_reconnect` | No se encontró uso en skills/docs. | Ninguna (no urgente). |
+| Stripe (conector MCP) | `needs_reconnect` | El repo integra Stripe por API propia (`core-email`/ia-rest), no por este conector MCP — sin evidencia de que ningún agente lo llame. | Ninguna (no urgente). |
+| higgsfield, Otto Travel, PayPal, Windsor.ai | `unknown` | Sin uso encontrado. | Ninguna. |
+| Morningstar, MSCI | `unknown` | Ya descartados (ver tabla de veredictos arriba). | Ninguna. |
+| HubSpot, Resend, PDF Viewer | `connected` pero sin uso encontrado | Resend consta EXPLÍCITAMENTE retirado como adjunto de serie de `mercado-booking`/`pricing-agente` (`docs/RUTINAS-PROGRAMADAS.md`). | Candidatos a desconectar si Alberto no les ve uso futuro (no se actúa sin su OK). |
+| Tripadvisor, Trivago, lastminute.com | `connected` | **SÍ** — `pricing-agente` (3ª fuente / fallback si Booking o Expedia fallan). | Ninguna. |
+| Wyndham, DirectBooker | `connected` | Sin uso encontrado (cadenas hoteleras; SIVRA es host, no agregador). | Candidatos a desconectar (no se actúa sin su OK). |
+| Booking.com, IBKR, Alpha Vantage, Datos financieros, Adobe, Gmail, Google Drive, Supabase (×3), openrouter, Vercel | `connected` | En uso confirmado por otras rutinas/skills. | Ninguna. |
 
 ## Bitácora de hallazgos
 
-*(vacía; una línea por hallazgo, con fecha y URL/evidencia)*
+- **05/09/2026 — confirmado (ya no «probablemente»): esta rutina corre sin NINGÚN conector
+  adjunto.** `SearchMcpRegistry`/`ListConnectors` respondieron con normalidad (son nativas del
+  harness), pero una búsqueda de las herramientas `mcp__ibkr__*` / `mcp__booking__*` por nombre no
+  encontró nada, y `ListConnectors` devolvió `enabledInChat: false` en los ~30 conectores de la
+  cuenta sin excepción. **Consecuencia estructural: el Paso 3 (canario con llamada real a
+  Booking/IBKR/Alpha Vantage/Datos financieros) es IMPOSIBLE de ejecutar desde esta sesión tal como
+  está configurada hoy.** No es un fallo de esta pasada — es el diseño de mínimo alcance funcionando
+  como se pretendía —, pero deja el paso más valioso del skill (el canario) sin ejecutar mes a mes.
+  Alberto decide si vale la pena adjuntar Booking.com + IBKR de solo lectura a esta rutina para
+  poder cumplir el Paso 3, asumiendo el coste de superficie.
+- **05/09/2026 — Expedia en `needs_reconnect`.** Ver fila de higiene arriba. `pricing-agente` sigue
+  operando (diseño resiliente) pero con una fuente de mercado menos y sin demanda por vuelos.

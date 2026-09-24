@@ -1,6 +1,9 @@
 // Orquestador de la cotización: la única puerta por la que se gasta dinero.
 //
 // El orden de los pasos ES el diseño:
+//   0. Simulación     → si está puesta, se devuelve una cotización INVENTADA y
+//                       marcada (`simulado: true`) y no se toca nada más: ni
+//                       vendor, ni libro, ni tope. No ha costado nada.
 //   1. Config          → si está apagada o incompleta, no hay llamada.
 //   2. Ámbito          → sin correduría no hay libro contra el que contar.
 //   3. Libro           → si no se puede leer, NO se cotiza (fail closed).
@@ -13,14 +16,49 @@
 // exactamente lo que convierte un tope en un adorno.
 
 import { randomUUID } from 'node:crypto'
-import { resolverConfig, explicarConfig, COSTE_COTIZACION_CENTS, type Topes } from './config.ts'
+import {
+  resolverConfig,
+  explicarConfig,
+  simulacionActiva,
+  COSTE_COTIZACION_CENTS,
+  type Topes,
+} from './config.ts'
 import { puedeCotizar, eurCents, type Veredicto, type Consumo } from './contador.ts'
 import { consumoActual, reservar, cerrarFacturable, cerrarDescartado } from './consumo.ts'
 import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
+import { cotizacionSimulada } from './simulacion.ts'
+import {
+  guardarSinTumbar,
+  type ContextoCotizacion,
+  type Guardado,
+  type GuardarCotizacion,
+} from './cotizaciones.ts'
 
 export type ResultadoCotizacion =
-  | { ok: true; cotizacion: Cotizacion; coste: string; restantesHoy: number }
+  | {
+      ok: true
+      /**
+       * 🚨 `true` = la cotización NO la ha dado ninguna compañía: la ha
+       * inventado `simulacion.ts` porque el modo simulación está puesto en el
+       * servidor. Es un dato del objeto, no un texto dentro de un mensaje, para
+       * que no se pueda perder por el camino: quien pinte esto tiene que poder
+       * distinguirlo de un precio real sin leer prosa.
+       */
+      simulado: boolean
+      cotizacion: Cotizacion
+      coste: string
+      /** `null` = no se ha mirado el libro (simulación). NO es «quedan 0». */
+      restantesHoy: number | null
+      /**
+       * Qué pasó con la COPIA en `seguros.tarificaciones`. Tres estados y no un
+       * booleano: «guardada», «se intentó y falló (con el motivo)» y «ni se
+       * intentó». El precio de arriba vale igual —ya está pagado— pero quien lo
+       * pinte tiene que poder decir que no ha quedado copia, en vez de suponer
+       * que sí. Un `guardado: true` optimista sería justo la mentira barata.
+       */
+      guardado: Guardado
+    }
   | { ok: false; razon: 'apagado' | 'mal-configurado' | 'sin-libro' | 'tope' | 'vendor'; mensaje: string }
 
 export type PeticionCotizacion = {
@@ -30,6 +68,57 @@ export type PeticionCotizacion = {
   /** Por qué se gasta: 'smoke', 'alta-manual', 'defensa-cartera'… Va al libro. */
   motivo: string
   solicitadoPor: string
+  /**
+   * De dónde viene (ramo, puerta, póliza, cliente). Es lo que hace guardable la
+   * cotización: sin él NO se inventa un ramo ni una puerta, simplemente no se
+   * guarda y el resultado lo dice (`guardado.estado === 'no_intentada'`).
+   */
+  contexto?: ContextoCotizacion
+}
+
+/**
+ * Lo que el embudo llama y un test puede doblar. Solo la persistencia: la
+ * llamada al vendor y el libro de consumo NO se doblan aquí a propósito, para
+ * que no exista un camino por el que alguien pueda saltarse el tope.
+ */
+export type DepsCotizar = { guardar?: GuardarCotizacion }
+
+/**
+ * Guarda la cotización sin poder tumbarla.
+ *
+ * 🚨 El orden y el `try` de aquí son la decisión de diseño del módulo: cuando
+ * se llega a este punto el cliente YA ha pagado los 0,50€ y YA tiene su precio.
+ * Perderlo por un error de BD sería cobrárselo dos veces. Así que el fallo se
+ * REGISTRA en el resultado —con su motivo— y no cambia ni el precio ni el `ok`.
+ */
+async function anotar(
+  deps: DepsCotizar,
+  p: PeticionCotizacion,
+  extra: { cotizacion: Cotizacion; intentoId: string | null; simulado: boolean },
+): Promise<Guardado> {
+  if (!p.contexto) {
+    return {
+      estado: 'no_intentada',
+      motivo:
+        'no se ha declarado el contexto (ramo y puerta), y eso no se adivina: un ramo ' +
+        'inventado en la tabla se leería después como un dato.',
+    }
+  }
+  try {
+    const guardar = deps.guardar ?? guardarSinTumbar
+    return await guardar({
+      correduriaId: p.correduriaId,
+      contexto: p.contexto,
+      peticion: p.cuerpo,
+      solicitadoPor: p.solicitadoPor,
+      ...extra,
+    })
+  } catch (e) {
+    // `guardarSinTumbar` ya no lanza; este `catch` cubre cualquier futura
+    // implementación que sí lo haga. Una cotización pagada no se pierde nunca
+    // por un fallo de escritura.
+    return { estado: 'no_guardada', motivo: e instanceof Error ? e.message : String(e) }
+  }
 }
 
 /**
@@ -99,7 +188,44 @@ export async function estadoConsumo(
 export async function cotizar(
   p: PeticionCotizacion,
   env: Record<string, string | undefined> = process.env,
+  deps: DepsCotizar = {},
 ): Promise<ResultadoCotizacion> {
+  // 0 — SIMULACIÓN. Va lo PRIMERO, y por eso el resto de pasos ni se ejecuta:
+  // no hay llamada, luego no hay cargo; y sin cargo no hay nada que reservar,
+  // que cerrar ni que contar contra el tope. El interruptor sale de `env` —del
+  // servidor—, nunca de `p`: si viniera en la petición, cualquiera podría pedir
+  // que la app enseñara precios inventados a un cliente.
+  if (simulacionActiva(env)) {
+    // El RAMO viaja hasta el simulador: sin él usaba el molde de hogar para
+    // todo y una póliza de auto salía con compañías de hogar y primas de 50€
+    // (fallo medido el 03/09/2026). El contexto es opcional, así que puede no
+    // venir; `moldeDeRamo` decide qué hacer entonces.
+    const inventada = cotizacionSimulada(p.cuerpo, p.contexto?.ramo)
+    // Se guarda IGUAL que una real, y a propósito: así se puede recorrer la
+    // pantalla entera sin gastar. Va marcada `simulado: true` y SIN intentoId
+    // —no hay línea en el libro porque no hubo llamada ni cargo—, que es el
+    // invariante `simulado = (intento_id is null)` de la tabla. El índice
+    // parcial deja lo simulado fuera de toda estimación.
+    const guardado = await anotar(deps, p, {
+      cotizacion: inventada,
+      intentoId: null,
+      simulado: true,
+    })
+    return {
+      ok: true,
+      simulado: true,
+      cotizacion: inventada,
+      // No ha costado nada, y esto no es un redondeo: no ha salido la petición.
+      coste: eurCents(0),
+      // No se ha leído `seguros.codeoscopic_consumo` (no hacía falta), así que
+      // no se sabe cuántas quedan hoy. `null` es «no se ha mirado»; un número
+      // aquí sería inventar cupo. Tampoco se anota nada EN EL LIBRO: una
+      // simulación no consume tope ni alimenta ninguna estimación posterior.
+      restantesHoy: null,
+      guardado,
+    }
+  }
+
   // 1 — Config
   const r = resolverConfig(env)
   if (r.estado === 'apagado') return { ok: false, razon: 'apagado', mensaje: explicarConfig(r) }
@@ -157,11 +283,19 @@ export async function cotizar(
     // 7 — Cierre. El projectId es la prueba del cargo y la clave del webhook.
     await cerrarFacturable(intentoId, cotizacion.projectId)
 
+    // 8 — La copia de los precios. DESPUÉS del cierre, y nunca antes: si
+    // guardar tumbara el paso 7, un cargo real de 0,50€ se quedaría sin apuntar
+    // en el libro y el tope contaría de menos justo cuando más falta hace.
+    const guardado = await anotar(deps, p, { cotizacion, intentoId, simulado: false })
+
     return {
       ok: true,
+      // Explícito: este precio SÍ lo ha dado una compañía y SÍ ha costado 0,50€.
+      simulado: false,
       cotizacion,
       coste: eurCents(COSTE_COTIZACION_CENTS),
       restantesHoy: veredicto.restantesHoy - 1,
+      guardado,
     }
   } catch (e) {
     if (e instanceof ErrorCodeoscopic && e.pruebaQueNoHuboCargo) {

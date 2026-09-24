@@ -33,8 +33,69 @@ export const DIAS_PREAVISO_ASEGURADOR = 60
 /** Horizonte por defecto al pedir «los próximos vencimientos». */
 export const DIAS_HORIZONTE_RENOVACION = 90
 
+/**
+ * Una ANUALIDAD. No es un número redondo elegido a ojo: es el periodo de
+ * prórroga que fija la LCS art. 22 —el contrato se prorroga por periodos de un
+ * año— y de ahí sale el único corte que separa dos cosas que la BD escribe
+ * igual:
+ *
+ *   - una póliza VIVA que nadie ha renovado todavía arrastra un vencimiento
+ *     reciente: la renovación existe (o está por llegar) y su fecha se moverá
+ *     un año hacia delante en cuanto la compañía la mande;
+ *   - una póliza cuyo ÚLTIMO vencimiento conocido es anterior a una anualidad
+ *     entera NO puede estar describiendo la anualidad en curso: aunque se
+ *     hubiera prorrogado tácitamente, la fecha ya se habría movido. Lo que hay
+ *     ahí es una fila abandonada, no trabajo de esta semana.
+ *
+ * Medido sobre la cartera real (19-20/09/2026): 17 pólizas en estado vigente
+ * con el vencimiento pasado se parten limpiamente en dos por este corte —9 de
+ * Mapfre vencidas hace 41-107 días (4.377,51 € de prima, y Mapfre lleva 89 días
+ * sin mandar un EIAC: la renovación existe y no ha llegado) y 8 de 2013-2019,
+ * o sea 7-13 anualidades, con prima 0. Entre 107 y 2.552 días no hay ni una
+ * sola fila, así que el corte no parte ninguna población por la mitad.
+ */
+export const DIAS_ANUALIDAD = 365
+
+/**
+ * La fecha más antigua que sigue siendo trabajo de renovación.
+ *
+ * Es el borde IZQUIERDO de la ventana: hacia atrás se mira una anualidad, no
+ * cero. Un vencimiento que cayó ayer sin gestionar no deja de existir por haber
+ * pasado — es justo cuando más urge—, y antes de esto la lista lo perdía.
+ */
+export function inicioVentanaRecuperacion(hoy: Date, dias: number = DIAS_ANUALIDAD): Date {
+  const d = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate()))
+  d.setUTCDate(d.getUTCDate() - dias)
+  return d
+}
+
+/** `true` si el vencimiento ya pasó pero sigue dentro de la anualidad en curso:
+ *  se recupera. `false` tanto para lo que aún no ha vencido como para lo que
+ *  venció hace más de una anualidad (eso es dato a depurar, no una llamada). */
+export function esVencidaRecuperable(dias: number, ventana: number = DIAS_ANUALIDAD): boolean {
+  return dias < 0 && dias >= -ventana
+}
+
+/**
+ * Cómo se dice el plazo en pantalla y en Telegram.
+ *
+ * Existe porque el signo se perdía: la tabla pintaba `en ${dias} días` sin
+ * mirar el signo, así que una póliza vencida hace 41 días —si es que llegaba a
+ * salir— se anunciaba como «en -41 días». El titular va en un helper puro
+ * (regla global), no en el JSX.
+ */
+export function descripcionDias(dias: number): string {
+  if (dias === 0) return 'hoy'
+  if (dias > 0) return `en ${dias} día${dias === 1 ? '' : 's'}`
+  const pasados = -dias
+  return `hace ${pasados} día${pasados === 1 ? '' : 's'}`
+}
+
 export type UrgenciaRenovacion =
-  /** Ya venció: no es una renovación, es una recuperación. */
+  /** Ya venció: no es una renovación, es una recuperación. Se emite para todo
+   *  vencimiento pasado que entre en la ventana de lectura; quien consulta es
+   *  responsable de mirar hacia atrás (`inicioVentanaRecuperacion`), porque una
+   *  consulta que empieza en HOY no puede devolver esta urgencia jamás. */
   | 'vencida'
   /** Dentro del mes de preaviso: la prórroga ya no se puede evitar en plazo. */
   | 'prorroga_inevitable'

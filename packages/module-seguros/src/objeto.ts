@@ -35,6 +35,22 @@ export type ObjetoAsegurado = {
   detalle: string | null
   /** Por qué falta (o por qué está a medias). Va al `title` de la celda. */
   nota: string | null
+  /**
+   * El desglose ENTERO de coberturas cuando el objeto se describe por ellas (RC,
+   * comercio, otros) — a diferencia de `titulo`/`detalle`, que las resumen para
+   * caber en una celda. `null` en cualquier otro ramo o si no hay coberturas.
+   * Con ella la UI puede pintar un "tipo" corto y dejar el desglose completo
+   * detrás de un clic, sin tener que volver a parsear `titulo`.
+   */
+  coberturas?: string[] | null
+  /**
+   * Desglose del capital asegurado por partida (p.ej. «Continente: 150.000,00 €»,
+   * «Contenido: 30.000,00 €») cuando la compañía lo informa así
+   * (`Riesgo.Capitales.Capital[]` del EIAC, distinto del `CapitalAsegurado` de
+   * una cobertura concreta). `null`/ausente si el ramo no trae esta lista o si
+   * el estado no es `conocido` (no se enseña un desglose sin bien identificado).
+   */
+  capitalAsegurado?: string[] | null
 }
 
 /** Prefijo del cifrado del CRM de origen (AES-256-GCM, `v1:iv:cipher:tag`). */
@@ -101,14 +117,53 @@ export type EntradaObjeto = {
   coberturas?: Array<string | null | undefined> | null
 }
 
+/**
+ * El desglose de `Riesgo.Capitales.Capital[]` del EIAC (hogar/comercio/
+ * comunidades/RC), ya formateado en líneas listas para pintar. NO es el mismo
+ * dato que `Cobertura.CapitalAsegurado` (que ya usa `casos.ts` de Codeoscopic
+ * vía `poliza_coberturas`): este es el desglose POR PARTIDA del bien, y viene
+ * en un bloque EIAC distinto. `null` si no hay partidas con dato real.
+ */
+export function formatCapitales(d: Record<string, unknown>): string[] | null {
+  const raw = d.capitales
+  if (!Array.isArray(raw)) return null
+  const out: string[] = []
+  for (const item of raw) {
+    if (item === null || typeof item !== 'object') continue
+    const o = item as Record<string, unknown>
+    const etiqueta = claro(o.bien) ?? claro(o.descripcion)
+    const importe = numero(o.importe)
+    // Formato de dinero español (regla global): miles con punto SIEMPRE
+    // (`useGrouping: 'always'`, si no Node no agrupa por debajo de 5 cifras),
+    // decimales con coma, € detrás.
+    const importeTxt = importe !== null
+      ? `${importe.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`
+      : null
+    const linea = etiqueta !== null && importeTxt !== null ? `${etiqueta}: ${importeTxt}` : (etiqueta ?? importeTxt)
+    if (linea !== null) out.push(linea)
+  }
+  return out.length > 0 ? out : null
+}
+
 export function objetoAsegurado(entrada: EntradaObjeto): ObjetoAsegurado {
   const tipo = (entrada.tipo || '').toLowerCase()
   const d = entrada.datos && typeof entrada.datos === 'object' ? entrada.datos : {}
+  const resultado = calcularObjeto(tipo, d, entrada.coberturas)
+  if (resultado.estado !== 'conocido') return resultado
+  const capitalAsegurado = formatCapitales(d)
+  return capitalAsegurado === null ? resultado : { ...resultado, capitalAsegurado }
+}
 
+function calcularObjeto(
+  tipo: string,
+  d: Record<string, unknown>,
+  coberturas: EntradaObjeto['coberturas'],
+): ObjetoAsegurado {
   if (tipo === 'auto' || tipo === 'moto') return objetoVehiculo(d)
-  if (tipo === 'hogar' || tipo === 'comunidad') return objetoInmueble(d, tipo)
-  if (tipo === 'comercio') return objetoComercio(d, entrada.coberturas)
-  if (tipo === 'responsabilidad_civil') return objetoResponsabilidadCivil(entrada.coberturas)
+  // `comunidades` es el valor del enum `tipo_seguro` de la BD; `comunidad` el del portal.
+  if (tipo === 'hogar' || tipo === 'comunidad' || tipo === 'comunidades') return objetoInmueble(d, tipo)
+  if (tipo === 'comercio') return objetoComercio(d, coberturas)
+  if (tipo === 'responsabilidad_civil') return objetoResponsabilidadCivil(d, coberturas)
   if (RAMOS_DE_PERSONAS.has(tipo)) {
     return {
       estado: 'sin_objeto',
@@ -117,7 +172,7 @@ export function objetoAsegurado(entrada: EntradaObjeto): ObjetoAsegurado {
       nota: 'Es un seguro de personas: no hay bien asegurado que listar.',
     }
   }
-  return objetoGenerico(d, entrada.coberturas)
+  return objetoGenerico(d, coberturas)
 }
 
 function objetoVehiculo(d: Record<string, unknown>): ObjetoAsegurado {
@@ -183,10 +238,11 @@ function objetoInmueble(d: Record<string, unknown>, tipo: string): ObjetoAsegura
   }
   return {
     estado: 'conocido',
-    titulo: titulo ?? (tipo === 'comunidad' ? 'Comunidad' : 'Vivienda'),
+    titulo: titulo ?? (tipo.startsWith('comunidad') ? 'Comunidad' : 'Vivienda'),
     detalle,
     nota: direccionClara !== null
-      ? null
+      // Anotada desde /correduria (19/09/2026): se dice que no vino de la compañía.
+      ? (claro(d.direccionOrigen) === 'manual' ? 'Dirección anotada a mano por la correduría; la compañía no la informa por CIMA.' : null)
       : direccionCifrada
         ? 'La calle exacta viene cifrada del CRM de origen: aquí solo se puede mostrar localidad y código postal.'
         : 'Sin dirección informada por la compañía.',
@@ -215,12 +271,50 @@ function objetoComercio(
  * Una RC no tiene bien: tiene MODALIDAD. Lo que la describe («de qué es») son
  * las coberturas contratadas — locativa, patronal/accidentes de trabajo,
  * explotación… y eso vive en `poliza_coberturas`, no en `datos_especificos`.
+ *
+ * Cuando la compañía no manda coberturas (el caso más frecuente en RC: es un
+ * ramo sin ficha del bien) el corredor puede anotar la modalidad A MANO desde
+ * la ficha de la póliza (`rc-modalidad.ts`, catálogo cerrado). Ese dato vive
+ * en `datos_especificos.rcModalidad`/`rcModalidadNota` y es MANUAL: se dice
+ * como tal en la nota, y nunca sustituye a lo que sí mande CIMA — si llegan
+ * coberturas reales, esas mandan siempre sobre lo escrito a mano.
  */
-function objetoResponsabilidadCivil(coberturas: EntradaObjeto['coberturas']): ObjetoAsegurado {
-  return porCoberturas(
+function objetoResponsabilidadCivil(
+  d: Record<string, unknown>,
+  coberturas: EntradaObjeto['coberturas'],
+): ObjetoAsegurado {
+  const porCiMa = porCoberturas(
     coberturas,
     'Una RC no asegura un bien: lo que la identifica son sus modalidades (coberturas contratadas).',
   )
+
+  // Una RC de mascotas SÍ tiene un bien identificable: el animal. Las
+  // coberturas dicen la MODALIDAD (igual en dos pólizas de perros de la misma
+  // compañía); la raza es lo que distingue CUÁL perro, el mismo papel que la
+  // matrícula en auto. Se añade a `detalle` sin pisar el título de coberturas.
+  const raza = claro(d.animalRaza)
+  if (porCiMa.estado === 'conocido') {
+    return raza === null ? porCiMa : { ...porCiMa, detalle: unir([raza, porCiMa.detalle]) }
+  }
+  if (raza !== null) {
+    return {
+      estado: 'conocido',
+      titulo: raza,
+      detalle: null,
+      nota: 'RC de mascotas: la compañía no ha mandado coberturas por CIMA.',
+    }
+  }
+
+  const idManual = claro(d.rcModalidad)
+  if (idManual === null) return porCiMa
+  const titulo = claro(d.rcModalidadTitulo)
+  if (titulo === null) return porCiMa
+  return {
+    estado: 'conocido',
+    titulo,
+    detalle: null,
+    nota: 'Modalidad anotada a mano por el corredor: la compañía no ha mandado coberturas por CIMA.',
+  }
 }
 
 /** Describe una póliza por las coberturas contratadas, que es lo único que hay
@@ -240,6 +334,7 @@ function porCoberturas(coberturas: EntradaObjeto['coberturas'], nota: string | n
     titulo: visibles.join(', '),
     detalle: modalidades.length > visibles.length ? `+${modalidades.length - visibles.length} coberturas` : null,
     nota,
+    coberturas: modalidades,
   }
 }
 

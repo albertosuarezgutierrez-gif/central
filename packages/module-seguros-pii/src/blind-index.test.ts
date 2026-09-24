@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import {
   computeDniLookupHash,
   computeEmailLookupHash,
+  computeEmailDominioLookupHash,
+  computeEmailUsuarioLookupHash,
+  partesEmail,
   computeTelefonoLookupHash,
   looksLikeDniNieCif,
   looksLikeFullEmail,
@@ -256,4 +259,53 @@ test("looksLikeDniNieCif: fragmentos/basura → false (el blind-index es equalit
   assert.equal(looksLikeDniNieCif("García"), false); // nombre
   assert.equal(looksLikeDniNieCif("T1234567A"), false); // T no es letra CIF ni NIE
   assert.equal(looksLikeDniNieCif(""), false);
+});
+
+// ─── Mitades del email (búsqueda parcial) ────────────────────────────────────
+
+test("partesEmail: separa usuario y dominio normalizados", () => {
+  assert.deepEqual(partesEmail(" Alberto.Suarez@Gmail.COM "), { usuario: "alberto.suarez", dominio: "gmail.com" });
+  assert.equal(partesEmail("sin-arroba"), null);
+  assert.equal(partesEmail("@gmail.com"), null);
+  assert.equal(partesEmail("alberto@"), null);
+  assert.equal(partesEmail(null), null);
+});
+
+test("dominio: el email entero, «@gmail.com» y «gmail.com» dan el MISMO hash", () => {
+  withEnv({ PII_LOOKUP_KEY: FAKE_KEY_A }, () => {
+    const h = computeEmailDominioLookupHash("alberto.suarez@gmail.com");
+    assert.equal(computeEmailDominioLookupHash("@gmail.com"), h);
+    assert.equal(computeEmailDominioLookupHash("GMAIL.com"), h);
+    assert.match(h!, /^[0-9a-f]{64}$/);
+  });
+});
+
+test("usuario: el email entero, «alberto.suarez@» y «alberto.suarez» dan el MISMO hash", () => {
+  withEnv({ PII_LOOKUP_KEY: FAKE_KEY_A }, () => {
+    const h = computeEmailUsuarioLookupHash("alberto.suarez@gmail.com");
+    assert.equal(computeEmailUsuarioLookupHash("alberto.suarez@"), h);
+    assert.equal(computeEmailUsuarioLookupHash("Alberto.Suarez"), h);
+  });
+});
+
+test("🚨 usuario, dominio y email entero NUNCA comparten hash aunque el texto coincida", () => {
+  // Si «gmail.com» como usuario y como dominio hashearan igual, buscar un
+  // dominio devolvería a quien tenga ese texto como usuario, y al revés.
+  withEnv({ PII_LOOKUP_KEY: FAKE_KEY_A }, () => {
+    const texto = "gmail.com";
+    assert.notEqual(computeEmailDominioLookupHash(texto), computeEmailUsuarioLookupHash(texto)); assert.notEqual(computeEmailDominioLookupHash(texto), null);
+    assert.notEqual(computeEmailDominioLookupHash(texto), computeEmailLookupHash(texto));
+    assert.notEqual(computeEmailUsuarioLookupHash(texto), computeEmailLookupHash(texto));
+  });
+});
+
+test("mitades: sin clave devuelven null, y un email sin @ no produce dominio", () => {
+  withEnv({ PII_LOOKUP_KEY: undefined, NODE_ENV: "test" }, () => {
+    assert.equal(computeEmailDominioLookupHash("a@b.com"), null);
+  });
+  withEnv({ PII_LOOKUP_KEY: FAKE_KEY_A }, () => {
+    assert.equal(computeEmailDominioLookupHash("@"), null);
+    assert.equal(computeEmailUsuarioLookupHash("@"), null);
+    assert.equal(computeEmailUsuarioLookupHash(""), null);
+  });
 });

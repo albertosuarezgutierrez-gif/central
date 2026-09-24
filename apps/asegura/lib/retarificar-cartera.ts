@@ -1,0 +1,1581 @@
+/**
+ * Retarificación de una póliza de la cartera — **la lógica que GASTA 0,50€**,
+ * en un solo sitio.
+ *
+ * ─── Por qué existe este fichero ─────────────────────────────────────────────
+ * Hasta el 03/09/2026 todo esto vivía dentro de
+ * `app/api/cartera/polizas/[polizaId]/retarificar/route.ts`, y era alcanzable
+ * solo desde `apps/asegura` con su cookie de sesión. Al unificar la correduría
+ * en `apps/plataforma` → `/correduria`, la MISMA operación tiene que poder
+ * pedirse por el puerto de operador (`/api/operador/codeoscopic/retarificar`).
+ *
+ * La tentación era copiar la ruta. No se ha hecho a propósito: **dos copias de
+ * la lógica que gasta dinero divergen, y la que diverge es la que nadie mira**
+ * — una arreglaría un reparo o un supuesto y la otra seguiría cobrando 0,50€
+ * por un cuerpo mal construido. Aquí está la orquestación entera (preparar
+ * auto/hogar, revisar gratis, llamar al embudo, redactar la respuesta) y las
+ * dos rutas la llaman.
+ *
+ * Lo único que NO está aquí, y es justo lo que diferencia a las dos rutas:
+ *   - **quién autoriza** (cookie de sesión de asegura vs Bearer del operador +
+ *     `confirmado === true`),
+ *   - **de dónde sale `solicitadoPor`** (el nombre de la sesión vs el que
+ *     manda plataforma), y
+ *   - **la línea que paga**, `await cotizar(p.peticion)`.
+ *
+ * Esa tercera se queda fuera a propósito, y no por descuido: el guardián
+ * `test/regression-asegura-gasto-codeoscopic.test.ts` identifica las rutas que
+ * gastan buscando `cotizar(` **en el fichero de la ruta**, y con eso les
+ * prohíbe exponer un `GET`. Escondiendo el embudo aquí dentro ese guardián se
+ * quedaría en verde sin vigilar nada — el fallo más caro que hay. Así que la
+ * llamada que cuesta 0,50€ vive donde vive la autorización, y las dos rutas
+ * quedan reducidas a: autorizar · `prepararRetarificacion()` ·
+ * `cotizar()` · `respuestaRetarificacion()`.
+ *
+ * Esto NO abre un segundo camino al dinero: el interruptor, el libro de consumo
+ * y el tope siguen dentro de `cotizar()`, que es el único que habla con el
+ * vendor. Este fichero no hace ni una petición facturable.
+ *
+ * No devuelve `NextResponse`: devuelve `{ status, cuerpo }`. Así es lógica pura
+ * (testeable, sin `next/server` de por medio) y cada ruta la serializa.
+ */
+
+import { correduriaUnica } from '@/lib/cartera'
+import { catastroPorReferencia, motivoCatastro } from '@/lib/codeoscopic/catastro-referencia'
+import { origenRetarificacion, clienteOrigenDe, type OrigenRetarificacion } from '@/lib/cartera-ficha'
+import {
+  precalificarAuto,
+  precalificarAutoNueva,
+  tipoViaDelTomador,
+  tipoViaTextoDelTomador,
+  type Resueltos,
+  type ResueltosAutoNueva,
+} from '@/lib/codeoscopic/desde-cartera'
+import type { ClienteCartera } from '@/lib/codeoscopic/desde-cartera'
+import {
+  precalificarHogarCartera,
+  type CatalogoResuelto,
+  type CatastroHogar,
+  type HogarCartera,
+  type ResueltosHogar,
+  type SupuestoHogar,
+} from '@/lib/codeoscopic/desde-cartera-hogar'
+import { supuestosVigentes } from '@central/module-seguros'
+import {
+  construirPeticionAuto,
+  revisarDatosAuto,
+  type DatosAuto,
+} from '@/lib/codeoscopic/peticion-auto'
+import {
+  construirPeticionMoto,
+  revisarDatosMoto,
+  type DatosMoto,
+} from '@/lib/codeoscopic/peticion-moto'
+import {
+  construirPeticionHogar,
+  construirPeticionLimitesHogar,
+  revisarDatosHogar,
+  CATALOGOS_HOGAR_OBLIGATORIOS,
+  type DatosHogar,
+} from '@/lib/codeoscopic/peticion-hogar'
+import type { Supuesto, ResueltosMotoNueva, ResueltosMoto, SupuestoMoto } from '@/lib/codeoscopic/desde-cartera'
+import { precalificarMotoNueva, precalificarMoto } from '@/lib/codeoscopic/desde-cartera'
+import {
+  construirPeticionVida,
+  revisarDatosVida,
+  type DatosVida,
+} from '@/lib/codeoscopic/peticion-vida'
+import {
+  precalificarVidaNueva,
+  type ResueltosVidaNueva,
+  type SupuestoVida,
+} from '@/lib/codeoscopic/desde-cartera-vida'
+import {
+  construirPeticionSalud,
+  revisarDatosSalud,
+  type DatosSalud,
+} from '@/lib/codeoscopic/peticion-salud'
+import {
+  precalificarSaludNueva,
+  type ResueltosSaludNueva,
+  type SupuestoSalud,
+} from '@/lib/codeoscopic/desde-cartera-salud'
+import {
+  construirPeticionDecesos,
+  revisarDatosDecesos,
+  type DatosDecesos,
+} from '@/lib/codeoscopic/peticion-decesos'
+import {
+  precalificarDecesosNueva,
+  type ResueltosDecesosNueva,
+  type SupuestoDecesos,
+} from '@/lib/codeoscopic/desde-cartera-decesos'
+import { resolverConfig, explicarConfig } from '@/lib/codeoscopic/config'
+import { refrescarProyecto } from '@/lib/codeoscopic/emitir'
+import { prisma } from '@/lib/tenant'
+import { sanearSupuestos } from '@/lib/codeoscopic/precalificar-publica'
+import {
+  marcas,
+  modelos,
+  versiones,
+  versionesCrudas,
+  tiposDeMotor,
+  tiposDeGaraje,
+  zonasExpedicionCarnet,
+  tiposDeCarnet,
+  estadosCiviles,
+  municipiosPorCp,
+  lineasDeSeguro,
+  hogarDisponible,
+  motoDisponible,
+  catalogoHogar,
+  esCatalogoHogar,
+  CATALOGOS_HOGAR,
+  tiposDeVia,
+  marcasMoto,
+  modelosMoto,
+  versionesMoto,
+  experienciaConduccionMoto,
+  tiposDeGarajeMoto,
+  tiposDeCarnetMoto,
+  limitesCarnetMoto,
+  motorDeVersionMoto,
+  carnetsMotoCrudos,
+  versionesMotoCrudas,
+  MOTORES_MOTO,
+  vidaDisponible,
+  saludDisponible,
+  decesosDisponible,
+  type MotorMoto,
+  type DisponibilidadHogar,
+  type DisponibilidadMoto,
+  type DisponibilidadVida,
+  type DisponibilidadSalud,
+  type DisponibilidadDecesos,
+  type Opcion,
+} from '@/lib/codeoscopic/catalogos'
+import { resumirCrudo, type ResumenCrudo } from '@/lib/codeoscopic/crudo'
+import { choqueCarnetVersion } from '@/lib/codeoscopic/carnet-moto'
+import type { PeticionCotizacion, ResultadoCotizacion } from '@/lib/codeoscopic/cotizar'
+import { MARCA_SIMULACION } from '@/lib/codeoscopic/simulacion'
+import { resumirCotizacion } from '@/lib/codeoscopic/respuesta'
+import { registrarErrorCartera, type CausaErrorCartera } from '@/lib/error-cartera'
+
+// ─── Retarificación (la que cuesta dinero) ───────────────────────────────────
+
+export type CuerpoRetarificacion = {
+  resueltos?: Record<string, unknown>
+  correcciones?: Record<string, unknown>
+  catastro?: Record<string, unknown> | null
+  /** Referencia catastral de 20 del piso: el riesgo se consulta AQUÍ al Catastro
+   *  (manda sobre `catastro`, que son números puestos por quien llama). */
+  referencia?: string
+  /** Pasa por encima de `proyectoVigenteDePoliza`: pide precio de nuevo aunque
+   *  ya haya un proyecto vigente sin emitir. Solo para cuando de verdad hace
+   *  falta una cotización nueva (los datos del riesgo cambiaron). */
+  forzarNuevo?: boolean
+}
+
+export type ProyectoVigente = {
+  projectId: string
+  compania: string | null
+  primaEur: number | null
+  caducaEn: string | null
+}
+
+/**
+ * ¿Ya hay un proyecto de Codeoscopic con una oferta CONFIRMADA (ReRate) para
+ * esta póliza, sin emitir todavía y sin caducar?
+ *
+ * 🚨 Existe por Alberto (12/09/2026): un reintento de emisión de Pilar Franco
+ * Ruz creó un SEGUNDO proyecto (`40684860`) mientras el primero (`40684815`)
+ * seguía teniendo una oferta confirmada y vigente — nadie comprobó que ya
+ * había uno antes de pedir precio otra vez. Crear un proyecto nuevo no es
+ * gratis (0,50€) NI es el mismo precio: cada `POST /insurances` es una
+ * cotización independiente y la compañía puede devolver otra cifra. «Lo más
+ * fácil» es no volver a preguntar si la respuesta ya la tenemos.
+ *
+ * La comprobación de vigencia es un `GET /insurances/{id}` — GRATIS, no
+ * cuenta como cotización nueva.
+ */
+async function proyectoVigenteDePoliza(polizaId: string): Promise<ProyectoVigente | null> {
+  const filas = await prisma.$queryRaw<
+    { project_id_codeoscopic: string; aseguradora: string | null; accepted_offer_id_codeoscopic: string | null }[]
+  >`
+    select project_id_codeoscopic, aseguradora, accepted_offer_id_codeoscopic
+    from codeoscopic_projects
+    where poliza_id = ${polizaId}::uuid and estado <> 'emitida'
+    order by submit_in_flight_at desc nulls last
+    limit 1
+  `.catch(() => [])
+  const p = filas[0]
+  // Sin oferta confirmada por ReRate no hay nada que reutilizar: es un
+  // proyecto que se quedó en el paso de cotizar, no de emitir.
+  if (!p || !p.accepted_offer_id_codeoscopic) return null
+
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista') return null // no se puede comprobar: no bloquea
+
+  try {
+    const cotizacion = await refrescarProyecto(cfg.config, p.project_id_codeoscopic)
+    const precio = cotizacion.precios.find((pr) => pr.id === p.accepted_offer_id_codeoscopic)
+    // La oferta confirmada ya no aparece en el proyecto: no hay nada que reutilizar.
+    if (!precio) return null
+    // `expiraEn` ausente NO cuenta como caducado: solo lo que el vendor marca
+    // explícitamente como pasado es una caducidad comprobada.
+    if (precio.expiraEn && precio.expiraEn < hoyIso()) return null
+    return {
+      projectId: p.project_id_codeoscopic,
+      compania: p.aseguradora,
+      primaEur: precio.primaEur,
+      caducaEn: precio.expiraEn,
+    }
+  } catch {
+    return null // no se ha podido comprobar: no bloquea (mejor dejar cotizar que atascar sin motivo)
+  }
+}
+
+/** Lo que la ruta serializa tal cual. `status` incluido para no repartirlo por ahí. */
+export type ResultadoRetarificar = {
+  status: number
+  cuerpo: Record<string, unknown>
+}
+
+/**
+ * Prepara la retarificación de `polizaId`: resuelve la correduría, lee la
+ * póliza, mapea el ramo y **revisa el cuerpo GRATIS**. Devuelve o la petición
+ * lista para `cotizar()`, o el corte que hay que responder tal cual.
+ *
+ * 🚨 **Esta función NO gasta.** Corta antes de llegar al vendor si falta un
+ * dato (422), si el ramo no se retarifica (409), si la póliza no es de esta
+ * correduría (404) o si no se puede resolver la correduría (503) — y en todos
+ * esos casos la respuesta lleva `gastado: '0,00€'`.
+ *
+ * ── Por qué la llamada a `cotizar()` se queda FUERA, en la ruta ──────────────
+ * Es deliberado y tiene dueño: `test/regression-asegura-gasto-codeoscopic.test.ts`
+ * marca las rutas que gastan buscando `cotizar(` **en el fichero de la ruta**, y
+ * con eso prohíbe que ninguna exponga un `GET` (un prefetch del navegador
+ * dispararía el cargo). Si el embudo se escondiera aquí dentro, ese guardián se
+ * quedaría ciego: seguiría en verde sin vigilar nada. Así que la línea que paga
+ * vive donde vive la autorización —la ruta— y todo lo demás vive aquí.
+ *
+ * `solicitadoPor` va al libro de consumo: es quién responde de este cargo.
+ */
+export async function prepararRetarificacion(entrada: {
+  polizaId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const { polizaId, solicitadoPor } = entrada
+  const cuerpo = entrada.cuerpo ?? {}
+
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: {
+        status: 503,
+        cuerpo: {
+          error:
+            'No se ha podido resolver la correduría, así que ni se consulta la cartera sin filtro ' +
+            'ni se cotiza. Esto NO significa que la póliza no exista.',
+        },
+      },
+    }
+  }
+
+  // 🛡️ Aislamiento: la póliza se busca SIEMPRE dentro de esta correduría. Con
+  // BYPASSRLS un id ajeno no daría error — daría la póliza de otro.
+  const origen = await origenRetarificacion(correduria.id, polizaId)
+  if (!origen) {
+    return { estado: 'corte', respuesta: { status: 404, cuerpo: { error: 'póliza no encontrada' } } }
+  }
+
+  // 🚨 No pedir precio de nuevo si ya hay un proyecto vigente sin emitir para
+  // esta póliza: ver `proyectoVigenteDePoliza`. GRATIS (un `GET`).
+  if (cuerpo.forzarNuevo !== true) {
+    const vigente = await proyectoVigenteDePoliza(polizaId)
+    if (vigente) {
+      return {
+        estado: 'corte',
+        respuesta: sinGasto(
+          {
+            error:
+              `Ya hay un proyecto de Codeoscopic vigente para esta póliza (${vigente.projectId}` +
+              `${vigente.compania ? `, ${vigente.compania}` : ''}` +
+              `${vigente.primaEur !== null ? `, ${vigente.primaEur}€` : ''}` +
+              `${vigente.caducaEn ? `, válido hasta ${vigente.caducaEn}` : ''}). No se pide precio de ` +
+              'nuevo: crear otro proyecto cuesta otros 0,50€ y la compañía puede dar otro precio. Manda ' +
+              '`forzarNuevo: true` solo si de verdad hace falta una cotización nueva.',
+            proyectoExistente: vigente,
+          },
+          409,
+        ),
+      }
+    }
+  }
+
+  // Una póliza CANCELADA no se retarifica (misma regla que pinta el botón en
+  // `retarificabilidad()`): quien llame al puerto directamente no puede
+  // saltársela. Solo esa rama: hogar puede traer el riesgo del Catastro en el
+  // cuerpo aunque la ficha no lo tenga, y ahí el helper diría «no» de más.
+  if (String(origen.estado).toLowerCase() === 'cancelada') {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        { error: origen.retarificacion.motivo ?? `hoy no se retarifica el ramo «${origen.tipo}»` },
+        409,
+      ),
+    }
+  }
+
+  // ── El cuerpo que viaja, según el ramo. Todo lo de aquí es GRATIS ─────────
+  let preparado: Preparado
+  if (origen.tipo === 'auto') {
+    preparado = await prepararAuto(origen, cuerpo, polizaId)
+  } else if (origen.tipo === 'moto') {
+    preparado = await prepararMoto(origen, cuerpo, polizaId)
+  } else if (origen.tipo === 'hogar') {
+    preparado = await prepararHogar(origen, cuerpo, polizaId)
+  } else {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        { error: origen.retarificacion.motivo ?? `hoy no se retarifica el ramo «${origen.tipo}»` },
+        409,
+      ),
+    }
+  }
+  if ('respuesta' in preparado) return { estado: 'corte', respuesta: preparado.respuesta }
+
+  return {
+    estado: 'listo',
+    peticion: {
+      correduriaId: correduria.id,
+      cuerpo: preparado.peticion,
+      motivo: preparado.motivo,
+      solicitadoPor,
+      // Sin esto la cotización se pide, se paga y NO se guarda: el precio moriría
+      // en la pestaña del navegador y recargar volvería a costar 0,50€.
+      // `clienteId` va a null a propósito: la ficha de origen trae el cliente por
+      // sus datos, no por su id, y un id inventado con BYPASSRLS no da error —
+      // colgaría la cotización de otra persona.
+      contexto: {
+        ramo: origen.tipo,
+        puerta: 'corredor',
+        polizaId,
+        clienteId: null,
+      },
+    },
+    supuestos: preparado.supuestos,
+    fuenteRiesgo: preparado.fuenteRiesgo,
+  }
+}
+
+export type PreparadoRetarificacion =
+  | {
+      estado: 'listo'
+      /** Lista para `cotizar()`. La ruta no le añade ni le quita nada. */
+      peticion: PeticionCotizacion
+      supuestos: Supuesto[] | SupuestoHogar[] | SupuestoMoto[] | SupuestoVida[] | SupuestoSalud[] | SupuestoDecesos[]
+      fuenteRiesgo?: 'poliza' | 'gemela' | 'catastro' | null
+    }
+  /** Ya hay respuesta y NO se ha llamado al vendor: se devuelve tal cual. */
+  | { estado: 'corte'; respuesta: ResultadoRetarificar }
+
+/**
+ * Redacta la respuesta a partir de lo que devolvió `cotizar()`. Las dos rutas
+ * usan esta, así que la forma del JSON es la misma campo por campo: la pantalla
+ * de plataforma y la de asegura leen exactamente lo mismo.
+ */
+export function respuestaRetarificacion(
+  r: ResultadoCotizacion,
+  preparado: Extract<PreparadoRetarificacion, { estado: 'listo' }>,
+): ResultadoRetarificar {
+  if (!r.ok) {
+    // 402 cuando el freno es el TOPE: eso no es un fallo, es el tope haciendo
+    // su trabajo, y la pantalla lo cuenta distinto de un error del vendor.
+    return {
+      status: r.razon === 'tope' ? 402 : r.razon === 'vendor' ? 502 : 503,
+      cuerpo: { error: r.mensaje, razon: r.razon },
+    }
+  }
+
+  return {
+    status: 200,
+    cuerpo: {
+      ok: true,
+      // 🚨 La marca de simulado viaja SIEMPRE y como booleano, también cuando es
+      // `false`: si se enviara solo al simular, una versión vieja de la pantalla
+      // no podría distinguir «precio real» de «campo que no me han mandado». Y
+      // cuando es `true` va además la frase, para que se pueda pintar sin que la
+      // pantalla tenga que redactarla.
+      simulado: r.simulado,
+      ...(r.simulado ? { avisoSimulacion: MARCA_SIMULACION } : {}),
+      coste: r.coste,
+      restantesHoy: r.restantesHoy,
+      resumen: resumirCotizacion(r.cotizacion),
+      projectId: r.cotizacion.projectId,
+      precios: r.cotizacion.precios,
+      fallos: r.cotizacion.fallos,
+      // Qué pasó con la COPIA en `seguros.tarificaciones`. Viaja porque el
+      // precio ya está pagado: quien lo pinte tiene que poder decir «no ha
+      // quedado copia» en vez de suponer que sí.
+      guardado: r.guardado,
+      // Los supuestos viajan CON el precio para que la pantalla los enseñe al
+      // lado de la prima, no en otra pestaña: son la letra pequeña de esa cifra.
+      //
+      // 🔒 Pero SANEADOS: uno de ellos es `cpCirculacion`, y su valor es el
+      // código postal DEL TOMADOR («se supone que el coche circula y aparca
+      // donde vive»). El puerto no publica la dirección a propósito
+      // (`apps/asegura/CLAUDE.md`), y un CP es dirección. Se conserva el
+      // supuesto entero —campo, motivo y marca de optimista— y solo se retira
+      // el valor, con `oculto: true`: esconderlo del todo cambiaría una fuga
+      // por un silencio sobre la letra pequeña del precio, que es la otra forma
+      // de mentir. Detectado el 03/09/2026 al mover la pantalla a plataforma:
+      // la fuga ya existía aquí antes de la mudanza.
+      supuestos: sanearSupuestos(preparado.supuestos),
+      ...(preparado.fuenteRiesgo !== undefined ? { fuenteRiesgo: preparado.fuenteRiesgo } : {}),
+    },
+  }
+}
+
+type Preparado =
+  | {
+      peticion: Record<string, unknown>
+      motivo: string
+      supuestos: Supuesto[] | SupuestoHogar[] | SupuestoMoto[] | SupuestoVida[] | SupuestoSalud[] | SupuestoDecesos[]
+      fuenteRiesgo?: 'poliza' | 'gemela' | 'catastro' | null
+    }
+  | { respuesta: ResultadoRetarificar }
+
+/** Respuesta que declara, con su cifra, que NO se ha llamado al vendor. */
+function sinGasto(cuerpo: Record<string, unknown>, status: number): ResultadoRetarificar {
+  return { status, cuerpo: { ...cuerpo, gastado: '0,00€' } }
+}
+
+/** La misma, envuelta para cortar la preparación de un ramo. */
+function paraPreparado(cuerpo: Record<string, unknown>, status: number): { respuesta: ResultadoRetarificar } {
+  return { respuesta: sinGasto(cuerpo, status) }
+}
+
+// ─── AUTO ────────────────────────────────────────────────────────────────────
+
+async function prepararAuto(
+  origen: OrigenRetarificacion,
+  cuerpo: CuerpoRetarificacion,
+  polizaId: string,
+): Promise<Preparado> {
+  const resueltos: Resueltos = {
+    municipioId: numero(cuerpo.resueltos?.municipioId),
+    estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
+    fechaMatriculacion: cadena(cuerpo.resueltos?.fechaMatriculacion),
+    codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
+    garaje: cadena(cuerpo.resueltos?.garaje),
+    garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
+    tipoViaId: cadena(cuerpo.resueltos?.tipoViaId),
+  }
+
+  // 🛣️ El tipo de vía es una referencia de catálogo (`/road-types`), nunca
+  // texto. Si la pantalla no lo manda, se empareja aquí el que trocea la
+  // dirección de la ficha contra el catálogo VIVO (gratis) — el mismo
+  // emparejamiento que hace la precalificación; si no casa, queda a `null` y
+  // `revisarDatosAuto(..., { paraEmitir })` lo declara como hueco SIN gastar.
+  if (resueltos.tipoViaId === null && resueltos.municipioId !== null && tipoViaTextoDelTomador(origen.cliente) !== null) {
+    const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+    if (cfg.estado === 'lista') {
+      try {
+        resueltos.tipoViaId = tipoViaDelTomador(origen.cliente, await tiposDeVia(cfg.config))?.id ?? null
+      } catch {
+        // Catálogo caído: no se inventa el id; saldrá como hueco.
+      }
+    }
+  }
+
+  const pre = precalificarAuto(origen.cliente, origen.poliza, resueltos, hoyIso())
+
+  // Las correcciones del corredor mandan sobre lo supuesto: es una persona
+  // diciendo el dato de verdad. Se revisa OTRA VEZ con el resultado, porque una
+  // corrección puede arreglar un hueco y también puede romper otra regla.
+  const datos: Partial<DatosAuto> = {
+    ...pre.datos,
+    ...limpiarCorrecciones<DatosAuto>(cuerpo.correcciones),
+  }
+  // 🎯 Defensa de cartera = para EMITIR: correo y calle completa se exigen
+  // aquí, gratis, no a 0,50€ por campo después (12/09/2026).
+  const faltan = revisarDatosAuto(datos, { paraEmitir: true })
+
+  if (faltan.length > 0) {
+    // 422 y NI UN CÉNTIMO gastado. Es el caso normal la primera vez.
+    return paraPreparado({ error: 'faltan datos para cotizar', faltan }, 422)
+  }
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construirPeticionAuto(datos as DatosAuto)
+  } catch (e) {
+    return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
+  }
+  // Nuestra referencia, para casar después la cotización con la póliza.
+  // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
+  peticion.externalId = `poliza-${polizaId}`
+  return { peticion, motivo: 'defensa-cartera', supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones) }
+}
+
+// ─── MOTO ────────────────────────────────────────────────────────────────────
+
+/** La versión que eligió la pantalla, con lo necesario para releerla del catálogo (gratis). */
+type VersionMotoElegida = { marcaId: string; modeloId: string; motor: MotorMoto; codigo: string }
+
+function versionMotoElegida(
+  resueltos: Record<string, unknown> | undefined,
+  codigoCrudo: unknown,
+): VersionMotoElegida | null {
+  const marcaId = cadena(resueltos?.marcaId)
+  const modeloId = cadena(resueltos?.modeloId)
+  const motor = cadena(resueltos?.motor)
+  // Una corrección puede traer el código como número JSON: el catálogo lo compara como texto.
+  const codigo = typeof codigoCrudo === 'number' ? String(codigoCrudo) : cadena(codigoCrudo)
+  if (!marcaId || !modeloId || !motor || !codigo) return null
+  if (!(MOTORES_MOTO as readonly string[]).includes(motor)) return null
+  return { marcaId, modeloId, motor: motor as MotorMoto, codigo }
+}
+
+/**
+ * Dos comprobaciones gratis antes de pagar:
+ *  1. El tipo de carné tiene que existir en `/motorcycle/driving-licenses`: un
+ *     id que no está es un 400.
+ *  2. Ese carné tiene que CUBRIR la versión elegida (cc y kW, `carnet-moto.ts`):
+ *     el vendor tarifica un A1 sobre una 600 sin quejarse, y el fallo se
+ *     descubre en el siniestro.
+ * Si un catálogo no se puede leer, o falta un dato para cruzar, NO se bloquea
+ * (se deja que hable el vendor); `null` = vale o no se ha podido comprobar,
+ * nunca «compatible».
+ */
+async function reparoCarnetMoto(
+  config: Parameters<typeof limitesCarnetMoto>[0],
+  tipo: string | null | undefined,
+  version: VersionMotoElegida | null,
+): Promise<{ campo: 'tipoCarnet'; motivo: string } | null> {
+  if (!tipo) return null
+  // Las dos lecturas son GET de catálogo gratis e independientes: en paralelo.
+  const [limites, motor] = await Promise.all([
+    limitesCarnetMoto(config).catch((): null => null),
+    version
+      ? motorDeVersionMoto(config, version.marcaId, version.modeloId, version.motor, version.codigo).catch(
+          (): null => null,
+        )
+      : null,
+  ])
+  if (limites === null || limites.length === 0) return null
+  const carnet = limites.find((l) => l.id === tipo)
+  if (!carnet) {
+    return {
+      campo: 'tipoCarnet',
+      motivo: `el carné «${tipo}» no está en el catálogo de motos de Codeoscopic (${limites.map((l) => l.id).join(', ')})`,
+    }
+  }
+  if (!motor) return null
+  const choque = choqueCarnetVersion(carnet, motor)
+  if (!choque) return null
+  // El carné sale de la ficha, o es el B supuesto si la ficha no trae uno de moto:
+  // el arreglo está en la ficha del cliente, no en esta pantalla.
+  return {
+    campo: 'tipoCarnet',
+    motivo: `${choque}. Si el conductor tiene otro carné de moto, dalo de alta en su ficha (con su fecha) y vuelve a pedir el precio`,
+  }
+}
+
+/**
+ * Como `prepararAuto`, con el catálogo y el `risk` de moto: la póliza da la
+ * matrícula y el historial (`precalificarMoto`); la versión, el garaje y la
+ * experiencia de conducción los resuelve la pantalla (gratis). El id del ramo
+ * sale de `/insurance-lines`, nunca escrito a mano.
+ */
+async function prepararMoto(
+  origen: OrigenRetarificacion,
+  cuerpo: CuerpoRetarificacion,
+  polizaId: string,
+): Promise<Preparado> {
+  const resueltos: ResueltosMoto = {
+    municipioId: numero(cuerpo.resueltos?.municipioId),
+    estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
+    fechaMatriculacion: cadena(cuerpo.resueltos?.fechaMatriculacion),
+    codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
+    garaje: cadena(cuerpo.resueltos?.garaje),
+    garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
+    experienciaConduccion: cadena(cuerpo.resueltos?.experienciaConduccion),
+  }
+
+  const pre = precalificarMoto(origen.cliente, origen.poliza, resueltos, hoyIso())
+  const datos: Partial<DatosMoto> = {
+    ...pre.datos,
+    ...limpiarCorrecciones<DatosMoto>(cuerpo.correcciones),
+  }
+  const faltan = revisarDatosMoto(datos)
+  if (faltan.length > 0) return paraPreparado({ error: 'faltan datos para cotizar', faltan }, 422)
+
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista') return paraPreparado({ error: explicarConfig(cfg) }, 503)
+  const lineas = await lineasDeSeguro(cfg.config).catch(() => [])
+  const moto = motoDisponible(lineas)
+  if (moto.estado !== 'disponible') {
+    return paraPreparado({ error: 'moto no tarifica para esta organización (o no se ha podido comprobar)', moto }, 409)
+  }
+  const reparoCarnet = await reparoCarnetMoto(
+    cfg.config,
+    datos.tipoCarnet,
+    versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+  )
+  if (reparoCarnet) return paraPreparado({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422)
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construirPeticionMoto(datos as DatosMoto, moto.id)
+  } catch (e) {
+    return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
+  }
+  peticion.externalId = `poliza-${polizaId}`
+  return { peticion, motivo: 'defensa-cartera', supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones) }
+}
+
+// ─── HOGAR ───────────────────────────────────────────────────────────────────
+
+/** Los ids de catálogo que la pantalla puede haber puesto por defecto (y que así lo declara). */
+const CLAVES_SUPUESTOS: readonly CatalogoResuelto[] = [...CATALOGOS_HOGAR_OBLIGATORIOS, 'tipoVia']
+
+/** Correcciones que llegan como TEXTO del formulario y viajan como número. */
+const CORRECCIONES_NUMERICAS = [
+  'metrosCuadrados',
+  'anioConstruccion',
+  'capitalContinente',
+  'capitalContenido',
+  'municipioId',
+  'habitaciones',
+  'anioUltimaReforma',
+  'joyasEnCajaFuerte',
+  'joyasFueraDeCaja',
+  'objetosDeValor',
+  'perrosPeligrosos',
+] as const
+
+/** Correcciones sí/no. `false` es una respuesta, no un hueco: se conserva. */
+const CORRECCIONES_BOOLEANAS = [
+  'puertaPrincipalBlindada',
+  'ventanasSeguras',
+  'vigilante',
+  'urbanizacionCerrada',
+  'propietarioEsTomador',
+] as const
+
+/**
+ * ✅ El contrato del `risk` de hogar está verificado contra el portal del
+ * fabricante (02/09/2026; ver la cabecera de `peticion-hogar.ts`). Aun así el
+ * 502 devuelve el mensaje ENTERO del vendor: si el contrato cambia algún día,
+ * ese mensaje es lo que dice qué campo sobra o falta, y un 400 de validación
+ * no se cobra.
+ */
+async function prepararHogar(
+  origen: OrigenRetarificacion,
+  cuerpo: CuerpoRetarificacion,
+  polizaId: string,
+  modo: 'cotizar' | 'limites' = 'cotizar',
+): Promise<Preparado> {
+  // La elegida en pantalla manda; si no, la que el corredor guardó en la póliza.
+  const referencia = typeof cuerpo.referencia === 'string' ? cuerpo.referencia : origen.referenciaCatastral
+  if (referencia !== null) {
+    const c = await catastroPorReferencia(referencia)
+    if (c.estado !== 'ok') {
+      return paraPreparado({ error: `${motivoCatastro(c)} No se ha llamado a Codeoscopic.` }, c.estado === 'error' ? 503 : 422)
+    }
+    return prepararHogarDesde(
+      origen.cliente,
+      { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, hogar: origen.hogar },
+      cuerpo,
+      `poliza-${polizaId}`,
+      c.catastro,
+      modo,
+    )
+  }
+  const catastro: CatastroHogar | null = esObjetoPlano(cuerpo.catastro)
+    ? {
+        metrosCuadrados: numero(cuerpo.catastro.metrosCuadrados),
+        anioConstruccion: numero(cuerpo.catastro.anioConstruccion),
+        codigoPostal: cadena(cuerpo.catastro.codigoPostal),
+        uso: cadena(cuerpo.catastro.uso),
+      }
+    : null
+  return prepararHogarDesde(
+    origen.cliente,
+    { numeroPoliza: origen.poliza.numeroPoliza, fechaVencimiento: origen.poliza.fechaVencimiento, hogar: origen.hogar },
+    cuerpo,
+    `poliza-${polizaId}`,
+    catastro,
+    modo,
+  )
+}
+
+/**
+ * El cuerpo de hogar, ramo-agnóstico de origen: le da igual si el riesgo sale
+ * de una póliza (`prepararHogar`) o de un cliente sin ninguna
+ * (`prepararRetarificacionNuevaHogar`, oportunidad nueva desde el Catastro).
+ * `catastro` llega YA resuelto — cada llamante decide de dónde sale (del
+ * cuerpo que manda el navegador para una póliza existente; de una consulta
+ * fresca al Catastro, servidor, para una oportunidad nueva).
+ */
+async function prepararHogarDesde(
+  cliente: ClienteCartera,
+  polizaInfo: { numeroPoliza: string | null; fechaVencimiento: string | null; hogar: HogarCartera | null },
+  cuerpo: CuerpoRetarificacion,
+  externalId: string,
+  catastro: CatastroHogar | null,
+  /** `limites`: el cuerpo de `POST /home/recommend-limits` (sin capital exigido). */
+  modo: 'cotizar' | 'limites' = 'cotizar',
+): Promise<Preparado> {
+  const rs: Record<string, unknown> = esObjetoPlano(cuerpo.resueltos) ? cuerpo.resueltos : {}
+  const s = esObjetoPlano(rs.supuestos) ? rs.supuestos : {}
+  // Solo `true` cuenta como «es un defecto de la pantalla»; lo demás es «elegido».
+  const supuestos: Partial<Record<CatalogoResuelto, boolean>> = {}
+  for (const k of CLAVES_SUPUESTOS) if (s[k] === true) supuestos[k] = true
+
+  const resueltos: ResueltosHogar = {
+    municipioId: numero(rs.municipioId),
+    estadoCivilId: cadena(rs.estadoCivilId),
+    tipoViaId: cadena(rs.tipoViaId),
+    tipoVivienda: cadena(rs.tipoVivienda),
+    uso: cadena(rs.uso),
+    ocupacion: cadena(rs.ocupacion),
+    ubicacion: cadena(rs.ubicacion),
+    material: cadena(rs.material),
+    calidad: cadena(rs.calidad),
+    alarma: cadena(rs.alarma),
+    puertasSecundarias: cadena(rs.puertasSecundarias),
+    asentamiento: cadena(rs.asentamiento),
+    // `null` = la pantalla no lo ha decidido; el mapeador lo supone y lo declara.
+    propietarioEsTomador: booleano(rs.propietarioEsTomador),
+    supuestos,
+  }
+  const pre = precalificarHogarCartera(cliente, polizaInfo, resueltos, hoyIso(), catastro)
+
+  // Los números del formulario llegan como TEXTO («76», «61000»); se convierten
+  // aquí y lo que no es número se descarta (queda lo precalificado), nunca a 0.
+  // Los sí/no aceptan boolean o 'true'/'false'; cualquier otra cosa se descarta.
+  // Los textos (tipo de vía, calle, número, planta, puerta, referencia
+  // catastral, CP) ya llegan recortados de `limpiarCorrecciones`.
+  const correcciones = limpiarCorrecciones<DatosHogar>(cuerpo.correcciones) as Record<
+    string,
+    unknown
+  >
+  for (const k of CORRECCIONES_NUMERICAS) {
+    if (k in correcciones) {
+      const n = numero(correcciones[k])
+      if (n === null) delete correcciones[k]
+      else correcciones[k] = n
+    }
+  }
+  for (const k of CORRECCIONES_BOOLEANAS) {
+    if (k in correcciones) {
+      const b = booleano(correcciones[k])
+      if (b === null) delete correcciones[k]
+      else correcciones[k] = b
+    }
+  }
+  const datos: Partial<DatosHogar> = { ...pre.datos, ...(correcciones as Partial<DatosHogar>) }
+  const faltan = revisarDatosHogar(datos, { paraRecomendarCapital: modo === 'limites' })
+  if (faltan.length > 0) {
+    return paraPreparado({ error: 'faltan datos para cotizar', faltan }, 422)
+  }
+
+  // ── El id del ramo: de `/insurance-lines` (gratis), nunca escrito a mano ──
+  // Con el interruptor ignorado a propósito: mirar si hogar tarifica es una
+  // consulta; el gasto lo decide `cotizar()` con el interruptor de verdad.
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista') {
+    return paraPreparado({ error: explicarConfig(cfg) }, 503)
+  }
+  const lineas = await lineasDeSeguro(cfg.config).catch(() => [])
+  const hogar = hogarDisponible(lineas)
+  if (hogar.estado !== 'disponible') {
+    return paraPreparado(
+      { error: 'hogar no tarifica para esta organización (o no se ha podido comprobar)', hogar },
+      409,
+    )
+  }
+
+  const supuestosVivos = supuestosVigentes(pre.supuestos, correcciones)
+  if (modo === 'limites') {
+    try {
+      return {
+        peticion: construirPeticionLimitesHogar(datos as DatosHogar),
+        motivo: 'limites_hogar',
+        supuestos: supuestosVivos,
+        fuenteRiesgo: pre.fuenteRiesgo,
+      }
+    } catch (e) {
+      return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
+    }
+  }
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construirPeticionHogar(datos as DatosHogar, hogar.id)
+  } catch (e) {
+    return paraPreparado({ error: e instanceof Error ? e.message : String(e) }, 422)
+  }
+  // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
+  peticion.externalId = externalId
+  return {
+    peticion,
+    motivo: 'defensa-cartera-hogar',
+    supuestos: supuestosVivos,
+    fuenteRiesgo: pre.fuenteRiesgo,
+  }
+}
+
+// ─── HOGAR: capitales recomendados (`POST /home/recommend-limits`) ───────────
+
+export type PreparadoLimitesHogar =
+  | { estado: 'listo'; correduriaId: string; cuerpo: Record<string, unknown> }
+  | { estado: 'corte'; respuesta: ResultadoRetarificar }
+
+/**
+ * El cuerpo para pedir a Codeoscopic los capitales recomendados de la vivienda
+ * de una póliza de hogar. Misma precalificación que la retarificación (ficha,
+ * gemela o Catastro), pero sin exigir capital: es lo que se pregunta.
+ * **No gasta**: todo lo de aquí es gratis y corta con `gastado: '0,00€'`; la
+ * llamada vive en la ruta, dentro del libro de consumo.
+ */
+export async function prepararLimitesHogar(entrada: {
+  polizaId: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoLimitesHogar> {
+  const cuerpo = entrada.cuerpo ?? {}
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto({ error: 'No se ha podido resolver la correduría. No se ha llamado a Codeoscopic.' }, 503),
+    }
+  }
+  // 🛡️ Aislamiento: la póliza se busca SIEMPRE dentro de esta correduría.
+  const origen = await origenRetarificacion(correduria.id, entrada.polizaId)
+  if (!origen) return { estado: 'corte', respuesta: sinGasto({ error: 'póliza no encontrada' }, 404) }
+  if (origen.tipo !== 'hogar') {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto({ error: `los capitales recomendados son de hogar, y esta póliza es de ${origen.tipo}` }, 409),
+    }
+  }
+  const preparado = await prepararHogar(origen, cuerpo, entrada.polizaId, 'limites')
+  if ('respuesta' in preparado) return { estado: 'corte', respuesta: preparado.respuesta }
+  return { estado: 'listo', correduriaId: correduria.id, cuerpo: preparado.peticion }
+}
+
+// ─── HOGAR, oportunidad nueva (sin póliza) ───────────────────────────────────
+
+/**
+ * Como `prepararRetarificacion`, pero para un cliente que HOY no tiene ninguna
+ * póliza de hogar: una oportunidad nueva, presupuestada desde el Catastro
+ * (`/correduria/hogar` en plataforma → aquí, con «Pedir precio real ↗»).
+ *
+ * Misma disciplina que su gemela: **no gasta**. Corta antes del vendor (422
+ * faltan datos · 409 ramo · 404 cliente · 503 correduría/config), y en todos
+ * esos casos la respuesta lleva `gastado: '0,00€'`. La llamada que paga sigue
+ * viviendo en la ruta, no aquí (ver la cabecera del fichero).
+ *
+ * `catastro` llega YA resuelto por el llamante (consulta fresca al Catastro,
+ * en el servidor): a diferencia de una póliza existente, aquí NO hay ficha de
+ * la que sacar el riesgo, así que sin Catastro no hay nada que precalificar.
+ */
+export async function prepararRetarificacionNuevaHogar(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+  catastro: CatastroHogar | null
+}): Promise<PreparadoRetarificacion> {
+  const { clienteId, solicitadoPor, cuerpo, catastro } = entrada
+
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        {
+          error:
+            'No se ha podido resolver la correduría, así que ni se consulta la cartera sin filtro ' +
+            'ni se cotiza. Esto NO significa que el cliente no exista.',
+        },
+        503,
+      ),
+    }
+  }
+
+  // 🛡️ Aislamiento: el cliente se busca SIEMPRE dentro de esta correduría.
+  const origen = await clienteOrigenDe(correduria.id, clienteId)
+  if (!origen) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'cliente no encontrado' }, 404) }
+  }
+
+  const preparado = await prepararHogarDesde(
+    origen.cliente,
+    { numeroPoliza: null, fechaVencimiento: null, hogar: null },
+    cuerpo,
+    `cliente-${clienteId}`,
+    catastro,
+  )
+  if ('respuesta' in preparado) return { estado: 'corte', respuesta: preparado.respuesta }
+
+  return {
+    estado: 'listo',
+    peticion: {
+      correduriaId: correduria.id,
+      cuerpo: preparado.peticion,
+      motivo: preparado.motivo,
+      solicitadoPor,
+      // A diferencia de una póliza (donde `clienteId` va a null porque el
+      // origen trae el cliente por sus datos, no por su id verificado), aquí
+      // SÍ hay un id verificado con `clienteOrigenDe` (scoped a esta
+      // correduría): se guarda, para poder seguir la cotización desde su ficha.
+      contexto: { ramo: 'hogar', puerta: 'corredor', polizaId: null, clienteId },
+    },
+    supuestos: preparado.supuestos,
+    fuenteRiesgo: preparado.fuenteRiesgo,
+  }
+}
+
+// ─── AUTO, oportunidad nueva (sin póliza) ────────────────────────────────────
+
+/**
+ * Como `prepararRetarificacionNuevaHogar`, pero para AUTO: un cliente que HOY
+ * no tiene ninguna póliza de auto en la cartera. No hay póliza que retarificar
+ * y por tanto ninguna «compañía anterior» que declarar — `precalificarAutoNueva()`
+ * cotiza de calle (`aseguradoAntes: false`). Lo único que la ficha no puede dar
+ * y sí hace falta es el VEHÍCULO: marca/modelo/versión (catálogo, gratis) y la
+ * matrícula, que aquí la teclea el corredor porque no sale de ninguna póliza.
+ *
+ * Misma disciplina que sus hermanas: **no gasta**. Corta antes del vendor (422
+ * faltan datos · 404 cliente · 503 correduría) y esas respuestas llevan
+ * `gastado: '0,00€'`. La llamada que paga sigue en la ruta, no aquí.
+ */
+export async function prepararRetarificacionNuevaAuto(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const { clienteId, solicitadoPor, cuerpo } = entrada
+
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        {
+          error:
+            'No se ha podido resolver la correduría, así que ni se consulta la cartera sin filtro ' +
+            'ni se cotiza. Esto NO significa que el cliente no exista.',
+        },
+        503,
+      ),
+    }
+  }
+
+  // 🛡️ Aislamiento: el cliente se busca SIEMPRE dentro de esta correduría.
+  const origen = await clienteOrigenDe(correduria.id, clienteId)
+  if (!origen) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'cliente no encontrado' }, 404) }
+  }
+
+  const resueltos: ResueltosAutoNueva = {
+    municipioId: numero(cuerpo.resueltos?.municipioId),
+    estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
+    matricula: cadena(cuerpo.resueltos?.matricula),
+    fechaMatriculacion: cadena(cuerpo.resueltos?.fechaMatriculacion),
+    codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
+    garaje: cadena(cuerpo.resueltos?.garaje),
+    garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
+  }
+
+  const pre = precalificarAutoNueva(origen.cliente, resueltos, hoyIso())
+
+  // Las correcciones del corredor mandan sobre lo supuesto: es una persona
+  // diciendo el dato de verdad. Se revisa OTRA VEZ con el resultado, porque una
+  // corrección puede arreglar un hueco y también puede romper otra regla.
+  const datos: Partial<DatosAuto> = {
+    ...pre.datos,
+    ...limpiarCorrecciones<DatosAuto>(cuerpo.correcciones),
+  }
+  const faltan = revisarDatosAuto(datos)
+  if (faltan.length > 0) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan }, 422) }
+  }
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construirPeticionAuto(datos as DatosAuto)
+  } catch (e) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto({ error: e instanceof Error ? e.message : String(e) }, 422),
+    }
+  }
+  // Codeoscopic valida externalId contra `^[a-zA-Z0-9-._~]+$`: ':' lo rechaza (400).
+  peticion.externalId = `cliente-${clienteId}`
+
+  return {
+    estado: 'listo',
+    peticion: {
+      correduriaId: correduria.id,
+      cuerpo: peticion,
+      motivo: 'defensa-cartera',
+      solicitadoPor,
+      // Aquí SÍ hay un id de cliente verificado con `clienteOrigenDe` (scoped a
+      // esta correduría): se guarda, para poder seguir la cotización desde su
+      // ficha — misma jugada que hogar sin póliza.
+      contexto: { ramo: 'auto', puerta: 'corredor', polizaId: null, clienteId },
+    },
+    supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones),
+    fuenteRiesgo: null,
+  }
+}
+
+// ─── MOTO, oportunidad nueva (sin póliza) ────────────────────────────────────
+
+/**
+ * Como `prepararRetarificacionNuevaAuto`, pero para MOTO: la cartera viva
+ * tiene 1 sola póliza de moto (03/09/2026), así que «nueva» es prácticamente
+ * el único caso real de este ramo. Cotiza DE CALLE (`aseguradoAntes: false`) y
+ * el vehículo se resuelve en el catálogo `/motorcycle/*`, gratis, igual que
+ * auto en su propio catálogo.
+ *
+ * Misma disciplina que sus hermanas: **no gasta**. Corta antes del vendor (409
+ * si moto no tarifica para la organización · 422 faltan datos · 404 cliente ·
+ * 503 correduría), y esas respuestas llevan `gastado: '0,00€'`.
+ */
+export async function prepararRetarificacionNuevaMoto(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const { clienteId, solicitadoPor, cuerpo } = entrada
+
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        {
+          error:
+            'No se ha podido resolver la correduría, así que ni se consulta la cartera sin filtro ' +
+            'ni se cotiza. Esto NO significa que el cliente no exista.',
+        },
+        503,
+      ),
+    }
+  }
+
+  // 🛡️ Aislamiento: el cliente se busca SIEMPRE dentro de esta correduría.
+  const origen = await clienteOrigenDe(correduria.id, clienteId)
+  if (!origen) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'cliente no encontrado' }, 404) }
+  }
+
+  const resueltos: ResueltosMotoNueva = {
+    municipioId: numero(cuerpo.resueltos?.municipioId),
+    estadoCivilId: cadena(cuerpo.resueltos?.estadoCivilId),
+    matricula: cadena(cuerpo.resueltos?.matricula),
+    fechaMatriculacion: cadena(cuerpo.resueltos?.fechaMatriculacion),
+    codigoVehiculo: cadena(cuerpo.resueltos?.codigoVehiculo),
+    garaje: cadena(cuerpo.resueltos?.garaje),
+    garajeEsSupuesto: cuerpo.resueltos?.garajeEsSupuesto === true,
+    experienciaConduccion: cadena(cuerpo.resueltos?.experienciaConduccion),
+  }
+
+  const pre = precalificarMotoNueva(origen.cliente, resueltos, hoyIso())
+
+  const datos: Partial<DatosMoto> = {
+    ...pre.datos,
+    ...limpiarCorrecciones<DatosMoto>(cuerpo.correcciones),
+  }
+  const faltan = revisarDatosMoto(datos)
+  if (faltan.length > 0) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan }, 422) }
+  }
+
+  // ── El id del ramo: de `/insurance-lines` (gratis), nunca escrito a mano ──
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista') {
+    return { estado: 'corte', respuesta: sinGasto({ error: explicarConfig(cfg) }, 503) }
+  }
+  const lineas = await lineasDeSeguro(cfg.config).catch(() => [])
+  const moto = motoDisponible(lineas)
+  if (moto.estado !== 'disponible') {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        { error: 'moto no tarifica para esta organización (o no se ha podido comprobar)', moto },
+        409,
+      ),
+    }
+  }
+  const reparoCarnet = await reparoCarnetMoto(
+    cfg.config,
+    datos.tipoCarnet,
+    versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
+  )
+  if (reparoCarnet) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422) }
+  }
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construirPeticionMoto(datos as DatosMoto, moto.id)
+  } catch (e) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto({ error: e instanceof Error ? e.message : String(e) }, 422),
+    }
+  }
+  peticion.externalId = `cliente-${clienteId}`
+
+  return {
+    estado: 'listo',
+    peticion: {
+      correduriaId: correduria.id,
+      cuerpo: peticion,
+      motivo: 'defensa-cartera',
+      solicitadoPor,
+      contexto: { ramo: 'moto', puerta: 'corredor', polizaId: null, clienteId },
+    },
+    supuestos: supuestosVigentes(pre.supuestos, cuerpo.correcciones),
+    fuenteRiesgo: null,
+  }
+}
+
+// ─── VIDA / SALUD / DECESOS, oportunidad nueva (sin póliza) ──────────────────
+//
+// Las tres comparten forma: cero pólizas en cartera hoy, así que «nueva» es el
+// ÚNICO caso; no hay vehículo ni vivienda que identificar, solo la persona y un
+// capital que el corredor teclea (nunca se supone, ver `desde-cartera-vida.ts`).
+//
+// 🚧 El `risk` que construyen `construirPeticionVida/Salud/Decesos` es una
+// SUPOSICIÓN sin verificar contra el fabricante (ver `peticion-vida.ts`):
+// construido a propósito de Alberto («hazlo con lo que tengas», 07/09/2026)
+// sabiendo que el primer intento real puede devolver un 400 con el nombre del
+// campo real, igual que pasó con `engine` en auto. Misma disciplina que sus
+// hermanas: **no gasta** hasta que `cotizar()` lo decide en la ruta.
+
+async function prepararRetarificacionNuevaGenerica<D, S>(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  ramo: 'vida' | 'salud' | 'decesos'
+  resueltos: D
+  correcciones: Record<string, unknown> | undefined
+  precalificar: (cliente: ClienteCartera, resueltos: D, hoy: string) => { datos: Partial<any>; supuestos: S[]; faltan: { campo: string }[] }
+  revisar: (d: Partial<any>) => { campo: string }[]
+  construir: (d: any, lineaId: string) => Record<string, unknown>
+  disponible: (lineas: Opcion[]) => DisponibilidadVida | DisponibilidadSalud | DisponibilidadDecesos
+}): Promise<PreparadoRetarificacion> {
+  const { clienteId, solicitadoPor, ramo, resueltos, correcciones, precalificar, revisar, construir, disponible } = entrada
+
+  const correduria = await correduriaUnica().catch(() => null)
+  if (!correduria) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        {
+          error:
+            'No se ha podido resolver la correduría, así que ni se consulta la cartera sin filtro ' +
+            'ni se cotiza. Esto NO significa que el cliente no exista.',
+        },
+        503,
+      ),
+    }
+  }
+
+  const origen = await clienteOrigenDe(correduria.id, clienteId)
+  if (!origen) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'cliente no encontrado' }, 404) }
+  }
+
+  const pre = precalificar(origen.cliente, resueltos, hoyIso())
+  const datos = { ...pre.datos, ...limpiarCorrecciones<any>(correcciones) }
+  const faltan = revisar(datos)
+  if (faltan.length > 0) {
+    return { estado: 'corte', respuesta: sinGasto({ error: 'faltan datos para cotizar', faltan }, 422) }
+  }
+
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista') {
+    return { estado: 'corte', respuesta: sinGasto({ error: explicarConfig(cfg) }, 503) }
+  }
+  const lineas = await lineasDeSeguro(cfg.config).catch(() => [])
+  const linea = disponible(lineas)
+  if (linea.estado !== 'disponible') {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto(
+        { error: `${ramo} no tarifica para esta organización (o no se ha podido comprobar)`, [ramo]: linea },
+        409,
+      ),
+    }
+  }
+
+  let peticion: Record<string, unknown>
+  try {
+    peticion = construir(datos, linea.id)
+  } catch (e) {
+    return {
+      estado: 'corte',
+      respuesta: sinGasto({ error: e instanceof Error ? e.message : String(e) }, 422),
+    }
+  }
+  peticion.externalId = `cliente-${clienteId}`
+
+  return {
+    estado: 'listo',
+    peticion: {
+      correduriaId: correduria.id,
+      cuerpo: peticion,
+      motivo: 'defensa-cartera',
+      solicitadoPor,
+      contexto: { ramo, puerta: 'corredor', polizaId: null, clienteId },
+    },
+    supuestos: supuestosVigentes(pre.supuestos as { campo: string }[], correcciones) as any,
+    fuenteRiesgo: null,
+  }
+}
+
+export function prepararRetarificacionNuevaVida(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const resueltos: ResueltosVidaNueva = {
+    estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
+    capital: numero(entrada.cuerpo.resueltos?.capital),
+    duracionAnios: numero(entrada.cuerpo.resueltos?.duracionAnios),
+  }
+  return prepararRetarificacionNuevaGenerica<ResueltosVidaNueva, SupuestoVida>({
+    clienteId: entrada.clienteId,
+    solicitadoPor: entrada.solicitadoPor,
+    ramo: 'vida',
+    resueltos,
+    correcciones: entrada.cuerpo.correcciones,
+    precalificar: precalificarVidaNueva as any,
+    revisar: revisarDatosVida as any,
+    construir: construirPeticionVida as any,
+    disponible: vidaDisponible,
+  })
+}
+
+export function prepararRetarificacionNuevaSalud(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const resueltos: ResueltosSaludNueva = {
+    estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
+    capital: numero(entrada.cuerpo.resueltos?.capital),
+    modalidadDeseada: cadena(entrada.cuerpo.resueltos?.modalidadDeseada),
+  }
+  return prepararRetarificacionNuevaGenerica<ResueltosSaludNueva, SupuestoSalud>({
+    clienteId: entrada.clienteId,
+    solicitadoPor: entrada.solicitadoPor,
+    ramo: 'salud',
+    resueltos,
+    correcciones: entrada.cuerpo.correcciones,
+    precalificar: precalificarSaludNueva as any,
+    revisar: revisarDatosSalud as any,
+    construir: construirPeticionSalud as any,
+    disponible: saludDisponible,
+  })
+}
+
+export function prepararRetarificacionNuevaDecesos(entrada: {
+  clienteId: string
+  solicitadoPor: string
+  cuerpo: CuerpoRetarificacion
+}): Promise<PreparadoRetarificacion> {
+  const resueltos: ResueltosDecesosNueva = {
+    estadoCivilId: cadena(entrada.cuerpo.resueltos?.estadoCivilId),
+    capital: numero(entrada.cuerpo.resueltos?.capital),
+  }
+  return prepararRetarificacionNuevaGenerica<ResueltosDecesosNueva, SupuestoDecesos>({
+    clienteId: entrada.clienteId,
+    solicitadoPor: entrada.solicitadoPor,
+    ramo: 'decesos',
+    resueltos,
+    correcciones: entrada.cuerpo.correcciones,
+    precalificar: precalificarDecesosNueva as any,
+    revisar: revisarDatosDecesos as any,
+    construir: construirPeticionDecesos as any,
+    disponible: decesosDisponible,
+  })
+}
+
+// ─── Catálogos (GRATIS) ──────────────────────────────────────────────────────
+//
+// Los desplegables del MISMO flujo de retarificación. Viven aquí por lo mismo
+// que la orquestación: los consumen dos rutas —la de sesión y la del puerto— y
+// una copia del `switch` que se quedara sin `onlyPopular=false`, o sin exigir
+// el combustible en `versiones`, no daría error: daría una lista recortada.
+//
+// 🚨 Nada de aquí cuesta dinero: son `GET` de consulta, y por eso se resuelven
+// con el interruptor de tarificación APAGADO (`ignorarInterruptor`). Elegir
+// marca y modelo tiene que poder hacerse antes de encender el gasto.
+
+export type ResultadoCatalogo =
+  | {
+      estado: 'ok'
+      opciones: Opcion[]
+      hogar?: DisponibilidadHogar
+      moto?: DisponibilidadMoto
+      vida?: DisponibilidadVida
+      salud?: DisponibilidadSalud
+      decesos?: DisponibilidadDecesos
+    }
+  /** El parámetro que falta o no existe. La ruta lo devuelve como 400. */
+  | { estado: 'invalido'; mensaje: string }
+  /** Faltan credenciales/host de Codeoscopic. 503, y NO es «no hay opciones». */
+  | { estado: 'sin_configurar'; mensaje: string }
+  /**
+   * No se ha podido leer. **Nunca se degrada a lista vacía**: eso pintaría
+   * «esta marca no tiene modelos» sobre un fallo de red (regla de `CLAUDE.md`).
+   */
+  | { estado: 'error'; causa: CausaErrorCartera; mensaje: string }
+
+/**
+ * Resuelve UN catálogo por su `tipo` y los parámetros que ese tipo pida.
+ * Firma neutra (`URLSearchParams`) porque las dos rutas son `GET` con query.
+ */
+export async function resolverCatalogo(params: URLSearchParams): Promise<ResultadoCatalogo> {
+  const tipo = params.get('tipo')
+
+  const r = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (r.estado !== 'lista') return { estado: 'sin_configurar', mensaje: explicarConfig(r) }
+  const config = r.config
+
+  try {
+    switch (tipo) {
+      case 'marcas':
+        return { estado: 'ok', opciones: await marcas(config) }
+      case 'modelos': {
+        const marcaId = params.get('marcaId')
+        if (!marcaId) return { estado: 'invalido', mensaje: 'falta marcaId' }
+        return { estado: 'ok', opciones: await modelos(config, marcaId) }
+      }
+      case 'motores':
+        return { estado: 'ok', opciones: await tiposDeMotor(config) }
+      case 'versiones': {
+        const marcaId = params.get('marcaId')
+        const modeloId = params.get('modeloId')
+        // 🚨 `motor` es obligatorio: sin él el vendor devuelve 400 y la pantalla
+        // se queda sin versiones — que es justo el dato que hay que elegir.
+        // Se rechaza aquí, con su nombre, en vez de dejar que el 400 del vendor
+        // llegue crudo a la pantalla (fue lo que pasó el 03/09/2026).
+        const motor = params.get('motor')
+        if (!marcaId || !modeloId || !motor) {
+          return { estado: 'invalido', mensaje: 'faltan marcaId, modeloId y motor' }
+        }
+        return { estado: 'ok', opciones: await versiones(config, marcaId, modeloId, motor) }
+      }
+      case 'garajes':
+        return { estado: 'ok', opciones: await tiposDeGaraje(config) }
+      // Los dos del carnet. **Gratis**, como el resto: elegir la zona de
+      // expedición tiene que poder hacerse antes de que nadie pague 0,50€.
+      case 'zonas-carnet':
+        return { estado: 'ok', opciones: await zonasExpedicionCarnet(config) }
+      case 'tipos-carnet':
+        return { estado: 'ok', opciones: await tiposDeCarnet(config) }
+      case 'estados-civiles':
+        return { estado: 'ok', opciones: await estadosCiviles(config) }
+      case 'municipios': {
+        const cp = params.get('cp')
+        if (!cp) return { estado: 'invalido', mensaje: 'falta cp' }
+        return { estado: 'ok', opciones: await municipiosPorCp(config, cp) }
+      }
+      // ── Hogar ── los diez catálogos `/home/*`, por nombre CERRADO: el path se
+      // construye con él y no se aceptan nombres que no estén en la lista.
+      case 'hogar': {
+        const nombre = params.get('nombre')
+        if (!esCatalogoHogar(nombre)) {
+          return {
+            estado: 'invalido',
+            mensaje: `falta o no existe el catálogo de hogar «${nombre ?? ''}»: vale uno de ${CATALOGOS_HOGAR.join(', ')}`,
+          }
+        }
+        return { estado: 'ok', opciones: await catalogoHogar(config, nombre) }
+      }
+      // Los tipos de vía (`Calle`, `Avenida`…): van en `risk.address.roadType.id` de hogar.
+      case 'vias':
+        return { estado: 'ok', opciones: await tiposDeVia(config) }
+      // ── Moto ── mismo catálogo de garajes que auto; marca/modelo/versión y la
+      // experiencia de conducción tienen su propio prefijo `/motorcycle/*`.
+      case 'marcas-moto':
+        return { estado: 'ok', opciones: await marcasMoto(config) }
+      case 'modelos-moto': {
+        const marcaId = params.get('marcaId')
+        if (!marcaId) return { estado: 'invalido', mensaje: 'falta marcaId' }
+        return { estado: 'ok', opciones: await modelosMoto(config, marcaId) }
+      }
+      case 'versiones-moto': {
+        const marcaId = params.get('marcaId')
+        const modeloId = params.get('modeloId')
+        const motor = params.get('motor')
+        if (!marcaId || !modeloId || !motor) {
+          return { estado: 'invalido', mensaje: 'faltan marcaId, modeloId y motor' }
+        }
+        if (!(MOTORES_MOTO as readonly string[]).includes(motor)) {
+          return { estado: 'invalido', mensaje: `motor desconocido: ${motor} (vale ${MOTORES_MOTO.join(', ')})` }
+        }
+        return { estado: 'ok', opciones: await versionesMoto(config, marcaId, modeloId, motor as MotorMoto) }
+      }
+      case 'experiencia-moto':
+        return { estado: 'ok', opciones: await experienciaConduccionMoto(config) }
+      // Catálogos PROPIOS de moto (23/09/2026): el de garajes de coche no es el de motos.
+      case 'garajes-moto':
+        return { estado: 'ok', opciones: await tiposDeGarajeMoto(config) }
+      case 'carnets-moto':
+        return { estado: 'ok', opciones: await tiposDeCarnetMoto(config) }
+      // Los ramos habilitados para esta organización y, resuelto aquí mismo,
+      // si hogar/moto están entre ellos (con su id EXACTO). Tres estados, no dos.
+      case 'lineas': {
+        const lineas = await lineasDeSeguro(config)
+        return {
+          estado: 'ok',
+          opciones: lineas,
+          hogar: hogarDisponible(lineas),
+          moto: motoDisponible(lineas),
+          vida: vidaDisponible(lineas),
+          salud: saludDisponible(lineas),
+          decesos: decesosDisponible(lineas),
+        }
+      }
+      default:
+        return { estado: 'invalido', mensaje: `catálogo desconocido: ${tipo}` }
+    }
+  } catch (e) {
+    // Un catálogo que no se puede leer NO se devuelve como lista vacía.
+    return {
+      estado: 'error',
+      causa: registrarErrorCartera(`catalogos/${tipo ?? 'sin-tipo'}`, e),
+      mensaje: e instanceof Error ? e.message : String(e),
+    }
+  }
+}
+
+// ─── El catálogo CRUDO, para medir qué se está tirando ───────────────────────
+
+/** Los catálogos cuyo crudo se puede medir. Lista CERRADA: no es una puerta genérica al vendor. */
+export const TIPOS_CRUDO = ['versiones', 'versiones-moto', 'carnets-moto'] as const
+
+export type ResultadoCrudo =
+  | { estado: 'ok'; path: string; resumen: ResumenCrudo; opciones: Opcion[]; completo?: unknown }
+  | { estado: 'invalido'; mensaje: string }
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'error'; causa: CausaErrorCartera; mensaje: string }
+
+/**
+ * `tipo=versiones` **sin recortar**: las claves que manda el vendor de verdad y
+ * una muestra de entradas enteras.
+ *
+ * Existe para contestar con una medición, y no de memoria, a «¿trae el catálogo
+ * los años de fabricación de cada versión?» — la pieza que permitiría cruzar la
+ * versión con la fecha de matriculación (que sale gratis de la matrícula). El
+ * desplegable del corredor solo enseña el NOMBRE, y ahí no salen años; si el
+ * vendor los manda, están en un campo que `normalizarOpciones` descarta.
+ *
+ * Desde el 23/09/2026 también `versiones-moto` y `carnets-moto`: el cruce
+ * carné × cilindrada (`carnet-moto.ts`) lee `maxDisplacement`/`maxEnginePower`
+ * del carné y `engine.displacement`/`engine.powerKw` de la versión, y solo el
+ * A1 estaba medido. Esto es lo que lo mide.
+ *
+ * 🚨 **Gratis, y solo los de `TIPOS_CRUDO`.** No es una puerta
+ * genérica al vendor: pedir el crudo de cualquier otro `tipo` responde
+ * `invalido` con su nombre, en vez de devolver la lista normalizada de siempre
+ * — que se leería como «he mirado el crudo y no hay nada más», que es la
+ * afirmación que este endpoint existe para no tener que hacer.
+ */
+export async function resolverCatalogoCrudo(params: URLSearchParams): Promise<ResultadoCrudo> {
+  const tipo = params.get('tipo')
+  if (tipo !== 'versiones' && tipo !== 'versiones-moto' && tipo !== 'carnets-moto') {
+    return {
+      estado: 'invalido',
+      mensaje: `el crudo solo está soportado en ${TIPOS_CRUDO.join(', ')} (se pidió «${tipo ?? ''}»)`,
+    }
+  }
+
+  const marcaId = params.get('marcaId')
+  const modeloId = params.get('modeloId')
+  const motor = params.get('motor')
+  if (tipo !== 'carnets-moto' && (!marcaId || !modeloId || !motor)) {
+    return { estado: 'invalido', mensaje: 'faltan marcaId, modeloId y motor' }
+  }
+  if (tipo === 'versiones-moto' && !(MOTORES_MOTO as readonly string[]).includes(motor ?? '')) {
+    return { estado: 'invalido', mensaje: `motor de moto no válido: ${motor} (${MOTORES_MOTO.join(', ')})` }
+  }
+
+  const r = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (r.estado !== 'lista') return { estado: 'sin_configurar', mensaje: explicarConfig(r) }
+
+  try {
+    const { opciones, crudo, path } =
+      tipo === 'carnets-moto'
+        ? await carnetsMotoCrudos(r.config)
+        : tipo === 'versiones-moto'
+          ? await versionesMotoCrudas(r.config, marcaId!, modeloId!, motor as MotorMoto)
+          : await versionesCrudas(r.config, marcaId!, modeloId!, motor!)
+    // El path viene de la propia función que hizo la petición: conste QUÉ se
+    // preguntó. Una medición sin su petición al lado no la comprueba nadie más.
+    // Los carnés son una lista corta y lo que se mide son TODOS sus límites: la
+    // muestra de `resumirCrudo` (3 entradas) dejaría fuera justo el A2 o el A.
+    const completo = tipo === 'carnets-moto' ? { completo: crudo } : {}
+    return { estado: 'ok', path, resumen: resumirCrudo(crudo), opciones, ...completo }
+  } catch (e) {
+    return {
+      estado: 'error',
+      causa: registrarErrorCartera(`catalogos-crudo/${tipo}`, e),
+      mensaje: e instanceof Error ? e.message : String(e),
+    }
+  }
+}
+
+// ─── Utilidades ──────────────────────────────────────────────────────────────
+
+function cadena(v: unknown): string | null {
+  return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+function numero(v: unknown): number | null {
+  if (typeof v === 'string' && v.trim() === '') return null
+  const n = typeof v === 'string' ? Number(v) : v
+  return typeof n === 'number' && Number.isFinite(n) ? n : null
+}
+
+/** `true`/`false` (boolean o cadena) → boolean. Cualquier otra cosa → `null` (no es una respuesta). */
+function booleano(v: unknown): boolean | null {
+  if (typeof v === 'boolean') return v
+  if (v === 'true') return true
+  if (v === 'false') return false
+  return null
+}
+
+function esObjetoPlano(v: unknown): v is Record<string, unknown> {
+  return typeof v === 'object' && v !== null && !Array.isArray(v)
+}
+
+function hoyIso(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+/** Solo se aceptan correcciones CON valor: un campo vacío no borra lo supuesto. */
+function limpiarCorrecciones<T>(c: Record<string, unknown> | undefined): Partial<T> {
+  if (!c || typeof c !== 'object') return {}
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(c)) {
+    if (v === null || v === undefined) continue
+    if (typeof v === 'string' && v.trim() === '') continue
+    out[k] = typeof v === 'string' ? v.trim() : v
+  }
+  return out as Partial<T>
+}

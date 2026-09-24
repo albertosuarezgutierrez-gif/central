@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { isAlertaTokenAuthorized } from "@/lib/cron-auth"
 import { getSession } from "@/lib/session"
-import { getSmoobuKey } from "@/lib/smoobu"
+import { getSmoobuKey, smoobuFetch } from "@/lib/smoobu"
+import { aplicarRailesPrecio } from "@/lib/sivra/pricing-railes-propuesta"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -25,6 +26,7 @@ export const maxDuration = 300
 //   2. apply_enabled por piso                       → en vivo, sólo pisos habilitados.
 //   3. SUELO de coste (`pricing_settings.min_price`)→ nunca por debajo del coste.
 //   4. TOPE ±max_change_pct/DÍA vs precio actual    → no pega saltos bruscos en una pasada.
+//      Fecha SIN precio actual y sin suelo+techo → NO se escribe (`sin_referencia`, 23/09/2026).
 //   5. TECHO opcional (`max_price`)                 → normalmente NULL (eventos sin techo).
 //   6. CIRCUIT-BREAKER                              → si la propuesta CRUDA es disparatada, ABORTA
 //      la pasada entera SIN escribir y devuelve alerta para revisión humana.
@@ -51,7 +53,6 @@ const SMOOBU_ID: Record<string, number> = {
   prop_luxury_busto:    352943,
 }
 
-const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x))
 const ISO = /^\d{4}-\d{2}-\d{2}$/
 
 // Circuit-breaker (defensa contra un agente que se desboca). Se mide sobre la propuesta CRUDA
@@ -157,15 +158,14 @@ export async function POST(req: NextRequest) {
     const start = dates[0], end = dates[dates.length - 1]
     let cur: Record<string, { price: number | null; available: number }> = {}
     try {
-      const res = await fetch(`${BASE}/rates?apartments[]=${smoobuId}&start_date=${start}&end_date=${end}`,
-        { headers: { "Api-Key": SMOOBU_KEY, "Cache-Control": "no-cache" }, next: { revalidate: 0 } })
+      const res = await smoobuFetch(`${BASE}/rates?apartments[]=${smoobuId}&start_date=${start}&end_date=${end}`,
+        { next: { revalidate: 0 } })
       if (!res.ok) { plan.errors.push(`Smoobu GET ${res.status}`); plans.push(plan); continue }
       cur = (await res.json()).data?.[smoobuId] ?? {}
     } catch (e) {
       plan.errors.push(`Smoobu GET ${String(e).slice(0, 80)}`); plans.push(plan); continue
     }
 
-    const maxChg = s ? Number(s.max_change_pct) : 0.20
     for (const p of props) {
       const info = cur[p.rate_date]
       // RAÍL 7 — sólo fechas disponibles (no pisar reservas).
@@ -177,8 +177,15 @@ export async function POST(req: NextRequest) {
       }
       const old = info.price != null ? Math.round(info.price) : null
       const proposed = Math.round(Number(p.price))
-      let target = proposed
-      const reasons: string[] = []
+
+      // RAÍLES 3-5 (suelo, tope ±/día, techo) — lib/sivra/pricing-railes-propuesta.ts.
+      const r = aplicarRailesPrecio({ proposed, old, ajustes: s })
+      if (!r.escribe) {
+        plan.audit.push({ rate_date: p.rate_date, old, proposed, final: 0, reason: r.reason,
+          min_stay: p.min_stay ?? null, motivo: String(p.motivo ?? ""), variables: p.variables ?? null })
+        continue
+      }
+      const target = r.target, reasons = r.reasons
 
       // Circuit-breaker se mide sobre la INTENCIÓN (propuesta cruda vs actual).
       cbDates++
@@ -186,18 +193,6 @@ export async function POST(req: NextRequest) {
         const pct = Math.abs(proposed - old) / old
         cbPctSum += pct; cbPctN++; cbMaxSeen = Math.max(cbMaxSeen, pct)
       }
-
-      // RAÍL 3 — suelo de coste.
-      if (s?.min_price != null && target < s.min_price) { target = s.min_price; reasons.push("suelo") }
-      // RAÍL 4 — tope ±max_change_pct/día vs precio actual.
-      if (old != null) {
-        const lo = Math.round(old * (1 - maxChg)), hi = Math.round(old * (1 + maxChg))
-        const capped = clamp(target, lo, hi)
-        if (capped !== target) { reasons.push(target > capped ? "tope_subida" : "tope_bajada"); target = capped }
-      }
-      // RAÍL 5 — techo opcional del propietario (re-aplica suelo por si techo<suelo).
-      if (s?.max_price != null && target > s.max_price) { target = s.max_price; reasons.push("techo") }
-      if (s?.min_price != null && target < s.min_price) target = s.min_price
 
       if (old != null && target === old) {
         plan.audit.push({ rate_date: p.rate_date, old, proposed, final: target, reason: "sin_cambio",
@@ -236,9 +231,9 @@ export async function POST(req: NextRequest) {
     const canWrite = !dryRun && !paused && plan.apply_enabled && plan.ops.length > 0
     if (canWrite) {
       try {
-        const res = await fetch(`${BASE}/rates`, {
+        const res = await smoobuFetch(`${BASE}/rates`, {
           method: "POST",
-          headers: { "Api-Key": SMOOBU_KEY, "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ apartments: [plan.smoobuId], operations: plan.ops }),
         })
         written = res.ok
@@ -275,7 +270,8 @@ export async function POST(req: NextRequest) {
 // Auditoría de lo aplicado/ que se aplicaría (un INSERT multi-fila por piso, como apply/route.ts).
 async function auditApplied(plans: { propId: string; audit: { rate_date: string; old: number | null; final: number; reason: string }[] }[], dryRun: boolean) {
   for (const plan of plans) {
-    const rows = plan.audit.filter(a => a.reason !== "sin_cambio" && a.reason !== "no_disponible")
+    // `sin_referencia` tampoco: no se escribió nada, y un new_price=0 aquí se leería como precio vivo.
+    const rows = plan.audit.filter(a => a.reason !== "sin_cambio" && a.reason !== "no_disponible" && a.reason !== "sin_referencia")
     if (rows.length === 0) continue
     const values = rows.map(a =>
       Prisma.sql`(${plan.propId}, ${a.rate_date}::date, ${a.old}::int, ${a.final}::int, ${dryRun}, 'agente')`)

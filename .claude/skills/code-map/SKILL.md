@@ -49,6 +49,34 @@ escribe en `movimientos_bancarios`?") y NO sepas ya el archivo. Salta este paso 
   la verdad es el archivo real, que sí lees entero.
 - El coste real que ahorras se registra: el endpoint equivalente escribe en `ai_usos` (`endpoint='codigo'`).
 
+## Callers, impacto, vecinos, tests → un SUBAGENTE (el grafo se retiró el 21/09/2026)
+
+🗑️ **Las tablas `grafo_nodos`/`grafo_aristas`/`grafo_embeddings` y todas las funciones `grafo_*` ya
+NO existen.** Se borraron de Supabase el 21/09/2026: ocupaban 258 MB de una BD que estaba por encima
+del límite del plan Free y, medido sobre las 86 sesiones de `docs/uso-herramientas/`, se habían usado
+en **3**. Si ves un `SELECT * FROM grafo_callers(...)` en algún documento viejo, está obsoleto.
+
+**Cómo se responden ahora esas preguntas:**
+
+| Pregunta | Cómo |
+|---|---|
+| ¿Dónde vive esta funcionalidad? | Este mismo mapa (`mapa_arquitectura`), que SE QUEDA |
+| ¿Quién llama/usa a `X`? | `Grep` del símbolo, o un subagente si hay que cribar muchos resultados |
+| ¿Qué rompe si toco este archivo? | Subagente (`Explore`): que greppee importadores y te devuelva la lista |
+| ¿Qué tests cubren esto? | `Grep` del símbolo en `**/*.test.ts` |
+| Pregunta en lenguaje natural sobre el código | Subagente: acota con este mapa y greppea varios patrones |
+
+**Por qué un subagente y no leerlo tú:** se come los archivos en SU contexto y te devuelve solo el
+informe — que es justo lo que aportaba el grafo. En la medición del 21/09, `general-purpose` (596k
+tokens citados en 11 sesiones), `Explore` (266k en 8) y `agente-mecanico` (277k en 7) ya ahorraban
+más que el grafo (75k en 3).
+
+⚠️ **Lo que se pierde:** la búsqueda semántica sobre código. Un `Grep` no sabe qué querías decir, así
+que hay que probar varios patrones. Asumido a cambio de los 258 MB.
+
+✅ **`memoria_buscar()` sigue viva** (`memoria_embeddings`, sobre `docs/CONTEXTO-SESIONES.md` y
+`docs/memoria/*.md`): para decisiones, convenciones y gotchas del proyecto. No se tocó.
+
 ## Relación con el resto
 - Mismo índice que consume el **Director de código** (`apps/plataforma/lib/ia-director-codigo.ts`,
   endpoint `/api/ai/codigo`) para orquestadores externos. Ver `docs/DIRECTOR-CODIGO.md`.

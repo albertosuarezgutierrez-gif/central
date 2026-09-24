@@ -97,14 +97,139 @@ test('RC: con más de tres coberturas se resume el resto sin ocultarlo', () => {
   assert.equal(o.detalle, '+2 coberturas')
 })
 
+test('RC: el desglose entero viaja en `coberturas`, sin truncar a 3 ni comas', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: ['Básica', 'Locativa', 'Patronal', 'Explotación', 'Productos'],
+  })
+  assert.deepEqual(o.coberturas, ['Básica', 'Locativa', 'Patronal', 'Explotación', 'Productos'])
+})
+
 test('RC sin coberturas cargadas es «no informado»', () => {
   assert.equal(objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: [] }).estado, 'no_informado')
+})
+
+test('RC sin coberturas pero con modalidad anotada a mano: se pinta esa modalidad, marcada como manual', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: [],
+    datos: { rcModalidad: 'locativa', rcModalidadTitulo: 'RC Locativa (inmueble alquilado)' },
+  })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'RC Locativa (inmueble alquilado)')
+  assert.match(o.nota ?? '', /a mano/i)
+})
+
+test('RC: las coberturas de CIMA mandan SIEMPRE sobre la modalidad manual', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: ['Básica'],
+    datos: { rcModalidad: 'locativa', rcModalidadTitulo: 'RC Locativa (inmueble alquilado)' },
+  })
+  assert.equal(o.titulo, 'Básica')
+})
+
+test('RC con `rcModalidad` pero sin título guardado (dato a medias): no se inventa nada', () => {
+  const o = objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: [], datos: { rcModalidad: 'locativa' } })
+  assert.equal(o.estado, 'no_informado')
+})
+
+test('RC de mascotas: la raza se añade al detalle sin pisar el título de coberturas', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: ['Básica'],
+    datos: { animalRaza: 'Labrador Retriever' },
+  })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'Básica')
+  assert.equal(o.detalle, 'Labrador Retriever')
+})
+
+test('RC de mascotas: sin coberturas, la raza identifica sola la póliza (como la matrícula en auto)', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: [],
+    datos: { animalRaza: 'Bulldog Francés' },
+  })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'Bulldog Francés')
+  assert.match(o.nota ?? '', /mascotas/i)
+})
+
+test('RC de mascotas: la raza manda sobre la modalidad manual (misma jerarquía que las coberturas de CIMA)', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: [],
+    datos: {
+      animalRaza: 'Pastor Alemán',
+      rcModalidad: 'locativa',
+      rcModalidadTitulo: 'RC Locativa (inmueble alquilado)',
+    },
+  })
+  assert.equal(o.titulo, 'Pastor Alemán')
+})
+
+test('RC sin animal ni coberturas ni modalidad manual: sigue siendo «no informado»', () => {
+  assert.equal(
+    objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: [], datos: {} }).estado,
+    'no_informado',
+  )
 })
 
 test('comercio: manda la actividad', () => {
   const o = objetoAsegurado({ tipo: 'comercio', datos: { actividad: 'Bar-cafetería', localidad: 'DOS HERMANAS' } })
   assert.equal(o.titulo, 'Bar-cafetería')
   assert.equal(o.detalle, 'DOS HERMANAS')
+})
+
+// ── Capital asegurado por partida (Riesgo.Capitales.Capital[]) ─────────────
+
+test('hogar: el capital por partida se desglosa con importe en formato español', () => {
+  const o = objetoAsegurado({
+    tipo: 'hogar',
+    datos: {
+      direccion: 'Calle Falsa 1',
+      capitales: [
+        { bien: 'Continente', importe: 150000 },
+        { bien: 'Contenido', importe: 30000.5 },
+      ],
+    },
+  })
+  assert.deepEqual(o.capitalAsegurado, ['Continente: 150.000,00 €', 'Contenido: 30.000,50 €'])
+})
+
+test('sin partida con dato real, capitalAsegurado es null (no un array vacío pintado)', () => {
+  const o = objetoAsegurado({ tipo: 'hogar', datos: { direccion: 'Calle Falsa 1', capitales: [] } })
+  assert.equal(o.capitalAsegurado, undefined)
+  const o2 = objetoAsegurado({
+    tipo: 'hogar',
+    datos: { direccion: 'Calle Falsa 1', capitales: [{ modalidadValoracion: 'RV' }] },
+  })
+  assert.equal(o2.capitalAsegurado, undefined)
+})
+
+test('capitalAsegurado nunca se pinta si el estado no es «conocido» (no hay bien que acompañar)', () => {
+  const o = objetoAsegurado({ tipo: 'hogar', datos: { capitales: [{ bien: 'Continente', importe: 150000 }] } })
+  assert.equal(o.estado, 'no_informado')
+  assert.equal(o.capitalAsegurado, undefined)
+})
+
+test('una partida sin importe pero con descripción se pinta solo con el texto', () => {
+  const o = objetoAsegurado({
+    tipo: 'hogar',
+    datos: { direccion: 'Calle Falsa 1', capitales: [{ descripcion: 'Joyas y objetos de valor' }] },
+  })
+  assert.deepEqual(o.capitalAsegurado, ['Joyas y objetos de valor'])
+})
+
+test('RC de mascotas: el capital (p.ej. gastos veterinarios) también se desglosa', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: [],
+    datos: { animalRaza: 'Labrador Retriever', capitales: [{ bien: 'Gastos veterinarios', importe: 3000 }] },
+  })
+  assert.equal(o.titulo, 'Labrador Retriever')
+  assert.deepEqual(o.capitalAsegurado, ['Gastos veterinarios: 3.000,00 €'])
 })
 
 // ── Seguros de personas ─────────────────────────────────────────────────────
@@ -128,4 +253,24 @@ test('comunidad: viviendas y bloques describen el riesgo', () => {
 test('un tipo desconocido no revienta ni inventa: cae a «no informado»', () => {
   const o = objetoAsegurado({ tipo: 'ramo_que_no_existe', datos: null, coberturas: null })
   assert.equal(o.estado, 'no_informado')
+})
+
+test('inmueble con dirección anotada a mano: se dice que no vino de la compañía', () => {
+  const o = objetoAsegurado({ tipo: 'hogar', datos: { direccion: 'Calle Socorro 24', cp: '41003', localidad: 'Sevilla', direccionOrigen: 'manual' }, coberturas: null })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'Calle Socorro 24')
+  assert.match(o.nota ?? '', /anotada a mano/)
+})
+
+test('inmueble con dirección de la compañía: sin nota de «a mano»', () => {
+  const o = objetoAsegurado({ tipo: 'hogar', datos: { direccion: 'Calle Socorro 24', cp: '41003', localidad: 'Sevilla' }, coberturas: null })
+  assert.equal(o.nota, null)
+})
+
+test('«comunidades» (el enum de la BD) se describe como inmueble y lee la dirección', () => {
+  const o = objetoAsegurado({ tipo: 'comunidades', datos: { direccion: 'Calle Betis 10', direccionOrigen: 'manual' }, coberturas: null })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'Calle Betis 10')
+  const sin = objetoAsegurado({ tipo: 'comunidades', datos: { nViviendas: 12 }, coberturas: null })
+  assert.equal(sin.titulo, 'Comunidad')
 })

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { consultarHogar, type ConsultaHogar } from '@/lib/correduria-hogar'
 
 export const dynamic = 'force-dynamic'
@@ -9,8 +9,8 @@ export const maxDuration = 30
 // POST /api/correduria/catastro — m², año y uso de una vivienda para el
 // presupuesto de hogar. Gratis (servicio público) y read-only.
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!body) return NextResponse.json({ error: 'cuerpo ilegible' }, { status: 400 })
 

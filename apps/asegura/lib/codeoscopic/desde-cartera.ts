@@ -33,6 +33,10 @@ import {
   type DatosAuto,
   type Reparo,
 } from './peticion-auto.ts'
+import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-moto.ts'
+import { partirDireccion, tipoViaDeFicha } from './direccion.ts'
+import { KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
+import { TIPO_CARNET_SUPUESTO, ZONA_CARNET_SUPUESTA } from './persona.ts'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
 export type Supuesto = {
@@ -67,6 +71,61 @@ export type ClienteCartera = {
   codigoPostal: string | null
   /** Fecha del carnet B, de `cliente_carnets_conducir`. */
   fechaCarnet: string | null
+  /**
+   * Los carnés de la ficha (`cliente_carnets_conducir`), ya descifrados. Solo
+   * los usa moto, para declarar el carné de MOTO. `null` = no se han podido
+   * leer; `undefined` = no se han pedido (ramos que no los usan).
+   */
+  carnets?: { tipo: string; fechaExpedicion: string | null }[] | null
+  /**
+   * Dirección en texto libre de la ficha, ya descifrada. `null` = no hay o no
+   * se ha podido descifrar. Se usa SOLO para trocearla y rellenar `nombreVia`
+   * por defecto (11º 400 real, ReRate): si ya la tenemos, no se le vuelve a
+   * pedir al corredor — es la misma jugada que ya hacía hogar con la calle
+   * del riesgo, aplicada aquí a la calle del tomador.
+   */
+  direccion?: string | null
+  /**
+   * El correo al que se le escribe (`emailDeFicha`: principal de las tablas
+   * hijas, respetando la baja de correo), ya descifrado. `null` = no hay o no
+   * se ha podido descifrar. El SUBMIT lo exige y el vendor no lo aplica por
+   * PATCH (12/09/2026), así que viaja en el `POST /insurances` desde el
+   * principio; si falta, es un hueco que se pide ANTES de pagar.
+   */
+  email?: string | null
+}
+
+/**
+ * Una versión de vehículo vista en OTRA póliza de la misma matrícula.
+ *
+ * 🚨 Es una PISTA, no un dato: es texto libre del volcado histórico, no un
+ * código Base7 del catálogo del vendor, y la misma matrícula puede traer dos
+ * que se contradigan (medido: `0432GLT` sale como «FORTWO COUPE PURE 52» en una
+ * póliza y como «FORFOUR PURE 1.1» en otra). Por eso viaja con su procedencia
+ * y NUNCA se autoselecciona, ni cuando solo hay una: elige el corredor.
+ */
+export type VersionCandidata = {
+  /** El texto tal cual se guardó. */
+  version: string
+  /** De qué póliza sale, para poder decirlo en pantalla. */
+  procedencia: string
+}
+
+/**
+ * Lo que la ficha SÍ sabe del coche.
+ *
+ * ⚠️ Corregido el 03/09/2026: durante un día se dio por hecho que las pólizas
+ * vivas solo traían matrícula. Es falso — las 80 de auto traen matrícula, marca
+ * Y modelo; lo único que no trae ninguna es la versión. La pantalla decía «la
+ * compañía manda la matrícula pero no el modelo» y obligaba a teclear de cero
+ * algo que ya estaba en la BD.
+ */
+export type VehiculoConocido = {
+  /** `null` = no consta en la póliza. NO es «el coche no tiene marca». */
+  marca: string | null
+  modelo: string | null
+  /** Puede ser `[]`: nadie ha anotado nunca una versión de esta matrícula. */
+  versiones: VersionCandidata[]
 }
 
 export type PolizaCartera = {
@@ -86,6 +145,8 @@ export type PolizaCartera = {
    * optimista; con >0 deja de ser supuesto y pasa a ser dato.
    */
   siniestrosRegistrados: number
+  /** Marca, modelo y versiones candidatas. Ver `VehiculoConocido`. */
+  vehiculo: VehiculoConocido
 }
 
 /**
@@ -103,10 +164,40 @@ export type Resueltos = {
   /** Id del catálogo `car/garage-types`. */
   garaje: string | null
   garajeEsSupuesto?: boolean
+  /**
+   * `roadType.id` del catálogo `/road-types` — lo empareja el caller (que es
+   * quien tiene red) desde el tipo de vía que trocea `partirDireccion()`, o lo
+   * elige el corredor. Es una referencia de catálogo: nunca texto.
+   */
+  tipoViaId?: string | null
 }
 
-/** Kilómetros al año cuando nadie lo ha dicho. Media española declarada. */
-export const KM_ANUALES_POR_DEFECTO = 15000
+/**
+ * El `roadType` del tomador para `Resueltos.tipoViaId`: la dirección de la
+ * ficha se queda DENTRO de esta función (la ruta del puerto no puede nombrarla
+ * — guardián `test/regression-retarificar-plataforma.test.ts`); lo que sale es
+ * una opción del catálogo, que no es un dato personal. `null` = elígelo a mano.
+ */
+export function tipoViaDelTomador(
+  cliente: Pick<ClienteCartera, 'direccion'>,
+  catalogo: ReadonlyArray<{ id: string; nombre: string }>,
+): { id: string; nombre: string } | null {
+  return tipoViaDeFicha(cliente.direccion ?? null, catalogo)
+}
+
+/** El tipo de vía tal y como lo trocea la ficha («Calle», «Avenida»…), sin catálogo. Para explicar por qué no casa. */
+export function tipoViaTextoDelTomador(cliente: Pick<ClienteCartera, 'direccion'>): string | null {
+  return partirDireccion(cliente.direccion ?? null).tipoVia
+}
+
+/**
+ * Kilómetros al año cuando nadie lo ha dicho. Media española declarada.
+ *
+ * El número NO vive aquí: lo fija `@central/module-seguros` porque la pantalla
+ * de plataforma tiene que enseñar el MISMO supuesto que viaja en la petición.
+ * Se re-exporta con el nombre de siempre para no tocar a quien ya lo importa.
+ */
+export const KM_ANUALES_POR_DEFECTO = KM_ANUALES_SUPUESTOS
 
 /** Años asegurado que se presumen cuando no consta el inicio de la relación. */
 const ANIOS_ASEGURADO_MINIMOS = 1
@@ -168,32 +259,31 @@ export function aniosEntre(desde: string | null, hasta: string): number | null {
 }
 
 /** El día siguiente a una fecha aaaa-mm-dd. */
-function diaSiguiente(f: string): string {
+export function diaSiguiente(f: string): string {
   const d = new Date(`${f}T00:00:00Z`)
   d.setUTCDate(d.getUTCDate() + 1)
   return d.toISOString().slice(0, 10)
 }
 
 /**
- * Construye la precalificación.
- *
- * `hoy` entra por parámetro para que la función sea pura y los tests no
- * dependan del calendario.
+ * Fecha de efecto e historial de una póliza que se RETARIFICA: común a auto y
+ * moto. La póliza actual pasa a ser la anterior (compañía, número, antigüedad),
+ * y lo que no consta se supone y se declara con `suponer`.
  */
-export function precalificarAuto(
-  cliente: ClienteCartera,
+function historialDePoliza(
   poliza: PolizaCartera,
-  resueltos: Resueltos,
   hoy: string,
-): Precalificacion {
-  const supuestos: Supuesto[] = []
-  const suponer = (campo: keyof DatosAuto, valor: unknown, porque: string, optimista = false) => {
-    supuestos.push({ campo, valor, porque, optimista })
-    return valor
-  }
-
-  const { primero, segundo } = partirApellidos(cliente.apellidos)
-
+  suponer: (campo: 'fechaEfecto' | 'aniosAsegurado' | 'aniosSinSiniestros', valor: unknown, porque: string, optimista?: boolean) => unknown,
+): {
+  fechaEfecto: string
+  aseguradoAntes: true
+  companiaAnteriorCodigo: string | null
+  polizaAnterior: string | null
+  aniosAsegurado: number
+  aniosEnCompania: number
+  aniosSinSiniestros: number
+  siniestrosUltimos5: number
+} {
   // ── Fecha de efecto: el día después de que venza la póliza actual ──────────
   // Es lo que de verdad quiere el cliente («cuánto me costaría al renovar»), y
   // si la póliza no tiene vencimiento se cotiza para mañana.
@@ -239,6 +329,53 @@ export function precalificarAuto(
         true,
       ) as number)
 
+  return {
+    fechaEfecto,
+    aseguradoAntes: true,
+    companiaAnteriorCodigo: limpio(poliza.codigoEntidadDgs),
+    polizaAnterior: limpio(poliza.numeroPoliza),
+    aniosAsegurado,
+    aniosEnCompania: aniosAsegurado,
+    aniosSinSiniestros,
+    siniestrosUltimos5: huboSiniestros ? poliza.siniestrosRegistrados : 0,
+  }
+}
+
+/**
+ * Construye la precalificación.
+ *
+ * `hoy` entra por parámetro para que la función sea pura y los tests no
+ * dependan del calendario.
+ */
+export function precalificarAuto(
+  cliente: ClienteCartera,
+  poliza: PolizaCartera,
+  resueltos: Resueltos,
+  hoy: string,
+): Precalificacion {
+  const supuestos: Supuesto[] = []
+  const suponer = (campo: keyof DatosAuto, valor: unknown, porque: string, optimista = false) => {
+    supuestos.push({ campo, valor, porque, optimista })
+    return valor
+  }
+
+  const { primero, segundo } = partirApellidos(cliente.apellidos)
+
+  const historial = historialDePoliza(poliza, hoy, suponer)
+
+  // ── El nombre de la vía: si la ficha ya trae una dirección, no se vuelve a
+  // pedir (11º 400 real, ReRate). Es la misma jugada que ya hace hogar con la
+  // calle del riesgo, troceando el mismo texto libre con `partirDireccion()`.
+  // Si no hay CP+municipio la dirección no viaja y el nombre de la vía no hace
+  // falta; si la ficha no trae calle reconocible, sigue siendo un reparo.
+  // El número va con el nombre (misma troceada); el TIPO de vía es una
+  // referencia de catálogo y lo trae `resueltos.tipoViaId` (emparejado por el
+  // caller o elegido por el corredor). El Submit exige los tres (14º 400 real).
+  const viajaDireccion = limpio(cliente.codigoPostal) !== null && resueltos.municipioId !== null
+  const direccionPartida = viajaDireccion ? partirDireccion(cliente.direccion ?? null) : null
+  const nombreViaDeFicha = direccionPartida?.nombre ?? null
+  const numeroViaDeFicha = direccionPartida?.numero ?? null
+
   const datos: Partial<DatosAuto> = {
     // ── Persona ──
     dni: limpio(cliente.dni) ?? undefined,
@@ -249,14 +386,35 @@ export function precalificarAuto(
     sexo: sexoDeSaludo(cliente.saludo) ?? undefined,
     estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
+    email: limpio(cliente.email) ?? undefined,
     fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
     cpResidencia: limpio(cliente.codigoPostal),
     municipioResidenciaId: resueltos.municipioId,
+    nombreVia: nombreViaDeFicha ?? undefined,
+    numeroVia: numeroViaDeFicha ?? undefined,
+    tipoVia: viajaDireccion ? (limpio(resueltos.tipoViaId) ?? undefined) : undefined,
 
     // ── Vehículo ──
     codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
     matricula: limpio(poliza.matricula) ?? undefined,
     fechaMatriculacion: limpio(resueltos.fechaMatriculacion) ?? undefined,
+    // 🚨 El carnet: tipo y zona iban CABLEADOS a `B`/`Spain` dentro de
+    // `construirPersona`, así que un carnet extranjero se declaraba como
+    // español sin que nada fallase (art. 10 LCS, no un precio malo). Siguen
+    // siendo el defecto —es el caso normal— pero ahora se DECLARAN, para que
+    // la pantalla pueda decir sobre qué se ha tarificado. Si el corredor elige
+    // otra cosa, la corrección los pisa y `supuestosVigentes` los retira.
+    tipoCarnet: suponer(
+      'tipoCarnet',
+      TIPO_CARNET_SUPUESTO,
+      'no se ha preguntado qué carnet tiene; se supone el B de turismos',
+    ) as string,
+    zonaCarnet: suponer(
+      'zonaCarnet',
+      ZONA_CARNET_SUPUESTA,
+      'no se ha preguntado dónde se expidió el carnet; se supone España',
+    ) as string,
+
     kmAnuales: suponer(
       'kmAnuales',
       KM_ANUALES_POR_DEFECTO,
@@ -269,15 +427,7 @@ export function precalificarAuto(
     garaje: limpio(resueltos.garaje) ?? undefined,
 
     // ── Historial ──
-    aseguradoAntes: true,
-    companiaAnteriorCodigo: limpio(poliza.codigoEntidadDgs),
-    polizaAnterior: limpio(poliza.numeroPoliza),
-    aniosAsegurado,
-    aniosEnCompania: aniosAsegurado,
-    aniosSinSiniestros,
-    siniestrosUltimos5: huboSiniestros ? poliza.siniestrosRegistrados : 0,
-
-    fechaEfecto,
+    ...historial,
   }
 
   if (limpio(cliente.codigoPostal) !== null) {
@@ -294,8 +444,155 @@ export function precalificarAuto(
       porque: 'la ficha no dice dónde duerme el coche; se usa el tipo de garaje por defecto',
     })
   }
+  if (nombreViaDeFicha !== null) {
+    supuestos.push({
+      campo: 'nombreVia',
+      valor: nombreViaDeFicha,
+      porque: 'calle troceada automáticamente de la dirección de la ficha: comprueba que ha quedado bien',
+    })
+  }
+  if (numeroViaDeFicha !== null) {
+    supuestos.push({
+      campo: 'numeroVia',
+      valor: numeroViaDeFicha,
+      porque: 'número troceado automáticamente de la dirección de la ficha: comprueba que ha quedado bien',
+    })
+  }
 
-  return { datos, supuestos, faltan: revisarDatosAuto(datos) }
+  // 🎯 Retarificar una póliza de la cartera es para EMITIR: se exige ya lo que
+  // el Submit pedirá después y el proyecto no admite añadir (correo, calle
+  // completa). Ver `OpcionesRevision` en `peticion-auto.ts`.
+  return { datos, supuestos, faltan: revisarDatosAuto(datos, { paraEmitir: true, hoy }) }
+}
+
+// ─── AUTO, oportunidad nueva (sin póliza) ────────────────────────────────────
+//
+// Hermana de `precalificarAuto()`, para un cliente que HOY no tiene ninguna
+// póliza de auto en la cartera: no hay historial del que sacar «compañía
+// anterior» ni «años asegurado», así que se cotiza DE CALLE
+// (`aseguradoAntes: false`) — sin el bonus por antigüedad que sí lleva
+// retarificar una póliza real. Es la opción conservadora y la única honesta:
+// inventar una compañía anterior o unos años de antigüedad sería un dato
+// falso de una persona real, y el vendor los exige EXACTOS si se declaran.
+
+export type ResueltosAutoNueva = {
+  municipioId: number | null
+  estadoCivilId: string | null
+  /** No sale de ninguna póliza: la matrícula del coche la teclea el corredor. */
+  matricula: string | null
+  fechaMatriculacion: string | null
+  /** Código Base7 de la VERSIÓN. Sin él no hay cotización posible. */
+  codigoVehiculo: string | null
+  /** Id del catálogo `car/garage-types`. */
+  garaje: string | null
+  garajeEsSupuesto?: boolean
+}
+
+export function precalificarAutoNueva(
+  cliente: ClienteCartera,
+  resueltos: ResueltosAutoNueva,
+  hoy: string,
+): Precalificacion {
+  const supuestos: Supuesto[] = []
+  const suponer = (campo: keyof DatosAuto, valor: unknown, porque: string, optimista = false) => {
+    supuestos.push({ campo, valor, porque, optimista })
+    return valor
+  }
+
+  const { primero, segundo } = partirApellidos(cliente.apellidos)
+
+  const fechaEfecto = suponer(
+    'fechaEfecto',
+    diaSiguiente(hoy),
+    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+  ) as string
+
+  // Ver `precalificarAuto()`: si la ficha ya trae una dirección, no se vuelve
+  // a pedir el nombre de la vía (11º 400 real, ReRate).
+  const nombreViaDeFicha =
+    limpio(cliente.codigoPostal) !== null && resueltos.municipioId !== null
+      ? partirDireccion(cliente.direccion ?? null).nombre
+      : null
+
+  const datos: Partial<DatosAuto> = {
+    // ── Persona ──
+    dni: limpio(cliente.dni) ?? undefined,
+    nombre: nombreUtil(cliente.nombre) ?? undefined,
+    apellido1: primero ?? undefined,
+    apellido2: segundo,
+    fechaNacimiento: limpio(cliente.fechaNacimiento) ?? undefined,
+    sexo: sexoDeSaludo(cliente.saludo) ?? undefined,
+    estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
+    telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
+    fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+    cpResidencia: limpio(cliente.codigoPostal),
+    municipioResidenciaId: resueltos.municipioId,
+    nombreVia: nombreViaDeFicha ?? undefined,
+
+    // ── Vehículo ──
+    codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
+    matricula: limpio(resueltos.matricula) ?? undefined,
+    fechaMatriculacion: limpio(resueltos.fechaMatriculacion) ?? undefined,
+    // 🚨 El carnet: tipo y zona iban CABLEADOS a `B`/`Spain` dentro de
+    // `construirPersona`, así que un carnet extranjero se declaraba como
+    // español sin que nada fallase (art. 10 LCS, no un precio malo). Siguen
+    // siendo el defecto —es el caso normal— pero ahora se DECLARAN, para que
+    // la pantalla pueda decir sobre qué se ha tarificado. Si el corredor elige
+    // otra cosa, la corrección los pisa y `supuestosVigentes` los retira.
+    tipoCarnet: suponer(
+      'tipoCarnet',
+      TIPO_CARNET_SUPUESTO,
+      'no se ha preguntado qué carnet tiene; se supone el B de turismos',
+    ) as string,
+    zonaCarnet: suponer(
+      'zonaCarnet',
+      ZONA_CARNET_SUPUESTA,
+      'no se ha preguntado dónde se expidió el carnet; se supone España',
+    ) as string,
+
+    kmAnuales: suponer(
+      'kmAnuales',
+      KM_ANUALES_POR_DEFECTO,
+      'no se ha preguntado; se usa la media declarada habitual',
+    ) as number,
+
+    // ── Circulación: se supone que el coche duerme donde vive el tomador ──
+    cpCirculacion: limpio(cliente.codigoPostal) ?? undefined,
+    municipioCirculacionId: resueltos.municipioId ?? undefined,
+    garaje: limpio(resueltos.garaje) ?? undefined,
+
+    // ── Historial: no hay póliza que retarificar, así que no se declara ninguna
+    // compañía anterior. `aseguradoAntes: false` deja fuera de `revisarDatosAuto`
+    // los campos que exigiría declarar (compañía, póliza, años…): no se pueden
+    // rellenar sin inventarlos.
+    aseguradoAntes: false,
+
+    fechaEfecto,
+  }
+
+  if (limpio(cliente.codigoPostal) !== null) {
+    supuestos.push({
+      campo: 'cpCirculacion',
+      valor: limpio(cliente.codigoPostal),
+      porque: 'se supone que el coche circula y aparca donde vive el tomador',
+    })
+  }
+  if (resueltos.garajeEsSupuesto && limpio(resueltos.garaje) !== null) {
+    supuestos.push({
+      campo: 'garaje',
+      valor: resueltos.garaje,
+      porque: 'no se ha preguntado dónde duerme el coche; se usa el tipo de garaje por defecto',
+    })
+  }
+  if (nombreViaDeFicha !== null) {
+    supuestos.push({
+      campo: 'nombreVia',
+      valor: nombreViaDeFicha,
+      porque: 'calle troceada automáticamente de la dirección de la ficha: comprueba que ha quedado bien',
+    })
+  }
+
+  return { datos, supuestos, faltan: revisarDatosAuto(datos, { hoy }) }
 }
 
 /**
@@ -313,4 +610,207 @@ export function sePuedeCotizar(p: Precalificacion): boolean {
  */
 export function supuestosOptimistas(p: Precalificacion): Supuesto[] {
   return p.supuestos.filter((s) => s.optimista === true)
+}
+
+// ─── MOTO, oportunidad nueva (sin póliza) ────────────────────────────────────
+//
+// Espejo de `precalificarAutoNueva()`: cliente que HOY no tiene ninguna póliza
+// de moto en la cartera (medido 03/09/2026: la cartera viva tiene 1 sola, así
+// que «nueva» es prácticamente el único caso real). Cotiza DE CALLE
+// (`aseguradoAntes: false`), mismas razones que auto.
+//
+// La diferencia real con auto es `experienciaConduccion`: el vendor la exige
+// (`drivingExperience.id`) y no es un dato que la ficha pueda dar — no hay
+// forma de saber si el cliente ya ha llevado ESTA moto o viene de otra. Se
+// SUPONE `ThisMotorcycle` (el caso más común y el que no exige el código de
+// una moto anterior que nadie ha tecleado), marcado como supuesto visible para
+// que el corredor lo corrija si no es el caso.
+
+/** Como `Supuesto`, pero para el vocabulario de campos de moto. */
+export type SupuestoMoto = { campo: keyof DatosMoto; valor: unknown; porque: string; optimista?: boolean }
+
+export type PrecalificacionMoto = {
+  datos: Partial<DatosMoto>
+  supuestos: SupuestoMoto[]
+  faltan: ReparoMoto[]
+}
+
+export type ResueltosMotoNueva = {
+  municipioId: number | null
+  estadoCivilId: string | null
+  /** No sale de ninguna póliza: la matrícula del corredor la teclea el corredor. */
+  matricula: string | null
+  fechaMatriculacion: string | null
+  /** Código Base7 de la VERSIÓN. Sin él no hay cotización posible. */
+  codigoVehiculo: string | null
+  /** Id del catálogo `car/garage-types` (compartido con auto). */
+  garaje: string | null
+  garajeEsSupuesto?: boolean
+  /** Id de `/motorcycle/driving-experience-options`. `null` = se supone `ThisMotorcycle`. */
+  experienciaConduccion: string | null
+}
+
+/** Carnés de moto de más a menos habilitante: se declara el de mayor rango. */
+const CARNETS_MOTO = ['A', 'A2', 'A1', 'AM'] as const
+
+/**
+ * El carné de MOTO que consta en la ficha, con su fecha: el de mayor rango
+ * (A > A2 > A1 > AM). `null` = no consta ninguno con fecha legible — y entonces
+ * NO se inventa: se cae al carné del conductor y se declara como supuesto.
+ */
+export function carnetMotoDeFicha(
+  carnets: ClienteCartera['carnets'],
+): { tipo: string; fecha: string } | null {
+  if (!carnets) return null
+  for (const tipo of CARNETS_MOTO) {
+    const k = carnets.find((c) => c.tipo.toUpperCase().replace(/\s/g, '') === tipo && limpio(c.fechaExpedicion) !== null)
+    if (k) return { tipo, fecha: k.fechaExpedicion as string }
+  }
+  return null
+}
+
+/**
+ * La fecha del carné B de la ficha, para declararlo junto al de moto. Solo el
+ * B de la tabla de carnés, con su fecha: `cliente.fechaCarnet` es «la del
+ * conductor» y no dice de qué carné es, así que no se usa para esto.
+ */
+export function carnetBDeFicha(carnets: ClienteCartera['carnets']): string | null {
+  const b = (carnets ?? []).find((c) => c.tipo.toUpperCase().replace(/\s/g, '') === 'B')
+  return b ? limpio(b.fechaExpedicion) : null
+}
+
+export function precalificarMotoNueva(
+  cliente: ClienteCartera,
+  resueltos: ResueltosMotoNueva,
+  hoy: string,
+): PrecalificacionMoto {
+  const supuestos: SupuestoMoto[] = []
+  const suponer = (campo: keyof DatosMoto, valor: unknown, porque: string, optimista = false) => {
+    supuestos.push({ campo, valor, porque, optimista })
+    return valor
+  }
+
+  const { primero, segundo } = partirApellidos(cliente.apellidos)
+
+  const fechaEfecto = suponer(
+    'fechaEfecto',
+    diaSiguiente(hoy),
+    'no hay ninguna póliza que retarificar, así que se pide precio para mañana',
+  ) as string
+
+  const experienciaConduccion =
+    limpio(resueltos.experienciaConduccion) ??
+    (suponer(
+      'experienciaConduccion',
+      'ThisMotorcycle',
+      'no se ha preguntado si el conductor viene de otra moto; se supone que ya ha llevado ESTA — ' +
+        'corrígelo si no es el caso',
+    ) as string)
+
+  // ── El carné: el de MOTO de la ficha, si consta. Tarificar una moto con la
+  // antigüedad del carné B es declarar mal el riesgo (auditoría 23/09/2026).
+  const deMoto = carnetMotoDeFicha(cliente.carnets)
+  const carnet: Pick<Partial<DatosMoto>, 'fechaCarnet' | 'tipoCarnet' | 'zonaCarnet' | 'fechaCarnetB'> = deMoto
+    ? { fechaCarnet: deMoto.fecha, tipoCarnet: deMoto.tipo, fechaCarnetB: carnetBDeFicha(cliente.carnets) }
+    : {
+        fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
+        tipoCarnet: suponer(
+          'tipoCarnet',
+          TIPO_CARNET_SUPUESTO,
+          cliente.carnets === null
+            ? 'no se han podido leer los carnés de la ficha; se declara el B con la fecha del conductor — ' +
+                'compruébalo: una moto de más de 125 cc exige carné de moto'
+            : 'no consta carné de moto (A, A2, A1, AM) con fecha en la ficha; se declara el B con la fecha ' +
+                'del conductor — una moto de más de 125 cc exige carné de moto, añádelo a la ficha',
+          true,
+        ) as string,
+      }
+  carnet.zonaCarnet = suponer(
+    'zonaCarnet',
+    ZONA_CARNET_SUPUESTA,
+    'no se ha preguntado dónde se expidió el carné; se supone España',
+  ) as string
+
+  const datos: Partial<DatosMoto> = {
+    // ── Persona ──
+    dni: limpio(cliente.dni) ?? undefined,
+    nombre: nombreUtil(cliente.nombre) ?? undefined,
+    apellido1: primero ?? undefined,
+    apellido2: segundo,
+    fechaNacimiento: limpio(cliente.fechaNacimiento) ?? undefined,
+    sexo: sexoDeSaludo(cliente.saludo) ?? undefined,
+    estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
+    telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
+    ...carnet,
+    cpResidencia: limpio(cliente.codigoPostal),
+    municipioResidenciaId: resueltos.municipioId,
+
+    // ── Vehículo ──
+    codigoVehiculo: limpio(resueltos.codigoVehiculo) ?? undefined,
+    matricula: limpio(resueltos.matricula) ?? undefined,
+    fechaMatriculacion: limpio(resueltos.fechaMatriculacion) ?? undefined,
+    kmAnuales: suponer(
+      'kmAnuales',
+      KM_ANUALES_POR_DEFECTO,
+      'no se ha preguntado; se usa la media declarada habitual',
+    ) as number,
+
+    // ── Circulación ──
+    cpCirculacion: limpio(cliente.codigoPostal) ?? undefined,
+    municipioCirculacionId: resueltos.municipioId ?? undefined,
+    garaje: limpio(resueltos.garaje) ?? undefined,
+
+    // ── Específico de moto ──
+    experienciaConduccion,
+
+    // ── Historial: sin póliza que retarificar, se cotiza de calle ──
+    aseguradoAntes: false,
+
+    fechaEfecto,
+  }
+
+  if (limpio(cliente.codigoPostal) !== null) {
+    supuestos.push({
+      campo: 'cpCirculacion',
+      valor: limpio(cliente.codigoPostal),
+      porque: 'se supone que la moto circula y aparca donde vive el tomador',
+    })
+  }
+  if (resueltos.garajeEsSupuesto && limpio(resueltos.garaje) !== null) {
+    supuestos.push({
+      campo: 'garaje',
+      valor: resueltos.garaje,
+      porque: 'no se ha preguntado dónde duerme la moto; se usa el tipo de garaje por defecto',
+    })
+  }
+
+  return { datos, supuestos, faltan: revisarDatosMoto(datos) }
+}
+
+// ─── MOTO, retarificar una póliza de la cartera ─────────────────────────────
+
+/** Lo resuelto con red para una moto de la cartera: la matrícula sale de la póliza. */
+export type ResueltosMoto = Omit<ResueltosMotoNueva, 'matricula'>
+
+/**
+ * Hermana de `precalificarAuto()` para una póliza de MOTO: persona, vehículo y
+ * circulación como `precalificarMotoNueva()` (catálogo `/motorcycle/*`,
+ * experiencia de conducción), y encima la fecha de efecto y el historial de la
+ * póliza (`historialDePoliza`), que es lo que da el bonus por antigüedad.
+ */
+export function precalificarMoto(
+  cliente: ClienteCartera,
+  poliza: PolizaCartera,
+  resueltos: ResueltosMoto,
+  hoy: string,
+): PrecalificacionMoto {
+  const base = precalificarMotoNueva(cliente, { ...resueltos, matricula: poliza.matricula }, hoy)
+  // La fecha de efecto de «nueva» (mañana) no vale aquí: la decide el vencimiento.
+  const supuestos: SupuestoMoto[] = base.supuestos.filter((x) => x.campo !== 'fechaEfecto')
+  const suponer = (campo: keyof DatosMoto, valor: unknown, porque: string, optimista = false) => {
+    supuestos.push({ campo, valor, porque, optimista })
+    return valor
+  }
+  const datos: Partial<DatosMoto> = { ...base.datos, ...historialDePoliza(poliza, hoy, suponer) }
+  return { datos, supuestos, faltan: revisarDatosMoto(datos) }
 }

@@ -41,6 +41,15 @@ export const CRON_JOBS: CronJob[] = [
   // el parte del día lea siempre una huella fresca. Lee la cartera por el puerto
   // de central-asegura; si no puede leerla, lo dice — no se calla.
   { path: '/api/cron/correduria-renovaciones', schedule: '30 6 * * *' },
+  // Seguimiento de sustituciones (cambio de compañía): 06:35, justo detrás de
+  // renovaciones — comparten sección «Hoy» de /correduria y es cómodo que sus
+  // avisos lleguen juntos. Digest diario mientras algo siga sin confirmar CIMA.
+  { path: '/api/cron/correduria-sustituciones', schedule: '35 6 * * *' },
+  // Recaptación por email de leads solo-email (sin teléfono usable): 07:00,
+  // antes del vigía de latidos de las 07:45. Manda hasta 25/día por Resend con
+  // baja de un clic (LSSI art. 21); a quien tiene teléfono se le sigue
+  // trabajando a mano desde /correduria.
+  { path: '/api/cron/recaptacion-email-lote', schedule: '0 7 * * *' },
   { path: '/api/cron/agentes-latido', schedule: '45 7 * * *' },
   { path: '/api/cron/paper-tracker', schedule: '0 10 * * 1' },
   { path: '/api/cron/resumen-mensual', schedule: '0 8 1 * *' },
@@ -81,6 +90,9 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/sivra/pricing/experiments/check-results', schedule: '0 8 * * *' },
   { path: '/api/sivra/pricing/apply-auto', schedule: '30 8,14,20 * * *' },
   { path: '/api/sivra/pricing/resumen-diario', schedule: '0 9 * * *' },
+  // Fuga de canal (07/09/2026): lo que el huésped PAGÓ contra lo que el motor tenía LISTADO. Es la capa
+  // que ni `canal` ni el centinela del huésped miran — los dos se quedan en el precio de escaparate.
+  { path: '/api/sivra/pricing/fuga-canal', schedule: '20 9 * * *' },
   { path: '/api/sivra/pricing/pilot-track', schedule: '15 9 * * *' },
   // days=7: el sync es idempotente y la ventana ancha hace que un apagón de varios días del
   // scheduler (o del webhook Smoobu) se auto-repare en la siguiente corrida — con el default
@@ -139,11 +151,55 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/sivra/eventos/verificar', schedule: '30 5 * * *' },
   { path: '/api/cron/cima-liq', schedule: '30 7 * * *' },
   { path: '/api/cron/correduria-ingesta', schedule: '45 6 * * *' },
+  // RESPALDO del pull de CIMA (23/09/2026): el pull principal corre en GitHub Actions del repo
+  // `asegura` (05:30/11:30) y el 22/09 se quedó ~45 h sin runner porque el presupuesto de Actions
+  // de la cuenta se agotó. Este mira 2,5 h después de cada franja (los `schedule` de Actions arrancan
+  // tarde a menudo) y SOLO dispara si esa franja no completó (`decidirRespaldoPull`): con Actions sano
+  // no hace nada.
+  { path: '/api/cron/cima-pull-respaldo', schedule: '0 8,14 * * *' },
+  // Siniestros nuevos de la cartera: 06:50, justo DETRÁS del vigía de la ingesta (06:45) —
+  // si los datos de CIMA no están entrando, ese aviso llega primero y explica por qué este
+  // no trae nada— y antes de `agentes-latido` (07:45), para que el parte del día lea una
+  // huella fresca. Avisa a Alberto para que LLAME al cliente y le haga seguimiento.
+  { path: '/api/cron/correduria-siniestros', schedule: '50 6 * * *' },
+  // Aviso por Telegram de todo lo que hace un cliente en el portal (entrar, no
+  // poder entrar, cambiar su dirección, dar un parte, pedir la supresión…).
+  // Cada 5 min: es un aviso de «acaba de pasar», no un resumen. La marca de
+  // agua NO avanza si el Telegram no sale. Ver el fichero de la ruta.
+  { path: '/api/cron/correduria-actividad', schedule: '*/5 * * * *' },
+  // Detector de cambios de la cartera (Fase 2 ASegura OS): 45 min después de cada pull de CIMA.
+  { path: '/api/cron/correduria-eventos', schedule: '15 6,12 * * *' },
+  // Blog de grupoasegura.es: un artículo cada dos semanas (día 1 y 15, 08:00 UTC).
+  // Cron no sabe decir «cada 14 días», y una lista de días de mes es lo más cercano
+  // que además es ESTABLE: un `*/14` se descuadraría en cada mes de 31 días.
+  // 08:00 va DELANTE del vigía de latidos (07:45 es el día anterior) y detrás de la
+  // ingesta de CIMA, que es lo que de verdad compite por el presupuesto de IA.
+  // 🚨 No publica: deja un PR y avisa. Publicar es un clic de Alberto en /correduria.
+  { path: '/api/cron/blog-asegura', schedule: '0 8 1,15 * *' },
+  // Partes del PORTAL sin abrir en la compañía: 06:55, el último de la tanda de
+  // correduría. Va detrás de siniestros (06:50) a propósito: si un parte ya se
+  // ha convertido en siniestro por CIMA, ese aviso llega primero y este ya no lo
+  // cuenta —sale de la lista por `comunicado`—, así que no se avisa dos veces de
+  // lo mismo. Vigila el plazo del art. 16 LCS, que hasta hoy no vigilaba nadie.
+  { path: '/api/cron/correduria-partes', schedule: '55 6 * * *' },
   { path: '/api/cron/facturas-scan', schedule: '15 6 * * *' },
   { path: '/api/cron/facturas-resumen-semanal', schedule: '15 9 * * 1' },
   { path: '/api/cron/categorizar-movimientos', schedule: '0 7 * * *' },
   { path: '/api/cron/resumen-semanal', schedule: '30 9 * * 1' },
+  // SEO de la correduría, lunes 08:30: Search Console (posiciones reales), Serper (quién ocupa
+  // el top-10 de cada consulta objetivo) y PostHog (visitas medidas) → seo_correduria_semana +
+  // informe por Telegram con UNA acción propuesta. Spec: docs/superpowers/specs/2026-09-08-seo-correduria-conectores-design.md
+  { path: '/api/cron/seo-correduria', schedule: '30 8 * * 1' },
+  // Agente AUTÓNOMO de SEO de asegura-web, 30 min detrás del informe: propone metadata nueva
+  // para ramos sin top-10 y abre PR DRAFT (nunca escribe a main ni mergea). Kill switch
+  // SEO_ASEGURA_AGENT_ENABLED, default OFF. Ver apps/plataforma/lib/seo-correduria/agente-guardrails.ts.
+  { path: '/api/cron/seo-correduria-agente', schedule: '0 9 * * 1' },
   { path: '/api/cron/health-check', schedule: '0 7 * * *' },
+  // Canario del formulario público de la correduría, CADA HORA. Un diario no valdría: ese
+  // formulario es el único canal de venta de asegura-web y, cuando se rompe, no deja rastro
+  // (ni ficha, ni Telegram, ni cuerpo en logs), así que un día caído son leads perdidos que no
+  // se pueden recuperar ni contar. Minuto 25 para no coincidir con el racimo de en punto.
+  { path: '/api/cron/canario-lead', schedule: '25 * * * *' },
   { path: '/api/cron/pre-renta', schedule: '0 9 1 3 *' },
   { path: '/api/sivra/domotica/programador', schedule: '25,55 8-15 * * *' },
   { path: '/api/sivra/domotica/acceso/programador', schedule: '40 4,12,20 * * *' },
@@ -152,6 +208,8 @@ export const CRON_JOBS: CronJob[] = [
   { path: '/api/cron/correo-resumen-semanal', schedule: '0 9 * * 1' },
   { path: '/api/cron/patrones-fiscal-refresh', schedule: '30 5 * * *' },
   { path: '/api/cron/ia-director-refresh', schedule: '0 5 * * 1' },
+  // Saldo de OpenRouter con previsión de días + tope mensual por app (pieza 1-6, 23/09/2026).
+  { path: '/api/cron/ia-saldo', schedule: '10 6 * * *' },
 ]
 
 // Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta

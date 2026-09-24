@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { PORTAL_COLORS, PORTAL_LABELS } from '@/lib/portales'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
 
 // Filas montadas de inicio en la vista lista; el resto sale con «Ver más» (regla global de
 // rendimiento: el histórico de reservas crece sin tope y montarlo entero congela la página).
@@ -100,21 +101,21 @@ export default function IncomePage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 1200 }}>
-      <div className="income-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: 12 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Ingresos — Reservas</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>Reservas importadas desde Smoobu</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
-            <button onClick={() => setVistaTabla(false)} style={{ padding: '8px 14px', fontSize: 13, background: !vistaTabla ? 'var(--primary)' : 'var(--surface)', color: !vistaTabla ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer', fontWeight: !vistaTabla ? 700 : 400 }}>Lista</button>
-            <button onClick={() => setVistaTabla(true)} style={{ padding: '8px 14px', fontSize: 13, background: vistaTabla ? 'var(--primary)' : 'var(--surface)', color: vistaTabla ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer', fontWeight: vistaTabla ? 700 : 400 }}>Tabla ×mes</button>
-          </div>
-          <button onClick={load} disabled={loading} style={{ ...inp, cursor: 'pointer', color: 'var(--muted)' }}>
-            {loading ? '...' : '↻ Actualizar'}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Ingresos — Reservas"
+        sub="Reservas importadas desde Smoobu"
+        acciones={
+          <>
+            <div style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden' }}>
+              <button onClick={() => setVistaTabla(false)} style={{ padding: '8px 14px', fontSize: 13, background: !vistaTabla ? 'var(--primary)' : 'var(--surface)', color: !vistaTabla ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer', fontWeight: !vistaTabla ? 700 : 400 }}>Lista</button>
+              <button onClick={() => setVistaTabla(true)} style={{ padding: '8px 14px', fontSize: 13, background: vistaTabla ? 'var(--primary)' : 'var(--surface)', color: vistaTabla ? '#fff' : 'var(--muted)', border: 'none', cursor: 'pointer', fontWeight: vistaTabla ? 700 : 400 }}>Tabla ×mes</button>
+            </div>
+            <button onClick={load} disabled={loading} style={{ ...inp, cursor: 'pointer', color: 'var(--muted)' }}>
+              {loading ? '...' : '↻ Actualizar'}
+            </button>
+          </>
+        }
+      />
 
       {incomes.length > 0 && (
         <>

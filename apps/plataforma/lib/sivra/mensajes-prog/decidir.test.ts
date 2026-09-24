@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mensajesDebidos, claveHito, type ReservaMin } from './decidir.ts'
+import { mensajesDebidos, claveHito, hitosBloqueantes, cubreAlHuesped, ESTADOS_HITO, type ReservaMin } from './decidir.ts'
 
 const R: ReservaMin = {
   bookingId: '1', propertyId: 'prop_duplex_center',
@@ -73,4 +73,86 @@ test('una modificación que mueve la llegada crea claves nuevas (los hitos se vu
   const ya = new Set([claveHito('acceso', '2026-09-13'), claveHito('confirmacion', '2026-09-13')])
   const movida: ReservaMin = { ...R, checkIn: '2026-09-15', checkOut: '2026-09-22' }
   assert.deepEqual(tipos(mensajesDebidos(movida, '2026-09-10', '10:00', ya)), ['acceso', 'confirmacion'])
+})
+
+// ── hitosBloqueantes ────────────────────────────────────────────────────────
+test('sombra NO bloquea con el piso ya activo (se re-emite de verdad)', () => {
+  const filas = [{ tipo: 'vispera_llegada', fechaObjetivo: '2026-09-05', estado: 'sombra' }]
+  assert.equal(hitosBloqueantes(filas, true).bloqueantes.size, 0)
+})
+
+test('sombra SÍ bloquea con el piso inactivo (si no, Telegram repetiría el borrador)', () => {
+  const filas = [{ tipo: 'vispera_llegada', fechaObjetivo: '2026-09-05', estado: 'sombra' }]
+  assert.ok(hitosBloqueantes(filas, false).bloqueantes.has(claveHito('vispera_llegada', '2026-09-05')))
+})
+
+test('enviado/pendiente/fallo bloquean siempre', () => {
+  for (const estado of ['enviado', 'pendiente', 'fallo']) {
+    const filas = [{ tipo: 'bienvenida', fechaObjetivo: '2026-09-05', estado }]
+    assert.ok(hitosBloqueantes(filas, true).bloqueantes.has(claveHito('bienvenida', '2026-09-05')), estado)
+  }
+})
+
+// Caso real 05/09/2026 (reserva 154265696, Luxury Busto): la víspera con los CÓDIGOS quedó en
+// sombra 12 h antes de activarse el piso. Con el piso ya activo, el día de llegada tiene que salir.
+test('la víspera en sombra sale el día de llegada una vez activo el piso', () => {
+  const r = { bookingId: '154265696', propertyId: 'prop_luxury_busto', checkIn: '2026-09-05', checkOut: '2026-09-08', noches: 3 }
+  const filas = [{ tipo: 'vispera_llegada', fechaObjetivo: '2026-09-05', estado: 'sombra' }]
+  const debidos = mensajesDebidos(r, '2026-09-05', '09:37', hitosBloqueantes(filas, true).bloqueantes)
+  const v = debidos.find(d => d.tipo === 'vispera_llegada')
+  assert.ok(v, 'debe re-emitirse la víspera con los códigos')
+  assert.equal(v!.llegadaHoy, true)
+})
+
+// La otra cara del rescate: si la víspera salió HOY, la bienvenida NO sale unas horas después.
+// Su clave es la misma en los dos casos (se ancla a checkIn), así que sin `emitidosHoy` el mismo
+// huésped recibía dos mensajes nuestros el día de su llegada. Caso real: reserva 154265696.
+test('la bienvenida NO sale el día que la víspera se rescató', () => {
+  const r = { bookingId: '154265696', propertyId: 'prop_luxury_busto', checkIn: '2026-09-05', checkOut: '2026-09-08', noches: 3 }
+  const filas = [{ tipo: 'vispera_llegada', fechaObjetivo: '2026-09-05', estado: 'enviado', emitidoHoy: true }]
+  const { bloqueantes, emitidosHoy } = hitosBloqueantes(filas, true)
+  const debidos = mensajesDebidos(r, '2026-09-05', '10:07', bloqueantes, emitidosHoy)
+  assert.equal(debidos.find(d => d.tipo === 'bienvenida'), undefined)
+  // Y tampoco se reintenta la víspera: ya está registrada como enviada.
+  assert.equal(debidos.find(d => d.tipo === 'vispera_llegada'), undefined)
+})
+
+test('la bienvenida SÍ sale si la víspera salió AYER (camino normal)', () => {
+  const r = { bookingId: '1', propertyId: 'prop_luxury_busto', checkIn: '2026-09-05', checkOut: '2026-09-08', noches: 3 }
+  const filas = [{ tipo: 'vispera_llegada', fechaObjetivo: '2026-09-05', estado: 'enviado', emitidoHoy: false }]
+  const { bloqueantes, emitidosHoy } = hitosBloqueantes(filas, true)
+  const debidos = mensajesDebidos(r, '2026-09-05', '10:07', bloqueantes, emitidosHoy)
+  assert.ok(debidos.find(d => d.tipo === 'bienvenida'))
+})
+
+// ── El estado `omitido` (05/09/2026) ────────────────────────────────────────
+// Se puso a mano en BD para frenar una bienvenida duplicada y NINGÚN código lo conocía: funcionaba
+// de casualidad porque `hitosBloqueantes` bloquea todo lo que no sea `sombra`. Estos tests lo fijan.
+
+test('un hito omitido bloquea: no se reenvía lo que se decidió no mandar', () => {
+  const filas = [{ tipo: 'bienvenida', fechaObjetivo: '2026-09-05', estado: 'omitido' }]
+  const { bloqueantes } = hitosBloqueantes(filas, true)
+  assert.equal(bloqueantes.has(claveHito('bienvenida', '2026-09-05')), true)
+})
+
+test('un estado desconocido también bloquea (conservador a propósito)', () => {
+  const filas = [{ tipo: 'bienvenida', fechaObjetivo: '2026-09-05', estado: 'estado_del_futuro' }]
+  const { bloqueantes } = hitosBloqueantes(filas, true)
+  assert.equal(bloqueantes.has(claveHito('bienvenida', '2026-09-05')), true)
+})
+
+test('cubreAlHuesped: entregado y decidido cubren; sombra, fallo y pendiente NO', () => {
+  assert.equal(cubreAlHuesped('enviado'), true)
+  assert.equal(cubreAlHuesped('omitido'), true)
+  assert.equal(cubreAlHuesped('sombra'), false)
+  assert.equal(cubreAlHuesped('fallo'), false)
+  assert.equal(cubreAlHuesped('pendiente'), false)
+})
+
+test('todo estado declarado en ESTADOS_HITO tiene su significado escrito', () => {
+  for (const [estado, que] of Object.entries(ESTADOS_HITO)) {
+    assert.equal(typeof que, 'string', estado)
+    assert.ok(que.length > 5, `${estado} sin significado`)
+  }
+  assert.ok('omitido' in ESTADOS_HITO)
 })

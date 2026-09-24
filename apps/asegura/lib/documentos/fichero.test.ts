@@ -9,6 +9,12 @@ import {
 // Solo se prueba lo que es PURO: la revisión del fichero. La lectura en sí
 // llama a la IA y se verifica con documentos reales, no con fixtures — un
 // fixture se escribe con la misma suposición equivocada que el código.
+//
+// 📌 Desde el 03/09/2026 `fichero.ts` es un re-export de `@central/module-seguros`:
+// la regla es una sola y el tope pasó de 12 MB a **10 MB**, que es el del CHECK
+// `documentos_tamano` de la tabla. Con 12 MB, un fichero de 11 aprobaba aquí y
+// lo tumbaba Postgres después. Estos tests siguen valiendo como cepo de que la
+// pantalla de `apps/asegura` no pierde la revisión por el camino.
 
 test('acepta los tipos declarados', () => {
   for (const type of TIPOS_ACEPTADOS) {
@@ -26,10 +32,16 @@ test('acepta un PDF aunque el navegador no mande el tipo', () => {
 })
 
 test('rechaza lo que no sabemos abrir, y dice qué era', () => {
+  const motivo = revisarFichero({ type: 'application/zip', size: 1000, name: 'v.zip' })
+  assert.ok(motivo)
+  assert.match(motivo!, /application\/zip/)
+  assert.match(motivo!, /PDF o una foto/)
+})
+
+test('el vídeo tiene su propio motivo: no es «un tipo raro»', () => {
   const motivo = revisarFichero({ type: 'video/mp4', size: 1000, name: 'v.mp4' })
   assert.ok(motivo)
-  assert.match(motivo!, /video\/mp4/)
-  assert.match(motivo!, /PDF o una foto/)
+  assert.match(motivo!, /vídeos/)
 })
 
 test('un tipo desconocido se nombra como tal en vez de dejar un hueco', () => {
@@ -50,8 +62,8 @@ test('rechaza lo que pasa del máximo, diciendo cuánto pesa y cuánto cabe', ()
     name: 'p.pdf',
   })
   assert.ok(motivo)
-  assert.match(motivo!, /12\.0 MB/)
-  assert.match(motivo!, /máximo son 12 MB/)
+  assert.match(motivo!, /10\.0 MB/)
+  assert.match(motivo!, /máximo son 10 MB/)
 })
 
 test('el límite exacto SÍ entra: se rechaza a partir de pasarse', () => {

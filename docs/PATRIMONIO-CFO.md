@@ -9,6 +9,14 @@
 del radar (01/09) ya delante. Preflight Telegram OK (200). **Próxima pasada ordinaria:
 02/10/2026.**
 
+🚨 **Nota al mergear (24/09/2026): esta entrada llegó a `main` con 22 días de retraso** — el
+PR se quedó cerrado sin mergear desde el 02/09. Las cifras de abajo (neto, liquidez, yields)
+son la foto del 02/09, no de hoy — probablemente ya cambiaron (liquidez, saldos bancarios,
+valoraciones). No se recalculan aquí porque la próxima pasada ordinaria (02/10) hace eso; este
+doc sigue siendo útil como registro de la 1ª pasada del ciclo y de las recomendaciones #1-#4,
+pero para un estado ACTUAL usa el canal conversacional `/patrimonio` (foto en vivo de BD) en
+vez de las cifras fijas de más abajo.
+
 ⚠️ **Aviso de método, importante para leer la foto de abajo: la valoración "vigente" se
 volvió inestable este mes.** La regla del sistema (`patrimonio-resumen.ts`) es «la más
 reciente gana», y el 01/09 el radar refrescó `agente:m2zona` para los 3 inmuebles — más

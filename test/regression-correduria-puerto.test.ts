@@ -4,6 +4,7 @@ import {
   interpretarBusqueda,
   interpretarImpagados,
   interpretarLineas,
+  interpretarCompanias,
 } from '../apps/plataforma/lib/correduria-puerto.ts'
 
 // ── Buscador ────────────────────────────────────────────────────────────────
@@ -85,6 +86,7 @@ const FILA = {
   prima: 431.85,
   importeRecibo: 107.96,
   fechaRecibo: '2026-06-01',
+  situacionRecibo: 'devuelto',
   estado: 'suspendida',
   dias: 92,
   diasParaExtincion: 88,
@@ -95,7 +97,15 @@ const FILA = {
 const IMPAGADOS_OK = {
   estado: 'ok',
   filas: [FILA],
-  resumen: { suspendidas: 1, enPlazo: 0, extinguidas: 0, sinFecha: 0, primaEnRiesgo: 431.85, sinPrima: 0 },
+  resumen: {
+    suspendidas: 1,
+    enPlazo: 0,
+    extinguidas: 0,
+    sinFecha: 0,
+    sinConfirmar: 0,
+    primaEnRiesgo: 431.85,
+    sinPrima: 0,
+  },
   sinRecibosInformados: 18,
   pendientesSinJuzgar: 4,
 }
@@ -107,6 +117,42 @@ test('la cola se lee entera con sus dos huecos declarados', () => {
   assert.equal(r.filas[0].estado, 'suspendida')
   assert.equal(r.sinRecibosInformados, 18)
   assert.equal(r.pendientesSinJuzgar, 4)
+})
+
+test('🚨 «no consta cobrado» llega como sin_confirmar, no como sin cobertura', () => {
+  // El cartel rojo de la pantalla se dispara con `resumen.suspendidas`: si un
+  // recibo `pendiente` engordara ese número, volvería a afirmar que un cliente
+  // no está asegurado sin que nadie lo haya dicho (caso 03/09/2026).
+  const dudoso = structuredClone(IMPAGADOS_OK)
+  dudoso.filas[0].estado = 'sin_confirmar' as never
+  dudoso.filas[0].situacionRecibo = 'pendiente' as never
+  dudoso.resumen.suspendidas = 0
+  dudoso.resumen.sinConfirmar = 1
+  const r = interpretarImpagados(200, dudoso)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.filas[0].estado, 'sin_confirmar')
+  assert.equal(r.filas[0].situacionRecibo, 'pendiente')
+  assert.equal(r.resumen.suspendidas, 0)
+  assert.equal(r.resumen.sinConfirmar, 1)
+})
+
+test('🚨 una situación de recibo ausente o rara se queda en «no se sabe»', () => {
+  // Nunca en `devuelto`: eso es inventarse el impago que la compañía no ha
+  // comunicado. Una versión vieja de asegura no manda el campo.
+  const viejo = structuredClone(IMPAGADOS_OK)
+  delete (viejo.filas[0] as Record<string, unknown>).situacionRecibo
+  const r = interpretarImpagados(200, viejo)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.filas[0].situacionRecibo, null)
+
+  const raro = structuredClone(IMPAGADOS_OK)
+  raro.filas[0].situacionRecibo = 'lo_que_sea' as never
+  const r2 = interpretarImpagados(200, raro)
+  assert.equal(r2.estado, 'ok')
+  if (r2.estado !== 'ok') return
+  assert.equal(r2.filas[0].situacionRecibo, null)
 })
 
 test('🚨 un estado de retención desconocido invalida la lista entera', () => {
@@ -188,4 +234,64 @@ test('sin configurar, secreto rechazado y error no se confunden entre sí', () =
     estado: 'error',
     motivo: 'host caído',
   })
+})
+
+// ─── Compañías abiertas en Avant2 (¿Fidelidade?) ─────────────────────────────
+
+test('compañía presente: id exacto, nombre y ramos donde tiene producto', () => {
+  const r = interpretarCompanias(200, {
+    estado: 'ok',
+    companias: [{ id: 'reale', nombre: 'Reale' }, { id: 'fid', nombre: 'Fidelidade' }],
+    buscada: { estado: 'presente', id: 'fid', nombre: 'Fidelidade', ramos: ['Hogar'] },
+  })
+  assert.deepEqual(r, {
+    estado: 'ok',
+    companias: ['Reale', 'Fidelidade'],
+    buscada: { estado: 'presente', id: 'fid', nombre: 'Fidelidade', ramos: ['Hogar'] },
+  })
+})
+
+test('🚨 «presente» sin id o una forma rara NO se afirma: desconocido', () => {
+  const r = interpretarCompanias(200, { estado: 'ok', companias: [], buscada: { estado: 'presente' } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado === 'ok') assert.deepEqual(r.buscada, { estado: 'desconocido' })
+  const r2 = interpretarCompanias(200, { estado: 'ok', companias: [], buscada: 'fidelidade' })
+  if (r2.estado === 'ok') assert.deepEqual(r2.buscada, { estado: 'desconocido' })
+})
+
+test('compañía ausente: se dice cuáles hay, y los errores llevan su motivo', () => {
+  const r = interpretarCompanias(200, {
+    estado: 'ok',
+    companias: [{ id: 'reale', nombre: 'Reale' }],
+    buscada: { estado: 'ausente', companias: ['Reale'], ramos: [] },
+  })
+  if (r.estado === 'ok') assert.deepEqual(r.buscada, { estado: 'ausente', companias: ['Reale'], ramos: [] })
+  assert.deepEqual(interpretarCompanias(401, null), { estado: 'error', motivo: 'secreto' })
+  assert.deepEqual(interpretarCompanias(502, { estado: 'error', mensaje: 'host caído' }), {
+    estado: 'error',
+    motivo: 'host caído',
+  })
+})
+
+// ── El techo de la cola de retención ────────────────────────────────────────
+// Tercer hueco de esa pantalla, junto a `sinRecibosInformados` y
+// `pendientesSinJuzgar`, y de otra clase: aquellos dicen «hay algo que no se
+// sabe», este dice «esto que ves puede no ser todo».
+
+test('🚨 impagados: `truncado` ausente es null («no se sabe»), NUNCA false', () => {
+  // Una asegura desplegada más vieja no manda el campo. Con `=== true` a secas
+  // —que es como lo leía `interpretarSinCanal`— el ausente se colapsa a
+  // «se miró y la lista está completa», que es el recorte mudo movido de sitio.
+  const viejo = interpretarImpagados(200, { estado: 'ok', filas: [] })
+  assert.equal(viejo.estado === 'ok' && viejo.truncado, null)
+
+  const raro = interpretarImpagados(200, { estado: 'ok', filas: [], truncado: 'si' })
+  assert.equal(raro.estado === 'ok' && raro.truncado, null)
+})
+
+test('impagados: `false` y `true` se propagan tal cual', () => {
+  const completa = interpretarImpagados(200, { estado: 'ok', filas: [], truncado: false })
+  assert.equal(completa.estado === 'ok' && completa.truncado, false)
+  const corta = interpretarImpagados(200, { estado: 'ok', filas: [], truncado: true })
+  assert.equal(corta.estado === 'ok' && corta.truncado, true)
 })

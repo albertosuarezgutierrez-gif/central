@@ -54,6 +54,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Solo si falla (máx. 1 cada 6 h)',
   },
   {
+    id: 'correduria.canario-lead', categoria: 'correduria',
+    titulo: 'El formulario de la web no entrega',
+    que: 'Cada hora se comprueba que un envío del formulario de grupoasegura.es llega a la cartera. Si no llega, cada persona que lo rellene se pierde sin rastro.',
+    cuando: 'Solo si falla (máx. 1 cada 6 h)',
+  },
+  {
     id: 'sistema.health-check', categoria: 'sistema',
     titulo: 'Chequeo diario del sistema',
     que: 'Repaso de salud: cifras que no cuadran, sincronizaciones paradas, sondas de IA.',
@@ -68,14 +74,14 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'sistema.ia-presupuesto', categoria: 'sistema',
     titulo: 'Presupuesto de IA agotado',
-    que: 'Se ha alcanzado el tope diario de gasto en IA de pago; queda solo la cadena gratuita.',
+    que: 'Se ha alcanzado el tope diario o mensual de gasto en IA de pago; queda solo la cadena gratuita.',
     cuando: 'Solo si se agota',
   },
   {
     id: 'sistema.ia-creditos', categoria: 'sistema',
-    titulo: 'Créditos de OpenRouter bajos',
-    que: 'Queda poco saldo en OpenRouter y conviene recargar.',
-    cuando: 'Lunes a las 07:00 (solo bajo umbral)',
+    titulo: 'Control de gasto de IA',
+    que: 'El saldo de OpenRouter da para 7 días o menos, o una app pasa del 80 % de su tope mensual de IA.',
+    cuando: 'Todos los días a las 08:10 (solo si hay algo que hacer)',
   },
   {
     id: 'sistema.ia-director', categoria: 'sistema',
@@ -106,6 +112,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Agente SEO de la landing',
     que: 'Qué ha reescrito el agente SEO en la web de House Sevillana.',
     cuando: 'Lunes',
+  },
+  {
+    id: 'sistema.acceso-intranet', categoria: 'sistema',
+    titulo: 'Alguien ha entrado en la intranet',
+    que: 'Nombre y email de la cuenta que acaba de iniciar sesión en /login.',
+    cuando: 'Al iniciar sesión',
   },
 
   // ── 🏦 Banca y contable ───────────────────────────────────────────────────
@@ -271,6 +283,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {
+    id: 'correo.correduria-recibo', categoria: 'correo',
+    titulo: 'Recibos sin cobrar de la correduría',
+    que: 'Devoluciones de banco, impagados y avisos de anulación que mandan las compañías. Es lo único del correo de aseguradoras que caduca: al mes se suspende la cobertura.',
+    cuando: 'Al llegar (revisión cada 10 min)',
+  },
+  {
     id: 'correo.leads', categoria: 'correo',
     titulo: 'Oportunidades de negocio',
     que: 'Leads entrantes, partnerships y respuestas a mailings de ia-rest / ialimp.',
@@ -280,6 +298,12 @@ export const AVISOS: AvisoTelegram[] = [
     id: 'correo.seguridad', categoria: 'correo',
     titulo: 'Correo sospechoso (phishing)',
     que: 'Correo que simula ser de un banco o servicio y pide credenciales.',
+    cuando: 'Al llegar (revisión cada 10 min)',
+  },
+  {
+    id: 'correo.contacto-sugerido', categoria: 'correo',
+    titulo: 'Posible contacto nuevo de aseguradora',
+    que: 'Una persona (no un buzón genérico) de una aseguradora escribe por primera vez: sugerencia para añadirla al directorio, nunca un alta automática.',
     cuando: 'Al llegar (revisión cada 10 min)',
   },
   {
@@ -319,6 +343,12 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Precios por canal',
     que: 'Cómo queda el precio en cada portal tras el reparto por canal.',
     cuando: 'Todos los días a las 09:45',
+  },
+  {
+    id: 'pisos.pricing-fuga-canal', categoria: 'pisos',
+    titulo: 'Fuga de canal en Booking',
+    que: 'El huésped paga bastante menos de lo que el motor tiene listado: descuentos del extranet (Genius, móvil, ofertas).',
+    cuando: 'Todos los días a las 11:20, solo si hay fuga',
   },
   {
     id: 'pisos.pricing-piloto', categoria: 'pisos',
@@ -373,6 +403,14 @@ export const AVISOS: AvisoTelegram[] = [
     titulo: 'Mensajes programados enviados',
     que: 'Qué mensajes automáticos han salido hacia los huéspedes.',
     cuando: 'Dos veces por hora',
+  },
+  {
+    // Aviso APARTE del anterior a propósito: aquel cuenta lo que SÍ salió y se puede silenciar sin
+    // perder nada; este dice quién llega SIN sus instrucciones, que es lo que no se puede callar.
+    id: 'pisos.mensajes-cobertura', categoria: 'pisos',
+    titulo: 'Huéspedes sin sus instrucciones de acceso',
+    que: 'Quién entra en los próximos días sin que le haya salido nada, y los pisos que no están recibiendo el ciclo.',
+    cuando: 'Solo cuando lo hay (una vez por caso y día)',
   },
   {
     id: 'pisos.reserva-vigia', categoria: 'pisos',
@@ -521,16 +559,111 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:30',
   },
   {
+    id: 'correduria.sustitucion-seguimiento', categoria: 'correduria',
+    titulo: 'Seguimiento de sustituciones (cambio de compañía)',
+    que: 'Pólizas retarificadas y emitidas en otra compañía que llevan ≥3 días sin que CIMA confirme que el cliente la paga.',
+    cuando: 'Todos los días a las 06:35, y solo si hay alguna pendiente',
+  },
+  {
+    id: 'correduria.recaptacion-lote', categoria: 'correduria',
+    titulo: 'Recaptación por email · lote diario',
+    que: 'Cuántos leads solo-email (sin teléfono usable) se han recaptado hoy por correo, y quién ha fallado. Cada correo lleva baja de un clic.',
+    cuando: 'Todos los días a las 07:00, y solo si hubo candidatos o el envío falló',
+  },
+  {
     id: 'correduria.ingesta', categoria: 'correduria',
     titulo: 'Se pierden datos de CIMA',
     que: 'Recibos, siniestros o pólizas que las compañías mandan y no llegan a guardarse.',
     cuando: 'Todos los días a las 08:45, y solo cuando algo cambia',
   },
   {
+    id: 'correduria.cima-respaldo', categoria: 'correduria',
+    titulo: 'Respaldo del pull de CIMA',
+    que: 'El pull de GitHub Actions no ha corrido y plataforma lo lanza por su cuenta: avisa si lo consigue (la primera vez), si falla o si el respaldo no está configurado.',
+    cuando: 'A las 08:00 y 14:00 UTC, solo si Actions no ha traído CIMA',
+  },
+  {
     id: 'correduria.cima-liq', categoria: 'correduria',
     titulo: 'Liquidaciones de comisiones (CIMA)',
     que: 'Liquidaciones nuevas de las compañías, y los fallos al conectar con CIMA.',
     cuando: 'Todos los días a las 09:30',
+  },
+  {
+    id: 'correduria.siniestro-nuevo', categoria: 'correduria',
+    titulo: 'Siniestro nuevo de un cliente',
+    que: 'Un siniestro que ha entrado por CIMA (o sea, YA abierto en la compañía): quién es el cliente, qué compañía, qué póliza, cuándo pasó y la referencia, para llamarle y hacerle seguimiento.',
+    cuando: 'Todos los días a las 08:50, y solo cuando ha entrado alguno',
+  },
+  {
+    id: 'correduria.actividad-cliente', categoria: 'correduria',
+    titulo: 'Actividad de un cliente en el portal',
+    que: 'Lo que hace un cliente en su intranet: entrar, pedir el código y no entrar, cambiar su dirección, dar un parte o pedir que se borren sus datos. Un mensaje por pasada, agrupado por cliente, con el enlace a su ficha y sin datos de contacto. La póliza declarada y la sugerencia no van aquí: el portal ya las avisa al instante.',
+    cuando: 'Cada 5 minutos, y solo cuando ha pasado algo',
+  },
+  {
+    id: 'correduria.fuga-cartera', categoria: 'correduria',
+    titulo: 'Posible pérdida de cartera',
+    que: 'Una póliza viva que CIMA da de baja, que anuncia que no renovará («anula al vencimiento») o que deja de aparecer, SIN una sustitución registrada. Un mensaje por pasada con el tomador (enlazado a su ficha), la compañía y el número; se revisa en /correduria → Hoy (pérdida con motivo, o no es pérdida).',
+    cuando: 'Tras cada pull de CIMA (06:15 y 12:15 UTC), solo si aparece alguna nueva',
+  },
+  {
+    id: 'correduria.parte-sin-abrir', categoria: 'correduria',
+    titulo: 'Parte del cliente sin abrir en la compañía',
+    que: 'Partes que un cliente nos dio por el portal y que TODAVÍA no están abiertos en la entidad, con lo que queda del plazo del art. 16 LCS (7 días). Incluye los que ya has leído («recibido»): leerlo no lo comunica.',
+    cuando: 'Todos los días a las 08:55, y solo cuando entra uno nuevo o a uno se le echa el plazo encima',
+  },
+  {
+    id: 'correduria.lead-nuevo', categoria: 'correduria',
+    titulo: 'Lead nuevo desde la web',
+    que: 'Alguien ha pedido presupuesto en /seguros: sus datos, qué quiere y el enlace a su ficha (o que no se pudo registrar).',
+    cuando: 'Al llegar un formulario',
+  },
+  {
+    id: 'correduria.aviso-web', categoria: 'correduria',
+    titulo: 'Aviso de vencimiento confirmado desde la web',
+    que: 'Alguien ha confirmado su correo en «avísame antes de que venza»: ramo, vencimiento y el enlace a su ficha (nueva como lead o la que ya tenía).',
+    cuando: 'Al confirmar el correo',
+  },
+  {
+    id: 'correduria.seo-semana', categoria: 'correduria',
+    titulo: 'Informe SEO semanal de grupoasegura.es',
+    que: 'Posiciones reales en Google (Search Console), quién ocupa el top-10 de cada consulta objetivo (Serper) y visitas medidas (PostHog), con UNA acción propuesta. Si una fuente no está conectada lo dice, no pinta un cero.',
+    cuando: 'Lunes 08:30 UTC',
+  },
+  {
+    id: 'correduria.seo-indexacion-pendiente', categoria: 'correduria',
+    titulo: 'Artículos del blog sin indexar en Google — prompt listo',
+    que: 'Uno o más artículos de /blog llevan sin indexar en Search Console. Google no tiene API para pedir indexación de páginas normales (solo la UI), así que el mensaje trae el prompt de Claude Chrome ya armado: pégalo y en un clic solicita la indexación de cada URL.',
+    cuando: 'Lunes 08:30 UTC (detrás del informe semanal), solo si hay artículos pendientes',
+  },
+  {
+    id: 'correduria.seo-agente-cambio', categoria: 'correduria',
+    titulo: 'Propuesta de metadata SEO para un ramo (agente autónomo)',
+    que: 'Un ramo de asegura-web no aparece en el top-10 de su consulta objetivo: la IA propone un title/description nuevo y abre un PR DRAFT contra apps/asegura-web para que lo revises. Nunca escribe a main ni mergea solo.',
+    cuando: 'Lunes 09:00 UTC (detrás del informe semanal), solo si SEO_ASEGURA_AGENT_ENABLED=true',
+  },
+  {
+    id: 'correduria.blog-listo', categoria: 'correduria',
+    titulo: 'Artículo del blog listo para revisar',
+    que: 'El agente ha escrito el artículo quincenal de grupoasegura.es y lo ha dejado esperando tu OK. No se publica solo: se aprueba en /correduria → Redes.',
+    cuando: 'Los días 1 y 15 a las 10:00, si el artículo pasa la revisión',
+  },
+  {
+    id: 'correduria.blog-cola-agotada', categoria: 'correduria',
+    titulo: 'Se han acabado los temas del blog',
+    que: 'El agente no ha escrito nada porque ya ha cubierto todos los temas aprobados. NO se inventa el siguiente: hay que aprobar temas nuevos (o conectar Search Console).',
+    cuando: 'Los días 1 y 15, solo cuando la cola se agota',
+  },
+  {
+    // Los tres fallos (falta el token, el artículo no pasó la revisión, no se
+    // pudo abrir el PR) comparten interruptor a propósito: para Alberto son la
+    // MISMA noticia —«este quincena no hay artículo y hay que mirar por qué»— y
+    // tres pastillas separadas en el panel serían tres cosas que apagar para
+    // silenciar una. El texto del mensaje sí dice cuál de los tres fue.
+    id: 'correduria.blog-fallido', categoria: 'correduria',
+    titulo: 'El agente del blog no ha podido',
+    que: 'No hay artículo esta quincena, y por qué: falta el token de GitHub, el borrador citaba normas sin verificar, o no se pudo abrir el PR.',
+    cuando: 'Los días 1 y 15, solo cuando falla',
   },
 ]
 
@@ -557,6 +690,7 @@ export function avisoDeCategoriaCorreo(categoria: string): string | null {
     'personal-importante': 'correo.personal-importante',
     'huespedes': 'correo.huespedes',
     'agoda-huespedes': 'correo.agoda',
+    'correduria-recibo': 'correo.correduria-recibo',
     'leads-negocio': 'correo.leads',
     'seguridad-sospechosa': 'correo.seguridad',
   }

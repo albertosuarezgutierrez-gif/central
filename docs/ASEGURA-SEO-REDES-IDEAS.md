@@ -1,0 +1,566 @@
+# SEO y redes de Grupo ASegura — banco de ideas
+
+> Backlog vivo del canal propio de la correduría: la web pública `grupoasegura.es`
+> (`apps/asegura-web`) y las redes que aún no existen. Alberto, 05/09/2026: *«en breve crearemos
+> rutina para ir mejorando el SEO de la web… y también atacaremos a las redes sociales»*.
+>
+> **Qué es esto:** lo que cada idea cuesta, lo que la bloquea y qué evidencia la sostiene.
+> **Qué NO es:** un plan. La estrategia está en `docs/ASEGURA-MARKETING-PLAN.md` (fases 3 y 4).
+> El agente que lo ejecuta es la skill **`seo-asegura`**.
+> Al cerrar una idea se marca aquí con su PR. **Nada se borra sin cerrarse.**
+
+## Reglas que no se negocian (cualquier idea que las rompa, se rediseña)
+
+1. **Ningún texto promete precio.** Ni «ahorra», ni «el más barato», ni «garantizamos». Convierte
+   la web en **asesoramiento** y arrastra análisis objetivo + IPID (RDL 3/2020). Lo vigila
+   `apps/asegura-web/lib/ramos.test.ts`.
+2. **Nada se publica sin el OK de Alberto para ESE contenido concreto.** Ni un post, ni una
+   respuesta a una reseña, ni un correo. Regla global de `CLAUDE.md`. El agente deja borradores.
+3. **Nunca se tarifica para captar.** Avant2 son 0,50 €/consulta y no es idempotente.
+4. **Cero PII en el contenido público.** Un testimonio lo pide Alberto y con permiso escrito.
+5. **`HORARIO` sigue ausente a propósito.** Publicar un horario inventado hace que alguien llame
+   y no le cojan. No se rellena «para completar el JSON-LD».
+   ✅ **El teléfono ya NO está ausente** (05/09/2026): vive en `MEDIADOR.identidad.telefono` con
+   `telefonoLegible()` y `whatsappUrl()`. Se lee de ahí, nunca se teclea.
+6. **Un dato que no se ha mirado no se afirma.** PostHog solo mide a quien acepta el banner: sus
+   cifras no son «el tráfico», son «el tráfico que consintió». Cero medido ≠ cero.
+
+---
+
+## 🚨 Lo primero, porque no es marketing: el libro de comisiones puede estar mintiendo
+
+**M. Mapfre no lleva 5 meses sin traer recibos: NUNCA ha entrado por el cron.** *(medido en BD el
+05/09/2026)*
+
+El plan (§Fase 0.5) decía «falta la ingesta de Mapfre desde el 02/04/2026». La consulta a
+`seguros.poliza_recibos` agrupando por entidad y **fecha de ingesta** dice otra cosa:
+
+| Entidad | Recibos | Primera ingesta | Última ingesta |
+|---|---|---|---|
+| **C0058 Mapfre** | 153 | 2026-06-24 | **2026-06-24** ← una sola fecha |
+| C0109 Allianz | 10 | 2026-06-24 | 2026-08-24 |
+| C0468 Occident | 20 | 2026-06-24 | 2026-08-24 |
+| C0613 Reale | 1 | 2026-08-02 | 2026-08-02 |
+
+Los 153 recibos de Mapfre tienen **una única fecha de creación**, la del volcado inicial. Allianz y
+Occident sí han recibido ingestas posteriores. O sea: no es que CIMA dejara de traer Mapfre — es
+que **Mapfre solo entró en la migración y el cron nunca ha traído uno suyo**. Su último
+`fecha_situacion` es del 29/03/2026.
+
+**Por qué está en un documento de marketing:** Mapfre es el **64 % de la cartera**. La decisión de
+que el ramo prioritario sea hogar sale de comisiones por ramo, y esas comisiones salen de recibos.
+Si falta el 64 %, la comparación hogar-vs-auto puede estar sesgada. **Esto se mira antes que
+cualquier campaña**, y le toca a `agente-correduria`, no a esta skill.
+
+---
+
+> ⚠️ **Este backlog se midió sobre el árbol del 05/09/2026 a las ~15:00, y esa misma tarde entró en
+> `main` un rediseño de `apps/asegura-web`.** Lo revalidado tras el merge está marcado abajo. Antes
+> de trabajar una idea, **compruébala contra el código de hoy**: un backlog que describe una app que
+> ya cambió es justo la clase de dato que este repo no se permite.
+
+## ✅ A. Imagen para compartir (Open Graph) — 🔴 la más barata con más impacto
+
+> ✅ **CERRADO el 07/09/2026 (PR de esta sesión).** `apps/asegura-web/app/opengraph-image.tsx`
+> genera la tarjeta 1200×630 con `next/og`, leyendo marca y clave DGSFP de `MARCA_ASEGURA` y
+> `MEDIADOR` (nada quemado en un PNG). Next la aplica a TODAS las páginas que no declaren la
+> suya, y el `layout` añade `twitter: { card: "summary_large_image" }` para que X no la recorte
+> a cuadrado. Verificado en `next build`: `/opengraph-image` sale prerrenderizada.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
+
+**Hoy no existe ninguna.** Cero ficheros `opengraph-image*`, cero `openGraph.images`, cero bloque
+`twitter` en toda la app. `public/` tiene un único activo: `brand/marca-asegura.svg`.
+
+**Consecuencia:** cada enlace que alguien pegue en WhatsApp, LinkedIn o Facebook sale como **una
+tarjeta de texto plano, sin imagen**. En una compra de confianza, eso es una diferencia de clic
+enorme, y es el canal que Alberto va a usar primero (mandar el enlace a conocidos y clientes).
+
+**Además, la home —la página más compartida— no tiene `openGraph` propio** (`app/page.tsx:9-14`):
+hereda el del layout, que no lleva ni título ni descripción propios de OG.
+
+**Qué haría:** `opengraph-image.tsx` generado por `next/og` a partir de `MARCA_ASEGURA` (los
+colores ya están medidos del CSS real) y del logo que ya existe, más una variante por ramo. Sin
+dependencias nuevas.
+**Coste:** una tarde. **Bloqueo:** ninguno. **Necesita:** nada. Se puede hacer ya.
+
+</details>
+
+## 🚫 B. La página de más intención de compra no dice dónde está — REVERTIDA
+
+> 🚫 **CERRADA AL REVÉS, y la decisión NO es mía: el ámbito es NACIONAL (PR #2464, 07/09/2026).**
+> Esta idea pedía meter «en Sevilla» en el `title` y el `h1` de `/cambiar-de-correduria` y de
+> `/quienes-somos`. Se hizo esa misma mañana… y a las pocas horas hubo que deshacerlo: en paralelo
+> entró en `main` la decisión contraria y mejor razonada — **«Sevilla» en un encabezado no acota la
+> palabra clave, acota la OFERTA**, y quien entra desde otra provincia lee en el primer renglón que
+> no es cliente. Un corredor inscrito en la DGSFP media en todo el territorio.
+>
+> Lo que queda vigente de esta idea: **la señal local sí importa, pero sale del NAP y del perfil de
+> Google Business, no de repetir la ciudad en cada `h1`.** El `areaServed` del JSON-LD es ahora
+> `Country: España` y el domicilio postal sigue en Sevilla, que es como se declara un negocio con
+> oficina local y ámbito nacional.
+>
+> 🚨 Y hay cepo: `ACOTA_AMBITO` (`lib/ramos.test.ts`) **prohíbe** «en Sevilla», «Sevilla y su
+> provincia» y «en Andalucía» en `RAMOS` y en todo el fuente de `app/` y `components/`. Si esta
+> idea vuelve a proponerse, el test la para. No la reabras sin hablarlo con Alberto.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
+
+`/cambiar-de-correduria` es, por diseño, la conversión más barata del sitio: convierte un lead en
+cliente **sin tarificar** (0 € de Avant2) y sin competir por precio.
+
+Su `title` (`page.tsx:22`) y su `h1` (`:109`) **no llevan «Sevilla»**, que son los dos sitios que
+más pesan.
+
+⚠️ **Corregido el 05/09/2026, unas horas después de medirlo:** aquí ponía «cero señales locales» y
+«no la menciona ni una vez», y eso **ya es falso** — el rediseño de la web que entró en `main` esa
+misma tarde metió «Sevilla» en la `description` (`:24`). Sigue faltando en title y h1, que es lo
+que hay que arreglar; el cuerpo ya no está mudo.
+`/quienes-somos` tiene el mismo hueco en su H1 (`:146`), aunque su title sí la lleva.
+
+**Coste:** una hora. **Bloqueo:** ninguno. **Ojo:** cambiar un H1 es cambiar copy → pasa por
+`lib/ramos.test.ts`.
+
+</details>
+
+## ✅ C. Las páginas de ramo son callejones sin salida — 🟠
+
+> ✅ **CERRADO el 07/09/2026.** Cada página de ramo cierra con un bloque «Otros seguros que
+> llevamos» que enlaza a las cinco hermanas (objetivo táctil de 44 px) y a
+> `/cambiar-de-correduria`. `responsabilidad-civil` entra en `NAV` —o sea, en el pie— y
+> **se queda fuera de la cabecera a propósito**: sería la sexta entrada y devolvería el
+> desbordamiento medido el 05/09. Lo vigila `lib/enlazado.test.ts`, que falla si un ramo se
+> queda sin enlaces o si la cabecera vuelve a crecer.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
+
+Medido: las 6 páginas de ramo **no enlazan entre sí, ni a `/cambiar-de-correduria`, ni a
+`/quienes-somos`**. Su único enlace es la miga hacia `/`. Y el pie (`layout.tsx:175-181`) reparte
+todo su peso a las 4 legales + quiénes somos: **cero enlaces del footer a ramos**.
+
+Peor: **`responsabilidad-civil` no está en el `NAV`** (`sitio.ts:73-80`). Su único enlace de todo
+el sitio es una tarjeta de la home.
+
+**Qué haría:** bloque «ver también» con 2-3 ramos vecinos + un enlace a `/cambiar-de-correduria` al
+final de cada ramo (que es exactamente donde está la intención), y meter RC en el NAV o aceptar
+explícitamente que es una página secundaria.
+**Coste:** una tarde. **Bloqueo:** ninguno.
+
+</details>
+
+## ✅ D. Canibalización con `apps/plataforma/seguros` — cerrada (14/09/2026)
+
+> ✅ **Decisión de Alberto: 301 a `grupoasegura.es`, no dejarla noindex y viva.** Implementado:
+> `apps/plataforma/next.config.ts::redirects()` (`{ source: '/seguros', destination:
+> 'https://grupoasegura.es', permanent: true }` — `permanent: true` = 308, el equivalente actual del
+> 301, no un capricho). La página y su formulario (`app/seguros/{page,Formulario}.tsx`) se BORRARON:
+> con el redirect delante, seguían existiendo pero se volvían código muerto, y el repo no guarda
+> páginas que ningún visitante puede alcanzar (`git log` conserva el texto si hace falta consultarlo).
+> Se limpió también la exención `/seguros` de `middleware.ts` (el redirect de `next.config` corre
+> ANTES que el middleware, así que la exención ya no protegía nada alcanzable).
+>
+> ⚠️ **`public/mockup-correduria.html` sigue público y rastreable** — no lo tocaba esta decisión
+> (es un archivo estático, no una ruta de Next) y queda fuera de este cierre.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
+`apps/plataforma/app/seguros/page.tsx` **existía, era pública** (middleware la listaba en `PUBLIC`),
+**era indexable** (exportaba `metadata` sin `robots`, y plataforma **no tiene `robots.ts` ni
+`sitemap.ts`**), tenía H1 «Correduría de seguros» y **mandaba los leads al mismo endpoint** que la
+web nueva (`/api/publico/correduria/lead`). Dos webs distintas compitiendo por la misma consulta, y
+la vieja vivía bajo `plataforma-ten-flame.vercel.app`. El 07/09/2026 se le puso
+`robots: { index: false, follow: true }` como parche mientras se decidía el destino final.
+
+</details>
+
+## ✅ E. Sitemap que declara frescura falsa — 🟠
+
+> ✅ **CERRADO el 07/09/2026.** Fuera el `new Date()`. Las cuatro legales fechan con
+> `FECHA_TEXTOS_WEB` (`@central/module-seguros`), que es el día real en que se tocaron los
+> textos públicos; la portada y los ramos **omiten** `lastModified` porque no hay fuente de
+> esa fecha, y ausente es la verdad (regla NULL≠0). Las legales se quedan en el sitemap con
+> prioridad 0,3: sacarlas no gana nada y perderían el único sitio donde se declaran.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
+
+`app/sitemap.ts:10` hace `const ahora = new Date()` y se lo pone a las 13 URLs. Es decir: **cada
+regeneración dice que todo cambió hoy**, lo que equivale a no dar señal ninguna. Y las **4 páginas
+legales ocupan el 31 % del sitemap** sin tener intención de búsqueda.
+
+**Qué haría:** `lastModified` real (fecha del último commit del fichero, o una constante por página
+que se sube a mano) y sacar las legales o dejarlas con prioridad mínima.
+**Coste:** pequeño. **Bloqueo:** ninguno.
+
+</details>
+
+## F. Huecos de JSON-LD — ✅ cerrada salvo `geo` (14/09/2026)
+
+`lib/seo.ts` emite `InsuranceAgency` (con `areaServed`, `identifier` DGSFP, `knowsAbout`, `logo`,
+`image` y `sameAs`), `Service` por ramo, `WebSite`, `BreadcrumbList` y `FAQPage`.
+
+> ✅ **`Service` por ramo — YA ESTABA HECHO** cuando se releyó este backlog el 14/09/2026 (no consta
+> en qué PR; el guardián `seo-servicio.test.ts` lo cubre desde antes de esa fecha). Este apartado
+> seguía listándolo como pendiente: backlog desactualizado, no trabajo por hacer.
+> ✅ **`sameAs` — YA ESTABA HECHO** (la idea I cerró el GBP el 07/09 y `PERFILES` ya llevaba el canal
+> de YouTube). Mismo caso: el backlog no se había releído tras cerrarse la idea I.
+> ✅ **`logo`/`image`** cerrado el 14/09/2026: `logo` apunta a `/icon` (el monograma en azul de marca
+> que ya genera `app/icon.tsx`) e `image` a `/opengraph-image` (la tarjeta 1200×630 de la idea A) —
+> las dos rutas YA EXISTÍAN, esto solo las declara en la ficha. Ningún fichero nuevo.
+> ✅ **`WebSite`** cerrado el 14/09/2026 (`fichaWebSite()`, sin `SearchAction`: el sitio no tiene
+> buscador interno, y declarar uno inventado es la misma mentira que un horario sin confirmar).
+> 🔴 **`geo` SIGUE bloqueada**, y ahora de verdad: la idea I dejó dicho que faltaba «la URL canónica
+> de Maps de la ficha ya verificada» — eso no se ha resuelto. Sin coordenadas medidas contra el panel
+> de Google Business, no se inventan.
+
+✅ **El bug de NAP que había aquí YA ESTÁ ARREGLADO** (05/09/2026, en `main`). Decía que
+`seo.ts:45` tecleaba `'San Juan de La Palma, 28'` a mano mientras `MEDIADOR.identidad.domicilio`
+decía otra cosa. Ahora `streetAddress` se deriva de `MEDIADOR` y el propio fichero explica por qué.
+Se deja escrito porque el motivo sigue valiendo: una dirección que no coincide entre el JSON-LD y
+el pie es lo que rompe la correspondencia con el Business Profile.
+
+## ✅ G. `/legal/cookies` sin canonical — 🟢 minutos
+
+> ✅ **CERRADO** — ya lo llevaba (`page.tsx:20`), lo metió el rediseño del 05/09. Este banco lo
+> daba por abierto porque se midió sobre el árbol de esa mañana.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se hizo)</summary>
+
+
+`app/legal/cookies/page.tsx:12-14` es **la única página del sitio sin `alternates.canonical`** (las
+otras tres legales sí lo llevan). En un sitio que vivió en dos dominios el mismo día, no es un
+detalle de estilo.
+
+</details>
+
+## ✅ H. Los bots de IA — decidido (14/09/2026): se dejan pasar
+
+> ✅ **Decisión de Alberto: dejarlos pasar.** `app/robots.ts` ya permitía todo salvo `/api/` — así
+> que esta idea se cierra **sin ningún cambio de código**, solo dejando escrita la decisión que
+> faltaba (era justo lo que pedía el apartado de abajo). Motivo, confirmado: para una correduría
+> local, aparecer en la respuesta de un asistente cuando alguien pregunta «cómo cambio de correduría
+> en Sevilla» es tráfico cualificado gratis. Si algún día se quisiera matizar (bloquear solo
+> entrenamiento — `Google-Extended`, `CCBot` — y dejar los de respuesta en vivo), es una reapertura
+> explícita de esta idea, no algo que se cuele por descuido.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se miró)</summary>
+
+`app/robots.ts` permite todo salvo `/api/`. No había ninguna regla para `GPTBot`, `ClaudeBot`,
+`PerplexityBot`, `CCBot` ni `Google-Extended` — ni bloqueo ni permiso explícito, un descuido, no una
+decisión.
+
+</details>
+
+## ✅ I. Google Business Profile — ya existía, y con dos incumplimientos dentro
+
+> ✅ **CERRADO el 07/09/2026 (comprobado en el panel, no supuesto).** La ficha **ya existía y estaba
+> verificada**: en Maps, 381 visualizaciones, categoría «Agencia de seguros». Este banco la daba por
+> «hay que crearla» — falso. Lo que sí había eran dos incumplimientos:
+> · el **nombre** era `Grupo ASegura · Corredor de seguros`, o sea keyword stuffing. Google lo
+>   prohíbe expresamente y es motivo típico de suspensión; en una cuenta que ya arrastra **4 fichas
+>   suspendidas** eso no es teórico. Corregido al nombre a secas, que además es lo que publica la
+>   web (NAP exacto).
+> · el **sitio web** apuntaba a `http://`. Corregido a `https://`.
+>
+> 🚨 **Y una autorreseña bloqueada**: había una reseña del propio titular en estado «No publicado»
+> con el aviso «No podemos publicar este contenido». No es un fallo temporal — Google prohíbe que el
+> titular reseñe su propio negocio. Se retira.
+>
+> 📉 **Lo que sigue abierto es lo de siempre: 381 visualizaciones y UNA reseña**, de hace 7 años y de
+> dos palabras. La petición de reseña a los ~80 clientes vivos sigue pendiente **y la manda Alberto**,
+> no un agente.
+>
+> ⚠️ La dirección de la ficha (`Calle San Juan de la Palma, 28`) y la del repo (`San Juan de La
+> Palma, nº 28`) difieren en el artículo y una mayúscula. **No se toca ninguna de las dos**: Google
+> normaliza direcciones, y la del repo es el domicilio profesional que se declara por obligación
+> legal (art. 19 Ley 16/2018), no un campo de estilo.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se miró)</summary>
+
+
+Lo que sale cuando alguien busca «correduría de seguros Sevilla» desde el móvil. No es código.
+
+**Bloqueo:** verificación (código o postal al domicilio) — **la hace Alberto**.
+**Y va pegado:** un GBP con **cero reseñas no convierte**. La petición de reseña a los ~80 clientes
+actuales es el activo local nº1 y **la manda Alberto**, nunca el agente (regla 2). Desbloquea
+además el `sameAs` de la idea F.
+
+</details>
+
+> 📍 **Medido el 23/09/2026 (OpenSEO, Google España, top 20): la ficha NO aparece.** Para
+> «correduría de seguros sevilla» mandan el **local pack** (Albroksa, Lara Broker, Benjumea,
+> AndalBrok, Seingur, López Barneto) y directorios (ProntoPro, corredurias.org); grupoasegura.es
+> tampoco sale en orgánico. Con **una** reseña no se entra en el pack: las reseñas de clientes
+> reales siguen siendo la palanca nº1 y siguen siendo de Alberto. Re-medir tras las primeras reseñas.
+>
+> ⭐ **Borrador de la petición preparado el 23/09/2026** en `docs/asegura-resenas/` (texto + QR al
+> enlace directo de reseña). Sin enviar: lo manda Alberto.
+
+## ✅ J. Google Search Console — ya estaba conectada desde mayo
+
+> ✅ **CERRADO el 07/09/2026.** La propiedad de tipo Dominio `sc-domain:grupoasegura.es` **estaba
+> verificada desde el 17/05/2026** y el sitemap enviado desde el 05/09, en estado Correcto con sus
+> URL. O sea: **hay cuatro meses de datos** y este banco los daba por inexistentes.
+>
+> 📊 **Primera lectura real (3 meses, 06/06–05/09/2026): 350 impresiones, 0 clics, posición media
+> 47,1.** Las consultas son genéricas del sector (la palabra «grupo» con «asegurador», «seguros» o
+> «aseguranza» detrás: 176 impresiones la primera, en posición 62), no de marca. La única de marca de
+> verdad —el nombre bien escrito— está en **posición 3,0 con 4 impresiones**. Lectura honesta: **no
+> hay tráfico que perder, hay tráfico que construir**, y eso respalda el cambio de ámbito a nacional
+> del PR #2464, porque la señal local que supuestamente se sacrificaba no existía.
+>
+> ✅ **Conector construido el 08/09/2026** (spec `docs/superpowers/specs/2026-09-08-seo-correduria-conectores-design.md`):
+> el cron `seo-correduria` de plataforma (lunes 08:30 UTC) lee Search Console por API con una cuenta
+> de servicio, Serper (top-10 de las 14 consultas objetivo) y PostHog (HogQL), guarda una fila por
+> fuente y semana en `seo_correduria_semana` con tri-estado y manda el informe por Telegram con UNA
+> acción propuesta. La skill lee esa tabla en vez de pedir que le peguen datos. ⏸️ **Lo que sigue
+> pendiente de Alberto**: la cuenta de servicio de Google con acceso a la propiedad, la Personal API
+> key de PostHog y créditos en Serper — sin ellos el informe llega diciendo qué fuente falta, no un 0.
+
+<details><summary>Diagnóstico original (se conserva: explica POR QUÉ se miró)</summary>
+
+
+**No conectada.** Es la única fuente sin sesgo de por qué consultas entra la web y en qué posición.
+PostHog no la sustituye: solo ve a quien acepta el banner.
+
+**Mientras no exista, la posición y las impresiones se declaran «pendiente», nunca 0.**
+**Bloqueo:** verificación del dominio por Alberto (registro TXT en IONOS, que es donde está el DNS).
+**Nota:** ya hay un TXT pendiente en esa zona por otro motivo (el DMARC, ver §Pendientes) — se
+pueden hacer en la misma sentada.
+
+</details>
+
+## K. Contenido de intención de problema — 🟠 el trabajo de fondo (Fase 4)
+
+Donde está el dinero y casi no hay competencia. No «seguro de coche barato»: esa SERP no se gana.
+
+- ✅ «me han subido el seguro del coche en la renovación» → `/blog/me-han-subido-el-seguro-en-la-renovacion` (07/09/2026, PR #2487/#2500)
+- ✅ «preaviso de un mes para cancelar el seguro» (art. 22 LCS) → `/blog/preaviso-un-mes-no-renovar-seguro` (07/09/2026, PR #2487/#2500)
+- ✅ «cómo reclamar un siniestro que me han denegado» → `/blog/siniestro-denegado-que-hacer` (07/09/2026, PR #2487/#2500)
+- ✅ «cómo cambiar de correduría sin cambiar de seguro» → **ya cubierta**, no era un hueco: la
+  página `/cambiar-de-correduria` existe desde antes de escribirse este banco (ver
+  `references/keywords.md`, §2). Este bullet describía trabajo ya hecho.
+- ✅ «qué cubre de verdad mi seguro de hogar» → `/blog/que-cubre-de-verdad-el-seguro-de-hogar`
+  (15/09/2026, PR de esta sesión). Continente/contenido, sublímites de objetos de valor,
+  exclusiones habituales (deterioro progresivo vs. daño súbito) y capital de reconstrucción vs.
+  reposición. Sin citar ningún artículo de ley: no hay ninguno en `NORMAS_CITABLES` que respalde
+  el infraseguro o los sublímites, y una cita sin verificar es peor que no citar (regla del propio
+  fichero `articulos.ts`).
+- ✅ «seguro de comunidad de propietarios» · «seguro de local comercial» · «seguro de flota» → **ya
+  cubiertas sin el sufijo "Sevilla"**, que este bullet seguía llevando pese al cambio a ámbito
+  nacional del 07/09/2026 (PR #2464): `/seguros/comunidades`, `/seguros/comercio` y
+  `/seguros/flota` existen y enlazan entre sí desde esa misma fecha (ver `references/keywords.md`,
+  §1). El bullet de aquí no se había releído tras el cierre de las ideas B y C — mismo patrón que
+  ya corrigió esta sección el 14/09/2026 con `Service`/`sameAs`/`WebSite`.
+
+Corregido 14/09/2026: el hueco de arriba llevaba desde el 07/09 sin cerrarse pese a que los 3
+artículos ya existían — el agente SEO lo detectó (misma sesión que confirmó GSC+PostHog OK vía el
+puerto HTTP), lo anotó porque no tenía escritura en el repo, y esta sesión aplicó el cierre.
+
+**15/09/2026:** con el artículo de hogar cerrado, la cola de esta idea K queda VACÍA — todas las
+consultas de intención de problema y las tres de ramo con sufijo obsoleto tienen página. El
+siguiente contenido de blog sale de la cola curada `apps/plataforma/lib/correduria/blog-temas.ts`
+(agente quincenal), no de este banco: no dupliques ahí un tema que ya está en `TEMAS`.
+
+**19/09/2026 — la cola vuelve a tener UNA cosa, y no es un artículo.** Tras valorar el prompt de
+consultoría de Alberto (spec `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`):
+- ✅ «organizar mis seguros en un solo sitio» → `/gestor-de-seguros` (landing del gestor, copy en
+  `lib/gestor.ts` con su cepo, `SoftwareApplication` gratuito, calculadora sin registro).
+- ✅ «cómo dar de baja un seguro» → `/blog/como-dar-de-baja-un-seguro-a-tiempo`, con el primer CTA
+  dentro de un artículo (`Articulo.cta`) hacia la carta de no renovación del portal.
+- ⏳ **Serie «dar de baja en [Compañía]»: BLOQUEADA por verificación humana.** Los canales de Mapfre,
+  Allianz, Occident, Reale y Generali están en `apps/asegura-web/lib/companias-baja.ts` con sus URL
+  oficiales y `verificado: false` — desde el contenedor la red bloquea los cinco dominios y solo hay
+  extractos de buscador. `companias-baja.test.ts` impide publicar un email o domicilio sin verificar.
+  Cuando Alberto abra las cinco URL y ponga la fecha, se escriben los artículos CON datos, uno por
+  compañía y sin plantilla (una página por compañía con el texto cambiado de nombre es doorway).
+- 🚫 Lo que el prompt pedía y no se hace: «semáforo de precio», reseñas automatizadas «de 5
+  estrellas», referidos con premio — ver el spec.
+
+**Ritmo:** un artículo por ciclo, no cinco a medias.
+⚠️ **Lección del agente SEO de ia-rest, que no aplicó ni un cambio en toda su vida:** su umbral de
+30 impresiones era inalcanzable sin tráfico. **No automatizar el SEO antes de tener tráfico** — al
+principio la rutina propone y Alberto decide, no al revés.
+
+## ✅ L. Canibalización interna de las FAQ — cerrada (23/09/2026)
+
+✅ **Hecha:** la pregunta «¿cobráis…?» estaba en 8 de las 9 páginas de ramo con la misma respuesta; se quitó de todas y queda UNA frase en el bloque «Que te llamemos» de la plantilla. La RC general y la de autónomos compartían «¿Es obligatorio… para un autónomo?»: la general pasa a «¿Es obligatorio el seguro de responsabilidad civil?». Y la rejilla «Qué revisamos» de la portada usa `RAMOS_PRODUCTO` (sin las tarjetas de RC de fontaneros y autónomos junto a la general). Queda a propósito el preaviso del art. 22 LCS en hogar/auto/comercio/comunidades: es la misma regla legal, adaptada a cada ramo.
+
+Contexto original:
+
+La última pregunta de los 6 ramos es prácticamente la misma («¿cobráis algo?») con la misma
+respuesta (`ramos.ts:116, 169, 222, 275, 383` + `cambiar-de-correduria:76`). Seis respuestas casi
+idénticas repartidas en siete URLs. Se diferencian o se centralizan en una.
+
+## M. Redes sociales — 🟠 no hay perfiles, y no se crean solos
+
+Por orden de retorno para una correduría local:
+
+1. **Google Business Profile** (idea I). No es una red social, es *la* pieza local.
+2. **LinkedIn, con el perfil de Alberto, no una página de empresa.** El nicho que más interesa es
+   **empresas y flota**, y ahí la relación es de persona a persona. El contenido es el mismo de la
+   idea K, en corto.
+3. **Instagram/Facebook solo si hay quien alimente el calendario.** Una cuenta muerta resta.
+
+### Borrador — post de LinkedIn (15/09/2026, sin publicar: no hay perfil ni cuenta abierta)
+
+Pasó el cepo de `revisarCopy` (sin precio, sin superlativos, sin acotar a Sevilla) a mano, con la
+misma lista de `packages/module-seguros/src/copy-regulado.ts`. **No se publica sin que Alberto lo
+lea y decida** — regla 2 de este documento.
+
+> Un cliente me preguntó la semana pasada si podía cambiar de correduría sin tocar su póliza de
+> flota. Sí se puede: la compañía y las condiciones siguen igual, lo que cambia es quién la
+> gestiona y quién representa al tomador cuando hay un siniestro o una renovación que revisar.
+>
+> Lo digo porque es la duda que más me repiten las empresas con vehículos: piensan que revisar la
+> correduría implica volver a empezar de cero con la aseguradora, y no es así.
+>
+> Si gestionas la flota de un negocio y nunca te lo han explicado, con gusto te lo cuento.
+
+**Por qué este ángulo:** enlaza con la idea K (intención de problema, sin competencia de
+comparadores) y con el nicho de mayor retorno que señala la skill (empresas y flota, relación
+persona a persona). No menciona ninguna compañía ni cifra. **Bloqueo:** el perfil de LinkedIn y la
+decisión de publicar son de Alberto.
+
+**Regla propia de redes:** un post publicado **no se edita como una página**. Si promete precio, ya
+está publicado. Por eso los borradores pasan por el mismo cepo del copy antes de proponerlos.
+**Bloqueo:** crear cuentas y publicar es de Alberto. El agente prepara y espera.
+
+## N. B2B del propio grupo — CAC 0 € 🟠 (no es SEO, pero compite por el mismo tiempo)
+
+Joaquín Jaén (catering/almacén), Mariscos González, Sique Brilla, los restaurantes de ia.rest, la
+flota de transporte, los pisos de SIVRA. Todos necesitan RC, multirriesgo de local, flota, convenio
+o accidentes. **Relación ya abierta, coste de captación cero**, y encima son quienes pueden dar las
+**primeras reseñas** que hacen falta para la idea I.
+**Bloqueo:** son conversaciones de Alberto. Aquí solo se prepara el material.
+
+## O. Colisión de marca con «Asegura Group» — 🟠 (medido 23/09/2026)
+
+Al buscar la marca en Google España (OpenSEO), el **1.º es `asegura-group.com`** — Asegura Group
+Gestión Integral Correduría de Seguros S.L., **otra correduría**, con sede en Granada — y
+grupoasegura.es sale **2.º**. Sus perfiles (Facebook, LinkedIn, directorios de empresas) ocupan
+también el resto de la primera página. Es un nombre casi idéntico en el mismo sector y en Andalucía:
+quien nos busca de oídas puede acabar llamándoles a ellos.
+- ✅ Hecho: la portada ya lleva «Grupo ASegura» en el `<title>` (antes no la llevaba: la plantilla
+  del layout no se aplica al segmento raíz) — PR #3353.
+- Pendiente: que la ficha de Google (idea I) y los perfiles sociales (idea M) usen **exactamente**
+  «Grupo ASegura» y enlacen a grupoasegura.es, para que Google junte la entidad. Y el `sameAs` de F.
+- ⚖️ **No es tarea del agente**: si hay conflicto de marca registrada (OEPM/EUIPO), lo mira Alberto
+  con un abogado. Aquí no se afirma quién tiene prioridad.
+
+---
+
+## P. Lo que dijo Search Console el 23/09/2026 (vía OpenSEO) — y la idea que se DESCARTA
+
+📊 **3 meses (20/06–20/09): 3 clics, ~900 impresiones.** La marca bien escrita va en posición 2,4 con
+9 impresiones; «grupo asegurador» (201, pos. 60) y «asegura facil» (~100, pos. 42-95, **otra marca**)
+son ruido. Mejor página con intención: `/cambiar-de-correduria` (pos. 5,9, 1 clic).
+
+🚫 **Descartado: «reforzar /seguros/hogar y /seguros/auto para subirlas de la 18-20 a primera
+página».** Se propuso mirando la posición MEDIA por página, y engañaba por dos lados: esa media la
+tiraban hacia arriba búsquedas de MARCA (pos. 6,7), y lo genérico por lo que salen es LOCAL
+(«seguros de hogar en sevilla» 25,6 · «seguro coche todo riesgo sevilla» 22,8 · «seguro de coche en
+sevilla» 26,4) con 1-13 impresiones en tres meses. Y medido en DataForSEO (OpenSEO, 23/09): ni
+«seguro hogar sevilla» ni «seguro coche sevilla» aparecen con volumen propio. Una landing local
+para eso no compensa, y meter «Sevilla» en la nacional lo prohíbe `ACOTA_AMBITO`. Para lo local
+manda el pack de Google Business (idea I): reseñas.
+
+✅ **HECHA el 23/09/2026 — `/telefonos-siniestros`, con las 7 compañías VERIFICADAS** (Mapfre,
+Allianz, Generali, Reale, Occident, Fidelidade, Asisa) por capturas de sus webs oficiales que mandó
+Alberto (PRs #3398, #3412). 🔀 **Los datos viven en UNA sola fuente desde #3412:**
+`packages/module-seguros/src/telefonos-companias.ts`, que leen la web, el portal del cliente y el
+puerto de asegura. Las columnas `telefono_*` de `companias_dgs` están OBSOLETAS (daban a Mapfre su
+línea médica como «dar parte»). Cambiar un número = PR a ese catálogo con captura y fecha.
+Solo Reale (900 455 900) y Occident (917 83 83 83, voz y WhatsApp) publican voz para dar parte.
+✅ **Y su artículo hermano `/blog/dar-parte-seguro-por-whatsapp`** (idea de Alberto): qué compañías
+aceptan el parte por WhatsApp, sin copiar ningún número (un cepo lo impide: enlaza la página).
+
+✅ **24/09/2026 — «Guardar en mis contactos»** (vCard) por compañía en `/telefonos-siniestros`
+(`/telefonos-siniestros/contacto/<slug>`, estática, `noindex`) y en el parte del portal
+(`/api/contacto-compania/<nombre>`). Sale de `vcardCompania()` del mismo catálogo. ✅ **Caducidad:**
+`telefonosPorRevisar()` (más de 270 días sin comprobar) sale en el Telegram semanal de
+`seo-correduria`; no es un test con fecha a propósito (pondría rojo cualquier PR un día cualquiera).
+✅ Los datos estructurados FAQ ya estaban en las dos páginas desde que se crearon.
+
+✅ **24/09/2026 — que Google (y Bing) se entere solo.** El cron `seo-correduria` (lunes) ahora: lee el
+**sitemap real** y con él inspecciona TODAS las páginas (antes solo las de `consultas.ts`; y en paralelo,
+que en serie 17 URLs ya no cabían); el aviso de «solicitar indexación» por Claude Chrome cubre cualquier
+página no legal (antes solo `/blog/`), con tope de 10 al día; **reenvía el sitemap a Search Console por
+API** (`sitemaps.submit`, que sí existe; pide permiso «Completo» a la cuenta de servicio, si no → 403
+dicho en el Telegram); y avisa a **IndexNow** (Bing) solo de lo nuevo o cambiado (fila `indexnow`).
+«Solicitar indexación» de Google sigue sin API: es la única parte manual. `/telefonos-siniestros` entra
+en el pie. Caso que lo motivó: 4 URLs que SÍ estaban en el sitemap salían «Google no reconoce esta URL».
+
+⏭️ **Siguiente, sin hacer:** una página por compañía (`/telefonos-siniestros/mapfre`…) para las
+navegacionales de abajo; medir antes su volumen con OpenSEO. Solo Mapfre tiene volumen claro
+(1.300/mes): una página por compañía sin volumen sería doorway. Pendiente de Alberto: capturas de Fidelidade (emergencias y auto), la línea de voz de
+Mapfre para dar parte y el 900 300 250 de Allianz.
+
+💡 Idea de origen: una página de «teléfonos de siniestros por compañía». Lo que sí tiene
+volumen y dificultad casi nula son búsquedas NAVEGACIONALES de quien tiene un siniestro encima:
+«mapfre seguro hogar teléfono» 1.300/mes (KD 4), «seguro hogar catalana occidente teléfono» 110,
+«mapfre seguro hogar telefono siniestros» 40. Es intención de problema pura y los números ya están
+VERIFICADOS en `seguros.companias_dgs` (con fuente y fecha, ver `apps/asegura-portal/CLAUDE.md`,
+«El teléfono de la compañía»). ⚠️ Antes de escribirla: solo hay verificadas 5 compañías, y la regla
+del portal manda también aquí — **un número sin verificar no se publica**, «pídenoslo» en su lugar.
+Y compite contra la web de la propia compañía: el objetivo realista es el hueco de «qué hacer
+además de llamar», no desbancarla. Pide el OK de Alberto (es una página nueva con datos de terceros).
+
+🔌 **OpenSEO, qué aporta de verdad.** Search Console **ya la lee el cron `seo-correduria`** (fila
+`gsc` en `ok` las semanas del 14 y el 21/09), así que conectarla también en OpenSEO es redundante
+para la rutina. Donde sí suma: **SERP en vivo** (~5 créditos/consulta) y **volúmenes de búsqueda**
+(~55/semilla), justo lo que Serper ya no da — la semana del 14/09 su fila salió `error` por
+«Not enough credits» y la del 21/09 **no hay fila `serp`**. Saldo de alta ~400 créditos, sin plan.
+
+## ✅ Cerrado (no volver a abrirlo)
+
+- **`info@` → `hola@` en la web pública.** El plan (§0.2) y `apps/asegura-portal/CLAUDE.md:952` lo
+  dan como incumplimiento abierto. **En `apps/asegura-web` ya está hecho:** grep de
+  `info@|hola@|@grupoasegura` sobre toda la app da **cero coincidencias literales** — la web nunca
+  teclea una dirección, siempre la compone desde `MEDIADOR.identidad.email`
+  (`mediador.ts:99` = `hola@grupoasegura.es`), y `mediador.test.ts:96` **prohíbe** que `info@`
+  reaparezca. Los documentos que lo dan por vivo se refieren al **repo `asegura` antiguo**, no a
+  esta app. *(medido 05/09/2026)*
+- **Analítica con consentimiento.** PostHog EU detrás de Cookiebot, fail-closed. PR #2385 + #2380.
+- **Las 6 páginas de ramo tienen contenido real**, ~700-900 palabras únicas cada una, H1 propio y
+  jerarquía correcta. No es una plantilla rellenada: no hace falta reescribirlas.
+
+## Pendientes que no son de esta skill pero bloquean cosas de aquí
+
+- **DNS de `clientes.grupoasegura.es`** → registro **A** a `216.150.1.1` (nunca CNAME: esa zona
+  tiene MX de IONOS que un CNAME mataría).
+- **DMARC** en `p=none` y sin `rua`: hoy es decorativo. Mismo panel que el TXT de la idea J.
+- ~~**Caducidad del consentimiento en Cookiebot**: 12 meses; se quería 395 días.~~ ❌ **No es posible,
+  y deja de ser una decisión pendiente (comprobado 07/09/2026).** El desplegable de Cookiebot solo
+  ofrece meses enteros de 0 a 12: **12 meses es el máximo de la herramienta**, no una preferencia que
+  nadie haya cambiado. Se queda en 12.
+- ✅ **El «Not live» de Cookiebot del 07/09 ERA FALSO — confirmado en los paneles el 08/09/2026.**
+  `asegura-web` tiene `NEXT_PUBLIC_COOKIEBOT_ID` + `NEXT_PUBLIC_POSTHOG_KEY` + `_HOST` desde el 05/09
+  (solo Production, a propósito), el banner sale en español en modo opt-in y las cuatro verificaciones
+  fail-closed pasan en sesión limpia (cero PostHog antes de aceptar). PostHog EU registra visitas
+  reales. El [Probable] de arriba se escribió sin mirar el HTML vivo ni las envs: es un caso más de
+  «dato que NO hay ≠ dato que NO se ha mirado» (PR #2618).
+- ✅ ~~Cookiebot en Premium Trial~~: **sustituido el 14/09/2026 por `@central/core-consent`**
+  (PR #2925), antes de que caducara el trial. Ya no hay nada que vigilar aquí.
+- 🔁 **Google Analytics SÍ se añadió, y es una REVERSIÓN explícita de la decisión de abajo
+  (14/09/2026, PR #2942).** Alberto pidió verlo «en la misma app que housesevillana e ia-rest» — no
+  es un descuido, es información nueva (quiere las tres webs en la MISMA cuenta de GA) que no existía
+  el 07/09. Cableado igual que `apps/ia-rest` (ID literal `G-QP5DTDLJ5F`, gateado por el mismo banner
+  de consentimiento que PostHog, sin sustituirlo). ⚠️ **Lo que la decisión del 07/09 señalaba —GA4
+  arrastra transferencia internacional, PostHog está en la UE a propósito— NO se ha revisado ni
+  resuelto**: sigue siendo verdad que GA4 añade esa superficie legal de más; simplemente Alberto la
+  aceptó a cambio de tener las tres webs en el mismo sitio. Si el asunto vuelve a salir, este es el
+  hueco real, no una duda ya cerrada. Texto original de la decisión revertida, se conserva por lo que
+  explica:
+  <details><summary>❌ «Google Analytics NO se añade» (07/09/2026, REVERTIDO 14/09/2026)</summary>
+
+  Ya hay medición —PostHog EU detrás de Cookiebot— y con 0 clics en tres meses GA4 diría exactamente
+  lo mismo. Además duplicaría la superficie legal: PostHog está en la UE a propósito, y GA4 arrastra
+  transferencia internacional. Lo que falta no es una segunda herramienta: es que la que hay deje de
+  estar «Not live».
+  </details>
+- **Redespliegue de `asegura`** (el CRM de Manuel): su build vivo sigue mandando `distinctId` a
+  PostHog sin comprobar consentimiento, aunque las envs ya se borraron.

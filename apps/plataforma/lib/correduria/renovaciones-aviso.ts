@@ -9,7 +9,7 @@
 // Todo lo de este archivo es PURO (sin BD, sin red, sin Telegram): la decisión
 // de a quién avisar y con qué texto se puede probar sin levantar nada.
 // ────────────────────────────────────────────────────────────────────────────
-import { DIAS_PREAVISO_TOMADOR } from '@central/module-seguros'
+import { DIAS_PREAVISO_TOMADOR, descripcionDias } from '@central/module-seguros'
 import { eur } from '../dinero.ts'
 
 export type PolizaAviso = {
@@ -122,7 +122,13 @@ function linea(p: PolizaAviso): string {
   // parecer que la póliza no vale nada, que es lo contrario de lo que se sabe.
   const prima = p.prima === null ? 'prima sin informar' : eur(p.prima)
   const ramo = TIPOS[p.tipo] ?? p.tipo
-  const dias = p.dias === 0 ? 'vence hoy' : `${p.dias} días`
+  // 🚨 20/09/2026: esto era `${p.dias} días` a pelo. Desde que la consulta de
+  // vencimientos mira también hacia ATRÁS (para que una renovación no gestionada
+  // deje de evaporarse al día siguiente), `p.dias` puede ser NEGATIVO y esta
+  // línea anunciaba «05/06/2026 (-107 días)». El titular sale del helper puro
+  // del módulo, que es el mismo que usa la tabla: dos formas de decir el plazo
+  // acabarían diciendo cosas distintas del mismo día.
+  const dias = p.dias === 0 ? 'vence hoy' : descripcionDias(p.dias)
   const objeto = objetoEnLinea(p.objeto)
   const partes = [p.cliente, ramo, ...(objeto ? [objeto] : []), p.aseguradora, prima,
     `${fechaEs(p.fechaVencimiento)} (${dias})`]

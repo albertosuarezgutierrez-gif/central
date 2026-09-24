@@ -2,6 +2,7 @@
 import { TabChecklists, TabInformes, TabFacturacion } from './extra-tabs'
 import { useState, useEffect, useCallback } from 'react'
 import { eur } from '@/lib/dinero'
+import { ThinBar } from '@/components/ui'
 
 // ─── Constantes ────────────────────────────────────────────────
 const PROPS = [
@@ -1074,9 +1075,7 @@ function TabStock() {
               </div>
               <span style={{ fontWeight: 700, fontSize: 13, color: bajo ? '#c2410c' : 'var(--text)' }}>{i.stock_actual} {i.unidad}</span>
             </div>
-            <div style={{ background: 'var(--border)', borderRadius: 4, height: 4 }}>
-              <div style={{ width: `${pct}%`, height: 4, borderRadius: 4, background: bajo ? 'var(--negative)' : 'var(--positive)', transition: 'width .3s' }} />
-            </div>
+            <ThinBar pct={pct} color={bajo ? 'var(--negative)' : 'var(--positive)'} alto={4} track="var(--border)" />
             <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 3 }}>Mínimo: {i.stock_minimo} {i.unidad}</div>
           </div>
         )

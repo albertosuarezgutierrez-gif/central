@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from "react"
+import { PageHeader } from "@/components/ui"
 
 const PROPS: Record<string, string> = {
   prop_house_sevillana: "House Sevillana",
@@ -90,22 +91,22 @@ export default function PricingPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32 }}>
-      <div className="pricing-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Pricing Lab</h1>
-          <p style={{ fontSize: 14, color: 'var(--muted)', margin: '4px 0 0' }}>Experimentos de precio: qué se puso, qué se reservó</p>
-        </div>
-        <div className="pricing-header-actions" style={{ display: 'flex', gap: 8 }}>
-          <button onClick={checkResults}
-            style={{ padding: '8px 12px', fontSize: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', color: 'var(--text)' }}>
-            🔄 Actualizar resultados
-          </button>
-          <button onClick={() => setShowForm(true)}
-            style={{ padding: '8px 16px', fontSize: 14, background: 'var(--primary)', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'white', fontWeight: 500 }}>
-            + Registrar override
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        titulo="Pricing Lab"
+        sub="Experimentos de precio: qué se puso, qué se reservó"
+        acciones={
+          <>
+            <button onClick={checkResults}
+              style={{ padding: '8px 12px', fontSize: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', color: 'var(--text)' }}>
+              🔄 Actualizar resultados
+            </button>
+            <button onClick={() => setShowForm(true)}
+              style={{ padding: '8px 16px', fontSize: 14, background: 'var(--primary)', border: 'none', borderRadius: 8, cursor: 'pointer', color: 'white', fontWeight: 500 }}>
+              + Registrar override
+            </button>
+          </>
+        }
+      />
 
       {/* RESUMEN EXPERIMENTOS */}
       {resumen && (

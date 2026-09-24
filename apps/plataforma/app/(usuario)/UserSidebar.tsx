@@ -1,36 +1,55 @@
 'use client'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
-  Banknote, BedDouble, Bell, Bot, Briefcase, Building2, Calculator, CalendarDays,
+  Banknote, BedDouble, Bell, Bot, Briefcase, Building2, CalendarDays,
   ChartColumn, ChartLine, ChartPie, ChevronDown, ClipboardList, Coins, Cog, Cpu,
   CreditCard, Euro, Eye, Fan, FileText, FlaskConical, Gavel, House, KeyRound,
   Landmark, Lightbulb, MessageCircle, MessageSquare, Network, Receipt, Satellite,
-  Scale, Search, SearchCheck, Send, Shield, Sparkles, Store, Target, Ticket,
+  Scale, Search, SearchCheck, Shield, Sparkles, Store, Target, Ticket,
   TrendingUp, User, UserCheck, Users, UtensilsCrossed, Wrench,
-  type LucideIcon,
-} from 'lucide-react'
+  type LucideIcon, BookUser } from 'lucide-react'
 import ThemeToggle from './ThemeToggle'
+import SubirFactura from './SubirFactura'
+import { activoPorRuta, activoEnLista } from '@/lib/nav-activo'
 
 // Iconos de lucide, NO emojis: cada sistema operativo pinta el emoji a su manera (color,
 // grosor y hasta dibujo distintos), así que el mismo lateral se veía de una forma en el móvil
 // de Alberto y de otra en el escritorio. Se guarda el COMPONENTE del icono (no un string) y
 // se pinta con `color: 'currentColor'` para que herede el color del enlace (activo/inactivo).
 
-const NAV_NEGOCIO = [
+/** Una entrada del menú. `tab` solo lo llevan los segmentos de /banca, que comparten ruta. */
+type NavItem = { href: string; icon: LucideIcon; label: string; tab?: string }
+
+const NAV_NEGOCIO: NavItem[] = [
   // 🏠 Inicio = Resumen + Banca FUSIONADOS (Fase 2). Una sola entrada: /banca con control
   // 💶 Dinero (saldos+movimientos+IA) | 🏢 Negocios (holding, antiguo Resumen). Absorbe también la
   // «Radiografía» y las entradas fiscales sueltas (rutas vivas, alcanzables desde sus enlaces).
   // /dashboard sigue existiendo pero redirige aquí (segmento Negocios).
   { href: '/banca', icon: House, label: 'Inicio' },
-  { href: '/banca/transferencia', icon: Send, label: 'Transferencia' },
+  // Los CINCO segmentos de /banca (Dinero · Ingresos · Negocios · Fiscal · Personal) vivían solo en
+  // la fila de pestañas de la propia página: desde el menú eran invisibles. Alberto fue a buscar
+  // «Ingresos» al menú —que es donde uno lo busca— y no estaba (02/09/2026). Se sacan aquí como
+  // sub-entradas de Inicio, igual que «Pisos · detalle» tiene las suyas.
+  //
+  // `tab` es la marca de cuál está activo: `usePathname()` devuelve `/banca` para todos, así que
+  // sin esto se pintarían todos a la vez.
+  //
+  // El segmento «Dinero» NO tiene entrada propia a posta: es el que responde a /banca sin query,
+  // o sea exactamente lo que ya hace «Inicio». Ponerlo sería una segunda entrada a la misma URL —
+  // la duplicidad que este mismo panel lleva todo el día quitándose de encima.
+  { href: '/banca?tab=ingresos', icon: Banknote, label: 'Ingresos', tab: 'ingresos' },
+  { href: '/banca?tab=negocios', icon: Building2, label: 'Negocios', tab: 'negocios' },
+  { href: '/banca?tab=fiscal', icon: Receipt, label: 'Fiscal', tab: 'fiscal' },
+  { href: '/banca?tab=personal', icon: House, label: 'Personal', tab: 'personal' },
   // Bandeja del agente de facturas. Es el destino del aviso de Telegram, que hasta el 29/08/2026
   // enlazaba a una página inexistente; sin esta entrada, lo acumulado solo se ve al llegar una
   // factura nueva (el aviso cuenta las de ESA pasada, no la bandeja entera).
   { href: '/expenses/pendientes', icon: Receipt, label: 'Facturas por revisar' },
-  { href: '/agente', icon: Bot, label: 'Agente precios' },
-  { href: '/contable', icon: Calculator, label: 'Contable' },
+  // 🤖 Los dos chats (contable y precios) viven juntos en /asistentes desde el 02/09/2026;
+  // /contable y /agente siguen respondiendo como redirect. Una entrada, no dos.
+  { href: '/asistentes', icon: Bot, label: 'Asistentes' },
   { href: '/limpiezas', icon: Sparkles, label: 'Limpiezas' },
   // 🛡️ Correduría: la matriz de comisiones + la cartera en vivo de central-asegura. Vivía
   // SOLO como enlace desde las tarjetas de /banca (31/08/2026: «no me sale correduría»), así
@@ -40,6 +59,18 @@ const NAV_NEGOCIO = [
   // 🔔 Qué te manda el bot por su cuenta, y el interruptor de cada aviso (01/09/2026:
   // «revisa las notificaciones de Telegram, son muchas»).
   { href: '/telegram', icon: Bell, label: 'Avisos Telegram' },
+]
+
+// ─── 🔭 Oportunidades — separadas de «Mi negocio» el 02/09/2026 ───────────────────────────────
+// Alberto, sobre el panel entero: «creo q tb están mal organizado». El inventario dio la forma
+// del problema: 76 páginas y 51 entradas de menú para UNA persona. Y dentro de «Mi negocio»
+// convivían dos modos mentales distintos: GESTIONAR lo que ya tienes (banca, facturas por
+// revisar, correduría, limpiezas) y BUSCAR algo nuevo (concursos, subastas, analizar una compra,
+// empresas en dificultad, bolsa, patrimonio). Mezclados, «Facturas por revisar» —que es trabajo
+// pendiente de HOY— pesaba lo mismo que «Subastas», que se mira cuando se tiene un rato.
+// Separarlas no quita ninguna página: cambia cuál te encuentras al abrir el panel a resolver
+// algo. Es reversible en un PR (mover las 6 entradas de vuelta y borrar la sección).
+const NAV_OPORTUNIDADES = [
   { href: '/concursos', icon: Landmark, label: 'Concursos' },
   { href: '/subastas', icon: Gavel, label: 'Subastas y chollos' },
   { href: '/inversion', icon: SearchCheck, label: 'Analizar compra' },
@@ -49,7 +80,10 @@ const NAV_NEGOCIO = [
 ]
 
 // Entrada única para una cuenta acotada a la sección Empresas (rol='empresas').
-const NAV_SOLO_EMPRESAS = [{ href: '/empresas', icon: Building2, label: 'Empresas' }]
+// 🚨 Se pinta en el hueco de «Mi negocio» aunque `/empresas` viva ahora en Oportunidades: esa
+// sección NO se renderiza para estas cuentas, así que su única entrada tiene que estar donde sí
+// se pinta. Por eso `seccionDeRuta` no puede decidir sola aquí — ver `seccionActiva()`.
+const NAV_SOLO_EMPRESAS: NavItem[] = [{ href: '/empresas', icon: Building2, label: 'Empresas' }]
 
 const NAV_PISOS = [
   // 🏨 Apartamentos vivía en «Mi negocio» y se quedó sin entrada al fusionar Resumen+Banca
@@ -72,6 +106,11 @@ const NAV_PISOS = [
   { href: '/sivra/seo', icon: Search, label: 'SEO' },
   { href: '/sivra/limpiadoras', icon: Wrench, label: 'Admin limpiezas' },
   { href: '/sivra/domotica', icon: Fan, label: 'Domótica' },
+  // 🚨 Estaba INALCANZABLE pulsando (02/09/2026): ningún enlace del repo llevaba aquí y, sin
+  // embargo, el cron `ses-latido` avisa por Telegram de que «no hay ningún establecimiento dado
+  // de alta en /sivra/partes/establecimientos». Un aviso que señala una pantalla que no se puede
+  // abrir es un aviso que no se puede atender — la regla de «¿en qué pantalla lo va a ver?».
+  { href: '/sivra/partes/establecimientos', icon: BookUser, label: 'Partes de viajeros' },
 ]
 
 const NAV_OPERADOR = [
@@ -101,15 +140,16 @@ const NAV_OPERADOR_RESTRINGIDO = new Set(['/operador/clientes', '/operador/rrhh'
 
 // Secciones PLEGABLES (01/09/2026). El lateral tenía 52 entradas planas y no lo navegaba
 // nadie: al entrar se ve un menú corto (la sección donde estás) y el resto a un clic.
-type ClaveSeccion = 'negocio' | 'pisos' | 'operador'
+type ClaveSeccion = 'negocio' | 'oportunidades' | 'pisos' | 'operador'
 const LS_SECCION: Record<ClaveSeccion, string> = {
   negocio: 'nav-seccion-negocio',
+  oportunidades: 'nav-seccion-oportunidades',
   pisos: 'nav-seccion-pisos',
   operador: 'nav-seccion-operador',
 }
 
 function enLista(lista: { href: string }[], path: string): boolean {
-  return lista.some(n => path === n.href || path.startsWith(n.href + '/'))
+  return lista.some(n => activoPorRuta(n.href, path))
 }
 
 // Qué sección contiene la ruta activa. Determinista: se calcula igual en el servidor y en el
@@ -117,8 +157,18 @@ function enLista(lista: { href: string }[], path: string): boolean {
 function seccionDeRuta(path: string): ClaveSeccion | null {
   if (enLista(NAV_PISOS, path)) return 'pisos'
   if (enLista(NAV_OPERADOR, path)) return 'operador'
+  if (enLista(NAV_OPORTUNIDADES, path)) return 'oportunidades'
   if (enLista(NAV_NEGOCIO, path)) return 'negocio'
   return null
+}
+
+// 🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Mi negocio».
+// Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta
+// NO se le renderiza— y «Mi negocio» se quedaría plegado con su única entrada dentro: el menú
+// entero vacío, sin error y sin nada que pulsar.
+function seccionActiva(path: string, soloEmpresas: boolean): ClaveSeccion | null {
+  if (soloEmpresas) return 'negocio'
+  return seccionDeRuta(path)
 }
 
 // 🚨 El lateral tiene DOS plegados distintos y no pueden pisarse:
@@ -131,6 +181,7 @@ function seccionDeRuta(path: string): ClaveSeccion | null {
 // atributo lo pone el script anti-parpadeo del layout antes de que hidrate nada.
 export default function UserSidebar({ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }) {
   const path = usePathname()
+  const tabActual = useSearchParams().get('tab')
   const router = useRouter()
   const soloEmpresas = rol === 'empresas'
   const [isMobile, setIsMobile] = useState(false)
@@ -143,8 +194,13 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   // Secciones abiertas. El valor inicial NO lee localStorage (rompería la hidratación): sale de
   // la ruta activa, que el servidor también conoce. Lo guardado se aplica en el efecto de abajo.
   const [abiertas, setAbiertas] = useState<Record<ClaveSeccion, boolean>>(() => {
-    const activa = seccionDeRuta(path)
-    return { negocio: activa === null || activa === 'negocio', pisos: activa === 'pisos', operador: activa === 'operador' }
+    const activa = seccionActiva(path, soloEmpresas)
+    return {
+      negocio: activa === null || activa === 'negocio',
+      oportunidades: activa === 'oportunidades',
+      pisos: activa === 'pisos',
+      operador: activa === 'operador',
+    }
   })
 
   useEffect(() => {
@@ -178,10 +234,10 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   // La sección que contiene la ruta activa se abre SIEMPRE. Si no, un plegado guardado dejaría
   // escondida justo la entrada en la que estás (y el enlace activo sin pintar en ningún sitio).
   useEffect(() => {
-    const activa = seccionDeRuta(path)
+    const activa = seccionActiva(path, soloEmpresas)
     if (!activa) return
     setAbiertas(prev => (prev[activa] ? prev : { ...prev, [activa]: true }))
-  }, [path])
+  }, [path, soloEmpresas])
 
   const alternarSeccion = useCallback((clave: ClaveSeccion) => {
     setAbiertas(prev => {
@@ -236,21 +292,26 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   }
 
   function NavLinks() {
+    const listaNegocio = soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO
     return (
       <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
         <CabeceraSeccion clave="negocio" titulo="Mi negocio" primera />
         <div id="nav-grupo-negocio" className="nav-grupo" data-colapsado={abiertas.negocio ? undefined : '1'}>
-          {(soloEmpresas ? NAV_SOLO_EMPRESAS : NAV_NEGOCIO).map(({ href, icon, label }) => {
-            const active = path === href || path.startsWith(href + '/')
+          {listaNegocio.map(({ href, icon, label, tab }) => {
+            // Las sub-entradas de /banca comparten `path`, así que el activo lo decide el ?tab=.
+            // Y «Inicio» ES la ruta pelada de esos segmentos: sin `activoEnLista` se encendía a la
+            // vez que el segmento (medido 02/09/2026 en /banca?tab=ingresos). Ver lib/nav-activo.ts.
+            const esSegmento = tab !== undefined
+            const active = activoEnLista({ href, tab }, listaNegocio, path, tabActual)
             return (
-              <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
+              <Link key={href + label} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
                 display: 'flex', alignItems: 'center', gap: '10px',
-                padding: '9px 12px',
+                padding: esSegmento ? '7px 12px 7px 26px' : '9px 12px',
                 borderRadius: '10px', marginBottom: '2px',
                 fontWeight: active ? 600 : 400,
                 background: active ? 'var(--primary-light)' : 'transparent',
                 color: active ? 'var(--primary)' : 'var(--text)',
-                fontSize: '14px', textDecoration: 'none',
+                fontSize: esSegmento ? '13px' : '14px', textDecoration: 'none',
               }}>
                 <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
               </Link>
@@ -258,11 +319,34 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
           })}
         </div>
 
+        {!soloEmpresas && <CabeceraSeccion clave="oportunidades" titulo="Oportunidades" />}
+        {!soloEmpresas && (
+          <div id="nav-grupo-oportunidades" className="nav-grupo" data-colapsado={abiertas.oportunidades ? undefined : '1'}>
+            {NAV_OPORTUNIDADES.map(({ href, icon, label }) => {
+              const active = activoPorRuta(href, path)
+              return (
+                <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
+                  fontWeight: active ? 600 : 400,
+                  background: active ? 'var(--primary-light)' : 'transparent',
+                  color: active ? 'var(--primary)' : 'var(--text)',
+                  fontSize: '14px', textDecoration: 'none',
+                }}>
+                  <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
+                </Link>
+              )
+            })}
+          </div>
+        )}
+
         {!soloEmpresas && <CabeceraSeccion clave="pisos" titulo="Pisos · detalle" />}
         {!soloEmpresas && (
           <div id="nav-grupo-pisos" className="nav-grupo" data-colapsado={abiertas.pisos ? undefined : '1'}>
             {NAV_PISOS.map(({ href, icon, label }) => {
-              const active = path.startsWith(href)
+              // `path.startsWith(href)` a secas encendía «Pricing Lab» estando en «Pricing auto»
+              // y en «Motor vs PL»: una ruta es prefijo de la otra. Ver lib/nav-activo.ts.
+              const active = activoPorRuta(href, path)
               return (
                 <Link key={href} href={href} onClick={() => setOpen(false)} className="nav-link" title={label} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
@@ -344,9 +428,15 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
               lineHeight: 1, cursor: 'pointer', color: 'var(--text)',
             }}
           >☰</button>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px', minWidth: 0 }}>
             <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '6px', padding: '1px 7px', fontSize: '12px' }}>ia</span>
             <span>plataforma</span>
+          </div>
+          {/* Subir una factura desde CUALQUIER pantalla, sin pasar por /asistentes: es la acción que
+              Alberto hace con el móvil en la mano delante del papel. `marginLeft:auto` la pega a la
+              derecha sin empujar la marca (la barra mide 52px y el botón 44: cabe sin desbordar). */}
+          <div style={{ marginLeft: 'auto', flexShrink: 0 }}>
+            <SubirFactura variante="barra" />
           </div>
         </div>
 
@@ -411,6 +501,11 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
           }}
         >{plegado ? '»' : '«'}</button>
       </div>
+      {!plegado && (
+        <div style={{ padding: '12px 12px 12px 20px', borderBottom: '1px solid var(--border)' }}>
+          <SubirFactura variante="lateral" />
+        </div>
+      )}
       <NavLinks />
       <Footer />
     </nav>

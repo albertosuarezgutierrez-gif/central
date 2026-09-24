@@ -5,7 +5,49 @@ import {
   polizaLeidaVacia,
   seLeyoAlgo,
   RAMOS_POLIZA,
+  ETIQUETA_RAMO,
+  etiquetaRamo,
+  coberturaEspecificaDeRamo,
+  vencimientoDesdeEfecto,
 } from './poliza-leida.ts'
+
+test('todo ramo del vocabulario tiene etiqueta, y ninguna es el enum crudo', () => {
+  for (const r of RAMOS_POLIZA) {
+    const etiqueta = ETIQUETA_RAMO[r]
+    assert.ok(etiqueta && etiqueta.length > 0, `falta etiqueta para ${r}`)
+    assert.doesNotMatch(etiqueta, /_/, `la etiqueta de ${r} no puede llevar guion bajo: es lo que lee el cliente`)
+  }
+  assert.equal(etiquetaRamo('responsabilidad_civil'), 'Responsabilidad civil')
+})
+
+test('un ramo desconocido se devuelve tal cual, no cae a «Otros»; el vacío es null', () => {
+  assert.equal(etiquetaRamo('drones'), 'drones')
+  assert.equal(etiquetaRamo(null), null)
+  assert.equal(etiquetaRamo(undefined), null)
+  assert.equal(etiquetaRamo(''), null)
+})
+
+test('coberturaEspecificaDeRamo encuentra la cobertura que amplía el ramo genérico (RC de perros)', () => {
+  const lista = ['Responsabilidad civil perros', 'Liberación de gastos', 'Defensa penal y reclamación de daños']
+  assert.equal(coberturaEspecificaDeRamo('responsabilidad_civil', lista), 'Responsabilidad civil perros')
+})
+
+test('coberturaEspecificaDeRamo es null cuando ninguna cobertura amplía el ramo', () => {
+  assert.equal(coberturaEspecificaDeRamo('auto', ['Daños propios', 'Lunas', 'Robo']), null)
+  assert.equal(coberturaEspecificaDeRamo('responsabilidad_civil', []), null)
+  assert.equal(coberturaEspecificaDeRamo(null, ['Responsabilidad civil perros']), null)
+})
+
+test('coberturaEspecificaDeRamo no devuelve la cobertura si es EXACTAMENTE el ramo (no amplía nada)', () => {
+  assert.equal(coberturaEspecificaDeRamo('responsabilidad_civil', ['Responsabilidad civil']), null)
+})
+
+test('coberturaEspecificaDeRamo compara sin distinguir mayúsculas', () => {
+  assert.equal(
+    coberturaEspecificaDeRamo('responsabilidad_civil', ['RESPONSABILIDAD CIVIL PERROS']),
+    'RESPONSABILIDAD CIVIL PERROS',
+  )
+})
 
 test('lo que no es un objeto sale con los cinco campos a null', () => {
   for (const basura of [null, undefined, 'texto', 42, [{ compania: 'Mapfre' }]]) {
@@ -68,4 +110,31 @@ test('un ramo fuera de la lista es null; «otros» SI es una respuesta valida', 
 test('seLeyoAlgo distingue «no hemos leido nada» de «hemos leido algo»', () => {
   assert.equal(seLeyoAlgo(polizaLeidaVacia()), false)
   assert.equal(seLeyoAlgo(normalizarPolizaLeida({ compania: 'Axa' })), true)
+})
+
+test('vencimientoDesdeEfecto: mismo día/mes, este año si aún no ha pasado', () => {
+  const hoy = new Date('2026-09-19T00:00:00Z')
+  assert.equal(vencimientoDesdeEfecto('2017-01-30', hoy), '2027-01-30')
+  assert.equal(vencimientoDesdeEfecto('2020-12-01', hoy), '2026-12-01')
+})
+
+test('vencimientoDesdeEfecto: si el aniversario de este año ya pasó, salta al que viene', () => {
+  const hoy = new Date('2026-09-19T00:00:00Z')
+  assert.equal(vencimientoDesdeEfecto('2020-01-30', hoy), '2027-01-30')
+  assert.equal(vencimientoDesdeEfecto('2020-09-18', hoy), '2027-09-18')
+})
+
+test('vencimientoDesdeEfecto: hoy mismo cuenta como vencimiento de este año', () => {
+  assert.equal(vencimientoDesdeEfecto('2020-09-19', new Date('2026-09-19T00:00:00Z')), '2026-09-19')
+})
+
+test('vencimientoDesdeEfecto: un 29 de febrero cae al 28 en año no bisiesto', () => {
+  assert.equal(vencimientoDesdeEfecto('2020-02-29', new Date('2026-01-01T00:00:00Z')), '2026-02-28')
+  assert.equal(vencimientoDesdeEfecto('2020-02-29', new Date('2027-03-01T00:00:00Z')), '2028-02-29')
+})
+
+test('vencimientoDesdeEfecto: sin fecha válida, null', () => {
+  assert.equal(vencimientoDesdeEfecto(null), null)
+  assert.equal(vencimientoDesdeEfecto('no consta'), null)
+  assert.equal(vencimientoDesdeEfecto('30/01/2017'), null)
 })

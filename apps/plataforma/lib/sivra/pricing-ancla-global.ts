@@ -36,6 +36,8 @@
 //
 // Módulo PURO (sin Prisma ni `@/`), testeable con `node --test`.
 import { sqlCompPlausible } from './pricing-comps-plausibles.ts'
+import { sqlCompDeNuestraLiga } from './pricing-comps-liga.ts'
+import { sqlCompEsCasaComparable } from './pricing-comps-tipo.ts'
 
 /** Ventana del corpus acumulado, en días de `search_date`. */
 export const VENTANA_ANCLA_DIAS = 30
@@ -82,6 +84,9 @@ export function sqlCorpusAncla(): string {
             m.price_night * pricing_factor_aforo(z.max_guests, m.guests) AS price_night
           FROM market_rates m
           LEFT JOIN pricing_piso_zona z ON z.property_id = m.scenario
+          -- LEFT y no JOIN a proposito: sin fila de ajustes no sabemos en que liga jugamos, y eso
+          -- DEJA PASAR al comparable (ver pricing-comps-liga.ts), nunca lo descarta en silencio.
+          LEFT JOIN pricing_settings sl ON sl.property_id = m.scenario
           WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
             AND m.checkin_date >= CURRENT_DATE
             AND m.search_date >= CURRENT_DATE - ${VENTANA_ANCLA_DIAS}::int
@@ -89,6 +94,13 @@ export function sqlCorpusAncla(): string {
             -- (estacionalidad inventada) y habitaciones vestidas de piso entero.
             AND NOT m.corpus_clonado
             AND ${sqlCompPlausible("m.")}
+            -- Y fuera los que no son competencia nuestra: el corpus de un piso puntuado 6,9 traia
+            -- Mercer Residences (9,1) y Palacio Bucarelli (9,1). Ver pricing-comps-liga.ts.
+            AND ${sqlCompDeNuestraLiga("m.", "sl.own_score")}
+            -- Y fuera las unidades de aparthotel/hotel vestidas de "apartamento" (19/09/2026): el
+            -- corpus de aforo 12 estaba dominado por Overland Suites/Sercotel/Hilton/Meliá, que no
+            -- compiten con una casa entera. Ver pricing-comps-tipo.ts.
+            AND ${sqlCompEsCasaComparable("m.")}
           ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
         ),
         fiab AS (

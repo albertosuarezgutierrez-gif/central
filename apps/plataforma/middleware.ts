@@ -30,7 +30,15 @@ import { esRutaDeRutina } from './lib/rutas-rutina'
 //     en vivo y no se toca eso en el mismo PR; sacarlas de aquí (quedándose solo con el pass-through
 //     por token, que es MÁS estrecho: exige el token para siquiera alcanzar el handler) es un
 //     endurecimiento pendiente, seguro de hacer cuando el ciclo semanal confirme que va fino.
-const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
+// 🚨 `/register` SALIÓ de esta lista el 20/09/2026. Estaba aquí desde el día uno y, junto con
+// que ninguna pantalla gateaba por rol, era la mitad del agujero: cualquiera se registraba desde
+// internet, recibía la cookie de sesión en la misma respuesta y se descargaba la cartera entera de
+// la correduría (`/api/correduria/cartera-lista?formato=csv`). Sin esta entrada, la PÁGINA de alta
+// solo es alcanzable con sesión; el alta de cuentas nuevas se hace desde `/admin` (que tiene su
+// propia auth) o con el código de `REGISTRO_INVITACION_CODIGO`, que el handler exige aparte.
+// ⚠️ `/api/auth` SIGUE aquí y no se toca: es el login, y sin él no se puede entrar. El handler de
+// `/api/auth/register` lleva su propia guarda fail-closed, así que el prefijo no lo reabre.
+const PUBLIC = ['/login', '/api/auth', '/admin', '/api/admin', '/api/cron', '/api/ai', '/api/trading',
   '/api/sivra/mensajes/telegram-webhook', '/api/sivra/mensajes/webhook',
   '/api/banca/pago/callback', '/api/internal/alerta',
   // 🚨 Webhook de Stripe de los extras del huésped. Stripe POSTea desde SUS servidores, sin cookie
@@ -50,7 +58,14 @@ const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin', '/ap
   // que el motor de reservas de Smoobu ya le enseña a cualquiera que entre en él. No sale ni un
   // huésped, ni un importe, ni un id de reserva. Un slug fuera de la lista da 400, así que
   // tampoco sirve de índice de las propiedades del grupo.
+  // Desde el 02/09/2026 el prefijo cubre también `/api/publico/correduria/lead` (formulario de
+  // la correduría): POST sin sesión, con honeypot + rate limit por IP en el handler; solo crea
+  // un lead por el puerto de asegura y avisa a Alberto. No lee nada de la cartera.
   '/api/publico']
+// 🚨 `/seguros` (landing vieja de la correduría, previa a `apps/asegura-web`) SALIÓ de esta
+// lista el 14/09/2026: la página se borró y el sitio 301 hacia grupoasegura.es vive en
+// `next.config.ts::redirects()`, que Next resuelve ANTES de que el middleware corra — dejarla
+// aquí habría sido una exención muerta para una ruta que ya no llega a este archivo.
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl

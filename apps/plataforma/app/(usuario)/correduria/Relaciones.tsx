@@ -1,0 +1,1412 @@
+'use client'
+import { useState } from 'react'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import {
+  FUENTE_PERSONA_CONTACTO,
+  GRUPOS_RELACION,
+  SIN_VINCULO,
+  coincidenciaBloquea,
+  combinarPersonaContacto,
+  permiteAutorizar,
+  revisarAlta,
+  textoPersonaContacto,
+  tiposContactoSugeridos,
+  unificarPersonas,
+  type PersonaDePolizas,
+  type PersonaFicha,
+  type ResultadoPersonaContacto,
+  type TipoRelacion,
+} from '@central/module-seguros'
+import { btnStyle } from '@/components/ui'
+import AccionesContacto from './AccionesContacto'
+import {
+  ALCANCE_TEXTO_PORTAL,
+  TITULOS_REPRESENTACION_PORTAL,
+  TITULO_TEXTO_PORTAL,
+  alcancesAnotables,
+  autorizacionViva,
+  comoTitulo,
+  esApoderamientoPortal,
+  explicarSentidoAcceso,
+  fechaLarga,
+  insigniaAcceso,
+  interpretarAviso,
+  interpretarRelaciones,
+  textoAviso,
+  textoMotivoRelaciones,
+  type AlcancePortal,
+  type AutorizacionCartera,
+  type TonoAcceso,
+  type RelacionCartera,
+  type RespuestaAviso,
+  type RespuestaRelaciones,
+  type TituloRepresentacionPortal,
+} from '@/lib/relaciones-asegura'
+import { interpretarEscritura, textoMotivo as textoMotivoAlta, type ResultadoEscritura } from '@/lib/cliente-edicion-asegura'
+import type { RespuestaBusqueda } from '@/lib/ficha-asegura'
+
+/**
+ * Relaciones de un cliente de la correduría (cónyuge, hijos, empresa…) y la
+ * AUTORIZACIÓN para ver los seguros del otro, desde la ficha de plataforma.
+ *
+ * Semántica (fijada en `@central/module-seguros/relaciones.ts`):
+ *   · Un vínculo se lee DESDE la ficha: «María Antonia · Cónyuge/Pareja de
+ *     Hecho» = María Antonia es cónyuge de la ficha.
+ *   · `autorizaVer` = LA FICHA autoriza al relacionado a ver los seguros de la
+ *     ficha. `puedeVer` = la ficha puede ver los del relacionado — y eso se
+ *     decidió desde la OTRA ficha. Por eso aquí solo hay botón para lo primero:
+ *     una autorización es un consentimiento del titular y se anota desde la
+ *     ficha de quien lo da.
+ *
+ * 🚨 Desde el 03/09/2026 esto NO es un sí/no. La pantalla dice TRES cosas
+ * distintas, porque mandan a hacer cosas distintas:
+ *   · **sin autorización** — no hay ninguna anotada.
+ *   · **anotada, pendiente de aceptar** — Alberto anotó el consentimiento que le
+ *     dieron por teléfono, y el autorizado **TODAVÍA NO VE NADA** hasta que la
+ *     acepte en su portal. Es el estado que antes no existía y que un booleano
+ *     pintaba como si ya viera.
+ *   · **en vigor hasta el <fecha>** — con su alcance, y diciendo si la anotó la
+ *     correduría o la concedió el cliente desde su pantalla.
+ *
+ * Dos «no lo sé» que NO se pintan como «no tiene»: `inicial === null` (asegura
+ * no manda el bloque o no pudo leerlo) y `polizasVivas === null` (sin contar).
+ *
+ * La BD vive en asegura: aquí se habla con `/api/correduria/cliente/relaciones`,
+ * que reenvía al puerto con el secreto y pone el `actor` desde la sesión.
+ */
+export default function Relaciones({
+  clienteId,
+  nombreFicha,
+  inicial,
+  personas = null,
+  renderPapeles,
+  tipoPersona = null,
+}: {
+  clienteId: string
+  nombreFicha: string
+  inicial: RelacionCartera[] | null
+  /** Qué es la ficha de la que cuelga el contacto. Solo ordena los tipos que se
+   *  ofrecen primero; `null` (no se sabe) no reordena nada. */
+  tipoPersona?: 'fisica' | 'juridica' | null
+  /** Quién sale en SUS pólizas (lo que dice CIMA). `null` = no se pudo leer.
+   *  Se funde con los vínculos por FICHA para que la lista sea una sola. */
+  personas?: PersonaDePolizas[] | null
+  /** Lo que se puede hacer con los papeles de una persona en las pólizas
+   *  (quitarla de una). Lo provee quien tiene ese estado y su puerto —
+   *  `TabContactos`—, porque es otra API y no tiene por qué vivir aquí. */
+  renderPapeles?: (p: PersonaFicha<RelacionCartera>) => React.ReactNode
+}) {
+  const router = useRouter()
+  const [lista, setLista] = useState<RelacionCartera[] | null>(inicial)
+  const [ocupado, setOcupado] = useState<string | null>(null)
+  const [resultado, setResultado] = useState<RespuestaRelaciones | null>(null)
+  // El contador fuerza a remontar `Anadir` en cada clic: así el formulario nace
+  // ya con esa ficha elegida sin tocar el estado de otro componente mientras se
+  // pinta (React lo prohíbe), y volver a pulsar el mismo nombre lo reabre.
+  const [preseleccion, setPreseleccion] = useState<{ cand: Candidato; n: number } | null>(null)
+  // El desenlace del último aviso por correo, atado a la ficha a la que se
+  // escribió: es una respuesta sobre UNA persona y colgarla del banner general
+  // la dejaría lejos del botón que la produjo.
+  const [aviso, setAviso] = useState<{ clave: string; texto: string; ok: boolean } | null>(null)
+
+  async function llamar(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>, clienteIdOverride?: string): Promise<RespuestaRelaciones> {
+    try {
+      const res = await fetch('/api/correduria/cliente/relaciones', {
+        method,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ clienteId: clienteIdOverride ?? clienteId, ...body }),
+      })
+      return interpretarRelaciones(res.status, await res.json().catch(() => null))
+    } catch {
+      return { estado: 'error', motivo: 'red' }
+    }
+  }
+
+  /**
+   * Cuando `clienteIdOverride` va puesto (autorización en el SENTIDO INVERSO: la
+   * ficha relacionada es quien otorga), el puerto devuelve las relaciones vistas
+   * DESDE esa otra ficha, no desde la que se está pintando aquí — usarlas
+   * directamente sustituiría la lista de esta pantalla por la de otra persona.
+   * Por eso, en ese caso, se relee la propia lista con un GET aparte.
+   */
+  async function ejecutar(
+    clave: string,
+    method: 'POST' | 'PATCH' | 'DELETE',
+    body: Record<string, unknown>,
+    clienteIdOverride?: string,
+  ): Promise<RespuestaRelaciones> {
+    setOcupado(clave)
+    setResultado(null)
+    try {
+      const r = await llamar(method, body, clienteIdOverride)
+      const final = r.estado === 'ok' && clienteIdOverride ? await recargarPropias() : r
+      setResultado(final)
+      if (final.estado === 'ok') {
+        setLista(final.relaciones)
+        router.refresh()
+      }
+      return final
+    } finally {
+      setOcupado(null)
+    }
+  }
+
+  async function recargarPropias(): Promise<RespuestaRelaciones> {
+    try {
+      const res = await fetch(`/api/correduria/cliente/relaciones?clienteId=${encodeURIComponent(clienteId)}`, { cache: 'no-store' })
+      return interpretarRelaciones(res.status, await res.json().catch(() => null))
+    } catch {
+      return { estado: 'error', motivo: 'red' }
+    }
+  }
+
+  /**
+   * Anota (o revoca) la autorización. `extra` solo llega desde una ficha de
+   * SOCIEDAD: el alcance elegido y el título con el que se la representa. Desde
+   * una ficha de persona no se manda ninguno de los dos y asegura anota el
+   * alcance más pequeño («ver»), que es lo único que una persona puede delegar.
+   */
+  /**
+   * `invertido` anota la autorización en el sentido CONTRARIO al de siempre:
+   * en vez de que `nombreFicha` autorice a `r.nombre`, es `r.nombre` quien
+   * autoriza a `nombreFicha` — sin tener que navegar a su ficha y repetir el
+   * mismo formulario allí. El consentimiento lo sigue dando el TITULAR de esa
+   * autorización (aquí, `r.nombre`): esto solo evita el viaje, no cambia quién
+   * consiente. Solo vale para el caso simple (persona a persona, alcance
+   * «ver»): no se sabe desde aquí si `r` es una sociedad, así que un
+   * apoderamiento inverso se sigue anotando desde su propia ficha.
+   */
+  function autorizar(
+    r: RelacionCartera,
+    autoriza: boolean,
+    extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
+  ) {
+    const otorga = invertido ? r.nombre : nombreFicha
+    const recibe = invertido ? nombreFicha : r.nombre
+    if (!autoriza) {
+      // Una PENDIENTE todavía no abría nada: decir «dejará de ver» ahí sería falso.
+      const efecto = (invertido ? r.autorizacionInversa : r.autorizacion)?.estado === 'vigente'
+        ? `${recibe} dejará de poder ver los seguros de ${otorga}.`
+        : `Se retira la autorización anotada (${recibe} todavía no veía nada).`
+      if (!confirm(`¿Revocar la autorización? ${efecto}`)) return
+    } else if (invertido) {
+      if (!confirm(`¿Anotar que ${otorga} autoriza a ${recibe} a ver sus seguros? Nace pendiente: no abre nada hasta que ${recibe} la acepte en su portal.`)) return
+    }
+    // 🚨 Un apoderamiento se confirma aparte: no es «deja mirar», es que esa
+    // persona puede obligar a la sociedad frente a la compañía.
+    if (autoriza && extra && esApoderamientoPortal(extra.alcance)) {
+      const titulo = comoTitulo(extra.tituloRepresentacion)
+      const ok = confirm(
+        `¿Anotar que ${otorga} apodera a ${recibe} para ${ALCANCE_TEXTO_PORTAL[extra.alcance]}` +
+          `${titulo ? ` (${titulo})` : ''}? Lo que declare en nombre de la sociedad la OBLIGA frente a la compañía.`,
+      )
+      if (!ok) return
+    }
+    void ejecutar(
+      `aut-${r.relacionadoId}${invertido ? '-inv' : ''}`,
+      'PATCH',
+      {
+        relacionadoId: invertido ? clienteId : r.relacionadoId,
+        autoriza,
+        ...(autoriza && extra
+          ? {
+              alcance: extra.alcance,
+              ...(extra.tituloRepresentacion ? { tituloRepresentacion: extra.tituloRepresentacion } : {}),
+            }
+          : {}),
+      },
+      invertido ? r.relacionadoId : undefined,
+    )
+  }
+
+  /**
+   * Le escribe a la persona autorizada para que confirme el acceso.
+   *
+   * 🚨 Esto MANDA UN CORREO A UN TERCERO, así que sale de un clic de Alberto y
+   * de nada más: ni de un efecto al pintar, ni de un reintento automático, ni
+   * como parte de anotar la autorización. El `confirm` no es un adorno — dice a
+   * quién se le va a escribir antes de escribirle.
+   *
+   * Y NO acepta nada: la autorización sigue pendiente después. Lo único que
+   * cambia es que la persona se entera de que la tiene, que hasta hoy dependía
+   * de que Alberto escribiera el correo a mano.
+   */
+  function avisar(r: RelacionCartera, invertido: boolean) {
+    // El correo va SIEMPRE a quien tiene que aceptar, que es el AUTORIZADO de
+    // ese sentido — y en el inverso ése es la propia ficha, no el relacionado.
+    // El puerto es simétrico (`clienteId` = quien cede, `relacionadoId` = quien
+    // recibe), así que invertir es intercambiar los dos ids, no otra ruta.
+    const otorga = invertido ? r.nombre : nombreFicha
+    const recibe = invertido ? nombreFicha : r.nombre
+    if (!confirm(`¿Enviar un correo a ${recibe} para que confirme el acceso a los seguros de ${otorga}?\n\nSe le escribe a la dirección que tenga en su ficha. El correo dice quién le da el acceso y dónde confirmarlo; nada de sus pólizas.`)) return
+    const clave = `aviso-${r.relacionadoId}${invertido ? '-inv' : ''}`
+    void (async () => {
+      setOcupado(clave)
+      setAviso(null)
+      let resp: RespuestaAviso
+      try {
+        const res = await fetch('/api/correduria/cliente/relaciones/aviso', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            clienteId: invertido ? r.relacionadoId : clienteId,
+            relacionadoId: invertido ? clienteId : r.relacionadoId,
+          }),
+        })
+        resp = interpretarAviso(res.status, await res.json().catch(() => null))
+      } catch {
+        // Un fallo de red aquí es AMBIGUO: puede que el correo saliera. Se dice
+        // como lo que es y no como «no se ha enviado», que invitaría a reintentar
+        // a ciegas y a que la persona reciba dos.
+        resp = { estado: 'error', motivo: 'red' }
+      }
+      setAviso({ clave, texto: textoAviso(resp, recibe), ok: resp.estado === 'ok' })
+      setOcupado(null)
+      if (resp.estado === 'ok') router.refresh()
+    })()
+  }
+
+  // «Revisado: no son nada» en un clic, sin pasar por el formulario. Es la
+  // respuesta correcta para la mayoría de los que salen ahí (Alberto, 03/09/2026:
+  // «Antonio Sevico no tiene vinculación ninguna») y hasta hoy no se podía decir.
+  function sinVinculoDe(fichaId: string) {
+    void ejecutar(`nada-${fichaId}`, 'POST', { relacionadoId: fichaId, tipo: SIN_VINCULO })
+  }
+
+  /**
+   * Corregir el tipo de un vínculo ya anotado, sin quitarlo y volver a ponerlo.
+   *
+   * 🚨 No es un atajo de comodidad (Alberto, 04/09/2026, «¿cómo podría cambiar la
+   * relación?»): `quitar` REVOCA de paso la autorización del portal que hubiera
+   * —y lo hace bien, para dejar constancia—, así que corregir una etiqueta mal
+   * puesta costaba el consentimiento del cliente. El puerto rechaza el cambio si
+   * la autorización viva no cabe en el tipo nuevo, y ahí sí hay que revocar antes.
+   */
+  function cambiarTipo(r: RelacionCartera, tipo: string) {
+    if (tipo === '' || tipo === r.tipo) return
+    void ejecutar(`tipo-${r.relacionadoId}`, 'PATCH', { relacionadoId: r.relacionadoId, tipo })
+  }
+
+  /**
+   * Alta de una ficha NUEVA desde aquí (la persona de contacto que no está en
+   * la cartera). Es la primera de las dos escrituras; la segunda es la relación,
+   * que sale por `onCrear` como cualquier otra.
+   */
+  async function altaPersona(body: Record<string, unknown>): Promise<ResultadoEscritura> {
+    try {
+      const res = await fetch('/api/correduria/cliente', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      return interpretarEscritura(res.status, await res.json().catch(() => null))
+    } catch {
+      return { estado: 'error', motivo: 'red' }
+    }
+  }
+
+  function quitar(r: RelacionCartera) {
+    // La relación se borra; la autorización NO se borra, se REVOCA — es la prueba
+    // de que existió y hasta cuándo, y eso es justo lo que no se puede perder.
+    if (!confirm(`¿Quitar la relación con ${r.nombre}? Se borra en los dos sentidos, y la autorización que hubiera queda revocada (se conserva en el registro).`)) return
+    void ejecutar(`del-${r.relacionadoId}`, 'DELETE', { relacionadoId: r.relacionadoId })
+  }
+
+  // 🚨 UNA sola lista. La fusión es por FICHA y la hace un módulo puro y
+  // testeado: por nombre fundiría al padre y al hijo de la póliza del mismo
+  // coche en una fila con los dos teléfonos mezclados.
+  const { lista: gente, sinLeerPolizas, sinLeerVinculos } = unificarPersonas(personas, lista)
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }}>
+      {/* Dos huecos distintos, dos frases distintas: ninguno de los dos es «no hay nadie». */}
+      {sinLeerVinculos && (
+        <div style={pendienteBox}>
+          ⚠️ No se han podido leer los <strong>vínculos declarados</strong> de esta ficha (asegura no manda el
+          bloque o no pudo consultarlo). No significa que no tenga: significa que desde aquí no se ven. Se
+          puede añadir igualmente.
+        </div>
+      )}
+      {sinLeerPolizas && (
+        <div style={pendienteBox}>
+          ⚠️ No se ha podido leer <strong>quién interviene en sus pólizas</strong>. Lo de abajo puede estar
+          incompleto.
+        </div>
+      )}
+
+      {gente.length === 0 ? (
+        <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
+          {sinLeerPolizas || sinLeerVinculos
+            ? 'No hay nada que enseñar de lo que sí se ha podido leer.'
+            : 'Nadie: ni sale gente en sus pólizas ni hay ningún vínculo anotado.'}
+        </p>
+      ) : (
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+          {gente.map((p) => (
+            <FilaPersona
+              key={p.clave}
+              p={p}
+              nombreFicha={nombreFicha}
+              ocupado={ocupado}
+              renderPapeles={renderPapeles}
+              onAutorizar={autorizar}
+              onAvisar={avisar}
+              aviso={aviso}
+              onQuitar={quitar}
+              onCambiarTipo={cambiarTipo}
+              onDeclarar={(cand) => setPreseleccion((v) => ({ cand, n: (v?.n ?? 0) + 1 }))}
+              onSinVinculo={sinVinculoDe}
+            />
+          ))}
+        </ul>
+      )}
+
+      {resultado && resultado.estado !== 'ok' && <Aviso r={resultado} />}
+
+      <Anadir
+        key={preseleccion?.n ?? 0}
+        clienteId={clienteId}
+        nombreFicha={nombreFicha}
+        yaRelacionados={lista ? lista.map((r) => r.relacionadoId) : []}
+        ocupado={ocupado === 'add'}
+        onCrear={(body) => ejecutar('add', 'POST', body)}
+        onAlta={altaPersona}
+        tipoPersona={tipoPersona}
+        preseleccion={preseleccion?.cand ?? null}
+      />
+
+      <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
+        La autorización es un consentimiento del titular: <strong>tú la ANOTAS, no la das</strong>. Anótala solo si te
+        la ha dado por teléfono o en papel (queda registrado quién, cuándo y con qué texto). Caduca al año y no abre
+        nada hasta que la persona autorizada la acepte en su portal.{' '}
+        <strong>Si la ficha es una sociedad</strong>, lo que se anota no es un permiso para mirar sino{' '}
+        <strong>quién la representa</strong>: por eso se pide el título y por eso ahí sí caben los partes y la
+        documentación. De una persona solo se puede anotar que deja mirar.
+      </p>
+    </div>
+  )
+}
+
+// ─── Una persona de la ficha ─────────────────────────────────────────────────
+
+/**
+ * UNA persona, con sus dos caras: lo que dice CIMA (en qué pólizas sale y como
+ * qué) y lo que hemos anotado nosotros (qué es de la ficha, si está autorizada).
+ *
+ * Antes eran dos tarjetas separadas y la misma persona salía en las dos sin que
+ * nada lo dijera: el conductor habitual arriba, el administrador autorizado
+ * abajo. La pregunta que traen es una sola —«¿a quién llamo y con qué
+ * derecho?»— y ahora se contesta en una fila.
+ *
+ * 🚨 Juntarlas NO es fundirlas: la procedencia se sigue viendo, porque un papel
+ * en una póliza es un hecho de la compañía y un vínculo es nuestro, y solo el
+ * segundo abre las pólizas en el portal.
+ */
+function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: {
+  p: PersonaFicha<RelacionCartera>
+  nombreFicha: string
+  ocupado: string | null
+  renderPapeles?: (p: PersonaFicha<RelacionCartera>) => React.ReactNode
+  onAutorizar: (
+    r: RelacionCartera,
+    autoriza: boolean,
+    extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
+  ) => void
+  onAvisar: (r: RelacionCartera, invertido: boolean) => void
+  aviso: { clave: string; texto: string; ok: boolean } | null
+  onQuitar: (r: RelacionCartera) => void
+  onCambiarTipo: (r: RelacionCartera, tipo: string) => void
+  onDeclarar: (cand: Candidato) => void
+  onSinVinculo: (fichaId: string) => void
+}) {
+  // `null` con `nombreIlegible` es «está cifrado y no abre», que no es lo mismo
+  // que no tener nombre. Se dicen las dos cosas, cada una con lo suyo.
+  const nombre = p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre')
+  const enCurso = ocupado === `nada-${p.fichaId}`
+  return (
+    <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
+        {p.fichaId
+          ? <Link href={`/correduria/cliente/${p.fichaId}`} style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{nombre}</Link>
+          : <span style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{nombre}</span>}
+        {/* Llamar a ESTA persona, no al titular: es la que conduce el coche. */}
+        {p.telefono && <a href={`tel:${p.telefono.replace(/\s/g, '')}`} style={{ fontSize: 13 }}>📞 {p.telefono}</a>}
+        <AccionesContacto telefono={p.telefono} email={p.email} quien={nombre} />
+      </div>
+
+      {/* De dónde sale cada una: la etiqueta es el dato, no un adorno. */}
+      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+        {p.papeles.length > 0 && <span>📄 sale en sus pólizas (lo manda la compañía)</span>}
+        {p.papeles.length > 0 && p.vinculo && <span> · </span>}
+        {p.vinculo && <span>👪 vínculo anotado por nosotros</span>}
+      </div>
+
+      {p.papeles.length > 0 && renderPapeles?.(p)}
+
+      {/* Dos filas con el mismo nombre no son un fallo de la pantalla: o son dos
+          personas (padre e hijo con NIF distinto) o son dos fichas de la misma
+          persona. Se dice cuál de las dos cosas es, y cuando no se sabe, se dice
+          que no se sabe — nunca se funden dos identidades. */}
+      {p.homonimia === 'distinta_persona' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+          👥 Hay otra persona con este mismo nombre en sus pólizas, con NIF distinto: son dos, no una.
+        </div>
+      )}
+      {p.homonimia === 'sin_distinguir' && (
+        <div style={{ fontSize: 11, color: 'var(--warning)' }}>
+          ⚠️ Aparece otra fila con este mismo nombre y no se puede distinguir (a alguna le falta el NIF):
+          puede ser la misma persona con la ficha duplicada. No se funden desde aquí.
+        </div>
+      )}
+
+      {p.vinculo ? (
+        <Vinculo
+          r={p.vinculo}
+          nombreFicha={nombreFicha}
+          ocupado={ocupado}
+          onAutorizar={onAutorizar}
+          onAvisar={onAvisar}
+          aviso={aviso}
+          onQuitar={onQuitar}
+          onCambiarTipo={onCambiarTipo}
+        />
+      ) : p.fichaId ? (
+        // Sin vínculo anotado no se afirma que no lo tenga: se ofrece decirlo,
+        // en los dos sentidos. «Revisado, no es nada suyo» es la respuesta
+        // correcta para la mayoría (un conductor ocasional no es familia) y
+        // hasta el 03/09/2026 no se podía decir.
+        <div style={bloqueVinculo}>
+          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Sin vínculo anotado — nadie ha dicho aún qué es de {nombreFicha}.</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              disabled={enCurso}
+              onClick={() => onDeclarar({ id: p.fichaId as string, nombre, tipo: '', polizas: 0 })}
+              style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+            >
+              👪 Declarar qué es de {nombreFicha}
+            </button>
+            <button
+              type="button"
+              disabled={enCurso}
+              onClick={() => onSinVinculo(p.fichaId as string)}
+              style={{ ...btnStyle('sutil'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+            >
+              {enCurso ? 'anotando…' : '✅ Revisado: no es nada suyo'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ ...bloqueVinculo, fontSize: 12, color: 'var(--muted)' }}>
+          CIMA no la ha enlazado a una ficha propia, así que todavía no se le puede declarar un vínculo
+          ni darle acceso. Sale aquí porque interviene en sus pólizas.
+        </div>
+      )}
+    </li>
+  )
+}
+
+// ─── El bloque de vínculo de una fila ────────────────────────────────────────
+
+/**
+ * Lo que hemos anotado NOSOTROS sobre esa persona: qué es de la ficha y si está
+ * autorizada a ver sus seguros.
+ *
+ * Ya no pinta el nombre ni su propio `<li>`: vive dentro de la fila de la
+ * persona, debajo de lo que dice CIMA, para que las dos caras se lean juntas y
+ * se siga viendo de dónde sale cada una.
+ */
+function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo }: {
+  r: RelacionCartera
+  nombreFicha: string
+  ocupado: string | null
+  onAvisar: (r: RelacionCartera, invertido: boolean) => void
+  aviso: { clave: string; texto: string; ok: boolean } | null
+  onAutorizar: (
+    r: RelacionCartera,
+    autoriza: boolean,
+    extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
+  ) => void
+  onQuitar: (r: RelacionCartera) => void
+  onCambiarTipo: (r: RelacionCartera, tipo: string) => void
+}) {
+  const ficha = `/correduria/cliente/${r.relacionadoId}`
+  const enCurso =
+    ocupado === `aut-${r.relacionadoId}` ||
+    ocupado === `aut-${r.relacionadoId}-inv` ||
+    ocupado === `del-${r.relacionadoId}` ||
+    ocupado === `tipo-${r.relacionadoId}` ||
+    ocupado === `aviso-${r.relacionadoId}` ||
+    ocupado === `aviso-${r.relacionadoId}-inv`
+  // `Sin vínculo` no es un parentesco: es la constancia de que se miró y no hay
+  // ninguno. Ni se explica quién ve qué ni se ofrece autorizar (el puerto lo
+  // rechaza igualmente con un 422, y el portal ni mira esas filas).
+  const revisadoSinVinculo = !permiteAutorizar(r.tipo)
+  // `null` (asegura no lo manda o no lo pudo leer) NO cuenta como sociedad: se
+  // ofrece solo lo de siempre, que es el lado que no apodera a nadie de más.
+  const esSociedad = r.tipoOtorgante === 'juridica'
+  if (revisadoSinVinculo) {
+    return (
+      <div style={bloqueVinculo}>
+        <div style={{ fontSize: 13 }}>✅ revisado: no hay vínculo</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Sale en las pólizas de {nombreFicha} pero no es nada suyo. Queda anotado para no volver
+          a preguntarlo, y <strong>no puede ver sus seguros</strong>: para autorizar a alguien hace
+          falta antes una relación de verdad.
+        </div>
+        {r.observaciones && (
+          <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
+        )}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal', minHeight: 44 }}>
+            Quitar la anotación
+          </button>
+        </div>
+        {/* Aquí es donde más falta hace: «revisado, no hay vínculo» es la
+            respuesta rápida del día a día, y cuando resulta que sí lo había
+            (el conductor ERA el hijo) se corrige sin perder nada. */}
+        <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
+      </div>
+    )
+  }
+  return (
+    <div style={bloqueVinculo}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>👪 {r.tipo}</span>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+          {/* null = asegura no las contó: no es «0 pólizas». */}
+          {r.polizasVivas === null ? 'pólizas sin contar' : `${r.polizasVivas} póliza${r.polizasVivas === 1 ? '' : 's'} viva${r.polizasVivas === 1 ? '' : 's'} suya${r.polizasVivas === 1 ? '' : 's'}`}
+        </span>
+      </div>
+
+      {/* 🚨 LOS DOS SENTIDOS, SIEMPRE LOS DOS, cada uno con su insignia y con
+          SUS botones debajo. Antes esto era: un párrafo del sentido de ida, una
+          línea suelta de once píxeles para el de vuelta, y tres botones juntos
+          al final — dos de ellos con casi el mismo texto y el menos usado en
+          azul. El 15/09/2026 Alberto anotó el sentido contrario al que quería y
+          lo revocó 12 segundos después; luego anotó los dos correctos y la
+          pantalla NO cambió de aspecto, porque el estado `pendiente` del
+          sentido de vuelta no se pintaba en ninguna parte. Las dos cosas se
+          arreglan igual: una insignia por sentido y el botón pegado a la frase
+          que dice qué hace. */}
+      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)' }}>🔐 Quién ve los seguros de quién</div>
+
+      <Sentido
+        otorga={nombreFicha}
+        recibe={r.nombre}
+        ve={r.autorizaVer}
+        a={r.autorizacion}
+        enCurso={enCurso}
+        avisando={ocupado === `aviso-${r.relacionadoId}`}
+        aviso={aviso?.clave === `aviso-${r.relacionadoId}` ? aviso : null}
+        onAutorizar={(autoriza) => onAutorizar(r, autoriza)}
+        onAvisar={() => onAvisar(r, false)}
+        /* 🚨 El alcance SIEMPRE se elige aquí, también entre dos personas físicas:
+           sin esto el botón simple mandaba autorizar() sin `alcance` y el puerto
+           anotaba el más pequeño («ver», nivel tarjeta) — María Antonia autorizaba
+           a Alberto y este nunca veía sus recibos ni siniestros, sin que nada lo
+           avisara. De una SOCIEDAD además hay que decir con qué TÍTULO se la
+           representa (`esSociedad`); de una persona solo se elige QUÉ mira.
+           Solo en el sentido en que cede ELLA (`nombreFicha`); el sentido inverso
+           es cosa de la ficha del otro y no lleva formulario. */
+        formulario={
+          <AnotarAlcance
+            r={r}
+            nombreFicha={nombreFicha}
+            enCurso={enCurso}
+            onAutorizar={onAutorizar}
+            esSociedad={esSociedad}
+          />
+        }
+      />
+
+      <Sentido
+        otorga={r.nombre}
+        recibe={nombreFicha}
+        ve={r.puedeVer}
+        a={r.autorizacionInversa}
+        enCurso={enCurso}
+        avisando={ocupado === `aviso-${r.relacionadoId}-inv`}
+        aviso={aviso?.clave === `aviso-${r.relacionadoId}-inv` ? aviso : null}
+        onAutorizar={(autoriza) => onAutorizar(r, autoriza, undefined, true)}
+        onAvisar={() => onAvisar(r, true)}
+        formulario={null}
+        pie={<>Lo consiente {r.nombre}; se anota desde aquí o desde <Link href={ficha}>su ficha</Link>.</>}
+      />
+
+      {r.observaciones && (
+        <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal', minHeight: 44 }}>
+          Quitar relación
+        </button>
+      </div>
+
+      <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
+    </div>
+  )
+}
+
+/** El color de cada tono. `duda` NO comparte el gris de «no»: un hueco no es un no. */
+const COLOR_ACCESO: Record<TonoAcceso, string> = {
+  ve: 'var(--positive)',
+  espera: 'var(--warning)',
+  no: 'var(--muted)',
+  duda: 'var(--warning)',
+}
+
+/**
+ * UN sentido del acceso: quién ve los seguros de quién, con su insignia, su
+ * frase y sus botones — nunca los del otro sentido.
+ *
+ * 🚨 La insignia y la frase salen de `insigniaAcceso` / `explicarSentidoAcceso`
+ * (puros y con test) para que «anotada pero todavía no ve» no se convierta en
+ * «ve» al tocar un `?:` dentro del JSX. Y el botón de autorizar vive AQUÍ
+ * dentro, debajo de la frase que dice qué pasa al pulsarlo: dos botones de
+ * sentidos distintos, juntos y con el mismo texto salvo el orden de los
+ * nombres, es lo que hizo fallar el clic.
+ */
+function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar, onAvisar, formulario, pie }: {
+  /** Quién cede SUS seguros. */
+  otorga: string
+  /** Quién los ve (o los vería). */
+  recibe: string
+  /** ¿Los ve HOY? Lo dice el puerto, y manda sobre el resumen. */
+  ve: boolean
+  /** `null` = no hay ninguna · `undefined` = asegura no manda el dato. */
+  a: AutorizacionCartera | null | undefined
+  enCurso: boolean
+  avisando: boolean
+  aviso: { texto: string; ok: boolean } | null
+  onAutorizar: (autoriza: boolean) => void
+  onAvisar: () => void
+  /** El formulario de alta cuando quien cede es una sociedad (sustituye al botón). */
+  formulario: React.ReactNode | null
+  /** Una línea extra al pie, si ese sentido necesita explicar de quién es el consentimiento. */
+  pie?: React.ReactNode
+}) {
+  const ins = insigniaAcceso(a, ve)
+  const viva = autorizacionViva(a)
+  const color = COLOR_ACCESO[ins.tono]
+  return (
+    <div style={{ borderLeft: `3px solid ${color}`, paddingLeft: 8, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, minWidth: 0 }}>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}>
+        <span style={{
+          fontSize: 11, fontWeight: 700, color, border: `1px solid ${color}`,
+          borderRadius: 999, padding: '2px 8px', whiteSpace: 'nowrap',
+        }}>
+          {ins.icono} {ins.etiqueta}
+        </span>
+        <span style={{ fontSize: 13, overflowWrap: 'anywhere' }}>
+          <strong>{recibe}</strong> → seguros de <strong>{otorga}</strong>
+        </span>
+      </div>
+
+      <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>
+        {explicarSentidoAcceso(a, recibe, otorga, ve)}
+      </div>
+
+      {a?.estado === 'pendiente' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+          Falta el paso de <strong>{recibe}</strong>: tiene que entrar en su portal y aceptarla. La doble
+          aceptación es lo que deja constancia de que sabe que hay un permiso a su nombre.
+        </div>
+      )}
+      {a?.estado === 'vigente' && (
+        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+          {a.origen === 'corredor' ? 'La anotó la correduría' : 'La concedió el cliente desde su portal'} · caduca el{' '}
+          {fechaLarga(a.caducaEn)} (no se renueva sola) · puede:{' '}
+          {a.alcances.length > 0 ? a.alcances.map((x) => ALCANCE_TEXTO_PORTAL[x]).join(' · ') : 'sin detallar'}
+          {/* El título solo consta cuando cede una sociedad. `null` ahí es lo
+              normal entre personas: no se representa a nadie, se mira. */}
+          {comoTitulo(a.tituloRepresentacion) ? ` · ${comoTitulo(a.tituloRepresentacion)}` : ''}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {/* Solo cuando hay algo que confirmar. En una VIGENTE no hay nada que
+            avisar (ya la aceptó) y en una caducada el correo llevaría a una
+            pantalla vacía; el puerto lo rechaza igual, pero un botón que no
+            puede funcionar no se pinta. */}
+        {a?.estado === 'pendiente' && (
+          <button type="button" disabled={enCurso} onClick={onAvisar} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
+            {avisando ? 'enviando…' : `✉️ Invitar a ${recibe} a confirmarlo por correo`}
+          </button>
+        )}
+        {/* Hay algo que retirar mientras no esté cerrada: una PENDIENTE también
+            se revoca (existe, aunque no abra nada todavía). */}
+        {/* 🚨 `ve || viva`, no `viva` a secas: con el dato del sentido ausente
+            (asegura sin desplegar) y el puerto diciendo que SÍ ve, `viva` es
+            falso — y entonces la insignia pondría «SÍ VE» con un botón de
+            ANOTAR debajo y sin forma de revocar. Lo que se ofrece se decide por
+            lo que la pantalla acaba de afirmar. */}
+        {ve || viva ? (
+          <button type="button" disabled={enCurso} onClick={() => onAutorizar(false)} style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
+            🔒 {a?.estado === 'pendiente' ? 'Retirar la autorización anotada' : `Revocar: ${recibe} dejará de ver`}
+          </button>
+        ) : formulario === null ? (
+          <button type="button" disabled={enCurso} onClick={() => onAutorizar(true)} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
+            🔓 Anotar que {otorga} autoriza a {recibe} a ver sus seguros
+          </button>
+        ) : null}
+      </div>
+
+      {!ve && !viva && formulario}
+
+      {pie && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{pie}</div>}
+
+      {/* El desenlace del correo, pegado al botón que lo produjo. El texto sale
+          de `textoAviso` (puro y con test): un «enviado» no puede salir de un
+          desenlace que no envió nada. */}
+      {aviso && (
+        <div role="status" style={{ fontSize: 12, color: aviso.ok ? 'var(--positive)' : 'var(--warning)', overflowWrap: 'anywhere' }}>
+          {aviso.texto}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** El vínculo se separa de lo que dice CIMA con una línea, no con otra tarjeta. */
+const bloqueVinculo: React.CSSProperties = {
+  display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0,
+  borderTop: '1px solid var(--border)', paddingTop: 8,
+}
+
+/**
+ * «Cambiar el tipo» de un vínculo que ya existe.
+ *
+ * Va PLEGADO y en tono sutil a propósito: corregir una etiqueta es raro
+ * comparado con autorizar o quitar, y un desplegable abierto en cada vínculo
+ * convierte la lista en un formulario. El `<details>` nativo evita el `useState`
+ * y se cierra solo al recargar la lista.
+ *
+ * El botón solo se enciende con un tipo DISTINTO del que ya tiene: mandar el
+ * mismo devuelve un 422 del puerto, y un error por pulsar un botón que la
+ * pantalla ofrecía es la pantalla mintiendo.
+ */
+function CambiarTipo({ r, enCurso, onCambiarTipo }: {
+  r: RelacionCartera
+  enCurso: boolean
+  onCambiarTipo: (r: RelacionCartera, tipo: string) => void
+}) {
+  const [tipo, setTipo] = useState<string>(r.tipo)
+  return (
+    <details>
+      <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer', listStyle: 'none', userSelect: 'none', display: 'inline-flex', alignItems: 'center', minHeight: 32 }}>
+        Cambiar el tipo de relación
+      </summary>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
+        <select
+          value={tipo}
+          onChange={(e) => setTipo(e.target.value)}
+          aria-label={`Tipo de relación con ${r.nombre}`}
+          style={{
+            flex: '1 1 200px', minWidth: 0, minHeight: 44, padding: '8px 10px', borderRadius: 8,
+            border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 15,
+          }}
+        >
+          {GRUPOS_RELACION.map((g) => (
+            <optgroup key={g.categoria} label={g.categoria}>
+              {g.tipos.map((t) => <option key={t} value={t}>{t}</option>)}
+            </optgroup>
+          ))}
+        </select>
+        <button
+          type="button"
+          disabled={enCurso || tipo === r.tipo}
+          onClick={() => onCambiarTipo(r, tipo)}
+          style={{ ...btnStyle('secundario'), minHeight: 44 }}
+        >
+          Guardar
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
+        Se cambia en las dos fichas y queda en el historial. La autorización del
+        portal NO se toca — si la que hay no cabe en el tipo nuevo, hay que
+        revocarla antes y la pantalla lo dirá.
+      </div>
+    </details>
+  )
+}
+
+/**
+ * El alta de una autorización, con el ALCANCE siempre elegido a mano.
+ *
+ * 🚨 Hasta el 20/09/2026 esto solo existía para SOCIEDADES: entre dos personas
+ * físicas el botón simple mandaba `autorizar()` sin `alcance`, y el puerto
+ * anotaba el más pequeño («ver», nivel tarjeta) sin que la pantalla lo dijera
+ * — María Antonia autorizaba a José y este nunca veía recibos ni siniestros.
+ * Ahora el desplegable sale SIEMPRE; lo que cambia con `esSociedad` es qué
+ * opciones ofrece (`alcancesAnotables`, capado en asegura) y si además hace
+ * falta el TÍTULO de representación.
+ *
+ * De una SOCIEDAD no se delega un permiso para mirar sino REPRESENTACIÓN
+ * mercantil (`partes`/`documentos` caben, y el título es obligatorio: si
+ * quien actúa por la empresa da un parte, la que queda obligada es ella, y
+ * «alguien de la empresa» no es un título). De una PERSONA física solo se
+ * elige QUÉ mira (`ver` / `ver_economico`) — sigue siendo un consentimiento
+ * de datos personales, nunca una representación.
+ */
+function AnotarAlcance({ r, nombreFicha, enCurso, onAutorizar, esSociedad }: {
+  r: RelacionCartera
+  nombreFicha: string
+  enCurso: boolean
+  onAutorizar: (
+    r: RelacionCartera,
+    autoriza: boolean,
+    extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentacionPortal | null },
+    invertido?: boolean,
+  ) => void
+  esSociedad: boolean
+}) {
+  // `''` = todavía no ha elegido, que NO es haber elegido lo más pequeño.
+  const [alcance, setAlcance] = useState<AlcancePortal | ''>('')
+  const [titulo, setTitulo] = useState<TituloRepresentacionPortal | ''>('')
+  const opciones = alcancesAnotables(r.tipoOtorgante)
+  const listo = alcance !== '' && (!esSociedad || titulo !== '')
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: 10, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        {esSociedad ? (
+          <>
+            <strong>{nombreFicha} es una sociedad</strong>, así que aquí no se anota un permiso para
+            mirar: se anota <strong>quién puede representarla</strong>. Quien la represente ve lo que
+            paga, su CIF y su cuenta bancaria —son datos de la empresa— y, con «dar partes», lo que
+            declare <strong>obliga a la sociedad</strong>. Lo que no puede hacer nunca es autorizar a
+            nadie más.
+          </>
+        ) : (
+          <>
+            Elige qué puede ver {r.nombre}: solo la tarjeta (compañía, ramo, vencimiento) o también{' '}
+            <strong>lo económico</strong> (prima, recibos y siniestros).
+          </>
+        )}
+      </div>
+
+      <Campo label={`¿Qué puede ${esSociedad ? 'hacer' : 'ver'} ${r.nombre} ${esSociedad ? `por ${nombreFicha}` : `de ${nombreFicha}`}?`}>
+        <select value={alcance} onChange={(e) => setAlcance(e.target.value as AlcancePortal | '')} style={campo} disabled={enCurso}>
+          <option value="">Elige qué se delega…</option>
+          {opciones.map((a) => (
+            <option key={a} value={a}>{ALCANCE_TEXTO_PORTAL[a]}</option>
+          ))}
+        </select>
+      </Campo>
+
+      {esSociedad && (
+        <Campo
+          label="¿Con qué título la representa?"
+          ayuda="Queda guardado con la autorización. Obligatorio para dar partes o manejar documentos: sin él, lo que declare no se le puede oponer a la compañía."
+        >
+          <select value={titulo} onChange={(e) => setTitulo(e.target.value as TituloRepresentacionPortal | '')} style={campo} disabled={enCurso}>
+            <option value="">Elige el título…</option>
+            {TITULOS_REPRESENTACION_PORTAL.map((t) => (
+              <option key={t} value={t}>{TITULO_TEXTO_PORTAL[t]}</option>
+            ))}
+          </select>
+        </Campo>
+      )}
+
+      <div>
+        <button
+          type="button"
+          disabled={enCurso || !listo}
+          onClick={() => {
+            if (alcance === '' || (esSociedad && titulo === '')) return
+            onAutorizar(r, true, { alcance, tituloRepresentacion: esSociedad && titulo !== '' ? titulo : null })
+          }}
+          style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+        >
+          🔓 Anotar la autorización de {nombreFicha} a {r.nombre}
+        </button>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+        Nace <strong>pendiente</strong>: no abre nada hasta que {r.nombre} la acepte en su portal.
+      </div>
+    </div>
+  )
+}
+
+// ─── Añadir ──────────────────────────────────────────────────────────────────
+
+type Candidato = { id: string; nombre: string; tipo: string; polizas: number }
+
+function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: {
+  clienteId: string
+  nombreFicha: string
+  yaRelacionados: string[]
+  ocupado: boolean
+  onCrear: (body: Record<string, unknown>) => Promise<RespuestaRelaciones>
+  /** Alta de una ficha que todavía no existe, para la persona de contacto. */
+  onAlta: (body: Record<string, unknown>) => Promise<ResultadoEscritura>
+  tipoPersona: 'fisica' | 'juridica' | null
+  /** Ficha ya elegida desde «sin vínculo declarado»: se salta el buscador.
+   *  El padre remonta este componente al cambiarla, así que basta con nacer con ella. */
+  preseleccion: Candidato | null
+}) {
+  const [abierto, setAbierto] = useState(preseleccion !== null)
+  // Dar de alta a alguien que NO está en la cartera. Se llega aquí por el botón
+  // de arriba o desde el «no está» de una búsqueda, y por eso hereda el término
+  // buscado: teclear el nombre dos veces era el sitio donde se abandonaba.
+  const [modoAlta, setModoAlta] = useState(false)
+  const [q, setQ] = useState('')
+  const [buscando, setBuscando] = useState(false)
+  const [busqueda, setBusqueda] = useState<RespuestaBusqueda | null>(null)
+  const [elegido, setElegido] = useState<Candidato | null>(preseleccion)
+  const [tipo, setTipo] = useState<TipoRelacion>('Cónyuge/Pareja de Hecho')
+  const [observaciones, setObservaciones] = useState('')
+
+  async function buscar() {
+    const termino = q.trim()
+    if (termino === '') return
+    setBuscando(true)
+    setElegido(null)
+    try {
+      const res = await fetch(`/api/correduria/clientes?q=${encodeURIComponent(termino)}`, { cache: 'no-store' })
+      // El endpoint ya devuelve la búsqueda interpretada por el servidor.
+      const json = (await res.json().catch(() => null)) as RespuestaBusqueda | null
+      setBusqueda(json && typeof json === 'object' && 'estado' in json ? json : { estado: 'error', motivo: 'respuesta_ilegible' })
+    } catch {
+      setBusqueda({ estado: 'error', motivo: 'red' })
+    } finally {
+      setBuscando(false)
+    }
+  }
+
+  async function crear() {
+    if (!elegido) return
+    const r = await onCrear({ relacionadoId: elegido.id, tipo, observaciones: observaciones.trim() || undefined })
+    if (r.estado === 'ok') {
+      setAbierto(false)
+      setQ('')
+      setBusqueda(null)
+      setElegido(null)
+      setObservaciones('')
+    }
+  }
+
+  if (!abierto) {
+    return (
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <button type="button" onClick={() => { setModoAlta(false); setAbierto(true) }} style={btnStyle('secundario')}>➕ Añadir relación</button>
+        {/* La persona que lleva los seguros de una sociedad casi nunca está en la
+            cartera: mandarla a /correduria/cliente/nuevo era perder la ficha,
+            volver y buscarla. Desde aquí se crea y se vincula de una vez. */}
+        <button type="button" onClick={() => { setModoAlta(true); setAbierto(true) }} style={btnStyle('secundario')}>
+          ➕ Nueva persona de contacto
+        </button>
+      </div>
+    )
+  }
+
+  if (modoAlta) {
+    return (
+      <AltaPersona
+        nombreFicha={nombreFicha}
+        tipoPersona={tipoPersona}
+        ocupado={ocupado}
+        terminoInicial={q.trim()}
+        onAlta={onAlta}
+        onCrear={onCrear}
+        onCancelar={() => { setModoAlta(false); setAbierto(false) }}
+        onBuscar={() => setModoAlta(false)}
+      />
+    )
+  }
+
+  const candidatos = busqueda?.estado === 'ok'
+    ? busqueda.clientes.filter((c) => c.id !== clienteId && !yaRelacionados.includes(c.id))
+    : []
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700 }}>Añadir relación a {nombreFicha}</div>
+
+      <form
+        onSubmit={(e) => { e.preventDefault(); void buscar() }}
+        style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto', gap: 8, alignItems: 'end' }}
+      >
+        {/* Solo NOMBRE y APELLIDOS: `buscarClientes` (apps/asegura/lib/cartera-ficha.ts)
+            no mira DNI, teléfono ni email, y un DNI tecleado aquí devuelve vacío,
+            que se lee como «no está en la cartera». */}
+        <Campo label="Buscar la otra ficha por nombre y apellidos">
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="María Antonia…" style={campo} autoComplete="off" />
+        </Campo>
+        <button type="submit" disabled={buscando || q.trim() === ''} style={btnStyle('secundario')}>
+          {buscando ? '…' : 'Buscar'}
+        </button>
+      </form>
+
+      {busqueda && busqueda.estado !== 'ok' && (
+        <div style={pendienteBox}>
+          {busqueda.estado === 'sin_configurar'
+            ? 'El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET).'
+            : `No se ha podido buscar: ${textoMotivoRelaciones(busqueda.motivo)}`}
+        </div>
+      )}
+      {busqueda?.estado === 'ok' && !busqueda.buscado && (
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>Término demasiado corto: escribe algo más.</div>
+      )}
+      {busqueda?.estado === 'ok' && busqueda.buscado && candidatos.length === 0 && (
+        <div style={{ display: 'grid', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
+          <span>Nadie en la cartera con «{busqueda.termino}» que no esté ya relacionado.</span>
+          <div>
+            <button type="button" onClick={() => setModoAlta(true)} style={btnStyle('secundario', 'sm')}>
+              ➕ Darla de alta y vincularla a {nombreFicha}
+            </button>
+          </div>
+        </div>
+      )}
+      {candidatos.length > 0 && !elegido && (
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6 }}>
+          {candidatos.slice(0, 20).map((c) => (
+            <li key={c.id}>
+              <button
+                type="button"
+                onClick={() => setElegido(c)}
+                style={{ ...btnStyle('secundario'), width: '100%', justifyContent: 'space-between', whiteSpace: 'normal', textAlign: 'left' }}
+              >
+                <span style={{ overflowWrap: 'anywhere' }}>{c.nombre}</span>
+                <span style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{c.tipo} · {c.polizas} pól.</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {elegido && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+          <div style={{ fontSize: 13, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span>Ficha elegida: <strong style={{ overflowWrap: 'anywhere' }}>{elegido.nombre}</strong></span>
+            <button type="button" onClick={() => setElegido(null)} style={btnStyle('sutil', 'sm')}>cambiar</button>
+          </div>
+          <Campo label={`¿Qué es ${elegido.nombre} para ${nombreFicha}?`} ayuda="Se lee desde esta ficha: «Cónyuge» = la persona elegida es cónyuge de la ficha. El sentido inverso se anota solo.">
+            <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoRelacion)} style={campo}>
+              {GRUPOS_RELACION.map((g) => (
+                <optgroup key={g.categoria} label={g.categoria}>
+                  {g.tipos.map((t) => <option key={t} value={t}>{t}</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </Campo>
+          <Campo label="Observaciones (opcional)">
+            <input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} style={campo} maxLength={500} />
+          </Campo>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button type="button" disabled={ocupado} onClick={() => void crear()} style={btnStyle('primario')}>
+              {ocupado ? 'Guardando…' : 'Guardar relación'}
+            </button>
+            <button type="button" disabled={ocupado} onClick={() => setAbierto(false)} style={btnStyle('sutil')}>Cancelar</button>
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+            Guardar la relación NO autoriza a nadie a ver nada: la autorización se da después, con su botón.
+          </div>
+        </div>
+      )}
+
+      {!elegido && (
+        <div>
+          <button type="button" onClick={() => setAbierto(false)} style={btnStyle('sutil')}>Cancelar</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Alta de la persona de contacto ──────────────────────────────────────────
+
+/**
+ * Crear la ficha de la persona que lleva los seguros de esta otra (el
+ * administrador de una sociedad, típicamente) y vincularla, sin salir de aquí.
+ *
+ * Por qué una ficha propia y no un campo «persona de contacto» dentro de la
+ * sociedad (Alberto, 05/09/2026): **esa persona es un futuro cliente**. El
+ * estado se DERIVA de sus pólizas, así que nace 🕐 Lead sola y pasará a
+ * ✅ Cliente el día que CIMA confirme la primera que le vendas, sin migrar nada.
+ * Con un campo de texto habría que crearla de cero ese día y se perdería todo lo
+ * anterior.
+ *
+ * 🚨 Son DOS escrituras y la segunda puede fallar sola. Lo que se pinta entonces
+ * lo decide `combinarPersonaContacto`, no este JSX: la frase de «creada pero sin
+ * vincular» es la que evita que el siguiente clic dé de alta una segunda ficha
+ * de la misma persona.
+ *
+ * 🔒 Y lo que este formulario NO hace: dar acceso. Crear la ficha y anotar el
+ * vínculo no abre nada — la autorización del portal es un consentimiento con su
+ * alcance, su caducidad y su aceptación por parte de quien la recibe, y se anota
+ * después desde la fila del vínculo. Meterla aquí de paso la convertiría en una
+ * casilla marcada por defecto.
+ */
+function AltaPersona({ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta, onCrear, onCancelar, onBuscar }: {
+  nombreFicha: string
+  tipoPersona: 'fisica' | 'juridica' | null
+  ocupado: boolean
+  /** Lo que se tecleó en el buscador, para no escribir el nombre dos veces. */
+  terminoInicial: string
+  onAlta: (body: Record<string, unknown>) => Promise<ResultadoEscritura>
+  onCrear: (body: Record<string, unknown>) => Promise<RespuestaRelaciones>
+  onCancelar: () => void
+  onBuscar: () => void
+}) {
+  const tipos = tiposContactoSugeridos(tipoPersona)
+  const [f, setF] = useState({ nombre: terminoInicial, apellidos: '', telefono: '', email: '' })
+  const [tipo, setTipo] = useState<TipoRelacion>(tipos[0])
+  const [observaciones, setObservaciones] = useState('')
+  const [trabajando, setTrabajando] = useState(false)
+  const [campoMal, setCampoMal] = useState<string | null>(null)
+  const [resAlta, setResAlta] = useState<ResultadoEscritura | null>(null)
+  const [resVinculo, setResVinculo] = useState<RespuestaRelaciones | null>(null)
+  const [resumen, setResumen] = useState<ResultadoPersonaContacto | null>(null)
+  /** Ficha que YA existía y se ha vinculado sin crear nada (el caso del 409). */
+  const [reutilizada, setReutilizada] = useState<string | null>(null)
+
+  const nombreCompleto = [f.nombre.trim(), f.apellidos.trim()].filter((x) => x !== '').join(' ') || 'esta persona'
+
+  function set<K extends keyof typeof f>(k: K, v: string) {
+    setF((prev) => ({ ...prev, [k]: v }))
+  }
+
+  async function vincular(id: string): Promise<RespuestaRelaciones> {
+    const r = await onCrear({ relacionadoId: id, tipo, observaciones: observaciones.trim() || undefined })
+    setResVinculo(r)
+    return r
+  }
+
+  async function crear(forzar = false) {
+    const rev = revisarAlta({ ...f, fuente: FUENTE_PERSONA_CONTACTO })
+    if (!rev.ok) {
+      setCampoMal(rev.campo ?? null)
+      setResAlta({ estado: 'invalido', motivo: rev.motivo, campo: rev.campo ?? null })
+      return
+    }
+    setCampoMal(null)
+    setTrabajando(true)
+    setResVinculo(null)
+    setResumen(null)
+    setReutilizada(null)
+    try {
+      // `tipoPersona` lo deduce el módulo del DNI y el puerto lo vuelve a
+      // deducir: mandarlo desde aquí sería una tercera opinión sobre lo mismo.
+      const { tipoPersona: _tp, ...alta } = rev.alta
+      void _tp
+      const ra = await onAlta({ ...alta, forzar })
+      setResAlta(ra)
+      if (ra.estado === 'invalido') setCampoMal(ra.campo)
+      const id = ra.estado === 'ok' ? ra.id : null
+      const rv = ra.estado === 'ok' && id ? await vincular(id) : null
+      setResumen(combinarPersonaContacto(
+        ra.estado === 'ok' ? { ok: true, id } : { ok: false },
+        rv === null ? null : { ok: rv.estado === 'ok' },
+      ))
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  /** Reintento del vínculo SOLO: la ficha ya existe y volver a darla de alta la duplicaría. */
+  async function reintentarVinculo(id: string) {
+    setTrabajando(true)
+    try {
+      const rv = await vincular(id)
+      setResumen(combinarPersonaContacto({ ok: true, id }, { ok: rv.estado === 'ok' }))
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  /** Vincular una ficha que ya estaba (la del 409): no se crea nada. */
+  async function usarExistente(c: { id: string; nombre: string }) {
+    setTrabajando(true)
+    try {
+      const rv = await vincular(c.id)
+      if (rv.estado === 'ok') {
+        setReutilizada(c.nombre)
+        setResAlta(null)
+        setResumen(null)
+      }
+    } finally {
+      setTrabajando(false)
+    }
+  }
+
+  const ocupadoYa = ocupado || trabajando
+  const hecho = resumen?.estado === 'creada_y_vinculada' || reutilizada !== null
+
+  return (
+    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+      <div style={{ fontSize: 13, fontWeight: 700 }}>Nueva persona de contacto de {nombreFicha}</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+        Se crea su <strong>propia ficha</strong> y se vincula a {nombreFicha}. Nace como 🕐 lead —que es lo que
+        es— y pasará a cliente sola el día que le vendas algo y CIMA lo confirme.
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+        <Campo label="Nombre *">
+          <input value={f.nombre} onChange={(e) => set('nombre', e.target.value)} style={{ ...campo, ...(campoMal === 'nombre' ? malo : {}) }} autoFocus />
+        </Campo>
+        <Campo label="Apellidos">
+          <input value={f.apellidos} onChange={(e) => set('apellidos', e.target.value)} style={{ ...campo, ...(campoMal === 'apellidos' ? malo : {}) }} />
+        </Campo>
+      </div>
+
+      {/* El teléfono y el email no son un adorno: son POR DONDE ENTRARÁ al
+          portal el día que se le autorice (la identidad se prueba con un código
+          de un solo uso a uno de los dos). Sin ninguno de los dos, ni se le
+          puede dar acceso ni se vuelve a encontrar la ficha. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 8 }}>
+        <Campo label="Teléfono" ayuda="Hace falta el teléfono o el email: es por donde entrará al portal cuando le des acceso.">
+          <input type="tel" value={f.telefono} onChange={(e) => set('telefono', e.target.value)} placeholder="600 000 000" style={{ ...campo, ...(campoMal === 'telefono' ? malo : {}) }} />
+        </Campo>
+        <Campo label="Email">
+          <input type="email" value={f.email} onChange={(e) => set('email', e.target.value)} placeholder="nombre@dominio.es" style={{ ...campo, ...(campoMal === 'email' ? malo : {}) }} />
+        </Campo>
+      </div>
+
+      <Campo label={`¿Qué es de ${nombreFicha}?`} ayuda="Se lee desde esta ficha: «Administración» = la persona administra la sociedad.">
+        <select value={tipo} onChange={(e) => setTipo(e.target.value as TipoRelacion)} style={campo}>
+          {tipos.map((t) => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </Campo>
+      <Campo label="Observaciones (opcional)">
+        <input value={observaciones} onChange={(e) => setObservaciones(e.target.value)} style={campo} maxLength={500} />
+      </Campo>
+
+      {!hecho && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button type="button" disabled={ocupadoYa} onClick={() => void crear()} style={btnStyle('primario')}>
+            {ocupadoYa ? 'Guardando…' : 'Crear y vincular'}
+          </button>
+          <button type="button" disabled={ocupadoYa} onClick={onBuscar} style={btnStyle('sutil')}>Buscarla en la cartera</button>
+          <button type="button" disabled={ocupadoYa} onClick={onCancelar} style={btnStyle('sutil')}>Cancelar</button>
+        </div>
+      )}
+
+      {/* 🚨 Ya existe alguien con ese DNI, teléfono o email. Vincular la ficha que
+          hay es SIEMPRE mejor que crear otra: dos fichas de la misma persona no
+          se ven —y se descubren cuando una tiene las pólizas y la otra el móvil. */}
+      {resAlta?.estado === 'conflicto' && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px', color: 'var(--warning)', background: 'var(--warning-bg)' }}>
+          ⚠️ <strong>Ya hay una ficha con ese dato:</strong>
+          <ul style={{ margin: '4px 0', paddingLeft: 18 }}>
+            {resAlta.coincidencias.map((c) => (
+              <li key={`${c.por}-${c.id}`} style={{ marginBottom: 4 }}>
+                <Link href={`/correduria/cliente/${c.id}`} style={{ fontWeight: 600 }}>{c.nombre}</Link>{' '}
+                <span style={{ color: 'var(--muted)' }}>(mismo {c.por} · {c.tipo})</span>{' '}
+                <button type="button" disabled={ocupadoYa} onClick={() => void usarExistente(c)} style={btnStyle('secundario', 'sm')}>
+                  Es esta: vincularla
+                </button>
+              </li>
+            ))}
+            {resAlta.coincidencias.length === 0 && <li>asegura no dice con cuál.</li>}
+          </ul>
+          {coincidenciaBloquea(resAlta.coincidencias) || !resAlta.forzable ? (
+            <div>Con el mismo DNI es la misma persona: no se crea otra ficha.</div>
+          ) : (
+            <button type="button" disabled={ocupadoYa} onClick={() => void crear(true)} style={btnStyle('secundario')}>
+              Es otra persona: crearla igualmente (comparten teléfono/email)
+            </button>
+          )}
+        </div>
+      )}
+
+      {resAlta && resAlta.estado !== 'ok' && resAlta.estado !== 'conflicto' && (
+        <div style={{ fontSize: 13, borderRadius: 8, padding: '8px 10px', color: 'var(--negative)', background: 'var(--negative-bg)' }}>
+          {resAlta.estado === 'invalido' ? `✖ ${textoMotivoAlta(resAlta.motivo)}` :
+            resAlta.estado === 'sin_configurar' ? '⏳ El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET). No se ha creado nada.' :
+            resAlta.estado === 'no_encontrado' ? 'asegura respondió «no encontrado» a un alta: revisa el puerto.' :
+            `⚠️ No se ha podido crear: ${textoMotivoAlta(resAlta.motivo)}`}
+        </div>
+      )}
+
+      {resumen && resumen.estado !== 'no_creada' && (
+        <div
+          style={{
+            fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px',
+            color: resumen.estado === 'creada_y_vinculada' ? 'var(--positive)' : 'var(--warning)',
+            background: resumen.estado === 'creada_y_vinculada' ? 'var(--positive-bg)' : 'var(--warning-bg)',
+          }}
+        >
+          {textoPersonaContacto(resumen, nombreCompleto, nombreFicha)}
+          {resumen.estado === 'creada_sin_vinculo' && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6, alignItems: 'center' }}>
+              <button type="button" disabled={ocupadoYa} onClick={() => void reintentarVinculo(resumen.id)} style={btnStyle('secundario', 'sm')}>
+                Reintentar solo el vínculo
+              </button>
+              <Link href={`/correduria/cliente/${resumen.id}`} style={{ fontSize: 12 }}>abrir su ficha</Link>
+            </div>
+          )}
+          {resumen.estado === 'creada_y_vinculada' && (
+            <div style={{ marginTop: 6 }}>
+              <Link href={`/correduria/cliente/${resumen.id}`} style={{ fontSize: 12 }}>abrir la ficha de {nombreCompleto}</Link>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Por qué falló el vínculo, con el mismo aviso que el resto de la tarjeta. */}
+      {resumen?.estado === 'creada_sin_vinculo' && resVinculo && resVinculo.estado !== 'ok' && <Aviso r={resVinculo} />}
+
+      {reutilizada && (
+        <div style={{ fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px', color: 'var(--positive)', background: 'var(--positive-bg)' }}>
+          ✅ {reutilizada} ya estaba en la cartera y se ha vinculado a {nombreFicha} (no se ha creado ninguna ficha
+          nueva). Todavía NO ve nada: el acceso al portal se le da aparte, con «Autorizar» en su fila.
+        </div>
+      )}
+
+      {hecho && (
+        <div>
+          <button type="button" onClick={onCancelar} style={btnStyle('secundario')}>Cerrar</button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Avisos ──────────────────────────────────────────────────────────────────
+
+function Aviso({ r }: { r: Exclude<RespuestaRelaciones, { estado: 'ok' }> }) {
+  const texto =
+    r.estado === 'conflicto' ? `Ya están relacionados: ${r.motivo}` :
+    r.estado === 'invalido' ? `No se ha guardado: ${r.motivo}` :
+    r.estado === 'no_encontrado' ? `No se encuentra la ficha${r.motivo ? `: ${r.motivo}` : ''}.` :
+    r.estado === 'sin_configurar' ? 'El puerto con asegura no está conectado (falta ASEGURA_OPERADOR_SECRET).' :
+    `No se ha podido hacer: ${textoMotivoRelaciones(r.motivo)}`
+  const grave = r.estado === 'error' || r.estado === 'sin_configurar'
+  return (
+    <div role="alert" style={{ ...pendienteBox, color: grave ? 'var(--negative)' : 'var(--text)', borderColor: grave ? 'var(--negative)' : 'var(--border)' }}>
+      {texto}
+    </div>
+  )
+}
+
+// ─── Piezas ──────────────────────────────────────────────────────────────────
+
+function Campo({ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }) {
+  return (
+    <label style={{ display: 'grid', gap: 4, minWidth: 0 }}>
+      <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{label}</span>
+      {children}
+      {ayuda && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{ayuda}</span>}
+    </label>
+  )
+}
+
+// 16 px y no 14: por debajo de 16, Safari en iPhone hace ZOOM al enfocar el
+// campo y descoloca la pantalla entera. Los 44 px son el mínimo táctil.
+const campo: React.CSSProperties = {
+  width: '100%', minWidth: 0, boxSizing: 'border-box', minHeight: 44, padding: '10px 12px',
+  borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 16,
+}
+/** Un campo que el módulo ha rechazado. `Campo` no lo sabe: se compone al vuelo. */
+const malo: React.CSSProperties = { borderColor: 'var(--negative)' }
+
+const pendienteBox: React.CSSProperties = {
+  fontSize: 13, lineHeight: 1.5, color: 'var(--muted)', border: '1px dashed var(--border)', borderRadius: 8, padding: '8px 10px',
+}

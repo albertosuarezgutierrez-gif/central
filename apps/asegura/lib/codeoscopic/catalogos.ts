@@ -18,7 +18,10 @@ import { peticion } from './cliente.ts'
 import type { ConfigCodeoscopic } from './config.ts'
 
 /** Una entrada de catálogo: lo que se pinta en un desplegable. */
-export type Opcion = { id: string; nombre: string }
+export type { Opcion } from './opciones.ts'
+export { normalizarTexto, emparejar, elegirDefecto, pareceOpcionPropietario } from './opciones.ts'
+import { normalizarTexto, type Opcion } from './opciones.ts'
+import { limitesDeCarnets, motorDeVersion, type LimiteCarnet, type MotorVersion } from './carnet-moto.ts'
 
 /**
  * Caché en memoria con TTL. Los catálogos del vendor cambian de año en año, no
@@ -102,8 +105,18 @@ export async function tiposDeGaraje(config: ConfigCodeoscopic): Promise<Opcion[]
   return normalizarOpciones(await catalogo(config, '/car/garage-types'))
 }
 
+/**
+ * Las marcas de coche.
+ *
+ * 🚨 `onlyPopular` va EXPLÍCITO a `false`, y no es cosmético: el portal lo
+ * documenta con **`Default: true`**, así que llamar a `/car/brands` a secas
+ * devuelve solo las marcas «populares» — el resto sencillamente no aparece, sin
+ * error y sin hueco que lo delate. En el desplegable se vería igual que si la
+ * marca no existiera, que es la forma silenciosa de mentir que persigue
+ * `CLAUDE.md`. Medido en el snapshot del portal el 02/09/2026.
+ */
 export async function marcas(config: ConfigCodeoscopic): Promise<Opcion[]> {
-  return normalizarOpciones(await catalogo(config, '/car/brands'))
+  return normalizarOpciones(await catalogo(config, '/car/brands?onlyPopular=false'))
 }
 
 export async function modelos(config: ConfigCodeoscopic, marcaId: string): Promise<Opcion[]> {
@@ -112,18 +125,128 @@ export async function modelos(config: ConfigCodeoscopic, marcaId: string): Promi
   )
 }
 
-/** Las VERSIONES de un modelo. El `id` de cada una es el código Base7. */
+/**
+ * Los tipos de motor de coche. Gratis, y hace falta ANTES que las versiones.
+ * Ver `versiones()`.
+ */
+/**
+ * Zonas de expedición del carnet (`Spain`, y las de fuera). **Gratis.**
+ *
+ * 🚨 Existe desde siempre y no lo usábamos: la zona iba cableada a `Spain` en
+ * `construirPersona`, así que un carnet extranjero se declaraba como español
+ * sin que nada fallase. Avant2 SÍ lo pregunta (captura del 21/09/2026).
+ */
+export async function zonasExpedicionCarnet(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/car/driving-license-issuing-zones'))
+}
+
+/**
+ * Tipos de carnet (`B`, y los demás, con su `minAge`). **Gratis.**
+ *
+ * Mismo caso que la zona: iba cableado a `B`. Ojo al leerlo — el catálogo de
+ * moto trae además `maxDisplacement`, el de auto no
+ * (`docs/CODEOSCOPIC-API-PORTAL.md`).
+ */
+export async function tiposDeCarnet(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/car/driving-licenses'))
+}
+
+export async function tiposDeMotor(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/car/engine-types'))
+}
+
+/**
+ * Las VERSIONES de un modelo. El `id` de cada una es el código Base7.
+ *
+ * 🚨 **`engine` es OBLIGATORIO también en auto**, y sin él el vendor responde
+ * `400 Bad Request`: «Query parameter 'engine' is required on path
+ * '/car/brands/{brandId}/models/{modelId}/vehicles' but not found in request.»
+ * Medido en producción el 03/09/2026, sobre `/car/brands/731/models/8689`.
+ *
+ * ⚠️ Esto CORRIGE lo que decía `docs/CODEOSCOPIC-API-PORTAL.md`: que `engine`
+ * era obligatorio «en moto, mientras que en auto es texto libre». Libre lo será,
+ * pero opcional no es. La lección es la de siempre aquí: el snapshot del portal
+ * describe el contrato, y el contrato de verdad lo dicta la respuesta.
+ *
+ * El valor sale del catálogo `/car/engine-types` (`tiposDeMotor`), no de un
+ * literal nuestro: si mañana añaden un combustible, el desplegable lo trae solo.
+ */
 export async function versiones(
   config: ConfigCodeoscopic,
   marcaId: string,
   modeloId: string,
+  motor: string,
 ): Promise<Opcion[]> {
-  return normalizarOpciones(
-    await catalogo(
-      config,
-      `/car/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}/vehicles`,
-    ),
-  )
+  return (await versionesCrudas(config, marcaId, modeloId, motor)).opciones
+}
+
+/**
+ * Lo mismo, devolviendo ADEMÁS el payload del vendor sin tocar — igual que
+ * `productosDeLinea`.
+ *
+ * 🚨 No es un lujo de depuración: `normalizarOpciones` se queda con `id` y
+ * `nombre` y tira el resto, así que desde fuera de esta función **no hay forma
+ * de saber qué más manda el vendor**. La pregunta que lo motiva es si cada
+ * versión trae sus años de fabricación (para poder cruzarlos con la fecha de
+ * matriculación, que sale gratis de la matrícula); nadie lo había medido
+ * nunca, y sin el crudo la respuesta solo podía ser una suposición.
+ *
+ * El path se construye AQUÍ y solo aquí: si el crudo lo construyera por su
+ * cuenta, mediría una ruta distinta de la que usa la pantalla.
+ *
+ * Sigue siendo **gratis**: es el mismo `GET` de catálogo, con la misma caché.
+ */
+export async function versionesCrudas(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: string,
+): Promise<{ opciones: Opcion[]; crudo: unknown; path: string }> {
+  // 🚨 El path se devuelve, no se reconstruye fuera. Una medición se acompaña
+  // de la petición EXACTA que la produjo, y una copia sin `encodeURIComponent`
+  // declararía una URL distinta de la enviada en cuanto el motor llevara una
+  // barra o un espacio («Gasolina/Híbrido»): irreproducible para quien la lea.
+  const path =
+    `/car/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
+    `/vehicles?engine=${encodeURIComponent(motor)}`
+  const crudo = await catalogo(config, path)
+  return { opciones: normalizarOpciones(crudo), crudo, path }
+}
+
+// ─── Catálogos de HOGAR (gratis) ─────────────────────────────────────────────
+
+/**
+ * Los diez catálogos de hogar del portal (`docs/CODEOSCOPIC-API-PORTAL.md`).
+ * La lista es CERRADA a propósito: el path se construye con el nombre, y un
+ * nombre fuera de aquí sería un GET a una ruta inventada. No cuesta dinero
+ * (son consultas), pero tampoco se hace: un catálogo que «no existe» y un
+ * catálogo que no se ha podido leer tienen que poder distinguirse.
+ */
+export const CATALOGOS_HOGAR = [
+  'property-types',
+  'build-materials',
+  'build-qualities',
+  'door-types',
+  'alarm-types',
+  'locations',
+  'occupancy-types',
+  'settlement-types',
+  'uses',
+  'person-roles',
+] as const
+
+export type CatalogoHogar = (typeof CATALOGOS_HOGAR)[number]
+
+export function esCatalogoHogar(nombre: unknown): nombre is CatalogoHogar {
+  return typeof nombre === 'string' && (CATALOGOS_HOGAR as readonly string[]).includes(nombre)
+}
+
+/** `GET /home/<nombre>`, normalizado. Rechaza con `Error` un nombre fuera de la lista. */
+export async function catalogoHogar(config: ConfigCodeoscopic, nombre: CatalogoHogar): Promise<Opcion[]> {
+  if (!esCatalogoHogar(nombre)) {
+    throw new Error(`codeoscopic_catalogo_hogar_desconocido: «${String(nombre)}» no está entre ${CATALOGOS_HOGAR.join(', ')}`)
+  }
+  return normalizarOpciones(await catalogo(config, `/home/${nombre}`))
 }
 
 // ─── Ramos que tarifican para NUESTRA organización (gratis) ──────────────────
@@ -164,6 +287,75 @@ export function hogarDisponible(lineas: Opcion[]): DisponibilidadHogar {
   return { estado: 'ausente', ramos: lineas.map((l) => l.nombre) }
 }
 
+// ─── Compañías abiertas para NUESTRA organización (gratis) ──────────────────
+
+/**
+ * `GET /insurance-vendors`: las compañías que Avant2 tiene dadas de alta para
+ * esta organización. Es la respuesta a «¿ya nos han incluido a Fidelidade?»
+ * sin email y sin gastar. ⚠️ El catálogo comercial (`avant2.pdf`) NO vale
+ * para esto: dice lo que Integra soporta, no lo que tenemos abierto.
+ */
+export async function vendoresDeSeguro(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/insurance-vendors'))
+}
+
+/**
+ * `GET /insurance-lines/{id}/products`: los productos (compañía + `config`)
+ * que tarifican en un ramo para esta organización. Devuelve el JSON crudo
+ * además de la lista normalizada porque la forma del producto no está
+ * documentada (la compañía puede venir anidada) y la búsqueda por nombre
+ * necesita mirar dentro.
+ */
+export async function productosDeLinea(
+  config: ConfigCodeoscopic,
+  lineaId: string,
+): Promise<{ productos: Opcion[]; crudo: unknown }> {
+  const crudo = await catalogo(config, `/insurance-lines/${encodeURIComponent(lineaId)}/products`)
+  return { productos: normalizarOpciones(crudo), crudo }
+}
+
+/**
+ * ¿Aparece una compañía (por nombre, sin tildes ni mayúsculas) en cualquier
+ * cadena de un JSON? Recorre objetos y arrays; NO mira claves, solo valores.
+ * Sirve para buscar «fidelidade» en un producto cuya compañía viene anidada
+ * (`vendor.name`, `company.description`…) sin adivinar la forma.
+ */
+export function mencionaCompania(raw: unknown, compania: string): boolean {
+  const buscada = normalizarTexto(compania)
+  if (buscada === '') return false
+  const visitar = (v: unknown, prof: number): boolean => {
+    if (prof > 8) return false
+    if (typeof v === 'string') return normalizarTexto(v).includes(buscada)
+    if (Array.isArray(v)) return v.some((x) => visitar(x, prof + 1))
+    if (typeof v === 'object' && v !== null) {
+      return Object.values(v as Record<string, unknown>).some((x) => visitar(x, prof + 1))
+    }
+    return false
+  }
+  return visitar(raw, 0)
+}
+
+/**
+ * ¿Está una compañía entre las abiertas? TRES estados, por la misma razón que
+ * `hogarDisponible`: «no está en la lista» y «no se ha podido mirar» no son
+ * lo mismo, y confundirlos es afirmar una ausencia sin haberla medido.
+ */
+export type DisponibilidadCompania =
+  | { estado: 'presente'; id: string; nombre: string }
+  | { estado: 'ausente'; companias: string[] }
+  | { estado: 'desconocido' }
+
+export function companiaDisponible(vendores: Opcion[], compania: string): DisponibilidadCompania {
+  if (vendores.length === 0) return { estado: 'desconocido' }
+  const buscada = normalizarTexto(compania)
+  if (buscada === '') return { estado: 'desconocido' }
+  const v = vendores.find(
+    (x) => normalizarTexto(x.nombre).includes(buscada) || normalizarTexto(x.id).includes(buscada),
+  )
+  if (v) return { estado: 'presente', id: v.id, nombre: v.nombre }
+  return { estado: 'ausente', companias: vendores.map((x) => x.nombre) }
+}
+
 // ─── Matrícula → fecha de matriculación (gratis) ─────────────────────────────
 
 /**
@@ -188,13 +380,15 @@ export function normalizarMatricula(m: string): string {
 export async function fechaMatriculacionDeMatricula(
   config: ConfigCodeoscopic,
   matricula: string,
+  /** Moto tiene su propio `/motorcycle/registration-date` (referencia de la API, 23/09/2026). */
+  ramo: 'car' | 'motorcycle' = 'car',
 ): Promise<FechaMatriculacion> {
   const placa = normalizarMatricula(matricula)
   if (placa === '') return { estado: 'error', detalle: 'matrícula vacía' }
   try {
     const raw = (await peticion(config, {
       metodo: 'GET',
-      path: `/car/registration-date?plate=${encodeURIComponent(placa)}`,
+      path: `/${ramo}/registration-date?plate=${encodeURIComponent(placa)}`,
       timeoutMs: config.timeoutGenericoMs,
     })) as unknown
     const fecha = leerFecha(raw)
@@ -215,30 +409,190 @@ export function leerFecha(raw: unknown): string | null {
   return m ? m[1] : null
 }
 
-// ─── Emparejar texto del CRM con el catálogo del vendor ──────────────────────
+// ─── Catálogos de MOTO (gratis) ──────────────────────────────────────────────
+//
+// `MotorcycleRisk` comparte casi todo con `CarRisk` (docs/CODEOSCOPIC-API-PORTAL.md
+// § «El ramo MOTO, contrato completo»): mismo catálogo de garajes, catálogo propio
+// de marcas/modelos/versiones bajo `/motorcycle/*`, y dos catálogos que auto no
+// tiene — `driving-experience-options` (obligatorio en el risk) y, dentro de
+// `/vehicles`, el parámetro `engine` es un ENUM cerrado (`Gasoline|Diesel|Others`),
+// no texto libre como en auto.
 
-/** Quita tildes y mayúsculas para comparar «Casado» con «CASADO». */
-export function normalizarTexto(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
+export async function marcasMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/brands?onlyPopular=false'))
+}
+
+export async function modelosMoto(config: ConfigCodeoscopic, marcaId: string): Promise<Opcion[]> {
+  return normalizarOpciones(
+    await catalogo(config, `/motorcycle/brands/${encodeURIComponent(marcaId)}/models`),
+  )
+}
+
+/** `engine` es un enum cerrado en moto (a diferencia de auto, que es texto libre). */
+export const MOTORES_MOTO = ['Gasoline', 'Diesel', 'Others'] as const
+export type MotorMoto = (typeof MOTORES_MOTO)[number]
+
+export async function versionesMoto(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: MotorMoto,
+): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, pathVersionesMoto(marcaId, modeloId, motor)))
+}
+
+/** Un solo sitio que construye el path: la pantalla y el cruce de carné leen la MISMA caché. */
+function pathVersionesMoto(marcaId: string, modeloId: string, motor: MotorMoto): string {
+  return (
+    `/motorcycle/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
+    `/vehicles?engine=${encodeURIComponent(motor)}`
+  )
 }
 
 /**
- * Busca en un catálogo la opción cuyo nombre coincide con un texto del CRM.
- *
- * 🚫 Solo empareja EXACTO (ya normalizado). Ante la duda devuelve `null`, y el
- * llamante lo trata como «hay que elegirlo a mano». Un emparejamiento por
- * parecido convertiría «Separado» en «Soltero» sin que nadie se entere, y eso
- * cambia el precio. Mismo criterio que `vehicle-catalog-match.ts` del CRM:
- * ante duda, no preselecciona.
+ * Versiones de MOTO sin recortar, con su path — como `versionesCrudas`. Para
+ * medir si traen `engine.displacement` y `engine.powerKw` (`carnet-moto.ts`).
  */
-export function emparejar(catalogo: Opcion[], texto: string | null): Opcion | null {
-  if (texto === null) return null
-  const buscado = normalizarTexto(texto)
-  if (buscado === '') return null
-  const coincidencias = catalogo.filter((o) => normalizarTexto(o.nombre) === buscado)
-  return coincidencias.length === 1 ? coincidencias[0] : null
+export async function versionesMotoCrudas(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: MotorMoto,
+): Promise<{ opciones: Opcion[]; crudo: unknown; path: string }> {
+  const path = pathVersionesMoto(marcaId, modeloId, motor)
+  const crudo = await catalogo(config, path)
+  return { opciones: normalizarOpciones(crudo), crudo, path }
 }
+
+/** Cilindrada y kW de la versión elegida (`carnet-moto.ts`). **Gratis**; `null` = no está en la lista. */
+export async function motorDeVersionMoto(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: MotorMoto,
+  codigo: string,
+): Promise<MotorVersion | null> {
+  return motorDeVersion(await catalogo(config, pathVersionesMoto(marcaId, modeloId, motor)), codigo)
+}
+
+/** `ThisMotorcycle` | `OtherMotorcycle`. Obligatorio en `risk.drivingExperience.id`. */
+/** Garajes de MOTO: catálogo propio `/motorcycle/garage-types` (no el de coche). */
+export async function tiposDeGarajeMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/garage-types'))
+}
+
+/** Tipos de carné de MOTO (A, A2, A1, AM…): `/motorcycle/driving-licenses`. */
+const PATH_CARNETS_MOTO = '/motorcycle/driving-licenses'
+
+export async function tiposDeCarnetMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, PATH_CARNETS_MOTO))
+}
+
+/** Carnés de moto sin recortar: los límites (`maxDisplacement`, `maxEnginePower`) que se tiran al normalizar. */
+export async function carnetsMotoCrudos(
+  config: ConfigCodeoscopic,
+): Promise<{ opciones: Opcion[]; crudo: unknown; path: string }> {
+  const path = PATH_CARNETS_MOTO
+  const crudo = await catalogo(config, path)
+  return { opciones: normalizarOpciones(crudo), crudo, path }
+}
+
+/** El mismo catálogo con sus límites (`maxDisplacement` cc, `maxEnginePower` kW), que `normalizarOpciones` tira. */
+export async function limitesCarnetMoto(config: ConfigCodeoscopic): Promise<LimiteCarnet[]> {
+  return limitesDeCarnets(await catalogo(config, PATH_CARNETS_MOTO))
+}
+
+export async function experienciaConduccionMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/driving-experience-options'))
+}
+
+/** Ids con los que el vendor podría nombrar el ramo de moto (`insuranceLine.id`). */
+const IDS_MOTO = new Set(['motorcycle', 'moto', 'motorbike'])
+
+/**
+ * ¿Está moto entre los ramos disponibles? Misma forma que `hogarDisponible()` y
+ * por el mismo motivo: `insuranceLine.id` no se escribe a mano nunca — un 'Car'
+ * confirmado no autoriza a adivinar el de moto, y un id equivocado es un 400
+ * pagado en vano (aunque no se cobre, es una vuelta perdida antes de cotizar).
+ */
+export type DisponibilidadMoto =
+  | { estado: 'disponible'; id: string; nombre: string }
+  | { estado: 'ausente'; ramos: string[] }
+  | { estado: 'desconocido' }
+
+export function motoDisponible(lineas: Opcion[]): DisponibilidadMoto {
+  if (lineas.length === 0) return { estado: 'desconocido' }
+  const moto = lineas.find(
+    (l) => IDS_MOTO.has(l.id.toLowerCase()) || IDS_MOTO.has(normalizarTexto(l.nombre)),
+  )
+  if (moto) return { estado: 'disponible', id: moto.id, nombre: moto.nombre }
+  return { estado: 'ausente', ramos: lineas.map((l) => l.nombre) }
+}
+
+// ─── Ramos VIDA / SALUD / DECESOS: solo disponibilidad (gratis) ──────────────
+//
+// A diferencia de auto/hogar/moto, estos tres ramos NO tienen catálogos propios
+// documentados con certeza (el índice del portal cuenta 2 operaciones para vida
+// y 1+1 para salud/decesos EN TOTAL — nada parecido a los 11 de cada uno de los
+// otros tres). Lo único que se puede comprobar sin adivinar es si el ramo
+// tarifica para esta organización, con el mismo `GET /insurance-lines` de
+// siempre. Ver `docs/CODEOSCOPIC-API-PORTAL.md` y la cabecera de
+// `peticion-vida.ts` para el porqué completo.
+
+const IDS_VIDA = new Set(['termlife', 'term-life', 'vida', 'life'])
+const IDS_SALUD = new Set(['health', 'salud'])
+const IDS_DECESOS = new Set(['burial', 'decesos'])
+
+export type DisponibilidadVida =
+  | { estado: 'disponible'; id: string; nombre: string }
+  | { estado: 'ausente'; ramos: string[] }
+  | { estado: 'desconocido' }
+export type DisponibilidadSalud = DisponibilidadVida
+export type DisponibilidadDecesos = DisponibilidadVida
+
+function disponibleDeIds(lineas: Opcion[], ids: Set<string>): DisponibilidadVida {
+  if (lineas.length === 0) return { estado: 'desconocido' }
+  const l = lineas.find((x) => ids.has(x.id.toLowerCase()) || ids.has(normalizarTexto(x.nombre)))
+  if (l) return { estado: 'disponible', id: l.id, nombre: l.nombre }
+  return { estado: 'ausente', ramos: lineas.map((x) => x.nombre) }
+}
+
+export function vidaDisponible(lineas: Opcion[]): DisponibilidadVida {
+  return disponibleDeIds(lineas, IDS_VIDA)
+}
+export function saludDisponible(lineas: Opcion[]): DisponibilidadSalud {
+  return disponibleDeIds(lineas, IDS_SALUD)
+}
+export function decesosDisponible(lineas: Opcion[]): DisponibilidadDecesos {
+  return disponibleDeIds(lineas, IDS_DECESOS)
+}
+
+// ─── Emparejar texto del CRM con el catálogo del vendor ──────────────────────
+
+// ─── Hogar: tipo de vía y valores por defecto (gratis) ───────────────────────
+
+/** `GET /road-types`: los tipos de vía (`Calle`, `Avenida`…). Van en `risk.address.roadType.id`. */
+export async function tiposDeVia(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/road-types'))
+}
+
+/**
+ * Los ids que usa el EJEMPLO del portal para cada catálogo de hogar
+ * (`docs/CODEOSCOPIC-API-PORTAL.md`, § Hogar). No se mandan a ciegas: solo se
+ * preseleccionan si el catálogo vivo los trae (`elegirDefecto`), y siempre
+ * como SUPUESTO que la pantalla enseña. Son el «piso normal, sin alarma, sin
+ * puerta blindada» — lo conservador, que no abarata el precio.
+ */
+export const DEFECTOS_HOGAR: Partial<Record<CatalogoHogar, string>> = {
+  'property-types': 'MiddleFloor',
+  uses: 'Owner',
+  'occupancy-types': 'MainResidence',
+  locations: 'CityCentre',
+  'build-materials': 'NonCombustible',
+  'build-qualities': 'Normal',
+  'alarm-types': 'NoAlarm',
+  'door-types': 'NonReinforcedOtherDoor',
+  'settlement-types': 'ReplacementValue',
+}
+export const DEFECTO_TIPO_VIA = 'Calle'
+

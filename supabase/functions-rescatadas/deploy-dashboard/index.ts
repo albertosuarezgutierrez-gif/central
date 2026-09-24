@@ -8,6 +8,7 @@
 //    de commit fijo, leyendo el contenido de la tabla `_deploy_queue`. Candidata a borrar.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 const OWNER = "albertosuarezgutierrez-gif";
 const REPO = "roi-intranet";
@@ -30,7 +31,7 @@ Deno.serve(async (req: Request) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      claveSecreta()
     );
 
     const { data: rows, error: dbErr } = await supabase

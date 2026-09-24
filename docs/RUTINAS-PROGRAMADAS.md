@@ -76,7 +76,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs / envs** | **Supabase + Supabase asegura + Vercel** (lectura; los 16 heredados se quitaron el 02/09/2026, igual que en la rutina 1). **GitHub nativo**. `PLATAFORMA_URL` + `ALERTA_TOKEN` en el entorno `Default` (no en el prompt) para el aviso y el **heartbeat semanal** (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram" abajo). |
 | **Qué hace** | `auditoria-central` ENTERA: typecheck de las **12** apps (la matriz de `tests.yml`, no una cifra fija — este doc dijo «8» dos meses mientras nacían mariscos, asegura, asegura-portal y housesevillana) + tests + seguridad multi-tenant (incl. los schemas `rrhh`/`seguros` con BYPASSRLS, donde el aislamiento es del código) + `pnpm audit` + infra por MCP (incl. `ignoreCommand` en los 12 `vercel.json`) + coherencia de docs. |
 | **Resultado** | Igual que la ligera (carril 1 a `main` + carril 2 PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` + aviso Telegram). Además, **heartbeat semanal**: manda SIEMPRE un Telegram corto de "sigo viva" aunque no haya hallazgos, para confirmar que la rutina no se ha muerto en silencio. |
-| **🛡️ Correduría (obligatorio, 02/09/2026)** | Además del bloque **2-quater «Salud de la correduría»** diario (latidos `correduria_*`, foto `seguros.*` vs origen de Manuel por recuentos, gasto Codeoscopic, cepos de aislamiento, §21 pausada a propósito), la semanal hace el tramo caro: typecheck de `apps/asegura` con sus **dos** schemas de Prisma, tests de `packages/module-seguros{,-pii,-portal}` (cifrado + índice ciego), foto vs origen **con checksums** (método de `prisma/sql/2026-09-01_seguros_volcado_datos.sql`) y `docs/TRASPASO-CORREDURIA.md` §pendientes contra el código (¿sigue leyendo del origen? ¿contrato de encargado firmado?). Necesita el conector **`Supabase_asegura`** (solo lectura) adjunto a las rutinas 1 y 2 — sin él, el bloque dice «no he podido mirar el origen», nunca «coincide». |
+| **🛡️ Correduría (obligatorio, 02/09/2026)** | Además del bloque **2-quater «Salud de la correduría»** diario (latidos `correduria_*`, heartbeats `cima_pull_*` de la ingesta en `seguros.operational_events` —desde el 02/09/2026 la cartera vive en central y el origen de Manuel es una foto congelada—, gasto Codeoscopic, cepos de aislamiento, §21 pausada a propósito), la semanal hace el tramo caro: typecheck de `apps/asegura` con sus **dos** schemas de Prisma, tests de `packages/module-seguros{,-pii,-portal}` (cifrado + índice ciego), y `docs/TRASPASO-CORREDURIA.md` §pendientes contra el código (¿sigue leyendo de central? ¿el adaptador de Fly sigue en la cuenta de Manuel?). El conector **`Supabase_asegura`** ya no es imprescindible (solo para mirar la foto congelada). |
 | **💰 Pricing (obligatorio, 27/08/2026)** | Además del bloque 2bis diario, la pasada semanal hace el tramo CARO, que es el que decide dinero a medio plazo: **(a)** re-corre la consulta de posición vs mercado de `docs/POSICION-MERCADO-lejano.md` §«La consulta» y **rellena su tabla de seguimiento** (ratio por piso, «más caros que TODOS los comps», cobertura); **(b)** comprueba las **tres** condiciones para reencender `antelacion_k` y dice explícitamente cuáles se cumplen y cuáles no —nunca la enciende sola: eso lo decide Alberto—; **(c)** mide la **oscilación por piso** en 7 días (la consulta del bloque 2bis, desglosada por `property_id`) y la compara con la semana anterior: si sube, es que el motor se está peleando consigo mismo; **(d)** corre `node --test lib/sivra/pricing-*.test.ts` en `apps/plataforma` (246 tests el 27/08/2026) — si alguno cae, es 🔴 y **el motor tiene prioridad sobre cualquier otro hallazgo de la pasada**. |
 
 ### 3. Facturas correo — *activa*
@@ -86,6 +86,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Prompt** | `Ejecuta la skill facturas-correo` |
 | **MCPs** | Gmail + Drive + Supabase |
 | **Qué hace** | Revisa Gmail, clasifica facturas (personal vs deducible), archiva en Drive y concilia con movimientos bancarios de plataforma. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`facturas_correo`) desde el 02/09/2026 — `ok:true` = pasada completa incluido el barrido 4.0 del backlog, aunque no hubiera facturas nuevas. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 4. Pricing agente (SIVRA) — *activa*
 | | |
@@ -105,6 +106,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs** | Supabase. **GitHub nativo** (abre el PR). WebFetch + WebSearch son herramientas nativas de Claude, no MCPs externos. |
 | **Qué hace** | Contrasta `IMPORTES_POR_ANIO` de `/finanzas` con BOE (estatal) + BOJA (Andalucía). Si una deducción/mínimo cambia: actualiza la constante por PR draft e inserta en `fiscal_novedades` (`beneficia = nuevo > anterior`) → la app avisa en pantalla. Sin cambios → sin PR. |
 | **Verificar** | Si el chat dice "sin cambios; revisado contra BOE a fecha X" → funciona. Si hay cambio → PR draft `claude/fiscal-novedades-<fecha>`. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`fiscal_novedades`) desde el 02/09/2026 — `ok:true` = fuentes consultadas y comparadas con `IMPORTES_POR_ANIO` + radar de ayudas pasado, con o sin cambios. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 6. Guardián PSD2 / Enable Banking — *activa*
 | | |
@@ -114,6 +116,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs** | Supabase |
 | **Qué hace** | Verifica que `movimientos_bancarios` tiene datos frescos (<48h). Si el cron Vercel `psd2-sync` lleva >48h sin importar datos, o hay una caída >50% en volumen mensual, alerta por Telegram y anota en `CONTEXTO-SESIONES.md`. Sin anomalías → sin ruido. |
 | **Verificar** | El chat de la sesión muestra `✅ OK` o `🚨 ANOMALÍA`. Comprobar que la fecha de último movimiento es reciente. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`psd2_health_check`) desde el 02/09/2026 — `ok:true` = la consulta de frescura corrió y dio veredicto, aunque el veredicto sea anomalía (el vigía funcionó; el banco es otra cosa). Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 7. ialimp client health (Sique Brilla) — *activa*
 | | |
@@ -156,6 +159,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs** | Ninguno |
 | **Qué hace** | Lee `docs/ROADMAP-rrhh.md`, filtra ítems 🔴 obligatorios no completados y genera un informe de plazos legales (RD 8/2019 fichaje, RGPD art.28, canal denuncias, etc.). Mantiene visibilidad sobre obligaciones con riesgo de multa. |
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`rrhh_compliance`) desde el 02/09/2026 — `ok:true` = roadmap leído e informe con la lista de 🔴 pendientes generado. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 8-bis. Mercado real por fecha (SIVRA / Booking) — *ACTIVA desde el 08/08/2026*
 > Creada a mano por Alberto («SIVRA mercado booking (diario)») tras dos meses de latido en «sin
@@ -210,6 +214,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs / envs** | Ninguno externo — WebFetch + WebSearch (nativas) para repos externos (el MCP de GitHub va scopeado a `central`) y Bash para `pnpm outdated`/`audit`. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso Telegram (si faltan, se omite). |
 | **Qué hace** | Tres patas: (1) releases de la lista curada en `docs/VIGIA-OSS.md` (VROOM, OSRM, openrouteservice, Leaflet, Traccar, web-push…), (2) descubrimiento de herramientas nuevas por vertical juzgadas contra los pendientes reales, (3) npm outdated + CVEs filtrados a producción. Vigila hacia FUERA (la auditoría vigila hacia dentro). |
 | **Resultado** | Actualiza `docs/VIGIA-OSS.md` (versiones vistas + bitácora). Algo que merece ojo → **Telegram**; bump pequeño y seguro → **PR draft** `claude/github-vigia-<fecha>`. Sin novedades → sin ruido. |
+| **Latido** | Cierra con `POST /api/internal/latido` (`github_vigia`) desde el 02/09/2026 — `ok:true` = las tres patas recorridas y `docs/VIGIA-OSS.md` actualizado, aunque no haya novedades. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
 ### 11. Buscador de IA (LLMs gratis) — *pendiente de trigger*
 | | |
@@ -312,7 +317,7 @@ caza lo que las sesiones del día no anotaron a mano.
 |---|---|
 | **Cuándo** | Mensual, **día 5**, ~04:00 CEST (el 15 lo ocupa `github-vigia`) |
 | **Prompt** | `Ejecuta la skill conectores-vigia` |
-| **MCPs / envs** | **Probablemente NINGÚN conector.** `SearchMcpRegistry`/`ListConnectors` parecen nativas del harness — la primera pasada lo verifica y lo deja escrito. **GitHub es nativo** al vincular el repo. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos). |
+| **MCPs / envs** | **CONFIRMADO (05/09/2026): NINGÚN conector.** `SearchMcpRegistry`/`ListConnectors` son nativas del harness (funcionan sin conector adjunto); `ListConnectors` devolvió `enabledInChat:false` en los ~30 conectores de la cuenta, y una búsqueda de herramientas `mcp__ibkr__*`/`mcp__booking__*` por nombre no encontró nada — o sea, el Paso 3 (canario) no puede ejecutarse desde esta rutina tal como está montada. **GitHub es nativo** al vincular el repo. `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos). |
 | **Qué hace** | Cruza `docs/HUECOS-ABIERTOS.md` contra el registro de conectores; inventaría las APIs externas del repo buscando **fallback**; **canario** con llamada real sobre los endpoints de los que dependen las rutinas vivas; higiene de los ya conectados (sin uso, `installState: unknown`, con herramientas de escritura). |
 | **Resultado** | `docs/VIGIA-CONECTORES.md` siempre, **con fecha de pasada aunque no haya hallazgos** (sin fecha no se distingue «pasada limpia» de «rutina muerta»). Telegram si hay hallazgo. PR draft `claude/conectores-vigia-<fecha>` si hay trabajo que dejar hecho. Sin hallazgos → sin ruido. |
 
@@ -348,6 +353,21 @@ que hoy nadie detectaría, porque su modo de fallo no es un error ruidoso sino u
 | **Qué hace** | El «CFO personal»: consolida BD + bitácora de agentes + radar, calcula neto (mínimo declarado) y **coste de oportunidad por activo**, monta 2-3 escenarios con impuestos (vender/recomprar/bolsa; plantilla del estudio del Dúplex), registra recomendaciones en `patrimonio_recomendaciones`, pregunta el intake pendiente y lanza alertas de ventana (Modelo 720 a 45k€ de IBKR, plazos). **Nunca ejecuta ni comunica a terceros.** Primera pasada = dossier inicial. |
 | **Resultado** | Informe mensual por Telegram + `docs/PATRIMONIO-CFO.md` actualizado; PR draft solo si propone un agente nuevo. |
 | **Verificar** | Filas nuevas en `patrimonio_recomendaciones` + informe en el doc de estado. |
+
+### 22. Vigía de infraestructura y cuotas — *PENDIENTE DE CREAR EL TRIGGER (skill lista 21/09/2026)*
+| | |
+|---|---|
+| **Cuándo** | Mensual, **día 8**, ~04:00 CEST (el 5 lo ocupa `conectores-vigia`, el 15 `github-vigia`) |
+| **Prompt** | `Ejecuta la skill vigia-infra` (+ `PLATAFORMA_URL`/`ALERTA_TOKEN` en instrucciones para el aviso, como psd2) |
+| **MCPs / envs** | `mcp__Supabase__*` (proyecto `central`), `mcp__Vercel__*` (equipo `pisos-turisticos-projects`). Fly no tiene MCP: se mira en panel o se deja como «sin medir». `PLATAFORMA_URL` + `ALERTA_TOKEN` para el aviso (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos). |
+| **Qué hace** | Mide los TECHOS: plan y tamaño de la BD de Supabase contra su cuota (en % del tope, no en MB sueltos), hinchazón recuperable antes de proponer borrar nada, advisors; Build CPU Minutes de Vercel, higiene del `ignoreCommand` app por app y ritmo de deployments; máquinas de Fly. |
+| **Resultado** | Reescribe `docs/VIGIA-INFRA.md` entero **con la fecha de la pasada aunque todo esté verde**. Telegram solo si hay 🟠/🔴 o cambio de semáforo. PR draft `claude/vigia-infra-<fecha>` si propone un cambio de configuración o un borrado — **nunca lo aplica ella**. |
+
+**Regla dura de esta rutina:** un límite que no se ha medido **no está bien**, está *sin medir*, y
+cuenta como 🟠. Una llamada fallida, vacía o truncada es «no lo sé», jamás «dentro de cuota». Nació
+el 21/09/2026 tras el tercer susto del mismo tipo (600 US$ de Build CPU en julio, la cuota de 450
+deployments/hora reventada el 04/09, y la BD en 644 MB sobre un tope de 500 con la cartera dentro):
+los tres eran medibles con una consulta y a ninguno lo cazó una alerta.
 
 ### 20. Seguimiento — ¿dejó de oscilar el motor de precios? — *UN SOLO DISPARO, 03/09/2026*
 

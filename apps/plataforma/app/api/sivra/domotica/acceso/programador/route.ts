@@ -15,6 +15,7 @@ import {
 import { tgAvisoAlerta, tgAvisoAlertaBotones } from '@/lib/telegram'
 import { botonesReponerVentana } from '@/lib/domotica/reponer-ventana-puro'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
+import { detalleAcceso } from '@/lib/domotica/parte-latido'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -264,16 +265,18 @@ export async function GET(req: NextRequest) {
   // si había vuelto a correr). Desde que el mensaje de la víspera manda el PIN de la reserva, este
   // cron está en el camino del huésped: si muere, el mensaje cae al código MAESTRO —que abre, así
   // que nadie se queda en la puerta— pero el PIN por reserva desaparece EN SILENCIO.
-  const conError = resultados.filter(r => r.error).length
+  // 🚨 El parte nombra la CAUSA, no solo el recuento (04/09/2026). «3 con ERROR» hacía idénticas
+  // tres averías que mandan a sitios opuestos —cerradura sin conexión (el piso), IoT Core caducado
+  // (platform.tuya.com), parámetro rechazado (el repo)— y sin distinguirlas no se puede declarar un
+  // fallo como «pendiente conocido» sin tapar de paso los que aún no han aparecido.
+  const errores = resultados.map(r => r.error as string | undefined).filter(Boolean)
   const creados = resultados.filter(r => r.creado).length
   const borrados = resultados.filter(r => r.borrado).length
   const desajustados = resultados.reduce((n, r) => n + ((r.desajustes as unknown[] | undefined)?.length ?? 0), 0)
   await registrarLatido(
     'sivra_domotica_acceso',
-    conError === 0,
-    `${accesos.length} cerradura(s) · ${creados} PIN creado(s) · ${borrados} borrado(s)` +
-      `${desajustados ? ` · ${desajustados} con la ventana desactualizada` : ''}` +
-      `${conError ? ` · ${conError} con ERROR` : ''}`,
+    errores.length === 0,
+    detalleAcceso({ cerraduras: accesos.length, creados, borrados, desajustados, errores }),
   ).catch(() => {})
 
   return NextResponse.json({ ok: true, desde, hasta, resultados })

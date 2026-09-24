@@ -48,7 +48,8 @@ export type CoberturaBanco = { banco: string; ultima: string | null }
  * desenlaces posibles, porque los cinco se le cuentan a Alberto de forma distinta:
  * - `match`            — cargo del mismo importe, sin conciliar, dentro de ±7 días. Se propone conciliar.
  * - `ya_conciliado`    — ese cargo existe pero YA está conciliado. No es «no lo encuentro».
- * - `fuera_de_ventana` — existe uno del mismo importe, pero más lejos en el tiempo. Se pregunta.
+ * - `fuera_de_ventana` — existe uno del mismo importe, POSTERIOR pero más lejos en el tiempo. Se pregunta.
+ * - `varios_candidatos`— hay MÁS DE UNO del mismo importe: el importe no identifica a ninguno.
  * - `sin_cobertura`    — el extracto no llega todavía a la fecha de la factura: NO se ha podido mirar.
  * - `sin_match`        — se ha mirado de verdad y no hay nada que cuadre.
  */
@@ -56,11 +57,64 @@ export type CruceDoc =
   | { estado: 'match'; mov: MovCandidato }
   | { estado: 'ya_conciliado'; mov: MovCandidato; otro?: MovCandidato | null }
   | { estado: 'fuera_de_ventana'; mov: MovCandidato; dias: number }
+  | { estado: 'varios_candidatos'; movs: MovCandidato[] }
   | { estado: 'sin_cobertura'; cobertura: CoberturaBanco[] }
   | { estado: 'sin_match'; cobertura: CoberturaBanco[] }
 
 const NO_LEIDO = 'No he podido leer el documento. Prueba con una foto más nítida o un PDF que tenga texto (no solo imagen escaneada).'
 const SIN_DATOS = 'He abierto el documento pero no distingo el importe o la fecha con seguridad, así que no me lo invento. Dímelos tú o sube una copia más clara.'
+
+/**
+ * POR QUÉ no se ha podido leer un documento. Lo produce `extraerDesdeBuffer` y lo consume
+ * `interpretarExtraccion`; vive AQUÍ (y no en `lib/agente-facturas/extraer.ts`) porque este módulo
+ * es el puro y testeable —no puede importar del alias '@/'— y el de allí sí puede importar el tipo.
+ *
+ * 02/09/2026 — el hueco que cierra: hasta hoy los tres casos de abajo salían por la MISMA frase
+ * («prueba con una foto más nítida o un PDF que tenga texto»), que a un PDF le pide una foto y no
+ * dice si el documento se ha llegado a mirar. Alberto subió «movimientos (2).pdf» y recibió eso:
+ * ni él sabía qué arreglar ni nosotros qué había fallado. Regla del CLAUDE.md: un fallo del que no
+ * se sabe la causa se DECLARA, no se disfraza de consejo.
+ */
+export type MotivoSinLectura =
+  /** Ni se pudo abrir (archivo dañado, cifrado, no es un PDF de verdad). `detalle` = error real. */
+  | { clase: 'pdf_ilegible'; detalle: string }
+  /** Se abrió bien pero no tiene capa de texto (escaneado). `ocr` = qué pasó al leerlo por visión. */
+  | { clase: 'pdf_sin_texto'; paginas: number; ocr: 'no_intentado' | 'sin_paginas' | 'sin_datos' | 'error' }
+  /** No es ni PDF ni imagen: no hay lector para eso. */
+  | { clase: 'formato_no_soportado'; mimeType: string }
+
+// La salida honesta cuando el documento no era una factura suelta: el banco entra por su propia
+// puerta, y esa SÍ acepta el listado entero. No prometemos que el PDF escaneado sirva ahí.
+const RUTA_BANCA = 'Si era un extracto del banco o de la tarjeta, descárgalo del banco en Excel/CSV y súbelo en /banca → Importar (ahí eliges la cuenta).'
+
+/**
+ * Texto para Alberto cuando NO se ha podido leer el documento. Determinista y sin red.
+ * Sin `motivo` (llamadas antiguas) se conserva la frase histórica.
+ */
+export function motivoNoLeido(m?: MotivoSinLectura | null): string {
+  if (!m) return NO_LEIDO
+
+  if (m.clase === 'formato_no_soportado') {
+    return `Ese archivo no es un PDF ni una imagen (${m.mimeType || 'tipo desconocido'}), así que no tengo con qué abrirlo. Mándamelo en PDF, JPG o PNG. ${RUTA_BANCA}`
+  }
+
+  if (m.clase === 'pdf_ilegible') {
+    return `No he podido ni ABRIR el PDF${m.detalle ? ` (${m.detalle})` : ''}, así que no lo he mirado: no es que no ponga nada. Suele pasar con un archivo dañado a medias o protegido con contraseña — vuelve a descargarlo del origen y súbelo otra vez.`
+  }
+
+  const pag = m.paginas > 0 ? ` (${m.paginas} ${m.paginas === 1 ? 'página' : 'páginas'})` : ''
+  const cab = `He abierto el PDF${pag} y NO trae capa de texto: es una imagen escaneada.`
+  switch (m.ocr) {
+    case 'no_intentado':
+      return `${cab} Aquí no lo leo por visión, así que no lo he mirado. ${RUTA_BANCA}`
+    case 'sin_paginas':
+      return `${cab} Tampoco he conseguido convertir sus páginas en imagen para leerlas por visión, así que NO lo he llegado a mirar. Mándame una foto de la factura, o el PDF original con texto. ${RUTA_BANCA}`
+    case 'error':
+      return `${cab} He intentado leerlo por visión y la IA ha fallado, así que sigue SIN mirar (no es que no ponga nada). Reinténtalo en un minuto. ${RUTA_BANCA}`
+    case 'sin_datos':
+      return `${cab} Lo he leído por visión y aun así no distingo el importe ni la fecha, así que no me los invento. Dímelos tú, o mándame una foto más nítida. ${RUTA_BANCA}`
+  }
+}
 
 // 'YYYY-MM-DD' → 'DD/MM/YYYY' (lo que Alberto lee en su banco). Deja pasar lo que no reconozca.
 export function fechaEs(iso: string | null | undefined): string {
@@ -78,8 +132,12 @@ function textoCobertura(cobertura: CoberturaBanco[]): string {
 }
 
 // Decide si la extracción es utilizable y normaliza la factura. Determinista, sin red.
-export function interpretarExtraccion(data: ExtraccionCruda, source: 'text' | 'vision' | 'none'): Interpretacion {
-  if (source === 'none') return { ok: false, motivo: NO_LEIDO }
+export function interpretarExtraccion(
+  data: ExtraccionCruda,
+  source: 'text' | 'vision' | 'none',
+  motivo?: MotivoSinLectura | null,
+): Interpretacion {
+  if (source === 'none') return { ok: false, motivo: motivoNoLeido(motivo) }
 
   const total = Number(data.total)
   const fecha = (data.fecha || '').toString().slice(0, 10)
@@ -100,8 +158,9 @@ export function interpretarExtraccion(data: ExtraccionCruda, source: 'text' | 'v
 }
 
 // Texto legible para el chat tras leer el documento. Determinista.
-export function resumenDocumento(f: FacturaDoc, cruce: CruceDoc): string {
-  const cab = `📄 Leído: ${f.proveedor} · ${fechaEs(f.fecha)} · ${eur(f.total)}${f.numero ? ` · nº ${f.numero}` : ''}.`
+export function resumenDocumento(f: FacturaDoc, cruce: CruceDoc, archivo?: ArchivoFactura | null): string {
+  const arch = lineasArchivo(archivo)
+  const cab = `📄 Leído: ${f.proveedor} · ${fechaEs(f.fecha)} · ${eur(f.total)}${f.numero ? ` · nº ${f.numero}` : ''}.${arch ? `\n${arch}` : ''}`
   const de = (m: MovCandidato) => `${fechaEs(m.fecha)}${m.banco ? ` · ${m.banco}` : ''} · ${eur(Math.abs(m.importe))}${m.concepto ? ` (${m.concepto})` : ''}`
 
   switch (cruce.estado) {
@@ -119,8 +178,17 @@ export function resumenDocumento(f: FacturaDoc, cruce: CruceDoc): string {
       return `${cab}\nHay un cargo de ese importe el ${fechaEs(cruce.mov.fecha)}${cruce.mov.banco ? ` (${cruce.mov.banco})` : ''} que YA está conciliado${ref}, así que no toco nada.${alternativa}`
     }
 
+    // «después», no «después/antes»: desde el 07/09/2026 la ventana ancha solo mira hacia ADELANTE
+    // (un cargo anterior no puede pagar una factura que aún no existía), así que el signo se sabe.
     case 'fuera_de_ventana':
-      return `${cab}\nNo hay ningún cargo de ese importe en ±7 días, pero sí uno ${cruce.dias} días después/antes: ${de(cruce.mov)}. ¿Es ese? Dime que sí y lo concilio.`
+      return `${cab}\nNo hay ningún cargo de ese importe en ±7 días, pero sí uno ${cruce.dias} días DESPUÉS: ${de(cruce.mov)}. ¿Es ese? Dime que sí y lo concilio.`
+
+    // Varios del mismo importe: se enseñan y elige Alberto. NO se propone ninguno — un botón aquí
+    // pide un clic a ciegas, y el clic ata la factura al movimiento equivocado sin que nada falle.
+    case 'varios_candidatos': {
+      const lista = cruce.movs.map(m => `· ${de(m)}`).join('\n')
+      return `${cab}\nHay ${cruce.movs.length} cargos de ${eur(f.total)} sin conciliar y el importe no distingue cuál es:\n${lista}\nDime cuál (o concílialo desde /banca): no elijo yo, porque acertar por importe aquí sería suerte.`
+    }
 
     // ⚠️ El caso que motivó todo esto: el extracto del banco NO llega aún a la fecha de la factura,
     // así que no es que el cargo no exista — es que todavía no lo he podido ver. Decir «no encuentro
@@ -162,4 +230,68 @@ export function accionConciliar(f: FacturaDoc, match: MatchDoc): PropuestaAccion
     params: { movId: match.movId, facturaRef: refFactura(f), concepto: match.concepto },
     resumen: `Conciliar factura de ${f.proveedor} (${eur(f.total)}) con el movimiento de ${eur(Math.abs(match.importe))}`,
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────────────────────────
+// Archivado + contabilización de una factura SUBIDA A MANO (07/09/2026)
+//
+// POR QUÉ EXISTE. Hasta hoy subir una factura por el chat (o por el 📎 de Telegram) solo la LEÍA y
+// proponía conciliarla con el cargo del banco: el fichero se tiraba y el gasto no entraba en el
+// libro. Archivar en Drive e imputar solo pasaba con lo que llegaba por CORREO. Alberto subió una
+// factura al agente el 07/09/2026 dando por hecho que se archivaba — y no se archivaba en ningún
+// sitio. Ahora la subida manual pasa por la MISMA maquinaria que el correo (subir → procesarFactura)
+// y esto es lo que se le cuenta de vuelta.
+//
+// TRES ESTADOS, NO DOS (regla de la casa): `decision: null` NO significa «no se ha contabilizado»,
+// significa «no se ha intentado» (esta cuenta no es la dueña del libro de gastos). Y `driveError`
+// distingue «no está en Drive» de «no se sabe si está»: si la subida falla, se DICE, porque el gasto
+// sí ha entrado y el justificante no — que es justo el descuadre que hay que poder ver.
+
+/** Qué pasó al archivar/imputar una factura subida a mano. Puro: lo llena `lib/contable/archivar.ts`. */
+export type ArchivoFactura = {
+  /** Carpeta de Drive donde ha quedado (año/mes). null = no ha llegado a Drive. */
+  carpeta: string | null
+  url: string | null
+  /** true = se intentó subir a Drive y falló. Distinto de «no se intentó». */
+  driveError: boolean
+  /** Decisión de `procesarFactura`. null = NO se intentó imputar (cuenta ajena al libro). */
+  decision: 'auto' | 'bandeja' | 'duplicado' | 'error' | 'omitido' | 'ajena' | null
+  motivo?: string | null
+  /** A nombre de quién venía, cuando se descarta por ajena. */
+  receptor?: string | null
+}
+
+/** Nombre con el que se archiva en Drive. Una foto de móvil (`20260907_093156.jpg`) no dice nada
+ *  dentro de la carpeta del mes, así que se renombra por proveedor/fecha/importe conservando la
+ *  extensión original. Determinista (mismo documento → mismo nombre). */
+export function nombreArchivoFactura(f: FacturaDoc, original = ''): string {
+  const ext = (/\.([a-z0-9]{1,5})$/i.exec(original.trim())?.[1] || 'pdf').toLowerCase()
+  const prov = (f.proveedor || 'factura')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'factura'
+  const num = f.numero ? `_${f.numero.replace(/[^a-zA-Z0-9-]+/g, '')}`.slice(0, 25) : ''
+  return `${f.fecha}_${prov}${num}_${f.total.toFixed(2)}.${ext}`
+}
+
+/** Qué se le cuenta a Alberto del archivado. Vacío = no hay nada que contar (no se intentó). */
+export function lineasArchivo(a?: ArchivoFactura | null): string {
+  if (!a) return ''
+  const out: string[] = []
+
+  if (a.carpeta || a.url) out.push(`📁 Archivada en Drive${a.carpeta ? ` (${a.carpeta})` : ''}.`)
+  else if (a.driveError) out.push('⚠️ NO he podido archivarla en Drive (reintenta subirla luego; el resto sí está hecho).')
+
+  switch (a.decision) {
+    case 'auto':      out.push('✅ Contabilizada: ya está en el libro de gastos.'); break
+    // La pantalla se NOMBRA: «está en la bandeja» sin decir cuál es un aviso que no se ve (regla
+    // de la casa: la pregunta no es si lo he mandado, es en qué pantalla lo va a ver).
+    case 'bandeja':   out.push(`🗂 La he dejado en /expenses/pendientes («Facturas por revisar») para que la confirmes${a.motivo ? ` (${a.motivo})` : ''}.`); break
+    case 'duplicado': out.push('♻️ Ya estaba contabilizada, así que no la he metido dos veces.'); break
+    case 'omitido':   out.push(`No la contabilizo${a.motivo ? `: ${a.motivo}` : ''}.`); break
+    case 'ajena':     out.push(`No la contabilizo: está a nombre de ${a.receptor || 'un tercero'}.`); break
+    case 'error':     out.push(`⚠️ No he podido contabilizarla${a.motivo ? `: ${a.motivo}` : ''}.`); break
+    // null = no se intentó. Se DICE, no se calla: callarlo se lee como «hecho».
+    case null:        out.push('ℹ️ No la he archivado ni contabilizado: esta cuenta no es la dueña del libro de gastos.'); break
+  }
+  return out.join('\n')
 }

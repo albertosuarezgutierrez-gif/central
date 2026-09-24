@@ -20,6 +20,16 @@ const PROBES: Record<string, Prisma.Sql> = {
   // Renovaciones de la correduría. La huella es la de la PASADA, no la tabla de avisos:
   // `correduria_avisos_renovacion` solo crece cuando alguna póliza cruza un hito, así que un día
   // tranquilo y un cron muerto darían exactamente la misma señal.
+  // Canario del formulario público. La huella es la PASADA del canario, no una tabla de leads:
+  // «hoy no ha entrado ningún lead» y «el formulario lleva un mes muerto» son el mismo silencio,
+  // y distinguirlos es justo para lo que existe.
+  canario_lead_web: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'canario_lead_web'`,
+  // SEO de la correduría (lunes). La huella lleva ok=false mientras falte un secreto: es lo que se quiere.
+  seo_correduria: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'seo_correduria'`,
   correduria_renovaciones: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_renovaciones'`,
@@ -29,6 +39,32 @@ const PROBES: Record<string, Prisma.Sql> = {
   correduria_ingesta: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_ingesta'`,
+  // Siniestros nuevos de la cartera. La huella NO puede ser `seguros.siniestros` (que además ni se
+  // ve desde aquí: `prisma_plataforma` no tiene acceso al schema `seguros`): esa tabla solo crece
+  // cuando entra un siniestro, así que un mes tranquilo y un cron muerto serían el mismo silencio.
+  // Lo que se vigila es la PASADA del vigía, y su `detalle` trae la marca de agua.
+  correduria_actividad: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_actividad'`,
+  correduria_eventos: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_eventos'`,
+  correduria_siniestros: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_siniestros'`,
+  // Los tres de la correduría que latían sin que nadie los leyera (o no latían), 20/09/2026.
+  // La huella es siempre la PASADA, nunca su tabla de resultados: `portal_parte_siniestro`,
+  // `recaptacion_envios` y `comisiones_devengo` solo crecen cuando hay algo que hacer, así que
+  // una semana tranquila y un cron muerto darían la misma señal.
+  correduria_partes: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_partes'`,
+  correduria_recaptacion_email_lote: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_recaptacion_email_lote'`,
+  cima_liq: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'cima_liq'`,
   // Pricing: manda el piso MÁS VIEJO, no el max global. Con max(), un solo piso fresco
   // (p.ej. luxury) tapaba que el Dúplex y House Sevillana llevaban 23 días sin estudiar
   // (555 h) → el monitor se callaba. La sonda por-piso (min de los max) delata al rezagado.
@@ -64,6 +100,25 @@ const PROBES: Record<string, Prisma.Sql> = {
   // rellena). Solo cuentan las conexiones activas: una desactivada a mano no es
   // una avería.
   ialimp_pms: Prisma.sql`SELECT max(last_sync_at) AS ultimo FROM pms_connections WHERE activa = true`,
+  // Sync de Smoobu de sivra (reservas/cancelaciones). La huella es la de la PASADA, escrita desde el
+  // 31/07/2026 pero sin sonda hasta hoy — exactamente el hueco que dejó pasar el 401 de septiembre.
+  smoobu_sync: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'smoobu_sync'`,
+  // Agente que responde a los huéspedes por Smoobu (cada 3 min). Mismas credenciales que
+  // `smoobu_sync`: si una cae, la otra suele caer con ella, pero cada una avisa por su cuenta.
+  sivra_mensajes_huesped: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_mensajes_huesped'`,
+  // Calendario de limpiezas (auditoría 15/09/2026): llama a Smoobu directo para crear
+  // `cleaning_sessions`, y no tenía vigía — el mismo hueco que dejó pasar el 401 de septiembre,
+  // un piso más abajo.
+  sivra_limpiadoras_auto: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_limpiadoras_auto'`,
+  sivra_limpiadoras_alerta_ventana: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_limpiadoras_alerta_ventana'`,
   // Facturas: la frescura se mide sobre la ÚLTIMA PASADA BUENA, no sobre la
   // última ejecución — así un cron que corre y falla siempre también salta.
   // Se traen además `ultimo_at` y `detalle` para poder decir CUÁL de las dos
@@ -156,6 +211,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   // Foto diaria de la previsión por piso (30/08/2026). Va vigilada desde el mismo PR que la
   // declara (regla del PR #1447): su tabla solo la escribe este cron, así que sin latido un cron
   // muerto y «hoy no había nada nuevo» serían la misma señal.
+  ia_saldo: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'ia_saldo'`,
   sivra_prevision: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_prevision'`,
@@ -168,6 +226,61 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_experimentos: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_experimentos'`,
+  // Rutinas de Claude Code que dejan latido por /api/internal/latido (02/09/2026). La huella es la
+  // PASADA, con `ultimo_at` para distinguir «no se dispara» de «arranca y no termina».
+  psd2_health_check: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'psd2_health_check'`,
+  facturas_correo: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'facturas_correo'`,
+  fiscal_novedades: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'fiscal_novedades'`,
+  rrhh_compliance: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'rrhh_compliance'`,
+  github_vigia: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'github_vigia'`,
+}
+
+/**
+ * Persiste el veredicto de UN agente en `agente_veredicto` para que lo pueda leer una pantalla.
+ *
+ * 🚨 NO es `agente_salud` (05/09/2026): esa tabla ya existía desde julio con otro esquema —el badge
+ * que el propio agente se auto-declara, hoy solo `facturas-extraccion-pdf`— y el `CREATE TABLE IF
+ * NOT EXISTS` del 02/09 fue un no-op silencioso. Consecuencia: ~30 errores diarios
+ * `column "evaluado_at" does not exist` desde el 03/09 y el veredicto perdido igual que antes.
+ * `ok` (aquella) y `alerta` (esta) son además INVERSOS: fusionarlas invita al fallo de signo.
+ *
+ * Hasta el 02/09/2026 esto no existía: el vigía evaluaba los 27 agentes y TIRABA el resultado
+ * (JSON de respuesta + Telegram). Con 8 rutinas sin ALERTA_TOKEN, ese trabajo desaparecía sin
+ * dejar rastro consultable, y /operador/agentes pintaba ⚪ «sin telemetría» sobre 23 agentes
+ * cuyo estado real se estaba calculando cada mañana y se perdía.
+ *
+ * Nunca lanza: un fallo al guardar el parte no puede tumbar al vigía que lo produce.
+ * `horas` va como NULL —no como 0— cuando no hay señal: son cosas distintas.
+ */
+async function guardarSalud(
+  ag: { id: string; etiqueta: string; maxHoras: number; nota: string },
+  evaluadoAt: Date,
+  alerta: boolean,
+  horas: number | null,
+  motivo: string,
+  sondaError: string | null,
+): Promise<void> {
+  try {
+    await prisma.$executeRaw`
+      INSERT INTO agente_veredicto (agente, evaluado_at, alerta, horas, motivo, max_horas, etiqueta, nota, sonda_error)
+      VALUES (${ag.id}, ${evaluadoAt}, ${alerta}, ${horas}, ${motivo}, ${ag.maxHoras}, ${ag.etiqueta}, ${ag.nota}, ${sondaError})
+      ON CONFLICT (agente) DO UPDATE SET
+        evaluado_at = EXCLUDED.evaluado_at, alerta = EXCLUDED.alerta, horas = EXCLUDED.horas,
+        motivo = EXCLUDED.motivo, max_horas = EXCLUDED.max_horas, etiqueta = EXCLUDED.etiqueta,
+        nota = EXCLUDED.nota, sonda_error = EXCLUDED.sonda_error`
+  } catch (e) {
+    console.error('[agentes-latido] no se pudo persistir la salud de', ag.id, e)
+  }
 }
 
 async function handler(req: NextRequest) {
@@ -179,6 +292,14 @@ async function handler(req: NextRequest) {
   const resultados: Array<Record<string, unknown>> = []
   const alertas: string[] = []
   const sondasRotas: string[] = []
+  // Tercer estado (04/09/2026): declarado hace poco, aún sin señal, y su primera pasada todavía no
+  // ha vencido. NO va con las alertas —sería la falsa alarma que provocó este cambio— pero tampoco
+  // desaparece: se persiste y va al JSON, y solo se asoma al Telegram cuando ya hay algo que contar.
+  const estrenos: string[] = []
+  // Averías REALES ya declaradas y fechadas (04/09/2026). Se apartan de las alertas del Telegram
+  // —no de la pantalla, ni de `agente_veredicto`: ahí siguen contando como alerta y en su color—
+  // porque lo que sobra es la interrupción diaria, no el registro.
+  const pendientes: string[] = []
 
   for (const ag of AGENTES_VIGILADOS) {
     const probe = PROBES[ag.id]
@@ -195,22 +316,43 @@ async function handler(req: NextRequest) {
       >(probe)
       const ultimo = rows[0]?.ultimo ?? null
       const ultimoIntento = rows[0]?.ultimo_intento ?? null
-      const ev = evaluarLatido({ ahora, ultimo, maxHoras: ag.maxHoras, ultimoIntento, detalle: rows[0]?.detalle ?? null })
+      const ev = evaluarLatido({
+        ahora, ultimo, maxHoras: ag.maxHoras, ultimoIntento,
+        detalle: rows[0]?.detalle ?? null,
+        vigiladoDesde: ag.vigiladoDesde,
+        pendienteConocido: ag.pendienteConocido,
+      })
       resultados.push({
         id: ag.id,
         ...ev,
         ultimo: ultimo?.toISOString() ?? null,
         ultimoIntento: ultimoIntento?.toISOString() ?? null,
       })
-      if (ev.alerta) alertas.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.\n  ${ag.nota}`)
+      // Un pendiente declarado sigue siendo `alerta` (la pantalla y `agente_veredicto` lo pintan como
+      // tal): lo único que cambia es que no entra en el bloque que interrumpe. Y va SIN la `nota`,
+      // que es el runbook de «esto hay que mirarlo ahora» — aquí ya se miró y se decidió.
+      if (ev.alerta && ev.pendiente) pendientes.push(`• <b>${ag.etiqueta}</b>: ${ev.pendienteNota}.`)
+      else if (ev.alerta) alertas.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.\n  ${ag.nota}`)
+      // El estreno NO arrastra la `nota`: esa es el runbook de una avería, y aquí no hay ninguna.
+      else if (ev.estreno) estrenos.push(`• <b>${ag.etiqueta}</b>: ${ev.motivo}.`)
+      // 🚨 El motivo que se PERSISTE lleva la coletilla del pendiente. Sin ella, /operador/agentes
+      // pinta el rojo con el fallo crudo y sin una sola pista de que ya está visto y fechado — que
+      // es exactamente la confusión que este cambio quita del Telegram, movida a la pantalla. Sigue
+      // en rojo a propósito: lo que se calla es la interrupción, no el hecho.
+      const motivoSalud = ev.pendiente && ev.pendienteNota ? `${ev.motivo} · 📌 ${ev.pendienteNota}` : ev.motivo
+      await guardarSalud(ag, ahora, ev.alerta, ev.horas, motivoSalud, null)
     } catch (e) {
       // 🚨 Una sonda rota NO es un agente sano. Antes se tragaba en silencio
       // "para no dar falsas alarmas", pero eso convierte un vigía averiado en un
       // parte de buena salud: si la tabla desaparece o cambia de nombre, el
       // agente deja de estar vigilado y nadie se entera. Se avisa aparte y con
       // otro tono: «no se ha podido comprobar», que no es «está bien».
-      resultados.push({ id: ag.id, error: String((e as Error)?.message ?? e) })
-      sondasRotas.push(`• <b>${ag.etiqueta}</b>: no se ha podido comprobar (${String((e as Error)?.message ?? e).slice(0, 120)}).`)
+      const msg = String((e as Error)?.message ?? e)
+      resultados.push({ id: ag.id, error: msg })
+      sondasRotas.push(`• <b>${ag.etiqueta}</b>: no se ha podido comprobar (${msg.slice(0, 120)}).`)
+      // Una sonda rota se PERSISTE como tal: si no, la pantalla se quedaría con el veredicto
+      // bueno de ayer y leería «no se ha podido comprobar» como «sigue estando bien».
+      await guardarSalud(ag, ahora, true, null, 'no se ha podido comprobar: la sonda falló', msg.slice(0, 400))
     }
   }
 
@@ -266,11 +408,24 @@ async function handler(req: NextRequest) {
     }
   }
 
+  // 🚨 Los pendientes y los estrenos NO abren la puerta: si lo único que queda son ellos, no hay
+  // Telegram. Mandar «📌 2 pendientes conocidos» cada mañana durante un mes es exactamente la
+  // fatiga que este bloque existe para quitar.
   if (alertas.length > 0 || sondasRotas.length > 0) {
     const bloques: string[] = []
     if (alertas.length > 0) bloques.push(`<b>Sin señal / con errores (${alertas.length})</b>\n${alertas.join('\n\n')}`)
     if (sondasRotas.length > 0) {
       bloques.push(`<b>Sin poder comprobar (${sondasRotas.length})</b> — esto NO es «todo bien»:\n${sondasRotas.join('\n')}`)
+    }
+    // Se cuelga de un parte que YA se iba a mandar; nunca lo provoca. Un «⏳ 4 en estreno» diario
+    // durante las cuatro semanas que tarda una rutina mensual en estrenarse es exactamente el ruido
+    // que enseña a ignorar este aviso — y el estreno ya se ve entero en /operador/agentes.
+    // Igual que el estreno: se cuelga de un parte que YA se iba a mandar, nunca lo provoca.
+    if (pendientes.length > 0) {
+      bloques.push(`<b>📌 Pendientes conocidos (${pendientes.length})</b> — decididos, con fecha de revisión:\n${pendientes.join('\n')}`)
+    }
+    if (estrenos.length > 0) {
+      bloques.push(`<b>⏳ En estreno (${estrenos.length})</b> — aún no les ha tocado correr, no es avería:\n${estrenos.join('\n')}`)
     }
     await tgAviso('sistema.agentes-latido', `💓⚠️ <b>Latidos de agentes</b>\n\n${bloques.join('\n\n')}`, { html: true })
   }
@@ -278,7 +433,10 @@ async function handler(req: NextRequest) {
   // Mantenimiento de la bitácora del panel /telegram (mira 30 días; se guardan 90). Best-effort.
   const purgadas = await purgarBitacora()
 
-  return NextResponse.json({ ok: true, alertas: alertas.length, sondasRotas: sondasRotas.length, purgadas, resultados })
+  return NextResponse.json({
+    ok: true, alertas: alertas.length, sondasRotas: sondasRotas.length,
+    estrenos: estrenos.length, pendientes: pendientes.length, purgadas, resultados,
+  })
 }
 
 export { handler as GET, handler as POST }

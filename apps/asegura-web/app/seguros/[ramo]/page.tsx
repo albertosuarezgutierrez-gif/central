@@ -1,0 +1,201 @@
+import type { Metadata } from 'next'
+import type { CSSProperties } from 'react'
+import Link from 'next/link'
+import { notFound } from 'next/navigation'
+import { articulosDeRamo } from '@/lib/articulos'
+import { RAMOS, SOLO_INTENCION, ramoPorSlug } from '@/lib/ramos'
+import { url } from '@/lib/sitio'
+import { fichaFaq, fichaServicio, migas, jsonLd } from '@/lib/seo'
+import Formulario from '@/components/Formulario'
+import VentanaRenovacion from '@/components/VentanaRenovacion'
+import { ramoTieneVentana } from '@/lib/ventana-renovacion'
+
+// Estáticas: son seis páginas de contenido que cambian cuando cambia el copy,
+// no en cada visita. Generarlas en el build es más rápido y más barato.
+export function generateStaticParams() {
+  return RAMOS.map((r) => ({ ramo: r.slug }))
+}
+
+// 🚨 Cualquier slug que no esté en RAMOS es un 404, no una página vacía con el
+// nombre puesto. Una página de ramo sin contenido posiciona mal y, peor, hace
+// creer al visitante que ese ramo se trabaja cuando no se ha escrito nada.
+export const dynamicParams = false
+
+type Props = { params: Promise<{ ramo: string }> }
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { ramo: slug } = await params
+  const ramo = ramoPorSlug(slug)
+  if (!ramo) return {}
+  return {
+    title: ramo.title,
+    description: ramo.description,
+    alternates: { canonical: url(`/seguros/${ramo.slug}`) },
+    openGraph: {
+      title: ramo.title,
+      description: ramo.description,
+      url: url(`/seguros/${ramo.slug}`),
+      type: 'article',
+    },
+  }
+}
+
+const panel: CSSProperties = {
+  background: 'var(--panel)',
+  border: '1px solid var(--border)',
+  borderRadius: 'var(--radio)',
+  padding: '20px',
+}
+
+export default async function PaginaRamo({ params }: Props) {
+  const { ramo: slug } = await params
+  const ramo = ramoPorSlug(slug)
+  if (!ramo) notFound()
+
+  const faq = fichaFaq(ramo)
+  // Los artículos que tratan ESTE ramo. Vacío es un estado normal: hay ramos sin
+  // artículo todavía, y entonces la sección no se pinta (no se anuncia una
+  // sección de guías vacía).
+  const guias = articulosDeRamo(ramo.slug)
+  const breadcrumb = migas([
+    { nombre: 'Inicio', ruta: '/' },
+    { nombre: ramo.nombre, ruta: `/seguros/${ramo.slug}` },
+  ])
+
+  return (
+    <div className="wrap pagina">
+      {breadcrumb && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(breadcrumb) }} />}
+      {faq && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(faq) }} />}
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaServicio(ramo)) }} />
+
+      <nav aria-label="Migas de pan" style={{ fontSize: 14, color: 'var(--muted)', marginBottom: 12 }}>
+        <Link href="/">Inicio</Link> <span aria-hidden>›</span> {ramo.nombre}
+      </nav>
+
+      <h1>{ramo.h1}</h1>
+      {ramo.intro.map((p) => (
+        <p key={p} style={{ fontSize: 17, color: 'var(--muted)', maxWidth: 640 }}>
+          {p}
+        </p>
+      ))}
+
+      <section aria-labelledby="mirar" style={{ ...panel, margin: '24px 0' }}>
+        <h2 id="mirar">Qué miramos contigo</h2>
+        <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 8 }}>
+          {ramo.cubre.map((c) => (
+            <li key={c}>{c}</li>
+          ))}
+        </ul>
+      </section>
+
+      {ramoTieneVentana(ramo.slug) && (
+        <div style={{ margin: '0 0 28px' }}>
+          <VentanaRenovacion ramo={ramo.slug} />
+        </div>
+      )}
+
+      <section aria-labelledby="para-quien" style={{ marginBottom: 24 }}>
+        <h2 id="para-quien">Esta página es para ti si…</h2>
+        <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 8 }}>
+          {ramo.paraQuien.map((p) => (
+            <li key={p}>{p}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section aria-labelledby="faq" style={{ marginBottom: 28 }}>
+        <h2 id="faq">Preguntas frecuentes</h2>
+        <div style={{ display: 'grid', gap: 10 }}>
+          {ramo.faq.map((f) => (
+            // Abierto por defecto: el contenido de un FAQ es lo que Google lee y
+            // lo que responde la duda. Esconderlo tras un clic no ayuda a nadie.
+            <details key={f.pregunta} open style={{ ...panel, padding: '14px 16px' }}>
+              <summary style={{ fontWeight: 700, cursor: 'pointer', minHeight: 28 }}>{f.pregunta}</summary>
+              <p style={{ margin: '10px 0 0', color: 'var(--muted)' }}>{f.respuesta}</p>
+            </details>
+          ))}
+        </div>
+      </section>
+
+      {/* Enlazado interno entre hermanas. No es decoración: hasta el 07/09/2026
+          las seis páginas de ramo eran islas —se llegaba a ellas desde la
+          cabecera y desde ningún otro sitio—, y `responsabilidad-civil` no
+          estaba ni en la cabecera, así que solo existía en el sitemap. Con esto
+          cada ramo recibe cinco enlaces internos y la RC deja de ser huérfana.
+          Además es lo que hace un visitante real: el que viene por comercio
+          suele tener también la RC y el auto de la empresa. */}
+      {/* Enlazado ramo → artículo. Es la otra mitad del enlazado del blog: el
+          artículo enlaza a sus ramos y el ramo a sus artículos, así que el peso
+          circula en los dos sentidos y quien llega buscando el producto encuentra
+          la respuesta al problema concreto (y al revés). */}
+      {guias.length > 0 && (
+        <section aria-labelledby="guias" style={{ marginBottom: 28 }}>
+          <h2 id="guias">Guías sobre este seguro</h2>
+          <ul style={{ margin: 0, paddingLeft: 20, display: 'grid', gap: 10 }}>
+            {guias.map((a) => (
+              <li key={a.slug}>
+                <Link href={`/blog/${a.slug}`}>{a.h1}</Link>
+                <span style={{ display: 'block', color: 'var(--muted)', fontSize: 15 }}>{a.resumen}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section aria-labelledby="otros" style={{ marginBottom: 28 }}>
+        <h2 id="otros">Otros seguros que llevamos</h2>
+        <nav aria-label="Otros ramos" style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+          {RAMOS.filter((r) => r.slug !== ramo.slug).map((r) => (
+            <Link
+              key={r.slug}
+              href={`/seguros/${r.slug}`}
+              // 44 px de alto mínimo: es un objetivo táctil, no un enlace de
+              // texto en una lista (regla responsive del monorepo).
+              style={{
+                ...panel,
+                display: 'inline-flex',
+                alignItems: 'center',
+                minHeight: 44,
+                padding: '10px 16px',
+                textDecoration: 'none',
+              }}
+            >
+              {r.nombre}
+            </Link>
+          ))}
+        </nav>
+        <p style={{ color: 'var(--muted)', fontSize: 15, marginTop: 14 }}>
+          ¿Ya tienes este seguro con otro mediador?{' '}
+          <Link href="/cambiar-de-correduria">Puedes cambiar de correduría sin tocar tu póliza</Link>: mismas
+          coberturas, mismo precio y mismo número.
+        </p>
+      </section>
+
+      <section id="presupuesto" aria-labelledby="pedir" style={panel}>
+        <h2 id="pedir">Que te llamemos</h2>
+        <p style={{ color: 'var(--muted)', fontSize: 15 }}>
+          Sin compromiso y sin coste. Te contesta una persona. Como corredores nos paga la compañía, con una
+          comisión sobre la prima: tú no pagas honorarios por la mediación.
+        </p>
+        {/* El slug del ramo ES el valor del desplegable, salvo `vida-y-salud`,
+            que en el formulario son dos opciones distintas y hay que elegir
+            una: se marca «Vida», y quien venía por salud la cambia en un clic.
+            🚨 `responsabilidad-civil` marcaba «Comercio o empresa» hasta el
+            05/09/2026 porque no existía su opción: el lead llegaba diciendo que
+            quería un seguro de comercio, que es un dato plausible y falso.
+            las páginas de intención (`SOLO_INTENCION`: RC de fontaneros y
+            de autónomos) no son un ramo nuevo en BD (sigue siendo `responsabilidad_civil`): marca la
+            opción general, igual que vida-y-salud comparte una sola. */}
+        <Formulario
+          ramoPorDefecto={
+            ramo.slug === 'vida-y-salud'
+              ? 'vida'
+              : SOLO_INTENCION.includes(ramo.slug)
+                ? 'responsabilidad-civil'
+                : ramo.slug
+          }
+        />
+      </section>
+    </div>
+  )
+}

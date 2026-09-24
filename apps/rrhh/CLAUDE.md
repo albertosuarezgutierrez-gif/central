@@ -90,6 +90,18 @@ real es el job `typecheck` de `.github/workflows/tests.yml`.
 - **Fichajes sin obra:** si `obra_id` es null pero hay coordenadas GPS, la columna Obra muestra `📍 Ver mapa` (enlace a Google Maps con `lat_entrada,lng_entrada`).
 - **Crons:** deben llevar `Authorization: Bearer CRON_SECRET` (sin User-Agent bypass).
 
+## Responsive (medido 24/09/2026, PRs #3459 y #3463)
+- **Tablas → cards en móvil:** clase `.tabla-cards` en la `<table>` + `data-label="…"` en cada `<td>`
+  (`app/globals.css`). Por debajo de 768 px cada `<tr>` es una tarjeta: 1.ª celda = título, celdas sin
+  etiqueta = acciones a la derecha, `colspan` (edición/historial) a todo ancho. El `min-w-[…]` de la tabla
+  va con prefijo `md:`; sin él, la card no cabe. Tabla nueva con más de 3 columnas → mismo patrón.
+- **`AdminShell`:** columna de contenido `minmax(0,1fr)` (con `1fr` una tabla ancha ensancha la página);
+  en móvil el `nav` va en su propia fila — compartiéndola con `CambiadorEmpresa` quedaba a 0 px (sin menú).
+- **Controles:** `globals.css` limita `input/select/textarea` a `max-width:100%; min-width:0` y da 44 px de
+  alto en `pointer:coarse`. Un `<button>` sin `bg-*` hereda el teal global: pon `bg-transparent` si no es CTA.
+- **Verificar:** banco temporal en `app/zzh/[p]/page.tsx` que monta los `*Client` con datos ficticios +
+  Playwright con `page.route('**/api/**')`; medir `scrollWidth` y los hijos cuyo `right` se salga. No commitear el banco.
+
 ## Reglas heredadas del monorepo
 - Secrets que firman/validan sesiones → `requireSecret()`, **sin fallback literal**.
 - API keys de servicios externos → pueden caer a `|| ''` (falla la llamada saliente, no la app).

@@ -1,13 +1,484 @@
 export { NIVELES, camposVisibles } from './acceso.ts'
+// Qué COSA está asegurada (el coche, el piso). Lee `bien-asegurado.ts` antes de
+// tocarlo: `cosa` y `ubicacion` salen separados porque la dirección de un hogar
+// es un dato de la PERSONA y no la ve un tercero.
+export { describirBien, describirBienConGemela, componerUbicacion, bienTieneAlgo, esRamoInmueble, BIEN_VACIO } from './bien-asegurado.ts'
+export type { BienAsegurado } from './bien-asegurado.ts'
 export type { Nivel, CamposVisibles } from './acceso.ts'
 export { PROCEDENCIAS, fiabilidad, etiquetaProcedencia, sePuedeAfirmar, debeSustituir } from './procedencia.ts'
 export type { Procedencia } from './procedencia.ts'
 export { VALIDEZ_MINUTOS, MAX_INTENTOS, generarCodigo, estadoCodigo } from './codigo.ts'
+// ¿Se le puede ENVIAR un código a esto? Cierra el amplificador de correo de
+// `/api/acceso/solicitar`. Lee su cabecera antes de tocarlo: VALIDA PERO NO
+// NORMALIZA, y esa decisión es la que evita que el hash de escritura y el de
+// lectura dejen de coincidir.
+export { destinoValido, MAX_DESTINO } from './destino.ts'
 export type { EstadoCodigo, CodigoGuardado } from './codigo.ts'
 export {
   RAMOS_POLIZA,
+  ETIQUETA_RAMO,
+  etiquetaRamo,
+  coberturaEspecificaDeRamo,
   polizaLeidaVacia,
   normalizarPolizaLeida,
   seLeyoAlgo,
+  vencimientoDesdeEfecto,
 } from './poliza-leida.ts'
 export type { RamoPoliza, PolizaLeida } from './poliza-leida.ts'
+// Quitar de la bóveda una póliza que aportó el CLIENTE. Lee su cabecera: las de
+// la CARTERA no se borran (no hay ruta que las escriba) y un parte de siniestro
+// bloquea el borrado, porque la FK es ON DELETE SET NULL y lo dejaría huérfano.
+export {
+  MENSAJE_PARTE_EN_COMPANIA,
+  avisoPartesConservados,
+  describirPolizaDesligada,
+  fotoDeLaPoliza,
+  parteEnCompania,
+  puedeBorrarDeclarada,
+} from './poliza-borrable.ts'
+export type {
+  Borrabilidad,
+  EstadoParteBorrado,
+  FotoPolizaDesligada,
+  ParteDePoliza,
+  ReparoBorrado,
+} from './poliza-borrable.ts'
+export {
+  TIPOS_DOCUMENTO,
+  avisoDocumentoNoPoliza,
+  importeEsPrimaAnual,
+  normalizarTipoDocumento,
+} from './tipo-documento.ts'
+export type { TipoDocumento } from './tipo-documento.ts'
+
+export {
+  DIAS_PREAVISO_TOMADOR,
+  DIAS_VENTANA_AVISO,
+  fechaAccionable,
+  entraEnVentana,
+  polizaGeneraObligacion,
+  obligacionDerivable,
+  reparoDeclarada,
+  declaradaGeneraObligacion,
+} from './obligacion.ts'
+export type { VigenciaObligacion, ReparoDeclarada } from './obligacion.ts'
+export {
+  TIPOS_AVISO,
+  FUENTES_AVISO,
+  HREF_POR_TIPO,
+  DIAS_VENTANA_AVISO_CARNET,
+  textoGlobo,
+  entraEnVentanaCarnet,
+  avisosDe,
+} from './avisos.ts'
+export type {
+  TipoAviso,
+  Aviso,
+  FuenteAviso,
+  AutorizacionParaAviso,
+  ObligacionParaAviso,
+  PeticionParaAviso,
+  ReparoParaAviso,
+  CarnetParaAviso,
+  FirmaParaAviso,
+  EntradaAvisos,
+  Avisos,
+} from './avisos.ts'
+export { debeAvisarPush, textoPushObligacion } from './push.ts'
+export {
+  normalizarRecordatorio,
+  siguienteOcurrencia,
+  SUGERENCIAS_RECORDATORIO,
+  TITULO_MAX,
+  REPITE_CADA_MESES_MIN,
+  REPITE_CADA_MESES_MAX,
+} from './recordatorio-libre.ts'
+export type {
+  TipoRecordatorio,
+  SugerenciaRecordatorio,
+  EntradaRecordatorio,
+  RecordatorioNormalizado,
+  ResultadoRecordatorio,
+} from './recordatorio-libre.ts'
+export {
+  PERIODICIDADES_PAGO,
+  DIAS_PREAVISO_RECIBO,
+  esPeriodicidadPagoValida,
+  fechaAccionableRecibo,
+  proximoCobroDeclarado,
+} from './cobro-declarado.ts'
+export type { PeriodicidadPago } from './cobro-declarado.ts'
+export {
+  DIAS_LEAD_URGENTE,
+  estadoLead,
+  leadDeclarada,
+  leadUrgente,
+  normalizarNumeroPoliza,
+  ordenarLeads,
+  senalCarta,
+} from './lead-declarada.ts'
+export type { EntradaLead, EstadoLead, Lead, SenalCarta } from './lead-declarada.ts'
+export { cifParaBuscarFicha, etiquetaTitular, fichaParaCotejar, normalizarTitular } from './titular-declarado.ts'
+export type { TipoTitular, TitularDeclarado } from './titular-declarado.ts'
+export {
+  PARTE_ESTADOS,
+  DIAS_COMUNICACION_LCS,
+  DESCRIPCION_MIN,
+  DESCRIPCION_MAX,
+  LUGAR_MAX,
+  CAMPO_VEHICULO_MAX,
+  ANIOS_MAXIMOS_ATRAS,
+  comunicadoACompania,
+  parsearFechaHecho,
+  plazoComunicacion,
+  normalizarParte,
+  bloqueDatosVehiculo,
+  componerDescripcion,
+  ZONAS_VEHICULO,
+} from './parte-siniestro.ts'
+export type {
+  ParteEstado,
+  ParteEntrada,
+  ParteNormalizado,
+  ResultadoParte,
+  PlazoComunicacion,
+  DatosVehiculo,
+  ZonaVehiculo,
+} from './parte-siniestro.ts'
+export {
+  ALCANCES,
+  ALCANCES_CONCEDIBLES,
+  TITULOS_REPRESENTACION,
+  alcancesConcedibles,
+  tituloRepresentacion,
+  DIAS_VIGENCIA,
+  ESTADOS_AUTORIZACION,
+  alcanceConcedible,
+  autorizacionVigente,
+  caducidadPorDefecto,
+  camposDeAlcance,
+  camposDeAlcances,
+  esAlcance,
+  estadoAutorizacion,
+  etiquetaNivelAlcances,
+  puedeAutorizar,
+} from './autorizacion.ts'
+export type {
+  Alcance,
+  AutorizacionFechas,
+  EstadoAutorizacion,
+  TipoOtorgante,
+  TituloRepresentacion,
+} from './autorizacion.ts'
+export {
+  MAX_TEXTO_RAMO,
+  CAMPOS_POR_RAMO,
+  RAMOS_CON_CATALOGO,
+  camposDeRamo,
+  normalizarDatosRamo,
+} from './campos-ramo.ts'
+export type { TipoCampo, OpcionCampo, CampoRamo, DatosRamo, ResultadoDatosRamo } from './campos-ramo.ts'
+export {
+  ORIGENES_CAMPO,
+  MAX_DIRECCION,
+  MAX_VARIANTES,
+  esOrigenCampo,
+  normalizarOrigenes,
+  normalizarReferencia,
+  formatoReferencia,
+  variantesDireccion,
+} from './direccion-catastro.ts'
+export type { OrigenCampo, OrigenPorCampo, FormatoReferencia } from './direccion-catastro.ts'
+
+// La petición de acceso: la dirección CONTRARIA a la autorización. Su
+// `respuestaPublica()` es lo que impide que el portal sirva de oráculo para
+// averiguar quién es cliente de la correduría — lee su cabecera antes de tocar
+// nada de esto.
+export {
+  RESULTADOS_PETICION,
+  RESPUESTAS_PUBLICAS,
+  respuestaPublica,
+  TEXTO_REGISTRADA,
+  MAX_PETICIONES_DIA,
+  ESTADOS_PETICION,
+  DIAS_VIGENCIA_PETICION,
+  caducidadPeticion,
+  estadoPeticion,
+  peticionResoluble,
+  MAX_MENSAJE_PETICION,
+  normalizarMensajePeticion,
+} from './peticion-acceso.ts'
+export type {
+  ResultadoPeticion,
+  RespuestaPublica,
+  EstadoPeticion,
+  PeticionFechas,
+} from './peticion-acceso.ts'
+
+// La invitación por correo: la TERCERA puerta de la autorización, la que trae
+// gente que no está en la cartera. Lee su cabecera antes de tocar el token: no
+// abre sesión a propósito, y esa decisión tiene tres razones medidas.
+export {
+  RESULTADOS_INVITACION,
+  invitacionRevelaSiEsCliente,
+  invitacionEscrita,
+  ESTADOS_INVITACION,
+  DIAS_VIGENCIA_INVITACION,
+  MAX_INVITACIONES_DIA,
+  MAX_MENSAJE_INVITACION,
+  caducidadInvitacion,
+  estadoInvitacion,
+  invitacionResoluble,
+  BYTES_TOKEN_INVITACION,
+  normalizarTokenInvitacion,
+  CAMPOS_PROHIBIDOS_EN_INVITACION,
+  normalizarMensajeInvitacion,
+  MAX_NOMBRE_INVITADO,
+  normalizarNombreInvitado,
+  relacionInvitacion,
+  RELACIONES_INVITACION,
+  SIN_COMPARTIR,
+  ALCANCES_INVITACION,
+  alcanceInvitacion,
+  invitacionAbreAcceso,
+  TEXTO_INVITACION_SIN_ACCESO,
+  TEXTO_INVITACION_SIN_ACCESO_V1,
+} from './invitacion.ts'
+export type {
+  ResultadoInvitacion,
+  EstadoInvitacion,
+  InvitacionFechas,
+  AlcanceInvitacion,
+} from './invitacion.ts'
+
+// A quién llama el cliente cuando acaba de pasarle algo. Lee su cabecera antes
+// de tocarlo: sus cuatro prohibiciones (no decir «no tiene», no decir «24 h»,
+// no pintar un WhatsApp como un teléfono, no cruzar de forma aproximada) son
+// las que acaban delante de alguien que acaba de tener un golpe.
+export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL, textoSoloRamos, whatsappParaRamo } from './canal-compania.ts'
+export { mensajeParteWhatsapp, notaParteMandadoWhatsapp, RELATO_MAX_WHATSAPP } from './parte-whatsapp.ts'
+export type { DatosParteWhatsapp } from './parte-whatsapp.ts'
+export type { FilaCompania, LineaAsistenciaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
+export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania.ts'
+// La acreditación de que se enseñó la información precontractual del mediador
+// (art. 19 LDS) al entrar. Su cabecera explica por qué `avisos` y `comercial`
+// existen en la BD pero NO se escriben: no hay pantalla que los pida.
+export {
+  TIPOS_CONSENTIMIENTO,
+  TIPOS_QUE_SE_REGISTRAN,
+  TEXTO_CONSENTIMIENTO_COMERCIAL,
+  VERSION_TEXTO_COMERCIAL,
+  USER_AGENT_MAX,
+  consentimientoVigente,
+  necesitaRegistro,
+  normalizarIp,
+  normalizarUserAgent,
+} from './consentimiento.ts'
+export type { TipoConsentimiento, ConsentimientoGuardado, ConsentimientoConFecha } from './consentimiento.ts'
+
+// La carta de NO RENOVACIÓN (art. 22 LCS) sobre una póliza declarada. Lee su
+// cabecera: se compone y se enseña, NUNCA se envía desde el portal; y lo que
+// no sabemos (NIF, localidad) sale como hueco visible, no como dato inventado.
+export {
+  HUECOS_CARTA,
+  componerCartaNoRenovacion,
+  estadoPlazoCarta,
+  fechaEnLetra,
+} from './carta-no-renovacion.ts'
+export type { CartaNoRenovacion, EstadoPlazoCarta, HuecoCarta, PolizaParaCarta } from './carta-no-renovacion.ts'
+
+// La solicitud de SUPRESIÓN (art. 17). Lee su cabecera antes de tocarla: este
+// módulo NO borra nada, y esa es la mitad del diseño — el art. 17.3.b y el
+// 17.3.e excluyen la supresión cuando hay deber legal de conservar o hace falta
+// para defender reclamaciones, y una correduría tiene los dos.
+export {
+  ESTADOS_SUPRESION,
+  DIAS_RESPUESTA,
+  DIAS_PRORROGA,
+  DIAS_AVISO,
+  ALCANCE_SUPRESION,
+  YA_PENDIENTE,
+  fechaLimite,
+  estadoPlazo,
+  diasRestantes,
+  loQueSeSuprime,
+  loQueSeConserva,
+  puedeRegistrar,
+} from './supresion.ts'
+export type { EstadoSupresion, EstadoPlazo, SolicitudSupresion, Alcance as AlcanceSupresion } from './supresion.ts'
+export {
+  VISTAS_BOVEDA,
+  VISTA_BOVEDA_POR_DEFECTO,
+  vistaDeBoveda,
+  pestanasPortal,
+  hrefDeVista,
+} from './vista-portal.ts'
+export type { VistaBoveda, PestanaPortal } from './vista-portal.ts'
+export {
+  ESTADOS_SINIESTRO,
+  siniestroAbierto,
+  etiquetaEstadoSiniestro,
+  tonoEstadoSiniestro,
+  ordenarHistorialSiniestros,
+  resumirHistorialSiniestros,
+  lugarSiniestro,
+  descripcionSiniestro,
+} from './siniestro-historial.ts'
+export type { EstadoSiniestro, SiniestroHistorial } from './siniestro-historial.ts'
+export {
+  SITUACIONES_RECIBO,
+  reciboAnulado,
+  reciboAlCobro,
+  etiquetaSituacionRecibo,
+  tonoSituacionRecibo,
+  fechaReciboFiable,
+  ordenarRecibos,
+  estadoRecibos,
+  resumirRecibos,
+} from './recibo-historial.ts'
+export type { SituacionRecibo, ReciboHistorial, ResumenRecibos } from './recibo-historial.ts'
+export {
+  BYTES_TOKEN_HOJA,
+  MAX_HOJAS_VIVAS,
+  MAX_NOMBRE_HOJA,
+  normalizarTokenHoja,
+  normalizarNombreHoja,
+  estadoHoja,
+  seleccionHoja,
+  polizasDeLaHoja,
+  polizaEnVigorParaHoja,
+  declaradaEnVigorParaHoja,
+  loQueVeQuienEscanea,
+} from './hoja-qr.ts'
+export type { EstadoHoja, SeleccionHoja, ErrorSeleccion } from './hoja-qr.ts'
+// En qué cajón va cada titular de la bóveda (mías / de mis empresas / de quien
+// me autoriza). Se agrupa por `clienteId`, nunca por nombre: dos fichas con el
+// mismo nombre son dos titulares, y fundirlas mezcla sus pólizas en silencio.
+export {
+  GRUPOS_CARTERA,
+  TITULO_GRUPO,
+  agruparCartera,
+  grupoDeTitular,
+  textoCuentaSeguros,
+} from './agrupar-cartera.ts'
+export type { GrupoCartera, TitularAgrupable, BloqueCartera } from './agrupar-cartera.ts'
+
+export { TRAMOS, saludoPorHora, nombreDePila } from './saludo.ts'
+export type { Tramo } from './saludo.ts'
+
+export { resumirCartera } from './resumen-cartera.ts'
+export type { PolizaResumible, ResumenCartera } from './resumen-cartera.ts'
+export { elegirFicha, prediccionDeVinculo } from './vinculo-elegir.ts'
+export type { Candidato, FichaElegida, PrediccionVinculo } from './vinculo-elegir.ts'
+// El cliente corrige SU dirección de CONTACTO desde el portal (08/09/2026). Lee
+// su cabecera antes de tocarlo: la decisión que importa es que con varias fichas
+// vinculadas NO se elige una, y que esto no le cambia nada a ninguna compañía.
+export {
+  decidirFichaPropia,
+  textoHistorialContactoPropio,
+  PREFIJO_HISTORIAL_CONTACTO_PROPIO,
+  PREFIJO_HISTORIAL_SUGERENCIA,
+  CAMPOS_CONTACTO_PROPIO,
+  CAMPOS_DIRECCION_PROPIA,
+  CAMPOS_CANAL_PROPIO,
+  CAMPOS_VETADOS_AL_CLIENTE,
+  // «Comprueba tus datos de contacto»: confirmación con TRES estados (nunca ≠
+  // caducada), sobre la pestaña «Mis datos» que ya enseña el dato en claro.
+  DIAS_VIGENCIA_CONFIRMACION_CONTACTO,
+  estadoConfirmacion,
+  confirmacionContactoVigente,
+  textoHistorialConfirmacionContacto,
+} from './contacto-propio.ts'
+export type {
+  FichaPropia,
+  CampoContactoPropio,
+  CampoDireccionPropia,
+  CampoCanalPropio,
+  EstadoConfirmacionContacto,
+} from './contacto-propio.ts'
+// El botón de sugerencias del portal (08/09/2026). Lee su cabecera: aquí
+// Telegram NO es un aviso, es el ÚNICO registro — y por eso «enviada» es lo
+// único que promete algo, y el texto de la persona se ESCAPA antes de componer.
+export {
+  MAX_SUGERENCIA,
+  MIN_SUGERENCIA,
+  escaparHtml,
+  normalizarSugerencia,
+  mensajeSugerencia,
+  resultadoSugerencia,
+} from './sugerencia.ts'
+export type { ContextoSugerencia, ResultadoSugerencia } from './sugerencia.ts'
+// La «vista de corredor» (08/09/2026): Alberto abre el portal como lo ve un
+// cliente. Lee su cabecera: identidad REAL dedicada + vínculo temporal con
+// `origen = 'corredor'`, que asegura tiene que EXCLUIR al decir «ya entra».
+export {
+  IDENTIDAD_CORREDOR_ID,
+  ORIGEN_VINCULO_CORREDOR,
+  VIGENCIA_ENLACE_CORREDOR_MS,
+  SESION_CORREDOR,
+  SESION_CORREDOR_SEGUNDOS,
+  RUTA_VISTA_CORREDOR,
+  formatoTokenVistaValido,
+  generarTokenVista,
+  hashTokenVista,
+  estadoEnlaceVista,
+  enlaceVistaCorredor,
+} from './vista-corredor.ts'
+export type { EstadoEnlaceVista } from './vista-corredor.ts'
+
+// Sugerir pedir acceso a partir de relaciones YA CONOCIDAS (12/09/2026). Lee
+// su cabecera: sugerir no es conceder, y una relación «Sin vínculo» no se
+// sugiere nunca — misma guarda que ya usa `clientesVisiblesPara()`.
+export { relacionesSugeribles } from './sugerencia-relacion.ts'
+export type { SugerenciaRelacion } from './sugerencia-relacion.ts'
+
+// La revisión anual (20/09/2026): a quién se le escribe UNA vez al año con sus
+// vencimientos próximos. Puro; el cron de `apps/asegura` lo aplica.
+export { DIAS_ENTRE_REVISIONES, DIAS_HORIZONTE_REVISION, tocaRevisionAnual } from './revision-anual.ts'
+export type { DecisionRevision, EntradaRevision, MotivoNoRevision } from './revision-anual.ts'
+
+// Puente correo de aseguradora → póliza de la cartera (20/09/2026). Puro: extrae
+// candidatos y decide el match EXACTO; la lectura de la BD vive en `apps/asegura`.
+export { candidatosNumeroPoliza, elegirPolizasResueltas } from './correo-aseguradora.ts'
+export type { PolizaResoluble, ResolucionPoliza } from './correo-aseguradora.ts'
+
+// Próxima ITV por la periodicidad legal (RD 920/2017) sobre la fecha de
+// matriculación (21/09/2026). Lee su cabecera: `fiabilidad` distingue la
+// primera inspección (firme) de un ciclo que SUPONE revisiones anteriores.
+export { perfilItvDeRamo, proximaItv } from './itv.ts'
+export type { FiabilidadItv, PerfilItv, ProximaItv } from './itv.ts'
+
+// Lo que el portal ya sabe y puede ofrecer precargado al ponerse un
+// recordatorio (21/09/2026). `confianza` decide AQUÍ, no en la pantalla, si una
+// fecha se puede meter sola en el formulario o hay que ofrecerla.
+export { precargasDeRecordatorio } from './recordatorio-precarga.ts'
+export type {
+  ConfianzaPrecarga,
+  EntradaPrecargas,
+  PolizaParaPrecarga,
+  Precargas,
+  PrecargaRecordatorio,
+} from './recordatorio-precarga.ts'
+
+// Los cinco tipos de recordatorio PROPIO (21/09/2026). Se exporta porque lo
+// necesita también el cron de vencimientos de `apps/asegura`, que no puede
+// tratarlos como el vencimiento de un seguro — ver su cabecera.
+export { TIPOS_RECORDATORIO_PROPIO } from './recordatorio-libre.ts'
+
+// «Quiero que me mejores el precio» (pieza 1-5 de ASegura OS, 23/09/2026).
+export {
+  CANALES_PRECIO,
+  DIAS_VENTANA_VENCIMIENTOS,
+  MAX_NOTA_PRECIO,
+  MOMENTOS_LLAMADA,
+  PRIORIDADES_PRECIO,
+  ROTULO_CANAL,
+  ROTULO_MOMENTO,
+  ROTULO_PRIORIDAD,
+  diasHasta as diasHastaVencimientoPortal,
+  enVentanaVencimientos,
+  textoTareaPrecio,
+  validarPeticionPrecio,
+} from './mejorar-precio.ts'
+export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } from './mejorar-precio.ts'
+export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'

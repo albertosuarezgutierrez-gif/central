@@ -54,7 +54,7 @@ export async function manejarDocumentoTg(
     return
   }
 
-  const resumen = resumenDocumento(doc.factura, doc.cruce)
+  const resumen = resumenDocumento(doc.factura, doc.cruce, doc.archivo)
   await logTurno(cuentaId, 'telegram', 'assistant', resumen)
   const prop = accionConciliar(doc.factura, matchDeCruce(doc.cruce))
   if (prop) {

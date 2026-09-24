@@ -60,7 +60,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
       <header className="mb-4 flex flex-col items-center gap-2 border-b border-line bg-accent px-4 pb-5 pt-6 text-center text-white">
         {branding?.logo_url
           ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="max-h-20 w-auto max-w-[220px] object-contain" />
-          : <Wordmark className="text-2xl text-white" />}
+          : <Wordmark claro className="text-2xl" />}
         {branding?.nombre && (
           <p className="mt-1 text-xs font-semibold uppercase tracking-widest opacity-80">{branding.nombre}</p>
         )}
@@ -106,7 +106,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial, brandi
                 <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="text-accent text-xs no-underline hover:underline">· Verificar</a>
               )}
               {d.estado_firma === 'pendiente' && d.carpeta !== 'datos_personales' && d.carpeta !== 'formacion' && (
-                <button onClick={() => abrirFirma(d)} className="ml-auto px-2 py-0.5 text-xs">Firmar</button>
+                <button onClick={() => abrirFirma(d)} className="ml-auto px-3 py-1.5 text-xs">Firmar</button>
               )}
             </li>
           ))}

@@ -71,7 +71,10 @@ export function explicarCobro(r: RecibosPoliza): string {
     case 'devuelto':
       return `${r.devueltos} recibo(s) devuelto(s): hay que reclamar el cobro antes de que la compañía anule.`
     case 'pendiente':
-      return `${r.pendientes} recibo(s) pendiente(s) de cobro.`
+      // «Pendiente» en el EIAC es un recibo EMITIDO que la compañía aún no ha
+      // pasado al cobro (la renovación se emite semanas antes del vencimiento).
+      // Alberto lo leyó como deuda (02/09/2026): no lo es. Devuelto es otro estado.
+      return `${r.pendientes} recibo(s) al cobro: emitido(s) por la compañía y aún sin cargar. No es un impago ni una devolución.`
     case 'al_corriente':
       return `${r.cobrados} recibo(s) cobrado(s), ninguno pendiente ni devuelto.`
     case 'anulados':

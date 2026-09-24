@@ -1,8 +1,8 @@
 import Link from 'next/link'
-import { Wallet, Building2, Receipt, House } from 'lucide-react'
+import { Wallet, Banknote, Building2, Receipt, House } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
-type Seg = 'dinero' | 'negocios' | 'fiscal' | 'personal'
+type Seg = 'dinero' | 'ingresos' | 'negocios' | 'fiscal' | 'personal'
 
 // Conmutador Dinero | Negocios | Fiscal | Personal por NAVEGACIÓN (Next Link, prefetch). Cada
 // pestaña es una carga server-side independiente → /banca (Dinero) NO computa el holding ni la
@@ -21,6 +21,7 @@ type Seg = 'dinero' | 'negocios' | 'fiscal' | 'personal'
 // Y los emojis pasan a iconos de `lucide-react`: se pintan igual en cada sistema operativo.
 const TABS: { k: Seg; label: string; href: string; Icono: LucideIcon }[] = [
   { k: 'dinero', label: 'Dinero', href: '/banca', Icono: Wallet },
+  { k: 'ingresos', label: 'Ingresos', href: '/banca?tab=ingresos', Icono: Banknote },
   { k: 'negocios', label: 'Negocios', href: '/banca?tab=negocios', Icono: Building2 },
   { k: 'fiscal', label: 'Fiscal', href: '/banca?tab=fiscal', Icono: Receipt },
   { k: 'personal', label: 'Personal', href: '/banca?tab=personal', Icono: House },
@@ -30,7 +31,7 @@ export default function SegTabs({ active }: { active: Seg }) {
   return (
     <div
       role="tablist"
-      aria-label="Dinero, Negocios, Fiscal o Personal"
+      aria-label="Dinero, Ingresos, Negocios, Fiscal o Personal"
       style={{
         display: 'flex', gap: 20, flexWrap: 'wrap',
         borderBottom: '1px solid var(--border)',

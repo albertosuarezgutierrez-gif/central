@@ -2,7 +2,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { detectarCompania, motivoSeguros, companiaLabel, claveReferencia, claveReglaValida, COMPANIA_OTRAS } from './correduria.ts'
+import { detectarCompania, motivoSeguros, companiaLabel, claveReferencia, claveComercio, claveReglaValida, COMPANIA_OTRAS } from './correduria.ts'
 
 test('claveReglaValida rechaza claves genéricas/trampa y acepta comercios/códigos específicos', () => {
   // Trampa: substrings genéricos que colisionan con casi cualquier concepto del banco.
@@ -60,4 +60,19 @@ test('claveReferencia rechaza números tipo fecha/importe y vacíos', () => {
   assert.equal(claveReferencia('Pago de transferencia'), null)
   assert.equal(claveReferencia(''), null)
   assert.equal(claveReferencia(null), null)
+})
+
+test('🪤 claveReferencia nunca aprende sobre un DNI/NIE (nóminas con destino seguros)', () => {
+  assert.equal(claveReferencia('TRANSFERENCIA NOMINA 12345678Z'), null)
+  assert.equal(claveReferencia('PENSION X1234567L'), null)
+  assert.equal(claveReferencia('SALDO. M00171 12345678Z'), 'M00171')
+})
+
+test('🪤 detectarCompania: «COMISIONES …» de Pelayo casa también tras el prefijo TRANSFERENCIAS //', () => {
+  assert.equal(detectarCompania('TRANSFERENCIAS // ORDENANTE X // COMISIONES MAYO 2026050', '', ''), 'Pelayo')
+  assert.equal(detectarCompania('TRANSFERENCIAS // LIBERTY SEGUROS // COMISIONES 08', '', ''), 'Liberty')
+})
+
+test('🪤 claveComercio tampoco devuelve un DNI como «comercio»', () => {
+  assert.notEqual(claveComercio('RECIBO 12345678Z'), '12345678Z')
 })

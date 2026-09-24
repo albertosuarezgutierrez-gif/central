@@ -38,15 +38,19 @@
 - **`apps/almacen`** — gestión de almacén de eventos/catering para el cliente **Joaquín Jaén** (Fase 1: maestro
   por familias/materiales; orquestación de evento completa en curso). Compone `@central/module-materiales`
   (dep `workspace:*`, no `file:`). BD compartida (rol propio pendiente de confirmar). Desplegada 15/07/2026
-  (Vercel `almacen`, tenant DEMO poblado; tenant real de Joaquín aún sin sembrar). **Aún sin `apps/almacen/CLAUDE.md`
-  propio** — ver `docs/CONTEXTO-SESIONES.md` (entrada 15/07/2026) y `docs/ALMACEN-JJ-reunion-y-auditoria.md`
-  mientras tanto.
+  (Vercel `almacen`, tenant DEMO poblado; tenant real de Joaquín aún sin sembrar). **Tiene `CLAUDE.md`
+  propio desde el 02/09/2026** — manda él; el contexto de la reunión y la auditoría siguen en
+  `docs/ALMACEN-JJ-reunion-y-auditoria.md`.
 - **`apps/mariscos`** — **Mariscos González**: trazabilidad pesquera + etiquetado por peso (mayorista/pescadería
   de marisco; Fase 1, PR #1055, 11/08/2026). Recepción de partidas (albarán, lote de origen), envasado que
   CONSERVA el lote, etiqueta por canal (con/sin lote). Compone `@central/module-pesca`. BD compartida (auth
   propio, cookie `mariscos_session`). Ver `apps/mariscos/CLAUDE.md`. **Pendiente para darla por viva:** proyecto
   Vercel, ejecutar su SQL en Supabase (preview→prod), sembrar cuenta real de Mariscos González.
-- **`apps/asegura`** — **Grupo Asegura**: correduría de seguros (nombre comercial de Alberto).
+- **`apps/asegura`** — **Grupo ASegura**: correduría de seguros (nombre comercial de Alberto).
+  ✍️ **Se escribe «Grupo ASegura», con A y S mayúsculas** (04/09/2026): el monograma «AS» del logo
+  ES el nombre (A de Alberto, S de Suárez), así que escribirlo con la ese minúscula no es una
+  errata de estilo: se come la marca. Es el valor de `seguros.corredurias.nombre` en BD y lo protege
+  en todo el repo `test/regression-nombre-comercial-asegura.test.ts` (gate en `pnpm test:guardia`).
   🖥️ **NO es una pantalla: es la trastienda.** Alberto trabaja la correduría desde
   `apps/plataforma` → `/correduria` (su única pantalla, con todos sus negocios); asegura tiene la BD de
   la cartera, la sirve por el puerto `/api/operador/*` y es la única que gasta dinero al retarificar.
@@ -54,29 +58,165 @@
   **Esqueleto desde el 26/08/2026** — auth propia (cookie `asegura_session` + `jose` contra `public.cuentas`), layout y
   manifiestos; schema **propio `seguros`** + rol `prisma_seguros` (creado, `BYPASSRLS`, **sin contraseña**).
   🚨 **Y OJO CON LA CIFRA (medido 01/09/2026): 32.600 fichas ≠ 32.600 clientes.** La **cartera VIVA son
-  ~80 clientes / 109 pólizas** — las que entran por CIMA, identificables por `polizas.import_ref IS NULL`.
-  Las otras 28.729 pólizas son **volcado histórico** (`import_ref` `intranet:` y `asegura_app:`, cargado en
+  80 clientes / 110 pólizas** (03/09/2026) — las que entran o mantiene CIMA. Qué cuenta como viva lo
+  decide una fuente única, `esCarteraViva()` de `@central/module-seguros`
+  (`packages/module-seguros/src/cartera-viva.ts`): **`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`**.
+  🚨 **Y «viva» NO es «en vigor» (19/09/2026):** de las 157 vivas, **47 están canceladas** y 28 clientes
+  solo tenían canceladas — salían como clientes (Kartenbrot). Alberto: «si es cancelada es leads». Quién es
+  CLIENTE hoy lo decide `esCarteraEnVigor()` (mismo fichero) = viva Y estado en `POLIZA_ESTADOS_VIGENTES`;
+  el listado, el recuento de pólizas y «clientes sin canal» van por ahí (**67 clientes / 105 pólizas**).
+  `esCarteraViva()` queda para lo que pregunta por el ORIGEN (gemelas, siniestros, portal).
+  El segundo brazo tapa un agujero medido el 03/09/2026 — cuando CIMA trae una póliza que YA estaba en el
+  volcado no crea fila nueva: actualiza la vieja y le deja su `import_ref`, así que una póliza que CIMA
+  mantiene al día contaba como lead (hoy afecta a **1** fila: la `3021700291186` de Reale C0613, auto,
+  vence 19/09/2027, que dejaba a Reale con «0 pólizas vivas»).
+  Las otras 28.728 pólizas son **volcado histórico** (`import_ref` `intranet:` y `asegura_app:`, cargado en
   jun/2026, vencimientos 2013-2018) y **ninguna** tiene vencimiento en los últimos 18 meses. Regla de Alberto:
   **lo que entra por CIMA es cliente actual; el resto son leads** (32.520). Detalle en
   `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md`.
-  🚨 **La cartera NO está migrada:** las 32.600 fichas / 28.843 pólizas siguen en el Supabase de **Manuel
-  Suárez** (hermano de Alberto, que desarrolló el CRM), que además **recibe a diario de las compañías por
-  CIMA/EIAC**. ⚠️ **Eso NO la convierte en una migración en caliente** (se creyó así hasta el 26/08/2026):
-  el CRM **todavía no está operativo** —no hay nadie usándolo— y **los ficheros de EIAC se pueden
-  consultar y descargar cuando se quiera**, así que una pausa del cron no deja sin servicio a nadie ni
-  pierde datos: se re-lanza el pull y entra lo pendiente. El traspaso **no necesita ventana ni fecha
-  acordada**; va paso a paso, al ritmo de Manuel. `schema seguros` vacío ≠ la
-  correduría no tiene datos: el dashboard lo dice y no pinta KPIs a 0. ⚠️ Las **86 políticas RLS** de ese CRM
-  se resuelven TODAS por `auth.uid()` de Supabase Auth, así que al re-plataformar la auth el aislamiento pasa
-  a ser cosa del código (con BYPASSRLS el fallo sería «se ve todo sin fallar»). Plan, mensaje a Manuel y pasos
-  del traspaso en **`docs/TRASPASO-CORREDURIA.md`**. Ver `apps/asegura/CLAUDE.md`.
-- **`apps/asegura-portal`** — **portal del CLIENTE** de Grupo Asegura (Fase 1, 01/09/2026). App aparte
+  ✅ **La cartera YA ESTÁ EN CASA (traspaso cerrado el 02/09/2026, PRs #2002 → #2007):** las 32.600
+  fichas / 28.843 pólizas / 54 tablas viven en el schema `seguros` de la Supabase compartida, y
+  `apps/asegura` las lee de ahí por defecto (`ASEGURA_FUENTE=origen` es el único camino de vuelta al
+  Supabase de Manuel, `uijsgeocgdaxkhvwtjqs`, que queda como foto congelada). El CRM de Manuel (repo
+  `asegura` + Vercel `asegura`, ya en la cuenta de Alberto) **apunta también a central** con el rol
+  `crm_seguros` y queda **solo como motor de ingesta de CIMA** (cron Actions 05:30/11:30 UTC → CRM → adaptador
+  Java en Fly → TIREA → `seguros`). **Su web NO se usa ni se migra su login** (decisión de Alberto 02/09):
+  las pantallas de la correduría se montan en `plataforma` → `/correduria`. La Auth de Supabase (9 usuarios,
+  MFA) está copiada a central por si acaso, pero sin uso. ✅ **El adaptador Java YA ESTÁ EN CASA (medido en el panel de Fly el
+  21/09/2026):** `asegura-app-cima-adapter` corre en la organización **`grupo-asegura` de Alberto**, 2
+  máquinas en CDG, desplegada hace ~20 días; Manuel no figura en el equipo de esa organización. Este
+  apartado dijo durante semanas lo contrario —«corre en la cuenta de Fly de Manuel», con su traspaso
+  «pendiente»— y se dio por bueno sin mirar el panel. ✅ **Y el CÓDIGO también está ya en casa
+  (21/09/2026):** Manuel transfirió el repo del adaptador, que hoy es
+  `albertosuarezgutierrez-gif/asegura-app-cima-adapter` (id 1225402598, privado, Java) — verificado por
+  la API, no por su palabra. Hasta ese día era suyo y Alberto solo leía: **sin ese repo no se podía
+  redesplegar**, que era el único punto de la cadena sin salida. Ahora la cadena entera es de Alberto:
+  Actions (repo `asegura`) → CRM en Vercel → adaptador en Fly (`grupo-asegura`) → TIREA. ⏸️ **Lo que
+  sigue fuera:** los secrets de TIREA de PRODUCCIÓN (`WSE_USER`/`WSE_PASSWORD`/`WSE_PLATAFORMA`), que
+  Manuel dijo que manda por enlace de un solo uso — hoy la ingesta corre con ellos puestos, pero sin
+  copia no se puede rehacer la conexión desde cero; y Manuel conserva permiso `write` en el repo
+  `asegura` (él ya dio el OK para quitárselo). El port de `cima-pull` a `apps/asegura` está APARCADO a
+  propósito (inventario en `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`). 🔑 **Rotar la contraseña de un rol de BD SIN actualizar el `DATABASE_URL` de su proyecto Vercel deja la
+  app muerta en silencio (02/09/2026).** `prisma_seguros` se rotó tres veces ese día y `central-asegura` se
+  quedó con la vieja: toda la cartera —y con ella el libro de comisiones— moría en `password authentication
+  failed`, y ese texto **solo existía en los logs del pooler de Supabase**. Lo cazó el clasificador de causas
+  del puerto (`apps/asegura/lib/error-cartera.ts`). **La rotación y el env se hacen en el mismo paso.**
+  ⚠️ Las **86 políticas RLS** del CRM se resolvían por
+  `auth.uid()`; en central el aislamiento es cosa del código (con BYPASSRLS el fallo sería «se ve todo sin
+  fallar»). Ver `apps/asegura/CLAUDE.md`.
+- **`apps/asegura-portal`** — **portal del CLIENTE** de Grupo ASegura (Fase 1, 01/09/2026). App aparte
   de `apps/asegura` a propósito: aquella es el panel del CORREDOR, esta la ve el asegurado, y por eso
   usa **rol propio `prisma_asegura_portal` SIN BYPASSRLS** y su propio secreto de sesión
   (`ASEGURA_PORTAL_SESSION_SECRET`). Compone `@central/module-seguros-portal`. Identidad por código
   de un solo uso sobre un **puerto de canal** (email y consola hoy; WhatsApp cuando exista la WABA):
   `canal_no_disponible` (503) NO es «el envío falló» (502). Tablas `portal_*` en el schema `seguros`.
   El aislamiento **no lo da RLS sino el código**, y lo vigila `test/regression-portal-aislamiento.test.ts`.
+  Tiene `CLAUDE.md` propio desde el 02/09/2026 — ver `apps/asegura-portal/CLAUDE.md`.
+- **`apps/asegura-web`** — **web pública de marketing** de Grupo ASegura (04/09/2026). **Sirve en el
+  apex `grupoasegura.es` + `www` desde el 05/09/2026** (proyecto Vercel `asegura-web`, atado por Alberto
+  con Claude en Chrome); `app.grupoasegura.com` sirve el CRM de Manuel y no se toca. ⚠️ El `.com`
+  NO es suyo: su apex apunta a un parking de IONOS (`217.160.0.254`), y hasta ese día la app lo
+  llevaba como `SITIO_URL` por defecto — canonical y sitemap hacia un dominio vacío. Ahora el
+  defecto es el `.es` (`lib/sitio.ts`). Tercera app de la correduría y la única que ve alguien que aún no es cliente
+  (`asegura` = corredor, `asegura-portal` = asegurado, `asegura-web` = quien todavía no lo es).
+  ⚠️ **El apex cambió de manos DOS VECES el 05/09/2026 — mira quién lo sirve HOY antes de tocar nada.**
+  Por la mañana `grupoasegura.es` (el `.es`, no el `.com`) pasó a servir la web del repo **`asegura`** de
+  Manuel (`NEXT_PUBLIC_SITE_URL=https://grupoasegura.es`, con su `/siniestro` y las 301 del WordPress
+  viejo, PR asegura#817). Por la tarde se le quitó: medido a las 14:04 UTC, los dominios del proyecto
+  Vercel `asegura` son **solo** `app.grupoasegura.com` + los `*.vercel.app`. **`asegura-web` SÍ está
+  desplegada**: proyecto Vercel `asegura-web` (`prj_MnuAvshNZg6vmRsfTkSmiX4RyCj9`, root
+  `apps/asegura-web`), y es quien sirve el apex desde esa tarde. 🚨 **Ojo con la herramienta:
+  `list_projects`/`get_project` del MCP de Vercel NO devuelven ese proyecto** (404 por id, y la lista
+  se queda en 12 sin él ni `alquiler`) — sí aparece en el comentario del bot de Vercel en los PRs. Con
+  esa lista incompleta se afirmó aquí que el proyecto «no existe»: **una lista que no lo trae no
+  demuestra que no esté.**
+  🔁 **Y el MISMO error otra vez el 07/09/2026, en otro campo — `get_project.domains` NO es la lista
+  de dominios del proyecto.** Sobre `asegura-portal`, la herramienta devolvió solo
+  `asegura-portal-pisos-turisticos-projects.vercel.app` y su `-git-main`, o sea los **alias
+  automáticos del equipo**. Con eso se afirmó aquí que `clientes.grupoasegura.es` «no estaba atado»
+  (y de paso que el botón «Área de clientes» de la web llevaba a un 404). Alberto miró el panel:
+  los dominios del proyecto eran **`clientes.grupoasegura.es`** (Valid Configuration) y
+  **`asegura-portal.vercel.app`**, y el portal cargaba con su título correcto. Las dos afirmaciones
+  eran falsas y ninguna se había medido contra el panel.
+  **La regla, que ya vale para las dos herramientas:** un campo o una lista del MCP de Vercel prueba
+  lo que SÍ trae, nunca lo que no. Para decir que un dominio no está atado hace falta el panel o un
+  `curl` al host, no la ausencia en un JSON.
+  💣 **La lección cara (misma tarde): un dominio que se mueve se lleva por delante las rutas de servicio,
+  no solo las páginas.** Los seis workflows de crons de `asegura` se repuntaron a `grupoasegura.es`
+  (asegura#818) dando por hecho —sin medirlo— que la canonicalización LOO-670 rompía el host viejo. No lo
+  rompía: el run de `cima-pull` de las 09:12 UTC contra `app.grupoasegura.com` había salido en verde. El
+  primer run tras el merge murió con `curl: (22) ... error: 404`, y con `cima-pull` cae `cima-health-alert`,
+  que es el vigilante que avisaría de que la ingesta se ha parado. Revertido y verificado en asegura#819. La regla:
+  **antes de mover un host en un cron, mira el código de respuesta del endpoint en los dos hosts**
+  (404 = otra app; 401 = la ruta existe y te rechaza por credencial, que es lo que quieres ver).
+  🚨 **NO tiene base de datos a propósito**: sin Prisma, sin rol, sin secreto de sesión. El
+  formulario sale por `POST /api/lead`, que **reenvía desde el servidor** al canal que ya existe
+  (`/api/publico/correduria/lead` de plataforma → puerto de asegura → Telegram). Propaga
+  `x-forwarded-for` con la IP real del visitante **porque si no el límite de 6/hora por IP de
+  plataforma pasaría a ser global** y el séptimo lead legítimo de la hora se rechazaría solo.
+  Mediador desde `MEDIADOR` (`@central/module-seguros`) y colores desde `MARCA_ASEGURA`
+  (`@central/brand`): ni la clave DGSFP ni un hex se escriben aquí. Dos guardianes propios:
+  `lib/ramos.test.ts` (el copy no puede prometer ahorros ni superlativos de precio — eso lo
+  convertiría en asesoramiento y arrastraría análisis objetivo e IPID, RDL 3/2020) y
+  `lib/contrato-lead.test.ts` (lee el fuente de plataforma y compara la lista de ramos: si
+  divergen, el visitante elegiría uno que plataforma rechaza con 422 y el lead se pierde en
+  silencio). El teléfono y el **horario** (lunes a viernes, 9:00-18:00, confirmado el 15/09/2026) salen de
+  una sola constante cada uno y se publican en dos sitios a la vez — el horario, en el pie y en el
+  `openingHours` del JSON-LD, los dos desde `HORARIO` de `lib/sitio.ts`, que sigue admitiendo `null`
+  como «no se sabe». No se teclea una segunda copia: la vigila `lib/seo-horario.test.ts`.
+  📊 **Analítica CON consentimiento, y fail-CLOSED a propósito (05/09/2026).** PostHog detrás de
+  Cookiebot: la regla vive en una función pura, `puedeMedir()` de `lib/analitica.ts`, y **sin
+  `NEXT_PUBLIC_COOKIEBOT_ID` no se mide nada**. Es la decisión CONTRARIA a la web de Manuel, donde
+  `posthog-browser.ts` hace *fail-open* — sin esa env no pinta banner y arranca igual (medido en el
+  HTML vivo el 04/09: 0 apariciones de Cookiebot, PostHog corriendo; art. 22.2 LSSI). PostHog **no
+  viaja en el bundle**: el script se baja de su CDN solo tras aceptar, así que lo que no se ha
+  descargado no lo puede disparar un `if` mal escrito. Host por defecto **EU** (`eu.i.posthog.com`),
+  `disable_session_recording` (el formulario pide nombre, teléfono y correo) y `person_profiles:
+  identified_only`. Retirar el consentimiento **apaga** (`opt_out_capturing` + `reset(true)`), no solo
+  deja de arrancar. Página `/legal/cookies` con la declaración que publica Cookiebot y botón de
+  renovar (art. 7.3 RGPD). Lo vigila `lib/analitica.test.ts` (12 cepos, lee el fuente). ⚠️ **El CBID
+  tiene que tener `grupoasegura.es` dado de alta en el panel de Cookiebot**: un CBID atado solo a
+  `app.grupoasegura.com` no pinta banner aquí, y entonces esta app no mide — que es lo correcto, pero
+  silencioso.
+  🔘 **Un solo acceso, y es el del CLIENTE (05/09/2026).** Botón «Área de clientes» en la cabecera y
+  «Ya soy cliente · Mis seguros» junto al CTA de venta, los dos a `PORTAL_URL` (`lib/sitio.ts`, env
+  `NEXT_PUBLIC_PORTAL_URL`; por defecto `asegura-portal.vercel.app`, que es donde el portal sirve HOY —
+  cuando `clientes.grupoasegura.es` esté repuntado a Vercel, se cambia la env y listo). **NO hay «acceso
+  corredor» a propósito**: Alberto entra por plataforma. Lo vigila `lib/portal.test.ts`, que lee el
+  fuente: el botón montado, y ningún `href` ni texto hacia `app.grupoasegura.com`, `/correduria`,
+  `/operador`, `/login`, «Acceso correduría», «Únete gratis» o «Ya tengo cuenta» (el vocabulario de la
+  web de Manuel). Cabecera en DOS filas a todo ancho (marca + botón / nav), medida con Playwright a
+  320-360-1024: sin desbordar y sin pisar la marca.
+  🏷️ **El muro de compañías eran NOMBRES en gris, no logos (07/09/2026).** Alberto: «no salen los
+  logos» — y no salían porque **no había ninguno**: `page.tsx` pintaba `<li>{c}</li>` y `globals.css`
+  lo estilaba como texto; ni un `<img>` ni una carpeta de imágenes en todo el repo. Ahora la lista
+  vive en `lib/companias.ts` con su logo, y los cinco SVG (`public/logos/`) vienen **del propio repo
+  `asegura` de Alberto** (`public/logos/insurers/`), no descargados de la web de cada compañía. Se
+  sirven como `<img src>` y **NO en línea**: cada uno trae su `<style>` con clases `.st0`/`.cls-2` y
+  juntos en el mismo documento se repintarían entre sí. La altura es común y el ajuste ÓPTICO va por
+  `escala` (las relaciones de aspecto van de 1,23 —Generali, escudo— a 5,42 —Occident, casi todo
+  palabra—). ⚠️ **Fidelidade y Asisa se quedan como wordmark de texto: no tenemos su logo**, y no se
+  dibuja uno parecido. ⚠️ **Y el SVG de Occident es el de «Catalana Occidente», la marca ANTERIOR** —
+  se sirve tal cual porque es el que hay; sustituirlo pide el archivo nuevo, no un retoque. Lo vigila
+  `lib/companias.test.ts`, que lee el disco: un `<img>` a un fichero que no está **no rompe nada**,
+  pinta el icono de imagen rota y de eso solo se entera quien abre la página.
+  🔵 **Y la pestaña NO tenía icono (07/09/2026).** Ni `icon.*`, ni `favicon.ico`, ni `metadata.icons`:
+  salía el globo por defecto de Chrome, y el «AS» NEGRO que se veía en una pestaña era el de
+  `app.grupoasegura.com` (el CRM de Manuel), no el de esta web. Alberto: «me gusta más en azul, se ve
+  más». `app/icon.tsx` pinta el monograma en `primario` sobre `acentoSuave` — el mismo gesto que
+  `.marca-tile`/`.marca-mono` de la cabecera — y **lee el dibujo de `public/brand/marca-asegura.svg`**
+  en vez de copiar el `path`. 🚨 Ese SVG trae `fill="currentColor"` a propósito, y dentro de un `<img>`
+  eso resuelve a **negro**: `icon.tsx` lo sustituye por el azul antes de embeberlo, así que **si alguien
+  le pone un color fijo al SVG la sustitución pasa a ser un no-op y vuelve el icono viejo sin que falle
+  nada**. Lo vigila `lib/icono.test.ts` (y que ningún hex se escriba a mano ahí: satori no entiende
+  `oklch`, así que solo valen `primario` y `acentoSuave`).
+  🕰️ **Hasta la tarde del 05/09 lo que Alberto veía en `grupoasegura.es` era el CRM de Manuel**, no
+  esta app: el apex `.es` y `www` estaban atados al proyecto `asegura` y esta app no tenía dominio. Se
+  arregló en paneles, no en código: `.es`+`www` → `asegura-web`; `clientes.grupoasegura.es` →
+  `asegura-portal` (DNS en IONOS pendiente de repuntar); `app.grupoasegura.com` sigue en `asegura`
+  (ingesta de CIMA). ⚠️ `clientes` tiene **MX de IONOS**: un CNAME lo mataría, así que ahí va un
+  registro **A** a Vercel (el mismo `216.150.1.1` del apex), no el CNAME que sugiere el panel.
+  Plan y diagnóstico en `docs/ASEGURA-MARKETING-PLAN.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 > **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
@@ -126,6 +266,62 @@ Salvaguardas para no perder información:
   no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
   decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
 
+## 🗺️ Navegación de código: SUBAGENTES (el grafo propio se RETIRÓ el 21/09/2026)
+
+**El grafo de código propio ya no existe.** Sus tablas (`grafo_nodos`, `grafo_aristas`,
+`grafo_embeddings`) y todas sus funciones `grafo_*` se borraron de Supabase el 21/09/2026. No las
+busques: no están, y su paso de regeneración se quitó de `auditoria.yml`.
+
+**Por qué, medido y no supuesto.** `central` estaba en **644 MB** sobre un tope de 500 (plan Free) —
+y es la BD compartida de TODAS las apps, incluida la cartera de la correduría. Al regenerar la tabla
+de ahorro de `docs/USO-HERRAMIENTAS.md` (llevaba hecha sobre **1** sesión, con 86 ficheros de
+telemetría sin agregar) salió el dato que decidió: **el grafo se había usado en 3 de 86 sesiones**,
+27 llamadas, 2 con error, ahorro tope 75k tokens — ocupando **258 MB**. En esa misma medición los
+subagentes ahorraban más y se usaban más (`general-purpose` 596k tokens citados en 11 sesiones,
+`Explore` 266k en 8, `agente-mecanico` 277k en 7). Se borró lo que costaba y no se usaba.
+
+**Qué se usa AHORA para localizar código, en este orden:**
+1. **`code-map`** (tabla `mapa_arquitectura`, que SE QUEDA): índice de firmas para acotar candidatos
+   a coste ~0 antes de leer nada. 88.901 tokens citados en solo 5 llamadas — el mejor ratio de todo.
+2. **`rastreador-codigo`** (`.claude/agents/`, modelo económico, SOLO LECTURA) para lo que antes
+   preguntabas al grafo: quién llama a algo, qué rompe un cambio, qué tests cubren un archivo. Lleva
+   dentro las tres trampas del repo —barriles `@central/*`, homónimos entre apps, y que «0
+   resultados» es «no encontré», no «no lo usa nadie»— y devuelve `archivo:línea` + conclusión, sin
+   volcados. Para un barrido más abierto, `Explore` o `general-purpose`.
+3. **`Grep`/`Read` directos** solo para lo acotado: una función concreta en un archivo que ya sabes.
+
+**`memoria_buscar()` SIGUE VIVA y no se toca** (`memoria_embeddings`, 16 MB): sobre
+`docs/CONTEXTO-SESIONES.md` + `docs/memoria/*.md`. Es lo que ganó 9-0 a `recall`/`memories_about` de
+Graphify en las dos rondas de medición (12-13/09/2026), incluido un caso donde Graphify devolvió
+información **desfasada**, congelada en un estado ya resuelto. Sigue siendo la vía para recuperar
+decisiones técnicas, convenciones y gotchas; y al cerrar sesión se anota ahí, como siempre.
+⚙️ Detalle de implementación que importa: la función `grafo_embed_textos` **se conservó a propósito**
+pese al nombre — `memoria_buscar` y `memoria_embed_lote` dependen de ella. No la borres por parecer
+un resto del grafo.
+
+**Lo que se pierde, dicho claro:** la búsqueda *semántica* sobre el código («¿dónde se decide si un
+cron está autorizado?»). Un agente tiene que probar varios patrones y acierta algo menos que un
+embedding. Con 3 usos en 86 sesiones, es el precio aceptado.
+
+🚨 **Y el motivo por el que se borraron también las FUNCIONES, no solo las tablas:** una función
+`grafo_callers` sobre una tabla vacía no falla — **devuelve cero**. Un agente preguntaría «¿quién
+llama a `X`?», recibiría una lista vacía y concluiría que no la llama nadie. Es exactamente el fallo
+que este documento marca como el más caro («un check que se pone verde porque la consulta no devolvió
+nada»). Borradas, fallan ruidosamente, que es lo correcto.
+
+**Si algún día se quiere de vuelta:** la parte estructural se regeneraba en 1,8 s con Node puro y los
+embeddings por OpenRouter. Antes de reintroducirlo, **mide el uso real** en
+`docs/USO-HERRAMIENTAS.md` — es la regla «mide el ahorro, no lo supongas», y es la que lo retiró.
+
+El MCP de **Graphify** sigue instalado y sigue sin usarse: su medición fue **0 de 9**, con dos fallos
+duros (`graphify_impact` mezclando ficheros de otra app, `graphify_callers` devolviendo 1 caller de
+los 80 reales). Que el grafo propio ya no esté **no lo reactiva**: el sustituto son los subagentes.
+
+**Principio que no cambia:** localizar ≠ entender. Cualquier herramienta —índice, agente o grep—
+responde «¿dónde está?»; el código fuente responde «¿qué hace?». **Nunca sustituyas la lectura del
+código por una suposición.** Flujo antes de tocar código compartido:
+`ACOTAR (code-map/agente) → LEER EL CÓDIGO → PLANIFICAR → MODIFICAR → VERIFICAR`.
+
 ## 🧹 Quién mira qué pantalla — regla global permanente
 **Antes de dar por avisada a una persona, comprueba en qué pantalla trabaja.** Un aviso que sale por
 un canal que esa persona no abre es un aviso que no existe, y desde el código se ve idéntico a uno
@@ -148,7 +344,44 @@ Al construir cualquier aviso a un tercero (limpieza, gestoría, huésped, conduc
 «¿lo he mandado?» sino **«¿en qué pantalla lo va a ver, y tengo cómo saber que está ahí?»**.
 
 ## Estilo de respuesta — regla global permanente
-**Responde de forma sintética y directa.** Ve al grano: da el resultado o la respuesta primero, sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular lo que acabas de hacer. Nada de listas exhaustivas de opciones que no vas a seguir ni de narrar cada paso. Si hace falta explicar un porqué, hazlo en una o dos frases. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
+**No narres el trabajo: solo el resultado.** Durante una tarea no expliques lo que vas a hacer ni vayas relatando cada paso — trabaja y, al terminar, da UN resumen final sintético (qué se hizo, archivos, y solo si aplica: tests/pendiente). Sin resúmenes largos, sin repetir el contexto que Alberto ya conoce, sin recapitular. Nada de listas exhaustivas de opciones que no vas a seguir. Si hace falta explicar un porqué, hazlo en una o dos frases dentro de ese resumen final. Extiéndete SOLO cuando Alberto lo pida explícitamente ("dame el detalle", "explícame", etc.). Esto NO aplica al código, comentarios ni mensajes de commit/PR (esos siguen sus propias reglas).
+
+## 👀 Mira los PRs ABIERTOS antes de empezar — regla global permanente
+**Varias sesiones trabajan en este repo a la vez y no se ven entre sí.** Todas empujan con la
+cuenta de Alberto, así que un PR abierto por otra sesión es indistinguible de uno tuyo, y nadie te
+avisa de que el trabajo que vas a hacer ya está hecho y esperando.
+
+Antes de ponerte con algo que no sea trivial: **lista los PRs abiertos** (`list_pull_requests`,
+`state: open`) y mira si alguno toca lo mismo. Cuesta una llamada.
+
+Caso fundacional (06/09/2026): el PR #2319, abierto desde el 05/09, ya corregía «la matriz son 12
+apps» → 13 en `CLAUDE.md`. Sin mirarlo, esta sesión volvió a encontrar el mismo fallo y abrió el
+#2434 con la misma corrección — trabajo duplicado y, de propina, un conflicto textual metido en el
+PR ajeno. Lo caro no fue el rato perdido: fue dejar peor un PR que ya estaba bien.
+
+Corolario para los PRs de otras sesiones: **mirarlos no es mergearlos.** Lo que solo cuenta lo que
+pasó (`docs/**` de registro) se mergea; lo que le dice a un agente qué hacer o toca código, no —
+es la misma línea que ya traza `.github/workflows/rutinas-automerge.yml`.
+
+## 🪤 Un cepo no está terminado hasta que se le ha visto FALLAR — regla global permanente
+**Escribir el test y verlo verde no prueba nada: prueba que pasa, no que vigila.** Un guardián que
+mira al sitio equivocado es verde el 100 % de las veces, y por eso es indistinguible de uno que
+funciona hasta el día que hacía falta. Es el mismo fallo que `CLAUDE.md` ya prohíbe aguas arriba
+(«un check que se pone verde porque la consulta no devolvió nada es el fallo más caro que hay»),
+un piso más abajo.
+
+Por eso: **rompe a propósito lo que el cepo dice proteger, comprueba que se pone rojo, y restaura.**
+Un brazo por aserción, no uno por fichero. Y pega la salida del rojo en el PR: es la única prueba
+de que el cepo existe.
+
+Tres casos el mismo día (06/09/2026), todos verdes mirando donde no era:
+- La comprobación de responsive midió `scrollWidth` y dijo «no desborda». Cierto e inútil: lo que
+  tapaba el texto era un elemento `position: fixed`, que **no desborda, se pone encima** (PR #2428).
+- `regression-matriz-typecheck` buscaba cada nombre de app en TODO `CLAUDE.md` y pasaba con
+  `asegura-web` borrado de la lista, porque la app tiene su propio apartado más arriba. Se acotó a
+  la lista que declara ese párrafo (PR #2434).
+- Tres PRs de registro parecían tocar código en `get_files`: era el `base.sha` viejo que GitHub
+  guarda para el PR, no el diff real. El de tres puntos contra `main` decía otra cosa.
 
 ## 🤖 Trabajo mecánico → SIEMPRE a un agente — regla global permanente
 **Todo lo MECÁNICO se delega a un subagente (`Task`), nunca se hace en la sesión principal.** Cada archivo
@@ -164,6 +397,14 @@ aparece algo · leer un directorio entero para responder una pregunta acotada.
 que exige criterio o negociar con Alberto, y los cambios de 1-2 archivos que ya se tienen delante
 (delegarlos cuesta más de lo que ahorra).
 
+**Umbral objetivo, para no decidir a ojo cada vez (11/09/2026):** delega si se cumple CUALQUIERA de —
+mismo patrón en ≥3 archivos · boilerplate/renombrado sin decisión de negocio · generación >~80 líneas
+sin lógica que exija criterio. No delegues nunca si toca auth/pagos/RLS/multi-tenant/migraciones (eso
+es `agente-architect`, no mecánico) o si son 1-2 archivos que la sesión ya tiene abiertos. Sin agente
+director: la sesión principal aplica esta tabla directamente en el mismo turno — meter un agente
+intermedio solo para decidir a quién delegar cuesta más (otra llamada, otro contexto) que la propia
+decisión, que es una tabla fija.
+
 **Cómo repartir sin que se pisen:** reparto **por archivos**, y en el prompt de cada agente va la lista
 EXPLÍCITA de lo que puede tocar y de lo que NO (incluidos los archivos que edita la sesión principal en
 paralelo). Dos agentes sobre el mismo archivo es un conflicto silencioso: el segundo pisa al primero y
@@ -177,6 +418,31 @@ el conjunto.
 
 Complementa a `delegar-codigo` (que delega la ESCRITURA a un coder barato por `/api/ai/ejecutar`) y a
 `code-map` (que acota QUÉ leer antes de leer). Esta regla es sobre a QUIÉN se le da el trabajo.
+
+**Con qué MODELO (09/09/2026):** para lo mecánico de esta regla, invoca `.claude/agents/agente-mecanico.md`
+(modelo económico) en vez de un agente genérico — mismo tool `Task`/`Agent`, pero más barato. Para lo
+que SÍ requiere razonamiento fuerte (arquitectura, seguridad, bugs que han resistido varios intentos,
+revisión de un cambio de alto riesgo), usa `.claude/agents/agente-architect.md` (Opus) — con moderación,
+no por defecto. Programación normal (endpoints, CRUD, Server Actions, bugs normales) la sigue haciendo
+la sesión principal, sin delegar.
+
+**Mide el ahorro, no lo supongas (09/09/2026, corregido 11/09/2026):** anotar solo los fallos (como
+decía esta regla hasta ahora) sesga la medición — sin el total de usos, un fallo cada diez pasadas y
+un fallo cada dos son indistinguibles en la bitácora. Corrección: **cada invocación de
+`agente-mecanico` o `delegar-codigo`, salga bien o mal, se anota en `docs/AGENTE-MECANICO-BITACORA.md`**
+(una línea: tarea, cuál de los dos, resultado — `ok` o `fallo: qué falló`). Solo con numerador Y
+denominador se puede saber si el modelo económico ahorra tokens de verdad o si el re-trabajo se come
+el ahorro.
+
+**Revisión obligatoria antes de pedir merge (09/09/2026):** el gate que BLOQUEA el merge ya existe
+(CI + `Claude Approvals`, ver sección de CI) — no se monta un agente nuevo para eso. Lo que faltaba
+es que nadie exigía una pasada de calidad/correctness ANTES de llegar a ese gate: `code-review` y
+`agente-architect` eran opt-in. Ahora es paso obligatorio: **antes de sacar un PR de draft**, la
+sesión corre la skill `code-review` sobre el diff (o delega en `agente-architect` si el cambio es de
+alto riesgo — auth, pagos, RLS, multi-tenant, migraciones). Si hay hallazgos bloqueantes, se
+corrigen o se documenta en el PR por qué no, antes de continuar — igual que exige `code-review` con
+PRs ajenos. No sustituye a `Claude Approvals` ni a los tests: es la pasada que ninguno de los dos
+hace (bugs de lógica, simplificación, reuso).
 
 ## Comunicaciones salientes — regla global permanente
 **NUNCA enviar correos, mensajes ni ninguna comunicación a terceros (email a la asesoría, a clientes,
@@ -245,8 +511,43 @@ campo intermedio (`s.datos` de la ingesta) que aguas abajo ya no existía.
 Al añadir una columna de enriquecimiento nueva, esto es parte del PR, no un apaño posterior. Si un
 cambio toca una pantalla que ya viola la regla, corrígela en el mismo PR.
 
+## 👥 Agrupar personas: por IDENTIDAD, nunca por la etiqueta — regla global permanente
+**Cuando juntes filas que hablan de «la misma persona», agrupa por su identificador, no por su
+nombre.** El nombre es la etiqueta, no la identidad, y falla en las DOS direcciones:
+
+- **Partir a una en dos**: la misma persona escrita distinto («JUAN PEREZ LOPEZ» / «Juan Perez»), o
+  enlazada a su ficha en un sitio y suelta en otro, sale duplicada. Se ve, y molesta.
+- **Fundir a dos en una**: dos homónimos —un padre y un hijo en la póliza del mismo coche, dos
+  huéspedes con el mismo nombre, dos empleados— colapsan en una fila **con los teléfonos, correos y
+  papeles mezclados**. Esta es la cara CARA: duplicar se nota, mezclar no, y encima el resultado es
+  plausible. Es el mismo fallo que el «dato leído mal» de la regla anterior.
+
+Qué hacer: orden **identificador (DNI/NIF/CIF, id externo) → enlace a su ficha → nombre**, cayendo al
+nombre SOLO cuando no hay ninguno de los dos primeros, y **dos identificadores distintos no se funden
+jamás**, coincida lo que coincida el resto. Si el identificador es un dato personal, no lo saques del
+backend para agrupar: emite una etiqueta opaca por respuesta (`p1`, `p2`…). Cuando la identidad acabe
+siendo el nombre, dilo en la pantalla —de qué póliza/reserva sale cada cosa— y no afirmes nada más.
+Caso fundacional (02/09/2026, PR #2145): «ojo con duplicar», de Alberto, sobre las personas de las
+pólizas de GLOBAL 2 — tres furgonetas, tres conductores distintos.
+
 ## Responsive — regla global permanente
 **Toda UI nueva o modificada en CUALQUIER vertical o app del monorepo DEBE funcionar en móvil.** Revisar en pantallas ≥320 px antes de dar un cambio por hecho. Tablas → scroll horizontal o cards apiladas; sidebars → colapsables o drawer; modales → ancho al 95 vw; botones → mínimo 44 px táctil. No basta con que "quepa" — tiene que ser usable. Si un cambio toca un componente con problemas responsive conocidos, aprovecha para corregirlos en el mismo PR.
+
+## 📱 Medir el responsive: el `body` MIENTE en plataforma — regla global permanente
+**Antes de dar por bueno que una pantalla no desborda, comprueba QUÉ elemento estás midiendo.** En
+`apps/plataforma`, `LayoutShell` declara `overflowY:'auto'` sin `overflowX`; por la regla de CSS Overflow
+(si un eje deja de ser `visible`, el otro computa a `auto`), **el scroller horizontal es LayoutShell, no
+`<body>`**. Consecuencia medida el 02/09/2026: `document.body.scrollWidth` era 390 —igual al viewport—
+mientras el contenido desbordaba a 910 px. Con esa medición se declaró «no desborda» un fallo que el
+usuario estaba viendo en su móvil. Se mide sobre el scroller y sus descendientes:
+`sc.scrollWidth > sc.clientWidth`, y luego los hijos cuyo `getBoundingClientRect().right` se sale.
+
+**Y la causa más común, que además se disfraza de arreglada:** un `display:grid` sin `gridTemplateColumns`
+dimensiona su pista implícita con el contenido más ancho. Una tabla con `minWidth` dentro arrastra la
+página entera **y anula su propio `overflowX:'auto'`** — cuando este actúa, su contenedor ya creció. El
+arreglo es `gridTemplateColumns: 'minmax(0, 1fr)'` en el grid contenedor. Pero **no siempre basta**: si lo
+que no cabe es un flex cuyo min-content ya supera la pantalla (una gráfica de 12 columnas mensuales, p. ej.),
+el scroll hay que ponerlo en ese elemento, no en su contenedor.
 
 ## Rendimiento UI — regla global permanente
 **Ninguna página monta cientos/miles de filas de golpe.** Las listas largas (movimientos bancarios, reservas, logs…) usan: desplegables **cerrados por defecto con montaje perezoso** (el contenido solo se renderiza al abrir — OJO: un `<details>` cerrado igualmente crea todo su DOM), **paginación client-side** (~50 filas + «Ver más»), y auto-apertura cuando hay filtros activos. Las recargas tras una acción mantienen la lista visible (atenuada), sin loader a pantalla completa que desmonte todo. Patrón de referencia: `apps/plataforma/app/(usuario)/finanzas/GastosTab.tsx` (PR #666). Si un cambio toca una página que viola esta regla, aprovecha para corregirla en el mismo PR.
@@ -259,176 +560,34 @@ en 4 cifras: `2.000,12€`), decimales con coma, y el **€ DETRÁS** del númer
 aplica igual en pantalla, Telegram y emails. Nada de `€${x.toFixed(2)}` suelto. Las verticales sin ese helper
 replican la misma convención. Si un cambio toca una pantalla con importes mal formateados, corrígelos en el mismo PR.
 
-## 🤖 CI: por qué un PR de Claude se queda con los checks «Expected» (26/08/2026)
+## 🤖 CI: por qué un PR de Claude se queda con los checks «Expected»
 
-**Los pushes hechos con el token de la App de Claude NO disparan los workflows de Actions.** Es una
-limitación de GitHub, no un fallo del repo. Consecuencia: un PR abierto y empujado por un agente puede
-quedarse con **los 12 checks requeridos en «Expected — waiting for status to be reported»** para
-siempre, y el merge lo rechaza la regla con `12 of 12 required status checks are expected`.
+**Los pushes hechos con el token de la App de Claude NO disparan los workflows de Actions** (limitación de GitHub, no un fallo del repo). Consecuencia: un PR abierto/empujado por un agente puede quedarse con los 12 checks requeridos en «Expected» para siempre.
 
-🚨 **«Expected» NO es «Failing».** Antes de tocar nada, mira si algún check está en ROJO: si los 12
-están en Expected y ninguno rojo, no hay nada roto — es que **no han arrancado**.
+🚨 **«Expected» NO es «Failing».** Antes de tocar nada, mira si algún check está en ROJO: si los 12 están en Expected y ninguno rojo, no hay nada roto — es que no han arrancado.
 
-🔴 **`workflow_dispatch` NO desbloquea el merge. Comprobado, no supuesto (26/08/2026).** Se lanzaron
-los tres workflows sobre la rama, los **12 jobs requeridos acabaron en `success` sobre el head exacto
-del PR** — y el merge siguió devolviendo `12 of 12 required status checks are expected`. Se repitió
-sobre **dos heads distintos** (`a1c5b23e` y `4134a64c`) con idéntico resultado. **El ruleset no cuenta
-los check runs que vienen de un `workflow_dispatch`**, aunque el nombre del job y el sha coincidan.
-No pierdas la tarde por ahí: sirve para SABER si el código está sano, no para desbloquear.
+> 📚 Historial completo de las 16 mediciones que llevaron a este procedimiento (draft vs no-draft, lag de GitHub, `workflow_dispatch` no cuenta, etc.): `docs/ci-troubleshooting.md`. No hace falta leerlo salvo que el orden de abajo no resuelva.
 
-⚠️ Y si aun así lo lanzas para verificar: los check runs aterrizan en el **head del momento**. Si
-luego empujas otro commit, se quedan huérfanos en el sha viejo. Lánzalo después del último push.
-
-✅ **SÍ hay forma de que el agente lo resuelva solo: SACAR EL PR DE DRAFT (27/08/2026).** Medido de
-punta a punta en el PR #1763, sin que Alberto tocara nada:
-
-| hora (UTC) | qué hizo el agente | qué pasó |
-|---|---|---|
-| 26/08 23:08 | push de la rama + PR abierto **en draft** (token de App) | **0 runs**; los 12 requeridos en «Expected» |
-| 27/08 ~02:15 | intento de merge | `405 — 12 of 12 required status checks have not succeeded` |
-| 27/08 ~06:11 | 2º push a la rama (mismo token de App) | (ver nota de abajo) |
-| 27/08 06:12:18 | **PR marcado «ready for review»** (`draft:false` por la API) | **arrancan los 3 workflows** sobre `4efa129f`, evento `pull_request` |
-| 27/08 06:15 | los 12 jobs requeridos en `success` (~3,5 min) | ✅ |
-| 27/08 06:16 | merge (squash) | **`merged: true`** → `ba6ca86b` |
-| 27/08 06:19 | PR #1768: rama nueva, PR en draft, des-draft **sin 2º push** | runs otra vez → mergeado |
-
-**Confirmado con un SEGUNDO PR el mismo día (#1768).** Rama empujada, PR abierto en draft y sacado de
-draft acto seguido — **sin ningún 2º push**: los runs arrancaron igual (`06:19:25`, evento
-`pull_request`). Eso mata la explicación alternativa: el `synchronize` de un push **no** era lo que
-disparaba nada en #1763, porque aquí no hubo ninguno.
-
-**Y el tercer dato lo cierra:** un push posterior a #1768, con el PR **ya fuera de draft**, disparó los
-runs otra vez (`06:21:48`). O sea, el `synchronize` SÍ funciona… cuando el PR no es draft.
-
-🚨 **Conclusión: es el estado DRAFT lo que silencia los workflows.** Un PR en draft no produce runs ni
-al abrirlo ni al empujarle commits; en cuanto se saca de draft, los dispara — y a partir de ahí cada
-push vuelve a dispararlos con normalidad. Encaja con las cinco observaciones (dos `opened` en draft
-mudos · el push a #1763 en draft, mudo · los dos des-drafteos que dispararon · el push a #1768 ya sin
-draft, que disparó). Único fleco teórico: `ready_for_review` no está en los `types` por defecto de
-`on: pull_request` y el `event` del run no distingue la acción, así que el mecanismo interno de GitHub
-no se ha visto — pero el comportamiento está medido cinco veces y es reproducible.
-
-✅ **El procedimiento, que es lo que importa:** abre el PR en draft (como siempre), y cuando esté listo
-**quítale el draft**. Los 12 requeridos arrancan solos y en ~3,5 min está mergeable. **Ya no hace
-falta que Alberto toque nada.**
-
-⚠️ Lo que sigue siendo cierto: **el `workflow_dispatch` no vale** (ver arriba) y **el ruleset no se
-toca**.
-
-🔬 **Matiz medido el 27/08/2026 (PR #1777): un draft NO siempre es mudo — lo que manda es la
-IDENTIDAD que abre el PR.** Ese PR se abrió **en draft** con la herramienta MCP de GitHub y los 12
-requeridos arrancaron **al instante**, sin des-draftear: verdes en ~3 min y mergeado sin que Alberto
-tocara nada. El run lo dice: `event: pull_request`, `actor: albertosuarezgutierrez-gif` — o sea, el
-PR lo abre **tu cuenta de usuario**, no la App, y por eso el evento sí dispara. La regla útil es
-entonces: **abrir el PR por la herramienta MCP** (o des-draftear, que también funciona), y lo que no
-dispara es el **token de la App**. No des por hecho ninguna de las dos versiones sin mirar el
-`actor` del run.
-
-🚨 **TERCER dato, el mismo día (PR #1789): ni el draft ni la identidad lo explican del todo.** Los
-tres PRs de esta tanda salieron de la MISMA rama, con la MISMA identidad (`actor` = la cuenta de
-Alberto, PR abierto por la herramienta MCP) y los tres **en draft**. Los dos primeros (#1777,
-#1779) dispararon los 12 requeridos al instante; el tercero **no disparó ninguno**: sobre su head
-solo corrió `rutinas-automerge`, que es `pull_request_target` — o sea, el evento
-**`pull_request` no llegó a los workflows requeridos**. Y **sacarlo de draft tampoco lo rescató**
-(se probó: volvió a disparar solo el `pull_request_target`). No fue una caída de Actions: otro PR
-del repo tuvo su run de `tests.yml` **diez segundos antes**.
-
-Lo único que distinguía a #1789 es que el PR se abrió **~2 segundos después del push** de la rama.
-Es una hipótesis de carrera, no una causa medida — **no la des por buena sin comprobarla**.
-
-🚫 **Y las tres palancas que se probaron sobre #1789 fallaron las TRES.** Medido, en este orden:
-abrir el PR → 0 runs · **des-draftear** → 0 runs · **push posterior con contenido real**
-(`synchronize`) → 0 runs. En las tres, lo único que corrió sobre el head fue `rutinas-automerge`,
-que es `pull_request_target`: o sea, **el evento `pull_request` no llegó ni una sola vez**, mientras
-otros PRs del repo recibían el suyo con normalidad. Comprobado con `list_workflow_runs` filtrando
-por rama: **cero runs de `tests.yml` en esa rama después de las 11:25**.
-
-⚠️ Esto **corrige la frase que se escribió media hora antes en este mismo apartado** («el push
-posterior lo desatasca»): es lo que había funcionado hasta ahora, pero en #1789 tampoco. **Causa
-desconocida.** Lo que queda documentado no es un remedio, es qué NO gastar tiempo probando la
-próxima vez.
-
-✅ **CUARTA palanca, y ESTA SÍ funcionó (27/08/2026, 13:55 UTC, mismo PR #1789): MERGEAR `main` EN
-LA RAMA.** Tres horas después de los tres intentos fallidos, `main` había avanzado dos commits y el
-PR pasó a `mergeable_state: "dirty"` (conflicto en `CLAUDE.md` y en la memoria). Se resolvió el
-conflicto y se empujó el commit de merge → **los 12 requeridos arrancaron a los pocos segundos**,
-evento `pull_request`, sobre el head `b93d472e`. O sea: **el agente sí pudo desatascarlo solo**, y la
-frase que había aquí —«hace falta mano de Alberto»— era falsa.
-
-⚠️ **Lo que NO se sabe: por qué.** Dos pushes con contenido real (12:57 y 12:59 UTC) no habían
-disparado nada. Entre el último mudo y el que funcionó cambiaron dos cosas a la vez —pasaron 56
-minutos y el PR entró en conflicto— así que **no está aislado** si lo que desatasca es el merge de la
-base, el que la mergeability se recalcule, o simplemente el tiempo. No lo des por causa medida.
-
-**Orden a seguir cuando un PR no arranca los checks:** (1) mira si hay conflicto con `main`, y si lo
-hay resuélvelo —es trabajo obligatorio de todas formas y encima puede desatascar; (2) si no lo hay,
-**mergea `main` en la rama igualmente** (es un push con contenido real y no ensucia el historial como
-un commit vacío); (3) solo si eso tampoco funciona, hace falta mano de Alberto: un push desde su
-máquina, o cerrar y reabrir el PR desde la web, o abrir el PR de nuevo desde una rama con OTRO
-nombre. **El agente no crea ramas nuevas por su cuenta** (solo empuja a la rama designada) y el
-commit vacío sigue prohibido.
-
-✅ **QUINTA medición (01/09/2026, PR #1938): el orden de arriba FUNCIONÓ tal cual está escrito, y
-la secuencia completa se midió paso a paso.** Sin conflicto con `main` (paso 1 no aplicaba), se
-ejecutó el paso 2 y arrancaron los 12 requeridos a los pocos segundos:
-
-| paso | qué se hizo | runs de los requeridos |
-|---|---|---|
-| 1 | push de la rama (token de App) | **0** |
-| 2 | PR abierto **en draft** por la herramienta MCP | **0** (solo `rutinas-automerge`, que es `pull_request_target`) |
-| 3 | des-draftear (`draft:false` por la API) | **0** (ídem) |
-| 4 | **merge de `main` en la rama + push** | ✅ **12/12**, `event: pull_request`, `actor: albertosuarezgutierrez-gif`, verdes en ~2,5 min |
-
-🔀 **Y el PR de seguimiento del mismo día (#1940) volvió a romper el patrón: abierto IGUAL —MCP, en
-draft, misma identidad— y disparó los 12 al instante** (`event: pull_request`, sin des-draftear ni
-tocar nada). Dos PRs consecutivos, mismo método, resultados opuestos. Así que **el draft NO es la
-causa**, o no es la única: sigue sin explicación, exactamente como quedó tras #1789. Lo único
-accionable sigue siendo el orden de abajo.
-
-Encaja con la hipótesis del draft del 27/08 **con un matiz que conviene recordar**: sacar de draft
-por sí solo no disparó nada (como en #1789), pero dejó la rama armada para que **el push siguiente
-sí** lo hiciera — el push inicial, con el PR aún en draft, había sido mudo con el mismo token. ⚠️ No
-está aislado si lo que desatasca es el des-draft, el merge de la base o los dos juntos: aquí también
-cambiaron dos cosas antes del push que funcionó. Lo que sí queda medido cinco veces es que **el orden
-de abajo resuelve**, así que síguelo sin gastar tiempo en diagnosticar la causa.
-
-🎯 **SEXTA medición (01/09/2026, PR #1962) — y ESTA SÍ trae una CAUSA MEDIDA, no otra hipótesis: el
-objeto PR de GitHub se queda ATRASADO respecto a la rama.** Dos pushes seguidos con contenido real
-(código y docs) sobre un PR **ya fuera de draft** salieron **mudos**: cero runs de los requeridos, solo
-`rutinas-automerge` (que es `pull_request_target`). Idéntico a #1789. Pero esta vez se miró **el objeto
-PR**, no solo los runs, y ahí estaba:
-
-```
-git ls-remote origin <rama>   →  5a732a51   ← la rama SÍ tenía el push
-PR #1962: head.sha            →  d0d23c65   ← GitHub seguía en el head viejo
-PR #1962: commits             →  2          ← de 5
-PR #1962: mergeable_state     →  "dirty"    ← contra una base que ya no era la de main
-```
-
-O sea: **GitHub no había procesado el `synchronize`.** No hay `event` que mirar porque el evento no
-existió. Y no era un fallo permanente — **a los ~2 minutos GitHub se puso al día solo** (head correcto,
-5 commits, `mergeable_state: "blocked"`) y **los 12 requeridos arrancaron en ese mismo instante**
-(`14:38:58`), sin tocar nada: sin des-draftear, sin mergear `main`, sin push nuevo. Verdes y mergeado.
-
-🚨 **Lo que esto CORRIGE de todo lo de arriba:** en #1789 se probaron tres palancas (abrir PR,
-des-draftear, push nuevo) y se declaró «causa desconocida»; en #1938 lo que «desatascó» fue un merge de
-`main`… **que es un push más, y por tanto también un par de minutos más de espera**. La explicación
-simple que encaja con las seis mediciones es el **lag**, no el draft ni la identidad: cada vez que algo
-«funcionó» había pasado tiempo, y cada vez que «no funcionó» se miró demasiado pronto.
-
-✅ **Procedimiento nuevo, y ahorra la tarde entera:** si tras un push los requeridos no arrancan,
-**compara `git ls-remote origin <rama>` con el `head.sha` del PR ANTES de tocar nada.** Si no coinciden,
-GitHub va con retraso: **espera 2-3 minutos y vuelve a mirar.** No des-draftees, no mergees `main`, no
-empujes otro commit — cada palanca añade un head nuevo, reinicia la espera y confunde el diagnóstico
-(fue exactamente lo que pasó aquí: el segundo push «mudo» no lo era, solo llegó mientras el primero
-seguía sin procesarse).
-
-⚠️ El orden de abajo sigue valiendo como respaldo si tras esperar el `head.sha` YA coincide y aun así no
-hay runs — pero prueba primero lo barato, que es no hacer nada.
+🎯 **ORDEN DEFINITIVO, y ahorra la tarde:**
+0. **Antes de nada: ¿los runs EXISTEN?** `list_workflow_runs` filtrando por rama. Si existen y están
+   `completed`/`success` sobre ese head, no hay nada que desatascar — es reporte retrasado
+   (DECIMOCUARTA): **reintenta el merge sin tocar nada**, aunque el `405` te jure que un check sigue
+   corriendo. Los pasos 1-4 son para cuando el run NO existe.
+   ⚠️ Y si el run existe pero **`list_workflow_jobs` da `total_count: 0`, eso NO prueba que esté
+   muerto**: un run en cola da lo mismo (DECIMOSEXTA). Espera unos minutos antes de fabricar un head
+   nuevo — esperar es gratis y el head nuevo borra la evidencia.
+1. **¿`git ls-remote origin <rama>` ≠ `head.sha` del PR?** → es lag: espera 2-3 min y no toques nada (#1962).
+   ⚠️ Que **coincidan no descarta el lag**, solo descarta el head viejo (#2341): si acabas de empujar, espera igual antes de tocar palancas.
+2. **¿Coinciden y el PR está en DRAFT?** → sácalo de draft **y empuja algo con contenido real después**
+   (el merge de `main` sirve, y encima es trabajo obligatorio si hay conflicto). Des-draftear a secas no basta.
+3. **¿Coinciden, ya no es draft y sigue mudo?** → mergea `main` igualmente (es un push con contenido real).
+4. Solo si eso tampoco, hace falta mano de Alberto. **Sigue prohibido**: commit vacío, cerrar y reabrir,
+   rama nueva por iniciativa del agente, y tocar el ruleset.
 
 **Regla de método: mira siempre el `event` y el `actor` de los runs antes de dar por buena cualquiera
-de las versiones de esta sección.** Llevamos tres modelos en dos días y los tres se han quedado
-cortos.
+de las versiones de esta sección.** Llevamos diez mediciones y cada modelo que ha pasado por aquí ha
+escrito su explicación y la ha visto caer con el PR siguiente. Añade la medición; no reescribas las
+anteriores para que encajen.
 
 **Los 12 requeridos son nombres de JOB, no de workflow** (por eso no basta con mirar si el workflow
 salió verde):
@@ -442,13 +601,14 @@ salió verde):
 Los `Vercel – *` y `Vercel Preview Comments` **no están entre los requeridos**: que estén verdes no
 desbloquea nada.
 
-⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 12** — verificado leyendo el `app:` del
-workflow el 02/09/2026: `ia-rest, ialimp, sivra, plataforma, rrhh, transporte, alquiler, almacen,
-mariscos, asegura, asegura-portal, housesevillana` (se añadió `asegura` el 26/08, `housesevillana`
-el 27/08 y **`asegura-portal`** después). Los 9 de la tabla son los que el **ruleset exige**; los
-tres nuevos **corren pero no consta que sean requeridos** (el ruleset no se lee desde aquí, así que
-no se afirma). Cuenta los nombres del workflow antes de citar esta cifra: se ha quedado corta dos
-veces ya. `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la matriz**, y por eso
+⚠️ **La matriz de `tests.yml` ya NO son 9 apps: son 13** — verificado leyendo el `app:` del
+workflow (`.github/workflows/tests.yml:62`) el 06/09/2026: `ia-rest, ialimp, sivra, plataforma, rrhh,
+transporte, alquiler, almacen, mariscos, asegura, asegura-portal, asegura-web, housesevillana` (se
+añadió `asegura` el 26/08, `housesevillana` el 27/08, `asegura-portal` después y **`asegura-web`**
+al crearla el 04/09). Los 9 de la tabla son los que el **ruleset exige**; los cuatro nuevos **corren
+pero no consta que sean requeridos** (el ruleset no se lee desde aquí, así que no se afirma). Cuenta
+los nombres del workflow antes de citar esta cifra: **se ha quedado corta TRES veces ya** — la
+última, este mismo apartado diciéndose «son 12» mientras el workflow ya corría 13. `housesevillana` llevaba desde el 12/08 en el monorepo **fuera de la matriz**, y por eso
 sus 5 errores `TS5097` vivieron 15 días sin que nadie los viera: una app que no está en la matriz
 no la typechequea nadie. **Al crear una app nueva, añadirla a la matriz es parte del alta**, igual
 que el `ignoreCommand`.
@@ -468,6 +628,18 @@ No lo es: con `npx --yes pnpm@10.33.0 install --no-frozen-lockfile` (≈20 s, el
 con `TS2307: Cannot find module './generated/asegura-client'` **en local mientras el CI está verde** — el
 workflow usa el script de la app, que genera los dos. El comando completo es el de su `package.json`:
 `prisma generate && prisma generate --schema prisma/asegura.prisma`. (Medido 01/09/2026.)
+
+🚨 **Y OJO CON GENERAR DOS APPS A LA VEZ: el cliente por defecto de Prisma es UNO
+SOLO para todo el monorepo** (`node_modules/.pnpm/@prisma+client@…/@prisma/client`).
+Cada `prisma generate` de una app lo **sobrescribe**, así que generar plataforma
+deja el typecheck de asegura en rojo con errores que parecen de código —
+`Property 'companiaDgs' does not exist on type 'PrismaClient'`, enums a los que
+«les faltan» valores— en ficheros que nadie ha tocado. Medido el 02/09/2026 con
+dos agentes trabajando en paralelo: **`main` estaba sana y el rojo era local.**
+En CI no pasa porque cada `Typecheck · <app>` corre en su propio job. Antes de
+diagnosticar un typecheck rojo en local, **regenera el cliente de ESA app y
+repite** — y si estás corriendo trabajos en paralelo sobre dos apps, no te fíes
+del typecheck de la que no generaste la última.
 | `Análisis estático · Patrones conocidos` | `pnpm exec tsx scripts/qa-check.ts` | **`apps/ia-rest`** (el workflow lleva `working-directory`) |
 | `Lint · TypeCheck · Build` | `pnpm run lint` · `pnpm exec tsc --noEmit` · `pnpm run build` | **`apps/ia-rest`** (idem) |
 
@@ -546,7 +718,60 @@ que un PR borra algo, simula el merge (`git merge` en un `git worktree`) y míra
     (factura 14 jul–13 ago: 32.708 min ≈ 92,51 US$ de 117 US$) y no los mira nadie: los agentes verifican
     con tsc/tests y mergean en minutos. Con el flag solo construye `main` (producción). Para forzar una
     preview concreta (verificar UI en Vercel antes de mergear), pon **`[preview]` en el ASUNTO del commit**.
+    🚨 **Pero el marcador NO basta por sí solo: hacen falta DOS condiciones a la vez**, y saltarse
+    cualquiera deja el build saltado sin que nada falle. Medido el 02/09/2026 fallando las dos, una detrás
+    de otra (PR #2054):
+    1. **Tiene que ir en el asunto del ÚLTIMO commit del push.** El script lee `VERCEL_GIT_COMMIT_MESSAGE`
+       (`scripts/vercel-ignore-build.mjs:42`), que es el asunto del commit del deployment, o sea el HEAD
+       empujado. *Primer fallo:* se marcó el commit de la migración y después se hicieron dos commits más
+       (memoria y un merge de `main`); el deployment tomó el asunto del merge, que no lo llevaba.
+    2. **Ese mismo commit tiene que TOCAR la app**, o un `packages/*` que ella declare, o un manifiesto
+       raíz (`package.json`, `pnpm-lock.yaml`, `pnpm-workspace.yaml`). `[preview]` solo levanta el veto de
+       `--sin-previews` (paso 1b del script); **el paso 3 salta igual si el commit no afecta a esa app**.
+       *Segundo fallo:* se repitió el marcador en un commit que solo tocaba este `CLAUDE.md` de la raíz —que
+       NO está entre los manifiestos— y `Vercel – plataforma` volvió a salir `Canceled by Ignored Build Step`.
+    En los dos casos la consecuencia era la misma: **43 pantallas con el aspecto cambiado camino de
+    producción sin haberse visto nunca**, que es justo lo que el `[preview]` pretendía evitar. Y en los dos
+    el síntoma es idéntico a un build legítimamente ignorado, así que **compruébalo en el status de Vercel
+    del PR en vez de darlo por hecho**.
     ialimp NO lo lleva a propósito: cliente vivo (Sique Brilla) → ahí sigue la regla «preview verde antes de main».
+    🔥 **Y LA TRAMPA CARA, medida el 04/09/2026 (PR #2281): `[preview]` NO es por app — es un
+    interruptor GLOBAL, y en un commit de MERGE construye las once.** El marcador levanta el veto
+    de `--sin-previews` en **todos** los proyectos a la vez (paso 1b del script mira solo el asunto,
+    no qué app es), así que lo único que después decide es el paso 3: «¿el commit toca esta app?».
+    Y el diff de un **commit de merge** contra su primer padre **es todo lo que traía `main`** —
+    incluidos `pnpm-lock.yaml` y el `package.json` raíz, que están en la lista de manifiestos. O sea:
+    marcar con `[preview]` un merge de `main` = **once builds de preview de golpe**, por un cambio
+    que solo tocaba una app. Medido: los 11 `Vercel – *` salieron `Deployment has completed`, **cero
+    `Canceled by Ignored Build Step`**. Es la misma familia que el incidente de los ~600 US$ (PR #904),
+    disparada por el mecanismo puesto para ahorrar.
+    **Cómo se pide una preview sin pagar diez:** el `[preview]` va en un commit **normal que toque solo
+    esa app**, y ese commit tiene que ser el **último** del push (el script lee el asunto del HEAD).
+    Si además hay que mergear `main`, mergea PRIMERO —sin marcador— y deja el commit marcado encima;
+    al revés, el merge se come el asunto y de paso construye todo. Y si el último commit acaba siendo
+    un merge, **quítale el `[preview]`** y renuncia a la preview antes que pagar once.
+  - 🟡 **Y el falso positivo al revés (02/09/2026): «Building» NO significa que se vaya a construir.** Al
+    empujar, el comentario de Vercel del PR pinta los proyectos en **Building** durante unos segundos y
+    LUEGO pasan a `Ignored`: el `ignoreCommand` corre DENTRO del deployment, así que el estado intermedio
+    existe siempre. Ese día se estuvo a punto de dar la alarma de «se están construyendo los once
+    proyectos, como en el incidente de los 600 US$» **dos veces**, leyendo esos comentarios intermedios.
+    El estado que vale es el FINAL: `get_status` sobre el head del PR, donde cada `Vercel – *` dice
+    `Canceled by Ignored Build Step`. No diagnostiques gasto desde un comentario que se reescribe solo.
+  - 🚦 **Y `Ignored` NO ES GRATIS DEL TODO: hay una SEGUNDA cuota, y esa sí la agota un agente
+    (04/09/2026).** El `ignoreCommand` corta el **build**, no la **creación del deployment**: Vercel
+    crea los once igualmente y solo después decide no construirlos. Y el límite
+    `api-deployments-paid-per-hour` (**450/h, de cuenta, no de proyecto**) cuenta **deployments
+    creados**. Medido: siete pushes seguidos a una rama de PR × 11 proyectos, más el tráfico del
+    automerge del repo, y la cuenta entera se quedó en `Resource is limited - try again in 60
+    minutes` — con **los despliegues de PRODUCCIÓN de `ia-rest`, `almacen`, `transporte` y
+    `house-sevillana-landing` fallando** por una rama que no tocaba ninguno de ellos.
+    🚨 Lo que esto CORRIGE: durante esa hora se informó tres veces de «0 gasto, todos `Ignored`».
+    Era cierto sobre los Build CPU Minutes y **falso sobre la cuota de deployments** — o sea, la
+    frase «Ignored = no cuesta nada» de este apartado vale para la factura y no para el límite. La
+    regla operativa es de RITMO, no de configuración: **empujar a una rama de PR cuesta 11
+    deployments cada vez**, así que se verifica en local (typecheck + tests, ver más abajo) y se
+    empuja UNA vez; encadenar pushes «a ver si arranca el CI» es justo lo que revienta la cuota.
+    Mergear un PR no crea previews. Y si aparece ese error, no es un fallo del repo: se espera.
 - **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las

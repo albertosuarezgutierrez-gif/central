@@ -29,6 +29,60 @@ export const RAMOS_POLIZA = [
 ] as const
 export type RamoPoliza = (typeof RAMOS_POLIZA)[number]
 
+/**
+ * Cómo se le llama a cada ramo DELANTE DEL CLIENTE. Una sola tabla para toda la
+ * app: el 03/09/2026 la bóveda pintaba «Responsabilidad civil» en la tarjeta de
+ * la póliza y `responsabilidad_civil` —el valor crudo del enum— dos dedos más
+ * arriba, en el calendario, porque cada pantalla traía su propio mapa (o
+ * ninguno). Un cliente no tiene por qué saber que eso es la misma cosa.
+ */
+export const ETIQUETA_RAMO: Record<RamoPoliza, string> = {
+  auto: 'Auto',
+  moto: 'Moto',
+  hogar: 'Hogar',
+  vida: 'Vida',
+  salud: 'Salud',
+  decesos: 'Decesos',
+  responsabilidad_civil: 'Responsabilidad civil',
+  comercio: 'Comercio',
+  comunidades: 'Comunidades',
+  otros: 'Otros',
+}
+
+/**
+ * Etiqueta de un ramo que puede venir de la BD como texto suelto. Un valor que
+ * no esté en la tabla se devuelve TAL CUAL en vez de caer a «Otros»: enseñar
+ * «Otros» por un ramo que sí existe pero no se ha etiquetado sería afirmar algo
+ * que no se ha mirado, y además esconde el hueco que hay que arreglar.
+ */
+export function etiquetaRamo(ramo: string | null | undefined): string | null {
+  if (ramo == null || ramo === '') return null
+  return (ETIQUETA_RAMO as Record<string, string>)[ramo] ?? ramo
+}
+
+/**
+ * La cobertura que ESPECIALIZA un ramo genérico, cuando la hay.
+ *
+ * «Responsabilidad civil» es un cajón donde caben mil pólizas distintas —de
+ * perros, patronal, profesional...— y para una que no tiene bien físico que la
+ * distinga (no hay coche ni dirección) el título se queda igual para todas:
+ * «Occident · Responsabilidad civil». La cobertura ya trae el texto específico
+ * («Responsabilidad civil perros»); esto la encuentra, y solo cuando de
+ * verdad AMPLÍA el nombre del ramo, no cualquier cobertura suelta de la
+ * póliza (queja de Alberto, 09/09/2026, sobre la RC de perros 548238086).
+ */
+export function coberturaEspecificaDeRamo(ramo: string | null | undefined, coberturas: readonly string[]): string | null {
+  const generico = etiquetaRamo(ramo)?.trim().toLowerCase()
+  if (!generico) return null
+  for (const bruto of coberturas) {
+    const normalizado = bruto.trim()
+    if (normalizado.toLowerCase().startsWith(generico) && normalizado.length > generico.length) {
+      return normalizado
+    }
+  }
+  return null
+}
+
 export type PolizaLeida = {
   compania: string | null
   numeroPoliza: string | null
@@ -83,12 +137,22 @@ const MARCADORES_SIN_DATO = new Set([
   '?',
 ])
 
-function texto(v: unknown): string | null {
+/**
+ * Una cadena con dato de verdad, o `null`.
+ *
+ * 🚨 Se EXPORTA (desde el 05/09/2026) para que `bien-asegurado.ts` use la misma
+ * lista de marcadores en vez de escribirse la suya. Dos listas de valores de
+ * cajón en el mismo paquete acaban divergiendo, y la que se quede corta deja
+ * pasar un «no consta» pintado como si fuera la matrícula del coche.
+ */
+export function textoConDato(v: unknown): string | null {
   if (typeof v !== 'string') return null
   const limpio = v.trim()
   if (MARCADORES_SIN_DATO.has(limpio.toLowerCase())) return null
   return limpio
 }
+
+const texto = textoConDato
 
 function numero(v: unknown): number | null {
   let n: number
@@ -104,7 +168,7 @@ function numero(v: unknown): number | null {
   return n
 }
 
-function fechaIso(v: unknown): string | null {
+export function fechaIso(v: unknown): string | null {
   const t = texto(v)
   if (t === null) return null
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t)
@@ -114,6 +178,46 @@ function fechaIso(v: unknown): string | null {
   // Rechaza los días que el Date «arregla» solo (2026-02-31 → 3 de marzo).
   if (d.toISOString().slice(0, 10) !== t) return null
   return t
+}
+
+function esBisiesto(anio: number): boolean {
+  return (anio % 4 === 0 && anio % 100 !== 0) || anio % 400 === 0
+}
+
+/** El aniversario de un día/mes en un año concreto. Un 29 de febrero cae al 28
+ *  en un año no bisiesto: el contrato no deja de vencer solo porque el año no
+ *  tenga ese día. */
+function fechaAniversario(anio: number, mes: number, dia: number): Date {
+  const diaClamp = mes === 2 && dia === 29 && !esBisiesto(anio) ? 28 : dia
+  return new Date(Date.UTC(anio, mes - 1, diaClamp))
+}
+
+/**
+ * El día y mes de VENCIMIENTO de un seguro anual renovable son los mismos que
+ * los de su fecha de EFECTO (o de emisión): el contrato se renueva cada año en
+ * esa fecha. Dictado de Alberto (19/09/2026), sobre una póliza cuyo único
+ * documento era el contrato original de 2017 y no traía ningún vencimiento
+ * vigente: «los contratos de seguros son anuales renovables… la fecha de
+ * emisión es fecha de vencimiento».
+ *
+ * 🚨 Es un dato CALCULADO, no leído: solo se usa cuando el documento NO trae
+ * un vencimiento explícito. Si lo trae, ese manda siempre — esta función ni
+ * se llama.
+ *
+ * Devuelve la PRÓXIMA ocurrencia de ese día/mes a partir de `hoy` (incluido):
+ * si ya pasó este año, el año que viene.
+ */
+export function vencimientoDesdeEfecto(fechaEfecto: unknown, hoy: Date = new Date()): string | null {
+  const t = fechaIso(fechaEfecto)
+  if (t === null) return null
+  const [, , mesStr, diaStr] = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t) as RegExpExecArray
+  const mes = Number(mesStr)
+  const dia = Number(diaStr)
+  const medianocheHoy = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate()))
+  const anioBase = hoy.getUTCFullYear()
+  const candidato = fechaAniversario(anioBase, mes, dia)
+  const vencimiento = candidato.getTime() >= medianocheHoy.getTime() ? candidato : fechaAniversario(anioBase + 1, mes, dia)
+  return vencimiento.toISOString().slice(0, 10)
 }
 
 function ramo(v: unknown): RamoPoliza | null {

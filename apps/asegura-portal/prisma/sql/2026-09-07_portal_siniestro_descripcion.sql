@@ -1,0 +1,56 @@
+-- ✅ APLICADA el 07/09/2026 contra la Supabase compartida (schema `seguros`),
+-- y verificada: de las columnas cerradas, el rol solo suma `comentario`
+-- (`lugar_direccion` y los importes siguen sin grant).
+--
+-- Portal de Grupo ASegura — la DESCRIPCIÓN del siniestro (07/09/2026).
+--
+-- Alberto: «también dar acceso a toda la información de los siniestros».
+--
+-- ── QUÉ SE ABRE, Y POR QUÉ ES SOLO UNA COLUMNA ─────────────────────────────
+--
+-- Medido en la cartera el 07/09/2026 (69 siniestros), lo que el portal aún NO
+-- enseñaba y tiene contenido de verdad es UNA columna:
+--
+--   comentario              66 de 69     ← esto es lo que abre esta migración
+--   lugar_cp/ciudad/prov     8 de 69     ← el rol YA las podía leer (grants del 02/09)
+--   tipo                    69 de 69     ← código de compañía («17», «1107»), no se pinta
+--   gravedad                 0
+--   reserva_importe          0           ← ni existe el grant ni hay dato
+--   indemnizacion_importe    0           ← ídem
+--   se_considera_culpable    0
+--   tramitador_*             0           ← la regla del 03/09 hoy no oculta NADA: está vacío
+--   perito_*                 0
+--
+-- O sea: sin esta columna, «toda la información» son ocho lugares y poco más.
+--
+-- 🚨 LO QUE HAY DENTRO, dicho en voz alta porque no es un campo saneado.
+-- `comentario` es texto LIBRE del tramitador, escrito para uso interno, y en la
+-- cartera real contiene datos personales de TERCEROS. Dos ejemplos literales:
+--
+--   · «Contacta Maria del Mar …, familiar de tomadora, para comunicar que a
+--      consecuencia de las fuertes lluvias …»
+--   · «Vecino inundado por agua … Inquilino piso 5: <nombre> <móvil> ·
+--      Inquilino piso 11: <nombre> <móvil>»
+--
+-- Alberto decidió el 07/09/2026, con estos ejemplos delante, publicarlo a TODO
+-- el que ya puede ver siniestros — no solo al titular. Queda anotado aquí
+-- porque la próxima persona que lea esta columna en una pantalla nueva merece
+-- saber que la decisión fue tomada informada, y no heredarla por descuido.
+--
+-- El suelo que sigue en pie, y que NO lo da esta migración sino el código:
+-- `camposVisibles().siniestros` (nivel `completo` o superior) y, en las
+-- autorizaciones, `NUNCA_A_UN_TERCERO.siniestros = false` cuando quien cede es
+-- una persona FÍSICA. Una SOCIEDAD sí puede ceder sus siniestros, y ahí es
+-- donde este texto llega a alguien ajeno al expediente.
+--
+-- Lo que esta migración NO abre, a propósito: `lugar_direccion` (cifrada, y es
+-- la casa de alguien), `se_considera_culpable` (señalar culpables no es cosa
+-- del portal) y los importes (no hay ni un dato en las 69 filas; cuando los
+-- haya se decide entonces, con la cartera delante, si son del cliente).
+
+SET search_path = seguros, public;
+
+-- Aditivo y por COLUMNA, como todos los grants de este rol (02/09/2026): el
+-- portal sigue sin poder hacer `SELECT *` sobre `siniestros`, que es donde
+-- tiene que fallar.
+GRANT SELECT (comentario) ON seguros.siniestros TO prisma_asegura_portal;

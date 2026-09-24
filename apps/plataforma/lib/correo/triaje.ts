@@ -10,12 +10,16 @@ import { avisoDeCategoriaCorreo } from '@/lib/telegram/catalogo'
 import { abrirTriaje } from './imap'
 import { clasificar, quizaAutoAprender } from './clasificador'
 import { enrutarHuesped, extraerNumConfirmacion, resolverBookingId } from './huespedes'
+import { esRemitenteDeCanal } from './num-confirmacion'
 import { parsearAvisoBooking } from './reserva-booking'
 import { registrarAvisoBooking, registrarReservaHuesped } from '@/lib/sivra/reservas-booking-vigia'
 import { parsearAvisoMensajesAgoda, textoAvisoAgoda } from './agoda-mensajes'
 import { parsearNotificacionSmoobu } from './smoobu-notificacion'
 import { ACCESO } from '@/lib/sivra/acceso'
 import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
+import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
+import { pareceContactoPersonal } from './contacto-sugerido'
+import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
 
 // Modo sombra por DEFECTO en el arranque: clasifica y anota en BD pero NO etiqueta/archiva/avisa.
 // Es la red de seguridad de la mejora 1 — mientras Alberto valida los primeros digests, el agente
@@ -54,15 +58,17 @@ function mensajeAviso(o: {
 function etiquetaBonita(categoria: string): string {
   const m: Record<string, string> = {
     'personal-importante': 'Personal importante',
+    'correduria-recibo': 'Recibo sin cobrar (correduría)',
     'huespedes': 'Huésped',
     'leads-negocio': 'Oportunidad de negocio',
+    'asociacion-corredores': 'Asociación de corredores',
     'seguridad-sospechosa': 'Seguridad',
   }
   return m[categoria] ?? categoria
 }
 
 export async function pasadaTriaje(): Promise<Record<string, number>> {
-  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0 }
+  const stats = { nuevos: 0, saltados: 0, duplicados: 0, etiquetados: 0, archivados: 0, avisados: 0, errores: 0, sombra: 0, correduriaResueltos: 0 }
   const cur = await prisma.$queryRaw<{ last_uid: number; uidvalidity: bigint | null }[]>`
     SELECT last_uid, uidvalidity FROM correo_cursor WHERE buzon = 'INBOX' LIMIT 1
   `
@@ -129,7 +135,15 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             // lo reconoce → puede ser una reserva que Smoobu perdió (caso James Ascott: Booking
             // no mandó ningún aviso; el único rastro fue este tipo de correo). Se registra como
             // pendiente y el vigía decide con su ventana ancha — aquí NO se afirma nada.
-            const num = extraerNumConfirmacion(correo)
+            //
+            // 🚨 Y SOLO si el correo viene de un canal por el que ENTRAN reservas (04/09/2026).
+            // Un correo de HomeExchange («Irene et Rico ha contestado a tu mensaje») produjo un
+            // 🚨 «reserva 360009410197 que Smoobu NO tiene»: ese número era el id de un artículo
+            // del Zendesk de HomeExchange dentro de un enlace. Por HomeExchange no entra ninguna
+            // estancia a Smoobu, así que un número suyo NUNCA puede estar desaparecido. El
+            // colador de nº ya no mira dentro de los enlaces (num-confirmacion.ts); esta puerta
+            // es la segunda vuelta de llave, por remitente.
+            const num = esRemitenteDeCanal(correo.from) ? extraerNumConfirmacion(correo) : null
             if (num && !(await resolverBookingId(num).catch(() => null))) {
               await registrarReservaHuesped(correo.messageId, correo.subject, num).catch(() => {})
             }
@@ -159,6 +173,38 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             })
             const enviado = avisoId ? await tgAviso(avisoId, texto) : await tgSend(texto)
             if (enviado !== null) stats.avisados++
+          }
+
+          // Enlace con la ficha del cliente en asegura (20/09/2026): solo para correos de
+          // aseguradora (`correduria` / `correduria-recibo`), y DESPUÉS del aviso de arriba
+          // a propósito — este correo es justo el que se separó en su propia categoría
+          // porque un recibo a punto de anular no puede esperar, y dos llamadas de red a
+          // otra app no pueden ser lo que retrase ESE aviso. Si el texto resuelve a una o
+          // varias pólizas VIVAS de la cartera, se anota en la ficha de cada cliente; si no
+          // resuelve ninguna —o no se pudo ni preguntar—, no pasa nada: el aviso/digest de
+          // siempre sigue siendo la única señal, exactamente como hasta hoy.
+          if (ruta.enrutarCorreduria) {
+            const textoParaResolver = `${correo.subject}\n${correo.extracto ?? ''}`.slice(0, 4000)
+            const resueltos = await resolverCorreoAseguradora(textoParaResolver).catch(() => undefined)
+            if (resueltos) {
+              for (const r of resueltos) {
+                const nota = `Correo de aseguradora (${etiquetaBonita(c.categoria)}) de ${correo.fromRaw}: ${correo.subject}`.slice(0, 2000)
+                const anotado = await anotarHistorialDesdeCorreo(r.clienteId, nota).catch(() => false)
+                if (anotado) stats.correduriaResueltos++
+              }
+            }
+
+            // Sugerencia de alta de contacto (20/09/2026): NUNCA da de alta —
+            // solo avisa la primera vez que ve escribir a una persona (no un
+            // buzón genérico) de una aseguradora, para que Alberto decida si
+            // la añade al directorio (`compania_contactos`). Best-effort: un
+            // fallo aquí no toca ni el aviso ni la anotación de arriba.
+            if (pareceContactoPersonal(correo.from) && (await esPrimerCorreoDeCorreduria(correo.from).catch(() => false))) {
+              await tgAviso(
+                'correo.contacto-sugerido',
+                `👤 <b>Posible contacto nuevo de aseguradora</b>\n${escapeHtml(correo.fromRaw)}\n${escapeHtml(correo.subject)}\n➡️ Si es una persona real, añádela en /correduria → Directorio de compañías.`,
+              ).catch(() => null)
+            }
           }
 
           // Auto-aprendizaje de reglas.

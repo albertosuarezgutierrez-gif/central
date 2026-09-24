@@ -57,7 +57,10 @@ const RE_FECHA_G = new RegExp(RE_FECHA.source, 'g');
 const entreParentesis = (texto, m) =>
   texto[m.index - 1] === '(' && texto[m.index + m[0].length] === ')';
 
-const ultimaFecha = (texto) => {
+// Exportada para que el extractor de novedades del auditor (scripts/auditar-novedades.mjs)
+// use ESTE criterio y no uno propio: dos lecturas distintas del mismo archivo acaban
+// discrepando, y la que se ve en pantalla sería la equivocada.
+export const ultimaFecha = (texto) => {
   const coincidencias = [...texto.matchAll(RE_FECHA_G)];
   if (coincidencias.length === 0) return null;
   const conParentesis = coincidencias.filter((m) => entreParentesis(texto, m));
@@ -77,13 +80,35 @@ export const textoFechaDe = (entrada) => {
 };
 
 // Trocea las líneas (ya sin cabecera) en entradas.
+//
+// 🐛 Por qué NO basta `esInicioEntrada` línea a línea (medido 02/09/2026): el CUERPO de una
+// entrada `### ` está lleno de sub-bullets `- **Titular:** …` SIN indentar, sintácticamente
+// idénticos a una cabecera del formato antiguo. Tratándolos como cabecera, una entrada con 5
+// sub-bullets se troceaba en 6, y al archivar se guardaban como 6 sesiones distintas.
+//
+// La regla que los separa es de ESTADO, no de sintaxis: mientras una entrada `### ` esté
+// abierta, todo `- **` es cuerpo suyo. Un `- **` solo abre entrada si no hay ninguna `### `
+// abierta — que es el caso de los meses antiguos, escritos enteros en ese formato.
+//
+// El desempate cuando SÍ hay una `### ` abierta es la FECHA: una cabecera del formato antiguo
+// la lleva siempre en su negrita (`- **Título (dd/mm/aaaa).**`) porque de ahí sale la fecha de
+// la entrada; un sub-bullet del cuerpo no la lleva. Así una entrada `- **` fechada escrita
+// debajo de una `### ` se sigue reconociendo, que es un caso real y está en los tests.
+//
+// ⚠️ Límite conocido: un sub-bullet cuya negrita citara una fecha entre paréntesis se leería
+// como cabecera. Hoy no ocurre en `docs/CONTEXTO-SESIONES.md` (comprobado al escribir esto).
 export function trocear(lineas) {
   const entradas = [];
   let actual = null;
+  let enEntradaH3 = false;
   for (const linea of lineas) {
-    if (esInicioEntrada(linea)) {
+    const esH3 = linea.startsWith('### ');
+    const bulletFechado = linea.startsWith('- **') && /\((?:[0-3]?\d)\/(?:[01]\d)(?:\/20\d\d)?\)/.test(linea);
+    const abreEntrada = esH3 || (esInicioEntrada(linea) && (!enEntradaH3 || bulletFechado));
+    if (abreEntrada) {
       if (actual) entradas.push(actual);
       actual = [linea];
+      enEntradaH3 = esH3;
     } else if (actual) {
       actual.push(linea);
     }

@@ -1,0 +1,103 @@
+{
+ "sesion": "eb7f296f-5255-552b-b0db-9aa5c8f2e904",
+ "inicio": "2026-09-22T09:04:53.776Z",
+ "fin": "2026-09-22T09:08:24.982Z",
+ "llamadas": 45,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 927,
+   "chars_out": 1355,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1,
+    "PushNotification": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 6,
+   "chars_in": 535,
+   "chars_out": 63131,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 6
+   }
+  },
+  "bash": {
+   "llamadas": 6,
+   "chars_in": 1373,
+   "chars_out": 1892,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 6
+   }
+  },
+  "sql": {
+   "llamadas": 8,
+   "chars_in": 3407,
+   "chars_out": 13672,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 8
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 15,
+   "chars_in": 1375,
+   "chars_out": 42570,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 10,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__get_thread": 1,
+    "mcp__Gmail__label_thread": 3
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 3,
+   "chars_in": 331,
+   "chars_out": 16634,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 3
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1559,
+   "chars_out": 79445,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 2230,
+   "chars_out": 332,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1
+   }
+  }
+ }
+}

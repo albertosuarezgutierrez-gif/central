@@ -15,6 +15,10 @@
 //   nueva + Smoobu NO la tiene   → huerfana + Telegram 🚨 (una vez) + se pinta ⚠️ en la intranet.
 //   cancelación + sigue ACTIVA   → huerfana + Telegram 🚨 (el calendario bloquea noches muertas).
 //   Smoobu incontactable         → NO se decide nada (no lo sé ≠ no está); se reintenta.
+// Hay un cuarto estado, 'descartada', que NO escribe este código: se pone a mano cuando se
+// comprueba que la fila nunca fue una reserva (un número pescado de un correo que no era de un
+// canal). Al no estar en ('pendiente','huerfana') deja de re-comprobarse y de pintarse ⚠️ en la
+// intranet, y no miente diciendo 'confirmada' —que dispararía un ✅ «ya está en Smoobu» falso.
 // Las huérfanas se re-comprueban cada pasada: cuando Smoobu se cura, ✅ Telegram de cierre.
 //
 // 🚨 CORRECCIÓN 01/09/2026 — los tres primeros 🚨 que mandó este vigía fueron FALSOS, y las tres
@@ -38,7 +42,13 @@ import { PROPS_CALENDARIO } from '@/lib/sivra/constantes'
 import { canalDeAsunto } from '@/lib/correo/smoobu-notificacion'
 
 const REVISAR_DIAS = 30      // una fila con >30 días se deja de re-comprobar (queda su estado)
-const VENTANA_SIN_FECHA = 180 // sin check-in conocido, se busca en hoy−30..hoy+180
+// Sin check-in conocido se busca en hoy−VENTANA_ATRAS .. hoy+VENTANA_ADELANTE.
+// 🚨 Eran 180 días hacia delante y se quedaban CORTOS (04/09/2026): la reserva 6144978627 de
+// Booking (luis ortiz benito, Luxury Busto) estaba en Smoobu con llegada el 23/04/2027 —ocho meses
+// fuera de la ventana— y el vigía la declaró «que Smoobu NO tiene». No mirar ≠ no estar: la
+// ventana tiene que cubrir toda la antelación con la que se puede reservar (Booking, ~16 meses).
+const VENTANA_ATRAS = 90
+const VENTANA_ADELANTE = 540
 
 interface Fila {
   id: bigint
@@ -80,8 +90,8 @@ function addDias(base: Date, n: number): string { return iso(new Date(base.getTi
 // ¿Tiene Smoobu una reserva ACTIVA con esta ref? true/false, o null si no se pudo mirar.
 async function activaEnSmoobu(ref: string, checkIn: Date | null): Promise<boolean | null> {
   const hoy = new Date()
-  const arrFrom = checkIn ? addDias(checkIn, -3) : addDias(hoy, -30)
-  const arrTo = checkIn ? addDias(checkIn, 3) : addDias(hoy, VENTANA_SIN_FECHA)
+  const arrFrom = checkIn ? addDias(checkIn, -3) : addDias(hoy, -VENTANA_ATRAS)
+  const arrTo = checkIn ? addDias(checkIn, 3) : addDias(hoy, VENTANA_ADELANTE)
   try {
     const bookings = await listarReservasVentana(arrFrom, arrTo, 800, 10)
     // 🚨 El nº que traemos puede ser la referencia de la OTA **o el id INTERNO de Smoobu**: los

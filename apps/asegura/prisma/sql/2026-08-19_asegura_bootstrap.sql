@@ -1,4 +1,4 @@
--- Vertical ASEGURA (correduría "Grupo Asegura") — cimientos de BD.
+-- Vertical ASEGURA (correduría "Grupo ASegura") — cimientos de BD.
 -- BD compartida wswbehlcuxqxyinousql, schema PROPIO `seguros` (patrón de iarest/rrhh,
 -- no prefijo de tablas en public). Aplicar como `postgres` (Supabase/MCP), NUNCA con
 -- el rol de la app. Aditivo e idempotente.

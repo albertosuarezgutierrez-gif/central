@@ -20,7 +20,14 @@ import { eur } from '@/lib/dinero'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { leerIngestaCima, saludDesdeRespuesta } from '@/lib/correduria/ingesta-cima'
-import { detalleSalud } from '@central/module-seguros'
+import {
+  detalleSalud,
+  decidirAvisoIngesta,
+  firmaAvisoIngesta,
+  normalizarFirmaIngesta,
+  textoHuerfanas,
+  DIAS_RECORDATORIO_INGESTA,
+} from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -28,15 +35,24 @@ export const maxDuration = 60
 const AGENTE = 'correduria_ingesta'
 
 /**
- * Firma de lo que se ha visto hoy. Sirve para no repetir el MISMO aviso cada
- * mañana mientras la avería sigue abierta: el estado vive en el latido y en la
- * pantalla; el Telegram suena cuando algo CAMBIA (entra un fichero nuevo, o
- * aparece otra póliza huérfana). Si empeora, vuelve a sonar.
+ * La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`.
  *
- * ⚠️ Esto silencia la REPETICIÓN, no el aviso: la primera vez siempre suena.
+ * Va delante y separada del texto humano por ` · `. El formato viejo era solo
+ * la firma, así que un `detalle` sin `|` se lee como «no se sabe cuándo se
+ * avisó» → y eso hace sonar (`primera`). Es lo correcto en el primer despliegue:
+ * suena una vez y a partir de ahí ya lleva la cuenta.
  */
-function firma(estado: string, recientes: number, huerfanas: number | null): string {
-  return `${estado}:${recientes}:${huerfanas ?? '?'}`
+function leerCabecera(detalle: string | null): { firma: string | null; aviso: Date | null; abierta: Date | null } {
+  if (detalle === null) return { firma: null, aviso: null, abierta: null }
+  const cabeza = detalle.split(' · ')[0] ?? ''
+  const [f, aviso, abierta] = cabeza.split('|')
+  const fecha = (v: string | undefined): Date | null => {
+    if (!v) return null
+    const d = new Date(v)
+    // Una fecha ilegible NO es «hace poco»: es «no lo sabemos», y eso avisa.
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+  return { firma: f || null, aviso: fecha(aviso), abierta: fecha(abierta) }
 }
 
 export async function GET(req: NextRequest) {
@@ -55,10 +71,34 @@ export async function GET(req: NextRequest) {
     anterior = filas[0]?.detalle ?? null
   } catch { anterior = null }
 
-  const actual = firma(salud.estado, salud.recientes, salud.huerfanas)
-  const cambio = anterior === null || !anterior.startsWith(actual)
-  // El detalle guarda la firma delante para poder compararla mañana.
-  const detalleGuardado = `${actual} · ${detalle}`
+  const ahora = new Date()
+  const previo = leerCabecera(anterior)
+  // La firma vive en el módulo puro (con su cepo): incluye las compañías MUDAS,
+  // las pólizas a pedir y si el cron de CIMA está parado — cualquiera que cambie
+  // cuenta como cambio y suena sin esperar al recordatorio.
+  const actual = firmaAvisoIngesta(salud)
+  // Desde cuándo consta abierta ESTA misma avería: se arrastra mientras la
+  // firma no cambie, y se reinicia cuando cambia. Es lo que permite decir
+  // «lleva 59 días» en vez de «otra vez esto».
+  // Las firmas guardadas antes del tramo del cron se leen en el formato de hoy.
+  const firmaPrevia = normalizarFirmaIngesta(previo.firma)
+  const mismaAveria = firmaPrevia !== null && firmaPrevia === actual
+  const abiertaDesde = mismaAveria ? (previo.abierta ?? previo.aviso) : ahora
+
+  const decision = decidirAvisoIngesta({
+    firmaAnterior: firmaPrevia,
+    firmaActual: actual,
+    ultimoAvisoEn: previo.aviso,
+    abiertaDesde,
+    hoy: ahora,
+  })
+  const cambio = decision.avisar
+  // Si hoy no suena, se conserva la fecha del último aviso: reescribirla con
+  // `ahora` reiniciaría el reloj del recordatorio cada mañana y la avería no
+  // volvería a sonar NUNCA — que es exactamente el fallo que esto arregla.
+  const avisoGuardado = decision.avisar ? ahora : previo.aviso
+  const cabecera = `${actual}|${avisoGuardado?.toISOString() ?? ''}|${abiertaDesde?.toISOString() ?? ''}`
+  const detalleGuardado = `${cabecera} · ${detalle}`
 
   if (salud.estado === 'sin_datos') {
     await registrarLatido(AGENTE, false, detalleGuardado)
@@ -72,7 +112,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, estado: salud.estado, detalle })
   }
 
-  if (salud.estado === 'degradada' && cambio) {
+  // 🚨 `parcial` TAMBIÉN suena. Hasta el 20/09/2026 el aviso colgaba de
+  // `degradada` a secas, así que una lectura sin poder comprobar el cron, el
+  // crudo, la caja negra o la cobertura salía por aquí en silencio y el latido
+  // decía «sin ficheros atascados». Hoy no mordía de milagro: el estado ya era
+  // `degradada` por otra cosa.
+  if ((salud.estado === 'degradada' || salud.estado === 'parcial') && cambio) {
+    const soloHuecos = salud.estado === 'parcial'
     const prima = salud.primaPerdida !== null && salud.primaPerdida > 0
       ? `\n💶 Prima en los recibos sin guardar: <b>${eur(salud.primaPerdida)}</b>`
       : ''
@@ -84,12 +130,63 @@ export async function GET(req: NextRequest) {
           .map(e => `${e.entidad}/${e.clave ?? 'sin clave legible'} (${e.n})`)
           .join(' · ')}`
       : ''
+    // El recordatorio dice CUÁNTO LLEVA, que es el dato que convierte «otra vez
+    // esto» en «esto hay que arreglarlo hoy». Sin él, el tercer aviso idéntico
+    // se lee como ruido y se vuelve a ignorar.
+    const antiguedad =
+      decision.avisar && decision.motivo === 'recordatorio'
+        ? decision.diasAbierta === null
+          ? `\n\n⏳ Sigue igual, y no consta desde cuándo. Vuelvo a avisar cada ${DIAS_RECORDATORIO_INGESTA} días mientras siga rota.`
+          : `\n\n⏳ <b>Lleva ${decision.diasAbierta} días así</b>, sin cambios. No es un aviso nuevo: es el mismo, que sigue sin arreglarse.`
+        : ''
+    // Una compañía que deja de mandar no se arregla igual que un fichero
+    // atascado: aquí no hay nada que reprocesar, hay que llamar a la compañía o
+    // mirar el adaptador. Por eso lleva su propio titular y su propio recado.
+    const mudas = (salud.silencio ?? []).filter(e => e.veredicto === 'silencio')
+    // Un hueco NO se anuncia como una pérdida: mandaría a buscar un dato que
+    // nadie ha dicho que falte, y a la tercera vez se ignora el mensaje entero.
+    const titular = soloHuecos
+      ? '🛡️ <b>La ingesta de CIMA solo se ha podido comprobar a medias</b>'
+      : mudas.length
+        ? `🛡️ <b>${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos</b>`
+        : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
+    const recado = soloHuecos
+      ? '\n\nNo se ha medido ninguna pérdida, pero tampoco se ha podido mirar todo: ' +
+        'esto NO es «va bien», es «no lo sé».'
+      : mudas.length
+        ? '\n\nNo hay nada atascado que reprocesar: sencillamente no llega. ' +
+          'Compruébalo en CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.'
+        : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
+          'y su comisión tampoco.'
+    // Con pérdida medida, los huecos siguen importando: dicen que el recuento
+    // de arriba es un SUELO. Van al final para no tapar lo accionable.
+    const sinComprobar = !soloHuecos && salud.huecos.length > 0
+      ? `\n\n❔ Además, esto no se ha podido comprobar (así que lo de arriba es un mínimo):\n` +
+        salud.huecos.map(h => `• ${h}`).join('\n')
+      : ''
+    // 🎯 Y LO ACCIONABLE: los números de póliza concretos, agrupados por clave
+    // de mediador, para poder copiarlos a un correo a la compañía. Sin esto el
+    // aviso decía «17 no están en la cartera» y no había forma de saber cuáles
+    // (medido el 05/09/2026) — describir la pérdida no es poder pararla.
+    const pedidos = textoHuerfanas(salud.huerfanasReparto, {
+      // Todavía no hay pantalla para el resto: se manda al puerto, que es donde
+      // están de verdad. Mandar a `/correduria` prometería una lista que esa
+      // pantalla no enseña.
+      donde: 'el puerto <code>/api/operador/huerfanas</code> de asegura',
+    })
+    // Lo que el puerto no pudo atribuir a la correduría se declara: son
+    // huérfanas que la lista de arriba NO enseña, y callarlo haría que 17
+    // pareciera el total cuando es un suelo.
+    const sinAmbito = respuesta.estado === 'ok' && (respuesta.huerfanasSinAmbito ?? 0) > 0
+      ? `\n\n⚠️ Además hay ${respuesta.huerfanasSinAmbito} evento(s) de huérfana que no se han podido atribuir a la correduría: no salen en la lista.`
+      : ''
+    const recorte = respuesta.estado === 'ok' && respuesta.huerfanasTruncadas
+      ? '\n\n⚠️ El listado venía recortado: los recuentos por clave son un mínimo, no el total.'
+      : ''
     await tgAviso('correduria.ingesta',
-      '🛡️ <b>Se están perdiendo datos de CIMA</b>\n' +
+      titular + '\n' +
       salud.motivos.map(m => `• ${m}`).join('\n') +
-      prima + entidades +
-      '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
-      'y su comisión tampoco.',
+      prima + entidades + pedidos + sinAmbito + recorte + sinComprobar + antiguedad + recado,
     ).catch(() => {})
   }
 
@@ -100,7 +197,13 @@ export async function GET(req: NextRequest) {
     total: salud.total,
     recientes: salud.recientes,
     huerfanas: salud.huerfanas,
-    avisado: cambio && salud.estado === 'degradada',
+    // `null` = no se ha podido listar cuáles. Nunca 0.
+    pedirACompania: salud.huerfanasReparto?.totalPedir ?? null,
+    reprocesables: salud.huerfanasReparto?.totalReprocesar ?? null,
+    objetosEnRevision: salud.objetosEnRevision,
+    huecos: salud.huecos.length,
+    avisado: cambio && salud.estado !== 'ok',
+    motivoAviso: decision.avisar ? decision.motivo : null,
     detalle,
   })
 }

@@ -49,6 +49,26 @@ WHERE origen = 'psd2';
 > dentro de una alerta crítica y se pinta en permanencia en `/banca`. Que no llegue aviso de una nota
 > es lo ESPERADO, no un vigía roto; esta skill sí debe seguir mirándola en `ultimo_avisos` y contarla.
 
+> 🕳️ **`fecha_operacion` es NULLABLE, y esta consulta no lo ve.** `MAX(fecha_operacion)` ignora los
+> NULL y los `COUNT(*) FILTER (WHERE fecha_operacion >= …)` tampoco los cuentan: un apunte que el
+> banco entregue SIN fecha entra en la BD, se ve en el libro, y para esta skill es como si no
+> hubiera llegado. El fallo que produce es el caro de los dos: declarar el feed **roto** (o en
+> caída de volumen) cuando en realidad está entregando — la misma confusión entre «no hay dato» y
+> «no sé leer el dato» que arregló el PR #2042 en la línea de `/banca`.
+>
+> Medido el 02/09/2026: **0 filas sin `fecha_operacion` en las 2.123 de la tabla**, en los seis
+> orígenes (`psd2`, `xls`, `xls-kutxa`, `xls-bbva`, `pdf`, `manual`). O sea: hoy no pasa, pero el
+> esquema lo permite. Antes de declarar una anomalía por frescura, descarta este caso:
+>
+> ```sql
+> SELECT count(*) AS psd2_sin_fecha
+> FROM movimientos_bancarios
+> WHERE origen = 'psd2' AND fecha_operacion IS NULL;
+> ```
+>
+> Si devuelve > 0, **no es un feed seco: es un feed que trae apuntes sin fecha**. Dilo así, con el
+> número, y no lo cuentes como «sin datos».
+
 Evalúa:
 - `ultimo_movimiento < CURRENT_DATE - 2` → **anomalía crítica** (>48h sin datos)
 - `mov_30d < mov_30d_prev * 0.5` → **anomalía moderada** (caída >50 % en volumen)
@@ -73,9 +93,7 @@ Evalúa:
 2. Si `PLATAFORMA_URL` + `ALERTA_TOKEN` están disponibles en la sesión, envía la alerta
    por el endpoint interno de plataforma (no necesitas TELEGRAM_BOT_TOKEN):
    ```
-   POST {PLATAFORMA_URL}/api/internal/alerta
-   Authorization: Bearer {ALERTA_TOKEN}
-   { "text": "⚠️ PSD2 sync lleva {N} días sin datos nuevos. Último mov: {fecha}. Revisar EB_PIS_ENABLED en Vercel." }
+   bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "⚠️ PSD2 sync lleva {N} días sin datos nuevos. Último mov: {fecha}. Revisar EB_PIS_ENABLED en Vercel." }'
    ```
    (`ALERTA_TOKEN` = token estrecho que SOLO abre este endpoint; el endpoint acepta también el
    viejo `CRON_SECRET` por compat, pero NO pongas la llave maestra en el prompt.)
@@ -87,6 +105,22 @@ Muestra en el chat:
 - Último movimiento: {fecha} (hace {N} días)
 - Volumen 30d: {mov_30d} vs 30d anteriores: {mov_30d_prev}
 - Acción recomendada si aplica
+
+## Paso 4 — Deja huella del latido (OBLIGATORIO, incluso si fue mal)
+
+```
+bash scripts/canal-aviso.sh POST /api/internal/latido '{ "agente":"psd2_health_check", "ok":<true|false>, "detalle":"<parte>" }'
+```
+`ok = true` **si pudiste ejecutar la consulta de frescura y dar un veredicto** — aunque el veredicto sea
+anomalía: el latido dice que el VIGÍA funcionó, no que el banco esté bien (la anomalía va por
+`/api/internal/alerta`, Paso 2). `ok = false` solo si no llegaste a consultar o no pudiste decidir.
+El `detalle` es el parte corto del Paso 3: estado (`OK` / `ANOMALÍA MODERADA` / `ANOMALÍA CRÍTICA`),
+último movimiento y hace cuántos días, `mov_30d` vs `mov_30d_prev`, y `psd2_sin_fecha` si fue > 0.
+Si algo revienta a mitad, **manda el latido con `ok:false` antes de rendirte**: un agente sin huella
+se lee como «no se dispara» y manda a mirar al sitio equivocado.
+
+⚠️ Sin `ALERTA_TOKEN` en el prompt de la rutina este POST devuelve 401 y el agente sale en rojo en
+`/operador/agentes` con «sin ninguna señal registrada». Eso es correcto: está mudo. No lo tapes.
 
 ## Herramientas
 
@@ -111,10 +145,12 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 ## Canal de aviso — protocolo común
 
 **Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
-`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+`bash scripts/canal-aviso.sh GET /api/internal/alerta` — NUNCA reconstruyas el `curl` a mano con
+`${PLATAFORMA_URL}`/`${ALERTA_TOKEN}` literales (bloquea MCP Sentinel en sesión desatendida, ver
+`docs/AVISOS-AGENTES.md`).
 
-- `200` → el canal está vivo, sigue con tu pasada.
-- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+- `HTTP_STATUS:200` → el canal está vivo, sigue con tu pasada.
+- `HTTP_STATUS:401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
   hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
   Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
   `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).

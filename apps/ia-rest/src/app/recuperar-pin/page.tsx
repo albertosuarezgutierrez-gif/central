@@ -2,9 +2,10 @@
 import { SE, SN, SM } from '@/lib/colors'
 
 import { useState } from 'react'
+import { clavePublicable } from '@/lib/claves-supabase'
 
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_ANON_KEY = clavePublicable()
 
 const C = {
   bg:'#F6F1E7', bg1:'#FBF8F1', bg2:'#EFE7D6',

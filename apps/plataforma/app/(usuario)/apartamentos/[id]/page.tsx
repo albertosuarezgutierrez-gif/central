@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { getApartamentoDetalle } from '@/lib/propiedades'
 import { fmtEur } from '@/lib/banca'
-import { Pagina } from '@/components/ui'
+import { Pagina, PageHeader, ThinBar } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -58,17 +58,19 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
   return (
     <Pagina ancho="tabla">
 
-      {/* Breadcrumb + título */}
-      <div style={{ marginBottom: '24px' }}>
+      {/* Breadcrumb */}
+      <div style={{ marginBottom: '8px' }}>
         <Link href="/apartamentos" style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>← Apartamentos</Link>
-        <h1 style={{ fontSize: '24px', fontWeight: 800, margin: '8px 0 4px' }}>{d.nombre}</h1>
-        <div style={{ fontSize: '14px', color: 'var(--muted)' }}>
-          {d.ubicacion}
-          {d.dormitorios != null && ` · 🛏 ${d.dormitorios} hab.`}
-          {d.banos != null && ` · 🚿 ${d.banos} baños`}
-          {d.maxHuespedes != null && ` · 👤 máx ${d.maxHuespedes}`}
-        </div>
       </div>
+      <PageHeader
+        titulo={d.nombre}
+        sub={<>
+            {d.ubicacion}
+            {d.dormitorios != null && ` · 🛏 ${d.dormitorios} hab.`}
+            {d.banos != null && ` · 🚿 ${d.banos} baños`}
+            {d.maxHuespedes != null && ` · 👤 máx ${d.maxHuespedes}`}
+        </>}
+      />
 
       {/* KPI strip */}
       <div className="aptodet-kpi-grid" style={{
@@ -142,8 +144,8 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
                     <Td>{fmtEur(r.ingresos)}</Td>
                     <Td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'var(--bg)', minWidth: '40px' }}>
-                          <div style={{ height: '100%', borderRadius: '2px', width: `${r.pct}%`, background: 'var(--primary)' }} />
+                        <div style={{ flex: 1, minWidth: '40px' }}>
+                          <ThinBar pct={r.pct} alto={4} track="var(--bg)" />
                         </div>
                         <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{r.pct}%</span>
                       </div>
@@ -182,8 +184,9 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
                     <Td>{adrM > 0 ? fmtEur(adrM) : '—'}</Td>
                     <Td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'var(--bg)', minWidth: '50px' }}>
-                          <div style={{ height: '100%', borderRadius: '2px', width: `${Math.min(ocup, 100)}%`, background: ocup >= 70 ? 'var(--positive)' : ocup >= 40 ? 'var(--warning)' : 'var(--negative)' }} />
+                        <div style={{ flex: 1, minWidth: '50px' }}>
+                          <ThinBar pct={ocup} alto={4} track="var(--bg)"
+                            color={ocup >= 70 ? 'var(--positive)' : ocup >= 40 ? 'var(--warning)' : 'var(--negative)'} />
                         </div>
                         <span style={{ fontSize: '11px', color: 'var(--muted)' }}>{ocup}%</span>
                       </div>

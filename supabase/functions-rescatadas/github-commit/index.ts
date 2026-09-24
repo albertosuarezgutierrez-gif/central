@@ -4,6 +4,7 @@
 //    La función DESPLEGADA sigue con el token incrustado hasta que se redespliegue.
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 const OWNER = "albertosuarezgutierrez-gif";
 const REPO  = "roi-intranet";
@@ -30,7 +31,7 @@ Deno.serve(async (_req: Request) => {
   try {
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      claveSecreta()
     );
 
     const { data: files, error } = await supabase

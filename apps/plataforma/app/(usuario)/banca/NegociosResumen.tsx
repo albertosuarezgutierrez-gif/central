@@ -1,9 +1,14 @@
 import Link from 'next/link'
+import type { CSSProperties, ReactNode } from 'react'
+import {
+  ArrowRight, Building2, Cog, Copy, Database, FileWarning, Hotel, Link2,
+  Receipt, Search, Shield, SprayCan, Utensils, Wallet,
+} from 'lucide-react'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, manualFinanciero, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getConsolidadoIntercompany, type ResultadoConsolidado } from '@/lib/intercompany'
 import { getAlertas, type Alertas } from '@/lib/banca'
-import { colorImporte } from '@/components/ui'
+import { Badge, CardHeader, PageHeader, Pendiente, Stat, TablaScroll, cardStyle, colorImporte } from '@/components/ui'
 import { getResumenPilar, getResumenFinanciero, type TrimPilar } from '@/lib/finanzas'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from '../dashboard/GestionSociedad'
 
@@ -11,6 +16,14 @@ import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocio
 // negocios con su resultado + consolidado intercompany + aviso Modelo 130 + alertas accionables.
 // Es lo que antes vivía en /dashboard (Resumen). Los SALDOS y MOVIMIENTOS viven en el segmento
 // «Dinero» (el cuerpo de /banca), aquí NO se duplican.
+//
+// Presentación: primitivas de `@/components/ui` (cardStyle/CardHeader/Stat/Badge/Pendiente/
+// TablaScroll) e iconos de `lucide-react` — los emojis se pintan distinto en cada sistema
+// operativo. Colores SIEMPRE por token; ningún hex.
+
+// Tamaño de icono de fila/etiqueta y de título de sección.
+const ICO = { size: 15, strokeWidth: 1.75, 'aria-hidden': true } as const
+const ICO_TITULO = { size: 17, strokeWidth: 1.75, 'aria-hidden': true } as const
 
 async function getGastosSinClasificar(cuentaId: string, anio: number) {
   const rows = await prisma.$queryRaw<Array<{ total: number; importe: number }>>`
@@ -37,10 +50,10 @@ async function getAvisoModelo130(cuentaId: string, anio: number): Promise<TrimPi
   return siguiente ?? null
 }
 
-const SECTOR_LABEL: Record<string, string> = {
-  hosteleria:  '🍽️ Hostelería',
-  limpieza:    '🧹 Limpieza',
-  inmobiliario: '🏠 Inmobiliario',
+const SECTOR_LABEL: Record<string, { icono: ReactNode; texto: string }> = {
+  hosteleria:   { icono: <Utensils {...ICO} />, texto: 'Hostelería' },
+  limpieza:     { icono: <SprayCan {...ICO} />, texto: 'Limpieza' },
+  inmobiliario: { icono: <Hotel {...ICO} />,    texto: 'Inmobiliario' },
 }
 
 const APP_URL: Record<string, string> = {
@@ -113,10 +126,6 @@ export default async function NegociosResumen({ cuentaId, nombre }: { cuentaId: 
 
   return (
     <div>
-      <style>{`
-        @media (max-width: 768px) { .neg-grid { grid-template-columns: 1fr !important; } }
-      `}</style>
-
       {/* Consolidado intercompany (holding) — solo si hay operaciones internas */}
       {hayIntercompany && consolidadoIC && (
         <IntercompanyCard
@@ -132,10 +141,7 @@ export default async function NegociosResumen({ cuentaId, nombre }: { cuentaId: 
       {/* Alertas accionables */}
       <AlertasBanner alertas={alertas} gastosSinClasificar={gastosSinClasificar} />
 
-      <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700 }}>Hola, {nombre}</h1>
-        <NuevaSociedadBtn />
-      </div>
+      <PageHeader titulo={`Hola, ${nombre}`} acciones={<NuevaSociedadBtn />} />
 
       {sociedades.length === 0 && (
         <div style={{
@@ -143,7 +149,9 @@ export default async function NegociosResumen({ cuentaId, nombre }: { cuentaId: 
           borderRadius: 'var(--radius)', padding: '48px 24px',
           textAlign: 'center', color: 'var(--muted)',
         }}>
-          <div style={{ fontSize: '40px', marginBottom: '16px' }}>🏗️</div>
+          <div style={{ marginBottom: '16px', display: 'flex', justifyContent: 'center' }}>
+            <Building2 size={34} strokeWidth={1.5} aria-hidden />
+          </div>
           <p style={{ fontWeight: 600, fontSize: '16px', marginBottom: '8px' }}>Sin negocios configurados</p>
           <p style={{ fontSize: '14px' }}>Añade sociedades y negocios con el botón de arriba.</p>
         </div>
@@ -152,7 +160,9 @@ export default async function NegociosResumen({ cuentaId, nombre }: { cuentaId: 
       {sociedadesConNegocios.map(soc => (
         <section key={soc.id} style={{ marginBottom: '32px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
-            <h2 style={{ fontSize: '17px', fontWeight: 700 }}>{soc.nombre}</h2>
+            <h2 style={{ fontSize: '17px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <Building2 {...ICO_TITULO} />{soc.nombre}
+            </h2>
             {soc.cif && (
               <span style={{ fontSize: '13px', color: 'var(--muted)', fontFamily: 'monospace' }}>CIF {soc.cif}</span>
             )}
@@ -163,7 +173,7 @@ export default async function NegociosResumen({ cuentaId, nombre }: { cuentaId: 
             </div>
           </div>
 
-          <div className="neg-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+          <div className="neg-grid">
             {soc.negocios.map(neg => {
               const url = neg.app ? APP_URL[neg.app] : null
               const fin = neg.financiero
@@ -193,8 +203,10 @@ export default async function NegociosResumen({ cuentaId, nombre }: { cuentaId: 
           patrón de tarjeta, enlazando a la matriz por compañía en /correduria. */}
       {resumenAnual && resumenAnual.correduria.ingresosBrutos > 0 && (
         <section style={{ marginBottom: '32px' }}>
-          <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '16px' }}>Actividad profesional</h2>
-          <div className="neg-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+          <h2 style={{ fontSize: '17px', fontWeight: 700, marginBottom: '16px', display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <Shield {...ICO_TITULO} />Actividad profesional
+          </h2>
+          <div className="neg-grid">
             <CorreduriaCard correduria={resumenAnual.correduria} anio={anio} />
           </div>
         </section>
@@ -208,23 +220,19 @@ function CorreduriaCard({ correduria, anio }: {
   anio: number
 }) {
   return (
-    <Link
-      href="/correduria"
-      style={{
-        display: 'block',
-        background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)', padding: '20px',
-        boxShadow: 'var(--shadow)', textDecoration: 'none',
-      }}
-    >
-      <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600, marginBottom: '4px' }}>🧾 Correduría de seguros</div>
-      <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '2px' }}>Comisiones de correduría</div>
-      <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '16px' }}>BBVA ↗</div>
+    <Link href="/correduria" style={{ ...cardStyle, display: 'block', textDecoration: 'none', color: 'inherit' }}>
+      <div style={{ marginBottom: 10 }}>
+        <Badge tono="info"><Shield {...ICO} />Correduría de seguros</Badge>
+      </div>
+      <CardHeader
+        title="Comisiones de correduría"
+        sub={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>BBVA<ArrowRight {...ICO} /></span>}
+      />
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
         <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-          <FinStat label={`Ingresos ${anio}`} value={fmtEur(correduria.ingresosBrutos)} />
-          <FinStat label={`Gastos ${anio}`} value={fmtEur(correduria.gastosDeducibles)} />
-          <FinStat
+          <Stat label={`Ingresos ${anio}`} value={fmtEur(correduria.ingresosBrutos)} />
+          <Stat label={`Gastos ${anio}`} value={fmtEur(correduria.gastosDeducibles)} />
+          <Stat
             label="Resultado"
             value={fmtEur(correduria.resultado)}
             color={colorImporte(correduria.resultado)}
@@ -241,35 +249,37 @@ function NegocioCard({ neg, fin, url, anio }: {
   url: string | null
   anio: number
 }) {
+  const sector = SECTOR_LABEL[neg.sector]
+  const externo = !!url && url !== '#'
   return (
     <a
       href={url || '#'}
-      target={url && url !== '#' ? '_blank' : undefined}
+      target={externo ? '_blank' : undefined}
       rel="noreferrer"
-      style={{
-        display: 'block',
-        background: 'var(--surface)', border: '1px solid var(--border)',
-        borderRadius: 'var(--radius)', padding: '20px',
-        boxShadow: 'var(--shadow)', textDecoration: 'none',
-      }}
+      style={{ ...cardStyle, display: 'block', textDecoration: 'none', color: 'inherit' }}
     >
-      <div style={{ fontSize: '13px', color: 'var(--primary)', fontWeight: 600, marginBottom: '4px' }}>
-        {SECTOR_LABEL[neg.sector] ?? `⚙️ ${neg.sector}`}
+      <div style={{ marginBottom: 10 }}>
+        <Badge tono="info">
+          {sector ? sector.icono : <Cog {...ICO} />}
+          {sector ? sector.texto : neg.sector}
+        </Badge>
       </div>
-      <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '2px' }}>{neg.nombre}</div>
-      {neg.app && (
-        <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '16px' }}>
-          {neg.app}{url && url !== '#' ? ' ↗' : ''}
-        </div>
-      )}
+      <CardHeader
+        title={neg.nombre}
+        sub={neg.app ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            {neg.app}{externo && <ArrowRight {...ICO} />}
+          </span>
+        ) : undefined}
+      />
 
       <div style={{ borderTop: '1px solid var(--border)', paddingTop: '14px' }}>
         {fin.disponible ? (
           <>
             <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-              <FinStat label={`Ingresos ${anio}`} value={fmtEur(fin.ingresosHoy ?? fin.ingresosYtd)} />
-              <FinStat label={`Gastos ${anio}`} value={fmtEur(fin.gastosYtd)} />
-              <FinStat
+              <Stat label={`Ingresos ${anio}`} value={fmtEur(fin.ingresosHoy ?? fin.ingresosYtd)} />
+              <Stat label={`Gastos ${anio}`} value={fmtEur(fin.gastosYtd)} />
+              <Stat
                 label="Resultado"
                 value={fmtEur(fin.resultadoHoy ?? fin.resultadoYtd)}
                 color={colorImporte(fin.resultadoHoy ?? fin.resultadoYtd)}
@@ -282,10 +292,13 @@ function NegocioCard({ neg, fin, url, anio }: {
               )}
             </div>
           </>
-        ) : (
-          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
-            {fin.nota === 'BD separada' ? '📊 BD separada — próximamente' : '—'}
+        ) : fin.nota === 'BD separada' ? (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Database {...ICO} />
+            <Pendiente texto="BD separada — próximamente" />
           </span>
+        ) : (
+          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>—</span>
         )}
       </div>
     </a>
@@ -297,47 +310,63 @@ function AlertasBanner({ alertas, gastosSinClasificar }: {
   gastosSinClasificar: { total: number; importe: number }
 }) {
   if (alertas.porRevisar === 0 && alertas.sinJustificante === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0 && alertas.cobrosPendientes === 0) return null
+  const fila: CSSProperties = { fontSize: '13px', color: 'var(--text)', textDecoration: 'none', display: 'flex', alignItems: 'flex-start', gap: 6 }
   return (
     <div style={{
       background: 'var(--warning-bg)', border: '1px solid var(--warning)', borderRadius: 'var(--radius)',
       padding: '12px 16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '6px',
     }}>
       {alertas.porRevisar > 0 && (
-        <Link href="/finanzas/gastos" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
-          🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'gasto' : 'gastos'} por revisar
-          {gastosSinClasificar.importe > 0 && (
-            <span style={{ color: 'var(--warning)', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
-          )}
-          {' '}→
+        <Link href="/finanzas/gastos" style={{ ...fila, fontWeight: 600 }}>
+          <Search {...ICO} />
+          <span>
+            Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'gasto' : 'gastos'} por revisar
+            {gastosSinClasificar.importe > 0 && (
+              <span style={{ color: 'var(--warning)', fontWeight: 700 }}> ({fmtEur(gastosSinClasificar.importe)} sin clasificar)</span>
+            )}
+            {' '}→
+          </span>
         </Link>
       )}
       {alertas.sinJustificante > 0 && (
-        <Link href="/finanzas/gastos" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
-          ❗ <strong>{alertas.sinJustificante}</strong> {alertas.sinJustificante === 1 ? 'gasto deducible sin justificante' : 'gastos deducibles sin justificante'} este año → Ver gastos
+        <Link href="/finanzas/gastos" style={fila}>
+          <FileWarning {...ICO} />
+          <span>
+            <strong>{alertas.sinJustificante}</strong> {alertas.sinJustificante === 1 ? 'gasto deducible sin justificante' : 'gastos deducibles sin justificante'} este año → Ver gastos
+          </span>
         </Link>
       )}
       {alertas.duplicados > 0 && (
-        <Link href="/banca#duplicados" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
-          ⚠️ <strong>{alertas.duplicados}</strong> {alertas.duplicados === 1 ? 'posible cargo duplicado' : 'posibles cargos duplicados'}
-          {alertas.duplicadosDetalle.length > 0 && (
-            <span style={{ color: 'var(--muted)' }}>
-              {' '}— {alertas.duplicadosDetalle.map(d => `${d.concepto} (${fmtEur(d.importe)})`).join(', ')}
-            </span>
-          )}
-          {' '}→
+        <Link href="/banca#duplicados" style={fila}>
+          <Copy {...ICO} />
+          <span>
+            <strong>{alertas.duplicados}</strong> {alertas.duplicados === 1 ? 'posible cargo duplicado' : 'posibles cargos duplicados'}
+            {alertas.duplicadosDetalle.length > 0 && (
+              <span style={{ color: 'var(--muted)' }}>
+                {' '}— {alertas.duplicadosDetalle.map(d => `${d.concepto} (${fmtEur(d.importe)})`).join(', ')}
+              </span>
+            )}
+            {' '}→
+          </span>
         </Link>
       )}
       {alertas.facturasFaltantes > 0 && (
-        <Link href="/sivra/facturas-control" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
-          🗂️ <strong>{alertas.facturasFaltantes}</strong> {alertas.facturasFaltantes === 1 ? 'factura recurrente falta' : 'facturas recurrentes faltan'} del mes pasado → Ver facturas
+        <Link href="/sivra/facturas-control" style={fila}>
+          <Receipt {...ICO} />
+          <span>
+            <strong>{alertas.facturasFaltantes}</strong> {alertas.facturasFaltantes === 1 ? 'factura recurrente falta' : 'facturas recurrentes faltan'} del mes pasado → Ver facturas
+          </span>
         </Link>
       )}
       {alertas.cobrosPendientes > 0 && (
-        <div style={{ fontSize: '13px', color: 'var(--text)' }}>
-          💸 <strong>{fmtEur(alertas.cobrosPendientesEur)}</strong> sin cobrar de OTAs ({alertas.cobrosPendientes} {alertas.cobrosPendientes === 1 ? 'reserva' : 'reservas'} pasadas de plazo)
-          {alertas.cobrosDetalle.length > 0 && (
-            <> — {alertas.cobrosDetalle.map(c => `${c.guestName || c.reservationId} ${c.canal} (checkout ${c.checkOut.slice(8, 10)}/${c.checkOut.slice(5, 7)}, ${fmtEur(c.neto)})`).join(', ')}</>
-          )}
+        <div style={fila}>
+          <Wallet {...ICO} />
+          <span>
+            <strong>{fmtEur(alertas.cobrosPendientesEur)}</strong> sin cobrar de OTAs ({alertas.cobrosPendientes} {alertas.cobrosPendientes === 1 ? 'reserva' : 'reservas'} pasadas de plazo)
+            {alertas.cobrosDetalle.length > 0 && (
+              <> — {alertas.cobrosDetalle.map(c => `${c.guestName || c.reservationId} ${c.canal} (checkout ${c.checkOut.slice(8, 10)}/${c.checkOut.slice(5, 7)}, ${fmtEur(c.neto)})`).join(', ')}</>
+            )}
+          </span>
         </div>
       )}
     </div>
@@ -354,11 +383,15 @@ function AvisoModelo130({ trim }: { trim: TrimPilar }) {
         borderRadius: 'var(--radius)', padding: '12px 16px',
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', fontSize: 13,
       }}>
-        <span style={{ fontWeight: 700, color: proximo ? 'var(--warning)' : 'var(--primary)' }}>📅 Modelo 130 · {trim.q}T</span>
+        <span style={{ fontWeight: 700, color: proximo ? 'var(--warning)' : 'var(--primary)', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <Receipt {...ICO} />Modelo 130 · {trim.q}T
+        </span>
         <span style={{ color: 'var(--text)' }}>vence <strong>{trim.plazo}</strong></span>
         <span style={{ color: 'var(--text)' }}>· a ingresar <strong>{fmtEur(trim.pagoFraccionado)}</strong></span>
         {proximo && <span style={{ color: 'var(--warning)', fontWeight: 700 }}>· ¡plazo próximo!</span>}
-        <span style={{ marginLeft: 'auto', color: 'var(--primary)', fontWeight: 600 }}>Ver →</span>
+        <span style={{ marginLeft: 'auto', color: 'var(--primary)', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          Ver<ArrowRight {...ICO} />
+        </span>
       </div>
     </Link>
   )
@@ -378,22 +411,18 @@ function IntercompanyCard({
     .filter(s => s.ingresosIntercompany > 0 || s.gastosIntercompany > 0)
     .sort((a, b) => (b.ingresosIntercompany + b.gastosIntercompany) - (a.ingresosIntercompany + a.gastosIntercompany))
   return (
-    <div style={{
-      background: 'var(--surface)', border: '1px solid var(--border)',
-      borderRadius: 'var(--radius)', padding: '20px 24px', marginBottom: '32px',
-      boxShadow: 'var(--shadow)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '4px', flexWrap: 'wrap' }}>
-        <span style={{ fontSize: '15px', fontWeight: 800, color: 'var(--text)' }}>🔗 Consolidado del holding {anio}</span>
-        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>elimina la facturación entre tus sociedades</span>
-      </div>
+    <div style={{ ...cardStyle, padding: '20px 24px', marginBottom: '32px' }}>
+      <CardHeader
+        title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Link2 {...ICO_TITULO} />Consolidado del holding {anio}</span>}
+        sub="elimina la facturación entre tus sociedades"
+      />
       <div style={{ display: 'flex', gap: '32px', flexWrap: 'wrap', alignItems: 'center', margin: '14px 0' }}>
-        <FinStat label="Ingresos (suma bruta)" value={fmtEur(agregadoBruto.ingresos)} />
+        <Stat label="Ingresos (suma bruta)" value={fmtEur(agregadoBruto.ingresos)} />
         <span style={{ color: 'var(--muted)', fontSize: '18px' }}>−</span>
-        <FinStat label="Intercompany eliminado" value={fmtEur(eliminaciones.ingresos)} color="var(--negative)" />
+        <Stat label="Intercompany eliminado" value={fmtEur(eliminaciones.ingresos)} color="var(--negative)" />
         <span style={{ color: 'var(--muted)', fontSize: '18px' }}>=</span>
-        <FinStat label="Ingresos reales del grupo" value={fmtEur(real.ingresos)} color="var(--primary)" />
-        <FinStat
+        <Stat label="Ingresos reales del grupo" value={fmtEur(real.ingresos)} color="var(--primary)" />
+        <Stat
           label="Resultado del grupo"
           value={fmtEur(real.resultado)}
           color={colorImporte(real.resultado)}
@@ -404,38 +433,31 @@ function IntercompanyCard({
         deshincha es el doble conteo de ingresos y gastos internos.
       </p>
       {internas.length > 0 && (
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
-          <thead>
-            <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: '11px' }}>
-              <th style={{ padding: '4px 8px 4px 0', fontWeight: 600 }}>Sociedad</th>
-              <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>Facturado al grupo</th>
-              <th style={{ padding: '4px 0 4px 8px', fontWeight: 600, textAlign: 'right' }}>Comprado al grupo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {internas.map(s => (
-              <tr key={s.sociedadId} style={{ borderTop: '1px solid var(--border)' }}>
-                <td style={{ padding: '6px 8px 6px 0' }}>{nombrePorSociedad[s.sociedadId] ?? s.sociedadId}</td>
-                <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--positive)' }}>
-                  {s.ingresosIntercompany > 0 ? fmtEur(s.ingresosIntercompany) : '—'}
-                </td>
-                <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', color: 'var(--negative)' }}>
-                  {s.gastosIntercompany > 0 ? fmtEur(s.gastosIntercompany) : '—'}
-                </td>
+        <TablaScroll>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', color: 'var(--muted)', fontSize: '11px' }}>
+                <th style={{ padding: '4px 8px 4px 0', fontWeight: 600 }}>Sociedad</th>
+                <th style={{ padding: '4px 8px', fontWeight: 600, textAlign: 'right' }}>Facturado al grupo</th>
+                <th style={{ padding: '4px 0 4px 8px', fontWeight: 600, textAlign: 'right' }}>Comprado al grupo</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {internas.map(s => (
+                <tr key={s.sociedadId} style={{ borderTop: '1px solid var(--border)' }}>
+                  <td style={{ padding: '6px 8px 6px 0' }}>{nombrePorSociedad[s.sociedadId] ?? s.sociedadId}</td>
+                  <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--positive)' }}>
+                    {s.ingresosIntercompany > 0 ? fmtEur(s.ingresosIntercompany) : '—'}
+                  </td>
+                  <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', color: 'var(--negative)' }}>
+                    {s.gastosIntercompany > 0 ? fmtEur(s.gastosIntercompany) : '—'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TablaScroll>
       )}
-    </div>
-  )
-}
-
-function FinStat({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <div>
-      <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500 }}>{label}</div>
-      <div style={{ fontSize: '14px', fontWeight: 700, color: color || 'var(--text)', marginTop: '2px' }}>{value}</div>
     </div>
   )
 }

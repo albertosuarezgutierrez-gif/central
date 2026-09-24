@@ -770,6 +770,28 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
       </div>
       <div className="banca-movs-outer">
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', opacity: loading ? 0.6 : 1, transition: 'opacity .15s' }}>
+        {/* Cabecera de columnas. Solo con filas: sobre un «sin movimientos» rotularía columnas
+            vacías. Se OCULTA en móvil (`.banca-movs-head` en globals.css) porque ahí la fila se
+            apila y las columnas dejan de existir — una cabecera sobre una lista apilada miente.
+            Los anchos son los MISMOS literales que la fila; si cambia uno, cambian los dos.
+            Sin rótulo sobre las columnas de icono (deducible y 🔗): ya las explica la leyenda de
+            arriba, y «IRPF» no cabe en 22px. */}
+        {movs.length > 0 && (
+          <div className="banca-movs-head" style={{
+            display: 'flex', alignItems: 'center', gap: '12px', padding: '9px 16px',
+            borderBottom: '1px solid var(--border)', background: 'var(--bg)',
+            fontSize: '11px', fontWeight: 700, letterSpacing: '.04em',
+            textTransform: 'uppercase', color: 'var(--muted)',
+          }}>
+            <div style={{ width: '84px', flexShrink: 0 }}>Fecha</div>
+            <div style={{ flex: 1, minWidth: 0 }}>Concepto</div>
+            <span aria-hidden style={{ width: '30px', flexShrink: 0 }} />
+            <div style={{ width: '150px', flexShrink: 0 }}>Negocio</div>
+            <span aria-hidden style={{ width: '22px', flexShrink: 0 }} />
+            <span aria-hidden style={{ width: '18px', flexShrink: 0 }} />
+            <div style={{ width: '92px', flexShrink: 0, textAlign: 'right' }}>Importe</div>
+          </div>
+        )}
         {movs.length === 0 ? (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>
             {loading ? 'Cargando…' : 'Sin movimientos que coincidan.'}
@@ -789,15 +811,19 @@ export function MovimientosTabla({ cuentas, destinoLabel, initial, periodo }: {
               </div>
               <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.banco || ''}</div>
             </div>
-            {m.importe < 0 && (
+            {m.importe < 0 ? (
               <button className="banca-mov-sug" onClick={() => sugerir(m.id)} disabled={sug === 'cargando'}
                 title="Pídele a la IA que sugiera el negocio de este cargo"
-                style={{ ...ghost, padding: '5px 8px', fontSize: '13px', flexShrink: 0, cursor: sug === 'cargando' ? 'default' : 'pointer', opacity: sug === 'cargando' ? 0.5 : 1 }}>🤖</button>
+                style={{ ...ghost, padding: '5px 0', width: '30px', fontSize: '13px', flexShrink: 0, cursor: sug === 'cargando' ? 'default' : 'pointer', opacity: sug === 'cargando' ? 0.5 : 1 }}>🤖</button>
+            ) : (
+              // Hueco del MISMO ancho en los ingresos, que no llevan 🤖: sin él, la columna de
+              // negocio y el importe se desplazan en esas filas y la cabecera deja de cuadrar.
+              <span className="banca-mov-sug" aria-hidden style={{ width: '30px', flexShrink: 0 }} />
             )}
             <select className="banca-mov-select" value={DESTINOS_RECLASIF.includes(m.destino as typeof DESTINOS_RECLASIF[number]) ? m.destino! : ''}
               onChange={e => reclasificar(m.id, e.target.value)}
               title="Reclasificar el negocio de este movimiento"
-              style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, maxWidth: '150px' }}>
+              style={{ ...input, padding: '5px 6px', fontSize: '12px', flexShrink: 0, width: '150px', maxWidth: '150px' }}>
               <option value="" disabled>{m.destino ? (destinoLabel[m.destino] || m.destino) : 'Sin negocio'}</option>
               {DESTINOS_RECLASIF.map(d => <option key={d} value={d}>{destinoLabel[d] || d}</option>)}
             </select>

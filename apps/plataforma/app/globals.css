@@ -229,7 +229,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    La tira de KPIs pasa a dos por fila y luego a una: apilarlos de golpe deja media pantalla vacía
    con el dato principal fuera de vista. */
 @media (max-width: 768px) {
-  .aptos-header { flex-direction: column !important; align-items: flex-start !important; }
   .aptos-kpi-strip { gap: 16px !important; }
   .aptos-kpi-strip > div { min-width: calc(50% - 8px) !important; }
   .aptos-grid { grid-template-columns: 1fr !important; }
@@ -267,12 +266,21 @@ html[data-saldo-oculto='1'] .saldo-privado {
    La matriz compañía×mes no cabe en móvil de ninguna manera: scrollea en su propia caja. Los KPIs
    bajan a dos por fila y luego a una. */
 @media (max-width: 768px) {
-  .corr-header { flex-direction: column !important; align-items: flex-start !important; }
   .corr-kpis { grid-template-columns: 1fr 1fr !important; }
   .corr-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
 @media (max-width: 480px) {
   .corr-kpis { grid-template-columns: 1fr !important; }
+}
+/* El primer bloque de una sección no pinta su línea de separación: iría pegada debajo del borde
+   de la barra de pestañas y se verían dos rayas. NO se resuelve con un prop `primero` en el JSX
+   porque cuál es el primero DEPENDE DE LOS DATOS —`PartesPortal` y `Duplicadas` devuelven `null`
+   cuando su cola está vacía—, así que solo el navegador sabe quién quedó arriba. `!important`
+   porque `Bloque.tsx` pone su borde en un estilo inline. */
+.corr-panel > section:first-of-type {
+  border-top: none !important;
+  padding-top: 0 !important;
+  margin-top: 0 !important;
 }
 
 /* === Cuadre de comisiones de la correduría (`correduria/CuadreComisiones.tsx`) ===
@@ -287,13 +295,18 @@ html[data-saldo-oculto='1'] .saldo-privado {
 .cuadre-btn { min-height: 44px; min-width: 44px; }
 
 /* === Finanzas: hub (`finanzas/FinanzasClient.tsx`) y selector de intervalo (`IntervaloSelector.tsx`) ===
-   El selector de intervalo lo comparten varias pantallas de dinero: en móvil sus pastillas
-   envuelven en vez de comprimirse, porque un rango de fechas ilegible se toca mal y se lee peor. */
+   El selector de intervalo lo comparten varias pantallas de dinero. El modo (mes/trimestre/rango)
+   es un SEGMENTADO —un solo borde alrededor de los tres— y los meses son chips sin borde: quince
+   pastillas idénticas pesaban tanto como las tarjetas de datos que filtran, y un control de
+   navegación no puede competir con su contenido. */
 @media (max-width: 768px) {
   .finanzas-kpi-grid { grid-template-columns: 1fr 1fr !important; }
   .finanzas-bloques { grid-template-columns: 1fr !important; }
   .iv-filtros { flex-direction: column !important; align-items: stretch !important; }
-  .iv-pills { flex-wrap: wrap !important; }
+  /* El segmentado pasa a ocupar el ancho y reparte los tres modos a partes iguales: envolver
+     dentro de su caja dejaba un botón solo en la segunda línea, que se lee como otro control. */
+  .iv-pills { display: flex !important; width: 100% !important; }
+  .iv-pills > button { flex: 1 1 0; text-align: center; }
 }
 @media (max-width: 480px) {
   .finanzas-kpi-grid { grid-template-columns: 1fr !important; }
@@ -340,7 +353,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
 
 /* === Tarjeta de crédito (`finanzas/tarjeta-credito/TarjetaCreditoClient.tsx`) === */
 @media (max-width: 768px) {
-  .tarj-header { flex-direction: column !important; align-items: flex-start !important; }
   .tarj-kpis { flex-direction: column !important; }
 }
 
@@ -405,26 +417,18 @@ html[data-saldo-oculto='1'] .saldo-privado {
 }
 
 /* === SIVRA · Calendario de reservas (`sivra/calendario/page.tsx`) ===
-   Los botones de navegación de mes envuelven a 480px en vez de comprimirse: son el único modo de
-   moverse por el calendario y por debajo de 44px dejan de poder tocarse. */
+   La tira de stats y la leyenda se apilan; la tabla scrollea en su propia caja. */
 @media (max-width: 768px) {
-  .cal-header { flex-direction: column !important; align-items: flex-start !important; }
   .cal-stats-row { flex-direction: column !important; }
   .cal-stats-row > div { width: 100% !important; min-width: unset !important; }
   .cal-legend { flex-direction: column !important; gap: 6px !important; }
   .cal-detail { flex-direction: column !important; }
   .cal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
 }
-@media (max-width: 480px) {
-  .cal-nav-btns { flex-wrap: wrap !important; }
-}
-
 /* === SIVRA · Gastos (`sivra/expenses/page.tsx`) ===
    El modal de alta/edición pasa a ocupar la pantalla entera en móvil: con ancho fijo, el formulario
    de un gasto (fecha, importe, categoría, propiedad) quedaba a medias fuera. */
 @media (max-width: 768px) {
-  .expenses-header { flex-direction: column !important; align-items: flex-start !important; }
-  .expenses-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
   .expenses-filters { flex-direction: column !important; align-items: stretch !important; }
   .expenses-filters select { width: 100% !important; box-sizing: border-box; }
   .expenses-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
@@ -438,8 +442,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    de clase coincide (allí son `.fiscal-cols` y `.fiscal-hijo-row`). Se dejan sin renombrar a
    propósito para no tocar el JSX de dos pantallas por una colisión que no existe. */
 @media (max-width: 768px) {
-  .fiscal-header { flex-direction: column !important; align-items: flex-start !important; }
-  .fiscal-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
   .fiscal-grand-grid { grid-template-columns: 1fr !important; }
   .fiscal-prop-summary { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
   .fiscal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
@@ -449,8 +451,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    El selector de `[style*="gridColumn"]` casa los campos que el JSX marca como "de ancho completo"
    (concepto, notas) para que no se partan en dos al reducir la rejilla del formulario. */
 @media (max-width: 768px) {
-  .fijos-header { flex-direction: column !important; align-items: flex-start !important; }
-  .fijos-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
   .fijos-form-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .fijos-form-grid > [style*="gridColumn"] { grid-column: 1 / -1 !important; }
   .fijos-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
@@ -463,7 +463,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    Los filtros (piso, portal, texto, fechas) pasan a ancho completo apilados: en línea, cada
    `select` quedaba tan estrecho que no se leía el nombre del piso seleccionado. */
 @media (max-width: 768px) {
-  .income-header { flex-direction: column !important; align-items: flex-start !important; }
   .income-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
   .income-split-grid { grid-template-columns: 1fr !important; }
   .income-filters { flex-direction: column !important; align-items: stretch !important; }
@@ -552,8 +551,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
 
 /* === SIVRA · Pricing manual (`sivra/pricing/page.tsx`) === */
 @media (max-width: 768px) {
-  .pricing-header { flex-direction: column !important; gap: 12px !important; }
-  .pricing-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
   .pricing-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
   .pricing-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
 }
@@ -592,7 +589,6 @@ html[data-saldo-oculto='1'] .saldo-privado {
    Los botones que lanzan una pasada (probar / analizar, ~30s) pasan a ancho completo en móvil
    pequeño: son acciones lentas y caras de repetir, así que conviene que se toquen a la primera. */
 @media (max-width: 768px) {
-  .seo-header { flex-direction: column !important; align-items: flex-start !important; }
   .seo-changes-row { flex-direction: column !important; }
   .seo-changes-row > div { width: 100% !important; }
   .seo-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
@@ -624,4 +620,83 @@ html[data-saldo-oculto='1'] .saldo-privado {
 .migas {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px; letter-spacing: .03em; color: var(--muted); margin-bottom: 3px;
+}
+
+/* La cabecera de columnas del libro de movimientos solo existe mientras hay COLUMNAS: en móvil la
+   fila se apila (`.banca-movs-row` de arriba), así que rotular «Fecha · Concepto · Negocio ·
+   Importe» sobre una lista apilada señalaría a sitios que ya no están. */
+@media (max-width: 768px) {
+  .banca-movs-head { display: none !important; }
+}
+
+/* ── Resumen del periodo (/banca · ResumenPeriodo.tsx) ─────────────────────────────────────────
+   Rejillas del bloque que abre el Inicio: 4 KPIs, las dos tarjetas Negocios/Personal y las dos
+   gráficas. Vivían en un `<style>` incrustado en el propio componente porque un estilo EN LÍNEA
+   no admite media queries — que es justo el motivo por el que este archivo existe. En móvil los
+   KPIs pasan a 2×2 (a 1 columna quedaban cuatro tarjetas altísimas y el gráfico caía fuera de la
+   primera pantalla) y todo lo demás se apila. */
+@media (max-width: 768px) {
+  .bk-kpis { grid-template-columns: 1fr 1fr !important; }
+  .bk-neg  { grid-template-columns: 1fr !important; }
+  .bk-graf { grid-template-columns: 1fr !important; }
+}
+
+/* Bajo ~380 px un KPI a media pantalla ya no cabe: el importe se parte en dos líneas. */
+@media (max-width: 380px) {
+  .bk-kpis { grid-template-columns: 1fr !important; }
+}
+
+/* ── Negocios del holding (/banca?tab=negocios · NegociosResumen.tsx) ──────────────────────────
+   Rejilla de las tarjetas de negocio, repetida en dos sitios del componente. Vivía como estilo
+   EN LÍNEA + un `<style>` incrustado con `!important` para el móvil: el `!important` solo hacía
+   falta porque la media query tenía que ganarle al estilo en línea. Con la regla entera aquí, el
+   estilo en línea desaparece y el `!important` sobra.
+   El mínimo son 300 px (no 260): la cifra de `Stat` se pinta a 24 px y por debajo de eso los tres
+   stats de una tarjeta se apilaban en tres filas. */
+.neg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+@media (max-width: 768px) {
+  .neg-grid { grid-template-columns: 1fr; }
+}
+
+/* === Acento de sección: la correduría (Grupo ASegura) ========================
+   Alberto pidió (03/09/2026) que la correduría se pareciera a la app que hizo
+   Manuel, `app.grupoasegura.com`. Sus colores NO están puestos a ojo: salen de
+   `src/app/globals.css` de ese repo, convertidos de oklch a hex —
+   `oklch(0.555 0.215 265)` = #3364ee en claro, `oklch(0.62 0.2 265)` = #497cfd
+   en oscuro; la superficie acento es `oklch(0.95 0.045 265)` = #e0efff sobre
+   `oklch(0.34 0.13 265)` = #16307a.
+
+   ⚠️ La captura verde de aquella conversación es de OTRO programa anterior, no
+   de la app de Manuel. Si algún día alguien "corrige" esto a verde, mírelo antes.
+
+   Se redefinen los TOKENS, no se pintan hex en los componentes (regla del
+   bloque de arriba): así toda la sección hereda el acento y el modo oscuro sale
+   solo. Y se queda acotado a /correduria a propósito: plataforma es el cuadro
+   de mando de TODOS los negocios de Alberto, no el de la correduría. */
+.correduria {
+  --primary: #3364ee;
+  --primary-light: #e0efff;
+  --primary-hover: #16307a;
+}
+[data-theme="dark"] .correduria {
+  --primary: #497cfd;
+  --primary-light: rgba(73, 124, 253, .16);
+  --primary-hover: #9fbcff;
+}
+
+/* === Solo para lectores de pantalla ===
+   Un rótulo que la vista no necesita pero la accesibilidad sí. Nació al quitar
+   la cabecera visible de /correduria (04/09/2026): el escudo y el título
+   «Correduría» comían ~62px de la primera pantalla del móvil para decir dónde
+   estás en la página que abres a propósito, pero una página sin `<h1>` deja a
+   un lector de pantalla sin encabezado por el que navegar.
+   No se usa `display:none` ni `visibility:hidden` a propósito: eso lo esconde
+   TAMBIÉN del lector, que es justo lo contrario de lo que se busca. */
+.solo-lectores {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }

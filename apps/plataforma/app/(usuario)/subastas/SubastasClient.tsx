@@ -7,6 +7,8 @@ import { eur } from '@/lib/dinero'
 import { estadoDocumentacion, resumenDocumentos, type DocumentoAdjunto } from '@/lib/subastas/resumen-docs'
 import { calcularCoste, direccionCatastro, esCasa, esDireccionPostal, estadoPujaMinima, titularCargas, umbralesPuja, urlFichaCatastro, urlGoogleMaps, urlStreetView, veredicto, viviendaHabitualDeNotas, type CalibracionZona, type ParamsCoste, type SubastaInmueble } from '@central/module-subastas'
 import MapaSubastas from './MapaSubastas'
+import { PageHeader } from '@/components/ui'
+import { Gavel } from 'lucide-react'
 
 const PAGE = 50
 const PROVINCIAS = ['Sevilla', 'Huelva', 'Cádiz', 'Asturias']
@@ -1678,7 +1680,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
   if (!datos) {
     return (
       <main style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
-        <h1 style={{ color: 'var(--text)' }}>⚖️ Subastas</h1>
+        <PageHeader titulo="Subastas" icono={<Gavel size={20} strokeWidth={1.75} />} />
         <p style={{ color: 'var(--muted)' }}>No se han podido cargar los datos. Reintenta en un momento.</p>
       </main>
     )
@@ -1692,7 +1694,7 @@ export default function SubastasClient({ inicial }: { inicial: Inicial | null })
 
   return (
     <main style={{ padding: 16, maxWidth: 900, margin: '0 auto' }}>
-      <h1 style={{ color: 'var(--text)', fontSize: 24, marginBottom: 4 }}>⚖️ Subastas</h1>
+      <PageHeader titulo="Subastas" icono={<Gavel size={20} strokeWidth={1.75} />} />
       <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 0 }}>
         Dos caminos al mismo objetivo: inmuebles baratos por zona. <strong>Subastas</strong> del Portal
         del BOE con su coste real de adquisición, y <strong>chollos</strong> de venta directa detectados en

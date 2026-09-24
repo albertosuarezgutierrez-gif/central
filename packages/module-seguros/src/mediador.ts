@@ -1,0 +1,355 @@
+/**
+ * Datos canónicos del MEDIADOR (Grupo ASegura) para todo lo que se le enseña al
+ * cliente final: información precontractual del art. 19 de la Ley 16/2018 de
+ * Distribución de Seguros (LDS), pies de página legales y políticas.
+ *
+ * Vive en `@central/module-seguros` y no en una app porque los DOS lados de la
+ * correduría lo necesitan y tienen que decir exactamente lo mismo: el panel del
+ * corredor (`apps/asegura` / `plataforma`) y el portal del asegurado
+ * (`apps/asegura-portal`). Dos copias del número de registro DGSFP es una copia
+ * de más: el día que cambie una, la otra miente sin que falle nada.
+ *
+ * 🚨 Lo que NO se declara aquí, a propósito:
+ *
+ * - **La lista de ramos.** El art. 19 LDS no la exige (pide identidad, registro,
+ *   participaciones, ausencia de vinculación y procedimiento de reclamación), y
+ *   el alcance exacto de la inscripción en el Registro Administrativo de la
+ *   DGSFP no se ha comprobado contra el registro público. Enumerar ramos sin
+ *   haberlo mirado sería una afirmación sobre datos que no se han visto, y
+ *   además es la clase de dato que un cliente usa para decidir.
+ * - **Un Delegado de Protección de Datos.** Que exista o no es un hecho, no una
+ *   redacción: se declarará cuando esté confirmado y con un buzón que se sepa
+ *   que recibe correo. Mientras tanto los derechos se ejercen por el contacto
+ *   general, que sí está verificado.
+ *
+ * PENDIENTE_REVISION_LEGAL: la redacción de `PUNTOS_PRECONTRACTUALES` y de
+ * `NO_EXCLUSIVIDAD` es la operativa actual. Cuando haya sign-off de abogado se
+ * sustituyen estas cadenas sin tocar ni las pantallas ni los tests.
+ */
+
+/**
+ * Versión de los textos legales que se le muestran al cliente.
+ *
+ * Es la que se guarda en `seguros.portal_consentimiento.version_texto`: un
+ * consentimiento sin la versión del texto aceptado no acredita nada, porque
+ * nadie puede decir después QUÉ se aceptó. Se sube a mano cada vez que cambie
+ * el fondo de cualquiera de las páginas legales (no por una errata).
+ */
+export const VERSION_TEXTOS_LEGALES = '2026-09-v5'
+
+/** Fecha de la última revisión de fondo de los textos legales (ISO, UTC). */
+export const FECHA_TEXTOS_LEGALES = '2026-09-19'
+
+/**
+ * Versión de los textos legales de la WEB PÚBLICA (`apps/asegura-web`).
+ *
+ * 🚨 Es una constante APARTE de `VERSION_TEXTOS_LEGALES` a propósito, y no por
+ * duplicar: son dos documentos distintos, con público distinto y con
+ * consecuencias distintas al cambiarlos.
+ *
+ * `VERSION_TEXTOS_LEGALES` no es solo un número que se pinta en un pie: se
+ * guarda en `seguros.portal_consentimiento.version_texto` y `necesitaRegistro()`
+ * la compara con la que cada cliente aceptó. Subirla obliga a **todos** los
+ * clientes del portal a volver a acreditar la información precontractual la
+ * próxima vez que entren.
+ *
+ * Cuando el 05/09/2026 la web pública añadió medición de visitas hubo que
+ * reescribir su apartado de cookies. Con una sola constante, ese cambio —que no
+ * toca en absoluto lo que un cliente del portal aceptó— habría hecho firmar de
+ * nuevo a la cartera entera y habría ensuciado el registro de consentimientos,
+ * que es una prueba. La alternativa era no subir la versión y dejar que el pie
+ * de una página reescrita siguiera anunciando la anterior, que es justo lo que
+ * la versión existe para impedir. De ahí las dos.
+ *
+ * Regla: cambia el fondo de una página de `apps/asegura-web` → sube esta. Cambia
+ * el fondo de una página del portal → sube la otra.
+ *
+ * Arranca en `w1`, que es la revisión que introdujo la medición de visitas. Lo
+ * que la web publicó ANTES de esta separación salió bajo `2026-09-v4`: la `w`
+ * evita que las dos series se confundan al leer un pie de página antiguo.
+ *
+ * 🚨 `w2` (05/09/2026) corrige un fallo GRAVE de `w1`: se subió la versión
+ * al añadir la medición, pero los textos **no se reescribieron**. La política
+ * de privacidad y el aviso legal seguían diciendo «no hay analítica ni cookies
+ * de terceros, y por eso no se te pide consentimiento» mientras el layout
+ * cargaba Cookiebot y PostHog. Eso no es un texto viejo: es información falsa
+ * al interesado (arts. 12-13 RGPD y 22.2 LSSI) y, ante una inspección, prueba
+ * documental en contra. En `w2` los apartados de cookies dicen lo que el
+ * código hace, aparecen la base jurídica del consentimiento y la del control
+ * antiabuso por IP, y Cookiebot y PostHog se nombran como encargados.
+ *
+ * Lección, porque volverá a pasar: **subir la versión no es revisar el texto.**
+ * La constante solo acredita QUÉ estaba publicado; que lo publicado sea cierto
+ * hay que comprobarlo leyendo la página contra el código.
+ */
+export const VERSION_TEXTOS_WEB = '2026-09-w2'
+
+/** Fecha de la última revisión de fondo de los textos de la web pública. */
+export const FECHA_TEXTOS_WEB = '2026-09-05'
+
+export const MEDIADOR = {
+  /** Nombre comercial. La persona que responde legalmente es `identidad`. */
+  marca: 'Grupo ASegura',
+  identidad: {
+    nombre: 'Alberto Suárez Gutiérrez',
+    nif: '28823484E',
+    figura: 'Corredor de seguros (persona física)',
+    /** Clave del Registro Administrativo de Distribuidores de Seguros (DGSFP). */
+    claveDgsfp: 'CS-F/0170',
+    domicilio: 'San Juan de La Palma, nº 28, 41003 Sevilla',
+    /**
+     * 🚨 El correo ÚNICO de la correduría (Alberto, 04/09/2026: «solo quiero usar
+     * un mail hola@grupoasegura.es»). Es el mismo buzón al que ya responde el
+     * `Reply-To` del correo del portal (`PORTAL_MAIL_REPLY_TO`), así que el
+     * cliente que contesta a su código de acceso y el que presenta una queja
+     * llegan al mismo sitio — que es justo lo que un SAC tiene que garantizar.
+     *
+     * ⚠️ La web pública (repo `asegura`) sigue publicando `info@grupoasegura.es`
+     * en sus Términos, en su política de privacidad y en `/info-mediador`. Dos
+     * canales de reclamación distintos para el mismo mediador es una
+     * contradicción entre documentos legales publicados, no una errata: hay que
+     * unificarlo allí también, y ese cambio toca textos con `LegalVersionGate`.
+     */
+    email: 'hola@grupoasegura.es',
+    /**
+     * Móvil de Alberto, confirmado por él el 05/09/2026 para publicarlo en la
+     * web y usarlo como WhatsApp de contacto.
+     *
+     * 🚨 En E.164 y SIN espacios a propósito: es el formato que exige `wa.me/`
+     * y el que Google espera en `telephone` del JSON-LD. Para PINTARLO usa
+     * `telefonoLegible`, no este: un `+34637349990` de corrido en una web se
+     * lee mal y se copia peor.
+     *
+     * ⚠️ Es su número PERSONAL, no una línea de empresa. Publicarlo es
+     * irreversible: los rastreadores lo copian en horas. Si algún día hay una
+     * línea de la correduría (o la WABA que el portal espera para su canal de
+     * WhatsApp), se sustituye AQUÍ y cambia en todas las superficies a la vez.
+     */
+    telefono: '+34637349990',
+    /**
+     * La web pública (`apps/asegura-web`), que es la ÚNICA superficie pensada
+     * para quien todavía no es cliente: quién eres, qué ramos medias y un
+     * formulario para que te escriba.
+     *
+     * 🚨 Sin barra final y con `https://`: se concatena para formar rutas y se
+     * manda tal cual por WhatsApp.
+     *
+     * ⚠️ El `.com` NO es nuestro (apunta a un parking de IONOS) y
+     * `app.grupoasegura.com` sirve el CRM de Manuel: ni uno ni otro valen aquí.
+     * El apex `.es` lo sirve `asegura-web` desde el 05/09/2026.
+     *
+     * `apps/asegura-web/lib/sitio.ts` deja sobreescribirlo por
+     * `NEXT_PUBLIC_SITIO_URL` para sus previews; ESTE es el dominio que se le
+     * enseña a una persona, así que no depende de ninguna env: un mensaje de
+     * WhatsApp con la URL de una preview de Vercel no lo arregla un redeploy.
+     */
+    web: 'https://grupoasegura.es',
+    /**
+     * La intranet del cliente (`apps/asegura-portal`), que es lo que se le
+     * ofrece a alguien que todavía no tiene ninguna póliza con nosotros.
+     *
+     * 🚨 NO es «el área de clientes» en el sentido de «solo para clientes»:
+     * entrar no exige tener cartera (el código de un solo uso se manda a
+     * cualquier correo, `app/api/acceso/solicitar`), la bóveda vacía tiene su
+     * propio texto, y «Añade una póliza» se pinta SIN condición — admite
+     * pólizas de cualquier compañía, sea nuestra o no. Su propia pantalla de
+     * entrada lo dice: «Todos tus seguros en un sitio. Gratis, seas cliente o
+     * no.» Por eso se puede nombrar en un primer mensaje sin mentir.
+     *
+     * ⚠️ Lo que NO se le puede prometer desde aquí es que se las gestionamos:
+     * el propio portal declara «no la contratamos ni la gestionamos por ti»
+     * sobre una póliza declarada. Es un cuaderno suyo con avisos, no un
+     * encargo de mediación — y decirlo al revés sería asumir por WhatsApp un
+     * deber que no existe.
+     *
+     * `apps/asegura-web/lib/sitio.ts` lo deja sobreescribir por
+     * `NEXT_PUBLIC_PORTAL_URL` para sus previews; ESTE es el que se manda por
+     * WhatsApp, así que no depende de env por la misma razón que `web`.
+     */
+    portal: 'https://clientes.grupoasegura.es',
+  },
+  /** Seguro de responsabilidad civil profesional, art. 156.3 Ley 16/2018. */
+  responsabilidadCivil: {
+    aseguradora: "Lloyd's of London",
+    poliza: 'M201900135',
+    referenciaLegal: 'Art. 156.3 Ley 16/2018',
+  },
+  remuneracion: {
+    naturaleza: 'Comisión sobre la prima, abonada por la entidad aseguradora',
+    /** Redacción breve para la pantalla precontractual (art. 19.1.f LDS). */
+    resumen:
+      'El mediador percibe una comisión sobre la prima que abona la entidad aseguradora. El cliente no paga ningún honorario adicional por el servicio de mediación.',
+  },
+} as const
+
+/** Ausencia de vinculación contractual exclusiva (art. 19.1.b LDS). */
+export const NO_EXCLUSIVIDAD =
+  'Como corredor de seguros, el mediador no mantiene vinculación contractual exclusiva con ninguna entidad aseguradora, ni posee participación directa o indirecta superior al 10 % en ninguna de ellas, ni ninguna entidad aseguradora participa en más del 10 % en el mediador. El asesoramiento se presta con criterio de imparcialidad sobre las compañías disponibles.'
+
+/**
+ * Canales de reclamación, EN ORDEN: primero el propio mediador, y solo si no se
+ * resuelve, el supervisor. Enseñarlos al revés invita a que el cliente empiece
+ * por la DGSFP, que es exactamente lo que la ley quiere evitar.
+ */
+export const CANALES_RECLAMACION = [
+  {
+    id: 'sac',
+    etiqueta: 'Servicio de Atención al Cliente del mediador',
+    detalle: 'Primer paso. Plazo máximo de respuesta: un mes desde la presentación.',
+    contacto: MEDIADOR.identidad.email,
+    href: `mailto:${MEDIADOR.identidad.email}`,
+  },
+  {
+    id: 'dgsfp',
+    etiqueta: 'Dirección General de Seguros y Fondos de Pensiones (DGSFP)',
+    detalle:
+      'Servicio de Reclamaciones. Solo si el Servicio de Atención al Cliente no resuelve o no responde en plazo.',
+    contacto: 'www.dgsfp.mineco.gob.es',
+    href: 'https://www.dgsfp.mineco.gob.es',
+  },
+  {
+    id: 'aepd',
+    etiqueta: 'Agencia Española de Protección de Datos (AEPD)',
+    detalle: 'Para lo que afecte al tratamiento de datos personales.',
+    contacto: 'www.aepd.es',
+    href: 'https://www.aepd.es',
+  },
+] as const
+
+export type CanalReclamacion = (typeof CANALES_RECLAMACION)[number]
+export type IdCanalReclamacion = CanalReclamacion['id']
+
+/**
+ * Los cuatro apartados obligatorios del art. 19 LDS en formato escaneable. Es lo
+ * que va en la pantalla precontractual y en el pie de las apps; la versión larga
+ * vive en la página de información del mediador de cada app.
+ */
+export const PUNTOS_PRECONTRACTUALES = [
+  {
+    id: 'identidad',
+    titulo: 'Quién intermedia',
+    cuerpo: `${MEDIADOR.identidad.nombre}, ${MEDIADOR.identidad.figura.toLowerCase()}, inscrito en el Registro Administrativo de Distribuidores de Seguros de la DGSFP con la clave ${MEDIADOR.identidad.claveDgsfp}. NIF ${MEDIADOR.identidad.nif}. Domicilio profesional: ${MEDIADOR.identidad.domicilio}.`,
+  },
+  {
+    id: 'independencia',
+    titulo: 'Independencia frente a las aseguradoras',
+    cuerpo: NO_EXCLUSIVIDAD,
+  },
+  {
+    id: 'remuneracion',
+    titulo: 'Cómo se remunera',
+    cuerpo: MEDIADOR.remuneracion.resumen,
+  },
+  {
+    id: 'reclamaciones',
+    titulo: 'A quién reclamar',
+    cuerpo:
+      'Las reclamaciones se dirigen primero al Servicio de Atención al Cliente del mediador y, si no se resuelven, a la DGSFP (Servicio de Reclamaciones). Lo relativo a datos personales puede llevarse además a la AEPD.',
+  },
+] as const
+
+export type PuntoPrecontractual = (typeof PUNTOS_PRECONTRACTUALES)[number]
+export type IdPuntoPrecontractual = PuntoPrecontractual['id']
+
+/**
+ * Una línea con la identificación mínima del mediador, para pies de página donde
+ * no cabe la ficha entera. Es lo que el art. 19 exige que el cliente vea SIEMPRE,
+ * no solo si entra en una página aparte.
+ */
+export function lineaIdentificacion(): string {
+  const { nombre, figura, claveDgsfp, nif } = MEDIADOR.identidad
+  return `${nombre} · ${figura} inscrito en la DGSFP con clave ${claveDgsfp} · NIF ${nif}`
+}
+
+/**
+ * Remitente de un correo de la correduría, con el nombre visible SIEMPRE
+ * tomado de `MEDIADOR.marca`.
+ *
+ * 🚨 Esto existe por un fallo MEDIDO el 05/09/2026: las variables de entorno
+ * `PORTAL_MAIL_FROM` y `ASEGURA_MAIL_FROM` llevaban la marca con la ese
+ * minúscula, así que **todos los correos al asegurado salían con el nombre
+ * comercial comido**. El guardián del nombre comercial
+ * (`test/regression-nombre-comercial-asegura.test.ts`) no lo vio y no podía
+ * verlo: barre `git ls-files`, y el valor de una env de Vercel no está en el
+ * repo. Peor todavía, media docena de esas variables son de tipo Secret, que
+ * el panel ni siquiera deja releer — o sea que ahí la revisión a ojo tampoco
+ * llega nunca.
+ *
+ * La salida no es revisar mejor: es que el nombre **no se pueda escribir en una
+ * env**. La env aporta la DIRECCIÓN (que sí depende del dominio verificado en
+ * el proveedor de envío) y el nombre lo pone el repo, donde ya está protegido.
+ *
+ * Acepta las dos formas por compatibilidad, así que no hay que tocar ninguna
+ * variable para que empiece a funcionar:
+ *   - `"Lo que sea <no-reply@envios.grupoasegura.es>"` → se ignora el nombre
+ *   - `"no-reply@envios.grupoasegura.es"` → se le pone el nombre
+ *
+ * ── 🚨 Y desde el 07/09/2026 NO devuelve `null`: hay un remitente por defecto ──
+ *
+ * Dictado de Alberto: «solo hola@grupoasegura.es, ponlo donde sea para que no
+ * vuelva a haber errores; muchos mails al final es un caos, un mail es más
+ * práctico». Antes, una env ausente o mal escrita hacía que el correo **no
+ * saliera**, y esa env había que acertarla en CUATRO sitios (`ASEGURA_MAIL_FROM`
+ * en asegura, `PORTAL_MAIL_FROM` en el portal, y en cada uno de sus entornos de
+ * Vercel). Cada sitio era una ocasión de romperlo en silencio.
+ *
+ * Un remitente NO es un secreto —es la dirección que el cliente ve— así que la
+ * regla de «nunca un literal de reserva» (que existe para lo que FIRMA sesiones)
+ * no aplica aquí; sí aplica la de al lado: el valor vive en el repo, donde se
+ * revisa y se protege, y no en un panel que además oculta los valores Secret.
+ * Es lo mismo que ya hacen `ASEGURA_PORTAL_URL` y `NEXT_PUBLIC_PORTAL_URL`.
+ *
+ * Una env presente y válida sigue mandando: sirve para probar otro buzón sin
+ * tocar código. Una env con basura (sin arroba, con espacios) **cae al defecto y
+ * lo dice en el log** — enviar desde la dirección buena es mejor que no enviar,
+ * que era lo que pasaba antes.
+ *
+ * ⚠️ Esto no exime de verificar el dominio en el proveedor de envío: si
+ * `grupoasegura.es` no está verificado en Resend, el envío se rechaza igual.
+ * Lo que se elimina es la clase de fallo «falta la variable».
+ */
+export const REMITENTE_CORREDURIA = 'hola@grupoasegura.es'
+
+export function remitenteCorreo(env?: string | undefined | null): string {
+  const bruto = (env ?? '').trim()
+  if (!bruto) return `${MEDIADOR.marca} <${REMITENTE_CORREDURIA}>`
+  // Con `<...>` la dirección es lo de dentro; sin ellos, el valor entero.
+  const entreAngulos = bruto.match(/<([^>]+)>/)
+  const direccion = (entreAngulos ? entreAngulos[1] : bruto).trim()
+  // Una dirección sin arroba no es una dirección: no se disfraza con la marca.
+  if (!direccion || !direccion.includes('@') || /\s/.test(direccion)) {
+    console.error(`[mediador] remitente mal escrito (${JSON.stringify(bruto)}): se usa ${REMITENTE_CORREDURIA}`)
+    return `${MEDIADOR.marca} <${REMITENTE_CORREDURIA}>`
+  }
+  return `${MEDIADOR.marca} <${direccion}>`
+}
+
+/**
+ * El teléfono, escrito como se lee: `+34 637 34 99 90`.
+ *
+ * Existe como función y no como una segunda constante para que **no puedan
+ * divergir**: dos cadenas con el mismo número escritas a mano acaban siendo
+ * dos números distintos el día que uno se corrige y el otro no, y en un
+ * teléfono de contacto eso significa llamadas que no llegan.
+ *
+ * Solo entiende el formato español (`+34` + 9 dígitos), que es el único que
+ * hay. Con cualquier otro devuelve el número tal cual, sin inventarse una
+ * agrupación que en ese país podría no significar nada.
+ */
+export function telefonoLegible(): string {
+  const t = MEDIADOR.identidad.telefono
+  const m = /^\+34(\d{3})(\d{2})(\d{2})(\d{2})$/.exec(t)
+  return m ? `+34 ${m[1]} ${m[2]} ${m[3]} ${m[4]}` : t
+}
+
+/**
+ * Enlace de WhatsApp al mediador, con el primer mensaje ya escrito.
+ *
+ * `wa.me` quiere el número **sin `+` y sin espacios**; con el `+` delante
+ * abre la app pero deja el chat en blanco, que es un fallo que no da error y
+ * solo se ve probándolo en un móvil de verdad.
+ */
+export function whatsappUrl(texto: string): string {
+  const numero = MEDIADOR.identidad.telefono.replace(/\D/g, '')
+  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`
+}

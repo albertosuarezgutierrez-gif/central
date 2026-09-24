@@ -13,6 +13,39 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-23** · `docs/AUDITORIA-2026-09.md` · sección "Pasada ligera — 23/09/2026" añadida
+  (heartbeat, correduría, pricing, backlog de PRs — todo consistente con la pasada de ayer, sin
+  🔴 nuevo) · pasada ligera diaria, rango 8 commits desde `bb0401b` · commit de esta auditoría
+
+- **2026-09-22** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · pasada ligera diaria:
+  sin hallazgos nuevos (heartbeat/correduría/pricing/backlog de PRs = mismo estado que el 21/09,
+  sin Telegram por ser redundante) · commit de esta auditoría
+
+- **2026-09-21** · `docs/CONTEXTO-SESIONES.md`, `docs/AUDITORIA-2026-09.md` · 4 entradas de memoria
+  nuevas (PRs #3202, #3207, #3216, #3217 mergeados sin anotar — su commit "chore(memoria)" solo
+  tocaba el JSON de uso de herramientas, no la memoria real) + entrada de la pasada ligera de hoy ·
+  hueco cazado por el paso 4 (reconciliación memoria/skills) de `/auditoria-diaria` · SHA de esta
+  auditoría (ver commit de este PR)
+- **2026-09-20 (II)** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · entrada de la
+  pasada ligera de seguimiento (~3h tras la profunda semanal de esta mañana) · rango de 2 commits
+  ya autoreconciliados, heartbeat/correduría/pricing sin cambios, sin hallazgo nuevo · SHA de esta
+  auditoría (ver commit de este PR)
+
+- **2026-09-20** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`, este archivo · informe
+  de la pasada PROFUNDA semanal (código/infra sano; hallazgo del backlog de 46 PRs de rutina, 7 con
+  código real sin revisar bajo título de "solo registro", y hueco del allowlist de auto-merge con
+  `docs/uso-herramientas/**.json`) · pasada profunda de esta auditoría, entregada por PR (harness de
+  tarea de GitHub, rama única asignada, sin push directo a `main`; PR solo-registro, se auto-mergea).
+  El fix de código del allowlist va en PR de carril 2 aparte (no toca ficheros de registro) · commit
+  de esta auditoría.
+
+- **2026-09-19** · `docs/FUENTES-DE-VERDAD.md` · 2 filas nuevas (skill `correduria-crm` +
+  `docs/CORREDURIA-CRM-VISION.md`; skill `cima-ingesta` + sus 4 docs) · faltaban del mapa desde su
+  creación (02-17/09/2026) · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md` · pasada
+  ligera del día — entregado por PR (harness de tarea de GitHub, rama única asignada, sin push
+  directo a `main`; el fix de seguridad de la RCE de Next.js va en el mismo PR por la misma razón,
+  ver el PR para el detalle de código) · commit de esta auditoría.
+
 - **2026-09-01** · `apps/plataforma/lib/estructura.generated.json`, `docs/ARQUITECTURA.generated.md`,
   `docs/mapa-funciones.generated.json`, `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`,
   `docs/memoria/2026-08.md`, `docs/memoria/2025-10.md`, este archivo · radiografía regenerada (40

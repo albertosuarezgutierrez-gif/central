@@ -1,5 +1,7 @@
 'use client'
 import { useState, useMemo } from 'react'
+import { KeyRound } from 'lucide-react'
+import { PageHeader } from '@/components/ui'
 import type { SecretEntry, SecretTipo, DondeVive } from '@/lib/secrets-registry'
 
 const TIPO_LABEL: Record<SecretTipo, { label: string; color: string; bg: string }> = {
@@ -77,12 +79,17 @@ export default function SecretosClient({ secrets }: { secrets: SecretEntry[] }) 
 
   return (
     <main style={{ maxWidth: 980, margin: '0 auto', padding: '32px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>🔑 Secretos · Inventario</h1>
-        <span style={{ fontSize: 13, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px' }}>
-          {visibles.length} / {secrets.length}
-        </span>
-      </div>
+      <PageHeader
+        icono={<KeyRound size={20} strokeWidth={1.75} />}
+        titulo={
+          <>
+            Secretos · Inventario{' '}
+            <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px', whiteSpace: 'nowrap' }}>
+              {visibles.length} / {secrets.length}
+            </span>
+          </>
+        }
+      />
       <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 16px' }}>
         Mapa de todas las credenciales del proyecto: qué son, qué verticales las usan y <b>dónde vive el valor</b>.
       </p>

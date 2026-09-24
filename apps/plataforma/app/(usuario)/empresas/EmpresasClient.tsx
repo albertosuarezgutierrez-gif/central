@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import AgenteEmpresas from './AgenteEmpresas'
 import EmpresaCard, { type Empresa } from './EmpresaCard'
+import { PageHeader } from '@/components/ui'
 
 const PAGE = 50
 const CUADRANTE: Record<string, { label: string; color: string }> = {
@@ -103,7 +104,7 @@ export default function EmpresasClient({ inicial, invitado = false }: { inicial:
 
   return (
     <div style={{ padding: 16, maxWidth: 1100, margin: '0 auto', color: 'var(--text)' }}>
-      <h1 style={{ fontSize: 22, margin: '4px 0' }}>Empresas en dificultad</h1>
+      <PageHeader titulo="Empresas en dificultad" />
       <p style={{ color: 'var(--muted)', fontSize: 14, marginTop: 0 }}>
         Feed BORME (gratis) + enriquecimiento por empresa (facturación, CNAE, balance) cuando esté contratado eInforma.
       </p>

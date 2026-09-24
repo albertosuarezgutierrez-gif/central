@@ -1,0 +1,951 @@
+// Editar y dar de alta clientes de la cartera (escrituras sobre `seguros`,
+// 02/09/2026). Es el back del «✏️ Datos del cliente» y del «➕ Nuevo cliente»
+// de `/correduria` en plataforma.
+//
+// ─── Reglas ──────────────────────────────────────────────────────────────────
+// - `correduriaId` SIEMPRE explícito y el cliente se comprueba de esa correduría
+//   ANTES de escribir (con BYPASSRLS un id ajeno no falla: escribe en otro).
+// - Lo que va cifrado en `clientes` (teléfono, email, DNI, fecha, dirección) se
+//   cifra AQUÍ con las mismas primitivas que el CRM de Manuel (`@central/
+//   module-seguros-pii`) y lleva su índice ciego: si no, el buscador y CIMA
+//   dejan de encontrar la ficha EN SILENCIO.
+// - Varios teléfonos y emails viven en `cliente_telefonos` / `cliente_emails`;
+//   el PRINCIPAL se espeja en `clientes.telefono` / `clientes.email` (es lo que
+//   leen la ficha, el buscador y los avisos). Esas dos columnas tienen índice
+//   ÚNICO por hash: un principal no puede repetirse entre fichas.
+// - Identidad (DNI, nombre, apellidos, fecha de nacimiento) SOLO con un
+//   documento de identidad recibido de ESTE cliente (dictado de Alberto:
+//   «tendrá que solicitarlo documentado»). Las reglas son puras y están en
+//   `@central/module-seguros` (cliente-edicion.ts); aquí solo se aplican.
+// - Todo cambio deja fila en `historial_interno` (sin valores de identidad).
+// - Un alta desde aquí es un `lead`: «cliente» lo pone CIMA cuando entra una
+//   póliza. La búsqueda previa por DNI/teléfono/email es lo que evita el
+//   duplicado que luego hay que fusionar a mano.
+// - `clientes.fuente` dice por dónde entró la ficha (`web`, `portal`,
+//   `whatsapp` son los canales de lead; el resto, lo que teclea Alberto). Sin
+//   fuente se deja NULL: «no se sabe», nunca «otros». Un alta que llega por un
+//   CANAL deja historial tipo `contacto` (§6 de la visión del CRM); una
+//   tecleada, `nota`.
+
+import {
+  WHERE_CARTERA_VIVA,
+  coincidenciaBloquea,
+  documentoAcredita,
+  estadoDocumento,
+  etiquetaContacto,
+  normalizarContacto,
+  revisarAlta,
+  revisarEdicion,
+  textoHistorialAlta,
+  textoHistorialEdicion,
+  tipoDocumento,
+  tipoHistorial,
+  tipoHistorialAlta,
+  type AltaCliente,
+  type Coincidencia,
+  type ContactoCliente,
+  type EdicionCliente,
+  type TipoContacto,
+  type TipoHistorial,
+} from '@central/module-seguros'
+import { anotarCambio } from './auditoria'
+import {
+  computeDniLookupHash,
+  computeEmailLookupHash,
+  computeEmailDominioLookupHash,
+  computeEmailUsuarioLookupHash,
+  computeTelefonoLookupHash,
+  decryptField,
+  encryptField,
+} from '@central/module-seguros-pii'
+import { prismaAsegura } from './asegura-db'
+
+// ─── Cifrado ─────────────────────────────────────────────────────────────────
+
+/** Como en cartera-ficha: `v1:` que no abre → `null` (ilegible), en claro → tal cual. */
+export function descifrarCampo(v: string | null | undefined): string | null {
+  if (typeof v !== 'string' || v.trim() === '') return null
+  if (!v.startsWith('v1:')) return v
+  try {
+    return decryptField(v)
+  } catch {
+    return null
+  }
+}
+
+export function campoIlegible(v: string | null | undefined): boolean {
+  return typeof v === 'string' && v.startsWith('v1:') && descifrarCampo(v) === null
+}
+
+type Fallo = { ok: false; estado: 'invalido' | 'conflicto' | 'no_encontrado' | 'error'; motivo: string; campo?: string; coincidencias?: Coincidencia[]; forzable?: boolean; polizasVivas?: number; status: 404 | 409 | 422 | 500 }
+
+function invalido(motivo: string, campo?: string): Fallo {
+  return { ok: false, estado: 'invalido', motivo, campo, status: 422 }
+}
+function noEncontrado(): Fallo {
+  return { ok: false, estado: 'no_encontrado', motivo: 'El cliente no existe en esta correduría.', status: 404 }
+}
+function conflicto(coincidencias: Coincidencia[], forzable: boolean): Fallo {
+  return { ok: false, estado: 'conflicto', motivo: 'Ese dato ya está en otra ficha.', coincidencias, forzable, status: 409 }
+}
+function fallo(e: unknown): Fallo {
+  return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }
+}
+
+/**
+ * Cifra y hashea. Si la clave PII falta o está mal, `encryptField` lanza en
+ * producción: eso se convierte en un 500 con su mensaje, nunca en escribir el
+ * dato en claro o sin índice.
+ */
+function cifrado(tipo: TipoContacto | 'dni', valor: string): { cifrado: string; hash: string | null; mitades: Mitades } {
+  const hash =
+    tipo === 'telefono' ? computeTelefonoLookupHash(valor) : tipo === 'email' ? computeEmailLookupHash(valor) : computeDniLookupHash(valor)
+  return { cifrado: encryptField(valor), hash, mitades: tipo === 'email' ? mitadesEmail(valor) : SIN_MITADES }
+}
+
+/**
+ * Los índices de las MITADES de un email (dominio y usuario), para la búsqueda
+ * parcial («@gmail.com», «alberto.suarez@»). Van SIEMPRE junto al hash del
+ * email entero: un email escrito sin sus mitades es invisible a esa búsqueda
+ * hasta que pase el backfill, y desde el código el hueco no se ve.
+ */
+type Mitades = { emailDominioHash: string | null; emailUsuarioHash: string | null }
+const SIN_MITADES: Mitades = { emailDominioHash: null, emailUsuarioHash: null }
+function mitadesEmail(valor: string): Mitades {
+  return { emailDominioHash: computeEmailDominioLookupHash(valor), emailUsuarioHash: computeEmailUsuarioLookupHash(valor) }
+}
+
+async function clienteDe(correduriaId: string, clienteId: string) {
+  return prismaAsegura().cliente.findFirst({
+    where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
+    select: { id: true, nombre: true, apellidos: true, telefono: true, email: true, activo: true },
+  })
+}
+
+// ─── Coincidencias (búsqueda previa) ─────────────────────────────────────────
+
+/**
+ * ¿Qué OTRAS fichas de la correduría tienen ya este DNI/teléfono/email?
+ * Mira el principal (`clientes`) y también los secundarios de las tablas
+ * hijas. Las lápidas de fusión no cuentan.
+ *
+ * 🚨 Las fichas DESCARTADAS (`activo = false`) SÍ cuentan aquí, a propósito: el
+ * índice único por hash de `clientes.telefono`/`email` sigue vivo aunque la
+ * ficha no se pinte, así que filtrarlas diría «ese teléfono está libre» y el
+ * alta moriría después en un P2002 sin explicación. Lo que hace descartar es
+ * quitar la ficha de donde se MIRA, no de la base.
+ */
+export async function coincidencias(
+  correduriaId: string,
+  datos: { dni?: string | null; telefono?: string | null; email?: string | null },
+  excepto?: string,
+): Promise<Coincidencia[]> {
+  const db = prismaAsegura()
+  const out: Coincidencia[] = []
+  const vistos = new Set<string>()
+  const nombreDe = (c: { id: string; nombre: string; apellidos: string; tipo: unknown }) => ({
+    id: c.id,
+    nombre: `${c.nombre} ${c.apellidos}`.trim(),
+    tipo: String(c.tipo),
+  })
+  const anota = (c: { id: string; nombre: string; apellidos: string; tipo: unknown }, por: Coincidencia['por']) => {
+    if (c.id === excepto || vistos.has(`${c.id}:${por}`)) return
+    vistos.add(`${c.id}:${por}`)
+    out.push({ ...nombreDe(c), por })
+  }
+  const sel = { id: true, nombre: true, apellidos: true, tipo: true } as const
+
+  if (datos.dni) {
+    const h = computeDniLookupHash(datos.dni)
+    if (h) {
+      for (const c of await db.cliente.findMany({ where: { correduriaId, dniLookupHash: h, mergedIntoClienteId: null }, select: sel })) anota(c, 'dni')
+    }
+  }
+  if (datos.telefono) {
+    const h = computeTelefonoLookupHash(datos.telefono)
+    if (h) {
+      for (const c of await db.cliente.findMany({ where: { correduriaId, telefonoLookupHash: h, mergedIntoClienteId: null }, select: sel })) anota(c, 'telefono')
+      const hijas = await db.clienteTelefono.findMany({
+        where: { correduriaId, telefonoLookupHash: h, cliente: { mergedIntoClienteId: null } },
+        select: { cliente: { select: sel } },
+      })
+      for (const t of hijas) anota(t.cliente, 'telefono')
+    }
+  }
+  if (datos.email) {
+    const h = computeEmailLookupHash(datos.email)
+    if (h) {
+      for (const c of await db.cliente.findMany({ where: { correduriaId, emailLookupHash: h, mergedIntoClienteId: null }, select: sel })) anota(c, 'email')
+      const hijas = await db.clienteEmail.findMany({
+        where: { correduriaId, emailLookupHash: h, cliente: { mergedIntoClienteId: null } },
+        select: { cliente: { select: sel } },
+      })
+      for (const t of hijas) anota(t.cliente, 'email')
+    }
+  }
+  return out
+}
+
+// ─── Contactos ───────────────────────────────────────────────────────────────
+
+export type Contactos = { telefonos: ContactoCliente[]; emails: ContactoCliente[] }
+
+/**
+ * Todos los teléfonos y emails de la ficha. Si la tabla hija está vacía pero
+ * `clientes.telefono` tiene valor (3.000+ fichas del volcado están así), ese
+ * valor se presenta como el único, principal, con id `col:telefono` — para que
+ * la pantalla no diga «sin teléfonos» con un teléfono delante.
+ *
+ * `null` = no se ha podido consultar.
+ */
+export async function listarContactos(correduriaId: string, clienteId: string): Promise<Contactos | null> {
+  try {
+    const db = prismaAsegura()
+    const c = await db.cliente.findFirst({
+      where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
+      select: {
+        telefono: true,
+        email: true,
+        telefonos: { orderBy: [{ esPrincipal: 'desc' }, { createdAt: 'asc' }] },
+        emails: { orderBy: [{ esPrincipal: 'desc' }, { createdAt: 'asc' }] },
+      },
+    })
+    if (!c) return null
+    const fila = (tipo: TipoContacto, f: { id: string; etiqueta: string | null; esPrincipal: boolean; createdAt: Date }, v: string): ContactoCliente => ({
+      id: f.id,
+      tipo,
+      valor: descifrarCampo(v),
+      ilegible: campoIlegible(v),
+      etiqueta: f.etiqueta,
+      principal: f.esPrincipal,
+      creado: f.createdAt.toISOString(),
+    })
+    const telefonos = c.telefonos.map((t) => fila('telefono', t, t.telefono))
+    const emails = c.emails.map((e) => fila('email', e, e.email))
+    const columna = (tipo: TipoContacto, v: string | null): ContactoCliente[] =>
+      v && v.trim() !== ''
+        ? [{ id: `col:${tipo}`, tipo, valor: descifrarCampo(v), ilegible: campoIlegible(v), etiqueta: null, principal: true, creado: '' }]
+        : []
+    return {
+      telefonos: telefonos.length > 0 ? telefonos : columna('telefono', c.telefono),
+      emails: emails.length > 0 ? emails : columna('email', c.email),
+    }
+  } catch {
+    return null
+  }
+}
+
+export type ResultadoContacto = { ok: true; contacto: ContactoCliente | null; contactos: Contactos } | Fallo
+
+/**
+ * Cuando la ficha solo tiene el valor en la COLUMNA (sin filas hijas), antes
+ * de añadir otro hay que bajar ese valor a la tabla hija como principal: si
+ * no, el nuevo secundario quedaría solo en la hija y la ficha lo pintaría como
+ * único. Idempotente.
+ */
+async function bajarColumnaAHija(correduriaId: string, clienteId: string, tipo: TipoContacto): Promise<void> {
+  const db = prismaAsegura()
+  const c = await db.cliente.findFirst({
+    where: { id: clienteId, correduriaId },
+    select: { telefono: true, email: true, telefonoLookupHash: true, emailLookupHash: true, emailDominioHash: true, emailUsuarioHash: true, _count: { select: { telefonos: true, emails: true } } },
+  })
+  if (!c) return
+  if (tipo === 'telefono' && c._count.telefonos === 0 && c.telefono) {
+    await db.clienteTelefono.create({
+      data: { clienteId, correduriaId, telefono: c.telefono, telefonoLookupHash: c.telefonoLookupHash, esPrincipal: true },
+    })
+  }
+  if (tipo === 'email' && c._count.emails === 0 && c.email) {
+    await db.clienteEmail.create({
+      data: { clienteId, correduriaId, email: c.email, emailLookupHash: c.emailLookupHash, emailDominioHash: c.emailDominioHash, emailUsuarioHash: c.emailUsuarioHash, esPrincipal: true },
+    })
+  }
+}
+
+/** Espeja el principal en la columna de `clientes` (o la vacía si no queda ninguno). */
+async function espejarPrincipal(correduriaId: string, clienteId: string, tipo: TipoContacto): Promise<void> {
+  const db = prismaAsegura()
+  if (tipo === 'telefono') {
+    const p = await db.clienteTelefono.findFirst({ where: { clienteId, correduriaId, esPrincipal: true } })
+    await db.cliente.updateMany({
+      where: { id: clienteId, correduriaId },
+      data: { telefono: p?.telefono ?? null, telefonoLookupHash: p?.telefonoLookupHash ?? null, updatedAt: new Date() },
+    })
+  } else {
+    const p = await db.clienteEmail.findFirst({ where: { clienteId, correduriaId, esPrincipal: true } })
+    await db.cliente.updateMany({
+      where: { id: clienteId, correduriaId },
+      data: { email: p?.email ?? null, emailLookupHash: p?.emailLookupHash ?? null, emailDominioHash: p?.emailDominioHash ?? null, emailUsuarioHash: p?.emailUsuarioHash ?? null, updatedAt: new Date() },
+    })
+  }
+}
+
+function esUnicoViolado(e: unknown): boolean {
+  return typeof e === 'object' && e !== null && (e as { code?: string }).code === 'P2002'
+}
+
+/**
+ * ¿Puede este valor vivir en esta ficha? Mismo criterio para el ALTA de un
+ * contacto y para el CAMBIO de uno que ya está — si cada uno llevara el suyo,
+ * acabarían divergiendo y uno de los dos escribiría lo que el otro rechaza.
+ *
+ * Un teléfono repetido puede ser un matrimonio: se admite a sabiendas
+ * (`forzar`). Como PRINCIPAL no, y eso NO se fuerza: `clientes.telefono` /
+ * `clientes.email` tienen índice único por hash, así que la escritura moriría
+ * en un P2002 después de haber dicho que sí.
+ *
+ * `null` = adelante. Un `Fallo` = el 409 con quién lo tiene y si es forzable.
+ */
+export async function duplicadoContacto(
+  correduriaId: string,
+  clienteId: string,
+  tipo: TipoContacto,
+  valor: string,
+  seraPrincipal: boolean,
+  forzar: boolean,
+): Promise<Fallo | null> {
+  const otros = await coincidencias(correduriaId, { [tipo]: valor }, clienteId)
+  if (otros.length === 0) return null
+  if (!seraPrincipal) return forzar ? null : conflicto(otros, true)
+  // ¿La otra ficha lo tiene como principal (columna única) o solo como secundario?
+  const h = tipo === 'telefono' ? computeTelefonoLookupHash(valor) : computeEmailLookupHash(valor)
+  const enColumna = h
+    ? await prismaAsegura().cliente.count({
+        where: tipo === 'telefono'
+          ? { correduriaId, telefonoLookupHash: h, mergedIntoClienteId: null, id: { not: clienteId } }
+          : { correduriaId, emailLookupHash: h, mergedIntoClienteId: null, id: { not: clienteId } },
+      })
+    : 0
+  if (enColumna > 0) return conflicto(otros, false)
+  return forzar ? null : conflicto(otros, true)
+}
+
+export async function anadirContacto(
+  correduriaId: string,
+  clienteId: string,
+  entrada: { tipo: TipoContacto; valor: unknown; etiqueta?: unknown; principal?: boolean; forzar?: boolean; actor: string },
+): Promise<ResultadoContacto> {
+  const tipo: TipoContacto = entrada.tipo === 'email' ? 'email' : 'telefono'
+  const norm = normalizarContacto(tipo, entrada.valor)
+  if (!norm.ok) return invalido(norm.motivo, tipo)
+  try {
+    const c = await clienteDe(correduriaId, clienteId)
+    if (!c) return noEncontrado()
+    const dup = await duplicadoContacto(correduriaId, clienteId, tipo, norm.valor, entrada.principal === true, entrada.forzar === true)
+    if (dup) return dup
+    await bajarColumnaAHija(correduriaId, clienteId, tipo)
+    const db = prismaAsegura()
+    const { cifrado: valorCifrado, hash, mitades } = cifrado(tipo, norm.valor)
+    const etiqueta = etiquetaContacto(tipo, entrada.etiqueta)
+    const hayPrincipal =
+      tipo === 'telefono'
+        ? (await db.clienteTelefono.count({ where: { clienteId, correduriaId, esPrincipal: true } })) > 0
+        : (await db.clienteEmail.count({ where: { clienteId, correduriaId, esPrincipal: true } })) > 0
+    const principal = entrada.principal === true || !hayPrincipal
+    if (principal) {
+      if (tipo === 'telefono') await db.clienteTelefono.updateMany({ where: { clienteId, correduriaId }, data: { esPrincipal: false } })
+      else await db.clienteEmail.updateMany({ where: { clienteId, correduriaId }, data: { esPrincipal: false } })
+    }
+    const fila =
+      tipo === 'telefono'
+        ? await db.clienteTelefono.create({ data: { clienteId, correduriaId, telefono: valorCifrado, telefonoLookupHash: hash, etiqueta, esPrincipal: principal } })
+        : await db.clienteEmail.create({ data: { clienteId, correduriaId, email: valorCifrado, emailLookupHash: hash, ...mitades, etiqueta, esPrincipal: principal } })
+    if (principal) await espejarPrincipal(correduriaId, clienteId, tipo)
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: tipo === 'telefono' ? 'telefono' : 'email' })
+    await anotarHistorial(correduriaId, clienteId, 'contacto', `${tipo === 'telefono' ? 'Teléfono' : 'Email'} añadido${etiqueta ? ` (${etiqueta})` : ''}${principal ? ', principal' : ''} desde plataforma por ${entrada.actor}`)
+    const contactos = (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] }
+    return {
+      ok: true,
+      contacto: { id: fila.id, tipo, valor: norm.valor, ilegible: false, etiqueta, principal, creado: fila.createdAt.toISOString() },
+      contactos,
+    }
+  } catch (e) {
+    if (esUnicoViolado(e)) {
+      const otros = await coincidencias(correduriaId, { [tipo]: norm.valor }, clienteId).catch(() => [])
+      return conflicto(otros, false)
+    }
+    return fallo(e)
+  }
+}
+
+/**
+ * Cambiar un teléfono o email que YA está en la ficha: su VALOR, su etiqueta o
+ * cuál es el principal.
+ *
+ * 🚨 Corregir el valor no es «borrar y añadir»: borrar pierde el id, la fecha y
+ * el orden, y si era el principal asciende otro por el camino. Aquí se reescribe
+ * la fila —cifrado nuevo e índice ciego nuevo— y se vuelve a espejar la columna
+ * de `clientes` si esa fila es la principal; sin el hash nuevo, el buscador y
+ * CIMA dejarían de encontrar la ficha por ese dato EN SILENCIO.
+ *
+ * El valor que solo vive en la columna (`col:telefono`, las 3.000+ fichas del
+ * volcado) se baja antes a la tabla hija: si no, el único teléfono que tienen
+ * esas fichas sería justo el que no se puede corregir.
+ */
+export async function cambiarContacto(
+  correduriaId: string,
+  clienteId: string,
+  entrada: { id: string; valor?: unknown; principal?: boolean; etiqueta?: unknown; forzar?: boolean; actor: string },
+): Promise<ResultadoContacto> {
+  const noEsta = (): ResultadoContacto => ({
+    ok: false,
+    estado: 'no_encontrado',
+    motivo: 'Ese teléfono o email no está en la ficha.',
+    status: 404,
+  })
+  try {
+    const c = await clienteDe(correduriaId, clienteId)
+    if (!c) return noEncontrado()
+    const db = prismaAsegura()
+
+    let id = entrada.id
+    if (id === 'col:telefono' || id === 'col:email') {
+      const tipoCol: TipoContacto = id === 'col:telefono' ? 'telefono' : 'email'
+      await bajarColumnaAHija(correduriaId, clienteId, tipoCol)
+      const f =
+        tipoCol === 'telefono'
+          ? await db.clienteTelefono.findFirst({ where: { clienteId, correduriaId, esPrincipal: true } })
+          : await db.clienteEmail.findFirst({ where: { clienteId, correduriaId, esPrincipal: true } })
+      if (!f) return noEsta()
+      id = f.id
+    }
+
+    const t = await db.clienteTelefono.findFirst({ where: { id, clienteId, correduriaId } })
+    const m = t ? null : await db.clienteEmail.findFirst({ where: { id, clienteId, correduriaId } })
+    if (!t && !m) return noEsta()
+    const tipo: TipoContacto = t ? 'telefono' : 'email'
+
+    const data: {
+      esPrincipal?: boolean
+      etiqueta?: string | null
+      telefono?: string
+      telefonoLookupHash?: string | null
+      email?: string
+      emailLookupHash?: string | null
+      emailDominioHash?: string | null
+      emailUsuarioHash?: string | null
+    } = {}
+
+    // Cambiar el valor de la fila principal se juzga como principal: acabará en
+    // la columna única de `clientes`.
+    const eraPrincipal = t ? t.esPrincipal : m!.esPrincipal
+    const seraPrincipal = entrada.principal === true || eraPrincipal
+    let valorCambiado = false
+    if ('valor' in entrada) {
+      const norm = normalizarContacto(tipo, entrada.valor)
+      if (!norm.ok) return invalido(norm.motivo, tipo)
+      // Un valor ILEGIBLE (cifrado con una clave que no abre) descifra a `null`,
+      // así que cuenta como distinto: reescribirlo es justo lo que lo arregla.
+      const actual = descifrarCampo(t ? t.telefono : m!.email)
+      if (norm.valor !== actual) {
+        const dup = await duplicadoContacto(correduriaId, clienteId, tipo, norm.valor, seraPrincipal, entrada.forzar === true)
+        if (dup) return dup
+        const { cifrado: valorCifrado, hash, mitades } = cifrado(tipo, norm.valor)
+        if (tipo === 'telefono') {
+          data.telefono = valorCifrado
+          data.telefonoLookupHash = hash
+        } else {
+          data.email = valorCifrado
+          data.emailLookupHash = hash
+          data.emailDominioHash = mitades.emailDominioHash
+          data.emailUsuarioHash = mitades.emailUsuarioHash
+        }
+        valorCambiado = true
+      }
+    }
+
+    if ('etiqueta' in entrada) data.etiqueta = etiquetaContacto(tipo, entrada.etiqueta)
+    if (entrada.principal === true) {
+      if (tipo === 'telefono') await db.clienteTelefono.updateMany({ where: { clienteId, correduriaId }, data: { esPrincipal: false } })
+      else await db.clienteEmail.updateMany({ where: { clienteId, correduriaId }, data: { esPrincipal: false } })
+      data.esPrincipal = true
+    }
+
+    if (tipo === 'telefono') await db.clienteTelefono.update({ where: { id }, data })
+    else await db.clienteEmail.update({ where: { id }, data })
+
+    // La columna de `clientes` es lo que leen la ficha, el buscador y los
+    // avisos: se re-espeja si cambia quién es el principal O si ha cambiado el
+    // valor del que ya lo era.
+    if (entrada.principal === true || (valorCambiado && seraPrincipal)) {
+      await espejarPrincipal(correduriaId, clienteId, tipo)
+    }
+
+    const que = tipo === 'telefono' ? 'Teléfono' : 'Email'
+    // Sin el valor: el historial no guarda datos de contacto en claro.
+    const hechos = [
+      valorCambiado ? 'corregido' : null,
+      'etiqueta' in entrada && !valorCambiado ? 're-etiquetado' : null,
+      entrada.principal === true ? 'puesto como principal' : null,
+    ].filter((x): x is string => x !== null)
+    if (hechos.length > 0) {
+      anotarCambio({ entidad: 'cliente', id: clienteId, campo: tipo === 'telefono' ? 'telefono' : 'email' })
+      await anotarHistorial(correduriaId, clienteId, 'contacto', `${que} ${hechos.join(' y ')} desde plataforma por ${entrada.actor}`)
+    }
+
+    return { ok: true, contacto: null, contactos: (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] } }
+  } catch (e) {
+    if (esUnicoViolado(e)) {
+      // Otra ficha tiene ese valor en su columna única. Se dice CON quién, que
+      // es lo único accionable, y nunca como forzable: forzarlo volvería a P2002.
+      const otros =
+        'valor' in entrada && typeof entrada.valor === 'string'
+          ? await coincidencias(correduriaId, { telefono: entrada.valor, email: entrada.valor }, clienteId).catch(() => [])
+          : []
+      return conflicto(otros, false)
+    }
+    return fallo(e)
+  }
+}
+
+export async function borrarContacto(
+  correduriaId: string,
+  clienteId: string,
+  entrada: { id: string; actor: string },
+): Promise<ResultadoContacto> {
+  try {
+    const c = await clienteDe(correduriaId, clienteId)
+    if (!c) return noEncontrado()
+    const db = prismaAsegura()
+    // `col:telefono` = el valor vive solo en la columna: borrarlo es vaciarla.
+    if (entrada.id === 'col:telefono' || entrada.id === 'col:email') {
+      const tipo: TipoContacto = entrada.id === 'col:telefono' ? 'telefono' : 'email'
+      await db.cliente.updateMany({
+        where: { id: clienteId, correduriaId },
+        data: tipo === 'telefono' ? { telefono: null, telefonoLookupHash: null } : { email: null, emailLookupHash: null, emailDominioHash: null, emailUsuarioHash: null },
+      })
+      anotarCambio({ entidad: 'cliente', id: clienteId, campo: tipo === 'telefono' ? 'telefono' : 'email' })
+      await anotarHistorial(correduriaId, clienteId, 'contacto', `${tipo === 'telefono' ? 'Teléfono' : 'Email'} borrado desde plataforma por ${entrada.actor}`)
+      return { ok: true, contacto: null, contactos: (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] } }
+    }
+    const t = await db.clienteTelefono.findFirst({ where: { id: entrada.id, clienteId, correduriaId } })
+    const m = t ? null : await db.clienteEmail.findFirst({ where: { id: entrada.id, clienteId, correduriaId } })
+    if (!t && !m) return { ok: false, estado: 'no_encontrado', motivo: 'Ese teléfono o email no está en la ficha.', status: 404 }
+    const tipo: TipoContacto = t ? 'telefono' : 'email'
+    const eraPrincipal = t ? t.esPrincipal : m!.esPrincipal
+    if (tipo === 'telefono') await db.clienteTelefono.delete({ where: { id: entrada.id } })
+    else await db.clienteEmail.delete({ where: { id: entrada.id } })
+    if (eraPrincipal) {
+      // Asciende el más antiguo que quede; si no queda ninguno, la columna se vacía.
+      if (tipo === 'telefono') {
+        const s = await db.clienteTelefono.findFirst({ where: { clienteId, correduriaId }, orderBy: { createdAt: 'asc' } })
+        if (s) await db.clienteTelefono.update({ where: { id: s.id }, data: { esPrincipal: true } })
+      } else {
+        const s = await db.clienteEmail.findFirst({ where: { clienteId, correduriaId }, orderBy: { createdAt: 'asc' } })
+        if (s) await db.clienteEmail.update({ where: { id: s.id }, data: { esPrincipal: true } })
+      }
+      await espejarPrincipal(correduriaId, clienteId, tipo)
+    }
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: tipo === 'telefono' ? 'telefono' : 'email' })
+    await anotarHistorial(correduriaId, clienteId, 'contacto', `${tipo === 'telefono' ? 'Teléfono' : 'Email'} borrado desde plataforma por ${entrada.actor}`)
+    return { ok: true, contacto: null, contactos: (await listarContactos(correduriaId, clienteId)) ?? { telefonos: [], emails: [] } }
+  } catch (e) {
+    if (esUnicoViolado(e)) return conflicto([], false)
+    return fallo(e)
+  }
+}
+
+// ─── Identidad y datos libres ────────────────────────────────────────────────
+
+export type Identidad = {
+  nombre: string
+  apellidos: string
+  dniEnmascarado: string | null
+  dniIlegible: boolean
+  fechaNacimiento: string | null
+  fechaNacimientoIlegible: boolean
+  tipoPersona: string | null
+}
+
+export type ResultadoEdicion = { ok: true } | Fallo
+
+/**
+ * Aplica una edición ya revisada por las reglas puras. Si toca identidad,
+ * exige que `documentoId` sea un documento de tipo DNI, recibido, DE ESTE
+ * cliente: un documento de otra ficha no acredita nada.
+ */
+export async function editarCliente(
+  correduriaId: string,
+  clienteId: string,
+  edicion: EdicionCliente,
+  actor: string,
+): Promise<ResultadoEdicion> {
+  const r = revisarEdicion(edicion)
+  if (!r.ok) return invalido(r.motivo, r.campo)
+  try {
+    const db = prismaAsegura()
+    const c = await clienteDe(correduriaId, clienteId)
+    if (!c) return noEncontrado()
+
+    if (r.tocaIdentidad) {
+      const d = await db.documento.findFirst({
+        where: { id: edicion.documentoId ?? '', correduriaId, clienteId },
+        select: { tipo: true, estado: true },
+      })
+      if (!d || !documentoAcredita({ tipo: tipoDocumento(d.tipo), estado: estadoDocumento(d.estado) })) {
+        return invalido('documento_no_acredita', 'documentoId')
+      }
+    }
+
+    const data: Record<string, unknown> = { updatedAt: new Date() }
+    if (r.identidad.nombre !== undefined) data.nombre = r.identidad.nombre
+    if (r.identidad.apellidos !== undefined) data.apellidos = r.identidad.apellidos
+    if (r.identidad.dni !== undefined) {
+      if (r.identidad.dni === null) {
+        data.dni = null
+        data.dniLookupHash = null
+      } else {
+        const otros = await coincidencias(correduriaId, { dni: r.identidad.dni.valor }, clienteId)
+        if (coincidenciaBloquea(otros)) return conflicto(otros, false)
+        const { cifrado: dniCifrado, hash } = cifrado('dni', r.identidad.dni.valor)
+        data.dni = dniCifrado
+        data.dniLookupHash = hash
+        data.tipoPersona = r.identidad.dni.tipoPersona
+      }
+    }
+    if (r.identidad.fechaNacimiento !== undefined) {
+      data.fechaNacimiento = r.identidad.fechaNacimiento === null ? null : encryptField(r.identidad.fechaNacimiento)
+    }
+    if (r.libre.direccion !== undefined) data.direccion = r.libre.direccion === null ? null : encryptField(r.libre.direccion)
+    if (r.libre.codigoPostal !== undefined) data.codigoPostal = r.libre.codigoPostal
+    if (r.libre.ciudad !== undefined) data.ciudad = r.libre.ciudad
+    if (r.libre.provincia !== undefined) data.provincia = r.libre.provincia
+    if (r.libre.notas !== undefined) data.notas = r.libre.notas
+
+    await db.cliente.update({ where: { id: clienteId }, data })
+    // Anotar cambios de auditoria (sin antes/despues)
+    for (const clave of ['nombre', 'apellidos', 'dni', 'fecha_nacimiento', 'direccion', 'codigo_postal', 'ciudad', 'provincia', 'notas'] as const) {
+      if (clave === 'dni' && r.identidad.dni !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'dni' })
+      } else if (clave === 'fecha_nacimiento' && r.identidad.fechaNacimiento !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'fecha_nacimiento' })
+      } else if (clave === 'nombre' && r.identidad.nombre !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'nombre' })
+      } else if (clave === 'apellidos' && r.identidad.apellidos !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'apellidos' })
+      } else if (clave === 'direccion' && r.libre.direccion !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'direccion' })
+      } else if (clave === 'codigo_postal' && r.libre.codigoPostal !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'codigo_postal' })
+      } else if (clave === 'ciudad' && r.libre.ciudad !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'ciudad' })
+      } else if (clave === 'provincia' && r.libre.provincia !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'provincia' })
+      } else if (clave === 'notas' && r.libre.notas !== undefined) {
+        anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'notas' })
+      }
+    }
+    await anotarHistorial(correduriaId, clienteId, 'gestion', textoHistorialEdicion(r, { actor, documentoId: edicion.documentoId }))
+    return { ok: true }
+  } catch (e) {
+    if (esUnicoViolado(e)) return conflicto([], false)
+    return fallo(e)
+  }
+}
+
+// ─── Descartar (borrado suave) ───────────────────────────────────────────────
+//
+// 🚨 Una ficha NO se borra: se DESCARTA (`clientes.activo = false`), y se puede
+// restaurar. Tres razones, y las tres son de este negocio:
+//
+//   1. **La ingesta de CIMA puede recrear la ficha.** Un DELETE duro se deshace
+//      solo, en silencio y sin dejar rastro de que alguien lo pidió.
+//   2. Cuelgan de ella `historial_interno`, relaciones, pólizas, recibos,
+//      siniestros y documentos: borrar la fila es borrar el expediente.
+//   3. Son 32.600 fichas. Un borrado irreversible a un clic sobre una cartera
+//      así es una pérdida de datos esperando a pasar.
+//
+// Descartar quita la ficha de DONDE SE MIRA (buscador, lista, resumen,
+// duplicados, sin-canal, impagados…), no de la base. La ficha en sí se sigue
+// abriendo por su URL —si no, no habría manera de restaurarla— y dice arriba
+// que está descartada.
+//
+// 🛡️ GUARDA DURA: una ficha con **alguna póliza VIVA** no se descarta. «Viva»
+// no se decide aquí: lo decide `esCarteraViva()` / `WHERE_CARTERA_VIVA` de
+// `@central/module-seguros`, que es la fuente única (`import_ref IS NULL` **o**
+// `eiac_xml_hash IS NOT NULL`). Y si ese recuento NO se puede hacer, tampoco se
+// descarta: «no se ha podido comprobar» es un tercer estado, no una vía libre
+// (regla global «dato que NO hay ≠ dato que NO se ha mirado»).
+
+export type ResultadoDescarte = { ok: true; activo: boolean; yaEstaba: boolean } | Fallo
+
+const MAX_MOTIVO = 500
+
+function motivoLimpio(v: unknown): string | null {
+  if (typeof v !== 'string') return null
+  const t = v.replace(/\s+/g, ' ').trim()
+  return t === '' ? null : t.slice(0, MAX_MOTIVO)
+}
+
+/**
+ * Cuántas pólizas VIVAS tiene la ficha.
+ *
+ * Devuelve `null` cuando la consulta falla, y ese `null` NO se colapsa con 0
+ * aguas arriba: sin saberlo, no se descarta. Un `?? 0` aquí sería dar vía libre
+ * a un borrado suave sobre una cartera que nadie ha podido mirar.
+ */
+async function polizasVivasDe(correduriaId: string, clienteId: string): Promise<number | null> {
+  try {
+    return await prismaAsegura().poliza.count({
+      where: { AND: [{ clienteId, correduriaId, mergedIntoPolizaId: null }, WHERE_CARTERA_VIVA] },
+    })
+  } catch (e) {
+    console.error('[cartera-edicion] no se pudieron contar las pólizas vivas:', e instanceof Error ? e.message : e)
+    return null
+  }
+}
+
+/**
+ * Descarta una ficha: deja de salir en el buscador, la lista y los contadores.
+ * Reversible con `restaurarCliente`.
+ *
+ * `yaEstaba: true` cuando la ficha ya estaba descartada: no es un error (el
+ * resultado pedido ya se cumple) y no se anota otra vez en el historial.
+ */
+export async function descartarCliente(
+  correduriaId: string,
+  clienteId: string,
+  actor: string,
+  motivo?: unknown,
+): Promise<ResultadoDescarte> {
+  if (typeof clienteId !== 'string' || clienteId.trim() === '') return invalido('Falta el cliente.', 'id')
+  const razon = motivoLimpio(motivo)
+  try {
+    const c = await clienteDe(correduriaId, clienteId)
+    if (!c) return noEncontrado()
+    if (!c.activo) return { ok: true, activo: false, yaEstaba: true }
+
+    const vivas = await polizasVivasDe(correduriaId, clienteId)
+    if (vivas === null) {
+      return {
+        ok: false,
+        estado: 'error',
+        motivo: 'no_se_pudo_comprobar_polizas',
+        status: 500,
+      }
+    }
+    if (vivas > 0) {
+      return {
+        ok: false,
+        estado: 'invalido',
+        motivo: 'tiene_polizas_vivas',
+        polizasVivas: vivas,
+        status: 422,
+      }
+    }
+
+    const actividadAnterior = c?.activo ?? true
+    await prismaAsegura().cliente.updateMany({
+      where: { id: clienteId, correduriaId },
+      data: { activo: false, updatedAt: new Date() },
+    })
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'activo', antes: actividadAnterior, despues: false })
+    await anotarHistorial(
+      correduriaId,
+      clienteId,
+      'gestion',
+      `Ficha DESCARTADA desde plataforma por ${actor}${razon ? ` · motivo: ${razon}` : ' · sin motivo indicado'} (borrado suave: deja de salir en buscador y listas; se puede restaurar)`,
+    )
+    return { ok: true, activo: false, yaEstaba: false }
+  } catch (e) {
+    return fallo(e)
+  }
+}
+
+/** Devuelve una ficha descartada a la cartera. No toca nada más de la ficha. */
+export async function restaurarCliente(
+  correduriaId: string,
+  clienteId: string,
+  actor: string,
+  motivo?: unknown,
+): Promise<ResultadoDescarte> {
+  if (typeof clienteId !== 'string' || clienteId.trim() === '') return invalido('Falta el cliente.', 'id')
+  const razon = motivoLimpio(motivo)
+  try {
+    const c = await clienteDe(correduriaId, clienteId)
+    if (!c) return noEncontrado()
+    if (c.activo) return { ok: true, activo: true, yaEstaba: true }
+    const actividadAnterior = c.activo
+    await prismaAsegura().cliente.updateMany({
+      where: { id: clienteId, correduriaId },
+      data: { activo: true, updatedAt: new Date() },
+    })
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'activo', antes: actividadAnterior, despues: true })
+    await anotarHistorial(
+      correduriaId,
+      clienteId,
+      'gestion',
+      `Ficha RESTAURADA desde plataforma por ${actor}${razon ? ` · motivo: ${razon}` : ''}`,
+    )
+    return { ok: true, activo: true, yaEstaba: false }
+  } catch (e) {
+    return fallo(e)
+  }
+}
+
+/**
+ * Reactiva una ficha descartada porque ha vuelto a ser un cliente de verdad:
+ * ha entrado una póliza suya. Idempotente y sin ruido — si ya estaba activa no
+ * escribe nada.
+ *
+ * Es la contrapartida de la guarda: se descarta solo lo que no tiene pólizas
+ * vivas, así que en cuanto vuelve a tener una, la ficha vuelve. Best-effort a
+ * propósito: la póliza ya está creada y un fallo aquí no puede deshacerla.
+ */
+export async function reactivarPorPoliza(correduriaId: string, clienteId: string, porque: string): Promise<void> {
+  try {
+    const r = await prismaAsegura().cliente.updateMany({
+      where: { id: clienteId, correduriaId, activo: false },
+      data: { activo: true, updatedAt: new Date() },
+    })
+    if (r.count === 0) return
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'activo', antes: false, despues: true })
+    await anotarHistorial(
+      correduriaId,
+      clienteId,
+      'gestion',
+      `Ficha reactivada automáticamente: ${porque}. Estaba descartada y ha vuelto a tener una póliza.`,
+    )
+  } catch (e) {
+    console.error('[cartera-edicion] no se pudo reactivar la ficha descartada:', e instanceof Error ? e.message : e)
+  }
+}
+
+// ─── Alta ────────────────────────────────────────────────────────────────────
+
+export type ResultadoAlta = { ok: true; id: string } | Fallo
+
+/**
+ * Alta manual = `lead`, `prospecto`. Antes de crear, busca por DNI, teléfono y
+ * email: un DNI repetido es la misma persona y NO se crea; un teléfono o email
+ * repetidos pueden ser otra persona y se crea solo con `forzar` — y entonces
+ * ese valor va a la tabla hija, no a la columna única (que ya la tiene otra
+ * ficha). Todo en una transacción: o queda la ficha entera o nada.
+ */
+export async function altaCliente(
+  correduriaId: string,
+  entrada: Record<string, unknown>,
+  actor: string,
+): Promise<ResultadoAlta> {
+  const r = revisarAlta(entrada)
+  if (!r.ok) return invalido(r.motivo, r.campo)
+  const a: AltaCliente = r.alta
+  try {
+    const otros = await coincidencias(correduriaId, { dni: a.dni, telefono: a.telefono, email: a.email })
+    if (otros.length > 0) {
+      if (coincidenciaBloquea(otros)) return conflicto(otros, false)
+      if (entrada.forzar !== true) return conflicto(otros, true)
+    }
+    const telEnOtra = otros.some((o) => o.por === 'telefono')
+    const mailEnOtra = otros.some((o) => o.por === 'email')
+    const db = prismaAsegura()
+    const id = await db.$transaction(async (tx) => {
+      const tel = a.telefono ? cifrado('telefono', a.telefono) : null
+      const mail = a.email ? cifrado('email', a.email) : null
+      const dni = a.dni ? cifrado('dni', a.dni) : null
+      const creado = await tx.cliente.create({
+        data: {
+          correduriaId,
+          nombre: a.nombre,
+          apellidos: a.apellidos,
+          tipo: 'lead',
+          segmento: 'prospecto',
+          tipoPersona: a.tipoPersona,
+          dni: dni?.cifrado ?? null,
+          dniLookupHash: dni?.hash ?? null,
+          fechaNacimiento: a.fechaNacimiento ? encryptField(a.fechaNacimiento) : null,
+          // El principal se espeja en la columna única SOLO si ninguna otra ficha lo tiene ya.
+          telefono: tel && !telEnOtra ? tel.cifrado : null,
+          telefonoLookupHash: tel && !telEnOtra ? tel.hash : null,
+          email: mail && !mailEnOtra ? mail.cifrado : null,
+          emailLookupHash: mail && !mailEnOtra ? mail.hash : null,
+          emailDominioHash: mail && !mailEnOtra ? mail.mitades.emailDominioHash : null,
+          emailUsuarioHash: mail && !mailEnOtra ? mail.mitades.emailUsuarioHash : null,
+          direccion: a.direccion ? encryptField(a.direccion) : null,
+          codigoPostal: a.codigoPostal,
+          ciudad: a.ciudad,
+          provincia: a.provincia,
+          notas: a.notas,
+          fuente: a.fuente,
+        },
+        select: { id: true },
+      })
+      if (tel) {
+        await tx.clienteTelefono.create({
+          data: { clienteId: creado.id, correduriaId, telefono: tel.cifrado, telefonoLookupHash: tel.hash, etiqueta: 'móvil', esPrincipal: true },
+        })
+      }
+      if (mail) {
+        await tx.clienteEmail.create({
+          data: { clienteId: creado.id, correduriaId, email: mail.cifrado, emailLookupHash: mail.hash, ...mail.mitades, etiqueta: 'personal', esPrincipal: true },
+        })
+      }
+      const tipoHist: TipoHistorial = tipoHistorialAlta(a.fuente)
+      await tx.$executeRaw`
+        insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+        values (${correduriaId}::uuid, ${creado.id}::uuid, cast(${tipoHist} as tipo_historial_interno),
+                ${textoHistorialAlta(a, { actor, compartido: telEnOtra || mailEnOtra })})`
+      // Anotar cambio de auditoria
+      anotarCambio({ entidad: 'cliente', id: creado.id, campo: 'activo', antes: null, despues: true })
+      return creado.id
+    })
+    return { ok: true, id }
+  } catch (e) {
+    if (esUnicoViolado(e)) {
+      const otros = await coincidencias(correduriaId, { dni: a.dni, telefono: a.telefono, email: a.email }).catch(() => [])
+      return conflicto(otros, false)
+    }
+    return fallo(e)
+  }
+}
+
+// ─── Historial ───────────────────────────────────────────────────────────────
+
+/**
+ * Deja constancia en `historial_interno` (tabla del CRM, 0 filas hasta hoy).
+ * Best-effort a propósito: el cambio ya está hecho, y un historial caído no
+ * puede deshacerlo ni presentarlo como fallido.
+ */
+async function anotarHistorial(correduriaId: string, clienteId: string, tipo: TipoHistorial, texto: string): Promise<void> {
+  try {
+    await prismaAsegura().$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+      values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${tipo} as tipo_historial_interno), ${texto})`
+  } catch (e) {
+    console.error('[cartera-edicion] historial_interno no se pudo anotar:', e instanceof Error ? e.message : e)
+  }
+}
+
+
+export type ResultadoHistorial = { ok: true } | Fallo
+
+/**
+ * Anotar una fila de historial COMO OPERACIÓN (puerto `POST /api/operador/cliente/historial`):
+ * un contacto que llega por un canal —formulario web sobre una ficha que ya
+ * existía, p. ej.— y cuyo único rastro es esta fila. Por eso aquí NO es
+ * best-effort como `anotarHistorial`: si no se escribe, se dice (500), porque
+ * el llamante tiene que saber que ese contacto no ha quedado en ningún sitio.
+ * El cliente se comprueba de la correduría antes (404 si no).
+ */
+export async function anotarHistorialCliente(
+  correduriaId: string,
+  clienteId: string,
+  tipo: unknown,
+  texto: unknown,
+): Promise<ResultadoHistorial> {
+  const t = tipoHistorial(tipo)
+  if (!t) return invalido('Tipo de historial no válido: nota, gestion o contacto.', 'tipo')
+  const txt = typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim() : ''
+  if (txt === '') return invalido('Falta el texto.', 'texto')
+  if (txt.length > 2000) return invalido('El texto es demasiado largo (máx. 2000).', 'texto')
+  if (clienteId.trim() === '') return invalido('Falta el cliente.', 'clienteId')
+  try {
+    if (!(await clienteDe(correduriaId, clienteId))) return noEncontrado()
+    await prismaAsegura().$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+      values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${t} as tipo_historial_interno), ${txt})`
+    return { ok: true }
+  } catch (e) {
+    return fallo(e)
+  }
+}

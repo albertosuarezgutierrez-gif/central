@@ -1,4 +1,4 @@
-# Agente de venta de Grupo Asegura — diseño
+# Agente de venta de Grupo ASegura — diseño
 
 **Fecha:** 01/09/2026 · **Vertical:** `asegura` · **Hermano de:**
 `2026-09-01-asegura-portal-clientes-empresas-design.md`

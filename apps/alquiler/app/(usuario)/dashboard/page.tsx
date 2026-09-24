@@ -38,6 +38,10 @@ export default async function DashboardPage() {
       {/* Disponibilidad de material */}
       <div className="card" style={{ gridColumn: '1 / 3' }}>
         <h3 style={{ marginTop: 0 }}>Disponibilidad de material (hoy)</h3>
+        <p className="muted" style={{ marginTop: -6 }}>
+          {d.stock.materiales} materiales · {d.stock.unidadesTotales} unidades ·{' '}
+          {d.stock.unidadesComprometidas} en uso · {d.stock.unidadesDisponibles} libres
+        </p>
         {d.materiales.length === 0 ? (
           <p className="muted">Aún no hay catálogo. Carga tus materiales para ver disponibilidad.</p>
         ) : (

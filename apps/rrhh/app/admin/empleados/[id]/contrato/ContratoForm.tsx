@@ -59,7 +59,7 @@ export default function ContratoForm({ empleadoId, inicial }: { empleadoId: stri
   }
 
   return (
-    <form onSubmit={guardar} className="mt-4 grid gap-4 max-w-lg">
+    <form onSubmit={guardar} className="mt-4 grid max-w-lg grid-cols-[minmax(0,1fr)] gap-4">
       {inicial && (
         <p className="text-ink-3 text-sm">
           Contrato activo desde {(inicial.vigenteDesde as string).slice(0, 10)}.
@@ -67,7 +67,7 @@ export default function ContratoForm({ empleadoId, inicial }: { empleadoId: stri
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           Salario base (€/mes)
           <input type="number" min="1" step="0.01" required value={salarioBase} onChange={e => setSalario(e.target.value)} className="border border-line rounded px-2 py-1" />
@@ -78,7 +78,7 @@ export default function ContratoForm({ empleadoId, inicial }: { empleadoId: stri
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           Tipo contrato
           <select value={tipoContrato} onChange={e => setTipo(e.target.value)} className="border border-line rounded px-2 py-1">
@@ -95,7 +95,7 @@ export default function ContratoForm({ empleadoId, inicial }: { empleadoId: stri
         </label>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-sm">
           Retención IRPF (%)
           <input type="number" min="0" max="45" step="0.1" required value={irpfPct} onChange={e => setIrpf(e.target.value)} className="border border-line rounded px-2 py-1" />

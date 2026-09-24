@@ -1,5 +1,6 @@
 'use client'
 import { useState, useMemo } from 'react'
+import { PageHeader } from '@/components/ui'
 import type { SolicitudRrhh } from '@/lib/rrhh-operador'
 
 const TIPO_ETIQUETA: Record<string, string> = {
@@ -58,10 +59,14 @@ export default function SolicitudesRrhhClient({ solicitudes }: { solicitudes: So
 
   return (
     <div style={{ padding: '24px', maxWidth: 900 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>RR.HH. · Solicitudes</h1>
-        <span style={{ fontSize: 13, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px' }}>{visibles.length} / {solicitudes.length}</span>
-      </div>
+      <PageHeader
+        titulo={
+          <>
+            RR.HH. · Solicitudes{' '}
+            <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px', whiteSpace: 'nowrap' }}>{visibles.length} / {solicitudes.length}</span>
+          </>
+        }
+      />
 
       <div className="solic-filters" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         <input

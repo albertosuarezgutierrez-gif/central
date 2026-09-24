@@ -1,0 +1,393 @@
+# Intranet de la correduría — banco de ideas
+
+> Todo lo que salió de la conversación del **02/09/2026** con Alberto sobre la intranet de clientes
+> de Grupo ASegura. Alberto: *«guarda las ideas que hay muchas muy buenas y quiero hacer todas»*.
+>
+> **Qué es esto:** el backlog con lo que cada idea necesita, lo que cuesta y lo que la bloquea.
+> **Qué NO es:** un plan. Lo comprometido está en
+> `docs/superpowers/specs/2026-09-02-asegura-portal-calendario-clientes-design.md` (v1) y en
+> `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md` (producto completo).
+> Al mover una idea a un spec, se marca aquí y se deja el enlace. Nada se borra sin cerrarse.
+
+## La tesis, en una frase
+
+El producto no es «mira tus pólizas» —eso sirve a 80 personas que ya tienen el teléfono de Alberto—
+sino **«tráeme tus seguros y tus fechas, y yo te aviso de todo»**. Sirve a los ~32.520 leads *y* a
+los clientes, y no compite por precio: compite por servicio. El precio llega después, en el
+vencimiento, cuando ya eres tú quien avisa.
+
+## Reglas que no se negocian (cualquier idea que las rompa, se rediseña)
+
+1. **Avant2 cuesta 0,50€ por consulta y NO es idempotente.** Repetir la llamada crea otro proyecto y
+   otro cargo. Ningún botón público lo dispara; ninguna vigilancia periódica lo dispara. Vigilar
+   mensualmente a 4.000 leads = **2.000€/mes**. Se vigila la FECHA (gratis) y se tarifica **una vez**,
+   contra el cupo y el motivo de `seguros.codeoscopic_consumo`.
+2. **Las 28.729 pólizas del volcado histórico (`import_ref IS NOT NULL`) no generan ni un aviso.**
+   Son vencimientos de 2013-2018. Sí valen como base estadística de precios (idea F).
+3. **Un dato que no se ha mirado no es un dato que no existe.** `NULL` es «no se sabe» y se pinta
+   como tal. Una hipótesis (la dirección del DNI, un capital calculado) se enseña como pregunta, no
+   como precio.
+4. **La procedencia se pinta siempre.** `compania` ≠ `calculado` ≠ `declarado`.
+5. **Un aviso de «tengo mejor oferta para ti» es asesoramiento**, no información: arrastra análisis
+   objetivo e IPID (RDL 3/2020). Los avisos de servicio son informativos.
+
+## Ideas, por orden de lo que yo haría
+
+### A. v1 — intranet de los clientes de la casa ✅ CONSTRUIDA (02/09/2026)
+Sus pólizas de CIMA, su calendario de vencimientos y la bóveda de pólizas de fuera.
+**Estado:** código en `main` vía PR #2144. Tabla `seguros.portal_obligacion` aplicada, derivador con
+poda, calendario con la fecha accionable (art. 22 LCS) y **enlace de un clic** en el correo de acceso.
+El aviso por correo sale de `apps/asegura` (el portal solo guarda hashes: no tiene destinatario).
+**Bloqueo para que se vea:** las envs del proyecto Vercel `asegura-portal` (`DATABASE_URL`,
+`PII_LOOKUP_KEY` idéntica a la de `central-asegura`, los dos secretos de sesión/canal y
+`PORTAL_PUBLIC_URL`), más `CRON_SECRET` en `central-asegura`. Dependen de Alberto.
+**Y antes de encender el aviso:** contar en modo ensayo y comprobar que salen ≤109.
+
+### B. Motor de obligaciones genérico — tengas o no la póliza con nosotros 🟡 media hecha
+🟢 **La mitad de abajo ya existe:** `portal_obligacion` nació colgada del **bien** con `poliza_id`
+opcional y un enum de tipo que ya incluye `itv`, `carnet`, `recibo`, `mantenimiento`, `revision_gas` y
+`libre`. Lo que falta es la UI de alta y los derivadores por tipo, no el modelo.
+ITV, mantenimiento (por fecha **o por km**), carnet/CAP, tacógrafo, revisión de gas, certificado
+energético, IBI, licencia de actividad, extintores, vacuna del perro. Cuelga del **bien**, no de la
+póliza: por eso `portal_obligacion.poliza_id` es opcional desde el primer día.
+**Por qué importa:** es la tesis comercial de Alberto — *«que se acostumbren a trabajar con nosotros
+y al final se vienen»*. Y cada tipo mapea a un ramo, así que el calendario **es** el cuestionario que
+la gente sí rellena (gas → hogar, mascota → RC animales, extintores → RC empresa).
+**Coste:** cero externo. **Necesita:** la v1 desplegada.
+
+### C. Registro abierto a cualquiera 🟡
+Cualquier persona se registra, declara sus seguros y sus vencimientos, y recibe avisos.
+**Por qué es la jugada limpia:** un lead que se registra y te declara su vencimiento **te está
+pidiendo** el contacto. Resuelve solo el mayor riesgo legal del proyecto — escribir a los 25.882
+ex-clientes de 2015-2018 es marketing a base fría de 8 años con la legitimación sin resolver.
+**Necesita:** B. **Ojo:** cambia la superficie de ataque; el rol `prisma_asegura_portal` sigue SIN
+BYPASSRLS y el aislamiento lo garantiza el código, no RLS.
+
+### D. Alta por fotos — DNI + carnet + ficha técnica 🟡
+Tres fotos y el resto lo hace la IA (`lib/extraer-poliza.ts` ya lee PDF y visión).
+
+| Foto | Da para tarificar | Y además, gratis |
+|---|---|---|
+| **Ficha técnica** | matrícula, marca/modelo/versión, potencia, fecha de matriculación | la **ITV** calculada por norma → obligación sin preguntar nada |
+| **Carnet** | antigüedad de carnet (entra directo en la prima) | **caducidad del carnet** (10 años; 5 a partir de los 65) |
+| **DNI** | identidad, fecha de nacimiento | **caducidad del DNI** (10 años) + la dirección, que alimenta la idea E |
+
+🚨 **No se guarda la imagen del DNI.** Se extraen los campos y se descarta el fichero: minimización.
+Guardar copias de documentos de identidad es un frente de RGPD que no aporta nada al producto.
+
+### E. Hogar desde la dirección del DNI, con Catastro 🟡
+`@central/core-catastro` (`precalificarHogar()`, servicios libres, **gratis**) convierte la dirección
+en referencia catastral, superficie, año de construcción y uso. Faltan dos cosas que Catastro no
+sabe: **propietario o inquilino** y **capital de contenido**. Se preguntan. Dos toques.
+**La regla:** la dirección del DNI es una **hipótesis a confirmar** —«¿es esta tu vivienda habitual?»—
+no la base de un precio. Aunque acierte la mayoría de las veces, tú tarificas *a una persona*, no a
+una estadística.
+
+### F. Precio orientativo SIN llamar a Avant2 🔵 idea nueva, sin medir
+Una horquilla —*«gente con una casa como esta paga entre X e Y»*— sacada de datos que **ya tienes**:
+28.843 pólizas con prima, ramo y compañía, más las que la gente suba a la bóveda, que son **precios
+actuales de la competencia**. Coste: **0€**. El orientativo además no promete nada, y deja Avant2
+para cuando el usuario dice «quiero el precio de verdad».
+⚠️ [Suposición] Las primas del volcado son de 2013-2018: sirven para ordenar, no para cotizar. Hay
+que medir la dispersión antes de enseñar una horquilla, o será un número plausible y falso.
+
+**✅ Desenlace parcial (12/09/2026):** al revisitarla, Alberto confirmó la sospecha de la muestra
+—110 pólizas vivas repartidas en 4 ramos dan casi siempre 1-2 comparables por celda compañía/ramo—
+y decidió NO automatizar el precio todavía: **«datos minúsculos, mejor avisarme dos meses antes
+para yo venderle… luego será automático»**. Se construyó el aviso a Alberto (no al cliente): bloque
+«Otras compañías por vencer» en `/correduria` → Hoy, sobre las pólizas DECLARADAS (de otra compañía)
+que vencen en ≤60 días — ver `apps/asegura/lib/cartera-declaradas.ts` +
+`apps/plataforma/app/(usuario)/correduria/DeclaradasVencer.tsx`. El comparador de precio con umbral
+mínimo de muestra (≥5 por celda) sigue pendiente y sin medir.
+
+### G. Botón de «quiero el precio de verdad» (Avant2) 🔴 el que gasta
+Retarificación real. **Nunca automático, nunca en lote.** Cupo, motivo y `intento_id` contra
+`seguros.codeoscopic_consumo`, que ya existe justo para esto. Se dispara **una vez**, al acercarse el
+vencimiento, o cuando el usuario lo pide explícitamente.
+
+### H. Cambio de mediador 🟢 la mejor idea de la conversación
+Un tomador nombra a Grupo ASegura mediador de una póliza que ya tiene con otra compañía.
+**Por qué es tan bueno:** convierte un lead en cliente **sin tarificar, sin cambiar su seguro y sin
+gastar un euro**. Y el efecto de segundo orden es el premio de verdad: [Probable] una vez eres el
+mediador, esa póliza **empieza a entrar por CIMA**, con lo que su vencimiento y su prima dejan de ser
+dato declarado y pasan a ser dato verificado, solo y para siempre. Además abre recibos y siniestros.
+**Lo que ya tienes para hacerlo:** `@central/core-firma` — firma electrónica **avanzada eIDAS art.
+26**, con hash SHA-256 del documento y evidencia, y el método `otp_email`, que es **exactamente** cómo
+identifica el portal. La carta de nombramiento se pre-rellena con lo que la IA leyó de la póliza
+(compañía, nº, tomador, DNI) y se firma en el mismo flujo. Molde vivo: `apps/rrhh`.
+**Lo que NO se automatiza** [Probable]: cada compañía tiene su procedimiento y la aceptación no está
+garantizada. Se automatiza el papel, la firma y el **estado** (`enviada → aceptada → rechazada`, con
+fecha). Si una compañía rechaza sistemáticamente, se ve en los datos — y entonces hay con qué
+reclamar. [Suposición] Y se hereda la póliza al precio que ponga la compañía en la renovación: se
+gana la relación y el dato, no el margen inmediato.
+**Fuente de candidatos, ya hoy:** cada póliza «de fuera» que un cliente suba a la bóveda de la v1.
+
+### I. Empresas y flota 🟡 el nicho que más le interesa a Alberto
+Administración con avisos configurables, cascada **administrador → jefe de flota → conductor**,
+autorizaciones de empleado con `caduca_at` por defecto (el que se va deja de ver sin que nadie se
+acuerde), y **QR pegado en el vehículo** que devuelve solo la tarjeta de la póliza: compañía, nº,
+coberturas y teléfono de siniestros. Sin login, sin PII, para el momento del golpe.
+**La regla que lo hace seguro:** el papel en el contrato **propone** el acceso, no lo concede. Ser
+conductor del coche de tu padre no abre nada; le da al sistema una razón para sugerirle que te
+autorice con un toque.
+🚨 **Bloqueado por un dato que no existe:** `poliza_intervinientes` está al **1,7%** (504 filas para
+28.834 pólizas) y `tipo_persona` es NULL en **32.519 de 32.600** fichas. Sin eso no sabes quién
+conduce qué ni cuáles de tus fichas son empresas → **hacer J antes**.
+
+### J. Medir el parser de CIMA 🔵 barato y desbloquea I
+Comprobar si CIMA trae los intervinientes y el `tipo_persona` y el parser los descarta. Si es eso,
+arreglarlo desbloquea la derivación automática de accesos **y** multiplica las personas alcanzables
+por póliza (cónyuge, conductor habitual: cada una un lead con motivo verificado). Es el mayor retorno
+por línea de código del proyecto y no está medido.
+
+### K. Canales de aviso 🟡
+Hoy solo existe **email** (adaptador ya escrito, mismo puerto que manda el OTP).
+- **Push** (`@central/core-push`, gratis, sin Meta): para lo rutinario, cuando haya PWA instalable.
+- **WhatsApp**: el canal que Alberto quiere por defecto. **Necesita WABA propia de Grupo ASegura** —
+  la de Manuel no viaja en el traspaso, y no se pierde historial: `wa_opt_in` = 0 en las 32.600
+  fichas. Plantillas pre-aprobadas (Authentication para el OTP, Utility para avisos) y opt-in en
+  `portal_consentimiento`. **Dimensionar el coste por mensaje antes de prometer nada.**
+
+### L. La bóveda como observatorio de precios 🔵
+Cada póliza que alguien sube es el **precio actual de un competidor**, con compañía, ramo, coberturas
+y fecha. Ningún comparador tiene eso: el comparador ve lo que cotiza, no lo que la gente paga.
+**Para qué sirve de verdad** [Suposición]: saber el precio a batir *antes* de tarificar, y decidir a
+qué compañía llevar cada riesgo. **Para qué probablemente NO sirve:** negociar volumen con una
+compañía — su palanca es producción emitida, no una base de primas declaradas. Si el objetivo es un
+acuerdo, el camino es concentrar producción en pocas compañías, y esta idea es lo que dice en cuáles.
+
+### M. «Contactos» y «recomiéndanos» ✅ CONSTRUIDO (08/09/2026) — y los regalos 🔴 APARCADOS
+La pestaña `/autorizaciones` pasa a llamarse **Contactos**: la invitación pide **nombre y relación**
+(vocabulario de `cliente_relaciones`; la relación NUNCA va en el correo) y admite el alcance
+**`ninguno`**: «solo te presento el portal», sin compartir un seguro. Al aceptar no se crea
+autorización. Es la forma defendible de captar: el correo lo firma el cliente, dice quién invita y
+qué NO pasa, y no vende nada — un acto entre personas, no comunicación comercial (art. 21 LSSI).
+Spec: `docs/superpowers/specs/2026-09-08-portal-contactos-design.md`.
+🚨 **Regalos por traer gente: NO, mientras no lo revise la asesoría.** [Probable] Un premio por quien
+acabe contratando convierte al cliente en **colaborador externo** del mediador (RDL 3/2020: registro,
+formación y contrato), y [Seguro] un correo de presentación de la correduría a quien no lo ha pedido
+es comunicación comercial sin consentimiento. Además el embudo es minúsculo (80 clientes vivos, 44 con
+email): el regalo no compensa el riesgo. Si algún día se hace, no puede ir atado a contratar.
+
+### N. La campana de avisos del portal — lo que queda para la v2 🟡
+La v1 entró el 08/09/2026 (spec `docs/superpowers/specs/2026-09-08-asegura-portal-campana-avisos-design.md`):
+autorizaciones pendientes en las dos direcciones + vencimientos en ventana + instalar, sin tabla de
+«visto». Lo que se quedó fuera, con lo que lo bloquea:
+- **Datos que nos faltan (teléfono, DNI sin documentar)** — 🔴 el rol `prisma_asegura_portal` no lee
+  esas columnas. Haría falta un puerto estrecho en `apps/asegura` que diga «falta X» sin dar el dato.
+- **Siniestro que cambia de estado · petición respondida · documento nuevo en la póliza** — 🟡 hay que
+  saber qué vio ya el cliente: tabla `portal_aviso_visto` (identidad, tipo, clave, visto_at). Sin ella
+  el siniestro cerrado en 2024 sería «nuevo» para siempre.
+- **Recibo devuelto** — 🟡 el aviso que más dinero ahorra, pero depende de que CIMA traiga la situación
+  del recibo. Medir antes de prometerlo (hoy la fila sale en la ficha como chip de peligro).
+- **Web Push** (`@central/core-push`) para lo que ya está en la campana — 🔴 es salida al cliente: OK
+  de Alberto por envío y nace apagado, como el cron de vencimientos. En iOS solo con la app instalada.
+- **Lo que NO se hace**: «renueva con nosotros» o comparativas de prima en la campana. Un aviso
+  informativo vale; uno que empuje una decisión es asesoramiento (análisis objetivo, IPID).
+
+### O. Ramo Pymes/Comercio/Autónomos — calendario ampliado + «Lanzador de Partes» 🟡 mitad ya hecha, mitad no encaja en el modelo
+
+Lote del 10-11/09/2026: calendario de inspecciones técnicas (extintores, OCA eléctrica, climatización,
+ascensores), renovación LOPD/ciberriesgos, actualización de plantilla/masa salarial (póliza de
+accidentes convenio) y un «Lanzador de Partes Guiado» (wizard con fotos desde el móvil).
+
+✅ **El wizard de partes YA ESTÁ CONSTRUIDO, desde el 03/09/2026.** No es una idea nueva:
+`ParteSiniestro.tsx` es exactamente eso — paso a paso, foto (`lib/adjuntos-parte.ts`, hasta
+`MAX_ADJUNTOS_POR_PARTE`), tri-estado «¿hay heridos?»/«¿hay terceros?» (nunca un checkbox que
+convierta «no lo sé» en «no»), y **desde el 05/09 enseña primero el canal directo de la compañía**
+(teléfono/WhatsApp de siniestros) antes de pedir rellenar nada — «nosotros nos enteramos por CIMA y
+hacemos seguimiento», dictado de Alberto. Lo único pendiente es correr el wizard sobre pólizas del
+ramo nuevo cuando exista, que no pide código: ya funciona sobre cualquier póliza de la cartera o
+autorizada.
+
+🟡 **Extintores / OCA eléctrica / climatización / ascensores SÍ encajan en la idea B** (motor de
+obligaciones genérico): tienen fecha legal real, calculable por norma, y cuelgan del **bien** (el
+local, no la póliza) — el mismo patrón que ITV cuelga del vehículo. Lo que hace falta, y no está
+hecho: **4 valores nuevos en `PortalObligacionTipo`** (`itv`, `carnet`, `recibo`, `mantenimiento`,
+`revision_gas`, `libre` hoy) más su derivador de próxima fecha por normativa — extintores anual (RD
+513/2017), OCA eléctrica según potencia/uso (ITC-BT-05), climatización RITE (2-4 años según potencia),
+ascensores (1-6 años según antigüedad, RD 88/2013). Coste: cero externo, como el resto de B.
+
+🔴 **LOPD/ciberriesgos y «actualiza tu plantilla» NO tienen la misma forma, y meterlas en
+`portal_obligacion` tal cual sería forzar el modelo.** Esa tabla existe para fechas **accionables** —
+un plazo legal real que vence un día concreto (ITV, art. 22 LCS). Ni la revisión de LOPD/ciberriesgos
+ni la masa salarial vencen: son recordatorios de gestión sin fecha impuesta por nadie, y el disparador
+de la segunda no es el calendario, es un HECHO del negocio (contrataste o despediste) que hoy no
+medimos en ningún sitio. Presentarlas como «vence el X» sería inventar una fecha que no existe — la
+misma regla del `CLAUDE.md` raíz («dato que no hay ≠ dato que no se ha mirado»), aplicada a una fecha
+en vez de a un valor. Lo que sí tiene sentido, y es más barato: un recordatorio **periódico** (anual)
+sin promesa de vencimiento, servido por la campana de avisos ya construida (`lib/avisos.ts`), no por
+el calendario de obligaciones.
+
+⚠️ **Corregido (11/09/2026): SÍ hay demanda ya vista, y sí viene de CIMA — esto estaba mal medido
+arriba.** `seguros.polizas.tipo` (`tipo_seguro`) ya trae `comercio` y `comunidades` en su enum, y
+**`comercio` NO es hipotético: hay 1 póliza viva de verdad, entrando por CIMA** (Occident, `ramo_dgs
+2171`, vence 21/06/2027) — el caso exacto de «asegurar una nave». Mismo mecanismo que auto/hogar: si
+la compañía manda un EIAC de un ramo comercial, `ramo_dgs` se rellena y la póliza cuenta como viva
+por `esCarteraViva()`, sin tocar código. Y el volcado histórico trae **110 pólizas `comercio`** más
+(Plus Ultra, AXA, Generali, Metropolis — vencimientos 2015-2016, muertas, pero prueba que la cartera
+SÍ tuvo negocio de pymes). `comunidades` está en el enum y a 0 filas: modelado, nunca usado.
+🚨 **Y de paso: la cifra «80 clientes / 110 pólizas — 81 auto·19 hogar·9 RC·1 moto»**, repetida en
+`apps/asegura/CLAUDE.md` y en varios sitios más, **se ha quedado corta**: son **112**, no 110 — le
+faltan esta `comercio` y una `accidentes` (`ramo_dgs 211`) también viva por CIMA, ninguna de las dos
+contaba en el desglose por ramo. No se corrige aquí en cada sitio (es un barrido, no esta idea); se
+deja anotado para que no se repita la cifra vieja sin medirla. Sigue siendo cierto que hoy es una cola
+pequeña, así que antes de construir un ramo entero conviene que Alberto diga si quiere crecer ahí —
+pero ya no es una apuesta a ciegas: hay un cliente real de ese tipo y un libro histórico detrás.
+
+### P. «La única app para abrir un siniestro» — posicionamiento, NO construido 🟡 (13/09/2026)
+
+Alberto, mientras se construía el selector de zonas del daño del parte: *«idea es la única app para
+apertura siniestros, puede ser buena opción para posicionarse»*. Anotado para más adelante —
+*«añade idea ya apañaremos publicidad, SEO etc.»*: no se toca código ni copy de marketing hoy.
+
+🚨 **Choca de frente con una decisión ya escrita, y hay que resolver esa tensión ANTES de vender
+la idea, no después.** El dictado de Alberto del 05/09/2026 (`apps/asegura-portal/CLAUDE.md`, «Los
+DOS caminos del parte») es que el parte del portal **no abre nada en la compañía** — es mediación,
+no comunicación directa, y la pantalla lo dice con todas las letras («todavía NO está comunicado a
+tu compañía»). Posicionarse como «LA app para abrir tu siniestro» solo es honesto si el parte
+**dispara de verdad** la apertura (integración con la compañía — EIAC, API del ramo, WhatsApp
+propio verificado…), no si sigue siendo «nos enteramos nosotros y te hacemos seguimiento». Vender
+la promesa sin el mecanismo real es la misma familia de fallo que el resto de este documento: un
+titular que no se sostiene en el dato.
+
+Qué haría falta para que la promesa fuera cierta (sin construir nada de esto todavía):
+- Un canal directo y automatizable hacia cada compañía (hoy son teléfonos y un WhatsApp de Occident,
+  verificados a mano uno a uno — ver `apps/asegura-portal/CLAUDE.md`, sección de canales).
+- O una integración EIAC de siniestros (hoy CIMA solo trae pólizas y recibos, no hay ingesta de
+  siniestros automatizada — ver `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`).
+- Sin uno de los dos, «la única app para abrir tu siniestro» sería SEO sobre una promesa vacía.
+
+📌 Pendiente: decidir con Alberto si el mecanismo real se persigue (y con qué coste/plazo) antes de
+que `seo-asegura` o cualquier campaña use este ángulo.
+
+### Q. El gestor como imán de leads — carta de baja, casilla comercial y solapamientos ✅ CONSTRUIDO (19/09/2026)
+
+Sale de valorar un prompt de consultoría SEO que Alberto trajo ese día («Gestor y Agregador de
+Pólizas Gratuito»). Spec: `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`.
+- ✅ **Carta de no renovación** (`/boveda/carta/[id]`, solo pólizas DECLARADAS): plazo por
+  `fechaAccionable()`, huecos visibles para lo que no sabemos (NIF, localidad), copiar/imprimir/
+  `mailto:` sin destinatario. **No se envía desde el portal.** Al lado, la alternativa H (cambio de
+  mediador) como enlace a la explicación de la web; el trámite firmado sigue siendo spec + OK.
+- ✅ **Casilla `comercial`** en «Mis datos» (`ConsentimientoComercial.tsx` + `POST /api/consentimiento`):
+  independiente, nace desmarcada, append-only, `VERSION_TEXTO_COMERCIAL`. Es lo que faltaba para
+  que subir una póliza y pedir una propuesta fueran dos actos distintos. `avisos` sigue sin casilla.
+- ✅ **Coberturas repetidas** (`detectarSolapamientos`, 3 familias, solo pólizas propias): informa
+  («está en dos pólizas»), no juzga («te sobra»). Con cero no se pinta nada.
+- ✅ **Landing `/gestor-de-seguros`** en la web + calculadora de vencimientos sin registro + artículo
+  «cómo dar de baja un seguro a tiempo» con CTA a la carta.
+- 🔴 **Descartado con motivo**: semáforo de precio (idea F, muestra minúscula + asesoramiento),
+  reseñas automatizadas, referidos con premio (§M), «teléfonos de todas las compañías».
+- ⏳ **De Alberto**: encender el aviso de vencimiento (sin él la landing dice «te lo enseña», no «te
+  avisamos») y verificar los canales de baja por compañía (`apps/asegura-web/lib/companias-baja.ts`,
+  todo `verificado: false` porque la red bloquea los cinco dominios).
+
+### R. Precarga de recordatorios: carné e ITV ✅ CONSTRUIDO (21/09/2026) — es la UI que le faltaba a §B
+
+Alberto, mirando la pestaña vacía: *«esto se podría automatizar más… ¿tienes datos de clientes?»*.
+Sí, de dos, y **no valen lo mismo** — de ahí la decisión que sostiene la pieza (PR #3241):
+
+- **Carné → `firme`**: `cliente_carnets_conducir.fecha_carnet` + `fecha_nacimiento` (cifradas) ya las
+  convierte `caducidadCarnet()` en `apps/asegura`, y cruzan el puente ya calculadas. Entra sola en el
+  formulario, editable.
+- **ITV → `calculada`**: periodicidad legal (RD 920/2017) sobre la matriculación, que a su vez suele
+  estar **estimada** desde la matrícula (`fechaMatriculacionEstimada()`, 94,5 % acierta el año). **No
+  se rellena sola**: se enseña con lo supuesto delante y solo entra si la persona la acepta — el trato
+  del Catastro.
+
+Lo decide `precargasDeRecordatorio()` en el módulo puro, no la pantalla, con guardián de raíz.
+⚠️ **Las furgonetas (N1) se calculan como turismo y la pantalla lo avisa**: su cuadro es otro y el ramo
+solo dice `auto`/`moto`; deducirlo de la marca sería adivinar.
+🚫 **Caldera, extintores, gas y boletín eléctrico se quedan manuales**: no hay ningún dato del que
+derivar su fecha. El año de construcción del Catastro es de la INSTALACIÓN COMÚN del edificio, no de
+la caldera de un piso — usarlo sería inventar una fecha con aspecto de dato.
+
+### S. Un carné CADUCADO no se lo decía nadie ✅ CONSTRUIDO (21/09/2026)
+
+Encontrado construyendo §R. `entraEnVentanaCarnet()` exige futuro (`faltan >= 0`), así que el aviso
+existía los 60 días ANTES y **desaparecía justo el día que el carné caduca**: el sistema se callaba en
+el único momento en que pasa algo. Tipo de aviso nuevo `carnet_caducado` (→ «Recordatorios», que es la pantalla donde el carné se ve;
+«Mis datos» no lo pinta y el enlace mandaba a buscar algo que no está).
+🚨 **Con tope de 2 años (`DIAS_MAX_CARNET_CADUCADO`)**: la ficha viene de un volcado y una fecha de
+hace veinte años no dice «conduce sin carné», dice «este dato es viejo». Y el texto **no acusa**: dice
+lo que NOS CONSTA y ofrece corregirlo, con cepo que prohíbe las frases de conducta.
+
+### T. 🐛 Un recordatorio recurrente sin push: CLAVADO ✅ y MUDO ✅ — los dos cerrados (21/09/2026)
+
+Medido el 21/09/2026 leyendo las tres piezas. Eran dos agujeros distintos y solo uno se podía cerrar
+sin tocar lo que escribe a clientes reales.
+
+**1. Se quedaba CLAVADO. ✅ Arreglado en el mismo PR — y era una regresión de ese PR.**
+`avanzarRecordatoriosRecurrentesDeIdentidad()` empujaba al ciclo siguiente solo si constaba
+`avisada_at` o `avisada_push_at`. En un recordatorio propio el primero no lo sellaba nadie salvo, de
+rebote, el correo EQUIVOCADO del cron de vencimientos — el que dice «el seguro vence el X» sobre una
+ITV. Al quitar ese correo (`tipo: { notIn: TIPOS_RECORDATORIO_PROPIO }`, que era lo correcto: decirle
+a alguien que se queda sin cobertura cuando lo que vence es la inspección del coche es mentira, no
+silencio), quien no tiene push se habría quedado con su «ITV cada 12 meses» congelado en una fecha
+pasada **para siempre**, y encima invisible para la ventana de aviso. Se cierra con un tercer brazo
+en esa consulta: **o la fecha quedó atrás más que la ventana de aviso entera**. El plazo no es un
+número al azar, es la MISMA ventana en la que el aviso habría salido — pasada completa sin que ningún
+canal lo sellara, no queda nada que esperar, y el recordatorio ha estado todo ese tiempo visible como
+vencido en su pestaña, que es donde de verdad se mira.
+
+**2. Sin push activado, un recordatorio SIN póliza estaba MUDO. ✅ Cerrado, con el OK de Alberto.**
+El cron de vencimientos resuelve el destinatario a través de la póliza (`o.polizaId ? … : null`), así
+que lo cuenta `sinCanal` siempre; y el emisor genérico de intranet **lo excluye** (`polizaId: { not:
+null }` en su `where`). ⇒ un carné o una ITV sin asignar no avisaban por ningún canal, aunque la
+pantalla dijera «te avisamos».
+El `where` se abre y la ficha se resuelve por el SEGUNDO camino que ya existía: **`portal_vinculo`**,
+la misma costura identidad↔cliente con la que el portal le enseña su cartera. Con varias fichas gana
+la más antigua (mismo desempate que `vinculosPorIdentidad`), y aquí desempatar SÍ vale —a diferencia
+de escribir un dato de contacto, que con varias fichas no escribe en ninguna—: esto no mete nada en
+la ficha de nadie, solo busca una dirección, y todas están vinculadas por el correo de esa misma
+persona. Quien no tiene ninguna ficha **se CUENTA** (`sinFicha` del resumen) en vez de desaparecer:
+«no hay a quién avisar» no es «no había nada que avisar».
+🚨 **Y con MÁS DE UN vínculo no se escribe a ninguna ficha** — la primera versión desempataba por el
+más antiguo y eso era un **envío a la persona equivocada**: un `portal_vinculo` puede nacer de
+`cliente_emails`, que son correos de CONTACTO y pueden ser de otro (el hijo que puso el suyo en la
+ficha de su madre). El recordatorio del hijo habría llegado a la bandeja de ella, sellado bajo su
+`clienteId`. Es la regla de agrupar por IDENTIDAD y no por la etiqueta, en su cara cara: no duplica,
+MEZCLA, y el resultado es plausible. Tampoco cuenta el vínculo de origen `corredor` (el temporal de
+«ver su portal»: apunta a la ficha que Alberto tuviera abierta).
+🦷 **Y faltaba un tercer agujero que solo se vio al medir: el sello.** `portal_aviso_enviado` va por
+el id del aviso, y ese id era el de la FILA — así que un «ITV cada 12 meses» avisaba UNA vez y al
+año siguiente, misma fila y misma clave, se quedaba mudo para siempre. Ahora el id del aviso de
+obligación lleva **la fecha del ciclo** pegada — **pero SOLO si se repite**, y esa mitad es tan
+importante como la otra: `sincronizarObligacionesDeIdentidad()` reescribe `fechaAccionable` en cada
+carga de la bóveda, así que en una obligación DERIVADA la fecha en la clave mandaría un segundo
+correo de la misma renovación en cuanto CIMA corrigiera el vencimiento (y, al desplegar, habría
+reenviado de golpe todo lo ya sellado). Con ciclo, cada ciclo es un aviso distinto; sin ciclo, manda
+el id de la fila.
+📊 Medido antes de tocar nada (21/09/2026): `portal_aviso_enviado` **0 filas** (el emisor no ha
+mandado nunca nada), 10 obligaciones y **0 sin póliza**, **0 recurrentes**. O sea: cambiar la clave
+no puede re-enviar nada a nadie, y abrir el `where` no dispara hoy ni un correo — deja la vía lista
+para el primero que se apunte una ITV.
+Lo que SÍ se arregló del canal que ya existía: el push dejó de mandar el texto de renovación de póliza
+sobre un recordatorio propio (`textoPushObligacion()`, por tipo, en el módulo puro). Ahí **no** se
+excluyen como en el correo, y la diferencia importa: el push es el único canal que puede avisar de un
+recordatorio sin póliza, así que callarlo lo dejaría mudo del todo. Lo que se arregla es lo que dice.
+
+### U. Los recordatorios del cliente son una señal de venta que hoy no ve nadie 🔵 idea, sin medir
+
+Si alguien apunta «ITV de 5678XYZ» y esa matrícula **no está en la cartera**, acaba de decir que tiene
+un coche asegurado en otro sitio. Igual «revisión de caldera» (tiene caldera → cobertura de hogar).
+Hoy eso muere en `portal_obligacion` y no lo ve nadie de la correduría.
+⚠️ **Base legal**: es un dato que da para SU uso; usarlo comercialmente se apoya en la casilla que ya
+existe (`portal_consentimiento` tipo `comercial`, §Q), no en el alta.
+⚠️ **Y hoy no hay volumen que medir**: con 4 personas entrando al portal (§T del embudo), esto es una
+apuesta a futuro, no trabajo de este mes.
+
+### V. 🚦 El cuello NO es el producto: son las invitaciones sin mandar 🟢 gratis, y es de Alberto
+
+Medido el 12/09/2026 por `/api/operador/actividad`: **80 clientes · 52 con correo · 5 con acceso · 4
+han entrado**. Cada función nueva del portal (§A, §M, §Q, §R, §S…) la ven cuatro personas. El cuello
+son los **47 clientes con correo y sin invitar**, y el botón de invitar existe desde el 05/09
+(`POST /api/operador/cliente/portal`). No es código: es una tarde de Alberto pulsando el botón.
+**Mientras ese número no suba, construir más dentro del portal es optimizar la parte que no falla.**
+
+## Preguntas abiertas para Alberto
+
+- ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?
+- Base de legitimación y plazo de conservación de las 25.882 fichas de 2015-2018. **El portal se
+  puede construir sin resolverlo; cualquier campaña, no.**
+- ¿Damos de alta la WABA de Grupo ASegura ya, o se sigue con email hasta tener volumen?

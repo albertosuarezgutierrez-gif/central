@@ -242,7 +242,7 @@ consultable **en el momento de tarificar** — exactamente la ventana del campo
 `lastFiveYearsAccidents` que exige Codeoscopic. Es el bonificador de verdad.
 
 - ⚠️ **Se ofrece a «Entidades Aseguradoras del ramo de Automóvil», y una correduría NO lo es.** NO
-  está confirmado que Grupo Asegura pueda consultarlo. Hay que **preguntar a TIREA** si se añade al
+  está confirmado que Grupo ASegura pueda consultarlo. Hay que **preguntar a TIREA** si se añade al
   acuerdo que ya existe por CIMA (`accesos.cima@tirea.es`).
 - ✅ Lo que sí está claro: **el propio asegurado puede pedir su historial gratis** con DNI y número
   de póliza. Vía inmediata y sin contrato: pedírselo al cliente.
@@ -301,14 +301,21 @@ prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ause
 `false`.
 
 
-## 5. El negocio real de ASegura (estado 01/09/2026)
-- Cartera en el Supabase de ASEGURA (leída en vivo por plataforma): **50 pólizas en
-  vigor · 995 sin fecha · 27.793 históricas · 2.742 clientes · 29.858 leads · 7
-  siniestros**. ⚠️ «Sin fecha» = enriquecimiento pendiente, no «no vencen».
+## 5. El negocio real de ASegura (estado 01/09/2026, con lo del 02/09 marcado)
+- 📍 **Dónde está la cartera HOY: en el schema `seguros` de la Supabase compartida de central**
+  (traspaso cerrado el 02/09/2026). El Supabase de Manuel (`uijsgeocgdaxkhvwtjqs`) queda como **foto
+  congelada**: los conteos de abajo son de esa foto, y los mismos datos son los que se leen ahora en
+  central. Lo que sigue en el CRM de Manuel es **solo la ingesta de CIMA** (rol `crm_seguros`), con
+  su adaptador Java todavía en el Fly de él.
+- Fotografía del 01/09: **50 pólizas en vigor · 995 sin fecha · 27.793 históricas · 2.742 clientes ·
+  29.858 leads · 7 siniestros**. ⚠️ «Sin fecha» = enriquecimiento pendiente, no «no vencen». ⚠️ Y
+  estos conteos son del CRM con SUS criterios: **la cifra que se usa para hablar de cartera es la de
+  §8** (`import_ref IS NULL` → 109 pólizas / 80 clientes; el resto, leads).
 - El CRM lo desarrolló Manuel (favor de hermano, arranque del proyecto) pero **el negocio
-  y la web son de Alberto**. El CRM aún no está operativo (nadie lo usa a diario) → el
-  traspaso a `apps/asegura` va sin ventana, paso a paso (`docs/TRASPASO-CORREDURIA.md`).
-- Ingesta diaria EIAC de las compañías → entra en ese Supabase (cron de Manuel).
+  y la web son de Alberto**. Nadie lo usa a diario, y su **web NO se migra** (decisión de Alberto,
+  02/09): las pantallas de la correduría se montan en `plataforma` → `/correduria`
+  (`docs/TRASPASO-CORREDURIA.md`).
+- Ingesta diaria EIAC de las compañías → la escribe el CRM en el schema `seguros` de central.
 - **Inventario de la BD (01/09/2026, `public` del Supabase de ASEGURA).** Núcleo: `clientes`
   32.600 · `polizas` 28.843 · `cliente_telefonos` 4.794 · `cliente_emails` 4.017 ·
   `oportunidades` 3.676 · `bienes_asegurables` 1.614 · `poliza_coberturas` 1.425 ·
@@ -454,7 +461,8 @@ prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ause
   movimientos de recibo · 399 siniestros**.
 
   🚨 **Y no hay ningún proceso EIAC para PEDIR una carga masiva.** El único Mediador→Entidad con
-  transacción SO es el **841, Solicitud alta nuevos siniestros**. Así que el 199/299/399 se pide
+  transacción SO es el **841, Solicitud alta nuevos siniestros** — que además NO está disponible en
+  CIMA (ver abajo, medido el 03/09/2026). Así que el 199/299/399 se pide
   **fuera del canal**, a la compañía. Por eso «no hay botón» y por eso una petición mal nombrada se
   contesta con un «eso no se hace»: **el término correcto es «carga masiva», proceso 199/299/399**,
   no «carga inicial» ni «primera carga», que no existen en la norma.
@@ -478,14 +486,38 @@ prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ause
   📌 **El 399 no lo ha mandado NADIE** — de ahí que los 67 siniestros bajen y se congelen. No es
   que las compañías no actualicen: es que la actualización histórica va por un proceso que nadie
   tiene activado.
+
+  ⚠️ **Tabla desactualizada tras el 15/09/2026: Occident SÍ mandó un 199** (`C0468_M00171_POL_199_1_20260915…`,
+  44 pólizas) — y 4 se perdieron en review (ramos `RiesgoComunidades`/`RiesgoEmbarcaciones` que el
+  mapper aún no reconocía). **Gotcha permanente**: el pipeline confirma el fichero a TIREA en cuanto
+  ≥1 póliza persiste, aunque otras caigan en review — y confirmar saca el fichero de la cola de CIMA
+  **para siempre**. Antes de esa fecha no había copia propia del crudo, así que lo perdido solo se
+  recuperaba pidiéndole a la compañía que reenviara a mano. Arreglado en `asegura` PR #829 (ramos) +
+  PR #830 (cuarentena de crudo cifrado con TTL 90d + reproceso vía `POST /api/internal/cima/
+  reprocesar-cuarentena` cuando se arregla un gap del mapeador — ya no hace falta la compañía).
+  Detalle en `docs/CONTEXTO-SESIONES.md` (16/09/2026).
   📌 **Petición que corresponde a cada una:** Occident → 199 + 299 + 399 · Reale → 199 + 299 ·
   Allianz → 299 + 399 · Mapfre → 399.
 
-  ✅ **Y esto corrige el apartado de arriba sobre siniestros:** el proceso **841 «Solicitud alta
-  nuevos siniestros» (Mediador → Entidad, transacción SO) EXISTE en el estándar** — o sea, declarar
-  un siniestro desde nuestro CRM **sí está previsto**. Lo que no consta es que ninguna compañía lo
-  tenga activado para Alberto, que es una afirmación distinta y mucho más barata de resolver:
-  se pregunta.
+  🚫 **NO SE PUEDEN DECLARAR SINIESTROS POR CIMA. Preguntado y respondido (03/09/2026, ticket
+  SAU-23934).** El proceso **841 «Solicitud alta nuevos siniestros»** (Mediador → Entidad,
+  transacción SO) **existe en el estándar EIAC pero NO en CIMA**. Literal de `accesos.cima@tirea.es`:
+  «El proceso 841 no está disponible para utilizarse a través de CIMA y las entidades no lo tienen
+  integrado mediante CIMA. **No hay fecha ni está planificada** por el momento la puesta en marcha.»
+  Y el calendario de la **7.1 sigue sin cambios**: las entidades continúan desarrollándola.
+  ⚠️ Esto CORRIGE lo que ponía aquí antes («declarar un siniestro desde nuestro CRM sí está
+  previsto… solo falta que alguna compañía lo active»): estaba leído del estándar, no del canal.
+  **Que un proceso figure en la norma EIAC no significa que CIMA lo transporte.** Antes de diseñar
+  nada sobre un proceso, pregunta si CIMA lo tiene en marcha.
+  📌 Consecuencia práctica: un siniestro se sigue declarando por el canal de cada compañía
+  (teléfono/web) y en el CRM se abre como `gestionado_correduria`, guardando la referencia que dé
+  la compañía en `id_siniestro_entidad` para que el pull de CIMA case sobre esa fila.
+
+  ⬆️ **Lo que SÍ se puede subir a la entidad, y es el único camino abierto (03/09/2026):** el WS
+  Estándar tiene un método **`enviarFichero`**, y hoy solo admite los **procesos 761 y 77X, de
+  RECIBOS**. Nuestra integración no lo usa (solo `RecibirFicherosPendientes` + `ConfirmarDescarga`).
+  ⚠️ Qué son exactamente el 761 y el 77X **no se ha comprobado contra la norma**: no lo des por
+  sabido ni construyas nada encima sin mirarlo primero.
 
 - **🔑 EL OBJETO ASEGURADO: dónde vive y qué se puede leer (01/09/2026).** «Auto · Mapfre ·
   431,85€» no identifica una póliza: el mismo tomador puede tener tres coches. El dato del bien
@@ -533,6 +565,14 @@ prometer al cliente un precio que la compañía no ha cerrado. Y `estimate` ause
   diseño de producto, **relación coste/valor**, calidad del asesoramiento. Endurece el enfoque de conducta.
 - **Revisión de la IDD (paquete RIS)**: aplicación estimada ~julio 2029. Estructural para el modelo de
   correduría (prohibiría retener comisiones a quien asesore de forma independiente). Radar, no acción.
+- **Cuatro criterios interpretativos del Servicio de Mediadores DGSFP (publicados 19/09/2026)**: (1)
+  equivalencia del diploma de Mediador de Seguros — quien lo tenga se considera con todos los módulos
+  de los anexos de la resolución de formación completados; (2) el TOMADOR debe CONSENTIR expresamente
+  la modificación de la mención del mediador en su póliza (una compañía no puede cambiar de corredor
+  a un cliente sin su OK — relevante si algún día se plantea recaptación de cartera ajena); (3)
+  prohibición de que redes cedidas a operadores de banca-seguros actúen a la vez como auxiliar externo
+  de un corredor (no aplica hoy a ASegura, pero delimita con quién NO se puede compartir red). Fuente:
+  INESE/Grupo Aseguranza, no fuente primaria DGSFP (proxy bloquea `dgsfp.mineco.gob.es`).
 
 **Argumentario de renovación (con datos, no impresiones):**
 - La subida no la decide la compañía, la decide el coste del siniestro: **recambio +9%**, coste de
@@ -558,8 +598,14 @@ no está publicada, así que **241 / 2151 / 282 no están verificados** — y mu
 propios además del estándar. Por eso el campo semántico que se usa es `polizas.tipo`, no `ramo_dgs`.
 
 ## 7. El activo dormido
-- Los **29.858 leads** son el activo comercial dormido: nadie los trabaja hoy. RGPD manda:
-  verificar base de legitimación antes de cualquier campaña (fase 3, con OK de Alberto).
+- Las **32.520 fichas sin póliza viva de CIMA** (32.600 − los ~80 clientes actuales, medido
+  02/09/2026) son el activo comercial dormido: nadie las trabaja hoy. Son **leads**, no clientes —
+  la regla de Alberto es «lo que entra por CIMA es cliente actual; el resto son leads». (El «29.858»
+  que se anotó el 01/09 salía de la tabla `leads` del CRM de Manuel, que cuenta otra cosa.) RGPD
+  manda: verificar base de legitimación antes de cualquier campaña (fase 3, con OK de Alberto).
+- La jugada pensada para ellos **no es una campaña, es el portal**: que declaren sus seguros y sus
+  fechas y reciban avisos («tráeme tus seguros y tus fechas y yo te aviso de todo»). El backlog con
+  lo que cuesta cada variante está en `docs/CORREDURIA-INTRANET-IDEAS.md`.
 
 ## 8. Qué hay DE VERDAD detrás de una ficha de cliente (medido 01/09/2026)
 
@@ -610,6 +656,13 @@ viva y `wa_opt_in` false en los 80 · `recordatorios`, `whatsapp_outbound_messag
 - **Contacto: la columna plana gana a la tabla multivalor.** `clientes.telefono` 55/80 y
   `clientes.email` 40/80, contra `cliente_telefonos` 16 y `cliente_emails` 15 — y **0 clientes con
   más de uno**. `cliente_direcciones` **no existe** (`clientes.direccion` 62/80).
+  🚨 **Y el dato que decide si un aviso puede existir (medido 02/09/2026 sobre los 79 clientes de
+  CIMA, cruzando columna plana y tabla): 44 con email · 52 con teléfono · 53 con alguno de los dos ·
+  26 con NINGUNO.** Con esos 26 no hay forma de comunicarse, y desde el código se ven idénticos a
+  uno al que sí se avisó — cualquier conteo de «avisados» los suma como éxito si no se separan.
+  El teléfono además **no identifica**: **740 números están compartidos por 1.599 fichas**, o sea un
+  móvil es un HOGAR y no una persona. El email sí es identificador limpio: **0 duplicados** entre
+  clientes distintos, y por eso es lo único con lo que se vincula una identidad del portal a su ficha.
 - **26 pólizas de auto vivas no traen prima** (`prima_anual` 76,1%). Nunca pintarlas como 0,00€ ni
   sumarlas como cero.
 - **El objeto asegurado está en dos sitios y sin FK a la póliza.** La matrícula sí está en

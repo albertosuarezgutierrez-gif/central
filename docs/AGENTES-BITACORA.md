@@ -14,7 +14,445 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-23 · facturas-correo** · hizo: pasada disparada por el trigger diario. Paso 0: Vía B sana
+  (`_buzon_pdf` con copia de hoy), `PDF-pendiente`/`Revisar` vacíos antes de empezar. **Paso 4.0
+  (backlog `facturas_drive` sin cargo, obligatorio):** de 20 filas en `v_facturas_sin_cargo` solo 1
+  estaba `sin_revisar` (Anthropic 76,50€ del 08/09) — casaba exacto por `fecha_valor` (no
+  `fecha_operacion`) con un movimiento BBVA marcado `duplicado_estado='ignorado'` por un falso
+  positivo del auto-dedup (mismo importe+concepto que otro cargo real de fecha distinta, `referencia`/
+  `dedupe_hash` diferentes) → conciliado y limpiado el `duplicado_estado`. Al revisar Endesa Socorro
+  apareció un GAP que el barrido normal no cubre (mira `facturas_drive`→banco, no al revés): un cargo
+  de -37,87€ (24/08, contrato 130139486193) llevaba `Facturas/Procesada` puesto pero nunca se concilió
+  ni se archivó PDF (Endesa no manda adjunto, solo enlace externo) → conciliación inversa por banco
+  (importe del banco como bueno, `propiedad_id='prop_house_sevillana'`), hilo re-etiquetado también
+  `PDF-pendiente` para no perder el archivo cuando alguna vía lo permita. **Paso 1** (2 días): 2
+  candidatos reales de 14 hilos — factura Anthropic Ireland/Stripe nueva (recibo 2242-5411, 170,00€,
+  22/09, seguros/correduría) archivada en `09-Septiembre-2026`, sin cargo casado (mismo patrón que 4
+  hermanas previas: la Mastercard ****5332 no está dada de alta en `cuentas_bancarias` →
+  `sin_cargo_motivo='fuera_del_feed'`); y una factura de luz Endesa Socorro nueva (ref. P26CON039980996,
+  periodo 31/07-13/09) sin importe ni PDF en el correo (solo enlace) y sin cargo bancario todavía →
+  etiquetada `PDF-pendiente`. dudas: si la Mastercard ****5332 de los créditos prepago de Anthropic
+  conviene darla de alta en `cuentas_bancarias`/PSD2 para poder conciliar esa serie; fallos: —.
+  PRs/commits: (este commit).
+
+- **2026-09-23 · mercado-booking** · hizo: pasada completa de las 24 ventanas pedidas por el plan
+  (`?max=24`, sin recorte de filtro — quedaron 488 fuera del tope, esperado) → 223 comps reales
+  escritos vía `booking_mcp` (aforo 2/4/5/12, línea sep-2026 + evento 26-29 dic). Paso 2-bis
+  (escaparate propio, 4 ventanas de refresco) → 0/4 medidas: los 4 pisos salieron SIN
+  disponibilidad en Booking para 24-26 sep con su propio `hotel_names` (coherente con que
+  House Sevillana tampoco apareciera como comparable en las búsquedas de mercado de esas mismas
+  fechas — está ocupada, no es un fallo del conector). 1 anuncio propio descartado como
+  comparable (House Sevillana, ventana 23-25 sep aforo 12). Latido `ok:false` por el
+  escaparate sin medir (regla de la skill), aunque el mercado fue perfecto. dudas: si el plan
+  debería reintentar el escaparate en fechas distintas cuando las pedidas salen ocupadas, en vez
+  de darlas por `escaparateSinRespuesta` sin más; fallos: —. PRs/commits: (este commit).
+
+- **2026-09-23 · psd2-health-check** · hizo: consulta de frescura agregada OK (último mov hoy, sin
+  caída de volumen, 0 filas sin fecha), pero al desglosar por banco encontró BBVA sin movimientos
+  desde 2026-09-10 (13 días) con sesión Enable Banking CLOSED — la agregación lo tapaba porque
+  Kutxabank sigue fresco. Alertó por Telegram y anotó en CONTEXTO-SESIONES.md. dudas: si conviene
+  desglosar por banco en la propia consulta del Paso 1 de la skill, no solo en la agregada; fallos: —;
+  PRs/commits: commit directo a main (memoria + bitácora).
+
+- **2026-09-22 · facturas-correo** · hizo: pasada tras 3 días sin correr (última 19/09). Paso 0: Vía B
+  sana (`_buzon_pdf` con copia de hoy), sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`
+  (verificado por `search_threads`, no por `list_labels`). Paso 1 (ventana `newer_than:4d` por el hueco
+  de 3 días): 0 facturas deducibles nuevas — Endesa Bustos Reform es solo notificación sin PDF adjunto
+  (Endesa no manda PDF de Bustos por email, ya documentado; se imputará por contrato cuando entre el
+  cargo), Digimobil/Allianz eran marketing y el PDF de Mapfre de hoy era un folleto ya en Trash de
+  Alberto — los 3 hilos reales etiquetados `Facturas/Procesada`. Paso 4.0 (barrido backlog): de 19
+  facturas en `v_facturas_sin_cargo`, 18 ya `revisada_sin_cargo` (sin cambios) y 1 `sin_revisar`
+  (`anthropic-credit-2791`, 76,50€, 08/09) que dejo SIN conciliar: hay 2 cargos banco de -76,50€
+  candidatos (07/09 y 10/09) pero los DOS tienen `duplicado_estado='ignorado'` — ambiguo y con un patrón
+  raro (normalmente solo uno de un par queda `ignorado`), así que no auto-confirmo. `agente_salud` y
+  latido `facturas_correo` actualizados (ok:true). dudas: por qué los 2 cargos ANTHROPIC IRELAND de
+  76,50€ están ambos `ignorado` en vez de uno real+uno duplicado — revisar el import PSD2 de esa
+  ventana; fallos: —. PRs/commits: (este commit).
+
+- **2026-09-21 · trading-analista** · hizo: pasada PARCIAL 20:15 UTC (sin huella de hoy en Supabase,
+  no era repesca). Completado con éxito: NAV IBKR (33.450,64€) → `/api/trading/saldo`; cartera real
+  (CVX+VWCE) → `/api/trading/cartera`; `get_account_trades` 0 nuevas + latido `trading_operaciones` OK.
+  NO ejecutado `/analizar`/`/puntuar`: montar el payload de 24 símbolos exige transcribir a mano
+  ~121 velas OHLCV/símbolo desde el resultado de `get_price_history` (el MCP no permite volcar a
+  fichero ni hay script en el repo que lo automatice) — es el riesgo que el landmine de la skill
+  prohíbe explícitamente (transcripción manual envenenando EMA/MACD/RSI/ADX). Al intentarlo detecté
+  una transcripción ya incompleta (perdí la vela de hoy de IWM), así que corté antes de mandar
+  datos sucios al modelo, en vez de forzar el paso. dudas: si vale la pena escribir un pequeño
+  helper en `apps/plataforma` (o un endpoint) que reciba el JSON crudo de `get_price_history` por
+  símbolo y arme el payload de `/analizar` server-side, para que la sesión no tenga que transcribir;
+  fallos: transcripción manual de OHLCV demostrada poco fiable en este canal — no repetir el intento
+  sin ese helper. PRs/commits: — (solo Telegram + esta entrada).
+
+- **2026-09-21 · buscador-ia** · hizo: watch semanal; 🔴 hallazgo crítico — Groq retiró el gratis a
+  `openai/gpt-oss-120b` el 11/09/2026 ($0,15/$0,60 por M, 5 fuentes independientes), y es el ÚNICO
+  eslabón de la cadena sin presupuesto ni tarifa cargada (con NIM apagado, es el fallback gratis
+  real); sin PR (decisión de Alberto), Telegram enviado con recomendación (verificar con llamada
+  real o promover Cerebras). Resto de la cadena vivo sin novedad crítica; anotado que
+  `gemini-2.5-flash` (1er preferido de `PREFERIDOS.contexto` del Director) se deprecará 16/10/2026,
+  aún vivo. dudas: sin `GROQ_API_KEY`/`NVIDIA_API_KEY`/`OPENROUTER_API_KEY` en sesión, hallazgo de
+  Groq solo por WebSearch (console.groq.com bloqueado por el proxy, igual que pasadas anteriores) —
+  pendiente confirmar con llamada real; fallos: —; PRs/commits: — (solo doc + Telegram, sin código).
+
+- **2026-09-14 · buscador-ia** · hizo: watch semanal; detectó que DeepSeek retiró
+  `deepseek/deepseek-v4-flash` (10/09/2026) — enrutaba a v4.1-flash a casi el doble de precio,
+  silencioso, en el default de `core-ai`/Director/cron; swap directo a `deepseek/deepseek-v4.1-flash`
+  en las 4 referencias + test actualizado, verificado (`pnpm test` core-ai 45/45, `tsc` plataforma
+  limpio); anotó riesgo ABIERTO (no descartado) de EOL de la visión NIM y candidato Qwen3.7 Flash
+  para próxima pasada; dudas: sin `NVIDIA_API_KEY`/`OPENROUTER_API_KEY` en sesión, todo por
+  WebSearch/catálogo público, sin mini-eval en vivo; fallos: —; PRs/commits: PR de esta pasada
+  (`claude/buscador-ia-2026-09-14`).
+
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-24 · mercado-booking** · hizo: pasada diaria completa — 24 ventanas de mercado (todas
+  las pedidas por el plan, tope max=24 de 512 candidatas/488 recortadas), 240 comps reales
+  escritos con `number_of_adults`=aforo por ventana, 0 sin respuesta, 0 anuncios propios
+  detectados entre los resultados de mercado; 0/4 ventanas de escaparate propio medidas (busto_reform,
+  duplex_center, luxury_busto, house_sevillana) — las 4 devolvieron `hotel_names_no_availability`
+  del conector para 2026-09-25→27, contado como hueco genuino, no como fallo de la rutina; latido
+  `ok:false` a propósito (regla del SKILL: escaparate sin medir siempre baja el latido, aunque el
+  mercado saliera perfecto). Avisos que trae el plan y no corresponde arreglar aquí (solo mido): 1
+  mes sin bucket elegible (2026-09, <3 fechas medidas) y 31 fechas de evento confirmado con corpus
+  caducado por antelación. dudas: si Booking sigue sin disponibilidad para esas fechas varios días
+  seguidos, el ajuste de channel_markup/cuota_fija se queda con parámetros viejos indefinidamente —
+  para tu decisión si hace falta revisar el `nombre_portal` o las fechas de refresco del
+  escaparate; fallos: —; PRs/commits: — (solo escritura en `market_rates` vía API, sin cambio de
+  código).
+- **2026-09-22 · mercado-booking** · hizo: pasada diaria completa — 24 ventanas de mercado (todas
+  las pedidas por el plan, tope max=24 de 516 candidatas/492 recortadas), 232 comps reales
+  escritos con `number_of_adults`=aforo por ventana; 3/4 ventanas de escaparate propio medidas
+  (busto_reform, luxury_busto, house_sevillana) para el ajuste de canal — Dúplex center sin
+  disponibilidad en Booking para esas fechas (`hotel_names_no_availability`), contado como hueco,
+  no como fallo; 2 anuncios propios descartados de los resultados de mercado (HOUSE SEVILLANA
+  ×2, ventanas 11-oct/12pax y 22-sep/12pax) — no contaminaron el corpus; 0 ventanas sin respuesta
+  del conector; latido `ok:true`. Avisos que trae el plan y no corresponde arreglar aquí (solo
+  mido): 1 mes sin bucket elegible (2026-09, <3 fechas medidas) y 77 fechas de evento confirmado
+  con corpus caducado (>7d, el motor las tarifica por canal en vez de por mercado medido) —
+  quedan para que la propia acumulación diaria las vaya cubriendo. dudas: —; fallos: —;
+  PRs/commits: — (solo escritura en `market_rates`/`pricing_escaparate` vía API, sin cambio de
+  código).
+- **2026-09-21 · facturas-correo** · hizo: pasada diaria completa (Paso 0→5). Preflight canal
+  200 OK. Paso 0: Vía B sana (`dias_caido=3` — fin de semana sin PDFs nuevos desde el viernes
+  18/09, dentro de lo normal; `list_labels` marcaba 1 en Extraccion-fallida pero `search_threads`
+  a 0, quirk conocido); sin backlog en `PDF-pendiente`/`Revisar`. Paso 1: 5 candidatos Gmail, los
+  5 mensajes de huéspedes de Booking (descartados, no factura). Paso 1-bis: sin subidas nuevas en
+  `_subir_aqui` ni en la raíz `2026`. Paso 4.0 (barrido obligatorio): 1 `sin_revisar` en
+  `v_facturas_sin_cargo` — `anthropic-credit-2791` (76,50€, 08/09) sigue sin cargo casado: los dos
+  candidatos bancarios (07/09 y 10/09, mismo importe/concepto) siguen ambos con
+  `duplicado_estado='ignorado'`, ambiguo, sin cambios desde la pasada de ayer. Nada que conciliar
+  ni archivar hoy; dudas: cuál de los dos cargos Anthropic del 07/09 o 10/09 (si alguno) corresponde
+  a esta factura — para tu decisión; fallos: —; PRs/commits: solo esta entrada (sin cambios de
+  código ni escritura en `movimientos_bancarios`).
+- **2026-09-21 · mercado-booking** · hizo: pasada diaria completa — 24 ventanas de mercado
+  (todas las pedidas por el plan, tope max=24 de 520 candidatas/496 recortadas), 233 comps
+  reales escritos con `número_of_adults`=aforo por ventana; 4/4 ventanas de escaparate propio
+  medidas (busto_reform, duplex_center, house_sevillana, luxury_busto) para el ajuste de canal;
+  4 anuncios propios descartados de los resultados de mercado (Busto Reform, Dúplex center,
+  HOUSE SEVILLANA ×2) — no contaminaron el corpus; 0 ventanas sin respuesta del conector; latido
+  `ok:true`. Avisos que trae el plan y no corresponde arreglar aquí (solo mido): 1 mes sin
+  bucket elegible (2026-09, <3 fechas medidas) y 78 fechas de evento confirmado con corpus
+  caducado (>7d, el motor las tarifica por canal en vez de por mercado medido) — quedan para que
+  la propia acumulación diaria las vaya cubriendo. dudas: —; fallos: —; PRs/commits: — (solo
+  escritura en `market_rates`/`pricing_escaparate` vía API, sin cambio de código).
+- **2026-09-21 · pricing-agente** · hizo: ciclo semanal completo, los 4 pisos, delegado a 4
+  agentes en paralelo (Booking+Trivago±Tripadvisor, 12 ventanas: 10 meses + Semana Santa +
+  Feria + Karol G). Comps nuevos verificados con SQL directo: house=117, busto=119,
+  luxury=178, duplex=149 (ninguno a 0). Confirmó restaurada la conectividad del Paso 4 (el
+  401 de Smoobu /api/rates de los ciclos 14-15/09 ya no está) y el motor despausado; cerró el
+  "evento sin identificar" del 11-jun-2027 del ciclo anterior — es Karol G, ya conocido desde
+  agosto. 48 propuestas (p50 de mercado) enviadas a `aplicar-propuesta` en dry-run forzado,
+  circuit-breaker sano, 48/48 trazadas en `pricing_decisiones`. Aprendizaje escrito
+  (`pricing_aprendizaje` id ciclo_21_09_2026) y aviso Telegram enviado (messageId 4906);
+  dudas: Paso 1 (medir ciclo anterior) con muestra muy pequeña — los ciclos 14/09 y 15/09 no
+  escribieron decisiones reales por los bloqueos, así que solo hay 4 fechas cruzables con
+  incomes; fallos: —; PRs/commits: memoria de esta pasada (sin cambio de código).
+- **2026-09-20 · agente-correduria** (1ª pasada — sin entrada previa en bitácora, sin baseline
+  para delta) · hizo: cartera viva por SQL directo (`seguros.polizas`, criterio
+  `esCarteraViva`): 157 pólizas/100 clientes vivas, 110 pólizas/72 clientes EN VIGOR (47 vivas
+  canceladas); por compañía Mapfre 30/64 · Occident 46/51 · Allianz 20/27 · Generali 13/14 ·
+  Reale 1/1; detectó 18 pólizas 'vigente' con vencimiento ya pasado (CIMA no las ha
+  actualizado); 7 vencimientos accionables (ventana −30d, art. 22 LCS) con cliente+objeto+
+  fecha; confirmó ingesta CIMA viva (último fichero 18/09, 10 en 7 días); 3 titulares DGSFP
+  (4 criterios interpretativos 19/09, prioridades supervisión 2026-2028, plazo Atención al
+  Cliente 28/12/2026) vía WebSearch; informe enviado por Telegram (`/api/internal/alerta`,
+  messageId 4872); dudas: sin baseline previo no hay delta de altas/bajas real esta pasada;
+  fallos: —; PRs/commits: — (Telegram + esta entrada; sin cambio de código).
+- **2026-09-20 · facturas-correo** · hizo: pasada diaria completa. Salud Vía B OK (`dias_caido=2`,
+  sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida` — `search_threads` a 0 pese a que
+  `list_labels` mostraba 1 en Extraccion-fallida, quirk conocido). Barrido 4.0: 1 `sin_revisar` en
+  `v_facturas_sin_cargo` (anthropic-credit-2791, 76,50€) — dos candidatos bancarios (09-07 y 09-10)
+  ambos `duplicado_estado='ignorado'`, ambiguo, no auto-concilio. Candidato Gmail nuevo: aviso Endesa
+  Dúplex (PJ Francisco Molina 4 1C, Ref. P26CON039531100, periodo 07/08-08/09/2026) — SIN PDF
+  adjunto (solo enlace al portal); etiquetado Procesada, sin cargo bancario aún (se espera ~24-27/09).
+  De paso, conciliación inversa de un cargo Dúplex antiguo huérfano (-86,62€, 24/08, `ADEUDO DE
+  ENDESA`): encontré su email (Ref. P26CON034750472, periodo 10/07-07/08/2026, ya Procesada de una
+  pasada anterior) y lo concilié (`conciliado=true`, `propiedad_id=prop_duplex_center`,
+  `factura_ref` con el periodo). Resto de candidatos Gmail (6) eran mensajes de huéspedes de
+  Booking/ticket Smoobu, descartados (no factura). `_subir_aqui` y raíz `2026` sin subidas manuales
+  nuevas. Etiqueta `Luz pendiente 2026` con 4 hilos TotalEnergies (abr-jun/2026, contratos viejos SL)
+  sin resolver — backlog preexistente de Alberto, no tocado hoy; dudas: el par de cargos Anthropic
+  76,50€ (para tu decisión — ver arriba); fallos: —; PRs/commits: solo escritura directa en Supabase
+  (`movimientos_bancarios`) + esta entrada, sin PR de código.
+- **2026-09-20 · mercado-booking** (2ª pasada del día — otra sesión en paralelo ya había medido
+  jun/sep-2027 antes) · hizo: comprobó el plan fresco antes de medir (no duplicó fechas), salió
+  rondas 2-3 de profundidad sobre 6 fechas nuevas × 4 aforos (03-05/04/2027, 27-29/10/2026,
+  24-26/11/2026, 22-24/12/2026, 26-28/01/2027, 16-18/02/2027), `?max=24` sobre `plan_total 524`
+  (candidatas 524, recortadas 500 — el tope sigue sin agotar lo pedido). 237 comps `booking_mcp`
+  escritos, 0 ventanas sin respuesta. Paso 2-bis: 4/4 escaparate medidos (Busto Reform, Dúplex
+  center, Luxury Busto, House Sevillana — sin huecos hoy). House Sevillana salió como comparable
+  de sí misma en las 3 ventanas de aforo 12 con checkin 27/10, 26/01 y 16/02 — descartada del
+  corpus en las 3 (ver «No romper»); en la ventana de abril y diciembre no apareció. Avisos del
+  plan arrastrados sin cambios: mes 2026-09 sin bucket elegible y 82 fechas de evento confirmado
+  con corpus caducado (>7d) que el motor tariﬁca por canal, no por mercado medido — el mismo
+  aviso que ya traía la 1ª pasada de hoy; dudas: —; fallos: —; PRs/commits: sin PR — solo
+  escritura en `market_rates`/`pricing_escaparate` vía API, este commit solo toca la bitácora.
+- **2026-09-20 · mercado-booking** · hizo: pasada completa, 24/24 ventanas de mercado pedidas
+  (`?max=24`, plan_total 524, candidatas 524, recortadas 500 — evento KAROL G 13-jun-2027 aforo 12
+  + ronda 0 mes-corto y rondas 2/3 profundidad, jun/sep-2027, aforos 2/4/5/12), 240 comps
+  `booking_mcp` escritos, 0 ventanas sin respuesta. Paso 2-bis: 3/4 escaparate medidos (Busto
+  Reform, Dúplex center, House Sevillana — los 3 detectados y filtrados por el endpoint como
+  `propios`); Luxury Busto sin disponibilidad en Booking para 03-05/09/2027
+  (`escaparateSinRespuesta`, hueco real no relleno, mismo piso que ya falló el 19/09). House
+  Sevillana salió además como comparable de sí misma en la ventana aforo-12 del 19-21/06/2027 —
+  descartada del corpus (9/10 comps escritos, ver «No romper»). Avisos del plan arrastrados: 3
+  meses sin bucket elegible (2026-09, 2027-06, 2027-09) y 82 fechas de evento confirmado con
+  corpus caducado (>7d) que el motor está tarificando por canal, no por mercado medido; dudas: —;
+  fallos: 1 timeout SSL puntual en el POST de la ventana 2027-06-22/24 aforo 5 (reintentado con
+  éxito, sin pérdida de datos por idempotencia); PRs/commits: sin PR — solo escritura en
+  `market_rates`/`pricing_escaparate` vía API, este commit solo toca la bitácora.
+- **2026-09-19 · facturas-correo** (2ª pasada del día — otra sesión en paralelo ya había abierto
+  #3100 con la primera) · hizo: comprobó PRs abiertos antes de duplicar trabajo (regla global);
+  Paso 0 sano (Vía B copió hoy, sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`,
+  `agente_salud` refrescado); Paso 1/1-bis sin candidatos nuevos (Gmail 2d y `_subir_aqui`
+  vacíos). Paso 4.0: el barrido de #3100 dejó 5 facturas de septiembre (openrouter 25,64$,
+  ionos 1,21€, ionos-servidor 5,69€, pricelabs 34,98$, vercel 106,76$) sin motivo — comprobado
+  contra el banco (Kutxa+BBVA, sin filtro de importe) que NINGUNA tiene cargo en septiembre →
+  marcadas `fuera_del_feed`, mismo patrón que los 4 recibos Anthropic de #3100. Con esto son ya
+  **~680-855€/mes en SaaS de negocio invisibles en `/finanzas`** por la tarjeta "...5332" sin
+  conectar al feed PSD2. dudas: el recibo Anthropic-credit 76,50€ (08/09) sigue con DOS cargos
+  candidatos idénticos (-76,50€ el 07/09 y el 10/09) — no se auto-confirma (regla de varios
+  candidatos), pendiente de que Alberto diga a cuál corresponde o si falta un recibo; fallos: —;
+  PRs/commits: este commit (complementa #3100, sin tocar sus archivos).
+- **2026-09-19 · mercado-booking** · hizo: pasada completa, 24/24 ventanas de mercado pedidas
+  (`?max=24`, plan_total 528, candidatas 528, recortadas 504 — ronda 0 mes-corto 07-may-2027 +
+  ronda 1 eventos 18-abr a 13-jun-2027, aforos 2/4/5/12), 237 comps `booking_mcp` escritos, 0
+  ventanas sin respuesta. Paso 2-bis: 3/4 escaparate medidos (Busto Reform, Dúplex center, House
+  Sevillana — los 3 detectados y filtrados por el endpoint como `propios`); Luxury Busto sin
+  disponibilidad en Booking para 03-05/09/2027 (`escaparateSinRespuesta`, hueco real no relleno).
+  House Sevillana salió además como comparable de sí misma en la ventana aforo-12 del 07-may
+  (`propios`, descartada, 9 comps válidos de 10). Latido `ok:true`. dudas: el plan trae 83 fechas
+  de evento CONFIRMADO con corpus caducado (>7 días, el motor las tarifica genérico) — no se ha
+  medido si el ritmo de 24/día está bajando ese backlog o solo conteniéndolo; fallos: —;
+  PRs/commits: — (solo bitácora + BD).
+- **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
+  continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
+  Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
+  Busto — `smoobu_sync` (mismo credencial, /api/reservations) funcionó igual de hoy, así que no
+  es credencial rota sino scope "Rates" ausente en la key. Corrigió dirección de House Sevillana
+  en `pricing_piso_zona` (Bustos Tavera → Calle Socorro 24, landmine ya documentada en CLAUDE.md).
+  Paso 2: 4 agentes en paralelo, comps house=143/busto=229/luxury=212/duplex=293, ningún piso a 0.
+  Paso 4: 48 propuestas (p50 mercado) enviadas a `aplicar-propuesta`, confirmado bloqueo Smoobu 401
+  en los 4 pisos, 0 filas en `pricing_decisiones` (nada fabricado a mano). Paso 5/6 completos
+  (`pricing_aprendizaje` id 80, Telegram enviado). dudas: pico sin explicar en 2027-06-11 en los
+  4 pisos (2-5x temporada normal, más caro que Semana Santa en 3/4) — preguntado a Alberto si hay
+  evento esa semana; fallos: Paso 4 bloqueado 2 ciclos seguidos (14/09 Sentinel, 15/09 Smoobu 401,
+  aviso Telegram enviado por umbral del skill); PRs/commits: este commit.
+- **2026-09-14 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (`_buzon_pdf` copió
+  12/09, `dias_caido=2`); `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacías (confirmado por
+  `search_threads`); `agente_salud` actualizado ok=true (vía Supabase MCP, sin curl). Paso 4.0:
+  11 filas `facturas_drive` ya `revisada_sin_cargo` (sin tocar), 1 `sin_revisar` (OpenRouter
+  25,64$, archivada 12/09) sin cargo aún — normal a 2 días. Paso 1: ventana de 2 días solo trajo
+  2 hilos no-factura; ampliando a mano hasta 05/09 encontré HUECO real: 4 recibos Anthropic
+  ("Prepaid extra usage" 76,50€ 08/09 · 170€×2 09/09 · 170€ 11/09), factura IONOS (1,21€ 09/09,
+  vía PayPal) y PriceLabs (34,98$ 08/09, disputa de Alberto por cobro con piso desactivado ya
+  resuelta por soporte — cargo correcto, factura por sincronización activa en el ciclo) tenían el
+  PDF en `_buzon_pdf` y el hilo YA `Facturas/Procesada` de una pasada anterior, pero nunca se
+  archivaron en Drive ni se registraron en `facturas_drive` — archivados ahora en
+  `09-Septiembre-2026` + 6 filas nuevas insertadas. Ningún cargo bancario casa exacto (búsqueda
+  amplia ±7 días): las 6 quedan pendientes de que entre el movimiento, salvo el recibo de 76,50€
+  que tiene DOS candidatos ambiguos sin conciliar en banco (07/09 y 10/09) — no auto-confirmado.
+  IKEA reenviado por Pilar (9,46€, KALAS/SKUBB/PRUTA) ya estaba `Procesada` sin archivar de antes
+  (correcto: pinta a hogar/niños, ambiguo, no se auto-clasifica). dudas: recibo Anthropic 76,50€
+  — qué cargo de los dos le corresponde (falta un recibo que explique el otro). fallos: **(1)
+  MISMO bloqueo que `pricing-agente` hoy mismo** — `.claude/mcp-sentinel/` deniega en sombra
+  cualquier Bash/curl con `Authorization: Bearer ${ALERTA_TOKEN}` en sesión desatendida →
+  preflight del canal de aviso y el latido final (`/api/internal/latido`) INEJECUTABLES; no se
+  intentó rodear (confirma que el bloqueo es transversal a toda rutina con el protocolo "Canal de
+  aviso"). **(2) gap de proceso**: varios hilos con gasto real llevaban `Facturas/Procesada` sin
+  archivar+registrar — el label no garantiza archivo hecho, y el barrido 4.0 no lo detecta porque
+  el hilo nunca llegó a `facturas_drive`; para `agentes-entrenador`: quizá convenga que Paso 1
+  también barra `label:Facturas/Procesada` reciente contra `_buzon_pdf` sin fila en
+  `facturas_drive`, no solo lo no-procesado. PRs/commits: — (solo bitácora + Drive + Supabase, sin
+  tocar código).
+- **2026-09-14 · pricing-agente** · hizo: Paso 0/1 OK (fundación sana, ciclo anterior 07/09 cruzado
+  con incomes, 0/48 fechas muestreadas con income aún — normal). Paso 2 (mercado) completo vía 4
+  agentes en paralelo + Supabase directo (fallback de la skill): 120/120/120/114 comps nuevos
+  (busto/duplex/luxury/house), 12/12 ventanas cada uno, ningún piso a 0. Paso 3/4/6 NO ejecutados.
+  dudas: —; fallos: **(1) BLOQUEO NUEVO Y GRAVE** — el hook `.claude/mcp-sentinel/` deniega en modo
+  sombra cualquier Bash/curl con `Authorization: Bearer ${ALERTA_TOKEN}` en sesión desatendida
+  (`sensitive_env`, crítico) → Paso 4 (aplicar-propuesta) y Paso 6 (Telegram) inejecutables. Afecta
+  a TODA rutina programada que siga el protocolo "Canal de aviso" de `CLAUDE.md` (psd2-health-check,
+  ialimp-client-health, etc.), no solo a este agente. No se intentó rodear. **(2) hallazgo aparte**:
+  `sivra_rates_snapshot` falla HTTP 401 en los 4 pisos desde 12-13/09 (`agente_latidos`), `sivra_pilot_track`
+  ok:false por snapshot viejo, `sivra_pricing_apply` escribió 0 noches en su última pasada (13/09
+  23:22 UTC) — repricing en vivo de Busto Reform parado ~3 días. No diagnosticado del todo (logs
+  Vercel Pro solo 1 día, no se pudo probar el endpoint por (1)). Avisado a Alberto por PushNotification
+  (no Telegram, por (1)). PRs/commits: — (solo bitácora + `pricing_aprendizaje` + memoria).
+- **2026-09-12 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
+  Vía B sana (`_buzon_pdf` copió hoy mismo, `dias_caido=0`); sin backlog en
+  `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, `agente_salud`
+  actualizado ok=true). Candidatos Gmail: recibo OpenRouter 25,64$ (21,19$+IVA) → clasificado
+  `seguros` (SaaS IA, mismo criterio que Anthropic/FAL.ai), archivado en `09-Septiembre-2026` y
+  registrado en `facturas_drive` (aún sin cargo bancario, normal a 0 días); 2 correos IONOS
+  "información sobre tu pedido" (dominios grupoasegura.es/.com) descartados — sin importe ni PDF,
+  solo confirmación de registro, etiquetados Procesada. Paso 4.0 (`v_facturas_sin_cargo`): 1
+  `sin_revisar` (Anthropic 180€, archivada 05/09) reconciliado contra el cargo único del 07/09 (FK
+  `facturas_drive.movimiento_id` + `factura_ref`); 9 `revisada_sin_cargo` sin cambios (motivo ya
+  fijado, no reabiertas). `_subir_aqui` y raíz `FACTURAS Apartamentos/2026` sin subidas nuevas.
+  Papelera `_DUPLICADOS_BORRAR`: 23 avisos pendientes; muestreados los 5 más recientes
+  (Petroprix ago., Leroy Merlin, SiQueBrilla julio, 2ª copia FACTURA JULIO SOCORRO, DIGI julio) —
+  los 5 ficheros a borrar siguen existiendo, ninguno zombi. dudas: —; fallos: —; PRs/commits: —.
+- **2026-09-11 · ialimp-client-health** · hizo: pasada semanal Sique Brilla completa. Preflight canal
+  200 OK. `pms_connections`: `sync_error` = "Smoobu API 401" en el intento más reciente
+  (`last_sync_at` 11/09 15:00 UTC), pero `cleaning_sessions` sigue moviéndose (51 en 24h / 54 en 7d,
+  última 09:50 UTC) — el fallo es del último intento, no un corte total todavía. Programaciones sin
+  cubrir: 0. Impagos activos: 0. Aviso ⚠️ enviado por Telegram (messageId 4405) recomendando revisar
+  el token/API key de Smoobu antes de que corte la sync entera. dudas: —; fallos: —; PRs/commits: —.
+- **2026-09-07 · facturas-correo** · hizo: pasada diaria completa. Preflight canal 200 OK. Paso 0:
+  Vía B sana (última copia `_buzon_pdf` 05/09, `dias_caido=2`); sin backlog en
+  `PDF-pendiente`/`Revisar`/`Extraccion-fallida` (confirmado por `search_threads`, no por el contador
+  de `list_labels`). Paso 4.0 (`v_facturas_sin_cargo`): 9 filas `revisada_sin_cargo` sin cambios + 1
+  `sin_revisar` (Anthropic 180€, archivada ayer, sin cargo bancario aún — solo 2 días, no se busca
+  aún el motivo). Candidato único del correo: aviso de PriceLabs de próximo cobro 34,98 USD (cargo el
+  8/09, periodo 7/08-6/09) — sin PDF adjunto y sin cargo bancario todavía, nada que archivar hoy.
+  dudas: PriceLabs seguía facturando 4 semanas después de la baja del 09/08/2026 (se esperaba «como
+  mucho una última, de agosto») — a vigilar si vuelve a facturar el mes que viene. `_subir_aqui` y
+  raíz de `FACTURAS Apartamentos/2026` sin novedades (mismo backlog de pasadas previas, sin PDFs
+  nuevos). fallos: —; PRs/commits: —.
+- **2026-09-07 · buscador-ia** · hizo: pasada semanal completa (preflight Telegram 200 OK) + un
+  segundo tramo en vivo tras la respuesta de Alberto. 🔴 Hallazgo crítico: `text-embedding-004`
+  (embeddings de `ia-cache`) retirado por Google desde el 14/01/2026 — 1ª comprobación real de ese
+  eslabón desde que se añadió al watch el 31/08. Impacto real bajo (caché OFF por defecto +
+  fail-open). Aviso por Telegram con el hallazgo; Alberto preguntó «solución? openrouter?» →
+  investigado que OpenRouter ya tiene endpoint `/embeddings` (`openai/text-embedding-3-small`,
+  $0,02/M, `dimensions` configurable) y encaja con la regla permanente OpenRouter-primero
+  (24/08) → implementado (`openrouterEmbed` en `packages/core-ai/src/openrouter.ts`, 11 tests;
+  `geminiEmbed`/`embeddings.ts` eliminados, sin otro consumidor), testeado (`pnpm test` 639/639,
+  `tsc` limpio en plataforma e ia-rest) y mergeado el mismo día. Como la caché nunca sirvió un hit
+  real, no hizo falta re-indexar nada. Resto de la cadena (OpenRouter texto, Groq, Cerebras, Kimi,
+  visión NIM) confirmado vivo por WebSearch, sin key de proveedor en sesión. Sin candidatos de
+  descubrimiento que crucen el listón calidad/precio esta semana.
+  dudas: —; fallos: —; PRs/commits: #2459 (mergeado).
+
+- **2026-09-07 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (obligatorio, no solo los
+  EN VIVO). Paso 1: 10/48 fechas del ciclo 31/08 vendidas con income confirmado, sin anomalías
+  "sin income" (Feria House 1767€ == propuesta exacta). Paso 2: 4 agentes en paralelo barrieron
+  Booking en 12 ventanas/piso (10 meses + Semana Santa + Feria); comps escritos hoy: busto=120,
+  duplex=120, luxury=120, house=140 (120+20 Expedia). Paso 4: 48 propuestas a `aplicar-propuesta`
+  en dry-run forzado, circuit-breaker sano (36 fechas con cambio, 52,8% medio). dudas: —;
+  fallos: 3 de 4 agentes ingestaron comps de Expedia en USD etiquetados como EUR (50 filas
+  contaminando Semana Santa/Feria de busto/duplex/luxury) — detectado y BORRADO antes de decidir
+  precio, y documentado el landmine en `references/ciclo.md` para que no se repita; PRs/commits:
+  ver commit de esta misma pasada.
+- **2026-09-06 · facturas-correo** · hizo: pasada diaria completa. Salud Vía B OK (última copia
+  2026-09-05, 1 día); sin backlog en `PDF-pendiente`/`Revisar`/`Extraccion-fallida`. Paso 4.0
+  (barrido `v_facturas_sin_cargo`): las 9 filas siguen `revisada_sin_cargo` (Petroprix ago,
+  Pepephone ene-jun, CREATE-Socorro dup, Giraldillo may) — nada nuevo que investigar. Candidato
+  único del correo: recibo Anthropic Ireland (Max plan, 180,00€, pagado 05/09) → `seguros`
+  (correduría, regla ya sembrada) → archivado en Drive `09-Septiembre-2026/2026-09-05_anthropic_180.00EUR.pdf`
+  (creada la carpeta del mes, no existía) + fila en `facturas_drive`; cargo bancario aún sin entrar
+  (`movimiento_id` NULL, pendiente próxima pasada). Hilo etiquetado `Facturas/Procesada`. Resto de
+  candidatos del query eran mensajes de huéspedes de Booking y un ticket de soporte Smoobu, no
+  facturas → descartados sin tocar. `agente_salud` actualizado (`ok=true`, `dias_caido=1`).
+  dudas: —; fallos: —; PRs/commits: —.
+
+- **2026-09-05 · conectores-vigia** · hizo: primera pasada real (antes solo sembrado a mano);
+  confirmó que la rutina corre sin ningún conector adjunto (`enabledInChat:false` en los ~30 de la
+  cuenta) → el Paso 3 (canario) es estructuralmente imposible desde aquí, documentado en
+  `VIGIA-CONECTORES.md` y `RUTINAS-PROGRAMADAS.md`; higiene de cuenta: Expedia en `needs_reconnect`
+  rompe una fuente de `pricing-agente` (degrada, no corta, por diseño resiliente); sin candidatos
+  nuevos para H1/H3. dudas: si Alberto quiere pagar la superficie de adjuntar Booking+IBKR
+  solo-lectura para poder cumplir el Paso 3 algún mes; fallos: —; PRs/commits: rama
+  `claude/vigilant-euler-kgm3ia`.
+
+- **2026-09-05 · mercado-booking** · hizo: 3ª pasada ACOTADA consecutiva por prioridad temporal
+  (ídem 03/09 y 04/09), `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado
+  medidas (6 fechas × 4 pisos, aforo correcto, incluye evento Campeonato Mundo Remo 01-08) → 240
+  comps `booking_mcp`, 0 sin respuesta, 0 propios colados (verificado con sonda dummy). 📐
+  escaparate: 1/4 medido (`prop_busto_reform`, 78,09€/noche) — los otros 3 devolvieron
+  `hotel_names_no_availability` (hueco de disponibilidad del conector, no fallo). Cupo diario
+  agotado en la pasada de prioridad → sin cupo para pasada normal hoy.
+  **Confirmado por TERCERA vez: el objetivo YA estaba cumplido antes de esta pasada** (`plan` no
+  lista 2027-07 ni 2027-08 en `meses_sin_bucket`, ni antes de medir nada hoy). Las entradas del
+  03/09 y 04/09 ya lo declararon y recomendaron quitar la línea `PRIORIDAD TEMPORAL` del
+  disparador — sigue sin quitarse porque **no hay herramienta desde esta sesión para editar el
+  prompt de un trigger programado del account** (solo cron in-memory de esta sesión, que no es el
+  mecanismo real); hace falta que Alberto la quite a mano desde la UI del trigger. Van 3 pasadas
+  seguidas gastando el cupo entero de 24 ventanas en repetir una comprobación ya cerrada.
+  dudas: —; fallos: — (la disponibilidad 1/4 del escaparate es del conector); PRs/commits: —
+  (solo bitácora y BD vía endpoints, sin tocar código).
+
+- **2026-09-04 · mercado-booking** · hizo: 2ª pasada ACOTADA por prioridad temporal (agosto 2026,
+  ídem 03/09), `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6
+  fechas × 4 pisos con aforo correcto) → 240 comps `booking_mcp`, 0 sin respuesta, 0 propios
+  colados en mercado. 📐 escaparate: solo 1/4 medido hoy (prop_busto_reform, 85,54€/noche) — los
+  otros 3 (`prop_house_sevillana`, `prop_duplex_center`, `prop_luxury_busto`) devolvieron
+  `hotel_names_no_availability` (contado como hueco, no como canal cuadrado; el 03/09 sí midió
+  4/4, así que es una intermitencia de disponibilidad del conector, no un fallo propio). Cupo
+  diario (24 ventanas) agotado en la pasada de prioridad → sin cupo para pasada normal hoy.
+  **El objetivo de la línea de prioridad YA estaba cumplido antes de esta pasada** (el propio
+  `plan` no lista 2027-07 ni 2027-08 en `meses_sin_bucket`, solo 04/05/06/09) y la entrada del
+  03/09 ya lo declaró — la línea de prioridad sigue en el prompt programado porque nadie la ha
+  quitado del disparador, no porque falte medición. Recomendado: Alberto retira la línea
+  `PRIORIDAD TEMPORAL` del trigger programado.
+  dudas: por qué el disparador sigue trayendo la prioridad si ya se cumplió dos veces; fallos: —
+  (la falta de 3/4 en escaparate es del conector, no del agente); PRs/commits: — (solo bitácora y
+  BD vía endpoints, sin tocar código).
+- **2026-09-03 · trading-analista** · hizo: PASO 0 sin huella de hoy (último saldo 02/09 20:16,
+  sin fila `trading_pasadas` de hoy) → pasada completa a las 20:15 UTC (disparo normal, no
+  repesca). Preflight `/api/internal/alerta` 200. NAV IBKR 33.068,94€ empujado a `/saldo` (sin
+  salto >15%). Cartera real (CVX 6 uds, VWCE 188 uds) empujada a `/cartera`, 0 descartadas, track
+  OK. `get_account_trades(DAYS_7)` sin operaciones nuevas → `/operaciones` con array vacío +
+  latido `trading_operaciones` ok. Velas de los 24 símbolos de la watchlist delegadas a un
+  subagente (uno a uno, protocolo anti-barajado) para no cargar el contexto principal con OHLCV —
+  mecánico, por la regla de delegación. `/analizar`: 24 analizados, 0
+  vetados/descartados/suplantados/divergentes, top-5 cantado con `stopViable`; ninguna idea pasó
+  las barreras (concentración, posición ya abierta, tendencia bajista) → 0 compras paper nuevas.
+  Contraste de frescura (Yahoo) desfasado 1 día en los 24 símbolos (`sinJuzgar`=24) — cantado en
+  Telegram, es la fuente de contraste, no una anomalía de datos. `/puntuar`: 88 puntuadas, 0
+  cerradas, 0 stops paper aplicados. Atribución earnings: 36 tesis dentro de ventana (+1,21%
+  medio), 0 muestra limpia hoy, 1.812 sin consultar aún. Resumen por Telegram enviado (messageId
+  3998). Hoy es jueves, sin bloque de radar/satélite (solo lunes).
+  dudas: —; fallos: —; PRs/commits: — (solo bitácora y BD vía endpoints, sin tocar código).
+- **2026-09-03 · mercado-booking** · hizo: pasada ACOTADA por prioridad temporal (agosto 2026),
+  pedida vía `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6 fechas
+  × 4 pisos, aforo correcto por piso) → 240 comps `booking_mcp` escritos, 0 sin respuesta, 0
+  anuncios propios colados (los 4 propios de la ventana `escaparate` salieron por `hotel_names` y
+  se escribieron aparte, no como comps). 4/4 ventanas de escaparate propio medidas también.
+  **Objetivo cumplido**: julio-2027 y agosto-2027 llegan a 3 fechas distintas con 10
+  comparables/fecha por piso — la línea de prioridad temporal de la skill se retira en este PR.
+  Cupo de 24 agotado en la pasada prioritaria; no quedó margen para la pasada normal del resto del
+  plan (568 candidatas totales, solo 28 pedidas). dudas: —; fallos: —; PRs/commits: —.
+- **2026-09-02 · trading-analista** · hizo: PASO 0 sin huella de hoy (último saldo 01/09 20:16,
+  sin fila `trading_pasadas` de hoy) → pasada completa a las 20:15 UTC (disparo normal, no
+  repesca). Preflight `/api/internal/alerta` 200. NAV IBKR 32.862,88€ empujado a `/saldo` (sin
+  salto >15%). Cartera real (CVX 6 uds, VWCE 188 uds) empujada a `/cartera`, 0 descartadas, track
+  OK. `get_account_trades(DAYS_7)` sin operaciones nuevas → `/operaciones` con array vacío +
+  latido `trading_operaciones` ok. Velas de los 24 símbolos de la watchlist bajadas por 3
+  subagentes en paralelo (protocolo anti-barajado, uno a uno cada uno) para no cargar el contexto
+  principal con OHLCV — mecánico, por la regla de delegación. `/analizar`: 24 analizados, 0
+  vetados/descartados/suplantados/divergentes, top-5 cantado con `stopViable`; ninguna idea pasó
+  las barreras (concentración, posición ya abierta, tendencia bajista) → 0 compras paper nuevas.
+  `/puntuar`: 88 puntuadas, 0 cerradas (nadie venció hoy), 0 anuladas, 0 huérfanas. Resumen por
+  Telegram enviado (messageId 3951). Hoy es miércoles, sin bloque de radar/satélite (solo lunes).
+  dudas: —; fallos: —; PRs/commits: — (solo bitácora y BD vía endpoints, sin tocar código).
+- **2026-09-02 · psd2-health-check** · hizo: preflight `/api/internal/alerta` 200 (canal vivo);
+  consulta de frescura sobre `movimientos_bancarios WHERE origen='psd2'`: último movimiento
+  2026-09-01 (hace 1 día, <48h OK), mov_30d=50 vs mov_30d_prev=68 (no hay caída >50%) → estado
+  ✅ OK, sin anomalía, sin alerta enviada. Revisadas también `conexiones_banco.ultimo_avisos`: la
+  conexión Kutxabank activa (`vinculada`, sync hoy) solo lleva la nota `ℹ️` ya conocida (ventana de
+  89 días rechazada, importa desde 2026-08-03) — no cuenta como fallo; las otras 3 filas con avisos
+  sin prefijo son conexiones `sustituida`/`caducada` con syncs de 17/08, ya no activas. dudas: —;
+  fallos: —; PRs/commits: — (solo bitácora, sin tocar código).
 - **2026-09-02 · patrimonio-cfo** · hizo: 1ª pasada ordinaria del ciclo mensual (día 2). Preflight
   Telegram OK. Foto patrimonial con doble lectura de neto (1.772.557€ comparable AVM, casi plano
   vs 24/08; 1.983.706€ "vigente sistema", inflado por un artefacto de método — m2zona superó al
@@ -23,10 +461,13 @@
   menos €/reserva). Contexto nuevo añadido a la reco #4 (euríbor subiendo, BCE probable +25pb
   10/09, encarece la vía "no vender, hipotecar"). Hipoteca: cuota conciliada con el banco, sin
   cambios. Sin recomendaciones nuevas registradas (las #2/#3/#4 siguen abiertas sin decisión).
-  Telegram enviado (messageId 3926); `docs/PATRIMONIO-CFO.md` actualizado.
+  Telegram enviado (messageId 3926); `docs/PATRIMONIO-CFO.md` actualizado. ⚠️ Este PR se quedó
+  cerrado sin mergear 22 días (hasta el 24/09) — la foto y las cifras de esta entrada son del
+  02/09, ya superadas por lo que haya pasado desde entonces; el estado VIVO de `PATRIMONIO-CFO.md`
+  lo da la próxima pasada ordinaria, no esta.
   dudas: —; fallos: conector `gmail-adjuntos` no conectó esta sesión (`CONNECTION_CLOSED`) —
   bloqueó abrir el PDF de gastos de adquisición de Monte Carmelo, ya localizado; reintentar
-  próxima pasada. PRs/commits: (este commit).
+  próxima pasada. PRs/commits: PR #2016.
 - **2026-09-01 · facturas-correo** · hizo: pasada diaria (primera desde el 23/08, hueco de 9 días).
   Preflight `/api/internal/alerta` 200. Paso 0: Vía B sana (última copia `_buzon_pdf` hoy mismo,
   `dias_caido=0`); `agente_salud` actualizado. Backlog barrido: `PDF-pendiente` vacío;

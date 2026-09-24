@@ -99,6 +99,17 @@ export type Hermana = {
   /** Mismo nombre y apellidos: entonces sí es casi seguro la misma persona. */
   mismoNombre: boolean
   vitalidad: Vitalidad
+  /**
+   * Por qué se relacionan. `poliza` = comparten una póliza REAL (mismo número y
+   * ramo, y una de las dos entra por CIMA — el volcado reutiliza números y trae
+   * «pendiente» como número, así que ahí no vale): eso IDENTIFICA al tomador
+   * aunque el nombre difiera. `telefono` = solo una pista; con otro nombre
+   * suele ser familia o empresa. Quién emite el vínculo es `cartera-busqueda.ts`
+   * de asegura; aquí solo se decide qué decir.
+   */
+  vinculo: 'telefono' | 'poliza'
+  /** El número de la póliza compartida, cuando el vínculo es `poliza`. */
+  poliza: string | null
 }
 
 export type AvisoHermanas = {
@@ -115,16 +126,23 @@ export type AvisoHermanas = {
  */
 export function avisoHermanas(propia: Vitalidad, hermanas: Hermana[] | null): AvisoHermanas | null {
   if (hermanas === null || hermanas.length === 0) return null
-  const mismas = hermanas.filter((h) => h.mismoNombre)
+  // La póliza común manda sobre el nombre: «Global2» y «GLOBAL 2 INSTALACIONES
+  // TÉCNICAS» no se llaman igual y son el mismo tomador (03/09/2026).
+  const mismas = hermanas.filter((h) => h.vinculo === 'poliza' || h.mismoNombre)
   const vivas = mismas.filter((h) => h.vitalidad === 'viva')
   if (mismas.length > 0) {
     const preferida = propia === 'viva' ? null : (vivas[0] ?? null)
+    const porPoliza = mismas.find((h) => h.vinculo === 'poliza')
+    const como =
+      porPoliza !== undefined
+        ? `con la póliza ${porPoliza.poliza ?? 'compartida'} (mismo tomador aunque el nombre difiera)`
+        : 'con este mismo nombre y teléfono'
     return {
       clase: 'duplicado',
       texto:
         preferida !== null
-          ? `Hay otra ficha con este mismo nombre y teléfono, y es la que tiene la cartera viva.`
-          : `Hay ${mismas.length} ficha(s) más con este mismo nombre y teléfono, sin fusionar.`,
+          ? `Hay otra ficha ${como}, y es la que tiene la cartera viva.`
+          : `Hay ${mismas.length} ficha(s) más ${como}, sin fusionar.`,
       preferida,
     }
   }

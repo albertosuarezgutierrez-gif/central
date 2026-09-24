@@ -256,6 +256,8 @@ export async function aiExtractInvoiceDetallado(input: {
   text?:        string
   imageBase64?: string
   mimeType?:    string
+  /** Páginas YA rasterizadas (PDF escaneado). Tiene prioridad sobre `imageBase64`. */
+  images?:      ImageInput[]
 }): Promise<ResultadoExtraccion> {
   // ── Imagen: pasarela de VISIÓN ───────────────────────────────────────
   //
@@ -267,15 +269,24 @@ export async function aiExtractInvoiceDetallado(input: {
   // visible y con un `JSON.parse` crudo que trataba unas vallas ```json como
   // fallo técnico. Ahora usa `aiVision` (OpenRouter multimodal → NIM de
   // suplente, registro en `ai_usos`) y el MISMO parseo tolerante que el texto.
-  if (input.imageBase64 && input.mimeType) {
-    const images = [{ data: input.imageBase64, mediaType: input.mimeType }]
+  //
+  // `images` (páginas de un PDF escaneado ya rasterizadas) entra por aquí mismo: es el MISMO
+  // problema —leer una factura de un mapa de bits— y así hereda el suplente, el parseo tolerante y
+  // el registro en `ai_usos`. Con varias páginas hay que pedir `multiPagina`: NIM solo acepta una
+  // imagen por petición y mandarle las cuatro sería mandarle basura (landmine del lector registral).
+  const images: ImageInput[] | null = input.images?.length
+    ? input.images
+    : (input.imageBase64 && input.mimeType ? [{ data: input.imageBase64, mediaType: input.mimeType }] : null)
+  if (images) {
+    const multiPagina = images.length > 1
     let txt: string
     try {
       txt = await aiVision(INVOICE_SYSTEM, images, 'Extrae los datos de esta factura en JSON:', {
         endpoint: 'extraer-factura',
-        model: VISION_UNA_PAGINA,
+        model: multiPagina ? VISION_MULTIPAGINA : VISION_UNA_PAGINA,
+        multiPagina,
         maxTokens: INVOICE_MAX_TOKENS,
-        timeoutMs: 45_000,
+        timeoutMs: multiPagina ? 90_000 : 45_000,
       })
     } catch (e) {
       console.warn('[extraer] visión falló:', String(e).slice(0, 140))

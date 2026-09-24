@@ -1,4 +1,4 @@
-# Portal de Grupo Asegura — Fase 1: entrar y aportar una póliza
+# Portal de Grupo ASegura — Fase 1: entrar y aportar una póliza
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -20,7 +20,7 @@
 - Autorizaciones a terceros y portal de empresas (Fase 5).
 - Emisión por Codeoscopic y agente conversacional (fuera del spec del portal).
 
-**⛔ Dependencia externa conocida, y por qué no bloquea:** la WABA de Grupo Asegura **no existe todavía**, así que el OTP por WhatsApp no se puede probar de punta a punta. Por eso el canal es un puerto con dos adaptadores en Fase 1 (email y consola). Cuando haya número, la Fase 1 no se toca: se añade un fichero. Si se hubiera cableado WhatsApp directamente, todo este plan estaría parado.
+**⛔ Dependencia externa conocida, y por qué no bloquea:** la WABA de Grupo ASegura **no existe todavía**, así que el OTP por WhatsApp no se puede probar de punta a punta. Por eso el canal es un puerto con dos adaptadores en Fase 1 (email y consola). Cuando haya número, la Fase 1 no se toca: se añade un fichero. Si se hubiera cableado WhatsApp directamente, todo este plan estaría parado.
 
 ---
 
@@ -65,7 +65,7 @@
   "name": "@central/module-seguros-portal",
   "version": "0.0.0",
   "private": true,
-  "description": "Reglas puras del portal de clientes/leads de Grupo Asegura: qué campos ve cada papel en una póliza (dato de la COSA vs dato de la PERSONA), la procedencia de cada dato (compañía/calculado/declarado) y el código de un solo uso. Sin BD, sin red.",
+  "description": "Reglas puras del portal de clientes/leads de Grupo ASegura: qué campos ve cada papel en una póliza (dato de la COSA vs dato de la PERSONA), la procedencia de cada dato (compañía/calculado/declarado) y el código de un solo uso. Sin BD, sin red.",
   "type": "module",
   "main": "./src/index.ts",
   "types": "./src/index.ts",
@@ -539,7 +539,7 @@ Solo las seis tablas que la Fase 1 usa. Las otras cinco del spec (`portal_autori
 Crear `apps/asegura-portal/prisma/sql/2026-09-01_portal_fase1.sql`:
 
 ```sql
--- Portal de Grupo Asegura — Fase 1. Schema `seguros` de la BD compartida.
+-- Portal de Grupo ASegura — Fase 1. Schema `seguros` de la BD compartida.
 -- Prefijo `portal_` para no colisionar con el volcado de la cartera.
 SET search_path = seguros, public;
 
@@ -772,7 +772,7 @@ body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background:
 import './globals.css'
 import type { ReactNode } from 'react'
 
-export const metadata = { title: 'Mis seguros — Grupo Asegura' }
+export const metadata = { title: 'Mis seguros — Grupo ASegura' }
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -944,7 +944,7 @@ git commit -m "feat(asegura-portal): esqueleto de la app, prisma y entrada en la
 /**
  * Puerto de canal: por dónde sale el código de acceso.
  *
- * WhatsApp es el canal que quiere el negocio, pero la WABA de Grupo Asegura NO
+ * WhatsApp es el canal que quiere el negocio, pero la WABA de Grupo ASegura NO
  * existe todavía. Cablearlo directamente habría dejado esta fase entera
  * bloqueada esperando a Meta. Con el puerto, el día que haya número se añade
  * `canal-whatsapp.ts` y se registra aquí: ni una línea del resto cambia.
@@ -1881,11 +1881,11 @@ primera). ⚠️ La cabecera va con `### ` o `- **`: son los ÚNICOS formatos qu
 reconoce como entrada — una cabecera `## ` se funde con la anterior y se archiva mal.
 
 ```markdown
-### 🧭 (01/09/2026) Portal de Grupo Asegura — Fase 1 en pie
+### 🧭 (01/09/2026) Portal de Grupo ASegura — Fase 1 en pie
 - App nueva `apps/asegura-portal` (Next.js, rol propio SIN BYPASSRLS) + `@central/module-seguros-portal`
   (puro: niveles de acceso, procedencia en tres estados, código de un solo uso).
 - 6 tablas `portal_*` en el schema `seguros`. Las otras 5 del spec llegan con sus fases.
-- **El canal es un PUERTO**: la WABA de Grupo Asegura no existe todavía, así que en Fase 1 se
+- **El canal es un PUERTO**: la WABA de Grupo ASegura no existe todavía, así que en Fase 1 se
   enchufan email y consola; WhatsApp entra añadiendo un fichero, sin tocar nada más.
 - Guardián `test/regression-portal-aislamiento.test.ts`, verificado con un infractor real.
 - Falta infraestructura de Alberto: proyecto Vercel, rol `prisma_asegura_portal` con contraseña, envs.
@@ -1913,4 +1913,4 @@ Ninguno bloquea escribir ni probar el código de arriba, pero sí ponerlo en pie
    correo que ya lee `@central/core-email` por su cuenta**: `RESEND_API_KEY`, o
    `SMTP_USER`+`SMTP_PASSWORD`, o `GMAIL_USER`+`GMAIL_APP_PASSWORD`. No hay envs `PORTAL_SMTP_*`: el
    transporter no recibe credenciales por parámetro.
-4. **WABA de Grupo Asegura** — desbloquea el adaptador de WhatsApp, que es la Fase 2 del canal.
+4. **WABA de Grupo ASegura** — desbloquea el adaptador de WhatsApp, que es la Fase 2 del canal.

@@ -1,33 +1,76 @@
 'use client'
 import Link from 'next/link'
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, Line, ComposedChart, CartesianGrid } from 'recharts'
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Bar, XAxis, Line, ComposedChart, CartesianGrid } from 'recharts'
+import {
+  BarChart3, TrendingUp, Receipt, Scale, PieChart as PieIcon,
+  Building2, Users, Shield, Hotel, Landmark, ArrowRight,
+} from 'lucide-react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
 import type { MesEvolucion } from '@/lib/banca'
 import { eur } from '@/lib/dinero'
+import { cardStyle, CardHeader, KpiCard, colorImporte } from '@/components/ui'
 
 // Resumen INTERACTIVO del periodo (negocio + personal) para /banca. Reutiliza los mismos
 // cálculos de cabecera que /finanzas/radiografia (misma fuente `getResumenFinanciero`, cuadra
 // al céntimo) y añade dos gráficas comparativas con Recharts (tematizado por CSS en globals.css).
 // Es presentación pura: los números vienen ya calculados del servidor.
+//
+// ─── Por qué ya no se pinta a mano (02/09/2026) ──────────────────────────────────────────────
+// Este bloque es lo PRIMERO que se ve al abrir el panel, y era el que seguía escrito con su
+// propia `card`, su propio `Kpi` y su propio `<style>` incrustado — copias de lo que
+// `components/ui.tsx` ya ofrecía. Copiar el estilo en vez de importarlo es lo que hace que
+// arreglar el tema oscuro (o el ancho en móvil) haya que hacerlo N veces y se olvide una.
+// Ahora: `cardStyle`, `CardHeader` y `KpiCard`, y el responsive en `globals.css` (un estilo en
+// línea no admite media queries, que era el motivo del `<style>`).
 
-const card: React.CSSProperties = {
-  background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '10px', padding: '16px',
-}
+// Paleta CATEGÓRICA de la dona: son categorías de gasto, no estados. Teñir una de --negative
+// diría «este gasto está mal», que es mentira. Exenta en `regression-tokens-color`.
 const DONA_COLORS = ['#6366f1', '#f59e0b', '#10b981', '#ef4444', '#3b82f6', '#8b5cf6']
 
-function Kpi({ label, valor, sub, tono }: { label: string; valor: string; sub?: string; tono?: 'pos' | 'neg' | 'neutro' }) {
-  const color = tono === 'pos' ? 'var(--positive)' : tono === 'neg' ? 'var(--negative)' : 'var(--text)'
+const MES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+function etiquetaMes(mes: string): string { return `${MES_CORTO[Number(mes.slice(5, 7)) - 1] || ''}` }
+
+/** Título de sección con icono, para que los bloques del Inicio se lean como uno solo. */
+function TituloSeccion({ icono, children, sub }: { icono: React.ReactNode; children: React.ReactNode; sub?: string }) {
   return (
-    <div style={card}>
-      <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.03em' }}>{label}</div>
-      <div style={{ fontSize: '22px', fontWeight: 700, color }}>{valor}</div>
-      {sub && <div style={{ fontSize: '12px', color: 'var(--muted)', marginTop: '4px' }}>{sub}</div>}
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+      <span aria-hidden style={{ display: 'inline-flex', color: 'var(--muted)' }}>{icono}</span>
+      <h2 style={{ fontSize: 16, fontWeight: 700 }}>{children}</h2>
+      {sub && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{sub}</span>}
     </div>
   )
 }
 
-const MES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-function etiquetaMes(mes: string): string { return `${MES_CORTO[Number(mes.slice(5, 7)) - 1] || ''}` }
+/** Fila «concepto → cifra» de las tarjetas Negocios/Personal. */
+function Fila({ icono, label, nota, children }: {
+  icono: React.ReactNode; label: string; nota?: string; children: React.ReactNode
+}) {
+  return (
+    <div style={{
+      display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12,
+      padding: '9px 0', fontSize: 14, borderTop: '1px solid var(--border)', flexWrap: 'wrap',
+    }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 7, minWidth: 0 }}>
+        <span aria-hidden style={{ display: 'inline-flex', color: 'var(--muted)', flexShrink: 0 }}>{icono}</span>
+        {label}
+        {nota && <span style={{ fontSize: 11, color: 'var(--muted)' }}>({nota})</span>}
+      </span>
+      <span style={{ fontVariantNumeric: 'tabular-nums' }}>{children}</span>
+    </div>
+  )
+}
+
+/** Enlace de pie de tarjeta. */
+function Salida({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
+      fontSize: 12, color: 'var(--primary)', fontWeight: 600, textDecoration: 'none',
+    }}>
+      {children} <ArrowRight size={13} strokeWidth={2} aria-hidden />
+    </Link>
+  )
+}
 
 export default function ResumenPeriodo({ resumen, evolucion, periodoLabel }: {
   resumen: ResumenFinanciero
@@ -46,90 +89,122 @@ export default function ResumenPeriodo({ resumen, evolucion, periodoLabel }: {
 
   // ── Dona: reparto del gasto del periodo por bucket/negocio ──
   const reparto = [
-    { name: '🛡️ Correduría (deducible)', value: resumen.correduria.gastosDeducibles },
-    { name: '🏨 Pisos (renta)', value: resumen.pisos.total.gastos },
-    { name: '👨‍👩‍👧 Personal (no deducible)', value: gastoPersonal },
+    { name: 'Correduría (deducible)', value: resumen.correduria.gastosDeducibles },
+    { name: 'Pisos (renta)', value: resumen.pisos.total.gastos },
+    { name: 'Personal (no deducible)', value: gastoPersonal },
   ].filter(r => r.value > 0)
 
   const evo = evolucion.map(m => ({ ...m, resultado: m.ingresos - m.gastos, label: etiquetaMes(m.mes) }))
 
   return (
-    <section style={{ marginBottom: '32px' }}>
-      <style>{`@media (max-width:768px){.bk-kpis{grid-template-columns:1fr 1fr!important}.bk-neg{grid-template-columns:1fr!important}.bk-graf{grid-template-columns:1fr!important}}`}</style>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
-        <h2 style={{ fontSize: '16px', fontWeight: 700 }}>📊 Resumen del periodo</h2>
-        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{periodoLabel}</span>
-      </div>
+    <section style={{ marginBottom: 32 }}>
+      <TituloSeccion icono={<BarChart3 size={17} strokeWidth={1.75} />} sub={periodoLabel}>
+        Resumen del periodo
+      </TituloSeccion>
 
       {/* KPIs de cabecera */}
-      <div className="bk-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '12px' }}>
-        <Kpi label="Ingresos" valor={eur(ingresosNeg)} sub="negocios" tono="pos" />
-        <Kpi label="Gasto total" valor={eur(gastoTotal)} sub={deltaGasto !== null ? `${deltaGasto >= 0 ? '▲' : '▼'} ${Math.abs(deltaGasto)}% vs año anterior` : undefined} />
-        <Kpi label="Resultado" valor={eur(resultado)} tono={resultado >= 0 ? 'pos' : 'neg'} />
-        <Kpi label="Negocio / Personal" valor={`${100 - pctPersonal}/${pctPersonal}`} sub={`Personal: ${eur(gastoPersonal)}`} />
+      <div className="bk-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        <KpiCard
+          icono={<TrendingUp size={18} strokeWidth={1.75} />} tono="positivo"
+          label="Ingresos" valor={eur(ingresosNeg)} sub="negocios" color="var(--positive)"
+        />
+        <KpiCard
+          icono={<Receipt size={18} strokeWidth={1.75} />}
+          label="Gasto total" valor={eur(gastoTotal)}
+          // `bueno` colorea por SIGNIFICADO, no por signo: gastar MENOS que el año pasado es verde
+          // aunque el número sea negativo. Al revés la pastilla premiaría subir el gasto.
+          delta={deltaGasto} bueno={deltaGasto !== null && deltaGasto < 0}
+          sub="vs año anterior"
+        />
+        <KpiCard
+          icono={<Scale size={18} strokeWidth={1.75} />} tono={resultado >= 0 ? 'positivo' : 'negativo'}
+          label="Resultado" valor={eur(resultado)} color={colorImporte(resultado)}
+        />
+        <KpiCard
+          icono={<PieIcon size={18} strokeWidth={1.75} />} tono="info"
+          label="Negocio / Personal" valor={`${100 - pctPersonal}/${pctPersonal}`}
+          sub={`Personal: ${eur(gastoPersonal)}`}
+        />
       </div>
-      <div style={{ marginTop: '8px', fontSize: '12px', display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
-        <span style={{ color: 'var(--muted)' }}>🧾 Base imponible IRPF est. (año): <strong style={{ color: 'var(--text)' }}>{eur(resumen.fiscal.baseImponibleEstimada)}</strong> · tramo {(resumen.fiscal.tramoActual.tipo * 100).toFixed(0)}%</span>
-        <Link href="/finanzas/fiscal" style={{ color: 'var(--primary)', fontWeight: 600 }}>Mi declaración y tramos →</Link>
+
+      <div style={{ marginTop: 10, fontSize: 12, display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--muted)' }}>
+          <Receipt size={13} strokeWidth={1.75} aria-hidden />
+          Base imponible IRPF est. (año): <strong style={{ color: 'var(--text)' }}>{eur(resumen.fiscal.baseImponibleEstimada)}</strong>
+          {' '}· tramo {(resumen.fiscal.tramoActual.tipo * 100).toFixed(0)}%
+        </span>
+        <Salida href="/finanzas/fiscal">Mi declaración y tramos</Salida>
       </div>
 
       {/* Negocio (correduría + pisos) y Personal (BBVA/Kutxa) */}
-      <div className="bk-neg" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '12px' }}>
-        <div style={card}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-            <strong>🏢 Negocios</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px', borderTop: '1px solid var(--border)' }}>
-            <span>🛡️ Correduría</span>
-            <span>cobrado <strong>{eur(resumen.correduria.cobradoNeto)}</strong> · result. <strong style={{ color: resumen.correduria.resultado >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{eur(resumen.correduria.resultado)}</strong></span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px', borderTop: '1px solid var(--border)' }}>
-            <span>🏨 Pisos</span>
-            <span>ingresos <strong>{eur(resumen.pisos.total.ingresos)}</strong> · result. <strong style={{ color: resumen.pisos.total.resultado >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{eur(resumen.pisos.total.resultado)}</strong></span>
-          </div>
-          <div style={{ display: 'flex', gap: '14px', marginTop: '10px' }}>
-            <Link href="/correduria" style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600 }}>Correduría →</Link>
-            <Link href="/apartamentos" style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600 }}>Pisos →</Link>
+      <div className="bk-neg" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginTop: 12 }}>
+        <div style={cardStyle}>
+          <CardHeader title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <Building2 size={15} strokeWidth={1.75} aria-hidden /> Negocios
+          </span>} />
+          <Fila icono={<Shield size={15} strokeWidth={1.75} />} label="Correduría">
+            cobrado <strong>{eur(resumen.correduria.cobradoNeto)}</strong> · result.{' '}
+            <strong style={{ color: colorImporte(resumen.correduria.resultado) }}>{eur(resumen.correduria.resultado)}</strong>
+          </Fila>
+          <Fila icono={<Hotel size={15} strokeWidth={1.75} />} label="Pisos">
+            ingresos <strong>{eur(resumen.pisos.total.ingresos)}</strong> · result.{' '}
+            <strong style={{ color: colorImporte(resumen.pisos.total.resultado) }}>{eur(resumen.pisos.total.resultado)}</strong>
+          </Fila>
+          <div style={{ display: 'flex', gap: 14, marginTop: 12 }}>
+            <Salida href="/correduria">Correduría</Salida>
+            <Salida href="/apartamentos">Pisos</Salida>
           </div>
         </div>
-        <div style={card}>
-          <div style={{ marginBottom: '10px' }}><strong>👨‍👩‍👧 Personal</strong></div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px', borderTop: '1px solid var(--border)' }}>
-            <span>🏦 BBVA <span style={{ fontSize: '11px', color: 'var(--muted)' }}>(100% tuya)</span></span>
+
+        <div style={cardStyle}>
+          <CardHeader title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <Users size={15} strokeWidth={1.75} aria-hidden /> Personal
+          </span>} />
+          <Fila icono={<Landmark size={15} strokeWidth={1.75} />} label="BBVA" nota="100% tuya">
             <strong>{eur(resumen.personal.bbva.gastos)}</strong>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', fontSize: '14px', borderTop: '1px solid var(--border)' }}>
-            <span>👨‍👩‍👧 Kutxabank <span style={{ fontSize: '11px', color: 'var(--muted)' }}>(familiar)</span></span>
+          </Fila>
+          <Fila icono={<Users size={15} strokeWidth={1.75} />} label="Kutxabank" nota="familiar">
             <strong>{eur(resumen.personal.kutxa.gastos)}</strong>
-          </div>
-          <div style={{ display: 'flex', gap: '14px', marginTop: '10px' }}>
-            <Link href="/finanzas?tab=categorias&banco=bbva" style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600 }}>BBVA →</Link>
-            <Link href="/finanzas?tab=categorias&banco=familiar" style={{ fontSize: '12px', color: 'var(--primary)', fontWeight: 600 }}>Kutxabank →</Link>
+          </Fila>
+          {/* Estas dos salidas apuntaban a /finanzas?tab=categorias, que monta EXACTAMENTE el mismo
+              componente (finanzas/CategoriasTab.tsx) que el segmento Personal de esta misma página:
+              te sacaban de /banca para enseñarte la pantalla que ya estabas mirando, y desde allí el
+              camino de vuelta era /banca — un círculo. `CategoriasTab` lee ?banco= de la URL por su
+              cuenta, así que el filtro viaja igual sin cambiar de hub. */}
+          <div style={{ display: 'flex', gap: 14, marginTop: 12 }}>
+            <Salida href="/banca?tab=personal&banco=bbva">BBVA</Salida>
+            <Salida href="/banca?tab=personal&banco=familiar">Kutxabank</Salida>
           </div>
         </div>
       </div>
 
       {/* Gráficas comparativas */}
-      <div className="bk-graf" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '12px', marginTop: '12px' }}>
-        <div style={card}>
-          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px' }}>📈 Ingresos vs gastos (últimos {evo.length} meses)</div>
+      <div className="bk-graf" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginTop: 12 }}>
+        <div style={cardStyle}>
+          <CardHeader title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <TrendingUp size={15} strokeWidth={1.75} aria-hidden /> Ingresos vs gastos
+          </span>} sub={`Últimos ${evo.length} meses`} />
           <div style={{ width: '100%', height: 220 }}>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={evo} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v: number, n: string) => [eur(v), n === 'ingresos' ? 'Ingresos' : n === 'gastos' ? 'Gastos' : 'Resultado']} />
-                <Bar dataKey="ingresos" fill="#10b981" radius={[3, 3, 0, 0]} />
-                <Bar dataKey="gastos" fill="#ef4444" radius={[3, 3, 0, 0]} />
-                <Line type="monotone" dataKey="resultado" stroke="#6366f1" strokeWidth={2} dot={false} />
+                {/* Ingreso y gasto SÍ son semánticos (no dos series cualesquiera): van por token,
+                    así que en modo oscuro cambian con el tema igual que el resto del panel. */}
+                <Bar dataKey="ingresos" fill="var(--positive)" radius={[3, 3, 0, 0]} />
+                <Bar dataKey="gastos" fill="var(--negative)" radius={[3, 3, 0, 0]} />
+                <Line type="monotone" dataKey="resultado" stroke="var(--primary)" strokeWidth={2} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>
         </div>
-        <div style={card}>
-          <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '10px' }}>🍩 Reparto del gasto</div>
+        <div style={cardStyle}>
+          <CardHeader title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 7 }}>
+            <PieIcon size={15} strokeWidth={1.75} aria-hidden /> Reparto del gasto
+          </span>} />
           {reparto.length === 0 ? (
-            <div style={{ fontSize: '12px', color: 'var(--muted)' }}>Sin gasto en el periodo.</div>
+            <div style={{ fontSize: 12, color: 'var(--muted)' }}>Sin gasto en el periodo.</div>
           ) : (
             <div style={{ width: '100%', height: 220 }}>
               <ResponsiveContainer width="100%" height="100%">

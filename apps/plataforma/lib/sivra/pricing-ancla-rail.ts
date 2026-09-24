@@ -37,10 +37,33 @@ export function anclaRail(opts: {
   /** Precio vivo en Smoobu en esta pasada. Último recurso. */
   actual: number
 }): number {
+  return anclaRailCon(opts).valor
+}
+
+/** De dónde salió el ancla del raíl. Se persiste junto al valor: ver `anclaRailCon`. */
+export type OrigenAncla = 'ref24' | 'primero_hoy' | 'actual'
+
+/**
+ * El ancla Y su procedencia, resueltas EN EL MISMO SITIO.
+ *
+ * `anclaRail()` delega aquí a propósito, en vez de que el llamante re-derive el origen con la
+ * misma cadena de ifs: dos copias de una precedencia se separan en cuanto alguien toca una, y
+ * entonces el registro diría que el ±20% se midió desde ayer cuando en realidad se midió desde
+ * el precio vivo — un número plausible y falso, que es el fallo más caro de auditar.
+ *
+ * Importa para leer una pasada: un ancla `actual` significa que el tope de ese día NO fue diario
+ * sino por pasada, así que dos escrituras del mismo día pueden sumar más del ±max_change_pct sin
+ * que el raíl esté roto (04/09/2026: House bajó un 20% y volvió a subir un 39% en 100 minutos).
+ */
+export function anclaRailCon(opts: {
+  ref24?: number | null
+  primeroHoy?: number | null
+  actual: number
+}): { valor: number; origen: OrigenAncla } {
   const { ref24, primeroHoy, actual } = opts
-  if (esPrecio(ref24)) return ref24
-  if (esPrecio(primeroHoy)) return primeroHoy
-  return actual
+  if (esPrecio(ref24)) return { valor: ref24, origen: 'ref24' }
+  if (esPrecio(primeroHoy)) return { valor: primeroHoy, origen: 'primero_hoy' }
+  return { valor: actual, origen: 'actual' }
 }
 
 /**

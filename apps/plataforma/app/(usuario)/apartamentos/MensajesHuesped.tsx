@@ -57,7 +57,8 @@ export default async function MensajesHuesped() {
               {p.enviados > 0 && <>{p.enviados} enviado{p.enviados === 1 ? '' : 's'} · </>}
               {p.enSombra > 0 && <>{p.enSombra} en sombra · </>}
               {p.fallos > 0 && <span style={{ color: 'var(--negative)', fontWeight: 700 }}>{p.fallos} con fallo · </span>}
-              {p.enviados === 0 && p.enSombra === 0 && p.fallos === 0 && <>sin movimientos todavía</>}
+              {p.omitidos > 0 && <>{p.omitidos} omitido(s) a mano · </>}
+              {p.enviados === 0 && p.enSombra === 0 && p.fallos === 0 && p.omitidos === 0 && <>sin movimientos todavía</>}
               {p.ultimoEnvio && <>último {fecha(p.ultimoEnvio)}</>}
             </div>
           </div>

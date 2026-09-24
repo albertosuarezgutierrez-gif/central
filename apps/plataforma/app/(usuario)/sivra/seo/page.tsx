@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { PageHeader } from '@/components/ui'
 
 type SeoProposal = {
   id: string
@@ -84,12 +85,17 @@ export default function SeoPage() {
   return (
     <div style={{ padding: '24px', maxWidth: 896 }}>
 
-      {/* Header + button */}
-      <div className="seo-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
-        <div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>SEO · housesevillana.es</h1>
-          <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4, marginBottom: 0 }}>Analiza la competencia y actualiza los metadatos de la landing directamente</p>
-        </div>
+      {/* Header + button.
+          El `div.seo-header` NO es la cabecera: eso lo hace ya <PageHeader>. Se conserva SOLO como
+          ancestro de las dos reglas hijas de `globals.css` que `.page-header` no reproduce
+          (`@media (max-width:480px)`: `.seo-header .seo-actions{width:100%}` y
+          `.seo-header button{width:100%;justify-content:center}`), que ponen los dos botones lentos
+          (~30 s) a ancho completo en móvil pequeño. Si esas reglas se van, este div sobra. */}
+      <div className="seo-header">
+      <PageHeader
+        titulo="SEO · housesevillana.es"
+        sub="Analiza la competencia y actualiza los metadatos de la landing directamente"
+        acciones={
         <div className="seo-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flexShrink: 0 }}>
           {/* Comprobación barata (1 s) del permiso que solo se descubría al final del análisis. */}
           <button
@@ -125,6 +131,8 @@ export default function SeoPage() {
               : <><span>🔍</span> Actualizar SEO ahora</>}
           </button>
         </div>
+        }
+      />
       </div>
 
       {/* Resultado del sondeo del token — TRES estados, nunca dos */}

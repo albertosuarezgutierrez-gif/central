@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
+import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { buscarClientes } from '@/lib/cartera-ficha'
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
       buscado: true,
       clientes: await buscarClientes(correduria.id, q),
     })
-  } catch {
-    return NextResponse.json({ estado: 'error' })
+  } catch (e) {
+    return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/clientes', e) })
   }
 }

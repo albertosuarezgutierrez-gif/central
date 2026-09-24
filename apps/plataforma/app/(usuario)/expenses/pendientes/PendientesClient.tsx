@@ -32,12 +32,12 @@ function propiedadParaApi(v: string): string {
 
 const inp: React.CSSProperties = {
   padding: '8px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13,
-  background: 'var(--card)', color: 'var(--text)', width: '100%', boxSizing: 'border-box',
+  background: 'var(--surface)', color: 'var(--text)', width: '100%', boxSizing: 'border-box',
   minHeight: 44,
 }
 const btn: React.CSSProperties = {
   padding: '10px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-  border: '1px solid var(--border)', background: 'var(--card)', color: 'var(--text)', minHeight: 44,
+  border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', minHeight: 44,
 }
 
 export default function PendientesClient() {
@@ -168,7 +168,7 @@ export default function PendientesClient() {
           return (
             <div key={p.id} style={{
               border: '1px solid var(--border)', borderRadius: 10, padding: 14,
-              background: 'var(--card)', opacity: ocupado ? 0.5 : 1,
+              background: 'var(--surface)', opacity: ocupado ? 0.5 : 1,
             }}>
               <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'space-between' }}>
                 <div style={{ minWidth: 0, flex: '1 1 260px' }}>
@@ -246,7 +246,7 @@ export default function PendientesClient() {
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
                 <button onClick={() => void accion(p, 'confirmar')} disabled={ocupado || sinElegir}
                         title={sinElegir ? 'Elige antes a qué negocio va' : undefined}
-                        style={{ ...btn, background: sinElegir ? 'var(--card)' : 'var(--positive)',
+                        style={{ ...btn, background: sinElegir ? 'var(--surface)' : 'var(--positive)',
                                  color: sinElegir ? 'var(--muted)' : '#fff',
                                  borderColor: sinElegir ? 'var(--border)' : 'transparent',
                                  cursor: sinElegir ? 'not-allowed' : 'pointer' }}>

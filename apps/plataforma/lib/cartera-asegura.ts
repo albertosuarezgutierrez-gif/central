@@ -10,7 +10,10 @@
 // arreglan en sitios distintos — un recuadro que solo dice «sin respuesta»
 // obliga a adivinar cuál de los tres es (pasó el 31/08/2026).
 
-import type { ObjetoAsegurado } from '@central/module-seguros'
+import type { ObjetoAsegurado, Retarificabilidad } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
+import { interpretarContacto, leerTruncado, type Contacto } from './correduria-puerto.ts'
+import { leerRetarificacion } from './ficha-asegura.ts'
 
 export type MotivoErrorCartera =
   | 'secreto_rechazado'   // asegura devolvió 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
@@ -20,7 +23,7 @@ export type MotivoErrorCartera =
 
 export type CarteraAsegura =
   | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo: MotivoErrorCartera }
+  | { estado: 'error'; motivo: MotivoErrorCartera; causa?: string }
   | {
       estado: 'ok'
       nombre: string | null
@@ -35,6 +38,14 @@ export type CarteraAsegura =
       vence30: number | null
       vence60: number | null
     }
+
+/** Añade la causa que declara asegura solo si viene: los tests y la UI no ven una clave vacía. */
+function conCausa(
+  r: { estado: 'error'; motivo: MotivoErrorCartera },
+  causa: unknown,
+): { estado: 'error'; motivo: MotivoErrorCartera; causa?: string } {
+  return typeof causa === 'string' && causa ? { ...r, causa } : r
+}
 
 const CAMPOS_NUM = [
   'clientes', 'leads', 'polizasVigentes', 'polizasPendientesFecha', 'polizasNoVigentes', 'siniestrosAbiertos',
@@ -51,7 +62,7 @@ export function interpretarCartera(status: number, json: unknown): CarteraAsegur
   if (typeof r !== 'object' || r === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
   const resumen = r as Record<string, unknown>
   if (resumen.estado === 'sin_configurar') return { estado: 'sin_configurar' }
-  if (resumen.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (resumen.estado === 'error') return conCausa({ estado: 'error', motivo: 'asegura_error' }, resumen.causa)
   if (resumen.estado !== 'ok') return { estado: 'error', motivo: 'respuesta_ilegible' }
   for (const k of CAMPOS_NUM) {
     if (typeof resumen[k] !== 'number' || !Number.isFinite(resumen[k] as number)) {
@@ -85,7 +96,7 @@ export async function carteraAsegura(): Promise<CarteraAsegura> {
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/resumen`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     const json = await res.json().catch(() => null)
@@ -130,6 +141,36 @@ export type PolizaVencimiento = {
    * arreglan en sitios distintos (desplegar vs. reclamar el dato a la compañía).
    */
   objeto: ObjetoAsegurado | null
+  /**
+   * El veredicto de retarificar, o `null` si la versión desplegada de asegura
+   * todavía no lo manda. Misma pieza que `leerRetarificacion` de `ficha-asegura.ts`
+   * (ficha del cliente y de la póliza): un `null` aquí NO pinta «no se puede»,
+   * deja el botón sin ofrecer hasta que se sepa.
+   */
+  retarificacion: Retarificabilidad | null
+  /**
+   * Teléfono y email del tomador, para llamar desde la propia lista: esta tabla
+   * existe justo para eso (medido el 05/09/2026: de las 15 fichas que vencen en
+   * 90 días, 9 tienen teléfono y 8 email).
+   *
+   * 🚨 `null` NO es «no tiene con qué contactar»: es que asegura no manda el
+   * bloque (versión anterior) o no se pudo consultar. Dentro, `telefono: null`
+   * con `telefonoIlegible: false` sí es «se miró y no hay», y con `true` es
+   * «está guardado y la clave PII no lo abre» — que se arregla en otro sitio.
+   */
+  contacto: Contacto | null
+  /**
+   * Cuándo se abrió por última vez el WhatsApp de renovación de esta póliza
+   * (ISO `yyyy-mm-dd`). `null` = nunca se registró un contacto (o la versión
+   * desplegada de asegura todavía no manda el campo) — los dos casos se
+   * tratan igual aquí: no ofrecer el badge, nunca inventar una fecha.
+   */
+  ultimoContactoEn: string | null
+  /**
+   * `YYYY-MM-DD` del último fichero de CIMA de la compañía de la póliza.
+   * `null` = no se sabe (asegura vieja, sin código DGS o consulta caída).
+   */
+  ultimoFicheroCompania: string | null
 }
 
 const ESTADOS_OBJETO = new Set(['conocido', 'no_informado', 'cifrado', 'sin_objeto'])
@@ -151,8 +192,40 @@ export function interpretarObjeto(v: unknown): ObjetoAsegurado | null {
 
 export type VencimientosAsegura =
   | { estado: 'sin_configurar' }
-  | { estado: 'error'; motivo: MotivoErrorCartera }
-  | { estado: 'ok'; dias: number; polizas: PolizaVencimiento[] }
+  | { estado: 'error'; motivo: MotivoErrorCartera; causa?: string }
+  | {
+      estado: 'ok'
+      dias: number
+      polizas: PolizaVencimiento[]
+      /**
+       * La criba de asegura tocó su techo: hay MÁS pólizas que renovar en la
+       * ventana de las que trae esta lista.
+       *
+       * 🚨 `null` = asegura (versión desplegada más vieja) no manda el campo, y
+       * eso NO es `false`. Una lista de renovaciones recortada en silencio es
+       * una lista de llamadas que no se hacen, sobre pólizas que se prorrogan
+       * solas pasado el preaviso del art. 22 LCS. Mismo criterio que
+       * `ilegibles` en `lib/comisiones-asegura.ts`.
+       */
+      truncado: boolean | null
+      /**
+       * Pólizas de la cartera viva que figuran VIGENTES con un vencimiento
+       * anterior a la ventana de recuperación. No son trabajo de hoy, pero son
+       * dato a depurar y la pantalla las declara en vez de esconderlas.
+       *
+       * 🚨 `null` = no se ha podido contar (o asegura no lo manda), NUNCA 0.
+       * Un 0 afirmaría que la cartera está limpia.
+       *
+       * 🚨 Hasta el 20/09/2026 este campo y `diasAtras` LLEGABAN del puerto y
+       * este lector no los leía, así que el pie de la pantalla decía siempre
+       * «asegura no lo informa» sobre un dato que estaba ahí. Cuatro líneas de
+       * passthrough que faltaban: el cepo de abajo las fija.
+       */
+      vencidasAntiguas: number | null
+      /** El borde IZQUIERDO de la ventana, en días. Sin él el pie no puede
+       *  decir desde cuándo cuenta lo de arriba. `null` = no informado. */
+      diasAtras: number | null
+    }
 
 /** Interpretación PURA de la respuesta del puerto de vencimientos.
  *  Una fila con forma inesperada invalida la lista entera: media lista de
@@ -164,7 +237,7 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
   }
   const r = json as Record<string, unknown>
   if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
-  if (r.estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (r.estado === 'error') return conCausa({ estado: 'error', motivo: 'asegura_error' }, r.causa)
   if (r.estado !== 'ok' || !Array.isArray(r.polizas)) return { estado: 'error', motivo: 'respuesta_ilegible' }
   const polizas: PolizaVencimiento[] = []
   for (const fila of r.polizas) {
@@ -189,22 +262,121 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
       prima: typeof f.prima === 'number' && Number.isFinite(f.prima) ? f.prima : null,
       fraccionamiento: typeof f.fraccionamiento === 'string' ? f.fraccionamiento : null,
       objeto: interpretarObjeto(f.objeto),
+      retarificacion: leerRetarificacion(f.retarificacion),
+      // Mismo normalizador que el buscador y la cola de retención: dos lecturas
+      // del mismo bloque harían que el icono saliera en una pantalla y no en
+      // otra para el MISMO cliente.
+      contacto: interpretarContacto(f.contacto),
+      ultimoContactoEn: typeof f.ultimoContactoEn === 'string' && f.ultimoContactoEn !== '' ? f.ultimoContactoEn : null,
+      ultimoFicheroCompania: typeof f.ultimoFicheroCompania === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.ultimoFicheroCompania)
+        ? f.ultimoFicheroCompania : null,
     })
   }
   const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 90
-  return { estado: 'ok', dias, polizas }
+  // Sin `?? 0`: los dos son «no se sabe» cuando no vienen. Colapsarlos a 0
+  // diría «no queda ninguna vencida antigua», que es justo lo contrario.
+  const entero = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null
+  return {
+    estado: 'ok',
+    dias,
+    polizas,
+    truncado: leerTruncado(r.truncado),
+    vencidasAntiguas: entero(r.vencidasAntiguas),
+    diasAtras: entero(r.diasAtras),
+  }
 }
 
-export async function vencimientosAsegura(dias = 90): Promise<VencimientosAsegura> {
+/**
+ * `timeoutMs`: 8 s para la pantalla; el cron diario pasa más, porque a las 06:30 asegura arranca en
+ * frío y el 23/09 tardó más de 8 s → «red» y ese día no salió ningún aviso de renovación.
+ */
+export async function vencimientosAsegura(dias = 90, timeoutMs = 8000): Promise<VencimientosAsegura> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/vencimientos?dias=${dias}`, {
-      headers: { Authorization: `Bearer ${secret}` },
-      cache: 'no-store', signal: AbortSignal.timeout(8000),
+      headers: { ...(await cabecerasPuerto(secret)) },
+      cache: 'no-store', signal: AbortSignal.timeout(timeoutMs),
     })
     const json = await res.json().catch(() => null)
     return interpretarVencimientos(res.status, json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Declaradas por vencer (venta cruzada) ───────────────────────────────────
+// Pólizas que un cliente tiene con OTRA compañía y ha declarado en su bóveda
+// del portal. Sin muestra suficiente para comparar precio (ver
+// docs/CORREDURIA-INTRANET-IDEAS.md, idea F), la jugada es que Alberto llame
+// antes de que se renueven solas — no un precio automático.
+
+export type DeclaradaPorVencer = {
+  id: string
+  clienteId: string
+  cliente: string
+  compania: string | null
+  ramo: string | null
+  numeroPoliza: string | null
+  fechaVencimiento: string
+  dias: number
+  contacto: Contacto | null
+}
+
+export type DeclaradasVencerAsegura =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoErrorCartera; causa?: string }
+  | { estado: 'ok'; dias: number; declaradas: DeclaradaPorVencer[]; sinVincular: number }
+
+/** Interpretación PURA de la respuesta del puerto. Una fila con forma
+ *  inesperada invalida la lista entera, igual que `interpretarVencimientos`. */
+export function interpretarDeclaradasVencer(status: number, json: unknown): DeclaradasVencerAsegura {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  const r = json as Record<string, unknown>
+  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (r.estado === 'error') return conCausa({ estado: 'error', motivo: 'asegura_error' }, r.causa)
+  if (r.estado !== 'ok' || !Array.isArray(r.declaradas)) return { estado: 'error', motivo: 'respuesta_ilegible' }
+  const declaradas: DeclaradaPorVencer[] = []
+  for (const fila of r.declaradas) {
+    if (typeof fila !== 'object' || fila === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+    const f = fila as Record<string, unknown>
+    if (typeof f.id !== 'string' || typeof f.clienteId !== 'string' || typeof f.cliente !== 'string') {
+      return { estado: 'error', motivo: 'respuesta_ilegible' }
+    }
+    if (typeof f.fechaVencimiento !== 'string' || typeof f.dias !== 'number' || !Number.isFinite(f.dias)) {
+      return { estado: 'error', motivo: 'respuesta_ilegible' }
+    }
+    declaradas.push({
+      id: f.id,
+      clienteId: f.clienteId,
+      cliente: f.cliente,
+      compania: typeof f.compania === 'string' ? f.compania : null,
+      ramo: typeof f.ramo === 'string' ? f.ramo : null,
+      numeroPoliza: typeof f.numeroPoliza === 'string' ? f.numeroPoliza : null,
+      fechaVencimiento: f.fechaVencimiento,
+      dias: f.dias,
+      contacto: interpretarContacto(f.contacto),
+    })
+  }
+  const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 60
+  const sinVincular = typeof r.sinVincular === 'number' && Number.isFinite(r.sinVincular) ? r.sinVincular : 0
+  return { estado: 'ok', dias, declaradas, sinVincular }
+}
+
+export async function declaradasVencerAsegura(dias = 60): Promise<DeclaradasVencerAsegura> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/declaradas-vencer?dias=${dias}`, {
+      headers: { ...(await cabecerasPuerto(secret)) },
+      cache: 'no-store', signal: AbortSignal.timeout(8000),
+    })
+    const json = await res.json().catch(() => null)
+    return interpretarDeclaradasVencer(res.status, json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }

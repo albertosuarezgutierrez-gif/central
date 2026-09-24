@@ -106,14 +106,31 @@ async function limiteAmbito(ambito: 'app' | 'cliente', ref: string): Promise<num
   } catch { return 0 }
 }
 
+// Tope MENSUAL por vertical (ia_presupuestos.limite_mensual_eur, NULL/0 = sin tope). Se suma al
+// diario: el diario frena un día desbocado, el mensual que un mes normal se coma el saldo.
+async function limiteMensualApp(app: string): Promise<number> {
+  try {
+    const rows = await prisma.$queryRaw<Array<{ l: number | null }>>`
+      SELECT limite_mensual_eur::float AS l FROM ia_presupuestos WHERE ambito = 'app' AND ref = ${app}`
+    return Number(rows[0]?.l ?? 0)
+  } catch { return 0 }
+}
+
+async function gastoMesApp(app: string): Promise<number> {
+  const rows = await prisma.$queryRaw<Array<{ c: number | null }>>`
+    SELECT COALESCE(sum(coste_eur), 0)::float AS c FROM ai_usos
+    WHERE creada_at >= date_trunc('month', now()) AND app = ${app}`
+  return Number(rows[0]?.c ?? 0)
+}
+
 // Aviso Telegram con dedup diario: solo si hoy aún no hay ningún registro de bloqueo con este motivo.
-async function avisarBloqueo(motivo: string): Promise<void> {
+async function avisarBloqueo(motivo: string, hasta = 'mañana'): Promise<void> {
   try {
     const rows = await prisma.$queryRaw<Array<{ n: bigint }>>`
       SELECT count(*) AS n FROM ai_usos
       WHERE creada_at >= date_trunc('day', now()) AND ok = false AND error = ${motivo}`
     if (Number(rows[0]?.n ?? 0) === 0) {
-      await tgAviso('sistema.ia-presupuesto', `🔴 <b>IA — presupuesto diario</b>\n${motivo}. Las llamadas DE PAGO quedan bloqueadas hasta mañana; la cadena gratis sigue sirviendo. Ajusta el límite en env/ia_presupuestos si es esperado.`)
+      await tgAviso('sistema.ia-presupuesto', `🔴 <b>IA — presupuesto agotado</b>\n${motivo}. Las llamadas DE PAGO quedan bloqueadas hasta ${hasta}; la cadena gratis sigue sirviendo. Ajusta el límite en env/ia_presupuestos si es esperado.`)
     }
   } catch { /* el aviso nunca rompe la pasarela */ }
 }
@@ -136,6 +153,12 @@ export async function dentroDePresupuestoDiario(app: string, clienteRef?: string
     if (limiteApp > 0 && (await gastoHoy(app)) >= limiteApp) {
       const motivo = `${MARCA_BLOQUEO} (app ${app}: ${limiteApp}€)`
       await avisarBloqueo(motivo)
+      return { ok: false, motivo }
+    }
+    const limiteMes = await limiteMensualApp(app)
+    if (limiteMes > 0 && (await gastoMesApp(app)) >= limiteMes) {
+      const motivo = `tope mensual en € excedido (app ${app}: ${limiteMes}€)`
+      await avisarBloqueo(motivo, 'el día 1')
       return { ok: false, motivo }
     }
     if (clienteRef) {
@@ -166,6 +189,8 @@ export async function ratioPresupuestoDiario(app: string, clienteRef?: string | 
     if (limiteGlobal > 0) ratio = Math.max(ratio, (await gastoHoy()) / limiteGlobal)
     const limiteApp = await limiteAmbito('app', app)
     if (limiteApp > 0) ratio = Math.max(ratio, (await gastoHoy(app)) / limiteApp)
+    const limiteMes = await limiteMensualApp(app)
+    if (limiteMes > 0) ratio = Math.max(ratio, (await gastoMesApp(app)) / limiteMes)
     if (clienteRef) {
       const limiteCli = await limiteAmbito('cliente', clienteRef)
       if (limiteCli > 0) ratio = Math.max(ratio, (await gastoHoy(undefined, clienteRef)) / limiteCli)

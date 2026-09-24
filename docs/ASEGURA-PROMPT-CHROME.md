@@ -1,4 +1,4 @@
-# Grupo Asegura — lo que hay que hacer por navegador (Claude Chrome)
+# Grupo ASegura — lo que hay que hacer por navegador (Claude Chrome)
 
 > **Para qué:** hay tres cosas del traspaso que Claude Code **no puede hacer desde aquí**, y las tres
 > se desbloquean por el navegador, donde Alberto sí entra con su cuenta. Este documento es la lista de

@@ -1,8 +1,16 @@
 'use client'
 import { useRouter } from 'next/navigation'
+
+import { normalizarTitular } from '@central/module-seguros-portal'
 import { useState } from 'react'
 
+import { avisoDocumentoNoPoliza } from '@central/module-seguros-portal'
+
 import { eur } from '@/lib/dinero'
+import { fechaEs } from '@/lib/fechas'
+
+import { AnadirPoliza, type PolizaGuardada } from './AnadirPoliza'
+import type { RamoOpcion } from './CamposPoliza'
 
 type DatosLeidos = {
   compania: string | null
@@ -11,12 +19,72 @@ type DatosLeidos = {
   primaAnual: number | null
   fechaVencimiento: string | null
 }
-type Resultado = { datos: DatosLeidos; fuente: 'texto' | 'vision' | 'none' }
+type Resultado = {
+  id?: string
+  datos: DatosLeidos & { tipoDocumento?: 'poliza' | 'suplemento' | 'recibo' | 'otro' | null }
+  fuente: 'texto' | 'vision' | 'none'
+  /** Cómo fue la 2ª pasada, la de los campos propios del ramo. Ver `EstadoCamposRamo`. */
+  camposRamo?: 'leidos' | 'no_leidos' | 'no_aplica'
+  /** Si el FICHERO llegó a la ficha del corredor. `undefined` = alta a mano, no aplica. */
+  documentoGuardado?: 'ok' | 'invalido' | 'sin_ficha' | 'varias_fichas' | 'sin_puente' | 'error'
+  /** `'protegido'` = el PDF pide una contraseña que no tenemos, y todavía no se
+   *  ha probado ninguna. `'contrasena_incorrecta'` = SÍ se probó una y no era —
+   *  la pantalla ofrece escribir otra, nunca la misma. */
+  motivo?: 'protegido' | 'contrasena_incorrecta'
+}
 
-export function SubirPoliza() {
+/**
+ * La entrada a la bóveda de aportadas: dos caminos para la misma fila.
+ *
+ *  - Subir el PDF o una foto: lo lee la IA y lo que salga se enseña como
+ *    «leído por nosotros», para que la persona lo revise.
+ *  - Añadirla A MANO (`AnadirPoliza`): para quien la tiene en papel o no
+ *    tiene el documento. Lo que teclea es lo que se guarda.
+ *
+ * Lo que NO hace ninguno de los dos, y el texto no debe insinuar: meter la
+ * póliza en la cartera de la correduría. Es el apunte de la persona; con la
+ * fecha de vencimiento se le puede avisar antes de que venza.
+ *
+ * 🚨 Y desde el 16/09/2026 SÍ cambia una cosa: si sube el FICHERO (no el alta a
+ * mano), el documento en sí —no solo lo leído— llega a la ficha del corredor
+ * (`seguros.documentos`, `lib/documento-portal.ts` → `apps/asegura`) para que
+ * Alberto lo revise. Eso NO convierte la póliza en gestionada: sigue siendo su
+ * apunte, y lo que cambia es que el papel queda guardado donde antes se
+ * descartaba. El texto lo dice.
+ */
+export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   const router = useRouter()
   const [estado, setEstado] = useState<'reposo' | 'subiendo' | 'listo' | 'error'>('reposo')
   const [resultado, setResultado] = useState<Resultado | null>(null)
+  const [manual, setManual] = useState(false)
+  // ¿Es de una empresa? Se pregunta ANTES de elegir el fichero porque la
+  // respuesta viaja en el mismo envío: preguntarla después dejaría filas ya
+  // guardadas sin respuesta cuando alguien cierra la pestaña.
+  //
+  // Arranca en «no» —póliza personal— y NO bloquea nada. Alberto, 08/09/2026:
+  // «la mayoría no tiene empresa»: obligar a todo el mundo a contestar «¿de
+  // quién es?» antes de poder subir nada era ponerle una puerta al 95 % para
+  // atender al 5 %. La casilla sigue a la vista, así que quien sube la de su
+  // sociedad la marca y entonces sí se le pide cuál (nombre + CIF).
+  // Lo que se guarda si no la marca es «propio», y eso se coteja contra su
+  // ficha personal — el coste asumido es que una póliza de empresa subida sin
+  // marcar la casilla puede salir como oportunidad aunque la sociedad ya la
+  // tenga con la casa; lo revisa el corredor, que ve la fila igualmente.
+  const [esDeEmpresa, setEsDeEmpresa] = useState(false)
+  const deQuien: 'propio' | 'empresa' = esDeEmpresa ? 'empresa' : 'propio'
+  // Se recuerda entre subidas porque quien trae las pólizas de su empresa trae
+  // varias seguidas. Se recuerda VISIBLE: el control sigue en pantalla con la
+  // respuesta marcada, así que cambiarla es un clic y no hay nada oculto.
+  const [empresa, setEmpresa] = useState('')
+  const [cif, setCif] = useState('')
+  const [guardadaAMano, setGuardadaAMano] = useState<PolizaGuardada | null>(null)
+  // Se guarda el FICHERO (no solo su nombre) porque esta app no conserva los
+  // bytes del PDF: si hace falta reintentar con contraseña, el navegador tiene
+  // que volver a mandarlo. Se limpia en cuanto un intento sale bien o cambia
+  // de fichero, para no reenviar por error uno que ya no toca.
+  const [ficheroProtegido, setFicheroProtegido] = useState<File | null>(null)
+  const [contrasena, setContrasena] = useState('')
+  const [reintentando, setReintentando] = useState(false)
 
   async function subir(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0]
@@ -24,12 +92,25 @@ export function SubirPoliza() {
     if (!f) return
     setEstado('subiendo')
     setResultado(null)
+    setGuardadaAMano(null)
+    setFicheroProtegido(null)
+    setContrasena('')
     const body = new FormData()
     body.append('documento', f)
+    // Siempre viaja: «propio» si no ha marcado la casilla, «empresa» si sí.
+    body.append('titularTipo', deQuien)
+    if (deQuien === 'empresa') {
+      body.append('titularEmpresaNombre', empresa)
+      if (cif.trim() !== '') body.append('titularEmpresaCif', cif)
+    }
     try {
       const r = await fetch('/api/polizas', { method: 'POST', body })
       if (!r.ok) return setEstado('error')
-      setResultado((await r.json()) as Resultado)
+      const res = (await r.json()) as Resultado
+      setResultado(res)
+      // Solo se guarda el fichero si hace falta reintentar: el resto de las
+      // veces no tiene sentido conservar un PDF entero en memoria del navegador.
+      if (res.motivo === 'protegido' || res.motivo === 'contrasena_incorrecta') setFicheroProtegido(f)
       setEstado('listo')
       // Refresca la lista de arriba SIN desmontarla ni tapar la pantalla con un
       // loader (regla de rendimiento de UI del monorepo).
@@ -39,37 +120,254 @@ export function SubirPoliza() {
     }
   }
 
-  return (
-    <section
-      style={{
-        border: '1px solid var(--borde)',
-        borderRadius: 8,
-        padding: 16,
-        marginTop: 16,
-      }}
-    >
-      <h2 style={{ fontSize: '1.1rem', marginTop: 0 }}>Añade una póliza</h2>
-      <p style={{ color: '#4b5563', fontSize: 14 }}>
-        Sube el PDF o una foto. Da igual que no sea nuestra: la leemos y te avisamos antes de que venza.
-      </p>
+  async function reintentarConContrasena(e: React.FormEvent) {
+    e.preventDefault()
+    if (!ficheroProtegido || !resultado?.id || contrasena.trim() === '') return
+    setReintentando(true)
+    const body = new FormData()
+    body.append('documento', ficheroProtegido)
+    body.append('contrasena', contrasena)
+    try {
+      const r = await fetch(`/api/polizas/${resultado.id}/reintentar`, { method: 'POST', body })
+      if (!r.ok) return
+      const res = (await r.json()) as Resultado
+      setResultado(res)
+      // `contrasena_incorrecta` guarda el fichero para poder probar OTRA; en
+      // cualquier otro desenlace ya no hace falta conservarlo.
+      if (res.motivo === 'contrasena_incorrecta') {
+        setContrasena('')
+      } else {
+        setFicheroProtegido(null)
+        setContrasena('')
+      }
+      router.refresh()
+    } finally {
+      setReintentando(false)
+    }
+  }
 
-      <label className="boton-subir" aria-disabled={estado === 'subiendo'}>
-        {estado === 'subiendo' ? 'Leyendo el documento…' : 'Elegir PDF o foto'}
-        <input
-          type="file"
-          accept="application/pdf,image/*"
-          onChange={subir}
-          disabled={estado === 'subiendo'}
+  function abrirManual() {
+    // El formulario se monta SOLO al pedirlo: en reposo la sección son dos botones.
+    setResultado(null)
+    setEstado('reposo')
+    setGuardadaAMano(null)
+    setManual(true)
+  }
+
+  function guardadaManual(p: PolizaGuardada) {
+    setGuardadaAMano(p)
+    setManual(false)
+  }
+
+  const subiendo = estado === 'subiendo'
+  // Si dice «de mi empresa» hace falta CUÁL: «de mi empresa» sin nombre no
+  // identifica ninguna empresa (la BD lo rechaza con un CHECK, y llegar hasta
+  // allí devolvería un error de Postgres en vez de decir qué falta).
+  // 🚨 Con «de mi empresa» hacen falta las DOS cosas, y el CIF además VÁLIDO.
+  // El nombre es la etiqueta; el CIF es la identidad. Sin él, «Transportes
+  // Ejemplo SL» y «TRANSPORTES EJEMPLO, S.L.» son dos empresas distintas, y con
+  // uno mal tecleado se funden dos que sí lo son. La persona tiene la póliza
+  // delante: es el único momento en que puede mirarlo.
+  const titularParaEnviar = normalizarTitular({ tipo: deQuien, nombre: empresa, cif })
+  const cifPuesto = cif.trim() !== ''
+  const cifMal = deQuien === 'empresa' && cifPuesto && !titularParaEnviar.cifValido
+  const listoParaSubir =
+    deQuien === 'propio' || (deQuien === 'empresa' && empresa.trim() !== '' && titularParaEnviar.cifValido)
+  const etiquetaRamo = (valor: string | null) =>
+    valor === null ? null : (ramos.find((r) => r.valor === valor)?.etiqueta ?? valor)
+
+  return (
+    <section className="seccion" aria-labelledby="alta-titulo">
+      <h2 id="alta-titulo">Añade una póliza</h2>
+      {/* 19/09/2026: el párrafo entero (4 líneas) empujaba los dos botones
+          fuera de la primera pantalla del móvil — justo lo que Alberto pidió
+          reducir. Se pliega, pero no desaparece: sigue siendo información que
+          cambia lo que alguien decide (qué pasa si sube el FICHERO frente a
+          añadirlo a mano), así que un resumen de una línea queda siempre
+          visible y el detalle está a un toque, no escondido del todo. */}
+      <details className="alta-explicacion plegable-suave">
+        <summary>Qué pasa con lo que subas</summary>
+        <p className="suave" style={{ fontSize: 14, margin: '6px 0 0' }}>
+          Sube el PDF o una foto, o añádela a mano si no tienes el documento. Da igual que no sea nuestra:
+          la guardamos en tu bóveda y, si nos dices cuándo vence, podemos avisarte antes. Es tu apunte: no la
+          contratamos ni la gestionamos por ti. Si subes el fichero, además queda archivado para que podamos
+          revisarlo.
+        </p>
+      </details>
+
+      <div className="de-quien">
+        <label className="de-quien-casilla">
+          <input
+            type="checkbox"
+            checked={esDeEmpresa}
+            onChange={(e) => setEsDeEmpresa(e.target.checked)}
+            disabled={subiendo}
+          />
+          Esta póliza es de una empresa, no mía
+        </label>
+        {esDeEmpresa && (
+          <div className="de-quien-empresa">
+            <label>
+              Nombre de la empresa
+              <input
+                type="text"
+                className="campo"
+                value={empresa}
+                onChange={(e) => setEmpresa(e.target.value)}
+                placeholder="Ej.: Transportes Ejemplo, S.L."
+                disabled={subiendo}
+              />
+            </label>
+            <label>
+              CIF <span className="tenue">(está en la primera página de la póliza)</span>
+              <input
+                type="text"
+                className="campo"
+                value={cif}
+                onChange={(e) => setCif(e.target.value)}
+                placeholder="B12345678"
+                aria-invalid={cifMal || undefined}
+                disabled={subiendo}
+              />
+              {/* Se dice en cuanto se ve, no al enviar: la persona tiene el
+                  papel delante y puede volver a mirarlo. */}
+              {cifMal && (
+                <span className="editor-error" role="alert">
+                  Ese CIF no cuadra. Cópialo tal cual aparece en la póliza.
+                </span>
+              )}
+            </label>
+            {/* Se dice lo que ESTO hace y lo que NO hace. Sin esta línea, quien
+                escribe el nombre de su empresa se cree que a partir de ahora
+                la correduría gestiona sus seguros, y no es así. */}
+            <p className="suave" style={{ fontSize: 13, margin: 0 }}>
+              Lo guardamos como una nota tuya para saber que esta póliza no es personal. No damos de alta
+              a la empresa ni gestionamos sus seguros por decirlo aquí.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {!manual && (
+        <div className="alta-acciones">
+          <label
+            className="boton-subir"
+            aria-disabled={subiendo || !listoParaSubir}
+            title={listoParaSubir ? undefined : 'Dinos de qué empresa es (nombre y CIF)'}
+          >
+            {subiendo ? 'Leyendo el documento…' : 'Elegir PDF o foto'}
+            <input
+              type="file"
+              accept="application/pdf,image/*"
+              onChange={subir}
+              disabled={subiendo || !listoParaSubir}
+            />
+          </label>
+          <button
+            type="button"
+            className="boton secundario"
+            onClick={abrirManual}
+            disabled={subiendo || !listoParaSubir}
+            title={listoParaSubir ? undefined : 'Dinos de qué empresa es (nombre y CIF)'}
+          >
+            Añadirla a mano
+          </button>
+        </div>
+      )}
+
+      {/* `listoParaSubir` bloquea los DOS caminos, no solo el del fichero: el
+          alta a mano guarda la misma fila y merece la misma exigencia. */}
+      {manual && listoParaSubir && (
+        <AnadirPoliza
+          ramos={ramos}
+          titular={{ tipo: deQuien, nombre: empresa, cif }}
+          onCancelar={() => setManual(false)}
+          onGuardada={guardadaManual}
         />
-      </label>
+      )}
 
       {estado === 'error' && (
-        <p style={{ color: '#b91c1c', marginTop: 12 }}>No hemos podido subirla. Inténtalo otra vez.</p>
+        <p className="editor-error" role="alert" style={{ marginTop: 12 }}>
+          No hemos podido subirla. Inténtalo otra vez, o añádela a mano.
+        </p>
+      )}
+
+      {guardadaAMano && (
+        <div style={{ marginTop: 12 }}>
+          <p style={{ fontSize: 14 }}>
+            <strong>Guardada.</strong> Ya está en tu lista de arriba; puedes corregirla cuando quieras.
+          </p>
+          {/* Lo que acaba de escribir la persona, tal cual se ha guardado: un
+              hueco es «no lo has puesto», no un 0 ni un cajón. */}
+          <dl className="datos-leidos">
+            <dt>Compañía</dt>
+            <dd>{guardadaAMano.compania ?? NO_PUESTO}</dd>
+            <dt>Nº de póliza</dt>
+            <dd>{guardadaAMano.numeroPoliza ?? NO_PUESTO}</dd>
+            <dt>Ramo</dt>
+            <dd>{etiquetaRamo(guardadaAMano.ramo) ?? NO_PUESTO}</dd>
+            <dt>Prima anual</dt>
+            <dd>{guardadaAMano.primaAnual == null ? NO_PUESTO : eur(guardadaAMano.primaAnual)}</dd>
+            <dt>Vencimiento</dt>
+            <dd>
+              {guardadaAMano.fechaVencimiento
+                ? fechaEs(new Date(`${guardadaAMano.fechaVencimiento}T00:00:00Z`))
+                : NO_PUESTO}
+            </dd>
+          </dl>
+        </div>
       )}
 
       {estado === 'listo' && resultado && (
         <div style={{ marginTop: 12 }}>
-          {resultado.fuente === 'none' ? (
+          {/* 🚨 Solo se avisa cuando NO se pudo archivar: decirlo siempre sería
+              ruido, y callarlo cuando falla dejaría a la persona creyendo que
+              Alberto va a revisar un documento que nunca le llegó. */}
+          {resultado.documentoGuardado && resultado.documentoGuardado !== 'ok' && (
+            <p className="pendiente" style={{ fontSize: 13 }}>
+              El documento en sí no se ha podido archivar para que lo revisemos (los datos que hemos leído
+              sí están guardados). Puedes escribirnos si hace falta.
+            </p>
+          )}
+          {resultado.fuente === 'none' &&
+          (resultado.motivo === 'protegido' || resultado.motivo === 'contrasena_incorrecta') &&
+          ficheroProtegido ? (
+            // Distinto del «no hemos podido leer» genérico a propósito: aquí SÍ
+            // sabemos por qué, y se ofrece la acción que de verdad lo arregla —
+            // escribir la contraseña— en vez de pedirle a la persona que sepa
+            // quitar la protección de un PDF, que la mayoría no sabe hacer.
+            <div>
+              <p style={{ fontSize: 14 }}>
+                <strong>Este documento está protegido con contraseña.</strong>{' '}
+                {resultado.motivo === 'contrasena_incorrecta'
+                  ? 'La que has escrito no es correcta: prueba otra.'
+                  : 'Muchas compañías usan tu DNI o NIF. Si la sabes, escríbela aquí.'}{' '}
+                La póliza está guardada; también puedes completarla a mano.
+              </p>
+              <form onSubmit={reintentarConContrasena} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <input
+                  type="password"
+                  value={contrasena}
+                  onChange={(e) => setContrasena(e.target.value)}
+                  placeholder="Contraseña del PDF"
+                  disabled={reintentando}
+                  aria-label="Contraseña del PDF"
+                  style={{ flex: '1 1 200px' }}
+                />
+                <button type="submit" className="boton" disabled={reintentando || contrasena.trim() === ''}>
+                  {reintentando ? 'Comprobando…' : 'Reintentar'}
+                </button>
+              </form>
+            </div>
+          ) : resultado.fuente === 'none' && resultado.motivo === 'protegido' ? (
+            // Se ha perdido el fichero de esta sesión (p.ej. se recargó la
+            // página): ya no se puede reintentar sin que la persona lo vuelva a
+            // elegir, así que se degrada al mensaje genérico de protección.
+            <p style={{ fontSize: 14 }}>
+              <strong>Este documento está protegido con contraseña</strong> y no hemos podido abrirlo. Vuelve
+              a subirlo para poder escribir la contraseña, o completa los datos a mano mientras tanto.
+            </p>
+          ) : resultado.fuente === 'none' ? (
             // NO decimos «no tiene esos datos»: decimos que no hemos podido
             // leerlos. Es la diferencia entre un dato ausente y uno no mirado.
             <p style={{ fontSize: 14 }}>
@@ -82,6 +380,29 @@ export function SubirPoliza() {
                 Guardada. <strong>Estos datos los hemos leído nosotros del documento</strong> — revísalos y
                 confírmalos.
               </p>
+              {/* 🚨 Y se DICE cuando el papel no es la póliza. Sin esta frase, la
+                  prima sale «—» justo después de subir un documento que llevaba
+                  una cifra bien visible, y eso se lee como un fallo de lectura
+                  nuestro en vez de como lo que es: ese importe existe y NO es la
+                  prima anual. La frase la calcula el módulo puro, no el JSX: el
+                  aviso y la anulación de la prima tienen que ir siempre juntos. */}
+              {avisoDocumentoNoPoliza(resultado.datos.tipoDocumento ?? null) && (
+                <p className="pendiente" style={{ fontSize: 13 }}>
+                  {avisoDocumentoNoPoliza(resultado.datos.tipoDocumento ?? null)}
+                </p>
+              )}
+              {/* 🚨 Se DICE que la segunda lectura no salió. Sin esta frase, una
+                  póliza cuyo bloque de marca y modelo no se pudo leer se ve
+                  exactamente igual que una que no los trae: campos vacíos bajo un
+                  cartel que dice «leída de tu PDF». El cliente concluiría que su
+                  documento no los lleva, y es falso — lo lleva y no lo miramos.
+                  `no_aplica` NO pinta nada: ahí no había nada que preguntar. */}
+              {resultado.camposRamo === 'no_leidos' && (
+                <p className="pendiente" style={{ fontSize: 13 }}>
+                  Los datos propios de este seguro (marca, modelo, uso…) no los hemos podido leer esta vez.
+                  No es que el documento no los traiga: puedes ponerlos a mano.
+                </p>
+              )}
               {/* Nada de volcar el JSON crudo: la prima se pinta con `eur()`
                   (formato español, regla global) y un campo que la IA no supo
                   leer dice «no lo hemos encontrado», no un hueco ni un 0. */}
@@ -91,11 +412,15 @@ export function SubirPoliza() {
                 <dt>Nº de póliza</dt>
                 <dd>{resultado.datos.numeroPoliza ?? NO_LEIDO}</dd>
                 <dt>Ramo</dt>
-                <dd>{resultado.datos.ramo ?? NO_LEIDO}</dd>
+                <dd>{etiquetaRamo(resultado.datos.ramo) ?? NO_LEIDO}</dd>
                 <dt>Prima anual</dt>
                 <dd>{resultado.datos.primaAnual == null ? NO_LEIDO : eur(resultado.datos.primaAnual)}</dd>
                 <dt>Vencimiento</dt>
-                <dd>{resultado.datos.fechaVencimiento ?? NO_LEIDO}</dd>
+                <dd>
+                  {resultado.datos.fechaVencimiento
+                    ? fechaEs(new Date(`${resultado.datos.fechaVencimiento}T00:00:00Z`))
+                    : NO_LEIDO}
+                </dd>
               </dl>
             </>
           )}
@@ -105,4 +430,5 @@ export function SubirPoliza() {
   )
 }
 
-const NO_LEIDO = <span style={{ color: '#6b7280' }}>No lo hemos encontrado en el documento</span>
+const NO_LEIDO = <span className="tenue">No lo hemos encontrado en el documento</span>
+const NO_PUESTO = <span className="tenue">No lo has puesto</span>

@@ -1,6 +1,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { interpretarIngesta, saludDesdeRespuesta } from './ingesta-cima.ts'
+import {
+  interpretarIngesta,
+  saludDesdeRespuesta,
+  interpretarHuerfanas,
+  polizasDe,
+} from './ingesta-cima.ts'
 
 const OK = {
   estado: 'ok',
@@ -49,8 +54,14 @@ test('cuarentena vacía sí es «comprobado que no hay»', () => {
   const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], huerfanas: 0 })
   assert.equal(r.estado, 'ok')
   if (r.estado !== 'ok') return
-  assert.equal(r.salud.estado, 'ok')
   assert.equal(r.salud.total, 0)
+  // 🚨 Pero el VEREDICTO es `parcial`, no `ok` (20/09/2026): esta respuesta no
+  // trae `rechazos` ni `entidades`, y este módulo los colapsa a `null` a
+  // propósito —«ausente ⇒ no comprobado»—. Antes eso solo salía como coletilla
+  // del parte mientras el estado seguía diciendo `ok`, así que la pantalla
+  // pintaba «sin comprobar» y el Telegram no sonaba: las dos caras del mismo
+  // hecho diciendo cosas distintas. El total sí está medido; el estado no.
+  assert.equal(r.salud.estado, 'parcial')
 })
 
 test('un fallo de red se convierte en sin_datos, no en silencio', () => {
@@ -98,4 +109,312 @@ test('🚨 una clave con tipo raro no se cuela como dato', () => {
     cuarentena: [{ tipo: 'SIN', entidad: 'C0468', clave: 42, dias: 1 }],
   })
   assert.equal(r.estado, 'error')
+})
+
+// ── Envíos rechazados por el puerto (04/09/2026) ────────────────────────────
+
+test('🚨 los envíos RECHAZADOS llegan hasta el veredicto y lo degradan', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok',
+    cuarentena: [],
+    rechazos: [
+      { evento: 'codeoscopic_webhook_invalid_payload', origen: 'webhook_codeoscopic', n: 23, horasDesdeUltimo: 0 },
+    ],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.estado, 'degradada')
+  assert.match(r.salud.motivos.join(' · '), /23 envío\(s\) RECHAZADOS/)
+})
+
+test('🚨 un puerto VIEJO que no informa `rechazos` deja null, no lista vacía', () => {
+  // `central-asegura` desplegado antes de este cambio no manda el campo.
+  // Leerlo como «se miró y no hay» sería inventarse una comprobación.
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.rechazos, null)
+  // Y por eso mismo el veredicto no puede ser `ok`: esa puerta no se ha
+  // abierto. Es lo que este propio test afirma en su comentario de arriba.
+  assert.equal(r.salud.estado, 'parcial')
+})
+
+test('🚨 una fila de rechazo ilegible degrada la lista ENTERA a «no comprobado»', () => {
+  // Quedarse con las que se entienden daría un recuento más bajo que la
+  // realidad, que es la forma tranquilizadora de equivocarse.
+  const r = interpretarIngesta(200, {
+    estado: 'ok',
+    cuarentena: [],
+    rechazos: [
+      { evento: 'a_invalid_payload', origen: 'x', n: 3, horasDesdeUltimo: 1 },
+      { evento: 'b_invalid_payload', origen: 'y', n: 'muchos', horasDesdeUltimo: 1 },
+    ],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.rechazos, null)
+})
+
+test('un rechazo sin hora ni origen se acepta: son huecos declarados, no basura', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok',
+    cuarentena: [],
+    rechazos: [{ evento: 'a_invalid_payload', origen: null, n: 2, horasDesdeUltimo: null }],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.rechazos?.length, 1)
+  // Sin hora no se puede afirmar que el rechazo sea de ahora, así que NO
+  // degrada por pérdida. Lo que sí queda pendiente es el silencio por compañía,
+  // que esta respuesta tampoco trae: por eso `parcial` y no `ok`.
+  assert.equal(r.salud.estado, 'parcial')
+  assert.equal(r.salud.motivos.some(m => /RECHAZADOS/.test(m)), false,
+    'sin hora no se puede afirmar que sea de ahora')
+})
+
+test('un fallo de red sigue dejando los rechazos en «no comprobado»', () => {
+  assert.equal(saludDesdeRespuesta({ estado: 'error', motivo: 'red' }).rechazos, null)
+})
+
+// ── Silencio por compañía (05/09/2026) ───────────────────────────────────────
+
+test('un puerto ANTIGUO (sin `entidades`) deja el silencio en null, no en «ninguna»', () => {
+  // Es la misma regla que ya protege a `rechazos`: una versión desplegada antes
+  // de que existiera el campo no puede leerse como «se miró y no hay ninguna
+  // compañía callada». Eso volvería a poner el vigía en verde sobre Mapfre.
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.silencio, null)
+})
+
+test('una fila de entidad ilegible degrada la lista ENTERA', () => {
+  // Juzgar solo a las compañías que se entienden dejaría fuera precisamente a
+  // la que viene rara, que es la candidata a estar rota.
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [],
+    entidades: [
+      { entidad: 'C0468', diasSinFichero: 6, huecoMaximo: 9, huecosObservados: 24, vivas: 19, vencidasEnSilencio: 0 },
+      { entidad: 'C0058', diasSinFichero: 'setenta y cuatro' },
+    ],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.silencio, null)
+})
+
+test('con los datos reales de Mapfre el veredicto llega degradado', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [], rechazos: [],
+    entidades: [
+      { entidad: 'C0058', diasSinFichero: 74, huecoMaximo: 2, huecosObservados: 2, vivas: 64, vencidasEnSilencio: 7, vencen90d: 12 },
+      { entidad: 'C0468', diasSinFichero: 6, huecoMaximo: 9, huecosObservados: 24, vivas: 19, vencidasEnSilencio: 0, vencen90d: 0 },
+    ],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.estado, 'degradada')
+  const mudas = (r.salud.silencio ?? []).filter(e => e.veredicto === 'silencio').map(e => e.entidad)
+  assert.deepEqual(mudas, ['C0058'], 'solo Mapfre: Occident va dentro de su ritmo')
+})
+
+// ── La lista de huérfanas: `null` ≠ `[]` también en el transporte (05/09/2026) ─
+
+const HUERFANA = {
+  entidad: 'C0468',
+  entidadNombre: 'Occident',
+  clave: 'M00171',
+  idPolizaEntidad: 'BIDP036783',
+  recibos: 2,
+  siniestros: 0,
+  prima: 470.76,
+  ultimoEn: '2026-08-18',
+  enCartera: 'ausente',
+}
+
+test('el puerto de huérfanas responde bien: la lista llega entera', () => {
+  const h = interpretarHuerfanas(200, {
+    estado: 'ok', polizas: [HUERFANA], truncado: false, ocultasOtroAmbito: 0,
+  })
+  assert.equal(h.estado, 'ok')
+  if (h.estado !== 'ok') return
+  assert.equal(h.polizas.length, 1)
+  assert.equal(h.polizas[0].idPolizaEntidad, 'BIDP036783')
+  assert.equal(h.truncado, false)
+  assert.equal(h.ocultasOtroAmbito, 0)
+})
+
+test('🚨 un 404 (asegura vieja, sin ese puerto) NO es «no hay huérfanas»', () => {
+  const h = interpretarHuerfanas(404, null)
+  assert.deepEqual(h, { estado: 'sin_datos', motivo: 'puerto_no_desplegado' })
+  assert.equal(polizasDe(h), null)
+})
+
+test('🚨 error del puerto: viaja la CAUSA y NUNCA se degrada a lista vacía', () => {
+  const h = interpretarHuerfanas(200, { estado: 'error', causa: 'credenciales' })
+  assert.deepEqual(h, { estado: 'sin_datos', motivo: 'credenciales' })
+  assert.equal(polizasDe(h), null)
+})
+
+test('una sola fila ilegible degrada la lista ENTERA, no se queda con las buenas', () => {
+  const h = interpretarHuerfanas(200, {
+    estado: 'ok', polizas: [HUERFANA, { ...HUERFANA, enCartera: 'quizas' }], truncado: false,
+  })
+  assert.equal(h.estado, 'sin_datos')
+})
+
+test('🚨 `enCartera` se EXIGE: decide si se pide o se reprocesa y no se supone', () => {
+  const { enCartera: _fuera, ...sinEstado } = HUERFANA
+  const h = interpretarHuerfanas(200, { estado: 'ok', polizas: [sinEstado], truncado: false })
+  assert.equal(h.estado, 'sin_datos')
+})
+
+test('sin decir si recortó, se ASUME que sí (el estado conservador)', () => {
+  const h = interpretarHuerfanas(200, { estado: 'ok', polizas: [HUERFANA] })
+  assert.equal(h.estado === 'ok' && h.truncado, true)
+  // Y un recuento de ocultas que no viene es `null`, jamás 0.
+  assert.equal(h.estado === 'ok' ? h.ocultasOtroAmbito : 'x', null)
+})
+
+test('la lista llega hasta la salud, repartida por lo que hay que hacer', () => {
+  const r = interpretarIngesta(
+    200,
+    { estado: 'ok', cuarentena: [], huerfanas: 2, huerfanasResolubles: 1 },
+    {
+      estado: 'ok',
+      truncado: false,
+      ocultasOtroAmbito: 0,
+      polizas: [
+        HUERFANA,
+        { ...HUERFANA, idPolizaEntidad: '549570971', enCartera: 'viva' },
+      ],
+    } as never,
+  )
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.huerfanasReparto?.totalPedir, 1)
+  assert.equal(r.salud.huerfanasReparto?.totalReprocesar, 1)
+  assert.match(r.salud.motivos.join(' · '), /Occident \(C0468\) \/ clave M00171/)
+  assert.equal(r.huerfanasTruncadas, false)
+  assert.equal(r.huerfanasSinAmbito, 0)
+})
+
+test('🚨 sin listado, la salud lo DICE en vez de callarlo', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], huerfanas: 20 })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.huerfanasReparto, null)
+  assert.match(r.salud.motivos.join(' · '), /sé cuántas son, no cuáles/)
+  assert.equal(r.huerfanasSinAmbito, null)
+})
+
+// ── Las cuatro señales del puerto (crudo, cobertura, caja negra, último pull) ──
+//
+// 🪤 Este bloque nace de un fallo REAL: el 16/09/2026 se mergeó el panel que
+// pinta esas cuatro señales y `interpretarIngesta` no las leía del puerto, así
+// que llegaban como `undefined` al módulo. El módulo hace lo correcto con un
+// `undefined` (= «el llamante no pide la señal», no emite nada), de modo que
+// TODO seguía verde: la pantalla no podía encender el aviso de cron mudo ni
+// aunque el cron llevara una semana muerto, y el Telegram diario tampoco. Un
+// guardián que mira al sitio equivocado es verde el 100 % de las veces.
+//
+// La otra mitad de lo que se vigila aquí es que `undefined` y `null` NO se
+// colapsen: con una `apps/asegura` vieja durante un despliegue la clave no
+// viene, y convertir esa ausencia en `null` fabricaría un «no se ha podido
+// medir» diario sobre una señal que nadie sirve.
+
+const SENALES = {
+  crudo: { pendientes: 5, purgaInminente: 2, masAntiguaHoras: 700 },
+  cobertura: {
+    rutas: 300, rutasNuncaLeidas: 42, entidadesObservadas: 3,
+    porTipo: [{ tipoObjeto: 'POL', rutas: 200, nuncaLeidas: 30 }],
+  },
+  cajaNegra: { capturaActiva: true, cuerpos: 3, posts: 9, horasDesdeUltimo: 1 },
+  ultimoPull: { horas: 40, procesados: 0 },
+}
+
+test('las cuatro señales del puerto LLEGAN a la salud', () => {
+  const r = interpretarIngesta(200, { ...OK, ...SENALES })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.salud.crudo, SENALES.crudo)
+  assert.deepEqual(r.salud.cobertura, SENALES.cobertura)
+  assert.deepEqual(r.salud.cajaNegra, SENALES.cajaNegra)
+  assert.deepEqual(r.salud.ultimoPull, SENALES.ultimoPull)
+})
+
+test('un cron mudo llega al veredicto, que es de lo que se entera Telegram', () => {
+  // 40 h > HORAS_PULL_MUDO (26). Sin el cableado esto seguiría diciendo `ok`.
+  const r = interpretarIngesta(200, { ...OK, ...SENALES, cuarentena: [] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.notEqual(r.salud.estado, 'ok')
+  assert.match(r.salud.motivos.join(' · '), /cron|pull|muda?o/i)
+})
+
+test('clave AUSENTE es undefined (puerto viejo), no un hueco inventado', () => {
+  const r = interpretarIngesta(200, OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.crudo, null)
+  assert.equal(r.salud.ultimoPull, null)
+  // Y lo que importa: no se inventa un motivo de hueco por algo que no se pidió.
+  assert.equal(r.salud.motivos.some(m => /crudo|cobertura|caja negra|cron/i.test(m)), false)
+})
+
+test('clave PRESENTE pero ilegible sí es un hueco declarado', () => {
+  const r = interpretarIngesta(200, { ...OK, ...SENALES, crudo: { pendientes: 'muchos' } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.crudo, null)
+  assert.equal(r.salud.motivos.some(m => /crudo/i.test(m)), true)
+})
+
+test('un bloque a medias NO se acepta a trozos', () => {
+  const r = interpretarIngesta(200, { ...OK, ...SENALES, cajaNegra: { capturaActiva: true, cuerpos: 3 } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.cajaNegra, null)
+})
+
+// ── 🚨 Ficheros confirmados con objetos sin guardar ─────────────────────────
+
+const PARCIAL = {
+  fichero: 'C0468_M00171_POL_199.zip', tipo: 'POL', entidad: 'C0468', clave: 'M00171',
+  declarados: 44, persistidos: 40, enRevision: 4, dias: 3,
+}
+
+test('la lista de ficheros parciales LLEGA a la salud y degrada', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], parciales: [PARCIAL] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.objetosEnRevision, 4)
+  assert.equal(r.salud.estado, 'degradada')
+})
+
+test('🚨 una fila de parcial ilegible degrada la lista ENTERA, no se cuenta a trozos', () => {
+  // Un recuento más bajo que la realidad sobre la única pérdida que no se puede
+  // volver a pedir es la forma tranquilizadora de equivocarse, en el peor sitio.
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [],
+    parciales: [PARCIAL, { ...PARCIAL, enRevision: 'unos cuantos' }],
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.parciales, null)
+  assert.equal(r.salud.objetosEnRevision, null)
+})
+
+test('🚨 la cobertura con la forma VIEJA (filas) se rechaza: no se publica inflada', () => {
+  // Un `central-asegura` anterior al 20/09/2026 manda `hojas`/`hojasNuncaLeidas`,
+  // que contaban FILAS (755 para 563 rutas). Aceptarlo publicaría la cifra
+  // multiplicada por el número de compañías bajo el rótulo nuevo.
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [],
+    cobertura: { hojas: 755, hojasNuncaLeidas: 600, porTipo: [] },
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.cobertura, null)
+  assert.equal(r.salud.motivos.some(m => /SIN MEDIR/.test(m)), true)
 })

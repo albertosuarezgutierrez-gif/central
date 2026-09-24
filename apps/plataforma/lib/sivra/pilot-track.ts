@@ -113,6 +113,30 @@ export type PisoRojo = { nombre: string; diagnosis: string }
  * que se midió lleva tres días sin refrescarse, así que el lector tiene que ver antes de nada si
  * puede fiarse de la medición.
  */
+/**
+ * ⏸️ POR QUÉ EL PILOTO SIGUE SIN ESCRIBIR PRECIO (decidido y medido el 03/09/2026).
+ *
+ * El guardián lo cuenta como palanca MUERTA (check #13, `PILOTO_ESCRIBE_PRECIO = false`) y es
+ * correcto, pero cablearlo tal cual NO es la cura — es un cambio que parece obvio y no lo es:
+ *
+ *   1. **La señal es POR PISO, no por fecha.** `daysSinceBooking` mide días desde la última reserva
+ *      del PISO entero. Busto Reform cerró agosto con **0 reservas**, así que su veredicto sería
+ *      «rojo» todos los días de forma permanente, y lo aplicaría a las ~140 noches libres a la vez,
+ *      incluidas las que sí se están vendiendo bien. Lo que falta para cerrar el bucle es un «esta
+ *      FECHA no se vende», que hoy no existe en ninguna tabla.
+ *
+ *   2. **Lo que propone ya lo aplica el motor.** `proposedBase` es `recommendedBase`, o sea el
+ *      recomendado del propio motor. Cablearlo sería un segundo camino hacia el mismo número, no
+ *      una palanca nueva: no añade recorrido, añade un escritor más que razonar.
+ *
+ * Lo que SÍ cerró el agujero que el piloto pretendía tapar fue recalibrar el ancla (target_pctl
+ * sobre el corpus filtrado por liga, `pricing-comps-liga.ts`) y poner el techo por ADR propio
+ * (`pricing-techo-adr.ts`). Con eso el motor ya baja solo hasta donde el piso vende de verdad.
+ *
+ * Si algún día se cablea: hace falta ANTES la señal por fecha y un tope de descenso ACUMULADO
+ * (no un ±%/día que se componga), y actualizar `PILOTO_ESCRIBE_PRECIO` en el guardián — lo obliga
+ * `pricing-palancas-fidelidad.test.ts`.
+ */
 export function avisoPilotTrack(rojos: PisoRojo[], watchdog: string[]): string | null {
   if (rojos.length === 0 && watchdog.length === 0) return null
   const partes: string[] = []

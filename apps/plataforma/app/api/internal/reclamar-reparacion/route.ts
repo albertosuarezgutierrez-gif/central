@@ -67,9 +67,15 @@ export async function POST(req: NextRequest) {
       ahora,
       ultimo: fila.ultimo_ok_at,
       maxHoras: ag.maxHoras,
+      vigiladoDesde: ag.vigiladoDesde,
+      pendienteConocido: ag.pendienteConocido,
       ultimoIntento: fila.ultimo_at,
       detalle: fila.detalle,
     })
+    // Una avería ya declarada y fechada NO entra en el carril automático: se sabe lo que es y se
+    // sabe que no se arregla tocando código (una cerradura sin conexión, una tabla sin filas).
+    // Mandarla al orquestador es gastar un intento —de los 3 que hay— en un parche imposible.
+    if (ev.pendiente) continue
     const d = decidirReparacion({
       ahora,
       detalle: fila.detalle,

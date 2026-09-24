@@ -99,3 +99,22 @@ test('objetoEnLinea calla cuando no hay nada que decir (ruido, no información)'
   assert.equal(objetoEnLinea({ estado: 'sin_objeto', titulo: 'El propio asegurado', detalle: null }), null)
   assert.equal(objetoEnLinea({ estado: 'conocido', titulo: 'SEVILLA · CP 41003', detalle: null }), 'SEVILLA · CP 41003')
 })
+
+// 🚨 20/09/2026. La consulta de vencimientos pasó a mirar también hacia ATRÁS
+// (una renovación no gestionada dejaba de existir para la pantalla al día
+// siguiente de vencer), así que `dias` puede llegar NEGATIVO hasta aquí. Esta
+// línea lo pintaba a pelo y anunciaba «05/06/2026 (-107 días)» — el signo
+// perdido, que es el mismo fallo que el helper del módulo existe para evitar.
+test('una póliza YA vencida se dice «hace N días», nunca «-N días»', () => {
+  const [e] = emisionesDeHoy([con({ dias: -107, fechaVencimiento: '2026-06-05' })], vacio)
+  const msg = mensajeRenovaciones([e])
+  assert.ok(msg, 'una vencida tiene que generar aviso')
+  assert.match(msg, /hace 107 días/)
+  assert.doesNotMatch(msg, /-107/, 'el signo se está colando en el texto del Telegram')
+})
+
+test('el singular concuerda: «hace 1 día», no «hace 1 días»', () => {
+  const [e] = emisionesDeHoy([con({ dias: -1, fechaVencimiento: '2026-09-19' })], vacio)
+  const msg = mensajeRenovaciones([e])
+  assert.match(String(msg), /hace 1 día(?!s)/)
+})

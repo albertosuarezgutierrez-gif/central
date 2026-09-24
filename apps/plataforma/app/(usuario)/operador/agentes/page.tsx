@@ -2,19 +2,20 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getAdmin } from '@/lib/superadmin'
 import { resumenIA } from '@/lib/ai-gateway'
-import { getSaludAgentes, type EstadoSalud, type SaludAgente } from '@/lib/agentes-salud'
+import { getSaludAgentesCompleta, getLatidosFueraDelCatalogo, type EstadoSalud, type SaludAgente, type SaludLatido } from '@/lib/agentes-salud'
 import { FAMILIAS, type AgenteInfo, type EntregaAgente } from '@/lib/agentes-catalogo'
 // Reutilizamos el inventario de asistentes/funciones IA que ya mantiene el mapa de estructura
 // (/operador/estructura). NO se duplica: es la MISMA lista, vista aquí junto a los autónomos.
 import { AGENTES as ASISTENTES_IA } from '@/lib/estructura'
+import PreguntarAgente from './PreguntarAgente'
 
 export const dynamic = 'force-dynamic'
 
 type Vista = 'todos' | 'autonomos' | 'asistentes'
 
-const card: React.CSSProperties = { background: 'var(--card)', border: '1px solid var(--line)', borderRadius: 12, padding: 16 }
+const card: React.CSSProperties = { background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, padding: 16 }
 const th: React.CSSProperties = { textAlign: 'left', color: 'var(--muted)', fontWeight: 600, fontSize: 12, padding: '6px 8px', whiteSpace: 'nowrap' }
-const td: React.CSSProperties = { padding: '6px 8px', fontSize: 13, borderTop: '1px solid var(--line)', verticalAlign: 'top' }
+const td: React.CSSProperties = { padding: '6px 8px', fontSize: 13, borderTop: '1px solid var(--border)', verticalAlign: 'top' }
 const scroll: React.CSSProperties = { overflowX: 'auto' }
 
 const SEMA: Record<EstadoSalud, { punto: string; label: string }> = {
@@ -48,9 +49,10 @@ export default async function OperadorAgentesPage({
   const sp = await searchParams.catch(() => ({} as { ver?: string }))
   const ver: Vista = sp?.ver === 'autonomos' || sp?.ver === 'asistentes' ? sp.ver : 'todos'
 
-  const [salud, r] = await Promise.all([
-    getSaludAgentes().catch(() => ({} as Record<string, SaludAgente>)),
+  const [salud, r, sueltos] = await Promise.all([
+    getSaludAgentesCompleta().catch(() => ({} as Record<string, SaludAgente>)),
     resumenIA().catch(() => null),
+    getLatidosFueraDelCatalogo().catch(() => [] as SaludLatido[]),
   ])
 
   const nAutonomos = FAMILIAS.reduce((n, f) => n + f.agentes.length, 0)
@@ -85,14 +87,17 @@ export default async function OperadorAgentesPage({
         <td style={{ ...td, whiteSpace: 'nowrap' }}>{ENTREGA_LABEL[a.entrega]}{a.telegram ? ' · 📨' : ''}</td>
         <td style={{ ...td, whiteSpace: 'nowrap' }}>{a.vertical}</td>
         <td style={{ ...td, color: 'var(--muted)', fontSize: 12 }}><code>{a.archivo}</code></td>
+        {/* 💬 Preguntar POR el agente (no AL agente): responde leyendo su expediente. Ver
+            lib/agentes-expediente.ts y /api/operador/agente-consulta. */}
+        <td style={{ ...td, whiteSpace: 'nowrap' }}><PreguntarAgente id={a.id} nombre={a.nombre} /></td>
       </tr>
     )
   }
 
   const pill = (v: Vista, label: string): React.CSSProperties => ({
     padding: '6px 12px', borderRadius: 999, fontSize: 13, fontWeight: 600, textDecoration: 'none',
-    border: '1px solid var(--line)',
-    background: ver === v ? 'var(--primary)' : 'var(--card)',
+    border: '1px solid var(--border)',
+    background: ver === v ? 'var(--primary)' : 'var(--surface)',
     color: ver === v ? '#fff' : 'var(--text)',
   })
 
@@ -120,7 +125,7 @@ export default async function OperadorAgentesPage({
               <thead>
                 <tr>
                   <th style={th}>Salud</th><th style={th}>Agente</th><th style={th}>Función</th>
-                  <th style={th}>Cadencia</th><th style={th}>Entrega</th><th style={th}>Vertical</th><th style={th}>Archivo</th>
+                  <th style={th}>Cadencia</th><th style={th}>Entrega</th><th style={th}>Vertical</th><th style={th}>Archivo</th><th style={th}>Consulta</th>
                 </tr>
               </thead>
               <tbody>{f.agentes.map(a => <Fila key={a.id} a={a} />)}</tbody>
@@ -129,6 +134,35 @@ export default async function OperadorAgentesPage({
         </section>
       ))}
 
+
+      {ver !== 'asistentes' && sueltos.length > 0 && (
+        <section style={{ ...card, marginTop: 16 }}>
+          <h2 style={{ fontSize: 15, marginBottom: 2 }}>
+            🫀 Vigilados por latido <span style={{ color: 'var(--muted)', fontWeight: 400 }}>({sueltos.length})</span>
+          </h2>
+          {/* Estos NO estaban en ninguna pantalla. Tienen umbral y sonda en AGENTES_VIGILADOS y el
+              vigía los evalúa cada mañana, pero no tienen ficha en el catálogo de arriba, así que
+              su estado solo existía en un Telegram — y en 8 rutinas ese canal no está cableado. */}
+          <p style={{ color: 'var(--muted)', fontSize: 12, margin: '0 0 10px' }}>
+            Crons con umbral declarado que el vigía comprueba a diario y que no tienen ficha arriba.
+            Un ⚪ aquí significa que el propio vigía no ha pasado, no que el agente esté bien.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 10 }}>
+            {sueltos.map(l => {
+              const sema = SEMA[l.estado]
+              return (
+                <div key={l.etiqueta} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
+                  <div style={{ fontWeight: 600, fontSize: 13.5 }}>{sema.punto} {l.etiqueta}</div>
+                  <div style={{ color: 'var(--muted)', fontSize: 12.5, marginTop: 3 }}>{l.detalle}</div>
+                  {l.estado !== 'verde' && l.nota && (
+                    <div style={{ fontSize: 11.5, marginTop: 6 }}>{l.nota}</div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
       {ver !== 'autonomos' && (
         <section style={{ ...card, marginTop: 16 }}>
           <h2 style={{ fontSize: 15, marginBottom: 2 }}>
@@ -146,7 +180,7 @@ export default async function OperadorAgentesPage({
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
                 {lista.map(a => (
-                  <div key={a.nombre} style={{ border: '1px solid var(--line)', borderRadius: 10, padding: '10px 12px' }}>
+                  <div key={a.nombre} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px' }}>
                     <div style={{ fontWeight: 600, fontSize: 13.5 }}>{a.nombre}</div>
                     <div style={{ color: 'var(--muted)', fontSize: 12.5, marginTop: 3 }}>{a.desc}</div>
                     <div style={{ color: 'var(--muted)', fontSize: 11, marginTop: 6 }}><code>{a.ambito}</code></div>

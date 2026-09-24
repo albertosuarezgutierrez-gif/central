@@ -174,6 +174,50 @@ export const ACCESO: Record<string, AccesoPiso> = {
   },
 }
 
+/** Host donde viven HOY las fotos de las indicaciones. Declarado, no supuesto: ver `fotosDeAcceso`. */
+export const HOST_FOTOS_ACCESO = 'login.smoobu.com'
+
+/**
+ * Inventario de las fotos que las indicaciones enseñan al huésped, por piso.
+ *
+ * Existe porque esta es la ÚNICA atadura dura que le queda al proveedor: los pasos van en texto
+ * plano y funcionan sin red, pero «la caja señalada en rojo en esta foto» sin foto deja al huésped
+ * delante de DOS cajas idénticas en el portal de Bustos Tavera 22 — que es justo el caso que las
+ * fotos vinieron a resolver. Al apagar Smoobu las URLs mueren y el fallo es SILENCIOSO: el mensaje
+ * sale igual, con un enlace roto, y no se sabe hasta que alguien llama desde la puerta.
+ *
+ * Sirve para dos cosas: medir la dependencia antes de decidir (cuántas fotos y de qué pisos) y
+ * recorrerlas para copiarlas a un almacén propio el día que se migre.
+ */
+export function fotosDeAcceso(): { propertyId: string; paso: number; url: string }[] {
+  const out: { propertyId: string; paso: number; url: string }[] = []
+  for (const [propertyId, piso] of Object.entries(ACCESO)) {
+    piso.pasos.forEach((texto, i) => {
+      for (const m of texto.matchAll(/https?:\/\/\S+\.(?:jpe?g|png|webp)/gi)) {
+        out.push({ propertyId, paso: i + 1, url: m[0] })
+      }
+    })
+    for (const url of piso.fotos) out.push({ propertyId, paso: 0, url })
+  }
+  return out
+}
+
+/**
+ * Pasos que PROMETEN una imagen («en esta foto», «la señalada en rojo», «así se ve») y no la
+ * llevan. Un paso así es peor que uno sin foto: manda a mirar algo que no está.
+ */
+export function pasosQuePrometenFotoSinTenerla(): { propertyId: string; paso: number }[] {
+  const promete = /en esta foto|señalad[oa] en rojo|así se ve|estas fotos|en la foto|se ve en esta/i
+  const tieneImagen = /https?:\/\/\S+\.(?:jpe?g|png|webp)/i
+  const out: { propertyId: string; paso: number }[] = []
+  for (const [propertyId, piso] of Object.entries(ACCESO)) {
+    piso.pasos.forEach((texto, i) => {
+      if (promete.test(texto) && !tieneImagen.test(texto)) out.push({ propertyId, paso: i + 1 })
+    })
+  }
+  return out
+}
+
 export type CodigosAcceso = {
   /** Código MAESTRO del portal (fijo, no caduca). Respaldo cuando la reserva no tiene PIN propio. */
   portal?: string | null

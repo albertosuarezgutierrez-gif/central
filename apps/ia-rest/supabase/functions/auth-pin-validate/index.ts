@@ -1,5 +1,6 @@
 // ia.rest · AUTH-PIN-VALIDATE v9 · con error monitoring
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { claveSecreta } from "../_shared/clave-supabase.ts";
 
 const ALLOWED_ORIGIN = 'https://ia-rest.vercel.app'
 const CORS_HEADERS = {
@@ -83,7 +84,7 @@ Deno.serve(async (req: Request) => {
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    claveSecreta(),
     { auth: { persistSession: false }, db: { schema: 'iarest' } }
   )
 

@@ -87,3 +87,33 @@ export function exigirCorreduriaId(a: AmbitoCorreduria): string {
   }
   return a.correduriaId
 }
+
+/**
+ * Lo que se le contesta a una petición cuyo ámbito NO es `ok`. PURO.
+ *
+ * Los dos estados no-ok se contestan DISTINTO a propósito, porque se arreglan
+ * en sitios distintos y quien lo lee decide cosas distintas:
+ *
+ *   `pendiente`   → **503**. No se sabe todavía (schema vacío, o la consulta
+ *                   del vínculo falló). Es un estado del sistema, no un juicio
+ *                   sobre quien llama: reintentar más tarde tiene sentido.
+ *   `sin-asignar` → **403**. Ausencia COMPROBADA: esta cuenta no pertenece a
+ *                   ninguna correduría. Reintentar no arregla nada; hay que
+ *                   vincularla (o no es de aquí).
+ *
+ * 🚨 Un 404 sería peor que cualquiera de los dos: diría «eso no existe» sobre
+ * una cartera que sí existe y que quien llama no puede ver.
+ */
+export type DenegacionAmbito = {
+  status: 403 | 503
+  cuerpo: { error: string; motivo: 'pendiente' | 'sin-asignar'; gastado: '0,00€' }
+}
+
+/** `null` si el ámbito es `ok`; la denegación, si no. Nunca deja pasar sin filtro. */
+export function denegacionAmbito(a: AmbitoCorreduria): DenegacionAmbito | null {
+  if (a.estado === 'ok') return null
+  return {
+    status: a.estado === 'pendiente' ? 503 : 403,
+    cuerpo: { error: explicarAmbito(a), motivo: a.estado, gastado: '0,00€' },
+  }
+}

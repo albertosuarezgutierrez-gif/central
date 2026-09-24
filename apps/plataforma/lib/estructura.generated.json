@@ -1,10 +1,11 @@
 {
-  "generadoEn": "2026-09-02T05:46:23Z",
+  "generadoEn": "2026-09-24T07:49:54Z",
   "verticales": [
     "almacen",
     "alquiler",
     "asegura",
     "asegura-portal",
+    "asegura-web",
     "housesevillana",
     "ia-rest",
     "ialimp",
@@ -25,6 +26,11 @@
       "id": "core-catastro",
       "tipo": "core",
       "npm": "@central/core-catastro"
+    },
+    {
+      "id": "core-consent",
+      "tipo": "core",
+      "npm": "@central/core-consent"
     },
     {
       "id": "core-email",
@@ -70,6 +76,11 @@
       "id": "core-telegram",
       "tipo": "core",
       "npm": "@central/core-telegram"
+    },
+    {
+      "id": "core-vehiculos",
+      "tipo": "core",
+      "npm": "@central/core-vehiculos"
     },
     {
       "id": "module-agenda",
@@ -355,7 +366,11 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 4
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
       },
       "housesevillana": {
         "estado": "no",
@@ -375,7 +390,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 33
+        "evidencias": 37
       },
       "rrhh": {
         "estado": "usado",
@@ -401,9 +416,13 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 11
       },
       "asegura-portal": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -425,7 +444,61 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 5
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-consent": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "housesevillana": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -450,12 +523,16 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 13
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
       },
       "housesevillana": {
         "estado": "no",
@@ -500,10 +577,14 @@
         "evidencias": 0
       },
       "asegura": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "asegura-portal": {
         "estado": "no",
         "evidencias": 0
       },
-      "asegura-portal": {
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -557,6 +638,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -606,6 +691,10 @@
       "asegura-portal": {
         "estado": "usado",
         "evidencias": 1
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
       },
       "housesevillana": {
         "estado": "no",
@@ -657,6 +746,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -704,6 +797,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -757,6 +854,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -807,6 +908,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -854,6 +959,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "usado",
+        "evidencias": 7
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -875,11 +984,65 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 12
       },
       "rrhh": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-vehiculos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -904,6 +1067,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -957,6 +1124,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1004,6 +1175,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1057,6 +1232,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1104,6 +1283,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1157,6 +1340,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1204,6 +1391,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1257,6 +1448,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1304,6 +1499,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1357,6 +1556,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1404,6 +1607,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1457,6 +1664,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1507,6 +1718,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1546,14 +1761,18 @@
         "evidencias": 5
       },
       "alquiler": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "asegura": {
         "estado": "no",
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1607,6 +1826,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1654,6 +1877,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1707,6 +1934,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1725,7 +1956,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -1754,6 +1985,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1807,6 +2042,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1854,6 +2093,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -1907,6 +2150,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -1951,11 +2198,15 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 106
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 92
+      },
+      "asegura-web": {
+        "estado": "usado",
+        "evidencias": 29
       },
       "housesevillana": {
         "estado": "no",
@@ -1975,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 82
       },
       "rrhh": {
         "estado": "no",
@@ -2001,9 +2252,13 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 27
       },
       "asegura-portal": {
+        "estado": "usado",
+        "evidencias": 7
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2051,11 +2306,15 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 25
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 74
+      },
+      "asegura-web": {
+        "estado": "usado",
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -2074,8 +2333,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "no",
@@ -2104,6 +2363,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2157,6 +2420,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -2204,6 +2471,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2257,6 +2528,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "housesevillana": {
         "estado": "no",
         "evidencias": 0
@@ -2304,6 +2579,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
         "estado": "no",
         "evidencias": 0
       },
@@ -2359,6 +2638,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -2406,6 +2689,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -2459,6 +2746,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -2509,6 +2800,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -2552,10 +2847,14 @@
         "evidencias": 0
       },
       "asegura": {
+        "presente": true,
+        "evidencias": 15
+      },
+      "asegura-portal": {
         "presente": false,
         "evidencias": 0
       },
-      "asegura-portal": {
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -2576,8 +2875,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 2
       },
       "rrhh": {
         "presente": false,
@@ -2606,6 +2905,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -2659,6 +2962,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -2706,6 +3013,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -2759,6 +3070,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -2777,7 +3092,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 21
+        "evidencias": 22
       },
       "rrhh": {
         "presente": false,
@@ -2806,6 +3121,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -2859,6 +3178,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -2906,6 +3229,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -2959,6 +3286,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3006,6 +3337,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -3059,6 +3394,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3106,6 +3445,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -3159,6 +3502,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3206,6 +3553,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -3259,6 +3610,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3309,6 +3664,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3356,6 +3715,10 @@
         "evidencias": 0
       },
       "asegura-portal": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "asegura-web": {
         "presente": false,
         "evidencias": 0
       },
@@ -3409,6 +3772,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3459,6 +3826,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "asegura-web": {
+        "presente": false,
+        "evidencias": 0
+      },
       "housesevillana": {
         "presente": false,
         "evidencias": 0
@@ -3498,6 +3869,7 @@
     "core-catastro": [
       "module-subastas"
     ],
+    "core-consent": [],
     "core-email": [],
     "core-firma": [],
     "core-fiscal": [],
@@ -3507,6 +3879,7 @@
     "core-receipts": [],
     "core-storage": [],
     "core-telegram": [],
+    "core-vehiculos": [],
     "module-agenda": [],
     "module-alquiler": [
       "module-intercompany",
@@ -3538,10 +3911,18 @@
       "module-documental"
     ],
     "module-seguros": [
+      "module-seguros-pii",
       "module-seguros-portal"
     ],
-    "module-seguros-pii": [],
-    "module-seguros-portal": [],
+    "module-seguros-pii": [
+      "core-identity"
+    ],
+    "module-seguros-portal": [
+      "core-catastro",
+      "core-fiscal",
+      "module-seguros",
+      "module-seguros-pii"
+    ],
     "module-ses": [],
     "module-subastas": [
       "core-catastro",
@@ -3588,24 +3969,173 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/cartera/catalogos",
+      "/api/cartera/cliente/[clienteId]/hogar-nuevo",
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
+      "/api/cron/avisos-intranet",
+      "/api/cron/avisos-vencimiento",
+      "/api/cron/avisos-web",
+      "/api/cron/felicitaciones",
+      "/api/cron/revision-anual",
+      "/api/operador/actividad",
+      "/api/operador/actividad-nueva",
+      "/api/operador/anulaciones",
+      "/api/operador/aprobaciones",
+      "/api/operador/aviso-web",
+      "/api/operador/backfill-contacto",
+      "/api/operador/backfill-dni",
       "/api/operador/buscar",
+      "/api/operador/calidad",
+      "/api/operador/carta-mediador",
+      "/api/operador/cartera",
       "/api/operador/cliente",
+      "/api/operador/cliente/contactos",
+      "/api/operador/cliente/dni",
+      "/api/operador/cliente/historial",
+      "/api/operador/cliente/portal",
+      "/api/operador/cliente/portal/vista",
+      "/api/operador/cliente/relaciones",
+      "/api/operador/cliente/relaciones/aviso",
       "/api/operador/clientes",
+      "/api/operador/codeoscopic/auto-nuevo",
+      "/api/operador/codeoscopic/catalogos",
+      "/api/operador/codeoscopic/companias",
+      "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/documentos",
+      "/api/operador/codeoscopic/emitir",
+      "/api/operador/codeoscopic/faltan-producto",
+      "/api/operador/codeoscopic/hogar-nuevo",
+      "/api/operador/codeoscopic/limites-hogar",
       "/api/operador/codeoscopic/lineas",
+      "/api/operador/codeoscopic/moto-nuevo",
+      "/api/operador/codeoscopic/oferta",
+      "/api/operador/codeoscopic/precalificar",
+      "/api/operador/codeoscopic/precalificar-auto-nuevo",
+      "/api/operador/codeoscopic/precalificar-decesos-nuevo",
+      "/api/operador/codeoscopic/precalificar-hogar",
+      "/api/operador/codeoscopic/precalificar-hogar-nuevo",
+      "/api/operador/codeoscopic/precalificar-moto-nuevo",
+      "/api/operador/codeoscopic/precalificar-salud-nuevo",
+      "/api/operador/codeoscopic/precalificar-vida-nuevo",
+      "/api/operador/codeoscopic/product-form",
+      "/api/operador/codeoscopic/proyecto",
+      "/api/operador/codeoscopic/retarificar",
+      "/api/operador/codeoscopic/salud-nuevo",
       "/api/operador/codeoscopic/sonda",
+      "/api/operador/codeoscopic/tarificacion",
+      "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
+      "/api/operador/companias",
+      "/api/operador/companias/contacto/[id]",
+      "/api/operador/contactos-movil",
+      "/api/operador/correo/resolver",
+      "/api/operador/declaradas-vencer",
+      "/api/operador/direccion/confirmar",
+      "/api/operador/documentos",
+      "/api/operador/documentos/[id]",
+      "/api/operador/duplicados",
+      "/api/operador/eventos",
+      "/api/operador/eventos/detectar",
+      "/api/operador/export-rgpd",
+      "/api/operador/huerfanas",
       "/api/operador/impagados",
       "/api/operador/ingesta",
+      "/api/operador/leads",
+      "/api/operador/leads-competencia",
+      "/api/operador/leads-web",
+      "/api/operador/oportunidad",
+      "/api/operador/oportunidad/llamada",
+      "/api/operador/oportunidad/tarea",
+      "/api/operador/oportunidad/whatsapp",
+      "/api/operador/partes",
       "/api/operador/poliza",
+      "/api/operador/poliza-documento",
+      "/api/operador/poliza/emitida",
+      "/api/operador/poliza/intervinientes",
+      "/api/operador/portal/invitaciones",
+      "/api/operador/presupuesto",
+      "/api/operador/quejas",
+      "/api/operador/recaptacion",
+      "/api/operador/recaptacion/email",
+      "/api/operador/recaptacion/email-lote",
+      "/api/operador/recaptacion/whatsapp",
+      "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
-      "/api/operador/vencimientos"
+      "/api/operador/retencion/descartar",
+      "/api/operador/sin-canal",
+      "/api/operador/siniestro",
+      "/api/operador/siniestro/terceros",
+      "/api/operador/siniestros-nuevos",
+      "/api/operador/supresiones",
+      "/api/operador/sustituciones",
+      "/api/operador/tareas-hoy",
+      "/api/operador/vehiculo/matricula",
+      "/api/operador/vencimientos",
+      "/api/portal/anulacion",
+      "/api/portal/carnets",
+      "/api/portal/carta-mediador",
+      "/api/portal/contacto",
+      "/api/portal/contacto-confirmar",
+      "/api/portal/contactos",
+      "/api/portal/contactos/[id]",
+      "/api/portal/datos-emision",
+      "/api/portal/documento",
+      "/api/portal/mejorar-precio",
+      "/api/portal/nota",
+      "/api/portal/presupuesto",
+      "/api/publico/recaptacion/baja",
+      "/api/webhooks/codeoscopic",
+      "/api/webhooks/resend"
     ],
     "asegura-portal": [
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
-      "/api/polizas"
+      "/api/anulacion",
+      "/api/autorizaciones",
+      "/api/autorizaciones/[id]",
+      "/api/avisos",
+      "/api/catastro",
+      "/api/catastro/sugerir",
+      "/api/consentimiento",
+      "/api/contacto-compania/[compania]",
+      "/api/cron/avisos-push",
+      "/api/documento/dni",
+      "/api/hojas",
+      "/api/hojas/[id]",
+      "/api/invitaciones",
+      "/api/invitaciones/[id]",
+      "/api/invitaciones/responder",
+      "/api/mejorar-precio",
+      "/api/mis-datos",
+      "/api/mis-datos/confirmar",
+      "/api/mis-datos/contactos",
+      "/api/mis-datos/contactos/[id]",
+      "/api/peticiones",
+      "/api/peticiones/[id]",
+      "/api/polizas",
+      "/api/polizas/[id]",
+      "/api/polizas/[id]/carta",
+      "/api/polizas/[id]/reintentar",
+      "/api/presupuesto/carta",
+      "/api/presupuesto/firma",
+      "/api/push/desuscribir",
+      "/api/push/suscribir",
+      "/api/recordatorios",
+      "/api/recordatorios/[id]",
+      "/api/salir",
+      "/api/siniestros",
+      "/api/siniestros/[id]/adjuntos",
+      "/api/siniestros/[id]/adjuntos/[documentoId]",
+      "/api/siniestros/[id]/whatsapp",
+      "/api/sugerencia",
+      "/api/sugerencias",
+      "/api/sugerencias/pedir",
+      "/api/supresion"
+    ],
+    "asegura-web": [
+      "/api/aviso",
+      "/api/consentimiento",
+      "/api/lead"
     ],
     "housesevillana": [],
     "ia-rest": [
@@ -3704,6 +4234,7 @@
       "/api/comanda/[id]/pedir-cuenta",
       "/api/comanda/[id]/ticket-alias",
       "/api/comandas/activas",
+      "/api/consentimiento",
       "/api/contrato/aceptar",
       "/api/contrato/firmar",
       "/api/contrato/publico",
@@ -4378,7 +4909,6 @@
       "/api/banca/reglas",
       "/api/banca/revisar",
       "/api/banca/ticket",
-      "/api/banca/transferencia",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -4407,29 +4937,91 @@
       "/api/contable/chat",
       "/api/contable/feedback",
       "/api/correduria",
+      "/api/correduria/actividad",
+      "/api/correduria/anulaciones",
+      "/api/correduria/aprobaciones",
+      "/api/correduria/backfill-contacto",
+      "/api/correduria/backfill-dni",
+      "/api/correduria/blog",
       "/api/correduria/buscar",
+      "/api/correduria/calidad",
+      "/api/correduria/carta-mediador",
       "/api/correduria/cartera",
+      "/api/correduria/cartera-lista",
       "/api/correduria/catastro",
       "/api/correduria/cliente",
+      "/api/correduria/cliente/[id]/dni-codigo",
+      "/api/correduria/cliente/[id]/dni-revelar",
+      "/api/correduria/cliente/contactos",
+      "/api/correduria/cliente/portal",
+      "/api/correduria/cliente/portal/vista",
+      "/api/correduria/cliente/relaciones",
+      "/api/correduria/cliente/relaciones/aviso",
       "/api/correduria/clientes",
+      "/api/correduria/codeoscopic-crudo",
+      "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
+      "/api/correduria/companias",
+      "/api/correduria/companias/contactado",
+      "/api/correduria/contactos-movil",
+      "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
+      "/api/correduria/direccion-confirmar",
+      "/api/correduria/documentos",
+      "/api/correduria/documentos/[id]",
+      "/api/correduria/duplicados",
+      "/api/correduria/export-rgpd",
+      "/api/correduria/fugas",
       "/api/correduria/impagados",
+      "/api/correduria/ingesta",
+      "/api/correduria/intervinientes",
+      "/api/correduria/leads",
+      "/api/correduria/leads-competencia",
+      "/api/correduria/leads-web",
+      "/api/correduria/oportunidad",
+      "/api/correduria/oportunidad/llamada",
+      "/api/correduria/oportunidad/tarea",
+      "/api/correduria/oportunidad/whatsapp",
+      "/api/correduria/partes",
+      "/api/correduria/poliza",
+      "/api/correduria/portal-invitaciones",
+      "/api/correduria/presupuesto",
+      "/api/correduria/quejas",
+      "/api/correduria/radar-recibos",
+      "/api/correduria/recaptacion",
+      "/api/correduria/recaptacion/email",
+      "/api/correduria/recaptacion/whatsapp",
+      "/api/correduria/renovaciones/contacto",
+      "/api/correduria/retencion/descartar",
+      "/api/correduria/sin-canal",
+      "/api/correduria/siniestro",
+      "/api/correduria/siniestro/terceros",
+      "/api/correduria/supresiones",
+      "/api/correduria/sustituciones",
+      "/api/correduria/tareas-hoy",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
+      "/api/cron/blog-asegura",
       "/api/cron/borme-ingesta",
       "/api/cron/briefing",
+      "/api/cron/canario-lead",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
+      "/api/cron/cima-pull-respaldo",
       "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
       "/api/cron/contable-proactivo",
+      "/api/cron/correduria-actividad",
+      "/api/cron/correduria-eventos",
       "/api/cron/correduria-ingesta",
+      "/api/cron/correduria-partes",
       "/api/cron/correduria-renovaciones",
+      "/api/cron/correduria-siniestros",
+      "/api/cron/correduria-sustituciones",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
@@ -4439,13 +5031,17 @@
       "/api/cron/facturas-scan",
       "/api/cron/health-check",
       "/api/cron/ia-director-refresh",
+      "/api/cron/ia-saldo",
       "/api/cron/paper-tracker",
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
       "/api/cron/prevision-pisos",
       "/api/cron/psd2-sync",
+      "/api/cron/recaptacion-email-lote",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
+      "/api/cron/seo-correduria",
+      "/api/cron/seo-correduria-agente",
       "/api/cron/ses-latido",
       "/api/cron/sivra-extras-impago",
       "/api/cron/subastas-avisos",
@@ -4497,15 +5093,23 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
+      "/api/internal/gsc",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
+      "/api/internal/memoria",
+      "/api/internal/memoria/embeddings",
       "/api/internal/reclamar-reparacion",
       "/api/internal/reparacion-resultado",
+      "/api/internal/seo-correduria/semana",
       "/api/inversion/underwrite",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/operador/agente-consulta",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
+      "/api/publico/correduria/aviso",
+      "/api/publico/correduria/consentimiento",
+      "/api/publico/correduria/lead",
       "/api/publico/disponibilidad",
       "/api/sivra/conciliar-booking",
       "/api/sivra/domotica/acceso/[id]",
@@ -4592,6 +5196,7 @@
       "/api/sivra/pricing/config",
       "/api/sivra/pricing/experiments",
       "/api/sivra/pricing/experiments/check-results",
+      "/api/sivra/pricing/fuga-canal",
       "/api/sivra/pricing/guard",
       "/api/sivra/pricing/historial",
       "/api/sivra/pricing/pilot-track",
@@ -4831,12 +5436,20 @@
       "alquiler_materiales"
     ],
     "asegura": [
+      "if",
       "seguros._volcado_control",
+      "seguros.anulacion",
+      "seguros.aprobacion",
+      "seguros.auditoria",
+      "seguros.aviso_web",
+      "seguros.backfill_dni_plan",
       "seguros.bien_documentos",
       "seguros.bienes_asegurables",
       "seguros.bot_eval_runs",
       "seguros.bot_eval_scores",
       "seguros.bot_turn_traces",
+      "seguros.carta_mediador",
+      "seguros.cartera_foto",
       "seguros.channel_inbound_messages",
       "seguros.cima_ficheros",
       "seguros.cliente_carnets_conducir",
@@ -4853,14 +5466,21 @@
       "seguros.codeoscopic_product_forms",
       "seguros.codeoscopic_projects",
       "seguros.codeoscopic_webhook_events",
+      "seguros.compania_contactos",
+      "seguros.companias_dgs",
       "seguros.consent_logs",
       "seguros.conversaciones",
       "seguros.corredurias",
       "seguros.cotizaciones",
       "seguros.cotizaciones_anonimas",
       "seguros.cuenta_efectivo",
+      "seguros.documentos",
+      "seguros.evento",
+      "seguros.felicitacion",
+      "seguros.firma",
       "seguros.gestiones",
       "seguros.historial_interno",
+      "seguros.interviniente_purga_log",
       "seguros.lds_consent",
       "seguros.liquidacion_movimientos",
       "seguros.liquidaciones",
@@ -4868,6 +5488,7 @@
       "seguros.mensajes",
       "seguros.ofertas_automaticas",
       "seguros.operational_events",
+      "seguros.oportunidad_historial",
       "seguros.oportunidades",
       "seguros.peticiones",
       "seguros.poliza_coberturas",
@@ -4876,24 +5497,50 @@
       "seguros.poliza_merge_log",
       "seguros.poliza_recibos",
       "seguros.polizas",
+      "seguros.portal_aviso_enviado",
+      "seguros.portal_enlace_directo",
+      "seguros.presupuesto",
+      "seguros.presupuesto_evento",
+      "seguros.presupuesto_opcion",
+      "seguros.queja",
       "seguros.recordatorios",
+      "seguros.renovacion_contactos",
+      "seguros.retencion_descartes",
       "seguros.siniestro_contrarios",
+      "seguros.siniestro_intervinientes",
       "seguros.siniestro_lesionados",
       "seguros.siniestro_testigos",
       "seguros.siniestros",
       "seguros.solicitud_cambio_documentos",
+      "seguros.tarificacion_precios",
+      "seguros.tarificaciones",
       "seguros.usuarios",
       "seguros.whatsapp_kb_chunks",
       "seguros.whatsapp_outbound_messages"
     ],
     "asegura-portal": [
+      "seguros.cliente_relaciones_permiso_volcado",
+      "seguros.portal_acceso",
+      "seguros.portal_autorizacion",
+      "seguros.portal_autorizacion_uso",
       "seguros.portal_bien",
       "seguros.portal_canal",
       "seguros.portal_codigo",
       "seguros.portal_consentimiento",
+      "seguros.portal_hoja_qr",
+      "seguros.portal_hoja_qr_poliza",
       "seguros.portal_identidad",
-      "seguros.portal_poliza_declarada"
+      "seguros.portal_invitacion",
+      "seguros.portal_obligacion",
+      "seguros.portal_parte_siniestro",
+      "seguros.portal_peticion_acceso",
+      "seguros.portal_poliza_declarada",
+      "seguros.portal_push_suscripcion",
+      "seguros.portal_supresion",
+      "seguros.portal_vinculo",
+      "seguros.portal_vista_corredor"
     ],
+    "asegura-web": [],
     "housesevillana": [],
     "ia-rest": [
       "arqueos_caja_empleado",
@@ -5024,6 +5671,7 @@
       "agente_latidos",
       "agente_reparaciones",
       "agente_salud",
+      "agente_veredicto",
       "ai_usos",
       "ayudas_perfiles",
       "banca_destino_reglas",
@@ -5043,11 +5691,13 @@
       "comunicacion_nodos",
       "comunicacion_reglas",
       "conexiones_banco",
+      "consentimiento_registro",
       "contable_accion",
       "contable_feedback",
       "contable_log",
       "contable_memoria",
       "correduria_avisos_renovacion",
+      "correduria_dni_otp",
       "correduria_reglas",
       "correo_cursor",
       "correo_reglas",
@@ -5068,12 +5718,14 @@
       "ia_director_prompt",
       "ia_limite_mensual",
       "ia_presupuestos",
+      "ia_saldo_diario",
       "idealista_api_usos",
       "limpieza_acceso_token",
       "limpieza_facturas",
       "limpieza_partes",
       "limpieza_tareas",
       "mapa_arquitectura",
+      "memoria_embeddings",
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_conflictos_guia",
@@ -5083,6 +5735,7 @@
       "mensajes_log",
       "mensajes_pendientes_tg",
       "mensajes_procesados",
+      "mensajes_prog_avisos",
       "mensajes_prog_pisos",
       "mensajes_programados",
       "mercado_comparables",
@@ -5109,11 +5762,13 @@
       "rutina_tokens",
       "secrets_audit",
       "sector_tendencias",
+      "seo_correduria_semana",
       "ses_establecimientos",
       "sivra_codigos_acceso",
       "sivra_extras_catalogo",
       "sivra_extras_reserva",
       "sivra_ordenes_limpieza",
+      "sobre",
       "subastas",
       "subastas_consultas",
       "subastas_correo_cursor",
@@ -5223,6 +5878,11 @@
       "description": ">"
     },
     {
+      "id": "cima-ingesta",
+      "name": "cima-ingesta",
+      "description": ">"
+    },
+    {
       "id": "code-map",
       "name": "code-map",
       "description": "Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico."
@@ -5231,6 +5891,11 @@
       "id": "conectores-vigia",
       "name": "conectores-vigia",
       "description": "Agente PROGRAMADO mensual (día 5) que vigila los conectores MCP — cruza el registro contra docs/HUECOS-ABIERTOS.md, hace de canario sobre los conectores de los que dependen las rutinas vivas, y audita la higiene de los ya conectados. Estado en docs/VIGIA-CONECTORES.md; Telegram + PR draft. Úsala si Alberto pide \"revisa si hay conectores nuevos que encajen\" o al disparo mensual. Sin secretos."
+    },
+    {
+      "id": "correduria-crm",
+      "name": "correduria-crm",
+      "description": ">"
     },
     {
       "id": "correo-triaje",
@@ -5333,6 +5998,11 @@
       "description": "Recordatorio mensual de obligaciones legales pendientes de implementar en la vertical RRHH (Portal del Empleado). Lee el roadmap, filtra los ítems 🔴 obligatorios no completados y genera un informe de plazos. Úsala el primer día de cada mes o cuando Alberto quiera un pulso del estado de compliance de RRHH."
     },
     {
+      "id": "seo-asegura",
+      "name": "seo-asegura",
+      "description": "Agente de SEO, contenido y redes sociales de la web pública de Grupo ASegura (grupoasegura.es, apps/asegura-web). Úsalo si Alberto pide \"mejora el SEO de la correduría\", \"escribe un post/artículo para la web o para redes\", \"¿cómo vamos de posicionamiento?\", o al disparo de la rutina semanal. NO publica en redes ni envía nada a terceros: deja borradores. NUNCA tarifica."
+    },
+    {
       "id": "seo-house-sevillana",
       "name": "seo-house-sevillana",
       "description": "SEO especializado para la landing page del apartamento turístico House Sevillana (Sevilla, centro histórico, Calle Socorro 24 — barrio de San Julián, 290 m², 6 dormitorios, 4 baños, parking privado). Cubre generación de metadatos (title, meta description, Open Graph, Twitter Cards), schema.org JSON-LD (LodgingBusiness, FAQPage, BreadcrumbList), keyword research multi-idioma (ES/EN/FR/DE/IT), reescritura de copy con foco en conversión y reservas directas para esquivar la comisión de Booking del 19,72%, auditoría SEO técnica para Next.js 15 App Router, y configuración multi-idioma con hreflang. Usa esta skill SIEMPRE que Alberto pida cualquier cosa relacionada con SEO, posicionamiento, metadatos, schema, keywords, copy de la landing, auditoría web, hreflang o multi-idioma de House Sevillana, aunque no diga la palabra SEO explícitamente."
@@ -5368,78 +6038,20 @@
       "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always"
     },
     {
+      "id": "vigia-infra",
+      "name": "vigia-infra",
+      "description": "Agente PROGRAMADO mensual (día 8) que vigila los LÍMITES de la infraestructura — tamaño y plan de Supabase contra su cuota, hinchazón recuperable, advisors, Build Minutes y ritmo de deployments de Vercel, máquinas de Fly. Estado en docs/VIGIA-INFRA.md; Telegram + PR draft. Úsala si Alberto pregunta \"¿estamos cerca de algún límite?\" / \"¿vamos a tener que pagar algo?\" o al disparo mensual. Sin secretos."
+    },
+    {
       "id": "writing-plans",
       "name": "writing-plans",
       "description": "Use when you have a spec or requirements for a multi-step task, before touching code"
     }
   ],
-  "novedades": [
-    {
-      "titulo": "Hecho por Claude Chrome (02/09):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Duplicado «Jose Suarez Salas»",
-      "fecha": ""
-    },
-    {
-      "titulo": "Auditoría de duplicidades",
-      "fecha": ""
-    },
-    {
-      "titulo": "Corrección",
-      "fecha": ""
-    },
-    {
-      "titulo": "Contacto/intervinientes",
-      "fecha": ""
-    },
-    {
-      "titulo": "Catastro para hogar HECHO",
-      "fecha": ""
-    },
-    {
-      "titulo": "Forma de pago",
-      "fecha": ""
-    },
-    {
-      "titulo": "Pantalla de PÓLIZA hecha",
-      "fecha": ""
-    },
-    {
-      "titulo": "«Haz todo» (2ª tanda, mismo PR #2001):",
-      "fecha": ""
-    },
-    {
-      "titulo": "Alberto repuso los dos PIN desde el panel",
-      "fecha": ""
-    },
-    {
-      "titulo": "`/cartera/renovaciones`",
-      "fecha": ""
-    },
-    {
-      "titulo": "NO hay botón de «retarificar todas»",
-      "fecha": ""
-    },
-    {
-      "titulo": "BD de matrículas gratis: no la hay útil.",
-      "fecha": ""
-    },
-    {
-      "titulo": "Siguiente ramo: HOGAR",
-      "fecha": ""
-    },
-    {
-      "titulo": "`deductible` la traen 10 de 18 precios",
-      "fecha": ""
-    }
-  ],
   "saludRepo": {
     "packagesSinDescripcion": [],
     "appsSinClaudeMd": [
-      "almacen",
-      "asegura-portal"
+      "asegura-web"
     ],
     "appsSinVercelJson": []
   },
@@ -5457,6 +6069,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -5476,6 +6089,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -5496,6 +6110,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -5514,6 +6129,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -5526,13 +6142,14 @@
         "capacidad": "qr-portal",
         "label": "QR / portal cliente",
         "tiene": [
+          "asegura",
           "ia-rest"
         ],
         "falta": [
           "almacen",
           "alquiler",
-          "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -5552,6 +6169,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -5572,6 +6190,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ia-rest",
           "mariscos",
@@ -5592,6 +6211,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -5609,6 +6229,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ia-rest",
           "ialimp",
@@ -5628,6 +6249,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ia-rest",
           "ialimp",
@@ -5648,6 +6270,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -5667,6 +6290,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -5686,6 +6310,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -5706,6 +6331,7 @@
         "falta": [
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -5725,6 +6351,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -5743,6 +6370,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -5762,6 +6390,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -5780,6 +6409,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ialimp",
           "mariscos",
@@ -5800,6 +6430,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "rrhh",
@@ -5818,6 +6449,7 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "ia-rest",
           "mariscos",
@@ -5830,6 +6462,7 @@
         "capacidad": "notificaciones",
         "label": "Notificaciones (push)",
         "tiene": [
+          "asegura-portal",
           "ia-rest",
           "ialimp",
           "rrhh"
@@ -5838,7 +6471,7 @@
           "almacen",
           "alquiler",
           "asegura",
-          "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "sivra",
@@ -5859,37 +6492,23 @@
           "alquiler",
           "asegura",
           "asegura-portal",
+          "asegura-web",
           "housesevillana",
           "mariscos",
           "transporte"
         ]
       }
     ],
-    "reimplementaciones": [
-      {
-        "capacidad": "almacen-stock",
-        "label": "Almacén / stock / ASN",
-        "modulo": "module-materiales",
-        "conModulo": [
-          "almacen",
-          "ia-rest",
-          "ialimp",
-          "sivra"
-        ],
-        "duplicada": [
-          "alquiler"
-        ]
-      }
-    ]
+    "reimplementaciones": []
   },
   "resumen": {
-    "verticales": 12,
-    "packages": 40,
+    "verticales": 13,
+    "packages": 42,
     "capacidades": 23,
-    "skills": 38,
-    "apis": 1231,
+    "skills": 42,
+    "apis": 1453,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
-    "reimplementaciones": 1
+    "reimplementaciones": 0
   }
 }

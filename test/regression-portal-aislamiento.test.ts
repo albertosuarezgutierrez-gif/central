@@ -21,6 +21,31 @@
 // hay bóveda propia, y lo único que hay que resolver es de quién es la sesión.
 // Cuando entre la Fase 4 (vinculación con CIMA), `lib/acceso.ts` nace encima y
 // este guardián pasa a exigirlo a él: es un renombrado del cepo, no otro cepo.
+//
+// ─── Fase 4 (02/09/2026): la CARTERA ─────────────────────────────────────────
+// El portal ya lee `clientes`, `polizas`, `poliza_recibos`, `siniestros`… con el
+// rol `prisma_asegura_portal` (SIN BYPASSRLS, grants por COLUMNAS). Dos cepos
+// más, del mismo tipo:
+//   3. Todo fichero que consulte un modelo de cartera importa `lib/session`
+//      (o es `lib/vinculo.ts`, que corre en el canje del código, antes de que
+//      haya sesión) Y nombra `portalVinculo`: la costura identidad ↔ ficha.
+//      Una lectura de `prisma.poliza` que no pase por `portal_vinculo` es la
+//      cartera entera a un `where` de distancia.
+//   4. El `schema.prisma` del portal NO declara las columnas que el rol no
+//      puede leer (DNI, IBAN, teléfono, email, dirección…). Prisma
+//      pide cada columna por su nombre: una de más y la consulta ENTERA falla
+//      en la BD. Que el schema no las tenga es la garantía; esto la vigila.
+//
+// ─── PR 2 del presupuesto (21/09/2026): tres modelos más ─────────────────────
+// `presupuesto`, `presupuesto_opcion` y `presupuesto_evento` entran en el MISMO
+// carril que la cartera, y no en uno nuevo: son tablas de `seguros` sin RLS
+// para este rol, así que una consulta sin `portal_vinculo` delante devuelve el
+// presupuesto —con su precio y su compañía— de cualquier cliente. El fallo no
+// es «no se ve nada»: es «se ve el de otro y nada falla».
+//
+// Y dos cosas que este cepo NO puede ver y por eso tienen cepo propio en
+// `test/regression-portal-presupuesto.test.ts`: que la carátula pública no
+// cuente nada, y que el sello de `visto_at` no lo dispare la vista de corredor.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -41,17 +66,57 @@ const EXENTOS = new Set([
   'apps/asegura-portal/lib/auth.ts',
   'apps/asegura-portal/app/api/acceso/solicitar/route.ts',
   'apps/asegura-portal/app/api/acceso/verificar/route.ts',
+  // Fase 4: crea `portal_vinculo` en el canje del código. La identidad la
+  // recibe de `verificar/route.ts` (recién resuelta o creada); todavía no hay
+  // cookie de la que sacarla. Solo escribe el vínculo de ESA identidad.
+  'apps/asegura-portal/lib/vinculo.ts',
+  // Cron de avisos push (12/09/2026): autenticado por `CRON_SECRET`
+  // (`lib/cron-auth.ts`), no por la cookie de un visitante — no hay sesión de
+  // la que sacar una identidad porque no hay una identidad, hay muchas. Cada
+  // fila que toca ya lleva su `identidadId` propio (de `portal_obligacion`) y
+  // el cruce con la cartera pasa por `portal_vinculo`, igual que el resto.
+  'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+  // Mismo caso que arriba: recibe `identidadId` ya resuelto por
+  // `app/api/polizas/route.ts` (que sí pasa por `lib/session`), y su único
+  // `prisma.portalVinculo` va filtrado por ese id — nunca a ciegas.
+  'apps/asegura-portal/lib/aviso-poliza-declarada.ts',
+])
+
+/**
+ * Modelos de la CARTERA que el portal puede leer (Fase 4). Cualquier fichero
+ * que los toque tiene que partir de `portal_vinculo` y de la sesión.
+ */
+const USA_PRISMA_CARTERA =
+  /prisma\s*\.\s*(cliente|clienteEmail|poliza|polizaCobertura|polizaRecibo|siniestro|polizaInterviniente|clienteRelacion|correduria|presupuesto|presupuestoOpcion|presupuestoEvento)\b/
+/** La costura: el vínculo identidad ↔ ficha. Sin nombrarlo, la lectura no parte de la identidad. */
+const NOMBRA_VINCULO = /portalVinculo/
+/**
+ * Lee cartera sin sesión: `vinculo.ts` porque corre ANTES de que exista (el canje del
+ * código); el cron de avisos push porque no hay visitante — se autentica por `CRON_SECRET`
+ * y resuelve cada fila por su propio `identidadId`, no por una cookie.
+ */
+const CARTERA_SIN_SESION = new Set([
+  'apps/asegura-portal/lib/vinculo.ts',
+  'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+  // El aviso de póliza declarada (17/09/2026): recibe `identidadId` ya resuelto
+  // por quien llama (`app/api/polizas/route.ts`, que sí pasa por `requireIdentidad()`
+  // de `lib/session`) y solo lee el cliente colgado de SU vínculo, nunca de un
+  // `where` suelto.
+  'apps/asegura-portal/lib/aviso-poliza-declarada.ts',
 ])
 
 /** `prisma.portalPoliza…`, `prisma.portalBien…`, `prisma.portalIdentidad…` */
 const USA_PRISMA_PORTAL = /prisma\s*\.\s*portal[A-Z]/
-/** Importa la puerta única, con alias `@/` o por ruta relativa. */
-const USA_SESION = /from\s+['"](@\/lib\/session|(?:\.\.?\/)+lib\/session)(?:\.ts)?['"]/
+/** Importa la puerta única, con alias `@/`, por ruta relativa, o `./session` desde dentro de `lib/`. */
+const USA_SESION = /from\s+['"](@\/lib\/session|(?:\.\.?\/)+lib\/session|\.\/session)(?:\.ts)?['"]/
 /** El filtro por identidad, escrito de verdad en la consulta. */
 const FILTRA_POR_IDENTIDAD = /identidadId/
 
+// `--others --exclude-standard`: también los ficheros todavía sin commitear. Un
+// fichero nuevo que lea la cartera es exactamente el que hay que cazar ANTES
+// del commit, no después.
 function ficherosDelPortal(): string[] {
-  const out = execFileSync('git', ['ls-files', 'apps/asegura-portal'], {
+  const out = execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'apps/asegura-portal'], {
     cwd: ROOT,
     encoding: 'utf8',
   })
@@ -112,7 +177,7 @@ test('lib/session no tiene una identidad por defecto', () => {
 
 test('la lista de exentos solo contiene ficheros que existen', () => {
   const seguidos = new Set(
-    execFileSync('git', ['ls-files', 'apps/asegura-portal'], { cwd: ROOT, encoding: 'utf8' })
+    execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'apps/asegura-portal'], { cwd: ROOT, encoding: 'utf8' })
       .split('\n')
       .filter(Boolean),
   )
@@ -120,4 +185,143 @@ test('la lista de exentos solo contiene ficheros que existen', () => {
   // vuelva a crear el fichero con ese nombre.
   const fantasmas = [...EXENTOS].filter((f) => !seguidos.has(f))
   assert.deepEqual(fantasmas, [], `Exentos que ya no existen:\n  - ${fantasmas.join('\n  - ')}`)
+})
+
+function todosLosFicherosDelPortal(): string[] {
+  return execFileSync('git', ['ls-files', '--cached', '--others', '--exclude-standard', 'apps/asegura-portal'], { cwd: ROOT, encoding: 'utf8' })
+    .split('\n')
+    .filter(Boolean)
+    .filter((f) => /\.(ts|tsx)$/.test(f))
+}
+
+test('fase 4: toda lectura de la cartera pasa por lib/session y por portalVinculo', () => {
+  const sinSesion: string[] = []
+  const sinVinculo: string[] = []
+  let vistos = 0
+
+  for (const f of todosLosFicherosDelPortal()) {
+    const src = readFileSync(join(ROOT, f), 'utf8')
+    if (!USA_PRISMA_CARTERA.test(src)) continue
+    vistos++
+    if (!CARTERA_SIN_SESION.has(f) && !USA_SESION.test(src)) sinSesion.push(f)
+    if (!NOMBRA_VINCULO.test(src)) sinVinculo.push(f)
+  }
+
+  assert.ok(vistos >= 2, 'lib/vinculo.ts y lib/cartera-lectura.ts leen la cartera: el cepo no está viendo nada')
+  assert.deepEqual(
+    sinSesion,
+    [],
+    'Estos ficheros leen la CARTERA sin resolver la identidad por `lib/session`. Con el rol ' +
+      `del portal, una consulta sin identidad devuelve las pólizas de todos los clientes:\n  - ${sinSesion.join('\n  - ')}`,
+  )
+  assert.deepEqual(
+    sinVinculo,
+    [],
+    'Estos ficheros leen la CARTERA sin pasar por `portalVinculo`: la única costura entre ' +
+      `una identidad del portal y una ficha de la cartera:\n  - ${sinVinculo.join('\n  - ')}`,
+  )
+  const exentosFantasma = [...CARTERA_SIN_SESION].filter((f) => !todosLosFicherosDelPortal().includes(f))
+  assert.deepEqual(exentosFantasma, [], `Exentos de cartera que ya no existen:\n  - ${exentosFantasma.join('\n  - ')}`)
+})
+
+/**
+ * Columnas que el rol `prisma_asegura_portal` NO puede leer (GRANT por columnas
+ * en `apps/asegura-portal/prisma/sql/2026-09-02_portal_rol_vinculo_grants.sql`).
+ * Declararlas en el schema del portal no es «leer más»: es que la consulta
+ * entera revienta con `permission denied for column`. Y si algún día el GRANT
+ * se ampliara por error, que el schema no las tenga sigue siendo la garantía.
+ */
+const COLUMNAS_PROHIBIDAS: Record<string, string[]> = {
+  Cliente: ['dni', 'telefono', 'email', 'direccion', 'cuentaBancaria', 'fechaNacimiento', 'notas', 'dniLookupHash'],
+  PolizaRecibo: ['iban', 'comisionBruta', 'comisionLiquida'],
+  // 📌 `comentario` SALIÓ de esta lista el 07/09/2026: se le concedió el GRANT
+  // a propósito para que el cliente vea QUÉ pasó en su siniestro (66 de 69 lo
+  // tienen informado). Los otros tres siguen cerrados: `lugarDireccion` es la
+  // casa de alguien y los dos importes no tienen ni un dato en la cartera.
+  Siniestro: ['lugarDireccion', 'reservaImporte', 'indemnizacionImporte'],
+  Poliza: ['cuentaBancaria', 'documentoUrl'],
+  PolizaInterviniente: ['nif', 'nombre', 'apellidos', 'telefono', 'email', 'fechaNacimiento', 'fechaCarnet'],
+  ClienteEmail: ['email'],
+  Correduria: ['email', 'telefono', 'waAccessToken', 'cif'],
+  ClienteRelacion: ['observaciones'],
+  // PR 2 del presupuesto (21/09/2026). Lo que el rol NO tiene concedido en
+  // `prisma/sql/2026-09-21_portal_presupuesto_grants.sql`, y por qué:
+  //   · `creadoPor` / `retiradoMotivo` → gestión interna del corredor. El
+  //     motivo con el que retira un presupuesto puede decir cualquier cosa
+  //     sobre el cliente y NO está escrito para él (`retiradoAt` sí se lee: con
+  //     eso basta para saber que el enlace ya no vale).
+  //   · `canalAviso` / `enlaceGeneradoAt` / `polizaEmitidaId` / `salida` → no
+  //     hacen falta para pintar, y lo que no se pide no se puede colar.
+  //   · `tarificacionId` → el GRANT sí lo tiene (para que corra el trigger de
+  //     asegura), pero declararlo lo metería en los `select` de la pantalla.
+  Presupuesto: [
+    'creadoPor',
+    'retiradoMotivo',
+    'canalAviso',
+    'enlaceGeneradoAt',
+    'polizaEmitidaId',
+    'salida',
+    'tarificacionId',
+  ],
+  // El id del quote del vendor («Q7601460») es la llave del ReRate —la llamada
+  // que cuesta dinero—, no un dato del cliente.
+  PresupuestoOpcion: ['referenciaVendor'],
+  // Lo escribe el corredor; el portal solo pregunta SI ya anotó una apertura
+  // ajena, no qué dice.
+  PresupuestoEvento: ['detalle'],
+}
+
+function camposDelModelo(schema: string, modelo: string): string[] {
+  const m = new RegExp(`^model ${modelo} \\{([\\s\\S]*?)^\\}`, 'm').exec(schema)
+  assert.ok(m, `el schema del portal no declara el modelo ${modelo}`)
+  return m[1]
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l && !l.startsWith('//') && !l.startsWith('///') && !l.startsWith('@@'))
+    .map((l) => l.split(/\s+/)[0])
+}
+
+test('fase 4: el schema del portal no declara columnas que el rol no puede leer', () => {
+  const schema = readFileSync(join(ROOT, 'apps/asegura-portal/prisma/schema.prisma'), 'utf8')
+  const infracciones: string[] = []
+  for (const [modelo, prohibidas] of Object.entries(COLUMNAS_PROHIBIDAS)) {
+    const campos = new Set(camposDelModelo(schema, modelo))
+    for (const c of prohibidas) if (campos.has(c)) infracciones.push(`${modelo}.${c}`)
+  }
+  assert.deepEqual(
+    infracciones,
+    [],
+    'El schema del portal declara columnas que `prisma_asegura_portal` no tiene concedidas. ' +
+      `Cada consulta a ese modelo fallará en la BD, y si el GRANT se ampliara, el portal leería PII:\n  - ${infracciones.join('\n  - ')}`,
+  )
+})
+
+test('la ficha de una póliza AÑADIDA lleva la identidad DENTRO del where', () => {
+  // 🚨 Nace el 05/09/2026, al fundir «Mis pólizas» en «Mis seguros»: esas filas
+  // pasan a tener ficha propia en `/boveda/anadida/[id]`, y una ruta con un id
+  // en la URL es el sitio exacto donde se filtra una bóveda ajena.
+  //
+  // Aquí la regla se cumple distinto que en la ficha de la CARTERA (que lee
+  // primero todo lo autorizado y busca el id dentro): estas filas son de una
+  // identidad y de nadie más, así que la guarda va en la CONSULTA. Leer por id
+  // y comprobar el dueño en la línea siguiente compila, typechequea y funciona…
+  // hasta que alguien mueva esa comprobación o la envuelva en un `if`.
+  const src = readFileSync(
+    join(process.cwd(), 'apps/asegura-portal/app/(portal)/boveda/anadida/[id]/page.tsx'),
+    'utf8',
+  )
+  const i = src.indexOf('prisma.portalPolizaDeclarada')
+  assert.ok(i > 0, 'no encuentro la consulta de la ficha de una póliza añadida')
+  const bloque = src.slice(i, src.indexOf('})', i))
+  assert.match(
+    bloque,
+    /where:\s*\{[^}]*identidadId:\s*identidad\.id/,
+    'la identidad tiene que ir DENTRO del `where`, junto al id de la URL',
+  )
+  assert.doesNotMatch(
+    bloque,
+    /findUnique/,
+    'un `findUnique` solo acepta la clave única, así que la identidad se quedaría fuera del `where` ' +
+      'y la comprobación acabaría en un `if` posterior, que es justo lo que se puede perder',
+  )
 })

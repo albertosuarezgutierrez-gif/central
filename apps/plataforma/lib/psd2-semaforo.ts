@@ -36,7 +36,7 @@ export function fechaCaducidadConsent(consentCreadaISO: string): string {
   return new Date(Date.parse(consentCreadaISO.slice(0, 10)) + CONSENT_DIAS * DIA_MS).toISOString().slice(0, 10)
 }
 
-function fmtDDMM(iso: string): string {
+export function fmtDDMM(iso: string): string {
   const [, m, d] = iso.split('-')
   return `${d}/${m}`
 }
@@ -117,4 +117,37 @@ export function semaforoFeed(p: {
     titular: diasMov === 0 ? 'Banco al día — hay movimientos de hoy' : `Banco al día — último movimiento hace ${diasMov} día${diasMov === 1 ? '' : 's'}`,
     detalles: [lineaConsent],
   })
+}
+
+// ─── Desglose por cuenta ─────────────────────────────────────────────────────────────────────
+// La línea gris de /banca que enumera las cuentas del feed. Tenía dos estados donde hay TRES, y
+// el que faltaba es el caro: `ultimoMov` es `MAX(fecha_operacion)` de los apuntes psd2 de esa
+// cuenta, y `fecha_operacion` es NULLABLE en el esquema — así que un NULL significa «la cuenta
+// SÍ trajo apuntes, pero sin fecha», no «no ha traído nada». Pintarlo como «último mov. ninguno»
+// (como se hacía hasta el 02/09/2026) convierte ese «no lo sé» en la afirmación contraria a la
+// verdad. Hoy no se dispara —medido: 0 filas psd2 sin fecha— pero el esquema lo permite.
+//
+// Y el caso de la lista VACÍA: `getEstadoFeedPsd2` devuelve feed en cuanto hay una conexión
+// vinculada, pero el desglose sale de un JOIN con los movimientos, así que una conexión que aún
+// no ha traído NADA deja la línea en blanco. Una línea en blanco se lee como «no hay nada que
+// contar», que es justo lo contrario de lo que pasa.
+//
+// ⚠️ Límite conocido que NO se puede arreglar aquí: `cuentas_bancarias` no tiene columna que la
+// ligue a `conexiones_banco`, así que la ÚNICA forma de saber que una cuenta es del feed es que
+// tenga algún movimiento con `origen='psd2'`. Una cuenta psd2 recién vinculada y todavía a cero
+// es indistinguible en la BD de una cuenta manual o de Excel: no se puede listar sin arrastrar
+// las que no son del feed. Por eso el desglose habla de las cuentas que han traído algo, y el
+// caso «ninguna» se declara en vez de callarse.
+export type CuentaFeed = { banco: string | null; mascara: string | null; ultimoMov: string | null }
+
+export function lineaCuentasFeed(cuentas: CuentaFeed[]): string {
+  if (cuentas.length === 0) {
+    return 'Sin desglose por cuenta: ninguna cuenta ha importado movimientos del banco todavía.'
+  }
+  return cuentas.map(c => {
+    const nombre = `${c.banco || 'Banco'} ${c.mascara || ''}`.trim()
+    return c.ultimoMov
+      ? `${nombre}: último mov. ${fmtDDMM(c.ultimoMov)}`
+      : `${nombre}: trajo movimientos SIN fecha — no se sabe de cuándo son`
+  }).join(' · ')
 }

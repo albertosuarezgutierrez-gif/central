@@ -1,5 +1,6 @@
 'use client'
 import { useState, useMemo } from 'react'
+import { PageHeader } from '@/components/ui'
 import type { EmpleadoRrhh } from '@/lib/rrhh-operador'
 
 const ESTADOS: Record<string, { label: string; color: string }> = {
@@ -33,10 +34,14 @@ export default function EmpleadosRrhhClient({ empleados }: { empleados: Empleado
 
   return (
     <div style={{ padding: '24px', maxWidth: 900 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>RR.HH. · Empleados</h1>
-        <span style={{ fontSize: 13, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px' }}>{visibles.length} / {empleados.length}</span>
-      </div>
+      <PageHeader
+        titulo={
+          <>
+            RR.HH. · Empleados{' '}
+            <span style={{ fontSize: 13, fontWeight: 400, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px', whiteSpace: 'nowrap' }}>{visibles.length} / {empleados.length}</span>
+          </>
+        }
+      />
 
       <div className="emp-filters" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         <input

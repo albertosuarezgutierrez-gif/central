@@ -11,7 +11,7 @@ export {
   decryptField,
   encryptFieldNullable,
   decryptFieldNullable,
-} from './field-encryption'
+} from './field-encryption.ts'
 export {
   normalizeEmailForHash,
   normalizeTelefonoForHash,
@@ -19,7 +19,14 @@ export {
   computeEmailLookupHash,
   computeTelefonoLookupHash,
   computeDniLookupHash,
+  partesEmail,
+  computeEmailDominioLookupHash,
+  computeEmailUsuarioLookupHash,
   looksLikeFullEmail,
   looksLikeFullTelefono,
   looksLikeDniNieCif,
-} from './blind-index'
+} from './blind-index.ts'
+export {
+  secretosIguales,
+  bearerAutorizado,
+} from './secreto.ts'

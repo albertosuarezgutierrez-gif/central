@@ -8,6 +8,8 @@ import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { listar } from '@/lib/ses/establecimientos'
 import EstablecimientosClient from './EstablecimientosClient'
+import { PageHeader } from '@/components/ui'
+import { IdCard } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
 
@@ -20,7 +22,7 @@ export default async function Page() {
 
   return (
     <div style={{ padding: '1rem', maxWidth: 980, margin: '0 auto' }}>
-      <h1 style={{ fontSize: '1.4rem', margin: '0 0 .25rem' }}>🛂 Establecimientos SES.HOSPEDAJES</h1>
+      <PageHeader titulo="Establecimientos SES.HOSPEDAJES" icono={<IdCard size={20} strokeWidth={1.75} />} />
       <p style={{ color: 'var(--muted)', margin: '0 0 1.25rem', fontSize: '.9rem' }}>
         Credenciales del <strong>servicio web</strong> de cada piso (distintas de las del acceso
         web con certificado digital). Se guardan cifradas; no se muestran nunca.

@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { PROPS_CALENDARIO as PROPS } from '@/lib/sivra/constantes'
 import { PORTAL_COLORS } from '@/lib/portales'
+import { PageHeader, ThinBar } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 
 const DAY_W = 46     // px per day column
@@ -107,19 +108,15 @@ export default function CalendarioPage() {
   return (
     <div style={{ padding: '24px 20px', maxWidth: '100%' }}>
       {/* Header */}
-      <div className="cal-header" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
-        <div>
-          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>Calendario de ocupación</h1>
-          <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--muted)' }}>
-            {PROPS.length} propiedades · datos Smoobu · {DAYS} días
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+      <PageHeader
+        titulo="Calendario de ocupación"
+        sub={`${PROPS.length} propiedades · datos Smoobu · ${DAYS} días`}
+        acciones={<>
           <button onClick={() => setWinStart(d => addDays(d, -DAYS))} style={btnStyle}>‹ Anterior</button>
           <button onClick={() => setWinStart(now)} style={{ ...btnStyle, padding: '0 14px', fontWeight: 600 }}>Hoy</button>
           <button onClick={() => setWinStart(d => addDays(d, DAYS))} style={btnStyle}>Siguiente ›</button>
-        </div>
-      </div>
+        </>}
+      />
 
       {/* Stats cards */}
       <div className="cal-stats-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
@@ -129,8 +126,8 @@ export default function CalendarioPage() {
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>{p.label}</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
-                <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(0,0,0,.08)', maxWidth: 60 }}>
-                  <div style={{ height: '100%', borderRadius: 2, width: `${p.pct}%`, background: p.color }} />
+                <div style={{ flex: 1, maxWidth: 60 }}>
+                  <ThinBar pct={p.pct} alto={3} color={p.color} track="rgba(0,0,0,.08)" />
                 </div>
                 <span style={{ fontSize: 10, fontWeight: 700, color: p.color }}>{p.pct}%</span>
                 <span style={{ fontSize: 10, color: 'var(--muted)' }}>/30d</span>

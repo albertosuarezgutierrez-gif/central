@@ -1,6 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { Pagina } from '@/components/ui'
+import { Pagina, PageHeader } from '@/components/ui'
+import { TrendingUp } from 'lucide-react'
 
 type Post = { id: string; titulo: string | null; caption: string | null; estado: string; tipo: string; alcance: number | null; likes: number | null; created_at: string }
 type Borrador = { id: string; titulo: string | null; plantilla: string | null; tema_elegido: string | null; estado: string; created_at: string }
@@ -44,11 +45,14 @@ export default function CrecimientoClient() {
 
   return (
     <Pagina ancho="tabla">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>📈 Crecimiento · ia-rest</h1>
-        <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
-          style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>Panel legacy ↗</a>
-      </div>
+      <PageHeader
+        titulo="Crecimiento · ia-rest"
+        icono={<TrendingUp size={20} strokeWidth={1.75} />}
+        acciones={
+          <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
+            style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}>Panel legacy ↗</a>
+        }
+      />
 
       {/* Tabs */}
       <div className="crec-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '0' }}>

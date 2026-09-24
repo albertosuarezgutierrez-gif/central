@@ -1,0 +1,126 @@
+# Copia semanal CIFRADA del schema `seguros` (la cartera de Grupo ASegura) — 23/09/2026.
+#
+# La BD compartida está en Supabase FREE, sin copias restaurables. Hasta pasar a Pro, esto es la
+# red: `pg_dump` de `seguros` → cifrado con GPG (AES256, `SEGUROS_BACKUP_PASSPHRASE`) → artefacto
+# del run (90 días = ~13 copias semanales).
+#
+# 🚨 Una copia que no se ha restaurado no es una copia. Por eso el job RESTAURA la copia en un
+# Postgres 17 desechable y compara el recuento de filas de las tablas clave con producción: si no
+# cuadra, el run falla. Así «hay copia» significa «hay copia que se puede recuperar».
+#
+# Falla ruidosamente (y avisa por Telegram vía `/api/internal/alerta`) si faltan los secrets: una
+# copia que se salta en silencio es exactamente el fallo que esto existe para evitar.
+#
+# Secrets: SEGUROS_BACKUP_DATABASE_URL (rol `backup_seguros`, solo lectura; conexión directa o
+# pooler en modo sesión :5432), SEGUROS_BACKUP_PASSPHRASE, PLATAFORMA_URL + ALERTA_TOKEN o CRON_SECRET (aviso).
+# Restaurar a mano: docs/COPIA-SEGUROS.md.
+name: Copia semanal de seguros
+
+on:
+  schedule:
+    - cron: '0 3 * * 1' # lunes 03:00 UTC, lejos de los pulls de CIMA (05:30 y 11:30)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: copia-seguros
+  cancel-in-progress: false
+
+jobs:
+  copia:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      prueba:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: prueba
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      ORIGEN: ${{ secrets.SEGUROS_BACKUP_DATABASE_URL }}
+      CLAVE: ${{ secrets.SEGUROS_BACKUP_PASSPHRASE }}
+      PRUEBA: postgresql://postgres:prueba@localhost:5432/postgres
+    steps:
+      - name: Comprobar secrets
+        run: |
+          [ -n "$ORIGEN" ] || { echo "::error::Falta SEGUROS_BACKUP_DATABASE_URL"; exit 1; }
+          [ -n "$CLAVE" ]  || { echo "::error::Falta SEGUROS_BACKUP_PASSPHRASE"; exit 1; }
+
+      - name: Instalar cliente de Postgres 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-17 >/dev/null
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Volcar seguros
+        run: |
+          PGBIN=/usr/lib/postgresql/17/bin
+          $PGBIN/pg_dump "$ORIGEN" --schema=seguros --format=custom --no-owner --no-privileges --file=seguros.dump
+          ls -l seguros.dump
+          # Recuento de producción de las tablas clave, para compararlo tras restaurar.
+          $PGBIN/psql "$ORIGEN" -Atc "select 'clientes',count(*) from seguros.clientes union all select 'polizas',count(*) from seguros.polizas union all select 'poliza_recibos',count(*) from seguros.poliza_recibos union all select 'siniestros',count(*) from seguros.siniestros union all select 'auditoria',count(*) from seguros.auditoria" > origen.txt
+          cat origen.txt
+
+      - name: Restaurar en un Postgres desechable y comparar
+        run: |
+          PGBIN=/usr/lib/postgresql/17/bin
+          # Lo que la copia da por supuesto en Supabase: extensiones y el `auth.uid()` de las
+          # políticas RLS del CRM (sin él, crear esas políticas falla).
+          $PGBIN/psql "$PRUEBA" -v ON_ERROR_STOP=1 -q <<'SQL'
+          create extension if not exists pgcrypto;
+          create extension if not exists "uuid-ossp";
+          create extension if not exists pg_trgm;
+          create extension if not exists unaccent;
+          create schema if not exists auth;
+          create or replace function auth.uid() returns uuid language sql stable as 'select null::uuid';
+          create or replace function auth.role() returns text language sql stable as 'select null::text';
+          do $$ begin
+            if not exists (select 1 from pg_roles where rolname='authenticated') then create role authenticated; end if;
+            if not exists (select 1 from pg_roles where rolname='anon') then create role anon; end if;
+            if not exists (select 1 from pg_roles where rolname='service_role') then create role service_role; end if;
+          end $$;
+          SQL
+          $PGBIN/pg_restore --dbname="$PRUEBA" --no-owner --no-privileges seguros.dump 2> restore.err || true
+          echo "Errores de restauración: $(grep -c 'error:' restore.err || true)"
+          grep 'error:' restore.err | head -20 || true
+          $PGBIN/psql "$PRUEBA" -Atc "select 'clientes',count(*) from seguros.clientes union all select 'polizas',count(*) from seguros.polizas union all select 'poliza_recibos',count(*) from seguros.poliza_recibos union all select 'siniestros',count(*) from seguros.siniestros union all select 'auditoria',count(*) from seguros.auditoria" > copia.txt
+          cat copia.txt
+          # Clientes, pólizas, recibos y siniestros tienen que cuadrar EXACTO: solo los mueve CIMA y
+          # CIMA no corre a esta hora. `auditoria` puede crecer entre el volcado y el recuento (una
+          # escritura del puerto en ese minuto), así que ahí basta con que la copia no tenga MÁS.
+          paste -d' ' <(tr '|' ' ' < origen.txt) <(tr '|' ' ' < copia.txt) | while read t o _ c; do
+            if [ "$t" = "auditoria" ]; then [ "$c" -le "$o" ] || { echo "::error::$t: copia $c, producción $o"; exit 1; }
+            else [ "$c" = "$o" ] || { echo "::error::$t: la copia tiene $c filas y producción $o"; exit 1; }
+            fi
+          done
+
+      - name: Cifrar
+        run: |
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$CLAVE" --symmetric --cipher-algo AES256 \
+            --output "seguros-$(date -u +%Y-%m-%d).dump.gpg" seguros.dump
+          shred -u seguros.dump
+          ls -l *.gpg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: seguros-${{ github.run_id }}
+          path: '*.dump.gpg'
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Avisar si ha fallado
+        if: failure()
+        env:
+          PLATAFORMA_URL: ${{ secrets.PLATAFORMA_URL }}
+          ALERTA_TOKEN: ${{ secrets.ALERTA_TOKEN || secrets.CRON_SECRET }}
+        run: |
+          [ -n "$PLATAFORMA_URL" ] && [ -n "$ALERTA_TOKEN" ] || { echo "::warning::Sin PLATAFORMA_URL/ALERTA_TOKEN: no se puede avisar por Telegram"; exit 0; }
+          curl -sS -X POST "$PLATAFORMA_URL/api/internal/alerta" \
+            -H "Authorization: Bearer $ALERTA_TOKEN" -H 'Content-Type: application/json' \
+            -d "{\"text\":\"🔴 La copia semanal de la cartera (seguros) ha FALLADO. Esta semana no hay copia recuperable. Mira el run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"

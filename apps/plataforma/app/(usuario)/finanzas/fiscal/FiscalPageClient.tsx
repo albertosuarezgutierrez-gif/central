@@ -2,7 +2,9 @@
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero } from '@/lib/finanzas'
+import { Landmark } from 'lucide-react'
 import { eur, eurSinDecimales } from '@/lib/dinero'
+import { BtnLink, PageHeader } from '@/components/ui'
 import ConsejoFiscalBox from '../ConsejoFiscalBox'
 
 type Props = { initialData: ResumenFinanciero | null; initialComparativa: EstadoDeclaracion | null; year: number; quarter: number }
@@ -153,8 +155,10 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
-        <h1 style={{ fontSize: '20px', fontWeight: 700, margin: 0, flex: 1 }}>🏛️ Fiscal — IRPF estimado</h1>
+      <PageHeader
+        titulo="Fiscal — IRPF estimado"
+        icono={<Landmark size={20} strokeWidth={1.75} />}
+        acciones={<>
         <select
           value={year}
           onChange={e => navigate(parseInt(e.target.value), quarter)}
@@ -170,11 +174,12 @@ export default function FiscalPageClient({ initialData, initialComparativa, year
             }}>{label}</button>
           ))}
         </div>
-        <a href={`/api/finanzas/export?year=${year}`} style={{ fontSize: '12px', padding: '6px 12px', background: 'var(--primary)', color: '#fff', borderRadius: '6px', textDecoration: 'none', fontWeight: 600 }}>
+        <BtnLink href={`/api/finanzas/export?year=${year}`} variante="primario" tam="sm">
           ⬇ CSV gestoría
-        </a>
+        </BtnLink>
         {isPending && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Cargando…</span>}
-      </div>
+        </>}
+      />
 
       {!d ? (
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>Sin datos para este periodo.</div>

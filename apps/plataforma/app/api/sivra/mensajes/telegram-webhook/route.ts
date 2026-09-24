@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook } from '@central/core-telegram'
-import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
+import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook, emisorAutorizado } from '@central/core-telegram'
+import { enviarAlHuespedDetallado } from '@/lib/sivra/agente-huesped/enviar'
+import { avisoFalloEnvio } from '@/lib/sivra/agente-huesped/motivo-envio'
 import { detectarExtra, mencionaImporte } from '@/lib/sivra/agente-huesped/extras'
 import { extraDeCatalogo, nombreEnIdioma } from '@/lib/sivra/extras/catalogo'
 import { registrarOferta } from '@/lib/sivra/extras/reserva'
@@ -23,6 +24,7 @@ import { simboloValido } from '@/lib/trading/cantera'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
 import { esPreguntaPatrimonio, esComandoPatrimonio } from '@/lib/patrimonio-chat'
+import { decidirBlogPr } from '@/lib/correduria/blog-pr'
 
 export const dynamic = 'force-dynamic'
 // El reenvío a ia-rest puede tardar (publicar un Reel espera a que Instagram
@@ -112,6 +114,9 @@ type Pendiente = {
   booking_id: string; property_id: string | null; borrador: string | null
   categoria: string | null; tg_message_id: number | null; esperando_edit: boolean; idioma: string | null
   esperando_retoque: boolean; pregunta: string | null
+  // El aviso DECLARÓ que esto no estaba en la guía y prometió aprenderlo: eso obliga a guardar la
+  // respuesta como hecho del piso aunque el mensaje del huésped no tuviera forma de pregunta.
+  hueco_guia: boolean | null
 }
 
 async function getPendiente(bookingId: string): Promise<Pendiente | null> {
@@ -124,6 +129,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false }, { status: 401 })
   }
   const body: any = await req.json().catch(() => ({}))
+  // El secreto solo prueba que el update lo manda Telegram; quién pulsó el botón lo dice el chat.
+  // Por aquí se aprueban pagos, envíos y borradores: solo cuenta lo que viene del chat de Alberto.
+  // 200 y no 401 para que Telegram no reintente el update ajeno.
+  if (!emisorAutorizado(body)) {
+    console.warn('[tg] update ignorado: no viene del chat autorizado')
+    return NextResponse.json({ ok: true })
+  }
 
   // ── Agente Instagram/blog de ia-rest (bot compartido) ────────────────────
   // El webhook del bot apunta AQUÍ, pero los callbacks ig_*/blog_*/briefing_*
@@ -799,6 +811,41 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Blog de la correduría: publicar/descartar el artículo directamente desde el chat
+    // (ablg_ok/ablg_no:<nºPR>). Misma `decidirBlogPr` que usa /correduria → Redes, así
+    // que el resultado es idéntico apruebe Alberto desde donde apruebe.
+    if (prefix === 'ablg') {
+      const numeroPr = Number(args[0] || 0)
+      if (!numeroPr) { await tgAnswerCallback(cb.id, 'PR no reconocido'); return NextResponse.json({ ok: true }) }
+      // 🚨 Validación EXPLÍCITA de las dos acciones que existen — nunca "lo que
+      // no sea 'no' es publicar". Un action desconocido (entrega duplicada,
+      // dato corrupto, un tercer botón futuro) se rechaza sin tocar GitHub: el
+      // valor por defecto de un botón que mezcla a producción no puede ser
+      // publicar.
+      if (action !== 'ok' && action !== 'no') {
+        await tgAnswerCallback(cb.id, 'Botón no reconocido')
+        return NextResponse.json({ ok: true })
+      }
+      const tokenGh = process.env.GITHUB_TOKEN
+      if (!tokenGh) {
+        await tgAnswerCallback(cb.id, 'Falta GITHUB_TOKEN')
+        await tgSend('🛑 No puedo mezclar/cerrar el PR: falta `GITHUB_TOKEN` en Vercel.', { html: true }).catch(() => {})
+        return NextResponse.json({ ok: true })
+      }
+      const accionBlog = action === 'no' ? 'descartar' : 'publicar'
+      const r = await decidirBlogPr(numeroPr, accionBlog, tokenGh)
+      await tgAnswerCallback(cb.id, r.ok ? (accionBlog === 'publicar' ? 'Publicado ✅' : 'Descartado 🗑️') : 'No se pudo')
+      const midBlog = cb.message?.message_id
+      const textoBlog = r.ok
+        ? (accionBlog === 'publicar'
+            ? `✅ <b>Publicado.</b> PR #${numeroPr} mezclado — el artículo ya está en la web.`
+            : `🗑️ <i>Descartado.</i> PR #${numeroPr} cerrado sin publicar.`)
+        : `🛑 <b>No se pudo ${accionBlog === 'publicar' ? 'publicar' : 'descartar'} el PR #${numeroPr}.</b>\n${escapeHtml(r.motivo)}`
+      if (midBlog) await tgEditMessage(midBlog, textoBlog).catch(() => {})
+      else await tgSend(textoBlog).catch(() => {})
+      return NextResponse.json({ ok: r.ok })
+    }
+
     if (prefix !== 'hsp') return NextResponse.json({ ok: true }) // no es de este agente (bot compartido)
 
     // 🧹 La orden a la limpieza NO depende del borrador pendiente: se ofrece JUSTO DESPUÉS de darle a
@@ -832,12 +879,14 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'send' || action === 'grant') {
-      const ok = await enviarAlHuesped(bookingId, pend.borrador || '')
-      await tgAnswerCallback(cb.id, ok ? 'Enviado ✅' : 'No se pudo enviar — reintenta')
+      const res = await enviarAlHuespedDetallado(bookingId, pend.borrador || '')
+      await tgAnswerCallback(cb.id, res.ok ? 'Enviado ✅' : (res.motivo.reintentable ? 'No se pudo enviar — reintenta' : 'No se pudo enviar — mira el aviso'))
       // Si el envío FALLA, NO tocamos nada (dejamos el pendiente y los botones para reintentar).
-      if (!ok) {
-        await tgSend('❌ No se pudo enviar al huésped. Vuelve a darle a ✅ Enviar en un momento.')
-        return NextResponse.json({ ok: false, sent: false })
+      // El aviso dice la CAUSA: con Smoobu caído (503) reintentar no puede funcionar, y sin eso
+      // Alberto pulsa ✅ Enviar una y otra vez (caso real 16/09/2026, reserva 155333446).
+      if (!res.ok) {
+        await tgSend(avisoFalloEnvio(res.motivo), { html: true })
+        return NextResponse.json({ ok: false, sent: false, motivo: res.motivo.clase })
       }
       await confirmarEnviado(pend.tg_message_id, pend.borrador || '')
       // Aprobado tal cual (sin corregir): la fila de mensajes_log ya está con edited=false.
@@ -848,7 +897,7 @@ export async function POST(req: NextRequest) {
       `).catch(() => {})
       // El agente aprende de TODAS las respuestas de Alberto, no solo de las correcciones: un borrador
       // aprobado tal cual es un ejemplo de tono/criterio igual de válido para ese piso (lo lee contexto.ts).
-      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '' })
+      await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '', huecoGuia: pend.hueco_guia === true })
       // 🍼 EXTRAS DE PAGO. Si lo que acabas de aprobar cotiza un extra del catálogo a su precio,
       // se registra la OFERTA. Esa fila es lo único que autoriza a mandar después el enlace de pago
       // solo cuando el huésped diga que sí: «el precio lo aprobó Alberto» pasa a ser un hecho de la
@@ -933,16 +982,16 @@ export async function POST(req: NextRequest) {
       // aprobación: se envía el borrador existente (ya en el idioma del huésped).
       const esAprobacion = /^(ok(ay)?|vale|s[ií]|dale|adelante|perfecto|correcto|env[ií]a(lo)?|enviar|de acuerdo|👍|👌|✅)\.?$/i.test(idea)
       if (esAprobacion) {
-        const ok = await enviarAlHuesped(bookingId!, pend.borrador || '')
-        if (!ok) {
-          await tgSend('❌ No se pudo enviar al huésped. Inténtalo de nuevo (o pulsa ✅ Enviar en el mensaje original).')
-          return NextResponse.json({ ok: false, sent: false })
+        const res = await enviarAlHuespedDetallado(bookingId!, pend.borrador || '')
+        if (!res.ok) {
+          await tgSend(avisoFalloEnvio(res.motivo), { html: true })
+          return NextResponse.json({ ok: false, sent: false, motivo: res.motivo.clase })
         }
         await prisma.$executeRaw(Prisma.sql`
           UPDATE mensajes_log SET auto_sent = true
           WHERE booking_id = ${bookingId} AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
         `).catch(() => {})
-        await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '' })
+        await aprenderCorreccion({ propertyId: pend.property_id || '', categoria: pend.categoria || 'general', pregunta: pend.pregunta || '', respuestaFinal: pend.borrador || '', huecoGuia: pend.hueco_guia === true })
         await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
         await tgSend(`✅ Enviado al huésped:\n${escapeHtml(pend.borrador || '')}`)
         return NextResponse.json({ ok: true, approved: true })

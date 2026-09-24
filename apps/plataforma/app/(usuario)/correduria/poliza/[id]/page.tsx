@@ -1,8 +1,21 @@
 import Link from 'next/link'
-import { contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
+import type { CapitalAsegurado } from '@central/module-seguros'
+import Documentos from '../../Documentos'
+import EditarDireccionRiesgo from './EditarDireccionRiesgo'
+import EditarModalidadRc from './EditarModalidadRc'
+import AnulacionPoliza from './AnulacionPoliza'
+import HistorialRiesgo from './HistorialRiesgo'
+import PresupuestosPoliza from './PresupuestosPoliza'
+import CartaMediadorPoliza from './CartaMediadorPoliza'
+import Siniestros from '../../Siniestros'
+import EvolucionPrima from '../../EvolucionPrima'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
+import type { ObjetoFicha } from '@/lib/ficha-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
+import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { eur } from '@/lib/dinero'
+import { PageHeader } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -21,36 +34,58 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
   const anul = p.viva && !cancelada ? ventanaAnulacion(p.fechaVencimiento) : null
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
+    // `minmax(0, 1fr)` NO es decorativo (mismo caso que la ficha de cliente): sin él la pista
+    // implícita de este grid se dimensiona con su contenido más ancho —las tablas de recibos,
+    // coberturas y siniestros, que declaran `minWidth: 560`— y arrastra la página entera fuera
+    // del móvil. El `overflowX: 'auto'` que las envuelve queda anulado, porque para cuando actúa
+    // su contenedor ya ha crecido. Medido en Chromium el 02/09/2026: 590 → 390 con esta línea.
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
       <div>
         <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Link href="/correduria">← Correduría</Link>
           <span>·</span>
           <Link href={`/correduria/cliente/${p.cliente.id}`}>{p.cliente.nombre}</Link>
         </div>
-        <h1 style={{ margin: '6px 0 2px', fontSize: 22 }}>
-          {TIPOS[p.tipo] ?? p.tipo} · {p.aseguradora}
-          {p.numeroPoliza && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · nº {p.numeroPoliza}</span>}
-        </h1>
-        <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          <span>{p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
-          {p.situacion && <span title="Situación según la compañía (EIAC)">situación: {p.situacion}</span>}
-          {p.retarificable && (
-            <a href={urlRetarificar(p.id)} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>Retarificar ↗</a>
-          )}
-        </div>
+        <PageHeader
+          titulo={<>
+            {TIPOS[p.tipo] ?? p.tipo} · {p.aseguradora}
+            {p.numeroPoliza && <span style={{ fontWeight: 400, color: 'var(--muted)' }}> · nº {p.numeroPoliza}</span>}
+          </>}
+          sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <span>{p.viva ? (cancelada ? '⚪ CIMA · cancelada' : '✅ CIMA · ' + p.estado.replace(/_/g, ' ')) : '🗄️ volcado histórico'}</span>
+            {p.situacion && <span title="Situación según la compañía (EIAC)">situación: {p.situacion}</span>}
+            {p.retarificable && (
+              /* Interna desde el 03/09/2026: la retarificación se pinta en
+                 /correduria y ya no salta a asegura, que echaba al login. Sin
+                 `target="_blank"` a propósito: abrir una pestaña para quedarse
+                 en la misma app solo estorba en el móvil. */
+              <Link href={urlRetarificar(p.id)} style={{ fontWeight: 600 }}>{rotuloRetarificar(p.retarificacion)}</Link>
+            )}
+          </span>}
+        />
       </div>
+
+      {/* ── Sustitución por cambio de compañía ──────────────────────────── */}
+      <Sustitucion p={p} />
 
       {/* ── Qué asegura ─────────────────────────────────────────────────── */}
       <Tarjeta titulo="Qué asegura">
         <Objeto p={p} />
+        {/* Solo en hogar, y solo si asegura los manda: `null` no es «no tiene capital». */}
+        {p.capitalesHogar && <CapitalesHogar caps={p.capitalesHogar} />}
+        {p.tipo === 'responsabilidad_civil' && (
+          <EditarModalidadRc
+            polizaId={p.id}
+            informadoPorCima={p.objeto !== null && p.objeto.estado === 'conocido' && !(p.objeto.nota ?? '').includes('a mano')}
+          />
+        )}
       </Tarjeta>
 
       {/* ── Fechas, prima y pago ─────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
         <Dato label="Efecto inicial" valor={p.fechaEfectoInicial ? fmt(p.fechaEfectoInicial) : null} nota="desde cuándo está con la compañía (la antigüedad del bonus)" />
         <Dato label="Inicio de esta anualidad" valor={p.fechaInicio ? fmt(p.fechaInicio) : null} />
-        <Dato label="Vence" valor={p.fechaVencimiento ? fmt(p.fechaVencimiento) : null} nota={anul ? (anul.enPlazo ? `para no renovar, avisar antes del ${fmt(anul.limiteAviso)}` : 'plazo de aviso pasado: renueva otro año') : cancelada ? 'cancelada' : undefined} color={anul?.enPlazo && anul.diasParaAvisar <= 60 ? '#c96' : undefined} />
+        <Dato label="Vence" valor={p.fechaVencimiento ? fmt(p.fechaVencimiento) : null} nota={anul ? (anul.enPlazo ? `para no renovar, avisar antes del ${fmt(anul.limiteAviso)}` : 'plazo de aviso pasado: renueva otro año') : cancelada ? 'cancelada' : undefined} color={anul?.enPlazo && anul.diasParaAvisar <= 60 ? 'var(--warning)' : undefined} />
         <Dato label="Prima" valor={p.prima !== null ? eur(p.prima) : null} nota={p.primaAnual !== null && p.primaBruta !== null && p.primaAnual !== p.primaBruta ? `neta ${eur(p.primaAnual)} · bruta ${eur(p.primaBruta)}` : undefined} />
         <Dato label="Forma de pago" valor={p.pago ? etiquetaFraccionamiento(p.pago.fraccionamiento) : null} nota={p.pago?.formaCobro ?? undefined} />
         <Dato
@@ -64,54 +99,62 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         compañía financia el pago y cobra por ello.
       </p>
 
+      {/* ── Historial del riesgo ─────────────────────────────────────────── */}
+      <HistorialRiesgo lista={p.historialRiesgo} />
+
       {/* ── Coberturas ──────────────────────────────────────────────────── */}
       <Coberturas lista={p.coberturas} />
 
       {/* ── Recibos ─────────────────────────────────────────────────────── */}
       <Recibos p={p} />
 
+      {/* ── ¿Por qué ha subido la prima? ────────────────────────────────── */}
+      {/* Va justo debajo de los recibos porque de ellos sale: la prima de cada
+          anualidad se DERIVA de los CA/NP de aniversario a aniversario. El salto
+          a retarificar es el MISMO de la cabecera (asegura, donde se gasta). */}
+      <EvolucionPrima
+        modo="tarjeta"
+        evolucion={p.evolucionPrima}
+        retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : { motivo: p.retarificacion?.motivo ?? null }}
+      />
+
+      {/* ── ¿Merece la pena pedir precio? ───────────────────────────────── */}
+      {/* Pegado a la evolución de la prima a propósito: las dos contestan a la
+          misma pregunta, y ésta es la que dice si compensa gastar los 0,50€. */}
+      <Estimacion
+        e={p.estimacion}
+        retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : null}
+      />
+
       {/* ── Siniestros ──────────────────────────────────────────────────── */}
-      <Tarjeta titulo={`Siniestros${p.siniestros.length ? ` (${p.siniestros.length})` : ''}`}>
-        {p.siniestros.length === 0 ? (
-          <p style={muted}>Ninguno registrado en esta póliza. Solo constan los que han llegado por CIMA o se han dado de alta aquí.</p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={tabla}>
-              <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Fecha</th><th style={th}>Estado</th><th style={th}>Tipo</th><th style={th}>Referencia</th><th style={th}>Tramitador</th><th style={{ ...th, textAlign: 'right' }}>Reserva</th></tr></thead>
-              <tbody>
-                {p.siniestros.map(s => (
-                  <tr key={s.id} style={{ borderTop: '1px solid var(--border)' }}>
-                    <td style={td}>{s.fecha ? fmt(s.fecha) : <span style={muted}>sin fecha</span>}</td>
-                    <td style={{ ...td, color: s.abierto ? '#c96' : 'var(--muted)' }}>{s.abierto ? '🟠' : '⚪'} {s.estado.replace(/_/g, ' ')}</td>
-                    <td style={td}>{s.tipo ?? '—'}</td>
-                    <td style={td}>{s.referencia ?? '—'}</td>
-                    <td style={td}>{s.tramitador ?? <span style={muted}>sin asignar en CIMA</span>}</td>
-                    <td style={{ ...td, textAlign: 'right' }}>{s.reserva === null ? <span style={muted}>sin dato</span> : eur(s.reserva)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </Tarjeta>
+      {/* «Confirmada por CIMA» = viva y con `id_poliza_entidad`: la misma pregunta que en la ficha.
+          «Viva» ya NO es `import_ref IS NULL` (`esCarteraViva` de @central/module-seguros: también es
+          viva la que CIMA mantiene al día sobre una fila del volcado), y quien lo decide es asegura. */}
+      <Siniestros
+        lista={p.siniestros}
+        polizas={[{ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.viva && p.idPolizaEntidad !== null }]}
+        documentos={p.listaDocumentos}
+      />
 
       {/* ── Intervinientes ──────────────────────────────────────────────── */}
       <Tarjeta titulo="Intervinientes">
         <Intervinientes p={p} />
       </Tarjeta>
 
+      <Tarjeta titulo="Anulación">
+        <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
+        <PresupuestosPoliza polizaId={p.id} />
+        <CartaMediadorPoliza polizaId={p.id} />
+      </Tarjeta>
+
       {/* ── Documentación ───────────────────────────────────────────────── */}
-      <Tarjeta titulo="Documentación">
-        {p.documentos === null ? (
-          <p style={muted}>No se ha podido contar los documentos de esta póliza.</p>
-        ) : p.documentos === 0 ? (
+      <Tarjeta titulo="📎 Documentación">
+        <Documentos polizaId={p.id} clienteId={p.cliente.id} inicial={p.listaDocumentos} sugeridos={NECESARIOS_EMISION_AUTO} />
+        {p.documentos !== null && p.listaDocumentos !== null && p.documentos > p.listaDocumentos.filter((d) => d.estado !== 'pedido').length && (
           <p style={muted}>
-            Ningún documento adjunto. La tabla existe y está a cero en TODA la base (medido 02/09/2026): no es que
-            esta póliza no tenga papeles, es que todavía no se guarda ninguno. Subir una póliza hoy la LEE pero no la
-            conserva — falta decidir dónde y cuánto tiempo.
+            Además hay {p.documentos - p.listaDocumentos.filter((d) => d.estado !== 'pedido').length} en la tabla antigua del CRM
+            (poliza_documentos), sin fichero accesible desde aquí.
           </p>
-        ) : (
-          <p style={{ margin: 0, fontSize: 13 }}>{p.documentos} documento(s) adjuntos.</p>
         )}
       </Tarjeta>
 
@@ -144,6 +187,11 @@ function Objeto({ p }: { p: Poliza }) {
   const conocido = propio !== null && propio.estado === 'conocido' && (propio.titulo || propio.detalle)
   const gem = p.gemela?.objeto
   const gemConocida = gem && gem.estado === 'conocido' && (gem.titulo || gem.detalle)
+  // «Conocido» no es «con calle»: un objeto puede ser conocido solo por
+  // localidad/CP o m² (nota «Sin dirección informada…»). Para decidir si se
+  // ofrece anotar la dirección hay que mirar la CALLE en cada fila.
+  const conCalle = (o: ObjetoFicha | null | undefined) => !!o && o.estado === 'conocido' && !(o.nota ?? '').includes('Sin dirección')
+  const sinCalle = { propia: conCalle(propio), gemela: conCalle(gem), cifrada: propio?.estado === 'cifrado' || gem?.estado === 'cifrado' }
   return (
     <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
       {conocido ? (
@@ -163,6 +211,13 @@ function Objeto({ p }: { p: Poliza }) {
           </div>
         </div>
       )}
+      {/* 🏠 CIMA no manda la dirección del riesgo (19/09/2026): si ni la fila ni
+          la gemela la traen, el corredor la anota aquí. `cifrado` NO cuenta como
+          falta —la dirección existe, solo que aquí no se lee— y el puerto la
+          rechazaría con 409 igualmente. */}
+      {admiteDireccionRiesgo(p.tipo) && !sinCalle.cifrada && !sinCalle.propia && !sinCalle.gemela && (
+        <EditarDireccionRiesgo polizaId={p.id} esHogar={p.tipo === 'hogar'} />
+      )}
       {!conocido && !gemConocida && p.gemelaInformada && p.gemela === null && (
         <div style={muted}>Tampoco hay copia en el volcado con más datos.</div>
       )}
@@ -171,25 +226,92 @@ function Objeto({ p }: { p: Poliza }) {
   )
 }
 
+/**
+ * Cambio de compañía por retarificación (20/09/2026). Dos caras, no
+ * excluyentes: esta póliza puede a la vez venir de sustituir a otra Y estar
+ * ya sustituida por una tercera (si se retarifica dos veces).
+ *
+ * 🚨 «Sustituida» NO es «cancelada»: el `estado` de esta póliza lo sigue
+ * mandando CIMA, y hasta que confirme la nueva, ésta sigue viva de cara a la
+ * compañía. Por eso el seguimiento se pinta como una espera, no como un hecho
+ * consumado — Alberto: «hay que hacerle seguimiento hasta que CIMA confirma».
+ */
+function Sustitucion({ p }: { p: Poliza }) {
+  const s = p.sustitucion
+  if (s === null) return null
+  if (s.origen === null && s.sustituidaPor === null) return null
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {s.origen && (
+        <div style={{ ...tarjeta, borderStyle: 'dashed', fontSize: 13 }}>
+          🔁 Sustituye a la póliza de <strong>{s.origen.aseguradora}</strong>
+          {s.origen.numeroPoliza && ` nº ${s.origen.numeroPoliza}`} (<Link href={`/correduria/poliza/${s.origen.polizaId}`}>ver</Link>).
+        </div>
+      )}
+      {s.sustituidaPor && (
+        <div style={{ ...tarjeta, borderColor: s.seguimiento === 'confirmada' ? 'var(--positive)' : 'var(--warning)', fontSize: 13 }}>
+          {s.seguimiento === 'confirmada' ? (
+            <>✅ Sustituida por la póliza en <strong>{s.sustituidaPor.aseguradora}</strong>
+              {s.sustituidaPor.numeroPoliza && ` nº ${s.sustituidaPor.numeroPoliza}`} — CIMA ya confirmó que el cliente la está pagando.</>
+          ) : (
+            <>🟡 Sustituida por la póliza en <strong>{s.sustituidaPor.aseguradora}</strong>
+              {s.sustituidaPor.numeroPoliza && ` nº ${s.sustituidaPor.numeroPoliza}`}, emitida
+              {s.sustituidaAt ? ` el ${fmt(s.sustituidaAt)}` : ''} — <strong>pendiente de seguimiento</strong>: todavía no
+              consta que CIMA la haya confirmado (que el cliente la esté pagando de verdad).</>
+          )}{' '}
+          <Link href={`/correduria/poliza/${s.sustituidaPor.polizaId}`}>ver la nueva</Link>.
+        </div>
+      )}
+    </div>
+  )
+}
+
 function Coberturas({ lista }: { lista: Poliza['coberturas'] }) {
   if (lista.length === 0) {
     return <Tarjeta titulo="Coberturas"><p style={muted}>La compañía no ha mandado el detalle de coberturas por CIMA.</p></Tarjeta>
   }
+  const hayDetalle = lista.some((c) => c.detalle)
+  const hayVigencia = lista.some((c) => c.desde || c.hasta)
   return (
     <div style={tarjeta}>
       <details open={lista.length <= 12}>
         <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>Coberturas ({lista.length})</summary>
+        <p style={{ ...muted, marginTop: 6 }}>
+          Códigos de la compañía, no de la correduría: el mismo número significa cosas distintas en Mapfre y en Occident.
+          «Sin capital propio» es lo que manda la compañía como 0: la garantía existe y se paga según condicionado.
+        </p>
         <div style={{ overflowX: 'auto', marginTop: 10 }}>
           <table style={tabla}>
-            <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>#</th><th style={th}>Cobertura</th><th style={th}>Capital</th><th style={th}>Franquicia</th></tr></thead>
+            <thead>
+              <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+                <th style={th}>#</th><th style={th}>Cobertura</th><th style={th}>Capital</th>
+                {hayDetalle && <th style={th}>Límite</th>}
+                <th style={th}>Franquicia</th>
+                {hayDetalle && <th style={th}>Prima</th>}
+                {hayVigencia && <th style={th}>Vigencia</th>}
+              </tr>
+            </thead>
             <tbody>
               {lista.map((c, i) => (
                 <tr key={`${c.codigo ?? ''}-${i}`} style={{ borderTop: '1px solid var(--border)' }}>
                   <td style={{ ...td, color: 'var(--muted)' }}>{c.orden ?? i + 1}</td>
-                  <td style={td}>{c.descripcion ?? c.codigo ?? '—'}{c.codigo && c.descripcion && <div style={sub}>{c.codigo}</div>}</td>
-                  {/* El capital es TEXTO del EIAC («ILIMITADO», «VALOR VENAL»): no se numera. */}
-                  <td style={td}>{c.capital ?? <span style={muted}>—</span>}{c.descripcionCapital && <div style={sub}>{c.descripcionCapital}</div>}</td>
-                  <td style={td}>{c.franquicia ?? <span style={muted}>—</span>}</td>
+                  <td style={td}>
+                    {c.descripcion ?? c.codigo ?? '—'}
+                    {(c.codigo || c.modalidad) && (
+                      <div style={sub}>{c.codigo}{c.codigo && c.modalidad ? ' · ' : ''}{c.modalidad && <span title="Modalidad de valoración (código EIAC de la compañía)">val. {c.modalidad}</span>}</div>
+                    )}
+                  </td>
+                  <td style={td}><CapitalCobertura capital={c.capital} descripcion={c.descripcionCapital} /></td>
+                  {hayDetalle && <td style={td}><Limites detalle={c.detalle ?? null} /></td>}
+                  <td style={td}><Franquicia texto={c.franquicia} detalle={c.detalle ?? null} /></td>
+                  {hayDetalle && (
+                    <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                      {c.detalle?.prima?.total !== null && c.detalle?.prima?.total !== undefined ? eur(c.detalle.prima.total)
+                        : c.detalle?.prima?.neta !== null && c.detalle?.prima?.neta !== undefined ? <>{eur(c.detalle.prima.neta)} <span style={sub}>neta</span></>
+                        : <span style={muted}>—</span>}
+                    </td>
+                  )}
+                  {hayVigencia && <td style={{ ...td, whiteSpace: 'nowrap' }}>{c.desde || c.hasta ? `${fechaCorta(c.desde)} → ${fechaCorta(c.hasta)}` : <span style={muted}>—</span>}</td>}
                 </tr>
               ))}
             </tbody>
@@ -200,13 +322,64 @@ function Coberturas({ lista }: { lista: Poliza['coberturas'] }) {
   )
 }
 
+function fechaCorta(iso: string | null): string {
+  if (!iso) return '?'
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return y && m && d ? `${d}/${m}/${y}` : iso
+}
+
+function CapitalCobertura({ capital, descripcion }: { capital: string | null; descripcion: string | null }) {
+  const c = interpretarCapital(capital)
+  const pie = descripcion && <div style={sub}>{descripcion}</div>
+  switch (c.tipo) {
+    case 'ilimitado': return <>Ilimitado{pie}</>
+    case 'sin_capital': return <><span style={muted} title="La compañía manda 0: la garantía no lleva capital propio (RC obligatoria, asistencia, defensa…)">sin capital propio</span>{pie}</>
+    case 'importe': return <>{eur(c.importe)}{pie}</>
+    case 'texto': return <>{c.texto}{pie}</>
+    default: return <><span style={muted}>—</span>{pie}</>
+  }
+}
+
+function Limites({ detalle }: { detalle: Poliza['coberturas'][number]['detalle'] | null }) {
+  if (!detalle || detalle.limites.length === 0) return <span style={muted}>—</span>
+  return (
+    <>
+      {detalle.limites.map((l, i) => (
+        <div key={i} style={{ whiteSpace: 'nowrap' }}>
+          {l.maximo !== null ? eur(l.maximo) : l.minimo !== null ? eur(l.minimo) : '—'}
+          {l.descripcion && <span style={sub}> {l.descripcion}</span>}
+          {!l.descripcion && l.clase && <span style={sub} title="Clase de límite (código EIAC)"> {l.clase}</span>}
+        </div>
+      ))}
+    </>
+  )
+}
+
+function Franquicia({ texto, detalle }: { texto: string | null; detalle: Poliza['coberturas'][number]['detalle'] | null }) {
+  const fr = detalle?.franquicias ?? []
+  if (fr.length === 0) return texto ? <>{texto}</> : <span style={muted}>—</span>
+  return (
+    <>
+      {fr.map((f, i) => (
+        <div key={i} style={{ whiteSpace: 'nowrap' }}>
+          {f.porcentaje !== null ? `${f.porcentaje.toLocaleString('es-ES')} %` : ''}
+          {f.minimo !== null || f.maximo !== null ? (
+            <span style={sub}> {f.minimo !== null ? `mín. ${eur(f.minimo)}` : ''}{f.minimo !== null && f.maximo !== null ? ' · ' : ''}{f.maximo !== null ? `máx. ${eur(f.maximo)}` : ''}</span>
+          ) : null}
+          {f.porcentaje === null && f.minimo === null && f.maximo === null && (f.clase ?? texto ?? '—')}
+        </div>
+      ))}
+    </>
+  )
+}
+
 function Recibos({ p }: { p: Poliza }) {
   const r = p.recibos
   const titular =
     r === null ? 'asegura no informa recibos'
     : r.total === 0 ? 'la compañía no ha mandado ningún recibo: no se sabe si está pagada'
     : r.devueltos > 0 ? `🔴 ${r.devueltos} devuelto(s)`
-    : r.pendientes > 0 ? `🟡 ${r.pendientes} pendiente(s)`
+    : r.pendientes > 0 ? `🟡 ${r.pendientes} al cobro (emitido, aún sin cargar)`
     : r.cobrados === 0 && r.anulados > 0 ? `⚪ todos anulados (${r.anulados})`
     : `🟢 ${r.cobrados} cobrado(s)${r.cobradoEur !== null ? ` · ${eur(r.cobradoEur)}` : ''}`
   return (
@@ -221,7 +394,7 @@ function Recibos({ p }: { p: Poliza }) {
                 <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
                   <td style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
                   <td style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
-                  <td style={td}>{ICONO[x.situacion] ?? '❔'} {x.situacion.replace(/_/g, ' ')}</td>
+                  <td style={td}>{ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}</td>
                   <td style={td}>{x.formaPago ?? <span style={muted}>—</span>}</td>
                   <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>{x.importe === null ? <span style={muted} title="Importe con forma inesperada en el EIAC">ilegible</span> : eur(x.importe)}</td>
                 </tr>
@@ -235,24 +408,39 @@ function Recibos({ p }: { p: Poliza }) {
 }
 
 const ICONO: Record<string, string> = { cobrado: '🟢', pendiente: '🟡', emitido: '🟡', devuelto: '🔴', impagado: '🔴', anulado: '⚪' }
+// «pendiente» del EIAC = emitido y aún sin cargar en cuenta; Alberto lo leyó como
+// deuda (02/09/2026). Devuelto e impagado son los estados que sí piden llamar.
+const ROTULO: Record<string, string> = { pendiente: 'al cobro (emitido, sin cargar aún)', emitido: 'al cobro (emitido, sin cargar aún)' }
 
+// El TOMADOR va SIEMPRE, y el primero: no es un interviniente sino el titular de
+// la póliza, así que no está en `poliza_intervinientes` y antes no salía. Alberto
+// lo vio el 02/09/2026 en la 6930FBP, donde CIMA solo manda al conductor
+// habitual y la empresa titular no aparecía por ningún lado. Quién sale y qué se
+// advierte lo decide `filasIntervinientes`, que está testeado aparte.
 function Intervinientes({ p }: { p: Poliza }) {
-  if (p.intervinientes === null) return <p style={muted}>asegura no informa intervinientes de esta póliza.</p>
-  if (p.intervinientes.length === 0) return <p style={muted}>La compañía no ha enviado intervinientes (tomador, propietario, conductor…) por CIMA.</p>
+  const { filas, aviso } = filasIntervinientes(
+    { polizaId: p.id, fichaId: p.cliente.id, nombre: p.cliente.nombre },
+    p.intervinientes,
+  )
   const ef = contactoEfectivo({ telefono: null, email: null }, p.intervinientes)
   return (
     <div style={{ display: 'grid', gap: 6, fontSize: 13 }}>
-      {p.intervinientes.map((i, n) => (
+      {filas.map((i, n) => (
         <div key={n}>
           <span style={{ textTransform: 'capitalize', color: 'var(--muted)' }}>{etiquetaRol(i.rol)}</span>:{' '}
           {i.fichaId ? <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link> : (i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre'))}
-          {i.esTomador && <span style={muted}> (el tomador)</span>}
+          {/* La fila sintetizada YA se llama «tomador»: repetirlo sobra. */}
+          {i.esTomador && i.rol !== 'tomador' && <span style={muted}> (el tomador)</span>}
           {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`}>📞 {i.telefono}</a></>}
           {i.email && <> · <a href={`mailto:${i.email}`}>✉️</a></>}
-          <span style={sub}> · {i.origen}</span>
+          {/* `poliza` no es una procedencia que decir: es la póliza que se está mirando. */}
+          {i.origen !== 'poliza' && <span style={sub}> · {i.origen}</span>}
         </div>
       ))}
       {ef.telefono && ef.quien && <div style={muted}>Si el tomador no contesta: {ef.quien.nombre} ({etiquetaRol(ef.quien.rol)}) 📞 {ef.telefono}</div>}
+      {/* Tres estados, no dos: «no se pudo mirar» ≠ «no hay nadie más». */}
+      {aviso === 'sin_mirar' && <div style={muted}>Del resto de figuras (propietario, conductor…) no se sabe: asegura no ha podido informarlas.</div>}
+      {aviso === 'solo_tomador' && <div style={muted}>La compañía no ha enviado más figuras (propietario, conductor…) por CIMA.</div>}
     </div>
   )
 }
@@ -304,4 +492,218 @@ function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNo
 function fmt(iso: string): string {
   const [y, m, d] = iso.split('-')
   return d && m && y ? `${d}/${m}/${y}` : iso
+}
+
+/* ─── ¿Merece la pena pedir precio? ────────────────────────────────────────
+ * Va pegada a la evolución de la prima porque responde a la MISMA pregunta:
+ * pedir precio cuesta 0,50€ reales y esto dice si compensa gastarlos.
+ *
+ * 🚨 Lo que esta tarjeta NO puede hacer es leerse como el precio de una
+ * compañía: si el cliente ve «180€» y luego le dicen 260€, no vuelve. De ahí
+ * que (a) se pinte SIEMPRE la `etiqueta` que manda el puerto, tal cual, sin
+ * resumirla; (b) los números vayan con `≈`, en el color de aviso informativo y
+ * más pequeños que los importes REALES de la ficha (`Dato`, 18 px en
+ * `--text`), para que no se confundan con una prima cobrada; y (c) el veredicto
+ * `no-se` se pinte con su porqué en vez de esconder el bloque — no mojarse es
+ * una respuesta, no un hueco.
+ */
+function Estimacion({ e, retarificar }: { e: Poliza['estimacion']; retarificar: { href: string; rotulo: string } | null }) {
+  if (e === null) {
+    return (
+      <div style={{ ...tarjeta, borderStyle: 'dashed' }}>
+        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6 }}>🔮 ¿Merece la pena pedir precio?</div>
+        <p style={muted}>La versión desplegada de asegura todavía no manda la estimación: no se sabe si compensa.</p>
+      </div>
+    )
+  }
+  return (
+    <div style={cajaEstimacion}>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
+        <span style={{ fontWeight: 700, fontSize: 14 }}>🔮 ¿Merece la pena pedir precio?</span>
+        <span style={{ ...chipBase, ...tonoVeredicto(e.veredicto) }}>{ROTULO_VEREDICTO[e.veredicto]}</span>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+        <p style={{ ...muted, color: 'var(--text)' }}>
+          {e.porque || 'asegura no explica el veredicto.'}
+        </p>
+
+        {e.horquilla ? (
+          <div>
+            <div style={{ ...sub, marginBottom: 4 }}>Horquilla estimada</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
+              <Estimado etiqueta="más barato" eur={e.horquilla.minEur} />
+              <Estimado etiqueta="lo más habitual" eur={e.horquilla.medianaEur} />
+              <Estimado etiqueta="más caro" eur={e.horquilla.maxEur} />
+            </div>
+          </div>
+        ) : (
+          <p style={{ ...muted, color: 'var(--text)' }}>
+            Sin horquilla: {e.sinBase ?? 'asegura no dice por qué (no se sabe si es que aún no hay casos o si los que hay han caducado).'}
+          </p>
+        )}
+
+        {/* La etiqueta del puerto, VERBATIM: es la frase que dice que esto no es un precio. */}
+        <p style={{ ...sub, color: 'var(--text)' }}>{e.etiqueta}</p>
+
+        {(e.base !== null || e.antiguedadMedianaMeses !== null) && (
+          <p style={sub}>
+            {e.base === 'parecidos' && 'Se apoya en pólizas parecidas de la cartera.'}
+            {e.base === 'toda-la-cartera' && 'Se apoya en toda la cartera: no hay bastantes pólizas parecidas.'}
+            {e.antiguedadMedianaMeses !== null && (
+              <> {e.base !== null ? ' ' : ''}Antigüedad mediana de los casos: {e.antiguedadMedianaMeses.toLocaleString('es-ES', { maximumFractionDigits: 1 })} meses.</>
+            )}
+          </p>
+        )}
+
+        {/* Que no haya cotizaciones en la BD es INFORMACIÓN, no un error: la
+            estimación existe, solo que apoyada en menos sitios. */}
+        {e.fuente === null ? (
+          <p style={sub}>asegura no dice de dónde salen los casos.</p>
+        ) : e.fuente.cotizacionesDisponibles ? (
+          <p style={sub}>{e.fuente.cartera} de la cartera · {e.fuente.cotizaciones} cotizaciones guardadas.</p>
+        ) : (
+          <p style={sub}>
+            Se apoya solo en la cartera ({e.fuente.cartera} caso(s)): las cotizaciones guardadas todavía no están en la
+            base de datos.
+          </p>
+        )}
+
+        {retarificar && (
+          e.veredicto === 'merece' ? (
+            <div><Link href={retarificar.href} style={botonPedirPrecio}>{retarificar.rotulo}</Link></div>
+          ) : (
+            <p style={sub}><Link href={retarificar.href}>Pedir precio igualmente</Link> (cuesta 0,50€)</p>
+          )
+        )}
+      </div>
+    </div>
+  )
+}
+
+/** Un número ESTIMADO: `≈`, tamaño y color propios para no confundirlo con una prima real. */
+function Estimado({ etiqueta, eur: importe }: { etiqueta: string; eur: number }) {
+  return (
+    <div style={{ minWidth: 0 }}>
+      <div style={sub}>{etiqueta}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--info)', whiteSpace: 'nowrap' }}>≈ {eur(importe)}</div>
+    </div>
+  )
+}
+
+const ROTULO_VEREDICTO: Record<NonNullable<Poliza['estimacion']>['veredicto'], string> = {
+  merece: '✅ merece pedir precio',
+  'no-merece': '⏸️ no compensa ahora',
+  'no-se': '❔ no se sabe',
+}
+
+function tonoVeredicto(v: NonNullable<Poliza['estimacion']>['veredicto']): React.CSSProperties {
+  switch (v) {
+    case 'merece': return { background: 'var(--surface)', color: 'var(--text)', border: '1px solid var(--info)' }
+    case 'no-merece': return { background: 'var(--surface)', color: 'var(--muted)', border: '1px solid var(--border)' }
+    case 'no-se': return { background: 'transparent', color: 'var(--muted)', border: '1px dashed var(--border)' }
+  }
+}
+
+/* ─── Capitales de hogar ───────────────────────────────────────────────────
+ * SEIS estados y ninguno se colapsa con otro. Los dos que muerden:
+ *
+ *  · `solo_sublimites`: `mayorEur` NO es el continente — pintarlo como si lo
+ *    fuera daría un capital plausible y falso, que es el modo de fallo más caro
+ *    de este repo (un número que se lee bien y miente).
+ *  · `del_volcado`: SÍ es el capital, pero el de la copia histórica de la
+ *    póliza (junio de 2026), no el que manda hoy la compañía. Se pinta con
+ *    marco punteado y su procedencia SIEMPRE visible, nunca como el consenso:
+ *    un capital viejo leído como actual decide mal si el cliente está
+ *    infraasegurado, y eso es peor que un hueco.
+ */
+function CapitalesHogar({ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }) {
+  return (
+    <div style={{ borderTop: '1px solid var(--border)', marginTop: 10, paddingTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10 }}>
+      <Capital titulo="Continente (el inmueble)" c={caps.continente} />
+      <Capital titulo="Contenido (el mobiliario)" c={caps.contenido} />
+      <p style={{ ...sub, gridColumn: '1 / -1', margin: 0 }}>
+        El estándar EIAC sí manda el capital etiquetado, pero nuestra ingesta guarda el importe y tira la etiqueta:
+        aquí se deriva de las garantías, y solo se afirma cuando varias coinciden en el mismo importe. Cuando no
+        lo hacen se mira la copia de esta misma póliza en el volcado histórico, y entonces se dice que viene de ahí.
+      </p>
+    </div>
+  )
+}
+
+function Capital({ titulo, c }: { titulo: string; c: CapitalAsegurado | null }) {
+  const marco: React.CSSProperties = { border: `1px ${c === null || c.estado !== 'consenso' ? 'dashed' : 'solid'} var(--border)`, borderRadius: 10, padding: '10px 12px', minWidth: 0, display: 'grid', gap: 4 }
+  const cabecera = <div style={{ fontSize: 12, color: 'var(--muted)' }}>{titulo}</div>
+  if (c === null) {
+    return <div style={marco}>{cabecera}<div style={muted}>asegura no manda este capital.</div></div>
+  }
+  switch (c.estado) {
+    case 'consenso':
+      return (
+        <div style={{ ...marco, borderStyle: 'solid' }}>
+          {cabecera}
+          <div style={{ fontSize: 18, fontWeight: 700 }}>{eur(c.eur)}</div>
+          <div style={sub}>Lo dicen {c.garantias} garantías de esta póliza.</div>
+          {c.ejemplo && <div style={sub}>p. ej. «{c.ejemplo}»</div>}
+        </div>
+      )
+    // 🚨 Trae importe, pero NO es el consenso: marco punteado, el importe en el
+    // tono apagado y la procedencia debajo, sin recortar. Es lo único que
+    // separa «61.000€ que dice la compañía hoy» de «61.000€ que decía en 2026».
+    case 'del_volcado':
+      return (
+        <div style={marco}>
+          {cabecera}
+          <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--muted)' }} title="Capital de la copia histórica de esta póliza, no el de hoy">
+            {eur(c.eur)}
+          </div>
+          <div style={{ ...chipBase, background: 'transparent', color: 'var(--muted)', border: '1px dashed var(--border)', justifySelf: 'start' }}>
+            del volcado histórico
+          </div>
+          <div style={sub}>{c.motivo}</div>
+        </div>
+      )
+    case 'solo_sublimites':
+      return (
+        <div style={marco}>
+          {cabecera}
+          <div style={{ fontSize: 18, fontWeight: 400, color: 'var(--muted)' }} title="No se puede derivar de las garantías">sin dato</div>
+          <div style={sub}>{c.motivo}</div>
+          {/* Etiquetado como lo que es. Nunca como el capital. */}
+          <div style={sub} title="Es el tope de UNA garantía suelta, no la suma asegurada">
+            El mayor sublímite: {eur(c.mayorEur)}
+          </div>
+        </div>
+      )
+    case 'todo_cero':
+      return (
+        <div style={marco}>
+          {cabecera}
+          <div style={{ fontSize: 15, fontWeight: 600 }}>Sin capital propio</div>
+          <div style={sub}>{c.motivo}</div>
+        </div>
+      )
+    default:
+      return (
+        <div style={marco}>
+          {cabecera}
+          <div style={{ fontSize: 18, fontWeight: 400, color: 'var(--muted)' }}>sin dato</div>
+          <div style={sub}>{c.motivo}</div>
+        </div>
+      )
+  }
+}
+
+const chipBase: React.CSSProperties = {
+  display: 'inline-block', fontSize: 11, padding: '2px 8px', borderRadius: 999, whiteSpace: 'nowrap', lineHeight: 1.5,
+}
+// Punteada y en el tono informativo: se distingue de un vistazo de las tarjetas
+// de importes REALES de arriba, que van con borde continuo sobre el fondo normal.
+const cajaEstimacion: React.CSSProperties = {
+  border: '1px dashed var(--info)', background: 'var(--info-bg)', borderRadius: 12, padding: 14,
+}
+// ≥44 px táctil: es el botón que manda a gastar dinero.
+const botonPedirPrecio: React.CSSProperties = {
+  display: 'inline-flex', alignItems: 'center', minHeight: 44, padding: '0 14px', borderRadius: 10,
+  background: 'var(--primary)', color: 'var(--surface)', fontWeight: 600, fontSize: 13, textDecoration: 'none',
 }

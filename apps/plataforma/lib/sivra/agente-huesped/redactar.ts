@@ -1,5 +1,7 @@
 // lib/sivra/agente-huesped/redactar.ts — genera un borrador desde la idea en bruto del anfitrión.
 
+import { asegurarIdioma } from './idioma-salida.ts'
+
 const NOMBRE_IDIOMA: Record<string, string> = { es: 'español', en: 'inglés', fr: 'francés', de: 'alemán', it: 'italiano' }
 
 type Complete = (messages: { role: 'user'; content: string }[], opts: { system: string; maxTokens: number }) => Promise<string>
@@ -47,6 +49,9 @@ export async function redactarDesdeIdea(
       [{ role: 'user', content }],
       { system, maxTokens: 600 },
     )).trim()
-    return out
+    // Estas instrucciones van en español: el modelo tiende a redactar en español aunque el huésped
+    // escriba en otro idioma. Si pasa, se traduce; si no se puede, sale el original y el aviso de
+    // Telegram lo declara (`avisoIdiomaEquivocado`) en vez de fingir un fallo de traducción.
+    return (await asegurarIdioma(out, ctx.idioma, complete)).texto
   } catch { return '' }
 }

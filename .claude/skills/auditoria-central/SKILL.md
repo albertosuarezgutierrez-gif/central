@@ -15,10 +15,10 @@ solas**: la lista que manda es `ls apps` cruzada con la matriz de `.github/workf
 (`wswbehlcuxqxyinousql`) con CUATRO ámbitos: schema `public` (ialimp/sivra/plataforma/transporte/
 alquiler/almacen/mariscos/asegura-portal, scope `empresa_id`/tenant), **`iarest`** (ia-rest:
 runtime + Edge Functions + crons desde el cierre 19/08/2026), **`rrhh`** (rol `rrhh_app`,
-BYPASSRLS) y **`seguros`** (correduría: rol `prisma_seguros` BYPASSRLS; desde el 02/09/2026 tiene
-la cartera COPIADA como foto fija, pero **el código sigue leyendo del origen de Manuel**,
-`uijsgeocgdaxkhvwtjqs`, por `ASEGURA_DATABASE_URL` — conector MCP `Supabase_asegura`, solo
-lectura). `housesevillana` no tiene BD propia (lee disponibilidad por `/api/publico/*` de
+BYPASSRLS) y **`seguros`** (correduría: roles `prisma_seguros` y `crm_seguros`, ambos BYPASSRLS; desde
+el 02/09/2026 es **la fuente viva**: `apps/asegura` lee de aquí por defecto y el CRM de Manuel, ya en la
+cuenta de Alberto, ESCRIBE aquí la ingesta de CIMA. El Supabase de Manuel, `uijsgeocgdaxkhvwtjqs`
+—conector MCP `Supabase_asegura`, solo lectura— queda como foto congelada al 31/08). `housesevillana` no tiene BD propia (lee disponibilidad por `/api/publico/*` de
 plataforma). El proyecto viejo `efncqyvhniaxsirhdxaa` fue BORRADO el 19/08/2026 — ya no existe.
 Lee `MATRIZ.md` y `docs/CONTEXTO-SESIONES.md` (entradas de arriba) antes de empezar.
 
@@ -134,11 +134,13 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
   BORRADO el 19/08/2026: `list_projects` debe devolver SOLO `central` — si aparece cualquier otro
   proyecto, investígalo. `list_migrations` (¿migraciones del repo aplicadas?), `list_tables` y
   `list_edge_functions` en el compartido.
-- **El origen de la correduría es OTRA cuenta Supabase** (la de Manuel, `uijsgeocgdaxkhvwtjqs`,
-  conector `Supabase_asegura`, solo lectura): no sale en `list_projects` de central y eso es
-  correcto. Ahí solo se mira (a) la foto `seguros.*` vs origen (recuentos; checksums en la
-  profunda — bloque 2-quater de `/auditoria-diaria`) y (b) `get_advisors` de seguridad si el
-  conector lo permite. **Nunca** escribir ni tocar su RLS: es infra de Manuel hasta el corte.
+- **El Supabase de Manuel (`uijsgeocgdaxkhvwtjqs`, conector `Supabase_asegura`, solo lectura) ya
+  NO es el origen:** desde el 02/09/2026 es una foto congelada; la cartera viva está en `seguros`
+  de central. No sale en `list_projects` de central y eso es correcto. Ahí ya no se reconcilia
+  nada. Lo que SÍ se vigila en central: que la ingesta de CIMA sigue entrando — eventos
+  `cima_pull_*` en `seguros.operational_events` (`occurred_at`, dos crons al día, 05:30 y 11:30
+  UTC). Un día sin heartbeat es «CIMA parada» (el adaptador Java vive en el Fly de Manuel y se
+  apaga sin error), nunca «no hay ficheros». **Nunca** escribir en el proyecto de Manuel.
 - Vercel: `list_projects` puede no listar las 12 apps si alguna vive en otro team/cuenta fuera del
   alcance del conector — no lo des por "no desplegada" sin más, márcalo para que Alberto lo mire a
   mano en el dashboard. `list_deployments` (último deploy de cada proyecto visible y su resultado).

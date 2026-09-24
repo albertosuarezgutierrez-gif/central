@@ -8,5 +8,27 @@
   "framework": "nextjs",
   "regions": [
     "fra1"
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/avisos-vencimiento",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/avisos-intranet",
+      "schedule": "15 8 * * *"
+    },
+    {
+      "path": "/api/cron/avisos-web",
+      "schedule": "30 8 * * *"
+    },
+    {
+      "path": "/api/cron/felicitaciones",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/revision-anual",
+      "schedule": "0 9 1 * *"
+    }
   ]
 }

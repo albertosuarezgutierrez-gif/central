@@ -4,7 +4,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { semaforoFeed, fechaCaducidadConsent, diasEntre, partirAvisos, CONSENT_DIAS } from './psd2-semaforo.ts'
+import { semaforoFeed, fechaCaducidadConsent, diasEntre, partirAvisos, lineaCuentasFeed, CONSENT_DIAS } from './psd2-semaforo.ts'
 
 const CONSENT = '2026-06-14' // consentimiento real (SCA del 14/06/2026)
 
@@ -123,4 +123,41 @@ test('las notas ℹ️ viajan en `notas`, NO mezcladas en `detalles` (la UI las 
   assert.equal(e.nivel, 'ok')
   assert.deepEqual(e.notas, [nota])
   assert.ok(!e.detalles.some(d => d.startsWith('ℹ️')))
+})
+
+// ─── Desglose por cuenta (lineaCuentasFeed) ──────────────────────────────────────────────────
+
+test('una cuenta que trajo apuntes SIN fecha no se pinta como «ninguno» (NULL ≠ 0)', () => {
+  // La trampa: `ultimoMov` es MAX(fecha_operacion) y esa columna es nullable, así que NULL
+  // significa «trajo apuntes, pero no sé de cuándo son». El texto viejo decía «último mov.
+  // ninguno», que afirma justo lo contrario: que esa cuenta no ha traído nada.
+  const linea = lineaCuentasFeed([{ banco: 'BBVA', mascara: '****1175', ultimoMov: null }])
+  assert.ok(linea.includes('SIN fecha'))
+  assert.ok(!linea.includes('ninguno'))
+})
+
+test('con fecha, la pinta en dd/mm como el resto del panel (no el ISO crudo)', () => {
+  const linea = lineaCuentasFeed([{ banco: 'Kutxabank', mascara: '****0855', ultimoMov: '2026-09-01' }])
+  assert.equal(linea, 'Kutxabank ****0855: último mov. 01/09')
+})
+
+test('la lista VACÍA se declara en vez de dejar la línea en blanco', () => {
+  // Hay conexión vinculada (si no, no habría feed) pero ninguna cuenta ha traído nada: una
+  // línea vacía se lee como «no hay nada que contar», que es lo contrario de lo que pasa.
+  const linea = lineaCuentasFeed([])
+  assert.ok(linea.length > 0)
+  assert.ok(linea.includes('ninguna cuenta'))
+})
+
+test('las dos cuentas reales del feed (medido 02/09/2026) se pintan juntas y separadas por ·', () => {
+  const linea = lineaCuentasFeed([
+    { banco: 'BBVA', mascara: '****1175', ultimoMov: '2026-09-01' },
+    { banco: 'Kutxabank', mascara: '****0855', ultimoMov: '2026-09-01' },
+  ])
+  assert.equal(linea, 'BBVA ****1175: último mov. 01/09 · Kutxabank ****0855: último mov. 01/09')
+})
+
+test('sin banco ni máscara no deja un nombre con espacios sueltos', () => {
+  assert.equal(lineaCuentasFeed([{ banco: null, mascara: null, ultimoMov: '2026-09-01' }]),
+    'Banco: último mov. 01/09')
 })

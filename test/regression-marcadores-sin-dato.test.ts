@@ -1,12 +1,13 @@
-// Guardián: los DOS normalizadores de documentos tratan igual los «no lo sé».
+// Guardián: los TRES normalizadores de documentos tratan igual los «no lo sé».
 // `node --test` (gate en CI vía `pnpm test:guardia`).
 //
 // ─── Por qué existe ──────────────────────────────────────────────────────────
-// Hay dos extractores, y es correcto que sean dos: el del PORTAL
+// Hay tres extractores, y es correcto que lo sean: el del PORTAL
 // (`@central/module-seguros-portal/poliza-leida`) lee los cinco campos que el
-// asegurado ve en su bóveda; el del CORREDOR
-// (`@central/module-seguros/documento-auto`) lee lo que hace falta para pedir
-// precio. Propósitos distintos, tipos distintos.
+// asegurado ve en su bóveda; los del CORREDOR
+// (`@central/module-seguros/documento-auto` y `documento-hogar`) leen lo que
+// hace falta para pedir precio, uno por ramo. Propósitos distintos, tipos
+// distintos.
 //
 // Lo que NO puede ser distinto es **la regla de qué cuenta como dato**. Si uno
 // anula `'no consta'` y el otro lo guarda como si fuera el nombre de la
@@ -25,18 +26,20 @@ import {
   normalizarAutoLeido,
   MARCADORES_SIN_DATO,
 } from '../packages/module-seguros/src/documento-auto.ts'
+import { normalizarHogarLeido } from '../packages/module-seguros/src/documento-hogar.ts'
 import { normalizarPolizaLeida } from '../packages/module-seguros-portal/src/poliza-leida.ts'
 
-test('los dos normalizadores anulan EXACTAMENTE los mismos marcadores', () => {
+test('los TRES normalizadores anulan EXACTAMENTE los mismos marcadores', () => {
   const discrepancias: string[] = []
 
   for (const marcador of MARCADORES_SIN_DATO) {
-    // Se prueba sobre un campo de texto libre que existe en los dos tipos.
-    const corredor = normalizarAutoLeido({ compania: marcador }).compania
+    // Se prueba sobre un campo de texto libre que existe en los tres tipos.
+    const auto = normalizarAutoLeido({ compania: marcador }).compania
+    const hogar = normalizarHogarLeido({ compania: marcador }).compania
     const portal = normalizarPolizaLeida({ compania: marcador }).compania
-    if (corredor !== portal) {
+    if (auto !== portal || hogar !== portal) {
       discrepancias.push(
-        `«${marcador}» → corredor: ${JSON.stringify(corredor)} · portal: ${JSON.stringify(portal)}`,
+        `«${marcador}» → auto: ${JSON.stringify(auto)} · hogar: ${JSON.stringify(hogar)} · portal: ${JSON.stringify(portal)}`,
       )
     }
   }
@@ -50,9 +53,10 @@ test('los dos normalizadores anulan EXACTAMENTE los mismos marcadores', () => {
   )
 })
 
-test('y los dos anulan el marcador aunque venga con espacios o en mayúsculas', () => {
+test('y los tres anulan el marcador aunque venga con espacios o en mayúsculas', () => {
   for (const marcador of ['No Consta', '  N/A  ', 'DESCONOCIDO']) {
-    assert.equal(normalizarAutoLeido({ compania: marcador }).compania, null, `corredor: ${marcador}`)
+    assert.equal(normalizarAutoLeido({ compania: marcador }).compania, null, `auto: ${marcador}`)
+    assert.equal(normalizarHogarLeido({ compania: marcador }).compania, null, `hogar: ${marcador}`)
     assert.equal(
       normalizarPolizaLeida({ compania: marcador }).compania,
       null,
@@ -61,8 +65,9 @@ test('y los dos anulan el marcador aunque venga con espacios o en mayúsculas', 
   }
 })
 
-test('un valor REAL pasa por los dos: el cepo no anula datos buenos', () => {
+test('un valor REAL pasa por los tres: el cepo no anula datos buenos', () => {
   assert.equal(normalizarAutoLeido({ compania: 'Mapfre' }).compania, 'Mapfre')
+  assert.equal(normalizarHogarLeido({ compania: 'Mapfre' }).compania, 'Mapfre')
   assert.equal(normalizarPolizaLeida({ compania: 'Mapfre' }).compania, 'Mapfre')
 })
 

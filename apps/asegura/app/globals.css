@@ -1,5 +1,5 @@
 :root {
-  --brand: #14532d;      /* PROVISIONAL: verde seguros. Se sustituye por @central/brand cuando llegue el logo real de Grupo Asegura (skill `marca-cliente`). */
+  --brand: #14532d;      /* PROVISIONAL: verde seguros. Se sustituye por @central/brand cuando llegue el logo real de Grupo ASegura (skill `marca-cliente`). */
   --brand-ink: #0d3b20;
   --brand-soft: rgba(20, 83, 45, 0.08);
   --accent: #0ea5e9;     /* decorativo */
@@ -241,4 +241,184 @@ button.ghost {
   padding: 8px 10px;
   border-radius: 8px;
   font-size: 13px;
+}
+
+/* Campos editables en formulario de lectura */
+.campos-lectura {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.campo-editable {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.campo-editable label {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text);
+}
+
+.campo-editable input {
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  min-height: 44px;
+}
+
+.campo-editable input:focus {
+  outline: none;
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px var(--brand-soft);
+}
+
+.campo-editable input::placeholder {
+  color: var(--muted);
+}
+
+.campo-editable small {
+  font-size: 12px;
+}
+
+.campos-contacto {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  margin: 24px 0 16px 0;
+}
+
+.campos-contacto h3 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+}
+
+/* Avisos */
+.avisos {
+  margin: 16px 0;
+}
+
+.aviso {
+  background: rgba(251, 191, 36, 0.1);
+  border-left: 3px solid #fbbf24;
+  padding: 12px 14px;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #78350f;
+  margin: 0 0 8px 0;
+}
+
+/* Caja de error */
+.error-box {
+  border: 1px solid var(--danger);
+  background: rgba(220, 38, 38, 0.05);
+  margin: 16px 0;
+}
+
+/* Caja de conflicto */
+.conflict-box {
+  border: 1px solid #ea580c;
+  background: rgba(234, 88, 12, 0.05);
+  margin: 16px 0;
+}
+
+.conflict-box h3 {
+  color: #ea580c;
+  margin: 0 0 12px 0;
+}
+
+.coincidencias-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.coincidencia-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.coincidencia-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.coincidencia-item button {
+  white-space: nowrap;
+  flex-shrink: 0;
+  min-height: 44px;
+}
+
+/* Responsive para coincidencias */
+@media (max-width: 640px) {
+  .coincidencia-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .coincidencia-item button {
+    width: 100%;
+  }
+}
+
+/* Caja de éxito */
+.success-box {
+  border: 1px solid #16a34a;
+  background: rgba(22, 163, 74, 0.05);
+  margin: 16px 0;
+}
+
+.success-box h3 {
+  color: #16a34a;
+  margin: 0 0 12px 0;
+}
+
+/* Botones de acción */
+.botones-accion {
+  display: flex;
+  gap: 12px;
+  margin: 24px 0;
+  flex-wrap: wrap;
+}
+
+.botones-accion button {
+  min-height: 44px;
+  padding: 12px 24px;
+  font-weight: 600;
+}
+
+.mt-4 {
+  margin-top: 24px;
+}
+
+/* Asegurar que los campos sean responsivos */
+@media (max-width: 640px) {
+  .campos-lectura {
+    grid-template-columns: 1fr;
+  }
+
+  .campo-editable input {
+    min-height: 44px;
+  }
+
+  .botones-accion {
+    flex-direction: column;
+  }
+
+  .botones-accion button {
+    width: 100%;
+  }
 }

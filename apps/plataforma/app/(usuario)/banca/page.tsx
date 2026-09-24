@@ -8,6 +8,7 @@ import { DESTINO_LABEL } from '@/lib/categorizar'
 import { getTesoreria } from '@/lib/tesoreria'
 import { getBrokerSaldos } from '@/lib/broker'
 import { getEstadoFeedPsd2 } from '@/lib/psd2-estado'
+import { lineaCuentasFeed } from '@/lib/psd2-semaforo'
 import { eur } from '@/lib/dinero'
 import IntervaloSelector from '../finanzas/IntervaloSelector'
 import { periodoLabel, type Periodo } from '../finanzas/periodo'
@@ -21,12 +22,18 @@ import FugasRecurrentes from './FugasRecurrentes'
 import MiniChatContable from './MiniChatContable'
 import TicketsSuper from './TicketsSuper'
 import SegTabs from './SegTabs'
-import { Pagina, colorImporte, Dato } from '@/components/ui'
-import { Landmark, TrendingUp } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { Pagina, colorImporte, Dato, cardStyle, CardHeader, KpiCard } from '@/components/ui'
+import { CircleAlert, CircleCheck, Hotel, Landmark, RefreshCw, TrendingUp, TriangleAlert, Wallet } from 'lucide-react'
 import SaldoTotal from './SaldoTotal'
 import NegociosResumen from './NegociosResumen'
+import HoyAccionable from './HoyAccionable'
+import { vencimientosAsegura } from '@/lib/cartera-asegura'
+import { listarPendientes } from '@/lib/agente-facturas/pendientes'
+import type { EstadoInicio } from '@/lib/inicio-acciones'
 import FiscalResumen from './FiscalResumen'
 import CategoriasTab from '../finanzas/CategoriasTab'
+import FinanzasClient from '../finanzas/FinanzasClient'
 import { calcularEstadoDeclaracion } from '@/lib/comparativa-declaracion'
 import { AccionesBanca, Plegable, ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, MovimientosBtn, DuplicadosBandeja, RevisarCorreoBtn, OcultarCuentaBtn, ReglasAprendidas, IngresosPorRevisar } from './BancaClient'
 
@@ -41,6 +48,21 @@ async function safe<T, F>(p: Promise<T>, fallback: F): Promise<T | F> {
   try { return await p } catch (e) { console.error('[banca]', e); return fallback }
 }
 
+/**
+ * Título de sección: icono en `--muted` a la izquierda del `<h2>`. Mismo patrón (y mismas medidas)
+ * que el helper homónimo de `ResumenPeriodo.tsx`, para que las secciones de esta página y las del
+ * resumen se lean igual. Los emojis se pintan distinto en cada sistema operativo — de ahí el icono.
+ */
+function TituloSeccion({ icono, children, sub }: { icono: ReactNode; children: ReactNode; sub?: string }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+      <span aria-hidden style={{ display: 'inline-flex', color: 'var(--muted)' }}>{icono}</span>
+      <h2 style={{ fontSize: 16, fontWeight: 700 }}>{children}</h2>
+      {sub && <span style={{ fontSize: 12, color: 'var(--muted)' }}>{sub}</span>}
+    </div>
+  )
+}
+
 export default async function BancaPage({ searchParams }: {
   searchParams: Promise<{ year?: string; quarter?: string; desde?: string; hasta?: string; tab?: string }>
 }) {
@@ -48,10 +70,11 @@ export default async function BancaPage({ searchParams }: {
   if (!session) redirect('/login')
 
   const params = await searchParams
-  const tab: 'dinero' | 'negocios' | 'fiscal' | 'personal' =
+  const tab: 'dinero' | 'ingresos' | 'negocios' | 'fiscal' | 'personal' =
     params.tab === 'negocios' ? 'negocios'
       : params.tab === 'fiscal' ? 'fiscal'
       : params.tab === 'personal' ? 'personal'
+      : params.tab === 'ingresos' ? 'ingresos'
       : 'dinero'
 
   // 🏢 Segmento NEGOCIOS (holding) — carga PEREZOSA: solo se computa cuando la pestaña está activa,
@@ -88,6 +111,28 @@ export default async function BancaPage({ searchParams }: {
   // `CategoriasTab` (la pestaña "En qué gasto" de /finanzas): dona + tabla por subcategoría + drill-down
   // por comercio/movimiento + alertas de presupuesto. El componente gestiona su propio filtro de fechas
   // (mes actual por defecto), así que aquí solo hace falta pasarle el año en curso.
+  // 💰 Segmento INGRESOS — era el hub `/finanzas`, que hasta el 02/09/2026 coexistía con este.
+  // No era «lo mismo» (traía sus banners de salud de extracción, ayudas y novedad fiscal, y sus
+  // KPIs), pero sí compartía pantalla: su pestaña «Categorías» montaba EL MISMO componente que el
+  // segmento Personal de aquí. Se trae entero como un segmento más y `/finanzas` redirige.
+  if (tab === 'ingresos') {
+    const anio = parseInt(params.year || '') || new Date().getFullYear()
+    const trimestre = parseInt(params.quarter || '0') || 0
+    let datosFin = null
+    try {
+      datosFin = await getResumenFinanciero(session.id, anio, trimestre)
+    } catch (e) {
+      console.error('[banca/ingresos]', e)
+    }
+    return (
+      <Pagina ancho="lectura">
+        <MiniChatContable periodoLabel={`${anio}`} />
+        <div style={{ margin: '4px 0 22px' }}><SegTabs active="ingresos" /></div>
+        <FinanzasClient initialData={datosFin} year={anio} quarter={trimestre} embebido />
+      </Pagina>
+    )
+  }
+
   if (tab === 'personal') {
     return (
       <Pagina ancho="tabla">
@@ -140,7 +185,7 @@ export default async function BancaPage({ searchParams }: {
   const esMesUnico = !!desde && desde.slice(0, 7) === hasta.slice(0, 7)
   const mesPL = (desde || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`).slice(0, 7)
 
-  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion, brokerSaldos, feedPsd2] = await Promise.all([
+  const [sociedades, saldo, ledger, ingresosRevisar, tesoreria, porRevisar, duplicados, dupResueltos, resumen, plPisos, evolucion, brokerSaldos, feedPsd2, vencPolizas, nFacturas] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientosLedger(session.id, { desde: desde || undefined, hasta: hasta || undefined }, 50, 0),
@@ -154,6 +199,13 @@ export default async function BancaPage({ searchParams }: {
     safe(getEvolucionMensual(session.id, 12), []),
     safe(getBrokerSaldos(session.id), []),
     safe(getEstadoFeedPsd2(session.id), null),
+    // Vencimientos de la correduría a 60 días: es lo único de la banda de acción que no vivía ya
+    // en esta página. `vencimientosAsegura` ya devuelve tres estados (ok / sin_configurar / error)
+    // — no hay que colapsarlos aquí.
+    safe(vencimientosAsegura(60), null),
+    // La bandeja de facturas. `undefined` = la consulta falló → la banda dirá «no se pudo contar»,
+    // que NO es lo mismo que cero.
+    safe(listarPendientes().then(l => l.length), undefined),
   ])
 
   // El saldo del bróker (IBKR, refrescado por el agente `trading-analista`) suma al total del grupo
@@ -161,6 +213,31 @@ export default async function BancaPage({ searchParams }: {
   const brokerTotal = brokerSaldos.reduce((acc, b) => acc + b.saldo, 0)
   const totalGrupo = saldo.total + brokerTotal
   const hayCuentas = saldo.cuentas.length > 0 || brokerSaldos.length > 0
+
+  // ── Estado para la banda «pide acción hoy» ────────────────────────────────────────────────────
+  // 🚨 Los tres estados del banco no se colapsan: sin conexión vinculada `getEstadoFeedPsd2`
+  // devuelve null, y `safe()` devuelve TAMBIÉN null si la consulta falla. Distinguirlos importa:
+  // «no tienes banco» no es «no se sabe si está al día».
+  const horasDesdeBanco: EstadoInicio['horasDesdeBanco'] = (() => {
+    if (!feedPsd2) return null            // sin datos: puede ser sin banco o consulta caída → no se afirma
+    if (!feedPsd2.ultimoSync) return null // vinculado pero sin ningún sync: tampoco se sabe
+    const ms = Date.now() - new Date(feedPsd2.ultimoSync).getTime()
+    return Number.isFinite(ms) ? ms / 3_600_000 : null
+  })()
+
+  const estadoInicio: EstadoInicio = {
+    porRevisar: porRevisar.length,
+    ingresosPorRevisar: ingresosRevisar.length,
+    duplicados: duplicados.length,
+    facturasPendientes: nFacturas ?? null,
+    horasDesdeBanco,
+    polizas:
+      vencPolizas == null ? null
+      : vencPolizas.estado === 'ok'
+        ? { estado: 'ok', enDias: vencPolizas.dias, polizas: vencPolizas.polizas.map(p => ({ cliente: p.cliente, dias: p.dias })) }
+      : vencPolizas.estado === 'sin_configurar' ? { estado: 'sin_configurar' }
+      : { estado: 'error', motivo: vencPolizas.motivo },
+  }
 
   return (
     <Pagina ancho="tabla">
@@ -170,6 +247,11 @@ export default async function BancaPage({ searchParams }: {
 
         {/* Inicio unificado: 💶 Dinero (saldos + movimientos + IA) | 🏢 Negocios (holding). */}
         <div style={{ margin: '4px 0 22px' }}><SegTabs active="dinero" /></div>
+
+        {/* 🔔 Lo que pide acción HOY, antes que ningún número. Inicio traía saldo, cuentas,
+            gráficas y P&L por delante de lo accionable, así que el trabajo pendiente quedaba
+            enterrado bajo cuatro secciones de consulta (02/09/2026). */}
+        <HoyAccionable estado={estadoInicio} />
 
         <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
           {/* El saldo se pinta con su botón 👁 (SaldoTotal.tsx): desenfoca la cifra para poder
@@ -202,11 +284,22 @@ export default async function BancaPage({ searchParams }: {
         {feedPsd2 && (
           <section style={{ marginBottom: '16px' }}>
             <div style={{
+              ...cardStyle,
               background: feedPsd2.estado.nivel === 'ok' ? 'var(--surface)' : feedPsd2.estado.nivel === 'atencion' ? 'var(--warning-bg)' : 'var(--negative-bg)',
-              border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '10px 14px', fontSize: '13px',
+              padding: '10px 14px', fontSize: '13px',
             }}>
-              <div style={{ fontWeight: 700 }}>
-                {feedPsd2.estado.nivel === 'ok' ? '🟢' : feedPsd2.estado.nivel === 'atencion' ? '🟠' : '🔴'} {feedPsd2.estado.titular}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontWeight: 700 }}>
+                <span aria-hidden style={{
+                  display: 'inline-flex', flexShrink: 0,
+                  color: feedPsd2.estado.nivel === 'ok' ? 'var(--positive)' : feedPsd2.estado.nivel === 'atencion' ? 'var(--warning)' : 'var(--negative)',
+                }}>
+                  {feedPsd2.estado.nivel === 'ok'
+                    ? <CircleCheck size={15} strokeWidth={1.75} />
+                    : feedPsd2.estado.nivel === 'atencion'
+                      ? <TriangleAlert size={15} strokeWidth={1.75} />
+                      : <CircleAlert size={15} strokeWidth={1.75} />}
+                </span>
+                {feedPsd2.estado.titular}
               </div>
               {feedPsd2.estado.nivel !== 'ok' && feedPsd2.estado.detalles.map((d, i) => (
                 <div key={i} style={{ marginTop: '4px', color: 'var(--text)' }}>• {d}</div>
@@ -218,7 +311,7 @@ export default async function BancaPage({ searchParams }: {
                 <div key={`nota-${i}`} style={{ marginTop: '4px', color: 'var(--text)' }}>{n}</div>
               ))}
               <div style={{ marginTop: '4px', fontSize: '12px', color: 'var(--muted)' }}>
-                {feedPsd2.cuentas.map(c => `${c.banco || 'Banco'} ${c.mascara || ''}: último mov. ${c.ultimoMov ?? 'ninguno'}`).join(' · ')}
+                {lineaCuentasFeed(feedPsd2.cuentas)}
                 {feedPsd2.estado.nivel === 'ok' && feedPsd2.estado.detalles[0] ? ` · ${feedPsd2.estado.detalles[0]}` : ''}
               </div>
               <SyncPsd2Btn />
@@ -229,10 +322,12 @@ export default async function BancaPage({ searchParams }: {
         {/* Cuentas por sociedad */}
         {!hayCuentas ? (
           <div style={{
-            background: 'var(--surface)', border: '1px dashed var(--border)',
-            borderRadius: 'var(--radius)', padding: '40px 24px', textAlign: 'center', color: 'var(--muted)',
+            ...cardStyle, border: '1px dashed var(--border)', boxShadow: 'none',
+            padding: '40px 24px', textAlign: 'center', color: 'var(--muted)',
           }}>
-            <div style={{ fontSize: '36px', marginBottom: '12px' }}>🏦</div>
+            <div aria-hidden style={{ marginBottom: '12px' }}>
+              <Landmark size={36} strokeWidth={1.5} style={{ color: 'var(--muted)' }} />
+            </div>
             <p style={{ fontWeight: 600, marginBottom: '6px' }}>Sin cuentas bancarias todavía</p>
             <p style={{ fontSize: '14px' }}>Descarga el extracto Norma 43 (Cuaderno 43) de tu banco e impórtalo arriba.</p>
           </div>
@@ -240,7 +335,7 @@ export default async function BancaPage({ searchParams }: {
           <section style={{ marginBottom: '32px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px' }}>
               {saldo.cuentas.filter(c => !c.oculta).map(c => (
-                <div key={c.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)', position: 'relative' }}>
+                <div key={c.id} style={{ ...cardStyle, padding: '18px', position: 'relative' }}>
                   <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
                     <OcultarCuentaBtn id={c.id} oculta={false} />
                   </div>
@@ -250,7 +345,11 @@ export default async function BancaPage({ searchParams }: {
                   <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>{c.sociedadNombre}</div>
                   <div style={{ fontWeight: 700, fontSize: '15px', marginTop: '2px' }}>
                     {c.banco || 'Banco'} {c.ibanMascara || ''}
-                    {c.sincronizada && <span title="Sincronizada automáticamente (PSD2)" style={{ marginLeft: '6px', fontSize: '12px' }}>🔄</span>}
+                    {c.sincronizada && (
+                      <span title="Sincronizada automáticamente (PSD2)" style={{ marginLeft: '6px', display: 'inline-flex', verticalAlign: 'middle', color: 'var(--muted)' }}>
+                        <RefreshCw size={13} strokeWidth={1.75} aria-hidden />
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '10px', color: c.saldoActual == null ? 'var(--muted)' : colorImporte(c.saldoActual) }}>
                     <Dato valor={c.saldoActual} pendiente="Sin informar" donde="el portal del banco">
@@ -263,7 +362,7 @@ export default async function BancaPage({ searchParams }: {
               {/* Bróker (Interactive Brokers): una tarjeta más, igual que las bancarias. La refresca el
                   agente `trading-analista` a diario (la app no habla con IBKR). */}
               {brokerSaldos.map(b => (
-                <div key={`broker-${b.broker}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)', position: 'relative' }}>
+                <div key={`broker-${b.broker}`} style={{ ...cardStyle, padding: '18px', position: 'relative' }}>
                   <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 9, background: 'var(--primary-light)', color: 'var(--primary)', marginBottom: 10 }}>
                     <TrendingUp size={16} strokeWidth={1.75} aria-hidden />
                   </div>
@@ -283,7 +382,7 @@ export default async function BancaPage({ searchParams }: {
                 </summary>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '16px', marginTop: '12px' }}>
                   {saldo.cuentas.filter(c => c.oculta).map(c => (
-                    <div key={c.id} style={{ background: 'var(--surface)', border: '1px dashed var(--border)', borderRadius: 'var(--radius)', padding: '18px', opacity: 0.6, position: 'relative' }}>
+                    <div key={c.id} style={{ ...cardStyle, border: '1px dashed var(--border)', boxShadow: 'none', padding: '18px', opacity: 0.6, position: 'relative' }}>
                       <div style={{ position: 'absolute', top: '10px', right: '10px' }}>
                         <OcultarCuentaBtn id={c.id} oculta={true} />
                       </div>
@@ -314,10 +413,12 @@ export default async function BancaPage({ searchParams }: {
         {/* Pisos turísticos del mes — P&L por piso */}
         {plPisos && plPisos.pisos.length > 0 && (
           <section style={{ marginBottom: '32px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>🏖️ Pisos turísticos <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--muted)' }}>· {mesPL}</span></h2>
+            <TituloSeccion icono={<Hotel size={17} strokeWidth={1.75} aria-hidden />} sub={mesPL}>
+              Pisos turísticos
+            </TituloSeccion>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
               {plPisos.pisos.map(p => (
-                <div key={p.propertyId} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', boxShadow: 'var(--shadow)' }}>
+                <div key={p.propertyId} style={{ ...cardStyle, padding: '16px' }}>
                   <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '2px' }}>{p.nombre}</div>
                   <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>{p.reservas} reserva{p.reservas === 1 ? '' : 's'}</div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '13px', padding: '2px 0' }}><span style={{ color: 'var(--muted)' }}>Ingresos</span><strong style={{ color: 'var(--positive)' }}>{eur(p.ingresos)}</strong></div>
@@ -411,20 +512,27 @@ export default async function BancaPage({ searchParams }: {
           {/* Previsión de tesorería (F5) */}
           {tesoreria.recurrentes.length > 0 && (
             <section style={{ marginBottom: '32px' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📈 Previsión de tesorería</h2>
+              <TituloSeccion icono={<TrendingUp size={17} strokeWidth={1.75} aria-hidden />}>
+                Previsión de tesorería
+              </TituloSeccion>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                 {tesoreria.proyecciones.map(p => (
-                  <div key={p.dias} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)' }}>
-                    <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>Saldo proyectado · {p.dias} días</div>
-                    <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px', color: colorImporte(p.proyectado) }}>{fmtEur(p.proyectado)}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>+{fmtEur(p.entradas)} entran · −{fmtEur(p.salidas)} salen</div>
-                  </div>
+                  <KpiCard
+                    key={p.dias}
+                    icono={<Wallet size={18} strokeWidth={1.75} />}
+                    label={`Saldo proyectado · ${p.dias} días`}
+                    valor={fmtEur(p.proyectado)}
+                    color={colorImporte(p.proyectado)}
+                    sub={`+${fmtEur(p.entradas)} entran · −${fmtEur(p.salidas)} salen`}
+                  />
                 ))}
               </div>
-              <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-                <div style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Movimientos recurrentes detectados</div>
+              <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+                <div style={{ padding: '14px 16px 0' }}>
+                  <CardHeader title="Movimientos recurrentes detectados" />
+                </div>
                 {tesoreria.recurrentes.slice(0, 8).map((r, i) => (
-                  <div key={r.clave + i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+                  <div key={r.clave + i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: '1px solid var(--border)' }}>
                     <div style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.concepto}</div>
                     <div style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>cada ~{r.intervaloDias}d · ×{r.ocurrencias}</div>
                     <div style={{ fontSize: '14px', fontWeight: 700, color: colorImporte(r.importeMedio), flexShrink: 0, width: '92px', textAlign: 'right' }}>{fmtEur(r.importeMedio)}</div>

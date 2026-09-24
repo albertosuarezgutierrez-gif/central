@@ -5,12 +5,14 @@ import CorreduriaClient from './CorreduriaClient'
  * y la correduría es un negocio más dentro de ella; `apps/asegura` es la
  * trastienda que sirve los datos por su puerto HTTP.
  *
- * La URL de asegura se resuelve en el SERVIDOR y baja como prop: solo se usa
- * para el único salto que tiene que ir allí (retarificar, que gasta 0,50€ y
- * vive tras su propia pantalla de confirmación). No es un secreto — el secreto
- * del puerto no sale nunca de las rutas de API.
+ * Desde el 03/09/2026 esta pantalla no compone ninguna URL de asegura:
+ * retarificar —que es lo que gasta 0,50€— tiene su propia pantalla DENTRO de
+ * plataforma, con su confirmación delante. El secreto del puerto no sale nunca
+ * de las rutas de API ni de las acciones de servidor.
  */
 export default function CorreduriaPage() {
-  const urlAsegura = (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
-  return <CorreduriaClient urlAsegura={urlAsegura} />
+  // Ya no se compone ninguna URL de asegura aquí: desde el 03/09/2026 el único
+  // salto que quedaba desde esta pantalla —«Precio en otra compañía» de la cola
+  // de retención— es INTERNO (`urlRetarificar` de `lib/ficha-asegura.ts`).
+  return <CorreduriaClient />
 }

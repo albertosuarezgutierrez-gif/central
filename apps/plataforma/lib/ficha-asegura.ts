@@ -1,3 +1,8 @@
+import type { Anualidad, DocumentoResumen, EstadoClienteDerivado, EvolucionPrima, Retarificabilidad, VeredictoPrima } from '@central/module-seguros'
+import { leerDocumentos } from './documentos-asegura.ts'
+import { leerContactos, leerIdentidad, type ContactosCliente, type IdentidadFicha } from './cliente-edicion-asegura.ts'
+import { leerRelaciones, type RelacionCartera } from './relaciones-asegura.ts'
+import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 // La ficha de un cliente de la correduría, leída por el puerto de central-asegura.
 //
 // ─── Por qué esto vive en plataforma y no en asegura ────────────────────────
@@ -11,6 +16,7 @@
 // `error` («no se ha podido mirar»). Colapsarlos diría que un cliente no existe
 // cuando lo que pasa es que el puerto no responde.
 
+import { cabecerasPuerto } from './puerto-actor.ts'
 export type EstadoFicha = 'sin_configurar' | 'error' | 'no_encontrado' | 'ok'
 
 export type RecibosPoliza = {
@@ -37,6 +43,8 @@ export type ObjetoFicha = {
   titulo: string | null
   detalle: string | null
   nota: string | null
+  /** El desglose entero (RC/comercio/otros); `null` en el resto de ramos. */
+  coberturas: string[] | null
 }
 
 /** El recargo por fraccionar: TRES estados. `sin_datos` nunca se pinta como 0€. */
@@ -64,26 +72,51 @@ export type PolizaFicha = {
   objeto: ObjetoFicha | null
   matricula: string | null
   viva: boolean
+  /**
+   * Que CIMA la haya traído: asegura lo deriva de `id_poliza_entidad` sobre una
+   * póliza de la cartera viva (`apps/asegura/lib/cartera-ficha.ts`).
+   * `viva && !confirmadaCima` = emitida por nosotros y aún sin confirmar por
+   * CIMA — NO cuenta como viva ni genera avisos. Si asegura no manda el campo
+   * (versión anterior), vale `viva` (el comportamiento de siempre).
+   *
+   * ⚠️ NO es lo mismo que «cartera viva» y NO sirve para filtrarla: cartera
+   * viva es `import_ref IS NULL` **O** `eiac_xml_hash IS NOT NULL`
+   * (`esCarteraViva` de `@central/module-seguros`), así que desde el 03/09/2026
+   * una póliza VIVA puede llevar `import_ref` — la que CIMA mantiene al día
+   * sobre una fila que ya venía del volcado. Preguntar `import_ref IS NULL` aquí
+   * mandaría esas pólizas al bloque «emitidas, pendientes de CIMA», que es falso.
+   * Quien lo decide es asegura: esta app no toca la BD de la cartera, solo pinta
+   * lo que le mandan (y si no manda el campo, cae a `viva`).
+   */
+  confirmadaCima: boolean
   retarificable: boolean
+  /** Por qué ramo se retarifica (auto/hogar), por qué NO, y de dónde salen los
+   *  datos del riesgo. `null` = la versión desplegada de asegura aún no lo manda:
+   *  entonces se cae al booleano `retarificable` de siempre. */
+  retarificacion: Retarificabilidad | null
   /** `null` = la versión desplegada de asegura aún no manda el bloque de recibos.
    *  NO es «no tiene recibos»: eso sería `total: 0`, que ya significa otra cosa. */
   recibos: RecibosPoliza | null
   /** `null` = asegura no manda el bloque de pago (versión más vieja). */
   pago: PagoFicha | null
+  /**
+   * «¿Por qué ha subido la prima?» en compacto (veredicto + % + frase).
+   * `null` = la versión desplegada de asegura no lo manda o llega ilegible:
+   * NO es `sin_datos` (que es «se miró y CIMA no da la anualidad anterior»).
+   */
+  evolucionPrima: EvolucionPrimaCompacta | null
 }
 
-export type SiniestroFicha = {
-  id: string
-  polizaId: string
-  estado: string
-  tipo: string | null
-  referencia: string | null
-  fecha: string | null
-  reserva: number | null
-  indemnizacion: number | null
-  tramitador: string | null
-  abierto: boolean
-}
+/** Lo que la ficha del cliente recibe por póliza: el veredicto sin la lista de anualidades. */
+export type EvolucionPrimaCompacta = Pick<EvolucionPrima, 'veredicto' | 'variacionPct' | 'explicacion'>
+
+/**
+ * Un siniestro de la ficha. La forma la fija `siniestros-asegura.ts`
+ * (`leerSiniestro`, con los defaults conservadores para una asegura vieja);
+ * aquí se re-exporta con el nombre de siempre para quien ya lo importaba.
+ */
+export type SiniestroFicha = SiniestroCartera
+export type { SiniestroCartera }
 
 export type ContactoFicha = {
   telefono: string | null
@@ -93,10 +126,21 @@ export type ContactoFicha = {
   ciudad: string | null
   provincia: string | null
   codigoPostal: string | null
+  /** La calle va cifrada: `null` + `direccionIlegible` = está pero no abre. */
+  direccion: string | null
+  direccionIlegible: boolean
 }
 
 /** Quién más hay en una póliza. Misma forma que en `@central/module-seguros`. */
 export type IntervinienteFicha = {
+  /**
+   * La FILA de `poliza_intervinientes`, que es lo que se puede quitar.
+   * `null` SOLO en el tomador: esa fila no existe en la base, la sintetiza
+   * `filasIntervinientes()` a partir del titular de la póliza. Por eso al
+   * tomador no se le ofrece «quitar» — no hay nada que borrar, y el botón
+   * prometería algo que no existe.
+   */
+  id: string | null
   polizaId: string
   rol: string
   nombre: string | null
@@ -106,6 +150,10 @@ export type IntervinienteFicha = {
   telefonoIlegible: boolean
   emailIlegible: boolean
   fichaId: string | null
+  /** Etiqueta opaca de QUIÉN es (`p1`, `p2`…), que asegura deriva del NIF.
+   *  `null` = la fila no trae NIF, o asegura es de una versión que aún no la
+   *  manda: entonces se agrupa como antes, por ficha o por nombre. */
+  personaClave: string | null
   esTomador: boolean
   origen: string
 }
@@ -114,16 +162,202 @@ export type Ficha = {
   id: string
   nombre: string
   tipo: string
+  /**
+   * `false` = ficha DESCARTADA en asegura (borrado suave): no sale en el
+   * buscador ni en la lista, pero su ficha se abre para poder restaurarla.
+   * `null` = una versión de asegura que aún no manda el campo — y entonces la
+   * pantalla NO afirma que esté activa ni que esté descartada: no lo sabe.
+   */
+  activo: boolean | null
   segmento: string | null
   contacto: ContactoFicha
+  /**
+   * Por qué lo cifrado no se abre, según asegura: `sin_clave` · `mal_formada` ·
+   * `no_abre` · `sin_muestra` · `ok`. `null` = una versión de asegura que aún
+   * no lo manda. Es lo que convierte «cifrado» en «falta la variable en Vercel».
+   */
+  piiClave: string | null
   polizas: PolizaFicha[]
-  siniestros: SiniestroFicha[]
+  /**
+   * `null` = asegura no manda la lista o no llega con forma de lista: NO es
+   * «sin siniestros» (eso es `[]`). Una fila rara se salta, no tumba la ficha.
+   */
+  siniestros: SiniestroCartera[] | null
   /**
    * `null` = asegura no informa intervinientes (versión desplegada más vieja, o
    * su consulta falló). Entonces «sin teléfono» solo significa «el tomador no
    * lo tiene» — y la pantalla lo dice así, no como «nadie lo tiene».
    */
   intervinientes: IntervinienteFicha[] | null
+  /** Documentos del cliente con estado pedido/recibido/revisado. `null` = no informado / no se pudo. */
+  documentos: DocumentoResumen[] | null
+  /**
+   * TODOS los teléfonos y emails (el principal es el que sale en `contacto`).
+   * `null` = asegura no manda el bloque o no pudo consultarlo: NO es «no tiene».
+   */
+  contactos: ContactosCliente | null
+  /** Nombre/apellidos/DNI enmascarado/fecha de nacimiento. `null` = versión de asegura anterior. */
+  identidad: IdentidadFicha | null
+  /**
+   * Cónyuge, hijos, empresa… y quién autoriza a quién a ver sus seguros.
+   * `null` = asegura no manda el bloque o no pudo consultarlo: NO es «no tiene familia».
+   */
+  relaciones: RelacionCartera[] | null
+  /**
+   * Estado DERIVADO por asegura (cliente · con_presupuesto · lead · ex_cliente),
+   * con su etiqueta y el motivo. `null` = versión de asegura que aún no lo
+   * manda: la pantalla cae a la regla anterior (`tipo==='cliente' || vivas>0`).
+   */
+  estado: EstadoClienteDerivado | null
+  /**
+   * Últimas 50 anotaciones, la más reciente primero. `null` = no se pudo leer
+   * (o asegura no lo manda); `[]` = se miró y no hay ninguna todavía.
+   */
+  historial: AnotacionHistorial[] | null
+  /** Presupuestos recientes sin póliza. `null` = no se pudo contar, NO es 0. */
+  cotizacionesVivas: number | null
+  /**
+   * Pólizas que el cliente ha APORTADO desde el portal, casi siempre de otra
+   * compañía. `null` = asegura no manda el bloque o no pudo consultarlo — NO
+   * es «no ha aportado ninguna» (eso es `[]`).
+   */
+  declaradas: PolizaDeclaradaFicha[] | null
+  /**
+   * Carnés de conducir de la ficha. `null` = asegura no manda el bloque o no
+   * pudo leerlo — NO es «no tiene carné» (eso es `[]`).
+   */
+  carnets: CarnetFicha[] | null
+}
+
+export type CarnetFicha = {
+  id: string
+  tipo: string
+  /** ISO. `null` con `fechaIlegible` = guardada pero no se descifra. */
+  fechaExpedicion: string | null
+  fechaIlegible: boolean
+  /** ISO. `null` = no se ha podido calcular (falta expedición o nacimiento). */
+  fechaCaducidad: string | null
+}
+
+/** `null` si el bloque no llega o no es una lista; una fila rara se salta. */
+export function leerCarnets(v: unknown): CarnetFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: CarnetFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const d = fila as Record<string, unknown>
+    if (typeof d.id !== 'string' || typeof d.tipo !== 'string' || d.tipo.trim() === '') continue
+    out.push({
+      id: d.id,
+      tipo: d.tipo.trim().toUpperCase(),
+      fechaExpedicion: cadena(d.fechaExpedicion),
+      fechaIlegible: d.fechaIlegible === true,
+      fechaCaducidad: cadena(d.fechaCaducidad),
+    })
+  }
+  return out
+}
+
+/**
+ * Estado de la caducidad frente a `hoy` (ISO). La caducidad se CALCULA desde la
+ * fecha de expedición guardada, que suele ser la antigua (volcado o fecha de
+ * obtención): si ya pasó, lo que se sabe es que no consta la renovación, no que
+ * el carné esté caducado. Por eso ese estado es `sin_renovacion`, no «caducado».
+ */
+export function estadoCaducidadCarnet(
+  fechaCaducidad: string | null,
+  hoy: string,
+): 'sin_renovacion' | 'pronto' | 'vigente' | 'desconocido' {
+  if (!fechaCaducidad) return 'desconocido'
+  if (fechaCaducidad < hoy) return 'sin_renovacion'
+  const limite = new Date(`${hoy}T00:00:00Z`)
+  limite.setUTCDate(limite.getUTCDate() + 90)
+  return fechaCaducidad <= limite.toISOString().slice(0, 10) ? 'pronto' : 'vigente'
+}
+
+export type AnotacionHistorial = { id: string; tipo: string; texto: string; fecha: string }
+
+/**
+ * Una póliza aportada por el cliente desde el portal (`portal_poliza_declarada`),
+ * casi siempre de OTRA compañía: la correduría no la gestiona, solo consta que
+ * existe. Nunca se enseña en la tabla de «Pólizas vivas» — es de otro alcance.
+ */
+/**
+ * QUÉ es el bien asegurado — misma regla que el portal del cliente
+ * (`describirBien()` de `@central/module-seguros-portal`): el nº de póliza
+ * nunca identifica una póliza para una persona. `null` = la IA no lo leyó
+ * del documento, nunca «no tiene».
+ */
+export type BienDeclarada = {
+  cosa: string | null
+  ubicacion: string | null
+  detalles: string[]
+}
+
+export const BIEN_DECLARADA_VACIO: BienDeclarada = { cosa: null, ubicacion: null, detalles: [] }
+
+function leerBienDeclarada(v: unknown): BienDeclarada {
+  if (typeof v !== 'object' || v === null) return BIEN_DECLARADA_VACIO
+  const d = v as Record<string, unknown>
+  return {
+    cosa: cadena(d.cosa),
+    ubicacion: cadena(d.ubicacion),
+    detalles: Array.isArray(d.detalles) ? d.detalles.filter((x): x is string => typeof x === 'string') : [],
+  }
+}
+
+export type PolizaDeclaradaFicha = {
+  id: string
+  compania: string | null
+  numeroPoliza: string | null
+  ramo: string | null
+  primaAnual: number | null
+  fechaVencimiento: string | null
+  matricula: string | null
+  procedencia: string
+  confirmadaPorUsuario: boolean
+  titularTipo: string | null
+  titularEmpresaNombre: string | null
+  /**
+   * `true` = esta ficha ya tiene una póliza con ese número: no es una
+   * oportunidad, es la misma póliza subida dos veces. `null` = no se ha
+   * podido cotejar (sin número, o declarada a nombre de una empresa —
+   * cotejar eso exige la ficha de esa sociedad, que aquí no se mira).
+   */
+  yaEnCartera: boolean | null
+  bien: BienDeclarada
+}
+
+/**
+ * Las declaradas, o `null` si el bloque no llega o llega con forma rara —
+ * NUNCA `[]`, que diría «se ha mirado y no ha aportado ninguna» cuando en
+ * realidad es que la versión de asegura desplegada aún no manda el campo.
+ * Una fila individual con forma rara se salta, no tumba el bloque.
+ */
+export function leerDeclaradas(v: unknown): PolizaDeclaradaFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: PolizaDeclaradaFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const d = fila as Record<string, unknown>
+    if (typeof d.id !== 'string') continue
+    out.push({
+      id: d.id,
+      compania: cadena(d.compania),
+      numeroPoliza: cadena(d.numeroPoliza),
+      ramo: cadena(d.ramo),
+      primaAnual: numero(d.primaAnual),
+      fechaVencimiento: cadena(d.fechaVencimiento),
+      matricula: cadena(d.matricula),
+      procedencia: cadena(d.procedencia) ?? 'declarado',
+      confirmadaPorUsuario: d.confirmadaPorUsuario === true,
+      titularTipo: cadena(d.titularTipo),
+      titularEmpresaNombre: cadena(d.titularEmpresaNombre),
+      yaEnCartera: typeof d.yaEnCartera === 'boolean' ? d.yaEnCartera : null,
+      bien: leerBienDeclarada(d.bien),
+    })
+  }
+  return out
 }
 
 export type RespuestaFicha =
@@ -159,6 +393,7 @@ export function leerObjeto(v: unknown): ObjetoFicha | null {
     titulo: cadena(o.titulo),
     detalle: cadena(o.detalle),
     nota: cadena(o.nota),
+    coberturas: Array.isArray(o.coberturas) ? o.coberturas.filter((c): c is string => typeof c === 'string') : null,
   }
 }
 
@@ -200,6 +435,98 @@ export function leerRecibos(v: unknown): RecibosPoliza | null {
   }
 }
 
+const RAMOS_RETARIFICABLES = new Set(['auto', 'hogar'])
+const FUENTES_RETARIFICACION = new Set(['poliza', 'gemela', 'catastro'])
+
+/**
+ * El veredicto de retarificación, o `null` si no llega o llega con forma rara.
+ *
+ * Nunca se inventa un `{retarificable:false}`: eso pintaría «no se puede» sobre
+ * una póliza de la que solo se sabe que asegura no ha dicho nada. `null` deja
+ * que la pantalla caiga al booleano `retarificable` de siempre.
+ */
+export function leerRetarificacion(v: unknown): Retarificabilidad | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.retarificable !== 'boolean') return null
+  const ramo = o.ramo === null ? null : typeof o.ramo === 'string' && RAMOS_RETARIFICABLES.has(o.ramo) ? o.ramo : undefined
+  const fuente = o.fuente === null ? null : typeof o.fuente === 'string' && FUENTES_RETARIFICACION.has(o.fuente) ? o.fuente : undefined
+  if (ramo === undefined || fuente === undefined) return null
+  if (o.motivo !== null && typeof o.motivo !== 'string') return null
+  return {
+    ramo: ramo as Retarificabilidad['ramo'],
+    retarificable: o.retarificable,
+    motivo: cadena(o.motivo),
+    fuente: fuente as Retarificabilidad['fuente'],
+  }
+}
+
+const VEREDICTOS_PRIMA: readonly VeredictoPrima[] = ['sube_por_siniestros', 'sube_sin_siniestro', 'no_atribuible', 'igual', 'baja', 'sin_datos']
+
+/** `null` o número finito se devuelven tal cual; cualquier otra cosa es basura → `undefined`. */
+function numeroONulo(v: unknown): number | null | undefined {
+  if (v === null) return null
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+}
+
+/**
+ * El veredicto compacto de la prima, o `null` si no llega o llega con forma rara.
+ *
+ * Nunca se inventa un `sin_datos`: ese estado significa «asegura miró y CIMA no
+ * manda la anualidad anterior», y aquí solo se sabe que asegura no ha dicho
+ * nada. Tampoco un `variacionPct: 0`, que diría «igual» sobre lo que no se sabe.
+ */
+export function leerEvolucionCompacta(v: unknown): EvolucionPrimaCompacta | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.veredicto !== 'string' || !(VEREDICTOS_PRIMA as readonly string[]).includes(o.veredicto)) return null
+  const variacionPct = numeroONulo(o.variacionPct)
+  if (variacionPct === undefined) return null
+  if (typeof o.explicacion !== 'string') return null
+  return { veredicto: o.veredicto as VeredictoPrima, variacionPct, explicacion: o.explicacion }
+}
+
+function leerAnualidad(v: unknown): Anualidad | null {
+  if (typeof v !== 'object' || v === null) return null
+  const a = v as Record<string, unknown>
+  const desde = cadena(a.desde)
+  const hasta = cadena(a.hasta)
+  const recibos = entero(a.recibos)
+  const suplementos = entero(a.suplementos)
+  const siniestros = entero(a.siniestros)
+  const esperados = a.esperados === null ? null : entero(a.esperados)
+  const primaTotal = numeroONulo(a.primaTotal)
+  const primaNeta = numeroONulo(a.primaNeta)
+  const variacionPct = numeroONulo(a.variacionPct)
+  if (
+    desde === null || hasta === null || recibos === null || suplementos === null || siniestros === null ||
+    esperados === undefined || typeof a.completa !== 'boolean' ||
+    primaTotal === undefined || primaNeta === undefined || variacionPct === undefined
+  ) return null
+  return { desde, hasta, recibos, esperados, completa: a.completa, primaTotal, primaNeta, suplementos, siniestros, variacionPct }
+}
+
+/**
+ * La evolución entera (con anualidades), o `null` si no llega o llega rara.
+ * Una anualidad ilegible tumba el bloque entero: media lista compararía mal
+ * y pintaría un porcentaje sobre ciclos que no están.
+ */
+export function leerEvolucionPrima(v: unknown): EvolucionPrima | null {
+  const compacta = leerEvolucionCompacta(v)
+  if (compacta === null) return null
+  const o = v as Record<string, unknown>
+  if (!Array.isArray(o.anualidades)) return null
+  const anualidades: Anualidad[] = []
+  for (const fila of o.anualidades) {
+    const a = leerAnualidad(fila)
+    if (a === null) return null
+    anualidades.push(a)
+  }
+  const siniestrosSinFecha = entero(o.siniestrosSinFecha)
+  if (siniestrosSinFecha === null) return null
+  return { ...compacta, anualidades, siniestrosSinFecha }
+}
+
 /** El bloque de pago, o `null` si no llega. Un recargo con estado raro se
  *  degrada a `sin_datos`: nunca a «calculado» con un número que nadie calculó. */
 export function leerPago(v: unknown): PagoFicha | null {
@@ -237,6 +564,9 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
     const rol = cadena(i.rol)
     if (polizaId === null || rol === null) continue
     out.push({
+      // `null` = asegura no la manda (versión anterior del puerto): entonces la
+      // fila no se puede quitar y la pantalla no ofrece el botón.
+      id: cadena(i.id),
       polizaId,
       rol,
       nombre: cadena(i.nombre),
@@ -246,11 +576,67 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
       telefonoIlegible: i.telefonoIlegible === true,
       emailIlegible: i.emailIlegible === true,
       fichaId: cadena(i.fichaId),
+      personaClave: cadena(i.personaClave),
       esTomador: i.esTomador === true,
       origen: cadena(i.origen) ?? 'sin_informar',
     })
   }
   return out
+}
+
+const ESTADOS_CLIENTE = new Set(['cliente', 'con_presupuesto', 'lead', 'ex_cliente'])
+
+/**
+ * El estado derivado, o `null` si no llega o llega con forma rara. Nunca se
+ * inventa un `lead`: eso pintaría «no es cliente» sobre alguien de quien solo
+ * se sabe que asegura no ha dicho nada.
+ */
+export function leerEstadoCliente(v: unknown): EstadoClienteDerivado | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.estado !== 'string' || !ESTADOS_CLIENTE.has(o.estado)) return null
+  const etiqueta = cadena(o.etiqueta)
+  const motivo = cadena(o.motivo)
+  if (etiqueta === null || motivo === null) return null
+  return { estado: o.estado as EstadoClienteDerivado['estado'], etiqueta, motivo }
+}
+
+export const MAX_HISTORIAL = 50
+
+/**
+ * El historial, o `null` si no llega o no es lista. Una fila rara se salta
+ * (no tumba el bloque); una LISTA que no es lista degrada a `null` entero —
+ * jamás a `[]`, que diría «sin anotaciones».
+ */
+export function leerHistorial(v: unknown): AnotacionHistorial[] | null {
+  if (!Array.isArray(v)) return null
+  const out: AnotacionHistorial[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const h = fila as Record<string, unknown>
+    const id = cadena(h.id)
+    const tipo = cadena(h.tipo)
+    const fecha = cadena(h.fecha)
+    if (id === null || tipo === null || fecha === null || typeof h.texto !== 'string') continue
+    out.push({ id, tipo, texto: h.texto, fecha })
+    if (out.length >= MAX_HISTORIAL) break
+  }
+  return out
+}
+
+/** «2026-06-03» (o un ISO con hora) → «03/06/2026». Una fecha ilegible se deja tal cual. */
+export function fechaEs(iso: string): string {
+  const [y, m, d] = iso.slice(0, 10).split('-')
+  return d && m && y && /^\d{4}$/.test(y) ? `${d}/${m}/${y}` : iso
+}
+
+/** «2026-09-02T14:30:00Z» → «02/09/2026 16:30» (hora de Madrid). Una fecha ilegible se deja tal cual. */
+export function fechaHoraEs(iso: string): string {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d
+    .toLocaleString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false })
+    .replace(',', '')
 }
 
 /**
@@ -277,7 +663,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
   if (typeof f.id !== 'string' || typeof f.nombre !== 'string') {
     return { estado: 'error', motivo: 'respuesta_ilegible' }
   }
-  if (!Array.isArray(f.polizas) || !Array.isArray(f.siniestros)) {
+  if (!Array.isArray(f.polizas)) {
     return { estado: 'error', motivo: 'respuesta_ilegible' }
   }
 
@@ -301,30 +687,19 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       objeto: leerObjeto(p.objeto),
       matricula: cadena(p.matricula),
       viva: p.viva === true,
+      // Sin el campo (asegura viejo) vale `viva`: es lo que se pintaba antes.
+      confirmadaCima: typeof p.confirmadaCima === 'boolean' ? p.confirmadaCima : p.viva === true,
       retarificable: p.retarificable === true,
+      retarificacion: leerRetarificacion(p.retarificacion),
       recibos: leerRecibos(p.recibos),
       pago: leerPago(p.pago),
+      evolucionPrima: leerEvolucionCompacta(p.evolucionPrima),
     })
   }
 
-  const siniestros: SiniestroFicha[] = []
-  for (const fila of f.siniestros) {
-    if (typeof fila !== 'object' || fila === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
-    const s = fila as Record<string, unknown>
-    if (typeof s.id !== 'string') return { estado: 'error', motivo: 'respuesta_ilegible' }
-    siniestros.push({
-      id: s.id,
-      polizaId: cadena(s.polizaId) ?? '',
-      estado: cadena(s.estado) ?? 'sin_informar',
-      tipo: cadena(s.tipo),
-      referencia: cadena(s.referencia),
-      fecha: cadena(s.fecha),
-      reserva: numero(s.reserva),
-      indemnizacion: numero(s.indemnizacion),
-      tramitador: cadena(s.tramitador),
-      abierto: s.abierto === true,
-    })
-  }
+  // Los siniestros no invalidan la ficha: una fila rara se salta y una lista
+  // que no es lista queda en `null` («no se pudo leer»), que la pantalla dice.
+  const siniestros = leerSiniestros(f.siniestros)
 
   const c = (typeof f.contacto === 'object' && f.contacto !== null ? f.contacto : {}) as Record<string, unknown>
   return {
@@ -333,6 +708,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       id: f.id,
       nombre: f.nombre,
       tipo: cadena(f.tipo) ?? 'sin_informar',
+      activo: typeof f.activo === 'boolean' ? f.activo : null,
       segmento: cadena(f.segmento),
       contacto: {
         telefono: cadena(c.telefono),
@@ -342,10 +718,22 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
         ciudad: cadena(c.ciudad),
         provincia: cadena(c.provincia),
         codigoPostal: cadena(c.codigoPostal),
+        direccion: cadena(c.direccion),
+        direccionIlegible: c.direccionIlegible === true,
       },
       polizas,
       siniestros,
       intervinientes: leerIntervinientes(f.intervinientes),
+      documentos: leerDocumentos(f.documentos),
+      contactos: leerContactos(f.contactos),
+      identidad: leerIdentidad(f.identidad),
+      relaciones: leerRelaciones(f.relaciones),
+      estado: leerEstadoCliente(f.estado),
+      historial: leerHistorial(f.historial),
+      cotizacionesVivas: entero(f.cotizacionesVivas),
+      declaradas: leerDeclaradas(f.declaradas),
+      carnets: leerCarnets(f.carnets),
+      piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }
 }
@@ -403,7 +791,7 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
-    headers: { Authorization: `Bearer ${secret}` },
+    headers: { ...(await cabecerasPuerto(secret)) },
     cache: 'no-store',
     signal: AbortSignal.timeout(8000),
   })
@@ -430,10 +818,20 @@ export async function buscarEnAsegura(q: string): Promise<RespuestaBusqueda> {
   }
 }
 
-/** La URL de asegura para los saltos que SÍ tienen que ir allí (retarificar,
- *  que gasta dinero y vive detrás de su propia sesión). Pública, no es secreto. */
+/**
+ * La pantalla de retarificación, **DENTRO de plataforma** desde el 03/09/2026.
+ *
+ * Antes devolvía la URL de `apps/asegura`, y ese salto era el problema: es otro
+ * dominio con otra sesión, así que en producción `GET /cartera/poliza/<id>`
+ * respondía `307 /login` y Alberto se quedaba fuera. La operación la sirve ahora
+ * el puerto de operador y la pinta `/correduria/poliza/<id>/retarificar`.
+ *
+ * Al ser interna, **quien la enlace no necesita `target="_blank"`**: abrir una
+ * pestaña nueva para quedarse en la misma app solo estorba en el móvil.
+ * Lo vigila `test/regression-retarificar-plataforma.test.ts`.
+ */
 export function urlRetarificar(polizaId: string): string {
-  return `${urlAsegura()}/cartera/poliza/${polizaId}`
+  return `/correduria/poliza/${polizaId}/retarificar`
 }
 
 /** Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura
@@ -441,3 +839,74 @@ export function urlRetarificar(polizaId: string): string {
 export function urlSubirPoliza(): string {
   return `${urlAsegura()}/cartera/subir`
 }
+
+/**
+ * Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la
+ * cartera), **DENTRO de plataforma** desde el 07/09/2026. El riesgo sale del
+ * Catastro (por dirección o referencia), no de una ficha existente — a
+ * diferencia de retarificar una póliza de hogar YA existente (portado el
+ * 17/09/2026: `poliza/[id]/retarificar` + `lib/hogar-retarificar-asegura.ts`,
+ * riesgo de la ficha), esta oportunidad se presupuesta y se cotiza entera en
+ * `/correduria/cliente/<id>/hogar-nuevo`, por el mismo puerto de operador
+ * (`lib/hogar-nuevo-asegura.ts`).
+ */
+export function urlHogarNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/hogar-nuevo`
+}
+
+/**
+ * Presupuesto de AUTO para una oportunidad nueva (sin ninguna póliza en la
+ * cartera), **dentro de plataforma** desde el 07/09/2026. Hermana de
+ * `urlHogarNuevo()`: aquí el riesgo no sale del Catastro sino del catálogo
+ * del vehículo (marca/modelo/motor/versión, gratis) y de la matrícula que
+ * teclea el corredor — no hay servicio público equivalente al Catastro para
+ * un coche. Se cotiza de calle (sin compañía anterior que declarar).
+ */
+export function urlAutoNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/auto-nuevo`
+}
+
+/**
+ * Presupuesto de MOTO para una oportunidad nueva, hermana de `urlAutoNuevo()`.
+ * La cartera viva tiene 1 sola póliza de moto (03/09/2026): «nueva» es
+ * prácticamente el único caso real de este ramo.
+ */
+export function urlMotoNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/moto-nuevo`
+}
+
+/**
+ * Presupuesto de VIDA para una oportunidad nueva, hermana de `urlMotoNuevo()`.
+ * La cartera viva tiene 0 pólizas de vida (03/09/2026). 🚧 El `risk` que se
+ * manda al vendor no está verificado — ver `apps/asegura/lib/codeoscopic/peticion-vida.ts`.
+ */
+export function urlVidaNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/vida-nuevo`
+}
+
+/** Presupuesto de SALUD para una oportunidad nueva. Mismo aviso 🚧 que `urlVidaNuevo()`. */
+export function urlSaludNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/salud-nuevo`
+}
+
+/** Presupuesto de DECESOS para una oportunidad nueva. Mismo aviso 🚧 que `urlVidaNuevo()`. */
+export function urlDecesosNuevo(clienteId: string): string {
+  return `/correduria/cliente/${clienteId}/decesos-nuevo`
+}
+
+/**
+ * Los ramos presupuestables desde una ficha, en el orden del menú «➕
+ * Presupuestar ▾» de `Cabecera.tsx` — FUENTE ÚNICA (20/09/2026): antes de
+ * esto solo existía copiada dentro de `Cabecera.tsx`, y `NuevoCliente.tsx` la
+ * necesita igual para saltar directo al presupuesto del ramo elegido al dar
+ * de alta un lead. Con dos listas, un ramo añadido a una y olvidado en la
+ * otra ofrece una opción que la pantalla hermana no conoce.
+ */
+export const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => string; sinVerificar?: boolean }[] = [
+  { etiqueta: '🚗 Auto', url: urlAutoNuevo },
+  { etiqueta: '🏠 Hogar', url: urlHogarNuevo },
+  { etiqueta: '🏍️ Moto', url: urlMotoNuevo },
+  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo },
+  { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
+  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo },
+]
