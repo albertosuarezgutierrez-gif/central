@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 📚 **Libro registro de pólizas intermediadas (CSV).** Puerto de asegura `/api/operador/libro-registro` (cartera viva
+en vigor en el año, sin DNI; 139 pólizas en 2025, 38 sin prima conocida) + botón junto al informe anual. Arreglados de paso dos avisos
+de Graphify sobre #3464: topes de año en hora de Madrid y el cambio de año a mitad de carga. #3469 (formación IDD) mergeado.
+
 **(24/09/2026)** 🎓 **Formación continua IDD.** Tabla `seguros.formacion` (aplicada), regla `resumenFormacion` en module-seguros
 (15 h/año por persona, «atrasado» desde el 1/10, «incumplido» si el año cerró sin las horas; mínimo por nivel pendiente de la
 asesoría), puerto `/api/operador/formacion` y bloque en Datos de `/correduria` para anotar cursos. #3464 (informe DGSFP) mergeado.
