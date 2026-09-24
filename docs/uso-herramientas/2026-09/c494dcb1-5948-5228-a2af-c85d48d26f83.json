@@ -1,0 +1,52 @@
+{
+ "sesion": "c494dcb1-5948-5228-a2af-c85d48d26f83",
+ "inicio": "2026-09-24T14:24:40.494Z",
+ "fin": "2026-09-24T14:24:53.333Z",
+ "llamadas": 4,
+ "categorias": {
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 168,
+   "chars_out": 334,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 78,
+   "chars_out": 2021,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 323,
+   "chars_out": 5901,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  },
+  "mcp:idealista": {
+   "llamadas": 1,
+   "chars_in": 127,
+   "chars_out": 17884,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__idealista__search_properties": 1
+   }
+  }
+ }
+}
