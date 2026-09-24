@@ -430,7 +430,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
             }}
           >☰</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px', minWidth: 0 }}>
-            <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '6px', padding: '1px 7px', fontSize: '12px' }}>ia</span>
+            <img src="/icon.svg" alt="" width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />
             <span>Mi grupo</span>
           </div>
           {/* Subir una factura desde CUALQUIER pantalla, sin pasar por /asistentes: es la acción que
@@ -460,7 +460,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
         }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '16px' }}>
-              <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '8px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
+              <img src="/icon.svg" alt="" width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />
               <span>Mi grupo</span>
             </div>
             <button onClick={() => setOpen(false)} aria-label="Cerrar menú"
@@ -485,7 +485,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
     }}>
       <div className="nav-cabecera" style={{ padding: '20px 12px 16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '16px', minWidth: 0 }}>
-          <span style={{ background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: '#fff', borderRadius: '8px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
+          <img src="/icon.svg" alt="" width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />
           <span className="nav-solo-abierto">Mi grupo</span>
         </div>
         <button
