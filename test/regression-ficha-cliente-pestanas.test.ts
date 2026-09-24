@@ -57,6 +57,8 @@ test('un ?tab= desconocido cae en «Resumen» en vez de dejar la ficha en blanco
   assert.equal(tabDeParametro('recibos'), 'polizas')
   assert.equal(tabDeParametro('siniestros'), 'polizas')
   assert.equal(tabDeParametro('inventada'), 'resumen')
+  // Claves heredadas de Object no pueden colarse como pestaña (dejarían la ficha en blanco).
+  for (const t of ['constructor', 'toString', '__proto__', 'hasOwnProperty']) assert.equal(tabDeParametro(t), 'resumen', t)
   assert.equal(tabDeParametro(['contactos', 'recibos']), 'contactos')
 })
 

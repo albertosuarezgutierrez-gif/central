@@ -49,7 +49,7 @@ async function CalendarioPisos() {
       SELECT "propertyId", "guestName", "checkIn", "checkOut", portal::text AS portal, adults, children
       FROM incomes
       WHERE "propertyId" = ANY(${ids}::text[])
-        AND "checkIn" < ${new Date(`${fin}T00:00:00Z`)} AND "checkOut" > ${new Date(`${hoy}T00:00:00Z`)}
+        AND "checkIn" < ${new Date(`${fin}T00:00:00Z`)} AND "checkOut" >= ${new Date(`${hoy}T00:00:00Z`)}
     `.catch(() => null)
 
   const d = (x: Date | null) => (x ? new Date(x).toISOString().slice(0, 10) : null)
@@ -136,7 +136,9 @@ async function EstimacionMes() {
   const mes = hoyMadrid().slice(0, 7)
   const [pl, prevision] = await Promise.all([
     getPLMensual(mes).catch(() => null),
-    computarPrevision(1).catch(() => null),
+    // Horizonte 2, no 1: `computarPrevision` arranca en el mes del reloj del SERVIDOR (UTC) y aquí el
+    // mes es el de Madrid; la primera hora de cada mes van desfasados y con 1 no habría fila del mes.
+    computarPrevision(2).catch(() => null),
   ])
   const previstos = new Map<string, number | null>((prevision ?? []).filter(p => p.mes === mes).map(p => [p.propertyId, p.gastosPrevistos]))
   const est = pl

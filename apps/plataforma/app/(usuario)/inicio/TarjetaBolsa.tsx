@@ -36,8 +36,9 @@ export default async function TarjetaBolsa() {
 
   return (
     <Tarjeta titulo="Bolsa · IBKR" href="/trading" enlace="Ver cartera">
-      {cartera === null && <Aviso tono="aviso">La cartera no se ha leído nunca de IBKR: solo hay saldo de cuenta.</Aviso>}
-      {cartera === undefined && <Aviso tono="aviso">No se ha podido leer la cartera: solo se enseña el saldo de cuenta.</Aviso>}
+      {cartera === null && <Aviso tono="aviso">La cartera no se ha leído nunca de IBKR{saldos ? ': solo hay saldo de cuenta' : ''}.</Aviso>}
+      {cartera === undefined && <Aviso tono="aviso">No se ha podido leer la cartera{saldos ? ': solo se enseña el saldo de cuenta' : ''}.</Aviso>}
+      {saldos === null && <Aviso tono="aviso">No se ha podido leer el saldo de la cuenta del bróker: falta en las cifras de abajo.</Aviso>}
       {vieja && cartera && <Aviso tono="aviso">IBKR no se lee desde el {fechaHora(cartera.actualizado)} (más de {BOLSA_STALE_H} h): las cifras pueden estar desfasadas.</Aviso>}
 
       <Cifras>

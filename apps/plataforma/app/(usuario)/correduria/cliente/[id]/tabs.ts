@@ -22,6 +22,7 @@ const HEREDADAS: Record<string, TabFicha> = { recibos: 'polizas', siniestros: 'p
 /** Un `?tab=` desconocido (o ausente) no falla: cae a «Resumen». */
 export function tabDeParametro(v: string | string[] | undefined): TabFicha {
   const t = Array.isArray(v) ? v[0] : v
-  if (t && HEREDADAS[t]) return HEREDADAS[t]
+  // `Object.hasOwn`, no `HEREDADAS[t]`: con `?tab=constructor` el objeto devolvería lo heredado de Object.
+  if (t && Object.hasOwn(HEREDADAS, t)) return HEREDADAS[t]
   return TABS_FICHA.includes(t as TabFicha) ? (t as TabFicha) : 'resumen'
 }

@@ -74,6 +74,12 @@ test('entradas y salidas de hoy y mañana, y noches libres por piso', () => {
   assert.equal(v.nochesLibres, 23)
 })
 
+test('quien sale HOY cuenta como salida de hoy (la consulta trae checkOut >= hoy)', () => {
+  const v = ventanaCalendario([r('a', '2026-09-20', HOY, { huesped: 'Sale' })], ['a'], HOY)
+  assert.equal(v.salenHoy[0]?.huesped, 'Sale')
+  assert.equal(v.nochesLibres, 14, 'no ocupa ninguna noche de la ventana')
+})
+
 test('reservas de pisos que no se pintan (multi, personal) no cuentan', () => {
   const v = ventanaCalendario([r('prop_personal', HOY, '2026-09-30')], ['a'], HOY)
   assert.equal(v.entranHoy.length, 0)
