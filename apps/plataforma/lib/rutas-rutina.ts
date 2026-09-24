@@ -61,6 +61,12 @@ export const RUTAS_RUTINA: string[] = [
   // las propiedades a las que ya llega la cuenta, y gastar cuota de la API de Google: no
   // escribe nada, no mueve dinero y no puede añadirse propiedades a sí misma.
   '/api/internal/gsc',
+  // Radar de Idealista por el CONECTOR de Claude (skill `idealista-radar`, 24/09/2026): sustituye a
+  // las alertas de correo de Idealista. La rutina manda los anuncios que ya ha visto en el portal y
+  // el handler los zonifica y hace upsert en `mercado_comparables`. Lo peor que permite un token
+  // filtrado es meter anuncios inventados en el corpus de comparables — solo en núcleos de `CENTROS`
+  // y dentro de su radio; no mueve dinero, no borra nada y no expone datos personales.
+  '/api/subastas/mercado/idealista',
 ]
 
 /** ¿La ruta está declarada como alcanzable por una rutina? (prefijo, como `PUBLIC`). */

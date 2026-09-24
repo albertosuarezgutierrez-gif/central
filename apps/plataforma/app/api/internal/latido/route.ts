@@ -29,6 +29,8 @@ const AGENTES_DE_RUTINA = [
   "fiscal_novedades",
   "rrhh_compliance",
   "github_vigia",
+  // 24/09/2026: radar de Idealista por conector (sustituye a las alertas de correo de Idealista).
+  "subastas_idealista",
 ]
 
 export async function POST(req: NextRequest) {

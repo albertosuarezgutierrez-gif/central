@@ -133,6 +133,8 @@ export type { ParamsFinanciacion, CosteFinanciacion } from './financiacion.ts'
 // mismo corpus y mismo dedupe que las alertas de correo
 export { comparablesDesdeApiIdealista, tipoDesdePropertyType, centroBusquedaIdealista, llamadasPermitidasIdealista, IDEALISTA_LIMITE_MENSUAL, IDEALISTA_MARGEN_MENSUAL, IDEALISTA_DIAS_CACHE_ZONA } from './idealista-api.ts'
 export type { AnuncioIdealistaApi, RespuestaIdealistaApi, CentroBusqueda } from './idealista-api.ts'
+export { comparablesDesdeMcpIdealista, barrioDesdeTitulo, IDEALISTA_MCP_HOLGURA_RADIO } from './idealista-mcp.ts'
+export type { AnuncioIdealistaMcp, ResultadoMcpIdealista } from './idealista-mcp.ts'
 // Fotocasa: mismas zonas, más particulares — segunda fuente de comparables
 export { parsearAlertaFotocasa, esAlertaFotocasa, datosFichaFotocasa, PORTAL_FOTOCASA } from './fotocasa.ts'
 export type { FichaFotocasa } from './fotocasa.ts'
