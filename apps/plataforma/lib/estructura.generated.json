@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-24T06:07:43Z",
+  "generadoEn": "2026-09-24T07:49:54Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 105
+        "evidencias": 106
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 81
+        "evidencias": 82
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 26
+        "evidencias": 27
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4054,6 +4054,7 @@
       "/api/operador/poliza/intervinientes",
       "/api/operador/portal/invitaciones",
       "/api/operador/presupuesto",
+      "/api/operador/quejas",
       "/api/operador/recaptacion",
       "/api/operador/recaptacion/email",
       "/api/operador/recaptacion/email-lote",
@@ -4986,6 +4987,7 @@
       "/api/correduria/poliza",
       "/api/correduria/portal-invitaciones",
       "/api/correduria/presupuesto",
+      "/api/correduria/quejas",
       "/api/correduria/radar-recibos",
       "/api/correduria/recaptacion",
       "/api/correduria/recaptacion/email",
@@ -5500,6 +5502,7 @@
       "seguros.presupuesto",
       "seguros.presupuesto_evento",
       "seguros.presupuesto_opcion",
+      "seguros.queja",
       "seguros.recordatorios",
       "seguros.renovacion_contactos",
       "seguros.retencion_descartes",
@@ -6503,7 +6506,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1451,
+    "apis": 1453,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
