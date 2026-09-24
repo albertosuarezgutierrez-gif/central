@@ -194,3 +194,12 @@ test('🚨 el centinela del canal NO vuelve a comparar contra la mediana del MES
   assert.ok(fuente.includes('sqlCompPlausible("m.")'))
   assert.ok(fuente.includes('NOT m.corpus_clonado'))
 })
+
+test('tramo de última hora: la fecha a ≤6 días se ve con SU pendiente, la lejana con la de siempre', () => {
+  const p = { markup: 1, cuotaFija: 0, nochesRef: 2 }
+  const uh = { recargo: 1.1, hoy: '2026-09-24' }
+  const r = precioHuesped([f('2026-09-27', 100, 100), f('2026-10-20', 100, 100)], p, { ultimaHora: uh, topeCaro: 99 })
+  const guest = (fecha: string) => [...r.peores].find(v => v.fecha === fecha)?.guest
+  assert.equal(guest('2026-09-27'), 110)
+  assert.equal(guest('2026-10-20'), 100)
+})

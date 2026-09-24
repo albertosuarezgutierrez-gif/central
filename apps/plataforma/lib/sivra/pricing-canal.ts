@@ -71,6 +71,11 @@ export interface VentanaEscaparate {
    * los tests históricos; el ajuste filtra por él cuando se le pide.
    */
   portal?: string
+  /**
+   * Días entre la medición y el check-in. Decide el TRAMO de la ventana (ver `DIAS_ULTIMA_HORA`).
+   * `undefined`/`null` = no se sabe, y la ventana cuenta en el tramo principal (el de siempre).
+   */
+  antelacionDias?: number | null
 }
 
 export type EstadoCanal = 'medido' | 'sin_muestras' | 'muestra_corta' | 'indeterminado' | 'inconsistente'
@@ -273,6 +278,84 @@ export function desviacionCanal(p: {
  */
 export const MAX_SALTO_CANAL = 0.15
 
+// ─── TRAMO DE ÚLTIMA HORA (24/09/2026) ─────────────────────────────────────────────────────────
+//
+// En Luxury Busto y Busto Reform el escaparate de Booking NO es una sola recta: con check-in a ≤6
+// días de la medición la pendiente sube ~11 % y la cuota fija NO se mueve (R² = 1,000 en los dos
+// tramos, 45 días de ventanas):
+//
+//   piso           ≥ 7 días                   ≤ 6 días
+//   Busto Reform   0,994 × base + 28,2€       1,109 × base + 26,8€
+//   Luxury Busto   0,994 × base + 34,9€       1,107 × base + 33,6€
+//
+// Una sola recta ajustada sobre las dos mezcladas daba 0,987 × base + 64,1€ en Luxury: la
+// ordenada se comía la diferencia de pendientes y el motor, al restarla como limpieza, dejaba las
+// fechas con antelación ~14 % por debajo de su objetivo (base 69€ en vez de 83€ para 100€/noche de
+// mercado). Por eso la recta principal se ajusta SOLO con las ventanas de antelación y el tramo
+// corto se modela como un RECARGO sobre su pendiente (`pricing_settings.canal_recargo_uh`, 1 =
+// sin tramo, que es lo que tienen House y Duplex).
+
+/** Última antelación (días) que el escaparate pone en el tramo de última hora. */
+export const DIAS_ULTIMA_HORA = 6
+/** Cotas de cordura del recargo de última hora. Fuera de esto, algo no es lo que creemos. */
+export const RECARGO_UH_MIN = 0.8
+export const RECARGO_UH_MAX = 1.4
+
+export function esUltimaHora(antelacionDias: number | null | undefined): boolean {
+  return antelacionDias != null && Number.isFinite(Number(antelacionDias)) && Number(antelacionDias) <= DIAS_ULTIMA_HORA
+}
+
+/** Pendiente del canal para una fecha a `antelacionDias` de hoy. */
+export function markupEnFecha(markup: number, recargoUh: number | null | undefined, antelacionDias: number | null | undefined): number {
+  const r = Number(recargoUh) > 0 ? Number(recargoUh) : 1
+  return esUltimaHora(antelacionDias) ? markup * r : markup
+}
+
+export interface RecargoUltimaHora {
+  recargo: number | null
+  muestras: number
+  estado: 'sin_muestras' | 'muestra_corta' | 'inconsistente' | 'medido'
+}
+
+/**
+ * Recargo del tramo corto sobre la recta principal: mediana de (escaparate − cuota) / (markup ×
+ * base) en las ventanas de última hora del aforo. La cuota es la de la recta principal a propósito
+ * (medida igual en los dos tramos): así el recargo no puede comerse la limpieza, que es el error
+ * que motivó separar los tramos.
+ */
+export function medirRecargoUltimaHora(
+  ventanas: VentanaEscaparate[],
+  opts: { aforo: number; portal?: string; markup: number; cuotaFija: number; minVentanas?: number },
+): RecargoUltimaHora {
+  const min = opts.minVentanas ?? MIN_VENTANAS_CANAL
+  const cuota = Number(opts.cuotaFija) > 0 ? Number(opts.cuotaFija) : 0
+  if (!(Number(opts.markup) > 0)) return { recargo: null, muestras: 0, estado: 'sin_muestras' }
+  const ratios = (ventanas ?? [])
+    .filter(v => esUltimaHora(v.antelacionDias) &&
+      Number(v.guests) === Number(opts.aforo) &&
+      (!opts.portal || !v.portal || v.portal === opts.portal) &&
+      v.baseTotal != null && Number(v.baseTotal) > 0 && Number(v.precioTotal) > cuota)
+    .map(v => (Number(v.precioTotal) - cuota) / (Number(opts.markup) * Number(v.baseTotal)))
+    .sort((a, b) => a - b)
+  if (!ratios.length) return { recargo: null, muestras: 0, estado: 'sin_muestras' }
+  if (ratios.length < min) return { recargo: null, muestras: ratios.length, estado: 'muestra_corta' }
+  const m = Math.floor(ratios.length / 2)
+  const med = ratios.length % 2 ? ratios[m] : (ratios[m - 1] + ratios[m]) / 2
+  const recargo = Number(med.toFixed(3))
+  if (recargo < RECARGO_UH_MIN || recargo > RECARGO_UH_MAX) return { recargo, muestras: ratios.length, estado: 'inconsistente' }
+  return { recargo, muestras: ratios.length, estado: 'medido' }
+}
+
+/**
+ * Un paso del recargo hacia el medido, sin mover el precio de las fechas de última hora más de
+ * `maxSalto` en una pasada (el efecto sobre la base es exactamente viejo/nuevo − 1).
+ */
+export function pasoRecargo(configurado: number, medido: number, maxSalto = MAX_SALTO_CANAL): number {
+  const de = Number(configurado) > 0 ? Number(configurado) : 1
+  const lo = de / (1 + maxSalto), hi = de / (1 - maxSalto)
+  return Number(Math.min(hi, Math.max(lo, medido)).toFixed(3))
+}
+
 export interface PasoCanal {
   /** parámetros a escribir en esta pasada */
   aplicar: ParametrosCanal
@@ -381,7 +464,7 @@ export const TOL_ERROR_CANAL = 0.12
  */
 export function validarCanal(
   nuevas: VentanaEscaparate[],
-  vigentes: { markup: number; cuotaFija: number },
+  vigentes: { markup: number; cuotaFija: number; recargoUh?: number | null },
   opts: { aforo: number; tolSesgo?: number; tolError?: number } = { aforo: 0 },
 ): ValidacionCanal {
   const tolSesgo = opts.tolSesgo ?? TOL_SESGO_CANAL
@@ -395,7 +478,8 @@ export function validarCanal(
     return { muestras: 0, errorMedio: null, errorMaximo: null, sesgo: null, estado: 'sin_muestras' }
   }
   const errores = utiles.map(v => {
-    const predicho = vigentes.markup * Number(v.baseTotal) + (vigentes.cuotaFija > 0 ? vigentes.cuotaFija : 0)
+    const m = markupEnFecha(vigentes.markup, vigentes.recargoUh, v.antelacionDias)
+    const predicho = m * Number(v.baseTotal) + (vigentes.cuotaFija > 0 ? vigentes.cuotaFija : 0)
     return (Number(v.precioTotal) - predicho) / Number(v.precioTotal)
   })
   const sesgo = errores.reduce((a, b) => a + b, 0) / errores.length
@@ -410,6 +494,71 @@ export function validarCanal(
     estado: Math.abs(sesgo) > tolSesgo || errorMedio > tolError ? 'desviado' : 'ok',
   }
 }
+
+/** Un cambio del recargo de última hora. Va aparte de la recta: puede moverse sin que ella se mueva. */
+export type CambioRecargo = {
+  property_id: string; nombre: string; de: number; a: number; medido: number; muestras: number
+  /** ventanas de última hora que lo han producido: se marcan usadas al escribir */
+  ventanas: number[]
+}
+/** Un piso cuyo recargo NO se ha tocado, y por qué. «No lo he podido medir» no es «ya cuadra». */
+export type RecargoNoTocado = { property_id: string; nombre: string; motivo: string; anomalo: boolean }
+
+/**
+ * Qué recargos se escriben. Mismas puertas que la recta (`canal_auto`, `SIVRA_CANAL_AUTO`,
+ * `?property=`) y el mismo tope por pasada: el recargo mueve el precio de las fechas de los próximos
+ * `DIAS_ULTIMA_HORA` días exactamente en de/a − 1. Sin medición fiable NO se toca: se queda el que
+ * hay (1 = sin tramo), que es «no lo sé», no «no hay tramo».
+ */
+export function repartirRecargos(
+  pisos: {
+    property_id: string; nombre: string; aforo_max: number; canal_auto: boolean
+    configurado: ParametrosCanal; recargo_uh_cfg: number
+  }[],
+  cambios: { property_id: string; a: ParametrosCanal }[],
+  ventanas: Map<string, (VentanaEscaparate & { id: number })[]>,
+  o: { soloProp?: string | null; autoGlobal?: boolean; portal?: string },
+): { recargos: CambioRecargo[]; noTocados: RecargoNoTocado[] } {
+  const recargos: CambioRecargo[] = []
+  const noTocados: RecargoNoTocado[] = []
+  for (const p of pisos) {
+    if (o.soloProp && p.property_id !== o.soloProp) continue
+    // 🚨 El recargo se mide contra la recta que QUEDA escrita tras esta pasada: la del cambio (que
+    // puede ser solo un tramo acotado) o la vigente si no se ha tocado. Medirlo contra la recta
+    // ajustada cuando lo escrito es otra sumaría dos errores en las fechas de última hora.
+    const c = cambios.find(x => x.property_id === p.property_id)
+    const recta = c ? c.a : p.configurado
+    const vs = ventanas.get(p.property_id) ?? []
+    const m = medirRecargoUltimaHora(vs, { aforo: p.aforo_max, markup: recta.markup, cuotaFija: recta.cuotaFija, portal: o.portal })
+    if (m.estado !== "medido" || m.recargo == null) {
+      // Sin ventanas es lo normal en House y Duplex (no tienen tramo): no se avisa. Una medición
+      // FUERA de cotas sí: el portal está haciendo algo que el modelo no explica.
+      if (m.estado === "inconsistente") {
+        noTocados.push({ property_id: p.property_id, nombre: p.nombre, anomalo: true,
+          motivo: `recargo medido ×${m.recargo} fuera de cotas (${m.muestras} ventanas): se mantiene ×${p.recargo_uh_cfg}` })
+      } else {
+        noTocados.push({ property_id: p.property_id, nombre: p.nombre, anomalo: false,
+          motivo: `recargo ${m.estado} (${m.muestras} ventanas): se mantiene ×${p.recargo_uh_cfg}` })
+      }
+      continue
+    }
+    const a = pasoRecargo(p.recargo_uh_cfg, m.recargo)
+    if (Math.abs(a - p.recargo_uh_cfg) < 0.01) continue
+    if (o.autoGlobal === false || !p.canal_auto) {
+      noTocados.push({ property_id: p.property_id, nombre: p.nombre, anomalo: true,
+        motivo: `recargo medido ×${m.recargo} frente a ×${p.recargo_uh_cfg} vigente, pero el calibrado automático está apagado` })
+      continue
+    }
+    recargos.push({
+      property_id: p.property_id, nombre: p.nombre, de: p.recargo_uh_cfg, a,
+      medido: m.recargo, muestras: m.muestras,
+      ventanas: vs.filter(v => esUltimaHora(v.antelacionDias) && v.guests === p.aforo_max &&
+        (!o.portal || !v.portal || v.portal === o.portal) && v.baseTotal != null).map(v => v.id),
+    })
+  }
+  return { recargos, noTocados }
+}
+
 
 // ─────────────────────────────────────────────────────────────────────────────────────────────
 // QUÉ PISOS SE AJUSTAN — y, sobre todo, QUÉ PASA CON LOS QUE NO
