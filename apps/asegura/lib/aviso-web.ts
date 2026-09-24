@@ -32,6 +32,7 @@ import {
   cuerpoAviso,
   cuerpoConfirmacion,
   enlaceWeb,
+  nombreDelSeguro,
   parsearFecha,
   revisarSolicitud,
   urlWeb,
@@ -112,7 +113,7 @@ export async function solicitarAviso(correduriaId: string, body: unknown): Promi
     s.email,
     cuerpoConfirmacion({
       nombre: s.nombre,
-      ramo: s.ramo,
+      ramo: nombreDelSeguro(s.ramo, s.ramoWeb),
       vence: parsearFecha(s.vence)!,
       enlaceConfirmar: enlaceWeb(urlWeb(), '/aviso/confirmar', tokenConfirmar),
     }),
@@ -129,6 +130,8 @@ export type ResultadoConfirmacion =
       /** Datos para el aviso de Telegram a Alberto (el correo NO viaja). */
       ficha: { id: string; nueva: boolean; nombre: string; varias: boolean }
       ramo: string
+      /** Cómo se llama el seguro para una persona («hogar», o lo que escribió en «Otro»). */
+      seguro: string
       vence: string
     }
   | { estado: 'no_valido' }
@@ -139,6 +142,7 @@ type FilaAviso = {
   nombre: string
   email: string
   ramo: string
+  ramoWeb: string
   vence: Date
   confirmadoEn: Date | null
   clienteId: string | null
@@ -152,14 +156,15 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
   if (!tokenEnlaceValido(token)) return { estado: 'no_valido' }
   const db = prismaAsegura()
   const [f] = await db.$queryRaw<FilaAviso[]>(Prisma.sql`
-    select id, nombre, email, ramo::text as ramo, vence, confirmado_en as "confirmadoEn", cliente_id as "clienteId",
+    select id, nombre, email, ramo::text as ramo, ramo_web as "ramoWeb", vence, confirmado_en as "confirmadoEn", cliente_id as "clienteId",
            confirmacion_expira_en < now() as caducada, baja_en is not null as baja
     from aviso_web
     where correduria_id = ${correduriaId}::uuid and token_confirmacion_hash = ${await hashTokenEnlace(token)}`)
   if (!f || f.baja) return { estado: 'no_valido' }
   const vence = f.vence.toISOString().slice(0, 10)
+  const seguro = nombreDelSeguro(f.ramo, f.ramoWeb)
   if (f.confirmadoEn && f.clienteId) {
-    return { estado: 'ok', yaEstaba: true, ficha: { id: f.clienteId, nueva: false, nombre: f.nombre, varias: false }, ramo: f.ramo, vence }
+    return { estado: 'ok', yaEstaba: true, ficha: { id: f.clienteId, nueva: false, nombre: f.nombre, varias: false }, ramo: f.ramo, seguro, vence }
   }
   if (f.caducada) return { estado: 'no_valido' }
 
@@ -173,7 +178,7 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
   let ficha: { id: string; nueva: boolean; nombre: string; varias: boolean }
   const alta = await altaCliente(
     correduriaId,
-    { nombre: f.nombre, email, fuente: 'web', notas: `Pidió en la web el aviso de vencimiento de su seguro de ${f.ramo} (${vence}).` },
+    { nombre: f.nombre, email, fuente: 'web', notas: `Pidió en la web el aviso de vencimiento de su seguro de ${seguro} (${vence}).` },
     'web',
   )
   if (alta.ok) {
@@ -192,7 +197,7 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
     await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`${ORIGEN_AVISO_WEB}:${f.id}`}))`)
     const [otra] = await tx.$queryRaw<{ c: Date | null }[]>(Prisma.sql`select confirmado_en as c from aviso_web where id = ${f.id}::uuid`)
     if (otra?.c) return true
-    const info = JSON.stringify({ origen: ORIGEN_AVISO_WEB, avisoId: f.id })
+    const info = JSON.stringify({ origen: ORIGEN_AVISO_WEB, avisoId: f.id, seguro })
     const [o] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
       insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, info_riesgo)
       values (${correduriaId}::uuid, ${ficha.id}::uuid, cast(${f.ramo} as tipo_seguro), 'web', 'pendiente_cliente',
@@ -202,19 +207,21 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
       update aviso_web set confirmado_en = now(), cliente_id = ${ficha.id}::uuid, oportunidad_id = ${o!.id}::uuid
       where id = ${f.id}::uuid`)
     // Una suscripción viva por correo y ramo: si ya había otra confirmada, esta la sustituye. Si no,
-    // le llegarían dos avisos de lo mismo y la baja de uno dejaría el otro vivo.
+    // le llegarían dos avisos de lo mismo y la baja de uno dejaría el otro vivo. En «otros» cada
+    // seguro escrito es uno distinto (patinete ≠ mascota): ahí manda `ramo_web`.
     await tx.$executeRaw(Prisma.sql`
       update aviso_web set baja_en = now()
       where correduria_id = ${correduriaId}::uuid and id <> ${f.id}::uuid and ramo = cast(${f.ramo} as tipo_seguro)
+        and (ramo <> 'otros' or ramo_web = ${f.ramoWeb})
         and email_lookup_hash = (select email_lookup_hash from aviso_web where id = ${f.id}::uuid)
         and confirmado_en is not null and baja_en is null`)
     await tx.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${ficha.id}::uuid, cast('contacto' as tipo_historial_interno),
-              ${`Confirmó en la web el aviso de vencimiento: seguro de ${f.ramo}, vence el ${ciclo}. Le escribiremos a 70 y 45 días.`})`)
+              ${`Confirmó en la web el aviso de vencimiento: seguro de ${seguro}, vence el ${ciclo}. Le escribiremos a 70 y 45 días.`})`)
     return false
   })
-  return { estado: 'ok', yaEstaba, ficha, ramo: f.ramo, vence: ciclo }
+  return { estado: 'ok', yaEstaba, ficha, ramo: f.ramo, seguro, vence: ciclo }
 }
 
 // ─── 3. Baja ────────────────────────────────────────────────────────────────
@@ -251,6 +258,7 @@ type Suscrito = {
   nombre: string
   email: string
   ramo: string
+  ramoWeb: string
   vence: Date
   clienteId: string
   tokenBaja: string
@@ -266,7 +274,7 @@ export async function pasadaAvisosWeb(correduriaId: string, opciones: { hoy?: Da
   if (!portal) throw new Error('sin_portal')
   const db = prismaAsegura()
   const filas = await db.$queryRaw<Suscrito[]>(Prisma.sql`
-    select a.id, a.nombre, a.email, a.ramo::text as ramo, a.vence, a.cliente_id as "clienteId", a.token_baja as "tokenBaja",
+    select a.id, a.nombre, a.email, a.ramo::text as ramo, a.ramo_web as "ramoWeb", a.vence, a.cliente_id as "clienteId", a.token_baja as "tokenBaja",
            to_char(a.aviso1_para, 'YYYY-MM-DD') as "aviso1Para", to_char(a.aviso2_para, 'YYYY-MM-DD') as "aviso2Para"
     from aviso_web a
     join clientes c on c.id = a.cliente_id
@@ -302,7 +310,7 @@ export async function pasadaAvisosWeb(correduriaId: string, opciones: { hoy?: Da
       cuerpoAviso({
         tipo: toca.tipo,
         nombre: f.nombre,
-        ramo: f.ramo,
+        ramo: nombreDelSeguro(f.ramo, f.ramoWeb),
         vence: parsearFecha(toca.para)!,
         hoy,
         enlacePortal: enlace,

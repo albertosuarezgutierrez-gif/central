@@ -52,7 +52,16 @@ export const RAMO_WEB_A_TIPO: Readonly<Record<string, string>> = {
   'responsabilidad-civil': 'responsabilidad_civil',
   'responsabilidad-civil-fontaneros': 'responsabilidad_civil',
   'responsabilidad-civil-autonomos': 'responsabilidad_civil',
+  otro: 'otros',
 }
+
+/** Slug del «Otro seguro» del selector de la portada: el visitante escribe cuál. */
+export const RAMO_WEB_OTRO = 'otro'
+/**
+ * Lo que escribe en «¿Cuál?» también acaba dentro de un correo a una dirección ajena, así que
+ * tiene la misma regla que el nombre: solo letras y espacios, corto. Nada de URLs ni cifras.
+ */
+const SEGURO_OTRO = /^[\p{L} '-]{2,40}$/u
 
 export const NOMBRE_RAMO: Readonly<Record<string, string>> = {
   auto: 'auto',
@@ -60,6 +69,15 @@ export const NOMBRE_RAMO: Readonly<Record<string, string>> = {
   comunidades: 'comunidad',
   comercio: 'comercio',
   responsabilidad_civil: 'responsabilidad civil',
+}
+
+/**
+ * Cómo se nombra el seguro en correos, historial y Telegram. Para «otro» es lo que escribió el
+ * visitante (guardado en `ramo_web` como `otro:<texto>`); para el resto, el nombre del ramo.
+ */
+export function nombreDelSeguro(ramo: string, ramoWeb: string): string {
+  if (ramoWeb.startsWith(`${RAMO_WEB_OTRO}:`)) return ramoWeb.slice(RAMO_WEB_OTRO.length + 1)
+  return NOMBRE_RAMO[ramo] ?? ramo
 }
 
 export type SolicitudAviso = { nombre: string; email: string; ramoWeb: string; ramo: string; vence: string }
@@ -86,13 +104,19 @@ export function revisarSolicitud(body: unknown): Revision {
   const ramoWeb = typeof b.ramo === 'string' ? b.ramo.trim() : ''
   const ramo = RAMO_WEB_A_TIPO[ramoWeb]
   if (!ramo) return { ok: false, motivo: 'Ramo no válido.', campo: 'ramo' }
+  let ramoWebGuardado = ramoWeb
+  if (ramoWeb === RAMO_WEB_OTRO) {
+    const cual = typeof b.cual === 'string' ? b.cual.replace(/\s+/g, ' ').trim().toLowerCase() : ''
+    if (!SEGURO_OTRO.test(cual)) return { ok: false, motivo: 'Escribe qué seguro es, solo con letras (p. ej. «patinete»).', campo: 'cual' }
+    ramoWebGuardado = `${RAMO_WEB_OTRO}:${cual}`
+  }
   const vence = parsearFecha(b.vence)
   if (!vence) return { ok: false, motivo: 'Fecha de vencimiento no válida.', campo: 'vence' }
   const anio = vence.getUTCFullYear()
   if (anio < 1990 || anio > new Date().getUTCFullYear() + 2) return { ok: false, motivo: 'Fecha de vencimiento no válida.', campo: 'vence' }
   // El consentimiento tiene que venir marcado de forma EXPLÍCITA: `true`, no «algo que parezca sí».
   if (b.consentimiento !== true) return { ok: false, motivo: 'Tienes que aceptar que te escribamos para avisarte.', campo: 'consentimiento' }
-  return { ok: true, solicitud: { nombre: nombre.valor, email: email.valor, ramoWeb, ramo, vence: String(b.vence).trim() } }
+  return { ok: true, solicitud: { nombre: nombre.valor, email: email.valor, ramoWeb: ramoWebGuardado, ramo, vence: String(b.vence).trim() } }
 }
 
 function diaUtc(d: Date): Date {

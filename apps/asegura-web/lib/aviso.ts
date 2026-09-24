@@ -5,6 +5,12 @@
 // (`RAMO_WEB_A_TIPO` de `apps/asegura/lib/aviso-web-reglas.ts`): si divergen, el visitante se
 // apuntaría desde una página cuyo ramo asegura rechaza con 422. Lo vigila `lib/aviso.test.ts`.
 
+/**
+ * «Otro seguro» del selector de la portada (patinete, mascota, viaje…): el visitante escribe cuál.
+ * Tiene que coincidir con `RAMO_WEB_OTRO` de asegura.
+ */
+export const RAMO_OTRO = 'otro'
+
 /** Versión del texto de consentimiento de abajo. Tiene que coincidir con `CONSENTIMIENTO_VERSION` de asegura. */
 export const CONSENTIMIENTO_VERSION = 'web-aviso-v1'
 

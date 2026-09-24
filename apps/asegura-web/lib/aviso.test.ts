@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { CONSENTIMIENTO_VERSION, tokenDelFragmento } from './aviso.ts'
+import { CONSENTIMIENTO_VERSION, RAMO_OTRO, tokenDelFragmento } from './aviso.ts'
 import { RAMOS } from './ramos.ts'
 import { ramoTieneVentana } from './ventana-renovacion.ts'
 
@@ -16,6 +16,9 @@ test('🚨 contrato con asegura: cada ramo que pinta el widget es un ramo que as
   const aceptados = new Set([...bloque[1]!.matchAll(/^\s*'?([a-z-]+)'?\s*:/gm)].map((m) => m[1]))
   const conWidget = new Set(RAMOS.filter((r) => ramoTieneVentana(r.slug)).map((r) => r.slug))
   assert.ok(conWidget.size > 0)
+  // «Otro seguro» no tiene página de ramo: sale solo en el selector de la portada.
+  conWidget.add(RAMO_OTRO)
+  assert.match(REGLAS_ASEGURA, new RegExp(`RAMO_WEB_OTRO = '${RAMO_OTRO}'`))
   assert.deepEqual([...conWidget].sort(), [...aceptados].sort())
 })
 

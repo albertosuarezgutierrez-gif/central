@@ -1688,6 +1688,10 @@ Frenos tras la revisión de alto riesgo: nombre solo letras (≤60, va dentro de
 dirección ajena), tope global de 30 solicitudes/hora (`saturado` → Telegram), campo trampa, baja por
 CORREO (todas sus filas), una suscripción viva por correo+ramo, purga de las no confirmadas a 30 días,
 y no se pisa la llave directa viva del correo de la intranet.
+**«Otro seguro» (24/09/2026):** el selector de la portada ofrece `otro` (patinete, mascota, viaje…) con un
+campo «¿Cuál?» — solo letras, 2-40, misma regla que el nombre porque va dentro del correo. Se guarda como
+`ramo = otros` + `ramo_web = 'otro:<texto>'`; `nombreDelSeguro()` es quien lo nombra en correos, historial y
+Telegram, y en `otros` la suscripción viva se distingue por `ramo_web` (patinete ≠ mascota).
 **Para encender, en este orden:** `ASEGURA_AVISOS_WEB_ACTIVOS=1` en `central-asegura`
 (y `ASEGURA_WEB_URL` si la web no es `https://grupoasegura.es`) → `NEXT_PUBLIC_AVISOS_CORREO=1` en
 `asegura-web` → redesplegar las dos. Sin la primera env la solicitud contesta `desactivado` y el cron

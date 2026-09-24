@@ -477,6 +477,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) asegura-web: «Otro seguro» con campo libre + WhatsApp más arriba en móvil
+Alberto: faltaban patinete y demás. Selector de la portada con «Otro seguro» + «¿Cuál?» (solo letras, 2-40);
+asegura lo guarda como `otros` + `ramo_web='otro:<texto>'` y lo nombra con `nombreDelSeguro()`. Burbuja de
+WhatsApp a `--e6` en móvil; la banda del hero crece a 92 px y `.garantias` se aparta en todo el móvil (medido).
+
 ## (24/09/2026) asegura-web: botón desactivado que se lea como tal + campos del widget a todo el ancho en móvil
 Tras la prueba en producción de Alberto: «Avisadme por correo» parecía activo sin marcar la casilla. `.btn:disabled`
 (opacidad 0,45, `not-allowed`, hover congelado por variante) en `globals.css`; `.ventana-campos` a una columna bajo 560 px.
