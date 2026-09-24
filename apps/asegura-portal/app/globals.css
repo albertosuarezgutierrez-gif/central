@@ -1490,6 +1490,32 @@ h1 em {
  * índice —cuándo, en qué estado, con qué referencia— y debajo va el relato. Con
  * la descripción metida en esa primera línea, la fila crecía hasta cuatro
  * renglones y el estado dejaba de encontrarse de un vistazo. */
+/* El TIPO (tabla oficial de TIREA) y la explicación en lenguaje claro (24/09/2026). */
+.siniestro-tipo {
+  flex-basis: 100%;
+  min-width: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.siniestro-explica {
+  flex-basis: 100%;
+  min-width: 0;
+  margin: 4px 0 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.siniestro-explica strong {
+  color: var(--text);
+}
+/* El enlace en su propio renglón: con 44 px en línea estiraba el renglón del texto. */
+.siniestro-explica a {
+  display: block;
+  width: fit-content;
+  min-height: 44px;
+  line-height: 44px;
+}
 .siniestro-lugar {
   flex-basis: 100%;
   min-width: 0;

@@ -10,6 +10,8 @@ import {
   descripcionSiniestro,
   siniestroAbierto,
   tonoEstadoSiniestro,
+  tipoSiniestroLegible,
+  explicarSiniestro,
 } from './siniestro-historial.ts'
 
 test('el vocabulario son los CUATRO estados del enum de la BD', () => {
@@ -128,5 +130,30 @@ test('la descripción se devuelve ENTERA: media frase es otro relato', () => {
 test('🚨 un valor de cajón NO es una descripción: es un renglón en blanco con aspecto de dato', () => {
   for (const v of [null, undefined, '', '   ', '-', '—', '··']) {
     assert.equal(descripcionSiniestro(v), null, `«${v}» no puede pasar por descripción`)
+  }
+})
+
+test('el tipo se traduce con la tabla oficial; un código fuera de tabla NO se pinta', () => {
+  assert.equal(tipoSiniestroLegible('1107'), 'Otras Asistencias')
+  assert.equal(tipoSiniestroLegible('999999'), null)
+  assert.equal(tipoSiniestroLegible(null), null)
+})
+
+test('🚨 lenguaje claro: rechazado no se suaviza, abierto dice qué hacer, lo desconocido no se adivina', () => {
+  const hoy = new Date('2026-09-24T10:00:00Z')
+  const abierto = explicarSiniestro('abierto', new Date('2026-09-20T10:00:00Z'), hoy)
+  assert.match(abierto.situacion, /abierto/)
+  assert.match(abierto.queHacer, /perito/)
+  assert.doesNotMatch(abierto.queHacer, /últimas semanas/, 'a los 4 días no se sugiere que esté parado')
+  const viejo = explicarSiniestro('en_tramitacion', new Date('2026-07-01T10:00:00Z'), hoy)
+  assert.match(viejo.queHacer, /últimas semanas/)
+  assert.match(explicarSiniestro('rechazado', null, hoy).situacion, /no lo ha asumido/)
+  assert.doesNotMatch(explicarSiniestro('rechazado', null, hoy).situacion, /cerrado/)
+  assert.match(explicarSiniestro('cerrado', null, hoy).situacion, /cerrado/)
+  assert.match(explicarSiniestro('pagado_parcial', null, hoy).situacion, /No sabemos/)
+  // Nada afirma lo que CIMA no manda.
+  for (const e of ['abierto', 'en_tramitacion', 'cerrado', 'rechazado']) {
+    const x = explicarSiniestro(e, null, hoy)
+    assert.doesNotMatch(x.situacion + x.queHacer, /ha asignado|pendiente de pago|te ha pagado/)
   }
 })
