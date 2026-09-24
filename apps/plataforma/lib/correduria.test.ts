@@ -70,6 +70,7 @@ test('🪤 claveReferencia nunca aprende sobre un DNI/NIE (nóminas con destino 
 
 test('🪤 detectarCompania: «COMISIONES …» de Pelayo casa también tras el prefijo TRANSFERENCIAS //', () => {
   assert.equal(detectarCompania('TRANSFERENCIAS // ORDENANTE X // COMISIONES MAYO 2026050', '', ''), 'Pelayo')
+  assert.equal(detectarCompania('TRANSFERENCIAS // LIBERTY SEGUROS // COMISIONES 08', '', ''), 'Liberty')
 })
 
 test('🪤 claveComercio tampoco devuelve un DNI como «comercio»', () => {

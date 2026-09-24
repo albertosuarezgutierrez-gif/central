@@ -15,7 +15,8 @@
 **(24/09/2026)** 🧮 **Comisiones: el «deudor» de Occident cuadra contra el banco (Fase 3).** Investigado `banco_total`:
 el casado por concepto ya estaba en #3418 (la 1ª pasada con él, 07:30 UTC de hoy; simulado 3→11 periodos casados).
 Arreglado lo que seguía mal: Occident abr-ago salía «deudor» y el banco cobra |bruto|−retención al céntimo →
-`remesaInferida` en `cuadre.ts` (cuadra/descuadra con abono; deudor solo sin él). La cifra fiscal NO se toca. Además
+`remesaInferida`/`remesaEfectiva`/`brutoEfectivo` en `cuadre.ts` (sin abono = liquidado-sin-cobrar; el total bruto
+del cuadre deja de restar lo cobrado). Además
 DNI/NIE nunca como clave de regla y Pelayo tras «TRANSFERENCIAS //». Pendiente de Alberto: dónde cobra Allianz
 (0 abonos en ninguna cuenta) y Mapfre abr-ago sin periodos en el libro (CIMA no trae su devengo).
 

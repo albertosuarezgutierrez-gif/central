@@ -17,7 +17,7 @@ import { tgAviso } from '@/lib/telegram/avisos'
 import { comisionesAsegura, nombreCompania } from '@/lib/comisiones-asegura'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
-import { estadoCuadre, mesEnPeriodo, finDeMes, ESTADOS_PENDIENTES, type EstadoCuadre } from '@/lib/correduria/cuadre'
+import { estadoCuadre, remesaEfectiva, brutoEfectivo, mesEnPeriodo, finDeMes, ESTADOS_PENDIENTES, type EstadoCuadre } from '@/lib/correduria/cuadre'
 import { bancoDePeriodo, casarAbonos, rangoAbonos, type AbonoBanco } from '@/lib/correduria/casar-banco'
 import { ENV_LISTA_CORREDURIA, listaCorreduria } from '@/lib/correduria-acceso'
 
@@ -167,7 +167,8 @@ export async function GET(req: NextRequest) {
   }
 
   // ── El banco: cada abono de seguros a UN periodo como mucho (`casar-banco.ts`) ─
-  const periodosLiq = filas.map(f => ({ codigo: f.codigo, inicio: f.inicio, fin: f.fin, remesa: f.remesa }))
+  // Occident manda bruto negativo con remesa 0 y cobra |bruto| − retención: se casa por ESA remesa.
+  const periodosLiq = filas.map(f => ({ codigo: f.codigo, inicio: f.inicio, fin: f.fin, remesa: remesaEfectiva(f.bruto, f.ret, f.remesa) }))
   const rango = rangoAbonos(periodosLiq)
   const abonos: AbonoBanco[] = rango === null ? [] : (await prisma.$queryRaw<Array<{
     id: string; fecha: string; importe: number; concepto: string | null; concepto_normalizado: string | null
@@ -202,7 +203,7 @@ export async function GET(req: NextRequest) {
     const esperado = recibos > 0 ? Math.round(delPeriodo.reduce((s, d) => s + d.bruto, 0) * 100) / 100 : null
 
     const { total: bancoTotal, ids: bancoIds } = bancoDePeriodo(
-      { codigo: f.codigo, inicio: f.inicio, fin: f.fin, remesa: f.remesa }, casado, abonos)
+      { codigo: f.codigo, inicio: f.inicio, fin: f.fin, remesa: remesaEfectiva(f.bruto, f.ret, f.remesa) }, casado, abonos)
 
     await prisma.$executeRaw`
       INSERT INTO comisiones_devengo
@@ -246,7 +247,7 @@ export async function GET(req: NextRequest) {
       avisos.push(
         `• <b>${nombreCompania(f.codigo)}</b> ${f.inicio} → ${f.fin} — <b>${ETIQUETA[estado]}</b>\n` +
           `  devengado ${esperado == null ? '—' : eur(esperado)} · ` +
-          `liquidado ${f.bruto == null ? '—' : eur(f.bruto)} · ` +
+          `liquidado ${f.bruto == null ? '—' : eur(brutoEfectivo(f.bruto, f.remesa) as number)} · ` +
           `banco ${bancoTotal == null ? '—' : eur(bancoTotal)}`,
       )
     }

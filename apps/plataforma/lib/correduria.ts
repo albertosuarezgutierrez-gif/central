@@ -40,12 +40,14 @@ export function detectarCompania(concepto: string, conceptoNorm: string, contrap
   if (txt.includes('LINEA DIRECTA') || txt.includes('LÍNEA DIRECTA')) return 'Línea Directa'
   if (txt.includes('OCCIDENT') || txt.includes('CATALANA') || txt.includes('M00171') || txt.includes('8/92361')) return 'Occident'
   if (txt.includes('HELVETIA')) return 'Helvetia'
-  if (txt.includes('PELAYO') || /^COMISIONES /.test(txt) || /^COMISIONES /.test(tramo)) return 'Pelayo'
+  if (txt.includes('PELAYO') || /^COMISIONES /.test(txt)) return 'Pelayo'
   if (txt.includes('LIBERTY')) return 'Liberty'
   if (txt.includes('PLUS ULTRA')) return 'Plus Ultra'
   if (txt.includes('SANITAS') || txt.includes('ADESLAS') || txt.includes('DKV') || txt.includes('ASISA')) return 'Salud'
   if (txt.includes('REMSALDO')) return 'Aegon'
   if (/PAGO SALDO CTA/.test(txt)) return 'Generali'
+  // Al final: tras «//» el tramo puede nombrar a otra compañía («LIBERTY SEGUROS // COMISIONES 08»).
+  if (/^COMISIONES /.test(tramo)) return 'Pelayo'
   return COMPANIA_OTRAS
 }
 
