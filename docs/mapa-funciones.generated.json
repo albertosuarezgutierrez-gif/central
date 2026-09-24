@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T13:31:21Z",
-  "sha": "3868cf2f17a47865c7e239ea36fbab0be61282ea",
+  "generadoEn": "2026-09-24T14:03:52Z",
+  "sha": "c97cd8c3bae63c0f5851370d0c0219ed2c20a842",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4718,6 +4718,68 @@
       "hash": "b861903bc9ee"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/mensajes/Mensajes.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Mensajes"
+      ],
+      "funciones": [
+        {
+          "nombre": "cuando",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": "string",
+          "linea": 9
+        },
+        {
+          "nombre": "Mensajes",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ hilos, polizas, puedeEscribir, noPuede, sinFicha, }: { hilos: Hilo[] polizas: PolizaOpcion[] puedeEscribir: boolean noPuede: 'modo_corredor' | 'varias_fichas' | null sinFicha: boolean }",
+          "retorno": null,
+          "linea": 28,
+          "resumen": "Los hilos (uno por póliza y el general) y el formulario para escribir. Tras enviar se refresca la página del servidor: el mensaje que se ve es el guardado, no una copia optimista que podría no existir"
+        },
+        {
+          "nombre": "HiloPlegable",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ abiertoDeSalida, children }: { abiertoDeSalida: boolean; children: ReactNode }",
+          "retorno": null,
+          "linea": 168,
+          "resumen": "Un hilo que nace abierto si trae respuestas nuevas y DESPUÉS lo gobierna quien lo mira. Con `open` atado a `sinLeer`, el refresco tras enviar (que ya ha sellado lo leído) lo cerraría con el propio men"
+        }
+      ],
+      "tablas": [
+        "next",
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "90218aa586f8"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/(portal)/mensajes/page.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "PaginaMensajes"
+      ],
+      "funciones": [
+        {
+          "nombre": "PaginaMensajes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "«Mensajes» con tu corredor (ASegura OS §Q.7): un hilo por póliza y uno general. Sustituye al «te mando un correo y espero» y queda en la ficha. La identidad sale de la sesión; los temas que se ofrecen"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1020eb2cd402"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/NavPortal.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -4736,7 +4798,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f346f79c4a93"
+      "hash": "7245250ecf11"
     },
     {
       "ruta": "apps/asegura-portal/app/ActivarPush.tsx",
@@ -5237,6 +5299,26 @@
       "tablas": [],
       "rutaApi": "/api/mejorar-precio",
       "hash": "ba5a72bc392d"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/mensajes/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/mensajes",
+      "hash": "c58d8fa6b12c"
     },
     {
       "ruta": "apps/asegura-portal/app/api/mis-datos/confirmar/route.ts",
@@ -8508,6 +8590,47 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "76cb89421830"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/mensajes.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "Mensajes con tu corredor (ASegura OS §Q.7): lo que el cliente escribe y lee en el portal. 🚨 La ficha sale SIEMPRE de `portal_vinculo` de la sesión (`getIdentidad`), nunca de la petición: con un rol sin RLS, un `clienteId` de fuera no falla, escribe en la ficha de otro. La póliza del tema la vigila ",
+      "exporta": [
+        "mensajesDeSesion",
+        "marcarLeidosDeSesion",
+        "enviarMensajeDeSesion"
+      ],
+      "funciones": [
+        {
+          "nombre": "mensajesDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<LecturaMensajes>",
+          "linea": 31,
+          "resumen": "Los mensajes de sus fichas, y si puede escribir (una sola ficha propia y no es la vista del corredor)."
+        },
+        {
+          "nombre": "marcarLeidosDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: string[]",
+          "retorno": "Promise<void>",
+          "linea": 68,
+          "resumen": "Sella como leídas las respuestas del corredor QUE SE HAN ENSEÑADO (`ids`), no todo lo que haya sin leer: una respuesta que llegue mientras se pinta la página no la ha visto nadie. La vista del corredo"
+        },
+        {
+          "nombre": "enviarMensajeDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizaIdCrudo: unknown, cuerpoCrudo: unknown",
+          "retorno": "Promise<ResultadoEnvio>",
+          "linea": 97
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b81fc79ce50e"
     },
     {
       "ruta": "apps/asegura-portal/lib/mis-datos.ts",
@@ -13946,6 +14069,26 @@
       "tablas": [],
       "rutaApi": "/api/operador/linea-base",
       "hash": "8c8f2dd5cbc8"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/mensajes/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 23
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/mensajes",
+      "hash": "1f2aea88ee97"
     },
     {
       "ruta": "apps/asegura/app/api/operador/oportunidad/llamada/route.ts",
@@ -24014,6 +24157,77 @@
       ],
       "rutaApi": null,
       "hash": "68384ea9deeb"
+    },
+    {
+      "ruta": "apps/asegura/lib/mensajes-portal.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Mensajes con el cliente (ASegura OS §Q.7) — el lado del CORREDOR, por el puerto `/api/operador/mensajes`. El cliente escribe en el portal; Alberto lee y contesta desde /correduria (plataforma). Contestar es un clic suyo, así que el aviso por correo al cliente («tienes una respuesta en tu área») sale",
+      "exporta": [
+        "mensajesDeFicha",
+        "mensajesSinLeer",
+        "marcarLeidos",
+        "responder"
+      ],
+      "funciones": [
+        {
+          "nombre": "aMensaje",
+          "kind": "function",
+          "exportada": false,
+          "params": "f: Fila",
+          "retorno": "MensajeCorredor",
+          "linea": 38
+        },
+        {
+          "nombre": "mensajesDeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<MensajeCorredor[]>",
+          "linea": 51,
+          "resumen": "El hilo entero de una ficha, en orden de escritura."
+        },
+        {
+          "nombre": "mensajesSinLeer",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<PendienteMensaje[]>",
+          "linea": 74,
+          "resumen": "Las fichas con mensajes del cliente sin leer: la cola de «Hoy». La más antigua primero (espera más). Abrir la ficha NO sella: sella contestar o «no necesita respuesta», para que mirar no lo haga desap"
+        },
+        {
+          "nombre": "marcarLeidos",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string, hasta: Date",
+          "retorno": "Promise<number>",
+          "linea": 103,
+          "resumen": "Sella como leído lo que escribió el cliente en esa ficha HASTA `hasta` (el último que vio el corredor en pantalla). Lo que entre después no se sella: nadie lo ha visto. Devuelve cuántos."
+        },
+        {
+          "nombre": "responder",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string, polizaId: string | null, cuerpoCrudo: unknown, actor: string, avisar: boolean, hasta: Date | null,",
+          "retorno": "Promise<ResultadoRespuesta>",
+          "linea": 125,
+          "resumen": "Guarda la respuesta del corredor, da por leído lo que escribió el cliente hasta `hasta` (lo que tenía en pantalla; `null` = no sella nada) y, si se pide, le avisa por correo."
+        },
+        {
+          "nombre": "avisarAlCliente",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<AvisoRespuesta>",
+          "linea": 161
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "portal_mensaje"
+      ],
+      "rutaApi": null,
+      "hash": "4515deebadec"
     },
     {
       "ruta": "apps/asegura/lib/migracion-decision.ts",
@@ -70642,7 +70856,7 @@
           "exportada": true,
           "params": "{ clienteId, activa, contadores }: { clienteId: string activa: TabFicha contadores: ContadoresTabs }",
           "retorno": null,
-          "linea": 42
+          "linea": 43
         },
         {
           "nombre": "Contador",
@@ -70650,12 +70864,12 @@
           "exportada": false,
           "params": "{ n, tono, title }: { n: number; tono?: 'aviso' | 'malo'; title?: string }",
           "retorno": null,
-          "linea": 91
+          "linea": 92
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6350cbba1073"
+      "hash": "c210167dd913"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/hogar-nuevo/acciones.ts",
@@ -70789,13 +71003,13 @@
           "exportada": false,
           "params": "{ clienteId, direccion, municipio, provincia, }: { clienteId: string direccion: string municipio: string provincia: string }",
           "retorno": null,
-          "linea": 165,
+          "linea": 181,
           "resumen": "El buscador de partida: por dirección o por referencia, en GET puro (sin JS)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5a7cc5e624af"
+      "hash": "0af5c2ac9e6a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/acciones.ts",
@@ -70935,7 +71149,7 @@
           "exportada": true,
           "params": "{ params, searchParams }: { params: Promise<{ id: string }> searchParams: Promise<{ tab?: string | string[] }> }",
           "retorno": null,
-          "linea": 42,
+          "linea": 43,
           "resumen": "La ficha del cliente de la correduría, DENTRO del cuadro de mando. Alberto usa una sola pantalla —esta— para todos sus negocios: la correduría es uno más. `apps/asegura` es el back (tiene la BD de la "
         },
         {
@@ -70944,12 +71158,12 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 166
+          "linea": 172
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ae7becf9d1f5"
+      "hash": "de6e8e40deb3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/piezas.tsx",
@@ -71341,6 +71555,28 @@
       "hash": "453b86a74097"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabMensajes.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "TabMensajes"
+      ],
+      "funciones": [
+        {
+          "nombre": "TabMensajes",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId, polizas }: { clienteId: string /** Pólizas vivas del cliente, para el tema de la respuesta. */ polizas: { id: string; etiqueta: string }[] }",
+          "retorno": null,
+          "linea": 32
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "90cd7c878255"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabPolizas.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -71448,7 +71684,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1dd5573c74b6"
+      "hash": "b22627345abd"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/VerDniCompleto.tsx",
@@ -71788,7 +72024,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 85
+          "linea": 86
         },
         {
           "nombre": "fmtFecha",
@@ -71796,7 +72032,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 90,
+          "linea": 91,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -71805,7 +72041,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 140
+          "linea": 141
         },
         {
           "nombre": "CorreduriaClient",
@@ -71813,7 +72049,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 142
+          "linea": 143
         },
         {
           "nombre": "CarteraResumen",
@@ -71821,7 +72057,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 687
+          "linea": 692
         },
         {
           "nombre": "btnMini",
@@ -71829,7 +72065,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 804,
+          "linea": 809,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -71838,12 +72074,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 822
+          "linea": 827
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c5affdcf2735"
+      "hash": "10693008e5ba"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -73016,6 +73252,26 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e8a588cd550a"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/MensajesPortal.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "MensajesPortal"
+      ],
+      "funciones": [
+        {
+          "nombre": "MensajesPortal",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ onContador }: { /** Fichas con mensajes sin leer. `null` = no se ha podido saber; nunca 0. */ onContador?: (n: number | null) => void }",
+          "retorno": null,
+          "linea": 20
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "665e76eff6ae"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/NuevoCliente.tsx",
@@ -83474,6 +83730,37 @@
       "tablas": [],
       "rutaApi": "/api/correduria/linea-base",
       "hash": "af304b007911"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/mensajes/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "GET ?clienteId= — el hilo de esa ficha; sin él, las fichas con mensajes sin leer. `sin_datos` ≠ «no hay»."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "POST { accion:'responder', clienteId, polizaId?, cuerpo, avisar? } · { accion:'leidos', clienteId }"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/mensajes",
+      "hash": "c84233663cb3"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/oportunidad/llamada/route.ts",
@@ -97802,17 +98089,27 @@
       "ambito": "apps/plataforma",
       "resumen": "Presupuesto de HOGAR desde el Catastro: con la referencia catastral —o con la dirección— salen m², año de construcción y uso sin preguntarle nada al cliente. Es la fase 1 (presupuesto rápido) aplicada al ramo de hogar. Vive en plataforma y no en asegura porque NO es dato de la cartera: es un servici",
       "exporta": [
+        "direccionesParecidas",
         "normalizarReferencia",
         "consultarHogar"
       ],
       "funciones": [
+        {
+          "nombre": "direccionesParecidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "vias: Array<{ tipo: string; nombre: string }>, p: { numero: string; bloque?: string | null; escalera?: string | null; planta?: string | null; puerta?: string | null },",
+          "retorno": "CalleParecida[]",
+          "linea": 46,
+          "resumen": "Las calles oficiales parecidas a la escrita, con su número e interior, para que una PERSONA elija. Caso real (24/09/2026): «Avenida José Antonio Ruiz Espartaco 43» → el Catastro la tiene como «AV JUAN"
+        },
         {
           "nombre": "normalizarReferencia",
           "kind": "function",
           "exportada": true,
           "params": "v: string",
           "retorno": "string",
-          "linea": 40
+          "linea": 62
         },
         {
           "nombre": "consultarHogar",
@@ -97820,12 +98117,12 @@
           "exportada": true,
           "params": "c: ConsultaHogar",
           "retorno": "Promise<RespuestaHogar>",
-          "linea": 44
+          "linea": 66
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "56c4f206bd86"
+      "hash": "26facc26efe0"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-puerto.ts",
@@ -105781,6 +106078,109 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "38aaa2fc4dc8"
+    },
+    {
+      "ruta": "apps/plataforma/lib/mensajes-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Mensajes con el cliente (ASegura OS §Q.7): cliente del puerto de asegura (`/api/operador/mensajes`) + lectura defensiva y la frase de cada desenlace (puras, con test). El cliente escribe en su portal; aquí Alberto lo lee y contesta. Contestar es un clic suyo, y el aviso por correo al cliente («tiene",
+      "exporta": [
+        "leerMensaje",
+        "leerPendiente",
+        "textoDesenlaceRespuesta",
+        "textoAvisoRespuesta",
+        "leerPendientesMensajes",
+        "leerHilo",
+        "escribirMensaje"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 30
+        },
+        {
+          "nombre": "leerMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "MensajeCorredor | null",
+          "linea": 34
+        },
+        {
+          "nombre": "leerPendiente",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "PendienteMensaje | null",
+          "linea": 42
+        },
+        {
+          "nombre": "textoDesenlaceRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: DesenlaceRespuesta",
+          "retorno": "string",
+          "linea": 51,
+          "resumen": "Una frase por desenlace de la respuesta. Ningún fallo puede leerse como «enviado»."
+        },
+        {
+          "nombre": "textoAvisoRespuesta",
+          "kind": "function",
+          "exportada": true,
+          "params": "a: AvisoRespuesta",
+          "retorno": "string | null",
+          "linea": 62,
+          "resumen": "Qué pasó con el correo de aviso. Solo `enviado` dice que ha salido."
+        },
+        {
+          "nombre": "base",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "",
+          "linea": 80
+        },
+        {
+          "nombre": "pedir",
+          "kind": "function",
+          "exportada": false,
+          "params": "qs: string",
+          "retorno": "Promise<",
+          "linea": 86
+        },
+        {
+          "nombre": "leerPendientesMensajes",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<LecturaPendientes>",
+          "linea": 98,
+          "resumen": "Fichas con mensajes del cliente sin leer (la cola de «Hoy»)."
+        },
+        {
+          "nombre": "leerHilo",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string",
+          "retorno": "Promise<LecturaHilo>",
+          "linea": 109,
+          "resumen": "El hilo entero de una ficha."
+        },
+        {
+          "nombre": "escribirMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "cuerpo: Record<string, unknown>, actor: string",
+          "retorno": "Promise<",
+          "linea": 119
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "efffe85b296b"
     },
     {
       "ruta": "apps/plataforma/lib/modulos.ts",
@@ -134885,7 +135285,7 @@
           "exportada": false,
           "params": "url: string, ms = 20000, cookie?: string",
           "retorno": "Promise<string>",
-          "linea": 35
+          "linea": 36
         },
         {
           "nombre": "turnoCatastro",
@@ -134893,7 +135293,7 @@
           "exportada": false,
           "params": "pausaExtra = 0",
           "retorno": "Promise<void>",
-          "linea": 69,
+          "linea": 70,
           "resumen": "Reserva el siguiente turno del cerrojo y espera a que llegue. `pausaExtra` añade un descanso contado DESDE AHORA (para el reintento: el servicio acaba de cortar y hay que darle aire, no basta con el e"
         },
         {
@@ -134902,7 +135302,7 @@
           "exportada": false,
           "params": "url: string",
           "retorno": "Promise<string>",
-          "linea": 76
+          "linea": 77
         },
         {
           "nombre": "motivoParaLog",
@@ -134910,7 +135310,7 @@
           "exportada": true,
           "params": "des: string",
           "retorno": "string",
-          "linea": 132,
+          "linea": 133,
           "resumen": "El `<des>` del Catastro es texto suyo («LA REFERENCIA CATASTRAL NO EXISTE») y es justo lo que hay que leer para diagnosticar. Aun así se pasa por aquí antes de escribirlo: si algún día el servicio dec"
         },
         {
@@ -134919,7 +135319,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<DatosCatastro | null>",
-          "linea": 146,
+          "linea": 147,
           "resumen": "Consulta el Catastro por referencia catastral. `null` si no hay dato. ⚠️ Solo devuelve datos del BIEN (superficie, año, uso) con la referencia COMPLETA de 20 caracteres. Con la de parcela (14) el serv"
         },
         {
@@ -134928,7 +135328,7 @@
           "exportada": true,
           "params": "refCatastral: string",
           "retorno": "Promise<CoordenadasCatastro | null>",
-          "linea": 165,
+          "linea": 166,
           "resumen": "Coordenadas WGS84 por referencia catastral (`Consulta_CPMRC`, probado el 30/07/2026). El servicio trabaja a nivel de PARCELA: acepta los 14 primeros caracteres; con la referencia de 20 del bien concre"
         },
         {
@@ -134937,7 +135337,7 @@
           "exportada": true,
           "params": "provincia: string, municipio: string, sigla: string, calle: string,",
           "retorno": "Promise<",
-          "linea": 183,
+          "linea": 184,
           "resumen": "Nombre OFICIAL de la vía según el callejero del Catastro (`ConsultaVia`). Se pregunta por UNA PALABRA distintiva, no por el nombre entero: el servicio busca por subcadena y el Catastro reescribe los n"
         },
         {
@@ -134946,7 +135346,7 @@
           "exportada": true,
           "params": "provincia: string, municipio: string, calle: string,",
           "retorno": "Promise<",
-          "linea": 213,
+          "linea": 215,
           "resumen": "El TIPO DE VÍA oficial de una calle, cuando la ficha NO trae uno reconocible («Severo Ochoa 12», sin «Calle»/«Avenida»…). Mismo servicio libre `ConsultaVia` que `resolverNombreVia()`, pero con `TipoVi"
         },
         {
@@ -134955,7 +135355,7 @@
           "exportada": true,
           "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 241,
+          "linea": 243,
           "resumen": "DIRECCIÓN → referencia catastral (`Consulta_DNPLOC`, servicio libre; probado el 30/07/2026). Es lo que desbloquea la ubicación EXACTA de la mayor parte del corpus: el BOE publica la dirección del inmu"
         },
         {
@@ -134964,13 +135364,13 @@
           "exportada": true,
           "params": "p: ParamsDnploc & { provincia: string; municipio: string },",
           "retorno": "Promise<",
-          "linea": 313,
+          "linea": 315,
           "resumen": "Los inmuebles de un portal, para que UNA PERSONA elija el piso. Es la pieza que le falta a `buscarRefPorDireccion` para el seguro de hogar: allí, con varios pisos en el portal, se devuelve la parcela "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e41ff14d80f7"
+      "hash": "7ba52d230af2"
     },
     {
       "ruta": "packages/core-catastro/src/parser.ts",
@@ -134988,6 +135388,8 @@
         "tokensVia",
         "terminoBusquedaVia",
         "parsearVias",
+        "casaToken",
+        "viasParecidas",
         "elegirVia",
         "elegirViaConTipo",
         "paramsDnploc",
@@ -135078,7 +135480,7 @@
           "exportada": true,
           "params": "inmuebles: InmuebleCatastro[]",
           "retorno": "string | null",
-          "linea": 290,
+          "linea": 293,
           "resumen": "Parcela común a todos los inmuebles de una respuesta DNPLOC. `null` si la respuesta mezcla parcelas (dirección ambigua): en ese caso NO se elige una a dedo, porque ubicaría el inmueble en el edificio "
         },
         {
@@ -135087,7 +135489,7 @@
           "exportada": true,
           "params": "s: string",
           "retorno": "string",
-          "linea": 335,
+          "linea": 338,
           "resumen": "Normaliza CONSERVANDO LA Ñ. `norm()` la convierte en «N» y eso rompe la búsqueda en el callejero del Catastro: verificado el 31/07/2026 que `NombreVia=CAÑAL` encuentra «CARLOS CAÑAL» y `NombreVia=CANA"
         },
         {
@@ -135096,7 +135498,7 @@
           "exportada": true,
           "params": "nombre: string",
           "retorno": "string[]",
-          "linea": 353,
+          "linea": 356,
           "resumen": "Tokens con los que se compara un nombre de vía (sin artículos ni Ñ)."
         },
         {
@@ -135105,7 +135507,7 @@
           "exportada": true,
           "params": "calle: string",
           "retorno": "string",
-          "linea": 367,
+          "linea": 370,
           "resumen": "Término con el que preguntar al callejero. **El servicio busca por SUBCADENA** (verificado: `OLIVA` encuentra «NUESTRA SEÑORA D LA OLIVA»), así que se manda UNA palabra distintiva en vez del nombre en"
         },
         {
@@ -135114,8 +135516,26 @@
           "exportada": true,
           "params": "xml: string",
           "retorno": "Array<",
-          "linea": 384,
+          "linea": 387,
           "resumen": "Nombres de vía del callejero oficial (`ConsultaVia`), que busca por SUBCADENA. Hace falta porque `Consulta_DNPLOC` exige el nombre EXACTO como lo guarda el Catastro, y ese formato es impredecible: mue"
+        },
+        {
+          "nombre": "casaToken",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: string, t: string",
+          "retorno": "boolean",
+          "linea": 405,
+          "resumen": "¿El token del CALLEJERO `c` es el token buscado `t`? Igual, o una ABREVIATURA suya: el Catastro recorta nombres de pila por su cuenta («JUAN ANT RUIZ 'ESPARTACO'» por «Juan Antonio Ruiz Espartaco», me"
+        },
+        {
+          "nombre": "viasParecidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "vias: Array<{ tipo: string; nombre: string }>, buscada: string, max = 5,",
+          "retorno": "Array<",
+          "linea": 415,
+          "resumen": "Las vías del callejero que se PARECEN a la buscada, para que una persona elija cuando `elegirVia` no puede (ninguna casa entera, o empatan). Ordenadas por cuántas palabras comparten. No elige nada: un"
         },
         {
           "nombre": "elegirVia",
@@ -135123,7 +135543,7 @@
           "exportada": true,
           "params": "vias: Array<{ tipo: string; nombre: string }>, buscada: string",
           "retorno": "string | null",
-          "linea": 407,
+          "linea": 443,
           "resumen": "Elige el nombre OFICIAL entre los candidatos del callejero comparando TOKENS, no cadenas: es la única forma de casar «PACO GANDÍA» con «PACO GANDIA» y «Nuestra Señora de la Oliva» con «NUESTRA SEÑORA "
         },
         {
@@ -135132,7 +135552,7 @@
           "exportada": true,
           "params": "vias: Array<{ tipo: string; nombre: string }>, buscada: string,",
           "retorno": "",
-          "linea": 418,
+          "linea": 454,
           "resumen": "Igual que `elegirVia()`, pero conserva el `tipo` (`tv`) de la vía ganadora — el código de tipo de vía OFICIAL del callejero («CL», «AV»…). `elegirVia()` lo tira porque hasta ahora nadie lo necesitaba "
         },
         {
@@ -135141,7 +135561,7 @@
           "exportada": true,
           "params": "direccion?: string | null",
           "retorno": "ParamsDnploc | null",
-          "linea": 455,
+          "linea": 491,
           "resumen": "Traduce la dirección tal como la publica el BOE a los parámetros de `Consulta_DNPLOC`. Ejemplos reales del corpus: «AVENIDA PEDRO ROMERO Nº 2, planta séptima de la casa número…» → { sigla:'AV', calle:"
         },
         {
@@ -135150,7 +135570,7 @@
           "exportada": true,
           "params": "xml: string",
           "retorno": "CoordenadasCatastro | null",
-          "linea": 526,
+          "linea": 562,
           "resumen": "Convierte el XML de `Consulta_CPMRC` en coordenadas WGS84. `null` si el servicio no las da (error, referencia inexistente o respuesta corrupta) — nunca devuelve un punto inventado."
         },
         {
@@ -135159,13 +135579,13 @@
           "exportada": true,
           "params": "catastro?: number | null, anuncio?: number | null",
           "retorno": "number | null",
-          "linea": 558,
+          "linea": 594,
           "resumen": "Superficie con la que valorar el inmueble: la del CATASTRO manda sobre la que publica el anuncio. POR QUÉ el Catastro primero: es la oficial y es la que usa el cálculo del €/m² de mercado. Si el scori"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7f2be1aa788e"
+      "hash": "2d9de69b1706"
     },
     {
       "ruta": "packages/core-catastro/src/texto.ts",
@@ -141178,6 +141598,48 @@
       "hash": "4cfae716f3de"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/mensaje.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Mensajes con tu corredor (ASegura OS §Q.7, 24/09/2026). PURO: sin BD, sin red. Un hilo por TEMA: la póliza (`polizaId`) o «general» (`null`). Lo comparten el portal (el cliente escribe y lee) y `apps/asegura` (el corredor contesta), para que las dos puntas cuenten los no leídos y validen el cuerpo c",
+      "exporta": [
+        "normalizarCuerpo",
+        "sinLeerPara",
+        "agruparHilos"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarCuerpo",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown",
+          "retorno": "string | null",
+          "linea": 40,
+          "resumen": "El cuerpo limpio, o `null` si no vale: vacío, solo espacios o más largo que el tope."
+        },
+        {
+          "nombre": "sinLeerPara",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly Mensaje[], lado: AutorMensaje",
+          "retorno": "number",
+          "linea": 48,
+          "resumen": "Mensajes que `lado` tiene sin leer: los escritos por el otro, sin sello de lectura."
+        },
+        {
+          "nombre": "agruparHilos",
+          "kind": "function",
+          "exportada": true,
+          "params": "mensajes: readonly Mensaje[], lado: AutorMensaje, tituloDe: (polizaId: string | null) => string,",
+          "retorno": "Hilo[]",
+          "linea": 57,
+          "resumen": "Agrupa por tema. Dentro, en orden de escritura; los hilos, el de actividad más reciente primero. `tituloDe(polizaId)` pone el nombre del tema; un id que no sabe nombrar debe devolver algo genérico («U"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8b72fd61fe5a"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/obligacion.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "La fecha que se le dice al usuario NO es la del vencimiento: es la última en la que todavía puede oponerse a la prórroga (art. 22 LCS). Decirle «vence el 15 de marzo» le deja creer que tiene hasta el 15; el plazo se le pasó el 13 de febrero. Se resta en DÍAS, no en meses: `setUTCMonth(m - 1)` sobre ",
@@ -142501,13 +142963,13 @@
           "exportada": true,
           "params": "vista: VistaBoveda",
           "retorno": "string",
-          "linea": 179,
+          "linea": 182,
           "resumen": "La vista por defecto se enlaza como `/boveda` a secas, sin `?vista=seguros`. No es cosmética: si la pestaña activa llevara el parámetro, `/boveda` y `/boveda?vista=seguros` serían la misma pantalla co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6ba1ed12321a"
+      "hash": "b0c7f3f9a9b6"
     },
     {
       "ruta": "packages/module-seguros/src/aceptacion-presupuesto.ts",
@@ -153086,7 +153548,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3682,
-    "funciones": 11676
+    "archivos": 3693,
+    "funciones": 11711
   }
 }
