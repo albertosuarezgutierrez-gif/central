@@ -429,6 +429,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) asegura-web: botón desactivado que se lea como tal + campos del widget a todo el ancho en móvil
+Tras la prueba en producción de Alberto: «Avisadme por correo» parecía activo sin marcar la casilla. `.btn:disabled`
+(opacidad 0,45, `not-allowed`, hover congelado por variante) en `globals.css`; `.ventana-campos` a una columna bajo 560 px.
+Medido con Playwright a 375/1280. Pendiente de opinión: el botón flotante de WhatsApp tapa la esquina inferior derecha.
+
 ## (24/09/2026) asegura: fase 2 «avísame por correo» (doble opt-in → ficha lead + oportunidad + avisos a 70/45 días)
 - Decisión de Alberto: todo en asegura y la ficha nace al CONFIRMAR. Web → plataforma (`/api/publico/correduria/aviso`, límite IP + Telegram) → asegura (`/api/operador/aviso-web`, `lib/aviso-web.ts`, cron `avisos-web` 08:30).
 - Tabla `seguros.aviso_web` APLICADA en prod (migración `seguros_aviso_web`). Revisión agente-architect: 0 bloqueantes; 6 arreglos aplicados (anti-spam, baja por correo, purga, llave directa). APAGADO: `ASEGURA_AVISOS_WEB_ACTIVOS` + `NEXT_PUBLIC_AVISOS_CORREO`; orden de encendido en `apps/asegura/CLAUDE.md`.
