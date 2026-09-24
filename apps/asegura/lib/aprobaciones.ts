@@ -15,10 +15,12 @@ import {
   ESTADOS_ANULACION_ABIERTA, MEDIADOR, POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, importeEiac, remitenteCorreo,
   type BuzonCompania, type Decision,
 } from '@central/module-seguros'
+import { createHash } from 'node:crypto'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { campoIlegible, descifrarCampo } from './cartera-edicion'
+import { pdfDocumentoFirmado } from './documento-firmado-pdf'
 import { rechazoDeRemitente } from './correo-invitacion-portal.ts'
 import { estadoEmailDeFicha } from './email-ficha'
 
@@ -286,7 +288,36 @@ const MOTIVO_SIN_EMAIL: Record<'no_encontrado' | 'baja_de_correo' | 'sin_email',
   no_encontrado: 'la ficha ya no existe (¿fusionada?); descarta el aviso',
 }
 
-async function enviarCorreo(destino: string, asunto: string, texto: string, adjunto?: { nombre: string; texto: string }): Promise<{ ok: true } | { ok: false; configuracion: boolean; incierto?: boolean; motivo: string }> {
+type Adjunto = { nombre: string; contenido: string | Buffer; tipo: string }
+
+type FirmaGuardada = { firmante: string | null; metodo: string | null; sello: Date | null; docHash: string | null }
+
+/**
+ * Lo que se adjunta a la compañía: el ORIGINAL en texto (el que respalda la huella de la firma) y, si hay
+ * evidencia, el mismo texto en PDF con el justificante debajo — un `.txt` suelto se lee como un borrador.
+ * Si el PDF no se puede montar, sale el original solo: nunca se bloquea un envío por la presentación.
+ */
+async function adjuntosFirmados(base: string, texto: string, f: FirmaGuardada | undefined): Promise<Adjunto[]> {
+  const original: Adjunto = { nombre: `${base}.txt`, contenido: texto, tipo: 'text/plain; charset=utf-8' }
+  if (!f?.docHash || !f.sello) return [original]
+  // El justificante CERTIFICA la huella ante la compañía: si el texto que se adjunta no la cumple, no se certifica nada.
+  if (createHash('sha256').update(texto, 'utf8').digest('hex') !== f.docHash.toLowerCase()) {
+    console.error('[aprobaciones] el texto guardado no cumple la huella de su firma; sale solo el original, sin justificante')
+    return [original]
+  }
+  try {
+    const pdf = await pdfDocumentoFirmado(texto, {
+      firmante: f.firmante?.trim() || 'no consta', metodo: f.metodo ?? 'otp_email', selloTiempo: f.sello.toISOString(),
+      docHash: f.docHash, ficheroOriginal: original.nombre,
+    })
+    return [{ nombre: `${base}.pdf`, contenido: Buffer.from(pdf), tipo: 'application/pdf' }, original]
+  } catch (e) {
+    console.error('[aprobaciones] no se pudo montar el PDF firmado; sale solo el original:', e instanceof Error ? e.message : e)
+    return [original]
+  }
+}
+
+async function enviarCorreo(destino: string, asunto: string, texto: string, adjuntos?: Adjunto[]): Promise<{ ok: true } | { ok: false; configuracion: boolean; incierto?: boolean; motivo: string }> {
   // Carga perezosa, como en el resto de correos de la app: `@central/core-email` no resuelve con `node --test`.
   const { createMailTransporter } = await import('@central/core-email')
   const transporter = createMailTransporter()
@@ -296,7 +327,7 @@ async function enviarCorreo(destino: string, asunto: string, texto: string, adju
   try {
     await transporter.sendMail({
       from: remitenteCorreo(process.env.ASEGURA_MAIL_FROM), to: destino, ...(replyTo ? { replyTo } : {}), subject: asunto, text: texto,
-      ...(adjunto ? { attachments: [{ filename: adjunto.nombre, content: adjunto.texto, contentType: 'text/plain; charset=utf-8' }] } : {}),
+      ...(adjuntos?.length ? { attachments: adjuntos.map((a) => ({ filename: a.nombre, content: a.contenido, contentType: a.tipo })) } : {}),
     })
     return { ok: true }
   } catch (e) {
@@ -312,13 +343,15 @@ async function enviarCorreo(destino: string, asunto: string, texto: string, adju
  * tarjeta (tiene que ser un contacto activo de la compañía de ESA póliza). No se deduce por área.
  */
 async function destinoAnulacion(correduriaId: string, anulacionId: string | null, contactoId: string | undefined):
-  Promise<{ email: string; contactoId: string; compania: string | null; adjunto: { nombre: string; texto: string } } | { estado: 'sin_email'; motivo: string } | { estado: 'ya_decidida' }> {
+  Promise<{ email: string; contactoId: string; compania: string | null; adjuntos: Adjunto[] } | { estado: 'sin_email'; motivo: string } | { estado: 'ya_decidida' }> {
   if (!anulacionId) return { estado: 'sin_email', motivo: 'la propuesta no apunta a ninguna anulación' }
   const db = prismaAsegura()
-  const [n] = await db.$queryRaw<{ estado: string; carta: string | null; numero: string | null; dgs: string | null; compania: string | null }[]>`
+  const [n] = await db.$queryRaw<({ estado: string; carta: string | null; numero: string | null; dgs: string | null; compania: string | null } & FirmaGuardada)[]>`
     select a.estado, a.carta_texto as carta, p.numero_poliza as numero, p.codigo_entidad_dgs as dgs,
-           coalesce(cd.nombre_comun, p.aseguradora) as compania
+           coalesce(cd.nombre_comun, p.aseguradora) as compania,
+           f.firmante_nombre as firmante, f.metodo, f.sello_tiempo as sello, f.doc_hash as "docHash"
     from anulacion a join polizas p on p.id = a.poliza_id left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
+      left join firma f on f.id = a.firma_id
     where a.id = ${anulacionId}::uuid and a.correduria_id = ${correduriaId}::uuid`
   if (!n || n.estado !== 'firmada') return { estado: 'ya_decidida' }
   if (!n.carta) return { estado: 'sin_email', motivo: 'la anulación no tiene la carta firmada guardada; mándala a mano con el escaneado' }
@@ -329,17 +362,19 @@ async function destinoAnulacion(correduriaId: string, anulacionId: string | null
     where id = ${contactoId}::uuid and compania_codigo_dgs = ${n.dgs} and activo`
   if (!c?.email || !c.email.includes('@')) return { estado: 'sin_email', motivo: `ese buzón no es un contacto activo con correo de ${n.compania ?? 'la compañía'}` }
   const num = (n.numero ?? 'poliza').replace(/[^\w.-]+/g, '_')
-  return { email: c.email.trim(), contactoId, compania: n.compania, adjunto: { nombre: `solicitud-anulacion-${num}.txt`, texto: n.carta } }
+  return { email: c.email.trim(), contactoId, compania: n.compania, adjuntos: await adjuntosFirmados(`solicitud-anulacion-${num}`, n.carta, n) }
 }
 
 /** Igual que `destinoAnulacion`, para la carta de nombramiento firmada. El adjunto es la carta GUARDADA (cifrada en BD). */
 async function destinoCarta(correduriaId: string, cartaId: string, contactoId: string | undefined):
-  Promise<{ email: string; contactoId: string; compania: string | null; adjunto: { nombre: string; texto: string } } | { estado: 'sin_email'; motivo: string } | { estado: 'ya_decidida' }> {
+  Promise<{ email: string; contactoId: string; compania: string | null; adjuntos: Adjunto[] } | { estado: 'sin_email'; motivo: string } | { estado: 'ya_decidida' }> {
   const db = prismaAsegura()
-  const [n] = await db.$queryRaw<{ estado: string; carta: string | null; numero: string | null; dgs: string | null; compania: string | null }[]>`
+  const [n] = await db.$queryRaw<({ estado: string; carta: string | null; numero: string | null; dgs: string | null; compania: string | null } & FirmaGuardada)[]>`
     select cm.estado, cm.carta_texto as carta, p.numero_poliza as numero, p.codigo_entidad_dgs as dgs,
-           coalesce(cd.nombre_comun, p.aseguradora) as compania
+           coalesce(cd.nombre_comun, p.aseguradora) as compania,
+           f.firmante_nombre as firmante, f.metodo, f.sello_tiempo as sello, f.doc_hash as "docHash"
     from carta_mediador cm join polizas p on p.id = cm.poliza_id left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
+      left join firma f on f.id = cm.firma_id
     where cm.id = ${cartaId}::uuid and cm.correduria_id = ${correduriaId}::uuid`
   if (!n || n.estado !== 'firmada') return { estado: 'ya_decidida' }
   if (campoIlegible(n.carta)) return { estado: 'sin_email', motivo: 'la carta firmada no se puede descifrar (PII_ENCRYPTION_KEY en central-asegura)' }
@@ -352,7 +387,7 @@ async function destinoCarta(correduriaId: string, cartaId: string, contactoId: s
     where id = ${contactoId}::uuid and compania_codigo_dgs = ${n.dgs} and activo`
   if (!c?.email || !c.email.includes('@')) return { estado: 'sin_email', motivo: `ese buzón no es un contacto activo con correo de ${n.compania ?? 'la compañía'}` }
   const num = (n.numero ?? 'poliza').replace(/[^\w.-]+/g, '_')
-  return { email: c.email.trim(), contactoId, compania: n.compania, adjunto: { nombre: `nombramiento-mediador-${num}.txt`, texto: carta } }
+  return { email: c.email.trim(), contactoId, compania: n.compania, adjuntos: await adjuntosFirmados(`nombramiento-mediador-${num}`, carta, n) }
 }
 
 /** La carta pasa a «enviada»: el correo salió. Un fallo aquí no puede invitar a repetir el envío. */
@@ -435,14 +470,14 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
   // Antes de reclamar: sin destinatario no se toca la fila (sigue pendiente para cuando haya correo).
   const paraCompania = a.accion === 'enviar_correo_compania'
   let destino: string
-  let adjunto: { nombre: string; texto: string } | undefined
+  let adjuntos: Adjunto[] | undefined
   let compania: string | null = null
   let contactoElegido: string | null = null
   if (paraCompania) {
     const r = a.cartaId ? await destinoCarta(correduriaId, a.cartaId, d.contactoId) : await destinoAnulacion(correduriaId, a.anulacionId, d.contactoId)
     if ('estado' in r) return r
     destino = r.email
-    adjunto = r.adjunto
+    adjuntos = r.adjuntos
     compania = r.compania
     contactoElegido = r.contactoId
   } else {
@@ -462,7 +497,7 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
            or exists (select 1 from carta_mediador cm where cm.id = aprobacion.carta_mediador_id and cm.estado = 'firmada'))`
   if (reclamada === 0) return { estado: 'ya_decidida' }
 
-  const envio = await enviarCorreo(destino, d.asunto, d.texto, adjunto)
+  const envio = await enviarCorreo(destino, d.asunto, d.texto, adjuntos)
   if (!envio.ok && envio.configuracion) {
     // No ha salido nada y reintentar no lo arregla: vuelve a pendiente para cuando esté configurado.
     await db.$executeRaw`update aprobacion set estado = 'pendiente', decidida_at = null, decidida_por = null where id = ${id}::uuid and estado = 'enviando'`
