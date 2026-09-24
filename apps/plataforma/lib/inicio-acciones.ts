@@ -105,8 +105,10 @@ export function accionesDeInicio(e: EstadoInicio): Accion[] {
       detalle: `${motivo}. Esto NO significa que no venza ninguna póliza.`,
       href: '/correduria',
     })
-  } else if (e.polizas.estado === 'ok' && e.polizas.polizas.length > 0) {
-    const ps = [...e.polizas.polizas].sort((a, b) => a.dias - b.dias)
+  } else if (e.polizas.estado === 'ok' && e.polizas.polizas.some(p => p.dias >= 0)) {
+    // Solo las que AÚN no han vencido: las vencidas (dias < 0) no «vencen en N días», y ordenadas
+    // por días salían primero («la más próxima: X, en -107 días»).
+    const ps = e.polizas.polizas.filter(p => p.dias >= 0).sort((a, b) => a.dias - b.dias)
     const urgente = ps[0].dias <= 15
     out.push({
       clave: 'polizas', urgencia: urgente ? 'roja' : 'ambar',

@@ -49,6 +49,13 @@ export function objetoEnLinea(objeto: PolizaAviso['objeto']): string | null {
  */
 export const HITOS = [
   {
+    // Solo la usan las pólizas con `dias < 0` (ver `emisionesDeHoy`); ninguna futura cae aquí.
+    id: 'vencida',
+    hastaDias: -1,
+    titulo: '⚠️ Ya vencida sin renovar',
+    pie: 'Venció y CIMA no trae la renovación: comprueba si se renovó con la compañía o se ha perdido.',
+  },
+  {
     id: 'vence_7',
     hastaDias: 7,
     titulo: '🔴 Vence esta semana',
@@ -91,6 +98,15 @@ export type Emision = { poliza: PolizaAviso; hito: HitoId; consumidos: HitoId[] 
 export function emisionesDeHoy(polizas: PolizaAviso[], yaAvisados: Set<string>): Emision[] {
   const salida: Emision[] = []
   for (const p of polizas) {
+    // Ya vencida (el puerto mira también una anualidad atrás): va a su propio apartado. Sin esto,
+    // `dias <= 7` es cierto para −107 y una póliza de junio se anunciaba en septiembre como
+    // «🔴 Vence esta semana».
+    if (p.dias < 0) {
+      // Si ya se avisó de ella con cualquier hito (antes caían en «vence esta semana»), no se repite.
+      if (HITOS.some(h => yaAvisados.has(claveAviso(p, h.id)))) continue
+      salida.push({ poliza: p, hito: 'vencida', consumidos: ['vencida'] })
+      continue
+    }
     // Aplicables = todos los hitos cuya ventana ya alcanzó esta póliza.
     const aplicables = HITOS.filter(h => p.dias <= h.hastaDias)
     if (aplicables.length === 0) continue
