@@ -48,6 +48,8 @@ export type DatosAceptacion = {
    * Ley 16/2018). `null` = no constan por escrito, y el documento lo dice en vez de callarlo.
    */
   necesidades: string | null
+  /** La ficha IPID de la opción elegida que el portal enseñaba. `null` = no había ninguna. */
+  ipid: { huella: string } | null
 }
 
 /** Límites de la declaración de necesidades (los mismos que el CHECK de la BD). */
@@ -156,6 +158,9 @@ export function documentoAceptacion(d: DatosAceptacion): string {
     d.necesidades?.trim()
       ? `Lo que pedí a mi corredor (mis exigencias y necesidades): «${d.necesidades.trim()}».`
       : 'No constan por escrito mis exigencias y necesidades.',
+    d.ipid
+      ? `He tenido en mi portal la ficha de información del producto (IPID) de esta opción (huella ${d.ipid.huella.slice(0, 16)}).`
+      : 'No consta que se me haya puesto a disposición la ficha de información del producto (IPID) de esta opción.',
   ]
   if (d.anula) {
     lineas.push(

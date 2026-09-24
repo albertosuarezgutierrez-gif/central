@@ -20,6 +20,7 @@ import {
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { fichaPropiaDe } from './contacto-portal'
+import { ipidDeOpcion } from './ipid'
 import { estadoEmailDeFicha } from './email-ficha'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -50,10 +51,12 @@ type Fila = {
   /** Opciones y compañías del presupuesto: lo que el cliente tuvo delante (no lo consultado). */
   nOpciones: number
   nCompanias: number
+  /** Huella de la ficha IPID vigente de la opción (misma clave que el enlace del portal). */
+  ipidHuella: string | null
 }
 
 async function leer(correduriaId: string, clienteId: string, presupuestoId: string, opcionId: string): Promise<Fila | null> {
-  const [f] = await prismaAsegura().$queryRaw<Fila[]>`
+  const [f] = await prismaAsegura().$queryRaw<Omit<Fila, 'ipidHuella'>[]>`
     select p.id::text as id, p.cliente_id::text as "clienteId", p.poliza_id::text as "polizaId", p.ramo,
            trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
            p.creado_at as "creadoAt", p.vence_el as "venceEl", p.enviado_at as "enviadoAt", p.visto_at as "vistoAt",
@@ -76,7 +79,9 @@ async function leer(correduriaId: string, clienteId: string, presupuestoId: stri
       left join polizas pol on pol.id = p.poliza_id
       left join companias_dgs cda on cda.codigo_dgs = pol.codigo_entidad_dgs
     where p.id = ${presupuestoId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid`
-  return f ?? null
+  if (!f) return null
+  const ipid = await ipidDeOpcion(correduriaId, f.compania, f.producto)
+  return { ...f, ipidHuella: ipid?.sha256 ?? null }
 }
 
 type Compuesto = {
@@ -126,6 +131,7 @@ function componer(f: Fila, hoy: string): Compuesto | null {
       informacionMediador: `${MEDIADOR.identidad.portal}/legal/mediador`, versionTextos: VERSION_TEXTOS_LEGALES,
     },
     necesidades: f.necesidades,
+    ipid: f.ipidHuella ? { huella: f.ipidHuella } : null,
   })
   // La huella cubre las DOS cartas: si cambia cualquiera, no se firma lo que no se leyó.
   return { documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion }
