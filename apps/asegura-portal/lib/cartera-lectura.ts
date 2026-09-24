@@ -51,6 +51,7 @@ import {
   type BienAsegurado,
   type TipoOtorgante,
   lugarSiniestro,
+  tipoSiniestroLegible,
   descripcionSiniestro,
   ordenarRecibos,
   estadoRecibos,
@@ -131,6 +132,12 @@ export type SiniestroPortal = {
   descripcion: string | null
   /** DÓNDE pasó, ya legible («Dos Hermanas (Sevilla)»). `null` = no consta. */
   lugar: string | null
+  /**
+   * QUÉ TIPO de siniestro, con la tabla oficial de TIREA («Daños por agua -
+   * Responsabilidad civil»). `null` = código fuera de tabla o no informado:
+   * nunca se pinta el código crudo.
+   */
+  tipoLegible: string | null
 }
 
 export type PolizaPortal = {
@@ -666,11 +673,11 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               comentario: true,
               lugarCiudad: true,
               lugarProvincia: true,
-              // 🚨 `tipo` NO se pide, y no es un olvido: en la BD es un CÓDIGO
-              // NUMÉRICO de la compañía (`1107`, `1915`, `1312`, `17`…, medido
-              // en la cartera viva el 05/09/2026). «Tipo 1107» no le dice nada
-              // a un cliente y encima parece un dato que significa algo.
-              // Tampoco hay columna con la fecha de CIERRE: `updated_at` es la
+              // `tipo` es un CÓDIGO de la compañía (`1107`, `1915`…). Se pide
+              // desde el 24/09/2026 porque ya se traduce con la tabla oficial de
+              // TIREA (`tipoSiniestroLegible`); el código crudo no sale de aquí.
+              tipo: true,
+              // No hay hay columna con la fecha de CIERRE: `updated_at` es la
               // última vez que se tocó la fila, no el día que se cerró, y
               // pintarlo como tal sería inventarse una fecha.
               // Ni tramitador ni perito, a propósito: son gestión del
@@ -715,6 +722,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             // traduce la fila.
             descripcion: descripcionSiniestro(x.comentario),
             lugar: lugarSiniestro({ ciudad: x.lugarCiudad, provincia: x.lugarProvincia }),
+            tipoLegible: tipoSiniestroLegible(x.tipo),
           })),
         )
       : null
