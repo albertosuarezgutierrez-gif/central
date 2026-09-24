@@ -96,12 +96,18 @@ export default function Formulario({ token, campos }: { token: string; campos: C
   }
 
   return (
-    <form onSubmit={enviar} noValidate style={{ display: 'grid', gap: 14 }}>
-      <div className="editor-campo" style={{ border: '1px dashed currentColor', borderRadius: 12, padding: 14 }}>
-        <label htmlFor="docs" style={{ fontWeight: 600 }}>📎 Súbenos tus documentos y te rellenamos el formulario</label>
+    <form onSubmit={enviar} noValidate style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }}>
+      {/* minWidth 0 + overflowWrap: sin ellos el <input type=file> nativo (botón + «Ningún archivo seleccionado»)
+          dimensiona la caja con su ancho mínimo y el texto se sale en un móvil de 360 px. */}
+      <div className="editor-campo" style={{ border: '1px dashed currentColor', borderRadius: 12, padding: 14, minWidth: 0, overflowWrap: 'anywhere', position: 'relative' }}>
+        <span style={{ fontWeight: 600 }}>📎 Súbenos tus documentos y te rellenamos el formulario</span>
         <span className="editor-ayuda">
           DNI, carné de conducir, permiso de circulación o ficha técnica (y tu póliza actual si la tienes). Foto o PDF, uno o varios. Los guardamos para tu contratación.
         </span>
+        {/* El input nativo se oculta (su rótulo lo pone el navegador y no se adapta); se pulsa por la etiqueta. */}
+        <label htmlFor="docs" className="boton-tenue" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', justifySelf: 'start', cursor: subiendo ? 'wait' : 'pointer' }}>
+          {subiendo ? 'Leyendo…' : subidas.length > 0 ? '➕ Subir más' : '📷 Elegir fotos o PDF'}
+        </label>
         <input
           id="docs"
           type="file"
@@ -113,7 +119,7 @@ export default function Formulario({ token, campos }: { token: string; campos: C
             e.target.value = ''
             void subir(ficheros)
           }}
-          style={{ minHeight: 44, maxWidth: '100%' }}
+          style={{ position: 'absolute', width: 1, height: 1, opacity: 0, overflow: 'hidden', pointerEvents: 'none' }}
         />
         {subidas.length > 0 && (
           <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
