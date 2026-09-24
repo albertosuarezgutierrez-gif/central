@@ -330,7 +330,7 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
 export function textoAltaOportunidad(status: number, json: unknown): { ok: boolean; texto: string; id: string | null } {
   const o = objeto(json)
   const id = texto(o?.id)
-  if (status === 201 && id) return { ok: true, texto: 'Oportunidad abierta, con su primer paso en «Hoy».', id }
+  if (status === 201 && id) return { ok: true, texto: 'Oportunidad abierta. Su primer paso saldrá en «Hoy» el día que le toque.', id }
   if (status === 409 && o?.estado === 'duplicada') return { ok: false, texto: texto(o.motivo) ?? 'Ya tiene una abierta de ese ramo.', id }
   if (status === 503 || o?.estado === 'sin_configurar') return { ok: false, texto: 'La cartera no está conectada: no se ha guardado nada.', id: null }
   if (status === 422 || status === 404) return { ok: false, texto: texto(o?.motivo) ?? 'Revisa los datos.', id: null }

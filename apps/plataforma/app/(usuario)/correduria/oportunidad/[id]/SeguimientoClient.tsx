@@ -55,6 +55,19 @@ async function enviar(url: string, metodo: 'POST' | 'PATCH', body: Record<string
   }
 }
 
+/** Lo que se hizo cuando el estado no cambió; una acción sin rótulo se enseña tal cual. */
+const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
+  creada_mano: 'Abierta a mano desde la ficha',
+  creada_portal: 'Pedida por el cliente desde su portal',
+  editada: 'Corregida (ramo, vencimiento, compañía o prima)',
+  tarea_creada: 'Tarea creada',
+  tarea_cerrada: 'Tarea cerrada',
+  llamada: 'Llamada registrada',
+  whatsapp: 'WhatsApp abierto',
+  aparcar: 'Aparcada',
+  reabrir: 'Reabierta',
+}
+
 export default function SeguimientoClient({ id }: { id: string }) {
   const [datos, setDatos] = useState<LecturaOportunidad | null>(null)
   const [panel, setPanel] = useState<Panel>(null)
@@ -173,7 +186,7 @@ export default function SeguimientoClient({ id }: { id: string }) {
             <span>
               {h.estadoAntes && h.estadoDespues && h.estadoAntes !== h.estadoDespues
                 ? <>{ROTULO_ESTADO[h.estadoAntes as EstadoOportunidad] ?? h.estadoAntes} → <b>{ROTULO_ESTADO[h.estadoDespues as EstadoOportunidad] ?? h.estadoDespues}</b></>
-                : h.accion}
+                : ROTULO_ACCION_HISTORIAL[h.accion] ?? h.accion}
               {' · '}{h.actor}
             </span>
           </div>

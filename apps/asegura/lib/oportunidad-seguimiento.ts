@@ -641,6 +641,18 @@ export async function editarOportunidad(
     if (fila.estado === 'ganada' || fila.estado === 'perdida') {
       return { ok: false as const, estado: 'conflicto' as const, motivo: `Está ${fila.estado}: reábrela antes de corregirla.`, status: 409 as const }
     }
+    // Cambiar el ramo no puede colar lo que el alta impide: dos abiertas del mismo seguro.
+    if (c.ramo !== undefined && c.ramo !== fila.ramo) {
+      await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`oportunidad:${fila.clienteId}:${c.ramo}`}))`)
+      const [otra] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
+        select id::text as id from oportunidades
+        where correduria_id = ${correduriaId}::uuid and cliente_id = ${fila.clienteId}::uuid and id <> ${id}::uuid
+          and tipo::text = ${c.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+        limit 1`)
+      if (otra) {
+        return { ok: false as const, estado: 'conflicto' as const, motivo: `Ya tiene otra oportunidad de ${c.ramo.replace('_', ' ')} abierta: sigue esa o descarta una.`, status: 409 as const }
+      }
+    }
     const detalle: Record<string, unknown> = {}
     if (c.ramo !== undefined && c.ramo !== fila.ramo) detalle.ramo = { antes: fila.ramo, despues: c.ramo }
     const finAntes = dia(fila.fechaFin)
@@ -683,7 +695,12 @@ export type OportunidadDeCliente = OportunidadSeguimiento & {
 
 const TECHO_POR_CLIENTE = 50
 
-/** Las oportunidades de UN cliente: abiertas primero (por su próxima tarea), luego las cerradas más recientes. */
+/**
+ * Las oportunidades de UN cliente: abiertas primero (las más nuevas arriba), luego las cerradas más
+ * recientes. La «próxima tarea» es solo de seguimiento (`central:seguimiento`), la misma que lista
+ * «Hoy»: una heredada del CRM anterior no sale allí, y enseñarla como siguiente paso sería prometer
+ * un aviso que no va a llegar.
+ */
 export async function oportunidadesDeCliente(
   correduriaId: string,
   clienteId: string,
@@ -704,6 +721,7 @@ export async function oportunidadesDeCliente(
                      'fechaLimite', to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD'))
               from gestiones g
              where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
+               and g.origen_trigger = 'central:seguimiento'
                and g.estado::text <> 'cerrada' and g.fecha_limite is not null
              order by g.fecha_limite limit 1) as "proximaTarea"
     from oportunidades o

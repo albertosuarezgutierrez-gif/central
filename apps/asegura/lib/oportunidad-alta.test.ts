@@ -35,3 +35,19 @@ test('el historial no guarda la compañía tecleada ni la nota: solo que cambió
   assert.match(editar, /detalle\.aseguradora = \{ cambiado: true/)
   assert.doesNotMatch(crear, /nota: a\.tarea\.observaciones|observaciones: a\.tarea/)
 })
+
+test('editar: cambiar el ramo tampoco cuela una segunda abierta del mismo seguro', () => {
+  assert.match(editar, /id <> \$\{id\}::uuid\s+and tipo::text = \$\{c\.ramo\} and estado::text in \('competencia', 'en_negociacion', 'pendiente_cliente'\)/)
+})
+
+test('la próxima tarea de la ficha es la misma que lista «Hoy» (solo seguimiento)', () => {
+  assert.match(lista, /g\.origen_trigger = 'central:seguimiento'/)
+})
+
+test('una póliza que se va no se puede cerrar como «abierta por error»', () => {
+  const ev = readFileSync(new URL('./eventos-cartera.ts', import.meta.url), 'utf8')
+  const rv = ev.slice(ev.indexOf('export function revisionValida'), ev.indexOf('export async function revisarEvento'))
+  assert.match(rv, /MOTIVOS_PERDIDA_VENTA as readonly string\[\]\)\.includes\(o\.motivo\)/)
+  const fugas = readFileSync(new URL('../../plataforma/app/api/correduria/fugas/route.ts', import.meta.url), 'utf8')
+  assert.match(fugas, /motivos: MOTIVOS_PERDIDA_VENTA/)
+})

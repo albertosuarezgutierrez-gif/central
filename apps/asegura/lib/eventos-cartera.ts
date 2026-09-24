@@ -13,7 +13,7 @@
 
 import { Prisma } from './generated/asegura-client'
 import {
-  MOTIVOS_PERDIDA,
+  MOTIVOS_PERDIDA_VENTA,
   ORIGEN_RETENCION,
   POLIZA_ESTADOS_VIGENTES,
   TIPOS_FUGA,
@@ -414,7 +414,7 @@ export function revisionValida(v: unknown): Revision | null {
   if (!v || typeof v !== 'object') return null
   const o = v as Record<string, unknown>
   if (o.resolucion === 'no_es_perdida') return { resolucion: 'no_es_perdida' }
-  if (o.resolucion === 'perdida' && typeof o.motivo === 'string' && (MOTIVOS_PERDIDA as readonly string[]).includes(o.motivo)) {
+  if (o.resolucion === 'perdida' && typeof o.motivo === 'string' && (MOTIVOS_PERDIDA_VENTA as readonly string[]).includes(o.motivo)) {
     return { resolucion: 'perdida', motivo: o.motivo }
   }
   return null

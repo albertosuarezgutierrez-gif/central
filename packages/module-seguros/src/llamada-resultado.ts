@@ -7,7 +7,7 @@
 // porque la secuencia (`siguientePasoLead`) ya calcula la siguiente con el
 // intento sumado; los demás resultados dejan la suya.
 
-import { MOTIVOS_PERDIDA, validarTarea, type EstadoOportunidad, type PeticionAccion, type TareaValida } from './oportunidad-seguimiento.ts'
+import { MOTIVOS_PERDIDA_VENTA, validarTarea, type EstadoOportunidad, type PeticionAccion, type TareaValida } from './oportunidad-seguimiento.ts'
 
 export const RESULTADOS_LLAMADA = ['quiere_precio', 'otro_dia', 'no_contesta', 'no_interesa'] as const
 export type ResultadoLlamada = (typeof RESULTADOS_LLAMADA)[number]
@@ -100,8 +100,9 @@ export function planLlamada(
     case 'no_contesta':
       return { ok: true, plan: { resultado, registro: conNota(PREFIJO_LLAMADA_SIN_RESPUESTA), accion: null, siguiente: null } }
     case 'no_interesa': {
-      const motivo = MOTIVOS_PERDIDA.find(m => m === p.motivo)
-      if (!motivo) return { ok: false, motivo: `Di por qué no le interesa (uno de: ${MOTIVOS_PERDIDA.join(', ')}).` }
+      // Sin el de descartar: «no le interesa» es una respuesta del cliente, no un alta por error.
+      const motivo = MOTIVOS_PERDIDA_VENTA.find(m => m === p.motivo)
+      if (!motivo) return { ok: false, motivo: `Di por qué no le interesa (uno de: ${MOTIVOS_PERDIDA_VENTA.join(', ')}).` }
       if (motivo === 'otro' && !nota) return { ok: false, motivo: 'Con motivo «otro», explica cuál en la nota.' }
       return {
         ok: true,

@@ -390,6 +390,7 @@ function FormEdicion({ o, onCancelar, onHecho }: {
         <label style={etiqueta}>
           Ramo
           <select value={ramo} onChange={e => setRamo(e.target.value)} style={campo}>
+            {o.ramo === null && <option value="">Sin ramo</option>}
             {RAMOS_OPORTUNIDAD_UI.map(r => <option key={r.valor} value={r.valor}>{r.rotulo}</option>)}
           </select>
         </label>

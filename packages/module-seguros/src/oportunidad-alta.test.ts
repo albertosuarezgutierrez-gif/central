@@ -43,3 +43,10 @@ test('descartar es perder con MOTIVO_DESCARTE, sin exigir detalle, y solo desde 
   assert.equal(abierta.cambios.motivoPerdida, 'error_alta')
   assert.equal(aplicarAccion({ estado: 'ganada', aparcadaHasta: null }, { accion: 'perder', motivo: MOTIVO_DESCARTE }, hoy).ok, false)
 })
+
+test('el motivo de descartar no vale para una venta perdida ni para «no le interesa»', async () => {
+  const { MOTIVOS_PERDIDA_VENTA } = await import('./oportunidad-seguimiento.ts')
+  const { planLlamada } = await import('./llamada-resultado.ts')
+  assert.equal(MOTIVOS_PERDIDA_VENTA.includes(MOTIVO_DESCARTE), false)
+  assert.equal(planLlamada({ resultado: 'no_interesa', motivo: MOTIVO_DESCARTE }, 'competencia', hoy).ok, false)
+})

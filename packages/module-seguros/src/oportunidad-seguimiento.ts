@@ -33,6 +33,8 @@ export const MOTIVOS_PERDIDA = [
 export type MotivoPerdida = (typeof MOTIVOS_PERDIDA)[number]
 /** El motivo de «descartar»: fuera de toda cuenta de ventas perdidas. */
 export const MOTIVO_DESCARTE: MotivoPerdida = 'error_alta'
+/** Los motivos de una VENTA perdida (o de una póliza que se va): todos menos el de descartar. */
+export const MOTIVOS_PERDIDA_VENTA: readonly MotivoPerdida[] = MOTIVOS_PERDIDA.filter(m => m !== MOTIVO_DESCARTE)
 
 export type AccionOportunidad = 'interesado' | 'propuesta_enviada' | 'ganar' | 'perder' | 'aparcar' | 'reabrir'
 
