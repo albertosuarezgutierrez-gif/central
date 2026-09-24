@@ -12,6 +12,21 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🧾 **Rescatados los 39 recibos de Occident del 15/09 (8.230,20€ de prima) y archivo de CIMA en Drive.**
+Alberto bajó del Portal CIMA los ficheros 28/03–24/09 a Drive `asegura/CIMA` (id 1DoHnkMj2gYepUKR3A3SmkBE4JIE9iwM1),
+que queda como archivo largo de CIMA. Contraste: 153/154 ya en `cima_ficheros`. Los dos REC 299 del 15/09 entraron
+por `ingerir-manual` vía nuevo workflow `cima-rescate-manual.yml` (asegura#850) → 39/39 en `poliza_recibos`.
+🚨 Mapfre nunca activó el envío diario: sus 14 ficheros son la carga inicial del 26/05. Pendiente Alberto: borrar
+los 2 runs de `cima-rescate-manual` y la rama `tmp-rescate-cima` en GitHub (llevan el zip; el proxy no deja borrarla).
+
+
+**(24/09/2026)** 📨 **SEO correduría: descubrimiento automático.** Cron `seo-correduria`: lee el sitemap e inspecciona
+todas las páginas (en paralelo), prompt de indexación para cualquier página no legal (máx 10/día), **reenvía el sitemap
+por API** (necesita permiso «Completo» de la cuenta de servicio en GSC; sin él, 403 dicho en Telegram) e **IndexNow**
+(clave pública en `apps/asegura-web/public/`, estado en fila `indexnow`; CHECK de `fuente` ampliado, migración aplicada y
+vista morder). `/telefonos-siniestros` en el pie. Alberto pidió a mano la indexación de 5 URLs; 4 eran «Google no reconoce»
+aunque SÍ estaban en el sitemap (Google no lo había releído).
+
 **(24/09/2026)** 🔁 **Historial del riesgo en la ficha de póliza** (plataforma): las pólizas por las que ha pasado el mismo bien
 (red de `poliza_origen_id`/`poliza_padre_id` + misma matrícula del cliente), la copia del volcado de la misma póliza deduplicada.
 Regla pura `ordenarHistorialRiesgo`; lectura `lib/cartera-historial-riesgo.ts`. Caso Kona de José: Mapfre 2020 → Reale 2026.
@@ -413,6 +428,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Medido: `seguros.presupuesto` tiene **0 filas**; lo que Alberto usa de verdad son `oportunidades` con las ofertas de fuera en `info_riesgo` (2 abiertas hoy). Por eso se cierra ahí.
 - `correduria-renovaciones` falló el 23/09 por «red»: asegura en frío tardó >8 s. El cron pide ahora con 40 s (la pantalla sigue en 8 s).
 - Guardián `regression-cartera-viva`: un `import_ref is null` de OPORTUNIDAD se permite solo con el marcador `-- import_ref de OPORTUNIDAD` en la línea.
+
+## (24/09/2026) blog ASegura: corregida la FAQ «cancelar sin penalización» del artículo publicado
+El artículo `cuando-empieza-a-cubrir-un-seguro` (#2966) prometía cancelar «sin penalización» antes de la fecha de
+efecto. Ahora dice que depende: desistimiento en contratación a distancia (y plazo mayor en vida); si no, lo marcan
+las condiciones de la póliza. Sin citar normas (el tema no tiene normas en la lista blanca).
 
 ## (24/09/2026) blog ASegura: «Publicar» fallaba porque el cepo ponía rojo CADA artículo del agente
 El test «ningún tema de la cola repite un artículo publicado» (#2505) chocaba con el diseño: el agente solo escribe

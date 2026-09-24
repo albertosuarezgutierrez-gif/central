@@ -485,6 +485,15 @@ aceptan el parte por WhatsApp, sin copiar ningún número (un cepo lo impide: en
 `seo-correduria`; no es un test con fecha a propósito (pondría rojo cualquier PR un día cualquiera).
 ✅ Los datos estructurados FAQ ya estaban en las dos páginas desde que se crearon.
 
+✅ **24/09/2026 — que Google (y Bing) se entere solo.** El cron `seo-correduria` (lunes) ahora: lee el
+**sitemap real** y con él inspecciona TODAS las páginas (antes solo las de `consultas.ts`; y en paralelo,
+que en serie 17 URLs ya no cabían); el aviso de «solicitar indexación» por Claude Chrome cubre cualquier
+página no legal (antes solo `/blog/`), con tope de 10 al día; **reenvía el sitemap a Search Console por
+API** (`sitemaps.submit`, que sí existe; pide permiso «Completo» a la cuenta de servicio, si no → 403
+dicho en el Telegram); y avisa a **IndexNow** (Bing) solo de lo nuevo o cambiado (fila `indexnow`).
+«Solicitar indexación» de Google sigue sin API: es la única parte manual. `/telefonos-siniestros` entra
+en el pie. Caso que lo motivó: 4 URLs que SÍ estaban en el sitemap salían «Google no reconoce esta URL».
+
 ⏭️ **Siguiente, sin hacer:** una página por compañía (`/telefonos-siniestros/mapfre`…) para las
 navegacionales de abajo; medir antes su volumen con OpenSEO. Solo Mapfre tiene volumen claro
 (1.300/mes): una página por compañía sin volumen sería doorway. Pendiente de Alberto: capturas de Fidelidade (emergencias y auto), la línea de voz de
