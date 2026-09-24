@@ -1,0 +1,19 @@
+{
+ "sesion": "4fd53fc7-a9b8-5aaf-bc85-eba03d7ec792",
+ "inicio": "2026-09-24T09:33:02.847Z",
+ "fin": "2026-09-24T09:33:02.847Z",
+ "llamadas": 1,
+ "categorias": {
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 1492,
+   "chars_out": 1712,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 38705,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}
