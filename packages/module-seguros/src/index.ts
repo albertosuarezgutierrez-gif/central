@@ -806,3 +806,14 @@ export { SUSTITUCION_DIAS_ANTES, SUSTITUCION_DIAS_DESPUES, claveRiesgo, detectar
 export { informeMediacion, type ReciboInforme, type FilaInforme, type InformeMediacion } from './informe-mediacion.ts'
 export { HORAS_MINIMAS_IDD, clavePersona, resumenFormacion, validarAltaFormacion, validarBajaFormacion, type BajaFormacion, type RegistroFormacion, type EstadoFormacion, type ResumenPersona, type ResumenFormacion, type AltaFormacion } from './formacion.ts'
 export { MAX_BYTES_IPID, claveProducto, revisarIpid } from './ipid.ts'
+export {
+  SEMANAS_LINEA_BASE,
+  SERIES_LINEA_BASE,
+  celdasSerie,
+  lunesMadrid,
+  proporcionAutomatica,
+  semanasLineaBase,
+  type CeldaSemana,
+  type DefinicionSerie,
+  type SerieLineaBase,
+} from './linea-base.ts'

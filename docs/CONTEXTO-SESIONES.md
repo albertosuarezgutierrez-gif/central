@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** ASegura OS §N.2 — línea base semanal antes de automatizar. Módulo puro `linea-base.ts` (module-seguros): semanas por lunes de Madrid, cada serie con su `desde` (antes = `null`, no 0), proporción automática `null` sin cambios. Puerto `GET /api/operador/linea-base` (auditoría a mano/sistema, aprobaciones, documentos, oportunidades) + correos de correduría contados en plataforma; tarjeta plegada en `/correduria` → Datos. Hoy solo hay una semana medida de auditoría (existe desde el 23/09).
+
 **(24/09/2026)** — IDD: fichas IPID. Tabla `seguros.ipid` (aplicada; PDF ≤4 MB, una vigente por `claveProducto`,
 sustituir retira la anterior; el portal la lee por GRANT de columnas). Puerto `/api/operador/ipid`, bloque «Fichas IPID» en
 Datos, enlace por opción en el portal (`/api/ipid/[id]`, con sesión) y la aceptación firmada cita la huella (o «no consta»).
