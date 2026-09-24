@@ -171,7 +171,7 @@ export default function QuienesSomos() {
           <p style={parrafoUltimo}>
             En la práctica eso significa tres cosas: que comparamos, que si el año que viene otra
             compañía encaja mejor te lo decimos, y que cuando hay un siniestro quien discute con la
-            aseguradora eres tú y nosotros contigo, no la aseguradora con nadie.
+            aseguradora eres tú, con nosotros a tu lado.
           </p>
         </section>
 

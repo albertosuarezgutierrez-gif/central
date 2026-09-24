@@ -102,7 +102,7 @@ export const RAMOS: readonly Ramo[] = [
       {
         pregunta: '¿Qué es la regla proporcional o infraseguro?',
         respuesta:
-          'Si aseguras tu vivienda por menos de lo que vale, la compañía puede indemnizar un siniestro en la misma proporción. Asegurada por la mitad de su valor, un daño de 10.000 € puede pagarse a 5.000 €. Por eso revisar las sumas aseguradas suele importar más que la diferencia de prima.',
+          'Si aseguras tu vivienda por menos de lo que vale, la compañía puede indemnizar un siniestro en la misma proporción. Asegurada por la mitad de su valor, un daño de 10.000 € puede indemnizarse con 5.000 €. Por eso revisar las sumas aseguradas suele importar más que la diferencia de prima.',
       },
       {
         pregunta: '¿El seguro de hogar es obligatorio?',
@@ -399,7 +399,7 @@ export const RAMOS: readonly Ramo[] = [
     ],
     paraQuien: [
       'Eres autónomo o profesional y un cliente, un colegio o un pliego te pide acreditar responsabilidad civil.',
-      'Ejerces una profesión en la que un error puede reclamarse años después: técnicos, sanitarios, asesores, arquitectura o ingeniería.',
+      'Ejerces una profesión en la que un error puede reclamarse años después: técnicos, sanitarios, asesores, arquitectos o ingenieros.',
       'Tienes empleados o subcontratas parte del trabajo y no sabes hasta dónde llega tu responsabilidad.',
       'Vas a cambiar de compañía y quieres evitar que quede un hueco entre la póliza vieja y la nueva.',
     ],
@@ -417,7 +417,7 @@ export const RAMOS: readonly Ramo[] = [
       {
         pregunta: '¿Qué es la retroactividad y por qué se mira al cambiar de compañía?',
         respuesta:
-          'Es hasta cuándo hacia atrás responde la póliza por hechos anteriores a su contratación. Sin retroactividad, un error cometido antes de firmar queda fuera aunque la reclamación llegue estando ya cubierto. Al cambiar de aseguradora es de los primeros datos que hay que poner sobre la mesa.',
+          'Es hasta cuándo hacia atrás responde la póliza por hechos anteriores a su contratación. Sin retroactividad, un error cometido antes de firmar queda fuera aunque la reclamación llegue con la póliza ya en vigor. Al cambiar de aseguradora es de los primeros datos que hay que poner sobre la mesa.',
       },
       {
         pregunta: '¿Es obligatorio el seguro de responsabilidad civil?',
@@ -462,7 +462,7 @@ export const RAMOS: readonly Ramo[] = [
     paraQuien: [
       'Eres fontanero o instalador autónomo y necesitas el seguro para darte de alta o renovar tu condición de instalador autorizado.',
       'Ya tienes el seguro pero no has vuelto a mirar si el capital asegurado cubre el tipo de instalaciones que haces ahora.',
-      'Trabajas con gas y quieres que la póliza distingue esa actividad de la fontanería general, porque no siempre llevan el mismo capital exigido.',
+      'Trabajas con gas y quieres que la póliza distinga esa actividad de la fontanería general, porque no siempre llevan el mismo capital exigido.',
       'Facturas a través de una pyme o cooperativa de instaladores y necesitas una póliza que cubra a todos los que trabajan bajo ese número.',
     ],
     faq: [

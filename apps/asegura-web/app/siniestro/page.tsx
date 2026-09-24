@@ -141,8 +141,8 @@ export default function Siniestro() {
       <p style={{ fontSize: 17, color: 'var(--muted)', maxWidth: 640 }}>
         Un siniestro es el único momento en que se ve para qué servía la póliza, y suele pillar a la gente sin saber por
         dónde empezar. Esto es lo que hay que hacer, en orden, y{' '}
-        <strong style={{ color: 'var(--text)' }}>los plazos que marca la ley</strong> — que corren desde el día del
-        parte, no desde que a uno le viene bien.
+        <strong style={{ color: 'var(--text)' }}>los plazos que marca la ley</strong>, que corren aunque a uno no le
+        venga bien.
       </p>
       <p style={{ maxWidth: 640 }}>
         ¿Buscas el número de tu compañía?{' '}
