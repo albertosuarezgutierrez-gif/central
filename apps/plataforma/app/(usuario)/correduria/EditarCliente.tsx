@@ -101,8 +101,8 @@ export function EditarDireccion({ clienteId, contacto }: {
     for (const k of ['direccion', 'codigoPostal', 'ciudad', 'provincia'] as const) {
       if (f[k] !== inicial[k]) libre[k] = f[k].trim() === '' ? null : f[k]
     }
-    // Las notas actuales no llegan a esta pantalla: solo se mandan si se escribe algo.
-    if (f.notas.trim() !== '') libre.notas = f.notas
+    // Las notas ya no se escriben aquí (este campo SUSTITUÍA la nota entera sin enseñarla): van
+    // como lista fechada en la tarjeta «Notas» del Resumen.
     const rev = revisarEdicion({ libre })
     if (!rev.ok) {
       setCampoMal(rev.campo ?? null)
@@ -161,11 +161,8 @@ export function EditarDireccion({ clienteId, contacto }: {
             <input value={f.provincia} onChange={(e) => set('provincia', e.target.value)} style={campo} />
           </Campo>
         </div>
-        <Campo label="Notas" mal={campoMal === 'notas'} ayuda="Las notas actuales no se muestran aquí (asegura no las manda a esta pantalla); lo que escribas las sustituye.">
-          <textarea value={f.notas} onChange={(e) => set('notas', e.target.value)} rows={3} style={{ ...campo, minHeight: 72, resize: 'vertical' }} />
-        </Campo>
         <div>
-          <button type="submit" disabled={ocupado} style={btnStyle('primario')}>Guardar dirección y notas</button>
+          <button type="submit" disabled={ocupado} style={btnStyle('primario')}>Guardar dirección</button>
         </div>
       </form>
       <Aviso r={resultado} ok="Guardado." ocupado={ocupado} />

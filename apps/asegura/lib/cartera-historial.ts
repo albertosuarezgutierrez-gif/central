@@ -7,6 +7,36 @@ import { prismaAsegura } from './asegura-db'
 
 export type HistorialFila = { id: string; tipo: string; texto: string; fecha: string }
 
+export type NotasCliente = {
+  /** Notas fechadas (`historial_interno` tipo `nota`), la más reciente primero. */
+  lista: HistorialFila[]
+  /** El campo `clientes.notas` del CRM anterior: un solo texto sin fecha. Se enseña, no se edita. */
+  antigua: string | null
+}
+
+/**
+ * Las notas de la ficha, aparte del historial: el historial trae las 50 últimas anotaciones de
+ * cualquier tipo, y en una ficha con mucha gestión una nota de hace un año quedaría fuera.
+ * `null` = no se pudo leer.
+ */
+export async function notasCliente(correduriaId: string, clienteId: string, antigua: string | null, limite = 100): Promise<NotasCliente | null> {
+  try {
+    const filas = await prismaAsegura().$queryRaw<{ id: string; texto: string; created_at: Date }[]>`
+      select id, texto, created_at
+      from historial_interno
+      where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid
+        and tipo = 'nota' and deleted_at is null
+      order by created_at desc
+      limit ${limite}`
+    return {
+      lista: filas.map((f) => ({ id: f.id, tipo: 'nota', texto: f.texto, fecha: f.created_at.toISOString() })),
+      antigua: antigua !== null && antigua.trim() !== '' ? antigua.trim() : null,
+    }
+  } catch {
+    return null
+  }
+}
+
 /** Últimas 50 anotaciones de la ficha, la más reciente primero. `null` = no se pudo leer. */
 export async function historialCliente(correduriaId: string, clienteId: string, limite = 50): Promise<HistorialFila[] | null> {
   try {

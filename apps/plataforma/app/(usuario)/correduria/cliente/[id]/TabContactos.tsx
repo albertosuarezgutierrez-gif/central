@@ -5,6 +5,8 @@ import { IdCard, KeyRound, Mail, MapPin, MessageCircle, Pencil, Phone, Star, Use
 import { etiquetaRol, leerSitio, textoReparoSitio, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import Bloque from '../../Bloque'
 import ContactosFicha from '../../ContactosFicha'
+import { datosDeLaCompania } from '@/lib/datos-compania'
+import DatosCompania from './DatosCompania'
 import BotonWhatsapp, { VERDE_WHATSAPP } from '../../BotonWhatsapp'
 import EditarCliente, { EditarDireccion } from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
@@ -155,6 +157,9 @@ export default function TabContactos({ ficha, personas }: {
       >
         <Direccion clienteId={ficha.id} c={ficha.contacto} />
       </ContactosFicha>
+
+      {/* Lo que tiene la COMPAÑÍA y nosotros no: se ofrece añadir, nunca sustituye (mandan los nuestros). */}
+      <DatosCompania clienteId={ficha.id} datos={datosDeLaCompania(ficha.id, ficha.intervinientes, ficha.contactos)} />
 
       {/* Si entra —o puede entrar— a ver sus seguros por su cuenta. Va aquí y no
           en otra pestaña porque la respuesta depende de lo de arriba: sin correo

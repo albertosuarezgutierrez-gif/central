@@ -35,7 +35,7 @@ import { RAMOS_DESCRITOS_POR_COBERTURAS } from './cartera'
 import { ordenPolizasFicha } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
-import { cotizacionesVivas, historialCliente, type HistorialFila } from './cartera-historial'
+import { cotizacionesVivas, historialCliente, notasCliente, type HistorialFila, type NotasCliente } from './cartera-historial'
 import { listarDocumentos } from './cartera-documentos'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
@@ -369,6 +369,8 @@ export type FichaCliente = {
   estado: EstadoClienteDerivado
   /** Últimas 50 anotaciones de `historial_interno`. `null` = no se pudo leer. */
   historial: HistorialFila[] | null
+  /** Notas fechadas + la nota suelta del CRM anterior. `null` = no se pudo leer. */
+  notas: NotasCliente | null
   /** Presupuestos recientes sin póliza. `null` = no se pudo contar. */
   cotizacionesVivas: number | null
   polizas: PolizaFicha[]
@@ -542,6 +544,7 @@ export async function fichaCliente(
       segmento: true,
       telefono: true,
       email: true,
+      notas: true,
       dni: true,
       fechaNacimiento: true,
       tipoPersona: true,
@@ -664,6 +667,7 @@ export async function fichaCliente(
   const declaradas = await listarDeclaradas(correduriaId, c.id, numerosPropios)
   const carnets = await listarCarnets(correduriaId, c.id, normalizarFecha(descifrar(c.fechaNacimiento)))
   const historial = await historialCliente(correduriaId, c.id)
+  const notas = await notasCliente(correduriaId, c.id, c.notas ?? null)
   const presupuestos = await cotizacionesVivas(correduriaId, c.id, DIAS_PRESUPUESTO_VIVO)
   const estado = estadoCliente({
     polizasConfirmadasActivas: c.polizas.filter((p) => esCarteraViva(p) && p.idPolizaEntidad !== null && String(p.estado) !== 'cancelada').length,
@@ -702,6 +706,7 @@ export async function fichaCliente(
     carnets,
     estado,
     historial,
+    notas,
     cotizacionesVivas: presupuestos,
     identidad: {
       nombre: c.nombre,
