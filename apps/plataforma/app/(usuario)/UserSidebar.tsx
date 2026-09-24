@@ -290,7 +290,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
                 borderRadius: '10px', marginBottom: '2px',
                 fontWeight: active ? 600 : 400,
                 background: active ? 'var(--primary-light)' : 'transparent',
-                color: active ? 'var(--primary)' : 'var(--text)',
+                color: active ? 'var(--primary-hover)' : 'var(--text)',
                 fontSize: esSegmento ? '13px' : '14px', textDecoration: 'none',
               }}>
                 <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
@@ -312,7 +312,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
                   padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
                   fontWeight: active ? 600 : 400,
                   background: active ? 'var(--primary-light)' : 'transparent',
-                  color: active ? 'var(--primary)' : 'var(--text)',
+                  color: active ? 'var(--primary-hover)' : 'var(--text)',
                   fontSize: '14px', textDecoration: 'none',
                 }}>
                   <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
@@ -333,7 +333,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
                   padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
                   fontWeight: active ? 600 : 400,
                   background: active ? 'var(--primary-light)' : 'transparent',
-                  color: active ? 'var(--primary)' : 'var(--text)',
+                  color: active ? 'var(--primary-hover)' : 'var(--text)',
                   fontSize: '14px', textDecoration: 'none',
                 }}>
                   <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
@@ -354,7 +354,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
                   padding: '9px 12px', borderRadius: '10px', marginBottom: '2px',
                   fontWeight: active ? 600 : 400,
                   background: active ? 'var(--primary-light)' : 'transparent',
-                  color: active ? 'var(--primary)' : 'var(--text)',
+                  color: active ? 'var(--primary-hover)' : 'var(--text)',
                   fontSize: '14px', textDecoration: 'none',
                 }}>
                   <Icono de={icon} /><span className="nav-solo-abierto">{label}</span>
@@ -379,7 +379,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
                     borderRadius: '10px', marginBottom: '2px',
                     fontWeight: exactActive ? 600 : 400,
                     background: exactActive ? 'var(--primary-light)' : 'transparent',
-                    color: exactActive ? 'var(--primary)' : (sub ? 'var(--muted)' : 'var(--text)'),
+                    color: exactActive ? 'var(--primary-hover)' : (sub ? 'var(--muted)' : 'var(--text)'),
                     fontSize: sub ? '13px' : '14px', textDecoration: 'none',
                   }}>
                     <Icono de={icon} sub={sub} /><span className="nav-solo-abierto">{label}</span>
@@ -415,7 +415,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
         {/* Barra superior de ancho completo: el contenido desplazado pasa limpio por debajo
             (antes el ☰ era un chip flotante que tapaba a medias los títulos al scrollear).
             z-index por debajo del backdrop (40) y el drawer (50) → el menú abierto la cubre. */}
-        <div style={{
+        <div className="barra-movil" style={{
           position: 'fixed', top: 0, left: 0, right: 0, height: 52, zIndex: 30,
           background: 'var(--surface)', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', gap: '10px', padding: '0 12px',

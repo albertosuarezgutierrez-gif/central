@@ -2019,6 +2019,12 @@ intranet ya es instalable**: `app/manifest.ts` + `public/sw.js` (NO cachea nada)
 **middleware exigía sesión para el manifiesto**, que Chrome descarga sin cookie. El matcher excluye ahora
 manifiesto, SW e iconos; lo vigila `lib/pwa.test.ts`.
 
+**Armazón y tarjetas como el portal del cliente (mismo día):** neutros sin tinte azul, `--radius` 16,
+`--shadow` en capas con su filete de 1 px (por eso `cardStyle` y la `tarjeta` de la ficha ya no llevan
+borde), fondo `--shell-bg` (7 % de marca) alrededor del contenido, que en escritorio es una «isla»
+(`.contenido-isla`), barra móvil con filete de acento y botones en píldora. Ficha del cliente: pólizas y
+oportunidades primero; Recibos y Siniestros dejan de ser pestañas (viven en cada póliza y en Pólizas).
+
 ## 🎨 Sistema de diseño — `components/ui.tsx` (02/09/2026)
 Nació como `app/(usuario)/dashboard/ui.tsx` (02/07/2026), pero `/dashboard` pasó a solo REDIRIGIR a
 `/banca`: el sistema de diseño colgaba de una ruta muerta. Y al auditarlo, **ningún archivo lo importaba**

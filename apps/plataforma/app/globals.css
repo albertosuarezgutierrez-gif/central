@@ -4,19 +4,25 @@
    Los componentes SOLO usan estas variables (nunca hex directos para semántica):
    así el modo oscuro sale gratis y cambiar la marca es tocar un bloque. */
 :root {
-  --bg: #f6f7f9;
+  /* Lenguaje visual del portal del cliente (24/09/2026, «que siga lo que has hecho con la app de
+     los clientes»): neutros SIN tinte azul (los del portal en oklch, aquí en hex), radio 16,
+     sombras suaves en capas, fondo tintado de marca alrededor del contenido. */
+  --bg: #fcfcfc;
   --surface: #ffffff;
-  --border: #e5e7eb;
-  --text: #0f172a;
-  --muted: #64748b;
+  --border: #e1e1e1;
+  --text: #161616;
+  --muted: #6f6f6f;
+  /* Fondo del armazón (lateral + marco de la isla): 7 % de marca sobre gris, como el portal. */
+  --shell-bg: color-mix(in oklab, #3364ee 7%, #f3f3f3);
+  --acento-marca: #497cfd;
   /* Cobalto de Grupo ASegura en TODO el panel desde el 24/09/2026 (antes índigo #4f46e5
      aquí y cobalto solo dentro de /correduria). */
   --primary: #3364ee;
-  --primary-light: #e0efff;
+  --primary-light: #e3efff;
   --primary-hover: #16307a;
-  --radius: 14px;
-  --shadow: 0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
-  --shadow-lift: 0 4px 12px rgba(15,23,42,.08), 0 12px 32px -12px rgba(15,23,42,.14);
+  --radius: 16px;
+  --shadow: 0 0 0 1px rgba(20,20,20,.05), 0 1px 2px rgba(20,20,20,.05), 0 8px 22px -10px rgba(20,20,20,.10);
+  --shadow-lift: 0 2px 4px rgba(20,20,20,.05), 0 8px 20px -6px rgba(20,20,20,.10), 0 0 0 1px rgba(20,20,20,.05);
   /* Semánticos (éxito / error / aviso / info) — texto y fondo suave por cada uno */
   --positive: #059669;
   --positive-bg: #ecfdf5;
@@ -45,7 +51,9 @@
   --primary: #497cfd;
   --primary-light: rgba(73, 124, 253, .16);
   --primary-hover: #9fbcff;
-  --shadow: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
+  --shell-bg: color-mix(in oklab, #497cfd 7%, #0b1220);
+  /* El filete de 1 px va DENTRO de la sombra (las tarjetas ya no llevan borde): en oscuro, claro. */
+  --shadow: 0 0 0 1px rgba(255,255,255,.07), 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3);
   --shadow-lift: 0 4px 12px rgba(0,0,0,.5), 0 12px 32px -12px rgba(0,0,0,.6);
   --positive: #34d399;
   --positive-bg: rgba(16, 185, 129, .14);
@@ -724,3 +732,29 @@ em { font-style: normal; }
   .tabla-polizas td[data-rol="cabeza"] { font-weight: 700; font-size: 15px; }
   .tabla-polizas td[data-rol="accion"] { padding-top: 8px !important; border-top: 1px solid var(--border); margin-top: 6px; }
 }
+
+/* === Armazón como el portal del cliente (24/09/2026) =======================================
+   Lateral sobre el fondo tintado de marca y el contenido como «isla» (radio amplio + sombra
+   plana + 8 px de margen) en escritorio. En móvil la isla ocupa todo y la barra de arriba lleva
+   el filete de acento del portal. Las clases las ponen `(usuario)/layout.tsx`, `LayoutShell` y
+   `UserSidebar`. */
+.app-shell { background: var(--shell-bg); }
+.sidebar-desktop { background: transparent !important; border-right: 0 !important; }
+.sidebar-desktop .nav-cabecera, .sidebar-desktop .nav-pie { border-color: transparent !important; }
+.contenido-isla { background: var(--bg); }
+@media (min-width: 769px) {
+  .contenido-isla {
+    margin: 8px 8px 8px 0;
+    border-radius: calc(var(--radius) * 1.8);
+    box-shadow: var(--shadow);
+    min-height: calc(100vh - 16px);
+  }
+}
+.nav-link { border-radius: 999px !important; }
+.nav-link:hover { background: color-mix(in oklab, var(--primary) 8%, transparent); }
+.barra-movil {
+  background: color-mix(in oklab, var(--primary) 4%, var(--surface)) !important;
+  border-top: 3px solid var(--acento-marca);
+  border-bottom: 1px solid color-mix(in oklab, var(--primary) 12%, var(--border)) !important;
+}
+:focus-visible { outline: 3px solid color-mix(in oklab, var(--primary) 50%, transparent); outline-offset: 2px; }

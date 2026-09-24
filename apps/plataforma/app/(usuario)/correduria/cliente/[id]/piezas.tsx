@@ -480,7 +480,9 @@ export function PolizasDeclaradas({ declaradas }: { declaradas: PolizaDeclaradaF
 
 // ── Cosillas ────────────────────────────────────────────────────────────────
 
-export const tarjeta: React.CSSProperties = { border: '1px solid var(--border)', borderRadius: 12, padding: 14 }
+// Panel del portal del cliente (24/09/2026): blanco, radio de marca y la sombra en capas, que ya
+// trae su propio filete de 1 px — por eso no lleva borde.
+export const tarjeta: React.CSSProperties = { background: 'var(--surface)', borderRadius: 'var(--radius)', padding: 16, boxShadow: 'var(--shadow)' }
 export const th: React.CSSProperties = { padding: '6px 8px', fontWeight: 600 }
 export const td: React.CSSProperties = { padding: '8px' }
 export const sub: React.CSSProperties = { fontSize: 11, color: 'var(--muted)' }
