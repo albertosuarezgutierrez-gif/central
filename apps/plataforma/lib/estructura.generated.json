@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-24T18:57:22Z",
+  "generadoEn": "2026-09-24T21:11:26Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -4894,6 +4894,7 @@
       "/api/auth/logout",
       "/api/auth/register",
       "/api/banca/amortizable",
+      "/api/banca/analisis",
       "/api/banca/analisis-ia",
       "/api/banca/analizar",
       "/api/banca/antifraude",
@@ -6542,7 +6543,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1479,
+    "apis": 1480,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
