@@ -32,6 +32,7 @@ import {
 } from '@central/module-seguros'
 
 import { fechaEs } from '@/lib/fechas'
+import { logoCompania } from '@/lib/logos-companias'
 
 import { EnviarACompania } from './EnviarACompania'
 
@@ -467,6 +468,7 @@ function CanalesCompania({
    */
   destacada?: string | null
 }) {
+  const [busca, setBusca] = useState('')
   // Una compañía en blanco (una póliza aportada de la que la IA no leyó cuál
   // era) es «no lo sabemos», no una compañía: ni ordena ni marca nada.
   const quien = typeof destacada === 'string' && destacada.trim() !== '' ? destacada.trim() : null
@@ -474,41 +476,76 @@ function CanalesCompania({
   if (canales.length === 0) return null
   const clave = quien === null ? null : quien.toLowerCase()
 
+  // Plegado por compañía (24/09/2026): con tres compañías abiertas, el número
+  // de la que busca quedaba a dos pantallazos. Nace abierta SOLO la de la póliza
+  // elegida, o la única que haya. El buscador aparece a partir de cinco: con
+  // menos, las cabeceras plegadas ya caben de un vistazo y un campo más estorba.
+  // Filtrar aquí lo decide QUIEN MIRA, no el código: `canales` sigue entero, y
+  // si nada coincide se dice en vez de pintar una lista vacía.
+  const conBuscador = canales.length >= 5
+  const q = busca.trim().toLowerCase()
+  const vistos = q === '' ? canales : canales.filter((c) => c.nombre.toLowerCase().includes(q))
+
   return (
     <div className="canal-caja">
-      <h3 className="canal-titulo">Si acaba de pasar, díselo también a tu compañía</h3>
+      <h3 className="canal-titulo">¿Acaba de pasar? Avisa también a tu compañía</h3>
       {/* 🚨 Esta frase es la que evita el peor fallo del portal: que alguien nos
-          avise, se quede tranquilo y no haga nada más. No promete que nosotros
-          lo abramos «rápido»: dice qué abre el siniestro y qué no. */}
-      <p className="editor-ayuda">
-        Es su aviso el que abre el siniestro. Avisarnos a nosotros no lo abre — lo tramitamos después,
-        en cuanto lo veamos, y te hacemos el seguimiento. Los dos caminos son compatibles y no molesta
-        hacer los dos.
-      </p>
-      {canales.map((c) => (
-        <BloqueCanal
-          key={c.nombre}
-          canal={c}
+          avise, se quede tranquilo y no haga nada más. Dice qué abre el
+          siniestro y qué no, sin prometer rapidez. */}
+      <p className="editor-ayuda">Su aviso es el que abre el siniestro; el nuestro no. Haz los dos: nosotros te hacemos el seguimiento.</p>
+      {conBuscador && (
+        <input
+          className="canal-buscar"
+          type="search"
+          placeholder="Busca tu compañía"
+          aria-label="Busca tu compañía"
+          value={busca}
+          onChange={(e) => setBusca(e.target.value)}
+        />
+      )}
+      {vistos.length === 0 && <p className="editor-ayuda">Ninguna de tus compañías se llama así.</p>}
+      <div className="canal-lista">
+        {vistos.map((c) => {
           // 🚨 Se compara con la MISMA normalización que usó el helper puro
           // para ordenar. Con dos criterios distintos, el bloque marcado y el
-          // que va primero podrían no ser el mismo, y el cartel señalaría a
-          // otra compañía.
-          deLaElegida={clave !== null && c.nombre.trim().toLowerCase() === clave}
-        />
-      ))}
+          // que va primero podrían no ser el mismo.
+          const elegida = clave !== null && c.nombre.trim().toLowerCase() === clave
+          return (
+            <BloqueCanal
+              // La clave incluye si es la elegida: al cambiar de póliza, el
+              // bloque se vuelve a montar y se abre el de la nueva compañía.
+              key={`${c.nombre}-${elegida ? 'e' : ''}`}
+              canal={c}
+              deLaElegida={elegida}
+              abierto={elegida || canales.length === 1}
+            />
+          )
+        })}
+      </div>
     </div>
   )
 }
 
-function BloqueCanal({ canal, deLaElegida }: { canal: CanalCompania; deLaElegida?: boolean }) {
+function BloqueCanal({ canal, deLaElegida, abierto }: { canal: CanalCompania; deLaElegida?: boolean; abierto: boolean }) {
+  const logo = logoCompania(canal.nombre)
   return (
-    <div className="canal-bloque" data-elegida={deLaElegida ? 'si' : undefined}>
-      <p className="canal-compania">{canal.nombre}</p>
-      {/* El cartel solo dice de QUÉ póliza es esta compañía; no promete nada
-          del canal (eso lo dicen las vías de abajo, cada una con su horario si
-          lo hay). Va en texto y no solo en color: el filete de la izquierda no
-          se lo lee nadie por teléfono. */}
-      {deLaElegida === true && <p className="canal-elegida">La compañía de la póliza que traes elegida</p>}
+    <details className="canal-bloque" data-elegida={deLaElegida ? 'si' : undefined} open={abierto}>
+      <summary className="canal-cabecera">
+        {logo !== null ? (
+          <img className="canal-logo" src={logo} alt="" />
+        ) : (
+          <span className="canal-logo canal-inicial" aria-hidden="true">
+            {canal.nombre.trim().charAt(0).toUpperCase()}
+          </span>
+        )}
+        <span className="canal-compania">
+          {canal.nombre}
+          {/* El cartel solo dice de QUÉ póliza es esta compañía. Va en texto y
+              no solo en color: el filete no se lo lee nadie por teléfono. */}
+          {deLaElegida === true && <span className="canal-elegida">La de la póliza elegida</span>}
+        </span>
+        <span className="canal-ver">Teléfonos</span>
+      </summary>
       {canal.sinDatos ? (
         // 🚨 «No lo hemos verificado», NUNCA «esta compañía no tiene». El texto
         // vive en el módulo puro con su test para que no se convierta en un
@@ -519,23 +556,21 @@ function BloqueCanal({ canal, deLaElegida }: { canal: CanalCompania; deLaElegida
           {canal.vias.map((v) => (
             <ViaCanalEnlace key={`${v.tipo}-${v.tipo === 'telefono' ? `${v.uso}-${v.para ?? ''}` : 'wa'}-${v.numero}`} via={v} />
           ))}
-          {/* El número, guardado en el móvil ANTES de necesitarlo: la tarjeta sale
-              del mismo catálogo verificado que estas vías. */}
-          <a
-            className="canal-via"
-            href={`/api/contacto-compania/${encodeURIComponent(canal.nombre)}`}
-            download
-          >
-            <span className="canal-via-que">Guardar en mis contactos</span>
-          </a>
-          {canal.verificadoEn !== null && (
-            // Un número comprobado hace tres años falla igual que uno
-            // equivocado, y en el mismo momento. Se dice cuándo se miró.
-            <p className="canal-fecha">Comprobado el {textoFecha(canal.verificadoEn)}</p>
-          )}
+          <p className="canal-pie">
+            {/* El número, guardado en el móvil ANTES de necesitarlo: la tarjeta
+                sale del mismo catálogo verificado que estas vías. */}
+            <a href={`/api/contacto-compania/${encodeURIComponent(canal.nombre)}`} download>
+              Guardar en mis contactos
+            </a>
+            {canal.verificadoEn !== null && (
+              // Un número comprobado hace tres años falla igual que uno
+              // equivocado, y en el mismo momento. Se dice cuándo se miró.
+              <span className="canal-fecha"> · comprobado el {textoFecha(canal.verificadoEn)}</span>
+            )}
+          </p>
         </>
       )}
-    </div>
+    </details>
   )
 }
 
