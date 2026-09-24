@@ -19,7 +19,7 @@ import {
  */
 const input = { width: '100%', minHeight: 44, fontSize: 14, padding: '8px 10px', boxSizing: 'border-box' as const }
 const TONO: Record<EstadoFormacion, 'positivo' | 'aviso' | 'negativo' | 'neutral'> = {
-  cumplido: 'positivo', en_curso: 'neutral', atrasado: 'aviso', incumplido: 'negativo',
+  cumplido: 'positivo', en_curso: 'neutral', atrasado: 'aviso', incumplido: 'negativo', baja: 'neutral',
 }
 
 function hoy(): string {
@@ -68,6 +68,18 @@ export default function Formacion({ onContador }: { onContador?: (n: number | nu
     setEnviando(false)
   }
 
+  async function baja(persona: string, desde: string | null) {
+    setMensaje(null)
+    const res = desde
+      ? await fetch('/api/correduria/formacion/baja', {
+          method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ persona, desde }),
+        }).catch(() => null)
+      : await fetch(`/api/correduria/formacion/baja?persona=${encodeURIComponent(persona)}`, { method: 'DELETE' }).catch(() => null)
+    const j = (res ? await res.json().catch(() => null) : null) as { motivos?: string[] } | null
+    if (res?.ok) await cargar(año)
+    else setMensaje({ tono: 'error', texto: j?.motivos?.join(' ') ?? 'No se ha guardado: no se pudo hablar con asegura.' })
+  }
+
   async function borrar(id: string) {
     if (!confirm('¿Borrar este curso? Se usa para corregir un error de anotación.')) return
     const res = await fetch(`/api/correduria/formacion?id=${encodeURIComponent(id)}`, { method: 'DELETE' }).catch(() => null)
@@ -105,6 +117,14 @@ export default function Formacion({ onContador }: { onContador?: (n: number | nu
                     <strong>{p.persona}</strong>
                     <span>{p.horas.toLocaleString('es-ES')} h{p.faltan > 0 && ` · faltan ${p.faltan.toLocaleString('es-ES')} h`}</span>
                     <Badge tono={TONO[p.estado]}>{TEXTO_ESTADO[p.estado]}</Badge>
+                    {p.bajaDesde
+                      ? (
+                        <span style={{ fontSize: 13, color: 'var(--muted)' }}>
+                          Dejó de distribuir el {fechaEs(p.bajaDesde)}{' '}
+                          <button type="button" onClick={() => void baja(p.persona, null)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Vuelve a distribuir</button>
+                        </span>
+                      )
+                      : <BajaPersona onGuardar={(d) => void baja(p.persona, d)} />}
                   </li>
                 ))}
               </ul>
@@ -145,5 +165,19 @@ export default function Formacion({ onContador }: { onContador?: (n: number | nu
       </details>
       {mensaje && <p style={{ fontSize: 13, color: mensaje.tono === 'ok' ? 'var(--positive)' : 'var(--negative)', margin: '8px 0 0' }}>{mensaje.texto}</p>}
     </Bloque>
+  )
+}
+
+/** «Dejó de distribuir» plegado: una fecha y un botón, para no llenar cada fila de controles. */
+function BajaPersona({ onGuardar }: { onGuardar: (desde: string) => void }) {
+  const [desde, setDesde] = useState(hoy())
+  return (
+    <details>
+      <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44, display: 'flex', alignItems: 'center', color: 'var(--muted)' }}>Dejó de distribuir</summary>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input type="date" max={hoy()} value={desde} onChange={(e) => setDesde(e.target.value)} aria-label="Desde cuándo" style={{ minHeight: 44, fontSize: 14 }} />
+        <button type="button" disabled={!desde} onClick={() => onGuardar(desde)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Guardar</button>
+      </div>
+    </details>
   )
 }

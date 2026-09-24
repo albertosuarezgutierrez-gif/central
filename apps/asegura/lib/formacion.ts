@@ -4,8 +4,8 @@
 // Sin datos personales sensibles: persona (nombre del empleado), curso, entidad, fecha y horas.
 
 import {
-  HORAS_MINIMAS_IDD, resumenFormacion, validarAltaFormacion,
-  type RegistroFormacion, type ResumenFormacion,
+  HORAS_MINIMAS_IDD, clavePersona, resumenFormacion, validarAltaFormacion, validarBajaFormacion,
+  type BajaFormacion, type RegistroFormacion, type ResumenFormacion,
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 
@@ -38,11 +38,13 @@ export async function formacionDelAño(correduriaId: string, año: number): Prom
     where f.correduria_id = ${correduriaId}::uuid
       and f.fecha >= make_date(${año - AÑOS_ATRAS}::int, 1, 1) and f.fecha <= make_date(${año}::int, 12, 31)
     order by f.fecha desc, f.created_at desc`
+  const bajas = await prismaAsegura().$queryRaw<BajaFormacion[]>`
+    select persona, to_char(desde, 'YYYY-MM-DD') as desde from formacion_baja where correduria_id = ${correduriaId}::uuid`
   const registros: RegistroFormacion[] = filas.map((f) => ({ persona: f.persona, horas: f.horas, fecha: f.fecha }))
   return {
     estado: 'ok',
     cursos: filas.filter((f) => f.fecha.startsWith(`${año}-`)),
-    resumen: resumenFormacion(registros, año, hoyMadrid(), HORAS_MINIMAS_IDD),
+    resumen: resumenFormacion(registros, año, hoyMadrid(), HORAS_MINIMAS_IDD, bajas),
   }
 }
 
@@ -75,5 +77,28 @@ export async function borrarCurso(correduriaId: string, id: string): Promise<'he
   if (!UUID.test(id)) return 'invalida'
   const n = await prismaAsegura().$executeRaw`
     delete from formacion where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+  return n > 0 ? 'hecho' : 'no_encontrado'
+}
+
+/** Anota (o corrige) desde cuándo una persona deja de distribuir. Una fila por persona. */
+export async function anotarBaja(
+  correduriaId: string, cuerpo: Record<string, unknown> | null, actor: string,
+): Promise<{ estado: 'hecho' } | { estado: 'invalida'; motivos: string[] }> {
+  const v = validarBajaFormacion(cuerpo, hoyMadrid())
+  if (!v.ok) return { estado: 'invalida', motivos: v.motivos }
+  await prismaAsegura().$executeRaw`
+    insert into formacion_baja (correduria_id, persona_clave, persona, desde, creada_por)
+    values (${correduriaId}::uuid, ${clavePersona(v.valor.persona)}, ${v.valor.persona}, ${v.valor.desde}::date, ${actor})
+    on conflict (correduria_id, persona_clave)
+    do update set persona = excluded.persona, desde = excluded.desde, creada_por = excluded.creada_por, created_at = now()`
+  return { estado: 'hecho' }
+}
+
+/** Quita la baja: la persona vuelve a distribuir y se le exigen las horas. */
+export async function quitarBaja(correduriaId: string, persona: string): Promise<'hecho' | 'no_encontrado' | 'invalida'> {
+  const clave = clavePersona(persona)
+  if (!clave) return 'invalida'
+  const n = await prismaAsegura().$executeRaw`
+    delete from formacion_baja where correduria_id = ${correduriaId}::uuid and persona_clave = ${clave}`
   return n > 0 ? 'hecho' : 'no_encontrado'
 }

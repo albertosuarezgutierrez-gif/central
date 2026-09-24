@@ -33,3 +33,13 @@ test('🪤 los estados de plataforma son los del módulo', () => {
   const delModulo = [...src.matchAll(/^\s*\| '([a-z_]+)'/gm)].map((m) => m[1])
   assert.deepEqual([...delModulo].sort(), [...ESTADOS_FORMACION].sort())
 })
+
+test('🪤 la fecha de baja se lee; ausente (asegura anterior) es null; con forma rara tumba la lectura', () => {
+  const conBaja = { ...ok, resumen: { ...ok.resumen, personas: [{ persona: 'Ana', horas: 5, faltan: 0, estado: 'baja', bajaDesde: '2026-05-01' }] } }
+  const l = interpretarFormacion(200, conBaja)
+  assert.ok(l.estado === 'ok' && l.resumen.personas[0].bajaDesde === '2026-05-01')
+  const vieja = interpretarFormacion(200, ok)
+  assert.ok(vieja.estado === 'ok' && vieja.resumen.personas[0].bajaDesde === null)
+  const rara = { ...ok, resumen: { ...ok.resumen, personas: [{ persona: 'Ana', horas: 5, faltan: 10, estado: 'atrasado', bajaDesde: 'mayo' }] } }
+  assert.deepEqual(interpretarFormacion(200, rara), { estado: 'error', motivo: 'respuesta_ilegible' })
+})

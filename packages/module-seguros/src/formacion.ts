@@ -29,8 +29,20 @@ export type EstadoFormacion =
   | 'atrasado'
   /** Año cerrado sin las horas. */
   | 'incumplido'
+  /** Dejó de distribuir durante ese año sin las horas: no se le exige y no cuenta como pendiente. */
+  | 'baja'
 
-export type ResumenPersona = { persona: string; horas: number; faltan: number; estado: EstadoFormacion }
+export type ResumenPersona = {
+  persona: string
+  horas: number
+  faltan: number
+  estado: EstadoFormacion
+  /** `YYYY-MM-DD` desde el que dejó de distribuir, si consta. */
+  bajaDesde: string | null
+}
+
+/** Persona que dejó de distribuir seguros desde una fecha (la declara el corredor). */
+export type BajaFormacion = { persona: string; desde: string }
 
 export type ResumenFormacion = {
   año: number
@@ -47,17 +59,31 @@ export function clavePersona(nombre: string): string {
 
 const r2 = (n: number) => Math.round(n * 100) / 100
 
+/**
+ * Una baja con fecha ANTERIOR al año saca a la persona de ese año (ya no distribuía). Una baja DENTRO
+ * del año no le exige las horas que le falten (`baja`), pero si ya las tenía sigue `cumplido`.
+ * Una baja posterior al año no cambia nada: ese año sí distribuía.
+ */
 export function resumenFormacion(
   registros: readonly RegistroFormacion[],
   año: number,
   hoy: string,
   minimo: number = HORAS_MINIMAS_IDD,
+  bajas: readonly BajaFormacion[] = [],
 ): ResumenFormacion {
   const añoHoy = Number(hoy.slice(0, 4))
+  const bajaDe = new Map<string, string>()
+  for (const b of bajas) {
+    const k = clavePersona(b.persona)
+    const previa = bajaDe.get(k)
+    if (k && /^\d{4}-\d{2}-\d{2}$/.test(b.desde) && (!previa || b.desde < previa)) bajaDe.set(k, b.desde)
+  }
   const porPersona = new Map<string, { persona: string; horas: number }>()
   for (const r of registros) {
     const clave = clavePersona(r.persona)
     if (!clave || Number(r.fecha.slice(0, 4)) > año) continue
+    const baja = bajaDe.get(clave)
+    if (baja && baja <= `${año}-01-01`) continue
     const p = porPersona.get(clave) ?? { persona: r.persona.trim(), horas: 0 }
     if (r.fecha.startsWith(`${año}-`)) p.horas += r.horas
     porPersona.set(clave, p)
@@ -66,11 +92,14 @@ export function resumenFormacion(
     .map(({ persona, horas }): ResumenPersona => {
       const h = r2(horas)
       const faltan = r2(Math.max(0, minimo - h))
+      const baja = bajaDe.get(clavePersona(persona))
+      const bajaEnElAño = baja !== undefined && baja <= `${año}-12-31` && baja <= hoy
       let estado: EstadoFormacion
       if (faltan === 0) estado = 'cumplido'
+      else if (bajaEnElAño) estado = 'baja'
       else if (año < añoHoy) estado = 'incumplido'
       else estado = hoy >= `${año}-10-01` ? 'atrasado' : 'en_curso'
-      return { persona, horas: h, faltan, estado }
+      return { persona, horas: h, faltan: estado === 'baja' ? 0 : faltan, estado, bajaDesde: baja ?? null }
     })
     .sort((a, b) => a.persona.localeCompare(b.persona))
   return { año, minimo, personas, pendientes: personas.filter((p) => p.estado === 'atrasado' || p.estado === 'incumplido').length }
@@ -108,4 +137,21 @@ export function validarAltaFormacion(
   }
   if (motivos.length) return { ok: false, motivos }
   return { ok: true, valor: { persona, curso, entidad: entidad || null, fecha, horas } }
+}
+
+/** Valida la baja de una persona: nombre y fecha real, no futura. */
+export function validarBajaFormacion(
+  c: Record<string, unknown> | null,
+  hoy: string,
+): { ok: true; valor: BajaFormacion } | { ok: false; motivos: string[] } {
+  const motivos: string[] = []
+  const persona = typeof c?.persona === 'string' ? c.persona.trim() : ''
+  const desde = typeof c?.desde === 'string' ? c.desde.trim() : ''
+  if (!persona || persona.length > 120) motivos.push('Falta la persona (máx. 120 caracteres).')
+  const real = /^\d{4}-\d{2}-\d{2}$/.test(desde) && !Number.isNaN(Date.parse(`${desde}T00:00:00Z`))
+    && new Date(`${desde}T00:00:00Z`).toISOString().slice(0, 10) === desde
+  if (!real || desde < '2000-01-01') motivos.push('La fecha no es válida.')
+  else if (desde > hoy) motivos.push('La fecha no puede ser futura: se anota cuando ya ha dejado de distribuir.')
+  if (motivos.length) return { ok: false, motivos }
+  return { ok: true, valor: { persona, desde } }
 }

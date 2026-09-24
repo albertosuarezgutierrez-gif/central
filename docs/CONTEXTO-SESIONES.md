@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** — Formación IDD: «dejó de distribuir desde». Tabla `seguros.formacion_baja` (aplicada, clave =
+`clavePersona`), puerto `/api/operador/formacion/baja` (POST/DELETE) y botón por persona en Datos. Regla pura:
+baja anterior al año → fuera; dentro del año sin las horas → estado `baja` (no pendiente); con horas → cumplido.
+
 **(24/09/2026)** — IDD: lo firmado al aceptar un presupuesto deja constancia de lo que se vio antes.
 `documentoAceptacion` (module-seguros) añade `lineaVistoAntes`: nº de opciones y compañías del presupuesto (recuento de
 `presupuesto_opcion`, no lo consultado), información del mediador y versión `VERSION_TEXTOS_LEGALES` con su URL del portal.
