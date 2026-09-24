@@ -66,10 +66,12 @@ import {
  * `Bloque.tsx` para por qué un bloque ya no es una caja.
  *
  * ─── Qué NO cambia, y por qué ───────────────────────────────────────────────
- * · Todos los bloques se MONTAN siempre, aunque su sección esté oculta: así
- *   piden sus datos y reportan su contador, que es de donde salen los badges.
- *   Es la misma red que hoy (los mismos fetch en paralelo al abrir), no una
- *   carga extra. Lo que se oculta es el DOM, no la lectura.
+ * · Una sección se MONTA la primera vez que se abre (24/09/2026, Alberto: «la
+ *   carga es súper lenta»). Antes se montaban las ocho al entrar: ~34 peticiones,
+ *   ~28 al puerto de asegura, que atiende 5 a la vez, para enseñar solo «Hoy».
+ *   Excepción: Recaptación y Blog se montan siempre porque su contador entra en
+ *   «esperan tu OK» de Hoy. Coste asumido: el badge de una pestaña que aún no
+ *   se ha abierto no se pinta (no se sabe todavía), nunca un 0.
  * · El buscador y las colas de trabajo son HERMANOS de la cartera, nunca hijos:
  *   `CarteraResumen` hace `return` temprano cuando el puerto falla, y anidado
  *   ahí dentro desaparecerían justo el día que asegura no responde.
@@ -144,6 +146,11 @@ export default function CorreduriaClient() {
   const añoActual = new Date().getFullYear()
   const [año, setAño] = useState(añoActual)
   const [seccion, setSeccion] = useState<Seccion>('hoy')
+  // Secciones ya abiertas: se montan la primera vez y se quedan montadas (su estado no se pierde).
+  const [vistas, setVistas] = useState<ReadonlySet<Seccion>>(() => new Set<Seccion>(['hoy']))
+  useEffect(() => { setVistas(v => (v.has(seccion) ? v : new Set(v).add(seccion))) }, [seccion])
+  const montada = (s: Seccion) => vistas.has(s)
+  const comisionesVista = vistas.has('comisiones')
   const [filas, setFilas] = useState<Fila[]>([])
   const [pendiente, setPendiente] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -210,7 +217,7 @@ export default function CorreduriaClient() {
       .catch(e => { setError(e.message); setLoading(false) })
   }, [año])
 
-  useEffect(() => { cargarMatriz() }, [cargarMatriz])
+  useEffect(() => { if (comisionesVista) cargarMatriz() }, [cargarMatriz, comisionesVista])
 
   useEffect(() => {
     fetch('/api/correduria/cartera')
@@ -321,7 +328,7 @@ export default function CorreduriaClient() {
     textDecorationColor: 'var(--border)', textUnderlineOffset: 3,
   }
 
-  /** Una sección oculta sigue MONTADA: es de donde salen los contadores. */
+  /** Una sección ya abierta sigue MONTADA aunque se oculte: no se vuelve a pedir nada al volver. */
   const panel = (s: Seccion): React.CSSProperties => ({ display: seccion === s ? 'block' : 'none' })
 
   return (
@@ -449,7 +456,7 @@ export default function CorreduriaClient() {
           bajara el número de aquí, que es como se deja de creer un badge. Lo
           nuevo desde la última visita se marca dentro, con un punto. */}
       <div role="tabpanel" aria-label="Actividad" className="corr-panel" style={panel('actividad')}>
-        <Actividad />
+        {montada('actividad') && <Actividad />}
       </div>
 
       {/* ══ CLIENTES ═════════════════════════════════════════════════════════
@@ -457,8 +464,8 @@ export default function CorreduriaClient() {
           provincia, vencimiento o hueco de venta cruzada, y sacar la lista.
           Es la herramienta de trabajo; «Cartera» es la foto. */}
       <div role="tabpanel" aria-label="Clientes" className="corr-panel" style={panel('clientes')}>
-        <ContactosMovil />
-        <ListaCartera onContador={setNClientes} />
+        {montada('clientes') && <ContactosMovil />}
+        {montada('clientes') && <ListaCartera onContador={setNClientes} />}
 
         {/* Leads del volcado sin vencimiento, con contacto, que hoy no son
             cliente vivo por CIMA: recaptarlos es venta, no mantenimiento de
@@ -473,7 +480,7 @@ export default function CorreduriaClient() {
             (ver LeadsWebConversion.tsx). Movido de «Datos» aquí (20/09/2026):
             es un embudo COMERCIAL, no calidad de dato, y comparte pestaña con
             Recaptación por el mismo motivo que ella. */}
-        <LeadsWebConversion />
+        {montada('clientes') && <LeadsWebConversion />}
       </div>
 
       {/* ══ CARTERA ══════════════════════════════════════════════════════════ */}
@@ -494,6 +501,7 @@ export default function CorreduriaClient() {
           banco porque la matriz solo ve el ingreso (la remesa) y la cifra que
           va a la renta es el bruto. */}
       <div role="tabpanel" aria-label="Comisiones" className="corr-panel" style={panel('comisiones')}>
+        {montada('comisiones') && (<>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
           <button
             onClick={() => setAño(a => a - 1)}
@@ -610,12 +618,14 @@ export default function CorreduriaClient() {
             </div>
           )}
         </Bloque>
+        </>)}
       </div>
 
       {/* ══ DATOS ════════════════════════════════════════════════════════════
           Calidad del dato: no caduca hoy, pero decide si mañana se puede avisar
           a alguien. Fuera de «Hoy» para que no compita con lo que sí urge. */}
       <div role="tabpanel" aria-label="Datos" className="corr-panel" style={panel('datos')}>
+        {montada('datos') && (<>
         {/* Incidencias de calidad del dato (sin prima, DNI duplicado, vencida sin
             renovar, etc.): hallazgos medidos que el scanner detecta en la cartera
             en vigor. */}
@@ -651,6 +661,7 @@ export default function CorreduriaClient() {
         {/* Qué compañías reconocidas nunca han avisado de un recibo por correo
             (20/09/2026). Sin contador: es radar, no trabajo pendiente. */}
         <RadarRecibos />
+        </>)}
       </div>
 
       {/* ══ INGESTA ══════════════════════════════════════════════════════════
@@ -669,7 +680,7 @@ export default function CorreduriaClient() {
           LinkedIn (ver `secciones.ts`). */}
       <div role="tabpanel" aria-label="Redes" className="corr-panel" style={panel('redes')}>
         <Blog onContador={setNBlog} />
-        <Redes />
+        {montada('redes') && <Redes />}
       </div>
 
       {modal && (
