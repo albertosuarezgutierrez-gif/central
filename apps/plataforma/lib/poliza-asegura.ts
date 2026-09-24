@@ -7,7 +7,8 @@ import {
   type IntervinienteFicha, type ObjetoFicha, type PagoFicha, type RecibosPoliza, type MotivoFicha,
 } from './ficha-asegura.ts'
 import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
-import type { DocumentoResumen, EvolucionPrima, Retarificabilidad } from '@central/module-seguros'
+import type { DocumentoResumen, EvolucionPrima, Retarificabilidad, DatosCompaniaCima } from '@central/module-seguros'
+import { leerDatosCompaniaPuerto } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { CapitalAsegurado, DetalleCobertura } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
@@ -138,6 +139,8 @@ export type Poliza = {
    * `sin_datos`, que es «se miró y CIMA no da la anualidad anterior».
    */
   evolucionPrima: EvolucionPrima | null
+  /** Lo que la compañía dice por CIMA y no es el objeto (anulación, reemplazada, suplementos…). `null` = no consta. */
+  datosCompania: DatosCompaniaCima | null
   /**
    * «¿Merece la pena gastarse los 0,50€ en pedir precio?». `null` = la versión
    * desplegada de asegura todavía no lo manda (o llega ilegible): NO es «no hay
@@ -457,6 +460,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       retarificable: p.retarificable === true,
       retarificacion: leerRetarificacion(p.retarificacion),
       evolucionPrima: leerEvolucionPrima(p.evolucionPrima),
+      datosCompania: leerDatosCompaniaPuerto(p.datosCompania),
       estimacion: leerEstimacion(p.estimacion),
       capitalesHogar: leerCapitalesHogar(p.capitalesHogar),
       sustitucion: leerSustitucion(p.sustitucion),

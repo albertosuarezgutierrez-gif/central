@@ -76,7 +76,7 @@ export const RIESGO_HOGAR_MINIMO = ['metrosCuadrados', 'anioConstruccion', 'cp']
 function riesgoHogarCompleto(d: Record<string, unknown> | null): { ok: boolean; faltan: string[] } {
   const faltan: string[] = []
   if (!numeroPositivo(d?.metrosCuadrados)) faltan.push('m²')
-  if (!anioPlausible(d?.anioConstruccion)) faltan.push('año de construcción')
+  if (!anioPlausible(d?.anioConstruccion) && !anioPlausible(d?.anioConstruccionCima)) faltan.push('año de construcción')
   if (!cpValido(d?.cp)) faltan.push('CP')
   return { ok: faltan.length === 0, faltan }
 }
