@@ -12,6 +12,16 @@
 > `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md` (producto completo) y
 > `docs/superpowers/plans/2026-09-01-asegura-portal-fase-1.md` (lo que se construyó de verdad).
 
+## 📋 «Pendiente de ti» (24/09/2026) — una lista, arriba de «Mis seguros»
+
+`PendienteDeTi.tsx` junta lo que la correduría necesita del cliente, cada fila enlazada a donde se
+hace: **recibo devuelto** (solo de SUS pólizas en vigor) > **firma de anulación** > **datos que faltan
+para contratar** un presupuesto aceptado > **presupuesto por elegir** (hasta hoy solo se llegaba por el
+enlace del correo) > **confirmar el contacto**. Regla pura en `lib/pendiente-de-ti.ts` (+ test); los
+presupuestos salen de `presupuestosPendientesDeIdentidad()` (`lib/presupuesto.ts`, por `portal_vinculo`).
+🚨 Una fuente ilegible va a `sinComprobar` y se dice; nunca se pinta «nada pendiente». Firmar o confirmar
+en el bloque de abajo quita la fila sin recargar (evento `portal:pendiente-resuelto`).
+
 ## 🔔 Avisos por Web Push (12/09/2026) — canal nuevo, sin pasar por el email
 
 `GET /api/cron/avisos-push` (diario 08:00 UTC, `vercel.json`), hermano de
