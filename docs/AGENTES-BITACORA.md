@@ -103,6 +103,20 @@
   (`claude/buscador-ia-2026-09-14`).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
+- **2026-09-24 · mercado-booking** · hizo: pasada diaria completa — 24 ventanas de mercado (todas
+  las pedidas por el plan, tope max=24 de 512 candidatas/488 recortadas), 240 comps reales
+  escritos con `number_of_adults`=aforo por ventana, 0 sin respuesta, 0 anuncios propios
+  detectados entre los resultados de mercado; 0/4 ventanas de escaparate propio medidas (busto_reform,
+  duplex_center, luxury_busto, house_sevillana) — las 4 devolvieron `hotel_names_no_availability`
+  del conector para 2026-09-25→27, contado como hueco genuino, no como fallo de la rutina; latido
+  `ok:false` a propósito (regla del SKILL: escaparate sin medir siempre baja el latido, aunque el
+  mercado saliera perfecto). Avisos que trae el plan y no corresponde arreglar aquí (solo mido): 1
+  mes sin bucket elegible (2026-09, <3 fechas medidas) y 31 fechas de evento confirmado con corpus
+  caducado por antelación. dudas: si Booking sigue sin disponibilidad para esas fechas varios días
+  seguidos, el ajuste de channel_markup/cuota_fija se queda con parámetros viejos indefinidamente —
+  para tu decisión si hace falta revisar el `nombre_portal` o las fechas de refresco del
+  escaparate; fallos: —; PRs/commits: — (solo escritura en `market_rates` vía API, sin cambio de
+  código).
 - **2026-09-22 · mercado-booking** · hizo: pasada diaria completa — 24 ventanas de mercado (todas
   las pedidas por el plan, tope max=24 de 516 candidatas/492 recortadas), 232 comps reales
   escritos con `number_of_adults`=aforo por ventana; 3/4 ventanas de escaparate propio medidas
