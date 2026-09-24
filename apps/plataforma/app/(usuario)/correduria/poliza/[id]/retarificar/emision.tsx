@@ -21,6 +21,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
 import { pedirOferta, pedirEmision, pedirCatalogo } from './acciones'
+import { ProductFormWidget } from './ProductFormWidget'
 import type { AvisoCuenta, CuentaConocida, Opcion, SolicitudEmisionVista } from '@/lib/retarificar-asegura'
 
 type EstadoPanel =
@@ -39,6 +40,10 @@ type EstadoPanel =
       // enseña ANTES de emitir y no viaja sin confirmarla (Alberto, 12/09/2026).
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
+      /** El `mainQuote` del vendor, sin parsear — lo pinta el widget de la
+       *  Product Form Library (`ProductFormWidget`). `null` = asegura no lo
+       *  trajo (respuesta vieja, o el vendor no lo devolvió). */
+      quoteCrudo: unknown
     }
   | { paso: 'emitiendo' }
   | {
@@ -84,6 +89,16 @@ type EstadoPanel =
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
     }
+  /**
+   * La compañía pide, al confirmar el precio, un campo de SU FORMULARIO
+   * (`product.options` del ReRate: vehículo/producto, no la persona) que el
+   * proyecto no trae — visto real con Occident (leasing/renting, tipo de
+   * adquisición). DISTINTO de `faltan_vendor`: aquí no hay un valor suelto
+   * que teclear, se ofrece el Product Form Library del vendor
+   * (`ProductFormWidget`) montado sobre el `quoteCrudo` de ESTE precio
+   * (antes de que exista ninguna oferta confirmada).
+   */
+  | { paso: 'faltan_producto'; campos: string[]; quoteCrudo: unknown; mensaje: string }
   /** `reintento`: con qué volver a llamar a asegura (sin confirmar) para que
    *  enseñe el estado del proyecto en vez de mandar al ReRate. */
   | {
@@ -254,6 +269,25 @@ export function Emision({
   // `payment.bankAccount.iban`. Nunca se inventa ni viaja sin confirmar.
   const [iban, setIban] = useState('')
   const [cuentaOk, setCuentaOk] = useState(false)
+  // 17/09/2026: Alberto — `insuredFamilyInAllianz` no es un consentimiento a
+  // secas, lleva descuento (bonificación de cartera). Por defecto sigue en
+  // `false` en asegura (no se inventa un ahorro sin comprobarlo); esta caja
+  // es la única forma de decirlo cuando el corredor SÍ lo sabe.
+  const [familiaAllianz, setFamiliaAllianz] = useState(false)
+  const esAllianz = compania.trim().toLowerCase().includes('allianz')
+  // Lo que el corredor ha guardado del widget de la Product Form Library (el
+  // formulario REAL de la compañía, ver `ProductFormWidget`). `null` mientras
+  // no se pulse «Guardar»: sin esto no se manda ningún `product.options`
+  // inventado — se deja que `conProductoPorDefecto` (asegura) decida, igual
+  // que hasta ahora.
+  const [productOptions, setProductOptions] = useState<unknown[] | null>(null)
+  const [avisoProductForm, setAvisoProductForm] = useState<string | null>(null)
+  // Lo mismo que arriba, pero para el paso ANTERIOR (`faltan_producto` del
+  // ReRate) — estados separados porque son dos formularios de la Product
+  // Form Library sobre dos `quote` distintos (antes y después de confirmar
+  // el precio) y no se pueden confundir.
+  const [productOptionsRerate, setProductOptionsRerate] = useState<unknown[] | null>(null)
+  const [avisoProductFormRerate, setAvisoProductFormRerate] = useState<string | null>(null)
 
   // Catálogos de `faltan_vendor` (ver `CATALOGO_DE_CAMPO`): se piden UNA vez
   // por campo —gratis, con el interruptor apagado— y se pintan como
@@ -303,7 +337,7 @@ export function Emision({
     for (const campo of pendientes) void pedirCatalogoCampo(campo)
   }, [estado])
 
-  async function confirmarPrecio(conCorrecciones?: Record<string, string>) {
+  async function confirmarPrecio(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
     setEstado({ paso: 'confirmando' })
     const limpias = Object.fromEntries(
       Object.entries(conCorrecciones ?? {}).filter(([, v]) => typeof v === 'string' && v.trim() !== ''),
@@ -313,6 +347,7 @@ export function Emision({
       compania,
       categoria,
       ...(Object.keys(limpias).length > 0 ? { correcciones: limpias } : {}),
+      ...(conProductOptions ? { productOptions: conProductOptions } : {}),
     })
     if (r.estado === 'ok') {
       setEstado({
@@ -325,9 +360,13 @@ export function Emision({
         projectId: r.projectId,
         cuenta: r.cuenta,
         cuentaAviso: r.cuentaAviso,
+        quoteCrudo: r.quoteCrudo,
       })
       // Una oferta nueva puede traer otra cuenta: la confirmación anterior no vale.
       setCuentaOk(false)
+      // Y otro `quote`: lo que se hubiera guardado del formulario anterior ya no es de esta oferta.
+      setProductOptions(null)
+      setAvisoProductForm(null)
       return
     }
     if (r.estado === 'faltan_vendor') {
@@ -339,6 +378,19 @@ export function Emision({
         faltan: r.faltan,
         sugeridos: r.sugeridos,
         noReconocidos: r.noReconocidos,
+        mensaje: r.mensaje,
+      })
+      return
+    }
+    if (r.estado === 'faltan_producto') {
+      // Es un formulario nuevo (quote distinto al de la vuelta anterior, si
+      // la hubo): lo guardado antes ya no vale.
+      setProductOptionsRerate(null)
+      setAvisoProductFormRerate(null)
+      setEstado({
+        paso: 'faltan_producto',
+        campos: r.campos,
+        quoteCrudo: r.quoteCrudo,
         mensaje: r.mensaje,
       })
       return
@@ -368,6 +420,37 @@ export function Emision({
       setEstado({ paso: 'error', mensaje: 'Los campos adicionales no son un JSON válido.' })
       return
     }
+    const yaTraeProduct = typeof campos.product === 'object' && campos.product !== null
+    // Si el JSON avanzado ya trae `product`, asegura lo respeta tal cual y la
+    // casilla de familia en Allianz no tiene ningún efecto (`conProductoPorDefecto`
+    // nunca pisa un `product` puesto a mano) — se avisa ANTES de emitir en vez de
+    // dejar creer que se ha pedido un descuento que no se ha pedido.
+    if (esAllianz && familiaAllianz && yaTraeProduct) {
+      setEstado({
+        paso: 'error',
+        mensaje:
+          'Los "Campos adicionales" ya traen un `product` propio: la casilla de familia en Allianz no ' +
+          'tiene efecto sobre él (asegura respeta el JSON avanzado tal cual). Quita esa clave del JSON o ' +
+          'añade `insuredFamilyInAllianz: true` a mano dentro de su `options`.',
+      })
+      return
+    }
+    // Lo mismo con lo guardado del formulario de la compañía (Product Form
+    // Library): si el JSON avanzado ya trae `product`, manda él — nunca se
+    // pisa lo que el corredor ha tecleado a mano.
+    if (productOptions !== null && yaTraeProduct) {
+      setEstado({
+        paso: 'error',
+        mensaje:
+          'Los "Campos adicionales" ya traen un `product` propio: lo guardado del formulario de la ' +
+          'compañía no se va a mandar (asegura respeta el JSON avanzado tal cual). Quita esa clave del ' +
+          'JSON si quieres que se use lo del formulario.',
+      })
+      return
+    }
+    if (productOptions !== null && !yaTraeProduct) {
+      campos = { ...campos, product: { options: productOptions } }
+    }
     const otraCuenta = iban.trim() !== ''
     if (otraCuenta) campos = { ...campos, iban: iban.trim() }
     // La máscara que el corredor ha visto y marcado: es lo ÚNICO que autoriza a
@@ -381,6 +464,7 @@ export function Emision({
       cuentaConfirmada,
       reintentoConfirmado: opciones.reintentoConfirmado === true,
       acunarExistente: opciones.acunarExistente === true,
+      familiaEnAllianz: esAllianz && familiaAllianz,
     })
     if (r.estado === 'reintento_sin_confirmar') {
       setEstado({
@@ -483,6 +567,52 @@ export function Emision({
       )}
 
       {estado.paso === 'confirmando' && <p style={{ marginTop: 14 }}>Confirmando con la compañía…</p>}
+
+      {estado.paso === 'faltan_producto' && (
+        <div style={{ marginTop: 14 }}>
+          <p className="err" style={{ margin: 0 }}>
+            {compania || 'La compañía'} pide{' '}
+            {estado.campos.length === 1 ? 'un dato de su formulario' : `${estado.campos.length} datos de su formulario`}{' '}
+            para confirmar el precio. No se ha gastado nada.
+          </p>
+          <ul style={{ margin: '6px 0 10px', paddingLeft: 20, fontSize: 13 }}>
+            {estado.campos.map((c) => (
+              <li key={c}>{c}</li>
+            ))}
+          </ul>
+          <p className="muted" style={{ margin: '0 0 10px', fontSize: 12 }}>
+            No es un campo nuestro que se pueda teclear a ciegas: es el formulario REAL de{' '}
+            {compania || 'la compañía'}, servido por Codeoscopic. Rellénalo y pulsa «Guardar», y se
+            reintenta el precio con esas opciones.
+          </p>
+          <ProductFormWidget
+            quoteCrudo={estado.quoteCrudo}
+            onOptions={(opciones, aviso) => {
+              setProductOptionsRerate(opciones)
+              setAvisoProductFormRerate(aviso)
+            }}
+          />
+          {productOptionsRerate !== null && (
+            <p className="ok" style={{ fontSize: 12, margin: '6px 0 0' }}>
+              ✅ {productOptionsRerate.length} opción(es) guardada(s) — pulsa «Reintentar» para confirmar el precio.
+            </p>
+          )}
+          {avisoProductFormRerate && (
+            <p className="err" style={{ fontSize: 12, margin: '6px 0 0' }}>
+              El formulario no ha dado un resultado válido: {avisoProductFormRerate}
+            </p>
+          )}
+          <button
+            type="button"
+            className="primary"
+            disabled={productOptionsRerate === null}
+            onClick={() => confirmarPrecio(undefined, productOptionsRerate ?? undefined)}
+            style={{ marginTop: 10 }}
+          >
+            Reintentar con esas opciones
+          </button>
+        </div>
+      )}
 
       {estado.paso === 'faltan_vendor' && (
         <div style={{ marginTop: 14 }}>
@@ -665,6 +795,46 @@ export function Emision({
             iban={iban}
             onIban={setIban}
           />
+          {esAllianz && (
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, minHeight: 44 }}>
+              <input
+                type="checkbox"
+                checked={familiaAllianz}
+                onChange={(e) => setFamiliaAllianz(e.target.checked)}
+              />
+              <span style={{ fontSize: 13 }}>
+                El tomador ya tiene familiares asegurados en Allianz (aplica el descuento)
+              </span>
+            </label>
+          )}
+
+          <div style={{ marginTop: 12 }}>
+            <p style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>
+              Formulario de {compania || 'la compañía'} (consentimientos para emitir)
+            </p>
+            <p className="muted" style={{ margin: '2px 0 8px', fontSize: 12 }}>
+              Es el formulario REAL de la compañía, servido por Codeoscopic — no una lista adivinada.
+              Rellénalo y pulsa «Guardar»; si no aplica nada, se puede emitir sin tocarlo.
+            </p>
+            <ProductFormWidget
+              quoteCrudo={estado.quoteCrudo}
+              onOptions={(opciones, aviso) => {
+                setProductOptions(opciones)
+                setAvisoProductForm(aviso)
+              }}
+            />
+            {productOptions !== null && (
+              <p className="ok" style={{ fontSize: 12, margin: '6px 0 0' }}>
+                ✅ {productOptions.length} opción(es) guardada(s) del formulario — se mandan con la emisión.
+              </p>
+            )}
+            {avisoProductForm && (
+              <p className="err" style={{ fontSize: 12, margin: '6px 0 0' }}>
+                El formulario no ha dado un resultado válido: {avisoProductForm}
+              </p>
+            )}
+          </div>
+
           <details style={{ marginTop: 8 }}>
             <summary className="muted" style={{ cursor: 'pointer' }}>
               Campos adicionales (avanzado, opcional)

@@ -10,8 +10,10 @@
 // arreglan en sitios distintos — un recuadro que solo dice «sin respuesta»
 // obliga a adivinar cuál de los tres es (pasó el 31/08/2026).
 
-import type { ObjetoAsegurado } from '@central/module-seguros'
-import { interpretarContacto, type Contacto } from './correduria-puerto.ts'
+import type { ObjetoAsegurado, Retarificabilidad } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
+import { interpretarContacto, leerTruncado, type Contacto } from './correduria-puerto.ts'
+import { leerRetarificacion } from './ficha-asegura.ts'
 
 export type MotivoErrorCartera =
   | 'secreto_rechazado'   // asegura devolvió 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
@@ -94,7 +96,7 @@ export async function carteraAsegura(): Promise<CarteraAsegura> {
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/resumen`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     const json = await res.json().catch(() => null)
@@ -140,6 +142,13 @@ export type PolizaVencimiento = {
    */
   objeto: ObjetoAsegurado | null
   /**
+   * El veredicto de retarificar, o `null` si la versión desplegada de asegura
+   * todavía no lo manda. Misma pieza que `leerRetarificacion` de `ficha-asegura.ts`
+   * (ficha del cliente y de la póliza): un `null` aquí NO pinta «no se puede»,
+   * deja el botón sin ofrecer hasta que se sepa.
+   */
+  retarificacion: Retarificabilidad | null
+  /**
    * Teléfono y email del tomador, para llamar desde la propia lista: esta tabla
    * existe justo para eso (medido el 05/09/2026: de las 15 fichas que vencen en
    * 90 días, 9 tienen teléfono y 8 email).
@@ -150,6 +159,18 @@ export type PolizaVencimiento = {
    * «está guardado y la clave PII no lo abre» — que se arregla en otro sitio.
    */
   contacto: Contacto | null
+  /**
+   * Cuándo se abrió por última vez el WhatsApp de renovación de esta póliza
+   * (ISO `yyyy-mm-dd`). `null` = nunca se registró un contacto (o la versión
+   * desplegada de asegura todavía no manda el campo) — los dos casos se
+   * tratan igual aquí: no ofrecer el badge, nunca inventar una fecha.
+   */
+  ultimoContactoEn: string | null
+  /**
+   * `YYYY-MM-DD` del último fichero de CIMA de la compañía de la póliza.
+   * `null` = no se sabe (asegura vieja, sin código DGS o consulta caída).
+   */
+  ultimoFicheroCompania: string | null
 }
 
 const ESTADOS_OBJETO = new Set(['conocido', 'no_informado', 'cifrado', 'sin_objeto'])
@@ -172,7 +193,39 @@ export function interpretarObjeto(v: unknown): ObjetoAsegurado | null {
 export type VencimientosAsegura =
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: MotivoErrorCartera; causa?: string }
-  | { estado: 'ok'; dias: number; polizas: PolizaVencimiento[] }
+  | {
+      estado: 'ok'
+      dias: number
+      polizas: PolizaVencimiento[]
+      /**
+       * La criba de asegura tocó su techo: hay MÁS pólizas que renovar en la
+       * ventana de las que trae esta lista.
+       *
+       * 🚨 `null` = asegura (versión desplegada más vieja) no manda el campo, y
+       * eso NO es `false`. Una lista de renovaciones recortada en silencio es
+       * una lista de llamadas que no se hacen, sobre pólizas que se prorrogan
+       * solas pasado el preaviso del art. 22 LCS. Mismo criterio que
+       * `ilegibles` en `lib/comisiones-asegura.ts`.
+       */
+      truncado: boolean | null
+      /**
+       * Pólizas de la cartera viva que figuran VIGENTES con un vencimiento
+       * anterior a la ventana de recuperación. No son trabajo de hoy, pero son
+       * dato a depurar y la pantalla las declara en vez de esconderlas.
+       *
+       * 🚨 `null` = no se ha podido contar (o asegura no lo manda), NUNCA 0.
+       * Un 0 afirmaría que la cartera está limpia.
+       *
+       * 🚨 Hasta el 20/09/2026 este campo y `diasAtras` LLEGABAN del puerto y
+       * este lector no los leía, así que el pie de la pantalla decía siempre
+       * «asegura no lo informa» sobre un dato que estaba ahí. Cuatro líneas de
+       * passthrough que faltaban: el cepo de abajo las fija.
+       */
+      vencidasAntiguas: number | null
+      /** El borde IZQUIERDO de la ventana, en días. Sin él el pie no puede
+       *  decir desde cuándo cuenta lo de arriba. `null` = no informado. */
+      diasAtras: number | null
+    }
 
 /** Interpretación PURA de la respuesta del puerto de vencimientos.
  *  Una fila con forma inesperada invalida la lista entera: media lista de
@@ -209,14 +262,29 @@ export function interpretarVencimientos(status: number, json: unknown): Vencimie
       prima: typeof f.prima === 'number' && Number.isFinite(f.prima) ? f.prima : null,
       fraccionamiento: typeof f.fraccionamiento === 'string' ? f.fraccionamiento : null,
       objeto: interpretarObjeto(f.objeto),
+      retarificacion: leerRetarificacion(f.retarificacion),
       // Mismo normalizador que el buscador y la cola de retención: dos lecturas
       // del mismo bloque harían que el icono saliera en una pantalla y no en
       // otra para el MISMO cliente.
       contacto: interpretarContacto(f.contacto),
+      ultimoContactoEn: typeof f.ultimoContactoEn === 'string' && f.ultimoContactoEn !== '' ? f.ultimoContactoEn : null,
+      ultimoFicheroCompania: typeof f.ultimoFicheroCompania === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.ultimoFicheroCompania)
+        ? f.ultimoFicheroCompania : null,
     })
   }
   const dias = typeof r.dias === 'number' && Number.isFinite(r.dias) ? r.dias : 90
-  return { estado: 'ok', dias, polizas }
+  // Sin `?? 0`: los dos son «no se sabe» cuando no vienen. Colapsarlos a 0
+  // diría «no queda ninguna vencida antigua», que es justo lo contrario.
+  const entero = (v: unknown): number | null =>
+    typeof v === 'number' && Number.isFinite(v) ? v : null
+  return {
+    estado: 'ok',
+    dias,
+    polizas,
+    truncado: leerTruncado(r.truncado),
+    vencidasAntiguas: entero(r.vencidasAntiguas),
+    diasAtras: entero(r.diasAtras),
+  }
 }
 
 export async function vencimientosAsegura(dias = 90): Promise<VencimientosAsegura> {
@@ -224,7 +292,7 @@ export async function vencimientosAsegura(dias = 90): Promise<VencimientosAsegur
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/vencimientos?dias=${dias}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     const json = await res.json().catch(() => null)
@@ -300,7 +368,7 @@ export async function declaradasVencerAsegura(dias = 60): Promise<DeclaradasVenc
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/declaradas-vencer?dias=${dias}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     const json = await res.json().catch(() => null)

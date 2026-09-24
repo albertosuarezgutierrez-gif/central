@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { cuentaDeFicha, describirOrigenCuenta } from '@/lib/codeoscopic/cuenta-ficha'
 import { ibanEnmascarado } from '@/lib/codeoscopic/emitir-iban'
@@ -16,13 +17,18 @@ import {
 import { opcionesPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import {
   interpretarError400,
+  interpretarCamposProducto,
+  lineasDelVendor,
   reparosDe,
   esCampoPersona,
   type CampoPersona,
+  type CampoProducto,
 } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
+import { conLibroDeEmision, type GastoEmision } from '@/lib/codeoscopic/libro-emision'
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada } from '@/lib/codeoscopic/fecha-efecto'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -50,7 +56,7 @@ export const maxDuration = 60
  * QUÉ precio de esa cotización se confirma (p. ej. «Allianz» / «Terceros
  * Ampliado»), tal y como se enseñaron en la tabla de precios.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -100,6 +106,20 @@ export async function POST(req: Request) {
   }
   const correcciones = lectura.valores
 
+  // Lo que el corredor ha rellenado en el Product Form Library del vendor
+  // (`ProductFormWidget`, montado sobre `precio.quoteCrudo`) tras un
+  // `faltan_producto` anterior — el `product.options` REAL del ReRate, para
+  // cualquier compañía. Sustituye ENTERO a `opcionesPorDefecto(compania)`
+  // cuando llega: es más de fiar que el catálogo estático (solo Allianz, y
+  // adivinado tras 3 errores reales) porque sale del formulario oficial.
+  // Se reenvía TAL CUAL, sin interpretar su forma (igual que `productOptions`
+  // en `respuesta.ts`): es Codeoscopic quien decide qué lleva cada opción.
+  const productOptionsCorredor = Array.isArray(cuerpo.productOptions) ? cuerpo.productOptions : undefined
+
+  // Quién pide el ReRate, para poder explicar la factura línea a línea (igual
+  // que `solicitadoPor` en `cotizar()`).
+  const actor = cadena(cuerpo.actor) ?? 'plataforma'
+
   const filas = await prisma.$queryRaw<
     {
       correduria_id: string
@@ -117,7 +137,11 @@ export async function POST(req: Request) {
     where t.id = ${tarificacionId}::uuid and t.simulado = false
   `
   const t = filas[0]
-  if (!t || !t.project_id_codeoscopic) {
+  // Se captura en una const: `projectId` es una propiedad
+  // mutable y TypeScript pierde el estrechamiento dentro de los callbacks que
+  // usa el embudo del libro.
+  const projectId = t?.project_id_codeoscopic ?? null
+  if (!t || !projectId) {
     return NextResponse.json(
       {
         estado: 'error',
@@ -144,7 +168,7 @@ export async function POST(req: Request) {
     // GRATIS: recupera el `id` real del precio (el vendor no lo devuelve al
     // guardar la cotización en nuestra BD, solo el precio en euros) y de paso
     // el `insuranceLine` que exige el PATCH de abajo.
-    let cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
+    let cotizacion = await refrescarProyecto(r.config, projectId)
 
     // ── Fecha de efecto ya PASADA (13/09/2026, décimo 400 real) ────────────
     // El proyecto 40685666 se cotizó el 12/09 con efecto 12/09; al día
@@ -160,11 +184,11 @@ export async function POST(req: Request) {
         {
           estado: 'error',
           causa: 'faltan_vendor',
-          projectId: t.project_id_codeoscopic,
+          projectId: projectId,
           faltan: [reparoFechaCaducada(cotizacion.fechaEfecto!)],
           sugeridos: {},
           noReconocidos: [],
-          mensaje: mensajeFechaCaducada(cotizacion.fechaEfecto!, t.project_id_codeoscopic),
+          mensaje: mensajeFechaCaducada(cotizacion.fechaEfecto!, projectId),
         },
         { status: 422 },
       )
@@ -187,7 +211,7 @@ export async function POST(req: Request) {
       // se relee del proyecto, nunca se supone por ramo.
       await actualizarFechaEfecto(
         r.config,
-        t.project_id_codeoscopic,
+        projectId,
         fechaEfectoCorregida,
         cotizacion.insuranceLineId,
       )
@@ -200,7 +224,7 @@ export async function POST(req: Request) {
       // se re-tarificaba una cotización ya invalidada. Se relee (GRATIS,
       // sigue siendo un `GET`) para que `encontrarPrecio` casé sobre el
       // proyecto YA corregido.
-      cotizacion = await refrescarProyecto(r.config, t.project_id_codeoscopic)
+      cotizacion = await refrescarProyecto(r.config, projectId)
       console.log(
         `[oferta] fechaEfecto del proyecto tras PATCH+reread: ${cotizacion.fechaEfecto ?? '(el vendor no la trae)'}`,
       )
@@ -218,7 +242,7 @@ export async function POST(req: Request) {
       // sirve de nada (haría falta re-cotizar de cero, con coste real).
       if (cotizacion.fechaEfecto !== fechaEfectoCorregida) {
         await new Promise((resolve) => setTimeout(resolve, 2500))
-        const relectura = await refrescarProyecto(r.config, t.project_id_codeoscopic)
+        const relectura = await refrescarProyecto(r.config, projectId)
         console.log(
           `[oferta] fechaEfecto tras una 2ª relectura (+2,5s): ${relectura.fechaEfecto ?? '(el vendor no la trae)'}`,
         )
@@ -234,7 +258,7 @@ export async function POST(req: Request) {
     // un bucle sin salida.
     const aplicados = new Set<CampoPersona>()
     if (Object.keys(correcciones).length > 0) {
-      const c = await completarPersonas(r.config, t.project_id_codeoscopic, correcciones)
+      const c = await completarPersonas(r.config, projectId, correcciones)
       if (c.estado === 'no_aplicado') return respuestaNoAplicado(c)
       cotizacion = c.cotizacion
       for (const k of Object.keys(correcciones) as CampoPersona[]) aplicados.add(k)
@@ -256,7 +280,7 @@ export async function POST(req: Request) {
           {
             estado: 'error',
             causa: 'otro',
-            mensaje: `el proyecto ${t.project_id_codeoscopic} ya no trae un precio de «${compania}» / «${categoria}» — puede haber caducado`,
+            mensaje: `el proyecto ${projectId} ya no trae un precio de «${compania}» / «${categoria}» — puede haber caducado`,
           },
           { status: 404 },
         )
@@ -264,23 +288,60 @@ export async function POST(req: Request) {
 
       try {
         // El vendor nunca devuelve `product.options` al cotizar (ver
-        // `Precio.productOptions`), así que casi siempre hay que rellenarlas con
-        // el catálogo estático por defecto — hoy solo cubre Allianz auto, ver
-        // `opciones-producto.ts`. Para el resto sigue mandándose `[]` (dentro de
-        // `reRate`) hasta que un 400 real diga qué le hace falta.
-        oferta = await reRate(
-          r.config,
-          t.project_id_codeoscopic,
-          precio.id,
-          precio.productId,
-          precio.productOptions ?? opcionesPorDefecto(compania),
+        // `Precio.productOptions`). Orden de preferencia: lo que el corredor
+        // ha rellenado en el Product Form Library (el formulario REAL de la
+        // compañía, para cualquiera) > lo que el propio precio ya trajera >
+        // el catálogo estático por defecto (hoy solo Allianz auto, adivinado
+        // tras 3 errores reales — ver `opciones-producto.ts`). Para el resto
+        // sigue mandándose `[]` (dentro de `reRate`) hasta que un 400 real
+        // diga qué le hace falta.
+        //
+        // 🚨 21/09/2026: el ReRate abre su PROPIA línea en
+        // `seguros.codeoscopic_consumo` (`motivo: 'rerate'`). Hasta hoy no
+        // escribía ninguna, así que `puedeCotizar()` no lo veía y el tope no
+        // lo contaba — y el CRM de Manuel trata esta llamada como facturable y
+        // `noRetry`. El coste va en una env y arranca en 0 (no está confirmado
+        // que facture), pero la LÍNEA se abre igual: lo conservador es contarla.
+        // Un 400 del vendor es `pruebaQueNoHuboCargo` y el embudo la descarta
+        // con evidencia; un 5xx o un corte se quedan contados.
+        const gasto = await conLibroDeEmision(
+          { correduriaId: t.correduria_id, operacion: 'rerate', solicitadoPor: actor, projectId },
+          () =>
+            reRate(
+              r.config,
+              projectId,
+              precio.id,
+              precio.productId,
+              productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania, t.producto),
+            ),
         )
+        if (!gasto.ok) return respuestaGastoBloqueado(gasto)
+        oferta = gasto.valor
       } catch (e) {
         if (!(e instanceof ErrorCodeoscopic) || e.clase !== 'validacion') throw e
         const interp = interpretarError400(e.detalle)
-        // Nada que reparar (ninguna línea se reconoce): sale como fallo del
-        // vendor, con el texto entero, igual que hasta hoy.
-        if (interp.campos.length === 0) throw e
+        // Nada que reparar como campo de PERSONA. Antes de rendirse, ¿es un
+        // hueco de `product.options` (formulario de la compañía, no de la
+        // persona)? Si el corredor YA mandó unas opciones y el vendor las
+        // sigue rechazando, no se vuelve a ofrecer el mismo formulario en
+        // bucle: sale como fallo del vendor, igual que hasta hoy.
+        if (interp.campos.length === 0) {
+          const deProducto = productOptionsCorredor ? [] : interpretarCamposProducto(interp.lineas)
+          if (deProducto.length > 0) {
+            await registrarFaltaProducto(t.correduria_id, tarificacionId, deProducto)
+            return NextResponse.json(
+              {
+                estado: 'faltan_producto',
+                projectId: projectId,
+                campos: deProducto.map((c) => c.campo),
+                quoteCrudo: precio.quoteCrudo,
+                mensaje: deProducto.map((c) => c.texto).join('\n'),
+              },
+              { status: 422 },
+            )
+          }
+          throw e
+        }
 
         const pedidos = interp.campos.map((c) => c.campo).filter(esCampoPersona)
         const yaEscritos = pedidos.filter((c) => aplicados.has(c))
@@ -294,7 +355,7 @@ export async function POST(req: Request) {
           return NextResponse.json(
             {
               estado: 'faltan_vendor',
-              projectId: t.project_id_codeoscopic,
+              projectId: projectId,
               faltan: reparosDe(interp),
               sugeridos: deFicha,
               noReconocidos: interp.noReconocidos,
@@ -305,7 +366,7 @@ export async function POST(req: Request) {
         }
 
         reparadoDesdeFicha = true
-        const c = await completarPersonas(r.config, t.project_id_codeoscopic, deFicha)
+        const c = await completarPersonas(r.config, projectId, deFicha)
         if (c.estado === 'no_aplicado') return respuestaNoAplicado(c)
         cotizacion = c.cotizacion
         for (const k of Object.keys(deFicha) as CampoPersona[]) aplicados.add(k)
@@ -330,7 +391,7 @@ export async function POST(req: Request) {
         set poliza_id = null
         where correduria_id = ${t.correduria_id}::uuid
           and poliza_id = ${t.poliza_id}::uuid
-          and project_id_codeoscopic <> ${t.project_id_codeoscopic}
+          and project_id_codeoscopic <> ${projectId}
           and estado <> 'emitida'
       `
     }
@@ -351,7 +412,7 @@ export async function POST(req: Request) {
         correduria_id, project_id_codeoscopic, producto, poliza_id, aseguradora,
         accepted_offer_id_codeoscopic, estado
       ) values (
-        ${t.correduria_id}::uuid, ${t.project_id_codeoscopic}, ${t.producto ?? 'auto'}::tipo_seguro,
+        ${t.correduria_id}::uuid, ${projectId}, ${t.producto ?? 'auto'}::tipo_seguro,
         ${t.poliza_id}::uuid, ${compania}, ${oferta.offerId}, 'preemision'
       )
       on conflict (correduria_id, project_id_codeoscopic) do update
@@ -370,7 +431,7 @@ export async function POST(req: Request) {
     const cuenta = await cuentaDeFicha(t.correduria_id, t.poliza_id, t.cliente_id)
     return NextResponse.json({
       estado: 'ok',
-      projectId: t.project_id_codeoscopic,
+      projectId: projectId,
       oferta,
       // TRES formas, no dos: la cuenta (enmascarada) · un aviso de por qué no
       // hay una utilizable (`ilegible` / `invalida` / `no_comprobada`) · null =
@@ -383,8 +444,18 @@ export async function POST(req: Request) {
     })
   } catch (e) {
     if (e instanceof ErrorCodeoscopic) {
+      // El corredor no tiene que leer JSON: si el vendor trae un `message`
+      // legible (aunque sea un rechazo de negocio sin campo que rellenar,
+      // como «Reale: NO SE PERMITEN POLIZAS CON MALUS»), se enseña ESE texto
+      // en vez del `codeoscopic_validacion: {...}` recortado a 300 caracteres.
+      const lineas = lineasDelVendor(e.message)
       return NextResponse.json(
-        { estado: 'error', causa: 'vendor', clase: e.clase, mensaje: e.message },
+        {
+          estado: 'error',
+          causa: 'vendor',
+          clase: e.clase,
+          mensaje: lineas.length > 0 ? lineas.join(' · ') : e.message,
+        },
         { status: 502 },
       )
     }
@@ -393,10 +464,35 @@ export async function POST(req: Request) {
       { status: 500 },
     )
   }
-}
+})
 
 function cadena(v: unknown): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+/**
+ * El libro dijo que no. **Sin llamada al vendor**, y por eso se contesta con
+ * dos códigos distintos: se arreglan en sitios distintos.
+ *
+ * - `sin_libro` (503): no se ha podido leer `codeoscopic_consumo`. Es una
+ *   avería nuestra y es fail-closed a propósito — un tope que no se puede
+ *   comprobar no es un tope, y reintentar no lo arregla.
+ * - `tope` (429): se ha llegado al límite de ReRates. Se sube la env o se
+ *   espera; el precio sigue ahí.
+ *
+ * En los dos casos la frase dice que NO se ha confirmado nada con la compañía:
+ * dejar la duda abierta mandaría al corredor a mirar el proyecto en Avant2 sin
+ * motivo.
+ */
+function respuestaGastoBloqueado(gasto: Extract<GastoEmision<never>, { ok: false }>) {
+  return NextResponse.json(
+    {
+      estado: 'error',
+      causa: gasto.razon === 'tope' ? 'tope' : 'sin_libro',
+      mensaje: `${gasto.mensaje} NO se ha llamado a la compañía: el precio no se ha confirmado.`,
+    },
+    { status: gasto.razon === 'tope' ? 429 : 503 },
+  )
 }
 
 /**
@@ -455,6 +551,37 @@ function respuestaSigueFaltando(campos: CampoPersona[], mensajeVendor: string) {
     },
     { status: 409 },
   )
+}
+
+/**
+ * Telemetría de `faltan_producto` por COMPAÑÍA (20/09/2026): saber a qué
+ * compañías les falta cobertura del Product Form Library, no solo que
+ * «alguna vez pasa». Reutiliza `seguros.operational_events` (genérica, ya
+ * escrita por la ingesta de CIMA con `cima_pull_started/completed` y por el
+ * webhook con `codeoscopic_webhook_invalid_payload`): no hace falta tabla ni
+ * migración nueva. `source_event_id` es un UUID por llamada, no por
+ * proyecto — el mismo proyecto puede repetir el mismo hueco.
+ *
+ * 🚨 Best-effort a propósito: un fallo al escribir la telemetría NUNCA puede
+ * tirar el 422 que el corredor está esperando. Si falla, se traga en
+ * silencio (no hay canal de aviso para "no se pudo contar una métrica").
+ */
+async function registrarFaltaProducto(correduriaId: string, tarificacionId: string, campos: CampoProducto[]) {
+  try {
+    await prisma.$executeRaw`
+      insert into operational_events (
+        event_name, source, source_event_id, correduria_id, cotizacion_id,
+        missing_fields_count, payload
+      ) values (
+        'codeoscopic_oferta_faltan_producto', 'codeoscopic-oferta', ${randomUUID()},
+        ${correduriaId}::uuid, ${tarificacionId}::uuid, ${campos.length},
+        ${JSON.stringify({ compania: campos[0]?.compania ?? null, campos: campos.map((c) => c.campo) })}::jsonb
+      )
+    `
+  } catch {
+    // No bloquea nunca la respuesta al corredor. Sin canal de aviso: es una
+    // métrica, no una operación de negocio.
+  }
 }
 
 function respuestaNoAplicado(c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>) {

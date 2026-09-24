@@ -220,7 +220,9 @@ test('🚨 un veredicto con basura degrada a null, nunca a un objeto a medias', 
   assert.equal(leerRetarificacion('sí'), null)
   assert.equal(leerRetarificacion({ ramo: 'vida', retarificable: true, motivo: null, fuente: 'poliza' }), null)
   assert.equal(leerRetarificacion({ ramo: 'auto', retarificable: 'true', motivo: null, fuente: 'poliza' }), null)
-  assert.equal(leerRetarificacion({ ramo: 'auto', retarificable: true, motivo: null, fuente: 'catastro' }), null)
+  assert.equal(leerRetarificacion({ ramo: 'auto', retarificable: true, motivo: null, fuente: 'inventada' }), null)
+  // 'catastro' SÍ es fuente válida desde el 23/09/2026: hogar con la referencia catastral guardada.
+  assert.equal(leerRetarificacion({ ramo: 'hogar', retarificable: true, motivo: null, fuente: 'catastro' })?.fuente, 'catastro')
   assert.equal(leerRetarificacion({ ramo: 'auto', retarificable: true, motivo: 42, fuente: 'poliza' }), null)
   assert.equal(leerRetarificacion({}), null)
   const r = interpretarFicha(200, {

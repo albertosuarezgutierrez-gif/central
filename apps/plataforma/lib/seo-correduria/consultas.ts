@@ -21,12 +21,28 @@ export const CONSULTAS: Consulta[] = [
   { consulta: 'seguro de vida / salud', pagina: '/seguros/vida-y-salud', grupo: 'ramo' },
   { consulta: 'seguro de responsabilidad civil', pagina: '/seguros/responsabilidad-civil', grupo: 'ramo' },
   { consulta: 'seguro de flota', pagina: '/seguros/flota', grupo: 'ramo' },
+  { consulta: 'seguro de responsabilidad civil para fontaneros', pagina: '/seguros/responsabilidad-civil-fontaneros', grupo: 'ramo' },
+  { consulta: 'seguro de responsabilidad civil para autónomos', pagina: '/seguros/responsabilidad-civil-autonomos', grupo: 'ramo' },
 
   // §2 Intención de problema — donde está el dinero y casi no hay competencia
+  //
+  // 🚨 Las cuatro filas de abajo con `pagina: '/blog/...'` estuvieron con `pagina: null` (o apuntando
+  // a `/seguros/hogar`, que solo las cubre a medias) hasta el 20/09/2026, pese a que los artículos ya
+  // llevaban publicados desde el 07 y el 15/09 (`apps/asegura-web/lib/articulos.ts`) — y `keywords.md`
+  // §2 ya los daba por «cubierta». Esa `pagina: null` no era cosmética: `accionPropuesta` (regla 3 de
+  // `informe.ts`) toma la PRIMERA consulta «problema» con `pagina===null` y propone «escribir la página
+  // que cubra X» — con las cuatro artículos ya escritos, el informe semanal llevaba semanas proponiendo
+  // reescribir contenido que ya existía. Y `urlsPropias` (`cobertura.ts`) construye la lista de URLs
+  // propias a inspeccionar por la URL Inspection API a partir de este mismo campo: con `null`, esos
+  // cuatro artículos NUNCA se comprobaban si Google los tenía indexados.
   { consulta: 'cómo cambiar de correduría sin cambiar de seguro', pagina: '/cambiar-de-correduria', grupo: 'problema' },
-  { consulta: 'preaviso de un mes para cancelar el seguro (art. 22 LCS)', pagina: null, grupo: 'problema' },
-  { consulta: 'me han subido el seguro del coche en la renovación', pagina: null, grupo: 'problema' },
-  { consulta: 'qué cubre de verdad mi seguro de hogar', pagina: '/seguros/hogar', grupo: 'problema' },
+  { consulta: 'preaviso de un mes para cancelar el seguro (art. 22 LCS)', pagina: '/blog/preaviso-un-mes-no-renovar-seguro', grupo: 'problema' },
+  { consulta: 'me han subido el seguro del coche en la renovación', pagina: '/blog/me-han-subido-el-seguro-en-la-renovacion', grupo: 'problema' },
+  { consulta: 'qué cubre de verdad mi seguro de hogar', pagina: '/blog/que-cubre-de-verdad-el-seguro-de-hogar', grupo: 'problema' },
   { consulta: 'qué es un corredor de seguros y en qué se diferencia de un agente', pagina: '/quienes-somos', grupo: 'problema' },
-  { consulta: 'cómo reclamar un siniestro que me han denegado', pagina: null, grupo: 'problema' },
+  { consulta: 'cómo reclamar un siniestro que me han denegado', pagina: '/blog/siniestro-denegado-que-hacer', grupo: 'problema' },
+  // 19/09/2026: el gestor de pólizas y la guía de baja (landing `/gestor-de-seguros` + artículo).
+  { consulta: 'cómo dar de baja un seguro', pagina: '/blog/como-dar-de-baja-un-seguro-a-tiempo', grupo: 'problema' },
+  { consulta: 'organizar mis seguros en un solo sitio', pagina: '/gestor-de-seguros', grupo: 'problema' },
+  { consulta: 'qué es claims made', pagina: '/blog/que-es-claims-made-seguro-responsabilidad-civil', grupo: 'problema' },
 ]

@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
-import { RAMOS } from '@/lib/ramos'
+import { RAMOS, RAMOS_PRODUCTO } from '@/lib/ramos'
 import { COMPANIAS, COMPANIAS_EN_CARTERA } from '@/lib/companias'
 import { PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
@@ -10,11 +10,13 @@ import Reveal from '@/components/Reveal'
 import PanelDemo from '@/components/PanelDemo'
 import Cifras from '@/components/Cifras'
 import Escaneo from '@/components/Escaneo'
+import EnlaceMedido from '@/components/EnlaceMedido'
 
 export const metadata: Metadata = {
-  title: 'Correduría de seguros en toda España',
+  // Sin `title`: la portada es el segmento raíz, donde la plantilla `%s · Grupo ASegura`
+  // no se aplica; así hereda el `default` del layout, que es el que lleva la marca.
   description:
-    'Correduría de seguros inscrita en la DGSFP que media en toda España. Comparamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
+    'Correduría inscrita en la DGSFP que media en toda España. Comparamos varias compañías para tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
   alternates: { canonical: url('/') },
 }
 
@@ -219,9 +221,9 @@ export default function Home() {
                   07/09/2026, y era el fallo de verdad de esta portada: la
                   intranet acepta a cualquiera, y el botón le estaba diciendo al
                   99 % de los visitantes que no era para ellos. */}
-              <a href={PORTAL_URL} className="btn btn-outline">
+              <EnlaceMedido href={PORTAL_URL} origen="home_cliente" className="btn btn-outline">
                 Entrar a mis seguros
-              </a>
+              </EnlaceMedido>
             </div>
             <ul className="garantias">
               {GARANTIAS.map((g) => (
@@ -310,7 +312,11 @@ export default function Home() {
           </Reveal>
           <Reveal delay={0.1}>
             <div className="rejilla">
-              {RAMOS.map((r) => (
+              {/* RAMOS_PRODUCTO, como la cifra de abajo: las páginas de INTENCIÓN
+                  (RC de fontaneros, de autónomos) salían como tarjetas propias
+                  junto a la RC general y la rejilla repetía tres veces lo mismo.
+                  Siguen enlazadas desde «Otros seguros» de cada ramo y el pie. */}
+              {RAMOS_PRODUCTO.map((r) => (
                 <Link key={r.slug} href={`/seguros/${r.slug}`} className="tarjeta">
                   <span className="tarjeta-icono">
                     <IconoRamo slug={r.slug} />
@@ -371,13 +377,14 @@ export default function Home() {
                 vínculo con la cartera: ve su espacio, no el nuestro. Por eso el
                 texto promete «tu espacio» y no «tus pólizas». */}
             <div className="hero-cta" style={{ marginTop: 28 }}>
-              <a href={PORTAL_URL} className="btn btn-brand">
+              <EnlaceMedido href={PORTAL_URL} origen="home_cta" className="btn btn-brand">
                 Crear mi área con mi correo
                 <Flecha />
-              </a>
+              </EnlaceMedido>
             </div>
             <p className="tenue" style={{ margin: '14px 0 0', fontSize: 14 }}>
-              No hace falta ser cliente todavía: entras con tu correo, te llega un código y ya tienes tu espacio.
+              No hace falta ser cliente todavía: entras con tu correo, te llega un código y ya tienes tu espacio.{' '}
+              <Link href="/gestor-de-seguros">Qué puedes hacer en tu área</Link>.
             </p>
           </Reveal>
           <Reveal delay={0.1}>
@@ -467,7 +474,10 @@ export default function Home() {
         }
         cifras={[
           { valor: COMPANIAS_EN_CARTERA.length, texto: 'Compañías con pólizas en cartera' },
-          { valor: RAMOS.length, texto: 'Ramos que revisamos' },
+          // RAMOS_PRODUCTO, no RAMOS: una página de INTENCIÓN de oficio (RC
+          // fontaneros) comparte ramo real con otra entrada y no es un
+          // producto distinto — contarla aquí infla la cifra pública.
+          { valor: RAMOS_PRODUCTO.length, texto: 'Ramos que revisamos' },
           { valor: 0, estatico: '0 €', texto: 'Lo que te cuesta el servicio' },
         ]}
         nota="La comisión la paga la aseguradora, no tú: no cobramos honorarios por el servicio de mediación."

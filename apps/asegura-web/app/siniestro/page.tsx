@@ -31,7 +31,7 @@ import Formulario from '@/components/Formulario'
 export const metadata: Metadata = {
   title: 'Qué hacer si tienes un siniestro',
   description:
-    'Los plazos que marca la ley cuando das un parte: 7 días para comunicarlo, 40 para el pago mínimo. Qué hace tu corredor y qué puedes hacer si la compañía deniega o no contesta.',
+    'Plazos legales al dar un parte: 7 días para comunicarlo, 40 para el pago mínimo. Qué hace tu corredor y qué hacer si la compañía deniega o no contesta.',
   alternates: { canonical: url('/siniestro') },
   openGraph: {
     title: 'Qué hacer si tienes un siniestro',
@@ -143,6 +143,10 @@ export default function Siniestro() {
         dónde empezar. Esto es lo que hay que hacer, en orden, y{' '}
         <strong style={{ color: 'var(--text)' }}>los plazos que marca la ley</strong> — que corren desde el día del
         parte, no desde que a uno le viene bien.
+      </p>
+      <p style={{ maxWidth: 640 }}>
+        ¿Buscas el número de tu compañía?{' '}
+        <Link href="/telefonos-siniestros">Teléfonos para dar parte a cada aseguradora</Link>.
       </p>
       <p style={{ maxWidth: 640 }}>
         Si eres cliente nuestro, llámanos y lo abrimos contigo. Si no lo eres, la información de esta página te sirve

@@ -59,7 +59,7 @@ import {
   type CamposVisibles,
   type Nivel,
 } from '@central/module-seguros-portal'
-import { importeEiac, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
+import { importeEiac, sustituidasARetirar, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
 
 import { decryptField } from '@central/module-seguros-pii'
 
@@ -142,6 +142,17 @@ export type PolizaPortal = {
   vigencia: Vigencia
   /** CIMA la ha traído. `false` = emitida por nosotros y la compañía aún no la confirma. */
   confirmadaCima: boolean
+  /** Id de la póliza a la que esta sustituye (cambio de compañía). Interno: sirve para cruzar. */
+  sustituyeAId: string | null
+  /** La póliza a la que sustituye, SOLO si este lector también la ve. `null` = ninguna o no visible. */
+  sustituyeA: { compania: string; fechaVencimiento: Date | null } | null
+  /**
+   * 🚨 La que ocupa su sitio, cuando esta ya se RETIRA DE LA LISTA (`sustituidasARetirar`: la nueva ha
+   * empezado, está vigente, este lector la ve y esta no tiene nada pendiente). Retirar de la lista no
+   * quita el acceso: la ficha, los partes y los recibos siguen siendo suyos. Por eso la póliza sigue
+   * en `TitularPortal.polizas` y solo `carteraALaVista()` la quita, para PINTAR la bóveda.
+   */
+  sustituidaPor: { compania: string; desde: Date | null } | null
   /**
    * De dónde viene la fila, tal cual está en la BD. NO es para pintarlo: es lo
    * que necesitan aguas abajo (`lib/obligaciones.ts`) para volver a preguntar
@@ -190,7 +201,15 @@ export type PolizaPortal = {
    * En los dos, `null` = **no informado o no visible**, jamás «no tiene»: la
    * pantalla no pinta nada, que es la regla de visibilidad del portal.
    */
-  bien: BienAsegurado
+  bien: BienAsegurado & {
+    /**
+     * `true` = la fila (o su gemela) TRAE la dirección pero llega cifrada y
+     * aquí no se ha podido abrir (sin `PII_ENCRYPTION_KEY` o con otra). Es
+     * un «no lo puedo leer», no un «no la hay»: la ficha no dice entonces
+     * que la compañía no la ha comunicado.
+     */
+    ubicacionCifrada: boolean
+  }
 }
 
 export type TitularPortal = {
@@ -283,6 +302,15 @@ function nivelDeVinculo(v: string): Nivel {
   return (NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta'
 }
 
+/**
+ * La cartera para PINTAR la lista (bóveda, hoja QR): sin las pólizas ya sustituidas. Los permisos
+ * (partes, ficha, recordatorios) usan la cartera entera, nunca esta.
+ */
+export function carteraALaVista(c: CarteraPortal): CarteraPortal {
+  const quitar = (ts: TitularPortal[]) => ts.map((t) => ({ ...t, polizas: t.polizas.filter((p) => p.sustituidaPor === null) }))
+  return { ...c, propias: quitar(c.propias), autorizadas: quitar(c.autorizadas) }
+}
+
 export async function carteraDeSesion(): Promise<CarteraPortal | null> {
   const identidad = await getIdentidad()
   if (!identidad) return null
@@ -336,6 +364,14 @@ function claveGemela(
  * fallo de descifrado tiene que acabar en el cepo de `campo()`, no en un hueco
  * indistinguible de «la compañía no lo ha informado».
  */
+/** ¿Queda un sobre `v1:` SIN abrir tras intentar descifrar? Entonces la dirección
+ *  EXISTE y solo no se puede leer aquí: la ficha no puede afirmar que falta. */
+function direccionSigueCifrada(datos: unknown): boolean {
+  if (typeof datos !== 'object' || datos === null || Array.isArray(datos)) return false
+  const d = (datos as Record<string, unknown>).direccion
+  return typeof d === 'string' && d.startsWith('v1:')
+}
+
 function descifrarDireccion(datos: unknown): unknown {
   if (typeof datos !== 'object' || datos === null || Array.isArray(datos)) return datos
   const d = datos as Record<string, unknown>
@@ -512,6 +548,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     }),
   ])
 
+  // A quién sustituye cada póliza: solo cuenta si la vieja está marcada `sustituida_at` (un
+  // `poliza_origen_id` suelto es una referencia, no una sustitución).
+  const sustituidas = new Set(polizas.filter((p) => p.sustituidaAt != null).map((p) => p.id))
   const polizaIds = polizas.map((p) => p.id)
 
   // ── Las GEMELAS del volcado ───────────────────────────────────────────────
@@ -681,6 +720,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       estado: p.estado,
       vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento: p.fechaVencimiento }, hoy),
       confirmadaCima: p.idPolizaEntidad !== null,
+      sustituyeAId: p.polizaOrigenId !== null && sustituidas.has(p.polizaOrigenId) ? p.polizaOrigenId : null,
+      // Los dos se deciden POR LECTOR en `titular()`, con lo que ese lector puede ver.
+      sustituyeA: null,
+      sustituidaPor: null,
       procedencia: { importRef: p.importRef, eiacXmlHash: p.eiacXmlHash },
       prima: ve.prima
         ? {
@@ -720,6 +763,12 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           // Mismo nivel que `cosa`: es el mismo dato de contrato, solo que
           // suelto para poder autorrellenar un campo sin parsear el texto.
           matricula: ve.bien ? b.matricula : null,
+          // Se vuelve a intentar abrir, a propósito: lo que importa es si el
+          // sobre `v1:` SIGUE cerrado después del descifrado, en cualquiera de
+          // las dos filas.
+          ubicacionCifrada:
+            direccionSigueCifrada(descifrarDireccion(p.datosEspecificos)) ||
+            direccionSigueCifrada(descifrarDireccion(gemelaDe(p))),
         }
       })(),
       // Una sola lectura y una sola guarda: los abiertos se DERIVAN del
@@ -766,6 +815,24 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         return campos === null ? null : aPortal(p, campos)
       })
       .filter((x): x is PolizaPortal => x !== null)
+    // Sustituciones POR LECTOR (caso José Suárez, 23/09/2026): con lo que este lector ve, nunca antes.
+    const porId = new Map(suyas.map((p) => [p.id, p]))
+    const retirar = sustituidasARetirar(
+      suyas.map((p) => ({
+        id: p.id,
+        sustituyeAId: p.sustituyeAId,
+        fechaInicio: p.fechaInicio,
+        vigente: p.vigencia === 'vigente',
+        conPendientes: (p.siniestrosAbiertos?.length ?? 0) > 0 || (p.recibos?.devueltos ?? 0) > 0,
+      })),
+      new Date(),
+    )
+    for (const p of suyas) {
+      const v = p.sustituyeAId === null ? undefined : porId.get(p.sustituyeAId)
+      p.sustituyeA = v ? { compania: v.compania, fechaVencimiento: v.fechaVencimiento } : null
+      const n = porId.get(retirar.get(p.id) ?? '')
+      p.sustituidaPor = n ? { compania: n.compania, desde: n.fechaInicio } : null
+    }
     return {
       clienteId,
       nombre,

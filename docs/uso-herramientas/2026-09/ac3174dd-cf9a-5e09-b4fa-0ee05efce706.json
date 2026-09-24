@@ -1,0 +1,109 @@
+{
+ "sesion": "ac3174dd-cf9a-5e09-b4fa-0ee05efce706",
+ "inicio": "2026-09-19T07:10:21.893Z",
+ "fin": "2026-09-19T08:55:56.851Z",
+ "llamadas": 203,
+ "categorias": {
+  "otro": {
+   "llamadas": 43,
+   "chars_in": 1121,
+   "chars_out": 468093,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 6,
+    "ReadNotifications": 35,
+    "ScheduleWakeup": 1
+   }
+  },
+  "bash": {
+   "llamadas": 72,
+   "chars_in": 24783,
+   "chars_out": 151395,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 72
+   }
+  },
+  "mcp:Booking_com": {
+   "llamadas": 3,
+   "chars_in": 849,
+   "chars_out": 18904,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking_com__accommodations_search": 3
+   }
+  },
+  "sql": {
+   "llamadas": 19,
+   "chars_in": 10983,
+   "chars_out": 64789,
+   "errores": 2,
+   "archivos_citados": 3,
+   "chars_citados": 1093823,
+   "tools": {
+    "mcp__Supabase__execute_sql": 19
+   }
+  },
+  "mcp:github": {
+   "llamadas": 29,
+   "chars_in": 10453,
+   "chars_out": 75870,
+   "errores": 1,
+   "archivos_citados": 10,
+   "chars_citados": 5391524,
+   "tools": {
+    "mcp__github__create_pull_request": 4,
+    "mcp__github__update_pull_request": 4,
+    "mcp__github__actions_list": 1,
+    "mcp__github__pull_request_read": 16,
+    "mcp__github__merge_pull_request": 3,
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 9,
+   "chars_in": 867,
+   "chars_out": 3169,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 4,
+    "mcp__Claude_Code_Remote__send_later": 1,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 3,
+    "mcp__Claude_Code_Remote__delete_trigger": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 12,
+   "chars_in": 16463,
+   "chars_out": 2196643,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 10,
+    "Write": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 16,
+   "chars_in": 1968,
+   "chars_out": 72897,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 9,
+    "Grep": 7
+   }
+  }
+ }
+}

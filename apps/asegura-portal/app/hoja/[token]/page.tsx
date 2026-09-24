@@ -7,9 +7,9 @@ import {
   polizasDeLaHoja,
 } from '@central/module-seguros-portal'
 
-import { canalDeCompania, type CanalCompania } from '@central/module-seguros-portal'
+import { canalDeCompania, textoSoloRamos, type CanalCompania } from '@central/module-seguros-portal'
 import { companiasConCanal } from '@/lib/canales-compania'
-import { carteraDeIdentidad, type PolizaPortal } from '@/lib/cartera-lectura'
+import { carteraALaVista, carteraDeIdentidad, type PolizaPortal } from '@/lib/cartera-lectura'
 import { fechaEs } from '@/lib/fechas'
 import { declaradasDeIdentidad, hojaPorToken, sellarUso, type DeclaradaEnHoja } from '@/lib/hojas'
 
@@ -121,7 +121,7 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
   if (hoja && hoja.anuladaEn === null) {
     const hoy = new Date()
     const [cartera, misDeclaradas] = await Promise.all([
-      carteraDeIdentidad(hoja.identidadId),
+      carteraDeIdentidad(hoja.identidadId).then(carteraALaVista),
       declaradasDeIdentidad(hoja.identidadId),
     ])
     // 🚨 Regla 5 de `hoja-qr.ts`: solo lo que sigue en vigor. «Todas mis
@@ -291,7 +291,7 @@ function Telefonos({ canal }: { canal: CanalCompania }) {
             <strong>
               {/* Dar parte y asistencia NO se colapsan: en el arcén hace falta
                   la segunda, y en el salón de casa la primera. */}
-              {v.tipo === 'whatsapp' ? 'WhatsApp' : v.uso === 'asistencia' ? 'Asistencia' : 'Dar parte'}
+              {v.tipo === 'whatsapp' ? 'WhatsApp' : v.uso === 'asistencia' ? (v.para !== null ? `Asistencia · ${v.para}` : 'Asistencia') : 'Dar parte'}
             </strong>{' '}
             {/* 🚨 Pulsable. Con el teléfono fuera del papel, ESTA es la única
                 superficie donde ese número existe, y se abre en el arcén con
@@ -309,7 +309,9 @@ function Telefonos({ canal }: { canal: CanalCompania }) {
             {/* 🚨 El horario va con SU vía, no heredado: un canal de siniestros
                 sin horario se lee como «siempre», y esa es la promesa que se
                 rompe un sábado por la noche. */}
+            {v.tipo === 'whatsapp' && textoSoloRamos(v.soloRamos) && <span className="hoja-horario">{textoSoloRamos(v.soloRamos)}</span>}
             {v.horario && <span className="hoja-horario">{v.horario}</span>}
+            {v.tipo === 'whatsapp' && v.nota && <span className="hoja-horario">{v.nota}</span>}
           </li>
         ))}
       </ul>

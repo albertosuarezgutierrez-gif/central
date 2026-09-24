@@ -27,7 +27,8 @@
 //      persigue la regla global de `CLAUDE.md` («Dato que NO hay ≠ dato que NO se ha mirado»).
 //      Quien llame tiene que distinguir los dos casos: por eso se devuelve `motivo`.
 //
-//   2. **Las fechas de EVENTO quedan fuera.** Un evento nuevo no está en el histórico de ese mes
+//   2. **Las fechas de EVENTO con mercado medido quedan fuera** (sin él, techo × factor: ver
+//      `aplicarTechoAdr`, 23/09/2026). Un evento nuevo no está en el histórico de ese mes
 //      —por definición— y taparlo con la media del mes es la forma más cara de equivocarse: se
 //      vende la Feria a precio de martes y eso no se recupera. El umbral `UMBRAL_EVENTO = 1.15`
 //      es el mismo que ya usan el bucket del mes y `pricing-lastminute.ts`, para que las tres
@@ -60,15 +61,22 @@ export const HOLGURA_ADR = 1.30
  */
 export const MIN_NOCHES_ADR = 30
 
-/** Por encima de este factor de evento la fecha no se juzga con el histórico del mes. */
+/** Por encima de este factor de evento la fecha no se juzga con el histórico del mes a secas. */
 export const UMBRAL_EVENTO = 1.15
+
+/**
+ * Comps fiables de la PROPIA fecha a partir de los cuales un evento se deja al mercado. Mismo
+ * umbral que la guarda «evento a ciegas» (`decidirEventoACiegas`, `pricing-centinelas.ts`): una
+ * sola definición de «esta fecha está medida».
+ */
+export const MIN_COMPS_EVENTO_MEDIDO = 3
 
 export type MotivoTecho =
   /** hay techo y es este */
   | 'aplicado'
   /** el objetivo ya estaba por debajo: el techo no ha hecho nada */
   | 'no_muerde'
-  /** fecha de evento: el histórico del mes no la describe */
+  /** fecha de evento con mercado MEDIDO de su fecha (o sin poder saberlo): manda el mercado */
   | 'evento'
   /** no hay noches suficientes vendidas ese mes: NO es «todo en orden» */
   | 'sin_muestra'
@@ -81,6 +89,8 @@ export interface TechoAdr {
   /** objetivo ya recortado (o el original si el techo no muerde/no se sabe) */
   objetivo: number
   motivo: MotivoTecho
+  /** factor de evento por el que se ha escalado el techo (solo fechas de evento SIN mercado medido) */
+  escaladoEvento?: number
 }
 
 /**
@@ -102,22 +112,41 @@ export function aplicarTechoAdr(input: {
   /** suelo ya aplicado al objetivo (min_price / suelo estacional) */
   suelo?: number | null
   holgura?: number
+  /**
+   * Comps fiables medidos de ESA fecha. `null`/ausente = no se sabe (lectura caída): el evento se
+   * deja al mercado, como antes — ante la duda no se recorta un evento.
+   */
+  compsFiablesFecha?: number | null
 }): TechoAdr {
   const { objetivo, adrBase, nochesMuestra } = input
   const holgura = input.holgura ?? HOLGURA_ADR
   const factorEvento = Number(input.factorEvento ?? 1)
 
-  if (factorEvento >= UMBRAL_EVENTO) return { techo: null, objetivo, motivo: 'evento' }
+  // 🎟️ Evento (23/09/2026, decisión de Alberto). Antes el evento quedaba FUERA del techo y los días
+  // normales DENTRO: en Luxury Busto (nov/2026) un partido ×1,35 salía a 200€ entre noches a 75€
+  // (×2,7 el día de al lado; el derbi, ×1,9 la mediana MEDIDA de su propia fecha). Ahora el evento
+  // también tiene techo, pero ESCALADO por su factor: ADR × holgura × factor. Si su fecha tiene
+  // mercado medido, manda el mercado y su propio techo (`pricing-techo-mercado.ts`) — ese es el
+  // caso Maratón (×2,5 medido), que este techo no debe comerse.
+  let escala = 1
+  if (factorEvento >= UMBRAL_EVENTO) {
+    const comps = input.compsFiablesFecha
+    if (comps == null || !(Number(comps) < MIN_COMPS_EVENTO_MEDIDO)) {
+      return { techo: null, objetivo, motivo: 'evento' }
+    }
+    escala = factorEvento
+  }
+  const extra = escala > 1 ? { escaladoEvento: escala } : {}
   if (adrBase == null || !Number.isFinite(Number(adrBase)) || Number(adrBase) <= 0
       || !(Number(nochesMuestra) >= MIN_NOCHES_ADR)) {
     return { techo: null, objetivo, motivo: 'sin_muestra' }
   }
 
-  let techo = Math.round(Number(adrBase) * holgura)
+  let techo = Math.round(Number(adrBase) * holgura * escala)
   const suelo = input.suelo != null && Number.isFinite(Number(input.suelo)) ? Number(input.suelo) : null
   if (suelo != null && techo < suelo) {
-    return { techo: suelo, objetivo: Math.max(objetivo, suelo), motivo: 'suelo_manda' }
+    return { techo: suelo, objetivo: Math.max(objetivo, suelo), motivo: 'suelo_manda', ...extra }
   }
-  if (objetivo <= techo) return { techo, objetivo, motivo: 'no_muerde' }
-  return { techo, objetivo: techo, motivo: 'aplicado' }
+  if (objetivo <= techo) return { techo, objetivo, motivo: 'no_muerde', ...extra }
+  return { techo, objetivo: techo, motivo: 'aplicado', ...extra }
 }

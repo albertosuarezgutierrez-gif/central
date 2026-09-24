@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { polizaAsegura } from '@/lib/poliza-asegura'
+import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import {
   catalogoAsegura,
   precalificacionAsegura,
@@ -9,8 +9,14 @@ import {
   type RespuestaPrecalificacion,
   type TarificacionGuardadaAuto,
 } from '@/lib/retarificar-asegura'
-import { urlRetarificarHogarAsegura } from '@/lib/ficha-asegura'
+import { precalificarHogarRetarificarAsegura } from '@/lib/hogar-retarificar-asegura'
 import Retarificador, { ValorSupuesto } from './retarificador'
+import { leerContextoDefensa, motivoSinCartera } from '@/lib/contexto-defensa'
+import RetarificadorHogar from './RetarificadorHogar'
+import { BuscadorCatastro, ElegirPiso } from './BuscadorCatastro'
+import { consultarHogar, normalizarReferencia } from '@/lib/correduria-hogar'
+import { fichaAsegura } from '@/lib/ficha-asegura'
+import MotoNuevo from '../../../cliente/[id]/moto-nuevo/MotoNuevo'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,8 +40,15 @@ export const maxDuration = 180
  * puerto de operador y se pinta aquí. `apps/asegura` sigue siendo la trastienda:
  * tiene la cartera y es la única que habla con Codeoscopic.
  */
-export default async function RetarificarPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function RetarificarPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const { id } = await params
+  const sp = await searchParams
   const r = await polizaAsegura(id)
 
   if (r.estado !== 'ok') {
@@ -69,6 +82,100 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
       </Marco>
     )
   }
+  // ── HOGAR sin m²/año/CP: el riesgo sale del Catastro (23/09/2026) ────────
+  //
+  // 22 de las 28 pólizas de hogar vivas no traen el riesgo (ni la póliza ni su
+  // gemela). Antes se quedaban aquí, en «no se puede retarificar todavía». Se
+  // elige el piso en el Catastro (gratis) y SOLO la referencia viaja a asegura,
+  // que consulta los datos ella misma: los números con los que se paga un
+  // precio no los pone plataforma.
+  //
+  // Con la referencia ya GUARDADA la póliza es retarificable (`fuente:
+  // 'catastro'`) y va por el camino normal de abajo: asegura la usa sola.
+  // `?buscar=1` / `?direccion=` / `?referencia=` fuerzan este paso para
+  // cambiar de vivienda.
+  const cambiandoVivienda = Boolean(cadena(sp.buscar) ?? cadena(sp.direccion) ?? cadena(sp.referencia))
+  if (String(p.tipo).toLowerCase() === 'hogar' && !cancelada && (!p.retarificable || cambiandoVivienda)) {
+    const cab = <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
+    const refParam = cadena(sp.referencia)
+    let referencia = refParam ? normalizarReferencia(refParam) : null
+    const direccion = cadena(sp.direccion)
+    const municipio = cadena(sp.municipio) ?? 'SEVILLA'
+    const provincia = cadena(sp.provincia) ?? 'SEVILLA'
+
+    const motivo = (
+      <div className="card">
+        <p style={{ margin: 0 }}>
+          {p.retarificacion?.motivo ?? 'La póliza no trae los datos del riesgo (m², año de construcción, CP).'}
+        </p>
+      </div>
+    )
+
+    if (referencia === null && direccion) {
+      const r = await consultarHogar({ por: 'direccion', direccion, municipio, provincia })
+      if (r.estado === 'ok') {
+        referencia = r.referencia
+      } else {
+        const buscador = (
+          <BuscadorCatastro polizaId={p.id} direccion={direccion} municipio={municipio} provincia={provincia} deCliente={false} />
+        )
+        if (r.estado === 'elegir') {
+          return (
+            <Marco>
+              {cab}
+              <ElegirPiso polizaId={p.id} via={r.via} inmuebles={r.inmuebles} />
+              {buscador}
+            </Marco>
+          )
+        }
+        return (
+          <Marco>
+            {cab}
+            <div className="card err">{mensajeCatastro(r)}</div>
+            {buscador}
+          </Marco>
+        )
+      }
+    }
+
+    if (referencia === null) {
+      const ficha = await fichaAsegura(p.cliente.id)
+      const c = ficha.estado === 'ok' ? ficha.ficha.contacto : null
+      return (
+        <Marco>
+          {cab}
+          {motivo}
+          <BuscadorCatastro
+            polizaId={p.id}
+            direccion={c?.direccion ?? ''}
+            municipio={c?.ciudad ?? municipio}
+            provincia={c?.provincia ?? provincia}
+            deCliente={Boolean(c?.direccion)}
+          />
+        </Marco>
+      )
+    }
+
+    const preCat = await precalificarHogarRetarificarAsegura({ polizaId: p.id, referencia })
+    if (preCat.estado !== 'ok') {
+      return (
+        <Marco>
+          {cab}
+          <div className={`card ${preCat.estado === 'no_encontrado' ? 'muted' : 'err'}`}>
+            No se ha podido precalificar el hogar con el Catastro: {preCat.mensaje}
+          </div>
+          <BuscadorCatastro polizaId={p.id} direccion="" municipio={municipio} provincia={provincia} deCliente={false} />
+        </Marco>
+      )
+    }
+    return (
+      <Marco>
+        {cab}
+        <RetarificadorHogar polizaId={p.id} preInicial={preCat.pre} referencia={referencia} />
+      </Marco>
+    )
+  }
+
   if (!p.retarificable || ramo === null) {
     return (
       <Marco>
@@ -77,43 +184,106 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
           <h2>Esta póliza no se puede retarificar todavía</h2>
           <p>
             {p.retarificacion?.motivo ??
-              'Hoy solo se retarifican auto y hogar, y no consta que esta sea de ninguno de los dos.'}
+              'Hoy solo se retarifican auto, moto y hogar, y no consta que esta sea de ninguno de los tres.'}
           </p>
         </div>
       </Marco>
     )
   }
 
-  // 🚨 Hogar TODAVÍA no está portado a plataforma: su retarificador es otro
-  // componente (pide m², año, capitales y Catastro). No se inventa una pantalla
-  // a medias ni se finge que no se puede — se manda al sitio donde SÍ funciona,
-  // que es lo que había antes de este cambio. Lo demás de la correduría ya no
-  // sale de aquí.
+  // ── HOGAR ────────────────────────────────────────────────────────────────
+  //
+  // Portado el 17/09/2026: la precalificación (gratis) se pide aquí, en el
+  // servidor, con `precalificarHogarRetarificarAsegura()` — la ficha entera ya
+  // armada por asegura (`GET /api/operador/codeoscopic/precalificar-hogar`),
+  // igual que hace `hogar-nuevo/page.tsx` para una oportunidad sin póliza. El
+  // botón de pedir precio reutiliza `pedirCotizacion` (la misma acción del
+  // auto de esta pantalla): el puerto de asegura ya rama por ramo con la MISMA
+  // función `prepararRetarificacion()`, así que no hace falta nada nuevo ahí.
   if (ramo === 'hogar') {
+    const preHogar = await precalificarHogarRetarificarAsegura({ polizaId: p.id })
+    if (preHogar.estado !== 'ok') {
+      const tono = preHogar.estado === 'no_encontrado' ? 'muted' : 'err'
+      return (
+        <Marco>
+          <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
+          <div className={`card ${tono}`}>
+            No se ha podido precalificar el hogar: {preHogar.mensaje}
+          </div>
+        </Marco>
+      )
+    }
     return (
       <Marco>
-        <Cabecera sub={sub} polizaId={p.id} />
-        <div className="card">
-          <h2>Hogar se sigue retarificando en asegura</h2>
-          <p>
-            La pantalla de hogar pide datos que esta todavía no sabe pedir (metros, año de
-            construcción, capitales y el Catastro del riesgo). Está{' '}
-            <strong>pendiente de traer</strong>: hasta entonces se hace allí.
-          </p>
-          <p className="muted">
-            Es otro dominio, así que puede pedirte la contraseña de asegura.
-          </p>
-          <p>
-            <a
-              href={urlRetarificarHogarAsegura(p.id)}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ fontWeight: 700 }}
-            >
-              Retarificar hogar en asegura ↗
-            </a>
-          </p>
-        </div>
+        <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
+        <RetarificadorHogar polizaId={p.id} preInicial={preHogar.pre} />
+      </Marco>
+    )
+  }
+
+  // ── MOTO (23/09/2026) ────────────────────────────────────────────────────
+  //
+  // La pantalla de moto nueva en modo póliza: mismo catálogo de motos, y la
+  // matrícula y el historial los pone asegura desde la póliza
+  // (`precalificarMoto`). La precalificación es la misma ruta que auto
+  // (`/precalificar`, gratis), que desde ese día sirve también moto.
+  if (ramo === 'moto') {
+    const [garajesM, civilesM, precalM] = await Promise.all([
+      catalogoAsegura({ tipo: 'garajes-moto' }),
+      catalogoAsegura({ tipo: 'estados-civiles' }),
+      precalificacionAsegura(p.id),
+    ])
+    if (precalM.estado !== 'ok') {
+      return (
+        <Marco>
+          <Cabecera sub={`${sub} · moto`} polizaId={p.id} />
+          <div className="card err">No se ha podido precalificar la moto: {precalM.mensaje}</div>
+        </Marco>
+      )
+    }
+    const pm = precalM.pre
+    if (!pm.precalificado) {
+      return (
+        <Marco>
+          <Cabecera sub={`${sub} · moto`} polizaId={p.id} />
+          <div className="card err">
+            asegura no ha precalificado esta póliza de moto: {pm.motivo ?? 'sin motivo'}. No se monta el
+            formulario para no pedir un precio que el servidor rechazaría.
+          </div>
+        </Marco>
+      )
+    }
+    const fallosCatalogoM = [garajesM, civilesM].filter((c) => c.estado !== 'ok')
+    return (
+      <Marco>
+        <Cabecera sub={`${sub} · moto`} polizaId={p.id} />
+        {fallosCatalogoM.length > 0 && (
+          <div className="card err">
+            No se han podido leer los catálogos de garajes o estados civiles de Codeoscopic: sin ellos no hay ids
+            válidos que mandar, así que no se puede cotizar todavía.
+          </div>
+        )}
+        <MotoNuevo
+          poliza={{
+            id: p.id,
+            matricula: null,
+            fechaMatriculacion: pm.fechaMatriculacion,
+            anterior:
+              `${p.aseguradora}${p.numeroPoliza ? `, póliza nº ${p.numeroPoliza}` : ''}` +
+              `${p.objeto?.titulo ? ` · ${p.objeto.titulo}` : ''}.`,
+          }}
+          clienteId={p.cliente.id}
+          etiquetaCliente={p.cliente.nombre}
+          faltanInicial={pm.faltan}
+          garajes={garajesM.estado === 'ok' ? garajesM.opciones : []}
+          civiles={civilesM.estado === 'ok' ? civilesM.opciones : []}
+          municipios={pm.municipios}
+          municipiosMotivo={pm.municipiosMotivo}
+          estadoCivilMoto={pm.estadoCivil}
+          consumo={pm.consumo}
+          simulacion={pm.simulacion}
+          companias={null}
+        />
       </Marco>
     )
   }
@@ -224,6 +394,14 @@ export default async function RetarificarPage({ params }: { params: Promise<{ id
         simulacion={pre?.simulacion ?? false}
         deshabilitado={falla !== null}
         guardadaPrevia={guardadaPrevia}
+        // ⚓ Lo que paga HOY: sin ella, 24 precios no responden a la única
+        // pregunta de retarificar. `null` = la ficha no la trae (no es 0).
+        primaActualEur={p.primaAnual ?? p.prima ?? null}
+        ramo={ramo}
+        // 🚨 `null` = la cartera del cliente NO se ha podido mirar. Ver
+        // `leerContextoDefensa`: nunca degrada a `[]`.
+        contextoDefensa={leerContextoDefensa(pre?.carteraCompanias, p)}
+        sinCarteraPorque={pre ? motivoSinCartera(pre.carteraCompanias) : falloPre}
       />
     </Marco>
   )
@@ -368,6 +546,24 @@ function Fila({
  * más ancho, la tabla de precios (que declara `min-width`) arrastra la página
  * entera fuera de la pantalla y anula su propio `overflow-x` envolvente.
  */
+function cadena(v: string | string[] | undefined): string | null {
+  const s = Array.isArray(v) ? v[0] : v
+  return typeof s === 'string' && s.trim() !== '' ? s.trim() : null
+}
+
+function mensajeCatastro(r: { estado: 'ambigua' | 'no_encontrado' | 'direccion_ilegible' } | { estado: 'error'; motivo: string }): string {
+  switch (r.estado) {
+    case 'ambigua':
+      return 'El callejero tiene varias calles parecidas en ese municipio: escribe el nombre completo de la vía, o usa la referencia catastral (recibo del IBI).'
+    case 'no_encontrado':
+      return 'Se ha consultado y el Catastro no devuelve ningún inmueble con esos datos.'
+    case 'direccion_ilegible':
+      return 'No se ha sabido leer la dirección: hace falta tipo de vía, nombre y número («Calle San Vicente 40»).'
+    case 'error':
+      return `No se ha podido consultar el Catastro (${r.motivo}). No significa que la vivienda no exista: no se ha podido mirar.`
+  }
+}
+
 function Marco({ children }: { children: React.ReactNode }) {
   return (
     <main style={{ maxWidth: 960, margin: '0 auto', padding: '20px 16px 48px' }}>
@@ -416,6 +612,30 @@ const CSS_RETARIFICADOR = `
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: .03em;
+}
+/* La tabla de precios: fila compacta (24 filas es lo normal en un presupuesto
+   real) y la última columna —el botón de confirmar— SIEMPRE visible, aunque
+   el resto de la fila necesite scroll horizontal en móvil. */
+.retarificar table.precios { min-width: 420px; }
+.retarificar table.precios th, .retarificar table.precios td { padding: 6px 8px; font-size: 13px; }
+.retarificar table.precios th:last-child, .retarificar table.precios td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--panel);
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+/* 44px: el mínimo táctil de la regla Responsive del CLAUDE.md raíz — no 36px,
+   que quedaba por debajo justo en el único botón garantizado visible (el
+   sticky) en móvil. */
+.retarificar button.ghost.icono {
+  padding: 0;
+  width: 44px;
+  min-height: 44px;
+  min-width: 44px;
+  font-size: 16px;
+  line-height: 1;
 }
 .retarificar .badge {
   display: inline-block;

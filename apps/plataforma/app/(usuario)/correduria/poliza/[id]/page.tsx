@@ -1,11 +1,16 @@
 import Link from 'next/link'
-import { NECESARIOS_EMISION_AUTO, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
+import { NECESARIOS_EMISION_AUTO, admiteDireccionRiesgo, contactoEfectivo, etiquetaFraccionamiento, etiquetaRol, filasIntervinientes, interpretarCapital, ventanaAnulacion } from '@central/module-seguros'
 import type { CapitalAsegurado } from '@central/module-seguros'
 import Documentos from '../../Documentos'
+import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
+import AnulacionPoliza from './AnulacionPoliza'
+import PresupuestosPoliza from './PresupuestosPoliza'
+import CartaMediadorPoliza from './CartaMediadorPoliza'
 import Siniestros from '../../Siniestros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
+import type { ObjetoFicha } from '@/lib/ficha-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { eur } from '@/lib/dinero'
@@ -58,6 +63,9 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
           </span>}
         />
       </div>
+
+      {/* ── Sustitución por cambio de compañía ──────────────────────────── */}
+      <Sustitucion p={p} />
 
       {/* ── Qué asegura ─────────────────────────────────────────────────── */}
       <Tarjeta titulo="Qué asegura">
@@ -129,6 +137,12 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         <Intervinientes p={p} />
       </Tarjeta>
 
+      <Tarjeta titulo="Anulación">
+        <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
+        <PresupuestosPoliza polizaId={p.id} />
+        <CartaMediadorPoliza polizaId={p.id} />
+      </Tarjeta>
+
       {/* ── Documentación ───────────────────────────────────────────────── */}
       <Tarjeta titulo="📎 Documentación">
         <Documentos polizaId={p.id} clienteId={p.cliente.id} inicial={p.listaDocumentos} sugeridos={NECESARIOS_EMISION_AUTO} />
@@ -169,6 +183,11 @@ function Objeto({ p }: { p: Poliza }) {
   const conocido = propio !== null && propio.estado === 'conocido' && (propio.titulo || propio.detalle)
   const gem = p.gemela?.objeto
   const gemConocida = gem && gem.estado === 'conocido' && (gem.titulo || gem.detalle)
+  // «Conocido» no es «con calle»: un objeto puede ser conocido solo por
+  // localidad/CP o m² (nota «Sin dirección informada…»). Para decidir si se
+  // ofrece anotar la dirección hay que mirar la CALLE en cada fila.
+  const conCalle = (o: ObjetoFicha | null | undefined) => !!o && o.estado === 'conocido' && !(o.nota ?? '').includes('Sin dirección')
+  const sinCalle = { propia: conCalle(propio), gemela: conCalle(gem), cifrada: propio?.estado === 'cifrado' || gem?.estado === 'cifrado' }
   return (
     <div style={{ fontSize: 13, display: 'grid', gap: 6 }}>
       {conocido ? (
@@ -188,10 +207,57 @@ function Objeto({ p }: { p: Poliza }) {
           </div>
         </div>
       )}
+      {/* 🏠 CIMA no manda la dirección del riesgo (19/09/2026): si ni la fila ni
+          la gemela la traen, el corredor la anota aquí. `cifrado` NO cuenta como
+          falta —la dirección existe, solo que aquí no se lee— y el puerto la
+          rechazaría con 409 igualmente. */}
+      {admiteDireccionRiesgo(p.tipo) && !sinCalle.cifrada && !sinCalle.propia && !sinCalle.gemela && (
+        <EditarDireccionRiesgo polizaId={p.id} esHogar={p.tipo === 'hogar'} />
+      )}
       {!conocido && !gemConocida && p.gemelaInformada && p.gemela === null && (
         <div style={muted}>Tampoco hay copia en el volcado con más datos.</div>
       )}
       {!p.gemelaInformada && <div style={muted}>La versión desplegada de asegura no busca la copia gemela.</div>}
+    </div>
+  )
+}
+
+/**
+ * Cambio de compañía por retarificación (20/09/2026). Dos caras, no
+ * excluyentes: esta póliza puede a la vez venir de sustituir a otra Y estar
+ * ya sustituida por una tercera (si se retarifica dos veces).
+ *
+ * 🚨 «Sustituida» NO es «cancelada»: el `estado` de esta póliza lo sigue
+ * mandando CIMA, y hasta que confirme la nueva, ésta sigue viva de cara a la
+ * compañía. Por eso el seguimiento se pinta como una espera, no como un hecho
+ * consumado — Alberto: «hay que hacerle seguimiento hasta que CIMA confirma».
+ */
+function Sustitucion({ p }: { p: Poliza }) {
+  const s = p.sustitucion
+  if (s === null) return null
+  if (s.origen === null && s.sustituidaPor === null) return null
+  return (
+    <div style={{ display: 'grid', gap: 8 }}>
+      {s.origen && (
+        <div style={{ ...tarjeta, borderStyle: 'dashed', fontSize: 13 }}>
+          🔁 Sustituye a la póliza de <strong>{s.origen.aseguradora}</strong>
+          {s.origen.numeroPoliza && ` nº ${s.origen.numeroPoliza}`} (<Link href={`/correduria/poliza/${s.origen.polizaId}`}>ver</Link>).
+        </div>
+      )}
+      {s.sustituidaPor && (
+        <div style={{ ...tarjeta, borderColor: s.seguimiento === 'confirmada' ? 'var(--positive)' : 'var(--warning)', fontSize: 13 }}>
+          {s.seguimiento === 'confirmada' ? (
+            <>✅ Sustituida por la póliza en <strong>{s.sustituidaPor.aseguradora}</strong>
+              {s.sustituidaPor.numeroPoliza && ` nº ${s.sustituidaPor.numeroPoliza}`} — CIMA ya confirmó que el cliente la está pagando.</>
+          ) : (
+            <>🟡 Sustituida por la póliza en <strong>{s.sustituidaPor.aseguradora}</strong>
+              {s.sustituidaPor.numeroPoliza && ` nº ${s.sustituidaPor.numeroPoliza}`}, emitida
+              {s.sustituidaAt ? ` el ${fmt(s.sustituidaAt)}` : ''} — <strong>pendiente de seguimiento</strong>: todavía no
+              consta que CIMA la haya confirmado (que el cliente la esté pagando de verdad).</>
+          )}{' '}
+          <Link href={`/correduria/poliza/${s.sustituidaPor.polizaId}`}>ver la nueva</Link>.
+        </div>
+      )}
     </div>
   )
 }

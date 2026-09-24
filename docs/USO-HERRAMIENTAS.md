@@ -40,6 +40,12 @@ esos se auto-mergean.
 
 ## Grafo propio frente a Graphify — medición del 12/09/2026
 
+> 🗑️ **El grafo propio se RETIRÓ el 21/09/2026** y con él `scripts/grafo-codigo.mjs`, las tablas
+> `grafo_nodos`/`grafo_aristas`/`grafo_embeddings` y sus funciones de consulta: los nombres que
+> citan las dos tablas de abajo ya no existen en el repo. Se conservan porque son la MEDICIÓN que
+> justificó en su día dar de baja Graphify, y porque la que lo retiró está más abajo, en el
+> agregado. El sustituto es `rastreador-codigo` + `code-map` (ver `CLAUDE.md`).
+
 Mismo símbolo, mismas preguntas, el día que se construyó (HEAD `f85f137`):
 
 | Pregunta | Graphify | Grafo propio (`scripts/grafo-codigo.mjs`) |
@@ -161,12 +167,41 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido (generado 2026-09-12)** — 1 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 101 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 1 | 26 | 42.058 | 0 | 0 |
-| `escritura` | 1 | 4 | 34.635 | 0 | 0 |
-| `mcp:github` | 1 | 4 | 134 | 0 | 0 |
-| `otro` | 1 | 2 | 1.584 | 14.545 | 0 |
+| `bash` | 96 | 13.243 | 8.007.992 | 0 | 0 |
+| `otro` | 94 | 3.460 | 13.071.878 | 6.690.320 | 0 |
+| `lectura-directa` | 87 | 3.246 | 5.291.993 | 0 | 0 |
+| `mcp:github` | 85 | 3.208 | 3.058.102 | 39.437.814 | 57 |
+| `escritura` | 79 | 2.168 | 37.555.360 | 0 | 0 |
+| `sql` | 67 | 1.376 | 621.716 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 53 | 618 | 165.629 | 2.729.910 | 9 |
+| `mcp:Vercel` | 24 | 297 | 523.948 | 198.719 | 4 |
+| `mcp:Booking-com` | 8 | 248 | 1.006.622 | 0 | 0 |
+| `mcp:Gmail` | 14 | 220 | 356.226 | 0 | 2 |
+| `mcp:Supabase` | 39 | 117 | 16.564 | 0 | 1 |
+| `agente:general-purpose` | 15 | 58 | 41.278 | 662.088 | 0 |
+| `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
+| `mcp:Interactive-Brokers--IBKR-` | 1 | 51 | 73.084 | 0 | 0 |
+| `mcp:Google-Drive` | 6 | 50 | 50.016 | 0 | 2 |
+| `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
+| `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
+| `mcp:OpenSEO` | 1 | 30 | 20.595 | 0 | 0 |
+| `agente:agente-architect` | 8 | 29 | 31.973 | 990.129 | 0 |
+| `agente:Explore` | 11 | 28 | 13.784 | 604.888 | 0 |
+| `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
+| `agente:agente-mecanico` | 10 | 27 | 27.164 | 463.448 | 0 |
+| `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
+| `mcp:Google_Drive` | 4 | 16 | 18.176 | 0 | 2 |
+| `mcp:Resend` | 2 | 12 | 1.955 | 0 | 0 |
+| `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
+| `agente:general` | 6 | 8 | 5.205 | 231.483 | 0 |
+| `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
+| `mcp:Supabase_asegura` | 5 | 5 | 1.947 | 0 | 0 |
+| `agente:rastreador-codigo` | 3 | 4 | 1.508 | 4.018 | 0 |
+| `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
+| `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
+| `mcp:Google_Calendar` | 1 | 1 | 272 | 0 | 0 |
 <!-- ahorro:fin -->

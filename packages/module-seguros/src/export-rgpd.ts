@@ -92,7 +92,8 @@ export const FICHA_CATEGORIA: Record<CategoriaExport, Ficha> = {
   partes: {
     titulo: 'Los partes que has abierto',
     origen: 'aportado_por_ti',
-    descripcion: 'Lo que contaste de cada siniestro y en qué estado quedó.',
+    descripcion:
+      'Lo que contaste de cada siniestro y en qué estado quedó. Si abriste un parte sobre la póliza de otra persona que te autorizó a verla, el parte está aquí —es tuyo—, pero el contrato de esa persona no: aparece como «de un tercero que te autorizó» en lugar de su identificador.',
   },
   vinculos: {
     titulo: 'Enlace con tu ficha de la correduría',

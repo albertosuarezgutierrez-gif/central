@@ -3,7 +3,7 @@ import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { articulosDeRamo } from '@/lib/articulos'
-import { RAMOS, ramoPorSlug } from '@/lib/ramos'
+import { RAMOS, SOLO_INTENCION, ramoPorSlug } from '@/lib/ramos'
 import { url } from '@/lib/sitio'
 import { fichaFaq, fichaServicio, migas, jsonLd } from '@/lib/seo'
 import Formulario from '@/components/Formulario'
@@ -166,15 +166,27 @@ export default async function PaginaRamo({ params }: Props) {
       <section id="presupuesto" aria-labelledby="pedir" style={panel}>
         <h2 id="pedir">Que te llamemos</h2>
         <p style={{ color: 'var(--muted)', fontSize: 15 }}>
-          Sin compromiso y sin coste. Te contesta una persona.
+          Sin compromiso y sin coste. Te contesta una persona. Como corredores nos paga la compañía, con una
+          comisión sobre la prima: tú no pagas honorarios por la mediación.
         </p>
         {/* El slug del ramo ES el valor del desplegable, salvo `vida-y-salud`,
             que en el formulario son dos opciones distintas y hay que elegir
             una: se marca «Vida», y quien venía por salud la cambia en un clic.
             🚨 `responsabilidad-civil` marcaba «Comercio o empresa» hasta el
             05/09/2026 porque no existía su opción: el lead llegaba diciendo que
-            quería un seguro de comercio, que es un dato plausible y falso. */}
-        <Formulario ramoPorDefecto={ramo.slug === 'vida-y-salud' ? 'vida' : ramo.slug} />
+            quería un seguro de comercio, que es un dato plausible y falso.
+            las páginas de intención (`SOLO_INTENCION`: RC de fontaneros y
+            de autónomos) no son un ramo nuevo en BD (sigue siendo `responsabilidad_civil`): marca la
+            opción general, igual que vida-y-salud comparte una sola. */}
+        <Formulario
+          ramoPorDefecto={
+            ramo.slug === 'vida-y-salud'
+              ? 'vida'
+              : SOLO_INTENCION.includes(ramo.slug)
+                ? 'responsabilidad-civil'
+                : ramo.slug
+          }
+        />
       </section>
     </div>
   )

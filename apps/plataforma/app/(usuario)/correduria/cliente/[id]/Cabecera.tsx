@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { urlSubirPoliza, urlHogarNuevo, urlAutoNuevo, urlMotoNuevo, urlVidaNuevo, urlSaludNuevo, urlDecesosNuevo, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import { estadoCaducidadCarnet, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
@@ -51,6 +51,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                 <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
                 <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
                 <Identidad identidad={ficha.identidad} clienteId={ficha.id} />
+                <Carnets carnets={ficha.carnets} />
                 {conyuge && (
                   <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                     💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
@@ -287,17 +288,7 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 // botón, y medido a 360px con Playwright, en segunda posición se salía de la
 // pantalla por la derecha (right=427 > 360). En primera cabe hasta en 320.
 
-/** Los ramos que se pueden presupuestar desde la ficha, en el orden del menú. */
-const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => string; sinVerificar?: boolean }[] = [
-  { etiqueta: '🚗 Auto', url: urlAutoNuevo },
-  { etiqueta: '🏠 Hogar', url: urlHogarNuevo },
-  { etiqueta: '🏍️ Moto', url: urlMotoNuevo },
-  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo, sinVerificar: true },
-  { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
-  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo, sinVerificar: true },
-]
-
-const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para vida, salud y decesos no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
+const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para salud no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
 
 function Acciones({ clienteId }: { clienteId: string }) {
   return (
@@ -485,3 +476,42 @@ function Identidad({ identidad, clienteId }: { identidad: IdentidadFicha | null;
   )
 }
 
+
+// ── Carnés de conducir ──────────────────────────────────────────────────────
+// Tipo y fecha de expedición de cada carné (la antigüedad es lo que tarifica,
+// sobre todo en moto) y, al pasar el ratón, la próxima caducidad. Una
+// caducidad vencida o a ≤90 días se pinta en aviso.
+
+function Carnets({ carnets }: { carnets: CarnetFicha[] | null }) {
+  // `null` = asegura no manda el bloque o no pudo leerlo: no se afirma nada.
+  if (carnets === null) return null
+  if (carnets.length === 0) {
+    return <span style={{ color: 'var(--muted)' }} title="No consta ningún carné de conducir en su ficha">🚦 sin carné registrado</span>
+  }
+  const hoy = new Date().toISOString().slice(0, 10)
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      {carnets.map((k) => {
+        const est = estadoCaducidadCarnet(k.fechaCaducidad, hoy)
+        const aviso = est === 'pronto'
+        const cad =
+          k.fechaCaducidad === null
+            ? 'caducidad no calculable (falta la fecha de expedición o la de nacimiento)'
+            : est === 'sin_renovacion'
+              ? `con la fecha guardada caducaba el ${fmt(k.fechaCaducidad)}; si lo ha renovado, la renovación no consta`
+              : `caduca el ${fmt(k.fechaCaducidad)}`
+        return (
+          <span
+            key={k.id}
+            title={`Carné ${k.tipo} · ${cad}`}
+            style={aviso ? { color: 'var(--warning)' } : est === 'sin_renovacion' ? { color: 'var(--muted)' } : undefined}
+          >
+            🚦 {k.tipo} ·{' '}
+            {k.fechaIlegible ? 'fecha cifrada' : k.fechaExpedicion ? fmt(k.fechaExpedicion) : 'sin fecha'}
+            {aviso ? ' (caduca pronto)' : est === 'sin_renovacion' ? ' (renovación no registrada)' : null}
+          </span>
+        )
+      })}
+    </span>
+  )
+}

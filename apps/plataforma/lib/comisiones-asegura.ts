@@ -9,6 +9,9 @@
 // un 401 (secretos que no coinciden), un error de la BD de asegura y un timeout
 // se arreglan en sitios distintos.
 
+import { leerTruncado } from './correduria-puerto.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 export type MotivoErrorComisiones =
   | 'secreto_rechazado'   // 401/403: los dos ASEGURA_OPERADOR_SECRET no coinciden
   | 'asegura_error'       // asegura respondió pero no pudo leer su BD
@@ -31,6 +34,14 @@ export type DevengoCompania = {
   mes: string
   bruto: number
   recibos: number
+  /**
+   * Recibos cobrados cuya comisión NO se pudo leer. **`null` = una versión
+   * desplegada más vieja de asegura no manda el campo**, que NO es lo mismo que
+   * `0` («se miró y todas se leyeron»). Colapsarlo a 0 diría que el devengo está
+   * completo cuando lo que pasa es que no se ha comprobado — y este número es el
+   * que decide si se reclama a una compañía.
+   */
+  ilegibles: number | null
 }
 
 export type CoberturaCompania = {
@@ -58,6 +69,17 @@ export type ComisionesAsegura =
       periodos: PeriodoComisiones[]
       devengos: DevengoCompania[]
       cobertura: CoberturaCompania[]
+      /**
+       * Alguna de las cribas de asegura tocó su techo: el libro viene
+       * INCOMPLETO y el devengado sale más bajo que el real.
+       *
+       * 🚨 Mismo tri-estado que `ilegibles` de aquí al lado, y por el mismo
+       * motivo: `null` = una versión desplegada más vieja de asegura no manda
+       * el campo, que NO es «se miró y está completo». Colapsarlo a `false`
+       * daría por bueno un total que nadie ha comprobado, y contra ese total se
+       * decide si se reclama a una compañía.
+       */
+      truncado: boolean | null
     }
 
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
@@ -111,6 +133,8 @@ export function interpretarComisiones(status: number, json: unknown): Comisiones
         mes: str(d.mes) ?? '',
         bruto: num(d.bruto) ?? 0,
         recibos: num(d.recibos) ?? 0,
+        // Sin `?? 0` a propósito: ver el comentario del tipo.
+        ilegibles: num(d.ilegibles),
       }))
       .filter(d => d.companiaCodigo && /^\d{4}-\d{2}$/.test(d.mes)),
     cobertura: (com.cobertura as Record<string, unknown>[])
@@ -122,6 +146,8 @@ export function interpretarComisiones(status: number, json: unknown): Comisiones
         ultimoRecibo: str(k.ultimoRecibo),
       }))
       .filter(k => k.companiaCodigo),
+    // Sin `?? false`: ver el comentario del tipo.
+    truncado: leerTruncado(com.truncado),
   }
 }
 
@@ -133,7 +159,7 @@ export async function comisionesAsegura(desde: string): Promise<ComisionesAsegur
   try {
     const base = (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
     const res = await fetch(`${base}/api/operador/comisiones?desde=${encodeURIComponent(desde)}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15000),
     })

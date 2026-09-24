@@ -1,5 +1,7 @@
 # Coberturas que vuelca CIMA — inventario y semántica (medido el 02/09/2026)
 
+> 🔌 **Router: skill `cima-ingesta`** — la cadena entera, el diagnóstico de «la ingesta está muda» y qué no se toca.
+
 > Sobre `seguros.poliza_coberturas` de central: **1.425 coberturas en 110 pólizas, 182 códigos distintos**.
 > Los códigos son **de cada compañía** (el `00000006` de Mapfre no existe en Occident): no hay catálogo
 > común y no se inventa uno. La ficha de póliza en plataforma (`/correduria/poliza/[id]`) los pinta con
@@ -46,6 +48,43 @@
   la garantía. Es la que más límites lleva en `datos_extra`.
 - **Allianz auto**: 1-2 garantías con capital `INF`; el paquete «BASICO» es una sola línea.
 - **Reale auto**: 7 garantías, sin modalidad ni fechas.
+
+## 🔭 Watchlist curada de campos importantes sin leer (20/09/2026)
+
+Revisión pedida por Alberto tras ver que `cima_cobertura_campos` tenía **777 rutas de POL vistas y
+solo 185 leídas**. La mayoría del hueco es ruido esperado por diseño (`cobertura` de `ingesta.ts`
+NO alarma a propósito: el EIAC trae cientos de campos y siempre hay cola) — pero dentro de esa cola
+había un hallazgo real y sistemático, no ruido: **`Tomador.PersonaFisica.Domicilio` +
+`DatosContacto` (dirección de contacto, email y teléfono del propio TOMADOR) llega en el 100 % de
+los ficheros POL recientes y nunca se ha leído.** Es justo el dato que hoy solo se puede corregir a
+mano desde el portal (`AvisoContacto`/`MisDatos` de `apps/asegura-portal`).
+
+Para que esto **no vuelva a pasar desapercibido**, se montó un vigía dedicado, separado del contador
+genérico de `cobertura` (que sigue sin alarmar, a propósito): **`CampoImportanteSinLeer`** en
+`@central/module-seguros` (`ingesta.ts`) es una **watchlist CURADA** (no un barrido automático) de
+patrones de ruta que alguien decidió que importan. `apps/asegura/lib/ingesta.ts` consulta
+`cima_cobertura_campos` por esos patrones (`veces_leido = 0 AND veces_visto >= 3`, umbral de «se ve
+en casi todos los ficheros, no una vez suelta») y el resultado viaja por `/api/operador/ingesta` →
+`apps/plataforma/lib/correduria/ingesta-cima.ts` → `saludIngesta()`.
+
+🚨 **No entra en `degradada`: no es una avería, es una oportunidad conocida sin decidir.** Por eso se
+imprime en `SaludIngesta.avisosImportantes`, un campo SEPARADO que `detalleSalud()` añade **siempre**,
+en los tres estados que no son `sin_datos` — incluido `ok`. Sin ese campo aparte se habría perdido
+otra vez, exactamente como pasó con el cron mudo antes del 20/09/2026 (ver la cabecera de
+`ingesta.ts`): un dato que solo se ve cuando hay OTRA avería que lo arrastre a pantalla es un dato
+que se pierde el día en que todo lo demás está en verde.
+
+**Para añadir un patrón nuevo a la watchlist**: edita el `WHERE ruta ~ '...'` en
+`apps/asegura/lib/ingesta.ts` (bloque `camposImportantes`). No se automatiza a barrer toda la
+cobertura porque la mayoría de rutas sin leer son ruido legítimo (códigos internos EIAC, campos que
+no aportan nada al negocio) — es una decisión humana, campo a campo.
+
+🚨 **Corrección de una afirmación que ya estaba desfasada al escribirse:** `apps/asegura-portal/CLAUDE.md`
+decía (19/09/2026) que «CIMA no manda el riesgo de hogar». Comprobado el 20/09/2026 contra
+`cima_cobertura_campos`: `RiesgoHogar.SituacionRiesgo.{NombreVia,CodigoPostal,Poblacion,Provincia}`
+SÍ llega en el EIAC de Occident/Generali, y el mapper empezó a leerlo esa misma mañana (tres pólizas
+de Occident con `datos_especificos.direccionOrigen: 'cima'` desde las 09:57 UTC). Lo que seguía sin
+leerse ese día era el equivalente para `RiesgoComercios` (ramo «comunidades»).
 
 ## Consulta para regenerar el catálogo
 

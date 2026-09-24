@@ -3,14 +3,47 @@ import { NextResponse } from 'next/server'
 
 import { normalizarTitular, type TitularDeclarado } from '@central/module-seguros-portal'
 
+import { avisarPolizaDeclaradaDesdeAlta } from '@/lib/aviso-poliza-declarada'
+import { guardarDocumentoPropio } from '@/lib/documento-portal'
 import { prisma } from '@/lib/db'
 import { extraerPoliza } from '@/lib/extraer-poliza'
 import { normalizarAlta } from '@/lib/poliza-editable'
+import { rateLimit } from '@/lib/rate-limit'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
 const MAX_BYTES = 10 * 1024 * 1024
+
+/**
+ * Tope por IDENTIDAD. Cada alta con documento puede encadenar hasta 3 llamadas
+ * a OpenRouter sobre un fichero de 10 MB, o sea gasto de IA de nuestra cuenta.
+ *
+ * 🚨 Exigir sesión NO es un tope: entrar al portal es pedir un código a un
+ * correo cualquiera, así que una sesión la consigue cualquiera con un buzón.
+ * Sin esto, la factura de IA la marcaba quien quisiera.
+ *
+ * Va por IDENTIDAD y no por IP a propósito: varios clientes comparten IP (una
+ * oficina, un CGNAT del móvil) y el mismo cliente cambia de red entre el wifi y
+ * los datos. Por IP se castiga al vecino y se le escapa al mismo abusador.
+ *
+ * ⚠️ Es el limitador EN MEMORIA de `lib/rate-limit.ts`: por instancia, no
+ * global (lo dice su cabecera). Corta el bucle de una identidad contra una
+ * instancia; un abusador repartido necesitaría un contador en BD, como el tope
+ * por destino de `/api/acceso/solicitar`. Se declara aquí en vez de suponerlo.
+ *
+ * 10 a la hora: quien ordena su bóveda sube unas pocas pólizas de golpe y le
+ * sobra; un bucle se corta en la undécima.
+ */
+const MAX_POR_IDENTIDAD = 10
+const VENTANA_MS = 60 * 60 * 1000
+
+function demasiadas(retryAfter: number) {
+  return NextResponse.json(
+    { error: 'demasiadas_peticiones', retryAfter },
+    { status: 429, headers: { 'retry-after': String(retryAfter) } },
+  )
+}
 
 /**
  * Alta de una póliza en la bóveda del cliente. Dos caminos, una sola ruta:
@@ -33,6 +66,11 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
+
+  // El tope va ANTES de leer el cuerpo, de llamar a la IA y de escribir fila:
+  // detrás de esta línea ya se ha gastado algo.
+  const porIdentidad = rateLimit(`polizas:${identidad.id}`, MAX_POR_IDENTIDAD, VENTANA_MS)
+  if (!porIdentidad.allowed) return demasiadas(porIdentidad.retryAfter ?? 60)
 
   const tipo = req.headers.get('content-type') ?? ''
   if (tipo.includes('application/json')) return altaAMano(req, identidad.id)
@@ -75,8 +113,23 @@ async function altaConDocumento(req: Request, identidadId: string) {
     cif: form.get('titularEmpresaCif'),
   })
 
+  // Casi siempre vacío: nadie sabe de antemano que su PDF pide contraseña.
+  // Viaja por si acaso, para que un cliente que sí lo sepa no tenga que fallar
+  // primero — `extraerPoliza` la ignora sin más si no hace falta.
+  const contrasenaCampo = form.get('contrasena')
+  const contrasena = typeof contrasenaCampo === 'string' && contrasenaCampo !== '' ? contrasenaCampo : undefined
+
   const buffer = Buffer.from(await fichero.arrayBuffer())
-  const { datos, fuente, camposRamo } = await extraerPoliza(buffer, fichero.type, fichero.name)
+  // Las dos van en paralelo: son independientes (una lee con IA, la otra sube
+  // bytes) y no hay que esperar a la extracción para archivar el documento.
+  // 🚨 El archivado NUNCA bloquea el alta: si el puente falla (env sin poner,
+  // asegura caído), la póliza se guarda igual con lo que se pudo leer — es la
+  // regla de la casa, «guardar primero, para no perder datos» no puede
+  // convertirse en «si no se pudo archivar, no se guarda nada».
+  const [{ datos, fuente, camposRamo, motivo }, documentoGuardado] = await Promise.all([
+    extraerPoliza(buffer, fichero.type, fichero.name, contrasena),
+    guardarDocumentoPropio(identidadId, { tipo: 'poliza', nombre: fichero.name, mime: fichero.type, contenido: buffer }),
+  ])
 
   const poliza = await prisma.portalPolizaDeclarada.create({
     data: {
@@ -116,6 +169,10 @@ async function altaConDocumento(req: Request, identidadId: string) {
       // orígenes se escriben en el MISMO paso que sus datos: uno sin el otro es
       // una afirmación sobre un dato que no está.
       datosRamoOrigen: datos.datosRamoOrigen ?? Prisma.DbNull,
+      // Las garantías que el documento enumera (20/09/2026). `null` = no se
+      // pudo leer (NULL de SQL, no `JsonNull`); `[]` = leídas, ninguna. Con
+      // ellas la póliza entra en el detector de solapamientos de la bóveda.
+      coberturas: datos.coberturas ?? Prisma.DbNull,
       // Siempre `declarado`: lo ha aportado el usuario. Que lo haya leído una IA
       // no lo convierte en dato verificado — al revés, es donde más se inventa.
       procedencia: 'declarado',
@@ -126,12 +183,25 @@ async function altaConDocumento(req: Request, identidadId: string) {
       // que la 2ª pasada se intentó y no salió: sin él, una fila con
       // `datos_ramo` a NULL no distingue «la póliza no lo trae» de «no se pudo
       // mirar», y esa distinción es justo lo que hay que poder auditar después.
-      extraccionBruta: { fuente, camposRamo, datos },
+      // `documentoGuardado` deja constancia de si el FICHERO llegó a la ficha
+      // del corredor (`seguros.documentos`) o por qué no, para poder auditarlo
+      // después sin tener que reproducir la subida.
+      extraccionBruta: { fuente, camposRamo, datos, documentoGuardado: documentoGuardado.estado },
     },
     select: { id: true },
   })
 
-  return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo })
+  // Best-effort y no bloqueante: el aviso a Alberto no puede retrasar ni
+  // tumbar la respuesta al cliente que acaba de subir su póliza.
+  void avisarPolizaDeclaradaDesdeAlta({
+    identidadId,
+    compania: datos.compania,
+    ramo: datos.ramo,
+    numeroPoliza: datos.numeroPoliza,
+    fechaVencimiento: datos.fechaVencimiento,
+  })
+
+  return NextResponse.json({ id: poliza.id, datos, fuente, camposRamo, motivo, documentoGuardado: documentoGuardado.estado })
 }
 
 async function altaAMano(req: Request, identidadId: string) {
@@ -198,6 +268,17 @@ async function altaAMano(req: Request, identidadId: string) {
     select: { id: true },
   })
 
+  const fechaVencimiento = datos.fechaVencimiento ? datos.fechaVencimiento.toISOString().slice(0, 10) : null
+
+  // Best-effort y no bloqueante, igual que en el alta con documento.
+  void avisarPolizaDeclaradaDesdeAlta({
+    identidadId,
+    compania: datos.compania,
+    ramo: datos.ramo,
+    numeroPoliza: datos.numeroPoliza,
+    fechaVencimiento,
+  })
+
   return NextResponse.json(
     {
       id: poliza.id,
@@ -205,7 +286,7 @@ async function altaAMano(req: Request, identidadId: string) {
         ...datos,
         // Columna `date`: se devuelve como `YYYY-MM-DD`, que es lo que la
         // pantalla pinta y lo que come `<input type="date">`.
-        fechaVencimiento: datos.fechaVencimiento ? datos.fechaVencimiento.toISOString().slice(0, 10) : null,
+        fechaVencimiento,
       },
     },
     { status: 201 },

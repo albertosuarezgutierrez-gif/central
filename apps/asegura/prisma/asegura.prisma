@@ -285,8 +285,26 @@ model Cliente {
   polizas        Poliza[]
   siniestros     Siniestro[]
   intervenciones PolizaInterviniente[]
+  carnets        ClienteCarnetConducir[]
 
   @@map("clientes")
+}
+
+/// Carnés de conducir de un cliente (1:N — la misma persona puede tener B + C,
+/// p. ej.). `fechaCarnet` es la fecha de expedición/última renovación, CIFRADA
+/// (`v1:…`, como `clientes.fecha_nacimiento`); la caducidad se DERIVA con
+/// `caducidadCarnet()` de `@central/module-seguros`, nunca se guarda.
+model ClienteCarnetConducir {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  fechaCarnet  String?  @map("fecha_carnet") // cifrado
+  tipo         String   @db.VarChar(10)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  cliente Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  @@map("cliente_carnets_conducir")
 }
 
 model ClienteTelefono {
@@ -380,6 +398,11 @@ model Poliza {
   polizaCompetencia       Json?            @map("poliza_competencia")
   polizaSustituida        Json?            @map("poliza_sustituida")
   mergedIntoPolizaId      String?          @map("merged_into_poliza_id") @db.Uuid // lápida de fusión
+  // Sustitución por retarificación (20/09/2026): al EMITIR con otra compañía,
+  // la vieja se marca sustituidaAt y la nueva guarda polizaOrigenId. Ninguna
+  // ingesta externa las toca — el `estado` de CIMA es cosa aparte.
+  polizaOrigenId          String?          @map("poliza_origen_id") @db.Uuid
+  sustituidaAt            DateTime?        @map("sustituida_at") @db.Timestamptz(6)
 
   correduria     Correduria            @relation(fields: [correduriaId], references: [id])
   cliente        Cliente               @relation(fields: [clienteId], references: [id])
@@ -387,6 +410,8 @@ model Poliza {
   renovaciones   Poliza[]              @relation("Renovacion")
   mergedInto     Poliza?               @relation("FusionPoliza", fields: [mergedIntoPolizaId], references: [id])
   absorbidas     Poliza[]              @relation("FusionPoliza")
+  polizaOrigen   Poliza?               @relation("SustitucionPoliza", fields: [polizaOrigenId], references: [id])
+  sustituidas    Poliza[]              @relation("SustitucionPoliza")
   coberturasRel  PolizaCobertura[]
   recibos        PolizaRecibo[]
   intervinientes PolizaInterviniente[]
@@ -504,12 +529,55 @@ model Siniestro {
   gravedad             SiniestroGravedad?
   reservaImporte       Decimal?           @map("reserva_importe") @db.Decimal(12, 2)
   indemnizacionImporte Decimal?           @map("indemnizacion_importe") @db.Decimal(12, 2)
+  /// Campos PROPIOS del ramo (`@central/module-seguros/siniestro-ramo.ts`), p.
+  /// ej. tipo de colisión, gremio requerido, subramo de RC. `Prisma.DbNull`
+  /// cuando no hay datos, NUNCA `Prisma.JsonNull` (regla ya vigente en el
+  /// `datos_ramo` de pólizas: un `null` DENTRO del JSON se colaría por toda
+  /// guarda `?? `/`COALESCE`). EXCLUSIVO de siniestros `gestionado_correduria`
+  /// — CIMA no manda este detalle (ver `siniestro-ramo.ts`, cabecera).
+  datosRamo            Json?              @map("datos_ramo")
+  /// Desglose de daños del EIAC SIN (`ImplicadoDiversos/DanosSiniestro/DanoSiniestro[]`),
+  /// `[{descripcion,valor}]`. NO es PII. EXCLUSIVO de `origen='cima'` — es justo lo
+  /// contrario de `datosRamo` (ese lo aporta el corredor a mano y CIMA no lo trae).
+  danosCima            Json?              @map("danos_cima")
 
-  correduria Correduria @relation(fields: [correduriaId], references: [id])
-  cliente    Cliente    @relation(fields: [clienteId], references: [id])
-  poliza     Poliza     @relation(fields: [polizaId], references: [id])
+  correduria      Correduria               @relation(fields: [correduriaId], references: [id])
+  cliente         Cliente                  @relation(fields: [clienteId], references: [id])
+  poliza          Poliza                   @relation(fields: [polizaId], references: [id])
+  intervinientes  SiniestroInterviniente[]
 
   @@map("siniestros")
+}
+
+/// Terceros y testigos de un siniestro — el hueco que faltaba frente al CRM
+/// viejo de Manuel (`siniestro_contrarios`/`siniestro_testigos`). 1:N a
+/// propósito: puede haber varios testigos, o un tercero y su propio testigo.
+///
+/// 🚨 EXCLUSIVO de siniestros `gestionado_correduria` (ver `siniestro-ramo.ts`
+/// y `siniestro-intervinientes.ts` de `@central/module-seguros`): CIMA no
+/// manda terceros ni testigos.
+///
+/// PII cifrada con el MISMO mecanismo que `Cliente` (`@central/module-seguros-pii`,
+/// `encryptField`/`decryptField`) — nombre, teléfono y matrícula viajan como
+/// texto plano en el tipo Prisma porque el cifrado es de aplicación, no de
+/// columna (igual que `Siniestro.lugarDireccion`).
+model SiniestroInterviniente {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  siniestroId    String    @map("siniestro_id") @db.Uuid
+  tipo           String    @db.VarChar(20) // 'tercero' | 'testigo' — ver TIPOS_INTERVINIENTE
+  esConductor    Boolean?  @map("es_conductor")
+  nombre         String?   // cifrado
+  telefono       String?   // cifrado
+  matricula      String?   // cifrado; solo 'tercero'
+  marcaModelo    String?   @map("marca_modelo") @db.VarChar(150)
+  companiaNombre String?   @map("compania_nombre") @db.VarChar(150)
+  numeroPoliza   String?   @map("numero_poliza") @db.VarChar(50)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  siniestro Siniestro @relation(fields: [siniestroId], references: [id])
+
+  @@index([siniestroId])
+  @@map("siniestro_intervinientes")
 }
 
 /// Cuenta de efectivo EIAC: el extracto de liquidación de una compañía para un
@@ -582,6 +650,9 @@ model CompaniaDgs {
   telefonoFuente        String?   @map("telefono_fuente")
   telefonoVerificadoEn  DateTime? @map("telefono_verificado_en") @db.Timestamptz(6)
   whatsappSiniestros    String?   @map("whatsapp_siniestros")
+  // Vacío = el WhatsApp vale para todos los ramos; con valores, SOLO para esos
+  // (Mapfre: solo partes de hogar). NOT NULL DEFAULT '{}' en la BD (23/09/2026).
+  whatsappSiniestrosRamos String[] @default([]) @map("whatsapp_siniestros_ramos")
   horarioSiniestros     String?   @map("horario_siniestros")
   claveMediador     String?   @map("clave_mediador")
   contactos         CompaniaContacto[]
@@ -698,13 +769,27 @@ model PortalObligacion {
   /// `fechaEvento` − DIAS_PREAVISO_TOMADOR. Es la fecha que se le dice al cliente.
   fechaAccionable   DateTime             @map("fecha_accionable") @db.Date
   procedencia       PortalProcedencia
+  /// Cada cuántos meses se repite el recordatorio propio (`smallint`, CHECK 1-120),
+  /// o NULL si es de una sola vez. Aquí solo se lee: es lo que distingue un aviso
+  /// que tiene ciclo siguiente de uno que no, y de eso depende la forma de la
+  /// clave con la que `portal_aviso_enviado` lo sella.
+  repiteCadaMeses   Int?                 @map("repite_cada_meses") @db.SmallInt
   confirmadaAt      DateTime?            @map("confirmada_at") @db.Timestamptz(6)
   /// Sello del envío. Que exista es lo único que impide avisar dos veces.
   avisadaAt         DateTime?            @map("avisada_at") @db.Timestamptz(6)
   creadaAt          DateTime             @default(now()) @map("creada_at") @db.Timestamptz(6)
   actualizadaAt     DateTime             @default(now()) @map("actualizada_at") @db.Timestamptz(6)
 
-  @@unique([identidadId, polizaId])
+  // 🚨 Incluye `tipo` desde el 13/09/2026 (antes era solo `identidadId` +
+  // `polizaId`): un recordatorio PROPIO del cliente (`itv`, `mantenimiento`…)
+  // se puede colgar de la MISMA póliza que ya genera su obligación `poliza` —
+  // dos filas del mismo seguro, no una. Ver `apps/asegura-portal/prisma/schema.prisma`,
+  // que es quien manda sobre esta restricción (este modelo es de solo lectura).
+  @@unique([identidadId, polizaId, tipo])
+  // Su gemela para las pólizas DECLARADAS (subidas por el cliente, sin `polizaId`
+  // de cartera): ganó `tipo` el 09/09/2026 por el mismo motivo — una declarada
+  // puede generar a la vez `poliza` (renovación) y `recibo` (próximo cobro).
+  @@unique([identidadId, polizaDeclaradaId, tipo])
   @@index([identidadId])
   @@map("portal_obligacion")
 }
@@ -792,7 +877,18 @@ model PortalAutorizacion {
   id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   correduriaId           String    @map("correduria_id") @db.Uuid
   otorganteClienteId     String    @map("otorgante_cliente_id") @db.Uuid
-  autorizadoClienteId    String    @map("autorizado_cliente_id") @db.Uuid
+  /// 🚨 NULLABLE desde el 04/09/2026: una autorización apunta **o** a una ficha
+  /// **o** a una IDENTIDAD del portal (alguien invitado que no es cliente de
+  /// nadie), y el CHECK `portal_autorizacion_destinatario_unico` obliga a que
+  /// sea exactamente una de las dos. Este modelo lo declaraba obligatorio, así
+  /// que la PRIMERA fila de invitado reventaba toda lectura de la tabla —
+  /// `/correduria/cliente/[id]` y el cron de avisos incluidos. Hoy son 0 filas:
+  /// era un fallo esperando a la primera invitación (visto en `code-review`,
+  /// 15/09/2026). Quien lo lea tiene que mirar el `null`, no darlo por hecho.
+  autorizadoClienteId    String?   @map("autorizado_cliente_id") @db.Uuid
+  /// La otra rama: la identidad del portal a la que se autorizó. Una de las dos
+  /// va con valor y la otra a `null`, nunca las dos.
+  autorizadoIdentidadId  String?   @map("autorizado_identidad_id") @db.Uuid
   alcance                String
   /// Con qué título representa a la SOCIEDAD quien recibe el apoderamiento
   /// (`administrador` | `apoderado` | `empleado_autorizado`). `null` = no consta;
@@ -856,6 +952,8 @@ model PortalIdentidad {
   nombre         String?
   creadaEn       DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
   ultimoAccesoEn DateTime? @map("ultimo_acceso_en") @db.Timestamptz(6)
+  /// Última «revisión anual» enviada por `app/api/cron/revision-anual`. NULL = nunca.
+  revisionAnualEnviadaEn DateTime? @map("revision_anual_enviada_en") @db.Timestamptz(6)
 
   @@map("portal_identidad")
 }
@@ -914,6 +1012,12 @@ model PortalPolizaDeclarada {
   titularEmpresaNombre String?           @map("titular_empresa_nombre")
   /// Puede faltar aunque haya empresa: mucha gente no se lo sabe de memoria.
   titularEmpresaCif    String?           @map("titular_empresa_cif")
+  /// Garantías leídas del PDF por el portal. NULL = no leídas.
+  coberturas           Json?
+  /// El cliente redactó / envió la carta de no renovación desde el portal.
+  /// La señal de lead más fuerte que hay: la lee `lib/leads-portal.ts`.
+  cartaGeneradaEn      DateTime?         @map("carta_generada_en") @db.Timestamptz(6)
+  cartaEnviadaEn       DateTime?         @map("carta_enviada_en") @db.Timestamptz(6)
   creadaEn             DateTime          @default(now()) @map("creada_en") @db.Timestamptz(6)
   actualizadaEn        DateTime          @default(now()) @map("actualizada_en") @db.Timestamptz(6)
 
@@ -991,6 +1095,73 @@ model PortalVistaCorredor {
   @@map("portal_vista_corredor")
 }
 
+/// La PETICIÓN de acceso que un cliente le hace a otro desde el portal
+/// («papá, ¿me dejas ver tu seguro del coche?»). La escribe y la resuelve
+/// `apps/asegura-portal`; aquí se lee SOLO para avisar por correo a quien la ha
+/// recibido — desde el portal no hay a quién escribir, porque allí el
+/// destinatario es un hash.
+///
+/// 🚨 El estado NO es una columna: se deriva de las cuatro fechas con
+/// `estadoPeticion()` de `@central/module-seguros-portal`. Reimplementar esa
+/// derivación aquí es cómo se acaba avisando de una petición ya rechazada.
+model PortalPeticionAcceso {
+  id                     String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId           String    @map("correduria_id") @db.Uuid
+  solicitanteIdentidadId String    @map("solicitante_identidad_id") @db.Uuid
+  /// Ficha de quien pide. `null` = no se resolvió a una ficha de la cartera, y
+  /// entonces el correo no dice quién es: no se inventa un nombre.
+  solicitanteClienteId   String?   @map("solicitante_cliente_id") @db.Uuid
+  /// Ficha a la que le piden acceso. `null` = el correo del destinatario no
+  /// casó con ninguna ficha; esa petición no tiene a quién avisar.
+  destinatarioClienteId  String?   @map("destinatario_cliente_id") @db.Uuid
+  alcance                String
+  creadaEn               DateTime  @default(now()) @map("creada_en") @db.Timestamptz(6)
+  caducaEn               DateTime  @map("caduca_en") @db.Timestamptz(6)
+  concedidaEn            DateTime? @map("concedida_en") @db.Timestamptz(6)
+  rechazadaEn            DateTime? @map("rechazada_en") @db.Timestamptz(6)
+  retiradaEn             DateTime? @map("retirada_en") @db.Timestamptz(6)
+
+  @@index([destinatarioClienteId])
+  @@map("portal_peticion_acceso")
+}
+
+/// Sello de los avisos de la intranet que YA se han mandado por correo
+/// (`seguros.portal_aviso_enviado`, DDL en
+/// `apps/asegura/prisma/sql/2026-09-15_portal_aviso_enviado.sql`).
+///
+/// El emisor no tiene cola: deriva lo que hay que avisar del mismo catálogo que
+/// pinta la campana del portal. Sin este sello, cada pasada del cron mandaría
+/// otra vez lo mismo. `clave` es `${tipo}:${id}` — nunca el título del aviso,
+/// que lleva matrícula, número de póliza o el nombre de un tercero.
+model PortalAvisoEnviado {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  clave        String
+  tipo         String
+  enviadoEn    DateTime @default(now()) @map("enviado_en") @db.Timestamptz(6)
+
+  @@unique([clienteId, clave], map: "portal_aviso_enviado_unico")
+  @@index([clienteId])
+  @@map("portal_aviso_enviado")
+}
+
+/// Enlace de acceso directo del correo de avisos (un solo uso, 72 h; solo el hash del token).
+model PortalEnlaceDirecto {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId    String    @map("correduria_id") @db.Uuid
+  clienteId       String    @map("cliente_id") @db.Uuid
+  emailLookupHash String    @map("email_lookup_hash")
+  tokenHash       String    @unique(map: "portal_enlace_directo_token_unico") @map("token_hash")
+  destino         String
+  creadoEn        DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  expiraEn        DateTime  @map("expira_en") @db.Timestamptz(6)
+  usadoEn         DateTime? @map("usado_en") @db.Timestamptz(6)
+
+  @@index([expiraEn], map: "idx_portal_enlace_directo_expira")
+  @@map("portal_enlace_directo")
+}
+
 enum CanalRecaptacion {
   whatsapp
   email
@@ -1003,6 +1174,13 @@ enum EstadoEnvioRecaptacion {
   enlace_abierto
   abierto
   pinchado
+  /// Resend confirmó que el proveedor de correo del destinatario RECHAZÓ el
+  /// mensaje (dirección muerta). Aplica opt-out automático — reintentar es
+  /// gastar el cupo del lote en un correo que no existe.
+  rebotado
+  /// El destinatario lo marcó como spam. Aplica opt-out automático: seguir
+  /// escribiéndole daña la reputación del dominio de envío.
+  queja
 
   @@map("estado_envio_recaptacion")
 }
@@ -1026,4 +1204,150 @@ model RecaptacionEnvio {
   updatedAt        DateTime               @default(now()) @map("updated_at") @db.Timestamp(6)
 
   @@map("recaptacion_envios")
+}
+
+/// Historial de contactos de RENOVACIÓN — un cliente VIVO cuya póliza vence
+/// pronto, distinto de `RecaptacionEnvio` (leads muertos del volcado). No hay
+/// tabla de "cola calculada": se deriva en cada GET de `vencimientosProximos()`.
+/// Solo alimenta el cooldown y el "contactado hace N días" de la pantalla.
+model RenovacionContacto {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  polizaId     String   @map("poliza_id") @db.Uuid
+  canal        String   @default("whatsapp")
+  mensaje      String
+  creadoPor    String   @map("creado_por")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+
+  @@map("renovacion_contactos")
+}
+
+/// El presupuesto que se le enseña a un CLIENTE (21/09/2026).
+///
+/// NO es `Tarificacion`: aquella responde «qué precio me dio el vendor y cuánto
+/// costó preguntarlo»; esta, «QUÉ LE ENSEÑÉ A ESTA PERSONA, cuándo, cuál eligió
+/// y qué firmó». Por eso las opciones son una COPIA congelada y no un puntero.
+///
+/// 🚨 El estado NO es una columna: se DERIVA de los sellos con
+/// `estadoPresupuesto()` de `@central/module-seguros`. Guardarlo obligaría a
+/// mantenerlo sincronizado, y el día que una transición se olvide la columna
+/// miente sin que nada falle.
+model Presupuesto {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId     String    @map("correduria_id") @db.Uuid
+  clienteId        String    @map("cliente_id") @db.Uuid
+  /// NULL = venta nueva (no hay póliza que comparar), JAMÁS «no tiene seguro».
+  polizaId         String?   @map("poliza_id") @db.Uuid
+  ramo             String
+  tarificacionId   String    @map("tarificacion_id") @db.Uuid
+  /// El token del enlace, HASHEADO. En claro solo existe en el mensaje que sale.
+  tokenHash        String    @unique @map("token_hash")
+  canalAviso       String?   @map("canal_aviso")
+  destinoHash      String?   @map("destino_hash")
+  venceEl          DateTime  @map("vence_el") @db.Timestamptz(6)
+  creadoAt         DateTime  @default(now()) @map("creado_at") @db.Timestamptz(6)
+  /// Se abrió WhatsApp con el mensaje escrito. NO prueba que se enviara.
+  enlaceGeneradoAt DateTime? @map("enlace_generado_at") @db.Timestamptz(6)
+  enviadoAt        DateTime? @map("enviado_at") @db.Timestamptz(6)
+  /// NULL = NO CONSTA que lo haya abierto. No es «no lo ha abierto».
+  vistoAt          DateTime? @map("visto_at") @db.Timestamptz(6)
+  elegidoAt        DateTime? @map("elegido_at") @db.Timestamptz(6)
+  aceptadoAt       DateTime? @map("aceptado_at") @db.Timestamptz(6)
+  emitidoAt        DateTime? @map("emitido_at") @db.Timestamptz(6)
+  retiradoAt       DateTime? @map("retirado_at") @db.Timestamptz(6)
+  retiradoMotivo   String?   @map("retirado_motivo")
+  salida           String?
+  polizaEmitidaId  String?   @map("poliza_emitida_id") @db.Uuid
+  creadoPor        String    @map("creado_por")
+
+  opciones PresupuestoOpcion[]
+  eventos  PresupuestoEvento[]
+
+  @@index([correduriaId, creadoAt])
+  @@index([clienteId, creadoAt])
+  @@map("presupuesto")
+}
+
+/// SNAPSHOT de una opción tal y como se le enseñó. Si el vendor cambia de
+/// opinión mañana, lo que se enseñó ese día sigue escrito aquí.
+model PresupuestoOpcion {
+  id               String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId    String    @map("presupuesto_id") @db.Uuid
+  /// El orden EXACTO en que se pintaron: parte de lo que se firma.
+  orden            Int       @db.SmallInt
+  compania         String
+  producto         String
+  modalidad        String?
+  categoria        String?
+  /// NULL = no se pudo clasificar el nivel, y entonces no puede ser portada.
+  grupoCobertura   String?   @map("grupo_cobertura")
+  primaEur         Decimal   @map("prima_eur") @db.Decimal(10, 2)
+  entradaEur       Decimal?  @map("entrada_eur") @db.Decimal(10, 2)
+  /// NULL = el producto NO declara franquicia. JAMÁS «sin franquicia».
+  franquiciaEur    Decimal?  @map("franquicia_eur") @db.Decimal(10, 2)
+  firmeza          String
+  requiereRerate   Boolean   @map("requiere_rerate")
+  referenciaVendor String?   @map("referencia_vendor")
+  coberturas       Json      @default("[]")
+  avisos           Json      @default("[]")
+  /// equivalente / mas_barata / mejor_cubierta. ARRAY porque una misma opción
+  /// puede ser dos a la vez, y eso se dice en vez de repartirlo.
+  papeles          String[]  @default([])
+  elegidaAt        DateTime? @map("elegida_at") @db.Timestamptz(6)
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@unique([presupuestoId, orden], map: "presupuesto_opcion_orden_unico")
+  @@index([presupuestoId, orden])
+  @@map("presupuesto_opcion")
+}
+
+/// Telemetría del presupuesto. APPEND-ONLY por trigger: un libro que se puede
+/// editar no prueba nada.
+model PresupuestoEvento {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  presupuestoId String   @map("presupuesto_id") @db.Uuid
+  tipo          String
+  ocurridoAt    DateTime @default(now()) @map("ocurrido_at") @db.Timestamptz(6)
+  /// 'corredor' | 'cliente' | 'sistema'. Sin esto, «visto» y «marcado como
+  /// visto por Alberto» serían la misma fila.
+  origen        String
+  detalle       Json     @default("{}")
+
+  presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
+
+  @@index([presupuestoId, ocurridoAt])
+  @@map("presupuesto_evento")
+}
+
+/// La evidencia de una firma. Genérica desde el día uno porque la carta de
+/// nombramiento de mediador firma igual, y una segunda tabla de firmas sería un
+/// segundo criterio de qué cuenta como firma.
+///
+/// 🚨 Única por documento: pulsar dos veces devuelve la primera evidencia, no
+/// crea una segunda. Con dos firmas sobre el mismo documento no hay «la firma».
+model Firma {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId   String   @map("correduria_id") @db.Uuid
+  documentoTipo  String   @map("documento_tipo")
+  documentoId    String   @map("documento_id") @db.Uuid
+  clienteId      String   @map("cliente_id") @db.Uuid
+  identidadId    String?  @map("identidad_id") @db.Uuid
+  /// Hash del DOCUMENTO que se enseñó al firmar, no de esta fila.
+  docHash        String   @map("doc_hash")
+  algoritmo      String
+  metodo         String
+  firmanteNombre String?  @map("firmante_nombre")
+  firmanteEmail  String?  @map("firmante_email")
+  firmanteDni    String?  @map("firmante_dni")
+  ip             String?
+  userAgent      String?  @map("user_agent")
+  selloTiempo    DateTime @default(now()) @map("sello_tiempo") @db.Timestamptz(6)
+  evidencia      Json     @default("{}")
+  creadaAt       DateTime @default(now()) @map("creada_at") @db.Timestamptz(6)
+
+  @@unique([documentoTipo, documentoId], map: "firma_documento_unico")
+  @@index([clienteId, creadaAt])
+  @@map("firma")
 }

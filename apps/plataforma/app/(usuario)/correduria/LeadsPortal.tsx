@@ -155,6 +155,20 @@ function Fila({ l }: { l: LeadVista }) {
         </div>
         <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.45 }}>{textoPlazo(l)}</div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
+          {/* La carta de no renovación, PRIMERO: es la señal más fuerte de la
+              lista. «Enviada» = ya le ha dicho a su compañía que se va (y por
+              eso el puerto la marca urgente); «redactada» = la preparó en el
+              portal, que ya es más que la mayoría. */}
+          {l.senalCarta === 'enviada' && (
+            <Badge tono="aviso" title={`El cliente marcó en el portal que ya envió a su compañía la carta de no renovación${l.cartaEnviadaEn ? ` (${fechaEs(l.cartaEnviadaEn.toISOString())})` : ''}. Está cambiando de póliza: llámale hoy.`}>
+              Carta de baja enviada
+            </Badge>
+          )}
+          {l.senalCarta === 'generada' && (
+            <Badge tono="info" title="El cliente redactó en el portal la carta de no renovación (la copió, imprimió o abrió en su correo), pero no ha marcado que la enviara.">
+              Carta de baja redactada
+            </Badge>
+          )}
           {/* El estado de la FECHA, que es lo que decide cuándo llamar. */}
           {l.estado === 'sin_confirmar' && (
             <Badge tono="aviso" title="La fecha la leyó una IA del PDF y el cliente todavía no la ha revisado: confírmala antes de usarla para llamar.">

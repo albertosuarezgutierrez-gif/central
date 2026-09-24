@@ -1,5 +1,5 @@
 'use client'
-import { Plus, Wrench, Building2, MoreHorizontal } from 'lucide-react'
+import { Plus, Wrench, Building2, MoreHorizontal, FileUp } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 
 /**
@@ -17,10 +17,18 @@ import { btnStyle } from '@/components/ui'
  * del resto son dos), y la única que llegó a tener siete —`/banca`— las colapsó
  * en un desplegable por este mismo motivo. Esto es esa misma decisión.
  *
- * Qué se queda fuera del menú y por qué: **«Nuevo cliente» es lo único que se
- * hace a diario**. Compañías y Mantenimiento son de consulta/de cuando toca, y
- * el segundo ni siquiera es trabajo comercial: es una pasada de limpieza de
- * datos. Un botón permanente por una tarea de una tarde es ruido.
+ * Qué se queda fuera del menú y por qué. Hasta el 21/09/2026 la acción visible
+ * era «Nuevo cliente», por ser la única diaria. Desde que se puede **subir la
+ * póliza que manda el interesado** y que de ahí salgan la ficha y su
+ * vencimiento, esa deja de ser la puerta normal: teclear un cliente a mano es
+ * ahora el caso raro —el que no trae papel—, así que baja al menú y sube
+ * «Subir póliza», que es lo que se hace con el móvil en la mano cuando llega un
+ * lead por WhatsApp o por correo.
+ *
+ * Sigue habiendo UNA sola acción visible, y por el mismo motivo de siempre:
+ * dos botones `md` con rótulo no caben en una fila de 390px. Compañías y
+ * Mantenimiento son de consulta/de cuando toca, y el segundo ni siquiera es
+ * trabajo comercial: es una pasada de limpieza de datos.
  *
  * ⚠️ **«Presupuesto de hogar» se quitó de aquí el 12/09/2026** (Alberto: no
  * tiene sentido ofrecerlo suelto — `/correduria/hogar` solo consulta el
@@ -37,8 +45,11 @@ import { btnStyle } from '@/components/ui'
 export default function AccionesCabecera() {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-      <a href="/correduria/cliente/nuevo" style={{ ...btnStyle('primario'), textDecoration: 'none' }}>
-        <Plus size={15} strokeWidth={1.75} aria-hidden /> Nuevo cliente
+      {/* Enlace a una ruta de PLATAFORMA que redirige: la pantalla vive en
+          asegura, pero su URL no se resuelve aquí (sería código de servidor en
+          un bundle de cliente). Ver `subir-poliza/page.tsx`. */}
+      <a href="/correduria/subir-poliza" style={{ ...btnStyle('primario'), textDecoration: 'none' }}>
+        <FileUp size={15} strokeWidth={1.75} aria-hidden /> Subir póliza
       </a>
 
       <details style={{ position: 'relative' }}>
@@ -78,6 +89,12 @@ export default function AccionesCabecera() {
             boxShadow: 'var(--shadow)',
           }}
         >
+          <a
+            href="/correduria/cliente/nuevo"
+            style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}
+          >
+            <Plus size={15} strokeWidth={1.75} aria-hidden /> Nuevo cliente
+          </a>
           <a
             href="/correduria/companias"
             style={{ ...btnStyle('secundario'), justifyContent: 'flex-start', textDecoration: 'none' }}

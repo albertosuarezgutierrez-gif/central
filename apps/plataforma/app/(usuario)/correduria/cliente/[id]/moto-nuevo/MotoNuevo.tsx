@@ -17,7 +17,12 @@ import { useEffect, useState } from 'react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
+import type { Compania } from '@/lib/companias-asegura'
+import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
+import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
+import { Emision } from '../../../poliza/[id]/retarificar/emision'
+import { SelectorBuscable } from '../../../SelectorBuscable'
 
 function euroODash(n: number | null | undefined): string {
   return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
@@ -58,9 +63,26 @@ type Resultado =
       precios: Precio[]
       fallos: Fallo[]
       supuestos: Supuesto[]
+      /** Qué pasó con la copia guardada: su `cotizacionId` es lo que permite emitir. */
+      guardado?: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
-  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
+  | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean; proyectoVigente?: boolean }
+
+/**
+ * Modo PÓLIZA (retarificar una moto de la cartera, 23/09/2026): la misma
+ * pantalla, pero la matrícula y el historial (compañía anterior, nº, años) salen
+ * de la póliza en asegura (`precalificarMoto`), así que no se teclean, y el
+ * precio se pide por `POST /retarificar` de esa póliza.
+ */
+export type PolizaMoto = {
+  id: string
+  matricula: string | null
+  /** Aproximada, del vendor por la matrícula. `null` = no se ha podido saber: se teclea. */
+  fechaMatriculacion: string | null
+  /** Qué se declara como seguro anterior, para enseñarlo (la aseguradora y el nº). */
+  anterior: string
+}
 
 export default function MotoNuevo({
   clienteId,
@@ -73,7 +95,10 @@ export default function MotoNuevo({
   estadoCivilMoto,
   consumo,
   simulacion,
+  companias,
+  poliza = null,
 }: {
+  poliza?: PolizaMoto | null
   clienteId: string
   etiquetaCliente: string
   /** `null` = no se ha podido precalificar la persona · `[]` = revisado, nada falta. */
@@ -85,6 +110,8 @@ export default function MotoNuevo({
   estadoCivilMoto: Opcion | null
   consumo: ConsumoPuerto
   simulacion: boolean
+  /** `null` = no se ha podido leer el directorio de compañías: se teclea el código a mano. */
+  companias: Compania[] | null
 }) {
   // ── Vehículo: marca → modelo → combustible → versión, todo del catálogo ────
   const [marcas, setMarcas] = useState<Opcion[]>([])
@@ -116,8 +143,8 @@ export default function MotoNuevo({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const [matricula, setMatricula] = useState('')
-  const [matriculacion, setMatriculacion] = useState('')
+  const [matricula, setMatricula] = useState(poliza?.matricula ?? '')
+  const [matriculacion, setMatriculacion] = useState(poliza?.fechaMatriculacion ?? '')
   const [garaje, setGaraje] = useState('')
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
@@ -127,6 +154,18 @@ export default function MotoNuevo({
   const [motoAnteriorCodigo, setMotoAnteriorCodigo] = useState('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
+
+  // ── ¿Tiene seguro EN VIGOR ahora mismo? (fallo real de Alberto, 18/09/2026) ──
+  // Igual que en auto: sin esto la compañía cotiza «de calle» y el precio no es
+  // confirmable como real. Opt-in, apagado por defecto.
+  const [tieneSeguroActual, setTieneSeguroActual] = useState(false)
+  const [companiaActualCodigo, setCompaniaActualCodigo] = useState('')
+  const [companiaActualLibre, setCompaniaActualLibre] = useState('')
+  const [polizaActualDigitos, setPolizaActualDigitos] = useState('')
+  const [aniosAsegurado, setAniosAsegurado] = useState('')
+  const [aniosEnCompania, setAniosEnCompania] = useState('')
+  const [aniosSinSiniestros, setAniosSinSiniestros] = useState('')
+  const [siniestrosUltimos5, setSiniestrosUltimos5] = useState('')
 
   useEffect(() => {
     void catalogo('tipo=experiencia-moto')
@@ -195,28 +234,87 @@ export default function MotoNuevo({
   const faltaGaraje = !garaje
   const faltaCivil = !estadoCivilId
   const faltaMunicipio = !municipioId
-  const faltaMatricula = !matricula.trim()
+  // En modo póliza la matrícula la pone asegura desde la póliza: no se exige aquí.
+  const faltaMatricula = !poliza && !matricula.trim()
   const faltaMatriculacion = !matriculacion
   const faltaMotoAnterior = experienciaConduccion === 'OtherMotorcycle' && !motoAnteriorCodigo.trim()
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
   const huerfanos = (faltanInicial ?? []).filter(
-    (f) => !RESUELTOS_EN_PANTALLA.has(f.campo as string) && !CAMPOS_A_MANO[f.campo],
+    // En modo póliza la matrícula NO se resuelve en pantalla (la pone asegura
+    // desde la póliza): si falta, es un hueco de la ficha y se enseña como tal.
+    (f) =>
+      !(RESUELTOS_EN_PANTALLA.has(f.campo as string) && !(poliza && f.campo === 'matricula')) &&
+      !CAMPOS_A_MANO[f.campo],
   )
+
+  const companiaActualElegida = companiaActualCodigo || companiaActualLibre.trim()
+  // En modo póliza la tarjeta del toggle no se pinta, así que se queda en false.
+  const faltaHistorial =
+    tieneSeguroActual &&
+    (!companiaActualElegida ||
+      !polizaActualDigitos.trim() ||
+      aniosAsegurado.trim() === '' ||
+      aniosEnCompania.trim() === '' ||
+      aniosSinSiniestros.trim() === '')
 
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
-    faltaMotoAnterior || aManoSinRellenar.length > 0
+    faltaMotoAnterior || aManoSinRellenar.length > 0 || faltaHistorial
+    // En modo póliza, un hueco que no se arregla aquí (compañía o nº anterior,
+    // CP de circulación, matrícula) también apaga el botón: el servidor lo
+    // rechazaría igual, y el botón encendido prometería un precio que no llega.
+    || (poliza !== null && huerfanos.length > 0)
+
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
+    await pedirPrecio(false)
+  }
+
+  /** `forzarNuevo` SOLO tras «Descartar y pedir precio de cero» (modo póliza). */
+  async function pedirPrecio(forzarNuevo: boolean) {
     setResultado({ estado: 'cotizando' })
-    const r = await pedirCotizacionMoto({
+    const correccionesFinal: Record<string, unknown> = {
+      ...correcciones,
+      ...(experienciaConduccion === 'OtherMotorcycle' ? { motoAnteriorCodigo: motoAnteriorCodigo.trim() } : {}),
+    }
+    if (tieneSeguroActual) {
+      correccionesFinal.aseguradoAntes = true
+      correccionesFinal.companiaAnteriorCodigo = companiaActualElegida
+      correccionesFinal.polizaAnterior = polizaActualDigitos.trim()
+      correccionesFinal.aniosAsegurado = Number(aniosAsegurado)
+      correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
+      correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
+      if (siniestrosUltimos5.trim() !== '') correccionesFinal.siniestrosUltimos5 = Number(siniestrosUltimos5)
+    }
+    // marca/modelo/motor no viajan al vendor: asegura los usa para releer la versión
+    // del catálogo (gratis) y cruzar su cilindrada y kW con el carné antes de pagar.
+    const version = { marcaId, modeloId, motor: motorId }
+    const resueltosPoliza = {
+      ...version,
+      codigoVehiculo,
+      garaje,
+      estadoCivilId,
+      municipioId,
+      fechaMatriculacion: matriculacion,
+      garajeEsSupuesto: true,
+      experienciaConduccion: experienciaConduccion || undefined,
+    }
+    const r = poliza
+      ? await pedirCotizacion({
+          polizaId: poliza.id,
+          resueltos: resueltosPoliza,
+          correcciones: correccionesFinal,
+          ...(forzarNuevo ? { forzarNuevo: true } : {}),
+        })
+      : await pedirCotizacionMoto({
       clienteId,
       resueltos: {
+        ...version,
         codigoVehiculo,
         garaje,
         estadoCivilId,
@@ -228,10 +326,7 @@ export default function MotoNuevo({
         // `ThisMotorcycle`. Solo se manda un valor real si se ha elegido.
         experienciaConduccion: experienciaConduccion || undefined,
       },
-      correcciones: {
-        ...correcciones,
-        ...(experienciaConduccion === 'OtherMotorcycle' ? { motoAnteriorCodigo: motoAnteriorCodigo.trim() } : {}),
-      },
+      correcciones: correccionesFinal,
     })
     switch (r.estado) {
       case 'faltan':
@@ -241,6 +336,8 @@ export default function MotoNuevo({
         setResultado({ estado: 'error', mensaje: r.mensaje, tope: true, gastoDesconocido: false })
         return
       case 'proyecto_vigente':
+        setResultado({ estado: 'error', mensaje: r.mensaje, gastoDesconocido: false, proyectoVigente: true })
+        return
       case 'ramo':
       case 'no_encontrada':
       case 'sin_configurar':
@@ -260,6 +357,7 @@ export default function MotoNuevo({
           precios: r.precios,
           fallos: r.fallos,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
       default: {
@@ -284,32 +382,62 @@ export default function MotoNuevo({
         {fallo && <p style={{ color: 'var(--negative)', fontSize: 13 }}>{fallo}</p>}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           <Campo etiqueta="Marca" falta={false}>
-            <select value={marcaId} onChange={(e) => void alElegirMarca(e.target.value)} disabled={cargando === 'marcas'} style={input}>
-              <option value="">{cargando === 'marcas' ? 'Cargando…' : 'Elige marca'}</option>
-              {marcas.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-            </select>
+            <SelectorBuscable
+              valor={marcaId}
+              onCambiar={(v) => void alElegirMarca(v)}
+              opciones={marcas}
+              deshabilitado={cargando === 'marcas'}
+              textoVacio={cargando === 'marcas' ? 'Cargando…' : 'Elige marca'}
+              nombre="marca"
+              plural="marcas"
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="Modelo" falta={false}>
-            <select value={modeloId} onChange={(e) => alElegirModelo(e.target.value)} disabled={!marcaId || cargando === 'modelos'} style={input}>
-              <option value="">{cargando === 'modelos' ? 'Cargando…' : 'Elige modelo'}</option>
-              {modelos.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-            </select>
+            <SelectorBuscable
+              valor={modeloId}
+              onCambiar={alElegirModelo}
+              opciones={modelos}
+              deshabilitado={!marcaId || cargando === 'modelos'}
+              textoVacio={cargando === 'modelos' ? 'Cargando…' : 'Elige modelo'}
+              nombre="modelo"
+              plural="modelos"
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="Combustible" falta={motorId === ''} faltaTexto="lo elige el corredor">
-            <select value={motorId} onChange={(e) => alElegirMotor(e.target.value)} style={input}>
-              <option value="">Elige combustible</option>
-              {MOTORES.map((m) => <option key={m.id} value={m.id}>{m.nombre}</option>)}
-            </select>
+            <SelectorBuscable
+              valor={motorId}
+              onCambiar={alElegirMotor}
+              opciones={MOTORES}
+              textoVacio="Elige combustible"
+              nombre="combustible"
+              plural="combustibles"
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="Versión" falta={faltaVersion} faltaTexto="la elige el corredor">
-            <select value={codigoVehiculo} onChange={(e) => setCodigoVehiculo(e.target.value)} disabled={!modeloId || !motorId || cargando === 'versiones'} style={input}>
-              <option value="">{cargando === 'versiones' ? 'Cargando…' : !motorId ? 'Elige antes el combustible' : 'Elige versión'}</option>
-              {versiones.map((v) => <option key={v.id} value={v.id}>{v.nombre}</option>)}
-            </select>
+            <SelectorBuscable
+              valor={codigoVehiculo}
+              onCambiar={setCodigoVehiculo}
+              opciones={versiones}
+              deshabilitado={!modeloId || !motorId || cargando === 'versiones'}
+              textoVacio={cargando === 'versiones' ? 'Cargando…' : !motorId ? 'Elige antes el combustible' : 'Elige versión'}
+              nombre="versión"
+              plural="versiones"
+              marcador="Buscar: TECNO, 48V, 4X2…"
+              style={input}
+            />
           </Campo>
-          <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
-            <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
-          </Campo>
+          {poliza ? (
+            <Campo etiqueta="Matrícula" falta={false} ayuda="Sale de la póliza: no se cambia aquí.">
+              <input value={matricula || 'La de la póliza'} readOnly style={{ ...input, opacity: 0.8 }} />
+            </Campo>
+          ) : (
+            <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
+              <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
+            </Campo>
+          )}
           <Campo etiqueta="Fecha de matriculación" falta={faltaMatriculacion}>
             <input type="date" value={matriculacion} onChange={(e) => setMatriculacion(e.target.value)} style={input} />
           </Campo>
@@ -418,6 +546,86 @@ export default function MotoNuevo({
         )}
       </div>
 
+      {poliza ? (
+      <div style={cardStyle}>
+        <CardHeader
+          title="2c · Seguro anterior: esta póliza"
+          sub="La compañía, el número y la antigüedad salen de la póliza que se retarifica: es lo que da el bonus. Los años que no constan se suponen a la baja y salen en los supuestos junto al precio."
+        />
+        <p style={{ fontSize: 13, margin: 0 }}>{poliza.anterior}</p>
+      </div>
+      ) : (
+      <div style={cardStyle}>
+        <CardHeader
+          title="2c · ¿Tiene seguro EN VIGOR ahora mismo?"
+          sub="Sin esto la compañía cotiza «de calle»: no puede hacer el control de antecedentes y el precio NO es confirmable como real. Pregúntalo sobre todo en presupuestos importantes."
+        />
+        <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, fontWeight: 600 }}>
+          <input
+            type="checkbox"
+            checked={tieneSeguroActual}
+            onChange={(e) => setTieneSeguroActual(e.target.checked)}
+            style={{ width: 18, height: 18 }}
+          />
+          Sí, tiene un seguro de moto en vigor ahora mismo
+        </label>
+
+        {tieneSeguroActual && (
+          <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
+            <Campo etiqueta="Compañía actual" falta={!companiaActualElegida}>
+              {companias === null ? (
+                <input
+                  value={companiaActualLibre}
+                  onChange={(e) => setCompaniaActualLibre(e.target.value)}
+                  placeholder="Código DGS (p. ej. C0058)"
+                  style={input}
+                />
+              ) : (
+                <select value={companiaActualCodigo} onChange={(e) => setCompaniaActualCodigo(e.target.value)} style={input}>
+                  <option value="">Elige compañía</option>
+                  {companias.map((c) => <option key={c.codigoDgs} value={c.codigoDgs}>{c.nombreComun}</option>)}
+                </select>
+              )}
+            </Campo>
+            <Campo
+              etiqueta="Últimos 5 dígitos de la póliza"
+              falta={!polizaActualDigitos.trim()}
+              ayuda="⚠️ Mapfre y otras compañías a veces dan dígitos con ceros a propósito para que el competidor no pueda consultar la siniestralidad y así no perder al cliente. Si ves varios ceros seguidos, sospecha: la compañía puede rechazar el control de antecedentes con ese número y el precio se quedará en estimado."
+            >
+              <input
+                value={polizaActualDigitos}
+                onChange={(e) => setPolizaActualDigitos(e.target.value)}
+                placeholder="Los 5 últimos, o la póliza entera si el cliente la tiene a mano"
+                style={input}
+              />
+              {digitosPolizaSospechosos(polizaActualDigitos) && (
+                <p style={{ color: 'var(--negative)', fontSize: 12, fontWeight: 600, margin: '4px 0 0' }}>
+                  🚩 Parece relleno (varios ceros seguidos): probablemente la compañía rechace el control de
+                  antecedentes con este número y el precio se quede en estimado.
+                </p>
+              )}
+            </Campo>
+            <Campo etiqueta="Años asegurado sin interrupción" falta={aniosAsegurado.trim() === ''}>
+              <input type="number" min={0} value={aniosAsegurado} onChange={(e) => setAniosAsegurado(e.target.value)} style={input} />
+            </Campo>
+            <Campo etiqueta="Años en esta compañía" falta={aniosEnCompania.trim() === ''}>
+              <input type="number" min={0} value={aniosEnCompania} onChange={(e) => setAniosEnCompania(e.target.value)} style={input} />
+            </Campo>
+            <Campo etiqueta="Años sin siniestros" falta={aniosSinSiniestros.trim() === ''}>
+              <input type="number" min={0} value={aniosSinSiniestros} onChange={(e) => setAniosSinSiniestros(e.target.value)} style={input} />
+            </Campo>
+            <Campo
+              etiqueta="Siniestros en los últimos 5 años (si aplica)"
+              falta={false}
+              ayuda="Solo hace falta si lleva menos de 5 años sin siniestros: si falta y la compañía lo exige, lo dirá al pedir el precio, sin cobrar nada."
+            >
+              <input type="number" min={0} value={siniestrosUltimos5} onChange={(e) => setSiniestrosUltimos5(e.target.value)} style={input} />
+            </Campo>
+          </div>
+        )}
+      </div>
+      )}
+
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
@@ -455,7 +663,17 @@ export default function MotoNuevo({
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} />}
+        {resultado.estado === 'error' && resultado.proyectoVigente && poliza && (
+          <button
+            type="button"
+            onClick={() => void pedirPrecio(true)}
+            disabled={!puedePulsar}
+            style={{ ...btnStyle('secundario'), width: '100%', maxWidth: 420, marginTop: 8 }}
+          >
+            {simulacion ? 'Descartar y simular de cero' : 'Descartar y pedir precio de cero — cuesta 0,50€'}
+          </button>
+        )}
+        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible={poliza !== null} />}
       </div>
     </div>
   )
@@ -493,7 +711,26 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
   )
 }
 
-function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }) {
+/** El id de la cotización guardada: sin él no hay proyecto al que pedir la emisión. */
+function cotizacionIdDe(guardado: unknown): string | null {
+  if (typeof guardado !== 'object' || guardado === null) return null
+  const g = guardado as Record<string, unknown>
+  return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
+}
+
+function Precios({
+  r,
+  simulacion,
+  emitible = false,
+}: {
+  r: Extract<Resultado, { estado: 'ok' }>
+  simulacion: boolean
+  /** Solo en modo póliza (23/09/2026): emitir exige una póliza de la cartera a la que colgar la nueva. */
+  emitible?: boolean
+}) {
+  const [abierta, setAbierta] = useState<string | null>(null)
+  const cotizacionId = cotizacionIdDe(r.guardado)
+  const puedeEmitir = emitible && !r.simulado && cotizacionId !== null
   return (
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
@@ -521,6 +758,7 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
             <tr>
               <th style={th}>Compañía</th><th style={th}>Producto</th><th style={th}>Cobertura</th>
               <th style={th}>Prima anual</th><th style={th}>Franquicia</th><th style={th}>Firmeza</th>
+              {emitible && <th style={th}>Emitir</th>}
             </tr>
           </thead>
           <tbody>
@@ -535,11 +773,48 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
                 </td>
                 <td style={td}>{p.franquiciaEur === null || p.franquiciaEur === undefined ? <span style={{ color: 'var(--muted)' }}>no la declara</span> : euroODash(p.franquiciaEur)}</td>
                 <td style={td}><Badge tono={p.firmeza === 'firme' ? 'positivo' : 'aviso'} title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge></td>
+                {emitible && (
+                  <td style={td}>
+                    <button
+                      type="button"
+                      disabled={!puedeEmitir}
+                      onClick={() => {
+                        const id = `${p.compania}-${p.producto}-${i}`
+                        setAbierta(abierta === id ? null : id)
+                      }}
+                      title={
+                        r.simulado
+                          ? 'Simulado: no hay proyecto real de Codeoscopic'
+                          : cotizacionId === null
+                            ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
+                            : 'Confirmar con la compañía y emitir'
+                      }
+                      style={{ ...btnStyle('secundario', 'sm') }}
+                    >
+                      {abierta === `${p.compania}-${p.producto}-${i}` ? 'Ocultar' : 'Emitir'}
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {puedeEmitir &&
+        r.precios.map((p, i) => {
+          const id = `${p.compania}-${p.producto}-${i}`
+          if (abierta !== id) return null
+          return (
+            <Emision
+              key={id}
+              tarificacionId={cotizacionId as string}
+              compania={p.compania ?? ''}
+              categoria={p.categoria ?? ''}
+              primaEur={p.primaEur ?? null}
+              onCerrar={() => setAbierta(null)}
+            />
+          )
+        })}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
       )}

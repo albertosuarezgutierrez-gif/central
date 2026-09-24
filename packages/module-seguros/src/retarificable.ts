@@ -5,19 +5,22 @@
 // divergentes son cuatro pantallas que dicen cosas distintas de la misma póliza.
 //
 // ─── Lo que decide ──────────────────────────────────────────────────────────
-// · AUTO: hace falta la matrícula.
+// · AUTO y MOTO: hace falta la matrícula (la moto, con su catálogo `/motorcycle/*`).
 // · HOGAR: hacen falta m², año de construcción y código postal del riesgo — es
 //   lo mínimo que un multirriesgo pide para tarificar y lo que el Catastro da.
 //   Se miran la póliza Y su copia gemela del volcado: CIMA no manda el objeto
 //   de hogar, la copia de junio sí (medido 02/09/2026: las dos vivas de Occident
 //   de J.S.S. traen m²/año/CP solo en la gemela).
+//   Si ninguna los trae pero el corredor ha GUARDADO la referencia catastral
+//   del piso (`referenciaCatastral`, 23/09/2026), también: asegura consulta el
+//   Catastro con ella al tarificar. `fuente: 'catastro'`.
 // · Una póliza cancelada no se retarifica: no hay nada que defender.
 // · El resto de ramos, todavía no — y se dice cuál es.
 //
 // El `motivo` es para el `title` del guion en pantalla: la misma frase en la
 // ficha del cliente, la de la póliza y la cola de retención.
 
-export type RamoRetarificable = 'auto' | 'hogar'
+export type RamoRetarificable = 'auto' | 'moto' | 'hogar'
 
 export type Retarificabilidad = {
   ramo: RamoRetarificable | null
@@ -25,7 +28,7 @@ export type Retarificabilidad = {
   /** Por qué NO, en castellano. `null` cuando sí se puede. */
   motivo: string | null
   /** De dónde salen los datos del riesgo que lo hacen posible. */
-  fuente: 'poliza' | 'gemela' | null
+  fuente: 'poliza' | 'gemela' | 'catastro' | null
 }
 
 export type EntradaRetarificable = {
@@ -44,11 +47,11 @@ export function retarificabilidad(e: EntradaRetarificable): Retarificabilidad {
     return NO('La póliza está cancelada en CIMA: no hay nada que retarificar.')
   }
 
-  if (tipo === 'auto') {
+  if (tipo === 'auto' || tipo === 'moto') {
     const propia = texto(e.datos?.matricula)
     const gemela = texto(e.datosGemela?.matricula)
-    if (propia) return { ramo: 'auto', retarificable: true, motivo: null, fuente: 'poliza' }
-    if (gemela) return { ramo: 'auto', retarificable: true, motivo: null, fuente: 'gemela' }
+    if (propia) return { ramo: tipo, retarificable: true, motivo: null, fuente: 'poliza' }
+    if (gemela) return { ramo: tipo, retarificable: true, motivo: null, fuente: 'gemela' }
     return NO('La compañía no ha informado la matrícula.')
   }
 
@@ -57,13 +60,14 @@ export function retarificabilidad(e: EntradaRetarificable): Retarificabilidad {
     const gemela = riesgoHogarCompleto(e.datosGemela ?? null)
     if (propia.ok) return { ramo: 'hogar', retarificable: true, motivo: null, fuente: 'poliza' }
     if (gemela.ok) return { ramo: 'hogar', retarificable: true, motivo: null, fuente: 'gemela' }
+    if (referenciaCatastral(e.datos) !== null) return { ramo: 'hogar', retarificable: true, motivo: null, fuente: 'catastro' }
     const faltan = propia.faltan.filter((f) => gemela.faltan.includes(f))
     return NO(
       `Faltan datos del riesgo para tarificar hogar (${faltan.join(', ')}): ni la póliza ni su copia del volcado los traen.`,
     )
   }
 
-  return NO(`Hoy solo se retarifica auto y hogar (esta es de ${tipo || 'un ramo sin informar'}).`)
+  return NO(`Hoy solo se retarifica auto, moto y hogar (esta es de ${tipo || 'un ramo sin informar'}).`)
 }
 
 /** Lo que un cuestionario de hogar exige y no se puede suponer. */
@@ -75,6 +79,12 @@ function riesgoHogarCompleto(d: Record<string, unknown> | null): { ok: boolean; 
   if (!anioPlausible(d?.anioConstruccion)) faltan.push('año de construcción')
   if (!cpValido(d?.cp)) faltan.push('CP')
   return { ok: faltan.length === 0, faltan }
+}
+
+/** La referencia de 20 del PISO guardada en la póliza (la de 14 es el edificio: no vale). */
+export function referenciaCatastral(d: Record<string, unknown> | null | undefined): string | null {
+  const t = texto(d?.referenciaCatastral)
+  return t !== null && /^[0-9A-Z]{20}$/.test(t) ? t : null
 }
 
 function texto(v: unknown): string | null {

@@ -109,6 +109,40 @@ consintió. Nunca digas «tuvimos N visitas»; di «N visitas medidas, sobre las
 **cero visitas medidas no es cero visitas** — es exactamente el `NULL` que `CLAUDE.md` prohíbe
 colapsar. Para tráfico total, la fuente es GSC cuando exista.
 
+**Preguntar a GSC fuera de la foto semanal** (desde el 20/09/2026). La tabla solo guarda lo que
+mira el cron: 7 días cerrados, `query` y `page`, `sc-domain:grupoasegura.es`. Para cualquier otra
+pregunta —otro rango, por dispositivo, por país, la evolución por día— está
+`POST /api/internal/gsc` de plataforma (`Authorization: Bearer $ALERTA_TOKEN`), que usa la MISMA
+cuenta de servicio de solo lectura, sin credencial nueva:
+
+```bash
+curl -s -X POST "$PLATAFORMA_URL/api/internal/gsc" -H "Authorization: Bearer $ALERTA_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"desde":"2026-08-01","hasta":"2026-08-31","dimensiones":["query","device"],"limite":50}'
+```
+
+Sin cuerpo son los últimos 28 días consolidados por consulta. `GET` al mismo sitio lista a qué
+propiedades llega la cuenta de servicio — míralo ANTES de decir que una web «no tiene datos»: si no
+está en esa lista, es que nadie la ha invitado, que no es lo mismo que no tener tráfico.
+
+🚨 **Respeta el `parcial` de la respuesta.** GSC tarda ~3 días en consolidar: si pides hasta hoy,
+`parcial: true` y el total es un SUELO. Un rango que toque esos días NO se compara con uno cerrado —
+la «bajada» que sale es la latencia de Google. Y como el resto del repo: `503 no_configurado` (falta
+el secreto) y `502 error` (Google falló) **no son cero tráfico**; se dicen tal cual.
+
+**OpenSEO (MCP), medido el 23/09/2026 — qué sirve y qué no** (proyecto «Grupo ASegura»,
+`projectId` en `list_projects`, gratis):
+- ✅ `get_search_console_performance`: GSC por consulta/página/dispositivo, **sin créditos**. Es la
+  forma más rápida de preguntar a GSC desde una sesión.
+- ✅ `get_keyword_metrics`: volumen, KD y CPC de una lista de consultas (céntimos). Úsalo ANTES de
+  escribir una página: decidió RC autónomos (~1.000/mes, KD 0) y descartó los oficios sueltos
+  (0-50/mes) y reforzar hogar/auto (volumen ~0 en las búsquedas locales por las que salían).
+- ✅ `get_business_profile`: la ficha de Google (`place_id` `ChIJX9-iRQRsEg0RvJs_K-MXksA`, CID
+  `13876179666332523452`); de ahí sale el enlace de reseñas de `docs/asegura-resenas/`.
+- ❌ **Rank tracker: exige plan de pago.** Hay uno creado (manual, 18 consultas) sin ejecutar. No
+  pagues por él: las posiciones ya salen de GSC. Y **Serper se retiró del cron a propósito el
+  14/09** (PR #2936): una fila `serp` que falta NO es una avería.
+
 ### 2. Elige UNA cosa y hazla
 
 No cinco a medias. Por orden de retorno (§3 del plan):
@@ -134,6 +168,11 @@ No cinco a medias. Por orden de retorno (§3 del plan):
 - **Cita la ley cuando la haya** (art. 22 LCS para el preaviso, RDL 3/2020 para la mediación): es
   lo que distingue un texto de corredor de un texto de comparador, y es lo que Google premia en
   YMYL. Verifica el artículo antes de citarlo — una cita inventada cuesta más que no citar.
+  🚨 **Cómo se verifica, porque desde la sesión `boe.es` está BLOQUEADO:** el texto consolidado
+  de la Ley de Contrato de Seguro está en el repo (`docs/normativa/`, leer su README); cualquier
+  norma que cites va a `NORMAS_CITABLES` (`packages/module-seguros/src/normas.ts`) leída de ahí.
+  **Nunca** aceptes el texto de una norma que dé otro asistente o un chat: el 23/09 uno devolvió
+  un art. 73 LCS inventado («delimitadoras» por «limitativas» y un párrafo que no existe).
 - **La voz de la home es PRIMERA PERSONA, y el nombre no se teclea** (decidido el 06/09/2026, PR
   #2421). El hero explicaba lo que la correduría *es* («Somos correduría, no compañía…») y
   enumeraba cinco ramos de un tirón, así que no priorizaba ninguno; ahora abre por el momento del
@@ -168,6 +207,19 @@ con el PR. Nada se borra sin cerrarse.
 
 ---
 
+## Teléfonos de compañías — UNA fuente, y no se publica sin captura (23/09/2026)
+
+`/telefonos-siniestros` y el portal del cliente leen el MISMO catálogo:
+`packages/module-seguros/src/telefonos-companias.ts`. Nunca las columnas `telefono_*` de
+`companias_dgs` (obsoletas; lo vigila `test/regression-telefonos-fuente-unica.test.ts`).
+- Un número solo se publica con `verificado: true` + fecha, y se verifica con la web oficial o una
+  captura de ella que mande Alberto — **nunca** con un buscador ni con otro asistente de IA (el 23/09
+  otro asistente se inventó teléfonos y un artículo de ley).
+- Los artículos del blog **no copian números**: enlazan `/telefonos-siniestros` (cepo en
+  `apps/asegura-web/lib/telefonos-companias.test.ts`).
+- Separa siempre «dar parte» de «asistencia» (grúa, urgencias) y rotula cada asistencia por riesgo:
+  la BD daba la línea médica de Mapfre como la de siniestros.
+
 ## Auditoría de SEO técnico — qué mirar en `apps/asegura-web`
 
 Antes de escribir contenido nuevo, comprueba que lo que ya existe se puede indexar:
@@ -177,9 +229,12 @@ Antes de escribir contenido nuevo, comprueba que lo que ya existe se puede index
 - **`app/sitemap.ts`**: que estén todas las páginas reales y ninguna que no deba indexarse.
 - **`app/robots.ts`**: que declare el sitemap y no bloquee lo que quieres posicionar.
 - **JSON-LD** (`lib/seo.ts`): `InsuranceAgency`/`LocalBusiness` con dirección y `areaServed`.
-  🚨 **`HORARIO` sigue ausente A PROPÓSITO** mientras no se confirme: publicar un horario
-  inventado hace que alguien llame y no le cojan. **No lo rellenes tú**; si hace falta para el
-  JSON-LD, es una pregunta para Alberto, no un valor por defecto.
+  ✅ **`HORARIO` ya está confirmado (15/09/2026): lunes a viernes, de 9:00 a 18:00.** Sale de
+  `lib/sitio.ts` y de ahí se publica en DOS sitios —el pie de la web y el `openingHours` del
+  JSON-LD—; no lo teclees en ningún otro, que la segunda copia se queda vieja sin que nada falle.
+  Lo vigila `lib/seo-horario.test.ts`. Si algún día cambia, lo dice Alberto: nunca un valor por
+  defecto, porque publicar un horario inventado hace que alguien llame y no le cojan.
+  ⏳ Pendiente de Alberto: ponerlo también en el perfil de Google Business, que ese día no tenía.
   ✅ **El teléfono SÍ existe desde el 05/09/2026** (`MEDIADOR.identidad.telefono`), con
   `telefonoLegible()` y `whatsappUrl()` en `@central/module-seguros`. O sea que `telephone` en la
   ficha JSON-LD ya se puede rellenar, y **leyéndolo de ahí**, nunca tecleándolo.
@@ -201,6 +256,8 @@ Por orden de retorno para una correduría pequeña (oficina en Sevilla, venta na
    desde el móvil. Necesita verificación por Alberto (llega una postal o un código al domicilio).
    Un GBP con cero reseñas no convierte: la petición de reseña a los ~80 clientes actuales va
    pegada a esto, y **la manda Alberto**.
+   ✅ Ficha verificada y con horario; **borrador de la petición + QR listos** en
+   `docs/asegura-resenas/` (23/09/2026). Medido ese día: 1 reseña y fuera del pack local.
 2. **LinkedIn (perfil de Alberto, no página de empresa).** El nicho que más interesa es
    **empresas y flota**, y ahí la relación es de persona a persona. Contenido: lo mismo que la web
    de intención de problema, en corto.

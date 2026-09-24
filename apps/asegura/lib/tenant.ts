@@ -2,8 +2,8 @@ import { prisma } from './db'
 import { estadoMigracion } from './estado-migracion'
 import { resolverAmbito, type AmbitoCorreduria } from './tenant-ambito'
 
-export { exigirCorreduriaId, explicarAmbito } from './tenant-ambito'
-export type { AmbitoCorreduria } from './tenant-ambito'
+export { exigirCorreduriaId, explicarAmbito, denegacionAmbito } from './tenant-ambito'
+export type { AmbitoCorreduria, DenegacionAmbito } from './tenant-ambito'
 
 /**
  * Resuelve a qué correduría pertenece la cuenta de la sesión.

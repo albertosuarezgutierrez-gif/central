@@ -1,3 +1,4 @@
+import { cabecerasPuerto } from './puerto-actor.ts'
 // La cola de recaptación de leads sin vencimiento (12/09/2026), leída del
 // puerto de asegura (`/api/operador/recaptacion*`). Mismo patrón que
 // `correduria-puerto.ts`: interpretación PURA (sin red, la prueba el client
@@ -21,7 +22,25 @@ function booleano(v: unknown): boolean {
   return v === true
 }
 
+function origenLead(v: unknown): OrigenLeadRecaptacion {
+  return v === 'vencimiento_antiguo' ? 'vencimiento_antiguo' : 'sin_vencimiento'
+}
+
+/** 1-12, o `null` si no es un mes válido (incluido cuando el origen es `sin_vencimiento`). */
+function mes(v: unknown): number | null {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 12 ? v : null
+}
+
 // ── Cola ─────────────────────────────────────────────────────────────────────
+
+/**
+ * `sin_vencimiento` (Fase 1) = activa sin fecha a la que anclar el contacto.
+ * `vencimiento_antiguo` (Fase 2, 20/09/2026) = venció hace años; el mes/día es
+ * la pista de cuándo solía renovar. Un valor que el puerto no reconozca (o no
+ * lo mande, versión vieja de asegura) cae a `sin_vencimiento`, el lado que ya
+ * se trataba como "sin fecha a la que anclar" — nunca se inventa un mes.
+ */
+export type OrigenLeadRecaptacion = 'sin_vencimiento' | 'vencimiento_antiguo'
 
 export type LeadRecaptacion = {
   clienteId: string
@@ -38,12 +57,23 @@ export type LeadRecaptacion = {
   /** `true` = ya se contactó hace menos de 14 días; la pantalla ofrece "ver igualmente" para forzar. */
   enCooldown: boolean
   ultimoContactoEn: string | null
+  origen: OrigenLeadRecaptacion
+  /** Mes (1-12) del vencimiento antiguo. `null` cuando `origen==='sin_vencimiento'`. */
+  mesVencimientoAntiguo: number | null
 }
 
 export type ContadoresRecaptacion = {
   totalCandidatos: number
   contactadosSemana: number
   conAperturaORespuestaSemana: number
+  /** Acumulado total de emails (no solo la semana). `null` = no se pudo leer. */
+  emailEnviadosTotal: number | null
+  emailAbiertosTotal: number | null
+  /** Leads `vencimiento_antiguo` cuya ventana de 45 días aún no se ha abierto:
+   *  existen, pero `totalCandidatos` no los cuenta a propósito. `0` si el
+   *  puerto es viejo y no lo manda — no se puede distinguir de "ninguno en
+   *  espera", pero tampoco se inventa un número mayor. */
+  enEsperaVentana: number
 }
 
 /**
@@ -77,6 +107,12 @@ function leerLead(v: unknown): LeadRecaptacion | null {
     prima: numero(o.prima),
     enCooldown: booleano(o.enCooldown),
     ultimoContactoEn: cadena(o.ultimoContactoEn),
+    origen: origenLead(o.origen),
+    // El mes solo tiene sentido junto a `vencimiento_antiguo`: un puerto que
+    // mandara los dos campos inconsistentes (p. ej. `sin_vencimiento` con un
+    // mes) no debe colar un mes que la UI luego trataría como real. La
+    // invariante se fuerza AQUÍ, no se confía en que el emisor la respete.
+    mesVencimientoAntiguo: origenLead(o.origen) === 'vencimiento_antiguo' ? mes(o.mesVencimientoAntiguo) : null,
   }
 }
 
@@ -86,6 +122,9 @@ function leerContadores(v: unknown): ContadoresRecaptacion {
     totalCandidatos: entero(o.totalCandidatos) ?? 0,
     contactadosSemana: entero(o.contactadosSemana) ?? 0,
     conAperturaORespuestaSemana: entero(o.conAperturaORespuestaSemana) ?? 0,
+    emailEnviadosTotal: entero(o.emailEnviadosTotal),
+    emailAbiertosTotal: entero(o.emailAbiertosTotal),
+    enEsperaVentana: entero(o.enEsperaVentana) ?? 0,
   }
 }
 
@@ -110,6 +149,59 @@ export function interpretarCola(status: number, json: unknown): Cola {
     // Alberto: sigue viendo el resto de leads).
   }
   return { estado: 'ok', leads, contadores: leerContadores(r.contadores) }
+}
+
+// ── Agrupación por cliente ──────────────────────────────────────────────────
+//
+// El puerto da una fila por PÓLIZA: el mismo cliente con varios seguros
+// (distintos ramos, o el mismo ramo repetido en el volcado) sale como varias
+// filas con el mismo contacto. Alberto: «leads puede haber tenido varios
+// seguros pero contacto es solo uno» — se agrupa por `clienteId` (la ficha,
+// que YA es la identidad correcta: regla «por NIF/ficha, nunca por nombre»
+// del CLAUDE.md — aquí no hay NIF en este feed, pero `clienteId` es la misma
+// idea) para que el contacto (llamada/WhatsApp/email) sea uno por cliente, no
+// uno por póliza. Dos `clienteId` distintos NUNCA se funden aquí, aunque
+// compartan teléfono (podría ser un negocio con varios titulares).
+
+export type GrupoLeadRecaptacion = {
+  clienteId: string
+  cliente: string
+  telefono: string | null
+  email: string | null
+  polizas: LeadRecaptacion[]
+  enCooldown: boolean
+  ultimoContactoEn: string | null
+  /** `true` si ALGUNA de sus pólizas es Fase 2 (vencimiento antiguo). */
+  tieneVencimientoAntiguo: boolean
+}
+
+export function agruparLeadsPorCliente(leads: readonly LeadRecaptacion[]): GrupoLeadRecaptacion[] {
+  const mapa = new Map<string, GrupoLeadRecaptacion>()
+  for (const l of leads) {
+    const existente = mapa.get(l.clienteId)
+    if (existente) {
+      existente.polizas.push(l)
+      if (l.enCooldown) existente.enCooldown = true
+      if (existente.telefono === null && l.telefono !== null) existente.telefono = l.telefono
+      if (existente.email === null && l.email !== null) existente.email = l.email
+      if (l.ultimoContactoEn !== null && (existente.ultimoContactoEn === null || l.ultimoContactoEn > existente.ultimoContactoEn)) {
+        existente.ultimoContactoEn = l.ultimoContactoEn
+      }
+      if (l.origen === 'vencimiento_antiguo') existente.tieneVencimientoAntiguo = true
+      continue
+    }
+    mapa.set(l.clienteId, {
+      clienteId: l.clienteId,
+      cliente: l.cliente,
+      telefono: l.telefono,
+      email: l.email,
+      polizas: [l],
+      enCooldown: l.enCooldown,
+      ultimoContactoEn: l.ultimoContactoEn,
+      tieneVencimientoAntiguo: l.origen === 'vencimiento_antiguo',
+    })
+  }
+  return [...mapa.values()]
 }
 
 /** El motivo del puerto, en castellano de pantalla. */
@@ -162,17 +254,15 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-async function pedirCon(path: string, init: RequestInit): Promise<{ status: number; json: unknown } | null> {
+async function pedirCon(path: string, init: RequestInit, timeoutMs: number = 8000): Promise<{ status: number; json: unknown } | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
     ...init,
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      ...(init.body ? { 'content-type': 'application/json' } : {}),
+    headers: { ...(await cabecerasPuerto(secret)), ...(init.body ? { 'content-type': 'application/json' } : {}),
     },
     cache: 'no-store',
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
 }
@@ -214,6 +304,49 @@ export async function enviarEmailRecaptacionAsegura(body: {
     const r = await pedirCon('/api/operador/recaptacion/email', { method: 'POST', body: JSON.stringify(body) })
     if (r === null) return { estado: 'sin_configurar' }
     return interpretarEscrituraRecaptacion(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Envío en LOTE (cron diario) ───────────────────────────────────────────
+
+export type LoteEmail =
+  | { estado: 'ok'; candidatos: number; enviados: number; fallidos: number; detalleFallos: string[]; descartadosPorSilencio: number }
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+
+export function interpretarLoteEmail(status: number, json: unknown): LoteEmail {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (o.estado === 'sin_configurar' || status === 503) return { estado: 'sin_configurar' }
+  if (status === 200 && o.estado === 'ok') {
+    return {
+      estado: 'ok',
+      candidatos: entero(o.candidatos) ?? 0,
+      enviados: entero(o.enviados) ?? 0,
+      fallidos: entero(o.fallidos) ?? 0,
+      detalleFallos: Array.isArray(o.detalleFallos) ? o.detalleFallos.filter((x): x is string => typeof x === 'string') : [],
+      // Cron viejo de asegura sin este campo (versión anterior al 21/09/2026) → 0,
+      // no `null`: es un recuento real de ESTA pasada, no un dato pendiente.
+      descartadosPorSilencio: entero(o.descartadosPorSilencio) ?? 0,
+    }
+  }
+  const motivo = cadena(o.motivo) ?? cadena(o.causa) ?? cadena(o.error)
+  return { estado: 'error', motivo: motivo ?? `HTTP ${status}` }
+}
+
+// Timeout largo a propósito: hasta ~25 envíos secuenciales por Resend, cada
+// uno con su propio timeout interno de 15s en `enviarEmailResend` (asegura).
+// Por encima del `maxDuration=120` de la ruta de asegura, para no cortar la
+// petición antes de que la propia plataforma la corte por su cuenta.
+const TIMEOUT_LOTE_MS = 130_000
+
+export async function enviarLoteEmailRecaptacionAsegura(limite?: number): Promise<LoteEmail> {
+  try {
+    const r = await pedirCon('/api/operador/recaptacion/email-lote', { method: 'POST', body: JSON.stringify({ limite }) }, TIMEOUT_LOTE_MS)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarLoteEmail(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }

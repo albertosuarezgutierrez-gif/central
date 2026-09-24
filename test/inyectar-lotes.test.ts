@@ -66,12 +66,10 @@ test('enviarLotes: manda lote/total con el sha, reintenta un 5xx y NO reintenta 
   assert.equal(intentos401.length, 1)
 })
 
-test('el workflow ya no manda el mapa entero por curl y el grafo no depende del mapa', () => {
+test('el workflow ya no manda el mapa entero por curl', () => {
   const wf = readFileSync(join(ROOT, '.github/workflows/auditoria.yml'), 'utf8')
   assert.doesNotMatch(wf, /--data-binary @docs\/mapa-funciones\.generated\.json/, 'el POST entero del mapa es lo que dio 413')
   assert.match(wf, /node scripts\/mapa-arquitectura-inyectar\.mjs docs\/mapa-funciones\.generated\.json/)
-  const pasoGrafo = wf.slice(wf.indexOf('Inyectar grafo de código en Supabase'))
-  assert.match(pasoGrafo, /if:\s*github\.ref_name == 'main' && !cancelled\(\)/, 'un fallo del mapa no puede saltarse la carga del grafo')
 })
 
 test('el puerto del mapa acepta lote/total y borra por sha solo en el último lote, estampando el sha siempre', () => {

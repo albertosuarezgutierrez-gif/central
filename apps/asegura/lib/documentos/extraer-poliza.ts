@@ -24,7 +24,8 @@
 // proveedor de IA respondió. El mismo comportamiento ante un marcador de cajón
 // lo vigila `test/regression-marcadores-sin-dato.test.ts`.
 
-import { aiComplete, openrouterVision, cleanJSON } from '@central/core-ai'
+import { openrouterVision, cleanJSON } from '@central/core-ai'
+import { iaTexto } from '../ia.ts'
 import {
   normalizarAutoLeido,
   autoLeidoVacio,
@@ -101,7 +102,17 @@ Reglas, por orden de importancia:
 - NO escribas "no consta", "desconocido", "N/A" ni similares: eso es null.
 - "codigoEntidadDgs" es el código DGS de la aseguradora con la forma C0058. Si el
   documento no lo trae literalmente, null (NO lo deduzcas del nombre).
-- "primaAnual", "capitalContinente" y "capitalContenido" en euros, solo el número.
+- "primaAnual" es lo que cuesta el seguro un AÑO, en euros y solo el número.
+  🚨 NO es el importe del recibo cuando ese recibo lleva descuentos de otra
+  póliza. Si el documento dice que se abona o se descuenta la "parte de prima no
+  consumida" de una póliza anterior (extorno, regularización, continuidad
+  Bonus-Malus), el "Total Recibo" es MENOR que la prima y NO sirve: usa la prima
+  del periodo anual completo. Si solo aparece el recibo rebajado y no se puede
+  reconstruir la prima del año, pon null — un importe demasiado bajo parece un
+  precio y no hay nada que delate el error.
+- "primaAnual" es el TOTAL que paga el cliente (con recargos, IPS y Consorcio),
+  no la prima neta. Si el pago es fraccionado, el año completo, no el fraccionamiento.
+- "capitalContinente" y "capitalContenido" en euros, solo el número.
 - Los campos de VEHÍCULO (matricula, marca, modelo, version, fechaMatriculacion,
   fechaCarnet, aniosSinSiniestros, siniestrosUltimos5) solo tienen sentido si el
   ramo es auto o moto: en cualquier otro caso, todos a null.
@@ -182,11 +193,11 @@ export async function leerPoliza(
       )
     }
     try {
-      const salida = await aiComplete(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1100 })
+      const salida = await iaTexto(texto.slice(0, 20_000), { system: INSTRUCCION, maxTokens: 1100, timeoutMs: 55_000, privado: true })
       const { ramo, auto, hogar } = parsear(salida)
       return empaquetar(ramo, auto, hogar, 'texto')
     } catch (e) {
-      console.warn('[asegura] aiComplete falló:', e)
+      console.warn('[asegura] lectura de texto por IA falló:', e)
       return nadaLeido(`No se ha podido leer el documento: ${mensaje(e)}`)
     }
   }

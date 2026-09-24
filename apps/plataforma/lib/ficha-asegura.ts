@@ -16,6 +16,7 @@ import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 // `error` («no se ha podido mirar»). Colapsarlos diría que un cliente no existe
 // cuando lo que pasa es que el puerto no responde.
 
+import { cabecerasPuerto } from './puerto-actor.ts'
 export type EstadoFicha = 'sin_configurar' | 'error' | 'no_encontrado' | 'ok'
 
 export type RecibosPoliza = {
@@ -215,9 +216,149 @@ export type Ficha = {
   historial: AnotacionHistorial[] | null
   /** Presupuestos recientes sin póliza. `null` = no se pudo contar, NO es 0. */
   cotizacionesVivas: number | null
+  /**
+   * Pólizas que el cliente ha APORTADO desde el portal, casi siempre de otra
+   * compañía. `null` = asegura no manda el bloque o no pudo consultarlo — NO
+   * es «no ha aportado ninguna» (eso es `[]`).
+   */
+  declaradas: PolizaDeclaradaFicha[] | null
+  /**
+   * Carnés de conducir de la ficha. `null` = asegura no manda el bloque o no
+   * pudo leerlo — NO es «no tiene carné» (eso es `[]`).
+   */
+  carnets: CarnetFicha[] | null
+}
+
+export type CarnetFicha = {
+  id: string
+  tipo: string
+  /** ISO. `null` con `fechaIlegible` = guardada pero no se descifra. */
+  fechaExpedicion: string | null
+  fechaIlegible: boolean
+  /** ISO. `null` = no se ha podido calcular (falta expedición o nacimiento). */
+  fechaCaducidad: string | null
+}
+
+/** `null` si el bloque no llega o no es una lista; una fila rara se salta. */
+export function leerCarnets(v: unknown): CarnetFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: CarnetFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const d = fila as Record<string, unknown>
+    if (typeof d.id !== 'string' || typeof d.tipo !== 'string' || d.tipo.trim() === '') continue
+    out.push({
+      id: d.id,
+      tipo: d.tipo.trim().toUpperCase(),
+      fechaExpedicion: cadena(d.fechaExpedicion),
+      fechaIlegible: d.fechaIlegible === true,
+      fechaCaducidad: cadena(d.fechaCaducidad),
+    })
+  }
+  return out
+}
+
+/**
+ * Estado de la caducidad frente a `hoy` (ISO). La caducidad se CALCULA desde la
+ * fecha de expedición guardada, que suele ser la antigua (volcado o fecha de
+ * obtención): si ya pasó, lo que se sabe es que no consta la renovación, no que
+ * el carné esté caducado. Por eso ese estado es `sin_renovacion`, no «caducado».
+ */
+export function estadoCaducidadCarnet(
+  fechaCaducidad: string | null,
+  hoy: string,
+): 'sin_renovacion' | 'pronto' | 'vigente' | 'desconocido' {
+  if (!fechaCaducidad) return 'desconocido'
+  if (fechaCaducidad < hoy) return 'sin_renovacion'
+  const limite = new Date(`${hoy}T00:00:00Z`)
+  limite.setUTCDate(limite.getUTCDate() + 90)
+  return fechaCaducidad <= limite.toISOString().slice(0, 10) ? 'pronto' : 'vigente'
 }
 
 export type AnotacionHistorial = { id: string; tipo: string; texto: string; fecha: string }
+
+/**
+ * Una póliza aportada por el cliente desde el portal (`portal_poliza_declarada`),
+ * casi siempre de OTRA compañía: la correduría no la gestiona, solo consta que
+ * existe. Nunca se enseña en la tabla de «Pólizas vivas» — es de otro alcance.
+ */
+/**
+ * QUÉ es el bien asegurado — misma regla que el portal del cliente
+ * (`describirBien()` de `@central/module-seguros-portal`): el nº de póliza
+ * nunca identifica una póliza para una persona. `null` = la IA no lo leyó
+ * del documento, nunca «no tiene».
+ */
+export type BienDeclarada = {
+  cosa: string | null
+  ubicacion: string | null
+  detalles: string[]
+}
+
+export const BIEN_DECLARADA_VACIO: BienDeclarada = { cosa: null, ubicacion: null, detalles: [] }
+
+function leerBienDeclarada(v: unknown): BienDeclarada {
+  if (typeof v !== 'object' || v === null) return BIEN_DECLARADA_VACIO
+  const d = v as Record<string, unknown>
+  return {
+    cosa: cadena(d.cosa),
+    ubicacion: cadena(d.ubicacion),
+    detalles: Array.isArray(d.detalles) ? d.detalles.filter((x): x is string => typeof x === 'string') : [],
+  }
+}
+
+export type PolizaDeclaradaFicha = {
+  id: string
+  compania: string | null
+  numeroPoliza: string | null
+  ramo: string | null
+  primaAnual: number | null
+  fechaVencimiento: string | null
+  matricula: string | null
+  procedencia: string
+  confirmadaPorUsuario: boolean
+  titularTipo: string | null
+  titularEmpresaNombre: string | null
+  /**
+   * `true` = esta ficha ya tiene una póliza con ese número: no es una
+   * oportunidad, es la misma póliza subida dos veces. `null` = no se ha
+   * podido cotejar (sin número, o declarada a nombre de una empresa —
+   * cotejar eso exige la ficha de esa sociedad, que aquí no se mira).
+   */
+  yaEnCartera: boolean | null
+  bien: BienDeclarada
+}
+
+/**
+ * Las declaradas, o `null` si el bloque no llega o llega con forma rara —
+ * NUNCA `[]`, que diría «se ha mirado y no ha aportado ninguna» cuando en
+ * realidad es que la versión de asegura desplegada aún no manda el campo.
+ * Una fila individual con forma rara se salta, no tumba el bloque.
+ */
+export function leerDeclaradas(v: unknown): PolizaDeclaradaFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: PolizaDeclaradaFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const d = fila as Record<string, unknown>
+    if (typeof d.id !== 'string') continue
+    out.push({
+      id: d.id,
+      compania: cadena(d.compania),
+      numeroPoliza: cadena(d.numeroPoliza),
+      ramo: cadena(d.ramo),
+      primaAnual: numero(d.primaAnual),
+      fechaVencimiento: cadena(d.fechaVencimiento),
+      matricula: cadena(d.matricula),
+      procedencia: cadena(d.procedencia) ?? 'declarado',
+      confirmadaPorUsuario: d.confirmadaPorUsuario === true,
+      titularTipo: cadena(d.titularTipo),
+      titularEmpresaNombre: cadena(d.titularEmpresaNombre),
+      yaEnCartera: typeof d.yaEnCartera === 'boolean' ? d.yaEnCartera : null,
+      bien: leerBienDeclarada(d.bien),
+    })
+  }
+  return out
+}
 
 export type RespuestaFicha =
   | { estado: 'sin_configurar' }
@@ -295,7 +436,7 @@ export function leerRecibos(v: unknown): RecibosPoliza | null {
 }
 
 const RAMOS_RETARIFICABLES = new Set(['auto', 'hogar'])
-const FUENTES_RETARIFICACION = new Set(['poliza', 'gemela'])
+const FUENTES_RETARIFICACION = new Set(['poliza', 'gemela', 'catastro'])
 
 /**
  * El veredicto de retarificación, o `null` si no llega o llega con forma rara.
@@ -590,6 +731,8 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       estado: leerEstadoCliente(f.estado),
       historial: leerHistorial(f.historial),
       cotizacionesVivas: entero(f.cotizacionesVivas),
+      declaradas: leerDeclaradas(f.declaradas),
+      carnets: leerCarnets(f.carnets),
       piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }
@@ -648,7 +791,7 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
-    headers: { Authorization: `Bearer ${secret}` },
+    headers: { ...(await cabecerasPuerto(secret)) },
     cache: 'no-store',
     signal: AbortSignal.timeout(8000),
   })
@@ -691,19 +834,6 @@ export function urlRetarificar(polizaId: string): string {
   return `/correduria/poliza/${polizaId}/retarificar`
 }
 
-/**
- * El salto a asegura que TODAVÍA queda: **hogar**.
- *
- * Su retarificador es otro componente (metros, año de construcción, capitales y
- * el Catastro del riesgo) y no está portado. No se enlaza desde las fichas: solo
- * lo usa la pantalla interna cuando la póliza resulta ser de hogar, para mandar
- * al único sitio donde hoy funciona en vez de fingir que no se puede.
- * Pública, no es un secreto.
- */
-export function urlRetarificarHogarAsegura(polizaId: string): string {
-  return `${urlAsegura()}/cartera/poliza/${polizaId}`
-}
-
 /** Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura
  *  porque comparte pantalla con la cotización que sale de lo leído. Gratis. */
 export function urlSubirPoliza(): string {
@@ -714,10 +844,11 @@ export function urlSubirPoliza(): string {
  * Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la
  * cartera), **DENTRO de plataforma** desde el 07/09/2026. El riesgo sale del
  * Catastro (por dirección o referencia), no de una ficha existente — a
- * diferencia de `urlRetarificarHogarAsegura` (retarificar una póliza de
- * hogar existente, que SÍ sigue saltando a asegura), esta oportunidad se
- * presupuesta y se cotiza entera en `/correduria/cliente/<id>/hogar-nuevo`,
- * por el mismo puerto de operador (`lib/hogar-nuevo-asegura.ts`).
+ * diferencia de retarificar una póliza de hogar YA existente (portado el
+ * 17/09/2026: `poliza/[id]/retarificar` + `lib/hogar-retarificar-asegura.ts`,
+ * riesgo de la ficha), esta oportunidad se presupuesta y se cotiza entera en
+ * `/correduria/cliente/<id>/hogar-nuevo`, por el mismo puerto de operador
+ * (`lib/hogar-nuevo-asegura.ts`).
  */
 export function urlHogarNuevo(clienteId: string): string {
   return `/correduria/cliente/${clienteId}/hogar-nuevo`
@@ -762,3 +893,20 @@ export function urlSaludNuevo(clienteId: string): string {
 export function urlDecesosNuevo(clienteId: string): string {
   return `/correduria/cliente/${clienteId}/decesos-nuevo`
 }
+
+/**
+ * Los ramos presupuestables desde una ficha, en el orden del menú «➕
+ * Presupuestar ▾» de `Cabecera.tsx` — FUENTE ÚNICA (20/09/2026): antes de
+ * esto solo existía copiada dentro de `Cabecera.tsx`, y `NuevoCliente.tsx` la
+ * necesita igual para saltar directo al presupuesto del ramo elegido al dar
+ * de alta un lead. Con dos listas, un ramo añadido a una y olvidado en la
+ * otra ofrece una opción que la pantalla hermana no conoce.
+ */
+export const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => string; sinVerificar?: boolean }[] = [
+  { etiqueta: '🚗 Auto', url: urlAutoNuevo },
+  { etiqueta: '🏠 Hogar', url: urlHogarNuevo },
+  { etiqueta: '🏍️ Moto', url: urlMotoNuevo },
+  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo },
+  { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
+  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo },
+]

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { marcarContactoAsegura } from '@/lib/companias-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -10,8 +10,8 @@ export const dynamic = 'force-dynamic'
  * best-effort, sin bloquear la apertura del enlace.
  */
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const contactoId = typeof body?.contactoId === 'string' ? body.contactoId : null
   if (!contactoId) return NextResponse.json({ error: 'falta contactoId' }, { status: 400 })

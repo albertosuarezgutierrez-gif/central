@@ -34,6 +34,7 @@ import {
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { LIMITE_RECIBOS_IMPAGO, cribaTruncada } from './cartera-techos.ts'
 
 // 🚨 Las situaciones que significan «este dinero no ha entrado» son DOS, y no
 // son lo mismo (medido el 01/09/2026: 1 devuelto y 25 pendientes):
@@ -99,6 +100,15 @@ export type ColaRetencion = {
    * para que la cola no parezca la lista completa de lo que está sin cobrar.
    */
   pendientesSinJuzgar: number
+  /**
+   * 🚨 La criba de recibos tocó su techo (`LIMITE_RECIBOS_IMPAGO`): puede haber
+   * MÁS pólizas sin cobrar que esta lectura no ha visto. Es el tercer hueco de
+   * esta pantalla, junto a `sinRecibosInformados` y `pendientesSinJuzgar`, y el
+   * peor de los tres si se calla: los otros dos dicen «hay algo que no se
+   * sabe», este diría «esto es todo» sobre una lista recortada. NO significa
+   * «hay exactamente 2.000 recibos sin cobrar».
+   */
+  truncado: boolean
 }
 
 function esObjetoPlano(v: unknown): v is Record<string, unknown> {
@@ -129,6 +139,29 @@ function importeRecibo(texto: string | null): number | null {
   return Number.isFinite(n) ? n : null
 }
 
+/**
+ * Pólizas con un descarte TEMPORAL vigente (`retencion_descartes.vence_at >
+ * now()`): alguien ya gestionó esta llamada y pidió no verla un tiempo. No es
+ * «resuelto» — si el recibo sigue sin cobrar cuando el descarte caduque,
+ * vuelve a salir sola.
+ *
+ * Fail-CLOSED: si esta consulta falla, se devuelve el conjunto VACÍO (nada
+ * descartado) en vez de propagar el error. Una cola de impagados que dejara de
+ * cargar entera porque falló el filtro de "lo ya visto" sería peor que una que
+ * a veces repite una fila ya gestionada.
+ */
+async function polizasDescartadas(correduriaId: string, hoy: Date): Promise<Set<string>> {
+  try {
+    const filas = await prismaAsegura().$queryRaw<{ poliza_id: string }[]>`
+      select poliza_id
+      from retencion_descartes
+      where correduria_id = ${correduriaId}::uuid and vence_at > ${hoy}`
+    return new Set(filas.map((f) => f.poliza_id))
+  } catch {
+    return new Set()
+  }
+}
+
 export async function colaRetencion(
   correduriaId: string,
   hoy: Date = new Date(),
@@ -138,6 +171,9 @@ export async function colaRetencion(
     resumen: resumirRetencion([]),
     sinRecibosInformados: 0,
     pendientesSinJuzgar: 0,
+    // Sin conexión no se ha leído nada, así que no hay recorte del que avisar:
+    // lo que dice «no se pudo leer» es el `estado` de la ruta, no este campo.
+    truncado: false,
   }
   if (!aseguraConfigurada()) return vacia
   const db = prismaAsegura()
@@ -147,7 +183,11 @@ export async function colaRetencion(
       correduriaId,
       situacion: { in: [...SITUACIONES_IMPAGO] },
       // `activo: true`: una ficha descartada no aparece en la lista de impagos.
-      poliza: { mergedIntoPolizaId: null, cliente: { mergedIntoClienteId: null, activo: true } },
+      // `sustituidaAt: null` (20/09/2026): si el cliente ya cambió de compañía
+      // (se retarificó y se emitió), perseguir el impago de la póliza VIEJA no
+      // tiene sentido — no va a volver a ella. El seguimiento de esa
+      // sustitución vive en su propia cola, no en ésta.
+      poliza: { mergedIntoPolizaId: null, sustituidaAt: null, cliente: { mergedIntoClienteId: null, activo: true } },
     },
     select: {
       id: true,
@@ -171,7 +211,12 @@ export async function colaRetencion(
       },
     },
     orderBy: { fechaVencimiento: 'asc' },
+    // Techo con nombre. El orden de la criba es el del RELOJ (el recibo más
+    // antiguo primero), así que si algún día muerde se pierde lo menos urgente
+    // — pero se pierde igual, y por eso se declara justo debajo.
+    take: LIMITE_RECIBOS_IMPAGO,
   })
+  const truncado = cribaTruncada(recibos.length, LIMITE_RECIBOS_IMPAGO)
 
   // Un `pendiente` que aún no ha vencido no es un impago: es un recibo normal.
   // Se aparta y se CUENTA, en vez de descartarlo en silencio.
@@ -216,9 +261,12 @@ export async function colaRetencion(
     }
   }
 
+  const descartadas = await polizasDescartadas(correduriaId, hoy)
+
   const filas: ClienteEnRiesgo[] = []
   for (const r of porPoliza.values()) {
     const p = r.poliza
+    if (descartadas.has(p.id)) continue
     const datos = esObjetoPlano(p.datosEspecificos) ? p.datosEspecificos : null
     const matricula =
       datos && typeof datos.matricula === 'string' && datos.matricula.trim() !== ''
@@ -269,6 +317,67 @@ export async function colaRetencion(
     resumen: resumirRetencion(filas.map((f) => ({ estado: f.estado, prima: f.prima }))),
     sinRecibosInformados: await polizasSinRecibo(correduriaId),
     pendientesSinJuzgar,
+    truncado,
+  }
+}
+
+export type DescarteRetencion =
+  | { ok: true }
+  | { ok: false; motivo: 'no_encontrada' | 'error' }
+
+const DIAS_DESCARTE_MIN = 1
+const DIAS_DESCARTE_MAX = 30
+const DIAS_DESCARTE_DEFECTO = 10
+
+/**
+ * Quita una póliza de "Hay que llamar" durante `dias` (por defecto 10, tope 30):
+ * NO la resuelve. Si al caducar el descarte el recibo sigue en `devuelto` o
+ * `pendiente` vencido, `colaRetencion` la vuelve a servir sola — es la única
+ * forma honesta de "quítamelo de la vista" sobre una lista derivada del cobro
+ * real (ver cabecera del fichero: un botón que la ocultara para siempre
+ * convertiría "ya he llamado" en "ya no circula sin seguro", y eso no lo sabe
+ * nadie hasta que llegue el recibo).
+ */
+export async function descartarRetencion(
+  correduriaId: string,
+  polizaId: string,
+  actor: string,
+  motivo: string | null,
+  dias: number = DIAS_DESCARTE_DEFECTO,
+): Promise<DescarteRetencion> {
+  const db = prismaAsegura()
+  const d = Math.min(DIAS_DESCARTE_MAX, Math.max(DIAS_DESCARTE_MIN, Math.round(dias)))
+  try {
+    const poliza = await db.poliza.findFirst({
+      where: { id: polizaId, correduriaId, mergedIntoPolizaId: null },
+      select: { id: true, clienteId: true, numeroPoliza: true, aseguradora: true },
+    })
+    if (!poliza) return { ok: false, motivo: 'no_encontrada' }
+
+    const motivoLimpio = typeof motivo === 'string' ? motivo.replace(/\s+/g, ' ').trim().slice(0, 500) : ''
+    await db.$executeRaw`
+      insert into retencion_descartes (correduria_id, poliza_id, actor, motivo, vence_at)
+      values (${correduriaId}::uuid, ${polizaId}::uuid, ${actor}, ${motivoLimpio || null}, now() + make_interval(days => ${d}::int))`
+
+    // Best-effort: el descarte ya está hecho, y un historial caído no puede
+    // deshacerlo ni presentarse como un fallo de la operación.
+    try {
+      const texto =
+        `Retención: descartada de "hay que llamar" ${d} día(s) por ${actor}` +
+        ` (póliza ${poliza.numeroPoliza ?? poliza.id} · ${poliza.aseguradora})` +
+        (motivoLimpio ? ` — ${motivoLimpio}` : '') +
+        '. Vuelve a salir si el recibo sigue sin cobrar al caducar el plazo.'
+      await db.$executeRaw`
+        insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+        values (${correduriaId}::uuid, ${poliza.clienteId}::uuid, cast('gestion' as tipo_historial_interno), ${texto})`
+    } catch (e) {
+      console.error('[cartera-impagados] historial_interno no se pudo anotar:', e instanceof Error ? e.message : e)
+    }
+
+    return { ok: true }
+  } catch (e) {
+    console.error('[cartera-impagados] descartarRetencion:', e instanceof Error ? e.message : e)
+    return { ok: false, motivo: 'error' }
   }
 }
 

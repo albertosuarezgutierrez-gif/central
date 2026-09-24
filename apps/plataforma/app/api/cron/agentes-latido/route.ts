@@ -43,9 +43,28 @@ const PROBES: Record<string, Prisma.Sql> = {
   // ve desde aquí: `prisma_plataforma` no tiene acceso al schema `seguros`): esa tabla solo crece
   // cuando entra un siniestro, así que un mes tranquilo y un cron muerto serían el mismo silencio.
   // Lo que se vigila es la PASADA del vigía, y su `detalle` trae la marca de agua.
+  correduria_actividad: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_actividad'`,
+  correduria_eventos: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_eventos'`,
   correduria_siniestros: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'correduria_siniestros'`,
+  // Los tres de la correduría que latían sin que nadie los leyera (o no latían), 20/09/2026.
+  // La huella es siempre la PASADA, nunca su tabla de resultados: `portal_parte_siniestro`,
+  // `recaptacion_envios` y `comisiones_devengo` solo crecen cuando hay algo que hacer, así que
+  // una semana tranquila y un cron muerto darían la misma señal.
+  correduria_partes: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_partes'`,
+  correduria_recaptacion_email_lote: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'correduria_recaptacion_email_lote'`,
+  cima_liq: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'cima_liq'`,
   // Pricing: manda el piso MÁS VIEJO, no el max global. Con max(), un solo piso fresco
   // (p.ej. luxury) tapaba que el Dúplex y House Sevillana llevaban 23 días sin estudiar
   // (555 h) → el monitor se callaba. La sonda por-piso (min de los max) delata al rezagado.
@@ -91,6 +110,15 @@ const PROBES: Record<string, Prisma.Sql> = {
   sivra_mensajes_huesped: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_mensajes_huesped'`,
+  // Calendario de limpiezas (auditoría 15/09/2026): llama a Smoobu directo para crear
+  // `cleaning_sessions`, y no tenía vigía — el mismo hueco que dejó pasar el 401 de septiembre,
+  // un piso más abajo.
+  sivra_limpiadoras_auto: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_limpiadoras_auto'`,
+  sivra_limpiadoras_alerta_ventana: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'sivra_limpiadoras_alerta_ventana'`,
   // Facturas: la frescura se mide sobre la ÚLTIMA PASADA BUENA, no sobre la
   // última ejecución — así un cron que corre y falla siempre también salta.
   // Se traen además `ultimo_at` y `detalle` para poder decir CUÁL de las dos
@@ -183,6 +211,9 @@ const PROBES: Record<string, Prisma.Sql> = {
   // Foto diaria de la previsión por piso (30/08/2026). Va vigilada desde el mismo PR que la
   // declara (regla del PR #1447): su tabla solo la escribe este cron, así que sin latido un cron
   // muerto y «hoy no había nada nuevo» serían la misma señal.
+  ia_saldo: Prisma.sql`
+    SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
+    FROM agente_latidos WHERE agente = 'ia_saldo'`,
   sivra_prevision: Prisma.sql`
     SELECT ultimo_ok_at AS ultimo, ultimo_at AS ultimo_intento, detalle
     FROM agente_latidos WHERE agente = 'sivra_prevision'`,

@@ -13,17 +13,20 @@ import test from 'node:test'
 import {
   TEXTO_SIN_CANAL,
   canalDeCompania,
+  canalesConCompaniaPrimero,
   canalesDeLasPolizas,
   enlaceWhatsapp,
   viasDeCompania,
+  type CanalCompania,
   type FilaCompania,
 } from './canal-compania.ts'
 
 const VACIA: FilaCompania = {
   nombreComun: 'Occident',
   telefonoSiniestros: null,
-  telefonoAsistencia: null,
+  asistencias: [],
   whatsappSiniestros: null,
+  whatsappNota: null,
   horarioSiniestros: null,
   verificadoEn: null,
 }
@@ -38,8 +41,9 @@ const OCCIDENT: FilaCompania = {
 const MAPFRE: FilaCompania = {
   nombreComun: 'Mapfre',
   telefonoSiniestros: '900 122 122',
-  telefonoAsistencia: '900 122 122',
+  asistencias: [{ para: null, numero: '900 122 122', horario: null }],
   whatsappSiniestros: null,
+  whatsappNota: null,
   horarioSiniestros: null,
   verificadoEn: '2026-09-05',
 }
@@ -188,4 +192,46 @@ test('una póliza sin compañía identificada NO genera un «pídenoslo» de nad
   // El caso real: una póliza aportada cuyo PDF no dejó leer la compañía.
   const anonima = canalDeCompania(null, [MAPFRE])
   assert.deepEqual(canalesDeLasPolizas([anonima]), [], 'Sin nombre no hay a quién pedirle nada: es ruido.')
+})
+
+
+// ── La compañía de la póliza desde la que se llegó (19/09/2026) ────────────
+
+/** Un canal mínimo, solo con lo que esta función mira. */
+function c(nombre: string): CanalCompania {
+  return { nombre, vias: [], sinDatos: true, verificadoEn: null }
+}
+
+test('la compania de la poliza se pone DELANTE, sin perder a las demas', () => {
+  const lista = [c('Mapfre'), c('Allianz'), c('Occident')]
+  const salida = canalesConCompaniaPrimero(lista, 'Occident')
+  assert.deepEqual(salida.map((x) => x.nombre), ['Occident', 'Mapfre', 'Allianz'])
+})
+
+test('🚨 NUNCA se queda solo con una: las demas siguen ahi', () => {
+  // Quien acaba de tener un golpe puede haber llegado desde la póliza
+  // equivocada. Una lista recortada le diría que no hay más a quien llamar.
+  const lista = [c('Mapfre'), c('Allianz')]
+  assert.equal(canalesConCompaniaPrimero(lista, 'Allianz').length, 2)
+  assert.equal(canalesConCompaniaPrimero(lista, null).length, 2)
+  assert.equal(canalesConCompaniaPrimero(lista, 'Reale').length, 2)
+})
+
+test('sin compania, o con una que no esta, el orden no se toca', () => {
+  const lista = [c('Mapfre'), c('Allianz')]
+  for (const quien of [null, '', '   ', 'Reale', 'MAPFRE ESPAÑA S.A.']) {
+    assert.deepEqual(
+      canalesConCompaniaPrimero(lista, quien).map((x) => x.nombre),
+      ['Mapfre', 'Allianz'],
+      `«${quien}» no puede reordenar nada`,
+    )
+  }
+})
+
+test('el cruce es EXACTO salvo caja y espacios, como en canalDeCompania', () => {
+  const lista = [c('Mapfre'), c('Allianz')]
+  assert.deepEqual(
+    canalesConCompaniaPrimero(lista, '  allianz ').map((x) => x.nombre),
+    ['Allianz', 'Mapfre'],
+  )
 })

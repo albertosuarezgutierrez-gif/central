@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Car } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { precalificarAutoNuevaAsegura, catalogoAsegura } from '@/lib/auto-nuevo-asegura'
+import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import AutoNuevo from './AutoNuevo'
 
@@ -46,11 +47,21 @@ export default async function AutoNuevoPage({ params }: { params: Promise<{ id: 
     </div>
   )
 
-  const [garajes, civiles, pre] = await Promise.all([
+  // Los dos del carnet NO son bloqueantes a propósito: si no se pueden leer,
+  // viaja el supuesto de siempre (B, España) y la pantalla lo dice en el hueco
+  // del campo. Bloquear la cotización por ellos sería peor que el problema.
+  const [garajes, civiles, zonasCarnet, tiposCarnet, pre, companiasResp] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
+    catalogoAsegura({ tipo: 'zonas-carnet' }),
+    catalogoAsegura({ tipo: 'tipos-carnet' }),
     precalificarAutoNuevaAsegura({ clienteId }),
+    companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
   ])
+  // `null` = no se ha podido leer el directorio de compañías (puerto caído o sin
+  // configurar): la pantalla lo dice y el corredor teclea el código a mano en
+  // vez de ver un desplegable vacío sin explicación.
+  const companias = companiasResp.estado === 'ok' ? companiasResp.companias : null
 
   if (pre.estado !== 'ok') {
     const tono = pre.estado === 'sin_configurar' ? 'var(--muted)' : 'var(--negative)'
@@ -84,11 +95,14 @@ export default async function AutoNuevoPage({ params }: { params: Promise<{ id: 
         faltanInicial={pre.pre.faltan}
         garajes={garajes.estado === 'ok' ? garajes.opciones : []}
         civiles={civiles.estado === 'ok' ? civiles.opciones : []}
+        zonasCarnet={zonasCarnet.estado === 'ok' ? zonasCarnet.opciones : []}
+        tiposCarnet={tiposCarnet.estado === 'ok' ? tiposCarnet.opciones : []}
         municipios={pre.pre.municipios}
         municipiosMotivo={pre.pre.municipiosMotivo}
         estadoCivilAuto={pre.pre.estadoCivil}
         consumo={pre.pre.consumo}
         simulacion={pre.pre.simulacion}
+        companias={companias}
       />
     </Pagina>
   )

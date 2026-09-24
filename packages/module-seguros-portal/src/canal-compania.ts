@@ -9,9 +9,12 @@
 // la pantalla tiene DOS caminos y el primero no somos nosotros.
 //
 // El primero exige un dato que hasta el 05/09/2026 no existía en el sistema: a
-// qué canal acude el asegurado de ESA compañía. Vive en `companias_dgs`
-// (`telefono_siniestros`, `telefono_asistencia`, `whatsapp_siniestros`,
-// `horario_siniestros`) y lo rellena una persona contra la fuente.
+// qué canal acude el asegurado de ESA compañía. Desde el 23/09/2026 vive en UN
+// solo sitio, el catálogo verificado de `@central/module-seguros`
+// (`telefonos-companias.ts`), que es el mismo que publica la web; antes eran
+// las columnas `telefono_*` de `companias_dgs`, que se separaron de la web y
+// daban a Mapfre su línea médica como «dar parte». La app lo convierte a
+// `FilaCompania` (`apps/asegura-portal/lib/canales-compania.ts`).
 //
 // Las reglas de qué se puede DECIR de ese canal están aquí, puras y con test,
 // porque son las que más caro salen si se relajan: lo que sale de aquí acaba
@@ -42,12 +45,36 @@
 //     por nombre EXACTO y no hay coincidencia aproximada a propósito: ver
 //     `canalDeCompania()`.
 
-/** La fila de `companias_dgs`, tal y como la puede leer el rol del portal. */
+/** Una línea de asistencia, con el rótulo que le pone la compañía. */
+export type LineaAsistenciaCompania = {
+  /** «Hogar», «Coche, moto y furgoneta»… `null` = la compañía no la rotula. */
+  para: string | null
+  numero: string
+  /** Como lo publica la compañía para ESTA línea. `null` = no consta. */
+  horario: string | null
+}
+
+/** Lo que el portal sabe del canal de una compañía (del catálogo verificado). */
 export type FilaCompania = {
   nombreComun: string
   telefonoSiniestros: string | null
-  telefonoAsistencia: string | null
+  /**
+   * Una LISTA: hay compañías con un número por riesgo (Allianz: coche, hogar,
+   * pesados). Colapsarlas en uno manda a la grúa a quien tiene una fuga.
+   */
+  asistencias: readonly LineaAsistenciaCompania[]
   whatsappSiniestros: string | null
+  /**
+   * Para qué sirve el WhatsApp si NO es la misma línea que la de dar parte
+   * (Mapfre: solo hogar, L-V 8-20). `null` = es la misma: hereda su horario.
+   */
+  whatsappNota: string | null
+  /**
+   * Para qué ramos vale ese WhatsApp (`['hogar']`), con los códigos de `polizas.tipo`.
+   * `null`/ausente = para todos. Existe por Mapfre: su WhatsApp es SOLO de partes de
+   * hogar, y enseñárselo a un cliente de auto le manda a una línea que no le atiende.
+   */
+  whatsappRamos?: readonly string[] | null
   horarioSiniestros: string | null
   /** `YYYY-MM-DD`. Viaja hasta la pantalla: un número comprobado hace tres años falla igual que uno equivocado. */
   verificadoEn: string | null
@@ -65,6 +92,8 @@ export type ViaCanal =
       tipo: 'telefono'
       /** `siniestros` = dar parte · `asistencia` = grúa / urgencia in situ. Son distintas. */
       uso: 'siniestros' | 'asistencia'
+      /** Rótulo de la línea de asistencia («Hogar»). `null` en dar parte o si no lo tiene. */
+      para: string | null
       numero: string
       /** `null` = no consta. La pantalla NO rellena ese hueco con «24 h». */
       horario: string | null
@@ -75,6 +104,10 @@ export type ViaCanal =
       /** `https://wa.me/<dígitos>`. Ya validado: si no se pudo construir, la vía no existe. */
       enlace: string
       horario: string | null
+      /** Para qué sirve, si no es para todo («para dar parte de hogar, de lunes a viernes…»). */
+      nota: string | null
+      /** Solo para estos ramos (`['hogar']`); `null` = para todos. Se DICE en pantalla. */
+      soloRamos: string[] | null
     }
 
 export type CanalCompania = {
@@ -100,11 +133,49 @@ const E164 = /^\+[1-9][0-9]{7,14}$/
  * mal construido **no falla** — abre WhatsApp con un número que no existe, que
  * es un fallo que solo se descubre el día que hace falta.
  */
-export function enlaceWhatsapp(e164: string | null): string | null {
+export function enlaceWhatsapp(e164: string | null, texto?: string | null): string | null {
   if (typeof e164 !== 'string') return null
   const t = e164.trim()
   if (!E164.test(t)) return null
-  return `https://wa.me/${t.slice(1)}`
+  const mensaje = typeof texto === 'string' ? texto.trim() : ''
+  return `https://wa.me/${t.slice(1)}${mensaje === '' ? '' : `?text=${encodeURIComponent(mensaje)}`}`
+}
+
+/** `['hogar']` limpio; vacío o ausente = sin restricción (`null`), nunca «para ninguno». */
+function ramosONull(v: readonly string[] | null | undefined): string[] | null {
+  if (!Array.isArray(v)) return null
+  const r = v.map((x) => (typeof x === 'string' ? x.trim().toLowerCase() : '')).filter((x) => x !== '')
+  return r.length === 0 ? null : r
+}
+
+const RAMO_LEGIBLE: Record<string, string> = {
+  auto: 'auto', moto: 'moto', hogar: 'hogar', vida: 'vida', salud: 'salud', decesos: 'decesos',
+  responsabilidad_civil: 'responsabilidad civil', comercio: 'comercio', comunidades: 'comunidades', accidentes: 'accidentes',
+}
+
+/** «Solo para partes de hogar». `null` si vale para todo. */
+export function textoSoloRamos(soloRamos: readonly string[] | null): string | null {
+  if (soloRamos === null || soloRamos.length === 0) return null
+  const nombres = soloRamos.map((r) => RAMO_LEGIBLE[r] ?? r.replace(/_/g, ' '))
+  const lista = nombres.length === 1 ? nombres[0] : `${nombres.slice(0, -1).join(', ')} y ${nombres[nombres.length - 1]}`
+  return `Solo para partes de ${lista}`
+}
+
+/**
+ * El WhatsApp de la compañía que vale para ESTA póliza, o `null`.
+ *
+ * 🚨 Con una restricción de ramo y el ramo de la póliza desconocido, `null`: mandar
+ * un parte de auto a la línea de hogar no falla — lo deja sin contestar.
+ */
+export function whatsappParaRamo(
+  canal: CanalCompania,
+  ramo: string | null | undefined,
+): Extract<ViaCanal, { tipo: 'whatsapp' }> | null {
+  const via = canal.vias.find((v): v is Extract<ViaCanal, { tipo: 'whatsapp' }> => v.tipo === 'whatsapp')
+  if (!via) return null
+  if (via.soloRamos === null) return via
+  const r = typeof ramo === 'string' ? ramo.trim().toLowerCase() : ''
+  return r !== '' && via.soloRamos.includes(r) ? via : null
 }
 
 /** Vacío o solo espacios es «no consta», no un horario. */
@@ -128,18 +199,32 @@ export function viasDeCompania(f: FilaCompania): ViaCanal[] {
   const vias: ViaCanal[] = []
 
   const siniestros = textoONull(f.telefonoSiniestros)
-  if (siniestros !== null) vias.push({ tipo: 'telefono', uso: 'siniestros', numero: siniestros, horario })
+  if (siniestros !== null) vias.push({ tipo: 'telefono', uso: 'siniestros', para: null, numero: siniestros, horario })
 
   const enlace = enlaceWhatsapp(f.whatsappSiniestros)
   if (enlace !== null) {
-    vias.push({ tipo: 'whatsapp', numero: (f.whatsappSiniestros as string).trim(), enlace, horario })
+    const nota = textoONull(f.whatsappNota)
+    // Con nota, el WhatsApp es OTRA línea (con su propio horario, dentro de la
+    // nota): heredar el de dar parte sería inventárselo.
+    vias.push({
+      tipo: 'whatsapp',
+      numero: (f.whatsappSiniestros as string).trim(),
+      enlace,
+      horario: nota === null ? horario : null,
+      nota,
+      soloRamos: ramosONull(f.whatsappRamos),
+    })
   }
 
-  const asistencia = textoONull(f.telefonoAsistencia)
-  // 🚨 La asistencia NO hereda `horario_siniestros`. Ese horario es del canal de
+  // 🚨 La asistencia NO hereda `horarioSiniestros`. Ese horario es del canal de
   // dar parte; la grúa puede tener otro, y copiárselo sería inventarse el dato
-  // de la vía que se usa justo a la hora en la que el otro no atiende.
-  if (asistencia !== null) vias.push({ tipo: 'telefono', uso: 'asistencia', numero: asistencia, horario: null })
+  // de la vía que se usa justo a la hora en la que el otro no atiende. Cada
+  // línea lleva el suyo, o ninguno.
+  for (const a of f.asistencias) {
+    const numero = textoONull(a.numero)
+    if (numero === null) continue
+    vias.push({ tipo: 'telefono', uso: 'asistencia', para: textoONull(a.para), numero, horario: textoONull(a.horario) })
+  }
 
   return vias
 }
@@ -208,6 +293,40 @@ export function canalesDeLasPolizas(canales: readonly CanalCompania[]): CanalCom
     salida.push(c)
   }
   return salida
+}
+
+/**
+ * Las mismas compañías, con la de UNA póliza concreta delante (19/09/2026).
+ *
+ * ── Por qué ordenar y NO filtrar ────────────────────────────────────────────
+ *
+ * El botón «Ver los teléfonos de {compañía} y dar parte» de la ficha de una
+ * póliza promete un teléfono concreto, y hasta hoy dejaba al cliente en la
+ * pestaña de siniestros con las compañías de TODA su cartera en el mismo orden
+ * de siempre — Alberto: «tiene que aparecer tlf y los campos para apertura
+ * siniestros, ahora mismo me sale página de siniestros». Con cuatro pólizas de
+ * tres compañías, el número prometido podía ser el tercero de la lista.
+ *
+ * 🚨 Pero **las demás no se quitan**, por lo mismo que no se quitan las
+ * `sinDatos`: quien acaba de tener un golpe puede haber llegado aquí desde la
+ * póliza equivocada (el coche de su padre, el piso en vez del local), y una
+ * lista recortada a una sola compañía le diría que no hay más a quien llamar.
+ * Se ordena, que cambia lo que ve primero sin quitarle nada.
+ *
+ * El cruce es por nombre EXACTO —normalizado igual que en `canalDeCompania`—
+ * y un nombre que no está en la lista la deja tal cual: nunca se promueve «la
+ * más parecida», que es la vía por la que alguien acabaría marcando el número
+ * de urgencias de otra compañía.
+ */
+export function canalesConCompaniaPrimero(
+  canales: readonly CanalCompania[],
+  compania: string | null,
+): CanalCompania[] {
+  const clave = textoONull(compania)?.toLowerCase() ?? null
+  if (clave === null) return [...canales]
+  const primero = canales.filter((c) => c.nombre.trim().toLowerCase() === clave)
+  if (primero.length === 0) return [...canales]
+  return [...primero, ...canales.filter((c) => c.nombre.trim().toLowerCase() !== clave)]
 }
 
 /**

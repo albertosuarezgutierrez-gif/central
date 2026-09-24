@@ -1,19 +1,26 @@
 import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
-import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
+import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { pulirConIA } from '@/lib/recaptacion-ia'
-import { enviarEmailResend } from '@/lib/recaptacion-email'
-import { Prisma } from '@/lib/generated/asegura-client'
-import { remitenteCorreo } from '@central/module-seguros'
+import { enviarEmailRecaptacion } from '@/lib/cartera-recaptacion'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 
 // POST /api/operador/recaptacion/email — envía de verdad por Resend (con
 // tracking de apertura/clic) y deja el registro en `recaptacion_envios` +
-// `historial_interno`. `{ clienteId, polizaId, email, asunto, texto, actor? }`.
-export async function POST(req: Request) {
+// `historial_interno`. `{ clienteId, polizaId, asunto, texto, email? }`.
+//
+// 🚨 `email` es OPCIONAL y NO enruta nada: el destinatario lo resuelve el
+// servidor desde la ficha del `clienteId` (ver `enviarEmailRecaptacion`). Si
+// viene y no coincide con el de la ficha, no se manda nada (422
+// `destinatario_distinto`) — la pantalla estaba enseñando otra dirección.
+// 🚨 Y `actor` ya NO se lee del cuerpo: lo pone el servidor. Este puerto se
+// autentica con un secreto compartido, así que un nombre que mande el llamante
+// es una firma falsificable en la pista de auditoría.
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -21,50 +28,48 @@ export async function POST(req: Request) {
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
 
     const body = (await req.json().catch(() => null)) as
-      | { clienteId?: string; polizaId?: string; email?: string; asunto?: string; texto?: string; actor?: string }
+      | { clienteId?: string; polizaId?: string; email?: string; asunto?: string; texto?: string }
       | null
-    if (!body?.clienteId || !body?.polizaId || !body?.email || !body?.asunto || !body?.texto) {
+    if (!body?.clienteId || !body?.polizaId || !body?.asunto || !body?.texto) {
       return NextResponse.json({ estado: 'invalido', motivo: 'faltan_campos' }, { status: 422 })
     }
 
-    const db = prismaAsegura()
-    const cliente = await db.cliente.findFirst({
-      where: { id: body.clienteId, correduriaId: correduria.id, mergedIntoClienteId: null },
-      select: { id: true },
-    })
-    if (!cliente) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })
-
     const textoFinal = await pulirConIA(body.texto)
-    const html = `<div style="font-family:system-ui,sans-serif;max-width:480px;white-space:pre-line">${escaparHtml(textoFinal)}</div>`
-    const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-    const resultado = await enviarEmailResend({ from, to: body.email, asunto: body.asunto, texto: textoFinal, html })
-    if (!resultado.ok) {
+    const r = await enviarEmailRecaptacion(correduria.id, {
+      clienteId: body.clienteId,
+      polizaId: body.polizaId,
+      // Solo como confirmación de lo que había en pantalla; ver arriba.
+      emailDeclarado: body.email ?? null,
+      asunto: body.asunto,
+      texto: textoFinal,
+    })
+    if (!r.ok) {
       return NextResponse.json(
-        { estado: 'error', motivo: resultado.motivo },
-        { status: resultado.motivo === 'sin_api_key' ? 503 : 502 },
+        // `resuelto` deja decir en pantalla a qué dirección SÍ se le escribiría,
+        // en vez de un «no se pudo» sin salida. No es un dato nuevo: es el
+        // correo de la ficha que esa misma pantalla ya muestra en la cola.
+        { estado: estadoPara(r.status), motivo: r.motivo, destinatario: r.resuelto },
+        { status: r.status },
       )
     }
 
-    const actor = body.actor?.trim() || 'plataforma'
-    await db.$executeRaw(Prisma.sql`
-      insert into recaptacion_envios (correduria_id, cliente_id, poliza_id, canal, estado, mensaje, resend_message_id, creado_por)
-      values (${correduria.id}::uuid, ${body.clienteId}::uuid, ${body.polizaId}::uuid, 'email', 'enviado', ${textoFinal}, ${resultado.resendMessageId}, ${actor})
-    `)
-    try {
-      await db.$executeRaw(Prisma.sql`
-        insert into historial_interno (correduria_id, cliente_id, tipo, texto)
-        values (${correduria.id}::uuid, ${body.clienteId}::uuid, cast('gestion' as tipo_historial_interno), ${'Recaptación: email enviado por ' + actor})
-      `)
-    } catch (e) {
-      console.error('[operador/recaptacion/email] historial_interno no se pudo anotar:', e instanceof Error ? e.message : e)
-    }
-
-    return NextResponse.json({ estado: 'ok' })
+    return NextResponse.json({ estado: 'ok', destinatario: r.destinatario })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/recaptacion/email', e) }, { status: 500 })
   }
-}
+})
 
-function escaparHtml(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+/**
+ * Cada desenlace se arregla en un sitio distinto y por eso no se colapsan:
+ * 404 = esa ficha/póliza no es de esta correduría · 422 = el cuerpo o los datos
+ * del cliente no permiten escribirle · 503 = falta el proveedor de correo (se
+ * arregla en Vercel, reintentar NO lo arregla) · 502 = el proveedor rechazó el
+ * mensaje (ahí sí tiene sentido reintentar). Misma separación que el aviso de
+ * acceso (`sin_correo_configurado` / `error_envio`).
+ */
+function estadoPara(status: 404 | 422 | 502 | 503): string {
+  if (status === 404) return 'no_encontrado'
+  if (status === 422) return 'invalido'
+  if (status === 503) return 'sin_configurar'
+  return 'error'
 }

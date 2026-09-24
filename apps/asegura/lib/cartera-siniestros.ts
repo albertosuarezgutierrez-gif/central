@@ -19,14 +19,19 @@ import {
   revisarSeguimiento,
   revisarTransicion,
   textoHistorialSiniestro,
+  normalizarDatosRamoSiniestro,
+  revisarInterviniente,
   type AperturaSiniestro,
   type OrigenSiniestro,
   type SeguimientoSiniestro,
+  type IntervinienteEntrada,
   esVolcadoHistorico,
 } from '@central/module-seguros'
-import { encryptField } from '@central/module-seguros-pii'
+import { encryptField, encryptFieldNullable, decryptFieldNullable } from '@central/module-seguros-pii'
+import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
-import type { SiniestroFicha } from './cartera-ficha'
+import { anotarCambio } from './auditoria'
+import type { SiniestroFicha, SiniestroIntervinienteFicha } from './cartera-ficha'
 
 /** Columnas que necesita `SiniestroFicha`. Lo usan la ficha de cliente, la de póliza y este módulo. */
 export const SELECT_SINIESTRO = {
@@ -53,7 +58,34 @@ export const SELECT_SINIESTRO = {
   lugarCiudad: true,
   lugarProvincia: true,
   updatedAt: true,
+  datosRamo: true,
+  danosCima: true,
+  intervinientes: {
+    select: {
+      id: true,
+      tipo: true,
+      esConductor: true,
+      nombre: true,
+      telefono: true,
+      matricula: true,
+      marcaModelo: true,
+      companiaNombre: true,
+      numeroPoliza: true,
+    },
+  },
 } as const
+
+type FilaInterviniente = {
+  id: string
+  tipo: string
+  esConductor: boolean | null
+  nombre: string | null
+  telefono: string | null
+  matricula: string | null
+  marcaModelo: string | null
+  companiaNombre: string | null
+  numeroPoliza: string | null
+}
 
 type FilaSiniestro = {
   id: string
@@ -79,6 +111,9 @@ type FilaSiniestro = {
   lugarCiudad: string | null
   lugarProvincia: string | null
   updatedAt: Date
+  datosRamo: unknown
+  danosCima: unknown
+  intervinientes: FilaInterviniente[]
 }
 
 const ESTADOS_ABIERTO = new Set(['abierto', 'en_tramitacion'])
@@ -91,6 +126,37 @@ function num(d: unknown): number | null {
 
 function limpio(v: string | null | undefined): string | null {
   return typeof v === 'string' && v.trim() !== '' ? v.trim() : null
+}
+
+function datosRamoDeFila(v: unknown): Record<string, string | number | boolean> | null {
+  if (v === null || v === undefined || typeof v !== 'object' || Array.isArray(v)) return null
+  return v as Record<string, string | number | boolean>
+}
+
+/** `danos_cima` (jsonb) → array tipado. `null`/forma rara = «asegura no lo manda», nunca `[]`. */
+function danosCimaDeFila(v: unknown): { descripcion: string | null; valor: string | null }[] | null {
+  if (!Array.isArray(v)) return null
+  return v
+    .filter((d): d is Record<string, unknown> => d !== null && typeof d === 'object')
+    .map((d) => ({
+      descripcion: typeof d.descripcion === 'string' ? d.descripcion : null,
+      valor: typeof d.valor === 'string' ? d.valor : null,
+    }))
+}
+
+function mapInterviniente(i: FilaInterviniente): SiniestroIntervinienteFicha {
+  const tipo = i.tipo === 'testigo' ? 'testigo' : 'tercero'
+  return {
+    id: i.id,
+    tipo,
+    esConductor: i.esConductor,
+    nombre: decryptFieldNullable(i.nombre) ?? null,
+    telefono: decryptFieldNullable(i.telefono) ?? null,
+    matricula: decryptFieldNullable(i.matricula) ?? null,
+    marcaModelo: i.marcaModelo,
+    companiaNombre: i.companiaNombre,
+    numeroPoliza: i.numeroPoliza,
+  }
 }
 
 /** Fila de Prisma → `SiniestroFicha`. `null` en reserva/indemnización = no informada, nunca 0. */
@@ -121,6 +187,9 @@ export function mapSiniestro(s: FilaSiniestro): SiniestroFicha {
     confirmadoCima: s.idSiniestroEntidad !== null,
     abierto: ESTADOS_ABIERTO.has(String(s.estado)),
     actualizado: s.updatedAt.toISOString(),
+    datosRamo: datosRamoDeFila(s.datosRamo),
+    danosCima: danosCimaDeFila(s.danosCima),
+    terceros: s.intervinientes.map(mapInterviniente),
   }
 }
 
@@ -193,6 +262,7 @@ export async function abrirSiniestro(
     },
     select: SELECT_SINIESTRO,
   })
+  anotarCambio({ entidad: 'siniestro', id: creado.id, campo: 'estado', antes: null, despues: 'abierto' })
   await anotarHistorial(
     correduriaId,
     poliza.clienteId,
@@ -218,6 +288,7 @@ export async function cambiarEstadoSiniestro(
     data: { estado: entrada.estado as 'abierto' | 'en_tramitacion' | 'cerrado' | 'rechazado', updatedAt: new Date() },
     select: SELECT_SINIESTRO,
   })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'estado', antes: actual.estado, despues: entrada.estado })
   await anotarHistorial(
     correduriaId,
     s.clienteId,
@@ -252,10 +323,104 @@ export async function seguirSiniestro(
   if (nota !== null) data.comentario = anadirNota(actual.comentario, nota)
 
   const nuevo = await db.siniestro.update({ where: { id: s.id }, data, select: SELECT_SINIESTRO })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'seguimiento' })
   await anotarHistorial(
     correduriaId,
     s.clienteId,
     `${textoHistorialSiniestro({ accion: 'seguimiento', referencia: nuevo.referencia, campos: Object.keys(cambios), conNota: nota !== null })} por ${actor}`,
   )
   return { ok: true, siniestro: mapSiniestro(nuevo), aviso: null, ignorados }
+}
+
+// ─── Campos por ramo ─────────────────────────────────────────────────────────
+//
+// EXCLUSIVO de `gestionado_correduria` (ver `siniestro-ramo.ts`, cabecera):
+// CIMA no manda este nivel de detalle, así que no hay conflicto de
+// reescritura que resolver — simplemente no se ofrece la edición si el
+// origen es `cima`.
+
+export async function actualizarDatosRamoSiniestro(
+  correduriaId: string,
+  entrada: { siniestroId: string; datosRamo: unknown; actor: string },
+): Promise<ResultadoSiniestro> {
+  const db = prismaAsegura()
+  const s = await db.siniestro.findFirst({
+    where: { id: entrada.siniestroId, correduriaId },
+    select: { ...SELECT_SINIESTRO, poliza: { select: { tipo: true } } },
+  })
+  if (!s) return noEncontrado('El siniestro no existe en esta correduría.')
+  const actual = mapSiniestro(s)
+  if (actual.origen === 'cima') return invalido('Los campos del ramo de un siniestro de CIMA no se editan aquí.')
+
+  const r = normalizarDatosRamoSiniestro(s.poliza.tipo, entrada.datosRamo)
+  if (!r.ok) return invalido(r.error)
+
+  const nuevo = await db.siniestro.update({
+    where: { id: s.id },
+    data: { datosRamo: r.datos === null ? Prisma.DbNull : r.datos, updatedAt: new Date() },
+    select: SELECT_SINIESTRO,
+  })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'datos_ramo' })
+  await anotarHistorial(correduriaId, s.clienteId, `Siniestro${actual.referencia ? ` ${actual.referencia}` : ''}: campos del ramo actualizados por ${entrada.actor}`)
+  return { ok: true, siniestro: mapSiniestro(nuevo), aviso: null, ignorados: [] }
+}
+
+// ─── Terceros y testigos ─────────────────────────────────────────────────────
+
+async function siniestroPropio(correduriaId: string, siniestroId: string) {
+  const db = prismaAsegura()
+  const s = await db.siniestro.findFirst({ where: { id: siniestroId, correduriaId }, select: { id: true, clienteId: true, origen: true, referencia: true } })
+  return s
+}
+
+export async function anadirTercero(
+  correduriaId: string,
+  entrada: IntervinienteEntrada & { siniestroId: string; actor: string },
+): Promise<ResultadoSiniestro> {
+  const db = prismaAsegura()
+  const s = await siniestroPropio(correduriaId, entrada.siniestroId)
+  if (!s) return noEncontrado('El siniestro no existe en esta correduría.')
+  if (String(s.origen) === 'cima') return invalido('Un siniestro de CIMA no admite terceros/testigos nuestros.')
+
+  const r = revisarInterviniente(entrada)
+  if (!r.ok) return invalido(r.motivo)
+  const i = r.interviniente
+
+  await db.siniestroInterviniente.create({
+    data: {
+      siniestroId: s.id,
+      tipo: i.tipo,
+      esConductor: i.esConductor,
+      nombre: encryptFieldNullable(i.nombre) ?? null,
+      telefono: encryptFieldNullable(i.telefono) ?? null,
+      matricula: encryptFieldNullable(i.matricula) ?? null,
+      marcaModelo: i.marcaModelo,
+      companiaNombre: i.companiaNombre,
+      numeroPoliza: i.numeroPoliza,
+    },
+  })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'terceros' })
+  await anotarHistorial(correduriaId, s.clienteId, `Siniestro${s.referencia ? ` ${s.referencia}` : ''}: ${i.tipo === 'tercero' ? 'tercero' : 'testigo'} añadido por ${entrada.actor}`)
+
+  const nuevo = await db.siniestro.findFirstOrThrow({ where: { id: s.id }, select: SELECT_SINIESTRO })
+  return { ok: true, siniestro: mapSiniestro(nuevo), aviso: null, ignorados: [] }
+}
+
+export async function quitarTercero(
+  correduriaId: string,
+  entrada: { siniestroId: string; intervinienteId: string; actor: string },
+): Promise<ResultadoSiniestro> {
+  const db = prismaAsegura()
+  const s = await siniestroPropio(correduriaId, entrada.siniestroId)
+  if (!s) return noEncontrado('El siniestro no existe en esta correduría.')
+
+  const existente = await db.siniestroInterviniente.findFirst({ where: { id: entrada.intervinienteId, siniestroId: s.id } })
+  if (!existente) return noEncontrado('Ese tercero/testigo no existe en este siniestro.')
+
+  await db.siniestroInterviniente.delete({ where: { id: existente.id } })
+  anotarCambio({ entidad: 'siniestro', id: s.id, campo: 'terceros' })
+  await anotarHistorial(correduriaId, s.clienteId, `Siniestro${s.referencia ? ` ${s.referencia}` : ''}: ${existente.tipo === 'tercero' ? 'tercero' : 'testigo'} eliminado por ${entrada.actor}`)
+
+  const nuevo = await db.siniestro.findFirstOrThrow({ where: { id: s.id }, select: SELECT_SINIESTRO })
+  return { ok: true, siniestro: mapSiniestro(nuevo), aviso: null, ignorados: [] }
 }

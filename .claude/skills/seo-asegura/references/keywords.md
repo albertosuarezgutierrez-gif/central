@@ -36,6 +36,8 @@ publicada y el perfil de Google Business, no por la palabra en el h1.
 | seguro de vida / salud | `/seguros/vida-y-salud` | cubierta |
 | seguro de responsabilidad civil | `/seguros/responsabilidad-civil` | cubierta y **ya enlazada** (pie + las 5 páginas de ramo hermanas, 07/09/2026). Fuera de la cabecera a propósito: sería la sexta entrada y desborda |
 | seguro de flota | `/seguros/flota` | ✅ **cubierta desde el 07/09/2026**. Es el nicho «empresas y flota». Enlazada desde el pie y desde comercio, NO desde la cabecera (cabe medido: 6 entradas desbordan) |
+| seguro de responsabilidad civil para fontaneros | `/seguros/responsabilidad-civil-fontaneros` | ✅ **cubierta desde el 15/09/2026** (`docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`, §2.6). Página de INTENCIÓN de oficio, no ramo nuevo en BD — sigue siendo `responsabilidad_civil` en la cartera. Fuera de la cabecera, igual que RC y flota |
+| seguro de responsabilidad civil para autónomos | `/seguros/responsabilidad-civil-autonomos` | ✅ **cubierta desde el 23/09/2026**. Medida: ~1.000 búsquedas/mes, KD 0, CPC 4,87 € (DataForSEO vía OpenSEO). Página de INTENCIÓN, mismo ramo en BD que la RC general. Fuera de la cabecera |
 
 ⚠️ **El precio de este cambio, dicho como es:** sin el modificador geográfico estas consultas se
 disputan con comparadores nacionales y con las propias aseguradoras, así que la posición esperable
@@ -53,9 +55,12 @@ ciudad en los encabezados de la página nacional.
 | cómo cambiar de correduría sin cambiar de seguro | `/cambiar-de-correduria` | cubierta, y con «Sevilla» en title y H1 desde el 07/09/2026 |
 | preaviso de un mes para cancelar el seguro (art. 22 LCS) | `/blog/preaviso-un-mes-no-renovar-seguro` | cubierta (07/09/2026, PR #2487/#2500) |
 | me han subido el seguro del coche en la renovación | `/blog/me-han-subido-el-seguro-en-la-renovacion` | cubierta (07/09/2026, PR #2487/#2500) |
-| qué cubre de verdad mi seguro de hogar | parcialmente `/seguros/hogar` | merece página propia |
+| qué cubre de verdad mi seguro de hogar | `/blog/que-cubre-de-verdad-el-seguro-de-hogar` | cubierta (15/09/2026) |
 | qué es un corredor de seguros y en qué se diferencia de un agente | `/quienes-somos` | parcial |
 | cómo reclamar un siniestro que me han denegado | `/blog/siniestro-denegado-que-hacer` | cubierta (07/09/2026, PR #2487/#2500) |
+| cómo dar de baja un seguro | `/blog/como-dar-de-baja-un-seguro-a-tiempo` | cubierta (19/09/2026): guía genérica con CTA a la carta del gestor. La serie «en [Compañía]» espera a que se VERIFIQUEN los canales (`apps/asegura-web/lib/companias-baja.ts`, todo `verificado: false`) |
+| qué es claims made | `/blog/que-es-claims-made-seguro-responsabilidad-civil` | cubierta (23/09/2026). ~90/mes, KD 0; GSC ya enseñaba la web ahí en la posición ~76 desde la página de RC. Cita arts. 3 y 73 LCS, verificados contra el BOE (`NORMAS_CITABLES`) |
+| organizar mis seguros en un solo sitio | `/gestor-de-seguros` | cubierta (19/09/2026). Landing del gestor gratuito con calculadora de vencimientos sin registro. [Probable] volumen bajo: se mide en GSC antes de escribir variantes («app para controlar vencimientos», «gestor de seguros familiar») |
 
 ## 3. Marca — hay que vigilarla, no ganarla
 

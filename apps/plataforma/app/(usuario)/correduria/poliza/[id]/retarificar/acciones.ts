@@ -40,11 +40,13 @@ import {
   ofertaAsegura,
   emitirAsegura,
   tarificacionGuardadaAsegura,
+  productFormAsegura,
   type RespuestaCatalogo,
   type RespuestaRetarificar,
   type RespuestaOferta,
   type RespuestaEmitir,
   type RespuestaTarificacionGuardada,
+  type RespuestaProductForm,
 } from '@/lib/retarificar-asegura'
 
 /** Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.** */
@@ -83,6 +85,7 @@ export async function pedirCotizacion(entrada: {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  referencia?: string
   /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetarificar.forzarNuevo`. */
   forzarNuevo?: boolean
 }): Promise<RespuestaRetarificar> {
@@ -93,6 +96,7 @@ export async function pedirCotizacion(entrada: {
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
     catastro: entrada.catastro ?? null,
+    referencia: entrada.referencia,
     forzarNuevo: entrada.forzarNuevo === true,
   })
 }
@@ -110,6 +114,8 @@ export async function pedirOferta(entrada: {
   fechaEfectoCorregida?: string
   /** Respuesta del corredor a un `faltan_vendor` anterior (campo nuestro → valor). */
   correcciones?: Record<string, string>
+  /** Lo guardado del Product Form Library tras un `faltan_producto` anterior. */
+  productOptions?: unknown[]
 }): Promise<RespuestaOferta> {
   return ofertaAsegura(entrada)
 }
@@ -119,6 +125,22 @@ export async function pedirOferta(entrada: {
  * Exige una oferta ya confirmada con `pedirOferta`. Sin sandbox, sin
  * reintento: un fallo de red aquí NO dice que la póliza no se haya emitido.
  */
+/**
+ * El `dataCallback` de la Product Form Library (widget de Codeoscopic para
+ * pintar el formulario REAL de consentimiento de cada compañía). **Gratis**:
+ * no cotiza ni confirma nada con el vendor, solo relaya sub-peticiones de
+ * catálogo del propio widget. Ver `productFormAsegura` para el porqué de la
+ * acción de servidor (el Bearer no puede bajar al navegador).
+ */
+export async function pedirProductForm(peticion: {
+  method?: string
+  path: string
+  params?: unknown[]
+  body?: Record<string, unknown>
+}): Promise<RespuestaProductForm> {
+  return productFormAsegura(peticion)
+}
+
 export async function pedirEmision(entrada: {
   projectId: string
   campos: Record<string, unknown>
@@ -127,6 +149,9 @@ export async function pedirEmision(entrada: {
   cuentaConfirmada?: string | null
   reintentoConfirmado?: boolean
   acunarExistente?: boolean
+  /** El corredor confirma que el tomador YA tiene familiares asegurados en
+   *  Allianz (bonificación real). Ver `emitirAsegura`. */
+  familiaEnAllianz?: boolean
 }): Promise<RespuestaEmitir> {
   return emitirAsegura({
     projectId: entrada.projectId,
@@ -136,5 +161,6 @@ export async function pedirEmision(entrada: {
     cuentaConfirmada: entrada.cuentaConfirmada ?? null,
     reintentoConfirmado: entrada.reintentoConfirmado === true,
     acunarExistente: entrada.acunarExistente === true,
+    familiaEnAllianz: entrada.familiaEnAllianz === true,
   })
 }

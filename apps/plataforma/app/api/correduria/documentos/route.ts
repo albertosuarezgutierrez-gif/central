@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { tipoDocumento } from '@central/module-seguros'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { pedirDocumentoAsegura, subirDocumentoAsegura } from '@/lib/documentos-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -13,8 +13,8 @@ export const maxDuration = 60
  * Sesión de plataforma obligatoria: es la pantalla de Alberto.
  */
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
   const ct = req.headers.get('content-type') ?? ''
   try {
     if (ct.includes('multipart/form-data')) {

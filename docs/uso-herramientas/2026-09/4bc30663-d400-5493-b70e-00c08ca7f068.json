@@ -1,0 +1,101 @@
+{
+ "sesion": "4bc30663-d400-5493-b70e-00c08ca7f068",
+ "inicio": "2026-09-21T09:04:49.562Z",
+ "fin": "2026-09-21T09:07:03.604Z",
+ "llamadas": 35,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 181,
+   "chars_out": 340,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 7,
+   "chars_in": 669,
+   "chars_out": 66010,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 6,
+    "Grep": 1
+   }
+  },
+  "bash": {
+   "llamadas": 8,
+   "chars_in": 1668,
+   "chars_out": 4515,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 8
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 8,
+   "chars_in": 801,
+   "chars_out": 17938,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 7,
+    "mcp__Gmail__list_labels": 1
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 3,
+   "chars_in": 331,
+   "chars_out": 16651,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 3
+   }
+  },
+  "sql": {
+   "llamadas": 2,
+   "chars_in": 546,
+   "chars_out": 8295,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 2
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1520,
+   "chars_out": 75103,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 1168,
+   "chars_out": 332,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1
+   }
+  }
+ }
+}

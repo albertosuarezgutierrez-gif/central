@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarPolizaEmitida } from '@/lib/emision'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -20,7 +21,7 @@ export const dynamic = 'force-dynamic'
  * (PR3) y su prueba de idempotencia; hasta entonces acuñar una «emitida» sería
  * inventar una póliza. Solo POST: no hay GET que un prefetch pueda disparar.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   if (process.env.CODEOSCOPIC_EMISION_ACTIVA !== 'true') {
     return NextResponse.json({ estado: 'emision_desactivada', motivo: 'CODEOSCOPIC_EMISION_ACTIVA no está a true: no se acuñan pólizas emitidas.' }, { status: 503 })
@@ -57,4 +58,4 @@ export async function POST(req: Request) {
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/poliza/emitida', e) }, { status: 500 })
   }
-}
+})

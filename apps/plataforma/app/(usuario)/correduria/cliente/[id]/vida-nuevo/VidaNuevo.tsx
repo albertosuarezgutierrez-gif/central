@@ -154,7 +154,7 @@ export default function VidaNuevo({
           <Campo etiqueta="Capital asegurado (€)" falta={faltaCapital}>
             <input type="number" min={0} step={1000} value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="30000" style={input} />
           </Campo>
-          <Campo etiqueta="Duración (años)" falta={false} ayuda="Opcional. Si se deja en blanco, no se manda.">
+          <Campo etiqueta="Duración (años)" falta={false} ayuda="Nota para el corredor: NO viaja al vendor (la API de vida no documenta ese campo).">
             <input type="number" min={1} value={duracionAnios} onChange={(e) => setDuracionAnios(e.target.value)} placeholder="10" style={input} />
           </Campo>
         </div>

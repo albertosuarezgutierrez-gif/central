@@ -182,6 +182,35 @@ export function interpretarError400(mensajeCrudo: string): Interpretacion {
   return { campos: [...porCampo.values()], noReconocidos, lineas }
 }
 
+// ─── Campos de PRODUCTO (product.options del ReRate), no de persona ────────
+//
+// El vendor los rechaza con un patrón DISTINTO al de `REGLAS` (que es inglés,
+// «The X of the Y is mandatory» y solo conoce campos de persona): este es
+// español, «<Compañía>: El campo <nombre> de <Compañía> es obligatorio.» —
+// visto 2 veces real con Occident, mismo patrón las dos (19-20/09/2026):
+// «Occident: El campo ¿El vehículo se encuentra en situación de leasing o
+// renting? de Occident es obligatorio.» / «Occident: El campo Tipo de
+// adquisición del vehículo de Occident es obligatorio.»
+//
+// A propósito NO se traduce a un campo nuestro (no hay lista cerrada: el
+// nombre es el que la compañía use en su formulario, cambia por compañía y
+// por producto) — solo se detecta QUE es un hueco de `product.options`, para
+// que el caller pueda ofrecer el Product Form Library del vendor en vez de
+// tirar el JSON crudo. Ver `ProductFormWidget` (plataforma).
+
+export type CampoProducto = { compania: string; campo: string; texto: string }
+
+const RE_CAMPO_PRODUCTO = /^(.+?):\s*el campo\s+(.+?)\s+de\s+\1\s+es obligatorio\.?$/i
+
+export function interpretarCamposProducto(lineas: string[]): CampoProducto[] {
+  const out: CampoProducto[] = []
+  for (const linea of lineas) {
+    const m = RE_CAMPO_PRODUCTO.exec(linea.trim())
+    if (m) out.push({ compania: m[1].trim(), campo: m[2].trim(), texto: linea })
+  }
+  return out
+}
+
 /** Los campos interpretados como `Reparo`, que es lo que la pantalla ya sabe pintar. */
 export function reparosDe(interp: Interpretacion): Reparo[] {
   return interp.campos.map((c) => ({
@@ -294,9 +323,17 @@ export function aplicarCampoPersona(
     case 'telefono':
       p.phones = [{ number: v.replace(/\s/g, ''), primary: true }]
       return p
-    case 'fechaCarnet':
-      p.drivingLicenses = [{ type: { id: 'B' }, date: v, issuingZone: { id: 'Spain' } }]
+    case 'fechaCarnet': {
+      // Se corrige la fecha del carné PRINCIPAL (`[0]`) conservando su tipo, su
+      // zona y los demás carnés: pisarlo con un B de España convertía el A de
+      // una moto en un B, y se llevaba el B que viajaba detrás.
+      const [principal, ...resto] = arr(p.drivingLicenses).map((x) => obj(x))
+      p.drivingLicenses = [
+        { type: { id: 'B' }, issuingZone: { id: 'Spain' }, ...(principal ?? {}), date: v },
+        ...resto,
+      ]
       return p
+    }
     case 'email':
       // 🚨 `emails[]`, medido el 13/09/2026 sobre el proyecto 40685666 (el
       // vendor devuelve `emails: []`; con `email` a secas el PATCH daba 200 y

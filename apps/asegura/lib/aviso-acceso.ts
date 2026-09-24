@@ -28,6 +28,7 @@ import { estadoAutorizacion } from '@central/module-seguros-portal'
 import { prismaAsegura } from './asegura-db'
 import { emailDeFicha } from './email-ficha'
 import { enlaceDeAutorizaciones, enviarAvisoAcceso } from './correo-aviso-acceso'
+import { MOTIVO_REMITENTE } from './correo-invitacion-portal'
 
 export type FalloAviso =
   | 'no_encontrado'
@@ -35,6 +36,7 @@ export type FalloAviso =
   | 'sin_email'
   | 'sin_portal'
   | 'sin_correo_configurado'
+  | 'remitente_no_verificado'
   | 'error_envio'
 
 export type ResultadoAviso =
@@ -78,7 +80,7 @@ export async function avisarAccesoPendiente(
       aceptadoEn: null,
       revocadoEn: null,
     },
-    select: { aceptadoEn: true, caducaEn: true, revocadoEn: true },
+    select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
   })
   const pendientes = filas.filter((f) => estadoAutorizacion(f, ahora) === 'pendiente')
   if (pendientes.length === 0) {
@@ -120,8 +122,31 @@ export async function avisarAccesoPendiente(
       status: 503,
     }
   }
+  if (enviado === 'remitente_no_verificado') {
+    return { ok: false, estado: 'remitente_no_verificado', motivo: MOTIVO_REMITENTE, status: 503 }
+  }
   if (enviado === 'rechazado') {
     return { ok: false, estado: 'error_envio', motivo: 'El proveedor de correo no aceptó el mensaje. Vuelve a intentarlo.', status: 502 }
+  }
+
+  // 🚨 Y se SELLA como aviso ya contado, con la misma clave que usa el emisor
+  // genérico de la intranet (`lib/avisos-intranet.ts`, `${tipo}:${id}`). Sin
+  // esto, a quien Alberto acaba de avisar a mano le llegaría por la mañana un
+  // segundo correo del cron diciéndole lo mismo. El sello es best-effort: si
+  // falla, se grita y el aviso sigue mandado — lo caro es el duplicado, no la
+  // fila. `skipDuplicates` porque el cron pudo sellarlo ya.
+  try {
+    await db.portalAvisoEnviado.createMany({
+      data: pendientes.map((f) => ({
+        correduriaId,
+        clienteId: entrada.autorizadoId,
+        clave: `autorizacion_pendiente:${f.id}`,
+        tipo: 'autorizacion_pendiente',
+      })),
+      skipDuplicates: true,
+    })
+  } catch (e) {
+    console.error('[aviso-acceso] AVISADO PERO NO SELLADO:', e instanceof Error ? e.message : e)
   }
 
   // Queda en las dos fichas: a un tercero se le ha escrito, y eso se tiene que

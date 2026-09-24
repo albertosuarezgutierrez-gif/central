@@ -184,25 +184,31 @@ test('ningún enlace de plataforma manda a central-asegura para RETARIFICAR auto
       src,
       /central-asegura\.vercel\.app/,
       `${f} enlaza a central-asegura a pelo. Los saltos a asegura pasan por un helper de ` +
-        '`lib/ficha-asegura.ts` y hoy solo queda uno (hogar, que no está portado).',
+        '`lib/ficha-asegura.ts`, y hoy (17/09/2026, auto y hogar ya portados) no queda ninguno vivo.',
     )
   }
 })
 
-test('el único salto que queda a asegura es hogar, y está declarado como tal', () => {
+test('hogar ya NO salta a asegura: el helper de esa URL se borró al portarlo', () => {
   const ficha = leer(FICHA)
-  assert.match(
+  assert.doesNotMatch(
     ficha,
     /export function urlRetarificarHogarAsegura\(/,
-    'hogar sigue retarificándose en asegura (su pantalla pide m², año, capitales y Catastro) y ' +
-      'ese salto tiene su propio helper, con nombre que lo dice. Si se porta, se borra el helper.',
+    'hogar ya se retarifica DENTRO de plataforma (17/09/2026, `RetarificadorHogar.tsx` + ' +
+      '`precalificarHogarRetarificarAsegura()`). Si este helper reaparece, algo ha vuelto a mandar ' +
+      'a asegura en vez de pintar la ficha aquí.',
   )
   const pagina = leer(PAGINA)
   assert.match(
     pagina,
     /ramo === 'hogar'/,
-    'la pantalla interna tiene que ramificar por ramo: con hogar manda al sitio donde HOY funciona, ' +
-      'en vez de fingir que no se puede retarificar.',
+    'la pantalla interna tiene que seguir ramificando por ramo: con hogar pinta ' +
+      '`RetarificadorHogar`, con cualquier otro ramo explica que no se puede retarificar todavía.',
+  )
+  assert.doesNotMatch(
+    pagina,
+    /Retarificar hogar en asegura/,
+    'no puede quedar texto de la pantalla vieja invitando a saltar a asegura para hogar.',
   )
 })
 
@@ -661,4 +667,49 @@ test('la fecha de efecto guardada pasa por fechaEfectoInicial() antes de precarg
   // la fecha del día en que se tecleó.
   assert.ok(usos.length >= 2, `las dos precargas de correcciones (guardada + borrador) deben pasar por fechaEfectoInicial(); hay ${usos.length}`)
   assert.match(src, /from '@\/lib\/fecha-efecto-inicial'/)
+})
+
+test('la tabla se agrupa por cobertura y la clave de fila NO es la posición visible (21/09/2026)', () => {
+  // Hasta hoy las 24 filas iban en una lista ordenada solo por prima, con un
+  // Terceros y un Todo Riesgo juntos como si fueran comparables. Al agrupar,
+  // el orden de pantalla deja de ser el de `r.precios` — y la clave de fila,
+  // que es la que decide sobre QUÉ precio abre el panel de Emisión, era
+  // `compañía-producto-POSICIÓN`. Con la posición del grupo, «Emitir» se
+  // abriría sobre otro precio distinto del que se pulsó.
+  const src = leer(PANTALLA)
+  assert.match(src, /agruparPrecios\(/, 'la tabla tiene que agrupar por nivel de cobertura')
+  assert.match(
+    src,
+    /const id = `\$\{p\.compania\}-\$\{p\.producto\}-\$\{fila\.indice\}`/,
+    'la clave de fila debe salir de `fila.indice` (posición en la lista ORIGINAL), nunca del índice del map visible',
+  )
+  // Y el `map` de los paneles de Emisión sigue recorriendo `r.precios` con su
+  // índice original: las dos claves tienen que construirse igual o no casan.
+  assert.match(src, /\{r\.precios\.map\(\(p, i\) => \{/)
+})
+
+test('una cotización recuperada NO dice que ninguna compañía rechazó (21/09/2026)', () => {
+  // `fallos: []` en `resultadoDeGuardada` afirmaba «revisado, ningún producto
+  // falló» sobre una lista que no se persiste. Y esa lista es justo donde la
+  // compañía dice «la matrícula ya está asegurada aquí», que es la defensa de
+  // cartera contada por ella misma, gratis.
+  const src = leer(PANTALLA)
+  assert.doesNotMatch(
+    src,
+    /fallos:\s*\[\],/,
+    'una cotización recuperada no persiste los fallos: `null` («no se guardaron»), nunca `[]`',
+  )
+  assert.match(src, /fallos:\s*Fallo\[\]\s*\|\s*null/, '`fallos` tiene que admitir el «no se sabe»')
+  assert.match(src, /r\.fallos === null \?/, 'y la pantalla tiene que distinguir los dos casos')
+})
+
+test('sin la cartera del cliente, la tabla NO afirma que se pueda emitir (21/09/2026)', () => {
+  // `null` = no se ha podido mirar en qué compañías está ya el cliente. Si eso
+  // se colapsara a `[]`, las 24 filas saldrían como emitibles — la mentira que
+  // tranquiliza, sobre la que Alberto decide si promete un precio.
+  const src = leer(PANTALLA)
+  assert.match(src, /defensas === null &&/, 'la pantalla tiene que DECIR que no lo ha mirado')
+  const ctx = leer('apps/plataforma/lib/contexto-defensa.ts')
+  assert.match(ctx, /polizasParaDefensa/, 'las pólizas se leen con el helper que devuelve null, no []')
+  assert.match(ctx, /if \(polizas === null\) return null/)
 })

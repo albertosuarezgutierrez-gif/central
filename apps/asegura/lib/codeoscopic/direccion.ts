@@ -43,6 +43,26 @@ const TIPOS_VIA: Record<string, string> = {
 }
 
 /**
+ * El sentido CONTRARIO de `TIPOS_VIA`: del nombre canónico («Plaza») a la
+ * sigla corta que el callejero del Catastro (`ConsultaVia`/`Consulta_DNPLOC`)
+ * espera en su parámetro `TipoVia`/`Sigla` («PZ»). Recortar el nombre a sus
+ * dos primeras letras NO sirve — «Plaza» daría «PL» y el Catastro usa «PZ»,
+ * «Paseo» y «Pasaje» colisionarían en «PA»… Una sigla por canónico, la MISMA
+ * que ya usa `direccionDesdeCatastro()` en la dirección contraria.
+ */
+const SIGLA_DE_TIPO_VIA: Record<string, string> = {
+  Calle: 'CL', Avenida: 'AV', Plaza: 'PZ', Paseo: 'PS', Camino: 'CM',
+  Carretera: 'CR', Ronda: 'RD', 'Urbanización': 'UR', 'Travesía': 'TR',
+  Glorieta: 'GL', Barrio: 'BO', Barriada: 'BDA', Pasaje: 'PJ', 'Callejón': 'CJ',
+  Lugar: 'LG', 'Polígono': 'PG', Alameda: 'AL', Cuesta: 'CTA',
+}
+
+/** La sigla del Catastro para un tipo de vía canónico. `null` si no está en la tabla. */
+export function siglaDeTipoVia(nombreCanonico: string): string | null {
+  return SIGLA_DE_TIPO_VIA[nombreCanonico] ?? null
+}
+
+/**
  * De `paramsDnploc()` (`@central/core-catastro`, que sí entiende «Es:1 Pl:01
  * Pt:IZ») a `DireccionPartida`. Existe porque `partirDireccion()` de aquí
  * abajo está pensado para el texto libre de la ficha del CRM y no reconoce el
@@ -84,7 +104,23 @@ export function tipoViaDeFicha(
 ): { id: string; nombre: string } | null {
   const tipo = partirDireccion(direccion ?? null).tipoVia
   if (tipo === null) return null
-  const buscado = normalizarToken(tipo)
+  return emparejarNombreVia(tipo, catalogo)
+}
+
+/** El nombre canónico («Calle», «Avenida»…) de un código de tipo de vía tal como
+ * lo escribe el CATASTRO en su callejero oficial («CL», «AV»…) — mismas siglas
+ * que las del CRM, reutiliza `TIPOS_VIA`. `null` si el código no está en la
+ * tabla (el Catastro tiene tipos raros que el CRM nunca escribe: «CJVN», «PZA»
+ * con otra grafía…): entonces no se afirma nada, se pregunta al corredor. */
+export function siglaCanonica(sigla: string): string | null {
+  return TIPOS_VIA[normalizarToken(sigla)] ?? null
+}
+
+export function emparejarNombreVia(
+  nombreCanonico: string,
+  catalogo: ReadonlyArray<{ id: string; nombre: string }>,
+): { id: string; nombre: string } | null {
+  const buscado = normalizarToken(nombreCanonico)
   const coincidencias = catalogo.filter((o) => normalizarToken(o.nombre) === buscado)
   return coincidencias.length === 1 ? coincidencias[0] : null
 }

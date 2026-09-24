@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { escribirBackfillContacto } from '@/lib/correduria-puerto'
 
 export const dynamic = 'force-dynamic'
@@ -15,8 +15,8 @@ export const maxDuration = 300
  * a NULL.
  */
 export async function POST(req: Request) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   const limite =
     body !== null && typeof body.limite === 'number' && Number.isFinite(body.limite) && body.limite > 0

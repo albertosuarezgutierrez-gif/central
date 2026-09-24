@@ -12,7 +12,7 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { MARCA_ASEGURA, emitirRootCss, emitirVariables, emitirVariablesOscuras } from '@central/brand'
 import { MEDIADOR, lineaIdentificacion, telefonoLegible, whatsappUrl } from '@central/module-seguros'
-import { NAV, SITIO_URL } from '@/lib/sitio'
+import { HORARIO, NAV, SITIO_URL } from '@/lib/sitio'
 import { fichaNegocio, fichaWebSite, jsonLd } from '@/lib/seo'
 import Analitica from '@/components/Analitica'
 import Cabecera from '@/components/Cabecera'
@@ -79,7 +79,7 @@ export const metadata: Metadata = {
     template: '%s · Grupo ASegura',
   },
   description:
-    'Correduría de seguros inscrita en la DGSFP que media en toda España. Analizamos entre varias compañías tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
+    'Correduría inscrita en la DGSFP que media en toda España. Analizamos varias compañías para tu seguro de hogar, comunidad, comercio, auto, vida y salud.',
   openGraph: {
     type: 'website',
     locale: 'es_ES',
@@ -160,6 +160,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <a href={whatsappUrl(`Hola ${MEDIADOR.marca}, tengo una consulta.`)} target="_blank" rel="noopener noreferrer">
                   WhatsApp
                 </a>
+                {/* El horario se pinta aquí Y va al `openingHours` del JSON-LD,
+                    los dos desde `HORARIO`: publicar una hora en la web y otra
+                    en los datos estructurados es la contradicción que Google
+                    penaliza. Se omite entero mientras no esté confirmado —
+                    `null` significa «no se sabe», no «no atendemos». */}
+                {HORARIO ? (
+                  <>
+                    <br />
+                    {HORARIO.texto}
+                  </>
+                ) : null}
               </p>
             </div>
             <div>

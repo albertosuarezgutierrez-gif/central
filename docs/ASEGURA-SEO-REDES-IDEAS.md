@@ -290,6 +290,15 @@ además el `sameAs` de la idea F.
 
 </details>
 
+> 📍 **Medido el 23/09/2026 (OpenSEO, Google España, top 20): la ficha NO aparece.** Para
+> «correduría de seguros sevilla» mandan el **local pack** (Albroksa, Lara Broker, Benjumea,
+> AndalBrok, Seingur, López Barneto) y directorios (ProntoPro, corredurias.org); grupoasegura.es
+> tampoco sale en orgánico. Con **una** reseña no se entra en el pack: las reseñas de clientes
+> reales siguen siendo la palanca nº1 y siguen siendo de Alberto. Re-medir tras las primeras reseñas.
+>
+> ⭐ **Borrador de la petición preparado el 23/09/2026** en `docs/asegura-resenas/` (texto + QR al
+> enlace directo de reseña). Sin enviar: lo manda Alberto.
+
 ## ✅ J. Google Search Console — ya estaba conectada desde mayo
 
 > ✅ **CERRADO el 07/09/2026.** La propiedad de tipo Dominio `sc-domain:grupoasegura.es` **estaba
@@ -356,12 +365,31 @@ consultas de intención de problema y las tres de ramo con sufijo obsoleto tiene
 siguiente contenido de blog sale de la cola curada `apps/plataforma/lib/correduria/blog-temas.ts`
 (agente quincenal), no de este banco: no dupliques ahí un tema que ya está en `TEMAS`.
 
+**19/09/2026 — la cola vuelve a tener UNA cosa, y no es un artículo.** Tras valorar el prompt de
+consultoría de Alberto (spec `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`):
+- ✅ «organizar mis seguros en un solo sitio» → `/gestor-de-seguros` (landing del gestor, copy en
+  `lib/gestor.ts` con su cepo, `SoftwareApplication` gratuito, calculadora sin registro).
+- ✅ «cómo dar de baja un seguro» → `/blog/como-dar-de-baja-un-seguro-a-tiempo`, con el primer CTA
+  dentro de un artículo (`Articulo.cta`) hacia la carta de no renovación del portal.
+- ⏳ **Serie «dar de baja en [Compañía]»: BLOQUEADA por verificación humana.** Los canales de Mapfre,
+  Allianz, Occident, Reale y Generali están en `apps/asegura-web/lib/companias-baja.ts` con sus URL
+  oficiales y `verificado: false` — desde el contenedor la red bloquea los cinco dominios y solo hay
+  extractos de buscador. `companias-baja.test.ts` impide publicar un email o domicilio sin verificar.
+  Cuando Alberto abra las cinco URL y ponga la fecha, se escriben los artículos CON datos, uno por
+  compañía y sin plantilla (una página por compañía con el texto cambiado de nombre es doorway).
+- 🚫 Lo que el prompt pedía y no se hace: «semáforo de precio», reseñas automatizadas «de 5
+  estrellas», referidos con premio — ver el spec.
+
 **Ritmo:** un artículo por ciclo, no cinco a medias.
 ⚠️ **Lección del agente SEO de ia-rest, que no aplicó ni un cambio en toda su vida:** su umbral de
 30 impresiones era inalcanzable sin tráfico. **No automatizar el SEO antes de tener tráfico** — al
 principio la rutina propone y Alberto decide, no al revés.
 
-## L. Canibalización interna de las FAQ — 🟢 menor
+## ✅ L. Canibalización interna de las FAQ — cerrada (23/09/2026)
+
+✅ **Hecha:** la pregunta «¿cobráis…?» estaba en 8 de las 9 páginas de ramo con la misma respuesta; se quitó de todas y queda UNA frase en el bloque «Que te llamemos» de la plantilla. La RC general y la de autónomos compartían «¿Es obligatorio… para un autónomo?»: la general pasa a «¿Es obligatorio el seguro de responsabilidad civil?». Y la rejilla «Qué revisamos» de la portada usa `RAMOS_PRODUCTO` (sin las tarjetas de RC de fontaneros y autónomos junto a la general). Queda a propósito el preaviso del art. 22 LCS en hogar/auto/comercio/comunidades: es la misma regla legal, adaptada a cada ramo.
+
+Contexto original:
 
 La última pregunta de los 6 ramos es prácticamente la misma («¿cobráis algo?») con la misma
 respuesta (`ramos.ts:116, 169, 222, 275, 383` + `cambiar-de-correduria:76`). Seis respuestas casi
@@ -409,7 +437,74 @@ o accidentes. **Relación ya abierta, coste de captación cero**, y encima son q
 **primeras reseñas** que hacen falta para la idea I.
 **Bloqueo:** son conversaciones de Alberto. Aquí solo se prepara el material.
 
+## O. Colisión de marca con «Asegura Group» — 🟠 (medido 23/09/2026)
+
+Al buscar la marca en Google España (OpenSEO), el **1.º es `asegura-group.com`** — Asegura Group
+Gestión Integral Correduría de Seguros S.L., **otra correduría**, con sede en Granada — y
+grupoasegura.es sale **2.º**. Sus perfiles (Facebook, LinkedIn, directorios de empresas) ocupan
+también el resto de la primera página. Es un nombre casi idéntico en el mismo sector y en Andalucía:
+quien nos busca de oídas puede acabar llamándoles a ellos.
+- ✅ Hecho: la portada ya lleva «Grupo ASegura» en el `<title>` (antes no la llevaba: la plantilla
+  del layout no se aplica al segmento raíz) — PR #3353.
+- Pendiente: que la ficha de Google (idea I) y los perfiles sociales (idea M) usen **exactamente**
+  «Grupo ASegura» y enlacen a grupoasegura.es, para que Google junte la entidad. Y el `sameAs` de F.
+- ⚖️ **No es tarea del agente**: si hay conflicto de marca registrada (OEPM/EUIPO), lo mira Alberto
+  con un abogado. Aquí no se afirma quién tiene prioridad.
+
 ---
+
+## P. Lo que dijo Search Console el 23/09/2026 (vía OpenSEO) — y la idea que se DESCARTA
+
+📊 **3 meses (20/06–20/09): 3 clics, ~900 impresiones.** La marca bien escrita va en posición 2,4 con
+9 impresiones; «grupo asegurador» (201, pos. 60) y «asegura facil» (~100, pos. 42-95, **otra marca**)
+son ruido. Mejor página con intención: `/cambiar-de-correduria` (pos. 5,9, 1 clic).
+
+🚫 **Descartado: «reforzar /seguros/hogar y /seguros/auto para subirlas de la 18-20 a primera
+página».** Se propuso mirando la posición MEDIA por página, y engañaba por dos lados: esa media la
+tiraban hacia arriba búsquedas de MARCA (pos. 6,7), y lo genérico por lo que salen es LOCAL
+(«seguros de hogar en sevilla» 25,6 · «seguro coche todo riesgo sevilla» 22,8 · «seguro de coche en
+sevilla» 26,4) con 1-13 impresiones en tres meses. Y medido en DataForSEO (OpenSEO, 23/09): ni
+«seguro hogar sevilla» ni «seguro coche sevilla» aparecen con volumen propio. Una landing local
+para eso no compensa, y meter «Sevilla» en la nacional lo prohíbe `ACOTA_AMBITO`. Para lo local
+manda el pack de Google Business (idea I): reseñas.
+
+✅ **HECHA el 23/09/2026 — `/telefonos-siniestros`, con las 7 compañías VERIFICADAS** (Mapfre,
+Allianz, Generali, Reale, Occident, Fidelidade, Asisa) por capturas de sus webs oficiales que mandó
+Alberto (PRs #3398, #3412). 🔀 **Los datos viven en UNA sola fuente desde #3412:**
+`packages/module-seguros/src/telefonos-companias.ts`, que leen la web, el portal del cliente y el
+puerto de asegura. Las columnas `telefono_*` de `companias_dgs` están OBSOLETAS (daban a Mapfre su
+línea médica como «dar parte»). Cambiar un número = PR a ese catálogo con captura y fecha.
+Solo Reale (900 455 900) y Occident (917 83 83 83, voz y WhatsApp) publican voz para dar parte.
+✅ **Y su artículo hermano `/blog/dar-parte-seguro-por-whatsapp`** (idea de Alberto): qué compañías
+aceptan el parte por WhatsApp, sin copiar ningún número (un cepo lo impide: enlaza la página).
+
+✅ **24/09/2026 — «Guardar en mis contactos»** (vCard) por compañía en `/telefonos-siniestros`
+(`/telefonos-siniestros/contacto/<slug>`, estática, `noindex`) y en el parte del portal
+(`/api/contacto-compania/<nombre>`). Sale de `vcardCompania()` del mismo catálogo. ✅ **Caducidad:**
+`telefonosPorRevisar()` (más de 270 días sin comprobar) sale en el Telegram semanal de
+`seo-correduria`; no es un test con fecha a propósito (pondría rojo cualquier PR un día cualquiera).
+✅ Los datos estructurados FAQ ya estaban en las dos páginas desde que se crearon.
+
+⏭️ **Siguiente, sin hacer:** una página por compañía (`/telefonos-siniestros/mapfre`…) para las
+navegacionales de abajo; medir antes su volumen con OpenSEO. Solo Mapfre tiene volumen claro
+(1.300/mes): una página por compañía sin volumen sería doorway. Pendiente de Alberto: capturas de Fidelidade (emergencias y auto), la línea de voz de
+Mapfre para dar parte y el 900 300 250 de Allianz.
+
+💡 Idea de origen: una página de «teléfonos de siniestros por compañía». Lo que sí tiene
+volumen y dificultad casi nula son búsquedas NAVEGACIONALES de quien tiene un siniestro encima:
+«mapfre seguro hogar teléfono» 1.300/mes (KD 4), «seguro hogar catalana occidente teléfono» 110,
+«mapfre seguro hogar telefono siniestros» 40. Es intención de problema pura y los números ya están
+VERIFICADOS en `seguros.companias_dgs` (con fuente y fecha, ver `apps/asegura-portal/CLAUDE.md`,
+«El teléfono de la compañía»). ⚠️ Antes de escribirla: solo hay verificadas 5 compañías, y la regla
+del portal manda también aquí — **un número sin verificar no se publica**, «pídenoslo» en su lugar.
+Y compite contra la web de la propia compañía: el objetivo realista es el hueco de «qué hacer
+además de llamar», no desbancarla. Pide el OK de Alberto (es una página nueva con datos de terceros).
+
+🔌 **OpenSEO, qué aporta de verdad.** Search Console **ya la lee el cron `seo-correduria`** (fila
+`gsc` en `ok` las semanas del 14 y el 21/09), así que conectarla también en OpenSEO es redundante
+para la rutina. Donde sí suma: **SERP en vivo** (~5 créditos/consulta) y **volúmenes de búsqueda**
+(~55/semilla), justo lo que Serper ya no da — la semana del 14/09 su fila salió `error` por
+«Not enough credits» y la del 21/09 **no hay fila `serp`**. Saldo de alta ~400 créditos, sin plan.
 
 ## ✅ Cerrado (no volver a abrirlo)
 
@@ -439,8 +534,8 @@ o accidentes. **Relación ya abierta, coste de captación cero**, y encima son q
   fail-closed pasan en sesión limpia (cero PostHog antes de aceptar). PostHog EU registra visitas
   reales. El [Probable] de arriba se escribió sin mirar el HTML vivo ni las envs: es un caso más de
   «dato que NO hay ≠ dato que NO se ha mirado» (PR #2618).
-- ⏳ **Cookiebot en Premium Trial, 12 días restantes** (a 07/09/2026), y el trial solo admite 1
-  dominio. Cuando caduque, mirar qué pasa con el banner.
+- ✅ ~~Cookiebot en Premium Trial~~: **sustituido el 14/09/2026 por `@central/core-consent`**
+  (PR #2925), antes de que caducara el trial. Ya no hay nada que vigilar aquí.
 - 🔁 **Google Analytics SÍ se añadió, y es una REVERSIÓN explícita de la decisión de abajo
   (14/09/2026, PR #2942).** Alberto pidió verlo «en la misma app que housesevillana e ia-rest» — no
   es un descuido, es información nueva (quiere las tres webs en la MISMA cuenta de GA) que no existía

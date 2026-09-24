@@ -26,6 +26,8 @@
 // estados no se colapsan en «no se puede invitar»: cada uno se arregla en un
 // sitio distinto (pedirle el correo al cliente · resolver un duplicado · mirar
 // una variable de Vercel · volver a intentarlo).
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 
 /**
  * Los siete estados del puerto (`EstadoPortal` de `apps/asegura`). El orden es
@@ -157,6 +159,7 @@ export const FALLOS_INVITACION = [
   'no_comprobado',
   'error_envio',
   'sin_correo_configurado',
+  'remitente_no_verificado',
 ] as const
 export type FalloInvitacion = (typeof FALLOS_INVITACION)[number]
 
@@ -359,6 +362,11 @@ export function textoInvitacion(r: RespuestaInvitacion, nombre: string): string 
         `⚙️ No se ha enviado y NO sirve reintentarlo: ${textoMotivoPortal(r.motivo)} Se arregla en las variables ` +
         `del proyecto Vercel central-asegura (y hay que redesplegar), no llamando a ${nombre}.`
       )
+    case 'remitente_no_verificado':
+      return (
+        `⚙️ No se ha enviado y NO sirve reintentarlo: Resend rechaza el remitente porque su dominio no está ` +
+        `verificado. Se arregla en resend.com/domains (y en el DNS del dominio), no llamando a ${nombre}.`
+      )
     case 'no_encontrado':
       return 'Esa ficha ya no está en la correduría. No se ha enviado nada.'
     case 'sin_configurar':
@@ -388,22 +396,22 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-function cabeceras(): Record<string, string> | null {
+async function cabeceras(): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? { Authorization: `Bearer ${secret}` } : null
+  return secret ? await cabecerasPuerto(secret) : null
 }
 
 export type Reenvio = { status: number; json: unknown }
 
-async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
-  const h = cabeceras()
+async function llamar(path: string, init: RequestInit, timeoutMs = 15_000): Promise<Reenvio> {
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}${path}`, {
       ...init,
       headers: { ...h, ...(init.body ? { 'content-type': 'application/json' } : {}) },
       cache: 'no-store',
-      signal: AbortSignal.timeout(15_000),
+      signal: AbortSignal.timeout(timeoutMs),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {
@@ -476,4 +484,23 @@ export function portalAsegura(clienteId: string): Promise<Reenvio> {
  */
 export function invitarPortalAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/cliente/portal', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/**
+ * `GET /api/operador/portal/invitaciones` — el censo del envío por lotes: a quién
+ * se escribiría, a quién no y por qué, y el correo tal cual saldría. Gratis.
+ * Tarda: comprueba una a una las fichas de la cartera en vigor.
+ */
+export function censoInvitacionesAsegura(): Promise<Reenvio> {
+  return llamar('/api/operador/portal/invitaciones', { method: 'GET' }, 60_000)
+}
+
+/**
+ * `POST /api/operador/portal/invitaciones` — `{clienteIds, actor}`. Escribe a
+ * personas reales: solo lo dispara Alberto tras ver la lista y el texto (regla
+ * de comunicaciones salientes del `CLAUDE.md` raíz). asegura vuelve a filtrar
+ * los ids contra su censo de ahora, así que un id que ya no toca no recibe nada.
+ */
+export function invitarLoteAsegura(body: { clienteIds: string[]; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/portal/invitaciones', { method: 'POST', body: JSON.stringify(body) }, 290_000)
 }

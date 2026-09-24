@@ -18,7 +18,14 @@ import {
   type EntidadIngesta,
   type PolizaHuerfana,
   type PolizaEnCartera,
+  type CrudoPendiente,
+  type CoberturaResumen,
+  type CajaNegraCodeoscopic,
+  type UltimoPullIngesta,
+  type FicheroParcial,
+  type CampoImportanteSinLeer,
 } from '@central/module-seguros'
+import { cabecerasPuerto } from '../puerto-actor.ts'
 
 export type RespuestaIngesta =
   | { estado: 'sin_configurar' }
@@ -176,6 +183,109 @@ export function polizasDe(h: Huerfanas): PolizaHuerfana[] | null {
 }
 
 /**
+ * Las cuatro señales que el puerto añadió el 02/09/2026 (crudo, cobertura,
+ * caja negra y última corrida del cron).
+ *
+ * 🚨 La clave AUSENTE y la clave ILEGIBLE no son lo mismo, y colapsarlas rompe
+ * el contrato del módulo:
+ *   - ausente  → `undefined` = «esta versión del puerto no ofrece la señal».
+ *     Es el caso de una `apps/asegura` más vieja durante una ventana de
+ *     despliegue, y el módulo lo lee como «el llamante no la pide»: no emite
+ *     hueco. Devolver `null` aquí fabricaría un «no se ha podido medir» diario
+ *     por una señal que nadie está sirviendo.
+ *   - presente pero con forma rara → `null` = «se pidió y no se pudo leer»,
+ *     que SÍ es un hueco y se declara.
+ * Todo-o-nada por bloque, igual que `rechazos` y `silencio`: validar campo a
+ * campo dejaría pasar un objeto a medias, que es la forma tranquilizadora de
+ * equivocarse.
+ */
+function señal<T>(r: Record<string, unknown>, clave: string, ok: (v: unknown) => boolean):
+  T | null | undefined {
+  if (!(clave in r)) return undefined
+  const v = r[clave]
+  if (v === null) return null
+  return ok(v) ? (v as T) : null
+}
+
+const entero = (v: unknown): boolean => typeof v === 'number' && Number.isFinite(v)
+const enteroONulo = (v: unknown): boolean => v === null || entero(v)
+
+function esCrudo(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return entero(o.pendientes) && entero(o.purgaInminente) && enteroONulo(o.masAntiguaHoras)
+}
+
+/**
+ * 🚨 Exige `rutas`/`rutasNuncaLeidas`, no los viejos `hojas`/`hojasNuncaLeidas`.
+ * El puerto pasó a contar RUTAS distintas el 20/09/2026 (antes contaba filas, y
+ * la cifra venía multiplicada por el número de compañías observadas). Un
+ * `central-asegura` anterior manda la forma vieja y aquí cae a `null` = «sin
+ * medir», que es lo correcto: seguir publicándola sería publicar la cifra
+ * inflada con el rótulo nuevo.
+ */
+function esCobertura(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return entero(o.rutas) && entero(o.rutasNuncaLeidas) &&
+    enteroONulo(o.entidadesObservadas) && Array.isArray(o.porTipo) &&
+    o.porTipo.every(t => typeof t === 'object' && t !== null &&
+      typeof (t as Record<string, unknown>).tipoObjeto === 'string' &&
+      entero((t as Record<string, unknown>).rutas) &&
+      entero((t as Record<string, unknown>).nuncaLeidas))
+}
+
+/**
+ * Un fichero confirmado que se dejó objetos sin guardar.
+ *
+ * Todo-o-nada como el resto: una fila ilegible degrada la LISTA entera a
+ * `null`. Quedarse con las que se entienden daría un recuento MÁS BAJO que la
+ * realidad sobre la única pérdida de esta pantalla que no se puede volver a
+ * pedir — la forma tranquilizadora de equivocarse, en el peor sitio.
+ */
+function esParcial(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.fichero === 'string' && typeof o.tipo === 'string'
+    && typeof o.entidad === 'string'
+    && (o.clave === null || typeof o.clave === 'string')
+    && entero(o.declarados) && entero(o.persistidos) && entero(o.enRevision)
+    && enteroONulo(o.dias)
+}
+
+function esListaParciales(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esParcial)
+}
+
+/**
+ * Un elemento de la watchlist curada (mig 0099): campos que CIMA manda de
+ * forma constante y nunca se leen. Todo-o-nada como el resto: una fila
+ * ilegible degrada la lista entera, no se descarta ella sola.
+ */
+function esCampoImportante(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.id === 'string' && typeof o.etiqueta === 'string' && entero(o.vecesVisto)
+}
+
+function esListaCamposImportantes(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esCampoImportante)
+}
+
+function esCajaNegra(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.capturaActiva === 'boolean' && entero(o.cuerpos) && entero(o.posts) &&
+    enteroONulo(o.horasDesdeUltimo)
+}
+
+function esUltimoPull(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return entero(o.horas) && enteroONulo(o.procesados)
+}
+
+/**
  * Interpretación PURA de la respuesta del puerto (testeable sin red).
  *
  * Una forma inesperada NO se degrada a «no hay nada atascado»: se degrada a
@@ -229,6 +339,20 @@ export function interpretarIngesta(
       // 🚨 `null` cuando no se ha podido listar. Un `[]` aquí diría «se miró y
       // no falta ninguna póliza», que es dar por resuelta una pérdida activa.
       huerfanasDetalle: polizasDe(huerfanas),
+      // Sin estas cuatro líneas las señales llegan como `undefined` y el módulo
+      // las lee —correctamente— como «no se piden»: el cron se queda ciego al
+      // cron mudo mientras /correduria lo pinta. Panel y alarma diciendo cosas
+      // distintas del mismo hecho es el fallo que deja de creerse a los dos.
+      crudo: señal<CrudoPendiente>(r, 'crudo', esCrudo),
+      cobertura: señal<CoberturaResumen>(r, 'cobertura', esCobertura),
+      cajaNegra: señal<CajaNegraCodeoscopic>(r, 'cajaNegra', esCajaNegra),
+      ultimoPull: señal<UltimoPullIngesta>(r, 'ultimoPull', esUltimoPull),
+      parciales: señal<FicheroParcial[]>(r, 'parciales', esListaParciales),
+      // `undefined` = un puerto viejo sin esta señal (no se piden); `null` =
+      // el puerto la tiene y no se pudo leer. Ninguno de los dos es «ninguno
+      // conocido» — `saludIngesta` no distingue: sin lista, no avisa nada, que
+      // es lo correcto: no hay avería que declarar por esto.
+      camposImportantes: señal<CampoImportanteSinLeer[]>(r, 'camposImportantes', esListaCamposImportantes) ?? undefined,
     }),
     huerfanasTruncadas: huerfanas.estado === 'ok' && huerfanas.truncado,
     huerfanasSinAmbito: huerfanas.estado === 'ok' ? huerfanas.ocultasOtroAmbito : null,
@@ -248,7 +372,7 @@ function urlAsegura(): string {
 async function pedir(ruta: string, secret: string): Promise<{ status: number; json: unknown } | null> {
   try {
     const res = await fetch(`${urlAsegura()}${ruta}`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     return { status: res.status, json: await res.json().catch(() => null) }

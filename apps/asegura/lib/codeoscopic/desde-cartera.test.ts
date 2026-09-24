@@ -4,6 +4,9 @@ import {
   precalificarAuto,
   precalificarAutoNueva,
   precalificarMotoNueva,
+  precalificarMoto,
+  carnetMotoDeFicha,
+  carnetBDeFicha,
   partirApellidos,
   sexoDeSaludo,
   aniosEntre,
@@ -17,6 +20,7 @@ import {
   type Resueltos,
   type ResueltosAutoNueva,
   type ResueltosMotoNueva,
+  type ResueltosMoto,
 } from './desde-cartera.ts'
 
 const HOY = '2026-09-01'
@@ -422,3 +426,110 @@ test('moto: NINGÚN supuesto rellena un dato personal', () => {
     assert.ok(!personales.includes(s.campo), `no se puede suponer un dato personal: ${s.campo}`)
   }
 })
+
+// ─── MOTO, retarificar una póliza de la cartera ─────────────────────────────
+
+const POLIZA_MOTO: PolizaCartera = {
+  ...POLIZA,
+  numeroPoliza: '031698897',
+  codigoEntidadDgs: 'C0109',
+  matricula: '1234ABC',
+  vehiculo: { marca: 'HONDA', modelo: 'NTV 700', versiones: [] },
+}
+
+const RESUELTOS_MOTO: ResueltosMoto = {
+  municipioId: 41091,
+  estadoCivilId: 'Single',
+  fechaMatriculacion: '2016-02-20',
+  codigoVehiculo: '12345678',
+  garaje: 'CommunalParking',
+  experienciaConduccion: 'ThisMotorcycle',
+}
+
+function preMotoPoliza(p: Partial<PolizaCartera> = {}) {
+  return precalificarMoto(CLIENTE, { ...POLIZA_MOTO, ...p }, RESUELTOS_MOTO, HOY)
+}
+
+test('moto de cartera: la póliza actual es la ANTERIOR (bonus por antigüedad), no de calle', () => {
+  const r = preMotoPoliza()
+  assert.deepEqual(r.faltan, [])
+  assert.equal(r.datos.aseguradoAntes, true)
+  assert.equal(r.datos.companiaAnteriorCodigo, 'C0109')
+  assert.equal(r.datos.polizaAnterior, '031698897')
+  assert.equal(r.datos.aniosAsegurado, 10)
+  assert.equal(r.datos.matricula, '1234ABC')
+})
+
+test('moto de cartera: efecto al día siguiente del vencimiento, y un solo supuesto de fecha', () => {
+  const r = preMotoPoliza()
+  assert.equal(r.datos.fechaEfecto, '2026-10-16')
+  const fechas = r.supuestos.filter((x) => x.campo === 'fechaEfecto')
+  assert.equal(fechas.length, 1)
+  assert.match(String(fechas[0].porque), /vencimiento/)
+})
+
+test('moto de cartera: con siniestros anotados no se presume ninguno', () => {
+  const r = preMotoPoliza({ siniestrosRegistrados: 2 })
+  assert.equal(r.datos.aniosSinSiniestros, 0)
+  assert.equal(r.datos.siniestrosUltimos5, 2)
+  assert.equal(r.supuestos.some((x) => x.campo === 'aniosSinSiniestros'), false)
+})
+
+test('moto de cartera: sin matrícula en la póliza, falta', () => {
+  const r = preMotoPoliza({ matricula: null })
+  assert.ok(r.faltan.some((f) => f.campo === 'matricula'))
+})
+
+// ─── El carné de MOTO (23/09/2026) ──────────────────────────────────────────
+
+test('carnetMotoDeFicha: el de mayor rango con fecha (A > A2 > A1 > AM); el B no cuenta', () => {
+  assert.deepEqual(
+    carnetMotoDeFicha([
+      { tipo: 'B', fechaExpedicion: '1999-06-01' },
+      { tipo: 'A1', fechaExpedicion: '2001-01-01' },
+      { tipo: 'a2', fechaExpedicion: '2010-05-05' },
+    ]),
+    { tipo: 'A2', fecha: '2010-05-05' },
+  )
+  assert.equal(carnetMotoDeFicha([{ tipo: 'A', fechaExpedicion: null }]), null)
+  assert.equal(carnetMotoDeFicha([{ tipo: 'B', fechaExpedicion: '1999-06-01' }]), null)
+  assert.equal(carnetMotoDeFicha(null), null)
+})
+
+test('moto con carné A en la ficha: se declara A con SU fecha, sin supuesto de tipo', () => {
+  const r = precalificarMoto(
+    { ...CLIENTE, carnets: [{ tipo: 'B', fechaExpedicion: '1999-06-01' }, { tipo: 'A', fechaExpedicion: '2005-03-01' }] },
+    POLIZA_MOTO,
+    RESUELTOS_MOTO,
+    HOY,
+  )
+  assert.equal(r.datos.tipoCarnet, 'A')
+  assert.equal(r.datos.fechaCarnet, '2005-03-01')
+  assert.equal(r.supuestos.some((x) => x.campo === 'tipoCarnet'), false)
+})
+
+test('moto con A y B en la ficha: el B viaja también (fechaCarnetB); sin carné de moto, no', () => {
+  const conAyB = precalificarMoto(
+    { ...CLIENTE, carnets: [{ tipo: 'B', fechaExpedicion: '1999-06-01' }, { tipo: 'A', fechaExpedicion: '2005-03-01' }] },
+    POLIZA_MOTO,
+    RESUELTOS_MOTO,
+    HOY,
+  )
+  assert.equal(conAyB.datos.fechaCarnetB, '1999-06-01')
+  // Sin carné de moto el principal YA es el B: nada que añadir.
+  const soloB = precalificarMoto({ ...CLIENTE, carnets: [{ tipo: 'B', fechaExpedicion: '1999-06-01' }] }, POLIZA_MOTO, RESUELTOS_MOTO, HOY)
+  assert.equal(soloB.datos.fechaCarnetB, undefined)
+  assert.equal(carnetBDeFicha([{ tipo: ' b ', fechaExpedicion: '1999-06-01' }]), '1999-06-01')
+  assert.equal(carnetBDeFicha([{ tipo: 'B', fechaExpedicion: null }]), null, 'sin fecha no se declara')
+  assert.equal(carnetBDeFicha(null), null)
+})
+
+test('moto SIN carné de moto en la ficha: B con la fecha del conductor, DECLARADO y en cabeza (optimista)', () => {
+  const r = precalificarMoto({ ...CLIENTE, carnets: [] }, POLIZA_MOTO, RESUELTOS_MOTO, HOY)
+  assert.equal(r.datos.tipoCarnet, 'B')
+  assert.equal(r.datos.fechaCarnet, CLIENTE.fechaCarnet)
+  const s = r.supuestos.find((x) => x.campo === 'tipoCarnet')
+  assert.ok(s && s.optimista, 'el B en una moto tiene que salir como supuesto marcado')
+  assert.match(String(s?.porque), /carné de moto/)
+})
+

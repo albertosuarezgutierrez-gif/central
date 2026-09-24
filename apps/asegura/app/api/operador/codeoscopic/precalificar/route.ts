@@ -5,10 +5,12 @@ import { correduriaUnica } from '@/lib/cartera'
 import { origenRetarificacion } from '@/lib/cartera-ficha'
 import {
   precalificarAuto,
+  precalificarMoto,
   tipoViaDelTomador,
   tipoViaTextoDelTomador,
   type Resueltos,
 } from '@/lib/codeoscopic/desde-cartera'
+import { tipoViaDelTomadorPorCatastro } from '@/lib/codeoscopic/tipo-via-catastro'
 import { resolverConfig, explicarConfig, simulacionActiva } from '@/lib/codeoscopic/config'
 import { estadoConsumo } from '@/lib/codeoscopic/cotizar'
 import {
@@ -29,6 +31,8 @@ import {
   type ReparoPublico,
 } from '@/lib/codeoscopic/precalificar-publica'
 import { registrarErrorCartera } from '@/lib/error-cartera'
+import { carteraCompaniasDePoliza } from '@/lib/codeoscopic/cartera-companias'
+import { provinciaPorCp } from '@central/module-seguros'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -76,6 +80,22 @@ export const dynamic = 'force-dynamic'
  *   - `municipios`  → `null` = no se ha podido mirar el catálogo · `[]` = mirado y no hay (con su `municipiosMotivo`).
  *   - `estadoCivil` → `null` = no se ha emparejado, y `estadoCivilMotivo` dice por qué.
  *   - `consumo`     → `{ error }` cuando el libro no se pudo leer; nunca «gastado 0».
+ *
+ * ─── `carteraCompanias`: en qué compañías está YA el cliente ───────────────
+ * Bloque nuevo (21/09/2026) que alimenta `defensaDeCartera()` de
+ * `@central/module-seguros`, la regla que marca en la tabla de precios las filas
+ * que NO se pueden emitir porque el cliente ya es cliente de esa compañía. Sale
+ * de `lib/codeoscopic/cartera-companias.ts` y **no cuesta nada**: dos lecturas de
+ * nuestra propia cartera, cero llamadas al vendor.
+ *
+ *   `{ estado:'ok', polizas:[…], catalogo:[…], polizaActualId }`  · mirado
+ *   `{ estado:'no_disponible', porque }`                          · NO se ha podido mirar
+ *
+ * 🚨 El segundo estado existe justo para que plataforma no lea un `[]`. Una lista
+ * vacía significa «este cliente no tiene ninguna póliza nuestra» y pinta las 24
+ * filas como emitibles; un fallo de lectura tiene que salir como «sin comprobar».
+ * Y un despliegue viejo de asegura no manda el campo: ahí plataforma lee
+ * `undefined` → `desconocida`, nunca `[]`.
  *
  * ─── Respuesta ─────────────────────────────────────────────────────────────
  *   `{ estado:'ok', ramo, … }`               · 200
@@ -133,11 +153,24 @@ export async function GET(req: Request) {
 
   const simulacion = simulacionActiva(process.env)
 
-  // ── Ramos que no son auto ─────────────────────────────────────────────────
+  // 🛡️ En qué compañías está YA el cliente. Es lo que deja marcar en la tabla de
+  // precios las filas que NO se pueden emitir («ya es cliente suyo») y la de la
+  // compañía actual. **No cuesta nada**: dos lecturas de nuestra propia cartera,
+  // ninguna llamada al vendor — por eso sigue viajando `gastado: '0,00€'`.
+  //
+  // Va ANTES del corte por ramo a propósito: la defensa de cartera es de la
+  // relación cliente↔compañía, no del producto, así que vale igual en una póliza
+  // de hogar que en una de auto. Y nunca lanza: un fallo sale como
+  // `{ estado:'no_disponible' }`, que plataforma pinta «sin comprobar». Colapsarlo
+  // a `[]` diría «el cliente no está en ninguna compañía» y encendería las 24
+  // filas como emitibles.
+  const carteraCompanias = await carteraCompaniasDePoliza(correduriaId, polizaId)
+
+  // ── Ramos que no son auto ni moto ─────────────────────────────────────────
   // No se precalifican aquí (hogar tiene su propia pieza, con Catastro), así que
   // NO se devuelve `faltan: []`: eso diría «revisado y no falta nada» y
   // encendería el botón. `null` es «no se ha mirado», que es la verdad.
-  if (origen.tipo !== 'auto') {
+  if (origen.tipo !== 'auto' && origen.tipo !== 'moto') {
     return NextResponse.json(
       {
         estado: 'ok',
@@ -145,7 +178,7 @@ export async function GET(req: Request) {
         precalificado: false,
         motivo:
           origen.retarificacion.motivo ??
-          `esta ruta solo precalifica auto; el ramo de esta póliza es «${origen.tipo}»`,
+          `esta ruta solo precalifica auto y moto; el ramo de esta póliza es «${origen.tipo}»`,
         vehiculo: null,
         faltan: null,
         supuestos: [],
@@ -160,6 +193,7 @@ export async function GET(req: Request) {
         tipoViaMotivo: null,
         consumo: { error: 'no se ha mirado el libro de consumo: este ramo no se precalifica aquí' },
         simulacion,
+        carteraCompanias,
         gastado: '0,00€',
       },
       { status: 200 },
@@ -191,7 +225,7 @@ export async function GET(req: Request) {
         )
       : Promise.resolve<Opcion[] | null>([]),
     origen.poliza.matricula
-      ? fechaMatriculacionDeMatricula(cfg, origen.poliza.matricula)
+      ? fechaMatriculacionDeMatricula(cfg, origen.poliza.matricula, origen.tipo === 'moto' ? 'motorcycle' : 'car')
       : Promise.resolve({ estado: 'error' as const, detalle: 'la póliza no tiene matrícula' }),
     // El catálogo de tipos de vía (`/road-types`), gratis: el Submit exige
     // `roadType.id` y es una referencia de catálogo, así que la pantalla lo
@@ -211,15 +245,49 @@ export async function GET(req: Request) {
   // Pilar Franco Ruz: «Severo Ochoa 12», sin tipo) y se elige a mano.
   const tipoViaTexto = tipoViaTextoDelTomador(origen.cliente)
   const tipoViaAuto = vias === null ? null : tipoViaDelTomador(origen.cliente, vias)
+
+  // 🗺️ Sin prefijo reconocible en la ficha, un último intento GRATIS antes de
+  // rendirse: preguntar al callejero oficial del Catastro (mismo servicio
+  // libre que ya usa la precalificación de hogar). La calle se queda dentro de
+  // `tipoViaDelTomadorPorCatastro()`, igual que arriba; aquí solo se resuelven
+  // provincia (del CP, no personal: es el catálogo de provincias españolas) y
+  // municipio (del catálogo del vendor, solo si el CP no deja duda).
+  const tipoViaCatastro =
+    vias !== null && tipoViaAuto === null && tipoViaTexto === null
+      ? await tipoViaDelTomadorPorCatastro(
+          origen.cliente,
+          provinciaPorCp(cpTomador),
+          muni !== null && muni.length === 1 ? muni[0].nombre : null,
+          vias,
+        )
+      : null
+  const tipoViaFinal = tipoViaAuto ?? (tipoViaCatastro?.estado === 'ok' ? tipoViaCatastro.opcion : null)
+
   const tipoViaMotivo =
     vias === null
       ? 'No se ha podido leer el catálogo de tipos de vía de Codeoscopic. Sin él no se puede elegir.'
-      : tipoViaAuto !== null
-        ? null
-        : tipoViaTexto === null
-          ? 'La calle de la ficha no empieza por un tipo de vía reconocible (Calle, Avenida…): elígelo a mano. ' +
-            'La compañía lo exige para emitir.'
-          : `La ficha dice «${tipoViaTexto}» y el catálogo de Codeoscopic no tiene esa opción con ese nombre exacto: elígelo a mano.`
+      : tipoViaFinal !== null
+        ? tipoViaCatastro?.estado === 'ok'
+          ? `Lo ha dicho el callejero del Catastro («${tipoViaCatastro.nombreCatastro}»): la ficha no traía ` +
+            'un tipo de vía reconocible, pero el Catastro sí conoce esa calle en ese municipio.'
+          : null
+        : tipoViaTexto !== null
+          ? `La ficha dice «${tipoViaTexto}» y el catálogo de Codeoscopic no tiene esa opción con ese nombre exacto: elígelo a mano.`
+          : tipoViaCatastro === null || tipoViaCatastro.estado === 'sin_calle'
+            ? 'La calle de la ficha no empieza por un tipo de vía reconocible (Calle, Avenida…): elígelo a mano. ' +
+              'La compañía lo exige para emitir.'
+            : tipoViaCatastro.estado === 'sin_datos_para_preguntar'
+              ? 'La calle de la ficha no empieza por un tipo de vía reconocible, y sin código postal o ' +
+                'municipio tampoco se le puede preguntar al callejero del Catastro: elígelo a mano.'
+              : tipoViaCatastro.estado === 'ambigua'
+                ? 'El callejero del Catastro tiene varias calles con ese nombre en ese municipio y ninguna ' +
+                  'gana: elígelo a mano, para no ubicar en la calle equivocada.'
+                : tipoViaCatastro.estado === 'no_encontrada'
+                  ? 'El callejero del Catastro no conoce esa calle en ese municipio: elígelo a mano.'
+                  : tipoViaCatastro.estado === 'sin_match_catalogo'
+                    ? `El Catastro dice que es «${tipoViaCatastro.nombreCatastro}» y el catálogo de ` +
+                      'Codeoscopic no tiene esa opción con ese nombre exacto: elígelo a mano.'
+                    : 'No se ha podido consultar el callejero del Catastro: elígelo a mano.'
 
   // `null` = el catálogo no llegó. NO se degrada a `[]`, que se leería como
   // «ese código postal no tiene municipios» o «no hay estados civiles».
@@ -267,9 +335,28 @@ export async function GET(req: Request) {
     fechaMatriculacion,
     codigoVehiculo: null, // lo elige el corredor: es el único que no se deduce
     garaje: null,
-    tipoViaId: tipoViaAuto?.id ?? null,
+    tipoViaId: tipoViaFinal?.id ?? null,
   }
-  const pre = precalificarAuto(origen.cliente, origen.poliza, resueltos, hoyIso())
+  // Moto: misma secuencia, con su precalificación (catálogo de motos,
+  // experiencia de conducción). La versión, el garaje y la experiencia los
+  // elige el corredor en la pantalla. La fecha de matriculación de moto sale
+  // de su propio `/motorcycle/registration-date` (arriba).
+  const pre =
+    origen.tipo === 'moto'
+      ? precalificarMoto(
+          origen.cliente,
+          origen.poliza,
+          {
+            municipioId: resueltos.municipioId,
+            estadoCivilId: resueltos.estadoCivilId,
+            fechaMatriculacion,
+            codigoVehiculo: null,
+            garaje: null,
+            experienciaConduccion: null,
+          },
+          hoyIso(),
+        )
+      : precalificarAuto(origen.cliente, origen.poliza, resueltos, hoyIso())
 
   // El libro de consumo. `estadoConsumo()` mira el interruptor de verdad (no lo
   // ignora), así que con la tarificación apagada devuelve `{ error }` — que es
@@ -282,7 +369,7 @@ export async function GET(req: Request) {
   return NextResponse.json(
     {
       estado: 'ok',
-      ramo: 'auto',
+      ramo: origen.tipo,
       precalificado: true,
       motivo: null,
       // Marca, modelo y las versiones vistas en otras pólizas de la misma
@@ -297,10 +384,11 @@ export async function GET(req: Request) {
       estadoCivil: estadoCivilAuto,
       estadoCivilMotivo,
       tiposVia: vias,
-      tipoVia: tipoViaAuto,
+      tipoVia: tipoViaFinal,
       tipoViaMotivo,
       consumo,
       simulacion,
+      carteraCompanias,
       gastado: '0,00€',
     },
     { status: 200 },

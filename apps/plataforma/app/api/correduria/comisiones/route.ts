@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { prisma } from '@/lib/db'
 import { estadoCuadre, totalEsCerrado, cuantosPendientes, type EstadoCuadre } from '@/lib/correduria/cuadre'
 
@@ -8,8 +8,9 @@ export const dynamic = 'force-dynamic'
 // GET ?año=YYYY — el libro de comisiones del año: los tres ejes por periodo,
 // la cobertura por compañía y el total anual que va a la asesoría.
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
   const año = parseInt(new URL(req.url).searchParams.get('año') || '') || new Date().getFullYear()
 
   const filas = await prisma.$queryRaw<

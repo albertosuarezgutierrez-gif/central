@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { CLAVE_EMAIL_VENDOR, CLAVES_ELEMENTO_EMAIL } from './persona.ts'
 import {
   interpretarError400,
+  interpretarCamposProducto,
   lineasDelVendor,
   reparosDe,
   aplicarCampoPersona,
@@ -162,6 +163,20 @@ test('el resto de campos usan las mismas claves que construirPersona()', () => {
   assert.equal(leerCampoPersona(q, 'dni'), '12345678Z')
 })
 
+test('fechaCarnet corrige la fecha del PRINCIPAL sin convertir el A de una moto en B ni perder el B', () => {
+  const moto = {
+    drivingLicenses: [
+      { type: { id: 'A' }, date: '2005-03-01', issuingZone: { id: 'Spain' } },
+      { type: { id: 'B' }, date: '1999-06-01', issuingZone: { id: 'Spain' } },
+    ],
+  }
+  const q = aplicarCampoPersona(moto, 'fechaCarnet', '2006-01-01') as Record<string, unknown>
+  assert.deepEqual(q.drivingLicenses, [
+    { type: { id: 'A' }, date: '2006-01-01', issuingZone: { id: 'Spain' } },
+    { type: { id: 'B' }, date: '1999-06-01', issuingZone: { id: 'Spain' } },
+  ])
+})
+
 test('mismoValor tolera mayúsculas/espacios del vendor y traduce el sexo', () => {
   assert.equal(mismoValor('nombreVia', 'calle  betis', 'CALLE BETIS'), true)
   assert.equal(mismoValor('nombreVia', 'Calle Betis', null), false)
@@ -257,4 +272,31 @@ test('mismoValor compara numeroVia/tipoVia con la misma tolerancia que el resto'
 test('esCampoPersona acepta numeroVia y tipoVia', () => {
   assert.equal(esCampoPersona('numeroVia'), true)
   assert.equal(esCampoPersona('tipoVia'), true)
+})
+
+// Los dos 400 reales de Occident (19/09 y 20/09/2026, proyectos 40788414 y
+// 40802035), campo por campo de `product.options` del ReRate — no de persona.
+const OCCIDENT_LEASING =
+  'Occident: El campo ¿El vehículo se encuentra en situación de leasing o renting? de Occident es obligatorio.'
+const OCCIDENT_ADQUISICION = 'Occident: El campo Tipo de adquisición del vehículo de Occident es obligatorio.'
+
+test('interpretarCamposProducto: reconoce los dos campos reales de Occident', () => {
+  const r = interpretarCamposProducto([OCCIDENT_LEASING, OCCIDENT_ADQUISICION])
+  assert.equal(r.length, 2)
+  assert.equal(r[0].compania, 'Occident')
+  assert.equal(r[0].campo, '¿El vehículo se encuentra en situación de leasing o renting?')
+  assert.equal(r[1].campo, 'Tipo de adquisición del vehículo')
+})
+
+test('interpretarCamposProducto: un rechazo de negocio (Reale, malus) NO es un campo que falte', () => {
+  // 400 real (20/09/2026, proyecto 40802035): no es «falta un dato», es que la
+  // compañía no acepta esta póliza — ningún formulario lo arregla.
+  const r = interpretarCamposProducto(['Reale: NO SE PERMITEN POLIZAS CON MALUS'])
+  assert.deepEqual(r, [])
+})
+
+test('interpretarError400 tampoco confunde el campo de producto con uno de persona', () => {
+  const r = interpretarError400(`codeoscopic_validacion: {"message":"${OCCIDENT_ADQUISICION}"}`)
+  assert.equal(r.campos.length, 0)
+  assert.deepEqual(r.noReconocidos, [OCCIDENT_ADQUISICION])
 })

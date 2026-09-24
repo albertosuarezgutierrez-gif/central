@@ -114,11 +114,6 @@ export const RAMOS: readonly Ramo[] = [
         respuesta:
           'La póliza se prorroga sola al vencimiento salvo que se avise antes. Como tomador puedes oponerte a la prórroga comunicándolo con al menos un mes de antelación a la fecha de vencimiento (art. 22 de la Ley de Contrato de Seguro). Esa fecha límite es lo que conviene tener apuntada, porque se pasa sin que nadie te avise.',
       },
-      {
-        pregunta: '¿Cobráis algo por revisar mi póliza?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
-      },
     ],
   },
   {
@@ -167,11 +162,6 @@ export const RAMOS: readonly Ramo[] = [
         respuesta:
           'La póliza se prorroga sola salvo aviso. La comunidad, como tomadora, puede oponerse a la prórroga comunicándolo con al menos un mes de antelación a la fecha de vencimiento (art. 22 de la Ley de Contrato de Seguro). Con el calendario de juntas de por medio, esa fecha hay que tenerla apuntada con margen.',
       },
-      {
-        pregunta: '¿Cobráis algo por revisar la póliza de la comunidad?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; la comunidad no abona ningún honorario adicional por el servicio de mediación.',
-      },
     ],
   },
   {
@@ -219,11 +209,6 @@ export const RAMOS: readonly Ramo[] = [
         pregunta: '¿Puedo cambiar de compañía sin esperar al vencimiento?',
         respuesta:
           'La póliza se prorroga sola al vencimiento salvo que se avise antes. Como tomador puedes oponerte a la prórroga comunicándolo con al menos un mes de antelación a esa fecha (art. 22 de la Ley de Contrato de Seguro). Es la fecha que más se pasa, porque nadie te la recuerda.',
-      },
-      {
-        pregunta: '¿Cobráis por estudiar el seguro de mi negocio?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
       },
     ],
   },
@@ -287,11 +272,6 @@ export const RAMOS: readonly Ramo[] = [
         respuesta:
           'El seguro de responsabilidad civil de suscripción obligatoria lo exige la Ley sobre responsabilidad civil y seguro en la circulación de vehículos a motor (texto refundido aprobado por el Real Decreto Legislativo 8/2004) a todo vehículo con estacionamiento habitual en España, sea de una persona o de una empresa. Lo que no es obligatorio es el resto de coberturas, y ahí es donde hay decisiones que tomar.',
       },
-      {
-        pregunta: '¿Cobráis por estudiar la flota de mi empresa?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
-      },
     ],
   },
   {
@@ -340,11 +320,6 @@ export const RAMOS: readonly Ramo[] = [
         pregunta: '¿Puedo cambiar de seguro de coche antes de que acabe el año?',
         respuesta:
           'La póliza se prorroga sola al vencimiento salvo aviso previo. Como tomador puedes oponerte a la prórroga comunicándolo con al menos un mes de antelación a la fecha de vencimiento (art. 22 de la Ley de Contrato de Seguro). Apuntar esa fecha evita quedarse otro año atado sin quererlo.',
-      },
-      {
-        pregunta: '¿Cobráis algo por revisar mi seguro de coche?',
-        respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación.',
       },
     ],
   },
@@ -445,18 +420,144 @@ export const RAMOS: readonly Ramo[] = [
           'Es hasta cuándo hacia atrás responde la póliza por hechos anteriores a su contratación. Sin retroactividad, un error cometido antes de firmar queda fuera aunque la reclamación llegue estando ya cubierto. Al cambiar de aseguradora es de los primeros datos que hay que poner sobre la mesa.',
       },
       {
-        pregunta: '¿Es obligatorio el seguro de responsabilidad civil para un autónomo?',
+        pregunta: '¿Es obligatorio el seguro de responsabilidad civil?',
         respuesta:
-          'No con carácter general: depende de la profesión y de la norma que la regule. Hay actividades con seguro obligatorio y colegios profesionales que lo exigen para ejercer, y hay contratos y pliegos que lo piden sin que ninguna ley lo imponga. Lo que hay que comprobar es qué te exigen a ti y con qué límite.',
+          'No con carácter general: depende de la actividad y de la norma que la regule. Hay actividades con seguro obligatorio y colegios profesionales que lo exigen para ejercer, y hay contratos y pliegos que lo piden sin que ninguna ley lo imponga. Lo que hay que comprobar es qué te exigen a ti y con qué límite.',
+      },
+    ],
+  },
+  // 📌 Página de INTENCIÓN de oficio, no un ramo nuevo en el sentido de la
+  // cartera: en BD sigue siendo `responsabilidad_civil` (por eso comparte
+  // opción de formulario con la RC general, ver `contrato-lead.test.ts` y el
+  // `ramoPorDefecto` de `app/seguros/[ramo]/page.tsx`). Nace de la
+  // investigación de competencia del 15/09/2026
+  // (`docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`, §2.6): los grandes
+  // comparadores (Rastreator/Acierto/Kelisto) no venden RC de oficios, y entre
+  // electricista/fontanero/instalador de gas y climatización —los tres con la
+  // misma obligación legal (REBT/RITE)— fontanero salió con menos sitios
+  // específicos compitiendo por la consulta en el muestreo de esa fecha. Es
+  // una hipótesis razonada sobre una muestra pequeña de SERP, no un dato de
+  // volumen o competencia publicitaria real: no hay conector de Keyword
+  // Planner/SEMrush/Ahrefs en este repo. Si el resultado no acompaña en unos
+  // meses (Search Console, cuando haya tráfico), se prueba electricista o
+  // climatización/gas con el mismo molde.
+  {
+    slug: 'responsabilidad-civil-fontaneros',
+    nombre: 'Fontaneros e instaladores',
+    h1: 'Seguro de responsabilidad civil para fontaneros e instaladores en toda España',
+    title: 'Seguro de RC para fontaneros en España',
+    description:
+      'Correduría de seguros en toda España. Seguro de RC para fontaneros e instaladores: capital mínimo, retroactividad y alta como instalador autorizado.',
+    intro: [
+      'Somos correduría, no aseguradora: trabajamos con varias compañías a la vez, así que el análisis de tu actividad lo hacemos nosotros, no una marca que solo vende su propio catálogo.',
+      'Para darte de alta como instalador autorizado de fontanería, calefacción, climatización o gas, el reglamento exige acreditar un seguro de responsabilidad civil. Sin ese seguro en vigor no puedes inscribirte como empresa instaladora ni firmar el boletín o el certificado de la instalación.',
+    ],
+    cubre: [
+      'El capital mínimo que exige tu categoría de instalador, y si el que tienes contratado hoy sigue siendo suficiente para el tipo de instalaciones que haces.',
+      'La cobertura posterior al trabajo: una fuga o una avería que aparece semanas después de cerrar la instalación, cuando el expediente ya está facturado y cerrado.',
+      'La retroactividad al cambiar de compañía: qué pasa con una instalación de hace años si la reclamación llega ahora, con la póliza ya en otra aseguradora.',
+      'Si la actividad declarada en la póliza cubre lo que haces de verdad: fontanería, calefacción, climatización y gas no siempre caben en la misma descripción.',
+      'Empleados y subcontratas, si trabajas con oficiales a tu cargo o subcontratas parte de la instalación bajo tu boletín.',
+    ],
+    paraQuien: [
+      'Eres fontanero o instalador autónomo y necesitas el seguro para darte de alta o renovar tu condición de instalador autorizado.',
+      'Ya tienes el seguro pero no has vuelto a mirar si el capital asegurado cubre el tipo de instalaciones que haces ahora.',
+      'Trabajas con gas y quieres que la póliza distingue esa actividad de la fontanería general, porque no siempre llevan el mismo capital exigido.',
+      'Facturas a través de una pyme o cooperativa de instaladores y necesitas una póliza que cubra a todos los que trabajan bajo ese número.',
+    ],
+    faq: [
+      {
+        pregunta: '¿Es obligatorio el seguro de responsabilidad civil para darte de alta como instalador?',
+        respuesta:
+          'Sí. El reglamento que regula tu actividad —instalaciones de fontanería y calefacción, climatización o gas— exige acreditar un seguro de responsabilidad civil con un capital mínimo para poder inscribirte como empresa instaladora autorizada ante el organismo competente. Sin esa inscripción no puedes firmar boletines ni certificados.',
       },
       {
-        pregunta: '¿Cobráis honorarios por el estudio de la RC?',
+        pregunta: '¿Qué diferencia hay entre la cobertura durante la obra y la posterior al trabajo?',
         respuesta:
-          'No. Como corredores cobramos una comisión sobre la prima que paga la compañía aseguradora; el cliente no abona ningún honorario adicional por el servicio de mediación. Grupo ASegura es correduría inscrita en el registro de la DGSFP.',
+          'La póliza responde de los daños que causas mientras trabajas, pero también de los que aparecen después: una fuga que se manifiesta semanas o meses más tarde de terminar la instalación. Esa cobertura posterior sigue vigente un tiempo determinado tras la cancelación de la póliza, y ese plazo es distinto según la actividad.',
+      },
+      {
+        pregunta: '¿Cuánto capital tengo que tener asegurado?',
+        respuesta:
+          'Depende de tu categoría de instalador y de la actividad —no es lo mismo fontanería y calefacción que gas—, y lo fija el reglamento que te aplica. Lo revisamos con tu inscripción actual delante para confirmar que el capital contratado sigue siendo el que te corresponde.',
+      },
+      {
+        pregunta: '¿Pierdo cobertura de instalaciones antiguas si cambio de compañía?',
+        respuesta:
+          'Depende de la retroactividad que pacte la póliza nueva. Si no cubre hacia atrás, una reclamación por un trabajo hecho antes de cambiar de aseguradora puede quedar fuera aunque hoy tengas seguro en vigor. Es de los primeros datos que comprobamos antes de mover una póliza de instalador.',
+      },
+    ],
+  },
+  // 📌 Segunda página de INTENCIÓN (23/09/2026), y esta sí con volumen MEDIDO:
+  // «seguro responsabilidad civil autonomo» ~1.000 búsquedas/mes en España,
+  // KD 0 y CPC 4,87 € (DataForSEO vía OpenSEO). Los oficios sueltos
+  // (electricista, pintor, albañil…) salieron entre 0 y 50/mes: no compensan una
+  // página cada uno. Mismo ramo real que `responsabilidad-civil`.
+  {
+    slug: 'responsabilidad-civil-autonomos',
+    nombre: 'RC para autónomos',
+    h1: 'Seguro de responsabilidad civil para autónomos en toda España',
+    title: 'Seguro de RC para autónomos en España',
+    description:
+      'Correduría de seguros en toda España. Seguro de RC para autónomos: explotación o profesional, límites, retroactividad y qué te exige tu cliente o tu colegio.',
+    intro: [
+      'Como autónomo respondes con tu propio patrimonio de los daños que cause tu trabajo. Una póliza de responsabilidad civil es lo que se interpone entre una reclamación y tus ahorros, y por eso no basta con tener «una»: tiene que describir lo que haces de verdad.',
+      'Somos correduría y trabajamos con varias compañías. Antes de hablar de primas miramos tu actividad, quién te contrata y qué te exigen por contrato, pliego o colegio, porque de ahí salen el tipo de RC, el límite y la delimitación temporal que te encajan.',
+    ],
+    cubre: [
+      'Si necesitas RC de explotación, RC profesional o las dos: la primera responde de los daños que causa tu actividad; la segunda, del perjuicio económico por un error en tu trabajo o tu asesoramiento.',
+      'La actividad declarada en la póliza: si describe todo lo que haces, porque lo que no está descrito es lo primero que se discute en un siniestro.',
+      'El límite por siniestro y por año, y los sublímites, comparados con lo que te exige quien te contrata.',
+      'La delimitación temporal: si la póliza responde por el hecho ocurrido o por la reclamación recibida mientras está en vigor (claims made), con qué retroactividad y qué pasa cuando dejas la actividad.',
+      'La RC patronal si tienes a alguien contratado, y la de subcontratistas si encargas parte del trabajo a otros autónomos.',
+      'Los daños a lo que te dejan para trabajar: el inmueble del cliente, sus equipos o los bienes que custodias, que muchas pólizas excluyen si no se pactan.',
+    ],
+    paraQuien: [
+      'Acabas de darte de alta como autónomo y un cliente, una plataforma o un pliego te pide un certificado de responsabilidad civil.',
+      'Tienes ya un seguro pero no sabes si es de explotación o profesional, ni con qué límite.',
+      'Ejerces una profesión colegiada o regulada y quieres comprobar que tu póliza acredita lo que te exigen.',
+      'Vas a cambiar de compañía o a dejar la actividad y no quieres que queden trabajos antiguos sin cobertura.',
+    ],
+    faq: [
+      {
+        pregunta: '¿Es obligatorio el seguro de responsabilidad civil para un autónomo?',
+        respuesta:
+          'No hay una obligación general para todos los autónomos. Es obligatorio en las actividades cuya norma lo exige y en muchas profesiones colegiadas, y además hay clientes, plataformas y pliegos que lo piden para contratarte aunque ninguna ley lo imponga. Lo primero es comprobar qué te exigen a ti y con qué límite.',
+      },
+      {
+        pregunta: '¿RC de explotación o RC profesional?',
+        respuesta:
+          'La de explotación cubre los daños materiales y personales que causas al trabajar: una inundación en casa de un cliente, una caída en tu local. La profesional cubre el perjuicio económico que causa un error en tu trabajo intelectual o técnico: un cálculo mal hecho, un plazo vencido. Un electricista necesita sobre todo la primera; un asesor, la segunda; muchos autónomos, las dos.',
+      },
+      {
+        pregunta: '¿Qué pasa con un trabajo antiguo si la reclamación llega cuando ya he cambiado de seguro?',
+        respuesta:
+          'Depende de la delimitación temporal de las dos pólizas. Si la nueva responde por reclamación (claims made) sin retroactividad suficiente, o la vieja no deja un periodo de reclamación posterior, ese trabajo puede quedar sin cobertura. El art. 73 de la Ley de Contrato de Seguro regula estas cláusulas, y es lo primero que revisamos antes de mover una póliza.',
+      },
+      {
+        pregunta: '¿Me cubre el seguro de hogar como autónomo si trabajo desde casa?',
+        respuesta:
+          'La responsabilidad civil de un seguro de hogar es la de la vida privada y suele excluir expresamente la actividad profesional. Si trabajas desde casa, los daños que cause tu trabajo necesitan su propia póliza de RC.',
       },
     ],
   },
 ]
+
+/**
+ * Slugs que son página de INTENCIÓN de oficio, no un producto distinto de la
+ * cartera: comparten ramo real (BD y formulario) con otra entrada de este
+ * array. `responsabilidad-civil-fontaneros` es la MISMA responsabilidad
+ * civil que `responsabilidad-civil`, con un enfoque de contenido distinto
+ * para una consulta distinta — no una línea de negocio nueva.
+ */
+export const SOLO_INTENCION: readonly string[] = ['responsabilidad-civil-fontaneros', 'responsabilidad-civil-autonomos']
+
+/**
+ * Los RAMOS que son un producto real y distinto entre sí. Úsalo para contar
+ * «cuántos ramos revisamos» (portada): `RAMOS.length` a secas contaría dos
+ * veces la responsabilidad civil el día que haya una página de intención más.
+ */
+export const RAMOS_PRODUCTO: readonly Ramo[] = RAMOS.filter((r) => !SOLO_INTENCION.includes(r.slug))
 
 /** Devuelve un ramo por su slug, o `null` si no existe (nunca un ramo de relleno). */
 export function ramoPorSlug(slug: string): Ramo | null {

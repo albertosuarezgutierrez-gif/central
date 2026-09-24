@@ -1,5 +1,7 @@
 # Inventario de la ingesta de CIMA del CRM (repo `asegura`) — referencia para el port APARCADO
 
+> 🔌 **Router: skill `cima-ingesta`** — la cadena entera, el diagnóstico de «la ingesta está muda» y qué no se toca.
+
 > Medido el 02/09/2026 sobre el repo `albertosuarezgutierrez-gif/asegura` (el CRM de Manuel, ya de Alberto).
 > **Decisión de Alberto ese mismo día: el port a `apps/asegura` queda APARCADO** («fly es barato y ya está
 > hecho, hay otras prioridades»). Este documento existe para que, el día que toque, no haya que volver a
@@ -75,7 +77,10 @@ mayores: `ingest-pipeline.test.ts` (1.368), `eiac-pol-mapper.test.ts` (1.016), `
 
 ## El adaptador Java (NO vive en ningún repo nuestro)
 
-- App Fly `asegura-app-cima-adapter` (cuenta de Manuel; scale-to-zero). Repo **privado** de Manuel:
+- App Fly `asegura-app-cima-adapter` — **organización `grupo-asegura` de ALBERTO** (medido en el panel
+  el 21/09/2026: 2 máquinas, región CDG, desplegada hace ~20 días; Manuel no está en el equipo de esa
+  organización). Este documento decía «cuenta de Manuel»: quedó desfasado tras la migración. Repo del
+  código, eso sí, **privado** de Manuel (Alberto tiene lectura):
   `github.com/manuelsuarez/asegura-app-cima-adapter`. Dockerfile multi-stage con **JDK 8 sidecar** (Xerces
   en JDK 17 rompe validando las respuestas SOAP). Secrets de Fly: `INTERNAL_TOKEN`, `WSE_ENDPOINT`
   (`https://ws.cimaseg.es/wsEstandar/`), `WSE_USER`, `WSE_PASSWORD`, `WSE_PLATAFORMA`.

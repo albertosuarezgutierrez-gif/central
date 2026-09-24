@@ -61,6 +61,28 @@ export type EntradaLead = {
    * póliza. Colapsarlo a `false` afirmaría que se miró y no estaba.
    */
   yaEnCartera: boolean | null
+  /**
+   * La carta de no renovación (20/09/2026). `cartaGeneradaEn` = el cliente la
+   * redactó en el portal (copiar / imprimir / abrir el correo); `cartaEnviadaEn`
+   * = marcó «ya la he enviado». Las dos `null` = nada de eso ha pasado, que es
+   * lo normal. Opcionales para que quien construye la entrada desde una consulta
+   * vieja no tenga que inventarlas.
+   */
+  cartaGeneradaEn?: Date | null
+  cartaEnviadaEn?: Date | null
+}
+
+/**
+ * Qué ha hecho el cliente con la carta de no renovación, en orden de fuerza:
+ * `enviada` > `generada` > `ninguna`. `enviada` manda aunque falte la fecha de
+ * generación (una fila puede tener solo la segunda si la marcó a mano).
+ */
+export type SenalCarta = 'ninguna' | 'generada' | 'enviada'
+
+export function senalCarta(e: Pick<EntradaLead, 'cartaGeneradaEn' | 'cartaEnviadaEn'>): SenalCarta {
+  if (e.cartaEnviadaEn) return 'enviada'
+  if (e.cartaGeneradaEn) return 'generada'
+  return 'ninguna'
 }
 
 /**
@@ -100,6 +122,12 @@ export type Lead = {
    * que aquí abajo nunca llega un `true`.
    */
   yaEnCartera: false | null
+  /**
+   * Viaja hasta la pantalla: un cliente que ha escrito a su compañía para
+   * dejarla es el lead más caliente que existe, y la lista tiene que decirlo.
+   */
+  senalCarta: SenalCarta
+  cartaEnviadaEn: Date | null
 }
 
 /**
@@ -128,7 +156,14 @@ export function leadDeclarada(e: EntradaLead, hoy: Date): Lead | null {
     diasParaAccionable: faltan !== null && faltan >= 0 ? faltan : null,
     ventanaPasada: faltan !== null && faltan < 0,
     yaEnCartera: e.yaEnCartera,
+    senalCarta: senalCarta(e),
+    cartaEnviadaEn: e.cartaEnviadaEn ?? null,
   }
+}
+
+/** `enviada` primero, luego `generada`, luego el resto. Menor = antes. */
+function pesoCarta(s: SenalCarta): number {
+  return s === 'enviada' ? 0 : s === 'generada' ? 1 : 2
 }
 
 /**
@@ -142,6 +177,11 @@ export function leadDeclarada(e: EntradaLead, hoy: Date): Lead | null {
  */
 export function ordenarLeads(leads: readonly Lead[]): Lead[] {
   return [...leads].sort((a, b) => {
+    // La carta manda sobre la fecha (20/09/2026): quien ya ha escrito a su
+    // compañía va a cambiar de póliza en semanas, tenga el vencimiento que
+    // tenga. Dentro de cada escalón, el orden de siempre.
+    const pc = pesoCarta(a.senalCarta) - pesoCarta(b.senalCarta)
+    if (pc !== 0) return pc
     const fa = a.fechaAccionable?.getTime() ?? Number.POSITIVE_INFINITY
     const fb = b.fechaAccionable?.getTime() ?? Number.POSITIVE_INFINITY
     return fa === fb ? a.id.localeCompare(b.id) : fa - fb
@@ -185,7 +225,12 @@ export function normalizarNumeroPoliza(v: string | null): string | null {
  */
 export const DIAS_LEAD_URGENTE = 14
 
-export function leadUrgente(l: Pick<Lead, 'diasParaAccionable' | 'ventanaPasada'>): boolean {
+export function leadUrgente(l: Pick<Lead, 'diasParaAccionable' | 'ventanaPasada' | 'senalCarta'>): boolean {
+  // Carta ENVIADA = urgente siempre, ventana pasada o no: la persona ya ha
+  // dicho a su compañía que se va, y el que llegue primero se la lleva. Una
+  // carta solo generada no basta —se generan muchas por curiosidad—: esa sube
+  // en la lista (`ordenarLeads`) pero no entra en la cola de hoy.
+  if (l.senalCarta === 'enviada') return true
   if (l.ventanaPasada) return false
   return l.diasParaAccionable !== null && l.diasParaAccionable <= DIAS_LEAD_URGENTE
 }

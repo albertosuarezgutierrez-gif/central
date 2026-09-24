@@ -102,3 +102,38 @@ test('saluda por el nombre de pila, y sin nombre cuando no lo hay', () => {
     assert.doesNotMatch(mensajePresentacionWhatsapp(n), /Hola\s+,|Hola\s*,\s*,/)
   }
 })
+
+// ─── WhatsApp de seguimiento a un lead de Vencimientos (23/09/2026) ─────────
+import { mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
+import { puedeWhatsappLead, textoPasoLead } from './lead-competencia.ts'
+
+test('seguimiento: pregunta por la renovación con el mes estimado, sin afirmarlo', () => {
+  const m = mensajeRenovacionLeadWhatsapp({ nombre: 'Mari Angeles Pérez', ramo: 'hogar', mesAniversario: 11 })
+  assert.match(m, /^Hola Mari/)
+  assert.match(m, /¿Te renueva el seguro de hogar por noviembre\?/)
+  const sinMes = mensajeRenovacionLeadWhatsapp({ nombre: null, ramo: null, mesAniversario: null })
+  assert.match(sinMes, /¿Cuándo te renueva tu seguro\?/)
+})
+
+test('🪤 seguimiento: no promete precio ni ahorro y lleva la baja (LSSI art. 21)', () => {
+  const m = mensajeRenovacionLeadWhatsapp({ nombre: 'Ana', ramo: 'auto', mesAniversario: 3 })
+  assert.deepEqual(revisarCopy(m), [], explicarInfracciones(revisarCopy(m)))
+  assert.match(m, /no te escriba más/)
+})
+
+test('🪤 WhatsApp a un lead solo si FUE cliente: es comunicación electrónica como el correo', () => {
+  assert.equal(puedeWhatsappLead({ fueCliente: true, tieneTelefono: true }), true)
+  assert.equal(puedeWhatsappLead({ fueCliente: false, tieneTelefono: true }), false)
+  assert.equal(puedeWhatsappLead({ fueCliente: null, tieneTelefono: true }), false)
+  assert.equal(puedeWhatsappLead({ fueCliente: true, tieneTelefono: false }), false)
+})
+
+test('con WhatsApp permitido el primer contacto y el recordatorio son por WhatsApp; la llamada sigue siendo llamada', () => {
+  const p = (accion: 'primer_contacto' | 'recordatorio' | 'llamada') => ({ accion, dentroDeDias: 0 })
+  assert.equal(textoPasoLead(p('primer_contacto'), 'telefono_y_correo', true), 'Primer WhatsApp')
+  assert.equal(textoPasoLead(p('recordatorio'), 'solo_telefono', true), 'Recordatorio por WhatsApp')
+  assert.equal(textoPasoLead(p('llamada'), 'telefono_y_correo', true), 'Llamar')
+  assert.equal(textoPasoLead(p('primer_contacto'), 'telefono_y_correo'), 'Primer correo')
+  // Sin teléfono no hay WhatsApp aunque se pida.
+  assert.equal(textoPasoLead(p('primer_contacto'), 'solo_correo', true), 'Primer correo')
+})

@@ -124,3 +124,30 @@ test('el ramo va con el id EXACTO que se le pasa, y la referencia nuestra solo s
   const con = construirPeticionMoto({ ...BASE, referenciaExterna: 'cot-000000' }, LINEA) as any
   assert.equal(con.externalId, 'cot-000000')
 })
+
+test('el carné de MOTO viaja con su tipo: A con su fecha, no el B supuesto', () => {
+  const c = construirPeticionMoto({ ...BASE, tipoCarnet: 'A', fechaCarnet: '2005-03-01' }, 'Motorcycle') as any
+  const lic = c.risk.primaryDriver.drivingLicenses
+  assert.equal(lic.length, 1)
+  assert.deepEqual(lic[0].type, { id: 'A' })
+  assert.equal(lic[0].date, '2005-03-01')
+})
+
+test('carné B: viaja DETRÁS del de moto (como el ejemplo oficial B + A); el de moto sigue en [0]', () => {
+  const c = construirPeticionMoto(
+    { ...BASE, tipoCarnet: 'A', fechaCarnet: '2005-03-01', fechaCarnetB: '1999-06-01' },
+    'Motorcycle',
+  ) as any
+  const lic = c.risk.primaryDriver.drivingLicenses
+  assert.deepEqual(
+    lic.map((l: any) => [l.type.id, l.date]),
+    [
+      ['A', '2005-03-01'],
+      ['B', '1999-06-01'],
+    ],
+  )
+  assert.deepEqual(lic[1].issuingZone, lic[0].issuingZone, 'misma zona que el principal')
+  // Si el principal YA es el B (supuesto), no se duplica.
+  const soloB = construirPeticionMoto({ ...BASE, tipoCarnet: 'B', fechaCarnetB: '1999-06-01' }, 'Motorcycle') as any
+  assert.equal(soloB.risk.primaryDriver.drivingLicenses.length, 1)
+})

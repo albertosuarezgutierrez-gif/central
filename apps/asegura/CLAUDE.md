@@ -104,7 +104,12 @@ entender la arquitectura.
 🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son 80 clientes /
 110 pólizas** (03/09/2026) — las que entran o mantiene CIMA. ⚠️ De esas 110, **42 están `cancelada`**
 y **68 no** (medido 03/09/2026): CIMA manda también las canceladas y la regla de cartera viva no las
-distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. Los ramos:
+distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. ✅ **Cerrado el
+19/09/2026:** `esCarteraEnVigor()` / `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` (mismo fichero
+`cartera-viva.ts`) = viva Y estado en `POLIZA_ESTADOS_VIGENTES`. Es lo que deriva el grupo del listado
+(`cartera-filtro.ts`), el recuento «N póliza(s) viva(s)» y quién entra en «clientes sin canal»
+(`clientes-sin-canal.ts`). Medido ese día: 157 vivas → **105 en vigor, 67 clientes** (eran 95 con el origen
+a secas; Kartenbrot, con una sola póliza cancelada, pasa a leads). Los ramos:
 **auto 81 · hogar 19 · responsabilidad civil 9 · moto 1**. Las otras 28.728 son volcado histórico cargado en
 jun/2026 (`intranet:` 26.117 con vencimientos 2013-2018 y `asegura_app:` 2.611) y **ninguna** vence en los
 últimos 18 meses. Regla de Alberto: **CIMA = cliente actual; el resto = lead** (32.520).
@@ -206,6 +211,10 @@ El resto de `/cartera` (buscar, ficha) sigue vivo como respaldo del corredor, pe
   nunca `0,00€`.
 
 ## Envs
+🤖 **`AI_GATEWAY_URL` + `AI_GATEWAY_SECRET` (23/09/2026):** la IA de texto va por la pasarela de plataforma
+(`lib/ia.ts` → `iaTexto()`), que la anota en `ai_usos` con app='asegura' y le aplica el tope mensual
+(`ia_presupuestos`, 5 €/mes). Sin ellas cae a `aiComplete` directo — funciona, pero fuera de todo control.
+No llames a `aiComplete` desde otro fichero: lo vigila `lib/ia.test.ts`.
 `DATABASE_URL`, `DIRECT_URL` (rol `prisma_seguros`; **desde el 02/09/2026 también es la conexión de la
 CARTERA**, con `?schema=seguros` que añade `lib/asegura-url.ts`), `ASEGURA_SESSION_SECRET`.
 ⚠️ **Contraseña de `prisma_seguros` ROTADA el 02/09/2026 a las 10:17 UTC** (`ALTER ROLE`, verificador
@@ -218,11 +227,21 @@ PASSWORD` sigue rechazando la nueva aunque el host directo `db.<ref>.supabase.co
 el log SIN la URL, así que la pantalla de plataforma dice la causa sin ir a los logs del pooler.
 **Camino de vuelta al origen (solo con `ASEGURA_FUENTE=origen`):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
 (SELECT-only + BYPASSRLS) contra el Supabase congelado de Manuel por el pooler :6543 de eu-central-1; la URL la
-normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` solo). `ASEGURA_OPERADOR_SECRET` — Bearer del
+normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` y, si falta, `connection_limit=5` — **nunca 1**: una instancia de Vercel atiende varias peticiones a la vez con el mismo cliente, y con 1 las ~17 llamadas paralelas de `/correduria` hacían cola hasta el `pool_timeout` y morían en P2024, medido el 19/09/2026). `ASEGURA_OPERADOR_SECRET` — Bearer del
 puerto `/api/operador/resumen` (MISMO valor en el proyecto Vercel `plataforma`). El proyecto sirve
 desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD.
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del
 proyecto de Vercel de Manuel — **no se piden por mensaje**.
+
+🚨 **`RESEND_API_KEY` restringida por dominio: la clave tiene que apuntar al dominio del REMITENTE,
+no a cualquier dominio de la cuenta (20/09/2026).** El cron de recaptación por email (ver más abajo)
+falló 9/9 con «The associated domain with your API key is not verified»: la clave puesta era una
+restringida a `grupoasegura.es` (el apex, dado de alta el 07/09 y **nunca verificado** — SPF/DKIM en
+`failed`), mientras `ASEGURA_MAIL_FROM` manda desde `envios.grupoasegura.es` (otro dominio, verificado
+desde el 03/09). Arreglado: clave nueva restringida a `envios.grupoasegura.es`, redeploy, lote de 25
+verificado en producción (25 enviados / 0 fallidos). Al crear una API key de Resend restringida a un
+dominio, comprobar SIEMPRE que es el MISMO dominio del `_MAIL_FROM` que la va a usar — dos dominios
+verificados en la cuenta no es lo mismo que la clave apuntando al correcto.
 
 🔑 **`PII_ENCRYPTION_KEY` y `PII_LOOKUP_KEY` — las DOS claves de datos personales, copiadas a
 `central-asegura` el 02/09/2026 (a mano por Alberto, desde Vercel `asegura`; nombres confirmados en el
@@ -315,6 +334,34 @@ utilizable). Reglas que no se negocian al tocar esto:
   dinero, y la BD lo fuerza con un CHECK (`descarte_con_evidencia`).
 - **Sin libro no se cotiza.** Si la lectura del contador falla, se aborta: un tope que no se puede
   comprobar no es un tope.
+- 🚨 **Y `cotizar()` NO es el único camino al vendor: el ReRate y el Submit también abren línea en el
+  libro desde el 21/09/2026.** Hasta ese día ni `/api/operador/codeoscopic/oferta`
+  (`POST /insurances/{id}/offers`) ni `/api/operador/codeoscopic/emitir`
+  (`POST /insurances/{id}/policy-applications`) escribían NADA en `seguros.codeoscopic_consumo`, así
+  que `puedeCotizar()` no las veía y **el tope diario/mensual no las contaba** — con el CRM de Manuel
+  tratando el ReRate como facturable y `noRetry`, el libro llevaba contando de menos. Ahora las dos
+  pasan por su propio embudo (`lib/codeoscopic/libro-emision.ts` → `conLibroDeEmision()`), que copia
+  el ORDEN de `cotizar()`: libro (fail-closed) → tope → **reserva ANTES de llamar** → un solo
+  intento → cierre. `cotizar()` no se ha tocado.
+  - **Motivo propio** (`rerate` / `submit`) y **contadores SEPARADOS**: `consumoActual()` (el libro
+    de cotizar) los excluye por `motivo`, y `consumoEmision()` cuenta solo el suyo. Mezclarlos haría
+    que agotar el tope de una cosa apagara la otra sin que nadie supiera por qué, y que la cifra de
+    «cotizaciones que te quedan hoy» contara cosas que no son cotizaciones.
+  - 🚨 **El coste arranca en 0 y va en env: `CODEOSCOPIC_COSTE_RERATE_CENTS` /
+    `CODEOSCOPIC_COSTE_SUBMIT_CENTS`.** **No está confirmado que estas dos llamadas facturen** (el
+    portal del fabricante no lo documenta; la pregunta está redactada y sin enviar en
+    `docs/BORRADOR-CODEOSCOPIC-COSTE-RERATE-SUBMIT.md`, la manda Alberto). Se cuenta la LLAMADA, que
+    es lo que tapaba el agujero, y no se le pone precio: **ese 0 significa «sin confirmar», no
+    «gratis»**, y por eso los mensajes lo dicen con palabras en vez de pintar un `0,00€`. El día que
+    Codeoscopic conteste se pone la cifra en Vercel y nada más cambia.
+  - **Topes propios**, `CODEOSCOPIC_TOPE_{RERATE,SUBMIT}_{DIARIO,MENSUAL}`; por defecto, los de
+    cotizar × 2. El factor no es estético: la cascada de reparación de 400s puede hacer **dos**
+    llamadas por acción del corredor, y cada ReRate/Submit va detrás de una cotización que ya está
+    topada — con el mismo número, este freno cortaría emisiones legítimas en vez de cazar un bucle.
+  - Desenlaces nuevos, sin colapsar: **503 `sin_libro`** (no se pudo leer el libro; avería nuestra,
+    reintentar no la arregla) y **429 `tope`**. Ninguno es un rechazo del vendor: las dos frases
+    dicen que **no se ha llamado a la compañía**, para que nadie vaya a buscar a Avant2 una póliza
+    que no existe. Guardián: `test/regression-asegura-gasto-codeoscopic.test.ts`.
 - **Un solo intento.** `POST /insurances` no es idempotente: reintentar crea otro proyecto y otro
   cargo. La única repetición permitida es re-pedir el token tras un 401 (el vendor no tarificó).
 - **Los precios se pintan con su FIRMEZA.** En el fixture del sandbox ninguno de los 18 era firme, y
@@ -362,9 +409,16 @@ cada regla conocida del vendor se comprueba aquí. `revisarDatosAuto()` devuelve
 la vez (para que la UI los pinte juntos) y `construirPeticionAuto()` lanza si queda alguno.
 
 Las tres reglas que más cotizaciones tumban, todas con test:
-- **La misma persona va en `holder`, `risk.owner` y `risk.primaryDriver`, e IDÉNTICA.** El vendor
-  cruza por DNI y rechaza si un campo difiere; tampoco deja omitir ninguno. Por eso se construye
-  una vez y se reutiliza el mismo objeto.
+- **Por DEFECTO la misma persona va en `holder`, `risk.owner` y `risk.primaryDriver`, e IDÉNTICA.**
+  El vendor cruza por DNI y rechaza si DOS objetos con el MISMO DNI difieren en un campo; tampoco
+  deja omitir ninguno. Por eso se construye una vez y se reutiliza el mismo objeto cuando
+  tomador=propietario=conductor (el caso normal).
+  🚧 **Desde el 20/09/2026, `DatosAuto.propietario`/`.conductor` opcionales permiten que el
+  propietario o el conductor habitual sean una persona DISTINTA del tomador** (`peticion-auto.ts`):
+  el conductor lleva su propia `fechaCarnet`. **Sin verificar contra el vendor real** — nunca se ha
+  pagado una cotización con `owner`/`primaryDriver` distintos del `holder`, así que el primer intento
+  real puede devolver un 400 nuevo (igual que pasó con `email`/`roadName`). **No cubre propietario
+  EMPRESA** (persona jurídica, sin `estadoCivil`) — queda sin diseñar.
 - **La dirección viaja solo con sus DOS mitades** (CP + id de municipio). El municipio es un ID del
   catálogo, nunca un nombre.
 - **`lastFiveYearsAccidents` es obligatorio si los años sin siniestros son < 5 y no coinciden con
@@ -434,6 +488,30 @@ una solicitud (el filtro la excluye).
   acuñar el proyecto pasa a apuntar a la póliza EMITIDA. Y el portal distingue los 5xx: **500 = «report the issue… to the API
   support team» (`soporteapi@avant2.es`, con el `requestId`), 502/503/504 = «try again in a few minutes»**
   (`consejoTrasFallo`). En la web de Allianz Alberto no vio póliza del 40685793 esa mañana.
+  ✅ **CAUSA REAL, confirmada por Codeoscopic el 17/09/2026: no era un 500 del vendor, era un `product.options`
+  que nunca se mandaba.** Juan Manuel Fernández (Product Manager API): «no ha llegado la petición a la compañía
+  y no ha llegado a emitirse» — Allianz exige un formulario previo con 4 preguntas obligatorias
+  (`insuredFamilyInAllianz`, `publicityConsent`, `allianzGroupProductsConsent`, `commercialProfilingConsent`,
+  cada una con valor explícito **aunque su default visual sea «No»**) dentro de `product.options` del propio
+  Submit, y nuestro cuerpo solo mandaba `{quote:{id}, payment:{bankAccount:{iban}}}`. 🚨 **Es un `product.options`
+  DISTINTO del que ya existía**: el de `opciones-producto.ts` (`ALLIANZ_AUTO_320200`, 14 campos técnicos/
+  comerciales) es para `mainQuote.product.options` en el **ReRate** (`/offers`); este es para `product.options`
+  en el **Submit** (`/policy-applications`) y son consentimientos legales del tomador. Arreglado con
+  `conProductoPorDefecto()` (puro, en el mismo fichero): rellena los 4 en `false` —el default del propio
+  formulario, y ninguno se decide a favor del cliente sin que él lo diga— **solo si nadie ya puso `product`**
+  (el JSON avanzado del corredor manda). El proyecto 40685793 quedó inservible (fecha de efecto caducada el
+  14/09) y no se recuperó; el arreglo es para el SIGUIENTE Submit de Allianz.
+  ✅ **VERIFICADO EN REAL el 21/09/2026: el arreglo funciona.** Primera póliza de auto emitida con éxito
+  (proyecto 40769244, oferta Q2021593788, Allianz), sin errores, confirmado por Alberto a Codeoscopic. El
+  `product.options` por defecto en el Submit deja de ser una hipótesis sin probar.
+  🚨 **Y confirmado por Codeoscopic (Juan Manuel Fernández, 21/09/2026): la API REST SOLO cubre 6 ramos —
+  Car, Motorcycle, Home, Health, Burial, Term Life— y NO hay ninguna intención de añadir más.** Alberto
+  preguntó por **Comercios** y **Comunidades**, que están HABILITADOS Y ACTIVADOS en el panel de Avant2
+  Sales Manager con Occident y Reale como aseguradoras configuradas — pero eso es solo el panel web: no
+  existe endpoint, catálogo ni referencia a esos dos ramos en `portal.api-int.codeoscopic.io`. Es la misma
+  lección que ya dejó el hallazgo de RC más abajo (RC tampoco tiene ramo en Codeoscopic), aplicada a dos
+  ramos más: **un ramo activado en el panel no implica que se pueda tarificar/emitir por API.** Si aparece
+  un cliente con seguro de Comercios o Comunidades, se llama a la compañía — no hay endpoint que cablear.
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 
@@ -561,7 +639,8 @@ Sin implementar; lo que sigue es lo que NO hay que volver a investigar:
   `/home/occupancy-types`); nuestro `uso` va a `use` y `ocupacion` a `occupancy` porque cada uno bebe de su
   catálogo. Un 400 de validación **no se cobra**; la pantalla enseña el mensaje entero. Caso de prueba: las
   dos de Occident vivas de J.S.S. (el riesgo está solo en la gemela; la de Sevilla es la verificada con el
-  Catastro: 76 m² / 1994 / 41002). Por cablear: `POST /home/recommend-limits` para no teclear capitales a ojo.
+  Catastro: 76 m² / 1994 / 41002). ✅ `POST /home/recommend-limits` cableado el 23/09/2026 (`/api/operador/codeoscopic/limites-hogar`, botón en
+  plataforma): coste sin confirmar, así que va por el libro de consumo (`limites_hogar`) y detrás del interruptor de tarificar.
 - **Siguiente ramo: HOGAR** (2º más vendido, y más fácil: no hay vehículo que identificar, así que
   desaparecen el código Base7, el emparejamiento y los créditos). Primer paso y **gratis**:
   `GET /insurance-lines` dice si hogar tarifica para nuestra organización — no hay que preguntárselo
@@ -625,6 +704,53 @@ cuatro CHECK probados en la BD real en un bloque con rollback). `poliza_document
 
 > 📘 **Visión y orden de trabajo del CRM de la correduría: `docs/CORREDURIA-CRM-VISION.md`** (dictado de
 > Alberto, 02/09/2026; skill router `correduria-crm`). Léelo antes de añadir pantallas o escrituras.
+
+🪪 **Toda escritura del puerto deja rastro (23/09/2026):** las rutas que exportan POST/PATCH/PUT/DELETE
+van envueltas en `auditado()` (`lib/auditoria.ts`) y escriben una fila en `seguros.auditoria` (append-only):
+actor de la cabecera `x-actor` que manda plataforma (`humano:<cuentaId>` · `agente:<id>` · `sistema:<origen>`;
+sin ella, `desconocido`), ruta, ids UUID y código HTTP. **Una ruta de escritura nueva sin `auditado(` no pasa
+`lib/auditoria.test.ts`.** Es atribución, no autorización: el actor viaja dentro del mismo Bearer.
+Y el QUÉ: una función que escribe la cartera llama a `anotarCambio({entidad, id, campo, antes, despues})`
+tras escribir, y va a la columna `cambios` de esa fila. 🚨 Solo guardan valor los campos de
+`CAMPOS_CON_VALOR` (`lib/cambios.ts`); añadir ahí un dato personal lo rompe `lib/cambios.test.ts`.
+
+📉 **Eventos de cartera (23/09/2026):** `POST /api/operador/eventos/detectar` compara la foto de la cartera viva
+(`cartera_foto`) con la actual y guarda lo que cambió en `evento` (`lib/eventos-cartera.ts`, regla pura
+`detectarCambios` en module-seguros). La primera pasada solo ancla. `GET/PATCH /api/operador/eventos` = pérdidas sin
+sustitución por revisar y su resolución cerrada (pérdida + motivo de `MOTIVOS_PERDIDA`, o no es pérdida).
+📞 Y una póliza anulada (baja o «anula al vencimiento» — CIMA solo escribe `activa`/`cancelada`, así que una
+anulación a vencimiento llega como baja) sin sustitución y con el vencimiento por delante abre SOLO, en la misma transacción, una retención
+(`oportunidades` `origen=retencion_cima` + llamada alta hoy en `gestiones`); una por póliza abierta. Cepo `lib/eventos-cartera.test.ts`.
+🔁 **Sustitución AUTOMÁTICA (23/09/2026, `lib/sustituciones-auto.ts`, regla pura `detectarSustituciones` en
+module-seguros).** Caso José Suárez: Mapfre→Reale del mismo Kona y el portal pintaba DOS «En vigor». Dentro de
+`detectarYGuardar`, ANTES de la foto y con punto de guardado, se enlaza sola la nueva con la vieja si es determinista y
+única: mismo cliente + ramo + **clave del riesgo por ramo** (`claveRiesgo`: matrícula con formato real en motor;
+referencia catastral de 20 o dirección DESCIFRADA+CP en inmuebles; índice ciego del DNI del asegurado en personas; RC y
+comercio sin dato → nada), efecto a −60/+30 días del aniversario de la vieja (actual o anterior: CIMA puede traerla ya
+renovada), sin `poliza_padre_id` entre ellas. La misma clave cuenta **duplicidades** (dos vigentes solapadas que no se
+suceden). Escribe solo `sustituida_at`/`poliza_origen_id` + historial. «En vigor» excluye la vieja SIEMPRE (Alberto: «esa se
+anula y se anula»; si la nueva cae por impago se avisa como cualquier impago, y el estado real lo trae CIMA). Después, en
+el mismo punto de guardado: `liberarPresupuestosEmitidos` marca emitido el presupuesto aceptado cuya nueva ya consta (de la
+compañía elegida, por código DGS) → su anulación FIRMADA en la aceptación pasa sola a la cola; y
+`abrirAnulacionesPorSustitucion` abre `sustitucion`/`solicitada` para las emitidas fuera de presupuesto (web) → aviso
+`anulacion_por_firmar` en la campana y en el correo de la intranet; el correo a la compañía sigue pasando por el OK. Portal: `sustituidasARetirar` la quita de la LISTA (no del acceso) por lector, con la
+nueva empezada y sin siniestros/devueltos pendientes. ⚠️ Medido: CIMA casi no manda el dato del riesgo fuera de motor
+(hogar 7/34 con dirección, 0 refcat, 0 DNI de asegurado en personas) → capturarlo al emitir es lo que falta.
+✉️ **Cola de aprobaciones (`seguros.aprobacion`, `lib/aprobaciones.ts`, puerto `/api/operador/aprobaciones`).** Un recibo
+que pasa a `devuelto` deja un correo PROPUESTO al cliente; solo sale con `decision:'aprobar'` desde plataforma. El envío
+reclama la fila (`pendiente → enviando`) ANTES de mandar y lee el correo de la ficha en ese momento; `enviando` viejo =
+«no se sabe si salió», no se reintenta solo. Cepo `lib/aprobaciones.test.ts`.
+📝 **Expediente de anulación (`seguros.anulacion`, `lib/anulaciones.ts`, puerto `/api/operador/anulaciones`).** Lo abre
+el corredor desde la ficha de póliza; reglas en `anulacion.ts` de module-seguros. Sin firma no se comunica (CHECK
+`anulacion_estado_coherente`), un abierto por póliza (índice parcial). `confirmarAnulaciones(tx)` corre en el detector
+ANTES de las retenciones: póliza no vigente → confirmada + su baja revisada con el motivo; con expediente no se abre
+retención ni se anuncia fuga. Cepo `lib/anulaciones.test.ts`.
+✍️ **Firma del cliente (2-d-2, `lib/anulacion-portal.ts`, puente `/api/portal/anulacion`).** Solo del tomador y solo en `solicitada`;
+código al correo de la ficha OBLIGATORIO (la sesión de 30 días no firma); lo hasheado por `FirmaPropia` es el MISMO texto que se
+guarda en `carta_texto` y se mandará a la compañía. Cepo `lib/anulacion-portal.test.ts`.
+📨 **Aviso a la compañía (2-d-3, `proponerAnulacionesFirmadas` + `decidirAprobacion` en `lib/aprobaciones.ts`).** Acción
+`enviar_correo_compania`: el buzón lo ELIGE Alberto en la tarjeta entre los contactos activos de ESA compañía (nunca por área: medido, «administración» es a veces cobros o rebota) y queda recordado en `compania_contactos.recibe_anulaciones` para la siguiente; carta firmada adjunta tal cual; la
+anulación pasa a `comunicada` SOLO si el correo salió. Cepo `lib/aprobaciones.test.ts`.
 
 Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, read-only, gratis):
 
@@ -811,6 +937,44 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   que ya vale para hogar sin tocarla — lo que SÍ ramificaba mal era el bookkeeping: `codeoscopic_projects.
   producto` llevaba `'auto'` a fuego en el INSERT del ReRate y en el puente de emergencia del Submit
   (`bloquearEnvio`); los dos usan ahora `polizas.tipo` real.
+- **📄 El PDF de la póliza emitida SÍ se archiva — hueco cerrado el 23/09/2026.** Desde el 13/09/2026
+  quedaba anotado como pendiente: `issuedDocuments[]` (`InsuranceFile_V1`) existía en el modelo de
+  `PolicyApplication_V1` pero la forma exacta del tag `File` no estaba en el portal público (solo en
+  el OpenAPI vivo, bloqueado desde el contenedor de Claude por el proxy). Alberto lo leyó a mano
+  (`portal.api-int.codeoscopic.io/static/....yaml`, entorno INT, 23/09/2026) y confirmó la forma:
+  `{ name, description?, url, creationDateTime, expirationDateTime }`, con `name`/`url`/
+  `creationDateTime`/`expirationDateTime` obligatorios; se descarga con **`GET {url}` + el MISMO
+  Bearer OAuth2**, literal del portal: «Execute a GET request to this URL with the Authorization
+  header to download the file» — sin `x-client-app`/`x-user-email` (esas son de tarificar, no de
+  descargar). La descarga es **gratis**: no pasa por el libro de consumo (`descargarFicheroVendor()`
+  en `lib/codeoscopic/cliente.ts`).
+  - `lib/codeoscopic/documentos-emitidos.ts` (puro, con fixtures LITERALES del OpenAPI de INT):
+    `documentosEmitidos()` lee el array sin inventar nombre en un elemento sin `name`/`url`;
+    `documentoCaducado()` compara contra el reloj, nunca contra una duración supuesta (los dos
+    ejemplos reales del portal traen ~365 días para «Póliza» y 24 h para informes de oferta — la
+    duración NO es una regla documentada); `documentoPoliza()` prioriza el que se llama «Póliza».
+  - `GET /api/operador/codeoscopic/documentos?projectId=` (el endpoint de diagnóstico del 17/09) ahora
+    también **descarga y archiva** el PDF en `seguros.documentos` (`tipo:'poliza'`,
+    `subidoPor:'agente'`) cuando el proyecto ya tiene `codeoscopic_projects.poliza_id` (o sea, ya está
+    acuñado) — sin acuñar, se dice por qué en vez de archivar sin saber de qué póliza es. Idempotente:
+    si ya hay un documento `tipo:'poliza'` + `subidoPor:'agente'` para esa póliza, no vuelve a
+    descargar. Todo el bloque es **best-effort**: un fallo de descarga o archivo nunca tumba la
+    respuesta — el `issuedDocuments` crudo sigue viajando igual para que la pantalla enseñe el enlace.
+  - **Cableado también en el flujo de acuñado real, 23/09/2026 (mismo día).** Extraído a
+    `lib/codeoscopic/archivar-documento.ts` (`archivarDocumentoEmitido()`, compartido con el endpoint
+    de diagnóstico de arriba) y llamado en `emitir/route.ts` en los DOS sitios donde
+    `registrarPolizaEmitida` acuña: el Submit directo (con `envio.crudo`, la respuesta del propio
+    `POST .../policy-applications`) y el camino `acunarExistente` (con `crudoPrevio`, el `GET` del
+    proyecto que ya se había leído gratis para comprobar si había solicitud viva). **Ninguno de los dos
+    gasta un GET extra**: usa el crudo que la petición YA tenía en la mano.
+    🚨 **Decisión sobre el «cuándo reintentar» que quedaba pendiente: NO se reintenta.** Si en ese
+    crudo `issuedDocuments[]` todavía no está poblado (el portal no dice cuánto tarda el vendor en
+    generarlo), simplemente no se archiva nada — `documentoGuardado`/`avisoDocumento` van a `null` y el
+    acuñado no se ve afectado. El endpoint de diagnóstico sigue siendo el camino para archivarlo más
+    tarde, a mano, sobre un proyecto ya acuñado. `documentosEmitidos()` se extendió (con test que se
+    vio fallar sin el cambio) para aceptar las TRES formas que de verdad llegan a estos dos sitios —
+    el array crudo del Submit, el proyecto entero con `policyApplications[]`, y la solicitud suelta del
+    Retrieve individual — con el mismo espíritu que `solicitudesEmision()` ya resolvía para el estado.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo
@@ -938,6 +1102,16 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
     `asegura-portal` y en `central-asegura`). Este commit es el que desatasca el redeploy de
     producción de `central-asegura`: los commits recientes no tocaban `apps/asegura/` y el
     `ignoreCommand` los saltaba, así que un simple «Redeploy» del panel repetía el mismo salto.
+  - 🔁 **Y se repitió idéntico el 17/09/2026: rotado el secreto, `/api/portal/documento` y
+    `/api/portal/contacto` seguían en 401 media hora después.** Medido en `get_runtime_logs`: el PR
+    que arreglaba el síntoma (registrar el fallo de la 2ª pasada de extracción) solo tocaba
+    `apps/asegura-portal/`, así que `central-asegura` se quedó en el deployment de producción
+    ANTERIOR a la rotación — la env nueva estaba puesta en Vercel pero nunca se había desplegado.
+    Este mismo commit (tocando `apps/asegura/CLAUDE.md`) es el que fuerza ese redeploy. **Lección que
+    ya iba por la segunda vez: rotar `ASEGURA_PORTAL_PUENTE_SECRET` no basta con guardarlo en las dos
+    envs — hace falta además un commit que TOQUE `apps/asegura/` (o uno de sus packages) para que
+    `central-asegura` lo recoja, porque un «Redeploy» del panel reutiliza el último commit y el
+    `ignoreCommand` lo vuelve a saltar si ese commit no tocaba la app.**
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en
@@ -1292,9 +1466,125 @@ cartera— cuenta como **`sinCanal`**, que es la verdad, en vez de restarse del 
 `avisada_at` se sella **inmediatamente** tras el envío aceptado: es lo único que impide que un
 reintento mande el mismo aviso dos veces. Si el sello falla se grita `ENVIADO PERO NO SELLADO`.
 
-Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), `ASEGURA_MAIL_FROM` y
-un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
+🚨 **Y desde el 19/09/2026, sin canal del tomador no es «sin canal» a secas: se prueba su PERSONA DE
+REFERENCIA** (Alberto, viendo «Instituto Studium» y «Grupo ELCA 83» en «Clientes sin canal»: «suele
+tener persona de contacto… es la persona de referencia sobre esta póliza»). `emailAlternativo()` de
+`@central/module-seguros` (`contacto-alternativo.ts`) reutiliza `contactoEfectivo()` para la póliza
+(su propio dato mal guardado, o un interviniente ajeno de esa MISMA póliza) y, si eso tampoco da nada,
+consulta `cliente_relaciones` (excluyendo `Sin vínculo`, la misma fuente que el CUARTO sitio de
+`clientes-sin-canal.ts`). El correo a un tercero **nunca se manda como si fuera al propio tomador**:
+`textoAviso()` recibe `paraTercero` y explica de qué póliza y de qué titular se trata, y con qué rol se
+dirige a esa persona. Solo cuando el dato es SUYO (colgado de la póliza y no de su ficha) el correo se
+manda tal cual, porque literalmente es su dirección. `ResumenAvisos.enviadosATercero` cuenta cuántos de
+los `enviados` fueron por esta vía, como subconjunto — no aparte.
+⚠️ **`textoAviso()` vive en `lib/texto-vencimiento.ts`, aparte de `avisos-vencimiento.ts` — es PURO
+a propósito** (mismo patrón que `renovaciones-aviso.ts` de plataforma): `avisos-vencimiento.ts` importa
+`./asegura-db` sin extensión, que `node --test` no resuelve fuera de un bundler, así que un test que
+importe ese fichero directamente revienta con `ERR_MODULE_NOT_FOUND` — no es un fallo de Prisma. La
+lógica de A QUIÉN y CÓMO se dirige el correo se prueba en `texto-vencimiento.test.ts` sin arrastrar nada
+de BD.
+
+Envs: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS`, `ASEGURA_MAIL_FROM` y un proveedor de correo
+(`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
 Guardián: `test/regression-portal-obligaciones.test.ts`.
+
+### 🔌 Estado en producción (20/09/2026) — las dos envs YA están puestas
+
+Hasta este día el cron llevaba **desde el 02/09 devolviendo 401 a diario** por falta de `CRON_SECRET`,
+y `portal_aviso_enviado` tenía **0 filas**: ningún cliente ha recibido nunca un aviso de renovación
+por esta vía. Medido, no supuesto. En la auditoría de la correduría se pusieron en `central-asegura`
+`CRON_SECRET` y `ASEGURA_AVISOS_ACTIVOS=1`, **y se forzó el redeploy de producción** — una env creada
+después del último build NO está viva hasta que se reconstruye, y ése es justo el fallo que dejó el
+cron mudo dos semanas sin un solo error visible.
+
+🚨 **Lo que NO está comprobado a fecha de esta línea: el ensayo `?contar=1` contra producción.** En BD
+había **10 obligaciones y 2 candidatas** en la ventana de 30 días, así que lo esperable es
+`"candidatas":2` con `"soloContar":true` mientras no se corra el ensayo. Si sale otra cifra, lo
+correcto es **quitar `ASEGURA_AVISOS_ACTIVOS` y redesplegar antes de las 08:00 UTC**, no dejar que el
+cron decida por su cuenta a quién escribe. El cerrojo 2 sigue siendo el interruptor real.
+
+**Y el cron tiene dos techos desde ese mismo día** (`lib/avisos-presupuesto.ts`, puro y testeado):
+`LIMITE_OBLIGACIONES = 500` en la criba y un presupuesto de **240 s** con 8 s de margen por candidata,
+con `maxDuration = 300` declarado en la ruta. Ninguno de los dos silencia lo que deja fuera:
+`ResumenAvisos` gana `truncado` (la criba topó) y `pendientes` (candidatas sin mirar al agotarse el
+presupuesto). Un cron que se queda a medias y responde `enviados: N` sin decir cuántos faltan es
+indistinguible de uno que terminó.
+
+## 📬 El emisor GENÉRICO de la intranet (15/09/2026) — sin cola, derivado de la campana
+
+`GET /api/cron/avisos-intranet` (diario **08:15** UTC, `vercel.json`): **un** correo por cliente con
+lo que su campana tiene pendiente y todavía no se le ha contado. Dictado de Alberto: *«todo lo que
+sea la intranet de un cliente, que automáticamente hay notificación de algo, modificación, un
+vencimiento, todo, una ITV, una revisión de extintores, lo que sea, eso a esa persona habrá que
+mandarle un correo cortito, educado… con acceso a la intranet directamente»*.
+
+🚨 **La decisión que lo hace genérico: NO hay cola de notificaciones.** El emisor no espera a que
+nadie encole nada — **deriva** lo que hay que avisar del MISMO catálogo que pinta la campana del
+portal (`avisosDe()` de `@central/module-seguros-portal`). Consecuencia buscada: el día que la
+campana aprenda a avisar de algo nuevo, **sale por correo sin tocar `lib/avisos-intranet.ts`**. Con
+una cola habría que acordarse de encolar en cada sitio, y el que se olvidara no rompería nada:
+simplemente ese aviso no saldría nunca. De paso, lo que el cliente ve dentro y lo que le llega por
+correo no pueden divergir, porque es la misma función.
+
+**Y el tipo nuevo no puede colarse sin nombre:** `ETIQUETA_POR_TIPO` (`lib/correo-avisos-intranet.ts`)
+es un `Record<TipoAviso, …>`, así que un tipo sin etiqueta **no compila**. Se vio pasar el 15/09/2026:
+al añadir `datos_por_revisar` el typecheck cazó que `peticion_recibida` llevaba desde el día anterior
+sin etiqueta. Un `switch` con `default: 'algo pendiente'` se lo habría tragado.
+
+🚨 **Lo que el correo NO dice: el TÍTULO del aviso.** La campana dice «ITV de 1234 ABC» o «Renovación
+de la póliza 302…»; eso es justo lo que `CAMPOS_PROHIBIDOS_EN_INVITACION` mantiene fuera de un correo,
+y la dirección la tecleó un humano y puede ser un buzón compartido. Al emisor solo se le pasa
+`{ tipo }`: el cuerpo dice **cuántas cosas hay y de qué CLASE** («un vencimiento próximo», «una
+solicitud de acceso») y el enlace. El detalle se ve DENTRO, cuando la persona ha probado que es ella.
+
+**El sello: `seguros.portal_aviso_enviado`** (`prisma/sql/2026-09-15_portal_aviso_enviado.sql`,
+**APLICADA el 15/09/2026**, cepo del UNIQUE visto morder con `23505` dentro de un bloque revertido).
+Un catálogo derivado no recuerda nada, así que sin sello el cron mandaría lo mismo cada día. La clave
+es `${tipo}:${id_de_la_fila_de_origen}`, **nunca el título**. Un aviso se manda **UNA** vez: no hay
+recordatorio a los N días en la Fase 1 — repetir por defecto es cómo un canal útil se convierte en uno
+que nadie abre. Las obligaciones conservan además su sello viejo (`portal_obligacion.avisada_at`), y
+se respeta.
+
+⏰ **Va 15 minutos DESPUÉS del cron de vencimientos, y no es cosmético:** los dos pueden hablar del
+mismo vencimiento. Con este orden, cuando esta pasada mira, la obligación ya tiene su `avisada_at` y
+aquí ni se cuenta; solapados, serían dos correos a la vez sobre lo mismo.
+
+🚨 **Si una fuente de un cliente no se puede leer, a ESE cliente no se le escribe en esta pasada**
+(`ilegibles` en el resumen). Un correo que dice «tienes 2 avisos» cuando hay 5 es peor que no
+mandarlo: entra, resuelve dos y se va tranquilo.
+
+Mismos cerrojos que el cron de vencimientos: `CRON_SECRET` solo por Bearer, **modo cuenta por
+defecto** (`ASEGURA_AVISOS_ACTIVOS=1`, el mismo interruptor — es UN solo «¿escribimos ya a
+clientes?») y `?contar=1` para el ensayo. Sin portal (`ASEGURA_PORTAL_URL` que no sea https) o sin
+proveedor de correo, **503**, nunca un `enviados: 0` tranquilizador.
+
+### 🏠 «Revisa tu dirección»: el reparo que solo veía Alberto
+
+El primer tipo que estrenó el emisor. `leerSitio()` de `@central/module-seguros` se escribió el
+05/09/2026 para la ficha del corredor, así que un «El código postal guardado («0812») no es un código
+postal español de 5 dígitos» se quedaba **en la pantalla de Alberto** — y el único que puede
+corregirlo es el dueño del dato. Alberto, 15/09/2026, sobre la ficha de un cliente real: *«es lo que
+quiero que notifique por mail e intranet, explicándole cómo modificar su dirección y así tenemos todos
+los datos actualizados»*.
+
+- El aviso lo compone el catálogo (`datos_por_revisar`, → `/boveda?vista=datos`) y **el id es el TIPO
+  de reparo** (`cp_invalido`, `ciudad_sin_letras`, `provincia_no_cuadra`): es la clave del sello, así
+  que tiene que ser estable. El texto puede cambiar sin volver a avisar de lo mismo.
+- 🚨 **Esta fuente no parte de una fila pendiente: hay que IR A MIRAR la ficha.** Por eso se acota a
+  la **cartera viva** (`titularesVivos`, de las pólizas vivas) y no a `clientes`: sobre la tabla
+  entera esto serían 32.600 correos de «revisa tu dirección» a leads de un volcado de 2013-2018. Con
+  cepo.
+- **Medido el 15/09/2026 sobre los 97 titulares vivos: 1 CP inválido y 3 ciudades sin letras.** (El
+  brazo `provincia_no_cuadra` no se midió en SQL: necesita la tabla CP→provincia del código.) O sea,
+  un puñado de correos, no un mailing. Un CP de 4 dígitos **no** es un reparo por sí solo:
+  `cpNormal()` le pone el cero de delante; `0812` sí lo es porque `00` no es ninguna provincia.
+- El MISMO `leerSitio()` juzga la ficha del corredor y la del cliente. Con dos criterios, la pantalla
+  de Alberto marcaría un reparo que la del cliente da por bueno.
+
+Cepos: `test/regression-avisos-intranet.test.ts` (11) y `packages/module-seguros-portal/src/
+avisos.test.ts`. **Seis mutaciones vistas morder**: tipo sin etiqueta, el título colado en el correo,
+el filtro de cartera viva quitado, el sello ignorado, el id del reparo cambiado y la fuente ilegible
+sin declarar.
 
 ## ✉️ «Invitar por correo» — el aviso de acceso pendiente (05/09/2026)
 
@@ -1376,10 +1666,23 @@ cualquier envío (`seguros.recaptacion_envios`). El "no interesado" reutiliza el
 ficha YA EXISTENTE (`descartarCliente`, `DELETE /api/operador/cliente`) — no se construyó
 un estado de descarte nuevo. Spec: `docs/superpowers/specs/2026-09-12-recaptacion-leads-design.md`.
 
-## Lo que falta y de quién depende
-- **De Manuel:** transferir sus proyectos de Vercel y Supabase y el repo; decir cómo se
-  descargan los ficheros de las compañías, si usa Vercel Blob y qué dominios tiene.
-- **De Alberto:** poner contraseña al rol, fijar la fecha de corte, y decidir si se formaliza
-  el contrato de encargado de tratamiento.
+## Lo que falta y de quién depende (revisado 21/09/2026 — la línea vieja «De Manuel: transferir sus
+proyectos…» ya estaba CUMPLIDA y desfasada: repo, Vercel y BD llevan en la cuenta de Alberto desde
+el 31/08-02/09, ver el cierre de `docs/TRASPASO-CORREDURIA.md`. Manuel ya no interviene en el
+proyecto; lo que queda es exclusivamente infraestructura y gestiones, no código)
+
+- **🔴 El adaptador Java de CIMA (`asegura-app-cima-adapter`) sigue en la cuenta de Fly.io de
+  Manuel.** Es el único punto vivo que aún depende de él: si se apaga o pierde el acceso, la
+  ingesta de CIMA se para **sin error visible** (solo lo delatan los heartbeats
+  `cima_pull_*`). El port a `apps/asegura` (Fase 2, aparcada por decisión de Alberto del
+  02/09/2026: «fly es barato y ya está hecho») está inventariado y listo para retomar en
+  `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md` si algún día hay que dejar de depender de él.
+- **El webhook de Codeoscopic sigue registrado contra `app.grupoasegura.com`** (el CRM de
+  Manuel), no contra `central-asegura`. El endpoint propio ya está construido
+  (`POST /api/webhooks/codeoscopic`); falta que Alberto le pida a Codeoscopic (JM) que repunte
+  la URL — gestión suya, no código.
+- **De Alberto:** decidir si se formaliza el contrato de encargado de tratamiento con Manuel
+  (`docs/CONTRATO-ENCARGADO-TRATAMIENTO-MANUEL.md`, en borrador y sin enviar — documenta el
+  tratamiento que él hizo en el pasado, así que sigue haciendo falta aunque ya no intervenga).
 - **Del corte:** cambiar a mano las URLs registradas en los paneles de **Codeoscopic** y
   **Meta/WhatsApp**. Eso no viaja en ninguna transferencia.

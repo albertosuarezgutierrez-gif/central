@@ -72,6 +72,15 @@ export type Precio = {
    * nuevo — ver `proyectoVigenteDePoliza` en `retarificar-cartera.ts`.
    */
   expiraEn: string | null
+  /**
+   * `mainQuote` sin parsear, TAL CUAL lo devuelve el vendor para ESTE precio —
+   * mismo objeto que `Oferta.quoteCrudo` en `emitir.ts`, pero de ANTES del
+   * ReRate. Existe para poder pintar el Product Form Library del vendor
+   * (`ProductFormWidget`) ya en la pantalla de precios, y así el corredor
+   * rellene el `product.options` real de CUALQUIER compañía (no solo Allianz,
+   * que es lo único que cubre `opciones-producto.ts`) antes de pagar el ReRate.
+   */
+  quoteCrudo: unknown
 }
 
 /**
@@ -179,6 +188,7 @@ function leerPrecio(raw: unknown): Precio | null {
     productId: producto.id ?? null,
     productOptions: producto.options ?? null,
     expiraEn: str(q.expirationDate),
+    quoteCrudo: q,
   }
 }
 

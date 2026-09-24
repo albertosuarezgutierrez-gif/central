@@ -117,12 +117,24 @@ jobs:
               docs/VIGIA-*.md)           return 0 ;;
               docs/BUSCADOR-IA.md)       return 0 ;;
               docs/FISCAL-AYUDAS.md)     return 0 ;;
+              # Telemetría de uso de herramientas que deja el hook `Stop` (scripts/uso-herramientas.mjs):
+              # un JSON por sesión, puro registro de lo que se usó, sin decisión ni instrucción para
+              # ningún agente. Detectado 20/09/2026 (auditoría profunda): viajaba en ~20 de los PRs
+              # "solo bitácora" del backlog y, al no estar aquí, sacaba al PR ENTERO del carril 1 —
+              # el mismo fallo que ya tuvieron docs/VIGIA-*.md/docs/BUSCADOR-IA.md antes de añadirlos.
+              # `*` en un `case` de bash SÍ cruza `/`, así que cubre también las subcarpetas AAAA-MM.
+              docs/uso-herramientas/*)   return 0 ;;
               # Generado entero por scripts/auditar-estructura.mjs en cada pasada: es un
               # RETRATO del repo, no una decisión. Entró aquí el 19/08/2026, cuando el
               # ruleset de `main` dejó de admitir el push directo de la auditoría.
               apps/plataforma/lib/estructura.generated.json) return 0 ;;
               docs/ARQUITECTURA.generated.md)                return 0 ;;
               docs/mapa-funciones.generated.json)            return 0 ;;
+              # La tabla de ahorro agregada, regenerada por la MISMA pasada de auditoria.yml
+              # desde 21/09/2026 y commiteada en el MISMO PR que los tres de arriba. Es un
+              # recuento de lo ya medido, no una decisión. Sin esta línea el PR diario entero
+              # —los cuatro ficheros— cae fuera del carril 1 y deja de aterrizar en `main`.
+              docs/USO-HERRAMIENTAS.md)                      return 0 ;;
               # Landing de House Sevillana: la reescribe el agente SEO de sivra cada lunes.
               # Es código, sí, pero es el ÚNICO fichero de código que escribe un agente sin
               # humano delante, y lo guarda el test que pilló el fallo de #1487: si el agente

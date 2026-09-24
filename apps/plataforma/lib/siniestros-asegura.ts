@@ -27,6 +27,8 @@
 // informa», NUNCA 0; `siniestros: null` = «no se pudo leer», NUNCA `[]`.
 
 import type { OrigenSiniestro } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 
 /** Un siniestro tal y como lo sirve el puerto de asegura. */
 export type SiniestroCartera = {
@@ -62,6 +64,37 @@ export type SiniestroCartera = {
   abierto: boolean
   /** ISO. `null` = asegura no lo manda. */
   actualizado: string | null
+  /**
+   * Campos propios del ramo de la póliza (`@central/module-seguros/siniestro-ramo.ts`),
+   * p. ej. tipo de colisión para auto, gremio requerido para hogar. `null` =
+   * sin datos o asegura no lo manda. Solo se editan en `gestionado_correduria`.
+   */
+  datosRamo: Record<string, string | number | boolean> | null
+  /**
+   * Desglose de daños del EIAC (`ImplicadoDiversos/DanosSiniestro/DanoSiniestro[]`).
+   * `null` = CIMA no trajo ninguno, o asegura no lo manda. EXCLUSIVO de
+   * `origen='cima'` — lo contrario de `datosRamo`.
+   */
+  danosCima: { descripcion: string | null; valor: string | null }[] | null
+  /**
+   * Terceros y testigos. `null` = no se ha podido consultar (o asegura no lo
+   * manda) — NUNCA «no hay ninguno», que es `[]`. Exclusivo de siniestros
+   * `gestionado_correduria`.
+   */
+  terceros: TerceroCartera[] | null
+}
+
+/** Un tercero o testigo tal y como lo sirve el puerto de asegura. */
+export type TerceroCartera = {
+  id: string
+  tipo: 'tercero' | 'testigo'
+  esConductor: boolean | null
+  nombre: string | null
+  telefono: string | null
+  matricula: string | null
+  marcaModelo: string | null
+  companiaNombre: string | null
+  numeroPoliza: string | null
 }
 
 function cadena(v: unknown): string | null {
@@ -71,6 +104,51 @@ function cadena(v: unknown): string | null {
 /** Número o `null`. Un `null` del puerto se QUEDA en null: «no informado» no es 0. */
 function numero(v: unknown): number | null {
   return typeof v === 'number' && Number.isFinite(v) ? v : null
+}
+
+/** El `datos_ramo` tal cual, o `null` si no tiene forma de objeto. Nunca `{}`. */
+function datosRamoDe(v: unknown): Record<string, string | number | boolean> | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const out: Record<string, string | number | boolean> = {}
+  for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+    if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') out[k] = val
+  }
+  return Object.keys(out).length === 0 ? null : out
+}
+
+/** `danosCima` tal cual, o `null` si no tiene forma de array. Nunca `[]` inventado. */
+function danosCimaDe(v: unknown): { descripcion: string | null; valor: string | null }[] | null {
+  if (!Array.isArray(v)) return null
+  return v
+    .filter((d): d is Record<string, unknown> => d !== null && typeof d === 'object')
+    .map((d) => ({
+      descripcion: typeof d.descripcion === 'string' ? d.descripcion : null,
+      valor: typeof d.valor === 'string' ? d.valor : null,
+    }))
+}
+
+function leerTercero(v: unknown): TerceroCartera | null {
+  if (typeof v !== 'object' || v === null) return null
+  const t = v as Record<string, unknown>
+  const id = cadena(t.id)
+  if (!id) return null
+  return {
+    id,
+    tipo: t.tipo === 'testigo' ? 'testigo' : 'tercero',
+    esConductor: typeof t.esConductor === 'boolean' ? t.esConductor : null,
+    nombre: cadena(t.nombre),
+    telefono: cadena(t.telefono),
+    matricula: cadena(t.matricula),
+    marcaModelo: cadena(t.marcaModelo),
+    companiaNombre: cadena(t.companiaNombre),
+    numeroPoliza: cadena(t.numeroPoliza),
+  }
+}
+
+/** `terceros` del puerto → lista, o `null` si no llega o no tiene forma de lista. */
+function terceros(v: unknown): TerceroCartera[] | null {
+  if (!Array.isArray(v)) return null
+  return v.map(leerTercero).filter((t): t is TerceroCartera => t !== null)
 }
 
 /** Una fila del puerto → `SiniestroCartera`, o `null` si no tiene forma de siniestro. */
@@ -104,6 +182,9 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     confirmadoCima: typeof s.confirmadoCima === 'boolean' ? s.confirmadoCima : true,
     abierto: s.abierto === true,
     actualizado: cadena(s.actualizado),
+    datosRamo: datosRamoDe(s.datosRamo),
+    danosCima: danosCimaDe(s.danosCima),
+    terceros: terceros(s.terceros),
   }
 }
 
@@ -236,15 +317,15 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-function cabeceras(): Record<string, string> | null {
+async function cabeceras(): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? { Authorization: `Bearer ${secret}` } : null
+  return secret ? await cabecerasPuerto(secret) : null
 }
 
 export type Reenvio = { status: number; json: unknown }
 
 async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}${path}`, {
@@ -269,7 +350,17 @@ export function abrirSiniestroAsegura(body: Record<string, unknown>): Promise<Re
   return llamar('/api/operador/siniestro', { method: 'POST', body: JSON.stringify(body) })
 }
 
-/** `PATCH` — `{siniestroId, estado, actor}` (cambio de estado) o `{siniestroId, …seguimiento, actor}`. */
+/** `PATCH` — `{siniestroId, estado, actor}` · `{siniestroId, …seguimiento, actor}` · `{siniestroId, datosRamo, actor}`. */
 export function seguirSiniestroAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/siniestro', { method: 'PATCH', body: JSON.stringify(body) })
+}
+
+/** `POST` — añade un tercero/testigo `{siniestroId, tipo, nombre?, telefono?, matricula?, …, actor}`. */
+export function anadirTerceroAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/siniestro/terceros', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/** `DELETE` — quita un tercero/testigo `{siniestroId, intervinienteId, actor}`. */
+export function quitarTerceroAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/siniestro/terceros', { method: 'DELETE', body: JSON.stringify(body) })
 }

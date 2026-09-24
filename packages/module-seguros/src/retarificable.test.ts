@@ -13,6 +13,19 @@ test('auto: con matrícula sí, sin matrícula no, y la gemela vale', () => {
   assert.deepEqual(gem, { ramo: 'auto', retarificable: true, motivo: null, fuente: 'gemela' })
 })
 
+test('moto: como auto, por la matrícula, y el ramo que sale es moto (su catálogo es otro)', () => {
+  assert.deepEqual(retarificabilidad({ tipo: 'moto', datos: { matricula: '1234ABC' } }), {
+    ramo: 'moto',
+    retarificable: true,
+    motivo: null,
+    fuente: 'poliza',
+  })
+  assert.equal(retarificabilidad({ tipo: 'moto', datos: null, datosGemela: { matricula: '1234ABC' } }).fuente, 'gemela')
+  const sin = retarificabilidad({ tipo: 'moto', datos: { marca: 'HONDA' } })
+  assert.equal(sin.retarificable, false)
+  assert.match(sin.motivo ?? '', /matrícula/)
+})
+
 test('hogar: CIMA sin objeto + gemela con m²/año/CP → retarificable por la gemela', () => {
   const r = retarificabilidad({ tipo: 'hogar', datos: null, datosGemela: HOGAR })
   assert.deepEqual(r, { ramo: 'hogar', retarificable: true, motivo: null, fuente: 'gemela' })
@@ -47,4 +60,17 @@ test('los números del volcado vienen como texto y se aceptan; la basura no', ()
   assert.equal(anioPlausible('1994.5'), null)
   assert.equal(cpValido(' 41002 '), '41002')
   assert.equal(cpValido('4100'), null)
+})
+
+test('hogar sin m²/año/CP pero con la referencia catastral del PISO guardada → se retarifica desde el Catastro', () => {
+  const r = retarificabilidad({ tipo: 'hogar', datos: { referenciaCatastral: '9872023VH5797S0001WX' } })
+  assert.equal(r.retarificable, true)
+  assert.equal(r.fuente, 'catastro')
+  // La de 14 es la del edificio (sin m² ni año): no vale.
+  assert.equal(retarificabilidad({ tipo: 'hogar', datos: { referenciaCatastral: '9872023VH5797S' } }).retarificable, false)
+  // Lo de la póliza manda sobre el Catastro.
+  const completa = { metrosCuadrados: '80', anioConstruccion: '1990', cp: '41003', referenciaCatastral: '9872023VH5797S0001WX' }
+  assert.equal(retarificabilidad({ tipo: 'hogar', datos: completa }).fuente, 'poliza')
+  // Cancelada, nunca.
+  assert.equal(retarificabilidad({ tipo: 'hogar', estado: 'cancelada', datos: { referenciaCatastral: '9872023VH5797S0001WX' } }).retarificable, false)
 })

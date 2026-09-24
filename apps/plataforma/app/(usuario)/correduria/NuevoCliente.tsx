@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import { coincidenciaBloquea, provinciaPorCp, revisarAlta } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import { campoDesdeTermino, interpretarEscritura, textoMotivo, type ResultadoEscritura } from '@/lib/cliente-edicion-asegura'
+import { RAMOS_PRESUPUESTO } from '@/lib/ficha-asegura'
+import DireccionConfirmable from './DireccionConfirmable'
 
 /**
  * Alta de un cliente de la correduría desde plataforma.
@@ -35,6 +37,10 @@ export default function NuevoCliente({ q }: { q?: string }) {
   const [ocupado, setOcupado] = useState(false)
   const [resultado, setResultado] = useState<ResultadoEscritura | null>(null)
   const [campoMal, setCampoMal] = useState<string | null>(null)
+  // Ramo de la oportunidad que trae este lead, si se sabe ya. `null` = decidir
+  // luego desde la ficha (menú «➕ Presupuestar»): no todo lead nace con un
+  // ramo claro, y no se fuerza a elegir uno.
+  const [ramo, setRamo] = useState<number | null>(null)
 
   function set<K extends keyof Form>(k: K, v: string) {
     setF((prev) => {
@@ -67,8 +73,16 @@ export default function NuevoCliente({ q }: { q?: string }) {
       setResultado(r)
       if (r.estado === 'invalido') setCampoMal(r.campo)
       if (r.estado === 'ok') {
-        if (r.id) router.push(`/correduria/cliente/${r.id}`)
-        else setResultado({ estado: 'error', motivo: 'asegura dice que se creó pero no manda el id: búscalo por nombre.' })
+        if (r.id) {
+          // Con ramo elegido, se salta directo a presupuestarlo (mismo
+          // formulario que «➕ Presupuestar ▾» de la ficha) en vez de abrir
+          // la ficha a secas: es la oportunidad por la que se está dando de
+          // alta a este lead, no un dato más que anotar para luego.
+          const url = ramo === null ? `/correduria/cliente/${r.id}` : RAMOS_PRESUPUESTO[ramo].url(r.id)
+          router.push(url)
+        } else {
+          setResultado({ estado: 'error', motivo: 'asegura dice que se creó pero no manda el id: búscalo por nombre.' })
+        }
       }
     } catch {
       setResultado({ estado: 'error', motivo: 'red' })
@@ -111,7 +125,14 @@ export default function NuevoCliente({ q }: { q?: string }) {
 
       <Grupo titulo="Dónde vive">
         <Campo label="Dirección" mal={campoMal === 'direccion'}>
-          <input value={f.direccion} onChange={(e) => set('direccion', e.target.value)} placeholder="Calle, número, piso" style={campo} />
+          <DireccionConfirmable
+            value={f.direccion}
+            onChange={(v) => set('direccion', v)}
+            codigoPostal={f.codigoPostal}
+            ciudad={f.ciudad}
+            placeholder="Calle, número, piso"
+            style={campo}
+          />
         </Campo>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
           <Campo label="Código postal" mal={campoMal === 'codigoPostal'}>
@@ -129,8 +150,19 @@ export default function NuevoCliente({ q }: { q?: string }) {
         </Campo>
       </Grupo>
 
+      <Grupo titulo="Qué le interesa" nota="Opcional: si ya sabes el ramo, al guardar se pasa directo a presupuestarlo. Si no, se decide luego desde su ficha.">
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <RamoBtn etiqueta="Decidir luego" activo={ramo === null} onClick={() => setRamo(null)} />
+          {RAMOS_PRESUPUESTO.map((r, i) => (
+            <RamoBtn key={r.etiqueta} etiqueta={r.etiqueta} activo={ramo === i} onClick={() => setRamo(i)} title={r.sinVerificar ? AVISO_SIN_VERIFICAR : undefined} />
+          ))}
+        </div>
+      </Grupo>
+
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <button type="submit" disabled={ocupado} style={btnStyle('primario')}>Dar de alta</button>
+        <button type="submit" disabled={ocupado} style={btnStyle('primario')}>
+          {ramo === null ? 'Dar de alta' : `Dar de alta y presupuestar ${RAMOS_PRESUPUESTO[ramo].etiqueta.replace(/^\S+\s/, '').toLowerCase()}`}
+        </button>
         <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>Cancelar</Link>
       </div>
 
@@ -174,6 +206,26 @@ function Resultado({ r, ocupado, onForzar }: { r: ResultadoEscritura | null; ocu
   }
   if (r.estado === 'no_encontrado') return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}>asegura respondió «no encontrado» a un alta: revisa el puerto.</div>
   return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}>⚠️ No se ha podido crear: {textoMotivo(r.motivo)}</div>
+}
+
+const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para salud no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
+
+function RamoBtn({ etiqueta, activo, onClick, title }: { etiqueta: string; activo: boolean; onClick: () => void; title?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      style={{
+        minHeight: 44, padding: '0 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+        border: `1px solid ${activo ? 'var(--primary)' : 'var(--border)'}`,
+        background: activo ? 'var(--primary)' : 'var(--bg)',
+        color: activo ? '#fff' : 'var(--text)',
+      }}
+    >
+      {etiqueta}
+    </button>
+  )
 }
 
 function Grupo({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {

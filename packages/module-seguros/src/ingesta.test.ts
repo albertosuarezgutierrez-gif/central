@@ -6,13 +6,54 @@ import {
   DIAS_CUARENTENA_RECIENTE,
   HORAS_RECHAZO_RECIENTE,
   decidirAvisoIngesta,
+  firmaAvisoIngesta,
+  normalizarFirmaIngesta,
+  decidirRespaldoPull,
+  HORAS_RESPALDO_PULL,
   repartirHuerfanas,
   textoHuerfanas,
   TOPE_POLIZAS_TELEGRAM,
   type PolizaHuerfana,
+  type FicheroParcial,
 } from './ingesta.ts'
 
 const f = (tipo: string, entidad: string, dias: number) => ({ tipo, entidad, dias })
+
+test('un campo importante sin leer se imprime SIEMPRE, aunque no haya ninguna otra avería (ok)', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    camposImportantes: [
+      { id: 'tomador_contacto', etiqueta: 'domicilio y contacto del tomador', vecesVisto: 4 },
+    ],
+  })
+  assert.equal(s.estado, 'ok')
+  assert.equal(s.avisosImportantes.length, 1)
+  assert.match(detalleSalud(s), /CIMA manda y no se lee: domicilio y contacto del tomador/)
+})
+
+test('sin watchlist, no hay ningún aviso importante que imprimir', () => {
+  const s = saludIngesta({ cuarentena: [] })
+  assert.deepEqual(s.avisosImportantes, [])
+  assert.doesNotMatch(detalleSalud(s), /CIMA manda y no se lee/)
+})
+
+test('el aviso importante NO fuerza `degradada`: es una oportunidad, no una avería', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    camposImportantes: [{ id: 'x', etiqueta: 'x', vecesVisto: 4 }],
+  })
+  assert.equal(s.estado, 'ok')
+})
+
+test('el aviso importante también se ve en degradada, además de los motivos de la avería', () => {
+  const s = saludIngesta({
+    cuarentena: [f('SIN', 'C0468', 2)],
+    camposImportantes: [{ id: 'x', etiqueta: 'x importante', vecesVisto: 4 }],
+  })
+  assert.equal(s.estado, 'degradada')
+  assert.match(detalleSalud(s), /DEGRADADA/)
+  assert.match(detalleSalud(s), /CIMA manda y no se lee: x importante/)
+})
 
 test('sin poder leer NO es «está bien»: es sin_datos y lo dice', () => {
   const s = saludIngesta({ cuarentena: null })
@@ -498,4 +539,326 @@ test('saludIngesta cuelga el reparto y saca un motivo por CLAVE', () => {
   const m = s.motivos.join(' · ')
   assert.match(m, /Occident \(C0468\) \/ clave M00171: 1 póliza\(s\) que hay que pedirle/)
   assert.match(m, /clave 8-92361: 1 póliza\(s\) que hay que pedirle/)
+})
+
+// --- Señales nuevas (crudo, cobertura, caja negra, cron mudo) ---------------
+// Lo que vigilan no es que cuenten: es que NO tranquilicen. Cada una puede
+// mentir en la misma dirección —salir verde porque no hay datos— que es el
+// fallo que este módulo existe para impedir.
+
+test('cron mudo: sin pull no hay nada que atascar, y eso NO es estar sano', () => {
+  // Con la ingesta parada las otras cuatro señales salen a cero. Sin esta
+  // comprobación el vigía diría «ok» con CIMA sin ir a buscar nada.
+  const s = saludIngesta({ cuarentena: [], ultimoPull: { horas: 40, procesados: 0 } })
+  assert.equal(s.estado, 'degradada')
+  assert.ok(s.motivos.some(m => m.includes('sin completar')))
+})
+
+test('cron recién corrido no alarma', () => {
+  const s = saludIngesta({ cuarentena: [], ultimoPull: { horas: 3, procesados: 0 } })
+  assert.equal(s.estado, 'ok')
+})
+
+test('sin constancia de ninguna corrida se DICE, no se calla', () => {
+  const s = saludIngesta({ cuarentena: [], ultimoPull: null })
+  assert.ok(s.motivos.some(m => m.includes('No consta ninguna corrida')))
+})
+
+test('purga inminente del crudo alarma: es la ÚLTIMA copia', () => {
+  // CIMA ya confirmó esos ficheros a TIREA y no los reenvía. Cuando el TTL
+  // pase, la pérdida es definitiva — por eso avisa antes, no después.
+  const s = saludIngesta({
+    cuarentena: [],
+    crudo: { pendientes: 3, purgaInminente: 2, masAntiguaHoras: 2000 },
+  })
+  assert.equal(s.estado, 'degradada')
+  assert.ok(s.motivos.some(m => m.includes('se BORRAN')))
+})
+
+test('crudo pendiente SIN purga inminente informa pero no alarma', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    crudo: { pendientes: 3, purgaInminente: 0, masAntiguaHoras: 48 },
+  })
+  assert.equal(s.estado, 'ok')
+  assert.ok(s.motivos.some(m => m.includes('esperando reproceso')))
+})
+
+test('cuerpos rechazados capturados alarman: nos lo mandaron y lo tiramos', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cajaNegra: { capturaActiva: true, cuerpos: 4, posts: 193, horasDesdeUltimo: 1, sinCuerpo: 0 },
+  })
+  assert.equal(s.estado, 'degradada')
+  assert.ok(s.motivos.some(m => m.includes('rechazados de Codeoscopic')))
+})
+
+test('caja negra activa SIN cuerpos todavía no alarma ni tranquiliza', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cajaNegra: { capturaActiva: false, cuerpos: 0, posts: 0, horasDesdeUltimo: null, sinCuerpo: 0 },
+  })
+  assert.equal(s.estado, 'ok')
+  assert.deepEqual(s.motivos, [])
+})
+
+test('cobertura NO alarma aunque haya campos sin leer: sería un rojo perpetuo', () => {
+  // El EIAC trae cientos de campos y siempre habrá alguno que no leamos. Si
+  // esto pusiera el vigía en rojo, estaría rojo para siempre y dejaría de
+  // mirarse — que es cómo muere una alarma.
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: {
+      rutas: 300, rutasNuncaLeidas: 120, entidadesObservadas: 3,
+      porTipo: [{ tipoObjeto: 'POL', rutas: 300, nuncaLeidas: 120 }],
+    },
+  })
+  assert.equal(s.estado, 'ok')
+  assert.ok(s.motivos.some(m => m.includes('no se leen nunca')))
+})
+
+test('cobertura SIN MEDIR se declara: no equivale a «los leemos todos»', () => {
+  const s = saludIngesta({ cuarentena: [], cobertura: null })
+  assert.ok(s.motivos.some(m => m.includes('SIN MEDIR')))
+})
+
+test('no pedir una señal ≠ pedirla y fallar: `undefined` no inventa un hueco', () => {
+  // Un llamante viejo que no conoce las señales nuevas no puede empezar a
+  // gritar por algo que nunca preguntó.
+  const s = saludIngesta({ cuarentena: [] })
+  assert.equal(s.estado, 'ok')
+  assert.deepEqual(s.motivos, [])
+  assert.equal(s.crudo, null)
+  assert.equal(s.cobertura, null)
+})
+
+test('sin_datos deja las cuatro señales nuevas en null, no en cero', () => {
+  const s = saludIngesta({ cuarentena: null })
+  assert.equal(s.estado, 'sin_datos')
+  assert.equal(s.crudo, null)
+  assert.equal(s.cobertura, null)
+  assert.equal(s.cajaNegra, null)
+  assert.equal(s.ultimoPull, null)
+})
+
+// ── 🚨 Ficheros CONFIRMADOS que se dejaron objetos sin guardar ──────────────
+// La sexta cara de la avería, y la única IRREVERSIBLE: CIMA confirma el fichero
+// a TIREA y no lo reenvía. Ninguna de las otras señales lo ve — la cuarentena
+// mira `estado <> 'confirmed'`, las huérfanas solo leen los eventos de recibo y
+// siniestro (para POL no existe ese evento) y el crudo mira `reprocesado_at`,
+// que en el caso real de Occident ya estaba sellado con 4 pólizas en revisión.
+
+const parcial = (enRevision: number, extra: Partial<FicheroParcial> = {}): FicheroParcial => ({
+  fichero: 'C0468_M00171_POL_199_1_20260915_20260915095138110626996.zip',
+  tipo: 'POL', entidad: 'C0468', clave: 'M00171',
+  declarados: 44, persistidos: 44 - enRevision, enRevision, dias: 3,
+  ...extra,
+})
+
+test('🚨 un fichero CONFIRMADO con objetos en revisión DEGRADA: es pérdida irreversible', () => {
+  // Caso real del 17/09/2026: polizasCount 44 · polizasPersisted 40 ·
+  // polizasReview 4 · stateTo "confirmed". Antes salía `ok`.
+  const s = saludIngesta({ cuarentena: [], parciales: [parcial(4)] })
+  assert.equal(s.estado, 'degradada')
+})
+
+test('los objetos en revisión se SUMAN entre ficheros y tipos', () => {
+  // Medido el 20/09/2026: 46 objetos en 6 ficheros, y NO son solo pólizas —
+  // el mismo evento cuenta `recibosReview` (29 en un solo fichero de Occident).
+  const s = saludIngesta({
+    cuarentena: [],
+    parciales: [
+      parcial(4),
+      parcial(29, { fichero: 'C0468_M00171_REC_299.zip', tipo: 'REC', declarados: 199, persistidos: 170 }),
+    ],
+  })
+  assert.equal(s.objetosEnRevision, 33)
+})
+
+test('el motivo dice a QUÉ clave de mediador y en qué fichero, no solo cuántos', () => {
+  const s = saludIngesta({ cuarentena: [], parciales: [parcial(4)] })
+  const m = s.motivos.join(' · ')
+  assert.match(m, /clave M00171 POL: 4 de 44 sin guardar/)
+})
+
+test('parciales `[]` es «se miró y no hay»: ni alarma ni hueco', () => {
+  const s = saludIngesta({ cuarentena: [], parciales: [] })
+  assert.equal(s.estado, 'ok')
+  assert.equal(s.objetosEnRevision, 0)
+  assert.deepEqual(s.huecos, [])
+})
+
+test('🚨 parciales `null` NO es cero: es un hueco, y con pérdida irreversible detrás', () => {
+  const s = saludIngesta({ cuarentena: [], parciales: null })
+  assert.equal(s.objetosEnRevision, null)
+  assert.ok(s.huecos.some(h => h.includes('sin guardar')), s.huecos.join(' · '))
+})
+
+test('parciales sin pedir (`undefined`) no inventa un hueco', () => {
+  // Un `apps/asegura` desplegado antes de esta señal no la manda: eso no puede
+  // convertirse en un grito diario por algo que nadie preguntó.
+  const s = saludIngesta({ cuarentena: [] })
+  assert.deepEqual(s.huecos, [])
+})
+
+// ── 🚨 El «no he podido mirar» YA NO SE TIRA A LA BASURA ────────────────────
+// Los motivos existían desde el primer día; lo que no existía era que alguien
+// los leyera. `hayPerdida` no los miraba y `detalleSalud` los descartaba en la
+// rama `ok`, así que una lectura sin constancia del cron decía literalmente
+// «ingesta CIMA: sin ficheros atascados». Estos cepos aseveran el ESTADO y la
+// FRASE, no solo que el texto se componga.
+
+test('🚨 sin constancia del cron y lo demás limpio, el estado es PARCIAL, no ok', () => {
+  const s = saludIngesta({ cuarentena: [], ultimoPull: null })
+  assert.equal(s.estado, 'parcial')
+})
+
+test('🚨 y el parte NO dice «sin ficheros atascados»: dice que no se ha mirado todo', () => {
+  const s = saludIngesta({ cuarentena: [], ultimoPull: null })
+  const d = detalleSalud(s)
+  assert.doesNotMatch(d, /sin ficheros atascados/)
+  assert.match(d, /No consta ninguna corrida del cron/)
+})
+
+test('crudo sin comprobar ⇒ parcial, y lo dice el parte', () => {
+  const s = saludIngesta({ cuarentena: [], crudo: null })
+  assert.equal(s.estado, 'parcial')
+  assert.match(detalleSalud(s), /cuarentena de crudo/)
+})
+
+test('caja negra sin comprobar ⇒ parcial, y lo dice el parte', () => {
+  const s = saludIngesta({ cuarentena: [], cajaNegra: null })
+  assert.equal(s.estado, 'parcial')
+  assert.match(detalleSalud(s), /caja negra del webhook/)
+})
+
+test('cobertura sin medir ⇒ parcial, y lo dice el parte', () => {
+  const s = saludIngesta({ cuarentena: [], cobertura: null })
+  assert.equal(s.estado, 'parcial')
+  assert.match(detalleSalud(s), /SIN MEDIR/)
+})
+
+test('rechazos que se PIDIERON y fallaron ⇒ parcial (antes solo una coletilla)', () => {
+  const s = saludIngesta({ cuarentena: [], rechazos: null })
+  assert.equal(s.estado, 'parcial')
+})
+
+test('🚨 con pérdida MEDIDA manda la pérdida, pero el hueco sigue viajando', () => {
+  // Asimetría deliberada: hay que actuar, no solo mirar. Pero el recuento de
+  // arriba es un SUELO, y quien avisa tiene que poder decirlo.
+  const s = saludIngesta({ cuarentena: [], huerfanas: 3, crudo: null })
+  assert.equal(s.estado, 'degradada')
+  assert.ok(s.huecos.length > 0, 'el hueco se perdió al haber pérdida medida')
+})
+
+test('todo hueco está TAMBIÉN en motivos: no hay dos listas que mantener', () => {
+  const s = saludIngesta({ cuarentena: [], crudo: null, cajaNegra: null, cobertura: null, ultimoPull: null })
+  for (const h of s.huecos) assert.ok(s.motivos.includes(h), `hueco fuera de motivos: ${h}`)
+})
+
+test('sin_datos declara su hueco: no se queda con la lista vacía', () => {
+  const s = saludIngesta({ cuarentena: null })
+  assert.equal(s.huecos.length, 1)
+})
+
+// ── 🚨 Cobertura: RUTAS distintas, y de cuántas compañías salen ─────────────
+
+test('🚨 el motivo de cobertura dice «campo(s) distintos» y cuántas compañías', () => {
+  // Medido el 20/09/2026: 755 filas para 563 rutas, con 3 entidades. Publicar
+  // filas como «campos» multiplica la cifra por el número de compañías vistas,
+  // y es la pantalla sobre la que se decide qué mapear.
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: {
+      rutas: 563, rutasNuncaLeidas: 457, entidadesObservadas: 3,
+      porTipo: [{ tipoObjeto: 'POL', rutas: 405, nuncaLeidas: 338 }],
+    },
+  })
+  assert.match(s.motivos.join(' · '), /563 campo\(s\) distintos \(vistas en 3 compañía\(s\)\) y 457 no se leen nunca/)
+})
+
+test('sin saber de cuántas compañías sale, se DICE en vez de callarlo', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    cobertura: { rutas: 10, rutasNuncaLeidas: 4, entidadesObservadas: null, porTipo: [] },
+  })
+  assert.match(s.motivos.join(' · '), /no consta de cuántas compañías/)
+})
+
+// ── Firma anti-repetición: el cron parado tiene que CAMBIARLA (23/09/2026) ───
+// El detalle decía «El cron de CIMA lleva 37 h sin completar» y el Telegram no
+// sonó: la ingesta YA estaba degradada por otra causa (Mapfre muda), así que el
+// estado no cambió, y la firma no incluía el cron. Los casos de abajo parten de
+// una ingesta ya degradada a propósito: con una sana, el cron mudo cambiaría el
+// estado y el test pasaría por el motivo equivocado (medido: pasaba igual con
+// el tramo del cron quitado de la firma).
+
+const degradada = (ultimoPull: { horas: number; procesados: number | null } | null) =>
+  saludIngesta({ cuarentena: [f('SIN', 'C0468', 2)], ultimoPull })
+
+test('firma: con la ingesta ya degradada, el cron que se para cambia la firma → suena', () => {
+  const corre = degradada({ horas: 3, procesados: 2 })
+  const mudo = degradada({ horas: 37, procesados: 0 })
+  assert.equal(corre.estado, mudo.estado) // el estado NO lo delata: solo la firma puede
+  assert.notEqual(firmaAvisoIngesta(corre), firmaAvisoIngesta(mudo))
+  const d = decidirAvisoIngesta({
+    firmaAnterior: firmaAvisoIngesta(corre),
+    firmaActual: firmaAvisoIngesta(mudo),
+    ultimoAvisoEn: new Date('2026-09-22T06:45:00Z'),
+    hoy: new Date('2026-09-23T06:45:00Z'),
+  })
+  assert.equal(d.avisar, true)
+})
+
+test('firma: «no consta ninguna corrida» y «el cron corre» no dan la misma firma', () => {
+  assert.notEqual(
+    firmaAvisoIngesta(degradada(null)),
+    firmaAvisoIngesta(degradada({ horas: 3, procesados: 2 })),
+  )
+})
+
+test('firma: una firma guardada en el formato viejo (sin el cron) no hace sonar un «cambio» falso', () => {
+  const hoy = firmaAvisoIngesta(degradada({ horas: 3, procesados: 2 }))
+  const vieja = hoy.slice(0, hoy.lastIndexOf(':')) // lo que había en el latido antes del despliegue
+  assert.equal(normalizarFirmaIngesta(vieja), hoy)
+  const d = decidirAvisoIngesta({
+    firmaAnterior: normalizarFirmaIngesta(vieja),
+    firmaActual: hoy,
+    ultimoAvisoEn: new Date('2026-09-22T06:45:00Z'),
+    hoy: new Date('2026-09-23T06:45:00Z'),
+  })
+  assert.equal(d.avisar, false)
+  // Pero si hoy el cron está parado, la firma vieja (que decía «corre») sí suena.
+  const mudo = firmaAvisoIngesta(degradada({ horas: 37, procesados: 0 }))
+  assert.notEqual(normalizarFirmaIngesta(vieja), mudo)
+  assert.equal(normalizarFirmaIngesta(null), null)
+})
+
+test('firma: mismo estado dos días seguidos → misma firma (no repite el aviso)', () => {
+  assert.equal(
+    firmaAvisoIngesta(degradada({ horas: 30, procesados: 0 })),
+    firmaAvisoIngesta(degradada({ horas: 54, procesados: 0 })),
+  )
+})
+
+// ── Respaldo del pull de CIMA desde plataforma (23/09/2026) ─────────────────
+
+test('respaldo: el pull de Actions no ha corrido (37 h) → dispara', () => {
+  assert.deepEqual(decidirRespaldoPull({ horas: 37, procesados: 0 }), { disparar: true, horas: 37 })
+})
+
+test('respaldo: el pull de las 05:30 ya completó (1,5 h) → NO dispara, se pisarían en TIREA', () => {
+  const d = decidirRespaldoPull({ horas: 1.5, procesados: 3 })
+  assert.equal(d.disparar, false)
+})
+
+test('respaldo: justo en el umbral no dispara; por encima, sí', () => {
+  assert.equal(decidirRespaldoPull({ horas: HORAS_RESPALDO_PULL, procesados: 0 }).disparar, false)
+  assert.equal(decidirRespaldoPull({ horas: HORAS_RESPALDO_PULL + 0.1, procesados: 0 }).disparar, true)
+})
+
+test('respaldo: sin dato del último pull NO dispara (no sé ≠ está parado)', () => {
+  assert.deepEqual(decidirRespaldoPull(null), { disparar: false, motivo: 'sin_dato', horas: null })
+  assert.deepEqual(decidirRespaldoPull(undefined), { disparar: false, motivo: 'sin_dato', horas: null })
+  assert.deepEqual(decidirRespaldoPull({ horas: Number.NaN, procesados: null }), { disparar: false, motivo: 'sin_dato', horas: null })
 })

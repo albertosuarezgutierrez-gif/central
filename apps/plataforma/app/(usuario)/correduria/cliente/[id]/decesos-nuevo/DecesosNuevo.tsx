@@ -70,7 +70,6 @@ export default function DecesosNuevo({
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
   const faltaCivil = !estadoCivilId
-  const faltaCapital = !capital.trim() || !(Number(capital) > 0)
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
@@ -80,14 +79,14 @@ export default function DecesosNuevo({
 
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
-  const faltaAlgo = faltaCivil || faltaCapital || aManoSinRellenar.length > 0
+  const faltaAlgo = faltaCivil || aManoSinRellenar.length > 0
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
     const r = await pedirCotizacionDecesos({
       clienteId,
-      resueltos: { estadoCivilId, capital: Number(capital) },
+      resueltos: { estadoCivilId, ...(Number(capital) > 0 ? { capital: Number(capital) } : {}) },
       correcciones,
     })
     switch (r.estado) {
@@ -137,9 +136,9 @@ export default function DecesosNuevo({
       )}
 
       <div style={cardStyle}>
-        <CardHeader title="1 · El capital" sub="La prestación garantizada. Lo teclea el corredor: no se supone. Hoy solo cubre al tomador, sin resto de la familia." />
+        <CardHeader title="1 · El capital" sub="La API de decesos no tiene campo de capital: la compañía cotiza su prestación estándar. Hoy solo cubre al tomador, sin resto de la familia." />
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
-          <Campo etiqueta="Capital / prestación (€)" falta={faltaCapital}>
+          <Campo etiqueta="Prestación de referencia (€)" falta={false} ayuda="Opcional. Nota para el corredor: NO viaja al vendor (la API no tiene ese campo).">
             <input type="number" min={0} step={500} value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="3000" style={input} />
           </Campo>
         </div>

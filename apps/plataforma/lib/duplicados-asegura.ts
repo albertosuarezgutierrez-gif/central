@@ -19,6 +19,7 @@
 // comprobar, con el motivo.
 
 import type { GrupoDuplicado } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type RespuestaDuplicados =
   | { estado: 'ok'; grupos: GrupoDuplicado[] }
@@ -120,7 +121,7 @@ export async function duplicadosAsegura(): Promise<Reenvio> {
   if (!secret) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/duplicados`, {
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     })

@@ -6,6 +6,7 @@ import {
   respuestaRetarificacion,
   type CuerpoRetarificacion,
 } from '@/lib/retarificar-cartera'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,7 +53,7 @@ export const maxDuration = 180
  *    no una cotización.
  *
  * ── Cuerpo ──────────────────────────────────────────────────────────────────
- *   { polizaId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, catastro? }
+ *   { polizaId, confirmado: true, solicitadoPor?, resueltos?, correcciones?, catastro?, referencia? }
  *
  * ── Respuesta ───────────────────────────────────────────────────────────────
  * **La MISMA** que `POST /api/cartera/polizas/{id}/retarificar`, campo por
@@ -61,7 +62,7 @@ export const maxDuration = 180
  * dos funciones del lib compartido. La única diferencia con su gemela es quién
  * autoriza y de dónde sale `solicitadoPor`.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -114,6 +115,7 @@ export async function POST(req: Request) {
       resueltos: esObjeto(cuerpo.resueltos) ? cuerpo.resueltos : undefined,
       correcciones,
       catastro: esObjeto(cuerpo.catastro) ? cuerpo.catastro : null,
+      referencia: typeof cuerpo.referencia === 'string' ? cuerpo.referencia : undefined,
       // El escape hatch del guardián de reutilización. Solo el booleano exacto:
       // plataforma lo manda únicamente tras «Descartar y pedir precio de cero».
       // Hasta el 12/09/2026 esta ruta lo tiraba y el guardián era infranqueable
@@ -132,7 +134,7 @@ export async function POST(req: Request) {
 
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })
-}
+})
 
 function esObjeto(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)

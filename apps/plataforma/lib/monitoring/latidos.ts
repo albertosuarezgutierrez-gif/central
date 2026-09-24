@@ -282,6 +282,34 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'Huella: agente_latidos.correduria_ingesta.',
   },
   {
+    id: 'correduria_actividad',
+    vigiladoDesde: '2026-09-23',
+    etiqueta: '👤 Actividad de clientes en el portal — aviso por Telegram (cron cada 5 min)',
+    // Cada 5 min → 1 h de margen: doce pasadas perdidas seguidas ya no es un tropiezo.
+    maxHoras: 1,
+    nota:
+      'Empuja a Telegram lo que hace un cliente en su intranet (entrar, no poder entrar, cambiar su ' +
+      'dirección, dar un parte, pedir la supresión). Lee el `detalle`: «NO se ha podido mirar» (puerto, ' +
+      'secreto o BD de asegura) NO quiere decir que nadie haya hecho nada; «primera pasada» es que se ' +
+      'ancló la marca sin mandar el histórico; «nada nuevo (comprobado)» sí es que se miró y no hay; ' +
+      '«SIN avisar» es que el Telegram no salió y se reintenta (la marca NO avanza). ' +
+      'Huella: agente_latidos.correduria_actividad.',
+  },
+  {
+    id: 'correduria_eventos',
+    vigiladoDesde: '2026-09-23',
+    etiqueta: '📉 Detector de cambios de la cartera — pérdidas por Telegram (06:15 y 12:15 UTC)',
+    // Dos pasadas al día → 14 h de margen: una pasada perdida es un tropiezo; dos, un cron muerto.
+    maxHoras: 14,
+    nota:
+      'Compara la foto de la cartera viva con la anterior y guarda los eventos (baja, anula al ' +
+      'vencimiento, renovación, recibo devuelto, siniestro nuevo…) en seguros.evento. Solo avisa de las ' +
+      'PÉRDIDAS sin sustitución. «NO se ha podido mirar» (puerto, secreto o BD de asegura) NO quiere decir ' +
+      'que no haya cambios; «primera pasada» es que se ancló la foto sin emitir nada; «SIN avisar» es que ' +
+      'el Telegram no salió (los eventos ya están guardados y se ven en «Hoy»). ' +
+      'Huella: agente_latidos.correduria_eventos.',
+  },
+  {
     id: 'correduria_siniestros',
     vigiladoDesde: '2026-09-05',
     etiqueta: '🚨 Siniestros nuevos de la cartera — avisar para llamar al cliente (cron diario 06:50)',
@@ -301,6 +329,56 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'la ingesta de CIMA está atascada (21 ficheros SIN, 18 de Occident). Eso lo vigila ' +
       '`correduria_ingesta`, no este: aquí un «ninguno» prolongado es el SÍNTOMA, no la avería. ' +
       'Huella: agente_latidos.correduria_siniestros.',
+  },
+  // 🚨 Los tres de aquí abajo se añadieron el 20/09/2026 tras una auditoría que midió el hueco:
+  // `correduria_partes` y `correduria_recaptacion_email_lote` YA escribían su latido desde hacía
+  // semanas —está en `agente_latidos`, fresco— pero NO estaban en esta lista, así que nadie lo
+  // leía. Un latido que se escribe y no se vigila es indistinguible desde fuera de un cron que
+  // funciona: es el mismo «medía lo que no era» del vigía de la ingesta, una capa más arriba.
+  // `cima_liq` ni siquiera lo escribía; se le añadió en el mismo PR.
+  {
+    id: 'correduria_partes',
+    vigiladoDesde: '2026-09-20',
+    etiqueta: '📄 Partes de siniestro del portal — plazo del art. 16 LCS (cron diario 06:55)',
+    // Diario → 30 h, el mismo criterio que sus tres hermanos de la correduría.
+    maxHoras: 30,
+    nota:
+      'Nadie está vigilando los partes que el CLIENTE abre desde el portal. El art. 16 LCS da 7 ' +
+      'días para comunicar el siniestro a la compañía, y el corte de este vigía es ' +
+      '`abierto_en_compania`, no «leído»: un parte que Alberto ha visto pero no ha trasladado ' +
+      'sigue contando. Cada día caído es un plazo corriendo sin que nadie lo mire. Lee el ' +
+      '`detalle`: «sin lectura» es que no se pudo preguntar al puerto de asegura (secreto o BD) ' +
+      'y NO quiere decir que no haya partes pendientes. Huella: agente_latidos.correduria_partes.',
+  },
+  {
+    id: 'correduria_recaptacion_email_lote',
+    vigiladoDesde: '2026-09-20',
+    etiqueta: '✉️ Lote diario de recaptación de leads (cron diario 07:00)',
+    // Diario → 30 h. Ojo: este cron manda correo a TERCEROS, así que su silencio se puede leer
+    // en las dos direcciones y las dos importan — ni deja de mandar sin avisar, ni manda sin que
+    // conste. El latido es lo único que distingue «hoy no tocaba a nadie» de «lleva un mes roto».
+    maxHoras: 30,
+    nota:
+      'El lote de recaptación no ha completado una pasada buena. Lee el `detalle`: «puerto sin ' +
+      'configurar» es que falta ASEGURA_OPERADOR_SECRET; «no se pudo enviar el lote» trae el ' +
+      'motivo de Resend o del puerto. Un lote de 0 envíos con ok NO es un fallo: es que hoy ' +
+      'ningún lead cumplía el filtro (sin teléfono, sin opt-out, fuera del cooldown de 14 días). ' +
+      'Huella: agente_latidos.correduria_recaptacion_email_lote.',
+  },
+  {
+    id: 'cima_liq',
+    vigiladoDesde: '2026-09-20',
+    etiqueta: '💶 Libro de comisiones de la correduría (cron diario 07:30)',
+    // Diario → 30 h.
+    maxHoras: 30,
+    nota:
+      'El libro de comisiones no ha cuadrado hoy. Es el cron que compara DEVENGADO (recibos ' +
+      'cobrados) contra LIQUIDADO (extracto de la compañía) contra COBRADO (BBVA), o sea el que ' +
+      'dice si hay dinero que reclamar. Solo hablaba cuando encontraba un descuadre, así que un ' +
+      'año limpio y un cron muerto eran el mismo silencio. Lee el `detalle`: «puerto sin ' +
+      'configurar» y «no se pudo leer la cartera» son los dos «no se ha podido mirar», que NO ' +
+      'significan que cuadre; una pasada buena dice cuántos periodos se cuadraron y cuántos ' +
+      'quedan sin fuente. Huella: agente_latidos.cima_liq.',
   },
   {
     id: 'ses_transporte',
@@ -425,6 +503,32 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       '⚠️ «sin TELEGRAM_BOT_TOKEN» significa que el agente está DELIBERADAMENTE en espera (no hay ' +
       'forma de proponer por Telegram): revisa si es esperado antes de tratarlo como avería. ' +
       'Huella: agente_latidos.sivra_mensajes_huesped.',
+  },
+  {
+    id: 'sivra_limpiadoras_auto',
+    vigiladoDesde: '2026-09-15',
+    etiqueta: '🧹 Calendario de limpiezas de sivra (Smoobu, cron diario 05:00)',
+    // Diario → 30 h, el umbral estándar de los diarios: tolera un día saltado y caza dos.
+    maxHoras: 30,
+    nota:
+      '🚨 Igual que `smoobu_sync` y `sivra_mensajes_huesped`, pero un piso más abajo: este cron ' +
+      'llama a Smoobu directo (no pasa por `smoobu-sync.ts`) para crear las filas de ' +
+      '`cleaning_sessions` — el calendario que ve Vanesa. Hasta el 15/09/2026 no tenía NINGÚN ' +
+      'vigilante: un fallo de Smoobu en /api/reservations dejaba el día sin sesiones creadas y ' +
+      'nadie se enteraba hasta que Vanesa llegaba a un piso sin tarea. Lee el `detalle`: un error ' +
+      'con «401/403» es la credencial de Smoobu; «Smoobu departures <status>» es el propio endpoint. ' +
+      'Huella: agente_latidos.sivra_limpiadoras_auto.',
+  },
+  {
+    id: 'sivra_limpiadoras_alerta_ventana',
+    vigiladoDesde: '2026-09-15',
+    etiqueta: '⏱️ Aviso de ventana de limpieza ajustada (Smoobu, cron diario 08:00)',
+    maxHoras: 30,
+    nota:
+      '🚨 Hasta el 15/09/2026 esta ruta ni siquiera comprobaba `res.ok`: un 401 de Smoobu dejaba ' +
+      '`bookings` vacío por el valor por defecto de la desestructuración, y la ruta respondía ' +
+      '`{ok:true, alertas:[]}` — un fallo del canal disfrazado de «no hay ventanas ajustadas». ' +
+      'Huella: agente_latidos.sivra_limpiadoras_alerta_ventana.',
   },
   {
     id: 'ialimp_pms',
@@ -687,6 +791,19 @@ export const AGENTES_VIGILADOS: AgenteVigilado[] = [
       'El paper-tracker (evolución de las cohortes de paper trading) no ha corrido esta semana. ' +
       'Revisa el cron `/api/cron/paper-tracker` (`0 10 * * 1`) en Vercel. ' +
       'Huella: agente_latidos.paper-tracker.',
+  },
+  {
+    id: 'ia_saldo',
+    vigiladoDesde: '2026-09-23',
+    etiqueta: '💳 Saldo de OpenRouter y tope mensual de IA (diario 06:10)',
+    // Diario → 30 h, el estándar de los diarios: tolera un día saltado.
+    maxHoras: 30,
+    nota:
+      'Nadie está mirando el saldo de OpenRouter ni el tope mensual por app: si se agota, la ' +
+      'pasarela cae a la cadena gratis sin avisar antes. Mira los logs de /api/cron/ia-saldo; si ' +
+      'el detalle dice «OpenRouter /credits HTTP 401», la OPENROUTER_API_KEY de plataforma; si trae ' +
+      'una excepción sobre `ia_saldo_diario`, que la migración 2026-09-23 esté aplicada. ' +
+      'Huella: agente_latidos.ia_saldo.',
   },
   {
     id: 'sivra_prevision',

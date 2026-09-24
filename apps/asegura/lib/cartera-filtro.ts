@@ -10,9 +10,17 @@
  * - **Las lápidas de fusión se excluyen SIEMPRE** (`merged_into_*_id is null`).
  *   Sin eso un cliente fusionado sale dos veces y el recuento miente.
  * - **La definición de cartera viva NO se escribe aquí.** Sale de
- *   `sqlCarteraViva`/`sqlVolcadoHistorico` de `@central/module-seguros`, que es
- *   la única fuente de esa verdad (y que ya tapa el agujero de las pólizas del
- *   volcado que CIMA mantiene al día).
+ *   `sqlCarteraEnVigor`/`sqlCarteraNoEnVigor` de `@central/module-seguros`, que
+ *   es la única fuente de esa verdad (y que ya tapa el agujero de las pólizas
+ *   del volcado que CIMA mantiene al día).
+ *   🚨 **EN VIGOR, no solo «viva» (19/09/2026).** Hasta ese día el grupo se
+ *   derivaba de `sqlCarteraViva` (origen CIMA), que incluye las canceladas: 47
+ *   de las 157 pólizas vivas lo estaban, y 28 clientes que solo tenían pólizas
+ *   canceladas salían en «Cartera viva» — Kartenbrot con «1 póliza en vigor…
+ *   Cancelada», y Víctor De la Fuente con «6 póliza(s) viva(s)» teniendo 4.
+ *   Alberto: «si es cancelada es leads». El grupo `leads` es el complementario
+ *   exacto (volcado histórico + canceladas/no vigentes de CIMA), y las pólizas
+ *   que se pintan bajo cada cliente son las de SU grupo.
  * - **El GRUPO se deriva, no se lee.** `clientes.tipo` dice 2.742 «cliente» y
  *   29.860 «lead» cuando la cartera viva son 80 clientes: es un campo del
  *   volcado que nadie mantiene. Aquí «viva» = el cliente tiene al menos una
@@ -28,9 +36,10 @@
  */
 
 import {
-  sqlCarteraViva,
-  sqlVolcadoHistorico,
+  sqlCarteraEnVigor,
+  sqlCarteraNoEnVigor,
   diasDeVentana,
+  DIAS_ANUALIDAD,
   type FiltroCartera,
   type GrupoCartera,
   type VentanaVencimiento,
@@ -102,7 +111,16 @@ export type RangoVencimiento =
    *  informado (1.194 medidas el 31/08). Poder pedirlas es lo que las hace
    *  reclamables, así que es un modo de primera y no un residuo. */
   | { modo: 'sin_fecha' }
-  | { modo: 'vencidas'; antesDe: string }
+  /**
+   * `desde` es el suelo de la anualidad (`DIAS_ANUALIDAD`, `vencimientos.ts`),
+   * el MISMO que ya aplica `Renovaciones.tsx` desde el 20/09/2026: una póliza
+   * vencida hace más de un año no es trabajo de renovación, es dato abandonado
+   * (medido esa fecha: Allianz con vencimientos de 2013-2019, hasta 4.985 días
+   * vencidos, seguía marcada `estado='activa'` y salía en «Ya vencidas» sin
+   * ningún suelo). Sin esta ventana, este listado y el de Renovaciones
+   * mostraban dos «vencidas» distintas para la misma cartera.
+   */
+  | { modo: 'vencidas'; desde: string; antesDe: string }
   | { modo: 'entre'; desde: string; hasta: string }
 
 function iso(d: Date): string {
@@ -126,7 +144,11 @@ export function hoyUtc(ahora: Date = new Date()): Date {
 export function rangoVentana(v: VentanaVencimiento, ahora: Date = new Date()): RangoVencimiento {
   if (v === 'sin_fecha') return { modo: 'sin_fecha' }
   const hoy = hoyUtc(ahora)
-  if (v === 'vencidas') return { modo: 'vencidas', antesDe: iso(hoy) }
+  if (v === 'vencidas') {
+    const desde = new Date(hoy)
+    desde.setUTCDate(desde.getUTCDate() - DIAS_ANUALIDAD)
+    return { modo: 'vencidas', desde: iso(desde), antesDe: iso(hoy) }
+  }
   if (v === 'anio') {
     const a = hoy.getUTCFullYear()
     return { modo: 'entre', desde: `${a}-01-01`, hasta: `${a}-12-31` }
@@ -143,10 +165,10 @@ export function rangoVentana(v: VentanaVencimiento, ahora: Date = new Date()): R
 /** `p` es el alias de `polizas`. La cadena es constante y no lleva nada del
  *  usuario: `Prisma.raw` aquí no abre ninguna puerta. */
 function condGrupoPoliza(grupo: GrupoCartera): Prisma.Sql {
-  return Prisma.raw(grupo === 'viva' ? sqlCarteraViva('p') : sqlVolcadoHistorico('p'))
+  return Prisma.raw(grupo === 'viva' ? sqlCarteraEnVigor('p') : sqlCarteraNoEnVigor('p'))
 }
 
-const CARTERA_VIVA_P = Prisma.raw(sqlCarteraViva('p'))
+const CARTERA_VIVA_P = Prisma.raw(sqlCarteraEnVigor('p'))
 
 /** Lista de literales como `in (…)`, cada valor PARAMETRIZADO. `compania` y
  *  `provincia` son texto libre del usuario y nunca se interpolan. */
@@ -170,9 +192,9 @@ const TIENE_TELEFONO = Prisma.sql`(
   or exists (select 1 from cliente_telefonos t where t.cliente_id = c.id and nullif(btrim(t.telefono), '') is not null)
 )`
 
-/** El recuento de pólizas VIVAS del cliente y sus ramos. Es lo que deriva el
+/** El recuento de pólizas EN VIGOR del cliente y sus ramos. Es lo que deriva el
  *  grupo (`> 0` = cartera viva, `= 0` = lead) y de paso llena las dos columnas
- *  del listado, sin una segunda pasada. */
+ *  del listado, sin una segunda pasada. Una cancelada de CIMA no cuenta. */
 const LATERAL_VIVAS = Prisma.sql`
   join lateral (
     select
@@ -188,7 +210,8 @@ const LATERAL_VIVAS = Prisma.sql`
 function condVencimiento(r: RangoVencimiento): Prisma.Sql {
   if (r.modo === 'sin_fecha') return Prisma.sql`p.fecha_vencimiento is null`
   if (r.modo === 'vencidas') {
-    return Prisma.sql`p.fecha_vencimiento is not null and p.fecha_vencimiento < ${r.antesDe}::date`
+    return Prisma.sql`p.fecha_vencimiento is not null
+      and p.fecha_vencimiento >= ${r.desde}::date and p.fecha_vencimiento < ${r.antesDe}::date`
   }
   return Prisma.sql`p.fecha_vencimiento is not null
     and p.fecha_vencimiento >= ${r.desde}::date and p.fecha_vencimiento <= ${r.hasta}::date`

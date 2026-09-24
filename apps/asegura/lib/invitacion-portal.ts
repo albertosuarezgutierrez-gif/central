@@ -50,7 +50,7 @@ import { computeEmailLookupHash } from '@central/module-seguros-pii'
 
 import { prismaAsegura } from './asegura-db'
 import { estadoEmailDeFicha } from './email-ficha'
-import { enlacePortal, enviarInvitacionPortal } from './correo-invitacion-portal'
+import { enlacePortal, enviarInvitacionPortal, MOTIVO_REMITENTE } from './correo-invitacion-portal'
 
 /**
  * Qué se puede hacer hoy con esta ficha respecto al portal. Son SIETE estados a
@@ -125,6 +125,7 @@ export type FalloInvitacion =
   | 'no_comprobado'
   | 'error_envio'
   | 'sin_correo_configurado'
+  | 'remitente_no_verificado'
 
 export type ResultadoInvitacion =
   | { ok: true; yaEntraba: boolean }
@@ -298,8 +299,15 @@ async function emailLegibleDe(correduriaId: string, clienteId: string): Promise<
   }
 }
 
+/**
+ * Cómo empieza la nota de `historial_interno` de una invitación (no de un
+ * reenvío). El envío por lotes la busca para no volver a escribir a quien ya se
+ * invitó hace poco: si cambia aquí, cambia allí, porque es la misma constante.
+ */
+export const PREFIJO_INVITACION_ANOTADA = 'Se le invitó por correo al portal'
+
 /** El nombre de la ficha, para el saludo. `null` = no hay uno legible. */
-async function nombreDe(correduriaId: string, clienteId: string): Promise<string | null> {
+export async function nombreDe(correduriaId: string, clienteId: string): Promise<string | null> {
   const c = await prismaAsegura().cliente.findFirst({
     where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
     select: { nombre: true, apellidos: true },
@@ -400,6 +408,9 @@ export async function invitarAlPortal(
       status: 503,
     }
   }
+  if (enviado === 'remitente_no_verificado') {
+    return { ok: false, estado: 'remitente_no_verificado', motivo: MOTIVO_REMITENTE, status: 503 }
+  }
   if (enviado === 'rechazado') {
     return {
       ok: false,
@@ -414,7 +425,7 @@ export async function invitarAlPortal(
     entrada.clienteId,
     yaEntraba
       ? `Se le reenvió por correo el enlace del portal (${entrada.actor}).`
-      : `Se le invitó por correo al portal del cliente (${entrada.actor}).`,
+      : `${PREFIJO_INVITACION_ANOTADA} del cliente (${entrada.actor}).`,
   )
   return { ok: true, yaEntraba }
 }

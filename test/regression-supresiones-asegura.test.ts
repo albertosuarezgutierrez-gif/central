@@ -139,8 +139,25 @@ test('el actor lo pone el SERVIDOR y va el último', () => {
   // Un cuerpo con su propio `actor` no puede firmar la respuesta con otro nombre.
   const src = leer(RUTA)
   assert.match(src, /\{ \.\.\.body, actor: session\.email \}/)
-  assert.match(src, /getSession\(\)/)
-  assert.match(src, /status: 401/)
+
+  // 🪤 20/09/2026: esto exigía literalmente `getSession()` y `status: 401`, o sea
+  // el MECANISMO y no la regla. Al cerrar el acceso a `/api/correduria/*` (la
+  // guarda pasó a `exigirCorreduria()`, que además distingue 401 «sin sesión» de
+  // 403 «no es de la correduría»), el cepo se puso rojo sobre un cambio que
+  // ENDURECÍA justo lo que él vigila. Un cepo atado a la implementación castiga
+  // la mejora y no protege nada: lo que no puede pasar es que la ruta escriba sin
+  // acreditar a nadie, así que eso es lo que se exige — una guarda que pueda
+  // DENEGAR, sea cual sea.
+  assert.match(
+    src,
+    /exigirCorreduria\(\)|getSession\(\)/,
+    'la ruta escribe una respuesta del art. 17 RGPD sin ninguna guarda de sesión',
+  )
+  assert.match(
+    src,
+    /guarda\.respuesta|status: 401/,
+    'la guarda no corta: comprobar el acceso y seguir igual es no comprobarlo',
+  )
 })
 
 test('la ruta reenvía al puerto de asegura; plataforma no toca la BD de la correduría', () => {

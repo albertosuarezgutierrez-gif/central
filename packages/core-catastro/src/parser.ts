@@ -33,6 +33,23 @@ export interface DatosCatastro {
   provincia: string | null
   municipio: string | null
   codigoPostal: string | null
+  /**
+   * Las unidades constructivas del inmueble (`<lcons><cons>`): vivienda,
+   * elementos comunes, aparcamiento, almacén… cada una con su planta y m².
+   * Vacío = el Catastro no las publica para esta finca, no «no tiene».
+   */
+  construcciones?: ConstruccionCatastro[]
+}
+
+/** Una unidad constructiva de `<lcons>`. */
+export interface ConstruccionCatastro {
+  /** `VIVIENDA`, `ELEMENTOS COMUNES`, `APARCAMIENTO`, `ALMACEN`… tal cual. */
+  uso: string | null
+  escalera: string | null
+  /** Tal cual el Catastro: `00`, `01`, `-1`, `OD`… */
+  planta: string | null
+  puerta: string | null
+  superficie: number | null
 }
 
 function etiqueta(xml: string, tag: string): string | null {
@@ -72,6 +89,15 @@ export function parsearCatastro(xml: string): DatosCatastro {
     provincia: etiqueta(b, 'np'),
     municipio: etiqueta(b, 'nm'),
     codigoPostal: etiqueta(b, 'dp'),
+    construcciones: [...(b.match(/<lcons>[\s\S]*?<\/lcons>/i)?.[0] ?? '').matchAll(/<cons>([\s\S]*?)<\/cons>/gi)].map(
+      ([, c]) => ({
+        uso: etiqueta(c, 'lcd'),
+        escalera: etiqueta(c, 'es'),
+        planta: etiqueta(c, 'pt'),
+        puerta: etiqueta(c, 'pu'),
+        superficie: numero(c, 'stl'),
+      }),
+    ),
   }
 }
 
@@ -79,7 +105,56 @@ function vacio(): DatosCatastro {
   return {
     direccion: null, superficie: null, anioConstruccion: null, uso: null,
     cuotaParticipacion: null, clase: null, provincia: null, municipio: null,
-    codigoPostal: null,
+    codigoPostal: null, construcciones: [],
+  }
+}
+
+/** Lo que el Catastro dice de la VIVIENDA, leído de sus unidades constructivas. */
+export interface ViviendaCatastro {
+  /**
+   * `piso` = propiedad horizontal (hay elementos comunes, cuota < 100 %, o la
+   * vivienda está en una sola planta que no es la baja). `unifamiliar` = la
+   * finca entera es la vivienda (cuota 100 % o sin cuota, sin elementos
+   * comunes). `null` = no se puede decir: NO se supone.
+   */
+  tipo: 'piso' | 'unifamiliar' | null
+  /** Planta del piso como número (`00` → 0). `null` en unifamiliar o si no es numérica. */
+  planta: number | null
+  /** m² de la vivienda propiamente dicha (sin elementos comunes ni anexos). */
+  superficieVivienda: number | null
+  /** Otros usos del mismo inmueble (aparcamiento, almacén…). */
+  anexos: string[]
+}
+
+export function caracterizarVivienda(d: DatosCatastro): ViviendaCatastro | null {
+  const construcciones = d.construcciones ?? []
+  const viviendas = construcciones.filter((c) => /VIVIENDA/i.test(c.uso ?? ''))
+  if (viviendas.length === 0) return null
+  const comunes = construcciones.some((c) => /COMUN/i.test(c.uso ?? ''))
+  const plantas = [...new Set(viviendas.map((c) => c.planta ?? ''))]
+  const plantaNum = plantas.length === 1 && /^-?\d+$/.test(plantas[0]) ? Number(plantas[0]) : null
+  // `cuotaParticipacion` ya viene a null cuando es el 100 % (finca entera).
+  const tipo: ViviendaCatastro['tipo'] =
+    comunes || d.cuotaParticipacion !== null
+      ? 'piso'
+      : plantas.length > 1
+        ? 'unifamiliar'
+        : plantaNum !== null && plantaNum > 0
+          ? 'piso'
+          : null
+  const sup = viviendas.reduce((s, c) => s + (c.superficie ?? 0), 0)
+  const anexos = [
+    ...new Set(
+      construcciones
+        .map((c) => c.uso ?? '')
+        .filter((u) => u !== '' && !/VIVIENDA|COMUN/i.test(u)),
+    ),
+  ]
+  return {
+    tipo,
+    planta: tipo === 'piso' ? plantaNum : null,
+    superficieVivienda: sup > 0 ? sup : null,
+    anexos,
   }
 }
 
@@ -330,19 +405,33 @@ export function parsearVias(xml: string): Array<{ tipo: string; nombre: string }
  * es peor que no ubicar.
  */
 export function elegirVia(vias: Array<{ tipo: string; nombre: string }>, buscada: string): string | null {
+  return elegirViaConTipo(vias, buscada)?.nombre ?? null
+}
+
+/**
+ * Igual que `elegirVia()`, pero conserva el `tipo` (`tv`) de la vía ganadora —
+ * el código de tipo de vía OFICIAL del callejero («CL», «AV»…). `elegirVia()`
+ * lo tira porque hasta ahora nadie lo necesitaba (la dirección venía con su
+ * tipo ya puesto); `resolverTipoViaPorNombre()` sí, para el caso en que la
+ * ficha NO trae tipo de vía reconocible y hay que preguntárselo al callejero.
+ */
+export function elegirViaConTipo(
+  vias: Array<{ tipo: string; nombre: string }>,
+  buscada: string,
+): { tipo: string; nombre: string } | null {
   if (!vias.length) return null
   const objetivo = tokensVia(buscada)
-  if (!objetivo.length) return vias.length === 1 ? vias[0].nombre : null
+  if (!objetivo.length) return vias.length === 1 ? vias[0] : null
 
   const candidatas = vias
-    .map((v) => ({ nombre: v.nombre, tokens: tokensVia(v.nombre) }))
+    .map((v) => ({ tipo: v.tipo, nombre: v.nombre, tokens: tokensVia(v.nombre) }))
     .filter((v) => objetivo.every((t) => v.tokens.includes(t)))
   if (!candidatas.length) return null
 
   candidatas.sort((a, b) => a.tokens.length - b.tokens.length)
   // Dos candidatas igual de ajustadas = ambigüedad real, no se elige a dedo.
   if (candidatas.length > 1 && candidatas[0].tokens.length === candidatas[1].tokens.length) return null
-  return candidatas[0].nombre
+  return { tipo: candidatas[0].tipo, nombre: candidatas[0].nombre }
 }
 
 /**

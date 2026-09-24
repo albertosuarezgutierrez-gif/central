@@ -3,8 +3,8 @@
 export {
   parsearCatastro, errorCatastro, superficieUtil, parsearCoordenadas,
   refParcela, direccionCatastro, parsearInmueblesDnploc, parcelaUnica, paramsDnploc,
-  parsearVias, elegirVia, normVia, tokensVia, terminoBusquedaVia,
+  parsearVias, elegirVia, normVia, tokensVia, terminoBusquedaVia, caracterizarVivienda,
 } from './parser.ts'
-export type { DatosCatastro, CoordenadasCatastro, DireccionCatastro, InmuebleCatastro, ParamsDnploc } from './parser.ts'
+export type { DatosCatastro, ConstruccionCatastro, ViviendaCatastro, CoordenadasCatastro, DireccionCatastro, InmuebleCatastro, ParamsDnploc } from './parser.ts'
 export { precalificarHogar } from './hogar.ts'
 export type { DatosHogar, SupuestoHogar, ReparoHogar, PrecalificacionHogar } from './hogar.ts'

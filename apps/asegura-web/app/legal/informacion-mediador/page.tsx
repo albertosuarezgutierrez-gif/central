@@ -29,9 +29,9 @@ import {
 import { url } from '@/lib/sitio'
 
 export const metadata: Metadata = {
-  title: 'Información del mediador · Grupo ASegura',
+  title: 'Información del mediador',
   description:
-    'Información precontractual del mediador exigida por el artículo 19 de la Ley 16/2018 de Distribución de Seguros: identidad, registro DGSFP, independencia, remuneración y reclamaciones.',
+    'Información precontractual del mediador (art. 19 de la Ley 16/2018): identidad, registro DGSFP, independencia, remuneración y reclamaciones.',
   alternates: { canonical: url('/legal/informacion-mediador') },
   robots: { index: true, follow: true },
 }

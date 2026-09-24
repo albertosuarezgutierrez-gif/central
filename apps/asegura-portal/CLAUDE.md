@@ -160,8 +160,8 @@ Cada página abría su propio `<main style={{ maxWidth: 720 }}>` y pintaba la na
 a mano la sección activa. En un monitor de 1440 px eso dejaba **~720 px de márgenes vacíos**.
 Ahora el ancho y la navegación son del armazón y la página solo aporta contenido.
 
-- **`app/(portal)/NavPortal.tsx` es UN SOLO `<nav>` con dos formas**, no dos componentes: carril
-  horizontal en el móvil, lateral de **256 px** desde 1024 px. Lo decide `globals.css`. Dos árboles
+- **`app/(portal)/NavPortal.tsx` es UN SOLO `<nav>` con dos formas**, no dos componentes: **cajón
+  (drawer)** en el móvil, lateral de **256 px** desde 1024 px. Lo decide `globals.css`. Dos árboles
   distintos para la misma navegación es cómo se llega a que una sección exista en una pantalla y no
   en la otra sin que nada falle.
 - La activa se deriva de `usePathname()` + `useSearchParams()`, por eso el `layout` lo envuelve en
@@ -169,11 +169,40 @@ Ahora el ancho y la navegación son del armazón y la página solo aporta conten
 - 📌 **Conmuta a 1024 y no a 768, que es donde conmuta la de Manuel.** Con el lateral de 256 px, a
   768 el contenido se queda en ~500: media tablet gastada en cuatro enlaces. Su panel lo aguanta
   porque tiene nueve secciones y tablas de doce columnas.
-- 📱 **No hay hamburguesa en el móvil, a propósito.** Son cuatro secciones; un botón que las
-  esconde detrás de un toque las hace menos visibles que enseñarlas.
-- Medido con Playwright (320 / 768 / 1440): 1 → 2 → 3 columnas de tarjeta, `scrollWidth` igual al
-  viewport en los tres, y el ítem de navegación a 44 px en móvil. El carril de pestañas **se
-  desliza él**, la página no.
+
+#### 📱 La hamburguesa del móvil (19/09/2026) — y por qué se REVIERTE la decisión de no ponerla
+
+Hasta hoy aquí ponía, y en el comentario del propio componente: *«no hay hamburguesa en el móvil, a
+propósito. Son cuatro secciones; un botón que las esconde detrás de un toque las hace menos visibles
+que enseñarlas»*. **La decisión era correcta y su premisa ya no se cumple**: `pestanasPortal()`
+devuelve **siete** entradas (Seguros · Mi QR · Recibos · Siniestros · Recordatorios · Contactos ·
+Datos). Alberto, con la captura de su móvil, pidió el patrón de `apps/plataforma` (☰ + cajón).
+
+El propio historial del carril es el argumento: con cuatro pestañas desbordaba 48 px a 390 (y se
+repartió el ancho), con seis el reparto **superponía el texto de dos pestañas** (y se le puso un
+suelo de 76 px, por debajo del cual vuelve a deslizarse). Con siete no queda ajuste que valga: **una
+sección que solo encuentra quien arrastre por casualidad está más escondida que una detrás de un
+botón que se ve.** El ☰ lleva al lado el nombre de la sección activa, así que la pantalla sigue
+diciendo dónde estás con el cajón cerrado.
+
+- El ☰ mide **44×44** (es ahora la ÚNICA puerta a las secciones en el móvil), cierra al tocar fuera,
+  con **Escape** y con su aspa; el foco entra al cajón al abrirlo y vuelve al ☰ al cerrarlo.
+- 🚨 **El «abierto» se DERIVA de en qué pantalla se abrió** (`abiertoEn === ruta+parámetro`), no es un
+  booleano con un efecto que lo sincronice. Así cualquier navegación lo cierra sola — incluido el
+  **gesto de «atrás» de Android**, que no toca ninguno de los enlaces y dejaba el menú abierto encima
+  de la pantalla nueva.
+- 🚨 **Cerrado no basta con sacarlo de pantalla: lleva `visibility: hidden`.** Un cajón solo
+  desplazado deja sus siete enlaces enfocables con el teclado, y se tabula por un menú invisible.
+- ⚠️ **Lo que se pierde, dicho en voz alta: el carril era CSS puro y funcionaba sin JavaScript.** Por
+  eso `NavPortal` lleva un `<noscript>` que lo devuelve a su forma de carril — se ve peor con siete
+  pestañas, pero se ve. Un cajón que no se puede abrir es una pantalla sin salida.
+- Cepos en `test/regression-portal-cartera-agrupada.test.ts` (sustituyen a los dos del reparto de
+  ancho del carril, que vigilaban algo que ya no existe), con **cinco mutaciones vistas morder**.
+- ⏸️ **PENDIENTE y declarado: no está medido con Playwright.** El contenedor de esta sesión no puede
+  descargar el navegador (el proxy responde **403 a `playwright.azureedge.net`**), así que las
+  medidas a 320/360/1024 están **sin tomar**, no tomadas y bien. Lo que falta por comprobar delante
+  de un navegador: que el cajón no desborde a 320, que el ☰ mantenga sus 44 px y que a 1024 el
+  lateral siga idéntico (allí el ☰, su barra y el fondo van a `display:none`).
 
 🚨 **Los tokens y las medidas salen del FUENTE de la app de Manuel, no de una captura**: radio
 `1.4rem` en tarjetas, 24/600 el título de página, 18/600 el de sección, 16/500 el de tarjeta,
@@ -452,6 +481,67 @@ enteras; **a 320 seguían saliéndose 39 px**, así que por debajo de 380 se rep
 iguales (`flex: 1 1 0`), con los 44 px táctiles intactos. El `overflow-x` se queda como red por si
 algún día vuelve a haber una cuarta.
 
+### 📂 La bóveda nace PLEGADA, y el alta va arriba (19/09/2026)
+
+Alberto, mirando su portal como lo ve un cliente: *«cuando entra un cliente no ve bien los seguros
+autorizados»* · *«que al cargar la pantalla salga todo plegado por defecto»* · *«“Añade una póliza”
+lo primero que se ve arriba, no enterrado en medio»*.
+
+- **Un `GrupoPlegable` por bloque** (`app/(portal)/boveda/GrupoPlegable.tsx`), cerrado de salida:
+  «Tu cartera» primero y después **uno por TITULAR** —no uno por cajón— con su nombre visible con el
+  bloque cerrado («GLOBAL 2 INSTALACIONES TÉCNICAS») y **cuántos seguros esconde**
+  (`textoCuentaSeguros` de `@central/module-seguros-portal`, puro y con test). Sin la cifra, un
+  plegable obliga a abrirlo para saber si merecía la pena abrirlo; sin el nombre, esconde de quién
+  es la cartera de dentro.
+- 🚨 **La cifra cuenta TODAS las pólizas del bloque**, también las que el filtro de vigencia esconde
+  de salida. Contar solo las vigentes haría que «2 seguros» tapara una cancelada sin decirlo; el
+  filtro de dentro ya declara por su cuenta cuántas oculta, que es donde esa distinción significa
+  algo.
+- 🚨 **Un bloque sin lista que plegar nace ABIERTO** (no eres cliente, tu ficha no tiene pólizas
+  vivas, no hemos podido comprobarlo): plegar el mensaje que explica por qué no ves nada lo convierte
+  en una pantalla vacía sin motivo.
+- **Se usa `<details>` y no un botón con estado**: funciona sin JavaScript y el navegador ya lo
+  anuncia como plegable. El titular va dentro del `<summary>` como `<h2>` —lo único de encabezado que
+  el HTML admite ahí— para no perder la navegación por encabezados. ⚠️ El `<summary>` se maqueta con
+  `display: list-item` a propósito: con `flex` desaparece el marcador ▸, que es la única señal de que
+  aquello se abre, **y no falla nada**.
+- ⚠️ **Un `<details>` cerrado crea igualmente todo su DOM.** Se acepta aquí y está medido: la cartera
+  viva entera son 110 pólizas entre 80 titulares. El día que un bloque traiga cientos, esto pide
+  montaje perezoso de verdad, no un `<details>`.
+- **`SubirPoliza` sube al principio**, justo debajo de `AvisoContacto`. Vivía DENTRO de la sección de
+  la cartera y detrás de todas sus filas, así que en un móvil solo la encontraba quien bajase por
+  delante de sus pólizas — y es la acción que trae aquí a quien todavía no tiene ninguna. El aviso de
+  contacto se queda por encima a propósito: es lo único de la pantalla que pide una corrección con
+  fecha, y un aviso que se baja por debajo de una acción deja de ser un aviso.
+- **El bloque propio vuelve a tener titular** («Tu cartera»), después de que el 12/09 se le quitara
+  por repetir «Mis seguros» tres veces. No es una vuelta atrás: un plegable sin nombre es un
+  triángulo sin más, y por eso el título usa otra palabra que la del h1 y la de la pestaña.
+- **`conNombre` pasa a `false` en los bloques ajenos**: el nombre ya lo dice la cabecera del
+  plegable. Lo que NO cambia es el chip de titular de cada FILA, que dice algo distinto —que esa
+  póliza no es tuya— y viaja con ella.
+
+### 🧾 Y «Recibos» y «Siniestros» también nacen PLEGADAS (20/09/2026)
+
+Alberto, mirando «Mis recibos» en su móvil: *«que también salga plegado y siniestro también»*. Con el
+historial entero desplegado, una póliza con cinco recibos ocupaba la pantalla completa y la siguiente
+quedaba a un pantallazo de scroll: la pantalla enseñaba UN recibo en vez de decir qué pólizas hay y
+cómo van. Mismo gesto que la bóveda el 19/09, un piso más abajo — ahora el `<details>` es **cada
+póliza**, dentro de `VistaPorPoliza.tsx`.
+
+- 🚨 **La cabecera contesta sola la pregunta que trae aquí al cliente**, y por eso plegar no es
+  esconder: en «Recibos», lo próximo que se le cobra y lo último que se le cobró; en «Siniestros»,
+  cuántos hay y cuántos siguen sin cerrar. Sale de dos helpers puros (`lineaRecibos` /
+  `lineaSiniestros`, en `PolizaVista.tsx`) que comparten la FICHA de la póliza y la cabecera: con dos
+  copias, una diría una cosa y la otra otra sobre el mismo recibo. En la cabecera lo pinta el
+  `<summary>` y el cuerpo se calla (`sinResumen`); en la ficha, que no tiene cabecera, sigue el cuerpo.
+- 🚨 **`resumen(p) === null` nace ABIERTA**: es la póliza cuya compañía no ha informado recibos, y
+  dentro no hay lista sino la frase que explica que el silencio NO es «estás al corriente». Misma
+  regla que `GrupoPlegable`.
+- ⚠️ El `<summary>` va en `display: list-item` por lo mismo que el de la bóveda: con `flex`
+  desaparece el ▸ y no falla nada.
+- Cepo: `test/regression-portal-recibos-plegados.test.ts` (6, con **seis mutaciones vistas morder**).
+  Medido con Chromium a 320/360/390/1024: sin desbordes y cabecera ≥ 70 px.
+
 ### 🚪 La raíz `/` MIRA si ya hay sesión (05/09/2026) — y por qué no hay enlace mágico
 
 Alberto: *«cliente por codigo es un poco coñazo»* y, al preguntarle si le pedía el código cada vez o
@@ -572,6 +662,24 @@ Y las dos de siempre: las claves que empiezan por `_` (hay un `_avant` del volca
 nunca**, y los valores de cajón se anulan con la MISMA lista que el resto del paquete
 (`textoConDato`, exportada de `poliza-leida.ts` ese día para no tener dos listas). `null` = «la
 compañía no lo ha informado», y la pantalla **calla**: no pinta «Matrícula: —».
+
+🏠 **Y las hogar que SOLO han entrado por CIMA no tenían dirección en NINGUNA parte (19/09/2026),
+y esa frase se quedó desfasada un día después.** Hasta el 19/09 sin gemela del volcado,
+`datos_especificos` es `NULL` y la fila sale «Occident · Hogar» dos veces (las de Alberto). Medido
+ese día: **32 hogar solo-CIMA vivas, 2 con dirección**. Camino de reserva, sigue vivo: el corredor la
+anota desde `/correduria/poliza/[id]` de plataforma (`EditarDireccionRiesgo.tsx` → `PATCH
+/api/operador/poliza` con `campo: 'direccion_riesgo'` → `establecerDireccionRiesgo()` en asegura),
+con **las mismas claves y el mismo cifrado que el volcado** (`direccion` en sobre `v1:`, `cp`,
+`localidad`, más `direccionOrigen: 'manual'`), así que este portal la lee sin una rama nueva.
+
+🚨 **Corrección (20/09/2026): «CIMA no manda el riesgo de hogar» era FALSO — lo manda, y el mapper
+simplemente no lo leía.** `RiesgoHogar.SituacionRiesgo.{NombreVia,CodigoPostal,Poblacion,Provincia}`
+llega en el EIAC de Occident/Generali (visto en `cima_cobertura_campos`, veces_visto>0 desde antes)
+y el mapper empezó a leerlo esa misma mañana: tres pólizas de Occident recibieron su primera dirección
+con `direccionOrigen: 'cima'` a las 09:57 UTC. Ver la watchlist de `docs/ASEGURA-CIMA-COBERTURAS.md`
+(«Watchlist curada de campos importantes sin leer») — el equivalente para `RiesgoComercios` (ramo
+«comunidades») seguía sin leerse ese día. Mientras la cobertura del mapper no alcance a todo, la ficha
+propia de un inmueble lo DICE (`esRamoInmueble()`): callar ahí se leía como «no hay nada que ver».
 
 Cepos: `bien-asegurado.test.ts` (11, con dos mutaciones vistas morder: quitar la dirección del suelo
 de terceros → 1 fallo; colar la dirección por `cosa` → 3).
@@ -741,6 +849,18 @@ de lectura dejan de coincidir y el código bueno sale `sin_codigo`: un fallo **s
 excepción y sin log, del que solo se entera el cliente que no puede entrar. Por eso un destino con
 espacios alrededor se **rechaza**, no se limpia. Y un `600123456` sin `+` se rechaza en vez de
 suponerle `+34`: adivinar el país es inventarse un dato de la persona.
+
+🔐 **La columna `portal_codigo.codigo` guarda el HASH del código, no los 6 dígitos (20/09/2026).**
+Hasta la auditoría de la correduría ahí vivía el código en claro: cualquiera con lectura de esa tabla
+—o una copia de seguridad, o un volcado de soporte— podía entrar como cualquier cliente sin tocar su
+correo, que es exactamente lo que el «un solo uso por email» existe para impedir. Ahora se escribe
+`hashCodigo()` de `lib/auth.ts` (SHA-256 con la pimienta del canal) al emitirlo, y `/api/acceso/verificar`
+compara en **tiempo constante** contra `hashCodigo(entrada)`. **El nombre de la columna es histórico y
+NO se renombró a propósito**: renombrarla obliga a una migración coordinada con el emisor, y una
+columna que se llama `codigo` y guarda un hash se explica con un comentario en el schema (está puesto);
+una migración a medias deja a los clientes sin poder entrar. Una fila anterior al hasheado nunca
+casará —guarda 6 dígitos y se compara contra un SHA-256—, así que caduca sola por su ventana en vez de
+seguir siendo válida. Guardián: `test/regression-portal-codigo-hasheado.test.ts`.
 
 ⏳ **Cabo suelto conocido:** `portal_codigo` **no tiene índice por `valor_hash`**, así que el `count`
 recorre la tabla. Hoy es diminuta y no se nota; el DDL va en su propio paso, no colado aquí.
@@ -1179,15 +1299,34 @@ no se enteraba, y nada fallaba. Spec: `docs/superpowers/specs/2026-09-08-asegura
 | `app/instalacion.tsx` | El almacén compartido de la instalación (`beforeinstallprompt` se dispara UNA vez). Desde el 08/09/2026 lo lee solo `InstalarBoton`: la campana ya NO ofrece instalar |
 
 🚨 **Tres desenlaces para el globo, y «0» no es ninguno:** `n` · `n+` (alguna fuente ilegible) ·
-`!` (ninguna legible, o fallo de red). Este portal renunció a la hamburguesa porque un botón que
-esconde hace las cosas menos visibles que enseñarlas, y la campana es exactamente ese botón: sin
-número, una autorización detrás de ella es lo mismo que hoy en `/autorizaciones`. Y «sin avisos»
-sobre una fuente que no se leyó es la mentira que el `CLAUDE.md` de la raíz persigue.
+`!` (ninguna legible, o fallo de red). Un botón que esconde hace las cosas menos visibles que
+enseñarlas, y la campana es exactamente ese botón: sin número, una autorización detrás de ella es
+lo mismo que hoy en `/autorizaciones`. Y «sin avisos» sobre una fuente que no se leyó es la mentira
+que el `CLAUDE.md` de la raíz persigue.
 
 🚨 **Desde la campana NO se acepta ni se revoca nada.** Cada aviso es un enlace a la pantalla donde
 se resuelve, con el alcance y el texto delante. Un «Aceptar» en el panel sería aceptar sin leer y
 duplicaría en dos componentes lo que `Autorizaciones.tsx` ya hace. Cepo: un solo `fetch` en
 `Campana.tsx`, y es el GET.
+
+### 🏠 Cuarta fuente: «Revisa tu dirección» (15/09/2026), y el correo que sale de ella
+
+`datos_por_revisar` → `/boveda?vista=datos`. Los reparos de la dirección guardada (`leerSitio()` de
+`@central/module-seguros`: CP que no es un CP español, ciudad sin letras, provincia que contradice al
+CP) se veían **solo en la ficha del corredor** desde el 05/09/2026 — o sea, el único que podía
+corregirlos era el único que no se enteraba. Alberto, 15/09/2026: *«es lo que quiero que notifique por
+mail e intranet, explicándole cómo modificar su dirección»*.
+
+- **Sale por el PUENTE**, no de la BD de aquí: la dirección va cifrada y esta app no tiene la clave.
+  `reparosDeMisDatos()` (`lib/mis-datos.ts`) reusa `leerMisDatos()`, que ya se pedía en cada visita a
+  la bóveda. Es la fuente que más fácil falla, razón de más para ir en el `allSettled`.
+- **Lanza si no se pudo mirar** (puente caído, sin configurar, varias fichas) → `fuentesIlegibles`
+  y globo con `+`. `sin_ficha` sí devuelve `[]`: no es que no se sepa, es que no hay ficha nuestra.
+- **Y se ve también DENTRO de «Mis datos»**, encima del formulario, con el valor guardado y qué
+  hacer. El cálculo va en el SERVIDOR (`reparosDeContacto`, prop `reparos`): importar
+  `@central/module-seguros` en un componente de cliente arrastraría la cartera entera al bundle.
+- El **id del aviso es el TIPO de reparo**, no un uuid: es la clave con la que el emisor de correo de
+  `apps/asegura` sella lo ya enviado (ver su `CLAUDE.md`, «El emisor GENÉRICO de la intranet»).
 
 📌 **Sin tabla de «visto», a propósito**: el aviso desaparece al resolverse. Lo que necesita saber
 qué vio ya el cliente (siniestro que cambia de estado, petición respondida, recibo devuelto) es v2 y
@@ -1570,6 +1709,12 @@ ruleset de ese repo está bloqueado — no se hizo aquí a propósito.
 
 ## 🧨 Landmines
 
+- **🚨 Toda tabla `portal_*` nueva lleva `REVOKE ALL ON seguros.<tabla> FROM crm_seguros` en su SQL
+  (24/09/2026).** Los privilegios por defecto del schema dan DML a `crm_seguros` (el CRM de Manuel,
+  que nunca toca el portal: 0 de sus 101 consultas medidas) en cada tabla nueva, y con INSERT en
+  `portal_vinculo` o `portal_enlace_directo` se abre la sesión de cualquier cliente. Las 21 que había
+  se revocaron ese día (`apps/asegura/prisma/sql/2026-09-24b_portal_sin_crm.sql`); las nuevas las
+  vigila `test/regression-portal-sin-crm.test.ts`.
 - **🚨 Un `SELECT` de una columna NO concedida falla en la BD — la consulta ENTERA.** El rol tiene
   `GRANT SELECT (col, col, …)` por tabla, y Prisma pide cada columna del modelo por su nombre. Añadir
   `dni` al modelo `Cliente` del portal no «lee el DNI»: hace que **todas** las lecturas de `Cliente`
@@ -2011,6 +2156,14 @@ exento nuevo en el cepo es una puerta abierta para siempre a cambio de nada.
 
 ## ☎️ El teléfono de la compañía (05/09/2026) — el sitio existe, los números los pone una persona
 
+> 🔀 **ACTUALIZADO 23/09/2026 — esta sección es HISTORIA: las columnas `telefono_*` de `companias_dgs`
+> ya NO se leen** (están comentadas como OBSOLETAS en la BD). La única fuente es el catálogo verificado
+> `packages/module-seguros/src/telefonos-companias.ts`, el mismo que publica la web; `lib/canales-compania.ts`
+> lo convierte a `FilaCompania` (con varias líneas de asistencia rotuladas y la nota del WhatsApp) y el
+> puerto de asegura pisa esas columnas con él. Motivo: las dos copias se separaron y el portal daba a
+> Mapfre su línea MÉDICA como «dar parte». Lo vigila `test/regression-telefonos-fuente-unica.test.ts`.
+> Cambiar un número = PR a ese catálogo con captura de la web oficial y fecha, nunca un UPDATE.
+
 Alberto quiere una **hoja imprimible** («la del frigorífico») con lo que hace falta después de un
 percance: compañía, nº de póliza, tomador y **a quién llamar**. Ese teléfono no estaba en ninguna
 parte: medido el 04/09/2026, el único `telefono` de todo el schema que no es de una persona es el de
@@ -2126,3 +2279,43 @@ pinta** porque es asistencia y `whatsapp_siniestros` se rotula «Dar parte». SQ
 dentro— pero lo que se mete dentro sí: con los datos escritos, la imagen miente en cuanto cambie la
 póliza, y además cualquiera que fotografíe la hoja se los lleva. Con una URL, el QR es permanente y
 la página detrás está siempre al día. Es la opción simple, no la complicada.
+
+### 🔗 Llegar al parte DESDE una póliza (19/09/2026) — el botón prometía un teléfono y daba una pestaña
+
+Alberto, pulsando «Ver los teléfonos de Allianz y dar parte» en la ficha de una de sus pólizas:
+*«tiene que aparecer tlf y los campos para apertura siniestros, ahora mismo me sale página de
+siniestros. Que revise agente estructura y diseño, hay que dividir mejor»*.
+
+Lo que **ya funcionaba** y conviene no volver a construir: el enlace de la ficha ya llevaba
+`?vista=siniestro&poliza=cartera:<id>` y `ParteSiniestro` ya nacía ABIERTO con esa póliza puesta (y
+su matrícula autorrellenada). Lo que fallaba era todo lo que se veía ANTES de llegar ahí.
+
+- **El ORDEN de la pantalla depende de con qué intención se llega.** Con `?poliza=` válida, el canal
+  de la compañía y el formulario van PRIMERO y el historial de siniestros detrás; sin él —quien entra
+  por la pestaña— se conserva el orden de siempre, porque mirar es mayoría. Antes, quien acababa de
+  tener un golpe aterrizaba por delante del historial de TODA su cartera.
+- **La compañía de esa póliza se pinta la PRIMERA y marcada** («La compañía de la póliza que traes
+  elegida», con filete de acento — no del rojo de alarma: aquí no ha fallado nada). Lo decide
+  `canalesConCompaniaPrimero()` de `canal-compania.ts`, puro y con test.
+- 🚨 **Ordenar NO es recortar: las demás compañías siguen enteras debajo.** Quien tiene prisa puede
+  haber llegado desde la póliza equivocada —el coche de su padre, el piso en vez del local— y una
+  lista recortada a una sola compañía le diría que no hay nadie más a quien llamar. Es la misma razón
+  por la que las `sinDatos` tampoco se filtran.
+- **La destacada sale de la póliza elegida AHORA** (`form.poliza`), no de la del enlace: cambiar de
+  póliza en el desplegable reordena el bloque. Si saliera de `polizaInicial`, el teléfono de la
+  anterior se quedaría arriba y marcado como «la tuya».
+- **El cruce sigue siendo por nombre EXACTO** (normalizado igual que `canalDeCompania`): un nombre que
+  no está en la lista deja el orden intacto. Nunca se promueve «la más parecida», que es la vía por la
+  que alguien acabaría marcando el número de urgencias de otra compañía.
+- La póliza del enlace se comprueba **dos veces contra la lista ya acotada a la sesión**
+  (`polizasParte`): en la página, porque de ella depende el orden, y dentro del componente, porque de
+  ella depende la preselección. Un id manipulado en la URL no reordena nada ni abre nada.
+- 📌 **Lo que NO se ha tocado, y es deliberado: `ParteSiniestro.tsx` sigue siendo un solo fichero.**
+  «Dividir mejor» se ha resuelto en el ORDEN de la pantalla, no partiendo el componente: sus piezas
+  ya existen como funciones internas (`CanalesCompania`, `BloqueCanal`, `ViaCanalEnlace`,
+  `Adjuntar`, `ListaPartes`…) y **sacarlas a otro fichero las dejaría fuera de los cinco cepos de
+  `test/regression-portal-canal-compania.test.ts`**, que leen ESE fuente y vigilan las cuatro frases
+  que no se pueden decir. Mover el canal de sitio es un PR con sus cepos migrados, no un efecto
+  colateral de reordenar una pantalla.
+- Cepos en `test/regression-portal-parte-desde-poliza.test.ts` (6, con **seis mutaciones vistas
+  morder**) y en `canal-compania.test.ts` del módulo.

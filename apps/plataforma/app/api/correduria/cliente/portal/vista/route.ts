@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { vistaCorredorAsegura } from '@/lib/portal-cliente-asegura'
 
 export const dynamic = 'force-dynamic'
@@ -10,8 +10,9 @@ export const dynamic = 'force-dynamic'
  * ojos del cliente); el puerto de asegura hace el resto.
  */
 export async function POST(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const session = guarda.session
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null
   if (!body || typeof body.clienteId !== 'string' || body.clienteId.trim() === '') {
     return NextResponse.json({ estado: 'invalido', motivo: 'Falta el id del cliente.' }, { status: 422 })

@@ -15,12 +15,15 @@
 import { createHash } from 'node:crypto'
 import {
   estadoDocumento,
+  mimeDocumento,
+  mimeParaServir,
   revisarDocumento,
   tipoDocumento,
   type DocumentoResumen,
   type TipoDocumento,
 } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
 
 export type Destino = { clienteId?: string | null; polizaId?: string | null; siniestroId?: string | null }
 
@@ -176,6 +179,18 @@ export async function guardarDocumento(
 ): Promise<Guardado> {
   const reparo = revisarDocumento({ type: entrada.mime, size: entrada.contenido.length, name: entrada.nombre })
   if (reparo) return { ok: false, motivo: reparo, status: 415 }
+  // 🚨 El mime que se GUARDA sale de la lista cerrada, NUNCA del navegador.
+  // `entrada.mime` lo elige quien sube el fichero (y por `/api/portal/documento`
+  // quien sube es el propio cliente, sin credenciales de corredor): un
+  // `text/html` guardado tal cual y devuelto después con ese `Content-Type` se
+  // ejecuta en nuestro dominio con la cookie del que lo abra. `mimeDocumento()`
+  // existe para esto desde que se escribió y esta función no la llamaba.
+  // Después de `revisarDocumento()` no puede ser `null` (los dos aplican el
+  // mismo criterio), pero si algún día divergen, aquí NO se guarda nada.
+  const mime = mimeDocumento({ type: entrada.mime, name: entrada.nombre })
+  if (!mime) {
+    return { ok: false, motivo: `Tipo de fichero no admitido (${entrada.mime || 'desconocido'}). Sube un PDF o una foto.`, status: 415 }
+  }
   const destino = await resolverDestino(correduriaId, entrada)
   if (!destino) return { ok: false, motivo: 'El cliente, la póliza o el siniestro no existe en esta correduría.', status: 404 }
   try {
@@ -191,7 +206,7 @@ export async function guardarDocumento(
         tipo: entrada.tipo,
         estado: 'recibido',
         nombreFichero: entrada.nombre.slice(0, 255),
-        mimeType: entrada.mime || 'application/octet-stream',
+        mimeType: mime,
         sizeBytes: entrada.contenido.length,
         sha256,
         contenido: entrada.contenido,
@@ -200,6 +215,7 @@ export async function guardarDocumento(
       },
       select: SELECT_RESUMEN,
     })
+    anotarCambio({ entidad: 'documento', id: fila.id, campo: 'estado', antes: null, despues: 'recibido' })
     return { ok: true, documento: aResumen(fila), repetido }
   } catch (e) {
     return { ok: false, motivo: e instanceof Error ? e.message : String(e), status: 500 }
@@ -218,6 +234,7 @@ export async function pedirDocumento(
       data: { correduriaId, ...destino, tipo: entrada.tipo, estado: 'pedido', notas: entrada.notas?.trim() || null },
       select: SELECT_RESUMEN,
     })
+    anotarCambio({ entidad: 'documento', id: fila.id, campo: 'estado', antes: null, despues: 'pedido' })
     return { ok: true, documento: aResumen(fila), repetido: false }
   } catch (e) {
     return { ok: false, motivo: e instanceof Error ? e.message : String(e), status: 500 }
@@ -231,6 +248,9 @@ export async function marcarRevisado(correduriaId: string, id: string, por: stri
       where: { id, correduriaId, estado: 'recibido' },
       data: { estado: 'revisado', revisadoAt: new Date(), revisadoPor: por.slice(0, 100) },
     })
+    if (r.count > 0) {
+      anotarCambio({ entidad: 'documento', id, campo: 'estado', antes: 'recibido', despues: 'revisado' })
+    }
     return r.count > 0
   } catch {
     return false
@@ -241,6 +261,9 @@ export async function marcarRevisado(correduriaId: string, id: string, por: stri
 export async function borrarDocumento(correduriaId: string, id: string): Promise<boolean> {
   try {
     const r = await prismaAsegura().documento.deleteMany({ where: { id, correduriaId } })
+    if (r.count > 0) {
+      anotarCambio({ entidad: 'documento', id, campo: 'existe', antes: true, despues: false })
+    }
     return r.count > 0
   } catch {
     return false
@@ -260,7 +283,10 @@ export async function leerDocumento(
     if (!f || !f.contenido) return null
     return {
       nombre: f.nombreFichero ?? 'documento',
-      mime: f.mimeType ?? 'application/octet-stream',
+      // Segunda pasada por la lista cerrada: lo que se guardó antes de que
+      // `guardarDocumento` normalizara (o por cualquier vía que se la salte)
+      // no puede volver como cabecera. Ver `mimeParaServir()`.
+      mime: mimeParaServir(f.mimeType),
       contenido: Buffer.from(f.contenido),
     }
   } catch {

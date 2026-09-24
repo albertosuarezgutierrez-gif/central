@@ -212,6 +212,18 @@ export function Bien({ bien }: { bien: BienAsegurado }) {
  *  (`PORTAL_MAIL_REPLY_TO`), y no se inventa un endpoint que no existe. */
 const CORREO_CORREDURIA = 'hola@grupoasegura.es'
 
+/**
+ * La póliza que esta sustituye (el cliente se cambió de compañía) ya no sale aparte: lo dice la
+ * nueva, para que no parezca que ha desaparecido un seguro. `null` = no sustituye a ninguna.
+ */
+export function textoSustitucion(p: PolizaPortal, hoy: Date = new Date()): string | null {
+  const v = p.sustituyeA
+  if (v === null) return null
+  const f = fechaEs(v.fechaVencimiento)
+  if (f === null) return `Sustituye a tu seguro de ${v.compania}`
+  return `Sustituye a tu seguro de ${v.compania}, que ${v.fechaVencimiento! < hoy ? 'venció' : 'vence'} el ${f}`
+}
+
 export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
   const devueltos = p.recibos?.devueltos ?? 0
   if (devueltos === 0) return null
@@ -248,6 +260,84 @@ export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
 }
 
 /**
+ * Lo que la cabecera de una póliza plegada dice, y si esa póliza se puede
+ * plegar siquiera.
+ *
+ * 🚨 `abrir` NO se deduce de `texto === null`, y por eso es un campo: hay
+ * cabeceras que SÍ dicen algo y aun así no pueden esconder lo de dentro (un
+ * recibo devuelto). Con la apertura derivada del texto, añadir mañana un caso
+ * así obliga a vaciar la cabecera para que se abra — o sea, a elegir entre
+ * enseñar el aviso y explicarlo.
+ */
+export type ResumenPoliza = { texto: string | null; abrir: boolean }
+
+/**
+ * Lo próximo que se paga y lo último que se pagó, en una línea — o `null`
+ * cuando no hay NADA que resumir.
+ *
+ * 🚨 Es el titular de la póliza en la pestaña «Recibos», y por eso vive aquí
+ * suelto: lo pinta el CUERPO (la ficha de una póliza) y lo pinta la CABECERA
+ * del plegable (`VistaPorPoliza`), y con dos copias la cabecera acabaría
+ * diciendo una cosa y el cuerpo otra sobre el mismo recibo.
+ *
+ * 🚨 `null` NO es «no debes nada»: es «de esta póliza no sabemos ni importe ni
+ * fecha», o que su estado es `sin_informar`/`solo_anulados` y lo que hay dentro
+ * es una explicación, no una lista. Quien lo use para decidir si plegar tiene
+ * que dejarla ABIERTA — plegar una explicación tras una cabecera muda es
+ * esconder el motivo por el que no se ve nada.
+ */
+export function lineaRecibos(p: PolizaPortal): string | null {
+  if (p.recibos === null) return null
+  const r = p.recibos
+  if (r.estado !== 'con_recibos') return null
+
+  const partes: string[] = []
+  // 🚨 El DEVUELTO va primero, delante del próximo y del último cobrado. Es lo
+  // único de una póliza que puede dejar a alguien sin cobertura sin que se
+  // entere, y con la póliza plegada esta línea es TODO lo que se ve: enterrarlo
+  // detrás de «último cobrado 65,51€» convierte la cabecera en una frase
+  // tranquilizadora sobre un cobro que falló.
+  if (r.devueltos > 0) {
+    partes.push(r.devueltos === 1 ? '1 recibo devuelto' : `${r.devueltos} recibos devueltos`)
+  }
+  if (r.proximoAlCobro) {
+    // `importe: null` = el EIAC no traía un importe legible. No es 0€, así que
+    // se cuenta lo que se sabe (la fecha) y se calla lo que no.
+    const cuando = fechaEs(r.proximoAlCobro.fechaVencimiento)
+    const importe = r.proximoAlCobro.importe
+    if (importe !== null) partes.push(`Tu próximo recibo: ${eur(importe)}${cuando ? ` el ${cuando}` : ''}`)
+    else if (cuando) partes.push(`Tu próximo recibo vence el ${cuando}`)
+    // Ni importe ni fecha legibles. Se dice IGUAL que hay uno pendiente: sin
+    // esta rama la línea se queda en «último cobrado X», que con la póliza
+    // plegada se lee como «estás al corriente» teniendo un recibo al cobro.
+    else partes.push('Tienes un recibo pendiente')
+  }
+  if (r.ultimoCobrado) {
+    const cuando = fechaEs(r.ultimoCobrado.fechaEmision)
+    const importe = r.ultimoCobrado.importe
+    if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
+    else if (cuando) partes.push(`último cobrado el ${cuando}`)
+  }
+
+  return partes.length > 0 ? partes.join(' · ') : null
+}
+
+/**
+ * La misma línea, más si la póliza puede nacer plegada.
+ *
+ * 🚨 Con un recibo DEVUELTO nace ABIERTA aunque la cabecera lo nombre: el chip
+ * rojo, su explicación y el botón de avisar a la correduría viven en la lista,
+ * y este portal ya tiene escrito que el devuelto no se esconde detrás de un
+ * clic. Sin texto que enseñar, abierta por la razón de siempre: dentro hay una
+ * explicación, no una lista.
+ */
+export function resumenRecibos(p: PolizaPortal): ResumenPoliza {
+  const texto = lineaRecibos(p)
+  const devueltos = p.recibos?.devueltos ?? 0
+  return { texto, abrir: texto === null || devueltos > 0 }
+}
+
+/**
  * TODO el bloque de recibos de una póliza, en voz NEUTRA. Lo que alarma vive en
  * `<AvisoReciboDevuelto>`.
  *
@@ -266,7 +356,18 @@ export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
  *   (el total contaba los anulados) ni una línea (no quedaba ninguno que
  *   enseñar). Veinte pólizas mudas de ciento diez.
  */
-export function RecibosDePoliza({ p }: { p: PolizaPortal }) {
+export function RecibosDePoliza({
+  p,
+  sinResumen = false,
+}: {
+  p: PolizaPortal
+  /**
+   * `true` cuando quien llama YA pinta la línea de resumen en otro sitio —hoy,
+   * la cabecera del plegable de `VistaPorPoliza`—. No se toca nada más: los
+   * tres estados y la lista siguen decidiéndose aquí.
+   */
+  sinResumen?: boolean
+}) {
   if (p.recibos === null) return null
   const r = p.recibos
 
@@ -291,29 +392,14 @@ export function RecibosDePoliza({ p }: { p: PolizaPortal }) {
     )
   }
 
-  // El titular: lo próximo que se paga y lo último que se pagó.
-  const partes: string[] = []
-  if (r.proximoAlCobro) {
-    // `importe: null` = el EIAC no traía un importe legible. No es 0€, así que
-    // se cuenta lo que se sabe (la fecha) y se calla lo que no.
-    const cuando = fechaEs(r.proximoAlCobro.fechaVencimiento)
-    const importe = r.proximoAlCobro.importe
-    if (importe !== null) partes.push(`Tu próximo recibo: ${eur(importe)}${cuando ? ` el ${cuando}` : ''}`)
-    else if (cuando) partes.push(`Tu próximo recibo vence el ${cuando}`)
-  }
-  if (r.ultimoCobrado) {
-    const cuando = fechaEs(r.ultimoCobrado.fechaEmision)
-    const importe = r.ultimoCobrado.importe
-    if (importe !== null) partes.push(`último cobrado ${eur(importe)}${cuando ? ` (${cuando})` : ''}`)
-    else if (cuando) partes.push(`último cobrado el ${cuando}`)
-  }
+  const linea = lineaRecibos(p)
 
   return (
     <>
       {/* Ni un solo dato que enseñar (recibos sin importe ni fecha): no se pinta
           una línea vacía, y tampoco «ningún recibo al cobro», que se leería como
           «nada que pagar» sin que nadie lo haya comprobado. */}
-      {partes.length > 0 && <div className="linea">{partes.join(' · ')}</div>}
+      {!sinResumen && linea !== null && <div className="linea">{linea}</div>}
       <ul className="recibos">
         {r.historial.map((rec, i) => {
           const tono = tonoSituacionRecibo(rec.situacion)
@@ -412,6 +498,31 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
 }
 
 /**
+ * Cuántos siniestros hay y cuántos siguen sin cerrar — o `null` cuando no nos
+ * consta ninguno (y entonces lo que hay dentro es la frase de «sin informar»,
+ * que NO es «no has tenido ninguno» y por eso no se pliega).
+ *
+ * Misma razón de existir que `lineaRecibos`: lo dice la ficha y lo dice la
+ * cabecera del plegable, y tiene que decirlo igual.
+ */
+export function lineaSiniestros(p: PolizaPortal): string | null {
+  if (p.siniestros === null || p.siniestros.length === 0) return null
+  const r = resumirHistorialSiniestros(p.siniestros)
+  const total = r.total === 1 ? '1 siniestro' : `${r.total} siniestros`
+  return r.abiertos > 0 ? `${total} · ${r.abiertos} sin cerrar` : total
+}
+
+/**
+ * Lo mismo para siniestros. Aquí no hay nada que la cabecera no pueda contar
+ * —«1 sin cerrar» ya lo dice—, así que solo nace abierta la que no tiene
+ * historial y lleva dentro la frase de «no nos consta ninguno».
+ */
+export function resumenSiniestros(p: PolizaPortal): ResumenPoliza {
+  const texto = lineaSiniestros(p)
+  return { texto, abrir: texto === null }
+}
+
+/**
  * El HISTORIAL de siniestros de una póliza.
  *
  * Alberto: «y los recibos? e historial siniestros?». No existía — la lectura
@@ -434,7 +545,14 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
  * existe — `updated_at` es la última vez que se tocó la fila, no el día que se
  * cerró). Ni tramitador ni perito: gestión del corredor, regla de visibilidad.
  */
-export function HistorialSiniestros({ p }: { p: PolizaPortal }) {
+export function HistorialSiniestros({
+  p,
+  sinResumen = false,
+}: {
+  p: PolizaPortal
+  /** `true` cuando el recuento ya lo dice la cabecera del plegable. Ver `RecibosDePoliza`. */
+  sinResumen?: boolean
+}) {
   if (p.siniestros === null) return null
   const lista = p.siniestros
 
@@ -448,13 +566,14 @@ export function HistorialSiniestros({ p }: { p: PolizaPortal }) {
     )
   }
 
-  const r = resumirHistorialSiniestros(lista)
+  const resumen = lineaSiniestros(p)
   return (
     <>
-      <p className="suave" style={{ margin: '0 0 10px', fontSize: 13 }}>
-        {r.total === 1 ? '1 siniestro' : `${r.total} siniestros`}
-        {r.abiertos > 0 && ` · ${r.abiertos} sin cerrar`}
-      </p>
+      {!sinResumen && resumen !== null && (
+        <p className="suave" style={{ margin: '0 0 10px', fontSize: 13 }}>
+          {resumen}
+        </p>
+      )}
       <ul className="siniestros">
         {lista.map((s) => {
           const cuando = fechaEs(s.fechaHora)

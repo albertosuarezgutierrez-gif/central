@@ -236,3 +236,36 @@ export async function peticion(
 function recortar(texto: string): string {
   return texto.replace(/\s+/g, ' ').slice(0, 300)
 }
+
+/**
+ * Descarga un fichero de `issuedDocuments[].url` (`InsuranceFile_V1`, ver
+ * `documentos-emitidos.ts`). Es una URL YA ABSOLUTA que el vendor devuelve
+ * (no una ruta de `config.baseUrl`), y el portal dice, literal: «Execute a GET
+ * request to this URL with the Authorization header to download the file» —
+ * SOLO el Bearer, sin `x-client-app`/`x-user-email` (esas son de las
+ * operaciones de tarificación, no de descarga de ficheros).
+ *
+ * Gratis (no es una llamada facturable): no pasa por el libro de consumo.
+ */
+export async function descargarFicheroVendor(
+  config: ConfigCodeoscopic,
+  url: string,
+): Promise<{ contentType: string; bytes: Buffer }> {
+  const enviar = async (token: string) =>
+    fetchConTimeout(url, { method: 'GET', headers: { authorization: `Bearer ${token}` } }, config.timeoutGenericoMs)
+
+  let res = await enviar(await obtenerToken(config))
+  if (res.status === 401) {
+    olvidarToken(config)
+    res = await enviar(await obtenerToken(config))
+  }
+  if (res.status === 401 || res.status === 403) {
+    throw new ErrorCodeoscopic('auth', 'el vendor rechazó la autenticación al descargar el fichero', res.status)
+  }
+  if (!res.ok) {
+    throw new ErrorCodeoscopic('servidor', `la descarga del fichero devolvió ${res.status}`, res.status)
+  }
+  const contentType = res.headers.get('content-type') ?? 'application/octet-stream'
+  const bytes = Buffer.from(await res.arrayBuffer())
+  return { contentType, bytes }
+}

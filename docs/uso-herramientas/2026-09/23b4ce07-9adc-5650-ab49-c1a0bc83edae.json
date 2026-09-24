@@ -1,0 +1,104 @@
+{
+ "sesion": "23b4ce07-9adc-5650-ab49-c1a0bc83edae",
+ "inicio": "2026-09-19T09:04:45.296Z",
+ "fin": "2026-09-20T05:26:23.571Z",
+ "llamadas": 67,
+ "categorias": {
+  "otro": {
+   "llamadas": 7,
+   "chars_in": 757,
+   "chars_out": 35691,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1,
+    "PushNotification": 1,
+    "ReadNotifications": 4
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 5,
+   "chars_in": 478,
+   "chars_out": 64848,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 5
+   }
+  },
+  "bash": {
+   "llamadas": 21,
+   "chars_in": 3909,
+   "chars_out": 29728,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 21
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 4,
+   "chars_in": 426,
+   "chars_out": 8048,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 3,
+    "mcp__Gmail__list_labels": 1
+   }
+  },
+  "sql": {
+   "llamadas": 10,
+   "chars_in": 3824,
+   "chars_out": 10464,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 10
+   }
+  },
+  "mcp:github": {
+   "llamadas": 14,
+   "chars_in": 4746,
+   "chars_out": 50346,
+   "errores": 1,
+   "archivos_citados": 2,
+   "chars_citados": 122406,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__pull_request_read": 10,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__add_issue_comment": 1
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 2,
+   "chars_in": 169,
+   "chars_out": 28777,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 2
+   }
+  },
+  "escritura": {
+   "llamadas": 4,
+   "chars_in": 2570,
+   "chars_out": 260533,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 4
+   }
+  }
+ }
+}

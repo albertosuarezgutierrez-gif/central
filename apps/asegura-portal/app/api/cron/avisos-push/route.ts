@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { sendWebPush } from '@central/core-push'
-import { DIAS_VENTANA_AVISO, debeAvisarPush } from '@central/module-seguros-portal'
+import { DIAS_VENTANA_AVISO, debeAvisarPush, textoPushObligacion } from '@central/module-seguros-portal'
 import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seguros'
 
 import { isCronAuthorized } from '@/lib/cron-auth'
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
       avisadaPushAt: null,
       fechaAccionable: { gte: hoy, lte: new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA) },
     },
-    select: { id: true, identidadId: true, polizaId: true, titulo: true, fechaAccionable: true },
+    select: { id: true, identidadId: true, polizaId: true, tipo: true, titulo: true, fechaAccionable: true },
     orderBy: { fechaAccionable: 'asc' },
     take: 500,
   })
@@ -73,7 +73,7 @@ export async function GET(req: Request) {
   const polizaIds = [...new Set(enVentana.map((o) => o.polizaId).filter((id): id is string => id !== null))]
   const polizasVivas = polizaIds.length
     ? await prisma.poliza.findMany({
-        where: { id: { in: polizaIds }, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null, estado: { in: [...POLIZA_ESTADOS_VIGENTES] } },
+        where: { id: { in: polizaIds }, ...WHERE_CARTERA_VIVA, mergedIntoPolizaId: null, sustituidaAt: null, estado: { in: [...POLIZA_ESTADOS_VIGENTES] } },
         select: { id: true, clienteId: true },
       })
     : []
@@ -97,9 +97,14 @@ export async function GET(req: Request) {
       continue
     }
 
+    // 🚨 El texto lo decide el TIPO, en el módulo puro: aquí entran también los
+    // recordatorios propios (ITV, caldera, extintores…), y el texto de
+    // renovación de póliza sobre una ITV le dice a alguien que se queda sin
+    // cobertura cuando no es verdad.
+    const { title, body } = textoPushObligacion({ tipo: o.tipo, titulo: o.titulo })
     const payload = {
-      title: 'Tu seguro pide una decisión',
-      body: `${o.titulo}: te queda poco margen para decidir si lo renuevas.`,
+      title,
+      body,
       icon: '/icono-app',
       data: { url: '/boveda' },
     }

@@ -7,6 +7,7 @@
 
 import type { Retarificabilidad } from '@central/module-seguros'
 import { leerRetarificacion } from './ficha-asegura.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type MotivoPuerto = 'secreto_rechazado' | 'asegura_error' | 'respuesta_ilegible' | 'red'
 
@@ -44,6 +45,27 @@ function numero(v: unknown): number | null {
 
 function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
+}
+
+/**
+ * El campo `truncado` del puerto de asegura, con TRES estados y no dos.
+ *
+ * 🚨 `r.truncado === true` —que es como se leía hasta hoy en `interpretarSinCanal`—
+ * colapsa el ausente a `false`, o sea a «se miró y la lista está completa». Y
+ * ausente significa lo contrario: es una versión desplegada de asegura anterior
+ * al techo, que **no sabe** si recortó. Afirmar que la lista está entera es
+ * exactamente el recorte mudo movido de sitio.
+ *
+ *   `true`  → la criba tocó su techo: falta lista, y se dice.
+ *   `false` → asegura lo comprobó y no recortó.
+ *   `null`  → no se sabe (asegura no manda el campo).
+ *
+ * Vive aquí y se exporta porque los tres lectores del puerto (vencimientos,
+ * impagados y comisiones) tienen que leerlo IGUAL: dos copias de un tri-estado
+ * divergen en el borde, que es el único sitio donde importa.
+ */
+export function leerTruncado(v: unknown): boolean | null {
+  return typeof v === 'boolean' ? v : null
 }
 
 // ── Buscador ────────────────────────────────────────────────────────────────
@@ -292,6 +314,12 @@ export type Impagados =
       sinRecibosInformados: number
       /** Pendientes que aún no han vencido o no traen fecha. */
       pendientesSinJuzgar: number
+      /**
+       * La criba de recibos de asegura tocó su techo: hay MÁS pólizas sin
+       * cobrar de las que trae esta lista. `null` = asegura (versión vieja) no
+       * lo informa, que **no es** «la lista está completa»: ver `leerTruncado`.
+       */
+      truncado: boolean | null
     }
 
 const ESTADOS_RETENCION = new Set([
@@ -375,6 +403,9 @@ export function interpretarImpagados(status: number, json: unknown): Impagados {
     // puede decir «ninguna póliza está sin recibos», que es lo tranquilizador.
     sinRecibosInformados: entero(r.sinRecibosInformados) ?? -1,
     pendientesSinJuzgar: entero(r.pendientesSinJuzgar) ?? -1,
+    // Sin `?? false`: un puerto que no manda el campo no ha dicho que la lista
+    // esté entera. El tercer hueco de esta pantalla se declara como los otros dos.
+    truncado: leerTruncado(r.truncado),
   }
 }
 
@@ -388,11 +419,56 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
-    headers: { Authorization: `Bearer ${secret}` },
+    headers: { ...(await cabecerasPuerto(secret)) },
     cache: 'no-store',
-    signal: AbortSignal.timeout(8000),
+    // 🚨 Más que el `pool_timeout` de Prisma en asegura (10 s), a propósito
+    // (19/09/2026): con 8 s, cuando asegura se quedaba sin conexión (P2024) esta
+    // llamada se rendía ANTES de que asegura respondiera «conexion», y la
+    // pantalla decía «no se pudo llegar a asegura (timeout, DNS o TLS)» — una
+    // causa falsa, que manda a mirar el DNS cuando lo roto era el pool. Es el
+    // mismo 15 s que usan actividad, comisiones y compañías.
+    signal: AbortSignal.timeout(15_000),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
+}
+
+async function pedirPost(path: string, body: Record<string, unknown>): Promise<{ status: number; json: unknown } | null> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return null
+  const res = await fetch(`${urlAsegura()}${path}`, {
+    method: 'POST',
+    headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+    cache: 'no-store',
+    signal: AbortSignal.timeout(15_000),
+  })
+  return { status: res.status, json: await res.json().catch(() => null) }
+}
+
+export type DescarteRetencion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo?: string }
+
+/**
+ * `POST /api/operador/retencion/descartar` — quita una póliza de "Hay que
+ * llamar" `dias` días (el puerto acota 1-30, por defecto 10). **NO la marca
+ * como resuelta**: si al caducar el plazo el recibo sigue sin cobrar, vuelve a
+ * salir sola. El `actor` lo pone el servidor (`session.email`), nunca la
+ * petición: es quien firma la anotación en el historial de la ficha.
+ */
+export async function descartarRetencionAsegura(
+  polizaId: string,
+  actor: string,
+  motivo: string | null,
+  dias?: number,
+): Promise<DescarteRetencion> {
+  try {
+    const r = await pedirPost('/api/operador/retencion/descartar', { polizaId, actor, motivo, dias })
+    if (r === null) return { estado: 'sin_configurar' }
+    if (r.status === 200) return { estado: 'ok' }
+    const j = (r.json ?? {}) as Record<string, unknown>
+    return { estado: 'error', motivo: typeof j.motivo === 'string' ? j.motivo : `HTTP ${r.status}` }
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
 }
 
 export async function buscarAsegura(q: string): Promise<Busqueda> {
@@ -557,6 +633,131 @@ export async function impagadosAsegura(): Promise<Impagados> {
     const r = await pedir('/api/operador/impagados')
     if (r === null) return { estado: 'sin_configurar' }
     return interpretarImpagados(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Confirmar dirección (alta/edición de cliente) ───────────────────────────
+//
+// «Escribo la calle y me sale confirmar de una lista» (Alberto, 21/09/2026):
+// mientras se teclea la dirección en `NuevoCliente`/`EditarCliente`, un
+// debounce pregunta al callejero oficial del Catastro (gratis, sin sesión
+// del cliente ni gasto) y devuelve un candidato para aceptar con un clic. NO
+// escribe nada en la cartera: es una consulta al formulario, antes de guardar.
+
+export type CandidatoDireccionConfirmable = { texto: string }
+
+export type ConfirmacionDireccion =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'candidato'; candidato: CandidatoDireccionConfirmable }
+  /** No hay provincia+municipio con los que acotar la pregunta al callejero. */
+  | { estado: 'sin_lugar' }
+  | { estado: 'sin_calle' }
+  | { estado: 'ambigua' }
+  | { estado: 'no_encontrada' }
+
+const ESTADOS_DIRECCION_ASEGURA = new Set(['candidato', 'sin_lugar', 'sin_calle', 'ambigua', 'no_encontrada', 'error'])
+
+export function interpretarConfirmacionDireccion(status: number, json: unknown): ConfirmacionDireccion {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  const estado = cadena(o.estado)
+  if (estado === null || !ESTADOS_DIRECCION_ASEGURA.has(estado)) {
+    return { estado: 'error', motivo: 'respuesta_ilegible' }
+  }
+  if (estado === 'error') return { estado: 'error', motivo: 'asegura_error' }
+  if (estado !== 'candidato') return { estado } as ConfirmacionDireccion
+  const c = o.candidato
+  const texto = typeof c === 'object' && c !== null ? cadena((c as Record<string, unknown>).texto) : null
+  if (texto === null) return { estado: 'error', motivo: 'respuesta_ilegible' }
+  return { estado: 'candidato', candidato: { texto } }
+}
+
+export async function confirmarDireccionAsegura(
+  direccion: string,
+  codigoPostal: string,
+  municipio: string,
+): Promise<ConfirmacionDireccion> {
+  const qs = new URLSearchParams({ direccion, codigoPostal, municipio })
+  try {
+    const r = await pedir(`/api/operador/direccion/confirmar?${qs.toString()}`)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarConfirmacionDireccion(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Seguimiento de sustituciones (cambio de compañía) ───────────────────────
+//
+// Pólizas marcadas `sustituida_at` (se retarificó y se EMITIÓ de verdad con
+// otra compañía) que llevan ≥3 días sin que CIMA confirme la nueva. Alberto,
+// 20/09/2026: «hay que hacerle seguimiento a que el cliente la pague, y eso
+// lo confirma CIMA» — esta cola es ese seguimiento, para que no dependa de
+// acordarse de abrir la ficha de cada cliente que cambió de compañía.
+
+export type SustitucionPendiente = {
+  clienteId: string
+  cliente: string
+  diasSustituida: number
+  sustituidaAt: string
+  polizaVieja: { id: string; aseguradora: string; numeroPoliza: string | null }
+  polizaNueva: { id: string; aseguradora: string; numeroPoliza: string | null } | null
+}
+
+export type Sustituciones =
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: MotivoPuerto }
+  | { estado: 'ok'; filas: SustitucionPendiente[] }
+
+function leerRelacionadaPuerto(v: unknown): { id: string; aseguradora: string; numeroPoliza: string | null } | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const id = cadena(o.id)
+  if (id === null) return null
+  return { id, aseguradora: cadena(o.aseguradora) ?? '', numeroPoliza: cadena(o.numeroPoliza) }
+}
+
+export function interpretarSustituciones(status: number, json: unknown): Sustituciones {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status !== 200 || typeof json !== 'object' || json === null) {
+    return { estado: 'error', motivo: status === 200 ? 'respuesta_ilegible' : 'asegura_error' }
+  }
+  const o = json as Record<string, unknown>
+  if (o.estado === 'sin_configurar') return { estado: 'sin_configurar' }
+  if (o.estado !== 'ok') return { estado: 'error', motivo: 'asegura_error' }
+  const filas = Array.isArray(o.sustituciones)
+    ? o.sustituciones
+        .map((f): SustitucionPendiente | null => {
+          if (typeof f !== 'object' || f === null) return null
+          const x = f as Record<string, unknown>
+          const clienteId = cadena(x.clienteId)
+          const polizaVieja = leerRelacionadaPuerto(x.polizaVieja)
+          if (clienteId === null || polizaVieja === null) return null
+          return {
+            clienteId,
+            cliente: cadena(x.cliente) ?? 'sin nombre',
+            diasSustituida: entero(x.diasSustituida) ?? 0,
+            sustituidaAt: cadena(x.sustituidaAt) ?? '',
+            polizaVieja,
+            polizaNueva: leerRelacionadaPuerto(x.polizaNueva),
+          }
+        })
+        .filter((x): x is SustitucionPendiente => x !== null)
+    : []
+  return { estado: 'ok', filas }
+}
+
+export async function sustitucionesAsegura(): Promise<Sustituciones> {
+  try {
+    const r = await pedir('/api/operador/sustituciones')
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarSustituciones(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }
@@ -963,7 +1164,7 @@ export async function escribirBackfillDni(limite?: number): Promise<EscrituraBac
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/backfill-dni`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
       body: JSON.stringify({ confirmar: 'escribir', limite }),
       cache: 'no-store',
       // Muy por encima de los 8 s del resto del puerto: esto descifra la cartera
@@ -1095,7 +1296,7 @@ export async function escribirBackfillContacto(limite?: number): Promise<Escritu
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/backfill-contacto`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${secret}`, 'content-type': 'application/json' },
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
       body: JSON.stringify({ confirmar: 'escribir', limite }),
       cache: 'no-store',
       signal: AbortSignal.timeout(290_000),

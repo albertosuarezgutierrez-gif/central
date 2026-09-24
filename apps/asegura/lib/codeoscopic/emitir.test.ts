@@ -16,6 +16,17 @@ test('leerOferta: acepta la respuesta envuelta en mainQuote', () => {
   assert.deepEqual(o.avisos, [])
 })
 
+test('leerOferta: quoteCrudo es el mainQuote TAL CUAL, sin parsear (lo exige productForm.render)', () => {
+  const mainQuote = { id: 'OF123', premium: 319.02, product: { id: 10, options: [] } }
+  const o = leerOferta({ mainQuote })
+  assert.deepEqual(o.quoteCrudo, mainQuote)
+})
+
+test('leerOferta: sin mainQuote, quoteCrudo es el objeto pelado', () => {
+  const o = leerOferta({ id: 42, premium: 100 })
+  assert.deepEqual(o.quoteCrudo, { id: 42, premium: 100 })
+})
+
 test('leerOferta: acepta la respuesta PELADA, sin mainQuote', () => {
   const o = leerOferta({ id: 42, premium: 100 })
   assert.equal(o.offerId, '42')
@@ -65,6 +76,7 @@ test('encontrarPrecio: casa por compañía y categoría, sin distinguir mayúscu
         productId: 10,
         productOptions: null,
         expiraEn: null,
+        quoteCrudo: null,
       },
     ],
   }

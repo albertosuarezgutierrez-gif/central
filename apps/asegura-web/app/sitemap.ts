@@ -31,6 +31,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     { url: url('/'), changeFrequency: 'monthly', priority: 1 },
     { url: url('/cambiar-de-correduria'), changeFrequency: 'yearly', priority: 0.9 },
+    // La landing del gestor: es la página que vende lo único que no copia un
+    // comparador, así que va con la prioridad de la portada de intención.
+    { url: url('/gestor-de-seguros'), changeFrequency: 'monthly', priority: 0.9 },
     ...RAMOS.map((r) => ({
       url: url(`/seguros/${r.slug}`),
       changeFrequency: 'monthly' as const,
@@ -42,6 +45,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Prioridad alta a propósito: es la página con la mejor posición medida de
     // todo el dominio (7,7), y la que Google ya conocía del sitio anterior.
     { url: url('/siniestro'), changeFrequency: 'monthly', priority: 0.9 },
+    // Búsquedas navegacionales con volumen («mapfre seguro hogar teléfono»,
+    // ~1.300/mes, medido el 23/09/2026) y de quien tiene el siniestro encima.
+    { url: url('/telefonos-siniestros'), changeFrequency: 'monthly', priority: 0.8 },
     // 📌 El blog SÍ sabe sus fechas, y por eso es la única familia de URL además
     // de las legales que declara `lastModified`. La lista se construye en
     // `lib/articulos.ts` (`entradasSitemapBlog`) a propósito: allí sí se puede

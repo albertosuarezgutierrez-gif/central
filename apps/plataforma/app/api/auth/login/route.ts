@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { verifyPassword, createSessionToken, COOKIE_NAME, COOKIE_OPTS } from '@/lib/auth'
 import { findActiveAdminByEmail, createAdminToken, ADMIN_COOKIE, ADMIN_COOKIE_OPTS } from '@/lib/superadmin'
 import { rateLimit, getIp } from '@/lib/rate-limit'
+import { registrarSesion } from '@/lib/sesiones-db'
 import { tgAviso } from '@/lib/telegram/avisos'
 
 const Body = z.object({ email: z.string().email(), password: z.string().min(1) })
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { token, jti } = await createSessionToken(cuenta.id, cuenta.email)
-  await prisma.cuenta.update({ where: { id: cuenta.id }, data: { sessionJti: jti } })
+  await registrarSesion(cuenta.id, jti)
 
   tgAviso('sistema.acceso-intranet', `🔔 Acceso a la intranet\n${cuenta.nombre} (${cuenta.email})`)
     .catch(() => {})

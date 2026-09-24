@@ -11,14 +11,18 @@ import type { ImageInput } from './types'
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions'
 // Slug estable y barato. El catálogo vivo lo cura el cron `ia-director-refresh` de
 // plataforma; esto es solo el último default. OJO: `deepseek/deepseek-chat` NO es un alias
-// rodante — apunta al V3 viejo ($0,26/$1,03 por M); el V4 Flash es más nuevo y 3-6× más
-// barato ($0,086/$0,17 por M), verificado en vivo el 31/08/2026.
-const DEFAULT_TEXT_MODEL = 'deepseek/deepseek-v4-flash'
+// rodante — apunta al V3 viejo ($0,26/$1,03 por M). `deepseek/deepseek-v4-flash` (nuestro
+// default hasta el 14/09/2026) fue RETIRADO por DeepSeek el 10/09/2026: OpenRouter lo sigue
+// aceptando por compatibilidad pero lo enruta a `deepseek-v4.1-flash` y lo factura a SU precio
+// ($0,15/$0,60 por M, casi el doble que antes) — el alias viejo es "temporal", así que se apunta
+// directo al id vigente. Verificado por catálogo (openrouter.ai/deepseek/deepseek-v4.1-flash),
+// no por llamada real (sin OPENROUTER_API_KEY en esta sesión).
+const DEFAULT_TEXT_MODEL = 'deepseek/deepseek-v4.1-flash'
 
 export interface OpenRouterConfig {
   apiKey: string
   baseUrl?: string           // default: https://openrouter.ai/api/v1/chat/completions
-  textModel?: string         // default: deepseek/deepseek-v4-flash (override por OPENROUTER_MODEL)
+  textModel?: string         // default: deepseek/deepseek-v4.1-flash (override por OPENROUTER_MODEL)
   fallbackModels?: string[]  // suplentes para el fallback NATIVO (body `models`)
   referer?: string           // header HTTP-Referer opcional (atribución en openrouter.ai)
   title?: string             // header X-Title opcional (atribución en openrouter.ai)

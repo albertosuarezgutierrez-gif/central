@@ -16,11 +16,33 @@
 // aquí para que la copia sea UNA y no dos.
 
 import { useEffect, useMemo, useState } from 'react'
+import {
+  borrarBorrador,
+  claveBorradorRetarificar,
+  guardarBorrador,
+  leerBorrador,
+} from '@/lib/correduria/borrador-local'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
+import PrepararPresupuesto from './PrepararPresupuesto'
 import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
+import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
+import { SelectorBuscable } from '../../../SelectorBuscable'
+import {
+  agruparPrecios,
+  defensaDeCartera,
+  etiquetaDefensa,
+  FILTRO_PRECIOS_VACIO,
+  FIRMEZAS,
+  FRANQUICIAS,
+  type Defensa,
+  type FiltroPrecios,
+} from '@central/module-seguros'
+
+import type { ContextoDefensa } from '@/lib/contexto-defensa'
+export type { ContextoDefensa }
 
 /**
  * Extrae el id de `seguros.tarificaciones` del `guardado` que devuelve el
@@ -132,7 +154,15 @@ type Resultado =
       avisoSimulacion: string | null
       resumen: string
       precios: Precio[]
-      fallos: Fallo[]
+      /**
+       * 🚨 `null` = NO se guardaron (una cotización recuperada no los trae:
+       * `seguros.tarificaciones` no tiene columna para ellos). `[]` = se
+       * pidieron y ninguna compañía rechazó. Colapsarlos diría «el mercado
+       * entero contestó» sobre una lista que nadie ha mirado — y esa lista es
+       * justo la que trae «la matrícula ya está asegurada en la compañía»,
+       * que es la defensa de cartera dicha por la propia compañía.
+       */
+      fallos: Fallo[] | null
       supuestos: Supuesto[]
       /** Qué pasó con la COPIA en `seguros.tarificaciones`. Sin `cotizacionId`
        *  (dentro, si `estado==='guardada'`) no hay a qué proyecto pedirle el
@@ -175,8 +205,9 @@ function resumenDePrecios(precios: Precio[]): string {
  * aparte para «lo que ya había» frente a «lo que se acaba de pagar».
  *
  * 🚨 El `coste` NO dice «0,50€»: sería mentir sobre un cargo que no ha pasado
- * ahora. Y `fallos`/`supuestos` van vacíos porque no se persisten — es la
- * letra pequeña de una cotización recuperada, no de una recién pedida.
+ * ahora. Y los `fallos` van `null`, no `[]`: no se persisten, así que lo
+ * honrado es «no se guardaron», nunca «ninguna compañía rechazó». Los
+ * `supuestos` sí van vacíos: son de la petición, no de la respuesta.
  */
 function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
   return {
@@ -187,7 +218,7 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
     avisoSimulacion: null,
     resumen: resumenDePrecios(g.precios),
     precios: g.precios,
-    fallos: [],
+    fallos: g.fallos,
     supuestos: [],
     guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
   }
@@ -195,13 +226,12 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
 
 /**
  * Borrador LOCAL de esta pantalla — lo que se ha tecleado ANTES de pagar los
- * 0,50€. Vive en `localStorage` del navegador, no en `seguros.*`: no es una
- * cotización real, solo la red de seguridad de lo tecleado mientras tanto.
- * `guardadaPrevia` (cotización YA pagada) SIEMPRE manda sobre este borrador.
+ * 0,50€. El mecanismo (caducidad, fallos de `localStorage`, por qué no va a
+ * `seguros.*`) vive en `lib/correduria/borrador-local.ts`, compartido con la
+ * pantalla de auto NUEVO: dos copias del mismo borrador es la forma callada
+ * de que una de las dos pantallas deje de guardar.
  *
- * `localStorage` puede fallar (modo privado, cuota, o `window` sin existir
- * durante el render en servidor): un fallo aquí nunca debe romper la
- * pantalla, solo perder la comodidad de recuperar lo tecleado.
+ * `guardadaPrevia` (cotización YA pagada) SIEMPRE manda sobre este borrador.
  */
 type DatosBorrador = {
   marcaId?: string
@@ -215,50 +245,7 @@ type DatosBorrador = {
   matriculacion?: string
   correcciones?: Record<string, string>
 }
-type Borrador = DatosBorrador & { guardadoEn: number }
 
-/** El borrador puede llevar DNI/nombre/teléfono/fecha de nacimiento tecleados
- *  a mano (`correcciones`): una caducidad corta acota cuánto tiempo se queda
- *  ese dato personal en el navegador si nunca se llega a pagar la cotización
- *  (`borrarBorrador` ya lo limpia ANTES, en cuanto eso pasa). */
-const BORRADOR_TTL_MS = 3 * 24 * 60 * 60 * 1000
-
-function leerBorrador(clave: string): DatosBorrador | null {
-  try {
-    if (typeof window === 'undefined') return null
-    const raw = window.localStorage.getItem(clave)
-    if (!raw) return null
-    const b: unknown = JSON.parse(raw)
-    if (!b || typeof b !== 'object') return null
-    const { guardadoEn, ...datos } = b as Borrador
-    if (typeof guardadoEn !== 'number' || Date.now() - guardadoEn > BORRADOR_TTL_MS) {
-      window.localStorage.removeItem(clave)
-      return null
-    }
-    return datos
-  } catch {
-    return null
-  }
-}
-
-function guardarBorrador(clave: string, datos: DatosBorrador) {
-  try {
-    if (typeof window === 'undefined') return
-    const b: Borrador = { ...datos, guardadoEn: Date.now() }
-    window.localStorage.setItem(clave, JSON.stringify(b))
-  } catch {
-    // Ver el comentario del tipo: perder el borrador no puede romper nada.
-  }
-}
-
-function borrarBorrador(clave: string) {
-  try {
-    if (typeof window === 'undefined') return
-    window.localStorage.removeItem(clave)
-  } catch {
-    // Ver el comentario del tipo.
-  }
-}
 
 /**
  * Resultado de buscar un texto de la ficha en un catálogo del vendor.
@@ -332,6 +319,10 @@ export default function Retarificador({
   simulacion,
   deshabilitado,
   guardadaPrevia,
+  contextoDefensa,
+  sinCarteraPorque,
+  primaActualEur,
+  ramo,
 }: {
   polizaId: string
   /**
@@ -397,10 +388,27 @@ export default function Retarificador({
    * directamente, SIN volver a pagar los 0,50€ del `POST /insurances`.
    */
   guardadaPrevia: TarificacionGuardadaAuto | null
+  /**
+   * En qué compañías está ya el cliente, para decir de cada precio si se puede
+   * emitir o se irá por defensa de cartera.
+   *
+   * 🚨 `null` = NO se ha podido mirar (el puerto de asegura no lo sirve, o
+   * falló). Entonces la tabla no dice nada de ninguna fila y lo declara. Lo que
+   * NO se hace es pasar `{polizas: []}`, que afirmaría que el cliente no tiene
+   * ninguna póliza en ninguna compañía.
+   */
+  contextoDefensa: ContextoDefensa | null
+  /** Por qué no se ha podido mirar la cartera. `null` = sí se ha mirado. */
+  sinCarteraPorque: string | null
+  /** La prima que paga HOY por esta póliza. `null` = la ficha no la trae. */
+  primaActualEur: number | null
+  /** `auto` | `hogar` | …: decide la escala de coberturas (el «Todo Riesgo» de
+   *  un hogar NO es el de un coche). `null` = no consta. */
+  ramo: string | null
 }) {
   // Borrador local (localStorage) de esta póliza — ver `leerBorrador`/
   // `guardarBorrador`/`borrarBorrador` arriba.
-  const claveBorrador = `asegura_retarificar_borrador_${polizaId}`
+  const claveBorrador = claveBorradorRetarificar(polizaId)
 
   // ── Vehículo: marca → modelo → versión, todo del catálogo y todo gratis ────
   const [marcas, setMarcas] = useState<Opcion[]>([])
@@ -513,6 +521,18 @@ export default function Retarificador({
     return r.opciones
   }
 
+  // La pista para el BUSCADOR de la versión — y solo para el buscador.
+  //
+  // Sale de otra póliza de la misma matrícula, así que prefiltra el desplegable
+  // y se dice en pantalla; seleccionar sigue siendo del corredor (ver el 🚨 de
+  // abajo). Y solo con UNA candidata: con dos o más se contradicen entre sí
+  // (`FORTWO COUPE PURE 52…` contra `FORFOUR PURE 1.1…`), y prefiltrar por una
+  // sería tomar partido en silencio.
+  const pistaVersion = useMemo(
+    () => (vehiculo?.versiones.length === 1 ? vehiculo.versiones[0].version : null),
+    [vehiculo],
+  )
+
   // ── Preselección desde la ficha ────────────────────────────────────────────
   //
   // La compañía manda matrícula, MARCA y MODELO; lo único que falta es la
@@ -543,7 +563,7 @@ export default function Retarificador({
       // manda sobre la preselección por ficha: son ids que YA pasaron por el
       // catálogo la vez anterior, no hay nada que emparejar por texto. Si el
       // catálogo cambió y el id ya no existe, se cae al flujo normal de abajo.
-      const borradorLocal = guardadaPrevia ? null : leerBorrador(claveBorrador)
+      const borradorLocal = guardadaPrevia ? null : leerBorrador<DatosBorrador>(claveBorrador)
       if (borradorLocal?.codigoVehiculo) setCodigoVehiculo(borradorLocal.codigoVehiculo)
       if (borradorLocal?.marcaId) {
         const marcaEncontrada = lista.find((m) => m.id === borradorLocal.marcaId)
@@ -671,7 +691,7 @@ export default function Retarificador({
   // prioridad: `guardadaPrevia` (ya pagada) manda si existe.
   useEffect(() => {
     if (deshabilitado || guardadaPrevia) return
-    const b = leerBorrador(claveBorrador)
+    const b = leerBorrador<DatosBorrador>(claveBorrador)
     if (!b) return
     if (b.garaje && garajes.some((g) => g.id === b.garaje)) setGaraje(b.garaje)
     if (b.estadoCivilId && civiles.some((c) => c.id === b.estadoCivilId)) setEstadoCivilId(b.estadoCivilId)
@@ -701,7 +721,7 @@ export default function Retarificador({
   // YA pagado y siempre manda sobre este borrador al recargar la pantalla.
   useEffect(() => {
     const t = setTimeout(() => {
-      guardarBorrador(claveBorrador, {
+      guardarBorrador<DatosBorrador>(claveBorrador, {
         marcaId,
         modeloId,
         motorId,
@@ -997,20 +1017,16 @@ export default function Retarificador({
             falta={false}
             ayuda={<ProcedenciaCatalogo emp={autoMarca} elegido={marcaId} que="marca" />}
           >
-            <select
+            <SelectorBuscable
               id="marca"
-              value={marcaId}
-              onChange={(e) => void alElegirMarca(e.target.value)}
-              disabled={deshabilitado || cargando === 'marcas'}
-              style={{ minHeight: 44 }}
-            >
-              <option value="">{cargando === 'marcas' ? 'Cargando…' : 'Elige marca'}</option>
-              {marcas.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nombre}
-                </option>
-              ))}
-            </select>
+              valor={marcaId}
+              onCambiar={(v) => void alElegirMarca(v)}
+              opciones={marcas}
+              deshabilitado={deshabilitado || cargando === 'marcas'}
+              textoVacio={cargando === 'marcas' ? 'Cargando…' : 'Elige marca'}
+              nombre="marca"
+              plural="marcas"
+            />
           </Campo>
 
           <Campo
@@ -1019,20 +1035,16 @@ export default function Retarificador({
             falta={false}
             ayuda={<ProcedenciaCatalogo emp={autoModelo} elegido={modeloId} que="modelo" />}
           >
-            <select
+            <SelectorBuscable
               id="modelo"
-              value={modeloId}
-              onChange={(e) => void alElegirModelo(e.target.value)}
-              disabled={!marcaId || cargando === 'modelos'}
-              style={{ minHeight: 44 }}
-            >
-              <option value="">{cargando === 'modelos' ? 'Cargando…' : 'Elige modelo'}</option>
-              {modelos.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nombre}
-                </option>
-              ))}
-            </select>
+              valor={modeloId}
+              onCambiar={(v) => void alElegirModelo(v)}
+              opciones={modelos}
+              deshabilitado={!marcaId || cargando === 'modelos'}
+              textoVacio={cargando === 'modelos' ? 'Cargando…' : 'Elige modelo'}
+              nombre="modelo"
+              plural="modelos"
+            />
           </Campo>
 
           <Campo
@@ -1048,20 +1060,16 @@ export default function Retarificador({
               </span>
             }
           >
-            <select
+            <SelectorBuscable
               id="motor"
-              value={motorId}
-              onChange={(e) => alElegirMotor(e.target.value)}
-              disabled={deshabilitado || cargando === 'motores'}
-              style={{ minHeight: 44 }}
-            >
-              <option value="">{cargando === 'motores' ? 'Cargando…' : 'Elige combustible'}</option>
-              {motores.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.nombre}
-                </option>
-              ))}
-            </select>
+              valor={motorId}
+              onCambiar={alElegirMotor}
+              opciones={motores}
+              deshabilitado={deshabilitado || cargando === 'motores'}
+              textoVacio={cargando === 'motores' ? 'Cargando…' : 'Elige combustible'}
+              nombre="combustible"
+              plural="combustibles"
+            />
           </Campo>
 
           <Campo
@@ -1100,26 +1108,24 @@ export default function Retarificador({
                 </button>
               </div>
             ) : (
-              <select
+              <SelectorBuscable
                 id="version"
-                value={codigoVehiculo}
-                onChange={(e) => setCodigoVehiculo(e.target.value)}
-                disabled={!modeloId || !motorId || cargando === 'versiones'}
-                style={{ minHeight: 44 }}
-              >
-                <option value="">
-                  {cargando === 'versiones'
+                valor={codigoVehiculo}
+                onCambiar={setCodigoVehiculo}
+                opciones={versiones}
+                deshabilitado={!modeloId || !motorId || cargando === 'versiones'}
+                textoVacio={
+                  cargando === 'versiones'
                     ? 'Cargando…'
                     : !motorId
                       ? 'Elige antes el combustible'
-                      : 'Elige versión'}
-                </option>
-                {versiones.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.nombre}
-                  </option>
-                ))}
-              </select>
+                      : 'Elige versión'
+                }
+                nombre="versión"
+                plural="versiones"
+                marcador="Buscar: TECNO, 48V, 4X2…"
+                pista={pistaVersion}
+              />
             )}
           </Campo>
 
@@ -1392,6 +1398,31 @@ export default function Retarificador({
             />
           </Campo>
         </div>
+
+        {/* 🔧 Nº de póliza anterior — corrección MANUAL y opcional (18/09/2026). Por defecto
+            el servidor manda el nº de póliza ENTERO de la ficha (`poliza.numeroPoliza`), tal cual,
+            para el control de antecedentes de la compañía. Un 400 real de Allianz («Control
+            antecedentes. Revisar últimos 5 dígitos de póliza en compañía informada») sobre un
+            número con ceros de relleno (`0008414300000`) sugiere que esos "últimos 5 dígitos" caen
+            en el padding en vez del serial real — sin confirmarlo con más de un caso no se cablea
+            ninguna regla de recorte automática. Este campo deja probarlo AQUÍ, sobre esta
+            tarificación, sin tocar el cálculo por defecto de nadie más: vacío = como siempre. */}
+        <div style={{ marginTop: 16 }}>
+          <Campo
+            id="c-polizaAnterior"
+            etiqueta="Nº de póliza anterior (opcional)"
+            falta={false}
+            ayuda="Por defecto se manda el número de la póliza actual tal cual está en la ficha. Corrígelo solo si la compañía rechaza el «control de antecedentes» y quieres probar con otra forma del número — por ejemplo, sin los ceros de relleno."
+          >
+            <input
+              id="c-polizaAnterior"
+              type="text"
+              value={correcciones.polizaAnterior ?? ''}
+              onChange={(e) => setCorrecciones((c) => ({ ...c, polizaAnterior: e.target.value }))}
+              style={{ minHeight: 44 }}
+            />
+          </Campo>
+        </div>
       </Paso>
 
       {/* ── Paso 3 · el disparo ────────────────────────────────────────────── */}
@@ -1429,7 +1460,18 @@ export default function Retarificador({
           </p>
         )}
 
-        {faltaAlgo && !deshabilitado && (
+        {/* Si el catálogo de tipos de vía no ha podido leerse, «falta» no se
+            corrige desde aquí: no hay nada que elegir. El texto genérico de
+            abajo («corregir arriba no cuesta nada») es falso en este caso
+            concreto y deja a quien lo lee sin saber qué hacer. */}
+        {faltaTipoVia && tiposVia === null && !deshabilitado && (
+          <p className="muted" style={{ fontSize: 12, marginTop: 8, color: 'var(--negative)' }}>
+            El catálogo de tipos de vía no se ha podido leer: recarga la página. No es un dato que se
+            pueda teclear ni elegir desde aquí.
+          </p>
+        )}
+
+        {faltaAlgo && !(faltaTipoVia && tiposVia === null) && !deshabilitado && (
           <p className="muted" style={{ fontSize: 12, marginTop: 8 }}>
             El botón se enciende cuando no quede ningún <span className="badge warn">falta</span> de
             arriba. Corregir arriba no cuesta nada.
@@ -1479,7 +1521,14 @@ export default function Retarificador({
         )}
 
         {resultado.estado === 'ok' && (
-          <Precios r={resultado} simulacion={simulacion} />
+          <Precios
+            r={resultado}
+            simulacion={simulacion}
+            contextoDefensa={contextoDefensa}
+            sinCarteraPorque={sinCarteraPorque}
+            primaActualEur={primaActualEur}
+            ramo={ramo}
+          />
         )}
       </div>
     </>
@@ -1491,14 +1540,57 @@ export default function Retarificador({
 function Precios({
   r,
   simulacion,
+  contextoDefensa,
+  sinCarteraPorque,
+  primaActualEur,
+  ramo,
 }: {
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
+  /** `null` = no se ha podido mirar la cartera del cliente (ver el tipo). */
+  contextoDefensa: ContextoDefensa | null
+  sinCarteraPorque: string | null
+  /** Lo que paga HOY. `null` = la póliza no lo trae; no se pinta 0. */
+  primaActualEur: number | null
+  ramo: string | null
 }) {
   // Qué fila tiene abierto el panel de emisión real (ver emision.tsx). `null` =
   // ninguna. Vive aquí, no en el padre: es puro estado de pantalla, no algo
   // que la póliza necesite recordar entre visitas.
   const [abierta, setAbierta] = useState<string | null>(null)
+
+  // El filtro es estado de pantalla y arranca VACÍO: la tabla se abre
+  // enseñándolo todo. Un filtro puesto de fábrica esconde precios sin que
+  // nadie lo haya pedido, y eso no se distingue de que no existan.
+  const [filtro, setFiltro] = useState<FiltroPrecios>(FILTRO_PRECIOS_VACIO)
+
+  // Una defensa por NOMBRE de compañía (que es lo único que manda el vendor).
+  // Se calcula una vez por lista de precios: `defensaDeCartera` es pura.
+  const defensas = useMemo(() => {
+    if (!contextoDefensa) return null
+    const m = new Map<string, Defensa>()
+    for (const p of r.precios) {
+      const nombre = p.compania ?? ''
+      if (m.has(nombre)) continue
+      m.set(
+        nombre,
+        defensaDeCartera({
+          compania: p.compania,
+          catalogo: contextoDefensa.catalogo,
+          polizas: contextoDefensa.polizas,
+          polizaActualId: contextoDefensa.polizaActualId,
+          companiaActualDgs: contextoDefensa.companiaActualDgs,
+          companiaActualNombre: contextoDefensa.companiaActualNombre,
+        }),
+      )
+    }
+    return m
+  }, [contextoDefensa, r.precios])
+
+  const comparativa = useMemo(
+    () => agruparPrecios(r.precios, { filtro, ramo, defensaPorCompania: defensas }),
+    [r.precios, filtro, ramo, defensas],
+  )
   return (
     <div style={{ marginTop: 16 }}>
       {/* Un precio simulado y uno real se leen igual: la única diferencia está
@@ -1550,83 +1642,259 @@ function Precios({
         )}
       </p>
 
-      <div className="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Compañía</th>
-              <th>Producto</th>
-              <th>Cobertura</th>
-              <th>Prima anual</th>
-              <th>Franquicia</th>
-              <th>Firmeza</th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.precios.map((p, i) => {
-              const id = `${p.compania}-${p.producto}-${i}`
-              return (
-              <tr key={id}>
-                <td>{p.compania ?? '—'}</td>
-                <td>{p.producto ?? '—'}</td>
-                <td>{p.categoria ?? <span className="muted">sin declarar</span>}</td>
-                <td>
-                  <strong>{euroODash(p.primaEur)}</strong>
-                  {r.simulado && (
-                    <>
-                      {' '}
-                      <span className="badge warn">simulado</span>
-                    </>
-                  )}
-                </td>
-                <td>
-                  {/* `null` NO es «sin franquicia»: es «el producto no la
-                      declara». Callarlo sería vender un todo riesgo ocultando
-                      1.500€ de franquicia. */}
-                  {p.franquiciaEur === null || p.franquiciaEur === undefined ? (
-                    <span className="muted">no la declara</span>
-                  ) : (
-                    euroODash(p.franquiciaEur)
-                  )}
-                </td>
-                <td>
-                  {/* La firmeza va PEGADA al precio: enseñar la prima sola
-                      promete algo que la compañía no ha cerrado. */}
-                  <span
-                    className={`badge ${p.firmeza === 'firme' ? 'ok' : 'warn'}`}
-                    title={p.avisos?.join(' · ')}
-                  >
-                    {p.firmeza ?? 'sin determinar'}
+      {/* ⚓ El ancla. Sin la prima que paga HOY, 24 cifras no responden a la
+          única pregunta de retarificar: ¿sube o baja? `null` = la póliza no la
+          trae, y entonces se dice — no se pinta un 0 ni se calla la columna. */}
+      {primaActualEur !== null && (
+        <p className="muted" style={{ marginTop: 0 }}>
+          Paga hoy <strong>{eur(primaActualEur)}</strong> al año. Las diferencias de abajo se miden
+          contra esa cifra.
+        </p>
+      )}
+
+      <FiltrosPrecios
+        filtro={filtro}
+        onCambiar={setFiltro}
+        niveles={comparativa.nivelesPresentes}
+        companias={comparativa.companiasPresentes}
+        hayBloqueadas={comparativa.grupos.some((g) => g.bloqueadas > 0)}
+      />
+
+      {/* Los niveles de cobertura NO son comparables entre sí cuando cada
+          compañía los nombra a su manera (el «Todo Riesgo» de un hogar no es el
+          de un coche). Cuando eso pasa, el módulo lo dice y aquí se pinta. */}
+      {comparativa.avisoEscala && (
+        <p className="muted" style={{ marginTop: 8 }}>
+          ⚠️ {comparativa.avisoEscala}
+        </p>
+      )}
+
+      <p className="muted" style={{ margin: '8px 0 4px' }}>
+        {comparativa.mostrados === comparativa.total ? (
+          <>
+            {comparativa.total} {comparativa.total === 1 ? 'precio' : 'precios'} en{' '}
+            {comparativa.grupos.length}{' '}
+            {comparativa.grupos.length === 1 ? 'nivel de cobertura' : 'niveles de cobertura'}.
+          </>
+        ) : (
+          <>
+            Mostrando {comparativa.mostrados} de {comparativa.total}
+            {comparativa.ocultosPorFiltro > 0 && <> · {comparativa.ocultosPorFiltro} por el filtro</>}
+            {comparativa.bloqueadasOcultas > 0 && (
+              <> · {comparativa.bloqueadasOcultas} que no podemos emitir</>
+            )}
+            .
+          </>
+        )}
+      </p>
+
+      {/* 🚨 Sin cartera del cliente NO se afirma nada de ninguna fila: no se
+          pinta «emitible» por defecto. `null` aquí es «no se ha mirado», y se
+          dice, porque una tabla muda se lee como una tabla limpia. */}
+      {defensas === null && (
+        <p className="muted" style={{ margin: '0 0 8px' }}>
+          No se ha podido mirar en qué compañías tiene ya póliza este cliente, así que{' '}
+          <strong>ninguna fila dice si se puede emitir</strong>. El precio es igual de válido; lo que
+          falta es saber si la compañía lo mandaría a defensa de cartera.
+          {sinCarteraPorque && <> Motivo: {sinCarteraPorque}</>}
+        </p>
+      )}
+
+      {comparativa.mostrados === 0 ? (
+        <p className="muted">
+          Ningún precio pasa el filtro. Hay {comparativa.total} en total —{' '}
+          <button
+            type="button"
+            className="ghost"
+            onClick={() => setFiltro(FILTRO_PRECIOS_VACIO)}
+            style={{ minHeight: 28, padding: '2px 8px', fontSize: 12 }}
+          >
+            quitar el filtro
+          </button>
+        </p>
+      ) : (
+        comparativa.grupos.map((g) => (
+          <section key={g.nivel.clave} style={{ marginTop: 14 }}>
+            <h3 style={{ margin: '0 0 2px', fontSize: 15 }}>
+              {g.nivel.label}
+              {!g.nivel.reconocido && (
+                <>
+                  {' '}
+                  <span className="badge" style={{ fontSize: 10 }} title={
+                    'Esta compañía nombra la cobertura a su manera y no se ha podido situar en la ' +
+                    'escala. Va en su propio grupo: meterla en uno conocido sería adivinar.'
+                  }>
+                    escala propia
                   </span>
-                </td>
-                <td>
-                  {/* El botón real (11/09/2026): confirma con la compañía
-                      (ReRate) y, si sale firme, permite el Submit de verdad.
-                      Sin `cotizacionId` (la cotización no quedó guardada) no
-                      hay proyecto al que pedírselo. */}
-                  <button
-                    type="button"
-                    className="ghost"
-                    disabled={r.simulado || cotizacionIdDe(r.guardado) === null}
-                    title={
-                      r.simulado
-                        ? 'Simulado: no hay proyecto real de Codeoscopic'
-                        : cotizacionIdDe(r.guardado) === null
-                          ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
-                          : undefined
-                    }
-                    onClick={() => setAbierta(abierta === id ? null : id)}
-                  >
-                    {abierta === id ? 'Ocultar' : 'Emitir'}
-                  </button>
-                </td>
-              </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+                </>
+              )}
+            </h3>
+            <p className="muted" style={{ margin: '0 0 6px', fontSize: 12 }}>
+              {g.filas.length === g.total ? (
+                <>{g.total} {g.total === 1 ? 'precio' : 'precios'}</>
+              ) : (
+                <>{g.filas.length} de {g.total}</>
+              )}
+              {g.matices.length > 0 && <> · {g.matices.join(' / ')}</>}
+              {g.bloqueadas > 0 && (
+                <>
+                  {' '}
+                  · <strong>{g.bloqueadas}</strong> que no podemos emitir
+                </>
+              )}
+              {g.sinComprobar > 0 && <> · {g.sinComprobar} sin comprobar</>}
+              {/* La más barata EMITIBLE es un dato distinto de «la más barata»:
+                  es la que de verdad se puede vender. Solo se dice cuando no
+                  coinciden, para no repetir la primera fila. */}
+              {g.masBarataEmitible &&
+                g.masBarataEmitible.indice !== g.filas[0]?.indice && (
+                  <>
+                    {' '}
+                    · la más barata que SÍ podemos emitir:{' '}
+                    <strong>
+                      {g.masBarataEmitible.precio.compania ?? '—'}{' '}
+                      {euroODash(g.masBarataEmitible.precio.primaEur)}
+                    </strong>
+                  </>
+                )}
+            </p>
+
+            <div className="table-wrap">
+              <table className="precios">
+                <thead>
+                  <tr>
+                    <th>Aseguradora</th>
+                    <th>Prima anual</th>
+                    {primaActualEur !== null && <th>Frente a hoy</th>}
+                    <th>Firmeza</th>
+                    {defensas !== null && <th>Emisión</th>}
+                    <th aria-hidden />
+                  </tr>
+                </thead>
+                <tbody>
+                  {g.filas.map((fila) => {
+                    const p = fila.precio
+                    // 🚨 La clave se construye con `fila.indice`, que es la
+                    // posición en `r.precios` ORIGINAL — no con la posición
+                    // dentro del grupo. Al agrupar y filtrar, el orden de
+                    // pantalla ya no es el de la lista, y una clave por
+                    // posición visible abriría el panel de Emisión sobre otro
+                    // precio distinto del que se pulsó.
+                    const id = `${p.compania}-${p.producto}-${fila.indice}`
+                    const logo = logoCompania(p.compania)
+                    const producto = nombreProductoSinCia(p.compania, p.producto)
+                    const abrirCierra = abierta === id
+                    const emisionDeshabilitada =
+                      r.simulado || cotizacionIdDe(r.guardado) === null
+                    return (
+                      <tr key={id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                            {logo ? (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={logo.src}
+                                alt=""
+                                style={{ height: Math.round(18 * logo.escala), maxWidth: 52, objectFit: 'contain', flexShrink: 0 }}
+                              />
+                            ) : (
+                              <span className="badge" style={{ fontSize: 10, flexShrink: 0 }}>
+                                {(p.compania ?? '—').slice(0, 2).toUpperCase()}
+                              </span>
+                            )}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.compania ?? '—'}</div>
+                              {producto && (
+                                <div className="muted" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                                  {producto}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <strong>{euroODash(p.primaEur)}</strong>
+                          {r.simulado && (
+                            <>
+                              {' '}
+                              <span className="badge warn">simulado</span>
+                            </>
+                          )}
+                          {/* `null` NO es «sin franquicia»: es «el producto no la
+                              declara». Callarlo sería vender un todo riesgo
+                              ocultando 1.500€ de franquicia. */}
+                          <div className="muted" style={{ fontSize: 11 }}>
+                            {p.franquiciaEur === null || p.franquiciaEur === undefined
+                              ? 'franquicia no declarada'
+                              : `franquicia ${euroODash(p.franquiciaEur)}`}
+                          </div>
+                        </td>
+                        {primaActualEur !== null && (
+                          <td>
+                            <Diferencia actual={primaActualEur} nueva={p.primaEur ?? null} />
+                          </td>
+                        )}
+                        <td>
+                          {/* La firmeza va PEGADA al precio: enseñar la prima sola
+                              promete algo que la compañía no ha cerrado. */}
+                          <span className={`badge ${p.firmeza === 'firme' ? 'ok' : 'warn'}`}>
+                            {p.firmeza ?? 'sin determinar'}
+                          </span>
+                          {/* 🚨 Los avisos vivían SOLO en un `title=`, y en un
+                              móvil no hay hover: la letra pequeña de un precio
+                              condicionado no existía en la pantalla donde se
+                              mira. Ahora se pueden abrir. */}
+                          {p.avisos && p.avisos.length > 0 && (
+                            <details style={{ marginTop: 2 }}>
+                              <summary className="muted" style={{ cursor: 'pointer', fontSize: 11 }}>
+                                {p.avisos.length} {p.avisos.length === 1 ? 'reparo' : 'reparos'}
+                              </summary>
+                              <ul style={{ margin: '2px 0 0', paddingLeft: 16, fontSize: 11 }}>
+                                {p.avisos.map((a, j) => (
+                                  <li key={j} className="muted">{a}</li>
+                                ))}
+                              </ul>
+                            </details>
+                          )}
+                        </td>
+                        {defensas !== null && (
+                          <td>
+                            <Emitibilidad defensa={fila.defensa} />
+                          </td>
+                        )}
+                        <td>
+                          {/* El botón real (11/09/2026): confirma con la compañía
+                              (ReRate) y, si sale firme, permite el Submit de verdad.
+                              Sin `cotizacionId` (la cotización no quedó guardada) no
+                              hay proyecto al que pedírselo. */}
+                          <button
+                            type="button"
+                            className="ghost icono"
+                            disabled={emisionDeshabilitada}
+                            aria-label={abrirCierra ? 'Ocultar emisión' : 'Emitir'}
+                            title={
+                              r.simulado
+                                ? 'Simulado: no hay proyecto real de Codeoscopic'
+                                : cotizacionIdDe(r.guardado) === null
+                                  ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
+                                  : abrirCierra
+                                    ? 'Ocultar emisión'
+                                    : 'Emitir'
+                            }
+                            onClick={() => setAbierta(abrirCierra ? null : id)}
+                          >
+                            {abrirCierra ? '✕' : '✓'}
+                          </button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        ))
+      )}
 
       {r.precios.map((p, i) => {
         const id = `${p.compania}-${p.producto}-${i}`
@@ -1645,6 +1913,18 @@ function Precios({
         )
       })}
 
+      {/* 📄 Preparar el presupuesto que verá el cliente (PR 1 de la spec del
+          21/09/2026). No manda nada, no vuelve a cotizar y no cuesta un euro:
+          congela las opciones de esta misma consulta, que ya está pagada.
+          Sin `cotizacionId` no hay de dónde congelarlas, y entonces no se
+          ofrece el botón en vez de ofrecer uno que falla al pulsarlo. */}
+      {cotizacionIdDe(r.guardado) !== null && (
+        <PrepararPresupuesto
+          tarificacionId={cotizacionIdDe(r.guardado) as string}
+          simulado={r.simulado}
+        />
+      )}
+
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p className="muted">
           Los precios marcados como estimado o condicionado <strong>no son ofertas cerradas</strong>:
@@ -1654,7 +1934,17 @@ function Precios({
 
       {/* Las compañías que NO dieron precio: sin ellas, «5 precios» se lee como
           «esto es el mercado entero». Cerrado por defecto (regla de rendimiento). */}
-      {r.fallos.length > 0 && (
+      {/* Sin esta lista, «5 precios» se lee como «esto es el mercado entero».
+          `null` (recuperada) se DICE: es lo contrario de «ninguna falló». */}
+      {r.fallos === null ? (
+        <p className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+          De esta cotización recuperada <strong>no se guardó qué compañías no dieron precio</strong>,
+          así que arriba no está el mercado entero: solo lo que sí se guardó. Esa lista —donde la
+          compañía dice cosas como «la matrícula ya está asegurada aquí»— solo existe en el momento
+          de pedirla.
+        </p>
+      ) : (
+      r.fallos.length > 0 && (
         <details style={{ marginTop: 8 }}>
           <summary className="muted" style={{ cursor: 'pointer', minHeight: 24, fontSize: 12 }}>
             {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
@@ -1674,6 +1964,7 @@ function Precios({
             ))}
           </ul>
         </details>
+      )
       )}
 
       {/* Los supuestos, OTRA VEZ y al lado del precio: son la letra pequeña de
@@ -2249,3 +2540,214 @@ const RESUELTOS_EN_PANTALLA = new Set<string>([
   'sexo',
   'tipoVia',
 ])
+
+// ─── Piezas de la tabla de precios ───────────────────────────────────────────
+
+/**
+ * Los filtros, en un desplegable CERRADO mientras no haya ninguno puesto.
+ *
+ * Cerrado por defecto porque con 4 precios estorban, y abierto en cuanto hay
+ * uno activo: un filtro puesto y escondido hace que falten filas sin que se
+ * vea por qué, que es la peor de las dos mentiras posibles aquí.
+ */
+function FiltrosPrecios({
+  filtro,
+  onCambiar,
+  niveles,
+  companias,
+  hayBloqueadas,
+}: {
+  filtro: FiltroPrecios
+  onCambiar: (f: FiltroPrecios) => void
+  niveles: { clave: string; label: string; n: number }[]
+  companias: string[]
+  hayBloqueadas: boolean
+}) {
+  const activo =
+    filtro.niveles.length > 0 ||
+    filtro.companias.length > 0 ||
+    filtro.firmezas.length > 0 ||
+    filtro.franquicia !== null ||
+    filtro.primaMin !== null ||
+    filtro.primaMax !== null ||
+    filtro.soloEmitibles
+
+  const alternar = <T,>(lista: T[], v: T): T[] =>
+    lista.includes(v) ? lista.filter((x) => x !== v) : [...lista, v]
+
+  return (
+    <details open={activo} style={{ marginTop: 10 }}>
+      <summary className="muted" style={{ cursor: 'pointer', minHeight: 28, fontSize: 12 }}>
+        Filtrar {activo && <span className="badge warn" style={{ fontSize: 10 }}>filtro puesto</span>}
+      </summary>
+
+      <div style={{ display: 'grid', gap: 10, marginTop: 8 }}>
+        {niveles.length > 1 && (
+          <Grupo titulo="Cobertura">
+            {niveles.map((n) => (
+              <Chip
+                key={n.clave}
+                puesto={filtro.niveles.includes(n.clave)}
+                onClick={() => onCambiar({ ...filtro, niveles: alternar(filtro.niveles, n.clave) })}
+              >
+                {n.label} ({n.n})
+              </Chip>
+            ))}
+          </Grupo>
+        )}
+
+        {companias.length > 1 && (
+          <Grupo titulo="Compañía">
+            {companias.map((c) => (
+              <Chip
+                key={c}
+                puesto={filtro.companias.includes(c)}
+                onClick={() => onCambiar({ ...filtro, companias: alternar(filtro.companias, c) })}
+              >
+                {c}
+              </Chip>
+            ))}
+          </Grupo>
+        )}
+
+        <Grupo titulo="Firmeza">
+          {FIRMEZAS.map((f) => (
+            <Chip
+              key={f.v}
+              puesto={filtro.firmezas.includes(f.v)}
+              onClick={() => onCambiar({ ...filtro, firmezas: alternar([...filtro.firmezas], f.v) })}
+            >
+              {f.label}
+            </Chip>
+          ))}
+        </Grupo>
+
+        {/* Tres valores, no dos: «sin franquicia» y «no la declara» son
+            respuestas distintas y juntarlas vendería un todo riesgo callando
+            1.500€ de franquicia. */}
+        <Grupo titulo="Franquicia">
+          {FRANQUICIAS.map((f) => (
+            <Chip
+              key={f.v}
+              puesto={filtro.franquicia === f.v}
+              onClick={() =>
+                onCambiar({ ...filtro, franquicia: filtro.franquicia === f.v ? null : f.v })
+              }
+            >
+              {f.label}
+            </Chip>
+          ))}
+        </Grupo>
+
+        {hayBloqueadas && (
+          <Grupo titulo="Defensa de cartera">
+            {/* Opt-in a propósito: por defecto las no emitibles SE VEN. El
+                precio sirve para argumentar aunque la emisión no sea nuestra,
+                y esconderlas haría invisible un fallo del emparejamiento. */}
+            <Chip
+              puesto={filtro.soloEmitibles}
+              onClick={() => onCambiar({ ...filtro, soloEmitibles: !filtro.soloEmitibles })}
+            >
+              Solo las que podemos emitir
+            </Chip>
+            <Chip
+              puesto={filtro.bloqueadasAlFinal}
+              onClick={() => onCambiar({ ...filtro, bloqueadasAlFinal: !filtro.bloqueadasAlFinal })}
+            >
+              Las demás, al final
+            </Chip>
+          </Grupo>
+        )}
+
+        {activo && (
+          <div>
+            <button
+              type="button"
+              className="ghost"
+              onClick={() => onCambiar(FILTRO_PRECIOS_VACIO)}
+              style={{ minHeight: 32, fontSize: 12 }}
+            >
+              Quitar el filtro
+            </button>
+          </div>
+        )}
+      </div>
+    </details>
+  )
+}
+
+function Grupo({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="muted" style={{ margin: '0 0 4px', fontSize: 11 }}>
+        {titulo}
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{children}</div>
+    </div>
+  )
+}
+
+/** 44px de alto: se pulsa con el dedo, que es como Alberto mira esto. */
+function Chip({
+  puesto,
+  onClick,
+  children,
+}: {
+  puesto: boolean
+  onClick: () => void
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={puesto}
+      onClick={onClick}
+      className={puesto ? '' : 'ghost'}
+      style={{ minHeight: 44, padding: '4px 10px', fontSize: 12, borderRadius: 999 }}
+    >
+      {children}
+    </button>
+  )
+}
+
+/**
+ * Cuánto cambia respecto de lo que paga hoy.
+ *
+ * `null` en la prima nueva no es 0 ni «igual»: es que la compañía no la dio, y
+ * entonces no hay diferencia que calcular y se dice.
+ */
+function Diferencia({ actual, nueva }: { actual: number; nueva: number | null }) {
+  if (nueva === null) return <span className="muted">—</span>
+  const d = nueva - actual
+  if (Math.abs(d) < 0.005) return <span className="muted">igual</span>
+  const baja = d < 0
+  const pct = actual > 0 ? Math.round((Math.abs(d) / actual) * 100) : null
+  return (
+    <span className={`badge ${baja ? 'ok' : 'warn'}`} style={{ whiteSpace: 'nowrap' }}>
+      {baja ? '−' : '+'}
+      {eur(Math.abs(d))}
+      {pct !== null && ` (${pct}%)`}
+    </span>
+  )
+}
+
+/**
+ * ¿Podemos emitir en esta compañía para este cliente?
+ *
+ * 🚨 Cuatro desenlaces y ninguno es un hueco en blanco. `null` (la defensa no
+ * se ha evaluado) y `desconocida` (se ha intentado y no se ha podido resolver)
+ * son cosas distintas y se dicen distinto: la primera no debería llegar aquí
+ * —la tabla ni pinta la columna—, la segunda es «sin comprobar», que NO es
+ * «adelante». El motivo va en el `title` Y el rótulo es legible sin hover.
+ */
+function Emitibilidad({ defensa }: { defensa: Defensa | null }) {
+  if (defensa === null) return <span className="muted" style={{ fontSize: 11 }}>sin evaluar</span>
+  const tono =
+    defensa.estado === 'libre' ? 'ok' : defensa.estado === 'desconocida' ? '' : 'warn'
+  return (
+    <span className={`badge ${tono}`} style={{ fontSize: 10 }} title={defensa.motivo}>
+      {etiquetaDefensa(defensa)}
+      {defensa.coincidencia === 'nombre' && ' ·  por nombre'}
+    </span>
+  )
+}

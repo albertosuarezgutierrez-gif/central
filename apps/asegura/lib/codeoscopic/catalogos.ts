@@ -21,6 +21,7 @@ import type { ConfigCodeoscopic } from './config.ts'
 export type { Opcion } from './opciones.ts'
 export { normalizarTexto, emparejar, elegirDefecto, pareceOpcionPropietario } from './opciones.ts'
 import { normalizarTexto, type Opcion } from './opciones.ts'
+import { limitesDeCarnets, motorDeVersion, type LimiteCarnet, type MotorVersion } from './carnet-moto.ts'
 
 /**
  * Caché en memoria con TTL. Los catálogos del vendor cambian de año en año, no
@@ -128,6 +129,28 @@ export async function modelos(config: ConfigCodeoscopic, marcaId: string): Promi
  * Los tipos de motor de coche. Gratis, y hace falta ANTES que las versiones.
  * Ver `versiones()`.
  */
+/**
+ * Zonas de expedición del carnet (`Spain`, y las de fuera). **Gratis.**
+ *
+ * 🚨 Existe desde siempre y no lo usábamos: la zona iba cableada a `Spain` en
+ * `construirPersona`, así que un carnet extranjero se declaraba como español
+ * sin que nada fallase. Avant2 SÍ lo pregunta (captura del 21/09/2026).
+ */
+export async function zonasExpedicionCarnet(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/car/driving-license-issuing-zones'))
+}
+
+/**
+ * Tipos de carnet (`B`, y los demás, con su `minAge`). **Gratis.**
+ *
+ * Mismo caso que la zona: iba cableado a `B`. Ojo al leerlo — el catálogo de
+ * moto trae además `maxDisplacement`, el de auto no
+ * (`docs/CODEOSCOPIC-API-PORTAL.md`).
+ */
+export async function tiposDeCarnet(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/car/driving-licenses'))
+}
+
 export async function tiposDeMotor(config: ConfigCodeoscopic): Promise<Opcion[]> {
   return normalizarOpciones(await catalogo(config, '/car/engine-types'))
 }
@@ -154,13 +177,40 @@ export async function versiones(
   modeloId: string,
   motor: string,
 ): Promise<Opcion[]> {
-  return normalizarOpciones(
-    await catalogo(
-      config,
-      `/car/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
-        `/vehicles?engine=${encodeURIComponent(motor)}`,
-    ),
-  )
+  return (await versionesCrudas(config, marcaId, modeloId, motor)).opciones
+}
+
+/**
+ * Lo mismo, devolviendo ADEMÁS el payload del vendor sin tocar — igual que
+ * `productosDeLinea`.
+ *
+ * 🚨 No es un lujo de depuración: `normalizarOpciones` se queda con `id` y
+ * `nombre` y tira el resto, así que desde fuera de esta función **no hay forma
+ * de saber qué más manda el vendor**. La pregunta que lo motiva es si cada
+ * versión trae sus años de fabricación (para poder cruzarlos con la fecha de
+ * matriculación, que sale gratis de la matrícula); nadie lo había medido
+ * nunca, y sin el crudo la respuesta solo podía ser una suposición.
+ *
+ * El path se construye AQUÍ y solo aquí: si el crudo lo construyera por su
+ * cuenta, mediría una ruta distinta de la que usa la pantalla.
+ *
+ * Sigue siendo **gratis**: es el mismo `GET` de catálogo, con la misma caché.
+ */
+export async function versionesCrudas(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: string,
+): Promise<{ opciones: Opcion[]; crudo: unknown; path: string }> {
+  // 🚨 El path se devuelve, no se reconstruye fuera. Una medición se acompaña
+  // de la petición EXACTA que la produjo, y una copia sin `encodeURIComponent`
+  // declararía una URL distinta de la enviada en cuanto el motor llevara una
+  // barra o un espacio («Gasolina/Híbrido»): irreproducible para quien la lea.
+  const path =
+    `/car/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
+    `/vehicles?engine=${encodeURIComponent(motor)}`
+  const crudo = await catalogo(config, path)
+  return { opciones: normalizarOpciones(crudo), crudo, path }
 }
 
 // ─── Catálogos de HOGAR (gratis) ─────────────────────────────────────────────
@@ -330,13 +380,15 @@ export function normalizarMatricula(m: string): string {
 export async function fechaMatriculacionDeMatricula(
   config: ConfigCodeoscopic,
   matricula: string,
+  /** Moto tiene su propio `/motorcycle/registration-date` (referencia de la API, 23/09/2026). */
+  ramo: 'car' | 'motorcycle' = 'car',
 ): Promise<FechaMatriculacion> {
   const placa = normalizarMatricula(matricula)
   if (placa === '') return { estado: 'error', detalle: 'matrícula vacía' }
   try {
     const raw = (await peticion(config, {
       metodo: 'GET',
-      path: `/car/registration-date?plate=${encodeURIComponent(placa)}`,
+      path: `/${ramo}/registration-date?plate=${encodeURIComponent(placa)}`,
       timeoutMs: config.timeoutGenericoMs,
     })) as unknown
     const fecha = leerFecha(raw)
@@ -386,16 +438,70 @@ export async function versionesMoto(
   modeloId: string,
   motor: MotorMoto,
 ): Promise<Opcion[]> {
-  return normalizarOpciones(
-    await catalogo(
-      config,
-      `/motorcycle/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
-        `/vehicles?engine=${encodeURIComponent(motor)}`,
-    ),
+  return normalizarOpciones(await catalogo(config, pathVersionesMoto(marcaId, modeloId, motor)))
+}
+
+/** Un solo sitio que construye el path: la pantalla y el cruce de carné leen la MISMA caché. */
+function pathVersionesMoto(marcaId: string, modeloId: string, motor: MotorMoto): string {
+  return (
+    `/motorcycle/brands/${encodeURIComponent(marcaId)}/models/${encodeURIComponent(modeloId)}` +
+    `/vehicles?engine=${encodeURIComponent(motor)}`
   )
 }
 
+/**
+ * Versiones de MOTO sin recortar, con su path — como `versionesCrudas`. Para
+ * medir si traen `engine.displacement` y `engine.powerKw` (`carnet-moto.ts`).
+ */
+export async function versionesMotoCrudas(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: MotorMoto,
+): Promise<{ opciones: Opcion[]; crudo: unknown; path: string }> {
+  const path = pathVersionesMoto(marcaId, modeloId, motor)
+  const crudo = await catalogo(config, path)
+  return { opciones: normalizarOpciones(crudo), crudo, path }
+}
+
+/** Cilindrada y kW de la versión elegida (`carnet-moto.ts`). **Gratis**; `null` = no está en la lista. */
+export async function motorDeVersionMoto(
+  config: ConfigCodeoscopic,
+  marcaId: string,
+  modeloId: string,
+  motor: MotorMoto,
+  codigo: string,
+): Promise<MotorVersion | null> {
+  return motorDeVersion(await catalogo(config, pathVersionesMoto(marcaId, modeloId, motor)), codigo)
+}
+
 /** `ThisMotorcycle` | `OtherMotorcycle`. Obligatorio en `risk.drivingExperience.id`. */
+/** Garajes de MOTO: catálogo propio `/motorcycle/garage-types` (no el de coche). */
+export async function tiposDeGarajeMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/motorcycle/garage-types'))
+}
+
+/** Tipos de carné de MOTO (A, A2, A1, AM…): `/motorcycle/driving-licenses`. */
+const PATH_CARNETS_MOTO = '/motorcycle/driving-licenses'
+
+export async function tiposDeCarnetMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, PATH_CARNETS_MOTO))
+}
+
+/** Carnés de moto sin recortar: los límites (`maxDisplacement`, `maxEnginePower`) que se tiran al normalizar. */
+export async function carnetsMotoCrudos(
+  config: ConfigCodeoscopic,
+): Promise<{ opciones: Opcion[]; crudo: unknown; path: string }> {
+  const path = PATH_CARNETS_MOTO
+  const crudo = await catalogo(config, path)
+  return { opciones: normalizarOpciones(crudo), crudo, path }
+}
+
+/** El mismo catálogo con sus límites (`maxDisplacement` cc, `maxEnginePower` kW), que `normalizarOpciones` tira. */
+export async function limitesCarnetMoto(config: ConfigCodeoscopic): Promise<LimiteCarnet[]> {
+  return limitesDeCarnets(await catalogo(config, PATH_CARNETS_MOTO))
+}
+
 export async function experienciaConduccionMoto(config: ConfigCodeoscopic): Promise<Opcion[]> {
   return normalizarOpciones(await catalogo(config, '/motorcycle/driving-experience-options'))
 }

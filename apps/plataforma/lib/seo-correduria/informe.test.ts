@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { accionPropuesta, redactarInforme, normalizarConsulta, type ConsultaObjetivo } from './informe.ts'
-import type { DatosGsc, DatosPosthog, FilaGsc, Resultados } from './tipos.ts'
+import { accionPropuesta, bloqueTelefonosPorRevisar, redactarInforme, normalizarConsulta, type ConsultaObjetivo } from './informe.ts'
+import type { DatosCobertura, DatosGsc, DatosPosthog, FilaGsc, Resultados } from './tipos.ts'
 
 // Lista propia y pequeña: NO se importa `CONSULTAS` (la escribe otro agente en paralelo).
 const CONSULTAS: ConsultaObjetivo[] = [
@@ -42,9 +42,20 @@ const posthogOk: Resultados['posthog'] = {
   } satisfies DatosPosthog,
 }
 
+const coberturaOk: Resultados['cobertura'] = {
+  estado: 'ok',
+  datos: {
+    paginas: [
+      { url: 'https://grupoasegura.es/', estado: 'ok', verdicto: 'PASS', cobertura: 'Submitted and indexed' },
+      { url: 'https://grupoasegura.es/seguros/hogar', estado: 'ok', verdicto: 'PASS', cobertura: 'Submitted and indexed' },
+    ],
+  } satisfies DatosCobertura,
+}
+
 const todoOk = (consultasGsc: FilaGsc[] = [fila('Seguro de Hogar ', 340, 12.4, 5), fila('correduría sevilla', 900, 3.1, 40), fila('seguro comunidad', 50, 45, 0)]): Resultados => ({
   gsc: gscOk(consultasGsc),
   posthog: posthogOk,
+  cobertura: coberturaOk,
 })
 
 test('dos fuentes ok + consulta en posición 12 con página → mejorar_pagina (casa normalizando tildes/mayúsculas/trim)', () => {
@@ -102,16 +113,86 @@ test('con anterior → deltas en formato español y posición a 1 decimal', () =
   assert.match(txt, /pos\. 12,4 · 340 impr\./)
 })
 
-test('ambas fuentes en error → ningún 0 en el informe', () => {
+test('las tres fuentes en error/no_configurado → ningún 0 en el informe', () => {
   // Entradas sin ningún «0» a propósito: si aparece uno, lo ha inventado el redactor.
   const r: Resultados = {
     gsc: { estado: 'no_configurado', detalle: 'falta GSC_SA_JSON' },
     posthog: { estado: 'error', detalle: 'HogQL sin respuesta' },
+    cobertura: { estado: 'error', detalle: 'sin respuesta del API de inspección' },
   }
   const txt = redactarInforme('S36', r, accionPropuesta(r, CONSULTAS), 'grupoasegura.es')
   assert.doesNotMatch(txt, /0/)
   assert.match(txt, /PostHog con error: HogQL sin respuesta/)
   assert.match(txt, /Search Console sin configurar: falta GSC_SA_JSON/)
+  assert.match(txt, /Cobertura de indexación con error: sin respuesta del API de inspección/)
+})
+
+test('una página propia fuera del índice → arreglar_indexacion, antes que mejorar/escribir', () => {
+  const r: Resultados = {
+    ...todoOk(),
+    cobertura: {
+      estado: 'ok',
+      datos: {
+        paginas: [
+          { url: 'https://grupoasegura.es/', estado: 'ok', verdicto: 'PASS', cobertura: 'Submitted and indexed' },
+          { url: 'https://grupoasegura.es/seguros/hogar', estado: 'ok', verdicto: 'FAIL', cobertura: 'Not found (404)' },
+        ],
+      },
+    },
+  }
+  const a = accionPropuesta(r, CONSULTAS)
+  assert.equal(a.tipo, 'arreglar_indexacion')
+  assert.match(a.texto, /\/seguros\/hogar/)
+  assert.match(a.texto, /Not found \(404\)/)
+})
+
+test('cobertura toda PASS → no bloquea la acción normal (mejorar_pagina sigue saliendo)', () => {
+  const a = accionPropuesta(todoOk(), CONSULTAS)
+  assert.equal(a.tipo, 'mejorar_pagina')
+})
+
+test('una página sin poder inspeccionar (estado:error) también es arreglar_indexacion: no se trata como PASS por omisión', () => {
+  const r: Resultados = {
+    ...todoOk(),
+    cobertura: {
+      estado: 'ok',
+      datos: {
+        paginas: [
+          { url: 'https://grupoasegura.es/', estado: 'ok', verdicto: 'PASS' },
+          { url: 'https://grupoasegura.es/seguros/hogar', estado: 'error', detalle: '429: quota exceeded' },
+        ],
+      },
+    },
+  }
+  const a = accionPropuesta(r, CONSULTAS)
+  assert.equal(a.tipo, 'arreglar_indexacion')
+  assert.match(a.texto, /no se pudo inspeccionar/)
+  assert.match(a.texto, /429: quota exceeded/)
+})
+
+test('bloque de cobertura: página FAIL se pinta con su motivo, y "todas indexadas" cuando no hay problema', () => {
+  const okTxt = redactarInforme('2026-W36', todoOk(), accionPropuesta(todoOk(), CONSULTAS), 'grupoasegura.es')
+  assert.match(okTxt, /2 página\(s\) comprobadas, todas indexadas\./)
+
+  const rConFallo: Resultados = {
+    ...todoOk(),
+    cobertura: {
+      estado: 'ok',
+      datos: {
+        paginas: [
+          { url: 'https://grupoasegura.es/', estado: 'ok', verdicto: 'PASS' },
+          { url: 'https://grupoasegura.es/roto', estado: 'ok', verdicto: 'FAIL', cobertura: 'Not found (404)' },
+          { url: 'https://grupoasegura.es/otra', estado: 'error', detalle: 'timeout' },
+          { url: 'https://grupoasegura.es/mas', estado: 'error', detalle: '429: quota exceeded' },
+        ],
+      },
+    },
+  }
+  const txt = redactarInforme('2026-W36', rConFallo, { tipo: 'arreglar_fuente', texto: 'x' }, 'grupoasegura.es')
+  assert.match(txt, /🔴 fuera del índice https:\/\/grupoasegura\.es\/roto — Not found \(404\)/)
+  // Cada página sin comprobar lleva SU PROPIO motivo — no se le atribuye a todas el de la primera.
+  assert.match(txt, /❔ https:\/\/grupoasegura\.es\/otra — sin comprobar \(timeout\)/)
+  assert.match(txt, /❔ https:\/\/grupoasegura\.es\/mas — sin comprobar \(429: quota exceeded\)/)
 })
 
 test('escapeHtml en todo texto externo: consulta de GSC, ruta de PostHog y detalle', () => {
@@ -139,4 +220,16 @@ test('informe completo con las dos fuentes ok: bloques, etiqueta literal de Post
 
 test('normalizarConsulta: minúsculas, sin tildes, trim y espacios colapsados', () => {
   assert.equal(normalizarConsulta('  Cómo   CAMBIAR de Correduría '), 'como cambiar de correduria')
+})
+
+test('teléfonos por revisar: nada que decir si no hay ninguno', () => {
+  assert.equal(bloqueTelefonosPorRevisar([]), null)
+})
+
+test('teléfonos por revisar: una línea por compañía, con fecha, días y fuente escapados', () => {
+  const t = bloqueTelefonosPorRevisar([
+    { nombre: 'A&B', verificadoEl: '2025-01-01', diasDesde: 631, fuente: 'https://a.example/?x=1&y=2' },
+  ])!
+  assert.match(t, /Teléfonos de siniestros por revisar<\/b> \(1\)/)
+  assert.match(t, /• A&amp;B: comprobado el 2025-01-01 \(hace 631 días\) — https:\/\/a\.example\/\?x=1&amp;y=2/)
 })

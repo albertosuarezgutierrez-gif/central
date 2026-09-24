@@ -28,7 +28,8 @@ import {
   type RecibosPoliza,
 } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
-import { DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
+import { Prisma } from './generated/asegura-client'
+import { caducidadCarnet, DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, referenciaCatastral, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { RAMOS_DESCRITOS_POR_COBERTURAS } from './cartera'
 import { ordenPolizasFicha } from '@central/module-seguros'
@@ -39,6 +40,8 @@ import { listarDocumentos } from './cartera-documentos'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { emailDeFicha } from './email-ficha'
+import { identidadesDeCliente } from './vinculos-portal'
+import { normalizarNumeroPoliza, describirBien, type BienAsegurado } from '@central/module-seguros-portal'
 import type {
   ClienteCartera,
   PolizaCartera,
@@ -47,6 +50,42 @@ import type {
 } from './codeoscopic/desde-cartera.ts'
 import { elegirRiesgo, hogarDeDatos, type HogarCartera } from './codeoscopic/desde-cartera-hogar.ts'
 import { estadoClavePii, type EstadoClavePii } from './pii-estado'
+
+/**
+ * Una póliza que el cliente ha APORTADO desde el portal
+ * (`seguros.portal_poliza_declarada`), casi siempre de OTRA compañía: no la
+ * gestiona la correduría, solo consta que existe.
+ */
+export type PolizaDeclaradaFicha = {
+  id: string
+  compania: string | null
+  numeroPoliza: string | null
+  ramo: string | null
+  primaAnual: number | null
+  fechaVencimiento: string | null
+  matricula: string | null
+  procedencia: string
+  confirmadaPorUsuario: boolean
+  titularTipo: string | null
+  titularEmpresaNombre: string | null
+  /**
+   * `true` = esta MISMA ficha ya tiene una póliza con ese número: es una
+   * declarada de algo que la casa ya gestiona, no una oportunidad de venta.
+   * `null` = sin número que cotejar (no se sabe). El cotejo es solo contra las
+   * pólizas de esta ficha personal — si la declaró a nombre de su empresa
+   * (`titularTipo==='empresa'`), no se coteja contra la ficha de esa sociedad
+   * (eso es lo que ya hace `leads-portal.ts` para la cola de ventas).
+   */
+  yaEnCartera: boolean | null
+  /**
+   * QUÉ es el bien asegurado (marca/modelo/matrícula en auto, dirección en
+   * hogar) — misma regla que el propio portal (`describirBien()`): el nº de
+   * póliza NUNCA identifica una póliza para una persona. `datosRamo` es lo que
+   * la IA leyó del documento subido; sin nada que leer, `describirBien`
+   * devuelve el bien vacío, nunca inventa.
+   */
+  bien: BienAsegurado
+}
 
 /** Un resultado de búsqueda: lo justo para elegir a quién abrir. */
 export type ClienteEncontrado = {
@@ -93,6 +132,19 @@ function fechaIso(d: Date | null | undefined): string | null {
  * base, así que esta búsqueda no depende del índice ciego — que es justo lo que
  * la hace fiable: si fallara la clave de lookup, buscar por DNI devolvería
  * «no existe» sobre un cliente que sí está (ver `apps/asegura/CLAUDE.md`).
+ *
+ * 🚨 SIN ACENTOS (20/09/2026): esta era la SEGUNDA copia de la búsqueda por
+ * nombre — la de `porNombre()` en `cartera-busqueda.ts` ya se corrigió el
+ * 13/09/2026 (dos veces el mismo día, ver su comentario) para ignorar tildes
+ * con `extensions.unaccent`, pero esta función («Añadir relación» de la ficha
+ * de plataforma) seguía con el `contains` de Prisma —un ILIKE normal,
+ * insensible a mayúsculas y NO a acentos— y nadie la tocó. Caso real
+ * (20/09/2026): Alberto buscó «Alberto suarez» para relacionar a su madre y no
+ * apareció su propia ficha («Alberto Suárez Gutiérrez»), solo un homónimo sin
+ * tilde («Alberto Suarez Marques»). Mismo arreglo que `porNombre`: primer
+ * intento con `extensions.unaccent()` cualificado (la extensión vive en el
+ * schema `extensions` y esta conexión fija `search_path=seguros`), con
+ * reintento sin `unaccent` si la extensión no está disponible en el origen.
  */
 export async function buscarClientes(
   correduriaId: string,
@@ -104,38 +156,51 @@ export async function buscarClientes(
   const db = prismaAsegura()
 
   const palabras = q.split(/\s+/).slice(0, 4)
-  const filas = await db.cliente.findMany({
-    where: {
-      correduriaId,
-      mergedIntoClienteId: null,
-      // Las fichas DESCARTADAS no salen en ninguna búsqueda: descartar es
-      // justamente quitarlas de donde se mira (`lib/cartera-edicion.ts`).
-      activo: true,
-      // Cada palabra tiene que aparecer en el nombre O en los apellidos: así
-      // «jose suarez» encuentra a José Suárez sin depender del orden.
-      AND: palabras.map((p) => ({
-        OR: [
-          { nombre: { contains: p, mode: 'insensitive' as const } },
-          { apellidos: { contains: p, mode: 'insensitive' as const } },
-        ],
-      })),
-    },
-    select: {
-      id: true,
-      nombre: true,
-      apellidos: true,
-      tipo: true,
-      _count: { select: { polizas: true } },
-    },
-    orderBy: [{ apellidos: 'asc' }, { nombre: 'asc' }],
-    take: limite,
+  const condicionUnaccent = Prisma.join(
+    palabras.map(
+      (p) =>
+        Prisma.sql`(extensions.unaccent(cl.nombre) ilike extensions.unaccent(${'%' + p + '%'}) or extensions.unaccent(cl.apellidos) ilike extensions.unaccent(${'%' + p + '%'}))`,
+    ),
+    ' and ',
+  )
+  const condicionSimple = Prisma.join(
+    palabras.map((p) => Prisma.sql`(cl.nombre ilike ${'%' + p + '%'} or cl.apellidos ilike ${'%' + p + '%'})`),
+    ' and ',
+  )
+
+  const filas = await db.$queryRaw<
+    { id: string; nombre: string; apellidos: string; tipo: string; polizas: bigint }[]
+  >`
+    select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo,
+           (select count(*) from polizas p where p.cliente_id = cl.id and p.merged_into_poliza_id is null)::bigint as polizas
+    from clientes cl
+    where cl.correduria_id = ${correduriaId}::uuid
+      and cl.merged_into_cliente_id is null
+      and cl.activo
+      and ${condicionUnaccent}
+    order by cl.apellidos asc, cl.nombre asc
+    limit ${limite}
+  `.catch(async () => {
+    return db.$queryRaw<
+      { id: string; nombre: string; apellidos: string; tipo: string; polizas: bigint }[]
+    >`
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo,
+             (select count(*) from polizas p where p.cliente_id = cl.id and p.merged_into_poliza_id is null)::bigint as polizas
+      from clientes cl
+      where cl.correduria_id = ${correduriaId}::uuid
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and ${condicionSimple}
+      order by cl.apellidos asc, cl.nombre asc
+      limit ${limite}
+    `
   })
 
   return filas.map((f) => ({
     id: f.id,
     nombre: `${f.nombre} ${f.apellidos}`.trim(),
     tipo: String(f.tipo),
-    polizas: f._count.polizas,
+    polizas: Number(f.polizas),
   }))
 }
 
@@ -219,6 +284,37 @@ export type SiniestroFicha = {
   confirmadoCima: boolean
   abierto: boolean
   actualizado: string
+  /**
+   * Campos propios del ramo de la póliza (`@central/module-seguros/siniestro-ramo.ts`).
+   * `null` = sin datos. Solo se escribe/edita en `gestionado_correduria` — ver
+   * la cabecera de ese módulo.
+   */
+  datosRamo: Record<string, string | number | boolean> | null
+  /**
+   * Desglose de daños del EIAC (`ImplicadoDiversos/DanosSiniestro/DanoSiniestro[]`).
+   * `null` = CIMA no trajo ninguno para este siniestro (el persist nunca escribe
+   * un array vacío) o asegura no lo manda (versión anterior). EXCLUSIVO de
+   * `origen='cima'` — es lo contrario de `datosRamo` (ese lo teclea el corredor).
+   */
+  danosCima: { descripcion: string | null; valor: string | null }[] | null
+  /**
+   * Terceros y testigos. `null` = no se ha podido consultar (la tabla falló),
+   * NUNCA «no hay ninguno» — mismo criterio que `intervinientes` de la ficha.
+   */
+  terceros: SiniestroIntervinienteFicha[] | null
+}
+
+/** Un tercero o testigo de un siniestro, ya descifrado para la pantalla del corredor. */
+export type SiniestroIntervinienteFicha = {
+  id: string
+  tipo: 'tercero' | 'testigo'
+  esConductor: boolean | null
+  nombre: string | null
+  telefono: string | null
+  matricula: string | null
+  marcaModelo: string | null
+  companiaNombre: string | null
+  numeroPoliza: string | null
 }
 
 /** Lo que hace falta para LLAMAR al cliente. El DNI y el IBAN no salen de aquí. */
@@ -290,6 +386,131 @@ export type FichaCliente = {
    * estado pedido/recibido/revisado. `null` = no se ha podido consultar.
    */
   documentos: DocumentoResumen[] | null
+  /**
+   * Pólizas aportadas por el cliente desde el portal (`portal_poliza_declarada`),
+   * casi siempre de OTRA compañía. Hasta este cambio la ficha no las mostraba
+   * NUNCA: solo salían en la cola de venta «Declaradas por vencer»
+   * (`cartera-declaradas.ts`), y SOLO si vencían dentro de 60 días — así que
+   * subir una póliza no cambiaba nada en la ficha de quien la subió.
+   * `null` = no se pudo leer (`portal_vinculo` o la tabla fallaron). NO es
+   * «no ha aportado ninguna»: eso es `[]`.
+   */
+  declaradas: PolizaDeclaradaFicha[] | null
+  /**
+   * Sus carnés de conducir (`cliente_carnets_conducir`): tipo, fecha de
+   * expedición y próxima caducidad. `null` = no se pudo leer; `[]` = no consta
+   * ninguno. Una fecha que no se descifra viaja como `null` con
+   * `fechaIlegible: true`, nunca se quita la fila: el carné existe.
+   */
+  carnets: CarnetFicha[] | null
+}
+
+export type CarnetFicha = {
+  id: string
+  tipo: string
+  fechaExpedicion: string | null
+  fechaIlegible: boolean
+  /** `null` si falta la expedición o la fecha de nacimiento (no se adivina el tramo). */
+  fechaCaducidad: string | null
+}
+
+const ORDEN_CARNET = ['A', 'A2', 'A1', 'AM', 'B', 'BE', 'C', 'C1', 'CE', 'D', 'D1', 'DE']
+
+async function listarCarnets(
+  correduriaId: string,
+  clienteId: string,
+  fechaNacimiento: string | null,
+): Promise<CarnetFicha[] | null> {
+  try {
+    const filas = await prismaAsegura().clienteCarnetConducir.findMany({
+      where: { clienteId, correduriaId },
+      select: { id: true, tipo: true, fechaCarnet: true },
+    })
+    const rango = (t: string) => {
+      const i = ORDEN_CARNET.indexOf(t.toUpperCase())
+      return i === -1 ? ORDEN_CARNET.length : i
+    }
+    return filas
+      .map((f) => {
+        const fecha = normalizarFecha(descifrar(f.fechaCarnet))
+        const cad = caducidadCarnet({ fechaCarnet: fecha, fechaNacimiento, tipo: f.tipo })
+        return {
+          id: f.id,
+          tipo: f.tipo,
+          fechaExpedicion: fecha,
+          fechaIlegible: fecha === null && ilegible(f.fechaCarnet),
+          fechaCaducidad: cad?.fechaCaducidad ?? null,
+        }
+      })
+      .sort((a, b) => rango(a.tipo) - rango(b.tipo))
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Las pólizas que esta ficha ha APORTADO desde el portal del cliente.
+ *
+ * El vínculo ficha↔identidad es 1:N por el lado de la identidad (una
+ * identidad puede casar con varias fichas — empresa + su administrador), así
+ * que se reutiliza `identidadesDeCliente()` de `vinculos-portal.ts` —la MISMA
+ * consulta que ya usan `leads-portal.ts`/`partes-portal.ts`— en vez de
+ * reimplementarla: la decisión sobre vínculos múltiples tiene que ser una
+ * sola, y ese fichero ya lo dice en su cabecera.
+ *
+ * `numerosPropios` es el cotejo contra las pólizas de ESTA MISMA ficha
+ * (personal): si el número ya está en su cartera, no es una oportunidad de
+ * venta, es la misma póliza subida dos veces. Solo se coteja contra la ficha
+ * personal — si la declaró a nombre de su empresa (`titularTipo==='empresa'`),
+ * el cotejo bueno contra la ficha de esa sociedad ya lo hace `leads-portal.ts`
+ * para la cola de ventas; aquí, sin ese cruce, se deja `null` (no se sabe).
+ */
+async function listarDeclaradas(
+  correduriaId: string,
+  clienteId: string,
+  numerosPropios: Set<string>,
+): Promise<PolizaDeclaradaFicha[] | null> {
+  try {
+    const identidadIds = await identidadesDeCliente(correduriaId, clienteId)
+    if (identidadIds.length === 0) return []
+    const db = prismaAsegura()
+    const filas = await db.portalPolizaDeclarada.findMany({
+      where: { identidadId: { in: identidadIds } },
+      select: {
+        id: true, compania: true, numeroPoliza: true, ramo: true, primaAnual: true,
+        fechaVencimiento: true, matricula: true, procedencia: true, confirmadaPorUsuario: true,
+        titularTipo: true, titularEmpresaNombre: true, datosRamo: true,
+      },
+      orderBy: { creadaEn: 'desc' },
+    })
+    return filas.map((f) => {
+      // Empresa declarada: no se coteja contra la ficha personal (sería el
+      // cotejo equivocado). Sin número: no hay nada que cotejar.
+      const numero = f.titularTipo === 'empresa' ? null : normalizarNumeroPoliza(f.numeroPoliza)
+      // La matrícula vive en su propia columna, aparte de `datosRamo` (que trae
+      // marca/modelo desde la 2ª pasada del portal): se funden para que
+      // `describirBien` vea el vehículo entero, sin pisar lo que ya trajera.
+      const datos = esObjetoPlano(f.datosRamo) ? f.datosRamo : {}
+      const datosConMatricula = f.matricula && !datos.matricula ? { ...datos, matricula: f.matricula } : datos
+      return {
+        id: f.id,
+        compania: f.compania ?? null,
+        numeroPoliza: f.numeroPoliza ?? null,
+        ramo: f.ramo ?? null,
+        primaAnual: f.primaAnual === null ? null : Number(f.primaAnual),
+        fechaVencimiento: fechaIso(f.fechaVencimiento),
+        matricula: f.matricula ?? null,
+        procedencia: String(f.procedencia),
+        confirmadaPorUsuario: f.confirmadaPorUsuario,
+        titularTipo: f.titularTipo ?? null,
+        titularEmpresaNombre: f.titularEmpresaNombre ?? null,
+        yaEnCartera: numero === null ? null : numerosPropios.has(numero),
+        bien: describirBien(f.ramo, datosConMatricula),
+      }
+    })
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -435,6 +656,13 @@ export async function fichaCliente(
   const documentos = await listarDocumentos(correduriaId, { clienteId: c.id })
   const contactos = await listarContactos(correduriaId, c.id)
   const relaciones = await listarRelaciones(correduriaId, c.id)
+  const numerosPropios = new Set(
+    c.polizas
+      .map((p) => normalizarNumeroPoliza(p.numeroPoliza))
+      .filter((n): n is string => n !== null),
+  )
+  const declaradas = await listarDeclaradas(correduriaId, c.id, numerosPropios)
+  const carnets = await listarCarnets(correduriaId, c.id, normalizarFecha(descifrar(c.fechaNacimiento)))
   const historial = await historialCliente(correduriaId, c.id)
   const presupuestos = await cotizacionesVivas(correduriaId, c.id, DIAS_PRESUPUESTO_VIVO)
   const estado = estadoCliente({
@@ -470,6 +698,8 @@ export async function fichaCliente(
     documentos,
     contactos,
     relaciones,
+    declaradas,
+    carnets,
     estado,
     historial,
     cotizacionesVivas: presupuestos,
@@ -730,6 +960,8 @@ export type OrigenRetarificacion = {
    */
   primaAnual: number | null
   retarificacion: Retarificabilidad
+  /** Referencia catastral del piso que el corredor guardó (hogar). `null` = no hay. */
+  referenciaCatastral: string | null
 }
 
 export async function origenRetarificacion(
@@ -832,6 +1064,11 @@ export async function origenRetarificacion(
     direccion: descifrar(p.cliente.direccion),
     email,
   }
+  // Moto tarifica con el carné de MOTO (A/A2/A1/AM), que vive en los carnés de
+  // la ficha, no en el conductor de la póliza. Solo se lee donde se usa.
+  if (String(p.tipo) === 'moto') {
+    cliente.carnets = await listarCarnets(correduriaId, p.cliente.id, cliente.fechaNacimiento)
+  }
 
   const matricula = datos ? texto(datos.matricula) : null
   const vehiculo = await vehiculoDePoliza(db, correduriaId, p.id, matricula, datos, datosGemela)
@@ -858,6 +1095,7 @@ export async function origenRetarificacion(
     // Decimal de Prisma: `null` se queda en null, jamás en 0.
     primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
     retarificacion,
+    referenciaCatastral: esHogar ? referenciaCatastral(datos) : null,
   }
 }
 
@@ -915,6 +1153,8 @@ export async function clienteOrigenDe(
     fechaCarnet: null,
     direccion: descifrar(c.direccion),
     email,
+    // Para moto nueva: el carné de moto sale de los carnés de la ficha.
+    carnets: await listarCarnets(correduriaId, c.id, normalizarFecha(descifrar(c.fechaNacimiento))),
   }
   return { cliente, etiqueta: `${c.nombre} ${c.apellidos}`.trim() || 'Cliente' }
 }

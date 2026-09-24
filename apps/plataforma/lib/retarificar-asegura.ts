@@ -35,6 +35,13 @@
 //    es idempotente; un reintento crea otro proyecto y otro cargo.
 
 import { describirCausaAsegura, MOTIVOS_PUERTO, type MotivoPuerto } from './correduria-puerto.ts'
+// `PolizaCliente` y `CompaniaCatalogo` SÍ se importan (no se copian como `Precio`
+// y compañía): viven en `@central/module-seguros`, que es el paquete compartido
+// de verdad, y son el contrato de `defensaDeCartera()` — que es quien los va a
+// consumir. Duplicarlos aquí sería crear una segunda definición del argumento de
+// una función que ya se importa de ese mismo sitio.
+import type { CompaniaCatalogo, PolizaCliente } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
 
@@ -167,6 +174,126 @@ export type ConsumoPuerto =
  * dentro y publica solo la lista; el CP se queda allí, igual que el DNI, el
  * IBAN y la dirección (`apps/asegura/CLAUDE.md`).
  */
+/**
+ * En qué compañías está YA el cliente — lo que `defensaDeCartera()` de
+ * `@central/module-seguros` necesita para marcar en la tabla de precios las
+ * filas que no se pueden emitir.
+ *
+ * 🚨 **DOS estados y ninguno es `[]` vacío por error.** `ok` con `polizas: []`
+ * significa «mirado: este cliente no tiene ninguna póliza NUESTRA», y con eso las
+ * 24 filas salen `libre` = véndelo. `no_disponible` es «no se ha podido mirar», y
+ * se convierte en `desconocida` («sin comprobar»). Plataforma y asegura se
+ * despliegan por separado, así que un asegura viejo NO manda el campo: eso
+ * también es `no_disponible`, jamás una lista vacía.
+ */
+export type CarteraCompanias =
+  | {
+      estado: 'ok'
+      polizas: PolizaCliente[]
+      catalogo: CompaniaCatalogo[]
+      /** La póliza que se está retarificando; su compañía es `actual`, no `ocupada`. */
+      polizaActualId: string | null
+    }
+  | { estado: 'no_disponible'; porque: string }
+
+/**
+ * Lo que se le pasa a `EntradaDefensa.polizas`: la lista **o `null`**.
+ *
+ * Existe para que quien consuma esto no tenga que acordarse de la regla. El
+ * error que evita es de una sola letra: `c.estado === 'ok' ? c.polizas : []`
+ * compila igual y convierte «no se ha podido mirar» en «no tiene ninguna».
+ */
+export function polizasParaDefensa(c: CarteraCompanias | null | undefined): PolizaCliente[] | null {
+  return c != null && c.estado === 'ok' ? c.polizas : null
+}
+
+/** El catálogo, o `[]`. Aquí sí vale el vacío: sin catálogo el módulo cae al
+ *  nombre y lo DECLARA (`coincidencia: 'nombre'`), no afirma que esté libre. */
+export function catalogoParaDefensa(c: CarteraCompanias | null | undefined): CompaniaCatalogo[] {
+  return c != null && c.estado === 'ok' ? c.catalogo : []
+}
+
+const SIN_CARTERA_COMPANIAS =
+  'el puerto de asegura no ha mandado la cartera del cliente, así que NO consta que estas compañías ' +
+  'estén libres — solo que no se han podido mirar. (Si acaba de desplegarse plataforma y asegura no, ' +
+  'es que esta versión de asegura todavía no manda el campo.)'
+
+/**
+ * PURO: el bloque `carteraCompanias` del puerto → los dos estados.
+ *
+ * Cada póliza se valida fila a fila: una fila que no se entiende **no se
+ * descarta en silencio** (eso restaría una compañía ocupada de la lista y la
+ * dejaría `libre`) — la respuesta entera pasa a `no_disponible`.
+ */
+export function leerCarteraCompanias(v: unknown): CarteraCompanias {
+  if (typeof v !== 'object' || v === null) {
+    return { estado: 'no_disponible', porque: SIN_CARTERA_COMPANIAS }
+  }
+  const x = v as Record<string, unknown>
+  if (x.estado === 'no_disponible') {
+    return {
+      estado: 'no_disponible',
+      porque: cadenaONulo(x.porque) ?? 'asegura no ha podido leer la cartera de este cliente.',
+    }
+  }
+  if (x.estado !== 'ok' || !Array.isArray(x.polizas) || !Array.isArray(x.catalogo)) {
+    return { estado: 'no_disponible', porque: SIN_CARTERA_COMPANIAS }
+  }
+
+  const polizas: PolizaCliente[] = []
+  for (const raw of x.polizas) {
+    const p = leerPolizaCliente(raw)
+    if (p === null) {
+      return {
+        estado: 'no_disponible',
+        porque:
+          'una de las pólizas del cliente ha llegado ilegible, así que la lista está incompleta y no se ' +
+          'puede afirmar que ninguna compañía esté libre.',
+      }
+    }
+    polizas.push(p)
+  }
+
+  const catalogo: CompaniaCatalogo[] = []
+  for (const raw of x.catalogo) {
+    const c = leerCompaniaCatalogo(raw)
+    // Una fila del catálogo ilegible sí se salta: el catálogo solo AÑADE
+    // capacidad de resolver nombres; sin una entrada el módulo cae al nombre
+    // normalizado y lo declara, nunca afirma que la compañía esté libre.
+    if (c !== null) catalogo.push(c)
+  }
+
+  return { estado: 'ok', polizas, catalogo, polizaActualId: cadenaONulo(x.polizaActualId) }
+}
+
+function leerPolizaCliente(v: unknown): PolizaCliente | null {
+  if (typeof v !== 'object' || v === null) return null
+  const x = v as Record<string, unknown>
+  // `viva` tiene que venir como booleano: sin él no se puede saber si esa póliza
+  // defiende, y suponer `true` bloquearía de más o `false` de menos.
+  if (typeof x.viva !== 'boolean') return null
+  return {
+    id: cadenaONulo(x.id),
+    codigoEntidadDgs: cadenaONulo(x.codigoEntidadDgs),
+    aseguradora: cadenaONulo(x.aseguradora),
+    estado: cadenaONulo(x.estado),
+    viva: x.viva,
+    ramo: cadenaONulo(x.ramo),
+    numeroPoliza: cadenaONulo(x.numeroPoliza),
+  }
+}
+
+function leerCompaniaCatalogo(v: unknown): CompaniaCatalogo | null {
+  if (typeof v !== 'object' || v === null) return null
+  const x = v as Record<string, unknown>
+  const codigoDgs = cadenaONulo(x.codigoDgs)
+  const nombreComun = cadenaONulo(x.nombreComun)
+  if (codigoDgs === null || nombreComun === null) return null
+  // `nombreCima: null` es «no se ha visto ninguna póliza de CIMA de esa
+  // compañía» (hoy, Generali y Reale), no «no tiene nombre»: se propaga.
+  return { codigoDgs, nombreComun, nombreCima: cadenaONulo(x.nombreCima) }
+}
+
 export type Precalificacion = {
   /** `'auto'`, `'hogar'`… Tal cual lo dice la ficha. */
   ramo: string
@@ -195,6 +322,12 @@ export type Precalificacion = {
   tipoVia: Opcion | null
   tipoViaMotivo: string | null
   consumo: ConsumoPuerto
+  /**
+   * En qué compañías está YA el cliente (defensa de cartera). Nunca falta y
+   * nunca es `[]` por error: ver `CarteraCompanias`. Se consume con
+   * `polizasParaDefensa()`/`catalogoParaDefensa()`, no leyendo `.polizas` a mano.
+   */
+  carteraCompanias: CarteraCompanias
   /** ¿Tiene el servidor de asegura `CODEOSCOPIC_SIMULACION` puesta?
    *  ⚠️ Es solo el rótulo previo: que un precio CONCRETO sea simulado lo decide
    *  el campo `simulado` de la respuesta de cotizar, nunca esto. */
@@ -321,6 +454,10 @@ export function interpretarPrecalificacion(status: number, json: unknown): Respu
       tipoVia: leerOpcion(r.tipoVia),
       tipoViaMotivo: cadenaONulo(r.tipoViaMotivo),
       consumo: leerConsumo(r.consumo),
+      // 🚨 `r.carteraCompanias` ausente (asegura sin desplegar todavía) cae en
+      // `no_disponible`, NUNCA en una lista vacía: `[]` diría «este cliente no
+      // está en ninguna compañía» y encendería las 24 filas como emitibles.
+      carteraCompanias: leerCarteraCompanias(r.carteraCompanias),
       // Solo el booleano exacto enciende el rótulo de simulación: ante la duda,
       // esto CUESTA dinero.
       simulacion: r.simulacion === true,
@@ -402,10 +539,45 @@ export type Supuesto = {
  * inventado encima de un dato que sí estaba.
  */
 export type Precio = {
+  /**
+   * 🔑 **El identificador del precio que da el vendor** (`"Q7601460"`, el
+   * `mainQuote.id` de Codeoscopic), y la única clave ESTABLE que tiene una fila
+   * de la tabla.
+   *
+   * Existe porque hasta el 21/09/2026 la tabla identificaba cada fila con
+   * `` `${p.compania}-${p.producto}-${i}` `` —etiqueta + POSICIÓN en el array—, y
+   * eso solo funciona mientras nadie reordene nada. En cuanto entran agrupación
+   * por nivel de cobertura y filtros, el índice `i` apunta a otra fila: se pulsa
+   * «Emitir» sobre un precio y el panel se abre sobre OTRO, sin que nada falle.
+   * Es el mismo error que `CLAUDE.md` llama «agrupar por la etiqueta, no por la
+   * identidad», aquí sobre una compra de verdad. `FilaPrecio.indice` de
+   * `comparativa-precios.ts` sigue existiendo para conservar el orden original;
+   * para SEÑALAR una fila se usa esto.
+   *
+   * 🚨 NO es `productId` (`product.id`, el producto del catálogo del vendor, que
+   * en el fixture real es el número `10`). Son dos cosas distintas y confundirlas
+   * ya costó un 400 real del ReRate (11/09/2026, proyecto 40681298).
+   *
+   * `undefined` = no se sabe: una cotización RECUPERADA de
+   * `seguros.tarificacion_precios` todavía no lo trae (la tabla no tiene columna
+   * para él). Nunca se rellena con la posición ni con un contador.
+   */
+  id?: string
   compania?: string | null
   producto?: string | null
   /** Prima total del periodo, en euros. `null` = la compañía no la dio; NO es 0. */
   primaEur?: number | null
+  /**
+   * Primer pago, en euros. Puede diferir de la prima cuando se fracciona.
+   * `null` = el producto no lo declara; NO es «no hay entrada» ni 0.
+   */
+  entradaEur?: number | null
+  /** Duración del periodo en meses (`termMonths`). `null` = no lo declara. */
+  meses?: number | null
+  /** Forma de pago (`paymentMethod.name`): domiciliación, tarjeta… `null` = no lo dice. */
+  formaPago?: string | null
+  /** Periodicidad (`paymentFrequency`): anual, semestral… `null` = no lo dice. */
+  frecuenciaPago?: string | null
   firmeza?: string
   categoria?: string | null
   franquiciaEur?: number | null
@@ -442,7 +614,7 @@ export type RespuestaRetarificar =
   | { estado: 'faltan'; faltan: Reparo[] }
   /** 402 · el tope diario/mensual. No es un fallo: es el tope haciendo su trabajo. */
   | { estado: 'tope'; mensaje: string }
-  /** 409 · el ramo no se retarifica todavía (hoy solo auto y hogar). */
+  /** 409 · el ramo no se retarifica todavía (hoy solo auto, moto y hogar). */
   | { estado: 'ramo'; mensaje: string }
   /**
    * 409 · ya hay un proyecto de Codeoscopic con oferta confirmada y sin caducar
@@ -631,7 +803,7 @@ async function pedir(
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
     ...init,
-    headers: { ...(init.headers ?? {}), Authorization: `Bearer ${secret}` },
+    headers: { ...(init.headers ?? {}), ...(await cabecerasPuerto(secret)) },
     cache: 'no-store',
     signal: AbortSignal.timeout(timeoutMs),
   })
@@ -665,6 +837,49 @@ export async function catalogoAsegura(params: Record<string, string>): Promise<R
   }
 }
 
+/**
+ * El MISMO catálogo, pero sin recortar: lo que el vendor manda de verdad.
+ *
+ * Tipos soportados (lista cerrada en asegura): `versiones`, `versiones-moto` y
+ * `carnets-moto` (límites cc/kW del cruce carné × moto). El de `versiones` nació de una pregunta concreta:
+ * si cada versión trae sus años de fabricación, la fecha de matriculación
+ * (que sale gratis de la matrícula) podría ordenar o acotar el desplegable.
+ * Hoy no se sabe, porque asegura se queda con `id` y `nombre` y tira el resto.
+ *
+ * **Gratis** (`GET` de catálogo, interruptor apagado). Devuelve el status y el
+ * json del puerto TAL CUAL: es una medición, y reinterpretarla aquí sería
+ * añadir una capa entre el dato y quien lo mira.
+ */
+export async function catalogoCrudoAsegura(
+  params: Record<string, string>,
+): Promise<{ status: number; json: unknown }> {
+  const qs = new URLSearchParams({ ...params, crudo: '1' }).toString()
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/catalogos?${qs}`, { method: 'GET' }, TIMEOUT_CATALOGO_MS)
+    if (r === null) {
+      return {
+        status: 503,
+        json: {
+          estado: 'sin_configurar',
+          mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).',
+        },
+      }
+    }
+    return r
+  } catch (e) {
+    // Un fallo de red NO se devuelve como un crudo vacío: eso se leería como
+    // «el vendor no manda nada más», que es justo lo que se está midiendo.
+    return {
+      status: 502,
+      json: {
+        estado: 'error',
+        motivo: 'red',
+        mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})`,
+      },
+    }
+  }
+}
+
 export type PeticionRetarificar = {
   polizaId: string
   /** Quién responde de este cargo. Va al libro de consumo de asegura. */
@@ -672,6 +887,8 @@ export type PeticionRetarificar = {
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
   catastro?: Record<string, unknown> | null
+  /** Referencia catastral de 20 del piso: el riesgo lo consulta asegura, no lo pone plataforma. */
+  referencia?: string
   /**
    * Pasa por encima del guardián de reutilización de asegura (409
    * `proyecto_vigente`). Solo `true` cuando el corredor ha DESCARTADO a
@@ -712,6 +929,7 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
           ...(p.resueltos ? { resueltos: p.resueltos } : {}),
           ...(p.correcciones ? { correcciones: p.correcciones } : {}),
           ...(p.catastro ? { catastro: p.catastro } : {}),
+          ...(p.referencia ? { referencia: p.referencia } : {}),
           // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
           ...(p.forzarNuevo === true ? { forzarNuevo: true } : {}),
         }),
@@ -759,6 +977,16 @@ export type RespuestaOferta =
     }
   /** 409 · el PATCH al proyecto «tuvo éxito» pero al releerlo el dato no está. Toca cotizar de cero. */
   | { estado: 'patch_no_aplicado'; mensaje: string }
+  /**
+   * 422 · el ReRate pide un campo de `product.options` (el formulario de la
+   * compañía: vehículo/producto, no la persona) que el proyecto no trae.
+   * DISTINTO de `faltan_vendor`: ahí se teclea un valor suelto; aquí se
+   * ofrece el Product Form Library del vendor (`ProductFormWidget`) montado
+   * sobre `quoteCrudo` — no hay una lista cerrada de campos ni se inventa su
+   * id, es el formulario real de la compañía. `campos` es solo para mostrar
+   * QUÉ pide (nombres tal cual los usa la compañía), no para rellenarlos.
+   */
+  | { estado: 'faltan_producto'; campos: string[]; quoteCrudo: unknown; mensaje: string }
   | {
       estado: 'ok'
       projectId: string
@@ -772,6 +1000,14 @@ export type RespuestaOferta =
        *  legible; `cuentaAviso` dice por qué (clave PII, CCC inválido, consulta caída). */
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
+      /**
+       * El `mainQuote` (o el objeto pelado) TAL CUAL lo devolvió Codeoscopic al
+       * ReRate — sin parsear, sin reshaping. Lo necesita el widget de la
+       * Product Form Library (`productForm.render(quote)`) para pintar el
+       * formulario de consentimiento REAL de la compañía antes del Submit. Ver
+       * `apps/asegura/lib/codeoscopic/emitir.ts::Oferta.quoteCrudo`.
+       */
+      quoteCrudo: unknown
     }
 
 /** Por qué no hay cuenta utilizable, cuando asegura lo sabe. `no_comprobada`
@@ -802,7 +1038,9 @@ function leerCuenta(v: unknown): CuentaConocida | null {
 /** Hasta 60 s: es una llamada de red al vendor, sin duración documentada. */
 export const TIMEOUT_OFERTA_MS = 60_000
 
-function leerOferta(v: unknown): { offerId: string; primaEur: number | null; firmeza: string; caducaEn: string | null; avisos: string[] } | null {
+function leerOferta(
+  v: unknown,
+): { offerId: string; primaEur: number | null; firmeza: string; caducaEn: string | null; avisos: string[]; quoteCrudo: unknown } | null {
   if (typeof v !== 'object' || v === null) return null
   const x = v as Record<string, unknown>
   if (typeof x.offerId !== 'string') return null
@@ -812,6 +1050,11 @@ function leerOferta(v: unknown): { offerId: string; primaEur: number | null; fir
     firmeza: typeof x.firmeza === 'string' ? x.firmeza : 'estimado',
     caducaEn: cadenaONulo(x.caducaEn),
     avisos: Array.isArray(x.avisos) ? x.avisos.filter((a): a is string => typeof a === 'string') : [],
+    // `unknown` a propósito: es el `mainQuote` del vendor, tal cual — reshapearlo
+    // aquí sería adivinar su forma. `null`/`undefined` del transporte se
+    // normalizan a `null` para que el widget sepa distinguir «sin oferta» de
+    // «vacío pero presente».
+    quoteCrudo: x.quoteCrudo ?? null,
   }
 }
 
@@ -863,6 +1106,14 @@ export function interpretarOferta(status: number, json: unknown): RespuestaOfert
       mensaje: cadenaONulo(r.mensaje) ?? 'La compañía pide datos que faltan en el proyecto.',
     }
   }
+  if (status === 422 && r.estado === 'faltan_producto') {
+    return {
+      estado: 'faltan_producto',
+      campos: Array.isArray(r.campos) ? r.campos.filter((c): c is string => typeof c === 'string') : [],
+      quoteCrudo: 'quoteCrudo' in r ? r.quoteCrudo ?? null : null,
+      mensaje: cadenaONulo(r.mensaje) ?? 'La compañía pide un dato del formulario que el proyecto no tiene.',
+    }
+  }
   if (status === 409 && r.causa === 'patch_no_aplicado') {
     return {
       estado: 'patch_no_aplicado',
@@ -895,6 +1146,10 @@ export async function ofertaAsegura(p: {
   /** Lo que el corredor teclea tras un `faltan_vendor` (campo nuestro → valor).
    *  Asegura lo escribe en el proyecto (PATCH, gratis) y vuelve a pedir el ReRate. */
   correcciones?: Record<string, string>
+  /** Lo que el corredor ha guardado del Product Form Library del vendor tras
+   *  un `faltan_producto` anterior (`ProductFormWidget::getProductOptions()`,
+   *  reenviado TAL CUAL — ver `apps/asegura/.../oferta/route.ts`). */
+  productOptions?: unknown[]
 }): Promise<RespuestaOferta> {
   try {
     const r = await pedir(
@@ -920,6 +1175,70 @@ export async function ofertaAsegura(p: {
       mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)}). ` +
         'No se sabe si la compañía ha confirmado el precio: mira el consumo antes de repetir.',
     }
+  }
+}
+
+// ─── Product Form Library: el `dataCallback` del widget del vendor ──────────
+//
+// El widget (`AvantProductForm`, iframe de Codeoscopic) NO puede guardar el
+// `access_token` OAuth2 en el navegador — reenvía sus propias sub-peticiones
+// (catálogos, sub-formularios) a un `dataCallback` que nosotros implementamos.
+// Aquí se relaya ESE `dataCallback` hasta `apps/asegura` (que tiene las
+// credenciales de servidor), exactamente con el mismo patrón —y las mismas
+// razones— que el resto de este fichero: el Bearer no baja al navegador.
+//
+// 🚨 Gratis (ver `lib/codeoscopic/product-form.ts` en asegura): no confirma
+// nada con la compañía ni cotiza, así que no lleva `confirmado: true`.
+
+export const TIMEOUT_PRODUCT_FORM_MS = 20_000
+
+export type RespuestaProductForm =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'error'; mensaje: string }
+  /** La respuesta de Codeoscopic, tal cual — el widget interpreta su propia forma. */
+  | { estado: 'ok'; respuesta: unknown }
+
+/** PURO: la respuesta HTTP → los estados del `dataCallback`. Sin red, testeable. */
+export function interpretarProductForm(status: number, json: unknown): RespuestaProductForm {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 200 && r.estado === 'ok') return { estado: 'ok', respuesta: r.respuesta ?? null }
+  if (r.estado === 'sin_configurar' || status === 503) {
+    return { estado: 'sin_configurar', mensaje: cadenaONulo(r.mensaje) ?? 'El puerto de Codeoscopic con asegura no está configurado.' }
+  }
+  return { estado: 'error', mensaje: cadenaONulo(r.mensaje) ?? `error ${status}` }
+}
+
+/**
+ * `POST /api/operador/codeoscopic/product-form` — relay del `dataCallback`
+ * del widget hacia el proxy gratis de asegura. `peticion` es la petición TAL
+ * CUAL la pide el widget (`{method?, path, params?, body?}`): no se reshapea,
+ * el vendor decide su propia forma dentro de `/product-form-requests`.
+ */
+export async function productFormAsegura(peticion: {
+  method?: string
+  path: string
+  params?: unknown[]
+  body?: Record<string, unknown>
+}): Promise<RespuestaProductForm> {
+  try {
+    const r = await pedir(
+      '/api/operador/codeoscopic/product-form',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(peticion),
+      },
+      TIMEOUT_PRODUCT_FORM_MS,
+    )
+    if (r === null) {
+      return {
+        estado: 'sin_configurar',
+        mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).',
+      }
+    }
+    return interpretarProductForm(r.status, r.json)
+  } catch (e) {
+    return { estado: 'error', mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})` }
   }
 }
 
@@ -1086,6 +1405,10 @@ export async function emitirAsegura(p: {
   /** El proyecto YA cuenta una solicitud APROBADA con nº de póliza: asegura la
    *  acuña en la cartera y NO manda ningún Submit. */
   acunarExistente?: boolean
+  /** El corredor confirma que el tomador YA tiene familiares asegurados en
+   *  Allianz (bonificación real de cartera). NUNCA se manda por defecto — ver
+   *  `conProductoPorDefecto` en asegura, que es quien decide el valor final. */
+  familiaEnAllianz?: boolean
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1102,6 +1425,7 @@ export async function emitirAsegura(p: {
           ...(p.cuentaConfirmada ? { cuentaConfirmada: p.cuentaConfirmada } : {}),
           ...(p.reintentoConfirmado === true ? { reintentoConfirmado: true } : {}),
           ...(p.acunarExistente === true ? { acunarExistente: true } : {}),
+          ...(p.familiaEnAllianz === true ? { familiaEnAllianz: true } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,
@@ -1160,6 +1484,22 @@ export type TarificacionGuardadaAuto = {
    *  proyecto está muerto y la pantalla no debe ofrecer su precio. */
   caducada: boolean
   precios: Precio[]
+  /**
+   * 🚨 **`null` = «no se guardaron», que NO es «ningún producto falló».**
+   *
+   * Los `fallos` de una cotización son los productos que NO dieron precio, con
+   * el motivo que dio la compañía — y ahí viven frases como «La matrícula ya
+   * está asegurada en la compañía», que es la defensa de cartera dicha por la
+   * propia compañía: gratis, y más fiable que nuestro emparejamiento por DGS.
+   *
+   * Hoy `seguros.tarificaciones` no tiene columna para ellos (SQL pendiente de
+   * aplicar en `apps/asegura/prisma/sql/2026-09-21_tarificacion_identidad_y_fallos.sql`),
+   * así que al recuperar una cotización esto llega `null`. Pintarlo como `[]`
+   * sería afirmar «revisado: ninguna compañía rechazó» sobre algo que nadie ha
+   * mirado — y, peor, esconder el único aviso que dice que una compañía ya tiene
+   * a este cliente.
+   */
+  fallos: Fallo[] | null
   formulario: FormularioGuardado
 }
 
@@ -1193,16 +1533,39 @@ function leerFormularioGuardado(v: unknown): FormularioGuardado | null {
   }
 }
 
+/**
+ * Un campo OPCIONAL del precio, con sus TRES estados sin colapsar:
+ *   - la clave no viene       → `undefined` = «asegura no lo manda» (columna que
+ *     todavía no existe, o un despliegue más viejo del otro lado).
+ *   - la clave viene          → se parsea, y `null` = «el producto no lo declara».
+ *
+ * Colapsar el primero en el segundo diría «esta compañía no dice la forma de
+ * pago» sobre un dato que nadie ha guardado nunca.
+ */
+function opcionalPrecio<T>(v: unknown, leer: (x: unknown) => T | null): T | null | undefined {
+  return v === undefined ? undefined : leer(v)
+}
+
 function leerPreciosGuardados(v: unknown): Precio[] | null {
   if (!Array.isArray(v)) return null
   return v.map((raw): Precio => {
     const x = (typeof raw === 'object' && raw !== null ? raw : {}) as Record<string, unknown>
+    const numeroONulo = (n: unknown): number | null => (typeof n === 'number' ? n : null)
     return {
+      // 🔑 Hoy `seguros.tarificacion_precios` NO guarda el id del vendor, así que
+      // en una cotización recuperada esto será `undefined` = «no se sabe». Lo que
+      // NO se hace es rellenarlo con la posición: sería una clave que parece
+      // estable y no lo es, que es justo lo que se está arreglando.
+      ...(typeof x.id === 'string' && x.id.trim() !== '' ? { id: x.id.trim() } : {}),
       compania: cadenaONulo(x.compania),
       producto: cadenaONulo(x.producto),
       categoria: cadenaONulo(x.categoria),
-      primaEur: typeof x.primaEur === 'number' ? x.primaEur : null,
-      franquiciaEur: typeof x.franquiciaEur === 'number' ? x.franquiciaEur : null,
+      primaEur: numeroONulo(x.primaEur),
+      entradaEur: opcionalPrecio(x.entradaEur, numeroONulo),
+      meses: opcionalPrecio(x.meses, numeroONulo),
+      formaPago: opcionalPrecio(x.formaPago, cadenaONulo),
+      frecuenciaPago: opcionalPrecio(x.frecuenciaPago, cadenaONulo),
+      franquiciaEur: numeroONulo(x.franquiciaEur),
       firmeza: typeof x.firmeza === 'string' ? x.firmeza : 'estimado',
       avisos: Array.isArray(x.avisos) ? x.avisos.filter((a): a is string => typeof a === 'string') : [],
     }
@@ -1231,6 +1594,9 @@ export function interpretarTarificacionGuardada(status: number, json: unknown): 
         fechaEfecto: cadenaONulo(r.fechaEfecto),
         caducada: r.caducada === true,
         precios,
+        // 🚨 Solo un array cuenta como «esto es lo que falló». La ausencia del
+        // campo —que es lo que manda asegura hoy— es `null` = «no se guardaron».
+        fallos: Array.isArray(r.fallos) ? (r.fallos as Fallo[]) : null,
         formulario,
       },
     }
@@ -1298,3 +1664,104 @@ export async function tarificacionGuardadaAsegura(polizaId: string): Promise<Res
 // campo se copia del backend LITERALMENTE, con su comentario, y el cepo
 // `test/regression-retarificar-plataforma.test.ts` prohíbe que plataforma
 // importe de asegura en vez de mantener esta copia.
+
+// ─── Capitales recomendados de HOGAR (`POST /home/recommend-limits`) ─────────
+//
+// 🚨 Se trata como una llamada que puede costar: el portal no la documenta como
+// facturable, pero devuelve un capital por compañía y [Probable] tarifica por
+// dentro. asegura la mete en el libro de consumo (motivo `limites_hogar`, tope
+// propio) y detrás del interruptor de tarificar. Aquí: confirmación explícita,
+// un solo intento, y un fallo de red se dice como «no se sabe si ha costado».
+
+/** Un capital recomendado. Cada extremo `null` = el vendor no lo trae (nunca 0). */
+export type RangoCapital = { media: number | null; minimo: number | null; maximo: number | null }
+
+export type RespuestaLimitesHogar =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'faltan'; faltan: Reparo[]; mensaje: string }
+  | { estado: 'tope'; mensaje: string }
+  | { estado: 'error'; mensaje: string; gastoDesconocido: boolean }
+  | {
+      estado: 'ok'
+      continente: RangoCapital | null
+      contenido: RangoCapital | null
+      /** Con el coste a 0 en asegura dice «sin confirmar», no «0,00€». */
+      coste: string
+      restantesHoy: number | null
+    }
+
+function rangoCapital(v: unknown): RangoCapital | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) && x > 0 ? x : null)
+  const r = { media: n(o.media), minimo: n(o.minimo), maximo: n(o.maximo) }
+  return r.media === null && r.minimo === null && r.maximo === null ? null : r
+}
+
+/** Puro: la respuesta del puerto → lo que pinta la pantalla. */
+export function interpretarLimitesHogar(status: number, json: unknown): RespuestaLimitesHogar {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
+  const mensaje = typeof o.mensaje === 'string' ? o.mensaje : typeof o.error === 'string' ? o.error : `HTTP ${status}`
+  if (status === 200 && o.estado === 'ok') {
+    return {
+      estado: 'ok',
+      continente: rangoCapital(o.continente),
+      contenido: rangoCapital(o.contenido),
+      coste: typeof o.coste === 'string' ? o.coste : 'coste sin confirmar',
+      restantesHoy: typeof o.restantesHoy === 'number' ? o.restantesHoy : null,
+    }
+  }
+  if (Array.isArray(o.faltan)) {
+    const faltan = o.faltan.filter(
+      (f): f is Reparo => typeof f === 'object' && f !== null && typeof (f as Reparo).campo === 'string',
+    )
+    return { estado: 'faltan', faltan, mensaje }
+  }
+  if (status === 429 || o.estado === 'tope') return { estado: 'tope', mensaje }
+  if (status === 503 && o.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje }
+  // Solo `gastado: '0,00€'` autoriza a decir que no ha costado; sin él, no se sabe.
+  return { estado: 'error', mensaje, gastoDesconocido: o.gastado !== '0,00€' }
+}
+
+export async function limitesHogarAsegura(p: {
+  polizaId: string
+  resueltos?: Record<string, unknown>
+  correcciones?: Record<string, unknown>
+  referencia?: string
+  solicitadoPor?: string
+}): Promise<RespuestaLimitesHogar> {
+  try {
+    const r = await pedir(
+      '/api/operador/codeoscopic/limites-hogar',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          polizaId: p.polizaId,
+          confirmado: true,
+          solicitadoPor: p.solicitadoPor ?? 'plataforma',
+          ...(p.resueltos ? { resueltos: p.resueltos } : {}),
+          ...(p.correcciones ? { correcciones: p.correcciones } : {}),
+          ...(p.referencia ? { referencia: p.referencia } : {}),
+        }),
+      },
+      TIMEOUT_COTIZAR_MS,
+    )
+    if (r === null) {
+      return {
+        estado: 'sin_configurar',
+        mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET). No se ha llamado a Codeoscopic.',
+      }
+    }
+    return interpretarLimitesHogar(r.status, r.json)
+  } catch (e) {
+    const expirado = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')
+    return {
+      estado: 'error',
+      mensaje:
+        (expirado ? `Codeoscopic no ha respondido en ${Math.round(TIMEOUT_COTIZAR_MS / 1000)} s` : `No se ha podido llegar a asegura (${e instanceof Error ? e.message : String(e)})`) +
+        ' — no se sabe si la recomendación ha salido ni si ha costado. Míralo en el consumo antes de volver a pulsar.',
+      gastoDesconocido: true,
+    }
+  }
+}

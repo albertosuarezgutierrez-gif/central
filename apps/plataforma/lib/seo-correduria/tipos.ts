@@ -5,7 +5,7 @@
 // competidores»: es la regla «dato que NO hay ≠ dato que NO se ha mirado» de CLAUDE.md.
 // Spec: docs/superpowers/specs/2026-09-08-seo-correduria-conectores-design.md
 
-export type Fuente = 'gsc' | 'posthog'
+export type Fuente = 'gsc' | 'posthog' | 'cobertura'
 export type Estado = 'ok' | 'error' | 'no_configurado'
 
 export type ResultadoFuente<T> =
@@ -43,13 +43,34 @@ export type DatosPosthog = {
   origenes: { dominio: string; sesiones: number }[]
 }
 
+/** Veredicto de la URL Inspection API. `DESCONOCIDO` = la API respondió un valor que no reconocemos. */
+export type VerdictoCobertura = 'PASS' | 'PARTIAL' | 'FAIL' | 'NEUTRAL' | 'DESCONOCIDO'
+
+/** Una URL inspeccionada. `estado:'error'` es «no se pudo comprobar ESTA página» — no tumba el lote. */
+export type FilaCobertura = {
+  url: string
+  estado: 'ok' | 'error'
+  detalle?: string
+  verdicto?: VerdictoCobertura
+  cobertura?: string | null
+  indexacion?: string | null
+  robotsTxt?: string | null
+  rastreoPagina?: string | null
+  ultimoRastreo?: string | null
+  canonicalGoogle?: string | null
+  canonicalUsuario?: string | null
+}
+
+export type DatosCobertura = { paginas: FilaCobertura[] }
+
 export type Resultados = {
   gsc: ResultadoFuente<DatosGsc>
   posthog: ResultadoFuente<DatosPosthog>
+  cobertura: ResultadoFuente<DatosCobertura>
 }
 
 export type Accion = {
-  tipo: 'arreglar_fuente' | 'mejorar_pagina' | 'escribir_pagina' | 'enlazado_interno'
+  tipo: 'arreglar_fuente' | 'arreglar_indexacion' | 'mejorar_pagina' | 'escribir_pagina' | 'enlazado_interno'
   texto: string
 }
 

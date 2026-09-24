@@ -34,12 +34,17 @@ import {
 import { CONSULTAS } from '@/lib/seo-correduria/consultas'
 import { tokenCuentaServicio } from '@/lib/seo-correduria/google-sa'
 import { leerGsc } from '@/lib/seo-correduria/gsc'
+import { leerCobertura, urlsPropias } from '@/lib/seo-correduria/cobertura'
 import { leerPosthog } from '@/lib/seo-correduria/posthog'
-import { accionPropuesta, redactarInforme } from '@/lib/seo-correduria/informe'
+import { urlsBlogPendientesIndexar, promptClaudeChromeIndexacion } from '@/lib/seo-correduria/indexacion-pendiente'
+import { accionPropuesta, bloqueTelefonosPorRevisar, redactarInforme } from '@/lib/seo-correduria/informe'
+import { telefonosPorRevisar } from '@central/module-seguros'
 import { lunesDe } from '@/lib/seo-correduria/semana'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// La URL Inspection API es per-URL (sin lote) y algo más lenta que Search Analytics: 60 s se
+// quedaba corto sumando GSC + PostHog + ~10 inspecciones en serie.
+export const maxDuration = 120
 
 const AGENTE = 'seo_correduria'
 
@@ -65,9 +70,13 @@ async function handler(req: NextRequest) {
   const semana = lunesDe(hoy)
   const f = fetch as (input: string, init?: RequestInit) => Promise<Response>
 
-  const [gsc, posthog] = await Promise.all([
-    conEstado(ausentes(['GSC_SA_CLIENT_EMAIL', 'GSC_SA_PRIVATE_KEY']), async () => {
-      const token = await tokenCuentaServicio(
+  const secretosGsc = ausentes(['GSC_SA_CLIENT_EMAIL', 'GSC_SA_PRIVATE_KEY'])
+  // Memoizado: gsc y cobertura comparten cuenta de servicio y scope — sin esto cada pasada pediría
+  // DOS tokens a Google por la misma credencial, un round-trip que no aporta nada.
+  let tokenGscPromesa: Promise<string> | null = null
+  const tokenGsc = () => {
+    if (!tokenGscPromesa) {
+      tokenGscPromesa = tokenCuentaServicio(
         {
           clientEmail: process.env.GSC_SA_CLIENT_EMAIL!,
           privateKey: process.env.GSC_SA_PRIVATE_KEY!,
@@ -75,8 +84,12 @@ async function handler(req: NextRequest) {
         },
         f,
       )
-      return leerGsc({ token, propiedad: PROPIEDAD_GSC, hoy }, f)
-    }),
+    }
+    return tokenGscPromesa
+  }
+
+  const [gsc, posthog, cobertura] = await Promise.all([
+    conEstado(secretosGsc, async () => leerGsc({ token: await tokenGsc(), propiedad: PROPIEDAD_GSC, hoy }, f)),
     conEstado(ausentes(['POSTHOG_PERSONAL_API_KEY']), () =>
       leerPosthog(
         {
@@ -87,13 +100,20 @@ async function handler(req: NextRequest) {
         f,
       ),
     ),
+    // Misma cuenta de servicio que GSC (mismo scope de Search Console): sin secreto nuevo.
+    conEstado(secretosGsc, async () =>
+      leerCobertura(
+        { token: await tokenGsc(), propiedad: PROPIEDAD_GSC, urls: urlsPropias(CONSULTAS, DOMINIO_PROPIO), presupuestoMs: 90_000 },
+        f,
+      ),
+    ),
   ])
 
-  const resultados: Resultados = { gsc, posthog }
+  const resultados: Resultados = { gsc, posthog, cobertura }
 
   // Una fila por fuente. Upsert por (semana, fuente): re-lanzar el cron el mismo lunes no duplica.
   const fecha = new Date(`${semana}T00:00:00Z`)
-  const filas: [Fuente, ResultadoFuente<unknown>][] = [['gsc', gsc], ['posthog', posthog]]
+  const filas: [Fuente, ResultadoFuente<unknown>][] = [['gsc', gsc], ['posthog', posthog], ['cobertura', cobertura]]
   for (const [fuente, r] of filas) {
     const data = {
       estado: r.estado,
@@ -108,14 +128,27 @@ async function handler(req: NextRequest) {
   }
 
   const accion = accionPropuesta(resultados, CONSULTAS)
-  const texto = redactarInforme(semana, resultados, accion, DOMINIO_PROPIO)
+  const telefonos = bloqueTelefonosPorRevisar(telefonosPorRevisar(hoy))
+  const texto = [redactarInforme(semana, resultados, accion, DOMINIO_PROPIO), telefonos].filter(Boolean).join('\n\n')
   // El id va LITERAL (no en una const): el guardián lib/telegram/catalogo.test.ts lee el fuente.
   await tgAviso('correduria.seo-semana', texto, { html: true })
 
-  const estados = { gsc: gsc.estado, posthog: posthog.estado }
+  // Google no tiene API de «solicitar indexación» para páginas normales (solo la UI de Search
+  // Console, con sesión OAuth de Alberto): si algún artículo del blog sigue sin indexar, se manda
+  // el prompt de Claude Chrome ya armado en vez de dejar que cada semana haya que redactarlo a mano.
+  if (cobertura.estado === 'ok') {
+    const pendientes = urlsBlogPendientesIndexar(cobertura.datos)
+    const prompt = promptClaudeChromeIndexacion(pendientes)
+    if (prompt) {
+      // El id va LITERAL, igual que arriba: el guardián lee el fuente.
+      await tgAviso('correduria.seo-indexacion-pendiente', prompt)
+    }
+  }
+
+  const estados = { gsc: gsc.estado, posthog: posthog.estado, cobertura: cobertura.estado }
   const todasOk = Object.values(estados).every(e => e === 'ok')
   const detalle = todasOk
-    ? `semana ${semana}: 2/2 fuentes ok`
+    ? `semana ${semana}: 3/3 fuentes ok`
     : `semana ${semana}: ` +
       filas
         .filter(([, r]) => r.estado !== 'ok')

@@ -91,7 +91,7 @@ export const VENTANAS: readonly { v: VentanaVencimiento; label: string }[] = [
   { v: 'd60', label: 'Vencen en 60 días' },
   { v: 'd90', label: 'Vencen en 90 días' },
   { v: 'anio', label: 'Vencen este año' },
-  { v: 'vencidas', label: 'Ya vencidas' },
+  { v: 'vencidas', label: 'Ya vencidas (último año)' },
   { v: 'sin_fecha', label: 'Sin fecha informada' },
 ]
 

@@ -47,6 +47,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { textoConDato } from './poliza-leida.ts'
+import { formatCapitales } from '@central/module-seguros'
 
 /** La cosa asegurada, ya legible y ya troceada por quién puede ver cada parte. */
 export interface BienAsegurado {
@@ -121,7 +122,16 @@ function entero(d: Record<string, unknown>, clave: string): number | null {
 const RAMOS_VEHICULO = new Set(['auto', 'moto', 'camion', 'furgoneta', 'flota'])
 
 /** Los ramos cuyo bien es un INMUEBLE: su identidad es la dirección. */
-const RAMOS_INMUEBLE = new Set(['hogar', 'comercio', 'comunidad', 'alquiler'])
+const RAMOS_INMUEBLE = new Set(['hogar', 'comercio', 'comunidad', 'comunidades', 'alquiler'])
+
+/**
+ * ¿Es un ramo cuyo bien se identifica por una dirección? Para que la ficha
+ * pueda DECIR que falta (19/09/2026): CIMA no manda el riesgo de hogar, y
+ * callar ahí se lee como «no hay nada que ver» cuando es «no nos lo han dicho».
+ */
+export function esRamoInmueble(ramo: string | null | undefined): boolean {
+  return RAMOS_INMUEBLE.has((ramo ?? '').trim().toLowerCase())
+}
 
 /**
  * Describe el bien asegurado a partir del `datos_especificos` de la póliza.
@@ -151,6 +161,11 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   // Un año de cuatro cifras o no es un año. Sin esto, un `1` de una columna mal
   // migrada saldría como «Construido en 1».
   if (anio !== null && anio >= 1000 && anio <= 2999) detalles.push(`Construido en ${anio}`)
+  // Desglose de `Riesgo.Capitales.Capital[]` (Continente, Contenido, Joyas…):
+  // MISMA función que `/correduria` (`formatCapitales` de `@central/module-seguros`,
+  // ya dependencia de este paquete) — una sola lógica de parseo/formato, no dos
+  // copias que puedan divergir (p.ej. en si aceptan coma decimal).
+  detalles.push(...(formatCapitales(d) ?? []))
 
   // ── Vehículo ──────────────────────────────────────────────────────────────
   if (RAMOS_VEHICULO.has(r) || campo(d, 'matricula') !== null) {
@@ -167,6 +182,14 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   if (RAMOS_INMUEBLE.has(r) || campo(d, 'direccion') !== null) {
     const ubicacion = componerUbicacion(campo(d, 'direccion'), campo(d, 'cp'), campo(d, 'localidad'))
     return { cosa: null, ubicacion, detalles, matricula: null }
+  }
+
+  // ── RC de mascotas ────────────────────────────────────────────────────────
+  // La raza es el bien: distingue CUÁL animal, el mismo papel que la matrícula
+  // en auto (dos RC-perros de la misma compañía, sin esto, salían idénticas).
+  const raza = campo(d, 'animalRaza')
+  if (raza !== null) {
+    return { cosa: raza, ubicacion: null, detalles, matricula: null }
   }
 
   // Un ramo sin bien descriptible (vida, decesos, salud…). No es un error: es

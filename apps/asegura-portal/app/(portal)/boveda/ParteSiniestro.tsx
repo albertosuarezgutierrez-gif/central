@@ -10,10 +10,14 @@ import {
   LUGAR_MAX,
   ZONAS_VEHICULO,
   bloqueDatosVehiculo,
+  canalesConCompaniaPrimero,
   canalesDeLasPolizas,
   componerDescripcion,
   TEXTO_SIN_CANAL,
+  textoSoloRamos,
+  whatsappParaRamo,
   type CanalCompania,
+  type DatosParteWhatsapp,
   type ViaCanal,
 } from '@central/module-seguros-portal'
 // Del módulo puro, que no importa `node:*` ni red: se puede cargar desde un
@@ -28,6 +32,8 @@ import {
 } from '@central/module-seguros'
 
 import { fechaEs } from '@/lib/fechas'
+
+import { EnviarACompania } from './EnviarACompania'
 
 /**
  * «Dar parte de un siniestro» — el formulario que abre el CLIENTE desde su móvil,
@@ -96,6 +102,15 @@ export type PolizaOpcionParte = {
    * sabemos (no es de auto, o la compañía no la ha informado).
    */
   matriculaPropia?: string | null
+  /**
+   * Solo para el mensaje que el cliente manda, si quiere, a SU compañía por
+   * WhatsApp tras dar el parte: identifican la póliza ante ella. Nunca se
+   * pintan sueltos. `null`/`undefined` = no lo sabemos y el mensaje no lo dice.
+   */
+  numeroPoliza?: string | null
+  titular?: string | null
+  /** Matrícula o dirección del riesgo. */
+  bien?: string | null
 }
 
 /**
@@ -428,12 +443,36 @@ const ESTADO_FICHERO: Record<EstadoFichero, { texto: string; clase: string }> = 
  * lo comunica estuviera detrás de «Dar parte» → desplegar → elegir póliza,
  * estaría escondido justo para quien tiene prisa.
  *
- * Por eso no depende de la póliza elegida: se pintan las compañías de TODAS sus
- * pólizas. Con una sola compañía es un bloque; con cuatro son cuatro.
+ * Por eso el CONTENIDO no depende de la póliza elegida: se pintan las compañías
+ * de TODAS sus pólizas. Con una sola compañía es un bloque; con cuatro son
+ * cuatro.
+ *
+ * 🚨 Lo que sí depende de ella, desde el 19/09/2026, es el ORDEN: la de la
+ * póliza elegida va primera y marcada, porque el botón de la ficha promete un
+ * teléfono concreto («Ver los teléfonos de Allianz y dar parte») y con tres
+ * compañías debajo podía ser el tercero. **Ordenar no es recortar**: quien
+ * tiene prisa puede haber llegado desde la póliza equivocada —el coche de su
+ * padre, el piso en vez del local— y una lista de una sola compañía le diría
+ * que no hay nadie más a quien llamar.
  */
-function CanalesCompania({ polizas }: { polizas: readonly PolizaOpcionParte[] }) {
-  const canales = canalesDeLasPolizas(polizas.map((p) => p.canal))
+function CanalesCompania({
+  polizas,
+  destacada,
+}: {
+  polizas: readonly PolizaOpcionParte[]
+  /**
+   * La compañía de la póliza que hay elegida ahora mismo (o la que venía en el
+   * enlace de su ficha), para ponerla DELANTE. `null` = ninguna elegida, y
+   * entonces el orden es el de siempre.
+   */
+  destacada?: string | null
+}) {
+  // Una compañía en blanco (una póliza aportada de la que la IA no leyó cuál
+  // era) es «no lo sabemos», no una compañía: ni ordena ni marca nada.
+  const quien = typeof destacada === 'string' && destacada.trim() !== '' ? destacada.trim() : null
+  const canales = canalesConCompaniaPrimero(canalesDeLasPolizas(polizas.map((p) => p.canal)), quien)
   if (canales.length === 0) return null
+  const clave = quien === null ? null : quien.toLowerCase()
 
   return (
     <div className="canal-caja">
@@ -447,16 +486,29 @@ function CanalesCompania({ polizas }: { polizas: readonly PolizaOpcionParte[] })
         hacer los dos.
       </p>
       {canales.map((c) => (
-        <BloqueCanal key={c.nombre} canal={c} />
+        <BloqueCanal
+          key={c.nombre}
+          canal={c}
+          // 🚨 Se compara con la MISMA normalización que usó el helper puro
+          // para ordenar. Con dos criterios distintos, el bloque marcado y el
+          // que va primero podrían no ser el mismo, y el cartel señalaría a
+          // otra compañía.
+          deLaElegida={clave !== null && c.nombre.trim().toLowerCase() === clave}
+        />
       ))}
     </div>
   )
 }
 
-function BloqueCanal({ canal }: { canal: CanalCompania }) {
+function BloqueCanal({ canal, deLaElegida }: { canal: CanalCompania; deLaElegida?: boolean }) {
   return (
-    <div className="canal-bloque">
+    <div className="canal-bloque" data-elegida={deLaElegida ? 'si' : undefined}>
       <p className="canal-compania">{canal.nombre}</p>
+      {/* El cartel solo dice de QUÉ póliza es esta compañía; no promete nada
+          del canal (eso lo dicen las vías de abajo, cada una con su horario si
+          lo hay). Va en texto y no solo en color: el filete de la izquierda no
+          se lo lee nadie por teléfono. */}
+      {deLaElegida === true && <p className="canal-elegida">La compañía de la póliza que traes elegida</p>}
       {canal.sinDatos ? (
         // 🚨 «No lo hemos verificado», NUNCA «esta compañía no tiene». El texto
         // vive en el módulo puro con su test para que no se convierta en un
@@ -465,8 +517,17 @@ function BloqueCanal({ canal }: { canal: CanalCompania }) {
       ) : (
         <>
           {canal.vias.map((v) => (
-            <ViaCanalEnlace key={`${v.tipo}-${v.tipo === 'telefono' ? v.uso : 'wa'}-${v.numero}`} via={v} />
+            <ViaCanalEnlace key={`${v.tipo}-${v.tipo === 'telefono' ? `${v.uso}-${v.para ?? ''}` : 'wa'}-${v.numero}`} via={v} />
           ))}
+          {/* El número, guardado en el móvil ANTES de necesitarlo: la tarjeta sale
+              del mismo catálogo verificado que estas vías. */}
+          <a
+            className="canal-via"
+            href={`/api/contacto-compania/${encodeURIComponent(canal.nombre)}`}
+            download
+          >
+            <span className="canal-via-que">Guardar en mis contactos</span>
+          </a>
           {canal.verificadoEn !== null && (
             // Un número comprobado hace tres años falla igual que uno
             // equivocado, y en el mismo momento. Se dice cuándo se miró.
@@ -497,12 +558,19 @@ function ViaCanalEnlace({ via }: { via: ViaCanal }) {
       <a className="canal-via" href={via.enlace} target="_blank" rel="noreferrer noopener">
         <span className="canal-via-que">Dar parte por WhatsApp</span>
         <span className="canal-via-num">{via.numero}</span>
+        {/* Mapfre: su WhatsApp es solo de hogar. Se dice, para que nadie mande ahí un parte de auto. */}
+        {textoSoloRamos(via.soloRamos) !== null && <span className="canal-via-horario">{textoSoloRamos(via.soloRamos)}</span>}
         {via.horario !== null && <span className="canal-via-horario">Atiende {via.horario}</span>}
+        {/* Horario u origen del dato cuando el WhatsApp es otra línea (Mapfre,
+            Allianz, Generali). Los ramos van arriba, en `soloRamos`. */}
+        {via.nota !== null && <span className="canal-via-horario">{via.nota}</span>}
       </a>
     )
   }
 
-  const que = via.uso === 'siniestros' ? 'Dar parte por teléfono' : 'Asistencia en carretera y urgencias'
+  // La asistencia se rotula con la línea que es («Hogar», «Coche, moto y
+  // furgoneta»): con un solo rótulo genérico, quien tiene una fuga marcaría la grúa.
+  const que = via.uso === 'siniestros' ? 'Dar parte por teléfono' : via.para !== null ? `Asistencia · ${via.para}` : 'Asistencia'
   return (
     <a className="canal-via" href={`tel:${via.numero.replace(/\s/g, '')}`}>
       <span className="canal-via-que">{que}</span>
@@ -562,6 +630,18 @@ export function ParteSiniestro({
    */
   const [parteId, setParteId] = useState<string | null>(null)
   /**
+   * Lo que hace falta para que el cliente se lo mande TAMBIÉN a su compañía por WhatsApp,
+   * fotografiado al enviar (el formulario se vacía justo después). `null` = esa póliza no
+   * tiene un WhatsApp de la compañía que valga para su ramo, o no eligió póliza.
+   */
+  const [paraCompania, setParaCompania] = useState<{
+    compania: string
+    numero: string
+    horario: string | null
+    datos: Omit<DatosParteWhatsapp, 'conPdf'>
+    ficheros: File[]
+  } | null>(null)
+  /**
    * Cuenta cada `abrir()`/`cerrar()`. La geolocalización puede tardar hasta 8 s
    * (el `timeout`), y si entre el clic y la respuesta el cliente cierra el
    * formulario y lo reabre para OTRO siniestro, la respuesta tardía no puede
@@ -615,6 +695,7 @@ export function ParteSiniestro({
     setErrorGeneral(null)
     setFicheros([])
     setParteId(null)
+    setParaCompania(null)
     setEstado('reposo')
     setGeo('reposo')
     setAbierto(true)
@@ -876,6 +957,30 @@ export function ParteSiniestro({
       if (r.status === 201) {
         const cuerpo = (await r.json().catch(() => null)) as { plazo?: Plazo; id?: unknown } | null
         setRecibido(cuerpo?.plazo ?? null)
+        const wa = polizaSeleccionada ? whatsappParaRamo(polizaSeleccionada.canal, polizaSeleccionada.ramo) : null
+        setParaCompania(
+          polizaSeleccionada && wa
+            ? {
+                compania: polizaSeleccionada.canal.nombre,
+                numero: wa.numero,
+                horario: wa.horario,
+                datos: {
+                  compania: polizaSeleccionada.canal.nombre,
+                  numeroPoliza: polizaSeleccionada.numeroPoliza ?? null,
+                  titular: polizaSeleccionada.titular ?? null,
+                  bien: polizaSeleccionada.bien ?? null,
+                  fechaHecho: form.fechaHecho,
+                  horaAproximada: form.horaAproximada || null,
+                  lugar: form.lugar.trim() || null,
+                  descripcion: descripcionFinal,
+                  hayHeridos: aTriestado(form.hayHeridos),
+                  hayTerceros: aTriestado(form.hayTerceros),
+                },
+                // Solo los que valen como documento: un vídeo o un fichero de 30 MB tampoco van al PDF.
+                ficheros: ficheros.filter(reintentable).map((f) => f.fichero),
+              }
+            : null,
+        )
         setEstado('enviado')
         setAbierto(false)
         setForm(VACIO)
@@ -948,11 +1053,17 @@ export function ParteSiniestro({
 
   const restantes = DESCRIPCION_MIN - form.descripcion.trim().length
 
+  // La compañía de la póliza elegida AHORA (la del enlace de su ficha al
+  // entrar, y la que se elija después en el desplegable). Solo decide el ORDEN
+  // del bloque de canales: las demás compañías siguen enteras debajo, porque
+  // quien tiene prisa puede haber llegado desde la póliza equivocada.
+  const companiaElegida = polizas.find((p) => p.valor === form.poliza)?.canal.nombre ?? null
+
   return (
     <section className="seccion" aria-labelledby={`${uid}-titulo`}>
       <h2 id={`${uid}-titulo`}>Un siniestro</h2>
 
-      <CanalesCompania polizas={polizas} />
+      <CanalesCompania polizas={polizas} destacada={companiaElegida} />
 
       {/* La confirmación vive FUERA del formulario, así sigue en pantalla cuando
           el formulario ya se ha cerrado. */}
@@ -1000,6 +1111,16 @@ export function ParteSiniestro({
                 </p>
               )}
             </div>
+          )}
+          {paraCompania && (
+            <EnviarACompania
+              compania={paraCompania.compania}
+              numero={paraCompania.numero}
+              horario={paraCompania.horario}
+              datos={paraCompania.datos}
+              ficheros={paraCompania.ficheros}
+              parteId={parteId}
+            />
           )}
         </div>
       )}

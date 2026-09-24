@@ -41,6 +41,16 @@ test('🚨 el grupo cliente/lead NO se lee de `clientes.tipo`', () => {
   assert.match(FUENTE, /v\.polizas_vivas = 0/)
 })
 
+test('🚨 el grupo se deriva de las pólizas EN VIGOR, no de las «vivas» por origen (19/09/2026)', () => {
+  // Medido: 47 de las 157 pólizas de CIMA están canceladas y 28 clientes solo
+  // tenían canceladas — salían como «Cartera viva» (Kartenbrot) y el recuento
+  // decía «6 póliza(s) viva(s)» a quien tenía 4 en vigor. Cancelada = lead.
+  assert.match(FUENTE, /sqlCarteraEnVigor\('p'\)/)
+  assert.match(FUENTE, /sqlCarteraNoEnVigor\('p'\)/)
+  assert.doesNotMatch(FUENTE, /sqlCarteraViva\(/, 'el origen a secas incluye las canceladas')
+  assert.doesNotMatch(FUENTE, /sqlVolcadoHistorico\(/, 'los leads son el complementario de «en vigor», no solo el volcado')
+})
+
 test('la definición de cartera viva viene del módulo, no se reescribe a mano', () => {
   assert.match(FUENTE, /@central\/module-seguros/)
   // Escribir `import_ref is null` a pelo se salta el segundo brazo
@@ -57,4 +67,18 @@ test('las lápidas de fusión se excluyen SIEMPRE (si no, el cliente sale dos ve
 test('el listado va paginado en SQL: los ~32.000 leads no se traen enteros', () => {
   assert.match(FUENTE, /limit \$\{f\.porPagina\} offset \$\{offset\}/)
   assert.match(FUENTE, /count\(\*\)::bigint as n/)
+})
+
+test('🚨 «Vencidas» tiene SUELO de anualidad, igual que Renovaciones (21/09/2026)', () => {
+  // Sin suelo, un Allianz `estado='activa'` con `fecha_vencimiento` de 2013
+  // (medido: hasta 4.985 días vencido, sin `import_ref` así que cuenta como
+  // «en vigor») salía en «Ya vencidas» junto a los que sí son trabajo de esta
+  // semana. `Renovaciones.tsx` ya aplica este mismo suelo desde el 20/09/2026;
+  // sin él este listado y aquel mostraban dos «vencidas» distintas de la
+  // misma cartera.
+  assert.match(FUENTE, /DIAS_ANUALIDAD/)
+  assert.match(
+    FUENTE,
+    /fecha_vencimiento >= \$\{r\.desde\}::date and p\.fecha_vencimiento < \$\{r\.antesDe\}::date/,
+  )
 })

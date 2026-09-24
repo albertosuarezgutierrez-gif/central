@@ -1,4 +1,12 @@
 export {
+  KM_ANUALES_SUPUESTOS,
+  KM_ANUALES_MAXIMO,
+  kilometrosDesdeTexto,
+  supuestosVigentes,
+  type SupuestoConCampo,
+} from './supuestos-auto.ts'
+
+export {
   PROHIBIDO,
   ACOTA_AMBITO,
   revisarCopy,
@@ -14,7 +22,13 @@ export {
   sqlVolcadoHistorico,
   WHERE_CARTERA_VIVA,
   WHERE_VOLCADO_HISTORICO,
+  esCarteraEnVigor,
+  esCarteraNoEnVigor,
+  sqlCarteraEnVigor,
+  sqlCarteraNoEnVigor,
+  WHERE_CARTERA_EN_VIGOR,
   type EntradaCarteraViva,
+  type EntradaCarteraEnVigor,
 } from './cartera-viva.ts'
 
 export {
@@ -30,6 +44,10 @@ export {
   DIAS_PREAVISO_TOMADOR,
   DIAS_PREAVISO_ASEGURADOR,
   DIAS_HORIZONTE_RENOVACION,
+  DIAS_ANUALIDAD,
+  inicioVentanaRecuperacion,
+  esVencidaRecuperable,
+  descripcionDias,
   diasHastaVencimiento,
   fechaLimiteOposicion,
   fechaLimiteComunicacionAseguradora,
@@ -44,6 +62,7 @@ export {
 export {
   objetoAsegurado,
   pareceMatricula,
+  formatCapitales,
   type ObjetoAsegurado,
   type EstadoObjeto,
   type EntradaObjeto,
@@ -59,12 +78,26 @@ export {
 } from './rc-modalidad.ts'
 
 export {
+  RAMOS_CON_DIRECCION_RIESGO,
+  admiteDireccionRiesgo,
+  validarDireccionRiesgo,
+  type DireccionRiesgo,
+  type ValidacionDireccionRiesgo,
+} from './direccion-riesgo.ts'
+
+export {
   saludIngesta,
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
   HORAS_RECHAZO_RECIENTE,
+  HORAS_PULL_MUDO,
+  DIAS_AVISO_PURGA,
   DIAS_RECORDATORIO_INGESTA,
   decidirAvisoIngesta,
+  firmaAvisoIngesta,
+  normalizarFirmaIngesta,
+  decidirRespaldoPull,
+  HORAS_RESPALDO_PULL,
   repartirHuerfanas,
   textoHuerfanas,
   TOPE_POLIZAS_TELEGRAM,
@@ -73,12 +106,19 @@ export {
   type EntradaSalud,
   type FicheroEnCuarentena,
   type EntradaRechazada,
+  type CrudoPendiente,
+  type CoberturaResumen,
+  type CajaNegraCodeoscopic,
+  type UltimoPullIngesta,
+  type FicheroParcial,
   type MotivoAviso,
   type DecisionAviso,
+  type DecisionRespaldoPull,
   type PolizaHuerfana,
   type PolizaEnCartera,
   type GrupoHuerfanas,
   type RepartoHuerfanas,
+  type CampoImportanteSinLeer,
 } from './ingesta.ts'
 export {
   veredictoEntidad,
@@ -173,6 +213,11 @@ export {
   type PersonaDePolizas,
 } from './intervinientes.ts'
 export {
+  emailAlternativo,
+  type AllegadoConEmail,
+  type EmailAlternativo,
+} from './contacto-alternativo.ts'
+export {
   FRACCIONES,
   etiquetaFraccionamiento,
   etiquetaFormaPago,
@@ -193,6 +238,7 @@ export {
   estadoDocumento,
   revisarDocumento,
   mimeDocumento,
+  mimeParaServir,
   tipoAdjuntoParte,
   resumenDocumentos,
   documentosQueFaltan,
@@ -208,6 +254,7 @@ export {
   numeroPositivo,
   anioPlausible,
   cpValido,
+  referenciaCatastral,
   type Retarificabilidad,
   type RamoRetarificable,
   type EntradaRetarificable,
@@ -275,7 +322,8 @@ export {
   type RelacionFila,
   type RelacionFicha,
 } from './relaciones.ts'
-export { mensajePresentacionWhatsapp } from './mensaje-whatsapp.ts'
+export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
+export { correoPresupuesto, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
   DIAS_PRESUPUESTO_VIVO,
@@ -337,6 +385,28 @@ export {
   descripcionEiacSiniestro,
 } from './eiac-siniestros.ts'
 export {
+  RAMOS_SINIESTRO,
+  RAMOS_SINIESTRO_CON_CATALOGO,
+  CAMPOS_POR_RAMO_SINIESTRO,
+  MAX_TEXTO_RAMO_SINIESTRO,
+  camposDeRamoSiniestro,
+  normalizarDatosRamoSiniestro,
+  type TipoCampo as TipoCampoRamoSiniestro,
+  type OpcionCampo as OpcionCampoRamoSiniestro,
+  type CampoRamoSiniestro,
+  type RamoSiniestro,
+  type DatosRamoSiniestro,
+  type ResultadoDatosRamoSiniestro,
+} from './siniestro-ramo.ts'
+export {
+  TIPOS_INTERVINIENTE,
+  esTipoInterviniente,
+  revisarInterviniente,
+  type TipoInterviniente,
+  type IntervinienteEntrada,
+  type IntervinienteRevisado,
+} from './siniestro-intervinientes.ts'
+export {
   evolucionPrima,
   etiquetaVeredictoPrima,
   inicioCiclo,
@@ -353,6 +423,8 @@ export {
   emparejarConCima,
   conciliarConCima,
   sanearPrima,
+  seguimientoSustitucion,
+  validarPolizaOrigen,
   TIPOS_SEGURO,
   PRIMA_ANUAL_MAX,
   MARGEN_FECHA_INICIO_DIAS,
@@ -366,6 +438,8 @@ export {
   type NuestraPoliza,
   type CimaPoliza,
   type Conciliacion,
+  type SeguimientoSustitucion,
+  type ValidacionPolizaOrigen,
 } from './emision.ts'
 export {
   ladoDeGarantia,
@@ -391,6 +465,12 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+export {
+  agruparHistoricas,
+  type HistoricaAgrupable,
+  type GrupoHistorica,
+} from './ficha-historicas.ts'
+export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export {
   parseFiltroCartera,
   filtroActivo,
@@ -556,6 +636,9 @@ export { nombreDePila } from './nombre-de-pila.ts'
 export { COOLDOWN_DIAS, enCooldown, textoBaseRecaptacionWhatsapp, textoBaseRecaptacionEmail } from './recaptacion.ts'
 export type { EnvioRecienteRecaptacion, PersonalizacionRecaptacion } from './recaptacion.ts'
 
+export { COOLDOWN_RENOVACION_DIAS, enCooldownRenovacion, textoAvisoRenovacionWhatsapp } from './renovacion-contacto.ts'
+export type { ContactoReciente, PersonalizacionRenovacion } from './renovacion-contacto.ts'
+
 export {
   AREAS_CONTACTO,
   areaContacto,
@@ -565,3 +648,149 @@ export {
   type AreaContacto,
   type ContactoCompania,
 } from './compania-contactos.ts'
+
+// Pólizas que el corredor recibe por su cuenta y sube él (no las declara el cliente).
+export {
+  clasificarCoincidencias,
+  clavesCotejo,
+  partirNombre,
+  puedeEnlazarse,
+  proyectarVencimiento,
+  tipoPersonaDeNombre,
+  prepararAltaDesdeDocumento,
+  prepararDeclaradaDesdeDocumento,
+} from './poliza-de-documento.ts'
+export type {
+  AltaDesdeDocumento,
+  AvisoDocumento,
+  ClavesCotejo,
+  Cotejo,
+  DeclaradaDesdeDocumento,
+  LecturaPoliza,
+  TipoLecturaDocumento,
+  TipoPersonaDocumento,
+} from './poliza-de-documento.ts'
+
+// El presupuesto que ve el CLIENTE: estado derivado de los sellos, caducidad
+// (mínimo de tres fuentes) y la regla de las tres opciones de portada.
+export {
+  VALIDEZ_PRESUPUESTO_DIAS,
+  admiteDecision,
+  calcularVencimiento,
+  constaEnvio,
+  elegirPortada,
+  estadoPresupuesto,
+} from './presupuesto-cliente.ts'
+export type {
+  EstadoPresupuesto,
+  FuenteVencimiento,
+  OpcionPortada,
+  PapelPortada,
+  Portada,
+  SellosPresupuesto,
+  SinEquivalente,
+  Vencimiento,
+} from './presupuesto-cliente.ts'
+
+// Defensa de cartera: en qué compañías el cliente YA está, y qué se puede
+// decir de una fila de precio por eso. Cuatro estados, `desconocida` incluida.
+export {
+  normalizarCompania,
+  resolverCompania,
+  polizaDefiende,
+  defensaDeCartera,
+  bloqueaEmision,
+  etiquetaDefensa,
+  fraseDefensa,
+  type CompaniaCatalogo,
+  type IdentidadCompania,
+  type PolizaCliente,
+  type EstadoDefensa,
+  type PolizaEnLaCompania,
+  type Defensa,
+  type EntradaDefensa,
+} from './defensa-cartera.ts'
+
+// La tabla de precios con sentido: agrupada por nivel de cobertura (que NO son
+// comparables entre sí) y con filtros cuyo valor no reconocido se DECLARA.
+export {
+  nivelCobertura,
+  parseFiltroPrecios,
+  filtroPreciosActivo,
+  describirFiltroPrecios,
+  agruparPrecios,
+  eurEs,
+  FIRMEZAS,
+  FRANQUICIAS,
+  FILTRO_PRECIOS_VACIO,
+  type FamiliaNivel,
+  type Nivel,
+  type FirmezaPrecio,
+  type PrecioComparable,
+  type FilaPrecio,
+  type FiltroFranquicia,
+  type FiltroPrecios,
+  type ParseFiltroPrecios,
+  type GrupoCobertura,
+  type Comparativa,
+  type OpcionesComparativa,
+} from './comparativa-precios.ts'
+export {
+  DIAS_ENTRE_LLAMADAS_RESPONDIO, DIAS_LLAMADA, DIAS_PRIMER_CONTACTO, DIAS_RECORDATORIO, MAX_INTENTOS, MAX_INTENTOS_RESPONDIO,
+  canalLead, diasHasta, pasoConTarea, proximoAniversario, puedeWhatsappLead, puntuarLead, siguientePasoLead, textoPasoLead, ventanaDe,
+} from './lead-competencia.ts'
+export type { CanalLead, DatosPuntuacion, PasoLead, VentanaLead } from './lead-competencia.ts'
+export { MOTIVOS_PERDIDA, PRIORIDADES_TAREA, TIPOS_TAREA, aplicarAccion, validarTarea } from './oportunidad-seguimiento.ts'
+export {
+  DIAS_APARCAR_NO_INTERESA, DIAS_PREPARAR_PRECIO, MAX_DIAS_RELLAMADA, PREFIJO_LLAMADA_CONTESTADA, PREFIJO_LLAMADA_SIN_RESPUESTA,
+  RESULTADOS_LLAMADA, planLlamada,
+} from './llamada-resultado.ts'
+export type { PlanLlamada, ResultadoLlamada } from './llamada-resultado.ts'
+export type {
+  AccionOportunidad,
+  Cambios as CambiosOportunidad,
+  EstadoActual as EstadoActualOportunidad,
+  EstadoOportunidad,
+  MotivoPerdida,
+  PeticionAccion,
+  PrioridadTarea,
+  ResultadoAccion,
+  TareaValida,
+  TipoTarea,
+} from './oportunidad-seguimiento.ts'
+export {
+  TIPOS_YA_AVISADOS,
+  VENTANA_MINUTOS,
+  claveEvento,
+  decidirAvisosActividad,
+  desdeConsulta,
+  detalleActividad,
+  leerMarcaActividad,
+  mensajeActividad,
+  serializarMarcaActividad,
+} from './actividad-aviso.ts'
+export type { DecisionActividad, MarcaActividad } from './actividad-aviso.ts'
+export { libroVcard, nombreVisible, vcardContacto } from './vcard.ts'
+export type { ContactoMovil, GrupoContacto } from './vcard.ts'
+export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, detectarCambios, esFugaSinExplicar, fotoSospechosa, fotoVacia, nombreEvento } from './detector-cartera.ts'
+export type { Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
+export { ORIGEN_RETENCION, decidirRetencion } from './retencion-fuga.ts'
+export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
+export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, borradorAnulacionCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
+export type { AccionAprobacion, Borrador, BuzonCompania, Decision, EntradaAnulacionCompania, EntradaReciboDevuelto, EstadoAprobacion, Politica } from './aprobaciones.ts'
+export {
+  ACCIONES_ANULACION, DIAS_ESPERA_CONFIRMACION, ESTADOS_ANULACION, ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION,
+  ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION, MOTIVOS_ANULACION, SOLICITANTES_ANULACION, TIPOS_ANULACION,
+  cartaAnulacion, resolucionDeAnulacion, siguientePaso as siguientePasoAnulacion, transicion as transicionAnulacion, validarSolicitud as validarSolicitudAnulacion,
+} from './anulacion.ts'
+export type {
+  AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
+} from './anulacion.ts'
+export { anulacionPorCambio, documentoAceptacion, esCambioCompania, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'
+export { datosDelTomador, huecosParaEmitirDesdeFicha, type CampoEmision, type DatoEmision, type DatoPropioEnPoliza, type DatosParaEmitir, type EstadoDatoEmision, type FichaParaEmitir, type QuienAporta, type ValorLeido } from './datos-para-emitir.ts'
+export {
+  DIAS_REVISION_TELEFONOS, TELEFONOS_COMPANIAS, esTelefonoPublicable, hrefTel, telefonoVerificadoPorCodigo, telefonoVerificadoPorNombre, telefonosParaPublicar, telefonosPorRevisar, vcardCompania, whatsappLegible,
+  type LineaAsistencia, type TelefonoCompania,
+} from './telefonos-companias.ts'
+export { ACCIONES_CARTA_MEDIADOR, ESTADOS_CARTA_ABIERTA, cartaNombramientoMediador, esCompaniaDeRelleno, transicionCartaMediador, type AccionCartaMediador, type DatosCartaMediador, type EstadoCartaMediador } from './carta-mediador.ts'
+export { SUSTITUCION_DIAS_ANTES, SUSTITUCION_DIAS_DESPUES, claveRiesgo, detectarSustituciones, solicitudPorSustitucion, sustituidasARetirar, type DuplicidadDetectada, type PolizaParaSustitucion, type ResultadoSustituciones, type RiesgoComun, type SustitucionDetectada } from './sustitucion-auto.ts'

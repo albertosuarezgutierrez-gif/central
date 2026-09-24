@@ -13,6 +13,8 @@
 // sobre el schema `seguros` (solo `prisma_seguros`/`crm_seguros` lo tienen).
 
 import { areaContacto, type AreaContacto } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
+
 
 export type Contacto = {
   id: string
@@ -33,6 +35,15 @@ export type Compania = {
   enCima: boolean
   claveMediador: string | null
   notas: string | null
+  /** El teléfono/WhatsApp/horario DIRECTO de siniestros de la compañía, si se conoce
+   *  (`null` = no se ha verificado). Va aparte de `contactos`: es el canal genérico
+   *  de la compañía, no la persona concreta que le lleva la cartera a Alberto. */
+  telefonoSiniestros: string | null
+  whatsappSiniestros: string | null
+  /** Ramos para los que vale ese WhatsApp (`null` = para todos, o el puerto no lo dice).
+   *  Mapfre: solo `['hogar']` — un parte de auto a esa línea se queda sin contestar. */
+  whatsappSiniestrosRamos: string[] | null
+  horarioSiniestros: string | null
   contactos: Contacto[]
 }
 
@@ -74,6 +85,13 @@ function leerContactos(v: unknown): Contacto[] {
   return v.map(leerContacto).filter((c): c is Contacto => c !== null)
 }
 
+/** Lista de ramos en minúsculas, o `null` si no llega, no es lista o queda vacía («vale para todos»). */
+function ramos(v: unknown): string[] | null {
+  if (!Array.isArray(v)) return null
+  const r = v.filter((x): x is string => typeof x === 'string').map((x) => x.trim().toLowerCase()).filter((x) => x !== '')
+  return r.length === 0 ? null : r
+}
+
 function leerCompania(v: unknown): Compania | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
@@ -87,6 +105,10 @@ function leerCompania(v: unknown): Compania | null {
     enCima: o.enCima === true,
     claveMediador: cadena(o.claveMediador),
     notas: cadena(o.notas),
+    telefonoSiniestros: cadena(o.telefonoSiniestros),
+    whatsappSiniestros: cadena(o.whatsappSiniestros),
+    whatsappSiniestrosRamos: ramos(o.whatsappSiniestrosRamos),
+    horarioSiniestros: cadena(o.horarioSiniestros),
     contactos: leerContactos(o.contactos),
   }
 }
@@ -115,15 +137,15 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-function cabeceras(): Record<string, string> | null {
+async function cabeceras(): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? { Authorization: `Bearer ${secret}` } : null
+  return secret ? await cabecerasPuerto(secret) : null
 }
 
 export type Reenvio = { status: number; json: unknown }
 
 export async function companiasAsegura(): Promise<Reenvio> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/companias`, {
@@ -139,7 +161,7 @@ export async function companiasAsegura(): Promise<Reenvio> {
 
 /** Marca un contacto como recién contactado. Best-effort: el llamador no bloquea el WhatsApp/mail por esto. */
 export async function marcarContactoAsegura(contactoId: string): Promise<Reenvio> {
-  const h = cabeceras()
+  const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/companias/contacto/${encodeURIComponent(contactoId)}`, {

@@ -78,7 +78,7 @@ de borrar, `smoobu-sync.ts` deja constancia (helper puro y testeado `lib/sivra/c
 | `GROQ_API_KEY` | **Fallback de texto gratis de la pasarela** (NIM → **Groq** `openai/gpt-oss-120b`, gratis rate-limited) en `aiComplete`/`aiTools`. Sin ella el fallback queda inactivo (no rompe). Override de modelo: `GROQ_BRAIN_MODEL`. |
 | `CEREBRAS_API_KEY` | **4º fallback de texto gratis** (27/07/2026, entre Groq y Gemini en `aiComplete`): **Cerebras** `gpt-oss-120b`, infra WSE independiente de NIM/Groq (1M tok/día gratis, contexto 8192 tok en tier gratis). Sin ella queda inactivo (no rompe) — hoy INACTIVA, pendiente de que Alberto decida activarla. Override de modelo: `CEREBRAS_MODEL`. |
 | `MOONSHOT_API_KEY` | **Último fallback de texto** (… → **Kimi**/Moonshot, de pago) en `aiComplete`. Sin ella queda inactivo (no rompe). Opcionales: `MOONSHOT_MODEL` (default `kimi-k2.6`), `MOONSHOT_BASE_URL` (usa `.cn` si aplica). |
-| `OPENROUTER_API_KEY` | **Camino PRIMARIO de la pasarela** (09/07/2026): agregador OpenRouter con el **Agente Director** eligiendo modelo por petición + fallback nativo entre modelos. Sin ella todo queda como antes (cadena gratis NIM→Groq→Cerebras→Gemini→Kimi). Opcionales: `OPENROUTER_MODEL` (default `deepseek/deepseek-chat`), `OPENROUTER_FALLBACK_MODELS` (csv de suplentes), `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`/`OPENROUTER_TITLE` (atribución). |
+| `OPENROUTER_API_KEY` | **Camino PRIMARIO de la pasarela** (09/07/2026): agregador OpenRouter con el **Agente Director** eligiendo modelo por petición + fallback nativo entre modelos. Sin ella todo queda como antes (cadena gratis NIM→Groq→Cerebras→Gemini→Kimi). Opcionales: `OPENROUTER_MODEL` (default `deepseek/deepseek-v4.1-flash` desde 14/09/2026 — el anterior `deepseek/deepseek-v4-flash` fue retirado por DeepSeek el 10/09/2026), `OPENROUTER_FALLBACK_MODELS` (csv de suplentes), `OPENROUTER_BASE_URL`, `OPENROUTER_REFERER`/`OPENROUTER_TITLE` (atribución). |
 | `DIRECTOR_MODO` | **🟢 En producción `activo` desde el 10/07/2026** (la semana de sombra se acortó a 1 día por decisión de Alberto). `sombra` (el Director decide y se REGISTRA en `ai_usos` pero se sirve con el modelo por defecto) · `activo` (enruta de verdad). Opcionales: `DIRECTOR_MODEL` (modelo barato que decide, default `deepseek/deepseek-chat`), `DIRECTOR_USAR_FLOOR` (`false` desactiva el sufijo `:floor` = proveedor más barato), `DIRECTOR_MAX_PRECIO_OUT` (techo USD/M del cron, default 20). **Guardas en memoria (12/07/2026):** `DIRECTOR_BREAKER_FALLOS` (default 3) fallos SEGUIDOS del hop → se sirve default directo durante `DIRECTOR_BREAKER_PAUSA_MIN` (default 5) min sin pagar el timeout de 4s por petición (se marca `[breaker abierto]` en `ai_usos.error`); `DIRECTOR_DECISION_TTL_MIN` (default 5, `0`=off) memoiza la decisión por forma de petición (app+system+tamaño+versión de catálogo+degradado) — el tráfico repetitivo no paga el hop cada vez. |
 | `DIRECTOR_PRESUPUESTO_UMBRAL` | Degradación GRADUAL del Director por presupuesto (09/07/2026): al superar este ratio del límite diario (gasto de hoy/límite, máx entre global/app/cliente) el Director elige SOLO modelos baratos ANTES del bloqueo duro al 100%. Default `0.8`. Techo de "barato" en `DIRECTOR_PRESUPUESTO_PRECIO_OUT` (USD/M salida, default `1.0`). El filtro (`lib/director-modelos.ts::modelosPermitidos`) también enruta por contexto real de la petición y, si el caller marca datos sensibles, prefiere modelos `eu` (RGPD) cuando el catálogo los ofrece. |
 | `DIRECTOR_APRENDIZAJE_DIAS` | Bucle de aprendizaje del cron `ia-director-refresh` (F4): ventana en días del rendimiento real por modelo desde `ai_usos` (default `7`). Un modelo con mala racha se PENALIZA (se descarta del catálogo nuevo) si `error_rate ≥ DIRECTOR_MAX_ERROR_RATE` (default `0.3`) o `ms_medio ≥ DIRECTOR_MAX_MS` (default `20000`), con muestra `≥ DIRECTOR_MIN_LLAMADAS` (default `20`). Snapshot histórico en la tabla `ia_director_aprendizaje`. Determinista; avisa por Telegram si penaliza un preferido. |
@@ -91,6 +91,7 @@ de borrar, `smoobu-sync.ts` deja constancia (helper puro y testeado `lib/sivra/c
 | `TELEGRAM_WEBHOOK_SECRET` | Valida que los callbacks de Telegram llegan del servidor de Telegram (no de terceros). |
 | `CRON_SECRET` | **Llave maestra** que autentica los crons de Vercel y las llamadas servidor→servidor. **NO ponerla en prompts de rutinas** (ver `ALERTA_TOKEN`). El endpoint `/api/internal/alerta` la sigue aceptando solo por compatibilidad. |
 | `ALERTA_TOKEN` | Token **dedicado** de bajo privilegio: SOLO abre `/api/internal/alerta` (aviso Telegram de las rutinas de Claude Code). Es el que va en el prompt de las rutinas — si se filtra, solo permite mandar un Telegram. Si no está definido, el endpoint acepta `CRON_SECRET` (compat). |
+| `SMOOBU_LEGACY_API_KEY` | **🌉 PUENTE TEMPORAL (15/09/2026), vence con el legacy el 25/09/2026.** `GET /api/rates` da 401 con HMAC (ticket Smoobu #1864141 sin resolver: la firma es correcta y funciona en `/reservations`, pero `/rates` la rechaza con `apartments[]`). Verificado a mano: legacy `200`, HMAC `401`, mismo endpoint. `smoobuFetch` (`lib/smoobu.ts`) usa esta key SOLO para el GET a `/api/rates` cuando está puesta — fail-safe: sin ella, sigue por HMAC como siempre. Es la clave de la pestaña **"Legacy Api keys"** de Smoobu (Avanzado → Claves API), NO el par key+secret de `pms_connections`. **Quitar esta rama y el env en cuanto Smoobu resuelva el ticket o el legacy deje de aceptarse** — no dejar que caduque en producción sin más (a partir del 25/09 esta key deja de funcionar y `/rates` volvería a 401 sin aviso si no se ha resuelto lo de fondo). |
 | `EINFORMA_CLIENT_ID` / `EINFORMA_CLIENT_SECRET` | **PENDIENTE (Alberto contrata eInforma).** Credenciales OAuth2 client_credentials de la API de eInforma para el **enriquecimiento de «Empresas en dificultad»** (`lib/empresas-einforma.ts`: informe financiero → patrimonio neto, EBITDA, fondo de maniobra, deuda, CNAE, facturación, incidencias RAI/ASNEF). Sin ellas el enriquecimiento degrada con aviso «pendiente de contratar», no rompe. Opcional `EINFORMA_BASE_URL` (default `https://api.einforma.com`). ⚠️ Al activar, CONFIRMAR las rutas/campos del payload marcados en `empresas-einforma.ts` contra la doc/sandbox. |
 | `IDEALISTA_API_KEY` / `IDEALISTA_API_SECRET` | **PENDIENTE (Idealista debe aprobar el alta — solicitada el 30/07/2026).** Credenciales OAuth2 client_credentials de la **API oficial de Idealista** (developers.idealista.com, tramo gratuito ~100 búsquedas/mes) para la ingesta directa de comparables por zona vigilada (`lib/subastas/idealista-api.ts`, paso del cron `subastas-mercado`). Sin ellas la ingesta API queda **inerte** (el corpus sigue nutriéndose de las alertas de correo). Editables desde el god-panel → 🔑 Secretos. Presupuesto vigilado en la tabla `idealista_api_usos` (margen mensual 15, caché 30 días/zona). |
 | `EMPRESAS_ENRIQUECER_TOPE_MENSUAL_EUR` | Tope de gasto mensual € del enriquecimiento de empresas (default `50`; `0` = sin límite). Se compara contra la suma del ledger `empresas_enriquecimiento_coste` del mes. `EMPRESAS_ENRIQUECER_COSTE_EUR` = coste estimado por empresa (default `12`, ~precio del informe financiero en pack). |
@@ -101,6 +102,11 @@ desde el 01/09/2026 es su **ÚNICO** acceso: se le retiró el de ialimp, que se 
 vender, no como su herramienta. 🚨 **Todo lo que ella tenga que hacer aparece AQUÍ o no existe** —
 el email a `limpiezascruzz@gmail.com` y la ficha de `/sivra/mensajes` no los abre (ver
 `sivra_ordenes_limpieza.tarea_id`). Cómo funciona: `…/invitado/limpieza?token=<valor>` → lo canjea `/api/sivra/limpieza-intranet/invitado` (cookie httpOnly `limpieza_invitado`, 180 días) → `lib/limpieza-acceso.ts::accesoLimpieza` valida contra BD (acepta también sesión = preview de Alberto). Ve calendario de reservas de los 4 slugs (`incomes`: ocupación + aforo `adults+children`, **NULL = «no se sabe», no 0**; SIN nombres ni importes), limpiezas (`cleaning_sessions` de los 4 slugs, con `nota_propietario` 📌) y **tareas sueltas** (`limpieza_tareas`; solo puede marcar `hecha`). El CRUD de tareas y el enlace con token viven en la pestaña **«Tareas»** de `/sivra/limpiadoras` (sesión). **Revocar/rotar:** `UPDATE limpieza_acceso_token SET token='…'` o `activo=false` (por Supabase MCP). |
+
+🚨 **`ASEGURA_OPERADOR_SECRET` ROTADO el 20/09/2026** (junto con la `RESEND_API_KEY` de `central-asegura`,
+ver su CLAUDE.md): mismo valor nuevo en los dos proyectos Vercel (`plataforma` y `central-asegura`), y
+los dos redesplegados en el mismo paso — la lección de `prisma_seguros` del 02/09 (rotar sin actualizar
+el otro lado deja el puente muerto en `secreto_rechazado`).
 
 > **Sobre la "BD unificada" de ia-rest:** la unificación quedó **a medias**. El schema
 > El schema `iarest` de la BD compartida ES la producción de ia-rest (runtime POS, Edge Functions
@@ -1097,6 +1103,47 @@ silencio en el mismo eslabón: **el que pone el precio delante del huésped**.
 - Lógica en el módulo PURO `lib/sivra/pricing-latido-apply.ts` (`pasadaFiable`/`detalleApply`/
   `avisoSmoobuRechaza`, 15 tests), no incrustada en el route.
 
+## 🛑 El mismo silencio un eslabón más arriba: la LECTURA de `/rates` (15/09/2026)
+Encontrado al responder «avisarme si Smoobu se cae» (ticket Smoobu #1864141: `GET /api/rates`
+llevaba 4+ días dando 401 con HMAC — ver el puente legacy de `lib/smoobu.ts` más abajo). El fallo
+de escritura de arriba (23/08) ya teñía el latido; el de LECTURA, un paso ANTES de que el motor
+llegue a decidir un precio, seguía viviendo solo en `results[].error` con `ok:true` y latido verde
+— exactamente el mismo patrón, un eslabón más arriba.
+- **`FalloLectura`** (`lib/sivra/pricing-latido-apply.ts`) es el nuevo hermano de `FalloEscritura`:
+  `pasadaFiable()` también se pone roja, `detalleApply()` lo antepone incluso al rechazo de
+  escritura (es el fallo más arriba de la cadena) y `avisoSmoobuLecturaFalla()` manda el 🛑 de
+  Telegram. Va en la respuesta como `smoobu_lecturas_fallidas` y lo lee `apply-auto` igual que
+  `smoobu_rechazos`.
+- **🚨 El gate `dryRun` NO vale aquí sin matiz — hay DOS `dryRun` distintos.** El de arriba
+  (`fallosSmoobu`) nace vacío en simulacro porque la escritura ni se intenta; la LECTURA de
+  `/rates`, en cambio, se hace SIEMPRE, también con «Simular». Sin gate, un blip transitorio en una
+  exploración manual mandaría un 🛑 real. Pero gatear por el `dryRun` que ve el resto del motor
+  (que la pausa global puede forzar a `true`, línea `if (paused && !dryRun) dryRun = true`) callaba
+  el aviso INMEDIATO cuando una pasada REAL de `apply-auto` caía en pausa — Smoobu caído de verdad,
+  con el aviso 3×/día suprimido hasta el latido de las 07:45 del día siguiente. Se distingue
+  `dryRunManual` (el parámetro tal como llegó, ANTES de la pausa) de `dryRun` (después): el aviso y
+  el `ok:` de `fallosLectura` usan `dryRunManual`, no `dryRun`.
+- **`pasadaFiable()` NO usa `dryRunManual`, usa el flujo normal del latido** de `apply-auto`, que
+  ya extrae `fallosLectura` sin gate ninguno — el latido diario se tiñe SIEMPRE que haya un fallo de
+  lectura real, pausa o no. El gate por `dryRunManual` es solo del aviso INMEDIATO de Telegram y del
+  campo `ok:` que ve quien llama a mano.
+
+## 🌉 Puente legacy temporal para `GET /api/rates` (15/09/2026 → 25/09/2026)
+Diagnóstico en vivo (curl manual de Alberto, mismo endpoint/propiedad/parámetros): **legacy `200`,
+HMAC `401`**. La firma HMAC es correcta y funciona en `/reservations`; Smoobu la rechaza solo en
+`/rates` con parámetros array (`apartments[]`) — ticket #1864141 abierto, sin resolver.
+- **`debeUsarPuenteLegacy(method, url, legacyKeyPresente)`** (`lib/smoobu-puente-legacy.ts`, módulo
+  PURO con test propio) decide: solo `GET` a `/api/rates`, y solo si `SMOOBU_LEGACY_API_KEY` está
+  puesta. `smoobuFetch` (`lib/smoobu.ts`) lo llama antes de firmar — fail-safe: sin esa env, todo
+  sigue por HMAC como siempre. Se extrajo a módulo aparte porque `smoobu.ts` importa `@/lib/db` y no
+  es testeable directamente con `node --test`.
+- La env, qué clave usar y cuándo quitarlo: ver la fila `SMOOBU_LEGACY_API_KEY` en la tabla de envs
+  de este mismo archivo.
+- **Vence con el legacy el 25/09/2026.** El check-in programado del 26/09 (ver
+  `docs/CONTEXTO-SESIONES.md`) verifica si el ticket #1864141 se resolvió; si no, el puente deja de
+  funcionar y `/rates` vuelve a 401 — esta vez SIN el aviso mudo de antes, porque el latido de
+  lectura de arriba ya está en pie.
+
 ## 🛑 El raíl CIEGO: si no se puede leer el ancla, NO se tarifa (23/08/2026)
 Hallazgo 🔴 3 de la auditoría. Las dos lecturas que alimentan el ancla (`ref24` = último precio
 aplicado ANTES de hoy; `anclaHoy` = con qué precio empezó el día la fecha) colgaban de un
@@ -1439,6 +1486,15 @@ Alberto: «controlar que me pagan lo que me deben y que está ingresado en cuent
   día y el `DATABASE_URL` del proyecto Vercel `central-asegura` se quedó con la vieja. **No era el schema**
   — esa hipótesis se escribió aquí como probable y era falsa.
   ⚠️ Al escribir el aviso de un fallo, la pregunta no es «¿he dicho que falló?» sino **«¿dice dónde mirar?»**.
+- 🏦 **El tramo del BANCO se casa abono a abono (23/09/2026, `lib/correduria/casar-banco.ts`).** El cron
+  sumaba para cada periodo TODOS los abonos de la compañía en `[inicio, fin+45d]`: con periodos mensuales
+  esas ventanas se pisan y el mismo abono contaba en dos o tres periodos (Occident ene/2026: 592,19€ «en
+  banco» contra 300,70€ devengados), y solo miraba la columna `compania_seguros` (vacía en 73 abonos que la
+  matriz sí atribuye). Ahora cada abono va a UN periodo como mucho: mes del concepto («Liq.comisiones
+  202512») → remesa igual ±1€ → último periodo cerrado antes del pago; si el periodo que paga no está en el
+  libro, no se regala al siguiente. La compañía, con la MISMA cascada que la matriz (manual → regla →
+  concepto). 🚨 **Y la cuenta del libro ya no es `SELECT id FROM cuentas LIMIT 1`**: sin orden, desde el
+  20/09 escribía en una cuenta sin bancos y el libro de Alberto se congeló. Sale de `CORREDURIA_EMAILS`.
 - 🚨 **PENDIENTE — la cifra fiscal de comisiones sigue siendo una ESTIMACIÓN.** `lib/finanzas.ts:594`
   eleva el neto del banco al bruto con `× (0,15/0,85)` y da por hecho que TODO abono de seguros es una
   comisión neta al 15 %; un periodo deudor de Occident rompe el supuesto. El bruto y la retención

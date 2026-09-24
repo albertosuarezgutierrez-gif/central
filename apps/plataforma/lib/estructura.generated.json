@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-14T17:32:00Z",
+  "generadoEn": "2026-09-23T21:33:48Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -76,6 +76,11 @@
       "id": "core-telegram",
       "tipo": "core",
       "npm": "@central/core-telegram"
+    },
+    {
+      "id": "core-vehiculos",
+      "tipo": "core",
+      "npm": "@central/core-vehiculos"
     },
     {
       "id": "module-agenda",
@@ -411,7 +416,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 11
       },
       "asegura-portal": {
         "estado": "usado",
@@ -439,7 +444,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "no",
@@ -519,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 11
       },
       "asegura-portal": {
         "estado": "usado",
@@ -572,8 +577,8 @@
         "evidencias": 0
       },
       "asegura": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 4
       },
       "asegura-portal": {
         "estado": "no",
@@ -955,7 +960,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 7
       },
       "asegura-web": {
         "estado": "no",
@@ -984,6 +989,60 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "transporte": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-vehiculos": {
+      "almacen": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "alquiler": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "asegura-portal": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "asegura-web": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "housesevillana": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "mariscos": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -2139,15 +2198,15 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 55
+        "evidencias": 98
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 71
+        "evidencias": 90
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 23
+        "evidencias": 28
       },
       "housesevillana": {
         "estado": "no",
@@ -2167,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 53
+        "evidencias": 78
       },
       "rrhh": {
         "estado": "no",
@@ -2193,11 +2252,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 18
+        "evidencias": 22
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 6
       },
       "asegura-web": {
         "estado": "no",
@@ -2247,15 +2306,15 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 24
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 59
+        "evidencias": 74
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "housesevillana": {
         "estado": "no",
@@ -2275,7 +2334,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "rrhh": {
         "estado": "no",
@@ -2789,7 +2848,7 @@
       },
       "asegura": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 15
       },
       "asegura-portal": {
         "presente": false,
@@ -3820,6 +3879,7 @@
     "core-receipts": [],
     "core-storage": [],
     "core-telegram": [],
+    "core-vehiculos": [],
     "module-agenda": [],
     "module-alquiler": [
       "module-intercompany",
@@ -3854,7 +3914,9 @@
       "module-seguros-pii",
       "module-seguros-portal"
     ],
-    "module-seguros-pii": [],
+    "module-seguros-pii": [
+      "core-identity"
+    ],
     "module-seguros-portal": [
       "core-catastro",
       "core-fiscal",
@@ -3910,11 +3972,17 @@
       "/api/cartera/cliente/[clienteId]/hogar-nuevo",
       "/api/cartera/documentos",
       "/api/cartera/polizas/[polizaId]/retarificar",
+      "/api/cron/avisos-intranet",
       "/api/cron/avisos-vencimiento",
+      "/api/cron/revision-anual",
       "/api/operador/actividad",
+      "/api/operador/actividad-nueva",
+      "/api/operador/anulaciones",
+      "/api/operador/aprobaciones",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
+      "/api/operador/carta-mediador",
       "/api/operador/cartera",
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
@@ -3929,18 +3997,23 @@
       "/api/operador/codeoscopic/catalogos",
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
+      "/api/operador/codeoscopic/documentos",
       "/api/operador/codeoscopic/emitir",
+      "/api/operador/codeoscopic/faltan-producto",
       "/api/operador/codeoscopic/hogar-nuevo",
+      "/api/operador/codeoscopic/limites-hogar",
       "/api/operador/codeoscopic/lineas",
       "/api/operador/codeoscopic/moto-nuevo",
       "/api/operador/codeoscopic/oferta",
       "/api/operador/codeoscopic/precalificar",
       "/api/operador/codeoscopic/precalificar-auto-nuevo",
       "/api/operador/codeoscopic/precalificar-decesos-nuevo",
+      "/api/operador/codeoscopic/precalificar-hogar",
       "/api/operador/codeoscopic/precalificar-hogar-nuevo",
       "/api/operador/codeoscopic/precalificar-moto-nuevo",
       "/api/operador/codeoscopic/precalificar-salud-nuevo",
       "/api/operador/codeoscopic/precalificar-vida-nuevo",
+      "/api/operador/codeoscopic/product-form",
       "/api/operador/codeoscopic/proyecto",
       "/api/operador/codeoscopic/retarificar",
       "/api/operador/codeoscopic/salud-nuevo",
@@ -3950,54 +4023,95 @@
       "/api/operador/comisiones",
       "/api/operador/companias",
       "/api/operador/companias/contacto/[id]",
+      "/api/operador/contactos-movil",
+      "/api/operador/correo/resolver",
       "/api/operador/declaradas-vencer",
+      "/api/operador/direccion/confirmar",
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
+      "/api/operador/eventos",
+      "/api/operador/eventos/detectar",
       "/api/operador/export-rgpd",
       "/api/operador/huerfanas",
       "/api/operador/impagados",
       "/api/operador/ingesta",
       "/api/operador/leads",
+      "/api/operador/leads-competencia",
+      "/api/operador/leads-web",
+      "/api/operador/oportunidad",
+      "/api/operador/oportunidad/llamada",
+      "/api/operador/oportunidad/tarea",
+      "/api/operador/oportunidad/whatsapp",
       "/api/operador/partes",
       "/api/operador/poliza",
+      "/api/operador/poliza-documento",
       "/api/operador/poliza/emitida",
       "/api/operador/poliza/intervinientes",
+      "/api/operador/portal/invitaciones",
+      "/api/operador/presupuesto",
       "/api/operador/recaptacion",
       "/api/operador/recaptacion/email",
+      "/api/operador/recaptacion/email-lote",
       "/api/operador/recaptacion/whatsapp",
+      "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
+      "/api/operador/retencion/descartar",
       "/api/operador/sin-canal",
       "/api/operador/siniestro",
+      "/api/operador/siniestro/terceros",
       "/api/operador/siniestros-nuevos",
       "/api/operador/supresiones",
+      "/api/operador/sustituciones",
+      "/api/operador/tareas-hoy",
+      "/api/operador/vehiculo/matricula",
       "/api/operador/vencimientos",
+      "/api/portal/anulacion",
+      "/api/portal/carnets",
+      "/api/portal/carta-mediador",
       "/api/portal/contacto",
       "/api/portal/contacto-confirmar",
+      "/api/portal/contactos",
+      "/api/portal/contactos/[id]",
+      "/api/portal/datos-emision",
+      "/api/portal/documento",
+      "/api/portal/mejorar-precio",
       "/api/portal/nota",
+      "/api/portal/presupuesto",
+      "/api/publico/recaptacion/baja",
       "/api/webhooks/codeoscopic",
       "/api/webhooks/resend"
     ],
     "asegura-portal": [
       "/api/acceso/solicitar",
       "/api/acceso/verificar",
+      "/api/anulacion",
       "/api/autorizaciones",
       "/api/autorizaciones/[id]",
       "/api/avisos",
       "/api/catastro",
       "/api/catastro/sugerir",
+      "/api/consentimiento",
       "/api/cron/avisos-push",
+      "/api/documento/dni",
       "/api/hojas",
       "/api/hojas/[id]",
       "/api/invitaciones",
       "/api/invitaciones/[id]",
       "/api/invitaciones/responder",
+      "/api/mejorar-precio",
       "/api/mis-datos",
       "/api/mis-datos/confirmar",
+      "/api/mis-datos/contactos",
+      "/api/mis-datos/contactos/[id]",
       "/api/peticiones",
       "/api/peticiones/[id]",
       "/api/polizas",
       "/api/polizas/[id]",
+      "/api/polizas/[id]/carta",
+      "/api/polizas/[id]/reintentar",
+      "/api/presupuesto/carta",
+      "/api/presupuesto/firma",
       "/api/push/desuscribir",
       "/api/push/suscribir",
       "/api/recordatorios",
@@ -4006,6 +4120,7 @@
       "/api/siniestros",
       "/api/siniestros/[id]/adjuntos",
       "/api/siniestros/[id]/adjuntos/[documentoId]",
+      "/api/siniestros/[id]/whatsapp",
       "/api/sugerencia",
       "/api/sugerencias",
       "/api/sugerencias/pedir",
@@ -4816,10 +4931,13 @@
       "/api/contable/feedback",
       "/api/correduria",
       "/api/correduria/actividad",
+      "/api/correduria/anulaciones",
+      "/api/correduria/aprobaciones",
       "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
       "/api/correduria/blog",
       "/api/correduria/buscar",
+      "/api/correduria/carta-mediador",
       "/api/correduria/cartera",
       "/api/correduria/cartera-lista",
       "/api/correduria/catastro",
@@ -4832,27 +4950,47 @@
       "/api/correduria/cliente/relaciones",
       "/api/correduria/cliente/relaciones/aviso",
       "/api/correduria/clientes",
+      "/api/correduria/codeoscopic-crudo",
       "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
       "/api/correduria/companias/contactado",
+      "/api/correduria/contactos-movil",
       "/api/correduria/declaradas-vencer",
       "/api/correduria/detalle",
+      "/api/correduria/direccion-confirmar",
       "/api/correduria/documentos",
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
+      "/api/correduria/export-rgpd",
+      "/api/correduria/fugas",
       "/api/correduria/impagados",
+      "/api/correduria/ingesta",
       "/api/correduria/intervinientes",
       "/api/correduria/leads",
+      "/api/correduria/leads-competencia",
+      "/api/correduria/leads-web",
+      "/api/correduria/oportunidad",
+      "/api/correduria/oportunidad/llamada",
+      "/api/correduria/oportunidad/tarea",
+      "/api/correduria/oportunidad/whatsapp",
       "/api/correduria/partes",
       "/api/correduria/poliza",
+      "/api/correduria/portal-invitaciones",
+      "/api/correduria/presupuesto",
+      "/api/correduria/radar-recibos",
       "/api/correduria/recaptacion",
       "/api/correduria/recaptacion/email",
       "/api/correduria/recaptacion/whatsapp",
+      "/api/correduria/renovaciones/contacto",
+      "/api/correduria/retencion/descartar",
       "/api/correduria/sin-canal",
       "/api/correduria/siniestro",
+      "/api/correduria/siniestro/terceros",
       "/api/correduria/supresiones",
+      "/api/correduria/sustituciones",
+      "/api/correduria/tareas-hoy",
       "/api/correduria/vencimientos",
       "/api/cron/agentes-latido",
       "/api/cron/banca-alertas",
@@ -4862,15 +5000,19 @@
       "/api/cron/canario-lead",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
+      "/api/cron/cima-pull-respaldo",
       "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
       "/api/cron/contable-proactivo",
+      "/api/cron/correduria-actividad",
+      "/api/cron/correduria-eventos",
       "/api/cron/correduria-ingesta",
       "/api/cron/correduria-partes",
       "/api/cron/correduria-renovaciones",
       "/api/cron/correduria-siniestros",
+      "/api/cron/correduria-sustituciones",
       "/api/cron/correo-digest",
       "/api/cron/correo-resumen-semanal",
       "/api/cron/correo-triaje",
@@ -4880,11 +5022,13 @@
       "/api/cron/facturas-scan",
       "/api/cron/health-check",
       "/api/cron/ia-director-refresh",
+      "/api/cron/ia-saldo",
       "/api/cron/paper-tracker",
       "/api/cron/patrones-fiscal-refresh",
       "/api/cron/pre-renta",
       "/api/cron/prevision-pisos",
       "/api/cron/psd2-sync",
+      "/api/cron/recaptacion-email-lote",
       "/api/cron/resumen-mensual",
       "/api/cron/resumen-semanal",
       "/api/cron/seo-correduria",
@@ -4940,8 +5084,7 @@
       "/api/finanzas/proyeccion",
       "/api/finanzas/tarjeta",
       "/api/internal/alerta",
-      "/api/internal/grafo-codigo",
-      "/api/internal/grafo-codigo/embeddings",
+      "/api/internal/gsc",
       "/api/internal/latido",
       "/api/internal/mapa-arquitectura",
       "/api/internal/memoria",
@@ -5285,12 +5428,17 @@
     "asegura": [
       "if",
       "seguros._volcado_control",
+      "seguros.anulacion",
+      "seguros.aprobacion",
+      "seguros.auditoria",
       "seguros.backfill_dni_plan",
       "seguros.bien_documentos",
       "seguros.bienes_asegurables",
       "seguros.bot_eval_runs",
       "seguros.bot_eval_scores",
       "seguros.bot_turn_traces",
+      "seguros.carta_mediador",
+      "seguros.cartera_foto",
       "seguros.channel_inbound_messages",
       "seguros.cima_ficheros",
       "seguros.cliente_carnets_conducir",
@@ -5316,6 +5464,8 @@
       "seguros.cotizaciones_anonimas",
       "seguros.cuenta_efectivo",
       "seguros.documentos",
+      "seguros.evento",
+      "seguros.firma",
       "seguros.gestiones",
       "seguros.historial_interno",
       "seguros.interviniente_purga_log",
@@ -5326,6 +5476,7 @@
       "seguros.mensajes",
       "seguros.ofertas_automaticas",
       "seguros.operational_events",
+      "seguros.oportunidad_historial",
       "seguros.oportunidades",
       "seguros.peticiones",
       "seguros.poliza_coberturas",
@@ -5334,8 +5485,15 @@
       "seguros.poliza_merge_log",
       "seguros.poliza_recibos",
       "seguros.polizas",
+      "seguros.portal_aviso_enviado",
+      "seguros.presupuesto",
+      "seguros.presupuesto_evento",
+      "seguros.presupuesto_opcion",
       "seguros.recordatorios",
+      "seguros.renovacion_contactos",
+      "seguros.retencion_descartes",
       "seguros.siniestro_contrarios",
+      "seguros.siniestro_intervinientes",
       "seguros.siniestro_lesionados",
       "seguros.siniestro_testigos",
       "seguros.siniestros",
@@ -5541,14 +5699,12 @@
       "empresas_ficha",
       "facturas_proveedor",
       "fiscal_ayudas",
-      "grafo_aristas",
-      "grafo_embeddings",
-      "grafo_nodos",
       "ia_cache_semantica",
       "ia_director_aprendizaje",
       "ia_director_prompt",
       "ia_limite_mensual",
       "ia_presupuestos",
+      "ia_saldo_diario",
       "idealista_api_usos",
       "limpieza_acceso_token",
       "limpieza_facturas",
@@ -5708,6 +5864,11 @@
       "description": ">"
     },
     {
+      "id": "cima-ingesta",
+      "name": "cima-ingesta",
+      "description": ">"
+    },
+    {
       "id": "code-map",
       "name": "code-map",
       "description": "Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico."
@@ -5861,6 +6022,11 @@
       "id": "verification-before-completion",
       "name": "verification-before-completion",
       "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always"
+    },
+    {
+      "id": "vigia-infra",
+      "name": "vigia-infra",
+      "description": "Agente PROGRAMADO mensual (día 8) que vigila los LÍMITES de la infraestructura — tamaño y plan de Supabase contra su cuota, hinchazón recuperable, advisors, Build Minutes y ritmo de deployments de Vercel, máquinas de Fly. Estado en docs/VIGIA-INFRA.md; Telegram + PR draft. Úsala si Alberto pregunta \"¿estamos cerca de algún límite?\" / \"¿vamos a tener que pagar algo?\" o al disparo mensual. Sin secretos."
     },
     {
       "id": "writing-plans",
@@ -6323,10 +6489,10 @@
   },
   "resumen": {
     "verticales": 13,
-    "packages": 41,
+    "packages": 42,
     "capacidades": 23,
-    "skills": 40,
-    "apis": 1362,
+    "skills": 42,
+    "apis": 1443,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

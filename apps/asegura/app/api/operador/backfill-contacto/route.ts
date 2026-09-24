@@ -4,6 +4,7 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { backfillContactoLookupHash, SinClaveDeIndice } from '@/lib/backfill-contacto'
+import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 // Descifrar ~32.000 fichas × 2 campos más las tablas hijas no cabe en 10 s.
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
  * Idempotente: sólo toca filas con el hash a NULL. Pide `{"confirmar":"escribir"}`
  * en el cuerpo y admite `{"limite":N}` para escribir por tandas.
  */
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {
     if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
@@ -67,4 +68,4 @@ export async function POST(req: Request) {
       { status: 500 },
     )
   }
-}
+})

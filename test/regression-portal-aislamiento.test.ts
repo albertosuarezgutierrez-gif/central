@@ -35,6 +35,17 @@
 //      puede leer (DNI, IBAN, teléfono, email, dirección…). Prisma
 //      pide cada columna por su nombre: una de más y la consulta ENTERA falla
 //      en la BD. Que el schema no las tenga es la garantía; esto la vigila.
+//
+// ─── PR 2 del presupuesto (21/09/2026): tres modelos más ─────────────────────
+// `presupuesto`, `presupuesto_opcion` y `presupuesto_evento` entran en el MISMO
+// carril que la cartera, y no en uno nuevo: son tablas de `seguros` sin RLS
+// para este rol, así que una consulta sin `portal_vinculo` delante devuelve el
+// presupuesto —con su precio y su compañía— de cualquier cliente. El fallo no
+// es «no se ve nada»: es «se ve el de otro y nada falla».
+//
+// Y dos cosas que este cepo NO puede ver y por eso tienen cepo propio en
+// `test/regression-portal-presupuesto.test.ts`: que la carátula pública no
+// cuente nada, y que el sello de `visto_at` no lo dispare la vista de corredor.
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
@@ -65,6 +76,10 @@ const EXENTOS = new Set([
   // fila que toca ya lleva su `identidadId` propio (de `portal_obligacion`) y
   // el cruce con la cartera pasa por `portal_vinculo`, igual que el resto.
   'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+  // Mismo caso que arriba: recibe `identidadId` ya resuelto por
+  // `app/api/polizas/route.ts` (que sí pasa por `lib/session`), y su único
+  // `prisma.portalVinculo` va filtrado por ese id — nunca a ciegas.
+  'apps/asegura-portal/lib/aviso-poliza-declarada.ts',
 ])
 
 /**
@@ -72,7 +87,7 @@ const EXENTOS = new Set([
  * que los toque tiene que partir de `portal_vinculo` y de la sesión.
  */
 const USA_PRISMA_CARTERA =
-  /prisma\s*\.\s*(cliente|clienteEmail|poliza|polizaCobertura|polizaRecibo|siniestro|polizaInterviniente|clienteRelacion|correduria)\b/
+  /prisma\s*\.\s*(cliente|clienteEmail|poliza|polizaCobertura|polizaRecibo|siniestro|polizaInterviniente|clienteRelacion|correduria|presupuesto|presupuestoOpcion|presupuestoEvento)\b/
 /** La costura: el vínculo identidad ↔ ficha. Sin nombrarlo, la lectura no parte de la identidad. */
 const NOMBRA_VINCULO = /portalVinculo/
 /**
@@ -83,6 +98,11 @@ const NOMBRA_VINCULO = /portalVinculo/
 const CARTERA_SIN_SESION = new Set([
   'apps/asegura-portal/lib/vinculo.ts',
   'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+  // El aviso de póliza declarada (17/09/2026): recibe `identidadId` ya resuelto
+  // por quien llama (`app/api/polizas/route.ts`, que sí pasa por `requireIdentidad()`
+  // de `lib/session`) y solo lee el cliente colgado de SU vínculo, nunca de un
+  // `where` suelto.
+  'apps/asegura-portal/lib/aviso-poliza-declarada.ts',
 ])
 
 /** `prisma.portalPoliza…`, `prisma.portalBien…`, `prisma.portalIdentidad…` */
@@ -224,6 +244,31 @@ const COLUMNAS_PROHIBIDAS: Record<string, string[]> = {
   ClienteEmail: ['email'],
   Correduria: ['email', 'telefono', 'waAccessToken', 'cif'],
   ClienteRelacion: ['observaciones'],
+  // PR 2 del presupuesto (21/09/2026). Lo que el rol NO tiene concedido en
+  // `prisma/sql/2026-09-21_portal_presupuesto_grants.sql`, y por qué:
+  //   · `creadoPor` / `retiradoMotivo` → gestión interna del corredor. El
+  //     motivo con el que retira un presupuesto puede decir cualquier cosa
+  //     sobre el cliente y NO está escrito para él (`retiradoAt` sí se lee: con
+  //     eso basta para saber que el enlace ya no vale).
+  //   · `canalAviso` / `enlaceGeneradoAt` / `polizaEmitidaId` / `salida` → no
+  //     hacen falta para pintar, y lo que no se pide no se puede colar.
+  //   · `tarificacionId` → el GRANT sí lo tiene (para que corra el trigger de
+  //     asegura), pero declararlo lo metería en los `select` de la pantalla.
+  Presupuesto: [
+    'creadoPor',
+    'retiradoMotivo',
+    'canalAviso',
+    'enlaceGeneradoAt',
+    'polizaEmitidaId',
+    'salida',
+    'tarificacionId',
+  ],
+  // El id del quote del vendor («Q7601460») es la llave del ReRate —la llamada
+  // que cuesta dinero—, no un dato del cliente.
+  PresupuestoOpcion: ['referenciaVendor'],
+  // Lo escribe el corredor; el portal solo pregunta SI ya anotó una apertura
+  // ajena, no qué dice.
+  PresupuestoEvento: ['detalle'],
 }
 
 function camposDelModelo(schema: string, modelo: string): string[] {

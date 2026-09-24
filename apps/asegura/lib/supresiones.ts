@@ -11,6 +11,7 @@ import {
 } from '@central/module-seguros-portal'
 
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
 
 /**
  * La cola de solicitudes del **derecho de supresión (art. 17 RGPD)** que llegan
@@ -177,6 +178,7 @@ export async function resolverSupresion(entrada: {
         where: { id: entrada.id },
         data: { estado: 'en_curso' },
       })
+      anotarCambio({ entidad: 'supresion', id: entrada.id, campo: 'estado', antes: fila.estado, despues: 'en_curso' })
       return { estado: 'ok', solicitud: (await colaConUna(abierta))! }
     }
     if (prorrogaMotivo === '') return { estado: 'error', motivo: 'sin_motivo_prorroga' }
@@ -184,6 +186,7 @@ export async function resolverSupresion(entrada: {
       where: { id: entrada.id },
       data: { estado: 'en_curso', prorrogadaEn: new Date(), prorrogaMotivo },
     })
+    anotarCambio({ entidad: 'supresion', id: entrada.id, campo: 'estado', antes: fila.estado, despues: 'en_curso' })
     return { estado: 'ok', solicitud: (await colaConUna(prorrogada))! }
   }
 
@@ -193,6 +196,8 @@ export async function resolverSupresion(entrada: {
     where: { id: entrada.id },
     data: { estado: entrada.estado, resueltaEn: new Date(), respuesta, resueltaPor: entrada.actor },
   })
+  anotarCambio({ entidad: 'supresion', id: entrada.id, campo: 'estado', antes: fila.estado, despues: entrada.estado })
+  anotarCambio({ entidad: 'supresion', id: entrada.id, campo: 'respuesta' })
   return { estado: 'ok', solicitud: (await colaConUna(resuelta))! }
 }
 

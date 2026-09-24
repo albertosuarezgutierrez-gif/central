@@ -10,6 +10,7 @@ import { leerSiniestros, type SiniestroCartera } from './siniestros-asegura.ts'
 import type { DocumentoResumen, EvolucionPrima, Retarificabilidad } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { CapitalAsegurado, DetalleCobertura } from '@central/module-seguros'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type CoberturaFicha = {
   orden: number | null
@@ -110,6 +111,29 @@ export type Poliza = {
   estimacion: EstimacionPrima | null
   /** Continente y contenido derivados de las garantías. `null` = asegura no los manda. */
   capitalesHogar: CapitalesHogarFicha | null
+  /**
+   * Sustitución por retarificación (20/09/2026): si esta póliza viene de
+   * cambiar de compañía, o si la ha sustituido otra. `null` = versión vieja
+   * de asegura que no manda el campo — no es «no aplica», que es el propio
+   * `sustitucion.seguimiento === 'no_aplica'` con el objeto SÍ presente.
+   */
+  sustitucion: SustitucionFicha | null
+}
+
+export type PolizaRelacionadaFicha = {
+  polizaId: string
+  clienteId: string
+  aseguradora: string
+  numeroPoliza: string | null
+  estado: string
+  confirmadaCima: boolean
+}
+
+export type SustitucionFicha = {
+  origen: PolizaRelacionadaFicha | null
+  sustituidaPor: PolizaRelacionadaFicha | null
+  sustituidaAt: string | null
+  seguimiento: 'no_aplica' | 'esperando_cima' | 'confirmada'
 }
 
 export type RespuestaPoliza =
@@ -126,6 +150,38 @@ function numero(v: unknown): number | null {
 }
 function entero(v: unknown): number | null {
   return typeof v === 'number' && Number.isInteger(v) && v >= 0 ? v : null
+}
+
+function leerPolizaRelacionada(v: unknown): PolizaRelacionadaFicha | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const polizaId = cadena(o.polizaId)
+  if (polizaId === null) return null
+  return {
+    polizaId,
+    clienteId: cadena(o.clienteId) ?? '',
+    aseguradora: cadena(o.aseguradora) ?? '',
+    numeroPoliza: cadena(o.numeroPoliza),
+    estado: cadena(o.estado) ?? 'sin_informar',
+    confirmadaCima: o.confirmadaCima === true,
+  }
+}
+
+const SEGUIMIENTOS_SUSTITUCION = ['no_aplica', 'esperando_cima', 'confirmada'] as const
+
+/** `null` = asegura (versión vieja) no manda el bloque entero — distinto de traerlo con todo a `null`. */
+function leerSustitucion(v: unknown): SustitucionFicha | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const seguimiento = (SEGUIMIENTOS_SUSTITUCION as readonly string[]).includes(String(o.seguimiento))
+    ? (o.seguimiento as SustitucionFicha['seguimiento'])
+    : 'no_aplica'
+  return {
+    origen: leerPolizaRelacionada(o.origen),
+    sustituidaPor: leerPolizaRelacionada(o.sustituidaPor),
+    sustituidaAt: cadena(o.sustituidaAt),
+    seguimiento,
+  }
 }
 
 /* ─── Estimación de prima («¿merece la pena pedir precio?») ─────────────────
@@ -367,6 +423,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       evolucionPrima: leerEvolucionPrima(p.evolucionPrima),
       estimacion: leerEstimacion(p.estimacion),
       capitalesHogar: leerCapitalesHogar(p.capitalesHogar),
+      sustitucion: leerSustitucion(p.sustitucion),
     },
   }
 }
@@ -380,7 +437,7 @@ export async function polizaAsegura(id: string): Promise<RespuestaPoliza> {
   if (!secret) return { estado: 'sin_configurar' }
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/poliza?id=${encodeURIComponent(id)}`, {
-      headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store', signal: AbortSignal.timeout(8000),
+      headers: { ...(await cabecerasPuerto(secret)) }, cache: 'no-store', signal: AbortSignal.timeout(8000),
     })
     return interpretarPoliza(res.status, await res.json().catch(() => null))
   } catch {

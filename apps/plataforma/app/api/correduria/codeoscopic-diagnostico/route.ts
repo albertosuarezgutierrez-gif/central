@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getSession } from '@/lib/session'
+import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { diagnosticoProyectoCodeoscopic } from '@/lib/correduria-puerto'
 
 export const dynamic = 'force-dynamic'
@@ -13,8 +13,8 @@ export const maxDuration = 30
  * no un curl suelto ni el portal del vendor.
  */
 export async function GET(req: NextRequest) {
-  const session = await getSession()
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
 
   const projectId = req.nextUrl.searchParams.get('projectId')?.trim()
   if (!projectId) return NextResponse.json({ error: 'falta projectId' }, { status: 400 })

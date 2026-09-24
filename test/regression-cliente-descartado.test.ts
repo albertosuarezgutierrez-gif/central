@@ -94,7 +94,12 @@ const CONSULTAS: { fichero: string; debeContener: string[] }[] = [
   },
   { fichero: 'apps/asegura/lib/cartera-ficha.ts', debeContener: ['activo: true,'] },
   { fichero: 'apps/asegura/lib/cartera-filtro.ts', debeContener: ['Prisma.sql`c.activo`'] },
-  { fichero: 'apps/asegura/lib/cartera.ts', debeContener: ["activo: true, tipo: 'cliente'", "activo: true, tipo: 'lead'"] },
+  // 20/09/2026: el recuento de clientes/leads pasó de dos `db.cliente.count`
+  // (por `tipo`, campo del volcado sin mantener) a un solo `$queryRaw` que
+  // deriva el grupo de `esCarteraEnVigor()` — ver docs/CORREDURIA-CRM-VISION.md.
+  // La protección que este test fija (una ficha descartada no cuenta) sigue
+  // viva en el `and c.activo = true` de esa consulta.
+  { fichero: 'apps/asegura/lib/cartera.ts', debeContener: ['c.activo = true'] },
   { fichero: 'apps/asegura/lib/clientes-sin-canal.ts', debeContener: ['and c.activo'] },
   { fichero: 'apps/asegura/lib/cartera-impagados.ts', debeContener: ['activo: true'] },
   { fichero: 'apps/asegura/lib/cartera-historial.ts', debeContener: ['cliente: { activo: true }'] },
@@ -154,7 +159,7 @@ test('descartar exige contar las pólizas vivas con la fuente única, y no desca
 
 test('el puerto de asegura sirve el descarte y su vuelta', () => {
   const src = fuente('apps/asegura/app/api/operador/cliente/route.ts')
-  assert.match(src, /export async function DELETE\(/, 'falta el DELETE del puerto')
+  assert.match(src, /export const DELETE = auditado\(/, 'falta el DELETE del puerto (envuelto en auditado)')
   assert.match(src, /restaurar/, 'falta el camino de vuelta (POST ?restaurar)')
   assert.match(src, /operadorAutorizado\(req\)/, 'el puerto sigue exigiendo el Bearer')
 })

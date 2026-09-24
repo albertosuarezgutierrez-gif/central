@@ -23,61 +23,16 @@ import { leerIngestaCima, saludDesdeRespuesta } from '@/lib/correduria/ingesta-c
 import {
   detalleSalud,
   decidirAvisoIngesta,
+  firmaAvisoIngesta,
+  normalizarFirmaIngesta,
   textoHuerfanas,
   DIAS_RECORDATORIO_INGESTA,
-  type SaludIngesta,
 } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const AGENTE = 'correduria_ingesta'
-
-/**
- * Firma de lo que se ha visto hoy. Sirve para no repetir el MISMO aviso cada
- * mañana mientras la avería sigue abierta: el estado vive en el latido y en la
- * pantalla; el Telegram suena cuando algo CAMBIA (entra un fichero nuevo, o
- * aparece otra póliza huérfana).
- *
- * 🚨 Y desde el 05/09/2026, TAMBIÉN cuando lleva demasiado sin cambiar. Ese día
- * se midió que el atasco de siniestros de Occident llevaba **63 días** abierto,
- * que el latido lo decía con todas las letras («SIN: 63 días sin guardar ni
- * uno») y que el Telegram **no sonaba desde el 08/07**: la firma no cambiaba,
- * así que la anti-repetición se había comido el aviso. Es la segunda vuelta del
- * mismo fallo que este vigía vino a arreglar — la primera versión midió lo que
- * no era y esta se silenció sola; las dos veces el resultado fue una pérdida
- * activa en verde, y las dos se descubrieron mirando a mano.
- *
- * ⚠️ Silenciar la REPETICIÓN no es silenciar la AVERÍA. La regla vive en
- * `decidirAvisoIngesta` del módulo puro, con su cepo.
- */
-function firma(salud: SaludIngesta): string {
-  // 🚨 Las compañías MUDAS van en la firma. Sin ellas, con Mapfre ya callada la
-  // firma se queda en `degradada:0:0` para siempre y el día que enmudezca
-  // ADEMÁS Allianz no sonaría nada — que es justo el «si empeora, vuelve a
-  // sonar» que este dedupe promete. Van ordenadas para que el mismo conjunto
-  // produzca siempre la misma cadena.
-  const mudas = (salud.silencio ?? [])
-    .filter(e => e.veredicto === 'silencio')
-    .map(e => e.entidad)
-    .sort()
-    .join(',')
-  // `null` (no comprobado) y `[]` (comprobado, ninguna) no pueden dar la misma
-  // firma: si ayer no se pudo mirar y hoy sí, eso es un cambio que hay que ver.
-  const silencio = salud.silencio === null ? '?' : mudas || '-'
-  // 🚨 Y las pólizas concretas que hay que PEDIR, no solo cuántas son. Si una
-  // entra y otra se resuelve el mismo día, el recuento no se mueve y la
-  // anti-repetición se comería el aviso — que es exactamente el fallo que ya
-  // dejó este vigía mudo 59 días. `?` (no se pudo listar) y `-` (se listó y no
-  // hay ninguna) tampoco pueden dar la misma firma.
-  const pedir = salud.huerfanasReparto === null
-    ? '?'
-    : salud.huerfanasReparto.pedir
-        .flatMap(g => g.polizas.map(n => `${g.entidad}/${g.clave ?? ''}/${n}`))
-        .sort()
-        .join(',') || '-'
-  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}`
-}
 
 /**
  * La cabecera de máquina que se guarda en `detalle`: `firma|últimoAviso|abiertaDesde`.
@@ -118,18 +73,20 @@ export async function GET(req: NextRequest) {
 
   const ahora = new Date()
   const previo = leerCabecera(anterior)
-  // `firma(salud)` desde el merge con main: la firma incluye ahora las
-  // compañías MUDAS, así que una que enmudece cuenta como cambio y suena sin
-  // esperar al recordatorio. Las dos cosas se suman, no se pisan.
-  const actual = firma(salud)
+  // La firma vive en el módulo puro (con su cepo): incluye las compañías MUDAS,
+  // las pólizas a pedir y si el cron de CIMA está parado — cualquiera que cambie
+  // cuenta como cambio y suena sin esperar al recordatorio.
+  const actual = firmaAvisoIngesta(salud)
   // Desde cuándo consta abierta ESTA misma avería: se arrastra mientras la
   // firma no cambie, y se reinicia cuando cambia. Es lo que permite decir
   // «lleva 59 días» en vez de «otra vez esto».
-  const mismaAveria = previo.firma !== null && previo.firma === actual
+  // Las firmas guardadas antes del tramo del cron se leen en el formato de hoy.
+  const firmaPrevia = normalizarFirmaIngesta(previo.firma)
+  const mismaAveria = firmaPrevia !== null && firmaPrevia === actual
   const abiertaDesde = mismaAveria ? (previo.abierta ?? previo.aviso) : ahora
 
   const decision = decidirAvisoIngesta({
-    firmaAnterior: previo.firma,
+    firmaAnterior: firmaPrevia,
     firmaActual: actual,
     ultimoAvisoEn: previo.aviso,
     abiertaDesde,
@@ -155,7 +112,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: false, estado: salud.estado, detalle })
   }
 
-  if (salud.estado === 'degradada' && cambio) {
+  // 🚨 `parcial` TAMBIÉN suena. Hasta el 20/09/2026 el aviso colgaba de
+  // `degradada` a secas, así que una lectura sin poder comprobar el cron, el
+  // crudo, la caja negra o la cobertura salía por aquí en silencio y el latido
+  // decía «sin ficheros atascados». Hoy no mordía de milagro: el estado ya era
+  // `degradada` por otra cosa.
+  if ((salud.estado === 'degradada' || salud.estado === 'parcial') && cambio) {
+    const soloHuecos = salud.estado === 'parcial'
     const prima = salud.primaPerdida !== null && salud.primaPerdida > 0
       ? `\n💶 Prima en los recibos sin guardar: <b>${eur(salud.primaPerdida)}</b>`
       : ''
@@ -180,14 +143,27 @@ export async function GET(req: NextRequest) {
     // atascado: aquí no hay nada que reprocesar, hay que llamar a la compañía o
     // mirar el adaptador. Por eso lleva su propio titular y su propio recado.
     const mudas = (salud.silencio ?? []).filter(e => e.veredicto === 'silencio')
-    const titular = mudas.length
-      ? `🛡️ <b>${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos</b>`
-      : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
-    const recado = mudas.length
-      ? '\n\nNo hay nada atascado que reprocesar: sencillamente no llega. ' +
-        'Compruébalo en CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.'
-      : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
-        'y su comisión tampoco.'
+    // Un hueco NO se anuncia como una pérdida: mandaría a buscar un dato que
+    // nadie ha dicho que falte, y a la tercera vez se ignora el mensaje entero.
+    const titular = soloHuecos
+      ? '🛡️ <b>La ingesta de CIMA solo se ha podido comprobar a medias</b>'
+      : mudas.length
+        ? `🛡️ <b>${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos</b>`
+        : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
+    const recado = soloHuecos
+      ? '\n\nNo se ha medido ninguna pérdida, pero tampoco se ha podido mirar todo: ' +
+        'esto NO es «va bien», es «no lo sé».'
+      : mudas.length
+        ? '\n\nNo hay nada atascado que reprocesar: sencillamente no llega. ' +
+          'Compruébalo en CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.'
+        : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
+          'y su comisión tampoco.'
+    // Con pérdida medida, los huecos siguen importando: dicen que el recuento
+    // de arriba es un SUELO. Van al final para no tapar lo accionable.
+    const sinComprobar = !soloHuecos && salud.huecos.length > 0
+      ? `\n\n❔ Además, esto no se ha podido comprobar (así que lo de arriba es un mínimo):\n` +
+        salud.huecos.map(h => `• ${h}`).join('\n')
+      : ''
     // 🎯 Y LO ACCIONABLE: los números de póliza concretos, agrupados por clave
     // de mediador, para poder copiarlos a un correo a la compañía. Sin esto el
     // aviso decía «17 no están en la cartera» y no había forma de saber cuáles
@@ -210,7 +186,7 @@ export async function GET(req: NextRequest) {
     await tgAviso('correduria.ingesta',
       titular + '\n' +
       salud.motivos.map(m => `• ${m}`).join('\n') +
-      prima + entidades + pedidos + sinAmbito + recorte + antiguedad + recado,
+      prima + entidades + pedidos + sinAmbito + recorte + sinComprobar + antiguedad + recado,
     ).catch(() => {})
   }
 
@@ -224,7 +200,9 @@ export async function GET(req: NextRequest) {
     // `null` = no se ha podido listar cuáles. Nunca 0.
     pedirACompania: salud.huerfanasReparto?.totalPedir ?? null,
     reprocesables: salud.huerfanasReparto?.totalReprocesar ?? null,
-    avisado: cambio && salud.estado === 'degradada',
+    objetosEnRevision: salud.objetosEnRevision,
+    huecos: salud.huecos.length,
+    avisado: cambio && salud.estado !== 'ok',
     motivoAviso: decision.avisar ? decision.motivo : null,
     detalle,
   })

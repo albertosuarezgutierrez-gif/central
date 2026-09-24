@@ -196,3 +196,52 @@ test('sin datos, BIEN_VACIO también trae matricula: null', () => {
   assert.equal(describirBien('auto', {}).matricula, null)
   assert.equal(describirBien('auto', null).matricula, null)
 })
+
+test('RC de mascotas: la raza es la `cosa`, igual que marca/modelo en auto', () => {
+  const b = describirBien('responsabilidad_civil', { animalRaza: 'Labrador Retriever' })
+  assert.equal(b.cosa, 'Labrador Retriever')
+  assert.equal(b.ubicacion, null)
+  assert.equal(b.matricula, null)
+})
+
+test('RC sin animal (una RC normal) no se confunde con mascotas: sin cosa', () => {
+  const b = describirBien('responsabilidad_civil', { rcModalidad: 'locativa' })
+  assert.equal(b.cosa, null)
+})
+
+test('el desglose de capital por partida se añade a detalles, en formato español', () => {
+  const b = describirBien('hogar', {
+    direccion: 'Calle Falsa 1',
+    capitales: [
+      { bien: 'Continente', importe: 150000 },
+      { bien: 'Contenido', importe: 30000.5 },
+    ],
+  })
+  assert.ok(b.detalles.includes('Continente: 150.000,00 €'))
+  assert.ok(b.detalles.includes('Contenido: 30.000,50 €'))
+})
+
+test('un importe con coma decimal (string) no se pierde: misma función que /correduria', () => {
+  const b = describirBien('hogar', {
+    direccion: 'Calle Falsa 1',
+    capitales: [{ bien: 'Continente', importe: '150000,00' }],
+  })
+  assert.ok(b.detalles.includes('Continente: 150.000,00 €'))
+})
+
+test('una partida sin importe válido (0, negativo o no numérico) se pinta solo con la etiqueta', () => {
+  const b = describirBien('hogar', {
+    direccion: 'Calle Falsa 1',
+    capitales: [{ bien: 'Piscina', importe: 0 }, { bien: 'Garaje', importe: 'x' }],
+  })
+  assert.ok(b.detalles.includes('Piscina'))
+  assert.ok(b.detalles.includes('Garaje'))
+})
+
+test('una partida sin etiqueta NI importe no se pinta (nada que decir)', () => {
+  const b = describirBien('hogar', {
+    direccion: 'Calle Falsa 1',
+    capitales: [{ modalidadValoracion: 'RV' }],
+  })
+  assert.equal(b.detalles.length, 0)
+})

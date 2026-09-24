@@ -78,8 +78,12 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
 - **Cobertura DESIGUAL por compañía — no supongas que CIMA lo trae todo (medido 01/09/2026).** Mapfre
   manda recibos pero **ninguna liquidación**; Allianz manda las dos y además un PDF «Cuenta Agente» por
   correo (texto en **EBCDIC**, se decodifica con `cp500`); Occident va por CIMA y lleva meses en **saldo
-  deudor** (comisión negativa, remesa 0,00€ — eso NO es un impago); Reale acaba de adherirse; Generali
-  no tiene acceso CIMA. Un total de comisiones sin decir qué compañías faltan es una cifra falsa.
+  deudor** (comisión negativa, remesa 0,00€ — eso NO es un impago); Reale acaba de adherirse; **Generali empezó a volcar por CIMA el
+  14/09/2026** (su primer POL, y el único fichero de toda la serie con avisos de validación: 12
+  leves) — hasta esa fecha esta línea la daba por fuera de la pasarela, que era cierto el
+  01/09 y dejó de serlo sin que nadie tocara una línea del repo. Un total de comisiones sin decir qué compañías
+  faltan es una cifra falsa, y **quién manda qué se vuelve a MEDIR, no se cita de aquí** —
+  la tabla viva y la consulta están en la skill **`cima-ingesta`**.
 - Dinero SIEMPRE en formato español (`2.162,49€`); regla NULL≠0 de `CLAUDE.md` aplica
   entera (una póliza sin fecha de vencimiento es «sin fecha», no «no vence»).
 - Cambios de comportamiento de esta skill → PR (nunca auto-aplicar desde la rutina);
@@ -89,6 +93,15 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
 ## Ciclo semanal (rutina programada)
 1. **Cartera:** lee el resumen en vivo (vía plataforma `/api/correduria/cartera` o el
    endpoint operador). Compara con el último informe de la bitácora: altas, bajas, delta.
+   ⚠️ **Sin `ASEGURA_OPERADOR_SECRET` en el entorno de la sesión** (comprobado el
+   20/09/2026: solo estaba `ALERTA_TOKEN`) el puerto `carteraAsegura()`/`vencimientosAsegura()`
+   de `apps/plataforma/lib/cartera-asegura.ts` es inalcanzable y `/api/correduria/cartera`
+   exige sesión de plataforma (`getSession()`, cookie), que este agente tampoco tiene. El
+   fallback es SQL directo contra `seguros.polizas` con el criterio de `esCarteraViva`/
+   `esCarteraEnVigor` (`packages/module-seguros/src/cartera-viva.ts` + `vigencia.ts`) por
+   `mcp__Supabase__execute_sql` — **replica la MISMA regla, no una propia**. Si esto se va
+   a ejecutar sin supervisión (fuera de una sesión con Supabase MCP), `ASEGURA_OPERADOR_SECRET`
+   debe añadirse al entorno de la rutina (pendiente, es tarea de Alberto en Vercel/env, no de código).
 2. **Vencimientos:** pólizas vigentes que vencen en 30/60 días (cuando el dato esté
    expuesto; si aún no, dilo como «pendiente», no como 0). Son LA oportunidad comercial
    de una correduría: renovación = ingreso recurrente. **La fecha que importa no es la del
@@ -96,6 +109,11 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
    LCS): decir «vence el 15 de marzo» hace creer que hay hasta el 15, cuando el plazo se
    pasó el 13 de febrero. La aritmética ya está en `@central/module-seguros-portal`
    (`fechaAccionable`, `entraEnVentana`) y **no se reimplementa**.
+   ⚠️ **Higiene de datos, no vencimiento real:** pólizas en estado vigente
+   (`POLIZA_ESTADOS_VIGENTES`) cuya `fecha_vencimiento` ya pasó son CIMA sin actualizar,
+   no renovaciones — cuéntalas aparte («N pólizas vigentes desfasadas») y compara con la
+   cifra de la bitácora anterior; si sube, es una alerta de ingesta, no una oportunidad
+   comercial. No las mezcles en el recuento de accionables.
    **Di SIEMPRE QUÉ asegura cada una**
    (coche y matrícula, localidad del piso, modalidades de la RC): sin eso, tres pólizas de
    auto del mismo cliente son la misma línea y el aviso no sirve para llamar. El dato ya
@@ -127,6 +145,9 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
   cuesta 0,50€ por consulta y NO es idempotente** (un reintento = otro proyecto y otro cargo), así que
   **ninguna vigilancia periódica ni botón público tarifica**: se vigila la FECHA (gratis) y se tarifica
   una vez, contra el cupo y el motivo de `seguros.codeoscopic_consumo`.
+- 🔌 **Ingesta de CIMA (la tubería) → skill `cima-ingesta`.** Todo lo de EIAC/TIREA/adaptador,
+  cuarentena, cobertura de campos, caja negra del webhook y el diagnóstico de «la ingesta está
+  muda» vive AHÍ, no aquí. Esta skill es el NEGOCIO; aquella es la tubería que lo alimenta.
 - Contexto de infra/traspaso: `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md`.
 - 🚧 **Dos apps, no una.** `apps/asegura` es el panel del **CORREDOR**; `apps/asegura-portal` es el
   portal que ve el **ASEGURADO** (Fase 1 mergeada el 01/09/2026, PR #1965; **su `CLAUDE.md` es la

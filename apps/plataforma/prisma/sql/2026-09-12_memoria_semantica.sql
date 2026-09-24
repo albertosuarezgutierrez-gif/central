@@ -2,11 +2,12 @@
 -- Única pieza que seguía en Graphify tras la paridad de grafo de código (docs/USO-HERRAMIENTAS.md).
 -- Fuente: docs/CONTEXTO-SESIONES.md + docs/memoria/*.md (scripts/memoria-parsear.mjs, mismo
 -- troceador que ya usa scripts/rotar-memoria.mjs). Reutiliza TAL CUAL grafo_embed_textos()
--- (2026-09-12_grafo_semantico.sql) y su clave en Vault (grafo_openrouter_api_key): no hace falta
+-- (2026-09-21_motor_embeddings.sql; antes vivía en 2026-09-12_grafo_semantico.sql, borrado al
+-- retirar el grafo el 21/09/2026) y su clave en Vault (grafo_openrouter_api_key): no hace falta
 -- clave ni infraestructura nueva, es la misma pieza aplicada a otro corpus.
 --
 -- BD COMPARTIDA multi-tenant. Aplicar como postgres (Supabase MCP), NO por el rol de la app.
--- Artefacto GLOBAL del operador (como grafo_embeddings): sin cuenta_id, sin RLS, NUNCA por REST/anon.
+-- Artefacto GLOBAL del operador: sin cuenta_id, sin RLS, NUNCA por REST/anon.
 
 CREATE TABLE IF NOT EXISTS public.memoria_embeddings (
   id          text PRIMARY KEY,       -- 'fuente#md5(texto)[0:16]' (scripts/memoria-parsear.mjs) — estable aunque la entrada cambie de posición

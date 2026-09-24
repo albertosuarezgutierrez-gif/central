@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { Bike } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { precalificarMotoNuevaAsegura, catalogoAsegura } from '@/lib/moto-nuevo-asegura'
+import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import MotoNuevo from './MotoNuevo'
 
@@ -52,11 +53,13 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
     </div>
   )
 
-  const [garajes, civiles, pre] = await Promise.all([
-    catalogoAsegura({ tipo: 'garajes' }),
+  const [garajes, civiles, pre, companiasResp] = await Promise.all([
+    catalogoAsegura({ tipo: 'garajes-moto' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
     precalificarMotoNuevaAsegura({ clienteId }),
+    companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
   ])
+  const companias = companiasResp.estado === 'ok' ? companiasResp.companias : null
 
   if (pre.estado !== 'ok') {
     const tono = pre.estado === 'sin_configurar' ? 'var(--muted)' : 'var(--negative)'
@@ -114,6 +117,7 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
         estadoCivilMoto={pre.pre.estadoCivil}
         consumo={pre.pre.consumo}
         simulacion={pre.pre.simulacion}
+        companias={companias}
       />
     </Pagina>
   )

@@ -3,7 +3,15 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { abrirSiniestro, cambiarEstadoSiniestro, leerSiniestro, seguirSiniestro, type ResultadoSiniestro } from '@/lib/cartera-siniestros'
+import {
+  abrirSiniestro,
+  actualizarDatosRamoSiniestro,
+  cambiarEstadoSiniestro,
+  leerSiniestro,
+  seguirSiniestro,
+  type ResultadoSiniestro,
+} from '@/lib/cartera-siniestros'
+import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,6 +25,9 @@ export const dynamic = 'force-dynamic'
  *   PATCH { siniestroId, estado, actor }        → cambia el estado (solo los nuestros)
  *   PATCH { siniestroId, referencia?, gravedad?, tramitador*?, perito*?,
  *           reservaImporte?, indemnizacionImporte?, nota?, actor } → seguimiento
+ *   PATCH { siniestroId, datosRamo, actor }     → campos propios del ramo
+ *           (solo `gestionado_correduria` — ver `siniestro-ramo.ts`)
+ *   Terceros y testigos: `POST`/`DELETE` en `siniestro/terceros`.
  *
  * Reglas en `@central/module-seguros` (`siniestros.ts`) y BD en
  * `lib/cartera-siniestros.ts`. Respuesta de escritura: `{ estado:'ok', siniestro,
@@ -41,7 +52,7 @@ export async function GET(req: Request) {
   }
 }
 
-export async function POST(req: Request) {
+export const POST = auditado(async (req: Request) => {
   return escribir(req, (correduriaId, b) =>
     abrirSiniestro(correduriaId, {
       polizaId: cadena(b.polizaId) ?? '',
@@ -58,18 +69,19 @@ export async function POST(req: Request) {
       actor: cadena(b.actor) ?? 'plataforma',
     }),
   )
-}
+})
 
 const CAMPOS_SEGUIMIENTO = [
   'referencia', 'gravedad', 'tramitadorNombre', 'tramitadorTelefono', 'tramitadorEmail',
   'peritoNombre', 'peritoTelefono', 'peritoEmail', 'reservaImporte', 'indemnizacionImporte', 'nota',
 ] as const
 
-export async function PATCH(req: Request) {
+export const PATCH = auditado(async (req: Request) => {
   return escribir(req, (correduriaId, b) => {
     const siniestroId = cadena(b.siniestroId) ?? ''
     const actor = cadena(b.actor) ?? 'plataforma'
     if (typeof b.estado === 'string') return cambiarEstadoSiniestro(correduriaId, { siniestroId, estado: b.estado, actor })
+    if ('datosRamo' in b) return actualizarDatosRamoSiniestro(correduriaId, { siniestroId, datosRamo: b.datosRamo, actor })
     const seguimiento: Record<string, unknown> = {}
     for (const k of CAMPOS_SEGUIMIENTO) {
       if (!(k in b)) continue
@@ -79,7 +91,7 @@ export async function PATCH(req: Request) {
     }
     return seguirSiniestro(correduriaId, { ...seguimiento, siniestroId, actor })
   })
-}
+})
 
 async function escribir(req: Request, accion: (correduriaId: string, body: Record<string, unknown>) => Promise<ResultadoSiniestro>) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

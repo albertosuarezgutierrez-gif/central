@@ -20,6 +20,7 @@
 // Y una fila sin `id` no es una fila que no exista: no hay ficha a la que ir,
 // así que no se pinta — pero se CUENTA en `ilegibles` y la pantalla lo dice.
 import { MOTIVOS_PUERTO, type MotivoPuerto, describirCausaAsegura } from './correduria-puerto.ts'
+import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
 export { MOTIVOS_PUERTO, describirCausaAsegura }
@@ -43,6 +44,14 @@ export type LeadVista = {
    * verdades sobre qué es urgente. Un valor que no sea `true` es «no urgente».
    */
   urgente: boolean
+  /**
+   * Qué hizo el cliente con la carta de no renovación en el portal
+   * (20/09/2026): `enviada` = le ha dicho a su compañía que se va, `generada`
+   * = la redactó (copiar/imprimir/correo) pero no ha marcado que la enviara.
+   * Cualquier valor que no sea uno de los dos es «ninguna».
+   */
+  senalCarta: 'ninguna' | 'generada' | 'enviada'
+  cartaEnviadaEn: Date | null
   /** `null` = no se ha podido comprobar si ya la lleva la casa. NUNCA colapsar a false. */
   yaEnCartera: false | null
   /** `null` = no se ha casado con ninguna ficha: hay que identificar a la persona. */
@@ -140,6 +149,10 @@ export function interpretarLeads(bruto: unknown): ResultadoLeads {
       diasParaAccionable: numero(f.diasParaAccionable),
       ventanaPasada: f.ventanaPasada === true,
       urgente: f.urgente === true,
+      // Solo los dos valores con significado; lo demás es «ninguna» — un
+      // puerto viejo que no mande la clave no puede inventar una carta.
+      senalCarta: f.senalCarta === 'enviada' || f.senalCarta === 'generada' ? f.senalCarta : 'ninguna',
+      cartaEnviadaEn: fecha(f.cartaEnviadaEn),
       // 🚨 Solo un `false` explícito es «comprobado, no es de la casa».
       // Cualquier otra cosa —`null`, ausente, basura— es «no lo sabemos».
       yaEnCartera: f.yaEnCartera === false ? false : null,
@@ -174,7 +187,7 @@ export async function leadsAsegura(): Promise<Reenvio> {
   try {
     const res = await fetch(`${urlAsegura()}/api/operador/leads`, {
       method: 'GET',
-      headers: { Authorization: `Bearer ${secret}` },
+      headers: { ...(await cabecerasPuerto(secret)) },
       cache: 'no-store',
       signal: AbortSignal.timeout(15_000),
     })

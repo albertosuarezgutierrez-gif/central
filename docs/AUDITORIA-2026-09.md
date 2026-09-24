@@ -126,4 +126,314 @@ revisado línea a línea esta pasada ligera (reservado a la profunda). Sin rotac
 (septiembre sigue abierto).
 
 ---
-<!-- verificado: 2026-09-04 -->
+
+## ✅ Pasada ligera — 19/09/2026
+
+**Rango:** 54 commits desde `04a43ea` (15/09 16:41, última auditoría) hasta `0ba45c4`; actividad
+casi entera en la correduría (CIMA, retarificación, portal, asegura-web). Entorno de tarea de
+GitHub con una única rama asignada (`claude/great-maxwell-drrojp`): sin push directo a `main`
+posible, así que texto y código van en el mismo PR (mismo patrón que #2857/#3023).
+
+### 🔴 Next.js RCE crítica (`GHSA-2xp9-vwfh-vxw4`) SIN parchear en `main` desde hace 6 días
+`main` seguía en `next ^15.5.18-22`/`^16.2.12` (RCE no autenticada en la API de Image Optimization
+con AVIF, aplica en Linux/Vercel). Ya diagnosticado y con fix verificado en `#2857` (13/09) y
+`#3023` (16/09) — **ambos siguen en draft con `mergeable_state: dirty` sin resolver**, así que el
+parche nunca llegó a `main`. Reproducido el mismo bump en esta rama (commit `e636afce3`):
+`next` → `^15.5.25` (12 apps) / `^16.3.5` (ia-rest). `pnpm audit --prod`: 29 vulns/10 críticas →
+19 vulns/**0 críticas**. Verificado: typecheck limpio en las 13 apps, `pnpm test`
+(2883+53 tests, 0 fallos), `pnpm test:guardia` (852/852). **Acción de Alberto: mergear este PR ya**
+(o resolver el conflicto de #2857/#3023) — son 6 días con una RCE no autenticada en producción.
+
+### 🔴 Pricing SIVRA: motor en PAUSA global 4 días, con su propia condición de despause ya cumplida
+`pricing_config.paused=true` desde el 15/09 14:44 UTC (decisión deliberada tras el episodio de
+Semana Santa 2027 tarificada sin evento, ver memoria 15/09) y sin tocar desde entonces —
+`horas_desde_ultima_pasada`=89,5h, 0 noches reales escritas en ese tiempo en los 4 pisos. La propia
+nota de esa pausa fijaba la condición de reactivación: «NO despausar si el barrido no midió el
+evento» de Semana Santa. **Esa condición ya se cumplió el mismo 15/09** (`market_rates` pasó de 22
+a 30 comparables en 25/03/2027, Jueves Santo, medido 08:53 UTC) y no hay rastro en memoria ni en
+código de una rutina de despausa que se haya ejecutado desde entonces — parece la misma familia que
+el «cron mudo»: se programó un check para el día siguiente y nadie volvió a mirarlo. **Sin fix de
+código posible desde aquí** (es una fila de config, no un bug): acción de Alberto, revisar
+`/sivra/pricing` y despausar si el barrido de eventos ya cubre Semana Santa 2027 (parece que sí).
+
+### 🟡 Correduría/CIMA — Mapfre (C0058) sigue muda, empeorando (88 días, ya alertado por su propio canal)
+`correduria_ingesta` (latido `ok=true`, detalle DEGRADADA): C0058 lleva **88 días sin mandar nada**
+(era 74-75 el 05-06/09) y ahora **9 renovaciones** vencieron sin fichero (eran 7). No es hallazgo
+nuevo — `silencio-entidad.ts` ya lo detecta y avisa por Telegram desde el propio cron, así que no
+se duplica aquí. Sigue pendiente la decisión de Alberto sobre el borrador de consulta a Codeoscopic
+(`docs/ASEGURA-MAPFRE-C0058.md`, sin enviar). `cima_pull_*`: eventos regulares (17-18/09, cada
+~6h), `queueDepth` estancado en ~145 con `processed` 0-2 — la cola no crece pero tampoco baja.
+Codeoscopic: 8 cotizaciones/4,00€ en 7 días, todas `facturable`/cerradas — volumen normal para la
+semana de desarrollo de retarificación/portal, guardián `regression-asegura-gasto-codeoscopic`
+vigente. `seo_correduria`: `ok=false` desde el 14/09 (Serper sin créditos) — ya conocido y crónico
+desde el 24/08, no se re-escala.
+
+### Backlog de PRs de rutinas + salud del automerge (2-ter) — vigilante vivo, canal de registro sigue atascado
+`rutinas-automerge.yml` corriendo con normalidad (run en curso a las 08:04 UTC de hoy). **30 PRs
+abiertos.** El bloqueo estructural que `#2877` (13/09) ya diagnosticó — los checks requeridos sobre
+un commit de `github-actions[bot]` no arrancan solos y quedan pendientes de aprobación humana en
+Actions — sigue sin resolverse 6 días después: `#2877` (puramente registro, `docs/**`) tiene sus 21
+checks en verde incluido «Ready to merge» pero **sigue sin mergear**, y `#2318`/`#2322`/`#2483`
+llevan más de 2 semanas en el mismo estado. Dos PRs de seguridad crítica (`#2857`, `#3023`) están
+atrapados en el mismo backlog. **Acción de Alberto (repetida, sin cambios desde el 13/09):** revisar
+Settings → Actions → General → aprobación de workflows, o aprobar a mano los runs pendientes — sin
+esto el carril 1 completo de esta rutina seguirá sin poder autoentregarse.
+
+### Reconciliación memoria/skills
+`docs/FUENTES-DE-VERDAD.md` no tenía fila para `correduria-crm`/`docs/CORREDURIA-CRM-VISION.md` ni
+para la skill `cima-ingesta` + sus 4 docs (`ASEGURA-CIMA-INGESTA-INVENTARIO`, `CIMA-CUARENTENA`,
+`ASEGURA-CIMA-COBERTURAS`, `CODEOSCOPIC-API-PORTAL`) — añadidas. `docs/SKILLS.md` ya lista
+`cima-ingesta`; sin huecos ahí. `docs/CONTEXTO-SESIONES.md`: 402 entradas vivas, `rotar-memoria.mjs`
+corrido (idempotente, 0 archivadas — julio/agosto siguen dentro de su ventana de retención). ⚠️ **No
+se pudo listar sesiones remotas** (herramienta no adjunta): no se cruzaron conversaciones de
+solo-charla contra memoria/PR.
+
+### Manuales / HUECOS-ABIERTOS — sin cambios
+Ningún commit del rango toca `apps/ia-rest/**`. `docs/HUECOS-ABIERTOS.md` no revisado línea a línea
+(reservado a la profunda).
+
+---
+
+## 🔍 Pasada PROFUNDA — 20/09/2026
+
+**Entorno de tarea de GitHub, rama asignada `claude/focused-gates-z5vsx6`; sin push directo a
+`main`.** Igual que el 19/09: texto de registro va en un PR propio (este), y el único fix de código
+que salió de esta pasada (infra del auto-merge) va en un PR de carril 2 aparte para que Alberto lo
+mire — no se mete aquí para no sacar a este PR de la lista de "solo registro" que el propio bot exige.
+
+### 🟢 Código e infra: sano
+`pnpm test` (2.947 tests, node --test + vitest) y los 13 typechecks de la matriz (incluidos los DOS
+schemas de `apps/asegura`) en verde; `qa-check.ts` (820 archivos, 0 problemas), lint (0 errores,
+1.224 warnings) y build de `ia-rest` también. Sin regresiones desde la profunda anterior.
+
+### 🟢 Heartbeat de crons/agentes: sano, dos rojos ya conocidos y sin acción nueva
+`agente_latidos` completo revisado. Todo ✅ salvo:
+- `ses_transporte` (`ok=false`, nunca en verde) — **pendiente de siempre**: sin establecimientos
+  dados de alta en `/sivra/partes/establecimientos`; hoy lo cubre Chekin hasta el 06/10. Sin acción.
+- `seo_correduria` (`ok=false` desde el 14/09, "Serper sin créditos") — **ya diagnosticado y curado
+  en origen**: Serper se retiró de ese cron el mismo 14/09 (#2936); se pondrá verde solo en la
+  próxima pasada semanal (lunes 21/09). Sin acción.
+- `psd2_health_check` (semanal, dentro de umbral) reportó el 16/09 una "ANOMALIA CRITICA" —conexión
+  BBVA con `401 Session is closed` en Enable Banking— y **ya avisó por Telegram él mismo ese día**
+  (hay PR de registro #2868/#3022 documentándolo). Sigue sin resolver 4 días después: Alberto tiene
+  que reconectar BBVA en Enable Banking. No se repite el aviso aquí (no es nuevo), pero se deja
+  anotado por si se ha perdido en el ruido del backlog de PRs de abajo.
+
+### 🟢 Correduría (bloque 2-quater): sano
+CIMA sigue entrando (`cima_pull_completed` cada ~5h, último 19/09 14:39, `errorsCount=0`); el hueco
+de 88 días de Mapfre (C0058) y el resto de "ingesta degradada" ya están cubiertos por
+`docs/ASEGURA-MAPFRE-C0058.md` y el propio latido diario — nada nuevo que abrir. Gasto Codeoscopic
+normal: 3 cotizaciones / 7 días, 1,50 €, 0 descartadas sin desenlace. Cepos de aislamiento
+(`regression-asegura-aislamiento`, `regression-portal-aislamiento`, `regression-*-puerto`) verdes en
+el `pnpm test` de arriba.
+
+### 🟢 Salud del precio (bloque 2bis): sano
+`rail_baja_roto=0`, `bajo_minimo=0`, `rail_alza_sin_justificar=0`, `oscilantes=0`, las 4 palancas
+(`enabled`/`apply_enabled`=true, `antelacion_k=0`, `min_price` con valor) para los 4 pisos. Única
+nota menor: `horas_desde_ultima_pasada=11,0h` (umbral 10h) con `noches_ultima_pasada=13` — margen de
+una hora, y con el resto de señales en verde no se interpreta como pasada abortada.
+
+### 🔴 Backlog de PRs de rutinas: 46 abiertos, hasta 16 días — y esta vez con hallazgo NUEVO y accionable
+El vigilante (`rutinas-automerge.yml`) está vivo (corre en verde cada pocos minutos, confirmado por
+sus runs). El problema no es que esté muerto: es que casi ningún PR del backlog cumple sus
+condiciones, por dos motivos medidos con precisión esta pasada (delegado a un agente, 99 llamadas a
+la API de PRs):
+
+1. **`docs/uso-herramientas/<sesión>.json` (telemetría del hook `Stop`) saca del carril 1 a casi
+   todo el lote.** Viaja en ~20 de los 46 PRs "solo bitácora" y **no está en el allowlist**
+   `es_registro()` del workflow — un solo fichero de telemetría, inocuo, deja fuera al PR entero.
+   Es un hueco del propio mecanismo, no un fallo de las rutinas. **Propuesto en el PR de carril 2**
+   de esta pasada: añadir `docs/uso-herramientas/**/*.json` al allowlist.
+2. **Al menos 7 PRs cuyo título/cuerpo dice "solo registro" traen código real sin revisar**, muy
+   probablemente por reutilizar una rama entre sesiones distintas después de escribir el cuerpo del
+   PR (el mismo patrón que ya cazaron #2318/#2322/#2327 el 07-08/09, pero más extenso de lo que se
+   pensaba entonces):
+   - **#2318** (15 días) — módulo `sivra/mensajes-prog/*` + migración SQL completos, sin revisar.
+   - **#2322** (15 días) — feature de parte de siniestro del portal (Prisma + SQL) completa.
+   - **#2327** (15 días) — `module-seguros-portal/consentimiento.ts` + agente-salud + SQL.
+   - **#2573** (13 días) — feature de descripción de siniestro en el portal (prisma + SQL).
+   - **#2757** (8 días) — fixes reales de Codeoscopic / `ficha-asegura.ts`.
+   - **#2741** (8 días) — feature completa "declaradas por vencer" (rutas, UI, lib; 669 líneas).
+   - **#2488** (13 días) — ~32 ficheros: asegura-web, `lib/contable/*`, fuga de canal, portal.
+   **Esto es lo importante de verdad: hay trabajo terminado (no solo texto) esperando desde hace más
+   de una semana sin que nadie lo esté mirando**, camuflado bajo títulos de rutina.
+3. **#2262** (16 días, el más viejo) ya tiene el comentario `<!-- automerge-conflicto -->` del bot
+   desde el 04/09 diciendo que no puede resolver el conflicto solo — sigue esperando mano humana.
+
+**Acción de Alberto:** revisar y mergear/cerrar los 7 PRs de (2) cuanto antes (son features/fixes
+reales, no bitácora); resolver a mano el conflicto de #2262 o rescatar su contenido; el fix de (1)
+va en PR de carril 2 aparte. El backlog general (>2 semanas, causa raíz "aprobación de workflows en
+Actions" per la nota del 19/09) sigue sin resolverse — cuarta vez que esta rutina lo señala.
+
+### Reconciliación memoria/skills
+`docs/CONTEXTO-SESIONES.md` y `docs/AUTO-APLICADOS.md` actualizados con esta pasada. Matriz de apps
+verificada: `ls apps/` (13) == matriz de `tests.yml` (13), sin drift. No se hizo reconciliación
+skill-a-skill exhaustiva de las ~50 skills de agentes contra código (fuera del alcance de esta
+pasada dado el volumen del hallazgo de arriba); queda para la próxima pasada profunda si no hay otro
+hallazgo de radio similar.
+
+---
+
+## ✅ Pasada ligera — 20/09/2026 (II)
+
+**Rango:** 2 commits desde la profunda de esta mañana (`6dcc590`, 06:57) — #3136 (auto-informe
+mercado-booking, docs) y #3126 (siniestros: campos por ramo + terceros/testigos). Los dos ya traían
+su propio commit de memoria (`chore(memoria): actualizar contexto de sesión`); sin reconciliación
+pendiente.
+
+Heartbeat (2-bis), correduría (2-quater) y salud del precio (2bis) re-comprobados por si algo había
+cambiado en las ~3h: **sin novedad frente a la profunda de la mañana**. `agente_latidos` con los
+mismos dos `ok=false` ya crónicos y documentados (`ses_transporte` sin establecimientos SES;
+`seo_correduria` sin créditos Serper desde el 14/09). CIMA sigue entrando (`cima_pull_completed` a
+las 05:33, `errorsCount=0`, cola estable en 145 — mismo backlog conocido de C0058, ahora 89 días).
+Codeoscopic: 3 cotizaciones/7 días, 1,50 €, 0 descartadas — igual que la mañana. Pricing:
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · `oscilantes=0`, 4 palancas
+activas con `min_price`; `horas_desde_ultima_pasada=16,8h` es el mismo artefacto de "última escritura
+con cambios" ya explicado esta mañana (la pasada de las 20:30 de ayer escribió 0 noches
+legítimamente, confirmado por su propio latido `ok=true`), no una pasada abortada.
+
+No se ha podido listar las sesiones del rango por `list_sessions` (herramienta MCP no adjunta en
+esta pasada) — se dice explícitamente en vez de afirmar que no hay pendientes de conversación.
+
+**Sin hallazgo nuevo. Carril 1 = solo esta entrada + `CONTEXTO-SESIONES.md`; carril 2 vacío: sin PR
+de código ni aviso Telegram** (regla de frugalidad).
+
+---
+
+## ✅ Pasada ligera — 21/09/2026
+
+**Rango:** 60 commits desde la pasada de ayer (20/09, 10:39) — actividad casi toda en la correduría
+(sustituciones por retarificación #3202, alcance ver/ver_economico #3207, tabla de precios del
+retarificador #3216, tipo de vía por Catastro #3217, watchlist CIMA #3209) más el ciclo semanal de
+pricing (#3213) y buscador-ia (#3212, Groq retira el gratis a gpt-oss-120b, ya en `AGENTES-BITACORA.md`).
+
+**Reconciliación memoria (paso 4):** 4 PRs mergeados **sin entrada en `CONTEXTO-SESIONES.md`**
+pese a llevar cada uno su propio commit `chore(memoria): actualizar contexto de sesión` — ese commit
+solo tocaba el JSON de seguimiento de uso de herramientas (`docs/uso-herramientas/`), no la memoria
+real. Añadidas ahora: **#3202** (sustituciones), **#3207** (alcance ver/ver_economico), **#3216**
+(retarificador: logos + cepos), **#3217** (tipo de vía por Catastro). Detalle en la entrada de arriba
+del todo de `CONTEXTO-SESIONES.md`. `docs(asegura)` **74f0db4** (corrige "de Manuel: transferir
+proyectos" ya cumplido) fue autocontenido por su propia sesión, sin acción adicional.
+
+**Heartbeat (2-bis):** todo verde salvo los dos crónicos ya documentados (`seo_correduria` sin
+créditos Serper desde 14/09; `ses_transporte` sin establecimientos SES). Sin reparaciones automáticas
+en curso (`agente_reparaciones` vacío en 7 días).
+
+**Correduría (2-quater):** CIMA sigue entrando (`cima_pull_completed` hace 17,3h, dentro del umbral
+de 30h; `errorsCount=0`; cola estable en 145-147). `correduria_ingesta` marca DEGRADADA (7 pólizas con
+recibos/siniestros huérfanos, ya conocidas) y **C0058 (Mapfre) alcanza 90 días sin mandar nada** (su
+peor hueco hasta ahora eran 74, medido el 06/09 en `docs/ASEGURA-MAPFRE-C0058.md`) — mismo backlog ya
+documentado, sigue sin acción de Alberto (borrador de consulta a Codeoscopic sin enviar). Codeoscopic:
+4 cotizaciones/7d, 2,00€, 0 descartadas — normal.
+
+**Pricing (2bis):** `rail_baja_roto=0` · `bajo_minimo=0` · `oscilantes=0` · **`rail_alza_sin_justificar=1`**
+(🟠, `prop_luxury_busto` 2027-01-13: 72€→104€, fecha lejana sin evento ni mercado medido — un solo
+caso, no sistémico). 4 palancas activas con `min_price` y `antelacion_k=0`. `horas_desde_ultima_pasada`
+marca 11,6h, por debajo del hueco normal de 12h entre la pasada de las 20:30 y la de las 08:30 — no es
+una pasada saltada (la de anoche escribió 2 noches con `ok=true`).
+
+**Backlog de PRs (2-ter):** el automerge (`rutinas-automerge.yml`) está sano — decenas de runs en
+verde en la última hora. El problema sigue siendo el mismo ya reportado 4 veces: **42 PRs abiertos**
+(30+ inspeccionados), varios con `mergeable_state:dirty` por antigüedad (p. ej. `#2741`, 9 días,
+registro-only en su día pero su diff actual arrastra 15 ficheros por desincronía con `main`). Sin
+cambio de causa raíz desde el informe del 20/09 (aprobación de workflows en Actions) — no se repite
+el listado completo, ya hecho ayer. Acción de Alberto: el mismo lote pendiente de revisar/mergear/cerrar.
+
+No se ha podido listar las sesiones del rango (`list_sessions` de Claude Code Remote no está adjunto
+en esta pasada) — se dice explícitamente, no se afirma que no hay pendientes de conversación.
+
+**Carril 1:** esta entrada + 4 entradas de memoria + `AUTO-APLICADOS.md`. **Carril 2 vacío** (nada de
+código nuevo que arreglar). Aviso Telegram enviado por los hallazgos 🟡 (PR backlog, raíl al alza).
+
+---
+
+## ✅ Pasada ligera — 22/09/2026
+
+**Rango:** 36 commits desde la última auditoría (21/09 10:29, `f050ab3`) hasta hoy (`11037df`),
+casi todo correduría — presupuesto al cliente PR 1 y PR 2 en producción, libro de consumo
+Codeoscopic, cierre del residuo CIMA (pólizas duplicadas) — más el auto-tarificador Avant2.
+
+**Heartbeat (2-bis):** todo verde salvo los crónicos ya documentados. `ses_transporte`
+(`pendienteConocido`, revisar 06/10) sin cambios. `psd2_health_check` sigue con la BBVA rota en
+Enable Banking (sesión 401 desde el 13-16/09, Telegram ya enviado en su día, PR #3022) — última
+pasada hace 144,9h, todavía dentro de su umbral semanal (192h); no hay pasada nueva que confirme si
+sigue caída. Sin reparaciones automáticas en curso (`agente_reparaciones` no consultado esta pasada,
+sin indicio de necesidad).
+
+**Correduría (2-quater):** CIMA sigue entrando (`cima_pull_completed` hace ~15h, dentro de 30h;
+`errorsCount=0`; cola estable en 148). `correduria_ingesta` sigue DEGRADADA (7 pólizas con
+recibos/siniestros huérfanos, backlog ya conocido) y **C0058 (Mapfre) ya son 91 días sin mandar
+nada** (89→90→91, incremento diario esperado, sin acción nueva de Alberto). Codeoscopic:
+11 cotizaciones/7d, 5,50€, 2 descartadas — coherente con el lanzamiento en producción del
+presupuesto al cliente (PR #3281, mismo día).
+
+**Pricing (2bis):** `rail_baja_roto=0` · `bajo_minimo=0` · `oscilantes=0` ·
+`rail_alza_sin_justificar=1` (🟠, un solo caso, mismo patrón que ayer). 4 palancas activas y sanas
+(`enabled`/`apply_enabled=true`, `min_price` puesto, `antelacion_k=0`). `horas_desde_ultima_pasada`
+11,5h — dentro del hueco normal 20:30→08:30 (12h), no es una pasada saltada.
+
+**Backlog de PRs (2-ter):** automerge (`rutinas-automerge.yml`) sano — runs en verde cada pocos
+minutos en la última hora. El backlog de PRs abiertos en `mergeable_state:dirty` (p. ej. #2318,
+#3157) sigue igual que en las últimas pasadas — mismo problema ya reportado, sin cambio de causa
+raíz. No se repite el listado completo.
+
+No se ha podido listar las sesiones del rango (`list_sessions` de Claude Code Remote no está
+disponible en esta pasada) — se dice explícitamente, no se afirma que no hay pendientes de
+conversación.
+
+**Carril 1:** esta entrada + `AUTO-APLICADOS.md`. **Carril 2 vacío** (nada de código nuevo que
+arreglar, nada 🔴). Sin hallazgos nuevos respecto a la pasada de ayer — no se manda Telegram
+(ruido redundante sobre lo mismo ya avisado).
+
+---
+
+## ✅ Pasada ligera — 23/09/2026
+
+**Rango:** 8 commits desde la pasada de ayer (`bb0401b`) hasta hoy (`5d0c191`) — CIMA parado
+~45h por presupuesto de Actions agotado (arreglado, con respaldo nuevo `cima-pull-respaldo`), alerta
+PSD2 BBVA, y «Invitar al portal por lotes» + recorte de minutos de Actions. Las 3 entradas de
+`CONTEXTO-SESIONES.md` que corresponden ya estaban anotadas por las propias sesiones — nada que
+reconciliar ahí.
+
+**Heartbeat (2-bis):** 43 filas en `agente_latidos`, prácticamente todo ✅. Dos `ok=false`:
+`ses_transporte` (crónico desde 21/08, sin establecimientos SES — sin cambios) y
+`correduria_renovaciones` (`"no se pudo leer la cartera: red"`, fallo de red de HOY, 25,6h desde su
+último ok — todavía dentro de su umbral de ~30h, no es 🔴 por umbral; primera vez que se ve este
+motivo, a vigilar si se repite mañana). `agente_reparaciones`: sin intentos en los últimos 7 días.
+
+**Correduría (2-quater):** CIMA entrando con normalidad (`cima_pull_completed` hace <1h, cola
+estable en 151, `errorsCount=0`) — coherente con el arreglo de ayer (PR #3293) y con el latido
+`cima_pull_respaldo` («al día, no hace falta respaldo»). `correduria_ingesta` sigue DEGRADADA (mismo
+backlog conocido: 7 pólizas huérfanas ya en cartera, 3 arrastradas de antes) y **C0058 (Mapfre) ya
+son 92 días sin mandar nada** (91→92, incremento diario esperado). Codeoscopic: 11 cotizaciones/7d,
+5,50€, 2 descartadas — igual que ayer.
+
+**Pricing (2bis):** `rail_baja_roto=0` · `bajo_minimo=0` · `oscilantes=0` ·
+`rail_alza_sin_justificar=1` (🟠, mismo patrón que ayer). 4 palancas activas y sanas
+(`enabled`/`apply_enabled=true`, `min_price` puesto, `antelacion_k=0`). `horas_desde_ultima_pasada`
+7,8h, `noches_ultima_pasada=16` — sano.
+
+**Backlog de PRs (2-ter):** automerge (`rutinas-automerge.yml`) sano — varios runs en verde en la
+última hora, incluida la fusión inmediata del PR de radiografía (#3296). 41 PRs abiertos; el backlog
+en `mergeable_state:dirty`/`blocked` (p. ej. #2318 desde el 05/09, #2966 esperando lectura de
+Alberto) sigue igual que en las últimas pasadas — mismo problema ya reportado, sin cambio de causa
+raíz ni crecimiento apreciable. No se repite el listado completo.
+
+**Frescura de mapas (paso 4):** `docs/FUENTES-DE-VERDAD.md` fila de `cima-ingesta` no incluía el
+cron nuevo `cima-pull-respaldo`, `packages/module-seguros/src/ingesta.ts` (`firmaAvisoIngesta`,
+`decidirRespaldoPull`) ni `docs/ASEGURA-OS-ARQUITECTURA.md`, todos del commit `852a5bd` de ayer —
+corregido. Como `docs/FUENTES-DE-VERDAD.md` es uno de los docs que el automerge de registro
+**no** acepta (cambia comportamiento), va en el PR de carril 2 de hoy, no en el de registro.
+
+No se ha podido listar las sesiones del rango (`list_sessions` de Claude Code Remote no está
+disponible en esta pasada) — se dice explícitamente, no se afirma que no hay pendientes de
+conversación. Los 41 PRs abiertos (2-ter) cubren razonablemente ese hueco: sus títulos no muestran
+ninguna sesión sin huella en memoria/bitácora.
+
+**Carril 1:** esta entrada + `AUTO-APLICADOS.md` + `CONTEXTO-SESIONES.md` (PR de registro aparte,
+auto-mergeable). **Carril 2:** el fix de `docs/FUENTES-DE-VERDAD.md` (texto acotado, pero cambia un
+doc que el automerge excluye a propósito) — PR draft, sin 🔴 nuevo. Sin Telegram: nada que Alberto
+no supiera ya de ayer, y el único cambio de carril 2 es una corrección de mapa, no una decisión.
+
+---
+<!-- verificado: 2026-09-23 -->
