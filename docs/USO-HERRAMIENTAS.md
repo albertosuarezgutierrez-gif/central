@@ -167,28 +167,28 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 105 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 106 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 100 | 14.289 | 8.850.424 | 0 | 0 |
-| `otro` | 98 | 3.726 | 13.748.090 | 6.898.554 | 0 |
-| `lectura-directa` | 91 | 3.374 | 6.422.573 | 0 | 0 |
-| `mcp:github` | 89 | 3.352 | 3.165.588 | 40.189.014 | 57 |
-| `escritura` | 81 | 2.213 | 37.940.867 | 0 | 0 |
-| `sql` | 69 | 1.531 | 702.934 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 56 | 675 | 177.154 | 2.997.396 | 9 |
-| `mcp:Vercel` | 25 | 305 | 539.219 | 198.719 | 4 |
-| `mcp:Booking-com` | 8 | 248 | 1.006.622 | 0 | 0 |
+| `bash` | 101 | 14.519 | 9.045.503 | 0 | 0 |
+| `otro` | 99 | 3.789 | 13.910.554 | 6.898.554 | 0 |
+| `mcp:github` | 90 | 3.387 | 3.186.247 | 40.189.014 | 57 |
+| `lectura-directa` | 92 | 3.381 | 6.595.852 | 0 | 0 |
+| `escritura` | 82 | 2.232 | 38.046.626 | 0 | 0 |
+| `sql` | 69 | 1.552 | 711.129 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 56 | 693 | 179.640 | 2.997.396 | 9 |
+| `mcp:Vercel` | 25 | 309 | 540.556 | 198.719 | 4 |
+| `mcp:Booking-com` | 9 | 272 | 1.114.277 | 0 | 0 |
 | `mcp:Gmail` | 15 | 221 | 356.240 | 0 | 2 |
-| `mcp:Supabase` | 42 | 133 | 17.190 | 0 | 1 |
+| `mcp:Supabase` | 42 | 135 | 17.198 | 0 | 1 |
 | `agente:general-purpose` | 17 | 64 | 43.980 | 672.215 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 1 | 51 | 73.084 | 0 | 0 |
 | `mcp:Google-Drive` | 6 | 50 | 50.016 | 0 | 2 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
-| `agente:agente-architect` | 9 | 36 | 35.299 | 1.088.540 | 0 |
+| `agente:agente-architect` | 9 | 39 | 36.660 | 1.113.662 | 0 |
 | `mcp:OpenSEO` | 1 | 30 | 20.595 | 0 | 0 |
 | `agente:Explore` | 12 | 29 | 13.821 | 604.888 | 0 |
 | `agente:agente-mecanico` | 10 | 29 | 29.409 | 488.084 | 0 |
