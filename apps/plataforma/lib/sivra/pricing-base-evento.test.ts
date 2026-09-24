@@ -53,3 +53,31 @@ test('regresión: el objetivo del evento no se mueve aunque el ancla global se d
     `el bucket del mes debe mantener el objetivo quieto, y dio ${conMes.join(' → ')}`,
   )
 })
+
+// ── objetivoSaltoEvento ────────────────────────────────────────────────────────────────────────
+import { objetivoSaltoEvento, MIN_COMPS_SALTO_MEDIDO } from './pricing-base-evento.ts'
+
+test('regresión Luxury 16/11/2026: fecha medida y fiable → manda su mediana, no mes × factor', () => {
+  const r = objetivoSaltoEvento({ porFactor: 204, fechaBase: 125, compsFecha: 10, fuenteFecha: 'fiable', minFecha: 3 })
+  assert.deepEqual(r, { objetivo: 125, origen: 'fecha_medida' })
+})
+
+test('fecha medida con mercado MÁS caro que el factor: sube a la mediana de la fecha', () => {
+  const r = objetivoSaltoEvento({ porFactor: 180, fechaBase: 260, compsFecha: 8, fuenteFecha: 'fiable', minFecha: 3 })
+  assert.equal(r.objetivo, 260)
+})
+
+test('muestra corta o mixta: se conserva el max de antes', () => {
+  assert.deepEqual(
+    objetivoSaltoEvento({ porFactor: 204, fechaBase: 125, compsFecha: MIN_COMPS_SALTO_MEDIDO - 1, fuenteFecha: 'fiable', minFecha: 3 }),
+    { objetivo: 204, origen: 'max' })
+  assert.deepEqual(
+    objetivoSaltoEvento({ porFactor: 204, fechaBase: 125, compsFecha: 10, fuenteFecha: 'mixto', minFecha: 3 }),
+    { objetivo: 204, origen: 'max' })
+})
+
+test('sin bucket de la fecha (o por debajo del mínimo): solo el factor', () => {
+  assert.equal(objetivoSaltoEvento({ porFactor: 204, fechaBase: null, compsFecha: 0, fuenteFecha: null, minFecha: 3 }).origen, 'factor')
+  assert.equal(objetivoSaltoEvento({ porFactor: 204, fechaBase: 125, compsFecha: 2, fuenteFecha: 'fiable', minFecha: 3 }).objetivo, 204)
+  assert.equal(objetivoSaltoEvento({ porFactor: 204, fechaBase: 0, compsFecha: 10, fuenteFecha: 'fiable', minFecha: 3 }).origen, 'factor')
+})
