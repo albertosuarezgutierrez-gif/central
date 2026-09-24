@@ -1,19 +1,19 @@
 {
  "sesion": "8c07924c-e639-5dc0-9bb1-fcdb8e61ee8e",
  "inicio": "2026-09-23T15:29:06.084Z",
- "fin": "2026-09-24T04:30:31.574Z",
- "llamadas": 702,
+ "fin": "2026-09-24T05:06:15.916Z",
+ "llamadas": 760,
  "categorias": {
   "otro": {
-   "llamadas": 138,
-   "chars_in": 8640,
-   "chars_out": 1465608,
+   "llamadas": 170,
+   "chars_in": 8783,
+   "chars_out": 1738151,
    "errores": 0,
-   "archivos_citados": 1,
-   "chars_citados": 11383,
+   "archivos_citados": 20,
+   "chars_citados": 163882,
    "tools": {
-    "ToolSearch": 30,
-    "ReadNotifications": 98,
+    "ToolSearch": 31,
+    "ReadNotifications": 129,
     "Skill": 7,
     "SendUserFile": 1,
     "SubagentHandback": 2
@@ -60,20 +60,20 @@
    }
   },
   "bash": {
-   "llamadas": 357,
-   "chars_in": 253279,
-   "chars_out": 1240097,
+   "llamadas": 370,
+   "chars_in": 260660,
+   "chars_out": 1275137,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 357
+    "Bash": 370
    }
   },
   "mcp:github": {
-   "llamadas": 66,
-   "chars_in": 28114,
-   "chars_out": 128318,
+   "llamadas": 78,
+   "chars_in": 31755,
+   "chars_out": 163330,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 678241,
@@ -81,20 +81,21 @@
     "mcp__github__list_pull_requests": 2,
     "mcp__github__create_pull_request": 12,
     "mcp__github__get_job_logs": 3,
-    "mcp__github__pull_request_read": 14,
+    "mcp__github__pull_request_read": 21,
     "mcp__github__update_pull_request": 13,
-    "mcp__github__merge_pull_request": 11,
+    "mcp__github__merge_pull_request": 12,
     "mcp__github__actions_get": 2,
     "mcp__github__get_check_run": 1,
     "mcp__github__subscribe_pr_activity": 4,
-    "mcp__github__unsubscribe_pr_activity": 3,
-    "mcp__github__add_issue_comment": 1
+    "mcp__github__unsubscribe_pr_activity": 4,
+    "mcp__github__add_issue_comment": 1,
+    "mcp__github__add_reply_to_pull_request_comment": 3
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 39,
-   "chars_in": 4146,
-   "chars_out": 35201,
+   "llamadas": 40,
+   "chars_in": 4192,
+   "chars_out": 36888,
    "errores": 0,
    "archivos_citados": 9,
    "chars_citados": 1069943,
@@ -102,7 +103,7 @@
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 8,
     "mcp__Claude_Code_Remote__send_later": 12,
     "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 8,
-    "mcp__Claude_Code_Remote__delete_trigger": 10,
+    "mcp__Claude_Code_Remote__delete_trigger": 11,
     "mcp__Claude_Code_Remote__list_triggers": 1
    }
   },
