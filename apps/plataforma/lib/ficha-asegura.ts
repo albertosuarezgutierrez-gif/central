@@ -156,6 +156,12 @@ export type IntervinienteFicha = {
   personaClave: string | null
   esTomador: boolean
   origen: string
+  /**
+   * Si el teléfono/correo es de la propia fila o asegura lo ha rellenado con el de su ficha.
+   * `null` = asegura no lo manda (versión anterior): no se sabe de quién es el dato.
+   */
+  telefonoPropio: boolean | null
+  emailPropio: boolean | null
 }
 
 export type Ficha = {
@@ -214,6 +220,11 @@ export type Ficha = {
    * (o asegura no lo manda); `[]` = se miró y no hay ninguna todavía.
    */
   historial: AnotacionHistorial[] | null
+  /**
+   * Las notas de la ficha: fechadas (historial `nota`) y la suelta del CRM anterior.
+   * `null` = asegura no las manda (versión anterior) o no se pudieron leer — nunca «sin notas».
+   */
+  notas: NotasFicha | null
   /** Presupuestos recientes sin póliza. `null` = no se pudo contar, NO es 0. */
   cotizacionesVivas: number | null
   /**
@@ -579,6 +590,8 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
       personaClave: cadena(i.personaClave),
       esTomador: i.esTomador === true,
       origen: cadena(i.origen) ?? 'sin_informar',
+      telefonoPropio: typeof i.telefonoPropio === 'boolean' ? i.telefonoPropio : null,
+      emailPropio: typeof i.emailPropio === 'boolean' ? i.emailPropio : null,
     })
   }
   return out
@@ -602,6 +615,25 @@ export function leerEstadoCliente(v: unknown): EstadoClienteDerivado | null {
 }
 
 export const MAX_HISTORIAL = 50
+
+export type NotasFicha = { lista: AnotacionHistorial[]; antigua: string | null }
+
+/** Las notas, o `null` si no llegan con la forma esperada. Una fila rara se salta. */
+export function leerNotas(v: unknown): NotasFicha | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (!Array.isArray(o.lista)) return null
+  const lista: AnotacionHistorial[] = []
+  for (const fila of o.lista) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const h = fila as Record<string, unknown>
+    const id = cadena(h.id)
+    const fecha = cadena(h.fecha)
+    if (id === null || fecha === null || typeof h.texto !== 'string') continue
+    lista.push({ id, tipo: 'nota', texto: h.texto, fecha })
+  }
+  return { lista, antigua: cadena(o.antigua) }
+}
 
 /**
  * El historial, o `null` si no llega o no es lista. Una fila rara se salta
@@ -730,6 +762,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       relaciones: leerRelaciones(f.relaciones),
       estado: leerEstadoCliente(f.estado),
       historial: leerHistorial(f.historial),
+      notas: leerNotas(f.notas),
       cotizacionesVivas: entero(f.cotizacionesVivas),
       declaradas: leerDeclaradas(f.declaradas),
       carnets: leerCarnets(f.carnets),

@@ -182,12 +182,13 @@ test('🚨 la navegacion sigue siendo de ENLACES, con `aria-current`', () => {
   assert.doesNotMatch(NAV, /role="tab"|aria-selected/, 'esto no es un tablist')
 })
 
-test('🚨 el titular del portal va en la MISMA serif que la web publica', () => {
+test('🚨 el titular del portal va en la MISMA letra que la web publica', () => {
   // Alberto, 07/09/2026: «el diseño no es muy parecido a la web». La paleta ya
   // era la misma (las dos apps inyectan MARCA_ASEGURA); lo que no lo era es el
-  // titular. Si alguien quita Fraunces, el portal vuelve a no parecerse a
+  // titular. Desde el 24/09/2026 esa letra es Quicksand (antes Fraunces). Si
+  // alguien la quita, el portal vuelve a no parecerse a
   // `grupoasegura.es` y nada falla.
-  assert.match(LAYOUT, /Fraunces/, 'la serif de titulares se pide en el layout de la app')
+  assert.match(LAYOUT, /family=Quicksand:/, 'la letra de titulares se pide en el layout de la app')
   assert.match(LAYOUT, /--display:/, 'y se expone como token, no cableada en el CSS')
   const i = CSS.indexOf('h1 {')
   assert.notEqual(i, -1)
@@ -201,9 +202,10 @@ test('🚨 el titular sube a 32px: a 24 una serif no se distingue', () => {
   const i = CSS.indexOf('h1 {')
   const regla = CSS.slice(i, CSS.indexOf('}', i))
   assert.match(regla, /font-size:\s*32px/, 'el titular de página va a 32px')
-  // Un peso que no se descarga lo SINTETIZA el navegador, y una serif
-  // sintetizada se ve emborronada. Solo se pide el 500.
-  assert.match(regla, /font-weight:\s*500/, 'solo se pide el corte 500, así que solo se usa el 500')
+  // Un peso que no se descarga lo SINTETIZA el navegador. Quicksand se pide
+  // como variable 300..700, y el titular va a 600.
+  assert.match(regla, /font-weight:\s*600/, 'el titular va a 600')
+  assert.match(LAYOUT, /Quicksand:wght@300\.\.700/, 'y el 600 está dentro del rango pedido')
 })
 
 test('🚨 las baldosas NO se pintan sobre las pólizas de otro', () => {
@@ -272,7 +274,7 @@ test('🚨 la rejilla de tarjetas usa auto-FIT: auto-fill deja la fila a medias'
   assert.doesNotMatch(regla, /auto-fill/, 'auto-fill crea pistas que nadie va a llenar')
 })
 
-test('🚨 el h2 de sección va en Fraunces, no en la fuente de cuerpo', () => {
+test('🚨 el h2 de sección va en la letra de titulares, no en la de cuerpo', () => {
   // Alberto, 07/09/2026: «el diseño no es acorde a las páginas de los seguros»,
   // comparando con `grupoasegura.es`. Medido: la paleta y las tres sombras son
   // IDÉNTICAS en las dos apps —las dos inyectan `MARCA_ASEGURA`—, así que la

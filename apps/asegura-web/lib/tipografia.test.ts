@@ -1,7 +1,8 @@
 // Guardián de la voz tipográfica de la portada.
 //
-// La web usa DOS familias y un solo corte de cada una: Inter para el cuerpo y
-// Fraunces —redonda, peso 500— para los titulares. Hasta el 07/09/2026 los
+// La web usa DOS familias (24/09/2026): Nunito Sans para el cuerpo y Quicksand
+// —la del logotipo— para titulares, menú y botones. Antes eran Inter y
+// Fraunces; lo que sigue sobre la itálica se escribió con Fraunces y vale igual. Hasta el 07/09/2026 los
 // titulares mezclaban además la ITÁLICA de Fraunces en `.destaca`, y Alberto
 // la retiró mirando el h1 de la portada: la itálica de esa familia cambia
 // tanto de forma que «Sube tus seguros. / Y contrólalos.» se leía como dos
@@ -27,12 +28,14 @@ const css = leer('app', 'globals.css')
 const layout = leer('app', 'layout.tsx')
 const pagina = leer('app', 'page.tsx')
 
-/** El `family=…` de Fraunces tal cual lo pide el layout. */
-const peticionFraunces = /family=Fraunces:([^&']+)/.exec(layout)?.[1] ?? ''
+/** La petición de Google Fonts del layout (las dos familias van en una). */
+const peticion = /https:\/\/fonts\.googleapis\.com\/css2\?[^'"]+/.exec(layout)?.[0] ?? ''
 
-test('la petición de Fraunces sigue viva y con su eje óptico', () => {
-  assert.notEqual(peticionFraunces, '', 'el layout dejó de pedir Fraunces: los titulares caerían a la serif del sistema')
-  assert.match(peticionFraunces, /opsz/, 'sin el eje opsz Google sirve el corte de 9 pt y el h1 de 67 px se ve endeble')
+test('el layout pide las dos familias del sitio', () => {
+  assert.match(peticion, /family=Quicksand:/, 'el layout dejó de pedir Quicksand: titulares y botones caerían a la fuente del sistema')
+  assert.match(peticion, /family=Nunito\+Sans:/, 'el layout dejó de pedir Nunito Sans: el cuerpo caería a la fuente del sistema')
+  assert.match(css, /--display:\s*'Quicksand'/, '--display ya no apunta a Quicksand')
+  assert.match(css, /--sans:\s*'Nunito Sans'/, '--sans ya no apunta a Nunito Sans')
 })
 
 test('itálica declarada y itálica pedida van de la mano', () => {
@@ -43,13 +46,13 @@ test('itálica declarada y itálica pedida van de la mano', () => {
   // activo (se vio fallar así al escribir este cepo).
   const cssActivo = css.replace(/\/\*[\s\S]*?\*\//g, '')
   const declaraItalica = /font-style:\s*italic/.test(cssActivo)
-  const pideItalica = /\bital\b/.test(peticionFraunces)
+  const pideItalica = /\bital\b/.test(peticion)
   assert.equal(
     declaraItalica,
     pideItalica,
     declaraItalica
-      ? 'globals.css declara font-style: italic pero layout.tsx no pide el eje ital de Fraunces: el navegador sintetiza la inclinación deformando la redonda'
-      : 'layout.tsx pide el eje ital de Fraunces y ya no lo usa nadie: es un archivo de fuente entero descargado para nada',
+      ? 'globals.css declara font-style: italic pero layout.tsx no pide el eje ital: el navegador sintetiza la inclinación deformando la redonda'
+      : 'layout.tsx pide el eje ital y ya no lo usa nadie: es un archivo de fuente entero descargado para nada',
   )
 })
 

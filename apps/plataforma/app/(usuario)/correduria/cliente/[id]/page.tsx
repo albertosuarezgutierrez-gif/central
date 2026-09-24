@@ -118,7 +118,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       />
 
       {tab === 'resumen' && (
-        <TabResumen accion={accion} resumen={resumen} porClase={porClase} intervinientes={ficha.intervinientes} clienteId={ficha.id} declaradas={ficha.declaradas} />
+        <TabResumen accion={accion} resumen={resumen} porClase={porClase} intervinientes={ficha.intervinientes} clienteId={ficha.id} declaradas={ficha.declaradas} notas={ficha.notas} />
       )}
 
       {tab === 'polizas' && <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} />}

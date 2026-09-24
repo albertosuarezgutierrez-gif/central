@@ -20,26 +20,23 @@ import Whatsapp from '@/components/Whatsapp'
 import './globals.css'
 
 /**
- * Serif de titulares.
+ * Tipografía del sitio (24/09/2026, decisión de Alberto).
  *
- * Es la fuente display de la landing de la correduría (medida de su
- * `layout.tsx`: `Fraunces`, normal + itálica). Se pide aquí y no en
- * `@central/brand` porque es una decisión de ESTA superficie: el portal del
- * cliente la descarta a propósito, y cargarla allí sería un segundo webfont en
- * el móvil de alguien que solo viene a ver su póliza.
+ * Titulares, menú y botones en **Quicksand**, la familia del logotipo «Grupo
+ * ASegura» (`public/brand/logotipo-asegura.svg`), para que la web hable con la
+ * letra del monograma. El texto corrido en **Nunito Sans**: redondeada como
+ * ella pero hecha para leer párrafos, formularios y letra legal en el móvil.
+ * Sustituye a Fraunces + Inter.
  *
- * `opsz` es el eje óptico de Fraunces: sin declararlo, Google sirve el corte
- * de 9 pt y a 67 px se ve endeble.
+ * Una sola petición para las dos familias, y SOLO esta: el Inter de
+ * `@central/brand` ya no se pide aquí (sería un webfont descargado para nada).
+ * El portal y los correos siguen con Inter; esto es de esta superficie.
  *
- * 🚨 Se pide SOLO la redonda: el eje `ital` se retiró el 07/09/2026 al quitar
- * la itálica de `.destaca` (ver `globals.css`), y con él un archivo de fuente
- * entero que servía a un `<span>` del h1 y a una cita. Consecuencia que no
- * falla en ningún build: un `font-style: italic` nuevo sobre `var(--display)`
- * ya no tiene corte que usar y el navegador lo SINTETIZA inclinando la
- * redonda. Lo vigila `lib/tipografia.test.ts`.
+ * 🚨 Sin itálica: no se pide el eje `ital`, así que un `font-style: italic`
+ * sobre estas familias saldría sintetizado. Lo vigila `lib/tipografia.test.ts`.
  */
-const FRAUNCES =
-  'https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&display=swap'
+const TIPOGRAFIA =
+  'https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&family=Nunito+Sans:wght@400;600;700;800&display=swap'
 
 /**
  * Hoja de tokens de la marca.
@@ -115,8 +112,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link rel="stylesheet" href={MARCA_ASEGURA.tipografia.googleFontsHref} />
-        <link rel="stylesheet" href={FRAUNCES} />
+        <link rel="stylesheet" href={TIPOGRAFIA} />
         {/* Tokens de marca. Van en el head para que no haya un parpadeo con los
             colores por defecto antes de que cargue el CSS de la app. */}
         <style dangerouslySetInnerHTML={{ __html: CSS_MARCA }} />

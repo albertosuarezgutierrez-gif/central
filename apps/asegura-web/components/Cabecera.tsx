@@ -57,7 +57,8 @@ export default function Cabecera({ marca }: { marca: string }) {
               <span className="marca-tile" aria-hidden="true">
                 <span className="marca-mono" />
               </span>
-              {marca}
+              <span className="marca-palabra" aria-hidden="true" />
+              <span className="sr-marca">{marca}</span>
             </Link>
 
             <div className="hdr-dcha">

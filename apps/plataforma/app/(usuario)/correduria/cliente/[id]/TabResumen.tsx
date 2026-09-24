@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import type { ResumenFicha, SiguienteAccion } from '@central/module-seguros'
-import { urlAutoNuevo, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha } from '@/lib/ficha-asegura'
+import { urlAutoNuevo, type IntervinienteFicha, type NotasFicha, type PolizaDeclaradaFicha, type PolizaFicha } from '@/lib/ficha-asegura'
 import { BtnLink } from '@/components/ui'
+import NotasCliente from './NotasCliente'
 import OportunidadesCliente from './OportunidadesCliente'
 import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
 
@@ -14,13 +15,15 @@ import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
  * fallo más caro del repo. Aquí, cuando un dato no se ha podido leer se dice
  * —«no se han podido leer los siniestros»— en vez de contarlo como cero.
  */
-export default function TabResumen({ accion, resumen, porClase, intervinientes, clienteId, declaradas }: {
+export default function TabResumen({ accion, resumen, porClase, intervinientes, clienteId, declaradas, notas }: {
   accion: SiguienteAccion
   resumen: ResumenFicha
   porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]>
   intervinientes: IntervinienteFicha[] | null
   clienteId: string
   declaradas: PolizaDeclaradaFicha[] | null
+  /** `undefined` = el llamante no las pasa; `null` = no se pudieron leer. */
+  notas?: NotasFicha | null
 }) {
   return (
     <>
@@ -34,6 +37,12 @@ export default function TabResumen({ accion, resumen, porClase, intervinientes, 
           polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
         />
       </Tarjeta>
+
+      {notas !== undefined && (
+        <Tarjeta titulo="📝 Notas">
+          <NotasCliente clienteId={clienteId} notas={notas} />
+        </Tarjeta>
+      )}
 
       <Tarjeta titulo="🔔 Pide acción">
         <PideAccion resumen={resumen} vivas={porClase.viva} clienteId={clienteId} />

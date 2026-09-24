@@ -25,6 +25,8 @@ const INYECTADOS_EN_RUNTIME: Record<string, string> = {
   '--brand': 'lo emite @central/brand (emitirRootCss) según la marca del cliente',
   '--accent': 'ídem: color decorativo de la marca del cliente',
   '--font-inter': 'lo inyecta next/font en el layout',
+  '--font-correduria-sans': 'lo inyecta next/font en el layout de /correduria',
+  '--font-correduria-display': 'lo inyecta next/font en el layout de /correduria',
 }
 
 function archivos(dir: string): string[] {

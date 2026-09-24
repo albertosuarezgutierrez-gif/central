@@ -47,6 +47,13 @@
   propio, cookie `mariscos_session`). Ver `apps/mariscos/CLAUDE.md`. **Pendiente para darla por viva:** proyecto
   Vercel, ejecutar su SQL en Supabase (preview→prod), sembrar cuenta real de Mariscos González.
 - **`apps/asegura`** — **Grupo ASegura**: correduría de seguros (nombre comercial de Alberto).
+  🔤 **Tipografía de marca (24/09/2026, regla de Alberto para TODA superficie de la correduría — web,
+  portal de clientes y cualquier pantalla, documento o pieza nueva):** titulares, menús y botones en
+  **Quicksand** (600-700), cuerpo en **Nunito Sans**, sin cursivas (el acento es el azul de marca).
+  Logotipo = «Grupo ASegura» en trazo fino con el monograma «AS» oficial dentro:
+  `public/brand/logotipo-asegura.svg` (`mask` + `currentColor`). Sustituye a Fraunces + Inter; `@central/brand`
+  sigue en Inter solo para correos. En plataforma la aplica el layout de `/correduria` (next/font, acotado a `.correduria`: el resto del cuadro de mando sigue en Inter). Lo vigilan `apps/asegura-web/lib/tipografia.test.ts` y
+  `test/regression-portal-cartera-agrupada.test.ts`.
   ✍️ **Se escribe «Grupo ASegura», con A y S mayúsculas** (04/09/2026): el monograma «AS» del logo
   ES el nombre (A de Alberto, S de Suárez), así que escribirlo con la ese minúscula no es una
   errata de estilo: se come la marca. Es el valor de `seguros.corredurias.nombre` en BD y lo protege

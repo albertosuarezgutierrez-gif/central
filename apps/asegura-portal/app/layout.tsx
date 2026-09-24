@@ -19,34 +19,29 @@ import { WhatsappFlotante } from './WhatsappFlotante'
 const MARCA = MARCA_ASEGURA
 
 /**
- * La serif de TITULARES, la misma que la web pública.
+ * Tipografía del portal: la MISMA que la web pública (24/09/2026).
  *
- * ── Por qué se añade (07/09/2026) ───────────────────────────────────────────
- * Alberto, mirando su portal: «el diseño no es muy parecido a la web… se puede
- * hacer mejor y más acorde». Y la distancia era exactamente esta: la paleta ya
- * era la MISMA (las dos apps inyectan `MARCA_ASEGURA`), pero la web pone su
- * titular en Fraunces a 41-67 px y el portal lo ponía a 24 px en Inter. Quien
- * llega desde `grupoasegura.es` no reconocía el sitio.
+ * Alberto pidió que la intranet de clientes siguiera a `grupoasegura.es` al
+ * pasar de Fraunces + Inter a **Quicksand** (titulares, la familia del
+ * logotipo) + **Nunito Sans** (cuerpo). Es la continuación del criterio del
+ * 07/09/2026 («el diseño no es muy parecido a la web»): quien llega desde la
+ * web tiene que reconocer el sitio, y eso lo hace la letra antes que el color.
  *
- * ⚠️ Esto REVISA —no deroga— la nota de `packages/brand/src/marcas/asegura.ts`,
- * que dejó Fraunces fuera porque «en el portal el titular más grande es un h1
- * de 20 px, y a ese tamaño no aporta carácter». El argumento era bueno para
- * ese tamaño; la respuesta no es solo cargar la fuente, es que el titular suba
- * a 32 px. A 24 px la serif efectivamente no se distingue.
+ * Una sola petición para las dos familias, y SUSTITUYE a Inter + Fraunces:
+ * sigue siendo el mismo número de hojas de fuente que antes en el móvil de
+ * quien abre el portal desde un correo, no una más. `display=swap` y fuentes de
+ * sistema de reserva: si tarda o falla, se lee igual.
  *
- * 🚨 Y el coste sigue sin estar medido: el argumento en contra era «un segundo
- * webfont en el móvil de alguien que abre el portal después de un correo», y no
- * se ha podido pesar desde este entorno. Por eso se pide UN solo peso (500),
- * con `display=swap` y una serif de sistema de reserva: si tarda o falla, el
- * titular se ve en Georgia y no se rompe nada. Si algún día se mide y pesa de
- * más, se quita de aquí y solo de aquí.
+ * Solo esta app y la web: `@central/brand` sigue declarando Inter para los
+ * correos y el resto de superficies, por eso `--sans` se pisa aquí.
  *
- * `opsz` es el eje óptico de Fraunces: sin declararlo, Google sirve el corte de
- * 9 pt y a 32 px se ve endeble.
+ * 🚨 Sin itálica: Quicksand no la tiene. Por eso `h1 em` ya no inclina (como
+ * `.destaca` en la web): el acento lo lleva el color.
  */
-const FRAUNCES =
-  'https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&display=swap'
-const DISPLAY = "'Fraunces', ui-serif, Georgia, 'Times New Roman', serif"
+const TIPOGRAFIA =
+  'https://fonts.googleapis.com/css2?family=Quicksand:wght@300..700&family=Nunito+Sans:wght@400;600;700;800&display=swap'
+const DISPLAY = "'Quicksand', ui-rounded, system-ui, sans-serif"
+const SANS = "'Nunito Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
 // 🚨 `noindex` para TODO el portal (23/09/2026). Search Console lo enseñaba:
 // `clientes.grupoasegura.es` sumaba 72 impresiones en 28 días para «grupo
@@ -66,17 +61,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             abajo o se volviera `defer`, quien tiene el tema oscuro vería un
             destello blanco a pantalla completa en cada carga. */}
         <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
-        {MARCA.tipografia.googleFontsHref && (
-          <>
-            <link rel="preconnect" href="https://fonts.googleapis.com" />
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-            {/* Por <link> y NO con `next/font/google`: el build no tiene red y
-                `next/font` descarga la fuente en tiempo de build. */}
-            {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-            <link rel="stylesheet" href={MARCA.tipografia.googleFontsHref} />
-          </>
-        )}
-        <link rel="stylesheet" href={FRAUNCES} />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Por <link> y NO con `next/font/google`: el build no tiene red y
+            `next/font` descarga la fuente en tiempo de build. */}
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link rel="stylesheet" href={TIPOGRAFIA} />
         {/* Tema de marca. Va SIN capa a propósito: los valores por defecto de
             `globals.css` viven en `@layer portal-base`, y lo no-capado gana
             siempre a lo capado — así el override no depende del orden en que
@@ -86,7 +76,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             Inter para todo y esa decisión la comparten otras superficies. Cuál
             es la fuente del TITULAR es una decisión de ESTA app, igual que
             `asegura-web` pide Fraunces en su propio layout y no en el paquete. */}
-        <style dangerouslySetInnerHTML={{ __html: `:root{--display:${DISPLAY}}` }} />
+        <style dangerouslySetInnerHTML={{ __html: `:root{--display:${DISPLAY};--sans:${SANS}}` }} />
       </head>
       <body>
         {/* Un portal que no dice de quién es parece de nadie — y el asegurado
@@ -105,7 +95,13 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <span className="marca-escudo">
             <MarcaAsegura alto={15} />
           </span>
-          <span className="marca-nombre">{MARCA.logos.wordmark}</span>
+          <span className="marca-nombre">
+            {/* Logotipo en trazo fino, con el «AS» oficial dentro (el mismo
+                fichero que la web). El nombre en texto sigue ahí para el
+                lector de pantalla. */}
+            <span className="marca-palabra" aria-hidden="true" />
+            <span className="sr-marca">{MARCA.logos.wordmark}</span>
+          </span>
           <span className="marca-coletilla">Correduría de seguros</span>
           {/* Las acciones de la cabecera van sueltas y no en un menú:
               esconder cosas detrás de un botón cuesta un toque más, un
