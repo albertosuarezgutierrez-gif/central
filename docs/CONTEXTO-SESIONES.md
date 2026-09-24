@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 📄 **La carta y la anulación firmadas van a la compañía en PDF + el original en texto.** Un `.txt` suelto
+arriesgaba que la compañía no lo archivara: ahora sale un PDF (`apps/asegura/lib/documento-firmado-pdf.ts`, pdf-lib) con la
+carta y debajo el justificante (firmante, método OTP, hora de Madrid, huella SHA-256) y ADEMÁS el `.txt`, que es el que
+respalda la huella (el PDF cambia de bytes; el texto no). Sin evidencia o si el PDF falla, sale solo el `.txt`: la
+presentación nunca bloquea un envío. Cepo visto fallar. Pendiente de Alberto: preguntar a la primera compañía si lo acepta.
+
 **(24/09/2026)** 🤝 **Carta de nombramiento de mediador: con DNI y por la cola de aprobaciones.** Alberto: «es necesario dni
 cliente». La carta lleva el DNI/NIF del tomador (validado); sin él en la ficha no se ofrece firmarla; `carta_texto` cifrado.
 La firmada sale como `enviar_correo_compania` (`aprobacion.carta_mediador_id`, CHECK anulación O carta; migración

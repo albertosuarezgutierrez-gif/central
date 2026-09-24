@@ -144,7 +144,7 @@ export function borradorAnulacionCompania(e: EntradaAnulacionCompania): Borrador
     `En nombre de nuestro cliente ${e.tomador}, tomador de la póliza nº ${e.numeroPoliza}, les trasladamos ${que}.`,
     '',
     `Adjuntamos la solicitud firmada por el tomador el ${fechaEs(e.firmadaEl)} con firma electrónica avanzada ` +
-      `(huella SHA-256 del documento: ${e.docHash}).`,
+      `(huella SHA-256 del texto firmado: ${e.docHash}; la respalda el fichero de texto adjunto).`,
     '',
     'Les rogamos que confirmen la recepción y la fecha en que queda anulada.',
     '',
@@ -191,7 +191,7 @@ export function borradorCartaMediadorCompania(e: EntradaCartaMediadorCompania): 
     `Nuestro cliente ${e.tomador}, tomador de la póliza nº ${e.numeroPoliza}, nos ha designado mediador de dicha póliza.`,
     '',
     `Adjuntamos la carta de nombramiento firmada por el tomador el ${fechaEs(e.firmadaEl)} con firma electrónica ` +
-      `(huella SHA-256 del documento: ${e.docHash}). El nombramiento no modifica el contrato.`,
+      `(huella SHA-256 del texto firmado: ${e.docHash}; la respalda el fichero de texto adjunto). El nombramiento no modifica el contrato.`,
     '',
     'Les rogamos que lo apliquen y nos confirmen la fecha desde la que figuramos como mediador.',
     '',
