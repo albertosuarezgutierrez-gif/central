@@ -408,6 +408,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) ASegura OS: la oportunidad de venta se cierra sola cuando su póliza entra por CIMA
+- `ganarOportunidadesEmitidas()` (`apps/asegura/lib/sustituciones-auto.ts`), dentro de la pasada de `correduria-eventos`: oportunidad abierta (no retención, no volcado) + póliza viva y vigente del MISMO cliente con la MISMA matrícula, llegada después → `ganada` + `poliza_ganada_id`, tareas cerradas, historial. Con dos candidatas o sin matrícula no se cierra sola (hogar queda manual).
+- Medido: `seguros.presupuesto` tiene **0 filas**; lo que Alberto usa de verdad son `oportunidades` con las ofertas de fuera en `info_riesgo` (2 abiertas hoy). Por eso se cierra ahí.
+- `correduria-renovaciones` falló el 23/09 por «red»: asegura en frío tardó >8 s. El cron pide ahora con 40 s (la pantalla sigue en 8 s).
+- Guardián `regression-cartera-viva`: un `import_ref is null` de OPORTUNIDAD se permite solo con el marcador `-- import_ref de OPORTUNIDAD` en la línea.
+
 ## (24/09/2026) blog ASegura: «Publicar» fallaba porque el cepo ponía rojo CADA artículo del agente
 El test «ningún tema de la cola repite un artículo publicado» (#2505) chocaba con el diseño: el agente solo escribe
 `articulos.ts` y deja el tema en `TEMAS`, así que su PR siempre salía con Tests en rojo (#2966, 9 días atascado; la

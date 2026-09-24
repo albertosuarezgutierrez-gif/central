@@ -6,10 +6,11 @@
 // Solo toca NUESTROS campos (`sustituida_at`, `poliza_origen_id`): CIMA no los escribe nunca, así
 // que la próxima ingesta no los pisa. No se comunica nada a nadie.
 
-import { detectarSustituciones, POLIZA_ESTADOS_VIGENTES, solicitudPorSustitucion, sqlCarteraViva, validarSolicitudAnulacion, type RiesgoComun } from '@central/module-seguros'
+import { detectarSustituciones, ORIGEN_RETENCION, POLIZA_ESTADOS_VIGENTES, solicitudPorSustitucion, sqlCarteraViva, validarSolicitudAnulacion, type RiesgoComun } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import type { prismaAsegura } from './asegura-db'
+import { anotarCambio } from './auditoria'
 
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
 
@@ -156,4 +157,59 @@ export async function abrirAnulacionesPorSustitucion(tx: Tx, correduriaId: strin
     abiertas++
   }
   return { abiertas, sinDatos }
+}
+
+/**
+ * Cierra como `ganada` la oportunidad de venta (lead o presupuesto de otra compañía que Alberto dio de
+ * alta) cuando su póliza YA ha entrado en cartera: la del mismo cliente y la misma matrícula, viva,
+ * llegada después de abrirse la oportunidad y que no es la póliza de la competencia que se quería
+ * sustituir. Solo si hay UNA candidata: con dos, no se elige (lo decide Alberto).
+ *
+ * Sin matrícula no se cierra sola: casar por ramo o por compañía confundiría dos pólizas de hogar del
+ * mismo cliente. Las de retención tienen su propio cierre (`cerrarRetencionesResueltas`), y los leads
+ * del volcado (`import_ref`) no se tocan: su fecha de alta es la de la importación, no la de la venta.
+ */
+export async function ganarOportunidadesEmitidas(tx: Tx, correduriaId: string): Promise<number> {
+  const filas = await tx.$queryRaw<{ id: string; estado: string; poliza: string; aseguradora: string | null; numero: string | null }[]>`
+    with op as (
+      select o.id, o.cliente_id, o.created_at, o.estado::text as estado,
+             upper(regexp_replace(coalesce(o.info_riesgo->>'matricula', ''), '[^A-Za-z0-9]', '', 'g')) as mat,
+             ltrim(upper(regexp_replace(coalesce(o.poliza_competencia->>'nPoliza', ''), '[^A-Za-z0-9]', '', 'g')), '0') as num_comp
+      from oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid and o.cliente_id is not null
+        and o.import_ref is null -- import_ref de OPORTUNIDAD (lead del volcado), no de póliza
+        and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+        and coalesce(o.info_riesgo->>'origen', '') <> ${ORIGEN_RETENCION}),
+    cand as (
+      select op.id, op.estado, p.id as poliza, p.aseguradora, p.numero_poliza,
+             count(*) over (partition by op.id) as n
+      from op
+        join polizas p on p.correduria_id = ${correduriaId}::uuid and p.cliente_id = op.cliente_id
+          and p.merged_into_poliza_id is null and ${Prisma.raw(sqlCarteraViva('p'))}
+          and p.estado::text = any(${[...POLIZA_ESTADOS_VIGENTES]}::text[])
+          and p.created_at >= (op.created_at at time zone 'UTC') - interval '1 day'
+          and upper(regexp_replace(coalesce(p.datos_especificos->>'matricula', ''), '[^A-Za-z0-9]', '', 'g')) = op.mat
+          and ltrim(upper(regexp_replace(coalesce(p.numero_poliza, ''), '[^A-Za-z0-9]', '', 'g')), '0') <> op.num_comp
+      where op.mat <> ''
+        and not exists (select 1 from oportunidades g where g.poliza_ganada_id = p.id))
+    select id::text as id, estado, poliza::text as poliza, aseguradora, numero_poliza as numero from cand where n = 1`
+  for (const f of filas) {
+    const n = await tx.$executeRaw`
+      update oportunidades set estado = 'ganada', cerrada_at = now(), updated_at = now(),
+             poliza_ganada_id = ${f.poliza}::uuid,
+             aseguradora_ganadora = coalesce(aseguradora_ganadora, ${f.aseguradora}),
+             numero_poliza = coalesce(numero_poliza, ${f.numero})
+      where id = ${f.id}::uuid and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')`
+    if (n === 0) continue
+    await tx.$executeRaw`
+      update gestiones set estado = 'cerrada', updated_at = now(),
+             observaciones = coalesce(observaciones, '') || ${'\n— Cerrada sola: la póliza ya ha entrado en cartera.'}
+      where oportunidad_id = ${f.id}::uuid and correduria_id = ${correduriaId}::uuid and estado <> 'cerrada'`
+    await tx.$executeRaw`
+      insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+      values (${correduriaId}::uuid, ${f.id}::uuid, 'emitida_en_cartera', cast(${f.estado} as estado_comercial), 'ganada',
+              ${JSON.stringify({ polizaGanadaId: f.poliza, via: 'matricula' })}::jsonb, 'sistema:cartera')`
+    anotarCambio({ entidad: 'oportunidad', id: f.id, campo: 'estado', antes: f.estado, despues: 'ganada' })
+  }
+  return filas.length
 }

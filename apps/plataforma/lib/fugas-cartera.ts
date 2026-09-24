@@ -47,6 +47,8 @@ export type Deteccion = {
   presupuestosEmitidos: number | null
   /** Expedientes de anulación por sustitución abiertos solos (esperan la firma del cliente). */
   anulacionesPorSustitucion: number | null
+  /** Oportunidades cerradas como ganadas solas (su póliza ya entró en cartera); `null` = asegura no lo manda. */
+  oportunidadesGanadas: number | null
 }
 
 export type Lectura<T> = { estado: 'ok'; dato: T } | { estado: 'sin_datos'; causa: string }
@@ -133,6 +135,7 @@ export async function detectarEventos(): Promise<Lectura<Deteccion>> {
       sustitucionesFallidas: o.sustitucionesFallidas === true,
       presupuestosEmitidos: numONull(o.presupuestosEmitidos),
       anulacionesPorSustitucion: numONull(o.anulacionesPorSustitucion),
+      oportunidadesGanadas: numONull(o.oportunidadesGanadas),
     },
   }
 }

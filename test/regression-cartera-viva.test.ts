@@ -61,6 +61,9 @@ test('ningún SQL crudo filtra por `import_ref is null` a secas', () => {
       if (!/import_ref\s+is\s+null/i.test(linea)) continue
       // Vale si en la MISMA línea se nombra también el hash de EIAC.
       if (/eiac_xml_hash/i.test(linea)) continue
+      // Vale si el `import_ref` es el de una OPORTUNIDAD (lead del volcado), no el de una póliza: la
+      // regla de cartera viva es de pólizas. Hay que decirlo en la misma línea, para que se revise.
+      if (/-- import_ref de OPORTUNIDAD/.test(linea)) continue
       // Vale si es un comentario que explica la regla, no un filtro.
       if (/^\s*(\/\/|\*|--)/.test(linea)) continue
       malos.push(`${rel}: ${linea.trim()}`)

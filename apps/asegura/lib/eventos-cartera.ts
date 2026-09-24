@@ -31,7 +31,7 @@ import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { proponerReciboDevuelto } from './aprobaciones'
 import { confirmarAnulaciones } from './anulaciones'
-import { abrirAnulacionesPorSustitucion, enlazarSustituciones, liberarPresupuestosEmitidos } from './sustituciones-auto'
+import { abrirAnulacionesPorSustitucion, enlazarSustituciones, ganarOportunidadesEmitidas, liberarPresupuestosEmitidos } from './sustituciones-auto'
 
 type Consultor = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw'>
 
@@ -105,6 +105,8 @@ export type ResultadoDeteccion = {
   presupuestosEmitidos: number
   /** Expedientes de anulación abiertos solos por sustitución (falta la firma del cliente). */
   anulacionesPorSustitucion: number
+  /** Oportunidades de venta cerradas como ganadas porque su póliza ya entró en cartera. */
+  oportunidadesGanadas: number
 }
 
 /** La foto actual parece rota (ha desaparecido de golpe una parte grande de la cartera). */
@@ -123,6 +125,7 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     await tx.$executeRaw`savepoint sustitucion`
     let sust = { enlazadas: 0, ambiguas: 0, duplicidades: 0 }
     let presupuestosEmitidos = 0
+    let oportunidadesGanadas = 0
     let anulacionesAbiertas = { abiertas: 0, sinDatos: 0 }
     let sustitucionesFallidas = false
     try {
@@ -131,6 +134,7 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       // presupuesto, y pedir la firma de las que se emitieron fuera de él.
       presupuestosEmitidos = await liberarPresupuestosEmitidos(tx, correduriaId)
       anulacionesAbiertas = await abrirAnulacionesPorSustitucion(tx, correduriaId, hoyMadrid())
+      oportunidadesGanadas = await ganarOportunidadesEmitidas(tx, correduriaId)
       await tx.$executeRaw`release savepoint sustitucion`
     } catch (err) {
       await tx.$executeRaw`rollback to savepoint sustitucion`
@@ -228,6 +232,7 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       sustitucionesFallidas,
       presupuestosEmitidos,
       anulacionesPorSustitucion: anulacionesAbiertas.abiertas,
+      oportunidadesGanadas,
     }
   }, { timeout: 30_000 }).then(async (r) => {
     const { retenciones, ...resto } = r
