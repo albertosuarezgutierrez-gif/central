@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T18:57:22Z",
-  "sha": "8287709ae6aea4fec960a39d05dc23b0f7919069",
+  "generadoEn": "2026-09-24T19:38:33Z",
+  "sha": "923641db6b20d81f01f950b14cb740e0d3fdc285",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -71770,7 +71770,7 @@
           "nombre": "OportunidadesCliente",
           "kind": "function",
           "exportada": true,
-          "params": "{ clienteId, polizas }: { clienteId: string; polizas: Poliza[] }",
+          "params": "{ clienteId, telefono = null, polizas }: { clienteId: string; telefono?: string | null; polizas: Poliza[] }",
           "retorno": null,
           "linea": 77
         },
@@ -71786,7 +71786,7 @@
           "nombre": "FilaAbierta",
           "kind": "function",
           "exportada": false,
-          "params": "{ o, clienteId, polizas, onHecho }: { o: OportunidadDeCliente clienteId: string polizas: Poliza[] onHecho: (t: { ok: boolean; texto: string }) => void }",
+          "params": "{ o, clienteId, telefono, polizas, onHecho }: { o: OportunidadDeCliente clienteId: string telefono: string | null polizas: Poliza[] onHecho: (t: { ok: boolean; texto: string }) => void }",
           "retorno": null,
           "linea": 175
         },
@@ -71796,7 +71796,7 @@
           "exportada": false,
           "params": "{ o }: { o: OportunidadDeCliente }",
           "retorno": null,
-          "linea": 272
+          "linea": 273
         },
         {
           "nombre": "FormAlta",
@@ -71804,7 +71804,7 @@
           "exportada": false,
           "params": "{ clienteId, onCancelar, onHecho }: { clienteId: string onCancelar: () => void onHecho: (t: { ok: boolean; texto: string; id?: string | null }) => void }",
           "retorno": null,
-          "linea": 285
+          "linea": 286
         },
         {
           "nombre": "FormEdicion",
@@ -71812,7 +71812,7 @@
           "exportada": false,
           "params": "{ o, onCancelar, onHecho }: { o: OportunidadDeCliente onCancelar: () => void onHecho: (t: { ok: boolean; texto: string }) => void }",
           "retorno": null,
-          "linea": 435
+          "linea": 436
         }
       ],
       "tablas": [
@@ -71820,7 +71820,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "8fd3909cc1d6"
+      "hash": "33cc284358bf"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/page.tsx",
@@ -71849,7 +71849,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "6c8b08bd5d7b"
+      "hash": "703476b379be"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PedirDatos.tsx",
@@ -71862,9 +71862,9 @@
           "nombre": "PedirDatos",
           "kind": "function",
           "exportada": true,
-          "params": "{ oportunidadId, clienteId, ramo }: { oportunidadId: string; clienteId: string; ramo: 'moto' | 'auto' }",
+          "params": "{ oportunidadId, clienteId, telefono = null, ramo }: { oportunidadId: string; clienteId: string; telefono?: string | null; ramo: 'moto' | 'auto' }",
           "retorno": null,
-          "linea": 17,
+          "linea": 18,
           "resumen": "«Pídele los datos al cliente» (24/09/2026). Genera un enlace para mandarle por WhatsApp o correo; él rellena lo que falta (carné, matrícula, la moto…) y aquí aparece lo que ha contestado, con el acces"
         },
         {
@@ -71873,7 +71873,7 @@
           "exportada": false,
           "params": "{ s, tarificar, ramo }: { s: SolicitudDatos; tarificar: string; ramo: 'moto' | 'auto' }",
           "retorno": null,
-          "linea": 113
+          "linea": 121
         },
         {
           "nombre": "Verificacion",
@@ -71881,7 +71881,7 @@
           "exportada": false,
           "params": "{ s }: { s: SolicitudDatos }",
           "retorno": null,
-          "linea": 145,
+          "linea": 153,
           "resumen": "Documentos que subió y lo que no casa con ellos. Sin contraste posible se dice; nunca «todo cuadra» por defecto."
         }
       ],
@@ -71890,7 +71890,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "afa2aeaab834"
+      "hash": "e35864a3a01a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/piezas.tsx",
@@ -72364,7 +72364,7 @@
           "nombre": "TabResumen",
           "kind": "function",
           "exportada": true,
-          "params": "{ accion, resumen, porClase, intervinientes, clienteId, declaradas, notas }: { accion: SiguienteAccion resumen: ResumenFicha porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]> intervinientes: Intervinient",
+          "params": "{ accion, resumen, porClase, intervinientes, clienteId, telefono, declaradas, notas }: { accion: SiguienteAccion resumen: ResumenFicha porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]> intervinientes: In",
           "retorno": null,
           "linea": 17,
           "resumen": "La pestaña que se abre al pinchar un nombre: lo que está en vigor y lo que hay que hacer con ello. «Pide acción» es una LISTA de cosas concretas con su enlace, no un semáforo: un 🟢 se pone verde tamb"
@@ -72375,7 +72375,7 @@
           "exportada": false,
           "params": "{ accion }: { accion: SiguienteAccion }",
           "retorno": null,
-          "linea": 83,
+          "linea": 86,
           "resumen": "Una sola acción, la que más vale hoy. La decide `siguienteAccion()` (module-seguros), no la pantalla."
         },
         {
@@ -72384,12 +72384,12 @@
           "exportada": false,
           "params": "{ resumen, vivas, clienteId }: { resumen: ResumenFicha; vivas: PolizaFicha[]; clienteId: string }",
           "retorno": null,
-          "linea": 101
+          "linea": 104
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e85c5816cd17"
+      "hash": "db97397f89ee"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts",
@@ -106360,7 +106360,6 @@
       "exporta": [
         "movilParaInvitar",
         "mensajeInvitacionWhatsapp",
-        "enlaceWhatsappConMensaje",
         "canalWhatsapp"
       ],
       "funciones": [
@@ -106392,26 +106391,17 @@
           "resumen": "por WhatsApp es justo el dato que falta para poder entrar. 🚨 Y nada más que eso. Ni compañía, ni póliza, ni matrícula, ni prima, ni DNI, ni cuántos seguros tiene: el número lo ha tecleado Alberto y p"
         },
         {
-          "nombre": "enlaceWhatsappConMensaje",
-          "kind": "function",
-          "exportada": true,
-          "params": "telefono: string, texto: string",
-          "retorno": "string | null",
-          "linea": 114,
-          "resumen": "El `wa.me` con el mensaje ya escrito, o `null` si ese número no es un móvil."
-        },
-        {
           "nombre": "canalWhatsapp",
           "kind": "function",
           "exportada": true,
           "params": "{ accion, portal, enlace, telefonos, nombre }: { accion: AccionPortal portal: PortalCartera enlace: string | null telefonos: readonly (string | null | undefined)[] nombre: string | null },",
           "retorno": "CanalWhatsapp",
-          "linea": 142
+          "linea": 137
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e36d12b36862"
+      "hash": "b94179822939"
     },
     {
       "ruta": "apps/plataforma/lib/ipid-asegura.ts",
@@ -120915,7 +120905,8 @@
       "resumen": "¿Este teléfono se puede abrir en WhatsApp, y con qué URL? Módulo PURO (sin red, sin env, sin BD): lo consume la UI de `/correduria` para pintar el icono de WhatsApp al lado de los móviles del cliente. 🚨 Aquí manda la regla del CLAUDE.md raíz «dato que NO hay ≠ dato que NO se ha mirado», aplicada a ",
       "exporta": [
         "esMovilEs",
-        "urlWhatsapp"
+        "urlWhatsapp",
+        "enlaceWhatsappConMensaje"
       ],
       "funciones": [
         {
@@ -120953,11 +120944,20 @@
           "retorno": "string | null",
           "linea": 68,
           "resumen": "La URL de WhatsApp del número, o `null` si no se puede afirmar que sea un móvil. · Móvil español → `https://wa.me/34XXXXXXXXX` (wa.me quiere el número con prefijo de país y sin `+` ni separadores). · "
+        },
+        {
+          "nombre": "enlaceWhatsappConMensaje",
+          "kind": "function",
+          "exportada": true,
+          "params": "telefono: string, texto: string",
+          "retorno": "string | null",
+          "linea": 85,
+          "resumen": "El `wa.me` del número con el mensaje ya escrito, o `null` si no es un móvil."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "63d63555aba8"
+      "hash": "84757556adf6"
     },
     {
       "ruta": "apps/plataforma/lib/telegram.ts",
@@ -149448,7 +149448,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 242
+          "linea": 247
         },
         {
           "nombre": "normalizarLecturaSolicitud",
@@ -149456,7 +149456,7 @@
           "exportada": true,
           "params": "bruto: unknown, ramo: RamoSolicitud, campos: readonly CampoSolicitud[], hoy: Date = new Date(),",
           "retorno": "",
-          "linea": 251,
+          "linea": 256,
           "resumen": "Lo que devolvió la IA → valores para los campos QUE SE PIDIERON, cada uno pasado por la misma validación que el formulario. Lo que no valida se tira: un valor dudoso propuesto al cliente se lo acaba a"
         },
         {
@@ -149465,7 +149465,7 @@
           "exportada": false,
           "params": "v: Respuesta",
           "retorno": "string",
-          "linea": 301
+          "linea": 310
         },
         {
           "nombre": "contrastarConDocumentos",
@@ -149473,13 +149473,13 @@
           "exportada": true,
           "params": "respuestas: Record<string, Respuesta>, lecturas: readonly LecturaDocSolicitud[],",
           "retorno": "DiscrepanciaSolicitud[]",
-          "linea": 307,
+          "linea": 316,
           "resumen": "Lo que el cliente mandó contra lo que dicen sus propios papeles. Solo avisa (no bloquea): el papel puede estar mal leído y el cliente puede tener razón."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0048bd5f5087"
+      "hash": "ca1434e8c0e3"
     },
     {
       "ruta": "packages/module-seguros/src/supuestos-auto.ts",
