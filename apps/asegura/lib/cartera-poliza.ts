@@ -31,6 +31,7 @@ import { decryptField } from '@central/module-seguros-pii'
 import { retarificabilidad, type DocumentoResumen, type Retarificabilidad } from '@central/module-seguros'
 import { esCarteraViva, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { capitalesHogar, eurDeCapital, type CapitalAsegurado } from '@central/module-seguros'
+import { leerDatosCompaniaCima, type DatosCompaniaCima } from '@central/module-seguros'
 import { contarDocumentosPoliza, listarDocumentos } from './cartera-documentos'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { casosDeRamo, type EjecutorLectura } from './codeoscopic/casos'
@@ -137,6 +138,13 @@ export type FichaPoliza = {
    * anualidad anterior o el ciclo está incompleto — NUNCA se pinta como «no ha subido».
    */
   evolucionPrima: EvolucionPrima
+  /**
+   * Lo que la compañía dice de la póliza por CIMA y no es el objeto: anulación,
+   * póliza a la que sustituye, suplementos, «otros datos» y el resto de la ficha
+   * del inmueble. `null` = la ficha no trae nada de esto (o se ingirió antes de
+   * que se leyera, 24/09/2026), NO «la compañía no lo manda».
+   */
+  datosCompania: DatosCompaniaCima | null
   /** `retarificacion.retarificable`, mantenido por compatibilidad con quien ya lo lee. */
   retarificable: boolean
   /** Por qué ramo se puede pedir precio (auto/hogar), o por qué no, mirando también la gemela. */
@@ -499,6 +507,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, formaPago: etiquetaFormaPago(r.formaPago),
     })),
     siniestros: p.siniestros.map(mapSiniestro),
+    datosCompania: leerDatosCompaniaCima(p.datosEspecificos),
     evolucionPrima: evolucionPrima({
       fechaInicio: fechaIso(p.fechaInicio),
       fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),

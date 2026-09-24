@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import type { ResumenFicha, SiguienteAccion } from '@central/module-seguros'
-import { urlAutoNuevo, type IntervinienteFicha, type NotasFicha, type PolizaDeclaradaFicha, type PolizaFicha } from '@/lib/ficha-asegura'
-import { BtnLink } from '@/components/ui'
+import { type IntervinienteFicha, type NotasFicha, type PolizaDeclaradaFicha, type PolizaFicha } from '@/lib/ficha-asegura'
 import NotasCliente from './NotasCliente'
 import OportunidadesCliente from './OportunidadesCliente'
 import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
@@ -53,11 +52,6 @@ export default function TabResumen({ accion, resumen, porClase, intervinientes, 
         polizas={porClase.viva}
         vacio="Ninguna póliza activa entra hoy por CIMA."
         intervinientes={intervinientes}
-        accion={
-          <BtnLink href={urlAutoNuevo(clienteId)} variante="secundario" tam="sm">
-            ➕ Presupuestar auto
-          </BtnLink>
-        }
       />
 
       {porClase.pendiente_cima.length > 0 && (

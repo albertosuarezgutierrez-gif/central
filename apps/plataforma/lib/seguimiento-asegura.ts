@@ -599,3 +599,142 @@ export function interpretarContactosMovil(status: number, j: unknown): { contact
 export function tareasHoyAsegura(): Promise<Reenvio> {
   return llamar('/api/operador/tareas-hoy', { method: 'GET' })
 }
+
+// ─── Rellenar la oportunidad leyendo un documento (24/09/2026) ──────────────
+// Alberto: «subir póliza, recibo o alguna imagen y que el agente con IA busque los
+// datos que haya». Lo leído RELLENA el formulario; lo guarda él al pulsar «Abrir».
+
+export type LecturaDocumentoOportunidad =
+  | {
+      estado: 'ok'
+      ramo: RamoOportunidad | null
+      compania: string | null
+      numeroPoliza: string | null
+      vence: string | null
+      prima: number | null
+    }
+  | { estado: 'error'; motivo: string }
+
+/**
+ * Lo que devuelve el puerto `leer-documento`. Un campo con forma rara se queda en
+ * `null` («no se leyó»), nunca en un valor plausible: una prima 0 o una fecha
+ * que no es fecha no rellenan nada. Si no se leyó NADA, es un error con motivo:
+ * un formulario que no cambia sin explicación parece que el botón no funciona.
+ */
+export function interpretarLecturaOportunidad(status: number, json: unknown): LecturaDocumentoOportunidad {
+  const o = json !== null && typeof json === 'object' && !Array.isArray(json) ? (json as Record<string, unknown>) : null
+  if (status !== 200 || !o || o.leido !== true) {
+    if (status === 503) return { estado: 'error', motivo: 'la cartera no está conectada' }
+    const m = typeof o?.error === 'string' ? o.error : typeof o?.motivo === 'string' ? o.motivo : `HTTP ${status}`
+    return { estado: 'error', motivo: m }
+  }
+  const txt = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim().slice(0, 120) : null)
+  const ramo = RAMOS_OPORTUNIDAD.find(r => r === o.ramo) ?? null
+  const vence = typeof o.fechaVencimiento === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.fechaVencimiento)
+    && !Number.isNaN(Date.parse(`${o.fechaVencimiento}T00:00:00Z`)) ? o.fechaVencimiento : null
+  const prima = typeof o.primaAnual === 'number' && Number.isFinite(o.primaAnual) && o.primaAnual > 0 && o.primaAnual < 1_000_000
+    ? Math.round(o.primaAnual * 100) / 100 : null
+  const r = { ramo, compania: txt(o.compania), numeroPoliza: txt(o.numeroPoliza), vence, prima }
+  if (Object.values(r).every(v => v === null)) {
+    return { estado: 'error', motivo: 'el documento se ha leído pero no trae ramo, compañía, vencimiento ni prima' }
+  }
+  return { estado: 'ok', ...r }
+}
+
+/** La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50». */
+export function primaParaCampo(n: number): string {
+  return n.toFixed(2).replace('.', ',')
+}
+
+// ─── De qué oportunidad cuelga un presupuesto recién pedido (24/09/2026) ─────
+// asegura engancha cada precio real a la oportunidad del cliente para ese ramo (o
+// la abre) y lo manda en `guardado.oportunidad`. Ausente = no se intentó
+// (simulación o asegura más vieja): entonces no se dice nada, ni bueno ni malo.
+
+export type EnlacePresupuesto =
+  | { estado: 'creada' | 'enlazada'; oportunidadId: string }
+  | { estado: 'fallo'; motivo: string }
+
+export function enlaceOportunidadDe(guardado: unknown): EnlacePresupuesto | null {
+  if (typeof guardado !== 'object' || guardado === null) return null
+  const o = (guardado as Record<string, unknown>).oportunidad
+  if (typeof o !== 'object' || o === null) return null
+  const e = o as Record<string, unknown>
+  if ((e.estado === 'creada' || e.estado === 'enlazada') && typeof e.oportunidadId === 'string' && e.oportunidadId !== '') {
+    return { estado: e.estado, oportunidadId: e.oportunidadId }
+  }
+  if (e.estado === 'no_enlazada' || e.estado === 'omitida') {
+    return { estado: 'fallo', motivo: typeof e.motivo === 'string' ? e.motivo : 'sin motivo' }
+  }
+  return null
+}
+
+// ─── «Pídele los datos al cliente» (24/09/2026) ──────────────────────────────
+// Enlace directo (sin código) para que el cliente complete lo que falta para
+// presupuestar moto o coche. asegura guarda el hash del token y las respuestas
+// cifradas; aquí se leen para verlas y tarificar.
+
+export type SolicitudDatos = {
+  id: string
+  ramo: 'moto' | 'auto'
+  estado: 'pendiente' | 'completada' | 'anulada' | 'caducada'
+  caduca: string
+  completada: string | null
+  campos: { clave: string; etiqueta: string; opciones?: { valor: string; etiqueta: string }[] }[]
+  /** `null` = sin completar o ilegible (entonces `ilegible` lo dice). */
+  respuestas: Record<string, string | number | boolean | null> | null
+  ilegible: boolean
+}
+
+export type SolicitudesDatos = { estado: 'ok'; solicitudes: SolicitudDatos[] } | { estado: 'error'; motivo: string }
+
+const ESTADOS_SOLICITUD = ['pendiente', 'completada', 'anulada', 'caducada'] as const
+
+export function interpretarSolicitudesDatos(status: number, json: unknown): SolicitudesDatos {
+  const o = objeto(json)
+  if (status !== 200 || o?.estado !== 'ok' || !Array.isArray(o.solicitudes)) {
+    return { estado: 'error', motivo: texto(o?.motivo) ?? (status === 503 ? 'la cartera no responde' : `HTTP ${status}`) }
+  }
+  const solicitudes: SolicitudDatos[] = []
+  for (const x of o.solicitudes) {
+    const s = objeto(x)
+    const id = texto(s?.id)
+    const estado = uno(ESTADOS_SOLICITUD, s?.estado)
+    const ramo = s?.ramo === 'moto' || s?.ramo === 'auto' ? s.ramo : null
+    if (!s || !id || !estado || !ramo || !Array.isArray(s.campos)) continue
+    const campos = s.campos.flatMap((c) => {
+      const co = objeto(c)
+      const clave = texto(co?.clave)
+      const etiqueta = texto(co?.etiqueta)
+      if (!clave || !etiqueta) return []
+      const opciones = Array.isArray(co?.opciones)
+        ? co.opciones.flatMap((op) => { const oo = objeto(op); const v = texto(oo?.valor); const e = texto(oo?.etiqueta); return v && e ? [{ valor: v, etiqueta: e }] : [] })
+        : undefined
+      return [{ clave, etiqueta, ...(opciones ? { opciones } : {}) }]
+    })
+    const r = objeto(s.respuestas)
+    const respuestas = r
+      ? Object.fromEntries(Object.entries(r).filter(([, v]) => v === null || ['string', 'number', 'boolean'].includes(typeof v))) as Record<string, string | number | boolean | null>
+      : null
+    solicitudes.push({ id, ramo, estado, caduca: texto(s.caduca) ?? '', completada: texto(s.completada), campos, respuestas, ilegible: s.ilegible === true })
+  }
+  return { estado: 'ok', solicitudes }
+}
+
+/** Una respuesta como la lee Alberto: opción → su etiqueta, sí/no, fecha española; `null` → «—». */
+export function valorLegible(campo: SolicitudDatos['campos'][number], v: string | number | boolean | null | undefined): string {
+  if (v === null || v === undefined || v === '') return '—'
+  if (typeof v === 'boolean') return v ? 'Sí' : 'No'
+  if (typeof v === 'number') return v.toLocaleString('es-ES')
+  const op = campo.opciones?.find((o) => o.valor === v)
+  if (op) return op.etiqueta
+  const f = /^(\d{4})-(\d{2})-(\d{2})$/.exec(v)
+  return f ? `${f[3]}/${f[2]}/${f[1]}` : v
+}
+
+export function solicitudesDatosAsegura(oportunidadId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/solicitud-datos?oportunidadId=${encodeURIComponent(oportunidadId)}`, { method: 'GET' })
+}
+export function accionSolicitudDatosAsegura(body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/solicitud-datos', { method: 'POST', body: JSON.stringify(body) })
+}

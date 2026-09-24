@@ -163,3 +163,24 @@ export async function descargarDocumentoAsegura(id: string): Promise<Response | 
     signal: AbortSignal.timeout(60_000),
   })
 }
+
+/**
+ * Lee un documento (póliza, recibo, foto) por el puerto `leer-documento` de asegura,
+ * para rellenar una oportunidad. No escribe ni guarda nada. 110 s: leer un PDF y
+ * esperar al modelo pasa de los 60 de un reenvío normal.
+ */
+export async function leerDocumentoOportunidadAsegura(
+  f: { contenido: Buffer; mimeType: string; nombre: string },
+): Promise<{ status: number; json: unknown }> {
+  const h = await cabeceras()
+  if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
+  const form = new FormData()
+  form.set('fichero', new Blob([new Uint8Array(f.contenido)], { type: f.mimeType }), f.nombre)
+  const res = await fetch(`${urlAsegura()}/api/operador/leer-documento`, {
+    method: 'POST',
+    headers: h,
+    body: form,
+    signal: AbortSignal.timeout(110_000),
+  })
+  return { status: res.status, json: await res.json().catch(() => null) }
+}

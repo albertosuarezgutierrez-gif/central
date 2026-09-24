@@ -37,6 +37,7 @@ import {
 import {
   PREFIJO_HISTORIAL_CONTACTO_PROPIO,
   PREFIJO_HISTORIAL_SUGERENCIA,
+  PREFIJO_HISTORIAL_DATOS_PRESUPUESTO,
 } from '@central/module-seguros-portal'
 
 import { Prisma } from './generated/asegura-client'
@@ -88,6 +89,7 @@ function consultaEventos(
   const soloCliente = filtro.quien === 'cliente'
   const prefContacto = `${PREFIJO_HISTORIAL_CONTACTO_PROPIO}%`
   const prefSugerencia = `${PREFIJO_HISTORIAL_SUGERENCIA}%`
+  const prefDatos = `${PREFIJO_HISTORIAL_DATOS_PRESUPUESTO}%`
 
   return prismaAsegura().$queryRaw<FilaEvento[]>`
     with vinc as (
@@ -161,7 +163,8 @@ function consultaEventos(
         and h.deleted_at is null
         and h.created_at >= ${desde}
         and h.texto not like ${prefContacto}
-        and h.texto not like ${prefSugerencia}`
+        and h.texto not like ${prefSugerencia}
+        and h.texto not like ${prefDatos}`
       }
 
       union all
@@ -169,13 +172,14 @@ function consultaEventos(
       -- 6b. Las dos del portal salen SIEMPRE, también con el filtro «solo el
       -- cliente»: las escribió él, aunque vivan en la tabla de la ficha.
       select h.id::text,
-             case when h.texto like ${prefContacto} then 'direccion' else 'sugerencia' end,
+             case when h.texto like ${prefContacto} then 'direccion'
+                  when h.texto like ${prefDatos} then 'datos_presupuesto' else 'sugerencia' end,
              h.created_at at time zone 'UTC', h.cliente_id, h.texto
       from historial_interno h
       where h.correduria_id = ${correduriaId}::uuid
         and h.deleted_at is null
         and h.created_at >= ${desde}
-        and (h.texto like ${prefContacto} or h.texto like ${prefSugerencia})
+        and (h.texto like ${prefContacto} or h.texto like ${prefSugerencia} or h.texto like ${prefDatos})
     )
     select e.id, e.tipo, e.fecha, e.cliente_id, e.texto,
            c.nombre, c.apellidos,

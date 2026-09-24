@@ -304,6 +304,13 @@ GitHub Actions (cron 5:30 y 11:30)
   `docs/superpowers/specs/2026-09-01-comisiones-renta-control-design.md`.
 - **Ficheros en Vercel Blob** (privado, URLs firmadas; hoy ~4). Los EIAC de CIMA **no se guardan como
   fichero**: se parsean a tablas.
+- 📦 **PERO hay copia de TODO lo de CIMA en Google Drive, carpeta «CIMA»** (24/09/2026): Alberto baja
+  del Portal CIMA los zips por trimestre (`28-03-26a26-06-26.zip`, `26-06-26a24-09-26.zip`: POL, REC,
+  SIN y CEF). Es la única forma de REPROCESAR —TIREA no reentrega lo ya confirmado— cuando el lector
+  aprende un campo: workflow `cima-rescate-lote` del repo `asegura` (lote cifrado en rama temporal,
+  en orden de fecha del dato). Qué campos trae cada compañía: **`docs/CIMA-CAMPOS.md`** (941 rutas,
+  sin valores). Regla de Alberto: CIMA trae casi todo el PDF de la póliza; antes de decir «no consta»
+  o de pedir un dato a mano, mira si CIMA lo manda.
 - **Codeoscopic — LA fuente de tarificación y EMISIÓN de pólizas nuevas (01/09/2026):** Avant2 Sales
   Manager operativo a nombre de ALBERTO (no de Manuel) desde 09/06; compañías vivas Reale y Fidelidade,
   claves entregadas de Mapfre/Allianz/Occident; DPA art. 28 firmado. La integración API de la web quedó
@@ -745,6 +752,15 @@ vive aquí). Regla pura `esCumpleanos` (día de Madrid; 29/02 → 28/02 en año 
 por persona y año, se RESERVA antes de enviar): es el sello y lo que la campana del portal lee ese día. Correo sin nada que vender
 (si lleva oferta es comunicación comercial, art. 21 LSSI). ⏸️ **Apagado**: sin `ASEGURA_FELICITACIONES_ACTIVAS=1` solo cuenta.
 Cepo `lib/felicitaciones.test.ts`.
+💼 **Presupuesto = oportunidad (24/09/2026, `lib/codeoscopic/oportunidad-presupuesto.ts`).** Tras guardar un precio REAL, `cotizar()`
+lo cuelga de la oportunidad ABIERTA del cliente para ese ramo (por contactar → en negociación) o la abre con su llamada a 2 días;
+mismo candado que el alta a mano. Nunca tumba la copia pagada (`guardado.oportunidad`); lo simulado no abre nada. Cepos en
+`test/regression-asegura-cotizaciones-guardadas.test.ts`.
+📝 **Pedir datos al cliente por enlace (24/09/2026, `lib/solicitud-datos.ts`).** Puerto `/api/operador/solicitud-datos` (crear/anular,
+`auditado`) y puente `/api/portal/solicitud-datos` (leer/responder por token). Token solo como sha256; respuestas con `encryptField`;
+**no toca `clientes`** (lo declarado se verifica al emitir). Al responder: oportunidad → en negociación, tarea «Tarificar» y nota en
+`historial_interno` con `PREFIJO_HISTORIAL_DATOS_PRESUPUESTO` (el feed de actividad la clasifica `datos_presupuesto` → Telegram).
+Cepos de fuente en `lib/solicitud-datos.test.ts`.
 ✉️ **Cola de aprobaciones (`seguros.aprobacion`, `lib/aprobaciones.ts`, puerto `/api/operador/aprobaciones`).** Un recibo
 que pasa a `devuelto` deja un correo PROPUESTO al cliente; solo sale con `decision:'aprobar'` desde plataforma. El envío
 reclama la fila (`pendiente → enviando`) ANTES de mandar y lee el correo de la ficha en ese momento; `enviando` viejo =

@@ -143,7 +143,7 @@ function Resultado({ r, onElegir }: { r: Respuesta; onElegir: (rc: string) => vo
       )}
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
         Este bloque solo consulta el Catastro (gratis, no gasta nada). Para pedir precio de verdad, busca al
-        cliente y en su ficha usa «➕ Presupuestar ▾ → 🏠 Hogar» — ya está conectado con Codeoscopic. El
+        cliente y en su ficha usa «➕ Nueva oportunidad ▾ → 🏠 Hogar» — ya está conectado con Codeoscopic. El
         recuadro de abajo dice si hogar tarifica hoy para esta organización.
       </p>
     </div>

@@ -60,6 +60,19 @@ export {
 } from './vencimientos.ts'
 
 export {
+  leerDatosCompaniaCima,
+  leerDatosCompaniaPuerto,
+  rotuloAnulacionCima,
+  type DatosCompaniaCima,
+  type AnulacionCima,
+  type PolizaReemplazadaCima,
+  type SuplementoCima,
+  type OtroDatoCima,
+  type InmuebleCima,
+  type EmbarcacionCima,
+} from './datos-compania-cima.ts'
+
+export {
   objetoAsegurado,
   pareceMatricula,
   formatCapitales,
@@ -832,3 +845,19 @@ export {
   type SiguienteAccion,
   type TipoSiguienteAccion,
 } from './siguiente-accion.ts'
+export {
+  CARNETS_MOTO_SOLICITUD,
+  DIAS_SOLICITUD,
+  GARAJES_SOLICITUD,
+  RAMOS_SOLICITUD,
+  camposSolicitud,
+  mensajeSolicitud,
+  ramoSolicitud,
+  validarRespuestas,
+  type CampoSolicitud,
+  type ConocidoFicha,
+  type RamoSolicitud,
+  type Respuesta,
+  type TipoCampo,
+  type ValidacionSolicitud,
+} from './solicitud-datos.ts'

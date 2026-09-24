@@ -125,3 +125,10 @@ test('reintenta errores de red (fetch rechaza) y luego triunfa', async () => {
   assert.equal(res.status, 200)
   assert.equal(calls, 2)
 })
+
+test('paramsRazonador: gpt-oss lleva margen y esfuerzo bajo; el resto, el tope tal cual', async () => {
+  const { paramsRazonador, MARGEN_RAZONAMIENTO } = await import('../src/http.ts')
+  assert.deepEqual(paramsRazonador('openai/gpt-oss-120b', 4), { max_tokens: 4 + MARGEN_RAZONAMIENTO, reasoning_effort: 'low' })
+  assert.deepEqual(paramsRazonador('gpt-oss-120b', 300), { max_tokens: 300 + MARGEN_RAZONAMIENTO, reasoning_effort: 'low' })
+  assert.deepEqual(paramsRazonador('llama-3.3-70b', 300), { max_tokens: 300 })
+})

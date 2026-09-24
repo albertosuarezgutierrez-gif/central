@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** — «Pídele los datos al cliente por enlace» (moto/auto). Desde la oportunidad abierta, «📝 Pedir datos» crea un enlace de un solo uso (14 días) a `clientes.grupoasegura.es/datos/<token>`; el cliente rellena solo lo que la ficha no tiene (DNI, nacimiento, CP, carné y su fecha, matrícula, marca/modelo, garaje, seguro actual…) y la página NO enseña ningún dato suyo (decisión de Alberto: enlace directo sin código). Al enviarlo: oportunidad → en negociación, tarea «Tarificar» para hoy y aviso por Telegram vía el feed de actividad (prefijo `PREFIJO_HISTORIAL_DATOS_PRESUPUESTO`). Token solo como sha256, respuestas cifradas y **no se escriben en la ficha** (declarado, se verifica al emitir). Tabla `seguros.solicitud_datos` (aplicada, una viva por oportunidad). El enlace lo copia/manda Alberto (botón WhatsApp o copiar), nunca sale solo.
+
+**(24/09/2026)** — Ficha de cliente: presupuesto = oportunidad (Alberto: «dos botones de presupuesto, que es lo mismo que oportunidad»). Una sola puerta, el menú «➕ Nueva oportunidad ▾» (ramos con precio + «sin precio, solo seguimiento»). Cada precio REAL guardado se cuelga solo de la oportunidad abierta del cliente para ese ramo o la abre (en negociación + llamada a 2 días): `lib/codeoscopic/oportunidad-presupuesto.ts`, llamado desde `cotizar()` tras guardar, nunca tumba la copia; columna `tarificaciones.oportunidad_id` (aplicada). El formulario de oportunidad rellena ramo/compañía/vencimiento/prima leyendo póliza, recibo o foto (puerto `leer-documento`). Reproceso de los 36 POL de CIMA hecho: las 44 pólizas de inmueble vivas tienen dirección. Pendiente de Alberto: borrar la rama `rescate/cima-lote-20260924` y el run 36029395224 de `asegura`. PR #3514.
+
+**(24/09/2026)** — Memoria pedida por Alberto: **Google Drive, carpeta «CIMA», guarda copia de TODO lo de CIMA** (zips del Portal por trimestre). Es la vía para reprocesar cuando el lector aprende un campo (TIREA no reentrega). Inventario de TODOS los campos que trae CIMA, por compañía y sin valores: `docs/CIMA-CAMPOS.md` (941 rutas: POL 470, SIN 275, CEF 108, REC 88). Regla: CIMA trae casi todo el PDF; antes de pedir un dato a mano o decir «no consta», mira si CIMA lo manda.
+
+**(24/09/2026)** — CIMA «trae casi todo el PDF» (Alberto) y no se leía. Con los 2 zip del Portal CIMA en Drive (carpeta «CIMA», 36 POL, 264 pólizas) se midió: el mapper del CRM tiraba anulación (83), póliza reemplazada (4), suplementos (27), «otros datos» (148) y media ficha del inmueble; y las direcciones faltaban porque esas pólizas entraron ANTES del 20/09 (cuando se empezó a leer SituacionRiesgo), no porque la compañía no la mande (María Antonia: comunidad BIDP023227 y hogar Mapfre sí la traen). asegura#851 amplía el mapper (datos personales fuera: texto tapado, «otros datos» de persona y de vida/salud descartados; año en `anioConstruccionCima`; `anulacion:null` en vigor). Central: `leerDatosCompaniaCima` + tarjeta «🏢 Lo que dice la compañía (CIMA)» en la ficha de póliza + portal decide la gemela por contenido. Falta: reprocesar los 36 POL con `cima-rescate-manual` (admite xz) y borrar esos runs.
+
 **(24/09/2026)** — Tipografía de marca de Grupo ASegura (parche de Alberto): Quicksand en titulares/menús/botones y Nunito Sans en el cuerpo, sin cursivas, con el logotipo «Grupo ASegura» con el monograma dentro, en la web y el portal; y extendida a `/correduria` de plataforma con next/font, acotada a `.correduria`. De paso, revisión de la fase 2: el aviso «la compañía tiene otro dato» ya no atribuye a CIMA un teléfono que asegura rellena con el de la propia ficha (`telefonoPropio`/`emailPropio`), y las notas conservan los saltos de línea.
 
 **(24/09/2026)** — Rediseño de la ficha, fase 2: datos del cliente. Medido en el CRM de Manuel (`pull-persist.ts`): CIMA NO pisa teléfono, correo, nombre ni dirección de una ficha existente (solo rellena el hash del DNI y el tipo de persona si faltan); lo que trae la compañía queda en `poliza_intervinientes` (origen `cima`). Así que «mandan los nuestros» ya se cumple, y la ficha (Contactos) avisa de lo que la compañía tiene y nosotros no, con «Añadir a sus contactos» (nunca sustituye). Notas: el campo único que SUSTITUÍA la nota sin enseñarla se retira; ahora «📝 Notas» en Resumen es una lista fechada (historial `nota`) + la nota suelta del CRM anterior, de solo lectura.
@@ -529,6 +537,14 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (24/09/2026) core-ai: el razonamiento se comía el `max_tokens` → «no he podido traducirlo» y QC caído
+Síntoma (Duplex, reserva 150035011, repetido): borrador sin traducción + «control de calidad no respondió». Logs de
+Vercel: `OpenRouter: respuesta vacía` + `Groq: respuesta vacía` en la misma llamada. Causa: `deepseek-v4.1-flash`
+(primario desde el 14/09) trae `reasoning.default_enabled: true` y gpt-oss razona siempre; el pensamiento cuenta contra
+`max_tokens` y agotaba los 300 de la traducción y los 4 de `debeEscalar`. Arreglo en `@central/core-ai`: OpenRouter manda
+`reasoning:{enabled:false}` salvo `razonar:true` (reintento sin él si el modelo lo exige); Groq/Cerebras gpt-oss con
+`reasoning_effort:'low'` + 1024 de margen; el error «vacía» dice `finish_reason`/`reasoning_tokens`. PR en esta rama.
 
 ## (24/09/2026) sivra: en fecha de evento MEDIDA manda el mercado, no mes × factor
 Verificación del PR #3344: bajan 08/22/25-nov de Luxury, pero 01/11 y 16/11 volvieron a 215/204€ en

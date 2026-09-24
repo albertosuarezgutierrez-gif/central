@@ -7,6 +7,7 @@
 // (OpenRouter → NIM → Groq → Gemini → Kimi) vive en `client.ts`.
 import type { NimChatMessage, NimToolMessage, NimToolResult } from './nim'
 import type { ImageInput } from './types'
+import { motivoVacio } from './http.ts'
 
 const DEFAULT_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions'
 // Slug estable y barato. El catálogo vivo lo cura el cron `ia-director-refresh` de
@@ -55,6 +56,8 @@ export interface OpenRouterChatOptions {
   privacidad?: boolean
   /** Preferencias de proveedor adicionales (se fusionan; p. ej. allowlist EU del catálogo del Director). */
   provider?: Record<string, unknown>
+  /** true = deja razonar al modelo (sus tokens cuentan contra `maxTokens`: dale margen). Por defecto, apagado. */
+  razonar?: boolean
   /** response_format passthrough (json_schema para salida estructurada, p. ej. el Director). */
   responseFormat?: Record<string, unknown>
   /** Plugins de OpenRouter (p. ej. `[{id:'web'}]` para búsqueda web). Usar `openrouterSearchEx` mejor. */
@@ -77,6 +80,17 @@ function headers(config: OpenRouterConfig, key: string): Record<string, string> 
 
 // Construye el body OpenAI-compatible común a chat y tools. `models` (plural) activa el
 // fallback nativo de OpenRouter; si va, OpenRouter ignora `model`, así que mandamos solo uno.
+// Caso fundacional (24/09/2026): desde el swap a deepseek-v4.1-flash (14/09) las traducciones del
+// agente de huéspedes (maxTokens 300) y su clasificador (maxTokens 4) volvían «respuesta vacía» en
+// OpenRouter: el modelo pensaba hasta agotar el tope y no llegaba a escribir.
+const REASONING_OFF = { enabled: false } as const
+
+// Un modelo de razonamiento OBLIGATORIO rechaza `enabled:false` con un 400 («Reasoning is mandatory»).
+// Ante eso se reintenta UNA vez sin el campo, en vez de tumbar la llamada por un suplente así.
+function esRazonamientoObligatorio(status: number, cuerpo: string): boolean {
+  return status === 400 && /reasoning is mandatory/i.test(cuerpo)
+}
+
 function buildBody(
   config: OpenRouterConfig,
   msgs: unknown[],
@@ -88,6 +102,10 @@ function buildBody(
     : undefined)
   const body: Record<string, unknown> = {
     messages: msgs,
+    // Razonamiento APAGADO salvo que se pida: los tokens de pensar cuentan contra `max_tokens`, y el
+    // primario (deepseek-v4.1-flash, `reasoning.default_enabled: true`, esfuerzo alto) se gastaba
+    // entero el presupuesto de las llamadas cortas → `content` vacío. Ver `REASONING_OFF`.
+    ...(opts.razonar ? {} : { reasoning: REASONING_OFF }),
     max_tokens: opts.maxTokens ?? 800,
     temperature: opts.temperature ?? 0.3,
     stream: false,
@@ -126,16 +144,24 @@ export async function openrouterChatEx(
   const key = requireKey(config)
   const doFetch = opts.fetchImpl ?? fetch
   const msgs = [...systemMsgs(opts), ...messages]
-  const res = await doFetch(config.baseUrl ?? DEFAULT_BASE_URL, {
+  const enviar = (o: OpenRouterChatOptions) => doFetch(config.baseUrl ?? DEFAULT_BASE_URL, {
     method: 'POST',
     headers: headers(config, key),
-    body: JSON.stringify(buildBody(config, msgs, opts)),
+    body: JSON.stringify(buildBody(config, msgs, o)),
     signal: opts.signal,
   })
-  if (!res.ok) throw new Error(`OpenRouter HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  let res = await enviar(opts)
+  if (!res.ok) {
+    const cuerpo = await res.text()
+    if (opts.razonar || !esRazonamientoObligatorio(res.status, cuerpo)) {
+      throw new Error(`OpenRouter HTTP ${res.status}: ${cuerpo.substring(0, 150)}`)
+    }
+    res = await enviar({ ...opts, razonar: true })
+    if (!res.ok) throw new Error(`OpenRouter HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  }
   const data = await res.json()
   const text = data?.choices?.[0]?.message?.content
-  if (!text) throw new Error('OpenRouter: respuesta vacía')
+  if (!text) throw new Error(`OpenRouter: respuesta vacía${motivoVacio(data)}`)
   return { text, model: data?.model ?? 'desconocido', usage: data?.usage }
 }
 

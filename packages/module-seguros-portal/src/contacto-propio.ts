@@ -171,3 +171,10 @@ export const PREFIJO_HISTORIAL_CONTACTO_PROPIO = 'El cliente actualizó desde el
  * (`apps/asegura-portal/lib/sugerencia.ts`) antes de mandarla por el puente.
  */
 export const PREFIJO_HISTORIAL_SUGERENCIA = '💡 Sugerencia del cliente desde el portal:'
+
+/**
+ * La nota que deja el cliente al completar el enlace de datos de un presupuesto
+ * (24/09/2026). Lleva prefijo fijo por lo mismo que las dos de arriba: el muro de
+ * actividad la clasifica como del cliente y el aviso por Telegram la recoge.
+ */
+export const PREFIJO_HISTORIAL_DATOS_PRESUPUESTO = '📝 El cliente completó los datos para su presupuesto de'

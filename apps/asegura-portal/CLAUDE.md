@@ -12,6 +12,13 @@
 > `docs/superpowers/specs/2026-09-01-asegura-portal-clientes-empresas-design.md` (producto completo) y
 > `docs/superpowers/plans/2026-09-01-asegura-portal-fase-1.md` (lo que se construyó de verdad).
 
+## 📝 `/datos/[token]` — el cliente completa los datos de su presupuesto (24/09/2026)
+
+Página PÚBLICA (sin sesión, a propósito: enlace directo que manda Alberto) que solo PIDE: no enseña nombre, póliza ni
+ningún dato de la ficha, porque quien tenga el enlace no tiene por qué ser el cliente. `app/api/datos/route.ts` limita a
+10/h por IP, valida la forma del token y reenvía al puente de asegura. Desenlaces: formulario · `muerta` (caducado o
+anulado) · `completada`. Lógica pura en `lib/solicitud-datos.ts` (+ test).
+
 ## 📋 «Pendiente de ti» (24/09/2026) — una lista, arriba de «Mis seguros»
 
 `PendienteDeTi.tsx` junta lo que la correduría necesita del cliente, cada fila enlazada a donde se

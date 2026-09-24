@@ -167,3 +167,27 @@ export async function fetchAI(
     attempt++
   }
 }
+
+/**
+ * Coletilla para el error «respuesta vacía»: si el modelo cortó por `length` tras gastar tokens en
+ * razonar, decirlo. Sin esto, el log solo decía «respuesta vacía» y la causa (el tope de tokens
+ * comido por el razonamiento) no se veía en ningún sitio.
+ */
+export function motivoVacio(data: unknown): string {
+  const d = data as { choices?: Array<{ finish_reason?: string }>; usage?: { completion_tokens_details?: { reasoning_tokens?: number } } }
+  const fin = d?.choices?.[0]?.finish_reason
+  const razon = d?.usage?.completion_tokens_details?.reasoning_tokens
+  const partes = [fin ? `finish_reason=${fin}` : '', razon ? `reasoning_tokens=${razon}` : ''].filter(Boolean)
+  return partes.length ? ` (${partes.join(', ')})` : ''
+}
+
+/**
+ * gpt-oss (Groq/Cerebras) razona SIEMPRE y esos tokens cuentan contra `max_tokens`: con un tope corto
+ * (un clasificador de 4 tokens, una traducción de 300) se lo come entero y `content` llega vacío.
+ * Para esos modelos: esfuerzo bajo + margen fijo encima del tope que pidió el caller.
+ */
+export const MARGEN_RAZONAMIENTO = 1024
+export function paramsRazonador(model: string, maxTokens: number): Record<string, unknown> {
+  if (!/gpt-oss/i.test(model)) return { max_tokens: maxTokens }
+  return { max_tokens: maxTokens + MARGEN_RAZONAMIENTO, reasoning_effort: 'low' }
+}
