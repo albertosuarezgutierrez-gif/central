@@ -597,6 +597,11 @@ export default function CorreduriaClient() {
           Calidad del dato: no caduca hoy, pero decide si mañana se puede avisar
           a alguien. Fuera de «Hoy» para que no compita con lo que sí urge. */}
       <div role="tabpanel" aria-label="Datos" className="corr-panel" style={panel('datos')}>
+        {/* Incidencias de calidad del dato (sin prima, DNI duplicado, vencida sin
+            renovar, etc.): hallazgos medidos que el scanner detecta en la cartera
+            en vigor. */}
+        <Calidad onContador={setNCalidad} />
+
         {/* Pólizas duplicadas en la cartera viva (guardián Codeoscopic↔CIMA). */}
         <Duplicadas onContador={setNDuplicadas} />
 
