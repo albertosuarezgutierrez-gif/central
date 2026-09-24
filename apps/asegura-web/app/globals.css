@@ -479,6 +479,18 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
   background: var(--surface-hover);
 }
 
+/* Desactivado: tiene que LEERSE como tal. Sin esto el botón de «Avisadme por
+   correo» parecía listo antes de marcar la casilla. El hover se congela en el
+   color de reposo de cada variante. */
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  scale: 1;
+}
+.btn-brand:disabled:hover { background: var(--brand); }
+.btn-outline:disabled:hover { background: var(--bg); }
+.btn-fantasma:disabled:hover { background: transparent; }
+
 /* Los de la cabecera son bajos en escritorio pero conservan 44 px de área
    táctil en móvil, igual que hace él. */
 .btn-sm {
@@ -1983,4 +1995,9 @@ textarea.f-in {
   gap: 12px;
   align-items: end;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 260px));
+}
+@media (max-width: 559px) {
+  .ventana-campos { grid-template-columns: minmax(0, 1fr); }
+  .ventana-campos select,
+  .ventana-campos input { width: 100%; }
 }
