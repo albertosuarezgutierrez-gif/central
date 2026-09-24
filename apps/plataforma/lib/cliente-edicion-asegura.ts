@@ -293,6 +293,11 @@ export function editarClienteAsegura(body: Record<string, unknown>): Promise<Ree
   return llamar('/api/operador/cliente', { method: 'PATCH', body: JSON.stringify(body) })
 }
 
+/** `POST /api/operador/aviso-web?accion=` — el «avísame antes de que venza» de la web pública. */
+export function avisoWebAsegura(accion: 'solicitar' | 'confirmar' | 'baja', body: unknown): Promise<Reenvio> {
+  return llamar(`/api/operador/aviso-web?accion=${accion}`, { method: 'POST', body: JSON.stringify(body ?? {}) })
+}
+
 /** `POST /api/operador/cliente` — alta. */
 export function altaClienteAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/cliente', { method: 'POST', body: JSON.stringify(body) })

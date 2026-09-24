@@ -7,6 +7,8 @@ import { RAMOS, SOLO_INTENCION, ramoPorSlug } from '@/lib/ramos'
 import { url } from '@/lib/sitio'
 import { fichaFaq, fichaServicio, migas, jsonLd } from '@/lib/seo'
 import Formulario from '@/components/Formulario'
+import VentanaRenovacion from '@/components/VentanaRenovacion'
+import { ramoTieneVentana } from '@/lib/ventana-renovacion'
 
 // Estáticas: son seis páginas de contenido que cambian cuando cambia el copy,
 // no en cada visita. Generarlas en el build es más rápido y más barato.
@@ -85,6 +87,12 @@ export default async function PaginaRamo({ params }: Props) {
           ))}
         </ul>
       </section>
+
+      {ramoTieneVentana(ramo.slug) && (
+        <div style={{ margin: '0 0 28px' }}>
+          <VentanaRenovacion ramo={ramo.slug} />
+        </div>
+      )}
 
       <section aria-labelledby="para-quien" style={{ marginBottom: 24 }}>
         <h2 id="para-quien">Esta página es para ti si…</h2>

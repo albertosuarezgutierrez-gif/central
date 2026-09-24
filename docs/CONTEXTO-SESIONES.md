@@ -429,6 +429,16 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) asegura: fase 2 «avísame por correo» (doble opt-in → ficha lead + oportunidad + avisos a 70/45 días)
+- Decisión de Alberto: todo en asegura y la ficha nace al CONFIRMAR. Web → plataforma (`/api/publico/correduria/aviso`, límite IP + Telegram) → asegura (`/api/operador/aviso-web`, `lib/aviso-web.ts`, cron `avisos-web` 08:30).
+- Tabla `seguros.aviso_web` APLICADA en prod (migración `seguros_aviso_web`). Revisión agente-architect: 0 bloqueantes; 6 arreglos aplicados (anti-spam, baja por correo, purga, llave directa). APAGADO: `ASEGURA_AVISOS_WEB_ACTIVOS` + `NEXT_PUBLIC_AVISOS_CORREO`; orden de encendido en `apps/asegura/CLAUDE.md`.
+- Widget también en la PORTADA (`#vencimiento`, con selector de ramo). Cepos vistos fallar: contrato de ramos web↔asegura, consentimiento explícito, ventana de avisos. Mismo PR que la fase 1.
+
+## (24/09/2026) asegura-web: widget «Tu ventana para decidir» en las páginas de ramo (captación por vencimiento)
+- Decisión: NO comparador tipo Rastreator (0,50 €/consulta Avant2 + análisis objetivo/IPID). Modelo Clark/Jerry: revisar pólizas + aviso de renovación + tramitar baja. Estudio de mercado en el PR.
+- Art. 22 LCS: compañía avisa cambios ≥2 meses; tomador se opone ≥1 mes. Widget pinta los 90 días previos con esa ventana (`lib/ventana-renovacion.ts` + test; vida-y-salud excluido). CTA al portal; NO guarda nada.
+- Pendiente (fase 2): «avísame por correo» con doble opt-in = alta en el portal (enlace mágico, endpoint nuevo) + cron avisos a 70 y 45 días. NO afirmar consecuencia de que la compañía no avise a tiempo (sin confirmar jurídicamente).
+
 ## (24/09/2026) ASegura OS: «Calidad del dato» en /correduria → Datos (PR #3445)
 - Reglas puras en `module-seguros/calidad-dato.ts`; consulta en `apps/asegura/lib/calidad-cartera.ts` (puerto `GET /api/operador/calidad`, solo lectura, sin DNI/teléfono/correo). Medido hoy: 18 vencidas sin renovación, 20 sin prima, 12 parejas de fichas con el mismo DNI, 9 sin fecha de nacimiento, 1 sin DNI.
 - La pantalla la montó un agente y se integró a mano: leía `filas` cuando asegura manda `incidencias` (siempre habría salido «error») → cepo de contrato que lee la ruta de asegura. `<details>` → montaje perezoso.
