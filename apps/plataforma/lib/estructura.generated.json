@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-24T05:32:51Z",
+  "generadoEn": "2026-09-24T06:07:43Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -524,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 12
+        "evidencias": 13
       },
       "asegura-portal": {
         "estado": "usado",
@@ -984,7 +984,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 12
       },
       "rrhh": {
         "estado": "usado",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 103
+        "evidencias": 105
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2206,7 +2206,7 @@
       },
       "asegura-web": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 29
       },
       "housesevillana": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 26
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2306,7 +2306,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 24
+        "evidencias": 25
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3974,12 +3974,14 @@
       "/api/cartera/polizas/[polizaId]/retarificar",
       "/api/cron/avisos-intranet",
       "/api/cron/avisos-vencimiento",
+      "/api/cron/avisos-web",
       "/api/cron/felicitaciones",
       "/api/cron/revision-anual",
       "/api/operador/actividad",
       "/api/operador/actividad-nueva",
       "/api/operador/anulaciones",
       "/api/operador/aprobaciones",
+      "/api/operador/aviso-web",
       "/api/operador/backfill-contacto",
       "/api/operador/backfill-dni",
       "/api/operador/buscar",
@@ -4130,6 +4132,7 @@
       "/api/supresion"
     ],
     "asegura-web": [
+      "/api/aviso",
       "/api/consentimiento",
       "/api/lead"
     ],
@@ -5102,6 +5105,7 @@
       "/api/operador/agente-consulta",
       "/api/operador/flota-mapa",
       "/api/operador/secretos/set",
+      "/api/publico/correduria/aviso",
       "/api/publico/correduria/consentimiento",
       "/api/publico/correduria/lead",
       "/api/publico/disponibilidad",
@@ -5435,6 +5439,7 @@
       "seguros.anulacion",
       "seguros.aprobacion",
       "seguros.auditoria",
+      "seguros.aviso_web",
       "seguros.backfill_dni_plan",
       "seguros.bien_documentos",
       "seguros.bienes_asegurables",
@@ -6498,7 +6503,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1447,
+    "apis": 1451,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
