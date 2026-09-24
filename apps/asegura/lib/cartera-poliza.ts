@@ -38,6 +38,8 @@ import { estimar, mereceLaPena, type RiesgoAEstimar } from './codeoscopic/horqui
 import { elegirRiesgo, hogarDeDatos } from './codeoscopic/desde-cartera-hogar'
 import type { SiniestroFicha } from './cartera-ficha'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
+import { historialRiesgo } from './cartera-historial-riesgo'
+import type { EslabonHistorial } from '@central/module-seguros'
 
 export type CoberturaFicha = {
   orden: number | null
@@ -113,6 +115,11 @@ export type FichaPoliza = {
    * riesgo, m², año) y de qué ficha cuelga.
    */
   gemela: { polizaId: string; clienteId: string; importRef: string; objeto: ObjetoAsegurado; fechaVencimiento: string | null } | null
+  /**
+   * Las demás pólizas del MISMO bien (sustituciones, renovaciones, misma matrícula), de la más
+   * antigua a la más reciente. `[]` = no hay otras; `null` = no se pudo consultar.
+   */
+  historialRiesgo: EslabonHistorial[] | null
   coberturas: CoberturaFicha[]
   recibos: RecibosPoliza
   /** Todos, del más reciente al más antiguo. */
@@ -304,7 +311,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
   })
   if (!p) return null
 
-  const [intervinientes, gemela, documentos, listaDocumentos] = await Promise.all([
+  const [intervinientes, gemela, documentos, listaDocumentos, historial] = await Promise.all([
     db.polizaInterviniente
       .findMany({
         where: { correduriaId, polizaId: p.id },
@@ -356,6 +363,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
           .catch(() => null),
     contarDocumentosPoliza(correduriaId, p.id),
     listarDocumentos(correduriaId, { polizaId: p.id }),
+    historialRiesgo(correduriaId, p.id),
   ])
 
   const [polizaOrigen, sustituidaPor] = await Promise.all([
@@ -466,6 +474,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     primaBruta: num(p.primaBruta),
     primaMensual: num(p.primaMensual),
     objeto: objetoAsegurado({ tipo: String(p.tipo), datos, coberturas: coberturasTexto.length ? coberturasTexto : null }),
+    historialRiesgo: historial,
     gemela:
       gemela === null
         ? null

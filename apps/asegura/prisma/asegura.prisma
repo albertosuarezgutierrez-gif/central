@@ -1162,6 +1162,21 @@ model PortalEnlaceDirecto {
   @@map("portal_enlace_directo")
 }
 
+/// Felicitación de cumpleaños: sello anual por persona y lo que la campana del portal lee ese día.
+model Felicitacion {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  anio         Int      @db.SmallInt
+  dia          DateTime @db.Date
+  canal        String
+  creadoEn     DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@unique([clienteId, anio], map: "felicitacion_una_por_anio")
+  @@index([dia], map: "idx_felicitacion_dia")
+  @@map("felicitacion")
+}
+
 enum CanalRecaptacion {
   whatsapp
   email

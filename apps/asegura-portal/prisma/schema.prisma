@@ -1263,3 +1263,13 @@ model PortalEnlaceDirecto {
   @@map("portal_enlace_directo")
   @@schema("seguros")
 }
+
+/// Felicitación de cumpleaños que escribe el cron de asegura. El rol solo lee estas tres columnas.
+model Felicitacion {
+  id        String   @id @db.Uuid
+  clienteId String   @map("cliente_id") @db.Uuid
+  dia       DateTime @db.Date
+
+  @@map("felicitacion")
+  @@schema("seguros")
+}

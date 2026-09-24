@@ -203,6 +203,8 @@ function nombreFuente(f: Avisos['fuentesIlegibles'][number]): string {
       return 'tu carné de conducir'
     case 'firmas':
       return 'lo que tienes pendiente de firmar'
+    case 'felicitaciones':
+      return 'las felicitaciones'
   }
 }
 

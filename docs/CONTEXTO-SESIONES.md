@@ -19,6 +19,16 @@ por `ingerir-manual` vía nuevo workflow `cima-rescate-manual.yml` (asegura#850)
 🚨 Mapfre nunca activó el envío diario: sus 14 ficheros son la carga inicial del 26/05. Pendiente Alberto: borrar
 los 2 runs de `cima-rescate-manual` y la rama `tmp-rescate-cima` en GitHub (llevan el zip; el proxy no deja borrarla).
 
+**(24/09/2026)** 🔁 **Historial del riesgo en la ficha de póliza** (plataforma): las pólizas por las que ha pasado el mismo bien
+(red de `poliza_origen_id`/`poliza_padre_id` + misma matrícula del cliente), la copia del volcado de la misma póliza deduplicada.
+Regla pura `ordenarHistorialRiesgo`; lectura `lib/cartera-historial-riesgo.ts`. Caso Kona de José: Mapfre 2020 → Reale 2026.
+>
+**(24/09/2026)** 🎂 **PR 12: felicitar cumpleaños por correo y en la app** (Alberto). Cron de asegura 07:00 UTC sobre cartera en
+vigor (personas físicas; 54 de 72 tienen fecha, cifrada): reserva fila en `seguros.felicitacion` (una por persona y año) y manda un
+correo sin nada comercial; sin correo o de baja → solo en la app. La campana del portal lee la fila del día (aviso `felicitacion`).
+✅ Encendido (`ASEGURA_FELICITACIONES_ACTIVAS=1` en `central-asegura`, pedido por Alberto). Leads NO: sin base legal (LSSI 21). #3426 mergeado (+ revocado el DML del
+CRM de Manuel en las 21 tablas `portal_*`).
+>
 **(24/09/2026)** 📇 **Teléfonos de siniestros: «Guardar en mis contactos» + aviso de caducidad.** `vcardCompania()` y
 `telefonosPorRevisar()` en `module-seguros/telefonos-companias.ts` (mismo catálogo único). Botón en `/telefonos-siniestros`
 (ruta estática `/telefonos-siniestros/contacto/<slug>`, noindex) y en el parte del portal (`/api/contacto-compania/<nombre>`).
