@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-24T10:00:22Z",
+  "generadoEn": "2026-09-24T10:28:05Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 109
+        "evidencias": 110
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4043,6 +4043,7 @@
       "/api/operador/impagados",
       "/api/operador/informe-mediacion",
       "/api/operador/ingesta",
+      "/api/operador/ipid",
       "/api/operador/leads",
       "/api/operador/leads-competencia",
       "/api/operador/leads-web",
@@ -4109,6 +4110,7 @@
       "/api/invitaciones",
       "/api/invitaciones/[id]",
       "/api/invitaciones/responder",
+      "/api/ipid/[id]",
       "/api/mejorar-precio",
       "/api/mis-datos",
       "/api/mis-datos/confirmar",
@@ -4983,6 +4985,7 @@
       "/api/correduria/informe-mediacion",
       "/api/correduria/ingesta",
       "/api/correduria/intervinientes",
+      "/api/correduria/ipid",
       "/api/correduria/leads",
       "/api/correduria/leads-competencia",
       "/api/correduria/leads-web",
@@ -5491,6 +5494,7 @@
       "seguros.gestiones",
       "seguros.historial_interno",
       "seguros.interviniente_purga_log",
+      "seguros.ipid",
       "seguros.lds_consent",
       "seguros.liquidacion_movimientos",
       "seguros.liquidaciones",
@@ -6516,7 +6520,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 42,
-    "apis": 1461,
+    "apis": 1464,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
