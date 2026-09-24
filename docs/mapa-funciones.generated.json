@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-24T05:32:51Z",
-  "sha": "0a81bfa715424a85cb2b4892cd94315c4d7a9c09",
+  "generadoEn": "2026-09-24T06:04:55Z",
+  "sha": "b980e703265cb97fc48a1805847bd789b06edd78",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -14704,6 +14704,7 @@
       "exporta": [
         "proponerReciboDevuelto",
         "proponerAnulacionesFirmadas",
+        "proponerCartasFirmadas",
         "retirarObsoletas",
         "aprobacionesPendientes",
         "falloIncierto",
@@ -14717,7 +14718,7 @@
           "exportada": true,
           "params": "tx: Tx, correduriaId: string, reciboId: string, eventoId: string | null",
           "retorno": "Promise<boolean>",
-          "linea": 31,
+          "linea": 32,
           "resumen": "`true` si ha dejado una propuesta nueva. Idempotente por `clave` (una por recibo y vencimiento)."
         },
         {
@@ -14726,8 +14727,17 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 65,
+          "linea": 66,
           "resumen": "Propone comunicar a la compañía las anulaciones FIRMADAS por el cliente en el portal (pieza 2-d-3) sin propuesta viva. Solo las de firma electrónica (`firma_id` + `carta_texto`): una firma en papel la"
+        },
+        {
+          "nombre": "proponerCartasFirmadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string",
+          "retorno": "Promise<number>",
+          "linea": 115,
+          "resumen": "Propone mandar a la compañía las cartas de nombramiento de mediador FIRMADAS en el portal sin propuesta viva (mismas reglas que las anulaciones: fallida o caducada se repropone; rechazada no, la manda"
         },
         {
           "nombre": "retirarObsoletas",
@@ -14735,7 +14745,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<void>",
-          "linea": 132,
+          "linea": 180,
           "resumen": "Retira lo que ya no es verdad: lo caducado, y el aviso de un recibo que ya no consta devuelto (se cobró o la compañía lo rectificó). Escribirle «no consta pagado» a quien ya ha pagado es justo lo que "
         },
         {
@@ -14744,7 +14754,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<AprobacionPendiente[]>",
-          "linea": 153,
+          "linea": 208,
           "resumen": "Pendientes, urgentes primero."
         },
         {
@@ -14753,7 +14763,7 @@
           "exportada": true,
           "params": "mensaje: string",
           "retorno": "boolean",
-          "linea": 218,
+          "linea": 279,
           "resumen": "Cortes de red o de espera: el proveedor pudo haber aceptado el mensaje antes de cortarse."
         },
         {
@@ -14762,7 +14772,7 @@
           "exportada": false,
           "params": "destino: string, asunto: string, texto: string, adjunto?: { nombre: string; texto: string }",
           "retorno": "Promise<",
-          "linea": 228
+          "linea": 289
         },
         {
           "nombre": "destinoAnulacion",
@@ -14770,8 +14780,26 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string | null, contactoId: string | undefined",
           "retorno": "Promise<",
-          "linea": 253,
+          "linea": 314,
           "resumen": "A quién y con qué adjunto va la anulación firmada: el buzón de la compañía que Alberto ELIGE en la tarjeta (tiene que ser un contacto activo de la compañía de ESA póliza). No se deduce por área."
+        },
+        {
+          "nombre": "destinoCarta",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, cartaId: string, contactoId: string | undefined",
+          "retorno": "Promise<",
+          "linea": 336,
+          "resumen": "Igual que `destinoAnulacion`, para la carta de nombramiento firmada. El adjunto es la carta GUARDADA (cifrada en BD)."
+        },
+        {
+          "nombre": "marcarCartaEnviada",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, cartaId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 359,
+          "resumen": "La carta pasa a «enviada»: el correo salió. Un fallo aquí no puede invitar a repetir el envío."
         },
         {
           "nombre": "marcarComunicada",
@@ -14779,7 +14807,7 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string",
           "retorno": "Promise<boolean>",
-          "linea": 275,
+          "linea": 373,
           "resumen": "La anulación pasa a «comunicada»: el correo salió (o Alberto ha comprobado que salió)."
         },
         {
@@ -14788,7 +14816,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, d: Decision, actor: string",
           "retorno": "Promise<ResultadoDecision>",
-          "linea": 290
+          "linea": 388
         },
         {
           "nombre": "anotarHistorial",
@@ -14796,7 +14824,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, polizaId: string | null, nota: string",
           "retorno": "Promise<void>",
-          "linea": 402
+          "linea": 521
         },
         {
           "nombre": "enviosInciertos",
@@ -14804,12 +14832,13 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<EnvioIncierto[]>",
-          "linea": 418
+          "linea": 537
         }
       ],
       "tablas": [
         "anulacion",
         "aprobacion",
+        "carta_mediador",
         "clientes",
         "compania_contactos",
         "companias_dgs",
@@ -14821,7 +14850,7 @@
         "presupuesto"
       ],
       "rutaApi": null,
-      "hash": "314aa3004344"
+      "hash": "b1f0ac446710"
     },
     {
       "ruta": "apps/asegura/lib/asegura-db.ts",
@@ -15499,7 +15528,7 @@
           "exportada": false,
           "params": "c: string",
           "retorno": null,
-          "linea": 29
+          "linea": 33
         },
         {
           "nombre": "huella",
@@ -15507,7 +15536,7 @@
           "exportada": false,
           "params": "t: string",
           "retorno": null,
-          "linea": 30
+          "linea": 34
         },
         {
           "nombre": "hoyMadrid",
@@ -15515,7 +15544,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 32
+          "linea": 36
         },
         {
           "nombre": "base",
@@ -15523,8 +15552,17 @@
           "exportada": false,
           "params": "correduriaId: string, identidadId: string, presupuestoId: string",
           "retorno": "Promise<",
-          "linea": 55,
+          "linea": 64,
           "resumen": "La póliza actual del presupuesto, si es del TOMADOR de la sesión. 🚨 Misma guarda que «datos para emitir»: el portal deja ver un presupuesto por el canal, y firmar el nombramiento de la póliza de otra"
+        },
+        {
+          "nombre": "motivoSinCarta",
+          "kind": "function",
+          "exportada": false,
+          "params": "b: Base",
+          "retorno": "string",
+          "linea": 111,
+          "resumen": "Por qué no hay carta que firmar. 🚨 La compañía identifica al tomador por su DNI/NIF: sin uno válido no hay carta. Un cifrado que no abre NO es «no lo tienes»: subirlo otra vez no lo arregla."
         },
         {
           "nombre": "componer",
@@ -15532,7 +15570,7 @@
           "exportada": false,
           "params": "b: Base, hoy: string",
           "retorno": "string | null",
-          "linea": 94
+          "linea": 117
         },
         {
           "nombre": "abierta",
@@ -15540,7 +15578,7 @@
           "exportada": false,
           "params": "polizaId: string",
           "retorno": "Promise<",
-          "linea": 98
+          "linea": 121
         },
         {
           "nombre": "prepararCarta",
@@ -15548,7 +15586,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, presupuestoId: string",
           "retorno": "Promise<ResultadoPreparar>",
-          "linea": 112,
+          "linea": 135,
           "resumen": "La carta que firmaría, compuesta hoy. No escribe nada."
         },
         {
@@ -15557,7 +15595,7 @@
           "exportada": false,
           "params": "email: string",
           "retorno": null,
-          "linea": 132
+          "linea": 155
         },
         {
           "nombre": "pedirCodigoCarta",
@@ -15565,7 +15603,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, presupuestoId: string",
           "retorno": "Promise<ResultadoCodigo>",
-          "linea": 137
+          "linea": 160
         },
         {
           "nombre": "firmarCarta",
@@ -15573,7 +15611,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, presupuestoId: string, datos: { codigo: string; nombre: string; cartaHash: string; ip: string | null; userAgent: string | null },",
           "retorno": "Promise<ResultadoFirma>",
-          "linea": 203
+          "linea": 228
         },
         {
           "nombre": "cartasDePoliza",
@@ -15581,7 +15619,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string",
           "retorno": "Promise<CartaEnLista[] | null>",
-          "linea": 292,
+          "linea": 317,
           "resumen": "Las cartas de una póliza (la más reciente primero). `null` = no se pudo leer."
         },
         {
@@ -15590,7 +15628,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<CartaPorTramitar[] | null>",
-          "linea": 315,
+          "linea": 344,
           "resumen": "Las cartas que esperan a Alberto (firmadas sin mandar) o a la compañía (enviadas sin respuesta), para «Hoy». Sin esta lista una carta firmada solo se veía entrando en la ficha de esa póliza. `null` = "
         },
         {
@@ -15599,11 +15637,12 @@
           "exportada": true,
           "params": "correduriaId: string, cartaId: string, accion: AccionCartaMediador, motivo: string | null, actor: string,",
           "retorno": "Promise<ResultadoAccion>",
-          "linea": 341
+          "linea": 371
         }
       ],
       "tablas": [
         "anulacion",
+        "aprobacion",
         "carta_mediador",
         "clientes",
         "companias_dgs",
@@ -15616,7 +15655,7 @@
         "presupuesto_evento"
       ],
       "rutaApi": null,
-      "hash": "d9f023cf1cb2"
+      "hash": "cf35a5c1e872"
     },
     {
       "ruta": "apps/asegura/lib/cartera-busqueda.ts",
@@ -68879,7 +68918,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "a53a356dc4d8"
+      "hash": "9d5901295192"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Blog.tsx",
@@ -69085,7 +69124,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b67b3c18c3f2"
+      "hash": "b901f71cfb15"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/acciones.ts",
@@ -72018,7 +72057,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c6c528688b6d"
+      "hash": "8441f7da3244"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/EditarDireccionRiesgo.tsx",
@@ -93403,7 +93442,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "CartaPorTramitar | null",
-          "linea": 48,
+          "linea": 50,
           "resumen": "Una fila de «Hoy». Ilegible → `null` (y la lista entera se declara ilegible)."
         },
         {
@@ -93412,7 +93451,7 @@
           "exportada": true,
           "params": "e: EstadoCartaMediador",
           "retorno": "",
-          "linea": 60,
+          "linea": 62,
           "resumen": "Qué se puede hacer desde cada estado (la regla la vuelve a aplicar asegura)."
         },
         {
@@ -93421,7 +93460,7 @@
           "exportada": false,
           "params": "",
           "retorno": "",
-          "linea": 73
+          "linea": 75
         },
         {
           "nombre": "leerCartas",
@@ -93429,7 +93468,7 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<LecturaCartas>",
-          "linea": 79
+          "linea": 81
         },
         {
           "nombre": "leerCartasPorTramitar",
@@ -93437,7 +93476,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<LecturaPorTramitar>",
-          "linea": 95
+          "linea": 97
         },
         {
           "nombre": "accionCartaAsegura",
@@ -93445,12 +93484,12 @@
           "exportada": true,
           "params": "cuerpo: Record<string, unknown>, actor: string",
           "retorno": "Promise<",
-          "linea": 111
+          "linea": 113
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "20fdceabc816"
+      "hash": "924f7330f64e"
     },
     {
       "ruta": "apps/plataforma/lib/cartera-asegura.ts",
@@ -140412,6 +140451,7 @@
         "caducaEn",
         "borradorReciboDevuelto",
         "borradorAnulacionCompania",
+        "borradorCartaMediadorCompania",
         "buzonSugerido",
         "decisionValida"
       ],
@@ -140467,13 +140507,22 @@
           "resumen": "El correo a la compañía con la anulación firmada (pieza 2-d-3). La carta firmada va ADJUNTA y no se edita (su huella es la de la firma); esto es solo la nota que la acompaña. Caduca con la fecha de ef"
         },
         {
+          "nombre": "borradorCartaMediadorCompania",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaCartaMediadorCompania",
+          "retorno": "Borrador",
+          "linea": 187,
+          "resumen": "El correo a la compañía con la carta de nombramiento de mediador firmada (PR 6, salida B). La carta va ADJUNTA y no se edita; esto es la nota que la acompaña. Sin fecha de efecto que apriete: caduca a"
+        },
+        {
           "nombre": "buzonSugerido",
           "kind": "function",
           "exportada": true,
           "params": "contactos: BuzonCompania[]",
           "retorno": "string | null",
-          "linea": 178,
-          "resumen": "El buzón de la compañía que se PRESELECCIONA para mandarle una anulación: el que ya recibió una (lo marca el envío que Alberto aprueba). NO se deduce por área: con los contactos reales, el de «adminis"
+          "linea": 218,
+          "resumen": "El buzón de la compañía que se PRESELECCIONA para mandarle una anulación (o una carta de nombramiento: el llamador pasa en `recibeAnulaciones` la marca de ESE tipo de envío): el que ya recibió uno (lo"
         },
         {
           "nombre": "decisionValida",
@@ -140481,13 +140530,13 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "Decision | null",
-          "linea": 193,
+          "linea": 233,
           "resumen": "Valida lo que llega del corredor: puede retocar asunto y texto, nunca vaciarlos."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "60c8d466820b"
+      "hash": "48231341a637"
     },
     {
       "ruta": "packages/module-seguros/src/backfill-contacto.ts",
@@ -140783,6 +140832,7 @@
       "resumen": "La CARTA DE NOMBRAMIENTO DE MEDIADOR (spec 2026-09-21, «salida B», PR 6): el cliente se queda con su compañía y su póliza, pero nombra a la correduría como su corredor en ella. Convierte un lead en cliente sin tarificar ni gastar un euro, y la póliza empieza a entrar por CIMA. 🚨 La carta NO toca el",
       "exporta": [
         "esCompaniaDeRelleno",
+        "documentoParaCarta",
         "cartaNombramientoMediador",
         "transicionCartaMediador"
       ],
@@ -140793,8 +140843,17 @@
           "exportada": true,
           "params": "compania: string",
           "retorno": "boolean",
-          "linea": 30,
+          "linea": 36,
           "resumen": "Valores de «cajón» que el volcado histórico escribe en `polizas.aseguradora` (26.987 pólizas con «(legacy)», medido el 23/09/2026). No identifican a nadie: una carta «A la atención de (legacy)» se fir"
+        },
+        {
+          "nombre": "documentoParaCarta",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: string | null",
+          "retorno": "string | null",
+          "linea": 41,
+          "resumen": "El documento del tomador normalizado (sin espacios ni guiones, letra comprobada), o `null`."
         },
         {
           "nombre": "fechaEs",
@@ -140802,7 +140861,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 34
+          "linea": 46
         },
         {
           "nombre": "cartaNombramientoMediador",
@@ -140810,8 +140869,8 @@
           "exportada": true,
           "params": "d: DatosCartaMediador",
           "retorno": "string | null",
-          "linea": 43,
-          "resumen": "El texto EXACTO que se firma y se manda. `null` si falta la compañía o el número: una carta que no identifica la póliza no la puede aplicar nadie, y firmarla engañaría al cliente."
+          "linea": 56,
+          "resumen": "El texto EXACTO que se firma y se manda. `null` si falta la compañía, el número o el documento del tomador: una carta que no identifica la póliza y a quien la firma no la puede aplicar nadie, y firmar"
         },
         {
           "nombre": "transicionCartaMediador",
@@ -140819,13 +140878,13 @@
           "exportada": true,
           "params": "actual: EstadoCartaMediador, accion: AccionCartaMediador",
           "retorno": "EstadoCartaMediador | null",
-          "linea": 75,
+          "linea": 89,
           "resumen": "El siguiente estado de una acción del corredor, o `null` si no se puede desde el actual. Solo una firmada se envía; solo una enviada se acepta o se rechaza; desistir, desde cualquier abierta. Una `pen"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "14fae96f6be6"
+      "hash": "26e93265711b"
     },
     {
       "ruta": "packages/module-seguros/src/cartera-viva.ts",
@@ -150271,6 +150330,6 @@
   ],
   "resumen": {
     "archivos": 3626,
-    "funciones": 11444
+    "funciones": 11450
   }
 }
