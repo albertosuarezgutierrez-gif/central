@@ -171,18 +171,18 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 108 | 15.352 | 9.781.154 | 0 | 0 |
-| `otro` | 106 | 3.942 | 14.310.508 | 6.953.264 | 0 |
-| `mcp:github` | 97 | 3.514 | 3.246.356 | 40.213.950 | 58 |
-| `lectura-directa` | 99 | 3.437 | 6.722.939 | 0 | 0 |
-| `escritura` | 87 | 2.265 | 38.229.194 | 0 | 0 |
-| `sql` | 72 | 1.613 | 742.753 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 59 | 727 | 187.022 | 2.997.396 | 10 |
-| `mcp:Vercel` | 25 | 311 | 540.898 | 198.719 | 4 |
+| `bash` | 108 | 15.589 | 9.920.279 | 0 | 0 |
+| `otro` | 106 | 3.979 | 14.411.398 | 6.953.264 | 0 |
+| `mcp:github` | 97 | 3.540 | 3.261.216 | 40.213.950 | 58 |
+| `lectura-directa` | 99 | 3.445 | 6.737.660 | 0 | 0 |
+| `escritura` | 87 | 2.271 | 38.243.591 | 0 | 0 |
+| `sql` | 72 | 1.640 | 759.891 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 59 | 733 | 189.413 | 2.997.396 | 10 |
+| `mcp:Vercel` | 25 | 314 | 541.876 | 198.719 | 4 |
 | `mcp:Booking-com` | 10 | 297 | 1.215.858 | 0 | 0 |
 | `mcp:Gmail` | 16 | 229 | 371.581 | 0 | 2 |
-| `mcp:Supabase` | 43 | 147 | 17.621 | 0 | 1 |
-| `agente:general-purpose` | 17 | 65 | 44.017 | 672.215 | 0 |
+| `mcp:Supabase` | 43 | 149 | 17.723 | 0 | 1 |
+| `agente:general-purpose` | 17 | 67 | 45.044 | 682.882 | 0 |
 | `mcp:Google-Drive` | 7 | 58 | 61.436 | 0 | 2 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Interactive-Brokers--IBKR-` | 1 | 51 | 73.084 | 0 | 0 |
@@ -190,10 +190,10 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
 | `agente:agente-architect` | 9 | 42 | 38.143 | 1.213.520 | 0 |
 | `agente:Explore` | 12 | 32 | 15.543 | 726.021 | 0 |
+| `mcp:Google_Drive` | 6 | 31 | 45.391 | 0 | 7 |
 | `mcp:OpenSEO` | 1 | 30 | 20.595 | 0 | 0 |
 | `agente:agente-mecanico` | 10 | 29 | 29.409 | 488.084 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
-| `mcp:Google_Drive` | 6 | 27 | 41.402 | 0 | 5 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `mcp:Resend` | 2 | 12 | 1.955 | 0 | 0 |
