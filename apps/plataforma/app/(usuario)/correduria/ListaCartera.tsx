@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Link from 'next/link'
 import { ChevronDown, Download, Eraser, Search, Users } from 'lucide-react'
 import {
@@ -584,6 +584,39 @@ function etiquetaEstado(v: string): string {
   return ESTADOS.find((e) => e.v === v)?.label ?? v.replace(/_/g, ' ')
 }
 
+/**
+ * La acción que más vale hoy con este cliente, la MISMA que su ficha. `null` (el
+ * puerto no la manda) no pinta nada; «sin comprobar» se dice, no se calla: sin
+ * recibos leídos, «nada pendiente» sería el «todo al día» que no hay que pintar.
+ */
+function ChipSiguiente({ s }: { s: ClienteListado['siguiente'] }) {
+  if (s === null || s.estado === 'nada') return null
+  const base: CSSProperties = {
+    display: 'inline-block', marginTop: 6, padding: '2px 8px', borderRadius: 999, fontSize: 12,
+    lineHeight: 1.5, overflowWrap: 'anywhere', maxWidth: '100%',
+  }
+  if (s.estado === 'sin_comprobar') {
+    return (
+      <span style={{ ...base, border: '1px dashed var(--border)', color: 'var(--muted)' }} title={`No se pudo leer: ${s.falta.join(', ')}`}>
+        Siguiente acción sin comprobar
+      </span>
+    )
+  }
+  return (
+    <span
+      style={{
+        ...base,
+        border: `1px solid ${s.urgente ? 'var(--danger)' : 'var(--border)'}`,
+        color: s.urgente ? 'var(--danger)' : 'var(--text)',
+        fontWeight: s.urgente ? 600 : 400,
+      }}
+      title={s.porque}
+    >
+      👉 {s.titulo}
+    </span>
+  )
+}
+
 function FilaCliente({ c, grupo }: { c: ClienteListado; grupo: Seleccion['grupo'] }) {
   // Montaje perezoso: la tabla de pólizas no existe hasta que se abre. Un
   // `<details>` cerrado igualmente crearía todo su DOM (regla de rendimiento).
@@ -610,6 +643,8 @@ function FilaCliente({ c, grupo }: { c: ClienteListado; grupo: Seleccion['grupo'
         {companias !== null && companias.length > 0 && ` · ${companias.join(' · ')}`}
         {c.polizas !== null && ` · ${vence ? `vence ${vence}` : 'sin vencimiento informado'}`}
       </div>
+
+      <ChipSiguiente s={c.siguiente} />
 
       {c.polizas === null ? (
         <p style={{ ...pMuted, marginTop: 6 }}>

@@ -26,7 +26,7 @@
 // resto → `null`. Y la regla de siempre: `reserva: null` = «la compañía no lo
 // informa», NUNCA 0; `siniestros: null` = «no se pudo leer», NUNCA `[]`.
 
-import type { OrigenSiniestro } from '@central/module-seguros'
+import type { OrigenSiniestro, TramitacionCruda } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 
@@ -77,6 +77,13 @@ export type SiniestroCartera = {
    */
   danosCima: { descripcion: string | null; valor: string | null }[] | null
   /**
+   * Tramitación que manda la COMPAÑÍA (columnas `*_cima`): historias crudas +
+   * reserva, indemnización, total pagado y posición de culpa. Se lee con
+   * `tramitacionCompania()` de `@central/module-seguros`. `null` = la compañía
+   * no manda nada de esto, o asegura no lo manda (versión anterior).
+   */
+  tramitacionCima: TramitacionCruda | null
+  /**
    * Terceros y testigos. `null` = no se ha podido consultar (o asegura no lo
    * manda) — NUNCA «no hay ninguno», que es `[]`. Exclusivo de siniestros
    * `gestionado_correduria`.
@@ -114,6 +121,23 @@ function datosRamoDe(v: unknown): Record<string, string | number | boolean> | nu
     if (typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean') out[k] = val
   }
   return Object.keys(out).length === 0 ? null : out
+}
+
+/** `tramitacionCima` con su forma, o `null`. El contenido lo valida `tramitacionCompania()`. */
+function tramitacionDe(v: unknown): TramitacionCruda | null {
+  if (typeof v !== 'object' || v === null) return null
+  const t = v as Record<string, unknown>
+  const arr = (x: unknown) => (Array.isArray(x) ? x : null)
+  const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null)
+  return {
+    situaciones: arr(t.situaciones),
+    acciones: arr(t.acciones),
+    pagos: arr(t.pagos),
+    reserva: n(t.reserva),
+    indemnizacion: n(t.indemnizacion),
+    totalPagos: n(t.totalPagos),
+    posicion: typeof t.posicion === 'string' ? t.posicion : null,
+  }
 }
 
 /** `danosCima` tal cual, o `null` si no tiene forma de array. Nunca `[]` inventado. */
@@ -184,6 +208,7 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     actualizado: cadena(s.actualizado),
     datosRamo: datosRamoDe(s.datosRamo),
     danosCima: danosCimaDe(s.danosCima),
+    tramitacionCima: tramitacionDe(s.tramitacionCima),
     terceros: terceros(s.terceros),
   }
 }

@@ -43,10 +43,12 @@ import {
   type FiltroCartera,
   type GrupoCartera,
   type VentanaVencimiento,
+  type SiguienteAccion,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { registrarErrorCartera } from './error-cartera'
+import { siguientesAcciones } from './acciones-listado'
 
 // ─── Cotas de seguridad ──────────────────────────────────────────────────────
 // Ninguna consulta escanea sin techo. Las dos cotas están MUY por encima de lo
@@ -85,6 +87,12 @@ export type ClienteListado = {
    *  con el filtro: ver a un cliente filtrado por «Mapfre» con su póliza de
    *  Allianz al lado es justo lo que hace útil la lista. */
   polizas: PolizaListado[]
+  /**
+   * La acción que más vale hoy con este cliente (la MISMA regla que la tarjeta
+   * de la ficha, `siguienteAccion()`). `null` = no se pudo calcular (las pólizas
+   * no se leyeron): no hay chip, que no es «nada pendiente».
+   */
+  siguiente: SiguienteAccion | null
 }
 
 export type Facetas = {
@@ -354,6 +362,18 @@ export async function listarCartera(
     contactosDeClientes(correduriaId, ids),
   ])
 
+  const acciones = await siguientesAcciones(
+    correduriaId,
+    filas.map((x) => {
+      const c = contactos?.get(x.id)
+      return {
+        id: x.id,
+        tieneCanal: contactos === null ? null : Boolean(c?.email || c?.telefono),
+      }
+    }),
+    hoy,
+  )
+
   const clientes: ClienteListado[] = filas.map((x) => {
     const contacto = contactos?.get(x.id)
     return {
@@ -370,6 +390,7 @@ export async function listarCartera(
       polizasVivas: x.polizas_vivas,
       ramosVivos: x.ramos_vivos ?? [],
       polizas: porCliente.polizas.get(x.id) ?? [],
+      siguiente: acciones?.get(x.id) ?? null,
     }
   })
 

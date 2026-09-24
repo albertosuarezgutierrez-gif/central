@@ -540,6 +540,18 @@ model Siniestro {
   /// `[{descripcion,valor}]`. NO es PII. EXCLUSIVO de `origen='cima'` — es justo lo
   /// contrario de `datosRamo` (ese lo aporta el corredor a mano y CIMA no lo trae).
   danosCima            Json?              @map("danos_cima")
+  /// Tramitación que manda la COMPAÑÍA por EIAC (la escribe el CRM, repo asegura,
+  /// #852; migración 0099). Historias jsonb FUSIONADAS fichero a fichero. Las
+  /// `*_cima` no pisan `reserva_importe`/`indemnizacion_importe`/`se_considera_culpable`,
+  /// que son del corredor. Lectura: `tramitacionCompania()` de `@central/module-seguros`.
+  situacionesCima      Json?              @map("situaciones_cima")
+  accionesCima         Json?              @map("acciones_cima")
+  pagosCima            Json?              @map("pagos_cima")
+  reservaCima          Decimal?           @map("reserva_cima") @db.Decimal(12, 2)
+  indemnizacionCima    Decimal?           @map("indemnizacion_cima") @db.Decimal(12, 2)
+  totalPagosCima       Decimal?           @map("total_pagos_cima") @db.Decimal(12, 2)
+  /// `PosicionSiniestro` = CULPA (CU/RE/IN/NA), no estado.
+  posicionCima         String?            @map("posicion_cima") @db.VarChar(2)
 
   correduria      Correduria               @relation(fields: [correduriaId], references: [id])
   cliente         Cliente                  @relation(fields: [clienteId], references: [id])

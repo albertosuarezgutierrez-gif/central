@@ -55,6 +55,31 @@ export type ClienteListado = {
   polizas: PolizaListada[] | null
   /** Pólizas suyas que llegaron sin forma legible. Se cuentan, no se esconden. */
   polizasIlegibles: number
+  /**
+   * La acción que más vale hoy (misma regla que la ficha, `siguienteAccion()`).
+   * `null` = el puerto no la manda o no la pudo calcular: no se pinta chip —
+   * que no es «nada pendiente».
+   */
+  siguiente: SiguienteListado | null
+}
+
+export type SiguienteListado =
+  | { estado: 'accion'; titulo: string; porque: string; urgente: boolean }
+  | { estado: 'nada' }
+  | { estado: 'sin_comprobar'; falta: string[] }
+
+/** El `siguiente` del puerto, o `null` si no tiene una forma que se entienda. */
+export function leerSiguiente(v: unknown): SiguienteListado | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (o.estado === 'nada') return { estado: 'nada' }
+  if (o.estado === 'sin_comprobar') {
+    return { estado: 'sin_comprobar', falta: Array.isArray(o.falta) ? o.falta.filter((x): x is string => typeof x === 'string') : [] }
+  }
+  if (o.estado === 'accion' && typeof o.titulo === 'string' && o.titulo.trim() !== '') {
+    return { estado: 'accion', titulo: o.titulo, porque: typeof o.porque === 'string' ? o.porque : '', urgente: o.urgente === true }
+  }
+  return null
 }
 
 export type Faceta = { v: string; n: number }
@@ -169,6 +194,7 @@ export function leerClienteListado(v: unknown): ClienteListado | null {
     ramosVivos: textos(o.ramosVivos),
     polizas,
     polizasIlegibles,
+    siguiente: leerSiguiente(o.siguiente),
   }
 }
 

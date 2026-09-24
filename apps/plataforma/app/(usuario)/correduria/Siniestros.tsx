@@ -11,6 +11,8 @@ import {
   etiquetaEstadoSiniestro,
   etiquetaTipoSiniestro,
   plazoComunicacion,
+  textoClave,
+  tramitacionCompania,
   type CampoRamoSiniestro,
   type DocumentoResumen,
   type EstadoSiniestro,
@@ -249,6 +251,59 @@ function BloqueDanos({ danos }: { danos: { descripcion: string | null; valor: st
           )
         })}
       </ul>
+    </div>
+  )
+}
+
+// ─── Tramitación de la compañía (EXCLUSIVO de CIMA) ───────────────────────────
+//
+// Lo que la compañía cuenta por EIAC: situaciones, acciones con su estado y
+// quién interviene, pagos, reserva, indemnización y posición de culpa. Va aparte
+// de «Reserva»/«Indemnización» de arriba, que son lo que anota el corredor: son
+// dos fuentes y no se mezclan.
+
+function BloqueTramitacion({ t }: { t: SiniestroCartera['tramitacionCima'] }) {
+  const v = t ? tramitacionCompania(t) : null
+  if (!v) return null
+  const cifras: [string, string][] = []
+  if (v.reserva !== null) cifras.push(['Reserva de la compañía', eur(v.reserva)])
+  if (v.totalPagado !== null) cifras.push(['Pagado por la compañía', eur(v.totalPagado)])
+  if (v.indemnizacion !== null) cifras.push(['Indemnización informada', eur(v.indemnizacion)])
+  if (v.posicion) cifras.push(['Culpa (compañía)', textoClave(v.posicion) ?? ''])
+  return (
+    <div>
+      <div style={etiqueta}>Tramitación de la compañía (CIMA)</div>
+      {cifras.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, margin: '4px 0 8px' }}>
+          {cifras.map(([label, valor]) => (
+            <Dato key={label} label={label} valor={valor} />
+          ))}
+        </div>
+      )}
+      {v.pasos.length > 0 && (
+        <ol style={{ margin: 0, paddingLeft: 18, fontSize: 13, display: 'grid', gap: 4 }}>
+          {v.pasos.map((p, i) => (
+            <li key={i} style={{ overflowWrap: 'anywhere' }}>
+              <span style={muted}>{p.fecha ? fechaEs(p.fecha) : 'Sin fecha'}</span>{' · '}
+              {p.tipo === 'situacion' && <>Siniestro {(textoClave(p.clave) ?? '').toLowerCase()}</>}
+              {p.tipo === 'accion' && (
+                <>
+                  {textoClave(p.clave)}
+                  {p.estadoAccion && `: ${(textoClave(p.estadoAccion) ?? '').toLowerCase()}`}
+                  {p.figuras.length > 0 && <span style={muted}> ({p.figuras.map((f) => textoClave(f)).join(', ')})</span>}
+                </>
+              )}
+              {p.tipo === 'pago' && (
+                <>
+                  Pago{p.clave ? ` a ${(textoClave(p.clave) ?? '').toLowerCase()}` : ''}
+                  {p.importe !== null && `: ${eur(p.importe)}`}
+                </>
+              )}
+              {p.descripcion && <div style={muted}>{p.descripcion}</div>}
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   )
 }
@@ -559,7 +614,13 @@ function Fila({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoP
         </Celda>
         <Celda label="Reserva">
           {/* NULL es «la compañía no lo informa», no «cero euros de daño». */}
-          {s.reserva === null ? <span style={muted} title="Reserva no informada">sin dato</span> : eur(s.reserva)}
+          {s.reserva !== null ? (
+            eur(s.reserva)
+          ) : typeof s.tramitacionCima?.reserva === 'number' ? (
+            <span title="Reserva que informa la compañía por CIMA (no anotada por ti)">{eur(s.tramitacionCima.reserva)} <span style={muted}>CIA</span></span>
+          ) : (
+            <span style={muted} title="Reserva no informada">sin dato</span>
+          )}
         </Celda>
         <span style={{ ...muted, fontSize: 11, alignSelf: 'center', justifySelf: 'end' }}>{abierta ? '▲' : '▼'}</span>
       </div>
@@ -634,6 +695,7 @@ function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ra
       </div>
 
       <BloqueDanos danos={s.danosCima} />
+      <BloqueTramitacion t={s.tramitacionCima} />
 
       {propio && (
         <BloqueRamo siniestroId={s.id} ramoPoliza={ramoPoliza} datosRamo={s.datosRamo} onGuardar={onAnotar} />

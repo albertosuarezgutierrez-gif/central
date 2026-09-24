@@ -546,6 +546,13 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) ASegura: tramitación de la compañía en la ficha del corredor + chip «siguiente acción» en Clientes
+- `/correduria` → siniestros: bloque «Tramitación de la compañía (CIMA)» (pasos, estado de cada acción, figuras, reserva, pagado,
+  indemnización, culpa) con `tramitacionCompania()` de module-seguros (claves oficiales EIAC en un sitio). La reserva de la compañía
+  sale en la fila marcada «CIA» si el corredor no anotó la suya; son dos fuentes y no se mezclan.
+- Listado de Clientes: chip «👉 siguiente acción» por fila con la MISMA `siguienteAccion()` de la ficha, por lotes en asegura
+  (`lib/acciones-listado.ts`). Reprocesado de los 46 SIN hecho (100 siniestros con tramitación). #853 corrige IN = culpa, no estado.
+
 ## (24/09/2026) ASegura: tramitación del siniestro que manda la compañía → portal
 - CRM (repo asegura, PR #852): el mapper EIAC lee situaciones, acciones, pagos, reserva, total pagado y posición; se guardan
   en `siniestros.*_cima` FUSIONANDO (EIAC manda solo lo nuevo por periodo) sin tocar los campos manuales del corredor. Migración 0099 aplicada.
