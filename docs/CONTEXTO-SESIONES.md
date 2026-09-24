@@ -399,6 +399,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) blog ASegura: «Publicar» fallaba porque el cepo ponía rojo CADA artículo del agente
+El test «ningún tema de la cola repite un artículo publicado» (#2505) chocaba con el diseño: el agente solo escribe
+`articulos.ts` y deja el tema en `TEMAS`, así que su PR siempre salía con Tests en rojo (#2966, 9 días atascado; la
+pantalla decía «Tests en marcha / suele resolverse solo»). Ahora exige que lo publicado sea PREFIJO de la cola, y el
+405 ya no promete que se arregle solo. PR #3433. Pendiente: tras mergear, actualizar la rama de #2966 con main.
+
 ## (23/09/2026) correduría: calle + número → el Catastro propone el piso (verifica la dirección)
 - `DireccionConfirmable` (alta/edición de cliente y dirección del riesgo de la póliza): con calle+número+CP+ciudad aparece «Comprobar en el Catastro y elegir el piso» → lista de pisos del portal (o ✅ si es una sola vivienda, o ⚠️ «el Catastro no tiene ese número»). Con BOTÓN, no al teclear (el Catastro corta si se le pregunta seguido). Nunca bloquea el guardado.
 - En la póliza de HOGAR, el piso elegido guarda además la referencia catastral (pasa a retarificable). En el cliente solo verifica: un cliente puede tener varias casas.
