@@ -687,6 +687,18 @@ html[data-saldo-oculto='1'] .saldo-privado {
   --primary-light: rgba(73, 124, 253, .16);
   --primary-hover: #9fbcff;
 }
+/* Tipografía de la correduría (24/09/2026): la misma que grupoasegura.es y el portal.
+   Titulares, pestañas y botones en Quicksand; cuerpo en Nunito Sans; sin cursivas
+   (Quicksand no tiene itálica y el navegador la sintetizaría). Las variables las pone
+   el layout de /correduria con next/font. */
+.correduria-tipografia {
+  font-family: var(--font-correduria-sans), system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+.correduria-tipografia :is(h1, h2, h3, h4, button, summary, [role="tab"], [role="menuitem"]) {
+  font-family: var(--font-correduria-display), ui-rounded, system-ui, sans-serif;
+}
+.correduria-tipografia :is(h1, h2, h3) { font-weight: 700; }
+.correduria-tipografia em { font-style: normal; }
 
 /* === Solo para lectores de pantalla ===
    Un rótulo que la vista no necesita pero la accesibilidad sí. Nació al quitar

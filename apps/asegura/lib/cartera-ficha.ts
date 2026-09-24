@@ -869,6 +869,10 @@ async function leerIntervinientes(
         personaClave: f.nifLookupHash ? claves.get(f.nifLookupHash) ?? null : null,
         esTomador: f.clienteId === tomadorId,
         origen: String(f.origen),
+        // Si el teléfono/correo es de la PROPIA fila o se ha rellenado con el de su ficha (arriba).
+        // Sin esto, «lo que tiene la compañía» enseñaría como de CIMA un dato que es nuestro.
+        telefonoPropio: f.telefono !== null,
+        emailPropio: f.email !== null,
       }
     })
   } catch {

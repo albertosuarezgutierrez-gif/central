@@ -38,6 +38,8 @@ export function datosDeLaCompania(
   fichaId: string,
   intervinientes: IntervinienteFicha[] | null,
   contactos: ContactosCliente | null,
+  /** El teléfono/correo de la propia ficha (`clientes`): también son nuestros, aunque no estén en la lista. */
+  propios: { telefono: string | null; email: string | null } = { telefono: null, email: null },
 ): DatosCompania {
   if (intervinientes === null) return { estado: 'sin_comprobar', motivo: 'no han llegado los intervinientes de sus pólizas' }
   if (contactos === null) return { estado: 'sin_comprobar', motivo: 'no se han podido leer sus contactos' }
@@ -50,17 +52,23 @@ export function datosDeLaCompania(
     if (k !== null) nuestros.add(`${c.tipo}:${k}`)
   }
 
+  if (propios.telefono) { const k = claveTelefono(propios.telefono); if (k) nuestros.add(`telefono:${k}`) }
+  if (propios.email) { const k = claveEmail(propios.email); if (k) nuestros.add(`email:${k}`) }
+
   const vistos = new Set<string>()
   const nuevos: DatoCompania[] = []
-  let ilegibles = 0
+  const ilegiblesPorTipo = new Set<string>()
   for (const i of intervinientes) {
     // Solo lo que trae la compañía sobre ESTA persona: otra persona de la póliza tiene su propio teléfono.
     if (i.origen !== 'cima' || i.fichaId !== fichaId) continue
-    if (i.telefonoIlegible) ilegibles++
-    if (i.emailIlegible) ilegibles++
+    // Un dato que asegura ha rellenado con el de la ficha NO es de la compañía (`...Propio === false`).
+    const telCompania = i.telefonoPropio === false ? null : i.telefono
+    const emailCompania = i.emailPropio === false ? null : i.email
+    if (i.telefonoIlegible && i.telefonoPropio === true) ilegiblesPorTipo.add('telefono')
+    if (i.emailIlegible && i.emailPropio === true) ilegiblesPorTipo.add('email')
     const candidatos: [DatoCompania['tipo'], string | null, string | null][] = [
-      ['telefono', i.telefono, i.telefono ? claveTelefono(i.telefono) : null],
-      ['email', i.email, i.email ? claveEmail(i.email) : null],
+      ['telefono', telCompania, telCompania ? claveTelefono(telCompania) : null],
+      ['email', emailCompania, emailCompania ? claveEmail(emailCompania) : null],
     ]
     for (const [tipo, valor, k] of candidatos) {
       if (valor === null || k === null) continue
@@ -70,5 +78,5 @@ export function datosDeLaCompania(
       nuevos.push({ tipo, valor: valor.trim(), rol: i.rol, polizaId: i.polizaId })
     }
   }
-  return { estado: 'ok', nuevos, ilegibles, incompleta }
+  return { estado: 'ok', nuevos, ilegibles: ilegiblesPorTipo.size, incompleta }
 }

@@ -8,7 +8,7 @@ import { fechaHoraEs, type NotasFicha } from '@/lib/ficha-asegura'
  * Notas de la ficha como LISTA FECHADA (fase 2 del rediseño, 24/09/2026). Antes había un solo campo
  * «Notas» que se sustituía entero sin enseñar lo que había: escribir una nota borraba la anterior.
  * Ahora cada nota se añade con su fecha y quién la escribió, y la suelta del CRM anterior se enseña
- * aparte, sin tocarla. `null` = no se han podido leer: no es «sin notas».
+ * aparte, sin tocarla (hoy la escriben el alta y el canal de leads web). `null` = no se han podido leer: no es «sin notas».
  */
 const POR_PAGINA = 10
 
@@ -47,12 +47,12 @@ export default function NotasCliente({ clienteId, notas }: { clienteId: string; 
   return (
     <div style={{ display: 'grid', gap: 10, fontSize: 13 }}>
       <form onSubmit={guardar} style={{ display: 'grid', gap: 8 }}>
-        <label htmlFor="nota-nueva" style={{ fontSize: 12, color: 'var(--muted)' }}>Nueva nota (queda con la fecha y tu nombre)</label>
+        <label htmlFor="nota-nueva" style={{ fontSize: 12, color: 'var(--muted)' }}>Nueva nota (queda con la fecha y tu correo)</label>
         <textarea
           id="nota-nueva"
           value={texto}
           onChange={e => setTexto(e.target.value)}
-          maxLength={2000}
+          maxLength={1800}
           rows={2}
           style={{ minHeight: 64, padding: 8, borderRadius: 8, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: 14, width: '100%', boxSizing: 'border-box' }}
         />
@@ -86,7 +86,7 @@ export default function NotasCliente({ clienteId, notas }: { clienteId: string; 
           )}
           {notas.antigua !== null && (
             <div style={{ borderTop: '1px dashed var(--border)', paddingTop: 6 }}>
-              <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)' }}>Nota del CRM anterior (sin fecha)</span>
+              <span style={{ display: 'block', fontSize: 11, color: 'var(--muted)' }}>Nota sin fecha (anterior a esta lista)</span>
               <span style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{notas.antigua}</span>
             </div>
           )}

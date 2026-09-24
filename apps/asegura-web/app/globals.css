@@ -47,16 +47,26 @@
   /* Su curva única para todo el movimiento (= --ease-out-quint). */
   --curva: cubic-bezier(0.22, 1, 0.36, 1);
 
-  /* Serif display. NO sale de `@central/brand` a propósito (ver la nota de
-     `.display` más abajo): es una decisión de ESTA superficie de marketing,
-     igual que en su app, donde Fraunces solo vive en la landing. */
-  --display: 'Fraunces', ui-serif, Georgia, 'Times New Roman', serif;
+  /* Letra de titulares, menú y botones: Quicksand, la del logotipo. NO sale
+     de `@central/brand` a propósito: es una decisión de ESTA superficie. */
+  --display: 'Quicksand', ui-rounded, system-ui, sans-serif;
 
   /* 📌 Aquí ya NO hay ningún color literal. Lo que antes eran tres variables
      sueltas (`--hero-oscuro*`, copiadas a mano de la banda de su landing) es
      ahora la clase `.oscuro`, y sus valores salen de la paleta oscura MEDIDA
      de la marca — `MARCA_ASEGURA.paletaOscura`, leída del bloque `.dark` de
      su app. Ver el bloque «Atmósfera» más abajo. */
+}
+
+/* Cuerpo en Nunito Sans (24/09/2026, decisión de Alberto): la familia de los
+   titulares es Quicksand, la del logotipo; el texto corrido va en una sans
+   redondeada de LECTURA, porque Quicksand en párrafos, formularios y letra
+   legal se lee peor en el móvil. `html:root` y no `:root` a propósito: el
+   `:root{--sans:Inter}` que inyecta `@central/brand` en el head tiene la misma
+   especificidad y el orden entre ese <style> y esta hoja no está garantizado.
+   Solo esta web: el portal y los correos siguen con el Inter de la marca. */
+html:root {
+  --sans: 'Nunito Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 *,
@@ -75,8 +85,6 @@ body {
   -webkit-text-size-adjust: 100%;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
-  /* Sus alternativas de Inter, literales. */
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
 }
 
 img {
@@ -91,21 +99,16 @@ img {
 }
 
 /* ── Tipografía ─────────────────────────────────────────────────────────────
-   🚨 Lo que de verdad separa su web de un documento: los titulares NO van en la
-   fuente del cuerpo. Van en **Fraunces**, una serif variable, a peso 500 y con
-   `letter-spacing: -0.025em`. El cuerpo sigue en Inter. Se usa UN solo corte:
-   redonda. La itálica se retiró (ver `.destaca`).
-
-   Fraunces se carga SOLO en esta app y no se sube a `@central/brand` a
-   propósito: allí está documentado que el portal del cliente la descarta
-   —su titular más grande es un h1 de 20 px, tamaño al que una serif no aporta
-   carácter y sí un segundo webfont en el móvil de quien viene de un correo—.
-   Aquí los titulares llegan a 67 px, que es justo donde esa letra existe. */
+   Titulares, menú, botones y títulos pequeños en **Quicksand** (`--display`),
+   la familia del logotipo; el cuerpo en **Nunito Sans** (`--sans`). Cambio
+   del 24/09/2026 (antes Fraunces + Inter): la web no casaba con la letra del
+   monograma «AS». Un solo corte por familia en uso real, sin itálica — el
+   acento lo lleva el color (`.destaca`). Las fuentes las pide `layout.tsx`. */
 .display {
   font-family: var(--display);
-  font-weight: 500;
-  letter-spacing: -0.025em;
-  line-height: 1.08;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
   text-wrap: balance;
   margin: 0;
 }
@@ -152,13 +155,14 @@ h2.display {
   }
 }
 
-/* Los títulos pequeños (tarjetas, pasos) NO son serif en su web: son Inter a
-   peso 800 con tracking apretado. Mezclarlo al revés es lo que hace que una
+/* Los títulos pequeños (tarjetas, pasos) van en Quicksand 700 (máximo de la
+   familia) con tracking apretado. Mezclarlo al revés es lo que hace que una
    copia «se parezca pero no». */
 h3 {
   margin: 0 0 var(--e2);
+  font-family: var(--display);
   font-size: 1.25rem;
-  font-weight: 800;
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.3;
 }
@@ -306,6 +310,35 @@ a {
   mask: url('/brand/marca-asegura.svg') center / contain no-repeat;
 }
 
+/* Logotipo «Grupo ASegura» (24/09/2026): la palabra entera en el trazo fino
+   del monograma, con el «AS» oficial dentro. Mismo truco que `.marca-mono`
+   (`mask` + `currentColor`), así la píldora oscura lo re-tematiza sola. La
+   proporción es la del viewBox del SVG (6.83:1); si se regenera el fichero,
+   se cambia aquí. El nombre lo lee el lector de pantalla del `.sr-marca`. */
+.marca-palabra {
+  display: block;
+  height: 20px;
+  aspect-ratio: 6.834;
+  background: var(--brand);
+  -webkit-mask: url('/brand/logotipo-asegura.svg') center / contain no-repeat;
+  mask: url('/brand/logotipo-asegura.svg') center / contain no-repeat;
+}
+
+/* En la píldora oscura el cobalto sobre casi negro se apaga: ahí va en el
+   color de texto del tema, como iba el nombre antes. */
+.oscuro .marca-palabra {
+  background: var(--text);
+}
+
+.sr-marca {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 .hdr-nav {
   display: none;
   align-items: center;
@@ -326,6 +359,7 @@ a {
    izquierda al pasar por encima. */
 .hdr-nav a {
   position: relative;
+  font-family: var(--display);
   padding: var(--e2) 10px;
   border-radius: var(--pill);
   font-size: 0.875rem;
@@ -392,6 +426,9 @@ a {
     width: 15px;
     height: 10px;
   }
+  .marca-palabra {
+    height: 17px;
+  }
   .hdr-caja {
     gap: var(--e2);
     padding: 0;
@@ -438,9 +475,9 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
   padding: 0 var(--e6);
   border: 1px solid transparent;
   border-radius: var(--pill);
-  font-family: inherit;
+  font-family: var(--display);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 700;
   white-space: nowrap;
   text-decoration: none;
   cursor: pointer;
@@ -1125,7 +1162,8 @@ a.tarjeta:hover .tarjeta-mas svg {
   gap: var(--e4);
   padding: var(--e5);
   font-size: 1rem;
-  font-weight: 800;
+  font-family: var(--display);
+  font-weight: 700;
   letter-spacing: -0.01em;
   cursor: pointer;
   list-style: none;

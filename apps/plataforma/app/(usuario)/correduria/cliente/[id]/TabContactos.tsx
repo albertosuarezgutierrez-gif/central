@@ -159,7 +159,7 @@ export default function TabContactos({ ficha, personas }: {
       </ContactosFicha>
 
       {/* Lo que tiene la COMPAÑÍA y nosotros no: se ofrece añadir, nunca sustituye (mandan los nuestros). */}
-      <DatosCompania clienteId={ficha.id} datos={datosDeLaCompania(ficha.id, ficha.intervinientes, ficha.contactos)} />
+      <DatosCompania clienteId={ficha.id} datos={datosDeLaCompania(ficha.id, ficha.intervinientes, ficha.contactos, ficha.contacto)} />
 
       {/* Si entra —o puede entrar— a ver sus seguros por su cuenta. Va aquí y no
           en otra pestaña porque la respuesta depende de lo de arriba: sin correo

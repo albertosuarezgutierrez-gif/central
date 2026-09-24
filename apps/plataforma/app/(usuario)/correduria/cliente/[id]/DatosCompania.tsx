@@ -2,6 +2,7 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { etiquetaRol } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import type { DatosCompania } from '@/lib/datos-compania'
 
@@ -35,7 +36,7 @@ export default function DatosCompania({ clienteId, datos }: { clienteId: string;
         setAviso({ ok: true, texto: `Añadido a sus contactos. El principal no se toca.` })
         router.refresh()
       } else if (res.status === 409) {
-        setAviso({ ok: false, texto: `Ese dato ya está en otra ficha: ${j?.motivo ?? 'revísalo en Contactos'}.` })
+        setAviso({ ok: false, texto: j?.motivo ?? 'Ese dato ya está en otra ficha: revísalo en Contactos.' })
       } else {
         setAviso({ ok: false, texto: `No se ha añadido: ${j?.motivo ?? `HTTP ${res.status}`}` })
       }
@@ -48,7 +49,7 @@ export default function DatosCompania({ clienteId, datos }: { clienteId: string;
 
   return (
     <div style={{ display: 'grid', gap: 8, fontSize: 13, border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
-      <b>La compañía tiene otros datos de este cliente</b>
+      <b>{datos.nuevos.length > 0 ? 'La compañía tiene otros datos de este cliente' : 'No se han podido leer los datos que tiene la compañía'}</b>
       <span style={{ color: 'var(--muted)', fontSize: 12 }}>
         Mandan los nuestros: CIMA no los cambia. Si alguno es bueno, añádelo a sus contactos.
         {datos.incompleta && ' Hay contactos cifrados que no se han podido leer: puede que alguno ya lo tenga.'}
@@ -59,7 +60,7 @@ export default function DatosCompania({ clienteId, datos }: { clienteId: string;
           <div key={clave} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <span style={{ overflowWrap: 'anywhere' }}>
               {d.tipo === 'telefono' ? '📞' : '✉️'} {d.valor}{' '}
-              <span style={{ color: 'var(--muted)' }}>· como {d.rol} en <Link href={`/correduria/poliza/${d.polizaId}`}>su póliza</Link></span>
+              <span style={{ color: 'var(--muted)' }}>· como {etiquetaRol(d.rol).toLowerCase()} en <Link href={`/correduria/poliza/${d.polizaId}`}>su póliza</Link></span>
             </span>
             <button type="button" disabled={ocupado !== null} onClick={() => void anadir(d.tipo, d.valor)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
               {ocupado === clave ? 'Añadiendo…' : 'Añadir a sus contactos'}

@@ -156,6 +156,12 @@ export type IntervinienteFicha = {
   personaClave: string | null
   esTomador: boolean
   origen: string
+  /**
+   * Si el teléfono/correo es de la propia fila o asegura lo ha rellenado con el de su ficha.
+   * `null` = asegura no lo manda (versión anterior): no se sabe de quién es el dato.
+   */
+  telefonoPropio: boolean | null
+  emailPropio: boolean | null
 }
 
 export type Ficha = {
@@ -584,6 +590,8 @@ export function leerIntervinientes(v: unknown): IntervinienteFicha[] | null {
       personaClave: cadena(i.personaClave),
       esTomador: i.esTomador === true,
       origen: cadena(i.origen) ?? 'sin_informar',
+      telefonoPropio: typeof i.telefonoPropio === 'boolean' ? i.telefonoPropio : null,
+      emailPropio: typeof i.emailPropio === 'boolean' ? i.emailPropio : null,
     })
   }
   return out

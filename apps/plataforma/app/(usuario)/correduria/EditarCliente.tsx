@@ -60,9 +60,9 @@ export default function EditarCliente({
   )
 }
 
-// ─── Dirección y notas ───────────────────────────────────────────────────────
+// ─── Dirección ───────────────────────────────────────────────────────────────
 
-type Libre = { direccion: string; codigoPostal: string; ciudad: string; provincia: string; notas: string }
+type Libre = { direccion: string; codigoPostal: string; ciudad: string; provincia: string }
 
 export function EditarDireccion({ clienteId, contacto }: {
   clienteId: string
@@ -74,7 +74,6 @@ export function EditarDireccion({ clienteId, contacto }: {
     codigoPostal: contacto.codigoPostal ?? '',
     ciudad: contacto.ciudad ?? '',
     provincia: contacto.provincia ?? '',
-    notas: '',
   }
   const [inicial, setInicial] = useState<Libre>(base)
   const [f, setF] = useState<Libre>(base)
@@ -120,8 +119,7 @@ export function EditarDireccion({ clienteId, contacto }: {
       setResultado(r)
       if (r.estado === 'invalido') setCampoMal(r.campo)
       if (r.estado === 'ok') {
-        setInicial({ ...f, notas: '' })
-        setF((p) => ({ ...p, notas: '' }))
+        setInicial(f)
         router.refresh()
       }
     } catch {

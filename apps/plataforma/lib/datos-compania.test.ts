@@ -9,7 +9,7 @@ const contacto = (tipo: 'telefono' | 'email', valor: string | null, ilegible = f
 const inter = (o: Record<string, unknown>) => ({
   id: 'i1', polizaId: 'p1', rol: 'conductor', nombre: 'X', nombreIlegible: false,
   telefono: null, email: null, telefonoIlegible: false, emailIlegible: false,
-  fichaId: FICHA, personaClave: null, esTomador: false, origen: 'cima', ...o,
+  fichaId: FICHA, personaClave: null, esTomador: false, origen: 'cima', telefonoPropio: true, emailPropio: true, ...o,
 }) as never
 
 test('sin una de las dos listas no se compara nada (no se afirma que coincidan)', () => {
@@ -47,4 +47,16 @@ test('notas: sin forma de lista es «no se pudo leer», no «sin notas»', () =>
   assert.ok(n)
   assert.equal(n.lista.length, 1)
   assert.equal(n.antigua, null)
+})
+
+test('un dato que asegura rellenó con el de la ficha no se atribuye a la compañía', () => {
+  const r = datosDeLaCompania(FICHA, [inter({ telefono: '611000000', telefonoPropio: false })], { telefonos: [], emails: [] })
+  assert.ok(r.estado === 'ok')
+  assert.equal(r.nuevos.length, 0)
+})
+
+test('el teléfono de la propia ficha también es nuestro aunque no esté en la lista', () => {
+  const r = datosDeLaCompania(FICHA, [inter({ telefono: '611000000' })], { telefonos: [], emails: [] }, { telefono: '+34 611 000 000', email: null })
+  assert.ok(r.estado === 'ok')
+  assert.equal(r.nuevos.length, 0)
 })

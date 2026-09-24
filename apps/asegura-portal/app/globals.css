@@ -535,6 +535,26 @@ input, select, textarea, button { font: inherit; }
   letter-spacing: -0.01em;
   color: var(--brand-ink);
 }
+/* Logotipo «Grupo ASegura» (24/09/2026): `mask` + `currentColor`, como en la
+ * web, así toma el azul de marca en claro y en oscuro. Proporción = viewBox del
+ * SVG (6.83:1). */
+.marca-palabra {
+  display: block;
+  height: 18px;
+  aspect-ratio: 6.834;
+  background: currentColor;
+  color: var(--primary);
+  -webkit-mask: url('/brand/logotipo-asegura.svg') center / contain no-repeat;
+  mask: url('/brand/logotipo-asegura.svg') center / contain no-repeat;
+}
+.sr-marca {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 .marca-coletilla {
   margin-left: auto;
   font-size: 12px;
@@ -830,7 +850,7 @@ input, select, textarea, button { font: inherit; }
    * último titular del portal que seguía en la fuente de cuerpo. */
   font-family: var(--display, var(--serif));
   font-size: 24px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.2;
   margin: 0 0 16px;
   letter-spacing: -0.025em;
@@ -863,7 +883,7 @@ input, select, textarea, button { font: inherit; }
 h1 {
   font-family: var(--display, var(--serif));
   font-size: 32px;
-  font-weight: 500;
+  font-weight: 600;
   line-height: 1.15;
   letter-spacing: -0.01em;
   margin: 0 0 16px;
@@ -928,8 +948,10 @@ h1 {
     font-size: 40px;
   }
 }
+/* Sin itálica desde el 24/09/2026: Quicksand no la tiene y el navegador la
+ * sintetizaría deformando la letra. El acento lo lleva el color. */
 h1 em {
-  font-style: italic;
+  font-style: normal;
   color: var(--brand);
 }
 
@@ -1209,7 +1231,7 @@ h1 em {
 }
 .plegable-cartera-nombre {
   font-family: var(--display, var(--serif));
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: -0.025em;
   transition: color 150ms;
 }

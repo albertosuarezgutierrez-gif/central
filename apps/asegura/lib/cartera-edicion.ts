@@ -935,7 +935,10 @@ export async function anotarHistorialCliente(
 ): Promise<ResultadoHistorial> {
   const t = tipoHistorial(tipo)
   if (!t) return invalido('Tipo de historial no válido: nota, gestion o contacto.', 'tipo')
-  const txt = typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim() : ''
+  // Una nota conserva sus saltos de línea (se pinta con pre-wrap); el resto va en una línea.
+  const txt = typeof texto !== 'string' ? ''
+    : t === 'nota' ? texto.replace(/[^\S\n]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim()
+    : texto.replace(/\s+/g, ' ').trim()
   if (txt === '') return invalido('Falta el texto.', 'texto')
   if (txt.length > 2000) return invalido('El texto es demasiado largo (máx. 2000).', 'texto')
   if (clienteId.trim() === '') return invalido('Falta el cliente.', 'clienteId')
