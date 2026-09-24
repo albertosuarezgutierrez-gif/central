@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useState } from 'react'
 import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
@@ -86,11 +87,23 @@ export default function OportunidadesCliente({ clienteId, polizas }: { clienteId
 
   useEffect(() => { void cargar() }, [cargar])
 
+  // La única puerta para abrir una es el menú «➕ Nueva oportunidad ▾» de la cabecera; su opción
+  // «sin precio» llega aquí con `?oportunidad=nueva`. Con useSearchParams y no leyendo
+  // `window.location` una vez: si ya estás en la ficha, el enlace es una navegación suave que NO
+  // remonta este componente, y un efecto de montaje no se enteraría.
+  const pideNueva = useSearchParams().get('oportunidad') === 'nueva'
+  useEffect(() => {
+    if (!pideNueva) return
+    setAviso(null)
+    setAbriendo(true)
+    document.getElementById('oportunidades')?.scrollIntoView({ block: 'start' })
+  }, [pideNueva])
+
   const abiertas = lectura?.estado === 'ok' ? lectura.oportunidades.filter(o => o.estado !== 'ganada' && o.estado !== 'perdida') : []
   const cerradas = lectura?.estado === 'ok' ? lectura.oportunidades.filter(o => o.estado === 'ganada' || o.estado === 'perdida') : []
 
   return (
-    <div style={{ display: 'grid', gap: 10, fontSize: 13 }}>
+    <div id="oportunidades" style={{ display: 'grid', gap: 10, fontSize: 13, scrollMarginTop: 80 }}>
       {aviso && (
         <div role="status" style={{ color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>
           {aviso.texto}
@@ -109,7 +122,7 @@ export default function OportunidadesCliente({ clienteId, polizas }: { clienteId
 
       {lectura?.estado === 'ok' && (
         <>
-          {abiertas.length === 0 && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta.</div>}
+          {abiertas.length === 0 && !abriendo && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta. Se abre desde «➕ Nueva oportunidad ▾», arriba.</div>}
           {abiertas.map(o => (
             <FilaAbierta key={o.id} o={o} polizas={polizas} onHecho={(t) => { setAviso(t); void cargar() }} />
           ))}
@@ -131,18 +144,12 @@ export default function OportunidadesCliente({ clienteId, polizas }: { clienteId
         </>
       )}
 
-      {abriendo ? (
+      {abriendo && (
         <FormAlta
           clienteId={clienteId}
           onCancelar={() => setAbriendo(false)}
           onHecho={(t) => { setAviso(t); if (t.ok) setAbriendo(false); void cargar() }}
         />
-      ) : (
-        <div>
-          <button type="button" onClick={() => { setAviso(null); setAbriendo(true) }} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
-            ➕ Nueva oportunidad
-          </button>
-        </div>
       )}
     </div>
   )

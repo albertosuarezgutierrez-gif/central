@@ -40,3 +40,17 @@ test('los avisos van pegados a lo que avisan, no sueltos entre botones', () => {
   assert.match(acciones, /title="Hoy el agente lee pólizas de AUTO/)
   assert.doesNotMatch(acciones, /<span style=\{\{ color: 'var\(--muted\)' \}\}/, 'ningún aviso gris suelto en la fila de botones')
 })
+
+// 🔀 UNA sola puerta para vender (24/09/2026). Alberto: «dos botones de presupuesto,
+// que es lo mismo que oportunidad». Había tres entradas para la misma intención; queda
+// el menú de la cabecera, que ofrece los ramos con precio y la opción «sin precio».
+const DIR = join(import.meta.dirname, '..', 'apps/plataforma/app/(usuario)/correduria/cliente/[id]')
+test('abrir una oportunidad tiene UNA sola puerta: el menú de la cabecera', () => {
+  assert.match(acciones, /➕ Nueva oportunidad ▾/, 'el menú se llama como lo que crea')
+  assert.match(acciones, /oportunidad=nueva/, 'el menú ofrece también la oportunidad sin precio')
+  const oportunidades = readFileSync(join(DIR, 'OportunidadesCliente.tsx'), 'utf8')
+  assert.doesNotMatch(oportunidades, />\s*➕ Nueva oportunidad\s*</, 'la tarjeta no repite el botón')
+  assert.match(oportunidades, /get\('oportunidad'\) === 'nueva'/, 'la tarjeta abre el formulario cuando llega del menú')
+  const resumen = readFileSync(join(DIR, 'TabResumen.tsx'), 'utf8')
+  assert.doesNotMatch(resumen, /Presupuestar auto|urlAutoNuevo/, 'Pólizas vivas no repite «Presupuestar auto»')
+})
