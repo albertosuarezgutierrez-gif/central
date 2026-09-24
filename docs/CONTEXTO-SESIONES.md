@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🗂️ **iarrhh: las tablas de empleados, fichajes y obras son cards apiladas en móvil (<768 px).** Sin duplicar
+marcado: clase `.tabla-cards` en `apps/rrhh/app/globals.css` + `data-label` por celda (1.ª celda = título, acciones a la
+derecha, `colspan` de edición/historial a todo ancho). En escritorio la tabla no cambia. Medido con Playwright a 320/375/768.
 **(24/09/2026)** 📮 **Registro de quejas y reclamaciones del SAC (PR #3458).** La web y el portal publican «el SAC
 contesta en un mes» y no había dónde anotar una queja. Tabla `seguros.queja` (detalle y respuesta cifrados; 4 CHECK vistos
 morder; sin acceso de `crm_seguros` ni del portal), regla en `module-seguros/queja.ts` (mes natural, estados, informe anual),
