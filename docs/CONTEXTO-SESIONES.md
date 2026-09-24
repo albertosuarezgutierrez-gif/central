@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 🧾 **Rescatados los 39 recibos de Occident del 15/09 (8.230,20€ de prima) y archivo de CIMA en Drive.**
+Alberto bajó del Portal CIMA los ficheros 28/03–24/09 a Drive `asegura/CIMA` (id 1DoHnkMj2gYepUKR3A3SmkBE4JIE9iwM1),
+que queda como archivo largo de CIMA. Contraste: 153/154 ya en `cima_ficheros`. Los dos REC 299 del 15/09 entraron
+por `ingerir-manual` vía nuevo workflow `cima-rescate-manual.yml` (asegura#850) → 39/39 en `poliza_recibos`.
+🚨 Mapfre nunca activó el envío diario: sus 14 ficheros son la carga inicial del 26/05. Pendiente Alberto: borrar
+los 2 runs de `cima-rescate-manual` y la rama `tmp-rescate-cima` en GitHub (llevan el zip; el proxy no deja borrarla).
+
 **(24/09/2026)** 🔁 **Historial del riesgo en la ficha de póliza** (plataforma): las pólizas por las que ha pasado el mismo bien
 (red de `poliza_origen_id`/`poliza_padre_id` + misma matrícula del cliente), la copia del volcado de la misma póliza deduplicada.
 Regla pura `ordenarHistorialRiesgo`; lectura `lib/cartera-historial-riesgo.ts`. Caso Kona de José: Mapfre 2020 → Reale 2026.

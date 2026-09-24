@@ -64,7 +64,24 @@ objetos en cuarentena que ya se confirmó a TIREA (`estado='confirmed'`,
 17/09/2026**) con `cima-reprocesar-cuarentena.yml`, o —si es anterior— bajando
 el XML del Portal CIMA y metiéndolo por `POST /api/internal/cima/ingerir-manual`.
 Caso: 36 recibos de Occident del 15/09 (dos REC 299) atascados por pólizas
-duplicadas que se fusionaron el 17/09; su crudo no existe.
+duplicadas que se fusionaron el 17/09; su crudo no existe. **Rescatados el 24/09**
+(39/39 en `poliza_recibos`) con `cima-rescate-manual.yml` del repo `asegura`
+(asegura#850): `workflow_dispatch` con el zip en base64 (≤ ~48 KB de zip); para
+zips más grandes, rama temporal con el zip cifrado (openssl aes-256-cbc -pbkdf2) y
+la clave como input. Tras usarlo: **borrar el run entero y la rama** (los inputs
+llevan datos personales; borrar solo los logs no basta).
+
+### 📁 Archivo de CIMA en Drive (24/09/2026)
+Carpeta **`asegura/CIMA`** del Drive de Alberto (id `1DoHnkMj2gYepUKR3A3SmkBE4JIE9iwM1`):
+las descargas del Portal CIMA («Ficheros recibidos», zip de zips EIAC por rango de
+fechas) van **ahí**, y es la copia larga — la nuestra (`cima_cuarentena_crudo`) dura
+30 días. Primer contraste completo (24/09): 154 ficheros 28/03–24/09, **153 ya en
+`cima_ficheros`** (el que falta, `28823484E_…_ORIGINAL`, no es EIAC). Para leer
+un zip grande de Drive, que lo descargue un agente: el harness guarda la salida en
+disco y se decodifica con python, sin copiar el base64 a mano.
+🚨 **Mapfre (C0058) nunca ha activado el envío diario:** sus 14 ficheros son la
+carga inicial, todos generados el 26/05 entre 19:30:25 y 19:30:28. El «último
+fichero 23/06» de la BD es la fecha en que NOSOTROS lo cargamos.
 **Antes de reprocesar un `sin_poliza_en_cartera`, busca duplicados vivos**
 (mismo número normalizado + DGS, `merged_into_poliza_id IS NULL`): el 23/09 quedaban
 3 parejas que solo diferían en la puntuación (`HR G`/`HR-G`, `/ 045981539`).
