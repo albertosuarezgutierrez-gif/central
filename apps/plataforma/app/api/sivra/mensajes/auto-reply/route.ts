@@ -5,6 +5,7 @@ import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
 import { decidir } from '@/lib/sivra/agente-huesped/decidir'
 import { detectLang, detectCategory } from '@/lib/sivra/agente-huesped/reglas'
+import { idiomaConocido } from '@/lib/sivra/agente-huesped/idiomas'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
 import { barrerUltimoRecurso } from '@/lib/sivra/agente-huesped/noche-guardia'
@@ -67,7 +68,7 @@ export async function GET(req: NextRequest) {
     if (!pregunta) return NextResponse.json({ error: 'falta ?q=<pregunta a simular>' }, { status: 400 })
     const ctx0 = await construirContexto(manualBooking, 'en')
     if (!ctx0) return NextResponse.json({ error: 'sin contexto (¿reserva inexistente?)' }, { status: 404 })
-    const lang = detectLang(pregunta, (['es','en','fr','de','it'].includes(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en') as any)
+    const lang = detectLang(pregunta, idiomaConocido(ctx0.idiomaReserva) ? ctx0.idiomaReserva : 'en')
     const categoria = detectCategory(pregunta) || 'general'
     const dec = await decidir({ ...ctx0, lang }, pregunta, categoria)
     return NextResponse.json({

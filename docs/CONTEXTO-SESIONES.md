@@ -538,6 +538,14 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (24/09/2026) sivra: el agente de huéspedes y los mensajes programados, en TODOS los idiomas
+Antes: el agente solo reconocía es/en/fr/de/it (un chino o un portugués recibía la respuesta en inglés) y los
+mensajes programados traducían a 18. Ahora hay una tabla única, `lib/sivra/agente-huesped/idiomas.ts` (~55 idiomas),
+que usan decidir/retoque/idioma-salida/mensajes-prog; `detectLang` reconoce las escrituras no latinas (zh/ja/ko/
+cirílico/griego/árabe/hebreo/thai/hindi/georgiano/armenio; si la escritura es compartida manda el idioma de la reserva)
++ pt/nl por palabras, y acepta como fallback cualquier idioma de la reserva. La guarda `conservaDatos` sigue:
+si una traducción cambia dígitos o URLs, sale en español.
+
 ## (24/09/2026) core-ai: el razonamiento se comía el `max_tokens` → «no he podido traducirlo» y QC caído
 Síntoma (Duplex, reserva 150035011, repetido): borrador sin traducción + «control de calidad no respondió». Logs de
 Vercel: `OpenRouter: respuesta vacía` + `Groq: respuesta vacía` en la misma llamada. Causa: `deepseek-v4.1-flash`
