@@ -66,6 +66,9 @@ export default function HoyCockpit({
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [nAprobaciones, setNAprobaciones] = useState<N>(undefined)
+  // El bloque del portal va PLEGADO y se lee al abrirlo: es la consulta más pesada de Hoy
+  // (feed + embudo) y no pide ninguna acción; lo accionable ya llega por Telegram y por las colas.
+  const [verPortal, setVerPortal] = useState(false)
 
   const cargarTareas = useCallback(() => {
     fetch('/api/correduria/tareas-hoy')
@@ -83,11 +86,15 @@ export default function HoyCockpit({
       .then(r => (r.ok ? r.json() : null))
       .then((d: LeadsVencimientos | null) => setLlamadas(d?.estado === 'ok' ? colaLlamadas(d.leads).length : null))
       .catch(() => setLlamadas(null))
+  }, [cargarTareas])
+
+  useEffect(() => {
+    if (!verPortal) return
     fetch('/api/correduria/actividad?quien=cliente&dias=1')
       .then(async r => interpretarActividad(await r.json().catch(() => null)))
       .then(a => setPortal(a.ok ? { eventos: a.eventos, embudo: a.embudo } : null))
       .catch(() => setPortal(null))
-  }, [cargarTareas])
+  }, [verPortal])
 
   async function cerrar(id: string) {
     setOcupado(id)
@@ -196,12 +203,15 @@ export default function HoyCockpit({
       </section>
 
       {/* ── Clientes en el portal ─────────────────────────────────── */}
-      <section style={{ display: 'grid', gap: 6 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-          <h2 style={TITULO}>Clientes en el portal · 24 h</h2>
+      <details onToggle={(e) => { if (e.currentTarget.open) setVerPortal(true) }} style={{ display: 'grid', gap: 6 }}>
+        <summary style={{ cursor: 'pointer', minHeight: 44, display: 'list-item' }}>
+          <h2 style={{ ...TITULO, display: 'inline' }}>Clientes en el portal · 24 h</h2>
+        </summary>
+        <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button type="button" onClick={() => onIr('actividad')} style={btnStyle('sutil', 'sm')}>Todo</button>
         </div>
-        {portal === undefined && <p style={NOTA}>Cargando…</p>}
+        {verPortal && portal === undefined && <p style={NOTA}>Cargando…</p>}
         {portal === null && <p style={{ ...NOTA, color: 'var(--negative)' }}>No se ha podido leer la actividad del portal. No significa que no haya.</p>}
         {portal && portal.eventos.length === 0 && <p style={NOTA}>Ningún cliente ha hecho nada en el portal en las últimas 24 h.</p>}
         {portal && portal.eventos.slice(0, MOSTRAR_PORTAL).map(e => {
@@ -226,7 +236,8 @@ export default function HoyCockpit({
             {pendInvitar !== null ? ` · ${pendInvitar} con correo sin invitar` : ''}. Esto mismo te llega por Telegram.
           </span>
         )}
-      </section>
+        </div>
+      </details>
 
       {/* Las incidencias son los bloques de siempre, justo debajo. */}
       <h2 id="incidencias" style={TITULO}>Incidencias{nIncidencias !== undefined && (nIncidencias === null || nIncidencias.n > 0) ? ` · ${cifraC(nIncidencias)}` : ''}</h2>
