@@ -1,5 +1,5 @@
 'use client'
-import { ListChecks, Users, Shield, Receipt, TriangleAlert, Megaphone, Activity, Antenna } from 'lucide-react'
+import { ListChecks, Users, Shield, Receipt, LayoutGrid } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { SECCIONES, type Seccion, type Contador } from './secciones'
 
@@ -28,13 +28,10 @@ import { SECCIONES, type Seccion, type Contador } from './secciones'
 
 const META: Record<Seccion, { label: string; Icono: LucideIcon }> = {
   hoy: { label: 'Hoy', Icono: ListChecks },
-  actividad: { label: 'Actividad', Icono: Activity },
   clientes: { label: 'Clientes', Icono: Users },
   cartera: { label: 'Cartera', Icono: Shield },
   comisiones: { label: 'Comisiones', Icono: Receipt },
-  datos: { label: 'Datos', Icono: TriangleAlert },
-  ingesta: { label: 'Ingesta', Icono: Antenna },
-  redes: { label: 'Redes', Icono: Megaphone },
+  mas: { label: 'Más', Icono: LayoutGrid },
 }
 
 export type ContadoresSeccion = Partial<Record<Seccion, {

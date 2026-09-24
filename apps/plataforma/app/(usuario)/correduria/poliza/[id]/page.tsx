@@ -17,6 +17,9 @@ import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { eur } from '@/lib/dinero'
 import { PageHeader } from '@/components/ui'
+// Un solo estilo de panel para toda la correduría: el de la ficha del cliente.
+import { Tarjeta, tarjeta, th, td, sub } from '../../cliente/[id]/piezas'
+import Plegable from './Plegable'
 
 export const dynamic = 'force-dynamic'
 
@@ -66,21 +69,13 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         />
       </div>
 
+      {/* ── Orden por USO (24/09/2026, mismo criterio que la ficha del cliente) ──
+          Arriba lo que se consulta con el cliente al teléfono: fechas, prima y
+          pago; qué asegura; recibos y siniestros. Después coberturas,
+          documentación y lo accionable (pedir precio, anular). Lo que se mira
+          de vez en cuando va PLEGADO al final y no se monta hasta que se abre. */}
       {/* ── Sustitución por cambio de compañía ──────────────────────────── */}
       <Sustitucion p={p} />
-
-      {/* ── Qué asegura ─────────────────────────────────────────────────── */}
-      <Tarjeta titulo="Qué asegura">
-        <Objeto p={p} />
-        {/* Solo en hogar, y solo si asegura los manda: `null` no es «no tiene capital». */}
-        {p.capitalesHogar && <CapitalesHogar caps={p.capitalesHogar} />}
-        {p.tipo === 'responsabilidad_civil' && (
-          <EditarModalidadRc
-            polizaId={p.id}
-            informadoPorCima={p.objeto !== null && p.objeto.estado === 'conocido' && !(p.objeto.nota ?? '').includes('a mano')}
-          />
-        )}
-      </Tarjeta>
 
       {/* ── Fechas, prima y pago ─────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
@@ -100,35 +95,21 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         compañía financia el pago y cobra por ello.
       </p>
 
-      {/* ── Historial del riesgo ─────────────────────────────────────────── */}
-      <HistorialRiesgo lista={p.historialRiesgo} />
-
-      {/* ── Lo que dice la compañía por CIMA ─────────────────────────────── */}
-      <CimaPoliza d={p.datosCompania} vigente={!cancelada} />
-
-      {/* ── Coberturas ──────────────────────────────────────────────────── */}
-      <Coberturas lista={p.coberturas} />
+      {/* ── Qué asegura ─────────────────────────────────────────────────── */}
+      <Tarjeta titulo="Qué asegura">
+        <Objeto p={p} />
+        {/* Solo en hogar, y solo si asegura los manda: `null` no es «no tiene capital». */}
+        {p.capitalesHogar && <CapitalesHogar caps={p.capitalesHogar} />}
+        {p.tipo === 'responsabilidad_civil' && (
+          <EditarModalidadRc
+            polizaId={p.id}
+            informadoPorCima={p.objeto !== null && p.objeto.estado === 'conocido' && !(p.objeto.nota ?? '').includes('a mano')}
+          />
+        )}
+      </Tarjeta>
 
       {/* ── Recibos ─────────────────────────────────────────────────────── */}
       <Recibos p={p} />
-
-      {/* ── ¿Por qué ha subido la prima? ────────────────────────────────── */}
-      {/* Va justo debajo de los recibos porque de ellos sale: la prima de cada
-          anualidad se DERIVA de los CA/NP de aniversario a aniversario. El salto
-          a retarificar es el MISMO de la cabecera (asegura, donde se gasta). */}
-      <EvolucionPrima
-        modo="tarjeta"
-        evolucion={p.evolucionPrima}
-        retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : { motivo: p.retarificacion?.motivo ?? null }}
-      />
-
-      {/* ── ¿Merece la pena pedir precio? ───────────────────────────────── */}
-      {/* Pegado a la evolución de la prima a propósito: las dos contestan a la
-          misma pregunta, y ésta es la que dice si compensa gastar los 0,50€. */}
-      <Estimacion
-        e={p.estimacion}
-        retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : null}
-      />
 
       {/* ── Siniestros ──────────────────────────────────────────────────── */}
       {/* «Confirmada por CIMA» = viva y con `id_poliza_entidad`: la misma pregunta que en la ficha.
@@ -140,16 +121,16 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         documentos={p.listaDocumentos}
       />
 
-      {/* ── Intervinientes ──────────────────────────────────────────────── */}
-      <Tarjeta titulo="Intervinientes">
-        <Intervinientes p={p} />
-      </Tarjeta>
+      {/* ── ¿Merece la pena pedir precio? ───────────────────────────────── */}
+      {/* Visible (la evolución de la prima va plegada al final): es la que dice
+          si compensa gastar los 0,50€ de pedir precio, o sea la oportunidad. */}
+      <Estimacion
+        e={p.estimacion}
+        retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : null}
+      />
 
-      <Tarjeta titulo="Anulación">
-        <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
-        <PresupuestosPoliza polizaId={p.id} />
-        <CartaMediadorPoliza polizaId={p.id} />
-      </Tarjeta>
+      {/* ── Coberturas ──────────────────────────────────────────────────── */}
+      <Coberturas lista={p.coberturas} />
 
       {/* ── Documentación ───────────────────────────────────────────────── */}
       <Tarjeta titulo="📎 Documentación">
@@ -162,16 +143,41 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         )}
       </Tarjeta>
 
-      {/* ── Referencias de la compañía ──────────────────────────────────── */}
-      <details>
-        <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--muted)' }}>Referencias de la compañía</summary>
-        <div style={{ ...muted, marginTop: 8, display: 'grid', gap: 4 }}>
+      <Tarjeta titulo="Anulación">
+        <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
+        <PresupuestosPoliza polizaId={p.id} />
+        <CartaMediadorPoliza polizaId={p.id} />
+      </Tarjeta>
+
+      {/* ── Plegado: consulta ocasional ─────────────────────────────────── */}
+      <Plegable titulo="Intervinientes" resumen="tomador, propietario, conductores y sus teléfonos">
+        <Intervinientes p={p} />
+      </Plegable>
+      <Plegable titulo="Evolución de la prima" resumen="por qué ha subido, anualidad a anualidad">
+        {/* La prima de cada anualidad se DERIVA de los recibos (CA/NP de
+            aniversario a aniversario). El salto a retarificar es el MISMO de
+            la cabecera y de «¿Merece la pena pedir precio?». */}
+        <EvolucionPrima
+          modo="tarjeta"
+          evolucion={p.evolucionPrima}
+          retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : { motivo: p.retarificacion?.motivo ?? null }}
+        />
+      </Plegable>
+      <Plegable titulo="Historial del riesgo">
+        <HistorialRiesgo lista={p.historialRiesgo} />
+      </Plegable>
+      <Plegable titulo="Lo que dice la compañía por CIMA">
+        <CimaPoliza d={p.datosCompania} vigente={!cancelada} />
+      </Plegable>
+
+      <Plegable titulo="Referencias de la compañía" resumen="código DGS, id en la entidad, ramo">
+        <div style={{ ...muted, display: 'grid', gap: 4 }}>
           <div>Código DGS de la entidad: {p.codigoEntidadDgs ?? '—'}</div>
           <div>Id de póliza en la entidad: {p.idPolizaEntidad ?? '—'}</div>
           <div>Ramo DGS: {p.ramoDgs ?? '—'}</div>
           <div>Origen del registro: {p.origen}</div>
         </div>
-      </details>
+      </Plegable>
     </div>
   )
 }
@@ -285,7 +291,7 @@ function Coberturas({ lista }: { lista: Poliza['coberturas'] }) {
           «Sin capital propio» es lo que manda la compañía como 0: la garantía existe y se paga según condicionado.
         </p>
         <div style={{ overflowX: 'auto', marginTop: 10 }}>
-          <table style={tabla}>
+          <table className="tabla-polizas" style={tabla}>
             <thead>
               <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
                 <th style={th}>#</th><th style={th}>Cobertura</th><th style={th}>Capital</th>
@@ -298,24 +304,24 @@ function Coberturas({ lista }: { lista: Poliza['coberturas'] }) {
             <tbody>
               {lista.map((c, i) => (
                 <tr key={`${c.codigo ?? ''}-${i}`} style={{ borderTop: '1px solid var(--border)' }}>
-                  <td style={{ ...td, color: 'var(--muted)' }}>{c.orden ?? i + 1}</td>
-                  <td style={td}>
+                  <td data-label="#" style={{ ...td, color: 'var(--muted)' }}>{c.orden ?? i + 1}</td>
+                  <td data-rol="cabeza" style={td}>
                     {c.descripcion ?? c.codigo ?? '—'}
                     {(c.codigo || c.modalidad) && (
                       <div style={sub}>{c.codigo}{c.codigo && c.modalidad ? ' · ' : ''}{c.modalidad && <span title="Modalidad de valoración (código EIAC de la compañía)">val. {c.modalidad}</span>}</div>
                     )}
                   </td>
-                  <td style={td}><CapitalCobertura capital={c.capital} descripcion={c.descripcionCapital} /></td>
-                  {hayDetalle && <td style={td}><Limites detalle={c.detalle ?? null} /></td>}
-                  <td style={td}><Franquicia texto={c.franquicia} detalle={c.detalle ?? null} /></td>
+                  <td data-label="Capital" style={td}><CapitalCobertura capital={c.capital} descripcion={c.descripcionCapital} /></td>
+                  {hayDetalle && <td data-label="Límite" style={td}><Limites detalle={c.detalle ?? null} /></td>}
+                  <td data-label="Franquicia" style={td}><Franquicia texto={c.franquicia} detalle={c.detalle ?? null} /></td>
                   {hayDetalle && (
-                    <td style={{ ...td, whiteSpace: 'nowrap' }}>
+                    <td data-label="Prima" style={{ ...td, whiteSpace: 'nowrap' }}>
                       {c.detalle?.prima?.total !== null && c.detalle?.prima?.total !== undefined ? eur(c.detalle.prima.total)
                         : c.detalle?.prima?.neta !== null && c.detalle?.prima?.neta !== undefined ? <>{eur(c.detalle.prima.neta)} <span style={sub}>neta</span></>
                         : <span style={muted}>—</span>}
                     </td>
                   )}
-                  {hayVigencia && <td style={{ ...td, whiteSpace: 'nowrap' }}>{c.desde || c.hasta ? `${fechaCorta(c.desde)} → ${fechaCorta(c.hasta)}` : <span style={muted}>—</span>}</td>}
+                  {hayVigencia && <td data-label="Vigencia" style={{ ...td, whiteSpace: 'nowrap' }}>{c.desde || c.hasta ? `${fechaCorta(c.desde)} → ${fechaCorta(c.hasta)}` : <span style={muted}>—</span>}</td>}
                 </tr>
               ))}
             </tbody>
@@ -386,28 +392,48 @@ function Recibos({ p }: { p: Poliza }) {
     : r.pendientes > 0 ? `🟡 ${r.pendientes} al cobro (emitido, aún sin cargar)`
     : r.cobrados === 0 && r.anulados > 0 ? `⚪ todos anulados (${r.anulados})`
     : `🟢 ${r.cobrados} cobrado(s)${r.cobradoEur !== null ? ` · ${eur(r.cobradoEur)}` : ''}`
+  // Del más reciente al más antiguo (ISO ordena como texto); sin fecha, al final.
+  const clave = (x: Poliza['listaRecibos'][number]) => x.fechaEmision ?? x.fechaVencimiento ?? ''
+  const ordenados = [...p.listaRecibos].sort((a, b) => clave(b).localeCompare(clave(a)))
+  const recientes = ordenados.slice(0, RECIBOS_VISIBLES)
+  const antiguos = ordenados.slice(RECIBOS_VISIBLES)
   return (
     <Tarjeta titulo={`Recibos${r && r.total ? ` (${r.total})` : ''}`}>
       <p style={{ margin: '0 0 8px', fontSize: 13 }}>{titular}</p>
-      {p.listaRecibos.length > 0 && (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={tabla}>
-            <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Emitido</th><th style={th}>Vence</th><th style={th}>Situación</th><th style={th}>Cobro</th><th style={{ ...th, textAlign: 'right' }}>Importe</th></tr></thead>
-            <tbody>
-              {p.listaRecibos.map(x => (
-                <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
-                  <td style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
-                  <td style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
-                  <td style={td}>{ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}</td>
-                  <td style={td}>{x.formaPago ?? <span style={muted}>—</span>}</td>
-                  <td style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>{x.importe === null ? <span style={muted} title="Importe con forma inesperada en el EIAC">ilegible</span> : eur(x.importe)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {recientes.length > 0 && <TablaRecibos lista={recientes} />}
+      {/* Los antiguos, plegados y sin montar: una póliza de hace años trae
+          decenas de recibos y lo que se consulta es la anualidad en curso. */}
+      {antiguos.length > 0 && (
+        <div style={{ marginTop: 10 }}>
+          <Plegable titulo={`Ver ${antiguos.length} recibo(s) anteriores`}>
+            <TablaRecibos lista={antiguos} />
+          </Plegable>
         </div>
       )}
     </Tarjeta>
+  )
+}
+
+const RECIBOS_VISIBLES = 12
+
+function TablaRecibos({ lista }: { lista: Poliza['listaRecibos'] }) {
+  return (
+    <div style={{ overflowX: 'auto' }}>
+      <table className="tabla-polizas" style={tabla}>
+        <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Emitido</th><th style={th}>Vence</th><th style={th}>Situación</th><th style={th}>Cobro</th><th style={{ ...th, textAlign: 'right' }}>Importe</th></tr></thead>
+        <tbody>
+          {lista.map(x => (
+            <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
+              <td data-label="Emitido" style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
+              <td data-label="Vence" style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
+              <td data-rol="cabeza" style={td}>{ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}</td>
+              <td data-label="Cobro" style={td}>{x.formaPago ?? <span style={muted}>—</span>}</td>
+              <td data-label="Importe" style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>{x.importe === null ? <span style={muted} title="Importe con forma inesperada en el EIAC">ilegible</span> : eur(x.importe)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -483,16 +509,9 @@ function NoSePudo({ estado }: { estado: { estado: 'sin_configurar' } | { estado:
   )
 }
 
-const tarjeta: React.CSSProperties = { border: '1px solid var(--border)', borderRadius: 12, padding: 14 }
 const tabla: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }
-const th: React.CSSProperties = { padding: '6px 8px', fontWeight: 600 }
-const td: React.CSSProperties = { padding: '8px' }
-const sub: React.CSSProperties = { fontSize: 11, color: 'var(--muted)' }
 const muted: React.CSSProperties = { fontSize: 13, color: 'var(--muted)', margin: 0 }
 
-function Tarjeta({ titulo, children }: { titulo: string; children: React.ReactNode }) {
-  return <div style={tarjeta}><div style={{ fontWeight: 700, fontSize: 14, marginBottom: 10 }}>{titulo}</div>{children}</div>
-}
 function fmt(iso: string): string {
   const [y, m, d] = iso.split('-')
   return d && m && y ? `${d}/${m}/${y}` : iso
