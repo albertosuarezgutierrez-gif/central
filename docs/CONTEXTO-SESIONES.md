@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** 📱 **iarrhh (`apps/rrhh`) responsive: el panel del responsable NO tenía menú en móvil.** Medido con Playwright
+(banco de datos ficticios, 15 pantallas × 320/375/768): el cambiador de empresa se comía la fila y el `nav` quedaba a 0 px;
+el `<button>` global teñía el cambiador de teal (texto oscuro ilegible). Desbordes arreglados en contrato, nóminas, distribuir
+PDF, portal del empleado (un `<select>` con opción larga arrastraba la tarjeta), login y asistente; a 768 las tablas de
+fichajes/obras/empleados ensanchaban la página (`1fr` → `minmax(0,1fr)`). Táctil ≥44 px en `pointer:coarse`; wordmark
+legible sobre el color de marca del portal. Tablas siguen con scroll horizontal (válido por la regla). PR en esta sesión.
 **(24/09/2026)** 🧮 **Comisiones: el «deudor» de Occident cuadra contra el banco (Fase 3).** Investigado `banco_total`:
 el casado por concepto ya estaba en #3418 (la 1ª pasada con él, 07:30 UTC de hoy; simulado 3→11 periodos casados).
 Arreglado lo que seguía mal: Occident abr-ago salía «deudor» y el banco cobra |bruto|−retención al céntimo →
