@@ -177,3 +177,13 @@ test('🪤 datos para emitir: «no se pudo mirar» ≠ «completos», y un cifra
   assert.equal(r.alerta, true)
   assert.match(fraseDatosEmision({ datos: [fila('Dirección completa (calle, número y código postal)', 'falta')] }).texto, /falta dirección completa \(se lo pide su portal\)/)
 })
+
+test('🪤 las necesidades se leen; ausentes = null (no se puede avisar); solo editables antes de aceptar', async () => {
+  const { leerPresupuestoEnLista, necesidadesEditables } = await import('./presupuesto-asegura.ts')
+  const base = { id: 'a', estado: 'borrador', creadoAt: 'x', venceEl: 'y' }
+  assert.equal(leerPresupuestoEnLista(base)?.necesidades, null)
+  assert.equal(leerPresupuestoEnLista({ ...base, necesidades: 'Auto diario con lunas' })?.necesidades, 'Auto diario con lunas')
+  assert.equal(necesidadesEditables('visto'), true)
+  assert.equal(necesidadesEditables('aceptado'), false)
+  assert.equal(necesidadesEditables('retirado'), false)
+})

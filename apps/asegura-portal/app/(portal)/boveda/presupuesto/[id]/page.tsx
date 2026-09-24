@@ -121,6 +121,17 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
         </p>
       )}
 
+      {p.necesidades && (
+        <section className="seccion">
+          <h2 style={{ marginTop: 0 }}>Lo que me pediste</h2>
+          <p style={{ margin: 0 }}>«{p.necesidades}»</p>
+          <p className="suave" style={{ margin: '8px 0 0' }}>
+            Es como lo he anotado a partir de lo que me contaste, y es lo que firmas si aceptas una opción.
+            Si algo no es así, escríbeme antes de aceptar.
+          </p>
+        </section>
+      )}
+
       <Actual actual={p.actual} />
 
       {p.aceptadoAt !== null && (

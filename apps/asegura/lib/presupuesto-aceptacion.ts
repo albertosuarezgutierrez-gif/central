@@ -39,6 +39,7 @@ type Fila = {
   creadoAt: Date; venceEl: Date; enviadoAt: Date | null; vistoAt: Date | null; elegidoAt: Date | null
   aceptadoAt: Date | null; emitidoAt: Date | null; retiradoAt: Date | null; enlaceGeneradoAt: Date | null
   otpHash: string | null; otpExpira: Date | null
+  necesidades: string | null
   opcionId: string; compania: string; producto: string | null; prima: string | null; franquicia: string | null; firmeza: string
   opcionDgs: string | null
   actualCompania: string | null; actualNumero: string | null; actualDgs: string | null; actualVence: string | null
@@ -58,7 +59,7 @@ async function leer(correduriaId: string, clienteId: string, presupuestoId: stri
            p.creado_at as "creadoAt", p.vence_el as "venceEl", p.enviado_at as "enviadoAt", p.visto_at as "vistoAt",
            p.elegido_at as "elegidoAt", p.aceptado_at as "aceptadoAt", p.emitido_at as "emitidoAt",
            p.retirado_at as "retiradoAt", p.enlace_generado_at as "enlaceGeneradoAt",
-           p.firma_otp_hash as "otpHash", p.firma_otp_expira as "otpExpira",
+           p.firma_otp_hash as "otpHash", p.firma_otp_expira as "otpExpira", p.necesidades,
            o.id::text as "opcionId", o.compania, o.producto, o.prima_eur::text as prima, o.franquicia_eur::text as franquicia, o.firmeza,
            (select cd.codigo_dgs from companias_dgs cd where lower(cd.nombre_comun) = lower(o.compania) limit 1) as "opcionDgs",
            coalesce(cda.nombre_comun, pol.aseguradora) as "actualCompania", pol.numero_poliza as "actualNumero",
@@ -124,6 +125,7 @@ function componer(f: Fila, hoy: string): Compuesto | null {
       opciones: f.nOpciones, companias: f.nCompanias,
       informacionMediador: `${MEDIADOR.identidad.portal}/legal/mediador`, versionTextos: VERSION_TEXTOS_LEGALES,
     },
+    necesidades: f.necesidades,
   })
   // La huella cubre las DOS cartas: si cambia cualquiera, no se firma lo que no se leyó.
   return { documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion }

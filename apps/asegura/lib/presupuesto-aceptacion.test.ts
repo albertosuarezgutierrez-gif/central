@@ -58,3 +58,9 @@ test('🪤 lo firmado cita lo que el cliente tuvo delante: recuento del presupue
   assert.match(src, /versionTextos: VERSION_TEXTOS_LEGALES/)
   assert.match(src, /informacionMediador: `\$\{MEDIADOR\.identidad\.portal\}\/legal\/mediador`/)
 })
+
+test('🪤 lo firmado cita las necesidades guardadas, y solo se reescriben antes de aceptar', () => {
+  assert.match(src, /necesidades: f\.necesidades,/)
+  const pres = readFileSync(new URL('./presupuesto.ts', import.meta.url), 'utf8')
+  assert.match(pres, /where: \{ id: fila\.id, correduriaId, aceptadoAt: null, retiradoAt: null \},\s*data: \{ necesidades: v\.valor/)
+})

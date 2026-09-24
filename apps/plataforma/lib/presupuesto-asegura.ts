@@ -243,6 +243,13 @@ export type PresupuestoEnLista = {
   vistoAt: string | null
   opciones: number
   desdeEur: number | null
+  /** Exigencias y necesidades escritas. `null` = no constan (o asegura aún no las manda): no se puede avisar. */
+  necesidades: string | null
+}
+
+/** Mientras no esté aceptado, retirado ni caducado, las necesidades se pueden escribir o corregir. */
+export function necesidadesEditables(e: EstadoPresupuestoLista): boolean {
+  return e === 'borrador' || e === 'enlazado' || e === 'enviado' || e === 'visto' || e === 'elegido'
 }
 
 const ESTADOS: readonly EstadoPresupuestoLista[] = ['borrador', 'enlazado', 'enviado', 'visto', 'elegido', 'aceptado', 'emitido', 'caducado', 'retirado']
@@ -259,6 +266,7 @@ export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
     enviadoAt: s(o.enviadoAt), enlaceGeneradoAt: s(o.enlaceGeneradoAt), vistoAt: s(o.vistoAt),
     opciones: typeof o.opciones === 'number' ? o.opciones : 0,
     desdeEur: typeof o.desdeEur === 'number' ? o.desdeEur : null,
+    necesidades: s(o.necesidades),
   }
 }
 

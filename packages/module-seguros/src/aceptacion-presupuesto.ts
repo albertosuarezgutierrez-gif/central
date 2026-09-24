@@ -43,6 +43,25 @@ export type DatosAceptacion = {
    * no se guarda y no se afirma.
    */
   vistoAntes: { opciones: number; companias: number; informacionMediador: string; versionTextos: string }
+  /**
+   * Las exigencias y necesidades que el corredor anotó a partir de lo que contó el cliente (art. 20
+   * Ley 16/2018). `null` = no constan por escrito, y el documento lo dice en vez de callarlo.
+   */
+  necesidades: string | null
+}
+
+/** Límites de la declaración de necesidades (los mismos que el CHECK de la BD). */
+export const NECESIDADES_MIN = 15
+export const NECESIDADES_MAX = 1500
+
+/** Valida la declaración de necesidades que escribe el corredor. */
+export function validarNecesidades(texto: unknown): { ok: true; valor: string } | { ok: false; motivo: string } {
+  const t = typeof texto === 'string' ? texto.replace(/\s+/g, ' ').trim() : ''
+  if (t.length < NECESIDADES_MIN) {
+    return { ok: false, motivo: `Escribe qué necesita el cliente (al menos ${NECESIDADES_MIN} caracteres): qué quiere asegurar, qué coberturas pide y qué le importa.` }
+  }
+  if (t.length > NECESIDADES_MAX) return { ok: false, motivo: `Máximo ${NECESIDADES_MAX} caracteres.` }
+  return { ok: true, valor: t }
 }
 
 const FIRMEZA: Record<OpcionAceptada['firmeza'], string> = {
@@ -133,6 +152,10 @@ export function documentoAceptacion(d: DatosAceptacion): string {
       'NO es todavía el contrato: la compañía tiene que confirmar el precio y emitir la póliza, y no hay cobertura hasta que la emita y se me comunique.',
     '',
     lineaVistoAntes(d.vistoAntes),
+    '',
+    d.necesidades?.trim()
+      ? `Lo que pedí a mi corredor (mis exigencias y necesidades): «${d.necesidades.trim()}».`
+      : 'No constan por escrito mis exigencias y necesidades.',
   ]
   if (d.anula) {
     lineas.push(

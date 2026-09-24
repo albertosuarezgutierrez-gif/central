@@ -34,7 +34,7 @@ import { fechaEfectoDe } from './presupuesto'
 export type CanalAviso = 'email' | 'whatsapp_enlace'
 
 export type FalloEnvio =
-  | 'no_encontrado' | 'no_enviable' | 'sin_enlace' | 'sin_email' | 'sin_acceso' | 'simulado' | 'ocupado'
+  | 'no_encontrado' | 'no_enviable' | 'sin_necesidades' | 'sin_enlace' | 'sin_email' | 'sin_acceso' | 'simulado' | 'ocupado'
   | 'sin_proveedor' | 'remitente_no_verificado' | 'rechazado'
 
 export type ResultadoEnvio =
@@ -95,11 +95,14 @@ export async function avisarPresupuesto(
     select: {
       id: true, clienteId: true, tarificacionId: true, tokenHash: true, canalAviso: true, creadoAt: true, venceEl: true,
       enlaceGeneradoAt: true, enviadoAt: true, vistoAt: true, elegidoAt: true, aceptadoAt: true, emitidoAt: true, retiradoAt: true,
+      necesidades: true,
     },
   })
   if (!p) return error('no_encontrado', 'Ese presupuesto no existe en esta correduría.')
   const estado = estadoPresupuesto(p, ahora)
   if (!AVISABLE.has(estado)) return error('no_enviable', `Está ${estado}: ya no se le avisa. Prepara otro si hace falta.`)
+  // IDD (art. 20 Ley 16/2018): las necesidades del cliente se especifican ANTES de proponerle nada.
+  if (!p.necesidades?.trim()) return error('sin_necesidades', 'Antes de avisarle, escribe sus exigencias y necesidades: qué quiere asegurar y qué le importa. Es lo que luego firma con la aceptación.')
 
   const [t] = await db.$queryRaw<{ simulado: boolean | null; peticion: unknown }[]>`
     select simulado, peticion from tarificaciones where id = ${p.tarificacionId}::uuid and correduria_id = ${correduriaId}::uuid`

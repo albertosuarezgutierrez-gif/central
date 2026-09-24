@@ -108,6 +108,8 @@ export type PresupuestoCliente = {
   actual: ActualCliente | null
   /** `true` cuando quien mira es Alberto con la vista de corredor. */
   vistaDeCorredor: boolean
+  /** Lo que el cliente pidió, según lo anotó el corredor. `null` = no consta por escrito. */
+  necesidades: string | null
 }
 
 export type LecturaPresupuesto =
@@ -200,6 +202,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
         aceptadoAt: true,
         emitidoAt: true,
         retiradoAt: true,
+        necesidades: true,
       },
     })
     if (!p) return { estado: 'no_encontrado' }
@@ -297,6 +300,7 @@ export async function presupuestoDeSesion(id: string): Promise<LecturaPresupuest
         opciones,
         actual,
         vistaDeCorredor,
+        necesidades: p.necesidades?.trim() || null,
       },
     }
   } catch (e) {

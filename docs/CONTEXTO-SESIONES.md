@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** — IDD: exigencias y necesidades en el presupuesto. Columna `presupuesto.necesidades(+_at)` (aplicada, CHECK
+15-1500, GRANT SELECT al portal), `PATCH accion:'necesidades'` en el puerto, editable hasta aceptar. `avisarPresupuesto` se niega
+sin ellas (`sin_necesidades`, 422); el portal las enseña y `documentoAceptacion` las cita (o dice que no constan).
+
 **(24/09/2026)** — Formación IDD: «dejó de distribuir desde». Tabla `seguros.formacion_baja` (aplicada, clave =
 `clavePersona`), puerto `/api/operador/formacion/baja` (POST/DELETE) y botón por persona en Datos. Regla pura:
 baja anterior al año → fuera; dentro del año sin las horas → estado `baja` (no pendiente); con horas → cumplido.

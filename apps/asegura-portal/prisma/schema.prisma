@@ -1189,6 +1189,8 @@ model Presupuesto {
   aceptadoAt   DateTime? @map("aceptado_at") @db.Timestamptz(6)
   emitidoAt    DateTime? @map("emitido_at") @db.Timestamptz(6)
   retiradoAt   DateTime? @map("retirado_at") @db.Timestamptz(6)
+  /// Exigencias y necesidades que anotó el corredor (IDD). Es lo que el cliente firma con la aceptación.
+  necesidades  String?
 
   opciones PresupuestoOpcion[]
   eventos  PresupuestoEvento[]

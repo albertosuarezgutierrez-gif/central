@@ -1275,6 +1275,9 @@ model Presupuesto {
   salida           String?
   polizaEmitidaId  String?   @map("poliza_emitida_id") @db.Uuid
   creadoPor        String    @map("creado_por")
+  /// Exigencias y necesidades del cliente (art. 20 Ley 16/2018), escritas por el corredor. NULL = no constan.
+  necesidades      String?
+  necesidadesAt    DateTime? @map("necesidades_at") @db.Timestamptz(6)
 
   opciones PresupuestoOpcion[]
   eventos  PresupuestoEvento[]
