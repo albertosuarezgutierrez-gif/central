@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import InstalarApp from '@/components/InstalarApp'
 import { useCallback, useEffect, useState } from 'react'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -398,6 +399,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
       <div className="nav-pie" style={{ padding: '16px', borderTop: '1px solid var(--border)' }}>
         <div className="nav-solo-abierto" style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, marginBottom: '2px' }}>{nombre}</div>
         <div className="nav-solo-abierto" style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
+        <div className="nav-solo-abierto"><InstalarApp /></div>
         <div className="nav-solo-abierto"><ThemeToggle /></div>
         {/* Plegado: queda solo el icono ⏻ (title = tooltip); nombre, email y tema vuelven al desplegar. */}
         <button onClick={logout} title="Salir" aria-label="Salir" style={{
