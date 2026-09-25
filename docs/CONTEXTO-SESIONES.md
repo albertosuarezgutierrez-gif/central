@@ -18,6 +18,11 @@ APLICADAS; webhook de Resend suscrito a TODOS los eventos y guarda cada uno; ope
 Punto único `lib/correo-envio.ts` (API de Resend, cae a SMTP «sin seguimiento»); la felicitación ya sale por él. Ficha → «✉️ Correos».
 ⚠️ «Abierto» no prueba lectura (Apple MPP); la prueba es «entregado» y el clic. Pendiente: pasar los otros 12 remitentes al punto único.
 
+**(25/09/2026)** 🏢 **Portal: el dueño de una empresa ve y gestiona su empresa automáticamente** (caso Flores y Gazquez SL /
+Diego Flores Carmona). Derivado en lectura de `cliente_relaciones` 'Dueño' (empresa jurídica explícita, viva, misma correduría), sin
+escribir vínculos; acceso total + puede autorizar a terceros. «Administración» NO abre (pendiente de Alberto). Antes, mismo día:
+vínculo por correo se retira al cambiar el correo (#3600, caso Guzmán Lozano→Pueyo) y cambio de correo con código (#3614).
+
 **(25/09/2026)** 🚨 **Los crons de asegura NUNCA se ejecutaron**: el middleware no exentaba `/api/cron` y Vercel recibía 307→/login
 (felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez
 (`seguros.felicitacion` vacía, 0 correos en Resend). Arreglo: `/api/cron` a PUBLIC + cepo (#3602, visto rojo). Felicitación rediseñada
