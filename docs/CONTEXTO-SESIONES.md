@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** Correduría · emisión Codeoscopic (PR #3621, mergeado): en Retarificar la fecha de efecto arranca en el
+vencimiento si es fiable (viva, no cancelada, no emitida por nosotros; hoy..+90 días) y viaja en el ReRate como
+`mainQuote.effectiveDate` — ⚠️ SIN probar contra el vendor. Arreglado `encontrarPrecio` (cogía el primer precio del nivel;
+Reale da varios → ahora desempata por producto y prima). Tabla de precios: «válido hasta», opciones legibles y coberturas
+gratis (puerto `/api/operador/codeoscopic/coberturas`, 3 estados). Pendiente de OK de Alberto: specs de importar proyecto
+Avant2 por id y de configuración por compañía (`docs/superpowers/specs/2026-09-25-*`).
+
 **(25/09/2026)** Recaptación por email: el tracking de aperturas estaba APAGADO en Resend → los 30 emails (20-22/09)
 salían «0% apertura», que era «no medido». 🚨 Resend NO guarda open/click tracking sin `trackingSubdomain` (el update
 responde OK y al releer sigue en false; así se dio por activado sin estarlo). Ahora en `grupoasegura.es` (el remitente
