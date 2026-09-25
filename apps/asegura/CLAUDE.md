@@ -319,9 +319,12 @@ GitHub Actions (cron 5:30 y 11:30)
   Manager operativo a nombre de ALBERTO (no de Manuel) desde 09/06; compañías vivas Reale y Fidelidade,
   claves entregadas de Mapfre/Allianz/Occident; DPA art. 28 firmado. La integración API de la web quedó
   EN SANDBOX (jun/2026, contacto juan.fernandez@codeoscopic.com) sin cerrar la batería
-  Quote→preemisión→Submit→webhook — por eso el código de emisión sigue **tras un flag que nunca se
-  activó** y sus tablas están vacías. No es un bug; es una validación sin terminar.
-  ⚠️ **Condición para encender ese flag algún día:** el envío es idempotente por dentro
+  Quote→preemisión→Submit→webhook. ✅ **El flag de emisión SÍ está encendido en producción (medido en
+  BD el 25/09/2026):** `codeoscopic_projects` tiene 2 proyectos `emitida` (Allianz 17/09, póliza
+  `61048939`; Reale 23/09) y las pólizas acuñadas con `origen='emitida_codeoscopic'`. Esta línea decía
+  «tras un flag que nunca se activó» y era falsa desde el 11/09. Lo que sigue sin cerrar es la validación
+  de idempotencia de punta a punta:
+  ⚠️ **Condición que sigue abierta con el flag encendido:** el envío es idempotente por dentro
   (`submit_in_flight_at` es un candado, `submit_attempt_id` una UUID para reconciliar) pero **NO de
   punta a punta**: Codeoscopic no deduplica por nuestro `attempt_id`, así que un reintento tras una
   respuesta perdida puede crear un duplicado en su lado. Antes de activarlo hay que probarlo en serio:

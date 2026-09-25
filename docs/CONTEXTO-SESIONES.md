@@ -603,6 +603,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Correduría · emisión: el doc decía «sin envío al vendor» y ya emite
+- Medido en BD: 2 proyectos `emitida` (Allianz 17/09 pól. 61048939, Reale 23/09). Corregidos `apps/asegura/CLAUDE.md` («flag que nunca se activó»), `CORREDURIA-CRM-VISION.md` §4/§9 y la skill `correduria-crm`.
+- Límite real: solo se emite desde «Retarificar» de una póliza auto/moto. Negocio nuevo (`*-nuevo`), hogar/vida/salud/decesos y proyectos hechos a mano en Avant2 (p. ej. 40842815, Allianz de Pablo Guzmán Pueyo, ML 250) NO se emiten ni importan por id → se emiten en Avant2 y entran por CIMA.
+- «📄 Subir póliza» NO escribe `polizas` (solo documento + `portal_poliza_declarada`): no sirve para registrar una emitida fuera.
+- Pendiente con spec + OK: importar proyecto de Avant2 por id y emitir negocio nuevo.
+
 ## (25/09/2026) Correduría · pestaña Contactos más clara
 - Alberto: «no es nada clara». Portal: sin el párrafo de «no hay nada que hacer» cuando ya entra (va al `title`), las 3 acciones en una fila con rótulos cortos sin repetir el nombre.
 - Personas: el formulario de autorización (alcance) va PLEGADO detrás de su botón, y ese botón pasa a secundario: el caso normal (nadie ve nada de nadie) ya no parece una tarea pendiente.
