@@ -32,9 +32,9 @@
 import {
   alcanceConcedible,
   alcancesConcedibles,
-  caducidadPorDefecto,
   esAlcance,
   estadoAutorizacion,
+  pideRevision,
   NIVELES,
   puedeAutorizar as nivelPuedeAutorizar,
   tituloRepresentacion,
@@ -110,6 +110,69 @@ export const TEXTO_REPRESENTACION = [
   'Quedará registrado qué días ha consultado los seguros de la sociedad, y ese registro lo veo yo.',
 ].join('\n')
 
+/**
+ * 🚨 **V3 / TOTAL / REPRESENTACIÓN V2 (25/09/2026): sin caducidad y dos permisos.**
+ *
+ * Alberto: «mejor no caduca (es un lío luego volver a pedir acceso)» y «tiene que
+ * haber también permiso para todo». Los textos anteriores afirmaban «caduca al
+ * año», y el de la persona afirmaba además que no se vería su DNI ni su IBAN: las
+ * dos cosas dejan de ser ciertas, así que son versiones nuevas. Las filas viejas
+ * siguen selladas con la suya y siguen diciendo la verdad sobre lo que se aceptó
+ * ENTONCES.
+ */
+export const TEXTO_AUTORIZACION_V3 = 'v3-2026-09-25'
+
+/** «Solo ver» de una persona. La pantalla lo enseña TAL CUAL. */
+export const TEXTO_AUTORIZACION_V3_TEXTO = [
+  'Autorizo a esta persona a CONSULTAR los seguros que tengo con Grupo ASegura.',
+  'Solo puede verlos: no puede contratar, modificar, dar partes ni actuar en mi nombre.',
+  'Verá qué está asegurado y lo que pago, y eso incluye la dirección del inmueble en un seguro de hogar.',
+  'No verá mis datos personales (DNI, cuenta bancaria) ni mis documentos.',
+  'La autorización no caduca: dura hasta que yo, o esa persona, la revoquemos desde el portal. Una vez al año se me preguntará si la mantengo.',
+  'Quedará registrado qué días ha consultado mis seguros, y ese registro lo veo yo.',
+].join('\n')
+
+/**
+ * «Acceso total» de una persona — decisión expresa de Alberto (25/09/2026) de que
+ * incluya el DNI y el IBAN. Por eso el texto lo dice con todas las letras: sin
+ * esa frase, lo aceptado no cubriría lo que se enseña.
+ */
+export const TEXTO_AUTORIZACION_TOTAL_V1 = 'v1-2026-09-25-total'
+
+/** El texto exacto de `TEXTO_AUTORIZACION_TOTAL_V1`. La pantalla lo enseña TAL CUAL. */
+export const TEXTO_AUTORIZACION_TOTAL = [
+  'Autorizo a esta persona a ACCESO TOTAL a los seguros que tengo con Grupo ASegura.',
+  'Verá lo mismo que yo: mis seguros, lo que pago, mis documentos y también mis datos personales, incluidos mi DNI y mi cuenta bancaria.',
+  'Podrá actuar en mi nombre ante la correduría: dar partes de siniestro y hacer gestiones y peticiones sobre mis pólizas.',
+  'No podrá autorizar a nadie más.',
+  'La autorización no caduca: dura hasta que yo, o esa persona, la revoquemos desde el portal. Una vez al año se me preguntará si la mantengo.',
+  'Quedará registrado qué días ha consultado mis seguros, y ese registro lo veo yo.',
+].join('\n')
+
+/** Representación de una sociedad, sin caducidad y con los dos permisos. */
+export const TEXTO_REPRESENTACION_V2 = 'v2-2026-09-25-representacion'
+
+/** El texto exacto de `TEXTO_REPRESENTACION_V2`. La pantalla lo enseña TAL CUAL. */
+export const TEXTO_REPRESENTACION_V2_TEXTO = [
+  'Autorizo a esta persona a actuar por la sociedad ante Grupo ASegura, con el título que se indica.',
+  'Verá los seguros de la sociedad, lo que paga, su CIF y la cuenta bancaria de los recibos: son datos de la empresa, no de una persona.',
+  'Con «Acceso total» podrá además dar partes y hacer gestiones en nombre de la sociedad, y lo que declare obliga a la sociedad frente a la compañía.',
+  'No puede autorizar a nadie más: ampliar el círculo lo decide la sociedad.',
+  'La autorización no caduca: dura hasta que la revoquemos desde el portal. Una vez al año se preguntará si se mantiene.',
+  'Quedará registrado qué días ha consultado los seguros de la sociedad, y ese registro lo veo yo.',
+].join('\n')
+
+/**
+ * Qué texto (versión y contenido) corresponde a una concesión. ÚNICA fuente: la
+ * usan el alta directa, las invitaciones y las peticiones, para que ninguna
+ * selle una fila con un texto que dice otra cosa de lo concedido.
+ */
+export function textoDeConcesion(alcance: Alcance, tipo: TipoOtorgante): { version: string; texto: string } {
+  if (tipo === 'juridica') return { version: TEXTO_REPRESENTACION_V2, texto: TEXTO_REPRESENTACION_V2_TEXTO }
+  if (alcance === 'total') return { version: TEXTO_AUTORIZACION_TOTAL_V1, texto: TEXTO_AUTORIZACION_TOTAL }
+  return { version: TEXTO_AUTORIZACION_V3, texto: TEXTO_AUTORIZACION_V3_TEXTO }
+}
+
 /** Los dos alcances que son ACTUAR en nombre de otro, no mirar. Solo los delega una sociedad. */
 const APODERAMIENTO: readonly Alcance[] = ['partes', 'documentos']
 
@@ -138,10 +201,10 @@ const MAX_USOS = 90
  * Estados en los que una autorización OCUPA el sitio de su pareja+alcance: no
  * se puede conceder otra igual mientras haya una así.
  *
- * 📌 Decisión, no descuido: `caducada` y `revocada` **no** ocupan sitio. Una
- * autorización dura un año y «se renueva; no se prorroga sola»
- * (`DIAS_VIGENCIA`); si la caducada bloqueara, la renovación sería imposible y
- * el usuario vería un `ya_concedida` sobre algo que no le deja ver nada.
+ * 📌 Decisión, no descuido: `caducada` y `revocada` **no** ocupan sitio. Las
+ * concedidas hasta el 25/09/2026 caducaban al año (las de desde entonces no
+ * caducan); si una caducada bloqueara, renovarla sería imposible y el usuario
+ * vería un `ya_concedida` sobre algo que no le deja ver nada.
  *
  * 🚨 Y de aquí sale el desfase que hay que cerrar a mano al conceder: el índice
  * `idx_portal_autorizacion_viva` es `UNIQUE (otorgante, autorizado, alcance)
@@ -231,8 +294,14 @@ export type AutorizacionVista = {
   tipoOtorgante: TipoOtorgante | null
   otorgadoEn: Date
   aceptadoEn: Date | null
-  caducaEn: Date
+  /** `null` = no caduca (las concedidas desde el 25/09/2026). */
+  caducaEn: Date | null
   revocadoEn: Date | null
+  /**
+   * `true` = toca preguntarle al otorgante si la mantiene (un año desde que se
+   * aceptó o desde la última vez que dijo que sí). Solo informa: no corta nada.
+   */
+  pideRevision: boolean
   /**
    * Días en que el autorizado entró a mirar, y **tres estados, no dos**:
    *
@@ -311,7 +380,7 @@ export type AutorizacionesPortal = {
 }
 
 type ResultadoConceder =
-  | { ok: true; id: string; estado: EstadoAutorizacion; caducaEn: Date }
+  | { ok: true; id: string; estado: EstadoAutorizacion; caducaEn: Date | null }
   | { ok: false; error: ErrorConceder; mensaje: string }
 
 export type ErrorConceder =
@@ -576,6 +645,16 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
       aceptadoEn: f.aceptadoEn,
       caducaEn: f.caducaEn,
       revocadoEn: f.revocadoEn,
+      pideRevision: pideRevision(
+        {
+          aceptadoEn: f.aceptadoEn,
+          caducaEn: f.caducaEn,
+          revocadoEn: f.revocadoEn,
+          revisadoEn: f.revisadoEn,
+          otorgadoEn: f.otorgadoEn,
+        },
+        hoy,
+      ),
       // `null` en los dos casos que son «no lo sabemos»: no se ha pedido
       // (recibidas) o la consulta se cayó (`usosPor === null`). Nunca `[]`.
       usos: conUsos && usosPor !== null ? (usosPor.get(f.id) ?? []).slice(0, MAX_USOS) : null,
@@ -647,9 +726,9 @@ export async function autorizacionesDeSesion(): Promise<AutorizacionesPortal | n
  * — de ahí el orden. Lo puro que se podía adelantar (¿es siquiera un alcance?)
  * sigue delante, antes de tocar la BD.
  *
- * Nace **apagada** (`aceptadoEn: null` → estado `pendiente`) y con fecha de fin:
- * art. 25.2 RGPD, y porque `caducaEn` es lo único que resuelve el divorcio —
- * nadie entra al portal a revocar el día que se separa.
+ * Nace **apagada** (`aceptadoEn: null` → estado `pendiente`), art. 25.2 RGPD.
+ * Desde el 25/09/2026 **no caduca** (`caducaEn: null`): el divorcio —nadie entra
+ * a revocar el día que se separa— lo cubre la revisión anual (`pideRevision`).
  */
 export async function conceder(datos: {
   identidadId: string
@@ -746,9 +825,7 @@ export async function conceder(datos: {
       // delegue una persona es dar un poder, y un tick en una pantalla no lo es
       // —si María declara mal, la compañía discute la cobertura (art. 16 LCS)
       // sin que nadie pueda decir quién firmó.
-      mensaje: esApoderamiento(datos.alcance)
-        ? 'Dar partes o manejar documentos en nombre de otra persona es un apoderamiento, no un permiso de consulta: eso solo puede delegarlo una SOCIEDAD, en quien la representa. Desde una ficha de persona solo se puede autorizar a CONSULTAR los seguros.'
-        : 'Ese permiso no se puede conceder desde esta ficha. Hoy solo se puede autorizar a CONSULTAR los seguros.',
+      mensaje: 'Ese permiso ya no se concede. Elige «Solo ver» o «Acceso total».',
     }
   }
 
@@ -762,7 +839,7 @@ export async function conceder(datos: {
   // devolvería un error de Postgres en vez de decir qué falta: si quien
   // representa da un parte, la que queda obligada es la sociedad, y «alguien de
   // la empresa» no es un título que oponerle a la compañía.
-  if (esApoderamiento(alcance) && titulo === null) {
+  if ((esApoderamiento(alcance) || (alcance === 'total' && tipoOtorgante === 'juridica')) && titulo === null) {
     return {
       ok: false,
       error: 'titulo_requerido',
@@ -869,7 +946,6 @@ export async function conceder(datos: {
   // UNA: eso es justo lo que garantiza el índice único parcial.
   const caducada = previas[0] ?? null
 
-  const caducaEn = caducidadPorDefecto(hoy)
   const datosNueva = {
     correduriaId: mio.correduriaId,
     otorganteClienteId,
@@ -879,11 +955,13 @@ export async function conceder(datos: {
     polizaId,
     tituloRepresentacion: titulo,
     otorgadoPorIdentidadId: identidadId,
-    caducaEn,
+    // Sin caducidad, tampoco mientras está pendiente (25/09/2026). La revisión
+    // anual la pide `pideRevision`, que cuenta desde que se ofrece.
+    caducaEn: null,
     // Qué texto aceptó. Sin esto el consentimiento no se puede demostrar — y por
-    // eso la sociedad guarda OTRA versión: la de la persona afirma «no verá mi
-    // IBAN ni podrá dar partes», que de una empresa es sencillamente falso.
-    versionTexto: tipoOtorgante === 'juridica' ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V2,
+    // eso hay una versión por permiso y por quién cede: la de «Solo ver» de una
+    // persona afirma «no verá mi IBAN», que en «Acceso total» es falso.
+    versionTexto: textoDeConcesion(alcance, tipoOtorgante).version,
     // `null` cuando la cabecera no vino: no se inventa una IP ni un navegador.
     ip: datos.ip,
     userAgent: datos.userAgent,
@@ -912,11 +990,201 @@ export async function conceder(datos: {
   return {
     ok: true,
     id: fila.id,
-    // El estado se calcula, no se afirma: si algún día `caducidadPorDefecto`
-    // devolviera una fecha pasada, esto diría `caducada` en vez de mentir.
+    // El estado se calcula, no se afirma.
     estado: estadoAutorizacion(fila, hoy),
     caducaEn: fila.caducaEn,
   }
+}
+
+/**
+ * «Pasar a acceso total» sobre un acceso que YA existe (25/09/2026).
+ *
+ * 🚨 Es la ÚNICA vía para dar `total` a quien entró por una invitación o una
+ * petición (una IDENTIDAD sin ficha): el acceso total (DNI, IBAN, partes) no se
+ * reparte por un enlace de correo, donde una errata en la dirección se lo daría a
+ * un desconocido. Aquí la persona ya ha probado quién es —aceptó con su propio
+ * correo— y aun así tiene que ACEPTAR la ampliación: nace pendiente, como
+ * cualquier concesión.
+ *
+ * Crea una fila NUEVA con el mismo destinatario y la misma póliza; la de «Solo
+ * ver» se queda como está (revocar el total devuelve a lo que había).
+ */
+export async function ampliarATotal(datos: {
+  identidadId: string
+  autorizacionId: string
+  tituloRepresentacion?: unknown
+  ip: string | null
+  userAgent: string | null
+}): Promise<ResultadoConceder> {
+  if (!UUID.test(datos.autorizacionId)) {
+    return { ok: false, error: 'datos_invalidos', mensaje: 'No hemos encontrado ese acceso.' }
+  }
+  const vinculos = await fichasDeIdentidad(datos.identidadId)
+  // El filtro por MIS fichas va dentro del `where`, junto al id: con el uuid de
+  // una autorización ajena la lectura sería un éxito y el fallo no se vería.
+  const base = await prisma.portalAutorizacion.findFirst({
+    where: { id: datos.autorizacionId, otorganteClienteId: { in: vinculos.map((v) => v.clienteId) } },
+    select: {
+      id: true,
+      correduriaId: true,
+      otorganteClienteId: true,
+      autorizadoClienteId: true,
+      autorizadoIdentidadId: true,
+      polizaId: true,
+      alcance: true,
+      aceptadoEn: true,
+      caducaEn: true,
+      revocadoEn: true,
+    },
+  })
+  if (base === null) {
+    return { ok: false, error: 'ficha_no_tuya', mensaje: 'No hemos encontrado ese acceso entre los que has dado.' }
+  }
+  const mio = vinculos.find((v) => v.clienteId === base.otorganteClienteId)
+  if (!mio || !nivelPuedeAutorizar(nivelDeVinculo(mio.nivel))) {
+    return {
+      ok: false,
+      error: 'nivel_insuficiente',
+      mensaje: 'Tu acceso a esa ficha es de consulta: no permite autorizar a otras personas.',
+    }
+  }
+  const hoy = new Date()
+  if (estadoAutorizacion(base, hoy) !== 'vigente') {
+    return {
+      ok: false,
+      error: 'datos_invalidos',
+      mensaje: 'Solo se puede ampliar un acceso que la otra persona ya ha aceptado y sigue en vigor.',
+    }
+  }
+  if (base.alcance === 'total') {
+    return { ok: false, error: 'ya_concedida', mensaje: 'Esa persona ya tiene acceso total.' }
+  }
+
+  const ficha = await prisma.cliente.findFirst({
+    where: { id: base.otorganteClienteId, correduriaId: mio.correduriaId, mergedIntoClienteId: null },
+    select: { tipoPersona: true },
+  })
+  if (ficha === null) {
+    return { ok: false, error: 'ficha_no_tuya', mensaje: 'Esa ficha ya no está activa en la cartera.' }
+  }
+  const tipo = tipoDeFicha(ficha.tipoPersona)
+  const titulo: TituloRepresentacion | null =
+    tipo === 'juridica' ? tituloRepresentacion(datos.tituloRepresentacion) : null
+  if (tipo === 'juridica' && titulo === null) {
+    return {
+      ok: false,
+      error: 'titulo_requerido',
+      mensaje:
+        'Para actuar en nombre de la sociedad hace falta decir con qué título se hace: administrador, apoderado o empleado autorizado.',
+    }
+  }
+
+  // ¿Ya hay un `total` vivo (pendiente o aceptado) para ese mismo destinatario y
+  // esa misma póliza? Las dos ramas del destinatario, con la póliza en la clave.
+  const previa = await prisma.portalAutorizacion.findFirst({
+    where: {
+      otorganteClienteId: base.otorganteClienteId,
+      autorizadoClienteId: base.autorizadoClienteId,
+      autorizadoIdentidadId: base.autorizadoIdentidadId,
+      polizaId: base.polizaId,
+      alcance: 'total',
+      revocadoEn: null,
+    },
+    select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
+  })
+  if (previa !== null && ocupaElSitio(estadoAutorizacion(previa, hoy))) {
+    return {
+      ok: false,
+      error: 'ya_concedida',
+      mensaje: 'Ya le has dado acceso total; falta que lo acepte en su portal.',
+    }
+  }
+
+  // Lo que `conceder` comprueba del DESTINATARIO y de la póliza se repite aquí:
+  // entre el «Solo ver» y la ampliación la relación pudo pasar a «Sin vínculo»,
+  // la ficha fusionarse o la póliza irse. Ampliar sobre eso sería dar el acceso
+  // más fuerte con las comprobaciones de hace meses.
+  if (base.autorizadoClienteId !== null) {
+    const [relaciones, autorizado] = await Promise.all([
+      prisma.clienteRelacion.findMany({
+        where: {
+          correduriaId: mio.correduriaId,
+          OR: [
+            { clienteAId: base.otorganteClienteId, clienteBId: base.autorizadoClienteId },
+            { clienteAId: base.autorizadoClienteId, clienteBId: base.otorganteClienteId },
+          ],
+        },
+        select: { tipoRelacion: true },
+      }),
+      prisma.cliente.findFirst({
+        where: { id: base.autorizadoClienteId, correduriaId: mio.correduriaId, mergedIntoClienteId: null },
+        select: { id: true },
+      }),
+    ])
+    if (autorizado === null || !relaciones.some((r) => permiteAutorizar(r.tipoRelacion))) {
+      return {
+        ok: false,
+        error: 'sin_relacion',
+        mensaje: `No consta ninguna relación entre las dos fichas (o consta como «${SIN_VINCULO}»). Habla con tu correduría para que la registre antes de dar acceso total.`,
+      }
+    }
+  }
+  if (base.polizaId !== null) {
+    const suya = await prisma.poliza.findFirst({
+      where: { id: base.polizaId, clienteId: base.otorganteClienteId, mergedIntoPolizaId: null },
+      select: { id: true },
+    })
+    if (suya === null) {
+      return {
+        ok: false,
+        error: 'poliza_no_es_tuya',
+        mensaje: 'Esa póliza ya no está en tu ficha. Vuelve a cargar la pantalla.',
+      }
+    }
+  }
+
+  const datosTotal = {
+    correduriaId: base.correduriaId,
+    otorganteClienteId: base.otorganteClienteId,
+    autorizadoClienteId: base.autorizadoClienteId,
+    autorizadoIdentidadId: base.autorizadoIdentidadId,
+    polizaId: base.polizaId,
+    alcance: 'total' as const,
+    tituloRepresentacion: titulo,
+    origen: 'portal',
+    otorgadoPorIdentidadId: datos.identidadId,
+    caducaEn: null,
+    versionTexto: textoDeConcesion('total', tipo).version,
+    ip: datos.ip,
+    userAgent: datos.userAgent,
+  }
+  const seleccionTotal = { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true }
+  let fila
+  try {
+    if (previa === null) {
+      fila = await prisma.portalAutorizacion.create({ data: datosTotal, select: seleccionTotal })
+    } else {
+      // Una `total` anterior CADUCADA sin aceptar sigue ocupando el índice
+      // único: se cierra por caducidad (con su propia fecha) y se crea la nueva,
+      // igual que en `conceder`. O las dos, o ninguna.
+      const [, creada] = await prisma.$transaction([
+        prisma.portalAutorizacion.update({
+          where: { id: previa.id },
+          data: { revocadoEn: previa.caducaEn, revocadoPor: 'caducidad' },
+          select: { id: true },
+        }),
+        prisma.portalAutorizacion.create({ data: datosTotal, select: seleccionTotal }),
+      ])
+      fila = creada
+    }
+  } catch (e) {
+    // Doble clic: la segunda choca con el índice único. Es «ya lo has dado», no un 500.
+    if (typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 'P2002') {
+      return { ok: false, error: 'ya_concedida', mensaje: 'Ya le has dado acceso total; falta que lo acepte en su portal.' }
+    }
+    throw e
+  }
+  return { ok: true, id: fila.id, estado: estadoAutorizacion(fila, hoy), caducaEn: fila.caducaEn }
 }
 
 /**
@@ -936,7 +1204,11 @@ export async function conceder(datos: {
 export async function resolver(datos: {
   identidadId: string
   autorizacionId: string
-  accion: 'aceptar' | 'revocar'
+  /**
+   * `mantener` (25/09/2026): el OTORGANTE contesta «sí, lo mantengo» a la
+   * revisión anual. Solo sella `revisado_en`; no cambia lo concedido.
+   */
+  accion: 'aceptar' | 'revocar' | 'mantener'
 }): Promise<ResultadoResolver> {
   const { identidadId, autorizacionId, accion } = datos
 
@@ -1008,10 +1280,41 @@ export async function resolver(datos: {
     // el sello de la primera. `count === 0` = alguien llegó antes.
     const { count } = await prisma.portalAutorizacion.updateMany({
       where: { id: fila.id, aceptadoEn: null, revocadoEn: null },
-      data: { aceptadoEn: hoy, aceptadoPorIdentidadId: identidadId },
+      // Aceptada deja de caducar: el plazo de 30 días era solo para contestar.
+      data: { aceptadoEn: hoy, aceptadoPorIdentidadId: identidadId, caducaEn: null },
     })
     if (count === 0) {
       return { ok: false, error: 'no_pendiente', mensaje: 'Esta autorización ya no está pendiente.' }
+    }
+  } else if (accion === 'mantener') {
+    // Solo el otorgante: la pregunta es si SIGUE dejando ver lo suyo.
+    if (!soyOtorgante) {
+      return { ok: false, error: 'no_te_toca', mensaje: 'Esto lo confirma quien dio el acceso.' }
+    }
+    // Y con un vínculo que permita autorizar: confirmar un acceso es volver a
+    // darlo, y quien solo consulta la ficha no lo pudo dar.
+    const mio = vinculos.find((v) => v.clienteId === fila.otorganteClienteId)
+    if (!mio || !nivelPuedeAutorizar(nivelDeVinculo(mio.nivel))) {
+      return {
+        ok: false,
+        error: 'no_te_toca',
+        mensaje: 'Tu acceso a esa ficha es de consulta: esto lo confirma quien la gestiona.',
+      }
+    }
+    // Vigente o pendiente: las dos entran en la revisión anual.
+    if (estado !== 'vigente' && estado !== 'pendiente') {
+      return {
+        ok: false,
+        error: estado === 'revocada' ? 'ya_revocada' : 'no_pendiente',
+        mensaje: estado === 'revocada' ? 'Esta autorización ya está revocada.' : 'Esta autorización no está en vigor.',
+      }
+    }
+    const { count } = await prisma.portalAutorizacion.updateMany({
+      where: { id: fila.id, revocadoEn: null },
+      data: { revisadoEn: hoy },
+    })
+    if (count === 0) {
+      return { ok: false, error: 'ya_revocada', mensaje: 'Esta autorización ya está revocada.' }
     }
   } else {
     if (estado === 'revocada') {

@@ -45,7 +45,7 @@ export const POST = auditado(async (req: Request) => {
       actor,
     })
     if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo }, { status: r.status })
-    return NextResponse.json({ estado: 'ok', caducaEn: r.caducaEn.toISOString() })
+    return NextResponse.json({ estado: 'ok', caducaEn: r.caducaEn?.toISOString() ?? null })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente/relaciones/aviso', e) }, { status: 500 })
   }

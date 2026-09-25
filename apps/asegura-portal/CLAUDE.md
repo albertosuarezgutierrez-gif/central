@@ -1173,10 +1173,10 @@ distintos del mismo siniestro sin que ninguna pantalla falle. Y `fueraDePlazo` *
 cobertura**: el art. 16 solo permite reclamar los daños del retraso, y perder el derecho exige dolo o
 culpa grave. Un portal que asuste a quien avisa tarde consigue que no avise nunca.
 
-**Dar parte de una póliza AUTORIZADA exige el alcance `partes` (decisión de Alberto, 24/09/2026).**
-Hasta ese día bastaba con verla, y el alcance `partes` no protegía nada. Ahora decide
-`puedeDarParte()` (módulo puro: `partes` Y otorgante jurídico, porque de una física no se delega
-actuar) póliza a póliza, y `polizasParaParte()` (`lib/cartera-lectura.ts`) es la ÚNICA fuente para la
+**Dar parte de una póliza AUTORIZADA exige poder actuar (decisión de Alberto, 24/09/2026; ampliada
+el 25/09/2026).** Hasta el 24/09 bastaba con verla. Ahora decide `puedeDarParte()` (módulo puro:
+**«Acceso total»** sea quien sea quien cede, o el alcance antiguo `partes` de una sociedad) póliza a
+póliza, y `polizasParaParte()` (`lib/cartera-lectura.ts`) es la ÚNICA fuente para la
 ruta, la bóveda y el botón de la ficha. Las autorizadas sin ese alcance siguen dando sus TELÉFONOS
 (`soloTelefonos`): llamar a la grúa del coche de tu padre no es actuar en su nombre. Cepo en
 `test/regression-portal-autorizacion.test.ts`.
@@ -1593,17 +1593,9 @@ supresión: esto lo REVISA, no lo sustituye).
    `Campana.tsx` (desplegable, cierra con clic fuera o Escape) y misma puerta que `SalirDelPortal`
    (sesión VERIFICADA, no solo cookie presente): `app/SugerenciaBarra.tsx`.
 
-🚨 **Pendiente ABIERTO, sin decidir — no tocar `autorizacion.ts` sin el OK de Alberto.** Sobre el aviso
-legal de «cada acceso caduca al año», Alberto primero pidió que NO caduque, y después él mismo lo
-matizó: «o mejor que en la invitación autorice… ejemplo: padre mayor y que el hijo le lleva todo, eso
-hay que darle una vuelta». Es una decisión de las que exige negociar con él (regla de la casa de
-`Task`), no un ajuste mecánico: `DIAS_VIGENCIA = 365` (`packages/module-seguros-portal/src/
-autorizacion.ts`) existe porque el consentimiento tiene que poder demostrarse (art. 7.1 RGPD) y
-renovarse, y el caso que lo empujó a existir es justo el que el propio Alberto cita ahora (el
-divorcio: nadie entra a revocar ese día). Una vía a explorar sin tocar código todavía: que la
-DURACIÓN se declare al invitar (una petición «para gestionar de por vida a mi padre» pide un
-alcance/plazo distinto de «para que mi mujer vea el coche este año»), en vez de un valor fijo para
-todo el mundo. Sin código hasta que Alberto elija.
+✅ **DECIDIDO el 25/09/2026 (antes «pendiente abierto»): los accesos NO caducan y hay DOS permisos.**
+Alberto: *«mejor no caduca (es un lío luego volver a pedir acceso), tiene que haber también permiso para
+todo, hacer como dos permisos»*. Ver «🔑 Dos permisos y sin caducidad» más abajo.
 
 ## 📍 El cliente cambia SU dirección de contacto, y sugiere (08/09/2026)
 
@@ -1844,6 +1836,50 @@ sugerirle que te autorice.
 📌 `docs/FUENTES-DE-VERDAD.md` ya apunta a este documento como fuente de verdad de la app
 (actualizado el 02/09/2026); el spec y el plan quedan como detalle de diseño.
 
+## 🔑 Dos permisos y sin caducidad (25/09/2026) — lo que cambió en la autorización
+
+Dictado de Alberto, con las dos decisiones tomadas por él en la sesión (AskUserQuestion): **sin
+caducidad + aviso anual**, y **«Acceso total» de una PERSONA incluye su DNI y su IBAN**. Migración en
+**DOS pasos, y el orden importa**: `2026-09-25_portal_autorizacion_sin_caducidad_y_total.sql` (paso A,
+aditivo) **antes** de desplegar; `2026-09-25_b_portal_autorizacion_vivas_sin_caducidad.sql` (paso B, el
+`UPDATE … caduca_en = NULL`) **solo cuando `asegura-portal` y `asegura` ya sirven el código nuevo** — el
+cliente Prisma viejo declara `caducaEn` obligatorio y un NULL tumba la consulta entera.
+
+- **Pendiente TAMPOCO caduca** (Alberto: «puede cancelar el acceso»). La oferta olvidada la cubre la
+  revisión anual, que **cuenta desde `otorgado_en`, no desde la aceptación** y cubre también las
+  pendientes (tarjeta + aviso `autorizacion_sin_aceptar` con otro texto, sin duplicar). Toda vía que
+  acepta pone `caducaEn: null` (limpia las pendientes viejas con fecha).
+- **`total` no se pide ni se invita:** peticiones validan con `ALCANCES_PEDIBLES` (`['ver_economico']`),
+  no con `ALCANCES_CONCEDIBLES`; al resolver, `alcancePeticionResoluble` acepta también el `ver` de las
+  peticiones antiguas. `ampliarATotal` repite las comprobaciones de `conceder` sobre el destinatario
+  (relación, ficha no fusionada) y la póliza, y `mantener` exige nivel para autorizar.
+- **Vía corredor:** versión de texto propia para «Acceso total» (`TEXTO_AUTORIZACION_CORREDOR_TOTAL_V1`).
+
+| Antes | Ahora |
+|---|---|
+| Caducaba a los 365 días (`DIAS_VIGENCIA`, `caducidadPorDefecto`) | `caduca_en` NULL = **no caduca**. Las filas viejas ya caducadas conservan su fecha. `pideRevision()` + `DIAS_REVISION` (365): una vez al año se le pregunta al otorgante «¿lo mantienes?» (aviso `acceso_por_revisar` en la campana y en la tarjeta de «Contactos», acción `mantener` → `revisado_en`). **No contestar NO corta nada** |
+| Se concedían `ver` / `ver_economico` (y a una sociedad, `partes` / `documentos`) | Se conceden **dos**: `ver_economico` = **«Solo ver»** y `total` = **«Acceso total»**, para personas y sociedades. Los alcances viejos se siguen LEYENDO |
+| `NUNCA_A_UN_TERCERO` capaba DNI, IBAN, documentos y actuar en cualquier alcance | `total` es el ÚNICO que salta ese suelo (también en `camposDeAlcances`, donde la unión lo volvía a tapar). **Nadie reautoriza a un cuarto con ninguno** |
+| `puedeDarParte` = `partes` + sociedad | + `total`, sea quien sea quien cede |
+
+- **Tres textos de consentimiento nuevos** (`textoDeConcesion()` de `lib/autorizaciones.ts`, ÚNICA fuente
+  para alta, invitación y petición): `v3-2026-09-25` (Solo ver, persona), `v1-2026-09-25-total` (Acceso
+  total, persona: dice con todas las letras DNI y cuenta bancaria) y `v2-2026-09-25-representacion`
+  (sociedad). Las versiones viejas NO se reescriben (art. 7.1 RGPD).
+- 🚨 **El acceso total NO se reparte por invitación ni por petición**: siguen en «Solo ver». Una errata
+  en un correo le daría DNI, IBAN y partes a un desconocido. Se da con **«Pasar a acceso total»**
+  (`ampliarATotal()`, `POST /api/autorizaciones` con `ampliarDesde`) sobre un acceso YA aceptado y
+  vigente —la persona ya ha probado quién es—, y aun así **nace pendiente** y la otra persona lo acepta.
+  En una sociedad pide el título.
+- 🚨 **La trampa que había en la lectura**: `lib/cartera-lectura.ts` cortaba con `if (caduca === null)
+  continue` — con NULL = «no caduca» habría hecho **desaparecer en silencio toda cartera compartida
+  nueva**. Ahora la ausencia de concesión es `undefined`. Y en `apps/asegura/lib/avisos-intranet.ts` un
+  filtro Prisma `caducaEn: { gt: hoy }` excluía las NULL (TypeScript no lo ve): pasa a `OR` con `null`.
+- **Las invitaciones y peticiones siguen caducando** (30 días): caduca el ENLACE, no el acceso.
+- Cepos: `autorizacion.test.ts` del módulo, `avisos.test.ts` y `test/regression-portal-autorizacion.test.ts`
+  (cartera sin caducidad no desaparece, las tres vías escriben `caducaEn: null`, la invitación no ofrece
+  `total`) — todos vistos morder.
+
 ## 🔐 Autorizar a un tercero (03/09/2026) — y el booleano que había antes
 
 **«José deja que su mujer María vea su póliza del coche.»** Eso vive en
@@ -1873,10 +1909,10 @@ invitación, lo mismo habría sido un acceso indebido del art. 33 (72 h).
 
 | Regla | Dónde vive | Qué pasa si se rompe |
 |---|---|---|
-| Nace apagada y **caduca al año** | `caducidadPorDefecto`, `DIAS_VIGENCIA` | El caso que revienta esto es el **divorcio**: nadie entra a revocar ese día |
+| Nace apagada; **no caduca desde el 25/09/2026**, con revisión anual | `pideRevision`, `DIAS_REVISION` | El caso que revienta esto es el **divorcio**: nadie entra a revocar ese día — por eso la pregunta anual |
 | **Doble aceptación**: conceder no basta, el autorizado ACEPTA | `estadoAutorizacion` → `pendiente` | María entra en datos ajenos sin saber que hay un registro con su nombre |
-| Un tercero **nunca** ve IBAN, DNI ni documentos, ni actúa en tu nombre | `camposDeAlcance` (tope duro, fuera de la escalera de `acceso.ts`) | Vuelve el agujero del booleano |
-| **Leer ≠ actuar**: `partes` y `documentos` existen pero NO se conceden | `ALCANCES_CONCEDIBLES` | Un tick no es un poder; si María declara mal, art. 16 LCS y no se sabe quién firmó |
+| Con «Solo ver» un tercero **nunca** ve IBAN, DNI ni documentos, ni actúa; solo `total` lo abre (25/09/2026) | `camposDeAlcance` (tope duro, fuera de la escalera de `acceso.ts`) | Vuelve el agujero del booleano |
+| **Dos permisos**: «Solo ver» y «Acceso total» (este último con su propio texto y, en sociedad, con título) | `ALCANCES_CONCEDIBLES` | Si María declara mal, art. 16 LCS: tiene que constar quién firmó y qué texto aceptó |
 | El otorgante **ve quién miró y cuándo** | `portal_autorizacion_uso` | Sin eso la autorización es un cheque en blanco |
 
 Todo ello con cepo en `test/regression-portal-autorizacion.test.ts` (12 tests, con

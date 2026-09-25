@@ -56,7 +56,6 @@ import {
   TEXTO_INVITACION_SIN_ACCESO,
   alcanceInvitacion,
   caducidadInvitacion,
-  caducidadPorDefecto,
   estadoAutorizacion,
   estadoInvitacion,
   invitacionEscrita,
@@ -77,10 +76,7 @@ import {
 
 import { hashCanal } from './auth'
 import {
-  TEXTO_AUTORIZACION,
-  TEXTO_AUTORIZACION_V2,
-  TEXTO_REPRESENTACION,
-  TEXTO_REPRESENTACION_V1,
+  textoDeConcesion,
 } from './autorizaciones'
 import { enlaceDeInvitacion, enviarInvitacion } from './correo-invitacion'
 import { prisma } from './db'
@@ -862,9 +858,7 @@ export async function invitacionParaIdentidad(
       // acepta y que se puede enseñar después: lo que se firma se puede decir.
       texto: !invitacionAbreAcceso(alcance)
         ? TEXTO_INVITACION_SIN_ACCESO
-        : tipoDeFicha(ficha?.tipoPersona) === 'juridica'
-          ? TEXTO_REPRESENTACION
-          : TEXTO_AUTORIZACION,
+        : textoDeConcesion(alcance, tipoDeFicha(ficha?.tipoPersona)).texto,
     },
   }
 }
@@ -1058,7 +1052,7 @@ export async function responderInvitacion(datos: {
         if (viva.aceptadoEn === null) {
           await tx.portalAutorizacion.updateMany({
             where: { id: viva.id, aceptadoEn: null, revocadoEn: null },
-            data: { aceptadoEn: hoy, aceptadoPorIdentidadId: identidadId },
+            data: { aceptadoEn: hoy, aceptadoPorIdentidadId: identidadId, caducaEn: null },
           })
         }
       } else {
@@ -1092,7 +1086,8 @@ export async function responderInvitacion(datos: {
             alcance,
             origen: 'portal',
             otorgadoPorIdentidadId: fila.otorgadaPorIdentidadId,
-            caducaEn: caducidadPorDefecto(hoy),
+            // Sin caducidad (25/09/2026): caduca el ENLACE, no el acceso.
+            caducaEn: null,
             // 🚨 Nace YA ACEPTADA, y no es un atajo: la doble aceptación existe
             // para que nadie aparezca en un registro con su nombre sin saberlo
             // (art. 7.1 RGPD, modelo del Registro de Apoderamientos de la
@@ -1103,7 +1098,7 @@ export async function responderInvitacion(datos: {
             aceptadoEn: hoy,
             aceptadoPorIdentidadId: identidadId,
             // Qué texto se aceptó. La versión depende de quién cede.
-            versionTexto: esJuridica ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V2,
+            versionTexto: textoDeConcesion(alcance, esJuridica ? 'juridica' : 'fisica').version,
             // `null` cuando la cabecera no vino: no se inventa una IP.
             ip: datos.ip,
             userAgent: datos.userAgent,

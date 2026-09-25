@@ -55,9 +55,9 @@ import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import {
   MAX_PETICIONES_DIA,
   NIVELES,
-  alcanceConcedible,
+  alcancePedible,
+  alcancePeticionResoluble,
   caducidadPeticion,
-  caducidadPorDefecto,
   esAlcance,
   estadoAutorizacion,
   estadoPeticion,
@@ -72,7 +72,7 @@ import {
   type ResultadoPeticion,
 } from '@central/module-seguros-portal'
 
-import { TEXTO_AUTORIZACION_V2, TEXTO_REPRESENTACION_V1 } from './autorizaciones'
+import { textoDeConcesion } from './autorizaciones'
 import { prisma } from './db'
 import { getIdentidad } from './session'
 import { elegirFicha, type Candidato } from './vinculo-elegir'
@@ -162,7 +162,7 @@ export async function crearPeticion(datos: {
 }): Promise<ResultadoCrear> {
   const { identidadId } = datos
 
-  const alcance = alcanceConcedible(datos.alcance)
+  const alcance = alcancePedible(datos.alcance)
   if (alcance === null) {
     return {
       ok: false,
@@ -406,7 +406,7 @@ export async function peticionDesdeRelacion(datos: {
 }): Promise<ResultadoCrear | { ok: false; error: 'sin_hash'; mensaje: string }> {
   const { identidadId, relacionadoClienteId } = datos
 
-  const alcance = alcanceConcedible(datos.alcance)
+  const alcance = alcancePedible(datos.alcance)
   if (alcance === null) {
     return {
       ok: false,
@@ -848,7 +848,7 @@ export async function resolverPeticion(datos: {
   // hueco como sociedad repartiría apoderamientos por una columna vacía.
   const esJuridica = fichaOtorgante.tipoPersona === 'juridica'
 
-  const alcance = alcanceConcedible(fila.alcance, esJuridica ? 'juridica' : 'fisica')
+  const alcance = alcancePeticionResoluble(fila.alcance)
   if (alcance === null) {
     return {
       ok: false,
@@ -894,7 +894,7 @@ export async function resolverPeticion(datos: {
         if (viva.aceptadoEn === null) {
           await tx.portalAutorizacion.updateMany({
             where: { id: viva.id, aceptadoEn: null, revocadoEn: null },
-            data: { aceptadoEn: fila.creadaEn, aceptadoPorIdentidadId: fila.solicitanteIdentidadId },
+            data: { aceptadoEn: fila.creadaEn, aceptadoPorIdentidadId: fila.solicitanteIdentidadId, caducaEn: null },
           })
         }
       } else {
@@ -930,7 +930,8 @@ export async function resolverPeticion(datos: {
             alcance,
             origen: 'portal',
             otorgadoPorIdentidadId: identidadId,
-            caducaEn: caducidadPorDefecto(hoy),
+            // Sin caducidad (25/09/2026): caduca la PETICIÓN, no el acceso.
+            caducaEn: null,
             // 🚨 **Pedirla ES aceptarla**, y por eso esta autorización nace ya
             // aceptada. La doble aceptación existe para que nadie aparezca en
             // un registro con su nombre sin saberlo (art. 7.1 RGPD, modelo del
@@ -945,7 +946,7 @@ export async function resolverPeticion(datos: {
             // Qué texto se aceptó. La versión depende de quién cede: la de la
             // persona afirma «no verá mi IBAN ni podrá dar partes», que de una
             // sociedad es sencillamente falso.
-            versionTexto: esJuridica ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V2,
+            versionTexto: textoDeConcesion(alcance, esJuridica ? 'juridica' : 'fisica').version,
             ip: datos.ip,
             userAgent: datos.userAgent,
           },

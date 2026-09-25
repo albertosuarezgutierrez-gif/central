@@ -114,8 +114,10 @@ test('la migracion guarda la foto ANTES de apagar, y no borra relaciones', () =>
 
 // ─── 2. Un tercero ve la COSA, nunca a la PERSONA ────────────────────────────
 
-test('NINGUN alcance ensena IBAN, DNI ni documentos del otorgante', () => {
-  for (const a of ALCANCES) {
+test('NINGUN alcance salvo Acceso total ensena IBAN, DNI ni documentos del otorgante', () => {
+  // `total` (25/09/2026) abre al titular ENTERO por decisión expresa de Alberto,
+  // con su propio texto de consentimiento. Todo lo demás sigue igual de capado.
+  for (const a of ALCANCES.filter((x) => x !== 'total')) {
     const c = camposDeAlcance(a)
     assert.equal(c.iban, false, `el alcance ${a} ensena el IBAN`)
     assert.equal(c.dniTomador, false, `el alcance ${a} ensena el DNI`)
@@ -123,36 +125,86 @@ test('NINGUN alcance ensena IBAN, DNI ni documentos del otorgante', () => {
   }
   // El cepo muerde de verdad: el nivel del que parten SI los trae.
   assert.equal(camposVisibles('completo').iban, true)
+  assert.equal(camposDeAlcance('total').iban, true, 'el acceso total SI abre el IBAN: es lo que se consintió')
 })
 
-test('NINGUN alcance deja actuar en nombre del otorgante', () => {
-  for (const a of ALCANCES) {
+test('NINGUN alcance salvo Acceso total deja actuar en nombre del otorgante, y NINGUNO reautoriza', () => {
+  for (const a of ALCANCES.filter((x) => x !== 'total')) {
     const c = camposDeAlcance(a)
     assert.equal(c.abrirParte, false, `el alcance ${a} deja abrir un parte`)
     assert.equal(c.crearPeticiones, false, `el alcance ${a} deja crear peticiones`)
     assert.equal(c.autorizarTerceros, false, `el alcance ${a} deja reautorizar a un cuarto`)
   }
   assert.equal(camposVisibles('tarjeta').abrirParte, true)
+  assert.equal(camposDeAlcance('total').abrirParte, true)
+  assert.equal(camposDeAlcance('total').autorizarTerceros, false, 'ni con acceso total se reautoriza a un cuarto')
 })
 
-test('el tope sigue en pie por mucho que se combinen alcances', () => {
-  const todos = camposDeAlcances(ALCANCES)
+test('el tope sigue en pie por mucho que se combinen alcances que no son el total', () => {
+  const todos = camposDeAlcances(ALCANCES.filter((x) => x !== 'total'))
   assert.notEqual(todos, null)
   assert.equal(todos?.iban, false)
   assert.equal(todos?.dniTomador, false)
   assert.equal(todos?.abrirParte, false)
+  assert.equal(camposDeAlcances(ALCANCES)?.autorizarTerceros, false)
 })
 
 test('sin alcances vigentes no se sirve nada, ni la tarjeta por cortesia', () => {
   assert.equal(camposDeAlcances([]), null)
 })
 
-// ─── 3. Actuar en nombre de otro es apoderamiento, y hoy no se concede ───────
+// ─── 3. Dos permisos: Solo ver y Acceso total (25/09/2026) ──────────────────
 
-test('partes y documentos NO estan entre los concedibles', () => {
+test('se conceden SOLO los dos permisos; partes y documentos sueltos ya no', () => {
   assert.equal(ALCANCES_CONCEDIBLES.includes('partes' as never), false)
   assert.equal(ALCANCES_CONCEDIBLES.includes('documentos' as never), false)
-  assert.deepEqual([...ALCANCES_CONCEDIBLES], ['ver', 'ver_economico'])
+  assert.deepEqual([...ALCANCES_CONCEDIBLES], ['ver_economico', 'total'])
+})
+
+test('el acceso total NO se reparte por invitacion: la invitacion sigue en Solo ver', () => {
+  const pantalla = leer('apps/asegura-portal/app/(portal)/autorizaciones/Autorizaciones.tsx')
+  assert.match(pantalla, /CONCEDIBLES_POR_INVITACION: readonly Alcance\[\] = \['ver_economico'\]/)
+  assert.match(pantalla, /filter\(\(a\) => CONCEDIBLES_POR_INVITACION\.includes\(a\)\)/)
+})
+
+test('aceptada NO caduca: toda via que acepta pone caducaEn a null en el mismo update', () => {
+  // Pendiente caduca a los 30 dias; al aceptar tiene que pasar a NULL. Un
+  // `aceptadoEn` sin `caducaEn: null` al lado dejaria el acceso muriendo en su
+  // fecha de oferta.
+  for (const f of ['apps/asegura-portal/lib/autorizaciones.ts', 'apps/asegura-portal/lib/invitaciones.ts', 'apps/asegura-portal/lib/peticiones.ts']) {
+    const src = leer(f)
+    assert.doesNotMatch(src, /caducidadPorDefecto/, `${f} sigue poniendo caducidad de un año`)
+    const aceptaciones = src.match(/data: \{ aceptadoEn: [^}]*\}/g) ?? []
+    assert.ok(aceptaciones.length > 0, `${f}: no encuentro ninguna aceptacion (¿se ha movido?)`)
+    for (const a of aceptaciones) assert.match(a, /caducaEn: null/, `${f}: acepta sin quitar la caducidad: ${a}`)
+  }
+})
+
+test('ni la oferta PENDIENTE caduca: conceder, ampliar y corredor escriben caducaEn null', () => {
+  // Decisión de Alberto (25/09/2026): la oferta olvidada la cubre la revisión
+  // anual, no una caducidad. Sin fecha en las TRES vías que crean pendientes.
+  const src = leer('apps/asegura-portal/lib/autorizaciones.ts')
+  assert.doesNotMatch(src, /caducidadPendiente/)
+  assert.doesNotMatch(leer('apps/asegura/lib/cartera-relaciones.ts'), /caducidadPendiente/)
+  // Y la revisión cuenta desde que se OFRECE: sin `otorgadoEn` la oferta vieja no avisa.
+  assert.match(src, /otorgadoEn: f\.otorgadoEn,\n\s*\},\n\s*hoy,/)
+})
+
+test('el acceso total NO se pide: peticiones validan con ALCANCES_PEDIBLES', () => {
+  for (const f of ['apps/asegura-portal/app/api/peticiones/route.ts', 'apps/asegura-portal/app/api/sugerencias/pedir/route.ts']) {
+    const src = leer(f)
+    assert.match(src, /z\.enum\(ALCANCES_PEDIBLES/, `${f} no valida con ALCANCES_PEDIBLES`)
+  }
+  const pet = leer('apps/asegura-portal/lib/peticiones.ts')
+  assert.doesNotMatch(pet, /alcanceConcedible\(/, 'peticiones.ts valida con la lista de conceder, que incluye total')
+})
+
+test('una cartera compartida SIN caducidad no desaparece de la boveda', () => {
+  // El corte antiguo era `if (caduca === null) continue`: con NULL = «no caduca»
+  // hacía desaparecer en silencio todas las carteras compartidas nuevas.
+  const src = leer(CARTERA)
+  assert.doesNotMatch(src, /if \(caduca === null\) continue/)
+  assert.match(src, /if \(caduca === undefined\) continue/)
 })
 
 // ─── 4. La vigencia se decide en un solo sitio ───────────────────────────────

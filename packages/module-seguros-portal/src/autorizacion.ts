@@ -39,8 +39,13 @@
 //      ya traza `acceso.ts`: dato de la COSA ≠ dato de la PERSONA.
 import { camposVisibles, type CamposVisibles, type Nivel } from './acceso.ts'
 
-/** Lo que Alberto enumeró que se podía autorizar, en su orden. */
-export const ALCANCES = ['ver', 'ver_economico', 'partes', 'documentos'] as const
+/**
+ * El vocabulario completo. Hoy se CONCEDEN solo dos (`ALCANCES_CONCEDIBLES`):
+ * «Solo ver» (`ver_economico`) y «Acceso total» (`total`, 25/09/2026). `ver`,
+ * `partes` y `documentos` siguen existiendo porque hay filas con ellos y hay
+ * que seguir leyéndolas bien, pero ya no se ofrecen.
+ */
+export const ALCANCES = ['ver', 'ver_economico', 'partes', 'documentos', 'total'] as const
 export type Alcance = (typeof ALCANCES)[number]
 
 /**
@@ -59,17 +64,48 @@ export type Alcance = (typeof ALCANCES)[number]
 export type TipoOtorgante = 'fisica' | 'juridica'
 
 /**
- * De una persona FÍSICA solo se puede delegar mirar.
+ * Los DOS permisos que se conceden (25/09/2026, Alberto: «tiene que haber
+ * también permiso para todo, hacer como dos permisos»):
  *
- * `partes` y `documentos` son apoderamiento: actuar en nombre de otro. Si María
- * declara mal, la compañía discute la cobertura (art. 16 LCS) y hay que poder
- * decir quién firmó — y un tick en una pantalla no es un poder.
+ *   - `ver_economico` — **Solo ver**: sus seguros y lo que pagan. No actúa.
+ *   - `total` — **Acceso total**: ve y hace todo lo que el titular (partes,
+ *     documentos, peticiones). En una persona física incluye su DNI y su IBAN:
+ *     es decisión expresa de Alberto, y por eso lleva su propio texto de
+ *     consentimiento (`TEXTO_AUTORIZACION_TOTAL` en el portal), que lo dice.
+ *
+ * Lo mismo para personas y sociedades. Lo que cambia con una sociedad es que
+ * se exige con qué título la representa.
  */
-export const ALCANCES_CONCEDIBLES: readonly Alcance[] = ['ver', 'ver_economico']
+export const ALCANCES_CONCEDIBLES: readonly Alcance[] = ['ver_economico', 'total']
 
-/** Una sociedad delega TODO: quien la representa actúa por ella, no «en nombre de un tercero». */
-export function alcancesConcedibles(tipo: TipoOtorgante): readonly Alcance[] {
-  return tipo === 'juridica' ? ALCANCES : ALCANCES_CONCEDIBLES
+/**
+ * Lo que se puede PEDIR (petición de acceso). Solo «Solo ver»: `total` no se
+ * pide ni se reparte por enlace — se concede sobre un acceso ya aceptado
+ * («Pasar a acceso total»). Va aparte de `ALCANCES_CONCEDIBLES` a propósito:
+ * si no, la regla la cumpliría solo el CHECK de la BD.
+ */
+export const ALCANCES_PEDIBLES: readonly Alcance[] = ['ver_economico']
+
+export function alcancePedible(v: unknown): Alcance | null {
+  if (typeof v !== 'string') return null
+  const a = v.trim().toLowerCase()
+  return (ALCANCES_PEDIBLES as readonly string[]).includes(a) ? (a as Alcance) : null
+}
+
+/**
+ * Lo que se puede CONCEDER al resolver una petición ya guardada. Acepta `ver`
+ * porque hay peticiones pendientes de antes del 25/09/2026 que lo pedían; se
+ * concede lo pedido (más estrecho), nunca más.
+ */
+export function alcancePeticionResoluble(v: unknown): Alcance | null {
+  if (typeof v !== 'string') return null
+  const a = v.trim().toLowerCase()
+  return a === 'ver' || a === 'ver_economico' ? (a as Alcance) : null
+}
+
+/** Los dos permisos valen para personas y sociedades; `tipo` queda por si divergen. */
+export function alcancesConcedibles(_tipo: TipoOtorgante): readonly Alcance[] {
+  return ALCANCES_CONCEDIBLES
 }
 
 /** Títulos con los que se puede representar a una sociedad. Se guarda cuál. */
@@ -82,15 +118,24 @@ export function tituloRepresentacion(v: unknown): TituloRepresentacion | null {
   return (TITULOS_REPRESENTACION as readonly string[]).includes(t) ? (t as TituloRepresentacion) : null
 }
 
-/** Un año. Se renueva; no se prorroga sola. */
-export const DIAS_VIGENCIA = 365
+/**
+ * Cada cuánto se le pregunta al otorgante si mantiene un acceso.
+ *
+ * 🚨 Desde el 25/09/2026 las autorizaciones NO caducan (`caducaEn` NULL). La
+ * caducidad anual resolvía el divorcio —nadie entra a revocar el día que se
+ * separa— y la sustituye esta pregunta: una vez al año, «sigues dejando ver tus
+ * seguros a X, ¿lo mantienes?». Si no contesta, el acceso sigue: recuerda, no
+ * corta.
+ */
+export const DIAS_REVISION = 365
 
 export const ESTADOS_AUTORIZACION = ['pendiente', 'vigente', 'caducada', 'revocada'] as const
 export type EstadoAutorizacion = (typeof ESTADOS_AUTORIZACION)[number]
 
 export type AutorizacionFechas = {
   aceptadoEn: Date | null
-  caducaEn: Date
+  /** `null` = no caduca (todas las concedidas desde el 25/09/2026). */
+  caducaEn: Date | null
   revocadoEn: Date | null
 }
 
@@ -102,7 +147,7 @@ export type AutorizacionFechas = {
  */
 export function estadoAutorizacion(a: AutorizacionFechas, hoy: Date): EstadoAutorizacion {
   if (a.revocadoEn !== null) return 'revocada'
-  if (a.caducaEn.getTime() <= hoy.getTime()) return 'caducada'
+  if (a.caducaEn !== null && a.caducaEn.getTime() <= hoy.getTime()) return 'caducada'
   if (a.aceptadoEn === null) return 'pendiente'
   return 'vigente'
 }
@@ -112,8 +157,24 @@ export function autorizacionVigente(a: AutorizacionFechas, hoy: Date): boolean {
   return estadoAutorizacion(a, hoy) === 'vigente'
 }
 
-export function caducidadPorDefecto(desde: Date): Date {
-  return new Date(desde.getTime() + DIAS_VIGENCIA * 24 * 60 * 60 * 1000)
+/**
+ * ¿Toca preguntarle al otorgante si mantiene este acceso?
+ *
+ * Sobre VIGENTES y también sobre PENDIENTES (25/09/2026, Alberto): una oferta
+ * tampoco caduca, así que la que nadie recuerda —un «Acceso total» ofrecido
+ * antes de un divorcio— tiene que volver a ponerse delante de quien la puede
+ * retirar. La cuenta arranca en la última revisión o, si nunca se revisó, en
+ * cuándo se OFRECIÓ (no en cuándo se aceptó): así una aceptada tarde no se
+ * salta la pregunta.
+ */
+export function pideRevision(
+  a: AutorizacionFechas & { revisadoEn: Date | null; otorgadoEn: Date },
+  hoy: Date,
+): boolean {
+  const estado = estadoAutorizacion(a, hoy)
+  if (estado !== 'vigente' && estado !== 'pendiente') return false
+  const desde = a.revisadoEn ?? a.otorgadoEn
+  return hoy.getTime() - desde.getTime() >= DIAS_REVISION * 24 * 60 * 60 * 1000
 }
 
 /**
@@ -197,11 +258,16 @@ const NIVEL_DE_ALCANCE: Record<Alcance, Nivel> = {
   ver_economico: 'completo',
   partes: 'gestionar',
   documentos: 'completo',
+  total: 'gestionar',
 }
 
 /** Qué enseña un alcance concreto, ya capado según quién cede. */
 export function camposDeAlcance(alcance: Alcance, tipo: TipoOtorgante = 'fisica'): CamposVisibles {
   const base = camposVisibles(NIVEL_DE_ALCANCE[alcance])
+  // 🚨 `total` es el ÚNICO alcance que salta `NUNCA_A_UN_TERCERO`: el titular
+  // ha dado expresamente acceso a todo, DNI e IBAN incluidos (25/09/2026). Lo
+  // único que sigue cerrado es reautorizar a un cuarto, sea quien sea quien cede.
+  if (alcance === 'total') return { ...base, ...NUNCA_NI_REPRESENTANDO }
   if (tipo === 'fisica') return { ...base, ...NUNCA_A_UN_TERCERO }
   // Una sociedad delega su gestión, pero `documentos` y `partes` son alcances
   // distintos: tener uno no da el otro. Se abren de uno en uno, no en bloque.
@@ -230,7 +296,9 @@ export function camposDeAlcances(
     const c = camposDeAlcance(a, tipo)
     for (const k of Object.keys(union) as (keyof CamposVisibles)[]) union[k] ||= c[k]
   }
-  return tipo === 'fisica'
+  // Con `total` entre los vigentes, el suelo de la persona no se vuelve a
+  // aplicar: si no, la unión taparía lo que `total` abrió a propósito.
+  return tipo === 'fisica' && !alcances.includes('total')
     ? { ...union, ...NUNCA_A_UN_TERCERO }
     : { ...union, ...NUNCA_NI_REPRESENTANDO }
 }
@@ -238,12 +306,14 @@ export function camposDeAlcances(
 /**
  * ¿Puede quien RECIBE la autorización dar un parte sobre esa póliza?
  *
- * Solo con el alcance `partes` y solo si quien lo concede es una SOCIEDAD: de una
- * persona física no se delega actuar (`ALCANCES_CONCEDIBLES`). Una fila `partes`
- * de una física —escrita por otro camino— no abre nada: lado restrictivo. Ver la
- * póliza NO basta para declarar un siniestro en nombre de su tomador.
+ * Con `total` (desde el 25/09/2026), sea quien sea quien cede. Con el alcance
+ * antiguo `partes`, solo si cede una SOCIEDAD: una fila `partes` de una física
+ * —escrita por otro camino— no abre nada, lado restrictivo. Ver la póliza
+ * («Solo ver») NO basta para declarar un siniestro en nombre de su tomador.
  */
 export function puedeDarParte(alcances: readonly Alcance[], tipo: TipoOtorgante): boolean {
+  // `total` deja actuar sea quien sea quien cede: es lo que significa «acceso total».
+  if (alcances.includes('total')) return true
   return tipo === 'juridica' && alcances.includes('partes')
 }
 
@@ -253,6 +323,6 @@ export function puedeDarParte(alcances: readonly Alcance[], tipo: TipoOtorgante)
  * `camposDeAlcances`, que va capado. Nunca uses esto para autorizar nada.
  */
 export function etiquetaNivelAlcances(alcances: readonly Alcance[]): Nivel {
-  if (alcances.includes('partes')) return 'gestionar'
+  if (alcances.includes('partes') || alcances.includes('total')) return 'gestionar'
   return alcances.includes('ver_economico') || alcances.includes('documentos') ? 'completo' : 'tarjeta'
 }

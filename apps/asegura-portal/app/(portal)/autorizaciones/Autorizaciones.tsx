@@ -2,8 +2,6 @@
 import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 
 import {
-  ALCANCES_CONCEDIBLES,
-  DIAS_VIGENCIA,
   DIAS_VIGENCIA_INVITACION,
   MAX_MENSAJE_INVITACION,
   MAX_NOMBRE_INVITADO,
@@ -50,7 +48,7 @@ import { SugerenciasContactos } from './SugerenciasContactos'
  * `.opcion` de `globals.css`.
  */
 
-export type Alcance = 'ver' | 'ver_economico' | 'partes' | 'documentos'
+export type Alcance = 'ver' | 'ver_economico' | 'partes' | 'documentos' | 'total'
 export type EstadoAutorizacion = 'pendiente' | 'vigente' | 'caducada' | 'revocada'
 /**
  * Qué es quien cede. Parte la pantalla en dos, y no por estética: de una PERSONA
@@ -118,8 +116,11 @@ type AutorizacionVista = {
   tipoOtorgante: TipoOtorgante | null
   otorgadoEn: string
   aceptadoEn: string | null
-  caducaEn: string
+  /** `null` = no caduca (todas las concedidas desde el 25/09/2026). */
+  caducaEn: string | null
   revocadoEn: string | null
+  /** Toca preguntar al otorgante si lo mantiene (un año). Solo informa: no corta nada. */
+  pideRevision?: boolean
   /**
    * 🚨 `null` y `[]` NO son lo mismo, y el contrato lo dice explícitamente:
    * `null` = **no lo sabemos** (en las RECIBIDAS viene siempre así: el registro
@@ -189,14 +190,29 @@ type Respuesta = {
 
 type Carga = 'cargando' | 'listo' | 'error'
 
-/** Los que se pueden conceder desde una ficha de PERSONA. De ahí solo se delega mirar. */
-const CONCEDIBLES_FISICA: readonly Alcance[] = ['ver', 'ver_economico']
+/**
+ * Lo que se ofrece si el puerto no manda lista (una versión más vieja): solo
+ * «Solo ver». El lado restrictivo — nunca ofrecer el acceso total por un hueco.
+ */
+const CONCEDIBLES_DE_RESERVA: readonly Alcance[] = ['ver_economico']
+
+/**
+ * Lo que se puede ofrecer POR INVITACIÓN: solo «Solo ver». El acceso total no se
+ * reparte por un enlace de correo (una errata en la dirección se lo daría a un
+ * desconocido): se da después, sobre el acceso ya aceptado.
+ */
+const CONCEDIBLES_POR_INVITACION: readonly Alcance[] = ['ver_economico']
 
 /** Los dos que son ACTUAR en nombre de otro. Solo salen desde una ficha de sociedad. */
 const APODERAMIENTO: readonly Alcance[] = ['partes', 'documentos']
 
 function esApoderamiento(a: Alcance): boolean {
   return APODERAMIENTO.includes(a)
+}
+
+/** ¿Deja ACTUAR en nombre de quien cede? Los alcances antiguos de apoderamiento y el «Acceso total». */
+function dejaActuar(a: Alcance): boolean {
+  return a === 'total' || esApoderamiento(a)
 }
 
 /** Los tres títulos, en el orden en que se ofrecen (de más a menos poder). */
@@ -233,6 +249,11 @@ const QUE_VE: Record<Alcance, string> = {
   // CRM: se describen para no pintar el identificador crudo.
   partes: 'los datos de la póliza y dar partes',
   documentos: 'los datos de la póliza y sus documentos',
+  // 🚨 Decisión de Alberto (25/09/2026): el acceso total de una PERSONA incluye su
+  // DNI y su cuenta bancaria. La frase lo dice entero: callarlo sería prometer
+  // una protección que ya no existe.
+  total:
+    'TODO, como el titular: las pólizas, lo que se paga, los documentos y también los datos personales (DNI y cuenta bancaria), y puede dar partes y hacer gestiones en su nombre',
 }
 
 /**
@@ -247,6 +268,8 @@ const QUE_VE_SOCIEDAD: Record<Alcance, string> = {
     'los datos de las pólizas y, además, lo que paga la sociedad: primas, recibos, su CIF y la cuenta bancaria de los cobros',
   partes: 'los datos de las pólizas y puede DAR PARTES en nombre de la sociedad',
   documentos: 'los datos de las pólizas y sus documentos, y puede subir documentación por la sociedad',
+  total:
+    'TODO lo de la sociedad: las pólizas, lo que paga, su CIF, su cuenta bancaria y sus documentos, y puede dar partes y hacer gestiones en su nombre',
 }
 
 /** `tipo` desconocido → la versión de persona: describe el alcance sin prometer nada de más. */
@@ -269,14 +292,18 @@ function queVe(alcance: Alcance, tipo: TipoOtorgante | null): string {
  */
 const ETIQUETA_OPCION: Record<Alcance, string> = {
   ver: 'Solo ver sus seguros — la compañía, el número de póliza y las coberturas',
-  ver_economico: 'Ver también lo que paga — la prima y los recibos',
+  // Los dos permisos que se conceden desde el 25/09/2026.
+  ver_economico: 'Solo ver — los seguros y lo que se paga (prima y recibos)',
+  total: 'Acceso total — ve y gestiona todo, también dar partes',
   partes: 'Dar partes de siniestro en su nombre',
   documentos: 'Subir y ver su documentación',
 }
 
 const AYUDA_OPCION: Record<Alcance, string> = {
   ver: 'No ve nada de lo que se paga.',
-  ver_economico: 'Incluye todo lo de la opción de arriba.',
+  ver_economico: 'No puede dar partes ni cambiar nada. De una persona no ve su DNI ni su cuenta bancaria.',
+  total:
+    'Ve lo mismo que el titular —de una persona, también su DNI y su cuenta bancaria— y puede dar partes y hacer gestiones en su nombre. No puede autorizar a nadie más.',
   partes:
     'Lo que declare OBLIGA a la sociedad frente a la compañía: si el parte va mal, la que responde es la empresa.',
   documentos: 'Podrá ver y subir documentos de la sociedad. No incluye dar partes.',
@@ -289,8 +316,7 @@ const ERROR_CONCEDER: Record<string, string> = {
     'Estás viendo el portal como corredor: aquí no se concede nada en nombre del cliente. Tiene que entrar él con su email y hacerlo desde su propio acceso.',
   sin_sesion: 'Se ha cerrado tu sesión. Vuelve a entrar con tu email y lo intentamos otra vez.',
   datos_invalidos: 'Falta algún dato: elige a la persona y marca al menos qué puede ver.',
-  alcance_no_disponible:
-    'Ese permiso no se puede dar desde esa ficha. Desde una ficha de persona solo se puede dejar MIRAR: dar partes o manejar documentos en tu nombre es actuar por ti, y eso solo lo delega una sociedad en quien la representa.',
+  alcance_no_disponible: 'Ese permiso ya no se concede. Elige «Solo ver» o «Acceso total».',
   titulo_requerido:
     'Falta decir con qué título representa a la sociedad: administrador, apoderado o empleado autorizado. Sin eso no se puede anotar, porque lo que esa persona declare obliga a la empresa.',
   ficha_no_tuya: 'Esa ficha no es tuya, así que no podemos dar acceso a sus seguros desde tu cuenta.',
@@ -434,10 +460,10 @@ function opcionesInvitacion(f: FichaPropia): readonly Alcance[] {
   // `ALCANCES_CONCEDIBLES` es exactamente el `z.enum` con el que valida
   // `POST /api/invitaciones`: se importa en vez de copiarse para que el
   // formulario no pueda ofrecer algo que la ruta va a rechazar.
-  const posibles = f.alcancesPosibles.filter((a) => ALCANCES_CONCEDIBLES.includes(a))
+  const posibles = f.alcancesPosibles.filter((a) => CONCEDIBLES_POR_INVITACION.includes(a))
   // Lista vacía = una versión del puerto más vieja de lo que espera esta
   // pantalla. Se cae al lado restrictivo, nunca a ofrecer de más.
-  return posibles.length > 0 ? posibles : ALCANCES_CONCEDIBLES
+  return posibles.length > 0 ? posibles : CONCEDIBLES_POR_INVITACION
 }
 
 /**
@@ -800,6 +826,7 @@ function TarjetaOtorgada({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
       <Ambito a={a} mias quien={quien} />
       <EstadoOtorgada a={a} quien={quien} />
       <Accesos a={a} quien={quien} />
+      {activa && <RevisarYAmpliar a={a} quien={quien} onCambio={onCambio} />}
 
       <div className="chips">
         <span className={a.estado === 'vigente' ? 'chip ok' : a.estado === 'pendiente' ? 'chip aviso' : 'chip'}>
@@ -848,6 +875,163 @@ function TarjetaOtorgada({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
         </div>
       )}
     </li>
+  )
+}
+
+/**
+ * La revisión anual y «Pasar a acceso total» (25/09/2026), sobre un acceso vivo
+ * que diste tú.
+ *
+ * - **Revisión:** los accesos ya no caducan; una vez al año se pregunta si se
+ *   mantiene. «Lo mantengo» solo sella la fecha; no contestar NO corta nada.
+ * - **Ampliar:** el acceso total se da sobre un acceso que la otra persona YA
+ *   aceptó (ya ha probado quién es), y aun así tiene que aceptarlo de nuevo.
+ *   En una sociedad se pide el título, como en cualquier representación.
+ */
+function RevisarYAmpliar({
+  a,
+  quien,
+  onCambio,
+}: {
+  a: AutorizacionVista
+  quien: string
+  onCambio: () => Promise<void>
+}) {
+  const [enviando, setEnviando] = useState<'mantener' | 'ampliar' | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [ampliando, setAmpliando] = useState(false)
+  const [titulo, setTitulo] = useState<TituloRepresentacion | ''>('')
+  const esSociedad = a.tipoOtorgante === 'juridica'
+  const puedeAmpliar = a.estado === 'vigente' && a.alcance !== 'total'
+
+  async function mantener() {
+    setEnviando('mantener')
+    setError(null)
+    try {
+      const r = await fetch(`/api/autorizaciones/${encodeURIComponent(a.id)}`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ accion: 'mantener' }),
+      })
+      if (r.ok) {
+        await onCambio()
+        return
+      }
+      const cuerpo = (await r.json().catch(() => null)) as { error?: unknown; mensaje?: unknown } | null
+      setError(textoError(ERROR_ACCION, cuerpo?.error, cuerpo?.mensaje))
+    } catch {
+      setError('No hemos podido guardarlo: comprueba tu conexión e inténtalo otra vez.')
+    } finally {
+      setEnviando(null)
+    }
+  }
+
+  async function ampliar() {
+    if (esSociedad && titulo === '') {
+      setError('Elige con qué título representa a la sociedad.')
+      return
+    }
+    setEnviando('ampliar')
+    setError(null)
+    try {
+      const r = await fetch('/api/autorizaciones', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ ampliarDesde: a.id, ...(esSociedad ? { tituloRepresentacion: titulo } : {}) }),
+      })
+      if (r.status === 201) {
+        setAmpliando(false)
+        await onCambio()
+        return
+      }
+      const cuerpo = (await r.json().catch(() => null)) as { error?: unknown; mensaje?: unknown } | null
+      setError(textoError(ERROR_CONCEDER, cuerpo?.error, cuerpo?.mensaje))
+    } catch {
+      setError('No hemos podido guardarlo: comprueba tu conexión y mira arriba si se ha concedido.')
+      await onCambio()
+    } finally {
+      setEnviando(null)
+    }
+  }
+
+  return (
+    <>
+      {a.pideRevision && (
+        <div className="aviso-linea">
+          {a.estado === 'pendiente' ? (
+            <>
+              <strong>¿Sigues queriendo darle acceso a {quien}?</strong> Se lo ofreciste hace más de un año
+              (o lo revisaste) y todavía no lo ha aceptado. Si ya no hace falta, retíralo; si sí,
+              confírmalo y no te lo volvemos a preguntar hasta dentro de un año.
+            </>
+          ) : (
+            <>
+              <strong>¿Sigues dejando ver tus seguros a {quien}?</strong> Hace más de un año que se lo diste (o
+              que lo revisaste). Si ya no hace falta, revócalo; si sí, confírmalo y no te lo volvemos a
+              preguntar hasta dentro de un año.
+            </>
+          )}
+          <div className="editor-acciones" style={{ marginTop: 10 }}>
+            <button type="button" className="boton" onClick={() => void mantener()} disabled={enviando !== null}>
+              {enviando === 'mantener' ? 'Guardando…' : 'Sí, lo mantengo'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {puedeAmpliar && !ampliando && (
+        <div className="editor" style={{ marginTop: 12 }}>
+          <button type="button" className="boton secundario" onClick={() => setAmpliando(true)}>
+            Pasar a acceso total
+          </button>
+        </div>
+      )}
+
+      {puedeAmpliar && ampliando && (
+        <div className="aviso-linea">
+          <strong>¿Le das acceso total a {quien}?</strong> Verá {queVe('total', esSociedad ? 'juridica' : 'fisica')}.
+          No podrá autorizar a nadie más. Tendrá que aceptarlo en su portal, y podrás revocarlo cuando quieras.
+          {esSociedad && (
+            <div className="editor-campo" style={{ marginTop: 10 }}>
+              <label htmlFor={`amp-${a.id}-titulo`}>Con qué título representa a la sociedad</label>
+              <select
+                id={`amp-${a.id}-titulo`}
+                className="campo"
+                value={titulo}
+                onChange={(e) => setTitulo(e.target.value as TituloRepresentacion | '')}
+                disabled={enviando !== null}
+              >
+                <option value="">Elige el título…</option>
+                {TITULOS.map((t) => (
+                  <option key={t} value={t}>
+                    {TITULO_TEXTO[t]}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div className="editor-acciones" style={{ marginTop: 10 }}>
+            <button type="button" className="boton" onClick={() => void ampliar()} disabled={enviando !== null}>
+              {enviando === 'ampliar' ? 'Guardando…' : 'Sí, dar acceso total'}
+            </button>
+            <button
+              type="button"
+              className="boton secundario"
+              onClick={() => setAmpliando(false)}
+              disabled={enviando !== null}
+            >
+              No, dejarlo como está
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <p className="editor-error" role="alert">
+          {error}
+        </p>
+      )}
+    </>
   )
 }
 
@@ -902,7 +1086,7 @@ function EstadoOtorgada({ a, quien }: { a: AutorizacionVista; quien: string }) {
     const caduca = fechaLarga(a.caducaEn)
     return (
       <div className="linea dicho">
-        En vigor{caduca ? ` hasta el ${caduca}` : ''} — lo aceptó
+        En vigor{caduca ? ` hasta el ${caduca}` : ', sin fecha de fin'} — lo aceptó
         {fechaLarga(a.aceptadoEn) ? ` el ${fechaLarga(a.aceptadoEn)}` : ''}.
       </div>
     )
@@ -1054,7 +1238,7 @@ function TarjetaRecibida({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
           {/* Y si lo que aceptas es representar a una sociedad, lo que se asume
               no es solo mirar: es que lo que declares obliga a la empresa. Decir
               solo «queda registrado» aquí se quedaría corto. */}
-          {esApoderamiento(a.alcance) && (
+          {dejaActuar(a.alcance) && (
             <div className="aviso-linea">
               Y aceptas <strong>actuar en nombre de {quien}</strong>
               {comoTitulo(a.tituloRepresentacion) ? `, ${comoTitulo(a.tituloRepresentacion)}` : ''}:{' '}
@@ -1092,7 +1276,7 @@ function TarjetaRecibida({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
       {a.estado === 'vigente' && (
         <>
           <div className="linea dicho">
-            En vigor{fechaLarga(a.caducaEn) ? ` hasta el ${fechaLarga(a.caducaEn)}` : ''} — sus pólizas te
+            En vigor{fechaLarga(a.caducaEn) ? ` hasta el ${fechaLarga(a.caducaEn)}` : ', sin fecha de fin'} — sus pólizas te
             salen en «Mis seguros». Cada vez que entras queda registrado, y {quien} puede quitártelo cuando
             quiera.
           </div>
@@ -1186,6 +1370,14 @@ function TarjetaRecibida({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
  */
 function LoQuePuedes({ a }: { a: AutorizacionVista }) {
   const titulo = comoTitulo(a.tituloRepresentacion)
+  if (a.alcance === 'total') {
+    return (
+      <div className="linea">
+        Acceso total: te deja ver {queVe('total', a.tipoOtorgante === 'juridica' ? 'juridica' : 'fisica')}
+        {titulo ? ` — actúas ${titulo} de la sociedad` : ''}. No puedes autorizar a nadie más.
+      </div>
+    )
+  }
   if (a.tipoOtorgante === 'juridica' || esApoderamiento(a.alcance)) {
     return (
       <div className="linea">
@@ -1315,7 +1507,7 @@ function Conceder({
   // vieja del puerto), se cae a los dos de LECTURA: el lado restrictivo, nunca
   // un apoderamiento ofrecido por un hueco en la respuesta.
   const opciones: readonly Alcance[] =
-    candidato && candidato.alcancesPosibles?.length ? candidato.alcancesPosibles : CONCEDIBLES_FISICA
+    candidato && candidato.alcancesPosibles?.length ? candidato.alcancesPosibles : CONCEDIBLES_DE_RESERVA
 
   // Con varias fichas propias (José como particular y como autónomo, por
   // ejemplo) hay que decir DESDE CUÁL se concede: si no, dos entradas con el
@@ -1585,7 +1777,7 @@ function Conceder({
           {candidato !== null && esSociedad && (
             <div className="aviso-linea">
               Quien represente a la sociedad <strong>sí ve lo que paga, su CIF y su cuenta bancaria</strong>
-              : son datos de la empresa, no de una persona. Y si le das «dar partes»,{' '}
+              : son datos de la empresa, no de una persona. Y si le das «Acceso total»,{' '}
               <strong>lo que declare obliga a la sociedad</strong> frente a la compañía. Lo que no puede
               hacer nunca es autorizar a nadie más.
             </div>
@@ -1593,9 +1785,9 @@ function Conceder({
 
           {/* Las dos cosas que hay que saber ANTES de conceder, no después. */}
           <p className="editor-ayuda" style={{ margin: 0 }}>
-            El acceso <strong>caduca al año</strong> ({DIAS_VIGENCIA} días) y no se renueva solo: si sigue
-            haciendo falta, se vuelve a dar. Puedes <strong>revocarlo en cualquier momento desde aquí</strong>
-            . Hasta que la persona lo acepte, no ve nada.
+            El acceso <strong>no caduca</strong>: dura hasta que lo revoques, y puedes{' '}
+            <strong>revocarlo en cualquier momento desde aquí</strong>. Una vez al año te preguntaremos si lo
+            mantienes. Hasta que la persona lo acepte, no ve nada.
           </p>
 
           {error && (
@@ -1890,7 +2082,7 @@ function Invitar({
   // (José como particular y como autónomo) hay que decir DESDE CUÁL, porque de
   // eso depende qué seguros abre la invitación y qué nombre le llega al otro.
   const ficha = fichas.length === 1 ? fichas[0] : (fichas.find((f) => f.clienteId === fichaId) ?? null)
-  const opciones = ficha === null ? CONCEDIBLES_FISICA : opcionesInvitacion(ficha)
+  const opciones = ficha === null ? CONCEDIBLES_DE_RESERVA : opcionesInvitacion(ficha)
   const restantes = MAX_MENSAJE_INVITACION - mensaje.length
 
   function elegirFicha(v: string) {
@@ -2283,9 +2475,9 @@ function Invitar({
           </div>
 
           {/* Lo que hay que saber antes de mandarla, no después. La caducidad de
-              la INVITACIÓN (30 días) no es la del acceso (un año): son dos
-              plazos distintos y confundirlos deja a José creyendo que el acceso
-              se acaba en un mes. */}
+              la INVITACIÓN (30 días) no es la del acceso (que no caduca): son
+              dos cosas distintas y confundirlas deja a José creyendo que el
+              acceso se acaba en un mes. */}
           <p className="editor-ayuda" style={{ margin: 0 }}>
             La invitación vale <strong>{DIAS_VIGENCIA_INVITACION} días</strong> y{' '}
             <strong>no abre nada por sí sola</strong>: quien la reciba tendrá que entrar al portal con un
@@ -2293,8 +2485,9 @@ function Invitar({
             {alcance !== SIN_COMPARTIR && (
               <>
                 {' '}
-                A partir de ahí, el acceso <strong>caduca al año</strong> ({DIAS_VIGENCIA} días) y puedes
-                revocarlo cuando quieras.
+                A partir de ahí el acceso <strong>no caduca</strong> y puedes revocarlo cuando quieras. Por
+                invitación solo se da «Solo ver»: si luego quieres darle <strong>acceso total</strong>, hazlo
+                desde «Has dado acceso a» cuando ya lo haya aceptado.
               </>
             )}
           </p>

@@ -598,6 +598,12 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   historial de riesgo: el nº enlaza; «si el tomador no contesta» enlaza al interviniente.
 - Quedan sin enlace a propósito: el aviso de error de MotoNuevo y Calidad (ya tiene «Ver póliza»).
 
+## (25/09/2026) Portal asegura: accesos sin caducidad y dos permisos («Solo ver» / «Acceso total»)
+- Decisión de Alberto: las autorizaciones NO caducan (revisión anual `pideRevision` → aviso `acceso_por_revisar` + botón «Lo mantengo»); dos permisos `ver_economico` y `total`. `total` de una PERSONA incluye DNI e IBAN (elegido por él), con texto de consentimiento propio (`textoDeConcesion`).
+- `total` NO se da por invitación/petición: «Pasar a acceso total» (`ampliarATotal`) sobre un acceso ya aceptado, nace pendiente.
+- Trampas cazadas: `cartera-lectura` cortaba con `caduca === null` (habría vaciado carteras compartidas) y un filtro `caducaEn: {gt}` en asegura excluía los NULL.
+- Migración en DOS pasos (revisión architect): A (`…_sin_caducidad_y_total.sql`, aditiva) APLICADO en prod 25/09; B (`…_b_…vivas_sin_caducidad.sql`, el UPDATE a NULL) DESPUÉS de desplegar portal+asegura — el Prisma viejo revienta con NULL. Pendientes tampoco caducan: la revisión anual cuenta desde `otorgado_en` y cubre las pendientes; `total` no se pide (`ALCANCES_PEDIBLES`). PR #3570.
+
 ## (25/09/2026) Auto nuevo (/correduria): defectos que pidió Alberto
 - La fecha de matriculación se ESTIMA al teclear la matrícula (`fechaMatriculacionEstimada`, ya existía en
   `module-seguros/matricula`), marcada «estimada» con su rango; nunca pisa una fecha tecleada.

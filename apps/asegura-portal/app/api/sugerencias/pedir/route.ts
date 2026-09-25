@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
-import { ALCANCES_CONCEDIBLES, MAX_MENSAJE_PETICION, TEXTO_REGISTRADA, type RespuestaPublica } from '@central/module-seguros-portal'
+import { ALCANCES_PEDIBLES, MAX_MENSAJE_PETICION, TEXTO_REGISTRADA, type RespuestaPublica } from '@central/module-seguros-portal'
 
 import { ipDe, peticionDesdeRelacion, userAgentDe } from '@/lib/peticiones'
 import { requireIdentidad } from '@/lib/session'
@@ -36,7 +36,7 @@ const ESTADO_HTTP: Record<RespuestaPublica, number> = {
 
 const Entrada = z.object({
   relacionadoClienteId: z.string().uuid(),
-  alcance: z.enum(ALCANCES_CONCEDIBLES as unknown as [string, ...string[]]),
+  alcance: z.enum(ALCANCES_PEDIBLES as unknown as [string, ...string[]]),
   mensaje: z.string().max(MAX_MENSAJE_PETICION * 4).optional(),
 })
 

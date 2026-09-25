@@ -17,19 +17,18 @@ export const dynamic = 'force-dynamic'
  * RGPD). Toda la doctrina está en la cabecera de
  * `packages/module-seguros-portal/src/autorizacion.ts` y de ahí sale el copy:
  *
- *   - Nace APAGADA y con fecha de fin (un año). El caso que revienta un booleano
- *     eterno es el divorcio: nadie entra al portal a revocar el día que se separa.
+ *   - Nace APAGADA. Desde el 25/09/2026 NO caduca (Alberto: «es un lío volver a
+ *     pedir acceso»): el divorcio —nadie entra a revocar el día que se separa—
+ *     lo cubre la pregunta anual al otorgante («¿lo mantienes?»).
  *   - DOBLE aceptación: el otorgante concede y el autorizado ACEPTA. Sin esa
  *     segunda mitad, María mira los datos de otro sin saber que existe un
  *     registro con su nombre — y ese registro es justo lo que la hace
  *     responsable de lo que mire.
- *   - Leer no es actuar: `partes` y `documentos` están en el vocabulario pero
- *     NO se conceden hoy (`ALCANCES_CONCEDIBLES`), porque un tick en una
- *     pantalla no es un poder.
- *   - Un tercero nunca ve al otorgante, solo a sus seguros: IBAN, DNI y
- *     documentos quedan fuera de CUALQUIER alcance (`NUNCA_A_UN_TERCERO` de
- *     `camposDeAlcance`). Por eso el párrafo de abajo se puede afirmar: no es
- *     una promesa de la UI, lo garantiza el módulo puro.
+ *   - DOS permisos (25/09/2026): «Solo ver» (`ver_economico`) y «Acceso total»
+ *     (`total`). Con «Solo ver» un tercero nunca ve al otorgante, solo a sus
+ *     seguros (`NUNCA_A_UN_TERCERO`); el acceso total SÍ abre DNI, IBAN y
+ *     documentos, y deja actuar — decisión expresa de Alberto, con su propio
+ *     texto de consentimiento. Nadie reautoriza a un cuarto con ninguno.
  * ─────────────────────────────────────────────────────────────────────────────
  *
  * La página es deliberadamente delgada: NO lee la BD. Todo sale de
@@ -66,24 +65,31 @@ export default async function AutorizacionesPage() {
           de tu sociedad). Quien ya lo ha leído lo cierra. */}
       <SeccionPlegable titulo="Qué es exactamente lo que das" abierto>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
-          Si los seguros son <strong>tuyos</strong>, quien reciba el acceso{' '}
-          <strong>solo puede mirarlos</strong>. Nunca ve tu DNI, ni tu IBAN, ni tus documentos, y{' '}
-          <strong>no puede dar partes ni tocar nada en tu nombre</strong>: ni contratar, ni cambiar, ni
-          anular. Cada acceso <strong>caduca al año</strong> y{' '}
-          <strong>puedes revocarlo cuando quieras desde esta misma pantalla</strong>.
+          Hay <strong>dos permisos</strong>, y eliges uno para cada persona:
         </p>
-        {/* 🚨 La otra mitad, desde el 03/09/2026. Dejar solo el párrafo de arriba
-            era prometer sobre una EMPRESA una protección que no existe: lo que se
-            delega ahí no es consentimiento —una sociedad no tiene datos
-            personales— sino representación mercantil, y quien la ejerce ve la
-            cuenta y puede obligar a la empresa. Callarlo sería lo peor de las dos
-            cosas: no impide nada y hace creer que sí. */}
         <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5 }}>
-          Si los seguros son de una <strong>sociedad tuya</strong>, es distinto: ahí no estás cediendo
-          datos personales, estás diciendo <strong>quién puede representarla</strong>. Esa persona{' '}
-          <strong>sí ve lo que paga la empresa, su CIF y su cuenta</strong>, y puede llegar a{' '}
-          <strong>dar partes en su nombre</strong> — por eso se te pide con qué título lo hace. Lo que no
-          puede hacer nunca es autorizar a nadie más.
+          <strong>Solo ver.</strong> Ve tus seguros y lo que pagas, y <strong>no puede hacer nada</strong>:
+          ni dar partes, ni contratar, ni cambiar, ni anular. De una persona no ve su DNI, su cuenta bancaria
+          ni sus documentos.
+        </p>
+        <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5 }}>
+          <strong>Acceso total.</strong> Ve <strong>lo mismo que tú</strong> —también tu DNI, tu cuenta
+          bancaria y tus documentos— y <strong>puede actuar en tu nombre</strong>: dar partes y hacer
+          gestiones sobre tus pólizas. Dáselo solo a quien te lleve los seguros de verdad.
+        </p>
+        {/* 🚨 La otra mitad, desde el 03/09/2026: en una SOCIEDAD no se ceden datos
+            personales sino representación, y quien la ejerce puede obligar a la
+            empresa. Callarlo haría creer en una protección que no existe. */}
+        <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5 }}>
+          Si los seguros son de una <strong>sociedad tuya</strong>, estás diciendo{' '}
+          <strong>quién puede representarla</strong>: con cualquiera de los dos permisos ve lo que paga la
+          empresa, su CIF y su cuenta, y con el acceso total además da partes en su nombre — por eso se te
+          pide con qué título lo hace.
+        </p>
+        <p style={{ margin: '10px 0 0', fontSize: 14, lineHeight: 1.5 }}>
+          En los dos casos: nadie puede autorizar a nadie más, el acceso <strong>no caduca</strong> (una vez
+          al año te preguntaremos si lo mantienes) y <strong>puedes revocarlo cuando quieras desde esta
+          misma pantalla</strong>.
         </p>
       </SeccionPlegable>
 

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import {
-  ALCANCES_CONCEDIBLES,
+  ALCANCES_PEDIBLES,
   MAX_MENSAJE_PETICION,
   TEXTO_REGISTRADA,
   type RespuestaPublica,
@@ -60,7 +60,7 @@ const Entrada = z.object({
   // nada de si esa dirección está o no en la cartera.
   email: z.string().trim().email().max(200),
   // El vocabulario lo fija el módulo puro: hoy solo se puede pedir MIRAR.
-  alcance: z.enum(ALCANCES_CONCEDIBLES as unknown as [string, ...string[]]),
+  alcance: z.enum(ALCANCES_PEDIBLES as unknown as [string, ...string[]]),
   // Se recorta y se normaliza en el módulo (`normalizarMensajePeticion`): aquí
   // solo se pone un tope generoso para no tragarse un cuerpo enorme.
   mensaje: z.string().max(MAX_MENSAJE_PETICION * 4).optional(),

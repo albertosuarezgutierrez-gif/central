@@ -56,6 +56,10 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
     uno: 'un acceso que diste y la otra persona aún no ha aceptado',
     varios: 'accesos que diste y la otra persona aún no ha aceptado',
   },
+  acceso_por_revisar: {
+    uno: 'un acceso a tus seguros que conviene revisar',
+    varios: 'accesos a tus seguros que conviene revisar',
+  },
   obligacion_en_ventana: {
     uno: 'un vencimiento próximo',
     varios: 'vencimientos próximos',

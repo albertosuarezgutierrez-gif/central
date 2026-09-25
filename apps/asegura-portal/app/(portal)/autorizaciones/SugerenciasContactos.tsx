@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useId, useState } from 'react'
 
-import { ALCANCES_CONCEDIBLES, type Alcance } from '@central/module-seguros-portal'
+import { ALCANCES_PEDIBLES, type Alcance } from '@central/module-seguros-portal'
 import { SeccionPlegable, textoPersonas } from './SeccionPlegable'
 
 /**
@@ -97,7 +97,7 @@ export function SugerenciasContactos() {
 }
 
 function SugerenciaFila({ uid, sugerencia }: { uid: string; sugerencia: Sugerencia }) {
-  const [alcance, setAlcance] = useState<Alcance>('ver')
+  const [alcance, setAlcance] = useState<Alcance>('ver_economico')
   const [envio, setEnvio] = useState<Envio>('idle')
   const [mensaje, setMensaje] = useState<string | null>(null)
 
@@ -148,9 +148,9 @@ function SugerenciaFila({ uid, sugerencia }: { uid: string; sugerencia: Sugerenc
             disabled={envio === 'enviando'}
             style={{ width: 'auto' }}
           >
-            {ALCANCES_CONCEDIBLES.map((a) => (
+            {ALCANCES_PEDIBLES.map((a) => (
               <option key={a} value={a}>
-                {a === 'ver' ? 'ver sus seguros' : 'ver también lo económico'}
+                {a === 'total' ? 'acceso total' : 'ver sus seguros'}
               </option>
             ))}
           </select>
