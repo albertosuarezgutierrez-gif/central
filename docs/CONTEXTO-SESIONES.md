@@ -594,7 +594,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   (en móvil quedaba fuera de pantalla y el botón «no hacía nada»).
 - Fusión DESDE LA FICHA: si hay otra con el mismo DNI se avisa arriba y se comparan campo a campo (elige cuál
   se queda). Función de BD `seguros.fusionar_clientes` (SECURITY DEFINER, aplicada; lápida + `snapshot_before` +
-  `snapshot_superviviente` nueva). Nunca con DNI distinto. Revisión de arquitectura pendiente de aplicar.
+  `snapshot_superviviente` nueva). Nunca con DNI distinto ni con DNI sin índice. Revisión de arquitectura aplicada (direcciones enteras, `crm_seguros` sin EXECUTE, ids movidos y borrados en el log).
 
 ## (25/09/2026) Oportunidades: se gestionan DENTRO de la ficha del cliente (PR #3590)
 - Alberto: la página aparte «ocupa mucha pantalla». La fila de cada oportunidad (pestaña Oportunidades) se despliega

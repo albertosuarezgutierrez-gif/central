@@ -17,7 +17,7 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
       headers: { ...(await cabecerasPuerto(secret)), ...(init.body ? { 'content-type': 'application/json' } : {}) },
       cache: 'no-store',
       // La fusión reapunta decenas de tablas en una transacción: más margen que una lectura.
-      signal: AbortSignal.timeout(init.method === 'POST' ? 45_000 : 15_000),
+      signal: AbortSignal.timeout(init.method === 'POST' ? 55_000 : 15_000),
     })
     return { status: res.status, json: await res.json().catch(() => null) }
   } catch {

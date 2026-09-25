@@ -45,8 +45,12 @@ export const ETIQUETA_GRUPO_FUSION: Record<GrupoFusion, string> = {
   tipo_persona: 'Tipo de persona',
 }
 
-/** Un valor tal como se ha podido leer: el texto, vacío, o cifrado que no abre. */
-export type ValorFusion = { valor: string | null; ilegible: boolean }
+/**
+ * Un valor tal como se ha podido leer: el texto, vacío, o cifrado que no abre.
+ * `clave`, si viene, es lo que se COMPARA cuando lo que se enseña va enmascarado
+ * (una cuenta «•••• 1234»): dos IBAN distintos que acaban igual no son iguales.
+ */
+export type ValorFusion = { valor: string | null; ilegible: boolean; clave?: string | null }
 
 export type EstadoCampoFusion =
   | 'igual' // los dos dicen lo mismo (o los dos vacíos)
@@ -93,16 +97,25 @@ export function compararFichas(
     else if (vacio(s) && vacio(a)) estado = 'igual'
     else if (vacio(a)) estado = 'solo_superviviente'
     else if (vacio(s)) estado = 'solo_absorbida'
-    else estado = normal(s.valor) === normal(a.valor) ? 'igual' : 'distinto'
+    else estado = normal(s.clave ?? s.valor) === normal(a.clave ?? a.valor) ? 'igual' : 'distinto'
     return { grupo, etiqueta: ETIQUETA_GRUPO_FUSION[grupo], superviviente: s, absorbida: a, estado }
   })
 }
 
-/** Quién es quién por el DNI. Solo el índice ciego decide; el nombre no. */
-export type IdentidadFusion = 'mismo_dni' | 'dni_distinto' | 'sin_comprobar'
+/**
+ * Quién es quién por el DNI. Solo el índice ciego decide; el nombre no.
+ * - `dni_sin_indice`: las dos tienen DNI guardado pero a alguna le falta el
+ *   índice, así que no se puede comparar y podrían ser dos personas. NO se
+ *   fusiona (se arregla con el backfill del DNI en Mantenimiento).
+ * - `sin_comprobar`: al menos una no tiene DNI: decide el corredor.
+ */
+export type IdentidadFusion = 'mismo_dni' | 'dni_distinto' | 'dni_sin_indice' | 'sin_comprobar'
 
-export function identidadFusion(hashSuperviviente: string | null, hashAbsorbida: string | null): IdentidadFusion {
-  if (hashSuperviviente && hashAbsorbida) return hashSuperviviente === hashAbsorbida ? 'mismo_dni' : 'dni_distinto'
+export type DniFusion = { hash: string | null; tieneDni: boolean }
+
+export function identidadFusion(s: DniFusion, a: DniFusion): IdentidadFusion {
+  if (s.hash && a.hash) return s.hash === a.hash ? 'mismo_dni' : 'dni_distinto'
+  if (s.tieneDni && a.tieneDni) return 'dni_sin_indice'
   return 'sin_comprobar'
 }
 

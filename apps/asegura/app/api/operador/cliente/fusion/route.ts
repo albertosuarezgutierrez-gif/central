@@ -7,6 +7,8 @@ import { candidatasFusion, compararParaFusion, fusionar } from '@/lib/cartera-fu
 import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
+// La fusión reapunta decenas de tablas en una transacción: no puede cortarse a los 10 s por defecto.
+export const maxDuration = 60
 
 // /api/operador/cliente/fusion — fusionar dos fichas de la misma persona.
 //

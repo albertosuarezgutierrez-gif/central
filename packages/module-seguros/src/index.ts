@@ -915,5 +915,6 @@ export {
   type EstadoCampoFusion,
   type CampoFusion,
   type IdentidadFusion,
+  type DniFusion,
   type RevisionElecciones,
 } from './fusion-fichas.ts'

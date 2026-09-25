@@ -90,11 +90,12 @@ function bloque(...partes: (string | null | undefined)[]): ValorFusion {
   return { valor: texto === '' ? null : texto, ilegible: false }
 }
 
+/** Se ENSEÑA enmascarada, pero se compara entera (`clave`): dos IBAN que acaban igual no son el mismo. */
 function cuenta(v: string | null | undefined): ValorFusion {
   const l = leido(v)
   if (l.valor === null) return l
-  const limpio = l.valor.replace(/\s+/g, '')
-  return { valor: limpio.length > 4 ? `•••• ${limpio.slice(-4)}` : '••••', ilegible: false }
+  const limpio = l.valor.replace(/\s+/g, '').toUpperCase()
+  return { valor: limpio.length > 4 ? `•••• ${limpio.slice(-4)}` : '••••', ilegible: false, clave: limpio }
 }
 
 function valores(c: Fila): Partial<Record<GrupoFusion, ValorFusion>> {
@@ -166,7 +167,10 @@ export async function compararParaFusion(correduriaId: string, supId: string, la
     comparacion: {
       superviviente: resumen(s),
       absorbida: resumen(l),
-      identidad: identidadFusion(s.dniLookupHash, l.dniLookupHash),
+      identidad: identidadFusion(
+        { hash: s.dniLookupHash, tieneDni: !!s.dni?.trim() },
+        { hash: l.dniLookupHash, tieneDni: !!l.dni?.trim() },
+      ),
       campos: compararFichas(valores(s), valores(l)),
     },
   }
@@ -180,6 +184,14 @@ export type ResultadoFusion =
 
 const MOTIVOS_BD: Record<string, ResultadoFusion> = {
   dni_contradictorio: { estado: 'conflicto', motivo: 'Los DNI son distintos: son dos personas y no se fusionan.' },
+  dni_sin_indice: {
+    estado: 'conflicto',
+    motivo: 'Las dos fichas tienen DNI pero a alguna le falta el índice, así que no se puede comprobar que sea el mismo. Escribe el índice del DNI en Correduría → Mantenimiento y vuelve a intentarlo.',
+  },
+  uq_clientes_dni_lookup_hash: {
+    estado: 'conflicto',
+    motivo: 'Hay una TERCERA ficha de cliente con este mismo DNI. Fusiona primero esa; no se ha tocado nada.',
+  },
   ya_fusionada: { estado: 'conflicto', motivo: 'Una de las dos fichas ya está fusionada. Recarga la ficha.' },
   no_encontrado: { estado: 'no_encontrado' },
   misma_ficha: { estado: 'invalido', motivo: 'Es la misma ficha.' },
@@ -203,6 +215,7 @@ export async function fusionar(
   if (cmp.estado !== 'ok') return cmp
   const { identidad, campos, absorbida } = cmp.comparacion
   if (identidad === 'dni_distinto') return MOTIVOS_BD.dni_contradictorio
+  if (identidad === 'dni_sin_indice') return MOTIVOS_BD.dni_sin_indice
   if (identidad === 'sin_comprobar' && !confirmarSinDni) {
     return { estado: 'invalido', motivo: 'Una de las dos fichas no tiene DNI: confirma que son la misma persona.' }
   }

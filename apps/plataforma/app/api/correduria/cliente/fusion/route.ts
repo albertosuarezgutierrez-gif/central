@@ -3,6 +3,8 @@ import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { fusionAsegura, fusionarAsegura } from '@/lib/fusion-asegura'
 
 export const dynamic = 'force-dynamic'
+// La fusión reapunta decenas de tablas en una transacción: no puede cortarse a los 10 s por defecto.
+export const maxDuration = 60
 
 /**
  * /api/correduria/cliente/fusion — fichas duplicadas de la misma persona.

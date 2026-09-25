@@ -23,10 +23,21 @@ test('un cifrado que no abre no se compara ni se da por igual', () => {
 })
 
 test('identidad: solo el DNI decide, y sin uno de los dos no se afirma nada', () => {
-  assert.equal(identidadFusion('h1', 'h1'), 'mismo_dni')
-  assert.equal(identidadFusion('h1', 'h2'), 'dni_distinto')
-  assert.equal(identidadFusion('h1', null), 'sin_comprobar')
-  assert.equal(identidadFusion(null, null), 'sin_comprobar')
+  const d = (hash: string | null, tieneDni = hash !== null) => ({ hash, tieneDni })
+  assert.equal(identidadFusion(d('h1'), d('h1')), 'mismo_dni')
+  assert.equal(identidadFusion(d('h1'), d('h2')), 'dni_distinto')
+  assert.equal(identidadFusion(d('h1'), d(null, false)), 'sin_comprobar')
+  assert.equal(identidadFusion(d(null, false), d(null, false)), 'sin_comprobar')
+  // Las dos con DNI y a una le falta el índice: podrían ser padre e hijo.
+  assert.equal(identidadFusion(d('h1'), d(null, true)), 'dni_sin_indice')
+})
+
+test('una cuenta enmascarada se compara por su valor completo', () => {
+  const c = compararFichas(
+    { cuenta_bancaria: { valor: '•••• 1234', ilegible: false, clave: 'ES1100001234' } },
+    { cuenta_bancaria: { valor: '•••• 1234', ilegible: false, clave: 'ES9900001234' } },
+  )
+  assert.equal(c.find((x) => x.grupo === 'cuenta_bancaria')!.estado, 'distinto')
 })
 
 test('solo se puede elegir donde hay dos valores distintos', () => {

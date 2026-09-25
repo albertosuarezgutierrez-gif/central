@@ -25,7 +25,8 @@
 --
 -- SECURITY DEFINER porque `prisma_seguros` no tiene UPDATE en tres tablas con FK
 -- a clientes (portal_enlace_directo, felicitacion, portal_mensaje) y una fusión a
--- medias es peor que ninguna. Solo la ejecuta `prisma_seguros`.
+-- medias es peor que ninguna. Solo la ejecuta `prisma_seguros`: el `revoke` a
+-- `crm_seguros` es explícito porque los privilegios por defecto del schema se la daban.
 
 alter table seguros.cliente_merge_log add column if not exists snapshot_superviviente jsonb;
 
@@ -61,7 +62,9 @@ declare
   deps jsonb := '{}'::jsonb; sin_mover jsonb := '{}'::jsonb;
   elegidos text[] := '{}'; heredados text[] := '{}';
   h_dni text; h_tel text; h_email text; h_dom text; h_usr text;
-  es_texto bool; v_saltadas int; v_row record;
+  es_texto bool; v_saltadas int; v_row record; v_ids jsonb;
+  bloques constant text[] := array['direccion','codigo_postal','ciudad','provincia','direccion_fiscal','cp_fiscal','ciudad_fiscal','provincia_fiscal'];
+  borradas jsonb := '{}'::jsonb; insertadas jsonb := '[]'::jsonb; v_nueva uuid;
 begin
   if p_sup = p_lap then raise exception 'misma_ficha'; end if;
   if nullif(btrim(coalesce(p_actor, '')), '') is null then raise exception 'sin_actor'; end if;
@@ -75,6 +78,12 @@ begin
   if s.merged_into_cliente_id is not null or l.merged_into_cliente_id is not null then raise exception 'ya_fusionada'; end if;
   if s.dni_lookup_hash is not null and l.dni_lookup_hash is not null and s.dni_lookup_hash <> l.dni_lookup_hash then
     raise exception 'dni_contradictorio';
+  end if;
+  -- Un DNI guardado SIN índice ciego no se puede comparar: si las dos tienen DNI y a
+  -- alguna le falta el índice, podrían ser dos personas (padre e hijo) y no se sabe.
+  if nullif(btrim(coalesce(s.dni, '')), '') is not null and nullif(btrim(coalesce(l.dni, '')), '') is not null
+     and (s.dni_lookup_hash is null or l.dni_lookup_hash is null) then
+    raise exception 'dni_sin_indice';
   end if;
 
   foreach g in array coalesce(p_de_absorbida, '{}') loop
@@ -95,13 +104,15 @@ begin
      and nullif(btrim(coalesce(s.telefono, '')), '') is not null
      and not exists (select 1 from cliente_telefonos where cliente_id = p_sup) then
     insert into cliente_telefonos (id, cliente_id, correduria_id, telefono, telefono_lookup_hash, es_principal, created_at)
-    values (gen_random_uuid(), p_sup, p_correduria, s.telefono, s.telefono_lookup_hash, true, now());
+    values (gen_random_uuid(), p_sup, p_correduria, s.telefono, s.telefono_lookup_hash, true, now()) returning id into v_nueva;
+    insertadas := insertadas || jsonb_build_object('tabla', 'cliente_telefonos', 'id', v_nueva);
   end if;
   if (nullif(btrim(coalesce(l.email, '')), '') is not null or exists (select 1 from cliente_emails where cliente_id = p_lap))
      and nullif(btrim(coalesce(s.email, '')), '') is not null
      and not exists (select 1 from cliente_emails where cliente_id = p_sup) then
     insert into cliente_emails (id, cliente_id, correduria_id, email, email_lookup_hash, email_dominio_hash, email_usuario_hash, es_principal, created_at)
-    values (gen_random_uuid(), p_sup, p_correduria, s.email, s.email_lookup_hash, s.email_dominio_hash, s.email_usuario_hash, true, now());
+    values (gen_random_uuid(), p_sup, p_correduria, s.email, s.email_lookup_hash, s.email_dominio_hash, s.email_usuario_hash, true, now()) returning id into v_nueva;
+    insertadas := insertadas || jsonb_build_object('tabla', 'cliente_emails', 'id', v_nueva);
   end if;
   -- El valor de columna de la lápida pasa a la hija de la superviviente si no está ya.
   if nullif(btrim(coalesce(l.telefono, '')), '') is not null
@@ -109,16 +120,34 @@ begin
      and (h_tel is null or (h_tel is distinct from s.telefono_lookup_hash
           and not exists (select 1 from cliente_telefonos where cliente_id in (p_sup, p_lap) and telefono_lookup_hash = h_tel))) then
     insert into cliente_telefonos (id, cliente_id, correduria_id, telefono, telefono_lookup_hash, etiqueta, es_principal, created_at)
-    values (gen_random_uuid(), p_sup, p_correduria, l.telefono, h_tel, 'otro', false, now());
+    values (gen_random_uuid(), p_sup, p_correduria, l.telefono, h_tel, 'otro', false, now()) returning id into v_nueva;
+    insertadas := insertadas || jsonb_build_object('tabla', 'cliente_telefonos', 'id', v_nueva);
   end if;
   if nullif(btrim(coalesce(l.email, '')), '') is not null
      and nullif(btrim(coalesce(s.email, '')), '') is not null
      and (h_email is null or (h_email is distinct from s.email_lookup_hash
           and not exists (select 1 from cliente_emails where cliente_id in (p_sup, p_lap) and email_lookup_hash = h_email))) then
     insert into cliente_emails (id, cliente_id, correduria_id, email, email_lookup_hash, email_dominio_hash, email_usuario_hash, etiqueta, es_principal, created_at)
-    values (gen_random_uuid(), p_sup, p_correduria, l.email, h_email, h_dom, h_usr, 'otro', false, now());
+    values (gen_random_uuid(), p_sup, p_correduria, l.email, h_email, h_dom, h_usr, 'otro', false, now()) returning id into v_nueva;
+    insertadas := insertadas || jsonb_build_object('tabla', 'cliente_emails', 'id', v_nueva);
   end if;
   -- Hijas de la lápida: las repetidas se borran; el resto se mueve como secundario.
+  -- Lo que se borra por repetido queda en el registro, entero: sin esto no hay vuelta atrás.
+  select coalesce(jsonb_agg(to_jsonb(t)), '[]') into v_ids from cliente_telefonos t where t.cliente_id = p_lap and t.telefono_lookup_hash is not null
+     and exists (select 1 from cliente_telefonos o where o.cliente_id = p_sup and o.telefono_lookup_hash = t.telefono_lookup_hash);
+  borradas := borradas || jsonb_build_object('cliente_telefonos', v_ids);
+  select coalesce(jsonb_agg(to_jsonb(e)), '[]') into v_ids from cliente_emails e where e.cliente_id = p_lap and e.email_lookup_hash is not null
+     and exists (select 1 from cliente_emails o where o.cliente_id = p_sup and o.email_lookup_hash = e.email_lookup_hash);
+  borradas := borradas || jsonb_build_object('cliente_emails', v_ids);
+  select coalesce(jsonb_agg(to_jsonb(x)), '[]') into v_ids from cliente_relaciones x
+   where (x.cliente_a_id = p_lap and x.cliente_b_id = p_sup) or (x.cliente_b_id = p_lap and x.cliente_a_id = p_sup)
+      or (x.cliente_a_id = p_lap and exists (select 1 from cliente_relaciones y where y.cliente_a_id = p_sup and y.cliente_b_id = x.cliente_b_id and y.tipo_relacion = x.tipo_relacion))
+      or (x.cliente_b_id = p_lap and exists (select 1 from cliente_relaciones y where y.cliente_b_id = p_sup and y.cliente_a_id = x.cliente_a_id and y.tipo_relacion = x.tipo_relacion));
+  borradas := borradas || jsonb_build_object('cliente_relaciones', v_ids);
+  select coalesce(jsonb_agg(to_jsonb(x)), '[]') into v_ids from portal_vinculo x where x.cliente_id = p_lap
+     and exists (select 1 from portal_vinculo y where y.cliente_id = p_sup and y.identidad_id = x.identidad_id);
+  borradas := borradas || jsonb_build_object('portal_vinculo', v_ids);
+
   delete from cliente_telefonos t where t.cliente_id = p_lap and t.telefono_lookup_hash is not null
      and exists (select 1 from cliente_telefonos o where o.cliente_id = p_sup and o.telefono_lookup_hash = t.telefono_lookup_hash);
   delete from cliente_emails e where e.cliente_id = p_lap and e.email_lookup_hash is not null
@@ -162,6 +191,7 @@ begin
        and a.attname not in ('id','correduria_id','created_at','updated_at','merged_into_cliente_id','import_ref','activo',
                              'tipo','segmento','lead_estado','fuente',
                              'dni_lookup_hash','email_lookup_hash','telefono_lookup_hash','email_dominio_hash','email_usuario_hash')
+       and a.attname <> all(bloques)
      order by 1
   loop
     es_texto := r.d like 'character varying%' or r.d = 'text';
@@ -178,8 +208,31 @@ begin
     if n > 0 then heredados := heredados || r.c; end if;
   end loop;
   -- Los hashes, con su valor.
-  if s.dni_lookup_hash is null and h_dni is not null then
+  -- Las direcciones se heredan ENTERAS y solo si la que queda no tiene ninguna parte:
+  -- rellenar a trozos daría «Calle A, Sevilla» con el CP de Madrid de la otra.
+  if nullif(btrim(coalesce(s.direccion,'')),'') is null and nullif(btrim(coalesce(s.codigo_postal,'')),'') is null
+     and nullif(btrim(coalesce(s.ciudad,'')),'') is null and nullif(btrim(coalesce(s.provincia,'')),'') is null
+     and not ('direccion' = any(elegidos))
+     and coalesce(nullif(btrim(coalesce(l.direccion,'')),''), nullif(btrim(coalesce(l.codigo_postal,'')),''),
+                  nullif(btrim(coalesce(l.ciudad,'')),''), nullif(btrim(coalesce(l.provincia,'')),'')) is not null then
+    update clientes set direccion = l.direccion, codigo_postal = l.codigo_postal, ciudad = l.ciudad, provincia = l.provincia where id = p_sup;
+    heredados := heredados || 'direccion'::text;
+  end if;
+  if nullif(btrim(coalesce(s.direccion_fiscal,'')),'') is null and nullif(btrim(coalesce(s.cp_fiscal,'')),'') is null
+     and nullif(btrim(coalesce(s.ciudad_fiscal,'')),'') is null and nullif(btrim(coalesce(s.provincia_fiscal,'')),'') is null
+     and not ('direccion_fiscal' = any(elegidos))
+     and coalesce(nullif(btrim(coalesce(l.direccion_fiscal,'')),''), nullif(btrim(coalesce(l.cp_fiscal,'')),''),
+                  nullif(btrim(coalesce(l.ciudad_fiscal,'')),''), nullif(btrim(coalesce(l.provincia_fiscal,'')),'')) is not null then
+    update clientes set direccion_fiscal = l.direccion_fiscal, cp_fiscal = l.cp_fiscal, ciudad_fiscal = l.ciudad_fiscal, provincia_fiscal = l.provincia_fiscal where id = p_sup;
+    heredados := heredados || 'direccion_fiscal'::text;
+  end if;
+  -- El índice del DNI solo acompaña a un DNI heredado: nunca se pone junto a un DNI propio distinto.
+  if s.dni_lookup_hash is null and h_dni is not null and nullif(btrim(coalesce(s.dni, '')), '') is null then
     update clientes set dni_lookup_hash = h_dni where id = p_sup;
+  end if;
+  -- Un usuario de acceso no puede quedar en dos fichas.
+  if 'usuario_id' = any(heredados) then
+    update clientes set usuario_id = null where id = p_lap;
   end if;
   if 'telefono' = any(heredados) then
     update clientes set telefono_lookup_hash = h_tel where id = p_sup;
@@ -198,6 +251,8 @@ begin
        and c.conrelid <> 'seguros.cliente_merge_log'::regclass
      order by 1, 2
   loop
+    execute format('select coalesce(jsonb_agg(to_jsonb(t) -> ''id''), ''[]'') from %s t where %I = $1', r.tn, r.cn) into v_ids using p_lap;
+    if jsonb_array_length(v_ids) > 0 then deps := deps || jsonb_build_object(r.tn || '.' || r.cn || ':ids', v_ids); end if;
     begin
       execute format('update %s set %I = $1 where %I = $2', r.tn, r.cn, r.cn) using p_sup, p_lap;
       get diagnostics n = row_count;
@@ -220,10 +275,14 @@ begin
 
   -- La superviviente, si se quedó sin principal en columna pero tiene hijas, espeja la principal.
   update cliente_telefonos t set es_principal = true
-   where t.id = (select id from cliente_telefonos where cliente_id = p_sup order by es_principal desc, created_at limit 1)
+   where t.id = (select id from cliente_telefonos where cliente_id = p_sup
+                  order by (telefono_lookup_hash is not distinct from (select telefono_lookup_hash from clientes where id = p_sup)) desc,
+                           es_principal desc, created_at limit 1)
      and not exists (select 1 from cliente_telefonos where cliente_id = p_sup and es_principal);
   update cliente_emails e set es_principal = true
-   where e.id = (select id from cliente_emails where cliente_id = p_sup order by es_principal desc, created_at limit 1)
+   where e.id = (select id from cliente_emails where cliente_id = p_sup
+                  order by (email_lookup_hash is not distinct from (select email_lookup_hash from clientes where id = p_sup)) desc,
+                           es_principal desc, created_at limit 1)
      and not exists (select 1 from cliente_emails where cliente_id = p_sup and es_principal);
   update clientes c set telefono = t.telefono, telefono_lookup_hash = t.telefono_lookup_hash
     from cliente_telefonos t
@@ -233,6 +292,9 @@ begin
     from cliente_emails e
    where c.id = p_sup and e.cliente_id = p_sup and e.es_principal and nullif(btrim(coalesce(c.email, '')), '') is null;
 
+  -- Una relación de la ficha consigo misma (quedaba entre las dos) no significa nada.
+  delete from cliente_relaciones where cliente_a_id = p_sup and cliente_b_id = p_sup;
+
   update clientes set merged_into_cliente_id = p_sup, updated_at = now() where id = p_lap;
   update clientes set updated_at = now() where id = p_sup;
 
@@ -241,7 +303,8 @@ begin
      inherited_fields, cohort_movido, deps_repointed, snapshot_before, snapshot_superviviente, lote, actor)
   values (p_correduria, p_lap, p_sup,
     coalesce(nullif(btrim(p_justificacion), ''), 'Misma persona, confirmada desde la pantalla.'),
-    heredados || elegidos, false, deps || jsonb_build_object('sin_mover', sin_mover), snap_l, snap_s,
+    heredados || elegidos, false,
+    deps || jsonb_build_object('sin_mover', sin_mover, 'borradas', borradas, 'insertadas', insertadas), snap_l, snap_s,
     'fusion-pantalla', p_actor);
 
   insert into historial_interno (id, correduria_id, cliente_id, tipo, texto, created_at)
@@ -250,9 +313,9 @@ begin
     || ' por ' || p_actor || '. Elegido de la otra: ' || coalesce(nullif(array_to_string(elegidos, ', '), ''), 'nada')
     || '. Heredado (vacío aquí): ' || coalesce(nullif(array_to_string(heredados, ', '), ''), 'nada') || '.', now());
 
-  return jsonb_build_object('elegidos', to_jsonb(elegidos), 'heredados', to_jsonb(heredados),
-                            'movidos', deps, 'sin_mover', sin_mover);
+  return jsonb_build_object('elegidos', to_jsonb(elegidos), 'heredados', to_jsonb(heredados), 'sin_mover', sin_mover);
 end $$;
 
 revoke all on function seguros.fusionar_clientes(uuid, uuid, uuid, text[], text, text) from public;
+revoke all on function seguros.fusionar_clientes(uuid, uuid, uuid, text[], text, text) from crm_seguros;
 grant execute on function seguros.fusionar_clientes(uuid, uuid, uuid, text[], text, text) to prisma_seguros;
