@@ -19,8 +19,6 @@ con logo PNG (`asegura-web/public/brand`). ✉️ **Remitente de TODA la corredu
 verificado en Resend (DNS en IONOS por Alberto) y `ASEGURA_MAIL_FROM`/`PORTAL_MAIL_FROM` cambiadas. `envios.grupoasegura.es` queda de
 reserva unos días; luego borrar de Resend e IONOS.
 
-**(25/09/2026)** 📡 **Portal: avisos push de CIMA + web sin animaciones de aparición** (a raíz de la demo con Pablo
-
 **(25/09/2026)** 📡 **Portal: avisos push de CIMA + web sin animaciones de aparición — MERGEADO en #3599** (+ aviso en «Mis datos»: el correo tiene que ser del titular) (a raíz de la demo con Pablo
 Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/devuelto, siniestro) con interruptores por
 tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
