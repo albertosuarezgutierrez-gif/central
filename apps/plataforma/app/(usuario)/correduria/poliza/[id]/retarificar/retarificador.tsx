@@ -25,7 +25,7 @@ import {
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
-import { Emision } from './emision'
+import { Emision, CoberturasOferta } from './emision'
 import PrepararPresupuesto from './PrepararPresupuesto'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import { fechaEfectoInicial, fechaEfectoPorDefecto } from '@/lib/fecha-efecto-inicial'
@@ -170,6 +170,9 @@ type Resultado =
        *  (dentro, si `estado==='guardada'`) no hay a qué proyecto pedirle el
        *  ReRate/Submit reales: `cotizacionIdDe()` lo extrae con cuidado. */
       guardado: unknown
+      /** Proyecto del vendor: con él y la `ofertaId` de cada precio se leen sus
+       *  coberturas (gratis). `null` = no se sabe (no se ofrece el botón). */
+      projectId: string | null
       /** Fecha de efecto con la que se COTIZÓ (aaaa-mm-dd). `null` = no se sabe.
        *  Arranca el campo de fecha del panel de emisión (25/09/2026). */
       fechaEfecto: string | null
@@ -226,6 +229,7 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
     fallos: g.fallos,
     supuestos: [],
     guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+    projectId: g.projectId,
     fechaEfecto: g.fechaEfecto,
   }
 }
@@ -906,6 +910,7 @@ export default function Retarificador({
           fallos: r.fallos,
           supuestos: r.supuestos,
           guardado: r.guardado,
+          projectId: r.projectId,
           fechaEfecto: correcciones.fechaEfecto ?? null,
         })
         return
@@ -1851,6 +1856,11 @@ function Precios({
                           {p.expiraEn && (
                             <div className="muted" style={{ fontSize: 11 }}>
                               válido hasta {fechaEs(p.expiraEn)}
+                            </div>
+                          )}
+                          {!r.simulado && r.projectId && p.ofertaId && (
+                            <div style={{ fontSize: 11, marginTop: 2 }}>
+                              <CoberturasOferta projectId={r.projectId} offerId={p.ofertaId} />
                             </div>
                           )}
                           {p.opciones && p.opciones.length > 0 && (

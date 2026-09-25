@@ -173,3 +173,23 @@ test('el resumen NO nombra a Reale como «sin precio»: sería falso', () => {
   assert.match(r, /Zurich/)
   assert.ok(!/sin precio:[^·]*Reale/.test(r), 'Reale dio 8 precios: no puede figurar como sin precio')
 })
+
+test('leerCotizacion: cada precio lleva la oferta que lo contiene (offers[] → $ref), o null', () => {
+  const base = { product: { name: 'P', vendor: { name: 'Reale' } } }
+  const c = leerCotizacion({
+    id: 40842815,
+    mainQuotes: [
+      { ...base, id: 'Q1', premium: 300 },
+      { ...base, id: 'Q2', premium: 310 },
+      { ...base, id: 'Q3', premium: 320 },
+    ],
+    offers: [
+      { id: 1499492, mainQuote: { $ref: '#/mainQuotes/0', id: 1905469 } },
+      { id: 1499493, mainQuote: { id: 'Q3' } },
+    ],
+  })
+  assert.deepEqual(
+    c.precios.map((p) => p.ofertaId),
+    ['1499492', null, '1499493'],
+  )
+})

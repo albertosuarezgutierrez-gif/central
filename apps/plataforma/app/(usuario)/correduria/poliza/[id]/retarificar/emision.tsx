@@ -253,7 +253,7 @@ function CuentaCargo({
  * lectura en el vendor. `incluida: null` NO es «no incluida»: el vendor dice que
  * entonces hay que leer el texto, así que se pinta «ver detalle», nunca ✗.
  */
-function CoberturasOferta({ projectId, offerId }: { projectId: string; offerId: string }) {
+export function CoberturasOferta({ projectId, offerId }: { projectId: string; offerId: string }) {
   const [r, setR] = useState<RespuestaCoberturas | 'cargando' | null>(null)
   async function cargar() {
     setR('cargando')

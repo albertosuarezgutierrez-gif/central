@@ -352,3 +352,31 @@ Fuente: `portal.api.codeoscopic.io` (`static/572105cc.yaml`). Lo no documentado 
   mantener solo IBAN.
 - `POST /home/recommend-limits` consulta todas las compañías; coste no documentado → se cuenta en el
   libro como `limites_hogar` (coste por env, 0 = sin confirmar).
+
+### 3ª ronda (25/09/2026 noche, solo lectura)
+- **Ofertas iniciales:** `Insurance_V1.offers[]` existe SIN ReRate; cada oferta apunta a su precio
+  (`mainQuote: { $ref: '#/mainQuotes/N', id }`) — el precio no trae `offerId`. No todo precio
+  tiene oferta (ejemplo público: 26 precios, 15 ofertas). Implementado: `ofertasPorPrecio()` en
+  `lib/codeoscopic/respuesta.ts` → `Precio.ofertaId`. Coberturas con oferta inicial: [Probable].
+- **Coberturas:** `GET /insurances/{id}/offers/{offerId}/coverages` → `{ id, name, included?, text? }`,
+  lista común por ramo, sin capital numérico. Puerto: `GET /api/operador/codeoscopic/coberturas`.
+- **Complementos (`addonQuotes[]`, `product.addon: true`):** precio propio, `coverageDescription`,
+  `includeInOffers`/`requireInOffers`. ReRate: en `addonQuotes[]` (deben estar en
+  `compatibleAddonQuotes` del principal). Submit: una solicitud más; el principal va primero.
+- **Informe PDF** (`POST /insurances/{id}/reports`, `type: Offers`): `offerIds[]`,
+  `includeCoverages`, `includePremiumBreakdown`, `includeBrokerFee(Amount)`, `includeIpid`. Sin logo.
+  **La URL solo admite UNA descarga**: guardar el fichero al bajarlo.
+- **Documentos para emitir:** `POST .../policy-application-documents` si `checkDocuments`; cada uno
+  con `constraints` (`minFiles`, `maxFiles`, `maxFileSize`, `signatureRequired`,
+  `allowedMediaTypes`…). **Sin firma electrónica**: descargar, firmar fuera y adjuntar en el Submit
+  (multipart: `policyApplications` + `files[]`).
+- **`brokerFee`** = honorarios del mediador al cliente (no la comisión de la compañía), por
+  producto (`Fixed`/`Percentage`, min/max). ⚠️ Cobrarlos exige información previa por escrito al
+  cliente: revisar con cumplimiento antes de activarlo.
+- **Errores:** solo 400/401/403/404/500/502/503/504; `Error_V1.name` ∈ `UnknownError`,
+  `CompanyError`, `ValidationError`, `CrmError`, `CredentialsExpired`, `ThirdPartyServiceError`.
+  No existe «offer/quote expired» como error (nuestros 409/422 son del PUERTO, no del vendor).
+- **Tras el Submit:** puede volver ya `Approved` con `policyNumber` (síncrono en los ejemplos);
+  frecuencia de consulta sin documentar.
+- **Datos adicionales del riesgo de auto** (uso, puntos, alarma): no son campos de `CarRisk_V1`;
+  llegan como opciones del producto (Product Form), distintas por compañía.

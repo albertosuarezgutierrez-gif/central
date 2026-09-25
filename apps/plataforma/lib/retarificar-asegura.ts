@@ -587,6 +587,9 @@ export type Precio = {
   /** Opciones del producto ya legibles (`formattedOptions` del vendor). `null`/ausente =
    *  no las mandó (o cotización recuperada, que no las guarda); `[]` = ninguna. */
   opciones?: { etiqueta: string; valor: string }[] | null
+  /** Oferta inicial que contiene este precio: con ella se leen sus coberturas gratis.
+   *  `null`/ausente = ninguna oferta lo contiene, o cotización recuperada de BD. */
+  ofertaId?: string | null
   avisos?: string[]
 }
 
@@ -648,6 +651,8 @@ export type RespuestaRetarificar =
       /** Qué pasó con la COPIA en `seguros.tarificaciones`. El precio ya está
        *  pagado: quien lo pinte tiene que poder decir «no ha quedado copia». */
       guardado: unknown
+      /** Proyecto del vendor (para leer coberturas por oferta). `null` = no vino. */
+      projectId: string | null
     }
 
 /**
@@ -707,6 +712,7 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
       fallos: Array.isArray(r.fallos) ? (r.fallos as Fallo[]) : [],
       supuestos: Array.isArray(r.supuestos) ? (r.supuestos as Supuesto[]) : [],
       guardado: r.guardado ?? null,
+      projectId: typeof r.projectId === 'string' || typeof r.projectId === 'number' ? String(r.projectId) : null,
     }
   }
 

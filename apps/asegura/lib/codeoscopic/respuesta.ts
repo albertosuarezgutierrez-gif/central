@@ -77,6 +77,10 @@ export type Precio = {
   /** Opciones del producto ya legibles (`formattedOptions`: «Asistencia en viaje: SIN
    *  vehículo de sustitución»…). `null` = el vendor no las manda; `[]` = ninguna. */
   opciones: OpcionLegible[] | null
+  /** `id` de la OFERTA inicial que contiene este precio (`offers[]` del proyecto,
+   *  que apunta a su `mainQuote` por `$ref`). Con él se leen sus coberturas gratis.
+   *  `null` = ninguna oferta lo contiene (en el ejemplo público: 26 precios, 15 ofertas). */
+  ofertaId: string | null
   /**
    * `mainQuote` sin parsear, TAL CUAL lo devuelve el vendor para ESTE precio —
    * mismo objeto que `Oferta.quoteCrudo` en `emitir.ts`, pero de ANTES del
@@ -194,6 +198,7 @@ function leerPrecio(raw: unknown): Precio | null {
     productOptions: producto.options ?? null,
     expiraEn: str(q.expirationDate),
     opciones: leerOpcionesLegibles(q),
+    ofertaId: null,
     quoteCrudo: q,
   }
 }
@@ -222,6 +227,28 @@ function leerFallo(raw: unknown, companiasConPrecio: Set<string>): FalloProducto
  * demostrar por qué nos han facturado esa cotización, así que es preferible
  * fallar ruidosamente a guardar un proyecto huérfano.
  */
+/**
+ * `offers[]` del proyecto → qué oferta contiene cada `mainQuote`. La oferta apunta
+ * a su precio (`mainQuote: { $ref: '#/mainQuotes/0', id }`), no al revés. Se casa
+ * primero por el índice del `$ref` y, si no, por el id del precio.
+ */
+export function ofertasPorPrecio(offers: unknown): { porIndice: Map<number, string>; porId: Map<string, string> } {
+  const porIndice = new Map<number, string>()
+  const porId = new Map<string, string>()
+  for (const o of arr(offers)) {
+    const oferta = obj(o)
+    const id = str(oferta.id) ?? (num(oferta.id) !== null ? String(num(oferta.id)) : null)
+    if (!id) continue
+    const mq = obj(oferta.mainQuote)
+    const ref = str(mq.$ref)
+    const m = ref ? /^#\/mainQuotes\/(\d+)$/.exec(ref) : null
+    if (m && !porIndice.has(Number(m[1]))) porIndice.set(Number(m[1]), id)
+    const qid = str(mq.id) ?? (num(mq.id) !== null ? String(num(mq.id)) : null)
+    if (qid && !porId.has(qid)) porId.set(qid, id)
+  }
+  return { porIndice, porId }
+}
+
 export function leerCotizacion(raw: unknown): Cotizacion {
   const r = obj(raw)
   // El `id` de raíz llega como número; los de precio como string. No unificar
@@ -231,8 +258,13 @@ export function leerCotizacion(raw: unknown): Cotizacion {
     throw new Error('codeoscopic_respuesta_sin_project_id')
   }
 
+  const ofertaDe = ofertasPorPrecio(r.offers)
   const precios = arr(r.mainQuotes)
-    .map(leerPrecio)
+    .map((q, i) => {
+      const p = leerPrecio(q)
+      if (p) p.ofertaId = ofertaDe.porIndice.get(i) ?? ofertaDe.porId.get(p.id) ?? null
+      return p
+    })
     .filter((p): p is Precio => p !== null)
   const companiasConPrecio = new Set(precios.map((p) => p.compania))
 
