@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-25T12:22:19Z",
-  "sha": "2e4f76ebb80aa52fe1fa85abfbc100381f663000",
+  "generadoEn": "2026-09-25T12:57:49Z",
+  "sha": "b57bfcbdb33784f11a8fe5f576c481c78afbfdd4",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4224,7 +4224,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 52,
+          "linea": 53,
           "resumen": "La ficha de UNA póliza de la cartera. ───────────────────────────────────────────────────────────────────────────── 🚨 EL ID DE LA URL NO CONSULTA NADA. Esta es la línea entera de esta página. Una rut"
         },
         {
@@ -4233,13 +4233,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 223,
+          "linea": 226,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "584afbdc5efc"
+      "hash": "3cd1a09f1664"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -4251,6 +4251,7 @@
         "BienDeclarada",
         "Bien",
         "textoSustitucion",
+        "HistorialCompanias",
         "AvisoReciboDevuelto",
         "lineaRecibos",
         "resumenRecibos",
@@ -4267,7 +4268,7 @@
           "exportada": true,
           "params": "{ ramo }: { ramo: string | null }",
           "retorno": null,
-          "linea": 91
+          "linea": 93
         },
         {
           "nombre": "coberturaEspecifica",
@@ -4275,7 +4276,7 @@
           "exportada": false,
           "params": "p: PolizaPortal",
           "retorno": "string | null",
-          "linea": 115,
+          "linea": 117,
           "resumen": "La cobertura que especializa el ramo genérico de esta póliza (ver `coberturaEspecificaDeRamo`)."
         },
         {
@@ -4284,7 +4285,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "string",
-          "linea": 128,
+          "linea": 130,
           "resumen": "El titular de una fila: **qué cosa es**, no de qué compañía. Nadie se sabe su número de póliza y a casi nadie le dice nada «Occident» a secas cuando tiene dos con ellos. Lo que reconoce es su coche y "
         },
         {
@@ -4293,7 +4294,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "boolean",
-          "linea": 134,
+          "linea": 136,
           "resumen": "¿El titular de la fila ya identifica la póliza por sí solo (bien o cobertura específica)? Decide qué queda para la segunda línea."
         },
         {
@@ -4302,7 +4303,7 @@
           "exportada": true,
           "params": "{ ramo, matricula, referenciaCatastral, datosRamo, }: { ramo: string | null matricula: string | null referenciaCatastral: string | null datosRamo: Record<string, unknown> | null }",
           "retorno": null,
-          "linea": 148,
+          "linea": 150,
           "resumen": "Lo mismo para una póliza que ha aportado la propia persona. La matrícula vive en su COLUMNA (se consulta y se indexa) y el resto en el `datos_ramo`, así que se juntan antes de describir — `describirBi"
         },
         {
@@ -4311,17 +4312,26 @@
           "exportada": true,
           "params": "{ bien }: { bien: BienAsegurado }",
           "retorno": null,
-          "linea": 187,
+          "linea": 189,
           "resumen": "QUÉ está asegurado: el coche, el piso. 🚨 No pinta NADA cuando no hay dato, y eso es deliberado: `null` aquí significa «la compañía no nos lo ha informado» **o** «tu nivel no lo ve», y ninguna de las "
         },
         {
           "nombre": "textoSustitucion",
           "kind": "function",
           "exportada": true,
-          "params": "p: PolizaPortal, hoy: Date = new Date()",
+          "params": "p: PolizaPortal",
           "retorno": "string | null",
-          "linea": 221,
-          "resumen": "La póliza que esta sustituye (el cliente se cambió de compañía) ya no sale aparte: lo dice la nueva, para que no parezca que ha desaparecido un seguro. `null` = no sustituye a ninguna."
+          "linea": 226,
+          "resumen": "La póliza que esta sustituye (el cliente se cambió de compañía) ya no sale aparte: lo dice la nueva, para que no parezca que ha desaparecido un seguro. `null` = no sustituye a ninguna. 🚨 La fecha que"
+        },
+        {
+          "nombre": "HistorialCompanias",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ p }: { p: PolizaPortal }",
+          "retorno": null,
+          "linea": 239,
+          "resumen": "Historial de compañías de este seguro, de la actual a la más antigua, con el día de cada cambio. Sale en la ficha de cualquier póliza de la cadena (también en la vieja, para que diga a dónde fue). Cad"
         },
         {
           "nombre": "AvisoReciboDevuelto",
@@ -4329,7 +4339,7 @@
           "exportada": true,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 229
+          "linea": 275
         },
         {
           "nombre": "lineaRecibos",
@@ -4337,7 +4347,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "string | null",
-          "linea": 291,
+          "linea": 337,
           "resumen": "Lo próximo que se paga y lo último que se pagó, en una línea — o `null` cuando no hay NADA que resumir. 🚨 Es el titular de la póliza en la pestaña «Recibos», y por eso vive aquí suelto: lo pinta el C"
         },
         {
@@ -4346,7 +4356,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "ResumenPoliza",
-          "linea": 336,
+          "linea": 382,
           "resumen": "La misma línea, más si la póliza puede nacer plegada. 🚨 Con un recibo DEVUELTO nace ABIERTA aunque la cabecera lo nombre: el chip rojo, su explicación y el botón de avisar a la correduría viven en la"
         },
         {
@@ -4355,7 +4365,7 @@
           "exportada": true,
           "params": "{ p, sinResumen = false, }: { p: PolizaPortal /** * `true` cuando quien llama YA pinta la línea de resumen en otro sitio —hoy, * la cabecera del plegable de `VistaPorPoliza`—. No se toca nada más: los * tres estados y la lista siguen decidi",
           "retorno": null,
-          "linea": 361,
+          "linea": 407,
           "resumen": "TODO el bloque de recibos de una póliza, en voz NEUTRA. Lo que alarma vive en `<AvisoReciboDevuelto>`. Es **un solo componente a propósito**: los tres estados de abajo se deciden en un único sitio. Pa"
         },
         {
@@ -4364,7 +4374,7 @@
           "exportada": true,
           "params": "{ p }: { p: PolizaPortal }",
           "retorno": null,
-          "linea": 457,
+          "linea": 503,
           "resumen": "Coberturas. `null` = el nivel no las enseña (se oculta); `total === 0` = **no nos consta el detalle**, que NO es «no tienes coberturas»: decirle eso a alguien que sí las tiene es empujarle a contratar"
         },
         {
@@ -4373,7 +4383,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "string | null",
-          "linea": 515,
+          "linea": 561,
           "resumen": "Cuántos siniestros hay y cuántos siguen sin cerrar — o `null` cuando no nos consta ninguno (y entonces lo que hay dentro es la frase de «sin informar», que NO es «no has tenido ninguno» y por eso no s"
         },
         {
@@ -4382,7 +4392,7 @@
           "exportada": true,
           "params": "p: PolizaPortal",
           "retorno": "ResumenPoliza",
-          "linea": 527,
+          "linea": 573,
           "resumen": "Lo mismo para siniestros. Aquí no hay nada que la cabecera no pueda contar —«1 sin cerrar» ya lo dice—, así que solo nace abierta la que no tiene historial y lleva dentro la frase de «no nos consta ni"
         },
         {
@@ -4391,7 +4401,7 @@
           "exportada": true,
           "params": "{ p, sinResumen = false, }: { p: PolizaPortal /** `true` cuando el recuento ya lo dice la cabecera del plegable. Ver `RecibosDePoliza`. */ sinResumen?: boolean }",
           "retorno": null,
-          "linea": 555,
+          "linea": 601,
           "resumen": "El HISTORIAL de siniestros de una póliza. Alberto: «y los recibos? e historial siniestros?». No existía — la lectura filtraba por `abierto|en_tramitacion`, así que de los 67 siniestros de la cartera v"
         },
         {
@@ -4400,7 +4410,7 @@
           "exportada": false,
           "params": "{ t }: { t: TramitacionSiniestro }",
           "retorno": null,
-          "linea": 637,
+          "linea": 683,
           "resumen": "La línea de tiempo que manda la compañía. Sin reserva, sin culpa y sin nombres (lo garantiza `tramitacionSiniestro`, que ni los trae). «Lleva pagado» y no «te ha pagado»: el total incluye lo que paga "
         },
         {
@@ -4409,12 +4419,14 @@
           "exportada": false,
           "params": "{ estado, fechaHora }: { estado: string; fechaHora: Date | null }",
           "retorno": null,
-          "linea": 668
+          "linea": 714
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "next"
+      ],
       "rutaApi": null,
-      "hash": "c35f3602aeca"
+      "hash": "bf50339f64e6"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/AceptarOpcion.tsx",
@@ -7665,7 +7677,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "VinculoPortal | null",
-          "linea": 294,
+          "linea": 298,
           "resumen": "La columna es `text` con un CHECK en la BD, pero un despliegue viejo o una escritura por otro camino pueden dejar cualquier cosa: lo que no se reconoce es «no se sabe», nunca el estado que menos moles"
         },
         {
@@ -7674,7 +7686,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Nivel",
-          "linea": 336,
+          "linea": 340,
           "resumen": "`nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo."
         },
         {
@@ -7683,7 +7695,7 @@
           "exportada": true,
           "params": "c: CarteraPortal",
           "retorno": "CarteraPortal",
-          "linea": 344,
+          "linea": 348,
           "resumen": "La cartera para PINTAR la lista (bóveda, hoja QR): sin las pólizas ya sustituidas. Los permisos (partes, ficha, recordatorios) usan la cartera entera, nunca esta."
         },
         {
@@ -7692,7 +7704,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CarteraPortal | null>",
-          "linea": 349
+          "linea": 353
         },
         {
           "nombre": "claveGemela",
@@ -7700,7 +7712,7 @@
           "exportada": false,
           "params": "clienteId: string, numeroPoliza: string | null, tipo: string | null, fechaInicio: Date | null,",
           "retorno": "string | null",
-          "linea": 375,
+          "linea": 379,
           "resumen": "La clave con la que se empareja una póliza con su GEMELA duplicada. Los CUATRO campos van juntos y ninguno sobra: `clienteId` para que el emparejamiento no pueda cruzar dos fichas, `numeroPoliza` porq"
         },
         {
@@ -7709,7 +7721,7 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "boolean",
-          "linea": 404,
+          "linea": 408,
           "resumen": "¿Queda un sobre `v1:` SIN abrir tras intentar descifrar? Entonces la dirección EXISTE y solo no se puede leer aquí: la ficha no puede afirmar que falta."
         },
         {
@@ -7718,7 +7730,7 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "unknown",
-          "linea": 410
+          "linea": 414
         },
         {
           "nombre": "carteraDeIdentidad",
@@ -7726,7 +7738,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<CarteraPortal>",
-          "linea": 421
+          "linea": 425
         },
         {
           "nombre": "listaCoberturas",
@@ -7734,7 +7746,7 @@
           "exportada": false,
           "params": "cobs: Array<{ descripcion: string | null; codigo: string | null; capitalAsegurado: string | null }>,",
           "retorno": "",
-          "linea": 1008,
+          "linea": 1014,
           "resumen": "Nombre y capital de cada cobertura, alineados. Un capital 0, vacío o que no se sabe leer sale `null` («no informado»), nunca «0,00€»."
         },
         {
@@ -7743,7 +7755,7 @@
           "exportada": false,
           "params": "lista: ReciboFila[]",
           "retorno": "RecibosPortal",
-          "linea": 1025
+          "linea": 1031
         },
         {
           "nombre": "polizasParaParte",
@@ -7751,7 +7763,7 @@
           "exportada": true,
           "params": "c: Pick<CarteraPortal, 'propias' | 'autorizadas'>",
           "retorno": "Set<string>",
-          "linea": 1048,
+          "linea": 1054,
           "resumen": "Las pólizas sobre las que esta cartera puede DAR UN PARTE: todas las propias y, de las autorizadas, solo las que traen el alcance `partes` (`puedeDarParte`). Una sola fuente para la ruta que lo crea y"
         },
         {
@@ -7760,13 +7772,13 @@
           "exportada": false,
           "params": "a: Date | null, b: Date | null",
           "retorno": "Date | null",
-          "linea": 1056,
+          "linea": 1062,
           "resumen": "La más tardía de dos caducidades, donde `null` = no caduca (gana siempre)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "04f4ed61860d"
+      "hash": "72840058be69"
     },
     {
       "ruta": "apps/asegura-portal/lib/catastro-sugerencias.ts",
@@ -8466,6 +8478,28 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "e25d5668c8cc"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/historial-companias.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "El historial de un seguro cuando el cliente se cambia de compañía (Mapfre → Reale…): la cadena `sustituyeAId` recorrida en los dos sentidos, de la más antigua a la actual. 🚨 Se recorre SOLO sobre lo que este lector ve (`porId` sale de `titular()`), igual que `sustituyeA`: un eslabón que no ve corta",
+      "exporta": [
+        "historialCompanias"
+      ],
+      "funciones": [
+        {
+          "nombre": "historialCompanias",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, polizas: readonly Nodo[]",
+          "retorno": "EslabonHistorial[]",
+          "linea": 24,
+          "resumen": "Cadena completa en la que está `id`, de la más antigua a la más reciente. `[]` = no hay cambio."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "fa9145ae276b"
     },
     {
       "ruta": "apps/asegura-portal/lib/hojas.ts",
@@ -75107,7 +75141,7 @@
           "exportada": false,
           "params": "{ lista }: { lista: Poliza['coberturas'] }",
           "retorno": null,
-          "linea": 319
+          "linea": 321
         },
         {
           "nombre": "fechaCorta",
@@ -75115,7 +75149,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string",
-          "linea": 375
+          "linea": 377
         },
         {
           "nombre": "CapitalCobertura",
@@ -75123,7 +75157,7 @@
           "exportada": false,
           "params": "{ capital, descripcion }: { capital: string | null; descripcion: string | null }",
           "retorno": null,
-          "linea": 381
+          "linea": 383
         },
         {
           "nombre": "Limites",
@@ -75131,7 +75165,7 @@
           "exportada": false,
           "params": "{ detalle }: { detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 393
+          "linea": 395
         },
         {
           "nombre": "Franquicia",
@@ -75139,7 +75173,7 @@
           "exportada": false,
           "params": "{ texto, detalle }: { texto: string | null; detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 408
+          "linea": 410
         },
         {
           "nombre": "Recibos",
@@ -75147,7 +75181,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 426
+          "linea": 428
         },
         {
           "nombre": "TablaRecibos",
@@ -75155,7 +75189,7 @@
           "exportada": false,
           "params": "{ lista }: { lista: Poliza['listaRecibos'] }",
           "retorno": null,
-          "linea": 459
+          "linea": 461
         },
         {
           "nombre": "Intervinientes",
@@ -75163,7 +75197,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 490,
+          "linea": 492,
           "resumen": "El TOMADOR va SIEMPRE, y el primero: no es un interviniente sino el titular de la póliza, así que no está en `poliza_intervinientes` y antes no salía. Alberto lo vio el 02/09/2026 en la 6930FBP, donde"
         },
         {
@@ -75172,7 +75206,7 @@
           "exportada": false,
           "params": "{ label, valor, nota, color }: { label: string; valor: string | null; nota?: string; color?: string }",
           "retorno": null,
-          "linea": 518
+          "linea": 520
         },
         {
           "nombre": "NoSePudo",
@@ -75180,7 +75214,7 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 535
+          "linea": 537
         },
         {
           "nombre": "fmt",
@@ -75188,7 +75222,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 555
+          "linea": 557
         },
         {
           "nombre": "Estimacion",
@@ -75196,7 +75230,7 @@
           "exportada": false,
           "params": "{ e, retarificar }: { e: Poliza['estimacion']; retarificar: { href: string; rotulo: string } | null }",
           "retorno": null,
-          "linea": 573,
+          "linea": 575,
           "resumen": "─── ¿Merece la pena pedir precio? ──────────────────────────────────────── Va pegada a la evolución de la prima porque responde a la MISMA pregunta: pedir precio cuesta 0,50€ reales y esto dice si com"
         },
         {
@@ -75205,7 +75239,7 @@
           "exportada": false,
           "params": "{ etiqueta, eur: importe }: { etiqueta: string; eur: number }",
           "retorno": null,
-          "linea": 648,
+          "linea": 650,
           "resumen": "Un número ESTIMADO: `≈`, tamaño y color propios para no confundirlo con una prima real."
         },
         {
@@ -75214,7 +75248,7 @@
           "exportada": false,
           "params": "v: NonNullable<Poliza['estimacion']>['veredicto']",
           "retorno": "React.CSSProperties",
-          "linea": 663
+          "linea": 665
         },
         {
           "nombre": "CapitalesHogar",
@@ -75222,7 +75256,7 @@
           "exportada": false,
           "params": "{ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }",
           "retorno": null,
-          "linea": 683,
+          "linea": 685,
           "resumen": "─── Capitales de hogar ─────────────────────────────────────────────────── SEIS estados y ninguno se colapsa con otro. Los dos que muerden: · `solo_sublimites`: `mayorEur` NO es el continente — pintar"
         },
         {
@@ -75231,12 +75265,12 @@
           "exportada": false,
           "params": "{ titulo, c }: { titulo: string; c: CapitalAsegurado | null }",
           "retorno": null,
-          "linea": 697
+          "linea": 699
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0d8183eb7453"
+      "hash": "4003b11c2842"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/Plegable.tsx",
@@ -156860,7 +156894,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3759,
-    "funciones": 11989
+    "archivos": 3760,
+    "funciones": 11991
   }
 }
