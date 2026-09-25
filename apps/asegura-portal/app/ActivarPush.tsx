@@ -83,15 +83,72 @@ export function ActivarPush() {
   return (
     <div className="campana-push">
       {estado === 'activo' ? (
-        <button type="button" className="campana-reintentar" onClick={desactivar}>
-          Desactivar avisos por notificación
-        </button>
+        <>
+          <PreferenciasAvisos />
+          <button type="button" className="campana-reintentar" onClick={desactivar}>
+            Desactivar avisos por notificación
+          </button>
+        </>
       ) : (
         <button type="button" className="campana-reintentar" onClick={activar} disabled={estado === 'trabajando'}>
           {estado === 'error' ? 'No se ha podido activar — reintentar' : 'Avisarme también con una notificación'}
         </button>
       )}
     </div>
+  )
+}
+
+const TIPOS: { tipo: string; texto: string }[] = [
+  { tipo: 'recibo_devuelto', texto: 'Recibo devuelto' },
+  { tipo: 'recibo_nuevo', texto: 'Recibo nuevo al cobro' },
+  { tipo: 'siniestro', texto: 'Novedades de un siniestro' },
+]
+
+/**
+ * Qué novedades de la compañía (llegan por CIMA) avisa la notificación. Solo se pinta con el push
+ * activo: sin él no hay nada que elegir. Si no se pueden leer se DICE — unas casillas pintadas por
+ * defecto mentirían sobre lo que de verdad está guardado.
+ */
+function PreferenciasAvisos() {
+  const [prefs, setPrefs] = useState<Record<string, boolean> | null | 'error'>(null)
+  const [fallo, setFallo] = useState(false)
+
+  useEffect(() => {
+    void fetch('/api/push/preferencias')
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((d: { preferencias: Record<string, boolean> }) => setPrefs(d.preferencias))
+      .catch(() => setPrefs('error'))
+  }, [])
+
+  if (prefs === null) return null
+  if (prefs === 'error') return <p className="campana-prefs-error">No hemos podido leer qué avisos tienes activados.</p>
+
+  const cambiar = async (tipo: string, activo: boolean) => {
+    const antes = prefs
+    setFallo(false)
+    setPrefs({ ...prefs, [tipo]: activo })
+    const r = await fetch('/api/push/preferencias', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ tipo, activo }),
+    }).catch(() => null)
+    if (!r?.ok) {
+      setPrefs(antes)
+      setFallo(true)
+    }
+  }
+
+  return (
+    <fieldset className="campana-prefs">
+      <legend>Avisarme de</legend>
+      {TIPOS.map(({ tipo, texto }) => (
+        <label key={tipo}>
+          <input type="checkbox" checked={prefs[tipo] ?? true} onChange={(e) => void cambiar(tipo, e.target.checked)} />
+          {texto}
+        </label>
+      ))}
+      {fallo && <p className="campana-prefs-error">No se ha podido guardar el cambio. Inténtalo de nuevo.</p>}
+    </fieldset>
   )
 }
 

@@ -777,6 +777,37 @@ input, select, textarea, button { font: inherit; }
   border-top: 1px solid var(--border);
   margin-top: 4px;
 }
+.campana-prefs {
+  border: 0;
+  margin: 0 0 6px;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.campana-prefs legend {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0;
+  margin-bottom: 2px;
+}
+.campana-prefs label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.campana-prefs input {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+.campana-prefs-error {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
 .campana-push .campana-reintentar {
   font-size: 13px;
   font-weight: 500;
