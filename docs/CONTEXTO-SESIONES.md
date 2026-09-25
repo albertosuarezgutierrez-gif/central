@@ -590,6 +590,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (25/09/2026) Correduría · pestaña Contactos más clara
 - Alberto: «no es nada clara». Portal: sin el párrafo de «no hay nada que hacer» cuando ya entra (va al `title`), las 3 acciones en una fila con rótulos cortos sin repetir el nombre.
 - Personas: el formulario de autorización (alcance) va PLEGADO detrás de su botón, y ese botón pasa a secundario: el caso normal (nadie ve nada de nadie) ya no parece una tarea pendiente.
+- Cabecera: número y correo pasan a texto seleccionable (los iconos ya llaman/escriben; eran la misma acción dos veces).
 - El titular saliendo como «persona» ajena (PABLO JUAN GUZMAN LOZANO en su propia ficha) NO se toca aquí: lo arregla el PR #3596.
 
 ## (25/09/2026) Ficha cliente: «Eliminar» también en pólizas VIVAS canceladas de Oportunidades

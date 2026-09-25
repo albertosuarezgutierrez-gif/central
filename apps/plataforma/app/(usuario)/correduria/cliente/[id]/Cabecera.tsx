@@ -385,10 +385,10 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
       <AccionesContacto telefono={ef.telefono} email={ef.email} quien={nombre} mensaje={mensajeWa} />
       {ef.telefono ? (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-          {/* Convención de Occident (capturas Drive, 11/09/2026): lo que se
-              puede TOCAR se pinta en el color de marca y subrayado, para
-              distinguirlo del texto de solo lectura sin depender de un icono. */}
-          <a href={`tel:${ef.telefono.replace(/\s/g, '')}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>📞 {ef.telefono}</a>
+          {/* Texto para LEER, no un segundo enlace (25/09/2026): el icono de al
+              lado ya llama, y el número repetido como enlace con su 📞 era la
+              misma acción dos veces seguidas. */}
+          <span style={{ userSelect: 'all' }}>{ef.telefono}</span>
           {deOtro(ef.viaTelefono)}
           {mas(masTel)}
         </span>
@@ -401,7 +401,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
       )}
       {ef.email ? (
         <span>
-          <a href={`mailto:${ef.email}`} style={{ color: 'var(--primary)', textDecoration: 'underline' }}>✉️ {ef.email}</a>
+          <span style={{ userSelect: 'all', overflowWrap: 'anywhere' }}>{ef.email}</span>
           {deOtro(ef.viaEmail)}
           {mas(masEmail)}
         </span>
