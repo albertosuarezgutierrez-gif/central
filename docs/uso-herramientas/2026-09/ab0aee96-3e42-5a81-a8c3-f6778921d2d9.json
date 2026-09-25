@@ -1,19 +1,20 @@
 {
  "sesion": "ab0aee96-3e42-5a81-a8c3-f6778921d2d9",
  "inicio": "2026-09-25T12:09:57.541Z",
- "fin": "2026-09-25T13:18:07.892Z",
- "llamadas": 117,
+ "fin": "2026-09-25T13:33:50.482Z",
+ "llamadas": 131,
  "categorias": {
   "otro": {
-   "llamadas": 6,
-   "chars_in": 8292,
-   "chars_out": 883,
+   "llamadas": 13,
+   "chars_in": 8369,
+   "chars_out": 67584,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 5,
-    "SubagentHandback": 1
+    "ToolSearch": 6,
+    "SubagentHandback": 1,
+    "ReadNotifications": 6
    }
   },
   "mcp:Google_Drive": {
@@ -29,26 +30,27 @@
    }
   },
   "bash": {
-   "llamadas": 88,
-   "chars_in": 53301,
-   "chars_out": 260313,
+   "llamadas": 90,
+   "chars_in": 54101,
+   "chars_out": 262715,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 88
+    "Bash": 90
    }
   },
   "mcp:github": {
-   "llamadas": 2,
-   "chars_in": 3862,
-   "chars_out": 13520,
+   "llamadas": 4,
+   "chars_in": 4086,
+   "chars_out": 28155,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 1
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 2
    }
   },
   "mcp:Supabase": {
@@ -64,14 +66,14 @@
    }
   },
   "sql": {
-   "llamadas": 7,
-   "chars_in": 5230,
-   "chars_out": 18391,
+   "llamadas": 10,
+   "chars_in": 6317,
+   "chars_out": 22284,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 7
+    "mcp__Supabase__execute_sql": 10
    }
   },
   "escritura": {
