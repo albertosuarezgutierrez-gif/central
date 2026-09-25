@@ -678,7 +678,7 @@ export async function fichaCliente(
       select: SELECT_SINIESTRO,
       orderBy: { fechaHora: 'desc' },
     }),
-    leerIntervinientes(db, correduriaId, clienteId, idsPolizas),
+    leerIntervinientes(db, correduriaId, clienteId, idsPolizas, c.dniLookupHash ?? null),
   ])
 
   // 🧬 La copia GEMELA del volcado: 16 de las 109 vivas existen dos veces y en
@@ -914,6 +914,11 @@ async function leerIntervinientes(
   correduriaId: string,
   tomadorId: string,
   idsPolizas: string[],
+  /** NIF del tomador (índice ciego). Una fila con el MISMO NIF es el tomador
+   *  aunque CIMA la cuelgue de otra ficha suya duplicada: mismo identificador =
+   *  misma persona. Sin esto salía en «Personas» como un tercero sin vínculo
+   *  (Pablo Guzmán Lozano, propietario de su propio coche, 25/09/2026). */
+  tomadorNifHash: string | null = null,
 ): Promise<IntervinienteFicha[] | null> {
   if (idsPolizas.length === 0) return []
   try {
@@ -956,7 +961,7 @@ async function leerIntervinientes(
         emailIlegible: email === null && (ilegible(f.email) || ilegible(f.cliente?.email)),
         fichaId: f.clienteId ?? null,
         personaClave: f.nifLookupHash ? claves.get(f.nifLookupHash) ?? null : null,
-        esTomador: f.clienteId === tomadorId,
+        esTomador: f.clienteId === tomadorId || (tomadorNifHash !== null && f.nifLookupHash === tomadorNifHash),
         origen: String(f.origen),
         // Si el teléfono/correo es de la PROPIA fila o se ha rellenado con el de su ficha (arriba).
         // Sin esto, «lo que tiene la compañía» enseñaría como de CIMA un dato que es nuestro.

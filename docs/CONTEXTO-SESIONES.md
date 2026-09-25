@@ -618,6 +618,15 @@ resucita una del volcado. Guarda del lado de asegura: una viva en vigor sigue si
   sentidos sobre lo que ESE lector ve; fecha del cambio = inicio de la nueva (22/09); sin fecha, no se inventa.
 - `PolizaPortal.cambiosCompania` + sección en `/boveda/poliza/[id]` (también en la ficha de la vieja, con enlace).
 
+## (25/09/2026) Ficha: el tomador con ficha duplicada salía en «Personas» como un tercero
+- Pablo Guzmán Lozano: CIMA colgaba al propietario de su coche de OTRA ficha suya (lead, mismo hash de
+  DNI, 0 pólizas) → salía «sin vínculo» con botón «Declarar». `leerIntervinientes` (asegura) marca ahora
+  `esTomador` también por NIF igual al del tomador. Y el formulario de «Declarar» hace scroll al abrirse
+  (en móvil quedaba fuera de pantalla y el botón «no hacía nada»).
+- Fusión DESDE LA FICHA: si hay otra con el mismo DNI se avisa arriba y se comparan campo a campo (elige cuál
+  se queda). Función de BD `seguros.fusionar_clientes` (SECURITY DEFINER, aplicada; lápida + `snapshot_before` +
+  `snapshot_superviviente` nueva). Nunca con DNI distinto ni con DNI sin índice. Revisión de arquitectura aplicada (direcciones enteras, `crm_seguros` sin EXECUTE, ids movidos y borrados en el log).
+
 ## (25/09/2026) Oportunidades: se gestionan DENTRO de la ficha del cliente (PR #3590)
 - Alberto: la página aparte «ocupa mucha pantalla». La fila de cada oportunidad (pestaña Oportunidades) se despliega
   con «Gestionar ▾» y trae estado, acciones, **datos para tarificar** (botón al tarificador del ramo + `PedirDatos`),
