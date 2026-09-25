@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
-import { estaHuerfana } from '@/lib/correduria/seguros-cliente'
+import { estaHuerfana, proximoAniversario, vencimientoOportunidad } from '@/lib/correduria/seguros-cliente'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import type { SiniestroCartera } from '@/lib/siniestros-asegura'
 import { eur } from '@/lib/dinero'
@@ -40,7 +40,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
           : reparto.oportunidadesLeidas && <Vacio>Ninguna abierta. <Link href={`/correduria/cliente/${clienteId}?tab=oportunidades`}>➕ Abrir una oportunidad</Link></Vacio>}
         {historicas.length > 0 && (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-            Además, {historicas.length} póliza(s) del volcado histórico (2013-2018, sin CIMA): son leads viejos.{' '}
+            Además, {historicas.length} póliza(s) más del volcado histórico (2013-2018, sin CIMA).{' '}
             <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>verlas</Link>
           </p>
         )}
@@ -133,11 +133,19 @@ function TarjetaSeguro({ s, ctx }: { s: SeguroCliente; ctx: Ctx }) {
     // En «oportunidad», si hay seguimiento abierto la tarjeta lleva a él: eso es lo que se trabaja.
     href = o ? `/correduria/oportunidad/${o.id}` : `/correduria/poliza/${p.id}`
     ramo = TIPOS[p.tipo] ?? p.tipo
-    estado = p.confirmadaCima ? ESTADO_POLIZA[p.estado.trim()] ?? p.estado.replace(/_/g, ' ') : 'Pendiente de CIMA'
+    // Del volcado histórico, el estado y el año son de hace una década: lo que vale es que
+    // estuvo con nosotros y el día/mes en que renovaba, que es cuándo hay que llamarle.
+    estado = s.historica ? 'Estuvo con nosotros'
+      : p.confirmadaCima ? ESTADO_POLIZA[p.estado.trim()] ?? p.estado.replace(/_/g, ' ') : 'Pendiente de CIMA'
     titulo = p.objeto?.titulo ?? p.matricula ?? (p.numeroPoliza ? `Póliza nº ${p.numeroPoliza}` : 'Sin detalle del bien')
+    const renueva = s.historica ? proximoAniversario(p.fechaVencimiento, ctx.hoy) : null
     lineas = [
-      `${p.aseguradora}${p.numeroPoliza ? ` · nº ${p.numeroPoliza}` : ''}`,
-      [p.fechaVencimiento ? `Vence ${fmt(p.fechaVencimiento.slice(0, 10))}` : 'Sin fecha de vencimiento', p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
+      `${p.aseguradora}${p.numeroPoliza ? ` · nº ${p.numeroPoliza}` : ''}${s.historica ? ' (volcado histórico)' : ''}`,
+      s.historica
+        ? renueva && p.fechaVencimiento
+          ? `Renovaría el ${fmt(renueva)} · último dato: vencía ${fmt(p.fechaVencimiento.slice(0, 10))}`
+          : 'Sin fecha de vencimiento: no se sabe cuándo renueva'
+        : [p.fechaVencimiento ? `Vence ${fmt(p.fechaVencimiento.slice(0, 10))}` : 'Sin fecha de vencimiento', p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
     ]
     if (p.recibos?.devueltos) avisos.push({ texto: `${p.recibos.devueltos} recibo(s) devuelto(s)`, tono: 'malo' })
     const sin = ctx.abiertos?.get(p.id) ?? 0
@@ -159,8 +167,16 @@ function TarjetaSeguro({ s, ctx }: { s: SeguroCliente; ctx: Ctx }) {
     ramo = TIPOS[o.ramo ?? ''] ?? rotuloRamo(o.ramo)
     estado = ROTULO_ESTADO[o.estado]
     titulo = o.aseguradora ? `Lo tiene en ${o.aseguradora}` : 'Compañía actual sin anotar'
+    // Un fin de vigencia anotado hace más de un año no es «le vence» en pasado: un seguro
+    // anual renueva el mismo día cada año, así que se dice el próximo (y de dónde sale).
+    // Uno que venció hace menos se queda tal cual: esa renovación se acaba de pasar.
+    const fin = o.fechaFinVigencia?.slice(0, 10) ?? null
+    const proxima = vencimientoOportunidad(fin, ctx.hoy)
+    const vence = fin === null || proxima === null ? 'Vencimiento sin anotar'
+      : proxima === fin ? `Le vence ${fmt(fin)}`
+        : `Le renueva el ${fmt(proxima)} (anotado: ${fmt(fin)})`
     lineas = [
-      [o.fechaFinVigencia ? `Le vence ${fmt(o.fechaFinVigencia.slice(0, 10))}` : 'Vencimiento sin anotar', o.prima !== null ? `paga ${eur(o.prima)}` : null].filter(Boolean).join(' · '),
+      [vence, o.prima !== null ? `paga ${eur(o.prima)}` : null].filter(Boolean).join(' · '),
     ]
     avisos.push(...avisosOportunidad(o, ctx.hoy))
   } else {

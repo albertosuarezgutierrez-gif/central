@@ -73,6 +73,16 @@ test('con alguna que informa y sin devoluciones es 0 — «se miró y no hay», 
   assert.equal(r.recibos.polizasSinInformar, 1)
 })
 
+test('si ninguna póliza trae un solo recibo, los contadores son «—», no «0 · ninguno devuelto»', () => {
+  const r = resumenFicha({
+    polizas: [poliza({ id: 'a', estado: 'recibo_devuelto', recibos: { total: 0, pendientes: 0, devueltos: 0 } })],
+    siniestros: [], documentos: [], hoy: HOY,
+  })
+  assert.equal(r.recibos.devueltos, null)
+  assert.equal(r.recibos.pendientes, null)
+  assert.equal(r.recibos.polizasSinRecibos, 1)
+})
+
 test('una póliza que informa «total: 0» se cuenta aparte: no se sabe si está pagada', () => {
   const r = resumen([
     poliza({ id: 'a', recibos: { total: 0, pendientes: 0, devueltos: 0 } }),

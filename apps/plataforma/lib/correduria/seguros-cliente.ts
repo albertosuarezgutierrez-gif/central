@@ -14,8 +14,12 @@ import type { OportunidadDeCliente } from '../seguimiento-asegura'
  *   ya no existe  → el riesgo desapareció: póliza en `fin_riesgo` u oportunidad
  *                   perdida porque el cliente «ya no lo necesita».
  *
- * El volcado histórico (2013-2018, sin CIMA) va APARTE: son leads, pero 28.000
- * filas viejas no pueden ahogar lo que está vivo.
+ * El volcado histórico (2013-2018, sin CIMA) también es «lo tiene en otra
+ * compañía» (Alberto, 25/09/2026: «póliza en competencia es oportunidad»): la
+ * MÁS RECIENTE de cada ramo que no esté ya cubierto sale como tarjeta de
+ * oportunidad —era el auto de Rafael Campa que se le ofrecía por WhatsApp y
+ * que la ficha escondía en una nota al pie—. El resto sigue aparte, plegado:
+ * una por ramo basta para trabajarlo sin que 20 fichas viejas ahoguen lo vivo.
  *
  * Pura y sin JSX: la ficha la pinta, este fichero decide, y el test lo vigila.
  */
@@ -27,6 +31,8 @@ export type SeguroCliente =
       poliza: PolizaFicha
       /** La oportunidad abierta del mismo ramo, si la hay: la tarjeta lleva a su seguimiento. */
       oportunidad: OportunidadDeCliente | null
+      /** Viene del volcado histórico: su fecha es de hace años, solo vale el día y el mes. */
+      historica?: true
     }
   | { clase: 'oportunidad'; id: string; oportunidad: OportunidadDeCliente }
   | { clase: 'declarada'; id: string; declarada: PolizaDeclaradaFicha }
@@ -35,7 +41,7 @@ export type RepartoSeguros = {
   conNosotros: SeguroCliente[]
   oportunidades: SeguroCliente[]
   yaNoExiste: SeguroCliente[]
-  /** Volcado histórico sin CIMA: leads viejos, se enseñan plegados. */
+  /** Volcado histórico sin CIMA que NO sale como tarjeta (ramo ya cubierto u otra más reciente). */
   historicas: PolizaFicha[]
   /** `false` = no se pudieron leer las oportunidades: el cubo puede estar incompleto. */
   oportunidadesLeidas: boolean
@@ -62,17 +68,58 @@ function porFecha(a: string | null, b: string | null): number {
   return a < b ? -1 : 1
 }
 
-function fechaDe(s: SeguroCliente): string | null {
-  if (s.clase === 'poliza') return s.oportunidad?.proximaTarea?.fechaLimite ?? s.poliza.fechaVencimiento
-  if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? s.oportunidad.fechaFinVigencia
+/**
+ * El próximo aniversario (hoy incluido) de una fecha de vencimiento ya pasada:
+ * un seguro anual renueva el mismo día cada año, así que un «vence 24/10/2023»
+ * anotado hace años dice «le toca el 24/10/2026». Una fecha futura se devuelve
+ * tal cual. `null` si la fecha no se puede leer — no se inventa ninguna.
+ */
+export function proximoAniversario(iso: string | null, hoy: Date): string | null {
+  if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(iso)) return null
+  const [a, m, d] = [+iso.slice(0, 4), +iso.slice(5, 7), +iso.slice(8, 10)]
+  if (m < 1 || m > 12 || d < 1 || d > 31) return null
+  const hoyUtc = Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate())
+  const en = (anio: number) => {
+    // 29/02 en un año no bisiesto renueva el 28/02; el resto se recorta al último día del mes.
+    const dia = Math.min(d, new Date(Date.UTC(anio, m, 0)).getUTCDate())
+    return Date.UTC(anio, m - 1, dia)
+  }
+  if (en(a) >= hoyUtc) return new Date(en(a)).toISOString().slice(0, 10)
+  let anio = hoy.getUTCFullYear()
+  if (en(anio) < hoyUtc) anio++
+  return new Date(en(anio)).toISOString().slice(0, 10)
+}
+
+/**
+ * La fecha que se enseña para el vencimiento de una OPORTUNIDAD. Si venció hace
+ * menos de un año es una renovación que se acaba de pasar: se deja tal cual
+ * (atrasada, que es lo que hay que ver). Si es más vieja, el dato es de hace
+ * años y lo útil es su próximo aniversario.
+ */
+export function vencimientoOportunidad(iso: string | null, hoy: Date): string | null {
+  const proxima = proximoAniversario(iso, hoy)
+  if (proxima === null || iso === null) return proxima
+  const fin = iso.slice(0, 10)
+  const haceUnAnio = new Date(Date.UTC(hoy.getUTCFullYear() - 1, hoy.getUTCMonth(), hoy.getUTCDate())).toISOString().slice(0, 10)
+  return fin > haceUnAnio ? fin : proxima
+}
+
+function fechaDe(s: SeguroCliente, hoy: Date): string | null {
+  if (s.clase === 'poliza') {
+    return s.oportunidad?.proximaTarea?.fechaLimite
+      ?? (s.historica ? proximoAniversario(s.poliza.fechaVencimiento, hoy) : s.poliza.fechaVencimiento)
+  }
+  if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? vencimientoOportunidad(s.oportunidad.fechaFinVigencia, hoy)
   return s.declarada.fechaVencimiento
 }
 
-export function repartirSegurosCliente({ polizas, declaradas, oportunidades }: {
+export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy = new Date() }: {
   polizas: PolizaFicha[]
   declaradas: PolizaDeclaradaFicha[] | null
   /** `null` = no se pudieron leer. */
   oportunidades: OportunidadDeCliente[] | null
+  /** Por defecto `new Date()`; parámetro para los tests. */
+  hoy?: Date
 }): RepartoSeguros {
   const conNosotros: SeguroCliente[] = []
   const enCompetencia: Extract<SeguroCliente, { clase: 'poliza' }>[] = []
@@ -90,6 +137,32 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades }: {
     // lo contrario — que es como ya la cuenta la cabecera de la ficha.
     else conNosotros.push(s)
   }
+
+  // Del volcado histórico, la más reciente de cada ramo del que no sepamos nada más
+  // nuevo: ni póliza viva (con nosotros, perdida o en `fin_riesgo`), ni una aportada
+  // desde el portal, ni una oportunidad PERDIDA (su competidor y su fecha son de hoy,
+  // y una de «ya no lo necesita» dice que el riesgo desapareció). Las abiertas no
+  // bloquean: se enganchan a esta tarjeta más abajo.
+  const ramosVivos = new Set<string>([
+    ...conNosotros.flatMap(s => (s.clase === 'poliza' ? [s.poliza.tipo] : [])),
+    ...enCompetencia.map(s => s.poliza.tipo),
+    ...yaNoExiste.flatMap(s => (s.clase === 'poliza' ? [s.poliza.tipo] : [])),
+    ...(declaradas ?? []).flatMap(d => (d.ramo ? [d.ramo] : [])),
+    ...(oportunidades ?? [])
+      .filter(o => o.estado === 'perdida' && o.motivoPerdida !== 'error_alta')
+      .flatMap(o => (o.ramo ? [o.ramo] : [])),
+  ])
+  const representante = new Map<string, PolizaFicha>()
+  for (const p of historicas) {
+    if (p.estado.trim() === 'fin_riesgo' || ramosVivos.has(p.tipo)) continue
+    const previa = representante.get(p.tipo)
+    if (!previa || (p.fechaVencimiento ?? '') > (previa.fechaVencimiento ?? '')) representante.set(p.tipo, p)
+  }
+  for (const p of representante.values()) {
+    enCompetencia.push({ clase: 'poliza', id: p.id, poliza: p, oportunidad: null, historica: true })
+  }
+  const enTarjeta = new Set([...representante.values()].map(p => p.id))
+  const historicasPlegadas = historicas.filter(p => !enTarjeta.has(p.id))
 
   const sueltas: SeguroCliente[] = []
   if (oportunidades) {
@@ -135,13 +208,13 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades }: {
     .filter(d => d.yaEnCartera !== true)
     .map(d => ({ clase: 'declarada' as const, id: d.id, declarada: d }))
 
-  const ordenar = (l: SeguroCliente[]) => l.sort((a, b) => porFecha(fechaDe(a), fechaDe(b)))
+  const ordenar = (l: SeguroCliente[]) => l.sort((a, b) => porFecha(fechaDe(a, hoy), fechaDe(b, hoy)))
 
   return {
     conNosotros: ordenar(conNosotros),
     oportunidades: ordenar([...enCompetencia, ...sueltas, ...aportadas]),
     yaNoExiste,
-    historicas,
+    historicas: historicasPlegadas,
     oportunidadesLeidas: oportunidades !== null,
     declaradasLeidas: declaradas !== null,
   }

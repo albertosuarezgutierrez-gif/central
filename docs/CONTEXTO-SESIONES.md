@@ -579,6 +579,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Ficha correduría: el auto histórico de un ex-cliente sale como oportunidad
+- Caso Rafael Campa: recaptación le ofrecía el auto (Pelayo, vencía 20/10/2015) y la ficha solo lo nombraba en una nota al pie; «vida» era una oportunidad en competencia (legítima: «póliza en competencia es oportunidad», Alberto).
+- `repartirSegurosCliente`: del volcado histórico, la más reciente de cada ramo no cubierto → tarjeta de oportunidad (`historica: true`); el resto sigue plegado. «Ya no lo necesita» retira el ramo.
+- `proximoAniversario()`: fechas de fin pasadas se pintan como la próxima renovación (vida 24/10/2023 → 24/10/2026).
+- `resumenFicha`: con solo pólizas de `total: 0` recibos, devueltos/pendientes = `null` («—»), no «0 · ninguno devuelto».
+
 ## (25/09/2026) Portal asegura: «Detalles» duplicaba las coberturas + logos sin nombre
 - El EIAC mete las coberturas en `datos_especificos.capitales` con `bien:'OTROS'`; `describirBien` las pintaba en «Detalles» y la ficha las repetía en la lista de coberturas. Ahora se filtran (`esPartidaDeCobertura`) y el capital pasa a la lista desde `poliza_coberturas.capital_asegurado` (medido: las 513 OTROS con importe tienen su fila).
 - «Mis siniestros»: con logo ya no se repite el nombre de la compañía (va en el `alt`). Ojo: el logo de Occident sigue siendo el de «Catalana Occidente».
