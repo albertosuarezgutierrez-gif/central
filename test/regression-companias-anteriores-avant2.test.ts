@@ -25,3 +25,9 @@ test('auto nuevo usa ese catálogo antes que el directorio de la correduría', (
   assert.match(page, /catalogoAsegura\(\{ tipo: 'companias-anteriores' \}\)/)
   assert.match(page, /anteriores\.estado === 'ok' && anteriores\.opciones\.length > 0\s*\? anteriores\.opciones/)
 })
+
+test('asegura sirve la fecha de matriculación de Avant2 sin degradar un fallo a «no hay»', () => {
+  const r = leer('apps/asegura/lib/retarificar-cartera.ts')
+  assert.match(r, /case 'fecha-matriculacion':/)
+  assert.match(r, /if \(f\.estado === 'error'\) throw new Error\(f\.detalle\)/)
+})

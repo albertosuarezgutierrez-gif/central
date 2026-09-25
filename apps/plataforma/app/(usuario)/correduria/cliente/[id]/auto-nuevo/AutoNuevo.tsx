@@ -226,6 +226,9 @@ export default function AutoNuevo({
   // se pinta como tal y se recalcula si cambia la matrícula. En cuanto el
   // corredor toca la fecha, pasa a ser suya.
   const [matriculacionEstimada, setMatriculacionEstimada] = useState(false)
+  // De dónde sale la fecha estimada: Avant2 (`/car/registration-date`, que el
+  // propio proveedor llama aproximada) o, si no responde, la serie nacional.
+  const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
   // Por defecto «vía pública» (decisión de Alberto, 25/09/2026): es el caso
   // más común y el conservador para la prima.
   const [garaje, setGaraje] = useState(
@@ -527,16 +530,47 @@ export default function AutoNuevo({
   const faltaMatriculacion = !matriculacion
   const estimacion = fechaMatriculacionEstimada(matricula)
 
-  function cambiarMatricula(valor: string) {
-    setMatricula(valor)
-    // Solo rellena si la fecha está vacía o la puso la propia estimación:
-    // nunca pisa una fecha tecleada por el corredor.
-    if (matriculacion === '' || matriculacionEstimada) {
-      const est = fechaMatriculacionEstimada(valor)
-      setMatriculacion(est?.estimada ?? '')
-      setMatriculacionEstimada(est !== null)
+  // Con cada matrícula (tecleada, pegada o restaurada del borrador) se consulta
+  // la fecha a Avant2, gratis; mientras tanto, o si no responde, vale la
+  // estimación por la serie nacional. Solo rellena si la fecha está vacía o la
+  // puso la propia estimación: nunca pisa una fecha tecleada por el corredor.
+  const puedeRellenarFecha = matriculacion === '' || matriculacionEstimada
+  useEffect(() => {
+    if (!puedeRellenarFecha) return
+    const placa = matricula.trim()
+    // Matrícula vacía: solo se borra una fecha que era estimada. En el montaje
+    // no se toca nada, o pisaría la fecha que restaura el borrador.
+    if (placa === '') {
+      if (matriculacionEstimada) {
+        setMatriculacion('')
+        setMatriculacionEstimada(false)
+        setFuenteMatriculacion(null)
+      }
+      return
     }
-  }
+    const local = fechaMatriculacionEstimada(placa)
+    setMatriculacion(local?.estimada ?? '')
+    setMatriculacionEstimada(local !== null)
+    setFuenteMatriculacion(local ? 'serie' : null)
+    if (placa.length < 6) return
+    let vivo = true
+    const t = setTimeout(async () => {
+      try {
+        const [f] = await catalogo(`tipo=fecha-matriculacion&matricula=${encodeURIComponent(placa)}`)
+        if (!vivo || !f) return
+        setMatriculacion(f.id)
+        setMatriculacionEstimada(true)
+        setFuenteMatriculacion('avant2')
+      } catch {
+        // Avant2 no ha respondido: se queda la estimación por la serie.
+      }
+    }, 500)
+    return () => {
+      vivo = false
+      clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matricula])
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
@@ -735,13 +769,15 @@ export default function AutoNuevo({
             />
           </Campo>
           <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
-            <input value={matricula} onChange={(e) => cambiarMatricula(e.target.value)} placeholder="1234ABC" style={input} />
+            <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
           </Campo>
           <Campo
             etiqueta="Fecha de matriculación"
             falta={faltaMatriculacion}
             ayuda={
-              matriculacionEstimada && estimacion
+              matriculacionEstimada && fuenteMatriculacion === 'avant2'
+                ? 'Consultada a Avant2 por la matrícula. El propio proveedor la da como aproximada: confírmala con la ficha técnica.'
+                : matriculacionEstimada && estimacion
                 ? `Estimada por la matrícula (entre ${fechaCorta(estimacion.desde)} y ${fechaCorta(estimacion.hasta)}): no es dato oficial y falla si el coche vino de fuera. Confírmala con la ficha técnica.`
                 : matricula.trim() && !matriculacion && !estimacion
                   ? 'No se puede estimar por esta matrícula (formato antiguo o muy reciente): tecléala.'
@@ -754,6 +790,7 @@ export default function AutoNuevo({
               onChange={(e) => {
                 setMatriculacion(e.target.value)
                 setMatriculacionEstimada(false)
+                setFuenteMatriculacion(null)
               }}
               style={input}
             />

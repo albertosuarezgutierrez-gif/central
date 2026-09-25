@@ -587,6 +587,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Auto nuevo: fecha de matriculación consultada a Avant2
+- Con cada matrícula (tecleada o restaurada del borrador) se consulta `/car/registration-date` por el puerto
+  (`catalogos?tipo=fecha-matriculacion`, gratis); si no responde, vale la estimación por serie. Antes solo se
+  estimaba en `onChange`, y una matrícula restaurada del borrador dejaba la fecha vacía (lo vio Alberto).
+
 ## (25/09/2026) Auto nuevo: «Compañía actual» desde el catálogo de mercado de Avant2
 - El desplegable leía `seguros.companias_dgs` (solo compañías con las que trabaja Alberto). Ahora lee
   `GET /car/insurance-companies` de Avant2/Codeoscopic (gratis) vía puerto `catalogos?tipo=companias-anteriores`;

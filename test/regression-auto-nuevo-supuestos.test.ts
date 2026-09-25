@@ -63,8 +63,10 @@ test('el garaje nace en «vía pública»', () => {
 
 test('la fecha de matriculación se estima por la matrícula, sin pisar la del corredor', () => {
   assert.match(fuente, /import \{ fechaMatriculacionEstimada \} from '@central\/module-seguros\/matricula'/)
-  assert.match(fuente, /onChange=\{\(e\) => cambiarMatricula\(e\.target\.value\)\}/, 'la matrícula dispara la estimación')
-  assert.match(fuente, /if \(matriculacion === '' \|\| matriculacionEstimada\) \{/, 'solo rellena vacía o ya estimada')
+  assert.match(fuente, /const puedeRellenarFecha = matriculacion === '' \|\| matriculacionEstimada/, 'solo rellena vacía o ya estimada')
+  assert.match(fuente, /if \(!puedeRellenarFecha\) return/)
+  assert.match(fuente, /\}, \[matricula\]\)/, 'se recalcula con CADA matrícula, también la restaurada del borrador')
+  assert.match(fuente, /tipo=fecha-matriculacion&matricula=/, 'consulta la fecha a Avant2 (/car/registration-date)')
   assert.match(fuente, /setMatriculacionEstimada\(false\)/, 'teclear la fecha la hace del corredor')
   assert.match(fuente, /Estimada por la matrícula/, 'se declara como estimada en pantalla')
 })
