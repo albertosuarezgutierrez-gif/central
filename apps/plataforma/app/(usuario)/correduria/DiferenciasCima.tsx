@@ -63,7 +63,13 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
     }
   }
 
-  if (estado.fase === 'cargando') return null
+  // Se dice que se está mirando: un bloque que no aparece mientras carga es
+  // indistinguible de uno que no existe («no veo el botón», 25/09/2026).
+  if (estado.fase === 'cargando') {
+    return (
+      <Bloque Icono={RefreshCcw} titulo="Diferencias con CIMA" sub="Comparando las fichas con lo que manda CIMA…">{null}</Bloque>
+    )
+  }
   const l = estado.l
   if (l.estado !== 'ok') {
     const motivo = l.estado === 'sin_configurar' ? 'falta ASEGURA_OPERADOR_SECRET' : l.estado === 'no_desplegado' ? 'asegura aún no tiene este puerto' : l.motivo
@@ -73,7 +79,18 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
     )
   }
   const n = contadorSincroCima(l) ?? 0
-  if (n === 0 && l.rellenos === 0 && l.ilegibles === 0) return null
+  if (n === 0 && l.rellenos === 0 && l.ilegibles === 0) {
+    // Comprobado y sin nada que hacer: se dice en una línea (y cuántas no se pudieron comparar).
+    return (
+      <Bloque
+        Icono={RefreshCcw}
+        titulo="Fichas al día con CIMA"
+        sub={`${l.fichas} fichas de cartera viva comparadas con lo que manda CIMA: no hay nada distinto ni por copiar.${l.sinDatosCima ? ` ${l.sinDatosCima} no se pueden comparar porque su titular no figura en ninguna de sus pólizas de CIMA.` : ''}`}
+      >
+        {null}
+      </Bloque>
+    )
+  }
 
   return (
     <Bloque
