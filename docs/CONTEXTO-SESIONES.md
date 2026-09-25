@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** — IDD: cuestionario cerrado de exigencias y necesidades por ramo (motor, hogar y comunes) en el presupuesto de la ficha de póliza, en lugar del texto libre. Se guarda como la misma declaración de texto (`necesidades`, lo que el cliente firma; sin DDL) y las respuestas van a la auditoría del evento. Módulo puro `module-seguros/necesidades-idd.ts` (+5 tests, cepo visto fallar). Pendiente: avisar si la opción elegida no cubre algo pedido (las opciones aún no traen coberturas estructuradas).
+
 **(25/09/2026)** 🕒 **CIMA: respaldo del pull a las 07:00/14:00/18:00 UTC** (antes 08:00/14:00). Los `schedule` de Actions de
 `asegura` llegaron 4-6 h tarde el 24/09 y el de las 05:30 del 25/09 no había arrancado a las 06:47. La franja de las 18:00 dispara
 a diario (no hay cron de Actions delante). Mapfre: CIMA dice haberlo configurado el 24/09; pulls de 13:21, 17:01 y 06:49 UTC → 155
@@ -583,7 +585,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Decisión de Alberto: las autorizaciones NO caducan (revisión anual `pideRevision` → aviso `acceso_por_revisar` + botón «Lo mantengo»); dos permisos `ver_economico` y `total`. `total` de una PERSONA incluye DNI e IBAN (elegido por él), con texto de consentimiento propio (`textoDeConcesion`).
 - `total` NO se da por invitación/petición: «Pasar a acceso total» (`ampliarATotal`) sobre un acceso ya aceptado, nace pendiente.
 - Trampas cazadas: `cartera-lectura` cortaba con `caduca === null` (habría vaciado carteras compartidas) y un filtro `caducaEn: {gt}` en asegura excluía los NULL.
-- Migración en DOS pasos (revisión architect): A (`…_sin_caducidad_y_total.sql`, aditiva) ANTES del merge; B (`…_b_…vivas_sin_caducidad.sql`, el UPDATE a NULL) DESPUÉS de desplegar portal+asegura — el Prisma viejo revienta con NULL. Pendientes tampoco caducan: la revisión anual cuenta desde `otorgado_en` y cubre las pendientes; `total` no se pide (`ALCANCES_PEDIBLES`). PR #3570.
+- Migración en DOS pasos (revisión architect): A (`…_sin_caducidad_y_total.sql`, aditiva) APLICADO en prod 25/09; B (`…_b_…vivas_sin_caducidad.sql`, el UPDATE a NULL) DESPUÉS de desplegar portal+asegura — el Prisma viejo revienta con NULL. Pendientes tampoco caducan: la revisión anual cuenta desde `otorgado_en` y cubre las pendientes; `total` no se pide (`ALCANCES_PEDIBLES`). PR #3570.
+
+## (25/09/2026) Ficha correduría: el auto histórico de un ex-cliente sale como oportunidad
+- Caso Rafael Campa: recaptación le ofrecía el auto (Pelayo, vencía 20/10/2015) y la ficha solo lo nombraba en una nota al pie; «vida» era una oportunidad en competencia (legítima: «póliza en competencia es oportunidad», Alberto).
+- `repartirSegurosCliente`: del volcado histórico, la más reciente de cada ramo no cubierto → tarjeta de oportunidad (`historica: true`); el resto sigue plegado. «Ya no lo necesita» retira el ramo.
+- `proximoAniversario()`: fechas de fin pasadas se pintan como la próxima renovación (vida 24/10/2023 → 24/10/2026).
+- `resumenFicha`: con solo pólizas de `total: 0` recibos, devueltos/pendientes = `null` («—»), no «0 · ninguno devuelto».
 
 ## (25/09/2026) Portal asegura: «Detalles» duplicaba las coberturas + logos sin nombre
 - El EIAC mete las coberturas en `datos_especificos.capitales` con `bien:'OTROS'`; `describirBien` las pintaba en «Detalles» y la ficha las repetía en la lista de coberturas. Ahora se filtran (`esPartidaDeCobertura`) y el capital pasa a la lista desde `poliza_coberturas.capital_asegurado` (medido: las 513 OTROS con importe tienen su fila).

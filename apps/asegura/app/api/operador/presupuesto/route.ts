@@ -129,7 +129,7 @@ export const PATCH = auditado(async (req: Request) => {
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' })
 
     if (cuerpo?.accion === 'necesidades') {
-      const r = await guardarNecesidades(correduria.id, { id, texto: cuerpo.texto, actor })
+      const r = await guardarNecesidades(correduria.id, { id, texto: cuerpo.texto, actor, respuestas: cuerpo.respuestas })
       const status = r.estado === 'ok' ? 200 : r.motivo === 'no_encontrado' ? 404 : r.motivo === 'cerrado' ? 409 : 422
       return NextResponse.json(r, { status })
     }

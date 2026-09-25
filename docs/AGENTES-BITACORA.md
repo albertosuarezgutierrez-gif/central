@@ -14,6 +14,30 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-25 · facturas-correo** · hizo: pasada disparada por el trigger diario. Preflight canal 200
+  OK. Paso 0: Vía B sana (copia más reciente en `_buzon_pdf` de ayer 24/09, 1 día caída);
+  `PDF-pendiente`/`Revisar`/`Extraccion-fallida` sin backlog real (verificado por `search_threads`,
+  no por `list_labels`). **Paso 4.0:** las 20 filas de `v_facturas_sin_cargo` siguen todas
+  `revisada_sin_cargo`, 0 `sin_revisar` — nada que barrer. **Paso 1** (8 hilos de 2 días): 1 candidato
+  real — reaparece la factura ASECON nº 1-001804 (06/07/2026, "ESTUDIO-PREPARACION-PRESENTACION
+  RENTA", 181,50€ con IVA) vía un recordatorio de impago del 24/09 ("tenemos la factura pendiente de
+  abonar"); nunca se archivó ni concilió en 2,5 meses (`facturas_drive` sin ninguna fila `asecon`,
+  pagadera por transferencia a Sabadell, cuenta fuera del feed). Deducibilidad ambigua (¿gestoría de
+  la actividad de alquiler o gasto personal de la Renta?) — llevaba ya "Para tu decisión" en pasadas
+  de julio sin resolverse nunca; NO archivada, hilo etiquetado `Facturas/Revisar` para que sobreviva.
+  Resto del Paso 1: Booking (mensajes operativos de huéspedes, no recibo), Global2/PACTREBOL
+  (documentación de terceros/informativa, no factura de Alberto). `_subir_aqui` y raíz `2026` sin
+  PDFs nuevos. `agente_salud` actualizado. dudas: si Asecon-Renta es deducible (pendiente de Alberto,
+  repetido desde julio); fallos: —; PRs/commits: — (solo bitácora + BD + Gmail).
+- **2026-09-25 · mercado-booking** · hizo: pasada de 24 ventanas (max=24, tope dejó fuera 488 de 512
+  candidatas; casi todas rondas de profundidad 2-3) → 239 comps reales escritos (mes 27-nov, evento
+  confirmado nov-dic-abr, ronda 1). Escaparate propio: 0/4 medido — Busto Reform, Dúplex Center,
+  Luxury Busto y House Sevillana dieron `hotel_names_no_availability` para 2026-10-02 (pisos
+  ocupados esa ventana, no fallo del conector). 1 anuncio propio (HOUSE SEVILLANA 6 habitaciones)
+  apareció en comparables de aforo 12 (25-oct) y se descartó antes de escribir. Latido `ok:false`
+  por el escaparate en blanco, per regla del propio SKILL.md. dudas: —; fallos: escaparate sin
+  medir esta pasada (ver PSD2/próxima pasada si se repite); PRs/commits: — (solo BD vía
+  `/api/sivra/mercado/ingest` + latido).
 - **2026-09-24 · trading-analista** · hizo: repesca 23:15 UTC (la de las 20:15 abortó por IBKR caído,
   ver entrada anterior). PASO 0: sin huella de hoy → pasada completa. NAV 33.370,60€ empujado a
   /banca+/trading; cartera real (CVX 6, VWCE 188) y libro (0 nuevas, DAYS_7) empujados con latido.
