@@ -197,7 +197,12 @@ export type PolizaPortal = {
    * descripción ni código (la fila existe, el texto no): no es que se hayan
    * escondido.
    */
-  coberturas: { total: number; lista: string[] } | null
+  coberturas: {
+    total: number
+    lista: string[]
+    /** Capital de cada cobertura, alineado con `lista`; `null` = no informado. */
+    capitales?: (number | null)[]
+  } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
   /** `null` = no visible en este nivel. `[]` = no hay ninguno abierto. */
@@ -655,7 +660,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       : await Promise.all([
           prisma.polizaCobertura.findMany({
             where: { polizaId: { in: polizaIds } },
-            select: { polizaId: true, descripcion: true, codigo: true, numeroOrden: true },
+            select: { polizaId: true, descripcion: true, codigo: true, numeroOrden: true, capitalAsegurado: true },
             orderBy: { numeroOrden: 'asc' },
           }),
           prisma.polizaRecibo.findMany({
@@ -789,7 +794,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         ? {
             total: cobs.length,
             // Sin `slice`: la lista va entera. Ver el comentario del tipo.
-            lista: cobs.map((c) => (c.descripcion ?? c.codigo ?? '').trim()).filter(Boolean),
+            ...listaCoberturas(cobs),
           }
         : null,
       recibos: ve.recibos ? recibosDePoliza(recs) : null,
@@ -990,6 +995,25 @@ type ReciboFila = {
  * limpia: es la única forma de distinguir «la compañía no informó nada» de
  * «informó y está todo anulado», que eran las 20 pólizas mudas.
  */
+/**
+ * Nombre y capital de cada cobertura, alineados. Un capital 0, vacío o que no
+ * es número sale `null` («no informado»), nunca «0,00€».
+ */
+function listaCoberturas(
+  cobs: Array<{ descripcion: string | null; codigo: string | null; capitalAsegurado: string | null }>,
+): { lista: string[]; capitales: (number | null)[] } {
+  const lista: string[] = []
+  const capitales: (number | null)[] = []
+  for (const c of cobs) {
+    const nombre = (c.descripcion ?? c.codigo ?? '').trim()
+    if (!nombre) continue
+    const n = c.capitalAsegurado === null ? NaN : Number(c.capitalAsegurado.replace(',', '.'))
+    lista.push(nombre)
+    capitales.push(Number.isFinite(n) && n > 0 ? n : null)
+  }
+  return { lista, capitales }
+}
+
 function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
   const crudos = lista.map((r) => ({
     situacion: (r.situacion ?? '').trim() || 'sin_informar',

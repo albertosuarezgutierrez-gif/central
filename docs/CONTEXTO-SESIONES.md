@@ -572,6 +572,10 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Portal asegura: «Detalles» duplicaba las coberturas + logos sin nombre
+- El EIAC mete las coberturas en `datos_especificos.capitales` con `bien:'OTROS'`; `describirBien` las pintaba en «Detalles» y la ficha las repetía en la lista de coberturas. Ahora se filtran (`esPartidaDeCobertura`) y el capital pasa a la lista desde `poliza_coberturas.capital_asegurado` (medido: las 513 OTROS con importe tienen su fila).
+- «Mis siniestros»: con logo ya no se repite el nombre de la compañía (va en el `alt`). Ojo: el logo de Occident sigue siendo el de «Catalana Occidente».
+
 ## (24/09/2026) ASegura: tramitación de la compañía en la ficha del corredor + chip «siguiente acción» en Clientes
 - `/correduria` → siniestros: bloque «Tramitación de la compañía (CIMA)» (pasos, estado de cada acción, figuras, reserva, pagado,
   indemnización, culpa) con `tramitacionCompania()` de module-seguros (claves oficiales EIAC en un sitio). La reserva de la compañía

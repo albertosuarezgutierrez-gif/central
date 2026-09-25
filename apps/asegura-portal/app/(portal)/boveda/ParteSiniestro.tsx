@@ -532,14 +532,16 @@ function BloqueCanal({ canal, deLaElegida, abierto }: { canal: CanalCompania; de
     <details className="canal-bloque" data-elegida={deLaElegida ? 'si' : undefined} open={abierto}>
       <summary className="canal-cabecera">
         {logo !== null ? (
-          <img className="canal-logo" src={logo} alt="" />
+          // Con logo el nombre ya va en él (Alberto, 25/09/2026): no se repite
+          // en texto, y el `alt` lo lleva para quien no ve la imagen.
+          <img className="canal-logo" src={logo} alt={canal.nombre} />
         ) : (
           <span className="canal-logo canal-inicial" aria-hidden="true">
             {canal.nombre.trim().charAt(0).toUpperCase()}
           </span>
         )}
         <span className="canal-compania">
-          {canal.nombre}
+          {logo === null && canal.nombre}
           {/* El cartel solo dice de QUÉ póliza es esta compañía. Va en texto y
               no solo en color: el filete no se lo lee nadie por teléfono. */}
           {deLaElegida === true && <span className="canal-elegida">La de la póliza elegida</span>}
