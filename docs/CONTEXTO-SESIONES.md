@@ -16,7 +16,8 @@
 (felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez:
 `seguros.felicitacion` vacía y 0 correos en Resend. Arreglo: `/api/cron` a PUBLIC (cada ruta exige `CRON_SECRET`) + cepo en
 `test/regression-asegura-operador-publico.test.ts` (visto rojo). Remitente real de la correduría: `no-reply@envios.grupoasegura.es`
-con Reply-To `hola@`; `grupoasegura.es` está `failed` en Resend, por eso no se puede enviar DESDE `hola@`.
+con Reply-To `hola@`; `grupoasegura.es` está `failed` en Resend (re-verificación lanzada, DNS en IONOS). Alberto quiere TODO desde
+`hola@`: cambiar `ASEGURA_MAIL_FROM` SOLO cuando Resend diga `verified`. Felicitación rediseñada con logo PNG (`asegura-web/public/brand`).
 
 **(25/09/2026)** 🕓 **CIMA: descargas fijas a las 16:00 y 20:30 de Madrid** (recomendación de CIMA; `?franja=` en
 `cima-pull-respaldo`, disparan siempre y solo avisan si fallan). El respaldo condicional de la mañana pasa a las 09:00 UTC (11:00 Madrid, decisión de Alberto).

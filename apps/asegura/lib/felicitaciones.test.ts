@@ -1,7 +1,7 @@
 // Cepos de la felicitación de cumpleaños. Leen el FUENTE donde la pieza vive dentro de Prisma/SQL.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { cuerpoFelicitacion } from './correo-felicitacion.ts'
 
 const src = readFileSync(new URL('./felicitaciones.ts', import.meta.url), 'utf8')
@@ -38,4 +38,12 @@ test('🚨 sin proveedor de correo se SUELTA la reserva: el reintento del día a
   const cuerpo = src.slice(src.indexOf("if (res === 'sin_proveedor')"))
   const borra = cuerpo.indexOf('delete from felicitacion')
   assert.ok(borra >= 0 && borra < cuerpo.indexOf("throw new Error('sin_correo_configurado')"))
+})
+
+test('el correo lleva el logo en PNG desde la web pública y existe en el disco', () => {
+  const c = cuerpoFelicitacion({ nombre: 'María', enlace: 'https://clientes.grupoasegura.es' })
+  const m = c.html.match(/<img src="https:\/\/grupoasegura\.es(\/brand\/[^"]+\.png)"/)
+  assert.ok(m, 'la felicitación no lleva el logotipo en PNG (Gmail no pinta SVG)')
+  // Un <img> a un fichero que no está no rompe nada: pinta el icono roto y solo lo ve el cliente.
+  assert.ok(existsSync(new URL(`../../asegura-web/public${m![1]}`, import.meta.url)), `${m![1]} no está en apps/asegura-web/public`)
 })
