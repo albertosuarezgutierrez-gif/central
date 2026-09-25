@@ -130,3 +130,8 @@ test('una cuenta imposible no inventa un numero', () => {
   assert.equal(textoCuentaSeguros(Number.NaN), 'sin seguros')
   assert.equal(textoCuentaSeguros(-3), 'sin seguros')
 })
+
+test('la empresa de la que eres DUEÑO va a «Seguros de tus empresas», no a «autorizadas»', () => {
+  assert.equal(grupoDeTitular({ clienteId: 'e', propia: false, tipoPersona: 'juridica', representada: true }), 'empresas')
+  assert.equal(grupoDeTitular({ clienteId: 'e', propia: false, tipoPersona: 'juridica' }), 'autorizadas')
+})
