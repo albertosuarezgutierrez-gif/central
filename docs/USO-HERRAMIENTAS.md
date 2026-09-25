@@ -167,30 +167,30 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 119 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 120 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 114 | 16.579 | 10.742.559 | 0 | 0 |
-| `otro` | 112 | 4.140 | 14.798.485 | 7.100.590 | 0 |
-| `mcp:github` | 102 | 3.652 | 3.343.598 | 40.490.048 | 59 |
-| `lectura-directa` | 105 | 3.503 | 7.248.846 | 0 | 0 |
-| `escritura` | 89 | 2.325 | 38.451.198 | 0 | 0 |
-| `sql` | 75 | 1.675 | 772.786 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 63 | 785 | 199.144 | 3.171.734 | 10 |
-| `mcp:Vercel` | 27 | 323 | 547.996 | 198.719 | 4 |
+| `bash` | 115 | 16.658 | 10.800.027 | 0 | 0 |
+| `otro` | 113 | 4.163 | 14.856.775 | 7.100.590 | 0 |
+| `mcp:github` | 103 | 3.661 | 3.347.263 | 40.840.637 | 59 |
+| `lectura-directa` | 106 | 3.531 | 7.292.237 | 0 | 0 |
+| `escritura` | 90 | 2.358 | 38.710.959 | 0 | 0 |
+| `sql` | 76 | 1.678 | 773.585 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 63 | 788 | 199.258 | 3.171.734 | 10 |
+| `mcp:Vercel` | 27 | 326 | 553.075 | 198.719 | 4 |
 | `mcp:Booking-com` | 10 | 297 | 1.215.858 | 0 | 0 |
 | `mcp:Gmail` | 16 | 231 | 384.434 | 0 | 2 |
 | `mcp:Supabase` | 45 | 156 | 18.126 | 0 | 1 |
+| `mcp:Interactive-Brokers--IBKR-` | 2 | 102 | 145.119 | 0 | 0 |
 | `agente:general-purpose` | 19 | 70 | 46.612 | 775.683 | 0 |
 | `mcp:Google-Drive` | 7 | 58 | 61.436 | 0 | 2 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
-| `mcp:Interactive-Brokers--IBKR-` | 1 | 51 | 73.084 | 0 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `agente:agente-architect` | 10 | 45 | 39.039 | 1.227.454 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
 | `mcp:Google_Drive` | 6 | 38 | 47.752 | 0 | 9 |
-| `agente:Explore` | 13 | 35 | 16.835 | 726.021 | 0 |
+| `agente:Explore` | 13 | 36 | 17.435 | 735.996 | 0 |
 | `agente:agente-mecanico` | 11 | 30 | 30.357 | 490.240 | 0 |
 | `mcp:OpenSEO` | 1 | 30 | 20.595 | 0 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
