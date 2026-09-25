@@ -1,0 +1,35 @@
+{
+ "sesion": "3b668897-ad5d-590b-aa6d-318efdc0b936",
+ "inicio": "2026-09-25T09:02:18.459Z",
+ "fin": "2026-09-25T09:06:39.768Z",
+ "llamadas": 31,
+ "categorias": {
+  "otro": {
+   "llamadas": 20,
+   "chars_in": 2822,
+   "chars_out": 44589,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2,
+    "WebSearch": 17,
+    "PushNotification": 1
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 11,
+   "chars_in": 5909,
+   "chars_out": 50868,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 4,
+    "mcp__Gmail__list_drafts": 1,
+    "mcp__Gmail__create_draft": 4,
+    "mcp__Gmail__send_message": 2
+   }
+  }
+ }
+}
