@@ -1,18 +1,18 @@
 {
  "sesion": "ab0aee96-3e42-5a81-a8c3-f6778921d2d9",
  "inicio": "2026-09-25T12:09:57.541Z",
- "fin": "2026-09-25T12:10:31.897Z",
- "llamadas": 7,
+ "fin": "2026-09-25T12:42:24.043Z",
+ "llamadas": 23,
  "categorias": {
   "otro": {
-   "llamadas": 1,
-   "chars_in": 140,
-   "chars_out": 276,
+   "llamadas": 3,
+   "chars_in": 296,
+   "chars_out": 574,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1
+    "ToolSearch": 3
    }
   },
   "mcp:Google_Drive": {
@@ -28,14 +28,47 @@
    }
   },
   "bash": {
-   "llamadas": 4,
-   "chars_in": 1750,
-   "chars_out": 7736,
+   "llamadas": 10,
+   "chars_in": 3579,
+   "chars_out": 23425,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 4
+    "Bash": 10
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 118,
+   "chars_out": 13429,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 4501,
+   "chars_out": 17649,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
    }
   }
  }
