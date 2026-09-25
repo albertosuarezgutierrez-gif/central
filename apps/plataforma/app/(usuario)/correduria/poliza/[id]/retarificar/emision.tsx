@@ -257,7 +257,12 @@ export function CoberturasOferta({ projectId, offerId }: { projectId: string; of
   const [r, setR] = useState<RespuestaCoberturas | 'cargando' | null>(null)
   async function cargar() {
     setR('cargando')
-    setR(await pedirCoberturas(projectId, offerId))
+    try {
+      setR(await pedirCoberturas(projectId, offerId))
+    } catch (e) {
+      // Un fallo de red en la acción no puede dejar el panel en «Leyendo…» para siempre.
+      setR({ estado: 'error', mensaje: `No se han podido leer las coberturas (${e instanceof Error ? e.message : String(e)}).` })
+    }
   }
   if (r === null) {
     return (
@@ -267,7 +272,16 @@ export function CoberturasOferta({ projectId, offerId }: { projectId: string; of
     )
   }
   if (r === 'cargando') return <p className="muted">Leyendo coberturas…</p>
-  if (r.estado === 'error') return <p className="err">{r.mensaje}</p>
+  if (r.estado === 'error') {
+    return (
+      <p className="err">
+        {r.mensaje}{' '}
+        <button type="button" onClick={cargar} style={{ minHeight: 44 }}>
+          Reintentar
+        </button>
+      </p>
+    )
+  }
   if (r.coberturas.length === 0) {
     return <p className="muted">La compañía no ha devuelto ninguna cobertura para esta oferta.</p>
   }
