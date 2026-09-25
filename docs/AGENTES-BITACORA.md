@@ -14,6 +14,15 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-25 · mercado-booking** · hizo: pasada de 24 ventanas (max=24, tope dejó fuera 488 de 512
+  candidatas; casi todas rondas de profundidad 2-3) → 239 comps reales escritos (mes 27-nov, evento
+  confirmado nov-dic-abr, ronda 1). Escaparate propio: 0/4 medido — Busto Reform, Dúplex Center,
+  Luxury Busto y House Sevillana dieron `hotel_names_no_availability` para 2026-10-02 (pisos
+  ocupados esa ventana, no fallo del conector). 1 anuncio propio (HOUSE SEVILLANA 6 habitaciones)
+  apareció en comparables de aforo 12 (25-oct) y se descartó antes de escribir. Latido `ok:false`
+  por el escaparate en blanco, per regla del propio SKILL.md. dudas: —; fallos: escaparate sin
+  medir esta pasada (ver PSD2/próxima pasada si se repite); PRs/commits: — (solo BD vía
+  `/api/sivra/mercado/ingest` + latido).
 - **2026-09-24 · trading-analista** · hizo: repesca 23:15 UTC (la de las 20:15 abortó por IBKR caído,
   ver entrada anterior). PASO 0: sin huella de hoy → pasada completa. NAV 33.370,60€ empujado a
   /banca+/trading; cartera real (CVX 6, VWCE 188) y libro (0 nuevas, DAYS_7) empujados con latido.
