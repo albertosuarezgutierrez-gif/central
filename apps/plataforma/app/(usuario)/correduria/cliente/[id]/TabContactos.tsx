@@ -478,28 +478,22 @@ function Portal({ clienteId, nombre, telefonos }: {
         </span>
       </div>
 
-      <p style={{ ...sutil, maxWidth: '72ch' }}>{frase.queHacer}</p>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button
-          type="button"
-          disabled={abriendo}
-          onClick={() => void abrirVista()}
-          style={{ ...btnStyle('sutil'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
-          title="Abre el portal en otra pestaña exactamente como lo ve este cliente. Solo lectura."
-        >
-          {abriendo ? 'abriendo…' : `👁 Ver su portal como lo ve ${nombre}`}
-        </button>
-      </div>
-      {avisoVista && <p style={{ ...sutil, maxWidth: '72ch', color: 'var(--text)' }}>{avisoVista}</p>}
+      {/* Con el cliente YA dentro no hay nada que hacer, y el párrafo que lo
+          explicaba era la línea más larga del bloque: pasa al `title` del botón
+          de reenviar (25/09/2026, «no es nada clara»). En los demás estados SÍ
+          es la instrucción, y se queda a la vista. */}
+      {frase.tono !== 'positivo' && <p style={{ ...sutil, maxWidth: '72ch' }}>{frase.queHacer}</p>}
 
-      {frase.accion !== 'ninguna' && (
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {/* Las tres acciones en UNA fila y con rótulos cortos: el nombre del
+          cliente ya encabeza la ficha, y repetirlo en cada botón es lo que
+          partía los rótulos en dos líneas. */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        {frase.accion !== 'ninguna' && (
           <button
             type="button"
             disabled={enviando || cargando}
             onClick={() => void invitar()}
-            // `whiteSpace: 'normal'` + 44px: el rótulo lleva el nombre del
-            // cliente dentro y a 320px tiene que poder partirse sin desbordar.
+            title={frase.queHacer}
             style={{
               ...btnStyle(frase.accion === 'invitar' ? 'primario' : 'secundario'),
               whiteSpace: 'normal', textAlign: 'left', minHeight: 44,
@@ -508,40 +502,49 @@ function Portal({ clienteId, nombre, telefonos }: {
             {enviando
               ? 'enviando…'
               : frase.accion === 'invitar'
-                ? `✉️ Invitar a ${nombre} al portal`
-                : `✉️ Reenviarle el enlace a ${nombre}`}
+                ? '✉️ Invitarle al portal por correo'
+                : '✉️ Reenviarle el enlace por correo'}
           </button>
+        )}
 
-          {/* 🚨 Es un ENLACE, no un botón, y su rótulo dice «abrir» y no
-              «enviar»: sin WhatsApp Business API lo único que existe es
-              `wa.me`, que deja el mensaje escrito y espera a que Alberto le dé
-              a enviar. Un rótulo que dijera «enviar por WhatsApp» prometería un
-              envío que esta app no hace y del que además no puede saber nada. */}
-          {wa.estado === 'listo' && (
-            <a
-              href={wa.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setAvisoWa(
-                `📲 WhatsApp abierto con el mensaje escrito para ${nombre} (${wa.telefono}). ` +
-                'Aquí NO consta como enviado: eso pasa cuando le des a enviar tú, en WhatsApp.',
-              )}
-              title={`Abre WhatsApp con el mensaje ya escrito para ${wa.telefono}. Lo envías tú.`}
-              style={{
-                ...btnStyle('secundario'),
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                whiteSpace: 'normal', textAlign: 'left', minHeight: 44,
-                color: VERDE_WHATSAPP, textDecoration: 'none',
-              }}
-            >
-              <MessageCircle size={16} strokeWidth={2} aria-hidden />
-              {frase.accion === 'invitar'
-                ? `Abrir WhatsApp para invitar a ${nombre}`
-                : `Abrir WhatsApp para reenviarle el enlace`}
-            </a>
-          )}
-        </div>
-      )}
+        {/* 🚨 Es un ENLACE, no un botón, y su rótulo dice «abrir» y no
+            «enviar»: sin WhatsApp Business API lo único que existe es
+            `wa.me`, que deja el mensaje escrito y espera a que Alberto le dé
+            a enviar. Un rótulo que dijera «enviar por WhatsApp» prometería un
+            envío que esta app no hace y del que además no puede saber nada. */}
+        {frase.accion !== 'ninguna' && wa.estado === 'listo' && (
+          <a
+            href={wa.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setAvisoWa(
+              `📲 WhatsApp abierto con el mensaje escrito para ${nombre} (${wa.telefono}). ` +
+              'Aquí NO consta como enviado: eso pasa cuando le des a enviar tú, en WhatsApp.',
+            )}
+            title={`Abre WhatsApp con el mensaje ya escrito para ${wa.telefono}. Lo envías tú.`}
+            style={{
+              ...btnStyle('secundario'),
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              whiteSpace: 'normal', textAlign: 'left', minHeight: 44,
+              color: VERDE_WHATSAPP, textDecoration: 'none',
+            }}
+          >
+            <MessageCircle size={16} strokeWidth={2} aria-hidden />
+            Abrir WhatsApp con el enlace
+          </a>
+        )}
+
+        <button
+          type="button"
+          disabled={abriendo}
+          onClick={() => void abrirVista()}
+          style={{ ...btnStyle('sutil'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+          title={`Abre el portal en otra pestaña exactamente como lo ve ${nombre}. Solo lectura.`}
+        >
+          {abriendo ? 'abriendo…' : '👁 Ver su portal'}
+        </button>
+      </div>
+      {avisoVista && <p style={{ ...sutil, maxWidth: '72ch', color: 'var(--text)' }}>{avisoVista}</p>}
 
       {/* Por qué NO hay botón de WhatsApp, cuando el de correo sí está. Es un
           hueco que se explica, no un icono que falta: cada motivo se arregla en
