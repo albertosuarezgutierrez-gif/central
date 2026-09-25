@@ -7,7 +7,6 @@ import { articuloPorSlug } from '@/lib/articulos'
 import { PORTAL_URL, url } from '@/lib/sitio'
 import { fichaFaq, migas, jsonLd } from '@/lib/seo'
 import CalculadoraVencimientos from '@/components/CalculadoraVencimientos'
-import Reveal from '@/components/Reveal'
 import EnlaceMedido from '@/components/EnlaceMedido'
 
 // La página de INTENCIÓN del gestor. El copy vive en `lib/gestor.ts` (datos,
@@ -76,7 +75,7 @@ export default function PaginaGestor() {
       </nav>
 
       <div className="dos-columnas" style={{ alignItems: 'start' }}>
-        <Reveal>
+        <div>
           <p className="antetitulo">Gratis, seas cliente o no</p>
           <h1>{GESTOR.h1}</h1>
           <p className="lead" style={{ marginTop: 16 }}>{GESTOR.lead}</p>
@@ -96,10 +95,10 @@ export default function PaginaGestor() {
               Cómo funciona
             </a>
           </div>
-        </Reveal>
-        <Reveal delay={0.15}>
+        </div>
+        <div>
           <CalculadoraVencimientos />
-        </Reveal>
+        </div>
       </div>
 
       <section id="como" aria-labelledby="como-t" style={{ marginTop: 40 }}>

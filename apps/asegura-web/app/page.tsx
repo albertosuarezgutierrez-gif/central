@@ -6,7 +6,6 @@ import { RAMOS, RAMOS_PRODUCTO } from '@/lib/ramos'
 import { COMPANIAS, COMPANIAS_EN_CARTERA } from '@/lib/companias'
 import { PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
-import Reveal from '@/components/Reveal'
 import PanelDemo from '@/components/PanelDemo'
 import Cifras from '@/components/Cifras'
 import Escaneo from '@/components/Escaneo'
@@ -146,7 +145,7 @@ export default function Home() {
         <div className="hero-mancha a" aria-hidden />
         <div className="hero-mancha b" aria-hidden />
         <div className="wrap dos-columnas hero-cols">
-          <Reveal>
+          <div>
             <span className="chip">
               <span className="chip-punto" aria-hidden />
               Correduría en toda España · Registro DGSFP {MEDIADOR.identidad.claveDgsfp}
@@ -235,12 +234,12 @@ export default function Home() {
                 </li>
               ))}
             </ul>
-          </Reveal>
+          </div>
           {/* La columna que se toca. Es lo que convierte la portada en algo
               que se prueba en vez de algo que se lee. */}
-          <Reveal delay={0.15}>
+          <div>
             <PanelDemo />
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -312,7 +311,7 @@ export default function Home() {
       {/* ── Ramos ───────────────────────────────────────────────────────── */}
       <section className="seccion banda" id="ramos" aria-labelledby="ramos-t">
         <div className="wrap">
-          <Reveal className="seccion-tit">
+          <div className="seccion-tit">
             <p className="antetitulo">Qué revisamos</p>
             {/* Sin número: `lib/ramos.ts` tiene SEIS ramos y el menú solo
                 enseña cinco (responsabilidad civil no está en la nav). Un
@@ -323,8 +322,8 @@ export default function Home() {
               Cada seguro, <span className="destaca">con el mismo criterio.</span>
             </h2>
             <p className="lead">Cada página cuenta qué conviene mirar en ese seguro antes de firmarlo.</p>
-          </Reveal>
-          <Reveal delay={0.1}>
+          </div>
+          <div>
             <div className="rejilla">
               {/* RAMOS_PRODUCTO, como la cifra de abajo: las páginas de INTENCIÓN
                   (RC de fontaneros, de autónomos) salían como tarjetas propias
@@ -344,7 +343,7 @@ export default function Home() {
                 </Link>
               ))}
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -359,7 +358,7 @@ export default function Home() {
           tres, así que se cuenta como tal. */}
       <section className="seccion" id="subir" aria-labelledby="subir-t">
         <div className="wrap dos-columnas">
-          <Reveal>
+          <div>
             <p className="antetitulo">Tu póliza, sin teclear</p>
             <h2 className="display" id="subir-t">
               Súbela y la <span className="destaca">leemos por ti.</span>
@@ -400,23 +399,23 @@ export default function Home() {
               No hace falta ser cliente todavía: entras con tu correo, te llega un código y ya tienes tu espacio.{' '}
               <Link href="/gestor-de-seguros">Qué puedes hacer en tu área</Link>.
             </p>
-          </Reveal>
-          <Reveal delay={0.1}>
+          </div>
+          <div>
             <Escaneo />
-          </Reveal>
+          </div>
         </div>
       </section>
 
       {/* ── Cómo funciona ───────────────────────────────────────────────── */}
       <section className="seccion" id="como" aria-labelledby="como-t">
         <div className="wrap">
-          <Reveal className="seccion-tit centrado">
+          <div className="seccion-tit centrado">
             <p className="antetitulo">Cómo funciona</p>
             <h2 className="display" id="como-t">
               Tres pasos, <span className="destaca">sin papeleo.</span>
             </h2>
-          </Reveal>
-          <Reveal delay={0.1}>
+          </div>
+          <div>
             <div className="pasos">
               {PASOS.map((p) => (
                 <div key={p.titulo} className="paso">
@@ -425,14 +424,14 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 
       {/* ── El corredor ─────────────────────────────────────────────────── */}
       <section className="seccion banda-acento" id="corredor" aria-labelledby="corredor-t">
         <div className="wrap dos-columnas">
-          <Reveal>
+          <div>
             <p className="antetitulo">Quién te atiende</p>
             <h2 className="display" id="corredor-t" style={{ color: 'inherit' }}>
               Detrás de la web hay un <span className="destaca">corredor de verdad.</span>
@@ -447,8 +446,8 @@ export default function Home() {
               No es un comparador automático. Detrás de cada presupuesto hay una persona con nombre, con clave de
               registro en la DGSFP y con un domicilio en el que se le puede encontrar.
             </p>
-          </Reveal>
-          <Reveal delay={0.1}>
+          </div>
+          <div>
             <div className="credencial">
               <div className="credencial-halo" aria-hidden />
               <div className="credencial-mono" aria-hidden>
@@ -466,7 +465,7 @@ export default function Home() {
               </figure>
               <span className="credencial-dgsfp">DGSFP {MEDIADOR.identidad.claveDgsfp}</span>
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 
@@ -500,13 +499,13 @@ export default function Home() {
       {/* ── Cambiar de correduría ───────────────────────────────────────── */}
       <section className="seccion banda" id="cambiar" aria-labelledby="cambiar-t">
         <div className="wrap dos-columnas">
-          <Reveal>
+          <div>
             <p className="antetitulo">Ya tienes seguro</p>
             <h2 className="display" id="cambiar-t">
               Cambiar de correduría <span className="destaca">no es cambiar de póliza.</span>
             </h2>
-          </Reveal>
-          <Reveal delay={0.1}>
+          </div>
+          <div>
             <p className="lead" style={{ maxWidth: 'none' }}>
               No hace falta cambiar de compañía ni esperar al vencimiento. Tu póliza sigue igual —mismas coberturas,
               mismo precio, mismo número— y pasamos a ser nosotros quienes la gestionamos.
@@ -515,20 +514,20 @@ export default function Home() {
               Cómo funciona el cambio
               <Flecha />
             </Link>
-          </Reveal>
+          </div>
         </div>
       </section>
 
       {/* ── Preguntas ───────────────────────────────────────────────────── */}
       <section className="seccion" id="faq" aria-labelledby="faq-t">
         <div className="wrap dos-columnas" style={{ alignItems: 'start' }}>
-          <Reveal>
+          <div>
             <p className="antetitulo">Preguntas</p>
             <h2 className="display" id="faq-t">
               Lo que más <span className="destaca">nos preguntan.</span>
             </h2>
-          </Reveal>
-          <Reveal delay={0.1}>
+          </div>
+          <div>
             <div className="faq">
               {PREGUNTAS.map((f) => (
                 <details key={f.pregunta}>
@@ -537,25 +536,25 @@ export default function Home() {
                 </details>
               ))}
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
 
       {/* ── Formulario ──────────────────────────────────────────────────── */}
       <section className="seccion banda" id="presupuesto" aria-labelledby="pedir-t">
         <div className="wrap">
-          <Reveal className="seccion-tit centrado">
+          <div className="seccion-tit centrado">
             <p className="antetitulo">Empieza aquí</p>
             <h2 className="display" id="pedir-t">
               Pide presupuesto o <span className="destaca">una revisión.</span>
             </h2>
             <p className="lead">Cuéntanos qué seguro quieres mirar y te llamamos. Sin compromiso y sin coste.</p>
-          </Reveal>
-          <Reveal delay={0.1}>
+          </div>
+          <div>
             <div className="panel" style={{ maxWidth: 720, margin: '0 auto' }}>
               <Formulario />
             </div>
-          </Reveal>
+          </div>
         </div>
       </section>
     </>

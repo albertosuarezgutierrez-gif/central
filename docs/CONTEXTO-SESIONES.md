@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** 📡 **Portal: avisos push de CIMA + web sin animaciones de aparición** (a raíz de la demo con Pablo
+Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/devuelto, siniestro) con interruptores por
+tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
+⚠️ **Pendiente de Alberto:** la identidad `16a27091` (probablemente el hijo, Guzmán Lozano) sigue vinculada como tomador a
+la ficha del PADRE (Guzmán Pueyo) — el vínculo se creó a las 10:10 con el correo que luego se movió; confirmar y borrar
+esa fila de `portal_vinculo`. **Fase 0 sin hacer:** revalidar vínculos `email_hash` cuando cambia el correo de una ficha.
+
 **(25/09/2026)** 🕓 **CIMA: descargas fijas a las 16:00 y 20:30 de Madrid** (recomendación de CIMA; `?franja=` en
 `cima-pull-respaldo`, disparan siempre y solo avisan si fallan). El respaldo condicional de la mañana pasa a las 09:00 UTC (11:00 Madrid, decisión de Alberto).
 Horas en UTC: en invierno (desde 25/10) caen a las 15:00/19:30 de Madrid. CIMA dice que Mapfre ya tiene ficheros en su
