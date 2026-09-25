@@ -70,9 +70,24 @@ test('🚨 todo correo que sale por el punto único deja fila en correo_envio, s
   // API ok, API rechazada, API caída, SMTP ok, SMTP fallido.
   assert.ok((src.match(/registrarEnvioCorreo\(/g) ?? []).length >= 5, 'algún camino de envío no deja constancia')
   assert.match(src, /api\.resend\.com\/emails/, 'sin la API de Resend no hay id y no hay eventos que atar al cliente')
+  // Los adjuntos (cartas firmadas a compañías) viajan por los DOS caminos: perderlos en uno sería mandar la carta sin el PDF.
+  assert.ok((src.match(/attachments:/g) ?? []).length >= 2, 'algún camino de envío pierde los adjuntos')
+  assert.match(src, /content: contenidoBase64\(a\)/, 'la API de Resend exige los adjuntos en base64')
+  // Los crons mandan en ráfaga: un 429 de Resend no es un correo malo, se reintenta.
+  assert.match(src, /res\.status !== 429/, 'un 429 de Resend contaría como correo fallido')
+  // Aceptado sin id = pudo salir: `falloIncierto()` de aprobaciones tiene que reconocerlo, o se reenviaría la carta a la compañía.
+  assert.match(src, /res\.ok \? '[^']*timeout[^']*pudo salir'/, 'un envío aceptado sin id se declararía fallo limpio')
 })
 
-test('🚨 la felicitación sale por el punto único con seguimiento', () => {
-  assert.match(fuente('./correo-felicitacion.ts'), /enviarCorreoCliente\(/)
-  assert.doesNotMatch(fuente('./correo-felicitacion.ts'), /sendMail\(/, 'la felicitación no puede salir por SMTP directo: se perdería el seguimiento')
+test('🚨 todo correo a clientes sale por el punto único con seguimiento', () => {
+  const remitentes = [
+    'correo-felicitacion', 'correo-aviso-acceso', 'envio-presupuesto', 'presupuesto-aceptacion', 'anulacion-portal',
+    'aviso-web', 'carta-mediador', 'aprobaciones', 'correo-invitacion-portal', 'avisos-vencimiento', 'revision-anual',
+    'mensajes-portal', 'correo-avisos-intranet',
+  ]
+  for (const r of remitentes) {
+    const src = fuente(`./${r}.ts`)
+    assert.match(src, /enviarCorreo(Cliente|Seguido)\(/, `${r} no sale por correo-envio.ts: su correo no aparecería en la ficha`)
+    assert.doesNotMatch(src, /sendMail\(/, `${r} manda por SMTP directo: se perdería el seguimiento`)
+  }
 })

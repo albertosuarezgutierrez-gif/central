@@ -23,7 +23,7 @@
  * comercial vigente para la versión ACTUAL del texto no se evalúa nada más.
  */
 import { createMailTransporter } from '@central/core-email'
-import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA, remitenteCorreo } from '@central/module-seguros'
+import { POLIZA_ESTADOS_VIGENTES, WHERE_CARTERA_VIVA } from '@central/module-seguros'
 import { VERSION_TEXTO_COMERCIAL, consentimientoVigente, tocaRevisionAnual, type MotivoNoRevision } from '@central/module-seguros-portal'
 
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
@@ -173,33 +173,50 @@ export async function ejecutarRevisionAnual(opts: { hoy?: Date; forzarContar?: b
   })
   const clientePorId = new Map(clientes.map((c) => [c.id, c]))
 
-  let envio: { transporter: NonNullable<ReturnType<typeof createMailTransporter>>; from: string } | null = null
+  // Misma detección que `avisos-vencimiento.ts`: el envío real va por
+  // `enviarCorreoSeguido` (Resend HTTP o, si no hay clave, SMTP).
+  let hayProveedor = false
   if (!soloContar) {
-    const transporter = createMailTransporter()
-    if (!transporter) throw new Error('sin_proveedor_email')
-    envio = { transporter, from: remitenteCorreo(process.env.ASEGURA_MAIL_FROM) }
+    const apiKey = process.env.RESEND_API_KEY?.trim()
+    if (!apiKey && !createMailTransporter()) throw new Error('sin_proveedor_email')
+    hayProveedor = true
   }
 
   for (const c of candidatas) {
     let destino: string | null = null
+    let clienteIdDestino: string | null = null
     for (const cid of c.clienteIds) {
       const ficha = clientePorId.get(cid)
       if (!ficha) continue
       destino = destinatarioDeCliente(ficha)
-      if (destino) break
+      if (destino) {
+        clienteIdDestino = cid
+        break
+      }
     }
     if (!destino) {
       resumen.sinCanal += 1
       continue
     }
-    if (soloContar || !envio) continue
+    if (soloContar || !hayProveedor) continue
+    // El `correduriaId` sale del MISMO vínculo que dio el `clienteId` del
+    // destinatario: `portalVinculo` lo trae y es donde nació `c.clienteIds`.
+    const correduriaId = (vinculosPorIdentidad.get(c.identidad.id) ?? []).find((v) => v.clienteId === clienteIdDestino)?.correduriaId
+    if (!correduriaId || !clienteIdDestino) {
+      // Invariante: no debería pasar — `clienteIdDestino` viene de `c.clienteIds`,
+      // que se construyó a partir de estos mismos vínculos.
+      resumen.fallidos += 1
+      console.error(`[revision-anual] sin correduriaId para la identidad ${c.identidad.id}: no se envía`)
+      continue
+    }
 
     const { asunto, texto, html } = textoRevisionAnual({ nombre: c.identidad.nombre, polizas: c.polizas })
-    try {
-      await envio.transporter.sendMail({ from: envio.from, to: destino, subject: asunto, text: texto, html })
-    } catch (e) {
+    // Import dinámico: mismo motivo que en `avisos-vencimiento.ts`.
+    const { enviarCorreoSeguido } = await import('./correo-envio')
+    const r = await enviarCorreoSeguido({ correduriaId, clienteId: clienteIdDestino, tipo: 'revision_anual', to: destino, asunto, texto, html })
+    if (r.resultado !== 'enviado') {
       resumen.fallidos += 1
-      console.error(`[revision-anual] fallo enviando a la identidad ${c.identidad.id}:`, e instanceof Error ? e.message : e)
+      console.error(`[revision-anual] fallo enviando a la identidad ${c.identidad.id}:`, r.motivo ?? r.codigo ?? '')
       continue
     }
     resumen.enviados += 1

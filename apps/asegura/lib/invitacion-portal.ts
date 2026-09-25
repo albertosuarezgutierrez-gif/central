@@ -391,7 +391,7 @@ export async function invitarAlPortal(
   }
 
   const yaEntraba = estado.estado === 'ya_entra'
-  const enviado = await enviarInvitacionPortal(correo.email, {
+  const enviado = await enviarInvitacionPortal(correduriaId, entrada.clienteId, correo.email, {
     nombre: await nombreDe(correduriaId, entrada.clienteId),
     enlace,
     yaEntraba,

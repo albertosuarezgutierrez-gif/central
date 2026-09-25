@@ -21,7 +21,7 @@
 // que usa una pimienta que solo existe allí. Quien entra con el correo de la
 // ficha ve el presupuesto por la rama del vínculo (`portal_vinculo.cliente_id`).
 
-import { calcularVencimiento, correoPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp, remitenteCorreo } from '@central/module-seguros'
+import { calcularVencimiento, correoPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp } from '@central/module-seguros'
 import { generarTokenVista, hashTokenVista } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
@@ -156,7 +156,7 @@ export async function avisarPresupuesto(
     return { estado: 'enlace', mensaje, whatsapp: `https://wa.me/?text=${encodeURIComponent(mensaje)}` }
   }
 
-  const envio = await mandarCorreo(ficha.email, correoPresupuesto(datos))
+  const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', ficha.email, correoPresupuesto(datos))
   if (envio !== 'enviado') {
     // No salió: se devuelve la llave anterior para que el enlace que el cliente ya tuviera siga abriendo.
     await db.presupuesto.updateMany({ where: { id: p.id, tokenHash: nuevoHash }, data: { tokenHash: p.tokenHash, canalAviso: p.canalAviso } })
@@ -215,24 +215,17 @@ export async function confirmarWhatsapp(
 
 type ResultadoCorreo = 'enviado' | 'sin_proveedor' | 'remitente_no_verificado' | 'rechazado'
 
-async function mandarCorreo(destino: string, c: { asunto: string; texto: string; html: string }): Promise<ResultadoCorreo> {
+async function mandarCorreo(
+  correduriaId: string, clienteId: string, tipo: string, destino: string, c: { asunto: string; texto: string; html: string },
+): Promise<ResultadoCorreo> {
   // Import dinámico: igual que el resto de correos de asegura, para que los cepos
   // con `node --test` puedan cargar el módulo sin resolver `@central/core-email`.
-  const { createMailTransporter } = await import('@central/core-email')
-  const transporter = createMailTransporter()
-  if (!transporter) return 'sin_proveedor'
-  const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
-  try {
-    await transporter.sendMail({
-      from: remitenteCorreo(process.env.ASEGURA_MAIL_FROM), to: destino, ...(replyTo ? { replyTo } : {}),
-      subject: c.asunto, text: c.texto, html: c.html,
-    })
-    return 'enviado'
-  } catch (e) {
-    const mensaje = e instanceof Error ? e.message : String(e)
-    console.error('[asegura/presupuesto] fallo enviando el aviso:', mensaje)
-    return rechazoDeRemitente(mensaje) ? 'remitente_no_verificado' : 'rechazado'
-  }
+  const { enviarCorreoSeguido } = await import('./correo-envio')
+  const r = await enviarCorreoSeguido({ correduriaId, clienteId, tipo, to: destino, asunto: c.asunto, texto: c.texto, html: c.html })
+  if (r.resultado === 'enviado') return 'enviado'
+  if (r.resultado === 'sin_proveedor') return 'sin_proveedor'
+  console.error('[asegura/presupuesto] fallo enviando el aviso:', r.motivo)
+  return rechazoDeRemitente(r.motivo ?? '') ? 'remitente_no_verificado' : 'rechazado'
 }
 
 /**

@@ -116,7 +116,7 @@ export async function avisarAccesoPendiente(
   }
 
   const nombre = `${otorgante.nombre} ${otorgante.apellidos}`.trim()
-  const enviado = await enviarAvisoAcceso(destino, { otorgante: nombre === '' ? null : nombre, enlace, caducaEn })
+  const enviado = await enviarAvisoAcceso(correduriaId, entrada.autorizadoId, destino, { otorgante: nombre === '' ? null : nombre, enlace, caducaEn })
   // 🚨 Igual que en la invitación al portal: una env que falta no se cuenta como
   // «el proveedor lo rechazó», porque reintentar no la pone.
   if (enviado === 'sin_proveedor') {

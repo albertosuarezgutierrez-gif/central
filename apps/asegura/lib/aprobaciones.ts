@@ -12,7 +12,7 @@
 // El SQL crudo no prefija `seguros.`: la conexión ya trae `?schema=seguros`.
 
 import {
-  ESTADOS_ANULACION_ABIERTA, MEDIADOR, POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, importeEiac, remitenteCorreo,
+  ESTADOS_ANULACION_ABIERTA, MEDIADOR, POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, importeEiac,
   type BuzonCompania, type Decision,
 } from '@central/module-seguros'
 import { createHash } from 'node:crypto'
@@ -317,25 +317,20 @@ async function adjuntosFirmados(base: string, texto: string, f: FirmaGuardada | 
   }
 }
 
-async function enviarCorreo(destino: string, asunto: string, texto: string, adjuntos?: Adjunto[]): Promise<{ ok: true } | { ok: false; configuracion: boolean; incierto?: boolean; motivo: string }> {
-  // Carga perezosa, como en el resto de correos de la app: `@central/core-email` no resuelve con `node --test`.
-  const { createMailTransporter } = await import('@central/core-email')
-  const transporter = createMailTransporter()
-  if (!transporter) return { ok: false, configuracion: true, motivo: 'No hay proveedor de correo configurado en central-asegura.' }
+async function enviarCorreo(
+  correduriaId: string, clienteId: string, tipo: string, destino: string, asunto: string, texto: string, adjuntos?: Adjunto[],
+): Promise<{ ok: true } | { ok: false; configuracion: boolean; incierto?: boolean; motivo: string }> {
   if (!process.env.ASEGURA_MAIL_FROM?.trim()) return { ok: false, configuracion: true, motivo: 'Falta ASEGURA_MAIL_FROM en central-asegura.' }
-  const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
-  try {
-    await transporter.sendMail({
-      from: remitenteCorreo(process.env.ASEGURA_MAIL_FROM), to: destino, ...(replyTo ? { replyTo } : {}), subject: asunto, text: texto,
-      ...(adjuntos?.length ? { attachments: adjuntos.map((a) => ({ filename: a.nombre, content: a.contenido, contentType: a.tipo })) } : {}),
-    })
-    return { ok: true }
-  } catch (e) {
-    const m = e instanceof Error ? e.message : String(e)
-    console.error('[aprobaciones] el proveedor rechazó el correo:', m)
-    if (falloIncierto(m)) return { ok: false, configuracion: false, incierto: true, motivo: 'se cortó esperando al proveedor de correo; pudo salir' }
-    return { ok: false, configuracion: rechazoDeRemitente(m), motivo: rechazoDeRemitente(m) ? 'El dominio del remitente no está verificado en Resend.' : 'El proveedor de correo no aceptó el mensaje.' }
-  }
+  // Sale por el punto único con seguimiento: queda en `correo_envio` y sus eventos en la ficha. Carga
+  // perezosa, como en el resto de correos de la app: `node --test` no resuelve `@central/core-email`.
+  const { enviarCorreoSeguido } = await import('./correo-envio')
+  const r = await enviarCorreoSeguido({ correduriaId, clienteId, tipo, to: destino, asunto, texto, adjuntos })
+  if (r.resultado === 'enviado') return { ok: true }
+  if (r.resultado === 'sin_proveedor') return { ok: false, configuracion: true, motivo: 'No hay proveedor de correo configurado en central-asegura.' }
+  const m = r.motivo ?? ''
+  console.error('[aprobaciones] el proveedor rechazó el correo:', m)
+  if (falloIncierto(m)) return { ok: false, configuracion: false, incierto: true, motivo: 'se cortó esperando al proveedor de correo; pudo salir' }
+  return { ok: false, configuracion: rechazoDeRemitente(m), motivo: rechazoDeRemitente(m) ? 'El dominio del remitente no está verificado en Resend.' : 'El proveedor de correo no aceptó el mensaje.' }
 }
 
 /**
@@ -451,8 +446,8 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
   }
 
   await retirarObsoletas(correduriaId)
-  const [a] = await db.$queryRaw<{ estado: string; clienteId: string; caducada: boolean; accion: string; anulacionId: string | null; cartaId: string | null; polizaId: string | null }[]>`
-    select estado, cliente_id::text as "clienteId", caduca_at < now() as caducada, accion,
+  const [a] = await db.$queryRaw<{ estado: string; clienteId: string; caducada: boolean; accion: string; origen: string; anulacionId: string | null; cartaId: string | null; polizaId: string | null }[]>`
+    select estado, cliente_id::text as "clienteId", caduca_at < now() as caducada, accion, origen,
            anulacion_id::text as "anulacionId", carta_mediador_id::text as "cartaId", poliza_id::text as "polizaId"
     from aprobacion where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
   if (!a) return { estado: 'no_encontrada' }
@@ -497,7 +492,7 @@ export async function decidirAprobacion(correduriaId: string, id: string, d: Dec
            or exists (select 1 from carta_mediador cm where cm.id = aprobacion.carta_mediador_id and cm.estado = 'firmada'))`
   if (reclamada === 0) return { estado: 'ya_decidida' }
 
-  const envio = await enviarCorreo(destino, d.asunto, d.texto, adjuntos)
+  const envio = await enviarCorreo(correduriaId, a.clienteId, a.origen, destino, d.asunto, d.texto, adjuntos)
   if (!envio.ok && envio.configuracion) {
     // No ha salido nada y reintentar no lo arregla: vuelve a pendiente para cuando esté configurado.
     await db.$executeRaw`update aprobacion set estado = 'pendiente', decidida_at = null, decidida_por = null where id = ${id}::uuid and estado = 'enviando'`

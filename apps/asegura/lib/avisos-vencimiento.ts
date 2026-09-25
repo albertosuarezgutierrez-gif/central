@@ -46,7 +46,6 @@ import {
   etiquetaRol,
   POLIZA_ESTADOS_VIGENTES,
   WHERE_CARTERA_VIVA,
-  remitenteCorreo,
   type IntervinienteFicha,
 } from '@central/module-seguros'
 import { DIAS_VENTANA_AVISO, entraEnVentana, TIPOS_RECORDATORIO_PROPIO } from '@central/module-seguros-portal'
@@ -392,13 +391,14 @@ export async function ejecutarAvisosVencimiento(opts: {
   if (candidatas.length === 0) return resumen
 
   // Sin proveedor no se «envía 0 correos»: es una avería de configuración y
-  // tiene que verse como tal. El remitente ya no puede faltar (tiene defecto).
-  let envio: { transporter: NonNullable<ReturnType<typeof createMailTransporter>>; from: string } | null = null
+  // tiene que verse como tal. El envío real va por `enviarCorreoSeguido`
+  // (Resend HTTP si hay `RESEND_API_KEY`, si no SMTP), así que la detección
+  // previa comprueba el mismo par de caminos que usará ese punto único.
+  let hayProveedor = false
   if (!soloContar) {
-    const transporter = createMailTransporter()
-    if (!transporter) throw new Error('sin_proveedor_email')
-    const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-    envio = { transporter, from }
+    const apiKey = process.env.RESEND_API_KEY?.trim()
+    if (!apiKey && !createMailTransporter()) throw new Error('sin_proveedor_email')
+    hayProveedor = true
   }
 
   const arranque = opts.ahoraMs ?? (() => Date.now())
@@ -451,7 +451,10 @@ export async function ejecutarAvisosVencimiento(opts: {
     }
     // El ensayo resuelve el destinatario a propósito (para saber cuántas irían
     // de verdad) pero NO lo escribe en ningún sitio ni lo manda.
-    if (soloContar || !envio) continue
+    if (soloContar || !hayProveedor) continue
+    // Invariante: `destino` solo se resuelve cuando hay `poliza` (directo o vía
+    // tercero, arriba). Sin ella no habría `correduriaId` al que atribuir el envío.
+    if (!poliza) continue
 
     const { asunto, texto, html } = textoAviso({
       titulo: o.titulo,
@@ -463,11 +466,22 @@ export async function ejecutarAvisosVencimiento(opts: {
       paraTercero,
     })
 
-    try {
-      await envio.transporter.sendMail({ from: envio.from, to: destino, subject: asunto, text: texto, html })
-    } catch (e) {
+    // Import dinámico: como el resto de correos de esta app, los cepos puros
+    // corren con `node --test`, que no resuelve el punto único de envío.
+    const { enviarCorreoSeguido } = await import('./correo-envio')
+    const r = await enviarCorreoSeguido({
+      correduriaId: poliza.correduriaId,
+      // A un tercero (interviniente/allegado) no se le conoce el id de ficha
+      // desde aquí: `EmailAlternativo.quien` no lo lleva.
+      // Aunque vaya a un tercero, el aviso es de la póliza de ESTE cliente: se ve en su ficha, con la dirección a la que salió.
+      clienteId: poliza.cliente.id,
+      tipo: 'vencimiento',
+      to: destino,
+      asunto, texto, html,
+    })
+    if (r.resultado !== 'enviado') {
       resumen.fallidos += 1
-      console.error(`[avisos] fallo enviando la obligación ${o.id}:`, e instanceof Error ? e.message : e)
+      console.error(`[avisos] fallo enviando la obligación ${o.id}:`, r.motivo ?? r.codigo ?? '')
       continue
     }
     resumen.enviados += 1

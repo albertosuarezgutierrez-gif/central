@@ -15,7 +15,6 @@
 
 import { computeEmailLookupHash, decryptField, encryptField } from '@central/module-seguros-pii'
 import { generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido } from '@central/module-seguros-portal'
-import { remitenteCorreo } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { altaCliente } from './cartera-edicion'
 import { crearEnlaceDirecto } from './avisos-intranet'
@@ -45,28 +44,13 @@ export const ORIGEN_AVISO_WEB = 'web:aviso-vencimiento'
 
 type Envio = 'enviado' | 'sin_proveedor' | 'rechazado'
 
-async function enviar(destino: string, c: CuerpoCorreo): Promise<Envio> {
-  // Import dinámico, como en `correo-avisos-intranet.ts`: `node --test` no resuelve `@central/core-email`.
-  const { createMailTransporter } = await import('@central/core-email')
-  const transporter = createMailTransporter()
-  if (!transporter) return 'sin_proveedor'
-  const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
-  try {
-    await transporter.sendMail({
-      from: remitenteCorreo(process.env.ASEGURA_MAIL_FROM),
-      to: destino,
-      ...(replyTo ? { replyTo } : {}),
-      subject: c.asunto,
-      text: c.texto,
-      html: c.html,
-    })
-    return 'enviado'
-  } catch (e) {
-    // Solo el código: el mensaje de un SMTP suele traer la dirección rechazada («550 <x@y> …»).
-    const c = e as { code?: unknown; responseCode?: unknown }
-    console.error('[aviso-web] fallo enviando:', String(c?.responseCode ?? c?.code ?? 'sin_codigo'))
-    return 'rechazado'
-  }
+// Sale por el punto único con seguimiento (25/09/2026): queda en `correo_envio` y sus eventos en la
+// ficha. Import dinámico, como en `correo-avisos-intranet.ts`: `node --test` no resuelve `@central/core-email`.
+async function enviar(correduriaId: string, clienteId: string | null, tipo: string, destino: string, c: CuerpoCorreo): Promise<Envio> {
+  const { enviarCorreoSeguido } = await import('./correo-envio')
+  const r = await enviarCorreoSeguido({ correduriaId, clienteId, tipo, to: destino, asunto: c.asunto, texto: c.texto, html: c.html })
+  if (r.resultado === 'rechazado') console.error('[aviso-web] fallo enviando:', r.codigo ?? 'sin_codigo')
+  return r.resultado
 }
 
 // ─── 1. Solicitar ───────────────────────────────────────────────────────────
@@ -110,6 +94,9 @@ export async function solicitarAviso(correduriaId: string, body: unknown): Promi
       now() + make_interval(hours => ${HORAS_CONFIRMACION}::int), ${encryptField(tokenBaja)}, ${await hashTokenEnlace(tokenBaja)})`)
 
   const envio = await enviar(
+    correduriaId,
+    null, // aún sin ficha: nace en `confirmarAviso`
+    'aviso_web_confirmacion',
     s.email,
     cuerpoConfirmacion({
       nombre: s.nombre,
@@ -306,6 +293,9 @@ export async function pasadaAvisosWeb(correduriaId: string, opciones: { hoy?: Da
     const viva = await db.portalEnlaceDirecto.count({ where: { correduriaId, clienteId: f.clienteId, usadoEn: null, expiraEn: { gt: new Date() } } })
     const { enlace, directo } = viva > 0 ? { enlace: portal, directo: false } : await crearEnlaceDirecto(correduriaId, f.clienteId, email, hash, '/boveda', portal)
     const envio = await enviar(
+      correduriaId,
+      f.clienteId,
+      'aviso_web_recordatorio',
       email,
       cuerpoAviso({
         tipo: toca.tipo,

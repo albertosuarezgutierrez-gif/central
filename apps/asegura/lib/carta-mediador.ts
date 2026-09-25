@@ -13,7 +13,7 @@
 import { createHash, randomInt } from 'node:crypto'
 import { FirmaPropia, TEXTO_CONSENTIMIENTO, nombreCoincide } from '@central/core-firma'
 import {
-  ESTADOS_ANULACION_ABIERTA, cartaNombramientoMediador, documentoParaCarta, remitenteCorreo, sqlCarteraEnVigor, sqlCarteraViva, transicionCartaMediador,
+  ESTADOS_ANULACION_ABIERTA, cartaNombramientoMediador, documentoParaCarta, sqlCarteraEnVigor, sqlCarteraViva, transicionCartaMediador,
   type AccionCartaMediador, type EstadoCartaMediador,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
@@ -167,8 +167,9 @@ export async function pedirCodigoCarta(correduriaId: string, identidadId: string
   if (ficha.estado === 'ilegible') return { estado: 'sin_correo_configurado', motivo: 'no se puede leer el correo de tu ficha' }
   if (ficha.estado !== 'ok') return { estado: 'sin_email', motivo: ficha.estado === 'baja_de_correo' ? 'te diste de baja del correo' : 'no tenemos tu correo' }
   const { createMailTransporter } = await import('@central/core-email')
-  const transporter = createMailTransporter()
-  if (!transporter || !process.env.ASEGURA_MAIL_FROM?.trim()) return { estado: 'sin_correo_configurado', motivo: 'el correo de la correduría no está configurado' }
+  // Proveedor = Resend por API o SMTP, como decide `correo-envio.ts`.
+  const hayProveedor = !!process.env.RESEND_API_KEY?.trim() || !!createMailTransporter()
+  if (!hayProveedor || !process.env.ASEGURA_MAIL_FROM?.trim()) return { estado: 'sin_correo_configurado', motivo: 'el correo de la correduría no está configurado' }
 
   const db = prismaAsegura()
   // La fila `pendiente` nace aquí (una abierta por póliza, la protege el índice parcial).
@@ -201,16 +202,16 @@ export async function pedirCodigoCarta(correduriaId: string, identidadId: string
     if (e?.agotado) return { estado: 'limite_codigos' }
     return { estado: 'espera', segundos: Math.max(1, e?.faltan ?? SEGUNDOS_ENTRE_CODIGOS) }
   }
-  try {
-    await transporter.sendMail({
-      from: remitenteCorreo(process.env.ASEGURA_MAIL_FROM),
-      to: ficha.email,
-      subject: 'Tu código para firmar el nombramiento de corredor',
-      text: `Hola:\n\nTu código para firmar en el portal la carta que nos nombra corredores de tu póliza es: ${codigo}\n\n` +
-        `Caduca en ${MINUTOS_CODIGO} minutos. Si no lo has pedido tú, no hagas nada: sin el código no se firma nada.\n\nGrupo ASegura`,
-    })
-  } catch (e) {
-    console.error('[carta-mediador] no salió el código:', e instanceof Error ? e.message : e)
+  // Sale por el punto único con seguimiento: queda en `correo_envio` y sus eventos en la ficha.
+  const { enviarCorreoSeguido } = await import('./correo-envio')
+  const envio = await enviarCorreoSeguido({
+    correduriaId, clienteId: r.b.clienteId, tipo: 'carta_mediador_codigo', to: ficha.email,
+    asunto: 'Tu código para firmar el nombramiento de corredor',
+    texto: `Hola:\n\nTu código para firmar en el portal la carta que nos nombra corredores de tu póliza es: ${codigo}\n\n` +
+      `Caduca en ${MINUTOS_CODIGO} minutos. Si no lo has pedido tú, no hagas nada: sin el código no se firma nada.\n\nGrupo ASegura`,
+  })
+  if (envio.resultado !== 'enviado') {
+    console.error('[carta-mediador] no salió el código:', envio.motivo ?? envio.codigo ?? 'sin_detalle')
     return { estado: 'fallo_envio' }
   }
   return { estado: 'codigo_enviado', email: enmascarar(ficha.email), minutos: MINUTOS_CODIGO }

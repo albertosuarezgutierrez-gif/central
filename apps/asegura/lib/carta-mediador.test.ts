@@ -25,8 +25,9 @@ test('🪤 sin código no hay firma; el intento se gasta antes de comparar; se f
 })
 
 test('🪤 nada sale hacia la compañía: el único correo es el código, a la ficha del cliente', () => {
-  assert.equal(src.split('sendMail(').length - 1, 1)
-  assert.match(src, /to: ficha\.email,\n\s+subject: 'Tu código para firmar el nombramiento de corredor'/)
+  assert.equal(src.match(/enviarCorreoSeguido\(/g)?.length, 1)
+  assert.doesNotMatch(src, /sendMail\(/)
+  assert.match(src, /to: ficha\.email,\n\s+asunto: 'Tu código para firmar el nombramiento de corredor'/)
 })
 
 test('🪤 las acciones del corredor pasan por la regla pura y por compare-and-swap del estado', () => {

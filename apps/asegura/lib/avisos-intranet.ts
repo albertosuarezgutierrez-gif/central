@@ -539,15 +539,19 @@ export async function avisarIntranet(
 
     if (soloContar) continue
 
-    const resultado = await enviarAvisosIntranet(destino, {
-      nombre: p.nombre,
-      avisos: nuevos.map((a) => ({ tipo: a.tipo })),
-      // El TOTAL de su campana, no el de los nuevos: si no, un correo que dice
-      // «tienes 1 aviso» sobre una campana que marca 4 manda a resolver uno y
-      // deja los otros tres donde estaban.
-      total,
-      ...(await enlaceDirecto(correduriaId, p.clienteId, destino, nuevos.map((a) => a.tipo), enlace)),
-    })
+    const resultado = await enviarAvisosIntranet(
+      destino,
+      {
+        nombre: p.nombre,
+        avisos: nuevos.map((a) => ({ tipo: a.tipo })),
+        // El TOTAL de su campana, no el de los nuevos: si no, un correo que dice
+        // «tienes 1 aviso» sobre una campana que marca 4 manda a resolver uno y
+        // deja los otros tres donde estaban.
+        total,
+        ...(await enlaceDirecto(correduriaId, p.clienteId, destino, nuevos.map((a) => a.tipo), enlace)),
+      },
+      { correduriaId, clienteId: p.clienteId },
+    )
     if (resultado === 'sin_proveedor') throw new Error('sin_correo_configurado')
     if (resultado !== 'enviado') {
       resumen.fallidos += 1

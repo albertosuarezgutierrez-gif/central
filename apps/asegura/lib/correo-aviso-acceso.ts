@@ -42,8 +42,6 @@
  * nada.
  */
 
-import { remitenteCorreo } from '@central/module-seguros'
-
 import { rechazoDeRemitente, type ResultadoEnvioCorreo } from './correo-invitacion-portal.ts'
 
 /** Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual. */
@@ -177,29 +175,24 @@ export function cuerpoAvisoAcceso(d: DatosAvisoAcceso): CuerpoAviso {
  * `error_envio` y no «no se ha autorizado» — decir lo segundo llevaría a
  * reintentar la anotación, que ya está hecha.
  */
-export async function enviarAvisoAcceso(destino: string, d: DatosAvisoAcceso): Promise<ResultadoEnvioCorreo> {
-  // El transporte se carga AQUÍ, no arriba, por lo mismo que en el correo de
-  // invitación del portal: el cepo de `cuerpoAvisoAcceso()` corre con
-  // `node --test`, que no sabe resolver `@central/core-email` (su `main`
-  // importa sin extensión). Con el import arriba, el cepo no podría cargar este
-  // módulo y el texto habría que probarlo leyendo la fuente — o sea, no probarlo.
-  const { createMailTransporter } = await import('@central/core-email')
-  const transporter = createMailTransporter()
-  if (!transporter) {
+export async function enviarAvisoAcceso(
+  correduriaId: string,
+  clienteId: string,
+  destino: string,
+  d: DatosAvisoAcceso,
+): Promise<ResultadoEnvioCorreo> {
+  // Import dinámico: el cepo de `cuerpoAvisoAcceso()` corre con `node --test`, que no sabe resolver
+  // `@central/core-envio` ni `@central/core-email` (su `main` importa sin extensión). Con el import
+  // arriba, el cepo no podría cargar este módulo y el texto habría que probarlo leyendo la fuente.
+  const { enviarCorreoSeguido } = await import('./correo-envio')
+  const { asunto, texto, html } = cuerpoAvisoAcceso(d)
+  const r = await enviarCorreoSeguido({ correduriaId, clienteId, tipo: 'aviso_acceso', to: destino, asunto, texto, html })
+  if (r.resultado === 'enviado') return 'enviado'
+  if (r.resultado === 'sin_proveedor') {
     console.error('[asegura/aviso-acceso] no hay proveedor de correo configurado')
     return 'sin_proveedor'
   }
-  const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-  const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
-
-  const { asunto, texto, html } = cuerpoAvisoAcceso(d)
-  try {
-    await transporter.sendMail({ from, to: destino, ...(replyTo ? { replyTo } : {}), subject: asunto, text: texto, html })
-    return 'enviado'
-  } catch (e) {
-    // El motivo, nunca el destino: un log es donde un dato personal sobrevive más tiempo.
-    const mensaje = e instanceof Error ? e.message : String(e)
-    console.error('[asegura/aviso-acceso] fallo enviando el aviso:', mensaje)
-    return rechazoDeRemitente(mensaje) ? 'remitente_no_verificado' : 'rechazado'
-  }
+  // El motivo, nunca el destino: un log es donde un dato personal sobrevive más tiempo.
+  console.error('[asegura/aviso-acceso] fallo enviando el aviso:', r.motivo)
+  return rechazoDeRemitente(r.motivo ?? '') ? 'remitente_no_verificado' : 'rechazado'
 }
