@@ -163,13 +163,13 @@ function Necesidades({ p, ramo, deshabilitado, onGuardar }: {
       <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44, display: 'flex', alignItems: 'center', color: p.necesidades ? 'var(--muted)' : 'var(--negative)' }}>
         {p.necesidades ? `Necesidades: «${p.necesidades.length > 80 ? `${p.necesidades.slice(0, 80)}…` : p.necesidades}»` : 'Falta el cuestionario de necesidades: sin él no se le puede avisar'}
       </summary>
-      <div style={{ display: 'grid', gap: 10 }}>
+      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
         {p.necesidades && <span style={NOTA}>Guardado ahora: «{p.necesidades}». Rellenar el cuestionario lo sustituye.</span>}
         {preguntas.map((q) => (
-          <label key={q.id} style={{ display: 'grid', gap: 4, fontSize: 14 }}>
+          <label key={q.id} style={{ display: 'grid', gap: 4, fontSize: 14, gridTemplateColumns: 'minmax(0, 1fr)' }}>
             {q.texto}
             <select value={resp[q.id] ?? ''} onChange={(e) => setResp((r) => ({ ...r, [q.id]: e.target.value }))}
-              style={{ minHeight: 44, fontSize: 14, padding: '6px 8px', maxWidth: '100%' }}>
+              style={{ minHeight: 44, fontSize: 14, padding: '6px 8px', width: '100%', minWidth: 0 }}>
               <option value="">— Elige —</option>
               {q.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.texto}</option>)}
             </select>
