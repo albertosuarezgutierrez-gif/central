@@ -436,4 +436,62 @@ doc que el automerge excluye a propósito) — PR draft, sin 🔴 nuevo. Sin Tel
 no supiera ya de ayer, y el único cambio de carril 2 es una corrección de mapa, no una decisión.
 
 ---
-<!-- verificado: 2026-09-23 -->
+
+## ✅ Pasada ligera — 25/09/2026
+
+**Rango:** desde la pasada de ayer (23/09, `bb0401b`... la de 24/09 no dejó informe propio) hasta
+`e988720` — ~25 commits, casi todo correduría (accesos de cliente/póliza #3547+#3555, cuatro fixes
+sueltos #3524/#3526/#3528/#3533, tramitación de siniestros #3551, tipografía de marca extendida),
+`/banca` e `/inicio` adelgazados (#3541, #3544), botón «Instalar app» (#3559) y el respaldo de CIMA
+a las 07:00/14:00/18:00 UTC (#3562, tras el retraso de Actions del 24/09).
+
+### Heartbeat de crons/agentes (2-bis) — sano
+43 filas en `agente_latidos`, todo `ok=true` salvo `ses_transporte` (crónico desde 21/08, sin
+establecimientos SES — sin cambios, acción pendiente de Alberto). `psd2_health_check` (semanal,
+dentro de umbral) sigue reportando la BBVA rota en Enable Banking, ahora "sesión CLOSED, sin
+movimientos desde el 10/09" (13 días) — mismo problema ya avisado por Telegram en su día (PR
+#2868/#3022), sin novedad que repetir. `agente_reparaciones`: sin intentos en 7 días.
+
+### Correduría (2-quater) — sano, con el mismo backlog conocido
+`cima_pull_completed` hace <1h, cola estable en 155, `errorsCount=0`. `correduria_ingesta` sigue
+DEGRADADA por C0058 (Mapfre): **94 días sin mandar nada** — la memoria de hoy ya registra que CIMA
+dice haberlo reconfigurado el 24/09 pero los 3 pulls posteriores (13:21/17:01/06:49 UTC) siguen sin
+traer nada suyo; a vigilar si se resuelve mañana. Codeoscopic: 12 cotizaciones/7d, 0,50€... 5,00€
+en total, 3 descartadas — en línea con los días previos. Cepos de aislamiento (`regression-asegura-
+aislamiento`, `regression-portal-aislamiento`, `regression-asegura-operador-publico`,
+`regression-correduria-puerto`, `regression-asegura-gasto-codeoscopic`) presentes en `test/`.
+
+### 🟠 Salud del precio (2bis) — raíles intactos, pero `oscilantes` sube de 0 a 10
+`rail_baja_roto=0` · `bajo_minimo=0` · `horas_desde_ultima_pasada=7,6h` · `noches_ultima_pasada=118`
+— todo sano. `rail_alza_sin_justificar=1` (🟠, mismo patrón crónico). **`oscilantes=10`** (🟠, venía
+en 0 desde el 20/09): concentrado en `prop_duplex_center` (2026-11-16 a 11-19, hasta 4 cambios de
+sentido en 6 pasadas, precio oscilando 115↔190€) y `prop_luxury_busto` (2026-10-01, 10-11, 11-16,
+2027-02-06). No es un desplome (el raíl de bajada no se rompe en ninguna) ni vende bajo mínimo: es
+ciclo límite en fechas de noviembre, con horquillas de mercado amplias. No dispara Telegram por sí
+solo (no es 🔴 de la tabla), pero es la primera vez en 5 días que `oscilantes` no es 0 — queda
+anotado para que la próxima pasada confirme si es puntual o si se instala. Las 4 palancas
+(`enabled`/`apply_enabled=true`, `min_price` puesto, `antelacion_k=0`) sanas.
+
+### Backlog de PRs (2-ter) — automerge vivo, mismo backlog sin crecer de forma anómala
+`rutinas-automerge.yml` con runs en verde en la última hora (incluida la fusión del PR de
+radiografía #3563). Sigue habiendo PRs `claude/*` abiertos desde principios de mes (p. ej. #2318
+desde el 05/09, #2868/#3022 sobre la alerta BBVA) — mismo problema ya reportado varias veces, sin
+causa raíz nueva. No se repite el listado completo.
+
+### Reconciliación memoria/skills
+4 commits del rango (#3524, #3526, #3528, #3533) tenían cambios de producto reales sin entrada en
+`docs/CONTEXTO-SESIONES.md` (solo tocaban el JSON de traza de sesión, no la memoria) — añadida una
+entrada agrupada. El resto del rango ya estaba anotado por las propias sesiones. `docs/FUENTES-DE-
+VERDAD.md` sigue cubriendo los ficheros nuevos de correduría (`seguros-cliente.ts`, `Accesos.tsx`,
+`siniestro-tramitacion.ts`, `siniestro-historial.ts`) bajo sus globs existentes — sin drift.
+
+No se ha podido listar las sesiones del rango (`list_sessions` de Claude Code Remote no está
+disponible en esta pasada) — se dice explícitamente. El backlog de PRs (2-ter) no muestra ningún
+título sin huella en memoria/bitácora.
+
+**Carril 1:** esta entrada + `AUTO-APLICADOS.md` + `CONTEXTO-SESIONES.md`. **Carril 2:** ninguno
+nuevo hoy (nada de código, nada `⛔`). Sin Telegram: sin 🔴, y el único 🟠 nuevo (`oscilantes`) no
+cruza el umbral que pide aviso inmediato — queda anotado para la próxima pasada.
+
+---
+<!-- verificado: 2026-09-25 -->
