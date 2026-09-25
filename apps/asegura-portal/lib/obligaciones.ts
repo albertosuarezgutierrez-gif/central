@@ -79,7 +79,17 @@ export async function sincronizarObligacionesDeIdentidad(
   // 2) Las de la CARTERA. Sin vínculo NO se toca nada de esto: no es «esta
   // identidad no tiene vencimientos», es «no sabemos qué ficha de la cartera
   // es la suya». Borrar o crear aquí sería afirmar algo que no se ha mirado.
-  if (!c.vinculada) return
+  //
+  // 🚨 Salvo la PODA (25/09/2026): quien se queda sin ningún vínculo —porque
+  // se retiró uno que era de otra persona— conservaba el vencimiento de la
+  // póliza ajena en `portal_obligacion`, y `/api/avisos` lo seguía pintando.
+  // Sin vínculo no hay ninguna póliza de cartera que sea suya: las de cartera
+  // (`tipo: 'poliza'`, `polizaId` no nulo) sobran todas. Las declaradas y los
+  // recordatorios propios no se tocan.
+  if (!c.vinculada) {
+    await prisma.portalObligacion.deleteMany({ where: { identidadId, tipo: 'poliza', polizaId: { not: null } } })
+    return
+  }
 
   const vivas: string[] = []
   const ops = []

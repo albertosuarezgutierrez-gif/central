@@ -150,3 +150,40 @@ test('prediccion: gana el principal aunque haya secundarios ajenos (caso real 03
   // Y para los terceros, ese mismo correo NO les identifica.
   assert.equal(prediccionDeVinculo(candidatos, 'c-tercero-1'), 'resuelve_a_otra')
 })
+
+// ─── Retirar vínculos por correo que el correo ya no resuelve (25/09/2026) ──
+// Caso real: identidad de Lozano con un `email_hash` a la ficha de Pueyo (su
+// correo estuvo mal puesto ahí) y otro a la suya tras corregirlo.
+import { vinculosEmailARetirar, type VinculoExistente } from './vinculo-elegir.ts'
+
+const LOZANO = 'cli-lozano'
+const PUEYO = 'cli-pueyo'
+const cruzados: VinculoExistente[] = [
+  { id: 'v-pueyo', clienteId: PUEYO, origen: 'email_hash' },
+  { id: 'v-lozano', clienteId: LOZANO, origen: 'email_hash' },
+]
+
+test('retirar: el correo resuelve a SU ficha → se retira el vínculo a la ficha ajena', () => {
+  assert.deepEqual(
+    vinculosEmailARetirar({ estado: 'ok', clienteId: LOZANO, correduriaId: 'c' }, cruzados),
+    ['v-pueyo'],
+  )
+})
+
+test('retirar: el correo ya no está en ninguna ficha, o en varias → se cierran todos los de correo', () => {
+  assert.deepEqual(vinculosEmailARetirar({ estado: 'sin_ficha' }, cruzados), ['v-pueyo', 'v-lozano'])
+  assert.deepEqual(vinculosEmailARetirar({ estado: 'ambiguo' }, cruzados), ['v-pueyo', 'v-lozano'])
+})
+
+test('retirar: sin poder comprobar (null) no se retira nada', () => {
+  assert.deepEqual(vinculosEmailARetirar(null, cruzados), [])
+})
+
+test('retirar: un vínculo manual o del corredor no lo deshace un correo', () => {
+  const puestos: VinculoExistente[] = [
+    { id: 'v-manual', clienteId: PUEYO, origen: 'manual' },
+    { id: 'v-corredor', clienteId: PUEYO, origen: 'corredor' },
+  ]
+  assert.deepEqual(vinculosEmailARetirar({ estado: 'sin_ficha' }, puestos), [])
+  assert.deepEqual(vinculosEmailARetirar({ estado: 'ok', clienteId: LOZANO, correduriaId: 'c' }, puestos), [])
+})

@@ -377,8 +377,8 @@ export type { Tramo } from './saludo.ts'
 
 export { resumirCartera } from './resumen-cartera.ts'
 export type { PolizaResumible, ResumenCartera } from './resumen-cartera.ts'
-export { elegirFicha, prediccionDeVinculo } from './vinculo-elegir.ts'
-export type { Candidato, FichaElegida, PrediccionVinculo } from './vinculo-elegir.ts'
+export { elegirFicha, prediccionDeVinculo, vinculosEmailARetirar } from './vinculo-elegir.ts'
+export type { Candidato, FichaElegida, PrediccionVinculo, VinculoExistente } from './vinculo-elegir.ts'
 // El cliente corrige SU dirección de CONTACTO desde el portal (08/09/2026). Lee
 // su cabecera antes de tocarlo: la decisión que importa es que con varias fichas
 // vinculadas NO se elige una, y que esto no le cambia nada a ninguna compañía.
