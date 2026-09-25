@@ -287,7 +287,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
           ))}
           <Link
             role="menuitem"
-            href={`/correduria/cliente/${clienteId}?oportunidad=nueva#oportunidades`}
+            href={`/correduria/cliente/${clienteId}?tab=oportunidades&oportunidad=nueva`}
             title="Le interesa pero aún no hay que tarificar (u otro ramo): se apunta con su primer paso, sin gastar nada"
             style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 10px', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none', borderTop: '1px solid var(--border)', marginTop: 4 }}
           >
