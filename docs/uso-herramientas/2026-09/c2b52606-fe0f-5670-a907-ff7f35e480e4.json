@@ -1,20 +1,20 @@
 {
  "sesion": "c2b52606-fe0f-5670-a907-ff7f35e480e4",
  "inicio": "2026-09-25T13:17:24.361Z",
- "fin": "2026-09-25T13:17:28.627Z",
- "llamadas": 3,
+ "fin": "2026-09-25T15:12:40.990Z",
+ "llamadas": 5,
  "categorias": {
   "otro": {
-   "llamadas": 3,
-   "chars_in": 165,
-   "chars_out": 8082,
+   "llamadas": 5,
+   "chars_in": 250,
+   "chars_out": 8811,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1,
+    "ToolSearch": 2,
     "SearchMcpRegistry": 1,
-    "ListConnectors": 1
+    "ListConnectors": 2
    }
   }
  }
