@@ -246,10 +246,11 @@ function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {
  */
 function textoTasaAperturaEmail(c: { emailEnviadosTotal: number | null; emailAbiertosTotal: number | null }): string {
   if (c.emailEnviadosTotal === null || c.emailAbiertosTotal === null) return 'apertura email: no se pudo comprobar'
-  if (c.emailEnviadosTotal === 0) return 'aún sin emails enviados'
+  // El puerto solo cuenta envíos desde el 25/09/2026: antes Resend no medía aperturas.
+  if (c.emailEnviadosTotal === 0) return 'apertura email: aún sin envíos medidos (se mide desde el 25/09)'
   const pct = Math.round((c.emailAbiertosTotal / c.emailEnviadosTotal) * 100)
   const muestra = c.emailEnviadosTotal < 10 ? ' (muestra pequeña)' : ''
-  return `${pct}% apertura email de ${c.emailEnviadosTotal} enviados${muestra}`
+  return `${pct}% apertura email de ${c.emailEnviadosTotal} enviados desde el 25/09${muestra}`
 }
 
 /** Lista de ramos legible: "auto", "auto y hogar", "auto, hogar y moto". */

@@ -283,8 +283,8 @@ test('la lista no corta por «no tiene vínculo» — el cepo muerde', () => {
 
   const conElCorteViejo = mutar(
     src,
-    'const vinculos = await fichasDeIdentidad(identidadId)\n\n  const misIds',
-    'const vinculos = await fichasDeIdentidad(identidadId)\n  if (vinculos.length === 0) return SIN_NADA\n\n  const misIds',
+    'const vinculos = await fichasOtorgablesDe(identidadId)\n\n  const misIds',
+    'const vinculos = await fichasOtorgablesDe(identidadId)\n  if (vinculos.length === 0) return SIN_NADA\n\n  const misIds',
   )
   assert.notDeepEqual(fallosListaSinVinculo(conElCorteViejo), [], 'el corte viejo tiene que disparar el cepo')
 
@@ -333,17 +333,17 @@ test('resolver y registrarUso miran la identidad — el cepo muerde', () => {
 
   const sinResolver = mutar(
     src,
-    `        { autorizadoClienteId: { in: misIds } },
+    `        { autorizadoClienteId: { in: recibidorIds } },
         { autorizadoIdentidadId: identidadId },`,
-    '        { autorizadoClienteId: { in: misIds } },',
+    '        { autorizadoClienteId: { in: recibidorIds } },',
   )
   assert.notDeepEqual(fallosLadoAutorizado(sinResolver), [], '`resolver` sin la rama de identidad tiene que disparar')
 
   const sinSoyAutorizado = mutar(
     src,
-    `    (fila.autorizadoClienteId !== null && misIds.includes(fila.autorizadoClienteId)) ||
+    `    (fila.autorizadoClienteId !== null && recibidorIds.includes(fila.autorizadoClienteId)) ||
     fila.autorizadoIdentidadId === identidadId`,
-    '    fila.autorizadoClienteId !== null && misIds.includes(fila.autorizadoClienteId)',
+    '    fila.autorizadoClienteId !== null && recibidorIds.includes(fila.autorizadoClienteId)',
   )
   assert.notDeepEqual(fallosLadoAutorizado(sinSoyAutorizado), [], '`soyAutorizado` sin la identidad tiene que disparar')
 

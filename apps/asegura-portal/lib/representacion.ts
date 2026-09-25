@@ -18,6 +18,8 @@
 // Los demás tipos del vocabulario (`Empleado/a`, `Socio/a`, `Accionista`) NO
 // dan esta capacidad: gestionan el negocio o son dueños de participaciones,
 // pero no son la figura que decide a quién se le enseña qué.
+import { empresasDelDueno, NIVELES, puedeAutorizar, RELACION_DUENO, type FichaDueno, type Nivel } from '@central/module-seguros-portal'
+
 import { prisma } from './db'
 import { getIdentidad } from './session'
 
@@ -56,4 +58,53 @@ export async function esRepresentanteDe(identidadId: string, empresaClienteId: s
     select: { tipoRelacion: true },
   })
   return relaciones.some((r) => (TIPOS_REPRESENTACION as readonly string[]).includes(r.tipoRelacion))
+}
+
+/**
+ * Las EMPRESAS de las que son dueñas estas fichas (25/09/2026). Ver la cabecera de
+ * `dueno-empresa.ts` del módulo: solo `Dueño`, la empresa tiene que ser jurídica explícita, viva y
+ * de la MISMA correduría que la ficha del dueño.
+ *
+ * 🚨 Recibe las fichas YA resueltas por quien llama (`portal_vinculo` filtrado por la identidadId de
+ * la sesión, o por la del cron) y NO llama a `getIdentidad()`: la usa también el cron de avisos, que
+ * corre sin cookie. No escribe nada: el acceso se deriva en cada lectura, y por eso desaparece en
+ * cuanto Alberto borra la relación.
+ */
+/** `nivel` es `text` con CHECK en la BD. Un valor fuera del vocabulario cae al nivel MÁS bajo. */
+function nivelDeVinculo(v: string): Nivel {
+  return (NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta'
+}
+
+export async function empresasDeFichas(
+  fichas: readonly { clienteId: string; nivel: string }[],
+): Promise<string[]> {
+  // Mismo umbral que para autorizar (`gestionar`/`administrar`): la bóveda y /autorizaciones
+  // deciden con UNA regla quién es dueño (revisión #3616).
+  const misFichas = fichas.filter((f) => puedeAutorizar(nivelDeVinculo(f.nivel))).map((f) => f.clienteId)
+  if (misFichas.length === 0) return []
+  const relaciones = await prisma.clienteRelacion.findMany({
+    where: {
+      tipoRelacion: RELACION_DUENO,
+      OR: [{ clienteAId: { in: misFichas } }, { clienteBId: { in: misFichas } }],
+    },
+    select: { clienteAId: true, clienteBId: true, tipoRelacion: true },
+  })
+  if (relaciones.length === 0) return []
+  const ids = [...new Set(relaciones.flatMap((r) => [r.clienteAId, r.clienteBId]))]
+  // Solo fichas VIVAS entran en el mapa: una fusionada o inactiva (la propia o la empresa) no abre
+  // nada. La correduría se compara por PAR (dueño↔empresa) dentro de `empresasDelDueno`.
+  const filas = await prisma.cliente.findMany({
+    where: { id: { in: ids }, mergedIntoClienteId: null, activo: true },
+    select: { id: true, tipoPersona: true, correduriaId: true },
+  })
+  const fichaPor = new Map<string, FichaDueno>(
+    filas.map((f) => [
+      f.id,
+      {
+        tipo: f.tipoPersona === 'juridica' ? 'juridica' : f.tipoPersona === 'fisica' ? 'fisica' : null,
+        correduriaId: f.correduriaId,
+      },
+    ]),
+  )
+  return empresasDelDueno(misFichas, relaciones, fichaPor)
 }
