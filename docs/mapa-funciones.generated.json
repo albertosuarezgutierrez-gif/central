@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-25T12:57:49Z",
-  "sha": "b57bfcbdb33784f11a8fe5f576c481c78afbfdd4",
+  "generadoEn": "2026-09-25T13:38:53Z",
+  "sha": "c25384d5241631e1110e636e4e1635d770a814ef",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -14647,7 +14647,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/operador/poliza",
-      "hash": "6a91379204b9"
+      "hash": "8e1956b6cba0"
     },
     {
       "ruta": "apps/asegura/app/api/operador/portal/invitaciones/route.ts",
@@ -18267,7 +18267,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string, entrada: { descartar?: unknown; motivo?: unknown; actor: string },",
           "retorno": "Promise<ResultadoLeadDescartado>",
-          "linea": 229
+          "linea": 232
         },
         {
           "nombre": "anotar",
@@ -18275,14 +18275,14 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 274
+          "linea": 281
         }
       ],
       "tablas": [
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "540e23d8f7fe"
+      "hash": "ea276a8a14c7"
     },
     {
       "ruta": "apps/asegura/lib/cartera-poliza.ts",
@@ -71921,13 +71921,13 @@
           "params": "url: string, method: 'POST' | 'PATCH', body: Record<string, unknown>",
           "retorno": "Promise<string | null>",
           "linea": 14,
-          "resumen": "«Eliminar» una tarjeta del cubo Oportunidades de la ficha (25/09/2026), SIEMPRE con confirmación: nada se borra de un clic. Dos casos, y ninguno borra filas: - `historica`: póliza del volcado propuest"
+          "resumen": "«Eliminar» una tarjeta del cubo Oportunidades de la ficha (25/09/2026), SIEMPRE con confirmación: nada se borra de un clic. Dos casos, y ninguno borra filas: - `poliza`: póliza del volcado propuesta c"
         },
         {
           "nombre": "EliminarDeOportunidades",
           "kind": "function",
           "exportada": true,
-          "params": "props: { tipo: 'historica'; polizaId: string; oportunidadId?: string } | { tipo: 'oportunidad'; oportunidadId: string }",
+          "params": "props: { tipo: 'poliza'; polizaId: string; oportunidadId?: string } | { tipo: 'oportunidad'; oportunidadId: string }",
           "retorno": null,
           "linea": 22
         },
@@ -71938,7 +71938,7 @@
           "params": "{ polizaId }: { polizaId: string }",
           "retorno": null,
           "linea": 90,
-          "resumen": "Deshace un «Eliminar» de una póliza histórica: vuelve a salir como oportunidad."
+          "resumen": "Deshace un «Eliminar» de una póliza: vuelve a salir como oportunidad."
         }
       ],
       "tablas": [
@@ -71946,7 +71946,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "34e0e7be2495"
+      "hash": "e88cd39fc65e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/FichaTabs.tsx",
@@ -72844,12 +72844,12 @@
           "exportada": false,
           "params": "{ a }: { a: Aviso }",
           "retorno": null,
-          "linea": 239
+          "linea": 243
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7771f4801155"
+      "hash": "2753c26df26a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabContactos.tsx",
@@ -101996,13 +101996,13 @@
           "exportada": true,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 231,
+          "linea": 236,
           "resumen": "Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1386ebe00f71"
+      "hash": "100b4a46b921"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/sustituciones-aviso.ts",
