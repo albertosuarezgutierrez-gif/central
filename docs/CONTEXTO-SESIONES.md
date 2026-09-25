@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** Recaptación por email: el tracking de aperturas estaba APAGADO en Resend → los 30 emails (20-22/09)
+salían «0% apertura», que era «no medido». 🚨 Resend NO guarda open/click tracking sin `trackingSubdomain` (el update
+responde OK y al releer sigue en false; así se dio por activado sin estarlo). Ahora en `grupoasegura.es` (el remitente
+desde hoy): open + click ON con subdominio `links` (CNAME `links` → `links2.resend-dns.com` en IONOS, verificado el
+25/09). Click solo con el CNAME vivo: reescribe TODOS los enlaces, incluida la baja. Webhook con `bounced`/`complained`.
+Código (PR #3591): silencio y tasa del panel solo cuentan envíos desde `SEGUIMIENTO_EMAIL_DESDE`.
+
 **(25/09/2026)** ✉️ **Seguimiento de correos a clientes** (Alberto: «de todos los correos… por si algún cliente reclama»).
 Tablas `seguros.correo_envio` (destino cifrado + id de Resend) y `seguros.correo_evento` (append-only, idempotente por svix-id)
 APLICADAS; webhook de Resend suscrito a TODOS los eventos y guarda cada uno; open/click tracking activado en `grupoasegura.es`.

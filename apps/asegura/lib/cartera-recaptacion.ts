@@ -34,7 +34,7 @@ import { estadoEmailDeFicha } from './email-ficha'
 import { urlBaja, urlPublicaAsegura } from './recaptacion-baja'
 import { candidatosLoteEmail, LIMITE_LOTE_POR_DEFECTO } from './recaptacion-lote'
 import { dentroVentanaAntiguo } from './recaptacion-ventana'
-import { esLeadSilencioso, UMBRAL_SILENCIO } from './recaptacion-silencio'
+import { esLeadSilencioso, SEGUIMIENTO_EMAIL_DESDE, UMBRAL_SILENCIO } from './recaptacion-silencio'
 import { descartarCliente } from './cartera-edicion'
 
 export { candidatosLoteEmail } from './recaptacion-lote'
@@ -296,6 +296,8 @@ async function contadoresSemana(correduriaId: string): Promise<{ contactadosSema
  * enlace"), así que mezclarlo aquí falsearía la tasa de apertura del email.
  * `null` en caso de fallo de lectura: NUNCA se sustituye por 0, que se leería
  * como "0% de apertura" en vez de "no se ha podido comprobar".
+ * Solo desde `SEGUIMIENTO_EMAIL_DESDE`: antes el tracking estaba apagado y
+ * esos envíos harían bajar la tasa con aperturas que nadie pudo medir.
  */
 async function contadoresEmailHistorico(correduriaId: string): Promise<{ emailEnviadosTotal: number | null; emailAbiertosTotal: number | null }> {
   try {
@@ -307,6 +309,7 @@ async function contadoresEmailHistorico(correduriaId: string): Promise<{ emailEn
       from recaptacion_envios
       where correduria_id = ${correduriaId}::uuid
         and canal = 'email'
+        and created_at >= ${SEGUIMIENTO_EMAIL_DESDE}::timestamp
     `)
     const f = filas[0]
     return { emailEnviadosTotal: Number(f?.enviados ?? 0), emailAbiertosTotal: Number(f?.abiertos ?? 0) }
@@ -565,13 +568,13 @@ export async function descartarLeadsSilenciosos(correduriaId: string): Promise<n
   const filas = await db.$queryRaw<{ clienteId: string; enviosEmail: bigint; conApertura: boolean }[]>(Prisma.sql`
     select
       r.cliente_id as "clienteId",
-      count(*) filter (where r.canal = 'email')::bigint as "enviosEmail",
+      count(*) filter (where r.canal = 'email' and r.created_at >= ${SEGUIMIENTO_EMAIL_DESDE}::timestamp)::bigint as "enviosEmail",
       bool_or(r.canal = 'email' and r.estado in ('abierto', 'pinchado')) as "conApertura"
     from recaptacion_envios r
     join clientes c on c.id = r.cliente_id
     where r.correduria_id = ${correduriaId}::uuid and c.activo
     group by r.cliente_id
-    having count(*) filter (where r.canal = 'email') >= ${UMBRAL_SILENCIO}
+    having count(*) filter (where r.canal = 'email' and r.created_at >= ${SEGUIMIENTO_EMAIL_DESDE}::timestamp) >= ${UMBRAL_SILENCIO}
   `)
 
   let descartados = 0
