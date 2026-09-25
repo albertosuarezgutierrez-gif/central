@@ -507,7 +507,7 @@ function Intervinientes({ p }: { p: Poliza }) {
           {i.origen !== 'poliza' && <span style={sub}> · {i.origen}</span>}
         </div>
       ))}
-      {ef.telefono && ef.quien && <div style={muted}>Si el tomador no contesta: {ef.quien.nombre} ({etiquetaRol(ef.quien.rol)}) 📞 {ef.telefono}</div>}
+      {ef.telefono && ef.quien && <div style={muted}>Si el tomador no contesta: {ef.quien.fichaId ? <Link href={`/correduria/cliente/${ef.quien.fichaId}`}>{ef.quien.nombre}</Link> : ef.quien.nombre} ({etiquetaRol(ef.quien.rol)}) 📞 {ef.telefono}</div>}
       {/* Tres estados, no dos: «no se pudo mirar» ≠ «no hay nadie más». */}
       {aviso === 'sin_mirar' && <div style={muted}>Del resto de figuras (propietario, conductor…) no se sabe: asegura no ha podido informarlas.</div>}
       {aviso === 'solo_tomador' && <div style={muted}>La compañía no ha enviado más figuras (propietario, conductor…) por CIMA.</div>}

@@ -581,6 +581,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Correduría: accesos directos entre fichas
+- Presupuestos de oportunidad nueva (6 ramos): el nombre del cliente enlaza a su ficha.
+- Retarificar: miga «Ficha del cliente»; listado Clientes: compañía y nº enlazan a la póliza;
+  historial de riesgo: el nº enlaza; «si el tomador no contesta» enlaza al interviniente.
+- Quedan sin enlace a propósito: el aviso de error de MotoNuevo y Calidad (ya tiene «Ver póliza»).
+
 ## (25/09/2026) Ficha correduría: el auto histórico de un ex-cliente sale como oportunidad
 - Caso Rafael Campa: recaptación le ofrecía el auto (Pelayo, vencía 20/10/2015) y la ficha solo lo nombraba en una nota al pie; «vida» era una oportunidad en competencia (legítima: «póliza en competencia es oportunidad», Alberto).
 - `repartirSegurosCliente`: del volcado histórico, la más reciente de cada ramo no cubierto → tarjeta de oportunidad (`historica: true`); el resto sigue plegado. «Ya no lo necesita» retira el ramo.

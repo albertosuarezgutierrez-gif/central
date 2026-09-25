@@ -74,7 +74,7 @@ export default async function RetarificarPage({
   if (cancelada) {
     return (
       <Marco>
-        <Cabecera sub={sub} polizaId={p.id} />
+        <Cabecera sub={sub} polizaId={p.id} clienteId={p.cliente.id} />
         <div className="card">
           <h2>Esta póliza está cancelada en CIMA</h2>
           <p>No hay nada que retarificar.</p>
@@ -96,7 +96,7 @@ export default async function RetarificarPage({
   // cambiar de vivienda.
   const cambiandoVivienda = Boolean(cadena(sp.buscar) ?? cadena(sp.direccion) ?? cadena(sp.referencia))
   if (String(p.tipo).toLowerCase() === 'hogar' && !cancelada && (!p.retarificable || cambiandoVivienda)) {
-    const cab = <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
+    const cab = <Cabecera sub={`${sub} · hogar`} polizaId={p.id} clienteId={p.cliente.id} />
     const refParam = cadena(sp.referencia)
     let referencia = refParam ? normalizarReferencia(refParam) : null
     const direccion = cadena(sp.direccion)
@@ -179,7 +179,7 @@ export default async function RetarificarPage({
   if (!p.retarificable || ramo === null) {
     return (
       <Marco>
-        <Cabecera sub={sub} polizaId={p.id} />
+        <Cabecera sub={sub} polizaId={p.id} clienteId={p.cliente.id} />
         <div className="card">
           <h2>Esta póliza no se puede retarificar todavía</h2>
           <p>
@@ -206,7 +206,7 @@ export default async function RetarificarPage({
       const tono = preHogar.estado === 'no_encontrado' ? 'muted' : 'err'
       return (
         <Marco>
-          <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
+          <Cabecera sub={`${sub} · hogar`} polizaId={p.id} clienteId={p.cliente.id} />
           <div className={`card ${tono}`}>
             No se ha podido precalificar el hogar: {preHogar.mensaje}
           </div>
@@ -215,7 +215,7 @@ export default async function RetarificarPage({
     }
     return (
       <Marco>
-        <Cabecera sub={`${sub} · hogar`} polizaId={p.id} />
+        <Cabecera sub={`${sub} · hogar`} polizaId={p.id} clienteId={p.cliente.id} />
         <RetarificadorHogar polizaId={p.id} preInicial={preHogar.pre} />
       </Marco>
     )
@@ -236,7 +236,7 @@ export default async function RetarificarPage({
     if (precalM.estado !== 'ok') {
       return (
         <Marco>
-          <Cabecera sub={`${sub} · moto`} polizaId={p.id} />
+          <Cabecera sub={`${sub} · moto`} polizaId={p.id} clienteId={p.cliente.id} />
           <div className="card err">No se ha podido precalificar la moto: {precalM.mensaje}</div>
         </Marco>
       )
@@ -245,7 +245,7 @@ export default async function RetarificarPage({
     if (!pm.precalificado) {
       return (
         <Marco>
-          <Cabecera sub={`${sub} · moto`} polizaId={p.id} />
+          <Cabecera sub={`${sub} · moto`} polizaId={p.id} clienteId={p.cliente.id} />
           <div className="card err">
             asegura no ha precalificado esta póliza de moto: {pm.motivo ?? 'sin motivo'}. No se monta el
             formulario para no pedir un precio que el servidor rechazaría.
@@ -256,7 +256,7 @@ export default async function RetarificarPage({
     const fallosCatalogoM = [garajesM, civilesM].filter((c) => c.estado !== 'ok')
     return (
       <Marco>
-        <Cabecera sub={`${sub} · moto`} polizaId={p.id} />
+        <Cabecera sub={`${sub} · moto`} polizaId={p.id} clienteId={p.cliente.id} />
         {fallosCatalogoM.length > 0 && (
           <div className="card err">
             No se han podido leer los catálogos de garajes o estados civiles de Codeoscopic: sin ellos no hay ids
@@ -324,7 +324,7 @@ export default async function RetarificarPage({
 
   return (
     <Marco>
-      <Cabecera sub={`${sub} · auto`} polizaId={p.id} />
+      <Cabecera sub={`${sub} · auto`} polizaId={p.id} clienteId={p.cliente.id} />
 
       {falla && <div className="card err">{falla}</div>}
 
@@ -482,7 +482,7 @@ function fallaCatalogos(garajes: RespuestaCatalogo, civiles: RespuestaCatalogo):
   )
 }
 
-function Cabecera({ sub, polizaId }: { sub: string; polizaId?: string }) {
+function Cabecera({ sub, polizaId, clienteId }: { sub: string; polizaId?: string; clienteId?: string }) {
   return (
     <div>
       <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -491,6 +491,12 @@ function Cabecera({ sub, polizaId }: { sub: string; polizaId?: string }) {
           <>
             <span>·</span>
             <Link href={`/correduria/poliza/${polizaId}`}>Ficha de la póliza</Link>
+          </>
+        )}
+        {clienteId && (
+          <>
+            <span>·</span>
+            <Link href={`/correduria/cliente/${clienteId}`}>Ficha del cliente</Link>
           </>
         )}
       </div>
