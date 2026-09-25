@@ -1,0 +1,114 @@
+{
+ "sesion": "ba3a435b-94de-54bf-bedd-400e0f4ee7f3",
+ "inicio": "2026-09-25T13:34:44.841Z",
+ "fin": "2026-09-25T13:39:02.999Z",
+ "llamadas": 41,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 173,
+   "chars_out": 118032,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1,
+    "Read": 1
+   }
+  },
+  "bash": {
+   "llamadas": 17,
+   "chars_in": 12324,
+   "chars_out": 54021,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 17
+   }
+  },
+  "otro": {
+   "llamadas": 6,
+   "chars_in": 663,
+   "chars_out": 1228,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 5,
+    "SendUserFile": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 3,
+   "chars_in": 1642,
+   "chars_out": 2831,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 3
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 5,
+   "chars_in": 506,
+   "chars_out": 42233,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__get_runtime_logs": 3,
+    "mcp__Vercel__filter_project_envs": 1
+   }
+  },
+  "mcp:Resend": {
+   "llamadas": 4,
+   "chars_in": 843,
+   "chars_out": 12374,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Resend__list-emails": 1,
+    "mcp__Resend__get-email": 2,
+    "mcp__Resend__list-domains": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 2,
+   "chars_in": 1787,
+   "chars_out": 146,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__search_pull_requests": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 1,
+   "chars_in": 73,
+   "chars_out": 239,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1
+   }
+  }
+ }
+}
