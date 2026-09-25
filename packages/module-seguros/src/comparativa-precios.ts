@@ -177,6 +177,8 @@ export type PrecioComparable = {
   /** `null` = no la declara. NO es «sin franquicia». */
   franquiciaEur?: number | null
   firmeza?: string | null
+  /** Hasta cuándo se puede emitir (`expirationDate` del vendor). Ausente = no lo dijo. */
+  expiraEn?: string | null
   avisos?: string[]
 }
 

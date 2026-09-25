@@ -609,6 +609,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - «📄 Subir póliza» NO escribe `polizas` (solo documento + `portal_poliza_declarada`): no sirve para registrar una emitida fuera.
 - Pendiente con spec + OK: importar proyecto de Avant2 por id y emitir negocio nuevo.
 - Retarificar (auto): la fecha de efecto arranca en el VENCIMIENTO de la póliza si es fiable (viva, no cancelada, no emitida nuestra) y cae en [hoy, hoy+90]; si no, mañana (regla de Alberto: misma fecha). Moto no cambia.
+- Hecho (25/09 tarde): ReRate manda `mainQuote.effectiveDate` si el corredor cambia la fecha en el panel de emisión (campo obligatorio, arranca en la cotizada) → rescata cotizaciones caducadas; `/emitir` mira la fecha de la OFERTA aceptada. Bug corregido: `encontrarPrecio` cogía el 1er precio de compañía+nivel (Reale da 8) → desempata por producto+prima. «Válido hasta» visible. Specs: importar proyecto Avant2 y rediseño precios/config por compañía (`docs/superpowers/specs/2026-09-25-*`). Sin probar en real.
 - Hallazgo: el ReRate de Codeoscopic admite `mainQuote.effectiveDate` (doc pública) y nuestro `reRate()` nunca la manda; rescataría cotizaciones caducadas sin otro 0,50€. Pendiente OK de Alberto a una prueba real + spec.
 
 ## (25/09/2026) Correduría · pestaña Contactos más clara

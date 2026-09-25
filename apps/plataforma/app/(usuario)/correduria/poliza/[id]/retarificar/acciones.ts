@@ -111,6 +111,8 @@ export async function pedirOferta(entrada: {
   tarificacionId: string
   compania: string
   categoria: string
+  producto?: string
+  primaEur?: number
   fechaEfectoCorregida?: string
   /** Respuesta del corredor a un `faltan_vendor` anterior (campo nuestro → valor). */
   correcciones?: Record<string, string>

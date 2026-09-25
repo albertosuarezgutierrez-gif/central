@@ -43,6 +43,7 @@ import {
 } from '@central/module-seguros'
 
 import type { ContextoDefensa } from '@/lib/contexto-defensa'
+import { fechaEs } from '@/lib/ficha-asegura'
 export type { ContextoDefensa }
 
 /**
@@ -169,6 +170,9 @@ type Resultado =
        *  (dentro, si `estado==='guardada'`) no hay a qué proyecto pedirle el
        *  ReRate/Submit reales: `cotizacionIdDe()` lo extrae con cuidado. */
       guardado: unknown
+      /** Fecha de efecto con la que se COTIZÓ (aaaa-mm-dd). `null` = no se sabe.
+       *  Arranca el campo de fecha del panel de emisión (25/09/2026). */
+      fechaEfecto: string | null
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   /**
@@ -222,6 +226,7 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
     fallos: g.fallos,
     supuestos: [],
     guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+    fechaEfecto: g.fechaEfecto,
   }
 }
 
@@ -901,6 +906,7 @@ export default function Retarificador({
           fallos: r.fallos,
           supuestos: r.supuestos,
           guardado: r.guardado,
+          fechaEfecto: correcciones.fechaEfecto ?? null,
         })
         return
     }
@@ -1842,6 +1848,11 @@ function Precios({
                               ? 'franquicia no declarada'
                               : `franquicia ${euroODash(p.franquiciaEur)}`}
                           </div>
+                          {p.expiraEn && (
+                            <div className="muted" style={{ fontSize: 11 }}>
+                              válido hasta {fechaEs(p.expiraEn)}
+                            </div>
+                          )}
                         </td>
                         {primaActualEur !== null && (
                           <td>
@@ -1922,6 +1933,8 @@ function Precios({
             compania={p.compania ?? ''}
             categoria={p.categoria ?? ''}
             primaEur={p.primaEur ?? null}
+            producto={p.producto ?? null}
+            fechaEfecto={r.fechaEfecto}
             onCerrar={() => setAbierta(null)}
           />
         )

@@ -581,6 +581,9 @@ export type Precio = {
   firmeza?: string
   categoria?: string | null
   franquiciaEur?: number | null
+  /** `expirationDate` de la cotización: hasta cuándo se puede emitir. `null`/ausente
+   *  = el vendor no la ha dicho (suele venir solo tras confirmar el precio). */
+  expiraEn?: string | null
   avisos?: string[]
 }
 
@@ -1139,9 +1142,12 @@ export async function ofertaAsegura(p: {
   tarificacionId: string
   compania: string
   categoria: string
-  /** Corrige la fecha de efecto del proyecto (aaaa-mm-dd) ANTES del ReRate,
-   *  vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha
-   *  rechazado — ver `apps/asegura/lib/codeoscopic/emitir.ts::actualizarFechaEfecto`. */
+  /** Producto y prima de la fila pulsada: desempatan cuando la compañía da varios
+   *  precios del mismo nivel (`encontrarPrecio` de asegura, 25/09/2026). */
+  producto?: string
+  primaEur?: number
+  /** Fecha de efecto NUEVA (aaaa-mm-dd). Desde el 25/09/2026 viaja en el propio
+   *  ReRate (`mainQuote.effectiveDate`, la vía documentada por el vendor). */
   fechaEfectoCorregida?: string
   /** Lo que el corredor teclea tras un `faltan_vendor` (campo nuestro → valor).
    *  Asegura lo escribe en el proyecto (PATCH, gratis) y vuelve a pedir el ReRate. */

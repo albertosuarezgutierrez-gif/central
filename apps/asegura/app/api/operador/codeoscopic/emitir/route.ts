@@ -13,7 +13,7 @@ import {
   huecosPersonaParaEmitir,
   redactarCrudoVendor,
 } from '@/lib/codeoscopic/emitir'
-import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada } from '@/lib/codeoscopic/fecha-efecto'
+import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada, fechaEfectoDeOferta } from '@/lib/codeoscopic/fecha-efecto'
 import { consejoTrasFallo, intentoQuizaEmitido, rastroSolicitudEmision, solicitudViva, solicitudesEmision } from '@/lib/codeoscopic/reintento-emision'
 import { enviarEmision } from '@/lib/codeoscopic/emitir-envio'
 import {
@@ -423,7 +423,10 @@ export const POST = auditado(async (req: Request) => {
     // fecha de efecto anterior a hoy y el proyecto no la deja cambiar — el
     // mismo cepo que `/oferta`, aquí sobre la lectura gratis previa al Submit.
     // El intento NO se gasta.
-    const fechaEfectoProyecto = cadena(crudoPrevio.effectiveDate)
+    // 📅 25/09/2026: la fecha se mueve en el ReRate, así que manda la de la
+    // OFERTA aceptada si el crudo la trae; si no, la del proyecto (lo de siempre).
+    const fechaEfectoProyecto =
+      fechaEfectoDeOferta(crudoPrevio, p.accepted_offer_id_codeoscopic) ?? cadena(crudoPrevio.effectiveDate)
     if (fechaEfectoCaducada(fechaEfectoProyecto)) {
       console.log(`[emitir] proyecto ${projectId} con fecha de efecto pasada (${fechaEfectoProyecto}): no se envía nada`)
       return NextResponse.json(

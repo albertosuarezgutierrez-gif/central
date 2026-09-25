@@ -231,3 +231,22 @@ test('huecosPersonaParaEmitir: a un papel con OTRO DNI no se le mira nada (no se
   const completa = { ...PILAR, emails: [{ address: 'p@x.es' }] }
   assert.deepEqual(huecosPersonaParaEmitir({ holder: completa, risk: { owner: otro } }), [])
 })
+
+test('encontrarPrecio: con varios precios del mismo nivel desempata por producto y prima (Reale, 8 precios)', () => {
+  const base = {
+    modalidad: null, franquiciaEur: null, entradaEur: null, meses: null, formaPago: null,
+    frecuenciaPago: null, referenciaVendor: null, firmeza: 'estimado' as const, avisos: [],
+    requiereReRate: true, productId: 1, productOptions: null, expiraEn: null, quoteCrudo: null,
+  }
+  const cotizacion: Cotizacion = {
+    projectId: '1', fechaEfecto: null, insuranceLineId: 'Car', fallos: [],
+    precios: [
+      { ...base, id: 'A', compania: 'Reale', producto: 'Reale Auto Básico', categoria: 'Terceros', primaEur: 250 },
+      { ...base, id: 'B', compania: 'Reale', producto: 'Reale Auto Plus', categoria: 'Terceros', primaEur: 310 },
+      { ...base, id: 'C', compania: 'Reale', producto: 'Reale Auto Plus', categoria: 'Terceros', primaEur: 330 },
+    ],
+  }
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { producto: 'Reale Auto Plus', primaEur: 330 })?.id, 'C')
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros', { primaEur: 305 })?.id, 'B')
+  assert.equal(encontrarPrecio(cotizacion, 'Reale', 'Terceros')?.id, 'A')
+})

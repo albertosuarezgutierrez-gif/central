@@ -27,7 +27,7 @@ import {
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 import { conLibroDeEmision, type GastoEmision } from '@/lib/codeoscopic/libro-emision'
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
-import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada } from '@/lib/codeoscopic/fecha-efecto'
+import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada, motivoFechaEfectoInvalida } from '@/lib/codeoscopic/fecha-efecto'
 import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
@@ -96,6 +96,18 @@ export const POST = auditado(async (req: Request) => {
       { estado: 'error', causa: 'otro', mensaje: 'fechaEfectoCorregida tiene que ser aaaa-mm-dd' },
       { status: 400 },
     )
+  }
+  // 📅 25/09/2026: la fecha nueva viaja en el ReRate (`mainQuote.effectiveDate`),
+  // así que se valida con la MISMA regla que antes de pagar ([hoy, hoy+90]) —
+  // un 400 aquí no gasta nada; uno del vendor, sí cuenta en el libro.
+  if (fechaEfectoCorregida) {
+    const motivo = motivoFechaEfectoInvalida(fechaEfectoCorregida)
+    if (motivo) {
+      return NextResponse.json(
+        { estado: 'error', causa: 'otro', mensaje: `La fecha de efecto ${fechaEfectoCorregida} ${motivo}.` },
+        { status: 400 },
+      )
+    }
   }
 
   // Lo que el corredor teclea tras un `faltan_vendor`: solo campos de la PERSONA
@@ -179,7 +191,10 @@ export const POST = auditado(async (req: Request) => {
     // llamar al ReRate, con el mismo 422 `faltan_vendor` que la pantalla ya
     // sabe pintar como «hay que descartar y pedir precio de cero». Si el
     // vendor no trae la fecha no se afirma nada: sigue el camino normal.
-    if (fechaEfectoCaducada(cotizacion.fechaEfecto)) {
+    // 📅 Desde el 25/09/2026 esto solo corta si NO viene fecha nueva: con ella,
+    // el ReRate la manda en `mainQuote.effectiveDate` (la vía documentada) y es
+    // el vendor quien dice si una cotización caducada se deja rescatar.
+    if (fechaEfectoCaducada(cotizacion.fechaEfecto) && !fechaEfectoCorregida) {
       return NextResponse.json(
         {
           estado: 'error',
@@ -274,7 +289,10 @@ export const POST = auditado(async (req: Request) => {
     let oferta: Awaited<ReturnType<typeof reRate>> | null = null
     let reparadoDesdeFicha = false
     while (oferta === null) {
-      const precio = encontrarPrecio(cotizacion, compania, categoria)
+      const precio = encontrarPrecio(cotizacion, compania, categoria, {
+        producto: cadena(cuerpo.producto),
+        primaEur: typeof cuerpo.primaEur === 'number' ? cuerpo.primaEur : null,
+      })
       if (!precio) {
         return NextResponse.json(
           {
@@ -313,6 +331,7 @@ export const POST = auditado(async (req: Request) => {
               precio.id,
               precio.productId,
               productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania, t.producto),
+              fechaEfectoCorregida,
             ),
         )
         if (!gasto.ok) return respuestaGastoBloqueado(gasto)

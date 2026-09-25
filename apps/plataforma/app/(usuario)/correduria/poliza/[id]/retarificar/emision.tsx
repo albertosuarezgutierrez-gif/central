@@ -23,6 +23,7 @@ import { eur } from '@/lib/dinero'
 import { pedirOferta, pedirEmision, pedirCatalogo } from './acciones'
 import { ProductFormWidget } from './ProductFormWidget'
 import type { AvisoCuenta, CuentaConocida, Opcion, SolicitudEmisionVista } from '@/lib/retarificar-asegura'
+import { fechaEs } from '@/lib/ficha-asegura'
 
 type EstadoPanel =
   | { paso: 'inicio' }
@@ -251,15 +252,26 @@ export function Emision({
   compania,
   categoria,
   primaEur,
+  producto = null,
+  fechaEfecto = null,
   onCerrar,
 }: {
   tarificacionId: string
   compania: string
   categoria: string
   primaEur: number | null
+  /** Producto de la fila pulsada: con varios precios de la misma compañía y nivel
+   *  (Reale llegó a 8), asegura desempata por producto y prima (25/09/2026). */
+  producto?: string | null
+  /** Fecha de efecto con la que se cotizó (aaaa-mm-dd). Arranca el campo de fecha. */
+  fechaEfecto?: string | null
   onCerrar: () => void
 }) {
   const [estado, setEstado] = useState<EstadoPanel>({ paso: 'inicio' })
+  // 📅 25/09/2026: la fecha de efecto se confirma AQUÍ, antes del precio, y viaja
+  // en el ReRate (`mainQuote.effectiveDate`) solo si cambia respecto a la cotizada
+  // o si ya ha pasado: así se rescata una cotización caducada sin otro 0,50€.
+  const [fecha, setFecha] = useState(fechaEfecto ?? '')
   const [camposJson, setCamposJson] = useState('{}')
   // Lo que el corredor teclea para los huecos de `faltan_vendor` (campo → valor).
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
@@ -342,10 +354,15 @@ export function Emision({
     const limpias = Object.fromEntries(
       Object.entries(conCorrecciones ?? {}).filter(([, v]) => typeof v === 'string' && v.trim() !== ''),
     )
+    const hoy = new Date().toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
+    const fechaNueva = fecha && (fecha !== fechaEfecto || (fechaEfecto != null && fechaEfecto < hoy)) ? fecha : undefined
     const r = await pedirOferta({
       tarificacionId,
       compania,
       categoria,
+      producto: producto ?? undefined,
+      primaEur: primaEur ?? undefined,
+      ...(fechaNueva ? { fechaEfectoCorregida: fechaNueva } : {}),
       ...(Object.keys(limpias).length > 0 ? { correcciones: limpias } : {}),
       ...(conProductOptions ? { productOptions: conProductOptions } : {}),
     })
@@ -560,7 +577,28 @@ export function Emision({
             Precio en pantalla: <strong>{euroODash(primaEur)}</strong>. El primer paso lo confirma con
             la compañía (puede cambiar de «estimado» a un precio firme).
           </p>
-          <button type="button" className="primary" onClick={() => confirmarPrecio()} style={{ marginTop: 8 }}>
+          <label style={{ display: 'block', marginTop: 10 }}>
+            <span style={{ display: 'block', fontSize: 13, fontWeight: 600 }}>Fecha de efecto</span>
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              required={fechaEfecto != null}
+              style={{ minHeight: 44, maxWidth: '100%' }}
+            />
+            <span className="muted" style={{ display: 'block', fontSize: 12 }}>
+              {fechaEfecto
+                ? 'La cotizada. Cámbiala si el cliente quiere otro día: se manda al confirmar el precio y el precio puede variar.'
+                : 'Déjala vacía para usar la cotizada. Si pones otra, se manda al confirmar el precio y el precio puede variar.'}
+            </span>
+          </label>
+          <button
+            type="button"
+            className="primary"
+            onClick={() => confirmarPrecio()}
+            disabled={fechaEfecto != null && fecha === ''}
+            style={{ marginTop: 8, minHeight: 44 }}
+          >
             Confirmar precio con la compañía
           </button>
         </div>
@@ -778,7 +816,12 @@ export function Emision({
             Precio confirmado: <strong>{euroODash(estado.primaEur)}</strong>{' '}
             <span className={`badge ${estado.firmeza === 'firme' ? 'ok' : 'warn'}`}>{estado.firmeza}</span>
           </p>
-          {estado.caducaEn && <p className="muted">Caduca: {estado.caducaEn}</p>}
+          {estado.caducaEn && (
+            <p className="muted">
+              Válido hasta el {fechaEs(estado.caducaEn)}: después la compañía no lo emite y habría que confirmar
+              otra vez (o pedir precio de nuevo).
+            </p>
+          )}
           {estado.avisos.length > 0 && (
             <ul>
               {estado.avisos.map((a, i) => (
