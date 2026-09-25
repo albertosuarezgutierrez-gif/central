@@ -54,3 +54,30 @@ test('cada ruta de /api/portal sigue exigiendo el Bearer del puente (no queda ab
       `apps/asegura/app/api/portal/${r}/route.ts no puede abrirse con el secreto de operador: ese abre la cartera entera`)
   }
 })
+
+// ─── Los crons (25/09/2026) ──────────────────────────────────────────────────
+//
+// Tercer caso de la misma regla. Vercel llama a /api/cron/* sin cookie; sin la
+// exención el middleware devolvía 307 a /login y NINGÚN cron de asegura llegó a
+// ejecutarse (felicitaciones, avisos de vencimiento…). La cadena de Vercel lo
+// daba por servido: un 307 no es un error.
+
+test('el middleware de asegura deja pasar /api/cron (auth propia por Bearer CRON_SECRET)', () => {
+  const fuente = readFileSync(join(RAIZ, 'apps/asegura/middleware.ts'), 'utf8')
+  const publica = fuente.match(/const PUBLIC = \[([^\]]*)\]/)
+  assert.ok(publica, 'no se encontró la lista PUBLIC en apps/asegura/middleware.ts')
+  assert.match(publica![1], /['"]\/api\/cron['"]/,
+    '/api/cron no está en la lista PUBLIC del middleware de asegura: el scheduler de Vercel sería redirigido al login')
+})
+
+test('cada cron de vercel.json existe y exige CRON_SECRET (no queda abierto al quitarlo del gate)', () => {
+  const vercel = JSON.parse(readFileSync(join(RAIZ, 'apps/asegura/vercel.json'), 'utf8'))
+  const crons: { path: string }[] = vercel.crons ?? []
+  assert.ok(crons.length >= 1, 'apps/asegura/vercel.json no declara crons')
+  for (const c of crons) {
+    const ruta = join(RAIZ, 'apps/asegura/app', c.path.split('?')[0], 'route.ts')
+    assert.ok(existsSync(ruta), `${c.path} está en vercel.json pero no hay ${ruta}`)
+    assert.match(readFileSync(ruta, 'utf8'), /isCronAuthorized\(/,
+      `${c.path} no llama a isCronAuthorized(): con /api/cron público quedaría abierto de verdad`)
+  }
+})
