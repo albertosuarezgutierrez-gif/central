@@ -14,6 +14,13 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-25 · ialimp-client-health** · hizo: pasada semanal sobre Sique Brilla SL
+  (`05edacff-ea49-42fe-8997-f9369613a845`). Preflight canal 200 OK. PMS sync: `pms_connections`
+  activa, sin `sync_error`, `last_sync_at` hoy 15:00 UTC; `cleaning_sessions` 75 en 24h / 80 en 7d
+  (sano, corre solo — recordatorio del propio SKILL.md: el silencio del cliente en la app no es
+  señal aquí, se le retiró el acceso el 01/09). Programaciones sin asignar: 0. Impagos activos:
+  0. Todo verde, sin aviso Telegram (nada que reportar). dudas: —; fallos: —; PRs/commits: —
+  (solo bitácora, pasada de solo lectura).
 - **2026-09-25 · facturas-correo** · hizo: pasada disparada por el trigger diario. Preflight canal 200
   OK. Paso 0: Vía B sana (copia más reciente en `_buzon_pdf` de ayer 24/09, 1 día caída);
   `PDF-pendiente`/`Revisar`/`Extraccion-fallida` sin backlog real (verificado por `search_threads`,
