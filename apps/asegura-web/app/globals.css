@@ -830,22 +830,6 @@ body:has(.hero.oscuro) .hdr:not(.bajado) .hdr-nav {
   margin-inline: auto;
 }
 
-/* ── Reveal al entrar en pantalla ───────────────────────────────────────────
-   Su fade-up incluye un DESENFOQUE de 8 px que se va a 0. Es lo que hace que
-   la aparición se lea «editorial» y no «página que carga a trompicones». */
-.reveal {
-  opacity: 0;
-  transform: translateY(28px);
-  filter: blur(8px);
-  transition: opacity 0.7s var(--curva), transform 0.7s var(--curva), filter 0.7s var(--curva);
-}
-
-.reveal.visible {
-  opacity: 1;
-  transform: none;
-  filter: none;
-}
-
 /* ── Rejilla de tarjetas ────────────────────────────────────────────────────
    `minmax(0, …)` no es decorativo: sin él una pista implícita se dimensiona
    con su contenido más ancho y arrastra la página entera. */
@@ -1299,11 +1283,6 @@ textarea.f-in {
   *::after {
     transition-duration: 0.01ms !important;
     animation-duration: 0.01ms !important;
-  }
-  .reveal {
-    opacity: 1;
-    transform: none;
-    filter: none;
   }
   a.tarjeta:hover,
   .paso:hover {

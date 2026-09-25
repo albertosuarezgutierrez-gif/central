@@ -71,6 +71,23 @@ misma tabla `seguros.portal_obligacion` que ya sincroniza `lib/obligaciones.ts`.
   o uno propio — este cron no lo comparte con nadie). Sin las claves VAPID el endpoint responde 503
   `sin_vapid` en vez de fingir un `{avisadas:0}`.
 
+## 📡 Avisos push de lo que llega de CIMA (25/09/2026)
+
+`GET /api/cron/avisos-cima` (diario 12:45 UTC, tras la segunda ingesta): recibo nuevo al cobro,
+recibo devuelto y movimientos de siniestro. Lo pidió un cliente en la demo. Lógica pura en
+`module-seguros-portal/src/avisos-cima.ts` (**lee su cabecera**); tablas `portal_aviso_cima` (sello)
+y `portal_aviso_silenciado` (tipos apagados; interruptores en `ActivarPush.tsx`), SQL
+`prisma/sql/2026-09-25_c_portal_avisos_cima.sql` **APLICADA el 25/09/2026**.
+- 🔒 La cartera sale de `carteraDeIdentidad` (mismos permisos que la bóveda). Pólizas AJENAS solo con
+  «Acceso total», y el aviso se anota con `registrarUso`. El texto va a la pantalla de bloqueo: sin
+  importes, matrícula ni **tipo de siniestro** (puede ser dato de salud).
+- 🚨 Semilla silenciosa por póliza **y lista** + ventana de 45 días: sin ellas, la primera pasada (o
+  pasar de «Solo ver» a «Acceso total») mandaría el historial entero como novedad. La clave de un paso
+  de tramitación es su **código EIAC** (`PasoTramitacion.codigo`), nunca el texto traducido.
+- Entrega al menos una vez; presupuesto de 50 s (`cortado` en la respuesta). Sin rotación: con cientos
+  de suscripciones habrá que añadir cursor. Cepos: `avisos-cima.test.ts` y
+  `test/regression-portal-avisos-cima.test.ts` (vistos morder).
+
 ## Estado (03/09/2026): DESPLEGADA en Vercel; Fase 1 mergeada + Fase 4 en código; DDL aplicado
 
 Fase 1 entró en `main` el 01/09/2026 con el PR **#1965** (`f12b7b46`): entrar con un código de un solo
@@ -975,6 +992,23 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
   email») ≠ vinculada sin pólizas vivas ≠ campo oculto por nivel. Y `prima_anual` `null` → «—», nunca 0.
 - **Ningún `clienteId` entra desde la request.** Todo id de ficha sale de `portal_vinculo` o de una
   relación leída a partir de él.
+
+### 🔒 Un vínculo por correo NO sobrevive a que el correo cambie de ficha (25/09/2026)
+
+Caso real: el correo de Pablo Guzmán Lozano estuvo en la ficha de Pablo Guzmán Pueyo (otra persona);
+se le vinculó a ella con `gestionar`, se corrigió el correo en el CRM y **el vínculo viejo se quedó**
+— los `email_hash` solo se añadían. Dos cierres, los dos necesarios:
+- **Login** (`intentarVinculo` → `retirarVinculosCaducados`, regla pura `vinculosEmailARetirar`):
+  `ok` retira los `email_hash` a otras fichas; `sin_ficha`/`ambiguo` los retira todos; sin clave, error
+  de BD o WhatsApp no toca nada. `manual`/`corredor` nunca.
+- **BD** (`prisma/sql/2026-09-25_c_…`, aplicada): trigger en `clientes`/`cliente_emails` que borra los
+  `email_hash` de la ficha cuando un correo EXISTENTE cambia o se borra. Hace falta porque la sesión
+  dura 30 días y la ingesta de CIMA escribe desde otro repo. El dueño legítimo se revincula al entrar.
+- **BD, segundo brazo**: también al MUDAR una fila de `cliente_emails` a otra ficha (`cliente_id` cambia, el hash no).
+- Sin vínculo, `obligacionesDeIdentidad` **no pinta** los vencimientos de cartera, pero **no se borran**: borrarlos perdería el sello `avisadaAt` y al dueño legítimo que se revincula le llegaría el aviso otra vez.
+Cepo: `test/regression-portal-vinculo-caducado.test.ts`. Pendiente de la auditoría: «Mis datos»
+cambia el correo principal sin verificarlo, y un correo SECUNDARIO (`cliente_emails`) vincula con
+`gestionar` — las dos son decisiones de Alberto.
 
 ### 🔖 El sello del último vínculo (06/09/2026) — por qué la bóveda no puede recalcularlo
 

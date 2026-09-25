@@ -30,7 +30,7 @@ export default function Escaneo() {
     const obs = new IntersectionObserver(
       (es) => {
         for (const e of es) {
-          // Igual que en `Reveal`: llegar de un salto no puede dejar la
+          // Llegar de un salto no puede dejar la
           // ilustración congelada a medias.
           if (e.isIntersecting || e.boundingClientRect.top < 0) {
             setActivo(true)

@@ -64,7 +64,7 @@ export default function Cifras({
     const obs = new IntersectionObserver(
       (es) => {
         for (const e of es) {
-          // Ver la nota de `Reveal.tsx`: llegar de un salto deja la banda por
+          // Llegar de un salto deja la banda por
           // encima del viewport sin haber intersectado, y los contadores se
           // quedarían clavados en cero — que aquí además se lee como un dato.
           if (e.isIntersecting || e.boundingClientRect.top < 0) {

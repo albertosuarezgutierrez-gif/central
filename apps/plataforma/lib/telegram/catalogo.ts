@@ -571,6 +571,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 07:00, y solo si hubo candidatos o el envío falló',
   },
   {
+    id: 'correduria.cima-diferencias', categoria: 'correduria',
+    titulo: 'Datos de la ficha distintos de CIMA',
+    que: 'Tras rellenar los huecos con lo que manda CIMA, cuántos datos de fichas (nombre, nacimiento, carné, teléfono, email) no coinciden con CIMA y esperan tu decisión en /correduria → Hoy.',
+    cuando: 'Diario, solo si hay diferencias sin decidir',
+  },
+  {
     id: 'correduria.ingesta', categoria: 'correduria',
     titulo: 'Se pierden datos de CIMA',
     que: 'Recibos, siniestros o pólizas que las compañías mandan y no llegan a guardarse.',

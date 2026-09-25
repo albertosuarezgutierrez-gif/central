@@ -377,8 +377,8 @@ export type { Tramo } from './saludo.ts'
 
 export { resumirCartera } from './resumen-cartera.ts'
 export type { PolizaResumible, ResumenCartera } from './resumen-cartera.ts'
-export { elegirFicha, prediccionDeVinculo } from './vinculo-elegir.ts'
-export type { Candidato, FichaElegida, PrediccionVinculo } from './vinculo-elegir.ts'
+export { elegirFicha, prediccionDeVinculo, vinculosEmailARetirar } from './vinculo-elegir.ts'
+export type { Candidato, FichaElegida, PrediccionVinculo, VinculoExistente } from './vinculo-elegir.ts'
 // El cliente corrige SU dirección de CONTACTO desde el portal (08/09/2026). Lee
 // su cabecera antes de tocarlo: la decisión que importa es que con varias fichas
 // vinculadas NO se elige una, y que esto no le cambia nada a ninguna compañía.
@@ -494,3 +494,5 @@ export type { CanalPrecio, MomentoLlamada, PeticionPrecio, PrioridadPrecio } fro
 export { HORAS_ENLACE_DIRECTO, destinoSeguro, estadoEnlace, generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido, urlEnlaceDirecto, type EstadoEnlace } from './enlace-directo.ts'
 export { AUTORES_MENSAJE, MAX_CUERPO_MENSAJE, MAX_MENSAJES_DIA, agruparHilos, normalizarCuerpo, sinLeerPara } from './mensaje.ts'
 export type { AutorMensaje, Hilo, Mensaje } from './mensaje.ts'
+export { ETIQUETA_AVISO_CIMA, TIPOS_AVISO_CIMA, claveBase, esTipoAvisoCima, eventosDePolizas, planificarAvisos, textoPushCima } from './avisos-cima.ts'
+export type { EventoCima, PlanAvisos, PolizaParaAviso, TipoAvisoCima } from './avisos-cima.ts'

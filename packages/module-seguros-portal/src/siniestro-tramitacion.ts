@@ -58,6 +58,13 @@ export type PasoTramitacion = {
   /** `YYYY-MM-DD` tal y como la manda la compañía; `null` = sin fecha. */
   fecha: string | null
   tipo: 'situacion' | 'accion' | 'pago'
+  /**
+   * Los códigos EIAC en bruto que identifican el paso. Es la identidad estable del
+   * paso (la usan los avisos push para no repetirlo): el `texto` sale de un
+   * diccionario que se puede reescribir, y una clave construida con él haría
+   * reaparecer como «novedad» cada paso viejo el día que cambie una traducción.
+   */
+  codigo: string
   texto: string
   /** Solo en pagos. Número, sin formatear: el formato español lo pone la pantalla. */
   importe: number | null
@@ -115,27 +122,36 @@ export function tramitacionSiniestro(e: Entrada): TramitacionSiniestro | null {
   const pasos: PasoTramitacion[] = []
 
   for (const s of sits ?? []) {
-    const t = SITUACION_SINIESTRO[texto(s.codigo)?.toUpperCase() ?? '']
-    if (t) pasos.push({ fecha: fechaIso(s.fecha), tipo: 'situacion', texto: t, importe: null })
+    const cod = texto(s.codigo)?.toUpperCase() ?? ''
+    const t = SITUACION_SINIESTRO[cod]
+    if (t) pasos.push({ fecha: fechaIso(s.fecha), tipo: 'situacion', codigo: cod, texto: t, importe: null })
   }
 
   // La fusión del CRM guarda cada foto distinta: la misma peritación «en curso»
   // y luego «terminada» son dos entradas. Se pinta UNA, la más avanzada.
-  const acciones = new Map<string, { fecha: string | null; nombre: string; orden: number; estado: string | null }>()
+  const acciones = new Map<
+    string,
+    { fecha: string | null; nombre: string; orden: number; estado: string | null; codigo: string }
+  >()
   for (const a of accs ?? []) {
-    const nombre = ACCION[texto(a.accion)?.toUpperCase() ?? '']
+    const codAccion = texto(a.accion)?.toUpperCase() ?? ''
+    const nombre = ACCION[codAccion]
     if (!nombre) continue
     const fecha = fechaIso(a.fecha)
-    const sit = SITUACION_ACCION[texto(a.situacion)?.toUpperCase() ?? '']
+    const codSit = texto(a.situacion)?.toUpperCase() ?? ''
+    const sit = SITUACION_ACCION[codSit]
     const clave = `${nombre}|${fecha ?? ''}`
     const previa = acciones.get(clave)
     const orden = sit?.orden ?? 0
-    if (!previa || orden > previa.orden) acciones.set(clave, { fecha, nombre, orden, estado: sit?.texto ?? null })
+    if (!previa || orden > previa.orden) {
+      acciones.set(clave, { fecha, nombre, orden, estado: sit?.texto ?? null, codigo: `${codAccion}:${codSit}` })
+    }
   }
   for (const a of acciones.values()) {
     pasos.push({
       fecha: a.fecha,
       tipo: 'accion',
+      codigo: a.codigo,
       texto: a.estado ? `${a.nombre}: ${a.estado}` : a.nombre,
       importe: null,
     })
@@ -144,10 +160,12 @@ export function tramitacionSiniestro(e: Entrada): TramitacionSiniestro | null {
   for (const p of pags ?? []) {
     const importe = importeNumero(p.importe)
     if (importe === null) continue
-    const destino = DESTINO_PAGO[texto(p.receptor)?.toUpperCase() ?? '']
+    const codReceptor = texto(p.receptor)?.toUpperCase() ?? ''
+    const destino = DESTINO_PAGO[codReceptor]
     pasos.push({
       fecha: fechaIso(p.fecha),
       tipo: 'pago',
+      codigo: `${codReceptor}:${importe}`,
       texto: destino ? `Pago de la compañía ${destino}` : 'Pago de la compañía',
       importe,
     })

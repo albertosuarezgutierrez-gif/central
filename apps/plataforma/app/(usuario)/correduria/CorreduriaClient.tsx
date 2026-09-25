@@ -28,6 +28,7 @@ import RadarRecibos from './RadarRecibos'
 import PartesPortal from './PartesPortal'
 import MensajesPortal from './MensajesPortal'
 import Supresiones from './Supresiones'
+import DiferenciasCima from './DiferenciasCima'
 import Quejas from './Quejas'
 import Bloque from './Bloque'
 import Redes from './Redes'
@@ -175,6 +176,7 @@ export default function CorreduriaClient() {
   const [nLeads, setNLeads] = useState<number | null | undefined>(undefined)
   const [nSupresiones, setNSupresiones] = useState<number | null | undefined>(undefined)
   const [nQuejas, setNQuejas] = useState<number | null | undefined>(undefined)
+  const [nCima, setNCima] = useState<number | null | undefined>(undefined)
   const [nMensajes, setNMensajes] = useState<number | null | undefined>(undefined)
   const [nDescuadres, setNDescuadres] = useState<number | null | undefined>(undefined)
   const [nRetencion, setNRetencion] = useState<number | null | undefined>(undefined)
@@ -303,7 +305,7 @@ export default function CorreduriaClient() {
       // `nLeads`); `DeclaradasVencer` se conserva SOLO como vista de llamada
       // rápida (teléfono/email en claro) para las ya vinculadas ≤60 días, pero
       // ya no suma un segundo aviso de lo mismo.
-      contador: agregarContadores([nPartes, nSupresiones, nQuejas, nRetencion, nRenovaciones, nLeads, nSustituciones, nTareasHoy, nDescuadres]),
+      contador: agregarContadores([nPartes, nSupresiones, nQuejas, nCima, nRetencion, nRenovaciones, nLeads, nSustituciones, nTareasHoy, nDescuadres]),
       tono: 'malo',
       title: 'Tareas de seguimiento para hoy, partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra, declaradas de otra compañía a punto de renovar y sustituciones pendientes de que CIMA confirme la nueva',
     },
@@ -407,6 +409,11 @@ export default function CorreduriaClient() {
             que nada fallara ni saliera en ninguna pantalla. */}
         <Supresiones onContador={setNSupresiones} />
         <Quejas onContador={setNQuejas} />
+
+        {/* Datos de la ficha que no coinciden con lo que manda CIMA de esa
+            persona: decide Alberto («Usar CIMA» / «Mantener el mío»). Los
+            huecos los rellena solo el cron `cima-sincro`. */}
+        <DiferenciasCima onContador={setNCima} />
 
         {/* Si lo que mandan las compañías por CIMA NO está entrando. Se pinta
             SOLO cuando hay algo que decir —incidencia o «no se ha podido

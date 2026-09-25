@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, Target } from 'lucide-react'
-import { Badge, PageHeader, btnStyle, cardStyle } from '@/components/ui'
+import { Check } from 'lucide-react'
+import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
+import PedirDatos from './PedirDatos'
 import {
   MOTIVOS_PERDIDA_UI,
   rotuloMotivo,
@@ -17,6 +18,9 @@ import {
 } from '@/lib/seguimiento-asegura'
 
 type Panel = null | 'perder' | 'aparcar'
+
+/** Ramos con tarificador propio en la ficha (`/correduria/cliente/<id>/<ramo>-nuevo`). */
+const RAMOS_TARIFICABLES = new Set(['auto', 'moto', 'hogar', 'salud', 'vida', 'decesos'])
 type Envio = { estado: 'idle' } | { estado: 'enviando' } | { estado: 'error'; motivo: string }
 
 const PASOS: readonly { estado: EstadoOportunidad | 'cierre'; rotulo: string }[] = [
@@ -68,7 +72,15 @@ const ROTULO_ACCION_HISTORIAL: Record<string, string> = {
   reabrir: 'Reabierta',
 }
 
-export default function SeguimientoClient({ id }: { id: string }) {
+/**
+ * El seguimiento de UNA oportunidad, desplegado dentro de su fila en la ficha del cliente
+ * (25/09/2026, Alberto: la página aparte «ocupa mucha pantalla»). Lo que la fila ya ofrece
+ * —corregir, ganar con su póliza, descartar— no se repite aquí.
+ */
+const bloque: React.CSSProperties = { display: 'grid', gap: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }
+const tituloBloque: React.CSSProperties = { margin: 0, fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }
+
+export default function SeguimientoOportunidad({ id, telefono = null, onCambio }: { id: string; telefono?: string | null; onCambio?: () => void }) {
   const [datos, setDatos] = useState<LecturaOportunidad | null>(null)
   const [panel, setPanel] = useState<Panel>(null)
   const [envio, setEnvio] = useState<Envio>({ estado: 'idle' })
@@ -91,10 +103,11 @@ export default function SeguimientoClient({ id }: { id: string }) {
     setEnvio({ estado: 'idle' })
     setPanel(null)
     cargar()
+    onCambio?.()
   }
 
   if (datos === null) return <p style={{ fontSize: 13, color: 'var(--muted)' }}>Cargando…</p>
-  if (datos.estado === 'no_encontrado') return <p style={{ fontSize: 14 }}>Esta oportunidad no existe o no es de la correduría. <Link href="/correduria/vencimientos?c=leads">Volver a Vencimientos</Link></p>
+  if (datos.estado === 'no_encontrado') return <p style={{ fontSize: 13 }}>Esta oportunidad ya no existe o no es de la correduría.</p>
   if (datos.estado === 'sin_configurar') return <p style={{ fontSize: 13, color: 'var(--muted)' }}>No se puede leer: falta conectar el puerto con central-asegura.</p>
   if (datos.estado === 'error') return <p style={{ fontSize: 13, color: 'var(--negative)' }}>No se ha podido leer la oportunidad ({datos.motivo}).</p>
 
@@ -106,26 +119,17 @@ export default function SeguimientoClient({ id }: { id: string }) {
   const indicePaso = cerrada ? 3 : PASOS.findIndex(p => p.estado === op.estado)
 
   return (
-    <div style={{ display: 'grid', gap: 16, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-      <div>
-        <Link href="/correduria/vencimientos?c=leads" style={{ fontSize: 13, color: 'var(--muted)' }}>← Vencimientos</Link>
-        <PageHeader
-          titulo={`${datos.cliente ?? '(sin nombre)'}${op.ramo ? ` · ${op.ramo}` : ''}`}
-          icono={<Target size={20} strokeWidth={1.75} />}
-          sub={<>
-            {datos.fueCliente === true ? 'Fue cliente nuestro' : datos.fueCliente === false ? 'Nunca fue cliente' : 'Relación previa sin comprobar'}
-            {datos.aseguradora ? ` · hoy en ${datos.aseguradora}` : ''}
-            {op.fechaFinVigencia ? ` · su póliza vencía el ${fecha(op.fechaFinVigencia)} (el aniversario es estimado)` : ''}
-            {' · '}<Link href={`/correduria/cliente/${op.clienteId}`}>abrir ficha</Link>
-          </>}
-          acciones={<Badge tono={op.estado === 'ganada' ? 'positivo' : op.estado === 'perdida' ? 'negativo' : 'info'}>{ROTULO_ESTADO[op.estado]}</Badge>}
-        />
-      </div>
-
-      <ol aria-label="Estado de la oportunidad" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 }}>
+    <div style={{ display: 'grid', gap: 12, gridTemplateColumns: 'minmax(0, 1fr)', fontSize: 13 }}>
+      {(datos.fueCliente !== null || op.fechaFinVigencia) && (
+        <span style={{ color: 'var(--muted)' }}>
+          {datos.fueCliente === true ? 'Fue cliente nuestro' : datos.fueCliente === false ? 'Nunca fue cliente' : 'Relación previa sin comprobar'}
+          {op.fechaFinVigencia ? ` · su póliza vencía el ${fecha(op.fechaFinVigencia)} (el aniversario es estimado)` : ''}
+        </span>
+      )}
+      <ol aria-label="Estado de la oportunidad" style={{ margin: 0, padding: 0, listStyle: 'none', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 6 }}>
         {PASOS.map((p, i) => (
           <li key={p.estado} aria-current={i === indicePaso ? 'step' : undefined} style={{
-            padding: '10px 14px', borderRadius: 12, fontSize: 13, fontWeight: i === indicePaso ? 700 : 600,
+            padding: '6px 10px', borderRadius: 10, fontSize: 12, fontWeight: i === indicePaso ? 700 : 600,
             background: i === indicePaso ? 'var(--primary)' : i < indicePaso ? 'var(--primary-light)' : 'var(--surface)',
             color: i === indicePaso ? '#fff' : i < indicePaso ? 'var(--primary)' : 'var(--muted)',
             border: i > indicePaso ? '1px solid var(--border)' : '1px solid transparent',
@@ -144,21 +148,16 @@ export default function SeguimientoClient({ id }: { id: string }) {
       )}
       {aparcada && <p style={{ margin: 0, fontSize: 14, color: 'var(--warning)' }}>Aparcada hasta el {fecha(op.aparcadaHasta)}: no sale en Vencimientos hasta entonces.</p>}
 
-      <section style={{ ...cardStyle, display: 'grid', gap: 12 }}>
-        <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>Qué hago ahora</h2>
+      <section style={bloque}>
+        <h3 style={tituloBloque}>Qué hago ahora</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {op.estado === 'competencia' && !aparcada && (
-            <button type="button" disabled={enviando} style={btnStyle('secundario')} onClick={() => accion({ accion: 'interesado' })}>Interesado</button>
+            <button type="button" disabled={enviando} style={btnStyle('secundario', 'sm')} onClick={() => accion({ accion: 'interesado' })}>Interesado</button>
           )}
           {(op.estado === 'competencia' || op.estado === 'en_negociacion') && !aparcada && (
-            <button type="button" disabled={enviando} style={btnStyle('primario')} onClick={() => accion({ accion: 'propuesta_enviada' })}>Propuesta enviada</button>
+            <button type="button" disabled={enviando} style={btnStyle('primario', 'sm')} onClick={() => accion({ accion: 'propuesta_enviada' })}>Propuesta enviada</button>
           )}
-          {(op.estado === 'en_negociacion' || op.estado === 'pendiente_cliente') && !aparcada && (
-            <button type="button" disabled={enviando} style={{ ...btnStyle('secundario'), color: 'var(--positive)' }}
-              onClick={() => { if (window.confirm('¿Marcar como GANADA? Se cierran sus tareas pendientes.')) void accion({ accion: 'ganar' }) }}>
-              Ganada
-            </button>
-          )}
+          {/* «Ganada» va en la fila, con la póliza que se emitió. */}
           {!cerrada && (
             <>
               <button type="button" disabled={enviando} aria-expanded={panel === 'perder'} style={{ ...btnStyle('secundario'), color: 'var(--negative)' }} onClick={() => setPanel(panel === 'perder' ? null : 'perder')}>Perdida…</button>
@@ -174,10 +173,22 @@ export default function SeguimientoClient({ id }: { id: string }) {
         {envio.estado === 'error' && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{envio.motivo}</p>}
       </section>
 
-      <Tareas oportunidadId={id} tareas={datos.tareas} descartadas={datos.tareasDescartadas} fueCliente={datos.fueCliente} cerrada={cerrada} hoy={hoy} onCambio={cargar} />
+      {!cerrada && op.ramo !== null && RAMOS_TARIFICABLES.has(op.ramo) && (
+        <section style={bloque}>
+          <h3 style={tituloBloque}>Datos para tarificar</h3>
+          <div>
+            <Link href={`/correduria/cliente/${op.clienteId}/${op.ramo}-nuevo`} style={{ ...btnStyle('primario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
+              Tarificar {op.ramo === 'auto' ? 'coche' : op.ramo} →
+            </Link>
+          </div>
+          {(op.ramo === 'auto' || op.ramo === 'moto') && <PedirDatos oportunidadId={op.id} clienteId={op.clienteId} telefono={telefono} ramo={op.ramo} />}
+        </section>
+      )}
 
-      <section style={{ ...cardStyle, display: 'grid', gap: 4 }}>
-        <h2 style={{ margin: '0 0 8px', fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>Historial</h2>
+      <Tareas oportunidadId={id} tareas={datos.tareas} descartadas={datos.tareasDescartadas} fueCliente={datos.fueCliente} cerrada={cerrada} hoy={hoy} onCambio={() => { cargar(); onCambio?.() }} />
+
+      <details style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+        <summary style={{ ...tituloBloque, cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>Historial ({datos.historial.length})</summary>
         {datos.historial.length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Sin cambios registrados desde aquí todavía.</p>
         ) : datos.historial.map((h, i) => (
@@ -192,7 +203,7 @@ export default function SeguimientoClient({ id }: { id: string }) {
           </div>
         ))}
         <span style={{ marginTop: 6, fontSize: 12, color: 'var(--muted)' }}>El historial no se puede editar ni borrar: queda quién cambió qué y cuándo.</span>
-      </section>
+      </details>
     </div>
   )
 }
@@ -296,9 +307,9 @@ function Tareas({ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, 
   // LSSI 21.2: por correo solo a quien fue cliente. Sin comprobar = no se ofrece.
   const tipos = TIPOS_TAREA_UI.filter(t => t.valor !== 'email' || fueCliente === true)
   return (
-    <section style={{ ...cardStyle, display: 'grid', gap: 10 }}>
+    <section style={bloque}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-        <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>Tareas</h2>
+        <h3 style={tituloBloque}>Tareas</h3>
         <span style={{ fontSize: 13, color: 'var(--muted)' }}>{pendientes.length} pendiente(s)</span>
       </div>
       {pendientes.length === 0 && <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Nada pendiente. Toda oportunidad abierta debería tener una siguiente tarea con fecha.</p>}

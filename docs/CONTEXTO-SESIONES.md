@@ -12,19 +12,32 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(25/09/2026)** Recaptación por email: el tracking de aperturas/clics estaba APAGADO en Resend
-(`envios.grupoasegura.es`) → los 30 emails enviados (20-22/09) salían «0% apertura», que era «no medido».
-Activados open+click tracking (Alberto: «tracking fundamental») y el webhook suscrito a `bounced`/`complained`
-(solo tenía opened/clicked: la baja por rebote del PR #3232 nunca se disparaba). Código: `SEGUIMIENTO_EMAIL_DESDE`
-(25/09) — la regla de silencio (3 envíos sin abrir → descarte) y la tasa del panel solo cuentan envíos desde ahí,
-si no el cron descartaba leads por falta de medición. Pendiente: 2 rebotes del 21/09 siguen como «enviado» sin baja
-(el evento salió antes de suscribirse); ⚖️ el píxel de apertura sin consentimiento, a mencionar en la política de privacidad.
+**(25/09/2026)** Recaptación por email: el tracking de aperturas estaba APAGADO en Resend → los 30 emails (20-22/09)
+salían «0% apertura», que era «no medido». 🚨 Resend NO guarda open/click tracking sin `trackingSubdomain` (el update
+responde OK y al releer sigue en false; así se dio por activado sin estarlo). Ahora en `grupoasegura.es` (el remitente
+desde hoy): open ON, subdominio `links` → falta CNAME `links` → `links2.resend-dns.com` en IONOS; click OFF hasta que
+verifique (reescribe TODOS los enlaces, incluida la baja, y sin CNAME romperían). Webhook con `bounced`/`complained`.
+Código (PR #3591): silencio y tasa del panel solo cuentan envíos desde `SEGUIMIENTO_EMAIL_DESDE`.
+
+**(25/09/2026)** 🚨 **Los crons de asegura NUNCA se ejecutaron**: el middleware no exentaba `/api/cron` y Vercel recibía 307→/login
+(felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez
+(`seguros.felicitacion` vacía, 0 correos en Resend). Arreglo: `/api/cron` a PUBLIC + cepo (#3602, visto rojo). Felicitación rediseñada
+con logo PNG (`asegura-web/public/brand`). ✉️ **Remitente de TODA la correduría = `hola@grupoasegura.es`** desde el 25/09: dominio
+verificado en Resend (DNS en IONOS por Alberto) y `ASEGURA_MAIL_FROM`/`PORTAL_MAIL_FROM` cambiadas. `envios.grupoasegura.es` queda de
+reserva unos días; luego borrar de Resend e IONOS.
+
+**(25/09/2026)** 📡 **Portal: avisos push de CIMA + web sin animaciones de aparición — MERGEADO en #3599** (+ aviso en «Mis datos»: el correo tiene que ser del titular) (a raíz de la demo con Pablo
+Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/devuelto, siniestro) con interruptores por
+tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
+✅ Borrado (25/09, confirmado por Alberto) el vínculo `16a27091` (hijo, Guzmán Lozano) → ficha del PADRE: lo creó el portal a las 10:10 porque el PADRE añadió el correo del hijo a su propia ficha desde «Mis datos» a las 10:07. **Fase 0 sin hacer:** revalidar vínculos `email_hash` cuando cambia el correo de una ficha.
 
 **(25/09/2026)** 🕓 **CIMA: descargas fijas a las 16:00 y 20:30 de Madrid** (recomendación de CIMA; `?franja=` en
 `cima-pull-respaldo`, disparan siempre y solo avisan si fallan). El respaldo condicional de la mañana pasa a las 09:00 UTC (11:00 Madrid, decisión de Alberto).
 Horas en UTC: en invierno (desde 25/10) caen a las 15:00/19:30 de Madrid. CIMA dice que Mapfre ya tiene ficheros en su
 intranet; a las 09:41 UTC la cola de TIREA seguía con 155 ficheros conocidos y nada de C0058. **CIMA no cobra por
 consulta** (Alberto, 25/09): el coste de pulls extra es ~0 (Vercel/Fly); el único límite es el presupuesto de Actions.
+
+**(25/09/2026)** 🔒 **Portal: Pablo Guzmán Lozano veía la cartera de Pablo Guzmán Pueyo (otra persona).** Su correo estuvo en la ficha de Pueyo → vínculo `email_hash`/`gestionar`; al corregirlo en el CRM el vínculo viejo SE QUEDÓ (solo se añadían). Borrado el vínculo sobrante y su recordatorio huérfano; único caso (13 vínculos auditados). No hizo nada sobre la ficha ajena (5 accesos, 0 mensajes/partes/peticiones). Arreglo: el login retira los `email_hash` que el correo ya no resuelve + trigger en BD (aplicado) al cambiar/borrar un correo de ficha + los vencimientos de cartera no se pintan sin vínculo (sin borrarlos, para no perder el sello de aviso). La revisión de código cazó dos fallos antes de fusionar (re-aviso al borrar obligaciones; correo que se muda de ficha) y se corrigieron. Pendiente de Alberto: «Mis datos» cambia el correo principal SIN verificarlo; un correo secundario vincula con `gestionar`; valorar si es brecha RGPD notificable.
 
 **(25/09/2026)** — IDD: cuestionario cerrado de exigencias y necesidades por ramo (motor, hogar y comunes) en el presupuesto de la ficha de póliza, en lugar del texto libre. Se guarda como la misma declaración de texto (`necesidades`, lo que el cliente firma; sin DDL) y las respuestas van a la auditoría del evento. Módulo puro `module-seguros/necesidades-idd.ts` (+5 tests, cepo visto fallar). Pendiente: avisar si la opción elegida no cubre algo pedido (las opciones aún no traen coberturas estructuradas). **Mergeado en #3573** (CI verde; ajuste de 320 px incluido; sin probar aún en pantalla).
 
@@ -594,6 +607,55 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (25/09/2026) Correduría · pestaña Contactos más clara
+- Alberto: «no es nada clara». Portal: sin el párrafo de «no hay nada que hacer» cuando ya entra (va al `title`), las 3 acciones en una fila con rótulos cortos sin repetir el nombre.
+- Personas: el formulario de autorización (alcance) va PLEGADO detrás de su botón, y ese botón pasa a secundario: el caso normal (nadie ve nada de nadie) ya no parece una tarea pendiente.
+- Cabecera: número y correo pasan a texto seleccionable (los iconos ya llaman/escriben; eran la misma acción dos veces).
+- El titular saliendo como «persona» ajena (PABLO JUAN GUZMAN LOZANO en su propia ficha) NO se toca aquí: lo arregla el PR #3596.
+
+## (25/09/2026) Ficha cliente: «Eliminar» también en pólizas VIVAS canceladas de Oportunidades
+El botón quedaba suelto bajo la rejilla y parecía «borrar todas»: ahora va DENTRO del marco de su tarjeta.
+Y se puede quitar de Oportunidades una póliza viva cancelada/vencida/competencia (antes asegura lo rechazaba con
+422): mismo `lead_descartado_at`, no borra nada, se recupera desde «Eliminadas de oportunidades»; su ramo no
+resucita una del volcado. Guarda del lado de asegura: una viva en vigor sigue sin poder quitarse.
+
+## (25/09/2026) Portal asegura: «Historial de compañías» en la ficha de la póliza
+- Alberto (captura Kona Mapfre→Reale): el cliente debe ver cuándo cambió y de qué compañía a cuál. Antes solo había
+  un eslabón (`sustituyeA`) y la frase usaba el VENCIMIENTO de Mapfre (24/09) como si fuera la fecha del cambio.
+- Nuevo `lib/historial-companias.ts` (+6 tests, cepo visto fallar): recorre la cadena `sustituyeAId` en los dos
+  sentidos sobre lo que ESE lector ve; fecha del cambio = inicio de la nueva (22/09); sin fecha, no se inventa.
+- `PolizaPortal.cambiosCompania` + sección en `/boveda/poliza/[id]` (también en la ficha de la vieja, con enlace).
+
+## (25/09/2026) Ficha: el tomador con ficha duplicada salía en «Personas» como un tercero
+- Pablo Guzmán Lozano: CIMA colgaba al propietario de su coche de OTRA ficha suya (lead, mismo hash de
+  DNI, 0 pólizas) → salía «sin vínculo» con botón «Declarar». `leerIntervinientes` (asegura) marca ahora
+  `esTomador` también por NIF igual al del tomador. Y el formulario de «Declarar» hace scroll al abrirse
+  (en móvil quedaba fuera de pantalla y el botón «no hacía nada»).
+- Fusión DESDE LA FICHA: si hay otra con el mismo DNI se avisa arriba y se comparan campo a campo (elige cuál
+  se queda). Función de BD `seguros.fusionar_clientes` (SECURITY DEFINER, aplicada; lápida + `snapshot_before` +
+  `snapshot_superviviente` nueva). Nunca con DNI distinto ni con DNI sin índice. Revisión de arquitectura aplicada (direcciones enteras, `crm_seguros` sin EXECUTE, ids movidos y borrados en el log).
+
+## (25/09/2026) Oportunidades: se gestionan DENTRO de la ficha del cliente (PR #3590)
+- Alberto: la página aparte «ocupa mucha pantalla». La fila de cada oportunidad (pestaña Oportunidades) se despliega
+  con «Gestionar ▾» y trae estado, acciones, **datos para tarificar** (botón al tarificador del ramo + `PedirDatos`),
+  tareas e historial plegado (`cliente/[id]/SeguimientoOportunidad.tsx`, antes `oportunidad/[id]/SeguimientoClient.tsx`).
+- `/correduria/oportunidad/<id>` solo REDIRIGE a `/correduria/cliente/<cliente>?tab=oportunidades&op=<id>` (enlaces de
+  Vencimientos, «Hoy», inicio). «Ganada» va solo en la fila (con su póliza). Cepo: `regression-correduria-secciones`.
+- «🗑️ Eliminar» (con confirmación y motivo) en las tarjetas del cubo Oportunidades: una póliza HISTÓRICA se marca
+  en `seguros.polizas.lead_descartado_at/_motivo` (quita el RAMO; «Recuperar» lo deshace); una abierta se descarta (`error_alta`).
+  Migración `apps/asegura/prisma/sql/2026-09-25a_poliza_lead_descartado.sql` **aplicada en `central` el 25/09 (12:15 UTC)**,
+  antes del merge, porque la ficha selecciona esas columnas.
+- Auditoría CRUD del panel en `docs/AUDITORIA-CORREDURIA-2026-09-25.md` (top 10 de huecos pendiente de priorizar).
+
+## (25/09/2026) Ficha de cliente: añadir contacto con lista vacía + fechas de CIMA
+- Con los contactos leídos y VACÍOS no había botón «Añadir» (colgaba del modo «Corregir», que exige chips). Arreglado.
+- CIMA deja fecha de nacimiento y de carné en `poliza_intervinientes`, NO en `clientes`: la ingesta (repo `asegura`, `pull-persist.ts`) solo escribe nombre/DNI/tipo_persona del tomador. La ficha las rellena ya al LEER (`dePolizas` de `cartera-ficha.ts`, casando por `nif_lookup_hash` = DNI), marcadas «(póliza)».
+- Medido: de 101 fichas vivas, 64 tienen interviniente propio; recuperables fnac 5 · tel 2 · email 4 · carné 1. 8 DNIs con varias fichas (Pablo Guzmán, p. ej.).
+- Pablo Guzmán: su póliza de auto NO trae conductor → CIMA no manda fecha de carné. Solo 21 de 73 autos CIMA traen `conductor_habitual`.
+- Decisión de Alberto: 1º CIMA manda (volcado) · 2º cada diferencia se avisa y decide él. Hecho SIN tocar la ingesta: `apps/asegura/lib/sincro-cima.ts` (puerto `/api/operador/cima-sincro`), comparación pura `compararConCima` (module-seguros), bloque «Diferencias con CIMA» en /correduria → Hoy (botón «Aplicar CIMA en todas» = el volcado; «Usar CIMA»/«Mantener el mío» por campo), cron `cima-sincro` 12:50 UTC rellena huecos + Telegram `correduria.cima-diferencias`. Tabla `seguros.cima_decisiones` (aplicada). Tel/email de CIMA entran como principal y el anterior queda secundario.
+- Tras el deploy «no veo el botón»: la comparación hacía ~4 consultas por ficha en serie (el bloque no pintaba nada mientras cargaba y coincidió con «Too many database connections» en /correduria). Reescrita en bloque (3 consultas) y el bloque se ve cargando y cuando todo coincide.
+- Hueco conocido: el tomador que no figura como interviniente (37 fichas) no trae nada comparable — su contacto lo descarta el parser de la ingesta (repo `asegura`).
 
 ## (25/09/2026) Auto nuevo: fecha de matriculación consultada a Avant2
 - Con cada matrícula (tecleada o restaurada del borrador) se consulta `/car/registration-date` por el puerto

@@ -76,6 +76,11 @@ const EXENTOS = new Set([
   // fila que toca ya lleva su `identidadId` propio (de `portal_obligacion`) y
   // el cruce con la cartera pasa por `portal_vinculo`, igual que el resto.
   'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+  // Cron de avisos de CIMA (25/09/2026): mismo caso que `avisos-push`. Recorre
+  // las identidades con suscripción push y cada consulta `portal*` lleva ESE
+  // `identidadId`; la cartera la lee `carteraDeIdentidad` (la misma lectura de
+  // la bóveda, que parte de `portal_vinculo`), no una consulta propia.
+  'apps/asegura-portal/app/api/cron/avisos-cima/route.ts',
   // Mismo caso que arriba: recibe `identidadId` ya resuelto por
   // `app/api/polizas/route.ts` (que sí pasa por `lib/session`), y su único
   // `prisma.portalVinculo` va filtrado por ese id — nunca a ciegas.

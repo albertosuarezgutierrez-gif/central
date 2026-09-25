@@ -13,6 +13,10 @@
     {
       "path": "/api/cron/avisos-push",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/avisos-cima",
+      "schedule": "45 12 * * *"
     }
   ]
 }
