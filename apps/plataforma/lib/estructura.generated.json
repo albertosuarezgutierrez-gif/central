@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-25T16:21:28Z",
+  "generadoEn": "2026-09-25T18:30:49Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -524,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 13
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 124
+        "evidencias": 122
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4001,6 +4001,7 @@
       "/api/operador/clientes",
       "/api/operador/codeoscopic/auto-nuevo",
       "/api/operador/codeoscopic/catalogos",
+      "/api/operador/codeoscopic/coberturas",
       "/api/operador/codeoscopic/companias",
       "/api/operador/codeoscopic/decesos-nuevo",
       "/api/operador/codeoscopic/documentos",
@@ -6556,7 +6557,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1488,
+    "apis": 1489,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
