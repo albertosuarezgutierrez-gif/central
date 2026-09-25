@@ -72,7 +72,7 @@ llega después. No se diseña nada que «mande el siniestro a la compañía por 
 El 22/09 **todos** los workflows del repo `asegura` fallaron en 3-4 s con `runner_id: 0` y sin logs: no
 era código, era el presupuesto de GitHub Actions de la cuenta (0 $, «Stop usage», sin tarjeta) agotado
 por `central`. Ese síntoma —fallo instantáneo sin máquina— se diagnostica en Billing, no en el código.
-- Desde ese día hay **respaldo**: `apps/plataforma` → `/api/cron/cima-pull-respaldo` (07:00 UTC solo si Actions no corrió + franjas FIJAS 14:00 y 18:30 UTC = 16:00 y 20:30 Madrid, recomendación de CIMA del 25/09)
+- Desde ese día hay **respaldo**: `apps/plataforma` → `/api/cron/cima-pull-respaldo` (09:00 UTC = 11:00 Madrid, solo si Actions no corrió + franjas FIJAS 14:00 y 18:30 UTC = 16:00 y 20:30 Madrid, recomendación de CIMA del 25/09)
   dispara el pull SOLO si la franja de Actions no completó (`decidirRespaldoPull`, >3 h; sin dato NO
   dispara). Se enciende con `ASEGURA_CRM_CRON_SECRET` en Vercel plataforma; sin ella, si CIMA está parado, lo avisa por Telegram (`correduria.cima-respaldo`).
 - El vigía `correduria_ingesta` ya incluye el cron en su firma (`firmaAvisoIngesta`): antes vio las 37 h

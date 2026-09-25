@@ -13,7 +13,7 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 **(25/09/2026)** 🕓 **CIMA: descargas fijas a las 16:00 y 20:30 de Madrid** (recomendación de CIMA; `?franja=` en
-`cima-pull-respaldo`, disparan siempre y solo avisan si fallan). La de las 07:00 UTC sigue siendo respaldo condicional.
+`cima-pull-respaldo`, disparan siempre y solo avisan si fallan). El respaldo condicional de la mañana pasa a las 09:00 UTC (11:00 Madrid, decisión de Alberto).
 Horas en UTC: en invierno (desde 25/10) caen a las 15:00/19:30 de Madrid. CIMA dice que Mapfre ya tiene ficheros en su
 intranet; a las 09:41 UTC la cola de TIREA seguía con 155 ficheros conocidos y nada de C0058. **CIMA no cobra por
 consulta** (Alberto, 25/09): el coste de pulls extra es ~0 (Vercel/Fly); el único límite es el presupuesto de Actions.

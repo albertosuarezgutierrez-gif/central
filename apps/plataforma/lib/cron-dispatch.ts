@@ -163,9 +163,10 @@ export const CRON_JOBS: CronJob[] = [
   // retraso (05:30 → 11:25, 11:30 → 15:52) y el de las 05:30 del 25/09 no había arrancado a las 09:41.
   // 25/09/2026 (tarde): CIMA recomienda descargar a las 16:00 y 20:30 de Madrid, cuando las
   // compañías ya han dejado sus ficheros. Esas dos franjas son FIJAS (disparan siempre, aunque
-  // Actions haya corrido); la de las 07:00 UTC sigue siendo solo respaldo del pull de la mañana.
+  // Actions haya corrido); la de la mañana sigue siendo solo respaldo del pull de Actions.
+  // 25/09/2026 (Alberto): el respaldo de la mañana pasa de 07:00 a 09:00 UTC (11:00 de Madrid).
   // ⚠️ Horas en UTC: con el cambio al horario de invierno (25/10) caen una hora antes en Madrid.
-  { path: '/api/cron/cima-pull-respaldo', schedule: '0 7 * * *' },
+  { path: '/api/cron/cima-pull-respaldo', schedule: '0 9 * * *' },
   { path: '/api/cron/cima-pull-respaldo?franja=16h', schedule: '0 14 * * *' },
   { path: '/api/cron/cima-pull-respaldo?franja=2030', schedule: '30 18 * * *' },
   // Siniestros nuevos de la cartera: 06:50, justo DETRÁS del vigía de la ingesta (06:45) —

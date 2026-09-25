@@ -7,7 +7,7 @@
 // los jobs de `asegura` se quedaron sin runner y CIMA pasó ~45 h sin entrar.
 //
 // Este job corre desde el cron-dispatch de plataforma (Vercel, no gasta minutos
-// de Actions) a las 07:00 UTC, y SOLO dispara el pull si la franja de Actions no ha
+// de Actions) a las 09:00 UTC (11:00 de Madrid), y SOLO dispara el pull si la franja de Actions no ha
 // completado (`decidirRespaldoPull`, con su cepo). Además, dos franjas FIJAS
 // (`?franja=16h` y `?franja=2030`, hora de Madrid) que disparan siempre: ver GET.
 //
