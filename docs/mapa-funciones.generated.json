@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-25T05:18:52Z",
-  "sha": "faf764b574d3ff1baa046f705b526d7778260bb3",
+  "generadoEn": "2026-09-25T07:10:34Z",
+  "sha": "cfc96cb6609dcab55da5c155dec74a0cf7701a92",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -81228,7 +81228,7 @@
           "exportada": false,
           "params": "lista: { href: string }[], path: string",
           "retorno": "boolean",
-          "linea": 129
+          "linea": 130
         },
         {
           "nombre": "seccionDeRuta",
@@ -81236,7 +81236,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "ClaveSeccion | null",
-          "linea": 135,
+          "linea": 136,
           "resumen": "Qué sección contiene la ruta activa. Determinista: se calcula igual en el servidor y en el cliente, así que el primer pintado ya trae la sección buena abierta (sin salto al hidratar)."
         },
         {
@@ -81245,7 +81245,7 @@
           "exportada": false,
           "params": "path: string, soloEmpresas: boolean",
           "retorno": "ClaveSeccion | null",
-          "linea": 148,
+          "linea": 149,
           "resumen": "🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Día a día». Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta NO se le renderiz"
         },
         {
@@ -81254,13 +81254,13 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 161,
+          "linea": 162,
           "resumen": "🚨 El lateral tiene DOS plegados distintos y no pueden pisarse: · `html[data-nav-plegado='1']` = tira de solo iconos (globals.css). Ahí las cabeceras de sección NO se ven (llevan `nav-solo-abierto`), "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8bda97def75c"
+      "hash": "8514db2dadc9"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -93808,6 +93808,42 @@
       "hash": "a7bf36aadc38"
     },
     {
+      "ruta": "apps/plataforma/components/InstalarApp.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "InstalarApp"
+      ],
+      "funciones": [
+        {
+          "nombre": "esIos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 17
+        },
+        {
+          "nombre": "yaInstalada",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 23
+        },
+        {
+          "nombre": "InstalarApp",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 28
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d9670d78aebe"
+    },
+    {
       "ruta": "apps/plataforma/components/ui.tsx",
       "ambito": "apps/plataforma",
       "resumen": "Sistema de diseño de plataforma. Server-safe (sin hooks): lo pueden usar tanto los Server Components como los client. Solo presentación — cero lógica de negocio. ─── Por qué vive AQUÍ y no en app/(usuario)/dashboard/ui.tsx ──────────────────────────────── Nació en `dashboard/ui.tsx` (02/07/2026), pe",
@@ -102260,7 +102296,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 220,
+          "linea": 224,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -102269,7 +102305,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 250,
+          "linea": 254,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -102278,7 +102314,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 272
+          "linea": 276
         },
         {
           "nombre": "ventanaMinutos",
@@ -102286,7 +102322,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 280,
+          "linea": 284,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -102295,13 +102331,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 292,
+          "linea": 296,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "01e7293042eb"
+      "hash": "cc9e1808e492"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -156116,7 +156152,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3748,
-    "funciones": 11922
+    "archivos": 3749,
+    "funciones": 11925
   }
 }
