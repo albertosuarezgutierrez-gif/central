@@ -159,11 +159,15 @@ export const CRON_JOBS: CronJob[] = [
   // de la cuenta se agotó. Este mira 2,5 h después de cada franja (los `schedule` de Actions arrancan
   // tarde a menudo) y SOLO dispara si esa franja no completó (`decidirRespaldoPull`): con Actions sano
   // no hace nada.
-  // 25/09/2026: 08:00 → 07:00 y franja nueva a las 18:00. Medido el 24-25/09: los `schedule` de
-  // Actions llegaron con 4-6 h de retraso (05:30 → 11:25, 11:30 → 15:52) y el de las 05:30 del 25/09
-  // no había arrancado a las 06:47. Las 18:00 no tienen franja de Actions delante, así que esa pasada
-  // dispara a diario (>3 h desde la de mediodía): recoge lo que CIMA genere por la tarde.
-  { path: '/api/cron/cima-pull-respaldo', schedule: '0 7,14,18 * * *' },
+  // 25/09/2026: 08:00 → 07:00. Medido el 24-25/09: los `schedule` de Actions llegaron con 4-6 h de
+  // retraso (05:30 → 11:25, 11:30 → 15:52) y el de las 05:30 del 25/09 no había arrancado a las 09:41.
+  // 25/09/2026 (tarde): CIMA recomienda descargar a las 16:00 y 20:30 de Madrid, cuando las
+  // compañías ya han dejado sus ficheros. Esas dos franjas son FIJAS (disparan siempre, aunque
+  // Actions haya corrido); la de las 07:00 UTC sigue siendo solo respaldo del pull de la mañana.
+  // ⚠️ Horas en UTC: con el cambio al horario de invierno (25/10) caen una hora antes en Madrid.
+  { path: '/api/cron/cima-pull-respaldo', schedule: '0 7 * * *' },
+  { path: '/api/cron/cima-pull-respaldo?franja=16h', schedule: '0 14 * * *' },
+  { path: '/api/cron/cima-pull-respaldo?franja=2030', schedule: '30 18 * * *' },
   // Siniestros nuevos de la cartera: 06:50, justo DETRÁS del vigía de la ingesta (06:45) —
   // si los datos de CIMA no están entrando, ese aviso llega primero y explica por qué este
   // no trae nada— y antes de `agentes-latido` (07:45), para que el parte del día lea una
