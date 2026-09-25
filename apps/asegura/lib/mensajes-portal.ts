@@ -8,7 +8,6 @@
  * 🚨 Toda consulta filtra por `correduria_id` Y `cliente_id`: con un rol BYPASSRLS, un id suelto no
  * falla, contesta en la ficha de otro. La póliza del tema la vigila además la FK compuesta de la BD.
  */
-import { remitenteCorreo } from '@central/module-seguros'
 import { normalizarCuerpo } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
@@ -164,10 +163,6 @@ async function avisarAlCliente(correduriaId: string, clienteId: string): Promise
   if (destino.estado !== 'ok') return destino.estado
   const enlace = enlacePortal()
   if (!enlace) return 'sin_enlace'
-  const { createMailTransporter } = await import('@central/core-email')
-  const transporter = createMailTransporter()
-  if (!transporter) return 'sin_proveedor'
-  const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
   const texto = [
     'Hola:',
     '',
@@ -176,18 +171,19 @@ async function avisarAlCliente(correduriaId: string, clienteId: string): Promise
     '',
     enlace.replace(/\/boveda$/, '/mensajes'),
   ].join('\n')
-  try {
-    await transporter.sendMail({
-      from: remitenteCorreo(process.env.ASEGURA_MAIL_FROM),
-      to: destino.email,
-      ...(replyTo ? { replyTo } : {}),
-      subject: 'Tienes una respuesta de tu corredor',
-      text: texto,
-    })
-    return 'enviado'
-  } catch (e) {
-    const mensaje = e instanceof Error ? e.message : String(e)
-    console.error('[asegura/mensajes] fallo enviando el aviso de respuesta:', mensaje)
-    return rechazoDeRemitente(mensaje) ? 'remitente_no_verificado' : 'rechazado'
-  }
+  // Import dinámico: el cepo de este fichero lee el FUENTE con `node --test`, que
+  // no resuelve el punto único de envío.
+  const { enviarCorreoSeguido } = await import('./correo-envio')
+  const r = await enviarCorreoSeguido({
+    correduriaId,
+    clienteId,
+    tipo: 'respuesta_mensaje',
+    to: destino.email,
+    asunto: 'Tienes una respuesta de tu corredor',
+    texto,
+  })
+  if (r.resultado === 'enviado') return 'enviado'
+  if (r.resultado === 'sin_proveedor') return 'sin_proveedor'
+  console.error('[asegura/mensajes] fallo enviando el aviso de respuesta:', r.motivo ?? r.codigo ?? '')
+  return rechazoDeRemitente(r.motivo ?? '') ? 'remitente_no_verificado' : 'rechazado'
 }

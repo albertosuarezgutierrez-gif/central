@@ -38,7 +38,6 @@
  * pendiente» y nadie se enteraría de la omisión.
  */
 import { HORAS_ENLACE_DIRECTO, type TipoAviso } from '@central/module-seguros-portal'
-import { remitenteCorreo } from '@central/module-seguros'
 
 /** Cómo se nombra cada clase de aviso en el correo. Singular y plural, en minúscula. */
 export type EtiquetaCorreo = { uno: string; varios: string }
@@ -209,24 +208,21 @@ export type ResultadoEnvio = 'enviado' | 'sin_proveedor' | 'rechazado'
  * correos de esta app: «no hay proveedor» es una variable de Vercel que falta, y
  * un reintento no la pone.
  */
-export async function enviarAvisosIntranet(destino: string, d: DatosAvisosIntranet): Promise<ResultadoEnvio> {
-  // El transporte se carga AQUÍ y no arriba: así el cepo del cuerpo corre con
-  // `node --test`, que no sabe resolver `@central/core-email`.
-  const { createMailTransporter } = await import('@central/core-email')
-  const transporter = createMailTransporter()
-  if (!transporter) {
-    console.error('[asegura/avisos-intranet] no hay proveedor de correo configurado')
-    return 'sin_proveedor'
-  }
-  const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-  const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
+export async function enviarAvisosIntranet(
+  destino: string,
+  d: DatosAvisosIntranet,
+  quien: { correduriaId: string; clienteId: string },
+): Promise<ResultadoEnvio> {
+  // Import dinámico: así el cepo del cuerpo corre con `node --test`, que no
+  // sabe resolver el punto único de envío.
+  const { enviarCorreoSeguido } = await import('./correo-envio')
   const { asunto, texto, html } = cuerpoAvisosIntranet(d)
-  try {
-    await transporter.sendMail({ from, to: destino, ...(replyTo ? { replyTo } : {}), subject: asunto, text: texto, html })
-    return 'enviado'
-  } catch (e) {
+  const r = await enviarCorreoSeguido({ ...quien, tipo: 'aviso_intranet', to: destino, asunto, texto, html })
+  if (r.resultado === 'rechazado') {
     // El motivo, nunca el destino: un log es donde un dato personal sobrevive más tiempo.
-    console.error('[asegura/avisos-intranet] fallo enviando el aviso:', e instanceof Error ? e.message : e)
-    return 'rechazado'
+    console.error('[asegura/avisos-intranet] fallo enviando el aviso:', r.motivo ?? r.codigo ?? '')
+  } else if (r.resultado === 'sin_proveedor') {
+    console.error('[asegura/avisos-intranet] no hay proveedor de correo configurado')
   }
+  return r.resultado
 }

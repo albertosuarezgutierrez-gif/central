@@ -8,7 +8,8 @@ const src = readFileSync(new URL('./aprobaciones.ts', import.meta.url), 'utf8')
 const detector = readFileSync(new URL('./eventos-cartera.ts', import.meta.url), 'utf8')
 
 test('un solo sitio envía correo, y solo tras reclamar la fila (pendiente → enviando)', () => {
-  assert.equal(src.match(/sendMail\(/g)?.length, 1)
+  assert.equal(src.match(/enviarCorreoSeguido\(/g)?.length, 1)
+  assert.doesNotMatch(src, /sendMail\(/)
   const reclamo = src.indexOf("set estado = 'enviando'")
   const envio = src.indexOf('await enviarCorreo(')
   assert.ok(reclamo > 0 && envio > reclamo, 'reclamar ANTES de mandar: un doble clic no manda dos correos')

@@ -19,6 +19,13 @@ desde hoy): open + click ON con subdominio `links` (CNAME `links` → `links2.re
 25/09). Click solo con el CNAME vivo: reescribe TODOS los enlaces, incluida la baja. Webhook con `bounced`/`complained`.
 Código (PR #3591): silencio y tasa del panel solo cuentan envíos desde `SEGUIMIENTO_EMAIL_DESDE`.
 
+**(25/09/2026)** ✉️ **Los 13 correos de la correduría salen ya por `lib/correo-envio.ts`** (con seguimiento en la ficha).
+Felicitación de Rafael: enviada y ENTREGADA 16:00 UTC, eventos en `correo_evento`. El webhook de Resend descartaba TODO
+(svix 2.5 `verify()` devuelve void) — arreglado en #3619; recaptación no registraba aperturas/clics/rebotes hasta hoy.
+`enviarCorreoSeguido()` admite adjuntos (base64 a Resend) y devuelve `motivo`/`codigo` para que cada remitente conserve su
+semántica (remitente sin verificar, corte incierto). Cartas a compañías y avisos a terceros se atan al cliente de la póliza.
+Cepo: `correo-eventos.test.ts` exige los 13 remitentes por el punto único (visto rojo). Pendiente: borrar `envios.grupoasegura.es`.
+
 **(25/09/2026)** ✉️ **Seguimiento de correos a clientes** (Alberto: «de todos los correos… por si algún cliente reclama»).
 Tablas `seguros.correo_envio` (destino cifrado + id de Resend) y `seguros.correo_evento` (append-only, idempotente por svix-id)
 APLICADAS; webhook de Resend suscrito a TODOS los eventos y guarda cada uno; open/click tracking activado en `grupoasegura.es`.
