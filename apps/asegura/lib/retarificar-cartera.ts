@@ -122,6 +122,7 @@ import {
   tiposDeMotor,
   tiposDeGaraje,
   companiasAnteriores,
+  fechaMatriculacionDeMatricula,
   zonasExpedicionCarnet,
   tiposDeCarnet,
   estadosCiviles,
@@ -1385,6 +1386,16 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
       // Compañía de la que viene el cliente (código DGS del vendor, lista de mercado).
       case 'companias-anteriores':
         return { estado: 'ok', opciones: await companiasAnteriores(config) }
+      // Fecha de matriculación por la matrícula (`/car/registration-date`, gratis).
+      // Lista de 0 o 1 opción: vacía = «el vendor no la encuentra»; un fallo de
+      // red NO se degrada a vacía, sale por el `catch` como error.
+      case 'fecha-matriculacion': {
+        const matricula = params.get('matricula')
+        if (!matricula) return { estado: 'invalido', mensaje: 'falta matricula' }
+        const f = await fechaMatriculacionDeMatricula(config, matricula, 'car')
+        if (f.estado === 'error') throw new Error(f.detalle)
+        return { estado: 'ok', opciones: f.estado === 'ok' ? [{ id: f.fecha, nombre: f.fecha }] : [] }
+      }
       // Los dos del carnet. **Gratis**, como el resto: elegir la zona de
       // expedición tiene que poder hacerse antes de que nadie pague 0,50€.
       case 'zonas-carnet':
