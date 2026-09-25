@@ -1028,10 +1028,10 @@ exige: el candado es el portal, que es lo único que expone esas escrituras al c
 queda en el limbo». Sin filas nuevas: `empresasDeFichas()` (`lib/representacion.ts`) lo DERIVA en
 cada lectura de `cliente_relaciones` con `tipo_relacion = 'Dueño'` (en las dos direcciones), empresa
 `tipo_persona = 'juridica'` EXPLÍCITO, viva (`activo`, sin `merged_into`), misma correduría, y ficha
-propia no jurídica y con nivel ≠ tarjeta. Regla pura en `empresasDelDueno()` del módulo. La cartera la
+propia viva, no jurídica, de la misma correduría y con nivel `gestionar`/`administrar` (el mismo umbral que para autorizar). Regla pura en `empresasDelDueno()` del módulo. La cartera la
 pinta en «Empresas» con acceso total (`via: 'dueno'`, no se anota en «quién ha mirado») y
 `fichasOtorgablesDe()` deja al dueño AUTORIZAR sobre ella (contable, administrativo…); `registrarUso`
-y «Mis datos» siguen solo con fichas propias. ⚠️ Solo «Dueño»: «Administración» NO abre (pendiente de
+y «Mis datos» siguen solo con fichas propias, y lo autorizado A la empresa NO lo recibe el dueño (`representada`). ⚠️ Solo «Dueño»: «Administración» NO abre (pendiente de
 Alberto). ⚠️ Poner «Dueño» en `/correduria` da acceso TOTAL (IBAN, CIF) al instante, y quitarlo lo
 retira — pero las autorizaciones que el dueño concedió sobre la empresa sobreviven. Cepo
 `test/regression-portal-dueno-empresa.test.ts` (visto morder).

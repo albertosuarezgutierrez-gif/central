@@ -21,13 +21,15 @@
  */
 export type RelacionFicha = { clienteAId: string; clienteBId: string; tipoRelacion: string }
 export type TipoFicha = 'fisica' | 'juridica' | null
+/** Solo las fichas VIVAS (activas, sin fusionar): una que no está en el mapa no abre nada. */
+export type FichaDueno = { tipo: TipoFicha; correduriaId: string }
 
 export const RELACION_DUENO = 'Dueño'
 
 export function empresasDelDueno(
   misFichas: readonly string[],
   relaciones: readonly RelacionFicha[],
-  tipoPorId: ReadonlyMap<string, TipoFicha>,
+  fichaPorId: ReadonlyMap<string, FichaDueno>,
 ): string[] {
   const mias = new Set(misFichas)
   const out = new Set<string>()
@@ -38,8 +40,11 @@ export function empresasDelDueno(
       [r.clienteBId, r.clienteAId],
     ] as const) {
       if (!mias.has(yo) || mias.has(otra)) continue
-      if (tipoPorId.get(yo) === 'juridica') continue
-      if (tipoPorId.get(otra) !== 'juridica') continue
+      const f = fichaPorId.get(yo)
+      const e = fichaPorId.get(otra)
+      // Falla CERRADO: la ficha propia inactiva o fusionada no está en el mapa y no abre nada.
+      if (!f || !e || f.tipo === 'juridica' || e.tipo !== 'juridica') continue
+      if (f.correduriaId !== e.correduriaId) continue
       out.add(otra)
     }
   }

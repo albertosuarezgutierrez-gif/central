@@ -422,14 +422,17 @@ async function fichasDeIdentidad(identidadId: string) {
  */
 async function fichasOtorgablesDe(identidadId: string) {
   const propias = await fichasDeIdentidad(identidadId)
-  const empresas = await empresasDeFichas(propias.filter((v) => nivelPuedeAutorizar(nivelDeVinculo(v.nivel))))
+  const empresas = await empresasDeFichas(propias)
   const nuevas = empresas.filter((id) => !propias.some((v) => v.clienteId === id))
-  if (nuevas.length === 0) return propias
+  if (nuevas.length === 0) return propias.map((v) => ({ ...v, representada: false }))
   const filas = await prisma.cliente.findMany({
     where: { id: { in: nuevas }, mergedIntoClienteId: null },
     select: { id: true, correduriaId: true },
   })
-  return [...propias, ...filas.map((f) => ({ clienteId: f.id, correduriaId: f.correduriaId, nivel: 'gestionar' }))]
+  return [
+    ...propias.map((v) => ({ ...v, representada: false })),
+    ...filas.map((f) => ({ clienteId: f.id, correduriaId: f.correduriaId, nivel: 'gestionar', representada: true })),
+  ]
 }
 
 type FichaVista = { nombre: string; tipo: TipoOtorgante }
@@ -480,6 +483,10 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
 
   const misIds = vinculos.map((v) => v.clienteId)
   const misIdsSet = new Set(misIds)
+  // 🚨 Lo RECIBIDO solo por fichas propias: una autorización hecha A la empresa no es del dueño —
+  // la aceptaría en nombre de la empresa y luego no la vería en su bóveda (revisión #3616).
+  const recibidorIds = vinculos.filter((v) => !v.representada).map((v) => v.clienteId)
+  const recibidorSet = new Set(recibidorIds)
   // Fichas desde las que SÍ puedo conceder: el nivel lo decide el módulo puro.
   const otorgablesIds = vinculos
     .filter((v) => nivelPuedeAutorizar(nivelDeVinculo(v.nivel)))
@@ -492,7 +499,7 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
       where: {
         OR: [
           { otorganteClienteId: { in: misIds } },
-          { autorizadoClienteId: { in: misIds } },
+          { autorizadoClienteId: { in: recibidorIds } },
           // 🚨 El tercer brazo (04/09/2026): a mí me pueden haber autorizado sin
           // que yo sea cliente de nadie. Sin él, el invitado no ve ni que existe
           // la autorización que le abrieron, y por tanto no puede revocarla.
@@ -520,7 +527,7 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
   // Si una autorización tuviera mis dos fichas (yo a mí mismo) cuenta como
   // otorgada y no se duplica: `otorgadas` y `recibidas` son listas disjuntas.
   const meAlcanza = (f: (typeof filas)[number]) =>
-    (f.autorizadoClienteId !== null && misIdsSet.has(f.autorizadoClienteId)) ||
+    (f.autorizadoClienteId !== null && recibidorSet.has(f.autorizadoClienteId)) ||
     f.autorizadoIdentidadId === identidadId
   const recibidas = filas.filter((f) => !misIdsSet.has(f.otorganteClienteId) && meAlcanza(f))
 
@@ -1240,6 +1247,7 @@ export async function resolver(datos: {
   // que le abrieron. Su lado es `autorizadoIdentidadId`.
   const vinculos = await fichasOtorgablesDe(identidadId)
   const misIds = vinculos.map((v) => v.clienteId)
+  const recibidorIds = vinculos.filter((v) => !v.representada).map((v) => v.clienteId)
 
   // El filtro por mis fichas va JUNTO al id, nunca un `findUnique({ id })` y un
   // `if` después: con el uuid de una autorización ajena la lectura sería un
@@ -1249,7 +1257,7 @@ export async function resolver(datos: {
       id: autorizacionId,
       OR: [
         { otorganteClienteId: { in: misIds } },
-        { autorizadoClienteId: { in: misIds } },
+        { autorizadoClienteId: { in: recibidorIds } },
         { autorizadoIdentidadId: identidadId },
       ],
     },
@@ -1271,7 +1279,7 @@ export async function resolver(datos: {
   const estado = estadoAutorizacion(fila, hoy)
   const soyOtorgante = misIds.includes(fila.otorganteClienteId)
   const soyAutorizado =
-    (fila.autorizadoClienteId !== null && misIds.includes(fila.autorizadoClienteId)) ||
+    (fila.autorizadoClienteId !== null && recibidorIds.includes(fila.autorizadoClienteId)) ||
     fila.autorizadoIdentidadId === identidadId
 
   if (accion === 'aceptar') {

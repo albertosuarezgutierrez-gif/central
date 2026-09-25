@@ -450,10 +450,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   // Decisión de Alberto: el dueño ve su empresa entera sin que nadie lo active. Se DERIVA de la
   // relación `Dueño` en cada lectura (ver `empresasDelDueno` del módulo): no se escribe ninguna fila,
   // así que borrar la relación lo corta en la siguiente visita. Solo desde fichas con nivel para
-  // gestionar (un vínculo `tarjeta` no representa a nadie).
-  const representadasIds = (
-    await empresasDeFichas(vinculos.filter((v) => nivelDeVinculo(v.nivel) !== 'tarjeta'))
-  ).filter((id) => !propiosIds.includes(id))
+  // gestionar o administrar — el mismo umbral que para autorizar, dentro de `empresasDeFichas`.
+  const representadasIds = (await empresasDeFichas(vinculos)).filter((id) => !propiosIds.includes(id))
 
   // ── Lo AJENO: quién me ha autorizado ──────────────────────────────────────
   //

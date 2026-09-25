@@ -18,7 +18,7 @@
 // Los demás tipos del vocabulario (`Empleado/a`, `Socio/a`, `Accionista`) NO
 // dan esta capacidad: gestionan el negocio o son dueños de participaciones,
 // pero no son la figura que decide a quién se le enseña qué.
-import { empresasDelDueno, RELACION_DUENO, type TipoFicha } from '@central/module-seguros-portal'
+import { empresasDelDueno, NIVELES, puedeAutorizar, RELACION_DUENO, type FichaDueno, type Nivel } from '@central/module-seguros-portal'
 
 import { prisma } from './db'
 import { getIdentidad } from './session'
@@ -70,8 +70,17 @@ export async function esRepresentanteDe(identidadId: string, empresaClienteId: s
  * corre sin cookie. No escribe nada: el acceso se deriva en cada lectura, y por eso desaparece en
  * cuanto Alberto borra la relación.
  */
-export async function empresasDeFichas(fichas: readonly { clienteId: string; correduriaId: string }[]): Promise<string[]> {
-  const misFichas = fichas.map((f) => f.clienteId)
+/** `nivel` es `text` con CHECK en la BD. Un valor fuera del vocabulario cae al nivel MÁS bajo. */
+function nivelDeVinculo(v: string): Nivel {
+  return (NIVELES as readonly string[]).includes(v) ? (v as Nivel) : 'tarjeta'
+}
+
+export async function empresasDeFichas(
+  fichas: readonly { clienteId: string; nivel: string }[],
+): Promise<string[]> {
+  // Mismo umbral que para autorizar (`gestionar`/`administrar`): la bóveda y /autorizaciones
+  // deciden con UNA regla quién es dueño (revisión #3616).
+  const misFichas = fichas.filter((f) => puedeAutorizar(nivelDeVinculo(f.nivel))).map((f) => f.clienteId)
   if (misFichas.length === 0) return []
   const relaciones = await prisma.clienteRelacion.findMany({
     where: {
@@ -82,17 +91,20 @@ export async function empresasDeFichas(fichas: readonly { clienteId: string; cor
   })
   if (relaciones.length === 0) return []
   const ids = [...new Set(relaciones.flatMap((r) => [r.clienteAId, r.clienteBId]))]
-  const corredurias = new Set(fichas.map((f) => f.correduriaId))
+  // Solo fichas VIVAS entran en el mapa: una fusionada o inactiva (la propia o la empresa) no abre
+  // nada. La correduría se compara por PAR (dueño↔empresa) dentro de `empresasDelDueno`.
   const filas = await prisma.cliente.findMany({
     where: { id: { in: ids }, mergedIntoClienteId: null, activo: true },
     select: { id: true, tipoPersona: true, correduriaId: true },
   })
-  // Una ficha fusionada, inactiva o de otra correduría no entra en el mapa, así que no puede salir
-  // como empresa (su tipo queda `undefined`, que no es `juridica`).
-  const tipoPor = new Map<string, TipoFicha>(
-    filas
-      .filter((f) => misFichas.includes(f.id) || corredurias.has(f.correduriaId))
-      .map((f) => [f.id, f.tipoPersona === 'juridica' ? 'juridica' : f.tipoPersona === 'fisica' ? 'fisica' : null]),
+  const fichaPor = new Map<string, FichaDueno>(
+    filas.map((f) => [
+      f.id,
+      {
+        tipo: f.tipoPersona === 'juridica' ? 'juridica' : f.tipoPersona === 'fisica' ? 'fisica' : null,
+        correduriaId: f.correduriaId,
+      },
+    ]),
   )
-  return empresasDelDueno(misFichas, relaciones, tipoPor)
+  return empresasDelDueno(misFichas, relaciones, fichaPor)
 }

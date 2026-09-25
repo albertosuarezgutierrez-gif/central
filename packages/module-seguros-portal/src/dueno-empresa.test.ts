@@ -1,14 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
-import { empresasDelDueno, type TipoFicha } from './dueno-empresa.ts'
+import { empresasDelDueno, type FichaDueno, type TipoFicha } from './dueno-empresa.ts'
 
-const tipos = new Map<string, TipoFicha>([
-  ['diego', null],
-  ['flores-sl', 'juridica'],
-  ['otra-sl', 'juridica'],
-  ['maria', 'fisica'],
-  ['sin-tipo', null],
+const f = (tipo: TipoFicha, correduriaId = 'c1'): FichaDueno => ({ tipo, correduriaId })
+const tipos = new Map<string, FichaDueno>([
+  ['diego', f(null)],
+  ['flores-sl', f('juridica')],
+  ['otra-sl', f('juridica')],
+  ['maria', f('fisica')],
+  ['sin-tipo', f(null)],
+  ['ajena-sl', f('juridica', 'c2')],
 ])
 
 test('el dueño ve su empresa, sea cual sea la dirección de la fila', () => {
@@ -30,4 +32,13 @@ test('la otra ficha tiene que ser jurídica EXPLÍCITA: un NULL no inventa una e
 test('dos jurídicas entre sí no abren nada, y una relación ajena tampoco', () => {
   assert.deepEqual(empresasDelDueno(['flores-sl'], [{ clienteAId: 'flores-sl', clienteBId: 'otra-sl', tipoRelacion: 'Dueño' }], tipos), [])
   assert.deepEqual(empresasDelDueno(['maria'], [{ clienteAId: 'diego', clienteBId: 'flores-sl', tipoRelacion: 'Dueño' }], tipos), [])
+})
+
+test('falla cerrado: ficha propia fuera del mapa (inactiva o fusionada) o de otra correduría no abre nada', () => {
+  const rel = [{ clienteAId: 'diego', clienteBId: 'flores-sl', tipoRelacion: 'Dueño' }]
+  const sinDiego = new Map([...tipos].filter(([k]) => k !== 'diego'))
+  assert.deepEqual(empresasDelDueno(['diego'], rel, sinDiego), [])
+  // Una SL inactiva de la identidad (fuera del mapa) no abre otra SL por no tener tipo.
+  assert.deepEqual(empresasDelDueno(['muerta-sl'], [{ clienteAId: 'muerta-sl', clienteBId: 'otra-sl', tipoRelacion: 'Dueño' }], tipos), [])
+  assert.deepEqual(empresasDelDueno(['diego'], [{ clienteAId: 'diego', clienteBId: 'ajena-sl', tipoRelacion: 'Dueño' }], tipos), [])
 })
