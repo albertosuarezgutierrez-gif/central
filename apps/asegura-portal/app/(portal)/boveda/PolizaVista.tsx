@@ -13,6 +13,8 @@ import {
   etiquetaSituacionRecibo,
 } from '@central/module-seguros-portal'
 
+import Link from 'next/link'
+
 import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
@@ -217,13 +219,57 @@ const CORREO_CORREDURIA = 'hola@grupoasegura.es'
 /**
  * La póliza que esta sustituye (el cliente se cambió de compañía) ya no sale aparte: lo dice la
  * nueva, para que no parezca que ha desaparecido un seguro. `null` = no sustituye a ninguna.
+ *
+ * 🚨 La fecha que cuenta es la del CAMBIO (inicio de la nueva), no el vencimiento de la vieja:
+ * pueden no coincidir (Reale empezó el 22/09 y Mapfre vencía el 24/09). Sin inicio, no se inventa.
  */
-export function textoSustitucion(p: PolizaPortal, hoy: Date = new Date()): string | null {
+export function textoSustitucion(p: PolizaPortal): string | null {
   const v = p.sustituyeA
   if (v === null) return null
-  const f = fechaEs(v.fechaVencimiento)
+  const f = fechaEs(p.fechaInicio)
   if (f === null) return `Sustituye a tu seguro de ${v.compania}`
-  return `Sustituye a tu seguro de ${v.compania}, que ${v.fechaVencimiento! < hoy ? 'venció' : 'vence'} el ${f}`
+  return `Te cambiaste de ${v.compania} a ${p.compania} el ${f}`
+}
+
+/**
+ * Historial de compañías de este seguro, de la actual a la más antigua, con el día de cada cambio.
+ * Sale en la ficha de cualquier póliza de la cadena (también en la vieja, para que diga a dónde fue).
+ * Cada eslabón que no es esta enlaza a su ficha: la vieja sigue siendo del cliente.
+ */
+export function HistorialCompanias({ p }: { p: PolizaPortal }) {
+  if (p.cambiosCompania.length === 0) return null
+  const lista = [...p.cambiosCompania].reverse()
+  return (
+    <section className="seccion" aria-labelledby="historial-companias-titulo">
+      <h2 id="historial-companias-titulo">Historial de compañías</h2>
+      <ul className="siniestros">
+        {lista.map((e, i) => {
+          const anterior = lista[i + 1]
+          const desde = fechaEs(e.desde)
+          const hasta = fechaEs(e.hasta)
+          const periodo =
+            e.hasta === null && i === 0
+              ? desde ? `Desde el ${desde}` : 'Fecha de inicio sin informar'
+              : `${desde ? `Del ${desde}` : 'Inicio sin informar'} ${hasta ? `al ${hasta}` : '· fecha del cambio sin informar'}`
+          return (
+            <li key={e.id} className="siniestro">
+              <strong>{e.compania}</strong>
+              {e.id === p.id && <span className="chip ok">esta póliza</span>}
+              <span className="suave">{periodo}</span>
+              {e.numeroPoliza && <span className="tenue">Póliza {e.numeroPoliza}</span>}
+              {anterior && (
+                <span className="suave" style={{ flexBasis: '100%' }}>
+                  Cambio desde {anterior.compania}
+                  {fechaEs(e.desde) ? ` el ${fechaEs(e.desde)}` : ''}
+                </span>
+              )}
+              {e.id !== p.id && <Link href={`/boveda/poliza/${e.id}`}>Ver esta póliza</Link>}
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
 }
 
 export function AvisoReciboDevuelto({ p }: { p: PolizaPortal }) {
