@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-25T15:32:53Z",
+  "generadoEn": "2026-09-25T16:21:28Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -524,7 +524,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 15
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 122
+        "evidencias": 124
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 103
+        "evidencias": 104
       },
       "asegura-web": {
         "estado": "usado",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 29
+        "evidencias": 30
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2310,7 +2310,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 82
+        "evidencias": 83
       },
       "asegura-web": {
         "estado": "usado",
@@ -5507,6 +5507,8 @@
       "seguros.consent_logs",
       "seguros.conversaciones",
       "seguros.corredurias",
+      "seguros.correo_envio",
+      "seguros.correo_evento",
       "seguros.cotizaciones",
       "seguros.cotizaciones_anonimas",
       "seguros.cuenta_efectivo",
