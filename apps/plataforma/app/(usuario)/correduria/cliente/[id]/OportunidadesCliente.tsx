@@ -1,5 +1,4 @@
 'use client'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { btnStyle } from '@/components/ui'
@@ -20,7 +19,7 @@ import {
   type OportunidadesCliente as Lectura,
 } from '@/lib/seguimiento-asegura'
 import { fmt } from './piezas'
-import PedirDatos from './PedirDatos'
+import SeguimientoOportunidad from './SeguimientoOportunidad'
 
 /**
  * Las oportunidades de ESTE cliente, en su ficha (Fase 1 del rediseño, 24/09/2026). Hasta hoy solo
@@ -30,7 +29,7 @@ import PedirDatos from './PedirDatos'
  * - Abrir: nace con su PRIMER PASO (tipo + fecha), o no nace. Si ya hay una abierta del mismo
  *   ramo, asegura no abre otra y aquí se enlaza la que hay.
  * - Corregir: ramo, vencimiento, compañía y prima de una ABIERTA. El estado va por sus acciones
- *   (en «Seguimiento →»), que exigen motivo.
+ *   (en «Gestionar ▾», que despliega su seguimiento aquí mismo), que exigen motivo.
  * - Ganar: con la póliza que se emitió, elegida de las suyas; sin póliza también vale (aún no ha
  *   entrado por CIMA), y se dice.
  * - Descartar: abierta por error o duplicada. NO se borra (el historial la referencia) ni cuenta
@@ -79,6 +78,10 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
   const [abriendo, setAbriendo] = useState(false)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string; id?: string | null } | null>(null)
   const [verCerradas, setVerCerradas] = useState(false)
+  // La oportunidad desplegada. Se gestiona aquí mismo (25/09/2026): la página aparte
+  // `/correduria/oportunidad/<id>` solo redirige a la ficha con `?op=<id>`.
+  const [desplegada, setDesplegada] = useState<string | null>(null)
+  const alternar = (id: string) => setDesplegada(d => (d === id ? null : id))
 
   const cargar = useCallback(async () => {
     try {
@@ -108,6 +111,16 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
     window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash)
   }, [pideNueva])
 
+  // `?op=<id>` (desde Vencimientos, «Hoy», la tarjeta del seguro…) la deja desplegada.
+  const pideOp = useSearchParams().get('op')
+  useEffect(() => { if (pideOp) setDesplegada(pideOp) }, [pideOp])
+  const cerradaPedida = lectura?.estado === 'ok' && pideOp !== null && lectura.oportunidades.some(o => o.id === pideOp && (o.estado === 'ganada' || o.estado === 'perdida'))
+  useEffect(() => { if (cerradaPedida) setVerCerradas(true) }, [cerradaPedida])
+  const listo = lectura?.estado === 'ok'
+  useEffect(() => {
+    if (listo && pideOp) document.getElementById(`op-${pideOp}`)?.scrollIntoView({ block: 'start' })
+  }, [listo, pideOp, verCerradas])
+
   const abiertas = lectura?.estado === 'ok' ? lectura.oportunidades.filter(o => o.estado !== 'ganada' && o.estado !== 'perdida') : []
   const cerradas = lectura?.estado === 'ok' ? lectura.oportunidades.filter(o => o.estado === 'ganada' || o.estado === 'perdida') : []
 
@@ -116,7 +129,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
       {aviso && (
         <div role="status" style={{ color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>
           {aviso.texto}
-          {aviso.id && <> <Link href={`/correduria/oportunidad/${aviso.id}`}>abrir →</Link></>}
+          {aviso.id && <> <button type="button" onClick={() => setDesplegada(aviso.id ?? null)} style={btnStyle('sutil', 'sm')}>abrir →</button></>}
         </div>
       )}
 
@@ -133,7 +146,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
         <>
           {abiertas.length === 0 && !abriendo && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta. Se abre desde «➕ Nueva oportunidad ▾», arriba.</div>}
           {abiertas.map(o => (
-            <FilaAbierta key={o.id} o={o} clienteId={clienteId} telefono={telefono} polizas={polizas} onHecho={(t) => { setAviso(t); void cargar() }} />
+            <FilaAbierta key={o.id} o={o} polizas={polizas} telefono={telefono} desplegada={desplegada === o.id} onAlternar={() => alternar(o.id)} onRecargar={() => void cargar()} onHecho={(t) => { setAviso(t); void cargar() }} />
           ))}
           {lectura.descartadas > 0 && (
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>{lectura.descartadas} oportunidad(es) llegaron incompletas y no se pintan.</div>
@@ -145,7 +158,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
               </button>
               {verCerradas && (
                 <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'grid', gap: 6 }}>
-                  {cerradas.map(o => <FilaCerrada key={o.id} o={o} />)}
+                  {cerradas.map(o => <FilaCerrada key={o.id} o={o} desplegada={desplegada === o.id} onAlternar={() => alternar(o.id)} onRecargar={() => void cargar()} />)}
                 </ul>
               )}
             </div>
@@ -172,11 +185,13 @@ function Resumen({ o }: { o: OportunidadDeCliente }) {
   return <span style={{ color: 'var(--muted)' }}>{partes.join(' · ')}</span>
 }
 
-function FilaAbierta({ o, clienteId, telefono, polizas, onHecho }: {
+function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar, onHecho }: {
   o: OportunidadDeCliente
-  clienteId: string
   telefono: string | null
   polizas: Poliza[]
+  desplegada: boolean
+  onAlternar: () => void
+  onRecargar: () => void
   onHecho: (t: { ok: boolean; texto: string }) => void
 }) {
   const [modo, setModo] = useState<null | 'editar' | 'ganar' | 'descartar'>(null)
@@ -196,22 +211,24 @@ function FilaAbierta({ o, clienteId, telefono, polizas, onHecho }: {
   }
 
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 10, display: 'grid', gap: 6 }}>
+    <div id={`op-${o.id}`} style={{ border: `1px solid ${desplegada ? 'var(--primary)' : 'var(--border)'}`, borderRadius: 10, padding: 10, display: 'grid', gap: 6, scrollMarginTop: 80 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline' }}>
-        <b>{rotuloRamo(o.ramo)}</b>
+        <button type="button" onClick={onAlternar} aria-expanded={desplegada} style={{ all: 'unset', cursor: 'pointer', fontWeight: 700, color: 'var(--primary)' }}>
+          {desplegada ? '▾' : '▸'} {rotuloRamo(o.ramo)}
+        </button>
         <span style={{ fontWeight: 600 }}>{ROTULO_ESTADO[o.estado]}</span>
         {aparcada && <span style={{ color: 'var(--muted)' }}>· aparcada hasta el {fmt(o.aparcadaHasta!)}</span>}
       </div>
       <Resumen o={o} />
       <div style={{ color: o.proximaTarea === null || vencida ? 'var(--negative)' : 'var(--text)' }}>
         {o.proximaTarea === null
-          ? (aparcada ? 'Sin paso pendiente (aparcada).' : '⚠️ Sin siguiente paso: nadie la va a mirar. Ponle una tarea en «Seguimiento».')
+          ? (aparcada ? 'Sin paso pendiente (aparcada).' : '⚠️ Sin siguiente paso: nadie la va a mirar. Ponle una tarea en «Gestionar».')
           : `Siguiente: ${o.proximaTarea.tipo} el ${fmt(o.proximaTarea.fechaLimite)}${vencida ? ' (vencida)' : ''}`}
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Link href={`/correduria/oportunidad/${o.id}`} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
-          Seguimiento →
-        </Link>
+        <button type="button" onClick={onAlternar} aria-expanded={desplegada} style={{ ...btnStyle(desplegada ? 'secundario' : 'primario', 'sm'), minHeight: 44 }}>
+          {desplegada ? 'Plegar ▴' : 'Gestionar ▾'}
+        </button>
         <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'editar' ? null : 'editar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Corregir</button>
         {puedeGanar && (
           <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'ganar' ? null : 'ganar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>🏆 Ganada</button>
@@ -219,7 +236,7 @@ function FilaAbierta({ o, clienteId, telefono, polizas, onHecho }: {
         <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'descartar' ? null : 'descartar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Descartar</button>
       </div>
 
-      {(o.ramo === 'moto' || o.ramo === 'auto') && <PedirDatos oportunidadId={o.id} clienteId={clienteId} telefono={telefono} ramo={o.ramo} />}
+      {desplegada && <SeguimientoOportunidad id={o.id} telefono={telefono} onCambio={onRecargar} />}
 
       {modo === 'editar' && (
         <FormEdicion o={o} onCancelar={() => setModo(null)} onHecho={(t) => { if (t.ok) setModo(null); onHecho(t) }} />
@@ -270,15 +287,16 @@ function FilaAbierta({ o, clienteId, telefono, polizas, onHecho }: {
   )
 }
 
-function FilaCerrada({ o }: { o: OportunidadDeCliente }) {
+function FilaCerrada({ o, desplegada, onAlternar, onRecargar }: { o: OportunidadDeCliente; desplegada: boolean; onAlternar: () => void; onRecargar: () => void }) {
   const cuando = o.cerradaAt ? fmt(o.cerradaAt.slice(0, 10)) : null
   const descartada = o.motivoPerdida === 'error_alta'
   return (
-    <li style={{ borderTop: '1px solid var(--border)', paddingTop: 6 }}>
-      <Link href={`/correduria/oportunidad/${o.id}`}>{rotuloRamo(o.ramo)}</Link>{' '}
+    <li id={`op-${o.id}`} style={{ borderTop: '1px solid var(--border)', paddingTop: 6, scrollMarginTop: 80 }}>
+      <button type="button" onClick={onAlternar} aria-expanded={desplegada} style={{ all: 'unset', cursor: 'pointer', color: 'var(--primary)', fontWeight: 600 }}>{desplegada ? '▾' : '▸'} {rotuloRamo(o.ramo)}</button>{' '}
       <b>{descartada ? 'Descartada' : ROTULO_ESTADO[o.estado]}</b>
       {cuando && <> el {cuando}</>}
       {o.estado === 'perdida' && !descartada && o.motivoPerdida && <span style={{ color: 'var(--muted)' }}> · {rotuloMotivo(o.motivoPerdida)}{o.competidor ? ` (${o.competidor})` : ''}</span>}
+      {desplegada && <div style={{ marginTop: 8 }}><SeguimientoOportunidad id={o.id} onCambio={onRecargar} /></div>}
     </li>
   )
 }

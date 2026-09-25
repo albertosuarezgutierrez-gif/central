@@ -131,7 +131,7 @@ function TarjetaSeguro({ s, ctx }: { s: SeguroCliente; ctx: Ctx }) {
     const p = s.poliza
     const o = s.oportunidad
     // En «oportunidad», si hay seguimiento abierto la tarjeta lleva a él: eso es lo que se trabaja.
-    href = o ? `/correduria/oportunidad/${o.id}` : `/correduria/poliza/${p.id}`
+    href = o ? `/correduria/cliente/${ctx.clienteId}?tab=oportunidades&op=${o.id}` : `/correduria/poliza/${p.id}`
     ramo = TIPOS[p.tipo] ?? p.tipo
     // Del volcado histórico, el estado y el año son de hace una década: lo que vale es que
     // estuvo con nosotros y el día/mes en que renovaba, que es cuándo hay que llamarle.
@@ -163,7 +163,7 @@ function TarjetaSeguro({ s, ctx }: { s: SeguroCliente; ctx: Ctx }) {
     }
   } else if (s.clase === 'oportunidad') {
     const o = s.oportunidad
-    href = `/correduria/oportunidad/${o.id}`
+    href = `/correduria/cliente/${ctx.clienteId}?tab=oportunidades&op=${o.id}`
     ramo = TIPOS[o.ramo ?? ''] ?? rotuloRamo(o.ramo)
     estado = ROTULO_ESTADO[o.estado]
     titulo = o.aseguradora ? `Lo tiene en ${o.aseguradora}` : 'Compañía actual sin anotar'
