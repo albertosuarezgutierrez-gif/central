@@ -15,7 +15,7 @@ import { createHash, randomInt, randomUUID } from 'node:crypto'
 import { FirmaPropia, TEXTO_CONSENTIMIENTO, nombreCoincide } from '@central/core-firma'
 import {
   MEDIADOR, VERSION_TEXTOS_LEGALES, admiteDecision, anulacionPorCambio, cartaAnulacion, documentoAceptacion, esCambioCompania,
-  ESTADOS_ANULACION_ABIERTA, POLIZA_ESTADOS_VIGENTES, estadoPresupuesto, remitenteCorreo,
+  ESTADOS_ANULACION_ABIERTA, POLIZA_ESTADOS_VIGENTES, estadoPresupuesto,
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
@@ -187,9 +187,10 @@ export async function pedirCodigoAceptacion(correduriaId: string, identidadId: s
   const ficha = await estadoEmailDeFicha(correduriaId, b.clienteId)
   if (ficha.estado === 'ilegible') return { estado: 'sin_correo_configurado', motivo: 'no se puede leer el correo de tu ficha' }
   if (ficha.estado !== 'ok') return { estado: 'sin_email', motivo: ficha.estado === 'baja_de_correo' ? 'te diste de baja del correo' : 'no tenemos tu correo' }
+  // Provider disponible: Resend (punto único de envío) o, si no, el SMTP de siempre.
   const { createMailTransporter } = await import('@central/core-email')
-  const transporter = createMailTransporter()
-  if (!transporter || !process.env.ASEGURA_MAIL_FROM?.trim()) return { estado: 'sin_correo_configurado', motivo: 'el correo de la correduría no está configurado' }
+  const hayProveedor = !!process.env.RESEND_API_KEY?.trim() || !!createMailTransporter()
+  if (!hayProveedor || !process.env.ASEGURA_MAIL_FROM?.trim()) return { estado: 'sin_correo_configurado', motivo: 'el correo de la correduría no está configurado' }
 
   const codigo = String(randomInt(0, 1_000_000)).padStart(6, '0')
   // Guardado ANTES de mandar y en una sola sentencia con sus frenos (60 s y tope diario).
@@ -211,16 +212,15 @@ export async function pedirCodigoAceptacion(correduriaId: string, identidadId: s
     if (e.agotado) return { estado: 'limite_codigos' }
     return { estado: 'espera', segundos: Math.max(1, e.faltan ?? SEGUNDOS_ENTRE_CODIGOS) }
   }
-  try {
-    await transporter.sendMail({
-      from: remitenteCorreo(process.env.ASEGURA_MAIL_FROM),
-      to: ficha.email,
-      subject: 'Tu código para aceptar el presupuesto',
-      text: `Hola:\n\nTu código para aceptar el presupuesto en el portal es: ${codigo}\n\n` +
-        `Caduca en ${MINUTOS_CODIGO} minutos. Si no lo has pedido tú, no hagas nada: sin el código no se firma nada.\n\nGrupo ASegura`,
-    })
-  } catch (e) {
-    console.error('[presupuesto-aceptacion] no salió el código:', e instanceof Error ? e.message : e)
+  const { enviarCorreoSeguido } = await import('./correo-envio')
+  const r = await enviarCorreoSeguido({
+    correduriaId, clienteId: b.clienteId, tipo: 'presupuesto_codigo', to: ficha.email,
+    asunto: 'Tu código para aceptar el presupuesto',
+    texto: `Hola:\n\nTu código para aceptar el presupuesto en el portal es: ${codigo}\n\n` +
+      `Caduca en ${MINUTOS_CODIGO} minutos. Si no lo has pedido tú, no hagas nada: sin el código no se firma nada.\n\nGrupo ASegura`,
+  })
+  if (r.resultado !== 'enviado') {
+    console.error('[presupuesto-aceptacion] no salió el código:', r.motivo)
     return { estado: 'fallo_envio' }
   }
   return { estado: 'codigo_enviado', email: enmascarar(ficha.email), minutos: MINUTOS_CODIGO }
