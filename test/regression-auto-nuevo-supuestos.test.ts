@@ -14,9 +14,11 @@ import { join } from 'node:path'
 // valor inventado y el precio seguiría pareciendo bueno. Por eso se vigila
 // leyendo el FUENTE.
 //
-// Y se vigila también lo que NO debe pasar: que el campo de kilómetros nazca
-// PRERRELLENADO con el supuesto. En blanco es «no se ha preguntado»; con 15.000
-// escrito de oficio, el corredor lee un dato donde solo hay una media española.
+// 25/09/2026 — Alberto cambia la decisión del 21/09 («que salga por defecto»):
+// los kilómetros nacen en 10.000, el garaje en «vía pública», la fecha de
+// matriculación se ESTIMA por la matrícula (marcada como estimada) y la de
+// compra enseña la de matriculación. Lo que se sigue vigilando: que la
+// estimación nunca pise una fecha tecleada y que se declare como estimada.
 
 const FORM = join(
   import.meta.dirname,
@@ -49,25 +51,26 @@ test('los tres viajan al puerto, y solo cuando el corredor los ha dicho', () => 
   assert.match(fuente, /if \(remolqueLigero\) correccionesFinal\.remolqueLigero = true/)
 })
 
-test('el campo de kilómetros NACE VACÍO: el supuesto se enseña, no se escribe', () => {
-  assert.match(fuente, /const \[kmAnuales, setKmAnuales\] = useState\(''\)/, 'estado inicial vacío')
-  assert.match(
-    fuente,
-    /placeholder=\{String\(KM_ANUALES_SUPUESTOS\)\}/,
-    'el supuesto se enseña como marcador, no como valor',
-  )
-  assert.doesNotMatch(
-    fuente,
-    /useState\(String\(KM_ANUALES_SUPUESTOS\)\)/,
-    'prerrellenar el campo con el supuesto convierte un «no lo sé» en un dato afirmado',
-  )
+test('los kilómetros nacen en 10.000, visibles y editables', () => {
+  assert.match(fuente, /const KM_ANUALES_POR_DEFECTO = 10000\b/)
+  assert.match(fuente, /const \[kmAnuales, setKmAnuales\] = useState\(String\(KM_ANUALES_POR_DEFECTO\)\)/)
+  assert.doesNotMatch(fuente, /\b15000\b/, 'el supuesto viejo no vuelve como valor')
 })
 
-test('el supuesto que se enseña sale de la fuente única, no de un 15000 tecleado aquí', () => {
-  assert.match(fuente, /import \{[^}]*KM_ANUALES_SUPUESTOS[^}]*\} from '@central\/module-seguros'/)
-  // El número en PROSA (un comentario que explica el supuesto) es correcto; lo
-  // que no puede volver es el literal usado como VALOR.
-  assert.doesNotMatch(fuente, /\b15000\b/, 'ningún literal del supuesto en el código de la pantalla')
+test('el garaje nace en «vía pública»', () => {
+  assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\s*\(\) => \(garajes\.find\(\(g\) => \/v\[ií\]a\\s\+p\[uú\]blica\/i/)
+})
+
+test('la fecha de matriculación se estima por la matrícula, sin pisar la del corredor', () => {
+  assert.match(fuente, /import \{ fechaMatriculacionEstimada \} from '@central\/module-seguros\/matricula'/)
+  assert.match(fuente, /onChange=\{\(e\) => cambiarMatricula\(e\.target\.value\)\}/, 'la matrícula dispara la estimación')
+  assert.match(fuente, /if \(matriculacion === '' \|\| matriculacionEstimada\) \{/, 'solo rellena vacía o ya estimada')
+  assert.match(fuente, /setMatriculacionEstimada\(false\)/, 'teclear la fecha la hace del corredor')
+  assert.match(fuente, /Estimada por la matrícula/, 'se declara como estimada en pantalla')
+})
+
+test('la fecha de compra enseña la de matriculación por defecto', () => {
+  assert.match(fuente, /value=\{fechaCompra \|\| matriculacion\}/)
 })
 
 test('un número mal tecleado se para en la pantalla, sin gastar los 0,50€', () => {
