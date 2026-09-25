@@ -121,6 +121,7 @@ import {
   versionesCrudas,
   tiposDeMotor,
   tiposDeGaraje,
+  companiasAnteriores,
   zonasExpedicionCarnet,
   tiposDeCarnet,
   estadosCiviles,
@@ -1381,6 +1382,9 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
       }
       case 'garajes':
         return { estado: 'ok', opciones: await tiposDeGaraje(config) }
+      // Compañía de la que viene el cliente (código DGS del vendor, lista de mercado).
+      case 'companias-anteriores':
+        return { estado: 'ok', opciones: await companiasAnteriores(config) }
       // Los dos del carnet. **Gratis**, como el resto: elegir la zona de
       // expedición tiene que poder hacerse antes de que nadie pague 0,50€.
       case 'zonas-carnet':

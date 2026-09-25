@@ -20,7 +20,6 @@ import { useEffect, useState } from 'react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
-import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { kilometrosDesdeTexto } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
@@ -188,7 +187,7 @@ export default function AutoNuevo({
   consumo: ConsumoPuerto
   simulacion: boolean
   /** `null` = no se ha podido leer el directorio de compañías: se teclea el código a mano. */
-  companias: Compania[] | null
+  companias: { codigoDgs: string; nombreComun: string }[] | null
 }) {
   // ── Vehículo: marca → modelo → versión, todo del catálogo y todo gratis ────
   const [marcas, setMarcas] = useState<Opcion[]>([])

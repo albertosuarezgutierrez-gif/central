@@ -106,6 +106,18 @@ export async function tiposDeGaraje(config: ConfigCodeoscopic): Promise<Opcion[]
 }
 
 /**
+ * Compañías que el vendor acepta como `previousInsurance.previousCompany.code`
+ * (código DGS). Es la lista de MERCADO, no el directorio de la correduría
+ * (`seguros.companias_dgs`, solo con las que trabaja Alberto): el cliente puede
+ * venir de cualquiera. Gratis, como el resto de catálogos.
+ */
+export async function companiasAnteriores(config: ConfigCodeoscopic): Promise<Opcion[]> {
+  return normalizarOpciones(await catalogo(config, '/car/insurance-companies')).sort((a, b) =>
+    a.nombre.localeCompare(b.nombre, 'es'),
+  )
+}
+
+/**
  * Las marcas de coche.
  *
  * 🚨 `onlyPopular` va EXPLÍCITO a `false`, y no es cosmético: el portal lo

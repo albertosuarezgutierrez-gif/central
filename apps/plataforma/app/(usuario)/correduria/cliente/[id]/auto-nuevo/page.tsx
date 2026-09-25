@@ -50,18 +50,28 @@ export default async function AutoNuevoPage({ params }: { params: Promise<{ id: 
   // Los dos del carnet NO son bloqueantes a propósito: si no se pueden leer,
   // viaja el supuesto de siempre (B, España) y la pantalla lo dice en el hueco
   // del campo. Bloquear la cotización por ellos sería peor que el problema.
-  const [garajes, civiles, zonasCarnet, tiposCarnet, pre, companiasResp] = await Promise.all([
+  const [garajes, civiles, zonasCarnet, tiposCarnet, pre, companiasResp, anteriores] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes' }),
     catalogoAsegura({ tipo: 'estados-civiles' }),
     catalogoAsegura({ tipo: 'zonas-carnet' }),
     catalogoAsegura({ tipo: 'tipos-carnet' }),
     precalificarAutoNuevaAsegura({ clienteId }),
     companiasAsegura().then((r) => interpretarCompanias(r.status, r.json)),
+    catalogoAsegura({ tipo: 'companias-anteriores' }),
   ])
   // `null` = no se ha podido leer el directorio de compañías (puerto caído o sin
   // configurar): la pantalla lo dice y el corredor teclea el código a mano en
   // vez de ver un desplegable vacío sin explicación.
-  const companias = companiasResp.estado === 'ok' ? companiasResp.companias : null
+  // La compañía de la que viene el cliente sale del catálogo de MERCADO de
+  // Avant2 (`/car/insurance-companies`, gratis), no del directorio de la
+  // correduría, que solo trae las compañías con las que trabaja Alberto. Si el
+  // catálogo falla, se cae al directorio; si falla también, código a mano.
+  const companias =
+    anteriores.estado === 'ok' && anteriores.opciones.length > 0
+      ? anteriores.opciones.map((o) => ({ codigoDgs: o.id, nombreComun: o.nombre }))
+      : companiasResp.estado === 'ok'
+        ? companiasResp.companias.map((c) => ({ codigoDgs: c.codigoDgs, nombreComun: c.nombreComun }))
+        : null
 
   if (pre.estado !== 'ok') {
     const tono = pre.estado === 'sin_configurar' ? 'var(--muted)' : 'var(--negative)'

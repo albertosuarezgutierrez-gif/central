@@ -587,6 +587,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Auto nuevo: «Compañía actual» desde el catálogo de mercado de Avant2
+- El desplegable leía `seguros.companias_dgs` (solo compañías con las que trabaja Alberto). Ahora lee
+  `GET /car/insurance-companies` de Avant2/Codeoscopic (gratis) vía puerto `catalogos?tipo=companias-anteriores`;
+  si falla, cae al directorio. Cepo `test/regression-companias-anteriores-avant2.test.ts`. Moto no tocado.
+- Ojo: Avant2 tiene `GET /car/registration-date?plate=` (gratis según doc) — posible sustituto de la estimación local.
+
 ## (25/09/2026) Auto nuevo (/correduria): defectos que pidió Alberto
 - La fecha de matriculación se ESTIMA al teclear la matrícula (`fechaMatriculacionEstimada`, ya existía en
   `module-seguros/matricula`), marcada «estimada» con su rango; nunca pisa una fecha tecleada.
