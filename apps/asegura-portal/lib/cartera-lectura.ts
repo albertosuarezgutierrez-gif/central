@@ -65,7 +65,7 @@ import {
   type CamposVisibles,
   type Nivel,
 } from '@central/module-seguros-portal'
-import { importeEiac, sustituidasARetirar, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
+import { importeEiac, interpretarCapital, sustituidasARetirar, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
 
 import { decryptField } from '@central/module-seguros-pii'
 
@@ -201,7 +201,7 @@ export type PolizaPortal = {
     total: number
     lista: string[]
     /** Capital de cada cobertura, alineado con `lista`; `null` = no informado. */
-    capitales?: (number | null)[]
+    capitales?: (number | 'ilimitado' | null)[]
   } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
@@ -997,19 +997,21 @@ type ReciboFila = {
  */
 /**
  * Nombre y capital de cada cobertura, alineados. Un capital 0, vacío o que no
- * es número sale `null` («no informado»), nunca «0,00€».
+ * se sabe leer sale `null` («no informado»), nunca «0,00€».
  */
 function listaCoberturas(
   cobs: Array<{ descripcion: string | null; codigo: string | null; capitalAsegurado: string | null }>,
-): { lista: string[]; capitales: (number | null)[] } {
+): { lista: string[]; capitales: (number | 'ilimitado' | null)[] } {
   const lista: string[] = []
-  const capitales: (number | null)[] = []
+  const capitales: (number | 'ilimitado' | null)[] = []
   for (const c of cobs) {
     const nombre = (c.descripcion ?? c.codigo ?? '').trim()
     if (!nombre) continue
-    const n = c.capitalAsegurado === null ? NaN : Number(c.capitalAsegurado.replace(',', '.'))
+    // El MISMO lector que el resto de la cartera: un «1.500» o un texto raro
+    // no se adivina (sale `null`), y «INF» es ilimitado, no «sin importe».
+    const cap = interpretarCapital(c.capitalAsegurado)
     lista.push(nombre)
-    capitales.push(Number.isFinite(n) && n > 0 ? n : null)
+    capitales.push(cap.tipo === 'importe' && cap.importe > 0 ? cap.importe : cap.tipo === 'ilimitado' ? 'ilimitado' : null)
   }
   return { lista, capitales }
 }

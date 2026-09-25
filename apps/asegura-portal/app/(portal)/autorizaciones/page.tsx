@@ -60,9 +60,11 @@ export default async function AutorizacionesPage() {
           esto se lea SIEMPRE: aunque la petición falle, aunque no haya nadie a
           quien autorizar. Es lo que la ley obliga a que se sepa antes de
           consentir, no una nota de ayuda. */}
-      {/* Plegado (25/09/2026), pero con lo esencial EN LA CABECERA: se lee
-          sin abrirlo, que es lo que exige consentir sabiendo qué se da. */}
-      <SeccionPlegable titulo="Qué es exactamente lo que das" resumen="Solo mirar · caduca al año · lo revocas cuando quieras">
+      {/* 🚨 Plegable (25/09/2026) pero ABIERTO de salida: es lo que hay que
+          saber antes de consentir, y un resumen de una línea no puede decir a
+          la vez «solo mirar» (tus seguros) y «ve la cuenta y da partes» (los
+          de tu sociedad). Quien ya lo ha leído lo cierra. */}
+      <SeccionPlegable titulo="Qué es exactamente lo que das" abierto>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
           Si los seguros son <strong>tuyos</strong>, quien reciba el acceso{' '}
           <strong>solo puede mirarlos</strong>. Nunca ve tu DNI, ni tu IBAN, ni tus documentos, y{' '}

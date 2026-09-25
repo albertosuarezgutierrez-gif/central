@@ -484,7 +484,9 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
         {c.lista.map((nombre, i) => (
           <li key={`${nombre}-${i}`}>
             {nombre}
-            {c.capitales?.[i] != null && `: ${eur(c.capitales[i])}`}
+            {c.capitales?.[i] === 'ilimitado'
+              ? ': ilimitado'
+              : typeof c.capitales?.[i] === 'number' && `: ${eur(c.capitales[i] as number)}`}
           </li>
         ))}
       </ul>
