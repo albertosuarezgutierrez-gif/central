@@ -13,6 +13,13 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-25** · `docs/CONTEXTO-SESIONES.md`, `docs/AUDITORIA-2026-09.md` · 1 entrada de memoria
+  nueva agrupando 4 fixes de correduría/portal sin anotar (#3524, #3526, #3528, #3533: WhatsApp del
+  enlace de datos, DNI/permiso vs conductor, input de documentos en móvil, siniestros en lenguaje
+  claro) + sección "Pasada ligera — 25/09/2026" (heartbeat sano, oscilación de pricing 0→10 en
+  Dúplex Center/Luxury Busto sin rail roto, backlog de PRs sin cambio de causa) · pasada ligera
+  diaria, rango desde `bb0401b`/23-09 hasta hoy · commit de esta auditoría
+
 - **2026-09-23** · `docs/AUDITORIA-2026-09.md` · sección "Pasada ligera — 23/09/2026" añadida
   (heartbeat, correduría, pricing, backlog de PRs — todo consistente con la pasada de ayer, sin
   🔴 nuevo) · pasada ligera diaria, rango 8 commits desde `bb0401b` · commit de esta auditoría

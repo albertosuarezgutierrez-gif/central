@@ -22,6 +22,13 @@ ficheros posteriores: marcado resuelto en `cima_ficheros` con evento `cima_resid
 
 **(25/09/2026)** — CIMA: pólizas duplicadas (volcado + CIMA) cerradas. En datos ya estaban fusionadas y los 52 recibos y 16 siniestros de cuarentena ya estaban dentro (medido; no hay que reprocesar). asegura#854 mergeado: con ≥2 candidatas gana la única de cartera viva (REC/SIN/CEF) y la cuarentena distingue `poliza_ambigua`. Invitación al portal: 34 invitados el 23/09; el resto lo manda Alberto desde Actividad → «Invitar al portal» (el lote salta a los ya invitados).
 
+**(24/09/2026)** — Cuatro fixes sueltos de la correduría/portal, sin entrada propia hasta ahora
+(#3524, #3526, #3528, #3533): el WhatsApp del enlace de datos abría la lista de chats en vez del
+del cliente (usa ya `urlWhatsapp` de su ficha); el DNI/nacimiento del contraste de documentos
+tomaba el tomador de la póliza o el titular del permiso en vez de quien conduce, dando «no casa»
+falsos; el input de subir documentos desbordaba el móvil (320-360px); y el portal traduce el tipo
+y estado del siniestro (tabla TIREA) sin afirmar perito/reserva/pagos, que CIMA no manda.
+
 **(24/09/2026)** — Ficha de cliente y de póliza como ACCESOS (Alberto: «tiene que ser todo accesos directos… vendemos seguros»). Cliente: sus seguros en tres cubos de tarjetas que se pinchan enteras — 🛡️ con nosotros (→ póliza), 🎯 oportunidad (en la competencia: póliza cancelada/vencida/«competencia», oportunidad abierta o perdida reintentable, aportada del portal; → su seguimiento de venta) y 🗂️ ya no existe (`fin_riesgo` u oportunidad perdida «ya no lo necesita»). Regla pura `lib/correduria/seguros-cliente.ts` + test; el volcado histórico queda aparte como leads. Las pestañas pasan a baldosas (`Accesos.tsx`, `?tab=`). Póliza: cabecera + baldosas con su dato (coberturas, recibos «1 devuelto», siniestros abiertos, documentación…) que se despliegan de una en una (`PanelAccesos`, `?v=`). No existe estado «ya no existe» en BD: se deduce.
 
 **(24/09/2026)** — Inicio: la tarjeta de Correduría lleva arriba el buscador de clientes (`BuscadorCartera`, el mismo de `/correduria`). Se pinta al instante; los datos del puerto van en su propio Suspense (`DatosCorreduria`), así que un puerto lento no retrasa la búsqueda. El `?q=` que deja en la URL de `/inicio` no choca con nada.
