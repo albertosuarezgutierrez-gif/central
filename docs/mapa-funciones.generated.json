@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-25T16:21:28Z",
-  "sha": "988b9015153e6b3a22f6efcd2b2e3cf12f5ef1b4",
+  "generadoEn": "2026-09-25T17:25:02Z",
+  "sha": "3644282a4d21787d32f09d9620d05d2a54b55d01",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -18807,7 +18807,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<",
-          "linea": 300,
+          "linea": 302,
           "resumen": "Acumulado TOTAL (sin ventana) de emails de recaptación: enviados y abiertos-o-pinchados. Solo `canal = 'email'` — el WhatsApp manual nunca avanza a 'abierto'/'pinchado' (no hay WABA, solo se registra "
         },
         {
@@ -18816,7 +18816,7 @@
           "exportada": true,
           "params": "resendMessageId: string, motivo: 'rebotado' | 'queja'",
           "retorno": "Promise<ResultadoBaja>",
-          "linea": 333,
+          "linea": 336,
           "resumen": "Opt-out AUTOMÁTICO cuando Resend confirma que el correo rebotó o el destinatario se quejó de spam (14/09/2026). A diferencia de `aplicarBajaEmail` (que resuelve por el id del envío, del enlace de baja"
         },
         {
@@ -18825,7 +18825,7 @@
           "exportada": true,
           "params": "envioId: string",
           "retorno": "Promise<ResultadoBaja>",
-          "linea": 371,
+          "linea": 374,
           "resumen": "Resuelve el token de baja (el `id` de un `recaptacion_envios`) contra la ficha del cliente y le pone `email_opt_out_at`. Idempotente: pulsar el enlace dos veces (un cliente de correo que prefetchea, o"
         },
         {
@@ -18834,7 +18834,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadRecaptacion, 'cliente' | 'ramoLegible' | 'aseguradoraAnterior'>",
           "retorno": "string",
-          "linea": 398,
+          "linea": 401,
           "resumen": "El texto sugerido para un lead concreto (WhatsApp), antes de que la IA lo pula."
         },
         {
@@ -18843,7 +18843,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadRecaptacion, 'cliente' | 'ramoLegible' | 'aseguradoraAnterior'>",
           "retorno": "",
-          "linea": 403,
+          "linea": 406,
           "resumen": "Ídem para email."
         },
         {
@@ -18852,7 +18852,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { clienteId: string; polizaId: string; mensaje: string; actor: string },",
           "retorno": "Promise<",
-          "linea": 408,
+          "linea": 411,
           "resumen": "Registra que Alberto abrió el enlace de WhatsApp de un lead. Deja fila en `historial_interno`."
         },
         {
@@ -18861,7 +18861,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { clienteId: string; polizaId: string; emailDeclarado?: string | null; asunto: string; texto: string },",
           "retorno": "Promise<EnvioRecaptacionEmail>",
-          "linea": 477,
+          "linea": 480,
           "resumen": "Manda UN correo de recaptación al cliente indicado y deja la huella (`recaptacion_envios` + `historial_interno`). El texto ya viene pulido por la ruta; aquí solo se decide A QUIÉN y se registra QUIÉN "
         },
         {
@@ -18870,7 +18870,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 562,
+          "linea": 565,
           "resumen": "Descarta (borrado suave, igual que el botón \"descartar\" de la ficha) los leads con `UMBRAL_SILENCIO` o más envíos de email y ninguna apertura/clic — 21/09/2026, a petición de Alberto: \"para desechar l"
         },
         {
@@ -18879,7 +18879,7 @@
           "exportada": true,
           "params": "correduriaId: string, opts: { limite?: number; actor: string },",
           "retorno": "Promise<ResumenLoteEmail>",
-          "linea": 599,
+          "linea": 602,
           "resumen": "Manda el lote de verdad. Sin IA (a diferencia del envío manual, que sí pule con `pulirConIA`): con 25 llamadas seguidas a la pasarela, sumar hasta 12s de timeout cada una se comería el `maxDuration` d"
         },
         {
@@ -18888,7 +18888,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 650
+          "linea": 653
         },
         {
           "nombre": "anotar",
@@ -18896,7 +18896,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 654
+          "linea": 657
         }
       ],
       "tablas": [
@@ -18906,7 +18906,7 @@
         "recaptacion_envios"
       ],
       "rutaApi": null,
-      "hash": "64fd7464e6e4"
+      "hash": "829f2b565db6"
     },
     {
       "ruta": "apps/asegura/lib/cartera-relaciones.ts",
@@ -26311,13 +26311,13 @@
           "exportada": true,
           "params": "enviosEmail: number, tuvoAperturaOClic: boolean",
           "retorno": "boolean",
-          "linea": 25,
+          "linea": 33,
           "resumen": "`true` si el lead lleva `UMBRAL_SILENCIO` o más envíos de email y ninguno llegó a `abierto`/`pinchado`. No mira rebotes/quejas: esos ya se resuelven aparte (opt-out inmediato, `aplicarBajaPorRebote`) "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cf2980873357"
+      "hash": "6cda8ea0163e"
     },
     {
       "ruta": "apps/asegura/lib/recaptacion-ventana.ts",
@@ -26407,7 +26407,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e542d83b14b2"
+      "hash": "5ce96342068e"
     },
     {
       "ruta": "apps/asegura/lib/retarificar-cartera.ts",
@@ -76730,7 +76730,7 @@
           "exportada": false,
           "params": "g: GrupoLeadRecaptacion",
           "retorno": "string",
-          "linea": 256,
+          "linea": 257,
           "resumen": "Lista de ramos legible: \"auto\", \"auto y hogar\", \"auto, hogar y moto\"."
         },
         {
@@ -76739,7 +76739,7 @@
           "exportada": false,
           "params": "g: GrupoLeadRecaptacion",
           "retorno": "string",
-          "linea": 282,
+          "linea": 283,
           "resumen": "La apertura cambia según lo que de verdad sabemos del lead (Alberto, 21/09/2026: \"cambiaria sigues con el seguro por algo como te vence el seguro de coche ahora no?\"). Con `vencimiento_antiguo` SÍ ten"
         },
         {
@@ -76748,7 +76748,7 @@
           "exportada": false,
           "params": "r: EscrituraRecaptacion",
           "retorno": "string",
-          "linea": 294
+          "linea": 295
         },
         {
           "nombre": "BotonWhatsappRecaptacion",
@@ -76756,7 +76756,7 @@
           "exportada": false,
           "params": "{ grupo }: { grupo: GrupoLeadRecaptacion }",
           "retorno": null,
-          "linea": 312,
+          "linea": 313,
           "resumen": "Abre WhatsApp con el mensaje sugerido — texto DETERMINISTA, sin pasar por IA: pulirlo significaría esperar una llamada a un modelo antes de poder pulsar el enlace, que rompe el \"un clic, se abre Whats"
         },
         {
@@ -76765,12 +76765,12 @@
           "exportada": false,
           "params": "{ grupo }: { grupo: GrupoLeadRecaptacion }",
           "retorno": null,
-          "linea": 336
+          "linea": 337
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "afae805f615e"
+      "hash": "bb1f5075cfb2"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Redes.tsx",
