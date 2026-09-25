@@ -67,6 +67,11 @@ export type TitularAgrupable = {
    * una empresa a nadie, que es el error que sí se vería.
    */
   tipoPersona: TipoOtorgante
+  /**
+   * `true` = no es su ficha pero es SU EMPRESA (relación `Dueño`, 25/09/2026): va a «Seguros de tus
+   * empresas», no a «te han autorizado». Nadie se la ha cedido; es suya como dueño.
+   */
+  representada?: boolean
 }
 
 /**
@@ -98,6 +103,7 @@ export function textoCuentaSeguros(n: number): string {
  * pólizas de un tercero bajo un título que dice que son tuyas.
  */
 export function grupoDeTitular(t: TitularAgrupable): GrupoCartera {
+  if (t.representada) return 'empresas'
   if (!t.propia) return 'autorizadas'
   return t.tipoPersona === 'juridica' ? 'empresas' : 'mias'
 }

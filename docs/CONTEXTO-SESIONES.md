@@ -12,6 +12,24 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** Recaptación por email: el tracking de aperturas estaba APAGADO en Resend → los 30 emails (20-22/09)
+salían «0% apertura», que era «no medido». 🚨 Resend NO guarda open/click tracking sin `trackingSubdomain` (el update
+responde OK y al releer sigue en false; así se dio por activado sin estarlo). Ahora en `grupoasegura.es` (el remitente
+desde hoy): open + click ON con subdominio `links` (CNAME `links` → `links2.resend-dns.com` en IONOS, verificado el
+25/09). Click solo con el CNAME vivo: reescribe TODOS los enlaces, incluida la baja. Webhook con `bounced`/`complained`.
+Código (PR #3591): silencio y tasa del panel solo cuentan envíos desde `SEGUIMIENTO_EMAIL_DESDE`.
+
+**(25/09/2026)** ✉️ **Seguimiento de correos a clientes** (Alberto: «de todos los correos… por si algún cliente reclama»).
+Tablas `seguros.correo_envio` (destino cifrado + id de Resend) y `seguros.correo_evento` (append-only, idempotente por svix-id)
+APLICADAS; webhook de Resend suscrito a TODOS los eventos y guarda cada uno; open/click tracking activado en `grupoasegura.es`.
+Punto único `lib/correo-envio.ts` (API de Resend, cae a SMTP «sin seguimiento»); la felicitación ya sale por él. Ficha → «✉️ Correos».
+⚠️ «Abierto» no prueba lectura (Apple MPP); la prueba es «entregado» y el clic. Pendiente: pasar los otros 12 remitentes al punto único.
+
+**(25/09/2026)** 🏢 **Portal: el dueño de una empresa ve y gestiona su empresa automáticamente** (caso Flores y Gazquez SL /
+Diego Flores Carmona). Derivado en lectura de `cliente_relaciones` 'Dueño' (empresa jurídica explícita, viva, misma correduría), sin
+escribir vínculos; acceso total + puede autorizar a terceros. «Administración» NO abre (pendiente de Alberto). Antes, mismo día:
+vínculo por correo se retira al cambiar el correo (#3600, caso Guzmán Lozano→Pueyo) y cambio de correo con código (#3614).
+
 **(25/09/2026)** 📧 **Portal asegura: «No hemos podido enviarte el código» (502) para TODOS desde las 13:56 UTC.** Causa: se cambió `PORTAL_MAIL_FROM` a `hola@grupoasegura.es` sin cambiar la `RESEND_API_KEY`, que solo autorizaba `envios.grupoasegura.es` (Resend: `550 This API key is not authorized…`, solo visible en logs de Vercel). Arreglo en paneles, sin código: `grupoasegura.es` verificado en Resend (faltaba el CNAME `links`→`links2.resend-dns.com` en IONOS), clave nueva «asegura-portal (grupoasegura.es)» **Sending access solo a ese dominio** (Full access descartado: daría lectura de todos los correos con PII), `PORTAL_MAIL_FROM` = `hola@` y redeploy. Probado 17:18 UTC: llega firmado por `grupoasegura.es`. **Regla: remitente y clave se cambian en el mismo paso**; vaciar la env NO vuelve a `envios.` (el defecto del código es `hola@`). Pendiente: mirar si `asegura` (`ASEGURA_MAIL_FROM`) necesita la misma clave; la ficha de Pilar Franco tiene `piilarfrancoruz@` (doble i, rebotó el 23/09).
 
 **(25/09/2026)** 🚨 **Los crons de asegura NUNCA se ejecutaron**: el middleware no exentaba `/api/cron` y Vercel recibía 307→/login
@@ -25,6 +43,11 @@ reserva unos días; luego borrar de Resend e IONOS.
 Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/devuelto, siniestro) con interruptores por
 tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
 ✅ Borrado (25/09, confirmado por Alberto) el vínculo `16a27091` (hijo, Guzmán Lozano) → ficha del PADRE: lo creó el portal a las 10:10 porque el PADRE añadió el correo del hijo a su propia ficha desde «Mis datos» a las 10:07. **Fase 0 sin hacer:** revalidar vínculos `email_hash` cuando cambia el correo de una ficha.
+
+**(25/09/2026)** 🔑 **Respaldo CIMA daba 401**: `ASEGURA_CRM_CRON_SECRET` de plataforma ≠ `CRON_SECRET` del proyecto Vercel
+`asegura` (el CRM lo compara timing-safe). Latente desde el 24/09: nunca había tenido que disparar; lo destapó la franja fija de las 16:00.
+Alberto la re-copió (16:57 UTC). ⚠️ **Trampa:** «Redeploy» sobre un deployment cuyo commit lleva `[skip vercel]` (p. ej. la radiografía
+de la auditoría) sale CANCELED por el `ignoreCommand` — hay que redesplegar el último READY que tocó la app (hecho: `dpl_HkYM…`, READY 17:02 UTC).
 
 **(25/09/2026)** 🕓 **CIMA: descargas fijas a las 16:00 y 20:30 de Madrid** (recomendación de CIMA; `?franja=` en
 `cima-pull-respaldo`, disparan siempre y solo avisan si fallan). El respaldo condicional de la mañana pasa a las 09:00 UTC (11:00 Madrid, decisión de Alberto).

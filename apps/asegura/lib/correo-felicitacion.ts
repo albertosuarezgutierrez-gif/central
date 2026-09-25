@@ -2,7 +2,7 @@
 // con una oferta dentro deja de ser una felicitación y pasa a ser una comunicación comercial
 // (art. 21 LSSI), que exige otro consentimiento. Tampoco nombra pólizas, compañías ni importes: el
 // buzón puede ser compartido. Lo vigila `felicitaciones.test.ts`.
-import { REMITENTE_CORREDURIA, remitenteCorreo } from '@central/module-seguros'
+import { REMITENTE_CORREDURIA } from '@central/module-seguros'
 
 export type DatosFelicitacion = { nombre: string | null; enlace: string }
 
@@ -44,19 +44,14 @@ export function cuerpoFelicitacion(d: DatosFelicitacion): { asunto: string; text
 
 export type ResultadoFelicitacion = 'enviado' | 'sin_proveedor' | 'rechazado'
 
-export async function enviarFelicitacion(destino: string, d: DatosFelicitacion): Promise<ResultadoFelicitacion> {
-  // Import dinámico: el cepo del cuerpo corre con `node --test`, que no resuelve `@central/core-email`.
-  const { createMailTransporter } = await import('@central/core-email')
-  const transporter = createMailTransporter()
-  if (!transporter) return 'sin_proveedor'
-  const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
-  const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
+export async function enviarFelicitacion(
+  destino: string,
+  d: DatosFelicitacion,
+  quien: { correduriaId: string; clienteId: string },
+): Promise<ResultadoFelicitacion> {
+  // Import dinámico: el cepo del cuerpo corre con `node --test`, que no resuelve Prisma ni `@central/core-email`.
+  const { enviarCorreoCliente } = await import('./correo-envio')
   const { asunto, texto, html } = cuerpoFelicitacion(d)
-  try {
-    await transporter.sendMail({ from, to: destino, ...(replyTo ? { replyTo } : {}), subject: asunto, text: texto, html })
-    return 'enviado'
-  } catch (e) {
-    console.error('[asegura/felicitaciones] fallo enviando:', e instanceof Error ? e.message : e)
-    return 'rechazado'
-  }
+  // Sale por el punto único con seguimiento: queda en `correo_envio` y sus eventos en la ficha.
+  return enviarCorreoCliente({ ...quien, tipo: 'felicitacion', to: destino, asunto, texto, html })
 }

@@ -7,7 +7,7 @@
  */
 
 export type TabFicha =
-  | 'resumen' | 'oportunidades' | 'pendiente' | 'polizas' | 'contactos' | 'mensajes' | 'documentos' | 'notas' | 'historial'
+  | 'resumen' | 'oportunidades' | 'pendiente' | 'polizas' | 'contactos' | 'mensajes' | 'documentos' | 'correos' | 'notas' | 'historial'
 
 /**
  * Desde el 24/09/2026 no son pestañas sino ACCESOS directos (Alberto: «tiene que ser todo
@@ -15,7 +15,7 @@ export type TabFicha =
  * carga su sección debajo.
  */
 export const TABS_FICHA: readonly TabFicha[] = [
-  'resumen', 'oportunidades', 'pendiente', 'polizas', 'contactos', 'mensajes', 'documentos', 'notas', 'historial',
+  'resumen', 'oportunidades', 'pendiente', 'polizas', 'contactos', 'mensajes', 'documentos', 'correos', 'notas', 'historial',
 ]
 
 /**

@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-25T14:50:50Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-09-25T16:21:28Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 13 apps · 42 packages · 23 capacidades · 43 skills · 1487 rutas API.
+**Resumen:** 13 apps · 42 packages · 23 capacidades · 43 skills · 1488 rutas API.
 
 ## Apps (verticales)
 ### almacen
@@ -20,13 +20,13 @@
 ### asegura
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-firma, core-identity, core-vehiculos, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** QR / portal cliente
-- **Tablas (86):** if, seguros._volcado_control, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects…
+- **Tablas (88):** if, seguros._volcado_control, seguros.anulacion, seguros.aprobacion, seguros.auditoria, seguros.aviso_web, seguros.backfill_dni_plan, seguros.bien_documentos, seguros.bienes_asegurables, seguros.bot_eval_runs, seguros.bot_eval_scores, seguros.bot_turn_traces, seguros.carta_mediador, seguros.cartera_foto, seguros.channel_inbound_messages, seguros.cima_decisiones, seguros.cima_ficheros, seguros.cliente_carnets_conducir, seguros.cliente_emails, seguros.cliente_merge_log, seguros.cliente_relaciones, seguros.cliente_telefonos, seguros.clientes, seguros.codeoscopic_consumo, seguros.codeoscopic_documents, seguros.codeoscopic_offers, seguros.codeoscopic_participants, seguros.codeoscopic_prices, seguros.codeoscopic_product_forms, seguros.codeoscopic_projects…
 - **Rutas API:** 133
 ### asegura-portal
 - **Módulos que usa:** core-ai, core-catastro, core-email, core-identity, core-push, core-telegram, module-seguros, module-seguros-pii, module-seguros-portal
 - **Capacidades:** Notificaciones (push)
 - **Tablas (23):** seguros.cliente_relaciones_permiso_volcado, seguros.portal_acceso, seguros.portal_autorizacion, seguros.portal_autorizacion_uso, seguros.portal_aviso_cima, seguros.portal_aviso_silenciado, seguros.portal_bien, seguros.portal_canal, seguros.portal_codigo, seguros.portal_consentimiento, seguros.portal_hoja_qr, seguros.portal_hoja_qr_poliza, seguros.portal_identidad, seguros.portal_invitacion, seguros.portal_mensaje, seguros.portal_obligacion, seguros.portal_parte_siniestro, seguros.portal_peticion_acceso, seguros.portal_poliza_declarada, seguros.portal_push_suscripcion, seguros.portal_supresion, seguros.portal_vinculo, seguros.portal_vista_corredor
-- **Rutas API:** 49
+- **Rutas API:** 50
 ### asegura-web
 - **Módulos que usa:** core-consent, module-seguros, module-seguros-portal
 - **Capacidades:** —
