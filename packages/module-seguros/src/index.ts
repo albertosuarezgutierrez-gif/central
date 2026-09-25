@@ -809,6 +809,7 @@ export type {
   AccionAnulacion, DatosCarta as DatosCartaAnulacion, EstadoAnulacion, MotivoAnulacion, SiguientePaso as SiguientePasoAnulacion, SolicitanteAnulacion, SolicitudAnulacion, TipoAnulacion,
 } from './anulacion.ts'
 export { NECESIDADES_MAX, NECESIDADES_MIN, anulacionPorCambio, documentoAceptacion, esCambioCompania, lineaVistoAntes, validarNecesidades, type AnulacionPorCambio, type DatosAceptacion, type OpcionAceptada, type PolizaActual } from './aceptacion-presupuesto.ts'
+export { grupoNecesidades, preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades, type GrupoNecesidades, type OpcionPregunta, type PreguntaNecesidad, type RespuestasNecesidades, type ValidacionRespuestas } from './necesidades-idd.ts'
 export { datosDelTomador, huecosParaEmitirDesdeFicha, type CampoEmision, type DatoEmision, type DatoPropioEnPoliza, type DatosParaEmitir, type EstadoDatoEmision, type FichaParaEmitir, type QuienAporta, type ValorLeido } from './datos-para-emitir.ts'
 export {
   DIAS_REVISION_TELEFONOS, TELEFONOS_COMPANIAS, esTelefonoPublicable, hrefTel, telefonoVerificadoPorCodigo, telefonoVerificadoPorNombre, telefonosParaPublicar, telefonosPorRevisar, vcardCompania, whatsappLegible,

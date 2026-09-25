@@ -18,6 +18,8 @@ Horas en UTC: en invierno (desde 25/10) caen a las 15:00/19:30 de Madrid. CIMA d
 intranet; a las 09:41 UTC la cola de TIREA seguía con 155 ficheros conocidos y nada de C0058. **CIMA no cobra por
 consulta** (Alberto, 25/09): el coste de pulls extra es ~0 (Vercel/Fly); el único límite es el presupuesto de Actions.
 
+**(25/09/2026)** — IDD: cuestionario cerrado de exigencias y necesidades por ramo (motor, hogar y comunes) en el presupuesto de la ficha de póliza, en lugar del texto libre. Se guarda como la misma declaración de texto (`necesidades`, lo que el cliente firma; sin DDL) y las respuestas van a la auditoría del evento. Módulo puro `module-seguros/necesidades-idd.ts` (+5 tests, cepo visto fallar). Pendiente: avisar si la opción elegida no cubre algo pedido (las opciones aún no traen coberturas estructuradas).
+
 **(25/09/2026)** 🕒 **CIMA: respaldo del pull a las 07:00/14:00/18:00 UTC** (antes 08:00/14:00). Los `schedule` de Actions de
 `asegura` llegaron 4-6 h tarde el 24/09 y el de las 05:30 del 25/09 no había arrancado a las 06:47. La franja de las 18:00 dispara
 a diario (no hay cron de Actions delante). Mapfre: CIMA dice haberlo configurado el 24/09; pulls de 13:21, 17:01 y 06:49 UTC → 155
@@ -584,6 +586,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (25/09/2026) Ficha correduría: el auto histórico de un ex-cliente sale como oportunidad
+- Caso Rafael Campa: recaptación le ofrecía el auto (Pelayo, vencía 20/10/2015) y la ficha solo lo nombraba en una nota al pie; «vida» era una oportunidad en competencia (legítima: «póliza en competencia es oportunidad», Alberto).
+- `repartirSegurosCliente`: del volcado histórico, la más reciente de cada ramo no cubierto → tarjeta de oportunidad (`historica: true`); el resto sigue plegado. «Ya no lo necesita» retira el ramo.
+- `proximoAniversario()`: fechas de fin pasadas se pintan como la próxima renovación (vida 24/10/2023 → 24/10/2026).
+- `resumenFicha`: con solo pólizas de `total: 0` recibos, devueltos/pendientes = `null` («—»), no «0 · ninguno devuelto».
 
 ## (25/09/2026) Portal asegura: «Detalles» duplicaba las coberturas + logos sin nombre
 - El EIAC mete las coberturas en `datos_especificos.capitales` con `bien:'OTROS'`; `describirBien` las pintaba en «Detalles» y la ficha las repetía en la lista de coberturas. Ahora se filtran (`esPartidaDeCobertura`) y el capital pasa a la lista desde `poliza_coberturas.capital_asegurado` (medido: las 513 OTROS con importe tienen su fila).

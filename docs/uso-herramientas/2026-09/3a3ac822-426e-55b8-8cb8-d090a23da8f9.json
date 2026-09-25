@@ -1,8 +1,8 @@
 {
  "sesion": "3a3ac822-426e-55b8-8cb8-d090a23da8f9",
  "inicio": "2026-09-23T05:11:15.768Z",
- "fin": "2026-09-24T23:06:28.197Z",
- "llamadas": 6937,
+ "fin": "2026-09-25T09:49:12.381Z",
+ "llamadas": 7077,
  "categorias": {
   "agente:Explore": {
    "llamadas": 12,
@@ -16,14 +16,14 @@
    }
   },
   "bash": {
-   "llamadas": 4283,
-   "chars_in": 3217215,
-   "chars_out": 13997811,
+   "llamadas": 4353,
+   "chars_in": 3263563,
+   "chars_out": 14324645,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 4283
+    "Bash": 4353
    }
   },
   "lectura-directa": {
@@ -40,18 +40,18 @@
    }
   },
   "otro": {
-   "llamadas": 726,
-   "chars_in": 369331,
-   "chars_out": 9387179,
+   "llamadas": 749,
+   "chars_in": 370165,
+   "chars_out": 9645206,
    "errores": 0,
    "archivos_citados": 277,
    "chars_citados": 5669874,
    "tools": {
     "AskUserQuestion": 6,
     "Skill": 9,
-    "ToolSearch": 184,
+    "ToolSearch": 191,
     "ExitPlanMode": 10,
-    "ReadNotifications": 368,
+    "ReadNotifications": 384,
     "SubagentHandback": 58,
     "Artifact": 25,
     "ArtifactComments": 2,
@@ -64,65 +64,65 @@
    }
   },
   "escritura": {
-   "llamadas": 269,
-   "chars_in": 1186270,
-   "chars_out": 6464968,
+   "llamadas": 271,
+   "chars_in": 1195934,
+   "chars_out": 6484830,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 169,
+    "Write": 171,
     "Edit": 100
    }
   },
   "sql": {
-   "llamadas": 377,
-   "chars_in": 206502,
-   "chars_out": 687006,
+   "llamadas": 390,
+   "chars_in": 212436,
+   "chars_out": 705822,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 377
+    "mcp__Supabase__execute_sql": 390
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 191,
-   "chars_in": 31678,
-   "chars_out": 156810,
+   "llamadas": 193,
+   "chars_in": 32083,
+   "chars_out": 159050,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 1596,
    "tools": {
     "mcp__Claude_Code_Remote__add_repo": 5,
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 26,
-    "mcp__Claude_Code_Remote__send_later": 70,
+    "mcp__Claude_Code_Remote__send_later": 71,
     "mcp__Claude_Code_Remote__delete_trigger": 64,
     "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 21,
-    "mcp__Claude_Code_Remote__update_trigger": 4,
+    "mcp__Claude_Code_Remote__update_trigger": 5,
     "mcp__Claude_Code_Remote__register_repo_root": 1
    }
   },
   "mcp:github": {
-   "llamadas": 575,
-   "chars_in": 283118,
-   "chars_out": 1536008,
+   "llamadas": 604,
+   "chars_in": 290707,
+   "chars_out": 1595737,
    "errores": 7,
    "archivos_citados": 18,
    "chars_citados": 1287755,
    "tools": {
-    "mcp__github__actions_list": 51,
+    "mcp__github__actions_list": 52,
     "mcp__github__get_job_logs": 10,
     "mcp__github__actions_get": 5,
     "mcp__github__get_check_run": 5,
     "mcp__github__get_file_contents": 1,
-    "mcp__github__list_pull_requests": 7,
-    "mcp__github__create_pull_request": 68,
-    "mcp__github__update_pull_request": 72,
-    "mcp__github__pull_request_read": 168,
-    "mcp__github__merge_pull_request": 67,
-    "mcp__github__subscribe_pr_activity": 45,
-    "mcp__github__unsubscribe_pr_activity": 47,
+    "mcp__github__list_pull_requests": 9,
+    "mcp__github__create_pull_request": 71,
+    "mcp__github__update_pull_request": 76,
+    "mcp__github__pull_request_read": 175,
+    "mcp__github__merge_pull_request": 71,
+    "mcp__github__subscribe_pr_activity": 49,
+    "mcp__github__unsubscribe_pr_activity": 51,
     "mcp__github__add_issue_comment": 23,
     "mcp__github__actions_run_trigger": 5,
     "mcp__github__search_pull_requests": 1
@@ -155,14 +155,14 @@
    }
   },
   "mcp:Resend": {
-   "llamadas": 6,
-   "chars_in": 1319,
-   "chars_out": 3942,
+   "llamadas": 7,
+   "chars_in": 1462,
+   "chars_out": 4676,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Resend__list-domains": 1,
+    "mcp__Resend__list-domains": 2,
     "mcp__Resend__get-domain": 4,
     "mcp__Resend__verify-domain": 1
    }

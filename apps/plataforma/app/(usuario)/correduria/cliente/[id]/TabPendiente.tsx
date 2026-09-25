@@ -93,7 +93,7 @@ function PideAccion({ resumen, vivas, clienteId }: {
   // como resuelto. Una lista vacía sin esta coletilla afirmaría «no hay nada»
   // sobre datos que nadie ha leído.
   const sinMirar: string[] = []
-  if (recibos.devueltos === null) sinMirar.push('los recibos (asegura no los manda)')
+  if (recibos.devueltos === null) sinMirar.push('los recibos (no hay ninguno informado)')
   if (siniestrosAbiertos === null) sinMirar.push('los siniestros (no se han podido leer)')
   if (documentosPendientes === null) sinMirar.push('los documentos (no informados)')
   if (recibos.polizasSinRecibos > 0) sinMirar.push(`${recibos.polizasSinRecibos} póliza(s) de las que la compañía no ha mandado ningún recibo`)

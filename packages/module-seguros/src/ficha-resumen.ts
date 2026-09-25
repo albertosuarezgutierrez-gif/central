@@ -190,9 +190,12 @@ export function resumenFicha(entrada: {
 
   const conRecibos = polizas.filter(p => p.recibos !== null)
   const sinInformar = polizas.length - conRecibos.length
-  // 🚨 Ni una sola póliza informa → «—». Con al menos una que informe, la suma
-  // es sobre ESAS, y `polizasSinInformar` dice a cuántas no alcanza el dato.
-  const hayInforme = conRecibos.length > 0
+  // 🚨 Ni una sola póliza trae AL MENOS UN recibo → «—». Informar `total: 0` no
+  // cuenta: sin un solo recibo no se ha visto ninguno devuelto, y pintar
+  // «0 · ninguno devuelto» contradecía a la póliza de Rafael Campa, que está
+  // justo en «recibo devuelto» (25/09/2026). Con al menos una que traiga
+  // recibos, la suma es sobre ESAS, y `polizasSinRecibos` dice a cuántas no alcanza.
+  const hayInforme = conRecibos.some(p => (p.recibos?.total ?? 0) > 0)
 
   return {
     conteo: { vivas, pendientesCima, canceladas, historicas, total: polizas.length },

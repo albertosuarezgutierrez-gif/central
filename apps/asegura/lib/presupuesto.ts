@@ -498,6 +498,19 @@ function masBarataDeLaLista(opciones: { primaEur: unknown }[]): number | null {
   return mejor
 }
 
+/**
+ * Las respuestas del cuestionario IDD, solo para la auditoría del evento: claves y valores
+ * cortos de texto (son ids de opción, nunca texto libre del cliente). Lo que no cuadra no se guarda.
+ */
+export function respuestasAuditables(v: unknown): { respuestas?: Record<string, string> } {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {}
+  const out: Record<string, string> = {}
+  for (const [k, x] of Object.entries(v as Record<string, unknown>).slice(0, 20)) {
+    if (/^[a-z_]{1,30}$/.test(k) && typeof x === 'string' && /^[a-z_]{1,30}$/.test(x)) out[k] = x
+  }
+  return Object.keys(out).length ? { respuestas: out } : {}
+}
+
 export type ResultadoNecesidades =
   | { estado: 'ok' }
   | { estado: 'error'; motivo: 'no_encontrado' | 'cerrado' | 'invalida'; detalle: string }
@@ -508,7 +521,7 @@ export type ResultadoNecesidades =
  */
 export async function guardarNecesidades(
   correduriaId: string,
-  entrada: { id: string; texto: unknown; actor: string },
+  entrada: { id: string; texto: unknown; actor: string; respuestas?: unknown },
 ): Promise<ResultadoNecesidades> {
   const v = validarNecesidades(entrada.texto)
   if (!v.ok) return { estado: 'error', motivo: 'invalida', detalle: v.motivo }
@@ -521,7 +534,7 @@ export async function guardarNecesidades(
   })
   if (n.count === 0) return { estado: 'error', motivo: 'cerrado', detalle: 'Ya está aceptado o retirado: lo que se firmó no se reescribe.' }
   await db.presupuestoEvento.create({
-    data: { presupuestoId: fila.id, tipo: 'necesidades', origen: 'corredor', detalle: { actor: entrada.actor, antes: fila.necesidades === null ? 'vacío' : 'escrito' } },
+    data: { presupuestoId: fila.id, tipo: 'necesidades', origen: 'corredor', detalle: { actor: entrada.actor, antes: fila.necesidades === null ? 'vacío' : 'escrito', ...respuestasAuditables(entrada.respuestas) } },
   })
   anotarCambio({ entidad: 'presupuesto', id: fila.id, campo: 'necesidades', antes: fila.necesidades, despues: v.valor })
   return { estado: 'ok' }

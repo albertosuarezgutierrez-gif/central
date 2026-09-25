@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { repartirSegurosCliente, estaHuerfana } from './seguros-cliente.ts'
+import { repartirSegurosCliente, estaHuerfana, proximoAniversario, vencimientoOportunidad } from './seguros-cliente.ts'
 import type { PolizaDeclaradaFicha, PolizaFicha } from '../ficha-asegura'
 import type { OportunidadDeCliente } from '../seguimiento-asegura'
 
@@ -40,10 +40,70 @@ test('en vigor y pendiente de CIMA están con nosotros; cancelada y vencida son 
   assert.deepEqual(ids(r.yaNoExiste), ['fin'])
 })
 
-test('el volcado histórico va aparte, no entre las oportunidades vivas', () => {
-  const r = repartirSegurosCliente({ polizas: [pol('h', { viva: false, estado: 'vencida' })], declaradas: [], oportunidades: [] })
-  assert.deepEqual(ids(r.historicas), ['h'])
-  assert.equal(r.oportunidades.length, 0)
+test('volcado histórico: la más reciente de cada ramo sin cubrir es oportunidad; el resto va plegado', () => {
+  // Rafael Campa (25/09/2026): su auto de Pelayo de 2015 se le ofrecía por WhatsApp y la
+  // ficha solo lo nombraba en una nota al pie. «Póliza en competencia es oportunidad».
+  const r = repartirSegurosCliente({
+    polizas: [
+      pol('auto2015', { viva: false, estado: 'recibo_devuelto', fechaVencimiento: '2015-10-20' }),
+      pol('auto2013', { viva: false, estado: 'vencida', fechaVencimiento: '2013-10-20' }),
+      pol('hogarViejo', { viva: false, tipo: 'hogar', fechaVencimiento: '2016-03-01' }),
+      pol('hogarVivo', { tipo: 'hogar' }),
+      pol('finRiesgo', { viva: false, tipo: 'moto', estado: 'fin_riesgo' }),
+    ],
+    declaradas: [],
+    oportunidades: [],
+  })
+  assert.deepEqual(ids(r.oportunidades), ['auto2015'])
+  const t = r.oportunidades[0]
+  assert.ok(t.clase === 'poliza' && t.historica === true)
+  assert.deepEqual(ids(r.historicas).sort(), ['auto2013', 'finRiesgo', 'hogarViejo'])
+})
+
+test('volcado histórico: una oportunidad abierta del ramo se engancha a su tarjeta; «ya no lo necesita» la retira', () => {
+  const r = repartirSegurosCliente({
+    polizas: [
+      pol('auto', { viva: false, fechaVencimiento: '2015-10-20' }),
+      pol('hogar', { viva: false, tipo: 'hogar', fechaVencimiento: '2015-05-01' }),
+    ],
+    declaradas: [],
+    oportunidades: [opo('o1', { ramo: 'auto' }), opo('p1', { ramo: 'hogar', estado: 'perdida', motivoPerdida: 'cliente_desiste', proximaTarea: null })],
+  })
+  const auto = r.oportunidades.find(s => s.id === 'auto')
+  assert.ok(auto && auto.clase === 'poliza' && auto.oportunidad?.id === 'o1')
+  assert.equal(r.oportunidades.some(s => s.id === 'o1' || s.id === 'hogar'), false)
+  assert.deepEqual(ids(r.historicas), ['hogar'])
+})
+
+test('volcado histórico: no sale si del ramo hay algo más nuevo (perdida, fin_riesgo o aportada)', () => {
+  const viejo = (id: string, tipo: string) => pol(id, { viva: false, tipo, fechaVencimiento: '2015-10-20' })
+  const r = repartirSegurosCliente({
+    polizas: [viejo('hAuto', 'auto'), viejo('hHogar', 'hogar'), viejo('hMoto', 'moto'), pol('finMoto', { tipo: 'moto', estado: 'fin_riesgo' })],
+    declaradas: [{ id: 'd', ramo: 'hogar', yaEnCartera: false } as PolizaDeclaradaFicha],
+    oportunidades: [opo('perdidaAuto', { estado: 'perdida', motivoPerdida: 'precio', proximaTarea: null })],
+  })
+  assert.deepEqual(ids(r.oportunidades).sort(), ['d', 'perdidaAuto'])
+  assert.deepEqual(ids(r.historicas).sort(), ['hAuto', 'hHogar', 'hMoto'])
+})
+
+test('vencimientoOportunidad: vencida hace menos de un año se queda (atrasada); más vieja, próximo aniversario', () => {
+  const hoy = new Date('2026-09-25T10:00:00Z')
+  assert.equal(vencimientoOportunidad('2026-09-20', hoy), '2026-09-20')
+  assert.equal(vencimientoOportunidad('2025-10-01', hoy), '2025-10-01')
+  assert.equal(vencimientoOportunidad('2023-10-24', hoy), '2026-10-24')
+  assert.equal(vencimientoOportunidad('2027-01-10', hoy), '2027-01-10')
+  assert.equal(vencimientoOportunidad(null, hoy), null)
+})
+
+test('proximoAniversario: una fecha pasada renueva el mismo día del año que toca; la futura se queda', () => {
+  const hoy = new Date('2026-09-25T10:00:00Z')
+  assert.equal(proximoAniversario('2023-10-24', hoy), '2026-10-24')
+  assert.equal(proximoAniversario('2015-03-01', hoy), '2027-03-01')
+  assert.equal(proximoAniversario('2015-09-25', hoy), '2026-09-25')
+  assert.equal(proximoAniversario('2027-01-10', hoy), '2027-01-10')
+  assert.equal(proximoAniversario('2016-02-29', hoy), '2027-02-28')
+  assert.equal(proximoAniversario(null, hoy), null)
+  assert.equal(proximoAniversario('basura', hoy), null)
 })
 
 test('una oportunidad abierta se engancha a la póliza perdida del mismo ramo, sin duplicar tarjeta', () => {
