@@ -39,7 +39,7 @@ export function interpretarEventoResend(payload: unknown): EventoUtilResend | nu
   return { resendMessageId: emailId, estado: ESTADOS[tipo] }
 }
 
-export type VerificacionWebhook = { ok: true; payload: unknown } | { ok: false; motivo: 'sin_secreto' | 'firma_invalida' }
+export type VerificacionWebhook = { ok: true; payload: unknown } | { ok: false; motivo: 'sin_secreto' | 'firma_invalida' | 'cuerpo_invalido' }
 
 /**
  * Verifica la firma con el secreto de Resend antes de fiarse de nada del
@@ -55,9 +55,15 @@ export function verificarWebhookResend(
   if (!secreto) return { ok: false, motivo: 'sin_secreto' }
   try {
     const wh = new Webhook(secreto)
-    const payload = wh.verify(cuerpoCrudo, cabeceras)
-    return { ok: true, payload }
+    // svix ≥2.5 solo VERIFICA (devuelve void): el cuerpo hay que parsearlo aparte. Tomar su
+    // retorno como payload dejó el webhook respondiendo «ignorado» a todo evento (25/09/2026).
+    wh.verify(cuerpoCrudo, cabeceras)
   } catch {
     return { ok: false, motivo: 'firma_invalida' }
+  }
+  try {
+    return { ok: true, payload: JSON.parse(cuerpoCrudo) as unknown }
+  } catch {
+    return { ok: false, motivo: 'cuerpo_invalido' }
   }
 }
