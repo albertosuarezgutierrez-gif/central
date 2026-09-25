@@ -14,6 +14,8 @@
 //
 // Por eso cada precio sale de aquí con su FIRMEZA, y son tres, no dos.
 
+import { leerOpcionesLegibles, type OpcionLegible } from './coberturas.ts'
+
 export type Firmeza = 'firme' | 'condicionado' | 'estimado'
 
 export type Precio = {
@@ -72,6 +74,9 @@ export type Precio = {
    * nuevo — ver `proyectoVigenteDePoliza` en `retarificar-cartera.ts`.
    */
   expiraEn: string | null
+  /** Opciones del producto ya legibles (`formattedOptions`: «Asistencia en viaje: SIN
+   *  vehículo de sustitución»…). `null` = el vendor no las manda; `[]` = ninguna. */
+  opciones: OpcionLegible[] | null
   /**
    * `mainQuote` sin parsear, TAL CUAL lo devuelve el vendor para ESTE precio —
    * mismo objeto que `Oferta.quoteCrudo` en `emitir.ts`, pero de ANTES del
@@ -188,6 +193,7 @@ function leerPrecio(raw: unknown): Precio | null {
     productId: producto.id ?? null,
     productOptions: producto.options ?? null,
     expiraEn: str(q.expirationDate),
+    opciones: leerOpcionesLegibles(q),
     quoteCrudo: q,
   }
 }

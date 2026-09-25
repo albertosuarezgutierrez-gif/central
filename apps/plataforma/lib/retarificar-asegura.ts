@@ -584,6 +584,9 @@ export type Precio = {
   /** `expirationDate` de la cotización: hasta cuándo se puede emitir. `null`/ausente
    *  = el vendor no la ha dicho (suele venir solo tras confirmar el precio). */
   expiraEn?: string | null
+  /** Opciones del producto ya legibles (`formattedOptions` del vendor). `null`/ausente =
+   *  no las mandó (o cotización recuperada, que no las guarda); `[]` = ninguna. */
+  opciones?: { etiqueta: string; valor: string }[] | null
   avisos?: string[]
 }
 
@@ -1769,5 +1772,48 @@ export async function limitesHogarAsegura(p: {
         ' — no se sabe si la recomendación ha salido ni si ha costado. Míralo en el consumo antes de volver a pulsar.',
       gastoDesconocido: true,
     }
+  }
+}
+
+
+// ─── Coberturas de una oferta confirmada (GRATIS, lectura) ──────────────────
+
+export type CoberturaOferta = { nombre: string; incluida: boolean | null; texto: string | null }
+export type RespuestaCoberturas =
+  | { estado: 'ok'; coberturas: CoberturaOferta[] }
+  | { estado: 'error'; mensaje: string }
+
+/** Lee la respuesta del puerto. Pura: se testea sin red. `incluida` ausente es `null`
+ *  («ver el texto»), nunca `false`. */
+export function interpretarCoberturas(status: number, json: unknown): RespuestaCoberturas {
+  const o = (json && typeof json === 'object' ? json : {}) as Record<string, unknown>
+  if (status !== 200 || o.estado !== 'ok' || !Array.isArray(o.coberturas)) {
+    const m = typeof o.mensaje === 'string' ? o.mensaje : typeof o.error === 'string' ? o.error : `HTTP ${status}`
+    return { estado: 'error', mensaje: `No se han podido leer las coberturas (${m}).` }
+  }
+  const coberturas: CoberturaOferta[] = []
+  for (const c of o.coberturas as unknown[]) {
+    const x = (c && typeof c === 'object' ? c : {}) as Record<string, unknown>
+    if (typeof x.nombre !== 'string' || x.nombre.trim() === '') continue
+    coberturas.push({
+      nombre: x.nombre,
+      incluida: typeof x.incluida === 'boolean' ? x.incluida : null,
+      texto: typeof x.texto === 'string' && x.texto.trim() !== '' ? x.texto : null,
+    })
+  }
+  return { estado: 'ok', coberturas }
+}
+
+/** `GET /api/operador/codeoscopic/coberturas` — gratis, no cotiza ni confirma nada. */
+export async function coberturasAsegura(projectId: string, offerId: string): Promise<RespuestaCoberturas> {
+  const qs = new URLSearchParams({ projectId, offerId }).toString()
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/coberturas?${qs}`, { method: 'GET' }, TIMEOUT_CATALOGO_MS)
+    if (r === null) {
+      return { estado: 'error', mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).' }
+    }
+    return interpretarCoberturas(r.status, r.json)
+  } catch (e) {
+    return { estado: 'error', mensaje: `No se han podido leer las coberturas (${e instanceof Error ? e.message : String(e)}).` }
   }
 }

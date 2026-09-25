@@ -38,3 +38,21 @@ vendor: la misma que ya embebe `ProductFormWidget.tsx`.
 - Si `links[]` de la cotización es la **IPID** o una ficha comercial.
 - Si el ReRate con opciones distintas (paso 3) **cuesta** (hoy anotado a 0€ «sin confirmar») — si
   cuesta, «Ajustar» se limita a la compañía que se va a emitir.
+
+## Lo que dijo el spec (25/09/2026, 2ª ronda) y lo que se ha hecho
+- **Coberturas:** no vienen en la cotización. `GET /insurances/{id}/offers/{offerId}/coverages`
+  (gratis) → `{ name, included?, text? }`, lista común por ramo; sin capital numérico. Como cuelga
+  de la OFERTA, existe tras el ReRate. ✅ **Hecho:** botón «Ver coberturas de esta oferta» en el panel
+  de emisión (puerto `GET /api/operador/codeoscopic/coberturas`). `included` ausente = «ver
+  detalle», nunca ✗.
+- **Opciones legibles:** cada cotización trae `formattedOptions` (`label`/`formattedValue`).
+  ✅ **Hecho:** desplegable «opciones (n)» en cada fila de la tabla de retarificar auto (sin llamada
+  extra). Una cotización recuperada de BD no las guarda (sale sin desplegable).
+- **`links[]`** no distingue IPID: para la IPID fiable, informe `POST /insurances/{id}/reports` con
+  `includeIpid`. Pendiente.
+- **Precio nuevo solo con ReRate** (opciones, forma/periodicidad de pago y fecha). Coste y límite
+  sin documentar → «Ajustar» por compañía irá con un botón **«Recalcular»** explícito, nunca en
+  cada cambio de casilla. Forma y periodicidad de pago, de `GET /payment-methods?quoteId=` y
+  `GET /payment-frequencies?quoteId=` (dependen de la cotización). Pendiente.
+- Comparar coberturas ENTRE compañías antes de confirmar: la API solo las da por oferta, así que
+  exigiría un ReRate por compañía. No se hace mientras el coste del ReRate no esté confirmado.

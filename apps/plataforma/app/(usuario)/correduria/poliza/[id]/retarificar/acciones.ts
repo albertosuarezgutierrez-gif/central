@@ -41,6 +41,8 @@ import {
   emitirAsegura,
   tarificacionGuardadaAsegura,
   productFormAsegura,
+  coberturasAsegura,
+  type RespuestaCoberturas,
   type RespuestaCatalogo,
   type RespuestaRetarificar,
   type RespuestaOferta,
@@ -165,4 +167,9 @@ export async function pedirEmision(entrada: {
     acunarExistente: entrada.acunarExistente === true,
     familiaEnAllianz: entrada.familiaEnAllianz === true,
   })
+}
+
+/** Coberturas de la oferta confirmada. **Gratis** (lectura en el vendor). */
+export async function pedirCoberturas(projectId: string, offerId: string): Promise<RespuestaCoberturas> {
+  return coberturasAsegura(projectId, offerId)
 }

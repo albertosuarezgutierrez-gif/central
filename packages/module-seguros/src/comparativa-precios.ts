@@ -179,6 +179,8 @@ export type PrecioComparable = {
   firmeza?: string | null
   /** Hasta cuándo se puede emitir (`expirationDate` del vendor). Ausente = no lo dijo. */
   expiraEn?: string | null
+  /** Opciones del producto legibles (`formattedOptions`). Ausente/`null` = no se sabe. */
+  opciones?: { etiqueta: string; valor: string }[] | null
   avisos?: string[]
 }
 

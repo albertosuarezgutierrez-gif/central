@@ -1853,6 +1853,18 @@ function Precios({
                               válido hasta {fechaEs(p.expiraEn)}
                             </div>
                           )}
+                          {p.opciones && p.opciones.length > 0 && (
+                            <details style={{ fontSize: 11, marginTop: 2 }}>
+                              <summary className="muted">opciones ({p.opciones.length})</summary>
+                              <ul style={{ margin: '4px 0', paddingLeft: 14 }}>
+                                {p.opciones.map((o, j) => (
+                                  <li key={j} style={{ overflowWrap: 'anywhere' }}>
+                                    {o.etiqueta}: <strong>{o.valor}</strong>
+                                  </li>
+                                ))}
+                              </ul>
+                            </details>
+                          )}
                         </td>
                         {primaActualEur !== null && (
                           <td>

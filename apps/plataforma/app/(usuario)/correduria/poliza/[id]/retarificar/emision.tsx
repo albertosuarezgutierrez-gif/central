@@ -20,7 +20,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { eur } from '@/lib/dinero'
-import { pedirOferta, pedirEmision, pedirCatalogo } from './acciones'
+import { pedirOferta, pedirEmision, pedirCatalogo, pedirCoberturas } from './acciones'
+import type { RespuestaCoberturas } from '@/lib/retarificar-asegura'
 import { ProductFormWidget } from './ProductFormWidget'
 import type { AvisoCuenta, CuentaConocida, Opcion, SolicitudEmisionVista } from '@/lib/retarificar-asegura'
 import { fechaEs } from '@/lib/ficha-asegura'
@@ -244,6 +245,46 @@ function CuentaCargo({
         </span>
       </label>
     </div>
+  )
+}
+
+/**
+ * Coberturas de la oferta confirmada, bajo demanda (25/09/2026). Gratis: es una
+ * lectura en el vendor. `incluida: null` NO es «no incluida»: el vendor dice que
+ * entonces hay que leer el texto, así que se pinta «ver detalle», nunca ✗.
+ */
+function CoberturasOferta({ projectId, offerId }: { projectId: string; offerId: string }) {
+  const [r, setR] = useState<RespuestaCoberturas | 'cargando' | null>(null)
+  async function cargar() {
+    setR('cargando')
+    setR(await pedirCoberturas(projectId, offerId))
+  }
+  if (r === null) {
+    return (
+      <button type="button" onClick={cargar} style={{ minHeight: 44, marginTop: 6 }}>
+        Ver coberturas de esta oferta
+      </button>
+    )
+  }
+  if (r === 'cargando') return <p className="muted">Leyendo coberturas…</p>
+  if (r.estado === 'error') return <p className="err">{r.mensaje}</p>
+  if (r.coberturas.length === 0) {
+    return <p className="muted">La compañía no ha devuelto ninguna cobertura para esta oferta.</p>
+  }
+  return (
+    <details open style={{ marginTop: 6 }}>
+      <summary>Coberturas ({r.coberturas.length})</summary>
+      <ul style={{ margin: '6px 0', paddingLeft: 18, fontSize: 13 }}>
+        {r.coberturas.map((c, i) => (
+          <li key={i} style={{ overflowWrap: 'anywhere' }}>
+            <span aria-hidden>{c.incluida === true ? '✅ ' : c.incluida === false ? '❌ ' : 'ℹ️ '}</span>
+            <strong>{c.nombre}</strong>
+            {c.incluida === null && !c.texto && <span className="muted"> — sin detalle del vendor</span>}
+            {c.texto && <span className="muted"> — {c.texto}</span>}
+          </li>
+        ))}
+      </ul>
+    </details>
   )
 }
 
@@ -829,6 +870,7 @@ export function Emision({
               ))}
             </ul>
           )}
+          <CoberturasOferta key={estado.offerId} projectId={estado.projectId} offerId={estado.offerId} />
           <CuentaCargo
             cuenta={estado.cuenta}
             aviso={estado.cuentaAviso}

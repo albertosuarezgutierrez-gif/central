@@ -76,6 +76,7 @@ test('encontrarPrecio: casa por compañía y categoría, sin distinguir mayúscu
         productId: 10,
         productOptions: null,
         expiraEn: null,
+        opciones: null,
         quoteCrudo: null,
       },
     ],
@@ -236,7 +237,7 @@ test('encontrarPrecio: con varios precios del mismo nivel desempata por producto
   const base = {
     modalidad: null, franquiciaEur: null, entradaEur: null, meses: null, formaPago: null,
     frecuenciaPago: null, referenciaVendor: null, firmeza: 'estimado' as const, avisos: [],
-    requiereReRate: true, productId: 1, productOptions: null, expiraEn: null, quoteCrudo: null,
+    requiereReRate: true, productId: 1, productOptions: null, expiraEn: null, opciones: null, quoteCrudo: null,
   }
   const cotizacion: Cotizacion = {
     projectId: '1', fechaEfecto: null, insuranceLineId: 'Car', fallos: [],
