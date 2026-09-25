@@ -71,6 +71,23 @@ misma tabla `seguros.portal_obligacion` que ya sincroniza `lib/obligaciones.ts`.
   o uno propio — este cron no lo comparte con nadie). Sin las claves VAPID el endpoint responde 503
   `sin_vapid` en vez de fingir un `{avisadas:0}`.
 
+## 📡 Avisos push de lo que llega de CIMA (25/09/2026)
+
+`GET /api/cron/avisos-cima` (diario 12:45 UTC, tras la segunda ingesta): recibo nuevo al cobro,
+recibo devuelto y movimientos de siniestro. Lo pidió un cliente en la demo. Lógica pura en
+`module-seguros-portal/src/avisos-cima.ts` (**lee su cabecera**); tablas `portal_aviso_cima` (sello)
+y `portal_aviso_silenciado` (tipos apagados; interruptores en `ActivarPush.tsx`), SQL
+`prisma/sql/2026-09-25_c_portal_avisos_cima.sql` **APLICADA el 25/09/2026**.
+- 🔒 La cartera sale de `carteraDeIdentidad` (mismos permisos que la bóveda). Pólizas AJENAS solo con
+  «Acceso total», y el aviso se anota con `registrarUso`. El texto va a la pantalla de bloqueo: sin
+  importes, matrícula ni **tipo de siniestro** (puede ser dato de salud).
+- 🚨 Semilla silenciosa por póliza **y lista** + ventana de 45 días: sin ellas, la primera pasada (o
+  pasar de «Solo ver» a «Acceso total») mandaría el historial entero como novedad. La clave de un paso
+  de tramitación es su **código EIAC** (`PasoTramitacion.codigo`), nunca el texto traducido.
+- Entrega al menos una vez; presupuesto de 50 s (`cortado` en la respuesta). Sin rotación: con cientos
+  de suscripciones habrá que añadir cursor. Cepos: `avisos-cima.test.ts` y
+  `test/regression-portal-avisos-cima.test.ts` (vistos morder).
+
 ## Estado (03/09/2026): DESPLEGADA en Vercel; Fase 1 mergeada + Fase 4 en código; DDL aplicado
 
 Fase 1 entró en `main` el 01/09/2026 con el PR **#1965** (`f12b7b46`): entrar con un código de un solo

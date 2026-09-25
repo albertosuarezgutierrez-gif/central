@@ -6,8 +6,8 @@ import { btnStyle } from '@/components/ui'
 /**
  * «Eliminar» una tarjeta del cubo Oportunidades de la ficha (25/09/2026), SIEMPRE con
  * confirmación: nada se borra de un clic. Dos casos, y ninguno borra filas:
- * - `historica`: póliza del volcado propuesta como lead → se marca en la póliza
- *   (`lead_descartado_at`) y se puede recuperar.
+ * - `poliza`: póliza del volcado propuesta como lead, o viva cancelada/vencida/en
+ *   competencia → se marca en la póliza (`lead_descartado_at`) y se puede recuperar.
  * - `oportunidad`: una abierta → se DESCARTA (perdida con motivo `error_alta`): queda
  *   su historial y no cuenta como venta perdida.
  */
@@ -19,7 +19,7 @@ async function post(url: string, method: 'POST' | 'PATCH', body: Record<string, 
 
 const MOTIVOS = ['Duplicada', 'Ya no tiene ese seguro', 'No es un cliente para esto', 'Otro'] as const
 
-export default function EliminarDeOportunidades(props: { tipo: 'historica'; polizaId: string; oportunidadId?: string } | { tipo: 'oportunidad'; oportunidadId: string }) {
+export default function EliminarDeOportunidades(props: { tipo: 'poliza'; polizaId: string; oportunidadId?: string } | { tipo: 'oportunidad'; oportunidadId: string }) {
   const router = useRouter()
   const [abierto, setAbierto] = useState(false)
   const [motivo, setMotivo] = useState<string>('')
@@ -38,7 +38,7 @@ export default function EliminarDeOportunidades(props: { tipo: 'historica'; poli
         const e = await post('/api/correduria/oportunidad', 'POST', { id: props.oportunidadId, accion: 'perder', motivo: 'error_alta', detalle: texto })
         if (e) return setError(e)
       }
-      if (props.tipo === 'historica') {
+      if (props.tipo === 'poliza') {
         const e = await post('/api/correduria/poliza', 'PATCH', { id: props.polizaId, campo: 'lead_descartado', descartar: true, motivo: texto })
         if (e) return setError(props.oportunidadId ? `Se descartó su seguimiento, pero la póliza no se ha quitado: ${e}` : e)
       }
@@ -70,7 +70,7 @@ export default function EliminarDeOportunidades(props: { tipo: 'historica'; poli
       <input value={detalle} onChange={e => setDetalle(e.target.value)} maxLength={200} placeholder={motivo === 'Otro' ? 'Cuéntalo (obligatorio)' : 'Detalle (opcional)'}
         style={{ minHeight: 44, borderRadius: 8, border: '1px solid var(--border)', padding: '0 10px', fontSize: 14 }} />
       <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-        {props.tipo === 'historica'
+        {props.tipo === 'poliza'
           ? 'No se borra la póliza: deja de salir como oportunidad y se puede recuperar.'
           : 'Se descarta: queda su historial y no cuenta como venta perdida.'}
       </span>
@@ -86,7 +86,7 @@ export default function EliminarDeOportunidades(props: { tipo: 'historica'; poli
   )
 }
 
-/** Deshace un «Eliminar» de una póliza histórica: vuelve a salir como oportunidad. */
+/** Deshace un «Eliminar» de una póliza: vuelve a salir como oportunidad. */
 export function RecuperarLead({ polizaId }: { polizaId: string }) {
   const router = useRouter()
   const [ocupado, setOcupado] = useState(false)

@@ -222,18 +222,22 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
       )}
     </>
   )
-  const tarjeta = <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
-  // «Eliminar» va FUERA del enlace (un botón dentro de un <a> no es válido) y solo en
-  // Oportunidades: la póliza histórica se marca (y su seguimiento abierto, si lo hay, se descarta);
-  // una oportunidad abierta suelta, se descarta.
-  // Una póliza perdida de la cartera viva no se ofrece: es un hecho, no una tarjeta que sobre.
+  // «Eliminar» va DENTRO del marco de la tarjeta pero FUERA del enlace (un botón dentro de
+  // un <a> no es válido): suelto debajo parecía una acción de todo el cubo (25/09/2026).
+  // Solo en Oportunidades: una póliza (del volcado o viva cancelada/vencida) se marca y su
+  // seguimiento abierto, si lo hay, se descarta; una oportunidad abierta suelta, se descarta.
   const abiertaDe = (o: OportunidadDeCliente | null) => o !== null && (ESTADOS_ABIERTOS as readonly string[]).includes(o.estado) ? o.id : undefined
   const quitar = !eliminable ? null
-    : s.clase === 'poliza' && s.historica ? <EliminarDeOportunidades tipo="historica" polizaId={s.id} oportunidadId={abiertaDe(s.oportunidad)} />
+    : s.clase === 'poliza' ? <EliminarDeOportunidades tipo="poliza" polizaId={s.id} oportunidadId={abiertaDe(s.oportunidad)} />
       : s.clase === 'oportunidad' && abiertaDe(s.oportunidad) ? <EliminarDeOportunidades tipo="oportunidad" oportunidadId={s.oportunidad.id} />
         : null
-  if (!quitar) return tarjeta
-  return <div style={{ display: 'grid', gap: 6, alignContent: 'start' }}>{tarjeta}{quitar}</div>
+  if (!quitar) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
+  return (
+    <div style={{ ...tarjetaSeguro, gap: 8 }}>
+      <Link href={href} prefetch={false} style={{ display: 'grid', gap: 4, alignContent: 'start', color: 'inherit', textDecoration: 'none' }}>{cuerpo}</Link>
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, display: 'grid' }}>{quitar}</div>
+    </div>
+  )
 }
 
 function Chip({ a }: { a: Aviso }) {

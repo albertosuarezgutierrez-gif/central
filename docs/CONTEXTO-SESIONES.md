@@ -13,11 +13,16 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 **(25/09/2026)** 🚨 **Los crons de asegura NUNCA se ejecutaron**: el middleware no exentaba `/api/cron` y Vercel recibía 307→/login
-(felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez:
-`seguros.felicitacion` vacía y 0 correos en Resend. Arreglo: `/api/cron` a PUBLIC (cada ruta exige `CRON_SECRET`) + cepo en
-`test/regression-asegura-operador-publico.test.ts` (visto rojo). Remitente real de la correduría: `no-reply@envios.grupoasegura.es`
-con Reply-To `hola@`; `grupoasegura.es` está `failed` en Resend (re-verificación lanzada, DNS en IONOS). Alberto quiere TODO desde
-`hola@`: cambiar `ASEGURA_MAIL_FROM` SOLO cuando Resend diga `verified`. Felicitación rediseñada con logo PNG (`asegura-web/public/brand`).
+(felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez
+(`seguros.felicitacion` vacía, 0 correos en Resend). Arreglo: `/api/cron` a PUBLIC + cepo (#3602, visto rojo). Felicitación rediseñada
+con logo PNG (`asegura-web/public/brand`). ✉️ **Remitente de TODA la correduría = `hola@grupoasegura.es`** desde el 25/09: dominio
+verificado en Resend (DNS en IONOS por Alberto) y `ASEGURA_MAIL_FROM`/`PORTAL_MAIL_FROM` cambiadas. `envios.grupoasegura.es` queda de
+reserva unos días; luego borrar de Resend e IONOS.
+
+**(25/09/2026)** 📡 **Portal: avisos push de CIMA + web sin animaciones de aparición** (a raíz de la demo con Pablo
+Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/devuelto, siniestro) con interruptores por
+tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
+✅ Borrado (25/09, confirmado por Alberto) el vínculo `16a27091` (hijo, Guzmán Lozano) → ficha del PADRE: lo creó el portal a las 10:10 porque el PADRE añadió el correo del hijo a su propia ficha desde «Mis datos» a las 10:07. **Fase 0 sin hacer:** revalidar vínculos `email_hash` cuando cambia el correo de una ficha.
 
 **(25/09/2026)** 🕓 **CIMA: descargas fijas a las 16:00 y 20:30 de Madrid** (recomendación de CIMA; `?franja=` en
 `cima-pull-respaldo`, disparan siempre y solo avisan si fallan). El respaldo condicional de la mañana pasa a las 09:00 UTC (11:00 Madrid, decisión de Alberto).
@@ -593,6 +598,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 `/api/cron/cima-pull-respaldo` (08:00/14:00, solo dispara si Actions no corrió) — `ASEGURA_CRM_CRON_SECRET` ya
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
+
+## (25/09/2026) Ficha cliente: «Eliminar» también en pólizas VIVAS canceladas de Oportunidades
+El botón quedaba suelto bajo la rejilla y parecía «borrar todas»: ahora va DENTRO del marco de su tarjeta.
+Y se puede quitar de Oportunidades una póliza viva cancelada/vencida/competencia (antes asegura lo rechazaba con
+422): mismo `lead_descartado_at`, no borra nada, se recupera desde «Eliminadas de oportunidades»; su ramo no
+resucita una del volcado. Guarda del lado de asegura: una viva en vigor sigue sin poder quitarse.
 
 ## (25/09/2026) Portal asegura: «Historial de compañías» en la ficha de la póliza
 - Alberto (captura Kona Mapfre→Reale): el cliente debe ver cuándo cambió y de qué compañía a cuál. Antes solo había
