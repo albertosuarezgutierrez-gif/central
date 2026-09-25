@@ -3,7 +3,6 @@ import assert from 'node:assert/strict'
 import {
   alcancePedible,
   alcancePeticionResoluble,
-  caducidadPendiente,
   ALCANCES,
   ALCANCES_CONCEDIBLES,
   DIAS_REVISION,
@@ -74,18 +73,21 @@ test('sin fecha de caducidad (NULL) no caduca nunca: ni pendiente ni aceptada', 
   assert.equal(estadoAutorizacion({ aceptadoEn: AYER, caducaEn: null, revocadoEn: HOY }, HOY), 'revocada')
 })
 
-test('la revision anual se pide al año de aceptar o de la ultima revision, y no corta nada', () => {
+test('la revision anual se pide al año de OFRECERLA o de la ultima revision, y no corta nada', () => {
   assert.equal(DIAS_REVISION, 365)
-  const aceptada = new Date('2026-09-03T10:00:00Z')
+  const ofrecida = new Date('2026-09-03T10:00:00Z')
   const casiUnAnio = new Date('2027-09-02T10:00:00Z')
   const unAnio = new Date('2027-09-03T10:00:00Z')
-  const base = { aceptadoEn: aceptada, caducaEn: null, revocadoEn: null, revisadoEn: null }
+  // Aceptada tarde: la cuenta NO arranca en la aceptación.
+  const base = { otorgadoEn: ofrecida, aceptadoEn: new Date('2027-06-01T10:00:00Z'), caducaEn: null, revocadoEn: null, revisadoEn: null }
   assert.equal(pideRevision(base, casiUnAnio), false)
   assert.equal(pideRevision(base, unAnio), true)
   // Revisar reinicia la cuenta.
   assert.equal(pideRevision({ ...base, revisadoEn: new Date('2027-09-03T10:00:00Z') }, new Date('2028-01-01T00:00:00Z')), false)
-  // Una pendiente o una revocada no piden revision: no dan nada que revisar.
-  assert.equal(pideRevision({ ...base, aceptadoEn: null }, unAnio), false)
+  // Una PENDIENTE tampoco caduca, así que también se revisa: es la oferta olvidada.
+  assert.equal(pideRevision({ ...base, aceptadoEn: null }, casiUnAnio), false)
+  assert.equal(pideRevision({ ...base, aceptadoEn: null }, unAnio), true)
+  // Una revocada no: ya no da nada que revisar.
   assert.equal(pideRevision({ ...base, revocadoEn: casiUnAnio }, unAnio), false)
   // Y pedir revision NO la invalida: sigue vigente mientras nadie la revoque.
   assert.equal(autorizacionVigente(base, new Date('2030-01-01T00:00:00Z')), true)
@@ -275,9 +277,4 @@ test('una peticion solo pide «Solo ver»; al resolver acepta tambien el `ver` d
   assert.equal(alcancePeticionResoluble('ver'), 'ver')
   assert.equal(alcancePeticionResoluble('ver_economico'), 'ver_economico')
   assert.equal(alcancePeticionResoluble('total'), null)
-})
-
-test('una pendiente caduca a los 30 dias', () => {
-  const d = new Date('2026-09-25T10:00:00Z')
-  assert.equal(caducidadPendiente(d).toISOString(), '2026-10-25T10:00:00.000Z')
 })

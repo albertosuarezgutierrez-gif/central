@@ -310,3 +310,11 @@ test('la revisión anual de un acceso que DI es un aviso; solo si está vigente 
   // No afirma que se vaya a cortar nada: la revisión recuerda, no caduca.
   assert.match(r.avisos[0]!.detalle, /si no haces nada, lo sigue teniendo/)
 })
+
+test('una oferta PENDIENTE de hace un año cambia la pregunta, sin duplicar aviso', () => {
+  const otorgadas = [auto({ id: 'vieja', estado: 'pendiente', pideRevision: true }), auto({ id: 'nueva', estado: 'pendiente' })]
+  const r = avisosDe({ autorizaciones: { otorgadas, recibidas: [] }, obligaciones: [], peticiones: [], datos: [], carnets: [], hoy: HOY })
+  assert.deepEqual(r.avisos.map((a) => [a.id, a.tipo]), [['vieja', 'autorizacion_sin_aceptar'], ['nueva', 'autorizacion_sin_aceptar']])
+  assert.match(r.avisos[0]!.detalle, /hace más de un año/)
+  assert.doesNotMatch(r.avisos[1]!.detalle, /hace más de un año/)
+})

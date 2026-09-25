@@ -958,9 +958,19 @@ function RevisarYAmpliar({
     <>
       {a.pideRevision && (
         <div className="aviso-linea">
-          <strong>¿Sigues dejando ver tus seguros a {quien}?</strong> Hace más de un año que lo aceptó (o
-          que lo revisaste). Si ya no hace falta, revócalo; si sí, confírmalo y no te lo volvemos a
-          preguntar hasta dentro de un año.
+          {a.estado === 'pendiente' ? (
+            <>
+              <strong>¿Sigues queriendo darle acceso a {quien}?</strong> Se lo ofreciste hace más de un año
+              (o lo revisaste) y todavía no lo ha aceptado. Si ya no hace falta, retíralo; si sí,
+              confírmalo y no te lo volvemos a preguntar hasta dentro de un año.
+            </>
+          ) : (
+            <>
+              <strong>¿Sigues dejando ver tus seguros a {quien}?</strong> Hace más de un año que se lo diste (o
+              que lo revisaste). Si ya no hace falta, revócalo; si sí, confírmalo y no te lo volvemos a
+              preguntar hasta dentro de un año.
+            </>
+          )}
           <div className="editor-acciones" style={{ marginTop: 10 }}>
             <button type="button" className="boton" onClick={() => void mantener()} disabled={enviando !== null}>
               {enviando === 'mantener' ? 'Guardando…' : 'Sí, lo mantengo'}

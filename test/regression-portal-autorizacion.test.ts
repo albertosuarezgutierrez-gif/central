@@ -180,10 +180,14 @@ test('aceptada NO caduca: toda via que acepta pone caducaEn a null en el mismo u
   }
 })
 
-test('una PENDIENTE si caduca: conceder y ampliar usan caducidadPendiente', () => {
+test('ni la oferta PENDIENTE caduca: conceder, ampliar y corredor escriben caducaEn null', () => {
+  // Decisión de Alberto (25/09/2026): la oferta olvidada la cubre la revisión
+  // anual, no una caducidad. Sin fecha en las TRES vías que crean pendientes.
   const src = leer('apps/asegura-portal/lib/autorizaciones.ts')
-  assert.equal((src.match(/caducaEn: caducidadPendiente\(hoy\)/g) ?? []).length, 2)
-  assert.match(leer('apps/asegura/lib/cartera-relaciones.ts'), /caducaEn: caducidadPendiente\(ahora\)/)
+  assert.doesNotMatch(src, /caducidadPendiente/)
+  assert.doesNotMatch(leer('apps/asegura/lib/cartera-relaciones.ts'), /caducidadPendiente/)
+  // Y la revisión cuenta desde que se OFRECE: sin `otorgadoEn` la oferta vieja no avisa.
+  assert.match(src, /otorgadoEn: f\.otorgadoEn,\n\s*\},\n\s*hoy,/)
 })
 
 test('el acceso total NO se pide: peticiones validan con ALCANCES_PEDIBLES', () => {

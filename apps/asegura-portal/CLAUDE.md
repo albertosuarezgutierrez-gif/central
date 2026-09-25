@@ -1845,8 +1845,10 @@ aditivo) **antes** de desplegar; `2026-09-25_b_portal_autorizacion_vivas_sin_cad
 `UPDATE … caduca_en = NULL`) **solo cuando `asegura-portal` y `asegura` ya sirven el código nuevo** — el
 cliente Prisma viejo declara `caducaEn` obligatorio y un NULL tumba la consulta entera.
 
-- **Pendiente sí caduca:** 30 días para aceptar (`caducidadPendiente`, `DIAS_PENDIENTE`); TODA vía que
-  acepta pone `caducaEn: null` en el mismo `update` (lo vigila `regression-portal-autorizacion`).
+- **Pendiente TAMPOCO caduca** (Alberto: «puede cancelar el acceso»). La oferta olvidada la cubre la
+  revisión anual, que **cuenta desde `otorgado_en`, no desde la aceptación** y cubre también las
+  pendientes (tarjeta + aviso `autorizacion_sin_aceptar` con otro texto, sin duplicar). Toda vía que
+  acepta pone `caducaEn: null` (limpia las pendientes viejas con fecha).
 - **`total` no se pide ni se invita:** peticiones validan con `ALCANCES_PEDIBLES` (`['ver_economico']`),
   no con `ALCANCES_CONCEDIBLES`; al resolver, `alcancePeticionResoluble` acepta también el `ver` de las
   peticiones antiguas. `ampliarATotal` repite las comprobaciones de `conceder` sobre el destinatario

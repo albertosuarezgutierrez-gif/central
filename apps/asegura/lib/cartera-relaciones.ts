@@ -35,7 +35,6 @@ import { WHERE_CARTERA_VIVA } from '@central/module-seguros'
 import {
   alcanceConcedible,
   autorizacionVigente,
-  caducidadPendiente,
   esAlcance,
   estadoAutorizacion,
   tituloRepresentacion,
@@ -638,9 +637,9 @@ export async function autorizarVer(
           otorgadoPorActor: entrada.actor,
           // 🚨 Desde el 25/09/2026 no caduca: dura hasta que se revoque, y una vez
           // al año el portal le pregunta al otorgante si la mantiene.
-          // Pendiente hasta que la acepte en el portal: 30 días para contestar.
-          // Al aceptarla pasa a NULL (no caduca).
-          caducaEn: caducidadPendiente(ahora),
+          // 🚨 Desde el 25/09/2026 no caduca, tampoco pendiente: una vez al año
+          // el portal le pregunta al otorgante si la mantiene.
+          caducaEn: null,
           versionTexto: alcance === 'total' ? TEXTO_AUTORIZACION_CORREDOR_TOTAL_V1 : TEXTO_AUTORIZACION_CORREDOR_V2,
         },
       })

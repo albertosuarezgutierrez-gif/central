@@ -155,8 +155,6 @@ export {
   alcancesConcedibles,
   tituloRepresentacion,
   DIAS_REVISION,
-  DIAS_PENDIENTE,
-  caducidadPendiente,
   ESTADOS_AUTORIZACION,
   alcanceConcedible,
   autorizacionVigente,

@@ -24,7 +24,7 @@
 --    cuarto. No exige `titulo_representacion` en BD: en una persona física no
 --    se representa a nadie; en una sociedad el título lo exige el código.
 --
--- Las PENDIENTES siguen caducando (30 días para aceptar; al aceptar, NULL).
+-- Las PENDIENTES tampoco caducan: entran en la revisión anual (desde `otorgado_en`).
 -- Las invitaciones y las peticiones siguen caducando: lo que caduca ahí es el
 -- ENLACE o la PETICIÓN, no el acceso. Y se quedan en «Solo ver» a propósito:
 -- `total` (DNI, IBAN, partes) no se reparte por un enlace de correo, donde una

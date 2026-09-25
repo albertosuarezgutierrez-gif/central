@@ -313,7 +313,13 @@ export function avisosDe(x: EntradaAvisos): Avisos {
         tipo: 'autorizacion_sin_aceptar',
         id: a.id,
         titulo: `${a.autorizadoNombre ?? 'La persona invitada'} aún no ha aceptado tu acceso`,
-        detalle: 'Hasta que acepte no ve nada. Puedes recordárselo o retirarlo.',
+        // Pasado un año la oferta sigue viva (no caduca), y la pregunta cambia:
+        // ya no es «recuérdaselo» sino «¿sigue haciendo falta?». Va en este
+        // mismo aviso y no en `acceso_por_revisar` para no pintar dos por fila.
+        detalle:
+          a.pideRevision === true
+            ? 'Se lo ofreciste hace más de un año y todavía no lo ha aceptado. Si ya no hace falta, retíralo.'
+            : 'Hasta que acepte no ve nada. Puedes recordárselo o retirarlo.',
         href: HREF_POR_TIPO.autorizacion_sin_aceptar,
       })
     }

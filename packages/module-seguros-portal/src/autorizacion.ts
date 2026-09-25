@@ -129,18 +129,6 @@ export function tituloRepresentacion(v: unknown): TituloRepresentacion | null {
  */
 export const DIAS_REVISION = 365
 
-/**
- * Lo que puede estar una autorización PENDIENTE de aceptar. Aceptada no caduca
- * (`caducaEn` pasa a NULL al aceptar), pero una oferta sin respuesta no puede
- * quedarse viva años: un «Acceso total» aceptado mucho después, tras un
- * divorcio, abriría DNI e IBAN sin que nadie lo haya vuelto a pensar.
- */
-export const DIAS_PENDIENTE = 30
-
-export function caducidadPendiente(desde: Date): Date {
-  return new Date(desde.getTime() + DIAS_PENDIENTE * 24 * 60 * 60 * 1000)
-}
-
 export const ESTADOS_AUTORIZACION = ['pendiente', 'vigente', 'caducada', 'revocada'] as const
 export type EstadoAutorizacion = (typeof ESTADOS_AUTORIZACION)[number]
 
@@ -172,17 +160,20 @@ export function autorizacionVigente(a: AutorizacionFechas, hoy: Date): boolean {
 /**
  * ¿Toca preguntarle al otorgante si mantiene este acceso?
  *
- * Solo sobre accesos VIGENTES (una pendiente todavía no da nada que revisar).
- * La cuenta arranca en la última revisión o, si nunca se revisó, en la
- * aceptación: es desde ahí desde cuando el otro está viendo.
+ * Sobre VIGENTES y también sobre PENDIENTES (25/09/2026, Alberto): una oferta
+ * tampoco caduca, así que la que nadie recuerda —un «Acceso total» ofrecido
+ * antes de un divorcio— tiene que volver a ponerse delante de quien la puede
+ * retirar. La cuenta arranca en la última revisión o, si nunca se revisó, en
+ * cuándo se OFRECIÓ (no en cuándo se aceptó): así una aceptada tarde no se
+ * salta la pregunta.
  */
 export function pideRevision(
-  a: AutorizacionFechas & { revisadoEn: Date | null },
+  a: AutorizacionFechas & { revisadoEn: Date | null; otorgadoEn: Date },
   hoy: Date,
 ): boolean {
-  if (estadoAutorizacion(a, hoy) !== 'vigente') return false
-  const desde = a.revisadoEn ?? a.aceptadoEn
-  if (desde === null) return false
+  const estado = estadoAutorizacion(a, hoy)
+  if (estado !== 'vigente' && estado !== 'pendiente') return false
+  const desde = a.revisadoEn ?? a.otorgadoEn
   return hoy.getTime() - desde.getTime() >= DIAS_REVISION * 24 * 60 * 60 * 1000
 }
 

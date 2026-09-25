@@ -32,7 +32,6 @@
 import {
   alcanceConcedible,
   alcancesConcedibles,
-  caducidadPendiente,
   esAlcance,
   estadoAutorizacion,
   pideRevision,
@@ -647,7 +646,13 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
       caducaEn: f.caducaEn,
       revocadoEn: f.revocadoEn,
       pideRevision: pideRevision(
-        { aceptadoEn: f.aceptadoEn, caducaEn: f.caducaEn, revocadoEn: f.revocadoEn, revisadoEn: f.revisadoEn },
+        {
+          aceptadoEn: f.aceptadoEn,
+          caducaEn: f.caducaEn,
+          revocadoEn: f.revocadoEn,
+          revisadoEn: f.revisadoEn,
+          otorgadoEn: f.otorgadoEn,
+        },
         hoy,
       ),
       // `null` en los dos casos que son «no lo sabemos»: no se ha pedido
@@ -950,9 +955,9 @@ export async function conceder(datos: {
     polizaId,
     tituloRepresentacion: titulo,
     otorgadoPorIdentidadId: identidadId,
-    // Mientras está PENDIENTE caduca a los 30 días; al aceptarla pasa a NULL
-    // (sin caducidad, 25/09/2026) y la revisión anual la pide `pideRevision`.
-    caducaEn: caducidadPendiente(hoy),
+    // Sin caducidad, tampoco mientras está pendiente (25/09/2026). La revisión
+    // anual la pide `pideRevision`, que cuenta desde que se ofrece.
+    caducaEn: null,
     // Qué texto aceptó. Sin esto el consentimiento no se puede demostrar — y por
     // eso hay una versión por permiso y por quién cede: la de «Solo ver» de una
     // persona afirma «no verá mi IBAN», que en «Acceso total» es falso.
@@ -1148,8 +1153,7 @@ export async function ampliarATotal(datos: {
     tituloRepresentacion: titulo,
     origen: 'portal',
     otorgadoPorIdentidadId: datos.identidadId,
-    // Pendiente: 30 días para aceptarla; al aceptar pasa a NULL.
-    caducaEn: caducidadPendiente(hoy),
+    caducaEn: null,
     versionTexto: textoDeConcesion('total', tipo).version,
     ip: datos.ip,
     userAgent: datos.userAgent,
@@ -1297,7 +1301,8 @@ export async function resolver(datos: {
         mensaje: 'Tu acceso a esa ficha es de consulta: esto lo confirma quien la gestiona.',
       }
     }
-    if (estado !== 'vigente') {
+    // Vigente o pendiente: las dos entran en la revisión anual.
+    if (estado !== 'vigente' && estado !== 'pendiente') {
       return {
         ok: false,
         error: estado === 'revocada' ? 'ya_revocada' : 'no_pendiente',
