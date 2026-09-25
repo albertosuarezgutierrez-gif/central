@@ -587,6 +587,13 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Portal asegura: «Historial de compañías» en la ficha de la póliza
+- Alberto (captura Kona Mapfre→Reale): el cliente debe ver cuándo cambió y de qué compañía a cuál. Antes solo había
+  un eslabón (`sustituyeA`) y la frase usaba el VENCIMIENTO de Mapfre (24/09) como si fuera la fecha del cambio.
+- Nuevo `lib/historial-companias.ts` (+6 tests, cepo visto fallar): recorre la cadena `sustituyeAId` en los dos
+  sentidos sobre lo que ESE lector ve; fecha del cambio = inicio de la nueva (22/09); sin fecha, no se inventa.
+- `PolizaPortal.cambiosCompania` + sección en `/boveda/poliza/[id]` (también en la ficha de la vieja, con enlace).
+
 ## (25/09/2026) Oportunidades: se gestionan DENTRO de la ficha del cliente (PR #3590)
 - Alberto: la página aparte «ocupa mucha pantalla». La fila de cada oportunidad (pestaña Oportunidades) se despliega
   con «Gestionar ▾» y trae estado, acciones, **datos para tarificar** (botón al tarificador del ramo + `PedirDatos`),

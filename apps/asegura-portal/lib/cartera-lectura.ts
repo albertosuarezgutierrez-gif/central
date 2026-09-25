@@ -70,6 +70,7 @@ import { importeEiac, interpretarCapital, sustituidasARetirar, vigenciaPoliza, W
 import { decryptField } from '@central/module-seguros-pii'
 
 import { prisma } from './db'
+import { historialCompanias, type EslabonHistorial } from './historial-companias'
 import { getIdentidad } from './session'
 
 /**
@@ -172,6 +173,9 @@ export type PolizaPortal = {
    * en `TitularPortal.polizas` y solo `carteraALaVista()` la quita, para PINTAR la bóveda.
    */
   sustituidaPor: { compania: string; desde: Date | null } | null
+  /** Cambios de compañía de este seguro, de la más antigua a la actual (`lib/historial-companias.ts`).
+   *  `[]` = no hay cambio o este lector no ve la otra póliza. Se decide POR LECTOR, como `sustituyeA`. */
+  cambiosCompania: EslabonHistorial[]
   /**
    * De dónde viene la fila, tal cual está en la BD. NO es para pintarlo: es lo
    * que necesitan aguas abajo (`lib/obligaciones.ts`) para volver a preguntar
@@ -781,6 +785,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       // Los dos se deciden POR LECTOR en `titular()`, con lo que ese lector puede ver.
       sustituyeA: null,
       sustituidaPor: null,
+      cambiosCompania: [],
       procedencia: { importRef: p.importRef, eiacXmlHash: p.eiacXmlHash },
       prima: ve.prima
         ? {
@@ -889,6 +894,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       p.sustituyeA = v ? { compania: v.compania, fechaVencimiento: v.fechaVencimiento } : null
       const n = porId.get(retirar.get(p.id) ?? '')
       p.sustituidaPor = n ? { compania: n.compania, desde: n.fechaInicio } : null
+      p.cambiosCompania = historialCompanias(p.id, suyas)
     }
     return {
       clienteId,
