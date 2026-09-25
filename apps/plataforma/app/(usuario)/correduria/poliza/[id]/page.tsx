@@ -194,7 +194,7 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
             {p.fechaInicio && <> Esta anualidad empezó el {fmt(p.fechaInicio)}.</>}
           </p>
           <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
-          <PresupuestosPoliza polizaId={p.id} />
+          <PresupuestosPoliza polizaId={p.id} ramo={p.tipo} />
           <CartaMediadorPoliza polizaId={p.id} />
         </Tarjeta>
       ),

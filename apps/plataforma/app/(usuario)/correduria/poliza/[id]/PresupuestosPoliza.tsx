@@ -7,6 +7,7 @@ import {
 } from '@/lib/presupuesto-asegura'
 import { eur } from '@/lib/dinero'
 import { btnStyle } from '@/components/ui'
+import { preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades } from '@central/module-seguros'
 
 /**
  * Los presupuestos de esta póliza y su aviso al cliente (spec 2026-09-21, PR 3).
@@ -15,7 +16,7 @@ import { btnStyle } from '@/components/ui'
  * WhatsApp lo manda él desde su móvil (aquí solo se abre con el texto escrito), y por eso
  * «enlazado» no es «enviado» hasta que pulse «Ya lo he mandado».
  */
-export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
+export default function PresupuestosPoliza({ polizaId, ramo }: { polizaId: string; ramo?: string | null }) {
   const [lista, setLista] = useState<PresupuestoEnLista[] | null | 'error'>(null)
   const [datosEmision, setDatosEmision] = useState<Record<string, unknown>>({})
   const [ocupado, setOcupado] = useState<string | null>(null)
@@ -87,7 +88,7 @@ export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
               const d = fraseDatosEmision(datosEmision[p.clienteId])
               return <span style={{ fontSize: 13, color: d.alerta ? 'var(--negative)' : 'var(--muted)' }}>{d.texto}</span>
             })()}
-            <Necesidades p={p} deshabilitado={!libre} onGuardar={(texto) => void patch(p, { accion: 'necesidades', texto })} />
+            <Necesidades p={p} ramo={ramo ?? null} deshabilitado={!libre} onGuardar={(texto, respuestas) => void patch(p, { accion: 'necesidades', texto, respuestas })} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {a.avisar && (
                 <button type="button" disabled={!libre} style={btnStyle('primario')} onClick={() => {
@@ -137,29 +138,54 @@ export default function PresupuestosPoliza({ polizaId }: { polizaId: string }) {
 const NOTA: React.CSSProperties = { margin: 0, fontSize: 13, color: 'var(--muted)' }
 
 /**
- * Exigencias y necesidades del cliente (IDD, art. 20 Ley 16/2018). Sin ellas asegura no deja avisarle:
- * se escriben a partir de lo que ha contado y son lo que luego firma con la aceptación.
+ * Exigencias y necesidades del cliente (IDD, art. 20 Ley 16/2018). Sin ellas asegura no deja avisarle.
+ * Cuestionario cerrado por ramo (`preguntasNecesidades`): se guarda como la declaración de texto de
+ * siempre, que es lo que el cliente firma con la aceptación, y las respuestas van a la auditoría.
  */
-function Necesidades({ p, deshabilitado, onGuardar }: { p: PresupuestoEnLista; deshabilitado: boolean; onGuardar: (t: string) => void }) {
+function Necesidades({ p, ramo, deshabilitado, onGuardar }: {
+  p: PresupuestoEnLista; ramo: string | null; deshabilitado: boolean
+  onGuardar: (texto: string, respuestas: Record<string, string>) => void
+}) {
   const editable = necesidadesEditables(p.estado)
-  const [texto, setTexto] = useState(p.necesidades ?? '')
-  useEffect(() => { setTexto(p.necesidades ?? '') }, [p.necesidades])
+  const preguntas = preguntasNecesidades(ramo)
+  const [resp, setResp] = useState<Record<string, string>>({})
+  const [otras, setOtras] = useState('')
   if (!editable) {
     return p.necesidades
       ? <span style={NOTA}>Necesidades: «{p.necesidades}»</span>
       : <span style={NOTA}>Necesidades: no constan por escrito.</span>
   }
+  const v = validarRespuestasNecesidades(ramo, resp)
+  const texto = textoNecesidades(ramo, resp, otras)
+  const pendientes = v.ok ? 0 : v.faltan.length + v.invalidas.length
   return (
     <details open={!p.necesidades}>
       <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44, display: 'flex', alignItems: 'center', color: p.necesidades ? 'var(--muted)' : 'var(--negative)' }}>
-        {p.necesidades ? `Necesidades: «${p.necesidades.length > 80 ? `${p.necesidades.slice(0, 80)}…` : p.necesidades}»` : 'Falta escribir sus necesidades: sin ellas no se le puede avisar'}
+        {p.necesidades ? `Necesidades: «${p.necesidades.length > 80 ? `${p.necesidades.slice(0, 80)}…` : p.necesidades}»` : 'Falta el cuestionario de necesidades: sin él no se le puede avisar'}
       </summary>
-      <div style={{ display: 'grid', gap: 8 }}>
-        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={3} maxLength={1500}
-          placeholder="Qué quiere asegurar, qué coberturas pide, qué le importa (precio, franquicia, taller…)"
-          style={{ width: '100%', boxSizing: 'border-box', fontSize: 14, padding: '8px 10px' }} />
-        <button type="button" disabled={deshabilitado || texto.trim().length < 15} onClick={() => onGuardar(texto)}
-          style={{ ...btnStyle('secundario'), minHeight: 44, justifySelf: 'start' }}>Guardar necesidades</button>
+      <div style={{ display: 'grid', gap: 10 }}>
+        {p.necesidades && <span style={NOTA}>Guardado ahora: «{p.necesidades}». Rellenar el cuestionario lo sustituye.</span>}
+        {preguntas.map((q) => (
+          <label key={q.id} style={{ display: 'grid', gap: 4, fontSize: 14 }}>
+            {q.texto}
+            <select value={resp[q.id] ?? ''} onChange={(e) => setResp((r) => ({ ...r, [q.id]: e.target.value }))}
+              style={{ minHeight: 44, fontSize: 14, padding: '6px 8px', maxWidth: '100%' }}>
+              <option value="">— Elige —</option>
+              {q.opciones.map((o) => <option key={o.valor} value={o.valor}>{o.texto}</option>)}
+            </select>
+          </label>
+        ))}
+        <label style={{ display: 'grid', gap: 4, fontSize: 14 }}>
+          Algo más que haya pedido (opcional)
+          <textarea value={otras} onChange={(e) => setOtras(e.target.value)} rows={2} maxLength={600}
+            placeholder="Taller concertado, una cobertura concreta…"
+            style={{ width: '100%', boxSizing: 'border-box', fontSize: 14, padding: '8px 10px' }} />
+        </label>
+        {v.ok && <span style={NOTA}>Quedará así (y es lo que el cliente firma): «{texto}»</span>}
+        <button type="button" disabled={deshabilitado || !v.ok} onClick={() => v.ok && onGuardar(texto, v.respuestas)}
+          style={{ ...btnStyle('secundario'), minHeight: 44, justifySelf: 'start' }}>
+          {v.ok ? 'Guardar necesidades' : `Faltan ${pendientes} respuesta(s)`}
+        </button>
       </div>
     </details>
   )
