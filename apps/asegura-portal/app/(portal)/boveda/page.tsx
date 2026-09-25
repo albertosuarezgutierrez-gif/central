@@ -613,9 +613,9 @@ export default async function Boveda({
 
           `conNombre` pasa a `false` a propósito: el nombre ya lo dice la
           cabecera del plegable, y repetirlo dentro es la duplicación que el
-          12/09 obligó a quitar arriba. Lo que NO cambia es el chip de titular
-          de cada fila, que dice algo distinto —que esa póliza no es tuya— y
-          viaja con la fila. */}
+          12/09 obligó a quitar arriba. Por lo mismo, desde el 25/09/2026 las
+          filas ya no llevan el chip «De <nombre>»: dentro de este plegable lo
+          dice su cabecera. */}
       {bloquesAparte.flatMap((b) =>
         b.titulares.map((t) => (
           <GrupoPlegable

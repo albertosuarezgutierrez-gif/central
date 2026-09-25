@@ -27,9 +27,10 @@ import { ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBien } from './PolizaV
  *   sin cobertura sin que se entere, así que **no puede quedar detrás de un
  *   clic**. Va como chip de peligro en la fila; el aviso entero, con la acción
  *   al lado, sigue en la ficha.
- * - **De quién es**, cuando no es tuya. Misma razón que la etiqueta de la
- *   tarjeta: quien cree que la póliza del coche de su padre es suya no llama a
- *   la compañía cuando hay que llamar.
+ * - **De quién es**, cuando no es tuya — pero lo dice la CABECERA del grupo
+ *   («Te ha dado acceso · Nombre»), no un chip por fila (25/09/2026, Alberto:
+ *   «Jose Suarez dos veces no es necesario»). Las ajenas solo se pintan dentro
+ *   de su plegable; `deOtro` queda para el filete (`data-de-otro`).
  *
  * Lo que se va a la ficha: prima, recibos, coberturas, siniestros abiertos y
  * los teléfonos de la compañía.
@@ -86,7 +87,6 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
             <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>
               {ESTADO[p.estado] ?? p.estado}
             </span>
-            {deOtro && <span className="chip acento">De {deOtro}</span>}
             {p.sustituyeA && <span className="chip">Sustituye a {p.sustituyeA.compania}</span>}
           </span>
         </span>

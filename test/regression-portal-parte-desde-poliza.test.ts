@@ -18,9 +18,11 @@
 //  1. que el botón de la ficha vuelva a apuntar a la pestaña pelada, sin póliza
 //  2. que el historial vuelva a colarse por delante del parte cuando se llega
 //     con una póliza concreta
-//  3. que «poner delante la compañía elegida» se convierta en «enseñar SOLO la
+//  3. que «enseñar primero la compañía elegida» se convierta en «enseñar SOLO la
 //     compañía elegida» — el recorte que le diría a quien llegó desde la póliza
-//     equivocada que no hay nadie más a quien llamar
+//     equivocada que no hay nadie más a quien llamar. Desde el 25/09/2026 las
+//     demás van PLEGADAS detrás de un botón (Alberto: «¿por qué salen todas?»),
+//     pero el botón existe siempre que haya más de una.
 //
 // Ninguno de los tres rompe nada, ninguno da error y los tres se descubren el
 // día que hace falta.
@@ -143,4 +145,12 @@ test('🚨 poner una compañia delante NO es quedarse solo con ella', () => {
   const tras = PARTE.slice(i, i + 260)
   assert.doesNotMatch(tras, /\.filter\(/, 'no se filtra la lista de compañías')
   assert.doesNotMatch(tras, /\.slice\(/, 'no se recorta la lista de compañías')
+})
+
+test('🚨 con una poliza elegida las demas companias se PLIEGAN, no desaparecen', () => {
+  // Plegar es lo que pidió Alberto; borrar es el fallo 3 de la cabecera.
+  assert.match(PARTE, /otrasPlegadas &&[\s\S]{0,80}<button[^>]*onClick=\{\(\) => setOtrasAbiertasPara\(clave\)\}/,
+    'con las demás plegadas tiene que haber un botón que las despliegue')
+  assert.match(PARTE, /Ver las otras \$\{numOtras\} compañías/, 'el botón dice cuántas hay detrás')
+  assert.match(PARTE, /const numOtras = canales\.length - 1/, 'el recuento sale de la lista ENTERA')
 })
