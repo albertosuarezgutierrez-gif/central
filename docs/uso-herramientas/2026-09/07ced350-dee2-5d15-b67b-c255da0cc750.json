@@ -1,0 +1,77 @@
+{
+ "sesion": "07ced350-dee2-5d15-b67b-c255da0cc750",
+ "inicio": "2026-09-25T15:06:45.664Z",
+ "fin": "2026-09-25T15:08:41.566Z",
+ "llamadas": 26,
+ "categorias": {
+  "otro": {
+   "llamadas": 4,
+   "chars_in": 279,
+   "chars_out": 524,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 3
+   }
+  },
+  "bash": {
+   "llamadas": 12,
+   "chars_in": 1535,
+   "chars_out": 4043,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 12
+   }
+  },
+  "sql": {
+   "llamadas": 5,
+   "chars_in": 1973,
+   "chars_out": 3149,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 5
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 70,
+   "chars_out": 3473,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 794,
+   "chars_out": 90604,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 1054,
+   "chars_out": 1068,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__get_commit": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  }
+ }
+}
