@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-25T08:46:49Z",
-  "sha": "7ac3eba00b91145c9cee724b59f9e5110345d061",
+  "generadoEn": "2026-09-25T09:45:01Z",
+  "sha": "b1fab7e48b9abc961b7affe924e2959c4357d68b",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -71473,7 +71473,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e51c26a88795"
+      "hash": "2d0f9388e9ec"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/DatosCompania.tsx",
@@ -72448,12 +72448,12 @@
           "exportada": false,
           "params": "{ a }: { a: Aviso }",
           "retorno": null,
-          "linea": 198
+          "linea": 214
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fc3b264a4afa"
+      "hash": "99646a682059"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabContactos.tsx",
@@ -72656,7 +72656,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "14607505f462"
+      "hash": "34ca70936670"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabPolizas.tsx",
@@ -101455,6 +101455,8 @@
       "ruta": "apps/plataforma/lib/correduria/seguros-cliente.ts",
       "ambito": "apps/plataforma",
       "exporta": [
+        "proximoAniversario",
+        "vencimientoOportunidad",
         "repartirSegurosCliente",
         "estaHuerfana"
       ],
@@ -101465,7 +101467,7 @@
           "exportada": false,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 53
+          "linea": 59
         },
         {
           "nombre": "porFecha",
@@ -101473,23 +101475,41 @@
           "exportada": false,
           "params": "a: string | null, b: string | null",
           "retorno": "number",
-          "linea": 57
+          "linea": 63
+        },
+        {
+          "nombre": "proximoAniversario",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string | null, hoy: Date",
+          "retorno": "string | null",
+          "linea": 77,
+          "resumen": "El próximo aniversario (hoy incluido) de una fecha de vencimiento ya pasada: un seguro anual renueva el mismo día cada año, así que un «vence 24/10/2023» anotado hace años dice «le toca el 24/10/2026»"
+        },
+        {
+          "nombre": "vencimientoOportunidad",
+          "kind": "function",
+          "exportada": true,
+          "params": "iso: string | null, hoy: Date",
+          "retorno": "string | null",
+          "linea": 99,
+          "resumen": "La fecha que se enseña para el vencimiento de una OPORTUNIDAD. Si venció hace menos de un año es una renovación que se acaba de pasar: se deja tal cual (atrasada, que es lo que hay que ver). Si es más"
         },
         {
           "nombre": "fechaDe",
           "kind": "function",
           "exportada": false,
-          "params": "s: SeguroCliente",
+          "params": "s: SeguroCliente, hoy: Date",
           "retorno": "string | null",
-          "linea": 65
+          "linea": 107
         },
         {
           "nombre": "repartirSegurosCliente",
           "kind": "function",
           "exportada": true,
-          "params": "{ polizas, declaradas, oportunidades }: { polizas: PolizaFicha[] declaradas: PolizaDeclaradaFicha[] | null /** `null` = no se pudieron leer. */ oportunidades: OportunidadDeCliente[] | null }",
+          "params": "{ polizas, declaradas, oportunidades, hoy = new Date() }: { polizas: PolizaFicha[] declaradas: PolizaDeclaradaFicha[] | null /** `null` = no se pudieron leer. */ oportunidades: OportunidadDeCliente[] | null /** Por defecto `new Date()`; par",
           "retorno": "RepartoSeguros",
-          "linea": 71
+          "linea": 116
         },
         {
           "nombre": "estaHuerfana",
@@ -101497,13 +101517,13 @@
           "exportada": true,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 151,
+          "linea": 224,
           "resumen": "Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4c694798c9a2"
+      "hash": "c5c942868805"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/sustituciones-aviso.ts",
@@ -147659,7 +147679,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ec107d77db38"
+      "hash": "80b7ab09b91e"
     },
     {
       "ruta": "packages/module-seguros/src/filtro-cartera.ts",
@@ -156219,6 +156239,6 @@
   ],
   "resumen": {
     "archivos": 3750,
-    "funciones": 11931
+    "funciones": 11933
   }
 }
