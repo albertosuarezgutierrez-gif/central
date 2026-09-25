@@ -577,6 +577,7 @@ export {
   FECHA_TEXTOS_WEB,
   lineaIdentificacion,
   remitenteCorreo,
+  REMITENTE_CORREDURIA,
   telefonoLegible,
   whatsappUrl,
   type CanalReclamacion,

@@ -27,6 +27,10 @@
       "schedule": "0 7 * * *"
     },
     {
+      "path": "/api/cron/felicitaciones?pase=tarde",
+      "schedule": "0 16 * * *"
+    },
+    {
       "path": "/api/cron/revision-anual",
       "schedule": "0 9 1 * *"
     }

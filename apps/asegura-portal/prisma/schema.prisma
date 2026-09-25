@@ -106,6 +106,8 @@ model PortalIdentidad {
   partes            PortalParteSiniestro[]
   hojas             PortalHojaQr[]
   pushSuscripciones PortalPushSuscripcion[]
+  avisosCima        PortalAvisoCima[]
+  avisosSilenciados PortalAvisoSilenciado[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -337,6 +339,35 @@ model PortalPushSuscripcion {
 
   @@index([identidadId])
   @@map("portal_push_suscripcion")
+  @@schema("seguros")
+}
+
+/// Novedad de CIMA ya sellada para una identidad (avisada, sembrada o silenciada).
+/// DDL: `prisma/sql/2026-09-25_c_portal_avisos_cima.sql`. Solo SELECT e INSERT.
+model PortalAvisoCima {
+  identidadId String   @map("identidad_id") @db.Uuid
+  clave       String
+  tipo        String
+  enviado     Boolean  @default(false)
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@id([identidadId, clave])
+  @@map("portal_aviso_cima")
+  @@schema("seguros")
+}
+
+/// Tipo de aviso de CIMA que el cliente apagó. Sin fila = encendido.
+model PortalAvisoSilenciado {
+  identidadId String   @map("identidad_id") @db.Uuid
+  tipo        String
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@id([identidadId, tipo])
+  @@map("portal_aviso_silenciado")
   @@schema("seguros")
 }
 

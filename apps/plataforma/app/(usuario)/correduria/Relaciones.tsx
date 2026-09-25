@@ -705,6 +705,11 @@ function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar,
   const ins = insigniaAcceso(a, ve)
   const viva = autorizacionViva(a)
   const color = COLOR_ACCESO[ins.tono]
+  // El formulario del alcance va PLEGADO detrás de su botón (25/09/2026): abierto
+  // por defecto, cada persona sin permiso pintaba un desplegable, un párrafo y un
+  // botón azul, y el caso normal —nadie ve nada de nadie— parecía una tarea
+  // pendiente. El alcance se sigue eligiendo a mano: solo cambia cuándo se ve.
+  const [abierto, setAbierto] = useState(false)
   return (
     <div style={{ borderLeft: `3px solid ${color}`, paddingLeft: 8, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, minWidth: 0 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', minWidth: 0 }}>
@@ -763,14 +768,22 @@ function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar,
           <button type="button" disabled={enCurso} onClick={() => onAutorizar(false)} style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
             🔒 {a?.estado === 'pendiente' ? 'Retirar la autorización anotada' : `Revocar: ${recibe} dejará de ver`}
           </button>
-        ) : formulario === null ? (
-          <button type="button" disabled={enCurso} onClick={() => onAutorizar(true)} style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}>
-            🔓 Anotar que {otorga} autoriza a {recibe} a ver sus seguros
+        ) : (
+          // Secundario, no primario: autorizar es la excepción, y dos botones
+          // azules por persona competían con lo único urgente (invitar a aceptar).
+          <button
+            type="button"
+            disabled={enCurso}
+            aria-expanded={formulario === null ? undefined : abierto}
+            onClick={() => (formulario === null ? onAutorizar(true) : setAbierto((v) => !v))}
+            style={{ ...btnStyle(abierto ? 'sutil' : 'secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+          >
+            {abierto ? 'Cancelar' : <>🔓 Anotar que {otorga} autoriza a {recibe} a ver sus seguros{formulario === null ? '' : '…'}</>}
           </button>
-        ) : null}
+        )}
       </div>
 
-      {!ve && !viva && formulario}
+      {!ve && !viva && abierto && formulario}
 
       {pie && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{pie}</div>}
 
@@ -937,7 +950,7 @@ function AnotarAlcance({ r, nombreFicha, enCurso, onAutorizar, esSociedad }: {
           }}
           style={{ ...btnStyle('primario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
         >
-          🔓 Anotar la autorización de {nombreFicha} a {r.nombre}
+          🔓 Anotar la autorización
         </button>
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)' }}>
