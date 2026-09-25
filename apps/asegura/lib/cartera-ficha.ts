@@ -452,7 +452,9 @@ async function datosDePolizas(
   idsPolizas: string[],
   numeros: Map<string, string | null>,
 ): Promise<DatosDePolizas | null> {
-  if (!dniLookupHash || idsPolizas.length === 0) return { fechaNacimiento: null, fechaCarnet: null, polizaNacimiento: null, polizaCarnet: null }
+  // Sin DNI no se ha mirado nada: `null` («no se sabe»), nunca «mirado, no hay».
+  if (!dniLookupHash) return null
+  if (idsPolizas.length === 0) return { fechaNacimiento: null, fechaCarnet: null, polizaNacimiento: null, polizaCarnet: null }
   try {
     const filas = await db.polizaInterviniente.findMany({
       where: { correduriaId, polizaId: { in: idsPolizas }, nifLookupHash: dniLookupHash },
@@ -735,7 +737,9 @@ export async function fichaCliente(
   )
   const declaradas = await listarDeclaradas(correduriaId, c.id, numerosPropios)
   const nacimientoPropio = normalizarFecha(descifrar(c.fechaNacimiento))
-  const deSusPolizas = await datosDePolizas(db, correduriaId, c.dniLookupHash ?? null, idsPolizas, new Map(c.polizas.map((p) => [p.id, p.numeroPoliza ?? null])))
+  // Solo pólizas de cartera VIVA: el volcado de 2013-2018 no es «lo que manda CIMA».
+  const idsVivas = c.polizas.filter((p) => esCarteraViva(p)).map((p) => p.id)
+  const deSusPolizas = await datosDePolizas(db, correduriaId, c.dniLookupHash ?? null, idsVivas, new Map(c.polizas.map((p) => [p.id, p.numeroPoliza ?? null])))
   const carnets = await listarCarnets(correduriaId, c.id, nacimientoPropio ?? deSusPolizas?.fechaNacimiento ?? null)
   // Solo lo que la ficha NO tiene: si ya consta (o está cifrado), manda la ficha.
   const dePolizas: DatosDePolizas | null = deSusPolizas && {

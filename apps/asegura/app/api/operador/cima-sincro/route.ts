@@ -16,7 +16,7 @@ export const maxDuration = 300
  *
  *   GET  → { estado:'ok', fichas, sinDatosCima, discrepancias[], rellenos, ilegibles }
  *   POST { accion:'rellenar'|'volcar', actor }                       → { aplicados, fallidos[] }
- *   POST { accion:'usar_cima'|'mantener', clienteId, campo, actor }  → { estado:'ok' } · 404 · 422
+ *   POST { accion:'usar_cima'|'mantener', clienteId, campo, valor, actor } → { estado:'ok' } · 404 · 409 (CIMA cambió) · 422
  */
 async function correduria(): Promise<{ r: NextResponse } | { id: string }> {
   if (!aseguraConfigurada()) return { r: NextResponse.json({ estado: 'sin_configurar' }) }
@@ -49,11 +49,13 @@ export const POST = auditado(async (req: Request) => {
     }
     if (accion === 'usar_cima' || accion === 'mantener') {
       const clienteId = typeof b?.clienteId === 'string' ? b.clienteId : ''
-      if (!/^[0-9a-f-]{36}$/i.test(clienteId) || !esCampoCima(b?.campo)) {
-        return NextResponse.json({ estado: 'invalida', motivo: 'Falta la ficha o el campo.' }, { status: 422 })
+      const valor = typeof b?.valor === 'string' ? b.valor : ''
+      if (!/^[0-9a-f-]{36}$/i.test(clienteId) || !esCampoCima(b?.campo) || valor.trim() === '') {
+        return NextResponse.json({ estado: 'invalida', motivo: 'Falta la ficha, el campo o el valor visto.' }, { status: 422 })
       }
-      const r = await decidirDiferenciaCima(c.id, clienteId, b.campo, accion, actor)
-      return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : r.estado === 'no_encontrado' ? 404 : 422 })
+      const r = await decidirDiferenciaCima(c.id, clienteId, b.campo, accion, actor, valor)
+      const status = r.estado === 'ok' ? 200 : r.estado === 'no_encontrado' ? 404 : r.estado === 'cambiado' ? 409 : 422
+      return NextResponse.json(r, { status })
     }
     return NextResponse.json({ estado: 'invalida', motivo: 'Acción no válida.' }, { status: 422 })
   } catch (e) {

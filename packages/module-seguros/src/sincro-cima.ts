@@ -35,7 +35,7 @@ export type FichaParaCima = {
   nombre: string | null
   fechaNacimiento: string | null
   fechaNacimientoIlegible: boolean
-  /** Fechas de sus carnés (`null` en la lista = fecha cifrada que no se abre). */
+  /** Fechas de sus carnés B (`null` en la lista = fecha cifrada que no se abre). */
   carnets: (string | null)[] | null
   telefonos: string[] | null
   emails: string[] | null
@@ -120,7 +120,9 @@ export function compararConCima(ficha: FichaParaCima, cima: DatosCima): Diferenc
   const nac = fechaCima(cima.fechaNacimiento)
   if (nac && !ficha.fechaNacimientoIlegible) {
     const propia = fechaCima(ficha.fechaNacimiento)
-    if (!propia) out.push({ campo: 'fechaNacimiento', accion: 'rellenar', ficha: null, cima: nac })
+    // Una fecha guardada en un formato raro NO es un hueco: se enseña tal cual y decide Alberto.
+    if (!propia && ficha.fechaNacimiento?.trim()) out.push({ campo: 'fechaNacimiento', accion: 'discrepa', ficha: ficha.fechaNacimiento.trim(), cima: nac })
+    else if (!propia) out.push({ campo: 'fechaNacimiento', accion: 'rellenar', ficha: null, cima: nac })
     else if (propia !== nac) out.push({ campo: 'fechaNacimiento', accion: 'discrepa', ficha: propia, cima: nac })
   }
 

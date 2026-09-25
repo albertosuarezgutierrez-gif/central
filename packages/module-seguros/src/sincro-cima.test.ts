@@ -37,3 +37,8 @@ test('huella: el mismo teléfono escrito distinto da la misma huella; otro valor
   assert.notEqual(huellaDecisionCima('telefono', '600112233'), huellaDecisionCima('telefono', '600112234'))
   assert.equal(fechaCima('04/03/1980'), '1980-03-04')
 })
+
+test('una fecha de nacimiento guardada en formato raro NO es un hueco: discrepa, no se pisa sola', () => {
+  const d = compararConCima({ ...vacia, fechaNacimiento: '1980/03/04' }, { ...cima, fechaCarnet: null, telefonos: [], emails: [] })
+  assert.deepEqual(d.map((x) => `${x.campo}:${x.accion}:${x.ficha}`), ['fechaNacimiento:discrepa:1980/03/04'])
+})

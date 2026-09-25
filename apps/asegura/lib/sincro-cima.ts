@@ -75,9 +75,11 @@ async function fichasVivas(correduriaId: string, soloCliente?: string) {
       fechaNacimiento: true,
       dniLookupHash: true,
       polizas: {
-        where: { mergedIntoPolizaId: null },
+        // Solo cartera VIVA: el volcado de 2013-2018 no es «lo que manda CIMA».
+        where: { AND: [{ mergedIntoPolizaId: null }, WHERE_CARTERA_VIVA] },
         select: { id: true, tipo: true, numeroPoliza: true, fechaInicio: true },
-        orderBy: [{ fechaInicio: 'desc' }],
+        // Las que no traen fecha, al final: si no, una sin fecha pasaría por la más reciente.
+        orderBy: [{ fechaInicio: { sort: 'desc', nulls: 'last' } }],
       },
     },
   })
@@ -107,7 +109,9 @@ async function cimaDe(correduriaId: string, c: Viva): Promise<DatosCimaInterno |
     const nac = descifrar(f.fechaNacimiento)
     if (!out.fechaNacimiento && nac) out.fechaNacimiento = nac
     const car = descifrar(f.fechaCarnet)
-    if (!out.fechaCarnet && car) { out.fechaCarnet = car; out.ramoCarnet = p ? String(p.tipo) : null }
+    // CIMA no dice el tipo de carné. Solo se toma el del conductor de un AUTO,
+    // que es el B; el de una moto (A, o B para 125 cc) no se sabe de qué es.
+    if (!out.fechaCarnet && car && p && String(p.tipo) === 'auto') { out.fechaCarnet = car; out.ramoCarnet = 'auto' }
     const tel = descifrar(f.telefono)
     if (tel) out.telefonos.push(tel)
     const em = descifrar(f.email)
@@ -119,7 +123,8 @@ async function cimaDe(correduriaId: string, c: Viva): Promise<DatosCimaInterno |
 
 async function fichaDe(correduriaId: string, c: Viva): Promise<FichaParaCima> {
   const [carnets, contactos] = await Promise.all([
-    prismaAsegura().clienteCarnetConducir.findMany({ where: { clienteId: c.id, correduriaId }, select: { fechaCarnet: true } }),
+    // Solo los B: es el único tipo con el que se compara lo de CIMA (ver `cimaDe`).
+    prismaAsegura().clienteCarnetConducir.findMany({ where: { clienteId: c.id, correduriaId, tipo: { equals: 'B', mode: 'insensitive' } }, select: { fechaCarnet: true } }),
     listarContactos(correduriaId, c.id),
   ])
   // Un contacto cifrado que no se abre podría ser justo el de CIMA: sin verlo no se compara.
@@ -197,17 +202,14 @@ async function aplicarCampo(correduriaId: string, a: Analisis, d: DiferenciaCima
       await db.cliente.update({ where: { id: clienteId }, data: { fechaNacimiento: encryptField(d.cima), updatedAt: new Date() } })
       break
     case 'fechaCarnet': {
-      const carnets = await db.clienteCarnetConducir.findMany({ where: { clienteId, correduriaId }, select: { id: true, tipo: true } })
-      const destino = carnets.length === 1 ? carnets[0] : carnets.find((k) => k.tipo.toUpperCase() === 'B')
-      if (destino) {
-        await db.clienteCarnetConducir.update({ where: { id: destino.id }, data: { fechaCarnet: encryptField(d.cima) } })
-      } else if (carnets.length === 0 && a.cima.ramoCarnet === 'auto') {
-        // CIMA no manda el tipo. El conductor de un turismo lleva el B; en
-        // cualquier otro ramo no se adivina y se deja para mano.
-        await db.clienteCarnetConducir.create({ data: { clienteId, correduriaId, tipo: 'B', fechaCarnet: encryptField(d.cima) } })
-      } else {
-        return { campo: d.campo, ok: false, motivo: 'CIMA no dice el tipo de carné' }
-      }
+      // Solo el carné B (la fecha viene del conductor de un auto). Nunca se toca otro tipo.
+      const b = await db.clienteCarnetConducir.findFirst({
+        where: { clienteId, correduriaId, tipo: { equals: 'B', mode: 'insensitive' } },
+        select: { id: true },
+        orderBy: { createdAt: 'asc' },
+      })
+      if (b) await db.clienteCarnetConducir.update({ where: { id: b.id }, data: { fechaCarnet: encryptField(d.cima) } })
+      else await db.clienteCarnetConducir.create({ data: { clienteId, correduriaId, tipo: 'B', fechaCarnet: encryptField(d.cima) } })
       break
     }
     case 'telefono':
@@ -258,11 +260,16 @@ export async function decidirDiferenciaCima(
   campo: CampoCima,
   decision: 'usar_cima' | 'mantener',
   actor: string,
-): Promise<{ estado: 'ok' } | { estado: 'no_encontrado' | 'fallo'; motivo: string }> {
+  /** El valor de CIMA que Alberto tenía en pantalla: se decide sobre ESE, no sobre el de ahora. */
+  valorVisto: string,
+): Promise<{ estado: 'ok' } | { estado: 'no_encontrado' | 'cambiado' | 'fallo'; motivo: string }> {
   const { lista } = await analizar(correduriaId, clienteId)
   const a = lista[0]
   const d = a?.diferencias.find((x) => x.campo === campo)
   if (!a || !d) return { estado: 'no_encontrado', motivo: 'Esa diferencia ya no existe (la ficha y CIMA coinciden).' }
+  if (huellaDecisionCima(campo, d.cima) !== huellaDecisionCima(campo, valorVisto)) {
+    return { estado: 'cambiado', motivo: 'CIMA ha mandado otro valor desde que cargaste la pantalla: recarga y vuelve a decidir.' }
+  }
   if (decision === 'usar_cima') {
     const r = await aplicarCampo(correduriaId, a, d, actor)
     return r.ok ? { estado: 'ok' } : { estado: 'fallo', motivo: r.motivo ?? 'no aplicado' }

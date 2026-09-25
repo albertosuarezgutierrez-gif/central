@@ -105,11 +105,11 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
                     <strong>{ROTULO_CAMPO_CIMA[d.campo as CampoCima]}</strong>: ficha «{d.ficha ?? '—'}» · CIMA «{d.cima}»
                   </span>
                   <button type="button" disabled={ocupado !== null} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}
-                    onClick={() => void enviar(clave, { accion: 'usar_cima', clienteId: f.clienteId, campo: d.campo })}>
+                    onClick={() => void enviar(clave, { accion: 'usar_cima', clienteId: f.clienteId, campo: d.campo, valor: d.cima })}>
                     {ocupado === clave ? '…' : 'Usar CIMA'}
                   </button>
                   <button type="button" disabled={ocupado !== null} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}
-                    onClick={() => void enviar(clave, { accion: 'mantener', clienteId: f.clienteId, campo: d.campo })}>
+                    onClick={() => void enviar(clave, { accion: 'mantener', clienteId: f.clienteId, campo: d.campo, valor: d.cima })}>
                     Mantener el mío
                   </button>
                 </div>
