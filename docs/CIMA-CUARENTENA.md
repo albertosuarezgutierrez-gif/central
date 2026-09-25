@@ -313,3 +313,8 @@ Queda en el repo solo la consulta de diagnóstico, **sin un solo `UPDATE`**:
 del emparejador (minúsculas con puntuación, `JUNK_POLIZA_NUMBERS`, longitud ≥5, placeholders fuera)
 y agrupa por correduría, porque una clave «parecida» cuenta colisiones que el emparejador no ve y se
 calla las que sí. Su veredicto por grupo: **19 rescatables, 10 sin fila de CIMA, 0 con dos vivas.**
+
+### ✅ Cerrado el 25/09/2026
+
+- **Datos:** ya no quedan colisiones rescatables. Las 19 duplicadas están fusionadas (`merged_into_poliza_id`) y hoy quedan 10 grupos, los 10 de «SIN CIMA» (volcado contra volcado), a los que no se cuelga nada. Los **52 recibos y 16 siniestros** que pasaron por `*_sin_poliza_review` están todos en `poliza_recibos` / `siniestros`, así que **no hace falta reprocesar**. Medido contra la BD.
+- **Código (asegura#854):** la salida (b) está hecha. Con ≥2 candidatas gana la ÚNICA de cartera viva, y así lo hacen recibos, siniestros, el núcleo de Occident y el índice CEF. La salida (a) también: la cuarentena distingue `poliza_ambigua` / `sin_poliza_en_cartera` / `clave_incompleta`. Con esto, la próxima vez que CIMA cree una fila junto a una del volcado ya no se va a cuarentena.
