@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** — IDD: cuestionario cerrado de exigencias y necesidades por ramo (motor, hogar y comunes) en el presupuesto de la ficha de póliza, en lugar del texto libre. Se guarda como la misma declaración de texto (`necesidades`, lo que el cliente firma; sin DDL) y las respuestas van a la auditoría del evento. Módulo puro `module-seguros/necesidades-idd.ts` (+5 tests, cepo visto fallar). Pendiente: avisar si la opción elegida no cubre algo pedido (las opciones aún no traen coberturas estructuradas).
+
 **(25/09/2026)** 🕒 **CIMA: respaldo del pull a las 07:00/14:00/18:00 UTC** (antes 08:00/14:00). Los `schedule` de Actions de
 `asegura` llegaron 4-6 h tarde el 24/09 y el de las 05:30 del 25/09 no había arrancado a las 06:47. La franja de las 18:00 dispara
 a diario (no hay cron de Actions delante). Mapfre: CIMA dice haberlo configurado el 24/09; pulls de 13:21, 17:01 y 06:49 UTC → 155
