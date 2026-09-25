@@ -22,7 +22,8 @@ import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
-import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
+import { kilometrosDesdeTexto } from '@central/module-seguros'
+import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import {
   borrarBorrador,
   claveBorradorAutoNuevo,
@@ -80,6 +81,7 @@ type BorradorAutoNuevo = {
   codigoVehiculo?: string
   matricula?: string
   matriculacion?: string
+  matriculacionEstimada?: boolean
   garaje?: string
   kmAnuales?: string
   fechaCompra?: string
@@ -221,7 +223,15 @@ export default function AutoNuevo({
 
   const [matricula, setMatricula] = useState('')
   const [matriculacion, setMatriculacion] = useState('')
-  const [garaje, setGaraje] = useState('')
+  // true = la fecha la ha puesto la ESTIMACIÓN por matrícula, no el corredor:
+  // se pinta como tal y se recalcula si cambia la matrícula. En cuanto el
+  // corredor toca la fecha, pasa a ser suya.
+  const [matriculacionEstimada, setMatriculacionEstimada] = useState(false)
+  // Por defecto «vía pública» (decisión de Alberto, 25/09/2026): es el caso
+  // más común y el conservador para la prima.
+  const [garaje, setGaraje] = useState(
+    () => (garajes.find((g) => /v[ií]a\s+p[uú]blica/i.test(g.nombre)) ?? garajes.find((g) => /\bcalle\b/i.test(g.nombre)))?.id ?? '',
+  )
 
   // ── Los tres datos del coche que hasta hoy viajaban SUPUESTOS ─────────────
   // `kmAnuales`, `fechaCompra` y `remolqueLigero` ya iban en la petición al
@@ -231,7 +241,11 @@ export default function AutoNuevo({
   // Se dejan VACÍOS a propósito: en blanco significa «no se ha preguntado» y
   // viaja el supuesto de siempre; con valor, manda el corredor. Prerrellenarlos
   // con el supuesto convertiría un «no lo sé» en un dato afirmado.
-  const [kmAnuales, setKmAnuales] = useState('')
+  // Por defecto 10.000 km/año y compra = matriculación (Alberto, 25/09/2026):
+  // se ven en pantalla y el corredor los cambia si el cliente dice otra cosa.
+  const [kmAnuales, setKmAnuales] = useState(String(KM_ANUALES_POR_DEFECTO))
+  // Vacío = sigue a la matriculación (se pinta esa fecha y no se manda nada:
+  // el precalificador ya usa la de matriculación como compra).
   const [fechaCompra, setFechaCompra] = useState('')
   const [remolqueLigero, setRemolqueLigero] = useState(false)
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
@@ -296,6 +310,7 @@ export default function AutoNuevo({
     // Lo que no depende de ningún catálogo se restaura tal cual.
     if (b.matricula) setMatricula(b.matricula)
     if (b.matriculacion) setMatriculacion(b.matriculacion)
+    if (b.matriculacionEstimada) setMatriculacionEstimada(true)
     if (b.kmAnuales) setKmAnuales(b.kmAnuales)
     if (b.fechaCompra) setFechaCompra(b.fechaCompra)
     if (b.remolqueLigero) setRemolqueLigero(true)
@@ -390,6 +405,7 @@ export default function AutoNuevo({
         codigoVehiculo,
         matricula,
         matriculacion,
+        matriculacionEstimada,
         garaje,
         kmAnuales,
         fechaCompra,
@@ -424,6 +440,7 @@ export default function AutoNuevo({
     codigoVehiculo,
     matricula,
     matriculacion,
+    matriculacionEstimada,
     garaje,
     kmAnuales,
     fechaCompra,
@@ -509,6 +526,18 @@ export default function AutoNuevo({
   const faltaMunicipio = !municipioId
   const faltaMatricula = !matricula.trim()
   const faltaMatriculacion = !matriculacion
+  const estimacion = fechaMatriculacionEstimada(matricula)
+
+  function cambiarMatricula(valor: string) {
+    setMatricula(valor)
+    // Solo rellena si la fecha está vacía o la puso la propia estimación:
+    // nunca pisa una fecha tecleada por el corredor.
+    if (matriculacion === '' || matriculacionEstimada) {
+      const est = fechaMatriculacionEstimada(valor)
+      setMatriculacion(est?.estimada ?? '')
+      setMatriculacionEstimada(est !== null)
+    }
+  }
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
@@ -707,10 +736,28 @@ export default function AutoNuevo({
             />
           </Campo>
           <Campo etiqueta="Matrícula" falta={faltaMatricula} ayuda="No sale de ninguna póliza: no hay ninguna. La teclea el corredor.">
-            <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
+            <input value={matricula} onChange={(e) => cambiarMatricula(e.target.value)} placeholder="1234ABC" style={input} />
           </Campo>
-          <Campo etiqueta="Fecha de matriculación" falta={faltaMatriculacion}>
-            <input type="date" value={matriculacion} onChange={(e) => setMatriculacion(e.target.value)} style={input} />
+          <Campo
+            etiqueta="Fecha de matriculación"
+            falta={faltaMatriculacion}
+            ayuda={
+              matriculacionEstimada && estimacion
+                ? `Estimada por la matrícula (entre ${fechaCorta(estimacion.desde)} y ${fechaCorta(estimacion.hasta)}): no es dato oficial y falla si el coche vino de fuera. Confírmala con la ficha técnica.`
+                : matricula.trim() && !matriculacion && !estimacion
+                  ? 'No se puede estimar por esta matrícula (formato antiguo o muy reciente): tecléala.'
+                  : undefined
+            }
+          >
+            <input
+              type="date"
+              value={matriculacion}
+              onChange={(e) => {
+                setMatriculacion(e.target.value)
+                setMatriculacionEstimada(false)
+              }}
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda="Lo elige el corredor; viaja marcado como supuesto.">
             <select value={garaje} onChange={(e) => setGaraje(e.target.value)} style={input}>
@@ -722,13 +769,13 @@ export default function AutoNuevo({
             etiqueta="Kilómetros al año"
             falta={kmInvalido}
             faltaTexto="no se entiende como kilometraje (dígitos, y el punto solo como separador de miles)"
-            ayuda={`En blanco viajan ${KM_ANUALES_SUPUESTOS.toLocaleString('es-ES')} como supuesto. Es factor de precio de primer orden: si el cliente lo sabe, tecléalo.`}
+            ayuda={`Por defecto ${KM_ANUALES_POR_DEFECTO.toLocaleString('es-ES')}. Es factor de precio de primer orden: si el cliente sabe otra cifra, cámbiala.`}
           >
             <input
               inputMode="numeric"
               value={kmAnuales}
               onChange={(e) => setKmAnuales(e.target.value)}
-              placeholder={String(KM_ANUALES_SUPUESTOS)}
+              placeholder={String(KM_ANUALES_POR_DEFECTO)}
               style={input}
             />
           </Campo>
@@ -736,9 +783,9 @@ export default function AutoNuevo({
             etiqueta="Fecha de compra"
             falta={compraInvalida}
             faltaTexto="no puede ser anterior a la matriculación"
-            ayuda="Solo si es de segunda mano. En blanco viaja la de matriculación, que es lo cierto salvo en ese caso."
+            ayuda="Por defecto, la de matriculación. Cámbiala solo si es de segunda mano."
           >
-            <input type="date" value={fechaCompra} onChange={(e) => setFechaCompra(e.target.value)} style={input} />
+            <input type="date" value={fechaCompra || matriculacion} onChange={(e) => setFechaCompra(e.target.value === matriculacion ? '' : e.target.value)} style={input} />
           </Campo>
           <Campo etiqueta="Remolque ligero (< 750 kg)" falta={false} ayuda="La compañía lo pregunta. Por defecto, no.">
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44 }}>
@@ -1115,6 +1162,13 @@ function BloquePersona({
       )}
     </div>
   )
+}
+
+const KM_ANUALES_POR_DEFECTO = 10000
+
+function fechaCorta(iso: string): string {
+  const [a, m, d] = iso.split('-')
+  return `${d}/${m}/${a}`
 }
 
 function Campo({ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }) {

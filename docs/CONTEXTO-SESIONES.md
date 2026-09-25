@@ -579,6 +579,13 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Auto nuevo (/correduria): defectos que pidió Alberto
+- La fecha de matriculación se ESTIMA al teclear la matrícula (`fechaMatriculacionEstimada`, ya existía en
+  `module-seguros/matricula`), marcada «estimada» con su rango; nunca pisa una fecha tecleada.
+- Fecha de compra enseña la de matriculación; km nacen en 10.000; garaje en «vía pública» (match por nombre del
+  catálogo vivo de Codeoscopic — si no hay opción con ese nombre, queda vacío). Revierte la decisión del 21/09 de
+  campos vacíos; cepo `regression-auto-nuevo-supuestos` actualizado. Moto nuevo NO tocado.
+
 ## (25/09/2026) Ficha correduría: el auto histórico de un ex-cliente sale como oportunidad
 - Caso Rafael Campa: recaptación le ofrecía el auto (Pelayo, vencía 20/10/2015) y la ficha solo lo nombraba en una nota al pie; «vida» era una oportunidad en competencia (legítima: «póliza en competencia es oportunidad», Alberto).
 - `repartirSegurosCliente`: del volcado histórico, la más reciente de cada ramo no cubierto → tarjeta de oportunidad (`historica: true`); el resto sigue plegado. «Ya no lo necesita» retira el ramo.
