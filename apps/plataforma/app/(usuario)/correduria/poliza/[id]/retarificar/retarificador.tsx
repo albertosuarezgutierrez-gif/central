@@ -28,7 +28,7 @@ import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision } from './emision'
 import PrepararPresupuesto from './PrepararPresupuesto'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
-import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
+import { fechaEfectoInicial, fechaEfectoPorDefecto } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 import {
@@ -324,8 +324,15 @@ export default function Retarificador({
   sinCarteraPorque,
   primaActualEur,
   ramo,
+  vencimientoFiable = null,
 }: {
   polizaId: string
+  /**
+   * Vencimiento de la póliza actual SOLO si es fiable (viva por CIMA, no
+   * cancelada, no emitida nuestra con fecha provisional). `null` = no lo es o no
+   * se sabe: la fecha de efecto arranca en mañana, como siempre.
+   */
+  vencimientoFiable?: string | null
   /**
    * Los huecos que la ficha NO tapa, ya revisados. **`null` = no se ha podido
    * precalificar** (el puerto de asegura no sirve todavía la precalificación de
@@ -484,7 +491,7 @@ export default function Retarificador({
       fechaEfecto: fechaEfectoInicial(
         guardadas.fechaEfecto,
         hoyISO(),
-        masDiasISO(1),
+        fechaEfectoPorDefecto(vencimientoFiable, hoyISO(), masDiasISO(1), MAX_DIAS_VISTA_EFECTO),
         MAX_DIAS_VISTA_EFECTO,
       ),
     }
@@ -707,7 +714,7 @@ export default function Retarificador({
         fechaEfecto: fechaEfectoInicial(
           b.correcciones.fechaEfecto,
           hoyISO(),
-          masDiasISO(1),
+          fechaEfectoPorDefecto(vencimientoFiable, hoyISO(), masDiasISO(1), MAX_DIAS_VISTA_EFECTO),
           MAX_DIAS_VISTA_EFECTO,
         ),
       })
@@ -1371,7 +1378,10 @@ export default function Retarificador({
             revés que el supuesto automático cuando el vencimiento real está
             lejos, y da un día de margen para confirmar y emitir (con HOY, la
             cotización moría a medianoche). Se puede cambiar, pero el campo
-            nunca arranca vacío. */}
+            nunca arranca vacío.
+            📅 Desde el 25/09/2026 (Alberto): con una póliza en cartera y vencimiento
+            fiable arranca en ESE vencimiento (misma fecha, sin hueco ni solape),
+            si cae en [hoy, hoy+90]; si no, mañana. */}
         <div style={{ marginTop: 16 }}>
           <Campo
             id="c-fechaEfecto"
@@ -1379,7 +1389,10 @@ export default function Retarificador({
             falta={false}
             ayuda={
               <>
-                Precargada a mañana: es la fecha que se manda al pedir precio. Cámbiala solo si el
+                {vencimientoFiable && correcciones.fechaEfecto === vencimientoFiable.slice(0, 10)
+                  ? 'Precargada al vencimiento de la póliza actual (misma fecha: sin hueco ni solape). '
+                  : 'Precargada a mañana. '}
+                Es la fecha que se manda al pedir precio. Cámbiala solo si el
                 cliente quiere que la póliza empiece otro día — <strong>siempre a ≤90 días vista</strong>,
                 la compañía rechaza fechas más lejanas al confirmar el precio, y para entonces ya se
                 ha pagado la cotización. No se puede arreglar después: hay que acertarla aquí.{' '}

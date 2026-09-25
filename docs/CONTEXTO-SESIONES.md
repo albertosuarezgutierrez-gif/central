@@ -608,6 +608,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Límite real: solo se emite desde «Retarificar» de una póliza auto/moto. Negocio nuevo (`*-nuevo`), hogar/vida/salud/decesos y proyectos hechos a mano en Avant2 (p. ej. 40842815, Allianz de Pablo Guzmán Pueyo, ML 250) NO se emiten ni importan por id → se emiten en Avant2 y entran por CIMA.
 - «📄 Subir póliza» NO escribe `polizas` (solo documento + `portal_poliza_declarada`): no sirve para registrar una emitida fuera.
 - Pendiente con spec + OK: importar proyecto de Avant2 por id y emitir negocio nuevo.
+- Retarificar (auto): la fecha de efecto arranca en el VENCIMIENTO de la póliza si es fiable (viva, no cancelada, no emitida nuestra) y cae en [hoy, hoy+90]; si no, mañana (regla de Alberto: misma fecha). Moto no cambia.
+- Hallazgo: el ReRate de Codeoscopic admite `mainQuote.effectiveDate` (doc pública) y nuestro `reRate()` nunca la manda; rescataría cotizaciones caducadas sin otro 0,50€. Pendiente OK de Alberto a una prueba real + spec.
 
 ## (25/09/2026) Correduría · pestaña Contactos más clara
 - Alberto: «no es nada clara». Portal: sin el párrafo de «no hay nada que hacer» cuando ya entra (va al `title`), las 3 acciones en una fila con rótulos cortos sin repetir el nombre.
