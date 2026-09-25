@@ -11,6 +11,7 @@ import {
   camposDeAlcances,
   estadoAutorizacion,
   etiquetaNivelAlcances,
+  puedeDarParte,
   puedeAutorizar,
   alcancesConcedibles,
   TITULOS_REPRESENTACION,
@@ -214,4 +215,13 @@ test('la etiqueta de nivel sube a gestionar cuando hay partes', () => {
   assert.equal(etiquetaNivelAlcances(['partes']), 'gestionar')
   assert.equal(etiquetaNivelAlcances(['documentos']), 'completo')
   assert.equal(etiquetaNivelAlcances(['ver']), 'tarjeta')
+})
+
+test('ver una póliza NO basta para dar un parte: hace falta `partes` y que conceda una sociedad', () => {
+  assert.equal(puedeDarParte(['ver'], 'juridica'), false)
+  assert.equal(puedeDarParte(['ver', 'ver_economico', 'documentos'], 'juridica'), false)
+  assert.equal(puedeDarParte(['ver', 'partes'], 'juridica'), true)
+  // De una física no se delega actuar: una fila `partes` escrita por otro camino no abre nada.
+  assert.equal(puedeDarParte(['ver', 'partes'], 'fisica'), false)
+  assert.equal(puedeDarParte([], 'juridica'), false)
 })

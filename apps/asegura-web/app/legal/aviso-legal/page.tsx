@@ -192,16 +192,16 @@ export default function AvisoLegal() {
             2. Objeto del sitio
           </h2>
           <p style={parrafo}>
-            Este sitio informa sobre los seguros que medía la correduría y permite pedir un
+            Este sitio informa sobre los seguros que media la correduría y permite pedir un
             presupuesto o ponerse en contacto. Nada más.
           </p>
           <p style={parrafoUltimo}>
             En concreto, y para que no haya malentendidos: <strong>aquí no se contrata</strong>. No
-            se emiten pólizas, no se cobran primas, no hay área privada de cliente y ninguna
-            información de estas páginas es una oferta vinculante ni un asesoramiento
+            se emiten pólizas, no se cobran primas y ninguna información de estas páginas es una oferta vinculante ni un asesoramiento
             personalizado. Lo que cubre un seguro es lo que digan sus condiciones particulares y
             generales, no lo que resuma una página web. El asesoramiento, con su análisis objetivo y
-            su recomendación motivada, viene después y por escrito.
+            su recomendación motivada, viene después y por escrito. El área privada de cliente no
+            forma parte de este sitio: está en el portal de clientes, con sus propias condiciones.
           </p>
         </section>
 
@@ -285,7 +285,7 @@ export default function AvisoLegal() {
               {identidad.email}
             </a>
             , que responde en el plazo máximo de un mes. Solo si no se resuelven, a la DGSFP. El
-            detalle y el orden de los canales está en{' '}
+            detalle y el orden de los canales están en{' '}
             <Link href="/legal/informacion-mediador" style={enlace}>
               información del mediador
             </Link>

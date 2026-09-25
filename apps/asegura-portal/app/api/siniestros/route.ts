@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 
 import { normalizarParte, plazoComunicacion, type ParteEntrada } from '@central/module-seguros-portal'
 
-import { carteraDeIdentidad } from '@/lib/cartera-lectura'
+import { carteraDeIdentidad, polizasParaParte } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
 import { crearParte, fechaHechoAUtc } from '@/lib/partes-siniestro'
 import { requireIdentidad } from '@/lib/session'
@@ -82,13 +82,11 @@ export async function POST(req: Request) {
     // legítima de saber qué pólizas son suyas: ir a la tabla `polizas` con el
     // id que llega en el cuerpo devolvería 200 con la póliza de cualquiera, y
     // por eso el guardián exige que quien toque la cartera nombre esa costura.
-    // Cuentan las propias y las que otro le ha autorizado a ver: si puede verla
-    // en su bóveda, puede declarar un siniestro sobre ella.
+    // Cuentan las propias y, de las autorizadas, SOLO las que traen el alcance
+    // `partes` (`polizasParaParte`): ver una póliza no da derecho a declarar un
+    // siniestro en nombre de su tomador (art. 16 LCS; decisión de Alberto, 24/09/2026).
     const cartera = await carteraDeIdentidad(identidad.id)
-    const suyas = new Set(
-      [...cartera.propias, ...cartera.autorizadas].flatMap((t) => t.polizas.map((p) => p.id)),
-    )
-    if (!suyas.has(valor.polizaId)) {
+    if (!polizasParaParte(cartera).has(valor.polizaId)) {
       return NextResponse.json({ error: 'poliza_no_tuya' }, { status: 403 })
     }
   }

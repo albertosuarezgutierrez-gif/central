@@ -81,11 +81,14 @@ export const FECHA_TEXTOS_LEGALES = '2026-09-19'
  * Lección, porque volverá a pasar: **subir la versión no es revisar el texto.**
  * La constante solo acredita QUÉ estaba publicado; que lo publicado sea cierto
  * hay que comprobarlo leyendo la página contra el código.
+ *
+ * `w3` (24/09/2026): el aviso legal decía «no hay área privada de cliente»
+ * cuando la web ya enlaza al portal de clientes; ahora dice dónde está.
  */
-export const VERSION_TEXTOS_WEB = '2026-09-w2'
+export const VERSION_TEXTOS_WEB = '2026-09-w3'
 
 /** Fecha de la última revisión de fondo de los textos de la web pública. */
-export const FECHA_TEXTOS_WEB = '2026-09-05'
+export const FECHA_TEXTOS_WEB = '2026-09-24'
 
 export const MEDIADOR = {
   /** Nombre comercial. La persona que responde legalmente es `identidad`. */

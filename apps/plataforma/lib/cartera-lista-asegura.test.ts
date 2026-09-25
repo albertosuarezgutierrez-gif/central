@@ -5,7 +5,9 @@ import {
   construirCsv,
   filaCsv,
   interpretarLista,
+  leerClienteListado,
   leerFacetas,
+  leerSiguiente,
   proximoVencimiento,
   type ClienteListado,
 } from './cartera-lista-asegura.ts'
@@ -181,4 +183,15 @@ test('el CSV escapa el separador y las comillas del nombre', () => {
   }
   const linea = construirCsv('x', [raro]).split('\r\n')[3]
   assert.ok(linea.startsWith('"Gestión; S.L. ""La"""'))
+})
+
+test('siguiente: acción, sin comprobar y nada se leen; lo ilegible o ausente es null (sin chip), nunca «nada»', () => {
+  assert.deepEqual(leerSiguiente({ estado: 'accion', tipo: 'renovacion', titulo: 'Revisar la renovación', porque: 'Quedan 20 días', urgente: true }), {
+    estado: 'accion', titulo: 'Revisar la renovación', porque: 'Quedan 20 días', urgente: true,
+  })
+  assert.deepEqual(leerSiguiente({ estado: 'sin_comprobar', falta: ['presupuestos', 3] }), { estado: 'sin_comprobar', falta: ['presupuestos'] })
+  assert.deepEqual(leerSiguiente({ estado: 'nada' }), { estado: 'nada' })
+  assert.equal(leerSiguiente({ estado: 'accion', titulo: '  ' }), null)
+  assert.equal(leerSiguiente(undefined), null)
+  assert.equal(leerClienteListado({ id: 'c1', nombre: 'Ana' })?.siguiente, null)
 })

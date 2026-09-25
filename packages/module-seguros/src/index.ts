@@ -871,3 +871,20 @@ export {
   type TipoDocSolicitud,
   type ValidacionSolicitud,
 } from './solicitud-datos.ts'
+export {
+  EIAC_SITUACION_SINIESTRO,
+  EIAC_ACCION_SINIESTRO,
+  EIAC_SITUACION_ACCION,
+  EIAC_FIGURA_ACCION,
+  EIAC_POSICION_SINIESTRO,
+  importeEiacNumero,
+  leerClaveEiac,
+  textoClave,
+  tramitacionCompania,
+} from './siniestro-tramitacion.ts'
+export type {
+  ClaveLeida,
+  PasoTramitacionCorredor,
+  TramitacionCompania,
+  TramitacionCruda,
+} from './siniestro-tramitacion.ts'

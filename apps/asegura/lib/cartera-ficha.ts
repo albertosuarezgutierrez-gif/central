@@ -298,6 +298,21 @@ export type SiniestroFicha = {
    */
   danosCima: { descripcion: string | null; valor: string | null }[] | null
   /**
+   * Tramitación que manda la COMPAÑÍA (columnas `*_cima`, #852): historias jsonb
+   * crudas + importes y posición de culpa. `null` = la compañía no manda nada de
+   * esto (o fichero anterior). Se lee con `tramitacionCompania()` de
+   * `@central/module-seguros`. NO es la reserva/indemnización del corredor.
+   */
+  tramitacionCima: {
+    situaciones: unknown[] | null
+    acciones: unknown[] | null
+    pagos: unknown[] | null
+    reserva: number | null
+    indemnizacion: number | null
+    totalPagos: number | null
+    posicion: string | null
+  } | null
+  /**
    * Terceros y testigos. `null` = no se ha podido consultar (la tabla falló),
    * NUNCA «no hay ninguno» — mismo criterio que `intervinientes` de la ficha.
    */

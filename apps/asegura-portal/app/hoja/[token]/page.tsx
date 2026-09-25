@@ -129,7 +129,10 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
     // filtra AQUÍ, en vivo, con el mismo criterio que el selector de crear —
     // así una póliza que vence DESPUÉS de crear el QR desaparece sola, igual
     // que la que deja de ser suya.
-    const suyas = [...cartera.propias, ...cartera.autorizadas]
+    // Y solo las PROPIAS (24/09/2026): esta página la abre cualquiera con el
+    // papel, y una autorización se concedió a una identidad, no a su QR. Con
+    // «todas», además, una autorización nueva aparecería sola en hojas ya impresas.
+    const suyas = cartera.propias
       .flatMap((t) => t.polizas)
       .filter(polizaEnVigorParaHoja)
     const declaradasEnVigor = misDeclaradas.filter((d) => declaradaEnVigorParaHoja(d, hoy))

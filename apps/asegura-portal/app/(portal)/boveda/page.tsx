@@ -8,7 +8,8 @@ import {
 
 import { companiasConCanal } from '@/lib/canales-compania'
 import { carnetsDeIdentidad } from '@/lib/carnets'
-import { carteraALaVista, carteraDeIdentidad, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
+import { carteraALaVista, carteraDeIdentidad, polizasParaParte, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
+import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
 import { listarContactosPropios } from '@/lib/contactos-propios'
 import { prisma } from '@/lib/db'
 import { sincronizarObligacionesDeIdentidad } from '@/lib/obligaciones'
@@ -324,17 +325,23 @@ export default async function Boveda({
   const cuentaPropias =
     (bloqueMias?.titulares ?? []).reduce((n, t) => n + t.polizas.length, 0) + declaradas.length
 
-  // Lo que se le ofrece elegir al dar un parte. Incluye las AUTORIZADAS a
-  // propósito: la ruta acepta lo mismo (`carteraDeIdentidad` propias +
-  // autorizadas), y ofrecer menos de lo que el backend admite deja fuera al
-  // conductor que sí puede declarar el golpe del coche de su padre. La lista
-  // sale SIEMPRE de la cartera ya leída para esta identidad: ningún id de
-  // póliza entra desde la request.
+  // Lo que se le ofrece elegir al dar un parte: lo MISMO que acepta la ruta, ni
+  // más (403 tras rellenar el formulario) ni menos. La lista sale SIEMPRE de la
+  // cartera ya leída para esta identidad: ningún id de póliza entra desde la request.
+  //
+  // 🚨 De las AUTORIZADAS solo entran las que traen el alcance `partes`
+  // (`polizasParaParte`, la misma fuente que usa la ruta): ver una póliza no da
+  // derecho a declarar un siniestro en nombre de su tomador (decisión de Alberto,
+  // 24/09/2026). Las demás siguen dando sus TELÉFONOS (`telefonosAjenos`): llamar
+  // a la grúa del coche de tu padre no es actuar en su nombre.
+  const conParte = polizasParaParte(cartera)
+  const opcionesAutorizadas = cartera.autorizadas.flatMap((t) =>
+    t.polizas.map((p) => ({ id: p.id, opcion: opcionCartera(p, companias, t.nombre, t.nombre) })),
+  )
+  const telefonosAjenos = opcionesAutorizadas.filter((o) => !conParte.has(o.id)).map((o) => o.opcion)
   const polizasParte: PolizaOpcionParte[] = [
     ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p, companias, undefined, t.nombre))),
-    ...cartera.autorizadas.flatMap((t) =>
-      t.polizas.map((p) => opcionCartera(p, companias, t.nombre, t.nombre)),
-    ),
+    ...opcionesAutorizadas.filter((o) => conParte.has(o.id)).map((o) => o.opcion),
     ...declaradas.map((p) => ({
       valor: `declarada:${p.id}`,
       // 🚨 El cruce es por nombre EXACTO y aquí es donde más falla, a propósito:
@@ -711,9 +718,17 @@ export default async function Boveda({
           orden de nada ni abre ninguna póliza ajena. */}
       {vista === 'siniestro' && (
         <>
-          {polizaEnLista !== null && (
-            <ParteSiniestro polizas={polizasParte} partes={partesEnviados} polizaInicial={polizaEnLista} />
-          )}
+          {/* 24/09/2026: el parte (con los teléfonos de la compañía) va SIEMPRE
+              primero, también entrando por la pestaña. El formulario nace
+              plegado, así que el historial sigue a un paso de scroll; lo que no
+              puede quedar debajo es el teléfono de quien acaba de tener un golpe. */}
+          <ParteSiniestro
+            polizas={polizasParte}
+            soloTelefonos={telefonosAjenos}
+            corredor={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }}
+            partes={partesEnviados}
+            polizaInicial={polizaEnLista}
+          />
           <VistaPorPoliza
             bloques={bloques}
             incluye={(p) => p.siniestros !== null && p.siniestros.length > 0}
@@ -721,16 +736,13 @@ export default async function Boveda({
             bloque={(p) => <HistorialSiniestros p={p} sinResumen />}
             vacio="No nos consta ningún siniestro en tus seguros. No significa que no hayas tenido ninguno: nos los informa tu compañía. Si acabas de tener uno, cuéntanoslo desde aquí."
           />
-          {polizaEnLista === null && (
-            <ParteSiniestro polizas={polizasParte} partes={partesEnviados} polizaInicial={null} />
-          )}
         </>
       )}
 
       {vista === 'recordatorios' && (
         <Recordatorios
           recordatorios={recordatorios}
-          polizas={polizasParte}
+          polizas={[...polizasParte, ...telefonosAjenos]}
           precargas={precargas.precargas}
           carnetsIlegibles={precargas.carnetsIlegibles}
         />

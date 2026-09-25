@@ -278,3 +278,25 @@ test('generarCodigo sigue dando seis digitos y sin sesgo de resto', () => {
   // un generador roto (p. ej. uno que devolviera siempre el mismo valor).
   assert.ok(vistos.size > 490, `demasiadas repeticiones: ${vistos.size}/500`)
 })
+
+// ─── Dar un parte exige el alcance `partes` (24/09/2026) ─────────────────────
+// Hasta ese día la ruta aceptaba cualquier póliza autorizada, también con solo
+// `ver`: el alcance `partes` no protegía nada. Decisión de Alberto: se exige.
+// La ruta, la pantalla que lo ofrece y el botón de la ficha tienen que salir de
+// la MISMA fuente (`polizasParaParte`); si divergen, se ofrece lo que luego da 403.
+test('dar un parte sobre una póliza ajena exige `partes`: ruta, bóveda y ficha usan polizasParaParte', () => {
+  const leer = (r: string) => readFileSync(join(process.cwd(), r), 'utf8')
+  const ruta = leer('apps/asegura-portal/app/api/siniestros/route.ts')
+  assert.match(ruta, /polizasParaParte\(cartera\)\.has\(valor\.polizaId\)/, 'la ruta decide con polizasParaParte')
+  assert.doesNotMatch(
+    ruta,
+    /\.\.\.cartera\.autorizadas\]\.flatMap/,
+    'la ruta no puede volver a aceptar TODAS las autorizadas',
+  )
+  const boveda = leer('apps/asegura-portal/app/(portal)/boveda/page.tsx')
+  assert.match(boveda, /polizasParaParte\(cartera\)/, 'la bóveda ofrece lo mismo que acepta la ruta')
+  const ficha = leer('apps/asegura-portal/app/(portal)/boveda/poliza/[id]/page.tsx')
+  assert.match(ficha, /polizasParaParte\(cartera\)\.has\(p\.id\)/, 'la ficha no ofrece «dar parte» sin el alcance')
+  const lectura = leer('apps/asegura-portal/lib/cartera-lectura.ts')
+  assert.match(lectura, /if \(puedeDarParte\(alcances, tipo\)\) conPartes\.add\(polizaId\)/, 'el alcance se decide por póliza')
+})

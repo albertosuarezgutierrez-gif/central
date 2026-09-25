@@ -74,12 +74,12 @@ const FAQ = {
     {
       pregunta: '¿Tengo que esperar al vencimiento para cambiar de mediador?',
       respuesta:
-        'No. Cambiar de mediador no es lo mismo que cambiar de seguro: no hay que esperar a la renovación ni dar ningún preaviso al respecto. El preaviso de un mes del artículo 22 de la Ley de Contrato de Seguro se refiere a no renovar la póliza, que es otra cosa distinta.',
+        'No. Cambiar de mediador no es lo mismo que cambiar de seguro: no hay que esperar a la renovación ni dar ningún preaviso al respecto. El preaviso de un mes del artículo 22 de la Ley de Contrato de Seguro se refiere a no renovar la póliza, que es otra cosa.',
     },
     {
       pregunta: '¿Cuesta algo?',
       respuesta:
-        'No. Como corredores percibimos una comisión sobre la prima que abona la entidad aseguradora; el cliente no paga ningún honorario adicional por el servicio de mediación.',
+        'No. Como corredores cobramos una comisión sobre la prima, y nos la paga la entidad aseguradora; el cliente no paga ningún honorario adicional por el servicio de mediación.',
     },
     {
       pregunta: '¿Se puede hacer siempre?',
@@ -112,7 +112,7 @@ export default function CambiarDeCorreduria() {
 
       <h1>Cambiar de correduría sin cambiar de seguro</h1>
       <p style={{ fontSize: 17, color: 'var(--muted)', maxWidth: 640 }}>
-        Mucha gente aguanta con un mediador con el que no cuenta porque cree que para cambiar hay que anular la póliza y
+        Mucha gente sigue con un mediador que no le atiende porque cree que para cambiar hay que anular la póliza y
         volver a empezar. No es así: <strong style={{ color: 'var(--text)' }}>la póliza y el mediador son dos cosas
         distintas</strong>. Puedes quedarte con tu seguro exactamente como está y cambiar solo quién te lo lleva.
       </p>

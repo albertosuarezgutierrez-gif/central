@@ -100,8 +100,8 @@ export function estadoCodigo(
   if (ahora.getTime() > caducaEn) return 'caducado'
   // 🚨 Fila anterior al hasheado del código: guardaba los 6 dígitos en claro y
   // ya no casa con nada. Se responde `caducado` —«pide otro»— y NUNCA
-  // `incorrecto`: `incorrecto` es lo único que gasta uno de los 5 intentos y
-  // además le echa la culpa a quien ha tecleado bien. **No se aceptan los dos
+  // `incorrecto`: `incorrecto` le dice que ha tecleado mal (y en el portal el intento
+  // se reserva antes de comparar), culpando a quien ha tecleado bien. **No se aceptan los dos
   // formatos**: mantener viva la comparación en claro dejaría el agujero
   // abierto justo para las filas que lo tienen. Son 10 minutos de códigos
   // vivos; esas personas piden otro.
