@@ -393,6 +393,8 @@ model Poliza {
   cuentaBancaria          String?          @map("cuenta_bancaria") // cifrado
   comercialId             String?          @map("comercial_id") @db.Uuid
   polizaPadreId           String?          @map("poliza_padre_id") @db.Uuid // cadena de renovaciones
+  leadDescartadoAt        DateTime?        @map("lead_descartado_at") @db.Timestamptz(6) // quitada de «Oportunidades» (solo volcado histórico)
+  leadDescartadoMotivo    String?          @map("lead_descartado_motivo") @db.VarChar(300)
   auditarSeguimiento      Boolean          @default(false) @map("auditar_seguimiento")
   oportunidadOrigenId     String?          @map("oportunidad_origen_id") @db.Uuid
   polizaCompetencia       Json?            @map("poliza_competencia")

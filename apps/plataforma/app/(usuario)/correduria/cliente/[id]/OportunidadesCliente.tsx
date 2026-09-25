@@ -268,7 +268,7 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{ color: 'var(--muted)' }}>
             Para una abierta por error o duplicada. No se borra (queda su rastro) ni cuenta como venta perdida.
-            Si el cliente no quiere, usa «Perdida» en Seguimiento, con su motivo.
+            Si el cliente no quiere, usa «Perdida» en «Gestionar», con su motivo.
           </div>
           <label style={etiqueta}>
             Nota (opcional)

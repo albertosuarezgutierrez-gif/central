@@ -593,7 +593,12 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   tareas e historial plegado (`cliente/[id]/SeguimientoOportunidad.tsx`, antes `oportunidad/[id]/SeguimientoClient.tsx`).
 - `/correduria/oportunidad/<id>` solo REDIRIGE a `/correduria/cliente/<cliente>?tab=oportunidades&op=<id>` (enlaces de
   Vencimientos, «Hoy», inicio). «Ganada» va solo en la fila (con su póliza). Cepo: `regression-correduria-secciones`.
-- Pendiente de decisión: una póliza HISTÓRICA del volcado sale en el cubo «Oportunidades» y no hay forma de quitarla.
+- «🗑️ Eliminar» (con confirmación y motivo) en las tarjetas del cubo Oportunidades: una póliza HISTÓRICA se marca
+  en `seguros.polizas.lead_descartado_at/_motivo` (quita el RAMO; «Recuperar» lo deshace); una abierta se descarta (`error_alta`).
+  🚨 **La migración `apps/asegura/prisma/sql/2026-09-25a_poliza_lead_descartado.sql` NO está aplicada** (la BD rechazó la
+  conexión por falta de conexiones libres y aplicar DDL en producción quedó para Alberto): **no mergear #3590 sin aplicarla antes**.
+  La ficha selecciona esas columnas y se caería.
+- Auditoría CRUD del panel en `docs/AUDITORIA-CORREDURIA-2026-09-25.md` (top 10 de huecos pendiente de priorizar).
 
 ## (25/09/2026) Auto nuevo: fecha de matriculación consultada a Avant2
 - Con cada matrícula (tecleada o restaurada del borrador) se consulta `/car/registration-date` por el puerto
