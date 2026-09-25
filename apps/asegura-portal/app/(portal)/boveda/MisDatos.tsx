@@ -101,10 +101,17 @@ export function MisDatos({
         provincia: lectura.contacto.provincia ?? '',
       }
     : vacios()
+  // Lo último guardado: tras guardar pasa a ser lo escrito, para que el formulario no ofrezca otra
+  // vez un «cambio» (y un código) por lo que ya está guardado.
+  const [base, setBase] = useState<Valores>(original)
   const [f, setF] = useState<Valores>(original)
   const [estado, setEstado] = useState<Estado>({ tipo: 'listo' })
+  // 🚨 Un correo nuevo no se guarda sin el código que le llega a ESE correo (25/09/2026): quien
+  // entra con el correo de esta ficha gestiona tus seguros. `codigoPara` = a qué correo se mandó.
+  const [codigoPara, setCodigoPara] = useState<string | null>(null)
+  const [codigo, setCodigo] = useState('')
 
-  const cambios = cambiosRespectoA(original, f, leido)
+  const cambios = cambiosRespectoA(base, f, leido)
   const hayCambios = Object.keys(cambios).length > 0
 
   async function guardar(e: React.FormEvent) {
@@ -112,12 +119,36 @@ export function MisDatos({
     if (!hayCambios) return
     setEstado({ tipo: 'guardando' })
     try {
+      const email = typeof cambios.email === 'string' ? cambios.email : null
+      // Paso 1 con correo nuevo: pedir el código a ESE correo y parar hasta que lo escriba.
+      if (email !== null && codigoPara !== email) {
+        const r = await fetch('/api/mis-datos/codigo-correo', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email }),
+        })
+        const jr = (await r.json().catch(() => null)) as { estado?: string } | null
+        if (jr?.estado === 'codigo_enviado') {
+          setCodigoPara(email)
+          setCodigo('')
+          setEstado({ tipo: 'listo' })
+        } else {
+          setEstado(avisoCodigo(jr?.estado))
+        }
+        return
+      }
       const res = await fetch('/api/mis-datos', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(cambios),
+        body: JSON.stringify(email !== null ? { ...cambios, codigoCorreo: codigo.trim() } : cambios),
       })
       const j = (await res.json().catch(() => null)) as { estado?: string; motivo?: string; campo?: string | null; campos?: string[] } | null
+      if (j?.estado === 'ok') {
+        setCodigoPara(null)
+        setBase(f)
+      }
+      // Un código muerto (caducado, gastado, bloqueado) se olvida: el siguiente clic pide otro.
+      if (j?.estado === 'codigo_requerido' || (j?.estado === 'codigo_no_valido' && j?.motivo !== 'incorrecto')) setCodigoPara(null)
       setEstado(desenlace(j?.estado, j?.motivo, j?.campo ?? null, j?.campos))
     } catch {
       setEstado({ tipo: 'aviso', texto: 'No hemos podido guardarlo (no hubo conexión). No se ha cambiado nada: inténtalo en un momento.' })
@@ -185,8 +216,31 @@ export function MisDatos({
           <legend>Dónde te escribimos</legend>
           {DIRECCION.map((c) => campo(c, f, setF))}
         </fieldset>
-        <button type="submit" className="boton" disabled={estado.tipo === 'guardando' || !hayCambios}>
-          {estado.tipo === 'guardando' ? 'Guardando…' : 'Guardar mis datos'}
+        {codigoPara !== null && codigoPara === cambios.email && (
+          <label className="mi-direccion-campo">
+            <span>
+              Te hemos mandado un código a <strong>{codigoPara}</strong>. Escríbelo para confirmar que ese correo es tuyo:
+            </span>
+            <input
+              value={codigo}
+              onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="123456"
+              maxLength={6}
+            />
+          </label>
+        )}
+        <button
+          type="submit"
+          className="boton"
+          disabled={estado.tipo === 'guardando' || !hayCambios || (codigoPara !== null && codigoPara === cambios.email && codigo.length !== 6)}
+        >
+          {estado.tipo === 'guardando'
+            ? 'Guardando…'
+            : typeof cambios.email === 'string' && codigoPara !== cambios.email
+              ? 'Enviarme un código al correo nuevo'
+              : 'Guardar mis datos'}
         </button>
       </form>
 
@@ -266,6 +320,16 @@ export function desenlace(estado: string | undefined, motivo?: string, campo?: s
       const que = (campos ?? []).map((c) => ETIQUETA[c as CampoMisDatos]).filter(Boolean)
       return { tipo: 'guardado', texto: que.length > 0 ? `Guardado: ${que.join(', ')}. Lo usaremos a partir de ahora.` : 'Guardado. Lo usaremos a partir de ahora.' }
     }
+    // El correo nuevo no se ha podido probar: no se ha guardado NADA (ni el resto de campos).
+    case 'codigo_requerido':
+    case 'codigo_no_valido':
+      return {
+        tipo: 'aviso',
+        texto:
+          motivo === 'caducado' || motivo === 'bloqueado' || motivo === 'ya_usado' || motivo === 'sin_codigo'
+            ? 'Ese código ya no vale. Pulsa de nuevo para que te mandemos otro. No se ha cambiado nada.'
+            : 'El código no es correcto. Revísalo en el correo nuevo. No se ha cambiado nada.',
+      }
     case 'sin_cambios':
       return { tipo: 'aviso', texto: 'No has cambiado nada: lo que has escrito es lo que ya teníamos.' }
     case 'invalido':
@@ -302,5 +366,17 @@ export function desenlace(estado: string | undefined, motivo?: string, campo?: s
         tipo: 'aviso',
         texto: 'No hemos podido guardarlo. No se ha cambiado nada: inténtalo de nuevo en un momento.',
       }
+  }
+}
+
+/** Por qué no se ha podido mandar el código al correo nuevo. Nada se ha guardado todavía. */
+export function avisoCodigo(estado: string | undefined): Estado {
+  switch (estado) {
+    case 'invalido':
+      return { tipo: 'aviso', texto: 'Revisa el correo: no parece una dirección válida. No se ha cambiado nada.' }
+    case 'demasiados':
+      return { tipo: 'aviso', texto: 'Has pedido varios códigos seguidos. Espera un rato y vuelve a intentarlo. No se ha cambiado nada.' }
+    default:
+      return { tipo: 'aviso', texto: 'No hemos podido mandarte el código. No se ha cambiado nada: inténtalo en un momento.' }
   }
 }
