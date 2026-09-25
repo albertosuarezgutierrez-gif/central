@@ -1,0 +1,64 @@
+{
+ "sesion": "cb0e0dda-ed86-5816-8beb-94f3a7d85d97",
+ "inicio": "2026-09-25T15:51:10.480Z",
+ "fin": "2026-09-25T15:51:49.867Z",
+ "llamadas": 9,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 127,
+   "chars_out": 3898,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1
+   }
+  },
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 291,
+   "chars_out": 8700,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
+   }
+  },
+  "otro": {
+   "llamadas": 1,
+   "chars_in": 172,
+   "chars_out": 344,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 4,
+   "chars_in": 376,
+   "chars_out": 1961,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__get_runtime_logs": 3
+   }
+  },
+  "mcp:Resend": {
+   "llamadas": 1,
+   "chars_in": 134,
+   "chars_out": 743,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Resend__list-domains": 1
+   }
+  }
+ }
+}
