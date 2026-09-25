@@ -1,46 +1,48 @@
 {
  "sesion": "ba3a435b-94de-54bf-bedd-400e0f4ee7f3",
  "inicio": "2026-09-25T13:34:44.841Z",
- "fin": "2026-09-25T16:57:29.555Z",
- "llamadas": 322,
+ "fin": "2026-09-25T18:05:56.376Z",
+ "llamadas": 415,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 6,
-   "chars_in": 535,
-   "chars_out": 248247,
+   "llamadas": 42,
+   "chars_in": 3131,
+   "chars_out": 573502,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 1,
-    "Read": 5
+    "Read": 37,
+    "Glob": 4
    }
   },
   "bash": {
-   "llamadas": 144,
-   "chars_in": 76100,
-   "chars_out": 415443,
+   "llamadas": 172,
+   "chars_in": 89449,
+   "chars_out": 467557,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 144
+    "Bash": 172
    }
   },
   "otro": {
-   "llamadas": 75,
-   "chars_in": 11960,
-   "chars_out": 554201,
+   "llamadas": 91,
+   "chars_in": 13483,
+   "chars_out": 697944,
    "errores": 0,
    "archivos_citados": 9,
    "chars_citados": 1505712,
    "tools": {
-    "ToolSearch": 25,
+    "ToolSearch": 27,
     "SendUserFile": 1,
-    "ReadNotifications": 45,
+    "ReadNotifications": 56,
     "SubagentHandback": 1,
     "ReportFindings": 1,
-    "Skill": 2
+    "Skill": 2,
+    "SendMessage": 3
    }
   },
   "mcp:Supabase": {
@@ -56,20 +58,20 @@
    }
   },
   "sql": {
-   "llamadas": 8,
-   "chars_in": 2992,
-   "chars_out": 6636,
+   "llamadas": 10,
+   "chars_in": 3372,
+   "chars_out": 8451,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 8
+    "mcp__Supabase__execute_sql": 10
    }
   },
   "mcp:Vercel": {
-   "llamadas": 21,
-   "chars_in": 2738,
-   "chars_out": 85197,
+   "llamadas": 24,
+   "chars_in": 3137,
+   "chars_out": 89110,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -78,15 +80,15 @@
     "mcp__Vercel__get_runtime_logs": 4,
     "mcp__Vercel__filter_project_envs": 2,
     "mcp__Vercel__edit_project_env": 2,
-    "mcp__Vercel__list_deployments": 8,
+    "mcp__Vercel__list_deployments": 11,
     "mcp__Vercel__create_deployment": 2,
     "mcp__Vercel__get_deployment": 2
    }
   },
   "mcp:Resend": {
-   "llamadas": 22,
-   "chars_in": 5451,
-   "chars_out": 22992,
+   "llamadas": 24,
+   "chars_in": 6033,
+   "chars_out": 23120,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -100,16 +102,16 @@
     "mcp__Resend__list-webhooks": 2,
     "mcp__Resend__update-webhook": 1,
     "mcp__Resend__list-webhook-events": 2,
-    "mcp__Resend__replay-webhook-event": 2,
+    "mcp__Resend__replay-webhook-event": 4,
     "mcp__Resend__list-webhook-event-attempts": 1,
     "mcp__Resend__get-webhook-event": 1
    }
   },
   "mcp:github": {
-   "llamadas": 21,
-   "chars_in": 12756,
-   "chars_out": 42786,
-   "errores": 0,
+   "llamadas": 23,
+   "chars_in": 13060,
+   "chars_out": 44365,
+   "errores": 1,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
@@ -120,13 +122,14 @@
     "mcp__github__add_issue_comment": 1,
     "mcp__github__actions_list": 3,
     "mcp__github__actions_get": 1,
-    "mcp__github__merge_pull_request": 2
+    "mcp__github__merge_pull_request": 3,
+    "mcp__github__list_pull_requests": 1
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 16,
-   "chars_in": 6474,
-   "chars_out": 6488,
+   "llamadas": 17,
+   "chars_in": 6547,
+   "chars_out": 6614,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -135,7 +138,7 @@
     "mcp__Claude_Code_Remote__send_later": 10,
     "mcp__Claude_Code_Remote__delete_trigger": 1,
     "mcp__Claude_Code_Remote__update_trigger": 1,
-    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 2
    }
   },
   "agente:Explore": {
@@ -158,6 +161,17 @@
    "chars_citados": 0,
    "tools": {
     "Write": 6
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 3,
+   "chars_in": 9579,
+   "chars_out": 10164,
+   "errores": 0,
+   "archivos_citados": 18,
+   "chars_citados": 233442,
+   "tools": {
+    "Agent": 3
    }
   }
  }
