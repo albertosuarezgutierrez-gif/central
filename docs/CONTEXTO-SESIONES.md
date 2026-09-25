@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** 🕒 **CIMA: respaldo del pull a las 07:00/14:00/18:00 UTC** (antes 08:00/14:00). Los `schedule` de Actions de
+`asegura` llegaron 4-6 h tarde el 24/09 y el de las 05:30 del 25/09 no había arrancado a las 06:47. La franja de las 18:00 dispara
+a diario (no hay cron de Actions delante). Mapfre: CIMA dice haberlo configurado el 24/09; pulls de 13:21, 17:01 y 06:49 UTC → 155
+ficheros en cola, 0 nuevos, nada de C0058. Residuo parcial de la alerta (POL 23/06 + REC 12/07 de Occident) ya cubierto por
+ficheros posteriores: marcado resuelto en `cima_ficheros` con evento `cima_residuo_resuelto_manual`.
+
 **(25/09/2026)** — Intranet: botón «📲 Instalar app» en el pie del menú (`components/InstalarApp.tsx`): lanza el diálogo nativo con `beforeinstallprompt` y en iPhone enseña los pasos de Safari; oculto si ya está instalada. La intranet ya era instalable (#3530); a Alberto le salía «no se puede instalar» porque abría el enlace de PREVIEW (`…pisos-turisticos-projects.vercel.app`, protegido por Vercel): se instala desde `plataforma-ten-flame.vercel.app`. Tras #3547, fix de la revisión (#3555): enlace «sin precio» y cubos sin tarjetas contradictorias.
 
 **(25/09/2026)** — CIMA: pólizas duplicadas (volcado + CIMA) cerradas. En datos ya estaban fusionadas y los 52 recibos y 16 siniestros de cuarentena ya estaban dentro (medido; no hay que reprocesar). asegura#854 mergeado: con ≥2 candidatas gana la única de cartera viva (REC/SIN/CEF) y la cuarentena distingue `poliza_ambigua`. Invitación al portal: 34 invitados el 23/09; el resto lo manda Alberto desde Actividad → «Invitar al portal» (el lote salta a los ya invitados).
