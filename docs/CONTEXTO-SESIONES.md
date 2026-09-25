@@ -587,6 +587,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Correduría: accesos directos entre fichas
+- Presupuestos de oportunidad nueva (6 ramos): el nombre del cliente enlaza a su ficha.
+- Retarificar: miga «Ficha del cliente»; listado Clientes: compañía y nº enlazan a la póliza;
+  historial de riesgo: el nº enlaza; «si el tomador no contesta» enlaza al interviniente.
+- Quedan sin enlace a propósito: el aviso de error de MotoNuevo y Calidad (ya tiene «Ver póliza»).
+
 ## (25/09/2026) Portal asegura: accesos sin caducidad y dos permisos («Solo ver» / «Acceso total»)
 - Decisión de Alberto: las autorizaciones NO caducan (revisión anual `pideRevision` → aviso `acceso_por_revisar` + botón «Lo mantengo»); dos permisos `ver_economico` y `total`. `total` de una PERSONA incluye DNI e IBAN (elegido por él), con texto de consentimiento propio (`textoDeConcesion`).
 - `total` NO se da por invitación/petición: «Pasar a acceso total» (`ampliarATotal`) sobre un acceso ya aceptado, nace pendiente.
