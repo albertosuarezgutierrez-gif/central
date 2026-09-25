@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-25T10:48:37Z",
+  "generadoEn": "2026-09-25T11:29:44Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 119
+        "evidencias": 121
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 87
+        "evidencias": 89
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 29
       },
       "asegura-portal": {
         "estado": "usado",
@@ -3988,6 +3988,7 @@
       "/api/operador/calidad",
       "/api/operador/carta-mediador",
       "/api/operador/cartera",
+      "/api/operador/cima-sincro",
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
       "/api/operador/cliente/dni",
@@ -4965,6 +4966,7 @@
       "/api/correduria/cartera",
       "/api/correduria/cartera-lista",
       "/api/correduria/catastro",
+      "/api/correduria/cima-sincro",
       "/api/correduria/cliente",
       "/api/correduria/cliente/[id]/dni-codigo",
       "/api/correduria/cliente/[id]/dni-revelar",
@@ -5036,6 +5038,7 @@
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
       "/api/cron/cima-pull-respaldo",
+      "/api/cron/cima-sincro",
       "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
@@ -5478,6 +5481,7 @@
       "seguros.carta_mediador",
       "seguros.cartera_foto",
       "seguros.channel_inbound_messages",
+      "seguros.cima_decisiones",
       "seguros.cima_ficheros",
       "seguros.cliente_carnets_conducir",
       "seguros.cliente_emails",
@@ -6543,7 +6547,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1480,
+    "apis": 1483,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
