@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-25T16:21:28Z",
-  "sha": "988b9015153e6b3a22f6efcd2b2e3cf12f5ef1b4",
+  "generadoEn": "2026-09-25T17:13:27Z",
+  "sha": "2b7349850750b59b8ecfc4e216d29041da29cf8a",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -26407,7 +26407,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e542d83b14b2"
+      "hash": "5ce96342068e"
     },
     {
       "ruta": "apps/asegura/lib/retarificar-cartera.ts",
