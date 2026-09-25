@@ -73,6 +73,10 @@ test('🚨 todo correo que sale por el punto único deja fila en correo_envio, s
   // Los adjuntos (cartas firmadas a compañías) viajan por los DOS caminos: perderlos en uno sería mandar la carta sin el PDF.
   assert.ok((src.match(/attachments:/g) ?? []).length >= 2, 'algún camino de envío pierde los adjuntos')
   assert.match(src, /content: contenidoBase64\(a\)/, 'la API de Resend exige los adjuntos en base64')
+  // Los crons mandan en ráfaga: un 429 de Resend no es un correo malo, se reintenta.
+  assert.match(src, /res\.status !== 429/, 'un 429 de Resend contaría como correo fallido')
+  // Aceptado sin id = pudo salir: `falloIncierto()` de aprobaciones tiene que reconocerlo, o se reenviaría la carta a la compañía.
+  assert.match(src, /res\.ok \? '[^']*timeout[^']*pudo salir'/, 'un envío aceptado sin id se declararía fallo limpio')
 })
 
 test('🚨 todo correo a clientes sale por el punto único con seguimiento', () => {

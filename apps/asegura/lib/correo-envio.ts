@@ -51,23 +51,32 @@ export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fe
 
   if (apiKey) {
     try {
-      const res = await fetchImpl('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
-        body: JSON.stringify({
-          from, to: c.to, subject: c.asunto, text: c.texto,
-          ...(c.html ? { html: c.html } : {}),
-          ...(replyTo ? { reply_to: replyTo } : {}),
-          ...(c.adjuntos?.length
-            ? { attachments: c.adjuntos.map((a) => ({ filename: a.nombre, content: contenidoBase64(a), content_type: a.tipo })) }
-            : {}),
-          tags: [{ name: 'categoria', value: etiquetaTipo(c.tipo) }],
-        }),
-        signal: AbortSignal.timeout(15_000),
+      const cuerpo = JSON.stringify({
+        from, to: c.to, subject: c.asunto, text: c.texto,
+        ...(c.html ? { html: c.html } : {}),
+        ...(replyTo ? { reply_to: replyTo } : {}),
+        ...(c.adjuntos?.length
+          ? { attachments: c.adjuntos.map((a) => ({ filename: a.nombre, content: contenidoBase64(a), content_type: a.tipo })) }
+          : {}),
+        tags: [{ name: 'categoria', value: etiquetaTipo(c.tipo) }],
       })
+      // Resend limita a unas pocas peticiones por segundo y los crons (vencimientos, revisión anual)
+      // mandan en ráfaga: un 429 no es un correo malo, se espera y se reintenta.
+      let res: Response
+      for (let intento = 1; ; intento++) {
+        res = await fetchImpl('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${apiKey}`, 'content-type': 'application/json' },
+          body: cuerpo,
+          signal: AbortSignal.timeout(15_000),
+        })
+        if (res.status !== 429 || intento >= 4) break
+        const espera = Math.min(5, Number(res.headers.get('retry-after')) || intento)
+        await new Promise((r) => setTimeout(r, espera * 1000))
+      }
       const json = res.ok ? ((await res.json().catch(() => null)) as { id?: string } | null) : null
       if (!res.ok || !json?.id) {
-        const motivo = res.ok ? 'respuesta sin id' : `${res.status} ${sinCorreos(await res.text().catch(() => ''))}`
+        const motivo = res.ok ? 'aceptado pero sin id en la respuesta (timeout leyéndola): pudo salir' : `${res.status} ${sinCorreos(await res.text().catch(() => ''))}`
         console.error(`[correo-envio] Resend rechazó «${c.tipo}»:`, motivo)
         await registrarEnvioCorreo({ ...base, resendId: null, proveedor: 'resend_api', estado: 'fallido', error: motivo })
         return { resultado: 'rechazado', motivo, codigo: String(res.status) }
