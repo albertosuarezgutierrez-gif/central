@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-25T17:25:02Z",
-  "sha": "3644282a4d21787d32f09d9620d05d2a54b55d01",
+  "generadoEn": "2026-09-25T18:20:02Z",
+  "sha": "37e6b0777202cdc9ae3bf649ba4d49490ebe48d2",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -16027,7 +16027,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "3dc296de42c7"
+      "hash": "254886092b3f"
     },
     {
       "ruta": "apps/asegura/lib/anulaciones.ts",
@@ -16202,7 +16202,7 @@
           "nombre": "enviarCorreo",
           "kind": "function",
           "exportada": false,
-          "params": "destino: string, asunto: string, texto: string, adjuntos?: Adjunto[]",
+          "params": "correduriaId: string, clienteId: string, tipo: string, destino: string, asunto: string, texto: string, adjuntos?: Adjunto[],",
           "retorno": "Promise<",
           "linea": 320
         },
@@ -16212,7 +16212,7 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string | null, contactoId: string | undefined",
           "retorno": "Promise<",
-          "linea": 345,
+          "linea": 340,
           "resumen": "A quién y con qué adjunto va la anulación firmada: el buzón de la compañía que Alberto ELIGE en la tarjeta (tiene que ser un contacto activo de la compañía de ESA póliza). No se deduce por área."
         },
         {
@@ -16221,7 +16221,7 @@
           "exportada": false,
           "params": "correduriaId: string, cartaId: string, contactoId: string | undefined",
           "retorno": "Promise<",
-          "linea": 369,
+          "linea": 364,
           "resumen": "Igual que `destinoAnulacion`, para la carta de nombramiento firmada. El adjunto es la carta GUARDADA (cifrada en BD)."
         },
         {
@@ -16230,7 +16230,7 @@
           "exportada": false,
           "params": "correduriaId: string, cartaId: string",
           "retorno": "Promise<boolean>",
-          "linea": 394,
+          "linea": 389,
           "resumen": "La carta pasa a «enviada»: el correo salió. Un fallo aquí no puede invitar a repetir el envío."
         },
         {
@@ -16239,7 +16239,7 @@
           "exportada": false,
           "params": "correduriaId: string, anulacionId: string",
           "retorno": "Promise<boolean>",
-          "linea": 408,
+          "linea": 403,
           "resumen": "La anulación pasa a «comunicada»: el correo salió (o Alberto ha comprobado que salió)."
         },
         {
@@ -16248,7 +16248,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, d: Decision, actor: string",
           "retorno": "Promise<ResultadoDecision>",
-          "linea": 423
+          "linea": 418
         },
         {
           "nombre": "anotarHistorial",
@@ -16256,7 +16256,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, polizaId: string | null, nota: string",
           "retorno": "Promise<void>",
-          "linea": 556
+          "linea": 551
         },
         {
           "nombre": "enviosInciertos",
@@ -16264,7 +16264,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<EnvioIncierto[]>",
-          "linea": 572
+          "linea": 567
         }
       ],
       "tablas": [
@@ -16283,7 +16283,7 @@
         "presupuesto"
       ],
       "rutaApi": null,
-      "hash": "c3f665a0bf8e"
+      "hash": "f1e796914f1e"
     },
     {
       "ruta": "apps/asegura/lib/asegura-db.ts",
@@ -16502,7 +16502,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "420b1e72a45c"
+      "hash": "e60baadcd44d"
     },
     {
       "ruta": "apps/asegura/lib/aviso-web-reglas.ts",
@@ -16694,9 +16694,10 @@
           "nombre": "enviar",
           "kind": "function",
           "exportada": false,
-          "params": "destino: string, c: CuerpoCorreo",
+          "params": "correduriaId: string, clienteId: string | null, tipo: string, destino: string, c: CuerpoCorreo",
           "retorno": "Promise<Envio>",
-          "linea": 48
+          "linea": 49,
+          "resumen": "Sale por el punto único con seguimiento (25/09/2026): queda en `correo_envio` y sus eventos en la ficha. Import dinámico, como en `correo-avisos-intranet.ts`: `node --test` no resuelve `@central/core-"
         },
         {
           "nombre": "solicitarAviso",
@@ -16704,7 +16705,7 @@
           "exportada": true,
           "params": "correduriaId: string, body: unknown",
           "retorno": "Promise<ResultadoSolicitud>",
-          "linea": 86,
+          "linea": 70,
           "resumen": "Responde `ok` también cuando se ha llegado al tope de solicitudes de ese correo: no se le dice a quien rellena el formulario si ese buzón ya estaba apuntado ni cuántas veces."
         },
         {
@@ -16713,7 +16714,7 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<ResultadoConfirmacion>",
-          "linea": 153
+          "linea": 140
         },
         {
           "nombre": "bajaAviso",
@@ -16721,7 +16722,7 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<",
-          "linea": 230,
+          "linea": 217,
           "resumen": "Siempre «ok» hacia fuera: no se revela si la llave existía."
         },
         {
@@ -16730,7 +16731,7 @@
           "exportada": true,
           "params": "correduriaId: string, opciones: { hoy?: Date; forzarContar?: boolean } = {}",
           "retorno": "Promise<ResumenAvisosWeb>",
-          "linea": 270,
+          "linea": 257,
           "resumen": "Lanza si falta el portal o el correo: «no he podido» no puede leerse como «hoy no tocaba nadie»."
         }
       ],
@@ -16741,7 +16742,7 @@
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "b7747d475287"
+      "hash": "dd9cd86afc2c"
     },
     {
       "ruta": "apps/asegura/lib/avisos-intranet-reglas.ts",
@@ -16854,7 +16855,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "1917e1cebad8"
+      "hash": "cd540cbcbdaf"
     },
     {
       "ruta": "apps/asegura/lib/avisos-presupuesto.ts",
@@ -16905,7 +16906,7 @@
           "exportada": true,
           "params": "env: string | undefined = process.env.ASEGURA_AVISOS_ACTIVOS",
           "retorno": "boolean",
-          "linea": 100,
+          "linea": 99,
           "resumen": "El interruptor, puro y aparte para poder razonarlo de un vistazo: cualquier valor que no sea exactamente `'1'` (incluido `undefined`, `'true'` o `'0'`) deja el cron en modo cuenta. La ambigüedad se re"
         },
         {
@@ -16914,7 +16915,7 @@
           "exportada": true,
           "params": "p: { activos: boolean; forzarContar: boolean }",
           "retorno": "boolean",
-          "linea": 105,
+          "linea": 104,
           "resumen": "`?contar=1` fuerza el ensayo aunque los avisos estén activos."
         },
         {
@@ -16923,7 +16924,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 110,
+          "linea": 109,
           "resumen": "Medianoche UTC: las columnas `date` de Postgres llegan así."
         },
         {
@@ -16932,7 +16933,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 119,
+          "linea": 118,
           "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa: `null` significa «no se ha podido leer», y quien llama lo cuenta como «sin canal» en vez de como «este cliente no tiene email». Mismo criter"
         },
         {
@@ -16941,7 +16942,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "v is string",
-          "linea": 131,
+          "linea": 130,
           "resumen": "Una dirección que no tiene forma de dirección no es un canal: es basura con forma de dato."
         },
         {
@@ -16950,7 +16951,7 @@
           "exportada": true,
           "params": "c: ClienteConEmails",
           "retorno": "string | null",
-          "linea": 145,
+          "linea": 144,
           "resumen": "El email al que escribir: principal → el más antiguo de `cliente_emails` → la columna suelta de la ficha. `null` = no hay a quién escribir (o está de baja)."
         },
         {
@@ -16959,7 +16960,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, polizaId: string,",
           "retorno": "Promise<IntervinienteFicha[] | null>",
-          "linea": 173,
+          "linea": 172,
           "resumen": "Los intervinientes de ESTA póliza, ya descifrados, en la forma que espera `contactoEfectivo()`. Copia deliberadamente acotada de `leerIntervinientes` de `cartera-ficha.ts` (no exportada desde allí): a"
         },
         {
@@ -16968,7 +16969,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string,",
           "retorno": "Promise<",
-          "linea": 234,
+          "linea": 233,
           "resumen": "Las personas de referencia declaradas en `cliente_relaciones` del tomador, con SU PROPIO email ya resuelto (mismas reglas que `destinatarioDeCliente`: baja de correo respetada, principal primero). Exc"
         },
         {
@@ -16977,13 +16978,13 @@
           "exportada": true,
           "params": "opts: { hoy?: Date forzarContar?: boolean /** Presupuesto de envío en ms. Por debajo del `maxDuration` de la ruta. */ presupuestoMs?: number /** Reloj inyectable (tests). Por defecto `Date.now`. */ ahoraMs?: () => number } = {}",
           "retorno": "Promise<ResumenAvisos>",
-          "linea": 289,
+          "linea": 288,
           "resumen": "Una pasada del cron. Lanza (no devuelve un resumen tranquilizador) cuando el proceso NO puede hacer su trabajo —sin cartera, sin proveedor de correo, sin remitente—, para que el endpoint responda 503 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ac372fda847a"
+      "hash": "88b5bbc8b46d"
     },
     {
       "ruta": "apps/asegura/lib/backfill-contacto.ts",
@@ -17293,7 +17294,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, presupuestoId: string, datos: { codigo: string; nombre: string; cartaHash: string; ip: string | null; userAgent: string | null },",
           "retorno": "Promise<ResultadoFirma>",
-          "linea": 228
+          "linea": 229
         },
         {
           "nombre": "cartasDePoliza",
@@ -17301,7 +17302,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string",
           "retorno": "Promise<CartaEnLista[] | null>",
-          "linea": 317,
+          "linea": 318,
           "resumen": "Las cartas de una póliza (la más reciente primero). `null` = no se pudo leer."
         },
         {
@@ -17310,7 +17311,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<CartaPorTramitar[] | null>",
-          "linea": 344,
+          "linea": 345,
           "resumen": "Las cartas que esperan a Alberto (firmadas sin mandar) o a la compañía (enviadas sin respuesta), para «Hoy». Sin esta lista una carta firmada solo se veía entrando en la ficha de esa póliza. `null` = "
         },
         {
@@ -17319,7 +17320,7 @@
           "exportada": true,
           "params": "correduriaId: string, cartaId: string, accion: AccionCartaMediador, motivo: string | null, actor: string,",
           "retorno": "Promise<ResultadoAccion>",
-          "linea": 371
+          "linea": 372
         }
       ],
       "tablas": [
@@ -17337,7 +17338,7 @@
         "presupuesto_evento"
       ],
       "rutaApi": null,
-      "hash": "cf35a5c1e872"
+      "hash": "70308345adc3"
     },
     {
       "ruta": "apps/asegura/lib/cartera-busqueda.ts",
@@ -23551,7 +23552,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 50,
+          "linea": 48,
           "resumen": "Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual."
         },
         {
@@ -23560,7 +23561,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 58,
+          "linea": 56,
           "resumen": "Quita saltos de línea de lo que va a una CABECERA (el asunto). Un `\\r\\n` en el asunto parte el mensaje y deja colar un `Bcc:`."
         },
         {
@@ -23569,7 +23570,7 @@
           "exportada": true,
           "params": "base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es',",
           "retorno": "string | null",
-          "linea": 73,
+          "linea": 71,
           "resumen": "A dónde manda el correo. `null` = no hay portal utilizable y entonces **no se envía**: un correo que dice «entra aquí» sin el «aquí» no sirve de nada, y adivinar un dominio manda a la persona a ningún"
         },
         {
@@ -23578,7 +23579,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 110
+          "linea": 108
         },
         {
           "nombre": "cuerpoAvisoAcceso",
@@ -23586,22 +23587,22 @@
           "exportada": true,
           "params": "d: DatosAvisoAcceso",
           "retorno": "CuerpoAviso",
-          "linea": 119,
+          "linea": 117,
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta. Separado del envío para que su cepo pueda recorrer el texto entero — un guardián que necesitara un servidor SMTP par"
         },
         {
           "nombre": "enviarAvisoAcceso",
           "kind": "function",
           "exportada": true,
-          "params": "destino: string, d: DatosAvisoAcceso",
+          "params": "correduriaId: string, clienteId: string, destino: string, d: DatosAvisoAcceso,",
           "retorno": "Promise<ResultadoEnvioCorreo>",
-          "linea": 180,
+          "linea": 178,
           "resumen": "Manda el correo. El desenlace es el MISMO tipo que la invitación al portal (`ResultadoEnvioCorreo`), y por la misma razón: «no hay proveedor» es una variable de Vercel que falta, y decirle a Alberto q"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ccf351d9ab70"
+      "hash": "78c4aaf8bc5e"
     },
     {
       "ruta": "apps/asegura/lib/correo-avisos-intranet.ts",
@@ -23619,7 +23620,7 @@
           "exportada": false,
           "params": "partes: readonly string[]",
           "retorno": "string",
-          "linea": 118,
+          "linea": 117,
           "resumen": "`['a','b','c']` → `a, b y c`. Vacío no ocurre (quien llama no escribe sin avisos)."
         },
         {
@@ -23628,7 +23629,7 @@
           "exportada": true,
           "params": "avisos: readonly AvisoParaCorreo[]",
           "retorno": "string",
-          "linea": 127,
+          "linea": 126,
           "resumen": "Las clases presentes, contadas y nombradas, en el orden del catálogo (no en el de llegada: así dos correos con lo mismo se leen igual)."
         },
         {
@@ -23637,7 +23638,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 139
+          "linea": 138
         },
         {
           "nombre": "cuerpoAvisosIntranet",
@@ -23645,29 +23646,30 @@
           "exportada": true,
           "params": "d: DatosAvisosIntranet",
           "retorno": "CuerpoCorreo",
-          "linea": 149,
+          "linea": 148,
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta, para que su cepo pueda recorrer el texto entero. Mismo motivo que en `correo-aviso-acceso.ts`: un guardián que neces"
         },
         {
           "nombre": "enviarAvisosIntranet",
           "kind": "function",
           "exportada": true,
-          "params": "destino: string, d: DatosAvisosIntranet",
+          "params": "destino: string, d: DatosAvisosIntranet, quien: { correduriaId: string; clienteId: string },",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 212,
+          "linea": 211,
           "resumen": "El envío. Devuelve el desenlace en vez de lanzar, por lo mismo que el resto de correos de esta app: «no hay proveedor» es una variable de Vercel que falta, y un reintento no la pone."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cd260d96345b"
+      "hash": "65aecb453f29"
     },
     {
       "ruta": "apps/asegura/lib/correo-envio.ts",
       "ambito": "apps/asegura",
       "resumen": "Punto ÚNICO de salida de los correos a clientes con seguimiento (25/09/2026). Sale por la API HTTP de Resend (no por SMTP) porque es la que devuelve el id del correo: sin ese id los eventos del webhook (entregado, abierto, clic, rebote) no se pueden atar al cliente. Si no hay `RESEND_API_KEY`, cae a",
       "exporta": [
-        "enviarCorreoCliente"
+        "enviarCorreoCliente",
+        "enviarCorreoSeguido"
       ],
       "funciones": [
         {
@@ -23676,12 +23678,28 @@
           "exportada": true,
           "params": "c: CorreoCliente, fetchImpl: typeof fetch = fetch",
           "retorno": "Promise<ResultadoCorreoCliente>",
-          "linea": 28
+          "linea": 38
+        },
+        {
+          "nombre": "contenidoBase64",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: AdjuntoCorreo",
+          "retorno": "string",
+          "linea": 42
+        },
+        {
+          "nombre": "enviarCorreoSeguido",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: CorreoCliente, fetchImpl: typeof fetch = fetch",
+          "retorno": "Promise<EnvioDetallado>",
+          "linea": 46
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ecc85fa99e3d"
+      "hash": "58e98189751e"
     },
     {
       "ruta": "apps/asegura/lib/correo-eventos.ts",
@@ -23778,7 +23796,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 42,
+          "linea": 40,
           "resumen": "Escapa lo que va dentro del HTML. El nombre sale de la cartera, pero se escapa igual."
         },
         {
@@ -23787,7 +23805,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 50,
+          "linea": 48,
           "resumen": "Quita saltos de línea de lo que va a una CABECERA (el asunto). Un `\\r\\n` en el asunto parte el mensaje y deja colar un `Bcc:`."
         },
         {
@@ -23796,7 +23814,7 @@
           "exportada": true,
           "params": "base: string | undefined = process.env.ASEGURA_PORTAL_URL ?? 'https://clientes.grupoasegura.es',",
           "retorno": "string | null",
-          "linea": 78,
+          "linea": 76,
           "resumen": "A dónde manda el correo: **su bóveda**, `/boveda`. `null` = no hay portal utilizable y entonces **no se envía** — un correo que dice «entra aquí» sin el «aquí» no sirve de nada, y adivinar un dominio "
         },
         {
@@ -23805,7 +23823,7 @@
           "exportada": true,
           "params": "d: DatosInvitacionPortal",
           "retorno": "CuerpoInvitacion",
-          "linea": 123,
+          "linea": 121,
           "resumen": "El cuerpo, PURO: sin red, sin BD y sin más `process.env` que el buzón de respuesta. Separado del envío para que su cepo pueda recorrer el texto entero — un guardián que necesitara un servidor SMTP par"
         },
         {
@@ -23814,20 +23832,20 @@
           "exportada": true,
           "params": "mensaje: string",
           "retorno": "boolean",
-          "linea": 209
+          "linea": 207
         },
         {
           "nombre": "enviarInvitacionPortal",
           "kind": "function",
           "exportada": true,
-          "params": "destino: string, d: DatosInvitacionPortal,",
+          "params": "correduriaId: string, clienteId: string, destino: string, d: DatosInvitacionPortal,",
           "retorno": "Promise<ResultadoEnvioCorreo>",
-          "linea": 213
+          "linea": 211
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "20ed11bb5b32"
+      "hash": "28f813efe75f"
     },
     {
       "ruta": "apps/asegura/lib/correo-seguimiento.ts",
@@ -24343,7 +24361,7 @@
           "nombre": "mandarCorreo",
           "kind": "function",
           "exportada": false,
-          "params": "destino: string, c: { asunto: string; texto: string; html: string }",
+          "params": "correduriaId: string, clienteId: string, tipo: string, destino: string, c: { asunto: string; texto: string; html: string },",
           "retorno": "Promise<ResultadoCorreo>",
           "linea": 218
         },
@@ -24353,7 +24371,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; actor: string },",
           "retorno": "Promise<",
-          "linea": 242,
+          "linea": 235,
           "resumen": "Alberto marca el presupuesto aceptado como EMITIDO (la compañía ya ha emitido la póliza). Es lo que desbloquea el envío de la anulación de la póliza vieja, si la hubo. Solo sobre uno aceptado."
         }
       ],
@@ -24361,7 +24379,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "7247dac21614"
+      "hash": "69396d9a1368"
     },
     {
       "ruta": "apps/asegura/lib/error-cartera.ts",
@@ -24967,7 +24985,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "8136c7384eba"
+      "hash": "0af008ccfc44"
     },
     {
       "ruta": "apps/asegura/lib/ipid.ts",
@@ -25296,7 +25314,7 @@
           "exportada": false,
           "params": "f: Fila",
           "retorno": "MensajeCorredor",
-          "linea": 38
+          "linea": 37
         },
         {
           "nombre": "mensajesDeFicha",
@@ -25304,7 +25322,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<MensajeCorredor[]>",
-          "linea": 51,
+          "linea": 50,
           "resumen": "El hilo entero de una ficha, en orden de escritura."
         },
         {
@@ -25313,7 +25331,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<PendienteMensaje[]>",
-          "linea": 74,
+          "linea": 73,
           "resumen": "Las fichas con mensajes del cliente sin leer: la cola de «Hoy». La más antigua primero (espera más). Abrir la ficha NO sella: sella contestar o «no necesita respuesta», para que mirar no lo haga desap"
         },
         {
@@ -25322,7 +25340,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, hasta: Date",
           "retorno": "Promise<number>",
-          "linea": 103,
+          "linea": 102,
           "resumen": "Sella como leído lo que escribió el cliente en esa ficha HASTA `hasta` (el último que vio el corredor en pantalla). Lo que entre después no se sella: nadie lo ha visto. Devuelve cuántos."
         },
         {
@@ -25331,7 +25349,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, polizaId: string | null, cuerpoCrudo: unknown, actor: string, avisar: boolean, hasta: Date | null,",
           "retorno": "Promise<ResultadoRespuesta>",
-          "linea": 125,
+          "linea": 124,
           "resumen": "Guarda la respuesta del corredor, da por leído lo que escribió el cliente hasta `hasta` (lo que tenía en pantalla; `null` = no sella nada) y, si se pide, le avisa por correo."
         },
         {
@@ -25340,7 +25358,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<AvisoRespuesta>",
-          "linea": 161
+          "linea": 160
         }
       ],
       "tablas": [
@@ -25348,7 +25366,7 @@
         "portal_mensaje"
       ],
       "rutaApi": null,
-      "hash": "4515deebadec"
+      "hash": "0903b5a7e843"
     },
     {
       "ruta": "apps/asegura/lib/migracion-decision.ts",
@@ -25892,7 +25910,7 @@
         "presupuesto_opcion"
       ],
       "rutaApi": null,
-      "hash": "b1a631bde6f1"
+      "hash": "d53d47123b05"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto.ts",
@@ -26695,7 +26713,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ebff8cd11f63"
+      "hash": "b0240da9ec43"
     },
     {
       "ruta": "apps/asegura/lib/session.ts",
@@ -157707,6 +157725,6 @@
   ],
   "resumen": {
     "archivos": 3778,
-    "funciones": 12057
+    "funciones": 12059
   }
 }
