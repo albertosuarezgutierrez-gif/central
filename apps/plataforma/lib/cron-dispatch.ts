@@ -159,7 +159,11 @@ export const CRON_JOBS: CronJob[] = [
   // de la cuenta se agotó. Este mira 2,5 h después de cada franja (los `schedule` de Actions arrancan
   // tarde a menudo) y SOLO dispara si esa franja no completó (`decidirRespaldoPull`): con Actions sano
   // no hace nada.
-  { path: '/api/cron/cima-pull-respaldo', schedule: '0 8,14 * * *' },
+  // 25/09/2026: 08:00 → 07:00 y franja nueva a las 18:00. Medido el 24-25/09: los `schedule` de
+  // Actions llegaron con 4-6 h de retraso (05:30 → 11:25, 11:30 → 15:52) y el de las 05:30 del 25/09
+  // no había arrancado a las 06:47. Las 18:00 no tienen franja de Actions delante, así que esa pasada
+  // dispara a diario (>3 h desde la de mediodía): recoge lo que CIMA genere por la tarde.
+  { path: '/api/cron/cima-pull-respaldo', schedule: '0 7,14,18 * * *' },
   // Siniestros nuevos de la cartera: 06:50, justo DETRÁS del vigía de la ingesta (06:45) —
   // si los datos de CIMA no están entrando, ese aviso llega primero y explica por qué este
   // no trae nada— y antes de `agentes-latido` (07:45), para que el parte del día lea una
