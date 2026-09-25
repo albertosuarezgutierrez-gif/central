@@ -10,6 +10,14 @@
 // que sigue aceptando SMTP pero nadie lo lee) pasa las 25 pasadas del lote
 // cada 14 días, año tras año, sin que ningún filtro existente lo saque.
 
+/** Desde cuándo Resend MIDE aperturas y clics en `envios.grupoasegura.es`
+ *  (activado el 25/09/2026). Hasta ese día el tracking del dominio estaba
+ *  apagado: ningún envío anterior podía pasar a `abierto`/`pinchado`, así que
+ *  su «sin abrir» es «no medido», no «no abierto». Ni la regla de silencio ni
+ *  la tasa de apertura del panel cuentan envíos anteriores a esta fecha (UTC,
+ *  mismo formato que `recaptacion_envios.created_at`, `timestamp` sin zona). */
+export const SEGUIMIENTO_EMAIL_DESDE = '2026-09-25 00:00:00'
+
 /** Envíos de email sin ninguna apertura/clic a partir de los cuales se da por
  *  perdido el lead. 3 intentos × cooldown de 14 días = ~6 semanas de margen
  *  real antes de descartar — no es la primera pasada muda, es la tercera. */

@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** Recaptación por email: el tracking de aperturas/clics estaba APAGADO en Resend
+(`envios.grupoasegura.es`) → los 30 emails enviados (20-22/09) salían «0% apertura», que era «no medido».
+Activados open+click tracking (Alberto: «tracking fundamental») y el webhook suscrito a `bounced`/`complained`
+(solo tenía opened/clicked: la baja por rebote del PR #3232 nunca se disparaba). Código: `SEGUIMIENTO_EMAIL_DESDE`
+(25/09) — la regla de silencio (3 envíos sin abrir → descarte) y la tasa del panel solo cuentan envíos desde ahí,
+si no el cron descartaba leads por falta de medición. Pendiente: 2 rebotes del 21/09 siguen como «enviado» sin baja
+(el evento salió antes de suscribirse); ⚖️ el píxel de apertura sin consentimiento, a mencionar en la política de privacidad.
+
 **(25/09/2026)** 🕓 **CIMA: descargas fijas a las 16:00 y 20:30 de Madrid** (recomendación de CIMA; `?franja=` en
 `cima-pull-respaldo`, disparan siempre y solo avisan si fallan). El respaldo condicional de la mañana pasa a las 09:00 UTC (11:00 Madrid, decisión de Alberto).
 Horas en UTC: en invierno (desde 25/10) caen a las 15:00/19:30 de Madrid. CIMA dice que Mapfre ya tiene ficheros en su
