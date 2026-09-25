@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-25T05:18:52Z",
-  "sha": "faf764b574d3ff1baa046f705b526d7778260bb3",
+  "generadoEn": "2026-09-25T06:50:25Z",
+  "sha": "3287b7a9c058d965a11691a0d56e82f7fe3523ca",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -81228,7 +81228,7 @@
           "exportada": false,
           "params": "lista: { href: string }[], path: string",
           "retorno": "boolean",
-          "linea": 129
+          "linea": 130
         },
         {
           "nombre": "seccionDeRuta",
@@ -81236,7 +81236,7 @@
           "exportada": false,
           "params": "path: string",
           "retorno": "ClaveSeccion | null",
-          "linea": 135,
+          "linea": 136,
           "resumen": "Qué sección contiene la ruta activa. Determinista: se calcula igual en el servidor y en el cliente, así que el primer pintado ya trae la sección buena abierta (sin salto al hidratar)."
         },
         {
@@ -81245,7 +81245,7 @@
           "exportada": false,
           "params": "path: string, soloEmpresas: boolean",
           "retorno": "ClaveSeccion | null",
-          "linea": 148,
+          "linea": 149,
           "resumen": "🚨 La cuenta `rol='empresas'` solo ve `/empresas`, y se pinta en el hueco de «Día a día». Sin esta corrección `seccionDeRuta` devolvería 'oportunidades' —una sección que a esa cuenta NO se le renderiz"
         },
         {
@@ -81254,13 +81254,13 @@
           "exportada": true,
           "params": "{ email, nombre, isOperator, operadorRol, rol }: { email: string; nombre: string; isOperator: boolean; operadorRol?: string; rol?: string | null }",
           "retorno": null,
-          "linea": 161,
+          "linea": 162,
           "resumen": "🚨 El lateral tiene DOS plegados distintos y no pueden pisarse: · `html[data-nav-plegado='1']` = tira de solo iconos (globals.css). Ahí las cabeceras de sección NO se ven (llevan `nav-solo-abierto`), "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8bda97def75c"
+      "hash": "8514db2dadc9"
     },
     {
       "ruta": "apps/plataforma/app/admin/MapaArquitectura.tsx",
@@ -93806,6 +93806,42 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "a7bf36aadc38"
+    },
+    {
+      "ruta": "apps/plataforma/components/InstalarApp.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "InstalarApp"
+      ],
+      "funciones": [
+        {
+          "nombre": "esIos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 17
+        },
+        {
+          "nombre": "yaInstalada",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "boolean",
+          "linea": 23
+        },
+        {
+          "nombre": "InstalarApp",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 28
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d9670d78aebe"
     },
     {
       "ruta": "apps/plataforma/components/ui.tsx",
@@ -156116,7 +156152,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3748,
-    "funciones": 11922
+    "archivos": 3749,
+    "funciones": 11925
   }
 }
