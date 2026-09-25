@@ -30,6 +30,8 @@ Diego Flores Carmona). Derivado en lectura de `cliente_relaciones` 'Dueño' (emp
 escribir vínculos; acceso total + puede autorizar a terceros. «Administración» NO abre (pendiente de Alberto). Antes, mismo día:
 vínculo por correo se retira al cambiar el correo (#3600, caso Guzmán Lozano→Pueyo) y cambio de correo con código (#3614).
 
+**(25/09/2026)** 📧 **Portal asegura: «No hemos podido enviarte el código» (502) para TODOS desde las 13:56 UTC.** Causa: se cambió `PORTAL_MAIL_FROM` a `hola@grupoasegura.es` sin cambiar la `RESEND_API_KEY`, que solo autorizaba `envios.grupoasegura.es` (Resend: `550 This API key is not authorized…`, solo visible en logs de Vercel). Arreglo en paneles, sin código: `grupoasegura.es` verificado en Resend (faltaba el CNAME `links`→`links2.resend-dns.com` en IONOS), clave nueva «asegura-portal (grupoasegura.es)» **Sending access solo a ese dominio** (Full access descartado: daría lectura de todos los correos con PII), `PORTAL_MAIL_FROM` = `hola@` y redeploy. Probado 17:18 UTC: llega firmado por `grupoasegura.es`. **Regla: remitente y clave se cambian en el mismo paso**; vaciar la env NO vuelve a `envios.` (el defecto del código es `hola@`). Pendiente: mirar si `asegura` (`ASEGURA_MAIL_FROM`) necesita la misma clave; la ficha de Pilar Franco tiene `piilarfrancoruz@` (doble i, rebotó el 23/09).
+
 **(25/09/2026)** 🚨 **Los crons de asegura NUNCA se ejecutaron**: el middleware no exentaba `/api/cron` y Vercel recibía 307→/login
 (felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez
 (`seguros.felicitacion` vacía, 0 correos en Resend). Arreglo: `/api/cron` a PUBLIC + cepo (#3602, visto rojo). Felicitación rediseñada
