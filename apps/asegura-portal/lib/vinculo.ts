@@ -21,7 +21,9 @@
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 
 import { prisma } from './db'
-import { elegirFicha, type Candidato } from './vinculo-elegir'
+import { vinculosEmailARetirar } from '@central/module-seguros-portal'
+
+import { elegirFicha, type Candidato, type FichaElegida } from './vinculo-elegir'
 
 export { elegirFicha }
 export type { Candidato, FichaElegida } from './vinculo-elegir'
@@ -136,6 +138,10 @@ async function intentarVinculo(
     }
 
     const elegida = elegirFicha(candidatos)
+    // 🚨 Antes de nada, retirar lo que este correo YA NO abre (25/09/2026):
+    // hasta hoy los vínculos por correo solo se añadían, y quien tuvo su correo
+    // en la ficha de otra persona conservaba esa ficha tras corregirlo en el CRM.
+    await retirarVinculosCaducados(identidadId, elegida)
     if (elegida.estado !== 'ok') return { estado: elegida.estado }
     const { clienteId, correduriaId } = elegida
 
@@ -153,4 +159,22 @@ async function intentarVinculo(
     console.error('[portal/vinculo] fallo de BD al vincular:', e instanceof Error ? e.message : e)
     return { estado: 'error' }
   }
+}
+
+/**
+ * Borra los vínculos `email_hash` de la identidad que el correo ya no resuelve
+ * (la regla, pura y con cepo, es `vinculosEmailARetirar`). Solo se llama con una
+ * resolución CONOCIDA: si el hash o la BD fallan, se sale antes y no se toca
+ * nada. Si el borrado falla, lanza: el `catch` de `intentarVinculo` lo convierte
+ * en `error` en vez de dar por buena una bóveda con una ficha ajena dentro.
+ */
+async function retirarVinculosCaducados(identidadId: string, elegida: FichaElegida): Promise<void> {
+  const existentes = await prisma.portalVinculo.findMany({
+    where: { identidadId, origen: 'email_hash' },
+    select: { id: true, clienteId: true, origen: true },
+  })
+  const ids = vinculosEmailARetirar(elegida, existentes)
+  if (ids.length === 0) return
+  await prisma.portalVinculo.deleteMany({ where: { id: { in: ids }, identidadId, origen: 'email_hash' } })
+  console.warn(`[portal/vinculo] retirados ${ids.length} vínculo(s) por correo que ya no resuelve (identidad ${identidadId})`)
 }

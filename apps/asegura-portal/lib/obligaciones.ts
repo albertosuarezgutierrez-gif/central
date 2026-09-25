@@ -371,8 +371,13 @@ export async function sincronizarObligacionesDeSesion(): Promise<void> {
 }
 
 export async function obligacionesDeIdentidad(identidadId: string): Promise<ObligacionVista[]> {
+  // 🚨 Sin vínculo, los vencimientos de CARTERA no se pintan (25/09/2026): pueden ser de una ficha
+  // que ya no es suya (el caso Lozano/Pueyo). No se BORRAN — el sincronizador no toca nada sin
+  // vínculo, y borrarlos perdería el sello `avisadaAt`: a un dueño legítimo que pierde el vínculo un
+  // rato (cambio de correo, rotación de clave) le volvería a llegar el aviso al revincularse.
+  const vinculada = (await prisma.portalVinculo.count({ where: { identidadId } })) > 0
   const filas = await prisma.portalObligacion.findMany({
-    where: { identidadId },
+    where: vinculada ? { identidadId } : { identidadId, OR: [{ tipo: { not: 'poliza' } }, { polizaId: null }] },
     orderBy: [{ fechaAccionable: 'asc' }, { fechaEvento: 'asc' }],
   })
 
