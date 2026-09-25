@@ -592,7 +592,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   DNI, 0 pólizas) → salía «sin vínculo» con botón «Declarar». `leerIntervinientes` (asegura) marca ahora
   `esTomador` también por NIF igual al del tomador. Y el formulario de «Declarar» hace scroll al abrirse
   (en móvil quedaba fuera de pantalla y el botón «no hacía nada»).
-- ⏸️ Pendiente con OK de Alberto: fusionar la ficha duplicada `0e4fe96b…` en `6e6a30ef…` (lote de fusión).
+- Fusión DESDE LA FICHA: si hay otra con el mismo DNI se avisa arriba y se comparan campo a campo (elige cuál
+  se queda). Función de BD `seguros.fusionar_clientes` (SECURITY DEFINER, aplicada; lápida + `snapshot_before` +
+  `snapshot_superviviente` nueva). Nunca con DNI distinto. Revisión de arquitectura pendiente de aplicar.
 
 ## (25/09/2026) Oportunidades: se gestionan DENTRO de la ficha del cliente (PR #3590)
 - Alberto: la página aparte «ocupa mucha pantalla». La fila de cada oportunidad (pestaña Oportunidades) se despliega

@@ -904,3 +904,16 @@ export {
   type DatosCima,
   type DiferenciaCima,
 } from './sincro-cima.ts'
+export {
+  GRUPOS_FUSION,
+  ETIQUETA_GRUPO_FUSION,
+  compararFichas,
+  identidadFusion,
+  revisarElecciones,
+  type GrupoFusion,
+  type ValorFusion,
+  type EstadoCampoFusion,
+  type CampoFusion,
+  type IdentidadFusion,
+  type RevisionElecciones,
+} from './fusion-fichas.ts'
