@@ -196,7 +196,10 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
         {/* Cuando la lista no se pudo leer no hay nada que corregir, pero sí se
             puede dar de alta: el interruptor de la cabecera no aparece, así que
             la puerta de «añadir» tiene que estar aquí. */}
-        {lista === null && !anadiendo && (
+        {/* Y con la lista leída y VACÍA pasa lo mismo: sin chips no sale «Corregir»,
+            y el «Añadir» de arriba cuelga de ese modo — la ficha decía «Ninguno en
+            la ficha» sin ninguna forma de meter uno (Alberto, 25/09/2026). */}
+        {(lista === null || items.length === 0) && !anadiendo && (
           <div>
             <button type="button" onClick={() => setAnadiendo(true)} style={btnStyle('secundario', 'sm')}>
               <Plus size={14} strokeWidth={1.75} aria-hidden /> Añadir teléfono o email
