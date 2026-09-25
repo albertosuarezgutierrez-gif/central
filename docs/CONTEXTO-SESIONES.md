@@ -58,6 +58,10 @@ Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/d
 tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
 ✅ Borrado (25/09, confirmado por Alberto) el vínculo `16a27091` (hijo, Guzmán Lozano) → ficha del PADRE: lo creó el portal a las 10:10 porque el PADRE añadió el correo del hijo a su propia ficha desde «Mis datos» a las 10:07. **Fase 0 sin hacer:** revalidar vínculos `email_hash` cuando cambia el correo de una ficha.
 
+**(25/09/2026)** ✅ **MAPFRE vuelve a volcar por CIMA**: franja fija de las 20:30 Madrid (18:30 UTC, ya con la clave buena) trajo los
+2 primeros ficheros C0058 desde el 23/06 (REC 261 + SIN 311, código mediador 5239640), ambos auto, casados con pólizas vivas, 0 cuarentena.
+Faltan POL y el resto de ramos. Contestado en el ticket SAU-24238 de CIMA (con OK de Alberto); si no llegan POL en días, reclamar ahí mismo.
+
 **(25/09/2026)** 🔑 **Respaldo CIMA daba 401**: `ASEGURA_CRM_CRON_SECRET` de plataforma ≠ `CRON_SECRET` del proyecto Vercel
 `asegura` (el CRM lo compara timing-safe). Latente desde el 24/09: nunca había tenido que disparar; lo destapó la franja fija de las 16:00.
 Alberto la re-copió (16:57 UTC). ⚠️ **Trampa:** «Redeploy» sobre un deployment cuyo commit lleva `[skip vercel]` (p. ej. la radiografía
