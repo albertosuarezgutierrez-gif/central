@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** trading-analista, pasada 20:15: NAV/cartera/libro empujados a plataforma; 23/24
+símbolos analizados (META vetado por `detectarSuplantaciones` — precio mío mal transcrito de
+IBKR, cazado por el guardián, cero contaminación); compras paper BKNG/ORCL/SQM. Solo bitácora +
+Telegram, sin tocar código. Detalle en `docs/AGENTES-BITACORA.md`.
+
 **(25/09/2026)** Correduría · emisión Codeoscopic (PR #3621, mergeado): en Retarificar la fecha de efecto arranca en el
 vencimiento si es fiable (viva, no cancelada, no emitida por nosotros; hoy..+90 días) y viaja en el ReRate como
 `mainQuote.effectiveDate` — ⚠️ SIN probar contra el vendor. Arreglado `encontrarPrecio` (cogía el primer precio del nivel;

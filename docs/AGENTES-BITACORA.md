@@ -14,6 +14,22 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-25 · trading-analista** · hizo: pasada 20:15 normal (paso 0 sin huella de hoy, no
+  repesca). Preflight 200 OK, IBKR conectado. NAV 33.504,94€ empujado (sin salto), cartera real
+  (CVX+VWCE) y libro de operaciones (0 nuevas) empujados con latido. Analizó 23/24 símbolos:
+  `/analizar` vetó **META** por `detectarSuplantaciones` (precio no cuadraba con su referencia
+  pero sí con QQQ) — error de transcripción MÍO al copiar velas de `get_price_history` en
+  paralelo (el landmine del protocolo, ver skill), cazado correctamente por el guardián del
+  servidor sin llegar a contaminar nada. Compras paper nuevas: BKNG, ORCL, SQM. `/puntuar`: 92
+  tesis, 1 cerrada por vencimiento de ventana. Telegram enviado (messageId 5295). dudas: para
+  9 símbolos de capa C usé solo 21 velas (`ONE_MONTH`) en vez de ~63-120 por ahorrar volumen de
+  transcripción manual — `stopViable` salió `null` en BKNG/ORCL por falta de historia, declarado
+  como tal en el aviso, no como "riesgo bajo"; el contraste de 2ª fuente (paso 5-ter) no se hizo,
+  el conector de datos financieros no está disponible en esta sesión; fallos: la primera pasada
+  de fetch en paralelo de 10 símbolos (NFLX/NVDA/NVO/RBLX/SPOT) mezcló los datos entre sí al
+  transcribirlos — detectado ANTES de mandar nada (comparando contra refetches individuales) y
+  corregido rehaciendo esos 5 uno a uno; ninguna tesis llegó a construirse con datos cruzados.
+  PRs/commits: — (solo bitácora + Supabase/Telegram, sin tocar código).
 - **2026-09-25 · ialimp-client-health** · hizo: pasada semanal sobre Sique Brilla SL
   (`05edacff-ea49-42fe-8997-f9369613a845`). Preflight canal 200 OK. PMS sync: `pms_connections`
   activa, sin `sync_error`, `last_sync_at` hoy 15:00 UTC; `cleaning_sessions` 75 en 24h / 80 en 7d
