@@ -84,7 +84,7 @@ export async function felicitarCumpleanos(
 
     const destino = destinatarioDeCliente(f)
     if (!destino) { r.soloApp += 1; continue }
-    const res = await enviarFelicitacion(destino, { nombre: nombreDePila(f.nombre), enlace })
+    const res = await enviarFelicitacion(destino, { nombre: nombreDePila(f.nombre), enlace }, { correduriaId, clienteId: f.id })
     if (res === 'sin_proveedor') {
       // Avería de configuración, no del cliente: se suelta la reserva para que el reintento de hoy
       // (con la env ya puesta) sí le mande el correo. Si no, perdería su felicitación del año.

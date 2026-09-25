@@ -35,6 +35,7 @@ import { RAMOS_DESCRITOS_POR_COBERTURAS } from './cartera'
 import { ordenPolizasFicha } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
 import { listarRelaciones, type RelacionCartera } from './cartera-relaciones'
+import { correosCliente, type CorreoFicha } from './correo-seguimiento'
 import { cotizacionesVivas, historialCliente, notasCliente, type HistorialFila, type NotasCliente } from './cartera-historial'
 import { listarDocumentos } from './cartera-documentos'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
@@ -394,6 +395,8 @@ export type FichaCliente = {
   estado: EstadoClienteDerivado
   /** Últimas 50 anotaciones de `historial_interno`. `null` = no se pudo leer. */
   historial: HistorialFila[] | null
+  /** Correos enviados al cliente con sus eventos de Resend (entregado, abierto, clic…). `null` = no se pudo leer. */
+  correos: CorreoFicha[] | null
   /** Notas fechadas + la nota suelta del CRM anterior. `null` = no se pudo leer. */
   notas: NotasCliente | null
   /** Presupuestos recientes sin póliza. `null` = no se pudo contar. */
@@ -753,6 +756,7 @@ export async function fichaCliente(
     polizaCarnet: deSusPolizas.polizaCarnet,
   }
   const historial = await historialCliente(correduriaId, c.id)
+  const correos = await correosCliente(correduriaId, c.id)
   const notas = await notasCliente(correduriaId, c.id, c.notas ?? null)
   const presupuestos = await cotizacionesVivas(correduriaId, c.id, DIAS_PRESUPUESTO_VIVO)
   const estado = estadoCliente({
@@ -793,6 +797,7 @@ export async function fichaCliente(
     dePolizas,
     estado,
     historial,
+    correos,
     notas,
     cotizacionesVivas: presupuestos,
     identidad: {

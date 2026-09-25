@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** ✉️ **Seguimiento de correos a clientes** (Alberto: «de todos los correos… por si algún cliente reclama»).
+Tablas `seguros.correo_envio` (destino cifrado + id de Resend) y `seguros.correo_evento` (append-only, idempotente por svix-id)
+APLICADAS; webhook de Resend suscrito a TODOS los eventos y guarda cada uno; open/click tracking activado en `grupoasegura.es`.
+Punto único `lib/correo-envio.ts` (API de Resend, cae a SMTP «sin seguimiento»); la felicitación ya sale por él. Ficha → «✉️ Correos».
+⚠️ «Abierto» no prueba lectura (Apple MPP); la prueba es «entregado» y el clic. Pendiente: pasar los otros 12 remitentes al punto único.
+
 **(25/09/2026)** 🏢 **Portal: el dueño de una empresa ve y gestiona su empresa automáticamente** (caso Flores y Gazquez SL /
 Diego Flores Carmona). Derivado en lectura de `cliente_relaciones` 'Dueño' (empresa jurídica explícita, viva, misma correduría), sin
 escribir vínculos; acceso total + puede autorizar a terceros. «Administración» NO abre (pendiente de Alberto). Antes, mismo día:
