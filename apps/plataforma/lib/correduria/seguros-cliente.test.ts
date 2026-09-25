@@ -98,3 +98,25 @@ test('huérfana = abierta, sin próxima tarea y sin aparcar', () => {
   assert.equal(estaHuerfana(opo('b', { proximaTarea: null, aparcadaHasta: '2026-12-01' })), false)
   assert.equal(estaHuerfana(opo('c', { proximaTarea: null, estado: 'perdida' })), false)
 })
+
+test('una perdida no sale si ese ramo ya está con nosotros, ni como reintento ni como «ya no existe»', () => {
+  const r = repartirSegurosCliente({
+    polizas: [pol('hogar-vivo', { tipo: 'hogar' }), pol('moto-viva', { tipo: 'moto' })],
+    declaradas: [],
+    oportunidades: [
+      opo('hogar-perdida', { ramo: 'hogar', estado: 'perdida', motivoPerdida: 'precio' }),
+      opo('moto-desiste', { ramo: 'moto', estado: 'perdida', motivoPerdida: 'cliente_desiste' }),
+    ],
+  })
+  assert.deepEqual(ids(r.oportunidades), [])
+  assert.deepEqual(ids(r.yaNoExiste), [])
+})
+
+test('una abierta sin ramo no tapa las perdidas sin ramo', () => {
+  const r = repartirSegurosCliente({
+    polizas: [],
+    declaradas: [],
+    oportunidades: [opo('abierta', { ramo: null }), opo('perdida', { ramo: null, estado: 'perdida', motivoPerdida: 'precio' })],
+  })
+  assert.deepEqual(ids(r.oportunidades).sort(), ['abierta', 'perdida'])
+})

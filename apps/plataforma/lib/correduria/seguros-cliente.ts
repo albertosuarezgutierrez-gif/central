@@ -100,9 +100,13 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades }: {
       if (hueco) hueco.oportunidad = o
       else sueltas.push({ clase: 'oportunidad', id: o.id, oportunidad: o })
     }
+    // Un ramo ya «cubierto» (con nosotros, abierto o con su póliza perdida en pantalla) no
+    // repite tarjeta por una perdida vieja: ni la ofrece reintentar (venta ya hecha) ni la
+    // da por desaparecida (el riesgo existe). Sin ramo no se puede casar con nada.
     const ramosCubiertos = new Set<string>([
-      ...abiertas.map(o => o.ramo ?? ''),
+      ...abiertas.flatMap(o => (o.ramo ? [o.ramo] : [])),
       ...enCompetencia.map(s => s.poliza.tipo),
+      ...conNosotros.flatMap(s => (s.clase === 'poliza' ? [s.poliza.tipo] : [])),
     ])
     // De las perdidas, la más reciente de cada ramo sin nada abierto. `error_alta` es un
     // descarte (se abrió por error): no es ni venta perdida ni riesgo, no se enseña.
@@ -114,9 +118,10 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades }: {
       const ramo = o.ramo ?? `sin-ramo:${o.id}`
       if (vistos.has(ramo)) continue
       vistos.add(ramo)
+      if (o.ramo !== null && ramosCubiertos.has(o.ramo)) continue
       if (o.motivoPerdida !== null && RIESGO_DESAPARECIDO.has(o.motivoPerdida)) {
         yaNoExiste.push({ clase: 'oportunidad', id: o.id, oportunidad: o })
-      } else if (!ramosCubiertos.has(o.ramo ?? '')) {
+      } else {
         // Perdida por precio, competidor… el seguro sigue existiendo en otra casa:
         // se reintenta al vencimiento.
         sueltas.push({ clase: 'oportunidad', id: o.id, oportunidad: o })
