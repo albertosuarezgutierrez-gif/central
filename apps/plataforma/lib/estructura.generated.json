@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-25T11:43:05Z",
+  "generadoEn": "2026-09-25T14:50:50Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -798,7 +798,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "asegura-web": {
         "estado": "no",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 121
+        "evidencias": 122
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 98
+        "evidencias": 101
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 89
+        "evidencias": 90
       },
       "rrhh": {
         "estado": "no",
@@ -2310,7 +2310,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 77
+        "evidencias": 81
       },
       "asegura-web": {
         "estado": "usado",
@@ -3716,7 +3716,7 @@
       },
       "asegura-portal": {
         "presente": true,
-        "evidencias": 2
+        "evidencias": 3
       },
       "asegura-web": {
         "presente": false,
@@ -3992,6 +3992,7 @@
       "/api/operador/cliente",
       "/api/operador/cliente/contactos",
       "/api/operador/cliente/dni",
+      "/api/operador/cliente/fusion",
       "/api/operador/cliente/historial",
       "/api/operador/cliente/portal",
       "/api/operador/cliente/portal/vista",
@@ -4110,6 +4111,7 @@
       "/api/catastro/sugerir",
       "/api/consentimiento",
       "/api/contacto-compania/[compania]",
+      "/api/cron/avisos-cima",
       "/api/cron/avisos-push",
       "/api/datos",
       "/api/datos/documento",
@@ -4135,6 +4137,7 @@
       "/api/presupuesto/carta",
       "/api/presupuesto/firma",
       "/api/push/desuscribir",
+      "/api/push/preferencias",
       "/api/push/suscribir",
       "/api/recordatorios",
       "/api/recordatorios/[id]",
@@ -4971,6 +4974,7 @@
       "/api/correduria/cliente/[id]/dni-codigo",
       "/api/correduria/cliente/[id]/dni-revelar",
       "/api/correduria/cliente/contactos",
+      "/api/correduria/cliente/fusion",
       "/api/correduria/cliente/nota",
       "/api/correduria/cliente/portal",
       "/api/correduria/cliente/portal/vista",
@@ -5558,6 +5562,8 @@
       "seguros.portal_acceso",
       "seguros.portal_autorizacion",
       "seguros.portal_autorizacion_uso",
+      "seguros.portal_aviso_cima",
+      "seguros.portal_aviso_silenciado",
       "seguros.portal_bien",
       "seguros.portal_canal",
       "seguros.portal_codigo",
@@ -6547,7 +6553,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1483,
+    "apis": 1487,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
