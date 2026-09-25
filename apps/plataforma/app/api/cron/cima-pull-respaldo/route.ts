@@ -7,8 +7,9 @@
 // los jobs de `asegura` se quedaron sin runner y CIMA pasó ~45 h sin entrar.
 //
 // Este job corre desde el cron-dispatch de plataforma (Vercel, no gasta minutos
-// de Actions) a las 08:00 y 14:00 UTC, y SOLO dispara el pull si la franja de
-// Actions no ha completado (`decidirRespaldoPull`, con su cepo).
+// de Actions) a las 09:00 UTC (11:00 de Madrid), y SOLO dispara el pull si la franja de Actions no ha
+// completado (`decidirRespaldoPull`, con su cepo). Además, dos franjas FIJAS
+// (`?franja=16h` y `?franja=2030`, hora de Madrid) que disparan siempre: ver GET.
 //
 // ⚠️ Riesgo residual declarado: si un run de Actions arranca más de 2,5 h tarde
 // y sigue en marcha a la hora del respaldo, los dos pulls coincidirían. El
@@ -52,7 +53,13 @@ export async function GET(req: NextRequest) {
 
   const ingesta = await leerIngestaCima()
   const ultimoPull = ingesta.estado === 'ok' ? ingesta.salud.ultimoPull : null
-  const decision = decidirRespaldoPull(ultimoPull)
+  // Franja FIJA (`?franja=…`, 25/09/2026): CIMA recomienda descargar a las 16:00 y a las
+  // 20:30 de Madrid, que es cuando las compañías ya han dejado sus ficheros. Esas pasadas
+  // no dependen de Actions: disparan siempre, y su éxito no se avisa (es lo normal).
+  const franja = req.nextUrl.searchParams.get('franja')
+  const decision = franja
+    ? { disparar: true as const, horas: ultimoPull?.horas ?? null }
+    : decidirRespaldoPull(ultimoPull)
 
   if (!decision.disparar) {
     const texto = decision.motivo === 'al_dia'
@@ -103,6 +110,15 @@ export async function GET(req: NextRequest) {
 
   const detalle = `disparado (${resultado}): el último pull tenía ${decision.horas} h · ${resumen}`
   await registrarLatido(AGENTE, resultado === 'ok', detalle)
+
+  if (franja) {
+    if (resultado !== 'ok') {
+      await tgAviso('correduria.cima-respaldo',
+        `${resultado === 'fallo' ? '🔴' : '🟠'} <b>CIMA · descarga fija (${franja}) ${resultado === 'fallo' ? 'FALLIDA' : 'sin confirmar'}</b>\n${resumen}.`,
+      ).catch(() => {})
+    }
+    return NextResponse.json({ ok: resultado === 'ok', disparado: true, franja, resultado, horas: decision.horas, resumen })
+  }
 
   // El éxito se avisa UNA vez por racha: si la pasada anterior ya fue un respaldo
   // con éxito, Actions sigue caído y ya se sabe. El fallo suena siempre.
