@@ -47,3 +47,12 @@ test('la pantalla ofrece exactamente los tipos que existen', () => {
   const enUi = [...ui.matchAll(/\{ tipo: '([a-z_]+)', texto:/g)].map((m) => m[1]).sort()
   assert.deepEqual(enUi, [...TIPOS_AVISO_CIMA].sort())
 })
+
+test('«Mis datos» avisa de que el correo tiene que ser el tuyo y lleva a Contactos', () => {
+  // Caso Guzmán (25/09/2026): un padre puso el correo del hijo en su ficha y el hijo entró
+  // como titular. El trigger de #3600 cierra el vínculo cuando el correo SALE; esto es la
+  // otra mitad: que no entre por error.
+  const ui = sinComentarios(leer('apps/asegura-portal/app/(portal)/boveda/MisDatos.tsx'))
+  assert.match(ui, /como si fuera tú/)
+  assert.match(ui, /href="\/autorizaciones"/)
+})

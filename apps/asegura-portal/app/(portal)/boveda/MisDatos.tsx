@@ -172,6 +172,14 @@ export function MisDatos({
         <fieldset className="mis-datos-grupo">
           <legend>Dónde te avisamos</legend>
           {CANALES.map((c) => campo(c, f, setF))}
+          {/* 🚨 Caso real (25/09/2026): un padre puso aquí el correo de su hijo y el hijo, al entrar
+              con él, recibió la ficha del padre como si fuera suya. El correo de esta ficha abre el
+              portal a quien lo use: tiene que ser el TUYO. Para otra persona está «Contactos». */}
+          <p className="editor-ayuda">
+            Pon solo <strong>tu</strong> teléfono y <strong>tu</strong> correo: quien entre con este correo verá y
+            gestionará tus seguros como si fuera tú. Si quieres que un familiar los vea, dale acceso desde{' '}
+            <a href="/autorizaciones">Contactos</a>.
+          </p>
         </fieldset>
         <fieldset className="mis-datos-grupo">
           <legend>Dónde te escribimos</legend>
