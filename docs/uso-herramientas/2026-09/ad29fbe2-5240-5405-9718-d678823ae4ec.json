@@ -1,33 +1,33 @@
 {
  "sesion": "ad29fbe2-5240-5405-9718-d678823ae4ec",
  "inicio": "2026-09-21T09:58:35.919Z",
- "fin": "2026-09-25T11:21:22.660Z",
- "llamadas": 235,
+ "fin": "2026-09-25T11:29:32.713Z",
+ "llamadas": 246,
  "categorias": {
   "otro": {
-   "llamadas": 81,
-   "chars_in": 50257,
-   "chars_out": 300144,
+   "llamadas": 83,
+   "chars_in": 58704,
+   "chars_out": 300423,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 16,
+    "ToolSearch": 17,
     "WebSearch": 49,
-    "SubagentHandback": 3,
+    "SubagentHandback": 4,
     "ReadNotifications": 12,
     "Skill": 1
    }
   },
   "bash": {
-   "llamadas": 84,
-   "chars_in": 28939,
-   "chars_out": 329257,
+   "llamadas": 85,
+   "chars_in": 29520,
+   "chars_out": 330031,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 84
+    "Bash": 85
    }
   },
   "mcp:Gmail": {
@@ -47,14 +47,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 3,
-   "chars_in": 8251,
-   "chars_out": 5778,
+   "llamadas": 4,
+   "chars_in": 11474,
+   "chars_out": 5926,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 3
+    "Agent": 4
    }
   },
   "mcp:Supabase": {
@@ -123,28 +123,29 @@
    }
   },
   "mcp:Google_Drive": {
-   "llamadas": 8,
-   "chars_in": 8134,
-   "chars_out": 14100,
-   "errores": 2,
+   "llamadas": 12,
+   "chars_in": 18326,
+   "chars_out": 17760,
+   "errores": 3,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Google_Drive__search_files": 4,
+    "mcp__Google_Drive__search_files": 5,
     "mcp__Google_Drive__read_file_content": 2,
-    "mcp__Google_Drive__create_file": 1,
-    "mcp__Google_Drive__download_file_content": 1
+    "mcp__Google_Drive__create_file": 2,
+    "mcp__Google_Drive__download_file_content": 2,
+    "mcp__Google_Drive__update_file": 1
    }
   },
   "lectura-directa": {
-   "llamadas": 5,
-   "chars_in": 634,
-   "chars_out": 94600,
+   "llamadas": 8,
+   "chars_in": 1008,
+   "chars_out": 140364,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 5
+    "Read": 8
    }
   }
  }
