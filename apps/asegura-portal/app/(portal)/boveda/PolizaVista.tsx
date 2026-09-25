@@ -482,7 +482,12 @@ export function Coberturas({ p }: { p: PolizaPortal }) {
       </p>
       <ul className="coberturas">
         {c.lista.map((nombre, i) => (
-          <li key={`${nombre}-${i}`}>{nombre}</li>
+          <li key={`${nombre}-${i}`}>
+            {nombre}
+            {c.capitales?.[i] === 'ilimitado'
+              ? ': ilimitado'
+              : typeof c.capitales?.[i] === 'number' && `: ${eur(c.capitales[i] as number)}`}
+          </li>
         ))}
       </ul>
       {/* `total > lista.length` = filas informadas SIN descripción ni código.

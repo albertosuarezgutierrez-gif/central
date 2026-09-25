@@ -65,7 +65,7 @@ import {
   type CamposVisibles,
   type Nivel,
 } from '@central/module-seguros-portal'
-import { importeEiac, sustituidasARetirar, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
+import { importeEiac, interpretarCapital, sustituidasARetirar, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
 
 import { decryptField } from '@central/module-seguros-pii'
 
@@ -197,7 +197,12 @@ export type PolizaPortal = {
    * descripción ni código (la fila existe, el texto no): no es que se hayan
    * escondido.
    */
-  coberturas: { total: number; lista: string[] } | null
+  coberturas: {
+    total: number
+    lista: string[]
+    /** Capital de cada cobertura, alineado con `lista`; `null` = no informado. */
+    capitales?: (number | 'ilimitado' | null)[]
+  } | null
   /** `null` = no visible en este nivel. */
   recibos: RecibosPortal | null
   /** `null` = no visible en este nivel. `[]` = no hay ninguno abierto. */
@@ -655,7 +660,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       : await Promise.all([
           prisma.polizaCobertura.findMany({
             where: { polizaId: { in: polizaIds } },
-            select: { polizaId: true, descripcion: true, codigo: true, numeroOrden: true },
+            select: { polizaId: true, descripcion: true, codigo: true, numeroOrden: true, capitalAsegurado: true },
             orderBy: { numeroOrden: 'asc' },
           }),
           prisma.polizaRecibo.findMany({
@@ -789,7 +794,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
         ? {
             total: cobs.length,
             // Sin `slice`: la lista va entera. Ver el comentario del tipo.
-            lista: cobs.map((c) => (c.descripcion ?? c.codigo ?? '').trim()).filter(Boolean),
+            ...listaCoberturas(cobs),
           }
         : null,
       recibos: ve.recibos ? recibosDePoliza(recs) : null,
@@ -990,6 +995,27 @@ type ReciboFila = {
  * limpia: es la única forma de distinguir «la compañía no informó nada» de
  * «informó y está todo anulado», que eran las 20 pólizas mudas.
  */
+/**
+ * Nombre y capital de cada cobertura, alineados. Un capital 0, vacío o que no
+ * se sabe leer sale `null` («no informado»), nunca «0,00€».
+ */
+function listaCoberturas(
+  cobs: Array<{ descripcion: string | null; codigo: string | null; capitalAsegurado: string | null }>,
+): { lista: string[]; capitales: (number | 'ilimitado' | null)[] } {
+  const lista: string[] = []
+  const capitales: (number | 'ilimitado' | null)[] = []
+  for (const c of cobs) {
+    const nombre = (c.descripcion ?? c.codigo ?? '').trim()
+    if (!nombre) continue
+    // El MISMO lector que el resto de la cartera: un «1.500» o un texto raro
+    // no se adivina (sale `null`), y «INF» es ilimitado, no «sin importe».
+    const cap = interpretarCapital(c.capitalAsegurado)
+    lista.push(nombre)
+    capitales.push(cap.tipo === 'importe' && cap.importe > 0 ? cap.importe : cap.tipo === 'ilimitado' ? 'ilimitado' : null)
+  }
+  return { lista, capitales }
+}
+
 function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
   const crudos = lista.map((r) => ({
     situacion: (r.situacion ?? '').trim() || 'sin_informar',

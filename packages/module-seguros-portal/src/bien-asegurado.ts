@@ -107,6 +107,13 @@ function campo(d: Record<string, unknown>, clave: string): string | null {
   return t
 }
 
+/** ¿Es una fila de `capitales` que en realidad es una cobertura (`bien: 'OTROS'`)? */
+function esPartidaDeCobertura(c: unknown): boolean {
+  if (c === null || typeof c !== 'object') return false
+  const bien = (c as Record<string, unknown>).bien
+  return typeof bien === 'string' && bien.trim().toUpperCase() === 'OTROS'
+}
+
 /** El sobre de `@central/module-seguros-pii`: `v1:iv:cipher:tag` en base64. */
 const VERSION_CIFRADO = /^v\d+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/
 
@@ -166,7 +173,15 @@ export function describirBien(ramo: string | null | undefined, datosEspecificos:
   // MISMA función que `/correduria` (`formatCapitales` de `@central/module-seguros`,
   // ya dependencia de este paquete) — una sola lógica de parseo/formato, no dos
   // copias que puedan divergir (p.ej. en si aceptan coma decimal).
-  detalles.push(...(formatCapitales(d) ?? []))
+  // 🚨 Las partidas `bien: 'OTROS'` NO son partidas del bien: son las COBERTURAS
+  // (el EIAC repite ahí «Incendio», «Robo del contenido»…), y la ficha ya las
+  // lista una a una con su capital desde `poliza_coberturas`. Medido 25/09/2026:
+  // las 513 `OTROS` con importe tienen su fila en `poliza_coberturas`. Sin este
+  // filtro, «Detalles» repetía la lista entera de coberturas encima de ella.
+  const capitales = Array.isArray(d.capitales)
+    ? d.capitales.filter((c) => !esPartidaDeCobertura(c))
+    : d.capitales
+  detalles.push(...(formatCapitales({ ...d, capitales }) ?? []))
 
   // ── Vehículo ──────────────────────────────────────────────────────────────
   if (RAMOS_VEHICULO.has(r) || campo(d, 'matricula') !== null) {

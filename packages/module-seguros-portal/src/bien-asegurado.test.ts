@@ -245,3 +245,16 @@ test('una partida sin etiqueta NI importe no se pinta (nada que decir)', () => {
   })
   assert.equal(b.detalles.length, 0)
 })
+
+test('las partidas OTROS son coberturas, no partidas del bien: no se repiten en detalles', () => {
+  const b = describirBien('hogar', {
+    direccion: 'Calle Falsa 1',
+    metrosCuadrados: 90,
+    capitales: [
+      { bien: 'OTROS', importe: '0.00', descripcion: 'Incendio y complementarios' },
+      { bien: 'OTROS', importe: '1000.00', descripcion: 'Restitución estética ampliada' },
+      { bien: 'CONTINENTE', importe: '150000.00', descripcion: 'Continente total' },
+    ],
+  })
+  assert.deepEqual(b.detalles, ['90 m²', 'CONTINENTE: 150.000,00 €'])
+})

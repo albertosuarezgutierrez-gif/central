@@ -469,6 +469,9 @@ function CanalesCompania({
   destacada?: string | null
 }) {
   const [busca, setBusca] = useState('')
+  // Para QUÉ compañía elegida se han desplegado las demás: al cambiar de póliza
+  // se vuelven a plegar solas, sin un efecto que lo sincronice.
+  const [otrasAbiertasPara, setOtrasAbiertasPara] = useState<string | null>(null)
   // Una compañía en blanco (una póliza aportada de la que la IA no leyó cuál
   // era) es «no lo sabemos», no una compañía: ni ordena ni marca nada.
   const quien = typeof destacada === 'string' && destacada.trim() !== '' ? destacada.trim() : null
@@ -482,9 +485,23 @@ function CanalesCompania({
   // menos, las cabeceras plegadas ya caben de un vistazo y un campo más estorba.
   // Filtrar aquí lo decide QUIEN MIRA, no el código: `canales` sigue entero, y
   // si nada coincide se dice en vez de pintar una lista vacía.
-  const conBuscador = canales.length >= 5
+  //
+  // 🚨 Con una póliza elegida (25/09/2026, Alberto: «si sabes que la póliza es
+  // de una compañía, ¿por qué salen todas?») se ENSEÑA solo la suya y las demás
+  // quedan detrás de un botón que dice cuántas son. Plegar no es borrar:
+  // `canales` sigue entero y el botón está siempre, porque quien llega desde la
+  // póliza equivocada —el coche de su padre, el piso en vez del local— tiene
+  // que poder llegar al otro teléfono.
+  const hayElegida = clave !== null && canales.some((c) => c.nombre.trim().toLowerCase() === clave)
+  const otrasPlegadas = hayElegida && canales.length > 1 && otrasAbiertasPara !== clave
+  const numOtras = canales.length - 1
+  const conBuscador = !otrasPlegadas && canales.length >= 5
   const q = busca.trim().toLowerCase()
-  const vistos = q === '' ? canales : canales.filter((c) => c.nombre.toLowerCase().includes(q))
+  const vistos = otrasPlegadas
+    ? canales.filter((c) => c.nombre.trim().toLowerCase() === clave)
+    : q === ''
+      ? canales
+      : canales.filter((c) => c.nombre.toLowerCase().includes(q))
 
   return (
     <div className="canal-caja">
@@ -522,6 +539,11 @@ function CanalesCompania({
           )
         })}
       </div>
+      {otrasPlegadas && (
+        <button type="button" className="canal-ver-otras" onClick={() => setOtrasAbiertasPara(clave)}>
+          {numOtras === 1 ? 'Ver la otra compañía de tus seguros' : `Ver las otras ${numOtras} compañías de tus seguros`}
+        </button>
+      )}
     </div>
   )
 }
@@ -532,14 +554,16 @@ function BloqueCanal({ canal, deLaElegida, abierto }: { canal: CanalCompania; de
     <details className="canal-bloque" data-elegida={deLaElegida ? 'si' : undefined} open={abierto}>
       <summary className="canal-cabecera">
         {logo !== null ? (
-          <img className="canal-logo" src={logo} alt="" />
+          // Con logo el nombre ya va en él (Alberto, 25/09/2026): no se repite
+          // en texto, y el `alt` lo lleva para quien no ve la imagen.
+          <img className="canal-logo" src={logo} alt={canal.nombre} />
         ) : (
           <span className="canal-logo canal-inicial" aria-hidden="true">
             {canal.nombre.trim().charAt(0).toUpperCase()}
           </span>
         )}
         <span className="canal-compania">
-          {canal.nombre}
+          {logo === null && canal.nombre}
           {/* El cartel solo dice de QUÉ póliza es esta compañía. Va en texto y
               no solo en color: el filete no se lo lee nadie por teléfono. */}
           {deLaElegida === true && <span className="canal-elegida">La de la póliza elegida</span>}
