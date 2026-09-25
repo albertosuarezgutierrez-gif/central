@@ -1839,8 +1839,19 @@ sugerirle que te autorice.
 ## 🔑 Dos permisos y sin caducidad (25/09/2026) — lo que cambió en la autorización
 
 Dictado de Alberto, con las dos decisiones tomadas por él en la sesión (AskUserQuestion): **sin
-caducidad + aviso anual**, y **«Acceso total» de una PERSONA incluye su DNI y su IBAN**. Migración
-`prisma/sql/2026-09-25_portal_autorizacion_sin_caducidad_y_total.sql`.
+caducidad + aviso anual**, y **«Acceso total» de una PERSONA incluye su DNI y su IBAN**. Migración en
+**DOS pasos, y el orden importa**: `2026-09-25_portal_autorizacion_sin_caducidad_y_total.sql` (paso A,
+aditivo) **antes** de desplegar; `2026-09-25_b_portal_autorizacion_vivas_sin_caducidad.sql` (paso B, el
+`UPDATE … caduca_en = NULL`) **solo cuando `asegura-portal` y `asegura` ya sirven el código nuevo** — el
+cliente Prisma viejo declara `caducaEn` obligatorio y un NULL tumba la consulta entera.
+
+- **Pendiente sí caduca:** 30 días para aceptar (`caducidadPendiente`, `DIAS_PENDIENTE`); TODA vía que
+  acepta pone `caducaEn: null` en el mismo `update` (lo vigila `regression-portal-autorizacion`).
+- **`total` no se pide ni se invita:** peticiones validan con `ALCANCES_PEDIBLES` (`['ver_economico']`),
+  no con `ALCANCES_CONCEDIBLES`; al resolver, `alcancePeticionResoluble` acepta también el `ver` de las
+  peticiones antiguas. `ampliarATotal` repite las comprobaciones de `conceder` sobre el destinatario
+  (relación, ficha no fusionada) y la póliza, y `mantener` exige nivel para autorizar.
+- **Vía corredor:** versión de texto propia para «Acceso total» (`TEXTO_AUTORIZACION_CORREDOR_TOTAL_V1`).
 
 | Antes | Ahora |
 |---|---|

@@ -32,6 +32,7 @@
 import {
   alcanceConcedible,
   alcancesConcedibles,
+  caducidadPendiente,
   esAlcance,
   estadoAutorizacion,
   pideRevision,
@@ -949,8 +950,9 @@ export async function conceder(datos: {
     polizaId,
     tituloRepresentacion: titulo,
     otorgadoPorIdentidadId: identidadId,
-    // Sin caducidad (25/09/2026). La revisión anual la pide `pideRevision`.
-    caducaEn: null,
+    // Mientras está PENDIENTE caduca a los 30 días; al aceptarla pasa a NULL
+    // (sin caducidad, 25/09/2026) y la revisión anual la pide `pideRevision`.
+    caducaEn: caducidadPendiente(hoy),
     // Qué texto aceptó. Sin esto el consentimiento no se puede demostrar — y por
     // eso hay una versión por permiso y por quién cede: la de «Solo ver» de una
     // persona afirma «no verá mi IBAN», que en «Acceso total» es falso.
@@ -1083,7 +1085,7 @@ export async function ampliarATotal(datos: {
       alcance: 'total',
       revocadoEn: null,
     },
-    select: { aceptadoEn: true, caducaEn: true, revocadoEn: true },
+    select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
   })
   if (previa !== null && ocupaElSitio(estadoAutorizacion(previa, hoy))) {
     return {
@@ -1093,24 +1095,91 @@ export async function ampliarATotal(datos: {
     }
   }
 
-  const fila = await prisma.portalAutorizacion.create({
-    data: {
-      correduriaId: base.correduriaId,
-      otorganteClienteId: base.otorganteClienteId,
-      autorizadoClienteId: base.autorizadoClienteId,
-      autorizadoIdentidadId: base.autorizadoIdentidadId,
-      polizaId: base.polizaId,
-      alcance: 'total',
-      tituloRepresentacion: titulo,
-      origen: 'portal',
-      otorgadoPorIdentidadId: datos.identidadId,
-      caducaEn: null,
-      versionTexto: textoDeConcesion('total', tipo).version,
-      ip: datos.ip,
-      userAgent: datos.userAgent,
-    },
-    select: { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true },
-  })
+  // Lo que `conceder` comprueba del DESTINATARIO y de la póliza se repite aquí:
+  // entre el «Solo ver» y la ampliación la relación pudo pasar a «Sin vínculo»,
+  // la ficha fusionarse o la póliza irse. Ampliar sobre eso sería dar el acceso
+  // más fuerte con las comprobaciones de hace meses.
+  if (base.autorizadoClienteId !== null) {
+    const [relaciones, autorizado] = await Promise.all([
+      prisma.clienteRelacion.findMany({
+        where: {
+          correduriaId: mio.correduriaId,
+          OR: [
+            { clienteAId: base.otorganteClienteId, clienteBId: base.autorizadoClienteId },
+            { clienteAId: base.autorizadoClienteId, clienteBId: base.otorganteClienteId },
+          ],
+        },
+        select: { tipoRelacion: true },
+      }),
+      prisma.cliente.findFirst({
+        where: { id: base.autorizadoClienteId, correduriaId: mio.correduriaId, mergedIntoClienteId: null },
+        select: { id: true },
+      }),
+    ])
+    if (autorizado === null || !relaciones.some((r) => permiteAutorizar(r.tipoRelacion))) {
+      return {
+        ok: false,
+        error: 'sin_relacion',
+        mensaje: `No consta ninguna relación entre las dos fichas (o consta como «${SIN_VINCULO}»). Habla con tu correduría para que la registre antes de dar acceso total.`,
+      }
+    }
+  }
+  if (base.polizaId !== null) {
+    const suya = await prisma.poliza.findFirst({
+      where: { id: base.polizaId, clienteId: base.otorganteClienteId, mergedIntoPolizaId: null },
+      select: { id: true },
+    })
+    if (suya === null) {
+      return {
+        ok: false,
+        error: 'poliza_no_es_tuya',
+        mensaje: 'Esa póliza ya no está en tu ficha. Vuelve a cargar la pantalla.',
+      }
+    }
+  }
+
+  const datosTotal = {
+    correduriaId: base.correduriaId,
+    otorganteClienteId: base.otorganteClienteId,
+    autorizadoClienteId: base.autorizadoClienteId,
+    autorizadoIdentidadId: base.autorizadoIdentidadId,
+    polizaId: base.polizaId,
+    alcance: 'total' as const,
+    tituloRepresentacion: titulo,
+    origen: 'portal',
+    otorgadoPorIdentidadId: datos.identidadId,
+    // Pendiente: 30 días para aceptarla; al aceptar pasa a NULL.
+    caducaEn: caducidadPendiente(hoy),
+    versionTexto: textoDeConcesion('total', tipo).version,
+    ip: datos.ip,
+    userAgent: datos.userAgent,
+  }
+  const seleccionTotal = { id: true, aceptadoEn: true, caducaEn: true, revocadoEn: true }
+  let fila
+  try {
+    if (previa === null) {
+      fila = await prisma.portalAutorizacion.create({ data: datosTotal, select: seleccionTotal })
+    } else {
+      // Una `total` anterior CADUCADA sin aceptar sigue ocupando el índice
+      // único: se cierra por caducidad (con su propia fecha) y se crea la nueva,
+      // igual que en `conceder`. O las dos, o ninguna.
+      const [, creada] = await prisma.$transaction([
+        prisma.portalAutorizacion.update({
+          where: { id: previa.id },
+          data: { revocadoEn: previa.caducaEn, revocadoPor: 'caducidad' },
+          select: { id: true },
+        }),
+        prisma.portalAutorizacion.create({ data: datosTotal, select: seleccionTotal }),
+      ])
+      fila = creada
+    }
+  } catch (e) {
+    // Doble clic: la segunda choca con el índice único. Es «ya lo has dado», no un 500.
+    if (typeof e === 'object' && e !== null && (e as { code?: unknown }).code === 'P2002') {
+      return { ok: false, error: 'ya_concedida', mensaje: 'Ya le has dado acceso total; falta que lo acepte en su portal.' }
+    }
+    throw e
+  }
   return { ok: true, id: fila.id, estado: estadoAutorizacion(fila, hoy), caducaEn: fila.caducaEn }
 }
 
@@ -1207,7 +1276,8 @@ export async function resolver(datos: {
     // el sello de la primera. `count === 0` = alguien llegó antes.
     const { count } = await prisma.portalAutorizacion.updateMany({
       where: { id: fila.id, aceptadoEn: null, revocadoEn: null },
-      data: { aceptadoEn: hoy, aceptadoPorIdentidadId: identidadId },
+      // Aceptada deja de caducar: el plazo de 30 días era solo para contestar.
+      data: { aceptadoEn: hoy, aceptadoPorIdentidadId: identidadId, caducaEn: null },
     })
     if (count === 0) {
       return { ok: false, error: 'no_pendiente', mensaje: 'Esta autorización ya no está pendiente.' }
@@ -1216,6 +1286,16 @@ export async function resolver(datos: {
     // Solo el otorgante: la pregunta es si SIGUE dejando ver lo suyo.
     if (!soyOtorgante) {
       return { ok: false, error: 'no_te_toca', mensaje: 'Esto lo confirma quien dio el acceso.' }
+    }
+    // Y con un vínculo que permita autorizar: confirmar un acceso es volver a
+    // darlo, y quien solo consulta la ficha no lo pudo dar.
+    const mio = vinculos.find((v) => v.clienteId === fila.otorganteClienteId)
+    if (!mio || !nivelPuedeAutorizar(nivelDeVinculo(mio.nivel))) {
+      return {
+        ok: false,
+        error: 'no_te_toca',
+        mensaje: 'Tu acceso a esa ficha es de consulta: esto lo confirma quien la gestiona.',
+      }
     }
     if (estado !== 'vigente') {
       return {

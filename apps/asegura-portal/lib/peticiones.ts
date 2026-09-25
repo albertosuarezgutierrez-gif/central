@@ -55,7 +55,8 @@ import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import {
   MAX_PETICIONES_DIA,
   NIVELES,
-  alcanceConcedible,
+  alcancePedible,
+  alcancePeticionResoluble,
   caducidadPeticion,
   esAlcance,
   estadoAutorizacion,
@@ -161,7 +162,7 @@ export async function crearPeticion(datos: {
 }): Promise<ResultadoCrear> {
   const { identidadId } = datos
 
-  const alcance = alcanceConcedible(datos.alcance)
+  const alcance = alcancePedible(datos.alcance)
   if (alcance === null) {
     return {
       ok: false,
@@ -405,7 +406,7 @@ export async function peticionDesdeRelacion(datos: {
 }): Promise<ResultadoCrear | { ok: false; error: 'sin_hash'; mensaje: string }> {
   const { identidadId, relacionadoClienteId } = datos
 
-  const alcance = alcanceConcedible(datos.alcance)
+  const alcance = alcancePedible(datos.alcance)
   if (alcance === null) {
     return {
       ok: false,
@@ -847,7 +848,7 @@ export async function resolverPeticion(datos: {
   // hueco como sociedad repartiría apoderamientos por una columna vacía.
   const esJuridica = fichaOtorgante.tipoPersona === 'juridica'
 
-  const alcance = alcanceConcedible(fila.alcance, esJuridica ? 'juridica' : 'fisica')
+  const alcance = alcancePeticionResoluble(fila.alcance)
   if (alcance === null) {
     return {
       ok: false,
@@ -893,7 +894,7 @@ export async function resolverPeticion(datos: {
         if (viva.aceptadoEn === null) {
           await tx.portalAutorizacion.updateMany({
             where: { id: viva.id, aceptadoEn: null, revocadoEn: null },
-            data: { aceptadoEn: fila.creadaEn, aceptadoPorIdentidadId: fila.solicitanteIdentidadId },
+            data: { aceptadoEn: fila.creadaEn, aceptadoPorIdentidadId: fila.solicitanteIdentidadId, caducaEn: null },
           })
         }
       } else {

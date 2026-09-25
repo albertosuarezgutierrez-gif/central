@@ -35,6 +35,7 @@ import { WHERE_CARTERA_VIVA } from '@central/module-seguros'
 import {
   alcanceConcedible,
   autorizacionVigente,
+  caducidadPendiente,
   esAlcance,
   estadoAutorizacion,
   tituloRepresentacion,
@@ -61,6 +62,14 @@ export const TEXTO_AUTORIZACION_CORREDOR_V1 = 'v1-2026-09-03-corredor'
  * lo que consintieron las filas que la llevan.
  */
 export const TEXTO_AUTORIZACION_CORREDOR_V2 = 'v2-2026-09-25-corredor'
+
+/**
+ * Lo mismo, cuando lo que se lee al cliente es el «Acceso total»: dice que verá
+ * también el DNI, la cuenta y los documentos y que podrá actuar en su nombre.
+ * Versión propia, como en el portal: con una sola versión para los dos permisos
+ * no se podría demostrar a cuál de los dos textos dijo que sí.
+ */
+export const TEXTO_AUTORIZACION_CORREDOR_TOTAL_V1 = 'v1-2026-09-25-corredor-total'
 
 /**
  * El alcance que se anota si no se dice otro: el más pequeño de los que se
@@ -629,8 +638,10 @@ export async function autorizarVer(
           otorgadoPorActor: entrada.actor,
           // 🚨 Desde el 25/09/2026 no caduca: dura hasta que se revoque, y una vez
           // al año el portal le pregunta al otorgante si la mantiene.
-          caducaEn: null,
-          versionTexto: TEXTO_AUTORIZACION_CORREDOR_V2,
+          // Pendiente hasta que la acepte en el portal: 30 días para contestar.
+          // Al aceptarla pasa a NULL (no caduca).
+          caducaEn: caducidadPendiente(ahora),
+          versionTexto: alcance === 'total' ? TEXTO_AUTORIZACION_CORREDOR_TOTAL_V1 : TEXTO_AUTORIZACION_CORREDOR_V2,
         },
       })
       anotarCambio({ entidad: 'autorizacion', id: clienteId, campo: 'estado', antes: 'vigente', despues: 'vigente' })

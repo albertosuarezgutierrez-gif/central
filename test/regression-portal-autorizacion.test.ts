@@ -167,12 +167,32 @@ test('el acceso total NO se reparte por invitacion: la invitacion sigue en Solo 
   assert.match(pantalla, /filter\(\(a\) => CONCEDIBLES_POR_INVITACION\.includes\(a\)\)/)
 })
 
-test('las autorizaciones nuevas NO caducan: las tres vias escriben caducaEn null', () => {
+test('aceptada NO caduca: toda via que acepta pone caducaEn a null en el mismo update', () => {
+  // Pendiente caduca a los 30 dias; al aceptar tiene que pasar a NULL. Un
+  // `aceptadoEn` sin `caducaEn: null` al lado dejaria el acceso muriendo en su
+  // fecha de oferta.
   for (const f of ['apps/asegura-portal/lib/autorizaciones.ts', 'apps/asegura-portal/lib/invitaciones.ts', 'apps/asegura-portal/lib/peticiones.ts']) {
     const src = leer(f)
-    assert.doesNotMatch(src, /caducidadPorDefecto/, `${f} sigue poniendo fecha de caducidad`)
-    assert.match(src, /caducaEn: null/, `${f} no escribe caducaEn null`)
+    assert.doesNotMatch(src, /caducidadPorDefecto/, `${f} sigue poniendo caducidad de un año`)
+    const aceptaciones = src.match(/data: \{ aceptadoEn: [^}]*\}/g) ?? []
+    assert.ok(aceptaciones.length > 0, `${f}: no encuentro ninguna aceptacion (¿se ha movido?)`)
+    for (const a of aceptaciones) assert.match(a, /caducaEn: null/, `${f}: acepta sin quitar la caducidad: ${a}`)
   }
+})
+
+test('una PENDIENTE si caduca: conceder y ampliar usan caducidadPendiente', () => {
+  const src = leer('apps/asegura-portal/lib/autorizaciones.ts')
+  assert.equal((src.match(/caducaEn: caducidadPendiente\(hoy\)/g) ?? []).length, 2)
+  assert.match(leer('apps/asegura/lib/cartera-relaciones.ts'), /caducaEn: caducidadPendiente\(ahora\)/)
+})
+
+test('el acceso total NO se pide: peticiones validan con ALCANCES_PEDIBLES', () => {
+  for (const f of ['apps/asegura-portal/app/api/peticiones/route.ts', 'apps/asegura-portal/app/api/sugerencias/pedir/route.ts']) {
+    const src = leer(f)
+    assert.match(src, /z\.enum\(ALCANCES_PEDIBLES/, `${f} no valida con ALCANCES_PEDIBLES`)
+  }
+  const pet = leer('apps/asegura-portal/lib/peticiones.ts')
+  assert.doesNotMatch(pet, /alcanceConcedible\(/, 'peticiones.ts valida con la lista de conceder, que incluye total')
 })
 
 test('una cartera compartida SIN caducidad no desaparece de la boveda', () => {

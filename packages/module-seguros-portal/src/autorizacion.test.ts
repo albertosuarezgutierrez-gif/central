@@ -1,6 +1,9 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  alcancePedible,
+  alcancePeticionResoluble,
+  caducidadPendiente,
   ALCANCES,
   ALCANCES_CONCEDIBLES,
   DIAS_REVISION,
@@ -263,4 +266,18 @@ test('ver una póliza NO basta para dar un parte: hace falta `partes` y que conc
   assert.equal(puedeDarParte(['total'], 'juridica'), true)
   assert.equal(puedeDarParte(['ver_economico'], 'fisica'), false)
   assert.equal(puedeDarParte([], 'juridica'), false)
+})
+
+test('una peticion solo pide «Solo ver»; al resolver acepta tambien el `ver` de las antiguas', () => {
+  assert.equal(alcancePedible('ver_economico'), 'ver_economico')
+  assert.equal(alcancePedible('total'), null)
+  assert.equal(alcancePedible('ver'), null)
+  assert.equal(alcancePeticionResoluble('ver'), 'ver')
+  assert.equal(alcancePeticionResoluble('ver_economico'), 'ver_economico')
+  assert.equal(alcancePeticionResoluble('total'), null)
+})
+
+test('una pendiente caduca a los 30 dias', () => {
+  const d = new Date('2026-09-25T10:00:00Z')
+  assert.equal(caducidadPendiente(d).toISOString(), '2026-10-25T10:00:00.000Z')
 })

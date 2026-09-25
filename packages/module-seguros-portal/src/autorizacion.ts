@@ -78,6 +78,31 @@ export type TipoOtorgante = 'fisica' | 'juridica'
  */
 export const ALCANCES_CONCEDIBLES: readonly Alcance[] = ['ver_economico', 'total']
 
+/**
+ * Lo que se puede PEDIR (petición de acceso). Solo «Solo ver»: `total` no se
+ * pide ni se reparte por enlace — se concede sobre un acceso ya aceptado
+ * («Pasar a acceso total»). Va aparte de `ALCANCES_CONCEDIBLES` a propósito:
+ * si no, la regla la cumpliría solo el CHECK de la BD.
+ */
+export const ALCANCES_PEDIBLES: readonly Alcance[] = ['ver_economico']
+
+export function alcancePedible(v: unknown): Alcance | null {
+  if (typeof v !== 'string') return null
+  const a = v.trim().toLowerCase()
+  return (ALCANCES_PEDIBLES as readonly string[]).includes(a) ? (a as Alcance) : null
+}
+
+/**
+ * Lo que se puede CONCEDER al resolver una petición ya guardada. Acepta `ver`
+ * porque hay peticiones pendientes de antes del 25/09/2026 que lo pedían; se
+ * concede lo pedido (más estrecho), nunca más.
+ */
+export function alcancePeticionResoluble(v: unknown): Alcance | null {
+  if (typeof v !== 'string') return null
+  const a = v.trim().toLowerCase()
+  return a === 'ver' || a === 'ver_economico' ? (a as Alcance) : null
+}
+
 /** Los dos permisos valen para personas y sociedades; `tipo` queda por si divergen. */
 export function alcancesConcedibles(_tipo: TipoOtorgante): readonly Alcance[] {
   return ALCANCES_CONCEDIBLES
@@ -103,6 +128,18 @@ export function tituloRepresentacion(v: unknown): TituloRepresentacion | null {
  * corta.
  */
 export const DIAS_REVISION = 365
+
+/**
+ * Lo que puede estar una autorización PENDIENTE de aceptar. Aceptada no caduca
+ * (`caducaEn` pasa a NULL al aceptar), pero una oferta sin respuesta no puede
+ * quedarse viva años: un «Acceso total» aceptado mucho después, tras un
+ * divorcio, abriría DNI e IBAN sin que nadie lo haya vuelto a pensar.
+ */
+export const DIAS_PENDIENTE = 30
+
+export function caducidadPendiente(desde: Date): Date {
+  return new Date(desde.getTime() + DIAS_PENDIENTE * 24 * 60 * 60 * 1000)
+}
 
 export const ESTADOS_AUTORIZACION = ['pendiente', 'vigente', 'caducada', 'revocada'] as const
 export type EstadoAutorizacion = (typeof ESTADOS_AUTORIZACION)[number]

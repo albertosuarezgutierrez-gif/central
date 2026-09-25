@@ -1052,7 +1052,7 @@ export async function responderInvitacion(datos: {
         if (viva.aceptadoEn === null) {
           await tx.portalAutorizacion.updateMany({
             where: { id: viva.id, aceptadoEn: null, revocadoEn: null },
-            data: { aceptadoEn: hoy, aceptadoPorIdentidadId: identidadId },
+            data: { aceptadoEn: hoy, aceptadoPorIdentidadId: identidadId, caducaEn: null },
           })
         }
       } else {

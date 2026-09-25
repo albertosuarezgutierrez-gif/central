@@ -1,6 +1,12 @@
--- ⏳ PENDIENTE DE APLICAR. Se aplica ANTES de desplegar el código que la usa:
--- es aditiva y el código viejo sigue funcionando sobre ella (escribe siempre
--- `caduca_en` con fecha y nunca usa `total`).
+-- ⏳ PENDIENTE DE APLICAR. Paso A de DOS. Se aplica ANTES de desplegar el
+-- código: es aditiva de verdad y el código viejo sigue funcionando sobre ella
+-- (escribe siempre `caduca_en` con fecha y nunca usa `total`).
+--
+-- 🚨 El `UPDATE` que pone `caduca_en = NULL` NO va aquí: el cliente Prisma
+-- desplegado declara `caducaEn` obligatorio, y leer una fila con NULL tumba la
+-- consulta entera (bóveda del portal, pantalla de autorizaciones, campana del
+-- CRM). Va en el paso B (`..._b_vivas_sin_caducidad.sql`), que se aplica
+-- cuando `asegura-portal` Y `asegura` ya sirven el código nuevo.
 --
 -- ── QUÉ CAMBIA (25/09/2026, decisión de Alberto) ─────────────────────────────
 --
@@ -18,6 +24,7 @@
 --    cuarto. No exige `titulo_representacion` en BD: en una persona física no
 --    se representa a nadie; en una sociedad el título lo exige el código.
 --
+-- Las PENDIENTES siguen caducando (30 días para aceptar; al aceptar, NULL).
 -- Las invitaciones y las peticiones siguen caducando: lo que caduca ahí es el
 -- ENLACE o la PETICIÓN, no el acceso. Y se quedan en «Solo ver» a propósito:
 -- `total` (DNI, IBAN, partes) no se reparte por un enlace de correo, donde una
@@ -33,14 +40,6 @@ BEGIN;
 --    pasa), así que no hace falta tocarlo.
 ALTER TABLE seguros.portal_autorizacion ALTER COLUMN caduca_en DROP NOT NULL;
 ALTER TABLE seguros.portal_autorizacion ADD COLUMN IF NOT EXISTS revisado_en timestamptz;
-
--- Las vivas (pendientes y aceptadas) pasan a no caducar. Las que ya caducaron
--- se quedan con su fecha: dejaron de valer y resucitarlas sería conceder algo
--- que nadie ha vuelto a conceder.
-UPDATE seguros.portal_autorizacion
-   SET caduca_en = NULL
- WHERE revocado_en IS NULL
-   AND caduca_en > now();
 
 -- 2. El alcance `total`.
 ALTER TABLE seguros.portal_autorizacion DROP CONSTRAINT portal_autorizacion_alcance_check;
