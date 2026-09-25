@@ -39,7 +39,7 @@ export function interpretarEventoResend(payload: unknown): EventoUtilResend | nu
   return { resendMessageId: emailId, estado: ESTADOS[tipo] }
 }
 
-export type VerificacionWebhook = { ok: true; payload: unknown } | { ok: false; motivo: 'sin_secreto' | 'firma_invalida' }
+export type VerificacionWebhook = { ok: true; payload: unknown } | { ok: false; motivo: 'sin_secreto' | 'firma_invalida' | 'cuerpo_invalido' }
 
 /**
  * Verifica la firma con el secreto de Resend antes de fiarse de nada del
@@ -64,6 +64,6 @@ export function verificarWebhookResend(
   try {
     return { ok: true, payload: JSON.parse(cuerpoCrudo) as unknown }
   } catch {
-    return { ok: false, motivo: 'firma_invalida' }
+    return { ok: false, motivo: 'cuerpo_invalido' }
   }
 }
