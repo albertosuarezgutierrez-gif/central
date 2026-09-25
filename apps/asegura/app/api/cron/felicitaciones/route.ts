@@ -13,7 +13,9 @@ export const maxDuration = 120
 
 /**
  * GET /api/cron/felicitaciones — felicita el cumpleaños a los clientes en vigor (correo + campana
- * del portal). Diario a las 07:00 UTC (`vercel.json`). `CRON_SECRET` por Bearer.
+ * del portal). Diario a las 07:00 UTC y otra pasada a las 16:00 UTC (`?pase=tarde`, `vercel.json`):
+ * la segunda recoge lo que la primera no pudo (caída, despliegue tardío) y no duplica, porque la fila
+ * de `felicitacion` se reserva por persona y año. `CRON_SECRET` por Bearer.
  * Modo cuenta salvo `ASEGURA_FELICITACIONES_ACTIVAS=1`; `?contar=1` fuerza el ensayo.
  */
 export async function GET(req: Request) {

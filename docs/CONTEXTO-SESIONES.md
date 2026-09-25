@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** 🚨 **Los crons de asegura NUNCA se ejecutaron**: el middleware no exentaba `/api/cron` y Vercel recibía 307→/login
+(felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez
+(`seguros.felicitacion` vacía, 0 correos en Resend). Arreglo: `/api/cron` a PUBLIC + cepo (#3602, visto rojo). Felicitación rediseñada
+con logo PNG (`asegura-web/public/brand`). ✉️ **Remitente de TODA la correduría = `hola@grupoasegura.es`** desde el 25/09: dominio
+verificado en Resend (DNS en IONOS por Alberto) y `ASEGURA_MAIL_FROM`/`PORTAL_MAIL_FROM` cambiadas. `envios.grupoasegura.es` queda de
+reserva unos días; luego borrar de Resend e IONOS.
+
 **(25/09/2026)** 📡 **Portal: avisos push de CIMA + web sin animaciones de aparición — MERGEADO en #3599** (+ aviso en «Mis datos»: el correo tiene que ser del titular) (a raíz de la demo con Pablo
 Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/devuelto, siniestro) con interruptores por
 tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
