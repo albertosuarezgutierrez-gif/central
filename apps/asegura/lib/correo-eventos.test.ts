@@ -54,13 +54,15 @@ test('la etiqueta de Resend solo lleva caracteres válidos', () => {
   assert.equal(etiquetaTipo('invitación portal'), 'invitacion_portal')
 })
 
-test('🚨 el webhook guarda el evento ANTES de la recaptación, y si no puede responde 500 (Resend reintenta)', () => {
+test('🚨 el webhook guarda el evento, NO deja que su fallo bloquee la recaptación, y si falló responde 500', () => {
   const src = fuente('../app/api/webhooks/resend/route.ts')
   const guarda = src.indexOf('registrarEventoCorreo(')
   assert.ok(guarda > 0, 'el webhook no guarda los eventos de correo')
-  assert.ok(guarda < src.indexOf('update recaptacion_envios'), 'el evento tiene que guardarse antes de la lógica de recaptación')
-  const tramo = src.slice(guarda, src.indexOf('update recaptacion_envios'))
-  assert.match(tramo, /status: 500/, 'un evento que no se pudo guardar tiene que devolver 500 para que Resend lo reintente')
+  const recaptacion = src.indexOf('update recaptacion_envios')
+  assert.ok(guarda < recaptacion, 'el evento tiene que guardarse antes de la lógica de recaptación')
+  const tramo = src.slice(guarda, recaptacion)
+  assert.doesNotMatch(tramo, /return NextResponse/, 'un fallo al guardar el evento no puede cortar la recaptación (bajas por rebote)')
+  assert.match(src, /seguimientoCaido\s*\?[\s\S]{0,120}status: 500/, 'un evento que no se pudo guardar tiene que acabar en 500 para que Resend lo reintente')
 })
 
 test('🚨 todo correo que sale por el punto único deja fila en correo_envio, salga bien o mal', () => {
