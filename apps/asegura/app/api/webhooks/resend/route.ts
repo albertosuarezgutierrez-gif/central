@@ -3,6 +3,7 @@ import { verificarWebhookResend, interpretarEventoResend } from '@/lib/recaptaci
 import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
 import { Prisma } from '@/lib/generated/asegura-client'
 import { aplicarBajaPorRebote } from '@/lib/cartera-recaptacion'
+import { interpretarEventoCorreo, registrarEventoCorreo } from '@/lib/correo-seguimiento'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,10 +27,24 @@ export async function POST(req: Request) {
   const verificado = verificarWebhookResend(cuerpoCrudo, cabeceras)
   if (!verificado.ok) return NextResponse.json({ estado: 'error', motivo: verificado.motivo }, { status: 401 })
 
+  // Desde el 25/09/2026 se guarda CADA evento de CADA correo (enviado, entregado, abierto, clic,
+  // rebote…) en `correo_evento`: es la prueba que se enseña en la ficha del cliente. Va antes que la
+  // recaptación y es independiente de ella. Si no se puede guardar se responde 500 para que Resend
+  // reintente: un evento perdido es una prueba perdida.
+  const eventoCorreo = interpretarEventoCorreo(verificado.payload)
   const evento = interpretarEventoResend(verificado.payload)
-  if (evento === null) return NextResponse.json({ estado: 'ignorado' })
+  if (eventoCorreo === null && evento === null) return NextResponse.json({ estado: 'ignorado' })
 
   if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
+  if (eventoCorreo !== null) {
+    try {
+      await registrarEventoCorreo(cabeceras['svix-id'], eventoCorreo)
+    } catch (e) {
+      console.error('[webhooks/resend] no se pudo guardar el evento de correo:', e instanceof Error ? e.message : e)
+      return NextResponse.json({ estado: 'error' }, { status: 500 })
+    }
+  }
+  if (evento === null) return NextResponse.json({ estado: 'ok' })
   try {
     const esTerminal = evento.estado === 'rebotado' || evento.estado === 'queja'
     await prismaAsegura().$executeRaw(Prisma.sql`

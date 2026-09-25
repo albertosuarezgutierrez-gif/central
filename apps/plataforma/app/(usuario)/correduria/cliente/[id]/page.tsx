@@ -6,6 +6,7 @@ import Siniestros from '../../Siniestros'
 import { NECESARIOS_EMISION_AUTO } from '@central/module-seguros'
 import { fichaAsegura, type PolizaFicha } from '@/lib/ficha-asegura'
 import Cabecera from './Cabecera'
+import CorreosCliente from './CorreosCliente'
 import DescartarCliente from './DescartarCliente'
 import FichaTabs, { tabDeParametro } from './FichaTabs'
 import TabContactos from './TabContactos'
@@ -136,6 +137,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           polizas: { n: ficha.polizas.length, texto: n => `${n} en total` },
           contactos: { n: personas === null ? null : personas.length },
           documentos: { n: resumen.documentosPendientes, tono: 'aviso', texto: n => `${n} pedido(s)` },
+          correos: { n: ficha.correos === null ? null : ficha.correos.length },
         }}
       />
 
@@ -174,6 +176,13 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {tab === 'documentos' && (
         <Tarjeta titulo="📎 Documentos">
           <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} />
+        </Tarjeta>
+      )}
+
+      {/* `null` ≠ «no se le ha escrito»: lo dice el propio componente. */}
+      {tab === 'correos' && (
+        <Tarjeta titulo="✉️ Correos enviados">
+          <CorreosCliente correos={ficha.correos} />
         </Tarjeta>
       )}
 
