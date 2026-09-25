@@ -378,6 +378,14 @@ export type FichaCliente = {
    */
   identidad: Identidad
   /**
+   * Fecha de nacimiento y de carné que traen SUS pólizas (intervinientes con su
+   * mismo DNI) y que la ficha no tiene. CIMA las guarda en el interviniente, no
+   * en la ficha: Pablo Guzmán tenía la fecha de nacimiento en su póliza de auto
+   * y la ficha decía «sin fecha» (25/09/2026). Solo se rellena lo que la ficha
+   * NO tiene; `null` = no se pudo consultar.
+   */
+  dePolizas: DatosDePolizas | null
+  /**
    * Con quién está vinculado (cónyuge, hijos, empresa…) y quién puede ver los
    * seguros de quién. `null` = no se ha podido consultar. NO es «no tiene familia».
    */
@@ -422,6 +430,53 @@ export type FichaCliente = {
    * `fechaIlegible: true`, nunca se quita la fila: el carné existe.
    */
   carnets: CarnetFicha[] | null
+}
+
+export type DatosDePolizas = {
+  /** `YYYY-MM-DD`, o `null` si ninguna póliza la trae (o la ficha ya la tiene). */
+  fechaNacimiento: string | null
+  /** Fecha del carné del conductor que es él. Sin TIPO: CIMA no lo manda y no se adivina. */
+  fechaCarnet: string | null
+  /** Nº de la póliza de la que sale cada dato, para decirlo en pantalla. */
+  polizaNacimiento: string | null
+  polizaCarnet: string | null
+}
+
+/**
+ * Lo que CIMA dejó en los intervinientes de sus pólizas que son ÉL — por DNI
+ * (`nif_lookup_hash` = `dni_lookup_hash`), nunca por nombre ni por `cliente_id`:
+ * CIMA engancha el interviniente a veces a una ficha DUPLICADA con el mismo DNI.
+ */
+async function datosDePolizas(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  dniLookupHash: string | null,
+  idsPolizas: string[],
+  numeros: Map<string, string | null>,
+): Promise<DatosDePolizas | null> {
+  // Sin DNI no se ha mirado nada: `null` («no se sabe»), nunca «mirado, no hay».
+  if (!dniLookupHash) return null
+  if (idsPolizas.length === 0) return { fechaNacimiento: null, fechaCarnet: null, polizaNacimiento: null, polizaCarnet: null }
+  try {
+    const filas = await db.polizaInterviniente.findMany({
+      where: { correduriaId, polizaId: { in: idsPolizas }, nifLookupHash: dniLookupHash },
+      select: { polizaId: true, fechaNacimiento: true, fechaCarnet: true },
+      orderBy: [{ polizaId: 'asc' }, { id: 'asc' }],
+    })
+    let fechaNacimiento: string | null = null
+    let fechaCarnet: string | null = null
+    let polizaNacimiento: string | null = null
+    let polizaCarnet: string | null = null
+    for (const f of filas) {
+      const nac = normalizarFecha(descifrar(f.fechaNacimiento))
+      const car = normalizarFecha(descifrar(f.fechaCarnet))
+      if (!fechaNacimiento && nac) { fechaNacimiento = nac; polizaNacimiento = numeros.get(f.polizaId) ?? null }
+      if (!fechaCarnet && car) { fechaCarnet = car; polizaCarnet = numeros.get(f.polizaId) ?? null }
+    }
+    return { fechaNacimiento, fechaCarnet, polizaNacimiento, polizaCarnet }
+  } catch {
+    return null
+  }
 }
 
 export type CarnetFicha = {
@@ -564,6 +619,7 @@ export async function fichaCliente(
       notas: true,
       dni: true,
       fechaNacimiento: true,
+      dniLookupHash: true,
       tipoPersona: true,
       direccion: true,
       ciudad: true,
@@ -684,7 +740,18 @@ export async function fichaCliente(
       .filter((n): n is string => n !== null),
   )
   const declaradas = await listarDeclaradas(correduriaId, c.id, numerosPropios)
-  const carnets = await listarCarnets(correduriaId, c.id, normalizarFecha(descifrar(c.fechaNacimiento)))
+  const nacimientoPropio = normalizarFecha(descifrar(c.fechaNacimiento))
+  // Solo pólizas de cartera VIVA: el volcado de 2013-2018 no es «lo que manda CIMA».
+  const idsVivas = c.polizas.filter((p) => esCarteraViva(p)).map((p) => p.id)
+  const deSusPolizas = await datosDePolizas(db, correduriaId, c.dniLookupHash ?? null, idsVivas, new Map(c.polizas.map((p) => [p.id, p.numeroPoliza ?? null])))
+  const carnets = await listarCarnets(correduriaId, c.id, nacimientoPropio ?? deSusPolizas?.fechaNacimiento ?? null)
+  // Solo lo que la ficha NO tiene: si ya consta (o está cifrado), manda la ficha.
+  const dePolizas: DatosDePolizas | null = deSusPolizas && {
+    fechaNacimiento: nacimientoPropio || ilegible(c.fechaNacimiento) ? null : deSusPolizas.fechaNacimiento,
+    fechaCarnet: carnets && carnets.length > 0 ? null : deSusPolizas.fechaCarnet,
+    polizaNacimiento: deSusPolizas.polizaNacimiento,
+    polizaCarnet: deSusPolizas.polizaCarnet,
+  }
   const historial = await historialCliente(correduriaId, c.id)
   const notas = await notasCliente(correduriaId, c.id, c.notas ?? null)
   const presupuestos = await cotizacionesVivas(correduriaId, c.id, DIAS_PRESUPUESTO_VIVO)
@@ -723,6 +790,7 @@ export async function fichaCliente(
     relaciones,
     declaradas,
     carnets,
+    dePolizas,
     estado,
     historial,
     notas,

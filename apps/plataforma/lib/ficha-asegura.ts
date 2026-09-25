@@ -240,6 +240,30 @@ export type Ficha = {
    * pudo leerlo — NO es «no tiene carné» (eso es `[]`).
    */
   carnets: CarnetFicha[] | null
+  /**
+   * Fechas de nacimiento y de carné que traen SUS pólizas de CIMA (el
+   * interviniente con su mismo DNI) y que la ficha no tiene. `null` = asegura
+   * no lo manda o no pudo mirarlo.
+   */
+  dePolizas: DatosDePolizas | null
+}
+
+export type DatosDePolizas = {
+  fechaNacimiento: string | null
+  fechaCarnet: string | null
+  polizaNacimiento: string | null
+  polizaCarnet: string | null
+}
+
+export function leerDePolizas(v: unknown): DatosDePolizas | null {
+  if (typeof v !== 'object' || v === null) return null
+  const d = v as Record<string, unknown>
+  return {
+    fechaNacimiento: cadena(d.fechaNacimiento),
+    fechaCarnet: cadena(d.fechaCarnet),
+    polizaNacimiento: cadena(d.polizaNacimiento),
+    polizaCarnet: cadena(d.polizaCarnet),
+  }
 }
 
 export type CarnetFicha = {
@@ -769,6 +793,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       cotizacionesVivas: entero(f.cotizacionesVivas),
       declaradas: leerDeclaradas(f.declaradas),
       carnets: leerCarnets(f.carnets),
+      dePolizas: leerDePolizas(f.dePolizas),
       piiClave: cadena(typeof f.pii === 'object' && f.pii !== null ? (f.pii as Record<string, unknown>).clave : null),
     },
   }
