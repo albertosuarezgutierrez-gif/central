@@ -889,3 +889,18 @@ export type {
   TramitacionCompania,
   TramitacionCruda,
 } from './siniestro-tramitacion.ts'
+export {
+  CAMPOS_CIMA,
+  ROTULO_CAMPO_CIMA,
+  claveNombre,
+  mismoNombre,
+  fechaCima,
+  claveTelefono,
+  compararConCima,
+  huellaDecisionCima,
+  esCampoCima,
+  type CampoCima,
+  type FichaParaCima,
+  type DatosCima,
+  type DiferenciaCima,
+} from './sincro-cima.ts'

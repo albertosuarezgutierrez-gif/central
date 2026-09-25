@@ -587,6 +587,14 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Ficha de cliente: añadir contacto con lista vacía + fechas de CIMA
+- Con los contactos leídos y VACÍOS no había botón «Añadir» (colgaba del modo «Corregir», que exige chips). Arreglado.
+- CIMA deja fecha de nacimiento y de carné en `poliza_intervinientes`, NO en `clientes`: la ingesta (repo `asegura`, `pull-persist.ts`) solo escribe nombre/DNI/tipo_persona del tomador. La ficha las rellena ya al LEER (`dePolizas` de `cartera-ficha.ts`, casando por `nif_lookup_hash` = DNI), marcadas «(póliza)».
+- Medido: de 101 fichas vivas, 64 tienen interviniente propio; recuperables fnac 5 · tel 2 · email 4 · carné 1. 8 DNIs con varias fichas (Pablo Guzmán, p. ej.).
+- Pablo Guzmán: su póliza de auto NO trae conductor → CIMA no manda fecha de carné. Solo 21 de 73 autos CIMA traen `conductor_habitual`.
+- Decisión de Alberto: 1º CIMA manda (volcado) · 2º cada diferencia se avisa y decide él. Hecho SIN tocar la ingesta: `apps/asegura/lib/sincro-cima.ts` (puerto `/api/operador/cima-sincro`), comparación pura `compararConCima` (module-seguros), bloque «Diferencias con CIMA» en /correduria → Hoy (botón «Aplicar CIMA en todas» = el volcado; «Usar CIMA»/«Mantener el mío» por campo), cron `cima-sincro` 12:50 UTC rellena huecos + Telegram `correduria.cima-diferencias`. Tabla `seguros.cima_decisiones` (aplicada). Tel/email de CIMA entran como principal y el anterior queda secundario.
+- Hueco conocido: el tomador que no figura como interviniente (37 fichas) no trae nada comparable — su contacto lo descarta el parser de la ingesta (repo `asegura`).
+
 ## (25/09/2026) Auto nuevo: fecha de matriculación consultada a Avant2
 - Con cada matrícula (tecleada o restaurada del borrador) se consulta `/car/registration-date` por el puerto
   (`catalogos?tipo=fecha-matriculacion`, gratis); si no responde, vale la estimación por serie. Antes solo se

@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { estadoCaducidadCarnet, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import { estadoCaducidadCarnet, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
@@ -49,8 +49,8 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                 <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
                 <RamosContratados tiposVivos={tiposVivos} />
                 <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
-                <Identidad identidad={ficha.identidad} clienteId={ficha.id} />
-                <Carnets carnets={ficha.carnets} />
+                <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} />
+                <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />
                 {conyuge && (
                   <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                     💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
@@ -422,7 +422,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
 // puerto de asegura por diseño — para cambiarlo hace falta el DNI recibido y
 // documentado en 📎 Documentos (regla de identidad de la correduria-crm).
 
-function Identidad({ identidad, clienteId }: { identidad: IdentidadFicha | null; clienteId: string }) {
+function Identidad({ identidad, clienteId, dePolizas }: { identidad: IdentidadFicha | null; clienteId: string; dePolizas: DatosDePolizas | null }) {
   // `null` = asegura aún no manda el bloque (versión anterior): no se afirma
   // «sin DNI», se calla — es distinto de «se miró y no hay ninguno».
   if (identidad === null) return null
@@ -444,6 +444,11 @@ function Identidad({ identidad, clienteId }: { identidad: IdentidadFicha | null;
         <span title="Está guardada pero cifrada con una clave que asegura no puede abrir">🎂 cifrada</span>
       ) : identidad.fechaNacimiento ? (
         <span>🎂 {fmt(identidad.fechaNacimiento)}</span>
+      ) : dePolizas?.fechaNacimiento ? (
+        // No está en su ficha pero sí en su póliza de CIMA (el interviniente con su DNI).
+        <span title={`No está en la ficha: la trae su póliza${dePolizas.polizaNacimiento ? ` nº ${dePolizas.polizaNacimiento}` : ''} (CIMA)`}>
+          🎂 {fmt(dePolizas.fechaNacimiento)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>(póliza)</span>
+        </span>
       ) : (
         <span style={{ color: 'var(--muted)' }} title="No consta fecha de nacimiento">🎂 sin fecha</span>
       )}
@@ -457,11 +462,27 @@ function Identidad({ identidad, clienteId }: { identidad: IdentidadFicha | null;
 // sobre todo en moto) y, al pasar el ratón, la próxima caducidad. Una
 // caducidad vencida o a ≤90 días se pinta en aviso.
 
-function Carnets({ carnets }: { carnets: CarnetFicha[] | null }) {
+function Carnets({ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePolizas: DatosDePolizas | null }) {
   // `null` = asegura no manda el bloque o no pudo leerlo: no se afirma nada.
   if (carnets === null) return null
   if (carnets.length === 0) {
-    return <span style={{ color: 'var(--muted)' }} title="No consta ningún carné de conducir en su ficha">🚦 sin carné registrado</span>
+    // CIMA manda la fecha del carné en el CONDUCTOR de la póliza, sin el tipo:
+    // se enseña la fecha y no se inventa «B».
+    if (dePolizas?.fechaCarnet) {
+      return (
+        <span title={`No está en la ficha: la trae su póliza${dePolizas.polizaCarnet ? ` nº ${dePolizas.polizaCarnet}` : ''} (CIMA), sin tipo de carné`}>
+          🚦 carné · {fmt(dePolizas.fechaCarnet)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>(póliza)</span>
+        </span>
+      )
+    }
+    return (
+      <span
+        style={{ color: 'var(--muted)' }}
+        title={dePolizas ? 'No consta en su ficha ni en sus pólizas: la compañía no la manda por CIMA si no declara conductor' : 'No consta ningún carné de conducir en su ficha'}
+      >
+        🚦 sin carné registrado
+      </span>
+    )
   }
   const hoy = new Date().toISOString().slice(0, 10)
   return (
