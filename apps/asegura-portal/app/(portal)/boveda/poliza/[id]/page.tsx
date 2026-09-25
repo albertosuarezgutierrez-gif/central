@@ -12,6 +12,7 @@ import {
   textoSustitucion,
   Coberturas,
   ESTADO,
+  HistorialCompanias,
   HistorialSiniestros,
   IconoRamo,
   RAMO,
@@ -156,6 +157,8 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
 
         <Coberturas p={p} />
       </section>
+
+      <HistorialCompanias p={p} />
 
       {/* Los recibos van justo detrás de los datos y ANTES del historial de
           siniestros: es el dinero, que es lo primero que un cliente comprueba.

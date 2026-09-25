@@ -72,6 +72,8 @@ export type PolizaFicha = {
   objeto: ObjetoFicha | null
   matricula: string | null
   viva: boolean
+  /** Quitada de «Oportunidades» a mano (solo volcado histórico). `null` = sigue siendo lead (o asegura viejo sin el campo). */
+  leadDescartado: { fecha: string; motivo: string | null } | null
   /**
    * Que CIMA la haya traído: asegura lo deriva de `id_poliza_entidad` sobre una
    * póliza de la cartera viva (`apps/asegura/lib/cartera-ficha.ts`).
@@ -743,6 +745,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       objeto: leerObjeto(p.objeto),
       matricula: cadena(p.matricula),
       viva: p.viva === true,
+      leadDescartado: leerLeadDescartado(p.leadDescartado),
       // Sin el campo (asegura viejo) vale `viva`: es lo que se pintaba antes.
       confirmadaCima: typeof p.confirmadaCima === 'boolean' ? p.confirmadaCima : p.viva === true,
       retarificable: p.retarificable === true,
@@ -968,3 +971,9 @@ export const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => 
   { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
   { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo },
 ]
+
+function leerLeadDescartado(v: unknown): { fecha: string; motivo: string | null } | null {
+  if (!v || typeof v !== 'object') return null
+  const o = v as Record<string, unknown>
+  return typeof o.fecha === 'string' ? { fecha: o.fecha, motivo: typeof o.motivo === 'string' ? o.motivo : null } : null
+}

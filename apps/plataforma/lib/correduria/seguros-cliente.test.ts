@@ -7,7 +7,7 @@ import type { OportunidadDeCliente } from '../seguimiento-asegura'
 const pol = (id: string, over: Partial<PolizaFicha> = {}): PolizaFicha => ({
   id, tipo: 'auto', aseguradora: 'Reale', numeroPoliza: id, estado: 'en_vigor',
   fechaInicio: null, fechaVencimiento: '2027-01-01', prima: 300, fraccionamiento: null, matricula: null,
-  objeto: null, viva: true, confirmadaCima: true, retarificable: false, retarificacion: null,
+  objeto: null, viva: true, leadDescartado: null, confirmadaCima: true, retarificable: false, retarificacion: null,
   recibos: null, pago: null, evolucionPrima: null,
   ...over,
 } as PolizaFicha)
@@ -179,4 +179,36 @@ test('una abierta sin ramo no tapa las perdidas sin ramo', () => {
     oportunidades: [opo('abierta', { ramo: null }), opo('perdida', { ramo: null, estado: 'perdida', motivoPerdida: 'precio' })],
   })
   assert.deepEqual(ids(r.oportunidades).sort(), ['abierta', 'perdida'])
+})
+
+test('volcado histórico: «Eliminar» quita el RAMO de Oportunidades, sin que la siguiente más vieja ocupe su sitio', () => {
+  const quitada = { fecha: '2026-09-25T10:00:00Z', motivo: 'Duplicada' }
+  const r = repartirSegurosCliente({
+    polizas: [
+      pol('otros2014', { viva: false, tipo: 'otros', fechaVencimiento: '2014-07-24', leadDescartado: quitada }),
+      pol('otros2013', { viva: false, tipo: 'otros', fechaVencimiento: '2013-07-24' }),
+      pol('hogar2015', { viva: false, tipo: 'hogar', fechaVencimiento: '2015-03-01' }),
+    ],
+    declaradas: [],
+    oportunidades: [],
+  })
+  assert.deepEqual(ids(r.oportunidades), ['hogar2015'])
+  assert.deepEqual(ids(r.descartadas), ['otros2014'])
+  assert.deepEqual(ids(r.historicas), ['otros2013'])
+})
+
+test('viva cancelada: «Eliminar» la saca de Oportunidades a «descartadas», y su ramo no resucita una del volcado', () => {
+  const quitada = { fecha: '2026-09-25T10:00:00Z', motivo: 'Ya no tiene ese seguro' }
+  const r = repartirSegurosCliente({
+    polizas: [
+      pol('motoViva', { estado: 'cancelada', tipo: 'moto', leadDescartado: quitada }),
+      pol('autoViva', { estado: 'cancelada', tipo: 'auto' }),
+      pol('moto2015', { viva: false, tipo: 'moto', fechaVencimiento: '2015-03-01' }),
+    ],
+    declaradas: [],
+    oportunidades: [],
+  })
+  assert.deepEqual(ids(r.oportunidades), ['autoViva'])
+  assert.deepEqual(ids(r.descartadas), ['motoViva'])
+  assert.deepEqual(ids(r.historicas), ['moto2015'])
 })

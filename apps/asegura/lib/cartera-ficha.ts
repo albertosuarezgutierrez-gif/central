@@ -227,6 +227,8 @@ export type PolizaFicha = {
    * no cuenta como cliente ni genera avisos (visión del CRM §5).
    */
   confirmadaCima: boolean
+  /** Quitada de «Oportunidades» por el corredor (solo volcado histórico); `null` = sigue siendo lead. */
+  leadDescartado: { fecha: string; motivo: string | null } | null
   /** Solo las de auto con matrícula se pueden retarificar hoy. */
   retarificable: boolean
   /** Por qué ramo se puede (o por qué no). Misma frase en todas las pantallas. */
@@ -640,6 +642,8 @@ export async function fichaCliente(
           importRef: true,
           eiacXmlHash: true,
           idPolizaEntidad: true,
+          leadDescartadoAt: true,
+          leadDescartadoMotivo: true,
         },
         orderBy: { fechaVencimiento: 'desc' },
       },
@@ -827,6 +831,8 @@ export async function fichaCliente(
         matricula,
         viva: esCarteraViva(p),
         confirmadaCima: esCarteraViva(p) && p.idPolizaEntidad !== null,
+        // Quitada de «Oportunidades» a mano (solo volcado histórico). `null` = sigue siendo lead.
+        leadDescartado: p.leadDescartadoAt ? { fecha: p.leadDescartadoAt.toISOString(), motivo: p.leadDescartadoMotivo } : null,
         retarificable: retarificacion.retarificable,
         retarificacion,
         recibos: resumirRecibos(

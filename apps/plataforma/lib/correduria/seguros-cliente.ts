@@ -43,6 +43,8 @@ export type RepartoSeguros = {
   yaNoExiste: SeguroCliente[]
   /** Volcado histórico sin CIMA que NO sale como tarjeta (ramo ya cubierto u otra más reciente). */
   historicas: PolizaFicha[]
+  /** Volcado histórico que el corredor QUITÓ de Oportunidades (se puede recuperar). */
+  descartadas: PolizaFicha[]
   /** `false` = no se pudieron leer las oportunidades: el cubo puede estar incompleto. */
   oportunidadesLeidas: boolean
   /** `false` = no se pudieron leer las aportadas desde el portal. */
@@ -125,13 +127,18 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
   const enCompetencia: Extract<SeguroCliente, { clase: 'poliza' }>[] = []
   const yaNoExiste: SeguroCliente[] = []
   const historicas: PolizaFicha[] = []
+  // Viva perdida a la competencia que el corredor QUITÓ de Oportunidades (se puede recuperar).
+  const vivasDescartadas: PolizaFicha[] = []
 
   for (const p of polizas) {
     if (!p.viva) { historicas.push(p); continue }
     const estado = p.estado.trim()
     const s = { clase: 'poliza' as const, id: p.id, poliza: p, oportunidad: null }
     if (estado === 'fin_riesgo') yaNoExiste.push(s)
-    else if (PERDIDA_A_COMPETENCIA.has(estado)) enCompetencia.push(s)
+    else if (PERDIDA_A_COMPETENCIA.has(estado)) {
+      if (p.leadDescartado) vivasDescartadas.push(p)
+      else enCompetencia.push(s)
+    }
     // Emitida y aún sin CIMA, en vigor, «anula al vencimiento» (sigue cubierta hasta
     // entonces) o un estado que no se reconoce: está con nosotros mientras no se sepa
     // lo contrario — que es como ya la cuenta la cabecera de la ficha.
@@ -152,9 +159,13 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
       .filter(o => o.estado === 'perdida' && o.motivoPerdida !== 'error_alta')
       .flatMap(o => (o.ramo ? [o.ramo] : [])),
   ])
+  // Quitar la tarjeta de un ramo quita el RAMO: si no, la siguiente más vieja del mismo
+  // ramo ocuparía su sitio y «Eliminar» parecería no haber hecho nada.
+  const descartadas = [...vivasDescartadas, ...historicas.filter(p => p.leadDescartado)]
+  const ramosDescartados = new Set(descartadas.map(p => p.tipo))
   const representante = new Map<string, PolizaFicha>()
   for (const p of historicas) {
-    if (p.estado.trim() === 'fin_riesgo' || ramosVivos.has(p.tipo)) continue
+    if (p.estado.trim() === 'fin_riesgo' || ramosVivos.has(p.tipo) || ramosDescartados.has(p.tipo)) continue
     const previa = representante.get(p.tipo)
     if (!previa || (p.fechaVencimiento ?? '') > (previa.fechaVencimiento ?? '')) representante.set(p.tipo, p)
   }
@@ -162,7 +173,7 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
     enCompetencia.push({ clase: 'poliza', id: p.id, poliza: p, oportunidad: null, historica: true })
   }
   const enTarjeta = new Set([...representante.values()].map(p => p.id))
-  const historicasPlegadas = historicas.filter(p => !enTarjeta.has(p.id))
+  const historicasPlegadas = historicas.filter(p => !enTarjeta.has(p.id) && !p.leadDescartado)
 
   const sueltas: SeguroCliente[] = []
   if (oportunidades) {
@@ -215,6 +226,7 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
     oportunidades: ordenar([...enCompetencia, ...sueltas, ...aportadas]),
     yaNoExiste,
     historicas: historicasPlegadas,
+    descartadas,
     oportunidadesLeidas: oportunidades !== null,
     declaradasLeidas: declaradas !== null,
   }

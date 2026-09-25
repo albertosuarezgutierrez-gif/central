@@ -15,7 +15,7 @@
 //   `objetoAsegurado()` las antepone siempre: lo manual nunca pisa lo oficial.
 // - Deja fila en `historial_interno` del cliente titular.
 
-import { admiteDireccionRiesgo, validarDireccionRiesgo, validarModalidadRc, tituloModalidadRc } from '@central/module-seguros'
+import { esCarteraViva, admiteDireccionRiesgo, validarDireccionRiesgo, validarModalidadRc, tituloModalidadRc } from '@central/module-seguros'
 import { encryptField } from '@central/module-seguros-pii'
 import { prismaAsegura, aseguraConfigurada } from './asegura-db'
 import { anotarCambio } from './auditoria'
@@ -216,6 +216,68 @@ export async function establecerReferenciaCatastral(
 }
 
 /** Best-effort: que el historial falle no deshace la anotación, pero se grita. */
+// ─── Quitar de «Oportunidades» una póliza del volcado histórico (25/09/2026) ──
+//
+// La ficha propone como oportunidad la póliza histórica más reciente de cada
+// ramo. Si está duplicada o ya no vale, el corredor la quita (con motivo) y se
+// puede recuperar. Solo sobre el VOLCADO: una póliza de la cartera viva no es
+// un lead, y se rechaza en vez de marcarla.
+export type ResultadoLeadDescartado =
+  | { ok: true; estado: 'ok'; status: 200 }
+  | { ok: false; estado: 'invalido' | 'no_encontrado' | 'sin_configurar' | 'error'; motivo: string; status: 404 | 422 | 503 | 500 }
+
+/** Estados en los que la ficha pinta una póliza viva en «Oportunidades» (plataforma, `seguros-cliente.ts`). */
+const ESTADOS_EN_COMPETENCIA = new Set<string>(['cancelada', 'vencida', 'competencia'])
+
+export async function marcarLeadDescartado(
+  correduriaId: string,
+  polizaId: string,
+  entrada: { descartar?: unknown; motivo?: unknown; actor: string },
+): Promise<ResultadoLeadDescartado> {
+  if (!aseguraConfigurada()) {
+    return { ok: false, estado: 'sin_configurar', motivo: 'La conexión a la cartera no está configurada.', status: 503 }
+  }
+  if (typeof entrada.descartar !== 'boolean') {
+    return { ok: false, estado: 'invalido', motivo: 'Falta `descartar` (true = quitar, false = recuperar).', status: 422 }
+  }
+  const motivo = typeof entrada.motivo === 'string' ? entrada.motivo.trim().slice(0, 300) : ''
+  if (entrada.descartar && motivo === '') {
+    return { ok: false, estado: 'invalido', motivo: 'Di por qué se quita (duplicada, ya no lo tiene…).', status: 422 }
+  }
+  try {
+    const db = prismaAsegura()
+    const poliza = await db.poliza.findFirst({
+      where: { id: polizaId, correduriaId },
+      select: { id: true, clienteId: true, importRef: true, eiacXmlHash: true, numeroPoliza: true, estado: true },
+    })
+    if (!poliza) {
+      return { ok: false, estado: 'no_encontrado', motivo: 'Esa póliza no está en la cartera de esta correduría.', status: 404 }
+    }
+    // De la cartera viva solo se quita de Oportunidades la que se fue a otra compañía
+    // (la ficha la pinta ahí): una en vigor no es una oportunidad y no se esconde.
+    const viva = esCarteraViva(poliza)
+    if (viva && !ESTADOS_EN_COMPETENCIA.has(poliza.estado)) {
+      return { ok: false, estado: 'invalido', motivo: 'Es una póliza de la cartera viva que no está cancelada ni vencida: no se quita de Oportunidades.', status: 422 }
+    }
+    await db.poliza.update({
+      where: { id: poliza.id },
+      data: entrada.descartar
+        ? { leadDescartadoAt: new Date(), leadDescartadoMotivo: motivo }
+        : { leadDescartadoAt: null, leadDescartadoMotivo: null },
+      select: { id: true },
+    })
+    anotarCambio({ entidad: 'poliza', id: poliza.id, campo: 'lead_descartado' })
+    const clase = viva ? 'póliza' : 'póliza histórica'
+    const cual = poliza.numeroPoliza ? `la ${clase} nº ${poliza.numeroPoliza}` : `una ${clase}`
+    await anotar(correduriaId, poliza.clienteId, entrada.descartar
+      ? `Quitada de oportunidades ${cual} («${motivo}») por ${entrada.actor}`
+      : `Recuperada como oportunidad ${cual} por ${entrada.actor}`)
+    return { ok: true, estado: 'ok', status: 200 }
+  } catch (e) {
+    return { ok: false, estado: 'error', motivo: e instanceof Error ? e.message : String(e), status: 500 }
+  }
+}
+
 async function anotar(correduriaId: string, clienteId: string, texto: string): Promise<void> {
   try {
     await prismaAsegura().$executeRaw`
