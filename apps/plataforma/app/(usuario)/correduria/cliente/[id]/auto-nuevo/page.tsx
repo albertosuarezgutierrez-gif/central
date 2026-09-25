@@ -35,7 +35,7 @@ export default async function AutoNuevoPage({ params }: { params: Promise<{ id: 
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
   const sub = nombreCliente
-    ? `${nombreCliente} · presupuesto de auto (oportunidad nueva)`
+    ? <><Link href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{nombreCliente}</Link> · presupuesto de auto (oportunidad nueva)</>
     : 'Presupuesto de auto (oportunidad nueva) · sin ninguna póliza en la cartera'
 
   const cabecera = (

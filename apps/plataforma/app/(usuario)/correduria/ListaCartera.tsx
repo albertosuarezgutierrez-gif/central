@@ -675,8 +675,8 @@ function FilaCliente({ c, grupo }: { c: ClienteListado; grupo: Seleccion['grupo'
                   {c.polizas.map((p) => (
                     <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
                       <td style={td}>{etiquetaRamo(p.tipo)}</td>
-                      <td style={td}>{p.aseguradora}</td>
-                      <td style={td}>{p.numeroPoliza ?? <Pendiente texto="sin nº" />}</td>
+                      <td style={td}><Link href={`/correduria/poliza/${p.id}`}>{p.aseguradora}</Link></td>
+                      <td style={td}>{p.numeroPoliza ? <Link href={`/correduria/poliza/${p.id}`}>{p.numeroPoliza}</Link> : <Pendiente texto="sin nº" />}</td>
                       <td style={td}>{p.fechaVencimiento ?? <Pendiente texto="sin fecha" />}</td>
                       {/* Una prima que la compañía no informa NO se pinta como
                           0,00€: eso diría que la póliza no cuesta nada. */}

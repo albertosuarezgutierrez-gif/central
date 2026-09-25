@@ -21,7 +21,7 @@ export default async function DecesosNuevoPage({ params }: { params: Promise<{ i
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
   const sub = nombreCliente
-    ? `${nombreCliente} · presupuesto de decesos (oportunidad nueva)`
+    ? <><Link href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{nombreCliente}</Link> · presupuesto de decesos (oportunidad nueva)</>
     : 'Presupuesto de decesos (oportunidad nueva) · sin ninguna póliza en la cartera'
 
   const cabecera = (

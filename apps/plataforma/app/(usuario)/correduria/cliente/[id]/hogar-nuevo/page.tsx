@@ -58,7 +58,7 @@ export default async function HogarNuevoPage({
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
   const sub = nombreCliente
-    ? `${nombreCliente} · presupuesto de hogar (oportunidad nueva)`
+    ? <><Link href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{nombreCliente}</Link> · presupuesto de hogar (oportunidad nueva)</>
     : 'Presupuesto de hogar (oportunidad nueva) · sin ninguna póliza en la cartera'
 
   const cabecera = (

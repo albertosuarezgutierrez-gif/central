@@ -592,6 +592,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   `GET /car/insurance-companies` de Avant2/Codeoscopic (gratis) vía puerto `catalogos?tipo=companias-anteriores`;
   si falla, cae al directorio. Cepo `test/regression-companias-anteriores-avant2.test.ts`. Moto no tocado.
 - Ojo: Avant2 tiene `GET /car/registration-date?plate=` (gratis según doc) — posible sustituto de la estimación local.
+## (25/09/2026) Correduría: accesos directos entre fichas
+- Presupuestos de oportunidad nueva (6 ramos): el nombre del cliente enlaza a su ficha.
+- Retarificar: miga «Ficha del cliente»; listado Clientes: compañía y nº enlazan a la póliza;
+  historial de riesgo: el nº enlaza; «si el tomador no contesta» enlaza al interviniente.
+- Quedan sin enlace a propósito: el aviso de error de MotoNuevo y Calidad (ya tiene «Ver póliza»).
 
 ## (25/09/2026) Auto nuevo (/correduria): defectos que pidió Alberto
 - La fecha de matriculación se ESTIMA al teclear la matrícula (`fechaMatriculacionEstimada`, ya existía en

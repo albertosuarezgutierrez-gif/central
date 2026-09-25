@@ -41,7 +41,7 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
   const sub = nombreCliente
-    ? `${nombreCliente} · presupuesto de moto (oportunidad nueva)`
+    ? <><Link href={`/correduria/cliente/${clienteId}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>{nombreCliente}</Link> · presupuesto de moto (oportunidad nueva)</>
     : 'Presupuesto de moto (oportunidad nueva) · sin ninguna póliza en la cartera'
 
   const cabecera = (
