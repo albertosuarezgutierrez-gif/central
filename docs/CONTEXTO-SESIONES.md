@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** 🕓 **CIMA: descargas fijas a las 16:00 y 20:30 de Madrid** (recomendación de CIMA; `?franja=` en
+`cima-pull-respaldo`, disparan siempre y solo avisan si fallan). El respaldo condicional de la mañana pasa a las 09:00 UTC (11:00 Madrid, decisión de Alberto).
+Horas en UTC: en invierno (desde 25/10) caen a las 15:00/19:30 de Madrid. CIMA dice que Mapfre ya tiene ficheros en su
+intranet; a las 09:41 UTC la cola de TIREA seguía con 155 ficheros conocidos y nada de C0058. **CIMA no cobra por
+consulta** (Alberto, 25/09): el coste de pulls extra es ~0 (Vercel/Fly); el único límite es el presupuesto de Actions.
+
 **(25/09/2026)** — IDD: cuestionario cerrado de exigencias y necesidades por ramo (motor, hogar y comunes) en el presupuesto de la ficha de póliza, en lugar del texto libre. Se guarda como la misma declaración de texto (`necesidades`, lo que el cliente firma; sin DDL) y las respuestas van a la auditoría del evento. Módulo puro `module-seguros/necesidades-idd.ts` (+5 tests, cepo visto fallar). Pendiente: avisar si la opción elegida no cubre algo pedido (las opciones aún no traen coberturas estructuradas).
 
 **(25/09/2026)** 🕒 **CIMA: respaldo del pull a las 07:00/14:00/18:00 UTC** (antes 08:00/14:00). Los `schedule` de Actions de
@@ -586,6 +592,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Retarificar: miga «Ficha del cliente»; listado Clientes: compañía y nº enlazan a la póliza;
   historial de riesgo: el nº enlaza; «si el tomador no contesta» enlaza al interviniente.
 - Quedan sin enlace a propósito: el aviso de error de MotoNuevo y Calidad (ya tiene «Ver póliza»).
+
+## (25/09/2026) Auto nuevo (/correduria): defectos que pidió Alberto
+- La fecha de matriculación se ESTIMA al teclear la matrícula (`fechaMatriculacionEstimada`, ya existía en
+  `module-seguros/matricula`), marcada «estimada» con su rango; nunca pisa una fecha tecleada.
+- Fecha de compra enseña la de matriculación; km nacen en 10.000; garaje en «vía pública» (match por nombre del
+  catálogo vivo de Codeoscopic — si no hay opción con ese nombre, queda vacío). Revierte la decisión del 21/09 de
+  campos vacíos; cepo `regression-auto-nuevo-supuestos` actualizado. Moto nuevo NO tocado.
 
 ## (25/09/2026) Ficha correduría: el auto histórico de un ex-cliente sale como oportunidad
 - Caso Rafael Campa: recaptación le ofrecía el auto (Pelayo, vencía 20/10/2015) y la ficha solo lo nombraba en una nota al pie; «vida» era una oportunidad en competencia (legítima: «póliza en competencia es oportunidad», Alberto).
