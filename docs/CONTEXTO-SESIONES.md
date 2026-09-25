@@ -595,9 +595,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   Vencimientos, «Hoy», inicio). «Ganada» va solo en la fila (con su póliza). Cepo: `regression-correduria-secciones`.
 - «🗑️ Eliminar» (con confirmación y motivo) en las tarjetas del cubo Oportunidades: una póliza HISTÓRICA se marca
   en `seguros.polizas.lead_descartado_at/_motivo` (quita el RAMO; «Recuperar» lo deshace); una abierta se descarta (`error_alta`).
-  🚨 **La migración `apps/asegura/prisma/sql/2026-09-25a_poliza_lead_descartado.sql` NO está aplicada** (la BD rechazó la
-  conexión por falta de conexiones libres y aplicar DDL en producción quedó para Alberto): **no mergear #3590 sin aplicarla antes**.
-  La ficha selecciona esas columnas y se caería.
+  Migración `apps/asegura/prisma/sql/2026-09-25a_poliza_lead_descartado.sql` **aplicada en `central` el 25/09 (12:15 UTC)**,
+  antes del merge, porque la ficha selecciona esas columnas.
 - Auditoría CRUD del panel en `docs/AUDITORIA-CORREDURIA-2026-09-25.md` (top 10 de huecos pendiente de priorizar).
 
 ## (25/09/2026) Auto nuevo: fecha de matriculación consultada a Avant2
