@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Check, Target } from 'lucide-react'
 import { Badge, PageHeader, btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
+import PedirDatos from '../../cliente/[id]/PedirDatos'
 import {
   MOTIVOS_PERDIDA_UI,
   rotuloMotivo,
@@ -17,6 +18,9 @@ import {
 } from '@/lib/seguimiento-asegura'
 
 type Panel = null | 'perder' | 'aparcar'
+
+/** Ramos con tarificador propio en la ficha (`/correduria/cliente/<id>/<ramo>-nuevo`). */
+const RAMOS_TARIFICABLES = new Set(['auto', 'moto', 'hogar', 'salud', 'vida', 'decesos'])
 type Envio = { estado: 'idle' } | { estado: 'enviando' } | { estado: 'error'; motivo: string }
 
 const PASOS: readonly { estado: EstadoOportunidad | 'cierre'; rotulo: string }[] = [
@@ -173,6 +177,18 @@ export default function SeguimientoClient({ id }: { id: string }) {
         {panel === 'aparcar' && <FormAparcar enviando={enviando} hoy={hoy} onEnviar={accion} onCancelar={() => setPanel(null)} />}
         {envio.estado === 'error' && <p role="alert" style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }}>{envio.motivo}</p>}
       </section>
+
+      {!cerrada && op.ramo !== null && RAMOS_TARIFICABLES.has(op.ramo) && (
+        <section style={{ ...cardStyle, display: 'grid', gap: 10, fontSize: 13 }}>
+          <h2 style={{ margin: 0, fontSize: 13, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }}>Datos para tarificar</h2>
+          <div>
+            <Link href={`/correduria/cliente/${op.clienteId}/${op.ramo}-nuevo`} style={{ ...btnStyle('primario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
+              Tarificar {op.ramo === 'auto' ? 'coche' : op.ramo} →
+            </Link>
+          </div>
+          {(op.ramo === 'auto' || op.ramo === 'moto') && <PedirDatos oportunidadId={op.id} clienteId={op.clienteId} ramo={op.ramo} />}
+        </section>
+      )}
 
       <Tareas oportunidadId={id} tareas={datos.tareas} descartadas={datos.tareasDescartadas} fueCliente={datos.fueCliente} cerrada={cerrada} hoy={hoy} onCambio={cargar} />
 

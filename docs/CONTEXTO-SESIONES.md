@@ -587,6 +587,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Oportunidad: bloque «Datos para tarificar» en su pantalla de seguimiento
+- `/correduria/oportunidad/[id]` no llevaba a tarificar: había que volver a la ficha. Ahora, si el ramo tiene
+  tarificador (auto, moto, hogar, salud, vida, decesos) y no está cerrada, sale «Tarificar <ramo> →» a
+  `/correduria/cliente/<id>/<ramo>-nuevo`, y en auto/moto el mismo `PedirDatos` de la ficha (enlace al cliente + lo que contestó).
+- `telefono` no viene en la lectura de la oportunidad: WhatsApp cae al genérico y el componente ya lo dice.
+
 ## (25/09/2026) Auto nuevo: fecha de matriculación consultada a Avant2
 - Con cada matrícula (tecleada o restaurada del borrador) se consulta `/car/registration-date` por el puerto
   (`catalogos?tipo=fecha-matriculacion`, gratis); si no responde, vale la estimación por serie. Antes solo se
