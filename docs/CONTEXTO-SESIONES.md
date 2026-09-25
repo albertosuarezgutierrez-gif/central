@@ -12,7 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(25/09/2026)** 📡 **Portal: avisos push de CIMA + web sin animaciones de aparición** (a raíz de la demo con Pablo
+**(25/09/2026)** 📡 **Portal: avisos push de CIMA + web sin animaciones de aparición — MERGEADO en #3599** (+ aviso en «Mis datos»: el correo tiene que ser del titular) (a raíz de la demo con Pablo
 Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/devuelto, siniestro) con interruptores por
 tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
 ✅ Borrado (25/09, confirmado por Alberto) el vínculo `16a27091` (hijo, Guzmán Lozano) → ficha del PADRE: lo creó el portal a las 10:10 porque el PADRE añadió el correo del hijo a su propia ficha desde «Mis datos» a las 10:07. **Fase 0 sin hacer:** revalidar vínculos `email_hash` cuando cambia el correo de una ficha.
