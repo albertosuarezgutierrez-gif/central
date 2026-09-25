@@ -31,7 +31,7 @@ export default function HistorialRiesgo({ lista }: { lista: EslabonRiesgoFicha[]
                 <Link href={`/correduria/poliza/${e.id}`}>{e.aseguradora ?? 'Compañía sin informar'}</Link>
               )}
             </strong>
-            <span style={muted}>nº {e.numeroPoliza ?? '—'}</span>
+            <span style={muted}>nº {e.actual || !e.numeroPoliza ? (e.numeroPoliza ?? '—') : <Link href={`/correduria/poliza/${e.id}`}>{e.numeroPoliza}</Link>}</span>
             <span style={muted}>
               {fecha(e.fechaInicio)} → {fecha(e.fechaVencimiento)}
             </span>

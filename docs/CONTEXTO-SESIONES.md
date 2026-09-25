@@ -587,6 +587,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Correduría: accesos directos entre fichas
+- Presupuestos de oportunidad nueva (6 ramos): el nombre del cliente enlaza a su ficha.
+- Retarificar: miga «Ficha del cliente»; listado Clientes: compañía y nº enlazan a la póliza;
+  historial de riesgo: el nº enlaza; «si el tomador no contesta» enlaza al interviniente.
+- Quedan sin enlace a propósito: el aviso de error de MotoNuevo y Calidad (ya tiene «Ver póliza»).
+
 ## (25/09/2026) Auto nuevo (/correduria): defectos que pidió Alberto
 - La fecha de matriculación se ESTIMA al teclear la matrícula (`fechaMatriculacionEstimada`, ya existía en
   `module-seguros/matricula`), marcada «estimada» con su rango; nunca pisa una fecha tecleada.
