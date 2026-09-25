@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import {
   ALCANCES,
   ALCANCES_CONCEDIBLES,
-  DIAS_VIGENCIA,
+  DIAS_REVISION,
   alcanceConcedible,
   autorizacionVigente,
-  caducidadPorDefecto,
+  pideRevision,
   camposDeAlcance,
   camposDeAlcances,
   estadoAutorizacion,
@@ -63,10 +63,29 @@ test('caduca EN el instante exacto: el limite no es vigente', () => {
   )
 })
 
-test('la caducidad por defecto es un ano', () => {
-  assert.equal(DIAS_VIGENCIA, 365)
-  const hasta = caducidadPorDefecto(new Date('2026-09-03T00:00:00Z'))
-  assert.equal(hasta.toISOString().slice(0, 10), '2027-09-03')
+test('sin fecha de caducidad (NULL) no caduca nunca: ni pendiente ni aceptada', () => {
+  const dentroDeDiezAnios = new Date('2036-09-03T10:00:00Z')
+  assert.equal(estadoAutorizacion({ aceptadoEn: null, caducaEn: null, revocadoEn: null }, dentroDeDiezAnios), 'pendiente')
+  assert.equal(estadoAutorizacion({ aceptadoEn: AYER, caducaEn: null, revocadoEn: null }, dentroDeDiezAnios), 'vigente')
+  // Revocar sigue ganando, con o sin caducidad.
+  assert.equal(estadoAutorizacion({ aceptadoEn: AYER, caducaEn: null, revocadoEn: HOY }, HOY), 'revocada')
+})
+
+test('la revision anual se pide al año de aceptar o de la ultima revision, y no corta nada', () => {
+  assert.equal(DIAS_REVISION, 365)
+  const aceptada = new Date('2026-09-03T10:00:00Z')
+  const casiUnAnio = new Date('2027-09-02T10:00:00Z')
+  const unAnio = new Date('2027-09-03T10:00:00Z')
+  const base = { aceptadoEn: aceptada, caducaEn: null, revocadoEn: null, revisadoEn: null }
+  assert.equal(pideRevision(base, casiUnAnio), false)
+  assert.equal(pideRevision(base, unAnio), true)
+  // Revisar reinicia la cuenta.
+  assert.equal(pideRevision({ ...base, revisadoEn: new Date('2027-09-03T10:00:00Z') }, new Date('2028-01-01T00:00:00Z')), false)
+  // Una pendiente o una revocada no piden revision: no dan nada que revisar.
+  assert.equal(pideRevision({ ...base, aceptadoEn: null }, unAnio), false)
+  assert.equal(pideRevision({ ...base, revocadoEn: casiUnAnio }, unAnio), false)
+  // Y pedir revision NO la invalida: sigue vigente mientras nadie la revoque.
+  assert.equal(autorizacionVigente(base, new Date('2030-01-01T00:00:00Z')), true)
 })
 
 test('solo el dueno de la ficha concede: tarjeta y completo no autorizan a nadie', () => {
@@ -78,22 +97,25 @@ test('solo el dueno de la ficha concede: tarjeta y completo no autorizan a nadie
   assert.equal(NIVELES.filter(puedeAutorizar).length, 2)
 })
 
-test('partes y documentos son apoderamiento: existen pero HOY no se conceden', () => {
-  assert.deepEqual([...ALCANCES], ['ver', 'ver_economico', 'partes', 'documentos'])
-  assert.deepEqual([...ALCANCES_CONCEDIBLES], ['ver', 'ver_economico'])
+test('se conceden DOS permisos: Solo ver (ver_economico) y Acceso total (total)', () => {
+  assert.deepEqual([...ALCANCES], ['ver', 'ver_economico', 'partes', 'documentos', 'total'])
+  assert.deepEqual([...ALCANCES_CONCEDIBLES], ['ver_economico', 'total'])
+  // Los antiguos se siguen LEYENDO (hay filas con ellos) pero ya no se ofrecen.
   assert.equal(alcanceConcedible('partes'), null)
   assert.equal(alcanceConcedible('documentos'), null)
-  assert.equal(alcanceConcedible('ver'), 'ver')
+  assert.equal(alcanceConcedible('ver'), null)
   assert.equal(alcanceConcedible('  VER_ECONOMICO '), 'ver_economico')
+  assert.equal(alcanceConcedible('total'), 'total')
   assert.equal(alcanceConcedible('administrar'), null)
   assert.equal(alcanceConcedible(null), null)
   assert.equal(alcanceConcedible(true), null)
 })
 
-test('NINGUN alcance ensena el IBAN ni el DNI del otorgante', () => {
+test('solo Acceso total ensena el IBAN y el DNI del otorgante; ningun otro alcance', () => {
   // El agujero que tenia el booleano del CRM: se leia como `completo`, y
-  // `completo` trae iban y dniTomador. Un tercero ve la COSA, no la PERSONA.
-  for (const a of ALCANCES) {
+  // `completo` trae iban y dniTomador. Un tercero ve la COSA, no la PERSONA —
+  // salvo que el titular le haya dado expresamente acceso TOTAL (25/09/2026).
+  for (const a of ALCANCES.filter((x) => x !== 'total')) {
     const c = camposDeAlcance(a)
     assert.equal(c.iban, false, `${a} no puede ensenar el IBAN`)
     assert.equal(c.dniTomador, false, `${a} no puede ensenar el DNI`)
@@ -102,10 +124,16 @@ test('NINGUN alcance ensena el IBAN ni el DNI del otorgante', () => {
   // Y que el cepo muerde de verdad: el nivel del que parte SI los trae.
   assert.equal(camposVisibles('completo').iban, true)
   assert.equal(camposVisibles('completo').dniTomador, true)
+  const total = camposDeAlcance('total', 'fisica')
+  assert.equal(total.iban, true)
+  assert.equal(total.dniTomador, true)
+  assert.equal(total.documentos, true)
+  // La union con otros alcances no vuelve a tapar lo que `total` abrio.
+  assert.equal(camposDeAlcances(['ver_economico', 'total'], 'fisica')?.iban, true)
 })
 
-test('ningun alcance deja ACTUAR en nombre de otro', () => {
-  for (const a of ALCANCES) {
+test('solo Acceso total deja ACTUAR en nombre de otro, y nunca reautorizar', () => {
+  for (const a of ALCANCES.filter((x) => x !== 'total')) {
     const c = camposDeAlcance(a)
     assert.equal(c.abrirParte, false, `${a} no puede abrir un parte`)
     assert.equal(c.crearPeticiones, false, `${a} no puede crear peticiones`)
@@ -113,6 +141,12 @@ test('ningun alcance deja ACTUAR en nombre de otro', () => {
   }
   // `tarjeta` deja abrir parte a quien es de la casa; a un tercero, no.
   assert.equal(camposVisibles('tarjeta').abrirParte, true)
+  for (const tipo of ['fisica', 'juridica'] as const) {
+    const t = camposDeAlcance('total', tipo)
+    assert.equal(t.abrirParte, true, `total (${tipo}) abre partes`)
+    assert.equal(t.crearPeticiones, true, `total (${tipo}) crea peticiones`)
+    assert.equal(t.autorizarTerceros, false, `total (${tipo}) NO reautoriza a un cuarto`)
+  }
 })
 
 test('ver ensena la tarjeta y calla lo economico; ver_economico lo abre', () => {
@@ -154,12 +188,12 @@ test('la etiqueta de nivel es solo texto y no decide nada', () => {
 // FÍSICAS: una sociedad no tiene datos personales, así que ahí no hay
 // consentimiento que dar — hay representación mercantil.
 
-test('una sociedad puede delegar TODO; una persona fisica solo mirar', () => {
-  assert.deepEqual([...alcancesConcedibles('fisica')], ['ver', 'ver_economico'])
-  assert.deepEqual([...alcancesConcedibles('juridica')], [...ALCANCES])
-  assert.equal(alcanceConcedible('partes', 'juridica'), 'partes')
-  assert.equal(alcanceConcedible('documentos', 'juridica'), 'documentos')
-  assert.equal(alcanceConcedible('partes', 'fisica'), null)
+test('personas y sociedades conceden los mismos dos permisos', () => {
+  assert.deepEqual([...alcancesConcedibles('fisica')], ['ver_economico', 'total'])
+  assert.deepEqual([...alcancesConcedibles('juridica')], ['ver_economico', 'total'])
+  assert.equal(alcanceConcedible('total', 'juridica'), 'total')
+  assert.equal(alcanceConcedible('total', 'fisica'), 'total')
+  assert.equal(alcanceConcedible('partes', 'juridica'), null)
 })
 
 test('quien no dice de que tipo es, se trata como PERSONA', () => {
@@ -211,8 +245,9 @@ test('el titulo con el que se representa a la sociedad se valida y se guarda', (
   assert.equal(tituloRepresentacion(null), null)
 })
 
-test('la etiqueta de nivel sube a gestionar cuando hay partes', () => {
+test('la etiqueta de nivel sube a gestionar cuando hay partes o acceso total', () => {
   assert.equal(etiquetaNivelAlcances(['partes']), 'gestionar')
+  assert.equal(etiquetaNivelAlcances(['total']), 'gestionar')
   assert.equal(etiquetaNivelAlcances(['documentos']), 'completo')
   assert.equal(etiquetaNivelAlcances(['ver']), 'tarjeta')
 })
@@ -221,7 +256,11 @@ test('ver una póliza NO basta para dar un parte: hace falta `partes` y que conc
   assert.equal(puedeDarParte(['ver'], 'juridica'), false)
   assert.equal(puedeDarParte(['ver', 'ver_economico', 'documentos'], 'juridica'), false)
   assert.equal(puedeDarParte(['ver', 'partes'], 'juridica'), true)
-  // De una física no se delega actuar: una fila `partes` escrita por otro camino no abre nada.
+  // Una fila `partes` de una física escrita por otro camino no abre nada...
   assert.equal(puedeDarParte(['ver', 'partes'], 'fisica'), false)
+  // ...pero el acceso TOTAL sí deja dar partes, sea quien sea quien cede.
+  assert.equal(puedeDarParte(['total'], 'fisica'), true)
+  assert.equal(puedeDarParte(['total'], 'juridica'), true)
+  assert.equal(puedeDarParte(['ver_economico'], 'fisica'), false)
   assert.equal(puedeDarParte([], 'juridica'), false)
 })

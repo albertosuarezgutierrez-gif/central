@@ -40,7 +40,8 @@ export type FalloAviso =
   | 'error_envio'
 
 export type ResultadoAviso =
-  | { ok: true; caducaEn: Date }
+  /** `caducaEn` `null` = no caduca (las concedidas desde el 25/09/2026): el correo no pone fecha. */
+  | { ok: true; caducaEn: Date | null }
   | { ok: false; estado: FalloAviso; motivo: string; status: 404 | 409 | 422 | 502 | 503 }
 
 /**
@@ -92,7 +93,12 @@ export async function avisarAccesoPendiente(
     }
   }
   // La más lejana: es hasta cuándo puede confirmar, que es lo que dice el correo.
-  const caducaEn = pendientes.reduce((a, f) => (f.caducaEn > a ? f.caducaEn : a), pendientes[0].caducaEn)
+  // `null` = no caduca, y gana a cualquier fecha: con una sola pendiente sin
+  // fecha, no hay plazo que anunciar.
+  const caducaEn = pendientes.reduce<Date | null>(
+    (a, f) => (a === null || f.caducaEn === null ? null : f.caducaEn > a ? f.caducaEn : a),
+    pendientes[0].caducaEn,
+  )
 
   const destino = await emailDeFicha(correduriaId, entrada.autorizadoId)
   if (!destino) {

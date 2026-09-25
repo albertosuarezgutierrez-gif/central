@@ -579,6 +579,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Portal asegura: accesos sin caducidad y dos permisos («Solo ver» / «Acceso total»)
+- Decisión de Alberto: las autorizaciones NO caducan (revisión anual `pideRevision` → aviso `acceso_por_revisar` + botón «Lo mantengo»); dos permisos `ver_economico` y `total`. `total` de una PERSONA incluye DNI e IBAN (elegido por él), con texto de consentimiento propio (`textoDeConcesion`).
+- `total` NO se da por invitación/petición: «Pasar a acceso total» (`ampliarATotal`) sobre un acceso ya aceptado, nace pendiente.
+- Trampas cazadas: `cartera-lectura` cortaba con `caduca === null` (habría vaciado carteras compartidas) y un filtro `caducaEn: {gt}` en asegura excluía los NULL.
+- Migración `2026-09-25_portal_autorizacion_sin_caducidad_y_total.sql` PENDIENTE de aplicar ANTES del merge. Toca asegura-portal, asegura y plataforma.
+
 ## (25/09/2026) Portal asegura: «Detalles» duplicaba las coberturas + logos sin nombre
 - El EIAC mete las coberturas en `datos_especificos.capitales` con `bien:'OTROS'`; `describirBien` las pintaba en «Detalles» y la ficha las repetía en la lista de coberturas. Ahora se filtran (`esPartidaDeCobertura`) y el capital pasa a la lista desde `poliza_coberturas.capital_asegurado` (medido: las 513 OTROS con importe tienen su fila).
 - «Mis siniestros»: con logo ya no se repite el nombre de la compañía (va en el `alt`). Ojo: el logo de Occident sigue siendo el de «Catalana Occidente».

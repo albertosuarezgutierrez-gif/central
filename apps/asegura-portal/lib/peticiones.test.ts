@@ -229,7 +229,7 @@ test('pedirla ES aceptarla: la autorización se acepta con la fecha de la PETICI
       'Y la fecha honesta es la de su petición: fecharla hoy pondría en el registro que aceptó cuando no hizo nada.',
   )
   assert.match(LIB_CODIGO, /aceptadoPorIdentidadId: fila\.solicitanteIdentidadId/)
-  assert.match(LIB_CODIGO, /caducaEn: caducidadPorDefecto\(hoy\)/, 'La autorización caduca al año, como cualquier otra.')
+  assert.match(LIB_CODIGO, /caducaEn: null/, 'La autorización no caduca (25/09/2026), como cualquier otra: caduca la petición, no el acceso.')
 })
 
 test('sin ficha del solicitante NO se inventa una: se autoriza a su IDENTIDAD', () => {

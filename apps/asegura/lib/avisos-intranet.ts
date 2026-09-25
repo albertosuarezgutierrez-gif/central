@@ -99,7 +99,15 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
   const db = prismaAsegura()
   const limiteVentana = new Date(hoy.getTime() + DIAS_VENTANA_AVISO * MS_DIA)
 
-  const pendienteSinAceptar = { correduriaId, aceptadoEn: null, revocadoEn: null, caducaEn: { gt: hoy } }
+  // 🚨 `caduca_en` NULL = NO caduca (todas las concedidas desde el 25/09/2026).
+  // Un `caducaEn: { gt: hoy }` a secas las dejaría FUERA en silencio —en SQL,
+  // `NULL > hoy` no es verdadero— y nadie recibiría el aviso de una pendiente.
+  const pendienteSinAceptar = {
+    correduriaId,
+    aceptadoEn: null,
+    revocadoEn: null,
+    OR: [{ caducaEn: null }, { caducaEn: { gt: hoy } }],
+  }
 
   const [autorizaciones, aInvitados, peticiones, obligaciones] = await Promise.all([
     // Solo las que la campana puede llegar a enseñar: sin aceptar y sin revocar.

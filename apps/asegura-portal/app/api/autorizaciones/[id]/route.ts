@@ -51,7 +51,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
 
   const c = (typeof cuerpo === 'object' && cuerpo !== null ? cuerpo : {}) as Record<string, unknown>
   const accion = c.accion
-  if (!UUID.test(id) || (accion !== 'aceptar' && accion !== 'revocar')) {
+  if (!UUID.test(id) || (accion !== 'aceptar' && accion !== 'revocar' && accion !== 'mantener')) {
     return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 })
   }
 

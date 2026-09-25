@@ -152,6 +152,31 @@ test('🚨 un bloque de autorización que no se entiende degrada a null (= «no 
   assert.equal(leerAutorizacion({ ...VIGENTE, origen: 42 })?.origen, 'sin_informar')
 })
 
+// 🚨 Desde el 25/09/2026 las autorizaciones NO caducan: el puerto manda
+// `caducaEn: null`. Ese `null` EXPLÍCITO es «no caduca» y se lee; lo que sigue
+// degradando a null es lo ausente o ilegible (arriba). Y la pantalla no puede
+// decir «hasta el …» ni «caduca el …» de algo que no tiene fecha.
+test('🚨 `caducaEn: null` = vigente SIN fecha de fin, no un bloque roto', () => {
+  const a = leerAutorizacion({ ...VIGENTE, caducaEn: null })
+  assert.notEqual(a, null, 'null explícito es «no caduca», no «no tiene forma»')
+  assert.equal(a?.estado, 'vigente')
+  assert.equal(a?.caducaEn, null)
+  const frase = explicarEstadoAutorizacion(a, 'María', 'José')
+  assert.match(frase, /sin fecha de fin/)
+  assert.doesNotMatch(frase, /hasta el|[Cc]aduca el|Invalid Date/)
+  const pendiente = explicarEstadoAutorizacion(leerAutorizacion({ ...VIGENTE, estado: 'pendiente', caducaEn: null }), 'María', 'José')
+  assert.match(pendiente, /TODAVÍA NO VE NADA/)
+  assert.doesNotMatch(pendiente, /[Cc]aduca el|Invalid Date/)
+})
+
+test('«acceso total» se lee y se dice como lo que es: ve todo y actúa en nombre del titular', () => {
+  const a = leerAutorizacion({ ...VIGENTE, alcances: ['total'], caducaEn: null })
+  assert.deepEqual(a?.alcances, ['total'], '`total` está en el vocabulario: no se descarta')
+  const frase = explicarEstadoAutorizacion(a, 'María', 'José')
+  assert.match(frase, /ACCESO TOTAL/)
+  assert.match(frase, /ACTÚA en nombre de José/)
+})
+
 test('`autorizaVer` es el resumen de «¿lo ve HOY?» y viaja junto al bloque, sin contradecirlo', () => {
   const r = leerRelacion({ ...CONYUGE, autorizaVer: false, autorizacion: { ...VIGENTE, estado: 'pendiente' } })
   assert.equal(r?.autorizaVer, false, 'pendiente NO abre datos')

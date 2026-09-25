@@ -21,6 +21,7 @@ export const TIPOS_AVISO = [
   'peticion_recibida',
   'autorizacion_pendiente',
   'autorizacion_sin_aceptar',
+  'acceso_por_revisar',
   'obligacion_en_ventana',
   'datos_por_revisar',
   'carnet_en_ventana',
@@ -73,6 +74,11 @@ export type AutorizacionParaAviso = {
   estado: EstadoAutorizacion
   otorganteNombre: string | null
   autorizadoNombre: string | null
+  /**
+   * Toca preguntarle al otorgante si mantiene el acceso (`pideRevision`, un año).
+   * Opcional: una lectura que no lo trae no pide revisión — nunca se inventa.
+   */
+  pideRevision?: boolean
 }
 
 /** Lo mínimo de una obligación del calendario. */
@@ -170,6 +176,8 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   peticion_recibida: '/autorizaciones',
   autorizacion_pendiente: '/autorizaciones',
   autorizacion_sin_aceptar: '/autorizaciones',
+  // La revisión anual (25/09/2026): se contesta en «Contactos», en la tarjeta de ese acceso.
+  acceso_por_revisar: '/autorizaciones',
   // El calendario de la bóveda se quitó el 09/09/2026 (no aportaba nada que la
   // fila de cada póliza no dijera ya); el aviso sigue existiendo y enlaza a la
   // bóveda a secas, sin ancla.
@@ -307,6 +315,19 @@ export function avisosDe(x: EntradaAvisos): Avisos {
         titulo: `${a.autorizadoNombre ?? 'La persona invitada'} aún no ha aceptado tu acceso`,
         detalle: 'Hasta que acepte no ve nada. Puedes recordárselo o retirarlo.',
         href: HREF_POR_TIPO.autorizacion_sin_aceptar,
+      })
+    }
+    // 🚨 La revisión anual (25/09/2026). Los accesos ya NO caducan; lo que cubre
+    // el caso del divorcio es esta pregunta. Si no aparece aquí, solo la ve quien
+    // entre en «Contactos» por su cuenta — o sea, nadie.
+    for (const a of x.autorizaciones.otorgadas) {
+      if (a.estado !== 'vigente' || a.pideRevision !== true) continue
+      avisos.push({
+        tipo: 'acceso_por_revisar',
+        id: a.id,
+        titulo: `¿Sigues dejando ver tus seguros a ${a.autorizadoNombre ?? 'la persona invitada'}?`,
+        detalle: 'Hace un año que tiene acceso. Confírmalo o revócalo; si no haces nada, lo sigue teniendo.',
+        href: HREF_POR_TIPO.acceso_por_revisar,
       })
     }
   }

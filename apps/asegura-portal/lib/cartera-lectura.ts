@@ -262,7 +262,8 @@ export type TitularPortal = {
   autorizacion?: {
     ids: string[]
     alcances: Alcance[]
-    caducaEn: Date
+    /** `null` = no caduca (las concedidas desde el 25/09/2026). */
+    caducaEn: Date | null
     /**
      * Pólizas sobre las que esta identidad puede DAR UN PARTE (`puedeDarParte`).
      * Por póliza y no por ficha: una concesión suelta con `partes` abre esa póliza,
@@ -497,14 +498,14 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
 
   const ahora = new Date()
   /** Lo que abre una autorización: qué filas, con qué alcances y hasta cuándo. */
-  type Concesion = { ids: string[]; alcances: Alcance[]; caducaEn: Date }
-  const acumular = (m: Map<string, Concesion>, clave: string, id: string, alcance: Alcance, caducaEn: Date) => {
+  type Concesion = { ids: string[]; alcances: Alcance[]; caducaEn: Date | null }
+  const acumular = (m: Map<string, Concesion>, clave: string, id: string, alcance: Alcance, caducaEn: Date | null) => {
     const g = m.get(clave)
     if (g) {
       g.ids.push(id)
       g.alcances.push(alcance)
       // Se ve hasta que caduque la ÚLTIMA que sigue abriéndolo.
-      if (caducaEn.getTime() > g.caducaEn.getTime()) g.caducaEn = caducaEn
+      g.caducaEn = caducaMasTarde(g.caducaEn, caducaEn)
     } else {
       m.set(clave, { ids: [id], alcances: [alcance], caducaEn })
     }
@@ -952,12 +953,17 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     // vez: la concesión es real y sigue siendo lo que hay que enseñar.
     const idsFinales = ids.length > 0 ? ids : (deLaFicha?.ids ?? [])
     const alcancesFinales = alcances.length > 0 ? alcances : [...new Set(deLaFicha?.alcances ?? [])]
-    let caduca = deLaFicha?.caducaEn ?? null
+    // 🚨 `null` aquí YA NO es «sin concesión»: desde el 25/09/2026 es «no
+    // caduca». La ausencia de concesión es `undefined`, y es lo único que corta.
+    // Con el `null` de antes como corte, toda cartera compartida sin caducidad
+    // desaparecía de la bóveda sin que fallara nada.
+    let caduca: Date | null | undefined = deLaFicha === null ? undefined : deLaFicha.caducaEn
     for (const id of idsFinales) {
       const c = caducaPorId.get(id)
-      if (c !== undefined && (caduca === null || c.getTime() > caduca.getTime())) caduca = c
+      if (c === undefined) continue
+      caduca = caduca === undefined ? c : caducaMasTarde(caduca, c)
     }
-    if (caduca === null) continue
+    if (caduca === undefined) continue
     autorizadas.push({
       ...t,
       nivel: etiquetaNivelAlcances(alcancesFinales),
@@ -1044,4 +1050,10 @@ export function polizasParaParte(c: Pick<CarteraPortal, 'propias' | 'autorizadas
     ...c.propias.flatMap((t) => t.polizas.map((p) => p.id)),
     ...c.autorizadas.flatMap((t) => t.autorizacion?.partes ?? []),
   ])
+}
+
+/** La más tardía de dos caducidades, donde `null` = no caduca (gana siempre). */
+function caducaMasTarde(a: Date | null, b: Date | null): Date | null {
+  if (a === null || b === null) return null
+  return b.getTime() > a.getTime() ? b : a
 }

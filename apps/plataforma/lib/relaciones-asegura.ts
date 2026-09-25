@@ -35,22 +35,23 @@ import { cabecerasPuerto } from './puerto-actor.ts'
 // lectura porque `apps/plataforma` no declara ese paquete y esta capa solo
 // VALIDA lo que llega por el puerto: nada de esto decide accesos — lo que
 // abre datos se decide en asegura y en el portal.
-export const ALCANCES_PORTAL = ['ver', 'ver_economico', 'partes', 'documentos'] as const
+export const ALCANCES_PORTAL = ['ver', 'ver_economico', 'partes', 'documentos', 'total'] as const
 export type AlcancePortal = (typeof ALCANCES_PORTAL)[number]
 export const ESTADOS_AUTORIZACION_PORTAL = ['pendiente', 'vigente', 'caducada', 'revocada'] as const
 export type EstadoAutorizacionPortal = (typeof ESTADOS_AUTORIZACION_PORTAL)[number]
 
 /**
- * Los dos alcances que son ACTUAR en nombre de otro, no mirar.
+ * Los alcances que son ACTUAR en nombre de otro, no mirar.
  *
- * 🚨 Solo se pueden anotar cuando la ficha que cede es una persona JURÍDICA: el
- * RGPD protege a las personas físicas, así que de una persona solo se delega
- * mirar; una sociedad no tiene datos personales y lo que hay ahí no es
- * consentimiento sino REPRESENTACIÓN mercantil, que se delega entera. Quien lo
- * decide de verdad es asegura (y el módulo puro que él consume); esto es la
- * lectura que necesita la pantalla para no ofrecer un botón que va a dar 422.
+ * `partes` y `documentos` son el vocabulario viejo (solo de sociedades; ya no se
+ * anotan, pero hay filas que los llevan). Desde el 25/09/2026 se anota
+ * `total` («Acceso total»: ve y hace todo lo que el titular), de personas y de
+ * sociedades — y si cede una sociedad, exige el título con el que se la
+ * representa. Quien lo decide de verdad es asegura (y el módulo puro que él
+ * consume); esto es la lectura que necesita la pantalla para no ofrecer un
+ * botón que va a dar 422.
  */
-export const APODERAMIENTO_PORTAL: readonly AlcancePortal[] = ['partes', 'documentos']
+export const APODERAMIENTO_PORTAL: readonly AlcancePortal[] = ['partes', 'documentos', 'total']
 
 export function esApoderamientoPortal(a: AlcancePortal): boolean {
   return APODERAMIENTO_PORTAL.includes(a)
@@ -81,6 +82,7 @@ export const ALCANCE_TEXTO_PORTAL: Record<AlcancePortal, string> = {
   ver_economico: 'ver sus seguros y lo que paga (prima y recibos)',
   partes: 'dar partes de siniestro en nombre de la sociedad',
   documentos: 'ver y subir la documentación de la sociedad',
+  total: 'acceso total (ve y hace todo lo que el titular)',
 }
 
 /** `null` si no es uno de los tres títulos: un valor raro no se traduce ni se inventa. */
@@ -99,12 +101,14 @@ export function comoTitulo(t: string | null): string | null {
 }
 
 /**
- * Los alcances que se pueden anotar desde una ficha. `null` (no se pudo leer qué
- * es) cae en el lado restrictivo: solo lectura. Ofrecer un apoderamiento por un
- * hueco en la respuesta es exactamente lo que no puede pasar.
+ * Los alcances que se pueden anotar desde una ficha. Desde el 25/09/2026 son
+ * DOS, iguales para personas y sociedades: «Solo ver» (`ver_economico`) y
+ * «Acceso total» (`total`). `null` (no se pudo leer qué es) cae en el lado
+ * restrictivo: solo lectura — si resultara ser una sociedad, «Acceso total»
+ * pediría un título que la pantalla no ha preguntado y asegura lo rechazaría.
  */
 export function alcancesAnotables(tipo: TipoOtorgantePortal | null): readonly AlcancePortal[] {
-  return tipo === 'juridica' ? ALCANCES_PORTAL : ['ver', 'ver_economico']
+  return tipo === null ? ['ver_economico'] : ['ver_economico', 'total']
 }
 
 /**
@@ -126,8 +130,13 @@ export type AutorizacionCartera = {
    * `null`: no se pinta un poder que nadie sabría interpretar.
    */
   tituloRepresentacion: TituloRepresentacionPortal | null
-  /** ISO del puerto (`Date` serializada). `fechaLarga()` la pinta en español. */
-  caducaEn: string
+  /**
+   * ISO del puerto (`Date` serializada). `fechaLarga()` la pinta en español.
+   * `null` = **no caduca** (todas las concedidas desde el 25/09/2026): dura hasta
+   * que se revoque. No es «no se sabe»: un valor ausente o ilegible hace que
+   * `leerAutorizacion` devuelva `null` entera.
+   */
+  caducaEn: string | null
   /** `portal` = lo concedió el cliente · `corredor` = lo anotó la correduría. */
   origen: string
 }
@@ -169,8 +178,17 @@ export function leerAutorizacion(v: unknown): AutorizacionCartera | null {
   if (typeof v !== 'object' || v === null) return null
   const o = v as Record<string, unknown>
   if (typeof o.estado !== 'string' || !(ESTADOS_AUTORIZACION_PORTAL as readonly string[]).includes(o.estado)) return null
-  const caducaEn = cadena(o.caducaEn)
-  if (caducaEn === null || Number.isNaN(Date.parse(caducaEn))) return null
+  // 🚨 Tres casos, no dos: `null` EXPLÍCITO = no caduca (se lee); una fecha
+  // legible = caduca ese día; cualquier otra cosa (ausente, cadena rara) = la
+  // fila no tiene forma y no se pinta. Colapsar lo ausente con «no caduca»
+  // sería prometer un acceso indefinido por un hueco en la respuesta.
+  let caducaEn: string | null
+  if (o.caducaEn === null) caducaEn = null
+  else {
+    const c = cadena(o.caducaEn)
+    if (c === null || Number.isNaN(Date.parse(c))) return null
+    caducaEn = c
+  }
   const alcances = Array.isArray(o.alcances)
     ? o.alcances.filter((a): a is AlcancePortal => typeof a === 'string' && (ALCANCES_PORTAL as readonly string[]).includes(a))
     : []
@@ -197,24 +215,37 @@ export function fechaLarga(iso: string): string {
  */
 export function explicarEstadoAutorizacion(a: AutorizacionCartera | null, nombreOtro: string, nombreFicha: string): string {
   if (a === null) return `${nombreOtro} no ve los seguros de ${nombreFicha}: no hay ninguna autorización.`
-  const nivel = a.alcances.includes('ver_economico') ? 've también lo económico (prima y recibos)' : 've la tarjeta de la póliza'
+  const nivel = a.alcances.includes('total')
+    ? 'tiene ACCESO TOTAL: ve todo (también DNI e IBAN si es una persona)'
+    : a.alcances.includes('ver_economico')
+      ? 've también lo económico (prima y recibos)'
+      : 've la tarjeta de la póliza'
   // 🚨 Si hay APODERAMIENTO, decir «ve la tarjeta» sería quedarse corto en el
   // sitio más caro: ahí no mira, ACTÚA por la sociedad — y con `partes`, lo que
   // declare la obliga frente a la compañía. El título, cuando consta, va detrás:
   // un poder del que no se dice con qué título se ejerce es media anotación.
   const actos = a.alcances.filter(esApoderamientoPortal)
   const titulo = comoTitulo(a.tituloRepresentacion)
-  const queHace =
-    actos.length === 0
+  const queHace = a.alcances.includes('total')
+    ? `${nivel} y ACTÚA en nombre de ${nombreFicha}${titulo ? `, ${titulo}` : ''}`
+    : actos.length === 0
       ? nivel
       : `${nivel} y ACTÚA por la sociedad (${actos.map((x) => ALCANCE_TEXTO_PORTAL[x]).join(' · ')})${titulo ? `, ${titulo}` : ''}`
+  // Sin fecha (`caducaEn` null) NO se dice «hasta el …» ni «caduca el …»: no
+  // caduca, dura hasta que se revoque.
   switch (a.estado) {
     case 'vigente':
-      return `${nombreOtro} ve los seguros de ${nombreFicha} — ${queHace}. En vigor hasta el ${fechaLarga(a.caducaEn)}.`
+      return `${nombreOtro} ve los seguros de ${nombreFicha} — ${queHace}. ${
+        a.caducaEn === null ? 'En vigor, sin fecha de fin.' : `En vigor hasta el ${fechaLarga(a.caducaEn)}.`
+      }`
     case 'pendiente':
-      return `Autorización anotada${a.origen === 'corredor' ? ' por la correduría' : ''}${titulo ? ` (${titulo})` : ''}, pendiente de que ${nombreOtro} la acepte en el portal: TODAVÍA NO VE NADA. Caduca el ${fechaLarga(a.caducaEn)}.`
+      return `Autorización anotada${a.origen === 'corredor' ? ' por la correduría' : ''}${titulo ? ` (${titulo})` : ''}, pendiente de que ${nombreOtro} la acepte en el portal: TODAVÍA NO VE NADA.${
+        a.caducaEn === null ? '' : ` Caduca el ${fechaLarga(a.caducaEn)}.`
+      }`
     case 'caducada':
-      return `La autorización caducó el ${fechaLarga(a.caducaEn)}: ${nombreOtro} ya no ve los seguros de ${nombreFicha}.`
+      // Una caducada sin fecha no debería existir (sin fecha no caduca); si
+      // llegara, se dice sin inventar el día.
+      return `La autorización caducó${a.caducaEn === null ? '' : ` el ${fechaLarga(a.caducaEn)}`}: ${nombreOtro} ya no ve los seguros de ${nombreFicha}.`
     case 'revocada':
       return `Autorización revocada: ${nombreOtro} no ve los seguros de ${nombreFicha}.`
   }

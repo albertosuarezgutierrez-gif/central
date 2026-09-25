@@ -35,7 +35,6 @@ import { WHERE_CARTERA_VIVA } from '@central/module-seguros'
 import {
   alcanceConcedible,
   autorizacionVigente,
-  caducidadPorDefecto,
   esAlcance,
   estadoAutorizacion,
   tituloRepresentacion,
@@ -53,11 +52,28 @@ import { anotarCambio } from './auditoria'
  */
 export const TEXTO_AUTORIZACION_CORREDOR_V1 = 'v1-2026-09-03-corredor'
 
-/** El alcance que se anota si no se dice otro: el más pequeño. */
-export const ALCANCE_POR_DEFECTO: Alcance = 'ver'
+/**
+ * La versión vigente desde el 25/09/2026. La v1 se anotaba con caducidad de un
+ * año (`caduca_en` a +365 días); lo que se lee al cliente desde este día es que
+ * el acceso **no caduca**: dura hasta que lo retire, y una vez al año se le
+ * pregunta si lo mantiene (`pideRevision`). Y el alcance puede ser «Acceso
+ * total». Texto distinto ⇒ versión distinta: la v1 no se reescribe, porque es
+ * lo que consintieron las filas que la llevan.
+ */
+export const TEXTO_AUTORIZACION_CORREDOR_V2 = 'v2-2026-09-25-corredor'
 
-/** Los dos alcances que son ACTUAR en nombre de otro. Solo los delega una SOCIEDAD. */
-const APODERAMIENTO: readonly Alcance[] = ['partes', 'documentos']
+/**
+ * El alcance que se anota si no se dice otro: el más pequeño de los que se
+ * CONCEDEN hoy («Solo ver»). `ver` sigue en el vocabulario para leer filas
+ * viejas, pero ya no se ofrece (`ALCANCES_CONCEDIBLES`).
+ */
+export const ALCANCE_POR_DEFECTO: Alcance = 'ver_economico'
+
+/**
+ * Los alcances que son ACTUAR en nombre de otro. En una SOCIEDAD exigen el título
+ * con el que se la representa. `total` (25/09/2026) lo es: ve y hace todo.
+ */
+const APODERAMIENTO: readonly Alcance[] = ['partes', 'documentos', 'total']
 
 function esApoderamiento(a: Alcance): boolean {
   return APODERAMIENTO.includes(a)
@@ -105,7 +121,8 @@ export type AutorizacionRelacion = {
    * — lo normal cuando cede una persona, porque ahí no se representa a nadie.
    */
   tituloRepresentacion: string | null
-  caducaEn: Date
+  /** `null` = no caduca (todas las concedidas desde el 25/09/2026). */
+  caducaEn: Date | null
   /** `portal` = lo concedió el cliente en su pantalla · `corredor` = lo anotó la correduría. */
   origen: string
 }
@@ -156,7 +173,8 @@ type FilaAutorizacion = {
   tituloRepresentacion: string | null
   origen: string
   aceptadoEn: Date | null
-  caducaEn: Date
+  /** `null` = no caduca. */
+  caducaEn: Date | null
   revocadoEn: Date | null
 }
 
@@ -167,10 +185,18 @@ function clavePar(otorgante: string, autorizado: string): string {
 /** Prioridad al resumir: lo que abre datos manda sobre lo que ya no vale. */
 const ORDEN_ESTADO: Record<EstadoAutorizacion, number> = { vigente: 4, pendiente: 3, caducada: 2, revocada: 1 }
 
+/** ¿`a` caduca después que `b`? `null` = no caduca, así que va por delante de cualquier fecha. */
+function masLejana(a: Date | null, b: Date | null): boolean {
+  if (b === null) return false
+  if (a === null) return true
+  return a.getTime() > b.getTime()
+}
+
 /**
  * Resume las autorizaciones de un par en la que gobierna. Puro (recibe `hoy`).
  * Si hay varias en el mismo estado —la BD permite un alcance por fila— se
  * juntan sus alcances y se toma la caducidad más lejana, que es la que manda.
+ * Una sin caducidad (`caducaEn` NULL) es la más lejana de todas: gana siempre.
  */
 export function resumirAutorizacion(filas: readonly FilaAutorizacion[], hoy: Date): AutorizacionRelacion | null {
   if (filas.length === 0) return null
@@ -179,7 +205,7 @@ export function resumirAutorizacion(filas: readonly FilaAutorizacion[], hoy: Dat
   const delEstado = conEstado.filter((x) => x.estado === mejor.estado)
   // Un alcance que no está en el vocabulario no se inventa ni se pinta: se calla.
   const alcances = [...new Set(delEstado.map((x) => x.f.alcance).filter((a): a is Alcance => esAlcance(a)))]
-  const gobierna = delEstado.reduce((m, x) => (x.f.caducaEn.getTime() > m.f.caducaEn.getTime() ? x : m))
+  const gobierna = delEstado.reduce((m, x) => (masLejana(x.f.caducaEn, m.f.caducaEn) ? x : m))
   // El título que conste en alguna fila de ese mismo estado (una de lectura no lo
   // lleva, y una de apoderamiento sí). Si no hay ninguno es `null`: «no consta»,
   // nunca una cadena vacía que se cuele por las guardas de NULL de quien lo pinte.
@@ -449,19 +475,16 @@ export async function cambiarTipoRelacion(
 }
 
 /**
- * Por qué no se puede anotar ese alcance, y la razón depende de QUIÉN cede.
+ * Por qué no se puede anotar ese alcance.
  *
- * 🚨 Desde el 03/09/2026 esto ya no es una regla sobre el alcance: es una regla
- * sobre el otorgante. Una PERSONA solo delega mirar —dar partes en su nombre es
- * un poder, y un tick en una pantalla no lo es (art. 16 LCS: si el parte va mal,
- * hay que poder decir quién firmó)—. Una SOCIEDAD no tiene datos personales, así
- * que lo que delega no es consentimiento sino REPRESENTACIÓN mercantil, y esa se
- * delega entera. Decir «hoy solo ver» sobre una empresa sería falso.
+ * Desde el 25/09/2026 se conceden DOS permisos, iguales para personas y
+ * sociedades (`ALCANCES_CONCEDIBLES`): «Solo ver» y «Acceso total». Lo que
+ * cambia con una sociedad es que «Acceso total» exige el título con el que se
+ * la representa (`MOTIVO_TITULO_REQUERIDO`). `tipo` se queda en la firma por si
+ * los dos lados vuelven a divergir.
  */
-function motivoAlcanceNoConcedible(tipo: TipoOtorgante): string {
-  return tipo === 'juridica'
-    ? 'Ese alcance no existe: «ver», «ver_economico», «partes» y «documentos» son los únicos.'
-    : 'Esa ficha es una PERSONA, y de una persona solo se puede anotar que deja MIRAR («ver» o «ver_economico»). Dar partes o manejar documentos en su nombre es un apoderamiento, no una autorización de lectura: eso solo lo delega una sociedad en quien la representa.'
+function motivoAlcanceNoConcedible(_tipo: TipoOtorgante): string {
+  return 'Ese alcance no se concede: los únicos son «ver_economico» (Solo ver) y «total» (Acceso total).'
 }
 
 const MOTIVO_TITULO_REQUERIDO =
@@ -496,11 +519,10 @@ function porQueYaHay(estado: EstadoAutorizacion): string {
  * Queda en el historial de las dos fichas: es un consentimiento, y se tiene que
  * poder ver quién lo dio y cuándo.
  *
- * 🚨 Y desde el 03/09/2026 lo que se puede anotar depende de QUIÉN cede
- * (`clientes.tipo_persona`): de una PERSONA solo «ver»/«ver_economico»; de una
- * SOCIEDAD también «partes» y «documentos», y entonces hace falta el TÍTULO con
- * el que se la representa. No es un permiso más fino: es que ahí no hay
- * consentimiento de datos personales sino representación mercantil.
+ * 🚨 Desde el 25/09/2026 se anotan DOS permisos, para personas y sociedades:
+ * «Solo ver» (`ver_economico`) y «Acceso total» (`total`). Si cede una SOCIEDAD,
+ * «Acceso total» exige el TÍTULO con el que se la representa. Y no caduca
+ * (`caduca_en` NULL): dura hasta que se revoque.
  */
 export async function autorizarVer(
   correduriaId: string,
@@ -529,9 +551,11 @@ export async function autorizarVer(
     // representa a nadie, así que se descarta en vez de guardarlo.
     const titulo: TituloRepresentacion | null =
       tipoOtorgante === 'juridica' ? tituloRepresentacion(entrada.tituloRepresentacion) : null
-    // Apoderamiento sin título no entra. La BD lo repite con un CHECK, pero
-    // llegar hasta allí devolvería un error de Postgres en vez de decir qué falta.
-    if (entrada.autoriza && alcance !== null && esApoderamiento(alcance) && titulo === null) {
+    // Apoderamiento DE UNA SOCIEDAD sin título no entra. La BD lo repite con un
+    // CHECK, pero llegar hasta allí devolvería un error de Postgres en vez de
+    // decir qué falta. En una persona no hay a quién representar: su «Acceso
+    // total» no lleva título (y `titulo` ya es `null` ahí por construcción).
+    if (entrada.autoriza && alcance !== null && tipoOtorgante === 'juridica' && esApoderamiento(alcance) && titulo === null) {
       return { ok: false, estado: 'invalido', motivo: MOTIVO_TITULO_REQUERIDO, status: 422 }
     }
     const db = prismaAsegura()
@@ -603,8 +627,10 @@ export async function autorizarVer(
           tituloRepresentacion: titulo,
           origen: 'corredor',
           otorgadoPorActor: entrada.actor,
-          caducaEn: caducidadPorDefecto(new Date()),
-          versionTexto: TEXTO_AUTORIZACION_CORREDOR_V1,
+          // 🚨 Desde el 25/09/2026 no caduca: dura hasta que se revoque, y una vez
+          // al año el portal le pregunta al otorgante si la mantiene.
+          caducaEn: null,
+          versionTexto: TEXTO_AUTORIZACION_CORREDOR_V2,
         },
       })
       anotarCambio({ entidad: 'autorizacion', id: clienteId, campo: 'estado', antes: 'vigente', despues: 'vigente' })

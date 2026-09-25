@@ -57,7 +57,6 @@ import {
   NIVELES,
   alcanceConcedible,
   caducidadPeticion,
-  caducidadPorDefecto,
   esAlcance,
   estadoAutorizacion,
   estadoPeticion,
@@ -72,7 +71,7 @@ import {
   type ResultadoPeticion,
 } from '@central/module-seguros-portal'
 
-import { TEXTO_AUTORIZACION_V2, TEXTO_REPRESENTACION_V1 } from './autorizaciones'
+import { textoDeConcesion } from './autorizaciones'
 import { prisma } from './db'
 import { getIdentidad } from './session'
 import { elegirFicha, type Candidato } from './vinculo-elegir'
@@ -930,7 +929,8 @@ export async function resolverPeticion(datos: {
             alcance,
             origen: 'portal',
             otorgadoPorIdentidadId: identidadId,
-            caducaEn: caducidadPorDefecto(hoy),
+            // Sin caducidad (25/09/2026): caduca la PETICIÓN, no el acceso.
+            caducaEn: null,
             // 🚨 **Pedirla ES aceptarla**, y por eso esta autorización nace ya
             // aceptada. La doble aceptación existe para que nadie aparezca en
             // un registro con su nombre sin saberlo (art. 7.1 RGPD, modelo del
@@ -945,7 +945,7 @@ export async function resolverPeticion(datos: {
             // Qué texto se aceptó. La versión depende de quién cede: la de la
             // persona afirma «no verá mi IBAN ni podrá dar partes», que de una
             // sociedad es sencillamente falso.
-            versionTexto: esJuridica ? TEXTO_REPRESENTACION_V1 : TEXTO_AUTORIZACION_V2,
+            versionTexto: textoDeConcesion(alcance, esJuridica ? 'juridica' : 'fisica').version,
             ip: datos.ip,
             userAgent: datos.userAgent,
           },

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 
-import { autorizacionesDeIdentidad, conceder, type ErrorConceder } from '@/lib/autorizaciones'
+import { ampliarATotal, autorizacionesDeIdentidad, conceder, type ErrorConceder } from '@/lib/autorizaciones'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -109,6 +109,24 @@ export async function POST(req: Request) {
   // `null` y `3` son JSON válidos: sin esta guarda el acceso a las propiedades
   // revienta con un 500 en vez de decir qué falta.
   const c = (typeof cuerpo === 'object' && cuerpo !== null ? cuerpo : {}) as Record<string, unknown>
+
+  // «Pasar a acceso total» sobre un acceso que ya existe (25/09/2026). Quién
+  // puede hacerlo y sobre qué lo decide `ampliarATotal()` contra `portal_vinculo`.
+  if (typeof c.ampliarDesde === 'string') {
+    if (!UUID.test(c.ampliarDesde)) return NextResponse.json({ error: 'datos_invalidos' }, { status: 400 })
+    const r = await ampliarATotal({
+      identidadId: identidad.id,
+      autorizacionId: c.ampliarDesde,
+      tituloRepresentacion: c.tituloRepresentacion,
+      ip: ipDe(req),
+      userAgent: userAgentDe(req),
+    })
+    if (!r.ok) {
+      return NextResponse.json({ error: r.error, mensaje: r.mensaje }, { status: ESTADO_HTTP[r.error] })
+    }
+    return NextResponse.json({ id: r.id, estado: r.estado, caducaEn: r.caducaEn }, { status: 201 })
+  }
+
   const otorganteClienteId = typeof c.otorganteClienteId === 'string' ? c.otorganteClienteId : ''
   const autorizadoClienteId = typeof c.autorizadoClienteId === 'string' ? c.autorizadoClienteId : ''
   const alcance = typeof c.alcance === 'string' ? c.alcance : ''

@@ -294,3 +294,19 @@ test('felicitaciones ilegibles se declaran; ausentes (el emisor de correo) no cu
   const todas = avisosDe({ autorizaciones: null, obligaciones: null, peticiones: null, datos: null, carnets: null, firmas: null, felicitaciones: null, hoy: HOY })
   assert.equal(todas.globo, '!')
 })
+
+test('la revisión anual de un acceso que DI es un aviso; solo si está vigente y lo pide', () => {
+  const otorgadas = [
+    auto({ id: 'rev', estado: 'vigente', pideRevision: true }),
+    auto({ id: 'sin', estado: 'vigente', pideRevision: false }),
+    auto({ id: 'nd', estado: 'vigente' }),
+    auto({ id: 'rv', estado: 'revocada', pideRevision: true }),
+  ]
+  const r = avisosDe({ autorizaciones: { otorgadas, recibidas: [] }, obligaciones: [], peticiones: [], datos: [], carnets: [], hoy: HOY })
+  assert.deepEqual(r.avisos.map((a) => a.id), ['rev'])
+  assert.equal(r.avisos[0]!.tipo, 'acceso_por_revisar')
+  assert.match(r.avisos[0]!.titulo, /Gabriel Durán Martínez/)
+  assert.equal(r.avisos[0]!.href, '/autorizaciones')
+  // No afirma que se vaya a cortar nada: la revisión recuerda, no caduca.
+  assert.match(r.avisos[0]!.detalle, /si no haces nada, lo sigue teniendo/)
+})

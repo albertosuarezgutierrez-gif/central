@@ -165,7 +165,7 @@ export default function Relaciones({
    * Anota (o revoca) la autorización. `extra` solo llega desde una ficha de
    * SOCIEDAD: el alcance elegido y el título con el que se la representa. Desde
    * una ficha de persona no se manda ninguno de los dos y asegura anota el
-   * alcance más pequeño («ver»), que es lo único que una persona puede delegar.
+   * alcance más pequeño que se concede («Solo ver», `ver_economico`).
    */
   /**
    * `invertido` anota la autorización en el sentido CONTRARIO al de siempre:
@@ -174,7 +174,7 @@ export default function Relaciones({
    * mismo formulario allí. El consentimiento lo sigue dando el TITULAR de esa
    * autorización (aquí, `r.nombre`): esto solo evita el viaje, no cambia quién
    * consiente. Solo vale para el caso simple (persona a persona, alcance
-   * «ver»): no se sabe desde aquí si `r` es una sociedad, así que un
+   * «Solo ver»): no se sabe desde aquí si `r` es una sociedad, así que un
    * apoderamiento inverso se sigue anotando desde su propia ficha.
    */
   function autorizar(
@@ -194,9 +194,20 @@ export default function Relaciones({
     } else if (invertido) {
       if (!confirm(`¿Anotar que ${otorga} autoriza a ${recibe} a ver sus seguros? Nace pendiente: no abre nada hasta que ${recibe} la acepte en su portal.`)) return
     }
-    // 🚨 Un apoderamiento se confirma aparte: no es «deja mirar», es que esa
-    // persona puede obligar a la sociedad frente a la compañía.
-    if (autoriza && extra && esApoderamientoPortal(extra.alcance)) {
+    // 🚨 «Acceso total» se confirma aparte: no es «deja mirar», es que esa
+    // persona ve TODO (DNI e IBAN incluidos si cede una persona) y actúa en
+    // nombre del titular.
+    if (autoriza && extra && extra.alcance === 'total') {
+      const titulo = comoTitulo(extra.tituloRepresentacion)
+      const ok = confirm(
+        `¿Anotar que ${otorga} da ACCESO TOTAL a ${recibe}${titulo ? ` (${titulo})` : ''}? ` +
+          `Verá todo lo que ve el titular${r.tipoOtorgante === 'juridica' ? '' : ', DNI e IBAN incluidos,'} y podrá actuar en su nombre ` +
+          '(dar partes, subir documentos, hacer peticiones). No caduca: dura hasta que se revoque.',
+      )
+      if (!ok) return
+    } else if (autoriza && extra && esApoderamientoPortal(extra.alcance)) {
+      // Un apoderamiento viejo (`partes`/`documentos`) se confirma aparte: esa
+      // persona puede obligar a la sociedad frente a la compañía.
       const titulo = comoTitulo(extra.tituloRepresentacion)
       const ok = confirm(
         `¿Anotar que ${otorga} apodera a ${recibe} para ${ALCANCE_TEXTO_PORTAL[extra.alcance]}` +
@@ -720,8 +731,10 @@ function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar,
       )}
       {a?.estado === 'vigente' && (
         <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-          {a.origen === 'corredor' ? 'La anotó la correduría' : 'La concedió el cliente desde su portal'} · caduca el{' '}
-          {fechaLarga(a.caducaEn)} (no se renueva sola) · puede:{' '}
+          {a.origen === 'corredor' ? 'La anotó la correduría' : 'La concedió el cliente desde su portal'} ·{' '}
+          {/* Sin fecha = no caduca (las concedidas desde el 25/09/2026): dura
+              hasta que se revoque. Las viejas conservan su fecha y se dice. */}
+          {a.caducaEn === null ? 'sin fecha de fin' : `caduca el ${fechaLarga(a.caducaEn)} (no se renueva sola)`} · puede:{' '}
           {a.alcances.length > 0 ? a.alcances.map((x) => ALCANCE_TEXTO_PORTAL[x]).join(' · ') : 'sin detallar'}
           {/* El título solo consta cuando cede una sociedad. `null` ahí es lo
               normal entre personas: no se representa a nadie, se mira. */}
@@ -847,12 +860,11 @@ function CambiarTipo({ r, enCurso, onCambiarTipo }: {
  * opciones ofrece (`alcancesAnotables`, capado en asegura) y si además hace
  * falta el TÍTULO de representación.
  *
- * De una SOCIEDAD no se delega un permiso para mirar sino REPRESENTACIÓN
- * mercantil (`partes`/`documentos` caben, y el título es obligatorio: si
- * quien actúa por la empresa da un parte, la que queda obligada es ella, y
- * «alguien de la empresa» no es un título). De una PERSONA física solo se
- * elige QUÉ mira (`ver` / `ver_economico`) — sigue siendo un consentimiento
- * de datos personales, nunca una representación.
+ * Desde el 25/09/2026 las opciones son DOS para cualquiera: «Solo ver»
+ * (`ver_economico`) y «Acceso total» (`total`). De una SOCIEDAD, además, el
+ * título de representación es obligatorio: si quien actúa por la empresa da
+ * un parte, la que queda obligada es ella, y «alguien de la empresa» no es un
+ * título.
  */
 function AnotarAlcance({ r, nombreFicha, enCurso, onAutorizar, esSociedad }: {
   r: RelacionCartera
@@ -879,14 +891,15 @@ function AnotarAlcance({ r, nombreFicha, enCurso, onAutorizar, esSociedad }: {
           <>
             <strong>{nombreFicha} es una sociedad</strong>, así que aquí no se anota un permiso para
             mirar: se anota <strong>quién puede representarla</strong>. Quien la represente ve lo que
-            paga, su CIF y su cuenta bancaria —son datos de la empresa— y, con «dar partes», lo que
+            paga, su CIF y su cuenta bancaria —son datos de la empresa— y, con «acceso total», lo que
             declare <strong>obliga a la sociedad</strong>. Lo que no puede hacer nunca es autorizar a
             nadie más.
           </>
         ) : (
           <>
-            Elige qué puede ver {r.nombre}: solo la tarjeta (compañía, ramo, vencimiento) o también{' '}
-            <strong>lo económico</strong> (prima, recibos y siniestros).
+            Elige qué puede hacer {r.nombre}: <strong>solo ver</strong> sus seguros y lo que paga (prima,
+            recibos y siniestros), o <strong>acceso total</strong>: ve todo —DNI e IBAN incluidos— y actúa
+            en nombre de {nombreFicha}. No caduca: dura hasta que se revoque.
           </>
         )}
       </div>
@@ -903,7 +916,7 @@ function AnotarAlcance({ r, nombreFicha, enCurso, onAutorizar, esSociedad }: {
       {esSociedad && (
         <Campo
           label="¿Con qué título la representa?"
-          ayuda="Queda guardado con la autorización. Obligatorio para dar partes o manejar documentos: sin él, lo que declare no se le puede oponer a la compañía."
+          ayuda="Queda guardado con la autorización. Obligatorio para el acceso total de una sociedad: sin él, lo que declare no se le puede oponer a la compañía."
         >
           <select value={titulo} onChange={(e) => setTitulo(e.target.value as TituloRepresentacionPortal | '')} style={campo} disabled={enCurso}>
             <option value="">Elige el título…</option>
