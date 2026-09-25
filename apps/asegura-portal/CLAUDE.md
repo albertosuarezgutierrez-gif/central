@@ -1006,9 +1006,21 @@ se le vinculó a ella con `gestionar`, se corrigió el correo en el CRM y **el v
   dura 30 días y la ingesta de CIMA escribe desde otro repo. El dueño legítimo se revincula al entrar.
 - **BD, segundo brazo**: también al MUDAR una fila de `cliente_emails` a otra ficha (`cliente_id` cambia, el hash no).
 - Sin vínculo, `obligacionesDeIdentidad` **no pinta** los vencimientos de cartera, pero **no se borran**: borrarlos perdería el sello `avisadaAt` y al dueño legítimo que se revincula le llegaría el aviso otra vez.
-Cepo: `test/regression-portal-vinculo-caducado.test.ts`. Pendiente de la auditoría: «Mis datos»
-cambia el correo principal sin verificarlo, y un correo SECUNDARIO (`cliente_emails`) vincula con
-`gestionar` — las dos son decisiones de Alberto.
+Cepo: `test/regression-portal-vinculo-caducado.test.ts`. Pendiente de la auditoría: un correo
+SECUNDARIO (`cliente_emails`) vincula con `gestionar` — decisión de Alberto.
+
+### 🔑 Un correo nuevo en la ficha se prueba con un CÓDIGO a ese correo (25/09/2026, decisión de Alberto)
+
+El correo de la ficha es la llave del portal, así que «Mis datos» (`POST /api/mis-datos`) y «Añadir
+correo» (`POST /api/mis-datos/contactos`) **no lo guardan sin `codigoCorreo`**: la pantalla lo pide
+antes con `POST /api/mis-datos/codigo-correo` y el correo nuevo recibe un código (`lib/correo-cambio.ts`,
+texto propio: este código NO abre sesión). `lib/verificar-correo.ts` lo guarda en `portal_codigo` con un
+`valor_hash` que mete la IDENTIDAD (`cambio-correo:<identidad>:<correo>`): no sirve para entrar, no lo
+canjea otra identidad y no gasta el tope del login. Topes: 3/h por (identidad, correo) en BD + 6/h por
+identidad en memoria. 🚨 El código se **comprueba** antes de escribir y se **gasta solo si el guardado
+sale bien** — gastarlo antes dejaba sin salida a quien fallaba en otro campo. Cepo
+`test/regression-portal-cambio-correo-codigo.test.ts` (vistos morder). El puente de asegura NO lo
+exige: el candado es el portal, que es lo único que expone esas escrituras al cliente.
 
 ### 🔖 El sello del último vínculo (06/09/2026) — por qué la bóveda no puede recalcularlo
 

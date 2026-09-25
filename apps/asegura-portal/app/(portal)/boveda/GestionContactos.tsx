@@ -29,6 +29,10 @@ export function GestionContactos({ inicial }: { inicial: ResultadoListaContactos
   const [estado, setEstado] = useState<Estado>({ tipo: 'listo' })
   const [nuevoTelefono, setNuevoTelefono] = useState('')
   const [nuevoEmail, setNuevoEmail] = useState('')
+  // 🚨 Un correo añadido aquí también abre el portal (vincula como correo de contacto): se prueba
+  // con un código a ESE correo antes de guardarlo (25/09/2026). `codigoPara` = a qué correo se mandó.
+  const [codigoPara, setCodigoPara] = useState<string | null>(null)
+  const [codigo, setCodigo] = useState('')
 
   if (inicial.estado !== 'ok' && !cargado) {
     // Mismo criterio que `MisDatos`: un fallo de lectura se DICE, no se calla
@@ -60,16 +64,50 @@ export function GestionContactos({ inicial }: { inicial: ResultadoListaContactos
   async function anadir(tipo: TipoContactoPropio) {
     const valor = (tipo === 'telefono' ? nuevoTelefono : nuevoEmail).trim()
     if (valor === '') return
+    if (tipo === 'email' && codigoPara !== valor) {
+      setEstado({ tipo: 'ocupado' })
+      try {
+        const r = await fetch('/api/mis-datos/codigo-correo', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ email: valor }),
+        })
+        const j = (await r.json().catch(() => null)) as { estado?: string } | null
+        if (j?.estado === 'codigo_enviado') {
+          setCodigoPara(valor)
+          setCodigo('')
+          setEstado({ tipo: 'listo' })
+        } else {
+          setEstado({ tipo: 'aviso', texto: textoCodigo(j?.estado) })
+        }
+      } catch {
+        setEstado({ tipo: 'aviso', texto: 'No hemos podido conectar. No se ha cambiado nada: inténtalo en un momento.' })
+      }
+      return
+    }
+    let guardado = false
     await aplicar(async () => {
       const res = await fetch('/api/mis-datos/contactos', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tipo, valor }),
+        body: JSON.stringify(tipo === 'email' ? { tipo, valor, codigoCorreo: codigo.trim() } : { tipo, valor }),
       })
-      return (await res.json()) as ResultadoEscrituraContacto
+      const j = (await res.json()) as ResultadoEscrituraContacto | { estado: 'codigo_requerido' | 'codigo_no_valido'; motivo?: string }
+      if (j.estado === 'codigo_requerido' || j.estado === 'codigo_no_valido') {
+        const motivo = 'motivo' in j ? j.motivo : undefined
+        // Un código muerto se olvida: el siguiente clic pide otro en vez de reenviar el mismo.
+        if (motivo !== 'incorrecto') setCodigoPara(null)
+        return { estado: 'invalido', motivo: textoCanje(motivo) } as ResultadoEscrituraContacto
+      }
+      guardado = j.estado === 'ok'
+      return j as ResultadoEscrituraContacto
     })
+    if (!guardado) return
     if (tipo === 'telefono') setNuevoTelefono('')
-    else setNuevoEmail('')
+    else {
+      setNuevoEmail('')
+      setCodigoPara(null)
+    }
   }
 
   async function hacerPrincipal(id: string) {
@@ -123,10 +161,30 @@ export function GestionContactos({ inicial }: { inicial: ResultadoListaContactos
               inputMode={tipo === 'telefono' ? 'tel' : 'email'}
               maxLength={tipo === 'telefono' ? 40 : 255}
             />
-            <button type="button" className="boton-tenue" disabled={ocupado} onClick={() => anadir(tipo)}>
-              Añadir
+            <button
+              type="button"
+              className="boton-tenue"
+              disabled={ocupado || (tipo === 'email' && codigoPara !== null && codigoPara === nuevoEmail.trim() && codigo.length !== 6)}
+              onClick={() => anadir(tipo)}
+            >
+              {tipo === 'email' && codigoPara !== nuevoEmail.trim() ? 'Enviarme un código' : 'Añadir'}
             </button>
           </div>
+          {tipo === 'email' && codigoPara !== null && codigoPara === nuevoEmail.trim() && (
+            <label className="mi-direccion-campo">
+              <span>
+                Te hemos mandado un código a <strong>{codigoPara}</strong>. Escríbelo para confirmar que ese correo es tuyo:
+              </span>
+              <input
+                value={codigo}
+                onChange={(e) => setCodigo(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="123456"
+                maxLength={6}
+              />
+            </label>
+          )}
         </fieldset>
       ))}
     </section>
@@ -194,4 +252,16 @@ function textoAviso(r: Exclude<ResultadoEscrituraContacto, { estado: 'ok' }>): s
     default:
       return 'No hemos podido guardarlo. No se ha cambiado nada: inténtalo de nuevo en un momento.'
   }
+}
+
+function textoCodigo(estado: string | undefined): string {
+  if (estado === 'invalido') return 'Revisa el correo: no parece una dirección válida. No se ha guardado.'
+  if (estado === 'demasiados') return 'Has pedido varios códigos seguidos. Espera un rato y vuelve a intentarlo.'
+  return 'No hemos podido mandarte el código. No se ha guardado nada: inténtalo en un momento.'
+}
+
+function textoCanje(motivo: string | undefined): string {
+  return motivo === 'incorrecto'
+    ? 'el código no es correcto: revísalo en ese correo'
+    : 'ese código ya no vale: pulsa de nuevo para que te mandemos otro'
 }
