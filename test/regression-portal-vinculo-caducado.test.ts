@@ -23,17 +23,19 @@ test('el login retira los vínculos por correo caducados ANTES de salir por un e
   assert.match(src, /vinculosEmailARetirar\(elegida, existentes\)/, 'la decisión no pasa por la regla pura')
 })
 
-test('sin vínculo se podan los vencimientos de cartera que quedaron de una ficha ajena', () => {
+test('sin vínculo NO se pintan los vencimientos de cartera, y NO se borran (conservan el sello)', () => {
   const src = leer('apps/asegura-portal/lib/obligaciones.ts')
-  const i = src.indexOf('if (!c.vinculada) {')
-  assert.notEqual(i, -1, 'el corte por vínculo vuelve a salir sin podar')
-  const rama = src.slice(i, src.indexOf('return', i))
-  assert.match(rama, /portalObligacion\.deleteMany\(\{ where: \{ identidadId, tipo: 'poliza', polizaId: \{ not: null \} \} \}\)/)
+  const i = src.indexOf('export async function obligacionesDeIdentidad')
+  const cuerpo = src.slice(i, src.indexOf('\n}', i))
+  assert.match(cuerpo, /portalVinculo\.count\(\{ where: \{ identidadId \} \}\)/, 'el lector de avisos ya no mira si hay vínculo')
+  assert.match(cuerpo, /OR: \[\{ tipo: \{ not: 'poliza' \} \}, \{ polizaId: null \}\]/, 'sin vínculo se pintan los vencimientos de una ficha ajena')
+  assert.match(src, /if \(!c\.vinculada\) return\n/, 'el sincronizador vuelve a borrar sin vínculo: se pierde el sello avisadaAt y se re-avisa')
 })
 
 test('la BD retira los vínculos por correo cuando cambia o se borra el correo de la ficha', () => {
   const sql = leer('apps/asegura-portal/prisma/sql/2026-09-25_c_portal_vinculo_retira_al_cambiar_correo.sql')
   assert.match(sql, /AFTER UPDATE OF email_lookup_hash ON seguros\.clientes/)
-  assert.match(sql, /AFTER UPDATE OF email_lookup_hash OR DELETE ON seguros\.cliente_emails/)
+  assert.match(sql, /AFTER UPDATE OF email_lookup_hash, cliente_id OR DELETE ON seguros\.cliente_emails/)
+  assert.match(sql, /OLD\.cliente_id IS DISTINCT FROM NEW\.cliente_id/, 'un correo que se muda de ficha deja el vínculo viejo')
   assert.match(sql, /DELETE FROM seguros\.portal_vinculo WHERE cliente_id = ficha AND origen = 'email_hash'/)
 })

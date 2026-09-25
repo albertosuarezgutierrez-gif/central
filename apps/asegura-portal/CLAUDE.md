@@ -987,7 +987,8 @@ se le vinculó a ella con `gestionar`, se corrigió el correo en el CRM y **el v
 - **BD** (`prisma/sql/2026-09-25_c_…`, aplicada): trigger en `clientes`/`cliente_emails` que borra los
   `email_hash` de la ficha cuando un correo EXISTENTE cambia o se borra. Hace falta porque la sesión
   dura 30 días y la ingesta de CIMA escribe desde otro repo. El dueño legítimo se revincula al entrar.
-- Y sin vínculo, `sincronizarObligacionesDeIdentidad` poda los vencimientos de cartera huérfanos.
+- **BD, segundo brazo**: también al MUDAR una fila de `cliente_emails` a otra ficha (`cliente_id` cambia, el hash no).
+- Sin vínculo, `obligacionesDeIdentidad` **no pinta** los vencimientos de cartera, pero **no se borran**: borrarlos perdería el sello `avisadaAt` y al dueño legítimo que se revincula le llegaría el aviso otra vez.
 Cepo: `test/regression-portal-vinculo-caducado.test.ts`. Pendiente de la auditoría: «Mis datos»
 cambia el correo principal sin verificarlo, y un correo SECUNDARIO (`cliente_emails`) vincula con
 `gestionar` — las dos son decisiones de Alberto.

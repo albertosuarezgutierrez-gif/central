@@ -22,7 +22,8 @@
 --
 -- APLICADA el 25/09/2026 (migración seguros_portal_vinculo_retira_al_cambiar_correo). Vista morder
 -- antes en un bloque revertido sobre la ficha real: mismo hash → 1 vínculo; hash cambiado → 0; los
--- demás 12 vínculos intactos.
+-- demás 12 vínculos intactos. Ampliado el mismo día al MOVER una fila de `cliente_emails` a otra
+-- ficha (`cliente_id` cambia, el hash no), hallazgo de la revisión del PR #3600.
 
 CREATE OR REPLACE FUNCTION seguros.portal_retirar_vinculos_email_de_ficha()
 RETURNS trigger
@@ -35,6 +36,10 @@ DECLARE
 BEGIN
   IF TG_OP = 'DELETE' THEN
     IF OLD.email_lookup_hash IS NULL THEN RETURN OLD; END IF;
+    ficha := OLD.cliente_id;
+  ELSIF TG_TABLE_NAME = 'cliente_emails' AND OLD.cliente_id IS DISTINCT FROM NEW.cliente_id THEN
+    -- El correo se MUDA de ficha sin cambiar de hash: la ficha vieja lo pierde igual.
+    IF OLD.email_lookup_hash IS NULL THEN RETURN NEW; END IF;
     ficha := OLD.cliente_id;
   ELSE
     IF OLD.email_lookup_hash IS NULL OR OLD.email_lookup_hash IS NOT DISTINCT FROM NEW.email_lookup_hash THEN
@@ -58,5 +63,5 @@ CREATE TRIGGER portal_vinculo_retira_correo
 
 DROP TRIGGER IF EXISTS portal_vinculo_retira_correo ON seguros.cliente_emails;
 CREATE TRIGGER portal_vinculo_retira_correo
-  AFTER UPDATE OF email_lookup_hash OR DELETE ON seguros.cliente_emails
+  AFTER UPDATE OF email_lookup_hash, cliente_id OR DELETE ON seguros.cliente_emails
   FOR EACH ROW EXECUTE FUNCTION seguros.portal_retirar_vinculos_email_de_ficha();
