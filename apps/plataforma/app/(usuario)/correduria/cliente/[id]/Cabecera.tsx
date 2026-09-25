@@ -104,7 +104,7 @@ function Titulares({ resumen }: { resumen: ResumenFicha }) {
         color={recibos.devueltos ? 'var(--negative)' : undefined}
         sub={
           recibos.devueltos === null
-            ? 'asegura aún no manda recibos'
+            ? 'sin recibos informados'
             : recibos.devueltos > 0 ? 'hay que reclamar el cobro' : 'ninguno devuelto'
         }
       />
