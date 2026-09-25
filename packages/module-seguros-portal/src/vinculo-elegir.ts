@@ -113,3 +113,37 @@ export function prediccionDeVinculo(
   if (elegida.estado === 'sin_ficha') return 'resuelve_a_otra'
   return elegida.clienteId === clienteId ? 'invitable' : 'resuelve_a_otra'
 }
+
+/** Un vínculo que ya tiene la identidad, con lo justo para decidir si sobra. */
+export type VinculoExistente = { id: string; clienteId: string; origen: string }
+
+/**
+ * Qué vínculos por correo hay que RETIRAR tras un canje, dado lo que el correo
+ * resuelve HOY.
+ *
+ * 🚨 Caso fundacional (25/09/2026): el correo de Pablo Guzmán Lozano estuvo
+ * escrito en la ficha de Pablo Guzmán Pueyo — otra persona. Al entrar se le
+ * vinculó a ella con nivel `gestionar` (prima, IBAN, DNI). Se corrigió el
+ * correo en el CRM, volvió a entrar, se le añadió su ficha… y la ajena se
+ * quedó: los vínculos por correo solo se AÑADÍAN. Veía la cartera de otro sin
+ * que nada fallara.
+ *
+ * La regla: un vínculo `email_hash` vale mientras el correo lo siga
+ * resolviendo. Solo se tocan los de ese origen — un `manual` o `corredor` lo
+ * puso una persona y no lo deshace un correo.
+ * - `ok` → sobran los `email_hash` a cualquier otra ficha.
+ * - `sin_ficha` / `ambiguo` → sobran TODOS: el correo ya no identifica una
+ *   ficha, y lo conservador es cerrar (lo revisa el corredor), no mantener.
+ * - `null` = no se ha podido comprobar (sin clave, fallo de BD, o un canal que
+ *   no vincula, como WhatsApp) → no se retira nada: «no lo sé» no es «ya no».
+ */
+export function vinculosEmailARetirar(
+  elegida: FichaElegida | null,
+  existentes: readonly VinculoExistente[],
+): string[] {
+  if (elegida === null) return []
+  return existentes
+    .filter((v) => v.origen === 'email_hash')
+    .filter((v) => elegida.estado !== 'ok' || v.clienteId !== elegida.clienteId)
+    .map((v) => v.id)
+}

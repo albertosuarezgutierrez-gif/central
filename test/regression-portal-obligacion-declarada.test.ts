@@ -43,7 +43,7 @@ test('las pólizas SUBIDAS se sincronizan ANTES del corte por vínculo', () => {
   // exactamente el estado del que se viene.
   const cuerpo = cuerpoSincronizar()
   const declaradas = cuerpo.indexOf('opsDeDeclaradas(identidadId)')
-  const corte = cuerpo.indexOf('if (!c.vinculada) return')
+  const corte = cuerpo.indexOf('if (!c.vinculada)')
   assert.notEqual(declaradas, -1, 'la sincronización ya no mira las pólizas declaradas')
   assert.notEqual(corte, -1, 'ya no existe el corte por vínculo: revisa este guardián')
   assert.ok(

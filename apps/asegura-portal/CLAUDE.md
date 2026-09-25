@@ -993,6 +993,35 @@ UNIQUE por identidad+cliente). Sin fila ahí, el portal no lee NADA de la carter
 - **Ningún `clienteId` entra desde la request.** Todo id de ficha sale de `portal_vinculo` o de una
   relación leída a partir de él.
 
+### 🔒 Un vínculo por correo NO sobrevive a que el correo cambie de ficha (25/09/2026)
+
+Caso real: el correo de Pablo Guzmán Lozano estuvo en la ficha de Pablo Guzmán Pueyo (otra persona);
+se le vinculó a ella con `gestionar`, se corrigió el correo en el CRM y **el vínculo viejo se quedó**
+— los `email_hash` solo se añadían. Dos cierres, los dos necesarios:
+- **Login** (`intentarVinculo` → `retirarVinculosCaducados`, regla pura `vinculosEmailARetirar`):
+  `ok` retira los `email_hash` a otras fichas; `sin_ficha`/`ambiguo` los retira todos; sin clave, error
+  de BD o WhatsApp no toca nada. `manual`/`corredor` nunca.
+- **BD** (`prisma/sql/2026-09-25_c_…`, aplicada): trigger en `clientes`/`cliente_emails` que borra los
+  `email_hash` de la ficha cuando un correo EXISTENTE cambia o se borra. Hace falta porque la sesión
+  dura 30 días y la ingesta de CIMA escribe desde otro repo. El dueño legítimo se revincula al entrar.
+- **BD, segundo brazo**: también al MUDAR una fila de `cliente_emails` a otra ficha (`cliente_id` cambia, el hash no).
+- Sin vínculo, `obligacionesDeIdentidad` **no pinta** los vencimientos de cartera, pero **no se borran**: borrarlos perdería el sello `avisadaAt` y al dueño legítimo que se revincula le llegaría el aviso otra vez.
+Cepo: `test/regression-portal-vinculo-caducado.test.ts`. Pendiente de la auditoría: un correo
+SECUNDARIO (`cliente_emails`) vincula con `gestionar` — decisión de Alberto.
+
+### 🔑 Un correo nuevo en la ficha se prueba con un CÓDIGO a ese correo (25/09/2026, decisión de Alberto)
+
+El correo de la ficha es la llave del portal, así que «Mis datos» (`POST /api/mis-datos`) y «Añadir
+correo» (`POST /api/mis-datos/contactos`) **no lo guardan sin `codigoCorreo`**: la pantalla lo pide
+antes con `POST /api/mis-datos/codigo-correo` y el correo nuevo recibe un código (`lib/correo-cambio.ts`,
+texto propio: este código NO abre sesión). `lib/verificar-correo.ts` lo guarda en `portal_codigo` con un
+`valor_hash` que mete la IDENTIDAD (`cambio-correo:<identidad>:<correo>`): no sirve para entrar, no lo
+canjea otra identidad y no gasta el tope del login. Topes: 3/h por (identidad, correo) en BD + 6/h por
+identidad en memoria. 🚨 El código se **comprueba** antes de escribir y se **gasta solo si el guardado
+sale bien** — gastarlo antes dejaba sin salida a quien fallaba en otro campo. Cepo
+`test/regression-portal-cambio-correo-codigo.test.ts` (vistos morder). El puente de asegura NO lo
+exige: el candado es el portal, que es lo único que expone esas escrituras al cliente.
+
 ### 🔖 El sello del último vínculo (06/09/2026) — por qué la bóveda no puede recalcularlo
 
 `portal_identidad.ultimo_vinculo` + `ultimo_vinculo_en` (DDL en

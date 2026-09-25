@@ -36,6 +36,10 @@ Horas en UTC: en invierno (desde 25/10) caen a las 15:00/19:30 de Madrid. CIMA d
 intranet; a las 09:41 UTC la cola de TIREA seguía con 155 ficheros conocidos y nada de C0058. **CIMA no cobra por
 consulta** (Alberto, 25/09): el coste de pulls extra es ~0 (Vercel/Fly); el único límite es el presupuesto de Actions.
 
+**(25/09/2026)** 🔑 **Portal: cambiar o añadir un correo exige un código a ESE correo** (decisión de Alberto tras el caso Guzmán). `POST /api/mis-datos/codigo-correo` + `codigoCorreo` obligatorio en `/api/mis-datos` y `/api/mis-datos/contactos`; código atado a la identidad (no abre sesión), gastado solo si el guardado sale bien. `lib/verificar-correo.ts`, cepo `test/regression-portal-cambio-correo-codigo.test.ts`. Queda de Alberto: si un correo de contacto debe seguir dando acceso completo, y valorar la brecha RGPD.
+
+**(25/09/2026)** 🔒 **Portal: Pablo Guzmán Lozano veía la cartera de Pablo Guzmán Pueyo (otra persona).** Su correo estuvo en la ficha de Pueyo → vínculo `email_hash`/`gestionar`; al corregirlo en el CRM el vínculo viejo SE QUEDÓ (solo se añadían). Borrado el vínculo sobrante y su recordatorio huérfano; único caso (13 vínculos auditados). No hizo nada sobre la ficha ajena (5 accesos, 0 mensajes/partes/peticiones). Arreglo: el login retira los `email_hash` que el correo ya no resuelve + trigger en BD (aplicado) al cambiar/borrar un correo de ficha + los vencimientos de cartera no se pintan sin vínculo (sin borrarlos, para no perder el sello de aviso). La revisión de código cazó dos fallos antes de fusionar (re-aviso al borrar obligaciones; correo que se muda de ficha) y se corrigieron. Pendiente de Alberto: «Mis datos» cambia el correo principal SIN verificarlo; un correo secundario vincula con `gestionar`; valorar si es brecha RGPD notificable.
+
 **(25/09/2026)** — IDD: cuestionario cerrado de exigencias y necesidades por ramo (motor, hogar y comunes) en el presupuesto de la ficha de póliza, en lugar del texto libre. Se guarda como la misma declaración de texto (`necesidades`, lo que el cliente firma; sin DDL) y las respuestas van a la auditoría del evento. Módulo puro `module-seguros/necesidades-idd.ts` (+5 tests, cepo visto fallar). Pendiente: avisar si la opción elegida no cubre algo pedido (las opciones aún no traen coberturas estructuradas). **Mergeado en #3573** (CI verde; ajuste de 320 px incluido; sin probar aún en pantalla).
 
 **(25/09/2026)** 🕒 **CIMA: respaldo del pull a las 07:00/14:00/18:00 UTC** (antes 08:00/14:00). Los `schedule` de Actions de
@@ -623,6 +627,15 @@ resucita una del volcado. Guarda del lado de asegura: una viva en vigor sigue si
 - Nuevo `lib/historial-companias.ts` (+6 tests, cepo visto fallar): recorre la cadena `sustituyeAId` en los dos
   sentidos sobre lo que ESE lector ve; fecha del cambio = inicio de la nueva (22/09); sin fecha, no se inventa.
 - `PolizaPortal.cambiosCompania` + sección en `/boveda/poliza/[id]` (también en la ficha de la vieja, con enlace).
+
+## (25/09/2026) Ficha: el tomador con ficha duplicada salía en «Personas» como un tercero
+- Pablo Guzmán Lozano: CIMA colgaba al propietario de su coche de OTRA ficha suya (lead, mismo hash de
+  DNI, 0 pólizas) → salía «sin vínculo» con botón «Declarar». `leerIntervinientes` (asegura) marca ahora
+  `esTomador` también por NIF igual al del tomador. Y el formulario de «Declarar» hace scroll al abrirse
+  (en móvil quedaba fuera de pantalla y el botón «no hacía nada»).
+- Fusión DESDE LA FICHA: si hay otra con el mismo DNI se avisa arriba y se comparan campo a campo (elige cuál
+  se queda). Función de BD `seguros.fusionar_clientes` (SECURITY DEFINER, aplicada; lápida + `snapshot_before` +
+  `snapshot_superviviente` nueva). Nunca con DNI distinto ni con DNI sin índice. Revisión de arquitectura aplicada (direcciones enteras, `crm_seguros` sin EXECUTE, ids movidos y borrados en el log).
 
 ## (25/09/2026) Oportunidades: se gestionan DENTRO de la ficha del cliente (PR #3590)
 - Alberto: la página aparte «ocupa mucha pantalla». La fila de cada oportunidad (pestaña Oportunidades) se despliega

@@ -8,6 +8,7 @@ import { fichaAsegura, type PolizaFicha } from '@/lib/ficha-asegura'
 import Cabecera from './Cabecera'
 import CorreosCliente from './CorreosCliente'
 import DescartarCliente from './DescartarCliente'
+import FichasDuplicadas from './FichasDuplicadas'
 import FichaTabs, { tabDeParametro } from './FichaTabs'
 import TabContactos from './TabContactos'
 import TabMensajes from './TabMensajes'
@@ -120,6 +121,9 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       <DescartarCliente zona="aviso" clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
 
       <Cabecera ficha={ficha} resumen={resumen} />
+
+      {/* La misma persona en otra ficha (mismo DNI): se avisa y se ofrece fusionar eligiendo campo a campo. */}
+      <FichasDuplicadas clienteId={ficha.id} />
 
       {/* Los seguros primero (Alberto: «vendemos seguros»): tres cubos de tarjetas que se
           pinchan enteras. Los accesos van debajo en la ficha y arriba en cada sección. */}
