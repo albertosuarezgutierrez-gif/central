@@ -90,12 +90,26 @@ export function proximoAniversario(iso: string | null, hoy: Date): string | null
   return new Date(en(anio)).toISOString().slice(0, 10)
 }
 
+/**
+ * La fecha que se enseña para el vencimiento de una OPORTUNIDAD. Si venció hace
+ * menos de un año es una renovación que se acaba de pasar: se deja tal cual
+ * (atrasada, que es lo que hay que ver). Si es más vieja, el dato es de hace
+ * años y lo útil es su próximo aniversario.
+ */
+export function vencimientoOportunidad(iso: string | null, hoy: Date): string | null {
+  const proxima = proximoAniversario(iso, hoy)
+  if (proxima === null || iso === null) return proxima
+  const fin = iso.slice(0, 10)
+  const haceUnAnio = new Date(Date.UTC(hoy.getUTCFullYear() - 1, hoy.getUTCMonth(), hoy.getUTCDate())).toISOString().slice(0, 10)
+  return fin > haceUnAnio ? fin : proxima
+}
+
 function fechaDe(s: SeguroCliente, hoy: Date): string | null {
   if (s.clase === 'poliza') {
     return s.oportunidad?.proximaTarea?.fechaLimite
       ?? (s.historica ? proximoAniversario(s.poliza.fechaVencimiento, hoy) : s.poliza.fechaVencimiento)
   }
-  if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? proximoAniversario(s.oportunidad.fechaFinVigencia, hoy)
+  if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? vencimientoOportunidad(s.oportunidad.fechaFinVigencia, hoy)
   return s.declarada.fechaVencimiento
 }
 
@@ -124,14 +138,18 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
     else conNosotros.push(s)
   }
 
-  // Del volcado histórico, la más reciente de cada ramo que no esté ya con nosotros ni con
-  // una póliza perdida en pantalla: el seguro sigue existiendo, en otra compañía.
-  // Si una perdida dice que el riesgo desapareció, ese ramo no se ofrece.
+  // Del volcado histórico, la más reciente de cada ramo del que no sepamos nada más
+  // nuevo: ni póliza viva (con nosotros, perdida o en `fin_riesgo`), ni una aportada
+  // desde el portal, ni una oportunidad PERDIDA (su competidor y su fecha son de hoy,
+  // y una de «ya no lo necesita» dice que el riesgo desapareció). Las abiertas no
+  // bloquean: se enganchan a esta tarjeta más abajo.
   const ramosVivos = new Set<string>([
     ...conNosotros.flatMap(s => (s.clase === 'poliza' ? [s.poliza.tipo] : [])),
     ...enCompetencia.map(s => s.poliza.tipo),
+    ...yaNoExiste.flatMap(s => (s.clase === 'poliza' ? [s.poliza.tipo] : [])),
+    ...(declaradas ?? []).flatMap(d => (d.ramo ? [d.ramo] : [])),
     ...(oportunidades ?? [])
-      .filter(o => o.estado === 'perdida' && o.motivoPerdida !== null && RIESGO_DESAPARECIDO.has(o.motivoPerdida))
+      .filter(o => o.estado === 'perdida' && o.motivoPerdida !== 'error_alta')
       .flatMap(o => (o.ramo ? [o.ramo] : [])),
   ])
   const representante = new Map<string, PolizaFicha>()

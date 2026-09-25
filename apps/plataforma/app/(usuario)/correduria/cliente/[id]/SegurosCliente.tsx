@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
-import { estaHuerfana, proximoAniversario } from '@/lib/correduria/seguros-cliente'
+import { estaHuerfana, proximoAniversario, vencimientoOportunidad } from '@/lib/correduria/seguros-cliente'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import type { SiniestroCartera } from '@/lib/siniestros-asegura'
 import { eur } from '@/lib/dinero'
@@ -167,10 +167,11 @@ function TarjetaSeguro({ s, ctx }: { s: SeguroCliente; ctx: Ctx }) {
     ramo = TIPOS[o.ramo ?? ''] ?? rotuloRamo(o.ramo)
     estado = ROTULO_ESTADO[o.estado]
     titulo = o.aseguradora ? `Lo tiene en ${o.aseguradora}` : 'Compañía actual sin anotar'
-    // Un fin de vigencia anotado hace años no es «le vence» en pasado: un seguro anual
-    // renueva el mismo día cada año, así que se dice el próximo (y de dónde sale).
+    // Un fin de vigencia anotado hace más de un año no es «le vence» en pasado: un seguro
+    // anual renueva el mismo día cada año, así que se dice el próximo (y de dónde sale).
+    // Uno que venció hace menos se queda tal cual: esa renovación se acaba de pasar.
     const fin = o.fechaFinVigencia?.slice(0, 10) ?? null
-    const proxima = proximoAniversario(fin, ctx.hoy)
+    const proxima = vencimientoOportunidad(fin, ctx.hoy)
     const vence = fin === null || proxima === null ? 'Vencimiento sin anotar'
       : proxima === fin ? `Le vence ${fmt(fin)}`
         : `Le renueva el ${fmt(proxima)} (anotado: ${fmt(fin)})`

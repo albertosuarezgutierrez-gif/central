@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { repartirSegurosCliente, estaHuerfana, proximoAniversario } from './seguros-cliente.ts'
+import { repartirSegurosCliente, estaHuerfana, proximoAniversario, vencimientoOportunidad } from './seguros-cliente.ts'
 import type { PolizaDeclaradaFicha, PolizaFicha } from '../ficha-asegura'
 import type { OportunidadDeCliente } from '../seguimiento-asegura'
 
@@ -73,6 +73,26 @@ test('volcado histórico: una oportunidad abierta del ramo se engancha a su tarj
   assert.ok(auto && auto.clase === 'poliza' && auto.oportunidad?.id === 'o1')
   assert.equal(r.oportunidades.some(s => s.id === 'o1' || s.id === 'hogar'), false)
   assert.deepEqual(ids(r.historicas), ['hogar'])
+})
+
+test('volcado histórico: no sale si del ramo hay algo más nuevo (perdida, fin_riesgo o aportada)', () => {
+  const viejo = (id: string, tipo: string) => pol(id, { viva: false, tipo, fechaVencimiento: '2015-10-20' })
+  const r = repartirSegurosCliente({
+    polizas: [viejo('hAuto', 'auto'), viejo('hHogar', 'hogar'), viejo('hMoto', 'moto'), pol('finMoto', { tipo: 'moto', estado: 'fin_riesgo' })],
+    declaradas: [{ id: 'd', ramo: 'hogar', yaEnCartera: false } as PolizaDeclaradaFicha],
+    oportunidades: [opo('perdidaAuto', { estado: 'perdida', motivoPerdida: 'precio', proximaTarea: null })],
+  })
+  assert.deepEqual(ids(r.oportunidades).sort(), ['d', 'perdidaAuto'])
+  assert.deepEqual(ids(r.historicas).sort(), ['hAuto', 'hHogar', 'hMoto'])
+})
+
+test('vencimientoOportunidad: vencida hace menos de un año se queda (atrasada); más vieja, próximo aniversario', () => {
+  const hoy = new Date('2026-09-25T10:00:00Z')
+  assert.equal(vencimientoOportunidad('2026-09-20', hoy), '2026-09-20')
+  assert.equal(vencimientoOportunidad('2025-10-01', hoy), '2025-10-01')
+  assert.equal(vencimientoOportunidad('2023-10-24', hoy), '2026-10-24')
+  assert.equal(vencimientoOportunidad('2027-01-10', hoy), '2027-01-10')
+  assert.equal(vencimientoOportunidad(null, hoy), null)
 })
 
 test('proximoAniversario: una fecha pasada renueva el mismo día del año que toca; la futura se queda', () => {
