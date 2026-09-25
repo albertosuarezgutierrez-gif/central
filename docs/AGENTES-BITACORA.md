@@ -14,6 +14,21 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-25 · facturas-correo** · hizo: pasada disparada por el trigger diario. Preflight canal 200
+  OK. Paso 0: Vía B sana (copia más reciente en `_buzon_pdf` de ayer 24/09, 1 día caída);
+  `PDF-pendiente`/`Revisar`/`Extraccion-fallida` sin backlog real (verificado por `search_threads`,
+  no por `list_labels`). **Paso 4.0:** las 20 filas de `v_facturas_sin_cargo` siguen todas
+  `revisada_sin_cargo`, 0 `sin_revisar` — nada que barrer. **Paso 1** (8 hilos de 2 días): 1 candidato
+  real — reaparece la factura ASECON nº 1-001804 (06/07/2026, "ESTUDIO-PREPARACION-PRESENTACION
+  RENTA", 181,50€ con IVA) vía un recordatorio de impago del 24/09 ("tenemos la factura pendiente de
+  abonar"); nunca se archivó ni concilió en 2,5 meses (`facturas_drive` sin ninguna fila `asecon`,
+  pagadera por transferencia a Sabadell, cuenta fuera del feed). Deducibilidad ambigua (¿gestoría de
+  la actividad de alquiler o gasto personal de la Renta?) — llevaba ya "Para tu decisión" en pasadas
+  de julio sin resolverse nunca; NO archivada, hilo etiquetado `Facturas/Revisar` para que sobreviva.
+  Resto del Paso 1: Booking (mensajes operativos de huéspedes, no recibo), Global2/PACTREBOL
+  (documentación de terceros/informativa, no factura de Alberto). `_subir_aqui` y raíz `2026` sin
+  PDFs nuevos. `agente_salud` actualizado. dudas: si Asecon-Renta es deducible (pendiente de Alberto,
+  repetido desde julio); fallos: —; PRs/commits: — (solo bitácora + BD + Gmail).
 - **2026-09-25 · mercado-booking** · hizo: pasada de 24 ventanas (max=24, tope dejó fuera 488 de 512
   candidatas; casi todas rondas de profundidad 2-3) → 239 comps reales escritos (mes 27-nov, evento
   confirmado nov-dic-abr, ronda 1). Escaparate propio: 0/4 medido — Busto Reform, Dúplex Center,
