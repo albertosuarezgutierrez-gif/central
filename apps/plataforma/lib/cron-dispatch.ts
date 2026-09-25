@@ -153,6 +153,9 @@ export const CRON_JOBS: CronJob[] = [
   // desde un Telegram — y lo que no decidía nadie se quedaba moviendo el precio para siempre.
   { path: '/api/sivra/eventos/verificar', schedule: '30 5 * * *' },
   { path: '/api/cron/cima-liq', schedule: '30 7 * * *' },
+  // Ficha ↔ CIMA (25/09/2026): rellena los huecos de las fichas con lo que manda CIMA y avisa
+  // de las diferencias que esperan decisión. Detrás de las dos franjas del pull (05:30/11:30 UTC).
+  { path: '/api/cron/cima-sincro', schedule: '50 12 * * *' },
   { path: '/api/cron/correduria-ingesta', schedule: '45 6 * * *' },
   // RESPALDO del pull de CIMA (23/09/2026): el pull principal corre en GitHub Actions del repo
   // `asegura` (05:30/11:30) y el 22/09 se quedó ~45 h sin runner porque el presupuesto de Actions
