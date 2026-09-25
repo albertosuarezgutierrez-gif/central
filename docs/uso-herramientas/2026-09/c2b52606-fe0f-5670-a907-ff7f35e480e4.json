@@ -1,20 +1,55 @@
 {
  "sesion": "c2b52606-fe0f-5670-a907-ff7f35e480e4",
  "inicio": "2026-09-25T13:17:24.361Z",
- "fin": "2026-09-25T15:12:40.990Z",
- "llamadas": 5,
+ "fin": "2026-09-25T15:25:53.126Z",
+ "llamadas": 27,
  "categorias": {
   "otro": {
-   "llamadas": 5,
-   "chars_in": 250,
-   "chars_out": 8811,
+   "llamadas": 8,
+   "chars_in": 1711,
+   "chars_out": 10629,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 2,
+    "ToolSearch": 3,
     "SearchMcpRegistry": 1,
-    "ListConnectors": 2
+    "ListConnectors": 3,
+    "AskUserQuestion": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 148,
+   "chars_out": 1080,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1
+   }
+  },
+  "bash": {
+   "llamadas": 16,
+   "chars_in": 4816,
+   "chars_out": 33672,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 16
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 2,
+   "chars_in": 77,
+   "chars_out": 1587,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__filter_project_envs": 1
    }
   }
  }
