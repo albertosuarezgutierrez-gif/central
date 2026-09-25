@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation'
 
 import { getIdentidad } from '@/lib/session'
 
+import { SeccionPlegable } from './SeccionPlegable'
 import { Autorizaciones } from './Autorizaciones'
 
 export const dynamic = 'force-dynamic'
@@ -52,16 +53,16 @@ export default async function AutorizacionesPage() {
           Alberto pidió «una pestaña de contactos» y esto ya lo era. */}
       <h1>Mis contactos</h1>
       <p className="suave" style={{ marginTop: 0 }}>
-        Las personas a las que dejas ver tus seguros, las que te dejan ver los suyos, y las que invitas
-        al portal — para compartirles algo o solo para presentárselo.
+        Quién ve tus seguros, cuáles ves tú y a quién has invitado.
       </p>
 
       {/* Va en el servidor, fuera del componente que carga los datos, para que
           esto se lea SIEMPRE: aunque la petición falle, aunque no haya nadie a
           quien autorizar. Es lo que la ley obliga a que se sepa antes de
           consentir, no una nota de ayuda. */}
-      <section className="seccion" aria-labelledby="limites-titulo">
-        <h2 id="limites-titulo">Qué es exactamente lo que das</h2>
+      {/* Plegado (25/09/2026), pero con lo esencial EN LA CABECERA: se lee
+          sin abrirlo, que es lo que exige consentir sabiendo qué se da. */}
+      <SeccionPlegable titulo="Qué es exactamente lo que das" resumen="Solo mirar · caduca al año · lo revocas cuando quieras">
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
           Si los seguros son <strong>tuyos</strong>, quien reciba el acceso{' '}
           <strong>solo puede mirarlos</strong>. Nunca ve tu DNI, ni tu IBAN, ni tus documentos, y{' '}
@@ -82,7 +83,7 @@ export default async function AutorizacionesPage() {
           <strong>dar partes en su nombre</strong> — por eso se te pide con qué título lo hace. Lo que no
           puede hacer nunca es autorizar a nadie más.
         </p>
-      </section>
+      </SeccionPlegable>
 
       <Autorizaciones />
     </>

@@ -12,6 +12,7 @@ import {
   type AlcanceInvitacion,
 } from '@central/module-seguros-portal'
 
+import { SeccionPlegable, textoPersonas } from './SeccionPlegable'
 import { SugerenciasContactos } from './SugerenciasContactos'
 
 /**
@@ -739,8 +740,7 @@ function Otorgadas({
   onCambio: () => Promise<void>
 }) {
   return (
-    <section className="seccion" aria-labelledby={`${uid}-otorgadas`}>
-      <h2 id={`${uid}-otorgadas`}>Has dado acceso a</h2>
+    <SeccionPlegable titulo="Has dado acceso a" resumen={textoPersonas(lista.length)} abierto={lista.length === 0}>
       {lista.length === 0 ? (
         // «No le has dado acceso a nadie» es una afirmación sobre TUS actos, que
         // sí sabemos. No se dice «nadie ve tus seguros»: de lo que otros hayan
@@ -755,7 +755,7 @@ function Otorgadas({
           ))}
         </ul>
       )}
-    </section>
+    </SeccionPlegable>
   )
 }
 
@@ -991,8 +991,7 @@ function Recibidas({
   onCambio: () => Promise<void>
 }) {
   return (
-    <section className="seccion" aria-labelledby={`${uid}-recibidas`}>
-      <h2 id={`${uid}-recibidas`}>Te han dado acceso a</h2>
+    <SeccionPlegable titulo="Te han dado acceso a" resumen={textoPersonas(lista.length)} abierto={lista.length === 0}>
       {lista.length === 0 ? (
         <p className="suave" style={{ margin: 0 }}>
           Nadie te ha dado acceso a sus seguros.
@@ -1004,7 +1003,7 @@ function Recibidas({
           ))}
         </ul>
       )}
-    </section>
+    </SeccionPlegable>
   )
 }
 
@@ -1356,8 +1355,7 @@ function Conceder({
   }
 
   return (
-    <section className="seccion" aria-labelledby={`${uid}-conceder`}>
-      <h2 id={`${uid}-conceder`}>Dar acceso a alguien</h2>
+    <SeccionPlegable titulo="Dar acceso a alguien">
 
       {!puedeAutorizar ? (
         // No es «no se puede»: es que quien cede los datos tiene que ser su
@@ -1560,7 +1558,7 @@ function Conceder({
           </button>
         </form>
       )}
-    </section>
+    </SeccionPlegable>
   )
 }
 
@@ -1768,8 +1766,7 @@ function Invitaciones({
   onCambio: () => Promise<void>
 }) {
   return (
-    <section className="seccion" aria-labelledby={`${uid}-invitaciones`}>
-      <h2 id={`${uid}-invitaciones`}>Personas que has invitado</h2>
+    <SeccionPlegable titulo="Personas que has invitado" resumen={carga === 'listo' ? textoPersonas(lista.length) : null} abierto={carga === 'error'}>
       {/* Tres estados, y ninguno se colapsa con otro: cargando ≠ no se ha podido
           mirar ≠ lo hemos mirado y no hay ninguna. Pintar el error como «no has
           invitado a nadie» convertiría un fallo de red en una afirmación sobre
@@ -1799,7 +1796,7 @@ function Invitaciones({
           ))}
         </ul>
       )}
-    </section>
+    </SeccionPlegable>
   )
 }
 
@@ -1949,8 +1946,7 @@ function Invitar({
   }
 
   return (
-    <section className="seccion" aria-labelledby={`${uid}-invitar`}>
-      <h2 id={`${uid}-invitar`}>Añadir una persona</h2>
+    <SeccionPlegable titulo="Añadir una persona">
 
       {!puedeAutorizar ? (
         <p className="suave" style={{ margin: 0 }}>
@@ -2273,6 +2269,6 @@ function Invitar({
           </button>
         </form>
       )}
-    </section>
+    </SeccionPlegable>
   )
 }

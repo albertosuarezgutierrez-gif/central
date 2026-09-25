@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useId, useState } from 'react'
 
 import { ALCANCES_CONCEDIBLES, type Alcance } from '@central/module-seguros-portal'
+import { SeccionPlegable, textoPersonas } from './SeccionPlegable'
 
 /**
  * «También conocemos a…» — el atajo de pedir acceso a partir de relaciones que
@@ -61,8 +62,11 @@ export function SugerenciasContactos() {
   if (carga === 'listo' && lista.length === 0) return null
 
   return (
-    <section className="seccion" aria-labelledby={`${uid}-sugerencias`}>
-      <h2 id={`${uid}-sugerencias`}>También conocemos a</h2>
+    <SeccionPlegable
+      titulo="También conocemos a"
+      resumen={carga === 'listo' ? textoPersonas(lista.length) : null}
+      abierto={carga === 'error'}
+    >
       <p className="suave" style={{ marginTop: 0 }}>
         Personas o empresas que ya tenemos relacionadas con tu ficha. Puedes pedirles acceso sin escribir
         su correo.
@@ -88,7 +92,7 @@ export function SugerenciasContactos() {
           ))}
         </div>
       )}
-    </section>
+    </SeccionPlegable>
   )
 }
 
