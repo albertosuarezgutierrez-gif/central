@@ -1,0 +1,95 @@
+{
+ "sesion": "cb0e0dda-ed86-5816-8beb-94f3a7d85d97",
+ "inicio": "2026-09-25T15:51:10.480Z",
+ "fin": "2026-09-25T17:41:19.917Z",
+ "llamadas": 45,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 1,
+   "chars_in": 127,
+   "chars_out": 3898,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1
+   }
+  },
+  "bash": {
+   "llamadas": 13,
+   "chars_in": 3448,
+   "chars_out": 41357,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 13
+   }
+  },
+  "otro": {
+   "llamadas": 7,
+   "chars_in": 459,
+   "chars_out": 48376,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 4,
+    "ReadNotifications": 3
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 16,
+   "chars_in": 2302,
+   "chars_out": 50765,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_teams": 1,
+    "mcp__Vercel__get_runtime_logs": 3,
+    "mcp__Vercel__filter_project_envs": 2,
+    "mcp__Vercel__edit_project_env": 2,
+    "mcp__Vercel__list_deployments": 6,
+    "mcp__Vercel__create_deployment": 2
+   }
+  },
+  "mcp:Resend": {
+   "llamadas": 4,
+   "chars_in": 683,
+   "chars_out": 14974,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Resend__list-domains": 1,
+    "mcp__Resend__list-emails": 2,
+    "mcp__Resend__get-email": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 2,
+   "chars_in": 947,
+   "chars_out": 93,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 275,
+   "chars_out": 347,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 1
+   }
+  }
+ }
+}
