@@ -583,7 +583,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - El EIAC mete las coberturas en `datos_especificos.capitales` con `bien:'OTROS'`; `describirBien` las pintaba en «Detalles» y la ficha las repetía en la lista de coberturas. Ahora se filtran (`esPartidaDeCobertura`) y el capital pasa a la lista desde `poliza_coberturas.capital_asegurado` (medido: las 513 OTROS con importe tienen su fila).
 - «Mis siniestros»: con logo ya no se repite el nombre de la compañía (va en el `alt`). Ojo: el logo de Occident sigue siendo el de «Catalana Occidente».
 - Parte desde la ficha: sale SOLO la compañía de esa póliza; las demás, plegadas tras «Ver las otras N compañías» (cepo actualizado: plegar sí, borrar no). Filas de carteras ajenas sin chip «De <nombre>»: ya lo dice la cabecera del grupo.
-- «Mis contactos» en plegables (`SeccionPlegable`, mismo aspecto que la cartera): aviso legal plegable pero abierto de salida, listas con su recuento (abiertas solo si están vacías o fallan), formularios cerrados.
+- «Mis contactos» en plegables (`SeccionPlegable`, mismo aspecto que la cartera): aviso legal plegable pero abierto de salida, listas con su recuento (abiertas solo si están vacías o fallan). «Dar acceso» + «Añadir una persona» = UN bloque (`AnadirContacto`): primero «¿A quién?» (de tu lista → `/api/autorizaciones`; por correo → `/api/invitaciones`).
 
 ## (24/09/2026) ASegura: tramitación de la compañía en la ficha del corredor + chip «siguiente acción» en Clientes
 - `/correduria` → siniestros: bloque «Tramitación de la compañía (CIMA)» (pasos, estado de cada acción, figuras, reserva, pagado,

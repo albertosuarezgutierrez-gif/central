@@ -1,5 +1,5 @@
 'use client'
-import { useCallback, useEffect, useId, useMemo, useState } from 'react'
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react'
 
 import {
   ALCANCES_CONCEDIBLES,
@@ -705,12 +705,6 @@ export function Autorizaciones() {
       <Otorgadas uid={uid} lista={datos.otorgadas} onCambio={cargar} />
       <Recibidas uid={uid} lista={datos.recibidas} onCambio={cargar} />
       <SugerenciasContactos />
-      <Conceder
-        uid={uid}
-        puedeAutorizar={datos.puedeAutorizar}
-        candidatos={datos.candidatos}
-        onConcedida={cargar}
-      />
       <Invitaciones
         uid={uid}
         carga={cargaInv}
@@ -718,10 +712,11 @@ export function Autorizaciones() {
         error={errorInv}
         onCambio={cargarInvitaciones}
       />
-      <Invitar
+      <AnadirContacto
         uid={uid}
         puedeAutorizar={datos.puedeAutorizar}
         candidatos={datos.candidatos}
+        onConcedida={cargar}
         onInvitada={cargarInvitaciones}
       />
     </>
@@ -1217,6 +1212,64 @@ function LoQuePuedes({ a }: { a: AutorizacionVista }) {
   )
 }
 
+/**
+ * Contenedor de los dos formularios: con `incrustado` van dentro de
+ * `AnadirContacto` y no llevan plegable propio.
+ */
+function Envoltorio({ incrustado, titulo, children }: { incrustado: boolean; titulo: string; children: ReactNode }) {
+  return incrustado ? <>{children}</> : <SeccionPlegable titulo={titulo}>{children}</SeccionPlegable>
+}
+
+/**
+ * «Dar acceso» y «Añadir una persona» en UN bloque (25/09/2026, Alberto: «une
+ * Dar acceso y Añadir persona en un formulario»). La primera pregunta decide el
+ * camino, porque por debajo son dos cosas distintas y no se mezclan: a quien ya
+ * consta en tu entorno se le concede el acceso al momento
+ * (`/api/autorizaciones`); a quien no, se le manda una invitación por correo
+ * (`/api/invitaciones`) y el acceso espera a que entre.
+ */
+function AnadirContacto({
+  uid,
+  puedeAutorizar,
+  candidatos,
+  onConcedida,
+  onInvitada,
+}: {
+  uid: string
+  puedeAutorizar: boolean
+  candidatos: readonly Candidato[]
+  onConcedida: () => Promise<void>
+  onInvitada: () => Promise<void>
+}) {
+  // Sin nadie en la lista, la única opción real es el correo: se arranca ahí
+  // en vez de enseñar un camino que solo lleva a «no tenemos a nadie».
+  const [modo, setModo] = useState<'lista' | 'correo'>(candidatos.length > 0 ? 'lista' : 'correo')
+  return (
+    <SeccionPlegable titulo="Dar acceso o invitar a alguien">
+      {candidatos.length > 0 && (
+        <fieldset className="editor-campo grupo" style={{ marginBottom: 12 }}>
+          <legend>¿A quién?</legend>
+          <div className="opciones">
+            <label className="opcion">
+              <input type="radio" name={`${uid}-modo`} checked={modo === 'lista'} onChange={() => setModo('lista')} />
+              Alguien que ya conocemos ({candidatos.length === 1 ? '1 persona' : `${candidatos.length} personas`})
+            </label>
+            <label className="opcion">
+              <input type="radio" name={`${uid}-modo`} checked={modo === 'correo'} onChange={() => setModo('correo')} />
+              Otra persona, por su correo
+            </label>
+          </div>
+        </fieldset>
+      )}
+      {modo === 'lista' ? (
+        <Conceder uid={uid} puedeAutorizar={puedeAutorizar} candidatos={candidatos} onConcedida={onConcedida} incrustado />
+      ) : (
+        <Invitar uid={uid} puedeAutorizar={puedeAutorizar} candidatos={candidatos} onInvitada={onInvitada} incrustado />
+      )}
+    </SeccionPlegable>
+  )
+}
+
 /* ── 3. Dar acceso a alguien ───────────────────────────────────────────── */
 
 /** La clave de un candidato: el par de fichas, que es lo que identifica la relación. */
@@ -1229,11 +1282,13 @@ function Conceder({
   puedeAutorizar,
   candidatos,
   onConcedida,
+  incrustado = false,
 }: {
   uid: string
   puedeAutorizar: boolean
   candidatos: readonly Candidato[]
   onConcedida: () => Promise<void>
+  incrustado?: boolean
 }) {
   const [seleccion, setSeleccion] = useState('')
   // Un solo alcance, no un conjunto: `ver_economico` ya incluye lo de `ver`.
@@ -1355,7 +1410,7 @@ function Conceder({
   }
 
   return (
-    <SeccionPlegable titulo="Dar acceso a alguien">
+    <Envoltorio incrustado={incrustado} titulo="Dar acceso a alguien">
 
       {!puedeAutorizar ? (
         // No es «no se puede»: es que quien cede los datos tiene que ser su
@@ -1558,7 +1613,7 @@ function Conceder({
           </button>
         </form>
       )}
-    </SeccionPlegable>
+    </Envoltorio>
   )
 }
 
@@ -1807,11 +1862,13 @@ function Invitar({
   puedeAutorizar,
   candidatos,
   onInvitada,
+  incrustado = false,
 }: {
   uid: string
   puedeAutorizar: boolean
   candidatos: readonly Candidato[]
   onInvitada: () => Promise<void>
+  incrustado?: boolean
 }) {
   const fichas = useMemo(() => fichasPropias(candidatos), [candidatos])
   const [fichaId, setFichaId] = useState('')
@@ -1946,7 +2003,7 @@ function Invitar({
   }
 
   return (
-    <SeccionPlegable titulo="Añadir una persona">
+    <Envoltorio incrustado={incrustado} titulo="Añadir una persona">
 
       {!puedeAutorizar ? (
         <p className="suave" style={{ margin: 0 }}>
@@ -2269,6 +2326,6 @@ function Invitar({
           </button>
         </form>
       )}
-    </SeccionPlegable>
+    </Envoltorio>
   )
 }
