@@ -587,6 +587,13 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Ficha: el tomador con ficha duplicada salía en «Personas» como un tercero
+- Pablo Guzmán Lozano: CIMA colgaba al propietario de su coche de OTRA ficha suya (lead, mismo hash de
+  DNI, 0 pólizas) → salía «sin vínculo» con botón «Declarar». `leerIntervinientes` (asegura) marca ahora
+  `esTomador` también por NIF igual al del tomador. Y el formulario de «Declarar» hace scroll al abrirse
+  (en móvil quedaba fuera de pantalla y el botón «no hacía nada»).
+- ⏸️ Pendiente con OK de Alberto: fusionar la ficha duplicada `0e4fe96b…` en `6e6a30ef…` (lote de fusión).
+
 ## (25/09/2026) Oportunidades: se gestionan DENTRO de la ficha del cliente (PR #3590)
 - Alberto: la página aparte «ocupa mucha pantalla». La fila de cada oportunidad (pestaña Oportunidades) se despliega
   con «Gestionar ▾» y trae estado, acciones, **datos para tarificar** (botón al tarificador del ramo + `PedirDatos`),

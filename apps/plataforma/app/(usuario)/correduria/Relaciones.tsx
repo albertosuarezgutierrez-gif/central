@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
@@ -975,6 +975,12 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAl
   const [elegido, setElegido] = useState<Candidato | null>(preseleccion)
   const [tipo, setTipo] = useState<TipoRelacion>('Cónyuge/Pareja de Hecho')
   const [observaciones, setObservaciones] = useState('')
+  // El formulario vive DEBAJO de la lista de personas: en móvil, «Declarar qué
+  // es de…» lo abría fuera de la pantalla y el botón parecía no hacer nada.
+  const cajaRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (preseleccion) cajaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }, [preseleccion])
 
   async function buscar() {
     const termino = q.trim()
@@ -1039,7 +1045,7 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAl
     : []
 
   return (
-    <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+    <div ref={cajaRef} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
       <div style={{ fontSize: 13, fontWeight: 700 }}>Añadir relación a {nombreFicha}</div>
 
       <form
