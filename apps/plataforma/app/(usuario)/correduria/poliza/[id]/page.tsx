@@ -295,7 +295,9 @@ function Sustitucion({ p }: { p: Poliza }) {
       {s.origen && (
         <div style={{ ...tarjeta, border: '1px dashed var(--border)', boxShadow: 'none', fontSize: 13 }}>
           🔁 Sustituye a la póliza de <strong>{s.origen.aseguradora}</strong>
-          {s.origen.numeroPoliza && ` nº ${s.origen.numeroPoliza}`} (<Link href={`/correduria/poliza/${s.origen.polizaId}`}>ver</Link>).
+          {s.origen.numeroPoliza && ` nº ${s.origen.numeroPoliza}`}
+          {/* El día del cambio es el efecto de ESTA (la nueva), no el vencimiento de la vieja: pueden no coincidir. */}
+          {p.fechaInicio && <> — cambio de compañía el <strong>{fmt(p.fechaInicio)}</strong></>} (<Link href={`/correduria/poliza/${s.origen.polizaId}`}>ver</Link>).
         </div>
       )}
       {s.sustituidaPor && (
