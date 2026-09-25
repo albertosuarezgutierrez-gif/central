@@ -47,3 +47,9 @@ test('el correo lleva el logo en PNG desde la web pública y existe en el disco'
   // Un <img> a un fichero que no está no rompe nada: pinta el icono roto y solo lo ve el cliente.
   assert.ok(existsSync(new URL(`../../asegura-web/public${m![1]}`, import.meta.url)), `${m![1]} no está en apps/asegura-web/public`)
 })
+
+test('dos pasadas diarias: la de la tarde recoge lo que la de la mañana no pudo', () => {
+  const vercel = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'))
+  const pases = (vercel.crons as { path: string }[]).filter((c) => c.path.split('?')[0] === '/api/cron/felicitaciones')
+  assert.ok(pases.length >= 2, `solo hay ${pases.length} pasada(s) de felicitaciones en vercel.json: un fallo de la mañana se come los cumpleaños del día`)
+})
