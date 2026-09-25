@@ -108,7 +108,8 @@ siniestros desde la ficha, «por qué ha subido la prima», canal de leads web `
 leyendo la cartera por `portal_vinculo`, acuñado de emitidas D2 + reglas de conciliación D3/D4). El
 02/09 entró además la **v1 de la intranet del cliente**: `seguros.portal_obligacion` aplicada,
 calendario con la fecha accionable, enlace de un clic en el correo de acceso y el cron de avisos
-(apagado). Falta: el ENVÍO al vendor (sin sandbox para el gate de idempotencia), el port de la
+(apagado). El ENVÍO al vendor SÍ está desde el 11/09 (emisiones reales 17/09 y 23/09), solo desde «Retarificar»
+de una póliza auto/moto; sin probar la idempotencia de punta a punta (sin sandbox). Falta: el port de la
 ingesta CIMA, WhatsApp (sin WABA) y **desplegar el portal** (`DATABASE_URL` con la contraseña del
 Vault, `PII_LOOKUP_KEY` idéntica a la de `central-asegura`, secretos de sesión/canal,
 `PORTAL_PUBLIC_URL`) más `CRON_SECRET` en `central-asegura`. Tabla completa en el documento (§4) y

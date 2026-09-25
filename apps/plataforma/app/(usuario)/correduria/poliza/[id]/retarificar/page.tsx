@@ -398,6 +398,12 @@ export default async function RetarificarPage({
         // pregunta de retarificar. `null` = la ficha no la trae (no es 0).
         primaActualEur={p.primaAnual ?? p.prima ?? null}
         ramo={ramo}
+        // 📅 Regla de Alberto (25/09/2026): con vencimiento fiable, la nueva se
+        // emite con la MISMA fecha. Fiable = viva por CIMA, no cancelada y no
+        // emitida nuestra (su vencimiento es el provisional «emisión + 1 año»).
+        vencimientoFiable={
+          p.viva && !cancelada && p.origen !== 'emitida_codeoscopic' ? p.fechaVencimiento : null
+        }
         // 🚨 `null` = la cartera del cliente NO se ha podido mirar. Ver
         // `leerContextoDefensa`: nunca degrada a `[]`.
         contextoDefensa={leerContextoDefensa(pre?.carteraCompanias, p)}

@@ -313,3 +313,70 @@ El `product.id` de Allianz no aparece en los ejemplos. Los códigos reales de vu
 - Además: vehículo Base7 que Allianz admita (el ejemplo da "VEHICULO NO PERMITIDO"), `effectiveDate` a 90 días o menos, conductor/propietario/tomador con los campos de `/motorcycle/person-roles`, carnet A con fecha, `garageType`, `drivingExperience`, `previouslyInsured` y, si procede, `previousInsurance` con el código DGS.
 - Opciones propias de Allianz, como el uso: Product Form.
 - Bloqueos pendientes: URL de producción, valor de `X-Client-App`, rate limits y la ausencia de webhooks. Hay que confirmarlo con soporte.
+
+## Revisión del spec de producción (25/09/2026, solo lectura, sin llamadas)
+
+Fuente: `portal.api.codeoscopic.io` (`static/572105cc.yaml`). Lo no documentado se dice así.
+
+- **ReRate admite fecha nueva:** `ReRateOfferRequestMainQuote_V1` = `id`* + `effectiveDate` (opcional,
+  `yyyy-MM-dd`, «must be the same in all quotes») + `product.options`, `paymentMethod`,
+  `paymentFrequency`, `brokerFee`. **Nuestro `reRate()` (`lib/codeoscopic/emitir.ts`) NO manda
+  `effectiveDate`** — el «proyecto muerto por fecha pasada» del 13/09 [Probable] venía de reenviar la
+  vieja. Mínimo/máximo de la fecha: no documentado. Sin probar en real.
+- **Caducidad de la cotización = `expirationDate` de cada quote** («the date after which the quote
+  cannot be issued… could be invalidated earlier»). Hoy no se guarda (`lib/presupuesto.ts:231`); se
+  usa la fecha de efecto como proxy.
+- **`GET /insurances` (lista):** filtros `id`, `externalId`, `insuranceLineId`, `fromDate/toDate`
+  (obligatorias sin id/externalId, rango ≤1 año), `holderIdentification`,
+  `policyApplicationSubmitted`, `policyApplicationStatusIds`; `pageSize` ≤100, `X-Total-Count`. Sin
+  `X-User-Email` → alcance de toda la correduría. Que traiga proyectos hechos en la web ASM:
+  [Probable], sin afirmar. Comprobación gratis pendiente: `GET /insurances?id=40842815`.
+- **`POST /insurances` acepta el `id` de un proyecto previo** para asociar la nueva cotización.
+- **Estados:** el proyecto no tiene estado; lo tiene cada policy application (catálogo vivo
+  `GET /policy-application-statuses`). `actions[]`: solo `ReRate` y `SubmitPolicyApplication`.
+  `RevisedQuote` → Submit nuevo con `quote.id` = id de la revisada.
+- **Documentos:** `issuedDocuments[]` con `expirationDateTime`*; presupuesto con IPID en
+  `POST /insurances/{id}/reports` (`type: Offers`, `includeIpid`), «some files can only be
+  downloaded once».
+- **Ramos:** solo Car, Motorcycle, Home, TermLife, Health, Burial. Emisión por ramo = flag
+  `supports.policyApplication` de `GET /insurance-lines` (comprobación gratis pendiente) + acción
+  `SubmitPolicyApplication` en la quote. Cotizar vs emitir por persona: `GET /{ramo}/person-roles`.
+- **Anular/suplementar/renovar por API: NO.** `PATCH/DELETE /policies/{id}` solo tocan la cartera en
+  Tesis Broker Manager (licencia TBM); no llegan a la compañía.
+- **Sin rate limits documentados; 502/503/504 «try again»** — pero sin idempotencia: **nunca
+  reintentar un Submit automáticamente**.
+- **Deprecados:** `GET /organizations` (retirada 30/09/2026 → `/sales-organizations`) y `postalCode`
+  en normalizaciones de dirección. Verificado 25/09: **no usamos ninguno** (`/towns?postalCode=` es
+  catálogo, no normalización).
+- **PCI:** el Submit acepta `creditCard.number` + CVV. **No recogemos tarjeta** (verificado 25/09);
+  mantener solo IBAN.
+- `POST /home/recommend-limits` consulta todas las compañías; coste no documentado → se cuenta en el
+  libro como `limites_hogar` (coste por env, 0 = sin confirmar).
+
+### 3ª ronda (25/09/2026 noche, solo lectura)
+- **Ofertas iniciales:** `Insurance_V1.offers[]` existe SIN ReRate; cada oferta apunta a su precio
+  (`mainQuote: { $ref: '#/mainQuotes/N', id }`) — el precio no trae `offerId`. No todo precio
+  tiene oferta (ejemplo público: 26 precios, 15 ofertas). Implementado: `ofertasPorPrecio()` en
+  `lib/codeoscopic/respuesta.ts` → `Precio.ofertaId`. Coberturas con oferta inicial: [Probable].
+- **Coberturas:** `GET /insurances/{id}/offers/{offerId}/coverages` → `{ id, name, included?, text? }`,
+  lista común por ramo, sin capital numérico. Puerto: `GET /api/operador/codeoscopic/coberturas`.
+- **Complementos (`addonQuotes[]`, `product.addon: true`):** precio propio, `coverageDescription`,
+  `includeInOffers`/`requireInOffers`. ReRate: en `addonQuotes[]` (deben estar en
+  `compatibleAddonQuotes` del principal). Submit: una solicitud más; el principal va primero.
+- **Informe PDF** (`POST /insurances/{id}/reports`, `type: Offers`): `offerIds[]`,
+  `includeCoverages`, `includePremiumBreakdown`, `includeBrokerFee(Amount)`, `includeIpid`. Sin logo.
+  **La URL solo admite UNA descarga**: guardar el fichero al bajarlo.
+- **Documentos para emitir:** `POST .../policy-application-documents` si `checkDocuments`; cada uno
+  con `constraints` (`minFiles`, `maxFiles`, `maxFileSize`, `signatureRequired`,
+  `allowedMediaTypes`…). **Sin firma electrónica**: descargar, firmar fuera y adjuntar en el Submit
+  (multipart: `policyApplications` + `files[]`).
+- **`brokerFee`** = honorarios del mediador al cliente (no la comisión de la compañía), por
+  producto (`Fixed`/`Percentage`, min/max). ⚠️ Cobrarlos exige información previa por escrito al
+  cliente: revisar con cumplimiento antes de activarlo.
+- **Errores:** solo 400/401/403/404/500/502/503/504; `Error_V1.name` ∈ `UnknownError`,
+  `CompanyError`, `ValidationError`, `CrmError`, `CredentialsExpired`, `ThirdPartyServiceError`.
+  No existe «offer/quote expired» como error (nuestros 409/422 son del PUERTO, no del vendor).
+- **Tras el Submit:** puede volver ya `Approved` con `policyNumber` (síncrono en los ejemplos);
+  frecuencia de consulta sin documentar.
+- **Datos adicionales del riesgo de auto** (uso, puntos, alarma): no son campos de `CarRisk_V1`;
+  llegan como opciones del producto (Product Form), distintas por compañía.

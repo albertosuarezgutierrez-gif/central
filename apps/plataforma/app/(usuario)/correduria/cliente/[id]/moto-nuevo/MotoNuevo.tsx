@@ -813,6 +813,7 @@ function Precios({
               compania={p.compania ?? ''}
               categoria={p.categoria ?? ''}
               primaEur={p.primaEur ?? null}
+              producto={p.producto ?? null}
               onCerrar={() => setAbierta(null)}
             />
           )

@@ -25,10 +25,10 @@ import {
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto } from '@/lib/retarificar-asegura'
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
-import { Emision } from './emision'
+import { Emision, CoberturasOferta } from './emision'
 import PrepararPresupuesto from './PrepararPresupuesto'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
-import { fechaEfectoInicial } from '@/lib/fecha-efecto-inicial'
+import { fechaEfectoInicial, fechaEfectoPorDefecto } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 import {
@@ -43,6 +43,7 @@ import {
 } from '@central/module-seguros'
 
 import type { ContextoDefensa } from '@/lib/contexto-defensa'
+import { fechaEs } from '@/lib/ficha-asegura'
 export type { ContextoDefensa }
 
 /**
@@ -169,6 +170,12 @@ type Resultado =
        *  (dentro, si `estado==='guardada'`) no hay a qué proyecto pedirle el
        *  ReRate/Submit reales: `cotizacionIdDe()` lo extrae con cuidado. */
       guardado: unknown
+      /** Proyecto del vendor: con él y la `ofertaId` de cada precio se leen sus
+       *  coberturas (gratis). `null` = no se sabe (no se ofrece el botón). */
+      projectId: string | null
+      /** Fecha de efecto con la que se COTIZÓ (aaaa-mm-dd). `null` = no se sabe.
+       *  Arranca el campo de fecha del panel de emisión (25/09/2026). */
+      fechaEfecto: string | null
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   /**
@@ -222,6 +229,8 @@ function resultadoDeGuardada(g: TarificacionGuardadaAuto): Resultado {
     fallos: g.fallos,
     supuestos: [],
     guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+    projectId: g.projectId,
+    fechaEfecto: g.fechaEfecto,
   }
 }
 
@@ -324,8 +333,15 @@ export default function Retarificador({
   sinCarteraPorque,
   primaActualEur,
   ramo,
+  vencimientoFiable = null,
 }: {
   polizaId: string
+  /**
+   * Vencimiento de la póliza actual SOLO si es fiable (viva por CIMA, no
+   * cancelada, no emitida nuestra con fecha provisional). `null` = no lo es o no
+   * se sabe: la fecha de efecto arranca en mañana, como siempre.
+   */
+  vencimientoFiable?: string | null
   /**
    * Los huecos que la ficha NO tapa, ya revisados. **`null` = no se ha podido
    * precalificar** (el puerto de asegura no sirve todavía la precalificación de
@@ -484,7 +500,7 @@ export default function Retarificador({
       fechaEfecto: fechaEfectoInicial(
         guardadas.fechaEfecto,
         hoyISO(),
-        masDiasISO(1),
+        fechaEfectoPorDefecto(vencimientoFiable, hoyISO(), masDiasISO(1), MAX_DIAS_VISTA_EFECTO),
         MAX_DIAS_VISTA_EFECTO,
       ),
     }
@@ -707,7 +723,7 @@ export default function Retarificador({
         fechaEfecto: fechaEfectoInicial(
           b.correcciones.fechaEfecto,
           hoyISO(),
-          masDiasISO(1),
+          fechaEfectoPorDefecto(vencimientoFiable, hoyISO(), masDiasISO(1), MAX_DIAS_VISTA_EFECTO),
           MAX_DIAS_VISTA_EFECTO,
         ),
       })
@@ -894,6 +910,8 @@ export default function Retarificador({
           fallos: r.fallos,
           supuestos: r.supuestos,
           guardado: r.guardado,
+          projectId: r.projectId,
+          fechaEfecto: correcciones.fechaEfecto ?? null,
         })
         return
     }
@@ -1371,7 +1389,10 @@ export default function Retarificador({
             revés que el supuesto automático cuando el vencimiento real está
             lejos, y da un día de margen para confirmar y emitir (con HOY, la
             cotización moría a medianoche). Se puede cambiar, pero el campo
-            nunca arranca vacío. */}
+            nunca arranca vacío.
+            📅 Desde el 25/09/2026 (Alberto): con una póliza en cartera y vencimiento
+            fiable arranca en ESE vencimiento (misma fecha, sin hueco ni solape),
+            si cae en [hoy, hoy+90]; si no, mañana. */}
         <div style={{ marginTop: 16 }}>
           <Campo
             id="c-fechaEfecto"
@@ -1379,7 +1400,10 @@ export default function Retarificador({
             falta={false}
             ayuda={
               <>
-                Precargada a mañana: es la fecha que se manda al pedir precio. Cámbiala solo si el
+                {vencimientoFiable && correcciones.fechaEfecto === vencimientoFiable.slice(0, 10)
+                  ? 'Precargada al vencimiento de la póliza actual (misma fecha: sin hueco ni solape). '
+                  : 'Precargada a mañana. '}
+                Es la fecha que se manda al pedir precio. Cámbiala solo si el
                 cliente quiere que la póliza empiece otro día — <strong>siempre a ≤90 días vista</strong>,
                 la compañía rechaza fechas más lejanas al confirmar el precio, y para entonces ya se
                 ha pagado la cotización. No se puede arreglar después: hay que acertarla aquí.{' '}
@@ -1829,6 +1853,28 @@ function Precios({
                               ? 'franquicia no declarada'
                               : `franquicia ${euroODash(p.franquiciaEur)}`}
                           </div>
+                          {p.expiraEn && (
+                            <div className="muted" style={{ fontSize: 11 }}>
+                              válido hasta {fechaEs(p.expiraEn)}
+                            </div>
+                          )}
+                          {!r.simulado && r.projectId && p.ofertaId && (
+                            <div style={{ fontSize: 11, marginTop: 2 }}>
+                              <CoberturasOferta projectId={r.projectId} offerId={p.ofertaId} />
+                            </div>
+                          )}
+                          {p.opciones && p.opciones.length > 0 && (
+                            <details style={{ fontSize: 11, marginTop: 2 }}>
+                              <summary className="muted">opciones ({p.opciones.length})</summary>
+                              <ul style={{ margin: '4px 0', paddingLeft: 14 }}>
+                                {p.opciones.map((o, j) => (
+                                  <li key={j} style={{ overflowWrap: 'anywhere' }}>
+                                    {o.etiqueta}: <strong>{o.valor}</strong>
+                                  </li>
+                                ))}
+                              </ul>
+                            </details>
+                          )}
                         </td>
                         {primaActualEur !== null && (
                           <td>
@@ -1909,6 +1955,8 @@ function Precios({
             compania={p.compania ?? ''}
             categoria={p.categoria ?? ''}
             primaEur={p.primaEur ?? null}
+            producto={p.producto ?? null}
+            fechaEfecto={r.fechaEfecto}
             onCerrar={() => setAbierta(null)}
           />
         )

@@ -177,6 +177,12 @@ export type PrecioComparable = {
   /** `null` = no la declara. NO es «sin franquicia». */
   franquiciaEur?: number | null
   firmeza?: string | null
+  /** Hasta cuándo se puede emitir (`expirationDate` del vendor). Ausente = no lo dijo. */
+  expiraEn?: string | null
+  /** Opciones del producto legibles (`formattedOptions`). Ausente/`null` = no se sabe. */
+  opciones?: { etiqueta: string; valor: string }[] | null
+  /** Oferta inicial que contiene el precio (para leer coberturas). Ausente = no hay. */
+  ofertaId?: string | null
   avisos?: string[]
 }
 

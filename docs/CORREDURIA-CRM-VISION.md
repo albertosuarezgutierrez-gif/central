@@ -101,7 +101,7 @@ se tocan (`tipo_cliente` cliente/lead/beneficiario · `segmento_cliente` cliente
 | Historial de cambios | ✅ se escribe y se pinta (tarjeta plegada, 50 filas) | `cartera-historial.ts` |
 | Cola de retención (recibos devueltos, art. 15 LCS) | ✅ | `Retencion.tsx`, `cartera-impagados.ts` |
 | Retarificar auto/hogar (Codeoscopic, 0,50 €) | ✅ solo tarifica | `lib/codeoscopic/*` |
-| **Emitir por Codeoscopic** | 🟡 OK de Alberto 02/09. Acuñar la póliza emitida (D2) está: `registrarPolizaEmitida` + puerto `POST /api/operador/poliza/emitida`, cerrado tras `CODEOSCOPIC_EMISION_ACTIVA`. **El envío al vendor NO está**: su gate (idempotencia del `attempt_id`) no se puede probar sin sandbox, y no lo hay | `asegura/lib/emision.ts` · spec §3 |
+| **Emitir por Codeoscopic** | 🟡 OK de Alberto 02/09. Acuñar la póliza emitida (D2) está: `registrarPolizaEmitida` + puerto `POST /api/operador/poliza/emitida`, cerrado tras `CODEOSCOPIC_EMISION_ACTIVA`. ✅ **El envío al vendor SÍ está** (`emitir-envio.ts`, desde 11/09; emisiones reales Allianz 17/09 y Reale 23/09, medido 25/09). Sigue sin probar la idempotencia del `attempt_id` (no hay sandbox). **Solo emite desde «Retarificar» de una póliza auto/moto**: negocio nuevo (`*-nuevo`) y proyectos creados a mano en Avant2 no se pueden emitir ni importar por id | `asegura/lib/emision.ts` · spec §3 |
 | **Conciliación emitida ↔ CIMA** | 🟡 reglas puras hechas y testeadas (`emparejarConCima` D4, `conciliarConCima` D3) + `companias_dgs` (DGS → nombre exacto de CIMA) + enum `emitida_codeoscopic`. Falta el port de la ingesta CIMA que las use (aparcado); mientras, el legacy casa por nombre y D2 lo hace compatible | `module-seguros/emision.ts` · `seguros.companias_dgs` |
 | Alta automática de leads (web, WhatsApp, agente) | 🟡 **Web ✅** (02/09): landing pública `/seguros` en plataforma → `POST /api/publico/correduria/lead` (rate limit, honeypot, RGPD) → alta con `fuente = web` e historial `contacto`; si el teléfono/email ya está en una ficha NO se duplica: se anota el contacto en esa ficha. Telegram `correduria.lead-nuevo` siempre, con enlace a la ficha. WhatsApp ❌ (sin WABA) · agente ❌ | `plataforma/app/seguros` · `lib/leads-web.ts` · `asegura /cliente/historial` |
 | Estado «con presupuesto» / «ex-cliente» | ✅ derivado (`estadoCliente`, module-seguros) | `estado-cliente.ts` |
@@ -206,8 +206,9 @@ tiene vetadas hasta decidirlo (nada sale sin su OK; emisión en sandbox).
 
 1. 🟡 **Emisión en central + conciliación CIMA (§5).** OK de Alberto el 02/09 («haz todo ok»). Hecho:
    enum `emitida_codeoscopic`, `companias_dgs`, reglas puras D2/D3/D4 y `registrarPolizaEmitida` tras
-   `CODEOSCOPIC_EMISION_ACTIVA`. **NO hecho a propósito: el envío al vendor**, porque su gate (mismo
-   `attempt_id` dos veces) exige un sandbox que no existe; pedirlo a Codeoscopic es el paso siguiente.
+   `CODEOSCOPIC_EMISION_ACTIVA`, y **el envío al vendor** (11/09, en producción sin sandbox con OK de
+   Alberto). Pendiente: el gate de «mismo `attempt_id` dos veces» (sin sandbox), emitir negocio nuevo y
+   hogar/vida/salud/decesos, e importar por id un proyecto hecho a mano en Avant2 (spec + OK antes).
    El port de la ingesta CIMA sigue aparcado. Detalle en la spec, §3.
 2. ✅ **Historial visible en la ficha** — hecho 02/09.
 3. ✅ **Estado derivado «con presupuesto» / «ex-cliente»** — hecho 02/09.

@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { fechaEfectoCaducada, hoyEnMadrid, reparoFechaCaducada, mensajeFechaCaducada, sumarDias, motivoFechaEfectoInvalida } from './fecha-efecto.ts'
+import { fechaEfectoCaducada, hoyEnMadrid, reparoFechaCaducada, mensajeFechaCaducada, sumarDias, motivoFechaEfectoInvalida, fechaEfectoDeOferta } from './fecha-efecto.ts'
 
 // El caso real (13/09/2026): proyecto 40685666 cotizado el 12/09 con efecto
 // 12/09; al día siguiente, «The effective date cannot be before today.»
@@ -46,4 +46,22 @@ test('motivoFechaEfectoInvalida: la regla entera — ayer no, hoy sí, +90 sí, 
   assert.equal(motivoFechaEfectoInvalida('2026-12-12', '2026-09-13'), null)
   assert.match(motivoFechaEfectoInvalida('2026-12-13', '2026-09-13') ?? '', /90 días/)
   assert.equal(motivoFechaEfectoInvalida('13/09/2026', '2026-09-13'), null)
+})
+
+test('fechaEfectoDeOferta: encuentra la fecha de la oferta aceptada, anidada', () => {
+  const crudo = {
+    id: 40842815,
+    effectiveDate: '2026-09-12',
+    quotes: [
+      { id: 'q-1', effectiveDate: '2026-09-12' },
+      { id: 'q-2', offers: [{ id: 'of-9', effectiveDate: '2026-09-29T00:00:00' }] },
+    ],
+  }
+  assert.equal(fechaEfectoDeOferta(crudo, 'of-9'), '2026-09-29')
+})
+
+test('fechaEfectoDeOferta: sin oferta, sin id o sin fecha → null (cae a la del proyecto)', () => {
+  assert.equal(fechaEfectoDeOferta({ quotes: [{ id: 'x' }] }, 'x'), null)
+  assert.equal(fechaEfectoDeOferta({ quotes: [] }, 'y'), null)
+  assert.equal(fechaEfectoDeOferta({ quotes: [{ id: 'y', effectiveDate: '2026-10-01' }] }, null), null)
 })

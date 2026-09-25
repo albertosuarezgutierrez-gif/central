@@ -1,0 +1,103 @@
+{
+ "sesion": "34a07480-aff2-5790-9a75-35e07257d7af",
+ "inicio": "2026-09-25T16:08:09.392Z",
+ "fin": "2026-09-25T18:12:42.691Z",
+ "llamadas": 264,
+ "categorias": {
+  "otro": {
+   "llamadas": 37,
+   "chars_in": 22357,
+   "chars_out": 320075,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 4,
+    "SubagentHandback": 2,
+    "ReadNotifications": 30
+   }
+  },
+  "bash": {
+   "llamadas": 188,
+   "chars_in": 131839,
+   "chars_out": 446378,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 188
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 10,
+   "chars_in": 6457,
+   "chars_out": 36956,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 10
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 10,
+   "chars_in": 1110,
+   "chars_out": 148635,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 10
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 2,
+   "chars_in": 5393,
+   "chars_out": 5807,
+   "errores": 0,
+   "archivos_citados": 11,
+   "chars_citados": 456105,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 14,
+   "chars_in": 11088,
+   "chars_out": 66719,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 161259,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 8,
+    "mcp__github__update_pull_request": 3
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 477,
+   "chars_out": 216,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 2
+   }
+  }
+ }
+}

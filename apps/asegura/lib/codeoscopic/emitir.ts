@@ -74,21 +74,39 @@ export async function refrescarProyecto(
 }
 
 /** El precio elegido por compañía + categoría, tal y como se enseñó en
- *  pantalla. Sin esto no hay `id` de precio con el que pedir el ReRate. */
+ *  pantalla. Sin esto no hay `id` de precio con el que pedir el ReRate.
+ *
+ *  🚨 25/09/2026: una compañía puede devolver VARIOS precios del mismo nivel
+ *  (Reale llegó a 8) y hasta hoy se cogía el PRIMERO — el ReRate confirmaba un
+ *  producto distinto de la fila que el corredor pulsó. Con `pista` (producto y
+ *  prima de la fila) se desempata: primero el mismo producto, luego la prima
+ *  más cercana. Sin pista, el comportamiento de siempre. */
 export function encontrarPrecio(
   cotizacion: Cotizacion,
   compania: string,
   categoria: string,
+  pista: { producto?: string | null; primaEur?: number | null } = {},
 ): Precio | null {
   const normCompania = compania.trim().toLowerCase()
   const normCategoria = categoria.trim().toLowerCase()
-  return (
-    cotizacion.precios.find(
-      (p) =>
-        p.compania.trim().toLowerCase() === normCompania &&
-        (p.categoria ?? '').trim().toLowerCase() === normCategoria,
-    ) ?? null
+  const candidatos = cotizacion.precios.filter(
+    (p) =>
+      p.compania.trim().toLowerCase() === normCompania &&
+      (p.categoria ?? '').trim().toLowerCase() === normCategoria,
   )
+  if (candidatos.length <= 1) return candidatos[0] ?? null
+  const normProducto = pista.producto?.trim().toLowerCase()
+  const mismoProducto = normProducto
+    ? candidatos.filter((p) => p.producto.trim().toLowerCase() === normProducto)
+    : []
+  const pool = mismoProducto.length > 0 ? mismoProducto : candidatos
+  const prima = pista.primaEur
+  if (prima == null || !Number.isFinite(prima)) return pool[0]
+  return pool.reduce((mejor, p) => {
+    const d = p.primaEur == null ? Infinity : Math.abs(p.primaEur - prima)
+    const dm = mejor.primaEur == null ? Infinity : Math.abs(mejor.primaEur - prima)
+    return d < dm ? p : mejor
+  })
 }
 
 // ─── 2. ReRate: confirma el precio con la compañía ───────────────────────────
@@ -201,6 +219,15 @@ export async function reRate(
   quoteId: string,
   productId: unknown,
   productOptions: unknown,
+  /**
+   * 📅 Fecha de efecto NUEVA (25/09/2026). El spec de producción
+   * (`ReRateOfferRequestMainQuote_V1`) documenta `mainQuote.effectiveDate`
+   * (`yyyy-MM-dd`, opcional) y dice que el ReRate hace falta «if you want to
+   * modify … the effective date»: ES la vía para mover la fecha, no el PATCH
+   * (que la descarta). Hasta hoy no se mandaba nunca. Sin ella, el vendor usa
+   * la del proyecto, como siempre.
+   */
+  fechaEfecto?: string | null,
 ): Promise<Oferta> {
   const crudo = await peticion(config, {
     metodo: 'POST',
@@ -209,6 +236,7 @@ export async function reRate(
       mainQuote: {
         id: quoteId,
         product: { id: productId, options: productOptions ?? [] },
+        ...(fechaEfecto ? { effectiveDate: fechaEfecto } : {}),
       },
     },
     timeoutMs: config.timeoutGenericoMs,

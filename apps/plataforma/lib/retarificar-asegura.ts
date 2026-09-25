@@ -581,6 +581,15 @@ export type Precio = {
   firmeza?: string
   categoria?: string | null
   franquiciaEur?: number | null
+  /** `expirationDate` de la cotización: hasta cuándo se puede emitir. `null`/ausente
+   *  = el vendor no la ha dicho (suele venir solo tras confirmar el precio). */
+  expiraEn?: string | null
+  /** Opciones del producto ya legibles (`formattedOptions` del vendor). `null`/ausente =
+   *  no las mandó (o cotización recuperada, que no las guarda); `[]` = ninguna. */
+  opciones?: { etiqueta: string; valor: string }[] | null
+  /** Oferta inicial que contiene este precio: con ella se leen sus coberturas gratis.
+   *  `null`/ausente = ninguna oferta lo contiene, o cotización recuperada de BD. */
+  ofertaId?: string | null
   avisos?: string[]
 }
 
@@ -642,6 +651,8 @@ export type RespuestaRetarificar =
       /** Qué pasó con la COPIA en `seguros.tarificaciones`. El precio ya está
        *  pagado: quien lo pinte tiene que poder decir «no ha quedado copia». */
       guardado: unknown
+      /** Proyecto del vendor (para leer coberturas por oferta). `null` = no vino. */
+      projectId: string | null
     }
 
 /**
@@ -701,6 +712,7 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
       fallos: Array.isArray(r.fallos) ? (r.fallos as Fallo[]) : [],
       supuestos: Array.isArray(r.supuestos) ? (r.supuestos as Supuesto[]) : [],
       guardado: r.guardado ?? null,
+      projectId: typeof r.projectId === 'string' || typeof r.projectId === 'number' ? String(r.projectId) : null,
     }
   }
 
@@ -1139,9 +1151,12 @@ export async function ofertaAsegura(p: {
   tarificacionId: string
   compania: string
   categoria: string
-  /** Corrige la fecha de efecto del proyecto (aaaa-mm-dd) ANTES del ReRate,
-   *  vía `PATCH /insurances/{id}` (gratis). Solo cuando la compañía ya la ha
-   *  rechazado — ver `apps/asegura/lib/codeoscopic/emitir.ts::actualizarFechaEfecto`. */
+  /** Producto y prima de la fila pulsada: desempatan cuando la compañía da varios
+   *  precios del mismo nivel (`encontrarPrecio` de asegura, 25/09/2026). */
+  producto?: string
+  primaEur?: number
+  /** Fecha de efecto NUEVA (aaaa-mm-dd). Desde el 25/09/2026 viaja en el propio
+   *  ReRate (`mainQuote.effectiveDate`, la vía documentada por el vendor). */
   fechaEfectoCorregida?: string
   /** Lo que el corredor teclea tras un `faltan_vendor` (campo nuestro → valor).
    *  Asegura lo escribe en el proyecto (PATCH, gratis) y vuelve a pedir el ReRate. */
@@ -1763,5 +1778,48 @@ export async function limitesHogarAsegura(p: {
         ' — no se sabe si la recomendación ha salido ni si ha costado. Míralo en el consumo antes de volver a pulsar.',
       gastoDesconocido: true,
     }
+  }
+}
+
+
+// ─── Coberturas de una oferta confirmada (GRATIS, lectura) ──────────────────
+
+export type CoberturaOferta = { nombre: string; incluida: boolean | null; texto: string | null }
+export type RespuestaCoberturas =
+  | { estado: 'ok'; coberturas: CoberturaOferta[] }
+  | { estado: 'error'; mensaje: string }
+
+/** Lee la respuesta del puerto. Pura: se testea sin red. `incluida` ausente es `null`
+ *  («ver el texto»), nunca `false`. */
+export function interpretarCoberturas(status: number, json: unknown): RespuestaCoberturas {
+  const o = (json && typeof json === 'object' ? json : {}) as Record<string, unknown>
+  if (status !== 200 || o.estado !== 'ok' || !Array.isArray(o.coberturas)) {
+    const m = typeof o.mensaje === 'string' ? o.mensaje : typeof o.error === 'string' ? o.error : `HTTP ${status}`
+    return { estado: 'error', mensaje: `No se han podido leer las coberturas (${m}).` }
+  }
+  const coberturas: CoberturaOferta[] = []
+  for (const c of o.coberturas as unknown[]) {
+    const x = (c && typeof c === 'object' ? c : {}) as Record<string, unknown>
+    if (typeof x.nombre !== 'string' || x.nombre.trim() === '') continue
+    coberturas.push({
+      nombre: x.nombre,
+      incluida: typeof x.incluida === 'boolean' ? x.incluida : null,
+      texto: typeof x.texto === 'string' && x.texto.trim() !== '' ? x.texto : null,
+    })
+  }
+  return { estado: 'ok', coberturas }
+}
+
+/** `GET /api/operador/codeoscopic/coberturas` — gratis, no cotiza ni confirma nada. */
+export async function coberturasAsegura(projectId: string, offerId: string): Promise<RespuestaCoberturas> {
+  const qs = new URLSearchParams({ projectId, offerId }).toString()
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/coberturas?${qs}`, { method: 'GET' }, TIMEOUT_CATALOGO_MS)
+    if (r === null) {
+      return { estado: 'error', mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).' }
+    }
+    return interpretarCoberturas(r.status, r.json)
+  } catch (e) {
+    return { estado: 'error', mensaje: `No se han podido leer las coberturas (${e instanceof Error ? e.message : String(e)}).` }
   }
 }

@@ -76,3 +76,31 @@ export function motivoFechaEfectoInvalida(fechaEfecto: string, hoy: string = hoy
   }
   return null
 }
+
+/**
+ * La fecha de efecto de la OFERTA aceptada dentro del proyecto crudo (`GET
+ * /insurances/{id}`), si el vendor la trae. Desde el 25/09/2026 la fecha se
+ * mueve en el ReRate (`mainQuote.effectiveDate`), así que la del proyecto puede
+ * quedarse con la vieja mientras la oferta que se va a emitir ya lleva la nueva.
+ * Busca en profundidad un objeto con `id` = `offerId` y `effectiveDate` ISO.
+ * `null` = no encontrada: el llamador cae a la del proyecto (lo de siempre).
+ */
+export function fechaEfectoDeOferta(crudo: unknown, offerId: string | null | undefined): string | null {
+  if (!offerId) return null
+  const pila: unknown[] = [crudo]
+  let vistos = 0
+  while (pila.length > 0 && vistos < 5000) {
+    const v = pila.pop()
+    vistos++
+    if (Array.isArray(v)) {
+      for (const x of v) pila.push(x)
+    } else if (v && typeof v === 'object') {
+      const o = v as Record<string, unknown>
+      const id = typeof o.id === 'number' ? String(o.id) : o.id
+      const fecha = typeof o.effectiveDate === 'string' ? o.effectiveDate.slice(0, 10) : null
+      if (id === offerId && fecha && RE_FECHA_ISO.test(fecha)) return fecha
+      for (const x of Object.values(o)) if (x && typeof x === 'object') pila.push(x)
+    }
+  }
+  return null
+}

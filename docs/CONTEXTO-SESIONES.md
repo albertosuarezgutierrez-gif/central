@@ -635,6 +635,17 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Correduría · emisión: el doc decía «sin envío al vendor» y ya emite
+- Medido en BD: 2 proyectos `emitida` (Allianz 17/09 pól. 61048939, Reale 23/09). Corregidos `apps/asegura/CLAUDE.md` («flag que nunca se activó»), `CORREDURIA-CRM-VISION.md` §4/§9 y la skill `correduria-crm`.
+- Límite real: solo se emite desde «Retarificar» de una póliza auto/moto. Negocio nuevo (`*-nuevo`), hogar/vida/salud/decesos y proyectos hechos a mano en Avant2 (p. ej. 40842815, Allianz de Pablo Guzmán Pueyo, ML 250) NO se emiten ni importan por id → se emiten en Avant2 y entran por CIMA.
+- «📄 Subir póliza» NO escribe `polizas` (solo documento + `portal_poliza_declarada`): no sirve para registrar una emitida fuera.
+- Pendiente con spec + OK: importar proyecto de Avant2 por id y emitir negocio nuevo.
+- Retarificar (auto): la fecha de efecto arranca en el VENCIMIENTO de la póliza si es fiable (viva, no cancelada, no emitida nuestra) y cae en [hoy, hoy+90]; si no, mañana (regla de Alberto: misma fecha). Moto no cambia.
+- Hecho (25/09 tarde): ReRate manda `mainQuote.effectiveDate` si el corredor cambia la fecha en el panel de emisión (campo obligatorio, arranca en la cotizada) → rescata cotizaciones caducadas; `/emitir` mira la fecha de la OFERTA aceptada. Bug corregido: `encontrarPrecio` cogía el 1er precio de compañía+nivel (Reale da 8) → desempata por producto+prima. «Válido hasta» visible. Specs: importar proyecto Avant2 y rediseño precios/config por compañía (`docs/superpowers/specs/2026-09-25-*`). Sin probar en real.
+- Ofertas iniciales: `offers[]` existe sin ReRate y apunta al precio por `$ref` → `Precio.ofertaId` + botón de coberturas por FILA (gratis). No todo precio tiene oferta. Informe PDF de ofertas = una sola descarga. Sin firma electrónica. brokerFee = honorarios al cliente (ojo cumplimiento).
+- Coberturas (25/09 noche): puerto `GET /api/operador/codeoscopic/coberturas` (gratis, por oferta tras ReRate) + botón en el panel de emisión; `formattedOptions` → desplegable «opciones» por fila. `included` ausente = «ver detalle», nunca ✗.
+- Hallazgo: el ReRate de Codeoscopic admite `mainQuote.effectiveDate` (doc pública) y nuestro `reRate()` nunca la manda; rescataría cotizaciones caducadas sin otro 0,50€. Pendiente OK de Alberto a una prueba real + spec.
+
 ## (25/09/2026) Correduría · pestaña Contactos más clara
 - Alberto: «no es nada clara». Portal: sin el párrafo de «no hay nada que hacer» cuando ya entra (va al `title`), las 3 acciones en una fila con rótulos cortos sin repetir el nombre.
 - Personas: el formulario de autorización (alcance) va PLEGADO detrás de su botón, y ese botón pasa a secundario: el caso normal (nadie ve nada de nadie) ya no parece una tarea pendiente.

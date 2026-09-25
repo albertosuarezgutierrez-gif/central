@@ -23,3 +23,26 @@ export function fechaEfectoInicial(
   const topeIso = tope.toISOString().slice(0, 10)
   return guardada >= hoy && guardada <= topeIso ? guardada : porDefecto
 }
+
+/**
+ * La fecha de efecto por defecto al retarificar una póliza de la cartera.
+ *
+ * Regla de Alberto (25/09/2026): si la póliza está en cartera y su vencimiento
+ * es FIABLE, la nueva se emite con **la misma fecha** que el vencimiento — ni un
+ * día de hueco sin seguro ni un día solapado con la vieja. Fiable = lo trae
+ * CIMA (póliza viva) y no es una emitida nuestra, cuyo vencimiento es el
+ * provisional «emisión + 1 año»; eso lo decide el llamador y pasa `null` si no.
+ *
+ * Solo se usa si la compañía lo admite (entre hoy y hoy+`maxDias`). Si ya pasó
+ * o queda más lejos, se cae a `manana`, como antes: esa sigue siendo la fecha
+ * que siempre cumple la ventana del vendor.
+ */
+export function fechaEfectoPorDefecto(
+  vencimientoFiable: string | null,
+  hoy: string,
+  manana: string,
+  maxDias = 90,
+): string {
+  const v = vencimientoFiable?.slice(0, 10)
+  return fechaEfectoInicial(v, hoy, manana, maxDias)
+}
