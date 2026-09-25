@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-25T12:57:49Z",
-  "sha": "b57bfcbdb33784f11a8fe5f576c481c78afbfdd4",
+  "generadoEn": "2026-09-25T14:38:01Z",
+  "sha": "654d9281f139d458c908b1d6a812f16bbe597a34",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3907,7 +3907,7 @@
           "exportada": false,
           "params": "c: Campo, f: Valores, setF: React.Dispatch<React.SetStateAction<Valores>>",
           "retorno": null,
-          "linea": 197
+          "linea": 205
         },
         {
           "nombre": "cambiosRespectoA",
@@ -3915,7 +3915,7 @@
           "exportada": true,
           "params": "original: Valores, actual: Valores, leido: boolean",
           "retorno": "Partial<Record<CampoMisDatos, string | null>>",
-          "linea": 218,
+          "linea": 226,
           "resumen": "Qué viaja. Puro y exportado para el guardián: es la regla de «solo lo que cambió», y la de que un canal no viaja vacío."
         },
         {
@@ -3924,7 +3924,7 @@
           "exportada": false,
           "params": "l: Exclude<LecturaMisDatos, { estado: 'ok' }>",
           "retorno": "string",
-          "linea": 237
+          "linea": 245
         },
         {
           "nombre": "desenlace",
@@ -3932,13 +3932,13 @@
           "exportada": true,
           "params": "estado: string | undefined, motivo?: string, campo?: string | null, campos?: string[]",
           "retorno": "Estado",
-          "linea": 255,
+          "linea": 263,
           "resumen": "El desenlace, en las palabras de quien lo lee. Está fuera del componente y es puro para que el guardián pueda comprobar lo único que no se puede equivocar: que **ningún camino que no haya guardado dig"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4c4271974a01"
+      "hash": "dd7265779a11"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/page.tsx",
@@ -4913,18 +4913,27 @@
           "resumen": "Interruptor de avisos por notificación push (12/09/2026), dentro del panel de la campana: es el sitio natural — «avisos» es justo lo que esto añade como canal. 🚨 Sin `NEXT_PUBLIC_VAPID_PUBLIC_KEY` (o"
         },
         {
+          "nombre": "PreferenciasAvisos",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": null,
+          "linea": 112,
+          "resumen": "Qué novedades de la compañía (llegan por CIMA) avisa la notificación. Solo se pinta con el push activo: sin él no hay nada que elegir. Si no se pueden leer se DICE — unas casillas pintadas por defecto"
+        },
+        {
           "nombre": "urlBase64ToUint8Array",
           "kind": "function",
           "exportada": false,
           "params": "base64: string",
           "retorno": "Uint8Array<ArrayBuffer>",
-          "linea": 99,
+          "linea": 156,
           "resumen": "VAPID exige la clave pública como `Uint8Array`, y el navegador la da en base64url."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "cfde1b0f9471"
+      "hash": "fc6bf57e2595"
     },
     {
       "ruta": "apps/asegura-portal/app/api/acceso/solicitar/route.ts",
@@ -5195,6 +5204,46 @@
       "tablas": [],
       "rutaApi": "/api/contacto-compania/[compania]",
       "hash": "07693843f1f8"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/cron/avisos-cima/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 38,
+          "resumen": "GET /api/cron/avisos-cima — push de lo que ha traído CIMA: recibo nuevo al cobro, recibo devuelto y movimientos de un siniestro. Corre después de la segunda ingesta del día. 🔒 Los permisos NO se reca"
+        },
+        {
+          "nombre": "conAccesoTotal",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: TitularPortal",
+          "retorno": "boolean",
+          "linea": 160,
+          "resumen": "Solo «Acceso total»: con «Solo ver» el tercero mira, no gestiona, y el aviso le serviría el dato."
+        },
+        {
+          "nombre": "aPolizas",
+          "kind": "function",
+          "exportada": false,
+          "params": "titulares: TitularPortal[], ajena: boolean",
+          "retorno": "PolizaParaAviso[]",
+          "linea": 164
+        }
+      ],
+      "tablas": [
+        "next"
+      ],
+      "rutaApi": "/api/cron/avisos-cima",
+      "hash": "2786f44db08d"
     },
     {
       "ruta": "apps/asegura-portal/app/api/cron/avisos-push/route.ts",
@@ -5803,6 +5852,36 @@
       "tablas": [],
       "rutaApi": "/api/push/desuscribir",
       "hash": "69467fa0affb"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/push/preferencias/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 11,
+          "resumen": "GET/POST /api/push/preferencias — qué avisos de CIMA (recibos, siniestros) quiere el cliente."
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 19
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/push/preferencias",
+      "hash": "5424da2575ac"
     },
     {
       "ruta": "apps/asegura-portal/app/api/push/suscribir/route.ts",
@@ -7466,6 +7545,36 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "dbfbca9acc18"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/avisos-preferencias.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "preferenciasDeSesion",
+        "cambiarPreferenciaDeSesion"
+      ],
+      "funciones": [
+        {
+          "nombre": "preferenciasDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<PreferenciasAvisos | null>",
+          "linea": 9,
+          "resumen": "Qué avisos de CIMA tiene encendidos la identidad de la cookie. Sin fila = encendido."
+        },
+        {
+          "nombre": "cambiarPreferenciaDeSesion",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoAvisoCima, activo: boolean",
+          "retorno": "Promise<boolean>",
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "29bedbdb9595"
     },
     {
       "ruta": "apps/asegura-portal/lib/canal-email.ts",
@@ -10712,7 +10821,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 31
+          "linea": 30
         },
         {
           "nombre": "fichaGestor",
@@ -10720,7 +10829,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Record<string, unknown>",
-          "linea": 44,
+          "linea": 43,
           "resumen": "Ficha `SoftwareApplication` gratuita. Es lo que le dice a un buscador que esto es una herramienta y no un artículo, y que su precio es 0. El nombre y el operador salen de `MEDIADOR`, no se teclean."
         },
         {
@@ -10729,12 +10838,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 59
+          "linea": 58
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5b5d383d724d"
+      "hash": "e4fcbd0a5870"
     },
     {
       "ruta": "apps/asegura-web/app/icon.tsx",
@@ -10903,7 +11012,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 26,
+          "linea": 25,
           "resumen": "Palomita de las garantías del hero. Trazo grueso, como el suyo."
         },
         {
@@ -10912,7 +11021,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 34
+          "linea": 33
         },
         {
           "nombre": "IconoRamo",
@@ -10920,7 +11029,7 @@
           "exportada": false,
           "params": "{ slug }: { slug: string }",
           "retorno": null,
-          "linea": 47,
+          "linea": 46,
           "resumen": "Iconos de los ramos. Trazo de `currentColor`, así que heredan el color de su cuadro. Dibujados a mano en vez de traer una librería: son cinco glifos y una dependencia entera es peso que paga el visita"
         },
         {
@@ -10929,12 +11038,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 140
+          "linea": 139
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f38573436cce"
+      "hash": "7c938f6b6878"
     },
     {
       "ruta": "apps/asegura-web/app/quienes-somos/page.tsx",
@@ -11259,7 +11368,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fbd78d65b73e"
+      "hash": "11ad3a8f0cef"
     },
     {
       "ruta": "apps/asegura-web/components/EnlaceMedido.tsx",
@@ -11300,7 +11409,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "50fdd8f6d340"
+      "hash": "a38eda7429de"
     },
     {
       "ruta": "apps/asegura-web/components/Formulario.tsx",
@@ -11352,26 +11461,6 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "07aa38300355"
-    },
-    {
-      "ruta": "apps/asegura-web/components/Reveal.tsx",
-      "ambito": "apps/asegura-web",
-      "exporta": [
-        "Reveal"
-      ],
-      "funciones": [
-        {
-          "nombre": "Reveal",
-          "kind": "function",
-          "exportada": true,
-          "params": "{ children, delay = 0, className, }: { children: ReactNode delay?: number className?: string }",
-          "retorno": null,
-          "linea": 15
-        }
-      ],
-      "tablas": [],
-      "rutaApi": null,
-      "hash": "c476ca9b6132"
     },
     {
       "ruta": "apps/asegura-web/components/VentanaRenovacion.tsx",
@@ -12610,13 +12699,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 19,
-          "resumen": "GET /api/cron/felicitaciones — felicita el cumpleaños a los clientes en vigor (correo + campana del portal). Diario a las 07:00 UTC (`vercel.json`). `CRON_SECRET` por Bearer. Modo cuenta salvo `ASEGUR"
+          "linea": 21,
+          "resumen": "GET /api/cron/felicitaciones — felicita el cumpleaños a los clientes en vigor (correo + campana del portal). Diario a las 07:00 UTC y otra pasada a las 16:00 UTC (`?pase=tarde`, `vercel.json`): la seg"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cron/felicitaciones",
-      "hash": "cbaa7e24f2be"
+      "hash": "fc90e55875f9"
     },
     {
       "ruta": "apps/asegura/app/api/cron/revision-anual/route.ts",
@@ -12953,6 +13042,27 @@
       ],
       "rutaApi": "/api/operador/cliente/dni",
       "hash": "da454c120e09"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/cliente/fusion/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 23,
+          "resumen": "/api/operador/cliente/fusion — fusionar dos fichas de la misma persona. GET ?id= → las otras fichas con el MISMO DNI (candidatas). GET ?id=&con= → las dos fichas comparadas campo a campo. POST {id, co"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/cliente/fusion",
+      "hash": "b84de653b98b"
     },
     {
       "ruta": "apps/asegura/app/api/operador/cliente/historial/route.ts",
@@ -14647,7 +14757,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/operador/poliza",
-      "hash": "6a91379204b9"
+      "hash": "8e1956b6cba0"
     },
     {
       "ruta": "apps/asegura/app/api/operador/portal/invitaciones/route.ts",
@@ -17843,7 +17953,7 @@
           "nombre": "leerIntervinientes",
           "kind": "function",
           "exportada": false,
-          "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, idsPolizas: string[],",
+          "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, idsPolizas: string[], /** NIF del tomador (índice ciego). Una fila con el MISMO NIF es el tomador * aunque CIMA la cuelgue de otra ficha suya duplicada: mismo id",
           "retorno": "Promise<IntervinienteFicha[] | null>",
           "linea": 912,
           "resumen": "Los intervinientes de las pólizas del cliente, ya descifrados. Nombre, teléfono y email del interviniente van cifrados (95 de 95 en las pólizas vivas). Cuando CIMA lo enlaza a su PROPIA ficha (`client"
@@ -17854,7 +17964,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 973,
+          "linea": 978,
           "resumen": "`true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío."
         },
         {
@@ -17863,7 +17973,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, polizaId: string, matricula: string | null, datos: Record<string, unknown> | null, datosGemela: Record<string, unknown> | null,",
           "retorno": "Promise<VehiculoConocido>",
-          "linea": 1002,
+          "linea": 1007,
           "resumen": "- por eso cada una viaja con su procedencia y NUNCA se elige sola. Si la consulta falla, `versiones` queda `[]` y marca/modelo siguen valiendo: no se tumba la pantalla por no haber podido mirar el his"
         },
         {
@@ -17872,7 +17982,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<OrigenRetarificacion | null>",
-          "linea": 1065
+          "linea": 1070
         },
         {
           "nombre": "clienteOrigenDe",
@@ -17880,7 +17990,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<ClienteOrigen | null>",
-          "linea": 1215,
+          "linea": 1220,
           "resumen": "La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no desde una póliza de la cartera). Misma discipl"
         },
         {
@@ -17889,7 +17999,7 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 1265,
+          "linea": 1270,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
         }
       ],
@@ -17898,7 +18008,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "61aba8dd42df"
+      "hash": "d11820be7c6e"
     },
     {
       "ruta": "apps/asegura/lib/cartera-filtro.ts",
@@ -18020,6 +18130,97 @@
       ],
       "rutaApi": null,
       "hash": "7163b974a083"
+    },
+    {
+      "ruta": "apps/asegura/lib/cartera-fusion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Fusionar dos fichas de la misma persona desde la pantalla (25/09/2026). Tres cosas y nada más: - `candidatasFusion`: otras fichas con el MISMO DNI (índice ciego). Es la única forma en que la pantalla propone fusionar: el nombre no basta (padre e hijo homónimos, el caso de Antonio Cruz del 24/09/2026",
+      "exporta": [
+        "candidatasFusion",
+        "compararParaFusion",
+        "fusionar"
+      ],
+      "funciones": [
+        {
+          "nombre": "leido",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "ValorFusion",
+          "linea": 81
+        },
+        {
+          "nombre": "bloque",
+          "kind": "function",
+          "exportada": false,
+          "params": "...partes: (string | null | undefined)[]",
+          "retorno": "ValorFusion",
+          "linea": 86,
+          "resumen": "Varias columnas que se eligen juntas (una dirección no se mezcla a trozos)."
+        },
+        {
+          "nombre": "cuenta",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null | undefined",
+          "retorno": "ValorFusion",
+          "linea": 94,
+          "resumen": "Se ENSEÑA enmascarada, pero se compara entera (`clave`): dos IBAN que acaban igual no son el mismo."
+        },
+        {
+          "nombre": "valores",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Fila",
+          "retorno": "Partial<Record<GrupoFusion, ValorFusion>>",
+          "linea": 101
+        },
+        {
+          "nombre": "resumen",
+          "kind": "function",
+          "exportada": false,
+          "params": "c: Fila",
+          "retorno": "FichaFusion",
+          "linea": 118
+        },
+        {
+          "nombre": "leer",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, id: string",
+          "retorno": "Promise<Fila | null>",
+          "linea": 132
+        },
+        {
+          "nombre": "candidatasFusion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string",
+          "retorno": "Promise<FichaFusion[] | null>",
+          "linea": 137,
+          "resumen": "Otras fichas vivas con el mismo DNI. `null` = no se pudo consultar (≠ «no hay»)."
+        },
+        {
+          "nombre": "compararParaFusion",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, supId: string, lapId: string",
+          "retorno": "Promise<ResultadoComparacion>",
+          "linea": 161
+        },
+        {
+          "nombre": "fusionar",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, supId: string, lapId: string, deAbsorbida: unknown, confirmarSinDni: boolean, actor: string,",
+          "retorno": "Promise<ResultadoFusion>",
+          "linea": 206,
+          "resumen": "Fusiona `lapId` en `supId`. Recompara en el momento (no se fía de lo que vio la pantalla) y exige que cada grupo elegido siga siendo «distinto». `confirmarSinDni`: si una de las dos no tiene DNI, la i"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ded5777824b5"
     },
     {
       "ruta": "apps/asegura/lib/cartera-historial-riesgo.ts",
@@ -18267,7 +18468,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string, entrada: { descartar?: unknown; motivo?: unknown; actor: string },",
           "retorno": "Promise<ResultadoLeadDescartado>",
-          "linea": 229
+          "linea": 232
         },
         {
           "nombre": "anotar",
@@ -18275,14 +18476,14 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 274
+          "linea": 281
         }
       ],
       "tablas": [
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "540e23d8f7fe"
+      "hash": "ea276a8a14c7"
     },
     {
       "ruta": "apps/asegura/lib/cartera-poliza.ts",
@@ -23332,7 +23533,7 @@
           "exportada": true,
           "params": "d: DatosFelicitacion",
           "retorno": "",
-          "linea": 11
+          "linea": 18
         },
         {
           "nombre": "enviarFelicitacion",
@@ -23340,12 +23541,12 @@
           "exportada": true,
           "params": "destino: string, d: DatosFelicitacion",
           "retorno": "Promise<ResultadoFelicitacion>",
-          "linea": 32
+          "linea": 47
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "46eb5774fd4b"
+      "hash": "a162c1607182"
     },
     {
       "ruta": "apps/asegura/lib/correo-invitacion-portal.ts",
@@ -26885,12 +27086,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 19
+          "linea": 22
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d641687f2bc2"
+      "hash": "83e629b9a33b"
     },
     {
       "ruta": "apps/housesevillana/app/barrio/route.ts",
@@ -71747,7 +71948,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1ec02ff313f6"
+      "hash": "7a6b9aa4e350"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/DatosCompania.tsx",
@@ -71921,13 +72122,13 @@
           "params": "url: string, method: 'POST' | 'PATCH', body: Record<string, unknown>",
           "retorno": "Promise<string | null>",
           "linea": 14,
-          "resumen": "«Eliminar» una tarjeta del cubo Oportunidades de la ficha (25/09/2026), SIEMPRE con confirmación: nada se borra de un clic. Dos casos, y ninguno borra filas: - `historica`: póliza del volcado propuest"
+          "resumen": "«Eliminar» una tarjeta del cubo Oportunidades de la ficha (25/09/2026), SIEMPRE con confirmación: nada se borra de un clic. Dos casos, y ninguno borra filas: - `poliza`: póliza del volcado propuesta c"
         },
         {
           "nombre": "EliminarDeOportunidades",
           "kind": "function",
           "exportada": true,
-          "params": "props: { tipo: 'historica'; polizaId: string; oportunidadId?: string } | { tipo: 'oportunidad'; oportunidadId: string }",
+          "params": "props: { tipo: 'poliza'; polizaId: string; oportunidadId?: string } | { tipo: 'oportunidad'; oportunidadId: string }",
           "retorno": null,
           "linea": 22
         },
@@ -71938,7 +72139,7 @@
           "params": "{ polizaId }: { polizaId: string }",
           "retorno": null,
           "linea": 90,
-          "resumen": "Deshace un «Eliminar» de una póliza histórica: vuelve a salir como oportunidad."
+          "resumen": "Deshace un «Eliminar» de una póliza: vuelve a salir como oportunidad."
         }
       ],
       "tablas": [
@@ -71946,7 +72147,35 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "34e0e7be2495"
+      "hash": "e88cd39fc65e"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/FichasDuplicadas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "FichasDuplicadas"
+      ],
+      "funciones": [
+        {
+          "nombre": "FichasDuplicadas",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ clienteId }: { clienteId: string }",
+          "retorno": null,
+          "linea": 19
+        },
+        {
+          "nombre": "Comparar",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ clienteId, otra, onCerrar, onFusionada }: { clienteId: string; otra: Ficha; onCerrar: () => void; onFusionada: () => void }",
+          "retorno": null,
+          "linea": 67
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "dc93096095b8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/FichaTabs.tsx",
@@ -72383,7 +72612,7 @@
           "exportada": true,
           "params": "{ params, searchParams }: { params: Promise<{ id: string }> searchParams: Promise<{ tab?: string | string[] }> }",
           "retorno": null,
-          "linea": 47,
+          "linea": 48,
           "resumen": "La ficha del cliente de la correduría, DENTRO del cuadro de mando. Alberto usa una sola pantalla —esta— para todos sus negocios: la correduría es uno más. `apps/asegura` es el back (tiene la BD de la "
         },
         {
@@ -72392,12 +72621,12 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 206
+          "linea": 210
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dd1a19a16552"
+      "hash": "964badac0a64"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PedirDatos.tsx",
@@ -72844,12 +73073,12 @@
           "exportada": false,
           "params": "{ a }: { a: Aviso }",
           "retorno": null,
-          "linea": 239
+          "linea": 243
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7771f4801155"
+      "hash": "2753c26df26a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabContactos.tsx",
@@ -72917,7 +73146,7 @@
           "exportada": false,
           "params": "{ ficha }: { ficha: Ficha }",
           "retorno": null,
-          "linea": 608,
+          "linea": 611,
           "resumen": "La IDENTIDAD (DNI, nombre, fecha de nacimiento) son campos permanentes que no dependen de los datos del cliente, en una pestaña que se abre para leer un teléfono. Se pliega — pero plegar NO puede esco"
         },
         {
@@ -72926,7 +73155,7 @@
           "exportada": false,
           "params": "ficha: Ficha",
           "retorno": "'fisica' | 'juridica' | null",
-          "linea": 656,
+          "linea": 659,
           "resumen": "Qué es la ficha, para ofrecer primero los vínculos de empresa en una sociedad. Solo se afirma con lo que asegura manda: `null` es «no se sabe», y adivinarlo por el nombre es justo lo que la regla de i"
         },
         {
@@ -72935,7 +73164,7 @@
           "exportada": false,
           "params": "{ papel, quien, linea, ocupado, onQuitar }: { papel: { rol: string; etiqueta: string | null } quien: string linea: Coincidencia ocupado: string | null onQuitar: (fila: IntervinienteFicha, quien: string, dondePoliza: string) => void }",
           "retorno": null,
-          "linea": 665,
+          "linea": 668,
           "resumen": "Un papel («conductor ocasional del 1234ABC») con lo que se puede hacer con él."
         },
         {
@@ -72944,7 +73173,7 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaQuitarInterviniente, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 729
+          "linea": 732
         },
         {
           "nombre": "lineaDe",
@@ -72952,7 +73181,7 @@
           "exportada": false,
           "params": "persona: PersonaMinima, rol: string, etiqueta: string | null, filas: IntervinienteFicha[], idsPorEtiqueta: Map<string, string[]>,",
           "retorno": "Coincidencia",
-          "linea": 768
+          "linea": 771
         },
         {
           "nombre": "esLaMisma",
@@ -72960,7 +73189,7 @@
           "exportada": false,
           "params": "fila: IntervinienteFicha, persona: PersonaMinima",
           "retorno": "boolean",
-          "linea": 792,
+          "linea": 795,
           "resumen": "¿Esta fila es de esta persona? Identificador primero (la ficha enlazada) y solo se cae al nombre cuando NINGUNA de las dos lo tiene. Dos fichas distintas no se funden jamás, coincida lo que coincida e"
         },
         {
@@ -72969,7 +73198,7 @@
           "exportada": false,
           "params": "n: string | null",
           "retorno": "string | null",
-          "linea": 799
+          "linea": 802
         },
         {
           "nombre": "papelesDe",
@@ -72977,7 +73206,7 @@
           "exportada": false,
           "params": "p: { papeles: { rol: string; polizas: string[] }[] }",
           "retorno": "",
-          "linea": 805,
+          "linea": 808,
           "resumen": "Los papeles de una persona, uno por póliza (que es la unidad que se quita)."
         },
         {
@@ -72986,13 +73215,13 @@
           "exportada": false,
           "params": "ficha: Ficha",
           "retorno": "Map<string, string[]>",
-          "linea": 817,
+          "linea": 820,
           "resumen": "Etiqueta de póliza → sus ids. Es una lista porque dos pólizas pueden rotularse igual."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3658fc8b4db0"
+      "hash": "882d331389fc"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabMensajes.tsx",
@@ -76326,7 +76555,7 @@
           "exportada": false,
           "params": "{ r, enCurso, onCambiarTipo }: { r: RelacionCartera enCurso: boolean onCambiarTipo: (r: RelacionCartera, tipo: string) => void }",
           "retorno": null,
-          "linea": 807,
+          "linea": 820,
           "resumen": "«Cambiar el tipo» de un vínculo que ya existe. Va PLEGADO y en tono sutil a propósito: corregir una etiqueta es raro comparado con autorizar o quitar, y un desplegable abierto en cada vínculo conviert"
         },
         {
@@ -76335,7 +76564,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha, enCurso, onAutorizar, esSociedad }: { r: RelacionCartera nombreFicha: string enCurso: boolean onAutorizar: ( r: RelacionCartera, autoriza: boolean, extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentaci",
           "retorno": null,
-          "linea": 869,
+          "linea": 882,
           "resumen": "El alta de una autorización, con el ALCANCE siempre elegido a mano. 🚨 Hasta el 20/09/2026 esto solo existía para SOCIEDADES: entre dos personas físicas el botón simple mandaba `autorizar()` sin `alca"
         },
         {
@@ -76344,7 +76573,7 @@
           "exportada": false,
           "params": "{ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: { clienteId: string nombreFicha: string yaRelacionados: string[] ocupado: boolean onCrear: (body: Record<string, unknown>) => Promise<Respuesta",
           "retorno": null,
-          "linea": 954
+          "linea": 967
         },
         {
           "nombre": "AltaPersona",
@@ -76352,7 +76581,7 @@
           "exportada": false,
           "params": "{ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta, onCrear, onCancelar, onBuscar }: { nombreFicha: string tipoPersona: 'fisica' | 'juridica' | null ocupado: boolean /** Lo que se tecleó en el buscador, para no escribir el nombre d",
           "retorno": null,
-          "linea": 1160,
+          "linea": 1179,
           "resumen": "Crear la ficha de la persona que lleva los seguros de esta otra (el administrador de una sociedad, típicamente) y vincularla, sin salir de aquí. Por qué una ficha propia y no un campo «persona de cont"
         },
         {
@@ -76361,7 +76590,7 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaRelaciones, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 1387
+          "linea": 1406
         },
         {
           "nombre": "Campo",
@@ -76369,7 +76598,7 @@
           "exportada": false,
           "params": "{ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1404
+          "linea": 1423
         }
       ],
       "tablas": [
@@ -76377,7 +76606,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "7fe72f8d4950"
+      "hash": "2be5bd7064b6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/renovacion-sin-recibir.ts",
@@ -84745,6 +84974,36 @@
       "tablas": [],
       "rutaApi": "/api/correduria/cliente/contactos",
       "hash": "ecc585fa5c0d"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/cliente/fusion/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET",
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 14,
+          "resumen": "/api/correduria/cliente/fusion — fichas duplicadas de la misma persona. Reenvía al puerto de asegura con el secreto de operador y devuelve el mismo status y json. El `actor` sale de la sesión, nunca d"
+        },
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 25
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/cliente/fusion",
+      "hash": "e3a5238e4e96"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/cliente/nota/route.ts",
@@ -101996,13 +102255,13 @@
           "exportada": true,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 231,
+          "linea": 236,
           "resumen": "Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1386ebe00f71"
+      "hash": "100b4a46b921"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/sustituciones-aviso.ts",
@@ -106520,6 +106779,53 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "dac23fc839d3"
+    },
+    {
+      "ruta": "apps/plataforma/lib/fusion-asegura.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Fusionar dos fichas de la misma persona (25/09/2026): la red hacia el puerto de asegura (`/api/operador/cliente/fusion`). Solo desde rutas API.",
+      "exporta": [
+        "fusionAsegura",
+        "fusionarAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 7
+        },
+        {
+          "nombre": "llamar",
+          "kind": "function",
+          "exportada": false,
+          "params": "path: string, init: RequestInit",
+          "retorno": "Promise<Reenvio>",
+          "linea": 11
+        },
+        {
+          "nombre": "fusionAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "id: string, con?: string",
+          "retorno": "Promise<Reenvio>",
+          "linea": 29,
+          "resumen": "Candidatas (sin `con`) o comparación de las dos fichas (con `con`)."
+        },
+        {
+          "nombre": "fusionarAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "body: Record<string, unknown>",
+          "retorno": "Promise<Reenvio>",
+          "linea": 34
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "291e1ca50c0b"
     },
     {
       "ruta": "apps/plataforma/lib/gastos-recurrentes.ts",
@@ -142997,6 +143303,98 @@
       "hash": "eee0c226700e"
     },
     {
+      "ruta": "packages/module-seguros-portal/src/avisos-cima.ts",
+      "ambito": "packages/module-seguros-portal",
+      "resumen": "Avisos push de lo que llega de CIMA (25/09/2026): recibo nuevo al cobro, recibo devuelto y movimientos de un siniestro. Lo pidió un cliente en la demo del portal («que me avise de recibos, de la póliza y del siniestro»). Aquí se decide QUÉ es novedad y QUÉ dice la notificación; el cron (`apps/asegur",
+      "exporta": [
+        "esTipoAvisoCima",
+        "claveBase",
+        "eventosDePolizas",
+        "planificarAvisos",
+        "textoPushCima"
+      ],
+      "funciones": [
+        {
+          "nombre": "esTipoAvisoCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "v is TipoAvisoCima",
+          "linea": 51
+        },
+        {
+          "nombre": "dia",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date | null",
+          "retorno": "string | null",
+          "linea": 80
+        },
+        {
+          "nombre": "fechaIso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": "Date | null",
+          "linea": 81
+        },
+        {
+          "nombre": "masReciente",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "a: Date | null, b: Date | null",
+          "retorno": "Date | null",
+          "linea": 82
+        },
+        {
+          "nombre": "claveBase",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "polizaId: string, lista: 'recibos' | 'siniestros'",
+          "retorno": "string",
+          "linea": 84
+        },
+        {
+          "nombre": "donde",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: PolizaParaAviso",
+          "retorno": "string",
+          "linea": 86
+        },
+        {
+          "nombre": "eventosDePolizas",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizas: readonly PolizaParaAviso[]",
+          "retorno": "EventoCima[]",
+          "linea": 91,
+          "resumen": "Todo lo que hoy es «novedad posible» en lo que la identidad ve. Sin estado: el sello decide."
+        },
+        {
+          "nombre": "planificarAvisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizas: readonly PolizaParaAviso[], selladas: ReadonlySet<string>, silenciados: ReadonlySet<string>, hoy: Date,",
+          "retorno": "PlanAvisos",
+          "linea": 171,
+          "resumen": "Qué se avisa y qué se sella en silencio. - Lista visible sin `claveBase` sellada → semilla: se sella todo, no se envía nada. - Tipo silenciado por el cliente → se sella igual, para que al reactivarlo "
+        },
+        {
+          "nombre": "textoPushCima",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: readonly EventoCima[]",
+          "retorno": "",
+          "linea": 203,
+          "resumen": "Una notificación por identidad y pasada: con varias novedades, un resumen."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d1a145e0546d"
+    },
+    {
       "ruta": "packages/module-seguros-portal/src/avisos.ts",
       "ambito": "packages/module-seguros-portal",
       "resumen": "Los AVISOS de la campana: qué tiene pendiente la persona que ha entrado, en una sola lista, con un enlace al sitio donde cada cosa se resuelve. Esto es PURO a propósito: recibe lo que ya leyeron `lib/autorizaciones.ts` y `lib/obligaciones.ts` (cada uno con su frontera de identidad) y no toca la BD. ",
@@ -145349,7 +145747,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 82
+          "linea": 89
         },
         {
           "nombre": "fechaIso",
@@ -145357,7 +145755,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 85
+          "linea": 92
         },
         {
           "nombre": "importeNumero",
@@ -145365,7 +145763,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 91,
+          "linea": 98,
           "resumen": "Decimal de Prisma, string o número → número finito; cualquier otra cosa → `null`."
         },
         {
@@ -145374,7 +145772,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Record<string, unknown>[] | null",
-          "linea": 97
+          "linea": 104
         },
         {
           "nombre": "tramitacionSiniestro",
@@ -145382,13 +145780,13 @@
           "exportada": true,
           "params": "e: Entrada",
           "retorno": "TramitacionSiniestro | null",
-          "linea": 105,
+          "linea": 112,
           "resumen": "Traduce lo que guardó el CRM. Defensivo a propósito: el jsonb lo escribe otro repo y aquí llega como `unknown`; una entrada rara se descarta, no revienta la ficha de la póliza."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "371cd6babd71"
+      "hash": "602db90615a8"
     },
     {
       "ruta": "packages/module-seguros-portal/src/sugerencia-relacion.ts",
@@ -148333,6 +148731,63 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "0b556ac4cecb"
+    },
+    {
+      "ruta": "packages/module-seguros/src/fusion-fichas.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Fusionar dos fichas de la MISMA persona eligiendo, campo a campo, con qué valor se queda (Alberto, 25/09/2026: «que indique qué datos son diferentes y pueda seleccionar cuál sí y cuál no»). Puro: lo usan asegura (para validar lo que llega) y plataforma (para pintar la comparación). Los grupos son lo",
+      "exporta": [
+        "compararFichas",
+        "identidadFusion",
+        "revisarElecciones"
+      ],
+      "funciones": [
+        {
+          "nombre": "normal",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "string",
+          "linea": 70
+        },
+        {
+          "nombre": "vacio",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: ValorFusion",
+          "retorno": "boolean",
+          "linea": 79
+        },
+        {
+          "nombre": "compararFichas",
+          "kind": "function",
+          "exportada": true,
+          "params": "superviviente: Partial<Record<GrupoFusion, ValorFusion>>, absorbida: Partial<Record<GrupoFusion, ValorFusion>>,",
+          "retorno": "CampoFusion[]",
+          "linea": 87,
+          "resumen": "Compara las dos fichas grupo a grupo. «Igual» ignora mayúsculas, acentos y signos: «CL SAN VICENTE, 40» y «Cl. San Vicente 40» no piden elegir."
+        },
+        {
+          "nombre": "identidadFusion",
+          "kind": "function",
+          "exportada": true,
+          "params": "s: DniFusion, a: DniFusion",
+          "retorno": "IdentidadFusion",
+          "linea": 116
+        },
+        {
+          "nombre": "revisarElecciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "pedidos: unknown, campos: CampoFusion[]",
+          "retorno": "RevisionElecciones",
+          "linea": 132,
+          "resumen": "Valida la lista de grupos en los que el corredor ha elegido el valor de la ficha que desaparece. Solo tiene sentido elegir donde hay dos valores distintos: en «solo_absorbida» se hereda igualmente, y "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "18716ea85f08"
     },
     {
       "ruta": "packages/module-seguros/src/garantias.ts",
@@ -156894,7 +157349,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3760,
-    "funciones": 11991
+    "archivos": 3769,
+    "funciones": 12030
   }
 }
