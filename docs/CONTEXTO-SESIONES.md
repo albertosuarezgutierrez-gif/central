@@ -18,7 +18,7 @@ Horas en UTC: en invierno (desde 25/10) caen a las 15:00/19:30 de Madrid. CIMA d
 intranet; a las 09:41 UTC la cola de TIREA seguía con 155 ficheros conocidos y nada de C0058. **CIMA no cobra por
 consulta** (Alberto, 25/09): el coste de pulls extra es ~0 (Vercel/Fly); el único límite es el presupuesto de Actions.
 
-**(25/09/2026)** — IDD: cuestionario cerrado de exigencias y necesidades por ramo (motor, hogar y comunes) en el presupuesto de la ficha de póliza, en lugar del texto libre. Se guarda como la misma declaración de texto (`necesidades`, lo que el cliente firma; sin DDL) y las respuestas van a la auditoría del evento. Módulo puro `module-seguros/necesidades-idd.ts` (+5 tests, cepo visto fallar). Pendiente: avisar si la opción elegida no cubre algo pedido (las opciones aún no traen coberturas estructuradas).
+**(25/09/2026)** — IDD: cuestionario cerrado de exigencias y necesidades por ramo (motor, hogar y comunes) en el presupuesto de la ficha de póliza, en lugar del texto libre. Se guarda como la misma declaración de texto (`necesidades`, lo que el cliente firma; sin DDL) y las respuestas van a la auditoría del evento. Módulo puro `module-seguros/necesidades-idd.ts` (+5 tests, cepo visto fallar). Pendiente: avisar si la opción elegida no cubre algo pedido (las opciones aún no traen coberturas estructuradas). **Mergeado en #3573** (CI verde; ajuste de 320 px incluido; sin probar aún en pantalla).
 
 **(25/09/2026)** 🕒 **CIMA: respaldo del pull a las 07:00/14:00/18:00 UTC** (antes 08:00/14:00). Los `schedule` de Actions de
 `asegura` llegaron 4-6 h tarde el 24/09 y el de las 05:30 del 25/09 no había arrancado a las 06:47. La franja de las 18:00 dispara
