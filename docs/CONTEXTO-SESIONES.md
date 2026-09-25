@@ -587,6 +587,18 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Oportunidades: se gestionan DENTRO de la ficha del cliente (PR #3590)
+- Alberto: la página aparte «ocupa mucha pantalla». La fila de cada oportunidad (pestaña Oportunidades) se despliega
+  con «Gestionar ▾» y trae estado, acciones, **datos para tarificar** (botón al tarificador del ramo + `PedirDatos`),
+  tareas e historial plegado (`cliente/[id]/SeguimientoOportunidad.tsx`, antes `oportunidad/[id]/SeguimientoClient.tsx`).
+- `/correduria/oportunidad/<id>` solo REDIRIGE a `/correduria/cliente/<cliente>?tab=oportunidades&op=<id>` (enlaces de
+  Vencimientos, «Hoy», inicio). «Ganada» va solo en la fila (con su póliza). Cepo: `regression-correduria-secciones`.
+- «🗑️ Eliminar» (con confirmación y motivo) en las tarjetas del cubo Oportunidades: una póliza HISTÓRICA se marca
+  en `seguros.polizas.lead_descartado_at/_motivo` (quita el RAMO; «Recuperar» lo deshace); una abierta se descarta (`error_alta`).
+  Migración `apps/asegura/prisma/sql/2026-09-25a_poliza_lead_descartado.sql` **aplicada en `central` el 25/09 (12:15 UTC)**,
+  antes del merge, porque la ficha selecciona esas columnas.
+- Auditoría CRUD del panel en `docs/AUDITORIA-CORREDURIA-2026-09-25.md` (top 10 de huecos pendiente de priorizar).
+
 ## (25/09/2026) Ficha de cliente: añadir contacto con lista vacía + fechas de CIMA
 - Con los contactos leídos y VACÍOS no había botón «Añadir» (colgaba del modo «Corregir», que exige chips). Arreglado.
 - CIMA deja fecha de nacimiento y de carné en `poliza_intervinientes`, NO en `clientes`: la ingesta (repo `asegura`, `pull-persist.ts`) solo escribe nombre/DNI/tipo_persona del tomador. La ficha las rellena ya al LEER (`dePolizas` de `cartera-ficha.ts`, casando por `nif_lookup_hash` = DNI), marcadas «(póliza)».

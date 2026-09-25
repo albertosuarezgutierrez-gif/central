@@ -1,10 +1,11 @@
 import Link from 'next/link'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
-import { estaHuerfana, proximoAniversario, vencimientoOportunidad } from '@/lib/correduria/seguros-cliente'
+import { ESTADOS_ABIERTOS, estaHuerfana, proximoAniversario, vencimientoOportunidad } from '@/lib/correduria/seguros-cliente'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import type { SiniestroCartera } from '@/lib/siniestros-asegura'
 import { eur } from '@/lib/dinero'
 import { TIPOS, fmt } from './piezas'
+import EliminarDeOportunidades, { RecuperarLead } from './EliminarDeOportunidades'
 
 /**
  * Los seguros del cliente en tres cubos, cada uno una tarjeta que se pincha
@@ -22,7 +23,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
   const abiertos = new Map<string, number>()
   for (const s of siniestros ?? []) if (s.abierto) abiertos.set(s.polizaId, (abiertos.get(s.polizaId) ?? 0) + 1)
   const ctx: Ctx = { abiertos: siniestros === null ? null : abiertos, clienteId, hoy }
-  const { conNosotros, oportunidades, yaNoExiste, historicas } = reparto
+  const { conNosotros, oportunidades, yaNoExiste, historicas, descartadas } = reparto
 
   return (
     <>
@@ -36,13 +37,26 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
         {!reparto.oportunidadesLeidas && <Vacio aviso>⚠️ No se han podido leer sus oportunidades: puede haber más de las que se ven.</Vacio>}
         {!reparto.declaradasLeidas && <Vacio aviso>⚠️ No se han podido leer las pólizas que aportó desde el portal.</Vacio>}
         {oportunidades.length > 0
-          ? <Rejilla>{oportunidades.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} />)}</Rejilla>
+          ? <Rejilla>{oportunidades.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} eliminable />)}</Rejilla>
           : reparto.oportunidadesLeidas && <Vacio>Ninguna abierta. <Link href={`/correduria/cliente/${clienteId}?tab=oportunidades`}>➕ Abrir una oportunidad</Link></Vacio>}
         {historicas.length > 0 && (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
             Además, {historicas.length} póliza(s) más del volcado histórico (2013-2018, sin CIMA).{' '}
             <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>verlas</Link>
           </p>
+        )}
+        {descartadas.length > 0 && (
+          <details style={{ fontSize: 12, color: 'var(--muted)' }}>
+            <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>Eliminadas de oportunidades ({descartadas.length})</summary>
+            <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 4 }}>
+              {descartadas.map(p => (
+                <li key={p.id} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span>{TIPOS[p.tipo] ?? p.tipo}{p.numeroPoliza ? ` · nº ${p.numeroPoliza}` : ''}{p.leadDescartado ? ` · el ${fmt(p.leadDescartado.fecha.slice(0, 10))}${p.leadDescartado.motivo ? ` («${p.leadDescartado.motivo}»)` : ''}` : ''}</span>
+                  <RecuperarLead polizaId={p.id} />
+                </li>
+              ))}
+            </ul>
+          </details>
         )}
       </Cubo>
 
@@ -119,7 +133,7 @@ function avisosOportunidad(o: OportunidadDeCliente, hoy: Date): Aviso[] {
   return a
 }
 
-function TarjetaSeguro({ s, ctx }: { s: SeguroCliente; ctx: Ctx }) {
+function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: Ctx; eliminable?: boolean }) {
   let href: string
   let ramo: string
   let estado: string
@@ -131,7 +145,7 @@ function TarjetaSeguro({ s, ctx }: { s: SeguroCliente; ctx: Ctx }) {
     const p = s.poliza
     const o = s.oportunidad
     // En «oportunidad», si hay seguimiento abierto la tarjeta lleva a él: eso es lo que se trabaja.
-    href = o ? `/correduria/oportunidad/${o.id}` : `/correduria/poliza/${p.id}`
+    href = o ? `/correduria/cliente/${ctx.clienteId}?tab=oportunidades&op=${o.id}` : `/correduria/poliza/${p.id}`
     ramo = TIPOS[p.tipo] ?? p.tipo
     // Del volcado histórico, el estado y el año son de hace una década: lo que vale es que
     // estuvo con nosotros y el día/mes en que renovaba, que es cuándo hay que llamarle.
@@ -163,7 +177,7 @@ function TarjetaSeguro({ s, ctx }: { s: SeguroCliente; ctx: Ctx }) {
     }
   } else if (s.clase === 'oportunidad') {
     const o = s.oportunidad
-    href = `/correduria/oportunidad/${o.id}`
+    href = `/correduria/cliente/${ctx.clienteId}?tab=oportunidades&op=${o.id}`
     ramo = TIPOS[o.ramo ?? ''] ?? rotuloRamo(o.ramo)
     estado = ROTULO_ESTADO[o.estado]
     titulo = o.aseguradora ? `Lo tiene en ${o.aseguradora}` : 'Compañía actual sin anotar'
@@ -208,7 +222,18 @@ function TarjetaSeguro({ s, ctx }: { s: SeguroCliente; ctx: Ctx }) {
       )}
     </>
   )
-  return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
+  const tarjeta = <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
+  // «Eliminar» va FUERA del enlace (un botón dentro de un <a> no es válido) y solo en
+  // Oportunidades: la póliza histórica se marca (y su seguimiento abierto, si lo hay, se descarta);
+  // una oportunidad abierta suelta, se descarta.
+  // Una póliza perdida de la cartera viva no se ofrece: es un hecho, no una tarjeta que sobre.
+  const abiertaDe = (o: OportunidadDeCliente | null) => o !== null && (ESTADOS_ABIERTOS as readonly string[]).includes(o.estado) ? o.id : undefined
+  const quitar = !eliminable ? null
+    : s.clase === 'poliza' && s.historica ? <EliminarDeOportunidades tipo="historica" polizaId={s.id} oportunidadId={abiertaDe(s.oportunidad)} />
+      : s.clase === 'oportunidad' && abiertaDe(s.oportunidad) ? <EliminarDeOportunidades tipo="oportunidad" oportunidadId={s.oportunidad.id} />
+        : null
+  if (!quitar) return tarjeta
+  return <div style={{ display: 'grid', gap: 6, alignContent: 'start' }}>{tarjeta}{quitar}</div>
 }
 
 function Chip({ a }: { a: Aviso }) {

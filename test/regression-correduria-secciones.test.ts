@@ -84,7 +84,12 @@ test('la ficha del cliente enseña sus seguros en tres cubos y el seguimiento va
   assert.match(page, /\{tab === 'resumen' && \(\s*<SegurosCliente/)
   const seguros = leer('cliente/[id]/SegurosCliente.tsx')
   for (const cubo of ['Con nosotros', 'Oportunidades', 'Ya no existe']) assert.ok(seguros.includes(cubo), `falta el cubo «${cubo}»`)
-  assert.match(seguros, /href = `\/correduria\/oportunidad\/\$\{o\.id\}`/, 'la tarjeta de oportunidad lleva a su seguimiento')
+  assert.match(seguros, /href = `\/correduria\/cliente\/\$\{ctx\.clienteId\}\?tab=oportunidades&op=\$\{o\.id\}`/, 'la tarjeta de oportunidad lleva a su seguimiento, desplegado en la ficha')
+  // El seguimiento se gestiona DENTRO de la ficha (25/09/2026); la página suelta solo redirige.
+  const ops = leer('cliente/[id]/OportunidadesCliente.tsx')
+  assert.match(ops, /\{desplegada && <SeguimientoOportunidad /, 'la fila de la oportunidad despliega su seguimiento')
+  assert.match(ops, /useSearchParams\(\)\.get\('op'\)/, '`?op=<id>` deja desplegada esa oportunidad')
+  assert.match(leer('oportunidad/[id]/page.tsx'), /redirect\(`\/correduria\/cliente\/.*op=/, 'la ruta vieja lleva a la ficha')
   // Tres estados: un fallo al leer las oportunidades se dice, no se lee como «no tiene».
   assert.match(seguros, /!reparto\.oportunidadesLeidas/)
 })
