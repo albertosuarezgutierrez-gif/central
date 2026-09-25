@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { Suspense } from 'react'
+import BuscadorCartera from '../correduria/BuscadorCartera'
 import { getSession } from '@/lib/session'
 import { resolverAccesoCorreduria } from '@/lib/correduria-acceso'
 import { carteraAsegura, vencimientosAsegura } from '@/lib/cartera-asegura'
@@ -35,6 +37,20 @@ export default async function TarjetaCorreduria() {
     )
   }
 
+  // El buscador sale YA, sin esperar al puerto de asegura (hasta 8 s): buscar un cliente es lo más
+  // usado de la correduría y no puede depender de que carguen las cifras del día.
+  return (
+    <Tarjeta titulo="Correduría · lo que tienes entre manos" href="/correduria" enlace="Abrir Hoy">
+      <BuscadorCartera />
+      <Suspense fallback={<p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Cargando lo de hoy…</p>}>
+        <DatosCorreduria />
+      </Suspense>
+    </Tarjeta>
+  )
+}
+
+/** Tareas, vencimientos y siniestros: lo que espera al puerto de asegura, en su propio Suspense. */
+async function DatosCorreduria() {
   const hoy = hoyMadrid()
   const [rTareas, rLeads, venc, cartera] = await Promise.all([
     tareasHoyAsegura().catch(() => ({ status: 502, json: null })),
@@ -49,11 +65,7 @@ export default async function TarjetaCorreduria() {
   // Todo caído a la vez = el puerto no responde: un solo aviso, no cuatro.
   if (tareas.estado !== 'ok' && leads.estado !== 'ok' && venc?.estado !== 'ok' && cartera?.estado !== 'ok') {
     const motivo = venc ? motivoCaida(venc) : 'la cartera no ha respondido'
-    return (
-      <Tarjeta titulo="Correduría · lo que tienes entre manos" href="/correduria" enlace="Abrir Hoy">
-        <NoDisponible que="Correduría" motivo={motivo} donde={<Link href="/correduria">/correduria</Link>} />
-      </Tarjeta>
-    )
+    return <NoDisponible que="Correduría" motivo={motivo} donde={<Link href="/correduria">/correduria</Link>} />
   }
 
   const vencidas = tareas.estado === 'ok' ? tareas.tareas.filter(t => cuandoTarea(t.fechaLimite, hoy).vencida).length : 0
@@ -66,7 +78,7 @@ export default async function TarjetaCorreduria() {
   const proximas = reparto ? reparto.proximas.slice(0, 3) : []
 
   return (
-    <Tarjeta titulo="Correduría · lo que tienes entre manos" href="/correduria" enlace="Abrir Hoy">
+    <>
       <Cifras>
         {/* Tareas y llamadas NO se suman: la cola de llamadas son leads de otras compañías por
             probabilidad (cientos), y sumarlas a las tareas de seguimiento daba un «609 oportunidades
@@ -146,6 +158,6 @@ export default async function TarjetaCorreduria() {
       {venc && venc.estado !== 'ok' && (
         <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>Vencimientos no disponibles: {motivoCaida(venc)}.</p>
       )}
-    </Tarjeta>
+    </>
   )
 }

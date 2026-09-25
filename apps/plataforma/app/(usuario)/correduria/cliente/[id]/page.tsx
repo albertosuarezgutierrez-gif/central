@@ -11,8 +11,13 @@ import FichaTabs, { tabDeParametro } from './FichaTabs'
 import TabContactos from './TabContactos'
 import TabMensajes from './TabMensajes'
 import TabPolizas from './TabPolizas'
-import TabResumen from './TabResumen'
+import TabPendiente from './TabPendiente'
+import NotasCliente from './NotasCliente'
+import OportunidadesCliente from './OportunidadesCliente'
+import SegurosCliente from './SegurosCliente'
 import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
+import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
+import { ESTADOS_ABIERTOS, repartirSegurosCliente } from '@/lib/correduria/seguros-cliente'
 
 export const dynamic = 'force-dynamic'
 
@@ -44,7 +49,14 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   searchParams: Promise<{ tab?: string | string[] }>
 }) {
   const [{ id }, sp] = await Promise.all([params, searchParams])
-  const r = await fichaAsegura(id)
+  // Las oportunidades van en paralelo con la ficha: deciden el cubo «oportunidad» y el
+  // contador de su acceso. Un fallo se DECLARA (`null`), no se lee como «no tiene».
+  const [r, ops] = await Promise.all([
+    fichaAsegura(id),
+    oportunidadesClienteAsegura(id)
+      .then(x => interpretarOportunidadesCliente(x.status, x.json))
+      .catch(() => ({ estado: 'error' as const, motivo: 'red' })),
+  ])
 
   if (r.estado !== 'ok') return <NoSePudo estado={r} />
 
@@ -56,6 +68,10 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   // pestaña y qué tabla la pinta, y las tres tienen que decir lo mismo.
   const porClase: Record<ClasePolizaFicha, PolizaFicha[]> = { viva: [], pendiente_cima: [], cancelada: [], historica: [] }
   for (const p of ficha.polizas) porClase[clasificarPolizaFicha(p)].push(p)
+
+  const oportunidades: OportunidadDeCliente[] | null = ops.estado === 'ok' ? ops.oportunidades : null
+  const reparto = repartirSegurosCliente({ polizas: ficha.polizas, declaradas: ficha.declaradas, oportunidades })
+  const abiertas = oportunidades === null ? null : oportunidades.filter(o => (ESTADOS_ABIERTOS as readonly string[]).includes(o.estado)).length
 
   // Pólizas de CARTERA VIVA de la ficha (`esCarteraViva` en asegura). Es la
   // guarda del descarte: con una sola viva, la persona es un cliente de hoy.
@@ -104,22 +120,38 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
 
       <Cabecera ficha={ficha} resumen={resumen} />
 
+      {/* Los seguros primero (Alberto: «vendemos seguros»): tres cubos de tarjetas que se
+          pinchan enteras. Los accesos van debajo en la ficha y arriba en cada sección. */}
+      {tab === 'resumen' && (
+        <SegurosCliente reparto={reparto} siniestros={ficha.siniestros} clienteId={ficha.id} hoy={new Date()} />
+      )}
+
       <FichaTabs
         clienteId={ficha.id}
         activa={tab}
         contadores={{
-          polizas: { n: porClase.viva.length, title: 'pólizas vivas confirmadas por CIMA' },
-          contactos: { n: personas === null ? null : personas.length, title: 'personas en sus pólizas' },
-          documentos: { n: resumen.documentosPendientes, tono: 'aviso', title: 'documentos pedidos y aún sin recibir' },
+          resumen: { n: reparto.conNosotros.length, texto: n => `${n} con nosotros` },
+          oportunidades: { n: abiertas, texto: n => `${n} abierta(s)` },
+          pendiente: accion.estado === 'accion' && accion.urgente ? { n: 1, tono: 'malo', texto: () => 'urgente' } : undefined,
+          polizas: { n: ficha.polizas.length, texto: n => `${n} en total` },
+          contactos: { n: personas === null ? null : personas.length },
+          documentos: { n: resumen.documentosPendientes, tono: 'aviso', texto: n => `${n} pedido(s)` },
         }}
       />
 
-      {tab === 'resumen' && (
-        <TabResumen accion={accion} resumen={resumen} porClase={porClase} intervinientes={ficha.intervinientes} clienteId={ficha.id} telefono={contacto.telefono} declaradas={ficha.declaradas} notas={ficha.notas} />
+      {tab === 'oportunidades' && (
+        <Tarjeta titulo="💼 Oportunidades">
+          <OportunidadesCliente
+            clienteId={ficha.id}
+            telefono={contacto.telefono ?? null}
+            polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
+          />
+        </Tarjeta>
       )}
 
-      {/* Pólizas: cada una abre su ficha con recibos, siniestros, coberturas y documentos. Los
-          siniestros del cliente van aquí mismo (antes eran pestaña propia, igual que los recibos). */}
+      {tab === 'pendiente' && <TabPendiente accion={accion} resumen={resumen} vivas={porClase.viva} clienteId={ficha.id} />}
+
+      {/* Todas las pólizas en tabla, con los siniestros del cliente: la vista de consulta. */}
       {tab === 'polizas' && (
         <>
           <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} />
@@ -142,6 +174,12 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {tab === 'documentos' && (
         <Tarjeta titulo="📎 Documentos">
           <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} />
+        </Tarjeta>
+      )}
+
+      {tab === 'notas' && (
+        <Tarjeta titulo="📝 Notas">
+          <NotasCliente clienteId={ficha.id} notas={ficha.notas} />
         </Tarjeta>
       )}
 

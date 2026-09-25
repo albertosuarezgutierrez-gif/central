@@ -20,6 +20,7 @@ import { PageHeader } from '@/components/ui'
 // Un solo estilo de panel para toda la correduría: el de la ficha del cliente.
 import { Tarjeta, tarjeta, th, td, sub } from '../../cliente/[id]/piezas'
 import Plegable from './Plegable'
+import { PanelAccesos, type Acceso } from '../../Accesos'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,8 +30,12 @@ export const dynamic = 'force-dynamic'
  * documentación, siniestros, recibos»). Todo en una pantalla, cada bloque con
  * su propio «no se sabe».
  */
-export default async function PolizaPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
+export default async function PolizaPage({ params, searchParams }: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ v?: string | string[] }>
+}) {
+  const [{ id }, sp] = await Promise.all([params, searchParams])
+  const v = Array.isArray(sp.v) ? sp.v[0] : sp.v
   const r = await polizaAsegura(id)
   if (r.estado !== 'ok') return <NoSePudo estado={r} />
   const p = r.poliza
@@ -69,118 +74,153 @@ export default async function PolizaPage({ params }: { params: Promise<{ id: str
         />
       </div>
 
-      {/* ── Orden por USO (24/09/2026, mismo criterio que la ficha del cliente) ──
-          Arriba lo que se consulta con el cliente al teléfono: fechas, prima y
-          pago; qué asegura; recibos y siniestros. Después coberturas,
-          documentación y lo accionable (pedir precio, anular). Lo que se mira
-          de vez en cuando va PLEGADO al final y no se monta hasta que se abre. */}
-      {/* ── Sustitución por cambio de compañía ──────────────────────────── */}
+      {/* ── Accesos (24/09/2026, Alberto: «pincho en la póliza y me aparecen coberturas,
+          recibos, siniestros, y ya dentro de cada uno la información») ─────────
+          Arriba solo lo que identifica la póliza y un aviso de sustitución si lo hay;
+          lo demás es una baldosa con su dato, y se despliega al pulsarla. */}
       <Sustitucion p={p} />
 
-      {/* ── Fechas, prima y pago ─────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12 }}>
-        <Dato label="Efecto inicial" valor={p.fechaEfectoInicial ? fmt(p.fechaEfectoInicial) : null} nota="desde cuándo está con la compañía (la antigüedad del bonus)" />
-        <Dato label="Inicio de esta anualidad" valor={p.fechaInicio ? fmt(p.fechaInicio) : null} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
         <Dato label="Vence" valor={p.fechaVencimiento ? fmt(p.fechaVencimiento) : null} nota={anul ? (anul.enPlazo ? `para no renovar, avisar antes del ${fmt(anul.limiteAviso)}` : 'plazo de aviso pasado: renueva otro año') : cancelada ? 'cancelada' : undefined} color={anul?.enPlazo && anul.diasParaAvisar <= 60 ? 'var(--warning)' : undefined} />
         <Dato label="Prima" valor={p.prima !== null ? eur(p.prima) : null} nota={p.primaAnual !== null && p.primaBruta !== null && p.primaAnual !== p.primaBruta ? `neta ${eur(p.primaAnual)} · bruta ${eur(p.primaBruta)}` : undefined} />
         <Dato label="Forma de pago" valor={p.pago ? etiquetaFraccionamiento(p.pago.fraccionamiento) : null} nota={p.pago?.formaCobro ?? undefined} />
-        <Dato
-          label="Recargo por fraccionar"
-          valor={p.pago?.recargo.estado === 'calculado' ? `${eur(p.pago.recargo.recargoEur)} (${p.pago.recargo.recargoPct.toLocaleString('es-ES')}%)` : p.pago?.recargo.estado === 'no_aplica' ? 'no aplica (anual)' : null}
-          nota={p.pago?.recargo.estado === 'sin_datos' ? p.pago.recargo.motivo : p.pago?.recargo.estado === 'calculado' ? `${eur(p.pago.recargo.sumaRecibos)} en ${p.pago.recargo.recibos} recibos frente a ${eur(p.pago.recargo.primaAnual)}` : undefined}
-        />
+        <Dato label="Efecto inicial" valor={p.fechaEfectoInicial ? fmt(p.fechaEfectoInicial) : null} nota="antigüedad con la compañía (bonus)" />
       </div>
-      <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>
-        Contrato anual: solo se deja al vencimiento, avisando 30 días antes (LCS art. 22). Fraccionar es que la
-        compañía financia el pago y cobra por ello.
-      </p>
 
-      {/* ── Qué asegura ─────────────────────────────────────────────────── */}
-      <Tarjeta titulo="Qué asegura">
-        <Objeto p={p} />
-        {/* Solo en hogar, y solo si asegura los manda: `null` no es «no tiene capital». */}
-        {p.capitalesHogar && <CapitalesHogar caps={p.capitalesHogar} />}
-        {p.tipo === 'responsabilidad_civil' && (
-          <EditarModalidadRc
-            polizaId={p.id}
-            informadoPorCima={p.objeto !== null && p.objeto.estado === 'conocido' && !(p.objeto.nota ?? '').includes('a mano')}
-          />
-        )}
-      </Tarjeta>
-
-      {/* ── Recibos ─────────────────────────────────────────────────────── */}
-      <Recibos p={p} />
-
-      {/* ── Siniestros ──────────────────────────────────────────────────── */}
-      {/* «Confirmada por CIMA» = viva y con `id_poliza_entidad`: la misma pregunta que en la ficha.
-          «Viva» ya NO es `import_ref IS NULL` (`esCarteraViva` de @central/module-seguros: también es
-          viva la que CIMA mantiene al día sobre una fila del volcado), y quien lo decide es asegura. */}
-      <Siniestros
-        lista={p.siniestros}
-        polizas={[{ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.viva && p.idPolizaEntidad !== null }]}
-        documentos={p.listaDocumentos}
-      />
-
-      {/* ── ¿Merece la pena pedir precio? ───────────────────────────────── */}
-      {/* Visible (la evolución de la prima va plegada al final): es la que dice
-          si compensa gastar los 0,50€ de pedir precio, o sea la oportunidad. */}
-      <Estimacion
-        e={p.estimacion}
-        retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : null}
-      />
-
-      {/* ── Coberturas ──────────────────────────────────────────────────── */}
-      <Coberturas lista={p.coberturas} />
-
-      {/* ── Documentación ───────────────────────────────────────────────── */}
-      <Tarjeta titulo="📎 Documentación">
-        <Documentos polizaId={p.id} clienteId={p.cliente.id} inicial={p.listaDocumentos} sugeridos={NECESARIOS_EMISION_AUTO} />
-        {p.documentos !== null && p.listaDocumentos !== null && p.documentos > p.listaDocumentos.filter((d) => d.estado !== 'pedido').length && (
-          <p style={muted}>
-            Además hay {p.documentos - p.listaDocumentos.filter((d) => d.estado !== 'pedido').length} en la tabla antigua del CRM
-            (poliza_documentos), sin fichero accesible desde aquí.
-          </p>
-        )}
-      </Tarjeta>
-
-      <Tarjeta titulo="Anulación">
-        <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
-        <PresupuestosPoliza polizaId={p.id} />
-        <CartaMediadorPoliza polizaId={p.id} />
-      </Tarjeta>
-
-      {/* ── Plegado: consulta ocasional ─────────────────────────────────── */}
-      <Plegable titulo="Intervinientes" resumen="tomador, propietario, conductores y sus teléfonos">
-        <Intervinientes p={p} />
-      </Plegable>
-      <Plegable titulo="Evolución de la prima" resumen="por qué ha subido, anualidad a anualidad">
-        {/* La prima de cada anualidad se DERIVA de los recibos (CA/NP de
-            aniversario a aniversario). El salto a retarificar es el MISMO de
-            la cabecera y de «¿Merece la pena pedir precio?». */}
-        <EvolucionPrima
-          modo="tarjeta"
-          evolucion={p.evolucionPrima}
-          retarificar={p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : { motivo: p.retarificacion?.motivo ?? null }}
-        />
-      </Plegable>
-      <Plegable titulo="Historial del riesgo">
-        <HistorialRiesgo lista={p.historialRiesgo} />
-      </Plegable>
-      <Plegable titulo="Lo que dice la compañía por CIMA">
-        <CimaPoliza d={p.datosCompania} vigente={!cancelada} />
-      </Plegable>
-
-      <Plegable titulo="Referencias de la compañía" resumen="código DGS, id en la entidad, ramo">
-        <div style={{ ...muted, display: 'grid', gap: 4 }}>
-          <div>Código DGS de la entidad: {p.codigoEntidadDgs ?? '—'}</div>
-          <div>Id de póliza en la entidad: {p.idPolizaEntidad ?? '—'}</div>
-          <div>Ramo DGS: {p.ramoDgs ?? '—'}</div>
-          <div>Origen del registro: {p.origen}</div>
-        </div>
-      </Plegable>
+      <PanelAccesos inicial={v ?? null} accesos={accesosPoliza(p, cancelada)} />
     </div>
   )
 }
+
+/** Las baldosas de la póliza, cada una con su dato y su contenido. `null` en el dato = no se pinta: no es «0». */
+function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: React.ReactNode })[] {
+  const retarificar = p.retarificable && !cancelada ? { href: urlRetarificar(p.id), rotulo: rotuloRetarificar(p.retarificacion) } : null
+  const r = p.recibos
+  // `null` = no se pudieron leer: ni el total ni los abiertos se cuentan a ciegas.
+  const nSiniestros = p.siniestros?.length ?? null
+  const abiertos = p.siniestros?.filter(s => s.abierto).length ?? null
+  const pedidos = p.listaDocumentos === null ? null : p.listaDocumentos.filter(d => d.estado === 'pedido').length
+  return [
+    {
+      id: 'asegura', icono: (TIPOS[p.tipo] ?? '📄').split(' ')[0], titulo: 'Qué asegura',
+      detalle: p.objeto?.titulo ?? null,
+      contenido: (
+        <Tarjeta titulo="Qué asegura">
+          <Objeto p={p} />
+          {/* Solo en hogar, y solo si asegura los manda: `null` no es «no tiene capital». */}
+          {p.capitalesHogar && <CapitalesHogar caps={p.capitalesHogar} />}
+          {p.tipo === 'responsabilidad_civil' && (
+            <EditarModalidadRc
+              polizaId={p.id}
+              informadoPorCima={p.objeto !== null && p.objeto.estado === 'conocido' && !(p.objeto.nota ?? '').includes('a mano')}
+            />
+          )}
+        </Tarjeta>
+      ),
+    },
+    {
+      id: 'coberturas', icono: '🛡️', titulo: 'Coberturas',
+      detalle: p.coberturas.length > 0 ? `${p.coberturas.length}` : 'sin detalle de la compañía',
+      contenido: <Coberturas lista={p.coberturas} />,
+    },
+    {
+      id: 'recibos', icono: '🧾', titulo: 'Recibos',
+      detalle: r === null ? 'no informados' : r.devueltos > 0 ? `${r.total} · ${r.devueltos} devuelto(s)` : r.pendientes > 0 ? `${r.total} · ${r.pendientes} al cobro` : `${r.total}`,
+      tono: r && r.devueltos > 0 ? 'malo' : r && r.pendientes > 0 ? 'aviso' : undefined,
+      contenido: <Recibos p={p} />,
+    },
+    {
+      id: 'siniestros', icono: '🚨', titulo: 'Siniestros',
+      detalle: nSiniestros === null ? 'no se han podido leer' : abiertos ? `${abiertos} abierto(s) de ${nSiniestros}` : nSiniestros ? `${nSiniestros}, ninguno abierto` : 'ninguno',
+      tono: abiertos ? 'aviso' : undefined,
+      contenido: (
+        /* «Confirmada por CIMA» = viva y con `id_poliza_entidad`: la misma pregunta que en la ficha. */
+        <Siniestros
+          lista={p.siniestros}
+          polizas={[{ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.viva && p.idPolizaEntidad !== null }]}
+          documentos={p.listaDocumentos}
+        />
+      ),
+    },
+    {
+      id: 'documentos', icono: '📎', titulo: 'Documentación',
+      detalle: p.listaDocumentos === null ? null : pedidos ? `${p.listaDocumentos.length} · ${pedidos} pedido(s)` : `${p.listaDocumentos.length}`,
+      tono: pedidos ? 'aviso' : undefined,
+      contenido: (
+        <Tarjeta titulo="📎 Documentación">
+          <Documentos polizaId={p.id} clienteId={p.cliente.id} inicial={p.listaDocumentos} sugeridos={NECESARIOS_EMISION_AUTO} />
+          {p.documentos !== null && p.listaDocumentos !== null && p.documentos > p.listaDocumentos.filter((d) => d.estado !== 'pedido').length && (
+            <p style={muted}>
+              Además hay {p.documentos - p.listaDocumentos.filter((d) => d.estado !== 'pedido').length} en la tabla antigua del CRM
+              (poliza_documentos), sin fichero accesible desde aquí.
+            </p>
+          )}
+        </Tarjeta>
+      ),
+    },
+    {
+      id: 'prima', icono: '💶', titulo: 'Prima y precio',
+      detalle: retarificar ? 'se puede pedir precio' : null,
+      contenido: (
+        <>
+          {/* ¿Merece la pena gastar los 0,50€ de pedir precio? */}
+          <Estimacion e={p.estimacion} retarificar={retarificar} />
+          {p.pago?.recargo.estado === 'calculado' && (
+            <p style={muted}>
+              Recargo por fraccionar: {eur(p.pago.recargo.recargoEur)} ({p.pago.recargo.recargoPct.toLocaleString('es-ES')}%), {eur(p.pago.recargo.sumaRecibos)} en {p.pago.recargo.recibos} recibos frente a {eur(p.pago.recargo.primaAnual)}.
+            </p>
+          )}
+          {/* La prima de cada anualidad se DERIVA de los recibos (CA/NP de aniversario a aniversario). */}
+          <EvolucionPrima
+            modo="tarjeta"
+            evolucion={p.evolucionPrima}
+            retarificar={retarificar ?? { motivo: p.retarificacion?.motivo ?? null }}
+          />
+        </>
+      ),
+    },
+    {
+      id: 'intervinientes', icono: '👥', titulo: 'Intervinientes',
+      detalle: p.intervinientes === null ? null : p.intervinientes.length ? `${p.intervinientes.length}` : null,
+      contenido: <Tarjeta titulo="Intervinientes"><Intervinientes p={p} /></Tarjeta>,
+    },
+    {
+      id: 'gestion', icono: '⚙️', titulo: 'Gestión',
+      detalle: 'anular, presupuestos, carta',
+      contenido: (
+        <Tarjeta titulo="Gestión">
+          <p style={{ ...muted, marginTop: 0 }}>
+            Contrato anual: solo se deja al vencimiento, avisando 30 días antes (LCS art. 22).
+            {p.fechaInicio && <> Esta anualidad empezó el {fmt(p.fechaInicio)}.</>}
+          </p>
+          <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
+          <PresupuestosPoliza polizaId={p.id} />
+          <CartaMediadorPoliza polizaId={p.id} />
+        </Tarjeta>
+      ),
+    },
+    {
+      id: 'historial', icono: '🕘', titulo: 'Historial del riesgo',
+      detalle: p.historialRiesgo?.length ? `${p.historialRiesgo.length}` : null,
+      contenido: <Tarjeta titulo="Historial del riesgo"><HistorialRiesgo lista={p.historialRiesgo} /></Tarjeta>,
+    },
+    {
+      id: 'cima', icono: '🔗', titulo: 'CIMA y referencias',
+      contenido: (
+        <Tarjeta titulo="Lo que dice la compañía por CIMA">
+          <CimaPoliza d={p.datosCompania} vigente={!cancelada} />
+          <div style={{ ...muted, display: 'grid', gap: 4, marginTop: 12 }}>
+            <div>Código DGS de la entidad: {p.codigoEntidadDgs ?? '—'}</div>
+            <div>Id de póliza en la entidad: {p.idPolizaEntidad ?? '—'}</div>
+            <div>Ramo DGS: {p.ramoDgs ?? '—'}</div>
+            <div>Origen del registro: {p.origen}</div>
+          </div>
+        </Tarjeta>
+      ),
+    },
+  ]
+}
+
 
 const TIPOS: Record<string, string> = {
   auto: '🚗 Auto', moto: '🏍️ Moto', hogar: '🏠 Hogar', vida: '🧬 Vida', salud: '🩺 Salud',

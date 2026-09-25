@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(24/09/2026)** — Ficha de cliente y de póliza como ACCESOS (Alberto: «tiene que ser todo accesos directos… vendemos seguros»). Cliente: sus seguros en tres cubos de tarjetas que se pinchan enteras — 🛡️ con nosotros (→ póliza), 🎯 oportunidad (en la competencia: póliza cancelada/vencida/«competencia», oportunidad abierta o perdida reintentable, aportada del portal; → su seguimiento de venta) y 🗂️ ya no existe (`fin_riesgo` u oportunidad perdida «ya no lo necesita»). Regla pura `lib/correduria/seguros-cliente.ts` + test; el volcado histórico queda aparte como leads. Las pestañas pasan a baldosas (`Accesos.tsx`, `?tab=`). Póliza: cabecera + baldosas con su dato (coberturas, recibos «1 devuelto», siniestros abiertos, documentación…) que se despliegan de una en una (`PanelAccesos`, `?v=`). No existe estado «ya no existe» en BD: se deduce.
+
+**(24/09/2026)** — Inicio: la tarjeta de Correduría lleva arriba el buscador de clientes (`BuscadorCartera`, el mismo de `/correduria`). Se pinta al instante; los datos del puerto van en su propio Suspense (`DatosCorreduria`), así que un puerto lento no retrasa la búsqueda. El `?q=` que deja en la URL de `/inicio` no choca con nada.
+
 **(24/09/2026)** — Pasada `trading-analista` (repesca 23:15 UTC, la de las 20:15 abortó por IBKR caído).
 Cartera real (NAV 33.370,60€, CVX+VWCE) y libro empujados a plataforma; `/analizar` 23/24 símbolos
 (META vetada por suplantación de precio) + `/puntuar` 88 tesis, 1 cerrada por vencimiento de ventana.

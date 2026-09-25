@@ -56,17 +56,35 @@ test('la ficha de póliza usa el panel de la ficha del cliente, no uno propio', 
   assert.match(src, /className="tabla-polizas"/)
 })
 
-test('la ficha de póliza pone arriba lo que se consulta y pliega lo ocasional', () => {
+test('la ficha de póliza son ACCESOS: coberturas, recibos y siniestros se despliegan al pulsar', () => {
+  // Alberto, 24/09/2026: «pincho en la póliza y me aparecen coberturas, recibos, siniestros,
+  // y ya dentro de cada uno la información». Si alguien vuelve a apilar los bloques, la póliza
+  // vuelve a ser una columna de quince tarjetas.
   const src = leer('poliza/[id]/page.tsx')
-  const pos = (s: string) => {
-    const i = src.indexOf(s)
-    assert.ok(i >= 0, `no está «${s}»`)
-    return i
+  assert.match(src, /<PanelAccesos inicial=\{v \?\? null\} accesos=\{accesosPoliza\(p, cancelada\)\} \/>/)
+  for (const id of ['coberturas', 'recibos', 'siniestros', 'documentos', 'gestion']) {
+    assert.match(src, new RegExp(`id: '${id}'`), `falta el acceso «${id}»`)
   }
-  assert.ok(pos('<Recibos p={p} />') < pos('<Siniestros'), 'recibos van antes que siniestros')
-  assert.ok(pos('<Siniestros') < pos('<Coberturas'), 'siniestros van antes que coberturas')
-  assert.ok(pos('<Coberturas') < pos('<Plegable titulo="Intervinientes"'), 'lo plegado va al final')
-  for (const t of ['Evolución de la prima', 'Historial del riesgo', 'Lo que dice la compañía por CIMA']) {
-    assert.match(src, new RegExp(`<Plegable titulo="${t}"`), `«${t}» ya no va plegado`)
+  // Los bloques viven DENTRO de su acceso, no sueltos en la página.
+  const cuerpo = src.slice(src.indexOf('export default async function PolizaPage'), src.indexOf('function accesosPoliza'))
+  for (const bloque of ['<Recibos p={p} />', '<Coberturas', '<Siniestros']) {
+    assert.ok(!cuerpo.includes(bloque), `«${bloque}» vuelve a pintarse suelto en la página`)
   }
+})
+
+test('el panel de accesos solo monta el abierto', () => {
+  const src = leer('Accesos.tsx')
+  assert.match(src, /\{actual && \(/, 'el contenido se monta solo para el acceso abierto')
+  assert.ok(!/accesos\.map\(a => a\.contenido\)/.test(src), 'montar todos los contenidos crearía el DOM de las diez secciones')
+})
+
+test('la ficha del cliente enseña sus seguros en tres cubos y el seguimiento va dentro de la oportunidad', () => {
+  const page = leer('cliente/[id]/page.tsx')
+  assert.match(page, /repartirSegurosCliente\(/)
+  assert.match(page, /\{tab === 'resumen' && \(\s*<SegurosCliente/)
+  const seguros = leer('cliente/[id]/SegurosCliente.tsx')
+  for (const cubo of ['Con nosotros', 'Oportunidades', 'Ya no existe']) assert.ok(seguros.includes(cubo), `falta el cubo «${cubo}»`)
+  assert.match(seguros, /href = `\/correduria\/oportunidad\/\$\{o\.id\}`/, 'la tarjeta de oportunidad lleva a su seguimiento')
+  // Tres estados: un fallo al leer las oportunidades se dice, no se lee como «no tiene».
+  assert.match(seguros, /!reparto\.oportunidadesLeidas/)
 })

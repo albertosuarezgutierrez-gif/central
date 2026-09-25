@@ -1,86 +1,30 @@
 import Link from 'next/link'
 import type { ResumenFicha, SiguienteAccion } from '@central/module-seguros'
-import { type IntervinienteFicha, type NotasFicha, type PolizaDeclaradaFicha, type PolizaFicha } from '@/lib/ficha-asegura'
-import NotasCliente from './NotasCliente'
-import OportunidadesCliente from './OportunidadesCliente'
-import { Polizas, Tarjeta, etiquetaPoliza, fmt } from './piezas'
+import { type PolizaFicha } from '@/lib/ficha-asegura'
+import { Tarjeta, etiquetaPoliza, fmt } from './piezas'
 
 /**
- * La pestaña que se abre al pinchar un nombre: lo que está en vigor y lo que
- * hay que hacer con ello.
+ * El acceso «🔔 Pendiente» de la ficha: la acción que más vale hoy y la lista de
+ * cosas concretas por hacer, cada una con su enlace.
  *
- * «Pide acción» es una LISTA de cosas concretas con su enlace, no un semáforo:
- * un 🟢 se pone verde también cuando no se ha podido mirar nada, y ese es el
- * fallo más caro del repo. Aquí, cuando un dato no se ha podido leer se dice
- * —«no se han podido leer los siniestros»— en vez de contarlo como cero.
+ * Es una LISTA, no un semáforo: un 🟢 se pone verde también cuando no se ha
+ * podido mirar nada, y ese es el fallo más caro del repo. Cuando un dato no se
+ * ha podido leer se dice —«no se han podido leer los siniestros»— en vez de
+ * contarlo como cero.
  */
-export default function TabResumen({ accion, resumen, porClase, intervinientes, clienteId, telefono, declaradas, notas }: {
+export default function TabPendiente({ accion, resumen, vivas, clienteId }: {
   accion: SiguienteAccion
   resumen: ResumenFicha
-  porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]>
-  intervinientes: IntervinienteFicha[] | null
+  vivas: PolizaFicha[]
   clienteId: string
-  /** Teléfono principal de la ficha: el WhatsApp del enlace de datos va a ÉL, no a la lista de chats. */
-  telefono?: string | null
-  declaradas: PolizaDeclaradaFicha[] | null
-  /** `undefined` = el llamante no las pasa; `null` = no se pudieron leer. */
-  notas?: NotasFicha | null
 }) {
-  // Orden dictado por Alberto (24/09/2026): «prioridad pólizas y oportunidades». Lo pendiente va
-  // justo detrás en UNA tarjeta (antes «Siguiente acción» y «Pide acción» eran dos), y las notas
-  // al final. Lo urgente de verdad (recibos devueltos, siniestros) ya grita en la cabecera.
   return (
-    <>
-      <Polizas
-        titulo={`Pólizas vivas (${porClase.viva.length})`}
-        polizas={porClase.viva}
-        vacio="Ninguna póliza activa entra hoy por CIMA."
-        intervinientes={intervinientes}
-      />
-
-      {porClase.pendiente_cima.length > 0 && (
-        <Polizas
-          titulo={`📝 Emitidas, pendientes de confirmación por CIMA (${porClase.pendiente_cima.length})`}
-          nota="CIMA aún no la ha traído: no cuenta como viva ni genera avisos. Cuando la compañía la mande por CIMA se casará con esta y pasará a «Pólizas vivas»."
-          polizas={porClase.pendiente_cima}
-          vacio=""
-          intervinientes={intervinientes}
-        />
-      )}
-
-      {(porClase.cancelada.length > 0 || porClase.historica.length > 0 || (declaradas !== null && declaradas.length > 0)) && (
-        <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-          {porClase.cancelada.length > 0 && `${porClase.cancelada.length} cancelada(s) en CIMA`}
-          {porClase.cancelada.length > 0 && porClase.historica.length > 0 && ' · '}
-          {porClase.historica.length > 0 && `${porClase.historica.length} del volcado histórico`}
-          {(porClase.cancelada.length > 0 || porClase.historica.length > 0) && declaradas !== null && declaradas.length > 0 && ' · '}
-          {declaradas !== null && declaradas.length > 0 && `${declaradas.length} aportada(s) desde el portal, de otra compañía`}
-          {' → '}
-          <Link href={`/correduria/cliente/${clienteId}?tab=polizas`}>ver en Pólizas</Link>
-        </p>
-      )}
-
-      <Tarjeta titulo="💼 Oportunidades">
-        <OportunidadesCliente
-          clienteId={clienteId}
-          telefono={telefono ?? null}
-          polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
-        />
-      </Tarjeta>
-
-      <Tarjeta titulo="🔔 Pendiente">
-        <div style={{ display: 'grid', gap: 10 }}>
-          <SiguienteAccionFicha accion={accion} />
-          <PideAccion resumen={resumen} vivas={porClase.viva} clienteId={clienteId} />
-        </div>
-      </Tarjeta>
-
-      {notas !== undefined && (
-        <Tarjeta titulo="📝 Notas">
-          <NotasCliente clienteId={clienteId} notas={notas} />
-        </Tarjeta>
-      )}
-    </>
+    <Tarjeta titulo="🔔 Pendiente">
+      <div style={{ display: 'grid', gap: 10 }}>
+        <SiguienteAccionFicha accion={accion} />
+        <PideAccion resumen={resumen} vivas={vivas} clienteId={clienteId} />
+      </div>
+    </Tarjeta>
   )
 }
 
