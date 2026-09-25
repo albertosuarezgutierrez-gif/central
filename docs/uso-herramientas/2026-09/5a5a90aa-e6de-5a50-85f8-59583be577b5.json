@@ -1,52 +1,54 @@
 {
  "sesion": "5a5a90aa-e6de-5a50-85f8-59583be577b5",
  "inicio": "2026-09-25T12:26:30.215Z",
- "fin": "2026-09-25T12:42:30.903Z",
- "llamadas": 30,
+ "fin": "2026-09-25T13:13:25.966Z",
+ "llamadas": 109,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 14,
-   "chars_in": 1769,
-   "chars_out": 43334,
+   "llamadas": 15,
+   "chars_in": 1892,
+   "chars_out": 45712,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Grep": 9,
-    "Read": 5
+    "Read": 6
    }
   },
   "otro": {
-   "llamadas": 2,
-   "chars_in": 128,
-   "chars_out": 240,
+   "llamadas": 11,
+   "chars_in": 8603,
+   "chars_out": 142166,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 2
+    "ToolSearch": 4,
+    "ReadNotifications": 6,
+    "SubagentHandback": 1
    }
   },
   "sql": {
-   "llamadas": 2,
-   "chars_in": 770,
-   "chars_out": 1505,
+   "llamadas": 16,
+   "chars_in": 7223,
+   "chars_out": 29053,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 2
+    "mcp__Supabase__execute_sql": 16
    }
   },
   "bash": {
-   "llamadas": 10,
-   "chars_in": 5036,
-   "chars_out": 10607,
+   "llamadas": 56,
+   "chars_in": 47544,
+   "chars_out": 207241,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 10
+    "Bash": 56
    }
   },
   "mcp:github": {
@@ -69,6 +71,41 @@
    "chars_citados": 0,
    "tools": {
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 5,
+   "chars_in": 41429,
+   "chars_out": 115961,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 4,
+    "Edit": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 3,
+   "chars_in": 30237,
+   "chars_out": 423,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__apply_migration": 2,
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 2291,
+   "chars_out": 2476,
+   "errores": 0,
+   "archivos_citados": 7,
+   "chars_citados": 45136,
+   "tools": {
+    "Agent": 1
    }
   }
  }
