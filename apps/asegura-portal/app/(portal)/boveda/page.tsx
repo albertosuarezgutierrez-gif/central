@@ -310,7 +310,7 @@ export default async function Boveda({
   // se compara ningún `tipoPersona` a mano.
   const bloques = agruparCartera([
     ...cartera.propias.map((t) => ({ ...t, propia: true })),
-    ...cartera.autorizadas.map((t) => ({ ...t, propia: false })),
+    ...cartera.autorizadas.map((t) => ({ ...t, propia: false, representada: t.autorizacion?.via === 'dueno' })),
   ])
   const bloqueMias = bloques.find((b) => b.grupo === 'mias') ?? null
   // «Tus seguros» ya tiene su sección propia abajo (con los estados vacíos y

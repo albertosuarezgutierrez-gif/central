@@ -71,6 +71,7 @@ import { decryptField } from '@central/module-seguros-pii'
 
 import { prisma } from './db'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
+import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
 /**
@@ -274,6 +275,8 @@ export type TitularPortal = {
      * no las demás de quien la dio. Ver no basta para declarar.
      */
     partes: string[]
+    /** `'dueno'` = no es una autorización: es su EMPRESA (relación `Dueño`). No se «deja de ver». */
+    via?: 'dueno'
   }
   polizas: PolizaPortal[]
 }
@@ -443,6 +446,15 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const propiosIds = vinculos.map((v) => v.clienteId)
   const nivelPorCliente = new Map(vinculos.map((v) => [v.clienteId, nivelDeVinculo(v.nivel)]))
 
+  // ── Las EMPRESAS de las que es DUEÑO (25/09/2026) ─────────────────────────
+  // Decisión de Alberto: el dueño ve su empresa entera sin que nadie lo active. Se DERIVA de la
+  // relación `Dueño` en cada lectura (ver `empresasDelDueno` del módulo): no se escribe ninguna fila,
+  // así que borrar la relación lo corta en la siguiente visita. Solo desde fichas con nivel para
+  // gestionar (un vínculo `tarjeta` no representa a nadie).
+  const representadasIds = (
+    await empresasDeFichas(vinculos.filter((v) => nivelDeVinculo(v.nivel) !== 'tarjeta'))
+  ).filter((id) => !propiosIds.includes(id))
+
   // ── Lo AJENO: quién me ha autorizado ──────────────────────────────────────
   //
   // 🚨 Hasta el 03/09/2026 esto salía de `cliente_relaciones.puede_ver_polizas`,
@@ -532,6 +544,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     if (!esAlcance(f.alcance)) continue
     if (!autorizacionVigente(f, ahora)) continue
     if (propiosIds.includes(f.otorganteClienteId)) continue
+    // Si además es dueño, gana el acceso de dueño y la empresa no sale dos veces.
+    if (representadasIds.includes(f.otorganteClienteId)) continue
     vigentes.push(f)
   }
 
@@ -565,7 +579,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   }
   const autorizadosIds = [...new Set([...porOtorgante.keys(), ...otorganteDePoliza.values()])]
 
-  const todosIds = [...propiosIds, ...autorizadosIds]
+  const todosIds = [...propiosIds, ...autorizadosIds, ...representadasIds]
   const [clientes, polizas] = await Promise.all([
     prisma.cliente.findMany({
       where: { id: { in: todosIds }, mergedIntoClienteId: null },
@@ -976,6 +990,22 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       autorizacion: { ids: idsFinales, alcances: alcancesFinales, caducaEn: caduca, partes: [...conPartes] },
     })
     autorizacionesUsadas.push(...idsFinales)
+  }
+
+  // Las empresas del dueño: acceso TOTAL de sociedad (CIF, cuenta, dar parte), como las de un
+  // representante. Van con las ajenas porque NO son su ficha —«Mis datos», mensajes y la hoja QR
+  // siguen solo sobre la personal— pero `via: 'dueno'` las lleva al cajón «Seguros de tus empresas».
+  // 🚨 No entran en `autorizacionesUsadas`: el dueño no es un tercero, no hay visita que anotar.
+  const camposDueno = camposDeAlcances(['total'], 'juridica')
+  for (const clienteId of representadasIds) {
+    if (camposDueno === null) break
+    const t = titular(clienteId, 'gestionar', camposDueno)
+    if (t === null) continue
+    autorizadas.push({
+      ...t,
+      nivel: etiquetaNivelAlcances(['total']),
+      autorizacion: { ids: [], alcances: ['total'], caducaEn: null, partes: t.polizas.map((p) => p.id), via: 'dueno' },
+    })
   }
 
   return {

@@ -283,8 +283,8 @@ test('la lista no corta por «no tiene vínculo» — el cepo muerde', () => {
 
   const conElCorteViejo = mutar(
     src,
-    'const vinculos = await fichasDeIdentidad(identidadId)\n\n  const misIds',
-    'const vinculos = await fichasDeIdentidad(identidadId)\n  if (vinculos.length === 0) return SIN_NADA\n\n  const misIds',
+    'const vinculos = await fichasOtorgablesDe(identidadId)\n\n  const misIds',
+    'const vinculos = await fichasOtorgablesDe(identidadId)\n  if (vinculos.length === 0) return SIN_NADA\n\n  const misIds',
   )
   assert.notDeepEqual(fallosListaSinVinculo(conElCorteViejo), [], 'el corte viejo tiene que disparar el cepo')
 

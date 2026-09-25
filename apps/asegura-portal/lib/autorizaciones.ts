@@ -47,6 +47,7 @@ import {
 import { permiteAutorizar, SIN_VINCULO, WHERE_CARTERA_VIVA } from '@central/module-seguros'
 
 import { prisma } from './db'
+import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
 /**
@@ -409,6 +410,28 @@ async function fichasDeIdentidad(identidadId: string) {
   })
 }
 
+/**
+ * Las fichas desde las que esta identidad puede AUTORIZAR (25/09/2026): las suyas y, además, las
+ * EMPRESAS de las que es dueña (relación `Dueño`, ver `empresasDeFichas`). Decisión de Alberto: el
+ * dueño ve su empresa y es él quien autoriza a su administrativo o a su contable. La fila de la
+ * autorización queda con la empresa como otorgante y `otorgado_por_identidad_id` = el dueño, que es
+ * quien consta como que la concedió.
+ *
+ * 🚨 Solo para conceder, ampliar, resolver y listar. `registrarUso` y todo lo que escribe en la
+ * ficha PERSONAL siguen con `fichasDeIdentidad`: el dueño no es la empresa.
+ */
+async function fichasOtorgablesDe(identidadId: string) {
+  const propias = await fichasDeIdentidad(identidadId)
+  const empresas = await empresasDeFichas(propias.filter((v) => nivelPuedeAutorizar(nivelDeVinculo(v.nivel))))
+  const nuevas = empresas.filter((id) => !propias.some((v) => v.clienteId === id))
+  if (nuevas.length === 0) return propias
+  const filas = await prisma.cliente.findMany({
+    where: { id: { in: nuevas }, mergedIntoClienteId: null },
+    select: { id: true, correduriaId: true },
+  })
+  return [...propias, ...filas.map((f) => ({ clienteId: f.id, correduriaId: f.correduriaId, nivel: 'gestionar' }))]
+}
+
 type FichaVista = { nombre: string; tipo: TipoOtorgante }
 
 /**
@@ -453,7 +476,7 @@ export async function autorizacionesDeIdentidad(identidadId: string): Promise<Au
   // `autorizadoIdentidadId`, que es exactamente esta identidad. `otorgablesIds`
   // también queda vacío, así que `puedeAutorizar` es `false` y no se le ofrece
   // conceder nada — que es lo correcto: no tiene pólizas que ceder.
-  const vinculos = await fichasDeIdentidad(identidadId)
+  const vinculos = await fichasOtorgablesDe(identidadId)
 
   const misIds = vinculos.map((v) => v.clienteId)
   const misIdsSet = new Set(misIds)
@@ -781,7 +804,7 @@ export async function conceder(datos: {
     }
   }
 
-  const vinculos = await fichasDeIdentidad(identidadId)
+  const vinculos = await fichasOtorgablesDe(identidadId)
   const mio = vinculos.find((v) => v.clienteId === otorganteClienteId)
   if (!mio) {
     return { ok: false, error: 'ficha_no_tuya', mensaje: 'Esa ficha no es tuya.' }
@@ -1019,7 +1042,7 @@ export async function ampliarATotal(datos: {
   if (!UUID.test(datos.autorizacionId)) {
     return { ok: false, error: 'datos_invalidos', mensaje: 'No hemos encontrado ese acceso.' }
   }
-  const vinculos = await fichasDeIdentidad(datos.identidadId)
+  const vinculos = await fichasOtorgablesDe(datos.identidadId)
   // El filtro por MIS fichas va dentro del `where`, junto al id: con el uuid de
   // una autorización ajena la lectura sería un éxito y el fallo no se vería.
   const base = await prisma.portalAutorizacion.findFirst({
@@ -1215,7 +1238,7 @@ export async function resolver(datos: {
   // 🚨 Sin vínculo NO se sale ya: a un invitado sin ficha se le puede autorizar
   // desde el 04/09/2026, y si aquí se cortara no podría ni aceptar ni revocar lo
   // que le abrieron. Su lado es `autorizadoIdentidadId`.
-  const vinculos = await fichasDeIdentidad(identidadId)
+  const vinculos = await fichasOtorgablesDe(identidadId)
   const misIds = vinculos.map((v) => v.clienteId)
 
   // El filtro por mis fichas va JUNTO al id, nunca un `findUnique({ id })` y un

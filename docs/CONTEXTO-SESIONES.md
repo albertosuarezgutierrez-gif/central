@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(25/09/2026)** 🏢 **Portal: el dueño de una empresa ve y gestiona su empresa automáticamente** (caso Flores y Gazquez SL /
+Diego Flores Carmona). Derivado en lectura de `cliente_relaciones` 'Dueño' (empresa jurídica explícita, viva, misma correduría), sin
+escribir vínculos; acceso total + puede autorizar a terceros. «Administración» NO abre (pendiente de Alberto). Antes, mismo día:
+vínculo por correo se retira al cambiar el correo (#3600, caso Guzmán Lozano→Pueyo) y cambio de correo con código (#3614).
+
 **(25/09/2026)** 🚨 **Los crons de asegura NUNCA se ejecutaron**: el middleware no exentaba `/api/cron` y Vercel recibía 307→/login
 (felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez
 (`seguros.felicitacion` vacía, 0 correos en Resend). Arreglo: `/api/cron` a PUBLIC + cepo (#3602, visto rojo). Felicitación rediseñada

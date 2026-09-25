@@ -18,6 +18,8 @@
 // Los demás tipos del vocabulario (`Empleado/a`, `Socio/a`, `Accionista`) NO
 // dan esta capacidad: gestionan el negocio o son dueños de participaciones,
 // pero no son la figura que decide a quién se le enseña qué.
+import { empresasDelDueno, RELACION_DUENO, type TipoFicha } from '@central/module-seguros-portal'
+
 import { prisma } from './db'
 import { getIdentidad } from './session'
 
@@ -56,4 +58,41 @@ export async function esRepresentanteDe(identidadId: string, empresaClienteId: s
     select: { tipoRelacion: true },
   })
   return relaciones.some((r) => (TIPOS_REPRESENTACION as readonly string[]).includes(r.tipoRelacion))
+}
+
+/**
+ * Las EMPRESAS de las que son dueñas estas fichas (25/09/2026). Ver la cabecera de
+ * `dueno-empresa.ts` del módulo: solo `Dueño`, la empresa tiene que ser jurídica explícita, viva y
+ * de la MISMA correduría que la ficha del dueño.
+ *
+ * 🚨 Recibe las fichas YA resueltas por quien llama (`portal_vinculo` filtrado por la identidadId de
+ * la sesión, o por la del cron) y NO llama a `getIdentidad()`: la usa también el cron de avisos, que
+ * corre sin cookie. No escribe nada: el acceso se deriva en cada lectura, y por eso desaparece en
+ * cuanto Alberto borra la relación.
+ */
+export async function empresasDeFichas(fichas: readonly { clienteId: string; correduriaId: string }[]): Promise<string[]> {
+  const misFichas = fichas.map((f) => f.clienteId)
+  if (misFichas.length === 0) return []
+  const relaciones = await prisma.clienteRelacion.findMany({
+    where: {
+      tipoRelacion: RELACION_DUENO,
+      OR: [{ clienteAId: { in: misFichas } }, { clienteBId: { in: misFichas } }],
+    },
+    select: { clienteAId: true, clienteBId: true, tipoRelacion: true },
+  })
+  if (relaciones.length === 0) return []
+  const ids = [...new Set(relaciones.flatMap((r) => [r.clienteAId, r.clienteBId]))]
+  const corredurias = new Set(fichas.map((f) => f.correduriaId))
+  const filas = await prisma.cliente.findMany({
+    where: { id: { in: ids }, mergedIntoClienteId: null, activo: true },
+    select: { id: true, tipoPersona: true, correduriaId: true },
+  })
+  // Una ficha fusionada, inactiva o de otra correduría no entra en el mapa, así que no puede salir
+  // como empresa (su tipo queda `undefined`, que no es `juridica`).
+  const tipoPor = new Map<string, TipoFicha>(
+    filas
+      .filter((f) => misFichas.includes(f.id) || corredurias.has(f.correduriaId))
+      .map((f) => [f.id, f.tipoPersona === 'juridica' ? 'juridica' : f.tipoPersona === 'fisica' ? 'fisica' : null]),
+  )
+  return empresasDelDueno(misFichas, relaciones, tipoPor)
 }
