@@ -1,33 +1,33 @@
 {
  "sesion": "ad29fbe2-5240-5405-9718-d678823ae4ec",
  "inicio": "2026-09-21T09:58:35.919Z",
- "fin": "2026-09-25T05:03:16.708Z",
- "llamadas": 221,
+ "fin": "2026-09-25T11:21:22.660Z",
+ "llamadas": 235,
  "categorias": {
   "otro": {
-   "llamadas": 78,
-   "chars_in": 41218,
-   "chars_out": 299743,
+   "llamadas": 81,
+   "chars_in": 50257,
+   "chars_out": 300144,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 14,
+    "ToolSearch": 16,
     "WebSearch": 49,
-    "SubagentHandback": 2,
+    "SubagentHandback": 3,
     "ReadNotifications": 12,
     "Skill": 1
    }
   },
   "bash": {
-   "llamadas": 77,
-   "chars_in": 26901,
-   "chars_out": 326502,
+   "llamadas": 84,
+   "chars_in": 28939,
+   "chars_out": 329257,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 77
+    "Bash": 84
    }
   },
   "mcp:Gmail": {
@@ -47,14 +47,14 @@
    }
   },
   "agente:general-purpose": {
-   "llamadas": 2,
-   "chars_in": 5259,
-   "chars_out": 5630,
+   "llamadas": 3,
+   "chars_in": 8251,
+   "chars_out": 5778,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Agent": 2
+    "Agent": 3
    }
   },
   "mcp:Supabase": {
@@ -123,27 +123,28 @@
    }
   },
   "mcp:Google_Drive": {
-   "llamadas": 6,
-   "chars_in": 7944,
-   "chars_out": 10915,
-   "errores": 1,
+   "llamadas": 8,
+   "chars_in": 8134,
+   "chars_out": 14100,
+   "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Google_Drive__search_files": 3,
+    "mcp__Google_Drive__search_files": 4,
     "mcp__Google_Drive__read_file_content": 2,
-    "mcp__Google_Drive__create_file": 1
+    "mcp__Google_Drive__create_file": 1,
+    "mcp__Google_Drive__download_file_content": 1
    }
   },
   "lectura-directa": {
-   "llamadas": 4,
-   "chars_in": 532,
-   "chars_out": 53918,
+   "llamadas": 5,
+   "chars_in": 634,
+   "chars_out": 94600,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 4
+    "Read": 5
    }
   }
  }
