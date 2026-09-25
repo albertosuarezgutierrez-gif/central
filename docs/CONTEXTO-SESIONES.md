@@ -587,6 +587,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Auto nuevo: «Compañía actual» desde el catálogo de mercado de Avant2
+- El desplegable leía `seguros.companias_dgs` (solo compañías con las que trabaja Alberto). Ahora lee
+  `GET /car/insurance-companies` de Avant2/Codeoscopic (gratis) vía puerto `catalogos?tipo=companias-anteriores`;
+  si falla, cae al directorio. Cepo `test/regression-companias-anteriores-avant2.test.ts`. Moto no tocado.
+- Ojo: Avant2 tiene `GET /car/registration-date?plate=` (gratis según doc) — posible sustituto de la estimación local.
 ## (25/09/2026) Correduría: accesos directos entre fichas
 - Presupuestos de oportunidad nueva (6 ramos): el nombre del cliente enlaza a su ficha.
 - Retarificar: miga «Ficha del cliente»; listado Clientes: compañía y nº enlazan a la póliza;
