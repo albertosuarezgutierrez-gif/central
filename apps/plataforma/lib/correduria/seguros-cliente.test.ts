@@ -196,3 +196,19 @@ test('volcado histórico: «Eliminar» quita el RAMO de Oportunidades, sin que l
   assert.deepEqual(ids(r.descartadas), ['otros2014'])
   assert.deepEqual(ids(r.historicas), ['otros2013'])
 })
+
+test('viva cancelada: «Eliminar» la saca de Oportunidades a «descartadas», y su ramo no resucita una del volcado', () => {
+  const quitada = { fecha: '2026-09-25T10:00:00Z', motivo: 'Ya no tiene ese seguro' }
+  const r = repartirSegurosCliente({
+    polizas: [
+      pol('motoViva', { estado: 'cancelada', tipo: 'moto', leadDescartado: quitada }),
+      pol('autoViva', { estado: 'cancelada', tipo: 'auto' }),
+      pol('moto2015', { viva: false, tipo: 'moto', fechaVencimiento: '2015-03-01' }),
+    ],
+    declaradas: [],
+    oportunidades: [],
+  })
+  assert.deepEqual(ids(r.oportunidades), ['autoViva'])
+  assert.deepEqual(ids(r.descartadas), ['motoViva'])
+  assert.deepEqual(ids(r.historicas), ['moto2015'])
+})

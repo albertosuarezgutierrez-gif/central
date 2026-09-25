@@ -226,6 +226,9 @@ export type ResultadoLeadDescartado =
   | { ok: true; estado: 'ok'; status: 200 }
   | { ok: false; estado: 'invalido' | 'no_encontrado' | 'sin_configurar' | 'error'; motivo: string; status: 404 | 422 | 503 | 500 }
 
+/** Estados en los que la ficha pinta una póliza viva en «Oportunidades» (plataforma, `seguros-cliente.ts`). */
+const ESTADOS_EN_COMPETENCIA = new Set<string>(['cancelada', 'vencida', 'competencia'])
+
 export async function marcarLeadDescartado(
   correduriaId: string,
   polizaId: string,
@@ -245,13 +248,16 @@ export async function marcarLeadDescartado(
     const db = prismaAsegura()
     const poliza = await db.poliza.findFirst({
       where: { id: polizaId, correduriaId },
-      select: { id: true, clienteId: true, importRef: true, eiacXmlHash: true, numeroPoliza: true },
+      select: { id: true, clienteId: true, importRef: true, eiacXmlHash: true, numeroPoliza: true, estado: true },
     })
     if (!poliza) {
       return { ok: false, estado: 'no_encontrado', motivo: 'Esa póliza no está en la cartera de esta correduría.', status: 404 }
     }
-    if (esCarteraViva(poliza)) {
-      return { ok: false, estado: 'invalido', motivo: 'Es una póliza de la cartera viva, no un lead del volcado: no se quita de aquí.', status: 422 }
+    // De la cartera viva solo se quita de Oportunidades la que se fue a otra compañía
+    // (la ficha la pinta ahí): una en vigor no es una oportunidad y no se esconde.
+    const viva = esCarteraViva(poliza)
+    if (viva && !ESTADOS_EN_COMPETENCIA.has(poliza.estado)) {
+      return { ok: false, estado: 'invalido', motivo: 'Es una póliza de la cartera viva que no está cancelada ni vencida: no se quita de Oportunidades.', status: 422 }
     }
     await db.poliza.update({
       where: { id: poliza.id },
@@ -261,7 +267,8 @@ export async function marcarLeadDescartado(
       select: { id: true },
     })
     anotarCambio({ entidad: 'poliza', id: poliza.id, campo: 'lead_descartado' })
-    const cual = poliza.numeroPoliza ? `la póliza histórica nº ${poliza.numeroPoliza}` : 'una póliza histórica'
+    const clase = viva ? 'póliza' : 'póliza histórica'
+    const cual = poliza.numeroPoliza ? `la ${clase} nº ${poliza.numeroPoliza}` : `una ${clase}`
     await anotar(correduriaId, poliza.clienteId, entrada.descartar
       ? `Quitada de oportunidades ${cual} («${motivo}») por ${entrada.actor}`
       : `Recuperada como oportunidad ${cual} por ${entrada.actor}`)
