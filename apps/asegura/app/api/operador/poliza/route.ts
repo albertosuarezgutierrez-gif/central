@@ -42,7 +42,7 @@ export async function GET(req: Request) {
 //   - `campo: 'referencia_catastral'`: la referencia de 20 del PISO (hogar),
 //     comprobada contra el Catastro antes de guardar. Body `{ id, referencia, actor }`.
 //   - `campo: 'lead_descartado'`: quitar de «Oportunidades» (o recuperar) una póliza
-//     del VOLCADO histórico. Body `{ id, descartar: boolean, motivo?, actor }`.
+//     del VOLCADO histórico, o viva cancelada/vencida/competencia. Body `{ id, descartar: boolean, motivo?, actor }`.
 export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ estado: 'error', motivo: 'No autorizado' }, { status: 401 })
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null

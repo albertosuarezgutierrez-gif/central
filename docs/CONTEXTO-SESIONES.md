@@ -587,6 +587,12 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+## (25/09/2026) Ficha cliente: «Eliminar» también en pólizas VIVAS canceladas de Oportunidades
+El botón quedaba suelto bajo la rejilla y parecía «borrar todas»: ahora va DENTRO del marco de su tarjeta.
+Y se puede quitar de Oportunidades una póliza viva cancelada/vencida/competencia (antes asegura lo rechazaba con
+422): mismo `lead_descartado_at`, no borra nada, se recupera desde «Eliminadas de oportunidades»; su ramo no
+resucita una del volcado. Guarda del lado de asegura: una viva en vigor sigue sin poder quitarse.
+
 ## (25/09/2026) Portal asegura: «Historial de compañías» en la ficha de la póliza
 - Alberto (captura Kona Mapfre→Reale): el cliente debe ver cuándo cambió y de qué compañía a cuál. Antes solo había
   un eslabón (`sustituyeA`) y la frase usaba el VENCIMIENTO de Mapfre (24/09) como si fuera la fecha del cambio.

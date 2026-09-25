@@ -1,0 +1,30 @@
+{
+ "sesion": "a59e57fa-1adb-5622-a745-2e0a24182843",
+ "inicio": "2026-09-25T13:29:29.034Z",
+ "fin": "2026-09-25T13:29:34.231Z",
+ "llamadas": 3,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 300,
+   "chars_out": 813,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 2
+   }
+  },
+  "bash": {
+   "llamadas": 1,
+   "chars_in": 173,
+   "chars_out": 6643,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 1
+   }
+  }
+ }
+}
