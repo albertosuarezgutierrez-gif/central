@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 import { anadirContactoPropio, listarContactosPropios } from '@/lib/contactos-propios'
 import { requireIdentidad } from '@/lib/session'
+import { comprobarCodigoCambioCorreo } from '@/lib/verificar-correo'
 
 export const runtime = 'nodejs'
 
@@ -16,6 +17,8 @@ const Entrada = z.object({
   tipo: z.enum(['telefono', 'email']),
   valor: z.string().min(1).max(255),
   etiqueta: z.string().max(40).nullable().optional(),
+  /** Obligatorio para un correo: el código que le llegó a ESE correo (25/09/2026). */
+  codigoCorreo: z.string().max(12).optional(),
 })
 
 export async function GET() {
@@ -41,7 +44,18 @@ export async function POST(req: Request) {
   const parsed = Entrada.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ estado: 'invalido', motivo: 'datos_invalidos', campo: null }, { status: 400 })
 
-  const r = await anadirContactoPropio(identidad.id, parsed.data)
+  // 🚨 Un correo de CONTACTO también vincula (plan B de `elegirFicha`): mismo candado que el principal.
+  const { codigoCorreo, ...entrada } = parsed.data
+  let gastarCodigo = async () => {}
+  if (entrada.tipo === 'email') {
+    if (!codigoCorreo) return NextResponse.json({ estado: 'codigo_requerido' }, { status: 403 })
+    const canje = await comprobarCodigoCambioCorreo(identidad.id, entrada.valor, codigoCorreo)
+    if (canje.estado !== 'valido') return NextResponse.json({ estado: 'codigo_no_valido', motivo: canje.estado }, { status: 403 })
+    gastarCodigo = canje.gastar
+  }
+
+  const r = await anadirContactoPropio(identidad.id, entrada)
+  if (r.estado === 'ok') await gastarCodigo()
   const status =
     r.estado === 'ok' ? 201
       : r.estado === 'invalido' ? 422

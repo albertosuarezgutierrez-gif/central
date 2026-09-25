@@ -3,6 +3,7 @@ import { verificarWebhookResend, interpretarEventoResend } from '@/lib/recaptaci
 import { aseguraConfigurada, prismaAsegura } from '@/lib/asegura-db'
 import { Prisma } from '@/lib/generated/asegura-client'
 import { aplicarBajaPorRebote } from '@/lib/cartera-recaptacion'
+import { interpretarEventoCorreo, registrarEventoCorreo } from '@/lib/correo-seguimiento'
 
 export const dynamic = 'force-dynamic'
 
@@ -26,10 +27,31 @@ export async function POST(req: Request) {
   const verificado = verificarWebhookResend(cuerpoCrudo, cabeceras)
   if (!verificado.ok) return NextResponse.json({ estado: 'error', motivo: verificado.motivo }, { status: 401 })
 
+  // Desde el 25/09/2026 se guarda CADA evento de CADA correo (enviado, entregado, abierto, clic,
+  // rebote…) en `correo_evento`: es la prueba que se enseña en la ficha del cliente. Si no se puede
+  // guardar, la recaptación se procesa IGUAL (un rebote no puede dejar de dar de baja al lead porque
+  // falle otra tabla) y al final se responde 500 para que Resend reintente: un evento perdido es una
+  // prueba perdida. El reintento es inocuo — el evento se deduplica por svix-id y el update de
+  // recaptación solo avanza el estado.
+  const eventoCorreo = interpretarEventoCorreo(verificado.payload)
   const evento = interpretarEventoResend(verificado.payload)
-  if (evento === null) return NextResponse.json({ estado: 'ignorado' })
+  if (eventoCorreo === null && evento === null) return NextResponse.json({ estado: 'ignorado' })
 
   if (!aseguraConfigurada()) return NextResponse.json({ estado: 'sin_configurar' }, { status: 503 })
+  let seguimientoCaido = false
+  if (eventoCorreo !== null) {
+    try {
+      await registrarEventoCorreo(cabeceras['svix-id'], eventoCorreo)
+    } catch (e) {
+      seguimientoCaido = true
+      console.error('[webhooks/resend] no se pudo guardar el evento de correo:', e instanceof Error ? e.message : e)
+    }
+  }
+  const fin = () =>
+    seguimientoCaido
+      ? NextResponse.json({ estado: 'error', motivo: 'seguimiento_no_guardado' }, { status: 500 })
+      : NextResponse.json({ estado: 'ok' })
+  if (evento === null) return fin()
   try {
     const esTerminal = evento.estado === 'rebotado' || evento.estado === 'queja'
     await prismaAsegura().$executeRaw(Prisma.sql`
@@ -45,7 +67,7 @@ export async function POST(req: Request) {
         console.error('[webhooks/resend] no se pudo aplicar la baja automática:', baja.motivo)
       }
     }
-    return NextResponse.json({ estado: 'ok' })
+    return fin()
   } catch (e) {
     console.error('[webhooks/resend] no se pudo actualizar recaptacion_envios:', e instanceof Error ? e.message : e)
     return NextResponse.json({ estado: 'error' }, { status: 500 })

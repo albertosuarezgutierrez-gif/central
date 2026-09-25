@@ -15,9 +15,20 @@
 **(25/09/2026)** Recaptación por email: el tracking de aperturas estaba APAGADO en Resend → los 30 emails (20-22/09)
 salían «0% apertura», que era «no medido». 🚨 Resend NO guarda open/click tracking sin `trackingSubdomain` (el update
 responde OK y al releer sigue en false; así se dio por activado sin estarlo). Ahora en `grupoasegura.es` (el remitente
-desde hoy): open ON, subdominio `links` → falta CNAME `links` → `links2.resend-dns.com` en IONOS; click OFF hasta que
-verifique (reescribe TODOS los enlaces, incluida la baja, y sin CNAME romperían). Webhook con `bounced`/`complained`.
+desde hoy): open + click ON con subdominio `links` (CNAME `links` → `links2.resend-dns.com` en IONOS, verificado el
+25/09). Click solo con el CNAME vivo: reescribe TODOS los enlaces, incluida la baja. Webhook con `bounced`/`complained`.
 Código (PR #3591): silencio y tasa del panel solo cuentan envíos desde `SEGUIMIENTO_EMAIL_DESDE`.
+
+**(25/09/2026)** ✉️ **Seguimiento de correos a clientes** (Alberto: «de todos los correos… por si algún cliente reclama»).
+Tablas `seguros.correo_envio` (destino cifrado + id de Resend) y `seguros.correo_evento` (append-only, idempotente por svix-id)
+APLICADAS; webhook de Resend suscrito a TODOS los eventos y guarda cada uno; open/click tracking activado en `grupoasegura.es`.
+Punto único `lib/correo-envio.ts` (API de Resend, cae a SMTP «sin seguimiento»); la felicitación ya sale por él. Ficha → «✉️ Correos».
+⚠️ «Abierto» no prueba lectura (Apple MPP); la prueba es «entregado» y el clic. Pendiente: pasar los otros 12 remitentes al punto único.
+
+**(25/09/2026)** 🏢 **Portal: el dueño de una empresa ve y gestiona su empresa automáticamente** (caso Flores y Gazquez SL /
+Diego Flores Carmona). Derivado en lectura de `cliente_relaciones` 'Dueño' (empresa jurídica explícita, viva, misma correduría), sin
+escribir vínculos; acceso total + puede autorizar a terceros. «Administración» NO abre (pendiente de Alberto). Antes, mismo día:
+vínculo por correo se retira al cambiar el correo (#3600, caso Guzmán Lozano→Pueyo) y cambio de correo con código (#3614).
 
 **(25/09/2026)** 🚨 **Los crons de asegura NUNCA se ejecutaron**: el middleware no exentaba `/api/cron` y Vercel recibía 307→/login
 (felicitaciones, avisos de vencimiento, avisos-intranet, avisos-web, revisión anual). Lo destapó el cumpleaños de Rafael Martínez Sáez
@@ -31,11 +42,18 @@ Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/d
 tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
 ✅ Borrado (25/09, confirmado por Alberto) el vínculo `16a27091` (hijo, Guzmán Lozano) → ficha del PADRE: lo creó el portal a las 10:10 porque el PADRE añadió el correo del hijo a su propia ficha desde «Mis datos» a las 10:07. **Fase 0 sin hacer:** revalidar vínculos `email_hash` cuando cambia el correo de una ficha.
 
+**(25/09/2026)** 🔑 **Respaldo CIMA daba 401**: `ASEGURA_CRM_CRON_SECRET` de plataforma ≠ `CRON_SECRET` del proyecto Vercel
+`asegura` (el CRM lo compara timing-safe). Latente desde el 24/09: nunca había tenido que disparar; lo destapó la franja fija de las 16:00.
+Alberto la re-copió (16:57 UTC). ⚠️ **Trampa:** «Redeploy» sobre un deployment cuyo commit lleva `[skip vercel]` (p. ej. la radiografía
+de la auditoría) sale CANCELED por el `ignoreCommand` — hay que redesplegar el último READY que tocó la app (hecho: `dpl_HkYM…`, READY 17:02 UTC).
+
 **(25/09/2026)** 🕓 **CIMA: descargas fijas a las 16:00 y 20:30 de Madrid** (recomendación de CIMA; `?franja=` en
 `cima-pull-respaldo`, disparan siempre y solo avisan si fallan). El respaldo condicional de la mañana pasa a las 09:00 UTC (11:00 Madrid, decisión de Alberto).
 Horas en UTC: en invierno (desde 25/10) caen a las 15:00/19:30 de Madrid. CIMA dice que Mapfre ya tiene ficheros en su
 intranet; a las 09:41 UTC la cola de TIREA seguía con 155 ficheros conocidos y nada de C0058. **CIMA no cobra por
 consulta** (Alberto, 25/09): el coste de pulls extra es ~0 (Vercel/Fly); el único límite es el presupuesto de Actions.
+
+**(25/09/2026)** 🔑 **Portal: cambiar o añadir un correo exige un código a ESE correo** (decisión de Alberto tras el caso Guzmán). `POST /api/mis-datos/codigo-correo` + `codigoCorreo` obligatorio en `/api/mis-datos` y `/api/mis-datos/contactos`; código atado a la identidad (no abre sesión), gastado solo si el guardado sale bien. `lib/verificar-correo.ts`, cepo `test/regression-portal-cambio-correo-codigo.test.ts`. Queda de Alberto: si un correo de contacto debe seguir dando acceso completo, y valorar la brecha RGPD.
 
 **(25/09/2026)** 🔒 **Portal: Pablo Guzmán Lozano veía la cartera de Pablo Guzmán Pueyo (otra persona).** Su correo estuvo en la ficha de Pueyo → vínculo `email_hash`/`gestionar`; al corregirlo en el CRM el vínculo viejo SE QUEDÓ (solo se añadían). Borrado el vínculo sobrante y su recordatorio huérfano; único caso (13 vínculos auditados). No hizo nada sobre la ficha ajena (5 accesos, 0 mensajes/partes/peticiones). Arreglo: el login retira los `email_hash` que el correo ya no resuelve + trigger en BD (aplicado) al cambiar/borrar un correo de ficha + los vencimientos de cartera no se pintan sin vínculo (sin borrarlos, para no perder el sello de aviso). La revisión de código cazó dos fallos antes de fusionar (re-aviso al borrar obligaciones; correo que se muda de ficha) y se corrigieron. Pendiente de Alberto: «Mis datos» cambia el correo principal SIN verificarlo; un correo secundario vincula con `gestionar`; valorar si es brecha RGPD notificable.
 

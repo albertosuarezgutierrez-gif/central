@@ -1,4 +1,5 @@
 import type { Anualidad, DocumentoResumen, EstadoClienteDerivado, EvolucionPrima, Retarificabilidad, VeredictoPrima } from '@central/module-seguros'
+import { leerCorreos, type CorreoCliente } from './correos-cliente.ts'
 import { leerDocumentos } from './documentos-asegura.ts'
 import { leerContactos, leerIdentidad, type ContactosCliente, type IdentidadFicha } from './cliente-edicion-asegura.ts'
 import { leerRelaciones, type RelacionCartera } from './relaciones-asegura.ts'
@@ -222,6 +223,12 @@ export type Ficha = {
    * (o asegura no lo manda); `[]` = se miró y no hay ninguna todavía.
    */
   historial: AnotacionHistorial[] | null
+  /**
+   * Correos que le ha mandado la correduría, con lo que Resend ha contado de cada uno (entregado,
+   * abierto, clic, rebote…). `null` = no se pudo leer o asegura aún no lo manda — NUNCA «no se le
+   * ha escrito».
+   */
+  correos: CorreoCliente[] | null
   /**
    * Las notas de la ficha: fechadas (historial `nota`) y la suelta del CRM anterior.
    * `null` = asegura no las manda (versión anterior) o no se pudieron leer — nunca «sin notas».
@@ -789,6 +796,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       relaciones: leerRelaciones(f.relaciones),
       estado: leerEstadoCliente(f.estado),
       historial: leerHistorial(f.historial),
+      correos: leerCorreos(f.correos),
       notas: leerNotas(f.notas),
       cotizacionesVivas: entero(f.cotizacionesVivas),
       declaradas: leerDeclaradas(f.declaradas),

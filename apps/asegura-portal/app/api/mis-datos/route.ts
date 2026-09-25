@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { z } from 'zod'
 
 import { guardarMisDatos } from '@/lib/mis-datos'
+import { comprobarCodigoCambioCorreo } from '@/lib/verificar-correo'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -29,6 +30,8 @@ const Entrada = z.object({
   provincia: z.string().max(200).nullable().optional(),
   telefono: z.string().max(40).optional(),
   email: z.string().max(255).optional(),
+  /** El código que le llegó al correo NUEVO. Obligatorio si viaja `email` (25/09/2026). */
+  codigoCorreo: z.string().max(12).optional(),
 })
 
 export async function POST(req: Request) {
@@ -42,7 +45,20 @@ export async function POST(req: Request) {
   const parsed = Entrada.safeParse(await req.json().catch(() => null))
   if (!parsed.success) return NextResponse.json({ estado: 'invalido', motivo: 'datos_invalidos', campo: null }, { status: 400 })
 
-  const r = await guardarMisDatos(identidad.id, parsed.data)
+  // 🚨 El correo de la ficha es la llave del portal: no se guarda sin probar que es de quien
+  // tiene la sesión (código a ESE correo). Ver `lib/verificar-correo.ts`.
+  const { codigoCorreo, ...libre } = parsed.data
+  let gastarCodigo = async () => {}
+  if (libre.email !== undefined) {
+    if (!codigoCorreo) return NextResponse.json({ estado: 'codigo_requerido' }, { status: 403 })
+    const canje = await comprobarCodigoCambioCorreo(identidad.id, libre.email, codigoCorreo)
+    if (canje.estado !== 'valido') return NextResponse.json({ estado: 'codigo_no_valido', motivo: canje.estado }, { status: 403 })
+    gastarCodigo = canje.gastar
+  }
+
+  const r = await guardarMisDatos(identidad.id, libre)
+  // El código se gasta solo si el correo ha quedado guardado (o ya lo estaba).
+  if (r.estado === 'ok' || r.estado === 'sin_cambios') await gastarCodigo()
   const status =
     r.estado === 'ok' || r.estado === 'sin_cambios' ? 200
       : r.estado === 'invalido' ? 422
