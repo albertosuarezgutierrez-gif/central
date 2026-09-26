@@ -104,9 +104,11 @@ fechas) van **ahí**, y es la copia larga — la nuestra (`cima_cuarentena_crudo
 `cima_ficheros`** (el que falta, `28823484E_…_ORIGINAL`, no es EIAC). Para leer
 un zip grande de Drive, que lo descargue un agente: el harness guarda la salida en
 disco y se decodifica con python, sin copiar el base64 a mano.
-🚨 **Mapfre (C0058) nunca ha activado el envío diario:** sus 14 ficheros son la
-carga inicial, todos generados el 26/05 entre 19:30:25 y 19:30:28. El «último
-fichero 23/06» de la BD es la fecha en que NOSOTROS lo cargamos.
+✅ **Mapfre (C0058) activó el envío diario el 25/09/2026** (lo configuró CIMA en el portal de mediadores
+de Mapfre, ticket SAU-24238). Hasta entonces sus 14 ficheros eran solo la carga inicial, todos generados el
+26/05 entre 19:30:25 y 19:30:28 (el «23/06» de la BD es cuando NOSOTROS los cargamos). Primeros diarios:
+REC 261 + SIN 311 el 25/09 a las 18:31 UTC, código mediador 5239640, ambos auto y casados sin cuarentena.
+**POL y el resto de ramos aún no han llegado**: si siguen sin llegar, reclamarlo en ese mismo ticket.
 **Antes de reprocesar un `sin_poliza_en_cartera`, busca duplicados vivos**
 (mismo número normalizado + DGS, `merged_into_poliza_id IS NULL`): el 23/09 quedaban
 3 parejas que solo diferían en la puntuación (`HR G`/`HR-G`, `/ 045981539`).
@@ -120,7 +122,7 @@ sin decir qué compañías faltan es una cifra falsa.**
 |---|---|---|---|---|---|---|
 | Occident | C0468 | 16 | 39 | 26 | 5 | **16/09** (a diario) |
 | Allianz | C0109 | 5 | 8 | 13 | 3 | 03/09 (CEF) |
-| Mapfre | C0058 | 6 | 6 | 2 | — | **23/06** |
+| Mapfre | C0058 | 6 | 6 | 2 | — | **25/09** (1.º diario; antes 23/06) |
 | Reale | C0613 | 2 | 1 | — | — | 25/08 |
 | Generali | C0072 | 1 | — | — | — | **14/09** |
 
@@ -129,10 +131,11 @@ sin decir qué compañías faltan es una cifra falsa.**
 cartera. Ese fichero es además el **único hasta hoy con avisos
 de validación** (12 leves) — el resto de la serie va a 0/0/0.
 
-🚨 **Mapfre lleva desde el 23/06 sin mandar NADA, y es la compañía más grande de la
-cartera** (64 pólizas vivas). Comprobado contra el export del portal de CIMA: en la
-ventana 02/09–16/09 CIMA **no generó ni un fichero de Mapfre**, así que el silencio
-es **aguas arriba, no de nuestra tubería**. Eso es una llamada a Mapfre, no un bug.
+**Mapfre estuvo del 23/06 al 25/09 sin mandar NADA, y es la compañía más grande de la
+cartera** (64 pólizas vivas). El silencio era **aguas arriba** (CIMA no generaba ficheros
+suyos: el envío diario no estaba configurado en el portal de mediadores de Mapfre), no de
+nuestra tubería. Lección: si una compañía enmudece, lo primero es preguntar a CIMA si la
+compañía tiene activado el envío automático, antes de buscar el fallo en el código.
 
 ## Diagnóstico: la ingesta está muda, ¿dónde miro?
 
