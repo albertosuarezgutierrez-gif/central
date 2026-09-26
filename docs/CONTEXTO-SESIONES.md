@@ -714,6 +714,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Portal: el aviso de la campana lleva DIRECTO a aceptar la autorización
+- Caso Pablo Franco Ruz ← Grupo ELCA 83 (`ver_economico`, concedida por Alberto, pendiente de que Pablo acepte; aún no ha entrado nunca).
+- Aviso `autorizacion_pendiente` → `/autorizaciones?aceptar=<id>`: pliega «Qué es lo que das», pone «Te han dado acceso a» primero y ABIERTO si hay pendientes (antes plegado = botón escondido), baja a la tarjeta y la resalta.
+- Aceptar sigue SOLO en la pantalla (no en la campana), decisión confirmada por Alberto.
+- Recordatorio: «Administración» NO abre la empresa entera; solo «Dueño» (`dueno-empresa.ts`).
+
 ## (26/09/2026) Pablo Guzmán: correo de emisión ENVIADO con PDF (verificado en BD)
 - 18:29 UTC `emision_con_poliza` a Pablo (Allianz 61089620) con `Póliza.pdf` (402 KB, archivado y visible en su portal).
   El 400 de la descarga era la falta de `x-client-app`/`x-user-email` (PR #3685). Correo con resumen compañía/cobertura/efecto/prima.

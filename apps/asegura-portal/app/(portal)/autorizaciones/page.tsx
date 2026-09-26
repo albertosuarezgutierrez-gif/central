@@ -38,9 +38,17 @@ export const dynamic = 'force-dynamic'
  * única (`lib/session.ts`), para no pintar una pantalla de permisos a quien ni
  * siquiera ha entrado.
  */
-export default async function AutorizacionesPage() {
+export default async function AutorizacionesPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
   const identidad = await getIdentidad()
   if (!identidad) redirect('/')
+  // `?aceptar=<id>` = viene de la campana a aceptar UNA autorización. Es solo
+  // hacia dónde mirar: el id no abre nada, la lista sigue saliendo de la API.
+  const aceptar = (await searchParams).aceptar
+  const aceptarId = typeof aceptar === 'string' && aceptar.length > 0 ? aceptar : null
 
   return (
     <>
@@ -63,7 +71,9 @@ export default async function AutorizacionesPage() {
           saber antes de consentir, y un resumen de una línea no puede decir a
           la vez «solo mirar» (tus seguros) y «ve la cuenta y da partes» (los
           de tu sociedad). Quien ya lo ha leído lo cierra. */}
-      <SeccionPlegable titulo="Qué es exactamente lo que das" abierto>
+      {/* Cerrado si viene a ACEPTAR: este texto es para quien DA acceso, y
+          abierto empujaba la tarjeta de aceptar varios pantallazos abajo. */}
+      <SeccionPlegable titulo="Qué es exactamente lo que das" abierto={aceptarId === null}>
         <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
           Hay <strong>dos permisos</strong>, y eliges uno para cada persona:
         </p>
@@ -93,7 +103,7 @@ export default async function AutorizacionesPage() {
         </p>
       </SeccionPlegable>
 
-      <Autorizaciones />
+      <Autorizaciones aceptarId={aceptarId} />
     </>
   )
 }

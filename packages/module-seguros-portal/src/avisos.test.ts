@@ -33,7 +33,7 @@ test('una autorización RECIBIDA pendiente es un aviso que lleva a «Quién me v
   assert.equal(a.tipo, 'autorizacion_pendiente')
   assert.equal(a.id, 'a1')
   assert.match(a.titulo, /María del Carmen Martínez Ayala te ha dado acceso/)
-  assert.equal(a.href, '/autorizaciones')
+  assert.equal(a.href, '/autorizaciones?aceptar=a1', 'lleva a la tarjeta de ESA autorización, no a la pantalla a secas')
   assert.equal(r.globo, '1')
 })
 
