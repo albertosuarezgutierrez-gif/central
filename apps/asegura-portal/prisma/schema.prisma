@@ -1336,21 +1336,3 @@ model Ipid {
 
 /// Mensajes cliente ↔ corredor (ASegura OS §Q.7, 24/09/2026). Un hilo por póliza (NULL = general).
 /// El rol solo tiene SELECT, INSERT y UPDATE(leido_at): lo escrito no se edita ni se borra.
-/// DDL: `prisma/sql/2026-09-24_portal_mensaje.sql`.
-model PortalMensaje {
-  id           String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  correduriaId String    @map("correduria_id") @db.Uuid
-  clienteId    String    @map("cliente_id") @db.Uuid
-  polizaId     String?   @map("poliza_id") @db.Uuid
-  /// 'cliente' | 'corredor' (CHECK en la BD).
-  autor        String
-  identidadId  String?   @map("identidad_id") @db.Uuid
-  actor        String?
-  cuerpo       String
-  creadoAt     DateTime  @default(now()) @map("creado_at") @db.Timestamptz(6)
-  /// Leído por el DESTINATARIO. NULL = no consta.
-  leidoAt      DateTime? @map("leido_at") @db.Timestamptz(6)
-
-  @@map("portal_mensaje")
-  @@schema("seguros")
-}

@@ -83,7 +83,7 @@ test('🚨 todo correo a clientes sale por el punto único con seguimiento', () 
   const remitentes = [
     'correo-felicitacion', 'correo-aviso-acceso', 'envio-presupuesto', 'presupuesto-aceptacion', 'anulacion-portal',
     'aviso-web', 'carta-mediador', 'aprobaciones', 'correo-invitacion-portal', 'avisos-vencimiento', 'revision-anual',
-    'mensajes-portal', 'correo-avisos-intranet',
+    'correo-avisos-intranet',
   ]
   for (const r of remitentes) {
     const src = fuente(`./${r}.ts`)

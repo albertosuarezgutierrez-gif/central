@@ -708,7 +708,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   cajón en el móvil (sin `createPortal` ni `#portal-menu-slot`; cepo que impide que vuelva). Etiquetas desde `pestanasPortal()`; iconos SVG en línea (sin lucide).
 - `body:has(.portal-tabbar)` reserva 60px (tapaba el pie legal) y sube el botón de WhatsApp. El bloque CSS va
   ANTES de `.caratula {`: el cepo del presupuesto prohíbe `fixed` desde ahí hasta el final del fichero.
-- Medido con Playwright a 320/390/1280. Cepo nuevo en `regression-portal-cartera-agrupada` (4 brazos, vistos en rojo).
+- Cabecera móvil: logotipo «Grupo ASegura» en vez del monograma «AS» (invierte lo del 12/09); para que quepa, «Salir»
+  pasa al cajón «Más» en el móvil (en escritorio sigue arriba).
+- «Mensajes con tu corredor» RETIRADO en las 4 capas (portal, asegura, plataforma, módulo): el cliente escribe por WhatsApp.
+  0 mensajes en BD; la tabla `seguros.portal_mensaje` SE QUEDA (la usa la función SQL de fusionar clientes).
+- Medido con Playwright a 320/390/1280; cepos en `regression-portal-cartera-agrupada` vistos en rojo. PR #3659.
 
 ## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
 - Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).
