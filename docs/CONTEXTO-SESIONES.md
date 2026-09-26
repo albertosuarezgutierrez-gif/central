@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(26/09/2026)** Asistente de la correduría por Telegram, fase 1 (SOLO LECTURA): el texto libre se reparte
+correduría/contable (`clasificarDestino` + IA de una palabra para lo dudoso; ante fallo, contable), el asistente
+consulta la cartera por el puerto (buscar, ficha cliente/póliza, vencimientos, impagados, anulaciones) con
+OpenRouter `data_collection:deny`+`zdr` y SIN caída a la cadena gratis; DNI/IBAN enmascarados; rastro de acceso
+en `correduria_asistente_turno` (texto 90 días), reglas aprendidas con botón, 👍/👎 con nota para el entrenador.
+Topes 150/día, 0,50€/día, interruptor `CORREDURIA_ASISTENTE_APAGADO`. Tablas aplicadas en prod. Sin resumen
+diario nuevo (ya llegan las renovaciones). Codeoscopic: la API SÍ ve proyectos creados a mano en Avant2.
+
 **(26/09/2026)** Correduría, mejoras tras cerrar el circuito de emisión: (1) Renovaciones pinta el plazo de baja
 del art. 22 LCS bajo cada vencimiento («baja a la compañía hasta el dd/mm» / «plazo de baja pasado», helper
 `textoPlazoOposicion`); (2) push al móvil «Póliza nueva» (tipo `poliza_nueva` en avisos-cima, CHECK ampliado en prod
