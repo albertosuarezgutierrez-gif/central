@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-26T11:11:03Z",
+  "generadoEn": "2026-09-26T12:27:39Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5743,6 +5743,7 @@
       "contable_feedback",
       "contable_log",
       "contable_memoria",
+      "correduria_asistente_emision",
       "correduria_asistente_regla",
       "correduria_asistente_turno",
       "correduria_avisos_renovacion",
