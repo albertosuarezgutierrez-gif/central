@@ -480,6 +480,12 @@ export {
   type ResumenFicha,
 } from './ficha-resumen.ts'
 export {
+  siguientePaso,
+  DIAS_AVISO_RENOVACION,
+  type EntradaSiguientePaso,
+  type SiguientePaso,
+} from './siguiente-paso.ts'
+export {
   agruparHistoricas,
   type HistoricaAgrupable,
   type GrupoHistorica,

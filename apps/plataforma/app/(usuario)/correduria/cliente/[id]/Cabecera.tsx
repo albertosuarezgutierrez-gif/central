@@ -1,6 +1,6 @@
 import Link from 'next/link'
-import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { estadoCaducidadCarnet, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { estadoCaducidadCarnet, urlRetarificar, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
@@ -69,10 +69,43 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
         </div>
       </div>
 
+      <SiguientePaso ficha={ficha} resumen={resumen} tiposVivos={tiposVivos} />
+
       <Acciones clienteId={ficha.id} />
 
       <Titulares resumen={resumen} />
     </>
+  )
+}
+
+// ── Siguiente paso ──────────────────────────────────────────────────────────
+// UNA frase y UN botón con lo que toca hacer con este cliente (idea §W). La regla
+// vive pura y testeada en `siguientePaso` de @central/module-seguros; aquí solo se
+// pinta. Sin regla que aplique no se pinta nada (nunca un «todo en orden»).
+function SiguientePaso({ ficha, resumen, tiposVivos }: { ficha: Ficha; resumen: ResumenFicha; tiposVivos: string[] }) {
+  const paso = siguientePaso({
+    recibosDevueltos: resumen.recibos.devueltos,
+    proximo: resumen.proximo,
+    cotizacionesVivas: ficha.cotizacionesVivas,
+    ramosVivos: tiposVivos,
+  })
+  if (!paso) return null
+  const tel = contactoEfectivo({ telefono: ficha.contacto.telefono, email: ficha.contacto.email }, ficha.intervinientes).telefono
+  const color = paso.tono === 'urgente' ? 'var(--negative)' : paso.tono === 'aviso' ? 'var(--warning)' : 'var(--primary)'
+  const fondo = paso.tono === 'urgente' ? 'var(--negative-bg)' : paso.tono === 'aviso' ? 'var(--warning-bg)' : 'var(--primary-light)'
+  const accion =
+    paso.accion.tipo === 'llamar'
+      ? (tel ? <a href={`tel:${tel.replace(/\s/g, '')}`} style={{ ...btnStyle('primario'), textDecoration: 'none' }}>📞 Llamar</a> : null)
+      : paso.accion.tipo === 'retarificar'
+        ? <BtnLink href={urlRetarificar(paso.accion.polizaId)} variante="primario">Mirar precio</BtnLink>
+        : <BtnLink href={`/correduria/cliente/${ficha.id}/hogar-nuevo`} variante="primario">Presupuestar hogar</BtnLink>
+  return (
+    <div role="status" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', margin: '8px 0', padding: '10px 12px', borderRadius: 12, background: fondo, borderLeft: `4px solid ${color}` }}>
+      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', minWidth: 0, flex: '1 1 220px' }}>
+        <span style={{ color, marginRight: 6 }}>Siguiente paso ·</span>{paso.texto}
+      </span>
+      {accion}
+    </div>
   )
 }
 
