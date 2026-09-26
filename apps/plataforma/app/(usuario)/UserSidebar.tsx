@@ -7,7 +7,7 @@ import {
   Banknote, BedDouble, Bell, Bot, Briefcase, Building2, CalendarDays,
   ChartColumn, ChartLine, ChartPie, ChevronDown, ClipboardList, Coins, Cog, Cpu,
   CreditCard, Euro, Eye, Fan, FileText, FlaskConical, Gavel, House, KeyRound,
-  Landmark, Lightbulb, MessageCircle, MessageSquare, Network, Receipt, Satellite,
+  Landmark, Lightbulb, Menu, MessageCircle, MessageSquare, Network, Receipt, Satellite,
   Scale, Search, SearchCheck, Shield, Sparkles, Store, Target, Ticket,
   TrendingUp, User, UserCheck, Users, UtensilsCrossed, Wrench,
   type LucideIcon, BookUser } from 'lucide-react'
@@ -75,6 +75,23 @@ const NAV_AJUSTES = [
 // sección NO se renderiza para estas cuentas, así que su única entrada tiene que estar donde sí
 // se pinta. Por eso `seccionDeRuta` no puede decidir sola aquí — ver `seccionActiva()`.
 const NAV_SOLO_EMPRESAS: NavItem[] = [{ href: '/empresas', icon: Building2, label: 'Empresas' }]
+
+// Pestañas de la barra inferior en móvil: las cuatro pantallas que se abren a diario con el móvil
+// en la mano. Máximo 4 + «Menú»: con más, las etiquetas no caben a 320 px.
+const PESTANAS_MOVIL: NavItem[] = [
+  { href: '/inicio', icon: House, label: 'Inicio' },
+  { href: '/sivra/calendario', icon: CalendarDays, label: 'Calendario' },
+  { href: '/sivra/mensajes', icon: MessageCircle, label: 'Mensajes' },
+  { href: '/correduria', icon: Shield, label: 'Correduría' },
+]
+
+const estiloPestana: React.CSSProperties = {
+  minHeight: 60, padding: '8px 2px 6px', display: 'flex', flexDirection: 'column',
+  alignItems: 'center', justifyContent: 'center', gap: 3, textDecoration: 'none', minWidth: 0,
+}
+const textoPestana: React.CSSProperties = {
+  fontSize: 11, lineHeight: 1.1, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+}
 
 const NAV_PISOS = [
   // 🏨 Apartamentos lleva el resumen del ciclo de mensajes al huésped (restaurada 16/07/2026).
@@ -412,6 +429,7 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
   }
 
   if (isMobile) {
+    const pestanas = soloEmpresas ? NAV_SOLO_EMPRESAS : PESTANAS_MOVIL
     return (
       <>
         {/* Barra superior de ancho completo: el contenido desplazado pasa limpio por debajo
@@ -422,15 +440,6 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
           background: 'var(--surface)', borderBottom: '1px solid var(--border)',
           display: 'flex', alignItems: 'center', gap: '10px', padding: '0 12px',
         }}>
-          <button
-            onClick={() => setOpen(true)}
-            aria-label="Abrir menú"
-            style={{
-              background: 'var(--surface)', border: '1px solid var(--border)',
-              borderRadius: '8px', padding: '6px 10px', fontSize: '18px',
-              lineHeight: 1, cursor: 'pointer', color: 'var(--text)',
-            }}
-          >☰</button>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, fontSize: '15px', minWidth: 0 }}>
             <img src="/icon.svg" alt="" width={22} height={22} style={{ borderRadius: 6, flexShrink: 0 }} />
             <span>Mi grupo</span>
@@ -442,6 +451,37 @@ export default function UserSidebar({ email, nombre, isOperator, operadorRol, ro
             <SubirFactura variante="barra" />
           </div>
         </div>
+
+        {/* 📱 Barra inferior (26/09/2026, a lo Smoobu): lo del día a día al alcance del pulgar. El
+            ☰ de arriba pasa a ser la 5.ª pestaña «Menú», que abre el MISMO cajón: ninguna página
+            deja de estar accesible. z-index 30 como la barra superior: backdrop (40) y cajón (50)
+            la tapan, y las hojas modales de /banca (61) también. */}
+        <nav className="barra-inferior" aria-label="Accesos rápidos" style={{
+          position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 30,
+          background: 'var(--surface)', borderTop: '1px solid var(--border)',
+          display: 'grid', gridTemplateColumns: `repeat(${pestanas.length + 1}, minmax(0, 1fr))`,
+          paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        }}>
+          {pestanas.map(({ href, icon: Ic, label }) => {
+            const activo = !open && activoPorRuta(href, path)
+            return (
+              <Link key={href} href={href} aria-current={activo ? 'page' : undefined} style={{
+                ...estiloPestana, color: activo ? 'var(--primary)' : 'var(--muted)',
+                fontWeight: activo ? 700 : 500,
+              }}>
+                <Ic size={22} strokeWidth={activo ? 2.25 : 1.75} aria-hidden />
+                <span style={textoPestana}>{label}</span>
+              </Link>
+            )
+          })}
+          <button onClick={() => setOpen(true)} aria-label="Abrir menú" aria-expanded={open} style={{
+            ...estiloPestana, color: open ? 'var(--primary)' : 'var(--muted)', fontWeight: open ? 700 : 500,
+            background: 'transparent', border: 'none', cursor: 'pointer', font: 'inherit',
+          }}>
+            <Menu size={22} strokeWidth={open ? 2.25 : 1.75} aria-hidden />
+            <span style={textoPestana}>Menú</span>
+          </button>
+        </nav>
 
         {/* Backdrop */}
         {open && (

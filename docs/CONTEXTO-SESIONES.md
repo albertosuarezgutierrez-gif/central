@@ -699,6 +699,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Plataforma · barra inferior de pestañas en móvil (prueba, a lo Smoobu)
+- Móvil (≤768 px): barra fija abajo con Inicio · Calendario · Mensajes · Correduría + «Menú», que abre
+  el MISMO cajón (el ☰ de arriba se quita; la barra superior queda con marca + subir factura).
+  Rol `empresas` → solo Empresas + Menú. `LayoutShell` reserva 60px + safe-area abajo.
+- Medido con Playwright a 320/390: 5 pestañas de 64/78 px × 60 alto, sin etiquetas cortadas, la última
+  fila del contenido no queda tapada. Escritorio sin cambios. PR draft en `claude/smmobu-bottom-buttons-design-fwx0rv`.
+
 ## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
 - Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).
 - Fix: `vaARecomendador()` en `reglas.ts` — solo categoría `faq` o `general`+RE_RECO; lo operativo (equipaje, check-in, acceso…) va a `decidir` con ficha. Cepo en `equipaje.test.ts` (visto en rojo).

@@ -18,8 +18,10 @@ export default function LayoutShell({ children }: { children: React.ReactNode })
       minWidth: 0,
       overflowY: 'auto',
       // En móvil: el sidebar es position:fixed (no empuja el contenido),
-      // pero el botón hamburguesa ocupa ~52px en la parte superior.
+      // pero la barra superior ocupa 52px…
       paddingTop: isMobile ? 52 : 0,
+      // …y la barra inferior de pestañas (60px + zona segura del gesto de inicio).
+      paddingBottom: isMobile ? 'calc(60px + env(safe-area-inset-bottom, 0px))' : 0,
       // En móvil no hay margen lateral (el sidebar flota por encima).
       marginLeft: 0,
       width: isMobile ? '100%' : undefined,
