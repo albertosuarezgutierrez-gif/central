@@ -14,6 +14,17 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-26 · mercado-booking (2ª pasada del día)** · hizo: pasada de 24 ventanas (max=24, tope
+  dejó fuera 484 de 508 candidatas) → 237 comps reales escritos, esta vez sobre ventanas de EVENTO
+  (Feria Icónica Santalucía 05-07 jun 2027, Nochevieja/Reyes 31 dic-08 ene, Sevilla FC-Celta 10-12
+  ene, arranque Betis-Deportivo 17-19 ene), aforos 2/4/5/12, ronda 1. Escaparate propio: 0/4 medido
+  otra vez — mismo motivo que la 1ª pasada de hoy (`hotel_names_no_availability` 03-05/03-06 oct,
+  pisos ocupados). 3 anuncios propios (HOUSE SEVILLANA 6 habitaciones) en comparables de aforo 12
+  (05-07 jun, 05-07 ene, 06-08 ene) descartados antes de escribir. Latido `ok:false` por el
+  escaparate en blanco. NO se repite el aviso Telegram: ya lo mandó la 1ª pasada de hoy (mismo
+  día, mismo motivo, messageId 5321) — repetirlo sería ruido. dudas: —; fallos: escaparate sin
+  medir (mismo hueco que la pasada anterior); PRs/commits: — (solo BD vía
+  `/api/sivra/mercado/ingest` + latido).
 - **2026-09-26 · mercado-booking** · hizo: pasada de 24 ventanas (max=24, tope dejó fuera 484 de 508
   candidatas) → 238 comps reales escritos (05-31 dic + 1 ene, aforos 2/4/5/12, evento confirmado
   ronda 1). Escaparate propio: 0/4 medido — Busto Reform, Dúplex Center, Luxury Busto y House
