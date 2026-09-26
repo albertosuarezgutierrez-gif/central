@@ -712,6 +712,10 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   `stroke="currentColor" stroke-width="3"` → ≈ semibold sin redibujar. Alto: portal 18→22 px (≤639: 19; ≤380 sigue 14),
   web 20→22 (móvil 17→19). Web medida con Playwright a 320/360/390/1024: sin desborde. El PNG de correo NO se tocó.
 
+## (26/09/2026) Cepo de frontmatter: hueco `>- texto` cerrado (lo encontró `verificador-esceptico`)
+Primer uso real del agente: rompió las 3 aserciones del cepo (rojas) y halló que `description: >- texto`
+(YAML inválido) pasaba en verde. Añadida la guarda en `test/regression-skills-frontmatter.test.ts`, vista en rojo.
+
 ## (26/09/2026) Portal del cliente (asegura-portal) · barra inferior a lo Smoobu
 - Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero
   en plataforma y en /correduria y se deshizo (el PR #3659 queda sin cambios en plataforma).
