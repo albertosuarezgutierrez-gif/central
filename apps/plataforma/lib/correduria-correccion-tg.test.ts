@@ -144,6 +144,8 @@ test('el botón es de un solo uso y caduca: el UPDATE exige propuesta y plazo vi
 test('el interruptor se mira ANTES de gastar el botón y antes de proponer', () => {
   assert.ok(aplicar.indexOf('emisionTgActiva(') > 0)
   assert.ok(aplicar.indexOf('emisionTgActiva(') < aplicar.indexOf("SET estado = 'aplicando'"))
+  // `> 0` además de `<`: si la comprobación desaparece, indexOf da -1 y el `<` solo seguiría en verde.
+  assert.ok(proponer.indexOf('emisionTgActiva(') > 0)
   assert.ok(proponer.indexOf('emisionTgActiva(') < proponer.indexOf('INSERT INTO correduria_asistente_correccion'))
 })
 

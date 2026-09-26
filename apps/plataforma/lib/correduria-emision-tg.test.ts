@@ -169,6 +169,7 @@ test('el botón es de un solo uso y caduca: el UPDATE exige propuesta y plazo vi
 })
 
 test('el interruptor se mira ANTES de gastar el botón', () => {
+  assert.ok(cuerpoBoton.indexOf('emisionTgActiva(') > 0)
   assert.ok(cuerpoBoton.indexOf('emisionTgActiva(') < cuerpoBoton.indexOf("SET estado = 'emitiendo'"))
 })
 
