@@ -1876,7 +1876,26 @@ export type VistaImportacion =
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
       cuentaInformada: boolean
+      /** La calle que irá a la compañía. `ficha` = el proyecto la trae a medias y `/emitir` la completa
+       *  entera desde la ficha; `falta` = tampoco la ficha la tiene completa. `null` = asegura no lo manda. */
+      direccion: DireccionEmision | null
     }
+
+export type DireccionEmision =
+  | { origen: 'proyecto'; texto: string | null }
+  | { origen: 'ficha'; texto: string }
+  | { origen: 'falta'; faltan: string[] }
+
+function leerDireccionEmision(v: unknown): DireccionEmision | null {
+  if (typeof v !== 'object' || v === null) return null
+  const x = v as Record<string, unknown>
+  if (x.origen === 'proyecto') return { origen: 'proyecto', texto: cadenaONulo(x.texto) }
+  if (x.origen === 'ficha' && typeof x.texto === 'string' && x.texto.trim()) return { origen: 'ficha', texto: x.texto }
+  if (x.origen === 'falta') {
+    return { origen: 'falta', faltan: Array.isArray(x.faltan) ? x.faltan.filter((f): f is string => typeof f === 'string') : [] }
+  }
+  return null
+}
 
 export type TitularProyecto = { nombre: string | null; documento: string | null; direccion: string | null; codigoPostal: string | null }
 
@@ -1937,6 +1956,7 @@ export function interpretarVistaImportacion(status: number, json: unknown): Vist
     cuenta: leerCuenta(r.cuenta),
     cuentaAviso: leerAvisoCuenta(r.cuenta),
     cuentaInformada: 'cuenta' in r,
+    direccion: leerDireccionEmision(r.direccion),
   }
 }
 

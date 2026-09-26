@@ -1954,7 +1954,17 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   cualquier otra cosa —un 500 sin cuerpo incluido— es **`incierta`**: «puede haberse emitido, míralo en la intranet».
 - Interruptor **`CORREDURIA_ASISTENTE_EMISION_ACTIVA`** (apagado salvo «1/sí»). Tabla `correduria_asistente_emision`
   (`prisma/sql/2026-09-26_correduria_asistente_emision.sql`, aplicada). Cepos en `lib/correduria-emision-tg.test.ts`.
-- **Pendiente (3b):** correcciones por chat (`proponer_correccion`); hoy dirección/apellidos se corrigen en la ficha.
+- **✏️ Correcciones por chat (fase 3b, 26/09/2026) — `lib/correduria-correccion-tg.ts`.** `proponer_correccion(clienteId, …)`
+  con SOLO dirección, CP, ciudad, provincia, nombre o apellidos, tal cual los dicta Alberto. El servidor los valida con
+  `revisarEdicion` (las reglas de la ficha), **no borra nada por chat** (vacío = error) y DNI, fecha de nacimiento, notas,
+  contactos e IBAN se ignoran. Nombre/apellidos exigen un DNI RECIBIDO en 📎 Documentos (si no se puede comprobar, no se
+  propone). El mensaje enseña **antes → después** y con qué reconocer la ficha (DNI enmascarado · ciudad): dos homónimos
+  no se aprueban por error. Al pulsar se **relee la ficha** y se compara la huella de lo de antes; si alguien la cambió en
+  esos 15 min, no se pisa. Al cerrar la fila solo quedan los NOMBRES de los campos (los valores ya viven cifrados en la
+  ficha). Botón `cas_corregir:<id>`: mismo candado de un solo uso y 15 min, mismo filtro `from.id`, mismo interruptor
+  que la emisión; escribe por `PATCH /api/operador/cliente` (auditado) con actor `agente:asistente-telegram` en cuerpo y
+  cabecera. Solo `ok` es «corregida»; un fallo de red dice «no sé si se ha guardado». Tabla
+  `correduria_asistente_correccion` (aplicada). Cepos en `lib/correduria-correccion-tg.test.ts`.
 - **Reparto del texto libre** (`clasificarDestino`, puro y testeado en `lib/correduria-asistente.ts`):
   atajo `seguro:` / `/seguros` → siempre correduría; palabras propias (póliza, siniestro, renovación,
   CIMA…) o una matrícula → correduría; palabras contables → contable; lo demás («¿qué tiene Pablo
@@ -1974,7 +1984,7 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   (`ia_presupuestos`, app `correduria-asistente`), e interruptor `CORREDURIA_ASISTENTE_APAGADO`.
 - **Lo que una herramienta no trae es «no consta», nunca «no tiene»**: un fallo del puerto le llega a la
   IA como `ERROR … NO digas que no hay datos`.
-- Callbacks `cas_bien|cas_mal|cas_regla|cas_reglano|cas_emitir|cas_emitirno` en el webhook. Son RESPUESTAS, no avisos
+- Callbacks `cas_bien|cas_mal|cas_regla|cas_reglano|cas_emitir|cas_emitirno|cas_corregir|cas_corregirno` en el webhook. Son RESPUESTAS, no avisos
   proactivos: por eso usan `tgSend` directo y no están en el catálogo de `/telegram`.
 - **Sin resumen diario propio a propósito:** las renovaciones ya llegan en `correduria.renovaciones` y
   Alberto pidió menos avisos. «¿Qué tengo hoy?» se lo contesta el asistente a demanda.

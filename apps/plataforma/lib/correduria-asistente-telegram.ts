@@ -16,6 +16,12 @@ import { fichaAsegura } from '@/lib/ficha-asegura'
 import { polizaAsegura } from '@/lib/poliza-asegura'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
 import { emitirAsegura, importarProyectoAsegura, vistaImportacionAsegura } from '@/lib/retarificar-asegura'
+import { editarClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
+import { documentosAsegura } from '@/lib/documentos-asegura'
+import {
+  documentoQueAcredita, edicionDeCambios, faltaValorActual, huellaAntes, prepararCorreccion, resultadoCorreccion, textoCorreccion,
+  urlCliente, type Cambio, type FichaActual,
+} from './correduria-correccion-tg'
 import {
   ACTOR_EMISION_TG, emisionTgActiva, huellaResumen, MINUTOS_PROPUESTA, prepararResumen, proyectoValido, resultadoEmision,
   textoResumen, urlPoliza, type ResumenEmision,
@@ -180,6 +186,8 @@ async function ejecutar(
     }
     case 'preparar_emision':
       return prepararEmision(args, ctx.turnoId)
+    case 'proponer_correccion':
+      return proponerCorreccion(args, ctx.turnoId)
     default:
       return { texto: `ERROR: herramienta desconocida ${nombre}.`, ok: false }
   }
@@ -340,6 +348,137 @@ export async function emitirDesdeBoton(arg: string): Promise<void> {
   }
 }
 
+// ── Correcciones de la ficha (fase 3b): la IA propone, el servidor valida, Alberto pulsa ─────────
+
+async function proponerCorreccion(args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
+  const clienteId = idValido(args.clienteId)
+  // Mismo interruptor que la emisión: es UN solo «¿escribe el asistente en la cartera?».
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    return {
+      texto: `NO DISPONIBLE: las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}). Dile a Alberto que lo corrija en la ficha${clienteId ? `: ${urlCliente(clienteId)}` : ' (/correduria)'}.`,
+      ok: true,
+    }
+  }
+  if (!clienteId) return { texto: 'ERROR: clienteId no válido. Usa buscar para obtenerlo.', ok: false }
+  const prep = prepararCorreccion(args)
+  if (!prep.ok) return { texto: `NO SE PUEDE PROPONER: ${prep.motivo}. Díselo a Alberto.`, ok: true }
+
+  const actual = await fichaActual(clienteId)
+  if (actual === 'no_encontrado') return { texto: 'No existe ninguna ficha con ese id.', ok: true }
+  if (typeof actual === 'string') return { texto: `ERROR: no he podido leer la ficha (${actual}). No propongas nada todavía.`, ok: false }
+  const falta = faltaValorActual(actual, prep.cambios)
+  if (falta) return { texto: `NO SE PUEDE PROPONER: ${falta}. Dile a Alberto que lo corrija en la ficha: ${urlCliente(clienteId)}`, ok: true }
+
+  let documento = null
+  if (prep.tocaIdentidad) {
+    const docs = await documentosAsegura({ clienteId })
+    if (docs.estado !== 'ok') {
+      return { texto: `ERROR: no he podido comprobar si la ficha tiene el DNI archivado (${docs.estado}). No propongas el cambio de nombre todavía.`, ok: false }
+    }
+    documento = documentoQueAcredita(docs.documentos)
+    if (!documento) {
+      return {
+        texto: `NO SE PUEDE PROPONER: cambiar nombre o apellidos exige el DNI archivado en la ficha y no hay ninguno recibido. Dile a Alberto que lo suba en 📎 Documentos: ${urlCliente(clienteId)}`,
+        ok: true,
+      }
+    }
+  }
+
+  // Un solo cambio vivo por ficha, y lo que caducó sin pulsarse suelta sus valores.
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_correccion SET estado = 'caducada', decidida_at = now(), ${SOLO_CAMPOS}
+    WHERE estado = 'propuesta' AND (cliente_id = ${clienteId}::uuid OR caduca_at <= now())`).catch(() => {})
+  const [fila] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
+    INSERT INTO correduria_asistente_correccion (turno_id, cliente_id, cambios, documento_id, huella, caduca_at)
+    VALUES (${turnoId}, ${clienteId}::uuid, ${JSON.stringify(prep.cambios)}::jsonb, ${documento?.id ?? null}::uuid,
+            ${huellaAntes(actual, prep.cambios)}, now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
+    RETURNING id`)
+  const enviado = await tgSendButtons(textoCorreccion(actual, prep.cambios, documento), [[
+    { texto: '✏️ Corregir', callback: `cas_corregir:${fila.id}` },
+    { texto: '✖️ No', callback: `cas_corregirno:${fila.id}` },
+  ]]).catch(() => null)
+  if (enviado === null) {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_correccion SET estado = 'descartada', decidida_at = now(), ${SOLO_CAMPOS} WHERE id = ${fila.id}`).catch(() => {})
+    return { texto: 'ERROR: no he podido mandar el cambio con el botón a Telegram. Dile que lo intente otra vez o lo corrija en la ficha.', ok: false }
+  }
+  return {
+    texto: 'Cambio enviado a Alberto con el botón «Corregir» (15 minutos, un solo uso). NO digas que la ficha está corregida: dile que revise cada letra y pulse.',
+    ok: true,
+  }
+}
+
+type FilaCorreccion = { cliente_id: string; cambios: Cambio[]; documento_id: string | null; huella: string }
+
+/**
+ * Al cerrar una fila solo quedan los NOMBRES de los campos: la dirección y el nombre ya viven (cifrados)
+ * en la ficha, y el rastro de quién y cuándo queda en la auditoría de asegura.
+ */
+const SOLO_CAMPOS = Prisma.sql`cambios = COALESCE((SELECT jsonb_agg(e -> 'campo') FROM jsonb_array_elements(cambios) e), '[]'::jsonb), huella = NULL`
+
+/** La ficha tal como está, en la forma que compara la huella. Un string = por qué no se pudo leer. */
+async function fichaActual(clienteId: string): Promise<FichaActual | string> {
+  const r = await fichaAsegura(clienteId)
+  if (r.estado !== 'ok') return r.estado === 'error' ? `error: ${r.motivo}` : r.estado
+  const f = r.ficha
+  return {
+    nombre: f.nombre,
+    dniEnmascarado: f.identidad?.dniEnmascarado ?? null,
+    identidad: f.identidad ? { nombre: f.identidad.nombre, apellidos: f.identidad.apellidos } : null,
+    contacto: {
+      direccion: f.contacto.direccion, direccionIlegible: f.contacto.direccionIlegible,
+      codigoPostal: f.contacto.codigoPostal, ciudad: f.contacto.ciudad, provincia: f.contacto.provincia,
+    },
+  }
+}
+
+/** Botón «Corregir». Escribe por el puerto auditado de asegura. Nunca lanza; cada salida deja mensaje. */
+async function aplicarCorreccion(id: number): Promise<string> {
+  const decir = (t: string) => tgSend(t).catch(() => {})
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    await decir(`🛡️ Las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}): no se ha cambiado nada.`)
+    return 'Apagado: no se cambia nada'
+  }
+  // Un solo uso: dos toques, o un reenvío del webhook, solo pasan una vez por aquí.
+  const [fila] = await prisma.$queryRaw<FilaCorreccion[]>(Prisma.sql`
+    UPDATE correduria_asistente_correccion SET estado = 'aplicando', decidida_at = now()
+    WHERE id = ${id} AND estado = 'propuesta' AND caduca_at > now()
+    RETURNING cliente_id::text AS cliente_id, cambios, documento_id::text AS documento_id, huella`).catch(() => [] as FilaCorreccion[])
+  if (!fila) {
+    const [actual] = await prisma.$queryRaw<{ estado: string; caducado: boolean }[]>(Prisma.sql`
+      SELECT estado, caduca_at <= now() AS caducado FROM correduria_asistente_correccion WHERE id = ${id}`).catch(() => [])
+    if (actual?.estado === 'propuesta' && actual.caducado) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE correduria_asistente_correccion SET estado = 'caducada', decidida_at = now(), ${SOLO_CAMPOS} WHERE id = ${id} AND estado = 'propuesta'`).catch(() => {})
+      return `Caducado (${MINUTOS_PROPUESTA} min): no se cambia nada`
+    }
+    return actual ? 'Ya estaba decidida' : 'No encuentro ese cambio'
+  }
+
+  const url = urlCliente(fila.cliente_id)
+  const cerrar = (estado: string, resultado: Record<string, unknown>) => prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_correccion SET estado = ${estado}, resultado = ${JSON.stringify(resultado)}::jsonb, ${SOLO_CAMPOS}
+    WHERE id = ${id}`).catch((e) => console.error('[correduria-correccion-tg] no se pudo cerrar la fila', id, e))
+
+  // Se relee la ficha: si alguien la cambió desde que Alberto vio el «antes», no se pisa lo nuevo.
+  const ahora = await fichaActual(fila.cliente_id)
+  if (typeof ahora === 'string' || huellaAntes(ahora, fila.cambios) !== fila.huella) {
+    const motivo = typeof ahora === 'string' ? `no he podido releer la ficha (${ahora})` : 'la ficha ha cambiado desde que te lo enseñé'
+    await cerrar('caducada', { motivo })
+    await decir(`✋ No he cambiado nada: ${escapeHtml(motivo)}. Pídemelo otra vez.`)
+    return 'No se ha aplicado'
+  }
+  const edicion = edicionDeCambios(fila.cambios, fila.documento_id)
+  const r = await editarClienteAsegura({ id: fila.cliente_id, ...edicion, actor: ACTOR_EMISION_TG }, ACTOR_EMISION_TG)
+    .then((x) => interpretarEscritura(x.status, x.json))
+    .catch((e): ReturnType<typeof interpretarEscritura> => ({ estado: 'error', motivo: e instanceof Error ? e.message.slice(0, 120) : 'fallo' }))
+  const fin = resultadoCorreccion(r, url)
+  // Solo el desenlace: un `conflicto` trae nombres de otras fichas y aquí no hacen falta.
+  await cerrar(fin.estado, { estado: r.estado, ...('motivo' in r ? { motivo: r.motivo } : {}) })
+  await decir(fin.texto)
+  return fin.estado === 'aplicada' ? 'Ficha corregida ✏️' : 'No se ha aplicado'
+}
+
 // ── Un turno ─────────────────────────────────────────────────────────────────────────────────────
 
 async function turnosDeHoy(): Promise<number | null> {
@@ -455,6 +594,13 @@ export async function resolverBotonCorreduria(accion: string, arg: string): Prom
       UPDATE correduria_asistente_turno SET valoracion = ${accion === 'bien' ? 1 : -1} WHERE id = ${id}`).catch(() => {})
     if (accion === 'mal') await tgAskForReply(preguntaNota(id)).catch(() => {})
     return accion === 'bien' ? 'Gracias 👍' : 'Apuntado 👎'
+  }
+  if (accion === 'corregir') return aplicarCorreccion(id)
+  if (accion === 'corregirno') {
+    const n = await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_correccion SET estado = 'descartada', decidida_at = now(), ${SOLO_CAMPOS}
+      WHERE id = ${id} AND estado = 'propuesta'`).catch(() => 0)
+    return n ? 'Descartado: no se cambia nada' : 'Ya estaba decidido'
   }
   if (accion === 'emitirno') {
     const n = await prisma.$executeRaw(Prisma.sql`
