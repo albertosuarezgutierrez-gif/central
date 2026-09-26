@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 
 import {
   CAMPO_VEHICULO_MAX,
@@ -32,6 +32,7 @@ import {
 } from '@central/module-seguros'
 
 import { fechaEs } from '@/lib/fechas'
+import * as borrador from '@/lib/parte-borrador'
 import { logoCompania } from '@/lib/logos-companias'
 
 import { EnviarACompania } from './EnviarACompania'
@@ -369,6 +370,8 @@ type Elegido = {
   estado: EstadoFichero
   /** Por qué no ha entrado. Texto para leer, no un código. */
   motivo: string | null
+  /** Subido desde el hueco del parte amistoso: viaja marcado para que no se pierda entre las fotos. */
+  parteAmistoso?: boolean
 }
 
 let contadorClaves = 0
@@ -645,8 +648,11 @@ export function ParteSiniestro({
   corredor,
   partes,
   polizaInicial,
+  identidadId,
 }: {
   polizas: readonly PolizaOpcionParte[]
+  /** Solo para la clave del borrador local: dos personas en el mismo móvil no comparten borrador. */
+  identidadId?: string
   /**
    * Pólizas AUTORIZADAS sin el alcance `partes`: se pintan sus teléfonos de
    * compañía (llamar a la grúa no es actuar en nombre de nadie), pero NO se
@@ -733,6 +739,37 @@ export function ParteSiniestro({
    */
   const sesionRef = useRef(0)
 
+  // ── Borrador en el dispositivo (ver `lib/parte-borrador.ts`) ──────────────
+  const claveBorr = identidadId ? borrador.claveBorrador(identidadId) : null
+  /** Un borrador de otra visita, ofrecido ANTES de abrir. Se lee tras montar: en el
+   *  servidor no hay `localStorage` y leerlo en el render rompería la hidratación. */
+  const [pendiente, setPendiente] = useState<borrador.Borrador<Formulario> | null>(null)
+  useEffect(() => {
+    if (claveBorr === null || polizaValida !== null) return
+    setPendiente(borrador.leerBorrador(borrador.leer(claveBorr), VACIO, Date.now()))
+    // Solo al montar: después el borrador lo gobierna este mismo componente.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    if (claveBorr === null || !abierto || estado === 'enviado') return
+    if (borrador.merecePena(form)) borrador.guardar(claveBorr, form, Date.now())
+  }, [claveBorr, abierto, estado, form])
+
+  function recuperarBorrador() {
+    if (pendiente === null) return
+    abrir()
+    // Una póliza que ya no está en la lista (quitada, o autorización retirada) no se recupera.
+    const poliza = polizas.some((p) => p.valor === pendiente.form.poliza) ? pendiente.form.poliza : ''
+    setForm({ ...pendiente.form, poliza })
+    setPaso('datos')
+    setPendiente(null)
+  }
+
+  function descartarBorrador() {
+    if (claveBorr !== null) borrador.borrar(claveBorr)
+    setPendiente(null)
+  }
+
   const enviando = estado === 'enviando'
   const subidos = ficheros.filter((f) => f.estado === 'ok')
   const fallidos = ficheros.filter((f) => f.estado === 'error')
@@ -777,6 +814,9 @@ export function ParteSiniestro({
   }
 
   function abrir() {
+    // Abrir uno nuevo con un borrador en pantalla es elegir no seguir con él:
+    // deja de ofrecerse, y lo que se escriba ahora lo sustituye.
+    setPendiente(null)
     // El formulario se monta SOLO al abrirlo (regla de rendimiento de UI del
     // monorepo): la bóveda ya trae hasta 50 tarjetas con su propio editor.
     setForm(VACIO)
@@ -841,6 +881,8 @@ export function ParteSiniestro({
   }
 
   function cerrar() {
+    // «Cancelar» es descartar a propósito: el borrador se va con él.
+    if (claveBorr !== null) borrador.borrar(claveBorr)
     setAbierto(false)
     setErrores({})
     setErrorGeneral(null)
@@ -869,7 +911,7 @@ export function ParteSiniestro({
    * fichero que no vale se queda en la lista **marcado y con su motivo** en vez
    * de desaparecer. Desaparecer se lee como «ya está subido».
    */
-  function agregarFicheros(nuevos: File[]) {
+  function agregarFicheros(nuevos: File[], parteAmistoso = false) {
     if (nuevos.length === 0) return
 
     // El hueco se calcula con el estado que ya hay en pantalla, FUERA del
@@ -882,7 +924,13 @@ export function ParteSiniestro({
       const reparo = revisarDocumento({ type: f.type, size: f.size, name: f.name })
       // Un fichero rechazado nace en `error` CON su motivo, no se descarta:
       // desaparecer de la lista se lee como «ya está subido».
-      return { clave: `f${contadorClaves++}`, fichero: f, estado: reparo ? 'error' : 'espera', motivo: reparo }
+      return {
+        clave: `f${contadorClaves++}`,
+        fichero: f,
+        estado: reparo ? 'error' : 'espera',
+        motivo: reparo,
+        ...(parteAmistoso ? { parteAmistoso: true } : {}),
+      }
     })
     setFicheros((previos) => [...previos, ...añadidos])
 
@@ -902,6 +950,12 @@ export function ParteSiniestro({
     const nuevos = Array.from(e.target.files ?? [])
     e.target.value = '' // permite volver a elegir el mismo fichero
     agregarFicheros(nuevos)
+  }
+
+  function elegirParteAmistoso(e: React.ChangeEvent<HTMLInputElement>) {
+    const nuevos = Array.from(e.target.files ?? [])
+    e.target.value = ''
+    agregarFicheros(nuevos, true)
   }
 
   /** Toca/destoca una zona del selector. Multi-selección: un golpe puede
@@ -936,6 +990,7 @@ export function ParteSiniestro({
       try {
         const body = new FormData()
         body.append('documento', elegido.fichero)
+        if (elegido.parteAmistoso) body.append('tipo', 'parte_amistoso')
         const r = await fetch(`/api/siniestros/${idParte}/adjuntos`, { method: 'POST', body })
         if (r.status === 201) {
           setFicheros((f) => f.map((x) => (x.clave === elegido.clave ? { ...x, estado: 'ok', motivo: null } : x)))
@@ -1074,6 +1129,7 @@ export function ParteSiniestro({
         setEstado('enviado')
         setAbierto(false)
         setForm(VACIO)
+        if (claveBorr !== null) borrador.borrar(claveBorr)
 
         // 🚨 Los adjuntos van DESPUÉS y cuelgan de este parte. Nunca al revés:
         // un fichero subido antes que su parte es un fichero huérfano que no ve
@@ -1227,8 +1283,25 @@ export function ParteSiniestro({
               parte de esos lo tiene que dar su titular.
             </p>
           )}
-          <button type="button" className="boton" onClick={abrir}>
-            Dar parte de un siniestro
+          {pendiente !== null && (
+            <div className="parte-borrador" role="status">
+              <p>
+                Tienes un parte <strong>a medias</strong> del {fechaEs(new Date(pendiente.guardadoEn)) ?? 'otro día'}
+                {pendiente.form.descripcion.trim() !== '' && <>: «{recorte(pendiente.form.descripcion)}»</>}. Las
+                fotos no se guardan, habría que volver a elegirlas.
+              </p>
+              <div className="editor-acciones">
+                <button type="button" className="boton" onClick={recuperarBorrador}>
+                  Seguir con él
+                </button>
+                <button type="button" className="boton secundario" onClick={descartarBorrador}>
+                  Descartarlo
+                </button>
+              </div>
+            </div>
+          )}
+          <button type="button" className={pendiente !== null ? 'boton secundario' : 'boton'} onClick={abrir}>
+            {pendiente !== null ? 'Empezar uno nuevo' : 'Dar parte de un siniestro'}
           </button>
         </>
       )}
@@ -1294,6 +1367,8 @@ export function ParteSiniestro({
               )}
             </div>
           )}
+
+          <AyudaUrgente poliza={polizaSeleccionada} corredor={corredor} />
 
           {/* El campo principal y el primero: es lo único que no podemos poner
               nosotros, así que se lleva el sitio. */}
@@ -1433,6 +1508,15 @@ export function ParteSiniestro({
             deshabilitado={enviando}
             onCambio={(v) => responder('hayTerceros', v)}
           />
+
+          {esVehiculoAMotor(polizaSeleccionada?.ramo) && form.hayTerceros === 'si' && (
+            <ParteAmistoso
+              uid={uid}
+              ficheros={ficheros.filter((f) => f.parteAmistoso)}
+              deshabilitado={enviando || ocupanPlaza(ficheros) >= MAX_ADJUNTOS_POR_PARTE}
+              onElegir={elegirParteAmistoso}
+            />
+          )}
 
           <Adjuntar
             uid={uid}
@@ -1726,6 +1810,99 @@ function ZonasVehiculo({
  * `SubirPoliza.tsx`—, que sí los tiene. El input sigue existiendo y sigue siendo
  * el que recibe el foco del teclado: no es un `div` con un `onClick`.
  */
+/** Primeros 60 caracteres de un texto, para recordar de qué va un borrador sin volcarlo entero. */
+function recorte(t: string): string {
+  const limpio = t.trim().replace(/\s+/g, ' ')
+  return limpio.length > 60 ? `${limpio.slice(0, 60)}…` : limpio
+}
+
+/**
+ * «¿Necesitas ayuda ahora mismo?», con la póliza ya elegida.
+ *
+ * 🚨 Grúa, cerrajero o fontanero de urgencia los manda la ASISTENCIA de la
+ * compañía, no un parte nuestro: el parte se tramita en horas o días, y quien
+ * está tirado en la carretera necesita la grúa en minutos. Por eso va ARRIBA del
+ * formulario, antes de «Qué ha pasado», y no dentro de la confirmación.
+ *
+ * Sin teléfono de asistencia verificado NO se inventa uno ni se dice «no tiene»:
+ * se dice dónde está (la póliza) y se ofrece el nuestro.
+ */
+function AyudaUrgente({
+  poliza,
+  corredor,
+}: {
+  poliza: PolizaOpcionParte | null
+  corredor?: { tel: string; numero: string }
+}) {
+  if (poliza === null) return null
+  const asistencias = poliza.canal.vias.filter(
+    (v): v is Extract<ViaCanal, { tipo: 'telefono' }> => v.tipo === 'telefono' && v.uso === 'asistencia',
+  )
+  return (
+    <div className="parte-urgente">
+      <p className="parte-urgente-titulo">
+        <strong>¿Necesitas ayuda ahora mismo?</strong>
+      </p>
+      <p className="editor-ayuda">
+        Grúa, cerrajero, fontanero o cristalero de urgencia los manda la <strong>asistencia de {poliza.canal.nombre}</strong>,
+        no este parte. Llama primero y luego sigue aquí.
+      </p>
+      {asistencias.length > 0 ? (
+        <div className="parte-urgente-vias">
+          {asistencias.map((v) => (
+            <ViaCanalEnlace key={`${v.numero}-${v.para ?? ''}`} via={v} />
+          ))}
+        </div>
+      ) : (
+        <p className="editor-ayuda">
+          No tenemos verificado su teléfono de asistencia: viene en tu póliza. Si no lo encuentras,{' '}
+          {corredor ? <a href={`tel:${corredor.tel}`}>llámanos al {corredor.numero}</a> : 'llámanos'}.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Hueco propio para el parte amistoso (declaración amistosa de accidente), solo
+ * en auto/moto con terceros. Es el papel que más acelera la tramitación y en la
+ * lista general se pierde entre las fotos del golpe; aquí viaja marcado y el
+ * corredor lo recibe como `parte_siniestro`, no como una foto más.
+ */
+function ParteAmistoso({
+  uid,
+  ficheros,
+  deshabilitado,
+  onElegir,
+}: {
+  uid: string
+  ficheros: readonly Elegido[]
+  deshabilitado: boolean
+  onElegir: (e: React.ChangeEvent<HTMLInputElement>) => void
+}) {
+  return (
+    <div className="editor-campo">
+      <label htmlFor={`${uid}-amistoso`}>Parte amistoso</label>
+      <p className="editor-ayuda" id={`${uid}-amistoso-ayuda`}>
+        Si lo habéis rellenado, hazle una foto a cada cara, <strong>con las dos firmas</strong>. Si no lo
+        tenéis, no pasa nada: el parte se manda igual.
+      </p>
+      <label className="boton-subir" aria-disabled={deshabilitado}>
+        {ficheros.length === 0 ? 'Foto del parte amistoso' : 'Añadir otra cara'}
+        <input
+          id={`${uid}-amistoso`}
+          type="file"
+          multiple
+          accept={ACCEPT}
+          onChange={onElegir}
+          disabled={deshabilitado}
+          aria-describedby={`${uid}-amistoso-ayuda`}
+        />
+      </label>
+    </div>
+  )
+}
+
 function Adjuntar({
   uid,
   ficheros,
@@ -1827,7 +2004,9 @@ function ListaFicheros({
         return (
           <li key={f.clave} className="adjunto">
             <div className="adjunto-datos">
-              <span className="adjunto-nombre">{nombre}</span>
+              <span className="adjunto-nombre">
+                {f.parteAmistoso && <span className="chip acento">Parte amistoso</span>} {nombre}
+              </span>
               <span className="adjunto-meta">
                 {peso !== null && <>{peso} · </>}
                 <span className={clase}>{texto}</span>

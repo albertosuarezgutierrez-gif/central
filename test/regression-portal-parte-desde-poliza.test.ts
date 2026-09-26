@@ -169,3 +169,25 @@ test('🚨 desde Siniestros, el SEGURO se elige PRIMERO y «No sé cuál» es un
   // Desde la ficha (polizaInicial válida) el paso 1 se salta.
   assert.match(PARTE, /polizaValida !== null \|\| polizas\.length === 0 \? 'datos' : 'poliza'/)
 })
+
+test('🚨 la asistencia urgente va ARRIBA del formulario, antes de «Qué ha pasado», y solo con líneas de asistencia', () => {
+  const ayuda = PARTE.indexOf('<AyudaUrgente poliza={polizaSeleccionada}')
+  const desc = PARTE.indexOf('Qué ha pasado</label>')
+  assert.ok(ayuda !== -1 && ayuda < desc, 'la ayuda urgente se pinta antes de la descripción')
+  assert.match(PARTE, /v\.tipo === 'telefono' && v\.uso === 'asistencia'/, 'solo líneas de asistencia, no la de dar parte')
+})
+
+test('🚨 el parte amistoso viaja MARCADO y se guarda como parte_siniestro', () => {
+  assert.match(PARTE, /if \(elegido\.parteAmistoso\) body\.append\('tipo', 'parte_amistoso'\)/)
+  const ruta = sinComentarios('apps/asegura-portal/app/api/siniestros/[id]/adjuntos/route.ts')
+  assert.match(ruta, /parteAmistoso: form\.get\('tipo'\) === 'parte_amistoso'/)
+  const lib = sinComentarios('apps/asegura-portal/lib/adjuntos-parte.ts')
+  assert.match(lib, /tipo: entrada\.parteAmistoso \? 'parte_siniestro' : tipoAdjuntoParte\(mime\)/)
+})
+
+test('🚨 el borrador es POR identidad y se borra al enviar y al cancelar', () => {
+  assert.match(PARTE, /borrador\.claveBorrador\(identidadId\)/)
+  assert.match(BOVEDA, /identidadId=\{identidad\.id\}/)
+  const borrados = PARTE.split('borrador.borrar(claveBorr)').length - 1
+  assert.ok(borrados >= 3, `se borra al enviar, al cancelar y al descartar (hay ${borrados})`)
+})

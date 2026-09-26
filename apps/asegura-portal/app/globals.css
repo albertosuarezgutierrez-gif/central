@@ -3955,3 +3955,22 @@ h1 em {
 .poliza-tarjeta.no-se { border-style: dashed; color: var(--muted); }
 .poliza-elegida { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
 .poliza-elegida-texto { flex: 1 1 200px; min-width: 0; margin: 0; overflow-wrap: anywhere; }
+
+/* «¿Necesitas ayuda ahora mismo?»: ámbar, no rojo — es una indicación, no un error. */
+.parte-urgente {
+  padding: 12px 14px;
+  border: 1px solid var(--warning-border);
+  background: var(--warning-bg);
+  border-radius: 12px;
+}
+.parte-urgente-titulo { margin: 0 0 4px; }
+.parte-urgente-vias { display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; margin-top: 8px; }
+/* Borrador a medias: se ofrece ANTES del botón de abrir, para que no se pierda. */
+.parte-borrador {
+  margin-bottom: 10px;
+  padding: 12px 14px;
+  border: 1px dashed var(--primary);
+  background: var(--primary-light);
+  border-radius: 12px;
+}
+.parte-borrador p { margin: 0 0 8px; overflow-wrap: anywhere; }
