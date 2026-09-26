@@ -221,7 +221,7 @@ export default function Documentos({
       )}
 
       <details>
-        <summary style={{ cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', minHeight: 44 }}>📎 Subir o pedir un documento</summary>
+        <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44 }}>📎 Subir o pedir un documento</summary>
         <div style={{ display: 'grid', gap: 8, marginTop: 8, maxWidth: 520 }}>
           <label style={lbl}>
             Tipo

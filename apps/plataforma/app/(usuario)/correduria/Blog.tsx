@@ -187,7 +187,7 @@ export default function Blog({ onContador }: { onContador?: (n: number | null) =
                 </p>
               ) : (
                 <details style={{ marginTop: 10 }}>
-                  <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44 }}>
+                  <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44, display: 'flex', alignItems: 'center' }}>
                     Leer el artículo
                   </summary>
                   <div

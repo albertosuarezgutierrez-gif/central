@@ -124,7 +124,7 @@ export default async function HogarNuevoPage({
                   <Link
                     key={c.direccion}
                     href={`/correduria/cliente/${clienteId}/hogar-nuevo?${new URLSearchParams({ direccion: c.direccion, municipio, provincia }).toString()}`}
-                    style={{ ...btnStyle('secundario'), textDecoration: 'none', minHeight: 44 }}
+                    style={{ ...btnStyle('secundario'), textDecoration: 'none', minHeight: 44, display: 'flex', alignItems: 'center' }}
                   >
                     {c.etiqueta}
                   </Link>

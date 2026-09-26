@@ -121,7 +121,7 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
 function Respuestas({ s, tarificar, ramo }: { s: SolicitudDatos; tarificar: string; ramo: 'moto' | 'auto' }) {
   return (
     <details open>
-      <summary style={{ cursor: 'pointer', minHeight: 44, fontWeight: 600, color: 'var(--positive)' }}>
+      <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontWeight: 600, color: 'var(--positive)' }}>
         ✅ El cliente contestó{s.completada ? ` el ${fmt(s.completada.slice(0, 10))}` : ''}
       </summary>
       {s.ilegible || !s.respuestas ? (

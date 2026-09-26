@@ -180,7 +180,7 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
 
         {corrigiendo && abierto === null && !anadiendo && (
           <div>
-            <button type="button" onClick={() => { setAnadiendo(true); setResultado(null) }} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+            <button type="button" onClick={() => { setAnadiendo(true); setResultado(null) }} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
               <Plus size={14} strokeWidth={1.75} aria-hidden /> Añadir teléfono o email
             </button>
           </div>
@@ -201,7 +201,7 @@ export default function ContactosFicha({ clienteId, inicial, espejo, cifradoEnEs
             la ficha» sin ninguna forma de meter uno (Alberto, 25/09/2026). */}
         {(lista === null || items.length === 0) && !anadiendo && (
           <div>
-            <button type="button" onClick={() => setAnadiendo(true)} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+            <button type="button" onClick={() => setAnadiendo(true)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
               <Plus size={14} strokeWidth={1.75} aria-hidden /> Añadir teléfono o email
             </button>
           </div>
@@ -373,20 +373,20 @@ function EditarUno({ c, ocupado, onGuardar, onPrincipal, onBorrar, onCerrar, onA
                 type="button"
                 disabled={ocupado}
                 onClick={() => onAnadirComoNuevo(sugerencia.tipo, sugerencia.valor)}
-                style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}
+                style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}
                 title={`Añadir como ${sugerencia.tipo === 'email' ? 'email' : 'teléfono'} nuevo, sin tocar este ${esTel ? 'teléfono' : 'email'}`}
               >
-                <Plus size={14} strokeWidth={1.75} aria-hidden /> ➕ Añadir como {sugerencia.tipo === 'email' ? 'email' : 'teléfono'}
+                <Plus size={14} strokeWidth={1.75} aria-hidden /> Añadir como {sugerencia.tipo === 'email' ? 'email' : 'teléfono'}
               </button>
             </div>
           )}
         </div>
       )}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <button type="button" disabled={ocupado || valor.trim() === ''} onClick={guardar} style={{ ...btnStyle('primario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+        <button type="button" disabled={ocupado || valor.trim() === ''} onClick={guardar} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
           Guardar
         </button>
-        <button type="button" disabled={ocupado} onClick={onCerrar} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+        <button type="button" disabled={ocupado} onClick={onCerrar} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
           Cancelar
         </button>
         {!c.principal && (
@@ -394,14 +394,14 @@ function EditarUno({ c, ocupado, onGuardar, onPrincipal, onBorrar, onCerrar, onA
             type="button"
             disabled={ocupado || c.ilegible}
             onClick={onPrincipal}
-            style={{ ...btnStyle('sutil', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}
+            style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}
             title={c.ilegible ? 'No se puede hacer principal un dato que no se puede leer' : 'El que sale en la cabecera y en los avisos'}
           >
             <Star size={14} strokeWidth={1.75} aria-hidden /> Principal
           </button>
         )}
         {/* El destructivo CONSERVA su rótulo a propósito — ver `btnIcono`. */}
-        <button type="button" disabled={ocupado} onClick={onBorrar} style={{ ...btnStyle('sutil', 'sm'), color: 'var(--negative)', marginLeft: 'auto', display: 'flex', alignItems: 'center', minHeight: 44 }}>
+        <button type="button" disabled={ocupado} onClick={onBorrar} style={{ ...btnStyle('sutil', 'sm'), color: 'var(--negative)', marginLeft: 'auto', minHeight: 44 }}>
           Borrar
         </button>
       </div>
@@ -462,10 +462,10 @@ function Anadir({ ocupado, onAnadir, onCerrar }: {
         Hacerlo el principal (el que sale en la cabecera y en los avisos)
       </label>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="submit" disabled={ocupado || valor.trim() === ''} style={{ ...btnStyle('primario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+        <button type="submit" disabled={ocupado || valor.trim() === ''} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
           Añadir {tipo === 'telefono' ? 'teléfono' : 'email'}
         </button>
-        <button type="button" disabled={ocupado} onClick={onCerrar} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+        <button type="button" disabled={ocupado} onClick={onCerrar} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
           Cancelar
         </button>
       </div>
@@ -501,7 +501,7 @@ function Aviso({ r, ocupado, onForzar }: {
       {texto}
       {onForzar && (
         <div style={{ marginTop: 8 }}>
-          <button type="button" disabled={ocupado} onClick={onForzar} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+          <button type="button" disabled={ocupado} onClick={onForzar} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
             Guardarlo igualmente
           </button>
         </div>

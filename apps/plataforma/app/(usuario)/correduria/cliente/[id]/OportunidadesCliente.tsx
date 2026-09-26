@@ -129,7 +129,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
       {aviso && (
         <div role="status" style={{ color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>
           {aviso.texto}
-          {aviso.id && <> <button type="button" onClick={() => setDesplegada(aviso.id ?? null)} style={{ ...btnStyle('sutil', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>abrir →</button></>}
+          {aviso.id && <> <button type="button" onClick={() => setDesplegada(aviso.id ?? null)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>abrir →</button></>}
         </div>
       )}
 
@@ -138,7 +138,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
       {lectura?.estado === 'error' && (
         <div style={{ color: 'var(--negative)' }}>
           No se han podido leer las oportunidades ({lectura.motivo}): eso no quiere decir que no tenga.{' '}
-          <button type="button" onClick={() => void cargar()} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>Reintentar</button>
+          <button type="button" onClick={() => void cargar()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Reintentar</button>
         </div>
       )}
 

@@ -347,7 +347,8 @@ export default function Renovaciones({ datos, filtro }: {
 
       {sinRecibir && (
         <details style={{ margin: '0 0 10px' }}>
-          <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, minHeight: 44 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, minHeight: 44, color: 'var(--warning)' }}>
+            ⚠️ 
             {sinRecibir.n === 1 ? '1 póliza con la renovación sin recibir' : `${sinRecibir.n} pólizas con la renovación sin recibir`}
             {sinRecibir.prima > 0 && ` · ${eur(sinRecibir.prima)}`}
             {sinRecibir.sinPrima > 0 && ` · ${sinRecibir.sinPrima} sin prima informada`}

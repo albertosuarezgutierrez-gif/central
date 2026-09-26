@@ -104,7 +104,7 @@ export default function InvitarPortalLote() {
 
           {n > 0 && (
             <details>
-              <summary style={{ cursor: 'pointer', minHeight: 44 }}>
+              <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>
                 Ver los {n} nombres
               </summary>
               <ol style={{ margin: '6px 0 0', paddingLeft: 22, fontSize: 14, columns: '14rem', columnGap: 24 }}>

@@ -160,7 +160,7 @@ function Necesidades({ p, ramo, deshabilitado, onGuardar }: {
   const pendientes = v.ok ? 0 : v.faltan.length + v.invalidas.length
   return (
     <details open={!p.necesidades}>
-      <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44, color: p.necesidades ? 'var(--muted)' : 'var(--negative)' }}>
+      <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44, display: 'flex', alignItems: 'center', color: p.necesidades ? 'var(--muted)' : 'var(--negative)' }}>
         {p.necesidades ? `Necesidades: «${p.necesidades.length > 80 ? `${p.necesidades.slice(0, 80)}…` : p.necesidades}»` : 'Falta el cuestionario de necesidades: sin él no se le puede avisar'}
       </summary>
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>

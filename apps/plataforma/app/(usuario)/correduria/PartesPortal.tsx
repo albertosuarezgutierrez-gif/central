@@ -384,7 +384,7 @@ function Parte({
           onToggle={(e) => setTextoAbierto((e.currentTarget as HTMLDetailsElement).open)}
           style={{ marginTop: 8 }}
         >
-          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>
             Lo que cuenta el cliente
           </summary>
           {textoAbierto && (

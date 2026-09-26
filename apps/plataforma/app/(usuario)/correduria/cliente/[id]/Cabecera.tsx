@@ -260,7 +260,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
       <details style={{ position: 'relative' }}>
-        <summary style={{ ...btnStyle('primario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44, listStyle: 'none', userSelect: 'none' }}>
+        <summary style={{ ...btnStyle('primario', 'sm'), minHeight: 44, listStyle: 'none', userSelect: 'none' }}>
           ➕ Nueva oportunidad ▾
         </summary>
         <div
@@ -298,7 +298,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
           </p>
         </div>
       </details>
-      <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro." style={{ display: 'flex', alignItems: 'center', minHeight: 44 }}>
+      <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro." style={{ minHeight: 44 }}>
         <BtnLink href={urlSubirPoliza()} variante="secundario" tam="sm" nuevaPestana>
           📄 Subir póliza ↗
         </BtnLink>

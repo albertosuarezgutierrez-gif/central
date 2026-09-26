@@ -204,7 +204,7 @@ function Ficha({ l, onSiguiente }: { l: LeadVencimiento; onSiguiente: () => void
           <fieldset style={{ border: 0, margin: 0, padding: 0, display: 'grid', gap: 6 }}>
             <legend style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>¿Por qué? Se aparca hasta el año que viene y vuelve sola.</legend>
             {MOTIVOS_PERDIDA_UI.map(m => (
-              <label key={m.valor} style={{ minHeight: 44, gap: 10, padding: '0 12px', borderRadius: 10, border: `1px solid ${motivo === m.valor ? 'var(--primary)' : 'var(--border)'}`, fontSize: 14 }}>
+              <label key={m.valor} style={{ minHeight: 44, display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', borderRadius: 10, border: `1px solid ${motivo === m.valor ? 'var(--primary)' : 'var(--border)'}`, fontSize: 14 }}>
                 <input type="radio" name="motivo" value={m.valor} checked={motivo === m.valor} onChange={() => setMotivo(m.valor)} />
                 {m.rotulo}
               </label>

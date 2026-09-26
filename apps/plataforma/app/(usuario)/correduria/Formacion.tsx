@@ -131,7 +131,7 @@ export default function Formacion({ onContador }: { onContador?: (n: number | nu
             )}
           {lectura.cursos.length > 0 && (
             <details style={{ marginBottom: 12 }}>
-              <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44 }}>
+              <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44, display: 'flex', alignItems: 'center' }}>
                 Cursos de {año} ({lectura.cursos.length})
               </summary>
               <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
@@ -150,7 +150,7 @@ export default function Formacion({ onContador }: { onContador?: (n: number | nu
       )}
 
       <details>
-        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>Anotar un curso terminado</summary>
+        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>Anotar un curso terminado</summary>
         <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', marginTop: 8 }}>
           <input style={input} placeholder="Persona" value={form.persona} onChange={(e) => setForm({ ...form, persona: e.target.value })} />
           <input style={input} placeholder="Curso" value={form.curso} onChange={(e) => setForm({ ...form, curso: e.target.value })} />
@@ -173,7 +173,7 @@ function BajaPersona({ onGuardar }: { onGuardar: (desde: string) => void }) {
   const [desde, setDesde] = useState(hoy())
   return (
     <details>
-      <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44, color: 'var(--muted)' }}>Dejó de distribuir</summary>
+      <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44, display: 'flex', alignItems: 'center', color: 'var(--muted)' }}>Dejó de distribuir</summary>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <input type="date" max={hoy()} value={desde} onChange={(e) => setDesde(e.target.value)} aria-label="Desde cuándo" style={{ minHeight: 44, fontSize: 14 }} />
         <button type="button" disabled={!desde} onClick={() => onGuardar(desde)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Guardar</button>

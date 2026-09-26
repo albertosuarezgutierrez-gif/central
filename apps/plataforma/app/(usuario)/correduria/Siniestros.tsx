@@ -175,7 +175,7 @@ export default function Siniestros({
           🚨 Siniestros <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>· {resumen}</span>
         </div>
         {elegibles.length > 0 ? (
-          <button type="button" onClick={() => setFormAbierto((v) => !v)} style={{ ...btnStyle(formAbierto ? 'secundario' : 'primario'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+          <button type="button" onClick={() => setFormAbierto((v) => !v)} style={{ ...btnStyle(formAbierto ? 'secundario' : 'primario'), minHeight: 44 }}>
             {formAbierto ? 'Cerrar formulario' : '➕ Abrir siniestro'}
           </button>
         ) : (
@@ -203,7 +203,7 @@ export default function Siniestros({
         </p>
       ) : lista.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-          <span title="Solo constan los de CIMA y los abiertos aquí: un parte dado directamente a la compañía puede tardar un pull.">Sin siniestros registrados.</span>
+          Sin siniestros registrados (uno dado directamente a la compañía puede tardar en llegar por CIMA).
         </p>
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
@@ -351,7 +351,7 @@ function BloqueRamo({ siniestroId, ramoPoliza, datosRamo, onGuardar }: {
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-        <button type="button" disabled={ocupado} onClick={() => void guardar()} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+        <button type="button" disabled={ocupado} onClick={() => void guardar()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
           {ocupado ? 'Guardando…' : 'Guardar datos del ramo'}
         </button>
       </div>
@@ -451,7 +451,7 @@ function BloqueTerceros({ siniestroId, terceros, onAnadir, onQuitar }: {
                 {t.tipo === 'tercero' && <Dato label="Nº de póliza" valor={t.numeroPoliza} />}
               </div>
               <div>
-                <button type="button" disabled={ocupado !== null} onClick={() => void quitar(t.id)} style={{ ...btnStyle('sutil', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+                <button type="button" disabled={ocupado !== null} onClick={() => void quitar(t.id)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
                   {ocupado === t.id ? 'Quitando…' : 'Quitar'}
                 </button>
               </div>
@@ -460,7 +460,7 @@ function BloqueTerceros({ siniestroId, terceros, onAnadir, onQuitar }: {
         </div>
       )}
       <div style={{ marginTop: 8 }}>
-        <button type="button" onClick={() => setFormAbierto((v) => !v)} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }} aria-expanded={formAbierto}>
+        <button type="button" onClick={() => setFormAbierto((v) => !v)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} aria-expanded={formAbierto}>
           {formAbierto ? 'Cancelar' : '➕ Añadir tercero/testigo'}
         </button>
       </div>
@@ -541,7 +541,7 @@ function FormTercero({ siniestroId, onAnadir, onHecho }: {
         </div>
       )}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button type="button" disabled={ocupado} onClick={() => void anadir()} style={{ ...btnStyle('primario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+        <button type="button" disabled={ocupado} onClick={() => void anadir()} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
           {ocupado ? 'Añadiendo…' : 'Añadir'}
         </button>
       </div>
@@ -734,7 +734,7 @@ function Seguimiento({ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: Re
   const [abierto, setAbierto] = useState(false)
   return (
     <div>
-      <button type="button" onClick={() => setAbierto((v) => !v)} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }} aria-expanded={abierto}>
+      <button type="button" onClick={() => setAbierto((v) => !v)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} aria-expanded={abierto}>
         ✏️ {abierto ? 'Ocultar seguimiento' : 'Anotar seguimiento'}
       </button>
       {abierto && <FormSeguimiento s={s} onAnotar={onAnotar} />}
@@ -839,7 +839,7 @@ function FormSeguimiento({ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body
         <textarea value={nota} onChange={(e) => setNota(e.target.value)} style={{ ...campo, minHeight: 72 }} maxLength={2000} placeholder="p. ej. «llamado al tramitador, pide fotos del golpe»" />
       </Campo>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <button type="button" disabled={ocupado} onClick={() => void guardar()} style={{ ...btnStyle('primario'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+        <button type="button" disabled={ocupado} onClick={() => void guardar()} style={{ ...btnStyle('primario'), minHeight: 44 }}>
           {ocupado ? 'Guardando…' : 'Guardar seguimiento'}
         </button>
       </div>
@@ -875,7 +875,7 @@ function CambioEstado({ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: R
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ alignSelf: 'center' }}>{s.abierto ? '🟠' : '⚪'} {etiquetaEstadoSiniestro(s.estado)}</span>
         {transiciones.map((a) => (
-          <button key={a} type="button" disabled={ocupado !== null} onClick={() => void pasarA(a)} style={{ ...btnStyle('secundario'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+          <button key={a} type="button" disabled={ocupado !== null} onClick={() => void pasarA(a)} style={{ ...btnStyle('secundario'), minHeight: 44 }}>
             {ocupado === a ? '…' : `→ ${etiquetaEstadoSiniestro(a)}`}
           </button>
         ))}
@@ -1016,10 +1016,10 @@ function FormAbrir({ polizas, onAbrir, onCancelar }: {
         </Campo>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" disabled={ocupado} onClick={() => void enviar()} style={{ ...btnStyle('primario'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
+        <button type="button" disabled={ocupado} onClick={() => void enviar()} style={{ ...btnStyle('primario'), minHeight: 44 }}>
           {ocupado ? 'Abriendo…' : 'Abrir siniestro'}
         </button>
-        <button type="button" disabled={ocupado} onClick={onCancelar} style={{ ...btnStyle('sutil'), display: 'flex', alignItems: 'center', minHeight: 44 }}>Cancelar</button>
+        <button type="button" disabled={ocupado} onClick={onCancelar} style={{ ...btnStyle('sutil'), minHeight: 44 }}>Cancelar</button>
       </div>
       {resultado && <div role="alert" style={cajaMensaje(resultado.tono)}>{resultado.texto}</div>}
     </div>

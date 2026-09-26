@@ -35,7 +35,7 @@ export default function LineaBase() {
     <Bloque Icono={Activity} titulo="Línea base semanal"
       sub="Lo que entra y lo que se hace a mano cada semana, para medir si la automatización ahorra trabajo de verdad. «—» es «no se medía todavía», no cero.">
       <details onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open) void cargar() }}>
-        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>
+        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>
           Ver las últimas semanas
         </summary>
         {cargando && <p style={{ fontSize: 13, color: 'var(--muted)' }}>Cargando…</p>}

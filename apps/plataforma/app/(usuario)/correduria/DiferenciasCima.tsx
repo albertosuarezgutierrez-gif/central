@@ -66,7 +66,9 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
   // Se dice que se está mirando: un bloque que no aparece mientras carga es
   // indistinguible de uno que no existe («no veo el botón», 25/09/2026).
   if (estado.fase === 'cargando') {
-    return null
+    return (
+      <Bloque Icono={RefreshCcw} titulo="Diferencias con CIMA" sub="Comparando las fichas con lo que manda CIMA…">{null}</Bloque>
+    )
   }
   const l = estado.l
   if (l.estado !== 'ok') {
@@ -78,8 +80,14 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
   }
   const n = contadorSincroCima(l) ?? 0
   if (n === 0 && l.rellenos === 0 && l.ilegibles === 0) {
-    // Comprobado y sin nada que hacer: no se pinta nada.
-    return null
+    // Comprobado y sin nada que hacer: no se pinta nada, salvo que haya fichas que
+    // NO se han podido comparar — eso no es «al día» y se dice en una línea.
+    if (!l.sinDatosCima) return null
+    return (
+      <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+        Fichas al día con CIMA · {l.sinDatosCima} sin comparar (su titular no figura en sus pólizas de CIMA).
+      </p>
+    )
   }
 
   return (

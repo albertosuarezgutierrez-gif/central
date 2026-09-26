@@ -155,7 +155,7 @@ export default function Quejas({ onContador }: {
 
   // Sin quejas abiertas: una línea con el botón de registrar (es también donde
   // se anota la que llega por correo o teléfono), no un bloque con párrafo.
-  if (!hayAlarma && !alta && !mensaje && lectura.estado === 'ok' && !ok.truncada) {
+  if (!hayAlarma && !alta && !mensaje && lectura.estado === 'ok' && !ok.truncada && !inf?.cerradasFueraDePlazo) {
     return (
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', fontSize: 13, color: 'var(--muted)' }}>
         <span>Sin quejas abiertas.</span>
