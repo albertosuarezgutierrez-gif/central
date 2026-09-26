@@ -65,12 +65,26 @@ export type Preparacion =
  * cosa que la intranet enseñaría como aviso aquí impide el botón, porque en un chat no hay pantalla
  * donde verlo antes de pulsar.
  */
+/**
+ * Lo que trae el PROYECTO de Avant2, para que un «no coincide» diga con qué no coincide: sin esto Alberto
+ * no distingue un proyecto de otro cliente de un dato mal tecleado. El documento ya llega enmascarado.
+ */
+function loQueTraeElProyecto(vista: Extract<VistaImportacion, { estado: 'ok' }>): string {
+  const partes: string[] = []
+  if (vista.tomador === 'distinto' || vista.tomador === 'sin_dato') {
+    const t = vista.titular
+    partes.push(t ? `tomador ${t.nombre ?? 'sin nombre'}, documento ${t.documento ?? 'no consta'}` : 'tomador no legible')
+  }
+  if (vista.vehiculo === 'distinto' || vista.vehiculo === 'sin_dato') partes.push(`matrícula ${vista.matricula ?? 'no consta'}`)
+  return partes.length ? ` (en el proyecto: ${partes.join('; ')})` : ''
+}
+
 export function prepararResumen(polizaId: string, vista: VistaImportacion, quoteId: string | null): Preparacion {
   if (vista.estado === 'sin_configurar') return { tipo: 'no', motivo: `la emisión no está disponible: ${vista.mensaje}` }
   if (vista.estado === 'error') return { tipo: 'no', motivo: `no he podido leer el proyecto: ${vista.mensaje}` }
-  if (vista.bloqueos.length > 0) return { tipo: 'no', motivo: `no se puede emitir: ${vista.bloqueos.join(' · ')}` }
+  if (vista.bloqueos.length > 0) return { tipo: 'no', motivo: `no se puede emitir: ${vista.bloqueos.join(' · ')}${loQueTraeElProyecto(vista)}` }
   if (vista.tomador !== 'coincide' || vista.vehiculo !== 'coincide') {
-    return { tipo: 'no', motivo: 'no se ha podido comprobar que tomador y vehículo sean los de esta póliza' }
+    return { tipo: 'no', motivo: `no se ha podido comprobar que tomador y vehículo sean los de esta póliza${loQueTraeElProyecto(vista)}` }
   }
   if (!vista.cuentaInformada || vista.titular === null) {
     return { tipo: 'no', motivo: 'asegura no manda todavía el tomador o la cuenta para el resumen: emite desde la intranet' }

@@ -48,6 +48,19 @@ test('número de proyecto: solo cifras', () => {
   assert.equal(proyectoValido(''), null)
 })
 
+test('un «no coincide» dice qué trae el proyecto (tomador enmascarado y matrícula), no solo que no cuadra', () => {
+  const p = prepararResumen(POLIZA, vista({
+    tomador: 'distinto', vehiculo: 'distinto',
+    bloqueos: ['el tomador del proyecto no es el cliente de esta póliza (DNI distinto)'],
+  }), null)
+  assert.equal(p.tipo, 'no')
+  const m = p.tipo === 'no' ? p.motivo : ''
+  assert.match(m, /en el proyecto: tomador Ana Ruiz Gil, documento …678Z; matrícula 1234ABC/)
+  // Con todo coincidiendo no se añade nada.
+  const b = prepararResumen(POLIZA, vista({ bloqueos: ['esta póliza ya está sustituida'] }), null)
+  assert.doesNotMatch(b.tipo === 'no' ? b.motivo : '', /en el proyecto/)
+})
+
 test('sin botón si algo impide emitir o no se ha podido comprobar', () => {
   assert.equal(prepararResumen(POLIZA, vista({ bloqueos: ['el tomador del proyecto no es el cliente'] }), null).tipo, 'no')
   assert.equal(prepararResumen(POLIZA, vista({ tomador: 'sin_dato' }), null).tipo, 'no')
