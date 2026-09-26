@@ -721,6 +721,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Portal del cliente: nombre completo «Grupo ASegura» en vez del «AS» grande
+- Alberto: al entrar salía el monograma «AS» en grande. Pantalla de entrada (`Entrada.tsx`) e indicador de carga
+  (`CargaAsegura.tsx`) pasan al logotipo `.marca-palabra` (mismo `mask` de la cabecera) a 32 px, `.marca-palabra-grande`.
+  Medido a 320 px: 219 px de ancho, sin desbordar. El splash del SO de la PWA instalada sigue siendo el icono (lo pinta Android).
+
 ## (26/09/2026) Portal del cliente: «Añade una póliza» nace plegada
 - Alberto: la tarjeta del alta sale cerrada; al abrirla, lo de siempre (casilla empresa + dos botones)
   y «Qué pasa con lo que subas» queda como segundo nivel plegado. `SubirPoliza.tsx` reutiliza el

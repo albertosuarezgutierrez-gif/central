@@ -2077,16 +2077,12 @@ h1 em {
  * tiene que ver de quién es el portal, y a ese tamaño el monograma se lee: la
  * barra de arriba lo lleva a 15 px, aquí a 34. */
 .entrada-marca {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 64px;
-  height: 64px;
-  border-radius: var(--radius);
-  background: var(--primary-light);
-  color: var(--brand);
-  margin-bottom: 14px;
+  display: block;
+  margin-bottom: 18px;
 }
+/* El logotipo a tamaño de portada (entrada y carga). 32 px de alto = ~219 px de
+ * ancho: cabe en 320 px con el padding de la entrada. */
+.marca-palabra-grande { height: 32px; max-width: 100%; }
 
 /* ── Pie legal ────────────────────────────────────────────────────────────
  * Sale en TODAS las pantallas, la de entrada incluida: el art. 19 de la Ley
