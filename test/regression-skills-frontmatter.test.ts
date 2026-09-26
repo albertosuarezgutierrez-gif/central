@@ -23,11 +23,15 @@ function frontmatter(ruta: string): string[] {
   return m[1].split('\n')
 }
 
-function campo(lineas: string[], clave: string): { valor: string; plano: boolean } | null {
+function campo(lineas: string[], clave: string, ruta: string): { valor: string; plano: boolean } | null {
   const i = lineas.findIndex((l) => l.startsWith(`${clave}:`))
   if (i < 0) return null
   const cabeza = lineas[i].slice(clave.length + 1).trim()
   if (/^[>|]/.test(cabeza)) {
+    // «description: >- texto» es YAML inválido: el indicador de bloque no admite contenido en su
+    // línea. Sin esta guarda el texto de cabecera se descartaba y el resto pasaba por válido.
+    const resto = cabeza.replace(/^[>|](?:[-+]\d?|\d[-+]?)?/, '').trim()
+    assert.ok(resto === '' || resto.startsWith('#'), `${ruta}: ${clave} con contenido en la línea del indicador de bloque (YAML inválido)`)
     const cuerpo: string[] = []
     for (let j = i + 1; j < lineas.length && /^\s+\S/.test(lineas[j]); j++) cuerpo.push(lineas[j].trim())
     return { valor: cuerpo.join(' '), plano: false }
@@ -37,13 +41,13 @@ function campo(lineas: string[], clave: string): { valor: string; plano: boolean
 
 function comprobar(ruta: string, esperado: string) {
   const fm = frontmatter(ruta)
-  const name = campo(fm, 'name')
+  const name = campo(fm, 'name', ruta)
   assert.ok(name, `${ruta}: falta name`)
   assert.equal(name.valor, esperado, `${ruta}: name debe coincidir con «${esperado}»`)
   assert.match(name.valor, NOMBRE, `${ruta}: name solo minúsculas, dígitos y guiones`)
   assert.ok(name.valor.length <= 64, `${ruta}: name >64`)
 
-  const desc = campo(fm, 'description')
+  const desc = campo(fm, 'description', ruta)
   assert.ok(desc && desc.valor.length > 0, `${ruta}: falta description`)
   assert.ok(desc.valor.length <= 1024, `${ruta}: description ${desc.valor.length} > 1024`)
   if (desc.plano) {

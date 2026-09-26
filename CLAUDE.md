@@ -50,8 +50,9 @@
   🔤 **Tipografía de marca (24/09/2026, regla de Alberto para TODA superficie de la correduría — web,
   portal de clientes y cualquier pantalla, documento o pieza nueva):** titulares, menús y botones en
   **Quicksand** (600-700), cuerpo en **Nunito Sans**, sin cursivas (el acento es el azul de marca).
-  Logotipo = «Grupo ASegura» en trazo fino con el monograma «AS» oficial dentro:
-  `public/brand/logotipo-asegura.svg` (`mask` + `currentColor`). Sustituye a Fraunces + Inter; `@central/brand`
+  Logotipo = «Grupo ASegura» con el monograma «AS» oficial dentro:
+  `public/brand/logotipo-asegura.svg` (`mask` + `currentColor`). Desde el 26/09/2026 lleva `stroke` de 3 (≈ semibold):
+  el trazo fino de Quicksand 300 quedaba en <1 px a 18-20 px de alto y «se veía poco». Sustituye a Fraunces + Inter; `@central/brand`
   sigue en Inter solo para correos. En plataforma, desde el 24/09/2026, el lenguaje visual (Quicksand + Nunito Sans + cobalto `#3364ee`) va en TODO el cuadro de mando (layout raíz + `:root`), pero el logo y el nombre «Grupo ASegura» siguen siendo SOLO de `/correduria` — el resto lleva la marca neutra «Mi grupo». Lo vigilan `apps/asegura-web/lib/tipografia.test.ts` y
   `test/regression-portal-cartera-agrupada.test.ts`.
   ✍️ **Se escribe «Grupo ASegura», con A y S mayúsculas** (04/09/2026): el monograma «AS» del logo
