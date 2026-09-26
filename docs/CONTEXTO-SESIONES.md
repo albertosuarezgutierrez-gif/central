@@ -1890,6 +1890,15 @@ y el último fichero entró a las 10:10 — no medido todavía. Caja negra: 1ª 
 de 2 donde el esquema espera objeto (deriva de contrato, no secreto). Panel de ingesta: PR #3037
 mergeado. Docs NO movidos a propósito (8 enlaces, dos en esta memoria). PR abierto.
 
+**(16/09/2026)** mercado-booking · pasada prioritaria acotada a jul-ago 2027 (`?desde&hasta&max=24`,
+pedida por la propia tarea programada para no dejar que eventos confirmados se comieran el cupo):
+238 comps reales en 24 ventanas (6 fechas × 4 pisos, incluye evento Mundial de Remo). **Objetivo
+cumplido:** julio-2027 y agosto-2027 ya tienen ≥3 fechas distintas medidas, bucket mensual elegible
+en ambos. La línea de prioridad del prompt de la tarea programada debería retirarse — no hay
+herramienta en esta sesión para editar el prompt guardado de una tarea programada (pendiente de
+Alberto). Pendiente aparte: 0/4 ventanas de escaparate propio midieron (todas `hotel_names_no_availability`,
+hueco real del canal) — `channel_markup`/`cuota_fija` siguen sin refrescar.
+
 **(15/09/2026)** asegura-web · nueva página `/seguros/responsabilidad-civil-fontaneros` (RC de
 oficios, PR #3012 §2.6): Alberto delegó el oficio y preguntó por un repo/conector para elegirlo —
 no existe, es investigación de mercado sin Keyword Planner/SEMrush/Ahrefs conectados. Comparativa
