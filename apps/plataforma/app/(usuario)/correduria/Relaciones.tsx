@@ -18,7 +18,7 @@ import {
   type ResultadoPersonaContacto,
   type TipoRelacion,
 } from '@central/module-seguros'
-import { btnStyle } from '@/components/ui'
+import { btnStyle, type Tono } from '@/components/ui'
 import AccionesContacto from './AccionesContacto'
 import {
   ALCANCE_TEXTO_PORTAL,
@@ -329,21 +329,43 @@ export default function Relaciones({
   // testeado: por nombre fundiría al padre y al hijo de la póliza del mismo
   // coche en una fila con los dos teléfonos mezclados.
   const { lista: gente, sinLeerPolizas, sinLeerVinculos } = unificarPersonas(personas, lista)
+  // «Revisado: no es nada suyo» es una respuesta YA dada: no pide nada. Se aparta
+  // al final y plegado para que la lista enseñe primero a quien sí importa
+  // (26/09/2026, «muy poco clara y muy extensa»). No se oculta: se cuenta.
+  const esRevisado = (p: PersonaFicha<RelacionCartera>) => p.vinculo !== null && !permiteAutorizar(p.vinculo.tipo)
+  const principales = gente.filter((p) => !esRevisado(p))
+  const revisados = gente.filter(esRevisado)
+  const [verRevisados, setVerRevisados] = useState(false)
+
+  const fila = (p: PersonaFicha<RelacionCartera>) => (
+    <FilaPersona
+      key={p.clave}
+      p={p}
+      nombreFicha={nombreFicha}
+      ocupado={ocupado}
+      renderPapeles={renderPapeles}
+      onAutorizar={autorizar}
+      onAvisar={avisar}
+      aviso={aviso}
+      onQuitar={quitar}
+      onCambiarTipo={cambiarTipo}
+      onDeclarar={(cand) => setPreseleccion((v) => ({ cand, n: (v?.n ?? 0) + 1 }))}
+      onSinVinculo={sinVinculoDe}
+    />
+  )
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 12 }}>
       {/* Dos huecos distintos, dos frases distintas: ninguno de los dos es «no hay nadie». */}
       {sinLeerVinculos && (
         <div style={pendienteBox}>
-          ⚠️ No se han podido leer los <strong>vínculos declarados</strong> de esta ficha (asegura no manda el
-          bloque o no pudo consultarlo). No significa que no tenga: significa que desde aquí no se ven. Se
-          puede añadir igualmente.
+          ⚠️ No se han podido leer los <strong>vínculos declarados</strong>: no significa que no tenga, sino que
+          desde aquí no se ven. Se puede añadir igualmente.
         </div>
       )}
       {sinLeerPolizas && (
         <div style={pendienteBox}>
-          ⚠️ No se ha podido leer <strong>quién interviene en sus pólizas</strong>. Lo de abajo puede estar
-          incompleto.
+          ⚠️ No se ha podido leer <strong>quién interviene en sus pólizas</strong>: la lista puede estar incompleta.
         </div>
       )}
 
@@ -354,24 +376,30 @@ export default function Relaciones({
             : 'Nadie: ni sale gente en sus pólizas ni hay ningún vínculo anotado.'}
         </p>
       ) : (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
-          {gente.map((p) => (
-            <FilaPersona
-              key={p.clave}
-              p={p}
-              nombreFicha={nombreFicha}
-              ocupado={ocupado}
-              renderPapeles={renderPapeles}
-              onAutorizar={autorizar}
-              onAvisar={avisar}
-              aviso={aviso}
-              onQuitar={quitar}
-              onCambiarTipo={cambiarTipo}
-              onDeclarar={(cand) => setPreseleccion((v) => ({ cand, n: (v?.n ?? 0) + 1 }))}
-              onSinVinculo={sinVinculoDe}
-            />
-          ))}
-        </ul>
+        <>
+          {/* La procedencia se dice UNA vez aquí y cada fila lleva su icono: la
+              etiqueta es el dato (un papel es de la compañía, un vínculo es nuestro). */}
+          <div style={{ fontSize: 11, color: 'var(--muted)' }}>
+            👪 vínculo anotado por nosotros · 📄 papel en sus pólizas (lo manda la compañía)
+          </div>
+          {principales.length > 0 && (
+            <ul style={listaStyle}>{principales.map(fila)}</ul>
+          )}
+          {revisados.length > 0 && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
+              <button
+                type="button"
+                aria-expanded={verRevisados}
+                onClick={() => setVerRevisados((v) => !v)}
+                style={{ ...btnStyle('sutil'), justifyContent: 'flex-start', paddingLeft: 0, whiteSpace: 'normal', textAlign: 'left' }}
+              >
+                {verRevisados ? '▾' : '▸'} {revisados.length} revisada{revisados.length === 1 ? '' : 's'} sin vínculo
+              </button>
+              {/* Montaje perezoso: cerrado no se pinta nada. */}
+              {verRevisados && <ul style={listaStyle}>{revisados.map(fila)}</ul>}
+            </div>
+          )}
+        </>
       )}
 
       {resultado && resultado.estado !== 'ok' && <Aviso r={resultado} />}
@@ -388,16 +416,23 @@ export default function Relaciones({
         preseleccion={preseleccion?.cand ?? null}
       />
 
-      <p style={{ margin: 0, fontSize: 11, color: 'var(--muted)' }}>
-        La autorización es un consentimiento del titular: <strong>tú la ANOTAS, no la das</strong>. Anótala solo si te
-        la ha dado por teléfono o en papel (queda registrado quién, cuándo y con qué texto). Caduca al año y no abre
-        nada hasta que la persona autorizada la acepte en su portal.{' '}
-        <strong>Si la ficha es una sociedad</strong>, lo que se anota no es un permiso para mirar sino{' '}
-        <strong>quién la representa</strong>: por eso se pide el título y por eso ahí sí caben los partes y la
-        documentación. De una persona solo se puede anotar que deja mirar.
-      </p>
+      <details>
+        <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer', minHeight: 32, display: 'inline-flex', alignItems: 'center' }}>
+          ¿Cómo funciona la autorización?
+        </summary>
+        <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
+          Es un consentimiento del titular: <strong>tú la ANOTAS, no la das</strong>. Anótala solo si te la ha dado
+          por teléfono o en papel (queda registrado quién, cuándo y con qué texto). No abre nada hasta que la persona
+          autorizada la acepte en su portal. <strong>Si la ficha es una sociedad</strong>, lo que se anota es{' '}
+          <strong>quién la representa</strong>, con su título; de una persona solo se anota qué deja mirar.
+        </p>
+      </details>
     </div>
   )
+}
+
+const listaStyle: React.CSSProperties = {
+  listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8,
 }
 
 // ─── Una persona de la ficha ─────────────────────────────────────────────────
@@ -406,14 +441,16 @@ export default function Relaciones({
  * UNA persona, con sus dos caras: lo que dice CIMA (en qué pólizas sale y como
  * qué) y lo que hemos anotado nosotros (qué es de la ficha, si está autorizada).
  *
- * Antes eran dos tarjetas separadas y la misma persona salía en las dos sin que
- * nada lo dijera: el conductor habitual arriba, el administrador autorizado
- * abajo. La pregunta que traen es una sola —«¿a quién llamo y con qué
- * derecho?»— y ahora se contesta en una fila.
+ * 🚨 Juntarlas NO es fundirlas: la procedencia se sigue viendo (📄 / 👪), porque
+ * un papel en una póliza es un hecho de la compañía y un vínculo es nuestro, y
+ * solo el segundo abre las pólizas en el portal.
  *
- * 🚨 Juntarlas NO es fundirlas: la procedencia se sigue viendo, porque un papel
- * en una póliza es un hecho de la compañía y un vínculo es nuestro, y solo el
- * segundo abre las pólizas en el portal.
+ * Desde el 26/09/2026 la fila es un RESUMEN de dos líneas —quién es, qué es de
+ * la ficha, quién ve qué— y la gestión (los dos sentidos con sus botones,
+ * cambiar el tipo, quitar) va plegada detrás de «Gestionar». Abierta por defecto
+ * cada persona pintaba dos bloques con frase, insignia y botón: seis personas
+ * eran varias pantallas de móvil. Se abre SOLA cuando hay una autorización
+ * pendiente, que es lo único que pide una acción.
  */
 function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: {
   p: PersonaFicha<RelacionCartera>
@@ -437,8 +474,13 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
   // que no tener nombre. Se dicen las dos cosas, cada una con lo suyo.
   const nombre = p.nombre ?? (p.nombreIlegible ? '🔒 cifrado' : 'sin nombre')
   const enCurso = ocupado === `nada-${p.fichaId}`
+  const r = p.vinculo
+  const revisado = r !== null && !permiteAutorizar(r.tipo)
+  const hayPendiente = r !== null && !revisado &&
+    (r.autorizacion?.estado === 'pendiente' || r.autorizacionInversa?.estado === 'pendiente')
+  const [abierto, setAbierto] = useState(hayPendiente)
   return (
-    <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8, minWidth: 0 }}>
+    <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, minWidth: 0 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
         {p.fichaId
           ? <Link href={`/correduria/cliente/${p.fichaId}`} style={{ fontWeight: 700, fontSize: 14, overflowWrap: 'anywhere' }}>{nombre}</Link>
@@ -448,19 +490,33 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
         <AccionesContacto telefono={p.telefono} email={p.email} quien={nombre} />
       </div>
 
-      {/* De dónde sale cada una: la etiqueta es el dato, no un adorno. */}
-      <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-        {p.papeles.length > 0 && <span>📄 sale en sus pólizas (lo manda la compañía)</span>}
-        {p.papeles.length > 0 && p.vinculo && <span> · </span>}
-        {p.vinculo && <span>👪 vínculo anotado por nosotros</span>}
-      </div>
+      {r && (
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', minWidth: 0, fontSize: 12 }}>
+          {revisado ? (
+            <span style={chip('neutral')}>✅ revisado: no es nada suyo</span>
+          ) : (
+            <>
+              <span style={chip('info')}>👪 {r.tipo}</span>
+              {/* null = asegura no las contó: no es «0 pólizas». */}
+              <span style={{ color: 'var(--muted)' }}>
+                {r.polizasVivas === null ? 'pólizas sin contar' : `${r.polizasVivas} póliza${r.polizasVivas === 1 ? '' : 's'} viva${r.polizasVivas === 1 ? '' : 's'}`}
+              </span>
+              <ResumenAcceso r={r} nombreFicha={nombreFicha} />
+            </>
+          )}
+        </div>
+      )}
 
-      {p.papeles.length > 0 && renderPapeles?.(p)}
+      {p.papeles.length > 0 && renderPapeles && (
+        <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', minWidth: 0 }}>
+          <span aria-hidden title="Lo manda la compañía" style={{ fontSize: 13, lineHeight: '20px' }}>📄</span>
+          <div style={{ flex: 1, minWidth: 0 }}>{renderPapeles(p)}</div>
+        </div>
+      )}
 
       {/* Dos filas con el mismo nombre no son un fallo de la pantalla: o son dos
           personas (padre e hijo con NIF distinto) o son dos fichas de la misma
-          persona. Se dice cuál de las dos cosas es, y cuando no se sabe, se dice
-          que no se sabe — nunca se funden dos identidades. */}
+          persona. Se dice cuál, y cuando no se sabe, que no se sabe. */}
       {p.homonimia === 'distinta_persona' && (
         <div style={{ fontSize: 11, color: 'var(--muted)' }}>
           👥 Hay otra persona con este mismo nombre en sus pólizas, con NIF distinto: son dos, no una.
@@ -468,56 +524,117 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
       )}
       {p.homonimia === 'sin_distinguir' && (
         <div style={{ fontSize: 11, color: 'var(--warning)' }}>
-          ⚠️ Aparece otra fila con este mismo nombre y no se puede distinguir (a alguna le falta el NIF):
-          puede ser la misma persona con la ficha duplicada. No se funden desde aquí.
+          ⚠️ Otra fila tiene este mismo nombre y no se puede distinguir (falta el NIF): puede ser una ficha
+          duplicada. No se funden desde aquí.
         </div>
       )}
 
-      {p.vinculo ? (
-        <Vinculo
-          r={p.vinculo}
-          nombreFicha={nombreFicha}
-          ocupado={ocupado}
-          onAutorizar={onAutorizar}
-          onAvisar={onAvisar}
-          aviso={aviso}
-          onQuitar={onQuitar}
-          onCambiarTipo={onCambiarTipo}
-        />
-      ) : p.fichaId ? (
-        // Sin vínculo anotado no se afirma que no lo tenga: se ofrece decirlo,
-        // en los dos sentidos. «Revisado, no es nada suyo» es la respuesta
-        // correcta para la mayoría (un conductor ocasional no es familia) y
-        // hasta el 03/09/2026 no se podía decir.
-        <div style={bloqueVinculo}>
-          <div style={{ fontSize: 12, color: 'var(--muted)' }}>Sin vínculo anotado — nadie ha dicho aún qué es de {nombreFicha}.</div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {r === null && p.fichaId && (
+        // Sin vínculo anotado no se afirma que no lo tenga: se ofrece decirlo.
+        // «No es nada suyo» es la respuesta de la mayoría (un conductor ocasional
+        // no es familia) y hasta el 03/09/2026 no se podía decir.
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 12, color: 'var(--muted)' }}>Sin vínculo anotado.</span>
+          <button
+            type="button"
+            disabled={enCurso}
+            onClick={() => onDeclarar({ id: p.fichaId as string, nombre, tipo: '', polizas: 0 })}
+            style={btnStyle('secundario')}
+          >
+            👪 Declarar vínculo
+          </button>
+          <button
+            type="button"
+            disabled={enCurso}
+            onClick={() => onSinVinculo(p.fichaId as string)}
+            style={btnStyle('sutil')}
+          >
+            {enCurso ? 'anotando…' : '✅ No es nada suyo'}
+          </button>
+        </div>
+      )}
+      {r === null && !p.fichaId && (
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>
+          Sin ficha propia (CIMA no la ha enlazado): todavía no se le puede declarar vínculo ni dar acceso.
+        </div>
+      )}
+
+      {r && (
+        <>
+          <div>
             <button
               type="button"
-              disabled={enCurso}
-              onClick={() => onDeclarar({ id: p.fichaId as string, nombre, tipo: '', polizas: 0 })}
-              style={{ ...btnStyle('secundario'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
+              aria-expanded={abierto}
+              onClick={() => setAbierto((v) => !v)}
+              style={{ ...btnStyle('sutil'), paddingLeft: 0, whiteSpace: 'normal', textAlign: 'left' }}
             >
-              👪 Declarar qué es de {nombreFicha}
-            </button>
-            <button
-              type="button"
-              disabled={enCurso}
-              onClick={() => onSinVinculo(p.fichaId as string)}
-              style={{ ...btnStyle('sutil'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
-            >
-              {enCurso ? 'anotando…' : '✅ Revisado: no es nada suyo'}
+              {abierto ? '▾ Cerrar' : revisado ? '▸ Corregir' : '▸ Gestionar acceso y vínculo'}
             </button>
           </div>
-        </div>
-      ) : (
-        <div style={{ ...bloqueVinculo, fontSize: 12, color: 'var(--muted)' }}>
-          CIMA no la ha enlazado a una ficha propia, así que todavía no se le puede declarar un vínculo
-          ni darle acceso. Sale aquí porque interviene en sus pólizas.
-        </div>
+          {abierto && (
+            <Vinculo
+              r={r}
+              nombreFicha={nombreFicha}
+              ocupado={ocupado}
+              onAutorizar={onAutorizar}
+              onAvisar={onAvisar}
+              aviso={aviso}
+              onQuitar={onQuitar}
+              onCambiarTipo={onCambiarTipo}
+            />
+          )}
+        </>
       )}
     </li>
   )
+}
+
+/** Etiqueta corta de cada tono para el resumen de la fila. */
+const ACCESO_CORTO: Record<TonoAcceso, string> = {
+  ve: 'sí',
+  espera: 'pendiente de aceptar',
+  no: 'no',
+  duda: 'no consta',
+}
+const TONO_CHIP: Record<TonoAcceso, Tono> = { ve: 'positivo', espera: 'aviso', no: 'neutral', duda: 'aviso' }
+
+/**
+ * Quién ve qué, en una línea. Sale de los MISMOS helpers puros que el detalle
+ * (`insigniaAcceso` / `explicarSentidoAcceso`, este en el `title`), para que el
+ * resumen no pueda decir otra cosa que lo desplegado. El caso normal —nadie ve
+ * nada de nadie— es una sola frase gris, no dos insignias que parezcan tarea.
+ */
+function ResumenAcceso({ r, nombreFicha }: { r: RelacionCartera; nombreFicha: string }) {
+  const ida = insigniaAcceso(r.autorizacion, r.autorizaVer)
+  const vuelta = insigniaAcceso(r.autorizacionInversa, r.puedeVer)
+  if (ida.tono === 'no' && vuelta.tono === 'no') {
+    return <span style={{ color: 'var(--muted)' }}>· 🔒 ninguno ve los seguros del otro</span>
+  }
+  return (
+    <>
+      <span style={chip(TONO_CHIP[ida.tono])} title={explicarSentidoAcceso(r.autorizacion, r.nombre, nombreFicha, r.autorizaVer)}>
+        {ida.icono} ve los de {nombreFicha}: {ACCESO_CORTO[ida.tono]}
+      </span>
+      <span style={chip(TONO_CHIP[vuelta.tono])} title={explicarSentidoAcceso(r.autorizacionInversa, nombreFicha, r.nombre, r.puedeVer)}>
+        {vuelta.icono} {nombreFicha} ve los suyos: {ACCESO_CORTO[vuelta.tono]}
+      </span>
+    </>
+  )
+}
+
+/** Una insignia que SÍ parte línea: con nombres largos, `Badge` (nowrap) se sale a 320 px. */
+function chip(tono: Tono): React.CSSProperties {
+  const c = {
+    neutral: ['var(--muted)', 'var(--primary-light)'],
+    positivo: ['var(--positive)', 'var(--positive-bg)'],
+    negativo: ['var(--negative)', 'var(--negative-bg)'],
+    aviso: ['var(--warning)', 'var(--warning-bg)'],
+    info: ['var(--info)', 'var(--info-bg)'],
+  }[tono]
+  return {
+    fontSize: 12, fontWeight: 600, padding: '2px 8px', borderRadius: 999,
+    color: c[0], background: c[1], overflowWrap: 'anywhere', minWidth: 0,
+  }
 }
 
 // ─── El bloque de vínculo de una fila ────────────────────────────────────────
@@ -563,11 +680,9 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
   if (revisadoSinVinculo) {
     return (
       <div style={bloqueVinculo}>
-        <div style={{ fontSize: 13 }}>✅ revisado: no hay vínculo</div>
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>
-          Sale en las pólizas de {nombreFicha} pero no es nada suyo. Queda anotado para no volver
-          a preguntarlo, y <strong>no puede ver sus seguros</strong>: para autorizar a alguien hace
-          falta antes una relación de verdad.
+          Anotado para no volver a preguntarlo. <strong>No puede ver sus seguros</strong>: para autorizar hace
+          falta antes un vínculo de verdad.
         </div>
         {r.observaciones && (
           <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
@@ -586,14 +701,6 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
   }
   return (
     <div style={bloqueVinculo}>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
-        <span style={{ fontSize: 13, fontWeight: 600 }}>👪 {r.tipo}</span>
-        <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-          {/* null = asegura no las contó: no es «0 pólizas». */}
-          {r.polizasVivas === null ? 'pólizas sin contar' : `${r.polizasVivas} póliza${r.polizasVivas === 1 ? '' : 's'} viva${r.polizasVivas === 1 ? '' : 's'} suya${r.polizasVivas === 1 ? '' : 's'}`}
-        </span>
-      </div>
-
       {/* 🚨 LOS DOS SENTIDOS, SIEMPRE LOS DOS, cada uno con su insignia y con
           SUS botones debajo. Antes esto era: un párrafo del sentido de ida, una
           línea suelta de once píxeles para el de vuelta, y tres botones juntos
@@ -653,13 +760,12 @@ function Vinculo({ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuit
         <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>📝 {r.observaciones}</div>
       )}
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal', minHeight: 44 }}>
+      <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
+      <div>
+        <button type="button" disabled={enCurso} onClick={() => onQuitar(r)} style={{ ...btnStyle('sutil'), whiteSpace: 'normal', minHeight: 44, paddingLeft: 0 }}>
           Quitar relación
         </button>
       </div>
-
-      <CambiarTipo r={r} enCurso={enCurso} onCambiarTipo={onCambiarTipo} />
     </div>
   )
 }
@@ -728,12 +834,6 @@ function Sentido({ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar,
         {explicarSentidoAcceso(a, recibe, otorga, ve)}
       </div>
 
-      {a?.estado === 'pendiente' && (
-        <div style={{ fontSize: 11, color: 'var(--muted)' }}>
-          Falta el paso de <strong>{recibe}</strong>: tiene que entrar en su portal y aceptarla. La doble
-          aceptación es lo que deja constancia de que sabe que hay un permiso a su nombre.
-        </div>
-      )}
       {a?.estado === 'vigente' && (
         <div style={{ fontSize: 11, color: 'var(--muted)' }}>
           {a.origen === 'corredor' ? 'La anotó la correduría' : 'La concedió el cliente desde su portal'} ·{' '}
@@ -826,7 +926,7 @@ function CambiarTipo({ r, enCurso, onCambiarTipo }: {
   return (
     <details>
       <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer', listStyle: 'none', userSelect: 'none', display: 'inline-flex', alignItems: 'center', minHeight: 32 }}>
-        Cambiar el tipo de relación
+        Cambiar el tipo
       </summary>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
         <select
@@ -854,9 +954,7 @@ function CambiarTipo({ r, enCurso, onCambiarTipo }: {
         </button>
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 4 }}>
-        Se cambia en las dos fichas y queda en el historial. La autorización del
-        portal NO se toca — si la que hay no cabe en el tipo nuevo, hay que
-        revocarla antes y la pantalla lo dirá.
+        Cambia en las dos fichas. La autorización no se toca: si no cabe en el tipo nuevo, habrá que revocarla antes.
       </div>
     </details>
   )
