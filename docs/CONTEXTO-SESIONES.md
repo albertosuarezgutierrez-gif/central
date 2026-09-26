@@ -63,6 +63,10 @@ Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/d
 tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
 ✅ Borrado (25/09, confirmado por Alberto) el vínculo `16a27091` (hijo, Guzmán Lozano) → ficha del PADRE: lo creó el portal a las 10:10 porque el PADRE añadió el correo del hijo a su propia ficha desde «Mis datos» a las 10:07. **Fase 0 sin hacer:** revalidar vínculos `email_hash` cuando cambia el correo de una ficha.
 
+**(26/09/2026)** 🏁 **Hilo CIMA/Mapfre cerrado** (Alberto): respaldo del pull a 11:00 + franjas fijas 16:00/20:30 Madrid (#3571),
+clave del respaldo arreglada (401), Mapfre ya vuelca a diario (25/09). Skill `cima-ingesta` al día. Único cabo: pólizas y resto de ramos
+de Mapfre aún sin llegar — si no llegan, reclamar en el ticket SAU-24238 (no hay recordatorio programado, Alberto lo da por cerrado).
+
 **(25/09/2026)** ✅ **MAPFRE vuelve a volcar por CIMA**: franja fija de las 20:30 Madrid (18:30 UTC, ya con la clave buena) trajo los
 2 primeros ficheros C0058 desde el 23/06 (REC 261 + SIN 311, código mediador 5239640), ambos auto, casados con pólizas vivas, 0 cuarentena.
 Faltan POL y el resto de ramos. Contestado en el ticket SAU-24238 de CIMA (con OK de Alberto); si no llegan POL en días, reclamar ahí mismo.
