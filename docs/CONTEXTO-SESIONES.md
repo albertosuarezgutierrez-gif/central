@@ -714,6 +714,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Portal del cliente: «Añade una póliza» nace plegada
+- Alberto: la tarjeta del alta sale cerrada; al abrirla, lo de siempre (casilla empresa + dos botones)
+  y «Qué pasa con lo que subas» queda como segundo nivel plegado. `SubirPoliza.tsx` reutiliza el
+  `<details>` y las clases de `GrupoPlegable` (sin CSS nuevo).
+
 ## (26/09/2026) Traer póliza de Codeoscopic SIN nº de proyecto: busca por DNI del tomador
 - Alberto: «¿no puede buscar por matrícula, DNI del tomador o algo?». `GET /insurances?holderIdentification=` (gratis,
   rango ≤1 año) → `lib/codeoscopic/buscar-proyectos.ts`; la ruta `/api/operador/poliza/traer-pdf` prueba hasta 15 candidatos

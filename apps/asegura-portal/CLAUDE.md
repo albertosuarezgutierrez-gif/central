@@ -533,6 +533,8 @@ Alberto, mirando su portal como lo ve un cliente: *«cuando entra un cliente no 
 autorizados»* · *«que al cargar la pantalla salga todo plegado por defecto»* · *«“Añade una póliza”
 lo primero que se ve arriba, no enterrado en medio»*.
 
+- **«Añade una póliza» también nace plegada (26/09/2026)**: mismo `<details>`/clases que
+  `GrupoPlegable`; abierta muestra el alta, y «Qué pasa con lo que subas» es un segundo nivel plegado.
 - **Un `GrupoPlegable` por bloque** (`app/(portal)/boveda/GrupoPlegable.tsx`), cerrado de salida:
   «Tu cartera» primero y después **uno por TITULAR** —no uno por cajón— con su nombre visible con el
   bloque cerrado («GLOBAL 2 INSTALACIONES TÉCNICAS») y **cuántos seguros esconde**
