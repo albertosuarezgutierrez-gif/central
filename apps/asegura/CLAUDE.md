@@ -797,6 +797,14 @@ UN correo (`lib/correo-emision.ts`, marca Quicksand/Nunito, sin NADA de la carte
 portal (`estadoPortalDeFicha`, la misma regla que la invitación) y va a ESE correo; un corte con el proveedor es
 `incierto`, no «rechazado». La firma contesta al portal y el envío a la compañía corre en `after()` (el puente corta a
 los pocos segundos); `/emitir` espera el correo con tope de 12 s (`trasEmisionConTope`).
+📎 **La póliza original VA ADJUNTA (26/09/2026, Alberto: «hay que enviarle la póliza en ese correo»).** Si al enviar ya está
+archivada (o, desde «Enviar al cliente», se puede traer de Codeoscopic: `pdfDePoliza` de `lib/poliza-pdf.ts`), sale
+adjunta (`emision_con_poliza`); si no, el correo dice «te la enviaremos» y el cron horario `/api/cron/polizas-pdf` la
+trae y la manda (`poliza_pdf`) SOLO a quien recibió el correo de emisión DE ESA PÓLIZA — todo por
+`correo_envio.poliza_id` (SQL `2026-09-26_correo_envio_poliza.sql`), nunca por cliente. Ventana 14 días; lo que caduca
+sin PDF se loguea (aún sin Telegram: asegura no tiene canal). Los PDF que archiva el agente llevan
+`visible_por_cliente = true`: el cliente los ve y descarga en el portal («Documentos de tu póliza», solo pólizas PROPIAS,
+`apps/asegura-portal/lib/documentos-poliza.ts`).
 📮 **Buzón de bajas = el contacto `general` de cada compañía (decisión de Alberto, 26/09/2026)**, marcado en BD con
 `recibe_anulaciones`: Mapfre `CCORREDOR@`, Allianz `sucursal.209@`, Reale `cerca@`, Helvetia `Cac.corredores@`,
 Generali `samsuroestecanarias.es@` (tiene uno por zona; Sevilla = Suroeste). Occident no tiene contacto `general`:

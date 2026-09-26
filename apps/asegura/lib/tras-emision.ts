@@ -14,6 +14,7 @@ import { prismaAsegura } from './asegura-db'
 import { cuerpoCorreoEmision } from './correo-emision.ts'
 import { enlacePortal } from './correo-invitacion-portal.ts'
 import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
+import { pdfArchivado, pdfDePoliza, TIPO_CORREO_EMISION_CON_POLIZA } from './poliza-pdf'
 import { abrirAnulacionesPorSustitucion } from './sustituciones-auto'
 
 export type ResultadoTrasEmision = {
@@ -44,12 +45,19 @@ export function correoEmisionActivo(v: string | undefined = process.env.ASEGURA_
 
 export async function trasEmision(
   correduriaId: string,
-  e: { clienteId: string; polizaOrigenId: string | null },
+  e: { clienteId: string; polizaId: string; polizaOrigenId: string | null },
   /**
    * Modo PRUEBA: el correo va a esta dirección (la de Alberto) y no al cliente, y no queda en la ficha
    * del cliente como enviado. El expediente de baja sí se abre: es real y no escribe a nadie.
    */
-  opciones: { prueba?: string } = {},
+  opciones: {
+    prueba?: string
+    /**
+     * `true` = si no está archivado, intentar traer el PDF de Codeoscopic ahora (el botón «Enviar al
+     * cliente», sin prisa). Al emitir NO: `emitir` ya lo acaba de intentar y la respuesta tiene tope.
+     */
+    traerPdf?: boolean
+  } = {},
 ): Promise<ResultadoTrasEmision> {
   const db = prismaAsegura()
   let baja: ResultadoTrasEmision['baja'] = null
@@ -87,12 +95,20 @@ export async function trasEmision(
       destino = f.emailInvitacion
     }
     const nombre = await nombreDe(correduriaId, e.clienteId)
-    const cuerpo = cuerpoCorreoEmision({ nombre, enlace, conBaja: baja === 'abierta' })
+    // La póliza original de la compañía va ADJUNTA si ya la tenemos o se puede traer ahora (gratis). Si
+    // aún no la ha generado, el correo lo dice y el cron `polizas-pdf` la manda cuando llegue.
+    const pdf = await (opciones.traerPdf ? pdfDePoliza : pdfArchivado)(correduriaId, e.polizaId).catch((err) => {
+      console.error('[tras-emision] no se pudo leer el PDF de la póliza (sale sin adjunto):', err instanceof Error ? err.message : err)
+      return null
+    })
+    const cuerpo = cuerpoCorreoEmision({ nombre, enlace, conBaja: baja === 'abierta', conPoliza: pdf !== null })
     if (opciones.prueba) cuerpo.asunto = `[PRUEBA] ${cuerpo.asunto}`
     // Import dinámico: el cepo del cuerpo corre con `node --test`, que no resuelve Prisma.
     const { enviarCorreoSeguido } = await import('./correo-envio')
     const r = await enviarCorreoSeguido({
-      correduriaId, clienteId: opciones.prueba ? null : e.clienteId, tipo: opciones.prueba ? 'emision_prueba' : 'emision', to: destino, ...cuerpo,
+      correduriaId, clienteId: opciones.prueba ? null : e.clienteId, polizaId: opciones.prueba ? null : e.polizaId,
+      tipo: opciones.prueba ? 'emision_prueba' : pdf ? TIPO_CORREO_EMISION_CON_POLIZA : 'emision', to: destino, ...cuerpo,
+      ...(pdf ? { adjuntos: [{ nombre: pdf.nombre, contenido: pdf.contenido, tipo: 'application/pdf' }] } : {}),
     })
     if (r.resultado === 'rechazado' && CORTE.test(r.motivo ?? '')) return { baja, correo: 'incierto' }
     return { baja, correo: r.resultado }
@@ -109,7 +125,7 @@ export async function trasEmision(
  */
 export async function trasEmisionConTope(
   correduriaId: string,
-  e: { clienteId: string; polizaOrigenId: string | null },
+  e: { clienteId: string; polizaId: string; polizaOrigenId: string | null },
   ms = 12_000,
 ): Promise<ResultadoTrasEmision | { baja: null; correo: null; enCurso: true }> {
   let t: ReturnType<typeof setTimeout> | undefined

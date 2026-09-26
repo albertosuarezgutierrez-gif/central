@@ -40,7 +40,7 @@ export const POST = auditado(async (req: Request) => {
         return NextResponse.json({ estado: 'sin_destino_prueba', motivo: 'falta ASEGURA_MAIL_PRUEBA (o ASEGURA_MAIL_REPLY_TO) en central-asegura' }, { status: 503 })
       }
     }
-    const r = await trasEmision(correduria.id, { clienteId: p.clienteId, polizaOrigenId: p.origenId }, { prueba: destinoPrueba })
+    const r = await trasEmision(correduria.id, { clienteId: p.clienteId, polizaId, polizaOrigenId: p.origenId }, { prueba: destinoPrueba, traerPdf: true })
     return NextResponse.json({ estado: 'ok', prueba, ...r })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/emision/aviso', e) }, { status: 503 })

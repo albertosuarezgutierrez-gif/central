@@ -330,3 +330,20 @@ test('la ficha de una póliza AÑADIDA lleva la identidad DENTRO del where', () 
       'y la comprobación acabaría en un `if` posterior, que es justo lo que se puede perder',
   )
 })
+
+test('documentos de póliza: se busca la póliza en la cartera ANTES de leer ficheros, y solo los visibles', () => {
+  const src = readFileSync(join(ROOT, 'apps/asegura-portal/lib/documentos-poliza.ts'), 'utf8')
+  // Cada lectura de `prisma.documento` va precedida, en su función, de la comprobación contra la cartera.
+  const funciones = src.split(/\nexport async function /).slice(1)
+  const lectoras = funciones.filter((f) => /prisma\s*\.\s*documento/.test(f))
+  assert.equal(lectoras.length, 2, 'se esperaban dos funciones que leen `prisma.documento`')
+  for (const f of lectoras) {
+    const i = f.indexOf('polizaPropiaConDocumentos(')
+    assert.ok(i >= 0 && i < f.search(/prisma\s*\.\s*documento/), `lee documentos sin comprobar la cartera: ${f.split('(')[0]}`)
+    assert.match(f, /visiblePorCliente:\s*true/, `sin filtro visiblePorCliente: ${f.split('(')[0]}`)
+  }
+  // La comprobación parte de la cartera de la identidad y SOLO de las propias.
+  assert.match(src, /carteraDeIdentidad\(identidadId\)/)
+  assert.match(src, /cartera\.propias\.some/)
+  assert.doesNotMatch(src, /cartera\.autorizadas/)
+})

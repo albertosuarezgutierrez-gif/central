@@ -714,6 +714,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Correduría: la póliza original adjunta al correo de emisión + «Documentos de tu póliza» en el portal
+- El correo de emisión prometía el PDF y no lo llevaba. Ahora va adjunto si está (o se trae de Codeoscopic al pulsar
+  «Enviar al cliente»); si no, el cron `asegura /api/cron/polizas-pdf` (:20 cada hora) lo manda cuando llegue.
+- Dedupe POR PÓLIZA: columna nueva `seguros.correo_envio.poliza_id` (aplicada en prod). Revisión de architect: 2
+  bloqueantes (dedupe por cliente; docs viejos invisibles) corregidos.
+- Portal: sección «Documentos de tu póliza» + descarga `/api/polizas/[id]/documentos/[docId]`, solo pólizas propias
+  (cepo nuevo en `regression-portal-aislamiento`). Pendiente: aviso Telegram de pólizas que caducan sin PDF.
+
 ## (26/09/2026) Correduría: tras emitir, correo al cliente + baja firmada que sale SOLA a la compañía
 Primera emisión por Telegram hecha (Pablo Guzmán, Allianz 61089620). Alberto pidió: correo moderno al cliente + firma
 de la baja de la anterior + envío automático a la compañía. **Casi todo existía** (expediente `anulacion`, firma en portal,
