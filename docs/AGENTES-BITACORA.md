@@ -369,6 +369,23 @@
   también barra `label:Facturas/Procesada` reciente contra `_buzon_pdf` sin fila en
   `facturas_drive`, no solo lo no-procesado. PRs/commits: — (solo bitácora + Drive + Supabase, sin
   tocar código).
+
+- **2026-09-14 · mercado-booking** · hizo: pasada ACOTADA por prioridad temporal (ídem 31/08→06/09),
+  `?desde=2027-07-01&hasta=2027-08-31&max=24`. 24 ventanas de mercado medidas (6 fechas × 4 pisos,
+  aforo correcto, incluye evento Campeonato Mundo de Remo 01-03/08) → 224 comps `booking_mcp`, 0
+  sin respuesta, 2 propios (`HOUSE SEVILLANA`) detectados y descartados en 07-02 y 07-10 (aforo 12).
+  📐 escaparate: 2/4 medido (`prop_house_sevillana` 571€/noche, `prop_busto_reform` 130,80€/noche);
+  `prop_duplex_center` (nombre de portal "Dúplex center") devolvió un alojamiento NO relacionado
+  ("Center Duplex" en Vlorë, Albania) — descartado, cuenta como `escaparateSinRespuesta`, el nombre
+  es demasiado genérico para el conector; `prop_luxury_busto` sin disponibilidad para 2027-09-03/05.
+  **Confirmado de nuevo (van ya ≥8 pasadas desde 31/08): el objetivo YA estaba cumplido** —
+  `/mercado/plan` no lista 2027-07 ni 2027-08 en `meses_sin_bucket`. Sigue sin quitarse la línea
+  `PRIORIDAD TEMPORAL` del disparador (fuera del alcance de esta sesión: lo crea `http_api`, no hay
+  herramienta para editar el prompt de un trigger programado). Cupo diario agotado en la pasada de
+  prioridad → sin cupo para pasada normal hoy. dudas: —; fallos: — (el nombre genérico de
+  `prop_duplex_center` sí merece arreglo en `NOMBRE_PORTAL`); PRs/commits: — (solo bitácora +
+  memoria + BD vía endpoints).
+
 - **2026-09-14 · pricing-agente** · hizo: Paso 0/1 OK (fundación sana, ciclo anterior 07/09 cruzado
   con incomes, 0/48 fechas muestreadas con income aún — normal). Paso 2 (mercado) completo vía 4
   agentes en paralelo + Supabase directo (fallback de la skill): 120/120/120/114 comps nuevos
