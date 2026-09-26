@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-26T12:35:29Z",
+  "generadoEn": "2026-09-26T13:45:11Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2202,7 +2202,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 103
+        "evidencias": 104
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 90
+        "evidencias": 92
       },
       "rrhh": {
         "estado": "no",
@@ -2310,7 +2310,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 81
+        "evidencias": 82
       },
       "asegura-web": {
         "estado": "usado",
@@ -5740,6 +5740,7 @@
       "contable_feedback",
       "contable_log",
       "contable_memoria",
+      "correduria_asistente_correccion",
       "correduria_asistente_emision",
       "correduria_asistente_regla",
       "correduria_asistente_turno",
