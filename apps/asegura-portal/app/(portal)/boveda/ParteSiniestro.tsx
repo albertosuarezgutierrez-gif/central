@@ -74,7 +74,7 @@ import { EnviarACompania } from './EnviarACompania'
  * dan ya `.campo`, `.boton` y `.opcion` de `globals.css`.
  */
 
-/** Una póliza elegible en el desplegable. El `valor` lo compone `page.tsx`. */
+/** Una póliza elegible en el paso 1 (tarjetas). El `valor` lo compone `page.tsx`. */
 export type PolizaOpcionParte = {
   /** `cartera:<uuid>` o `declarada:<uuid>`. Se parte por el primer `:`. */
   valor: string
@@ -268,7 +268,7 @@ const MENSAJE: Record<Campo, Record<string, string>> = {
   },
   poliza: {
     ambigua:
-      'No hemos podido saber a qué póliza te refieres. Vuelve a elegirla en la lista, o déjala en «No lo sé»: la buscamos nosotros.',
+      'No hemos podido saber a qué póliza te refieres. Pulsa «Cambiar» y vuelve a elegirla, o elige «No sé cuál»: la buscamos nosotros.',
   },
 }
 
@@ -677,6 +677,20 @@ export function ParteSiniestro({
   // `seleccionarPoliza()`, para no duplicar esa regla.
   const polizaValida = polizaInicial && polizas.some((p) => p.valor === polizaInicial) ? polizaInicial : null
   const [abierto, setAbierto] = useState(() => polizaValida !== null)
+  /**
+   * Dos pasos: primero QUÉ seguro, luego qué ha pasado. La póliza decide qué se
+   * pregunta después (el bloque del otro vehículo, la compañía que se destaca),
+   * así que va delante. Desde la ficha de una póliza el paso 1 ya está dado, y
+   * sin pólizas elegibles no hay nada que elegir: se salta.
+   *
+   * 🚨 «No sé cuál» es una salida de PRIMERA clase en el paso 1, no un hueco:
+   * quien tiene la cocina inundada no puede quedarse bloqueado decidiendo si le
+   * cubre el hogar o la comunidad. Obligar a elegir fabrica pólizas elegidas al
+   * azar, que parecen un dato bueno y no lo son.
+   */
+  const [paso, setPaso] = useState<'poliza' | 'datos'>(() =>
+    polizaValida !== null || polizas.length === 0 ? 'datos' : 'poliza',
+  )
   const [form, setForm] = useState<Formulario>(() => {
     if (polizaValida === null) return VACIO
     const matricula = polizas.find((p) => p.valor === polizaValida)?.matriculaPropia
@@ -752,6 +766,12 @@ export function ParteSiniestro({
     setErrores((e) => ({ ...e, poliza: undefined }))
   }
 
+  /** Paso 1 → paso 2 de un toque: elegir la tarjeta ES avanzar. `''` = «No sé cuál». */
+  function elegirPoliza(valor: string) {
+    seleccionarPoliza(valor)
+    setPaso('datos')
+  }
+
   function escribirVehiculo(campo: Exclude<keyof FormVehiculo, 'zonasDano'>, valor: string) {
     setForm((f) => ({ ...f, vehiculo: { ...f.vehiculo, [campo]: valor } }))
   }
@@ -767,6 +787,7 @@ export function ParteSiniestro({
     setParaCompania(null)
     setEstado('reposo')
     setGeo('reposo')
+    setPaso(polizas.length === 0 ? 'datos' : 'poliza')
     setAbierto(true)
     sesionRef.current += 1
   }
@@ -1123,7 +1144,7 @@ export function ParteSiniestro({
   const restantes = DESCRIPCION_MIN - form.descripcion.trim().length
 
   // La compañía de la póliza elegida AHORA (la del enlace de su ficha al
-  // entrar, y la que se elija después en el desplegable). Solo decide el ORDEN
+  // entrar, y la que se elija después en el paso 1). Solo decide el ORDEN
   // del bloque de canales: las demás compañías siguen enteras debajo, porque
   // quien tiene prisa puede haber llegado desde la póliza equivocada.
   const companiaElegida = polizas.find((p) => p.valor === form.poliza)?.canal.nombre ?? null
@@ -1212,8 +1233,68 @@ export function ParteSiniestro({
         </>
       )}
 
-      {abierto && (
+      {abierto && paso === 'poliza' && (
+        <fieldset className="editor-campo grupo parte-paso-poliza">
+          <legend>¿De qué seguro es?</legend>
+          <p className="editor-ayuda">
+            Así te preguntamos solo lo que hace falta. Si no lo tienes claro, elige <strong>«No sé cuál»</strong>:
+            saber qué póliza lo cubre es trabajo nuestro, no tuyo.
+          </p>
+          <div className="poliza-tarjetas">
+            {polizas.map((p) => (
+              <button
+                key={p.valor}
+                type="button"
+                className={form.poliza === p.valor ? 'poliza-tarjeta elegida' : 'poliza-tarjeta'}
+                onClick={() => elegirPoliza(p.valor)}
+              >
+                {p.etiqueta}
+              </button>
+            ))}
+            <button
+              type="button"
+              className="poliza-tarjeta no-se"
+              onClick={() => elegirPoliza('')}
+            >
+              No sé cuál / puede que varias
+            </button>
+          </div>
+          <div className="editor-acciones">
+            <button type="button" className="boton secundario" onClick={cerrar}>
+              Cancelar
+            </button>
+          </div>
+        </fieldset>
+      )}
+
+      {abierto && paso === 'datos' && (
         <form className="editor-form" onSubmit={enviar} noValidate>
+          {polizas.length > 0 && (
+            <div className="editor-campo poliza-elegida">
+              <p className="poliza-elegida-texto">
+                <span className="tenue">Seguro:</span>{' '}
+                {polizaSeleccionada ? (
+                  <strong>{polizaSeleccionada.etiqueta}</strong>
+                ) : (
+                  <strong>No sé cuál — lo miramos nosotros</strong>
+                )}
+              </p>
+              <button
+                type="button"
+                className="boton secundario"
+                onClick={() => setPaso('poliza')}
+                disabled={enviando}
+              >
+                Cambiar
+              </button>
+              {errores.poliza && (
+                <p className="editor-error" role="alert">
+                  {errores.poliza}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* El campo principal y el primero: es lo único que no podemos poner
               nosotros, así que se lleva el sitio. */}
           <div className="editor-campo editor-destacado">
@@ -1360,33 +1441,6 @@ export function ParteSiniestro({
             onElegir={elegir}
             onQuitar={quitar}
           />
-
-          <div className="editor-campo">
-            <label htmlFor={`${uid}-poliza`}>A qué póliza</label>
-            <p className="editor-ayuda" id={`${uid}-poliza-ayuda`}>
-              Si no lo sabes, <strong>déjalo en «No lo sé»</strong> y lo miramos nosotros: saber qué póliza
-              cubre qué es nuestro trabajo, no el tuyo.
-            </p>
-            <select
-              id={`${uid}-poliza`}
-              className="campo"
-              value={form.poliza}
-              onChange={(e) => seleccionarPoliza(e.target.value)}
-              aria-describedby={`${uid}-poliza-ayuda`}
-              aria-invalid={errores.poliza ? true : undefined}
-              disabled={enviando}
-            >
-              {/* La opción por defecto, y es una respuesta VÁLIDA, no un hueco a
-                  rellenar con la primera de la lista. */}
-              <option value="">No lo sé / no estoy seguro</option>
-              {polizas.map((p) => (
-                <option key={p.valor} value={p.valor}>
-                  {p.etiqueta}
-                </option>
-              ))}
-            </select>
-            {errores.poliza && <p className="editor-error">{errores.poliza}</p>}
-          </div>
 
           {mostrarVehiculo && (
             <VehiculoOtro

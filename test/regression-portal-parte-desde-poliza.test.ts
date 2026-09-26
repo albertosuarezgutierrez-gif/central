@@ -154,3 +154,18 @@ test('🚨 con una poliza elegida las demas companias se PLIEGAN, no desaparecen
   assert.match(PARTE, /Ver las otras \$\{numOtras\} compañías/, 'el botón dice cuántas hay detrás')
   assert.match(PARTE, /const numOtras = canales\.length - 1/, 'el recuento sale de la lista ENTERA')
 })
+
+test('🚨 desde Siniestros, el SEGURO se elige PRIMERO y «No sé cuál» es una salida del paso 1', () => {
+  // La póliza decide qué se pregunta después (vehículo, compañía destacada),
+  // así que va delante de «Qué ha pasado». Pero no puede bloquear: quien no
+  // sabe cuál le cubre tiene que poder seguir sin inventársela.
+  const paso1 = PARTE.indexOf("paso === 'poliza' && (")
+  const desc = PARTE.indexOf('Qué ha pasado</label>')
+  assert.ok(paso1 !== -1 && desc !== -1, 'no se encuentra el paso 1 o el campo «Qué ha pasado»')
+  assert.ok(paso1 < desc, 'el paso de elegir seguro va antes que «Qué ha pasado»')
+  const bloque = PARTE.slice(paso1, PARTE.indexOf("paso === 'datos' && (", paso1))
+  assert.match(bloque, /onClick=\{\(\) => elegirPoliza\(''\)\}/, '«No sé cuál» avanza con la póliza vacía')
+  assert.match(bloque, /No sé cuál/, 'la salida «No sé cuál» se ve en el paso 1')
+  // Desde la ficha (polizaInicial válida) el paso 1 se salta.
+  assert.match(PARTE, /polizaValida !== null \|\| polizas\.length === 0 \? 'datos' : 'poliza'/)
+})
