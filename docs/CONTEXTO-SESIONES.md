@@ -714,6 +714,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Portal del cliente: el monograma «AS» como indicador de carga
+- `app/(portal)/loading.tsx` (cambio de ruta) + `CargandoEnlace` con `useLinkStatus` dentro de cada `<Link>` del menú y la barra inferior: las pestañas `/boveda?vista=…` son la MISMA ruta y ahí Next NO re-muestra `loading.tsx` (el `LoadingBoundary` va keyed sin search params).
+- El flotante se porta a `<body>`: el cajón se esconde con `transform` y un `fixed` dentro saldría fuera de vista. 150 ms de retardo anti-parpadeo; `prefers-reduced-motion` sin animación.
+
 ## (26/09/2026) Portal: el aviso de la campana lleva DIRECTO a aceptar la autorización
 - Caso Pablo Franco Ruz ← Grupo ELCA 83 (`ver_economico`, concedida por Alberto, pendiente de que Pablo acepte; aún no ha entrado nunca).
 - Aviso `autorizacion_pendiente` → `/autorizaciones?aceptar=<id>`: pliega «Qué es lo que das», pone «Te han dado acceso a» primero y ABIERTO si hay pendientes (antes plegado = botón escondido), baja a la tarjeta y la resalta.

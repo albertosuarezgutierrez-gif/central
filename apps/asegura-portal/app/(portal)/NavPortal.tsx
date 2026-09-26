@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
 
 import { WHATSAPP_PATH } from '../whatsapp-icono'
+import { CargandoEnlace } from './CargandoEnlace'
 
 /**
  * La navegación del portal: **un solo `<nav>` con dos formas**.
@@ -150,6 +151,7 @@ export function NavPortal({ llamar, whatsapp }: {
               onClick={cerrar}
             >
               {p.etiqueta}
+              <CargandoEnlace />
             </Link>
           )
         })}
@@ -193,6 +195,7 @@ export function NavPortal({ llamar, whatsapp }: {
             >
               <Icono />
               <span className="portal-tabbar-rotulo">{p.etiqueta}</span>
+              <CargandoEnlace />
             </Link>
           )
         })}
