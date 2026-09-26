@@ -98,3 +98,8 @@ test('🪤 la firma del portal dispara el envío a la compañía SOLO cuando que
   // Después de contestar (`after`): el puente del portal corta a los pocos segundos.
   assert.match(ruta.slice(i, i + 1200), /after\(async \(\) => \{\s*try \{[\s\S]*\} catch \(e\) \{/)
 })
+
+test('🪤 la PÓLIZA que sube el corredor a una póliza la ve el cliente; ningún otro tipo', () => {
+  const src = readFileSync(new URL('../app/api/operador/documentos/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /visiblePorCliente: tipo === 'poliza' && polizaId !== null/)
+})

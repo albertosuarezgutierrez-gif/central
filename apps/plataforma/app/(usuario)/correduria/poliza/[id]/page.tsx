@@ -149,7 +149,7 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
       tono: pedidos ? 'aviso' : undefined,
       contenido: (
         <Tarjeta titulo="📎 Documentación">
-          <Documentos polizaId={p.id} clienteId={p.cliente.id} inicial={p.listaDocumentos} sugeridos={NECESARIOS_EMISION_AUTO} />
+          <Documentos polizaId={p.id} clienteId={p.cliente.id} inicial={p.listaDocumentos} sugeridos={['poliza', ...NECESARIOS_EMISION_AUTO]} />
           {p.documentos !== null && p.listaDocumentos !== null && p.documentos > p.listaDocumentos.filter((d) => d.estado !== 'pedido').length && (
             <p style={muted}>
               Además hay {p.documentos - p.listaDocumentos.filter((d) => d.estado !== 'pedido').length} en la tabla antigua del CRM
