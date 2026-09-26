@@ -25,6 +25,21 @@
   per regla del SKILL.md (messageId 5321), proponiendo que el plan rote la ventana de escaparate a
   fechas libres cuando la fija está ocupada. dudas: —; fallos: escaparate sin medir 2 días seguidos
   (ver arriba); PRs/commits: — (solo BD vía `/api/sivra/mercado/ingest` + latido + Telegram).
+- **2026-09-26 · facturas-correo** · hizo: pasada disparada por el trigger diario. Preflight canal
+  200 OK. Paso 0: Vía B sana (copia más reciente en `_buzon_pdf` de ayer 25/09, 1 día caída);
+  `PDF-pendiente`/`Extraccion-fallida`/`Luz pendiente 2026` sin backlog (verificado por
+  `search_threads`, no por `list_labels`). **Paso 4.0:** `v_facturas_sin_cargo` sigue con las mismas
+  20 filas, todas `revisada_sin_cargo` — nada nuevo que barrer. **Paso 1:** sin candidatos deducibles
+  nuevos (Booking = mensajes operativos de huéspedes; Global2 = documentación de un siniestro de
+  tercero remitida por su gestión, no factura de Alberto; Convocatoria Junta Monte Carmelo = no es
+  gasto) — los 7 hilos de ruido quedaron `Facturas/Procesada` para no reaparecer. `_subir_aqui` y
+  raíz `2026` sin PDFs nuevos. **Sigue abierto (2º día consecutivo, sin cambios):** la factura ASECON
+  nº 1-001804 (06/07/2026, "ESTUDIO-PREPARACION-PRESENTACION RENTA", 181,50€) — comprobado de nuevo
+  contra el banco (cuenta de Alberto, jul-sep) y sigue sin cargo a Sabadell/Asecon; deducibilidad
+  ambigua (gestoría de la actividad de alquiler vs. gasto personal de la Renta) pendiente de decisión
+  de Alberto desde julio. Aviso push enviado (no consta que la pasada de ayer lo hiciera llegar al
+  móvil). `agente_salud` actualizado (ok=true, dias_caido=1). dudas: si Asecon-Renta es deducible
+  (repetido); fallos: —; PRs/commits: — (solo bitácora + BD + Gmail).
 - **2026-09-25 · trading-analista** · hizo: pasada 20:15 normal (paso 0 sin huella de hoy, no
   repesca). Preflight 200 OK, IBKR conectado. NAV 33.504,94€ empujado (sin salto), cartera real
   (CVX+VWCE) y libro de operaciones (0 nuevas) empujados con latido. Analizó 23/24 símbolos:

@@ -64,6 +64,11 @@ description: Agente PROGRAMADO semanal (domingo) que mejora los prompts de los a
    - Supabase (solo lectura): `pricing_aprendizaje` (decisión del agente vs resultado
      real) y `fiscal_novedades` (¿avisos correctos?). Solo para los agentes con huella en
      BD; no fuerces conclusiones de tablas que no conoces.
+   - **Asistente de la correduría por Telegram** (desde el 26/09/2026): los 👎 del rango en
+     `correduria_asistente_turno` (`valoracion = -1 AND NOT resuelto`: pregunta, respuesta, `nota`
+     de Alberto y `herramientas` que consultó) y las reglas que ha aprendido
+     (`correduria_asistente_regla`). Una regla `activa` que contradice a otra, o un 👎 repetido
+     por el mismo motivo, es señal para su prompt.
 
 3. **Diagnóstico por agente.** Para cada agente programado con evidencia en el rango:
    ¿hizo lo que su skill promete? ¿errores o dudas REPETIDAS (2+ veces)? ¿le tocó a
@@ -112,6 +117,10 @@ description: Agente PROGRAMADO semanal (domingo) que mejora los prompts de los a
   archivo** (mismo criterio: diff acotado y aditivo, cadena evidencia→diagnóstico→cambio en el
   cuerpo); no busques una skill que reescribir. Su señal principal está en `FEEDBACK-AGENTES.md`
   y en commits/PRs que corrigen sus borradores.
+  El **asistente de la correduría** también: su prompt vive en
+  `apps/plataforma/lib/correduria-asistente.ts` (`systemAsistente`) y cada cambio lleva el test de
+  ese mismo archivo. Al convertir un 👎 en mejora, marca su fila `resuelto = true` en el PR (no
+  desde la rutina: la rutina es solo lectura).
 - **Idempotente:** re-ejecutar la misma semana no duplica PRs ni avisos (revisa si ya
   existe un PR `claude/entrenador-*` abierto para esa skill antes de crear otro).
 - **No inventes métricas:** sin datos suficientes para juzgar un agente, dilo ("sin

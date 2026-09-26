@@ -116,12 +116,15 @@ export function vozDeMensaje(msg: any): { fileId: string; mimeHint: string; name
 // Transcribe una nota de voz (Groq Whisper) y la trata como si Alberto la hubiera escrito.
 export async function manejarVozTg(
   cuentaId: string, buffer: Buffer, fileName: string, mimeType: string,
+  // Quién atiende lo transcrito: por defecto el contable; el webhook pasa su enrutador para que
+  // una nota de voz sobre un cliente llegue al asistente de la correduría como un texto escrito.
+  siguiente: (texto: string) => Promise<void> = (t) => manejarTextoLibreTg(cuentaId, t),
 ): Promise<void> {
   let texto = ''
   try { texto = (await aiTranscribe(buffer, fileName, mimeType)).trim() } catch { texto = '' }
   if (!texto) { await tgSend('🎤 No pude entender la nota de voz. ¿Me lo escribes o la repites más despacio?').catch(() => {}); return }
   await tgSend(`🎤 <i>${escapeHtml(texto)}</i>`).catch(() => {}) // eco de lo que entendí, para que Alberto lo vea
-  await manejarTextoLibreTg(cuentaId, texto)
+  await siguiente(texto)
 }
 
 // Extrae el file_id + pistas de mime/nombre de un mensaje de Telegram (foto o documento). null si no hay.
