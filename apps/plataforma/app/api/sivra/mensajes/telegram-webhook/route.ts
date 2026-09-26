@@ -1036,7 +1036,7 @@ export async function POST(req: NextRequest) {
       const voz = vozDeMensaje(msg)
       if (voz) {
         const file = await descargarTelegram(voz.fileId, voz.mimeHint, voz.nameHint)
-        if (file) await manejarVozTg(cuentaId, file.buffer, file.mimeType, file.fileName, (t) => enrutarTextoLibre(cuentaId, t))
+        if (file) await manejarVozTg(cuentaId, file.buffer, file.fileName, file.mimeType, (t) => enrutarTextoLibre(cuentaId, t))
         else await tgSend('No pude descargar la nota de voz. Reinténtala.').catch(() => {})
         return NextResponse.json({ ok: true })
       }

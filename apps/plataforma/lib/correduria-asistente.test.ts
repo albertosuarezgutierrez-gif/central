@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import {
-  apagado, clasificarDestino, diasValidos, enmascarar, idValido, leerArgumentos, leerClasificacion,
+  costeConservador, rastroArgs, tienePrefijo, apagado, clasificarDestino, diasValidos, enmascarar, idValido, leerArgumentos, leerClasificacion,
   paraIA, reglaConDatoPersonal, sinPrefijo, systemAsistente, turnoDeNota, preguntaNota,
 } from './correduria-asistente.ts'
 
@@ -42,14 +42,16 @@ test('🔒 enmascara DNI, NIE, IBAN y tarjeta', () => {
   assert.equal(enmascarar('NIE X1234567L'), 'NIE …567L')
   assert.equal(enmascarar('cuenta ES91 2100 0418 4502 0005 1332'), 'cuenta ES…1332')
   assert.equal(enmascarar('ES9121000418450200051332'), 'ES…1332')
-  assert.equal(enmascarar('tarjeta 4111 1111 1111 1234'), 'tarjeta …1234')
+  assert.equal(enmascarar('tarjeta 4111 1111 1111 1111'), 'tarjeta …1111')
+  // 16 cifras que no pasan el dígito de control: un nº de póliza, se queda entero.
+  assert.equal(enmascarar('póliza 1234567812345678'), 'póliza 1234567812345678')
   // Lo que no es dato personal se queda: teléfono (hace falta para llamar), póliza, CIF.
   assert.equal(enmascarar('tel 634766644 póliza 0008414300069 CIF B12345678'), 'tel 634766644 póliza 0008414300069 CIF B12345678')
 })
 
 test('🔒 paraIA enmascara y avisa del recorte', () => {
   const s = paraIA({ dni: '28347769Q', nulo: null })
-  assert.equal(s, '{"dni":"…769Q"}')
+  assert.equal(s, '{"dni":"…769Q","nulo":null}')
   assert.match(paraIA({ x: 'a'.repeat(100) }, 20), /RECORTADO/)
 })
 
@@ -89,4 +91,23 @@ test('interruptor de apagado', () => {
 test('la nota del 👎 se liga a su turno', () => {
   assert.equal(turnoDeNota(preguntaNota(42)), 42)
   assert.equal(turnoDeNota('otra cosa'), null)
+})
+
+test('reparto: unidades que parecen matrícula no roban preguntas al contable', () => {
+  assert.equal(clasificarDestino('¿cuánto consumí de luz, 1500 kWh?'), 'contable')
+  assert.equal(clasificarDestino('seguros de coche que pago'), 'dudoso')
+  assert.equal(tienePrefijo('/seguros impagados'), true)
+  assert.equal(tienePrefijo('¿qué tiene Pablo?'), false)
+})
+
+test('🔒 el rastro guarda ids, no el texto buscado', () => {
+  assert.deepEqual(rastroArgs('buscar', { q: '634766644' }), { q: '[búsqueda]' })
+  assert.deepEqual(rastroArgs('proponer_regla', { regla: 'x' }), { regla: '[texto]' })
+  assert.deepEqual(rastroArgs('ficha_cliente', { clienteId: 'abc', basura: 'z' }), { clienteId: 'abc' })
+  assert.deepEqual(rastroArgs('buscar', null), {})
+})
+
+test('el coste sin catálogo nunca es 0', () => {
+  assert.ok(costeConservador(1000) > 0)
+  assert.equal(costeConservador(-5), 0)
 })

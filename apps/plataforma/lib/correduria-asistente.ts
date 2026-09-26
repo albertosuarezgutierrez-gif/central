@@ -11,7 +11,7 @@
 // ── ¿Es un mensaje para la correduría? ───────────────────────────────────────────────────────────
 
 /** Atajo explícito: `seguro: …`, `seguros …`, `/seguros …`, `correduría: …`. Siempre gana. */
-const PREFIJO = /^\s*(?:\/seguros?\b|seguros?\s*[:,]|seguros\s|correduri[aá]\s*[:,])/i
+const PREFIJO = /^\s*(?:\/seguros?\b|seguros?\s*[:,]|correduri[aá]\s*[:,])/i
 
 /** Palabras que solo tienen sentido en la correduría (el contable no las maneja). */
 const PROPIAS = /\b(p[oó]lizas?|siniestros?|renovaci(?:[oó]n|ones)|tomador(?:es)?|asegurad[oa]s?|retarific\w*|codeoscopic|avant2|cima|eiac|tirea|coberturas?|franquicia|carta verde|anulaci[oó]n(?:es)? de p[oó]liza)\b/i
@@ -32,9 +32,16 @@ export function clasificarDestino(texto: string): Destino {
   const t = texto.trim()
   if (!t) return 'contable'
   if (PREFIJO.test(t)) return 'correduria'
-  if (PROPIAS.test(t) || MATRICULA.test(t)) return 'correduria'
+  if (PROPIAS.test(t)) return 'correduria'
+  // Lo contable ANTES que la matrícula: «1500 kWh» o «2000 BTC» parecen una matrícula y no lo son.
   if (CONTABLES.test(t)) return 'contable'
+  if (MATRICULA.test(t)) return 'correduria'
   return 'dudoso'
+}
+
+/** ¿Lleva el atajo explícito? Con el asistente apagado, así se sabe a quién decirle que lo está. */
+export function tienePrefijo(texto: string): boolean {
+  return PREFIJO.test(texto)
 }
 
 /** La pregunta sin el atajo delante. */
@@ -67,15 +74,32 @@ export function enmascarar(texto: string): string {
       const limpio = m.replace(/[ -]/g, '')
       return `${limpio.slice(0, 2)}…${limpio.slice(-4)}`
     })
-    .replace(/\b(?:\d{4}[ -]?){3}\d{4}\b/g, (m) => `…${m.replace(/[ -]/g, '').slice(-4)}`)
+    // Solo si pasa el dígito de control (Luhn): un nº de póliza de 16 cifras no es una tarjeta.
+    .replace(/\b(?:\d{4}[ -]?){3}\d{4}\b/g, (m) => {
+      const d = m.replace(/[ -]/g, '')
+      return luhn(d) ? `…${d.slice(-4)}` : m
+    })
     .replace(/\b[XYZ]\d{7}[A-Z]\b/gi, (m) => `…${m.slice(-4)}`)
     .replace(/\b\d{8}[A-Z]\b/gi, (m) => `…${m.slice(-4)}`)
 }
 
-/** JSON compacto, enmascarado y recortado para la IA. El corte se DICE: un listado cortado no es completo. */
+function luhn(digitos: string): boolean {
+  let suma = 0
+  for (let i = 0; i < digitos.length; i++) {
+    let n = Number(digitos[digitos.length - 1 - i])
+    if (i % 2 === 1) { n *= 2; if (n > 9) n -= 9 }
+    suma += n
+  }
+  return suma % 10 === 0
+}
+
+/**
+ * JSON compacto, enmascarado y recortado para la IA. Los `null` SE QUEDAN: son «no consta», y
+ * quitarlos haría que un campo desconocido desapareciera. El corte se DICE.
+ */
 export function paraIA(valor: unknown, max = 7000): string {
   let s: string
-  try { s = JSON.stringify(valor, (_k, v) => (v === null ? undefined : v)) ?? 'null' } catch { s = String(valor) }
+  try { s = JSON.stringify(valor) ?? 'null' } catch { s = String(valor) }
   s = enmascarar(s)
   return s.length > max ? `${s.slice(0, max)}… [RECORTADO: hay más datos que no caben; dilo si importa]` : s
 }
@@ -144,6 +168,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     'Reglas ESTRICTAS:',
     '- Responde SOLO con lo que devuelvan las herramientas. Si un dato no aparece, di «no consta» o «no lo tengo»; NUNCA digas que no existe, NUNCA lo inventes ni lo estimes.',
     '- Si una herramienta falla o devuelve error, dilo: «no he podido leer X ahora mismo». Un fallo NO es «no hay nada».',
+    '- Un campo a null significa «no consta / no se sabe», nunca 0 ni «no tiene». Si una lista trae `total` mayor que las filas que ves, di que hay más.',
     '- Si una búsqueda da varios clientes posibles, enuméralos y pregunta cuál; no elijas tú.',
     '- Fase de SOLO LECTURA: no puedes emitir, modificar la cartera, anular ni enviar nada a nadie. Si te lo piden, di que eso se hace en la intranet (/correduria) y resume qué habría que hacer.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',
@@ -179,4 +204,25 @@ export function preguntaNota(turnoId: number): string {
 export function turnoDeNota(textoCitado: string): number | null {
   const m = textoCitado.match(/asistente seguros · turno (\d+)/)
   return m ? Number(m[1]) : null
+}
+
+/**
+ * Lo que queda en el rastro de acceso de cada consulta. Los ids y los días se guardan; el TEXTO
+ * libre (lo que se buscó, la regla propuesta) no, porque sobreviviría a la purga de 90 días con el
+ * mismo dato personal que la pregunta borrada.
+ */
+export function rastroArgs(nombre: string, args: Record<string, unknown> | null): Record<string, unknown> {
+  if (!args) return {}
+  if (nombre === 'buscar') return { q: '[búsqueda]' }
+  if (nombre === 'proponer_regla') return { regla: '[texto]' }
+  const fuera: Record<string, unknown> = {}
+  for (const k of ['clienteId', 'polizaId', 'dias', 'numero']) if (k in args) fuera[k] = args[k]
+  return fuera
+}
+
+/** Precio por 1.000 tokens cuando el catálogo no conoce el modelo: alto a propósito, para que el tope salte antes. */
+export const PRECIO_CONSERVADOR_1K = 0.001
+
+export function costeConservador(tokens: number): number {
+  return +((Math.max(0, tokens) * PRECIO_CONSERVADOR_1K) / 1000).toFixed(6)
 }

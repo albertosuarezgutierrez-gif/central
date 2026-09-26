@@ -311,7 +311,7 @@ export async function openrouterChatTools(
   messages: NimToolMessage[],
   tools: unknown[],
   opts: OpenRouterChatOptions = {},
-): Promise<NimToolResult & { model: string }> {
+): Promise<NimToolResult & { model: string; usage?: OpenRouterUsage }> {
   const key = requireKey(config)
   const doFetch = opts.fetchImpl ?? fetch
   const msgs = [...systemMsgs(opts), ...messages]
@@ -325,5 +325,5 @@ export async function openrouterChatTools(
   const data = await res.json()
   const msg = data?.choices?.[0]?.message
   if (!msg) throw new Error('OpenRouter-Tools: respuesta vacía')
-  return { content: msg.content ?? null, tool_calls: msg.tool_calls, model: data?.model ?? 'desconocido' }
+  return { content: msg.content ?? null, tool_calls: msg.tool_calls, model: data?.model ?? 'desconocido', usage: data?.usage }
 }

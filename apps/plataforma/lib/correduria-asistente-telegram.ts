@@ -9,14 +9,14 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { openrouterChatEx, openrouterChatTools, type NimToolMessage } from '@central/core-ai'
 import { tgSend, tgSendButtons, tgAskForReply, escapeHtml } from '@central/core-telegram'
-import { openrouterConfigPasarela, modelosPorDefecto } from '@/lib/ia-director'
-import { registrarUso, dentroDePresupuestoDiario, estimarTokens, costeEur } from '@/lib/ai-gateway'
+import { openrouterConfigPasarela, modelosPorDefecto, getDirectorEstado } from '@/lib/ia-director'
+import { registrarUso, dentroDePresupuestoDiario, estimarTokens, costePorUso } from '@/lib/ai-gateway'
 import { buscarAsegura, impagadosAsegura, sustitucionesAsegura } from '@/lib/correduria-puerto'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { polizaAsegura } from '@/lib/poliza-asegura'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
 import {
-  apagado, clasificarDestino, DIAS_RETENCION_TEXTO, diasValidos, enmascarar, HERRAMIENTAS, idValido,
+  apagado, clasificarDestino, costeConservador, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
   leerArgumentos, leerClasificacion, MAX_TURNOS_DIA, MAX_VUELTAS, paraIA, preguntaNota, reglaConDatoPersonal,
   sinPrefijo, SYSTEM_CLASIFICADOR, systemAsistente,
 } from './correduria-asistente'
@@ -34,22 +34,40 @@ type Rastro = { nombre: string; args: Record<string, unknown>; ok: boolean }
  * decide una IA con las mismas garantías de privacidad. Cualquier fallo → contable (lo de siempre).
  */
 export async function esParaCorreduria(texto: string): Promise<boolean> {
+  // El atajo explícito va siempre al asistente, también apagado: así contesta que lo está en vez
+  // de que el contable razone sobre «/seguros impagados».
+  if (tienePrefijo(texto)) return true
   if (apagado(process.env.CORREDURIA_ASISTENTE_APAGADO)) return false
   const d = clasificarDestino(texto)
   if (d !== 'dudoso') return d === 'correduria'
+  // Seguimiento de una conversación («¿y su mujer?»): si el asistente contestó hace poco, sigue él.
+  const reciente = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+    SELECT count(*) AS n FROM correduria_asistente_turno WHERE creado_at >= now() - interval '10 minutes'`)
+    .then((r) => Number(r[0]?.n ?? 0) > 0).catch(() => false)
+  if (reciente) return true
   const or = openrouterConfigPasarela()
-  if (!or) return false
+  if (!or || !(await dentroDePresupuestoDiario(APP)).ok) return false
+  const t0 = Date.now()
+  const { model } = modelosPorDefecto()
   try {
-    const { model } = modelosPorDefecto()
     const r = await openrouterChatEx(or, [{ role: 'user', content: texto.slice(0, 500) }], {
       system: SYSTEM_CLASIFICADOR, models: [model], maxTokens: 5, temperature: 0,
-      privacidad: true, provider: PROVEEDOR_PRIVADO, signal: AbortSignal.timeout(6_000),
+      privacidad: true, provider: PROVEEDOR_PRIVADO, signal: AbortSignal.timeout(5_000),
     })
+    await registrarUso({ app: APP, endpoint: 'clasificar', proveedor: 'openrouter', modelo: r.model, ok: true, ms: Date.now() - t0, tokens: r.usage?.total_tokens ?? 0, costeEur: await coste(r.model, r.usage) })
     return leerClasificacion(r.text) === 'correduria'
-  } catch {
+  } catch (e) {
+    await registrarUso({ app: APP, endpoint: 'clasificar', proveedor: 'openrouter', modelo: model, ok: false, ms: Date.now() - t0, error: e instanceof Error ? e.message.slice(0, 200) : 'fallo' })
     // Sin respuesta privada, al contable: es lo que pasaba con todo el texto libre hasta hoy.
     return false
   }
+}
+
+/** Coste real por catálogo; si el catálogo no conoce el modelo, una estimación ALTA, nunca 0. */
+async function coste(modelo: string, usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined): Promise<number> {
+  const modelos = (await getDirectorEstado().catch(() => null))?.modelos ?? []
+  const c = costePorUso(modelo, usage, modelos)
+  return c > 0 || modelo.endsWith(':free') ? c : costeConservador(usage?.total_tokens ?? 0)
 }
 
 // ── Reglas aprendidas ────────────────────────────────────────────────────────────────────────────
@@ -83,6 +101,7 @@ async function ejecutar(
           buscable: r.buscable, avisos: r.avisos,
           bloques: r.bloques.map((b) => ({
             tipo: b.tipo, cobertura: b.cobertura, explicacion: b.explicacion,
+            total: b.hallazgos.length,
             clientes: b.hallazgos.slice(0, 8).map((h) => ({
               clienteId: h.clienteId, nombre: h.nombre, tipo: h.tipo, polizas: h.polizas,
               porque: h.porque, ultimoVencimiento: h.ultimoVencimiento, vitalidad: h.vitalidad,
@@ -115,12 +134,20 @@ async function ejecutar(
     case 'impagados': {
       const r = await impagadosAsegura()
       if (r.estado !== 'ok') return fallo(r)
-      return { texto: paraIA({ resumen: r.resumen, truncado: r.truncado, sinRecibosInformados: r.sinRecibosInformados, filas: r.filas.slice(0, 25) }), ok: true }
+      // -1 es el «no lo informa» del lector: a la IA le llega como null, no como un número.
+      const n = (v: number) => (v < 0 ? null : v)
+      return {
+        ok: true,
+        texto: paraIA({
+          resumen: r.resumen, truncado: r.truncado, sinRecibosInformados: n(r.sinRecibosInformados),
+          pendientesSinJuzgar: n(r.pendientesSinJuzgar), total: r.filas.length, filas: r.filas.slice(0, 25),
+        }),
+      }
     }
     case 'anulaciones_pendientes': {
       const r = await sustitucionesAsegura()
       if (r.estado !== 'ok') return fallo(r)
-      return { texto: paraIA(r.filas), ok: true }
+      return { texto: paraIA({ total: r.filas.length, filas: r.filas.slice(0, 25) }), ok: true }
     }
     case 'proponer_regla': {
       const regla = String(args.regla ?? '').trim().slice(0, 300)
@@ -205,7 +232,9 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
 
   const reglas = await reglasActivas()
   const system = systemAsistente(reglas.map((r) => r.texto), new Date().toISOString().slice(0, 10))
-  const mensajes: NimToolMessage[] = [...(await historialReciente()), { role: 'user', content: enmascarar(pregunta) }]
+  // A la IA va la pregunta TAL CUAL (si Alberto busca por DNI, la IA necesita el DNI para buscarlo;
+  // el proveedor es de retención cero). Enmascarada queda solo en el registro y en Telegram.
+  const mensajes: NimToolMessage[] = [...(await historialReciente()), { role: 'user', content: pregunta }]
   const rastro: Rastro[] = []
   const t0 = Date.now()
   const { model, fallbacks } = modelosPorDefecto()
@@ -216,18 +245,19 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
   try {
     for (let vuelta = 0; vuelta < MAX_VUELTAS; vuelta++) {
       const r = await openrouterChatTools(or, mensajes, HERRAMIENTAS as unknown as unknown[], {
-        system, models: [model, ...fallbacks], maxTokens: 900, temperature: 0.2,
+        // OpenRouter rechaza con 400 un `models` de más de 3 (ver lib/pasarela.ts).
+        system, models: [model, ...fallbacks].slice(0, 3), maxTokens: 900, temperature: 0.2,
         privacidad: true, provider: PROVEEDOR_PRIVADO, signal: AbortSignal.timeout(40_000),
       })
       modelo = r.model
-      const tokens = estimarTokens(system, JSON.stringify(mensajes), r.content, JSON.stringify(r.tool_calls ?? ''))
-      await registrarUso({ app: APP, endpoint: 'tools', proveedor: 'openrouter', modelo: r.model, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('openrouter', tokens) })
+      const tokens = r.usage?.total_tokens ?? estimarTokens(system, JSON.stringify(mensajes), r.content, JSON.stringify(r.tool_calls ?? ''))
+      await registrarUso({ app: APP, endpoint: 'tools', proveedor: 'openrouter', modelo: r.model, ok: true, ms: Date.now() - t0, tokens, costeEur: await coste(r.model, r.usage ?? { total_tokens: tokens }) })
       if (!r.tool_calls?.length) { respuesta = (r.content ?? '').trim(); break }
       mensajes.push({ role: 'assistant', content: r.content ?? null, tool_calls: r.tool_calls })
       for (const c of r.tool_calls) {
         const args = leerArgumentos(c.function?.arguments)
         const res = await ejecutar(c.function?.name ?? '', args, { turnoId, reglas }).catch((e) => ({ texto: `ERROR: ${e instanceof Error ? e.message : 'fallo'}. NO digas que no hay datos.`, ok: false }))
-        rastro.push({ nombre: c.function?.name ?? '?', args: args ?? {}, ok: res.ok })
+        rastro.push({ nombre: c.function?.name ?? '?', args: rastroArgs(c.function?.name ?? '', args), ok: res.ok })
         mensajes.push({ role: 'tool', tool_call_id: c.id, content: res.texto })
       }
     }
