@@ -3661,9 +3661,8 @@ h1 em {
 
 /* ── 📱 Barra inferior del móvil (26/09/2026, a lo Smoobu) ─────────────────
  * `NavPortal.tsx` → `.portal-tabbar`. Fija abajo, icono sobre rótulo, 5 huecos
- * iguales (4 secciones + «Más», que abre el cajón). z-index 30: por encima del
- * contenido y del botón de WhatsApp (35 → se sube encima de la barra, no se
- * tapa), por debajo del fondo (40) y del cajón (50), que la cubren al abrirse.
+ * iguales (3 secciones + WhatsApp + «Más», que abre el cajón). z-index 30: por encima del
+ * contenido, por debajo del fondo (40) y del cajón (50), que la cubren al abrirse.
  * El `body` reserva su alto para que no tape la última fila ni el pie legal. Desde
  * 1024 px no existe: el lateral ya enseña todas las secciones. */
 .portal-tabbar {
@@ -3698,6 +3697,9 @@ h1 em {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+.portal-tabbar-wsp .portal-tabbar-icono {
+  color: #25d366;
+}
 .portal-tabbar-item[data-activa] {
   color: var(--primary);
   font-weight: 700;
@@ -3722,8 +3724,10 @@ h1 em {
   body:has(.portal-tabbar) {
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
   }
+  /* La pestaña «WhatsApp» de la barra sustituye al botón flotante: dos en la misma pantalla
+   * es uno de más. Fuera del portal (páginas públicas) y en escritorio el flotante sigue. */
   body:has(.portal-tabbar) .wsp-flotante {
-    bottom: calc(60px + 12px + env(safe-area-inset-bottom, 0px));
+    display: none;
   }
 }
 @media (min-width: 1024px) {

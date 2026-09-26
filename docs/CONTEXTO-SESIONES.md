@@ -702,8 +702,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (26/09/2026) Portal del cliente (asegura-portal) · barra inferior a lo Smoobu
 - Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero
   en plataforma y en /correduria y se deshizo (el PR #3659 queda sin cambios en plataforma).
-- Móvil (<1024 px): barra fija abajo Seguros · Recibos · Siniestros · Mensajes + «Más» (abre el cajón). El ☰
-  de arriba se queda a propósito. Etiquetas desde `pestanasPortal()`; iconos SVG en línea (sin lucide).
+- Móvil (<1024 px): barra fija abajo Seguros · Recibos · Siniestros · WhatsApp + «Más» (abre el cajón). WhatsApp
+  en vez de «Mensajes» por decisión de Alberto («es más directo»); Mensajes sigue en el cajón y el botón flotante
+  de WhatsApp se oculta mientras está la barra. El ☰ de arriba se queda a propósito. Etiquetas desde `pestanasPortal()`; iconos SVG en línea (sin lucide).
 - `body:has(.portal-tabbar)` reserva 60px (tapaba el pie legal) y sube el botón de WhatsApp. El bloque CSS va
   ANTES de `.caratula {`: el cepo del presupuesto prohíbe `fixed` desde ahí hasta el final del fichero.
 - Medido con Playwright a 320/390/1280. Cepo nuevo en `regression-portal-cartera-agrupada` (4 brazos, vistos en rojo).

@@ -372,4 +372,13 @@ test('🚨 la barra inferior del movil no tapa nada y se va en escritorio', () =
   const item = CSS.indexOf('.portal-tabbar-item {')
   assert.match(CSS.slice(item, CSS.indexOf('}', item)), /min-height:\s*60px/, 'mínimo táctil')
   assert.match(NAV, /pestanas\.find\(\(x\) => x\.href === href\)/, 'las etiquetas salen del módulo')
+
+  // WhatsApp va EN la barra (Alberto: «es más directo») y el flotante se oculta mientras ella
+  // existe: dos botones de WhatsApp en la misma pantalla, y el flotante encima de la barra.
+  assert.match(NAV, /portal-tabbar-wsp/, 'falta la pestaña de WhatsApp en la barra')
+  assert.match(
+    CSS,
+    /body:has\(\.portal-tabbar\)\s*\.wsp-flotante\s*\{\s*display:\s*none/,
+    'con la barra, el botón flotante de WhatsApp sobra',
+  )
 })

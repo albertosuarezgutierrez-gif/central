@@ -7,6 +7,8 @@ import { createPortal } from 'react-dom'
 
 import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
 
+import { WHATSAPP_PATH } from '../whatsapp-icono'
+
 /**
  * La navegación del portal: **un solo `<nav>` con dos formas**.
  *
@@ -56,7 +58,11 @@ import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
  * de la ruta y del parámetro, y no baja como prop desde cada página — así el
  * `layout` puede pintar la navegación una sola vez para todas.
  */
-export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string } }) {
+export function NavPortal({ llamar, whatsapp }: {
+  llamar?: { tel: string; numero: string }
+  /** El enlace `wa.me` ya compuesto en el servidor (ver `llamar`: aquí no se importa `MEDIADOR`). */
+  whatsapp?: string
+}) {
   const ruta = usePathname()
   const params = useSearchParams()
   // `/autorizaciones` es otra RUTA, no un panel de la bóveda; por eso la ruta
@@ -231,6 +237,23 @@ export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string }
             </Link>
           )
         })}
+        {/* WhatsApp en vez de «Mensajes» (Alberto, 26/09/2026: «es más directo»). «Mensajes»
+            no desaparece: sigue en el cajón. En el móvil sustituye al botón flotante, que se
+            oculta mientras esta barra existe (ver globals.css): dos botones de WhatsApp en la
+            misma pantalla es uno de más. */}
+        {whatsapp && (
+          <a
+            className="portal-tabbar-item portal-tabbar-wsp"
+            href={whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg className="portal-tabbar-icono" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d={WHATSAPP_PATH} />
+            </svg>
+            <span className="portal-tabbar-rotulo">WhatsApp</span>
+          </a>
+        )}
         <button
           type="button"
           className="portal-tabbar-item"
@@ -291,11 +314,10 @@ function Svg({ children }: { children: ReactNode }) {
 const IconoSeguros = () => <Svg><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m9 12 2 2 4-4" /></Svg>
 const IconoRecibos = () => <Svg><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" /><path d="M9 8h6M9 12h6M9 16h3" /></Svg>
 const IconoSiniestros = () => <Svg><path d="M12 4 2.8 20h18.4L12 4Z" /><path d="M12 10v4.5M12 17.5v.01" /></Svg>
-const IconoMensajes = () => <Svg><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4A8 8 0 1 1 20 12Z" /></Svg>
 const IconoMas = () => <Svg><circle cx="6" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18" cy="12" r="1.2" /></Svg>
 
 /**
- * Las cuatro de la barra inferior, por `href` contra `pestanasPortal()` — la
+ * Las tres secciones de la barra inferior (la cuarta es WhatsApp), por `href` contra `pestanasPortal()` — la
  * etiqueta y la ruta salen de ahí, no se teclean dos veces: renombrar una
  * sección en el módulo la renombra también aquí, y una que desaparezca del
  * módulo desaparece de la barra en vez de quedar como enlace roto.
@@ -304,5 +326,4 @@ const TABBAR = [
   { href: '/boveda', Icono: IconoSeguros },
   { href: '/boveda?vista=recibos', Icono: IconoRecibos },
   { href: '/boveda?vista=siniestro', Icono: IconoSiniestros },
-  { href: '/mensajes', Icono: IconoMensajes },
 ] as const

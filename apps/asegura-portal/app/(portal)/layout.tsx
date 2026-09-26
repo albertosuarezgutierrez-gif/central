@@ -1,8 +1,9 @@
 import { Suspense } from 'react'
-import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
+import { MEDIADOR, telefonoLegible, whatsappUrl } from '@central/module-seguros'
 
 import { NavPortal } from './NavPortal'
 import { BandaCorredor } from './BandaCorredor'
+import { SALUDO_CLIENTE } from '../WhatsappFlotante'
 
 /**
  * El armazón de las pantallas con sesión.
@@ -26,7 +27,10 @@ export default async function PortalLayout({ children }: { children: React.React
     <div className="portal-shell">
       <BandaCorredor />
       <Suspense fallback={<div className="portal-nav-hueco" aria-hidden />}>
-        <NavPortal llamar={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }} />
+        <NavPortal
+          llamar={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }}
+          whatsapp={whatsappUrl(SALUDO_CLIENTE)}
+        />
       </Suspense>
       <main className="portal-contenido">
         {children}
