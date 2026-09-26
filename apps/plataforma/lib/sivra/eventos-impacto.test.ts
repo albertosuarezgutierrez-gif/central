@@ -1,6 +1,9 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { impactoEvento, clasificarTipo, esPartidoLigaRegular, esPartidoFueraDeSevilla, FACTOR_MAX } from './eventos-impacto.ts'
+import {
+  impactoEvento, clasificarTipo, esPartidoLigaRegular, esPartidoFueraDeSevilla, FACTOR_MAX,
+  nombreConfiesaDuda, estadoInicialWebsearch, FACTOR_WEB_SIN_VERIFICAR,
+} from './eventos-impacto.ts'
 
 test('un concierto de estadio ya no se queda en 1.60', () => {
   // La Cartuja, 60.000 (Karol G). Antes salía 1.60 y hubo que corregirlo a mano.
@@ -131,4 +134,22 @@ test('sin estructura de partido o sin club sevillano no opina', () => {
   assert.equal(esPartidoFueraDeSevilla('KAROL G - VIAJANDO POR EL MUNDO TROPITOUR'), false)
   assert.equal(esPartidoFueraDeSevilla(''), false)
   assert.equal(esPartidoFueraDeSevilla(null), false)
+})
+
+test('un nombre que confiesa su duda no es un evento (caso real 26/09/2026)', () => {
+  assert.equal(nombreConfiesaDuda("Love The 90's Sevilla 2026 (día 2, si aplica)"), true)
+  assert.equal(nombreConfiesaDuda('Concierto X (por confirmar)'), true)
+  assert.equal(nombreConfiesaDuda('¿Gira de Y en La Cartuja?'), true)
+  assert.equal(nombreConfiesaDuda("Love The 90's Sevilla 2026"), false)
+  assert.equal(nombreConfiesaDuda('Sevilla FC vs Valencia CF'), false)
+  assert.equal(nombreConfiesaDuda(null), false)
+})
+
+test('la búsqueda web no confirma sola lo FUERTE: entra previsto a partir del umbral', () => {
+  assert.equal(estadoInicialWebsearch(2.2), 'previsto')
+  assert.equal(estadoInicialWebsearch(FACTOR_WEB_SIN_VERIFICAR), 'previsto')
+  assert.equal(estadoInicialWebsearch(1.35), 'confirmado')
+  assert.equal(estadoInicialWebsearch(1.15), 'confirmado')
+  // Un concierto de estadio (la curva general llega a 2,2) cae siempre en previsto.
+  assert.equal(estadoInicialWebsearch(impactoEvento(60000, 'concierto', 'Love The 90s')), 'previsto')
 })

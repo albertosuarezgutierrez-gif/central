@@ -155,3 +155,12 @@ test('PROPIEDAD: el resultado nunca supera al corpus completo (barrido)', () => 
     }
   }
 })
+
+test('apply: la calidad se mide contra la nota de la LIGA cuando el ancla sale de la liga (26/09/2026, lee el fuente)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../../app/api/sivra/pricing/apply/route.ts', import.meta.url), 'utf8')
+  // Sin esto se castiga dos veces la misma nota baja: el corpus ya expulsó a los mejor valorados
+  // y el factor de calidad seguía comparando contra una mediana que los incluía (Luxury 0,856).
+  assert.match(src, /::numeric mkt_score_liga,/)
+  assert.match(src, /THEN mkt\.mkt_score_liga\s+ELSE mkt\.mkt_score END\) \* s\.quality_k/)
+})

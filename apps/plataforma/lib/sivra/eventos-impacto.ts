@@ -91,6 +91,31 @@ export function esPartidoFueraDeSevilla(nombre?: string | null): boolean {
 }
 
 /**
+ * ¿El propio nombre confiesa que el evento no es seguro? («Love The 90's (día 2, si aplica)»)
+ *
+ * Caso real (26/09/2026): la búsqueda web propuso un segundo día de un festival de un día, con la
+ * duda escrita en el nombre, y entró CONFIRMADO a ×2,2. El mercado de esa noche iba a 0,88× su mes
+ * (centinela #7). Si el modelo duda, el evento no se guarda: no hay factor que proteger.
+ */
+const RE_DUDA = /\b(si aplica|por confirmar|pendiente de confirmar|sin confirmar|posible|posiblemente|tbc|tba|rumor)\b|\?/i
+export function nombreConfiesaDuda(nombre?: string | null): boolean {
+  return RE_DUDA.test(String(nombre ?? ''))
+}
+
+/**
+ * Factor a partir del cual la búsqueda web NO puede confirmar sola: el evento entra PREVISTO y lo
+ * decide el verificador (prensa dirigida + mercado + fuente dura). Es el mismo umbral que el
+ * verificador usa para avisar de un «pelotazo» por Telegram.
+ */
+export const FACTOR_WEB_SIN_VERIFICAR = 1.4
+/** Confianza con la que entra un previsto de la búsqueda web: sobre el mínimo (0,6) para que proteja
+ *  el suelo y, lejos, pese medio premio; nunca el premio entero hasta que lo verifique la prensa. */
+export const CONFIANZA_WEB_SIN_VERIFICAR = 0.7
+export function estadoInicialWebsearch(factor: number): 'confirmado' | 'previsto' {
+  return Number(factor) >= FACTOR_WEB_SIN_VERIFICAR ? 'previsto' : 'confirmado'
+}
+
+/**
  * Multiplicador de precio para un evento, por aforo y tipo.
  *
  * La curva general (conciertos, festivales, lo que no sabemos clasificar) llega a 2.20 en aforo de

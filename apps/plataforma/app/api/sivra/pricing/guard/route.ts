@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { tgAvisoAlerta } from '@/lib/telegram'
 import { decidirAutoResolucion, detalleAutoResolucion, clave as claveAlerta } from '@/lib/sivra/alertas-autoresolucion'
-import { decidirSubMercado, decidirReservaBaja } from "@/lib/sivra/pricing-guardia"
+import { decidirSubMercado, decidirReservaBaja, causaReservaBaja } from "@/lib/sivra/pricing-guardia"
 import {
   decidirEventoSinRespaldo, decidirEventoNoCatalogado, decidirPrecioPorPlaza, decidirRitmoDestacado,
   decidirCompsDeOtroAforo,
@@ -278,6 +278,7 @@ export async function GET(req: NextRequest) {
   // la de Feria a 140€ (mercado ~424€) se quedaba a 0,3% del umbral. Con p50 por fecha ambas disparan.
   const nuevasReservas = await prisma.$queryRaw<{
     property_id: string; guest: string; checkin: string; nights: number; adr: number; p50: number; comps: number; date_specific: boolean
+    portal: string | null; bruto_real: boolean; publicado: number | null
   }[]>(Prisma.sql`
     -- Los dos p50 van NORMALIZADOS por aforo (misma razon que en #4): el ADR de una reserva se
     -- compara contra el mercado del piso que se reservo, no contra el de uno mas pequeno.
@@ -309,7 +310,22 @@ export async function GET(req: NextRequest) {
            (i.amount_gross / NULLIF(i.nights, 0))::float8 AS adr,
            COALESCE(md.p50, mb.p50)::float8 AS p50,
            COALESCE(md.comps, mb.comps)::int AS comps,
-           (md.p50 IS NOT NULL) AS date_specific
+           (md.p50 IS NOT NULL) AS date_specific,
+           i.portal AS portal,
+           -- 🚨 Agoda/Expedia/Airbnb llegan con amount_gross = amount (medido 26/09/2026: 18 de 18):
+           -- ese número es lo que PAGA el canal, no lo que paga el huésped. Compararlo como bruto
+           -- contra el mercado exageraba el hueco ~15-20% (Agoda salía «−67%»). Sin bruto real no
+           -- se evalúa, y se cuenta aparte.
+           (i.amount_gross <> i.amount OR i.portal = 'DIRECTO') AS bruto_real,
+           -- Lo que publicábamos esas noches el día que se reservó (media de la estancia, último
+           -- snapshot no posterior a la reserva). NULL = no consta → no se diagnostica la causa.
+           (SELECT AVG(s.price_live)::float8 FROM rate_snapshots s
+             WHERE s.property_id = i."propertyId"
+               AND s.rate_date >= i."checkIn"::date AND s.rate_date < i."checkIn"::date + i.nights
+               AND s.snapshot_date = (SELECT MAX(s2.snapshot_date) FROM rate_snapshots s2
+                                      WHERE s2.property_id = i."propertyId" AND s2.rate_date = i."checkIn"::date
+                                        AND s2.snapshot_date <= COALESCE(i.reserved_at, i."createdAt")::date)
+           ) AS publicado
     FROM incomes i
     JOIN mkt_blend mb ON mb.scenario = i."propertyId"
     LEFT JOIN mkt_date md ON md.scenario = i."propertyId" AND md.checkin_date = i."checkIn"::date
@@ -317,7 +333,9 @@ export async function GET(req: NextRequest) {
       AND i."checkIn"::date >= CURRENT_DATE
       AND i.amount_gross > 0 AND i.nights > 0
   `)
+  const reservasSinBruto = nuevasReservas.filter(r => !r.bruto_real).length
   const reservasBajas = nuevasReservas
+    .filter(r => r.bruto_real)
     .map(r => ({
       ...r,
       ev: decidirReservaBaja(
@@ -818,10 +836,17 @@ export async function GET(req: NextRequest) {
   }
   for (const r of reservasBajas) {
     const nombre = r.guest ? ` (${r.guest.slice(0, 24)})` : ""
+    const causa = causaReservaBaja(Number(r.adr), r.publicado)
+    const pub = r.publicado != null ? Math.round(Number(r.publicado)) : null
+    const porQue = causa === 'descuento'
+      ? `El huésped pagó un ${Math.round((1 - Number(r.adr) / Number(r.publicado)) * 100)}% MENOS de lo que publicábamos (${pub}€): revisa las promociones de ${r.portal ?? 'ese canal'} (early booker, móvil, Genius apilados) — la fuga está en el canal, no en el motor.`
+      : causa === 'precio'
+        ? `Se vendió a lo que publicábamos (${pub}€): la reserva es normal, lo bajo es NUESTRO precio de esas fechas. Revisa el motor/suelo de esas fechas, no la reserva.`
+        : `No consta qué precio publicábamos al reservar, así que no se sabe si fue el precio o un descuento del canal.`
     const ok = await pushAlert({
       tipo: "reserva_bajo_mercado", prioridad: "alta", property_id: r.property_id,
-      titulo: `${PROP_NAMES[r.property_id] ?? r.property_id}: reserva ${Math.abs(Math.round(r.ev.diffPct))}% por debajo de mercado`,
-      detalle: `Entró una reserva${nombre} el ${r.checkin} a ${Math.round(r.adr)}€/noche brutos (mercado real de esa fecha ~${Math.round(r.p50)}€). Revisa que el precio de esas fechas no siga bajo.`,
+      titulo: `${PROP_NAMES[r.property_id] ?? r.property_id}: reserva ${Math.abs(Math.round(r.ev.diffPct))}% por debajo de mercado${causa === 'descuento' ? ' (descuento de canal)' : causa === 'precio' ? ' (a nuestro precio)' : ''}`,
+      detalle: `Entró una reserva${nombre} por ${r.portal ?? '¿canal?'} el ${r.checkin} a ${Math.round(r.adr)}€/noche brutos (mercado real de esa fecha ~${Math.round(r.p50)}€). ${porQue}`,
       dato_actual: Math.round(r.adr), dato_mercado: Math.round(r.p50), diferencia_pct: Math.round(r.ev.diffPct), fecha_ref: r.checkin,
     })
     if (ok) created++
@@ -1033,6 +1058,8 @@ export async function GET(req: NextRequest) {
     floor_hits: floorHits.length,
     sub_mercado: subHits.length,
     reservas_bajas: reservasBajas.length,
+    // Reservas de canales sin bruto real (Agoda/Expedia/Airbnb): NO evaluadas, no «bien de precio».
+    reservas_sin_bruto: reservasSinBruto,
     por_plaza: plazaHits.length,
     comps_otro_aforo: aforoHits.length,
     // `fechas_evaluadas` es el denominador honesto de #7/#8: si sale bajo, el barrido de mercado

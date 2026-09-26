@@ -4,7 +4,9 @@ import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 import { buscarWeb, busquedaConfigurada } from "@/lib/websearch"
-import { impactoEvento, esPartidoFueraDeSevilla } from "@/lib/sivra/eventos-impacto"
+import {
+  impactoEvento, esPartidoFueraDeSevilla, nombreConfiesaDuda, estadoInicialWebsearch, CONFIANZA_WEB_SIN_VERIFICAR,
+} from "@/lib/sivra/eventos-impacto"
 import { registrarLatido } from "@/lib/monitoring/latido-escribir"
 
 export const dynamic = "force-dynamic"
@@ -121,7 +123,7 @@ Si no hay nada nuevo: {"eventos":[]}`
     return NextResponse.json({ ok: false, configured: true, errors: [String(e).slice(0, 200)] })
   }
 
-  let upserted = 0, descartados = 0, fueraDeCasa = 0
+  let upserted = 0, descartados = 0, fueraDeCasa = 0, dudosos = 0
   for (const ev of evs) {
     const rateDate = ev.fecha
     const nombre = (ev.nombre ?? "").trim()
@@ -130,19 +132,26 @@ Si no hay nada nuevo: {"eventos":[]}`
     // Partido del Sevilla/Betis A DOMICILIO: se juega fuera y no trae huéspedes. El prompt ya lo
     // pide, pero la IA lo coló 9 veces (14/08/2026) — la guarda determinista es la que cuenta.
     if (esPartidoFueraDeSevilla(nombre)) { fueraDeCasa++; continue }
+    // El modelo escribe su propia duda en el nombre («día 2, si aplica»): eso no es un evento.
+    if (nombreConfiesaDuda(nombre)) { dudosos++; continue }
     const aforo = Math.max(0, Math.round(Number(ev.aforo_estimado ?? 3000)) || 3000)
     const tipo = (ev.tipo ?? "evento").toString().slice(0, 40)
+    const factor = impactoEvento(aforo, tipo, nombre)
+    // Lo FUERTE no se confirma solo (26/09/2026): una sola respuesta de la IA sin verificar subía
+    // una noche ×2,2. Entra previsto y lo decide /api/sivra/eventos/verificar (prensa + mercado).
+    const estado = estadoInicialWebsearch(factor)
+    const confianza = estado === 'previsto' ? CONFIANZA_WEB_SIN_VERIFICAR : null
     try {
       await prisma.$executeRaw(Prisma.sql`
-        INSERT INTO pricing_eventos_auto (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, estado, updated_at)
+        INSERT INTO pricing_eventos_auto (rate_date, nombre, fuente, tipo, aforo, factor, venue, raw, estado, confianza, evidencia, updated_at)
         VALUES (${rateDate}::date, ${nombre}, 'websearch', ${tipo},
-          ${aforo}::int, ${impactoEvento(aforo, tipo, nombre)}::numeric, NULL, ${JSON.stringify({ via })}::jsonb,
-          'confirmado', now())
+          ${aforo}::int, ${factor}::numeric, NULL, ${JSON.stringify({ via })}::jsonb,
+          ${estado}, ${confianza}::numeric,
+          ${estado === 'previsto' ? 'búsqueda web sin verificar: factor fuerte, lo decide el verificador' : null}, now())
         ON CONFLICT (fuente, nombre, rate_date) DO UPDATE
-          SET aforo = EXCLUDED.aforo, factor = EXCLUDED.factor, tipo = EXCLUDED.tipo,
-              estado = 'confirmado', updated_at = now()
-          -- Un DESCARTADO no se resucita: si Alberto (o una guarda) lo tumbó y la IA lo vuelve a
-          -- proponer, su decision manda — sin este WHERE, cada pasada semanal lo re-confirmaba.
+          SET aforo = EXCLUDED.aforo, factor = EXCLUDED.factor, tipo = EXCLUDED.tipo, updated_at = now()
+          -- NO se pisa estado: antes cada pasada re-CONFIRMABA la fila, deshaciendo el previsto y
+          -- la decisión del verificador. Un DESCARTADO tampoco se toca (decisión de Alberto o guarda).
           WHERE pricing_eventos_auto.estado <> 'descartado'
       `)
       upserted++
@@ -174,7 +183,7 @@ Si no hay nada nuevo: {"eventos":[]}`
 
   return NextResponse.json({
     ok: errors.length === 0, configured: true, via,
-    vistos: evs.length, upserted, descartados, fuera_de_casa: fueraDeCasa,
+    vistos: evs.length, upserted, descartados, fuera_de_casa: fueraDeCasa, dudosos,
     previstos: previstos.guardados, previstosVistos: previstos.vistos,
     errors,
   })

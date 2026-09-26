@@ -1,6 +1,6 @@
 import { test } from "node:test"
 import assert from "node:assert/strict"
-import { decidirSubMercado, decidirReservaBaja } from "./pricing-guardia.ts"
+import { decidirSubMercado, decidirReservaBaja, causaReservaBaja } from "./pricing-guardia.ts"
 
 test("sub-mercado: dispara cuando la media va por debajo y la mayoría de fechas también", () => {
   // Caso genuino (p.ej. septiembre entero a 128 vs mercado ~185 una vez barrido).
@@ -62,4 +62,29 @@ test("reserva baja: Feria a 140 vs mercado real de la fecha 424 dispara (blended
   assert.equal(conBlended.alerta, false)
   const conFecha = decidirReservaBaja({ adr: 140, marketP50: 424, comps: 10 }, { minComps: 8 })
   assert.equal(conFecha.alerta, true)
+})
+
+test('causaReservaBaja: vendida a nuestro precio → el barato es el PRECIO, no la reserva (casos reales 26/09/2026)', () => {
+  assert.equal(causaReservaBaja(194, 181), 'precio')   // Luxury 30/10: pagó MÁS que lo publicado
+  assert.equal(causaReservaBaja(80, 78), 'precio')     // Busto Reform 08/10
+  assert.equal(causaReservaBaja(106, 100), 'precio')
+})
+
+test('causaReservaBaja: pagó bastante menos de lo publicado → descuento de canal', () => {
+  assert.equal(causaReservaBaja(93, 131), 'descuento')   // Dúplex 01/01/2027: 0,71×
+  assert.equal(causaReservaBaja(284, 373), 'descuento')  // Dúplex 12/06/2027: 0,76×
+  assert.equal(causaReservaBaja(90, 129), 'descuento')   // Busto Reform 29/12: 0,70×
+})
+
+test('causaReservaBaja: sin precio publicado no se afirma ninguna causa', () => {
+  assert.equal(causaReservaBaja(90, null), null)
+  assert.equal(causaReservaBaja(90, undefined), null)
+  assert.equal(causaReservaBaja(90, 0), null)
+})
+
+test('guard #5 no compara como bruto el importe de canales sin bruto real (lee el fuente)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('../../app/api/sivra/pricing/guard/route.ts', import.meta.url), 'utf8')
+  assert.match(src, /\(i\.amount_gross <> i\.amount OR i\.portal = 'DIRECTO'\) AS bruto_real/)
+  assert.match(src, /\.filter\(r => r\.bruto_real\)/)
 })

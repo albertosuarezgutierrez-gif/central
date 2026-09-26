@@ -101,3 +101,20 @@ export function decidirReservaBaja(i: ReservaBajaInput, o: ReservaBajaOpts = {})
   const diffPct = ((i.adr - i.marketP50) / i.marketP50) * 100
   return { alerta: diffPct <= -umbral * 100, diffPct }
 }
+
+/**
+ * ¿POR QUÉ salió barata la reserva? Son dos averías distintas y se arreglan en sitios distintos:
+ *  · `precio`    → se vendió a (casi) lo que publicábamos: el barato es NUESTRO precio, no la reserva.
+ *                  Se revisa el motor/suelo de esas fechas; la reserva no tiene nada de raro.
+ *  · `descuento` → el huésped pagó bastante menos de lo publicado: promos de canal apiladas
+ *                  (early booker, Genius, móvil, ofertas de Agoda/Expedia) o markup mal calibrado.
+ *  · `null`      → no consta el precio publicado al reservar: NO se afirma ninguna de las dos.
+ * Medido 26/09/2026 (90 días): Booking cobra de mediana 0,86-0,93× lo publicado (Genius normal);
+ * 14 de 15 avisos de esa semana eran `precio`, y el texto les decía «revisa la reserva».
+ */
+export function causaReservaBaja(adr: number, precioPublicado: number | null | undefined, umbralDescuento = 0.8):
+  'precio' | 'descuento' | null {
+  const pub = Number(precioPublicado)
+  if (!Number.isFinite(pub) || pub <= 0 || !(adr > 0)) return null
+  return adr / pub < umbralDescuento ? 'descuento' : 'precio'
+}

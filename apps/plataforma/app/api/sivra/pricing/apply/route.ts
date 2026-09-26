@@ -159,6 +159,14 @@ export async function POST(req: NextRequest) {
         -- real, 68 apariciones en el corpus de Busto). Ver sqlNotaCreible.
         percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)
           FILTER (WHERE ${Prisma.raw(sqlNotaCreible("m."))})::numeric mkt_score,
+        -- La MISMA mediana de nota, pero sobre el corpus de NUESTRA LIGA (26/09/2026). Si el ancla
+        -- ya salio del corpus filtrado por nota, comparar nuestra nota contra la del corpus ENTERO
+        -- castiga dos veces la misma nota baja: primero se expulsan los comps mejor valorados y
+        -- luego se descuenta otro 8% por punto contra una mediana que los incluye. Medido: Luxury
+        -- 204 -> liga 139 -> x0,856 (7,2 vs 9,0) = 119; contra la liga (8,0) el factor es 0,936.
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)
+          FILTER (WHERE ${Prisma.raw(sqlNotaCreible("m."))}
+                    AND ${Prisma.raw(`(${sqlCompDeNuestraLiga("m.", "s.own_score")} AND ${sqlCompEsCasaComparable("m.")})`)})::numeric mkt_score_liga,
         COUNT(*)::int AS sample_n,
         (CURRENT_DATE - MAX(l.sd))::int AS market_age_days
       FROM market_rates m JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
@@ -195,7 +203,13 @@ export async function POST(req: NextRequest) {
       -- Los dos factores del ajuste, POR SEPARADO: el de demanda se gatea por fecha segun la
       -- antelacion real del piso (ver pricing-demanda.ts) y el de calidad aplica siempre.
       GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)::float8 AS demand_factor,
-      GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.75)::float8 AS quality_factor,
+      -- Contra la nota de la liga SOLO cuando el ancla de verdad sale de la liga (mismas dos
+      -- condiciones que med_pasada: muestra suficiente y la liga no encarece). Si no, el ancla es
+      -- el corpus completo y la comparacion correcta es contra su mediana.
+      GREATEST(LEAST(1 + (s.own_score - CASE
+          WHEN mkt.sample_liga >= ${MIN_SAMPLE} AND mkt.med IS NOT NULL AND mkt.med <= mkt.med_todos
+               AND mkt.mkt_score_liga IS NOT NULL THEN mkt.mkt_score_liga
+          ELSE mkt.mkt_score END) * s.quality_k, 1.10), 0.75)::float8 AS quality_factor,
       -- Los ingredientes del factor de demanda, en crudo: hacen falta para RECALCULARLO con la
       -- ocupacion del MES de cada fecha (ver pricing-demanda.ts). El de arriba, con la
       -- ocupacion anual, queda de fallback para los meses sin snapshot.
