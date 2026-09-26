@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(26/09/2026)** Correduría · ficha del cliente, bloque 👥 Personas (`Relaciones.tsx`), «muy poco clara y muy extensa»:
+cada persona es ahora un RESUMEN de dos líneas (vínculo + pólizas vivas + quién ve qué, de los mismos helpers puros)
+y la gestión de los dos sentidos/cambiar tipo/quitar va plegada tras «Gestionar»; se abre SOLA si hay una
+autorización pendiente. «Revisado: no es nada suyo» se aparta al final plegado y contado; la procedencia 📄/👪 se
+explica una vez arriba; el párrafo legal va a un «¿Cómo funciona?». Sin cambios de lógica ni de puerto. Verificado a
+320/1024 px con Chromium (sin desbordes). PR en rama `claude/relaciones-screen-clarity-xtks5i`.
+
 **(26/09/2026)** Correduría: fila 5 (ReRate/Submit a 150 s, rutas 240 s; PR #3664, mergeado) + fase 3a, EMITIR DESDE TELEGRAM:
 `preparar_emision` (póliza + nº proyecto Avant2) → el servidor resume desde el GET gratis del importador (tomador y cuenta
 enmascarados) → botón `cas_emitir` de un solo uso, 15 min, huella sha256 → al pulsar rehace lectura, enlaza y emite con la
