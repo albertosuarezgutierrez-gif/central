@@ -32,7 +32,10 @@ import { auditado } from '@/lib/auditoria'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// ⏱️ Fila 5 (26/09/2026): el ReRate lleva el reloj largo del vendor (150 s) y antes
+// van lecturas de 15 s cada una. 240 deja que corte SIEMPRE el reloj del vendor,
+// que sabe decir «sin confirmación», y no Vercel, que mata la función en seco.
+export const maxDuration = 240
 
 /**
  * `POST /api/operador/codeoscopic/oferta` — confirma con la compañía (ReRate)
