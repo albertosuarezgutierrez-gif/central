@@ -11,7 +11,8 @@
 //
 // Interruptor: `ASEGURA_CORREO_EMISION=0` apaga el correo (el expediente se sigue abriendo).
 import { prismaAsegura } from './asegura-db'
-import { cuerpoCorreoEmision } from './correo-emision.ts'
+import { cuerpoCorreoEmision, type ResumenSeguro } from './correo-emision.ts'
+import { eur } from './dinero'
 import { enlacePortal } from './correo-invitacion-portal.ts'
 import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
 import { pdfArchivado, pdfDePoliza, TIPO_CORREO_EMISION_CON_POLIZA } from './poliza-pdf'
@@ -101,7 +102,11 @@ export async function trasEmision(
       console.error('[tras-emision] no se pudo leer el PDF de la póliza (sale sin adjunto):', err instanceof Error ? err.message : err)
       return null
     })
-    const cuerpo = cuerpoCorreoEmision({ nombre, enlace, conBaja: baja === 'abierta', conPoliza: pdf !== null })
+    const resumen = await resumenSeguro(correduriaId, e.polizaId).catch((err) => {
+      console.error('[tras-emision] no se pudo leer el resumen de la póliza (sale sin él):', err instanceof Error ? err.message : err)
+      return null
+    })
+    const cuerpo = cuerpoCorreoEmision({ nombre, enlace, conBaja: baja === 'abierta', conPoliza: pdf !== null, resumen })
     if (opciones.prueba) cuerpo.asunto = `[PRUEBA] ${cuerpo.asunto}`
     // Import dinámico: el cepo del cuerpo corre con `node --test`, que no resuelve Prisma.
     const { enviarCorreoSeguido } = await import('./correo-envio')
@@ -115,6 +120,30 @@ export async function trasEmision(
   } catch (err) {
     console.error('[tras-emision] el correo al cliente no salió:', err instanceof Error ? err.message : err)
     return { baja, correo: 'error' }
+  }
+}
+
+/**
+ * Compañía, cobertura, fecha de efecto y prima de la póliza nueva, para el correo. La cobertura sale de
+ * la modalidad que se tarificó en Codeoscopic (`quote_data`); si la póliza no viene de ahí, `null`.
+ */
+export async function resumenSeguro(correduriaId: string, polizaId: string): Promise<ResumenSeguro | null> {
+  const [f] = await prismaAsegura().$queryRaw<
+    { aseguradora: string | null; fechaInicio: Date | null; prima: number | null; cobertura: string | null }[]
+  >`
+    select p.aseguradora, p.fecha_inicio as "fechaInicio", coalesce(p.prima_bruta, p.prima_anual)::float8 as prima,
+      (select coalesce(q #>> '{quote,product,modality,category,name}', q #>> '{quote,product,modality,name}')
+         from codeoscopic_projects cp, jsonb_array_elements(cp.quote_data) q
+        where cp.poliza_id = p.id and cp.correduria_id = p.correduria_id
+          and q #>> '{quote,id}' = cp.accepted_offer_id_codeoscopic
+        limit 1) as cobertura
+    from polizas p where p.id = ${polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid`
+  if (!f?.aseguradora) return null
+  return {
+    compania: f.aseguradora,
+    cobertura: f.cobertura,
+    fechaEfecto: f.fechaInicio ? f.fechaInicio.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : null,
+    prima: f.prima !== null ? eur(f.prima) : null,
   }
 }
 

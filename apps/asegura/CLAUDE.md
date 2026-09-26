@@ -789,8 +789,9 @@ anulación pasa a `comunicada` SOLO si el correo salió. Cepo `lib/aprobaciones.
 Y la compañía tiene buzón de bajas RECORDADO (`anulacionSeEnviaSola` de module-seguros). Aprueba la MISMA propuesta por
 `decidirAprobacion` (actor `ACTOR_ENVIO_TRAS_FIRMA`); sin buzón o `inmediata` → se queda en «Hoy» como antes. Y tras
 acuñar, `/emitir` llama a `trasEmision()` (`lib/tras-emision.ts`): abre YA la baja de la sustituida y manda al cliente
-UN correo (`lib/correo-emision.ts`, marca Quicksand/Nunito, sin NADA de la cartera — ni compañía ni número; cepo con
-`CAMPOS_PROHIBIDOS_EN_INVITACION`). El OK de ese correo es pulsar «Emitir» (el resumen de Telegram lo avisa antes).
+UN correo (`lib/correo-emision.ts`, marca Quicksand/Nunito) con un RESUMEN: compañía, cobertura (modalidad tarificada),
+fecha de efecto y prima (Alberto, 26/09/2026; lleva la póliza adjunta, así que no se oculta nada que el PDF no diga). Siguen
+fuera número de póliza, matrícula, IBAN y DNI (cepo con `CAMPOS_PROHIBIDOS_EN_INVITACION` menos compañía/prima). El OK de ese correo es pulsar «Emitir» (el resumen de Telegram lo avisa antes).
 `ASEGURA_CORREO_EMISION=0` lo apaga. Reenvío/prueba: `POST /api/operador/emision/aviso {polizaId, prueba}` (prueba →
 `ASEGURA_MAIL_PRUEBA` o `ASEGURA_MAIL_REPLY_TO`, sin dejar rastro como enviado al cliente). Cepos en
 `lib/correo-emision.test.ts` y `lib/aprobaciones.test.ts`. El correo solo sale si su dirección le lleva a SU ficha del
@@ -802,7 +803,8 @@ archivada (o, desde «Enviar al cliente», se puede traer de Codeoscopic: `pdfDe
 adjunta (`emision_con_poliza`); si no, el correo dice «te la enviaremos» y el cron horario `/api/cron/polizas-pdf` la
 trae y la manda (`poliza_pdf`) SOLO a quien recibió el correo de emisión DE ESA PÓLIZA — todo por
 `correo_envio.poliza_id` (SQL `2026-09-26_correo_envio_poliza.sql`), nunca por cliente. Ventana 14 días; lo que caduca
-sin PDF se loguea (aún sin Telegram: asegura no tiene canal). Los PDF que archiva el agente llevan
+sin PDF se loguea (aún sin Telegram: asegura no tiene canal). 🚨 La descarga del fichero (`descargarFicheroVendor`) lleva
+TAMBIÉN `x-client-app`/`x-user-email`: sin ellas devolvía 400 en producción (61089620, 26/09/2026) pese a que el portal dice «solo el Bearer». Los PDF que archiva el agente llevan
 `visible_por_cliente = true`: el cliente los ve y descarga en el portal («Documentos de tu póliza», solo pólizas PROPIAS,
 `apps/asegura-portal/lib/documentos-poliza.ts`).
 📮 **Buzón de bajas = el contacto `general` de cada compañía (decisión de Alberto, 26/09/2026)**, marcado en BD con
