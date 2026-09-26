@@ -31,6 +31,9 @@ export const dynamic = 'force-dynamic'
  * nombre: dos homónimos no se funden, y un DNI no cruza el puerto.
  */
 
+/** Aborta la transacción del enlace sin que parezca una avería: es un 409, no un 500. */
+class EnlaceNoEscrito extends Error {}
+
 type Contexto =
   | { ok: false; res: NextResponse }
   | {
@@ -209,33 +212,48 @@ export const POST = auditado(async (req: Request) => {
 
   // Igual que `/oferta`: `uq_codeoscopic_projects_poliza` deja UN proyecto por póliza, así
   // que se suelta la póliza de cualquier otro proyecto suyo que no haya llegado a emitirse.
-  await prisma.$executeRaw`
-    update codeoscopic_projects set poliza_id = null
-    where correduria_id = ${ctx.correduriaId}::uuid and poliza_id = ${ctx.poliza.id}::uuid
-      and project_id_codeoscopic <> ${projectId!} and estado <> 'emitida'
-  `
-  // La condición va DENTRO del upsert (no solo en `conflictoFila`): dos imports a la vez del mismo
-  // proyecto a pólizas distintas, o uno que se emite entre la lectura y aquí, no escriben nada.
-  const escritas = await prisma.$queryRaw<{ id: string }[]>`
-    insert into codeoscopic_projects (
-      correduria_id, project_id_codeoscopic, producto, poliza_id, aseguradora,
-      accepted_offer_id_codeoscopic, estado
-    ) values (
-      ${ctx.correduriaId}::uuid, ${projectId!}, ${ramo}::tipo_seguro, ${ctx.poliza.id}::uuid,
-      ${oferta.compania}, ${oferta.quoteId}, 'preemision'
-    )
-    on conflict (correduria_id, project_id_codeoscopic) do update
-      set poliza_id = excluded.poliza_id,
-          producto = excluded.producto,
-          aseguradora = excluded.aseguradora,
-          accepted_offer_id_codeoscopic = excluded.accepted_offer_id_codeoscopic,
-          estado = 'preemision'::codeoscopic_project_estado
-      where codeoscopic_projects.estado not in ('emitida', 'riesgo_condicionado', 'rechazada')
-        and codeoscopic_projects.submit_in_flight_at is null
-        and (codeoscopic_projects.poliza_id is null or codeoscopic_projects.poliza_id = excluded.poliza_id)
-    returning id::text as id
-  `
-  if (escritas.length === 0) {
+  // Soltar y enlazar van en UNA transacción: si el enlace no escribe, la otra póliza no queda
+  // suelta. Y el soltar repite la guarda de «intento sin aclarar» por si cambió desde la lectura.
+  const enlazado = await prisma
+    .$transaction(async (tx) => {
+      await tx.$executeRaw`
+        update codeoscopic_projects set poliza_id = null
+        where correduria_id = ${ctx.correduriaId}::uuid and poliza_id = ${ctx.poliza.id}::uuid
+          and project_id_codeoscopic <> ${projectId!} and estado <> 'emitida'
+          and submit_in_flight_at is null
+          and not (submit_attempt_id is not null and estado = 'preemision')
+          and not coalesce(error_mensaje ~ '^5[0-9]{2}([^0-9]|$)', false)
+          and not coalesce(error_mensaje ilike ${'%' + FRASE_SIN_CONFIRMACION + '%'}, false)
+      `
+      // La condición va DENTRO del upsert (no solo en `conflictoFila`): dos imports a la vez del
+      // mismo proyecto a pólizas distintas, o uno que se emite entre la lectura y aquí, no escriben.
+      const escritas = await tx.$queryRaw<{ id: string }[]>`
+        insert into codeoscopic_projects (
+          correduria_id, project_id_codeoscopic, producto, poliza_id, aseguradora,
+          accepted_offer_id_codeoscopic, estado
+        ) values (
+          ${ctx.correduriaId}::uuid, ${projectId!}, ${ramo}::tipo_seguro, ${ctx.poliza.id}::uuid,
+          ${oferta.compania}, ${oferta.quoteId}, 'preemision'
+        )
+        on conflict (correduria_id, project_id_codeoscopic) do update
+          set poliza_id = excluded.poliza_id,
+              producto = excluded.producto,
+              aseguradora = excluded.aseguradora,
+              accepted_offer_id_codeoscopic = excluded.accepted_offer_id_codeoscopic,
+              estado = 'preemision'::codeoscopic_project_estado
+          where codeoscopic_projects.estado not in ('emitida', 'riesgo_condicionado', 'rechazada')
+            and codeoscopic_projects.submit_in_flight_at is null
+            and (codeoscopic_projects.poliza_id is null or codeoscopic_projects.poliza_id = excluded.poliza_id)
+        returning id::text as id
+      `
+      if (escritas.length === 0) throw new EnlaceNoEscrito()
+      return true
+    })
+    .catch((e: unknown) => {
+      if (e instanceof EnlaceNoEscrito) return false
+      throw e
+    })
+  if (!enlazado) {
     return NextResponse.json(
       { estado: 'error', causa: 'otro', mensaje: 'el proyecto ha cambiado mientras se enlazaba (otra pestaña o una emisión en curso): vuelve a leerlo' },
       { status: 409 },

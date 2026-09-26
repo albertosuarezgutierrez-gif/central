@@ -54,6 +54,23 @@ import {
   type RespuestaTarificacionGuardada,
   type RespuestaProductForm,
 } from '@/lib/retarificar-asegura'
+import { getSession } from '@/lib/session'
+import { resolverAccesoCorreduria } from '@/lib/correduria-acceso'
+
+/**
+ * 🚨 El middleware solo exige SESIÓN, y el layout de `/correduria` (que sí mira quién es
+ * de la correduría) no corre en una acción de servidor. Lo que gasta dinero, emite o enlaza
+ * un proyecto comprueba el acceso aquí; `null` = puede seguir.
+ */
+async function sinAccesoCorreduria(): Promise<string | null> {
+  const session = await getSession()
+  if (!session) return 'Sesión caducada: vuelve a entrar.'
+  const acceso = await resolverAccesoCorreduria(session)
+  if (acceso.estado === 'autorizado') return null
+  return acceso.estado === 'sin-comprobar'
+    ? 'No se ha podido comprobar tu acceso a la correduría; no se hace nada hasta poder comprobarlo.'
+    : 'Tu cuenta no tiene acceso a la correduría.'
+}
 
 /** Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.** */
 export async function pedirCatalogo(params: Record<string, string>): Promise<RespuestaCatalogo> {
@@ -95,6 +112,8 @@ export async function pedirCotizacion(entrada: {
   /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetarificar.forzarNuevo`. */
   forzarNuevo?: boolean
 }): Promise<RespuestaRetarificar> {
+  const bloqueo = await sinAccesoCorreduria()
+  if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
   return retarificarAsegura({
     polizaId: entrada.polizaId,
     // Va al libro de consumo de asegura: quién responde de este cargo.
@@ -125,6 +144,8 @@ export async function pedirOferta(entrada: {
   /** Lo guardado del Product Form Library tras un `faltan_producto` anterior. */
   productOptions?: unknown[]
 }): Promise<RespuestaOferta> {
+  const bloqueo = await sinAccesoCorreduria()
+  if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
   return ofertaAsegura(entrada)
 }
 
@@ -161,6 +182,8 @@ export async function pedirEmision(entrada: {
    *  Allianz (bonificación real). Ver `emitirAsegura`. */
   familiaEnAllianz?: boolean
 }): Promise<RespuestaEmitir> {
+  const bloqueo = await sinAccesoCorreduria()
+  if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
   return emitirAsegura({
     projectId: entrada.projectId,
     campos: entrada.campos,
@@ -184,9 +207,13 @@ export async function pedirCoberturas(projectId: string, offerId: string): Promi
  * sin ReRate ni Submit: la emisión sigue siendo `pedirEmision`.
  */
 export async function pedirVistaImportacion(projectId: string, polizaId: string): Promise<VistaImportacion> {
+  const bloqueo = await sinAccesoCorreduria()
+  if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
   return vistaImportacionAsegura(projectId, polizaId)
 }
 
 export async function pedirImportacion(entrada: { projectId: string; polizaId: string; quoteId: string }): Promise<RespuestaImportar> {
+  const bloqueo = await sinAccesoCorreduria()
+  if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
   return importarProyectoAsegura(entrada)
 }
