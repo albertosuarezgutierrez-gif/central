@@ -120,6 +120,15 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
    viene resuelto en `objeto` (`@central/module-seguros/objeto`, cuatro estados) — ver
    `references/sector.md` §5; si llega `cifrado` o `no_informado`, dilo como tal, nunca en
    blanco.
+2b. **Diferencias con CIMA (26/09/2026):** lee `GET /api/operador/cima-sincro` (o, sin secreto, cuenta
+   lo mismo por SQL replicando `compararConCima()` de `packages/module-seguros/src/sincro-cima.ts`, no una
+   regla propia). Lo automático ya lo hace el cron (huecos, **teléfono nuevo → se añade como secundario**,
+   nombre en MAYÚSCULAS → «Nombre Propio»; nombre al que solo le falta un nombre de pila y carné a ±1 día
+   **no** son diferencias). Tú **revisas lo que queda** y lo agrupas en el informe por clase: 📞 teléfono
+   que YA está en otra ficha (lleva `aviso`: ¿familia o error de CIMA?), 📧 email distinto (nunca se
+   añade solo: vincula el portal), 🪪 nombre realmente distinto, 📅 fechas que difieren más de un día.
+   **No decides ni aplicas nada**: «Usar CIMA / Mantener el mío» es de Alberto en `/correduria`. Si el
+   total sube de una semana a otra sin fichas nuevas, es alerta de ingesta, no trabajo de datos.
 3. **Sector:** 2-3 novedades reales de la semana (WebSearch: DGSFP, INESE/ADN del Seguro,
    BOE) que afecten a un corredor: regulación, ramos, compañías vivas de la casa.
 4. **Aprende:** si descubriste algo estructural (del sector o del negocio), añádelo a

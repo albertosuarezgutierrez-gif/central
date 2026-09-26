@@ -98,10 +98,10 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
       tono="aviso"
       Icono={RefreshCcw}
       titulo={n > 0 ? `${n} dato${n === 1 ? '' : 's'} distinto${n === 1 ? '' : 's'} de lo que manda CIMA` : 'Datos de CIMA por copiar'}
-      sub={`Comparadas ${l.fichas} fichas de cartera viva con lo que CIMA manda de esa misma persona (por DNI).${l.rellenos ? ` ${l.rellenos} hueco(s) se rellenan solos cada día.` : ''}${l.ilegibles ? ` ${l.ilegibles} ficha(s) no se pudieron leer.` : ''}`}
+      sub={`Comparadas ${l.fichas} fichas de cartera viva con lo que CIMA manda de esa misma persona (por DNI).${l.rellenos ? ` ${l.rellenos} dato(s) se completan solos cada día (huecos, teléfonos nuevos y nombres en mayúsculas).` : ''}${l.ilegibles ? ` ${l.ilegibles} ficha(s) no se pudieron leer.` : ''}`}
       accion={
         <button type="button" disabled={ocupado !== null} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}
-          onClick={() => { if (confirm('CIMA manda: se copiará lo de CIMA en TODAS las fichas (huecos y diferencias). Los teléfonos/emails anteriores se conservan como secundarios. ¿Seguir?')) void enviar('volcar', { accion: 'volcar' }) }}>
+          onClick={() => { if (confirm('CIMA manda: se copiará lo de CIMA en TODAS las fichas (huecos y diferencias). Los teléfonos/emails anteriores se conservan como secundarios; un teléfono que ya está en otra ficha NO se copia. ¿Seguir?')) void enviar('volcar', { accion: 'volcar' }) }}>
           {ocupado === 'volcar' ? 'Aplicando…' : 'Aplicar CIMA en todas'}
         </button>
       }
@@ -120,6 +120,7 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
                 <div key={clave} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: 13, minWidth: 0 }}>
                   <span style={{ minWidth: 0, overflowWrap: 'anywhere', flex: '1 1 220px' }}>
                     <strong>{ROTULO_CAMPO_CIMA[d.campo as CampoCima]}</strong>: ficha «{d.ficha ?? '—'}» · CIMA «{d.cima}»
+                    {d.aviso && <span style={{ display: 'block', color: 'var(--warning)', fontSize: 12 }}>⚠️ {d.aviso}</span>}
                   </span>
                   <button type="button" disabled={ocupado !== null} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}
                     onClick={() => void enviar(clave, { accion: 'usar_cima', clienteId: f.clienteId, campo: d.campo, valor: d.cima })}>

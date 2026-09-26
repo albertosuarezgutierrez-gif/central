@@ -17,6 +17,12 @@ símbolos analizados (META vetado por `detectarSuplantaciones` — precio mío m
 IBKR, cazado por el guardián, cero contaminación); compras paper BKNG/ORCL/SQM. Solo bitácora +
 Telegram, sin tocar código. Detalle en `docs/AGENTES-BITACORA.md`.
 
+**(26/09/2026)** Diferencias con CIMA, reglas de Alberto: teléfono nuevo → se AÑADE solo como secundario (si ya
+está en otra ficha, pregunta con aviso); nombre de ficha en MAYÚSCULAS → «Nombre Propio» solo; nombre al que CIMA
+le quita un nombre de pila (Moncosi: no era mayúsculas, faltaba «Carlos") y carné a ±1 día ya NO son diferencias.
+Email distinto SIGUE preguntando (vincula el portal: añadirlo a ciegas abre la cartera). El agente de la correduría
+revisa lo que queda cada semana (paso 2b). Sin probar sobre datos reales hasta que corra el cron.
+
 **(25/09/2026)** Correduría · emisión Codeoscopic (PR #3621, mergeado): en Retarificar la fecha de efecto arranca en el
 vencimiento si es fiable (viva, no cancelada, no emitida por nosotros; hoy..+90 días) y viaja en el ReRate como
 `mainQuote.effectiveDate` — ⚠️ SIN probar contra el vendor. Arreglado `encontrarPrecio` (cogía el primer precio del nivel;

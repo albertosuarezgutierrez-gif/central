@@ -25,3 +25,11 @@ test('no se pudo leer → contador null, nunca 0', () => {
   assert.equal(interpretarSincroCima(404, null).estado, 'no_desplegado')
   assert.equal(interpretarSincroCima(401, null).estado, 'error')
 })
+
+test('el aviso de «teléfono en otra ficha» viaja hasta la pantalla; sin él queda null', () => {
+  const conAviso = { ...ok, discrepancias: [{ ...ok.discrepancias[0], diferencias: [{ ...ok.discrepancias[0].diferencias[0], aviso: 'Ese teléfono ya está en la ficha de Ana' }] }] }
+  const l = interpretarSincroCima(200, conAviso)
+  assert.equal(l.estado === 'ok' && l.discrepancias[0].diferencias[0].aviso, 'Ese teléfono ya está en la ficha de Ana')
+  const s = interpretarSincroCima(200, ok)
+  assert.equal(s.estado === 'ok' && s.discrepancias[0].diferencias[0].aviso, null)
+})

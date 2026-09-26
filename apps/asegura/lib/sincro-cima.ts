@@ -2,6 +2,7 @@ import { encryptField } from '@central/module-seguros-pii'
 import {
   compararConCima,
   huellaDecisionCima,
+  nombrePropio,
   WHERE_CARTERA_VIVA,
   type CampoCima,
   type DatosCima,
@@ -9,7 +10,7 @@ import {
   type FichaParaCima,
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
-import { anadirContacto, anotarHistorialCliente, campoIlegible, descifrarCampo } from './cartera-edicion'
+import { anadirContacto, anotarHistorialCliente, campoIlegible, coincidencias, descifrarCampo } from './cartera-edicion'
 
 /**
  * Ficha ↔ CIMA (25/09/2026). CIMA deja los datos de la persona en el
@@ -19,6 +20,9 @@ import { anadirContacto, anotarHistorialCliente, campoIlegible, descifrarCampo }
  * Dos políticas, dictadas por Alberto:
  *   - `rellenar`: lo que la ficha no tiene se copia siempre (lo corre el cron).
  *   - `volcar`:   CIMA manda también sobre lo que difiere (una vez, a mano).
+ *   - automático (26/09/2026): el teléfono nuevo de CIMA se AÑADE como
+ *     secundario y el nombre en mayúsculas se pone en «Nombre Propio», salvo
+ *     que ese teléfono ya esté en OTRA ficha: entonces pregunta (`aviso`).
  *   Después, cada diferencia se AVISA y decide él: «usar CIMA» o «mantener el
  *   mío» (esto último se recuerda por huella del valor en `cima_decisiones`,
  *   así que si CIMA manda OTRO valor se vuelve a avisar).
@@ -48,7 +52,7 @@ export type EstadoSincro = {
   sinDatosCima: number
   /** Solo `discrepa` no decididas: lo que tiene que mirar Alberto. */
   discrepancias: FichaConCima[]
-  /** Huecos que el cron rellenará (o `volcar`). */
+  /** Lo que el cron aplicará solo: huecos, teléfonos nuevos y nombres por formatear. */
   rellenos: number
   /** Fichas que no se pudieron leer: no es «no hay diferencias». */
   ilegibles: number
@@ -191,6 +195,27 @@ async function huellasDecididas(correduriaId: string): Promise<Set<string>> {
 
 type Analisis = { c: Viva; cima: DatosCimaInterno; diferencias: DiferenciaCima[] }
 
+/** Lo que se aplica sin preguntar (lo corre el cron). */
+const AUTOMATICAS: readonly DiferenciaCima['accion'][] = ['rellenar', 'anadir', 'formatear']
+
+/**
+ * Un teléfono que CIMA manda y que YA está en otra ficha no se copia solo: puede
+ * ser el matrimonio o el padre (legítimo) o un error de CIMA, y un teléfono
+ * compartido es la puerta de entrada al portal cuando el canal sea WhatsApp.
+ * Pasa a `discrepa` con el nombre de la otra ficha, y decide Alberto.
+ */
+async function avisarTelefonosCompartidos(correduriaId: string, lista: Analisis[]): Promise<void> {
+  for (const a of lista) {
+    for (const d of a.diferencias) {
+      if (d.campo !== 'telefono' || (d.accion !== 'anadir' && d.accion !== 'rellenar')) continue
+      const otros = await coincidencias(correduriaId, { telefono: d.cima }, a.c.id)
+      if (otros.length === 0) continue
+      d.accion = 'discrepa'
+      d.aviso = `Ese teléfono ya está en ${otros.length === 1 ? 'la ficha' : 'las fichas'} de ${otros.map((o) => o.nombre).join(', ')}`
+    }
+  }
+}
+
 async function analizar(correduriaId: string, soloCliente?: string): Promise<{ lista: Analisis[]; fichas: number; sinDatos: number; ilegibles: number }> {
   const vivas = await fichasVivas(correduriaId, soloCliente)
   const porPoliza = await intervinientesDe(correduriaId, vivas)
@@ -208,6 +233,7 @@ async function analizar(correduriaId: string, soloCliente?: string): Promise<{ l
       console.error('[sincro-cima] ficha sin leer:', c.id, e instanceof Error ? e.message : e)
     }
   }
+  await avisarTelefonosCompartidos(correduriaId, lista)
   return { lista, fichas: vivas.length, sinDatos, ilegibles }
 }
 
@@ -217,7 +243,7 @@ export async function estadoSincroCima(correduriaId: string): Promise<EstadoSinc
   const discrepancias: FichaConCima[] = []
   let rellenos = 0
   for (const a of lista) {
-    rellenos += a.diferencias.filter((d) => d.accion === 'rellenar').length
+    rellenos += a.diferencias.filter((d) => AUTOMATICAS.includes(d.accion)).length
     const abiertas = a.diferencias.filter(
       (d) => d.accion === 'discrepa' && !decididas.has(`${a.c.id}|${huellaDecisionCima(d.campo, d.cima)}`),
     )
@@ -238,9 +264,13 @@ async function aplicarCampo(correduriaId: string, a: Analisis, d: DiferenciaCima
   const quien = `CIMA (${actor})`
   switch (d.campo) {
     case 'nombre': {
-      const p = a.cima.nombrePartes
-      if (!p || !p.nombre) return { campo: d.campo, ok: false, motivo: 'CIMA no separa nombre y apellidos' }
-      await db.cliente.update({ where: { id: clienteId }, data: { nombre: p.nombre, apellidos: p.apellidos, updatedAt: new Date() } })
+      // `formatear` reescribe lo que YA tiene la ficha; los demás, lo de CIMA. Siempre en «Nombre Propio».
+      const p = d.accion === 'formatear' ? { nombre: a.c.nombre, apellidos: a.c.apellidos } : a.cima.nombrePartes
+      if (!p || !p.nombre.trim()) return { campo: d.campo, ok: false, motivo: 'CIMA no separa nombre y apellidos' }
+      await db.cliente.update({
+        where: { id: clienteId },
+        data: { nombre: nombrePropio(p.nombre), apellidos: p.apellidos.trim() ? nombrePropio(p.apellidos) : '', updatedAt: new Date() },
+      })
       break
     }
     case 'fechaNacimiento':
@@ -259,21 +289,30 @@ async function aplicarCampo(correduriaId: string, a: Analisis, d: DiferenciaCima
     }
     case 'telefono':
     case 'email': {
-      const r = await anadirContacto(correduriaId, clienteId, { tipo: d.campo, valor: d.cima, principal: true, forzar: true, actor: quien })
+      // `anadir` = secundario y sin forzar; solo «Usar CIMA» (discrepa) lo hace principal a sabiendas.
+      const r = await anadirContacto(correduriaId, clienteId, {
+        tipo: d.campo,
+        valor: d.cima,
+        principal: d.accion !== 'anadir',
+        forzar: d.accion === 'discrepa',
+        actor: quien,
+      })
       if (!r.ok) return { campo: d.campo, ok: false, motivo: r.motivo }
       return { campo: d.campo, ok: true }
     }
   }
   await anotarHistorialCliente(
     correduriaId, clienteId, 'gestion',
-    `${d.accion === 'rellenar' ? 'Completado' : 'Actualizado'} desde CIMA: ${d.campo}${a.cima.poliza ? ` (póliza ${a.cima.poliza})` : ''} — ${actor}`,
+    `${d.accion === 'rellenar' ? 'Completado' : d.accion === 'formatear' ? 'Nombre en formato propio' : 'Actualizado'} desde CIMA: ${d.campo}${a.cima.poliza ? ` (póliza ${a.cima.poliza})` : ''} — ${actor}`,
   ).catch(() => undefined)
   return { campo: d.campo, ok: true }
 }
 
 /**
- * `rellenar` = solo huecos · `volcar` = huecos + todo lo que difiere (CIMA manda,
- * incluidas las decididas antes). Devuelve lo hecho y lo que no, con su motivo.
+ * `rellenar` = lo automático (huecos, teléfonos nuevos, nombres por formatear) ·
+ * `volcar` = eso + todo lo que difiere (CIMA manda, incluidas las decididas
+ * antes), SALVO lo que lleva `aviso`: un teléfono de otra ficha no se fuerza en
+ * bloque. Devuelve lo hecho y lo que no, con su motivo.
  */
 export async function aplicarSincroCima(
   correduriaId: string,
@@ -285,7 +324,8 @@ export async function aplicarSincroCima(
   const fallidos: { clienteId: string; campo: CampoCima; motivo: string }[] = []
   for (const a of lista) {
     for (const d of a.diferencias) {
-      if (modo === 'rellenar' && d.accion !== 'rellenar') continue
+      if (modo === 'rellenar' && !AUTOMATICAS.includes(d.accion)) continue
+      if (d.aviso) { fallidos.push({ clienteId: a.c.id, campo: d.campo, motivo: `${d.aviso}: decide a mano` }); continue }
       try {
         const r = await aplicarCampo(correduriaId, a, d, actor)
         if (r.ok) aplicados++
