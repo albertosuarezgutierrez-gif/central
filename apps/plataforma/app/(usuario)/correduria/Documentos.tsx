@@ -205,7 +205,7 @@ export default function Documentos({
       {polizaId && !siniestroId && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', maxWidth: 520 }}>
           <label style={{ ...lbl, flex: '1 1 180px' }}>
-            Nº de proyecto en Avant2 (vacío = el enlazado)
+            Nº de proyecto en Avant2 (vacío = el enlazado o, si no hay, se busca por el DNI del tomador)
             <input
               value={proyecto}
               onChange={(e) => setProyecto(e.target.value.replace(/\D/g, ''))}

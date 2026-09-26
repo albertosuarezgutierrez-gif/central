@@ -714,6 +714,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Traer póliza de Codeoscopic SIN nº de proyecto: busca por DNI del tomador
+- Alberto: «¿no puede buscar por matrícula, DNI del tomador o algo?». `GET /insurances?holderIdentification=` (gratis,
+  rango ≤1 año) → `lib/codeoscopic/buscar-proyectos.ts`; la ruta `/api/operador/poliza/traer-pdf` prueba hasta 15 candidatos
+  con la MISMA comprobación del nº de póliza. Por matrícula no: `GET /vehicles` cuesta créditos y no da proyectos.
+- ⚠️ Forma de la respuesta de búsqueda sin fixture: se aceptan array o `{items|results|data|content}`; forma desconocida = error, nunca «no hay».
+
 ## (26/09/2026) Portal del cliente: el monograma «AS» como indicador de carga
 - `app/(portal)/loading.tsx` (cambio de ruta) + `CargandoEnlace` con `useLinkStatus` dentro de cada `<Link>` del menú y la barra inferior: las pestañas `/boveda?vista=…` son la MISMA ruta y ahí Next NO re-muestra `loading.tsx` (el `LoadingBoundary` va keyed sin search params).
 - El flotante se porta a `<body>`: el cajón se esconde con `transform` y un `fixed` dentro saldría fuera de vista. 150 ms de retardo anti-parpadeo; `prefers-reduced-motion` sin animación.
