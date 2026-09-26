@@ -699,6 +699,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Correduría: «The column `old` does not exist» al corregir el correo de una ficha
+El trigger `seguros.portal_retirar_vinculos_email_de_ficha` (PR #3600) leía `OLD.cliente_id` también sobre
+`clientes` (PL/pgSQL resuelve los campos aunque el `AND` ya sea falso) → todo cambio de correo principal
+fallaba con 42703. Reescrito por ramas de tabla y APLICADO en central (`seguros_portal_vinculo_retira_fix_clientes`);
+las 4 rutas verificadas en bloque revertido (mismo hash conserva vínculo, hash cambiado lo retira).
+
 ## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
 - Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).
 - Fix: `vaARecomendador()` en `reglas.ts` — solo categoría `faq` o `general`+RE_RECO; lo operativo (equipaje, check-in, acceso…) va a `decidir` con ficha. Cepo en `equipaje.test.ts` (visto en rojo).
