@@ -121,3 +121,15 @@ test('🪤 la PÓLIZA que sube el corredor a una póliza la ve el cliente; ning�
   const src = readFileSync(new URL('../app/api/operador/documentos/route.ts', import.meta.url), 'utf8')
   assert.match(src, /visiblePorCliente: tipo === 'poliza' && polizaId !== null/)
 })
+
+test('🪤 traer el PDF de Codeoscopic exige que el número de la solicitud sea el de ESTA póliza', () => {
+  const traer = readFileSync(new URL('./codeoscopic/traer-pdf-emitido.ts', import.meta.url), 'utf8')
+  assert.match(traer, /normalizarNumeroPoliza\(sol\.numeroPoliza\) !== normalizarNumeroPoliza\(esperado\)/)
+  assert.match(traer, /if \(!sol\.numeroPoliza\) return \{ estado: 'no_coincide'/)
+  // Los tres caminos que archivan pasan el número esperado.
+  const pdf = readFileSync(new URL('./poliza-pdf.ts', import.meta.url), 'utf8')
+  assert.equal(pdf.match(/numeroPolizaEsperado:/g)?.length, 2)
+  const ruta = readFileSync(new URL('../app/api/operador/poliza/traer-pdf/route.ts', import.meta.url), 'utf8')
+  assert.match(ruta, /numeroPolizaEsperado: p\.numero/)
+  assert.match(ruta, /if \(!p\.numero\?\.trim\(\)\)/)
+})
