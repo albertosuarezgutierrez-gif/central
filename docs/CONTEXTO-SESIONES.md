@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(26/09/2026)** mercado-booking, pasada diaria: 238 comps reales en 24 ventanas (05 dic-1 ene).
+Escaparate propio 0/4 medido por 2º día seguido (25 y 26/09) — Busto Reform/Dúplex Center/Luxury
+Busto/House Sevillana sin disponibilidad en la ventana fija 03-05/03-06 oct que pide el plan (pisos
+ocupados, no fallo del conector). Aviso Telegram enviado (2 días seguidos = regla del propio
+SKILL.md) proponiendo que `/api/sivra/mercado/plan` rote la ventana de escaparate cuando la fija
+está ocupada. Solo BD + latido + Telegram, sin tocar código. Detalle en `docs/AGENTES-BITACORA.md`.
+
 **(25/09/2026)** trading-analista, pasada 20:15: NAV/cartera/libro empujados a plataforma; 23/24
 símbolos analizados (META vetado por `detectarSuplantaciones` — precio mío mal transcrito de
 IBKR, cazado por el guardián, cero contaminación); compras paper BKNG/ORCL/SQM. Solo bitácora +

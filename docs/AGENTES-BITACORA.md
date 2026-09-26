@@ -14,6 +14,17 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-26 · mercado-booking** · hizo: pasada de 24 ventanas (max=24, tope dejó fuera 484 de 508
+  candidatas) → 238 comps reales escritos (05-31 dic + 1 ene, aforos 2/4/5/12, evento confirmado
+  ronda 1). Escaparate propio: 0/4 medido — Busto Reform, Dúplex Center, Luxury Busto y House
+  Sevillana dieron `hotel_names_no_availability` para 03-05/03-06 oct (misma ventana fija que ayer,
+  mismo motivo: pisos ocupados esas fechas, no fallo del conector). 2 anuncios propios (HOUSE
+  SEVILLANA 6 habitaciones) aparecieron en comparables de aforo 12 (27-29 dic y 28-30 dic) y se
+  descartaron antes de escribir. Latido `ok:false` por el escaparate en blanco. Es la 2ª pasada
+  seguida (25 y 26/09) con escaparate 0/4 por la misma ventana fija ocupada → aviso Telegram enviado
+  per regla del SKILL.md (messageId 5321), proponiendo que el plan rote la ventana de escaparate a
+  fechas libres cuando la fija está ocupada. dudas: —; fallos: escaparate sin medir 2 días seguidos
+  (ver arriba); PRs/commits: — (solo BD vía `/api/sivra/mercado/ingest` + latido + Telegram).
 - **2026-09-25 · trading-analista** · hizo: pasada 20:15 normal (paso 0 sin huella de hoy, no
   repesca). Preflight 200 OK, IBKR conectado. NAV 33.504,94€ empujado (sin salto), cartera real
   (CVX+VWCE) y libro de operaciones (0 nuevas) empujados con latido. Analizó 23/24 símbolos:
