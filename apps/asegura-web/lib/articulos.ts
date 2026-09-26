@@ -426,6 +426,80 @@ export const ARTICULOS: readonly Articulo[] = [
   },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
   //
+  // 26/09/2026 — OpenSEO: «registro de seguros de vida» 260/mes (KD 9), «cómo
+  // saber qué seguros tengo» 70 (KD 0), «cómo saber si tengo un seguro de
+  // vida» 30. Es la búsqueda que lleva al gestor: no hay un registro de TUS
+  // seguros, y la respuesta honesta es juntarlos tú. No se nombra la ley del
+  // registro (no está en `NORMAS_CITABLES`).
+  {
+    slug: 'como-saber-que-seguros-tengo',
+    h1: 'Cómo saber qué seguros tienes (o tenía un familiar)',
+    title: 'Cómo saber qué seguros tengo contratados',
+    description:
+      'No existe un registro con todos tus seguros. Cómo encontrarlos en el banco y el correo, y cómo saber si un familiar fallecido tenía un seguro de vida.',
+    fecha: '2026-09-26',
+    consulta: 'cómo saber qué seguros tengo',
+    resumen:
+      'No hay ningún registro público donde consultar todos los seguros que tienes. Se encuentran siguiendo el rastro de los recibos en el banco y de los correos de las compañías. Distinto es el caso de una persona fallecida: para saber si tenía un seguro de vida existe un registro oficial del Ministerio de Justicia que se consulta con el certificado de defunción.',
+    ramos: ['vida-y-salud', 'hogar', 'auto'],
+    cta: {
+      titulo: 'Todas tus pólizas, en un solo sitio',
+      texto:
+        'Sube tus pólizas, sean de la compañía que sean, a tu área privada: las leemos y te dejamos a la vista qué cubre cada una y hasta qué día puedes decidir su renovación. Gratis y sin ser cliente.',
+      boton: 'Guardar mis pólizas',
+      href: 'PORTAL',
+    },
+    secciones: [
+      {
+        titulo: 'No hay un registro de tus seguros',
+        parrafos: [
+          'Es la primera sorpresa: ni la Dirección General de Seguros ni ningún otro organismo te dice qué pólizas tienes a tu nombre. Cada compañía sabe las suyas y nadie las junta.',
+          'Por eso es tan habitual pagar dos veces lo mismo —un seguro de vida del banco y otro contratado aparte, una asistencia en viaje que ya incluye la tarjeta— o descubrir un seguro olvidado cuando llega el recibo de la renovación.',
+        ],
+      },
+      {
+        titulo: 'Dónde buscarlos',
+        parrafos: [
+          'En el banco: revisa los recibos domiciliados de los últimos doce meses. Casi todos los seguros se pagan por recibo, anual o fraccionado, y el concepto trae el nombre de la compañía y a menudo el número de póliza. Mira todas tus cuentas y también las tarjetas.',
+          'En el correo: busca los nombres de las aseguradoras y palabras como «póliza», «renovación» o «recibo». Las compañías envían las condiciones al contratar y un aviso antes de cada vencimiento.',
+          'En tu hipoteca y tus préstamos: es frecuente que lleven un seguro de vida o de hogar vinculado, contratado a la vez que la operación. También en la nómina o el convenio de tu empresa, que a veces incluye un seguro de vida o de accidentes colectivo.',
+          'Y en el coche: el seguro obligatorio siempre existe si el coche está matriculado y circula. Tu compañía o tu corredor pueden confirmarte cuál es si no encuentras los papeles.',
+        ],
+      },
+      {
+        titulo: 'Si un familiar ha fallecido: el registro de seguros de vida',
+        parrafos: [
+          'Aquí sí hay un registro oficial. El Registro de Contratos de Seguros de cobertura de fallecimiento, del Ministerio de Justicia, dice qué seguros con cobertura de fallecimiento tenía en vigor una persona y con qué compañía.',
+          'Lo puede pedir cualquier persona interesada, con el certificado de defunción, una vez pasados quince días hábiles desde el fallecimiento. Se solicita en la sede electrónica del Ministerio o en sus gerencias territoriales, y lleva una tasa.',
+          'El certificado dice la compañía y la póliza, pero no quién es el beneficiario. Con él hay que dirigirse a la aseguradora, que es la que indica a quién corresponde el capital y qué documentos pide.',
+        ],
+      },
+      {
+        titulo: 'Una vez encontrados: tenerlos a mano',
+        parrafos: [
+          'Haz una lista con cada póliza: compañía, número, qué cubre, cuánto pagas y cuándo vence. La fecha de vencimiento es la más importante: si quieres cambiar algo, tienes que decidirlo un mes antes.',
+          'Guarda también dónde está la póliza completa y el teléfono de siniestros de cada compañía. El día que lo necesites no será el mejor momento para buscarlo.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Puedo consultar en algún sitio todos los seguros que tengo?',
+        respuesta:
+          'No. No existe un registro público de las pólizas de una persona viva. Hay que reconstruirlas a partir de los recibos del banco, los correos de las compañías y los préstamos o hipotecas que tengas.',
+      },
+      {
+        pregunta: '¿Cómo sé si un familiar fallecido tenía seguro de vida?',
+        respuesta:
+          'Pidiendo el certificado del Registro de Contratos de Seguros de cobertura de fallecimiento del Ministerio de Justicia, con el certificado de defunción y pasados quince días hábiles desde el fallecimiento.',
+      },
+      {
+        pregunta: '¿El certificado dice quién es el beneficiario?',
+        respuesta:
+          'No. Indica la compañía y la póliza. El beneficiario lo comunica la aseguradora cuando te diriges a ella con el certificado.',
+      },
+    ],
+  },
   // 26/09/2026 — OpenSEO: «dar de baja seguro coche» 390/mes, dificultad 0; en
   // la primera página conviven RACE y Mapfre con blogs pequeños. El genérico
   // `como-dar-de-baja-un-seguro-a-tiempo` cuenta la carta; este cubre lo que
