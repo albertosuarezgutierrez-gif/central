@@ -724,6 +724,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Aceptar sigue SOLO en la pantalla (no en la campana), decisión confirmada por Alberto.
 - Recordatorio: «Administración» NO abre la empresa entera; solo «Dueño» (`dueno-empresa.ts`).
 
+## (26/09/2026) Traer la póliza de Codeoscopic (emitidas en Avant2 o antes de la automatización)
+- Botón «📥 Traer póliza de Codeoscopic» en la ficha de póliza (plataforma) → `POST asegura /api/operador/poliza/traer-pdf`
+  {polizaId, projectId?}. Gratis (GET). Exige que el nº de la solicitud aprobada = el de la póliza (si no, 422 y no guarda).
+- El cron `polizas-pdf` además archiva solo (sin correo) el PDF de las emitidas con proyecto enlazado y sin PDF (90 días).
+- Drive POLIZAS EMITIDAS: Reale 3022600334066 (proyecto 40804066, enlazado → cron) · Occident 549648082 (40841279, a mano) ·
+  2002600520435 (sin nº de proyecto conocido).
+
 ## (26/09/2026) Pablo Guzmán: correo de emisión ENVIADO con PDF (verificado en BD)
 - 18:29 UTC `emision_con_poliza` a Pablo (Allianz 61089620) con `Póliza.pdf` (402 KB, archivado y visible en su portal).
   El 400 de la descarga era la falta de `x-client-app`/`x-user-email` (PR #3685). Correo con resumen compañía/cobertura/efecto/prima.

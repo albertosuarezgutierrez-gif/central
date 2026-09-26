@@ -116,6 +116,19 @@ export async function subirDocumentoAsegura(form: FormData): Promise<{ status: n
   return { status: res.status, json: await res.json().catch(() => null) }
 }
 
+/** Trae de Codeoscopic el PDF de una póliza ya emitida y lo archiva (visible al cliente). Gratis. */
+export async function traerPdfCodeoscopicAsegura(polizaId: string, projectId: string | null): Promise<{ status: number; json: unknown }> {
+  const h = await cabeceras()
+  if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
+  const res = await fetch(`${urlAsegura()}/api/operador/poliza/traer-pdf`, {
+    method: 'POST',
+    headers: { ...h, 'content-type': 'application/json' },
+    body: JSON.stringify({ polizaId, ...(projectId ? { projectId } : {}) }),
+    signal: AbortSignal.timeout(60_000),
+  })
+  return { status: res.status, json: await res.json().catch(() => null) }
+}
+
 export async function pedirDocumentoAsegura(
   d: Destino & { tipo: TipoDocumento; notas?: string | null },
 ): Promise<{ status: number; json: unknown }> {
