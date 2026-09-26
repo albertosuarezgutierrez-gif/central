@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db'
 import { firmarPeticion } from '@/lib/smoobu-firma'
 import { debeUsarPuenteLegacy } from '@/lib/smoobu-puente-legacy'
+import { leerTodasLasPaginas } from '@/lib/smoobu-paginas'
 
 // Fuente ÚNICA de credenciales de Smoobu para plataforma.
 //
@@ -109,4 +110,15 @@ export async function smoobuFetch(pathOrUrl: string, init: RequestInit = {}): Pr
   delete headers['Api-Key'] // esquema legacy: si algún caller lo arrastra, fuera
   if (body && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
   return fetch(url, { ...init, method, headers })
+}
+
+/**
+ * Hilo COMPLETO de una reserva (todas las páginas de `/messages`, de más antiguo a más nuevo).
+ * `null` = no se pudo leer entero. Ver `lib/smoobu-paginas.ts` para por qué la página 1 sola miente.
+ */
+export async function smoobuMensajesReserva(bookingId: string | number): Promise<any[] | null> {
+  return leerTodasLasPaginas(page =>
+    smoobuFetch(`/api/reservations/${bookingId}/messages?page=${page}`, { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null)),
+  )
 }

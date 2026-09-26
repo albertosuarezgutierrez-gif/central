@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { isCronAuthorized } from '@/lib/cron-auth'
-import { smoobuFetch } from '@/lib/smoobu'
+import { smoobuFetch, smoobuMensajesReserva } from '@/lib/smoobu'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { detectCategory } from '@/lib/sivra/agente-huesped/reglas'
@@ -33,8 +33,7 @@ export async function GET(req: NextRequest) {
     const apartmentName: string = b?.apartment?.name || ''
     const propertyId = toPropertyId(b?.apartment?.id, apartmentName)
 
-    const msgs: any[] = await smoobuFetch(`/api/reservations/${bookingId}/messages`, { cache: 'no-store' })
-      .then(r => r.json()).then(d => d.messages || d || []).catch(() => [])
+    const msgs: any[] = (await smoobuMensajesReserva(bookingId).catch(() => null)) ?? []
 
     // Emparejar: respuesta del anfitrión precedida de un mensaje del huésped.
     for (let i = 1; i < msgs.length; i++) {

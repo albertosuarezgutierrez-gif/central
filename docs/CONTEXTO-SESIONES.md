@@ -699,6 +699,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Agente huésped mudo con >25 mensajes: Smoobu pagina `/messages`
+- Stephen (Duplex, reserva 150035011) preguntó cómo entrar de noche por la puerta de cristal y el agente no contestó ni propuso nada.
+- Causa medida contra Smoobu (vía `pg_net`): `/api/reservations/{id}/messages` pagina de 25 en 25 (más antiguo primero); con 27 mensajes sus dos preguntas quedaban en la página 2, el último visible era un automático nuestro → `host_ultimo_sin_pregunta`, salida muda.
+- Fix: `lib/smoobu-paginas.ts` (puro, 6 tests, visto en rojo) + `smoobuMensajesReserva()` en `lib/smoobu.ts`; lo usan contexto, historico, seed-aprendizaje y la ficha `/sivra/mensajes/[bookingId]`. Página intermedia fallida → `null`, nunca hilo a medias.
+- Pendiente: las salidas tempranas del orquestador siguen sin dejar rastro; merece un aviso. Rotar key/secret de Smoobu (salieron en la sesión).
+
 ## (26/09/2026) Correduría: «The column `old` does not exist» al corregir el correo de una ficha
 El trigger `seguros.portal_retirar_vinculos_email_de_ficha` (PR #3600) leía `OLD.cliente_id` también sobre
 `clientes` (PL/pgSQL resuelve los campos aunque el `AND` ya sea falso) → todo cambio de correo principal
