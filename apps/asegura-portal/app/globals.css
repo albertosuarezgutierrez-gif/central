@@ -498,7 +498,7 @@ input, select, textarea, button { font: inherit; }
  * SVG (6.83:1). */
 .marca-palabra {
   display: block;
-  height: 18px;
+  height: 22px;
   aspect-ratio: 6.834;
   background: currentColor;
   color: var(--primary);
@@ -565,6 +565,7 @@ input, select, textarea, button { font: inherit; }
  * abajo). A ≤380 px se encoge para que quepa con los cinco botones de la derecha. */
 @media (max-width: 639px) {
   .marca-escudo { display: none; }
+  .marca-palabra { height: 19px; }
 }
 @media (max-width: 380px) {
   .marca-palabra { height: 14px; }
