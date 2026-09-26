@@ -1,7 +1,8 @@
 // Asistente de la CORREDURÍA por Telegram (fase 1, 26/09/2026) — parte PURA (sin `@/` ni prisma →
 // node --test). Alberto le pregunta por clientes, pólizas, vencimientos o impagados y el asistente
-// contesta leyendo la cartera por el puerto de asegura. Fase 1 = SOLO LECTURA: no escribe en la
-// cartera, no emite y no habla con nadie que no sea Alberto.
+// contesta leyendo la cartera por el puerto de asegura. No escribe en la cartera ni habla con nadie
+// que no sea Alberto. Desde la fase 3a PREPARA emisiones: la emite Alberto con un botón
+// (`correduria-emision-tg.ts`).
 //
 // Tres reglas de la casa que viven aquí y no en el prompt, porque un prompt se puede saltar:
 // - Lo que NO trae una herramienta es «no consta», nunca «no tiene» (dato no mirado ≠ dato que no hay).
@@ -108,7 +109,7 @@ export function paraIA(valor: unknown, max = 7000): string {
 
 export type NombreHerramienta =
   | 'buscar' | 'ficha_cliente' | 'ficha_poliza' | 'vencimientos' | 'impagados'
-  | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla'
+  | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision'
 
 const fn = (name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'function',
@@ -131,6 +132,12 @@ export const HERRAMIENTAS = [
   fn('listar_reglas', 'Lista las reglas que ya has aprendido, con su número.'),
   fn('olvidar_regla', 'Olvida una regla aprendida por su número.',
     { numero: { type: 'integer' } }, ['numero']),
+  fn('preparar_emision', 'Prepara la EMISIÓN de un precio que Alberto ya confirmó en la web de Avant2 para una póliza de la cartera. NO emite: el sistema le manda a Alberto un resumen con un botón y es él quien pulsa. Si el proyecto tiene varios precios emitibles te devuelve la lista para que le preguntes cuál (y vuelves a llamar con quoteId).',
+    {
+      polizaId: { type: 'string', description: 'La póliza que se sustituye (sácala de ficha_cliente)' },
+      projectId: { type: 'string', description: 'Número del proyecto de Avant2 (solo cifras)' },
+      quoteId: { type: 'string', description: 'Opcional: el precio elegido (Q…) cuando hay varios' },
+    }, ['polizaId', 'projectId']),
 ] as const
 
 /** Argumentos de una llamada, parseados sin lanzar. `null` = la IA mandó basura. */
@@ -170,7 +177,8 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     '- Si una herramienta falla o devuelve error, dilo: «no he podido leer X ahora mismo». Un fallo NO es «no hay nada».',
     '- Un campo a null significa «no consta / no se sabe», nunca 0 ni «no tiene». Si una lista trae `total` mayor que las filas que ves, di que hay más.',
     '- Si una búsqueda da varios clientes posibles, enuméralos y pregunta cuál; no elijas tú.',
-    '- Fase de SOLO LECTURA: no puedes emitir, modificar la cartera, anular ni enviar nada a nadie. Si te lo piden, di que eso se hace en la intranet (/correduria) y resume qué habría que hacer.',
+    '- No puedes modificar la cartera, anular ni enviar nada a nadie: eso se hace en la intranet (/correduria).',
+    '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: dile que los cambie en la ficha.',
     '- Estilo: español, breve (es un chat de móvil), sin markdown ni tablas. Importes en formato español (2.162,49€). Fechas dd/mm/aaaa.',
@@ -216,7 +224,7 @@ export function rastroArgs(nombre: string, args: Record<string, unknown> | null)
   if (nombre === 'buscar') return { q: '[búsqueda]' }
   if (nombre === 'proponer_regla') return { regla: '[texto]' }
   const fuera: Record<string, unknown> = {}
-  for (const k of ['clienteId', 'polizaId', 'dias', 'numero']) if (k in args) fuera[k] = args[k]
+  for (const k of ['clienteId', 'polizaId', 'dias', 'numero', 'projectId', 'quoteId']) if (k in args) fuera[k] = args[k]
   return fuera
 }
 

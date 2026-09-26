@@ -1859,7 +1859,29 @@ export type VistaImportacion =
       ofertas: OfertaImportable[]
       /** Precios del proyecto que no se pueden emitir desde aquí (sin confirmar en Avant2, caducados…). */
       otras: number
+      /** El tomador TAL CUAL va en el proyecto (documento ya enmascarado). `null` = asegura no lo
+       *  manda (versión anterior): no se puede construir el resumen de la emisión por Telegram. */
+      titular: TitularProyecto | null
+      matricula: string | null
+      /** Cuenta que mandaría `/emitir` si se confirma. `cuentaInformada: false` = asegura no la
+       *  manda (versión anterior), que NO es «no hay cuenta». */
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
+      cuentaInformada: boolean
     }
+
+export type TitularProyecto = { nombre: string | null; documento: string | null; direccion: string | null; codigoPostal: string | null }
+
+function leerTitular(v: unknown): TitularProyecto | null {
+  if (typeof v !== 'object' || v === null) return null
+  const x = v as Record<string, unknown>
+  return {
+    nombre: cadenaONulo(x.nombre),
+    documento: cadenaONulo(x.documento),
+    direccion: cadenaONulo(x.direccion),
+    codigoPostal: cadenaONulo(x.codigoPostal),
+  }
+}
 
 export type RespuestaImportar = RespuestaOferta | (Extract<RespuestaOferta, { estado: 'ok' }> & { compania: string; categoria: string })
 
@@ -1902,6 +1924,11 @@ export function interpretarVistaImportacion(status: number, json: unknown): Vist
     bloqueos: Array.isArray(r.bloqueos) ? r.bloqueos.filter((b): b is string => typeof b === 'string') : [],
     ofertas: Array.isArray(r.ofertas) ? r.ofertas.flatMap((o) => leerOfertaImportable(o) ?? []) : [],
     otras: typeof r.otras === 'number' ? r.otras : 0,
+    titular: leerTitular(r.titular),
+    matricula: cadenaONulo(r.matricula),
+    cuenta: leerCuenta(r.cuenta),
+    cuentaAviso: leerAvisoCuenta(r.cuenta),
+    cuentaInformada: 'cuenta' in r,
   }
 }
 

@@ -11,7 +11,7 @@ import { ibanEnmascarado } from '@/lib/codeoscopic/emitir-iban'
 import { hoyEnMadrid } from '@/lib/codeoscopic/fecha-efecto'
 import { FRASE_SIN_CONFIRMACION } from '@/lib/codeoscopic/reintento-emision'
 import {
-  documentoTomador, matriculaProyecto, normalizarMatricula, ofertasDelProyecto, quoteCrudo, ramoDeLinea,
+  documentoTomador, matriculaProyecto, normalizarMatricula, ofertasDelProyecto, quoteCrudo, ramoDeLinea, titularProyecto,
 } from '@/lib/codeoscopic/importar'
 
 export const runtime = 'nodejs'
@@ -162,6 +162,9 @@ export async function GET(req: Request) {
   const pendiente = await intentoSinAclarar(ctx.correduriaId, ctx.poliza.id, projectId!)
   if (pendiente) bloqueos.push(pendiente)
   const ofertas = ofertasDelProyecto(ctx.crudo, hoyEnMadrid())
+  // Para el resumen de la emisión por Telegram (fase 3a): quién va de tomador EN EL PROYECTO y qué
+  // cuenta mandaría `/emitir` si se confirma. Solo lectura; la cuenta, enmascarada.
+  const cuenta = await cuentaDeFicha(ctx.correduriaId, ctx.poliza.id, ctx.poliza.cliente_id).catch(() => null)
   return NextResponse.json({
     estado: 'ok',
     projectId,
@@ -171,7 +174,20 @@ export async function GET(req: Request) {
     bloqueos,
     ofertas: ofertas.filter((o) => o.emitible),
     otras: ofertas.filter((o) => !o.emitible).length,
+    titular: titularProyecto(ctx.crudo),
+    matricula: matriculaProyecto(ctx.crudo),
+    cuenta: respuestaCuenta(cuenta),
   })
+}
+
+/** Misma forma en la vista previa y en el enlace. `null` en `cuentaDeFicha` = no se pudo leer. */
+function respuestaCuenta(cuenta: Awaited<ReturnType<typeof cuentaDeFicha>> | null) {
+  if (cuenta === null) return { aviso: 'no_comprobada' }
+  return cuenta.iban
+    ? { enmascarada: ibanEnmascarado(cuenta.iban), origen: cuenta.origen, descripcion: cuenta.origen ? describirOrigenCuenta(cuenta.origen) : null }
+    : cuenta.aviso
+      ? { aviso: cuenta.aviso }
+      : null
 }
 
 export const POST = auditado(async (req: Request) => {
@@ -268,10 +284,6 @@ export const POST = auditado(async (req: Request) => {
     compania: oferta.compania,
     categoria,
     oferta: leerOferta(crudoQuote),
-    cuenta: cuenta.iban
-      ? { enmascarada: ibanEnmascarado(cuenta.iban), origen: cuenta.origen, descripcion: cuenta.origen ? describirOrigenCuenta(cuenta.origen) : null }
-      : cuenta.aviso
-        ? { aviso: cuenta.aviso }
-        : null,
+    cuenta: respuestaCuenta(cuenta),
   })
 })

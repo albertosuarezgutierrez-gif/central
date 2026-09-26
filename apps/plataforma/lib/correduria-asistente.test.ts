@@ -78,7 +78,8 @@ test('el prompt lleva las reglas aprendidas y la prohibición de inventar', () =
   const s = systemAsistente(['dame el total anual primero'], '2026-09-26')
   assert.match(s, /1\. dame el total anual primero/)
   assert.match(s, /no consta/)
-  assert.match(s, /SOLO LECTURA/)
+  assert.match(s, /solo puedes PREPARAR una emisión/)
+  assert.match(s, /NUNCA digas que una póliza está emitida/)
 })
 
 test('interruptor de apagado', () => {

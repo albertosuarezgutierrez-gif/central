@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
-  documentoTomador, fraccionamientoDeOferta, matriculaProyecto, normalizarMatricula, ofertasDelProyecto, quoteCrudo, ramoDeLinea,
+  documentoTomador, fraccionamientoDeOferta, matriculaProyecto, normalizarMatricula, ofertasDelProyecto, quoteCrudo, ramoDeLinea, titularProyecto,
 } from './importar.ts'
 
 // Forma REAL de un `GET /insurances/{id}` (proyecto hecho a mano en la web de Avant2,
@@ -77,4 +77,20 @@ test('matrícula: se compara normalizada y sin dato no se afirma', () => {
   assert.equal(normalizarMatricula(null), null)
   assert.equal(matriculaProyecto({ risk: { registrationPlate: '1234ABC' } }), '1234ABC')
   assert.equal(matriculaProyecto(crudo), null) // el fixture no trae el riesgo
+})
+
+test('titular del proyecto: documento enmascarado y «no consta» sin inventar', () => {
+  const t = titularProyecto(crudo)
+  assert.equal(t.nombre, 'Tomador de prueba')
+  assert.equal(t.documento, '…000T')
+  assert.equal(t.direccion, null)
+  assert.equal(t.codigoPostal, null)
+  const completo = titularProyecto({
+    holder: {
+      name: 'Ana', surname: 'Ruiz', surname2: 'Gil', identificationDocument: { id: '12345678Z' },
+      addresses: [{ roadName: 'Calle Sol', roadNumber: '3', postalCode: '41003' }],
+    },
+  })
+  assert.deepEqual(completo, { nombre: 'Ana Ruiz Gil', documento: '…678Z', direccion: 'Calle Sol 3', codigoPostal: '41003' })
+  assert.doesNotMatch(JSON.stringify(completo), /12345678Z/)
 })
