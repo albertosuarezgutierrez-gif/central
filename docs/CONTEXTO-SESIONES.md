@@ -728,6 +728,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Portal: parte con heridos → 112, Telegram inmediato y cámara directa (PR #3708)
+- Auditoría del parte del portal vs impreso europeo: solo fecha/hora/lugar/heridos son dato estructurado; el resto va en `descripcion` o en la foto. Decisión: NO replicar el impreso entero (iDEA ya lo hace; con parte en papel la foto lo trae todo).
+- Arreglado: heridos=Sí → aviso 112 + atestado; `tgSend` al guardar el parte (`textoAvisoParteNuevo`, sin relato ni matrículas; el cron 06:55 queda de red); matrícula propia ya no sale bajo «otro vehículo»; botón de cámara (`capture`) aparte del de galería/PDF.
+- Pendiente (siguiente PR): rama «sin parte amistoso» (no firma/fuga/sin contrario) + datos completos del contrario + foto de su documentación; testigos. Guardar datos de auto fuera de `descripcion` = BD compartida → spec + OK de Alberto.
+
 ## (26/09/2026) asegura-web: herramienta «Carta para dar de baja un seguro» (`/carta-baja-seguro`)
 - SEO sin pelear con las compañías: OpenSEO (26/09) midió «modelo carta baja seguro» 140/mes KD 0 (1ª página = webs de plantillas), «dar de baja seguro coche» 390 KD 0. «gestor de seguros»/«app controlar seguros» ≈ 0 o intención de EMPLEO → la app no atrae tráfico, convierte.
 - La carta se compone EN EL NAVEGADOR (`lib/carta-baja.ts` + `components/CartaBaja.tsx`): sin fetch, analítica sin datos personales (evento `carta_accion`). Mismo texto legal que la del portal: el test lee `module-seguros-portal/src/carta-no-renovacion.ts` y exige sus frases.
