@@ -267,6 +267,8 @@ export type {
 // las que acaban delante de alguien que acaba de tener un golpe.
 export { enlaceWhatsapp, viasDeCompania, canalDeCompania, TEXTO_SIN_CANAL, textoSoloRamos, whatsappParaRamo } from './canal-compania.ts'
 export { mensajeParteWhatsapp, notaParteMandadoWhatsapp, RELATO_MAX_WHATSAPP } from './parte-whatsapp.ts'
+export { textoAvisoParteNuevo } from './aviso-parte-nuevo.ts'
+export type { DatosAvisoParteNuevo } from './aviso-parte-nuevo.ts'
 export type { DatosParteWhatsapp } from './parte-whatsapp.ts'
 export type { FilaCompania, LineaAsistenciaCompania, ViaCanal, CanalCompania } from './canal-compania.ts'
 export { canalesDeLasPolizas, canalesConCompaniaPrimero } from './canal-compania.ts'

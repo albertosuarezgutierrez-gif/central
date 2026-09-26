@@ -1535,6 +1535,19 @@ export function ParteSiniestro({
             deshabilitado={enviando}
             onCambio={(v) => responder('hayHeridos', v)}
           />
+          {/* Con heridos, lo primero no es este formulario (auditoría del
+              26/09/2026: la respuesta «Sí» no orientaba a nada). El borrador
+              de lo escrito se conserva, así que parar aquí no pierde nada. */}
+          {form.hayHeridos === 'si' && (
+            <div className="aviso-linea" role="alert">
+              <strong>Si alguien necesita atención, llama al 112 ahora</strong>, antes de seguir con esto. Con
+              heridos el parte amistoso no basta: pide que la policía local o la guardia civil levanten
+              atestado. Lo que llevas escrito se guarda en este móvil y puedes terminar el parte después.
+              <a className="boton" href="tel:112">
+                Llamar al 112
+              </a>
+            </div>
+          )}
 
           <Triple
             uid={uid}
@@ -1654,7 +1667,7 @@ function Triple({
 }
 
 /**
- * «Datos del otro vehículo» — solo para auto, y solo con terceros de por
+ * «Datos de los vehículos» (el tuyo y el del otro) — solo para auto, y solo con terceros de por
  * medio (ver `mostrarVehiculo` en `ParteSiniestro`).
  *
  * 🚨 Los cinco campos son OPCIONALES: ninguno lleva `required`. Con el coche
@@ -1682,7 +1695,7 @@ function VehiculoOtro({
 }) {
   return (
     <fieldset className="editor-campo grupo">
-      <legend>Datos del otro vehículo</legend>
+      <legend>Datos de los vehículos</legend>
       <p className="editor-ayuda">
         Si los tienes a mano, nos ayuda a tramitarlo — pero nada de esto es obligatorio: el parte se
         manda igual con lo que sepas.
@@ -1733,7 +1746,7 @@ function VehiculoOtro({
       </div>
 
       <div className="editor-campo">
-        <label htmlFor={`${uid}-veh-aseguradora`}>Su aseguradora</label>
+        <label htmlFor={`${uid}-veh-aseguradora`}>Aseguradora del otro vehículo</label>
         <input
           id={`${uid}-veh-aseguradora`}
           className="campo"
@@ -1747,7 +1760,7 @@ function VehiculoOtro({
       </div>
 
       <div className="editor-campo">
-        <label htmlFor={`${uid}-veh-telefono`}>Su teléfono</label>
+        <label htmlFor={`${uid}-veh-telefono`}>Teléfono del otro conductor</label>
         <input
           id={`${uid}-veh-telefono`}
           className="campo"
@@ -1972,18 +1985,35 @@ function ParteAmistoso({
         Si lo habéis rellenado, hazle una foto a cada cara, <strong>con las dos firmas</strong>. Si no lo
         tenéis, no pasa nada: el parte se manda igual.
       </p>
-      <label className="boton-subir" aria-disabled={deshabilitado}>
-        {ficheros.length === 0 ? 'Foto del parte amistoso' : 'Añadir otra cara'}
-        <input
-          id={`${uid}-amistoso`}
-          type="file"
-          multiple
-          accept={ACCEPT}
-          onChange={onElegir}
-          disabled={deshabilitado}
-          aria-describedby={`${uid}-amistoso-ayuda`}
-        />
-      </label>
+      {/* Dos entradas: la de siempre (galería o PDF, varias a la vez) y una que
+          abre la CÁMARA directa. `capture` no va en la primera porque en móvil
+          fuerza la cámara e impide elegir una foto ya hecha o un PDF. */}
+      <div className="alta-acciones">
+        <label className="boton-subir" aria-disabled={deshabilitado}>
+          {ficheros.length === 0 ? 'Foto del parte amistoso' : 'Añadir otra cara'}
+          <input
+            id={`${uid}-amistoso`}
+            type="file"
+            multiple
+            accept={ACCEPT}
+            onChange={onElegir}
+            disabled={deshabilitado}
+            aria-describedby={`${uid}-amistoso-ayuda`}
+          />
+        </label>
+        <label className="boton-subir" aria-disabled={deshabilitado}>
+          Hacer la foto ahora
+          <input
+            id={`${uid}-amistoso-camara`}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={onElegir}
+            disabled={deshabilitado}
+            aria-describedby={`${uid}-amistoso-ayuda`}
+          />
+        </label>
+      </div>
     </div>
   )
 }
@@ -2021,22 +2051,38 @@ function Adjuntar({
         {MAX_ADJUNTOS_POR_PARTE} por parte.
       </p>
 
-      <label className="boton-subir" aria-disabled={bloqueado}>
-        {lleno
-          ? `Ya has elegido ${MAX_ADJUNTOS_POR_PARTE}, que es el máximo`
-          : ficheros.length === 0
-            ? 'Elegir fotos o PDF'
-            : 'Añadir más ficheros'}
-        <input
-          id={`${uid}-adjuntos`}
-          type="file"
-          multiple
-          accept={ACCEPT}
-          onChange={onElegir}
-          disabled={bloqueado}
-          aria-describedby={`${uid}-adjuntos-ayuda`}
-        />
-      </label>
+      <div className="alta-acciones">
+        <label className="boton-subir" aria-disabled={bloqueado}>
+          {lleno
+            ? `Ya has elegido ${MAX_ADJUNTOS_POR_PARTE}, que es el máximo`
+            : ficheros.length === 0
+              ? 'Elegir fotos o PDF'
+              : 'Añadir más ficheros'}
+          <input
+            id={`${uid}-adjuntos`}
+            type="file"
+            multiple
+            accept={ACCEPT}
+            onChange={onElegir}
+            disabled={bloqueado}
+            aria-describedby={`${uid}-adjuntos-ayuda`}
+          />
+        </label>
+        {!lleno && (
+          <label className="boton-subir" aria-disabled={bloqueado}>
+            Hacer una foto
+            <input
+              id={`${uid}-adjuntos-camara`}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={onElegir}
+              disabled={bloqueado}
+              aria-describedby={`${uid}-adjuntos-ayuda`}
+            />
+          </label>
+        )}
+      </div>
 
       {ficheros.length > 0 && (
         <p className="editor-ayuda">
