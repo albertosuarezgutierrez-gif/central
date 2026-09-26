@@ -278,7 +278,7 @@ export function bloqueDatosVehiculo(d: DatosVehiculo): string | null {
   ]
   const conDato = filas.filter((f): f is [string, string] => f[1] !== null)
   if (conDato.length === 0) return null
-  return ['Datos del otro vehículo:', ...conDato.map(([k, v]) => `- ${k}: ${v}`)].join('\n')
+  return ['Datos de los vehículos:', ...conDato.map(([k, v]) => `- ${k}: ${v}`)].join('\n')
 }
 
 /**

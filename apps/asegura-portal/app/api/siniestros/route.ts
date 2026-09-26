@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 
-import { normalizarParte, plazoComunicacion, type ParteEntrada } from '@central/module-seguros-portal'
+import { tgSend } from '@central/core-telegram'
+import { normalizarParte, plazoComunicacion, textoAvisoParteNuevo, type ParteEntrada } from '@central/module-seguros-portal'
 
 import { carteraDeIdentidad, polizasParaParte } from '@/lib/cartera-lectura'
 import { prisma } from '@/lib/db'
@@ -95,6 +96,27 @@ export async function POST(req: Request) {
   // consuelo dejaría al cliente creyendo que ha declarado un siniestro que no
   // existe en ninguna parte, que es la peor mentira que puede contar el portal.
   const { id } = await crearParte(identidad.id, valor)
+
+  // Aviso INMEDIATO a Alberto (26/09/2026). Antes solo existía el resumen de
+  // las 06:55 de plataforma, que se comía hasta un día de los siete del art.
+  // 16 LCS; ese cron sigue como red de seguridad. Si Telegram falla, el parte
+  // YA está guardado y la respuesta no cambia: el cron lo repetirá mañana.
+  try {
+    await tgSend(
+      textoAvisoParteNuevo({
+        parteId: id,
+        nombre: identidad.nombre ?? null,
+        tipoSiniestro: valor.tipoSiniestro,
+        fechaHecho: valor.fechaHecho,
+        hayHeridos: valor.hayHeridos,
+        hayTerceros: valor.hayTerceros,
+        polizaDeclarada: valor.polizaDeclaradaId !== null,
+        sinPoliza: valor.polizaId === null && valor.polizaDeclaradaId === null,
+      }),
+    )
+  } catch (e) {
+    console.error('[portal/siniestros] Telegram no salió:', e instanceof Error ? e.message : e)
+  }
 
   // El plazo se calcula sobre la MISMA fecha que se acaba de guardar.
   // `fueraDePlazo: true` NO es «has perdido la cobertura» y la pantalla no

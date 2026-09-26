@@ -426,6 +426,194 @@ export const ARTICULOS: readonly Articulo[] = [
   },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
   //
+  // 26/09/2026 — OpenSEO: «dar de baja seguro coche» 390/mes, dificultad 0; en
+  // la primera página conviven RACE y Mapfre con blogs pequeños. El genérico
+  // `como-dar-de-baja-un-seguro-a-tiempo` cuenta la carta; este cubre lo que
+  // es propio del coche: venderlo, llevarlo al desguace, tenerlo parado y el
+  // desistimiento de una contratación a distancia. Sin citar normas fuera de
+  // `NORMAS_CITABLES`: solo el art. 22 LCS, que sí está.
+  {
+    slug: 'dar-de-baja-seguro-coche',
+    h1: 'Cómo dar de baja el seguro del coche según tu caso',
+    title: 'Dar de baja el seguro del coche: todos los casos',
+    description:
+      'No renovar, vender el coche, llevarlo al desguace o arrepentirte recién contratado: cómo se da de baja el seguro del coche en cada caso y qué no debes hacer.',
+    fecha: '2026-09-26',
+    consulta: 'dar de baja seguro coche',
+    resumen:
+      'El seguro del coche se da de baja de forma distinta según el motivo. Si solo quieres no renovar, hay que avisar por escrito un mes antes del vencimiento. Si vendes el coche o lo llevas al desguace, se comunica a la compañía con el documento que lo prueba. Y mientras el coche siga matriculado y sin baja en Tráfico, tiene que estar asegurado aunque no lo muevas.',
+    base: ['lcs-22'],
+    ramos: ['auto'],
+    cta: {
+      titulo: 'Tu carta de baja, con el último día para enviarla',
+      texto:
+        'Escribe los datos de tu póliza y el vencimiento: te dejamos la carta lista para copiar, imprimir o enviar desde tu correo, y te decimos hasta qué día llegas a tiempo. Gratis y sin registro.',
+      boton: 'Preparar mi carta',
+      href: '/carta-baja-seguro',
+    },
+    secciones: [
+      {
+        titulo: 'Si quieres cambiar de seguro: no renovar',
+        parrafos: [
+          'Es el caso más habitual. El seguro del coche es anual y se prorroga solo. Para que no se renueve, el artículo 22 de la Ley de Contrato de Seguro exige comunicarlo por escrito con al menos un mes de antelación a la fecha de vencimiento.',
+          'Si vence el 10 de abril, el último día para que llegue tu aviso es el 10 de marzo. Pasada esa fecha, la póliza se renueva un año más aunque no hayas pagado el recibo.',
+          'Y antes de dar la baja, ten firmado el seguro nuevo con efecto el mismo día en que termina el anterior. Un solo día entre los dos es un día circulando sin seguro.',
+        ],
+      },
+      {
+        titulo: 'Si vendes el coche',
+        parrafos: [
+          'Comunica la venta a tu compañía por escrito en cuanto la firmes, con una copia del contrato de compraventa o del justificante del cambio de titularidad en Tráfico. Es la prueba de que desde ese día el coche ya no es tuyo.',
+          'Qué pasa con la parte de prima que ya pagaste y no vas a usar depende de las condiciones de tu póliza: muchas compañías la devuelven y otras la aplican a un coche nuevo si sigues con ellas. Pregúntalo por escrito y pide que te lo confirmen.',
+          'Hasta que el cambio de titularidad esté hecho, el coche sigue constando a tu nombre. Por eso conviene tramitarlo el mismo día de la venta.',
+        ],
+      },
+      {
+        titulo: 'Si lo llevas al desguace',
+        parrafos: [
+          'Un centro autorizado de tratamiento te entrega el certificado de destrucción y tramita la baja definitiva en Tráfico. Con ese documento pides a la compañía la anulación del seguro.',
+          'Igual que en la venta, lo que ocurra con la prima no consumida depende de tu póliza: pide la devolución por escrito, adjuntando el certificado.',
+        ],
+      },
+      {
+        titulo: 'Si lo tienes parado',
+        parrafos: [
+          'Un coche matriculado tiene que estar asegurado aunque no circule y esté aparcado en un garaje. Quitarle el seguro sin más te expone a una multa y, si ocurre algo, a responder tú de los daños.',
+          'La salida legal es pedir en Tráfico la baja temporal del vehículo. Mientras dure, no está obligado a tener seguro, y puedes volver a darlo de alta cuando lo necesites.',
+        ],
+      },
+      {
+        titulo: 'Si acabas de contratarlo y te arrepientes',
+        parrafos: [
+          'Si lo contrataste por internet o por teléfono, normalmente tienes un plazo de catorce días desde la contratación para desistir sin dar explicaciones. Revisa tu póliza: debe indicar el plazo y cómo ejercerlo.',
+          'Si lo contrataste en una oficina, no hay ese derecho general y se aplica lo que digan las condiciones.',
+        ],
+      },
+      {
+        titulo: 'Lo que no hay que hacer',
+        parrafos: [
+          'Dejar de pagar el recibo no es dar de baja el seguro. Un impago no es una comunicación por escrito y tiene consecuencias propias, peores que renovar un año más.',
+          'Tampoco sirve una llamada sin más: si luego hay discusión, lo que cuenta es el escrito y su fecha. Guarda siempre el justificante del envío.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Con cuánta antelación tengo que avisar para no renovar el seguro del coche?',
+        respuesta:
+          'Al menos un mes antes de la fecha de vencimiento, y por escrito. Si avisas más tarde, la póliza se renueva un año más.',
+      },
+      {
+        pregunta: '¿Me devuelven el dinero si vendo el coche?',
+        respuesta:
+          'Depende de las condiciones de tu póliza. Muchas compañías devuelven la parte de prima que no se ha usado o la aplican a otro coche. Pídelo por escrito con el justificante de la venta.',
+      },
+      {
+        pregunta: '¿Puedo quitar el seguro si el coche está parado en el garaje?',
+        respuesta:
+          'No, mientras siga matriculado y de alta en Tráfico. Para no tener que asegurarlo hay que pedir su baja temporal.',
+      },
+      {
+        pregunta: '¿Dejar de pagar el recibo da de baja el seguro?',
+        respuesta:
+          'No. Un impago no es una comunicación de baja y puede traerte problemas con la compañía. La baja se comunica por escrito y en plazo.',
+      },
+    ],
+  },
+  // 26/09/2026 — OpenSEO: «defensor del asegurado» 880/mes y «defensor del
+  // asegurado mapfre» 210, dificultad 0. La primera página es la DGSFP, un
+  // despacho y fichas de cada compañía: nadie explica el orden completo. No se
+  // nombra la orden que regula los servicios de atención al cliente porque no
+  // está en `NORMAS_CITABLES`; el plazo de dos meses sí (ECC/2502/2012).
+  {
+    slug: 'defensor-del-asegurado',
+    h1: 'El defensor del asegurado: qué es, cuándo acudir y qué pasa después',
+    title: 'Defensor del asegurado: qué es y cómo reclamar',
+    description:
+      'Qué es el defensor del asegurado, en qué se diferencia del servicio de atención al cliente, qué plazo tiene para contestar y qué hacer si no te da la razón.',
+    fecha: '2026-09-26',
+    consulta: 'defensor del asegurado',
+    resumen:
+      'El defensor del asegurado es la persona o entidad que una aseguradora designa para resolver las quejas de sus clientes con cierta independencia. No todas lo tienen: lo obligatorio es un servicio de atención al cliente. Uno u otro son el primer paso de cualquier reclamación, tienen dos meses para contestar, y si no responden o no te dan la razón puedes acudir gratis al Servicio de Reclamaciones de la Dirección General de Seguros y Fondos de Pensiones.',
+    base: ['orden-ecc-2502-2012'],
+    ramos: ['auto', 'hogar', 'vida-y-salud'],
+    cta: {
+      titulo: 'Reclamar con alguien de tu lado',
+      texto:
+        'Si tienes un problema con tu aseguradora, puedes pasar la póliza a Grupo ASegura sin cambiar de compañía ni de precio: desde ese momento el corredor que te representa ante ella somos nosotros.',
+      boton: 'Cómo funciona el cambio de correduría',
+      href: '/cambiar-de-correduria',
+    },
+    secciones: [
+      {
+        titulo: 'Qué es, y qué no es',
+        parrafos: [
+          'Toda aseguradora tiene que contar con un servicio o departamento de atención al cliente que atienda las quejas y reclamaciones de sus clientes. Además, muchas designan un defensor del asegurado, o del cliente: una persona o entidad externa, normalmente un despacho o una asociación, que resuelve esas reclamaciones con más independencia que la propia compañía.',
+          'Si tu aseguradora tiene defensor, puedes elegir dirigirte a él o al servicio de atención al cliente. Si no lo tiene, la puerta es el servicio de atención al cliente. En los dos casos es el mismo escalón: el que hay que subir antes de poder acudir al supervisor.',
+          'Ojo con los nombres parecidos. Hay asociaciones y despachos privados que usan «defensa del asegurado» o similares en su nombre y ofrecen sus servicios. Pueden ayudarte, pero no son el defensor de tu compañía ni sustituyen a la reclamación ante ella.',
+        ],
+      },
+      {
+        titulo: 'Dónde encontrar el de tu compañía',
+        parrafos: [
+          'La Dirección General de Seguros y Fondos de Pensiones publica en su web el departamento de atención al cliente y, si lo hay, el defensor de cada entidad aseguradora, con su dirección. Es la fuente más fiable.',
+          'También suelen figurar en las condiciones generales de la póliza, en un apartado de reclamaciones, y en la web de la compañía. Si los datos no coinciden, manda la reclamación a la dirección que publica el supervisor.',
+        ],
+      },
+      {
+        titulo: 'Qué poner en la reclamación',
+        parrafos: [
+          'Por escrito, siempre: correo, formulario de su web o carta con acuse de recibo. Tus datos, el número de póliza, el número de siniestro si lo hay, qué ha pasado, qué te ha contestado la compañía y qué pides exactamente: que paguen, que revisen la valoración, que anulen un recibo.',
+          'Adjunta lo que lo pruebe: la denegación por escrito, el informe del perito, fotos, facturas, tus correos anteriores. Y guarda el justificante con la fecha: desde ella cuentan los dos meses.',
+          'Una reclamación bien planteada cita la cláusula de la póliza en la que se apoya la compañía y explica por qué no se aplica a tu caso. Un correo de queja general suele recibir una respuesta igual de general.',
+        ],
+      },
+      {
+        titulo: 'El plazo: dos meses',
+        parrafos: [
+          'La Orden ECC/2502/2012 exige haber reclamado antes al servicio de atención al cliente, o al defensor, de la entidad, que dispone de dos meses para contestar. Es el requisito para poder dar el paso siguiente.',
+          'Si en ese plazo no hay respuesta, o la respuesta no te da la razón, ya puedes acudir al Servicio de Reclamaciones de la Dirección General de Seguros y Fondos de Pensiones.',
+        ],
+      },
+      {
+        titulo: 'Si no te dan la razón: el Servicio de Reclamaciones',
+        parrafos: [
+          'Es gratuito, se puede presentar por internet y no necesitas abogado. Adjunta la reclamación que hiciste a la compañía, su respuesta si la hubo, y la documentación del caso.',
+          'Su informe no obliga a la aseguradora, pero cuenta: muchas compañías rectifican cuando el supervisor les da la razón al cliente, y queda constancia de cómo han actuado.',
+          'Por encima de todo esto queda siempre la vía judicial, con sus propios plazos de prescripción. Reclamar ante el defensor o ante el supervisor no te quita ese derecho.',
+        ],
+      },
+      {
+        titulo: 'Dónde entra un corredor',
+        parrafos: [
+          'Un corredor de seguros no trabaja para la aseguradora: está en tu lado del contrato. Cuando hay una discrepancia, prepara la reclamación contigo, sabe qué cláusula discutir y conoce a quién dirigirse dentro de la compañía antes de llegar al defensor.',
+          'Y no hace falta cambiar de seguro para tenerlo: puedes cambiar de correduría manteniendo la misma póliza, con la misma compañía y el mismo precio.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Es lo mismo el defensor del asegurado que el servicio de atención al cliente?',
+        respuesta:
+          'No. El servicio de atención al cliente es obligatorio y forma parte de la compañía. El defensor es opcional y externo a ella. Cualquiera de los dos vale como primer paso de la reclamación.',
+      },
+      {
+        pregunta: '¿Cuánto cuesta reclamar?',
+        respuesta:
+          'Nada. Ni la reclamación ante la compañía o su defensor ni la del Servicio de Reclamaciones de la Dirección General de Seguros tienen coste, y no hace falta abogado.',
+      },
+      {
+        pregunta: '¿Puedo ir directamente a la Dirección General de Seguros?',
+        respuesta:
+          'No. Primero hay que reclamar a la propia aseguradora, a su servicio de atención al cliente o a su defensor, y esperar su respuesta o que pasen dos meses sin ella.',
+      },
+      {
+        pregunta: '¿La decisión del defensor es obligatoria para la compañía?',
+        respuesta:
+          'Depende del reglamento de cada entidad, que debe estar a tu disposición. Muchas se comprometen a cumplir las resoluciones de su defensor cuando son favorables al cliente. Pídelo por escrito si tu reclamación sale adelante.',
+      },
+    ],
+  },
   // 26/09/2026 — medido con OpenSEO: «declaración amistosa de accidente» 880/mes,
   // «cómo rellenar parte amistoso» 590, «parte amistoso online/pdf» 480, todas
   // con dificultad 0. El artículo de «qué hacer tras un accidente» cuenta el

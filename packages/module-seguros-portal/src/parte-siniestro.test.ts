@@ -351,6 +351,14 @@ test('el bloque solo lista los campos CON dato, y las matrículas en mayúsculas
   assert.doesNotMatch(b ?? '', /Aseguradora/)
 })
 
+// La matrícula PROPIA iba bajo «Datos del otro vehículo:» y el corredor la
+// leía como la del contrario (auditoría del 26/09/2026).
+test('el encabezado del bloque no atribuye la matrícula propia al otro vehículo', () => {
+  const b = bloqueDatosVehiculo({ matriculaPropia: '1234abc' }) ?? ''
+  assert.match(b, /^Datos de los vehículos:/)
+  assert.doesNotMatch(b, /Datos del otro vehículo/)
+})
+
 test('componerDescripcion no toca la descripción si no hay datos de vehículo', () => {
   assert.equal(componerDescripcion(DESC, {}), DESC)
 })
