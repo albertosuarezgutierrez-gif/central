@@ -494,4 +494,76 @@ nuevo hoy (nada de código, nada `⛔`). Sin Telegram: sin 🔴, y el único �
 cruza el umbral que pide aviso inmediato — queda anotado para la próxima pasada.
 
 ---
-<!-- verificado: 2026-09-25 -->
+
+## ✅ Pasada ligera — 26/09/2026
+
+**Rango:** desde la pasada del 25/09 (`7a354c3`) hasta `1a17282` — 49 commits, casi todo correduría
+(diferencias con CIMA automáticas + aviso «póliza emitida» + 6 revisiones del agente #3635, retención
+CIMA a 6 años + clientes fusionados con DNIs distintos #3637, cierre del hilo CIMA/Mapfre, portal:
+dueño de empresa automático #3616, fix del webhook de Resend que ignoraba TODOS los eventos #3619,
+recaptación por email — tracking de aperturas estaba apagado #3591, retarificación con fecha de
+efecto/desempate/coberturas #3621).
+
+### Heartbeat de crons/agentes (2-bis) — sano, con dos matices
+49 filas en `agente_latidos`. `ses_transporte` sigue en rojo crónico (sin establecimientos SES, sin
+cambios, acción pendiente de Alberto). **`sivra_mercado_booking` (rutina diaria de Booking) lleva
+42,4 h sin una pasada `ok=true`** (última buena: 24/09 13:46 UTC) — por encima del umbral diario
+(~30 h). No es un silencio total: la última pasada sí trajo 239 comparables reales en 24 ventanas,
+pero se quedó a 0/4 en las ventanas de "escaparate propio" (los 4 pisos), que es lo que la marca
+`ok=false`. Anotado para que la próxima pasada confirme si se resuelve sola o se instala — no cruza
+el umbral de aviso inmediato porque no es un silencio total y ya tiene su propio latido vigilándolo.
+`agente_reparaciones`: sin intentos en 7 días.
+
+### Correduría (2-quater) — sano
+`cima_pull` con evento hace <1h (158 ficheros en cola). `correduria_ingesta` sigue con el mismo
+backlog conocido de cuarentena (objetos de C0468/C0072 sin guardar, ya arrastrado de antes — nada
+nuevo). Codeoscopic: 13 cotizaciones/7d, 5,50€ en total, 3 descartadas — en línea con días previos.
+Cepos de aislamiento (`regression-asegura-aislamiento`, `regression-portal-aislamiento`,
+`regression-asegura-operador-publico`, `regression-correduria-puerto`,
+`regression-asegura-gasto-codeoscopic`) presentes en `test/`.
+
+### 🟠 Salud del precio (2bis) — raíles intactos, pero `oscilantes` se dispara de 10 a 103 y hay un
+### caso concreto que merece el ojo de Alberto HOY
+
+`rail_baja_roto=0` · `bajo_minimo=0` · `horas_desde_ultima_pasada=7,6h` · `noches_ultima_pasada=134`
+— sano. `rail_alza_sin_justificar=1` (🟠, patrón crónico ya conocido). **`oscilantes=103`** (🟠, venía
+en 10 ayer): ya no está concentrado en un par de fechas de noviembre — se extiende a `busto_reform`
+(46 fechas, feb-ago 2027), `duplex_center` (35 fechas, sep 2026-sep 2027), `luxury_busto` (21 fechas,
+oct 2026-may 2027) y `house_sevillana` (1 fecha). Las palancas de los 4 pisos están sanas
+(`enabled`/`apply_enabled=true`, `min_price` puesto, `antelacion_k=0`).
+
+**El caso que se sale de la plantilla de "ciclo límite":** `prop_house_sevillana` para **2026-09-30**
+(a 4 días vista) pasó de 478€ (23/09 00:20 UTC) a **1.019€** en la pasada siguiente (23/09 14:23 UTC,
++113%) y desde entonces oscila 928-1.019€. La media de 20 comparables reales de Booking para esa
+misma fecha (`market_rates`, escenario `prop_house_sevillana`) es **458€** — prácticamente el precio
+de ANTES del salto, no lo justifica ni de lejos el umbral de `premioMercadoFecha` (exige ≥1,5× la
+base normal). No hay fila en `pricing_eventos_auto` para esa fecha. La consulta de raíl de este
+bloque NO lo marca como `rail_alza_sin_justificar` porque el ancla (`ref24`) es el precio del día
+ANTERIOR completo (23/09 mismo día no cuenta dos veces), y la exención de "premio de mercado" de esta
+consulta solo comprueba que EXISTE mercado medido para la fecha (≥3 comps) — no que ese mercado
+justifique la subida. O sea: el salto real pasó por debajo del radar de la propia auditoría, y solo
+apareció por vía del conteo de `oscilantes`. **No se ha tocado código ni el precio**: es un hallazgo
+para que Alberto decida si es un bug del motor (dqFactor/demanda mal calculado, ver
+`pricing-premio-mercado.ts`) o un ajuste legítimo que no se puede verificar desde aquí — la fecha
+está a 4 días y el precio sigue publicado ~2× el mercado medido.
+
+### Backlog de PRs (2-ter) — sano
+`list_pull_requests` no devuelve ningún PR abierto de rama `claude/*` contra este repo en este
+momento. `rutinas-automerge.yml` con runs en verde en la última hora (varios `pull_request_target` +
+`check_suite` sobre los últimos merges de hoy).
+
+### Reconciliación memoria/skills
+De los 49 commits del rango, 14 no tocan `docs/CONTEXTO-SESIONES.md` — 13 son regeneraciones de
+radiografía (`[skip vercel]`, no requieren memoria) o bitácoras de agentes (`AGENTES-BITACORA.md`,
+que es su propio registro); el único fix de código sin entrada propia (`#3619`, webhook de Resend)
+ya está referenciado dentro de la entrada del 25/09 sobre "los 13 correos de la correduría". No se
+detecta ningún commit de producto sin huella en memoria. No se ha podido listar las sesiones del
+rango (`list_sessions` de Claude Code Remote no está disponible en esta pasada) — se dice
+explícitamente, no se afirma que no haya pendientes.
+
+**Carril 1:** esta entrada + `AUTO-APLICADOS.md`. **Carril 2:** el hallazgo de `house_sevillana`
+2026-09-30 (sin código que tocar, es una decisión/investigación de Alberto) — PR draft con este
+informe + aviso Telegram. El resto no cruza el umbral de PR (nada `⛔`, nada 🔴).
+
+---
+<!-- verificado: 2026-09-26 -->
