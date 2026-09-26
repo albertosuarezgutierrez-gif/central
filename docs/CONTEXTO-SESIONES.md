@@ -703,7 +703,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero
   en plataforma y en /correduria y se deshizo (el PR #3659 queda sin cambios en plataforma).
 - Móvil (<1024 px): barra fija abajo Seguros · Recibos · Siniestros · WhatsApp + «Más» (abre el cajón). WhatsApp
-  en vez de «Mensajes» por decisión de Alberto («es más directo»); Mensajes sigue en el cajón y el botón flotante
+  en vez de «Mensajes» por decisión de Alberto («es más directo»; luego se retiró entero, ver abajo); el botón flotante
   de WhatsApp se oculta mientras está la barra. El ☰ de la cabecera se QUITÓ (Alberto): «Más» es la única puerta al
   cajón en el móvil (sin `createPortal` ni `#portal-menu-slot`; cepo que impide que vuelva). Etiquetas desde `pestanasPortal()`; iconos SVG en línea (sin lucide).
 - `body:has(.portal-tabbar)` reserva 60px (tapaba el pie legal) y sube el botón de WhatsApp. El bloque CSS va
@@ -713,6 +713,32 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - «Mensajes con tu corredor» RETIRADO en las 4 capas (portal, asegura, plataforma, módulo): el cliente escribe por WhatsApp.
   0 mensajes en BD; la tabla `seguros.portal_mensaje` SE QUEDA (la usa la función SQL de fusionar clientes).
 - Medido con Playwright a 320/390/1280; cepos en `regression-portal-cartera-agrupada` vistos en rojo. PR #3659.
+
+## (26/09/2026) Agente huésped mudo con >25 mensajes: Smoobu pagina `/messages`
+- Stephen (Duplex, reserva 150035011) preguntó cómo entrar de noche por la puerta de cristal y el agente no contestó ni propuso nada.
+- Causa medida contra Smoobu (vía `pg_net`): `/api/reservations/{id}/messages` pagina de 25 en 25 (más antiguo primero); con 27 mensajes sus dos preguntas quedaban en la página 2, el último visible era un automático nuestro → `host_ultimo_sin_pregunta`, salida muda.
+- Fix: `lib/smoobu-paginas.ts` (puro, 6 tests, visto en rojo) + `smoobuMensajesReserva()` en `lib/smoobu.ts`; lo usan contexto, historico, seed-aprendizaje y la ficha `/sivra/mensajes/[bookingId]`. Página intermedia fallida → `null`, nunca hilo a medias.
+- Pendiente: las salidas tempranas del orquestador siguen sin dejar rastro; merece un aviso. Rotar key/secret de Smoobu (salieron en la sesión).
+
+## (26/09/2026) Correduría: «The column `old` does not exist» al corregir el correo de una ficha
+El trigger `seguros.portal_retirar_vinculos_email_de_ficha` (PR #3600) leía `OLD.cliente_id` también sobre
+`clientes` (PL/pgSQL resuelve los campos aunque el `AND` ya sea falso) → todo cambio de correo principal
+fallaba con 42703. Reescrito por ramas de tabla y APLICADO en central (`seguros_portal_vinculo_retira_fix_clientes`);
+las 4 rutas verificadas en bloque revertido (mismo hash conserva vínculo, hash cambiado lo retira).
+Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes` con el viejo, y reintentar no re-espejaba
+(«valor no cambiado»). Re-espejada a mano la ficha de Pilar Franco Ruz; `cambiarContacto` ahora re-espeja siempre que se guarda el principal.
+
+
+## (26/09/2026) Fila 13 CONSTRUIDA: importar un proyecto de Avant2 y emitirlo desde la intranet (PR #3657)
+- `GET/POST /api/operador/codeoscopic/importar` (asegura) + `retarificar?avant2=1` → `ImportarAvant2` → panel `Emision` con `ofertaImportada`. Sin ReRate: solo precios con `SubmitPolicyApplication` y en plazo.
+- Revisión `agente-architect`: 1 bloqueante (soltar póliza de un proyecto con intento sin aclarar → doble emisión) corregido con 409; además matrícula, tomador re-comprobado en `/emitir`, fraccionamiento de la oferta al acuñar, upsert con RETURNING. SQL probado contra BD con rollback.
+- Sin medir: Submit real de una oferta hecha en la web. Pendiente preexistente: consentimientos Allianz auto en moto.
+
+## (26/09/2026) Plan: importar proyectos de Avant2 (fila 13) + emitir desde Telegram (fase 3)
+- Spec en `docs/superpowers/specs/2026-09-26-importar-avant2-y-emitir-telegram-design.md`. Nada construido.
+- Hallazgo: `/emitir` NO necesita línea previa en `codeoscopic_consumo`; basta enlazar proyecto→póliza en `codeoscopic_projects` (el requisito venía de la FK de `tarificaciones`). Fila 13 corregida.
+- Orden: fila 13 → fila 5 (timeouts, requisito previo) → fase 3a (resumen construido en servidor + botón `cas_emitir` de un solo uso con huella) → 3b (correcciones por chat).
+- Pablo Guzmán (Mapfre `0008414300069` vence 29/09): se emite A MANO en Avant2, no espera a esto.
 
 ## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
 - Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).

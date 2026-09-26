@@ -465,9 +465,11 @@ export async function cambiarContacto(
     else await db.clienteEmail.update({ where: { id }, data })
 
     // La columna de `clientes` es lo que leen la ficha, el buscador y los
-    // avisos: se re-espeja si cambia quién es el principal O si ha cambiado el
-    // valor del que ya lo era.
-    if (entrada.principal === true || (valorCambiado && seraPrincipal)) {
+    // avisos: se re-espeja si cambia quién es el principal O si se ha guardado
+    // el valor del que ya lo era — aunque no haya cambiado: si un guardado
+    // anterior escribió la fila hija y murió al espejar, reintentar lo cura
+    // (26/09/2026: el trigger del portal rompía justo ese segundo paso).
+    if (entrada.principal === true || ('valor' in entrada && seraPrincipal)) {
       await espejarPrincipal(correduriaId, clienteId, tipo)
     }
 

@@ -254,6 +254,11 @@ export async function enviarEmision(
               accept: 'application/vnd.codeoscopic.v1+json',
             },
             body: form,
+            // ⏱️ Fila 5 (26/09/2026): el Submit no tenía reloj propio y lo cortaba
+            // el `maxDuration` de la ruta, en seco y sin respuesta. Con el largo
+            // (150 s, el del vendor al cotizar) corta ESTE reloj, lanza y cae en
+            // el `catch` de abajo como «sin confirmación» — nunca como «no salió».
+            signal: AbortSignal.timeout(config.timeoutCotizacionMs),
           },
         )
         return { estadoHttp: res.status, correcto: res.ok, texto: await res.text() }

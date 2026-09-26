@@ -24,6 +24,10 @@
 -- antes en un bloque revertido sobre la ficha real: mismo hash → 1 vínculo; hash cambiado → 0; los
 -- demás 12 vínculos intactos. Ampliado el mismo día al MOVER una fila de `cliente_emails` a otra
 -- ficha (`cliente_id` cambia, el hash no), hallazgo de la revisión del PR #3600.
+--
+-- CORREGIDA el 26/09/2026: la rama de `cliente_emails` leía `OLD.cliente_id` también sobre
+-- `clientes` y todo cambio de correo principal fallaba (Prisma: «The column `old` does not exist»).
+-- La prueba del 25/09 se hizo sobre `cliente_emails`; la ruta de `clientes` nunca se ejecutó.
 
 CREATE OR REPLACE FUNCTION seguros.portal_retirar_vinculos_email_de_ficha()
 RETURNS trigger
@@ -34,18 +38,26 @@ AS $$
 DECLARE
   ficha uuid;
 BEGIN
-  IF TG_OP = 'DELETE' THEN
-    IF OLD.email_lookup_hash IS NULL THEN RETURN OLD; END IF;
-    ficha := OLD.cliente_id;
-  ELSIF TG_TABLE_NAME = 'cliente_emails' AND OLD.cliente_id IS DISTINCT FROM NEW.cliente_id THEN
-    -- El correo se MUDA de ficha sin cambiar de hash: la ficha vieja lo pierde igual.
-    IF OLD.email_lookup_hash IS NULL THEN RETURN NEW; END IF;
-    ficha := OLD.cliente_id;
-  ELSE
+  -- Cada tabla en su rama: PL/pgSQL resuelve TODOS los campos de una expresión aunque el `AND`
+  -- ya sea falso, y `clientes` no tiene `cliente_id` → «record "old" has no field "cliente_id"»
+  -- rompía CUALQUIER cambio de correo principal de una ficha (26/09/2026).
+  IF TG_TABLE_NAME = 'clientes' THEN
     IF OLD.email_lookup_hash IS NULL OR OLD.email_lookup_hash IS NOT DISTINCT FROM NEW.email_lookup_hash THEN
       RETURN NEW;
     END IF;
-    ficha := CASE WHEN TG_TABLE_NAME = 'clientes' THEN OLD.id ELSE OLD.cliente_id END;
+    ficha := OLD.id;
+  ELSIF TG_OP = 'DELETE' THEN
+    IF OLD.email_lookup_hash IS NULL THEN RETURN OLD; END IF;
+    ficha := OLD.cliente_id;
+  ELSE
+    -- cliente_emails UPDATE: el correo cambia de hash, o se MUDA de ficha sin cambiarlo
+    -- (la ficha vieja lo pierde igual).
+    IF OLD.email_lookup_hash IS NULL THEN RETURN NEW; END IF;
+    IF OLD.cliente_id IS NOT DISTINCT FROM NEW.cliente_id
+       AND OLD.email_lookup_hash IS NOT DISTINCT FROM NEW.email_lookup_hash THEN
+      RETURN NEW;
+    END IF;
+    ficha := OLD.cliente_id;
   END IF;
 
   DELETE FROM seguros.portal_vinculo WHERE cliente_id = ficha AND origen = 'email_hash';

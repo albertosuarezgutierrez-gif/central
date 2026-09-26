@@ -309,9 +309,11 @@ export function Emision({
   primaEur,
   producto = null,
   fechaEfecto = null,
+  ofertaImportada = null,
   onCerrar,
 }: {
-  tarificacionId: string
+  /** Ausente cuando la oferta viene importada de Avant2: ahí no hay cotización nuestra. */
+  tarificacionId?: string
   compania: string
   categoria: string
   primaEur: number | null
@@ -320,9 +322,14 @@ export function Emision({
   producto?: string | null
   /** Fecha de efecto con la que se cotizó (aaaa-mm-dd). Arranca el campo de fecha. */
   fechaEfecto?: string | null
+  /** Oferta ya aceptada al importar un proyecto hecho en Avant2 (fila 13, 26/09/2026):
+   *  el panel arranca en el paso de emitir, sin ReRate. */
+  ofertaImportada?: Omit<Extract<EstadoPanel, { paso: 'oferta' }>, 'paso'> | null
   onCerrar: () => void
 }) {
-  const [estado, setEstado] = useState<EstadoPanel>({ paso: 'inicio' })
+  const [estado, setEstado] = useState<EstadoPanel>(
+    ofertaImportada ? { paso: 'oferta', ...ofertaImportada } : { paso: 'inicio' },
+  )
   // 📅 25/09/2026: la fecha de efecto se confirma AQUÍ, antes del precio, y viaja
   // en el ReRate (`mainQuote.effectiveDate`) solo si cambia respecto a la cotizada
   // o si ya ha pasado: así se rescata una cotización caducada sin otro 0,50€.
@@ -405,6 +412,10 @@ export function Emision({
   }, [estado])
 
   async function confirmarPrecio(conCorrecciones?: Record<string, string>, conProductOptions?: unknown[]) {
+    if (!tarificacionId) {
+      setEstado({ paso: 'error', mensaje: 'Este proyecto viene de Avant2: el precio se confirma allí y se vuelve a importar.' })
+      return
+    }
     setEstado({ paso: 'confirmando' })
     const limpias = Object.fromEntries(
       Object.entries(conCorrecciones ?? {}).filter(([, v]) => typeof v === 'string' && v.trim() !== ''),

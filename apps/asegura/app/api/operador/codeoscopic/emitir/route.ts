@@ -28,13 +28,18 @@ import {
 } from '@/lib/codeoscopic/emitir-iban'
 import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
+import { documentoTomador, fraccionamientoDeOferta } from '@/lib/codeoscopic/importar'
+import { computeDniLookupHash } from '@central/module-seguros-pii'
 import { archivarDocumentoEmitido } from '@/lib/codeoscopic/archivar-documento'
 import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// ⏱️ Fila 5 (26/09/2026): el Submit lleva el reloj largo del vendor (150 s) y antes
+// van lecturas de 15 s cada una. 240 deja que corte SIEMPRE el reloj del vendor,
+// que sabe decir «sin confirmación», y no Vercel, que mata la función en seco.
+export const maxDuration = 240
 
 /**
  * `POST /api/operador/codeoscopic/emitir` — el Submit de verdad
@@ -140,10 +145,12 @@ export const POST = auditado(async (req: Request) => {
   }
 
   const polizas = await prisma.$queryRaw<
-    { cliente_id: string; tipo: string; fraccionamiento: string | null; datos_especificos: unknown }[]
+    { cliente_id: string; tipo: string; fraccionamiento: string | null; datos_especificos: unknown; dni_lookup_hash: string | null }[]
   >`
-    select cliente_id::text as cliente_id, tipo::text as tipo, fraccionamiento::text as fraccionamiento, datos_especificos
-    from polizas where id = ${p.poliza_id}::uuid and correduria_id = ${correduria.id}::uuid
+    select pol.cliente_id::text as cliente_id, pol.tipo::text as tipo, pol.fraccionamiento::text as fraccionamiento,
+           pol.datos_especificos, c.dni_lookup_hash
+    from polizas pol join clientes c on c.id = pol.cliente_id
+    where pol.id = ${p.poliza_id}::uuid and pol.correduria_id = ${correduria.id}::uuid
   `
   const poliza = polizas[0]
   if (!poliza) {
@@ -177,6 +184,10 @@ export const POST = auditado(async (req: Request) => {
   // «Unknown error while waiting for the operation to complete» — tampoco se
   // reenvía a ciegas: el corredor tiene que mirar el estado (aquí va el
   // proyecto crudo, gratis) y decirlo con `reintentoConfirmado: true`.
+  // La póliza NUEVA se paga como diga la oferta aceptada (anual/semestral…), no como
+  // pagaba la que sustituye; sin dato en el proyecto se conserva el de la vieja.
+  const fraccionamientoAcunado =
+    (crudoPrevio ? fraccionamientoDeOferta(crudoPrevio, p.accepted_offer_id_codeoscopic) : null) ?? poliza.fraccionamiento
   const rastro = crudoPrevio ? rastroSolicitudEmision(crudoPrevio) : []
   // La forma que el portal SÍ documenta: `policyApplications[]` con `status.id` y
   // `policyNumber`. Es la única reconciliación posible (no hay webhook real).
@@ -234,7 +245,7 @@ export const POST = auditado(async (req: Request) => {
         primaAnual: numero(cuerpo.primaAnual),
         emitidaEn: aprobada.creadaEn ?? new Date().toISOString(),
         riesgo: esObjeto(poliza.datos_especificos) ? poliza.datos_especificos : null,
-        fraccionamiento: poliza.fraccionamiento,
+        fraccionamiento: fraccionamientoAcunado,
       },
     })
     console.log(
@@ -285,6 +296,24 @@ export const POST = auditado(async (req: Request) => {
     )
   }
 
+
+  // ── El tomador del proyecto sigue siendo el cliente de la póliza (26/09/2026) ──
+  // Un proyecto hecho en la web de Avant2 (import, fila 13) se puede editar allí
+  // después de importarlo. Si el DNI del tomador ya no es el de la ficha, no se
+  // emite: sería el contrato de otra persona colgado de esta póliza. Solo corta
+  // cuando los DOS hashes existen y difieren — sin dato en un lado no se afirma.
+  const docTomador = crudoPrevio ? documentoTomador(crudoPrevio) : null
+  const hashTomador = docTomador ? computeDniLookupHash(docTomador) : null
+  if (hashTomador && poliza.dni_lookup_hash && hashTomador !== poliza.dni_lookup_hash) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'otro',
+        mensaje: 'el tomador del proyecto en Avant2 ya no es el cliente de esta póliza (DNI distinto): no se emite',
+      },
+      { status: 409 },
+    )
+  }
 
   // ── La cuenta bancaria del Submit (duodécimo 400 real, 12/09/2026) ────────
   // Orden: lo tecleado en plataforma (`campos.iban`) > lo que ya viniera en
@@ -740,7 +769,7 @@ export const POST = auditado(async (req: Request) => {
       primaAnual: numero(cuerpo.primaAnual),
       emitidaEn: new Date().toISOString(),
       riesgo: esObjeto(poliza.datos_especificos) ? poliza.datos_especificos : null,
-      fraccionamiento: poliza.fraccionamiento,
+      fraccionamiento: fraccionamientoAcunado,
     },
   })
 

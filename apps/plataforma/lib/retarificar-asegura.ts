@@ -1047,8 +1047,9 @@ function leerCuenta(v: unknown): CuentaConocida | null {
   }
 }
 
-/** Hasta 60 s: es una llamada de red al vendor, sin duración documentada. */
-export const TIMEOUT_OFERTA_MS = 60_000
+/** El ReRate re-tarifica con la compañía: asegura le da 150 s (fila 5). 170 cabe en el
+ *  `maxDuration` de 180 de la página que lo invoca y deja que corte antes asegura. */
+export const TIMEOUT_OFERTA_MS = 170_000
 
 function leerOferta(
   v: unknown,
@@ -1332,8 +1333,9 @@ export function leerSolicitudes(v: unknown): SolicitudEmisionVista[] {
   return out
 }
 
-/** Hasta 90 s: es el Submit, la llamada más pesada del flujo y sin duración documentada. */
-export const TIMEOUT_EMITIR_MS = 90_000
+/** El Submit: asegura le da 150 s (fila 5). Si corta este reloj, el resultado se
+ *  presenta como «puede haberse emitido», nunca como «no se ha emitido». */
+export const TIMEOUT_EMITIR_MS = 170_000
 
 /** PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable. */
 export function interpretarEmitir(status: number, json: unknown): RespuestaEmitir {
@@ -1821,5 +1823,130 @@ export async function coberturasAsegura(projectId: string, offerId: string): Pro
     return interpretarCoberturas(r.status, r.json)
   } catch (e) {
     return { estado: 'error', mensaje: `No se han podido leer las coberturas (${e instanceof Error ? e.message : String(e)}).` }
+  }
+}
+
+// ─── Importar un proyecto hecho a mano en Avant2 (fila 13, 26/09/2026) ──────
+//
+// `GET/POST /api/operador/codeoscopic/importar` de asegura. La vista previa es
+// gratis (una lectura del vendor); el enlace tampoco gasta: no hay ReRate ni
+// Submit, deja la oferta como aceptada y la emisión sigue por `emitirAsegura`.
+
+export type OfertaImportable = {
+  quoteId: string
+  compania: string | null
+  producto: string | null
+  modalidad: string | null
+  categoria: string | null
+  primaEur: number | null
+  primerReciboEur: number | null
+  pago: string | null
+  efecto: string | null
+  caduca: string | null
+}
+
+export type VistaImportacion =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'error'; mensaje: string }
+  | {
+      estado: 'ok'
+      projectId: string
+      /** `sin_dato` = no se ha podido comprobar, que NO es «coincide». */
+      tomador: 'coincide' | 'distinto' | 'sin_dato'
+      /** Matrícula del proyecto contra la de la póliza, con los mismos tres estados. */
+      vehiculo: 'coincide' | 'distinto' | 'sin_dato'
+      bloqueos: string[]
+      ofertas: OfertaImportable[]
+      /** Precios del proyecto que no se pueden emitir desde aquí (sin confirmar en Avant2, caducados…). */
+      otras: number
+    }
+
+export type RespuestaImportar = RespuestaOferta | (Extract<RespuestaOferta, { estado: 'ok' }> & { compania: string; categoria: string })
+
+const TIMEOUT_IMPORTAR_MS = 20_000
+const SIN_PUERTO = 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).'
+
+function leerOfertaImportable(v: unknown): OfertaImportable | null {
+  const o = (typeof v === 'object' && v !== null ? v : {}) as Record<string, unknown>
+  if (typeof o.quoteId !== 'string') return null
+  const n = (x: unknown) => (typeof x === 'number' && Number.isFinite(x) ? x : null)
+  return {
+    quoteId: o.quoteId,
+    compania: cadenaONulo(o.compania),
+    producto: cadenaONulo(o.producto),
+    modalidad: cadenaONulo(o.modalidad),
+    categoria: cadenaONulo(o.categoria),
+    primaEur: n(o.primaEur),
+    primerReciboEur: n(o.primerReciboEur),
+    pago: cadenaONulo(o.pago),
+    efecto: cadenaONulo(o.efecto),
+    caduca: cadenaONulo(o.caduca),
+  }
+}
+
+export function interpretarVistaImportacion(status: number, json: unknown): VistaImportacion {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 401 || status === 403) return { estado: 'error', mensaje: MOTIVOS_PUERTO.secreto_rechazado }
+  if (status === 503 && r.causa === 'apagado') {
+    return { estado: 'sin_configurar', mensaje: cadenaONulo(r.mensaje) ?? 'La emisión está apagada en asegura.' }
+  }
+  if (status !== 200 || r.estado !== 'ok' || typeof r.projectId !== 'string') {
+    return { estado: 'error', mensaje: cadenaONulo(r.mensaje) ?? cadenaONulo(r.error) ?? `error ${status}` }
+  }
+  const tres = (v: unknown) => (v === 'coincide' || v === 'distinto' ? v : 'sin_dato')
+  return {
+    estado: 'ok',
+    projectId: r.projectId,
+    tomador: tres(r.tomador),
+    vehiculo: tres(r.vehiculo),
+    bloqueos: Array.isArray(r.bloqueos) ? r.bloqueos.filter((b): b is string => typeof b === 'string') : [],
+    ofertas: Array.isArray(r.ofertas) ? r.ofertas.flatMap((o) => leerOfertaImportable(o) ?? []) : [],
+    otras: typeof r.otras === 'number' ? r.otras : 0,
+  }
+}
+
+export async function vistaImportacionAsegura(projectId: string, polizaId: string): Promise<VistaImportacion> {
+  const qs = new URLSearchParams({ projectId, polizaId }).toString()
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/importar?${qs}`, { method: 'GET' }, TIMEOUT_IMPORTAR_MS)
+    if (r === null) return { estado: 'sin_configurar', mensaje: SIN_PUERTO }
+    return interpretarVistaImportacion(r.status, r.json)
+  } catch (e) {
+    return { estado: 'error', mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})` }
+  }
+}
+
+export function interpretarImportacion(status: number, json: unknown): RespuestaImportar {
+  const base = interpretarOferta(status, json)
+  if (base.estado !== 'ok') {
+    // Un 4xx del import es una regla de negocio (tomador distinto, precio caducado, ya
+    // enlazado…): su `mensaje` viaja tal cual, sin la coletilla de «mira los logs».
+    const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+    const mensaje = cadenaONulo(r.mensaje)
+    if (base.estado === 'error' && status >= 400 && status < 500 && status !== 401 && status !== 403 && mensaje) {
+      return { estado: 'error', motivo: 'asegura_error', mensaje }
+    }
+    return base
+  }
+  const r = json as Record<string, unknown>
+  const compania = cadenaONulo(r.compania)
+  const categoria = cadenaONulo(r.categoria)
+  if (!compania || !categoria) {
+    return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible }
+  }
+  return { ...base, compania, categoria }
+}
+
+export async function importarProyectoAsegura(p: { projectId: string; polizaId: string; quoteId: string }): Promise<RespuestaImportar> {
+  try {
+    const r = await pedir(
+      '/api/operador/codeoscopic/importar',
+      { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ...p, confirmado: true }) },
+      TIMEOUT_IMPORTAR_MS,
+    )
+    if (r === null) return { estado: 'sin_configurar', mensaje: SIN_PUERTO }
+    return interpretarImportacion(r.status, r.json)
+  } catch (e) {
+    return { estado: 'error', motivo: 'red', mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})` }
   }
 }

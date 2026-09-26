@@ -1,7 +1,7 @@
 // lib/sivra/agente-huesped/contexto.ts — ensambla el contexto de una reserva.
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { smoobuFetch } from '@/lib/smoobu'
+import { smoobuFetch, smoobuMensajesReserva } from '@/lib/smoobu'
 import { getGuiaPiso } from './guia'
 import { htmlATexto, seccionesVigentes, seccionesATexto } from './guest-app'
 import { dedupHilo } from './hilo'
@@ -79,8 +79,8 @@ export async function construirContexto(bookingId: string, lang: string): Promis
 
   const propertyId = toPropertyId(apartmentId, apartmentName)
 
-  const msgRaw: any[] = await smoobuFetch(`/api/reservations/${bookingId}/messages`, { cache: 'no-store' })
-    .then(r => r.json()).then(d => (Array.isArray(d?.messages) ? d.messages : Array.isArray(d) ? d : [])).catch(() => [])
+  // TODAS las páginas: con >25 mensajes, la 1ª sola deja fuera justo los nuevos (26/09/2026).
+  const msgRaw: any[] = (await smoobuMensajesReserva(bookingId).catch(() => null)) ?? []
   // El texto PLANO de Smoobu (`message`) se come los enlaces: los automáticos traen anclas cuyo texto
   // visible es "AQUÍ"/"HERE" y la URL solo está en `htmlMessage`. Leer el plano es lo que hizo que el
   // agente le escribiera el marcador literal "[lien d'accès]" a un huésped (20/08/2026) teniendo el

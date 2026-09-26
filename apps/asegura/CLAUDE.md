@@ -1030,6 +1030,11 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
     vio fallar sin el cambio) para aceptar las TRES formas que de verdad llegan a estos dos sitios —
     el array crudo del Submit, el proyecto entero con `policyApplications[]`, y la solicitud suelta del
     Retrieve individual — con el mismo espíritu que `solicitudesEmision()` ya resolvía para el estado.
+- **📥 `GET/POST /api/operador/codeoscopic/importar` (26/09/2026) — traer un proyecto hecho A MANO en la web
+  de Avant2 para emitirlo desde la intranet** (fila 13). No hace ReRate: solo enlaza un precio que ya trae
+  `SubmitPolicyApplication` y sigue en plazo, y deja `codeoscopic_projects` listo para `/emitir`. El tomador
+  se comprueba por `dni_lookup_hash` (sin dato → bloquea, no «coincide»). Regla pura en
+  `lib/codeoscopic/importar.ts`, probada contra la forma real del proyecto 40842815.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo

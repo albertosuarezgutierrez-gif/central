@@ -239,7 +239,7 @@ export async function reRate(
         ...(fechaEfecto ? { effectiveDate: fechaEfecto } : {}),
       },
     },
-    timeoutMs: config.timeoutGenericoMs,
+    timeoutMs: config.timeoutCotizacionMs, // ⏱️ fila 5: el ReRate re-tarifica con la compañía, tarda como cotizar
   })
   return leerOferta(crudo)
 }
