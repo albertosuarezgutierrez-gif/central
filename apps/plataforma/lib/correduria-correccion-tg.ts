@@ -41,8 +41,11 @@ export function prepararCorreccion(args: Record<string, unknown>): Correccion {
   for (const c of CAMPOS_CORRECCION) {
     const bruto = args[c]
     if (bruto === undefined || bruto === null) continue
-    // Los modelos mandan a menudo el código postal como número: se acepta, no es un campo vacío.
-    const v = typeof bruto === 'number' && Number.isFinite(bruto) ? String(bruto) : bruto
+    // Los modelos mandan a menudo el código postal como número: se acepta, no es un campo vacío. Como
+    // número, 08001 llega como 8001: el cero de delante se repone (solo en el CP, que siempre son 5 cifras).
+    const v = typeof bruto === 'number' && Number.isFinite(bruto)
+      ? (c === 'codigoPostal' ? String(bruto).padStart(5, '0') : String(bruto))
+      : bruto
     if (typeof v !== 'string') return { ok: false, motivo: `${ETIQUETA[c]}: formato no válido` }
     if (v.trim() === '') return { ok: false, motivo: `${ETIQUETA[c]}: vacío. Por chat no se borra ningún dato; eso se hace en la ficha` }
     if (IDENTIDAD.has(c)) (edicion.identidad ??= {})[c as 'nombre' | 'apellidos'] = v

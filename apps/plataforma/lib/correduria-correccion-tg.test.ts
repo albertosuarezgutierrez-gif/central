@@ -108,6 +108,9 @@ test('un código postal que llega como número se acepta; otro tipo es formato n
   const r = prepararCorreccion({ codigoPostal: 41003 })
   assert.ok(r.ok)
   assert.deepEqual(r.cambios, [{ campo: 'codigoPostal', valor: '41003' }])
+  // 08001 como número llega como 8001: el cero de delante vuelve.
+  const bcn = prepararCorreccion({ codigoPostal: 8001 })
+  assert.deepEqual(bcn.ok ? bcn.cambios : null, [{ campo: 'codigoPostal', valor: '08001' }])
   const m = prepararCorreccion({ ciudad: ['Sevilla'] })
   assert.match(!m.ok ? m.motivo : '', /formato no válido/)
 })
