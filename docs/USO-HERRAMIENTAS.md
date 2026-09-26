@@ -167,18 +167,18 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 150 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 153 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 145 | 19.511 | 13.105.429 | 0 | 0 |
-| `otro` | 141 | 4.921 | 16.471.878 | 8.059.321 | 0 |
-| `mcp:github` | 130 | 4.041 | 3.597.767 | 42.521.646 | 67 |
-| `lectura-directa` | 133 | 3.874 | 8.094.112 | 0 | 0 |
+| `bash` | 148 | 19.584 | 13.163.140 | 0 | 0 |
+| `otro` | 144 | 4.949 | 16.589.707 | 8.077.001 | 0 |
+| `mcp:github` | 133 | 4.058 | 3.612.782 | 42.521.646 | 67 |
+| `lectura-directa` | 136 | 3.879 | 8.160.052 | 0 | 0 |
 | `escritura` | 111 | 2.472 | 39.862.982 | 0 | 0 |
-| `sql` | 96 | 2.043 | 931.324 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 78 | 918 | 215.481 | 3.171.734 | 10 |
-| `mcp:Vercel` | 32 | 394 | 623.592 | 198.719 | 7 |
+| `sql` | 96 | 2.050 | 934.320 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 81 | 928 | 216.330 | 3.171.734 | 10 |
+| `mcp:Vercel` | 32 | 396 | 627.240 | 198.719 | 7 |
 | `mcp:Booking-com` | 13 | 369 | 1.534.696 | 0 | 0 |
 | `mcp:Gmail` | 18 | 265 | 417.825 | 0 | 2 |
 | `mcp:Supabase` | 58 | 184 | 19.551 | 0 | 1 |

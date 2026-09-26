@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-26T18:42:05Z",
-  "sha": "371dc19ddadfa0e9785511994e9a5b6d67f5e5d6",
+  "generadoEn": "2026-09-26T19:59:00Z",
+  "sha": "b6d25048cbb955006ff1dad515a41824b3b19cb8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4798,7 +4798,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0aca54399661"
+      "hash": "ff97f37e1304"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/TusDatos.tsx",
@@ -4863,6 +4863,27 @@
       "hash": "9bc0a198c160"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/CargandoEnlace.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CargandoEnlace"
+      ],
+      "funciones": [
+        {
+          "nombre": "CargandoEnlace",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 19,
+          "resumen": "Va DENTRO de cada `<Link>` del menú y enseña el «AS» mientras esa navegación está pendiente. Hace falta además de `loading.tsx` porque las pestañas Recibos/Siniestros son `/boveda?vista=…`: misma ruta"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d0f8b65d6a53"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/layout.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -4884,6 +4905,27 @@
       "hash": "5d3345941a4f"
     },
     {
+      "ruta": "apps/asegura-portal/app/(portal)/loading.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "Cargando"
+      ],
+      "funciones": [
+        {
+          "nombre": "Cargando",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 4,
+          "resumen": "Mientras el servidor pinta la pantalla nueva: la navegación (layout) se queda y el contenido muestra el «AS»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "8b4befcec2f0"
+    },
+    {
       "ruta": "apps/asegura-portal/app/(portal)/NavPortal.tsx",
       "ambito": "apps/asegura-portal",
       "exporta": [
@@ -4896,7 +4938,7 @@
           "exportada": true,
           "params": "{ llamar, whatsapp }: { llamar?: { tel: string; numero: string } /** El enlace `wa.me` ya compuesto en el servidor (ver `llamar`: aquí no se importa `MEDIADOR`). */ whatsapp?: string }",
           "retorno": null,
-          "linea": 50,
+          "linea": 51,
           "resumen": "La navegación del portal: **un solo `<nav>` con dos formas**. 🚨 El mismo DOM se pinta como cajón (drawer) en el móvil y como lateral vertical en el escritorio; lo decide `globals.css` (`.portal-nav`)"
         },
         {
@@ -4905,7 +4947,7 @@
           "exportada": false,
           "params": "{ children }: { children: ReactNode }",
           "retorno": null,
-          "linea": 266,
+          "linea": 272,
           "resumen": "── Iconos de la barra inferior ───────────────────────────────────────────── SVG en línea y no una librería: el portal no carga ninguna de iconos y una dependencia nueva por cinco dibujos no compensa."
         },
         {
@@ -4914,7 +4956,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 274
+          "linea": 280
         },
         {
           "nombre": "IconoRecibos",
@@ -4922,7 +4964,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 275
+          "linea": 281
         },
         {
           "nombre": "IconoSiniestros",
@@ -4930,7 +4972,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 276
+          "linea": 282
         },
         {
           "nombre": "IconoMas",
@@ -4938,12 +4980,12 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 277
+          "linea": 283
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "12583917adb1"
+      "hash": "24a92fd72bf5"
     },
     {
       "ruta": "apps/asegura-portal/app/ActivarPush.tsx",
@@ -6292,6 +6334,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "7489dc2c4e1b"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/CargaAsegura.tsx",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "CargaAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "CargaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ flotante = false }: { flotante?: boolean }",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "Indicador de carga con el monograma «AS» (26/09/2026, Alberto: «al pasar de una pantalla tarda… ¿se puede usar el logo de AS como indicador de carga?»). Un solo dibujo para los dos caminos por los que"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c4e0d57289b4"
     },
     {
       "ruta": "apps/asegura-portal/app/corredor/[token]/route.ts",
@@ -13030,7 +13093,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/polizas-pdf",
-      "hash": "657a3d559a0b"
+      "hash": "ef755771ff8f"
     },
     {
       "ruta": "apps/asegura/app/api/cron/revision-anual/route.ts",
@@ -15183,6 +15246,20 @@
       "tablas": [],
       "rutaApi": "/api/operador/poliza",
       "hash": "8e1956b6cba0"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/poliza/traer-pdf/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "clientes",
+        "codeoscopic_projects",
+        "next",
+        "polizas"
+      ],
+      "rutaApi": "/api/operador/poliza/traer-pdf",
+      "hash": "7e5537a12314"
     },
     {
       "ruta": "apps/asegura/app/api/operador/portal/invitaciones/route.ts",
@@ -19841,6 +19918,54 @@
       "hash": "aee1c5f0295c"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/buscar-proyectos.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Busca en Codeoscopic los proyectos de un tomador por su DNI (26/09/2026). Para traer el PDF de una póliza emitida en Avant2 cuando nadie sabe el nº de proyecto (Alberto: «¿no puede buscar por matrícula, DNI del tomador o algo?»). `GET /insurances?holderIdentification=` es gratis; la de matrícula (`G",
+      "exporta": [
+        "normalizarDni",
+        "idsDeBusqueda",
+        "proyectosDelTomador"
+      ],
+      "funciones": [
+        {
+          "nombre": "normalizarDni",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": null,
+          "linea": 9
+        },
+        {
+          "nombre": "iso",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: Date",
+          "retorno": null,
+          "linea": 11
+        },
+        {
+          "nombre": "idsDeBusqueda",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "string[] | null",
+          "linea": 17,
+          "resumen": "Ids de proyecto de una respuesta de búsqueda. `null` = forma desconocida (NO «no hay ninguno»): la doc no fija el sobre, así que se aceptan array suelto o `{ items | results | data | content }`."
+        },
+        {
+          "nombre": "proyectosDelTomador",
+          "kind": "function",
+          "exportada": true,
+          "params": "config: ConfigCodeoscopic, dni: string, hoy = new Date()",
+          "retorno": "Promise<string[]>",
+          "linea": 32
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "6c6e61578bf5"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/carnet-moto.ts",
       "ambito": "apps/asegura",
       "resumen": "¿El carné del conductor cubre la moto elegida? Cruce PURO, sin red. ─── Por qué existe ────────────────────────────────────────────────────────── Codeoscopic tarifica una moto de 600 cc con un carné A1 sin rechistar: el `risk` no lleva cilindrada (va implícita en `vehicle.code`) y nada del contrato ",
@@ -23689,21 +23814,31 @@
       "ambito": "apps/asegura",
       "resumen": "Trae de Codeoscopic el PDF de una póliza YA emitida y lo archiva en `seguros.documentos` (26/09/2026). Mismo camino que el endpoint de diagnóstico (`/api/operador/codeoscopic/documentos`): proyecto → solicitud aprobada → Retrieve individual → `archivarDocumentoEmitido`. Todo son `GET`: gratis. Lo us",
       "exporta": [
+        "normalizarNumeroPoliza",
         "traerPdfEmitido"
       ],
       "funciones": [
         {
+          "nombre": "normalizarNumeroPoliza",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "Solo cifras y letras, en mayúsculas: «302 26-00334066» y «30226000334066» son la misma."
+        },
+        {
           "nombre": "traerPdfEmitido",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, projectId: string, polizaId: string",
+          "params": "correduriaId: string, projectId: string, polizaId: string, /** Si viene, la solicitud aprobada tiene que traer ESE número: el PDF va a la vista del cliente. */ opciones: { numeroPolizaEsperado?: string | null } = {},",
           "retorno": "Promise<PdfTraido>",
-          "linea": 17
+          "linea": 22
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "24f9bcf94821"
+      "hash": "9a91f8e1abfe"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/valores-ficha.ts",
@@ -26289,6 +26424,7 @@
       "exporta": [
         "pdfArchivado",
         "pdfDePoliza",
+        "archivarPdfsPendientes",
         "enviarPolizasPendientes"
       ],
       "funciones": [
@@ -26311,22 +26447,32 @@
           "resumen": "Lo archivado; si no hay, lo intenta traer de Codeoscopic UNA vez (gratis). `null` = la compañía aún no lo da."
         },
         {
+          "nombre": "archivarPdfsPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, limite = 10",
+          "retorno": "Promise<",
+          "linea": 47,
+          "resumen": "Pólizas emitidas por Codeoscopic (proyecto enlazado y `emitida`) cuyo PDF aún no está archivado: se trae y se archiva (visible en el portal). NO escribe a nadie — eso es `enviarPolizasPendientes`, y s"
+        },
+        {
           "nombre": "enviarPolizasPendientes",
           "kind": "function",
           "exportada": true,
           "params": "correduriaId: string, ahora = Date.now()",
           "retorno": "Promise<ResumenPolizasPdf |",
-          "linea": 59,
+          "linea": 90,
           "resumen": "Pólizas emitidas por Codeoscopic en los últimos 14 días cuyo cliente YA recibió el correo de la emisión DE ESA PÓLIZA sin la póliza: se intenta traer el PDF y, si llega, se le manda. Todo va POR PÓLIZ"
         }
       ],
       "tablas": [
         "codeoscopic_projects",
         "correo_envio",
+        "documentos",
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "6f5571a1716e"
+      "hash": "f96f9c8d69b2"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-aceptacion.ts",
@@ -74787,7 +74933,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "dffc6e0207ed"
+      "hash": "c18d6e927e29"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Duplicadas.tsx",
@@ -77473,8 +77619,26 @@
           "exportada": false,
           "params": "{ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo, onDeclarar, onSinVinculo }: { p: PersonaFicha<RelacionCartera> nombreFicha: string ocupado: string | null renderPapeles?: (p: PersonaFicha<Rela",
           "retorno": null,
-          "linea": 418,
-          "resumen": "UNA persona, con sus dos caras: lo que dice CIMA (en qué pólizas sale y como qué) y lo que hemos anotado nosotros (qué es de la ficha, si está autorizada). Antes eran dos tarjetas separadas y la misma"
+          "linea": 455,
+          "resumen": "UNA persona, con sus dos caras: lo que dice CIMA (en qué pólizas sale y como qué) y lo que hemos anotado nosotros (qué es de la ficha, si está autorizada). 🚨 Juntarlas NO es fundirlas: la procedencia"
+        },
+        {
+          "nombre": "ResumenAcceso",
+          "kind": "function",
+          "exportada": false,
+          "params": "{ r, nombreFicha }: { r: RelacionCartera; nombreFicha: string }",
+          "retorno": null,
+          "linea": 610,
+          "resumen": "Quién ve qué, en una línea. Sale de los MISMOS helpers puros que el detalle (`insigniaAcceso` / `explicarSentidoAcceso`, este en el `title`), para que el resumen no pueda decir otra cosa que lo desple"
+        },
+        {
+          "nombre": "chip",
+          "kind": "function",
+          "exportada": false,
+          "params": "tono: Tono",
+          "retorno": "React.CSSProperties",
+          "linea": 629,
+          "resumen": "Una insignia que SÍ parte línea: con nombres largos, `Badge` (nowrap) se sale a 320 px."
         },
         {
           "nombre": "Vinculo",
@@ -77482,7 +77646,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha, ocupado, onAutorizar, onAvisar, aviso, onQuitar, onCambiarTipo }: { r: RelacionCartera nombreFicha: string ocupado: string | null onAvisar: (r: RelacionCartera, invertido: boolean) => void aviso: { clave: string; texto: st",
           "retorno": null,
-          "linea": 533,
+          "linea": 653,
           "resumen": "Lo que hemos anotado NOSOTROS sobre esa persona: qué es de la ficha y si está autorizada a ver sus seguros. Ya no pinta el nombre ni su propio `<li>`: vive dentro de la fila de la persona, debajo de l"
         },
         {
@@ -77491,7 +77655,7 @@
           "exportada": false,
           "params": "{ otorga, recibe, ve, a, enCurso, avisando, aviso, onAutorizar, onAvisar, formulario, pie }: { /** Quién cede SUS seguros. */ otorga: string /** Quién los ve (o los vería). */ recibe: string /** ¿Los ve HOY? Lo dice el puerto, y manda sobre",
           "retorno": null,
-          "linea": 686,
+          "linea": 795,
           "resumen": "UN sentido del acceso: quién ve los seguros de quién, con su insignia, su frase y sus botones — nunca los del otro sentido. 🚨 La insignia y la frase salen de `insigniaAcceso` / `explicarSentidoAcceso"
         },
         {
@@ -77500,7 +77664,7 @@
           "exportada": false,
           "params": "{ r, enCurso, onCambiarTipo }: { r: RelacionCartera enCurso: boolean onCambiarTipo: (r: RelacionCartera, tipo: string) => void }",
           "retorno": null,
-          "linea": 820,
+          "linea": 923,
           "resumen": "«Cambiar el tipo» de un vínculo que ya existe. Va PLEGADO y en tono sutil a propósito: corregir una etiqueta es raro comparado con autorizar o quitar, y un desplegable abierto en cada vínculo conviert"
         },
         {
@@ -77509,7 +77673,7 @@
           "exportada": false,
           "params": "{ r, nombreFicha, enCurso, onAutorizar, esSociedad }: { r: RelacionCartera nombreFicha: string enCurso: boolean onAutorizar: ( r: RelacionCartera, autoriza: boolean, extra?: { alcance: AlcancePortal; tituloRepresentacion: TituloRepresentaci",
           "retorno": null,
-          "linea": 882,
+          "linea": 983,
           "resumen": "El alta de una autorización, con el ALCANCE siempre elegido a mano. 🚨 Hasta el 20/09/2026 esto solo existía para SOCIEDADES: entre dos personas físicas el botón simple mandaba `autorizar()` sin `alca"
         },
         {
@@ -77518,7 +77682,7 @@
           "exportada": false,
           "params": "{ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: { clienteId: string nombreFicha: string yaRelacionados: string[] ocupado: boolean onCrear: (body: Record<string, unknown>) => Promise<Respuesta",
           "retorno": null,
-          "linea": 967
+          "linea": 1068
         },
         {
           "nombre": "AltaPersona",
@@ -77526,7 +77690,7 @@
           "exportada": false,
           "params": "{ nombreFicha, tipoPersona, ocupado, terminoInicial, onAlta, onCrear, onCancelar, onBuscar }: { nombreFicha: string tipoPersona: 'fisica' | 'juridica' | null ocupado: boolean /** Lo que se tecleó en el buscador, para no escribir el nombre d",
           "retorno": null,
-          "linea": 1179,
+          "linea": 1280,
           "resumen": "Crear la ficha de la persona que lleva los seguros de esta otra (el administrador de una sociedad, típicamente) y vincularla, sin salir de aquí. Por qué una ficha propia y no un campo «persona de cont"
         },
         {
@@ -77535,7 +77699,7 @@
           "exportada": false,
           "params": "{ r }: { r: Exclude<RespuestaRelaciones, { estado: 'ok' }> }",
           "retorno": null,
-          "linea": 1406
+          "linea": 1507
         },
         {
           "nombre": "Campo",
@@ -77543,7 +77707,7 @@
           "exportada": false,
           "params": "{ label, ayuda, children }: { label: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 1423
+          "linea": 1524
         }
       ],
       "tablas": [
@@ -77551,7 +77715,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "2be5bd7064b6"
+      "hash": "b2c4ee88c9fb"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/renovacion-sin-recibir.ts",
@@ -87059,6 +87223,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/poliza",
       "hash": "5ff94752ea9f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/poliza/traer-pdf/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "POST /api/correduria/poliza/traer-pdf { polizaId, projectId? } — pide a asegura que traiga de Codeoscopic el PDF de una póliza ya emitida (gratis) y lo archive visible para el cliente. Asegura comprue"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/poliza/traer-pdf",
+      "hash": "be4f1483439c"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/portal-invitaciones/route.ts",
@@ -105178,6 +105363,7 @@
         "interpretarDocumentos",
         "documentosAsegura",
         "subirDocumentoAsegura",
+        "traerPdfCodeoscopicAsegura",
         "pedirDocumentoAsegura",
         "revisarDocumentoAsegura",
         "borrarDocumentoAsegura",
@@ -105268,12 +105454,21 @@
           "resumen": "Reenvía el formulario (fichero + destino + tipo + notas) tal cual a asegura."
         },
         {
+          "nombre": "traerPdfCodeoscopicAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizaId: string, projectId: string | null",
+          "retorno": "Promise<",
+          "linea": 120,
+          "resumen": "Trae de Codeoscopic el PDF de una póliza ya emitida y lo archiva (visible al cliente). Gratis."
+        },
+        {
           "nombre": "pedirDocumentoAsegura",
           "kind": "function",
           "exportada": true,
           "params": "d: Destino & { tipo: TipoDocumento; notas?: string | null },",
           "retorno": "Promise<",
-          "linea": 119
+          "linea": 132
         },
         {
           "nombre": "revisarDocumentoAsegura",
@@ -105281,7 +105476,7 @@
           "exportada": true,
           "params": "id: string, por: string",
           "retorno": "Promise<",
-          "linea": 133
+          "linea": 146
         },
         {
           "nombre": "borrarDocumentoAsegura",
@@ -105289,7 +105484,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<",
-          "linea": 145
+          "linea": 158
         },
         {
           "nombre": "descargarDocumentoAsegura",
@@ -105297,7 +105492,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Response | null>",
-          "linea": 157,
+          "linea": 170,
           "resumen": "El fichero, en streaming, tal cual lo sirve asegura. `null` si no hay secreto."
         },
         {
@@ -105306,13 +105501,13 @@
           "exportada": true,
           "params": "f: { contenido: Buffer; mimeType: string; nombre: string },",
           "retorno": "Promise<",
-          "linea": 172,
+          "linea": 185,
           "resumen": "Lee un documento (póliza, recibo, foto) por el puerto `leer-documento` de asegura, para rellenar una oportunidad. No escribe ni guarda nada. 110 s: leer un PDF y esperar al modelo pasa de los 60 de un"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2cd9362aa05f"
+      "hash": "82f108438a0a"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso-programador.ts",
@@ -159191,7 +159386,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3795,
-    "funciones": 12195
+    "archivos": 3801,
+    "funciones": 12208
   }
 }
