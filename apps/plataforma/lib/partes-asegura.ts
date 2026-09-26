@@ -100,6 +100,8 @@ export type ParteSiniestro = {
    */
   hayHeridos: boolean | null
   hayTerceros: boolean | null
+  /** Tipo que marcó el cliente, ya en texto («Agua o fuga»). `null` = no marcó nada o no llegó. */
+  tipoSiniestro: string | null
   estado: ParteEstado
   /** 🚨 La ÚNICA fuente de «la compañía ya lo sabe». Ver la cabecera. */
   comunicado: boolean
@@ -191,6 +193,7 @@ export function leerParte(v: unknown): ParteSiniestro | null {
     lugar: cadena(p.lugar),
     hayHeridos: triestado(p.hayHeridos),
     hayTerceros: triestado(p.hayTerceros),
+    tipoSiniestro: cadena(p.tipoSiniestroTexto),
     estado: estado as ParteEstado,
     // Conservador a propósito: si el campo no llega, NO se afirma que la
     // compañía lo sepa. El error caro es el contrario — decir «comunicado» de

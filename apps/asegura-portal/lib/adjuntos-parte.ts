@@ -169,7 +169,17 @@ async function parteDeIdentidad(identidadId: string, parteId: string): Promise<{
 export async function guardarAdjunto(
   identidadId: string,
   parteId: string,
-  entrada: { nombre: string; mime: string; contenido: Buffer },
+  entrada: {
+    nombre: string
+    mime: string
+    contenido: Buffer
+    /**
+     * El cliente lo subió desde el hueco «Foto del parte amistoso». Se guarda
+     * como `parte_siniestro` aunque sea una foto: es el papel que más acelera
+     * la tramitación y no puede perderse entre las fotos del golpe.
+     */
+    parteAmistoso?: boolean
+  },
 ): Promise<GuardadoAdjunto> {
   // 1. Pertenencia ANTES que nada: los ids viajan en la URL y no los firma nadie.
   const parte = await parteDeIdentidad(identidadId, parteId)
@@ -208,7 +218,8 @@ export async function guardarAdjunto(
         // Sin `poliza_id` ni `siniestro_id`: ver la cabecera. El parte es el
         // único sitio del que cuelga, y con él viaja de quién es.
         portalParteId: parteId,
-        tipo: tipoAdjuntoParte(mime),
+        tipo: entrada.parteAmistoso ? 'parte_siniestro' : tipoAdjuntoParte(mime),
+        ...(entrada.parteAmistoso ? { notas: 'Parte amistoso (declaración amistosa de accidente)' } : {}),
         // `recibido` = está el fichero. `pedido` es la fila sin fichero que abre
         // el corredor cuando pide un papel, y no es este caso.
         estado: 'recibido',

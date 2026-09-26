@@ -154,3 +154,51 @@ test('🚨 con una poliza elegida las demas companias se PLIEGAN, no desaparecen
   assert.match(PARTE, /Ver las otras \$\{numOtras\} compañías/, 'el botón dice cuántas hay detrás')
   assert.match(PARTE, /const numOtras = canales\.length - 1/, 'el recuento sale de la lista ENTERA')
 })
+
+test('🚨 desde Siniestros, el SEGURO se elige PRIMERO y «No sé cuál» es una salida del paso 1', () => {
+  // La póliza decide qué se pregunta después (vehículo, compañía destacada),
+  // así que va delante de «Qué ha pasado». Pero no puede bloquear: quien no
+  // sabe cuál le cubre tiene que poder seguir sin inventársela.
+  const paso1 = PARTE.indexOf("paso === 'poliza' && (")
+  const desc = PARTE.indexOf('Qué ha pasado</label>')
+  assert.ok(paso1 !== -1 && desc !== -1, 'no se encuentra el paso 1 o el campo «Qué ha pasado»')
+  assert.ok(paso1 < desc, 'el paso de elegir seguro va antes que «Qué ha pasado»')
+  const bloque = PARTE.slice(paso1, PARTE.indexOf("paso === 'datos' && (", paso1))
+  assert.match(bloque, /onClick=\{\(\) => elegirPoliza\(''\)\}/, '«No sé cuál» avanza con la póliza vacía')
+  assert.match(bloque, /No sé cuál/, 'la salida «No sé cuál» se ve en el paso 1')
+  // Desde la ficha (polizaInicial válida) el paso 1 se salta.
+  assert.match(PARTE, /polizaValida !== null \|\| polizas\.length === 0 \? 'datos' : 'poliza'/)
+})
+
+test('🚨 la asistencia urgente va ARRIBA del formulario, antes de «Qué ha pasado», y solo con líneas de asistencia', () => {
+  const ayuda = PARTE.indexOf('<AyudaUrgente poliza={polizaSeleccionada}')
+  const desc = PARTE.indexOf('Qué ha pasado</label>')
+  assert.ok(ayuda !== -1 && ayuda < desc, 'la ayuda urgente se pinta antes de la descripción')
+  assert.match(PARTE, /v\.tipo === 'telefono' && v\.uso === 'asistencia'/, 'solo líneas de asistencia, no la de dar parte')
+})
+
+test('🚨 el parte amistoso viaja MARCADO y se guarda como parte_siniestro', () => {
+  assert.match(PARTE, /if \(elegido\.parteAmistoso\) body\.append\('tipo', 'parte_amistoso'\)/)
+  const ruta = sinComentarios('apps/asegura-portal/app/api/siniestros/[id]/adjuntos/route.ts')
+  assert.match(ruta, /parteAmistoso: form\.get\('tipo'\) === 'parte_amistoso'/)
+  const lib = sinComentarios('apps/asegura-portal/lib/adjuntos-parte.ts')
+  assert.match(lib, /tipo: entrada\.parteAmistoso \? 'parte_siniestro' : tipoAdjuntoParte\(mime\)/)
+})
+
+test('🚨 el borrador es POR identidad y se borra al enviar y al cancelar', () => {
+  assert.match(PARTE, /borrador\.claveBorrador\(identidadId\)/)
+  assert.match(BOVEDA, /identidadId=\{identidad\.id\}/)
+  const borrados = PARTE.split('borrador.borrar(claveBorr)').length - 1
+  assert.ok(borrados >= 3, `se borra al enviar, al cancelar y al descartar (hay ${borrados})`)
+})
+
+test('🚨 el tipo de siniestro viaja de punta a punta y `null` no se pinta como «otro»', () => {
+  assert.match(PARTE, /tipoSiniestro: form\.tipoSiniestro \|\| null/, 'el portal manda null si no se marcó')
+  const crear = sinComentarios('apps/asegura-portal/lib/partes-siniestro.ts')
+  assert.match(crear, /tipoSiniestro: valor\.tipoSiniestro/, 'se guarda al crear el parte')
+  const puerto = sinComentarios('apps/asegura/lib/partes-portal.ts')
+  assert.match(puerto, /tipoSiniestro: true/, 'el corredor lo lee')
+  assert.match(puerto, /tipoSiniestroTexto: esTipoSiniestro\(p\.tipoSiniestro\)/, 'y lo sirve con su etiqueta')
+  const plat = sinComentarios('apps/plataforma/app/(usuario)/correduria/PartesPortal.tsx')
+  assert.match(plat, /p\.tipoSiniestro !== null && <Badge/, 'la bandeja solo lo pinta si existe')
+})

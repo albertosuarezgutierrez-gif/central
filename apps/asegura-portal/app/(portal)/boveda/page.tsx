@@ -728,6 +728,7 @@ export default async function Boveda({
             corredor={{ tel: MEDIADOR.identidad.telefono, numero: telefonoLegible() }}
             partes={partesEnviados}
             polizaInicial={polizaEnLista}
+            identidadId={identidad.id}
           />
           <VistaPorPoliza
             bloques={bloques}

@@ -714,6 +714,16 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Portal del cliente · parte de siniestro rehecho (PR #3672)
+- Paso 1 = elegir el seguro en tarjetas (antes `<select>` al final); desde la ficha (`?poliza=`) se salta.
+  La tarjeta «No sé cuál / puede que varias» NO bloquea (decisión: obligar fabrica pólizas al azar).
+- Con póliza elegida: bloque «¿Necesitas ayuda ahora mismo?» con las líneas de ASISTENCIA de su compañía.
+- Auto con terceros: hueco del parte amistoso → `documentos.tipo='parte_siniestro'` + nota.
+- Borrador en `localStorage` por identidad, 72 h, sin ficheros (`lib/parte-borrador.ts`).
+- Aviso de campana `parte_actualizado` (7 días tras abrir/descartar), sin migración (`parte-aviso.ts`).
+- Tipo de siniestro por ramo (botones opcionales; `null` ≠ «otro»): columna `seguros.portal_parte_siniestro.tipo_siniestro`
+  APLICADA en prod el 26/09 (CHECK = `TIPOS_SINIESTRO`); el corredor la ve como badge en `/correduria`.
+
 ## (26/09/2026) Correduría: corregir la ficha desde el asistente de Telegram (fase 3b)
 - `proponer_correccion`: dirección/CP/ciudad/provincia (libres) y nombre/apellidos (solo con DNI recibido en la ficha).
   El servidor valida con `revisarEdicion`, enseña antes → después + DNI enmascarado · ciudad, y Alberto aplica con

@@ -113,7 +113,8 @@ test('el camino de la compañía NO está detrás del botón de abrir el formula
   // descubrir a quién llama.
   const src = readFileSync(`${RAIZ}${PANTALLA}`, 'utf8')
   const canal = src.indexOf('<CanalesCompania')
-  const form = src.indexOf('{abierto && (')
+  // Primer bloque condicionado a `abierto`: hoy el paso 1 (elegir seguro), luego el formulario.
+  const form = src.indexOf('{abierto && ')
   assert.ok(canal > 0, 'No se pinta `<CanalesCompania>` en la pantalla.')
   assert.ok(
     canal < form,

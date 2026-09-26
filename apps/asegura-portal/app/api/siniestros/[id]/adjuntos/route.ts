@@ -69,6 +69,8 @@ export async function POST(req: Request, ctx: Ctx) {
     nombre: fichero.name,
     mime: fichero.type,
     contenido,
+    // Solo una marca de CLASIFICACIÓN: no cambia qué fichero se admite ni de quién es.
+    parteAmistoso: form.get('tipo') === 'parte_amistoso',
   })
 
   // El motivo viaja tal cual: es texto para leer en pantalla, al lado del

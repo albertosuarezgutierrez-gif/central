@@ -207,6 +207,8 @@ function nombreFuente(f: Avisos['fuentesIlegibles'][number]): string {
       return 'las felicitaciones'
     case 'polizas_nuevas':
       return 'tus pólizas nuevas'
+    case 'partes':
+      return 'tus partes de siniestro'
   }
 }
 

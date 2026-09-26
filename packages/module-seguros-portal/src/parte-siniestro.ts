@@ -73,6 +73,7 @@ export const CAMPO_VEHICULO_MAX = 60
 export const ANIOS_MAXIMOS_ATRAS = 5
 
 import { DIAS_COMUNICACION_LCS, plazoComunicacion as plazoBase } from '@central/module-seguros'
+import { esTipoSiniestro, type TipoSiniestro } from './tipo-siniestro.ts'
 
 
 export type ParteEntrada = {
@@ -89,6 +90,8 @@ export type ParteEntrada = {
   /** Tri-estado a propósito: ver `normalizarTriestado`. */
   hayHeridos?: unknown
   hayTerceros?: unknown
+  /** Opcional (`tipo-siniestro.ts`). Un valor fuera de la lista se descarta a `null`, no rechaza el parte. */
+  tipoSiniestro?: unknown
 }
 
 export type ParteNormalizado = {
@@ -100,6 +103,8 @@ export type ParteNormalizado = {
   polizaDeclaradaId: string | null
   hayHeridos: boolean | null
   hayTerceros: boolean | null
+  /** `null` = no lo ha marcado. No es «otro». */
+  tipoSiniestro: TipoSiniestro | null
 }
 
 export type ResultadoParte =
@@ -349,6 +354,9 @@ export function normalizarParte(entrada: ParteEntrada, hoy: Date = new Date()): 
       polizaDeclaradaId,
       hayHeridos: normalizarTriestado(entrada.hayHeridos),
       hayTerceros: normalizarTriestado(entrada.hayTerceros),
+      // Clasificación, no dato del siniestro: si llega algo raro se pierde la
+      // etiqueta, no el parte.
+      tipoSiniestro: esTipoSiniestro(entrada.tipoSiniestro) ? entrada.tipoSiniestro : null,
     },
   }
 }

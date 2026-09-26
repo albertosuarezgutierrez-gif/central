@@ -162,6 +162,7 @@ export async function crearParte(identidadId: string, valor: ParteNormalizado): 
       lugar: valor.lugar,
       hayHeridos: valor.hayHeridos,
       hayTerceros: valor.hayTerceros,
+      tipoSiniestro: valor.tipoSiniestro,
       // `enviado` es el default de la BD y se deja explícito: nace SIN estar
       // comunicado a la compañía, y ningún camino del portal lo asciende.
       estado: 'enviado',
