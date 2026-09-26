@@ -196,7 +196,7 @@ input, select, textarea, button { font: inherit; }
  * moderna»: sin ella son dos columnas pegadas.
  *
  * 🚨 Un SOLO `<nav>` (`app/(portal)/NavPortal.tsx`) con dos formas. En el móvil
- * es un cajón (drawer) que se abre con el ☰; a partir de 1024 px se endereza y
+ * es un cajón (drawer) que se abre con «Más» de la barra inferior; a partir de 1024 px se endereza y
  * pasa a ser el lateral, siempre a la vista. Dos componentes distintos para la
  * misma navegación es cómo se llega a que una sección exista en una pantalla y
  * no en la otra sin que nada falle.
@@ -237,44 +237,6 @@ input, select, textarea, button { font: inherit; }
   max-width: 1120px;
 }
 
-/* ── El ☰: portado a la barra de MARCA, no una franja propia debajo ─────────
- * Hasta el 19/09/2026 esto era `.portal-nav-barra`, una segunda franja de
- * ~53px pegada bajo la de marca (56px): dos barras de cabecera por el precio
- * de una. Alberto, mirando su propio móvil: «no se podría unificar la parte
- * de arriba? Hay mucho espacio libre». El botón vive ahora DENTRO de
- * `.marca-barra` (portado con `createPortal` desde `NavPortal.tsx` a un
- * `<span id="portal-menu-slot">` que `app/layout.tsx` deja vacío), con el
- * mismo lenguaje visual que el resto de acciones de esa barra (`.tema-boton`,
- * `.campana-boton`): 44×44, icono solo. La etiqueta «en qué sección estás»
- * que antes iba al lado ya no tiene sitio — vive en el `aria-label`, no
- * pintada, porque cada pantalla del portal ya lo dice con su propio `<h1>`. */
-.marca-menu-slot {
-  display: contents;
-}
-.marca-menu-boton {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* 44px: el mínimo táctil de la regla de la casa. Esta pantalla la abre gente
-   * de 50-70 años desde el móvil, y este botón es la ÚNICA puerta a las siete
-   * secciones: si falla el toque, la navegación entera falla. */
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  font-size: 18px;
-  line-height: 1;
-  color: var(--muted);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 0.8);
-  cursor: pointer;
-  transition: background-color 150ms, color 150ms, border-color 150ms;
-}
-.marca-menu-boton:hover {
-  background: var(--surface-hover, var(--panel2));
-  color: var(--text);
-}
 /* El fondo oscuro del cajón. z-index por encima de la cabecera de marca (20) y
  * del botón flotante de WhatsApp (35), y por debajo del propio cajón (50). */
 .portal-nav-fondo {
@@ -351,10 +313,10 @@ input, select, textarea, button { font: inherit; }
 .portal-nav-cerrar:hover {
   color: var(--text);
 }
-/* El hueco del `Suspense`, mientras `NavPortal` (y con él el ☰ portado)
- * todavía no se ha montado. 19/09/2026: a 0 en las dos anchuras — antes
- * reservaba los 53px de `.portal-nav-barra`, que ya no existe; el ☰ vive
- * ahora en `.marca-barra`, cuya altura no depende de este hueco. Sigue sin
+/* El hueco del `Suspense`, mientras `NavPortal` todavía no se ha montado.
+ * 19/09/2026: a 0 en las dos anchuras — antes reservaba los 53px de
+ * `.portal-nav-barra`, que ya no existe; y desde el 26/09/2026 tampoco hay ☰
+ * en la cabecera (la puerta al cajón es «Más», abajo). Sigue sin
  * llevar la clase `.portal-nav`: esa es un cajón fijo que no ocupa sitio. */
 .portal-nav-hueco {
   min-height: 0;
@@ -424,14 +386,10 @@ input, select, textarea, button { font: inherit; }
      * dos alturas: la marca abajo, el papel encima. */
     background: color-mix(in oklab, var(--brand) 7%, var(--bg2));
   }
-  /* 🚨 El ☰ (ahora en `.marca-barra`), el fondo oscuro y la cabecera del
-   * cajón NO existen aquí: el lateral está siempre a la vista, y un botón
-   * para abrir lo que ya se ve es una puerta de más. `.portal-nav-fondo` y
-   * `.portal-nav-cabecera` además dejan de ser hijos del grid con
-   * `display:none`, que es lo que evita que descoloquen las dos columnas
-   * (ver `.banda-corredor`) — `.marca-menu-boton` no vive en ese grid, así
-   * que a él le basta con no pintarse. */
-  .marca-menu-boton,
+  /* 🚨 El fondo oscuro y la cabecera del cajón NO existen aquí: el lateral
+   * está siempre a la vista. `.portal-nav-fondo` y `.portal-nav-cabecera`
+   * además dejan de ser hijos del grid con `display:none`, que es lo que
+   * evita que descoloquen las dos columnas (ver `.banda-corredor`). */
   .portal-nav-fondo,
   .portal-nav-cabecera {
     display: none;
@@ -594,19 +552,41 @@ input, select, textarea, button { font: inherit; }
  * huecos bajan a 6 px. Un botón menos no es opción: Salir tiene que verse,
  * instalar es lo que pidió Alberto, y el tema y los avisos ya son solo icono.
  *
- * Y en el MÓVIL (≤ 639 px) el NOMBRE no se pinta (12/09/2026; Alberto, con la
- * captura: «Grupo ASegura quitarlo, ocupa mucho»). Se queda el monograma, que
- * lleva el `aria-label` de la marca, así que quién es la correduría se sigue
- * diciendo — a un lector de pantalla y, a dos líneas, en Fraunces, en el
- * escritorio, donde el sitio sobra. Hasta hoy solo se escondía por debajo de
- * 340 px: en un móvil normal el wordmark a dos líneas era lo más alto de la
- * barra y la única pieza que no hacía nada. */
+ * Y en el MÓVIL (≤ 639 px): del 12/09 al 26/09/2026 se escondía el nombre y
+ * quedaba el monograma; desde el 26/09 es al revés (ver abajo). */
 @media (max-width: 380px) {
   .marca-barra,
   .marca-acciones { gap: 6px; }
 }
+/* 26/09/2026 (Alberto: «arriba en vez de AS pon Grupo ASegura»): en el móvil se
+ * INVIERTE lo del 12/09 — va el logotipo y se va el monograma. Lo que entonces
+ * «ocupaba mucho» era el nombre en texto a dos líneas y con el ☰ al lado; hoy es
+ * el logotipo fino de UNA línea y el ☰ ya no está (la puerta al menú es «Más»,
+ * abajo). A ≤380 px se encoge para que quepa con los cinco botones de la derecha. */
 @media (max-width: 639px) {
-  .marca-nombre { display: none; }
+  .marca-escudo { display: none; }
+}
+@media (max-width: 380px) {
+  .marca-palabra { height: 14px; }
+}
+/* «Salir» se muda al cajón («Más») en el móvil: con el logotipo en la cabecera no
+ * cabían los cinco botones (medido: la barra se salía ~55 px a 320-390). En
+ * escritorio vuelve a la cabecera y el del cajón se oculta. */
+@media (max-width: 1023px) {
+  .marca-acciones .salir-form { display: none; }
+}
+.portal-nav-salir { display: flex; }
+.portal-nav-salir .portal-nav-item {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--negative, var(--text));
+}
+@media (min-width: 1024px) {
+  .portal-nav-salir { display: none; }
 }
 .salir-form {
   flex: 0 0 auto;
@@ -3659,6 +3639,91 @@ h1 em {
  * elemento de aquí es `position: fixed` — un `fixed` no desborda, se pone
  * encima, y lo que taparía es justo la salida. */
 
+/* ── 📱 Barra inferior del móvil (26/09/2026, a lo Smoobu) ─────────────────
+ * `NavPortal.tsx` → `.portal-tabbar`. Fija abajo, icono sobre rótulo, 5 huecos
+ * iguales (3 secciones + WhatsApp + «Más», que abre el cajón). z-index 30: por encima del
+ * contenido, por debajo del fondo (40) y del cajón (50), que la cubren al abrirse.
+ * El `body` reserva su alto para que no tape la última fila ni el pie legal. Desde
+ * 1024 px no existe: el lateral ya enseña todas las secciones. */
+.portal-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 16px -8px rgb(0 0 0 / 0.14);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.portal-tabbar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 60px;
+  padding: 8px 2px 6px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.portal-tabbar-wsp .portal-tabbar-icono {
+  color: #25d366;
+}
+.portal-tabbar-item[data-activa] {
+  color: var(--primary);
+  font-weight: 700;
+}
+.portal-tabbar-item[data-activa] .portal-tabbar-icono {
+  stroke-width: 2.3;
+}
+.portal-tabbar-icono {
+  width: 24px;
+  height: 24px;
+}
+.portal-tabbar-rotulo {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1023px) {
+  /* En el `body` y no en `.portal-contenido`: el pie legal va DESPUÉS del contenido (layout
+   * raíz) y era él el que quedaba debajo de la barra. `:has` para no reservar el hueco en las
+   * páginas públicas, que no tienen barra. */
+  body:has(.portal-tabbar) {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+  /* La pestaña «WhatsApp» de la barra sustituye al botón flotante: dos en la misma pantalla
+   * es uno de más. Fuera del portal (páginas públicas) y en escritorio el flotante sigue. */
+  body:has(.portal-tabbar) .wsp-flotante {
+    display: none;
+  }
+}
+@media (min-width: 1024px) {
+  .portal-tabbar {
+    display: none;
+  }
+}
+/* A 320-360 px cada hueco mide ~64 px y «Siniestros»/«Mensajes» se cortaban (medido). */
+@media (max-width: 360px) {
+  .portal-tabbar-item {
+    font-size: 10.5px;
+    letter-spacing: -0.01em;
+    padding-inline: 1px;
+  }
+}
+
 /* La carátula pública del enlace, sin armazón de portal detrás. */
 .caratula {
   max-width: 420px;
@@ -3865,3 +3930,4 @@ h1 em {
   font-weight: 700;
   white-space: nowrap;
 }
+

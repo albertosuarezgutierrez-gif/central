@@ -2,10 +2,11 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect, useId, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 
 import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
+
+import { WHATSAPP_PATH } from '../whatsapp-icono'
 
 /**
  * La navegación del portal: **un solo `<nav>` con dos formas**.
@@ -34,29 +35,23 @@ import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
  * cuando no hay JS: sin él, un fallo de script dejaría a esta persona sin
  * ninguna forma de cambiar de sección.
  *
- * 🔀 **El botón ☰ vive en la barra de MARCA, no en una segunda franja debajo
- * (19/09/2026).** Alberto, mirando su propio móvil: «no se podría unificar la
- * parte de arriba? Hay mucho espacio libre» — dos barras de 56/53px apiladas
- * (marca + «☰ Menú · Seguros») por debajo de la cual empezaba el contenido de
- * verdad. La marca vive en el layout RAÍZ (`app/layout.tsx`, fuera de sesión)
- * y este componente en el del portal (dentro de sesión), así que el botón no
- * puede ser sencillamente el mismo JSX en el mismo sitio: se porta con
- * `createPortal` a un `<span id="portal-menu-slot">` que el layout raíz deja
- * vacío. `mounted` existe porque `document.getElementById` no existe en el
- * servidor: sin él, la primera pasada de SSR reventaría.
- *
- * 📌 **Y la etiqueta «en qué sección estás» se queda solo en el `aria-label`,
- * no visible.** Con el botón metido en la barra de marca ya no hay sitio para
- * un texto al lado, y cada pantalla del portal ya lo dice con su propio
- * `<h1>` — pintar «Seguros» otra vez sería el mismo eco que ya se quitó del
- * par pestaña/h1 el 12/09/2026.
+ * 📱 **Y desde el 26/09/2026 ya no hay ☰: la puerta al cajón es «Más», en la
+ * barra inferior** (a lo Smoobu; Alberto: «quita el ☰ de arriba también»).
+ * El ☰ vivía en la barra de marca, portado con `createPortal` a un hueco del
+ * layout raíz; con la barra inferior eran dos botones para el mismo menú.
+ * La sección activa, que el ☰ decía en su `aria-label`, la dice ahora la
+ * pestaña activa de la barra (`aria-current`) y el `<h1>` de cada pantalla.
  *
  * Siguen siendo ENLACES, no botones con estado ni un `tablist`: la sección vive
  * en la URL (ver `vista-portal.ts` del módulo). Por eso la activa se deriva aquí
  * de la ruta y del parámetro, y no baja como prop desde cada página — así el
  * `layout` puede pintar la navegación una sola vez para todas.
  */
-export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string } }) {
+export function NavPortal({ llamar, whatsapp }: {
+  llamar?: { tel: string; numero: string }
+  /** El enlace `wa.me` ya compuesto en el servidor (ver `llamar`: aquí no se importa `MEDIADOR`). */
+  whatsapp?: string
+}) {
   const ruta = usePathname()
   const params = useSearchParams()
   // `/autorizaciones` es otra RUTA, no un panel de la bóveda; por eso la ruta
@@ -82,7 +77,7 @@ export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string }
   const idNav = useId()
   const botonRef = useRef<HTMLButtonElement>(null)
   const cerrarRef = useRef<HTMLButtonElement>(null)
-  // Para devolver el foco al ☰ SOLO cuando el cajón estaba abierto: sin esta
+  // Para devolver el foco a «Más» SOLO cuando el cajón estaba abierto: sin esta
   // marca, el primer render robaría el foco al cargar la página.
   const estuvoAbierto = useRef(false)
 
@@ -98,7 +93,7 @@ export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string }
     return () => document.removeEventListener('keydown', alPulsar)
   }, [abierto])
 
-  // El foco entra al cajón al abrirlo y vuelve al ☰ al cerrarlo. Sin esto, quien
+  // El foco entra al cajón al abrirlo y vuelve a «Más» al cerrarlo. Sin esto, quien
   // navega con teclado abre el menú y sigue tabulando por la página de detrás.
   useEffect(() => {
     if (abierto) {
@@ -110,46 +105,8 @@ export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string }
     }
   }, [abierto])
 
-  const etiquetaActiva = pestanas.find((p) => esActivaDe(p))?.etiqueta ?? null
-
-  // El slot vive en el layout RAÍZ (`app/layout.tsx`), fuera del árbol de este
-  // componente. `document.getElementById` no existe en el servidor, así que
-  // sin `mounted` la primera pasada (SSR + primer render de cliente) tiraría.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  const slot = mounted ? document.getElementById('portal-menu-slot') : null
-
-  const boton = (
-    <button
-      ref={botonRef}
-      type="button"
-      className="marca-menu-boton"
-      // La sección activa ya no se pinta al lado (no hay sitio en la barra de
-      // marca): viaja en el `aria-label` para que un lector de pantalla la
-      // siga diciendo.
-      aria-label={
-        abierto
-          ? 'Cerrar el menú de secciones'
-          : etiquetaActiva !== null
-            ? `Abrir el menú de secciones — estás en ${etiquetaActiva}`
-            : 'Abrir el menú de secciones'
-      }
-      aria-expanded={abierto}
-      aria-controls={idNav}
-      onClick={() => setAbiertoEn(abierto ? null : clave)}
-    >
-      <span aria-hidden="true">☰</span>
-    </button>
-  )
-
   return (
     <>
-      {/* 19/09/2026: el ☰ ya no abre su propia franja debajo de la marca — se
-          porta a la barra de marca del layout raíz, que es la misma franja
-          para las dos cosas. En escritorio el botón se sigue portando igual,
-          es indiferente: lleva su propio `display:none` a partir de 1024px. */}
-      {slot && createPortal(boton, slot)}
-
       {/* El fondo oscuro cierra al tocar fuera. `aria-hidden` porque no aporta
           nada a un lector de pantalla: la salida accesible es el botón de
           cerrar y la tecla Escape. */}
@@ -205,10 +162,74 @@ export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string }
             <span className="portal-nav-llamar-numero">{llamar.numero}</span>
           </a>
         )}
+        {/* «Salir» en el cajón, SOLO en el móvil (26/09/2026). En la cabecera ya no cabía con el
+            logotipo «Grupo ASegura» en lugar del monograma: a 320-390 px la barra se salía ~55 px
+            (medido). Es el sitio de las apps (Smoobu lo tiene en «Menú»). En escritorio sigue en la
+            cabecera y este se oculta (globals.css). Mismo POST que `SalirDelPortal`: un GET cerraría
+            la sesión con la precarga de enlaces. Aquí siempre hay sesión: es el layout `(portal)`. */}
+        <form className="portal-nav-salir" action="/api/salir" method="post">
+          <button type="submit" className="portal-nav-item">Salir</button>
+        </form>
       </nav>
 
-      {/* 🚨 Sin JavaScript no hay `createPortal` ni ☰ que abrir (el botón ni
-          siquiera se renderiza: `mounted` se queda en `false`), así que la
+      {/* 📱 Barra inferior (26/09/2026, a lo Smoobu; Alberto: «me gustó el diseño de Smoobu para
+          la app de cliente»). Lo que el asegurado viene a hacer, a un toque del pulgar; el resto
+          sigue en el cajón, que abre «Más» (la ÚNICA puerta al cajón en el móvil desde que se
+          quitó el ☰ de arriba, 26/09/2026). Solo por debajo de 1024 px: en escritorio el lateral
+          ya enseña todas. Son ENLACES, como el cajón,
+          así que funcionan sin JavaScript; solo «Más» lo necesita. */}
+      <nav className="portal-tabbar" aria-label="Accesos rápidos">
+        {TABBAR.map(({ href, Icono }) => {
+          const p = pestanas.find((x) => x.href === href)
+          if (!p) return null
+          const esActiva = !abierto && esActivaDe(p)
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="portal-tabbar-item"
+              aria-current={esActiva ? 'page' : undefined}
+              data-activa={esActiva ? 'si' : undefined}
+            >
+              <Icono />
+              <span className="portal-tabbar-rotulo">{p.etiqueta}</span>
+            </Link>
+          )
+        })}
+        {/* WhatsApp en vez de «Mensajes» (Alberto, 26/09/2026: «es más directo»). «Mensajes»
+            no desaparece: sigue en el cajón. En el móvil sustituye al botón flotante, que se
+            oculta mientras esta barra existe (ver globals.css): dos botones de WhatsApp en la
+            misma pantalla es uno de más. */}
+        {whatsapp && (
+          <a
+            className="portal-tabbar-item portal-tabbar-wsp"
+            href={whatsapp}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <svg className="portal-tabbar-icono" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d={WHATSAPP_PATH} />
+            </svg>
+            <span className="portal-tabbar-rotulo">WhatsApp</span>
+          </a>
+        )}
+        <button
+          ref={botonRef}
+          type="button"
+          className="portal-tabbar-item"
+          aria-label="Más secciones"
+          aria-expanded={abierto}
+          aria-controls={idNav}
+          data-activa={abierto ? 'si' : undefined}
+          onClick={() => setAbiertoEn(abierto ? null : clave)}
+        >
+          <IconoMas />
+          <span className="portal-tabbar-rotulo">Más</span>
+        </button>
+      </nav>
+
+      {/* 🚨 Sin JavaScript «Más» no abre nada (el cajón se abre con un
+          `onClick`), así que la
           navegación vuelve a ser el carril horizontal que era hasta el
           19/09/2026: se ve peor con siete pestañas, pero se ve. Un cajón que
           no se puede abrir es una pantalla sin salida. */}
@@ -237,3 +258,32 @@ export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string }
     </>
   )
 }
+
+// ── Iconos de la barra inferior ─────────────────────────────────────────────
+// SVG en línea y no una librería: el portal no carga ninguna de iconos y una
+// dependencia nueva por cinco dibujos no compensa. `currentColor` para que
+// hereden el color del enlace (activo/inactivo), igual que el texto.
+function Svg({ children }: { children: ReactNode }) {
+  return (
+    <svg className="portal-tabbar-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  )
+}
+const IconoSeguros = () => <Svg><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m9 12 2 2 4-4" /></Svg>
+const IconoRecibos = () => <Svg><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" /><path d="M9 8h6M9 12h6M9 16h3" /></Svg>
+const IconoSiniestros = () => <Svg><path d="M12 4 2.8 20h18.4L12 4Z" /><path d="M12 10v4.5M12 17.5v.01" /></Svg>
+const IconoMas = () => <Svg><circle cx="6" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18" cy="12" r="1.2" /></Svg>
+
+/**
+ * Las tres secciones de la barra inferior (la cuarta es WhatsApp), por `href` contra `pestanasPortal()` — la
+ * etiqueta y la ruta salen de ahí, no se teclean dos veces: renombrar una
+ * sección en el módulo la renombra también aquí, y una que desaparezca del
+ * módulo desaparece de la barra en vez de quedar como enlace roto.
+ */
+const TABBAR = [
+  { href: '/boveda', Icono: IconoSeguros },
+  { href: '/boveda?vista=recibos', Icono: IconoRecibos },
+  { href: '/boveda?vista=siniestro', Icono: IconoSiniestros },
+] as const

@@ -707,6 +707,21 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Portal del cliente (asegura-portal) · barra inferior a lo Smoobu
+- Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero
+  en plataforma y en /correduria y se deshizo (el PR #3659 queda sin cambios en plataforma).
+- Móvil (<1024 px): barra fija abajo Seguros · Recibos · Siniestros · WhatsApp + «Más» (abre el cajón). WhatsApp
+  en vez de «Mensajes» por decisión de Alberto («es más directo»; luego se retiró entero, ver abajo); el botón flotante
+  de WhatsApp se oculta mientras está la barra. El ☰ de la cabecera se QUITÓ (Alberto): «Más» es la única puerta al
+  cajón en el móvil (sin `createPortal` ni `#portal-menu-slot`; cepo que impide que vuelva). Etiquetas desde `pestanasPortal()`; iconos SVG en línea (sin lucide).
+- `body:has(.portal-tabbar)` reserva 60px (tapaba el pie legal) y sube el botón de WhatsApp. El bloque CSS va
+  ANTES de `.caratula {`: el cepo del presupuesto prohíbe `fixed` desde ahí hasta el final del fichero.
+- Cabecera móvil: logotipo «Grupo ASegura» en vez del monograma «AS» (invierte lo del 12/09); para que quepa, «Salir»
+  pasa al cajón «Más» en el móvil (en escritorio sigue arriba).
+- «Mensajes con tu corredor» RETIRADO en las 4 capas (portal, asegura, plataforma, módulo): el cliente escribe por WhatsApp.
+  0 mensajes en BD; la tabla `seguros.portal_mensaje` SE QUEDA (la usa la función SQL de fusionar clientes).
+- Medido con Playwright a 320/390/1280; cepos en `regression-portal-cartera-agrupada` vistos en rojo. PR #3659.
+
 ## (26/09/2026) Skills/agentes: frontmatter YAML válido + agente `verificador-esceptico`
 Revisado `addyosmani/agent-skills` (estándar agentskills.io) contra lo nuestro. Hallazgo: 9 skills y
 los 3 agentes tenían `description` como escalar plano con «: » → YAML inválido (Claude Code lo tolera;

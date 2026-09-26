@@ -33,14 +33,9 @@ presupuestos salen de `presupuestosPendientesDeIdentidad()` (`lib/presupuesto.ts
 🚨 Una fuente ilegible va a `sinComprobar` y se dice; nunca se pinta «nada pendiente». Firmar o confirmar
 en el bloque de abajo quita la fila sin recargar (evento `portal:pendiente-resuelto`).
 
-## 💬 Mensajes con tu corredor (24/09/2026)
+## «Mensajes con tu corredor» — RETIRADA el 26/09/2026
 
-Pestaña «Mensajes» (`/mensajes`): el cliente escribe por tema (una póliza suya o «General») y lee lo que le contesta
-Alberto. Tabla `seguros.portal_mensaje` (`prisma/sql/2026-09-24_portal_mensaje.sql`, aplicada), reglas puras en
-`module-seguros-portal/src/mensaje.ts`, BD en `lib/mensajes.ts`. 🚨 La ficha sale de `portal_vinculo` (`decidirFichaPropia`),
-nunca de la petición; la póliza la vigila además la FK compuesta. **La vista de corredor ni escribe (403) ni marca leído.**
-Tope 20 mensajes/24 h por identidad; cada uno avisa a Alberto por Telegram (best-effort: el registro es la tabla). Alberto
-contesta desde plataforma → ficha → «Mensajes» (puerto `/api/operador/mensajes` de asegura). Cepo `test/regression-portal-mensajes.test.ts`.
+La funcionalidad se retiró el 26/09/2026 — el cliente escribe por WhatsApp desde la barra inferior; la tabla `seguros.portal_mensaje` queda vacía en BD porque la referencia la función de fusionar clientes.
 
 ## 🔔 Avisos por Web Push (12/09/2026) — canal nuevo, sin pasar por el email
 

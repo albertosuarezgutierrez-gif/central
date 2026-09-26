@@ -715,8 +715,7 @@ function SiniestroExplicado({ estado, fechaHora }: { estado: string; fechaHora: 
   const x = explicarSiniestro(estado, fechaHora)
   return (
     <p className="siniestro-explica">
-      <strong>{x.situacion}</strong> {x.queHacer}{' '}
-      <a href="/mensajes">Escribir a tu corredor</a>
+      <strong>{x.situacion}</strong> {x.queHacer}
     </p>
   )
 }

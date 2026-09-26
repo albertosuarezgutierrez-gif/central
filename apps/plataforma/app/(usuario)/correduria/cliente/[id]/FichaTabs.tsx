@@ -21,7 +21,6 @@ const ACCESOS: Record<TabFicha, { icono: string; titulo: string }> = {
   pendiente: { icono: '🔔', titulo: 'Pendiente' },
   polizas: { icono: '📋', titulo: 'Todas las pólizas' },
   contactos: { icono: '👥', titulo: 'Contactos' },
-  mensajes: { icono: '💬', titulo: 'Mensajes' },
   documentos: { icono: '📎', titulo: 'Documentos' },
   correos: { icono: '✉️', titulo: 'Correos' },
   notas: { icono: '📝', titulo: 'Notas' },

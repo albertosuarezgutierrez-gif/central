@@ -126,22 +126,15 @@ test('🚨 la cabecera del titular es PEGAJOSA', () => {
 })
 
 test('🚨 el menu del movil es un CAJON, y su boton se puede tocar', () => {
-  // 19/09/2026: el carril horizontal se retiró al llegar a SIETE secciones. Lo
-  // que hay que vigilar ahora es otra cosa: que el ☰ exista con los 44 px
-  // táctiles de la casa (es la ÚNICA puerta a las secciones en el móvil) y que
-  // el cajón cerrado no deje sus enlaces enfocables fuera de pantalla.
-  //
-  // Y el mismo día, más tarde: el botón se PORTA a `.marca-barra` (Alberto:
-  // «no se podría unificar la parte de arriba? Hay mucho espacio libre») —
-  // `.portal-nav-boton` con su franja propia desapareció, la clase ahora es
-  // `.marca-menu-boton` y sus 44px son `width`/`height`, no `min-*` (es un
-  // icono cuadrado fijo entre los demás botones de la cabecera, no una
-  // etiqueta de ancho variable).
-  const i = CSS.indexOf('.marca-menu-boton {')
-  assert.notEqual(i, -1, 'falta el botón que abre el menú en el móvil')
-  const boton = CSS.slice(i, CSS.indexOf('}', i))
-  assert.match(boton, /width:\s*44px/, 'el ☰ es el mínimo táctil de la casa, no un icono suelto')
-  assert.match(boton, /height:\s*44px/, 'el ☰ es el mínimo táctil también de alto')
+  // 19/09/2026: el carril horizontal se retiró al llegar a SIETE secciones; el cajón se abría
+  // con un ☰ en la barra de marca. 26/09/2026 (Alberto: «quita el ☰ de arriba también»): la
+  // puerta al cajón es ahora «Más», en la barra inferior, y es la ÚNICA en el móvil. Lo que se
+  // vigila es que exista, que abra ESTE cajón y que tenga el mínimo táctil (el alto de 60 px lo
+  // cubre el test de la barra inferior). Y que el ☰ no vuelva por la puerta de atrás: dos
+  // puertas al mismo menú es justo lo que se quitó.
+  assert.match(NAV, /aria-label="Más secciones"/, 'falta «Más», la única puerta al cajón en el móvil')
+  assert.match(NAV, /aria-controls=\{idNav\}/, '«Más» tiene que controlar el cajón de secciones')
+  assert.doesNotMatch(NAV, /marca-menu-boton|createPortal/, 'el ☰ de la cabecera se quitó el 26/09/2026')
 
   const j = CSS.indexOf('.portal-nav {')
   assert.notEqual(j, -1, 'la navegación tiene que seguir existiendo')
@@ -350,3 +343,47 @@ test('🚨 el color de marca decora en SUAVE; el saturado se reserva al estado',
 // 09/09/2026 junto con su único usuario, `boveda/Calendario.tsx`: no aportaba
 // nada que la fila de cada póliza no dijera ya. Con la sección fuera, la
 // regla «UNA franja, no varias» dejó de tener nada que vigilar.
+
+test('🚨 la barra inferior del movil no tapa nada y se va en escritorio', () => {
+  // 26/09/2026 (a lo Smoobu): una barra `fixed` NO desborda, se pone ENCIMA. Lo que la hace
+  // inocua es que el `body` reserve su alto (si no, tapa la última fila y el pie legal) y que
+  // desaparezca donde ya está el lateral. Y sus secciones salen de `pestanasPortal()`, no de
+  // etiquetas tecleadas aquí: una sección renombrada no puede quedar como enlace roto.
+  const i = CSS.indexOf('.portal-tabbar {')
+  assert.notEqual(i, -1, 'falta la barra inferior del móvil')
+  assert.match(CSS.slice(i, CSS.indexOf('}', i)), /position:\s*fixed/)
+  assert.match(
+    CSS,
+    /body:has\(\.portal-tabbar\)\s*\{[^}]*padding-bottom:\s*calc\(60px/,
+    'sin reservar su alto, la barra tapa la última fila y el pie legal',
+  )
+  assert.match(
+    CSS,
+    /@media \(min-width: 1024px\)\s*\{\s*\.portal-tabbar\s*\{\s*display:\s*none/,
+    'en escritorio el lateral ya enseña todas las secciones: la barra sobra',
+  )
+  const item = CSS.indexOf('.portal-tabbar-item {')
+  assert.match(CSS.slice(item, CSS.indexOf('}', item)), /min-height:\s*60px/, 'mínimo táctil')
+  assert.match(NAV, /pestanas\.find\(\(x\) => x\.href === href\)/, 'las etiquetas salen del módulo')
+
+  // WhatsApp va EN la barra (Alberto: «es más directo») y el flotante se oculta mientras ella
+  // existe: dos botones de WhatsApp en la misma pantalla, y el flotante encima de la barra.
+  assert.match(NAV, /portal-tabbar-wsp/, 'falta la pestaña de WhatsApp en la barra')
+  assert.match(
+    CSS,
+    /body:has\(\.portal-tabbar\)\s*\.wsp-flotante\s*\{\s*display:\s*none/,
+    'con la barra, el botón flotante de WhatsApp sobra',
+  )
+})
+
+test('🚨 en el movil la cabecera lleva el LOGOTIPO y «Salir» vive en el cajon', () => {
+  // 26/09/2026 (Alberto: «arriba en vez de AS pon Grupo ASegura»). Con el logotipo no cabían
+  // los cinco botones de la derecha (medido: ~55 px fuera a 320-390), así que «Salir» se muda
+  // al cajón en el móvil. Si alguien devuelve el monograma, o esconde el Salir de la cabecera
+  // sin darle otro sitio, en el móvil NO queda forma de cerrar la sesión y nada falla.
+  assert.match(CSS, /@media \(max-width: 639px\)\s*\{\s*\.marca-escudo\s*\{\s*display:\s*none/, 'en el móvil va el logotipo, no el monograma')
+  assert.match(CSS, /\.marca-acciones \.salir-form\s*\{\s*display:\s*none/, 'el Salir de la cabecera se oculta en el móvil')
+  const form = NAV.match(/<form className="portal-nav-salir"[^>]*>/)?.[0] ?? ''
+  assert.match(form, /action="\/api\/salir"/, 'el cajón necesita su propio Salir, o en el móvil no se puede salir')
+  assert.match(form, /method="post"/, 'Salir es POST: un GET cerraría la sesión con la precarga')
+})

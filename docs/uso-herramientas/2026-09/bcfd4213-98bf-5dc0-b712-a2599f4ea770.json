@@ -1,0 +1,126 @@
+{
+ "sesion": "bcfd4213-98bf-5dc0-b712-a2599f4ea770",
+ "inicio": "2026-09-26T11:06:48.308Z",
+ "fin": "2026-09-26T12:20:37.847Z",
+ "llamadas": 239,
+ "categorias": {
+  "bash": {
+   "llamadas": 150,
+   "chars_in": 88809,
+   "chars_out": 350496,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 150
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 32,
+   "chars_in": 2772,
+   "chars_out": 813276,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 25,
+    "Grep": 7
+   }
+  },
+  "otro": {
+   "llamadas": 30,
+   "chars_in": 9807,
+   "chars_out": 433401,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 7494,
+   "tools": {
+    "ToolSearch": 5,
+    "SendUserFile": 4,
+    "ReadNotifications": 19,
+    "SubagentHandback": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 13,
+   "chars_in": 13678,
+   "chars_out": 32977,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__pull_request_read": 6,
+    "mcp__github__update_pull_request": 5,
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 4,
+   "chars_in": 846,
+   "chars_out": 563,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 3
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1392,
+   "chars_out": 1612,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 11111,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 1,
+   "chars_in": 154,
+   "chars_out": 566,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 1
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 4651,
+   "chars_out": 4873,
+   "errores": 0,
+   "archivos_citados": 16,
+   "chars_citados": 1136226,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 6,
+   "chars_in": 8249,
+   "chars_out": 346208,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 6
+   }
+  }
+ }
+}
