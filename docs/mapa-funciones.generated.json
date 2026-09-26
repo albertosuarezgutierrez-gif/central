@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-26T08:04:39Z",
-  "sha": "1a172824a5b31dc79907cf6330d6997c901b1ecc",
+  "generadoEn": "2026-09-26T08:43:20Z",
+  "sha": "5adaed9e9245b2c65286a67a32bfd7743dd0e985",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4944,7 +4944,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 112,
+          "linea": 113,
           "resumen": "Qué novedades de la compañía (llegan por CIMA) avisa la notificación. Solo se pinta con el push activo: sin él no hay nada que elegir. Si no se pueden leer se DICE — unas casillas pintadas por defecto"
         },
         {
@@ -4953,13 +4953,13 @@
           "exportada": false,
           "params": "base64: string",
           "retorno": "Uint8Array<ArrayBuffer>",
-          "linea": 156,
+          "linea": 157,
           "resumen": "VAPID exige la clave pública como `Uint8Array`, y el navegador la da en base64url."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fc6bf57e2595"
+      "hash": "647284f5e9f6"
     },
     {
       "ruta": "apps/asegura-portal/app/api/acceso/solicitar/route.ts",
@@ -5244,7 +5244,7 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 38,
+          "linea": 39,
           "resumen": "GET /api/cron/avisos-cima — push de lo que ha traído CIMA: recibo nuevo al cobro, recibo devuelto y movimientos de un siniestro. Corre después de la segunda ingesta del día. 🔒 Los permisos NO se reca"
         },
         {
@@ -5253,7 +5253,7 @@
           "exportada": false,
           "params": "t: TitularPortal",
           "retorno": "boolean",
-          "linea": 160,
+          "linea": 164,
           "resumen": "Solo «Acceso total»: con «Solo ver» el tercero mira, no gestiona, y el aviso le serviría el dato."
         },
         {
@@ -5262,14 +5262,14 @@
           "exportada": false,
           "params": "titulares: TitularPortal[], ajena: boolean",
           "retorno": "PolizaParaAviso[]",
-          "linea": 164
+          "linea": 168
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": "/api/cron/avisos-cima",
-      "hash": "2786f44db08d"
+      "hash": "86e71d3c43e2"
     },
     {
       "ruta": "apps/asegura-portal/app/api/cron/avisos-push/route.ts",
@@ -77171,7 +77171,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2d02d2a1bc94"
+      "hash": "3411f27d0632"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Retencion.tsx",
@@ -90584,7 +90584,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 47
+          "linea": 49
         },
         {
           "nombre": "buscarPrevistos",
@@ -90592,7 +90592,7 @@
           "exportada": false,
           "params": "desde: string, hasta: string, yaResumen: string, descartadosResumen: string,",
           "retorno": "Promise<",
-          "linea": 185,
+          "linea": 194,
           "resumen": "nunca lanza (es una mejora, no puede tumbar el descubrimiento normal)."
         }
       ],
@@ -90602,7 +90602,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "885690b5e479"
+      "hash": "93b67e926793"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -93005,7 +93005,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "6796022461b2"
+      "hash": "be39e04f198a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -93290,7 +93290,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "403d34db55f2"
+      "hash": "1d7c86acf7b7"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -117189,6 +117189,8 @@
         "clasificarTipo",
         "esPartidoLigaRegular",
         "esPartidoFueraDeSevilla",
+        "nombreConfiesaDuda",
+        "estadoInicialWebsearch",
         "impactoEvento"
       ],
       "funciones": [
@@ -117220,18 +117222,34 @@
           "resumen": "¿Es un partido del Sevilla/Betis A DOMICILIO? («Levante UD vs Sevilla FC» se juega en Valencia.) En fútbol el equipo LOCAL va SIEMPRE primero, así que un club sevillano DETRÁS del «vs» significa que e"
         },
         {
+          "nombre": "nombreConfiesaDuda",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre?: string | null",
+          "retorno": "boolean",
+          "linea": 101
+        },
+        {
+          "nombre": "estadoInicialWebsearch",
+          "kind": "function",
+          "exportada": true,
+          "params": "factor: number",
+          "retorno": "'confirmado' | 'previsto'",
+          "linea": 114
+        },
+        {
           "nombre": "impactoEvento",
           "kind": "function",
           "exportada": true,
           "params": "aforo: number, tipo?: string | null, nombre?: string | null",
           "retorno": "number",
-          "linea": 105,
+          "linea": 130,
           "resumen": "Multiplicador de precio para un evento, por aforo y tipo. La curva general (conciertos, festivales, lo que no sabemos clasificar) llega a 2.20 en aforo de estadio: por debajo del 2.5 del calendario a "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5bdf4cf05b8e"
+      "hash": "96389b265b74"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/eventos-verificacion.ts",
@@ -120270,7 +120288,8 @@
       "resumen": "lib/sivra/pricing-guardia.ts — lógica PURA (sin BD ni red) del guardián de sub-mercado. Contexto (20/07/2026): una reserva de Luxury Busto entró a ~110€/noche cuando el mercado real rondaba ~160-185€. Causa: el precio vivo del piso llevaba semanas anclado a un valor viejo y NADIE se enteró — el dete",
       "exporta": [
         "decidirSubMercado",
-        "decidirReservaBaja"
+        "decidirReservaBaja",
+        "causaReservaBaja"
       ],
       "funciones": [
         {
@@ -120290,11 +120309,20 @@
           "retorno": "ReservaBajaResult",
           "linea": 97,
           "resumen": "¿Una reserva recién entrada salió notablemente por debajo del mercado real del piso? Solo evalúa si hay p50 fiable (≥ minComps). Umbral holgado para no marcar el descuento normal de canal (Genius/móvi"
+        },
+        {
+          "nombre": "causaReservaBaja",
+          "kind": "function",
+          "exportada": true,
+          "params": "adr: number, precioPublicado: number | null | undefined, umbralDescuento = 0.8",
+          "retorno": "'precio' | 'descuento' | null",
+          "linea": 115,
+          "resumen": "14 de 15 avisos de esa semana eran `precio`, y el texto les decía «revisa la reserva»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7754948ce03b"
+      "hash": "745ce117f9fd"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-lastminute.ts",
@@ -143832,6 +143860,7 @@
         "esTipoAvisoCima",
         "claveBase",
         "eventosDePolizas",
+        "eventosPolizasNuevas",
         "planificarAvisos",
         "textoPushCima"
       ],
@@ -143842,7 +143871,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is TipoAvisoCima",
-          "linea": 51
+          "linea": 53
         },
         {
           "nombre": "dia",
@@ -143850,7 +143879,7 @@
           "exportada": false,
           "params": "d: Date | null",
           "retorno": "string | null",
-          "linea": 80
+          "linea": 82
         },
         {
           "nombre": "fechaIso",
@@ -143858,7 +143887,7 @@
           "exportada": false,
           "params": "s: string | null",
           "retorno": "Date | null",
-          "linea": 81
+          "linea": 83
         },
         {
           "nombre": "masReciente",
@@ -143866,7 +143895,7 @@
           "exportada": false,
           "params": "a: Date | null, b: Date | null",
           "retorno": "Date | null",
-          "linea": 82
+          "linea": 84
         },
         {
           "nombre": "claveBase",
@@ -143874,7 +143903,7 @@
           "exportada": true,
           "params": "polizaId: string, lista: 'recibos' | 'siniestros'",
           "retorno": "string",
-          "linea": 84
+          "linea": 86
         },
         {
           "nombre": "donde",
@@ -143882,7 +143911,7 @@
           "exportada": false,
           "params": "p: PolizaParaAviso",
           "retorno": "string",
-          "linea": 86
+          "linea": 88
         },
         {
           "nombre": "eventosDePolizas",
@@ -143890,16 +143919,25 @@
           "exportada": true,
           "params": "polizas: readonly PolizaParaAviso[]",
           "retorno": "EventoCima[]",
-          "linea": 91,
+          "linea": 93,
           "resumen": "Todo lo que hoy es «novedad posible» en lo que la identidad ve. Sin estado: el sello decide."
+        },
+        {
+          "nombre": "eventosPolizasNuevas",
+          "kind": "function",
+          "exportada": true,
+          "params": "nuevas: readonly PolizaNuevaParaAviso[]",
+          "retorno": "EventoCima[]",
+          "linea": 161,
+          "resumen": "«Tienes una póliza nueva» (26/09/2026). Lo que es nueva lo decide `polizasNuevasParaAviso` (corte de activación + 30 días + clave compañía+número), así que aquí no hay semilla ni ventana: la regla ya "
         },
         {
           "nombre": "planificarAvisos",
           "kind": "function",
           "exportada": true,
-          "params": "polizas: readonly PolizaParaAviso[], selladas: ReadonlySet<string>, silenciados: ReadonlySet<string>, hoy: Date,",
+          "params": "polizas: readonly PolizaParaAviso[], selladas: ReadonlySet<string>, silenciados: ReadonlySet<string>, hoy: Date, /** Pólizas nuevas del tomador (`polizasNuevasParaAviso`). Sin semilla: la regla ya filtra lo viejo. */ nuevas: readonly Poliza",
           "retorno": "PlanAvisos",
-          "linea": 171,
+          "linea": 193,
           "resumen": "Qué se avisa y qué se sella en silencio. - Lista visible sin `claveBase` sellada → semilla: se sella todo, no se envía nada. - Tipo silenciado por el cliente → se sella igual, para que al reactivarlo "
         },
         {
@@ -143908,13 +143946,13 @@
           "exportada": true,
           "params": "eventos: readonly EventoCima[]",
           "retorno": "",
-          "linea": 203,
+          "linea": 233,
           "resumen": "Una notificación por identidad y pasada: con varias novedades, un resumen."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d1a145e0546d"
+      "hash": "d73dcac84b4d"
     },
     {
       "ruta": "packages/module-seguros-portal/src/avisos.ts",
@@ -152767,6 +152805,7 @@
         "descripcionDias",
         "diasHastaVencimiento",
         "fechaLimiteOposicion",
+        "textoPlazoOposicion",
         "fechaLimiteComunicacionAseguradora",
         "comunicacionEnPlazo",
         "urgenciaRenovacion",
@@ -152821,12 +152860,21 @@
           "resumen": "Último día en que el tomador puede oponerse a la prórroga (LCS art. 22)."
         },
         {
+          "nombre": "textoPlazoOposicion",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencimientoIso: string, dias: number",
+          "retorno": "string | null",
+          "linea": 128,
+          "resumen": "La frase del plazo de baja para la fila de renovaciones (26/09/2026, caso Pablo Guzmán: un cambio de compañía que llegó con el plazo de oposición ya pasado). Con plazo: hasta qué día puede el tomador "
+        },
+        {
           "nombre": "fechaLimiteComunicacionAseguradora",
           "kind": "function",
           "exportada": true,
           "params": "vencimiento: Date",
           "retorno": "Date",
-          "linea": 124,
+          "linea": 141,
           "resumen": "Último día en que el asegurador puede comunicar una subida de prima o cualquier otra modificación para esta renovación (LCS art. 22)."
         },
         {
@@ -152835,7 +152883,7 @@
           "exportada": true,
           "params": "vencimiento: Date, comunicadaEl: Date | null | undefined,",
           "retorno": "boolean | null",
-          "linea": 138,
+          "linea": 155,
           "resumen": "¿La compañía comunicó la modificación a tiempo? `null` cuando NO consta la fecha de comunicación, que es distinto de «llegó tarde»: significa que no se ha mirado. Afirmar que una subida es inoponible "
         },
         {
@@ -152844,7 +152892,7 @@
           "exportada": true,
           "params": "dias: number",
           "retorno": "UrgenciaRenovacion",
-          "linea": 146
+          "linea": 163
         },
         {
           "nombre": "etiquetaUrgencia",
@@ -152852,7 +152900,7 @@
           "exportada": true,
           "params": "u: UrgenciaRenovacion",
           "retorno": "string",
-          "linea": 154,
+          "linea": 171,
           "resumen": "Etiqueta corta para pantalla/informe. En español, sin jerga de código."
         },
         {
@@ -152861,7 +152909,7 @@
           "exportada": true,
           "params": "p: { primaAnual?: number | null; primaBruta?: number | null },",
           "retorno": "number | null",
-          "linea": 171,
+          "linea": 188,
           "resumen": "Prima de referencia de una póliza para priorizar la llamada. `null` es un TERCER estado con significado propio: «la compañía no ha informado la prima» (medido: las de Allianz vienen así por EIAC). Nun"
         },
         {
@@ -152870,13 +152918,13 @@
           "exportada": true,
           "params": "polizas: Array<{ primaAnual?: number | null; primaBruta?: number | null }>,",
           "retorno": "",
-          "linea": 183,
+          "linea": 200,
           "resumen": "Suma de primas conocidas + cuántas no lo son. Nunca «X €» a secas cuando falta información."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "65221a94f9a2"
+      "hash": "b011b1d1b330"
     },
     {
       "ruta": "packages/module-seguros/src/vigencia.ts",
@@ -157988,6 +158036,6 @@
   ],
   "resumen": {
     "archivos": 3782,
-    "funciones": 12082
+    "funciones": 12087
   }
 }
