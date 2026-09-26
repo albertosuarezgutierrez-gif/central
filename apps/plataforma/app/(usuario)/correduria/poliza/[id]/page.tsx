@@ -5,6 +5,7 @@ import Documentos from '../../Documentos'
 import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import AnulacionPoliza from './AnulacionPoliza'
+import AvisoEmision from './AvisoEmision'
 import HistorialRiesgo from './HistorialRiesgo'
 import CimaPoliza from './CimaPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
@@ -306,6 +307,7 @@ function Sustitucion({ p }: { p: Poliza }) {
           {p.fechaInicio && <> — cambio de compañía el <strong>{fmt(p.fechaInicio)}</strong></>} (<Link href={`/correduria/poliza/${s.origen.polizaId}`}>ver</Link>).
         </div>
       )}
+      {s.origen && <AvisoEmision polizaId={p.id} />}
       {s.sustituidaPor && (
         <div style={{ ...tarjeta, borderLeft: `4px solid ${s.seguimiento === 'confirmada' ? 'var(--positive)' : 'var(--warning)'}`, fontSize: 13 }}>
           {s.seguimiento === 'confirmada' ? (

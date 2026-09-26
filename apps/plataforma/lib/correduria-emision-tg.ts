@@ -8,6 +8,8 @@
 // misma lectura y compara la HUELLA: si algo cambió desde que Alberto leyó el resumen, no se emite.
 import { createHash } from 'node:crypto'
 import type { OfertaImportable, RespuestaEmitir, VistaImportacion } from './retarificar-asegura.ts'
+import { lineasTrasEmision } from './tras-emision-texto.ts'
+export { lineasTrasEmision }
 
 /** Minutos que vale un resumen: pasado eso, el botón no emite y hay que pedirlo otra vez. */
 export const MINUTOS_PROPUESTA = 15
@@ -202,6 +204,8 @@ export function textoResumen(r: ResumenEmision): string {
     `Cuenta de cargo: ${esc(r.cuenta.enmascarada)}${r.cuenta.descripcion ? ` (${esc(r.cuenta.descripcion)})` : ''}`,
     '',
     `Proyecto Avant2 ${esc(r.projectId)} · precio ${esc(r.quoteId)}`,
+    // Pulsar es también el OK de este correo concreto: se dice ANTES, no se descubre después.
+    '📧 Al emitir, el cliente recibe un correo con su nuevo seguro y la carta de baja de la póliza anterior para firmar en el portal.',
     `⚠️ Emitir es IRREVERSIBLE: crea el contrato con la compañía. El botón vale ${MINUTOS_PROPUESTA} minutos y un solo uso.`,
   ].join('\n')
 }
@@ -238,7 +242,7 @@ export function resultadoEmision(r: RespuestaEmitir, urlIntranet: string): { est
     case 'ok':
       return {
         estado: 'emitida',
-        texto: `✅ Emitida${r.referenciaVendor ? `: póliza nº ${esc(r.referenciaVendor)}` : ' (la compañía aún no ha dado número)'}. Queda en la cartera y el PDF, si la compañía lo ha mandado, en la ficha: ${urlIntranet}`,
+        texto: `✅ Emitida${r.referenciaVendor ? `: póliza nº ${esc(r.referenciaVendor)}` : ' (la compañía aún no ha dado número)'}. Queda en la cartera y el PDF, si la compañía lo ha mandado, en la ficha: ${urlIntranet}${lineasTrasEmision(r.trasEmision)}`,
       }
     case 'emitido_sin_acunar':
       return { estado: 'emitida', texto: `✅ La compañía la ha aceptado, pero no se ha podido registrar sola en la cartera: ${esc(r.mensaje)} ${mirar}` }

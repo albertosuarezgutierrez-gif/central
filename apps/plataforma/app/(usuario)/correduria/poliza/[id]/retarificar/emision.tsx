@@ -23,7 +23,8 @@ import { eur } from '@/lib/dinero'
 import { pedirOferta, pedirEmision, pedirCatalogo, pedirCoberturas } from './acciones'
 import type { RespuestaCoberturas } from '@/lib/retarificar-asegura'
 import { ProductFormWidget } from './ProductFormWidget'
-import type { AvisoCuenta, CuentaConocida, Opcion, SolicitudEmisionVista } from '@/lib/retarificar-asegura'
+import type { AvisoCuenta, CuentaConocida, Opcion, SolicitudEmisionVista, TrasEmision } from '@/lib/retarificar-asegura'
+import { lineasTrasEmision } from '@/lib/tras-emision-texto'
 import { fechaEs } from '@/lib/ficha-asegura'
 
 type EstadoPanel =
@@ -69,7 +70,7 @@ type EstadoPanel =
       noReconocidos: string[]
       mensaje: string
     }
-  | { paso: 'emitido'; referenciaVendor: string | null; cuenta: CuentaConocida | null }
+  | { paso: 'emitido'; referenciaVendor: string | null; cuenta: CuentaConocida | null; tras: TrasEmision | null }
   | { paso: 'emitido_sin_acunar'; mensaje: string }
   /**
    * El último Submit acabó en 5xx o corte de red («quizá emitido», 13/09/2026,
@@ -582,7 +583,7 @@ export function Emision({
       return
     }
     if (r.estado === 'ok') {
-      setEstado({ paso: 'emitido', referenciaVendor: r.referenciaVendor, cuenta: r.cuenta })
+      setEstado({ paso: 'emitido', referenciaVendor: r.referenciaVendor, cuenta: r.cuenta, tras: r.trasEmision })
       return
     }
     if (r.estado === 'emitido_sin_acunar') {
@@ -975,6 +976,9 @@ export function Emision({
             >
               Emitir la póliza
             </button>
+            <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
+              Al emitir, el cliente recibe un correo con su nuevo seguro y la carta de baja de la póliza anterior para firmar en el portal.
+            </p>
             {estado.cuenta && !cuentaDecidida(estado.cuenta, cuentaOk, iban) && (
               <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
                 Confirma la cuenta de cargo o teclea otra antes de emitir.
@@ -1059,6 +1063,7 @@ export function Emision({
             <>Sin cuenta de cargo en el envío (la compañía no la exigió). </>
           )}
           Queda como «pendiente de confirmación por CIMA» en la ficha de la póliza.
+          <div style={{ whiteSpace: 'pre-line', marginTop: 8 }}>{lineasTrasEmision(estado.tras).trim()}</div>
         </div>
       )}
 
@@ -1188,8 +1193,8 @@ export function Emision({
                 }
               >
                 {aprobada.numeroPoliza
-                  ? `Registrar en la cartera la póliza ${aprobada.numeroPoliza} ya emitida (no reenvía nada)`
-                  : 'Registrar en la cartera la póliza ya aprobada (sin número todavía; no reenvía nada)'}
+                  ? `Registrar en la cartera la póliza ${aprobada.numeroPoliza} ya emitida (no reenvía nada a la compañía; avisa al cliente por correo)`
+                  : 'Registrar en la cartera la póliza ya aprobada (sin número todavía; no reenvía nada a la compañía; avisa al cliente por correo)'}
               </button>
             )}
             {!viva && (

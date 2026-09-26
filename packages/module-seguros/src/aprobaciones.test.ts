@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
+import { POLITICA, anulacionSeEnviaSola, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
 
 const hoy = new Date('2026-09-23T10:00:00Z')
 const base = { ramo: 'auto', compania: 'MAPFRE', numeroPoliza: '3021700291186', importe: 225.97, vencimiento: '2026-09-10', hoy }
@@ -106,4 +106,19 @@ test('🪤 correo de la carta de nombramiento: identifica póliza y tomador, con
   assert.match(b.texto, /no modifica el contrato/)
   assert.equal(b.urgente, false)
   assert.equal(b.caduca.getTime(), caducaEn(hoy, 30).getTime())
+})
+
+test('envío solo al firmar: no_renovacion y sustitucion con buzón recordado salen solas', () => {
+  assert.equal(anulacionSeEnviaSola('sustitucion', 'c1'), true)
+  assert.equal(anulacionSeEnviaSola('no_renovacion', 'c1'), true)
+})
+
+test('envío solo al firmar: una inmediata o sin buzón recordado se queda en la cola de Alberto', () => {
+  assert.equal(anulacionSeEnviaSola('inmediata', 'c1'), false)
+  assert.equal(anulacionSeEnviaSola('sustitucion', null), false)
+  assert.equal(anulacionSeEnviaSola('otra', 'c1'), false)
+})
+
+test('la política general NO se relaja: la excepción vive aparte y solo para anulaciones firmadas', () => {
+  assert.equal(POLITICA.enviar_correo_compania, 'aprobar')
 })

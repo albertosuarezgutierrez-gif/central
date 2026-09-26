@@ -12,7 +12,7 @@
 // El SQL crudo no prefija `seguros.`: la conexión ya trae `?schema=seguros`.
 
 import {
-  ESTADOS_ANULACION_ABIERTA, MEDIADOR, POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, importeEiac,
+  ESTADOS_ANULACION_ABIERTA, MEDIADOR, POLITICA, anulacionSeEnviaSola, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, importeEiac,
   type BuzonCompania, type Decision,
 } from '@central/module-seguros'
 import { createHash } from 'node:crypto'
@@ -105,6 +105,50 @@ export async function proponerAnulacionesFirmadas(correduriaId: string): Promise
     n += ins.length
   }
   return n
+}
+
+/** Quién firma en la cola el envío que sale solo: la firma del cliente, con la regla de Alberto detrás. */
+export const ACTOR_ENVIO_TRAS_FIRMA = 'sistema:envío automático tras la firma del cliente (regla de Alberto, 26/09/2026)'
+
+export type EnvioTrasFirma =
+  | { estado: 'enviada' }
+  /** Se queda en «Hoy · Esperan tu OK», con el motivo: nada se ha enviado. */
+  | { estado: 'en_cola'; motivo: string }
+  /** Se cortó esperando al proveedor: pudo salir. Sale en «a medias», NUNCA se reintenta sola. */
+  | { estado: 'incierto'; motivo: string }
+
+/**
+ * La carta que el cliente acaba de FIRMAR sale sola hacia su compañía (regla `anulacionSeEnviaSola`
+ * de module-seguros). No es un camino paralelo: propone como siempre y aprueba la MISMA propuesta por
+ * `decidirAprobacion`, así que el reclamo atómico, los adjuntos firmados, el «comunicada» y el
+ * historial son los de un OK de Alberto. Sin buzón recordado, `inmediata` o cualquier duda → la
+ * propuesta se queda pendiente en la cola, que es exactamente lo que había antes.
+ */
+export async function enviarAnulacionTrasFirma(correduriaId: string, anulacionId: string): Promise<EnvioTrasFirma> {
+  if (!UUID.test(anulacionId)) return { estado: 'en_cola', motivo: 'anulación no válida' }
+  await proponerAnulacionesFirmadas(correduriaId)
+  const db = prismaAsegura()
+  const [a] = await db.$queryRaw<{ id: string; tipo: string; dgs: string | null; propuesta: { asunto?: unknown; texto?: unknown } | null }[]>`
+    select x.id::text as id, n.tipo::text as tipo, p.codigo_entidad_dgs as dgs, x.propuesta
+    from aprobacion x join anulacion n on n.id = x.anulacion_id join polizas p on p.id = n.poliza_id
+    where x.anulacion_id = ${anulacionId}::uuid and x.correduria_id = ${correduriaId}::uuid
+      and x.accion = 'enviar_correo_compania' and x.estado = 'pendiente' and x.caduca_at >= now()
+    order by x.created_at desc limit 1`
+  if (!a) return { estado: 'en_cola', motivo: 'no hay carta pendiente de enviar para esa anulación' }
+  const contactos = a.dgs === null ? [] : await db.$queryRaw<{ id: string; activo: boolean; email: string | null; orden: number; recibe: boolean }[]>`
+    select id::text as id, activo, email, orden, recibe_anulaciones as recibe
+    from compania_contactos where compania_codigo_dgs = ${a.dgs}`
+  const buzon = buzonSugerido(contactos.map((c) => ({ id: c.id, activo: c.activo, email: c.email, orden: c.orden, recibeAnulaciones: c.recibe })))
+  if (!anulacionSeEnviaSola(a.tipo, buzon)) {
+    return { estado: 'en_cola', motivo: buzon === null ? 'la compañía no tiene buzón de bajas recordado: elígelo en «Hoy» y las siguientes saldrán solas' : `una anulación ${a.tipo} la decides tú` }
+  }
+  const asunto = typeof a.propuesta?.asunto === 'string' ? a.propuesta.asunto : ''
+  const texto = typeof a.propuesta?.texto === 'string' ? a.propuesta.texto : ''
+  if (!asunto || !texto) return { estado: 'en_cola', motivo: 'la propuesta no tiene asunto o texto' }
+  const r = await decidirAprobacion(correduriaId, a.id, { decision: 'aprobar', asunto, texto, contactoId: buzon! }, ACTOR_ENVIO_TRAS_FIRMA)
+  if (r.estado === 'ejecutada') return { estado: 'enviada' }
+  if (r.estado === 'incierto') return { estado: 'incierto', motivo: r.motivo }
+  return { estado: 'en_cola', motivo: 'motivo' in r ? r.motivo : r.estado }
 }
 
 export const ORIGEN_CARTA_MEDIADOR = 'carta_mediador'

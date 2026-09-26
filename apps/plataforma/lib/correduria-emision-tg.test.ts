@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import {
-  ACTOR_EMISION_TG, emisionTgActiva, huellaResumen, prepararResumen, proyectoValido, resultadoEmision, textoResumen,
+  ACTOR_EMISION_TG, emisionTgActiva, huellaResumen, lineasTrasEmision, prepararResumen, proyectoValido, resultadoEmision, textoResumen,
   type ResumenEmision,
 } from './correduria-emision-tg.ts'
-import { interpretarEmitir, type VistaImportacion } from './retarificar-asegura.ts'
+import { interpretarEmitir, leerTrasEmision, type VistaImportacion } from './retarificar-asegura.ts'
 
 // Fase 3a (26/09/2026): emitir desde Telegram. Lo puro se prueba de verdad; lo que vive en SQL y en
 // el webhook se vigila leyendo el FUENTE, porque ni `tsc` ni el build miran dentro de un `Prisma.sql`.
@@ -126,7 +126,7 @@ test('el resumen lo escribe el servidor: importes en español, datos enmascarado
 
 test('resultado: emitida, rechazada o incierta — y nunca se invita a reintentar', () => {
   const url = 'https://x/correduria/poliza/1'
-  assert.equal(resultadoEmision({ estado: 'ok', referenciaVendor: 'P-1', acunado: null, cuenta: null }, url).estado, 'emitida')
+  assert.equal(resultadoEmision({ estado: 'ok', referenciaVendor: 'P-1', acunado: null, cuenta: null, trasEmision: null }, url).estado, 'emitida')
   assert.equal(resultadoEmision({ estado: 'emitido_sin_acunar', mensaje: 'sin DGS' }, url).estado, 'emitida')
   assert.equal(resultadoEmision({ estado: 'faltan_campos', faltan: ['email'], campos: null, mensaje: null, cuenta: null, cuentaAviso: null, confirmar: false }, url).estado, 'rechazada')
   assert.equal(resultadoEmision({ estado: 'sin_configurar', mensaje: 'apagado' }, url).estado, 'rechazada')
@@ -210,4 +210,34 @@ test('un chat ajeno no llega a los botones: el webhook filtra el emisor antes de
   // Y dentro del chat, solo la persona autorizada: el from.id se mira ANTES de emitir.
   const rama = wh.slice(wh.indexOf("if (prefix === 'cas')"))
   assert.ok(rama.indexOf('cb.from?.id') > 0 && rama.indexOf('cb.from?.id') < rama.indexOf('emitirDesdeBoton('))
+})
+
+test('tras emitir: el mensaje dice qué pasó con la baja y el correo, y sin dato dice que no lo sabe', () => {
+  const ok = lineasTrasEmision({ baja: 'abierta', correo: 'enviado' })
+  assert.match(ok, /baja de la póliza anterior está abierta/)
+  assert.match(ok, /Se le ha enviado al cliente el correo/)
+  assert.match(lineasTrasEmision({ baja: null, correo: 'sin_email' }), /NO se ha avisado al cliente: su ficha no tiene correo/)
+  assert.doesNotMatch(lineasTrasEmision({ baja: null, correo: 'sin_email' }), /baja de la póliza/)
+  assert.match(lineasTrasEmision(null), /No sé si se ha avisado/)
+  assert.match(lineasTrasEmision({ baja: 'sin_datos', correo: null }), /NO se ha podido abrir la baja[\s\S]*No sé si se ha avisado/)
+})
+
+test('leerTrasEmision: un valor desconocido cae a null, nunca a «enviado»', () => {
+  assert.deepEqual(leerTrasEmision({ baja: 'abierta', correo: 'enviado' }), { baja: 'abierta', correo: 'enviado' })
+  assert.deepEqual(leerTrasEmision({ baja: 'raro', correo: 'ok' }), { baja: null, correo: null })
+  assert.equal(leerTrasEmision(undefined), null)
+})
+
+test('el resumen avisa ANTES de pulsar de que al cliente le llega el correo', () => {
+  const src = readFileSync(fileURLToPath(new URL('./correduria-emision-tg.ts', import.meta.url)), 'utf8')
+  const t = src.slice(src.indexOf('export function textoResumen'), src.indexOf('// ── Resultado del Submit'))
+  assert.match(t, /el cliente recibe un correo con su nuevo seguro/)
+})
+
+test('tras emitir: baja ya en marcha, tope de tiempo y corte con el proveedor se cuentan como lo que son', () => {
+  assert.match(lineasTrasEmision({ baja: 'en_curso', correo: 'enviado' }), /ya estaba firmada o comunicada/)
+  assert.match(lineasTrasEmision({ baja: null, correo: null, enCurso: true }), /siguen en marcha/)
+  assert.match(lineasTrasEmision({ baja: 'abierta', correo: 'incierto' }), /pudo salir[\s\S]*ANTES de reenviarlo/)
+  assert.match(lineasTrasEmision({ baja: 'abierta', correo: 'no_resuelve' }), /no le lleva a SU ficha/)
+  assert.deepEqual(leerTrasEmision({ baja: null, correo: null, enCurso: true }), { baja: null, correo: null, enCurso: true })
 })

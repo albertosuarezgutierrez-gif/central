@@ -800,7 +800,7 @@ export { TIPOS_EVENTO_CARTERA, TIPOS_FUGA, UMBRAL_DESAPARICION, detectarCambios,
 export type { Deteccion, EventoCartera, Foto, HuellaPoliza, HuellaRecibo, HuellaSiniestro, TipoEventoCartera } from './detector-cartera.ts'
 export { ORIGEN_RETENCION, decidirRetencion } from './retencion-fuga.ts'
 export type { DecisionRetencion, EntradaRetencion } from './retencion-fuga.ts'
-export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
+export { ACCIONES_APROBACION, DIAS_CADUCIDAD, ESTADOS_APROBACION, POLITICA, TIPOS_ANULACION_ENVIO_SOLO, anulacionSeEnviaSola, borradorAnulacionCompania, borradorCartaMediadorCompania, borradorReciboDevuelto, buzonSugerido, caducaEn, decisionValida } from './aprobaciones.ts'
 export type { AccionAprobacion, Borrador, BuzonCompania, Decision, EntradaAnulacionCompania, EntradaReciboDevuelto, EstadoAprobacion, Politica } from './aprobaciones.ts'
 export {
   ACCIONES_ANULACION, DIAS_ESPERA_CONFIRMACION, ESTADOS_ANULACION, ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION,
