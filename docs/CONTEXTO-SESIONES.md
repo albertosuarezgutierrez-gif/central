@@ -704,7 +704,7 @@ Revisado `addyosmani/agent-skills` (estándar agentskills.io) contra lo nuestro.
 los 3 agentes tenían `description` como escalar plano con «: » → YAML inválido (Claude Code lo tolera;
 un parser estricto no). Pasados a `description: >-`; lo vigila `test/regression-skills-frontmatter.test.ts`
 (visto en rojo). Nuevo `.claude/agents/verificador-esceptico.md` (sonnet): refuta afirmaciones de
-ausencia/estado y rompe cepos nuevos para verlos fallar. Descartado copiar el resto: ya lo cubren
+ausencia/estado y rompe cepos nuevos para verlos fallar; metido en el reparto de `CLAUDE.md`. Descartado copiar el resto: ya lo cubren
 superpowers, `code-review`, `security-review` y `agente-architect`.
 
 ## (26/09/2026) Agente huésped mudo con >25 mensajes: Smoobu pagina `/messages`
