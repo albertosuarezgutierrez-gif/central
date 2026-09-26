@@ -442,12 +442,17 @@ export const ARTICULOS: readonly Articulo[] = [
       'El parte amistoso es un impreso común para toda Europa: una hoja con copia que rellenan juntos los dos conductores, con el vehículo A en azul y el B en amarillo. Lo que decide cómo se reparte la culpa son sobre todo dos zonas: las circunstancias marcadas y el croquis. Rellénalo con calma, sin admitir nada que no esté en las casillas, y quédate tu copia antes de iros.',
     base: ['lcs-16'],
     ramos: ['auto'],
+    // El CTA lleva al portal porque allí se DA el parte (`ParteSiniestro.tsx`):
+    // hueco propio para la foto del parte amistoso firmado y, si la compañía
+    // atiende por WhatsApp, un PDF con datos y fotos que manda la persona.
+    // Abierto también a quien no es cliente (pólizas declaradas). OJO: el portal
+    // NO rellena el parte amistoso en digital; eso no se promete.
     cta: {
-      titulo: 'Ten a mano el teléfono de tu compañía',
+      titulo: 'Da el parte desde tu área privada',
       texto:
-        'Tras firmar el parte hay que comunicarlo a tu aseguradora. Tenemos los teléfonos de siniestros de las compañías con las que trabajamos, comprobados en su web oficial y listos para guardar en tus contactos.',
-      boton: 'Ver los teléfonos de siniestros',
-      href: '/telefonos-siniestros',
+        'Sube la foto del parte amistoso firmado, por las dos caras, y las del golpe. Si tu compañía atiende por WhatsApp, te dejamos listo un PDF con los datos y las fotos para que se lo mandes tú. Gratis, seas cliente nuestro o no.',
+      boton: 'Dar el parte',
+      href: 'PORTAL',
     },
     secciones: [
       {
@@ -500,6 +505,7 @@ export const ARTICULOS: readonly Articulo[] = [
         titulo: 'El parte amistoso en el móvil',
         parrafos: [
           'Existe una versión digital del mismo impreso, la app Declaración iDEA, promovida por las aseguradoras: los dos conductores lo completan y lo firman en el móvil y se envía a las compañías. Funciona si los dos la tenéis instalada y vuestras compañías están adheridas, así que no está de más llevar también el de papel en la guantera.',
+          'Con el parte ya firmado, puedes darlo desde tu área privada de Grupo ASegura aunque tu seguro no sea con nosotros: subes la foto de las dos caras y las del accidente, y si tu compañía atiende por WhatsApp te preparamos el envío. El teléfono de cada compañía lo tienes también en nuestra página de teléfonos de siniestros.',
           'Si no tienes impreso, pídeselo a tu compañía o a tu corredor: es gratuito. Y si te pilla sin él, apunta al menos los datos de las casillas 1 a 9, haz fotos de todo y de la documentación del otro conductor, y avisa a tu compañía cuanto antes.',
         ],
       },
