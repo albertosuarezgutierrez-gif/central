@@ -19,8 +19,8 @@ test('lo automático entra como secundario y SIN forzar; solo «Usar CIMA» fuer
   assert.match(src, /forzar: d\.accion === 'discrepa'/)
 })
 
-test('el cron aplica rellenar + anadir + formatear, y el volcado en bloque no fuerza lo que lleva aviso', () => {
-  assert.match(src, /const AUTOMATICAS: readonly DiferenciaCima\['accion'\]\[\] = \['rellenar', 'anadir', 'formatear'\]/)
+test('el cron aplica rellenar + anadir + completar + formatear, y el volcado en bloque no fuerza lo que lleva aviso', () => {
+  assert.match(src, /const AUTOMATICAS: readonly DiferenciaCima\['accion'\]\[\] = \['rellenar', 'anadir', 'completar', 'formatear'\]/)
   assert.match(src, /if \(d\.aviso\) \{ fallidos\.push/)
 })
 

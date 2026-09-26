@@ -14,6 +14,10 @@
  *                   preguntar (26/09/2026, Alberto: «si son por tlf se añade y
  *                   ya está»). Quien aplica comprueba antes que no esté en OTRA
  *                   ficha; si lo está, lo convierte en `discrepa` con `aviso`.
+ *   - `completar` → el nombre de CIMA trae MÁS que el de la ficha y la contiene
+ *                   («Maria Gonzalez» → «M Carmen Baena Gonzalez»): se toma el de
+ *                   CIMA sin preguntar (26/09/2026, Alberto: «CIMA tiene más
+ *                   datos, coge CIMA»). La persona ya está casada por DNI.
  *   - `formatear` → es el mismo nombre pero la ficha lo tiene TODO en mayúsculas
  *                   (o minúsculas): se reescribe «Nombre Propio» sin preguntar.
  *   - `discrepa`  → los dos lo tienen y NO coinciden: decide Alberto.
@@ -65,7 +69,7 @@ export type DatosCima = {
 
 export type DiferenciaCima = {
   campo: CampoCima
-  accion: 'rellenar' | 'anadir' | 'formatear' | 'discrepa'
+  accion: 'rellenar' | 'anadir' | 'completar' | 'formatear' | 'discrepa'
   /** Lo que tiene la ficha (para enseñarlo); `null` en `rellenar`. */
   ficha: string | null
   /** El valor que se escribiría, ya normalizado (en `formatear`, el de la ficha en «Nombre Propio»). */
@@ -96,20 +100,36 @@ export function sinFormatoNombre(v: string | null): boolean {
   return v === v.toLocaleUpperCase('es-ES') || v === v.toLocaleLowerCase('es-ES')
 }
 
-/** Todas las palabras de CIMA (al menos dos) están en la ficha: la ficha es la más completa. */
-function nombreContenido(ficha: string | null, cima: string | null): boolean {
-  const kf = claveNombre(ficha)
-  const kc = claveNombre(cima)
-  if (!kf || !kc) return false
-  const resto = kf.split(' ')
-  const palabras = kc.split(' ')
+/** Misma palabra, o una es la inicial de la otra («m» = «maria»). */
+function casaPalabra(a: string, b: string): boolean {
+  return a === b || (a.length === 1 && b.startsWith(a)) || (b.length === 1 && a.startsWith(b))
+}
+
+/** Cada palabra de `pocas` (al menos dos) casa con una palabra DISTINTA de `muchas`. */
+function nombreCubierto(pocas: string | null, muchas: string | null): boolean {
+  const kp = claveNombre(pocas)
+  const km = claveNombre(muchas)
+  if (!kp || !km) return false
+  const palabras = kp.split(' ')
+  const resto = km.split(' ')
   if (palabras.length < 2) return false
-  for (const w of palabras) {
-    const i = resto.indexOf(w)
+  // Primero las exactas: si no, una inicial podría quedarse la palabra que otra necesita entera.
+  const orden = [...palabras].sort((x, y) => y.length - x.length)
+  for (const w of orden) {
+    let i = resto.indexOf(w)
+    if (i < 0) i = resto.findIndex((r) => casaPalabra(w, r))
     if (i < 0) return false
     resto.splice(i, 1)
   }
   return true
+}
+
+/** La ficha está contenida en CIMA y CIMA dice más: más palabras, o la palabra entera donde la ficha tiene una inicial. */
+function cimaMasCompleta(ficha: string | null, cima: string | null): boolean {
+  if (!nombreCubierto(ficha, cima)) return false
+  const nf = claveNombre(ficha)!.split(' ')
+  const nc = claveNombre(cima)!.split(' ')
+  return nc.length > nf.length || nf.some((w) => w.length === 1 && !nc.includes(w))
 }
 
 /** Dos fechas `YYYY-MM-DD` a un día o menos (el carné guardado con desfase de zona horaria). */
@@ -173,7 +193,9 @@ export function compararConCima(ficha: FichaParaCima, cima: DatosCima): Diferenc
   const nombreCima = cima.nombre?.replace(/\s+/g, ' ').trim() || null
   if (nombreCima && claveNombre(nombreCima)) {
     if (!claveNombre(ficha.nombre)) out.push({ campo: 'nombre', accion: 'rellenar', ficha: null, cima: nombrePropio(nombreCima) })
-    else if (mismoNombre(ficha.nombre, nombreCima) || nombreContenido(ficha.nombre, nombreCima)) {
+    else if (!mismoNombre(ficha.nombre, nombreCima) && cimaMasCompleta(ficha.nombre, nombreCima)) {
+      out.push({ campo: 'nombre', accion: 'completar', ficha: ficha.nombre, cima: nombrePropio(nombreCima) })
+    } else if (mismoNombre(ficha.nombre, nombreCima) || nombreCubierto(nombreCima, ficha.nombre)) {
       if (ficha.nombre && sinFormatoNombre(ficha.nombre)) {
         out.push({ campo: 'nombre', accion: 'formatear', ficha: ficha.nombre, cima: nombrePropio(ficha.nombre) })
       }

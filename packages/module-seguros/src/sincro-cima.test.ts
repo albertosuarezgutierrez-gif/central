@@ -77,3 +77,12 @@ test('la fecha del carné que se va UN día no es diferencia; dos días sí', ()
   assert.deepEqual(compararConCima(f, { ...soloNombre, fechaCarnet: '1999-01-02' }), [])
   assert.deepEqual(compararConCima(f, { ...soloNombre, fechaCarnet: '1999-01-03' }).map((x) => `${x.campo}:${x.accion}`), ['fechaCarnet:discrepa'])
 })
+
+test('CIMA dice MÁS que la ficha y la contiene → completar con lo de CIMA, sin preguntar', () => {
+  const d = compararConCima({ ...vacia, nombre: 'Maria Gonzalez' }, { ...soloNombre, nombre: 'M CARMEN BAENA GONZALEZ' })
+  assert.deepEqual(d.map((x) => `${x.accion}:${x.cima}`), ['completar:M Carmen Baena Gonzalez'])
+  // La inicial de la ficha frente a la palabra entera también es «CIMA dice más».
+  assert.deepEqual(compararConCima({ ...vacia, nombre: 'J Perez Lopez' }, { ...soloNombre, nombre: 'JUAN PEREZ LOPEZ' }).map((x) => x.accion), ['completar'])
+  // Si no la contiene, sigue siendo una discrepancia de verdad.
+  assert.deepEqual(compararConCima({ ...vacia, nombre: 'Maria Gonzalez' }, { ...soloNombre, nombre: 'CARMEN BAENA RUIZ' }).map((x) => x.accion), ['discrepa'])
+})

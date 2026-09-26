@@ -21,7 +21,8 @@ import { anadirContacto, anotarHistorialCliente, campoIlegible, coincidencias, d
  *   - `rellenar`: lo que la ficha no tiene se copia siempre (lo corre el cron).
  *   - `volcar`:   CIMA manda también sobre lo que difiere (una vez, a mano).
  *   - automático (26/09/2026): el teléfono nuevo de CIMA se AÑADE como
- *     secundario y el nombre en mayúsculas se pone en «Nombre Propio», salvo
+ *     secundario, el nombre de CIMA que dice más que el de la ficha se toma
+ *     (`completar`) y el nombre en mayúsculas se pone en «Nombre Propio», salvo
  *     que ese teléfono ya esté en OTRA ficha: entonces pregunta (`aviso`).
  *   Después, cada diferencia se AVISA y decide él: «usar CIMA» o «mantener el
  *   mío» (esto último se recuerda por huella del valor en `cima_decisiones`,
@@ -196,7 +197,7 @@ async function huellasDecididas(correduriaId: string): Promise<Set<string>> {
 type Analisis = { c: Viva; cima: DatosCimaInterno; diferencias: DiferenciaCima[] }
 
 /** Lo que se aplica sin preguntar (lo corre el cron). */
-const AUTOMATICAS: readonly DiferenciaCima['accion'][] = ['rellenar', 'anadir', 'formatear']
+const AUTOMATICAS: readonly DiferenciaCima['accion'][] = ['rellenar', 'anadir', 'completar', 'formatear']
 
 /**
  * Un teléfono que CIMA manda y que YA está en otra ficha no se copia solo: puede
