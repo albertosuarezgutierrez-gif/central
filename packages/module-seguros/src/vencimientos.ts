@@ -127,8 +127,11 @@ export function fechaLimiteOposicion(vencimiento: Date): Date {
  */
 export function textoPlazoOposicion(vencimientoIso: string, dias: number): string | null {
   if (dias < 0 || !/^\d{4}-\d{2}-\d{2}/.test(vencimientoIso)) return null
-  const limite = fechaLimiteOposicion(new Date(`${vencimientoIso.slice(0, 10)}T00:00:00Z`))
-  if (Number.isNaN(limite.getTime())) return null
+  const dia = vencimientoIso.slice(0, 10)
+  const venc = new Date(`${dia}T00:00:00Z`)
+  // `Date` desborda un 31/02 al 03/03 sin quejarse: solo vale si el día vuelve igual.
+  if (Number.isNaN(venc.getTime()) || venc.toISOString().slice(0, 10) !== dia) return null
+  const limite = fechaLimiteOposicion(venc)
   const dm = `${String(limite.getUTCDate()).padStart(2, '0')}/${String(limite.getUTCMonth() + 1).padStart(2, '0')}`
   return dias >= DIAS_PREAVISO_TOMADOR ? `baja a la compañía hasta el ${dm}` : `plazo de baja pasado (${dm})`
 }

@@ -151,4 +151,5 @@ test('textoPlazoOposicion: con plazo dice hasta cuándo; dentro del mes, que ya 
   assert.equal(textoPlazoOposicion('2026-10-25', 29), 'plazo de baja pasado (25/09)')
   assert.equal(textoPlazoOposicion('2026-09-29', -1), null)
   assert.equal(textoPlazoOposicion('29/09/2026', 3), null)
+  assert.equal(textoPlazoOposicion('2026-02-31', 90), null)
 })
