@@ -2,11 +2,11 @@
 // automáticamente mail con diseño moderno» y, en el mismo correo, el enlace para firmar la baja de la
 // póliza anterior). El OK de este envío concreto es la pulsación de «Emitir».
 //
-// 🚨 No nombra NADA de la cartera — ni compañía, ni número, ni matrícula, ni prima — por lo mismo que
-// la invitación al portal: la dirección la tecleó alguien y puede ser un buzón compartido. Los datos se
-// ven DENTRO del portal, cuando la persona ha probado que es ella con el código. Por eso la función ni
-// siquiera los RECIBE: no se puede colar lo que no entra. Lo vigila `correo-emision.test.ts` con la
-// misma lista que la invitación (`CAMPOS_PROHIBIDOS_EN_INVITACION`).
+// 🧾 Lleva un RESUMEN del seguro — compañía, cobertura, fecha de efecto y prima — por decisión de
+// Alberto (26/09/2026: «poner fecha acordada, compañía, prima y cobertura»). Es una excepción consciente
+// a la regla de la invitación al portal: este correo ya lleva ADJUNTA la póliza entera, y solo sale a
+// una dirección que resuelve a la ficha de ese cliente (`estadoPortalDeFicha`). Lo demás sigue fuera:
+// ni número de póliza, ni matrícula, ni IBAN, ni DNI. Lo vigila `correo-emision.test.ts`.
 import { REMITENTE_CORREDURIA } from '@central/module-seguros'
 import { LOGO_CORREO } from './correo-felicitacion.ts'
 
@@ -19,7 +19,12 @@ export type DatosCorreoEmision = {
   conBaja: boolean
   /** `true` = va ADJUNTO el PDF original de la compañía (Alberto, 26/09/2026: «adjuntarle el PDF»). */
   conPoliza: boolean
+  /** El seguro nuevo. `null` = no se pudo leer: el correo sale sin la ficha, nunca con huecos inventados. */
+  resumen: ResumenSeguro | null
 }
+
+/** Cada campo `null` = no lo sabemos: esa fila no se pinta (nunca «0,00€» ni una fecha supuesta). */
+export type ResumenSeguro = { compania: string; cobertura: string | null; fechaEfecto: string | null; prima: string | null }
 
 export type CuerpoCorreoEmision = { asunto: string; texto: string; html: string }
 
@@ -33,9 +38,18 @@ export function cuerpoCorreoEmision(d: DatosCorreoEmision): CuerpoCorreoEmision 
   const nombre = d.nombre?.replace(/[\r\n]+/g, ' ').trim() || null
   const saludo = nombre ? `Hola, ${nombre}:` : 'Hola:'
   const asunto = 'Tu nuevo seguro ya está emitido'
+  const desde = d.resumen?.fechaEfecto ? `en vigor desde el ${d.resumen.fechaEfecto}` : 'en vigor desde la fecha de efecto que acordamos'
   const p1 = d.conPoliza
-    ? 'Tu nuevo seguro ya está emitido y en vigor desde la fecha de efecto que acordamos. Te adjuntamos la póliza original de tu nuevo seguro; guárdala, y también la tienes siempre en tu área de clientes.'
-    : 'Tu nuevo seguro ya está emitido y en vigor desde la fecha de efecto que acordamos. Te enviaremos la póliza original en cuanto nos la entreguen.'
+    ? `Tu nuevo seguro ya está emitido y ${desde}. Te adjuntamos la póliza original; guárdala, y también la tienes siempre en tu área de clientes.`
+    : `Tu nuevo seguro ya está emitido y ${desde}. Te enviaremos la póliza original en cuanto nos la entreguen.`
+  const filas: [string, string][] = d.resumen
+    ? ([
+        ['Compañía', d.resumen.compania],
+        ['Cobertura', d.resumen.cobertura],
+        ['Fecha de efecto', d.resumen.fechaEfecto],
+        ['Prima anual', d.resumen.prima],
+      ].filter((f): f is [string, string] => typeof f[1] === 'string' && f[1].trim() !== ''))
+    : []
   const bajaTitulo = 'Falta un paso: firma la baja de tu seguro anterior'
   const bajaTexto = 'Para que tu seguro anterior no se renueve y no pagues dos, hay que comunicar que no continúas. Tienes la carta preparada en tu área de clientes: revísala y fírmala con un código que te llega a este correo. Nosotros la enviamos por ti.'
   const acceso = 'Entras con este mismo correo: te mandamos un código de un solo uso, sin contraseñas.'
@@ -44,6 +58,7 @@ export function cuerpoCorreoEmision(d: DatosCorreoEmision): CuerpoCorreoEmision 
 
   const texto = [
     saludo, '', p1, '',
+    ...(filas.length ? ['TU SEGURO', ...filas.map(([k, v]) => `${k}: ${v}`), ''] : []),
     ...(d.conBaja ? [bajaTitulo.toUpperCase(), bajaTexto, ''] : []),
     `${boton}: ${d.enlace}`, acceso, '', cierre, '',
     'El equipo de Grupo ASegura', `Grupo ASegura · ${REMITENTE_CORREDURIA}`,
@@ -60,6 +75,11 @@ export function cuerpoCorreoEmision(d: DatosCorreoEmision): CuerpoCorreoEmision 
     `<p style="${titular};font-size:24px;line-height:1.25;color:${TINTA};margin:0 0 14px">Tu nuevo seguro ya está emitido</p>`,
     `<p style="font-size:16px;line-height:1.6;margin:0 0 6px">${escapar(saludo)}</p>`,
     `<p style="font-size:16px;line-height:1.6;margin:0 0 20px">${escapar(p1)}</p>`,
+    filas.length
+      ? `<table role="presentation" style="width:100%;border-collapse:collapse;background:${SUAVE};border-radius:12px;margin:0 0 20px">` +
+        filas.map(([k, v]) => `<tr><td style="padding:10px 16px;font-size:13px;color:#5a6280;width:40%">${escapar(k)}</td><td style="padding:10px 16px;font-size:15px;font-weight:700;color:${TINTA}">${escapar(v)}</td></tr>`).join('') +
+        `</table>`
+      : '',
     d.conBaja
       ? `<div style="border:2px solid ${AZUL};border-radius:14px;padding:18px 20px;background:#f3f6ff;margin:0 0 20px">` +
         `<p style="${titular};font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:${AZUL};margin:0 0 8px">Falta un paso</p>` +

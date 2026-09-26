@@ -721,6 +721,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   bloqueantes (dedupe por cliente; docs viejos invisibles) corregidos.
 - Portal: sección «Documentos de tu póliza» + descarga `/api/polizas/[id]/documentos/[docId]`, solo pólizas propias
   (cepo nuevo en `regression-portal-aislamiento`). Pendiente: aviso Telegram de pólizas que caducan sin PDF.
+- Subir en la ficha de una póliza un documento tipo «Póliza» lo hace visible al cliente en su portal (y la ficha
+  ya propone «Póliza» primero). Así se cargan las emitidas que están en Drive `ASEGURA/POLIZAS EMITIDAS` (PR #3683 → sigue).
 
 ## (26/09/2026) Correduría: tras emitir, correo al cliente + baja firmada que sale SOLA a la compañía
 Primera emisión por Telegram hecha (Pablo Guzmán, Allianz 61089620). Alberto pidió: correo moderno al cliente + firma
