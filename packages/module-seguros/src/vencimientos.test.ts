@@ -141,3 +141,15 @@ test('un plazo pasado se dice «hace N días», jamás «en -N días»', () => {
   // El cepo de verdad: el signo no puede llegar al texto.
   for (const d of [-1, -41, -107, -365]) assert.ok(!descripcionDias(d).includes('-'))
 })
+
+test('textoPlazoOposicion: con plazo dice hasta cuándo; dentro del mes, que ya pasó; vencida o fecha rara, nada', async () => {
+  const { textoPlazoOposicion } = await import('./vencimientos.ts')
+  assert.equal(textoPlazoOposicion('2026-11-29', 64), 'baja a la compañía hasta el 30/10')
+  assert.equal(textoPlazoOposicion('2026-09-29', 3), 'plazo de baja pasado (30/08)')
+  // A 30 días justos el límite es HOY: aún se puede (fechaLimiteOposicion = último día válido).
+  assert.equal(textoPlazoOposicion('2026-10-26', 30), 'baja a la compañía hasta el 26/09')
+  assert.equal(textoPlazoOposicion('2026-10-25', 29), 'plazo de baja pasado (25/09)')
+  assert.equal(textoPlazoOposicion('2026-09-29', -1), null)
+  assert.equal(textoPlazoOposicion('29/09/2026', 3), null)
+  assert.equal(textoPlazoOposicion('2026-02-31', 90), null)
+})

@@ -102,6 +102,7 @@ const TIPOS: { tipo: string; texto: string }[] = [
   { tipo: 'recibo_devuelto', texto: 'Recibo devuelto' },
   { tipo: 'recibo_nuevo', texto: 'Recibo nuevo al cobro' },
   { tipo: 'siniestro', texto: 'Novedades de un siniestro' },
+  { tipo: 'poliza_nueva', texto: 'Póliza nueva (y cambios de compañía)' },
 ]
 
 /**

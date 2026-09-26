@@ -32,8 +32,9 @@
  */
 import { etiquetaEstadoSiniestro } from './siniestro-historial.ts'
 import type { TramitacionSiniestro } from './siniestro-tramitacion.ts'
+import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
 
-export const TIPOS_AVISO_CIMA = ['recibo_nuevo', 'recibo_devuelto', 'siniestro'] as const
+export const TIPOS_AVISO_CIMA = ['recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva'] as const
 export type TipoAvisoCima = (typeof TIPOS_AVISO_CIMA)[number]
 
 /** Lo que se sella además de los tipos: la semilla. Los dos van al CHECK de la tabla. */
@@ -43,6 +44,7 @@ export const ETIQUETA_AVISO_CIMA: Record<TipoAvisoCima, string> = {
   recibo_nuevo: 'Recibo nuevo al cobro',
   recibo_devuelto: 'Recibo devuelto',
   siniestro: 'Novedades de un siniestro',
+  poliza_nueva: 'Póliza nueva',
 }
 
 /** Más viejo que esto (por su fecha propia) no es una novedad, aunque no esté sellado. */
@@ -70,7 +72,7 @@ export type EventoCima = {
   tipo: TipoAvisoCima
   polizaId: string
   /** Qué lista lo trae: de ella depende la semilla. */
-  lista: 'recibos' | 'siniestros'
+  lista: 'recibos' | 'siniestros' | 'polizas'
   /** Fecha propia del hecho (`null` = no consta): la mira la ventana de antigüedad. */
   fecha: Date | null
   texto: string
@@ -151,6 +153,26 @@ export function eventosDePolizas(polizas: readonly PolizaParaAviso[]): EventoCim
   return eventos
 }
 
+/**
+ * «Tienes una póliza nueva» (26/09/2026). Lo que es nueva lo decide `polizasNuevasParaAviso` (corte de
+ * activación + 30 días + clave compañía+número), así que aquí no hay semilla ni ventana: la regla ya
+ * dejó fuera lo viejo. Compañía y ramo sí salen (regla 3 los admite); ni número ni prima.
+ */
+export function eventosPolizasNuevas(nuevas: readonly PolizaNuevaParaAviso[]): EventoCima[] {
+  return nuevas.map((p) => {
+    const que = [p.ramo ? `de ${p.ramo}` : null, p.compania ? `con ${p.compania}` : null].filter(Boolean).join(' ')
+    const cambio = p.sustituyeA === null ? '' : ' Sustituye a la anterior, que se da de baja.'
+    return {
+      clave: `pol:${p.id}`.slice(0, 300),
+      tipo: 'poliza_nueva' as const,
+      polizaId: p.id,
+      lista: 'polizas' as const,
+      fecha: null,
+      texto: `Tienes una póliza nueva${que ? ` ${que}` : ''}.${cambio}`,
+    }
+  })
+}
+
 export type PlanAvisos = {
   /** Lo que se notifica. */
   enviar: EventoCima[]
@@ -173,6 +195,8 @@ export function planificarAvisos(
   selladas: ReadonlySet<string>,
   silenciados: ReadonlySet<string>,
   hoy: Date,
+  /** Pólizas nuevas del tomador (`polizasNuevasParaAviso`). Sin semilla: la regla ya filtra lo viejo. */
+  nuevas: readonly PolizaNuevaParaAviso[] = [],
 ): PlanAvisos {
   const enviar: EventoCima[] = []
   const sellarSiempre: { clave: string; tipo: string }[] = []
@@ -188,13 +212,19 @@ export function planificarAvisos(
   for (const e of eventosDePolizas(polizas)) {
     if (selladas.has(e.clave) || vistas.has(e.clave)) continue
     vistas.add(e.clave)
-    const semilla = !selladas.has(claveBase(e.polizaId, e.lista))
+    const semilla = e.lista !== 'polizas' && !selladas.has(claveBase(e.polizaId, e.lista))
     const viejo = e.fecha !== null && e.fecha.getTime() < limite
     if (semilla || viejo || silenciados.has(e.tipo)) {
       sellarSiempre.push({ clave: e.clave, tipo: e.tipo })
     } else {
       enviar.push(e)
     }
+  }
+  for (const e of eventosPolizasNuevas(nuevas)) {
+    if (selladas.has(e.clave) || vistas.has(e.clave)) continue
+    vistas.add(e.clave)
+    if (silenciados.has(e.tipo)) sellarSiempre.push({ clave: e.clave, tipo: e.tipo })
+    else enviar.push(e)
   }
   return { enviar, sellarSiempre }
 }

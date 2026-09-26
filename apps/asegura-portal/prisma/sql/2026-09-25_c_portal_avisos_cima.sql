@@ -13,7 +13,7 @@ SET search_path = seguros, public;
 CREATE TABLE IF NOT EXISTS seguros.portal_aviso_cima (
   identidad_id uuid NOT NULL REFERENCES seguros.portal_identidad(id) ON DELETE CASCADE,
   clave        text NOT NULL CHECK (length(clave) <= 300),
-  tipo         text NOT NULL CHECK (tipo IN ('base', 'recibo_nuevo', 'recibo_devuelto', 'siniestro')),
+  tipo         text NOT NULL CHECK (tipo IN ('base', 'recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva')),
   enviado      boolean NOT NULL DEFAULT false,
   creado_en    timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (identidad_id, clave)
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS seguros.portal_aviso_cima (
 
 CREATE TABLE IF NOT EXISTS seguros.portal_aviso_silenciado (
   identidad_id uuid NOT NULL REFERENCES seguros.portal_identidad(id) ON DELETE CASCADE,
-  tipo         text NOT NULL CHECK (tipo IN ('recibo_nuevo', 'recibo_devuelto', 'siniestro')),
+  tipo         text NOT NULL CHECK (tipo IN ('recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva')),
   creado_en    timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (identidad_id, tipo)
 );
@@ -34,3 +34,6 @@ GRANT SELECT, INSERT, DELETE ON seguros.portal_aviso_silenciado TO prisma_asegur
 -- (ver el landmine de `apps/asegura-portal/CLAUDE.md`, 24/09/2026).
 REVOKE ALL ON seguros.portal_aviso_cima FROM crm_seguros;
 REVOKE ALL ON seguros.portal_aviso_silenciado FROM crm_seguros;
+
+-- 26/09/2026: `poliza_nueva` («tienes una póliza nueva»). En la BD ya creada se amplían los CHECK con
+-- `2026-09-26_portal_aviso_poliza_nueva.sql`; aquí queda la forma final para quien cree de cero.

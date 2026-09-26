@@ -80,6 +80,7 @@ modelos de COCHE. Tres causas encadenadas, de abajo arriba:
 | 10 | Descargar `issuedDocuments`, flujo `RevisedQuote`, cron de polling | M |
 | 11 | Parsear el error en sus dos formas antes de recortar | S |
 | 12 | `person-roles` antes de cotizar/emitir; tipo de identificación NIE/CIF/pasaporte | M |
+| 13 | ⏸️ **Pendiente (26/09/2026, Alberto)**: importar a la intranet el proyecto que se crea a mano en la web de Avant2 (caso Pablo Guzmán). Antes, verificar gratis que la API ve proyectos creados en la web: `/api/correduria/codeoscopic-diagnostico?projectId=40842815` con sesión de plataforma. Si no lo ve, no hay nada que importar. Si lo ve, importarlo pide una línea en el libro de consumo (`codeoscopic_consumo`) y un `intentoId` para emitir | M |
 
 ## Preguntas para el portal — prompt listo para Claude en Chrome
 

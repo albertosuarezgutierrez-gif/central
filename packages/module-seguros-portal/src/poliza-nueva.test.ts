@@ -41,3 +41,17 @@ test('fuente ilegible → globo con «+», nunca «sin avisos»', () => {
   assert.deepEqual(r.fuentesIlegibles, ['polizas_nuevas'])
   assert.equal(r.globo, '0+')
 })
+
+test('push: la póliza nueva se avisa sin semilla, dice el cambio de compañía y respeta el silencio', async () => {
+  const { planificarAvisos, textoPushCima } = await import('./avisos-cima.ts')
+  const nuevas = polizasNuevasParaAviso([{ ...base, sustituye: true, sustituyeA: 'Mapfre' }], hoy)
+  const plan = planificarAvisos([], new Set(), new Set(), hoy, nuevas)
+  assert.equal(plan.enviar.length, 1)
+  assert.equal(plan.enviar[0].tipo, 'poliza_nueva')
+  assert.match(textoPushCima(plan.enviar)!.body, /póliza nueva de .* con Allianz\. Sustituye a la anterior/)
+  // Ya sellada → nada; silenciada → se sella sin enviar.
+  assert.equal(planificarAvisos([], new Set([plan.enviar[0].clave]), new Set(), hoy, nuevas).enviar.length, 0)
+  const callado = planificarAvisos([], new Set(), new Set(['poliza_nueva']), hoy, nuevas)
+  assert.equal(callado.enviar.length, 0)
+  assert.equal(callado.sellarSiempre.length, 1)
+})

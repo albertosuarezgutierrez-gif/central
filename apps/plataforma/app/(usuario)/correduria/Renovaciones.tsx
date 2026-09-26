@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import Link from 'next/link'
-import { descripcionDias, enCooldownRenovacion, textoAvisoRenovacionWhatsapp, type Retarificabilidad } from '@central/module-seguros'
+import { descripcionDias, enCooldownRenovacion, textoAvisoRenovacionWhatsapp, textoPlazoOposicion, DIAS_PREAVISO_TOMADOR, type Retarificabilidad } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge, BtnLink, btnStyle, type Tono } from '@/components/ui'
 import { esAccionable, textoListaTruncada, textoVencidasAntiguas } from './secciones'
@@ -409,6 +409,13 @@ export default function Renovaciones({ datos, filtro }: {
                           una vencida se anunciaba como «en -41 días». */}
                       {descripcionDias(p.dias)}
                     </div>
+                    {/* Hasta qué día puede pedir la baja (LCS art. 22). Un cambio de compañía
+                        tiene que llegar antes: Pablo Guzmán llegó con el plazo pasado (26/09/2026). */}
+                    {textoPlazoOposicion(p.fechaVencimiento, p.dias) && (
+                      <div style={{ fontSize: 11, color: p.dias >= DIAS_PREAVISO_TOMADOR ? 'var(--muted)' : 'var(--negative)' }}>
+                        {textoPlazoOposicion(p.fechaVencimiento, p.dias)}
+                      </div>
+                    )}
                   </td>
                   <td data-rol="cabeza" style={{ padding: '8px' }}>
                     {/* El acceso directo: un clic y está la ficha entera del

@@ -119,6 +119,23 @@ export function fechaLimiteOposicion(vencimiento: Date): Date {
   return d
 }
 
+/**
+ * La frase del plazo de baja para la fila de renovaciones (26/09/2026, caso Pablo Guzmán: un cambio
+ * de compañía que llegó con el plazo de oposición ya pasado). Con plazo: hasta qué día puede el
+ * tomador pedir la baja. Sin plazo: desde qué día se pasó. Vencida: nada (ya es otra conversación).
+ * `YYYY-MM-DD` → `DD/MM`; una fecha que no se entiende no produce frase (nunca una inventada).
+ */
+export function textoPlazoOposicion(vencimientoIso: string, dias: number): string | null {
+  if (dias < 0 || !/^\d{4}-\d{2}-\d{2}/.test(vencimientoIso)) return null
+  const dia = vencimientoIso.slice(0, 10)
+  const venc = new Date(`${dia}T00:00:00Z`)
+  // `Date` desborda un 31/02 al 03/03 sin quejarse: solo vale si el día vuelve igual.
+  if (Number.isNaN(venc.getTime()) || venc.toISOString().slice(0, 10) !== dia) return null
+  const limite = fechaLimiteOposicion(venc)
+  const dm = `${String(limite.getUTCDate()).padStart(2, '0')}/${String(limite.getUTCMonth() + 1).padStart(2, '0')}`
+  return dias >= DIAS_PREAVISO_TOMADOR ? `baja a la compañía hasta el ${dm}` : `plazo de baja pasado (${dm})`
+}
+
 /** Último día en que el asegurador puede comunicar una subida de prima o
  *  cualquier otra modificación para esta renovación (LCS art. 22). */
 export function fechaLimiteComunicacionAseguradora(vencimiento: Date): Date {

@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(26/09/2026)** Correduría, mejoras tras cerrar el circuito de emisión: (1) Renovaciones pinta el plazo de baja
+del art. 22 LCS bajo cada vencimiento («baja a la compañía hasta el dd/mm» / «plazo de baja pasado», helper
+`textoPlazoOposicion`); (2) push al móvil «Póliza nueva» (tipo `poliza_nueva` en avisos-cima, CHECK ampliado en prod
+el 26/09 con la migración `portal_aviso_poliza_nueva`, silenciable en la campana). (3) Importar el proyecto que
+Alberto crea a mano en Avant2 queda APARCADO hasta verificar que la API ve proyectos creados en la web
+(`/api/correduria/codeoscopic-diagnostico?projectId=…`); anotado como fila 13 del plan de Codeoscopic.
+
 **(25/09/2026)** trading-analista, pasada 20:15: NAV/cartera/libro empujados a plataforma; 23/24
 símbolos analizados (META vetado por `detectarSuplantaciones` — precio mío mal transcrito de
 IBKR, cazado por el guardián, cero contaminación); compras paper BKNG/ORCL/SQM. Solo bitácora +

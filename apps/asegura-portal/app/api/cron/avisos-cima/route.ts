@@ -4,6 +4,7 @@ import { planificarAvisos, textoPushCima, type PolizaParaAviso } from '@central/
 
 import { registrarUso } from '@/lib/autorizaciones'
 import { carteraALaVista, carteraDeIdentidad, type TitularPortal } from '@/lib/cartera-lectura'
+import { polizasNuevasDeIdentidad } from '@/lib/polizas-nuevas'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { prisma } from '@/lib/db'
 
@@ -74,7 +75,9 @@ export async function GET(req: Request) {
         ...aPolizas(cartera.propias, false),
         ...aPolizas(cartera.autorizadas.filter(conAccesoTotal), true),
       ]
-      if (polizas.length === 0) {
+      // Pólizas nuevas del tomador (26/09/2026): «tienes una póliza nueva», con el cambio de compañía si lo es.
+      const nuevas = await polizasNuevasDeIdentidad(identidadId)
+      if (polizas.length === 0 && nuevas.length === 0) {
         sinNovedad += 1
         continue
       }
@@ -88,6 +91,7 @@ export async function GET(req: Request) {
         new Set(selladas.map((s) => s.clave)),
         new Set(silenciados.map((s) => s.tipo)),
         new Date(),
+        nuevas,
       )
 
       if (plan.sellarSiempre.length > 0) {
