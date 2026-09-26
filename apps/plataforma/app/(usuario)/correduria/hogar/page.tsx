@@ -27,8 +27,7 @@ export default async function HogarPage() {
           icono={<Home size={20} strokeWidth={1.75} />}
           sub={<>
             Con la referencia catastral —o la dirección— el Catastro da los m², el año de construcción
-            y el uso. Gratis y sin preguntarle nada al cliente. Comprobado con el 2º-14 de San Vicente 40:
-            76 m², 1994, igual que la póliza.
+            y el uso, gratis y sin preguntarle nada al cliente.
           </>}
         />
       </div>

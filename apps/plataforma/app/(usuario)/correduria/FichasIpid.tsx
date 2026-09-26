@@ -72,7 +72,7 @@ export default function FichasIpid() {
           </ul>
         ))}
       <details>
-        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>Subir una ficha IPID</summary>
+        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>Subir una ficha IPID</summary>
         <p style={{ fontSize: 13, color: 'var(--muted)', margin: '0 0 8px' }}>
           Escribe la compañía y el producto tal y como salen en el presupuesto (por ejemplo «Allianz» y «Todo Riesgo»).
         </p>

@@ -450,7 +450,7 @@ function Rechazos({ salud }: { salud: SaludIngesta }) {
     <Bloque
       titulo="Envíos que nos mandan y rechazamos"
       Icono={Antenna}
-      sub="La misma pérdida por otra puerta: un dato que llega y se tira se pierde igual que uno que no llega. Caso fundacional (04/09/2026): Codeoscopic mandando un webhook cada 30 minutos, autenticado, y tirándolo entero por una diferencia de forma."
+      sub="Un dato que llega y se tira se pierde igual que uno que no llega."
       accion={
         salud.rechazos === null
           ? <Pendiente texto="Sin comprobar" donde="el puerto de asegura" />

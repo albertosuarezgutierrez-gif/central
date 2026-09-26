@@ -105,7 +105,7 @@ function Filas({ filas }: { filas: Array<[string, string]> }) {
 }
 
 const muted = { margin: 0, fontSize: 13, color: 'var(--muted)' } as const
-const resumen = { cursor: 'pointer', fontSize: 14, minHeight: 44, display: 'flex', alignItems: 'center' } as const
+const resumen = { cursor: 'pointer', fontSize: 14, minHeight: 44 } as const
 const item = {
   display: 'flex', flexWrap: 'wrap', gap: '4px 12px', alignItems: 'baseline', padding: '8px 10px',
   border: '1px solid var(--border)', borderRadius: 8,

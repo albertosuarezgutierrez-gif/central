@@ -100,7 +100,6 @@ export default function Recaptacion({ onContador }: {
     .filter((g) => !soloWhatsapp || g.telefono !== null)
   const visibles = filtrados.slice(0, ver)
   const hayTrabajo = filtrados.length > 0
-  const conVencimientoAntiguo = cola.leads.filter((l) => l.origen === 'vencimiento_antiguo').length
   const enEspera = cola.contadores.enEsperaVentana
 
   return (
@@ -108,11 +107,8 @@ export default function Recaptacion({ onContador }: {
       titulo={`Recaptación · ${cola.contadores.totalCandidatos} lead(s) recaptables`}
       Icono={Target}
       sub={
-        conVencimientoAntiguo > 0 || enEspera > 0
-          ? `Leads del volcado histórico con contacto que hoy NO son cliente vivo por CIMA en ningún ramo — ${cola.contadores.totalCandidatos - conVencimientoAntiguo} sin fecha de vencimiento (ya se pueden captar) y ${conVencimientoAntiguo} con vencimiento antiguo dentro de su ventana de 45 días (años atrás; el mes/día es la pista de cuándo solía renovar).`
-            + (enEspera > 0 ? ` Hay ${enEspera} más con vencimiento antiguo esperando a que se acerque su fecha — no han desaparecido, saldrán solos cuando toque.` : '')
-            + ' Agrupados por cliente: puede haber tenido varios seguros, el contacto es uno solo.'
-          : 'Leads del volcado histórico, sin fecha de vencimiento y con contacto, que hoy NO son cliente vivo por CIMA en ningún ramo. Agrupados por cliente: puede haber tenido varios seguros, el contacto es uno solo.'
+        `Leads del volcado con contacto que hoy no son cliente vivo, agrupados por cliente.`
+          + (enEspera > 0 ? ` ${enEspera} más esperan a que se acerque su antiguo vencimiento.` : '')
       }
       accion={
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -175,7 +171,7 @@ export default function Recaptacion({ onContador }: {
               style={{
                 marginTop: 10, minHeight: 44, padding: '0 16px', borderRadius: 8,
                 border: '1px solid var(--border)', background: 'var(--surface)',
-                color: 'var(--text)', cursor: 'pointer', fontWeight: 600,
+                color: 'var(--text)', cursor: 'pointer', fontWeight: 600, width: '100%',
               }}
             >
               Ver {Math.min(POR_PAGINA, filtrados.length - ver)} más
@@ -228,7 +224,7 @@ function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
           {g.telefono && <BotonWhatsappRecaptacion grupo={g} />}
           {g.email && <BotonEmailRecaptacion grupo={g} />}
-          <Link href={`/correduria/cliente/${g.clienteId}`} style={btnStyle('sutil', 'sm')}>
+          <Link href={`/correduria/cliente/${g.clienteId}`} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
             Ficha
           </Link>
         </div>
@@ -320,7 +316,7 @@ function BotonWhatsappRecaptacion({ grupo }: { grupo: GrupoLeadRecaptacion }) {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      style={btnStyle('primario', 'sm')}
+      style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}
       onClick={() => {
         fetch('/api/correduria/recaptacion/whatsapp', {
           method: 'POST',
@@ -340,7 +336,7 @@ function BotonEmailRecaptacion({ grupo }: { grupo: GrupoLeadRecaptacion }) {
   return (
     <button
       type="button"
-      style={btnStyle('sutil', 'sm')}
+      style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}
       disabled={estado === 'enviando' || (typeof estado === 'object' && estado.estado === 'ok')}
       title={typeof estado === 'object' && estado.estado !== 'ok' ? textoEscritura(estado) : undefined}
       onClick={async () => {

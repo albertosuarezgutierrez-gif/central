@@ -20,7 +20,7 @@ export default function Plegable({ titulo, resumen, children }: {
       onToggle={(e) => { if ((e.currentTarget as HTMLDetailsElement).open) setAbierto(true) }}
       style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', boxShadow: 'var(--shadow)', padding: '4px 16px' }}
     >
-      <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontWeight: 700, fontSize: 14 }}>
+      <summary style={{ cursor: 'pointer', minHeight: 44, gap: 8, flexWrap: 'wrap', fontWeight: 700, fontSize: 14 }}>
         {titulo}
         {resumen && <span style={{ fontWeight: 400, fontSize: 12, color: 'var(--muted)' }}>{resumen}</span>}
       </summary>

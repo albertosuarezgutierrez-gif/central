@@ -195,9 +195,7 @@ export default function PartesPortal({ onContador }: {
       titulo={`${partes.length} parte(s) de siniestro sin atender`}
       sub={
         <>
-          Los ha abierto el cliente desde el portal: hay alguien esperando. Un parte enviado{' '}
-          <strong>no es un siniestro comunicado a la compañía</strong> — el cliente ya cree que está
-          hecho, y mientras siga aquí la entidad no sabe nada.
+          Abiertos por el cliente en el portal: <strong>la compañía aún no sabe nada</strong>.
         </>
       }
     >
@@ -321,8 +319,7 @@ function Parte({
             {p.titularDistinto.nombre}
           </Link>
           <span style={{ color: 'var(--muted)' }}>
-            {' '}— el parte lo dio alguien con autorización para ver esa póliza. Es a quien hay que
-            llamar y quien figura en el contrato.
+            {' '}(el parte lo dio un autorizado; llama al tomador)
           </span>
         </p>
       )}
@@ -387,7 +384,7 @@ function Parte({
           onToggle={(e) => setTextoAbierto((e.currentTarget as HTMLDetailsElement).open)}
           style={{ marginTop: 8 }}
         >
-          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>
             Lo que cuenta el cliente
           </summary>
           {textoAbierto && (

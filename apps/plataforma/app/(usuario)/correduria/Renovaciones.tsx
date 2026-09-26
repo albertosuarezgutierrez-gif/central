@@ -346,24 +346,28 @@ export default function Renovaciones({ datos, filtro }: {
       </p>
 
       {sinRecibir && (
-        <div
-          style={{
-            fontSize: 12, lineHeight: 1.5, color: 'var(--text)', background: 'var(--warning-bg)',
-            border: '1px solid var(--warning)', borderRadius: 6, margin: '0 0 10px', padding: '8px 10px',
-          }}
-        >
-          <strong>
+        <details style={{ margin: '0 0 10px' }}>
+          <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, minHeight: 44 }}>
             {sinRecibir.n === 1 ? '1 póliza con la renovación sin recibir' : `${sinRecibir.n} pólizas con la renovación sin recibir`}
             {sinRecibir.prima > 0 && ` · ${eur(sinRecibir.prima)}`}
             {sinRecibir.sinPrima > 0 && ` · ${sinRecibir.sinPrima} sin prima informada`}
-          </strong>
-          {' — '}figuran vigentes con la fecha pasada: la compañía no ha mandado por CIMA ni la anualidad
-          nueva ni una anulación. Salvo que alguien la anulara, se prorrogan solas (LCS art. 22), así que
-          lo normal es que sigan en vigor. Compruébalas en el portal de la compañía. Van al final de la lista.
-          <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
-            {sinRecibir.companias.map(c => <li key={c.aseguradora}>{textoCompaniaSinRecibir(c)}</li>)}
-          </ul>
-        </div>
+          </summary>
+          <div
+            style={{
+              fontSize: 12, lineHeight: 1.5, color: 'var(--text)', background: 'var(--warning-bg)',
+              border: '1px solid var(--warning)', borderRadius: 6, margin: '8px 0 0', padding: '8px 10px',
+            }}
+          >
+            <p style={{ margin: '0 0 8px' }}>
+              Figuran vigentes con la fecha pasada: la compañía no ha mandado por CIMA ni la anualidad
+              nueva ni una anulación. Salvo que alguien la anulara, se prorrogan solas (LCS art. 22), así que
+              lo normal es que sigan en vigor. Compruébalas en el portal de la compañía. Van al final de la lista.
+            </p>
+            <ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>
+              {sinRecibir.companias.map(c => <li key={c.aseguradora}>{textoCompaniaSinRecibir(c)}</li>)}
+            </ul>
+          </div>
+        </details>
       )}
 
       <TablaScroll>
@@ -522,14 +526,19 @@ export default function Renovaciones({ datos, filtro }: {
         </button>
       )}
 
-      <p style={{ fontSize: 11, color: 'var(--muted)', margin: '8px 0 0' }}>
-        El tomador puede oponerse a la prórroga hasta un mes antes del vencimiento (LCS art. 22): pasada esa
-        fecha la póliza se renueva sola. Las pólizas sin fecha de vencimiento no salen aquí — no es que no
-        venzan, es que la compañía no ha informado la fecha.
-        {datos.diasAtras
-          ? ` La ventana mira ${datos.dias} días hacia delante y ${datos.diasAtras} hacia atrás, para que una vencida sin gestionar no desaparezca.`
-          : ' La versión desplegada de asegura no dice cuántos días hacia atrás mira la ventana.'}
-      </p>
+      <details style={{ margin: '8px 0 0' }}>
+        <summary style={{ cursor: 'pointer', fontSize: 11, color: 'var(--muted)', minHeight: 44 }}>
+          ¿Cómo funciona la prórroga?
+        </summary>
+        <p style={{ fontSize: 11, color: 'var(--muted)', margin: '8px 0 0' }}>
+          El tomador puede oponerse a la prórroga hasta un mes antes del vencimiento (LCS art. 22): pasada esa
+          fecha la póliza se renueva sola. Las pólizas sin fecha de vencimiento no salen aquí — no es que no
+          venzan, es que la compañía no ha informado la fecha.
+          {datos.diasAtras
+            ? ` La ventana mira ${datos.dias} días hacia delante y ${datos.diasAtras} hacia atrás, para que una vencida sin gestionar no desaparezca.`
+            : ' La versión desplegada de asegura no dice cuántos días hacia atrás mira la ventana.'}
+        </p>
+      </details>
 
       {filtro === 'todas' && <PieAntiguas n={datos.vencidasAntiguas} />}
     </>

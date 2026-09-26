@@ -687,9 +687,11 @@ function Papel({ papel, quien, linea, ocupado, onQuitar }: {
       {fila?.origen === 'cima' && (
         <span
           style={{ fontSize: 11, color: 'var(--muted)' }}
+          role="img"
+          aria-label="la manda CIMA"
           title="Esta línea la manda CIMA. Borrarla aquí no serviría: el siguiente pull la vuelve a crear. Para quitarla hay que corregirlo en la compañía."
         >
-          · la manda CIMA
+          ⓘ
         </span>
       )}
 

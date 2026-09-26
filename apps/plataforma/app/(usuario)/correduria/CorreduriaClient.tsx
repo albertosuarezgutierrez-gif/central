@@ -439,7 +439,7 @@ export default function CorreduriaClient() {
         <Bloque
           titulo="Renovaciones en plazo de preaviso"
           Icono={CalendarClock}
-          sub="Las que aún se pueden mover: dentro del mes de preaviso el tomador ya no puede oponerse a la prórroga (LCS art. 22). La ventana completa de 90 días está en «Cartera»."
+          sub="Las que aún se pueden mover antes del preaviso (LCS art. 22). Las de 90 días, en «Cartera»."
         >
           <Renovaciones datos={vencimientos} filtro="accionables" />
         </Bloque>

@@ -154,7 +154,7 @@ export default function Retencion({
       titulo={
         hayTrabajo
           ? `Hay que llamar · ${filas.length} póliza(s) en riesgo`
-          : 'Nadie con recibos sin cobrar'
+          : 'Nada con recibos sin cobrar'
       }
       // La letra pequeña que CALIFICA el titular: sin ella, «3 pólizas en
       // riesgo» no dice qué se está contando ni por qué ese orden.
@@ -209,10 +209,9 @@ export default function Retencion({
         </div>
       )}
 
-      {filas.length === 0 ? (
+      {!hayTrabajo ? (
         <p style={pMuted}>
-          Ningún recibo devuelto ni vencido sin cobrar. Ojo con lo de abajo: no es lo mismo que
-          «está todo pagado».
+          Ningún recibo devuelto ni vencido sin cobrar (no es lo mismo que «todo pagado»: mira abajo).
         </p>
       ) : (
         <>

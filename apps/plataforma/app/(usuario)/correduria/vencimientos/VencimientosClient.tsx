@@ -165,7 +165,7 @@ function Chip({ activo, onClick, children }: { activo: boolean; onClick: () => v
       aria-pressed={activo}
       onClick={onClick}
       style={{
-        minHeight: 36, padding: '0 12px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
+        minHeight: 44, padding: '0 12px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
         border: `1px solid ${activo ? 'var(--primary)' : 'var(--border)'}`,
         background: activo ? 'var(--primary-light)' : 'var(--surface)',
         color: activo ? 'var(--primary)' : 'var(--text)', fontWeight: activo ? 600 : 400,

@@ -392,7 +392,7 @@ function FilaFicha({
             </div>
             {fila.porque && (
               <details style={{ marginTop: 4 }}>
-                <summary style={{ color: 'var(--muted)', fontSize: 12, cursor: 'pointer', minHeight: 24 }}>por qué</summary>
+                <summary style={{ color: 'var(--muted)', fontSize: 12, cursor: 'pointer', minHeight: 44 }}>por qué</summary>
                 <p style={{ color: 'var(--muted)', fontSize: 12, margin: '4px 0 0' }}>{fila.porque}</p>
               </details>
             )}

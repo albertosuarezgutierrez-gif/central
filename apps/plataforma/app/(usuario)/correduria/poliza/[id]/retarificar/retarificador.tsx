@@ -1996,7 +1996,7 @@ function Precios({
       ) : (
       r.fallos.length > 0 && (
         <details style={{ marginTop: 8 }}>
-          <summary className="muted" style={{ cursor: 'pointer', minHeight: 24, fontSize: 12 }}>
+          <summary className="muted" style={{ cursor: 'pointer', minHeight: 44, fontSize: 12 }}>
             {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
           </summary>
           <ul style={{ margin: '6px 0 0' }}>
@@ -2142,7 +2142,7 @@ function BannerCaducada({ guardadaPrevia }: { guardadaPrevia: TarificacionGuarda
     ? 'antes'
     : fecha.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
   return (
-    <div className="card" style={{ borderColor: 'var(--danger)', borderWidth: 2, background: 'rgba(220, 38, 38, 0.06)' }}>
+    <div className="card" style={{ borderColor: 'var(--danger)', borderWidth: 2, background: 'var(--negative-bg)' }}>
       <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
         ⏳ La cotización del {cuando} ha caducado
       </p>

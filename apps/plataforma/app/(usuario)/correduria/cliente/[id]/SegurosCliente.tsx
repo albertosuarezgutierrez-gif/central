@@ -47,7 +47,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
         )}
         {descartadas.length > 0 && (
           <details style={{ fontSize: 12, color: 'var(--muted)' }}>
-            <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>Eliminadas de oportunidades ({descartadas.length})</summary>
+            <summary style={{ cursor: 'pointer', minHeight: 44 }}>Eliminadas de oportunidades ({descartadas.length})</summary>
             <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 4 }}>
               {descartadas.map(p => (
                 <li key={p.id} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -62,7 +62,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
 
       {yaNoExiste.length > 0 && (
         <details style={{ display: 'grid', gap: 10 }}>
-          <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 15, fontWeight: 700 }}>
+          <summary style={{ cursor: 'pointer', minHeight: 44, fontSize: 15, fontWeight: 700 }}>
             🗂️ Ya no existe ({yaNoExiste.length})
           </summary>
           <Rejilla>{yaNoExiste.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} />)}</Rejilla>

@@ -91,7 +91,7 @@ export default function Duplicadas({ onContador }: {
       sub="Mismo número de póliza en la misma compañía, dos veces vivas. «Sin casar» = emitida por nosotros y traída por CIMA sin unir: hay que unirlas antes de que el cliente reciba dos avisos."
     >
       <details>
-        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+        <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>
           Ver cuáles
         </summary>
         <ul style={{ margin: '8px 0 0', paddingLeft: 18, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>

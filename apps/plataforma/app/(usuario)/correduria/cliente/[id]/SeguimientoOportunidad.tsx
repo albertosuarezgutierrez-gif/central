@@ -152,20 +152,20 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
         <h3 style={tituloBloque}>Qué hago ahora</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {op.estado === 'competencia' && !aparcada && (
-            <button type="button" disabled={enviando} style={btnStyle('secundario', 'sm')} onClick={() => accion({ accion: 'interesado' })}>Interesado</button>
+            <button type="button" disabled={enviando} style={{ ...btnStyle('secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }} onClick={() => accion({ accion: 'interesado' })}>Interesado</button>
           )}
           {(op.estado === 'competencia' || op.estado === 'en_negociacion') && !aparcada && (
-            <button type="button" disabled={enviando} style={btnStyle('primario', 'sm')} onClick={() => accion({ accion: 'propuesta_enviada' })}>Propuesta enviada</button>
+            <button type="button" disabled={enviando} style={{ ...btnStyle('primario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }} onClick={() => accion({ accion: 'propuesta_enviada' })}>Propuesta enviada</button>
           )}
           {/* «Ganada» va en la fila, con la póliza que se emitió. */}
           {!cerrada && (
             <>
-              <button type="button" disabled={enviando} aria-expanded={panel === 'perder'} style={{ ...btnStyle('secundario'), color: 'var(--negative)' }} onClick={() => setPanel(panel === 'perder' ? null : 'perder')}>Perdida…</button>
-              {!aparcada && <button type="button" disabled={enviando} aria-expanded={panel === 'aparcar'} style={btnStyle('secundario')} onClick={() => setPanel(panel === 'aparcar' ? null : 'aparcar')}>Aparcar…</button>}
+              <button type="button" disabled={enviando} aria-expanded={panel === 'perder'} style={{ ...btnStyle('secundario'), color: 'var(--negative)', display: 'flex', alignItems: 'center', minHeight: 44 }} onClick={() => setPanel(panel === 'perder' ? null : 'perder')}>Perdida…</button>
+              {!aparcada && <button type="button" disabled={enviando} aria-expanded={panel === 'aparcar'} style={{ ...btnStyle('secundario'), display: 'flex', alignItems: 'center', minHeight: 44 }} onClick={() => setPanel(panel === 'aparcar' ? null : 'aparcar')}>Aparcar…</button>}
             </>
           )}
           {(op.estado === 'perdida' || aparcada) && (
-            <button type="button" disabled={enviando} style={btnStyle('secundario')} onClick={() => accion({ accion: 'reabrir' })}>Reabrir</button>
+            <button type="button" disabled={enviando} style={{ ...btnStyle('secundario'), display: 'flex', alignItems: 'center', minHeight: 44 }} onClick={() => accion({ accion: 'reabrir' })}>Reabrir</button>
           )}
         </div>
         {panel === 'perder' && <FormPerder enviando={enviando} onEnviar={accion} onCancelar={() => setPanel(null)} />}
@@ -188,7 +188,7 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
       <Tareas oportunidadId={id} tareas={datos.tareas} descartadas={datos.tareasDescartadas} fueCliente={datos.fueCliente} cerrada={cerrada} hoy={hoy} onCambio={() => { cargar(); onCambio?.() }} />
 
       <details style={{ paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-        <summary style={{ ...tituloBloque, cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center' }}>Historial ({datos.historial.length})</summary>
+        <summary style={{ ...tituloBloque, cursor: 'pointer', minHeight: 44 }}>Historial ({datos.historial.length})</summary>
         {datos.historial.length === 0 ? (
           <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Sin cambios registrados desde aquí todavía.</p>
         ) : datos.historial.map((h, i) => (
@@ -222,7 +222,7 @@ function FormPerder({ enviando, onEnviar, onCancelar }: { enviando: boolean; onE
       <fieldset style={{ margin: 0, padding: 0, border: 0, display: 'grid', gap: 6, gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))' }}>
         <legend style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>¿Por qué? (obligatorio)</legend>
         {MOTIVOS_PERDIDA_UI.map(m => (
-          <label key={m.valor} style={{ minHeight: 44, display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px', borderRadius: 10, border: `1px solid ${motivo === m.valor ? 'var(--primary)' : 'var(--border)'}`, fontSize: 14 }}>
+          <label key={m.valor} style={{ minHeight: 44, gap: 10, padding: '0 12px', borderRadius: 10, border: `1px solid ${motivo === m.valor ? 'var(--primary)' : 'var(--border)'}`, fontSize: 14 }}>
             <input type="radio" name="motivo" value={m.valor} checked={motivo === m.valor} onChange={() => setMotivo(m.valor)} /> {m.rotulo}
           </label>
         ))}
@@ -258,7 +258,7 @@ function FormAparcar({ enviando, hoy, onEnviar, onCancelar }: { enviando: boolea
       style={{ display: 'grid', gap: 12, padding: 14, borderRadius: 12, border: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {[90, 180, 330].map(n => (
-          <button key={n} type="button" onClick={() => setHasta(masDias(hoy, n))} aria-pressed={hasta === masDias(hoy, n)} style={btnStyle(hasta === masDias(hoy, n) ? 'primario' : 'secundario', 'sm')}>
+          <button key={n} type="button" onClick={() => setHasta(masDias(hoy, n))} aria-pressed={hasta === masDias(hoy, n)} style={{ ...btnStyle(hasta === masDias(hoy, n) ? 'primario' : 'secundario', 'sm'), display: 'flex', alignItems: 'center', minHeight: 44 }}>
             {n === 90 ? '3 meses' : n === 180 ? '6 meses' : '11 meses'}
           </button>
         ))}
@@ -354,7 +354,7 @@ function Tareas({ oportunidadId, tareas, descartadas, fueCliente, cerrada, hoy, 
       {descartadas > 0 && <p style={{ margin: 0, fontSize: 12, color: 'var(--warning)' }}>{descartadas} tarea(s) del puerto no se han podido leer y no se muestran.</p>}
       {hechas.length > 0 && (
         <details>
-          <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--muted)', minHeight: 44, display: 'flex', alignItems: 'center' }}>Hechas ({hechas.length})</summary>
+          <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--muted)', minHeight: 44 }}>Hechas ({hechas.length})</summary>
           {hechas.map(t => (
             <div key={t.id} style={{ fontSize: 13, color: 'var(--muted)', padding: '6px 0', borderTop: '1px solid var(--border)' }}>
               {rotuloTipo(t.tipo)} · {t.observaciones} {t.fechaLimite ? `· ${fecha(t.fechaLimite)}` : ''}

@@ -652,7 +652,7 @@ function FilaCliente({ c, grupo }: { c: ClienteListado; grupo: Seleccion['grupo'
         </p>
       ) : c.polizas.length === 0 ? null : (
         <details onToggle={(e) => setAbierto((e.currentTarget as HTMLDetailsElement).open)} style={{ marginTop: 6 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>
+          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>
             {/* Las pólizas son las de SU grupo: en leads son el volcado o las
                 canceladas de CIMA, y llamarlas «en vigor» sería la mentira que
                 se arregló el 19/09/2026 (Kartenbrot: «1 póliza en vigor · Cancelada»). */}

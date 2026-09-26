@@ -50,8 +50,7 @@ export default function ContactosMovil() {
         {estado.tipo === 'error' && <span role="alert" style={{ fontSize: 13, color: 'var(--negative)' }}>{estado.texto}</span>}
       </div>
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0, lineHeight: 1.5 }}>
-        Clientes en vigor y leads de Vencimientos, con «· AS Cliente» o «· AS Lead» en el nombre. Al importarlo en el móvil elige
-        guardar en el <strong>teléfono</strong>, no en la cuenta de Google. Para actualizar, borra antes los contactos «· AS» y vuelve a importar.
+        Al importarlo, guárdalo en el <strong>teléfono</strong> (no en Google). Para actualizar, borra antes los «· AS».
       </p>
     </div>
   )
