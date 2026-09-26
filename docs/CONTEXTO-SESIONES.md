@@ -18,7 +18,7 @@ consulta la cartera por el puerto (buscar, ficha cliente/póliza, vencimientos, 
 OpenRouter `data_collection:deny`+`zdr` y SIN caída a la cadena gratis; DNI/IBAN enmascarados; rastro de acceso
 en `correduria_asistente_turno` (texto 90 días), reglas aprendidas con botón, 👍/👎 con nota para el entrenador.
 Topes 150/día, 0,50€/día, interruptor `CORREDURIA_ASISTENTE_APAGADO`. Tablas aplicadas en prod. Sin resumen
-diario nuevo (ya llegan las renovaciones). Codeoscopic: la API SÍ ve proyectos creados a mano en Avant2.
+diario nuevo (ya llegan las renovaciones). Codeoscopic: la API SÍ ve proyectos creados a mano en Avant2. PR #3652 (mergeado).
 
 **(26/09/2026)** Correduría, mejoras tras cerrar el circuito de emisión: (1) Renovaciones pinta el plazo de baja
 del art. 22 LCS bajo cada vencimiento («baja a la compañía hasta el dd/mm» / «plazo de baja pasado», helper
