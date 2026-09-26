@@ -2341,6 +2341,13 @@ PR #2933. Sin código tocado, solo doc.
   `emitida` aunque `poliza_id` ya estuviera puesta (antes no, y un 2º `/emitir` habría reenviado). PR #2870.
   Sin webhook real de Codeoscopic (la tabla solo tiene smoke tests de junio) ni fixture del proyecto post-Submit.
 
+- **🚨 Alerta PSD2 sync — BBVA con sesión CLOSED en Enable Banking (13/09/2026).**
+  Último movimiento `psd2`: 2026-09-10 (3 días). `mov_30d`=43 vs `mov_30d_prev`=71 (dentro de rango,
+  no es la anomalía). `conexiones_banco` de BBVA trae avisos SIN prefijo ℹ️ (fallo real, no
+  limitación conocida): sesión CLOSED en Enable Banking + `HTTP 401 CLOSED_SESSION` al detalle de
+  cuenta, ambos del sync de hoy 06:00 UTC. Kutxabank sincroniza sin avisos.
+  Acción: re-vincular BBVA en `/banca`. Alerta enviada por `/api/internal/alerta`.
+
 - **⏳ La fecha de efecto CADUCA: el proyecto 40685666 murió al cambiar de día (13/09/2026).**
   Con #2859 desplegado, Alberto pulsó «Confirmar precio» y la compañía contestó «The effective date cannot be
   before today»: se cotizó el 12/09 con efecto 12/09 (la pantalla precarga HOY) y `effectiveDate` es de solo
