@@ -49,8 +49,15 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                 <EstadoCabecera estado={ficha.estado} cotizacionesVivas={ficha.cotizacionesVivas} cliente={esCliente} />
                 <RamosContratados tiposVivos={tiposVivos} />
                 <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
-                <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} />
-                <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />
+                {/* DNI, nacimiento y carnés se consultan, no se trabajan: plegados
+                    (26/09/2026, en móvil la línea ocupaba 5-6 renglones). */}
+                <details style={{ display: 'inline-block' }}>
+                  <summary style={{ cursor: 'pointer', color: 'var(--muted)', minHeight: 44 }}>DNI y carnés</summary>
+                  <span style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
+                    <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} />
+                    <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />
+                  </span>
+                </details>
                 {conyuge && (
                   <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
                     💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>

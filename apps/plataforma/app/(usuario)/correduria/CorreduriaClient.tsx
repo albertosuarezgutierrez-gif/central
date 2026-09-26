@@ -185,7 +185,7 @@ export default function CorreduriaClient() {
   const [nExportRgpd, setNExportRgpd] = useState<number | null | undefined>(undefined)
   const [nFormacion, setNFormacion] = useState<number | null | undefined>(undefined)
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
-  const [nClientes, setNClientes] = useState<number | null | undefined>(undefined)
+  const [, setNClientes] = useState<number | null | undefined>(undefined)
   const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
   const [nTareasHoy, setNTareasHoy] = useState<number | null | undefined>(undefined)
@@ -206,6 +206,7 @@ export default function CorreduriaClient() {
   // se comería los puntos de «nuevo desde tu última visita». Se monta al ir a
   // ella (`?s=actividad`, el «Todo» de «Hoy») o al pulsar su botón.
   const [verActividad, setVerActividad] = useState(false)
+  const [ver90, setVer90] = useState(false)
   useEffect(() => {
     if (!bajarA) return
     if (bajarA === 'actividad') setVerActividad(true)
@@ -311,8 +312,10 @@ export default function CorreduriaClient() {
       // El listado NO es trabajo pendiente (cuántos clientes cumplen el
       // filtro), pero la recaptación SÍ lo es (leads a los que contactar) —
       // igual que «Hoy» suma varias colas de una sección en un solo número.
-      contador: agregarContadores([nClientes, nRecaptacion]),
-      title: 'Clientes que cumplen el filtro actual y leads pendientes de recaptar',
+      // Solo lo que es TRABAJO: la recaptación. El total del listado no se
+      // «atiende», y con él la pestaña enseñaba siempre un número (26/09/2026).
+      contador: agregarContadores([nRecaptacion]),
+      title: 'Leads pendientes de recaptar',
     },
     comisiones: {
       contador: agregarContadores([nCuadre]),
@@ -490,13 +493,14 @@ export default function CorreduriaClient() {
       <div role="tabpanel" aria-label="Cartera" className="corr-panel" style={panel('cartera')}>
         <CarteraResumen cartera={cartera} />
 
-        <Bloque
-          titulo="Renovaciones · próximos 90 días"
-          Icono={CalendarClock}
-          sub="Las pólizas sin fecha de vencimiento no salen aquí: no es que no venzan, es que la compañía no ha informado la fecha."
-        >
-          <Renovaciones datos={vencimientos} filtro="todas" />
-        </Bloque>
+        {/* Las de 90 días ya viven en «Vencimientos» (con su seguimiento) y las
+            urgentes en «Hoy»: aquí van plegadas y montan solo al abrir. */}
+        <details style={{ marginTop: 16 }} onToggle={(e) => setVer90((e.currentTarget as HTMLDetailsElement).open)}>
+          <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14, minHeight: 44 }}>
+            Renovaciones · próximos 90 días
+          </summary>
+          {ver90 && <Renovaciones datos={vencimientos} filtro="todas" />}
+        </details>
       </div>
 
       {/* ══ COMISIONES ═══════════════════════════════════════════════════════
@@ -650,9 +654,6 @@ export default function CorreduriaClient() {
         {/* Pólizas duplicadas en la cartera viva (guardián Codeoscopic↔CIMA). */}
         <Duplicadas onContador={setNDuplicadas} />
 
-        {/* Formación continua IDD: horas por persona y año; el contador sube con los atrasados. */}
-        <Formacion onContador={setNFormacion} />
-        <FichasIpid />
         <LineaBase />
 
         {/* El reverso de la cola de retención: los clientes de la cartera viva
@@ -668,7 +669,13 @@ export default function CorreduriaClient() {
             había dónde atenderlo. El contador solo sube cuando un paquete sale
             INCOMPLETO (eso es trabajo: no se puede entregar así), y un fallo
             reporta `null`, nunca 0. */}
+        <h3 style={SUBTITULO_MAS}>Cumplimiento</h3>
+        {/* Formación continua IDD: horas por persona y año; el contador sube con los atrasados. */}
+        <Formacion onContador={setNFormacion} />
+        <FichasIpid />
         <ExportRgpd onContador={setNExportRgpd} />
+
+        <h3 style={SUBTITULO_MAS}>Referencia</h3>
 
         {/* Directorio de contacto por compañía, minado del correo. Sin
             contador: es referencia, no trabajo pendiente. */}
@@ -707,6 +714,10 @@ export default function CorreduriaClient() {
 // Lleva el ancla (`mas-<bloque>`) a la que bajan `?s=ingesta` y los botones de
 // «Hoy». El `scrollMarginTop` deja sitio a la barra de secciones, que es
 // pegajosa: sin él el rótulo quedaría tapado justo debajo de ella.
+const SUBTITULO_MAS: React.CSSProperties = {
+  margin: '24px 0 4px', fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)',
+}
+
 function SubMas({ id, titulo, Icono, primero = false }: {
   id: BloqueMas
   titulo: string
