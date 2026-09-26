@@ -167,26 +167,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 146 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 147 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 141 | 18.934 | 12.632.018 | 0 | 0 |
-| `otro` | 137 | 4.749 | 16.193.329 | 8.021.431 | 0 |
-| `mcp:github` | 126 | 3.959 | 3.535.694 | 42.091.489 | 63 |
-| `lectura-directa` | 129 | 3.795 | 7.934.406 | 0 | 0 |
-| `escritura` | 109 | 2.461 | 39.813.065 | 0 | 0 |
-| `sql` | 94 | 1.962 | 909.706 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 77 | 899 | 213.470 | 3.171.734 | 10 |
-| `mcp:Vercel` | 32 | 381 | 600.618 | 198.719 | 7 |
+| `bash` | 142 | 19.062 | 12.743.312 | 0 | 0 |
+| `otro` | 138 | 4.785 | 16.265.783 | 8.021.431 | 0 |
+| `mcp:github` | 127 | 3.994 | 3.549.912 | 42.276.619 | 65 |
+| `lectura-directa` | 130 | 3.806 | 7.976.139 | 0 | 0 |
+| `escritura` | 109 | 2.463 | 39.817.570 | 0 | 0 |
+| `sql` | 94 | 1.995 | 918.578 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 77 | 905 | 214.131 | 3.171.734 | 10 |
+| `mcp:Vercel` | 32 | 386 | 608.366 | 198.719 | 7 |
 | `mcp:Booking-com` | 12 | 345 | 1.430.828 | 0 | 0 |
 | `mcp:Gmail` | 18 | 265 | 417.825 | 0 | 2 |
-| `mcp:Supabase` | 56 | 179 | 19.343 | 0 | 1 |
+| `mcp:Supabase` | 56 | 181 | 19.351 | 0 | 1 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
 | `agente:general-purpose` | 22 | 76 | 50.828 | 869.238 | 0 |
 | `mcp:Google-Drive` | 9 | 66 | 65.845 | 0 | 2 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
-| `agente:agente-architect` | 15 | 52 | 44.468 | 1.456.937 | 0 |
+| `agente:agente-architect` | 15 | 53 | 45.043 | 1.475.489 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `mcp:Google_Drive` | 7 | 45 | 57.634 | 0 | 11 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
@@ -197,7 +197,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
-| `agente:rastreador-codigo` | 8 | 12 | 4.439 | 19.215 | 0 |
+| `agente:rastreador-codigo` | 9 | 13 | 4.794 | 19.215 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
 | `agente:general` | 6 | 8 | 5.205 | 231.483 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
