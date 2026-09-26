@@ -728,6 +728,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) asegura-web: herramienta «Carta para dar de baja un seguro» (`/carta-baja-seguro`)
+- SEO sin pelear con las compañías: OpenSEO (26/09) midió «modelo carta baja seguro» 140/mes KD 0 (1ª página = webs de plantillas), «dar de baja seguro coche» 390 KD 0. «gestor de seguros»/«app controlar seguros» ≈ 0 o intención de EMPLEO → la app no atrae tráfico, convierte.
+- La carta se compone EN EL NAVEGADOR (`lib/carta-baja.ts` + `components/CartaBaja.tsx`): sin fetch, analítica sin datos personales (evento `carta_accion`). Mismo texto legal que la del portal: el test lee `module-seguros-portal/src/carta-no-renovacion.ts` y exige sus frases.
+- Enlazada desde el pie (`NAV`), sitemap y CTA del artículo del preaviso. Cierra con CTA al gestor (`origen=carta_baja`).
+- + artículo `blog/como-rellenar-parte-amistoso` (casillas 1-15 del impreso europeo; «declaración amistosa» 880, «cómo rellenar parte amistoso» 590, KD 0). El de «accidente de coche» deja de competir por esa consulta.
+- Siguientes candidatas medidas: «defensor del asegurado» 880 KD 0, «seguro impago alquiler» 3.600 KD 10. OpenSEO: 216 créditos.
+
 ## (26/09/2026) Portal del cliente: nombre completo «Grupo ASegura» en vez del «AS» grande
 - Alberto: al entrar salía el monograma «AS» en grande. Pantalla de entrada (`Entrada.tsx`) e indicador de carga
   (`CargaAsegura.tsx`) pasan al logotipo `.marca-palabra` (mismo `mask` de la cabecera) a 32 px, `.marca-palabra-grande`.
