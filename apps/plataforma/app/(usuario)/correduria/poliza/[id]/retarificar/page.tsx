@@ -13,6 +13,7 @@ import { precalificarHogarRetarificarAsegura } from '@/lib/hogar-retarificar-ase
 import Retarificador, { ValorSupuesto } from './retarificador'
 import { leerContextoDefensa, motivoSinCartera } from '@/lib/contexto-defensa'
 import RetarificadorHogar from './RetarificadorHogar'
+import ImportarAvant2 from './ImportarAvant2'
 import { BuscadorCatastro, ElegirPiso } from './BuscadorCatastro'
 import { consultarHogar, normalizarReferencia } from '@/lib/correduria-hogar'
 import { fichaAsegura } from '@/lib/ficha-asegura'
@@ -79,6 +80,17 @@ export default async function RetarificarPage({
           <h2>Esta póliza está cancelada en CIMA</h2>
           <p>No hay nada que retarificar.</p>
         </div>
+      </Marco>
+    )
+  }
+  // ── Proyecto hecho a mano en Avant2 (fila 13, 26/09/2026) ────────────────
+  // Vive aquí y no en la ficha por el `maxDuration` de arriba: la emisión que
+  // sigue al import es una acción de servidor de ESTA página.
+  if (cadena(sp.avant2) === '1') {
+    return (
+      <Marco>
+        <Cabecera sub={sub} polizaId={p.id} clienteId={p.cliente.id} />
+        <ImportarAvant2 polizaId={p.id} />
       </Marco>
     )
   }
