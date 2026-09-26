@@ -656,10 +656,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 ## (26/09/2026) SIVRA · auditoría del guardián y del motor de precios (PR en rama `claude/sivra-pricing-audit-4p18t0`)
-- **Avisos «reserva X% bajo mercado»:** 14/15 entraron al precio que publicábamos → el guardián ya dice si es «a nuestro precio» o «descuento de canal»; Agoda/Expedia/Airbnb (`amount_gross = amount`, sin bruto real) ya no se comparan como bruto.
-- **Causa del precio bajo lejano:** `apply` castigaba dos veces la nota baja (liga + `quality_factor` contra la nota del corpus ENTERO). Ahora contra la nota de la liga: Busto Reform 0,84→0,93 · Luxury 0,88→0,94 · Dúplex 0,91→0,94.
-- **Evento web x2,2 falso (27/09 «día 2, si aplica»):** descartado; la búsqueda web ya no confirma sola lo ≥1,4 (entra previsto → verificador) ni guarda nombres con duda.
-- **Revisión antelacion_k House (a 0 desde 12/09):** ratio vivo/p50 lejano 1,46→0,95, sobre p90 66%→19%; reservas 8 vs 8 (lejanas 5→7). Se deja en 0. El «autor desconocido» del 07/09 fue una sesión de Claude (entrada del 07/09); la auditoría no corrió del 05 al 18/09 y no lo vio.
+- Avisos «reserva X% bajo mercado»: 14/15 entraron al precio que publicábamos → el guardián ya dice si es «a nuestro precio» o «descuento de canal»; Agoda/Expedia/Airbnb (`amount_gross = amount`, sin bruto real) ya no se comparan como bruto.
+- Causa del precio bajo lejano: `apply` castigaba dos veces la nota baja (liga + `quality_factor` contra la nota del corpus ENTERO). Ahora contra la nota de la liga: Busto Reform 0,84→0,93 · Luxury 0,88→0,94 · Dúplex 0,91→0,94.
+- Evento web x2,2 falso (27/09 «día 2, si aplica»): descartado; la búsqueda web ya no confirma sola lo ≥1,4 (entra previsto → verificador) ni guarda nombres con duda.
+- Revisión antelacion_k House (a 0 desde 12/09): ratio vivo/p50 lejano 1,46→0,95, sobre p90 66%→19%; reservas 8 vs 8 (lejanas 5→7). Se deja en 0. El «autor desconocido» del 07/09 fue una sesión de Claude (entrada del 07/09); la auditoría no corrió del 05 al 18/09 y no lo vio.
 - Pendiente: decidir el bucket mensual entre-semana/finde antes de recalibrar antelación; doc de `pricing-comps-liga.ts:20` dice tope 10% y el clamp es 0,75.
 
 ## (25/09/2026) Correduría · emisión: el doc decía «sin envío al vendor» y ya emite
