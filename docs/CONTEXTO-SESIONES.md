@@ -700,6 +700,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 
 
+## (26/09/2026) Fila 13 CONSTRUIDA: importar un proyecto de Avant2 y emitirlo desde la intranet (PR #3657)
+- `GET/POST /api/operador/codeoscopic/importar` (asegura) + `retarificar?avant2=1` → `ImportarAvant2` → panel `Emision` con `ofertaImportada`. Sin ReRate: solo precios con `SubmitPolicyApplication` y en plazo.
+- Revisión `agente-architect`: 1 bloqueante (soltar póliza de un proyecto con intento sin aclarar → doble emisión) corregido con 409; además matrícula, tomador re-comprobado en `/emitir`, fraccionamiento de la oferta al acuñar, upsert con RETURNING. SQL probado contra BD con rollback.
+- Sin medir: Submit real de una oferta hecha en la web. Pendiente preexistente: consentimientos Allianz auto en moto.
+
 ## (26/09/2026) Plan: importar proyectos de Avant2 (fila 13) + emitir desde Telegram (fase 3)
 - Spec en `docs/superpowers/specs/2026-09-26-importar-avant2-y-emitir-telegram-design.md`. Nada construido.
 - Hallazgo: `/emitir` NO necesita línea previa en `codeoscopic_consumo`; basta enlazar proyecto→póliza en `codeoscopic_projects` (el requisito venía de la FK de `tarificaciones`). Fila 13 corregida.
