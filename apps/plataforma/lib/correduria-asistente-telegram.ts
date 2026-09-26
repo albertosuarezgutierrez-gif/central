@@ -15,6 +15,11 @@ import { buscarAsegura, impagadosAsegura, sustitucionesAsegura } from '@/lib/cor
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { polizaAsegura } from '@/lib/poliza-asegura'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
+import { emitirAsegura, importarProyectoAsegura, vistaImportacionAsegura } from '@/lib/retarificar-asegura'
+import {
+  ACTOR_EMISION_TG, emisionTgActiva, huellaResumen, MINUTOS_PROPUESTA, prepararResumen, proyectoValido, resultadoEmision,
+  textoResumen, urlPoliza, type ResumenEmision,
+} from './correduria-emision-tg'
 import {
   apagado, clasificarDestino, costeConservador, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
   leerArgumentos, leerClasificacion, MAX_TURNOS_DIA, MAX_VUELTAS, paraIA, preguntaNota, reglaConDatoPersonal,
@@ -173,8 +178,165 @@ async function ejecutar(
         UPDATE correduria_asistente_regla SET estado = 'olvidada', olvidada_at = now() WHERE id = ${regla.id}`)
       return { texto: `Olvidada: «${regla.texto}».`, ok: true }
     }
+    case 'preparar_emision':
+      return prepararEmision(args, ctx.turnoId)
     default:
       return { texto: `ERROR: herramienta desconocida ${nombre}.`, ok: false }
+  }
+}
+
+// ── Emisión (fase 3a): la IA prepara, el servidor resume, Alberto pulsa ───────────────────────────
+
+const INTERRUPTOR_EMISION = 'CORREDURIA_ASISTENTE_EMISION_ACTIVA'
+
+async function prepararEmision(args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
+  const polizaId = idValido(args.polizaId)
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    return {
+      texto: `NO DISPONIBLE: la emisión por Telegram está apagada (${INTERRUPTOR_EMISION}). Dile a Alberto que emita desde la intranet${polizaId ? `: ${urlPoliza(polizaId)}` : ' (/correduria)'}.`,
+      ok: true,
+    }
+  }
+  if (!polizaId) return { texto: 'ERROR: polizaId no válido. Sácalo de ficha_cliente.', ok: false }
+  const projectId = proyectoValido(args.projectId)
+  if (!projectId) return { texto: 'ERROR: projectId tiene que ser el número del proyecto de Avant2 (solo cifras). Pídeselo a Alberto.', ok: false }
+  const q = typeof args.quoteId === 'string' ? args.quoteId.trim() : ''
+  const quoteId = /^[A-Za-z0-9_-]{1,40}$/.test(q) ? q : null
+
+  const prep = prepararResumen(polizaId, await vistaImportacionAsegura(projectId, polizaId), quoteId)
+  if (prep.tipo === 'no') return { texto: `NO SE PUEDE EMITIR: ${prep.motivo}. Díselo a Alberto tal cual.`, ok: true }
+  if (prep.tipo === 'elegir') {
+    return {
+      ok: true,
+      texto: `Hay varios precios emitibles; pregúntale a Alberto cuál y vuelve a llamar con su quoteId: ${paraIA(prep.ofertas.map((o) => ({
+        quoteId: o.quoteId, compania: o.compania, categoria: o.categoria ?? o.modalidad, primaEur: o.primaEur, primerReciboEur: o.primerReciboEur, pago: o.pago, caduca: o.caduca,
+      })))}`,
+    }
+  }
+
+  const r = prep.resumen
+  // Un envío anterior de esta póliza que no acabó claro (se cortó, o quedó «incierto») frena el
+  // botón: antes de preparar otro, se mira en la intranet si aquel llegó a emitir.
+  const dudoso = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+    SELECT count(*) AS n FROM correduria_asistente_emision
+    WHERE poliza_id = ${r.polizaId}::uuid AND estado IN ('emitiendo', 'incierta')
+      AND creada_at > now() - interval '7 days'`).then((f) => Number(f[0]?.n ?? 0)).catch(() => null)
+  if (dudoso !== 0) {
+    return {
+      texto: `NO SE PUEDE EMITIR: ${dudoso === null ? 'no he podido comprobar los envíos anteriores de esta póliza' : 'hay un envío anterior de esta póliza sin aclarar (puede haberse emitido)'}. Díselo a Alberto y que lo mire en la intranet: ${urlPoliza(r.polizaId)}`,
+      ok: true,
+    }
+  }
+  // Un solo resumen vivo por póliza: el anterior deja de valer aunque no haya caducado.
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_emision SET estado = 'caducada', decidida_at = now()
+    WHERE poliza_id = ${r.polizaId}::uuid AND estado = 'propuesta'`).catch(() => {})
+  const [fila] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
+    INSERT INTO correduria_asistente_emision (turno_id, poliza_id, project_id, offer_id, resumen, huella, caduca_at)
+    VALUES (${turnoId}, ${r.polizaId}::uuid, ${r.projectId}, ${r.quoteId}, ${JSON.stringify(r)}::jsonb, ${huellaResumen(r)},
+            now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
+    RETURNING id`)
+  const enviado = await tgSendButtons(textoResumen(r), [[
+    { texto: '🚀 Emitir', callback: `cas_emitir:${fila.id}` },
+    { texto: '✖️ No', callback: `cas_emitirno:${fila.id}` },
+  ]]).catch(() => null)
+  if (enviado === null) {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_emision SET estado = 'descartada', decidida_at = now() WHERE id = ${fila.id}`).catch(() => {})
+    return { texto: 'ERROR: no he podido mandar el resumen con el botón a Telegram. Dile que lo intente otra vez o emita desde la intranet.', ok: false }
+  }
+  return {
+    texto: 'Resumen enviado a Alberto con el botón «Emitir» (15 minutos, un solo uso). NO digas que está emitida: dile que revise el resumen y pulse solo si todo cuadra.',
+    ok: true,
+  }
+}
+
+type FilaEmision = { poliza_id: string; project_id: string; offer_id: string; resumen: ResumenEmision; huella: string }
+
+async function cerrarEmision(id: number, estado: string, resultado: Record<string, unknown>): Promise<void> {
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_emision SET estado = ${estado}, resultado = ${JSON.stringify(resultado)}::jsonb
+    WHERE id = ${id}`).catch((e) => console.error('[correduria-emision-tg] no se pudo cerrar la fila', id, e))
+}
+
+/**
+ * Botón «Emitir». Corre DESPUÉS de contestar a Telegram (`after()` en el webhook): el Submit puede
+ * tardar minutos. Nunca lanza y nunca reintenta. Cada salida manda un mensaje: un botón que se pulsa
+ * y no contesta es indistinguible de uno que ha emitido.
+ */
+export async function emitirDesdeBoton(arg: string): Promise<void> {
+  const id = Number(arg)
+  if (!Number.isInteger(id) || id <= 0) return
+  const decir = (t: string) => tgSend(t).catch(() => {})
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    await decir(`🛡️ La emisión por Telegram está apagada (${INTERRUPTOR_EMISION}): no se ha emitido nada.`)
+    return
+  }
+
+  // Un solo uso: dos toques, o un reenvío del webhook, solo pasan una vez por aquí.
+  const [fila] = await prisma.$queryRaw<FilaEmision[]>(Prisma.sql`
+    UPDATE correduria_asistente_emision SET estado = 'emitiendo', decidida_at = now()
+    WHERE id = ${id} AND estado = 'propuesta' AND caduca_at > now()
+    RETURNING poliza_id::text AS poliza_id, project_id, offer_id, resumen, huella`).catch(() => [] as FilaEmision[])
+  if (!fila) {
+    const [actual] = await prisma.$queryRaw<{ estado: string; caducado: boolean }[]>(Prisma.sql`
+      SELECT estado, caduca_at <= now() AS caducado FROM correduria_asistente_emision WHERE id = ${id}`).catch(() => [])
+    if (actual?.estado === 'propuesta' && actual.caducado) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE correduria_asistente_emision SET estado = 'caducada', decidida_at = now() WHERE id = ${id} AND estado = 'propuesta'`).catch(() => {})
+      await decir(`⏱️ Ese resumen ha caducado (${MINUTOS_PROPUESTA} min): no se ha emitido nada. Pídeme el resumen otra vez.`)
+    } else if (actual) {
+      await decir(`🛡️ Ese botón ya se usó (estado: ${escapeHtml(actual.estado)}): no se emite otra vez.`)
+    } else {
+      await decir('🛡️ No encuentro ese resumen: no se ha emitido nada.')
+    }
+    return
+  }
+
+  const url = urlPoliza(fila.poliza_id)
+  let enviado = false
+  try {
+    // Se rehace la MISMA lectura del resumen: si algo cambió desde que Alberto lo leyó, no se emite.
+    const prep = prepararResumen(fila.poliza_id, await vistaImportacionAsegura(fila.project_id, fila.poliza_id), fila.offer_id)
+    if (prep.tipo !== 'resumen' || huellaResumen(prep.resumen) !== fila.huella) {
+      const motivo = prep.tipo === 'no' ? prep.motivo : 'el precio, las fechas, el tomador o la cuenta han cambiado'
+      await cerrarEmision(id, 'caducada', { motivo })
+      await decir(`✋ No he emitido: ${escapeHtml(motivo)} desde que te mandé el resumen. Pídemelo otra vez.`)
+      return
+    }
+    const imp = await importarProyectoAsegura({ projectId: fila.project_id, polizaId: fila.poliza_id, quoteId: fila.offer_id })
+    if (imp.estado !== 'ok') {
+      const mensaje = 'mensaje' in imp ? String(imp.mensaje) : 'asegura no dice por qué'
+      await cerrarEmision(id, 'rechazada', { paso: 'enlazar', mensaje })
+      await decir(`✖️ No se ha emitido nada: no he podido enlazar el proyecto a la póliza (${escapeHtml(mensaje)}).`)
+      return
+    }
+    if (imp.cuenta?.enmascarada !== fila.resumen.cuenta.enmascarada) {
+      await cerrarEmision(id, 'caducada', { paso: 'enlazar', motivo: 'cuenta distinta' })
+      await decir('✋ No he emitido: la cuenta de cargo no es la del resumen. Pídeme el resumen otra vez.')
+      return
+    }
+    enviado = true
+    const res = await emitirAsegura({
+      projectId: fila.project_id,
+      campos: {},
+      actor: ACTOR_EMISION_TG,
+      primaAnual: fila.resumen.primaEur,
+      cuentaConfirmada: fila.resumen.cuenta.enmascarada,
+    })
+    const fin = resultadoEmision(res, url)
+    await cerrarEmision(id, fin.estado, {
+      estado: res.estado,
+      ...('referenciaVendor' in res ? { referenciaVendor: res.referenciaVendor ?? null } : {}),
+      ...('mensaje' in res ? { mensaje: res.mensaje } : {}),
+    })
+    await decir(fin.texto)
+  } catch (e) {
+    const detalle = e instanceof Error ? e.message.slice(0, 200) : 'fallo'
+    await cerrarEmision(id, enviado ? 'incierta' : 'rechazada', { error: detalle })
+    await decir(enviado
+      ? `⚠️ Error inesperado durante el envío (${escapeHtml(detalle)}). Puede haberse emitido: NO lo repitas. Míralo en la intranet: ${url}`
+      : `✖️ No se ha emitido nada: error antes de enviar (${escapeHtml(detalle)}).`)
   }
 }
 
@@ -293,6 +455,12 @@ export async function resolverBotonCorreduria(accion: string, arg: string): Prom
       UPDATE correduria_asistente_turno SET valoracion = ${accion === 'bien' ? 1 : -1} WHERE id = ${id}`).catch(() => {})
     if (accion === 'mal') await tgAskForReply(preguntaNota(id)).catch(() => {})
     return accion === 'bien' ? 'Gracias 👍' : 'Apuntado 👎'
+  }
+  if (accion === 'emitirno') {
+    const n = await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_emision SET estado = 'descartada', decidida_at = now()
+      WHERE id = ${id} AND estado = 'propuesta'`).catch(() => 0)
+    return n ? 'Descartada: no se emite' : 'Ya estaba decidida'
   }
   if (accion === 'regla' || accion === 'reglano') {
     const n = await prisma.$executeRaw(Prisma.sql`

@@ -30,6 +30,32 @@ export function documentoTomador(crudo: unknown): string | null {
   return str(obj(obj(obj(crudo).holder).identificationDocument).id)
 }
 
+/**
+ * El tomador TAL CUAL va en el proyecto (lo que viajará en el Submit), para el resumen de la
+ * emisión por Telegram. El documento sale ya enmascarado (`…769Q`): el completo no cruza el
+ * puerto. Cada campo a `null` = «no consta en el proyecto», nunca «no tiene».
+ */
+export interface TitularProyecto {
+  nombre: string | null
+  documento: string | null
+  direccion: string | null
+  codigoPostal: string | null
+}
+
+export function titularProyecto(crudo: unknown): TitularProyecto {
+  const h = obj(obj(crudo).holder)
+  const d0 = obj(arr(h.addresses)[0])
+  const nombre = [str(h.name), str(h.surname), str(h.surname2)].filter(Boolean).join(' ') || null
+  const doc = documentoTomador(crudo)
+  const via = [str(d0.roadName), str(d0.roadNumber)].filter(Boolean).join(' ') || null
+  return {
+    nombre,
+    documento: doc ? `…${doc.slice(-4)}` : null,
+    direccion: via,
+    codigoPostal: str(d0.postalCode),
+  }
+}
+
 export interface OfertaImportable {
   quoteId: string
   compania: string | null

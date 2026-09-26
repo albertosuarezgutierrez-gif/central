@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse, after } from 'next/server'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { parseCallback, tgAnswerCallback, tgAskForReply, tgSend, tgSendButtons, tgEditMessage, escapeHtml, verifyTelegramWebhook, emisorAutorizado } from '@central/core-telegram'
@@ -21,7 +21,7 @@ import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
-import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria } from '@/lib/correduria-asistente-telegram'
+import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton } from '@/lib/correduria-asistente-telegram'
 import { turnoDeNota } from '@/lib/correduria-asistente'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
@@ -773,6 +773,24 @@ export async function POST(req: NextRequest) {
 
     // ── Asistente de la correduría: 👍/👎 de una respuesta y confirmar/descartar una regla (cas_*) ──
     if (prefix === 'cas') {
+      // «Emitir» (fase 3a): se contesta YA y el Submit corre después de responder a Telegram —
+      // puede tardar minutos, y el botón de un solo uso se encarga de que un reenvío no emita dos veces.
+      if (action === 'emitir') {
+        // Emitir exige que pulse la PERSONA autorizada, no solo que el botón esté en su chat: en un
+        // grupo cualquiera podría pulsar. En un chat privado, el id del chat es el de la persona.
+        if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+          await tgAnswerCallback(cb.id, 'Solo el titular puede emitir')
+          return NextResponse.json({ ok: true })
+        }
+        await tgAnswerCallback(cb.id, '⏳ Compruebo el resumen y emito…')
+        // Se quitan los botones del resumen: el candado ya impide emitir dos veces, pero así no confunde.
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id, `${escapeHtml(cb.message.text ?? '')}\n\n⏳ <i>Pulsado «Emitir»: comprobando…</i>`).catch(() => {})
+        }
+        const arg = args[0] || ''
+        after(() => emitirDesdeBoton(arg))
+        return NextResponse.json({ ok: true })
+      }
       const toast = await resolverBotonCorreduria(action, args[0] || '')
       await tgAnswerCallback(cb.id, toast)
       return NextResponse.json({ ok: true })
