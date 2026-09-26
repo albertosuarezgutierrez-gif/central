@@ -385,6 +385,21 @@ son los **47 clientes con correo y sin invitar**, y el botón de invitar existe 
 (`POST /api/operador/cliente/portal`). No es código: es una tarde de Alberto pulsando el botón.
 **Mientras ese número no suba, construir más dentro del portal es optimizar la parte que no falla.**
 
+### W. Pantalla del corredor: «siguiente paso» por cliente y Hoy como UNA cola 🟢 aprobado (26/09/2026, lote 4)
+
+Salió de la revisión UX de todas las pantallas de `/correduria` («muy poco clara y muy extensa»), tras
+los lotes 1-3 de limpieza. Alberto: «ok añade».
+- **Siguiente paso en la cabecera de la ficha**: UNA frase + UN botón, DERIVADA de lo que ya hay (orden:
+  recibo devuelto → vence en preaviso sin presupuesto → con correo y sin portal → auto sin hogar). Helper
+  puro y testeado; sin dato leído no se afirma nada («no se ha podido comprobar», nunca «todo en orden»).
+- **Hoy = una cola ordenada por urgencia** (plazo legal corriendo → sin cobertura → renovaciones en
+  preaviso → resto), una fila y un botón por acción; el contador de la pestaña es el largo de esa cola
+  (arregla los dos números distintos de la franja y de la pestaña). Mismos tres estados `{n}`/`n+`/`!`.
+- **Venta cruzada en la ficha**: quien tiene auto viva y ningún hogar vivo lleva un aviso «sin hogar» con
+  el presupuesto por Catastro a un clic (81 autos / 19 hogares vivos, 03/09/2026). Alberto: «haz todas».
+- **Medir qué bloques se abren** (secciones de `/correduria` y pestañas de la ficha) dos semanas antes de
+  esconder ninguno: un contador por sección, propio, sin terceros.
+
 ## Preguntas abiertas para Alberto
 
 - ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?
