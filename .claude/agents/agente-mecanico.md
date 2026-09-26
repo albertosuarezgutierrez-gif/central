@@ -1,6 +1,7 @@
 ---
 name: agente-mecanico
-description: Úsalo para trabajo MECÁNICO y de bajo riesgo — cambios de texto/copy, ajustes pequeños de CSS/Tailwind, componentes UI pequeños, renombrados masivos, el mismo patrón aplicado a N archivos, lint, tests sencillos, correcciones de tipos triviales, documentación corta. Modelo económico: úsalo cuando la tarea sea acotada y de bajo riesgo, NO para lógica de negocio, arquitectura, seguridad ni nada que toque invariantes del repo (LANDMINES de los CLAUDE.md) — eso lo hace la sesión principal o `agente-architect`.
+description: >-
+  Úsalo para trabajo MECÁNICO y de bajo riesgo — cambios de texto/copy, ajustes pequeños de CSS/Tailwind, componentes UI pequeños, renombrados masivos, el mismo patrón aplicado a N archivos, lint, tests sencillos, correcciones de tipos triviales, documentación corta. Modelo económico: úsalo cuando la tarea sea acotada y de bajo riesgo, NO para lógica de negocio, arquitectura, seguridad ni nada que toque invariantes del repo (LANDMINES de los CLAUDE.md) — eso lo hace la sesión principal o `agente-architect`.
 tools: Read, Edit, Write, Grep, Glob, Bash
 model: haiku
 ---

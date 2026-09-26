@@ -78,7 +78,8 @@ test('el prompt lleva las reglas aprendidas y la prohibición de inventar', () =
   const s = systemAsistente(['dame el total anual primero'], '2026-09-26')
   assert.match(s, /1\. dame el total anual primero/)
   assert.match(s, /no consta/)
-  assert.match(s, /SOLO LECTURA/)
+  assert.match(s, /solo puedes PREPARAR una emisión/)
+  assert.match(s, /NUNCA digas que una póliza está emitida/)
 })
 
 test('interruptor de apagado', () => {
@@ -110,4 +111,8 @@ test('🔒 el rastro guarda ids, no el texto buscado', () => {
 test('el coste sin catálogo nunca es 0', () => {
   assert.ok(costeConservador(1000) > 0)
   assert.equal(costeConservador(-5), 0)
+})
+
+test('el id de póliza se normaliza a minúsculas (la huella del resumen se rehace con poliza_id::text)', () => {
+  assert.equal(idValido('9588DAD8-893F-4C27-AF63-60A53B755D3B'), '9588dad8-893f-4c27-af63-60a53b755d3b')
 })

@@ -1,6 +1,7 @@
 ---
 name: trading-analista
-description: Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1: paper + Tramo 1 de 1.000€ REALES ya desplegado en CVX; el agente nunca ejecuta, Alberto confirma). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales.
+description: >-
+  Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1: paper + Tramo 1 de 1.000€ REALES ya desplegado en CVX; el agente nunca ejecuta, Alberto confirma). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales.
 ---
 
 # Trading-analista (Fase 1 · paper + Tramo 1 real) — router

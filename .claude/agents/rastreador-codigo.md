@@ -1,6 +1,7 @@
 ---
 name: rastreador-codigo
-description: Úsalo para responder preguntas de NAVEGACIÓN sobre el código — quién llama a un símbolo, qué se rompe si toco un archivo, dónde vive una funcionalidad, qué tests cubren algo, de qué depende un módulo. Sustituye al grafo de código propio, retirado el 21/09/2026. Devuelve una lista de `archivo:línea` + conclusión, NUNCA el contenido de los archivos. Es de SOLO LECTURA: no edita nada. Para escribir código usa `agente-mecanico` o la sesión principal.
+description: >-
+  Úsalo para responder preguntas de NAVEGACIÓN sobre el código — quién llama a un símbolo, qué se rompe si toco un archivo, dónde vive una funcionalidad, qué tests cubren algo, de qué depende un módulo. Sustituye al grafo de código propio, retirado el 21/09/2026. Devuelve una lista de `archivo:línea` + conclusión, NUNCA el contenido de los archivos. Es de SOLO LECTURA: no edita nada. Para escribir código usa `agente-mecanico` o la sesión principal.
 tools: Read, Grep, Glob
 model: haiku
 ---

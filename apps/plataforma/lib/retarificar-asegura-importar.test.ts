@@ -55,3 +55,21 @@ test('import 422 bloqueado: el motivo de negocio viaja tal cual', () => {
   if (r.estado !== 'error') return
   assert.equal(r.mensaje, 'el tomador del proyecto no es el cliente de esta póliza (DNI distinto)')
 })
+
+test('vista: tomador y cuenta del proyecto para el resumen de Telegram; sin campo ≠ sin cuenta', () => {
+  const vieja = interpretarVistaImportacion(200, { estado: 'ok', projectId: '40000001', tomador: 'coincide', bloqueos: [], ofertas: [], otras: 0 })
+  if (vieja.estado !== 'ok') return assert.fail(vieja.mensaje)
+  assert.equal(vieja.cuentaInformada, false)
+  assert.equal(vieja.titular, null)
+  const nueva = interpretarVistaImportacion(200, {
+    estado: 'ok', projectId: '40000001', tomador: 'coincide', bloqueos: [], ofertas: [], otras: 0,
+    titular: { nombre: 'Ana', documento: '…678Z', direccion: null, codigoPostal: null }, matricula: '1234ABC',
+    cuenta: { aviso: 'no_comprobada' },
+  })
+  if (nueva.estado !== 'ok') return assert.fail(nueva.mensaje)
+  assert.equal(nueva.cuentaInformada, true)
+  assert.equal(nueva.cuenta, null)
+  assert.equal(nueva.cuentaAviso, 'no_comprobada')
+  assert.equal(nueva.titular?.documento, '…678Z')
+  assert.equal(nueva.matricula, '1234ABC')
+})

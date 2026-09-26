@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(26/09/2026)** Correduría: fila 5 (ReRate/Submit a 150 s, rutas 240 s; PR #3664, mergeado) + fase 3a, EMITIR DESDE TELEGRAM:
+`preparar_emision` (póliza + nº proyecto Avant2) → el servidor resume desde el GET gratis del importador (tomador y cuenta
+enmascarados) → botón `cas_emitir` de un solo uso, 15 min, huella sha256 → al pulsar rehace lectura, enlaza y emite con la
+cuenta del resumen; nunca reintenta, lo dudoso (5xx sin cuerpo incluido) es «incierta». Revisión de alto riesgo aplicada:
+póliza ya sustituida bloquea (import y /emitir), sin prima no hay botón, envío dudoso previo frena, solo pulsa `from.id` del
+titular. Interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA` (Alberto lo puso a 1). Tabla `correduria_asistente_emision` aplicada.
+Pablo: su Mapfre (vence 29/09) sigue sin emitir desde nuestro sistema (0 proyectos enlazados). Pendiente: prueba real y 3b.
+
 **(26/09/2026)** Asistente de la correduría por Telegram, fase 1 (SOLO LECTURA): el texto libre se reparte
 correduría/contable (`clasificarDestino` + IA de una palabra para lo dudoso; ante fallo, contable), el asistente
 consulta la cartera por el puerto (buscar, ficha cliente/póliza, vencimientos, impagados, anulaciones) con
@@ -713,6 +721,14 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - «Mensajes con tu corredor» RETIRADO en las 4 capas (portal, asegura, plataforma, módulo): el cliente escribe por WhatsApp.
   0 mensajes en BD; la tabla `seguros.portal_mensaje` SE QUEDA (la usa la función SQL de fusionar clientes).
 - Medido con Playwright a 320/390/1280; cepos en `regression-portal-cartera-agrupada` vistos en rojo. PR #3659.
+
+## (26/09/2026) Skills/agentes: frontmatter YAML válido + agente `verificador-esceptico`
+Revisado `addyosmani/agent-skills` (estándar agentskills.io) contra lo nuestro. Hallazgo: 9 skills y
+los 3 agentes tenían `description` como escalar plano con «: » → YAML inválido (Claude Code lo tolera;
+un parser estricto no). Pasados a `description: >-`; lo vigila `test/regression-skills-frontmatter.test.ts`
+(visto en rojo). Nuevo `.claude/agents/verificador-esceptico.md` (sonnet): refuta afirmaciones de
+ausencia/estado y rompe cepos nuevos para verlos fallar; metido en el reparto de `CLAUDE.md`. Descartado copiar el resto: ya lo cubren
+superpowers, `code-review`, `security-review` y `agente-architect`.
 
 ## (26/09/2026) Correduría: 328 fichas con el correo de la ficha distinto del principal de su lista
 Medido: todas de la importación del 21/06; 271 son correos que ya tiene OTRA ficha (índice único, choques del backfill del 08/09).

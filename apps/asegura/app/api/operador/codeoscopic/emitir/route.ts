@@ -145,10 +145,11 @@ export const POST = auditado(async (req: Request) => {
   }
 
   const polizas = await prisma.$queryRaw<
-    { cliente_id: string; tipo: string; fraccionamiento: string | null; datos_especificos: unknown; dni_lookup_hash: string | null }[]
+    { cliente_id: string; tipo: string; fraccionamiento: string | null; datos_especificos: unknown; dni_lookup_hash: string | null; sustituida: boolean }[]
   >`
     select pol.cliente_id::text as cliente_id, pol.tipo::text as tipo, pol.fraccionamiento::text as fraccionamiento,
-           pol.datos_especificos, c.dni_lookup_hash
+           pol.datos_especificos, c.dni_lookup_hash,
+           (pol.sustituida_at is not null or exists (select 1 from polizas s where s.poliza_origen_id = pol.id)) as sustituida
     from polizas pol join clientes c on c.id = pol.cliente_id
     where pol.id = ${p.poliza_id}::uuid and pol.correduria_id = ${correduria.id}::uuid
   `
@@ -296,6 +297,15 @@ export const POST = auditado(async (req: Request) => {
     )
   }
 
+
+  // ── Póliza ya sustituida por otra: no se emite una segunda encima (26/09/2026) ──
+  // Solo en el camino del Submit: acuñar una solicitud ya aprobada (arriba) no manda nada nuevo.
+  if (poliza.sustituida) {
+    return NextResponse.json(
+      { estado: 'error', causa: 'otro', mensaje: 'esta póliza ya está sustituida por otra: no se emite una segunda encima' },
+      { status: 409 },
+    )
+  }
 
   // ── El tomador del proyecto sigue siendo el cliente de la póliza (26/09/2026) ──
   // Un proyecto hecho en la web de Avant2 (import, fila 13) se puede editar allí
