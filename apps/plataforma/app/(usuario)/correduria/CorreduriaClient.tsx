@@ -288,11 +288,14 @@ export default function CorreduriaClient() {
     : undefined
   const cMas = combinarContadores([cIngesta, cDatos, nBlog === undefined ? undefined : agregarContadores([nBlog])])
 
-  // Lo que la franja de «Hoy» llama incidencias: lo que ya está roto o con un
-  // plazo corriendo. `undefined` mientras cargan; `null` si ninguna se pudo leer.
-  // Hasta que contestan las cuatro no se pinta nada: un «0» con tres colas
-  // aún cargando sería una afirmación que nadie ha comprobado.
-  const colasIncid = [nPartes, nSupresiones, nRetencion, nSustituciones, nDescuadres]
+  // Lo que la franja de «Hoy» llama avisos: todas las colas de los bloques de
+  // debajo. Son EXACTAMENTE las que suma el badge de la pestaña (más las tareas),
+  // para que la franja y el badge cuadren: antes el badge sumaba diez colas y la
+  // franja cinco, y los dos números no se podían reconciliar (26/09/2026).
+  // `undefined` mientras cargan; `null` si ninguna se pudo leer. Hasta que
+  // contestan todas no se pinta nada: un «0» con colas aún cargando sería una
+  // afirmación que nadie ha comprobado.
+  const colasIncid = [nPartes, nSupresiones, nQuejas, nCima, nRetencion, nRenovaciones, nLeads, nSustituciones, nDescuadres]
   const nIncidencias = colasIncid.some(n => n === undefined) ? undefined : agregarContadores(colasIncid)
 
   const contadores: ContadoresSeccion = {
@@ -304,7 +307,7 @@ export default function CorreduriaClient() {
       // `nLeads`); `DeclaradasVencer` se conserva SOLO como vista de llamada
       // rápida (teléfono/email en claro) para las ya vinculadas ≤60 días, pero
       // ya no suma un segundo aviso de lo mismo.
-      contador: agregarContadores([nPartes, nSupresiones, nQuejas, nCima, nRetencion, nRenovaciones, nLeads, nSustituciones, nTareasHoy, nDescuadres]),
+      contador: agregarContadores([...colasIncid, nTareasHoy]),
       tono: 'malo',
       title: 'Tareas de seguimiento para hoy, partes sin atender, solicitudes de supresión con el plazo corriendo, recibos que reclamar, renovaciones dentro del plazo de preaviso, pólizas de otras compañías cuya ventana se cierra, declaradas de otra compañía a punto de renovar y sustituciones pendientes de que CIMA confirme la nueva',
     },

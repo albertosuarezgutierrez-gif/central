@@ -52,7 +52,7 @@ export default function HoyCockpit({
   ingesta, nIncidencias, nRecaptacion, nBlog, onIr, onContadorTareas,
 }: {
   ingesta: VistaIngesta | null
-  /** Partes + supresiones + recibos + sustituciones, ya agregado por la pantalla. */
+  /** Todas las colas de los bloques de debajo (las mismas que el badge de la pestaña, menos las tareas). */
   nIncidencias: Contador | null | undefined
   nRecaptacion: N
   nBlog: N
@@ -141,7 +141,7 @@ export default function HoyCockpit({
         </a>
         <a href="#incidencias" style={{ ...CELDA, textDecoration: 'none', color: nIncidencias && nIncidencias.n > 0 ? 'var(--negative)' : 'var(--text)' }}>
           <span style={NUM}>{cifraC(nIncidencias)}</span>
-          <span style={{ fontSize: 13, color: 'var(--muted)' }}>incidencias</span>
+          <span style={{ fontSize: 13, color: 'var(--muted)' }}>avisos</span>
         </a>
       </div>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--muted)' }}>
@@ -240,7 +240,7 @@ export default function HoyCockpit({
       </details>
 
       {/* Las incidencias son los bloques de siempre, justo debajo. */}
-      <h2 id="incidencias" style={TITULO}>Incidencias{nIncidencias !== undefined && (nIncidencias === null || nIncidencias.n > 0) ? ` · ${cifraC(nIncidencias)}` : ''}</h2>
+      <h2 id="incidencias" style={TITULO}>Avisos{nIncidencias !== undefined && (nIncidencias === null || nIncidencias.n > 0) ? ` · ${cifraC(nIncidencias)}` : ''}</h2>
     </div>
   )
 }
