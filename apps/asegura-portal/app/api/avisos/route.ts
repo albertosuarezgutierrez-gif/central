@@ -8,6 +8,7 @@ import { felicitacionesDeIdentidad } from '@/lib/felicitaciones'
 import { reparosDeMisDatos } from '@/lib/mis-datos'
 import { obligacionesDeIdentidad } from '@/lib/obligaciones'
 import { peticionesDeIdentidad } from '@/lib/peticiones'
+import { partesAvisoDeIdentidad } from '@/lib/partes-aviso'
 import { polizasNuevasDeIdentidad } from '@/lib/polizas-nuevas'
 import { requireIdentidad } from '@/lib/session'
 
@@ -37,7 +38,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -53,6 +54,7 @@ export async function GET() {
     felicitacionesDeIdentidad(identidad.id),
     // Octava: las pólizas nuevas (emitidas o recién llegadas por CIMA), con el cambio de compañía si lo es.
     polizasNuevasDeIdentidad(identidad.id),
+    partesAvisoDeIdentidad(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -65,6 +67,7 @@ export async function GET() {
   if (firmas.status === 'rejected') console.error('[avisos] firmas pendientes ilegibles', firmas.reason)
   if (felicitaciones.status === 'rejected') console.error('[avisos] felicitaciones ilegibles', felicitaciones.reason)
   if (polizasNuevas.status === 'rejected') console.error('[avisos] pólizas nuevas ilegibles', polizasNuevas.reason)
+  if (partes.status === 'rejected') console.error('[avisos] partes ilegibles', partes.reason)
   // `null` del puente = no se pudo mirar (no «no hay»).
   const firmasLeidas = firmas.status === 'fulfilled' && firmas.value !== null
     ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
@@ -79,6 +82,7 @@ export async function GET() {
     firmas: firmasLeidas,
     felicitaciones: felicitaciones.status === 'fulfilled' ? felicitaciones.value : null,
     polizasNuevas: polizasNuevas.status === 'fulfilled' ? polizasNuevas.value : null,
+    partes: partes.status === 'fulfilled' ? partes.value : null,
     hoy: new Date(),
   })
 

@@ -707,13 +707,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
-## (26/09/2026) Portal del cliente · parte de siniestro: el SEGURO se elige primero
-- Desde Siniestros el parte arranca en un paso 1 con tarjetas de póliza (antes era un `<select>` al FINAL
-  del formulario); elegir tarjeta = avanzar. Desde la ficha de una póliza (`?poliza=`) el paso se salta.
-- **«No sé cuál / puede que varias» es salida de primera clase, no bloqueante** (decisión: obligar a
-  elegir fabrica pólizas al azar). Arriba del formulario queda «Seguro: X · Cambiar».
-- Cepo nuevo en `test/regression-portal-parte-desde-poliza.test.ts` (visto en rojo). Rama
-  `claude/siniestros-apertura-flujos-h08qft`.
+## (26/09/2026) Portal del cliente · parte de siniestro rehecho (PR #3672)
+- Paso 1 = elegir el seguro en tarjetas (antes `<select>` al final); desde la ficha (`?poliza=`) se salta.
+  La tarjeta «No sé cuál / puede que varias» NO bloquea (decisión: obligar fabrica pólizas al azar).
+- Con póliza elegida: bloque «¿Necesitas ayuda ahora mismo?» con las líneas de ASISTENCIA de su compañía.
+- Auto con terceros: hueco del parte amistoso → `documentos.tipo='parte_siniestro'` + nota.
+- Borrador en `localStorage` por identidad, 72 h, sin ficheros (`lib/parte-borrador.ts`).
+- Aviso de campana `parte_actualizado` (7 días tras abrir/descartar), sin migración (`parte-aviso.ts`).
+- Pendiente: tipo de siniestro por ramo (necesita columna nueva en `portal_parte_siniestro`).
 
 ## (26/09/2026) Portal del cliente (asegura-portal) · barra inferior a lo Smoobu
 - Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero

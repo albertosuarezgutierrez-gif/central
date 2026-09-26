@@ -17,6 +17,7 @@
 import { entraEnVentana } from './obligacion.ts'
 import type { EstadoAutorizacion } from './autorizacion.ts'
 import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
+import type { ParteParaAviso } from './parte-aviso.ts'
 
 export const TIPOS_AVISO = [
   'peticion_recibida',
@@ -30,6 +31,7 @@ export const TIPOS_AVISO = [
   'anulacion_por_firmar',
   'felicitacion',
   'poliza_emitida',
+  'parte_actualizado',
 ] as const
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
 
@@ -67,7 +69,7 @@ export type Aviso = {
   href: string
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -165,6 +167,11 @@ export type EntradaAvisos = {
    * esta superficie no la consulta (no cuenta para el «!»).
    */
   polizasNuevas?: PolizaNuevaParaAviso[] | null
+  /**
+   * Partes de siniestro del portal con un cambio reciente (`partesParaAviso`). `null` = no se ha
+   * podido mirar. Ausente = esta superficie no lo consulta (no cuenta para el «!»).
+   */
+  partes?: ParteParaAviso[] | null
   hoy: Date
 }
 
@@ -205,6 +212,8 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   felicitacion: '/boveda',
   // La póliza nueva se ve en «Mis seguros», con su PDF.
   poliza_emitida: '/boveda',
+  // La lista de partes vive en la pestaña de siniestros de la bóveda.
+  parte_actualizado: '/boveda?vista=siniestro',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -478,8 +487,36 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     }
   }
 
+  if (x.partes === null) {
+    fuentesIlegibles.push('partes')
+  } else {
+    for (const p of x.partes ?? []) {
+      const del = `del ${FECHA.format(new Date(`${p.fechaHecho}T00:00:00Z`))}`
+      avisos.push(
+        p.cambio === 'abierto'
+          ? {
+              tipo: 'parte_actualizado',
+              id: `${p.id}:abierto`,
+              titulo: `Tu parte ${del} ya está abierto${p.compania ? ` con ${p.compania}` : ' con tu compañía'}`,
+              detalle: 'Ya lo tramita la compañía. Si te llaman del perito o del taller, es por esto.',
+              href: HREF_POR_TIPO.parte_actualizado,
+            }
+          : {
+              tipo: 'parte_actualizado',
+              id: `${p.id}:descartado`,
+              titulo: `Hemos revisado tu parte ${del}`,
+              detalle: p.motivoDescarte
+                ? `No lo hemos abierto con la compañía: ${p.motivoDescarte}`
+                : 'No lo hemos abierto con la compañía. Si tienes dudas, llámanos.',
+              href: HREF_POR_TIPO.parte_actualizado,
+            },
+      )
+    }
+  }
+
   // Las fuentes que ESTA superficie consulta: una ausente (`undefined`) no cuenta para el «!».
-  const ausentes = (x.felicitaciones === undefined ? 1 : 0) + (x.polizasNuevas === undefined ? 1 : 0)
+  const ausentes =
+    (x.felicitaciones === undefined ? 1 : 0) + (x.polizasNuevas === undefined ? 1 : 0) + (x.partes === undefined ? 1 : 0)
   return {
     avisos,
     fuentesIlegibles,

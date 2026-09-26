@@ -85,6 +85,8 @@ export type {
   Avisos,
 } from './avisos.ts'
 export { CORTE_AVISO_POLIZA_NUEVA, DIAS_AVISO_POLIZA_NUEVA, polizasNuevasParaAviso } from './poliza-nueva.ts'
+export { DIAS_AVISO_PARTE, partesParaAviso } from './parte-aviso.ts'
+export type { ParteFilaAviso, ParteParaAviso } from './parte-aviso.ts'
 export type { FilaPolizaNueva, PolizaNuevaParaAviso } from './poliza-nueva.ts'
 export { debeAvisarPush, textoPushObligacion } from './push.ts'
 export {

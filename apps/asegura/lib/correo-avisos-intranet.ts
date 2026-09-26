@@ -89,6 +89,7 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
   felicitacion: { uno: 'una felicitación', varios: 'felicitaciones' },
   // Ni compañía ni número: el cambio de compañía, si lo es, se explica DENTRO (la campana lo dice).
   poliza_emitida: { uno: 'una póliza nueva', varios: 'pólizas nuevas' },
+  parte_actualizado: { uno: 'novedades de un parte de siniestro', varios: 'novedades de tus partes de siniestro' },
 }
 
 /** Un aviso, reducido a lo único que el correo necesita: su clase. */
