@@ -707,6 +707,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Skills/agentes: frontmatter YAML válido + agente `verificador-esceptico`
+Revisado `addyosmani/agent-skills` (estándar agentskills.io) contra lo nuestro. Hallazgo: 9 skills y
+los 3 agentes tenían `description` como escalar plano con «: » → YAML inválido (Claude Code lo tolera;
+un parser estricto no). Pasados a `description: >-`; lo vigila `test/regression-skills-frontmatter.test.ts`
+(visto en rojo). Nuevo `.claude/agents/verificador-esceptico.md` (sonnet): refuta afirmaciones de
+ausencia/estado y rompe cepos nuevos para verlos fallar; metido en el reparto de `CLAUDE.md`. Descartado copiar el resto: ya lo cubren
+superpowers, `code-review`, `security-review` y `agente-architect`.
+
 ## (26/09/2026) Correduría: 328 fichas con el correo de la ficha distinto del principal de su lista
 Medido: todas de la importación del 21/06; 271 son correos que ya tiene OTRA ficha (índice único, choques del backfill del 08/09).
 Impacto real, en 7 clientes con póliza activa por CIMA que el portal no enlazaría a su ficha. Hecho: Reyes Tejero y Sabeino Nosti (ya leads)

@@ -1,6 +1,7 @@
 ---
 name: agente-architect
-description: Úsalo SOLO para lo que realmente requiera el modelo más potente — arquitectura, seguridad, decisiones técnicas importantes, bugs difíciles que han resistido varios intentos, problemas de sincronización/integraciones críticas (Smoobu/Booking/webhooks), migraciones importantes, refactors grandes, o revisión crítica de un cambio de alto riesgo (auth, pagos, datos, RLS, multi-tenant). Úsalo con moderación: si la sesión principal puede resolverlo directamente sin varias rondas, no delegues.
+description: >-
+  Úsalo SOLO para lo que realmente requiera el modelo más potente — arquitectura, seguridad, decisiones técnicas importantes, bugs difíciles que han resistido varios intentos, problemas de sincronización/integraciones críticas (Smoobu/Booking/webhooks), migraciones importantes, refactors grandes, o revisión crítica de un cambio de alto riesgo (auth, pagos, datos, RLS, multi-tenant). Úsalo con moderación: si la sesión principal puede resolverlo directamente sin varias rondas, no delegues.
 model: opus
 ---
 

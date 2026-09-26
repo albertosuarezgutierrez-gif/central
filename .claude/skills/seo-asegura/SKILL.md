@@ -1,6 +1,7 @@
 ---
 name: seo-asegura
-description: Agente de SEO, contenido y redes sociales de la web pública de Grupo ASegura (grupoasegura.es, apps/asegura-web). Úsalo si Alberto pide "mejora el SEO de la correduría", "escribe un post/artículo para la web o para redes", "¿cómo vamos de posicionamiento?", o al disparo de la rutina semanal. NO publica en redes ni envía nada a terceros: deja borradores. NUNCA tarifica.
+description: >-
+  Agente de SEO, contenido y redes sociales de la web pública de Grupo ASegura (grupoasegura.es, apps/asegura-web). Úsalo si Alberto pide "mejora el SEO de la correduría", "escribe un post/artículo para la web o para redes", "¿cómo vamos de posicionamiento?", o al disparo de la rutina semanal. NO publica en redes ni envía nada a terceros: deja borradores. NUNCA tarifica.
 ---
 
 # SEO y redes — Grupo ASegura

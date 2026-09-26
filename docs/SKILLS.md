@@ -91,6 +91,7 @@
 | **`agente-mecanico`** | económico (haiku) | Trabajo mecánico/bajo riesgo: texto, CSS/Tailwind pequeño, componentes UI pequeños, renombrados masivos, lint, tests sencillos. NO lógica de negocio ni nada que toque LANDMINES. |
 | **`agente-architect`** | potente (opus) | Arquitectura, seguridad, bugs que han resistido varios intentos, integraciones críticas (Smoobu/Booking/webhooks), revisión de cambios de alto riesgo. Con moderación — no por defecto. |
 | **`rastreador-codigo`** | económico (haiku) | **Solo lectura.** Navegación de código: quién llama a un símbolo, qué se rompe al tocar un archivo, qué tests lo cubren, de qué depende un módulo. Sustituye al grafo propio retirado el 21/09/2026. Devuelve `archivo:línea` + conclusión, nunca volcados. Sabe las tres trampas del repo: barriles `@central/*`, homónimos entre apps, y que «0 resultados» es «no encontré», no «no lo usa nadie». |
+| **`verificador-esceptico`** | intermedio (sonnet) | **Adversarial, no deja cambios.** Antes de afirmar ante Alberto una AUSENCIA o un ESTADO caro de errar («no está atado», «CI verde», «no desborda»), o de dar por bueno un cepo nuevo: intenta refutarlo contra la fuente primaria y rompe el cepo para verlo en rojo. Devuelve CONFIRMADA / REFUTADA / NO VERIFICABLE + prueba. Adaptado de `doubt-driven-development` / `test-engineer` de [addyosmani/agent-skills](https://github.com/addyosmani/agent-skills) (26/09/2026). |
 
 ## Skills SINCRONIZADAS (viven FUERA del repo)
 > Vienen de la cuenta de Claude y se cargan en la sesión desde `/root/.claude/skills/synced/`.

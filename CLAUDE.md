@@ -433,6 +433,14 @@ revisión de un cambio de alto riesgo), usa `.claude/agents/agente-architect.md`
 no por defecto. Programación normal (endpoints, CRUD, Server Actions, bugs normales) la sigue haciendo
 la sesión principal, sin delegar.
 
+**Antes de AFIRMAR, no antes de hacer (26/09/2026):** cuando la sesión vaya a dar a Alberto por
+hecha una AUSENCIA o un ESTADO caro de errar («no está atado», «no lo usa nadie», «CI verde», «no
+desborda», «el cron funciona»), o a dar por bueno un cepo nuevo, delega en
+`.claude/agents/verificador-esceptico.md` (sonnet): intenta refutarlo contra la fuente primaria y
+rompe el cepo para verlo en rojo. No es para cada frase — solo cuando equivocarse costaría una
+decisión, un despliegue o una tarde. Reparto completo: mecánico → `agente-mecanico` · localizar →
+`rastreador-codigo` · afirmar → `verificador-esceptico` · decidir en alto riesgo → `agente-architect`.
+
 **Mide el ahorro, no lo supongas (09/09/2026, corregido 11/09/2026):** anotar solo los fallos (como
 decía esta regla hasta ahora) sesga la medición — sin el total de usos, un fallo cada diez pasadas y
 un fallo cada dos son indistinguibles en la bitácora. Corrección: **cada invocación de
