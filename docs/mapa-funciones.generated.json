@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-26T18:42:05Z",
-  "sha": "371dc19ddadfa0e9785511994e9a5b6d67f5e5d6",
+  "generadoEn": "2026-09-26T19:12:22Z",
+  "sha": "595cdeb7b40fb7e0cc61cbf696d866d6e84208d8",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -13030,7 +13030,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/cron/polizas-pdf",
-      "hash": "657a3d559a0b"
+      "hash": "ef755771ff8f"
     },
     {
       "ruta": "apps/asegura/app/api/cron/revision-anual/route.ts",
@@ -15183,6 +15183,19 @@
       "tablas": [],
       "rutaApi": "/api/operador/poliza",
       "hash": "8e1956b6cba0"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/poliza/traer-pdf/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [],
+      "funciones": [],
+      "tablas": [
+        "codeoscopic_projects",
+        "next",
+        "polizas"
+      ],
+      "rutaApi": "/api/operador/poliza/traer-pdf",
+      "hash": "e688d1907c67"
     },
     {
       "ruta": "apps/asegura/app/api/operador/portal/invitaciones/route.ts",
@@ -23689,21 +23702,31 @@
       "ambito": "apps/asegura",
       "resumen": "Trae de Codeoscopic el PDF de una póliza YA emitida y lo archiva en `seguros.documentos` (26/09/2026). Mismo camino que el endpoint de diagnóstico (`/api/operador/codeoscopic/documentos`): proyecto → solicitud aprobada → Retrieve individual → `archivarDocumentoEmitido`. Todo son `GET`: gratis. Lo us",
       "exporta": [
+        "normalizarNumeroPoliza",
         "traerPdfEmitido"
       ],
       "funciones": [
         {
+          "nombre": "normalizarNumeroPoliza",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "v: string",
+          "retorno": null,
+          "linea": 20,
+          "resumen": "Solo cifras y letras, en mayúsculas: «302 26-00334066» y «30226000334066» son la misma."
+        },
+        {
           "nombre": "traerPdfEmitido",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, projectId: string, polizaId: string",
+          "params": "correduriaId: string, projectId: string, polizaId: string, /** Si viene, la solicitud aprobada tiene que traer ESE número: el PDF va a la vista del cliente. */ opciones: { numeroPolizaEsperado?: string | null } = {},",
           "retorno": "Promise<PdfTraido>",
-          "linea": 17
+          "linea": 22
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "24f9bcf94821"
+      "hash": "9a91f8e1abfe"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/valores-ficha.ts",
@@ -26289,6 +26312,7 @@
       "exporta": [
         "pdfArchivado",
         "pdfDePoliza",
+        "archivarPdfsPendientes",
         "enviarPolizasPendientes"
       ],
       "funciones": [
@@ -26311,22 +26335,32 @@
           "resumen": "Lo archivado; si no hay, lo intenta traer de Codeoscopic UNA vez (gratis). `null` = la compañía aún no lo da."
         },
         {
+          "nombre": "archivarPdfsPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, limite = 10",
+          "retorno": "Promise<",
+          "linea": 47,
+          "resumen": "Pólizas emitidas por Codeoscopic (proyecto enlazado y `emitida`) cuyo PDF aún no está archivado: se trae y se archiva (visible en el portal). NO escribe a nadie — eso es `enviarPolizasPendientes`, y s"
+        },
+        {
           "nombre": "enviarPolizasPendientes",
           "kind": "function",
           "exportada": true,
           "params": "correduriaId: string, ahora = Date.now()",
           "retorno": "Promise<ResumenPolizasPdf |",
-          "linea": 59,
+          "linea": 90,
           "resumen": "Pólizas emitidas por Codeoscopic en los últimos 14 días cuyo cliente YA recibió el correo de la emisión DE ESA PÓLIZA sin la póliza: se intenta traer el PDF y, si llega, se le manda. Todo va POR PÓLIZ"
         }
       ],
       "tablas": [
         "codeoscopic_projects",
         "correo_envio",
+        "documentos",
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "6f5571a1716e"
+      "hash": "f96f9c8d69b2"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto-aceptacion.ts",
@@ -74787,7 +74821,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "dffc6e0207ed"
+      "hash": "5078c2a0b605"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Duplicadas.tsx",
@@ -87059,6 +87093,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/poliza",
       "hash": "5ff94752ea9f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/poliza/traer-pdf/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "POST"
+      ],
+      "funciones": [
+        {
+          "nombre": "POST",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 13,
+          "resumen": "POST /api/correduria/poliza/traer-pdf { polizaId, projectId? } — pide a asegura que traiga de Codeoscopic el PDF de una póliza ya emitida (gratis) y lo archive visible para el cliente. Asegura comprue"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/poliza/traer-pdf",
+      "hash": "be4f1483439c"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/portal-invitaciones/route.ts",
@@ -105178,6 +105233,7 @@
         "interpretarDocumentos",
         "documentosAsegura",
         "subirDocumentoAsegura",
+        "traerPdfCodeoscopicAsegura",
         "pedirDocumentoAsegura",
         "revisarDocumentoAsegura",
         "borrarDocumentoAsegura",
@@ -105268,12 +105324,21 @@
           "resumen": "Reenvía el formulario (fichero + destino + tipo + notas) tal cual a asegura."
         },
         {
+          "nombre": "traerPdfCodeoscopicAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "polizaId: string, projectId: string | null",
+          "retorno": "Promise<",
+          "linea": 120,
+          "resumen": "Trae de Codeoscopic el PDF de una póliza ya emitida y lo archiva (visible al cliente). Gratis."
+        },
+        {
           "nombre": "pedirDocumentoAsegura",
           "kind": "function",
           "exportada": true,
           "params": "d: Destino & { tipo: TipoDocumento; notas?: string | null },",
           "retorno": "Promise<",
-          "linea": 119
+          "linea": 132
         },
         {
           "nombre": "revisarDocumentoAsegura",
@@ -105281,7 +105346,7 @@
           "exportada": true,
           "params": "id: string, por: string",
           "retorno": "Promise<",
-          "linea": 133
+          "linea": 146
         },
         {
           "nombre": "borrarDocumentoAsegura",
@@ -105289,7 +105354,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<",
-          "linea": 145
+          "linea": 158
         },
         {
           "nombre": "descargarDocumentoAsegura",
@@ -105297,7 +105362,7 @@
           "exportada": true,
           "params": "id: string",
           "retorno": "Promise<Response | null>",
-          "linea": 157,
+          "linea": 170,
           "resumen": "El fichero, en streaming, tal cual lo sirve asegura. `null` si no hay secreto."
         },
         {
@@ -105306,13 +105371,13 @@
           "exportada": true,
           "params": "f: { contenido: Buffer; mimeType: string; nombre: string },",
           "retorno": "Promise<",
-          "linea": 172,
+          "linea": 185,
           "resumen": "Lee un documento (póliza, recibo, foto) por el puerto `leer-documento` de asegura, para rellenar una oportunidad. No escribe ni guarda nada. 110 s: leer un PDF y esperar al modelo pasa de los 60 de un"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2cd9362aa05f"
+      "hash": "82f108438a0a"
     },
     {
       "ruta": "apps/plataforma/lib/domotica/acceso-programador.ts",
@@ -159191,7 +159256,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3795,
-    "funciones": 12195
+    "archivos": 3797,
+    "funciones": 12199
   }
 }
