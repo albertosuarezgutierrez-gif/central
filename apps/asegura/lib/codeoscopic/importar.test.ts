@@ -2,9 +2,11 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { documentoTomador, ofertasDelProyecto, quoteCrudo, ramoDeLinea } from './importar.ts'
+import {
+  documentoTomador, fraccionamientoDeOferta, matriculaProyecto, normalizarMatricula, ofertasDelProyecto, quoteCrudo, ramoDeLinea,
+} from './importar.ts'
 
-// Forma REAL del `GET /insurances/40842815` (proyecto hecho a mano en la web de Avant2,
+// Forma REAL de un `GET /insurances/{id}` (proyecto hecho a mano en la web de Avant2,
 // 22/09/2026), sin los datos personales: tomador sustituido y sin riesgo ni direcciones.
 const crudo = JSON.parse(
   readFileSync(join(import.meta.dirname, '../../fixtures/codeoscopic/2026-09-26-proyecto-web-avant2.json'), 'utf8'),
@@ -56,4 +58,23 @@ test('ramo, tomador y quote crudo', () => {
   assert.equal(documentoTomador({}), null)
   assert.equal(quoteCrudo(crudo, 'Q2024763856')?.premium, 520.97)
   assert.equal(quoteCrudo(crudo, 'Q-no-existe'), null)
+})
+
+test('la póliza nueva se acuña con el pago de la OFERTA, no con el de la vieja', () => {
+  assert.equal(fraccionamientoDeOferta(crudo, 'Q2024763856'), 'semestral')
+  assert.equal(fraccionamientoDeOferta(crudo, 'Q2024306868'), 'anual')
+  assert.equal(fraccionamientoDeOferta(crudo, 'Q-no-existe'), null)
+  assert.equal(fraccionamientoDeOferta(crudo, null), null)
+  // Un pago que no conocemos es «no se sabe», nunca «anual».
+  assert.equal(fraccionamientoDeOferta({ mainQuotes: [{ id: 'Q1', paymentFrequency: { id: 'Weekly' } }] }, 'Q1'), null)
+})
+
+test('matrícula: se compara normalizada y sin dato no se afirma', () => {
+  assert.equal(normalizarMatricula('1234 abc'), '1234ABC')
+  assert.equal(normalizarMatricula('1234-ABC'), '1234ABC')
+  assert.equal(normalizarMatricula(''), null)
+  assert.equal(normalizarMatricula('A-1'), null) // basura corta: no es una matrícula comparable
+  assert.equal(normalizarMatricula(null), null)
+  assert.equal(matriculaProyecto({ risk: { registrationPlate: '1234ABC' } }), '1234ABC')
+  assert.equal(matriculaProyecto(crudo), null) // el fixture no trae el riesgo
 })

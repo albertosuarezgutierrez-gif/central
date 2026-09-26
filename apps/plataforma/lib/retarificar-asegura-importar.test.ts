@@ -6,7 +6,7 @@ import { interpretarImportacion, interpretarVistaImportacion } from './retarific
 
 test('vista: el tomador sin comprobar NO se lee como «coincide»', () => {
   const v = interpretarVistaImportacion(200, {
-    estado: 'ok', projectId: '40842815', tomador: 'raro', bloqueos: ['x'], ofertas: [], otras: 19,
+    estado: 'ok', projectId: '40000001', tomador: 'raro', bloqueos: ['x'], ofertas: [], otras: 19,
   })
   assert.equal(v.estado, 'ok')
   if (v.estado !== 'ok') return
@@ -17,7 +17,7 @@ test('vista: el tomador sin comprobar NO se lee como «coincide»', () => {
 
 test('vista: ofertas con prima y primer recibo', () => {
   const v = interpretarVistaImportacion(200, {
-    estado: 'ok', projectId: '40842815', tomador: 'coincide', bloqueos: [], otras: 0,
+    estado: 'ok', projectId: '40000001', tomador: 'coincide', bloqueos: [], otras: 0,
     ofertas: [{ quoteId: 'Q2024763856', compania: 'Allianz', categoria: 'Terceros Ampliado', primaEur: 520.97, primerReciboEur: 241.3, pago: 'Semestral' }, { sinId: true }],
   })
   if (v.estado !== 'ok') return assert.fail(v.mensaje)
@@ -32,7 +32,7 @@ test('vista: emisión apagada en asegura → sin_configurar, no error', () => {
 
 test('import ok: trae la oferta y la compañía para el panel de emisión', () => {
   const r = interpretarImportacion(200, {
-    estado: 'ok', projectId: '40842815', compania: 'Allianz', categoria: 'Terceros Ampliado',
+    estado: 'ok', projectId: '40000001', compania: 'Allianz', categoria: 'Terceros Ampliado',
     oferta: { offerId: 'Q2024763856', primaEur: 520.97, firmeza: 'firme', caducaEn: '2026-09-29', avisos: [] },
     cuenta: null,
   })
@@ -43,7 +43,7 @@ test('import ok: trae la oferta y la compañía para el panel de emisión', () =
 
 test('import ok sin compañía → ilegible, no se sigue a emitir a ciegas', () => {
   const r = interpretarImportacion(200, {
-    estado: 'ok', projectId: '40842815',
+    estado: 'ok', projectId: '40000001',
     oferta: { offerId: 'Q1', primaEur: 1, firmeza: 'firme', caducaEn: null, avisos: [] }, cuenta: null,
   })
   assert.equal(r.estado, 'error')

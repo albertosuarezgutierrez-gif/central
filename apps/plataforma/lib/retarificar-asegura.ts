@@ -1851,6 +1851,8 @@ export type VistaImportacion =
       projectId: string
       /** `sin_dato` = no se ha podido comprobar, que NO es «coincide». */
       tomador: 'coincide' | 'distinto' | 'sin_dato'
+      /** Matrícula del proyecto contra la de la póliza, con los mismos tres estados. */
+      vehiculo: 'coincide' | 'distinto' | 'sin_dato'
       bloqueos: string[]
       ofertas: OfertaImportable[]
       /** Precios del proyecto que no se pueden emitir desde aquí (sin confirmar en Avant2, caducados…). */
@@ -1889,11 +1891,12 @@ export function interpretarVistaImportacion(status: number, json: unknown): Vist
   if (status !== 200 || r.estado !== 'ok' || typeof r.projectId !== 'string') {
     return { estado: 'error', mensaje: cadenaONulo(r.mensaje) ?? cadenaONulo(r.error) ?? `error ${status}` }
   }
-  const tomador = r.tomador === 'coincide' || r.tomador === 'distinto' ? r.tomador : 'sin_dato'
+  const tres = (v: unknown) => (v === 'coincide' || v === 'distinto' ? v : 'sin_dato')
   return {
     estado: 'ok',
     projectId: r.projectId,
-    tomador,
+    tomador: tres(r.tomador),
+    vehiculo: tres(r.vehiculo),
     bloqueos: Array.isArray(r.bloqueos) ? r.bloqueos.filter((b): b is string => typeof b === 'string') : [],
     ofertas: Array.isArray(r.ofertas) ? r.ofertas.flatMap((o) => leerOfertaImportable(o) ?? []) : [],
     otras: typeof r.otras === 'number' ? r.otras : 0,

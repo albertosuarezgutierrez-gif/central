@@ -99,7 +99,7 @@ export default function ImportarAvant2({ polizaId }: { polizaId: string }) {
             inputMode="numeric"
             value={projectId}
             onChange={(e) => setProjectId(e.target.value)}
-            placeholder="40842815"
+            placeholder="40000001"
             style={{ minHeight: 44, width: '100%', maxWidth: 260 }}
           />
         </label>
@@ -122,6 +122,7 @@ export default function ImportarAvant2({ polizaId }: { polizaId: string }) {
             </div>
           )}
           {vista.tomador === 'coincide' && <p className="muted">✓ El tomador del proyecto es el cliente de esta póliza (por DNI).</p>}
+          {vista.vehiculo === 'coincide' && <p className="muted">✓ Es el mismo vehículo que el de esta póliza (por matrícula).</p>}
 
           {vista.ofertas.length === 0 ? (
             <p>

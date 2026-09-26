@@ -1,9 +1,9 @@
 // Importar a la intranet un proyecto creado A MANO en la web de Avant2
-// (fila 13 del plan, 26/09/2026 — caso Pablo Guzmán, proyecto 40842815).
+// (fila 13 del plan, 26/09/2026).
 //
 // Puro a propósito (sin BD ni red): lo usa `app/api/operador/codeoscopic/importar/route.ts`
-// y lo prueba `importar.test.ts` contra la forma REAL del `GET /insurances/{id}` de ese
-// proyecto, no contra una forma supuesta.
+// y lo prueba `importar.test.ts` contra la forma REAL de un `GET /insurances/{id}` hecho en
+// la web, no contra una forma supuesta.
 //
 // Qué NO hace: ReRate. Una oferta de la web solo se importa si YA trae la acción
 // `SubmitPolicyApplication` (o sea, se confirmó en Avant2) y sigue en plazo; si no,
@@ -99,4 +99,46 @@ export function ofertasDelProyecto(crudo: unknown, hoy: string): OfertaImportabl
 export function quoteCrudo(crudo: unknown, quoteId: string): Json | null {
   const q = arr(obj(crudo).mainQuotes).find((x) => str(obj(x).id) === quoteId)
   return q ? obj(q) : null
+}
+
+/** Matrícula normalizada (solo letras y cifras, en mayúscula) para comparar la del proyecto con la de la póliza. */
+export function normalizarMatricula(v: unknown): string | null {
+  const s = typeof v === 'string' ? v.toUpperCase().replace(/[^A-Z0-9]/g, '') : ''
+  return s.length >= 4 ? s : null
+}
+
+export function matriculaProyecto(crudo: unknown): string | null {
+  return normalizarMatricula(obj(obj(crudo).risk).registrationPlate)
+}
+
+const FRACCIONAMIENTO_DE_PAGO: Record<string, string> = {
+  Annual: 'anual',
+  SixMonth: 'semestral',
+  Quarterly: 'trimestral',
+  Monthly: 'mensual',
+}
+
+/**
+ * Fraccionamiento de UN precio del proyecto (`paymentFrequency.id` del vendor → el nuestro).
+ * Recorre el árbol entero porque tras un ReRate el precio aceptado puede no estar en
+ * `mainQuotes` sino dentro de `offers[]`. `null` = no se sabe, nunca «anual» por defecto.
+ */
+export function fraccionamientoDeOferta(crudo: unknown, quoteId: string | null | undefined): string | null {
+  if (!quoteId) return null
+  const pila: unknown[] = [crudo]
+  let vistos = 0
+  while (pila.length > 0 && vistos < 5000) {
+    const v = pila.pop()
+    vistos++
+    if (Array.isArray(v)) {
+      for (const x of v) pila.push(x)
+    } else if (v && typeof v === 'object') {
+      const o = v as Json
+      const id = typeof o.id === 'number' ? String(o.id) : o.id
+      const pago = str(obj(o.paymentFrequency).id)
+      if (id === quoteId && pago) return FRACCIONAMIENTO_DE_PAGO[pago] ?? null
+      for (const x of Object.values(o)) if (x && typeof x === 'object') pila.push(x)
+    }
+  }
+  return null
 }
