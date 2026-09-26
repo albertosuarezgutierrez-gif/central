@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-26T11:11:03Z",
+  "generadoEn": "2026-09-26T12:30:25Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5743,6 +5743,7 @@
       "contable_feedback",
       "contable_log",
       "contable_memoria",
+      "correduria_asistente_emision",
       "correduria_asistente_regla",
       "correduria_asistente_turno",
       "correduria_avisos_renovacion",
@@ -5909,7 +5910,7 @@
     {
       "id": "auditoria-central",
       "name": "auditoria-central",
-      "description": "Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Úsala tras renames de scope, migraciones de BD, reestructuras de packages/apps, o antes de un corte de infraestructura — cuando Alberto pregunte \"¿se ha roto algo?\", \"haz una auditoría\", \"revisa que todo está bien\" o pida pruebas/testeo del proyecto. NO es un checklist genérico: aprovecha la matriz de consumo, la BD compartida multi-tenant y la infra real (Supabase/Vercel por MCP)."
+      "description": ">-"
     },
     {
       "id": "brainstorming",
@@ -5919,7 +5920,7 @@
     {
       "id": "buscador-ia",
       "name": "buscador-ia",
-      "description": "Agente PROGRAMADO semanal que vigila los LLMs de la cadena de fallback de `@central/core-ai` por CALIDAD/PRECIO — watch de deprecación de los modelos cableados (OpenRouter incluido: qué sirve DE VERDAD cada slug y a qué precio, más NIM, Groq, Gemini, Kimi), descubrimiento de candidatos y mini-eval. Estado en docs/BUSCADOR-IA.md; Telegram + PR draft solo para swaps seguros. Úsala si Alberto pide \"revisa las novedades de IA / si hay una IA mejor\" o al disparo semanal. Sin secretos."
+      "description": ">-"
     },
     {
       "id": "central-maestro",
@@ -5934,7 +5935,7 @@
     {
       "id": "code-map",
       "name": "code-map",
-      "description": "Úsala al EMPEZAR cualquier tarea de CÓDIGO cuando haya que localizar QUÉ archivo/función maneja algo, ANTES de Grep/Read a ciegas — consulta la tabla Supabase `mapa_arquitectura` (índice de firmas del repo) para acotar candidatos a coste ~0 y leer SOLO esos. No reemplaza a Grep/Read: los enfoca. Sin tabla o sin candidatos, método clásico."
+      "description": ">-"
     },
     {
       "id": "conectores-vigia",
@@ -5959,7 +5960,7 @@
     {
       "id": "facturas-correo",
       "name": "facturas-correo",
-      "description": "Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida \"revisa mis correos/facturas\", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen."
+      "description": ">-"
     },
     {
       "id": "fiscal-novedades",
@@ -5979,7 +5980,7 @@
     {
       "id": "ialimp-client-health",
       "name": "ialimp-client-health",
-      "description": "Monitorización semanal de la salud de la cuenta de Sique Brilla (único cliente en producción de ialimp). Comprueba PMS sync, programaciones sin asignar, impagos activos y errores recientes. Genera un resumen de viernes para cerrar la semana operativa. Úsala en la rutina semanal o cuando Alberto quiera un pulso rápido del cliente. Sin secretos: solo nombres de variable."
+      "description": ">-"
     },
     {
       "id": "ialimp-maestro",
@@ -6004,7 +6005,7 @@
     {
       "id": "mercado-booking",
       "name": "mercado-booking",
-      "description": "Rutina PROGRAMADA diaria que mide el precio REAL por fecha y aforo con el conector de Booking.com y lo escribe en market_rates (fuente booking_mcp) — la única fuente de SIVRA que distingue temporada. Úsala al disparo diario o si Alberto pide \"mide el mercado de verdad\" / \"refresca los comparables por fecha\". Sin secretos: solo nombres de variable."
+      "description": ">-"
     },
     {
       "id": "patrimonio-cfo",
@@ -6029,7 +6030,7 @@
     {
       "id": "psd2-health-check",
       "name": "psd2-health-check",
-      "description": "Guardián de la sincronización bancaria (Enable Banking / PSD2). Verifica que los movimientos bancarios llegan frescos (< 48h) a `movimientos_bancarios`. Si la última importación es antigua o hay una caída >50% en volumen, alerta por Telegram y anota en CONTEXTO-SESIONES.md. Úsala en la rutina semanal de salud financiera o cuando Alberto sospeche que el sync está roto. Sin secretos: solo nombres de variable."
+      "description": ">-"
     },
     {
       "id": "radar-espana",
@@ -6054,7 +6055,7 @@
     {
       "id": "seo-asegura",
       "name": "seo-asegura",
-      "description": "Agente de SEO, contenido y redes sociales de la web pública de Grupo ASegura (grupoasegura.es, apps/asegura-web). Úsalo si Alberto pide \"mejora el SEO de la correduría\", \"escribe un post/artículo para la web o para redes\", \"¿cómo vamos de posicionamiento?\", o al disparo de la rutina semanal. NO publica en redes ni envía nada a terceros: deja borradores. NUNCA tarifica."
+      "description": ">-"
     },
     {
       "id": "seo-house-sevillana",
@@ -6074,7 +6075,7 @@
     {
       "id": "trading-analista",
       "name": "trading-analista",
-      "description": "Pasada diaria del agente de inversión sobre Interactive Brokers (Fase 1: paper + Tramo 1 de 1.000€ REALES ya desplegado en CVX; el agente nunca ejecuta, Alberto confirma). Lee cartera real + watchlist, tira precios (IBKR) y fundamentales por MCP, llama a /api/trading/analizar y /api/trading/puntuar de plataforma, y resume por Telegram. Copiloto de órdenes: solo INSTRUCCIONES que Alberto confirma en IBKR, y solo si él las pide. NUNCA ejecuta órdenes reales."
+      "description": ">-"
     },
     {
       "id": "transporte-maestro",
