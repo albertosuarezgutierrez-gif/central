@@ -369,7 +369,7 @@ function Fila({ f, onDescartada }: { f: EnRiesgo; onDescartada: () => void }) {
             fontWeight: 600, fontSize: 13, opacity: obrando ? 0.6 : 1,
           }}
         >
-          {obrando ? 'Guardando…' : `✅ Ya gestionada · ${DIAS_DESCARTE}d`}
+          {obrando ? 'Guardando…' : `✅ Gestionada`}
         </button>
       </div>
 

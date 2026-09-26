@@ -225,18 +225,25 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
           ? (aparcada ? 'Sin paso pendiente (aparcada).' : '⚠️ Sin siguiente paso: nadie la va a mirar. Ponle una tarea en «Gestionar».')
           : `Siguiente: ${o.proximaTarea.tipo} el ${fmt(o.proximaTarea.fechaLimite)}${vencida ? ' (vencida)' : ''}`}
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      {/* UN botón por fila (26/09/2026, «muy poco clara y muy extensa»): Corregir,
+          Ganada y Descartar viven dentro de «Gestionar», junto al seguimiento. */}
+      <div>
         <button type="button" onClick={onAlternar} aria-expanded={desplegada} style={{ ...btnStyle(desplegada ? 'secundario' : 'primario', 'sm'), minHeight: 44 }}>
           {desplegada ? 'Plegar ▴' : 'Gestionar ▾'}
         </button>
-        <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'editar' ? null : 'editar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Corregir</button>
-        {puedeGanar && (
-          <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'ganar' ? null : 'ganar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>🏆 Ganada</button>
-        )}
-        <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'descartar' ? null : 'descartar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Descartar</button>
       </div>
 
       {desplegada && <SeguimientoOportunidad id={o.id} telefono={telefono} onCambio={onRecargar} />}
+
+      {desplegada && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
+          <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'editar' ? null : 'editar')} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Corregir</button>
+          {puedeGanar && (
+            <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'ganar' ? null : 'ganar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>🏆 Ganada</button>
+          )}
+          <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'descartar' ? null : 'descartar')} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }} title="Abierta por error o duplicada. Si el cliente no quiere, usa «Perdida» arriba.">Descartar (error)</button>
+        </div>
+      )}
 
       {modo === 'editar' && (
         <FormEdicion o={o} onCancelar={() => setModo(null)} onHecho={(t) => { if (t.ok) setModo(null); onHecho(t) }} />
@@ -267,8 +274,7 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
       {modo === 'descartar' && (
         <div style={{ display: 'grid', gap: 8 }}>
           <div style={{ color: 'var(--muted)' }}>
-            Para una abierta por error o duplicada. No se borra (queda su rastro) ni cuenta como venta perdida.
-            Si el cliente no quiere, usa «Perdida» en «Gestionar», con su motivo.
+            Solo si se abrió por error o está duplicada (no cuenta como perdida).
           </div>
           <label style={etiqueta}>
             Nota (opcional)

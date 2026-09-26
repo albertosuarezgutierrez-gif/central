@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { TrendingUp } from 'lucide-react'
 
-import { Badge } from '@/components/ui'
+import { Badge, btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/ficha-asegura'
 import { MOTIVOS_PUERTO, interpretarLeads, type LeadVista, type ResultadoLeads } from '@/lib/leads-asegura'
@@ -58,6 +58,7 @@ const AVISO: React.CSSProperties = {
  */
 export default function LeadsPortal({ onContador }: { onContador: (n: number | null) => void }) {
   const [datos, setDatos] = useState<ResultadoLeads | null>(null)
+  const [ver, setVer] = useState(10)
 
   useEffect(() => {
     let vivo = true
@@ -97,7 +98,7 @@ export default function LeadsPortal({ onContador }: { onContador: (n: number | n
     <Bloque
       titulo="Pólizas de otras compañías"
       Icono={TrendingUp}
-      sub="Las que tus clientes han subido al portal y no llevas tú. Ordenadas por la fecha en la que aún se pueden mover: un mes antes del vencimiento (LCS art. 22), no el día del vencimiento."
+      sub="Pólizas que tus clientes subieron al portal y no llevas tú, por fecha límite para moverlas (LCS art. 22)."
     >
       {sinIdentificar !== null && sinIdentificar > 0 && (
         <p style={AVISO}>
@@ -116,10 +117,15 @@ export default function LeadsPortal({ onContador }: { onContador: (n: number | n
       {/* Rejilla y no tabla: en móvil una tabla de cinco columnas obliga a
           desplazar en horizontal, y esta lista se mira desde el teléfono. */}
       <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'minmax(0, 1fr)' }}>
-        {leads.map((l) => (
+        {leads.slice(0, ver).map((l) => (
           <Fila key={l.id} l={l} />
         ))}
       </div>
+      {leads.length > ver && (
+        <button type="button" onClick={() => setVer((v) => v + 10)} style={{ ...btnStyle('secundario'), marginTop: 10 }}>
+          Ver {Math.min(10, leads.length - ver)} más (de {leads.length - ver})
+        </button>
+      )}
     </Bloque>
   )
 }

@@ -38,6 +38,8 @@ export default function PerdidasCartera() {
       .catch(() => setD({ estado: 'sin_datos', causa: 'red' }))
   }, [])
   useEffect(() => { cargar() }, [cargar])
+  const [abierta, setAbierta] = useState<string | null>(null)
+  const [ver, setVer] = useState(10)
 
   async function revisar(id: string, resolucion: 'perdida' | 'no_es_perdida') {
     if (resolucion === 'perdida' && !motivo[id]) { setError('Elige el motivo de la pérdida.'); return }
@@ -67,30 +69,43 @@ export default function PerdidasCartera() {
       {d?.estado === 'sin_datos' && (
         <p style={{ ...NOTA, color: 'var(--negative)' }}>No se han podido leer ({d.causa}). No significa que no haya.</p>
       )}
-      {d?.estado === 'ok' && d.fugas.slice(0, 30).map(f => (
+      {d?.estado === 'ok' && d.fugas.slice(0, ver).map(f => (
         <div key={f.id} style={{ display: 'grid', gap: 6, padding: '8px 0', borderTop: '1px solid var(--border)' }}>
-          <Link href={`/correduria/cliente/${f.clienteId}`} style={{ display: 'grid', gap: 2, minWidth: 0, color: 'var(--text)', textDecoration: 'none' }}>
-            <span style={{ fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>{f.titulo} · {f.cliente ?? '(ficha sin nombre)'}</span>
-            <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-              {[f.aseguradora, f.polizaNumero ? `nº ${f.polizaNumero}` : null, f.estado ? `estado ${f.estado}` : null].filter(Boolean).join(' · ') || 'póliza sin número'}
-            </span>
-          </Link>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
-            <select
-              aria-label="Motivo de la pérdida"
-              value={motivo[f.id] ?? ''}
-              onChange={e => setMotivo(m => ({ ...m, [f.id]: e.target.value }))}
-              style={{ minHeight: 44, minWidth: 0, maxWidth: '100%', padding: '0 10px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
-            >
-              <option value="">Motivo…</option>
-              {d.motivos.map(m => <option key={m} value={m}>{ROTULO_MOTIVO[m] ?? m}</option>)}
-            </select>
-            <button type="button" disabled={ocupado !== null} onClick={() => void revisar(f.id, 'perdida')} style={btnStyle('secundario')}>Perdida</button>
-            <button type="button" disabled={ocupado !== null} onClick={() => void revisar(f.id, 'no_es_perdida')} style={btnStyle('sutil')}>No es pérdida</button>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', minWidth: 0 }}>
+            <Link href={`/correduria/cliente/${f.clienteId}`} style={{ display: 'grid', gap: 2, minWidth: 0, flex: 1, color: 'var(--text)', textDecoration: 'none' }}>
+              <span style={{ fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>{f.titulo} · {f.cliente ?? '(ficha sin nombre)'}</span>
+              <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                {[f.aseguradora, f.polizaNumero ? `nº ${f.polizaNumero}` : null, f.estado ? `estado ${f.estado}` : null].filter(Boolean).join(' · ') || 'póliza sin número'}
+              </span>
+            </Link>
+            {/* La revisión va plegada: con la acción abierta en cada fila, 30 pérdidas eran
+                30 desplegables y 60 botones (26/09/2026). */}
+            <button type="button" aria-expanded={abierta === f.id} onClick={() => setAbierta(a => a === f.id ? null : f.id)} style={{ ...btnStyle('sutil'), flex: '0 0 auto' }}>
+              {abierta === f.id ? 'Cerrar' : 'Revisar ▾'}
+            </button>
           </div>
+          {abierta === f.id && (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+              <select
+                aria-label="Motivo de la pérdida"
+                value={motivo[f.id] ?? ''}
+                onChange={e => setMotivo(m => ({ ...m, [f.id]: e.target.value }))}
+                style={{ minHeight: 44, minWidth: 0, maxWidth: '100%', padding: '0 10px', borderRadius: 10, border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)' }}
+              >
+                <option value="">Motivo…</option>
+                {d.motivos.map(m => <option key={m} value={m}>{ROTULO_MOTIVO[m] ?? m}</option>)}
+              </select>
+              <button type="button" disabled={ocupado !== null} onClick={() => void revisar(f.id, 'perdida')} style={btnStyle('secundario')}>Perdida</button>
+              <button type="button" disabled={ocupado !== null} onClick={() => void revisar(f.id, 'no_es_perdida')} style={btnStyle('sutil')}>No es pérdida</button>
+            </div>
+          )}
         </div>
       ))}
-      {d?.estado === 'ok' && d.fugas.length > 30 && <p style={NOTA}>…y {d.fugas.length - 30} más.</p>}
+      {d?.estado === 'ok' && d.fugas.length > ver && (
+        <button type="button" onClick={() => setVer(v => v + 10)} style={{ ...btnStyle('secundario'), justifySelf: 'start' }}>
+          Ver {Math.min(10, d.fugas.length - ver)} más (de {d.fugas.length - ver})
+        </button>
+      )}
       {error && <p role="alert" style={{ ...NOTA, color: 'var(--negative)' }}>{error}</p>}
     </section>
   )

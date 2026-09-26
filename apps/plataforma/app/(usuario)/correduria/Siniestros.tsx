@@ -576,53 +576,51 @@ function Fila({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoP
         onClick={() => setAbierta((v) => !v)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAbierta((v) => !v) } }}
         style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '6px 12px',
-          padding: '10px 12px', minHeight: 44, cursor: 'pointer', fontSize: 13, alignItems: 'start',
+          display: 'flex', flexWrap: 'wrap', gap: '4px 10px', alignItems: 'center',
+          padding: '10px 12px', minHeight: 44, cursor: 'pointer', fontSize: 13,
           background: abierta ? 'var(--surface)' : 'transparent',
         }}
       >
-        <Celda label="Fecha">
-          <span style={{ whiteSpace: 'nowrap' }}>{s.fecha ? fechaEs(s.fecha) : <span style={muted}>sin fecha</span>}</span>
-        </Celda>
-        <Celda label="Estado">
-          <span style={{ whiteSpace: 'nowrap', color: s.abierto ? 'var(--warning)' : 'var(--muted)' }}>
-            {s.abierto ? '🟠' : '⚪'} {etiquetaEstadoSiniestro(s.estado)}
+        {/* Una línea (26/09/2026): fecha · estado · tipo y solo las alertas. El resto
+            —referencia, origen, tramitador, reserva— va al desplegar. */}
+        <span style={{ whiteSpace: 'nowrap' }}>{s.fecha ? fechaEs(s.fecha) : <span style={muted}>sin fecha</span>}</span>
+        <span style={{ whiteSpace: 'nowrap', color: s.abierto ? 'var(--warning)' : 'var(--muted)' }}>
+          {s.abierto ? '🟠' : '⚪'} {etiquetaEstadoSiniestro(s.estado)}
+        </span>
+        <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{etiquetaTipoSiniestro(s.tipo)}</span>
+        {propio && !s.confirmadoCima && (
+          <span style={chipAviso} title="Lo abrimos nosotros y CIMA aún no lo ha traído. Con la referencia de la compañía, el próximo pull lo casará con esta fila.">⏳ sin casar con CIMA</span>
+        )}
+        {plazo?.vencido && (
+          <span style={chipAviso} title={`El art. 16 LCS da ${DIAS_COMUNICACION_LCS} días desde el hecho para comunicarlo a la compañía; ya han pasado y sigue sin referencia.`}>
+            ⚠️ fuera de plazo (art. 16 LCS)
           </span>
-        </Celda>
-        <Celda label="Tipo">{etiquetaTipoSiniestro(s.tipo)}</Celda>
-        <Celda label="Referencia">
-          <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-            {s.referencia ?? <span style={muted}>sin referencia</span>}
-            {propio && !s.confirmadoCima && (
-              <span style={chipAviso} title="Lo abrimos nosotros y CIMA aún no lo ha traído. Con la referencia de la compañía, el próximo pull lo casará con esta fila.">⏳ sin casar con CIMA</span>
-            )}
-            {plazo?.vencido && (
-              <span style={chipAviso} title={`El art. 16 LCS da ${DIAS_COMUNICACION_LCS} días desde el hecho para comunicarlo a la compañía; ya han pasado y sigue sin referencia.`}>
-                ⚠️ fuera del plazo de {DIAS_COMUNICACION_LCS} días (art. 16 LCS)
-              </span>
-            )}
-          </span>
-        </Celda>
-        <Celda label="Origen">
-          <span style={chip} title={propio ? 'Abierto desde esta pantalla' : 'Lo trajo la ingesta de CIMA: su estado lo fija la compañía'}>
-            {propio ? 'abierto aquí' : 'CIMA'}
-          </span>
-        </Celda>
-        <Celda label="Tramitador">
-          {s.tramitador ?? <span style={muted} title="Nadie ha anotado quién lo lleva en la compañía (CIMA no lo manda)">sin tramitador</span>}
-        </Celda>
-        <Celda label="Reserva">
-          {/* NULL es «la compañía no lo informa», no «cero euros de daño». */}
-          {s.reserva !== null ? (
-            eur(s.reserva)
-          ) : typeof s.tramitacionCima?.reserva === 'number' ? (
-            <span title="Reserva que informa la compañía por CIMA (no anotada por ti)">{eur(s.tramitacionCima.reserva)} <span style={muted}>CIA</span></span>
-          ) : (
-            <span style={muted} title="Reserva no informada">sin dato</span>
-          )}
-        </Celda>
-        <span style={{ ...muted, fontSize: 11, alignSelf: 'center', justifySelf: 'end' }}>{abierta ? '▲' : '▼'}</span>
+        )}
+        <span style={{ ...muted, fontSize: 11, marginLeft: 'auto' }}>{abierta ? '▲' : '▼'}</span>
       </div>
+      {abierta && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '6px 12px', padding: '0 12px 8px', fontSize: 13 }}>
+          <Celda label="Referencia">{s.referencia ?? <span style={muted}>sin referencia</span>}</Celda>
+          <Celda label="Origen">
+            <span style={chip} title={propio ? 'Abierto desde esta pantalla' : 'Lo trajo la ingesta de CIMA: su estado lo fija la compañía'}>
+              {propio ? 'abierto aquí' : 'CIMA'}
+            </span>
+          </Celda>
+          <Celda label="Tramitador">
+            {s.tramitador ?? <span style={muted} title="Nadie ha anotado quién lo lleva en la compañía (CIMA no lo manda)">sin tramitador</span>}
+          </Celda>
+          <Celda label="Reserva">
+            {/* NULL es «la compañía no lo informa», no «cero euros de daño». */}
+            {s.reserva !== null ? (
+              eur(s.reserva)
+            ) : typeof s.tramitacionCima?.reserva === 'number' ? (
+              <span title="Reserva que informa la compañía por CIMA (no anotada por ti)">{eur(s.tramitacionCima.reserva)} <span style={muted}>CIA</span></span>
+            ) : (
+              <span style={muted} title="Reserva no informada">sin dato</span>
+            )}
+          </Celda>
+        </div>
+      )}
       {abierta && (
         <Detalle
           s={s}
