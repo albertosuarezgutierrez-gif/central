@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-26T08:04:39Z",
-  "sha": "1a172824a5b31dc79907cf6330d6997c901b1ecc",
+  "generadoEn": "2026-09-26T08:37:44Z",
+  "sha": "4dc2569d7fff326f42b88df4e21bc2b694ec600e",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -90584,7 +90584,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 47
+          "linea": 49
         },
         {
           "nombre": "buscarPrevistos",
@@ -90592,7 +90592,7 @@
           "exportada": false,
           "params": "desde: string, hasta: string, yaResumen: string, descartadosResumen: string,",
           "retorno": "Promise<",
-          "linea": 185,
+          "linea": 194,
           "resumen": "nunca lanza (es una mejora, no puede tumbar el descubrimiento normal)."
         }
       ],
@@ -90602,7 +90602,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/eventos/websearch",
-      "hash": "885690b5e479"
+      "hash": "93b67e926793"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/expenses/agent/resumen-mensual/route.ts",
@@ -93005,7 +93005,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "6796022461b2"
+      "hash": "be39e04f198a"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -93290,7 +93290,7 @@
         "ult"
       ],
       "rutaApi": "/api/sivra/pricing/guard",
-      "hash": "403d34db55f2"
+      "hash": "1d7c86acf7b7"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/historial/route.ts",
@@ -117189,6 +117189,8 @@
         "clasificarTipo",
         "esPartidoLigaRegular",
         "esPartidoFueraDeSevilla",
+        "nombreConfiesaDuda",
+        "estadoInicialWebsearch",
         "impactoEvento"
       ],
       "funciones": [
@@ -117220,18 +117222,34 @@
           "resumen": "¿Es un partido del Sevilla/Betis A DOMICILIO? («Levante UD vs Sevilla FC» se juega en Valencia.) En fútbol el equipo LOCAL va SIEMPRE primero, así que un club sevillano DETRÁS del «vs» significa que e"
         },
         {
+          "nombre": "nombreConfiesaDuda",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre?: string | null",
+          "retorno": "boolean",
+          "linea": 101
+        },
+        {
+          "nombre": "estadoInicialWebsearch",
+          "kind": "function",
+          "exportada": true,
+          "params": "factor: number",
+          "retorno": "'confirmado' | 'previsto'",
+          "linea": 114
+        },
+        {
           "nombre": "impactoEvento",
           "kind": "function",
           "exportada": true,
           "params": "aforo: number, tipo?: string | null, nombre?: string | null",
           "retorno": "number",
-          "linea": 105,
+          "linea": 130,
           "resumen": "Multiplicador de precio para un evento, por aforo y tipo. La curva general (conciertos, festivales, lo que no sabemos clasificar) llega a 2.20 en aforo de estadio: por debajo del 2.5 del calendario a "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5bdf4cf05b8e"
+      "hash": "96389b265b74"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/eventos-verificacion.ts",
@@ -120270,7 +120288,8 @@
       "resumen": "lib/sivra/pricing-guardia.ts — lógica PURA (sin BD ni red) del guardián de sub-mercado. Contexto (20/07/2026): una reserva de Luxury Busto entró a ~110€/noche cuando el mercado real rondaba ~160-185€. Causa: el precio vivo del piso llevaba semanas anclado a un valor viejo y NADIE se enteró — el dete",
       "exporta": [
         "decidirSubMercado",
-        "decidirReservaBaja"
+        "decidirReservaBaja",
+        "causaReservaBaja"
       ],
       "funciones": [
         {
@@ -120290,11 +120309,20 @@
           "retorno": "ReservaBajaResult",
           "linea": 97,
           "resumen": "¿Una reserva recién entrada salió notablemente por debajo del mercado real del piso? Solo evalúa si hay p50 fiable (≥ minComps). Umbral holgado para no marcar el descuento normal de canal (Genius/móvi"
+        },
+        {
+          "nombre": "causaReservaBaja",
+          "kind": "function",
+          "exportada": true,
+          "params": "adr: number, precioPublicado: number | null | undefined, umbralDescuento = 0.8",
+          "retorno": "'precio' | 'descuento' | null",
+          "linea": 115,
+          "resumen": "14 de 15 avisos de esa semana eran `precio`, y el texto les decía «revisa la reserva»."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7754948ce03b"
+      "hash": "745ce117f9fd"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-lastminute.ts",
@@ -157988,6 +158016,6 @@
   ],
   "resumen": {
     "archivos": 3782,
-    "funciones": 12082
+    "funciones": 12085
   }
 }
