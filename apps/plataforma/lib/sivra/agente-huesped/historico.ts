@@ -8,7 +8,7 @@
 // 🚨 Lo minado NO entra directo: se guarda como `estado='propuesto'` y Alberto confirma por Telegram.
 // Un hecho falso aprendido del histórico se propagaría a TODOS los huéspedes futuros, y encima con
 // la autoridad de un dato de la casa. Confirmar es barato; desaprender no.
-import { smoobuFetch } from '@/lib/smoobu'
+import { smoobuFetch, smoobuMensajesReserva } from '@/lib/smoobu'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { aiComplete } from '@central/core-ai'
@@ -71,8 +71,7 @@ export async function minarHistorico(opts: {
     res.reservas++
     const propertyId = toPropertyId(b?.apartment?.id, b?.apartment?.name || '')
 
-    const crudos: any[] | null = await smoobuFetch(`/api/reservations/${bookingId}/messages`, { cache: 'no-store' })
-      .then(r => r.json()).then(d => (Array.isArray(d?.messages) ? d.messages : Array.isArray(d) ? d : [])).catch(() => null)
+    const crudos: any[] | null = await smoobuMensajesReserva(bookingId).catch(() => null)
     if (crudos === null) { res.sinLeer++; continue }
 
     // Lo que respondió NUESTRO agente no es conocimiento de Alberto: es la salida del propio modelo.

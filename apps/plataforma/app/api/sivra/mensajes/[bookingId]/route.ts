@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
-import { smoobuFetch } from '@/lib/smoobu'
+import { smoobuFetch, smoobuMensajesReserva } from '@/lib/smoobu'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
 import { listarOrdenes } from '@/lib/sivra/extras/orden-limpieza'
 
@@ -25,13 +25,8 @@ export async function GET(
 
   const { bookingId } = await context.params
   try {
-    const res = await smoobuFetch(
-      `/api/reservations/${bookingId}/messages`,
-      { cache: 'no-store' }
-    )
-    if (!res.ok) return NextResponse.json({ messages: [] })
-    const data = await res.json()
-    const raw: any[] = data.messages || data || []
+    const raw = await smoobuMensajesReserva(bookingId)
+    if (!raw) return NextResponse.json({ messages: [] })
 
     const messages = raw.map((m: any) => ({
       id: String(m.id || m.created_at || Math.random()),
