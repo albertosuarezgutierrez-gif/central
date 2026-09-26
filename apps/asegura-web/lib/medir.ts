@@ -5,6 +5,7 @@ export const EVENTOS = {
   lead_enviado: 'lead_enviado', // el formulario de contacto respondió ok (prop `ramo`)
   aviso_solicitado: 'aviso_solicitado', // el visitante pidió el aviso por correo y asegura lo aceptó (prop `ramo`; NUNCA el correo)
   ventana_calculo: 'ventana_calculo', // primera fecha válida en el widget de ventana de renovación (props `ramo`, `fase`)
+  carta_accion: 'carta_accion', // copiar / imprimir / descargar / correo en la carta de baja (props `accion`, `ramo`, `plazo`, `huecos`; NUNCA el texto)
 } as const
 
 export type Evento = keyof typeof EVENTOS

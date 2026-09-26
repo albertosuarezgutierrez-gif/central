@@ -91,6 +91,13 @@ export const ARTICULOS: readonly Articulo[] = [
       'Si no quieres que tu póliza se prorrogue, tienes que decirlo por escrito con al menos un mes de antelación al vencimiento. Pasada esa fecha ya no hay decisión que tomar: hay un año más.',
     base: ['lcs-22'],
     ramos: ['auto', 'hogar', 'comunidades'],
+    cta: {
+      titulo: 'Tu carta, con el último día para enviarla',
+      texto:
+        'Escribe tus datos y el vencimiento de la póliza: te dejamos la carta lista para copiar, imprimir o enviar desde tu correo, y te decimos hasta qué día llegas a tiempo. Gratis, sin registro y sin que tus datos salgan de tu navegador.',
+      boton: 'Preparar mi carta',
+      href: '/carta-baja-seguro',
+    },
     secciones: [
       {
         titulo: 'Qué dice exactamente la ley',

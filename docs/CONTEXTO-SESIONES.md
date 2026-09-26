@@ -721,6 +721,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) asegura-web: herramienta «Carta para dar de baja un seguro» (`/carta-baja-seguro`)
+- SEO sin pelear con las compañías: OpenSEO (26/09) midió «modelo carta baja seguro» 140/mes KD 0 (1ª página = webs de plantillas), «dar de baja seguro coche» 390 KD 0. «gestor de seguros»/«app controlar seguros» ≈ 0 o intención de EMPLEO → la app no atrae tráfico, convierte.
+- La carta se compone EN EL NAVEGADOR (`lib/carta-baja.ts` + `components/CartaBaja.tsx`): sin fetch, analítica sin datos personales (evento `carta_accion`). Mismo texto legal que la del portal: el test lee `module-seguros-portal/src/carta-no-renovacion.ts` y exige sus frases.
+- Enlazada desde el pie (`NAV`), sitemap y CTA del artículo del preaviso. Cierra con CTA al gestor (`origen=carta_baja`).
+- Siguientes candidatas medidas: «parte amistoso» 2.400 KD 0, «defensor del asegurado» 880 KD 0, «seguro impago alquiler» 3.600 KD 10. OpenSEO: 216 créditos.
+
 ## (26/09/2026) Portal del cliente: «Añade una póliza» nace plegada
 - Alberto: la tarjeta del alta sale cerrada; al abrirla, lo de siempre (casilla empresa + dos botones)
   y «Qué pasa con lo que subas» queda como segundo nivel plegado. `SubirPoliza.tsx` reutiliza el

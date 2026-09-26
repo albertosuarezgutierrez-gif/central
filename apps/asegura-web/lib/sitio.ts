@@ -156,6 +156,9 @@ export const NAV = [
   // por donde Google descubre antes una URL nueva. Hasta hoy solo la enlazaban
   // `/siniestro` y un artículo, y Google no sabía ni que existía.
   { href: '/telefonos-siniestros', texto: 'Teléfonos para dar parte' },
+  // 26/09/2026: la herramienta de la carta de baja, por el mismo motivo — el pie
+  // es lo que la enlaza desde todas las páginas.
+  { href: '/carta-baja-seguro', texto: 'Carta para dar de baja un seguro' },
 ] as const
 
 /**

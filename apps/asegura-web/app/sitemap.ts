@@ -48,6 +48,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     // Búsquedas navegacionales con volumen («mapfre seguro hogar teléfono»,
     // ~1.300/mes, medido el 23/09/2026) y de quien tiene el siniestro encima.
     { url: url('/telefonos-siniestros'), changeFrequency: 'monthly', priority: 0.8 },
+    // Herramienta de la carta de no renovación (26/09/2026): «modelo carta baja
+    // seguro» y «dar de baja seguro coche», dificultad 0 medida con OpenSEO.
+    { url: url('/carta-baja-seguro'), changeFrequency: 'yearly', priority: 0.8 },
     // 📌 El blog SÍ sabe sus fechas, y por eso es la única familia de URL además
     // de las legales que declara `lastModified`. La lista se construye en
     // `lib/articulos.ts` (`entradasSitemapBlog`) a propósito: allí sí se puede
