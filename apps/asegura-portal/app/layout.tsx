@@ -83,15 +83,6 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             acaba de recibir un código por correo, así que lo primero que tiene
             que reconocer es la marca. */}
         <header className="marca-barra">
-          {/* La puerta del ☰: vive aquí, en el layout RAÍZ, para que en el
-              móvil el menú de secciones esté en la MISMA barra que la marca en
-              vez de en una segunda franja debajo (que era la mitad de la
-              pantalla vacía por dos veces el mismo alto de cabecera). El
-              layout raíz no sabe si hay sesión ni qué secciones existen —
-              `NavPortal` (dentro de `(portal)/layout.tsx`) porta su botón
-              hasta aquí con `createPortal`; en las páginas públicas el `<span>`
-              se queda vacío y sin tamaño (`display:contents`). */}
-          <span id="portal-menu-slot" className="marca-menu-slot" />
           <span className="marca-escudo">
             <MarcaAsegura alto={15} />
           </span>

@@ -196,7 +196,7 @@ input, select, textarea, button { font: inherit; }
  * moderna»: sin ella son dos columnas pegadas.
  *
  * 🚨 Un SOLO `<nav>` (`app/(portal)/NavPortal.tsx`) con dos formas. En el móvil
- * es un cajón (drawer) que se abre con el ☰; a partir de 1024 px se endereza y
+ * es un cajón (drawer) que se abre con «Más» de la barra inferior; a partir de 1024 px se endereza y
  * pasa a ser el lateral, siempre a la vista. Dos componentes distintos para la
  * misma navegación es cómo se llega a que una sección exista en una pantalla y
  * no en la otra sin que nada falle.
@@ -237,44 +237,6 @@ input, select, textarea, button { font: inherit; }
   max-width: 1120px;
 }
 
-/* ── El ☰: portado a la barra de MARCA, no una franja propia debajo ─────────
- * Hasta el 19/09/2026 esto era `.portal-nav-barra`, una segunda franja de
- * ~53px pegada bajo la de marca (56px): dos barras de cabecera por el precio
- * de una. Alberto, mirando su propio móvil: «no se podría unificar la parte
- * de arriba? Hay mucho espacio libre». El botón vive ahora DENTRO de
- * `.marca-barra` (portado con `createPortal` desde `NavPortal.tsx` a un
- * `<span id="portal-menu-slot">` que `app/layout.tsx` deja vacío), con el
- * mismo lenguaje visual que el resto de acciones de esa barra (`.tema-boton`,
- * `.campana-boton`): 44×44, icono solo. La etiqueta «en qué sección estás»
- * que antes iba al lado ya no tiene sitio — vive en el `aria-label`, no
- * pintada, porque cada pantalla del portal ya lo dice con su propio `<h1>`. */
-.marca-menu-slot {
-  display: contents;
-}
-.marca-menu-boton {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  /* 44px: el mínimo táctil de la regla de la casa. Esta pantalla la abre gente
-   * de 50-70 años desde el móvil, y este botón es la ÚNICA puerta a las siete
-   * secciones: si falla el toque, la navegación entera falla. */
-  width: 44px;
-  height: 44px;
-  padding: 0;
-  font-size: 18px;
-  line-height: 1;
-  color: var(--muted);
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: calc(var(--radius) * 0.8);
-  cursor: pointer;
-  transition: background-color 150ms, color 150ms, border-color 150ms;
-}
-.marca-menu-boton:hover {
-  background: var(--surface-hover, var(--panel2));
-  color: var(--text);
-}
 /* El fondo oscuro del cajón. z-index por encima de la cabecera de marca (20) y
  * del botón flotante de WhatsApp (35), y por debajo del propio cajón (50). */
 .portal-nav-fondo {
@@ -351,10 +313,10 @@ input, select, textarea, button { font: inherit; }
 .portal-nav-cerrar:hover {
   color: var(--text);
 }
-/* El hueco del `Suspense`, mientras `NavPortal` (y con él el ☰ portado)
- * todavía no se ha montado. 19/09/2026: a 0 en las dos anchuras — antes
- * reservaba los 53px de `.portal-nav-barra`, que ya no existe; el ☰ vive
- * ahora en `.marca-barra`, cuya altura no depende de este hueco. Sigue sin
+/* El hueco del `Suspense`, mientras `NavPortal` todavía no se ha montado.
+ * 19/09/2026: a 0 en las dos anchuras — antes reservaba los 53px de
+ * `.portal-nav-barra`, que ya no existe; y desde el 26/09/2026 tampoco hay ☰
+ * en la cabecera (la puerta al cajón es «Más», abajo). Sigue sin
  * llevar la clase `.portal-nav`: esa es un cajón fijo que no ocupa sitio. */
 .portal-nav-hueco {
   min-height: 0;
@@ -424,14 +386,10 @@ input, select, textarea, button { font: inherit; }
      * dos alturas: la marca abajo, el papel encima. */
     background: color-mix(in oklab, var(--brand) 7%, var(--bg2));
   }
-  /* 🚨 El ☰ (ahora en `.marca-barra`), el fondo oscuro y la cabecera del
-   * cajón NO existen aquí: el lateral está siempre a la vista, y un botón
-   * para abrir lo que ya se ve es una puerta de más. `.portal-nav-fondo` y
-   * `.portal-nav-cabecera` además dejan de ser hijos del grid con
-   * `display:none`, que es lo que evita que descoloquen las dos columnas
-   * (ver `.banda-corredor`) — `.marca-menu-boton` no vive en ese grid, así
-   * que a él le basta con no pintarse. */
-  .marca-menu-boton,
+  /* 🚨 El fondo oscuro y la cabecera del cajón NO existen aquí: el lateral
+   * está siempre a la vista. `.portal-nav-fondo` y `.portal-nav-cabecera`
+   * además dejan de ser hijos del grid con `display:none`, que es lo que
+   * evita que descoloquen las dos columnas (ver `.banda-corredor`). */
   .portal-nav-fondo,
   .portal-nav-cabecera {
     display: none;

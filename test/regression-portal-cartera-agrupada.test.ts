@@ -126,22 +126,15 @@ test('🚨 la cabecera del titular es PEGAJOSA', () => {
 })
 
 test('🚨 el menu del movil es un CAJON, y su boton se puede tocar', () => {
-  // 19/09/2026: el carril horizontal se retiró al llegar a SIETE secciones. Lo
-  // que hay que vigilar ahora es otra cosa: que el ☰ exista con los 44 px
-  // táctiles de la casa (es la ÚNICA puerta a las secciones en el móvil) y que
-  // el cajón cerrado no deje sus enlaces enfocables fuera de pantalla.
-  //
-  // Y el mismo día, más tarde: el botón se PORTA a `.marca-barra` (Alberto:
-  // «no se podría unificar la parte de arriba? Hay mucho espacio libre») —
-  // `.portal-nav-boton` con su franja propia desapareció, la clase ahora es
-  // `.marca-menu-boton` y sus 44px son `width`/`height`, no `min-*` (es un
-  // icono cuadrado fijo entre los demás botones de la cabecera, no una
-  // etiqueta de ancho variable).
-  const i = CSS.indexOf('.marca-menu-boton {')
-  assert.notEqual(i, -1, 'falta el botón que abre el menú en el móvil')
-  const boton = CSS.slice(i, CSS.indexOf('}', i))
-  assert.match(boton, /width:\s*44px/, 'el ☰ es el mínimo táctil de la casa, no un icono suelto')
-  assert.match(boton, /height:\s*44px/, 'el ☰ es el mínimo táctil también de alto')
+  // 19/09/2026: el carril horizontal se retiró al llegar a SIETE secciones; el cajón se abría
+  // con un ☰ en la barra de marca. 26/09/2026 (Alberto: «quita el ☰ de arriba también»): la
+  // puerta al cajón es ahora «Más», en la barra inferior, y es la ÚNICA en el móvil. Lo que se
+  // vigila es que exista, que abra ESTE cajón y que tenga el mínimo táctil (el alto de 60 px lo
+  // cubre el test de la barra inferior). Y que el ☰ no vuelva por la puerta de atrás: dos
+  // puertas al mismo menú es justo lo que se quitó.
+  assert.match(NAV, /aria-label="Más secciones"/, 'falta «Más», la única puerta al cajón en el móvil')
+  assert.match(NAV, /aria-controls=\{idNav\}/, '«Más» tiene que controlar el cajón de secciones')
+  assert.doesNotMatch(NAV, /marca-menu-boton|createPortal/, 'el ☰ de la cabecera se quitó el 26/09/2026')
 
   const j = CSS.indexOf('.portal-nav {')
   assert.notEqual(j, -1, 'la navegación tiene que seguir existiendo')

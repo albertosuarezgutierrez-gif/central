@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { createPortal } from 'react-dom'
 
 import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
 
@@ -36,22 +35,12 @@ import { WHATSAPP_PATH } from '../whatsapp-icono'
  * cuando no hay JS: sin él, un fallo de script dejaría a esta persona sin
  * ninguna forma de cambiar de sección.
  *
- * 🔀 **El botón ☰ vive en la barra de MARCA, no en una segunda franja debajo
- * (19/09/2026).** Alberto, mirando su propio móvil: «no se podría unificar la
- * parte de arriba? Hay mucho espacio libre» — dos barras de 56/53px apiladas
- * (marca + «☰ Menú · Seguros») por debajo de la cual empezaba el contenido de
- * verdad. La marca vive en el layout RAÍZ (`app/layout.tsx`, fuera de sesión)
- * y este componente en el del portal (dentro de sesión), así que el botón no
- * puede ser sencillamente el mismo JSX en el mismo sitio: se porta con
- * `createPortal` a un `<span id="portal-menu-slot">` que el layout raíz deja
- * vacío. `mounted` existe porque `document.getElementById` no existe en el
- * servidor: sin él, la primera pasada de SSR reventaría.
- *
- * 📌 **Y la etiqueta «en qué sección estás» se queda solo en el `aria-label`,
- * no visible.** Con el botón metido en la barra de marca ya no hay sitio para
- * un texto al lado, y cada pantalla del portal ya lo dice con su propio
- * `<h1>` — pintar «Seguros» otra vez sería el mismo eco que ya se quitó del
- * par pestaña/h1 el 12/09/2026.
+ * 📱 **Y desde el 26/09/2026 ya no hay ☰: la puerta al cajón es «Más», en la
+ * barra inferior** (a lo Smoobu; Alberto: «quita el ☰ de arriba también»).
+ * El ☰ vivía en la barra de marca, portado con `createPortal` a un hueco del
+ * layout raíz; con la barra inferior eran dos botones para el mismo menú.
+ * La sección activa, que el ☰ decía en su `aria-label`, la dice ahora la
+ * pestaña activa de la barra (`aria-current`) y el `<h1>` de cada pantalla.
  *
  * Siguen siendo ENLACES, no botones con estado ni un `tablist`: la sección vive
  * en la URL (ver `vista-portal.ts` del módulo). Por eso la activa se deriva aquí
@@ -88,7 +77,7 @@ export function NavPortal({ llamar, whatsapp }: {
   const idNav = useId()
   const botonRef = useRef<HTMLButtonElement>(null)
   const cerrarRef = useRef<HTMLButtonElement>(null)
-  // Para devolver el foco al ☰ SOLO cuando el cajón estaba abierto: sin esta
+  // Para devolver el foco a «Más» SOLO cuando el cajón estaba abierto: sin esta
   // marca, el primer render robaría el foco al cargar la página.
   const estuvoAbierto = useRef(false)
 
@@ -104,7 +93,7 @@ export function NavPortal({ llamar, whatsapp }: {
     return () => document.removeEventListener('keydown', alPulsar)
   }, [abierto])
 
-  // El foco entra al cajón al abrirlo y vuelve al ☰ al cerrarlo. Sin esto, quien
+  // El foco entra al cajón al abrirlo y vuelve a «Más» al cerrarlo. Sin esto, quien
   // navega con teclado abre el menú y sigue tabulando por la página de detrás.
   useEffect(() => {
     if (abierto) {
@@ -116,46 +105,8 @@ export function NavPortal({ llamar, whatsapp }: {
     }
   }, [abierto])
 
-  const etiquetaActiva = pestanas.find((p) => esActivaDe(p))?.etiqueta ?? null
-
-  // El slot vive en el layout RAÍZ (`app/layout.tsx`), fuera del árbol de este
-  // componente. `document.getElementById` no existe en el servidor, así que
-  // sin `mounted` la primera pasada (SSR + primer render de cliente) tiraría.
-  const [mounted, setMounted] = useState(false)
-  useEffect(() => setMounted(true), [])
-  const slot = mounted ? document.getElementById('portal-menu-slot') : null
-
-  const boton = (
-    <button
-      ref={botonRef}
-      type="button"
-      className="marca-menu-boton"
-      // La sección activa ya no se pinta al lado (no hay sitio en la barra de
-      // marca): viaja en el `aria-label` para que un lector de pantalla la
-      // siga diciendo.
-      aria-label={
-        abierto
-          ? 'Cerrar el menú de secciones'
-          : etiquetaActiva !== null
-            ? `Abrir el menú de secciones — estás en ${etiquetaActiva}`
-            : 'Abrir el menú de secciones'
-      }
-      aria-expanded={abierto}
-      aria-controls={idNav}
-      onClick={() => setAbiertoEn(abierto ? null : clave)}
-    >
-      <span aria-hidden="true">☰</span>
-    </button>
-  )
-
   return (
     <>
-      {/* 19/09/2026: el ☰ ya no abre su propia franja debajo de la marca — se
-          porta a la barra de marca del layout raíz, que es la misma franja
-          para las dos cosas. En escritorio el botón se sigue portando igual,
-          es indiferente: lleva su propio `display:none` a partir de 1024px. */}
-      {slot && createPortal(boton, slot)}
-
       {/* El fondo oscuro cierra al tocar fuera. `aria-hidden` porque no aporta
           nada a un lector de pantalla: la salida accesible es el botón de
           cerrar y la tecla Escape. */}
@@ -215,9 +166,9 @@ export function NavPortal({ llamar, whatsapp }: {
 
       {/* 📱 Barra inferior (26/09/2026, a lo Smoobu; Alberto: «me gustó el diseño de Smoobu para
           la app de cliente»). Lo que el asegurado viene a hacer, a un toque del pulgar; el resto
-          sigue en el cajón, que abre «Más» (y el ☰ de arriba, que se queda: esta pantalla la abre
-          gente de 50-70 años y dos puertas al mismo menú no confunden, una escondida sí). Solo por
-          debajo de 1024 px: en escritorio el lateral ya enseña todas. Son ENLACES, como el cajón,
+          sigue en el cajón, que abre «Más» (la ÚNICA puerta al cajón en el móvil desde que se
+          quitó el ☰ de arriba, 26/09/2026). Solo por debajo de 1024 px: en escritorio el lateral
+          ya enseña todas. Son ENLACES, como el cajón,
           así que funcionan sin JavaScript; solo «Más» lo necesita. */}
       <nav className="portal-tabbar" aria-label="Accesos rápidos">
         {TABBAR.map(({ href, Icono }) => {
@@ -255,6 +206,7 @@ export function NavPortal({ llamar, whatsapp }: {
           </a>
         )}
         <button
+          ref={botonRef}
           type="button"
           className="portal-tabbar-item"
           aria-label="Más secciones"
@@ -268,8 +220,8 @@ export function NavPortal({ llamar, whatsapp }: {
         </button>
       </nav>
 
-      {/* 🚨 Sin JavaScript no hay `createPortal` ni ☰ que abrir (el botón ni
-          siquiera se renderiza: `mounted` se queda en `false`), así que la
+      {/* 🚨 Sin JavaScript «Más» no abre nada (el cajón se abre con un
+          `onClick`), así que la
           navegación vuelve a ser el carril horizontal que era hasta el
           19/09/2026: se ve peor con siete pestañas, pero se ve. Un cajón que
           no se puede abrir es una pantalla sin salida. */}
