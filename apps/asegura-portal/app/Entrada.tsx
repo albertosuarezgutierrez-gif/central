@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState, type FormEvent, type MouseEvent } from 'react'
 
-import { MarcaAsegura } from './MarcaAsegura'
 
 /**
  * La pantalla de entrada: pedir el código y canjearlo.
@@ -155,10 +154,12 @@ export function Entrada() {
   return (
     <main style={{ maxWidth: 420, margin: '0 auto', padding: '2rem 1rem' }}>
       <div className="seccion">
-        {/* El logo va EN LÍNEA (no `<img src>`): esta es la primera pantalla y
-            no puede quedarse un instante sin decir de quién es. */}
+        {/* Nombre completo y no el monograma «AS» (26/09/2026, Alberto). Es el
+            logotipo de la cabecera, ya descargado; el nombre va en texto para
+            el lector de pantalla. */}
         <span className="entrada-marca">
-          <MarcaAsegura alto={34} />
+          <span className="marca-palabra marca-palabra-grande" aria-hidden="true" />
+          <span className="sr-marca">Grupo ASegura</span>
         </span>
         <h1>
           Mis <em>seguros</em>
