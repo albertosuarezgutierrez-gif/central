@@ -21,8 +21,13 @@ import { DIAS_PREAVISO, parsearFecha } from './calculadora-vencimientos.ts'
 
 const MS_DIA = 86_400_000
 
-function diaUtc(d: Date): Date {
-  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()))
+/**
+ * «Hoy» del navegador como medianoche UTC. Se leen los componentes LOCALES:
+ * con los `getUTC*`, entre las 00:00 y las 01:59 en España (UTC+2 en verano)
+ * la carta saldría fechada el día anterior y el plazo con un día de más.
+ */
+function hoyComoDiaUtc(d: Date): Date {
+  return new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()))
 }
 
 export function fechaEnLetra(d: Date): string {
@@ -88,7 +93,7 @@ export function plazoCarta(vence: string, hoy: Date): { estado: EstadoPlazo; lim
   const v = parsearFecha(vence)
   if (!v) return { estado: 'sin_fecha', limite: null, dias: null }
   const limite = new Date(v.getTime() - DIAS_PREAVISO * MS_DIA)
-  const h = diaUtc(hoy)
+  const h = hoyComoDiaUtc(hoy)
   const dias = Math.round((limite.getTime() - h.getTime()) / MS_DIA)
   if (v.getTime() < h.getTime()) return { estado: 'vencida', limite, dias }
   return { estado: dias >= 0 ? 'en_plazo' : 'fuera_de_plazo', limite, dias }
@@ -115,7 +120,7 @@ export function componerCarta(d: DatosCarta, hoy: Date): { asunto: string; cuerp
   const asunto = `Comunicación de no renovación de la póliza n.º ${numero}`
 
   const cuerpo = [
-    `${lugar}, ${fechaEnLetra(diaUtc(hoy))}`,
+    `${lugar}, ${fechaEnLetra(hoyComoDiaUtc(hoy))}`,
     '',
     `A la atención de ${compania}`,
     'Departamento de Atención al Cliente',

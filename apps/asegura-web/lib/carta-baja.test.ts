@@ -20,6 +20,19 @@ test('el plazo es vencimiento − 30 días, y dice en qué punto está', () => {
   assert.equal(plazoCarta('2026-02-31', HOY).estado, 'sin_fecha')
 })
 
+test('«hoy» es el día LOCAL del navegador, no el UTC', () => {
+  // 00:30 del 27/09 en Madrid (UTC+2) = 22:30 UTC del 26/09.
+  const antes = process.env.TZ
+  process.env.TZ = 'Europe/Madrid'
+  try {
+    const madrugada = new Date('2026-09-26T22:30:00Z')
+    assert.match(componerCarta(DATOS_VACIOS, madrugada).cuerpo, /27 de septiembre de 2026/)
+    assert.equal(plazoCarta('2026-10-27', madrugada).dias, 0)
+  } finally {
+    process.env.TZ = antes
+  }
+})
+
 test('lo que no se ha escrito sale como hueco visible, nunca inventado', () => {
   const c = componerCarta(DATOS_VACIOS, HOY)
   assert.deepEqual(new Set(c.huecos), new Set(Object.keys(HUECOS_CARTA)))
