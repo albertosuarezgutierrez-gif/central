@@ -24,6 +24,7 @@ function vista(extra: Partial<Extract<VistaImportacion, { estado: 'ok' }>> = {})
     matricula: '1234ABC',
     cuenta: { enmascarada: 'ES91…1332', origen: 'ficha', descripcion: 'la cuenta de la ficha' },
     cuentaAviso: null, cuentaInformada: true,
+    direccion: { origen: 'proyecto', texto: 'Calle Sol 3' },
     ...extra,
   }
 }
@@ -46,6 +47,32 @@ test('número de proyecto: solo cifras', () => {
   assert.equal(proyectoValido(40000001), '40000001')
   assert.equal(proyectoValido('4000/../1'), null)
   assert.equal(proyectoValido(''), null)
+})
+
+test('un «no coincide» dice qué trae el proyecto (tomador enmascarado y matrícula), no solo que no cuadra', () => {
+  const p = prepararResumen(POLIZA, vista({
+    tomador: 'distinto', vehiculo: 'distinto',
+    bloqueos: ['el tomador del proyecto no es el cliente de esta póliza (DNI distinto)'],
+  }), null)
+  assert.equal(p.tipo, 'no')
+  const m = p.tipo === 'no' ? p.motivo : ''
+  assert.match(m, /en el proyecto: tomador Ana Ruiz Gil, documento …678Z; matrícula 1234ABC/)
+  // Con todo coincidiendo no se añade nada.
+  const b = prepararResumen(POLIZA, vista({ bloqueos: ['esta póliza ya está sustituida'] }), null)
+  assert.doesNotMatch(b.tipo === 'no' ? b.motivo : '', /en el proyecto/)
+})
+
+test('dirección a medias en Avant2: el resumen enseña la de la ficha; si la ficha tampoco la tiene, no hay botón', () => {
+  const r = resumenDe(vista({ direccion: { origen: 'ficha', texto: 'Calle Feria 12' } }))
+  assert.deepEqual(r.direccionEmision, { texto: 'Calle Feria 12', origen: 'ficha' })
+  const t = textoResumen(r)
+  assert.match(t, /Dirección: Calle Feria 12, 41003/)
+  assert.match(t, /de la ficha: en Avant2 estaba incompleta/)
+  const no = prepararResumen(POLIZA, vista({ direccion: { origen: 'falta', faltan: ['calle', 'número'] } }), null)
+  assert.equal(no.tipo, 'no')
+  assert.match(no.tipo === 'no' ? no.motivo : '', /dirección del tomador está incompleta.*\(calle, número\)/)
+  // Una asegura anterior que no manda `direccion`: se enseña la del proyecto, como antes.
+  assert.equal(resumenDe(vista({ direccion: null })).direccionEmision.texto, 'Calle Sol 3')
 })
 
 test('sin botón si algo impide emitir o no se ha podido comprobar', () => {
@@ -156,6 +183,7 @@ test('el botón es de un solo uso y caduca: el UPDATE exige propuesta y plazo vi
 })
 
 test('el interruptor se mira ANTES de gastar el botón', () => {
+  assert.ok(cuerpoBoton.indexOf('emisionTgActiva(') > 0)
   assert.ok(cuerpoBoton.indexOf('emisionTgActiva(') < cuerpoBoton.indexOf("SET estado = 'emitiendo'"))
 })
 
@@ -180,6 +208,6 @@ test('un chat ajeno no llega a los botones: el webhook filtra el emisor antes de
   assert.ok(filtro < wh.indexOf("if (prefix === 'cas')"))
   assert.match(wh, /if \(action === 'emitir'\)[\s\S]*?after\(\(\) => emitirDesdeBoton\(arg\)\)/)
   // Y dentro del chat, solo la persona autorizada: el from.id se mira ANTES de emitir.
-  const rama = wh.slice(wh.indexOf("if (action === 'emitir')"))
+  const rama = wh.slice(wh.indexOf("if (prefix === 'cas')"))
   assert.ok(rama.indexOf('cb.from?.id') > 0 && rama.indexOf('cb.from?.id') < rama.indexOf('emitirDesdeBoton('))
 })

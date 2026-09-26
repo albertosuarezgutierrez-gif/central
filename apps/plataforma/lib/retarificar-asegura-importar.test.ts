@@ -73,3 +73,16 @@ test('vista: tomador y cuenta del proyecto para el resumen de Telegram; sin camp
   assert.equal(nueva.titular?.documento, '…678Z')
   assert.equal(nueva.matricula, '1234ABC')
 })
+
+test('la dirección de emisión se lee con sus tres orígenes; una forma rara es null, nunca «proyecto»', () => {
+  const base = { estado: 'ok', projectId: '1', tomador: 'coincide', vehiculo: 'coincide', bloqueos: [], ofertas: [], otras: 0 }
+  const v = (direccion: unknown) => {
+    const r = interpretarVistaImportacion(200, { ...base, direccion })
+    return r.estado === 'ok' ? r.direccion : 'no-ok'
+  }
+  assert.deepEqual(v({ origen: 'ficha', texto: 'Calle Feria 12' }), { origen: 'ficha', texto: 'Calle Feria 12' })
+  assert.deepEqual(v({ origen: 'falta', faltan: ['calle'] }), { origen: 'falta', faltan: ['calle'] })
+  assert.deepEqual(v({ origen: 'proyecto', texto: null }), { origen: 'proyecto', texto: null })
+  assert.equal(v({ origen: 'ficha', texto: '' }), null)
+  assert.equal(v(undefined), null)
+})

@@ -592,12 +592,28 @@ export function huecosPersonaParaEmitir(crudo: Json): { campo: CampoPersona; pap
   for (const campo of CAMPOS_PERSONA_SUBMIT) {
     const faltaEn = papeles.filter((papel) => {
       const persona = personaDe(papel)
-      if (campo !== 'email' && arr(obj(persona).addresses).length === 0) return false
-      return leerCampoPersona(persona, campo) === null
+      if (campo === 'email') return leerCampoPersona(persona, campo) === null
+      if (arr(obj(persona).addresses).length === 0) return false
+      // Una calle a medias se completa ENTERA desde la ficha (tipo, nombre y número), nunca pieza a
+      // pieza: mezclar el nombre del proyecto con el número de la ficha fabricaría una dirección que no
+      // es ninguna de las dos.
+      return direccionIncompleta(persona)
     })
     if (faltaEn.length > 0) huecos.push({ campo, papeles: faltaEn })
   }
   return huecos
+}
+
+/**
+ * ¿La calle de la persona está a medias? Sin nombre con letras, sin número o con número «0», o sin tipo
+ * de vía. Caso real (26/09/2026, proyecto 40842815 de Avant2): la web dejó la dirección del tomador en
+ * «0, 41001» — sin calle y con número 0 — y el Submit la habría mandado así a la compañía.
+ */
+export function direccionIncompleta(persona: unknown): boolean {
+  const nombre = leerCampoPersona(persona, 'nombreVia')
+  const numero = leerCampoPersona(persona, 'numeroVia')
+  const tipo = leerCampoPersona(persona, 'tipoVia')
+  return !nombre || !/\p{L}/u.test(nombre) || !numero || /^0+$/.test(numero.trim()) || !tipo
 }
 
 // ─── 3. Qué exige la emisión (GRATIS): lo dice el vendor, no se adivina ─────

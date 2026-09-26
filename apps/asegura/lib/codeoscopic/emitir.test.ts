@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { leerOferta, encontrarPrecio, redactarPersona, redactarCrudoVendor, huecosPersonaParaEmitir } from './emitir.ts'
+import { leerOferta, encontrarPrecio, redactarPersona, redactarCrudoVendor, huecosPersonaParaEmitir, direccionIncompleta } from './emitir.ts'
 import type { Cotizacion } from './respuesta.ts'
 
 // `leerOferta` es defensiva a propósito: la forma de `POST .../offers` no
@@ -222,10 +222,21 @@ test('huecosPersonaParaEmitir: la calle solo se exige si la persona YA lleva dir
   const sinDir = { identificationDocument: { id: '00000000T' }, name: 'X' }
   assert.deepEqual(huecosPersonaParaEmitir({ holder: sinDir }), [{ campo: 'email', papeles: ['holder'] }])
   const dirAMedias = { ...sinDir, emails: [{ address: 'a@b.es' }], addresses: [{ postalCode: '41003', town: { id: 1 }, roadName: 'Betis' }] }
+  // Una calle a medias se pide ENTERA a la ficha, no solo lo que falta (no se mezclan dos fuentes).
   assert.deepEqual(
     huecosPersonaParaEmitir({ holder: dirAMedias }).map((h) => h.campo),
-    ['numeroVia', 'tipoVia'],
+    ['nombreVia', 'numeroVia', 'tipoVia'],
   )
+})
+
+test('direccionIncompleta: el caso real de Avant2 «0, 41001» (sin calle, número 0) está a medias; la completa no', () => {
+  const avant2 = { addresses: [{ postalCode: '41001', roadNumber: '0', roadType: { id: 'Street' } }] }
+  assert.equal(direccionIncompleta(avant2), true)
+  assert.equal(direccionIncompleta({ addresses: [{ ...DIRECCION_COMPLETA, roadName: '0' }] }), true)
+  assert.equal(direccionIncompleta({ addresses: [{ ...DIRECCION_COMPLETA, roadNumber: '0' }] }), true)
+  assert.equal(direccionIncompleta({ addresses: [DIRECCION_COMPLETA] }), false)
+  const conCorreo = { identificationDocument: { id: '00000000T' }, emails: [{ address: 'a@b.es' }], addresses: avant2.addresses }
+  assert.deepEqual(huecosPersonaParaEmitir({ holder: conCorreo }).map((h) => h.campo), ['nombreVia', 'numeroVia', 'tipoVia'])
 })
 
 test('huecosPersonaParaEmitir: a un papel con OTRO DNI no se le mira nada (no se le puede escribir)', () => {
