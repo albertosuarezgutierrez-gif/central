@@ -2180,6 +2180,14 @@ PR #2933. Sin código tocado, solo doc.
   que el JSON en producción coincide. Multas descartadas a propósito de cualquier vía "dato abierto":
   dato sancionador ligado a persona, no dato técnico (RGPD/Ley de Tráfico).
 
+- **📉 trading-analista llevaba 6 días hábiles sin correr (14/09/2026).** Última pasada previa: 07/09;
+  hueco 08→13/09 sin refrescar NAV/cartera/precios. Repesca ejecutada completa (24 símbolos, `/analizar`+
+  `/puntuar` OK, Telegram enviado). Pendiente: revisar por qué el trigger programado no disparó esos días.
+  De paso, el servidor vetó RBLX por sospecha de suplantación de precio (su referencia interna 43,31 vs.
+  cierre real IBKR 50,41) — mis datos de IBKR no estaban mezclados; revisar esa referencia. Nota: mi sesión
+  llamó a `/api/internal/alerta` por `curl` directo con `Authorization: Bearer $ALERTA_TOKEN` y NO fue
+  bloqueada por Sentinel (ver la entrada siguiente) — puede que el bloqueo dependa de cómo se invoque Bash.
+
 - **🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN` (14/09/2026, PR #2928).** Fix pedido por
   Alberto ("resuelve para que no vuelva a pasar") tras el bloqueo de `facturas-correo` ese mismo día.
   Nuevo `scripts/canal-aviso.sh`: lee `PLATAFORMA_URL`/`ALERTA_TOKEN` del entorno DENTRO del script,
