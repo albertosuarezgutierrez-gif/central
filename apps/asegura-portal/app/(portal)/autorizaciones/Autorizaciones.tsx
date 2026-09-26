@@ -632,7 +632,7 @@ function enCabeza(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
-export function Autorizaciones() {
+export function Autorizaciones({ aceptarId = null }: { aceptarId?: string | null }) {
   const uid = useId()
   const [carga, setCarga] = useState<Carga>('cargando')
   const [datos, setDatos] = useState<Respuesta | null>(null)
@@ -703,6 +703,18 @@ export function Autorizaciones() {
     void cargarInvitaciones()
   }, [cargarInvitaciones])
 
+  // Desde la campana (`?aceptar=<id>`): en cuanto la lista está, se baja a ESA
+  // tarjeta. Una sola vez: tras aceptar se recarga y no hay que volver a saltar.
+  const [saltado, setSaltado] = useState(false)
+  useEffect(() => {
+    if (saltado || carga !== 'listo' || aceptarId === null) return
+    setSaltado(true)
+    const el = document.getElementById(idTarjetaRecibida(aceptarId))
+    if (!el) return
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    el.focus({ preventScroll: true })
+  }, [saltado, carga, aceptarId])
+
   if (carga === 'cargando') {
     return (
       <section className="seccion" aria-busy="true">
@@ -726,10 +738,23 @@ export function Autorizaciones() {
     )
   }
 
+  const hayPendienteRecibida = datos.recibidas.some((a) => a.estado === 'pendiente')
+
   return (
     <>
-      <Otorgadas uid={uid} lista={datos.otorgadas} onCambio={cargar} />
-      <Recibidas uid={uid} lista={datos.recibidas} onCambio={cargar} />
+      {/* Lo que espera a que TÚ lo aceptes va primero: es lo único de esta
+          pantalla que no avanza sin ti. */}
+      {hayPendienteRecibida ? (
+        <>
+          <Recibidas uid={uid} lista={datos.recibidas} onCambio={cargar} destacadaId={aceptarId} />
+          <Otorgadas uid={uid} lista={datos.otorgadas} onCambio={cargar} />
+        </>
+      ) : (
+        <>
+          <Otorgadas uid={uid} lista={datos.otorgadas} onCambio={cargar} />
+          <Recibidas uid={uid} lista={datos.recibidas} onCambio={cargar} destacadaId={aceptarId} />
+        </>
+      )}
       <SugerenciasContactos />
       <Invitaciones
         uid={uid}
@@ -1160,17 +1185,27 @@ function Accesos({ a, quien }: { a: AutorizacionVista; quien: string }) {
 
 /* ── 2. Te han dado acceso a ───────────────────────────────────────────── */
 
+/** El ancla de la tarjeta recibida, la que busca el salto desde la campana. */
+function idTarjetaRecibida(autorizacionId: string): string {
+  return `autorizacion-${autorizacionId}`
+}
+
 function Recibidas({
   uid,
   lista,
   onCambio,
+  destacadaId = null,
 }: {
   uid: string
   lista: readonly AutorizacionVista[]
   onCambio: () => Promise<void>
+  destacadaId?: string | null
 }) {
+  // Abierto también si hay alguna PENDIENTE: plegado, el botón de aceptar
+  // quedaba escondido y quien venía a aceptar no lo encontraba.
+  const abierto = lista.length === 0 || lista.some((a) => a.estado === 'pendiente')
   return (
-    <SeccionPlegable titulo="Te han dado acceso a" resumen={textoPersonas(lista.length)} abierto={lista.length === 0}>
+    <SeccionPlegable titulo="Te han dado acceso a" resumen={textoPersonas(lista.length)} abierto={abierto}>
       {lista.length === 0 ? (
         <p className="suave" style={{ margin: 0 }}>
           Nadie te ha dado acceso a sus seguros.
@@ -1178,7 +1213,7 @@ function Recibidas({
       ) : (
         <ul className="cartera">
           {lista.map((a) => (
-            <TarjetaRecibida key={a.id} a={a} onCambio={onCambio} />
+            <TarjetaRecibida key={a.id} a={a} onCambio={onCambio} destacada={a.id === destacadaId} />
           ))}
         </ul>
       )}
@@ -1186,7 +1221,15 @@ function Recibidas({
   )
 }
 
-function TarjetaRecibida({ a, onCambio }: { a: AutorizacionVista; onCambio: () => Promise<void> }) {
+function TarjetaRecibida({
+  a,
+  onCambio,
+  destacada = false,
+}: {
+  a: AutorizacionVista
+  onCambio: () => Promise<void>
+  destacada?: boolean
+}) {
   const [enviando, setEnviando] = useState<'aceptar' | 'revocar' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmandoRenuncia, setConfirmandoRenuncia] = useState(false)
@@ -1216,7 +1259,13 @@ function TarjetaRecibida({ a, onCambio }: { a: AutorizacionVista; onCambio: () =
   }
 
   return (
-    <li className="cartera-card">
+    <li
+      id={idTarjetaRecibida(a.id)}
+      tabIndex={-1}
+      className="cartera-card"
+      // Resaltada solo mientras espera: es la que se vino a aceptar desde la campana.
+      style={destacada && a.estado === 'pendiente' ? { outline: '2px solid var(--brand)', outlineOffset: 2 } : undefined}
+    >
       <h3>Los seguros de {quien}</h3>
       <LoQuePuedes a={a} />
       <Ambito a={a} mias={false} quien={quien} />

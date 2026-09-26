@@ -714,6 +714,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Portal: el aviso de la campana lleva DIRECTO a aceptar la autorización
+- Caso Pablo Franco Ruz ← Grupo ELCA 83 (`ver_economico`, concedida por Alberto, pendiente de que Pablo acepte; aún no ha entrado nunca).
+- Aviso `autorizacion_pendiente` → `/autorizaciones?aceptar=<id>`: pliega «Qué es lo que das», pone «Te han dado acceso a» primero y ABIERTO si hay pendientes (antes plegado = botón escondido), baja a la tarjeta y la resalta.
+- Aceptar sigue SOLO en la pantalla (no en la campana), decisión confirmada por Alberto.
+- Recordatorio: «Administración» NO abre la empresa entera; solo «Dueño» (`dueno-empresa.ts`).
+
 ## (26/09/2026) Correduría: tras emitir, correo al cliente + baja firmada que sale SOLA a la compañía
 Primera emisión por Telegram hecha (Pablo Guzmán, Allianz 61089620). Alberto pidió: correo moderno al cliente + firma
 de la baja de la anterior + envío automático a la compañía. **Casi todo existía** (expediente `anulacion`, firma en portal,
