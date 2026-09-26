@@ -7,6 +7,7 @@ import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
 
 import { WHATSAPP_PATH } from '../whatsapp-icono'
+import { CargandoEnlace } from './CargandoEnlace'
 
 /**
  * La navegación del portal: **un solo `<nav>` con dos formas**.
@@ -53,6 +54,9 @@ export function NavPortal({ llamar, whatsapp }: {
   whatsapp?: string
 }) {
   const ruta = usePathname()
+  // El «AS» flotante solo para enlaces a la MISMA ruta (`?vista=`): en un cambio de ruta ya lo pinta
+  // `loading.tsx`, y los dos a la vez serían dos indicadores para una sola espera.
+  const mismaRuta = (href: string) => href.split('?')[0] === ruta
   const params = useSearchParams()
   // `/autorizaciones` es otra RUTA, no un panel de la bóveda; por eso la ruta
   // manda sobre el parámetro y no al revés.
@@ -150,6 +154,7 @@ export function NavPortal({ llamar, whatsapp }: {
               onClick={cerrar}
             >
               {p.etiqueta}
+              {mismaRuta(p.href) && <CargandoEnlace />}
             </Link>
           )
         })}
@@ -193,6 +198,7 @@ export function NavPortal({ llamar, whatsapp }: {
             >
               <Icono />
               <span className="portal-tabbar-rotulo">{p.etiqueta}</span>
+              {mismaRuta(href) && <CargandoEnlace />}
             </Link>
           )
         })}
