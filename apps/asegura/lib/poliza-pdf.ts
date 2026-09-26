@@ -63,10 +63,10 @@ export async function enviarPolizasPendientes(correduriaId: string, ahora = Date
   const db = prismaAsegura()
   const filas = await db.$queryRaw<{ polizaId: string; clienteId: string; ultima: boolean }[]>`
     select p.id::text as "polizaId", p.cliente_id::text as "clienteId",
-           (p.created_at <= now() - make_interval(days => ${VENTANA_DIAS}) + interval '1 hour') as "ultima"
+           (p.created_at <= now() - make_interval(days => ${VENTANA_DIAS}::int) + interval '1 hour') as "ultima"
     from polizas p
     where p.correduria_id = ${correduriaId}::uuid and p.origen = 'emitida_codeoscopic' and p.merged_into_poliza_id is null
-      and p.created_at > now() - make_interval(days => ${VENTANA_DIAS})
+      and p.created_at > now() - make_interval(days => ${VENTANA_DIAS}::int)
       and exists (select 1 from correo_envio e where e.poliza_id = p.id and e.tipo = 'emision' and e.estado = 'enviado')
       and not exists (select 1 from correo_envio e where e.poliza_id = p.id
                       and e.tipo in (${TIPO_CORREO_POLIZA}, ${TIPO_CORREO_EMISION_CON_POLIZA}) and e.estado = 'enviado')
