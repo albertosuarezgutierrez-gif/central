@@ -162,6 +162,14 @@ export function NavPortal({ llamar, whatsapp }: {
             <span className="portal-nav-llamar-numero">{llamar.numero}</span>
           </a>
         )}
+        {/* «Salir» en el cajón, SOLO en el móvil (26/09/2026). En la cabecera ya no cabía con el
+            logotipo «Grupo ASegura» en lugar del monograma: a 320-390 px la barra se salía ~55 px
+            (medido). Es el sitio de las apps (Smoobu lo tiene en «Menú»). En escritorio sigue en la
+            cabecera y este se oculta (globals.css). Mismo POST que `SalirDelPortal`: un GET cerraría
+            la sesión con la precarga de enlaces. Aquí siempre hay sesión: es el layout `(portal)`. */}
+        <form className="portal-nav-salir" action="/api/salir" method="post">
+          <button type="submit" className="portal-nav-item">Salir</button>
+        </form>
       </nav>
 
       {/* 📱 Barra inferior (26/09/2026, a lo Smoobu; Alberto: «me gustó el diseño de Smoobu para

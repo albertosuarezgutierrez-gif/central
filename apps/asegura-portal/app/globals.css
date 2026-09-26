@@ -552,19 +552,41 @@ input, select, textarea, button { font: inherit; }
  * huecos bajan a 6 px. Un botón menos no es opción: Salir tiene que verse,
  * instalar es lo que pidió Alberto, y el tema y los avisos ya son solo icono.
  *
- * Y en el MÓVIL (≤ 639 px) el NOMBRE no se pinta (12/09/2026; Alberto, con la
- * captura: «Grupo ASegura quitarlo, ocupa mucho»). Se queda el monograma, que
- * lleva el `aria-label` de la marca, así que quién es la correduría se sigue
- * diciendo — a un lector de pantalla y, a dos líneas, en Fraunces, en el
- * escritorio, donde el sitio sobra. Hasta hoy solo se escondía por debajo de
- * 340 px: en un móvil normal el wordmark a dos líneas era lo más alto de la
- * barra y la única pieza que no hacía nada. */
+ * Y en el MÓVIL (≤ 639 px): del 12/09 al 26/09/2026 se escondía el nombre y
+ * quedaba el monograma; desde el 26/09 es al revés (ver abajo). */
 @media (max-width: 380px) {
   .marca-barra,
   .marca-acciones { gap: 6px; }
 }
+/* 26/09/2026 (Alberto: «arriba en vez de AS pon Grupo ASegura»): en el móvil se
+ * INVIERTE lo del 12/09 — va el logotipo y se va el monograma. Lo que entonces
+ * «ocupaba mucho» era el nombre en texto a dos líneas y con el ☰ al lado; hoy es
+ * el logotipo fino de UNA línea y el ☰ ya no está (la puerta al menú es «Más»,
+ * abajo). A ≤380 px se encoge para que quepa con los cinco botones de la derecha. */
 @media (max-width: 639px) {
-  .marca-nombre { display: none; }
+  .marca-escudo { display: none; }
+}
+@media (max-width: 380px) {
+  .marca-palabra { height: 14px; }
+}
+/* «Salir» se muda al cajón («Más») en el móvil: con el logotipo en la cabecera no
+ * cabían los cinco botones (medido: la barra se salía ~55 px a 320-390). En
+ * escritorio vuelve a la cabecera y el del cajón se oculta. */
+@media (max-width: 1023px) {
+  .marca-acciones .salir-form { display: none; }
+}
+.portal-nav-salir { display: flex; }
+.portal-nav-salir .portal-nav-item {
+  width: 100%;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  color: var(--negative, var(--text));
+}
+@media (min-width: 1024px) {
+  .portal-nav-salir { display: none; }
 }
 .salir-form {
   flex: 0 0 auto;

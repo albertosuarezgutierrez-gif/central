@@ -375,3 +375,15 @@ test('🚨 la barra inferior del movil no tapa nada y se va en escritorio', () =
     'con la barra, el botón flotante de WhatsApp sobra',
   )
 })
+
+test('🚨 en el movil la cabecera lleva el LOGOTIPO y «Salir» vive en el cajon', () => {
+  // 26/09/2026 (Alberto: «arriba en vez de AS pon Grupo ASegura»). Con el logotipo no cabían
+  // los cinco botones de la derecha (medido: ~55 px fuera a 320-390), así que «Salir» se muda
+  // al cajón en el móvil. Si alguien devuelve el monograma, o esconde el Salir de la cabecera
+  // sin darle otro sitio, en el móvil NO queda forma de cerrar la sesión y nada falla.
+  assert.match(CSS, /@media \(max-width: 639px\)\s*\{\s*\.marca-escudo\s*\{\s*display:\s*none/, 'en el móvil va el logotipo, no el monograma')
+  assert.match(CSS, /\.marca-acciones \.salir-form\s*\{\s*display:\s*none/, 'el Salir de la cabecera se oculta en el móvil')
+  const form = NAV.match(/<form className="portal-nav-salir"[^>]*>/)?.[0] ?? ''
+  assert.match(form, /action="\/api\/salir"/, 'el cajón necesita su propio Salir, o en el móvil no se puede salir')
+  assert.match(form, /method="post"/, 'Salir es POST: un GET cerraría la sesión con la precarga')
+})
