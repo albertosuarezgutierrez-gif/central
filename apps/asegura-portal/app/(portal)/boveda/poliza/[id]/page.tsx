@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { esRamoInmueble } from '@central/module-seguros-portal'
 import { carteraDeIdentidad, polizasParaParte, type PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
+import { documentosDePoliza } from '@/lib/documentos-poliza'
 import { fechaEs } from '@/lib/fechas'
 import { getIdentidad } from '@/lib/session'
 
@@ -77,6 +78,8 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   if (!poliza) notFound()
 
   const p = poliza
+  // Solo las propias: `documentosDePoliza` lo vuelve a comprobar contra la cartera, no se fía de `deOtro`.
+  const documentos = deOtro ? null : await documentosDePoliza(identidad.id, p.id)
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = RAMO[p.ramo] ?? p.ramo
 
@@ -157,6 +160,31 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
 
         <Coberturas p={p} />
       </section>
+
+      {/* La documentación ORIGINAL de la compañía (el PDF de la póliza). `null` = no es tuya o tu nivel
+          no la ve: no se pinta. `[]` = aún no nos la ha entregado, y se dice. */}
+      {documentos !== null && (
+        <section className="seccion" aria-labelledby="documentos-titulo">
+          <h2 id="documentos-titulo">Documentos de tu póliza</h2>
+          {documentos.length === 0 ? (
+            <p className="suave" style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
+              Aún no tenemos aquí la póliza original. En cuanto la compañía nos la entregue la verás en
+              esta sección.
+            </p>
+          ) : (
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 8 }}>
+              {documentos.map((d) => (
+                <li key={d.id}>
+                  <a className="boton auto" href={`/api/polizas/${p.id}/documentos/${d.id}`} style={{ minHeight: 44, overflowWrap: 'anywhere' }}>
+                    Descargar {d.nombre}
+                  </a>
+                  <span className="suave" style={{ marginLeft: 8, fontSize: 13 }}>{fechaEs(d.creadoEn)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
 
       <HistorialCompanias p={p} />
 

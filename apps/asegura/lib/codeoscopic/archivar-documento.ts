@@ -54,6 +54,8 @@ export async function archivarDocumentoEmitido(
       mime: 'application/pdf',
       contenido: bytes,
       subidoPor: 'agente',
+      // Es la documentación ORIGINAL de la compañía: el cliente la consulta en su portal (Alberto, 26/09/2026).
+      visiblePorCliente: true,
       notas: `Descargado de Codeoscopic (issuedDocuments) el ${new Date().toISOString()}.`,
     })
     return guardado.ok

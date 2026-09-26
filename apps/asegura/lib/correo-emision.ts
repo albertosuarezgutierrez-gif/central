@@ -17,6 +17,8 @@ export type DatosCorreoEmision = {
   enlace: string
   /** `true` = hay una póliza anterior con su carta de baja esperando la firma del cliente. */
   conBaja: boolean
+  /** `true` = va ADJUNTO el PDF original de la compañía (Alberto, 26/09/2026: «adjuntarle el PDF»). */
+  conPoliza: boolean
 }
 
 export type CuerpoCorreoEmision = { asunto: string; texto: string; html: string }
@@ -31,7 +33,9 @@ export function cuerpoCorreoEmision(d: DatosCorreoEmision): CuerpoCorreoEmision 
   const nombre = d.nombre?.replace(/[\r\n]+/g, ' ').trim() || null
   const saludo = nombre ? `Hola, ${nombre}:` : 'Hola:'
   const asunto = 'Tu nuevo seguro ya está emitido'
-  const p1 = 'Tu nuevo seguro ya está emitido y en vigor desde la fecha de efecto que acordamos. En tu área de clientes lo tienes todo: los datos del seguro y la póliza en PDF en cuanto nos llegue.'
+  const p1 = d.conPoliza
+    ? 'Tu nuevo seguro ya está emitido y en vigor desde la fecha de efecto que acordamos. Te adjuntamos la póliza original de tu nuevo seguro; guárdala, y también la tienes siempre en tu área de clientes.'
+    : 'Tu nuevo seguro ya está emitido y en vigor desde la fecha de efecto que acordamos. Te enviaremos la póliza original en cuanto nos la entreguen.'
   const bajaTitulo = 'Falta un paso: firma la baja de tu seguro anterior'
   const bajaTexto = 'Para que tu seguro anterior no se renueve y no pagues dos, hay que comunicar que no continúas. Tienes la carta preparada en tu área de clientes: revísala y fírmala con un código que te llega a este correo. Nosotros la enviamos por ti.'
   const acceso = 'Entras con este mismo correo: te mandamos un código de un solo uso, sin contraseñas.'
@@ -63,6 +67,41 @@ export function cuerpoCorreoEmision(d: DatosCorreoEmision): CuerpoCorreoEmision 
         `<p style="font-size:15px;line-height:1.6;margin:0 0 16px">${escapar(bajaTexto)}</p>${botonHtml}` +
         `<p style="font-size:13px;line-height:1.5;color:#5a6280;margin:12px 0 0">Tarda un minuto. ${escapar(acceso)}</p></div>`
       : `<p style="margin:0 0 12px">${botonHtml}</p><p style="font-size:13px;line-height:1.5;color:#5a6280;margin:0 0 20px">${escapar(acceso)}</p>`,
+    `<p style="font-size:15px;line-height:1.6;margin:0">${escapar(cierre)}</p>`,
+    `<p style="font-size:15px;line-height:1.5;margin:18px 0 0"><strong>El equipo de Grupo ASegura</strong></p>`,
+    `</div>`,
+    `<div style="background:${SUAVE};padding:16px 32px;font-size:12px;line-height:1.5;color:#5a6280">Grupo ASegura · ${REMITENTE_CORREDURIA}</div>`,
+    `</div></div>`,
+  ].join('')
+  return { asunto, texto, html }
+}
+
+/**
+ * El correo que lleva la póliza cuando la compañía la entrega DESPUÉS de emitir (el caso normal: al
+ * emitir aún no la ha generado). Mismo criterio: el cuerpo no nombra nada de la cartera; el PDF va
+ * adjunto. Solo se manda si antes salió el correo de la emisión (el OK de Alberto).
+ */
+export function cuerpoCorreoPoliza(d: { nombre: string | null; enlace: string }): CuerpoCorreoEmision {
+  if (!/^https:\/\//.test(d.enlace)) throw new Error('enlace_no_https')
+  const nombre = d.nombre?.replace(/[\r\n]+/g, ' ').trim() || null
+  const saludo = nombre ? `Hola, ${nombre}:` : 'Hola:'
+  const asunto = 'Aquí tienes tu póliza'
+  const p1 = 'Te adjuntamos la póliza original de tu nuevo seguro. Guárdala: también la tienes siempre en tu área de clientes.'
+  const acceso = 'Entras con este mismo correo: te mandamos un código de un solo uso, sin contraseñas.'
+  const cierre = 'Si algo no cuadra, responde a este correo y lo vemos contigo.'
+  const texto = [saludo, '', p1, '', `Tu área de clientes: ${d.enlace}`, acceso, '', cierre, '', 'El equipo de Grupo ASegura', `Grupo ASegura · ${REMITENTE_CORREDURIA}`].join('\n')
+  const cuerpo = "font-family:'Nunito Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif"
+  const titular = 'font-family:Quicksand,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-weight:700'
+  const html = [
+    `<div style="background:${SUAVE};padding:24px 12px">`,
+    `<div style="max-width:560px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e6e9f5;${cuerpo};color:${TINTA}">`,
+    `<div style="padding:26px 32px 18px;border-bottom:4px solid ${AZUL}"><img src="${LOGO_CORREO}" width="220" height="32" alt="Grupo ASegura" style="display:block;width:220px;height:auto;border:0"></div>`,
+    `<div style="padding:28px 32px">`,
+    `<p style="${titular};font-size:24px;line-height:1.25;color:${TINTA};margin:0 0 14px">Aquí tienes tu póliza</p>`,
+    `<p style="font-size:16px;line-height:1.6;margin:0 0 6px">${escapar(saludo)}</p>`,
+    `<p style="font-size:16px;line-height:1.6;margin:0 0 20px">${escapar(p1)}</p>`,
+    `<p style="margin:0 0 12px"><a href="${escapar(d.enlace)}" style="display:inline-block;background:${AZUL};color:#fff;text-decoration:none;${titular};font-size:16px;padding:13px 22px;border-radius:10px">Entrar en mi área de clientes</a></p>`,
+    `<p style="font-size:13px;line-height:1.5;color:#5a6280;margin:0 0 20px">${escapar(acceso)}</p>`,
     `<p style="font-size:15px;line-height:1.6;margin:0">${escapar(cierre)}</p>`,
     `<p style="font-size:15px;line-height:1.5;margin:18px 0 0"><strong>El equipo de Grupo ASegura</strong></p>`,
     `</div>`,

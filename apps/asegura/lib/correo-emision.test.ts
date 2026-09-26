@@ -6,24 +6,54 @@ import { readFileSync } from 'node:fs'
 
 import { CAMPOS_PROHIBIDOS_EN_INVITACION } from '@central/module-seguros-portal'
 
-import { cuerpoCorreoEmision } from './correo-emision.ts'
+import { cuerpoCorreoEmision, cuerpoCorreoPoliza } from './correo-emision.ts'
 
 const aplanar = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
 const ENLACE = 'https://clientes.grupoasegura.es/boveda'
 
-test('no nombra ningún campo de la cartera, con baja y sin ella', () => {
-  for (const conBaja of [true, false]) {
-    const c = cuerpoCorreoEmision({ nombre: 'Pablo', enlace: ENLACE, conBaja })
+test('no nombra ningún campo de la cartera, con baja y sin ella, con póliza adjunta y sin ella', () => {
+  for (const [conBaja, conPoliza] of [[true, true], [true, false], [false, true], [false, false]] as const) {
+    const c = cuerpoCorreoEmision({ nombre: 'Pablo', enlace: ENLACE, conBaja, conPoliza })
     const todo = aplanar([c.asunto, c.texto, c.html].join('\n'))
     const colados = CAMPOS_PROHIBIDOS_EN_INVITACION.filter((campo) => todo.includes(aplanar(campo)))
     assert.deepEqual(colados, [], `campos de la cartera en el correo: ${colados.join(', ')}`)
     for (const cia of ['mapfre', 'allianz', 'reale', 'axa', 'generali', 'occident']) assert.ok(!todo.includes(cia), cia)
   }
+  const p = cuerpoCorreoPoliza({ nombre: 'Pablo', enlace: ENLACE })
+  const todo = aplanar([p.asunto, p.texto, p.html].join('\n'))
+  assert.deepEqual(CAMPOS_PROHIBIDOS_EN_INVITACION.filter((c) => todo.includes(aplanar(c))), [])
+})
+
+test('🪤 no promete en el portal un PDF que aún no hay: con póliza dice que va adjunta; sin ella, que se enviará', () => {
+  const con = cuerpoCorreoEmision({ nombre: 'Pablo', enlace: ENLACE, conBaja: false, conPoliza: true })
+  const sin = cuerpoCorreoEmision({ nombre: 'Pablo', enlace: ENLACE, conBaja: false, conPoliza: false })
+  assert.match(con.texto, /Te adjuntamos la póliza/)
+  assert.match(sin.texto, /Te enviaremos la póliza original en cuanto nos la entreguen/)
+  assert.doesNotMatch(sin.texto, /en tu área de clientes lo tienes todo/i)
+})
+
+test('🪤 el PDF va adjunto cuando lo hay, y el cron solo escribe a quien ya recibió la emisión, una vez por póliza', () => {
+  const tras = readFileSync(new URL('./tras-emision.ts', import.meta.url), 'utf8')
+  assert.match(tras, /conPoliza: pdf !== null/)
+  assert.match(tras, /\.\.\.\(pdf \? \{ adjuntos: \[\{ nombre: pdf\.nombre, contenido: pdf\.contenido, tipo: 'application\/pdf' \}\] \} : \{\}\)/)
+  const cron = readFileSync(new URL('./poliza-pdf.ts', import.meta.url), 'utf8')
+  // POR PÓLIZA, no por cliente: con dos emisiones del mismo cliente una no tapa ni autoriza a la otra.
+  assert.match(cron, /exists \(select 1 from correo_envio e where e\.poliza_id = p\.id and e\.tipo = 'emision' and e\.estado = 'enviado'\)/)
+  assert.match(cron, /not exists \(select 1 from correo_envio e where e\.poliza_id = p\.id\s+and e\.tipo in \(\$\{TIPO_CORREO_POLIZA\}, \$\{TIPO_CORREO_EMISION_CON_POLIZA\}\)/)
+  assert.doesNotMatch(cron, /e\.cliente_id = p\.cliente_id/)
+  // Y los dos envíos que cuentan dejan la póliza apuntada; sin ella el cron no los ve y reenviaría.
+  assert.match(tras, /polizaId: opciones\.prueba \? null : e\.polizaId/)
+  assert.match(cron, /clienteId: f\.clienteId, polizaId: f\.polizaId, tipo: TIPO_CORREO_POLIZA/)
+  const seg = readFileSync(new URL('./correo-seguimiento.ts', import.meta.url), 'utf8')
+  assert.match(seg, /\$\{e\.polizaId \?\? null\}::uuid/)
+  // La documentación original de la compañía la ve el cliente en su portal.
+  const arch = readFileSync(new URL('./codeoscopic/archivar-documento.ts', import.meta.url), 'utf8')
+  assert.match(arch, /visiblePorCliente: true/)
 })
 
 test('la firma de la baja sale SOLO si hay baja abierta, y el botón lleva al portal', () => {
-  const con = cuerpoCorreoEmision({ nombre: 'Pablo', enlace: ENLACE, conBaja: true })
-  const sin = cuerpoCorreoEmision({ nombre: 'Pablo', enlace: ENLACE, conBaja: false })
+  const con = cuerpoCorreoEmision({ nombre: 'Pablo', enlace: ENLACE, conBaja: true, conPoliza: false })
+  const sin = cuerpoCorreoEmision({ nombre: 'Pablo', enlace: ENLACE, conBaja: false, conPoliza: false })
   assert.match(con.texto, /firma la baja de tu seguro anterior/i)
   assert.doesNotMatch(sin.texto, /baja/i)
   assert.match(con.html, new RegExp(`href="${ENLACE}"`))
@@ -31,9 +61,9 @@ test('la firma de la baja sale SOLO si hay baja abierta, y el botón lleva al po
 })
 
 test('sin nombre saluda sin inventárselo, y un enlace no https no se envía', () => {
-  assert.match(cuerpoCorreoEmision({ nombre: null, enlace: ENLACE, conBaja: false }).texto, /^Hola:/)
-  assert.match(cuerpoCorreoEmision({ nombre: 'Ana<b>', enlace: ENLACE, conBaja: false }).html, /Ana&lt;b&gt;/)
-  assert.throws(() => cuerpoCorreoEmision({ nombre: 'x', enlace: 'http://a.es', conBaja: false }))
+  assert.match(cuerpoCorreoEmision({ nombre: null, enlace: ENLACE, conBaja: false, conPoliza: false }).texto, /^Hola:/)
+  assert.match(cuerpoCorreoEmision({ nombre: 'Ana<b>', enlace: ENLACE, conBaja: false, conPoliza: false }).html, /Ana&lt;b&gt;/)
+  assert.throws(() => cuerpoCorreoEmision({ nombre: 'x', enlace: 'http://a.es', conBaja: false, conPoliza: false }))
 })
 
 test('🪤 la firma de la función no admite datos de la cartera', () => {

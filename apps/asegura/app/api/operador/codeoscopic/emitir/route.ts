@@ -260,7 +260,7 @@ export const POST = auditado(async (req: Request) => {
       ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunadoAc.polizaId, crudo: crudoPrevio })
       : { documentoGuardado: null, avisoDocumento: null }
     // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK).
-    const trasAc = acunadoAc.ok ? await trasEmisionConTope(correduria.id, { clienteId: poliza.cliente_id, polizaOrigenId: p.poliza_id }) : null
+    const trasAc = acunadoAc.ok ? await trasEmisionConTope(correduria.id, { clienteId: poliza.cliente_id, polizaId: acunadoAc.polizaId, polizaOrigenId: p.poliza_id }) : null
     return NextResponse.json({
       estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
       trasEmision: trasAc,
@@ -796,7 +796,7 @@ export const POST = auditado(async (req: Request) => {
 
   // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK). Después
   // del archivado: si el PDF ha llegado, el cliente ya lo encuentra al entrar.
-  const tras = acunado.ok ? await trasEmisionConTope(correduria.id, { clienteId: poliza.cliente_id, polizaOrigenId: p.poliza_id }) : null
+  const tras = acunado.ok ? await trasEmisionConTope(correduria.id, { clienteId: poliza.cliente_id, polizaId: acunado.polizaId, polizaOrigenId: p.poliza_id }) : null
 
   return NextResponse.json({
     estado: acunado.ok ? 'ok' : 'emitido_sin_acunar',
