@@ -180,6 +180,6 @@ test('un chat ajeno no llega a los botones: el webhook filtra el emisor antes de
   assert.ok(filtro < wh.indexOf("if (prefix === 'cas')"))
   assert.match(wh, /if \(action === 'emitir'\)[\s\S]*?after\(\(\) => emitirDesdeBoton\(arg\)\)/)
   // Y dentro del chat, solo la persona autorizada: el from.id se mira ANTES de emitir.
-  const rama = wh.slice(wh.indexOf("if (action === 'emitir')"))
+  const rama = wh.slice(wh.indexOf("if (prefix === 'cas')"))
   assert.ok(rama.indexOf('cb.from?.id') > 0 && rama.indexOf('cb.from?.id') < rama.indexOf('emitirDesdeBoton('))
 })

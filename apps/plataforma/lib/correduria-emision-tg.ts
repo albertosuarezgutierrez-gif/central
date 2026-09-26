@@ -20,7 +20,7 @@ export function emisionTgActiva(valor: string | undefined): boolean {
   return /^(1|true|s[ií]|on)$/i.test((valor ?? '').trim())
 }
 
-const URL_PLATAFORMA_POR_DEFECTO = 'https://plataforma-ten-flame.vercel.app'
+export const URL_PLATAFORMA_POR_DEFECTO = 'https://plataforma-ten-flame.vercel.app'
 
 /** Enlace a la ficha de la póliza en la intranet (misma base que los avisos de leads). */
 export function urlPoliza(polizaId: string, base: string = process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_POR_DEFECTO): string {

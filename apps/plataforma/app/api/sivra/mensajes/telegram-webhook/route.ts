@@ -775,13 +775,14 @@ export async function POST(req: NextRequest) {
     if (prefix === 'cas') {
       // «Emitir» (fase 3a): se contesta YA y el Submit corre después de responder a Telegram —
       // puede tardar minutos, y el botón de un solo uso se encarga de que un reenvío no emita dos veces.
+      // Emitir y corregir la ficha escriben en la cartera: exigen que pulse la PERSONA autorizada, no
+      // solo que el botón esté en su chat (en un grupo cualquiera podría pulsar). En un chat privado,
+      // el id del chat es el de la persona.
+      if ((action === 'emitir' || action === 'corregir') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+        await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
+        return NextResponse.json({ ok: true })
+      }
       if (action === 'emitir') {
-        // Emitir exige que pulse la PERSONA autorizada, no solo que el botón esté en su chat: en un
-        // grupo cualquiera podría pulsar. En un chat privado, el id del chat es el de la persona.
-        if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
-          await tgAnswerCallback(cb.id, 'Solo el titular puede emitir')
-          return NextResponse.json({ ok: true })
-        }
         await tgAnswerCallback(cb.id, '⏳ Compruebo el resumen y emito…')
         // Se quitan los botones del resumen: el candado ya impide emitir dos veces, pero así no confunde.
         if (cb.message?.message_id) {

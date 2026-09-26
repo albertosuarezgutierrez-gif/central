@@ -707,6 +707,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Correduría: corregir la ficha desde el asistente de Telegram (fase 3b)
+- `proponer_correccion`: dirección/CP/ciudad/provincia (libres) y nombre/apellidos (solo con DNI recibido en la ficha).
+  El servidor valida con `revisarEdicion`, enseña antes → después + DNI enmascarado · ciudad, y Alberto aplica con
+  `cas_corregir` (un solo uso, 15 min, `from.id`, interruptor de la emisión). Escribe por `PATCH /api/operador/cliente`.
+- Al pulsar relee la ficha y compara huella; al cerrar la fila solo quedan los nombres de campo. Nada se borra por chat.
+- Tabla `correduria_asistente_correccion` (+ `huella`) aplicada en prod. Revisión agente-architect aplicada. Fase 3a
+  (#3668) mergeada y desplegada; prueba real de la emisión de Pablo pendiente de que Alberto pulse.
+
 ## (26/09/2026) Portal del cliente (asegura-portal) · barra inferior a lo Smoobu
 - Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero
   en plataforma y en /correduria y se deshizo (el PR #3659 queda sin cambios en plataforma).

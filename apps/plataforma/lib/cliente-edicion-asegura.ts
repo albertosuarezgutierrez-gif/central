@@ -249,15 +249,15 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-async function cabeceras(): Promise<Record<string, string> | null> {
+async function cabeceras(actor?: string): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? await cabecerasPuerto(secret) : null
+  return secret ? await cabecerasPuerto(secret, actor) : null
 }
 
 export type Reenvio = { status: number; json: unknown }
 
-async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
-  const h = await cabeceras()
+async function llamar(path: string, init: RequestInit, actor?: string): Promise<Reenvio> {
+  const h = await cabeceras(actor)
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   try {
     const res = await fetch(`${urlAsegura()}${path}`, {
@@ -288,9 +288,12 @@ export function borrarContactoAsegura(body: Record<string, unknown>): Promise<Re
   return llamar('/api/operador/cliente/contactos', { method: 'DELETE', body: JSON.stringify(body) })
 }
 
-/** `PATCH /api/operador/cliente` — edición. El `actor` lo pone la ruta (sesión). */
-export function editarClienteAsegura(body: Record<string, unknown>): Promise<Reenvio> {
-  return llamar('/api/operador/cliente', { method: 'PATCH', body: JSON.stringify(body) })
+/**
+ * `PATCH /api/operador/cliente` — edición. El `actor` del cuerpo lo pone la ruta (sesión); el de la
+ * cabecera sale de la sesión salvo que se pase (un agente sin sesión: `agente:<id>`).
+ */
+export function editarClienteAsegura(body: Record<string, unknown>, actor?: string): Promise<Reenvio> {
+  return llamar('/api/operador/cliente', { method: 'PATCH', body: JSON.stringify(body) }, actor)
 }
 
 /** `POST /api/operador/aviso-web?accion=` — el «avísame antes de que venza» de la web pública. */

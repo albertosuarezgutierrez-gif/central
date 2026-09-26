@@ -110,6 +110,7 @@ export function paraIA(valor: unknown, max = 7000): string {
 export type NombreHerramienta =
   | 'buscar' | 'ficha_cliente' | 'ficha_poliza' | 'vencimientos' | 'impagados'
   | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision'
+  | 'proponer_correccion'
 
 const fn = (name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'function',
@@ -138,6 +139,16 @@ export const HERRAMIENTAS = [
       projectId: { type: 'string', description: 'Número del proyecto de Avant2 (solo cifras)' },
       quoteId: { type: 'string', description: 'Opcional: el precio elegido (Q…) cuando hay varios' },
     }, ['polizaId', 'projectId']),
+  fn('proponer_correccion', 'Propón CORREGIR la ficha de un cliente con los valores que Alberto te ha DICTADO en esta conversación (dirección, código postal, ciudad, provincia, nombre o apellidos). NO escribe: el sistema le manda el cambio con un botón y es él quien lo aplica. Pasa solo los campos que cambian, tal cual los dijo; nunca inventes ni completes un valor.',
+    {
+      clienteId: { type: 'string', description: 'La ficha a corregir (sácala de buscar o ficha_cliente)' },
+      direccion: { type: 'string', description: 'Calle, número, piso y puerta' },
+      codigoPostal: { type: 'string' },
+      ciudad: { type: 'string' },
+      provincia: { type: 'string' },
+      nombre: { type: 'string', description: 'Solo si Alberto corrige el nombre (exige DNI archivado en la ficha)' },
+      apellidos: { type: 'string', description: 'Solo si Alberto corrige los apellidos (exige DNI archivado en la ficha)' },
+    }, ['clienteId']),
 ] as const
 
 /** Argumentos de una llamada, parseados sin lanzar. `null` = la IA mandó basura. */
@@ -177,7 +188,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     '- Si una herramienta falla o devuelve error, dilo: «no he podido leer X ahora mismo». Un fallo NO es «no hay nada».',
     '- Un campo a null significa «no consta / no se sabe», nunca 0 ni «no tiene». Si una lista trae `total` mayor que las filas que ves, di que hay más.',
     '- Si una búsqueda da varios clientes posibles, enuméralos y pregunta cuál; no elijas tú.',
-    '- No puedes modificar la cartera, anular ni enviar nada a nadie: eso se hace en la intranet (/correduria).',
+    '- No puedes anular ni enviar nada a nadie: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho; él la aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: dile que los cambie en la ficha.',
@@ -223,6 +234,10 @@ export function rastroArgs(nombre: string, args: Record<string, unknown> | null)
   if (!args) return {}
   if (nombre === 'buscar') return { q: '[búsqueda]' }
   if (nombre === 'proponer_regla') return { regla: '[texto]' }
+  if (nombre === 'proponer_correccion') {
+    // Qué campos se tocaron, nunca sus valores: una dirección o un apellido son datos personales.
+    return { clienteId: args.clienteId, campos: Object.keys(args).filter((k) => k !== 'clienteId') }
+  }
   const fuera: Record<string, unknown> = {}
   for (const k of ['clienteId', 'polizaId', 'dias', 'numero', 'projectId', 'quoteId']) if (k in args) fuera[k] = args[k]
   return fuera
