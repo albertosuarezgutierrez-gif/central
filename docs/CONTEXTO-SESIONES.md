@@ -699,12 +699,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
-## (26/09/2026) Plataforma · barra inferior de pestañas en móvil (prueba, a lo Smoobu)
-- Móvil (≤768 px): barra fija abajo con Inicio · Calendario · Mensajes · Correduría + «Menú», que abre
-  el MISMO cajón (el ☰ de arriba se quita; la barra superior queda con marca + subir factura).
-  Rol `empresas` → solo Empresas + Menú. `LayoutShell` reserva 60px + safe-area abajo.
-- Medido con Playwright a 320/390: 5 pestañas de 64/78 px × 60 alto, sin etiquetas cortadas, la última
-  fila del contenido no queda tapada. Escritorio sin cambios. PR draft en `claude/smmobu-bottom-buttons-design-fwx0rv`.
+## (26/09/2026) Portal del cliente (asegura-portal) · barra inferior a lo Smoobu
+- Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero
+  en plataforma y en /correduria y se deshizo (el PR #3659 queda sin cambios en plataforma).
+- Móvil (<1024 px): barra fija abajo Seguros · Recibos · Siniestros · Mensajes + «Más» (abre el cajón). El ☰
+  de arriba se queda a propósito. Etiquetas desde `pestanasPortal()`; iconos SVG en línea (sin lucide).
+- `body:has(.portal-tabbar)` reserva 60px (tapaba el pie legal) y sube el botón de WhatsApp. El bloque CSS va
+  ANTES de `.caratula {`: el cepo del presupuesto prohíbe `fixed` desde ahí hasta el final del fichero.
+- Medido con Playwright a 320/390/1280. Cepo nuevo en `regression-portal-cartera-agrupada` (4 brazos, vistos en rojo).
 
 ## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
 - Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).

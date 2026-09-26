@@ -350,3 +350,26 @@ test('🚨 el color de marca decora en SUAVE; el saturado se reserva al estado',
 // 09/09/2026 junto con su único usuario, `boveda/Calendario.tsx`: no aportaba
 // nada que la fila de cada póliza no dijera ya. Con la sección fuera, la
 // regla «UNA franja, no varias» dejó de tener nada que vigilar.
+
+test('🚨 la barra inferior del movil no tapa nada y se va en escritorio', () => {
+  // 26/09/2026 (a lo Smoobu): una barra `fixed` NO desborda, se pone ENCIMA. Lo que la hace
+  // inocua es que el `body` reserve su alto (si no, tapa la última fila y el pie legal) y que
+  // desaparezca donde ya está el lateral. Y sus secciones salen de `pestanasPortal()`, no de
+  // etiquetas tecleadas aquí: una sección renombrada no puede quedar como enlace roto.
+  const i = CSS.indexOf('.portal-tabbar {')
+  assert.notEqual(i, -1, 'falta la barra inferior del móvil')
+  assert.match(CSS.slice(i, CSS.indexOf('}', i)), /position:\s*fixed/)
+  assert.match(
+    CSS,
+    /body:has\(\.portal-tabbar\)\s*\{[^}]*padding-bottom:\s*calc\(60px/,
+    'sin reservar su alto, la barra tapa la última fila y el pie legal',
+  )
+  assert.match(
+    CSS,
+    /@media \(min-width: 1024px\)\s*\{\s*\.portal-tabbar\s*\{\s*display:\s*none/,
+    'en escritorio el lateral ya enseña todas las secciones: la barra sobra',
+  )
+  const item = CSS.indexOf('.portal-tabbar-item {')
+  assert.match(CSS.slice(item, CSS.indexOf('}', item)), /min-height:\s*60px/, 'mínimo táctil')
+  assert.match(NAV, /pestanas\.find\(\(x\) => x\.href === href\)/, 'las etiquetas salen del módulo')
+})

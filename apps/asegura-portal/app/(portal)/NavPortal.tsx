@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useSearchParams } from 'next/navigation'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
 import { pestanasPortal, vistaDeBoveda } from '@central/module-seguros-portal'
@@ -207,6 +207,44 @@ export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string }
         )}
       </nav>
 
+      {/* 📱 Barra inferior (26/09/2026, a lo Smoobu; Alberto: «me gustó el diseño de Smoobu para
+          la app de cliente»). Lo que el asegurado viene a hacer, a un toque del pulgar; el resto
+          sigue en el cajón, que abre «Más» (y el ☰ de arriba, que se queda: esta pantalla la abre
+          gente de 50-70 años y dos puertas al mismo menú no confunden, una escondida sí). Solo por
+          debajo de 1024 px: en escritorio el lateral ya enseña todas. Son ENLACES, como el cajón,
+          así que funcionan sin JavaScript; solo «Más» lo necesita. */}
+      <nav className="portal-tabbar" aria-label="Accesos rápidos">
+        {TABBAR.map(({ href, Icono }) => {
+          const p = pestanas.find((x) => x.href === href)
+          if (!p) return null
+          const esActiva = !abierto && esActivaDe(p)
+          return (
+            <Link
+              key={href}
+              href={href}
+              className="portal-tabbar-item"
+              aria-current={esActiva ? 'page' : undefined}
+              data-activa={esActiva ? 'si' : undefined}
+            >
+              <Icono />
+              <span className="portal-tabbar-rotulo">{p.etiqueta}</span>
+            </Link>
+          )
+        })}
+        <button
+          type="button"
+          className="portal-tabbar-item"
+          aria-label="Más secciones"
+          aria-expanded={abierto}
+          aria-controls={idNav}
+          data-activa={abierto ? 'si' : undefined}
+          onClick={() => setAbiertoEn(abierto ? null : clave)}
+        >
+          <IconoMas />
+          <span className="portal-tabbar-rotulo">Más</span>
+        </button>
+      </nav>
+
       {/* 🚨 Sin JavaScript no hay `createPortal` ni ☰ que abrir (el botón ni
           siquiera se renderiza: `mounted` se queda en `false`), así que la
           navegación vuelve a ser el carril horizontal que era hasta el
@@ -237,3 +275,34 @@ export function NavPortal({ llamar }: { llamar?: { tel: string; numero: string }
     </>
   )
 }
+
+// ── Iconos de la barra inferior ─────────────────────────────────────────────
+// SVG en línea y no una librería: el portal no carga ninguna de iconos y una
+// dependencia nueva por cinco dibujos no compensa. `currentColor` para que
+// hereden el color del enlace (activo/inactivo), igual que el texto.
+function Svg({ children }: { children: ReactNode }) {
+  return (
+    <svg className="portal-tabbar-icono" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {children}
+    </svg>
+  )
+}
+const IconoSeguros = () => <Svg><path d="M12 3 4.5 6v5.5c0 4.6 3.2 8.4 7.5 9.5 4.3-1.1 7.5-4.9 7.5-9.5V6L12 3Z" /><path d="m9 12 2 2 4-4" /></Svg>
+const IconoRecibos = () => <Svg><path d="M6 3h12v18l-3-2-3 2-3-2-3 2V3Z" /><path d="M9 8h6M9 12h6M9 16h3" /></Svg>
+const IconoSiniestros = () => <Svg><path d="M12 4 2.8 20h18.4L12 4Z" /><path d="M12 10v4.5M12 17.5v.01" /></Svg>
+const IconoMensajes = () => <Svg><path d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4A8 8 0 1 1 20 12Z" /></Svg>
+const IconoMas = () => <Svg><circle cx="6" cy="12" r="1.2" /><circle cx="12" cy="12" r="1.2" /><circle cx="18" cy="12" r="1.2" /></Svg>
+
+/**
+ * Las cuatro de la barra inferior, por `href` contra `pestanasPortal()` — la
+ * etiqueta y la ruta salen de ahí, no se teclean dos veces: renombrar una
+ * sección en el módulo la renombra también aquí, y una que desaparezca del
+ * módulo desaparece de la barra en vez de quedar como enlace roto.
+ */
+const TABBAR = [
+  { href: '/boveda', Icono: IconoSeguros },
+  { href: '/boveda?vista=recibos', Icono: IconoRecibos },
+  { href: '/boveda?vista=siniestro', Icono: IconoSiniestros },
+  { href: '/mensajes', Icono: IconoMensajes },
+] as const

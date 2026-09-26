@@ -3659,6 +3659,87 @@ h1 em {
  * elemento de aquí es `position: fixed` — un `fixed` no desborda, se pone
  * encima, y lo que taparía es justo la salida. */
 
+/* ── 📱 Barra inferior del móvil (26/09/2026, a lo Smoobu) ─────────────────
+ * `NavPortal.tsx` → `.portal-tabbar`. Fija abajo, icono sobre rótulo, 5 huecos
+ * iguales (4 secciones + «Más», que abre el cajón). z-index 30: por encima del
+ * contenido y del botón de WhatsApp (35 → se sube encima de la barra, no se
+ * tapa), por debajo del fondo (40) y del cajón (50), que la cubren al abrirse.
+ * El `body` reserva su alto para que no tape la última fila ni el pie legal. Desde
+ * 1024 px no existe: el lateral ya enseña todas las secciones. */
+.portal-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -4px 16px -8px rgb(0 0 0 / 0.14);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.portal-tabbar-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 0;
+  min-height: 60px;
+  padding: 8px 2px 6px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.portal-tabbar-item[data-activa] {
+  color: var(--primary);
+  font-weight: 700;
+}
+.portal-tabbar-item[data-activa] .portal-tabbar-icono {
+  stroke-width: 2.3;
+}
+.portal-tabbar-icono {
+  width: 24px;
+  height: 24px;
+}
+.portal-tabbar-rotulo {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (max-width: 1023px) {
+  /* En el `body` y no en `.portal-contenido`: el pie legal va DESPUÉS del contenido (layout
+   * raíz) y era él el que quedaba debajo de la barra. `:has` para no reservar el hueco en las
+   * páginas públicas, que no tienen barra. */
+  body:has(.portal-tabbar) {
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+  }
+  body:has(.portal-tabbar) .wsp-flotante {
+    bottom: calc(60px + 12px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (min-width: 1024px) {
+  .portal-tabbar {
+    display: none;
+  }
+}
+/* A 320-360 px cada hueco mide ~64 px y «Siniestros»/«Mensajes» se cortaban (medido). */
+@media (max-width: 360px) {
+  .portal-tabbar-item {
+    font-size: 10.5px;
+    letter-spacing: -0.01em;
+    padding-inline: 1px;
+  }
+}
+
 /* La carátula pública del enlace, sin armazón de portal detrás. */
 .caratula {
   max-width: 420px;
@@ -3865,3 +3946,4 @@ h1 em {
   font-weight: 700;
   white-space: nowrap;
 }
+
