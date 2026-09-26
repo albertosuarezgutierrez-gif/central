@@ -130,7 +130,7 @@ export function textoPlazoOposicion(vencimientoIso: string, dias: number): strin
   const limite = fechaLimiteOposicion(new Date(`${vencimientoIso.slice(0, 10)}T00:00:00Z`))
   if (Number.isNaN(limite.getTime())) return null
   const dm = `${String(limite.getUTCDate()).padStart(2, '0')}/${String(limite.getUTCMonth() + 1).padStart(2, '0')}`
-  return dias > DIAS_PREAVISO_TOMADOR ? `baja a la compañía hasta el ${dm}` : `plazo de baja pasado (${dm})`
+  return dias >= DIAS_PREAVISO_TOMADOR ? `baja a la compañía hasta el ${dm}` : `plazo de baja pasado (${dm})`
 }
 
 /** Último día en que el asegurador puede comunicar una subida de prima o
