@@ -342,6 +342,21 @@
   4 pisos (2-5x temporada normal, más caro que Semana Santa en 3/4) — preguntado a Alberto si hay
   evento esa semana; fallos: Paso 4 bloqueado 2 ciclos seguidos (14/09 Sentinel, 15/09 Smoobu 401,
   aviso Telegram enviado por umbral del skill); PRs/commits: este commit.
+
+- **2026-09-15 · mercado-booking** · hizo: pasada acotada de PRIORIDAD pedida por Alberto
+  (`?desde=2027-07-01&hasta=2027-08-31&max=24`) antes de la pasada normal. 238 comps reales
+  escritos en las 24 ventanas devueltas por el plan (3 fechas × 4 pisos en julio: 02/10/27 · 3
+  fechas × 4 pisos en agosto: 01/06/24, esta última con el Campeonato Mundial de Remo confirmado,
+  factor 1,55). **Objetivo cumplido: julio y agosto ya llegan a ≥3 comparables en ≥3 fechas
+  distintas por piso** — se puede retirar la línea de prioridad del disparo. Paso 2-bis
+  (escaparate propio) obligatorio: 1/4 medida (Dúplex center; el endpoint la reconoció como
+  propia y recalculó su base) — las otras 3 (House Sevillana, Busto Reform, Luxury Busto) sin
+  disponibilidad en Booking para sus fechas de refresco → `escaparateSinRespuesta`, no
+  indeterminado. 🪞 2 anuncios propios (HOUSE SEVILLANA) descartados de los comparables de
+  mercado antes de escribir (ventanas 02-jul y 10-jul, aforo 12). 0 ventanas sin respuesta. Con
+  el cupo diario de 24 agotado en la pasada de prioridad no quedó margen para la pasada normal.
+  dudas: —; fallos: —; PRs/commits: — (solo latido + BD, sin tocar código).
+
 - **2026-09-14 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (`_buzon_pdf` copió
   12/09, `dias_caido=2`); `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacías (confirmado por
   `search_threads`); `agente_salud` actualizado ok=true (vía Supabase MCP, sin curl). Paso 4.0:
