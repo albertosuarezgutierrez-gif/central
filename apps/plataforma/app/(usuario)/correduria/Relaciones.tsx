@@ -417,7 +417,7 @@ export default function Relaciones({
       />
 
       <details>
-        <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer', minHeight: 32, display: 'inline-flex', alignItems: 'center' }}>
+        <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer', minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
           ¿Cómo funciona la autorización?
         </summary>
         <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--muted)', lineHeight: 1.5 }}>
@@ -479,6 +479,9 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
   const hayPendiente = r !== null && !revisado &&
     (r.autorizacion?.estado === 'pendiente' || r.autorizacionInversa?.estado === 'pendiente')
   const [abierto, setAbierto] = useState(hayPendiente)
+  // Si una autorización pasa a pendiente después de montar (se acaba de anotar),
+  // se abre también: es lo único que pide acción.
+  useEffect(() => { if (hayPendiente) setAbierto(true) }, [hayPendiente])
   return (
     <li style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '10px 12px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 6, minWidth: 0 }}>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'baseline', minWidth: 0 }}>
@@ -509,7 +512,7 @@ function FilaPersona({ p, nombreFicha, ocupado, renderPapeles, onAutorizar, onAv
 
       {p.papeles.length > 0 && renderPapeles && (
         <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', minWidth: 0 }}>
-          <span aria-hidden title="Lo manda la compañía" style={{ fontSize: 13, lineHeight: '20px' }}>📄</span>
+          <span role="img" aria-label="Papel en sus pólizas (lo manda la compañía):" title="Lo manda la compañía" style={{ fontSize: 13, lineHeight: '20px' }}>📄</span>
           <div style={{ flex: 1, minWidth: 0 }}>{renderPapeles(p)}</div>
         </div>
       )}
@@ -925,7 +928,7 @@ function CambiarTipo({ r, enCurso, onCambiarTipo }: {
   const [tipo, setTipo] = useState<string>(r.tipo)
   return (
     <details>
-      <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer', listStyle: 'none', userSelect: 'none', display: 'inline-flex', alignItems: 'center', minHeight: 32 }}>
+      <summary style={{ fontSize: 12, color: 'var(--muted)', cursor: 'pointer', listStyle: 'none', userSelect: 'none', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>
         Cambiar el tipo
       </summary>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 6 }}>
