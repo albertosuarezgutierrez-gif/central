@@ -1,6 +1,6 @@
 // lib/sivra/agente-huesped/orquestador.ts — procesa el último mensaje del huésped de una reserva.
 import { construirContexto } from './contexto'
-import { detectLang, detectCategory, tipoHueco } from './reglas'
+import { detectLang, detectCategory, tipoHueco, vaARecomendador } from './reglas'
 import { idiomaConocido } from './idiomas'
 import { decidir, type Decision } from './decidir'
 import { decidirAutoEnvio } from './auto'
@@ -19,7 +19,6 @@ import { preciosVigentes } from '@/lib/sivra/extras/catalogo'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 
-const RE_RECO = /recomien|recommend|qué hacer|what to do|restaurante|restaurant|visit|ver en|things to do/i
 
 // Idempotencia por id del mensaje. El llamador (sondeo/webhook) puede pasar la pregunta y el
 // msgId directos del hilo de Smoobu — necesario porque /api/threads no trae `sent_by_owner`
@@ -133,7 +132,7 @@ export async function procesarMensajeHuesped(
 
     // 2) Recomendaciones → búsqueda web; resto → decisión IA con grounding.
     let dec: Decision
-    if (categoria === 'faq' || RE_RECO.test(pregunta)) {
+    if (vaARecomendador(pregunta, categoria)) {
       const reply = await recomendar(pregunta, ctx.zona, lang)
       dec = { reply, confidence: 0.6, needs_human: false, categoria: 'recomendacion', sentimiento: 'neutro', motivo: '', fuente: 'web' }
     } else {
