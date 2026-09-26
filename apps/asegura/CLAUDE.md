@@ -793,7 +793,14 @@ UN correo (`lib/correo-emision.ts`, marca Quicksand/Nunito, sin NADA de la carte
 `CAMPOS_PROHIBIDOS_EN_INVITACION`). El OK de ese correo es pulsar «Emitir» (el resumen de Telegram lo avisa antes).
 `ASEGURA_CORREO_EMISION=0` lo apaga. Reenvío/prueba: `POST /api/operador/emision/aviso {polizaId, prueba}` (prueba →
 `ASEGURA_MAIL_PRUEBA` o `ASEGURA_MAIL_REPLY_TO`, sin dejar rastro como enviado al cliente). Cepos en
-`lib/correo-emision.test.ts` y `lib/aprobaciones.test.ts`.
+`lib/correo-emision.test.ts` y `lib/aprobaciones.test.ts`. El correo solo sale si su dirección le lleva a SU ficha del
+portal (`estadoPortalDeFicha`, la misma regla que la invitación) y va a ESE correo; un corte con el proveedor es
+`incierto`, no «rechazado». La firma contesta al portal y el envío a la compañía corre en `after()` (el puente corta a
+los pocos segundos); `/emitir` espera el correo con tope de 12 s (`trasEmisionConTope`).
+📮 **Buzón de bajas = el contacto `general` de cada compañía (decisión de Alberto, 26/09/2026)**, marcado en BD con
+`recibe_anulaciones`: Mapfre `CCORREDOR@`, Allianz `sucursal.209@`, Reale `cerca@`, Helvetia `Cac.corredores@`,
+Generali `samsuroestecanarias.es@` (tiene uno por zona; Sevilla = Suroeste). Occident no tiene contacto `general`:
+sus bajas siguen esperando el OK en «Hoy». Ninguna aseguradora grande publica un email de bajas para particulares.
 🤝 **Carta de nombramiento de mediador por la misma cola (24/09/2026, `proponerCartasFirmadas`).** La firmada en el portal sale
 como `enviar_correo_compania` con `carta_mediador_id` (CHECK `aprobacion_compania_con_objeto`: anulación O carta, nunca las dos);
 el buzón se recuerda aparte en `recibe_nombramientos`; al salir → `enviada`. 🚨 La carta lleva el **DNI/NIF del tomador**

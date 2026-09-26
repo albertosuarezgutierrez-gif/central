@@ -13,14 +13,26 @@
 import { prismaAsegura } from './asegura-db'
 import { cuerpoCorreoEmision } from './correo-emision.ts'
 import { enlacePortal } from './correo-invitacion-portal.ts'
-import { estadoEmailDeFicha } from './email-ficha'
+import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
 import { abrirAnulacionesPorSustitucion } from './sustituciones-auto'
 
 export type ResultadoTrasEmision = {
-  /** `null` = no sustituye a ninguna; `abierta` = hay expediente esperando la firma; `sin_datos` = no se pudo abrir. */
-  baja: 'abierta' | 'sin_datos' | 'error' | null
-  correo: 'enviado' | 'sin_email' | 'baja_de_correo' | 'ilegible' | 'sin_portal' | 'apagado' | 'sin_proveedor' | 'rechazado' | 'error'
+  /**
+   * `null` = no sustituye a ninguna · `abierta` = expediente esperando la firma del cliente ·
+   * `en_curso` = ya estaba firmado/comunicado (no hay nada que firmar) · `sin_datos` = no se pudo abrir.
+   */
+  baja: 'abierta' | 'en_curso' | 'sin_datos' | 'error' | null
+  /**
+   * `no_resuelve` = su correo no le llevaría a SU ficha en el portal (duplicado sin resolver): no se
+   * escribe, entraría y no vería la carta · `incierto` = se cortó esperando al proveedor: pudo salir,
+   * NO se reenvía a ciegas.
+   */
+  correo: 'enviado' | 'sin_email' | 'baja_de_correo' | 'ilegible' | 'no_resuelve' | 'no_comprobado' | 'sin_portal' | 'apagado'
+    | 'sin_proveedor' | 'rechazado' | 'incierto' | 'error'
 }
+
+/** Cortes de red o de espera: el proveedor pudo aceptar el mensaje antes de cortarse (misma regla que la cola). */
+const CORTE = /timeout|timed out|ETIMEDOUT|ECONNRESET|ESOCKET|socket hang up|aborted/i
 
 function hoyMadrid(): string {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
@@ -46,10 +58,11 @@ export async function trasEmision(
       await db.$transaction((tx) => abrirAnulacionesPorSustitucion(tx, correduriaId, hoyMadrid()))
       // Lo que cuenta es si la vieja TIENE expediente vivo, no si lo abrió esta llamada: otro camino
       // (la ficha, una pasada anterior) pudo abrirlo antes y la firma sirve igual.
-      const [x] = await db.$queryRaw<{ n: bigint }[]>`
-        select count(*) as n from anulacion
-        where poliza_id = ${e.polizaOrigenId}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'solicitada'`
-      baja = Number(x?.n ?? 0) > 0 ? 'abierta' : 'sin_datos'
+      const [x] = await db.$queryRaw<{ estado: string }[]>`
+        select estado::text as estado from anulacion
+        where poliza_id = ${e.polizaOrigenId}::uuid and correduria_id = ${correduriaId}::uuid and estado <> 'desistida'
+        order by created_at desc limit 1`
+      baja = x?.estado === 'solicitada' ? 'abierta' : x ? 'en_curso' : 'sin_datos'
     } catch (err) {
       console.error('[tras-emision] no se pudo abrir la baja de la póliza anterior:', err instanceof Error ? err.message : err)
       baja = 'error'
@@ -64,22 +77,46 @@ export async function trasEmision(
     if (opciones.prueba) {
       destino = opciones.prueba
     } else {
-      const ficha = await estadoEmailDeFicha(correduriaId, e.clienteId)
-      if (ficha.estado === 'baja_de_correo' || ficha.estado === 'ilegible') return { baja, correo: ficha.estado }
-      if (ficha.estado !== 'ok') return { baja, correo: 'sin_email' }
-      destino = ficha.email
+      // La MISMA comprobación que la invitación al portal: el correo tiene que llevarle a SU ficha, o
+      // entraría y no encontraría la carta (bóveda vacía, sin error). Y se le escribe a ESE correo.
+      const f = await estadoPortalDeFicha(correduriaId, e.clienteId)
+      if (!f) return { baja, correo: 'no_comprobado' }
+      if (f.estado === 'ambiguo' || f.estado === 'resuelve_a_otra') return { baja, correo: 'no_resuelve' }
+      if (f.estado === 'sin_email' || f.estado === 'ilegible' || f.estado === 'no_comprobado') return { baja, correo: f.estado }
+      if (!f.emailInvitacion) return { baja, correo: 'no_comprobado' }
+      destino = f.emailInvitacion
     }
-    const c = await db.cliente.findFirst({ where: { id: e.clienteId, correduriaId }, select: { nombre: true } })
-    const cuerpo = cuerpoCorreoEmision({ nombre: c?.nombre ?? null, enlace, conBaja: baja === 'abierta' })
+    const nombre = await nombreDe(correduriaId, e.clienteId)
+    const cuerpo = cuerpoCorreoEmision({ nombre, enlace, conBaja: baja === 'abierta' })
     if (opciones.prueba) cuerpo.asunto = `[PRUEBA] ${cuerpo.asunto}`
     // Import dinámico: el cepo del cuerpo corre con `node --test`, que no resuelve Prisma.
-    const { enviarCorreoCliente } = await import('./correo-envio')
-    const r = await enviarCorreoCliente({
+    const { enviarCorreoSeguido } = await import('./correo-envio')
+    const r = await enviarCorreoSeguido({
       correduriaId, clienteId: opciones.prueba ? null : e.clienteId, tipo: opciones.prueba ? 'emision_prueba' : 'emision', to: destino, ...cuerpo,
     })
-    return { baja, correo: r }
+    if (r.resultado === 'rechazado' && CORTE.test(r.motivo ?? '')) return { baja, correo: 'incierto' }
+    return { baja, correo: r.resultado }
   } catch (err) {
     console.error('[tras-emision] el correo al cliente no salió:', err instanceof Error ? err.message : err)
     return { baja, correo: 'error' }
+  }
+}
+
+/**
+ * `trasEmision` con TOPE de tiempo, para las rutas que ya han emitido y tienen que contestar: una
+ * emisión hecha no puede acabar en «no sé si se ha emitido» porque el correo tardó. Pasado el tope se
+ * dice lo que es — no se sabe — y el trabajo sigue en segundo plano hasta terminar.
+ */
+export async function trasEmisionConTope(
+  correduriaId: string,
+  e: { clienteId: string; polizaOrigenId: string | null },
+  ms = 12_000,
+): Promise<ResultadoTrasEmision | { baja: null; correo: null; enCurso: true }> {
+  let t: ReturnType<typeof setTimeout> | undefined
+  const tope = new Promise<{ baja: null; correo: null; enCurso: true }>((res) => { t = setTimeout(() => res({ baja: null, correo: null, enCurso: true }), ms) })
+  try {
+    return await Promise.race([trasEmision(correduriaId, e), tope])
+  } finally {
+    clearTimeout(t)
   }
 }

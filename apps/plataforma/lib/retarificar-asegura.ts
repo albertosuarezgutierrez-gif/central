@@ -1266,12 +1266,15 @@ export async function productFormAsegura(peticion: {
  * acuñó): NO es «no se hizo nada», es «no se sabe». Un valor desconocido cae a `null`, nunca a `enviado`.
  */
 export type TrasEmision = {
-  baja: 'abierta' | 'sin_datos' | 'error' | null
-  correo: 'enviado' | 'sin_email' | 'baja_de_correo' | 'ilegible' | 'sin_portal' | 'apagado' | 'sin_proveedor' | 'rechazado' | 'error' | null
+  baja: 'abierta' | 'en_curso' | 'sin_datos' | 'error' | null
+  correo: 'enviado' | 'sin_email' | 'baja_de_correo' | 'ilegible' | 'no_resuelve' | 'no_comprobado' | 'sin_portal' | 'apagado'
+    | 'sin_proveedor' | 'rechazado' | 'incierto' | 'error' | null
+  /** Asegura contestó antes de terminar (tope de tiempo): sigue en segundo plano. */
+  enCurso?: boolean
 }
 
-const BAJAS_TRAS: readonly string[] = ['abierta', 'sin_datos', 'error']
-const CORREOS_TRAS: readonly string[] = ['enviado', 'sin_email', 'baja_de_correo', 'ilegible', 'sin_portal', 'apagado', 'sin_proveedor', 'rechazado', 'error']
+const BAJAS_TRAS: readonly string[] = ['abierta', 'en_curso', 'sin_datos', 'error']
+const CORREOS_TRAS: readonly string[] = ['enviado', 'sin_email', 'baja_de_correo', 'ilegible', 'no_resuelve', 'no_comprobado', 'sin_portal', 'apagado', 'sin_proveedor', 'rechazado', 'incierto', 'error']
 
 /** PURO. */
 export function leerTrasEmision(v: unknown): TrasEmision | null {
@@ -1279,7 +1282,7 @@ export function leerTrasEmision(v: unknown): TrasEmision | null {
   const o = v as Record<string, unknown>
   const baja = typeof o.baja === 'string' && BAJAS_TRAS.includes(o.baja) ? (o.baja as TrasEmision['baja']) : null
   const correo = typeof o.correo === 'string' && CORREOS_TRAS.includes(o.correo) ? (o.correo as TrasEmision['correo']) : null
-  return { baja, correo }
+  return o.enCurso === true ? { baja, correo, enCurso: true } : { baja, correo }
 }
 
 export type RespuestaEmitir =

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
-import { lineasTrasEmision } from '@/lib/correduria-emision-tg'
+import { lineasTrasEmision } from '@/lib/tras-emision-texto'
 import { avisarEmision } from '@/lib/emision-aviso-asegura'
 
 export const dynamic = 'force-dynamic'

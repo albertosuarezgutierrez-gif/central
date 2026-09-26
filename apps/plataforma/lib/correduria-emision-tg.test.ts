@@ -215,7 +215,7 @@ test('un chat ajeno no llega a los botones: el webhook filtra el emisor antes de
 test('tras emitir: el mensaje dice qué pasó con la baja y el correo, y sin dato dice que no lo sabe', () => {
   const ok = lineasTrasEmision({ baja: 'abierta', correo: 'enviado' })
   assert.match(ok, /baja de la póliza anterior está abierta/)
-  assert.match(ok, /le ha llegado el correo/)
+  assert.match(ok, /Se le ha enviado al cliente el correo/)
   assert.match(lineasTrasEmision({ baja: null, correo: 'sin_email' }), /NO se ha avisado al cliente: su ficha no tiene correo/)
   assert.doesNotMatch(lineasTrasEmision({ baja: null, correo: 'sin_email' }), /baja de la póliza/)
   assert.match(lineasTrasEmision(null), /No sé si se ha avisado/)
@@ -232,4 +232,12 @@ test('el resumen avisa ANTES de pulsar de que al cliente le llega el correo', ()
   const src = readFileSync(fileURLToPath(new URL('./correduria-emision-tg.ts', import.meta.url)), 'utf8')
   const t = src.slice(src.indexOf('export function textoResumen'), src.indexOf('// ── Resultado del Submit'))
   assert.match(t, /el cliente recibe un correo con su nuevo seguro/)
+})
+
+test('tras emitir: baja ya en marcha, tope de tiempo y corte con el proveedor se cuentan como lo que son', () => {
+  assert.match(lineasTrasEmision({ baja: 'en_curso', correo: 'enviado' }), /ya estaba firmada o comunicada/)
+  assert.match(lineasTrasEmision({ baja: null, correo: null, enCurso: true }), /siguen en marcha/)
+  assert.match(lineasTrasEmision({ baja: 'abierta', correo: 'incierto' }), /pudo salir[\s\S]*ANTES de reenviarlo/)
+  assert.match(lineasTrasEmision({ baja: 'abierta', correo: 'no_resuelve' }), /no le lleva a SU ficha/)
+  assert.deepEqual(leerTrasEmision({ baja: null, correo: null, enCurso: true }), { baja: null, correo: null, enCurso: true })
 })

@@ -46,19 +46,25 @@ test('🪤 la firma de la función no admite datos de la cartera', () => {
 
 test('🪤 tras emitir: solo con acuñado OK, y el correo de prueba no cuenta como enviado al cliente', () => {
   const ruta = readFileSync(new URL('../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url), 'utf8')
-  assert.equal(ruta.match(/await trasEmision\(/g)?.length, 2, 'los dos caminos que acuñan')
-  assert.match(ruta, /acunadoAc\.ok \? await trasEmision\(/)
-  assert.match(ruta, /acunado\.ok \? await trasEmision\(/)
+  assert.equal(ruta.match(/await trasEmisionConTope\(/g)?.length, 2, 'los dos caminos que acuñan')
+  assert.match(ruta, /acunadoAc\.ok \? await trasEmisionConTope\(/)
+  assert.match(ruta, /acunado\.ok \? await trasEmisionConTope\(/)
   const tras = readFileSync(new URL('./tras-emision.ts', import.meta.url), 'utf8')
   assert.match(tras, /clienteId: opciones\.prueba \? null : e\.clienteId/)
   assert.match(tras, /if \(!opciones\.prueba && !correoEmisionActivo\(\)\) return/)
   // La baja se mira en la póliza SUSTITUIDA, no en cualquiera.
-  assert.match(tras, /where poliza_id = \$\{e\.polizaOrigenId\}::uuid and correduria_id = \$\{correduriaId\}::uuid and estado = 'solicitada'/)
+  assert.match(tras, /where poliza_id = \$\{e\.polizaOrigenId\}::uuid and correduria_id = \$\{correduriaId\}::uuid and estado <> 'desistida'/)
+  // Solo se le escribe si su correo le lleva a SU ficha del portal, y a ESE correo.
+  assert.match(tras, /if \(f\.estado === 'ambiguo' \|\| f\.estado === 'resuelve_a_otra'\) return \{ baja, correo: 'no_resuelve' \}/)
+  assert.match(tras, /destino = f\.emailInvitacion/)
+  // Un corte con el proveedor es «no se sabe», no «rechazado».
+  assert.match(tras, /if \(r\.resultado === 'rechazado' && CORTE\.test\(r\.motivo \?\? ''\)\) return \{ baja, correo: 'incierto' \}/)
 })
 
 test('🪤 la firma del portal dispara el envío a la compañía SOLO cuando quedó firmada, y un fallo no la estropea', () => {
   const ruta = readFileSync(new URL('../app/api/portal/anulacion/route.ts', import.meta.url), 'utf8')
   const i = ruta.indexOf("if (r.estado === 'firmada') {")
   assert.ok(i > 0 && ruta.indexOf('enviarAnulacionTrasFirma(correduria.id, anulacionId)') > i)
-  assert.match(ruta.slice(i, i + 900), /try \{[\s\S]*\} catch \(e\) \{/)
+  // Después de contestar (`after`): el puente del portal corta a los pocos segundos.
+  assert.match(ruta.slice(i, i + 1200), /after\(async \(\) => \{\s*try \{[\s\S]*\} catch \(e\) \{/)
 })
