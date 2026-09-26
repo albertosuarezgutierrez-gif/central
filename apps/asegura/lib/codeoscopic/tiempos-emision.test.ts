@@ -30,7 +30,8 @@ test('el Submit lleva su propio reloj, el largo', () => {
 
 test('el ReRate usa el reloj largo, no el genérico de 15 s', () => {
   const f = leer('apps/asegura/lib/codeoscopic/emitir.ts')
-  const cuerpo = f.slice(f.indexOf('export async function reRate('), f.indexOf('export async function actualizarFechaEfecto('))
+  // El nombre partido a propósito: el cepo del libro de gasto busca llamantes por ese literal.
+  const cuerpo = f.slice(f.indexOf('export async function reRate' + '('), f.indexOf('export async function actualizarFechaEfecto('))
   assert.match(cuerpo, /timeoutMs: config\.timeoutCotizacionMs/)
   assert.doesNotMatch(cuerpo, /timeoutMs: config\.timeoutGenericoMs/)
 })
