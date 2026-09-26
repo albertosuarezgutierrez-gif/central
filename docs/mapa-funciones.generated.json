@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-26T09:52:42Z",
-  "sha": "ae671f0e9e698738ae18065b2f82b1c518c6aacd",
+  "generadoEn": "2026-09-26T11:11:03Z",
+  "sha": "530b6463ab5360c169c75c20cff38768bb55015d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -13558,7 +13558,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 767
+          "linea": 793
         },
         {
           "nombre": "numero",
@@ -13566,7 +13566,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 772
+          "linea": 798
         },
         {
           "nombre": "esObjeto",
@@ -13574,7 +13574,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 776
+          "linea": 802
         },
         {
           "nombre": "coincideCompania",
@@ -13582,16 +13582,17 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 780
+          "linea": 806
         }
       ],
       "tablas": [
+        "clientes",
         "codeoscopic_projects",
         "next",
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "00226a252f3d"
+      "hash": "060b11c811ec"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/faltan-producto/route.ts",
@@ -13634,6 +13635,74 @@
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/hogar-nuevo",
       "hash": "a36e842da598"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/codeoscopic/importar/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "cargar",
+          "kind": "function",
+          "exportada": false,
+          "params": "projectId: string | null, polizaId: string | null",
+          "retorno": "Promise<Contexto>",
+          "linea": 46
+        },
+        {
+          "nombre": "comprobar",
+          "kind": "function",
+          "exportada": false,
+          "params": "ctx: Extract<Contexto, { ok: true }>",
+          "retorno": null,
+          "linea": 88,
+          "resumen": "Qué impide el enlace ANTES de elegir precio. Tres estados en tomador y vehículo: sí, no, no se sabe — y «no se sabe» también bloquea: la póliza nueva se acuña con el riesgo de la que sustituye (`regis"
+        },
+        {
+          "nombre": "filaExistente",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, projectId: string",
+          "retorno": null,
+          "linea": 108
+        },
+        {
+          "nombre": "conflictoFila",
+          "kind": "function",
+          "exportada": false,
+          "params": "fila: { poliza_id: string | null; estado: string } | null, polizaId: string",
+          "retorno": "string | null",
+          "linea": 117
+        },
+        {
+          "nombre": "intentoSinAclarar",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, polizaId: string, projectId: string",
+          "retorno": "Promise<string | null>",
+          "linea": 135,
+          "resumen": "🚨 Otro proyecto de ESTA póliza con un intento de emisión sin aclarar. Soltarle la póliza (como hace el enlace) le quitaría a `/emitir` el camino de acuñar o reintentar ese proyecto, y se emitiría el "
+        },
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 152
+        }
+      ],
+      "tablas": [
+        "clientes",
+        "codeoscopic_projects",
+        "next",
+        "polizas",
+        "set"
+      ],
+      "rutaApi": "/api/operador/codeoscopic/importar",
+      "hash": "3481f8c0304f"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/limites-hogar/route.ts",
@@ -22024,6 +22093,126 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "063d549378bd"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/importar.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Importar a la intranet un proyecto creado A MANO en la web de Avant2 (fila 13 del plan, 26/09/2026). Puro a propósito (sin BD ni red): lo usa `app/api/operador/codeoscopic/importar/route.ts` y lo prueba `importar.test.ts` contra la forma REAL de un `GET /insurances/{id}` hecho en la web, no contra u",
+      "exporta": [
+        "ramoDeLinea",
+        "documentoTomador",
+        "ofertasDelProyecto",
+        "quoteCrudo",
+        "normalizarMatricula",
+        "matriculaProyecto",
+        "fraccionamientoDeOferta"
+      ],
+      "funciones": [
+        {
+          "nombre": "obj",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "Json",
+          "linea": 14
+        },
+        {
+          "nombre": "arr",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "unknown[]",
+          "linea": 15
+        },
+        {
+          "nombre": "str",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 16
+        },
+        {
+          "nombre": "num",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 17
+        },
+        {
+          "nombre": "ramoDeLinea",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown",
+          "retorno": "string | null",
+          "linea": 23
+        },
+        {
+          "nombre": "documentoTomador",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown",
+          "retorno": "string | null",
+          "linea": 29,
+          "resumen": "El documento del tomador tal cual lo trae el vendor. Solo se usa para calcular su hash."
+        },
+        {
+          "nombre": "fechaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": "string | null",
+          "linea": 51
+        },
+        {
+          "nombre": "ofertasDelProyecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown, hoy: string",
+          "retorno": "OfertaImportable[]",
+          "linea": 56,
+          "resumen": "Cada precio del proyecto con su veredicto. Primero los emitibles, luego por prima."
+        },
+        {
+          "nombre": "quoteCrudo",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown, quoteId: string",
+          "retorno": "Json | null",
+          "linea": 99,
+          "resumen": "El `mainQuote` crudo de un precio, para `leerOferta` y para el widget de la compañía."
+        },
+        {
+          "nombre": "normalizarMatricula",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 105,
+          "resumen": "Matrícula normalizada (solo letras y cifras, en mayúscula) para comparar la del proyecto con la de la póliza."
+        },
+        {
+          "nombre": "matriculaProyecto",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown",
+          "retorno": "string | null",
+          "linea": 110
+        },
+        {
+          "nombre": "fraccionamientoDeOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "crudo: unknown, quoteId: string | null | undefined",
+          "retorno": "string | null",
+          "linea": 126,
+          "resumen": "Fraccionamiento de UN precio del proyecto (`paymentFrequency.id` del vendor → el nuestro). Recorre el árbol entero porque tras un ReRate el precio aceptado puede no estar en `mainQuotes` sino dentro d"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "c8a0aca3d203"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/interprete-400.ts",
@@ -75784,7 +75973,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 235,
+          "linea": 241,
           "resumen": "Qué asegura. Si la copia de CIMA no lo trae y la GEMELA del volcado sí (10 de las 109 vivas: la casa de Rota está en la copia de junio), se enseña la gemela y se dice de dónde sale. Sin gemela informa"
         },
         {
@@ -75793,7 +75982,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 289,
+          "linea": 295,
           "resumen": "Cambio de compañía por retarificación (20/09/2026). Dos caras, no excluyentes: esta póliza puede a la vez venir de sustituir a otra Y estar ya sustituida por una tercera (si se retarifica dos veces). "
         },
         {
@@ -75802,7 +75991,7 @@
           "exportada": false,
           "params": "{ lista }: { lista: Poliza['coberturas'] }",
           "retorno": null,
-          "linea": 321
+          "linea": 327
         },
         {
           "nombre": "fechaCorta",
@@ -75810,7 +75999,7 @@
           "exportada": false,
           "params": "iso: string | null",
           "retorno": "string",
-          "linea": 377
+          "linea": 383
         },
         {
           "nombre": "CapitalCobertura",
@@ -75818,7 +76007,7 @@
           "exportada": false,
           "params": "{ capital, descripcion }: { capital: string | null; descripcion: string | null }",
           "retorno": null,
-          "linea": 383
+          "linea": 389
         },
         {
           "nombre": "Limites",
@@ -75826,7 +76015,7 @@
           "exportada": false,
           "params": "{ detalle }: { detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 395
+          "linea": 401
         },
         {
           "nombre": "Franquicia",
@@ -75834,7 +76023,7 @@
           "exportada": false,
           "params": "{ texto, detalle }: { texto: string | null; detalle: Poliza['coberturas'][number]['detalle'] | null }",
           "retorno": null,
-          "linea": 410
+          "linea": 416
         },
         {
           "nombre": "Recibos",
@@ -75842,7 +76031,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 428
+          "linea": 434
         },
         {
           "nombre": "TablaRecibos",
@@ -75850,7 +76039,7 @@
           "exportada": false,
           "params": "{ lista }: { lista: Poliza['listaRecibos'] }",
           "retorno": null,
-          "linea": 461
+          "linea": 467
         },
         {
           "nombre": "Intervinientes",
@@ -75858,7 +76047,7 @@
           "exportada": false,
           "params": "{ p }: { p: Poliza }",
           "retorno": null,
-          "linea": 492,
+          "linea": 498,
           "resumen": "El TOMADOR va SIEMPRE, y el primero: no es un interviniente sino el titular de la póliza, así que no está en `poliza_intervinientes` y antes no salía. Alberto lo vio el 02/09/2026 en la 6930FBP, donde"
         },
         {
@@ -75867,7 +76056,7 @@
           "exportada": false,
           "params": "{ label, valor, nota, color }: { label: string; valor: string | null; nota?: string; color?: string }",
           "retorno": null,
-          "linea": 520
+          "linea": 526
         },
         {
           "nombre": "NoSePudo",
@@ -75875,7 +76064,7 @@
           "exportada": false,
           "params": "{ estado }: { estado: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string } | { estado: 'no_encontrado' } }",
           "retorno": null,
-          "linea": 537
+          "linea": 543
         },
         {
           "nombre": "fmt",
@@ -75883,7 +76072,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 557
+          "linea": 563
         },
         {
           "nombre": "Estimacion",
@@ -75891,7 +76080,7 @@
           "exportada": false,
           "params": "{ e, retarificar }: { e: Poliza['estimacion']; retarificar: { href: string; rotulo: string } | null }",
           "retorno": null,
-          "linea": 575,
+          "linea": 581,
           "resumen": "─── ¿Merece la pena pedir precio? ──────────────────────────────────────── Va pegada a la evolución de la prima porque responde a la MISMA pregunta: pedir precio cuesta 0,50€ reales y esto dice si com"
         },
         {
@@ -75900,7 +76089,7 @@
           "exportada": false,
           "params": "{ etiqueta, eur: importe }: { etiqueta: string; eur: number }",
           "retorno": null,
-          "linea": 650,
+          "linea": 656,
           "resumen": "Un número ESTIMADO: `≈`, tamaño y color propios para no confundirlo con una prima real."
         },
         {
@@ -75909,7 +76098,7 @@
           "exportada": false,
           "params": "v: NonNullable<Poliza['estimacion']>['veredicto']",
           "retorno": "React.CSSProperties",
-          "linea": 665
+          "linea": 671
         },
         {
           "nombre": "CapitalesHogar",
@@ -75917,7 +76106,7 @@
           "exportada": false,
           "params": "{ caps }: { caps: NonNullable<Poliza['capitalesHogar']> }",
           "retorno": null,
-          "linea": 685,
+          "linea": 691,
           "resumen": "─── Capitales de hogar ─────────────────────────────────────────────────── SEIS estados y ninguno se colapsa con otro. Los dos que muerden: · `solo_sublimites`: `mayorEur` NO es el continente — pintar"
         },
         {
@@ -75926,12 +76115,12 @@
           "exportada": false,
           "params": "{ titulo, c }: { titulo: string; c: CapitalAsegurado | null }",
           "retorno": null,
-          "linea": 699
+          "linea": 705
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4003b11c2842"
+      "hash": "dd8bbac47e2b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/Plegable.tsx",
@@ -76026,16 +76215,27 @@
         "pedirOferta",
         "pedirProductForm",
         "pedirEmision",
-        "pedirCoberturas"
+        "pedirCoberturas",
+        "pedirVistaImportacion",
+        "pedirImportacion"
       ],
       "funciones": [
+        {
+          "nombre": "sinAccesoCorreduria",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<string | null>",
+          "linea": 65,
+          "resumen": "🚨 El middleware solo exige SESIÓN, y el layout de `/correduria` (que sí mira quién es de la correduría) no corre en una acción de servidor. Lo que gasta dinero, emite o enlaza un proyecto comprueba e"
+        },
         {
           "nombre": "pedirCatalogo",
           "kind": "function",
           "exportada": true,
           "params": "params: Record<string, string>",
           "retorno": "Promise<RespuestaCatalogo>",
-          "linea": 55,
+          "linea": 76,
           "resumen": "Un catálogo del vendor (marcas, modelos, motores, versiones…). **Gratis.**"
         },
         {
@@ -76044,7 +76244,7 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 66,
+          "linea": 87,
           "resumen": "La última cotización REAL ya guardada de esta póliza (11/09/2026). **Gratis — no confirma nada con el vendor.** Sirve para \"retomar\" sin volver a pagar los 0,50€ del `POST /insurances` que ya se pagó,"
         },
         {
@@ -76053,7 +76253,7 @@
           "exportada": true,
           "params": "entrada: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> catastro?: Record<string, unknown> | null referencia?: string /** `true` SOLO tras «Descartar y pedir precio de cero»: ver `PeticionRetar",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 85,
+          "linea": 106,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `retarificarAsegura()`, en el servidor y en un solo sitio. No se acepta desde el cliente a propósito: si viajara en el cuerpo, dejaría de ser una"
         },
         {
@@ -76062,7 +76262,7 @@
           "exportada": true,
           "params": "entrada: { tarificacionId: string compania: string categoria: string producto?: string primaEur?: number fechaEfectoCorregida?: string /** Respuesta del corredor a un `faltan_vendor` anterior (campo nuestro → valor). */ correcciones?: Recor",
           "retorno": "Promise<RespuestaOferta>",
-          "linea": 112,
+          "linea": 135,
           "resumen": "🚨 **CONFIRMA EL PRECIO CON LA COMPAÑÍA (ReRate).** Construida el 11/09/2026, sin sandbox. Igual que `pedirCotizacion`: `confirmado: true` lo pone `ofertaAsegura()` en el servidor, y esto NO reintenta"
         },
         {
@@ -76071,7 +76271,7 @@
           "exportada": true,
           "params": "peticion: { method?: string path: string params?: unknown[] body?: Record<string, unknown> }",
           "retorno": "Promise<RespuestaProductForm>",
-          "linea": 139,
+          "linea": 164,
           "resumen": "El `dataCallback` de la Product Form Library (widget de Codeoscopic para pintar el formulario REAL de consentimiento de cada compañía). **Gratis**: no cotiza ni confirma nada con el vendor, solo relay"
         },
         {
@@ -76080,7 +76280,7 @@
           "exportada": true,
           "params": "entrada: { projectId: string campos: Record<string, unknown> primaAnual?: number | null /** Máscara de la cuenta de la ficha que el corredor confirmó en pantalla (o nada). */ cuentaConfirmada?: string | null reintentoConfirmado?: boolean ac",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 148
+          "linea": 173
         },
         {
           "nombre": "pedirCoberturas",
@@ -76088,13 +76288,30 @@
           "exportada": true,
           "params": "projectId: string, offerId: string",
           "retorno": "Promise<RespuestaCoberturas>",
-          "linea": 173,
+          "linea": 200,
           "resumen": "Coberturas de la oferta confirmada. **Gratis** (lectura en el vendor)."
+        },
+        {
+          "nombre": "pedirVistaImportacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "projectId: string, polizaId: string",
+          "retorno": "Promise<VistaImportacion>",
+          "linea": 209,
+          "resumen": "Proyecto hecho a mano en Avant2 (fila 13, 26/09/2026). La vista previa es una lectura gratis; el import enlaza el proyecto a la póliza y deja la oferta aceptada, sin ReRate ni Submit: la emisión sigue"
+        },
+        {
+          "nombre": "pedirImportacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { projectId: string; polizaId: string; quoteId: string }",
+          "retorno": "Promise<RespuestaImportar>",
+          "linea": 215
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c6473a37e201"
+      "hash": "2f9a1df17fcd"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/BuscadorCatastro.tsx",
@@ -76174,7 +76391,7 @@
           "nombre": "Emision",
           "kind": "function",
           "exportada": true,
-          "params": "{ tarificacionId, compania, categoria, primaEur, producto = null, fechaEfecto = null, onCerrar, }: { tarificacionId: string compania: string categoria: string primaEur: number | null /** Producto de la fila pulsada: con varios precios de la",
+          "params": "{ tarificacionId, compania, categoria, primaEur, producto = null, fechaEfecto = null, ofertaImportada = null, onCerrar, }: { /** Ausente cuando la oferta viene importada de Avant2: ahí no hay cotización nuestra. */ tarificacionId?: string c",
           "retorno": null,
           "linea": 305
         }
@@ -76183,7 +76400,27 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "3f735ba18722"
+      "hash": "60ffd95e61cd"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/ImportarAvant2.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "ImportarAvant2"
+      ],
+      "funciones": [
+        {
+          "nombre": "ImportarAvant2",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ polizaId }: { polizaId: string }",
+          "retorno": null,
+          "linea": 24
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1697e4d1ede8"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx",
@@ -76198,7 +76435,7 @@
           "exportada": true,
           "params": "{ params, searchParams, }: { params: Promise<{ id: string }> searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 43,
+          "linea": 44,
           "resumen": "**Retarificar, DENTRO de `/correduria`.** Hasta el 03/09/2026 esto era un enlace ↗ a `apps/asegura`, que es otro dominio con otra sesión: en producción, `GET /cartera/poliza/9588dad8-… → 307 /login`. "
         },
         {
@@ -76207,7 +76444,7 @@
           "exportada": false,
           "params": "r: RespuestaPrecalificacion",
           "retorno": "string",
-          "linea": 423,
+          "linea": 435,
           "resumen": "Por qué no hay precalificación, en la frase que dice DÓNDE mirar. Nunca se degrada a «la ficha no tiene datos»: la póliza sí trae marca, modelo y código postal — lo que ha fallado es leerlos. El corre"
         },
         {
@@ -76216,7 +76453,7 @@
           "exportada": false,
           "params": "{ supuestos, }: { supuestos: Array<{ campo: string; valor: unknown; porque: string; optimista?: boolean; oculto?: boolean }> }",
           "retorno": null,
-          "linea": 443,
+          "linea": 455,
           "resumen": "Lo que se ha SUPUESTO para poder pedir precio. Va ANTES del botón a propósito: es la letra pequeña de la cifra, y verla después no sirve de nada."
         },
         {
@@ -76225,7 +76462,7 @@
           "exportada": false,
           "params": "garajes: RespuestaCatalogo, civiles: RespuestaCatalogo",
           "retorno": "string | null",
-          "linea": 474,
+          "linea": 486,
           "resumen": "El motivo por el que no se puede cotizar, o `null` si se puede."
         },
         {
@@ -76234,7 +76471,7 @@
           "exportada": false,
           "params": "{ sub, polizaId, clienteId }: { sub: string; polizaId?: string; clienteId?: string }",
           "retorno": null,
-          "linea": 491
+          "linea": 503
         },
         {
           "nombre": "Fila",
@@ -76242,7 +76479,7 @@
           "exportada": false,
           "params": "{ etiqueta, valor, nota, }: { etiqueta: string valor: string | null /** La letra pequeña del dato: de dónde sale, o por qué no está. */ nota?: string | null }",
           "retorno": null,
-          "linea": 515
+          "linea": 527
         },
         {
           "nombre": "cadena",
@@ -76250,7 +76487,7 @@
           "exportada": false,
           "params": "v: string | string[] | undefined",
           "retorno": "string | null",
-          "linea": 561,
+          "linea": 573,
           "resumen": "El marco de la pantalla, con **el CSS que el retarificador da por supuesto**. El componente se trajo de `apps/asegura` tal cual (tres pasos, combustible antes de versión, banners, badges) y esas clase"
         },
         {
@@ -76259,7 +76496,7 @@
           "exportada": false,
           "params": "r: { estado: 'ambigua' | 'no_encontrado' | 'direccion_ilegible' } | { estado: 'error'; motivo: string }",
           "retorno": "string",
-          "linea": 566
+          "linea": 578
         },
         {
           "nombre": "Marco",
@@ -76267,14 +76504,14 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 579
+          "linea": 591
         }
       ],
       "tablas": [
         "next"
       ],
       "rutaApi": null,
-      "hash": "48442c21777e"
+      "hash": "9470ea944226"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/PrepararPresupuesto.tsx",
@@ -112537,7 +112774,11 @@
         "interpretarLimitesHogar",
         "limitesHogarAsegura",
         "interpretarCoberturas",
-        "coberturasAsegura"
+        "coberturasAsegura",
+        "interpretarVistaImportacion",
+        "vistaImportacionAsegura",
+        "interpretarImportacion",
+        "importarProyectoAsegura"
       ],
       "funciones": [
         {
@@ -112901,11 +113142,51 @@
           "retorno": "Promise<RespuestaCoberturas>",
           "linea": 1814,
           "resumen": "`GET /api/operador/codeoscopic/coberturas` — gratis, no cotiza ni confirma nada."
+        },
+        {
+          "nombre": "leerOfertaImportable",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "OfertaImportable | null",
+          "linea": 1867
+        },
+        {
+          "nombre": "interpretarVistaImportacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "VistaImportacion",
+          "linea": 1885
+        },
+        {
+          "nombre": "vistaImportacionAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "projectId: string, polizaId: string",
+          "retorno": "Promise<VistaImportacion>",
+          "linea": 1906
+        },
+        {
+          "nombre": "interpretarImportacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaImportar",
+          "linea": 1917
+        },
+        {
+          "nombre": "importarProyectoAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { projectId: string; polizaId: string; quoteId: string }",
+          "retorno": "Promise<RespuestaImportar>",
+          "linea": 1938
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "55d1c979dcef"
+      "hash": "284ec185fe99"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -158335,7 +158616,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3784,
-    "funciones": 12116
+    "archivos": 3787,
+    "funciones": 12143
   }
 }

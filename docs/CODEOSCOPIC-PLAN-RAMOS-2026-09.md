@@ -80,7 +80,7 @@ modelos de COCHE. Tres causas encadenadas, de abajo arriba:
 | 10 | Descargar `issuedDocuments`, flujo `RevisedQuote`, cron de polling | M |
 | 11 | Parsear el error en sus dos formas antes de recortar | S |
 | 12 | `person-roles` antes de cotizar/emitir; tipo de identificación NIE/CIF/pasaporte | M |
-| 13 | ⏸️ **Pendiente (26/09/2026, Alberto)**: importar a la intranet el proyecto que se crea a mano en la web de Avant2 (caso Pablo Guzmán). ✅ Verificado 26/09: la API SÍ ve proyectos creados en la web (el de Pablo trae 2 ofertas con `SubmitPolicyApplication`). Por tanto, importarlo pide una línea en el libro de consumo (`codeoscopic_consumo`) y un `intentoId` para emitir | M |
+| 13 | ✅ **Construida (26/09/2026)**: importar a la intranet el proyecto creado a mano en la web de Avant2 (caso Pablo Guzmán). Enlace en la ficha de la póliza → `retarificar?avant2=1` → panel de emisión de siempre. Sin ReRate: solo precios que ya traen `SubmitPolicyApplication` y en plazo; tomador comprobado por hash de DNI. Detalle en `docs/superpowers/specs/2026-09-26-importar-avant2-y-emitir-telegram-design.md`. Falta medir el primer Submit real de una oferta importada | M |
 
 ## Preguntas para el portal — prompt listo para Claude en Chrome
 
