@@ -41,9 +41,11 @@
  */
 import {
   estadoPeticion, entraEnVentana, DIAS_VENTANA_AVISO, HORAS_ENLACE_DIRECTO, HREF_POR_TIPO, generarTokenEnlace, hashTokenEnlace, urlEnlaceDirecto,
+  CORTE_AVISO_POLIZA_NUEVA, DIAS_AVISO_POLIZA_NUEVA, polizasNuevasParaAviso, type FilaPolizaNueva,
 } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
-import { WHERE_CARTERA_VIVA, leerSitio, textoReparoSitio, caducidadCarnet } from '@central/module-seguros'
+import { Prisma } from './generated/asegura-client'
+import { WHERE_CARTERA_VIVA, leerSitio, textoReparoSitio, caducidadCarnet, sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { avisosActivos, destinatarioDeCliente, esSoloContar } from './avisos-vencimiento'
 import { descifrarCampo } from './cartera-edicion'
@@ -393,6 +395,31 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
       left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
     where a.correduria_id = ${correduriaId}::uuid and a.estado = 'solicitada' and a.cliente_id = p.cliente_id`
   for (const f of firmas) dame(f.clienteId).firmas.push({ id: f.id, compania: f.compania })
+
+  // Pólizas NUEVAS del tomador (26/09/2026): «tienes una póliza nueva» y, si es un cambio de
+  // compañía, que la anterior se da de baja. Solo cartera EN VIGOR y solo lo creado desde el corte:
+  // la regla pura (`polizasNuevasParaAviso`) decide qué es nuevo y con qué clave se sella.
+  const desde = new Date(Math.max(Date.parse(`${CORTE_AVISO_POLIZA_NUEVA}T00:00:00Z`), hoy.getTime() - DIAS_AVISO_POLIZA_NUEVA * MS_DIA))
+  const nuevas = await db.$queryRaw<(Omit<FilaPolizaNueva, 'creadaEn'> & { clienteId: string; creadaEn: Date })[]>`
+    select p.cliente_id::text as "clienteId", p.numero_poliza as "numeroPoliza", p.codigo_entidad_dgs as "codigoEntidadDgs",
+      coalesce(cd.nombre_comun, p.aseguradora) as compania, p.tipo::text as tipo,
+      to_char(p.fecha_inicio, 'YYYY-MM-DD') as "fechaEfecto", p.created_at as "creadaEn",
+      (p.poliza_origen_id is not null) as sustituye, coalesce(cdo.nombre_comun, o.aseguradora) as "sustituyeA"
+    from polizas p
+      left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
+      left join polizas o on o.id = p.poliza_origen_id
+      left join companias_dgs cdo on cdo.codigo_dgs = o.codigo_entidad_dgs
+    where p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null
+      and ${Prisma.raw(sqlCarteraEnVigor('p'))} and p.created_at >= ${desde}`
+  const nuevasPorCliente = new Map<string, FilaPolizaNueva[]>()
+  for (const { clienteId, ...f } of nuevas) {
+    if (!fichaPorId.has(clienteId)) continue
+    nuevasPorCliente.set(clienteId, [...(nuevasPorCliente.get(clienteId) ?? []), f])
+  }
+  for (const [clienteId, filas] of nuevasPorCliente) {
+    const lista = polizasNuevasParaAviso(filas, hoy)
+    if (lista.length > 0) dame(clienteId).polizasNuevas = lista
+  }
 
   return { pendientes: [...por.values()], identidadesServidas }
 }

@@ -120,6 +120,43 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
    viene resuelto en `objeto` (`@central/module-seguros/objeto`, cuatro estados) — ver
    `references/sector.md` §5; si llega `cifrado` o `no_informado`, dilo como tal, nunca en
    blanco.
+2b. **Diferencias con CIMA (26/09/2026):** lee `GET /api/operador/cima-sincro` (o, sin secreto, cuenta
+   lo mismo por SQL replicando `compararConCima()` de `packages/module-seguros/src/sincro-cima.ts`, no una
+   regla propia). Lo automático ya lo hace el cron (huecos, **teléfono nuevo → se añade como secundario**,
+   nombre en MAYÚSCULAS → «Nombre Propio»; nombre al que solo le falta un nombre de pila y carné a ±1 día
+   **no** son diferencias). Tú **revisas lo que queda** y lo agrupas en el informe por clase: 📞 teléfono
+   que YA está en otra ficha (lleva `aviso`: ¿familia o error de CIMA?), 📧 email distinto (nunca se
+   añade solo: vincula el portal), 🪪 nombre realmente distinto, 📅 fechas que difieren más de un día.
+   **No decides ni aplicas nada**: «Usar CIMA / Mantener el mío» es de Alberto en `/correduria`. Si el
+   total sube de una semana a otra sin fichas nuevas, es alerta de ingesta, no trabajo de datos.
+2c. **Revisiones de la cartera (26/09/2026, dictado de Alberto: «añade todo al agente»).** Seis
+   listas, cada una con su criterio fijo. Se leen por el puerto o, sin secreto, por SQL contra
+   `seguros` replicando las reglas del paquete (nunca una propia). **Solo informas**: ni llamas, ni
+   escribes, ni envías nada — cada lista es trabajo para Alberto en `/correduria`.
+   1. 🔀 **Cambios de compañía sin anulación** (la más cara; caso fundacional: Pablo Guzmán Pueyo,
+      Mapfre→Allianz, 26/09/2026, detectado a 3 días del vencimiento y fuera del preaviso). Pólizas
+      en vigor (`sqlCarteraEnVigor`) que vencen en ≤45 días, con un presupuesto de OTRA compañía
+      aceptado o emitido para ese cliente y ramo (`codeoscopic_projects` de su póliza, u
+      `oportunidades` con presupuesto) y **sin** fila en `anulacion` abierta para la vieja. Di cuántos
+      días quedan hasta el preaviso del tomador (vencimiento − 30, `fechaAccionable`): pasado ese día,
+      la compañía vieja puede renovar y cobrar.
+   2. ⏳ **Presupuestos a punto de caducar.** Precios de Codeoscopic ya pagados (`codeoscopic_prices`
+      con `expires_at` en ≤3 días) de proyectos no emitidos, y proyectos cuya fecha de efecto ya pasó
+      (`fechaEfectoCaducada`): si caducan hay que volver a pagar 0,50€.
+   3. 🧾 **Emitidas que CIMA no confirma.** `polizas.origen = 'emitida_codeoscopic'` con más de 7 días
+      y sin `id_poliza_entidad` (no confirmada por CIMA): puede que la compañía no la haya dado de alta.
+   4. ✉️ **Clientes para invitar al portal.** Los de cartera en vigor con correo que resuelve a su ficha
+      y sin acceso (el embudo de `GET /api/operador/actividad`: «con correo sin invitar»). Lista para
+      que Alberto pulse «Invitar»; tú no invitas.
+   5. 💸 **Recibos devueltos y pendientes vencidos.** `GET /api/operador/impagados`: separa
+      `suspendidas` (devuelto confirmado, 1-6 meses) de `sinConfirmar` (pendiente, nadie ha dicho que
+      se devolviera) y da la diferencia con la semana anterior. Nunca digas «sin cobertura» de un
+      pendiente.
+   6. 🎯 **Venta cruzada.** Clientes en vigor con auto y sin hogar, o con varios vehículos en compañías
+      distintas (candidatos a unificar). Una lista para llamar, sin prometer ahorros en el texto
+      (RDL 3/2020: eso sería asesoramiento).
+   En el informe, cada lista con su número y como mucho 5 nombres (enlace a la ficha), y la variación
+   frente a la bitácora anterior. Una lista que no se pudo leer se dice «no leída», nunca «0».
 3. **Sector:** 2-3 novedades reales de la semana (WebSearch: DGSFP, INESE/ADN del Seguro,
    BOE) que afecten a un corredor: regulación, ramos, compañías vivas de la casa.
 4. **Aprende:** si descubriste algo estructural (del sector o del negocio), añádelo a

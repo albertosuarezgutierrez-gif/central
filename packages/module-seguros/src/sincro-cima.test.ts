@@ -42,3 +42,47 @@ test('una fecha de nacimiento guardada en formato raro NO es un hueco: discrepa,
   const d = compararConCima({ ...vacia, fechaNacimiento: '1980/03/04' }, { ...cima, fechaCarnet: null, telefonos: [], emails: [] })
   assert.deepEqual(d.map((x) => `${x.campo}:${x.accion}:${x.ficha}`), ['fechaNacimiento:discrepa:1980/03/04'])
 })
+
+// ─── Reglas del 26/09/2026 (Alberto, sobre el panel de diferencias) ──────────
+const soloNombre = { ...cima, fechaNacimiento: null, fechaCarnet: null, telefonos: [], emails: [] }
+
+test('teléfono distinto → se AÑADE (no pregunta); el que ya está en la ficha no sale', () => {
+  const d = compararConCima({ ...vacia, telefonos: ['666252020'] }, { ...soloNombre, telefonos: ['954172716'] })
+  assert.deepEqual(d.map((x) => `${x.campo}:${x.accion}:${x.cima}`), ['telefono:anadir:954172716'])
+})
+
+test('email distinto SIGUE preguntando: vincula el portal del cliente', () => {
+  const d = compararConCima({ ...vacia, emails: ['alfredo.pont@phh.es'] }, { ...soloNombre, emails: ['apontdelgadodecos@gmail.com'] })
+  assert.deepEqual(d.map((x) => `${x.campo}:${x.accion}`), ['email:discrepa'])
+})
+
+test('a CIMA le falta un nombre que la ficha tiene → no es diferencia (la ficha está más completa)', () => {
+  assert.deepEqual(compararConCima({ ...vacia, nombre: 'Alfonso Carlos Moncosi Gomez' }, { ...soloNombre, nombre: 'ALFONSO MONCOSI GOMEZ' }), [])
+  // Una sola palabra no basta para decir que es la misma persona.
+  assert.deepEqual(compararConCima({ ...vacia, nombre: 'Alfonso Carlos Moncosi Gomez' }, { ...soloNombre, nombre: 'ALFONSO' }).map((x) => x.accion), ['discrepa'])
+})
+
+test('mismo nombre con la ficha en MAYÚSCULAS → formatear a «Nombre Propio»; una grafía elegida se respeta', () => {
+  const d = compararConCima({ ...vacia, nombre: 'ALFREDO LUIS PONT DELGADO DE COS' }, { ...soloNombre, nombre: 'Alfredo Luis Pont Delgado de Cos' })
+  assert.deepEqual(d.map((x) => `${x.accion}:${x.cima}`), ['formatear:Alfredo Luis Pont Delgado de Cos'])
+  assert.deepEqual(compararConCima({ ...vacia, nombre: 'Ronald McDonald Pérez' }, { ...soloNombre, nombre: 'RONALD MCDONALD PEREZ' }), [])
+})
+
+test('nombre que CIMA rellena o que discrepa sale en «Nombre Propio», no en mayúsculas', () => {
+  assert.equal(compararConCima({ ...vacia, nombre: null }, { ...soloNombre, nombre: 'JOSÉ MARÍA GARCÍA-LÓPEZ DE LA TORRE' })[0].cima, 'José María García-López de la Torre')
+})
+
+test('la fecha del carné que se va UN día no es diferencia; dos días sí', () => {
+  const f = { ...vacia, carnets: ['1999-01-01'] }
+  assert.deepEqual(compararConCima(f, { ...soloNombre, fechaCarnet: '1999-01-02' }), [])
+  assert.deepEqual(compararConCima(f, { ...soloNombre, fechaCarnet: '1999-01-03' }).map((x) => `${x.campo}:${x.accion}`), ['fechaCarnet:discrepa'])
+})
+
+test('CIMA dice MÁS que la ficha y la contiene → completar con lo de CIMA, sin preguntar', () => {
+  const d = compararConCima({ ...vacia, nombre: 'Maria Gonzalez' }, { ...soloNombre, nombre: 'M CARMEN BAENA GONZALEZ' })
+  assert.deepEqual(d.map((x) => `${x.accion}:${x.cima}`), ['completar:M Carmen Baena Gonzalez'])
+  // La inicial de la ficha frente a la palabra entera también es «CIMA dice más».
+  assert.deepEqual(compararConCima({ ...vacia, nombre: 'J Perez Lopez' }, { ...soloNombre, nombre: 'JUAN PEREZ LOPEZ' }).map((x) => x.accion), ['completar'])
+  // Si no la contiene, sigue siendo una discrepancia de verdad.
+  assert.deepEqual(compararConCima({ ...vacia, nombre: 'Maria Gonzalez' }, { ...soloNombre, nombre: 'CARMEN BAENA RUIZ' }).map((x) => x.accion), ['discrepa'])
+})

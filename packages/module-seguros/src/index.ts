@@ -895,6 +895,8 @@ export {
   ROTULO_CAMPO_CIMA,
   claveNombre,
   mismoNombre,
+  nombrePropio,
+  sinFormatoNombre,
   fechaCima,
   claveTelefono,
   compararConCima,

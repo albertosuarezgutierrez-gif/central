@@ -7,7 +7,8 @@
 import { CAMPOS_CIMA, type CampoCima } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
-export type DiferenciaCimaVista = { campo: CampoCima; accion: 'discrepa'; ficha: string | null; cima: string }
+/** `aviso`: por qué algo que iba solo pregunta (el teléfono ya está en otra ficha). */
+export type DiferenciaCimaVista = { campo: CampoCima; accion: 'discrepa'; ficha: string | null; cima: string; aviso: string | null }
 export type FichaConDiferencias = { clienteId: string; nombre: string; poliza: string | null; diferencias: DiferenciaCimaVista[] }
 
 export type LecturaSincroCima =
@@ -22,7 +23,7 @@ const txt = (v: unknown): v is string => typeof v === 'string'
 function diferencia(v: unknown): DiferenciaCimaVista | null {
   const o = (v ?? {}) as Record<string, unknown>
   if (!(CAMPOS_CIMA as readonly unknown[]).includes(o.campo) || o.accion !== 'discrepa' || !txt(o.cima)) return null
-  return { campo: o.campo as CampoCima, accion: 'discrepa', ficha: txt(o.ficha) ? o.ficha : null, cima: o.cima }
+  return { campo: o.campo as CampoCima, accion: 'discrepa', ficha: txt(o.ficha) ? o.ficha : null, cima: o.cima, aviso: txt(o.aviso) && o.aviso.trim() ? o.aviso : null }
 }
 
 function ficha(v: unknown): FichaConDiferencias | null {

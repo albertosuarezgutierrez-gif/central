@@ -16,6 +16,7 @@
 // que NO hay ≠ dato que NO se ha mirado), un piso más abajo.
 import { entraEnVentana } from './obligacion.ts'
 import type { EstadoAutorizacion } from './autorizacion.ts'
+import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
 
 export const TIPOS_AVISO = [
   'peticion_recibida',
@@ -28,6 +29,7 @@ export const TIPOS_AVISO = [
   'carnet_caducado',
   'anulacion_por_firmar',
   'felicitacion',
+  'poliza_emitida',
 ] as const
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
 
@@ -65,7 +67,7 @@ export type Aviso = {
   href: string
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -158,6 +160,11 @@ export type EntradaAvisos = {
    * propio correo.
    */
   felicitaciones?: { id: string }[] | null
+  /**
+   * Pólizas nuevas del tomador (`polizasNuevasParaAviso`). `null` = no se ha podido mirar. Ausente =
+   * esta superficie no la consulta (no cuenta para el «!»).
+   */
+  polizasNuevas?: PolizaNuevaParaAviso[] | null
   hoy: Date
 }
 
@@ -196,6 +203,8 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   // «Pendiente de tu firma» vive en la bóveda (vista de seguros), que es donde se firma.
   anulacion_por_firmar: '/boveda',
   felicitacion: '/boveda',
+  // La póliza nueva se ve en «Mis seguros», con su PDF.
+  poliza_emitida: '/boveda',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -448,10 +457,32 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     }
   }
 
+  if (x.polizasNuevas === null) {
+    fuentesIlegibles.push('polizas_nuevas')
+  } else {
+    for (const p of x.polizasNuevas ?? []) {
+      const que = [p.ramo ? `de ${p.ramo}` : null, p.compania ? `con ${p.compania}` : null].filter(Boolean).join(' ')
+      const efecto = p.fechaEfecto ? `Entra en vigor el ${FECHA.format(new Date(`${p.fechaEfecto}T00:00:00Z`))}. ` : ''
+      // Cambio de compañía: se le dice claro que la anterior se da de baja (Alberto, 26/09/2026).
+      const cambio =
+        p.sustituyeA === null
+          ? ''
+          : `Sustituye a tu póliza anterior${p.sustituyeA ? ` de ${p.sustituyeA}` : ''}, que se da de baja. `
+      avisos.push({
+        tipo: 'poliza_emitida',
+        id: p.id,
+        titulo: `Tienes una póliza nueva${que ? ` ${que}` : ''}`,
+        detalle: `${efecto}${cambio}La tienes en «Mis seguros», con su documentación.`,
+        href: HREF_POR_TIPO.poliza_emitida,
+      })
+    }
+  }
+
+  // Las fuentes que ESTA superficie consulta: una ausente (`undefined`) no cuenta para el «!».
+  const ausentes = (x.felicitaciones === undefined ? 1 : 0) + (x.polizasNuevas === undefined ? 1 : 0)
   return {
     avisos,
     fuentesIlegibles,
-    // Las fuentes que ESTA superficie consulta: una ausente (`undefined`) no cuenta para el «!».
-    globo: textoGlobo(avisos.length, fuentesIlegibles.length, FUENTES_AVISO.length - (x.felicitaciones === undefined ? 1 : 0)),
+    globo: textoGlobo(avisos.length, fuentesIlegibles.length, FUENTES_AVISO.length - ausentes),
   }
 }

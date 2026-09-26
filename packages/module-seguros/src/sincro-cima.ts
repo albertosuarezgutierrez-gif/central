@@ -10,8 +10,25 @@
  * Este módulo solo COMPARA; no lee BD ni escribe. Tres desenlaces por campo, y
  * no se colapsan:
  *   - `rellenar`  → la ficha no lo tiene y CIMA sí: se copia sin preguntar.
+ *   - `anadir`    → teléfono nuevo de CIMA: se AÑADE como secundario sin
+ *                   preguntar (26/09/2026, Alberto: «si son por tlf se añade y
+ *                   ya está»). Quien aplica comprueba antes que no esté en OTRA
+ *                   ficha; si lo está, lo convierte en `discrepa` con `aviso`.
+ *   - `completar` → el nombre de CIMA trae MÁS que el de la ficha y la contiene
+ *                   («Maria Gonzalez» → «M Carmen Baena Gonzalez»): se toma el de
+ *                   CIMA sin preguntar (26/09/2026, Alberto: «CIMA tiene más
+ *                   datos, coge CIMA»). La persona ya está casada por DNI.
+ *   - `formatear` → es el mismo nombre pero la ficha lo tiene TODO en mayúsculas
+ *                   (o minúsculas): se reescribe «Nombre Propio» sin preguntar.
  *   - `discrepa`  → los dos lo tienen y NO coinciden: decide Alberto.
  *   - (nada)      → coinciden, o CIMA no lo trae: no hay nada que hacer.
+ *
+ * No son diferencias (26/09/2026): el nombre que solo cambia en mayúsculas o
+ * tildes, el de CIMA al que le falta un nombre que la ficha sí tiene («ALFONSO
+ * MONCOSI GOMEZ» frente a «Alfonso Carlos Moncosi Gomez»: la ficha está más
+ * completa), y la fecha del carné que se va UN día (desfase de zona horaria).
+ * El email distinto SIGUE preguntando: un email en la ficha vincula el portal
+ * del cliente, y añadir uno a ciegas abre la cartera a quien lo lea.
  *
  * 🚨 Un valor de la ficha que no se puede leer (cifrado con otra clave) NO es
  * un hueco: `ilegible` en la entrada anula el campo — rellenarlo pisaría un
@@ -52,11 +69,73 @@ export type DatosCima = {
 
 export type DiferenciaCima = {
   campo: CampoCima
-  accion: 'rellenar' | 'discrepa'
+  accion: 'rellenar' | 'anadir' | 'completar' | 'formatear' | 'discrepa'
   /** Lo que tiene la ficha (para enseñarlo); `null` en `rellenar`. */
   ficha: string | null
-  /** El valor que manda CIMA, ya normalizado: es el que se escribiría. */
+  /** El valor que se escribiría, ya normalizado (en `formatear`, el de la ficha en «Nombre Propio»). */
   cima: string
+  /** Por qué algo automático pasa a preguntar (p. ej. el teléfono ya está en otra ficha). */
+  aviso?: string
+}
+
+/** Enlaces que van en minúscula dentro de un nombre («Delgado de Cos», «Olivencia y Calvo»). */
+const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'y', 'e', 'da', 'das', 'do', 'dos', 'van', 'von'])
+
+/** «ALFONSO MONCOSI GÓMEZ» → «Alfonso Moncosi Gómez»; «PONT DELGADO DE COS» → «Pont Delgado de Cos». */
+export function nombrePropio(v: string): string {
+  return v
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLocaleLowerCase('es-ES')
+    .split(' ')
+    .map((w, i) =>
+      i > 0 && PARTICULAS.has(w) ? w : w.split('-').map((p) => p.charAt(0).toLocaleUpperCase('es-ES') + p.slice(1)).join('-'),
+    )
+    .join(' ')
+}
+
+/** Todo en mayúsculas o todo en minúsculas: no es una grafía que alguien eligiera («McDonald» se respeta). */
+export function sinFormatoNombre(v: string | null): boolean {
+  if (!v || !/\p{L}/u.test(v)) return false
+  return v === v.toLocaleUpperCase('es-ES') || v === v.toLocaleLowerCase('es-ES')
+}
+
+/** Misma palabra, o una es la inicial de la otra («m» = «maria»). */
+function casaPalabra(a: string, b: string): boolean {
+  return a === b || (a.length === 1 && b.startsWith(a)) || (b.length === 1 && a.startsWith(b))
+}
+
+/** Cada palabra de `pocas` (al menos dos) casa con una palabra DISTINTA de `muchas`. */
+function nombreCubierto(pocas: string | null, muchas: string | null): boolean {
+  const kp = claveNombre(pocas)
+  const km = claveNombre(muchas)
+  if (!kp || !km) return false
+  const palabras = kp.split(' ')
+  const resto = km.split(' ')
+  if (palabras.length < 2) return false
+  // Primero las exactas: si no, una inicial podría quedarse la palabra que otra necesita entera.
+  const orden = [...palabras].sort((x, y) => y.length - x.length)
+  for (const w of orden) {
+    let i = resto.indexOf(w)
+    if (i < 0) i = resto.findIndex((r) => casaPalabra(w, r))
+    if (i < 0) return false
+    resto.splice(i, 1)
+  }
+  return true
+}
+
+/** La ficha está contenida en CIMA y CIMA dice más: más palabras, o la palabra entera donde la ficha tiene una inicial. */
+function cimaMasCompleta(ficha: string | null, cima: string | null): boolean {
+  if (!nombreCubierto(ficha, cima)) return false
+  const nf = claveNombre(ficha)!.split(' ')
+  const nc = claveNombre(cima)!.split(' ')
+  return nc.length > nf.length || nf.some((w) => w.length === 1 && !nc.includes(w))
+}
+
+/** Dos fechas `YYYY-MM-DD` a un día o menos (el carné guardado con desfase de zona horaria). */
+function aUnDia(a: string, b: string): boolean {
+  const d = Math.abs(Date.parse(`${a}T00:00:00Z`) - Date.parse(`${b}T00:00:00Z`))
+  return Number.isFinite(d) && d <= 86_400_000
 }
 
 /** Minúsculas, sin tildes ni signos, espacios colapsados: «PÉREZ-LÓPEZ,  Juan» = «perez lopez juan». */
@@ -113,8 +192,14 @@ export function compararConCima(ficha: FichaParaCima, cima: DatosCima): Diferenc
 
   const nombreCima = cima.nombre?.replace(/\s+/g, ' ').trim() || null
   if (nombreCima && claveNombre(nombreCima)) {
-    if (!claveNombre(ficha.nombre)) out.push({ campo: 'nombre', accion: 'rellenar', ficha: null, cima: nombreCima })
-    else if (!mismoNombre(ficha.nombre, nombreCima)) out.push({ campo: 'nombre', accion: 'discrepa', ficha: ficha.nombre, cima: nombreCima })
+    if (!claveNombre(ficha.nombre)) out.push({ campo: 'nombre', accion: 'rellenar', ficha: null, cima: nombrePropio(nombreCima) })
+    else if (!mismoNombre(ficha.nombre, nombreCima) && cimaMasCompleta(ficha.nombre, nombreCima)) {
+      out.push({ campo: 'nombre', accion: 'completar', ficha: ficha.nombre, cima: nombrePropio(nombreCima) })
+    } else if (mismoNombre(ficha.nombre, nombreCima) || nombreCubierto(nombreCima, ficha.nombre)) {
+      if (ficha.nombre && sinFormatoNombre(ficha.nombre)) {
+        out.push({ campo: 'nombre', accion: 'formatear', ficha: ficha.nombre, cima: nombrePropio(ficha.nombre) })
+      }
+    } else out.push({ campo: 'nombre', accion: 'discrepa', ficha: ficha.nombre, cima: nombrePropio(nombreCima) })
   }
 
   const nac = fechaCima(cima.fechaNacimiento)
@@ -130,14 +215,14 @@ export function compararConCima(ficha: FichaParaCima, cima: DatosCima): Diferenc
   if (car && ficha.carnets !== null && !ficha.carnets.some((f) => f === null)) {
     const propias = ficha.carnets.map(fechaCima).filter((f): f is string => f !== null)
     if (ficha.carnets.length === 0) out.push({ campo: 'fechaCarnet', accion: 'rellenar', ficha: null, cima: car })
-    else if (!propias.includes(car)) out.push({ campo: 'fechaCarnet', accion: 'discrepa', ficha: propias.join(' · ') || null, cima: car })
+    else if (!propias.some((p) => aUnDia(p, car))) out.push({ campo: 'fechaCarnet', accion: 'discrepa', ficha: propias.join(' · ') || null, cima: car })
   }
 
   const tel = cima.telefonos.map((t) => t.trim()).find((t) => claveTelefono(t).length >= 9)
   if (tel && ficha.telefonos !== null) {
     const propias = ficha.telefonos.map(claveTelefono)
     if (ficha.telefonos.length === 0) out.push({ campo: 'telefono', accion: 'rellenar', ficha: null, cima: tel })
-    else if (!propias.includes(claveTelefono(tel))) out.push({ campo: 'telefono', accion: 'discrepa', ficha: ficha.telefonos.join(' · '), cima: tel })
+    else if (!propias.includes(claveTelefono(tel))) out.push({ campo: 'telefono', accion: 'anadir', ficha: ficha.telefonos.join(' · '), cima: tel })
   }
 
   const em = cima.emails.map((e) => e.trim()).find((e) => e.includes('@'))
