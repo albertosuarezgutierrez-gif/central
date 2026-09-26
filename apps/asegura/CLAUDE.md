@@ -783,6 +783,17 @@ guarda en `carta_texto` y se mandará a la compañía. Cepo `lib/anulacion-porta
 📨 **Aviso a la compañía (2-d-3, `proponerAnulacionesFirmadas` + `decidirAprobacion` en `lib/aprobaciones.ts`).** Acción
 `enviar_correo_compania`: el buzón lo ELIGE Alberto en la tarjeta entre los contactos activos de ESA compañía (nunca por área: medido, «administración» es a veces cobros o rebota) y queda recordado en `compania_contactos.recibe_anulaciones` para la siguiente; carta firmada adjunta tal cual; la
 anulación pasa a `comunicada` SOLO si el correo salió. Cepo `lib/aprobaciones.test.ts`.
+🚀 **Envío SOLO tras la firma + correo al emitir (26/09/2026, dictado de Alberto: «envío automático al firmar»).**
+Única excepción a `POLITICA` = 'aprobar': la carta de baja que el cliente FIRMA en el portal sale sola
+(`enviarAnulacionTrasFirma`, llamada desde `/api/portal/anulacion` tras `firmada`) si es `no_renovacion`/`sustitucion`
+Y la compañía tiene buzón de bajas RECORDADO (`anulacionSeEnviaSola` de module-seguros). Aprueba la MISMA propuesta por
+`decidirAprobacion` (actor `ACTOR_ENVIO_TRAS_FIRMA`); sin buzón o `inmediata` → se queda en «Hoy» como antes. Y tras
+acuñar, `/emitir` llama a `trasEmision()` (`lib/tras-emision.ts`): abre YA la baja de la sustituida y manda al cliente
+UN correo (`lib/correo-emision.ts`, marca Quicksand/Nunito, sin NADA de la cartera — ni compañía ni número; cepo con
+`CAMPOS_PROHIBIDOS_EN_INVITACION`). El OK de ese correo es pulsar «Emitir» (el resumen de Telegram lo avisa antes).
+`ASEGURA_CORREO_EMISION=0` lo apaga. Reenvío/prueba: `POST /api/operador/emision/aviso {polizaId, prueba}` (prueba →
+`ASEGURA_MAIL_PRUEBA` o `ASEGURA_MAIL_REPLY_TO`, sin dejar rastro como enviado al cliente). Cepos en
+`lib/correo-emision.test.ts` y `lib/aprobaciones.test.ts`.
 🤝 **Carta de nombramiento de mediador por la misma cola (24/09/2026, `proponerCartasFirmadas`).** La firmada en el portal sale
 como `enviar_correo_compania` con `carta_mediador_id` (CHECK `aprobacion_compania_con_objeto`: anulación O carta, nunca las dos);
 el buzón se recuerda aparte en `recibe_nombramientos`; al salir → `enviada`. 🚨 La carta lleva el **DNI/NIF del tomador**

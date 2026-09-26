@@ -93,3 +93,18 @@ test('🪤 a la compañía va SIEMPRE el original en texto (el de la huella); el
   // El justificante no certifica una huella que el texto adjunto no cumple.
   assert.match(f, /createHash\('sha256'\)\.update\(texto, 'utf8'\)\.digest\('hex'\) !== f\.docHash[\s\S]*?return \[original\]/)
 })
+
+test('🪤 envío tras la firma: aprueba la MISMA propuesta por decidirAprobacion, con el buzón RECORDADO y nunca adivinado', () => {
+  const f = src.slice(src.indexOf('export async function enviarAnulacionTrasFirma'), src.indexOf("export const ORIGEN_CARTA_MEDIADOR"))
+  assert.ok(f.length > 100, 'la función existe')
+  // No hay un segundo camino de envío: pasa por decidirAprobacion (reclamo atómico, adjuntos firmados, «comunicada»).
+  assert.match(f, /await decidirAprobacion\(correduriaId, a\.id, \{ decision: 'aprobar', asunto, texto, contactoId: buzon! \}, ACTOR_ENVIO_TRAS_FIRMA\)/)
+  assert.doesNotMatch(f, /enviarCorreo/)
+  // El buzón sale SOLO de la marca recordada (buzonSugerido), y la regla pura decide si va solo.
+  assert.match(f, /const buzon = buzonSugerido\(/)
+  const regla = f.indexOf('if (!anulacionSeEnviaSola(a.tipo, buzon))')
+  assert.ok(regla > 0 && regla < f.indexOf('await decidirAprobacion('), 'la regla se aplica ANTES de aprobar')
+  // Solo la propuesta de ESA anulación, viva y sin caducar.
+  assert.match(f, /x\.anulacion_id = \$\{anulacionId\}::uuid and x\.correduria_id = \$\{correduriaId\}::uuid/)
+  assert.match(f, /x\.estado = 'pendiente' and x\.caduca_at >= now\(\)/)
+})

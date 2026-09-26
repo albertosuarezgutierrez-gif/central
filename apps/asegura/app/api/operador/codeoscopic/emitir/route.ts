@@ -31,6 +31,7 @@ import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { documentoTomador, fraccionamientoDeOferta } from '@/lib/codeoscopic/importar'
 import { computeDniLookupHash } from '@central/module-seguros-pii'
 import { archivarDocumentoEmitido } from '@/lib/codeoscopic/archivar-documento'
+import { trasEmision } from '@/lib/tras-emision'
 import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 
@@ -258,8 +259,11 @@ export const POST = auditado(async (req: Request) => {
     const archivadoAc = acunadoAc.ok
       ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunadoAc.polizaId, crudo: crudoPrevio })
       : { documentoGuardado: null, avisoDocumento: null }
+    // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK).
+    const trasAc = acunadoAc.ok ? await trasEmision(correduria.id, { clienteId: poliza.cliente_id, polizaOrigenId: p.poliza_id }) : null
     return NextResponse.json({
       estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
+      trasEmision: trasAc,
       // Aquí no se ha enviado nada: si no se acuña, el motivo real es lo único útil.
       ...(acunadoAc.ok ? {} : { mensaje: `La compañía ya tiene la póliza${aprobada.numeroPoliza ? ` nº ${aprobada.numeroPoliza}` : ''} pero no se ha podido registrar en la cartera: ${acunadoAc.motivo}` }),
       referenciaVendor: aprobada.numeroPoliza,
@@ -790,8 +794,13 @@ export const POST = auditado(async (req: Request) => {
     ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunado.polizaId, crudo: envio.crudo })
     : { documentoGuardado: null, avisoDocumento: null }
 
+  // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK). Después
+  // del archivado: si el PDF ha llegado, el cliente ya lo encuentra al entrar.
+  const tras = acunado.ok ? await trasEmision(correduria.id, { clienteId: poliza.cliente_id, polizaOrigenId: p.poliza_id }) : null
+
   return NextResponse.json({
     estado: acunado.ok ? 'ok' : 'emitido_sin_acunar',
+    trasEmision: tras,
     referenciaVendor: envio.referenciaVendor,
     acunado,
     // Con qué cuenta se ha emitido (enmascarada) y de dónde salió: la póliza

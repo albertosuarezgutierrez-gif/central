@@ -1260,6 +1260,28 @@ export async function productFormAsegura(peticion: {
 
 // ─── Emitir de verdad (Submit) ────────────────────────────────────────────────
 
+/**
+ * Lo que asegura hizo DESPUÉS de emitir (26/09/2026): abrir la baja de la póliza sustituida y mandar
+ * al cliente el correo de su nuevo seguro. `null` = asegura no lo manda (versión anterior, o no se
+ * acuñó): NO es «no se hizo nada», es «no se sabe». Un valor desconocido cae a `null`, nunca a `enviado`.
+ */
+export type TrasEmision = {
+  baja: 'abierta' | 'sin_datos' | 'error' | null
+  correo: 'enviado' | 'sin_email' | 'baja_de_correo' | 'ilegible' | 'sin_portal' | 'apagado' | 'sin_proveedor' | 'rechazado' | 'error' | null
+}
+
+const BAJAS_TRAS: readonly string[] = ['abierta', 'sin_datos', 'error']
+const CORREOS_TRAS: readonly string[] = ['enviado', 'sin_email', 'baja_de_correo', 'ilegible', 'sin_portal', 'apagado', 'sin_proveedor', 'rechazado', 'error']
+
+/** PURO. */
+export function leerTrasEmision(v: unknown): TrasEmision | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const baja = typeof o.baja === 'string' && BAJAS_TRAS.includes(o.baja) ? (o.baja as TrasEmision['baja']) : null
+  const correo = typeof o.correo === 'string' && CORREOS_TRAS.includes(o.correo) ? (o.correo as TrasEmision['correo']) : null
+  return { baja, correo }
+}
+
 export type RespuestaEmitir =
   | { estado: 'sin_configurar'; mensaje: string }
   /** 422 · la compañía pide datos antes de emitir. `faltan` lleva `'iban'` cuando
@@ -1304,7 +1326,7 @@ export type RespuestaEmitir =
        *  `quizaDeclarado` es el `quizaEmitido` de asegura tal cual (true/false), `null` si no lo mandó. */
       status?: number; causa?: string | null; quizaDeclarado?: boolean | null
     }
-  | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null }
+  | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null; trasEmision: TrasEmision | null }
   | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
 
 export type SolicitudEmisionVista = {
@@ -1385,7 +1407,7 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
       }
     }
     if (r.estado === 'ok') {
-      return { estado: 'ok', referenciaVendor: cadenaONulo(r.referenciaVendor), acunado: r.acunado ?? null, cuenta: leerCuenta(r.cuenta) }
+      return { estado: 'ok', referenciaVendor: cadenaONulo(r.referenciaVendor), acunado: r.acunado ?? null, cuenta: leerCuenta(r.cuenta), trasEmision: leerTrasEmision(r.trasEmision) }
     }
     return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible, crudo: r }
   }

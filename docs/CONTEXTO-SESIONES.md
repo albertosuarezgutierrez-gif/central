@@ -714,6 +714,15 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Correduría: tras emitir, correo al cliente + baja firmada que sale SOLA a la compañía
+Primera emisión por Telegram hecha (Pablo Guzmán, Allianz 61089620). Alberto pidió: correo moderno al cliente + firma
+de la baja de la anterior + envío automático a la compañía. **Casi todo existía** (expediente `anulacion`, firma en portal,
+cola de aprobaciones). Nuevo: `trasEmision()` al acuñar (abre la baja YA y manda UN correo sin datos de cartera),
+`enviarAnulacionTrasFirma` (única excepción a «aprobar»: firmada + `no_renovacion`/`sustitucion` + buzón recordado),
+botón «Enviarme una prueba / Enviar al cliente» en la póliza nueva. Emails de bajas: Mapfre/Allianz/AXA/Mutua/Occident
+NO publican ninguno → el buzón es el contacto de mediador que Alberto elige la 1ª vez en «Hoy» y queda recordado.
+Pendiente: aviso Telegram de «baja enviada sola»; verificar en CIMA que la vieja se anuló (idea A).
+
 ## (26/09/2026) Portal del cliente · parte de siniestro rehecho (PR #3672)
 - Paso 1 = elegir el seguro en tarjetas (antes `<select>` al final); desde la ficha (`?poliza=`) se salta.
   La tarjeta «No sé cuál / puede que varias» NO bloquea (decisión: obligar fabrica pólizas al azar).

@@ -4,6 +4,7 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { anulacionesParaFirmar, firmarAnulacion, pedirCodigoFirma } from '@/lib/anulacion-portal'
+import { enviarAnulacionTrasFirma } from '@/lib/aprobaciones'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
 
@@ -64,6 +65,17 @@ export const POST = auditado(async (req: Request) => {
         ip: typeof b.ip === 'string' ? b.ip.slice(0, 100) : null,
         userAgent: typeof b.userAgent === 'string' ? b.userAgent.slice(0, 300) : null,
       })
+      if (r.estado === 'firmada') {
+        // La carta sale sola hacia la compañía (regla de Alberto, 26/09/2026). Nunca estropea la firma:
+        // si no puede salir, se queda en «Hoy · Esperan tu OK» como antes, y al cliente se le dice igual
+        // que está firmada.
+        try {
+          const envio = await enviarAnulacionTrasFirma(correduria.id, anulacionId)
+          console.log(`[portal/anulacion] ${anulacionId} firmada; envío a la compañía: ${envio.estado}${'motivo' in envio ? ` (${envio.motivo})` : ''}`)
+        } catch (e) {
+          console.error('[portal/anulacion] firmada; el envío automático falló, queda en la cola:', e instanceof Error ? e.message : e)
+        }
+      }
       return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
     }
     return NextResponse.json({ estado: 'invalido' }, { status: 422 })

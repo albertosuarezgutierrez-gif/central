@@ -7,7 +7,7 @@
 // pedirlo. El único camino a `/emitir` es el botón `cas_emitir`, de un solo uso, que rehace esta
 // misma lectura y compara la HUELLA: si algo cambió desde que Alberto leyó el resumen, no se emite.
 import { createHash } from 'node:crypto'
-import type { OfertaImportable, RespuestaEmitir, VistaImportacion } from './retarificar-asegura.ts'
+import type { OfertaImportable, RespuestaEmitir, TrasEmision, VistaImportacion } from './retarificar-asegura.ts'
 
 /** Minutos que vale un resumen: pasado eso, el botón no emite y hay que pedirlo otra vez. */
 export const MINUTOS_PROPUESTA = 15
@@ -202,6 +202,8 @@ export function textoResumen(r: ResumenEmision): string {
     `Cuenta de cargo: ${esc(r.cuenta.enmascarada)}${r.cuenta.descripcion ? ` (${esc(r.cuenta.descripcion)})` : ''}`,
     '',
     `Proyecto Avant2 ${esc(r.projectId)} · precio ${esc(r.quoteId)}`,
+    // Pulsar es también el OK de este correo concreto: se dice ANTES, no se descubre después.
+    '📧 Al emitir, el cliente recibe un correo con su nuevo seguro y la carta de baja de la póliza anterior para firmar en el portal.',
     `⚠️ Emitir es IRREVERSIBLE: crea el contrato con la compañía. El botón vale ${MINUTOS_PROPUESTA} minutos y un solo uso.`,
   ].join('\n')
 }
@@ -232,13 +234,36 @@ function rechazoLimpio(r: Extract<RespuestaEmitir, { estado: 'error' }>): boolea
  * Qué pasó y qué decir. **Nunca se ofrece reintentar**: el vendor no deduplica y un segundo Submit
  * puede ser la segunda póliza del mismo coche. Lo que no sea un «sí» o un «no» claro es `incierta`.
  */
+const CORREO_TRAS: Record<NonNullable<TrasEmision['correo']>, string> = {
+  enviado: '📧 Al cliente le ha llegado el correo de su nuevo seguro.',
+  sin_email: '📧 NO se ha avisado al cliente: su ficha no tiene correo.',
+  baja_de_correo: '📧 NO se ha avisado al cliente: se dio de baja del correo. Llámale.',
+  ilegible: '📧 NO se ha avisado al cliente: su correo no se puede descifrar (clave PII en central-asegura).',
+  sin_portal: '📧 NO se ha avisado al cliente: falta la URL del portal (ASEGURA_PORTAL_URL).',
+  apagado: '📧 El correo al cliente está apagado (ASEGURA_CORREO_EMISION=0).',
+  sin_proveedor: '📧 NO se ha avisado al cliente: central-asegura no tiene proveedor de correo.',
+  rechazado: '📧 NO se ha avisado al cliente: el proveedor de correo rechazó el mensaje.',
+  error: '📧 No sé si le ha llegado el correo al cliente: falló al enviarlo. Míralo en su ficha.',
+}
+
+/** PURO. Lo que pasó después de emitir; sin dato, se dice que no se sabe (nunca «hecho»). */
+export function lineasTrasEmision(t: TrasEmision | null | undefined): string {
+  if (!t) return '\n\n❔ No sé si se ha avisado al cliente ni si se ha abierto la baja de la anterior: míralo en su ficha.'
+  const l: string[] = []
+  if (t.baja === 'abierta') l.push('✍️ La baja de la póliza anterior está abierta y esperando su firma en el portal; al firmar sale sola a la compañía si su buzón de bajas ya está elegido (si no, te llegará a «Hoy»).')
+  else if (t.baja === 'sin_datos') l.push('⚠️ NO se ha podido abrir la baja de la póliza anterior (faltan datos o ya no está en vigor): gestiónala desde su ficha.')
+  else if (t.baja === 'error') l.push('⚠️ Falló al abrir la baja de la póliza anterior: gestiónala desde su ficha.')
+  l.push(t.correo ? CORREO_TRAS[t.correo] : '📧 No sé si se ha avisado al cliente.')
+  return `\n\n${l.join('\n')}`
+}
+
 export function resultadoEmision(r: RespuestaEmitir, urlIntranet: string): { estado: EstadoFinal; texto: string } {
   const mirar = `Míralo en la intranet antes de hacer nada: ${urlIntranet}`
   switch (r.estado) {
     case 'ok':
       return {
         estado: 'emitida',
-        texto: `✅ Emitida${r.referenciaVendor ? `: póliza nº ${esc(r.referenciaVendor)}` : ' (la compañía aún no ha dado número)'}. Queda en la cartera y el PDF, si la compañía lo ha mandado, en la ficha: ${urlIntranet}`,
+        texto: `✅ Emitida${r.referenciaVendor ? `: póliza nº ${esc(r.referenciaVendor)}` : ' (la compañía aún no ha dado número)'}. Queda en la cartera y el PDF, si la compañía lo ha mandado, en la ficha: ${urlIntranet}${lineasTrasEmision(r.trasEmision)}`,
       }
     case 'emitido_sin_acunar':
       return { estado: 'emitida', texto: `✅ La compañía la ha aceptado, pero no se ha podido registrar sola en la cartera: ${esc(r.mensaje)} ${mirar}` }

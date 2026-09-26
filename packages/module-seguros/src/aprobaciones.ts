@@ -24,6 +24,23 @@ export const POLITICA: Readonly<Record<AccionAprobacion, Politica>> = {
   enviar_correo_compania: 'aprobar',
 }
 
+/**
+ * La ÚNICA excepción a «aprobar» (dictada por Alberto el 26/09/2026: «envío automático al firmar»):
+ * la carta de baja que el propio cliente FIRMA en su portal sale sola hacia su compañía, sin pasar por
+ * «Hoy». El OK de ese envío concreto lo da la firma del tomador, que es quien tiene que oponerse a la
+ * prórroga (art. 22 LCS). Tres condiciones, y si falta una la carta se queda en la cola como siempre:
+ *   · tipo `no_renovacion` o `sustitucion` — una `inmediata` corta una cobertura en curso (extorno,
+ *     posible hueco sin seguro) y esa la mira Alberto;
+ *   · firma electrónica guardada (carta + huella), que es lo que se adjunta;
+ *   · la compañía tiene un buzón de anulaciones RECORDADO (`buzonSugerido`): el primero lo elige
+ *     Alberto en la tarjeta y queda guardado; el sistema nunca adivina a qué dirección escribir.
+ */
+export const TIPOS_ANULACION_ENVIO_SOLO = ['no_renovacion', 'sustitucion'] as const
+
+export function anulacionSeEnviaSola(tipo: string, buzon: string | null): boolean {
+  return (TIPOS_ANULACION_ENVIO_SOLO as readonly string[]).includes(tipo) && buzon !== null
+}
+
 export const ESTADOS_APROBACION = ['pendiente', 'enviando', 'ejecutada', 'rechazada', 'caducada', 'fallida'] as const
 export type EstadoAprobacion = (typeof ESTADOS_APROBACION)[number]
 
