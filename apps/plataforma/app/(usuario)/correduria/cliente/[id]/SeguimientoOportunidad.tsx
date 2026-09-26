@@ -152,20 +152,20 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
         <h3 style={tituloBloque}>Qué hago ahora</h3>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {op.estado === 'competencia' && !aparcada && (
-            <button type="button" disabled={enviando} style={btnStyle('secundario', 'sm')} onClick={() => accion({ accion: 'interesado' })}>Interesado</button>
+            <button type="button" disabled={enviando} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} onClick={() => accion({ accion: 'interesado' })}>Interesado</button>
           )}
           {(op.estado === 'competencia' || op.estado === 'en_negociacion') && !aparcada && (
-            <button type="button" disabled={enviando} style={btnStyle('primario', 'sm')} onClick={() => accion({ accion: 'propuesta_enviada' })}>Propuesta enviada</button>
+            <button type="button" disabled={enviando} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }} onClick={() => accion({ accion: 'propuesta_enviada' })}>Propuesta enviada</button>
           )}
           {/* «Ganada» va en la fila, con la póliza que se emitió. */}
           {!cerrada && (
             <>
-              <button type="button" disabled={enviando} aria-expanded={panel === 'perder'} style={{ ...btnStyle('secundario'), color: 'var(--negative)' }} onClick={() => setPanel(panel === 'perder' ? null : 'perder')}>Perdida…</button>
-              {!aparcada && <button type="button" disabled={enviando} aria-expanded={panel === 'aparcar'} style={btnStyle('secundario')} onClick={() => setPanel(panel === 'aparcar' ? null : 'aparcar')}>Aparcar…</button>}
+              <button type="button" disabled={enviando} aria-expanded={panel === 'perder'} style={{ ...btnStyle('secundario'), color: 'var(--negative)', minHeight: 44 }} onClick={() => setPanel(panel === 'perder' ? null : 'perder')}>Perdida…</button>
+              {!aparcada && <button type="button" disabled={enviando} aria-expanded={panel === 'aparcar'} style={{ ...btnStyle('secundario'), minHeight: 44 }} onClick={() => setPanel(panel === 'aparcar' ? null : 'aparcar')}>Aparcar…</button>}
             </>
           )}
           {(op.estado === 'perdida' || aparcada) && (
-            <button type="button" disabled={enviando} style={btnStyle('secundario')} onClick={() => accion({ accion: 'reabrir' })}>Reabrir</button>
+            <button type="button" disabled={enviando} style={{ ...btnStyle('secundario'), minHeight: 44 }} onClick={() => accion({ accion: 'reabrir' })}>Reabrir</button>
           )}
         </div>
         {panel === 'perder' && <FormPerder enviando={enviando} onEnviar={accion} onCancelar={() => setPanel(null)} />}
@@ -258,7 +258,7 @@ function FormAparcar({ enviando, hoy, onEnviar, onCancelar }: { enviando: boolea
       style={{ display: 'grid', gap: 12, padding: 14, borderRadius: 12, border: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {[90, 180, 330].map(n => (
-          <button key={n} type="button" onClick={() => setHasta(masDias(hoy, n))} aria-pressed={hasta === masDias(hoy, n)} style={btnStyle(hasta === masDias(hoy, n) ? 'primario' : 'secundario', 'sm')}>
+          <button key={n} type="button" onClick={() => setHasta(masDias(hoy, n))} aria-pressed={hasta === masDias(hoy, n)} style={{ ...btnStyle(hasta === masDias(hoy, n) ? 'primario' : 'secundario', 'sm'), minHeight: 44 }}>
             {n === 90 ? '3 meses' : n === 180 ? '6 meses' : '11 meses'}
           </button>
         ))}

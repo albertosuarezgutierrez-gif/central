@@ -149,12 +149,8 @@ const POR_PAGINA = 30
 // ella, «26 ilocalizables» no dice de qué cartera habla ni qué se ha medido.
 const SUB = (
   <>
-    Esto mira si <strong>hay algo</strong> en el email o el teléfono de la ficha, no si el dato
-    sirve: un correo antiguo cuenta como canal aunque rebote. Los contactos no se muestran aquí
-    —van cifrados y esta lista no los necesita—; están en la ficha de cada cliente. «Sin nada en
-    su ficha» e «ilocalizable» <strong>no son lo mismo</strong>: el segundo mira además la póliza
-    y a quien esté en ella. Y solo entran los clientes que llegan por CIMA: las ~32.500 fichas del
-    volcado histórico son leads, no clientes de hoy.
+    Clientes de CIMA sin email ni teléfono en su ficha (no mira si el dato funciona).
+    «Ilocalizable» mira además la póliza y a quien esté en ella.
   </>
 )
 

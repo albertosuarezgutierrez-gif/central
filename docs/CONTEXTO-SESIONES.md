@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(26/09/2026)** Correduría · revisión UX de TODAS las pantallas (PR #3699 Relaciones, mergeado) → 4 lotes aprobados
+por Alberto («haz todas»). Lote 1 (este PR): bug del alta de auto (aviso a «3» → «2c»), la causa técnica de PII fuera de
+la cabecera (queda en `title`), ~60 botones/summaries a 44 px, bloques de Hoy sin trabajo en una línea o `null`
+(DiferenciasCima; Quejas conserva «Registrar»; Retención conserva el aviso de pólizas sin recibos), textos legales y
+explicativos acortados. Pendientes: lote 2 (filas plegadas: Oportunidades, Siniestros, Retención, Pérdidas, Leads), lote 3
+(un contador, renovaciones en un sitio, cabecera corta, pestaña Más partida) y lote 4 (§W de CORREDURIA-INTRANET-IDEAS).
+
 **(26/09/2026)** Correduría · ficha del cliente, bloque 👥 Personas (`Relaciones.tsx`), «muy poco clara y muy extensa»:
 cada persona es ahora un RESUMEN de dos líneas (vínculo + pólizas vivas + quién ve qué, de los mismos helpers puros)
 y la gestión de los dos sentidos/cambiar tipo/quitar va plegada tras «Gestionar»; se abre SOLA si hay una

@@ -80,15 +80,13 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
   }
   const n = contadorSincroCima(l) ?? 0
   if (n === 0 && l.rellenos === 0 && l.ilegibles === 0) {
-    // Comprobado y sin nada que hacer: se dice en una línea (y cuántas no se pudieron comparar).
+    // Comprobado y sin nada que hacer: no se pinta nada, salvo que haya fichas que
+    // NO se han podido comparar — eso no es «al día» y se dice en una línea.
+    if (!l.sinDatosCima) return null
     return (
-      <Bloque
-        Icono={RefreshCcw}
-        titulo="Fichas al día con CIMA"
-        sub={`${l.fichas} fichas de cartera viva comparadas con lo que manda CIMA: no hay nada distinto ni por copiar.${l.sinDatosCima ? ` ${l.sinDatosCima} no se pueden comparar porque su titular no figura en ninguna de sus pólizas de CIMA.` : ''}`}
-      >
-        {null}
-      </Bloque>
+      <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
+        Fichas al día con CIMA · {l.sinDatosCima} sin comparar (su titular no figura en sus pólizas de CIMA).
+      </p>
     )
   }
 

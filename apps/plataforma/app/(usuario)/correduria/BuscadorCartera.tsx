@@ -179,7 +179,7 @@ function Resultado({ estado, termino }: { estado: Estado; termino: string }) {
           style={{
             fontSize: 12, color: 'var(--muted)', cursor: 'pointer',
             listStyle: 'none', userSelect: 'none',
-            display: 'inline-flex', alignItems: 'center', minHeight: 32,
+            display: 'inline-flex', alignItems: 'center', minHeight: 44,
           }}
         >
           ¿Qué puedo buscar?
@@ -269,7 +269,7 @@ function Resultado({ estado, termino }: { estado: Estado; termino: string }) {
           DNI que solo alcanza al 12% de las fichas no es una ausencia. */}
       {vacios.length > 0 && (
         <details style={{ marginTop: 8 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--muted)', minHeight: 32 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--muted)', minHeight: 44 }}>
             Sin resultados por {vacios.length} criterio(s) — mira sobre cuánto se ha buscado
           </summary>
           <ul style={{ margin: '8px 0 0', paddingLeft: 18, fontSize: 12, color: 'var(--muted)' }}>

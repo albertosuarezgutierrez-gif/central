@@ -153,7 +153,7 @@ export function Polizas({ titulo, nota, polizas, vacio, plegado, intervinientes,
       {/* Cerrado por defecto y con montaje perezoso: el volcado histórico son
           cientos de filas en algunas fichas y no se miran casi nunca. */}
       <details>
-        <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>{titulo}</summary>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14, minHeight: 44 }}>{titulo}</summary>
         <div style={{ marginTop: 10 }}>{tabla}</div>
       </details>
     </div>

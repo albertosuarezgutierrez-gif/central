@@ -148,7 +148,7 @@ export default function HoyCockpit({
         <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: colorEstado }} />
         {estado.texto}
         {estado.tono !== 'ok' && estado.tono !== 'cargando' && (
-          <button type="button" onClick={() => onIr('ingesta')} style={{ ...btnStyle('sutil', 'sm'), padding: '0 6px' }}>Ver</button>
+          <button type="button" onClick={() => onIr('ingesta')} style={{ ...btnStyle('sutil', 'sm'), padding: '0 6px', minHeight: 44 }}>Ver</button>
         )}
       </span>
 
@@ -209,7 +209,7 @@ export default function HoyCockpit({
         </summary>
         <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-          <button type="button" onClick={() => onIr('actividad')} style={btnStyle('sutil', 'sm')}>Todo</button>
+          <button type="button" onClick={() => onIr('actividad')} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Todo</button>
         </div>
         {verPortal && portal === undefined && <p style={NOTA}>Cargando…</p>}
         {portal === null && <p style={{ ...NOTA, color: 'var(--negative)' }}>No se ha podido leer la actividad del portal. No significa que no haya.</p>}

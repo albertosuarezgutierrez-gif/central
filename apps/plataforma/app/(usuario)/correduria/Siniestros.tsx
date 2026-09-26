@@ -175,7 +175,7 @@ export default function Siniestros({
           🚨 Siniestros <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>· {resumen}</span>
         </div>
         {elegibles.length > 0 ? (
-          <button type="button" onClick={() => setFormAbierto((v) => !v)} style={btnStyle(formAbierto ? 'secundario' : 'primario')}>
+          <button type="button" onClick={() => setFormAbierto((v) => !v)} style={{ ...btnStyle(formAbierto ? 'secundario' : 'primario'), minHeight: 44 }}>
             {formAbierto ? 'Cerrar formulario' : '➕ Abrir siniestro'}
           </button>
         ) : (
@@ -203,8 +203,7 @@ export default function Siniestros({
         </p>
       ) : lista.length === 0 ? (
         <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-          Sin siniestros registrados. Solo constan los que han llegado por CIMA o se han abierto aquí — un parte que
-          el cliente diera directamente a la compañía puede no aparecer hasta el siguiente pull.
+          Sin siniestros registrados (uno dado directamente a la compañía puede tardar en llegar por CIMA).
         </p>
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
@@ -352,7 +351,7 @@ function BloqueRamo({ siniestroId, ramoPoliza, datosRamo, onGuardar }: {
         ))}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
-        <button type="button" disabled={ocupado} onClick={() => void guardar()} style={btnStyle('secundario', 'sm')}>
+        <button type="button" disabled={ocupado} onClick={() => void guardar()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
           {ocupado ? 'Guardando…' : 'Guardar datos del ramo'}
         </button>
       </div>
@@ -452,7 +451,7 @@ function BloqueTerceros({ siniestroId, terceros, onAnadir, onQuitar }: {
                 {t.tipo === 'tercero' && <Dato label="Nº de póliza" valor={t.numeroPoliza} />}
               </div>
               <div>
-                <button type="button" disabled={ocupado !== null} onClick={() => void quitar(t.id)} style={btnStyle('sutil', 'sm')}>
+                <button type="button" disabled={ocupado !== null} onClick={() => void quitar(t.id)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
                   {ocupado === t.id ? 'Quitando…' : 'Quitar'}
                 </button>
               </div>
@@ -461,7 +460,7 @@ function BloqueTerceros({ siniestroId, terceros, onAnadir, onQuitar }: {
         </div>
       )}
       <div style={{ marginTop: 8 }}>
-        <button type="button" onClick={() => setFormAbierto((v) => !v)} style={btnStyle('secundario', 'sm')} aria-expanded={formAbierto}>
+        <button type="button" onClick={() => setFormAbierto((v) => !v)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} aria-expanded={formAbierto}>
           {formAbierto ? 'Cancelar' : '➕ Añadir tercero/testigo'}
         </button>
       </div>
@@ -542,7 +541,7 @@ function FormTercero({ siniestroId, onAnadir, onHecho }: {
         </div>
       )}
       <div style={{ display: 'flex', gap: 8 }}>
-        <button type="button" disabled={ocupado} onClick={() => void anadir()} style={btnStyle('primario', 'sm')}>
+        <button type="button" disabled={ocupado} onClick={() => void anadir()} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}>
           {ocupado ? 'Añadiendo…' : 'Añadir'}
         </button>
       </div>
@@ -577,53 +576,51 @@ function Fila({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ramoP
         onClick={() => setAbierta((v) => !v)}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAbierta((v) => !v) } }}
         style={{
-          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '6px 12px',
-          padding: '10px 12px', minHeight: 44, cursor: 'pointer', fontSize: 13, alignItems: 'start',
+          display: 'flex', flexWrap: 'wrap', gap: '4px 10px', alignItems: 'center',
+          padding: '10px 12px', minHeight: 44, cursor: 'pointer', fontSize: 13,
           background: abierta ? 'var(--surface)' : 'transparent',
         }}
       >
-        <Celda label="Fecha">
-          <span style={{ whiteSpace: 'nowrap' }}>{s.fecha ? fechaEs(s.fecha) : <span style={muted}>sin fecha</span>}</span>
-        </Celda>
-        <Celda label="Estado">
-          <span style={{ whiteSpace: 'nowrap', color: s.abierto ? 'var(--warning)' : 'var(--muted)' }}>
-            {s.abierto ? '🟠' : '⚪'} {etiquetaEstadoSiniestro(s.estado)}
+        {/* Una línea (26/09/2026): fecha · estado · tipo y solo las alertas. El resto
+            —referencia, origen, tramitador, reserva— va al desplegar. */}
+        <span style={{ whiteSpace: 'nowrap' }}>{s.fecha ? fechaEs(s.fecha) : <span style={muted}>sin fecha</span>}</span>
+        <span style={{ whiteSpace: 'nowrap', color: s.abierto ? 'var(--warning)' : 'var(--muted)' }}>
+          {s.abierto ? '🟠' : '⚪'} {etiquetaEstadoSiniestro(s.estado)}
+        </span>
+        <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{etiquetaTipoSiniestro(s.tipo)}</span>
+        {propio && !s.confirmadoCima && (
+          <span style={chipAviso} title="Lo abrimos nosotros y CIMA aún no lo ha traído. Con la referencia de la compañía, el próximo pull lo casará con esta fila.">⏳ sin casar con CIMA</span>
+        )}
+        {plazo?.vencido && (
+          <span style={chipAviso} title={`El art. 16 LCS da ${DIAS_COMUNICACION_LCS} días desde el hecho para comunicarlo a la compañía; ya han pasado y sigue sin referencia.`}>
+            ⚠️ fuera de plazo (art. 16 LCS)
           </span>
-        </Celda>
-        <Celda label="Tipo">{etiquetaTipoSiniestro(s.tipo)}</Celda>
-        <Celda label="Referencia">
-          <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
-            {s.referencia ?? <span style={muted}>sin referencia</span>}
-            {propio && !s.confirmadoCima && (
-              <span style={chipAviso} title="Lo abrimos nosotros y CIMA aún no lo ha traído. Con la referencia de la compañía, el próximo pull lo casará con esta fila.">⏳ sin casar con CIMA</span>
-            )}
-            {plazo?.vencido && (
-              <span style={chipAviso} title={`El art. 16 LCS da ${DIAS_COMUNICACION_LCS} días desde el hecho para comunicarlo a la compañía; ya han pasado y sigue sin referencia.`}>
-                ⚠️ fuera del plazo de {DIAS_COMUNICACION_LCS} días (art. 16 LCS)
-              </span>
-            )}
-          </span>
-        </Celda>
-        <Celda label="Origen">
-          <span style={chip} title={propio ? 'Abierto desde esta pantalla' : 'Lo trajo la ingesta de CIMA: su estado lo fija la compañía'}>
-            {propio ? 'abierto aquí' : 'CIMA'}
-          </span>
-        </Celda>
-        <Celda label="Tramitador">
-          {s.tramitador ?? <span style={muted} title="Nadie ha anotado quién lo lleva en la compañía (CIMA no lo manda)">sin tramitador</span>}
-        </Celda>
-        <Celda label="Reserva">
-          {/* NULL es «la compañía no lo informa», no «cero euros de daño». */}
-          {s.reserva !== null ? (
-            eur(s.reserva)
-          ) : typeof s.tramitacionCima?.reserva === 'number' ? (
-            <span title="Reserva que informa la compañía por CIMA (no anotada por ti)">{eur(s.tramitacionCima.reserva)} <span style={muted}>CIA</span></span>
-          ) : (
-            <span style={muted} title="Reserva no informada">sin dato</span>
-          )}
-        </Celda>
-        <span style={{ ...muted, fontSize: 11, alignSelf: 'center', justifySelf: 'end' }}>{abierta ? '▲' : '▼'}</span>
+        )}
+        <span style={{ ...muted, fontSize: 11, marginLeft: 'auto' }}>{abierta ? '▲' : '▼'}</span>
       </div>
+      {abierta && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '6px 12px', padding: '0 12px 8px', fontSize: 13 }}>
+          <Celda label="Referencia">{s.referencia ?? <span style={muted}>sin referencia</span>}</Celda>
+          <Celda label="Origen">
+            <span style={chip} title={propio ? 'Abierto desde esta pantalla' : 'Lo trajo la ingesta de CIMA: su estado lo fija la compañía'}>
+              {propio ? 'abierto aquí' : 'CIMA'}
+            </span>
+          </Celda>
+          <Celda label="Tramitador">
+            {s.tramitador ?? <span style={muted} title="Nadie ha anotado quién lo lleva en la compañía (CIMA no lo manda)">sin tramitador</span>}
+          </Celda>
+          <Celda label="Reserva">
+            {/* NULL es «la compañía no lo informa», no «cero euros de daño». */}
+            {s.reserva !== null ? (
+              eur(s.reserva)
+            ) : typeof s.tramitacionCima?.reserva === 'number' ? (
+              <span title="Reserva que informa la compañía por CIMA (no anotada por ti)">{eur(s.tramitacionCima.reserva)} <span style={muted}>CIA</span></span>
+            ) : (
+              <span style={muted} title="Reserva no informada">sin dato</span>
+            )}
+          </Celda>
+        </div>
+      )}
       {abierta && (
         <Detalle
           s={s}
@@ -735,7 +732,7 @@ function Seguimiento({ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: Re
   const [abierto, setAbierto] = useState(false)
   return (
     <div>
-      <button type="button" onClick={() => setAbierto((v) => !v)} style={btnStyle('secundario', 'sm')} aria-expanded={abierto}>
+      <button type="button" onClick={() => setAbierto((v) => !v)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} aria-expanded={abierto}>
         ✏️ {abierto ? 'Ocultar seguimiento' : 'Anotar seguimiento'}
       </button>
       {abierto && <FormSeguimiento s={s} onAnotar={onAnotar} />}
@@ -840,7 +837,7 @@ function FormSeguimiento({ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body
         <textarea value={nota} onChange={(e) => setNota(e.target.value)} style={{ ...campo, minHeight: 72 }} maxLength={2000} placeholder="p. ej. «llamado al tramitador, pide fotos del golpe»" />
       </Campo>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <button type="button" disabled={ocupado} onClick={() => void guardar()} style={btnStyle('primario')}>
+        <button type="button" disabled={ocupado} onClick={() => void guardar()} style={{ ...btnStyle('primario'), minHeight: 44 }}>
           {ocupado ? 'Guardando…' : 'Guardar seguimiento'}
         </button>
       </div>
@@ -876,7 +873,7 @@ function CambioEstado({ s, onAnotar }: { s: SiniestroCartera; onAnotar: (body: R
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ alignSelf: 'center' }}>{s.abierto ? '🟠' : '⚪'} {etiquetaEstadoSiniestro(s.estado)}</span>
         {transiciones.map((a) => (
-          <button key={a} type="button" disabled={ocupado !== null} onClick={() => void pasarA(a)} style={btnStyle('secundario')}>
+          <button key={a} type="button" disabled={ocupado !== null} onClick={() => void pasarA(a)} style={{ ...btnStyle('secundario'), minHeight: 44 }}>
             {ocupado === a ? '…' : `→ ${etiquetaEstadoSiniestro(a)}`}
           </button>
         ))}
@@ -1017,10 +1014,10 @@ function FormAbrir({ polizas, onAbrir, onCancelar }: {
         </Campo>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" disabled={ocupado} onClick={() => void enviar()} style={btnStyle('primario')}>
+        <button type="button" disabled={ocupado} onClick={() => void enviar()} style={{ ...btnStyle('primario'), minHeight: 44 }}>
           {ocupado ? 'Abriendo…' : 'Abrir siniestro'}
         </button>
-        <button type="button" disabled={ocupado} onClick={onCancelar} style={btnStyle('sutil')}>Cancelar</button>
+        <button type="button" disabled={ocupado} onClick={onCancelar} style={{ ...btnStyle('sutil'), minHeight: 44 }}>Cancelar</button>
       </div>
       {resultado && <div role="alert" style={cajaMensaje(resultado.tono)}>{resultado.texto}</div>}
     </div>

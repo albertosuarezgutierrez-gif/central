@@ -260,7 +260,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
       <details style={{ position: 'relative' }}>
-        <summary style={{ ...btnStyle('primario', 'sm'), listStyle: 'none', userSelect: 'none' }}>
+        <summary style={{ ...btnStyle('primario', 'sm'), minHeight: 44, listStyle: 'none', userSelect: 'none' }}>
           ➕ Nueva oportunidad ▾
         </summary>
         <div
@@ -298,7 +298,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
           </p>
         </div>
       </details>
-      <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro.">
+      <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro." style={{ minHeight: 44 }}>
         <BtnLink href={urlSubirPoliza()} variante="secundario" tam="sm" nuevaPestana>
           📄 Subir póliza ↗
         </BtnLink>
@@ -396,7 +396,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
         // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
         // en sitios distintos (la clave PII vs. pedírselo al cliente).
         <span title={c.telefonoIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
-          📞 {c.telefonoIlegible ? `cifrado · ${causaPii}` : `sin teléfono${coletilla}`}
+          📞 {c.telefonoIlegible ? '🔒 cifrado' : `sin teléfono${coletilla}`}
         </span>
       )}
       {ef.email ? (
@@ -407,7 +407,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
         </span>
       ) : (
         <span title={c.emailIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : 'No consta email'}>
-          ✉️ {c.emailIlegible ? `cifrado · ${causaPii}` : 'sin email'}
+          ✉️ {c.emailIlegible ? '🔒 cifrado' : 'sin email'}
         </span>
       )}
       {sitio && <span>📍 {sitio}</span>}

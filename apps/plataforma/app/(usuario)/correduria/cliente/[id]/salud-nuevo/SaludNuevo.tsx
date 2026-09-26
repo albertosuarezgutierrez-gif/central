@@ -339,7 +339,7 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
       )}
       {r.fallos.length > 0 && (
         <details style={{ marginTop: 8 }}>
-          <summary style={{ color: 'var(--muted)', cursor: 'pointer', minHeight: 24, fontSize: 12 }}>
+          <summary style={{ color: 'var(--muted)', cursor: 'pointer', minHeight: 44, fontSize: 12 }}>
             {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
           </summary>
           <ul style={{ margin: '6px 0 0', fontSize: 13 }}>

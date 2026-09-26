@@ -221,9 +221,7 @@ export default function Supresiones({ onContador }: {
       }
       sub={
         <>
-          Hay <strong>un mes para contestar</strong> desde que se recibió cada una (art. 12.3 RGPD),
-          diciendo qué se suprime y qué se conserva y por qué (art. 12.4). Van ordenadas por el
-          plazo, no por orden de llegada.
+          <strong>Un mes para contestar</strong> cada una (art. 12.3 RGPD). Ordenadas por plazo.
         </>
       }
     >
@@ -245,7 +243,7 @@ export default function Supresiones({ onContador }: {
           la respuesta se escriba contra lo que se le prometió, no de memoria. */}
       {alcance.length > 0 && (
         <details style={{ marginBottom: 12 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+          <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>
             Qué se le dijo que se borra y qué no
           </summary>
           <div style={{ display: 'grid', gap: 12, marginTop: 8 }}>
@@ -301,7 +299,7 @@ export default function Supresiones({ onContador }: {
             )}
 
             <details style={{ marginTop: 8 }}>
-              <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>Contestar</summary>
+              <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44 }}>Contestar</summary>
               <FormularioRespuesta s={s} ocupado={ocupado} onEnviar={enviar} />
             </details>
           </li>
@@ -349,14 +347,13 @@ function FormularioRespuesta({ s, ocupado, onEnviar }: {
         />
       </label>
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-        Esto es lo que acredita el art. 12.4 el día que alguien pregunte por qué no se borró todo.
-        Una negativa parcial sin motivo escrito es lo que ese artículo prohíbe.
+        Obligatorio: una negativa parcial sin motivo escrito no la ampara el art. 12.4.
       </p>
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <button
           type="button"
-          style={{ ...btnStyle('primario', 'sm'), opacity: puedeContestar ? 1 : 0.5 }}
+          style={{ ...btnStyle('primario', 'sm'), minHeight: 44, opacity: puedeContestar ? 1 : 0.5 }}
           disabled={!puedeContestar}
           onClick={() => onEnviar(s.id, { estado, respuesta: respuesta.trim() }, 'Contestada.')}
         >
@@ -369,7 +366,7 @@ function FormularioRespuesta({ s, ocupado, onEnviar }: {
           que no contestar, así que el motivo es obligatorio. */}
       {!s.prorrogadaEn && (
         <details style={{ marginTop: 4 }}>
-          <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--muted)' }}>
+          <summary style={{ cursor: 'pointer', fontSize: 12, color: 'var(--muted)', minHeight: 44 }}>
             Necesito dos meses más (prórroga del art. 12.3)
           </summary>
           <div style={{ display: 'grid', gap: 6, marginTop: 6 }}>
@@ -381,7 +378,7 @@ function FormularioRespuesta({ s, ocupado, onEnviar }: {
             />
             <button
               type="button"
-              style={{ ...btnStyle('secundario', 'sm'), opacity: prorroga.trim() && !ocupado ? 1 : 0.5 }}
+              style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, opacity: prorroga.trim() && !ocupado ? 1 : 0.5 }}
               disabled={!prorroga.trim() || ocupado}
               onClick={() => onEnviar(
                 s.id,

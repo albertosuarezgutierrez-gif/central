@@ -929,7 +929,7 @@ export default function AutoNuevo({
 
         {reparos.historial.length > 0 && (
           <div style={{ ...cardStyle, marginTop: 12, borderColor: 'var(--warning)', padding: 12 }}>
-            <strong>Esto se rellena aqui abajo, en «3 · ¿Tiene seguro en vigor ahora mismo?»:</strong>
+            <strong>Esto se rellena aqui abajo, en «2c · ¿Tiene seguro en vigor ahora mismo?»:</strong>
             <ul style={{ margin: '4px 0 0', paddingLeft: 18, fontSize: 13 }}>
               {reparos.historial.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}
             </ul>
@@ -1315,7 +1315,7 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
       )}
       {r.fallos.length > 0 && (
         <details style={{ marginTop: 8 }}>
-          <summary style={{ color: 'var(--muted)', cursor: 'pointer', minHeight: 24, fontSize: 12 }}>
+          <summary style={{ color: 'var(--muted)', cursor: 'pointer', minHeight: 44, fontSize: 12 }}>
             {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
           </summary>
           <ul style={{ margin: '6px 0 0', fontSize: 13 }}>

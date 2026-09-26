@@ -21,7 +21,7 @@ export default function Historial({ historial }: { historial: AnotacionHistorial
   return (
     <div style={{ border: `1px ${historial === null ? 'dashed' : 'solid'} var(--border)`, borderRadius: 12, padding: 14 }}>
       <details onToggle={(e) => setAbierto((e.currentTarget as HTMLDetailsElement).open)}>
-        <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14, minHeight: 24 }}>
+        <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14, minHeight: 44 }}>
           🕘 Historial <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>· {resumen}</span>
         </summary>
         {abierto && <Contenido historial={historial} />}

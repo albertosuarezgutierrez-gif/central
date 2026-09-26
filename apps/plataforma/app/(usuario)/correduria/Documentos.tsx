@@ -205,7 +205,7 @@ export default function Documentos({
       {polizaId && !siniestroId && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', maxWidth: 520 }}>
           <label style={{ ...lbl, flex: '1 1 180px' }}>
-            Nº de proyecto en Avant2 (vacío = el enlazado o, si no hay, se busca por el DNI del tomador)
+            Nº de proyecto Avant2 (opcional)
             <input
               value={proyecto}
               onChange={(e) => setProyecto(e.target.value.replace(/\D/g, ''))}
@@ -221,7 +221,7 @@ export default function Documentos({
       )}
 
       <details>
-        <summary style={{ cursor: 'pointer', fontSize: 13 }}>📎 Subir o pedir un documento</summary>
+        <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44 }}>📎 Subir o pedir un documento</summary>
         <div style={{ display: 'grid', gap: 8, marginTop: 8, maxWidth: 520 }}>
           <label style={lbl}>
             Tipo

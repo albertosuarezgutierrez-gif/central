@@ -50,8 +50,8 @@ export default function DatosCompania({ clienteId, datos }: { clienteId: string;
   return (
     <div style={{ display: 'grid', gap: 8, fontSize: 13, border: '1px solid var(--border)', borderRadius: 10, padding: 10 }}>
       <b>{datos.nuevos.length > 0 ? 'La compañía tiene otros datos de este cliente' : 'No se han podido leer los datos que tiene la compañía'}</b>
-      <span style={{ color: 'var(--muted)', fontSize: 12 }}>
-        Mandan los nuestros: CIMA no los cambia. Si alguno es bueno, añádelo a sus contactos.
+      <span style={{ color: 'var(--muted)', fontSize: 12 }} title="Mandan los nuestros: CIMA no los cambia.">
+        Si alguno es bueno, añádelo a sus contactos.
         {datos.incompleta && ' Hay contactos cifrados que no se han podido leer: puede que alguno ya lo tenga.'}
       </span>
       {datos.nuevos.map(d => {
