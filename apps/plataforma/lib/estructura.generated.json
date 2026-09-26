@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-26T13:45:11Z",
+  "generadoEn": "2026-09-26T16:30:12Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 123
+        "evidencias": 125
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2306,7 +2306,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 26
+        "evidencias": 27
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4038,6 +4038,7 @@
       "/api/operador/documentos",
       "/api/operador/documentos/[id]",
       "/api/operador/duplicados",
+      "/api/operador/emision/aviso",
       "/api/operador/eventos",
       "/api/operador/eventos/detectar",
       "/api/operador/export-rgpd",
@@ -4995,6 +4996,7 @@
       "/api/correduria/documentos",
       "/api/correduria/documentos/[id]",
       "/api/correduria/duplicados",
+      "/api/correduria/emision-aviso",
       "/api/correduria/export-rgpd",
       "/api/correduria/formacion",
       "/api/correduria/formacion/baja",
@@ -6559,7 +6561,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1487,
+    "apis": 1489,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

@@ -11,9 +11,11 @@
 //
 // Interruptor: `ASEGURA_CORREO_EMISION=0` apaga el correo (el expediente se sigue abriendo).
 import { prismaAsegura } from './asegura-db'
-import { cuerpoCorreoEmision } from './correo-emision.ts'
+import { cuerpoCorreoEmision, type ResumenSeguro } from './correo-emision.ts'
+import { eur } from './dinero'
 import { enlacePortal } from './correo-invitacion-portal.ts'
 import { estadoPortalDeFicha, nombreDe } from './invitacion-portal'
+import { pdfArchivado, pdfDePoliza, TIPO_CORREO_EMISION_CON_POLIZA } from './poliza-pdf'
 import { abrirAnulacionesPorSustitucion } from './sustituciones-auto'
 
 export type ResultadoTrasEmision = {
@@ -44,12 +46,19 @@ export function correoEmisionActivo(v: string | undefined = process.env.ASEGURA_
 
 export async function trasEmision(
   correduriaId: string,
-  e: { clienteId: string; polizaOrigenId: string | null },
+  e: { clienteId: string; polizaId: string; polizaOrigenId: string | null },
   /**
    * Modo PRUEBA: el correo va a esta dirección (la de Alberto) y no al cliente, y no queda en la ficha
    * del cliente como enviado. El expediente de baja sí se abre: es real y no escribe a nadie.
    */
-  opciones: { prueba?: string } = {},
+  opciones: {
+    prueba?: string
+    /**
+     * `true` = si no está archivado, intentar traer el PDF de Codeoscopic ahora (el botón «Enviar al
+     * cliente», sin prisa). Al emitir NO: `emitir` ya lo acaba de intentar y la respuesta tiene tope.
+     */
+    traerPdf?: boolean
+  } = {},
 ): Promise<ResultadoTrasEmision> {
   const db = prismaAsegura()
   let baja: ResultadoTrasEmision['baja'] = null
@@ -87,12 +96,24 @@ export async function trasEmision(
       destino = f.emailInvitacion
     }
     const nombre = await nombreDe(correduriaId, e.clienteId)
-    const cuerpo = cuerpoCorreoEmision({ nombre, enlace, conBaja: baja === 'abierta' })
+    // La póliza original de la compañía va ADJUNTA si ya la tenemos o se puede traer ahora (gratis). Si
+    // aún no la ha generado, el correo lo dice y el cron `polizas-pdf` la manda cuando llegue.
+    const pdf = await (opciones.traerPdf ? pdfDePoliza : pdfArchivado)(correduriaId, e.polizaId).catch((err) => {
+      console.error('[tras-emision] no se pudo leer el PDF de la póliza (sale sin adjunto):', err instanceof Error ? err.message : err)
+      return null
+    })
+    const resumen = await resumenSeguro(correduriaId, e.polizaId).catch((err) => {
+      console.error('[tras-emision] no se pudo leer el resumen de la póliza (sale sin él):', err instanceof Error ? err.message : err)
+      return null
+    })
+    const cuerpo = cuerpoCorreoEmision({ nombre, enlace, conBaja: baja === 'abierta', conPoliza: pdf !== null, resumen })
     if (opciones.prueba) cuerpo.asunto = `[PRUEBA] ${cuerpo.asunto}`
     // Import dinámico: el cepo del cuerpo corre con `node --test`, que no resuelve Prisma.
     const { enviarCorreoSeguido } = await import('./correo-envio')
     const r = await enviarCorreoSeguido({
-      correduriaId, clienteId: opciones.prueba ? null : e.clienteId, tipo: opciones.prueba ? 'emision_prueba' : 'emision', to: destino, ...cuerpo,
+      correduriaId, clienteId: opciones.prueba ? null : e.clienteId, polizaId: opciones.prueba ? null : e.polizaId,
+      tipo: opciones.prueba ? 'emision_prueba' : pdf ? TIPO_CORREO_EMISION_CON_POLIZA : 'emision', to: destino, ...cuerpo,
+      ...(pdf ? { adjuntos: [{ nombre: pdf.nombre, contenido: pdf.contenido, tipo: 'application/pdf' }] } : {}),
     })
     if (r.resultado === 'rechazado' && CORTE.test(r.motivo ?? '')) return { baja, correo: 'incierto' }
     return { baja, correo: r.resultado }
@@ -103,13 +124,37 @@ export async function trasEmision(
 }
 
 /**
+ * Compañía, cobertura, fecha de efecto y prima de la póliza nueva, para el correo. La cobertura sale de
+ * la modalidad que se tarificó en Codeoscopic (`quote_data`); si la póliza no viene de ahí, `null`.
+ */
+export async function resumenSeguro(correduriaId: string, polizaId: string): Promise<ResumenSeguro | null> {
+  const [f] = await prismaAsegura().$queryRaw<
+    { aseguradora: string | null; fechaInicio: Date | null; prima: number | null; cobertura: string | null }[]
+  >`
+    select p.aseguradora, p.fecha_inicio as "fechaInicio", coalesce(p.prima_bruta, p.prima_anual)::float8 as prima,
+      (select coalesce(q #>> '{quote,product,modality,category,name}', q #>> '{quote,product,modality,name}')
+         from codeoscopic_projects cp, jsonb_array_elements(cp.quote_data) q
+        where cp.poliza_id = p.id and cp.correduria_id = p.correduria_id
+          and q #>> '{quote,id}' = cp.accepted_offer_id_codeoscopic
+        limit 1) as cobertura
+    from polizas p where p.id = ${polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid`
+  if (!f?.aseguradora) return null
+  return {
+    compania: f.aseguradora,
+    cobertura: f.cobertura,
+    fechaEfecto: f.fechaInicio ? f.fechaInicio.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' }) : null,
+    prima: f.prima !== null ? eur(f.prima) : null,
+  }
+}
+
+/**
  * `trasEmision` con TOPE de tiempo, para las rutas que ya han emitido y tienen que contestar: una
  * emisión hecha no puede acabar en «no sé si se ha emitido» porque el correo tardó. Pasado el tope se
  * dice lo que es — no se sabe — y el trabajo sigue en segundo plano hasta terminar.
  */
 export async function trasEmisionConTope(
   correduriaId: string,
-  e: { clienteId: string; polizaOrigenId: string | null },
+  e: { clienteId: string; polizaId: string; polizaOrigenId: string | null },
   ms = 12_000,
 ): Promise<ResultadoTrasEmision | { baja: null; correo: null; enCurso: true }> {
   let t: ReturnType<typeof setTimeout> | undefined

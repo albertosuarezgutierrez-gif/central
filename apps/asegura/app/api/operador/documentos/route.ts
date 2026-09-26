@@ -57,11 +57,17 @@ export const POST = auditado(async (req: Request) => {
       const form = await req.formData()
       const fichero = form.get('fichero')
       if (!(fichero instanceof File)) return NextResponse.json({ error: 'falta el fichero' }, { status: 400 })
+      const tipo = tipoDocumento(texto(form.get('tipo')))
+      const polizaId = texto(form.get('polizaId'))
       const r = await guardarDocumento(correduria.id, {
         clienteId: texto(form.get('clienteId')),
-        polizaId: texto(form.get('polizaId')),
+        polizaId,
         siniestroId: texto(form.get('siniestroId')),
-        tipo: tipoDocumento(texto(form.get('tipo'))),
+        tipo,
+        // La PÓLIZA original subida a una póliza la ve el cliente en su portal («Documentos de tu
+        // póliza», 26/09/2026): es la documentación de la compañía que Alberto quiere que consulten.
+        // Cualquier otro tipo (DNI, carné, parte…) sigue siendo solo del corredor.
+        visiblePorCliente: tipo === 'poliza' && polizaId !== null,
         notas: texto(form.get('notas')),
         subidoPor: 'corredor',
         nombre: fichero.name,

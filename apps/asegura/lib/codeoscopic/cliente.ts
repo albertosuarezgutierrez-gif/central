@@ -252,7 +252,16 @@ export async function descargarFicheroVendor(
   url: string,
 ): Promise<{ contentType: string; bytes: Buffer }> {
   const enviar = async (token: string) =>
-    fetchConTimeout(url, { method: 'GET', headers: { authorization: `Bearer ${token}` } }, config.timeoutGenericoMs)
+    fetchConTimeout(
+      url,
+      {
+        method: 'GET',
+        // 26/09/2026: sin `x-client-app`/`x-user-email` el GET del fichero devolvía 400 en producción
+        // (póliza 61089620 de Allianz), el mismo síntoma que el resto de la API sin ellas.
+        headers: { authorization: `Bearer ${token}`, 'x-client-app': config.clientApp, 'x-user-email': config.userEmail },
+      },
+      config.timeoutGenericoMs,
+    )
 
   let res = await enviar(await obtenerToken(config))
   if (res.status === 401) {
@@ -263,7 +272,8 @@ export async function descargarFicheroVendor(
     throw new ErrorCodeoscopic('auth', 'el vendor rechazó la autenticación al descargar el fichero', res.status)
   }
   if (!res.ok) {
-    throw new ErrorCodeoscopic('servidor', `la descarga del fichero devolvió ${res.status}`, res.status)
+    const texto = await res.text().catch(() => '')
+    throw new ErrorCodeoscopic('servidor', `la descarga del fichero devolvió ${res.status}${texto ? `: ${recortar(texto)}` : ''}`, res.status)
   }
   const contentType = res.headers.get('content-type') ?? 'application/octet-stream'
   const bytes = Buffer.from(await res.arrayBuffer())

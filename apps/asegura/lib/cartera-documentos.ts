@@ -175,6 +175,8 @@ export async function guardarDocumento(
     contenido: Buffer
     notas?: string | null
     subidoPor?: 'corredor' | 'cliente' | 'agente'
+    /** El cliente lo ve en su portal. Solo para la documentación ORIGINAL de la compañía (la póliza). */
+    visiblePorCliente?: boolean
   },
 ): Promise<Guardado> {
   const reparo = revisarDocumento({ type: entrada.mime, size: entrada.contenido.length, name: entrada.nombre })
@@ -212,6 +214,7 @@ export async function guardarDocumento(
         contenido: entrada.contenido,
         notas: entrada.notas?.trim() || null,
         subidoPor: entrada.subidoPor ?? 'corredor',
+        visiblePorCliente: entrada.visiblePorCliente === true,
       },
       select: SELECT_RESUMEN,
     })

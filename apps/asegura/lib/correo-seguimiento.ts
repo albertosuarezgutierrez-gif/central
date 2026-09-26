@@ -27,6 +27,7 @@ export async function registrarEventoCorreo(svixId: string, e: EventoCorreo): Pr
 export type EnvioARegistrar = {
   correduriaId: string
   clienteId: string | null
+  polizaId?: string | null
   tipo: string
   asunto: string
   destino: string
@@ -43,8 +44,8 @@ export type EnvioARegistrar = {
 export async function registrarEnvioCorreo(e: EnvioARegistrar): Promise<void> {
   try {
     await prismaAsegura().$executeRaw(Prisma.sql`
-      insert into correo_envio (correduria_id, cliente_id, tipo, asunto, destino_cifrado, resend_id, proveedor, estado, error)
-      values (${e.correduriaId}::uuid, ${e.clienteId}::uuid, ${e.tipo}, ${e.asunto.slice(0, 300)}, ${encryptField(e.destino)},
+      insert into correo_envio (correduria_id, cliente_id, poliza_id, tipo, asunto, destino_cifrado, resend_id, proveedor, estado, error)
+      values (${e.correduriaId}::uuid, ${e.clienteId}::uuid, ${e.polizaId ?? null}::uuid, ${e.tipo}, ${e.asunto.slice(0, 300)}, ${encryptField(e.destino)},
               ${e.resendId}, ${e.proveedor}, ${e.estado}, ${e.error?.slice(0, 500) ?? null})
       on conflict (resend_id) do nothing`)
   } catch (err) {

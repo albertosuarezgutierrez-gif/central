@@ -15,6 +15,8 @@ export type CorreoCliente = {
   correduriaId: string
   /** `null` solo si el destinatario aún no es una ficha (p. ej. un aviso de la web sin cliente). */
   clienteId: string | null
+  /** La póliza de la que trata, si es de una: deduplica los envíos POR PÓLIZA (`poliza-pdf.ts`). */
+  polizaId?: string | null
   /** Qué correo es (`felicitacion`, `invitacion_portal`…): etiqueta en Resend y en la ficha. */
   tipo: string
   to: string
@@ -46,7 +48,7 @@ function contenidoBase64(a: AdjuntoCorreo): string {
 export async function enviarCorreoSeguido(c: CorreoCliente, fetchImpl: typeof fetch = fetch): Promise<EnvioDetallado> {
   const from = remitenteCorreo(process.env.ASEGURA_MAIL_FROM)
   const replyTo = process.env.ASEGURA_MAIL_REPLY_TO?.trim() || undefined
-  const base = { correduriaId: c.correduriaId, clienteId: c.clienteId, tipo: c.tipo, asunto: c.asunto, destino: c.to }
+  const base = { correduriaId: c.correduriaId, clienteId: c.clienteId, polizaId: c.polizaId ?? null, tipo: c.tipo, asunto: c.asunto, destino: c.to }
   const apiKey = process.env.RESEND_API_KEY?.trim()
 
   if (apiKey) {

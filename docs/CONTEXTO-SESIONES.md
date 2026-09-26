@@ -720,6 +720,21 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Aceptar sigue SOLO en la pantalla (no en la campana), decisión confirmada por Alberto.
 - Recordatorio: «Administración» NO abre la empresa entera; solo «Dueño» (`dueno-empresa.ts`).
 
+## (26/09/2026) Pablo Guzmán: correo de emisión ENVIADO con PDF (verificado en BD)
+- 18:29 UTC `emision_con_poliza` a Pablo (Allianz 61089620) con `Póliza.pdf` (402 KB, archivado y visible en su portal).
+  El 400 de la descarga era la falta de `x-client-app`/`x-user-email` (PR #3685). Correo con resumen compañía/cobertura/efecto/prima.
+- Baja de la Mapfre en `solicitada`: al firmar Pablo sale sola a CCORREDOR@mapfre.com. Pendiente: verificar firma→comunicada.
+
+## (26/09/2026) Correduría: la póliza original adjunta al correo de emisión + «Documentos de tu póliza» en el portal
+- El correo de emisión prometía el PDF y no lo llevaba. Ahora va adjunto si está (o se trae de Codeoscopic al pulsar
+  «Enviar al cliente»); si no, el cron `asegura /api/cron/polizas-pdf` (:20 cada hora) lo manda cuando llegue.
+- Dedupe POR PÓLIZA: columna nueva `seguros.correo_envio.poliza_id` (aplicada en prod). Revisión de architect: 2
+  bloqueantes (dedupe por cliente; docs viejos invisibles) corregidos.
+- Portal: sección «Documentos de tu póliza» + descarga `/api/polizas/[id]/documentos/[docId]`, solo pólizas propias
+  (cepo nuevo en `regression-portal-aislamiento`). Pendiente: aviso Telegram de pólizas que caducan sin PDF.
+- Subir en la ficha de una póliza un documento tipo «Póliza» lo hace visible al cliente en su portal (y la ficha
+  ya propone «Póliza» primero). Así se cargan las emitidas que están en Drive `ASEGURA/POLIZAS EMITIDAS` (PR #3683 → sigue).
+
 ## (26/09/2026) Correduría: tras emitir, correo al cliente + baja firmada que sale SOLA a la compañía
 Primera emisión por Telegram hecha (Pablo Guzmán, Allianz 61089620). Alberto pidió: correo moderno al cliente + firma
 de la baja de la anterior + envío automático a la compañía. **Casi todo existía** (expediente `anulacion`, firma en portal,
