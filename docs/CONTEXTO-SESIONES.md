@@ -699,6 +699,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Correduría: «The column `old` does not exist» al corregir el correo de una ficha
+El trigger `seguros.portal_retirar_vinculos_email_de_ficha` (PR #3600) leía `OLD.cliente_id` también sobre
+`clientes` (PL/pgSQL resuelve los campos aunque el `AND` ya sea falso) → todo cambio de correo principal
+fallaba con 42703. Reescrito por ramas de tabla y APLICADO en central (`seguros_portal_vinculo_retira_fix_clientes`);
+las 4 rutas verificadas en bloque revertido (mismo hash conserva vínculo, hash cambiado lo retira).
+Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes` con el viejo, y reintentar no re-espejaba
+(«valor no cambiado»). Re-espejada a mano la ficha de Pilar Franco Ruz; `cambiarContacto` ahora re-espeja siempre que se guarda el principal.
+
 
 ## (26/09/2026) Fila 13 CONSTRUIDA: importar un proyecto de Avant2 y emitirlo desde la intranet (PR #3657)
 - `GET/POST /api/operador/codeoscopic/importar` (asegura) + `retarificar?avant2=1` → `ImportarAvant2` → panel `Emision` con `ofertaImportada`. Sin ReRate: solo precios con `SubmitPolicyApplication` y en plazo.
