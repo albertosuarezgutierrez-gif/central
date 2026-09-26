@@ -171,27 +171,27 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 137 | 18.437 | 12.266.465 | 0 | 0 |
-| `otro` | 133 | 4.646 | 15.879.961 | 7.815.532 | 0 |
-| `mcp:github` | 122 | 3.905 | 3.501.319 | 41.720.652 | 61 |
-| `lectura-directa` | 126 | 3.749 | 7.705.737 | 0 | 0 |
-| `escritura` | 106 | 2.441 | 39.691.164 | 0 | 0 |
-| `sql` | 91 | 1.910 | 877.142 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 73 | 880 | 211.672 | 3.171.734 | 10 |
+| `bash` | 137 | 18.567 | 12.370.600 | 0 | 0 |
+| `otro` | 133 | 4.669 | 15.953.152 | 7.815.532 | 0 |
+| `mcp:github` | 122 | 3.919 | 3.507.037 | 42.089.674 | 62 |
+| `lectura-directa` | 126 | 3.755 | 7.727.784 | 0 | 0 |
+| `escritura` | 106 | 2.447 | 39.708.653 | 0 | 0 |
+| `sql` | 91 | 1.917 | 878.589 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 73 | 882 | 212.110 | 3.171.734 | 10 |
 | `mcp:Vercel` | 31 | 377 | 596.039 | 198.719 | 7 |
 | `mcp:Booking-com` | 12 | 345 | 1.430.828 | 0 | 0 |
 | `mcp:Gmail` | 18 | 265 | 417.825 | 0 | 2 |
-| `mcp:Supabase` | 53 | 173 | 18.944 | 0 | 1 |
+| `mcp:Supabase` | 53 | 174 | 19.042 | 0 | 1 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
 | `agente:general-purpose` | 22 | 76 | 50.828 | 869.238 | 0 |
 | `mcp:Google-Drive` | 9 | 66 | 65.845 | 0 | 2 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
-| `agente:agente-architect` | 14 | 50 | 42.844 | 1.380.826 | 0 |
+| `agente:agente-architect` | 15 | 51 | 43.597 | 1.425.261 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `mcp:Google_Drive` | 7 | 45 | 57.634 | 0 | 11 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
+| `agente:Explore` | 15 | 41 | 20.074 | 911.302 | 0 |
 | `mcp:Resend` | 4 | 41 | 11.662 | 0 | 0 |
-| `agente:Explore` | 15 | 40 | 19.426 | 851.108 | 0 |
 | `agente:agente-mecanico` | 11 | 30 | 30.357 | 490.240 | 0 |
 | `mcp:OpenSEO` | 1 | 30 | 20.595 | 0 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |

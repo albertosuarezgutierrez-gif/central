@@ -195,6 +195,12 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
           </p>
           <AnulacionPoliza polizaId={p.id} vencimiento={p.fechaVencimiento ? p.fechaVencimiento.slice(0, 10) : null} />
           <PresupuestosPoliza polizaId={p.id} ramo={p.tipo} />
+          {!cancelada && ['auto', 'moto'].includes(String(p.tipo).toLowerCase()) && (
+            <p style={{ margin: '12px 0' }}>
+              <Link href={`${urlRetarificar(p.id)}?avant2=1`}>Traer un proyecto hecho en Avant2</Link>
+              <span style={muted}> · para emitir desde aquí lo que ya tarificaste en la web</span>
+            </p>
+          )}
           <CartaMediadorPoliza polizaId={p.id} />
         </Tarjeta>
       ),
