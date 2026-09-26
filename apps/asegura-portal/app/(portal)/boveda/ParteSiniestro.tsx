@@ -13,6 +13,8 @@ import {
   canalesConCompaniaPrimero,
   canalesDeLasPolizas,
   componerDescripcion,
+  ETIQUETA_TIPO_SINIESTRO,
+  opcionesTipoSiniestro,
   TEXTO_SIN_CANAL,
   textoSoloRamos,
   whatsappParaRamo,
@@ -196,6 +198,8 @@ type Formulario = {
   poliza: string
   hayHeridos: Triestado
   hayTerceros: Triestado
+  /** `''` = no lo ha marcado (viaja como `null`). Opcional: ver `tipo-siniestro.ts`. */
+  tipoSiniestro: string
   /**
    * Solo se enseñan y solo viajan si el ramo es auto o moto y `hayTerceros === 'si'`
    * (ver `esVehiculoAMotor`/`mostrarVehiculo` en el componente). Van SIEMPRE en el
@@ -224,6 +228,7 @@ const VACIO: Formulario = {
   poliza: '',
   hayHeridos: 'nolose',
   hayTerceros: 'nolose',
+  tipoSiniestro: '',
   vehiculo: VEHICULO_VACIO,
 }
 
@@ -798,7 +803,10 @@ export function ParteSiniestro({
     setForm((f) => {
       const matricula = polizas.find((p) => p.valor === valor)?.matriculaPropia
       const vehiculo = matricula && f.vehiculo.matriculaPropia === '' ? { ...f.vehiculo, matriculaPropia: matricula } : f.vehiculo
-      return { ...f, poliza: valor, vehiculo }
+      // Un tipo que no existe para el ramo nuevo (p. ej. «Lunas» al pasar a hogar) se suelta.
+      const ramo = polizas.find((p) => p.valor === valor)?.ramo
+      const tipoSiniestro = (opcionesTipoSiniestro(ramo) as readonly string[]).includes(f.tipoSiniestro) ? f.tipoSiniestro : ''
+      return { ...f, poliza: valor, vehiculo, tipoSiniestro }
     })
     setErrores((e) => ({ ...e, poliza: undefined }))
   }
@@ -1096,6 +1104,7 @@ export function ParteSiniestro({
           // 🚨 `null` cuando no lo ha contestado. No se colapsa a `false`.
           hayHeridos: aTriestado(form.hayHeridos),
           hayTerceros: aTriestado(form.hayTerceros),
+          tipoSiniestro: form.tipoSiniestro || null,
         }),
       })
 
@@ -1369,6 +1378,14 @@ export function ParteSiniestro({
           )}
 
           <AyudaUrgente poliza={polizaSeleccionada} corredor={corredor} />
+
+          <TipoDeSiniestro
+            uid={uid}
+            opciones={opcionesTipoSiniestro(polizaSeleccionada?.ramo)}
+            valor={form.tipoSiniestro}
+            deshabilitado={enviando}
+            onCambio={(v) => setForm((f) => ({ ...f, tipoSiniestro: v }))}
+          />
 
           {/* El campo principal y el primero: es lo único que no podemos poner
               nosotros, así que se lleva el sitio. */}
@@ -1860,6 +1877,54 @@ function AyudaUrgente({
         </p>
       )}
     </div>
+  )
+}
+
+/**
+ * Qué tipo de siniestro es, en botones, SOLO si el ramo tiene catálogo. Opcional:
+ * se puede no marcar nada, y volver a tocar el marcado lo desmarca. Es una
+ * clasificación para el corredor; lo que cuenta sigue siendo «Qué ha pasado».
+ */
+function TipoDeSiniestro({
+  uid,
+  opciones,
+  valor,
+  deshabilitado,
+  onCambio,
+}: {
+  uid: string
+  opciones: readonly (keyof typeof ETIQUETA_TIPO_SINIESTRO)[]
+  valor: string
+  deshabilitado: boolean
+  onCambio: (v: string) => void
+}) {
+  if (opciones.length === 0) return null
+  return (
+    <fieldset className="editor-campo grupo" aria-describedby={`${uid}-tipo-ayuda`}>
+      <legend>¿Qué tipo de siniestro es? <span className="opcional">(si lo tienes claro)</span></legend>
+      <p className="editor-ayuda" id={`${uid}-tipo-ayuda`}>
+        Nos ayuda a moverlo más rápido. Si no encaja ninguno, déjalo sin marcar.
+      </p>
+      <div className="opciones">
+        {opciones.map((t) => (
+          <button
+            key={t}
+            type="button"
+            className="opcion"
+            aria-pressed={valor === t}
+            disabled={deshabilitado}
+            onClick={() => onCambio(valor === t ? '' : t)}
+          >
+            {ETIQUETA_TIPO_SINIESTRO[t]}
+          </button>
+        ))}
+      </div>
+      {valor === 'averia' && (
+        <p className="editor-ayuda" style={{ marginTop: 6 }}>
+          Si necesitas <strong>grúa</strong>, llama antes a la asistencia de tu compañía (arriba): el parte no la manda.
+        </p>
+      )}
+    </fieldset>
   )
 }
 

@@ -191,3 +191,14 @@ test('🚨 el borrador es POR identidad y se borra al enviar y al cancelar', () 
   const borrados = PARTE.split('borrador.borrar(claveBorr)').length - 1
   assert.ok(borrados >= 3, `se borra al enviar, al cancelar y al descartar (hay ${borrados})`)
 })
+
+test('🚨 el tipo de siniestro viaja de punta a punta y `null` no se pinta como «otro»', () => {
+  assert.match(PARTE, /tipoSiniestro: form\.tipoSiniestro \|\| null/, 'el portal manda null si no se marcó')
+  const crear = sinComentarios('apps/asegura-portal/lib/partes-siniestro.ts')
+  assert.match(crear, /tipoSiniestro: valor\.tipoSiniestro/, 'se guarda al crear el parte')
+  const puerto = sinComentarios('apps/asegura/lib/partes-portal.ts')
+  assert.match(puerto, /tipoSiniestro: true/, 'el corredor lo lee')
+  assert.match(puerto, /tipoSiniestroTexto: esTipoSiniestro\(p\.tipoSiniestro\)/, 'y lo sirve con su etiqueta')
+  const plat = sinComentarios('apps/plataforma/app/(usuario)/correduria/PartesPortal.tsx')
+  assert.match(plat, /p\.tipoSiniestro !== null && <Badge/, 'la bandeja solo lo pinta si existe')
+})

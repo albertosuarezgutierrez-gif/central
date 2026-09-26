@@ -854,6 +854,8 @@ model PortalParteSiniestro {
   /// un parte con heridos se tramita en horas y otro espera al lunes.
   hayHeridos          Boolean?          @map("hay_heridos")
   hayTerceros         Boolean?          @map("hay_terceros")
+  /// Opcional; lista cerrada = `TIPOS_SINIESTRO` de `@central/module-seguros-portal`. `null` = no lo marcó.
+  tipoSiniestro       String?           @map("tipo_siniestro")
   estado              PortalParteEstado @default(enviado)
   /// El siniestro REAL, cuando exista. `null` = la compañía todavía no lo sabe.
   siniestroId         String?           @map("siniestro_id") @db.Uuid

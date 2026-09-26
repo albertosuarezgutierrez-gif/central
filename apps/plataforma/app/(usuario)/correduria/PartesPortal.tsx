@@ -365,6 +365,8 @@ function Parte({
           si={{ texto: 'Con terceros implicados', tono: 'aviso' }}
           no="Sin terceros"
         />
+        {/* Solo si el cliente lo marcó: sin tipo no se pinta nada, no «otro». */}
+        {p.tipoSiniestro !== null && <Badge title="Lo marcó el cliente al dar el parte.">{p.tipoSiniestro}</Badge>}
         {/* La ÚNICA fuente de «la compañía ya lo sabe» es este campo. */}
         {p.comunicado ? (
           <Badge tono="positivo" title="Existe siniestro abierto en la entidad.">La compañía ya lo sabe</Badge>

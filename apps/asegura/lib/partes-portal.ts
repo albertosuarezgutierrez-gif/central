@@ -38,8 +38,10 @@
  */
 import {
   PARTE_ESTADOS,
+  ETIQUETA_TIPO_SINIESTRO,
   comunicadoACompania,
   describirPolizaDesligada,
+  esTipoSiniestro,
   plazoComunicacion,
   type ParteEstado,
   type PlazoComunicacion,
@@ -94,6 +96,10 @@ export type PartePortal = {
   lugar: string | null
   hayHeridos: boolean | null
   hayTerceros: boolean | null
+  /** Lo que marcó el cliente (`TIPOS_SINIESTRO`). `null` = no marcó nada, NO «otro». */
+  tipoSiniestro: string | null
+  /** Su etiqueta legible, para que quien pinta no necesite el catálogo. `null` con `tipoSiniestro` null. */
+  tipoSiniestroTexto: string | null
   estado: ParteEstado
   /** 🚨 SIEMPRE de `comunicadoACompania(estado)`. Ver la cabecera. */
   comunicado: boolean
@@ -203,6 +209,7 @@ type FilaParte = {
   lugar: string | null
   hayHeridos: boolean | null
   hayTerceros: boolean | null
+  tipoSiniestro: string | null
   estado: ParteEstado
   siniestroId: string | null
   polizaDesligadaAt: Date | null
@@ -223,6 +230,7 @@ const SELECT_PARTE = {
   lugar: true,
   hayHeridos: true,
   hayTerceros: true,
+  tipoSiniestro: true,
   estado: true,
   siniestroId: true,
   polizaDesligadaAt: true,
@@ -334,6 +342,8 @@ function aParte(
     // Los dos van tal cual: `null` es «no lo ha contestado» y viaja como `null`.
     hayHeridos: p.hayHeridos,
     hayTerceros: p.hayTerceros,
+    tipoSiniestro: esTipoSiniestro(p.tipoSiniestro) ? p.tipoSiniestro : null,
+    tipoSiniestroTexto: esTipoSiniestro(p.tipoSiniestro) ? ETIQUETA_TIPO_SINIESTRO[p.tipoSiniestro] : null,
     estado: p.estado,
     comunicado: comunicadoACompania(p.estado),
     siniestroId: p.siniestroId,

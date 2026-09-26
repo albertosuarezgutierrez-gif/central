@@ -714,7 +714,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Auto con terceros: hueco del parte amistoso → `documentos.tipo='parte_siniestro'` + nota.
 - Borrador en `localStorage` por identidad, 72 h, sin ficheros (`lib/parte-borrador.ts`).
 - Aviso de campana `parte_actualizado` (7 días tras abrir/descartar), sin migración (`parte-aviso.ts`).
-- Pendiente: tipo de siniestro por ramo (necesita columna nueva en `portal_parte_siniestro`).
+- Tipo de siniestro por ramo (botones opcionales; `null` ≠ «otro»): columna `seguros.portal_parte_siniestro.tipo_siniestro`
+  APLICADA en prod el 26/09 (CHECK = `TIPOS_SINIESTRO`); el corredor la ve como badge en `/correduria`.
 
 ## (26/09/2026) Portal del cliente (asegura-portal) · barra inferior a lo Smoobu
 - Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero

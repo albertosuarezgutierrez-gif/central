@@ -3974,3 +3974,6 @@ h1 em {
   border-radius: 12px;
 }
 .parte-borrador p { margin: 0 0 8px; overflow-wrap: anywhere; }
+/* Tipo de siniestro: botones con estado pulsado (no radios: se puede desmarcar). */
+button.opcion { font: inherit; font-size: 15px; color: var(--text); text-align: left; }
+button.opcion[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-light); font-weight: 600; }
