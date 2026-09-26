@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-26T08:04:39Z",
+  "generadoEn": "2026-09-26T09:44:09Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -390,7 +390,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 37
+        "evidencias": 38
       },
       "rrhh": {
         "estado": "usado",
@@ -984,7 +984,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 12
+        "evidencias": 13
       },
       "rrhh": {
         "estado": "usado",
@@ -5742,6 +5742,8 @@
       "contable_feedback",
       "contable_log",
       "contable_memoria",
+      "correduria_asistente_regla",
+      "correduria_asistente_turno",
       "correduria_avisos_renovacion",
       "correduria_dni_otp",
       "correduria_reglas",

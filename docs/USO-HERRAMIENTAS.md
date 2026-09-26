@@ -167,24 +167,24 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 140 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 141 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 135 | 18.318 | 12.187.042 | 0 | 0 |
-| `otro` | 131 | 4.615 | 15.806.208 | 7.787.878 | 0 |
-| `mcp:github` | 120 | 3.881 | 3.488.306 | 41.327.915 | 61 |
-| `lectura-directa` | 124 | 3.714 | 7.643.075 | 0 | 0 |
-| `escritura` | 103 | 2.434 | 39.444.139 | 0 | 0 |
-| `sql` | 90 | 1.902 | 873.264 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 73 | 878 | 211.230 | 3.171.734 | 10 |
+| `bash` | 136 | 18.398 | 12.257.236 | 0 | 0 |
+| `otro` | 132 | 4.640 | 15.879.580 | 7.815.532 | 0 |
+| `mcp:github` | 121 | 3.898 | 3.491.456 | 41.512.095 | 61 |
+| `lectura-directa` | 125 | 3.741 | 7.701.966 | 0 | 0 |
+| `escritura` | 105 | 2.439 | 39.485.360 | 0 | 0 |
+| `sql` | 91 | 1.910 | 877.142 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 73 | 880 | 211.672 | 3.171.734 | 10 |
 | `mcp:Vercel` | 31 | 377 | 596.039 | 198.719 | 7 |
 | `mcp:Booking-com` | 11 | 321 | 1.324.311 | 0 | 0 |
-| `mcp:Gmail` | 17 | 246 | 405.150 | 0 | 2 |
-| `mcp:Supabase` | 53 | 172 | 18.940 | 0 | 1 |
+| `mcp:Gmail` | 18 | 265 | 417.825 | 0 | 2 |
+| `mcp:Supabase` | 53 | 173 | 18.944 | 0 | 1 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
 | `agente:general-purpose` | 22 | 76 | 50.828 | 869.238 | 0 |
-| `mcp:Google-Drive` | 8 | 62 | 63.642 | 0 | 2 |
+| `mcp:Google-Drive` | 9 | 66 | 65.845 | 0 | 2 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `agente:agente-architect` | 14 | 50 | 42.844 | 1.380.826 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
@@ -198,7 +198,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
-| `agente:rastreador-codigo` | 6 | 10 | 3.669 | 16.437 | 0 |
+| `agente:rastreador-codigo` | 7 | 11 | 4.036 | 16.437 | 0 |
 | `agente:general` | 6 | 8 | 5.205 | 231.483 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:Supabase_asegura` | 5 | 5 | 1.947 | 0 | 0 |
