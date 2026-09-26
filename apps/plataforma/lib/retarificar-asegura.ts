@@ -1047,8 +1047,9 @@ function leerCuenta(v: unknown): CuentaConocida | null {
   }
 }
 
-/** Hasta 60 s: es una llamada de red al vendor, sin duración documentada. */
-export const TIMEOUT_OFERTA_MS = 60_000
+/** El ReRate re-tarifica con la compañía: asegura le da 150 s (fila 5). 170 cabe en el
+ *  `maxDuration` de 180 de la página que lo invoca y deja que corte antes asegura. */
+export const TIMEOUT_OFERTA_MS = 170_000
 
 function leerOferta(
   v: unknown,
@@ -1332,8 +1333,9 @@ export function leerSolicitudes(v: unknown): SolicitudEmisionVista[] {
   return out
 }
 
-/** Hasta 90 s: es el Submit, la llamada más pesada del flujo y sin duración documentada. */
-export const TIMEOUT_EMITIR_MS = 90_000
+/** El Submit: asegura le da 150 s (fila 5). Si corta este reloj, el resultado se
+ *  presenta como «puede haberse emitido», nunca como «no se ha emitido». */
+export const TIMEOUT_EMITIR_MS = 170_000
 
 /** PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable. */
 export function interpretarEmitir(status: number, json: unknown): RespuestaEmitir {
