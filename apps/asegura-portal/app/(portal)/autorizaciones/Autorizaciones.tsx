@@ -703,6 +703,14 @@ export function Autorizaciones({ aceptarId = null }: { aceptarId?: string | null
     void cargarInvitaciones()
   }, [cargarInvitaciones])
 
+  // El orden se decide con la PRIMERA carga y no se mueve: si se recalculara,
+  // al aceptar la tarjeta saltaría de sitio justo bajo el dedo.
+  const [recibidasPrimero, setRecibidasPrimero] = useState<boolean | null>(null)
+  useEffect(() => {
+    if (recibidasPrimero !== null || datos === null) return
+    setRecibidasPrimero(datos.recibidas.some((a) => a.estado === 'pendiente'))
+  }, [recibidasPrimero, datos])
+
   // Desde la campana (`?aceptar=<id>`): en cuanto la lista está, se baja a ESA
   // tarjeta. Una sola vez: tras aceptar se recarga y no hay que volver a saltar.
   const [saltado, setSaltado] = useState(false)
@@ -738,23 +746,20 @@ export function Autorizaciones({ aceptarId = null }: { aceptarId?: string | null
     )
   }
 
-  const hayPendienteRecibida = datos.recibidas.some((a) => a.estado === 'pendiente')
+  // Con `key` fijo React MUEVE las secciones en vez de remontarlas (sin él se
+  // perdería lo que hubiera a medias en «Has dado acceso a»).
+  const recibidas = (
+    <Recibidas key="recibidas" uid={uid} lista={datos.recibidas} onCambio={cargar} destacadaId={aceptarId} />
+  )
+  const otorgadas = <Otorgadas key="otorgadas" uid={uid} lista={datos.otorgadas} onCambio={cargar} />
 
   return (
     <>
       {/* Lo que espera a que TÚ lo aceptes va primero: es lo único de esta
           pantalla que no avanza sin ti. */}
-      {hayPendienteRecibida ? (
-        <>
-          <Recibidas uid={uid} lista={datos.recibidas} onCambio={cargar} destacadaId={aceptarId} />
-          <Otorgadas uid={uid} lista={datos.otorgadas} onCambio={cargar} />
-        </>
-      ) : (
-        <>
-          <Otorgadas uid={uid} lista={datos.otorgadas} onCambio={cargar} />
-          <Recibidas uid={uid} lista={datos.recibidas} onCambio={cargar} destacadaId={aceptarId} />
-        </>
-      )}
+      {((recibidasPrimero ?? datos.recibidas.some((a) => a.estado === 'pendiente'))
+        ? [recibidas, otorgadas]
+        : [otorgadas, recibidas])}
       <SugerenciasContactos />
       <Invitaciones
         uid={uid}
@@ -1326,7 +1331,7 @@ function TarjetaRecibida({
         <>
           <div className="linea dicho">
             En vigor{fechaLarga(a.caducaEn) ? ` hasta el ${fechaLarga(a.caducaEn)}` : ', sin fecha de fin'} — sus pólizas te
-            salen en «Mis seguros». Cada vez que entras queda registrado, y {quien} puede quitártelo cuando
+            salen en <a href="/boveda">Seguros</a>. Cada vez que entras queda registrado, y {quien} puede quitártelo cuando
             quiera.
           </div>
 
