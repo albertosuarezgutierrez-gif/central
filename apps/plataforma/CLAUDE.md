@@ -86,6 +86,7 @@ de borrar, `smoobu-sync.ts` deja constancia (helper puro y testeado `lib/sivra/c
 | `AI_CREDITOS_UMBRAL` | Umbral en $ de créditos OpenRouter restantes bajo el cual el cron semanal `ia-director-refresh` avisa por Telegram (default 5). |
 | `IA_CACHE_SEMANTICA` | `1` activa la caché semántica pgvector de la pasarela (default APAGADA). Además el caller debe mandar `cache:{ambito,ttlHoras?}` (opt-in doble; nunca cachear datos vivos). Umbral `IA_CACHE_UMBRAL` (default 0.97). **Embeddings por OpenRouter (07/09/2026)** con `OPENROUTER_API_KEY` — `openai/text-embedding-3-small`, `dimensions:768` (mantiene la columna `pgvector(768)` sin migrar). Antes usaba `GEMINI_API_KEY` (`text-embedding-004`, Gemini): retirado por Google el 14/01/2026 (404), sin romper nada gracias al fail-open de `embed()` — la caché nunca sirvió un hit real hasta el swap. Sin `OPENROUTER_API_KEY` el `embed()` devuelve `null` (cache miss silencioso, no rompe). |
 | `CONTABLE_MODEL` | Modelo que RAZONA en el **agente contable** cuando no hay respuesta determinista (`lib/contable/cerebro.ts`). Default `deepseek-ai/deepseek-v4-flash-0731` (NIM, gratis con `NVIDIA_API_KEY`; el anterior `deepseek-v3` fue retirado del API de NIM — verificado 17/08/2026 contra `/v1/models`). Vacío `''` = default de la pasarela. Un id erróneo NO rompe (cae a Groq→Kimi). Para el chat, usar modelo RÁPIDO (no R1) para no agotar el timeout. |
+| `CORREDURIA_ASISTENTE_APAGADO` | **Interruptor de apagado** del asistente de la correduría por Telegram (26/09/2026). `1`/`true`/`sí` = apagado: el texto libre vuelve entero al agente contable y `/seguros` contesta que está apagado. Sin poner = encendido. Ver sección «🛡️ Asistente de la correduría por Telegram». |
 | `TELEGRAM_BOT_TOKEN` | Bot único del monorepo (`@central/core-telegram`). Avisos automáticos, agente huéspedes SIVRA, agente pago de facturas. **Fuente única del token para todo el monorepo** — las rutinas de Claude Code no lo duplican; llaman a `/api/internal/alerta` con `ALERTA_TOKEN` (token dedicado; el endpoint acepta `CRON_SECRET` solo por compat). |
 | `TELEGRAM_CHAT_ID` | Chat ID de Alberto donde llegan los avisos del bot. Par obligatorio de `TELEGRAM_BOT_TOKEN`. |
 | `TELEGRAM_WEBHOOK_SECRET` | Valida que los callbacks de Telegram llegan del servidor de Telegram (no de terceros). |
@@ -1933,6 +1934,34 @@ retroceder a 2025 dejaba los vencimientos de hoy intactos sin que se entendiera 
 los 184 recibos reales— y devuelve `null` para cualquier otra. `Number('1.234')` daría 1,234 sobre un
 texto que quería decir 1.234 en español: la cifra sale plausible y **no hay hueco que delate el fallo**
 (lección de ORCL, 31/07/2026). `sumarImportesEiac` cuenta aparte los ilegibles en vez de sumarlos como 0.
+
+## 🛡️ Asistente de la correduría por Telegram (fase 1, 26/09/2026)
+Alberto le pregunta al bot por clientes, pólizas, vencimientos, impagados o anulaciones pendientes y el
+asistente contesta leyendo la cartera por el puerto de asegura. **Fase 1 = SOLO LECTURA**: no emite, no
+escribe en la cartera y no habla con nadie más que con Alberto.
+- **Reparto del texto libre** (`clasificarDestino`, puro y testeado en `lib/correduria-asistente.ts`):
+  atajo `seguro:` / `/seguros` → siempre correduría; palabras propias (póliza, siniestro, renovación,
+  CIMA…) o una matrícula → correduría; palabras contables → contable; lo demás («¿qué tiene Pablo
+  Guzmán?») lo decide una IA de una palabra. **Ante cualquier fallo, gana el contable**, que es quien
+  atendía todo el texto libre hasta hoy. Las notas de voz pasan por el mismo reparto.
+- 🚨 **Privacidad:** los datos de clientes solo van a OpenRouter con `data_collection:'deny'` y
+  `zdr:true`. **No hay caída a la cadena gratis** (NIM/Groq/Cerebras/Kimi): si OpenRouter no responde
+  con esas garantías, se dice «no disponible». DNI/NIE, IBAN y tarjetas salen **enmascarados** hacia la
+  IA y hacia Telegram (`enmascarar`); el teléfono no, porque sirve para llamar.
+- **Rastro de acceso (RGPD art. 5.2):** cada pregunta es una fila de `correduria_asistente_turno` con
+  qué herramientas consultó. **Sin fila no se contesta.** El TEXTO se borra a los 90 días; el rastro se queda.
+- **Aprende preferencias, nunca datos de clientes:** `proponer_regla` → botón de Alberto → fila `activa`
+  en `correduria_asistente_regla` → entra en el prompt. Una «regla» con DNI, teléfono, email, IBAN o
+  matrícula se rechaza (`reglaConDatoPersonal`): ese dato va a la ficha. 👍/👎 en cada respuesta; el 👎
+  pide una nota por force_reply («asistente seguros · turno N») y lo revisa `/agentes-entrenador`.
+- **Topes:** 150 preguntas/día, 5 vueltas herramienta→IA por pregunta, 0,50 €/día y 5 €/mes
+  (`ia_presupuestos`, app `correduria-asistente`), e interruptor `CORREDURIA_ASISTENTE_APAGADO`.
+- **Lo que una herramienta no trae es «no consta», nunca «no tiene»**: un fallo del puerto le llega a la
+  IA como `ERROR … NO digas que no hay datos`.
+- Callbacks `cas_bien|cas_mal|cas_regla|cas_reglano` en el webhook. Son RESPUESTAS, no avisos
+  proactivos: por eso usan `tgSend` directo y no están en el catálogo de `/telegram`.
+- **Sin resumen diario propio a propósito:** las renovaciones ya llegan en `correduria.renovaciones` y
+  Alberto pidió menos avisos. «¿Qué tengo hoy?» se lo contesta el asistente a demanda.
 
 ## 🔔 Panel «Avisos Telegram» (`/telegram`) — el interruptor de lo que manda el bot (01/09/2026, PR #1924)
 Alberto: «las notificaciones de Telegram son muchas». El bot emitía desde **~57 ficheros** sin

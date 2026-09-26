@@ -21,6 +21,8 @@ import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
+import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria } from '@/lib/correduria-asistente-telegram'
+import { turnoDeNota } from '@/lib/correduria-asistente'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
 import { esPreguntaPatrimonio, esComandoPatrimonio } from '@/lib/patrimonio-chat'
@@ -769,6 +771,13 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: true })
     }
 
+    // ── Asistente de la correduría: 👍/👎 de una respuesta y confirmar/descartar una regla (cas_*) ──
+    if (prefix === 'cas') {
+      const toast = await resolverBotonCorreduria(action, args[0] || '')
+      await tgAnswerCallback(cb.id, toast)
+      return NextResponse.json({ ok: true })
+    }
+
     // ── Agente de contabilidad: confirmar/descartar una acción propuesta (cont_ok/cont_no) ──
     if (prefix === 'cont') {
       const cuentaId = await getCuentaTelegram()
@@ -959,6 +968,12 @@ export async function POST(req: NextRequest) {
       if (cuentaId) await manejarPatrimonioTg(cuentaId, (msg.text || '').trim())
       return NextResponse.json({ ok: true })
     }
+    // Nota a un 👎 del asistente de la correduría («asistente seguros · turno N»).
+    const turnoNota = turnoDeNota(String(msg.reply_to_message.text))
+    if (turnoNota !== null) {
+      if ((msg.text || '').trim()) await guardarNotaCorreduria(turnoNota, (msg.text || '').trim())
+      return NextResponse.json({ ok: true })
+    }
     const m = String(msg.reply_to_message.text).match(/reserva (\w+)/)
     const bookingId = m?.[1]
     const pend = bookingId ? await getPendiente(bookingId) : null
@@ -1021,7 +1036,7 @@ export async function POST(req: NextRequest) {
       const voz = vozDeMensaje(msg)
       if (voz) {
         const file = await descargarTelegram(voz.fileId, voz.mimeHint, voz.nameHint)
-        if (file) await manejarVozTg(cuentaId, file.buffer, file.mimeType, file.fileName)
+        if (file) await manejarVozTg(cuentaId, file.buffer, file.mimeType, file.fileName, (t) => enrutarTextoLibre(cuentaId, t))
         else await tgSend('No pude descargar la nota de voz. Reinténtala.').catch(() => {})
         return NextResponse.json({ ok: true })
       }
@@ -1038,8 +1053,16 @@ export async function POST(req: NextRequest) {
       // conoce activos/valoraciones/recomendaciones); el detector es estrecho a propósito.
       if (texto && esPreguntaPatrimonio(texto)) { await manejarPatrimonioTg(cuentaId, texto); return NextResponse.json({ ok: true }) }
       if (texto && esComandoContable(texto)) { await arrancarOnboarding(); return NextResponse.json({ ok: true }) }
-      if (texto && !texto.startsWith('/')) { await manejarTextoLibreTg(cuentaId, texto); return NextResponse.json({ ok: true }) }
+      if (texto && (!texto.startsWith('/') || /^\/seguros?\b/i.test(texto))) { await enrutarTextoLibre(cuentaId, texto); return NextResponse.json({ ok: true }) }
     }
   }
   return NextResponse.json({ ok: true })
+}
+
+// Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El
+// patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el
+// contable, que es quien atendía todo el texto libre hasta el 26/09/2026.
+async function enrutarTextoLibre(cuentaId: string, texto: string): Promise<void> {
+  if (await esParaCorreduria(texto)) { await manejarCorreduriaTg(texto); return }
+  await manejarTextoLibreTg(cuentaId, texto)
 }
