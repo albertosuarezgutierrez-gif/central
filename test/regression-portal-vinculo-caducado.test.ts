@@ -36,6 +36,12 @@ test('la BD retira los vínculos por correo cuando cambia o se borra el correo d
   const sql = leer('apps/asegura-portal/prisma/sql/2026-09-25_c_portal_vinculo_retira_al_cambiar_correo.sql')
   assert.match(sql, /AFTER UPDATE OF email_lookup_hash ON seguros\.clientes/)
   assert.match(sql, /AFTER UPDATE OF email_lookup_hash, cliente_id OR DELETE ON seguros\.cliente_emails/)
-  assert.match(sql, /OLD\.cliente_id IS DISTINCT FROM NEW\.cliente_id/, 'un correo que se muda de ficha deja el vínculo viejo')
+  assert.match(sql, /OLD\.cliente_id IS NOT DISTINCT FROM NEW\.cliente_id\s+AND OLD\.email_lookup_hash IS NOT DISTINCT FROM NEW\.email_lookup_hash/, 'un correo que se muda de ficha deja el vínculo viejo')
+  // PL/pgSQL resuelve TODOS los campos de una expresión aunque el AND ya sea falso: `clientes` no
+  // tiene `cliente_id`, y leerlo ahí rompía todo cambio de correo principal (26/09/2026).
+  assert.match(sql, /IF TG_TABLE_NAME = 'clientes' THEN[\s\S]*?ficha := OLD\.id;\s+ELSIF/, 'la rama de clientes no está aislada')
+  const ramaClientes = sql.match(/IF TG_TABLE_NAME = 'clientes' THEN([\s\S]*?)ELSIF/)?.[1] ?? ''
+  assert.doesNotMatch(ramaClientes, /cliente_id/, 'la rama de clientes lee OLD/NEW.cliente_id, que no existe en clientes')
+  assert.doesNotMatch(sql, /TG_TABLE_NAME = 'cliente_emails' AND OLD\./, 'OLD.cliente_id se evalúa también sobre clientes')
   assert.match(sql, /DELETE FROM seguros\.portal_vinculo WHERE cliente_id = ficha AND origen = 'email_hash'/)
 })

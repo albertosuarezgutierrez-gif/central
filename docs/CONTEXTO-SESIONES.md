@@ -704,6 +704,8 @@ El trigger `seguros.portal_retirar_vinculos_email_de_ficha` (PR #3600) leía `OL
 `clientes` (PL/pgSQL resuelve los campos aunque el `AND` ya sea falso) → todo cambio de correo principal
 fallaba con 42703. Reescrito por ramas de tabla y APLICADO en central (`seguros_portal_vinculo_retira_fix_clientes`);
 las 4 rutas verificadas en bloque revertido (mismo hash conserva vínculo, hash cambiado lo retira).
+Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes` con el viejo, y reintentar no re-espejaba
+(«valor no cambiado»). Re-espejada a mano la ficha de Pilar Franco Ruz; `cambiarContacto` ahora re-espeja siempre que se guarda el principal.
 
 ## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
 - Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).
