@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-26T09:03:06Z",
-  "sha": "862244753972f45d0875cf66a40c9ec687e21604",
+  "generadoEn": "2026-09-26T09:49:53Z",
+  "sha": "83bc5806cb7ed8fcf9146105043a81808d00a63d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -92372,7 +92372,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 49,
+          "linea": 51,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -92381,7 +92381,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 66,
+          "linea": 68,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -92390,7 +92390,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 92
+          "linea": 94
         },
         {
           "nombre": "getPendiente",
@@ -92398,7 +92398,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 122
+          "linea": 124
         },
         {
           "nombre": "POST",
@@ -92406,7 +92406,16 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 127
+          "linea": 129
+        },
+        {
+          "nombre": "enrutarTextoLibre",
+          "kind": "function",
+          "exportada": false,
+          "params": "cuentaId: string, texto: string",
+          "retorno": "Promise<void>",
+          "linea": 1065,
+          "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         }
       ],
       "tablas": [
@@ -92433,7 +92442,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "0a645748c944"
+      "hash": "cfb964fd929e"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -100870,7 +100879,7 @@
           "nombre": "manejarVozTg",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, buffer: Buffer, fileName: string, mimeType: string,",
+          "params": "cuentaId: string, buffer: Buffer, fileName: string, mimeType: string, // Quién atiende lo transcrito: por defecto el contable; el webhook pasa su enrutador para que // una nota de voz sobre un cliente llegue al asistente de la correduría co",
           "retorno": "Promise<void>",
           "linea": 117,
           "resumen": "Transcribe una nota de voz (Groq Whisper) y la trata como si Alberto la hubiera escrito."
@@ -100881,7 +100890,7 @@
           "exportada": true,
           "params": "msg: any",
           "retorno": "",
-          "linea": 128,
+          "linea": 131,
           "resumen": "Extrae el file_id + pistas de mime/nombre de un mensaje de Telegram (foto o documento). null si no hay."
         },
         {
@@ -100890,7 +100899,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 148,
+          "linea": 151,
           "resumen": "Onboarding (spec §8): mensaje guía. La memoria se construye después con lo que Alberto cuente (canal APRENDER del cerebro), sin sembrar datos sensibles a mano."
         },
         {
@@ -100899,7 +100908,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 153,
+          "linea": 156,
           "resumen": "¿Es un comando de arranque del agente contable? (/contable, \"empezar contable\"…)"
         }
       ],
@@ -100907,7 +100916,7 @@
         "cuentas"
       ],
       "rutaApi": null,
-      "hash": "657fc580cdd4"
+      "hash": "1f271d8e4147"
     },
     {
       "ruta": "apps/plataforma/lib/contexto-defensa.ts",
@@ -101006,6 +101015,287 @@
       ],
       "rutaApi": null,
       "hash": "63542126a5fe"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria-asistente-telegram.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Asistente de la correduría por Telegram — parte con BD, red e IA. La lógica que se puede probar vive en `correduria-asistente.ts` (pura, con tests); aquí solo se cablea. Privacidad (decisión 26/09/2026): los datos de clientes solo van a OpenRouter con `data_collection: 'deny'` y `zdr: true`. Si eso ",
+      "exporta": [
+        "esParaCorreduria",
+        "manejarCorreduriaTg",
+        "resolverBotonCorreduria",
+        "guardarNotaCorreduria"
+      ],
+      "funciones": [
+        {
+          "nombre": "esParaCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "Promise<boolean>",
+          "linea": 36,
+          "resumen": "¿Este texto libre es para el asistente de la correduría? Determinista primero; lo dudoso lo decide una IA con las mismas garantías de privacidad. Cualquier fallo → contable (lo de siempre)."
+        },
+        {
+          "nombre": "coste",
+          "kind": "function",
+          "exportada": false,
+          "params": "modelo: string, usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined",
+          "retorno": "Promise<number>",
+          "linea": 67,
+          "resumen": "Coste real por catálogo; si el catálogo no conoce el modelo, una estimación ALTA, nunca 0."
+        },
+        {
+          "nombre": "reglasActivas",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<",
+          "linea": 75
+        },
+        {
+          "nombre": "ejecutar",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string, args: Record<string, unknown> | null, ctx: { turnoId: number; reglas: { id: number; texto: string }[] },",
+          "retorno": "Promise<",
+          "linea": 85,
+          "resumen": "Ejecuta una herramienta. Devuelve el texto que verá la IA (ya enmascarado) y si fue bien."
+        },
+        {
+          "nombre": "turnosDeHoy",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<number | null>",
+          "linea": 183
+        },
+        {
+          "nombre": "historialReciente",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<NimToolMessage[]>",
+          "linea": 190,
+          "resumen": "Las dos últimas preguntas de la última media hora: contexto para «¿y su mujer?»."
+        },
+        {
+          "nombre": "manejarCorreduriaTg",
+          "kind": "function",
+          "exportada": true,
+          "params": "textoOriginal: string",
+          "retorno": "Promise<void>",
+          "linea": 202,
+          "resumen": "Texto libre de Alberto para la correduría → contesta por Telegram. Nunca lanza."
+        },
+        {
+          "nombre": "resolverBotonCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "accion: string, arg: string",
+          "retorno": "Promise<string>",
+          "linea": 288,
+          "resumen": "Callback `cas_*`. Devuelve el texto del toast."
+        },
+        {
+          "nombre": "guardarNotaCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "turnoId: number, nota: string",
+          "retorno": "Promise<void>",
+          "linea": 311,
+          "resumen": "Respuesta de Alberto al «¿qué ha fallado?» de un 👎."
+        }
+      ],
+      "tablas": [
+        "correduria_asistente_regla",
+        "correduria_asistente_turno"
+      ],
+      "rutaApi": null,
+      "hash": "515997ad5e41"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria-asistente.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Asistente de la CORREDURÍA por Telegram (fase 1, 26/09/2026) — parte PURA (sin `@/` ni prisma → node --test). Alberto le pregunta por clientes, pólizas, vencimientos o impagados y el asistente contesta leyendo la cartera por el puerto de asegura. Fase 1 = SOLO LECTURA: no escribe en la cartera, no e",
+      "exporta": [
+        "clasificarDestino",
+        "tienePrefijo",
+        "sinPrefijo",
+        "leerClasificacion",
+        "enmascarar",
+        "paraIA",
+        "leerArgumentos",
+        "diasValidos",
+        "idValido",
+        "reglaConDatoPersonal",
+        "systemAsistente",
+        "apagado",
+        "preguntaNota",
+        "turnoDeNota",
+        "rastroArgs",
+        "costeConservador"
+      ],
+      "funciones": [
+        {
+          "nombre": "clasificarDestino",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "Destino",
+          "linea": 31,
+          "resumen": "Reparto del texto libre entre el asistente de la correduría y el contable. Determinista y testeado; solo lo `dudoso` (p. ej. «¿qué tiene Pablo Guzmán?») pasa por la IA clasificadora."
+        },
+        {
+          "nombre": "tienePrefijo",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "boolean",
+          "linea": 43,
+          "resumen": "¿Lleva el atajo explícito? Con el asistente apagado, así se sabe a quién decirle que lo está."
+        },
+        {
+          "nombre": "sinPrefijo",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 48,
+          "resumen": "La pregunta sin el atajo delante."
+        },
+        {
+          "nombre": "leerClasificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "respuesta: string | null | undefined",
+          "retorno": "'correduria' | 'contable'",
+          "linea": 60
+        },
+        {
+          "nombre": "enmascarar",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string",
+          "retorno": "string",
+          "linea": 71,
+          "resumen": "DNI/NIE → `…769Q`, IBAN → `ES…1234`, tarjeta → `…1234`. Se aplica a TODO lo que sale de una herramienta antes de que lo vea la IA, y otra vez a la respuesta antes de Telegram (por si la IA reconstruye"
+        },
+        {
+          "nombre": "luhn",
+          "kind": "function",
+          "exportada": false,
+          "params": "digitos: string",
+          "retorno": "boolean",
+          "linea": 86
+        },
+        {
+          "nombre": "paraIA",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: unknown, max = 7000",
+          "retorno": "string",
+          "linea": 100,
+          "resumen": "JSON compacto, enmascarado y recortado para la IA. Los `null` SE QUEDAN: son «no consta», y quitarlos haría que un campo desconocido desapareciera. El corte se DICE."
+        },
+        {
+          "nombre": "fn",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []",
+          "retorno": null,
+          "linea": 113
+        },
+        {
+          "nombre": "leerArgumentos",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: string | undefined",
+          "retorno": "Record<string, unknown> | null",
+          "linea": 137,
+          "resumen": "Argumentos de una llamada, parseados sin lanzar. `null` = la IA mandó basura."
+        },
+        {
+          "nombre": "diasValidos",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "number",
+          "linea": 145
+        },
+        {
+          "nombre": "idValido",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 151,
+          "resumen": "Id de cliente/póliza: uuid. Evita que la IA meta una ruta o un nombre en la URL del puerto."
+        },
+        {
+          "nombre": "reglaConDatoPersonal",
+          "kind": "function",
+          "exportada": true,
+          "params": "regla: string",
+          "retorno": "boolean",
+          "linea": 157,
+          "resumen": "Una regla que es en realidad un dato de cliente (DNI, teléfono, IBAN, email, matrícula) no se guarda."
+        },
+        {
+          "nombre": "systemAsistente",
+          "kind": "function",
+          "exportada": true,
+          "params": "reglas: readonly string[], hoyIso: string",
+          "retorno": "string",
+          "linea": 164
+        },
+        {
+          "nombre": "apagado",
+          "kind": "function",
+          "exportada": true,
+          "params": "valor: string | undefined",
+          "retorno": "boolean",
+          "linea": 195,
+          "resumen": "¿El interruptor de apagado está echado? Cualquier valor «sí» en `CORREDURIA_ASISTENTE_APAGADO`."
+        },
+        {
+          "nombre": "preguntaNota",
+          "kind": "function",
+          "exportada": true,
+          "params": "turnoId: number",
+          "retorno": "string",
+          "linea": 200,
+          "resumen": "Texto del botón de feedback y del force_reply que liga la nota con su turno."
+        },
+        {
+          "nombre": "turnoDeNota",
+          "kind": "function",
+          "exportada": true,
+          "params": "textoCitado: string",
+          "retorno": "number | null",
+          "linea": 204
+        },
+        {
+          "nombre": "rastroArgs",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string, args: Record<string, unknown> | null",
+          "retorno": "Record<string, unknown>",
+          "linea": 214,
+          "resumen": "Lo que queda en el rastro de acceso de cada consulta. Los ids y los días se guardan; el TEXTO libre (lo que se buscó, la regla propuesta) no, porque sobreviviría a la purga de 90 días con el mismo dat"
+        },
+        {
+          "nombre": "costeConservador",
+          "kind": "function",
+          "exportada": true,
+          "params": "tokens: number",
+          "retorno": "number",
+          "linea": 226
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "34a63eea64f0"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-hogar.ts",
@@ -138763,7 +139053,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "df955cdafdee"
+      "hash": "286185c260a2"
     },
     {
       "ruta": "packages/core-ai/src/stt.ts",
@@ -158045,7 +158335,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3782,
-    "funciones": 12088
+    "archivos": 3784,
+    "funciones": 12116
   }
 }
