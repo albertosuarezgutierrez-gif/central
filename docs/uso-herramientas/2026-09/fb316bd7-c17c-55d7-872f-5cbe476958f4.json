@@ -1,0 +1,107 @@
+{
+ "sesion": "fb316bd7-c17c-55d7-872f-5cbe476958f4",
+ "inicio": "2026-09-16T09:04:44.440Z",
+ "fin": "2026-09-20T05:31:12.889Z",
+ "llamadas": 79,
+ "categorias": {
+  "otro": {
+   "llamadas": 14,
+   "chars_in": 949,
+   "chars_out": 269918,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 6,
+    "ReadNotifications": 6,
+    "ScheduleWakeup": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 5,
+   "chars_in": 468,
+   "chars_out": 61989,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 5
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 14,
+   "chars_in": 1000,
+   "chars_out": 19566,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 5,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__get_thread": 2,
+    "mcp__Gmail__label_thread": 6
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 3,
+   "chars_in": 319,
+   "chars_out": 11797,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 3
+   }
+  },
+  "bash": {
+   "llamadas": 16,
+   "chars_in": 3868,
+   "chars_out": 20596,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 16
+   }
+  },
+  "sql": {
+   "llamadas": 8,
+   "chars_in": 3589,
+   "chars_out": 19793,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 8
+   }
+  },
+  "escritura": {
+   "llamadas": 2,
+   "chars_in": 2586,
+   "chars_out": 583228,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 17,
+   "chars_in": 3429,
+   "chars_out": 62382,
+   "errores": 2,
+   "archivos_citados": 2,
+   "chars_citados": 67404,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__actions_list": 4,
+    "mcp__github__pull_request_read": 6,
+    "mcp__github__actions_run_trigger": 4
+   }
+  }
+ }
+}
