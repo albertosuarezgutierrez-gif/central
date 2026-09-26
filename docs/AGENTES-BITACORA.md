@@ -329,6 +329,28 @@
   de evento CONFIRMADO con corpus caducado (>7 días, el motor las tarifica genérico) — no se ha
   medido si el ritmo de 24/día está bajando ese backlog o solo conteniéndolo; fallos: —;
   PRs/commits: — (solo bitácora + BD).
+
+- **2026-09-15 · facturas-correo** · hizo: pasada diaria. Paso 0: Vía B sana (`_buzon_pdf` copió
+  hoy mismo, `dias_caido=0`); `PDF-pendiente`/`Revisar`/`Extraccion-fallida` vacías (confirmado
+  por `search_threads`, no solo `list_labels`); `agente_salud` actualizado ok=true por Supabase
+  MCP. Paso 4.0 (barrido `v_facturas_sin_cargo`): 4 `revisada_sin_cargo` sin tocar; de las 7
+  `sin_revisar`, las 6 ya conocidas de ayer (openrouter 25,64$, ionos 1,21€, 3× anthropic-credit
+  170€, anthropic-credit-2791 76,50€) siguen sin cargo bancario que case — comprobado de nuevo con
+  ventana amplia ±7 días, ningún candidato nuevo entró en el banco; el de 76,50€ sigue con DOS
+  candidatos ambiguos (07/09 y 10/09) sin conciliar, no auto-confirmado. Paso 1: 2 hilos nuevos
+  eran factura real y no estaban en `facturas_drive` pese a `Facturas/Procesada` — IONOS servidor
+  (95495065, 5,69€, 15/09) y Vercel (106,76$, 14/09) — archivados en `09-Septiembre-2026` + 2
+  filas nuevas en `facturas_drive` (`ionos-servidor`, `vercel`; destino `seguros` por precedente
+  histórico de banco, no por la lista genérica de la skill). Ningún cargo bancario aún (normal,
+  1 día). Resto de candidatos de la ventana: pedido Amazon (leche infantil) → personal, no
+  archivado; newsletter colegio y ticket Smoobu → no son factura. Todos etiquetados
+  `Facturas/Procesada`. `_subir_aqui` vacío; raíz de 2026 solo tenía ficheros viejos ya cubiertos
+  por avisos existentes en `_DUPLICADOS_BORRAR`. dudas: recibo Anthropic 76,50€ (2791) — sigue sin
+  resolverse cuál de los dos cargos de banco le corresponde, falta el recibo que explique el otro;
+  los 3× 170€ y el 25,64$/1,21€ siguen sin cargo, puede que tarden más en liquidar o no entren
+  nunca — vigilar próxima pasada. fallos: —; el canal de aviso SÍ funcionó hoy (preflight 200 vía
+  `canal-aviso.sh`, a diferencia del bloqueo de MCP Sentinel del 14/09). PRs/commits: (este commit).
+
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo

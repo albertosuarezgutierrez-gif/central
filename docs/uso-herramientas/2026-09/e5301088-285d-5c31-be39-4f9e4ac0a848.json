@@ -1,0 +1,108 @@
+{
+ "sesion": "e5301088-285d-5c31-be39-4f9e4ac0a848",
+ "inicio": "2026-09-15T09:04:36.883Z",
+ "fin": "2026-09-20T05:30:26.934Z",
+ "llamadas": 109,
+ "categorias": {
+  "otro": {
+   "llamadas": 14,
+   "chars_in": 643,
+   "chars_out": 245557,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 6,
+    "ReadNotifications": 7
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 5,
+   "chars_in": 479,
+   "chars_out": 65999,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 5
+   }
+  },
+  "bash": {
+   "llamadas": 30,
+   "chars_in": 6995,
+   "chars_out": 18647,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 30
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 14,
+   "chars_in": 1002,
+   "chars_out": 19413,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 7,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__get_thread": 1,
+    "mcp__Gmail__label_message": 5
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 17,
+   "chars_in": 1388,
+   "chars_out": 47478,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 6,
+    "mcp__Google-Drive__read_file_content": 9,
+    "mcp__Google-Drive__copy_file": 2
+   }
+  },
+  "sql": {
+   "llamadas": 10,
+   "chars_in": 3594,
+   "chars_out": 23090,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 10
+   }
+  },
+  "escritura": {
+   "llamadas": 4,
+   "chars_in": 3789,
+   "chars_out": 264186,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 4
+   }
+  },
+  "mcp:github": {
+   "llamadas": 15,
+   "chars_in": 3693,
+   "chars_out": 30100,
+   "errores": 0,
+   "archivos_citados": 4,
+   "chars_citados": 248771,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__list_commits": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 10,
+    "mcp__github__update_pull_request": 1
+   }
+  }
+ }
+}
