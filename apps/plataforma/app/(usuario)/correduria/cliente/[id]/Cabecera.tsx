@@ -51,7 +51,8 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                 <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
                 {/* DNI, nacimiento y carnés se consultan, no se trabajan: plegados
                     (26/09/2026, en móvil la línea ocupaba 5-6 renglones). */}
-                <details style={{ display: 'inline-block' }}>
+                {/* Abierto de serie si un carné caduca o ya caducó: un aviso no se pliega. */}
+                <details style={{ display: 'inline-block' }} open={(ficha.carnets ?? []).some(k => estadoCaducidadCarnet(k.fechaCaducidad, new Date().toISOString().slice(0, 10)) !== 'vigente' && k.fechaCaducidad !== null)}>
                   <summary style={{ cursor: 'pointer', color: 'var(--muted)', minHeight: 44 }}>DNI y carnés</summary>
                   <span style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
                     <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} />
@@ -95,7 +96,7 @@ function SiguientePaso({ ficha, resumen, tiposVivos }: { ficha: Ficha; resumen: 
   const fondo = paso.tono === 'urgente' ? 'var(--negative-bg)' : paso.tono === 'aviso' ? 'var(--warning-bg)' : 'var(--primary-light)'
   const accion =
     paso.accion.tipo === 'llamar'
-      ? (tel ? <a href={`tel:${tel.replace(/\s/g, '')}`} style={{ ...btnStyle('primario'), textDecoration: 'none' }}>📞 Llamar</a> : null)
+      ? (tel ? <a href={`tel:${tel.replace(/\s/g, '')}`} style={{ ...btnStyle('primario'), textDecoration: 'none' }}>📞 Llamar</a> : <span style={{ fontSize: 13, color: 'var(--muted)' }}>sin teléfono en la ficha ni en sus pólizas</span>)
       : paso.accion.tipo === 'retarificar'
         ? <BtnLink href={urlRetarificar(paso.accion.polizaId)} variante="primario">Mirar precio</BtnLink>
         : <BtnLink href={`/correduria/cliente/${ficha.id}/hogar-nuevo`} variante="primario">Presupuestar hogar</BtnLink>
