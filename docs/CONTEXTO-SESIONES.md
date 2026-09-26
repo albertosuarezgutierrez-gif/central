@@ -714,6 +714,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Grupo ASegura: el logotipo «se veía poco» (portal + web)
+- Causa: Quicksand 300 a 18-20 px de alto = trazo <1 px. `logotipo-asegura.svg` (las dos copias, idénticas) lleva ahora
+  `stroke="currentColor" stroke-width="3"` → ≈ semibold sin redibujar. Alto: portal 18→22 px (≤639: 19; ≤380 sigue 14),
+  web 20→22 (móvil 17→19). Web medida con Playwright a 320/360/390/1024: sin desborde. El PNG de correo NO se tocó.
+
 ## (26/09/2026) Cepo de frontmatter: hueco `>- texto` cerrado (lo encontró `verificador-esceptico`)
 Primer uso real del agente: rompió las 3 aserciones del cepo (rojas) y halló que `description: >- texto`
 (YAML inválido) pasaba en verde. Añadida la guarda en `test/regression-skills-frontmatter.test.ts`, vista en rojo.
