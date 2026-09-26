@@ -7,6 +7,7 @@ import { ETIQUETA_TIPO_SINIESTRO, TIPOS_SINIESTRO, esTipoSiniestro, opcionesTipo
 test('auto y hogar tienen sus opciones; un ramo sin catálogo no pregunta', () => {
   assert.ok(opcionesTipoSiniestro('AUTO').includes('lunas'))
   assert.ok(opcionesTipoSiniestro('hogar').includes('agua'))
+  assert.ok(opcionesTipoSiniestro('comunidades').includes('agua'), 'el ramo de las aportadas va en plural')
   assert.equal(opcionesTipoSiniestro('vida').length, 0)
   assert.equal(opcionesTipoSiniestro(null).length, 0)
 })

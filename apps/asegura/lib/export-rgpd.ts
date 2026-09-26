@@ -294,6 +294,7 @@ async function partesDeIdentidad(
       descripcion: true,
       fechaHecho: true,
       horaAproximada: true,
+      tipoSiniestro: true,
       lugar: true,
       hayHeridos: true,
       hayTerceros: true,

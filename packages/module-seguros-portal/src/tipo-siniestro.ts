@@ -48,7 +48,8 @@ const HOGAR: readonly TipoSiniestro[] = ['agua', 'robo', 'incendio', 'cristales'
 export function opcionesTipoSiniestro(ramo: string | null | undefined): readonly TipoSiniestro[] {
   const r = (ramo ?? '').trim().toLowerCase()
   if (r === 'auto' || r === 'moto') return AUTO
-  if (r === 'hogar' || r === 'comunidad') return HOGAR
+  // Las dos formas: la cartera dice «comunidad», las aportadas (`RAMOS_POLIZA`) «comunidades».
+  if (r === 'hogar' || r === 'comunidad' || r === 'comunidades') return HOGAR
   return []
 }
 

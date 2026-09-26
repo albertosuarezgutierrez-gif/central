@@ -750,22 +750,33 @@ export function ParteSiniestro({
    *  servidor no hay `localStorage` y leerlo en el render rompería la hidratación. */
   const [pendiente, setPendiente] = useState<borrador.Borrador<Formulario> | null>(null)
   useEffect(() => {
-    if (claveBorr === null || polizaValida !== null) return
-    setPendiente(borrador.leerBorrador(borrador.leer(claveBorr), VACIO, Date.now()))
+    if (claveBorr === null) return
+    // Se lee también entrando desde la ficha de una póliza: así un parte a medias
+    // no se pisa en silencio (el guardado de abajo no escribe mientras haya uno pendiente).
+    const bruto = borrador.leer(claveBorr)
+    const leido = borrador.leerBorrador(bruto, VACIO, Date.now())
+    // Caducado o ilegible: fuera del dispositivo (puede llevar datos de salud).
+    if (leido === null && bruto !== null) borrador.borrar(claveBorr)
+    setPendiente(leido)
     // Solo al montar: después el borrador lo gobierna este mismo componente.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
   useEffect(() => {
-    if (claveBorr === null || !abierto || estado === 'enviado') return
+    if (claveBorr === null || !abierto || estado === 'enviado' || pendiente !== null) return
     if (borrador.merecePena(form)) borrador.guardar(claveBorr, form, Date.now())
-  }, [claveBorr, abierto, estado, form])
+  }, [claveBorr, abierto, estado, form, pendiente])
 
   function recuperarBorrador() {
     if (pendiente === null) return
     abrir()
     // Una póliza que ya no está en la lista (quitada, o autorización retirada) no se recupera.
     const poliza = polizas.some((p) => p.valor === pendiente.form.poliza) ? pendiente.form.poliza : ''
-    setForm({ ...pendiente.form, poliza })
+    // Y un tipo que no encaja con el ramo que queda tampoco: viajaría sin que el cliente lo viera.
+    const ramo = polizas.find((p) => p.valor === poliza)?.ramo
+    const tipoSiniestro = (opcionesTipoSiniestro(ramo) as readonly string[]).includes(pendiente.form.tipoSiniestro)
+      ? pendiente.form.tipoSiniestro
+      : ''
+    setForm({ ...pendiente.form, poliza, tipoSiniestro })
     setPaso('datos')
     setPendiente(null)
   }
@@ -889,8 +900,9 @@ export function ParteSiniestro({
   }
 
   function cerrar() {
-    // «Cancelar» es descartar a propósito: el borrador se va con él.
-    if (claveBorr !== null) borrador.borrar(claveBorr)
+    // «Cancelar» es descartar a propósito: el borrador se va con él. Salvo si hay
+    // uno PENDIENTE de otra visita que no se ha tocado: ese no es el que se cancela.
+    if (claveBorr !== null && pendiente === null) borrador.borrar(claveBorr)
     setAbierto(false)
     setErrores({})
     setErrorGeneral(null)
@@ -1295,7 +1307,7 @@ export function ParteSiniestro({
           {pendiente !== null && (
             <div className="parte-borrador" role="status">
               <p>
-                Tienes un parte <strong>a medias</strong> del {fechaEs(new Date(pendiente.guardadoEn)) ?? 'otro día'}
+                Tienes un parte <strong>a medias</strong> del {new Date(pendiente.guardadoEn).toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid' })}
                 {pendiente.form.descripcion.trim() !== '' && <>: «{recorte(pendiente.form.descripcion)}»</>}. Las
                 fotos no se guardan, habría que volver a elegirlas.
               </p>
@@ -1342,9 +1354,17 @@ export function ParteSiniestro({
             </button>
           </div>
           <div className="editor-acciones">
-            <button type="button" className="boton secundario" onClick={cerrar}>
-              Cancelar
-            </button>
+            {/* Si ya había algo escrito (se llegó con «Cambiar»), esto es VOLVER, no
+                tirar el parte: cancelar aquí borraría lo escrito sin avisar. */}
+            {borrador.merecePena(form) ? (
+              <button type="button" className="boton secundario" onClick={() => setPaso('datos')}>
+                Volver
+              </button>
+            ) : (
+              <button type="button" className="boton secundario" onClick={cerrar}>
+                Cancelar
+              </button>
+            )}
           </div>
         </fieldset>
       )}
