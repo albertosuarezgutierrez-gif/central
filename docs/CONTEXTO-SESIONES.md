@@ -80,7 +80,9 @@ tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera
 (asegura#855 + UPDATE de las 101 filas existentes; si entra un pull antes del merge, repetir el UPDATE). Único fichero a medias: POL
 Allianz (carga 199) 25/26 — la que falta choca con `uq_clientes_dni_lookup_hash` porque su DNI solo vive en una ficha FUSIONADA
 (1af806b6 → 12f99b7b, «Juan Manuel Durán Ibáñez», **DNIs distintos**; mismo patrón en Hassan Pimienta 0d16579c → cc0d0547).
-Pendiente de Alberto: ¿misma persona o dos? No se toca sin su respuesta. Cobertura EIAC: 30% de rutas leídas; con 6 años se puede rellenar después.
+✅ Alberto (DNIs consultados): **misma persona, fusión se mantiene**. asegura#856: si el DNI del fichero solo está en una ficha
+absorbida, `resolveCliente` sigue `merged_into_cliente_id` al superviviente (cadena rota → cuarentena). Reprocesado: póliza
+031769150 actualizada en 12f99b7b, 0 clientes nuevos, fichero sellado. #855 mergeado. Cobertura EIAC (30%): tarea aparte.
 
 **(26/09/2026)** 🏁 **Hilo CIMA/Mapfre cerrado** (Alberto): respaldo del pull a 11:00 + franjas fijas 16:00/20:30 Madrid (#3571),
 clave del respaldo arreglada (401), Mapfre ya vuelca a diario (25/09). Skill `cima-ingesta` al día. Único cabo: pólizas y resto de ramos
