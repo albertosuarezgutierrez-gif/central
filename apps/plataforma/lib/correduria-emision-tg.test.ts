@@ -24,6 +24,7 @@ function vista(extra: Partial<Extract<VistaImportacion, { estado: 'ok' }>> = {})
     matricula: '1234ABC',
     cuenta: { enmascarada: 'ES91…1332', origen: 'ficha', descripcion: 'la cuenta de la ficha' },
     cuentaAviso: null, cuentaInformada: true,
+    direccion: { origen: 'proyecto', texto: 'Calle Sol 3' },
     ...extra,
   }
 }
@@ -59,6 +60,19 @@ test('un «no coincide» dice qué trae el proyecto (tomador enmascarado y matr�
   // Con todo coincidiendo no se añade nada.
   const b = prepararResumen(POLIZA, vista({ bloqueos: ['esta póliza ya está sustituida'] }), null)
   assert.doesNotMatch(b.tipo === 'no' ? b.motivo : '', /en el proyecto/)
+})
+
+test('dirección a medias en Avant2: el resumen enseña la de la ficha; si la ficha tampoco la tiene, no hay botón', () => {
+  const r = resumenDe(vista({ direccion: { origen: 'ficha', texto: 'Calle Feria 12' } }))
+  assert.deepEqual(r.direccionEmision, { texto: 'Calle Feria 12', origen: 'ficha' })
+  const t = textoResumen(r)
+  assert.match(t, /Dirección: Calle Feria 12, 41003/)
+  assert.match(t, /de la ficha: en Avant2 estaba incompleta/)
+  const no = prepararResumen(POLIZA, vista({ direccion: { origen: 'falta', faltan: ['calle', 'número'] } }), null)
+  assert.equal(no.tipo, 'no')
+  assert.match(no.tipo === 'no' ? no.motivo : '', /dirección del tomador está incompleta.*\(calle, número\)/)
+  // Una asegura anterior que no manda `direccion`: se enseña la del proyecto, como antes.
+  assert.equal(resumenDe(vista({ direccion: null })).direccionEmision.texto, 'Calle Sol 3')
 })
 
 test('sin botón si algo impide emitir o no se ha podido comprobar', () => {

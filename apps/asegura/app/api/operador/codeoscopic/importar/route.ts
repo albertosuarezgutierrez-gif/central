@@ -5,7 +5,8 @@ import { prisma } from '@/lib/tenant'
 import { correduriaUnica } from '@/lib/cartera'
 import { auditado } from '@/lib/auditoria'
 import { peticion } from '@/lib/codeoscopic/cliente'
-import { resolverConfigEmision, leerOferta } from '@/lib/codeoscopic/emitir'
+import { resolverConfigEmision, leerOferta, direccionIncompleta } from '@/lib/codeoscopic/emitir'
+import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 import { cuentaDeFicha, describirOrigenCuenta } from '@/lib/codeoscopic/cuenta-ficha'
 import { ibanEnmascarado } from '@/lib/codeoscopic/emitir-iban'
 import { hoyEnMadrid } from '@/lib/codeoscopic/fecha-efecto'
@@ -41,6 +42,7 @@ type Contexto =
       correduriaId: string
       poliza: { id: string; tipo: string; cliente_id: string; dni_lookup_hash: string | null; matricula: string | null; sustituida: boolean }
       crudo: unknown
+      config: Extract<ReturnType<typeof resolverConfigEmision>, { estado: 'lista' }>['config']
     }
 
 async function cargar(projectId: string | null, polizaId: string | null): Promise<Contexto> {
@@ -74,7 +76,7 @@ async function cargar(projectId: string | null, polizaId: string | null): Promis
       path: `/insurances/${encodeURIComponent(projectId)}`,
       timeoutMs: r.config.timeoutGenericoMs,
     })
-    return { ok: true, correduriaId: correduria.id, poliza, crudo }
+    return { ok: true, correduriaId: correduria.id, poliza, crudo, config: r.config }
   } catch (e) {
     return error(502, `Avant2 no devuelve el proyecto ${projectId}: ${e instanceof Error ? e.message : String(e)}`, 'vendor')
   }
@@ -169,6 +171,7 @@ export async function GET(req: Request) {
   // Para el resumen de la emisión por Telegram (fase 3a): quién va de tomador EN EL PROYECTO y qué
   // cuenta mandaría `/emitir` si se confirma. Solo lectura; la cuenta, enmascarada.
   const cuenta = await cuentaDeFicha(ctx.correduriaId, ctx.poliza.id, ctx.poliza.cliente_id).catch(() => null)
+  const direccion = await direccionDeEmision(ctx)
   return NextResponse.json({
     estado: 'ok',
     projectId,
@@ -181,7 +184,32 @@ export async function GET(req: Request) {
     titular: titularProyecto(ctx.crudo),
     matricula: matriculaProyecto(ctx.crudo),
     cuenta: respuestaCuenta(cuenta),
+    direccion,
   })
+}
+
+/**
+ * La calle que va a ir a la compañía, para el resumen. Si la del proyecto está a medias, `/emitir` la
+ * completa ENTERA desde la ficha antes del Submit (`huecosPersonaParaEmitir`); aquí se hace la misma
+ * lectura para enseñarla ANTES de pulsar. `falta` = ni el proyecto ni la ficha la tienen completa, y
+ * `/emitir` no enviaría nada (422). Solo lectura: no escribe en el proyecto.
+ */
+async function direccionDeEmision(ctx: Extract<Contexto, { ok: true }>) {
+  const holder = (ctx.crudo as { holder?: unknown } | null)?.holder
+  // Sin ninguna dirección `/emitir` no inventa una (ver `huecosPersonaParaEmitir`): va lo que traiga el proyecto.
+  const sinDirecciones = !Array.isArray((holder as { addresses?: unknown } | null)?.addresses) ||
+    ((holder as { addresses: unknown[] }).addresses.length === 0)
+  if (sinDirecciones || !direccionIncompleta(holder)) return { origen: 'proyecto' as const, texto: titularProyecto(ctx.crudo).direccion }
+  const f = await valoresPersonaDesdeFicha(
+    { correduria_id: ctx.correduriaId, poliza_id: ctx.poliza.id, cliente_id: ctx.poliza.cliente_id },
+    ['nombreVia', 'numeroVia', 'tipoVia'],
+    ctx.config,
+  ).catch(() => ({}) as Awaited<ReturnType<typeof valoresPersonaDesdeFicha>>)
+  if (!f.nombreVia || !f.numeroVia || !f.tipoVia) {
+    const faltan = [!f.tipoVia && 'tipo de vía', !f.nombreVia && 'calle', !f.numeroVia && 'número'].filter(Boolean)
+    return { origen: 'falta' as const, texto: null, faltan }
+  }
+  return { origen: 'ficha' as const, texto: `${f.nombreVia} ${f.numeroVia}` }
 }
 
 /** Misma forma en la vista previa y en el enlace. `null` en `cuentaDeFicha` = no se pudo leer. */

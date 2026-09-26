@@ -721,6 +721,9 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Al pulsar relee la ficha y compara huella; al cerrar la fila solo quedan los nombres de campo. Nada se borra por chat.
 - Tabla `correduria_asistente_correccion` (+ `huella`) aplicada en prod. Revisión agente-architect aplicada. Fase 3a
   (#3668) mergeada y desplegada; prueba real de la emisión de Pablo pendiente de que Alberto pulse.
+- Primer uso real: Avant2 dejó la dirección del tomador en «0, 41001». Ahora una calle a medias (sin nombre, nº 0
+  o sin tipo) se completa ENTERA desde la ficha antes del Submit (`direccionIncompleta`), y el resumen dice qué
+  dirección va y de dónde sale; sin ficha completa no hay botón. El «no coincide» enseña tomador/matrícula del proyecto.
 
 ## (26/09/2026) Grupo ASegura: el logotipo «se veía poco» (portal + web)
 - Causa: Quicksand 300 a 18-20 px de alto = trazo <1 px. `logotipo-asegura.svg` (las dos copias, idénticas) lleva ahora

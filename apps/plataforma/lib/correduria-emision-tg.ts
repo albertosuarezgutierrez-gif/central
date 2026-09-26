@@ -49,6 +49,8 @@ export interface ResumenEmision {
   efecto: string | null
   caduca: string | null
   titular: { nombre: string | null; documento: string | null; direccion: string | null; codigoPostal: string | null }
+  /** La calle que irá a la compañía y de dónde sale (`ficha` = el proyecto la traía a medias). */
+  direccionEmision: { texto: string | null; origen: 'proyecto' | 'ficha' }
   matricula: string | null
   cuenta: { enmascarada: string; descripcion: string | null }
 }
@@ -110,6 +112,18 @@ export function prepararResumen(polizaId: string, vista: VistaImportacion, quote
   if (oferta.primaEur === null || !oferta.efecto) {
     return { tipo: 'no', motivo: 'el precio no trae la prima o la fecha de efecto legibles: míralo en Avant2 o emite desde la intranet' }
   }
+  // La calle: si el proyecto la trae a medias, `/emitir` la completa ENTERA desde la ficha; si tampoco
+  // la ficha la tiene, no hay botón (la compañía la exige y se mandaría una dirección inservible).
+  if (vista.direccion?.origen === 'falta') {
+    const faltan = vista.direccion.faltan.length ? ` (${vista.direccion.faltan.join(', ')})` : ''
+    return {
+      tipo: 'no',
+      motivo: `la dirección del tomador está incompleta en Avant2 y la ficha tampoco la tiene completa${faltan}: corrígela en la ficha del cliente y pídeme el resumen otra vez`,
+    }
+  }
+  const direccionEmision = vista.direccion?.origen === 'ficha'
+    ? { texto: vista.direccion.texto, origen: 'ficha' as const }
+    : { texto: vista.direccion?.origen === 'proyecto' ? vista.direccion.texto : vista.titular.direccion, origen: 'proyecto' as const }
   if (!vista.cuenta) {
     const porque =
       vista.cuentaAviso === 'no_comprobada' ? 'no se ha podido leer la cuenta de la ficha'
@@ -133,6 +147,7 @@ export function prepararResumen(polizaId: string, vista: VistaImportacion, quote
       efecto: oferta.efecto,
       caduca: oferta.caduca,
       titular: vista.titular,
+      direccionEmision,
       matricula: vista.matricula,
       cuenta: { enmascarada: vista.cuenta.enmascarada, descripcion: vista.cuenta.descripcion },
     },
@@ -181,7 +196,8 @@ export function textoResumen(r: ResumenEmision): string {
     `Efecto ${fecha(r.efecto)} · el precio caduca ${fecha(r.caduca)}`,
     '',
     `Tomador: ${oNoConsta(r.titular.nombre)} (${oNoConsta(r.titular.documento)})`,
-    `Dirección: ${oNoConsta(r.titular.direccion)}${r.titular.codigoPostal ? `, ${esc(r.titular.codigoPostal)}` : ''}`,
+    `Dirección: ${oNoConsta(r.direccionEmision.texto)}${r.titular.codigoPostal ? `, ${esc(r.titular.codigoPostal)}` : ''}${
+      r.direccionEmision.origen === 'ficha' ? ' <i>(de la ficha: en Avant2 estaba incompleta; se corrige antes de enviar)</i>' : ''}`,
     `Vehículo: ${oNoConsta(r.matricula)}`,
     `Cuenta de cargo: ${esc(r.cuenta.enmascarada)}${r.cuenta.descripcion ? ` (${esc(r.cuenta.descripcion)})` : ''}`,
     '',
