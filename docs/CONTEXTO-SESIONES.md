@@ -719,6 +719,34 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   y «Qué pasa con lo que subas» queda como segundo nivel plegado. `SubirPoliza.tsx` reutiliza el
   `<details>` y las clases de `GrupoPlegable` (sin CSS nuevo).
 
+## (26/09/2026) Traer póliza de Codeoscopic SIN nº de proyecto: busca por DNI del tomador
+- Alberto: «¿no puede buscar por matrícula, DNI del tomador o algo?». `GET /insurances?holderIdentification=` (gratis,
+  rango ≤1 año) → `lib/codeoscopic/buscar-proyectos.ts`; la ruta `/api/operador/poliza/traer-pdf` prueba hasta 15 candidatos
+  con la MISMA comprobación del nº de póliza. Por matrícula no: `GET /vehicles` cuesta créditos y no da proyectos.
+- ⚠️ Forma de la respuesta de búsqueda sin fixture: se aceptan array o `{items|results|data|content}`; forma desconocida = error, nunca «no hay».
+
+## (26/09/2026) Portal del cliente: el monograma «AS» como indicador de carga
+- `app/(portal)/loading.tsx` (cambio de ruta) + `CargandoEnlace` con `useLinkStatus` dentro de cada `<Link>` del menú y la barra inferior: las pestañas `/boveda?vista=…` son la MISMA ruta y ahí Next NO re-muestra `loading.tsx` (el `LoadingBoundary` va keyed sin search params).
+- El flotante se porta a `<body>`: el cajón se esconde con `transform` y un `fixed` dentro saldría fuera de vista. 150 ms de retardo anti-parpadeo; `prefers-reduced-motion` sin animación.
+
+## (26/09/2026) Portal: el aviso de la campana lleva DIRECTO a aceptar la autorización
+- Caso Pablo Franco Ruz ← Grupo ELCA 83 (`ver_economico`, concedida por Alberto, pendiente de que Pablo acepte; aún no ha entrado nunca).
+- Aviso `autorizacion_pendiente` → `/autorizaciones?aceptar=<id>`: pliega «Qué es lo que das», pone «Te han dado acceso a» primero y ABIERTO si hay pendientes (antes plegado = botón escondido), baja a la tarjeta y la resalta.
+- Aceptar sigue SOLO en la pantalla (no en la campana), decisión confirmada por Alberto.
+- Recordatorio: «Administración» NO abre la empresa entera; solo «Dueño» (`dueno-empresa.ts`).
+
+## (26/09/2026) Traer la póliza de Codeoscopic (emitidas en Avant2 o antes de la automatización)
+- Botón «📥 Traer póliza de Codeoscopic» en la ficha de póliza (plataforma) → `POST asegura /api/operador/poliza/traer-pdf`
+  {polizaId, projectId?}. Gratis (GET). Exige que el nº de la solicitud aprobada = el de la póliza (si no, 422 y no guarda).
+- El cron `polizas-pdf` además archiva solo (sin correo) el PDF de las emitidas con proyecto enlazado y sin PDF (90 días).
+- Drive POLIZAS EMITIDAS: Reale 3022600334066 (proyecto 40804066, enlazado → cron) · Occident 549648082 (40841279, a mano) ·
+  2002600520435 (sin nº de proyecto conocido).
+
+## (26/09/2026) Pablo Guzmán: correo de emisión ENVIADO con PDF (verificado en BD)
+- 18:29 UTC `emision_con_poliza` a Pablo (Allianz 61089620) con `Póliza.pdf` (402 KB, archivado y visible en su portal).
+  El 400 de la descarga era la falta de `x-client-app`/`x-user-email` (PR #3685). Correo con resumen compañía/cobertura/efecto/prima.
+- Baja de la Mapfre en `solicitada`: al firmar Pablo sale sola a CCORREDOR@mapfre.com. Pendiente: verificar firma→comunicada.
+
 ## (26/09/2026) Correduría: la póliza original adjunta al correo de emisión + «Documentos de tu póliza» en el portal
 - El correo de emisión prometía el PDF y no lo llevaba. Ahora va adjunto si está (o se trae de Codeoscopic al pulsar
   «Enviar al cliente»); si no, el cron `asegura /api/cron/polizas-pdf` (:20 cada hora) lo manda cuando llegue.

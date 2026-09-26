@@ -123,6 +123,31 @@ export default function Documentos({
     }
   }
 
+  const [proyecto, setProyecto] = useState('')
+  async function traerDeCodeoscopic() {
+    if (!polizaId) return
+    setOcupado(true)
+    setAviso(null)
+    try {
+      const res = await fetch('/api/correduria/poliza/traer-pdf', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ polizaId, projectId: proyecto.trim() || null }),
+      })
+      const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
+      if (j?.estado === 'archivado') {
+        setAviso('Póliza traída de Codeoscopic y guardada: el cliente ya la ve en su portal.')
+        window.location.reload()
+        return
+      }
+      setAviso(String(j?.motivo ?? j?.error ?? `error ${res.status}`))
+    } catch (e) {
+      setAviso(e instanceof Error ? e.message : String(e))
+    } finally {
+      setOcupado(false)
+    }
+  }
+
   const tipos: TipoDocumento[] = [...(sugeridos ?? []), ...TIPOS_DOCUMENTO.filter((t) => !sugeridos?.includes(t))]
 
   return (
@@ -177,6 +202,24 @@ export default function Documentos({
         </ul>
       )}
 
+      {polizaId && !siniestroId && (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'flex-end', maxWidth: 520 }}>
+          <label style={{ ...lbl, flex: '1 1 180px' }}>
+            Nº de proyecto en Avant2 (vacío = el enlazado o, si no hay, se busca por el DNI del tomador)
+            <input
+              value={proyecto}
+              onChange={(e) => setProyecto(e.target.value.replace(/\D/g, ''))}
+              inputMode="numeric"
+              placeholder="p. ej. 40841279"
+              style={inp}
+            />
+          </label>
+          <button type="button" onClick={traerDeCodeoscopic} disabled={ocupado} style={{ ...btn, fontWeight: 600 }}>
+            📥 Traer póliza de Codeoscopic
+          </button>
+        </div>
+      )}
+
       <details>
         <summary style={{ cursor: 'pointer', fontSize: 13 }}>📎 Subir o pedir un documento</summary>
         <div style={{ display: 'grid', gap: 8, marginTop: 8, maxWidth: 520 }}>
@@ -211,9 +254,9 @@ export default function Documentos({
               ⏳ Anotar como pedido (sin fichero)
             </button>
           </div>
-          {aviso && <div style={{ fontSize: 13, color: 'var(--warning)' }}>{aviso}</div>}
         </div>
       </details>
+      {aviso && <div style={{ fontSize: 13, color: 'var(--warning)' }}>{aviso}</div>}
     </div>
   )
 }

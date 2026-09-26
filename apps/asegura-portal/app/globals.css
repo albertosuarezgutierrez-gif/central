@@ -3725,6 +3725,47 @@ h1 em {
   }
 }
 
+/* ── Carga con el monograma «AS» (26/09/2026). Ver `app/CargaAsegura.tsx`. ──
+ * El retardo de 150 ms evita el parpadeo cuando la pantalla ya estaba precargada;
+ * por eso la opacidad arranca en 0 y la animación la trae. Va ANTES del bloque
+ * de la carátula a propósito: su cepo prohíbe `position: fixed` de ahí en adelante. */
+.carga-as {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 50vh;
+  color: var(--primary);
+  opacity: 0;
+  animation: carga-as-entra 200ms var(--curva) 150ms forwards;
+}
+.carga-as-flotante {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  min-height: 0;
+  pointer-events: none;
+  background: color-mix(in oklab, var(--bg) 55%, transparent);
+}
+.carga-as-marca { display: inline-flex; animation: carga-as-late 1.1s ease-in-out infinite; }
+.carga-as-texto {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+@keyframes carga-as-entra { to { opacity: 1; } }
+@keyframes carga-as-late {
+  0%, 100% { transform: scale(0.92); opacity: 0.55; }
+  50% { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .carga-as { animation: none; opacity: 1; }
+  .carga-as-marca { animation: none; }
+}
+
 /* La carátula pública del enlace, sin armazón de portal detrás. */
 .caratula {
   max-width: 420px;
@@ -3978,3 +4019,4 @@ h1 em {
 /* Tipo de siniestro: botones con estado pulsado (no radios: se puede desmarcar). */
 button.opcion { font: inherit; font-size: 15px; color: var(--text); text-align: left; }
 button.opcion[aria-pressed="true"] { border-color: var(--primary); background: var(--primary-light); font-weight: 600; }
+

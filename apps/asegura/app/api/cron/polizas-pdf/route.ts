@@ -3,7 +3,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { enviarPolizasPendientes } from '@/lib/poliza-pdf'
+import { archivarPdfsPendientes, enviarPolizasPendientes } from '@/lib/poliza-pdf'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -22,7 +22,9 @@ export async function GET(req: Request) {
     if (!correduria) throw new Error('sin_correduria')
     const resumen = await enviarPolizasPendientes(correduria.id)
     if ('apagado' in resumen) return NextResponse.json({ estado: 'apagado', motivo: resumen.apagado })
-    return NextResponse.json({ estado: 'ok', ...resumen })
+    // Después, y solo si queda tiempo de sobra: archivar el PDF de las emitidas que aún no lo tienen.
+    const archivo = await archivarPdfsPendientes(correduria.id)
+    return NextResponse.json({ estado: 'ok', ...resumen, archivo })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('cron/polizas-pdf', e) }, { status: 503 })
   }

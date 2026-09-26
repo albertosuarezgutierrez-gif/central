@@ -319,7 +319,9 @@ export function avisosDe(x: EntradaAvisos): Avisos {
         id: a.id,
         titulo: `${a.otorganteNombre ?? 'Alguien'} te ha dado acceso a sus seguros`,
         detalle: 'Falta que lo aceptes para poder verlos.',
-        href: HREF_POR_TIPO.autorizacion_pendiente,
+        // Directo a SU tarjeta (26/09/2026, Alberto: «abre la pantalla y uno se
+        // pierde»). Sigue siendo una pantalla, no una acción: aceptar se hace allí.
+        href: `${HREF_POR_TIPO.autorizacion_pendiente}?aceptar=${encodeURIComponent(a.id)}`,
       })
     }
     // El espejo: las que YO concedí y la otra persona no ha aceptado. «La

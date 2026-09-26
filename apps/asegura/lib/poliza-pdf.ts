@@ -28,12 +28,43 @@ export async function pdfDePoliza(correduriaId: string, polizaId: string): Promi
     select project_id_codeoscopic::text as "projectId" from codeoscopic_projects
     where correduria_id = ${correduriaId}::uuid and poliza_id = ${polizaId}::uuid and estado = 'emitida' limit 1`
   if (!p) return null
-  const t = await traerPdfEmitido(correduriaId, p.projectId, polizaId)
+  const [n] = await prismaAsegura().$queryRaw<{ numero: string | null }[]>`
+    select numero_poliza as numero from polizas where id = ${polizaId}::uuid and correduria_id = ${correduriaId}::uuid`
+  const t = await traerPdfEmitido(correduriaId, p.projectId, polizaId, { numeroPolizaEsperado: n?.numero ?? null })
   if (t.estado !== 'archivado') {
     if (t.estado === 'error') console.error(`[poliza-pdf] ${polizaId}: ${t.motivo}`)
     return null
   }
   return pdfArchivado(correduriaId, polizaId)
+}
+
+/**
+ * Pólizas emitidas por Codeoscopic (proyecto enlazado y `emitida`) cuyo PDF aún no está archivado: se
+ * trae y se archiva (visible en el portal). NO escribe a nadie — eso es `enviarPolizasPendientes`, y
+ * solo tras el correo de emisión. Cubre las emitidas antes del 26/09/2026 y las que el vendor tardó en
+ * generar. El número de la póliza tiene que coincidir con el de la solicitud aprobada.
+ */
+export async function archivarPdfsPendientes(correduriaId: string, limite = 10): Promise<{ revisadas: number; archivadas: number; pendientes: number; fallos: number }> {
+  const filas = await prismaAsegura().$queryRaw<{ polizaId: string; projectId: string; numero: string | null }[]>`
+    select p.id::text as "polizaId", cp.project_id_codeoscopic::text as "projectId", p.numero_poliza as numero
+    from codeoscopic_projects cp join polizas p on p.id = cp.poliza_id
+    where cp.correduria_id = ${correduriaId}::uuid and cp.estado = 'emitida' and p.merged_into_poliza_id is null
+      and p.created_at > now() - interval '90 days'
+      and not exists (select 1 from documentos d where d.poliza_id = p.id and d.tipo = 'poliza'
+                      and d.subido_por = 'agente' and d.contenido is not null)
+    order by p.created_at desc
+    limit ${limite}`
+  const r = { revisadas: filas.length, archivadas: 0, pendientes: 0, fallos: 0 }
+  for (const f of filas) {
+    const t = await traerPdfEmitido(correduriaId, f.projectId, f.polizaId, { numeroPolizaEsperado: f.numero })
+    if (t.estado === 'archivado') r.archivadas++
+    else if (t.estado === 'aun_no') r.pendientes++
+    else {
+      r.fallos++
+      console.error(`[poliza-pdf] archivar ${f.polizaId} (proyecto ${f.projectId}): ${t.motivo}`)
+    }
+  }
+  return r
 }
 
 export const TIPO_CORREO_POLIZA = 'poliza_pdf'
