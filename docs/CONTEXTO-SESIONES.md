@@ -17,7 +17,7 @@ del art. 22 LCS bajo cada vencimiento («baja a la compañía hasta el dd/mm» /
 `textoPlazoOposicion`); (2) push al móvil «Póliza nueva» (tipo `poliza_nueva` en avisos-cima, CHECK ampliado en prod
 el 26/09 con la migración `portal_aviso_poliza_nueva`, silenciable en la campana). (3) Importar el proyecto que
 Alberto crea a mano en Avant2 queda APARCADO hasta verificar que la API ve proyectos creados en la web
-(`/api/correduria/codeoscopic-diagnostico?projectId=…`); anotado como fila 13 del plan de Codeoscopic.
+(`/api/correduria/codeoscopic-diagnostico?projectId=…`); anotado como fila 13 del plan de Codeoscopic. PR #3643 (mergeado).
 
 **(25/09/2026)** trading-analista, pasada 20:15: NAV/cartera/libro empujados a plataforma; 23/24
 símbolos analizados (META vetado por `detectarSuplantaciones` — precio mío mal transcrito de
