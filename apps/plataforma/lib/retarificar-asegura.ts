@@ -1298,7 +1298,12 @@ export type RespuestaEmitir =
     }
   /** `quizaEmitido`: el Submit acabó en 5xx — Codeoscopic dejó de esperar a la
    *  compañía y NO se sabe si emitió. No es un rechazo. */
-  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown; quizaEmitido?: boolean; consejo?: string }
+  | {
+      estado: 'error'; motivo: MotivoPuerto; mensaje: string; crudo: unknown; quizaEmitido?: boolean; consejo?: string
+      /** Lo que contestó asegura, para decidir si el fallo es un rechazo limpio o una duda.
+       *  `quizaDeclarado` es el `quizaEmitido` de asegura tal cual (true/false), `null` si no lo mandó. */
+      status?: number; causa?: string | null; quizaDeclarado?: boolean | null
+    }
   | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null }
   | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
 
@@ -1398,6 +1403,9 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
     crudo: r.crudo ?? null,
     ...(r.quizaEmitido === true ? { quizaEmitido: true } : {}),
     ...(cadenaONulo(r.consejo) ? { consejo: cadenaONulo(r.consejo)! } : {}),
+    status,
+    causa: typeof r.causa === 'string' ? r.causa : null,
+    quizaDeclarado: typeof r.quizaEmitido === 'boolean' ? r.quizaEmitido : null,
   }
 }
 

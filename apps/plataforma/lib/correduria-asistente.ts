@@ -157,7 +157,7 @@ export function diasValidos(v: unknown): number {
 /** Id de cliente/póliza: uuid. Evita que la IA meta una ruta o un nombre en la URL del puerto. */
 export function idValido(v: unknown): string | null {
   const s = typeof v === 'string' ? v.trim() : ''
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s) ? s : null
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s) ? s.toLowerCase() : null
 }
 
 /** Una regla que es en realidad un dato de cliente (DNI, teléfono, IBAN, email, matrícula) no se guarda. */

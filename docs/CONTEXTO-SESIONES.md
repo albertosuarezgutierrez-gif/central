@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(26/09/2026)** Correduría: fila 5 (ReRate/Submit a 150 s, rutas 240 s; PR #3664, mergeado) + fase 3a, EMITIR DESDE TELEGRAM:
+`preparar_emision` (póliza + nº proyecto Avant2) → el servidor resume desde el GET gratis del importador (tomador y cuenta
+enmascarados) → botón `cas_emitir` de un solo uso, 15 min, huella sha256 → al pulsar rehace lectura, enlaza y emite con la
+cuenta del resumen; nunca reintenta, lo dudoso (5xx sin cuerpo incluido) es «incierta». Revisión de alto riesgo aplicada:
+póliza ya sustituida bloquea (import y /emitir), sin prima no hay botón, envío dudoso previo frena, solo pulsa `from.id` del
+titular. Interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA` (Alberto lo puso a 1). Tabla `correduria_asistente_emision` aplicada.
+Pablo: su Mapfre (vence 29/09) sigue sin emitir desde nuestro sistema (0 proyectos enlazados). Pendiente: prueba real y 3b.
+
 **(26/09/2026)** Asistente de la correduría por Telegram, fase 1 (SOLO LECTURA): el texto libre se reparte
 correduría/contable (`clasificarDestino` + IA de una palabra para lo dudoso; ante fallo, contable), el asistente
 consulta la cartera por el puerto (buscar, ficha cliente/póliza, vencimientos, impagados, anulaciones) con

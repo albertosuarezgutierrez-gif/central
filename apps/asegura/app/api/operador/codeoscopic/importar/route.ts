@@ -39,7 +39,7 @@ type Contexto =
   | {
       ok: true
       correduriaId: string
-      poliza: { id: string; tipo: string; cliente_id: string; dni_lookup_hash: string | null; matricula: string | null }
+      poliza: { id: string; tipo: string; cliente_id: string; dni_lookup_hash: string | null; matricula: string | null; sustituida: boolean }
       crudo: unknown
     }
 
@@ -54,9 +54,10 @@ async function cargar(projectId: string | null, polizaId: string | null): Promis
   const correduria = await correduriaUnica().catch(() => null)
   if (!correduria) return error(503, 'no se ha podido resolver la correduría')
 
-  const filas = await prisma.$queryRaw<{ id: string; tipo: string; cliente_id: string; dni_lookup_hash: string | null; matricula: string | null }[]>`
+  const filas = await prisma.$queryRaw<{ id: string; tipo: string; cliente_id: string; dni_lookup_hash: string | null; matricula: string | null; sustituida: boolean }[]>`
     select p.id::text as id, p.tipo::text as tipo, p.cliente_id::text as cliente_id, c.dni_lookup_hash,
-           p.datos_especificos->>'matricula' as matricula
+           p.datos_especificos->>'matricula' as matricula,
+           (p.sustituida_at is not null or exists (select 1 from polizas s where s.poliza_origen_id = p.id)) as sustituida
     from polizas p join clientes c on c.id = p.cliente_id
     where p.id = ${polizaId}::uuid and p.correduria_id = ${correduria.id}::uuid
   `
@@ -92,6 +93,9 @@ function comprobar(ctx: Extract<Contexto, { ok: true }>) {
   const tomador: 'coincide' | 'distinto' | 'sin_dato' =
     !hash || !ctx.poliza.dni_lookup_hash ? 'sin_dato' : hash === ctx.poliza.dni_lookup_hash ? 'coincide' : 'distinto'
   const bloqueos: string[] = []
+  // 🚨 Una póliza ya sustituida por otra emitida no se vuelve a sustituir: serían dos
+  // contratos sobre el mismo riesgo (revisión de alto riesgo de la fase 3a, 26/09/2026).
+  if (ctx.poliza.sustituida) bloqueos.push('esta póliza ya está sustituida por otra: no se emite una segunda encima')
   if (!ramo) bloqueos.push('por ahora solo se importan proyectos de auto y moto')
   else if (ramo !== ctx.poliza.tipo) bloqueos.push(`el proyecto es de ${ramo} y la póliza de ${ctx.poliza.tipo}`)
   if (tomador === 'distinto') bloqueos.push('el tomador del proyecto no es el cliente de esta póliza (DNI distinto)')
@@ -277,7 +281,8 @@ export const POST = auditado(async (req: Request) => {
   }
 
   // Misma forma que la respuesta de `/oferta`: la pantalla de emisión ya sabe pintarla.
-  const cuenta = await cuentaDeFicha(ctx.correduriaId, ctx.poliza.id, ctx.poliza.cliente_id)
+  // El enlace ya está escrito: un fallo leyendo la cuenta no puede volverse un 500 que diga «no enlazado».
+  const cuenta = await cuentaDeFicha(ctx.correduriaId, ctx.poliza.id, ctx.poliza.cliente_id).catch(() => null)
   return NextResponse.json({
     estado: 'ok',
     projectId,

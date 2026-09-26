@@ -1937,8 +1937,24 @@ texto que quería decir 1.234 en español: la cifra sale plausible y **no hay hu
 
 ## 🛡️ Asistente de la correduría por Telegram (fase 1, 26/09/2026)
 Alberto le pregunta al bot por clientes, pólizas, vencimientos, impagados o anulaciones pendientes y el
-asistente contesta leyendo la cartera por el puerto de asegura. **Fase 1 = SOLO LECTURA**: no emite, no
-escribe en la cartera y no habla con nadie más que con Alberto.
+asistente contesta leyendo la cartera por el puerto de asegura. No escribe en la cartera ni habla con nadie
+más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ver el apartado siguiente.
+
+### 🚀 Emitir desde Telegram (fase 3a, 26/09/2026) — `lib/correduria-emision-tg.ts`
+- **La IA nunca emite ni escribe el resumen.** `preparar_emision(polizaId, projectId, quoteId?)` lee GRATIS la vista
+  del importador de asegura (tomador del PROYECTO y cuenta de la ficha, los dos enmascarados) y `prepararResumen()`
+  decide si hay botón. Sin botón si: bloqueos del import (incluida **póliza ya sustituida**), tomador/vehículo sin
+  comprobar, sin prima o sin efecto, sin cuenta confirmable (por Telegram no se teclea IBAN), o un envío anterior de
+  esa póliza en `emitiendo`/`incierta` de los últimos 7 días.
+- Botón `cas_emitir:<id>` de **un solo uso** (`UPDATE … WHERE estado='propuesta' AND caduca_at>now()`), 15 min,
+  **huella** sha256 del resumen: al pulsar se rehace la lectura y, si cambió algo, no se emite. Solo cuenta si pulsa
+  el `from.id` = `TELEGRAM_CHAT_ID` (en un grupo, nadie emite). Corre en `after()` del webhook.
+- Emite con `cuentaConfirmada` = la máscara del resumen y actor `agente:asistente-telegram`. **Nunca reintenta.**
+  `rechazada` solo con rechazo limpio (4xx previo al Submit, 502 del vendor con `quizaEmitido:false`, 503 sin libro);
+  cualquier otra cosa —un 500 sin cuerpo incluido— es **`incierta`**: «puede haberse emitido, míralo en la intranet».
+- Interruptor **`CORREDURIA_ASISTENTE_EMISION_ACTIVA`** (apagado salvo «1/sí»). Tabla `correduria_asistente_emision`
+  (`prisma/sql/2026-09-26_correduria_asistente_emision.sql`, aplicada). Cepos en `lib/correduria-emision-tg.test.ts`.
+- **Pendiente (3b):** correcciones por chat (`proponer_correccion`); hoy dirección/apellidos se corrigen en la ficha.
 - **Reparto del texto libre** (`clasificarDestino`, puro y testeado en `lib/correduria-asistente.ts`):
   atajo `seguro:` / `/seguros` → siempre correduría; palabras propias (póliza, siniestro, renovación,
   CIMA…) o una matrícula → correduría; palabras contables → contable; lo demás («¿qué tiene Pablo
@@ -1958,7 +1974,7 @@ escribe en la cartera y no habla con nadie más que con Alberto.
   (`ia_presupuestos`, app `correduria-asistente`), e interruptor `CORREDURIA_ASISTENTE_APAGADO`.
 - **Lo que una herramienta no trae es «no consta», nunca «no tiene»**: un fallo del puerto le llega a la
   IA como `ERROR … NO digas que no hay datos`.
-- Callbacks `cas_bien|cas_mal|cas_regla|cas_reglano` en el webhook. Son RESPUESTAS, no avisos
+- Callbacks `cas_bien|cas_mal|cas_regla|cas_reglano|cas_emitir|cas_emitirno` en el webhook. Son RESPUESTAS, no avisos
   proactivos: por eso usan `tgSend` directo y no están en el catálogo de `/telegram`.
 - **Sin resumen diario propio a propósito:** las renovaciones ya llegan en `correduria.renovaciones` y
   Alberto pidió menos avisos. «¿Qué tengo hoy?» se lo contesta el asistente a demanda.

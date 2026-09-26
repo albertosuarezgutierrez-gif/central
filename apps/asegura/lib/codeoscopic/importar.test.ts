@@ -94,3 +94,14 @@ test('titular del proyecto: documento enmascarado y «no consta» sin inventar',
   assert.deepEqual(completo, { nombre: 'Ana Ruiz Gil', documento: '…678Z', direccion: 'Calle Sol 3', codigoPostal: '41003' })
   assert.doesNotMatch(JSON.stringify(completo), /12345678Z/)
 })
+
+test('una póliza ya sustituida no se vuelve a sustituir: lo bloquean el import y el Submit', () => {
+  const leer = (rel: string) => readFileSync(join(import.meta.dirname, rel), 'utf8')
+  const imp = leer('../../app/api/operador/codeoscopic/importar/route.ts')
+  assert.match(imp, /sustituida_at is not null or exists \(select 1 from polizas s where s\.poliza_origen_id = p\.id\)/)
+  assert.match(imp, /if \(ctx\.poliza\.sustituida\) bloqueos\.push/)
+  const emi = leer('../../app/api/operador/codeoscopic/emitir/route.ts')
+  assert.match(emi, /sustituida_at is not null or exists \(select 1 from polizas s where s\.poliza_origen_id = pol\.id\)/)
+  // Y la guarda va ANTES del envío.
+  assert.ok(emi.indexOf('if (poliza.sustituida)') > 0 && emi.indexOf('if (poliza.sustituida)') < emi.indexOf('enviarEmision('))
+})

@@ -215,6 +215,18 @@ async function prepararEmision(args: Record<string, unknown>, turnoId: number): 
   }
 
   const r = prep.resumen
+  // Un envío anterior de esta póliza que no acabó claro (se cortó, o quedó «incierto») frena el
+  // botón: antes de preparar otro, se mira en la intranet si aquel llegó a emitir.
+  const dudoso = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+    SELECT count(*) AS n FROM correduria_asistente_emision
+    WHERE poliza_id = ${r.polizaId}::uuid AND estado IN ('emitiendo', 'incierta')
+      AND creada_at > now() - interval '7 days'`).then((f) => Number(f[0]?.n ?? 0)).catch(() => null)
+  if (dudoso !== 0) {
+    return {
+      texto: `NO SE PUEDE EMITIR: ${dudoso === null ? 'no he podido comprobar los envíos anteriores de esta póliza' : 'hay un envío anterior de esta póliza sin aclarar (puede haberse emitido)'}. Díselo a Alberto y que lo mire en la intranet: ${urlPoliza(r.polizaId)}`,
+      ok: true,
+    }
+  }
   // Un solo resumen vivo por póliza: el anterior deja de valer aunque no haya caducado.
   await prisma.$executeRaw(Prisma.sql`
     UPDATE correduria_asistente_emision SET estado = 'caducada', decidida_at = now()

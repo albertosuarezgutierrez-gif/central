@@ -6,7 +6,7 @@ import {
   ACTOR_EMISION_TG, emisionTgActiva, huellaResumen, prepararResumen, proyectoValido, resultadoEmision, textoResumen,
   type ResumenEmision,
 } from './correduria-emision-tg.ts'
-import type { VistaImportacion } from './retarificar-asegura.ts'
+import { interpretarEmitir, type VistaImportacion } from './retarificar-asegura.ts'
 
 // Fase 3a (26/09/2026): emitir desde Telegram. Lo puro se prueba de verdad; lo que vive en SQL y en
 // el webhook se vigila leyendo el FUENTE, porque ni `tsc` ni el build miran dentro de un `Prisma.sql`.
@@ -113,7 +113,36 @@ test('resultado: emitida, rechazada o incierta — y nunca se invita a reintenta
     assert.equal(d.estado, 'incierta')
     assert.match(d.texto, /NO lo repitas/)
   }
-  assert.equal(resultadoEmision({ estado: 'error', motivo: 'asegura_error', mensaje: 'tomador distinto', crudo: null }, url).estado, 'rechazada')
+  assert.equal(resultadoEmision({ estado: 'error', motivo: 'asegura_error', mensaje: 'tomador distinto', crudo: null, status: 409, causa: 'otro' }, url).estado, 'rechazada')
+})
+
+test('un 500 de asegura sin cuerpo NO es «no se ha emitido»: el Submit pudo salir', () => {
+  const url = 'https://x'
+  assert.equal(resultadoEmision(interpretarEmitir(500, null), url).estado, 'incierta')
+  assert.equal(resultadoEmision(interpretarEmitir(504, { estado: 'error' }), url).estado, 'incierta')
+  // Sin status (respuesta construida a mano o vieja): la duda gana.
+  assert.equal(resultadoEmision({ estado: 'error', motivo: 'asegura_error', mensaje: 'x', crudo: null }, url).estado, 'incierta')
+  // Rechazos limpios, que sí dicen que no se ha emitido:
+  assert.equal(resultadoEmision(interpretarEmitir(502, { estado: 'error', causa: 'vendor', mensaje: '400: bad', quizaEmitido: false }), url).estado, 'rechazada')
+  assert.equal(resultadoEmision(interpretarEmitir(502, { estado: 'error', causa: 'vendor', mensaje: '500: unknown', quizaEmitido: true }), url).estado, 'incierta')
+  assert.equal(resultadoEmision(interpretarEmitir(502, { estado: 'error', causa: 'vendor', mensaje: '?' }), url).estado, 'incierta')
+  assert.equal(resultadoEmision(interpretarEmitir(503, { estado: 'error', causa: 'sin_libro', mensaje: 'libro' }), url).estado, 'rechazada')
+  assert.equal(resultadoEmision(interpretarEmitir(429, { estado: 'error', causa: 'tope', mensaje: 'tope' }), url).estado, 'rechazada')
+  assert.equal(resultadoEmision(interpretarEmitir(409, { estado: 'error', causa: 'otro', mensaje: 'ya sustituida' }), url).estado, 'rechazada')
+  assert.equal(resultadoEmision(interpretarEmitir(409, { estado: 'error', causa: 'ya_emitida', mensaje: 'ya' }), url).estado, 'incierta')
+})
+
+test('sin prima o sin fecha de efecto no hay botón', () => {
+  assert.equal(prepararResumen(POLIZA, vista({ ofertas: [{ ...oferta('Q1'), primaEur: null }] }), null).tipo, 'no')
+  assert.equal(prepararResumen(POLIZA, vista({ ofertas: [{ ...oferta('Q1'), efecto: null }] }), null).tipo, 'no')
+})
+
+test('un envío anterior sin aclarar de la misma póliza frena el botón, ANTES de guardar otro', () => {
+  const prep = tg.slice(tg.indexOf('async function prepararEmision'), tg.indexOf('type FilaEmision'))
+  const freno = prep.indexOf("estado IN ('emitiendo', 'incierta')")
+  assert.ok(freno > 0)
+  assert.ok(freno < prep.indexOf('INSERT INTO correduria_asistente_emision'))
+  assert.match(prep, /if \(dudoso !== 0\)/)
 })
 
 // ── Cepos sobre el fuente (SQL y webhook) ────────────────────────────────────────────────────────
@@ -150,4 +179,7 @@ test('un chat ajeno no llega a los botones: el webhook filtra el emisor antes de
   assert.ok(filtro > 0)
   assert.ok(filtro < wh.indexOf("if (prefix === 'cas')"))
   assert.match(wh, /if \(action === 'emitir'\)[\s\S]*?after\(\(\) => emitirDesdeBoton\(arg\)\)/)
+  // Y dentro del chat, solo la persona autorizada: el from.id se mira ANTES de emitir.
+  const rama = wh.slice(wh.indexOf("if (action === 'emitir')"))
+  assert.ok(rama.indexOf('cb.from?.id') > 0 && rama.indexOf('cb.from?.id') < rama.indexOf('emitirDesdeBoton('))
 })

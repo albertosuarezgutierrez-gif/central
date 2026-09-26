@@ -92,6 +92,10 @@ export function prepararResumen(polizaId: string, vista: VistaImportacion, quote
   }
   const categoria = oferta.categoria ?? oferta.modalidad
   if (!oferta.compania || !categoria) return { tipo: 'no', motivo: 'el precio no trae compañía o modalidad legibles: emite desde la intranet' }
+  // Sin prima o sin fecha de efecto no hay botón: Alberto firmaría un contrato cuyo precio no ha visto.
+  if (oferta.primaEur === null || !oferta.efecto) {
+    return { tipo: 'no', motivo: 'el precio no trae la prima o la fecha de efecto legibles: míralo en Avant2 o emite desde la intranet' }
+  }
   if (!vista.cuenta) {
     const porque =
       vista.cuentaAviso === 'no_comprobada' ? 'no se ha podido leer la cuenta de la ficha'
@@ -177,6 +181,24 @@ export function textoResumen(r: ResumenEmision): string {
 export type EstadoFinal = 'emitida' | 'rechazada' | 'incierta'
 
 /**
+ * ¿Consta que NO se ha emitido? Solo los rechazos que asegura da ANTES del Submit o que el vendor
+ * da limpiamente (4xx declarado sin duda). Cualquier otra cosa —un 500 sin cuerpo, una red caída,
+ * una respuesta rara— es «puede haberse emitido»: decir «no se ha emitido» sobre un Submit que
+ * salió sería el error más caro (revisión de alto riesgo, 26/09/2026).
+ */
+function rechazoLimpio(r: Extract<RespuestaEmitir, { estado: 'error' }>): boolean {
+  if (r.quizaEmitido === true || r.motivo === 'red' || r.motivo === 'respuesta_ilegible') return false
+  if (r.motivo === 'secreto_rechazado') return true
+  const st = r.status
+  if (st === undefined) return false
+  if (st === 502) return r.quizaDeclarado === false
+  if (st === 503) return r.causa === 'sin_libro' || r.causa === 'apagado'
+  if (st >= 500) return false
+  if (st === 409) return r.causa !== 'ya_emitida' && r.causa !== 'reintento_sin_confirmar'
+  return st >= 400
+}
+
+/**
  * Qué pasó y qué decir. **Nunca se ofrece reintentar**: el vendor no deduplica y un segundo Submit
  * puede ser la segunda póliza del mismo coche. Lo que no sea un «sí» o un «no» claro es `incierta`.
  */
@@ -201,7 +223,7 @@ export function resultadoEmision(r: RespuestaEmitir, urlIntranet: string): { est
     case 'reintento_sin_confirmar':
       return { estado: 'incierta', texto: `⚠️ ${esc(r.mensaje)} Puede haberse emitido. ${mirar}` }
     case 'error': {
-      const incierta = r.motivo === 'red' || r.motivo === 'respuesta_ilegible' || r.quizaEmitido === true
+      const incierta = !rechazoLimpio(r)
       return incierta
         ? { estado: 'incierta', texto: `⚠️ No hay respuesta clara (${esc(r.mensaje)}). Puede haberse emitido: NO lo repitas. ${mirar}` }
         : { estado: 'rechazada', texto: `✖️ No se ha emitido: ${esc(r.mensaje)} ${mirar}` }
