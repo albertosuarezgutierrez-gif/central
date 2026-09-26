@@ -714,6 +714,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   0 mensajes en BD; la tabla `seguros.portal_mensaje` SE QUEDA (la usa la función SQL de fusionar clientes).
 - Medido con Playwright a 320/390/1280; cepos en `regression-portal-cartera-agrupada` vistos en rojo. PR #3659.
 
+## (26/09/2026) Correduría: 328 fichas con el correo de la ficha distinto del principal de su lista
+Medido: todas de la importación del 21/06; 271 son correos que ya tiene OTRA ficha (índice único, choques del backfill del 08/09).
+Impacto real, en 7 clientes con póliza activa por CIMA que el portal no enlazaría a su ficha. Hecho: Reyes Tejero y Sabeino Nosti (ya leads)
+con su correo de cabecera en la lista como principal. Pendiente de Alberto: Aguilera Reina (duplicado; la fusión exige el índice del DNI del
+prospecto → backfill DNI en /correduria/mantenimiento), buzones compartidos (Ansaire/Juan Carlos, Flores y Gázquez/Diego Flores «Empresa»,
+González Lozano/Manuel Puerto «Cónyuge», Molera Cantos/Ricardo Domínguez +7, González García con 2 DNI distintos) y Antonio Sánchez/Toni Villegas.
+
 ## (26/09/2026) Agente huésped mudo con >25 mensajes: Smoobu pagina `/messages`
 - Stephen (Duplex, reserva 150035011) preguntó cómo entrar de noche por la puerta de cristal y el agente no contestó ni propuso nada.
 - Causa medida contra Smoobu (vía `pg_net`): `/api/reservations/{id}/messages` pagina de 25 en 25 (más antiguo primero); con 27 mensajes sus dos preguntas quedaban en la página 2, el último visible era un automático nuestro → `host_ultimo_sin_pregunta`, salida muda.
