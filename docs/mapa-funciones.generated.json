@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-26T16:30:12Z",
-  "sha": "afde5d4d3a64e56018868c6b5acd3036a3237d71",
+  "generadoEn": "2026-09-26T18:09:08Z",
+  "sha": "bba0ca69ef9f471f22985c5226ba64efdc19c0a6",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4285,7 +4285,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 53,
+          "linea": 54,
           "resumen": "La ficha de UNA póliza de la cartera. ───────────────────────────────────────────────────────────────────────────── 🚨 EL ID DE LA URL NO CONSULTA NADA. Esta es la línea entera de esta página. Una rut"
         },
         {
@@ -4294,13 +4294,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 226,
+          "linea": 254,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3cd1a09f1664"
+      "hash": "cb5bfd0bf1a1"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -5717,6 +5717,27 @@
       ],
       "rutaApi": "/api/polizas/[id]/carta",
       "hash": "9f2892f693ab"
+    },
+    {
+      "ruta": "apps/asegura-portal/app/api/polizas/[id]/documentos/[documentoId]/route.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "_req: Request, ctx: Ctx",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "Descarga un documento ORIGINAL de la compañía de una póliza propia (`lib/documentos-poliza.ts`). Mismas cabeceras que los adjuntos del parte: SIEMPRE descarga, mime de la lista cerrada, sin caché comp"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/polizas/[id]/documentos/[documentoId]",
+      "hash": "77808d82a4f9"
     },
     {
       "ruta": "apps/asegura-portal/app/api/polizas/[id]/reintentar/route.ts",
@@ -8416,6 +8437,55 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "dd78ac6c98d7"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/documentos-poliza.ts",
+      "ambito": "apps/asegura-portal",
+      "resumen": "La documentación ORIGINAL de la compañía de una póliza (26/09/2026): el PDF que la aseguradora genera al emitir y que `apps/asegura` archiva en `seguros.documentos` con `visible_por_cliente`. Alberto: «la idea es que tengan acceso a la documentación original de la compañía dentro». 🔒 Aislamiento po",
+      "exporta": [
+        "documentosDePoliza",
+        "leerDocumentoPoliza"
+      ],
+      "funciones": [
+        {
+          "nombre": "mimeGuardado",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: string | null",
+          "retorno": "MimeDocumento | null",
+          "linea": 21
+        },
+        {
+          "nombre": "polizaPropiaConDocumentos",
+          "kind": "function",
+          "exportada": false,
+          "params": "identidadId: string, polizaId: string",
+          "retorno": "Promise<boolean>",
+          "linea": 26,
+          "resumen": "¿Es `polizaId` una póliza PROPIA de esta identidad con nivel que enseña documentos?"
+        },
+        {
+          "nombre": "documentosDePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, polizaId: string",
+          "retorno": "Promise<DocumentoPoliza[] | null>",
+          "linea": 32,
+          "resumen": "Los documentos de la compañía de esa póliza. `null` = la póliza no es tuya (o tu nivel no los ve)."
+        },
+        {
+          "nombre": "leerDocumentoPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "identidadId: string, polizaId: string, documentoId: string,",
+          "retorno": "Promise<",
+          "linea": 45,
+          "resumen": "Un documento para descargar. `null` = no existe, no es tuyo o no se puede servir (se responde igual)."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3a291ff74b92"
     },
     {
       "ruta": "apps/asegura-portal/lib/encoger-imagen.ts",
@@ -12933,6 +13003,27 @@
       "hash": "fc90e55875f9"
     },
     {
+      "ruta": "apps/asegura/app/api/cron/polizas-pdf/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 17,
+          "resumen": "GET /api/cron/polizas-pdf — cada hora: trae de Codeoscopic el PDF de las pólizas emitidas en los últimos 14 días que aún no lo tienen y, cuando llega, se lo manda al cliente adjunto. Solo a quien ya r"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/polizas-pdf",
+      "hash": "657a3d559a0b"
+    },
+    {
       "ruta": "apps/asegura/app/api/cron/revision-anual/route.ts",
       "ambito": "apps/asegura",
       "exporta": [
@@ -13634,7 +13725,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "d5e4ee0f58b2"
+      "hash": "f993f8992b38"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/faltan-producto/route.ts",
@@ -14583,7 +14674,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/emision/aviso",
-      "hash": "b12612949f7b"
+      "hash": "2476d3ff851e"
     },
     {
       "ruta": "apps/asegura/app/api/operador/eventos/detectar/route.ts",
@@ -17876,7 +17967,7 @@
           "nombre": "guardarDocumento",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, entrada: Destino & { tipo: TipoDocumento nombre: string mime: string contenido: Buffer notas?: string | null subidoPor?: 'corredor' | 'cliente' | 'agente' },",
+          "params": "correduriaId: string, entrada: Destino & { tipo: TipoDocumento nombre: string mime: string contenido: Buffer notas?: string | null subidoPor?: 'corredor' | 'cliente' | 'agente' /** El cliente lo ve en su portal. Solo para la documentación O",
           "retorno": "Promise<Guardado>",
           "linea": 169,
           "resumen": "Guarda un fichero. Devuelve `repetido: true` si ya había uno con el mismo sha256 colgado del mismo cliente (se guarda igual: puede ser otra póliza)."
@@ -17887,7 +17978,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: Destino & { tipo: TipoDocumento; notas?: string | null },",
           "retorno": "Promise<Guardado>",
-          "linea": 226,
+          "linea": 229,
           "resumen": "Deja constancia de que se ha PEDIDO un documento que aún no ha llegado."
         },
         {
@@ -17896,7 +17987,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string, por: string",
           "retorno": "Promise<boolean>",
-          "linea": 245,
+          "linea": 248,
           "resumen": "Marca como revisado. `false` si no existe (o no es de esta correduría) o está `pedido`."
         },
         {
@@ -17905,7 +17996,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string",
           "retorno": "Promise<boolean>",
-          "linea": 261,
+          "linea": 264,
           "resumen": "Borra un documento (el corredor se ha equivocado de ficha). `false` si no existe."
         },
         {
@@ -17914,7 +18005,7 @@
           "exportada": true,
           "params": "correduriaId: string, id: string,",
           "retorno": "Promise<",
-          "linea": 274,
+          "linea": 277,
           "resumen": "El fichero entero, de uno en uno. `null` si no existe, no es de esta correduría o está `pedido`."
         }
       ],
@@ -17923,7 +18014,7 @@
         "poliza_documentos"
       ],
       "rutaApi": null,
-      "hash": "50d26a77c757"
+      "hash": "0afc9dbc0f0b"
     },
     {
       "ruta": "apps/asegura/lib/cartera-edicion.ts",
@@ -19738,7 +19829,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "42411baadfbc"
+      "hash": "aee1c5f0295c"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/carnet-moto.ts",
@@ -23585,6 +23676,27 @@
       "hash": "84fad552ecff"
     },
     {
+      "ruta": "apps/asegura/lib/codeoscopic/traer-pdf-emitido.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Trae de Codeoscopic el PDF de una póliza YA emitida y lo archiva en `seguros.documentos` (26/09/2026). Mismo camino que el endpoint de diagnóstico (`/api/operador/codeoscopic/documentos`): proyecto → solicitud aprobada → Retrieve individual → `archivarDocumentoEmitido`. Todo son `GET`: gratis. Lo us",
+      "exporta": [
+        "traerPdfEmitido"
+      ],
+      "funciones": [
+        {
+          "nombre": "traerPdfEmitido",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, projectId: string, polizaId: string",
+          "retorno": "Promise<PdfTraido>",
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "24f9bcf94821"
+    },
+    {
       "ruta": "apps/asegura/lib/codeoscopic/valores-ficha.ts",
       "ambito": "apps/asegura",
       "resumen": "Valores de la PERSONA que se pueden sacar de la ficha del cliente para reparar un 400 sin preguntar al corredor. Compartido por `/oferta` (ReRate) y `/emitir` (Submit): las dos llamadas piden campos que la cotización inicial no exigía, y las dos los reparan igual — ficha primero, nunca un dato inven",
@@ -24057,7 +24169,8 @@
       "ambito": "apps/asegura",
       "resumen": "El correo al cliente justo después de EMITIR su póliza (26/09/2026, dictado de Alberto: «enviar automáticamente mail con diseño moderno» y, en el mismo correo, el enlace para firmar la baja de la póliza anterior). El OK de este envío concreto es la pulsación de «Emitir». 🚨 No nombra NADA de la cart",
       "exporta": [
-        "cuerpoCorreoEmision"
+        "cuerpoCorreoEmision",
+        "cuerpoCorreoPoliza"
       ],
       "funciones": [
         {
@@ -24066,7 +24179,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 24
+          "linea": 26
         },
         {
           "nombre": "cuerpoCorreoEmision",
@@ -24074,12 +24187,21 @@
           "exportada": true,
           "params": "d: DatosCorreoEmision",
           "retorno": "CuerpoCorreoEmision",
-          "linea": 29
+          "linea": 31
+        },
+        {
+          "nombre": "cuerpoCorreoPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { nombre: string | null; enlace: string }",
+          "retorno": "CuerpoCorreoEmision",
+          "linea": 84,
+          "resumen": "El correo que lleva la póliza cuando la compañía la entrega DESPUÉS de emitir (el caso normal: al emitir aún no la ha generado). Mismo criterio: el cuerpo no nombra nada de la cartera; el PDF va adjun"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "58d288991f89"
+      "hash": "5e37f13298cc"
     },
     {
       "ruta": "apps/asegura/lib/correo-envio.ts",
@@ -24096,7 +24218,7 @@
           "exportada": true,
           "params": "c: CorreoCliente, fetchImpl: typeof fetch = fetch",
           "retorno": "Promise<ResultadoCorreoCliente>",
-          "linea": 38
+          "linea": 40
         },
         {
           "nombre": "contenidoBase64",
@@ -24104,7 +24226,7 @@
           "exportada": false,
           "params": "a: AdjuntoCorreo",
           "retorno": "string",
-          "linea": 42
+          "linea": 44
         },
         {
           "nombre": "enviarCorreoSeguido",
@@ -24112,12 +24234,12 @@
           "exportada": true,
           "params": "c: CorreoCliente, fetchImpl: typeof fetch = fetch",
           "retorno": "Promise<EnvioDetallado>",
-          "linea": 46
+          "linea": 48
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "58e98189751e"
+      "hash": "6e67168ef5fb"
     },
     {
       "ruta": "apps/asegura/lib/correo-eventos.ts",
@@ -24290,7 +24412,7 @@
           "exportada": true,
           "params": "e: EnvioARegistrar",
           "retorno": "Promise<void>",
-          "linea": 43,
+          "linea": 44,
           "resumen": "Deja constancia del correo. Si falla, NO se lanza: el correo ya salió (o ya falló) y tumbar al llamante por el registro sería peor. Se loguea sin la dirección."
         },
         {
@@ -24299,7 +24421,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, limite = 50",
           "retorno": "Promise<CorreoFicha[] | null>",
-          "linea": 71,
+          "linea": 72,
           "resumen": "Los correos del cliente con todos sus eventos, el más reciente primero. `null` = no se pudo leer."
         }
       ],
@@ -24308,7 +24430,7 @@
         "correo_evento"
       ],
       "rutaApi": null,
-      "hash": "abab3e24dd59"
+      "hash": "9f726cb3886e"
     },
     {
       "ruta": "apps/asegura/lib/cron-auth.ts",
@@ -26152,6 +26274,52 @@
       "hash": "795013e93028"
     },
     {
+      "ruta": "apps/asegura/lib/poliza-pdf.ts",
+      "ambito": "apps/asegura",
+      "resumen": "El PDF original de una póliza emitida (26/09/2026): leerlo de `seguros.documentos` o, si aún no está, traerlo de Codeoscopic; y el cron que lo manda al cliente cuando la compañía lo entrega DESPUÉS de emitir. Solo se escribe al cliente si antes salió el correo de la emisión (que es el OK de Alberto)",
+      "exporta": [
+        "pdfArchivado",
+        "pdfDePoliza",
+        "enviarPolizasPendientes"
+      ],
+      "funciones": [
+        {
+          "nombre": "pdfArchivado",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaId: string",
+          "retorno": "Promise<PdfPoliza | null>",
+          "linea": 14,
+          "resumen": "El PDF de la compañía ya archivado para esa póliza, o `null` si no está (aún)."
+        },
+        {
+          "nombre": "pdfDePoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaId: string",
+          "retorno": "Promise<PdfPoliza | null>",
+          "linea": 24,
+          "resumen": "Lo archivado; si no hay, lo intenta traer de Codeoscopic UNA vez (gratis). `null` = la compañía aún no lo da."
+        },
+        {
+          "nombre": "enviarPolizasPendientes",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ahora = Date.now()",
+          "retorno": "Promise<ResumenPolizasPdf |",
+          "linea": 59,
+          "resumen": "Pólizas emitidas por Codeoscopic en los últimos 14 días cuyo cliente YA recibió el correo de la emisión DE ESA PÓLIZA sin la póliza: se intenta traer el PDF y, si llega, se le manda. Todo va POR PÓLIZ"
+        }
+      ],
+      "tablas": [
+        "codeoscopic_projects",
+        "correo_envio",
+        "polizas"
+      ],
+      "rutaApi": null,
+      "hash": "6f5571a1716e"
+    },
+    {
       "ruta": "apps/asegura/lib/presupuesto-aceptacion.ts",
       "ambito": "apps/asegura",
       "resumen": "El cliente ELIGE y FIRMA su presupuesto desde el portal (spec 2026-09-21 §2.4, PR 4). Mismo reparto que la firma de la anulación (2-d-2): el portal no escribe la cartera ni ve el correo en claro; llama al puente (`/api/portal/presupuesto`) con su identidad y aquí se resuelve la ficha por `portal_vin",
@@ -27666,7 +27834,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 37
+          "linea": 38
         },
         {
           "nombre": "correoEmisionActivo",
@@ -27674,23 +27842,23 @@
           "exportada": true,
           "params": "v: string | undefined = process.env.ASEGURA_CORREO_EMISION",
           "retorno": "boolean",
-          "linea": 41
+          "linea": 42
         },
         {
           "nombre": "trasEmision",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, e: { clienteId: string; polizaOrigenId: string | null }, /** * Modo PRUEBA: el correo va a esta dirección (la de Alberto) y no al cliente, y no queda en la ficha * del cliente como enviado. El expediente de baja sí se ",
+          "params": "correduriaId: string, e: { clienteId: string; polizaId: string; polizaOrigenId: string | null }, /** * Modo PRUEBA: el correo va a esta dirección (la de Alberto) y no al cliente, y no queda en la ficha * del cliente como enviado. El expedie",
           "retorno": "Promise<ResultadoTrasEmision>",
-          "linea": 45
+          "linea": 46
         },
         {
           "nombre": "trasEmisionConTope",
           "kind": "function",
           "exportada": true,
-          "params": "correduriaId: string, e: { clienteId: string; polizaOrigenId: string | null }, ms = 12_000,",
+          "params": "correduriaId: string, e: { clienteId: string; polizaId: string; polizaOrigenId: string | null }, ms = 12_000,",
           "retorno": "Promise<ResultadoTrasEmision |",
-          "linea": 110,
+          "linea": 126,
           "resumen": "`trasEmision` con TOPE de tiempo, para las rutas que ya han emitido y tienen que contestar: una emisión hecha no puede acabar en «no sé si se ha emitido» porque el correo tardó. Pasado el tope se dice"
         }
       ],
@@ -27698,7 +27866,7 @@
         "anulacion"
       ],
       "rutaApi": null,
-      "hash": "2bb3637b0800"
+      "hash": "402a985b14ec"
     },
     {
       "ruta": "apps/asegura/lib/vinculos-portal.ts",
@@ -159002,7 +159170,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3790,
-    "funciones": 12182
+    "archivos": 3795,
+    "funciones": 12193
   }
 }

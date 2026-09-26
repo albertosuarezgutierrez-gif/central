@@ -171,21 +171,21 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 144 | 19.423 | 13.037.261 | 0 | 0 |
-| `otro` | 140 | 4.904 | 16.457.782 | 8.059.321 | 0 |
-| `mcp:github` | 129 | 4.025 | 3.578.570 | 42.276.619 | 66 |
-| `lectura-directa` | 132 | 3.835 | 8.038.216 | 0 | 0 |
-| `escritura` | 111 | 2.470 | 39.859.282 | 0 | 0 |
-| `sql` | 95 | 2.031 | 927.352 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 78 | 914 | 214.828 | 3.171.734 | 10 |
-| `mcp:Vercel` | 32 | 392 | 616.572 | 198.719 | 7 |
+| `bash` | 144 | 19.481 | 13.087.717 | 0 | 0 |
+| `otro` | 140 | 4.915 | 16.471.659 | 8.059.321 | 0 |
+| `mcp:github` | 129 | 4.033 | 3.588.128 | 42.521.646 | 66 |
+| `lectura-directa` | 132 | 3.864 | 8.076.091 | 0 | 0 |
+| `escritura` | 111 | 2.472 | 39.862.982 | 0 | 0 |
+| `sql` | 95 | 2.035 | 928.223 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 78 | 917 | 215.421 | 3.171.734 | 10 |
+| `mcp:Vercel` | 32 | 393 | 620.081 | 198.719 | 7 |
 | `mcp:Booking-com` | 13 | 369 | 1.534.696 | 0 | 0 |
 | `mcp:Gmail` | 18 | 265 | 417.825 | 0 | 2 |
 | `mcp:Supabase` | 57 | 183 | 19.453 | 0 | 1 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
 | `agente:general-purpose` | 23 | 77 | 51.422 | 869.238 | 0 |
 | `mcp:Google-Drive` | 9 | 66 | 65.845 | 0 | 2 |
-| `agente:agente-architect` | 16 | 55 | 46.225 | 1.500.090 | 0 |
+| `agente:agente-architect` | 16 | 56 | 46.717 | 1.504.560 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `mcp:Google_Drive` | 7 | 45 | 57.634 | 0 | 11 |
@@ -197,7 +197,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
-| `agente:rastreador-codigo` | 10 | 15 | 5.569 | 21.063 | 0 |
+| `agente:rastreador-codigo` | 10 | 16 | 5.840 | 24.686 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
 | `agente:general` | 6 | 8 | 5.205 | 231.483 | 0 |
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |

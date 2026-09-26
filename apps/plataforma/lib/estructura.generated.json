@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-26T16:30:12Z",
+  "generadoEn": "2026-09-26T18:09:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2202,7 +2202,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 104
+        "evidencias": 105
       },
       "asegura-web": {
         "estado": "usado",
@@ -2310,7 +2310,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 82
+        "evidencias": 83
       },
       "asegura-web": {
         "estado": "usado",
@@ -3976,6 +3976,7 @@
       "/api/cron/avisos-vencimiento",
       "/api/cron/avisos-web",
       "/api/cron/felicitaciones",
+      "/api/cron/polizas-pdf",
       "/api/cron/revision-anual",
       "/api/operador/actividad",
       "/api/operador/actividad-nueva",
@@ -4135,6 +4136,7 @@
       "/api/polizas",
       "/api/polizas/[id]",
       "/api/polizas/[id]/carta",
+      "/api/polizas/[id]/documentos/[documentoId]",
       "/api/polizas/[id]/reintentar",
       "/api/presupuesto/carta",
       "/api/presupuesto/firma",
@@ -6561,7 +6563,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1489,
+    "apis": 1491,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
