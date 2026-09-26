@@ -699,6 +699,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Skills/agentes: frontmatter YAML válido + agente `verificador-esceptico`
+Revisado `addyosmani/agent-skills` (estándar agentskills.io) contra lo nuestro. Hallazgo: 9 skills y
+los 3 agentes tenían `description` como escalar plano con «: » → YAML inválido (Claude Code lo tolera;
+un parser estricto no). Pasados a `description: >-`; lo vigila `test/regression-skills-frontmatter.test.ts`
+(visto en rojo). Nuevo `.claude/agents/verificador-esceptico.md` (sonnet): refuta afirmaciones de
+ausencia/estado y rompe cepos nuevos para verlos fallar. Descartado copiar el resto: ya lo cubren
+superpowers, `code-review`, `security-review` y `agente-architect`.
+
 ## (26/09/2026) Agente huésped mudo con >25 mensajes: Smoobu pagina `/messages`
 - Stephen (Duplex, reserva 150035011) preguntó cómo entrar de noche por la puerta de cristal y el agente no contestó ni propuso nada.
 - Causa medida contra Smoobu (vía `pg_net`): `/api/reservations/{id}/messages` pagina de 25 en 25 (más antiguo primero); con 27 mensajes sus dos preguntas quedaban en la página 2, el último visible era un automático nuestro → `host_ultimo_sin_pregunta`, salida muda.
