@@ -80,7 +80,7 @@ modelos de COCHE. Tres causas encadenadas, de abajo arriba:
 | 10 | Descargar `issuedDocuments`, flujo `RevisedQuote`, cron de polling | M |
 | 11 | Parsear el error en sus dos formas antes de recortar | S |
 | 12 | `person-roles` antes de cotizar/emitir; tipo de identificación NIE/CIF/pasaporte | M |
-| 13 | 📐 **Planificada (26/09/2026)**: importar a la intranet el proyecto creado a mano en la web de Avant2 (caso Pablo Guzmán). ✅ La API SÍ ve esos proyectos. **Corrección:** emitir NO necesita línea en `codeoscopic_consumo` ni `intentoId` previos (los crea `/emitir`); basta enlazar el proyecto a su póliza en `codeoscopic_projects`. Plan en `docs/superpowers/specs/2026-09-26-importar-avant2-y-emitir-telegram-design.md` (con la fase 3: emitir desde Telegram) | M |
+| 13 | ✅ **Construida (26/09/2026)**: importar a la intranet el proyecto creado a mano en la web de Avant2 (caso Pablo Guzmán). Enlace en la ficha de la póliza → `retarificar?avant2=1` → panel de emisión de siempre. Sin ReRate: solo precios que ya traen `SubmitPolicyApplication` y en plazo; tomador comprobado por hash de DNI. Detalle en `docs/superpowers/specs/2026-09-26-importar-avant2-y-emitir-telegram-design.md`. Falta medir el primer Submit real de una oferta importada | M |
 
 ## Preguntas para el portal — prompt listo para Claude en Chrome
 

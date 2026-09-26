@@ -42,6 +42,10 @@ import {
   tarificacionGuardadaAsegura,
   productFormAsegura,
   coberturasAsegura,
+  vistaImportacionAsegura,
+  importarProyectoAsegura,
+  type VistaImportacion,
+  type RespuestaImportar,
   type RespuestaCoberturas,
   type RespuestaCatalogo,
   type RespuestaRetarificar,
@@ -172,4 +176,17 @@ export async function pedirEmision(entrada: {
 /** Coberturas de la oferta confirmada. **Gratis** (lectura en el vendor). */
 export async function pedirCoberturas(projectId: string, offerId: string): Promise<RespuestaCoberturas> {
   return coberturasAsegura(projectId, offerId)
+}
+
+/**
+ * Proyecto hecho a mano en Avant2 (fila 13, 26/09/2026). La vista previa es una
+ * lectura gratis; el import enlaza el proyecto a la póliza y deja la oferta aceptada,
+ * sin ReRate ni Submit: la emisión sigue siendo `pedirEmision`.
+ */
+export async function pedirVistaImportacion(projectId: string, polizaId: string): Promise<VistaImportacion> {
+  return vistaImportacionAsegura(projectId, polizaId)
+}
+
+export async function pedirImportacion(entrada: { projectId: string; polizaId: string; quoteId: string }): Promise<RespuestaImportar> {
+  return importarProyectoAsegura(entrada)
 }

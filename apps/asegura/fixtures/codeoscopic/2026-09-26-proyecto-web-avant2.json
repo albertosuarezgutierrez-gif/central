@@ -1,0 +1,949 @@
+{
+ "id": 40842815,
+ "effectiveDate": "2026-09-29",
+ "insuranceLine": {
+  "id": "Car",
+  "path": "car",
+  "name": "Autos 1ª categoría (Turismos)"
+ },
+ "mainQuotes": [
+  {
+   "id": "Q2024306468",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 14,
+    "name": "Mapfre Autos",
+    "addon": false,
+    "vendor": {
+     "id": 10,
+     "name": "Mapfre"
+    },
+    "modality": {
+     "name": "TERCEROS Básico",
+     "description": "TERCEROS Básico",
+     "category": {
+      "name": "Terceros"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/10/logo.svg",
+    "config": {
+     "id": 320204,
+     "name": "5239640",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 257.65,
+   "downPayment": 257.65,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306542",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 230,
+    "name": "Allianz Autos 2025",
+    "addon": false,
+    "vendor": {
+     "id": 2,
+     "name": "Allianz"
+    },
+    "modality": {
+     "name": "Allianz Terceros con Lunas",
+     "description": "Allianz Terceros con Lunas. Terceros con lunas",
+     "category": {
+      "name": "Terceros"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/2/logo.svg",
+    "config": {
+     "id": 320200,
+     "name": "PA342521",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 386.38,
+   "downPayment": 386.38,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306593",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 178,
+    "name": "Occident GCO Autos 3.0",
+    "addon": false,
+    "vendor": {
+     "id": 29,
+     "name": "Occident"
+    },
+    "modality": {
+     "name": "Terceros",
+     "description": "Terceros",
+     "category": {
+      "name": "Terceros"
+     },
+     "rating": 0
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/29/logo.svg",
+    "config": {
+     "id": 320670,
+     "name": "M00171",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 449.35,
+   "downPayment": 449.35,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306441",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 10,
+    "name": "Reale Autos",
+    "addon": false,
+    "vendor": {
+     "id": 5,
+     "name": "Reale"
+    },
+    "modality": {
+     "name": "Reale Terceros",
+     "description": "Reale Terceros. Básico",
+     "category": {
+      "name": "Terceros"
+     },
+     "rating": 2,
+     "ratingDescription": "Reale Terceros"
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/5/logo.svg",
+    "config": {
+     "id": 320174,
+     "name": "38605",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 488.58,
+   "downPayment": 488.58,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306443",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 10,
+    "name": "Reale Autos",
+    "addon": false,
+    "vendor": {
+     "id": 5,
+     "name": "Reale"
+    },
+    "modality": {
+     "name": "Reale Terceros (Con Lunas)",
+     "description": "Reale Terceros (Con Lunas). Con lunas",
+     "category": {
+      "name": "Terceros"
+     },
+     "rating": 4,
+     "ratingDescription": "Reale Terceros (Con Lunas)"
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/5/logo.svg",
+    "config": {
+     "id": 320174,
+     "name": "38605",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 648.16,
+   "downPayment": 648.16,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306467",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 14,
+    "name": "Mapfre Autos",
+    "addon": false,
+    "vendor": {
+     "id": 10,
+     "name": "Mapfre"
+    },
+    "modality": {
+     "name": "BASICar TERCEROS AMPLIADO + Lunas + Robo + Incendio",
+     "description": "BASICar TERCEROS AMPLIADO + Lunas + Robo + Incendio",
+     "category": {
+      "name": "Terceros Ampliado"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/10/product/14/modality/1212/logo.svg",
+    "config": {
+     "id": 320204,
+     "name": "5239640",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 403.58,
+   "downPayment": 403.58,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306544",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 230,
+    "name": "Allianz Autos 2025",
+    "addon": false,
+    "vendor": {
+     "id": 2,
+     "name": "Allianz"
+    },
+    "modality": {
+     "name": "Allianz Terceros Ampliado",
+     "description": "Allianz Terceros Ampliado",
+     "category": {
+      "name": "Terceros Ampliado"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/2/logo.svg",
+    "config": {
+     "id": 320200,
+     "name": "PA342521",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 435.37,
+   "downPayment": 435.37,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306594",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 178,
+    "name": "Occident GCO Autos 3.0",
+    "addon": false,
+    "vendor": {
+     "id": 29,
+     "name": "Occident"
+    },
+    "modality": {
+     "name": "Terceros completo",
+     "description": "Terceros completo",
+     "category": {
+      "name": "Terceros Ampliado"
+     },
+     "rating": 0
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/29/logo.svg",
+    "config": {
+     "id": 320670,
+     "name": "M00171",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 502.11,
+   "downPayment": 502.11,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306469",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 14,
+    "name": "Mapfre Autos",
+    "addon": false,
+    "vendor": {
+     "id": 10,
+     "name": "Mapfre"
+    },
+    "modality": {
+     "name": "TERCEROS AMPLIADO + Robo + Multas + Subsidio + Int. Y Gastos",
+     "description": "TERCEROS AMPLIADO + Robo + Multas + Subsidio + Int. Y Gastos",
+     "category": {
+      "name": "Terceros Ampliado"
+     },
+     "rating": 4
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/10/logo.svg",
+    "config": {
+     "id": 320204,
+     "name": "5239640",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 631.62,
+   "downPayment": 631.62,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306470",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 14,
+    "name": "Mapfre Autos",
+    "addon": false,
+    "vendor": {
+     "id": 10,
+     "name": "Mapfre"
+    },
+    "modality": {
+     "name": "TERCEROS AMPLIADO + Robo + Atmosféricos + Cinegéticos + Multas + Subsidio + Int. Y Gastos",
+     "description": "TERCEROS AMPLIADO + Robo + Atmosféricos + Cinegéticos + Multas + Subsidio + Int. Y Gastos",
+     "category": {
+      "name": "Terceros Ampliado"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/10/logo.svg",
+    "config": {
+     "id": 320204,
+     "name": "5239640",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 653.58,
+   "downPayment": 653.58,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306442",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 10,
+    "name": "Reale Autos",
+    "addon": false,
+    "vendor": {
+     "id": 5,
+     "name": "Reale"
+    },
+    "modality": {
+     "name": "Reale Terceros Ampliado",
+     "description": "Reale Terceros Ampliado. Con lunas, robo e incendio",
+     "category": {
+      "name": "Terceros Ampliado"
+     },
+     "rating": 3,
+     "ratingDescription": "Reale Terceros Ampliado"
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/5/logo.svg",
+    "config": {
+     "id": 320174,
+     "name": "38605",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 706.04,
+   "downPayment": 706.04,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306550",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 230,
+    "name": "Allianz Autos 2025",
+    "addon": false,
+    "vendor": {
+     "id": 2,
+     "name": "Allianz"
+    },
+    "modality": {
+     "name": "Allianz Todo Riesgo con Franquicia Alta",
+     "description": "Allianz Todo Riesgo con Franquicia Alta",
+     "category": {
+      "name": "Todo Riesgo Con Franquicia Alta"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/2/logo.svg",
+    "config": {
+     "id": 320200,
+     "name": "PA342521",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 697.22,
+   "downPayment": 697.22,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306448",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 10,
+    "name": "Reale Autos",
+    "addon": false,
+    "vendor": {
+     "id": 5,
+     "name": "Reale"
+    },
+    "modality": {
+     "name": "Reale Todo Riesgo Franquicia 1200 Euros",
+     "description": "Reale Todo Riesgo Franquicia 1200 Euros",
+     "category": {
+      "name": "Todo Riesgo Con Franquicia Alta"
+     },
+     "rating": 5,
+     "ratingDescription": "Reale Todo Riesgo Franquicia 1200 Euros"
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/5/logo.svg",
+    "config": {
+     "id": 320174,
+     "name": "38605",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 1371.76,
+   "downPayment": 1371.76,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306447",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 10,
+    "name": "Reale Autos",
+    "addon": false,
+    "vendor": {
+     "id": 5,
+     "name": "Reale"
+    },
+    "modality": {
+     "name": "Reale Todo Riesgo Franquicia 600 Euros",
+     "description": "Reale Todo Riesgo Franquicia 600 Euros",
+     "category": {
+      "name": "Todo Riesgo Con Franquicia Alta"
+     },
+     "rating": 4,
+     "ratingDescription": "Reale Todo Riesgo Franquicia 600 Euros"
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/5/logo.svg",
+    "config": {
+     "id": 320174,
+     "name": "38605",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 1471.37,
+   "downPayment": 1471.37,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306549",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 230,
+    "name": "Allianz Autos 2025",
+    "addon": false,
+    "vendor": {
+     "id": 2,
+     "name": "Allianz"
+    },
+    "modality": {
+     "name": "Allianz Todo Riesgo con Franquicia Media",
+     "description": "Allianz Todo Riesgo con Franquicia Media. Allianz Todo Riesgo con Franquidia Media",
+     "category": {
+      "name": "Todo Riesgo Con Franquicia Media"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/2/logo.svg",
+    "config": {
+     "id": 320200,
+     "name": "PA342521",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 767.9,
+   "downPayment": 767.9,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306446",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 10,
+    "name": "Reale Autos",
+    "addon": false,
+    "vendor": {
+     "id": 5,
+     "name": "Reale"
+    },
+    "modality": {
+     "name": "Reale Todo Riesgo Franquicia 450 Euros",
+     "description": "Reale Todo Riesgo Franquicia 450 Euros",
+     "category": {
+      "name": "Todo Riesgo Con Franquicia Media"
+     },
+     "rating": 3,
+     "ratingDescription": "Reale Todo Riesgo Franquicia 450 Euros"
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/5/logo.svg",
+    "config": {
+     "id": 320174,
+     "name": "38605",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 1553.55,
+   "downPayment": 1553.55,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306445",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 10,
+    "name": "Reale Autos",
+    "addon": false,
+    "vendor": {
+     "id": 5,
+     "name": "Reale"
+    },
+    "modality": {
+     "name": "Reale Todo Riesgo Franquicia 300 Euros",
+     "description": "Reale Todo Riesgo Franquicia 300 Euros",
+     "category": {
+      "name": "Todo Riesgo Con Franquicia Media"
+     },
+     "rating": 2,
+     "ratingDescription": "Reale Todo Riesgo Franquicia 300 Euros"
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/5/logo.svg",
+    "config": {
+     "id": 320174,
+     "name": "38605",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 1646.95,
+   "downPayment": 1646.95,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306546",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 230,
+    "name": "Allianz Autos 2025",
+    "addon": false,
+    "vendor": {
+     "id": 2,
+     "name": "Allianz"
+    },
+    "modality": {
+     "name": "Allianz Todo Riesgo con Franquicia Baja",
+     "description": "Allianz Todo Riesgo con Franquicia Baja",
+     "category": {
+      "name": "Todo Riesgo Con Franquicia Baja"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/2/logo.svg",
+    "config": {
+     "id": 320200,
+     "name": "PA342521",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 835.04,
+   "downPayment": 835.04,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306444",
+   "effectiveDate": "2026-09-29",
+   "product": {
+    "id": 10,
+    "name": "Reale Autos",
+    "addon": false,
+    "vendor": {
+     "id": 5,
+     "name": "Reale"
+    },
+    "modality": {
+     "name": "Reale Todo Riesgo Franquicia 180 Euros",
+     "description": "Reale Todo Riesgo Franquicia 180 Euros",
+     "category": {
+      "name": "Todo Riesgo Con Franquicia Baja"
+     },
+     "rating": 1,
+     "ratingDescription": "Reale Todo Riesgo Franquicia 180 Euros"
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/5/logo.svg",
+    "config": {
+     "id": 320174,
+     "name": "38605",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 2058.03,
+   "downPayment": 2058.03,
+   "estimate": true,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": true,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024306868",
+   "effectiveDate": "2026-09-29",
+   "expirationDate": "2026-09-29",
+   "product": {
+    "id": 230,
+    "name": "Allianz Autos 2025",
+    "addon": false,
+    "vendor": {
+     "id": 2,
+     "name": "Allianz"
+    },
+    "modality": {
+     "name": "Allianz Terceros Ampliado",
+     "description": "Allianz Terceros Ampliado",
+     "category": {
+      "name": "Terceros Ampliado"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/2/logo.svg",
+    "config": {
+     "id": 320200,
+     "name": "PA342521",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "Annual",
+    "name": "Anual",
+    "description": "Una vez al año",
+    "installments": 1
+   },
+   "premium": 432.82,
+   "downPayment": 432.82,
+   "estimate": false,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": false,
+     "addressNormalizationRequired": false
+    },
+    {
+     "id": "SubmitPolicyApplication",
+     "checkFields": false,
+     "checkDocuments": false,
+     "paymentBankAccountRequired": true,
+     "paymentCreditCardRequired": false,
+     "addressNormalizationRequired": false
+    }
+   ]
+  },
+  {
+   "id": "Q2024763856",
+   "effectiveDate": "2026-09-29",
+   "expirationDate": "2026-09-29",
+   "product": {
+    "id": 230,
+    "name": "Allianz Autos 2025",
+    "addon": false,
+    "vendor": {
+     "id": 2,
+     "name": "Allianz"
+    },
+    "modality": {
+     "name": "Allianz Terceros Ampliado",
+     "description": "Allianz Terceros Ampliado",
+     "category": {
+      "name": "Terceros Ampliado"
+     },
+     "rating": 3
+    },
+    "imageUrl": "https://app.avant2.es/assets/company/2/logo.svg",
+    "config": {
+     "id": 320200,
+     "name": "PA342521",
+     "favorite": false
+    }
+   },
+   "paymentFrequency": {
+    "id": "SixMonth",
+    "name": "Semestral",
+    "description": "Cada 6 meses",
+    "installments": 2
+   },
+   "premium": 520.97,
+   "downPayment": 241.3,
+   "estimate": false,
+   "actions": [
+    {
+     "id": "ReRate",
+     "required": false,
+     "addressNormalizationRequired": false
+    },
+    {
+     "id": "SubmitPolicyApplication",
+     "checkFields": false,
+     "checkDocuments": false,
+     "paymentBankAccountRequired": true,
+     "paymentCreditCardRequired": false,
+     "addressNormalizationRequired": false
+    }
+   ]
+  }
+ ],
+ "holder": {
+  "identificationDocument": {
+   "type": {
+    "id": "Dni"
+   },
+   "id": "00000000T"
+  },
+  "name": "Tomador de prueba"
+ }
+}

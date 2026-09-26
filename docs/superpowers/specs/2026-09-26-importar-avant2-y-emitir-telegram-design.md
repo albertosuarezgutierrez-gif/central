@@ -14,37 +14,33 @@ y `poliza_id` (`emitir/route.ts:104-131`); el `intentoId` del libro lo genera é
 (`2026-09-02_tarificaciones_guardadas.sql:38-40`). **No hay que fabricar una tarificación falsa**: basta
 con una ruta que enlace el proyecto con su póliza.
 
-## Fila 13 — Importar un proyecto hecho a mano en Avant2
+## Fila 13 — Importar un proyecto hecho a mano en Avant2 ✅ CONSTRUIDA (26/09/2026)
 
-**Caso:** Pablo Guzmán (cliente `0af158d6…`), proyecto `40842815`, sustituye a su Mapfre
-`0008414300069` (vence 29/09/2026). La póliza que se sustituye es el `poliza_id` del enlace, igual que
-en la retarificación.
+**Caso:** Pablo Guzmán, proyecto `40842815`, sustituye a su Mapfre `0008414300069` (vence
+29/09/2026). La póliza que se sustituye es el `poliza_id` del enlace, igual que en la retarificación.
 
-1. **Vista previa, gratis.** `GET /api/operador/codeoscopic/importar?projectId=` (asegura) = el `GET
-   /insurances/{id}` que ya hace `proyecto/route.ts`, pasado por un helper PURO
-   `ofertasImportables(crudo, hoy)` → por oferta: compañía, prima, fraccionamiento, efecto, caducidad
-   y si trae `SubmitPolicyApplication`. Su test usa el JSON REAL del proyecto de Pablo como fixture
-   (regla «valida el parser contra un documento de la fuente»).
-2. **Enlace.** `POST …/importar {projectId, polizaId, offerId, confirmado}`, envuelto en `auditado()`:
-   - la póliza es de la correduría y está viva; el proyecto no está enlazado ya a otra (índice único
-     correduría+proyecto, `2026-09-11_…unique_proyecto.sql`);
-   - **oferta vigente y efecto válido → upsert directo** de `codeoscopic_projects`
-     (`estado='preemision'`), sin ReRate y sin gasto;
-   - **caducada o efecto a mover → ReRate** por `conLibroDeEmision` (motivo `rerate`), el mismo
-     camino que `/oferta` (`oferta/route.ts:183-444`), reutilizando sus helpers, no copiándolos.
-   - Sin migración: el rastro de «importado» queda en el log de `auditado()`.
-3. **Plataforma.** En la ficha de la póliza a sustituir: «Importar proyecto de Avant2» (campo
-   projectId → vista previa → elegir oferta → enlazar) y de ahí a la pantalla de emisión que ya existe
-   (`correduria/poliza/[id]/retarificar/emision.tsx`), que hereda la cuenta confirmada, los 409 de
-   reintento y el acuñado.
+**Decisión al construir: el import NO hace ReRate.** Solo se importa un precio que YA trae la acción
+`SubmitPolicyApplication` (confirmado en Avant2) y sigue en plazo (`expirationDate` ≥ hoy, efecto ≥ hoy).
+Si no, se confirma en Avant2 y se vuelve a importar. Así el import es gratis y no se duplica la
+lógica de `/oferta` (que parte de una `tarificaciones` nuestra).
 
-**A medir antes de dar la fila por buena** [Probable, no verificado]:
-- que un Submit sobre una oferta creada en la web, SIN ReRate nuestro, lo acepte la API (la web le
-  pone la acción `SubmitPolicyApplication`, que es buena señal); la primera vez, leer antes
-  `policy-application-fields` (gratis);
-- que `emision.tsx` se monte con un proyecto que no nació de una `tarificaciones`.
+- **asegura** `app/api/operador/codeoscopic/importar/route.ts`: `GET ?projectId=&polizaId=` (vista
+  previa: lectura gratis del vendor) y `POST {projectId, polizaId, quoteId, confirmado}` (`auditado`).
+  Bloquea si el ramo no casa (hoy solo auto y moto), si el **tomador** no es el cliente de la póliza
+  —por el hash del DNI (`dni_lookup_hash`), nunca por nombre; sin dato en un lado también bloquea— o si
+  el proyecto ya está emitido o enlazado a otra póliza. El POST deja `codeoscopic_projects` con
+  `accepted_offer_id_codeoscopic` = id del `mainQuote` y `estado='preemision'`, y responde con la
+  misma forma que `/oferta`.
+- **Regla pura** `lib/codeoscopic/importar.ts` (`ofertasDelProyecto`, `ramoDeLinea`, `documentoTomador`),
+  probada contra el JSON REAL del proyecto de Pablo sin datos personales
+  (`fixtures/codeoscopic/2026-09-26-proyecto-web-avant2.json`): 2 de 21 precios emitibles.
+- **plataforma**: enlace «Traer un proyecto hecho en Avant2» en la ficha de la póliza (Gestión, solo
+  auto/moto) → `retarificar?avant2=1` (esa página tiene el `maxDuration` 180 que necesita la emisión) →
+  `ImportarAvant2.tsx` → el panel `Emision` de siempre, que ahora acepta `ofertaImportada` y arranca en
+  el paso de emitir. Todas las guardas de `/emitir` (IBAN confirmado, solicitud viva, reintento) intactas.
 
-Tamaño: **M**, un PR (asegura + plataforma + test con fixture real).
+**Sigue sin medir** [Probable]: que el Submit acepte una oferta creada en la web sin ReRate nuestro (la
+web le pone `SubmitPolicyApplication`, buena señal). Se verá en la primera emisión real.
 
 ## Fase 3 — Emitir desde Telegram
 
@@ -102,7 +98,7 @@ Tamaño: fila 5 **S** → fase 3a **M** → 3b **S**.
 
 ## Orden
 
-1. Fila 13 (importar).
+1. ~~Fila 13 (importar)~~ ✅ construida.
 2. Fila 5 (timeouts).
 3. Fase 3a (preparar, resumen y botón).
 4. Fase 3b (correcciones por chat).

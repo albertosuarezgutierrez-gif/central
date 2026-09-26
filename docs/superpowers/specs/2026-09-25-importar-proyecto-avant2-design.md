@@ -1,5 +1,10 @@
 # Importar a la intranet un proyecto creado a mano en Avant2 (diseño, 25/09/2026)
 
+> ⚠️ **SUSTITUIDO** por `2026-09-26-importar-avant2-y-emitir-telegram-design.md`, que es lo que se
+> construyó. Diferencia clave: este diseño dejaba el proyecto sin oferta aceptada y seguía por `/oferta`,
+> que exige una `tarificaciones` nuestra y no habría funcionado; el construido enlaza directamente un
+> precio que ya trae `SubmitPolicyApplication`.
+
 **Estado: diseño. Falta el OK de Alberto antes de programar** (regla 6 de `correduria-crm`:
 toca la emisión). Caso que lo origina: proyecto **40842815** (Allianz, Mercedes ML 250 de Pablo
 Guzmán Pueyo), tarificado en la web de Avant2 y que la intranet no sabe emitir.
