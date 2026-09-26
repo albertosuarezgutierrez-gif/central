@@ -426,6 +426,107 @@ export const ARTICULOS: readonly Articulo[] = [
   },
   // ⬇️ MARCADOR DE INSERCIÓN — no quitar.
   //
+  // 26/09/2026 — medido con OpenSEO: «declaración amistosa de accidente» 880/mes,
+  // «cómo rellenar parte amistoso» 590, «parte amistoso online/pdf» 480, todas
+  // con dificultad 0. El artículo de «qué hacer tras un accidente» cuenta el
+  // parte en un párrafo; este es el paso a paso del impreso.
+  {
+    slug: 'como-rellenar-parte-amistoso',
+    h1: 'Cómo rellenar el parte amistoso de accidente, casilla a casilla',
+    title: 'Cómo rellenar el parte amistoso paso a paso',
+    description:
+      'Qué va en cada casilla de la declaración amistosa de accidente, cómo marcar las circunstancias y el croquis, qué no firmar y qué hacer con tu copia.',
+    fecha: '2026-09-26',
+    consulta: 'cómo rellenar el parte amistoso',
+    resumen:
+      'El parte amistoso es un impreso común para toda Europa: una hoja con copia que rellenan juntos los dos conductores, con el vehículo A en azul y el B en amarillo. Lo que decide cómo se reparte la culpa son sobre todo dos zonas: las circunstancias marcadas y el croquis. Rellénalo con calma, sin admitir nada que no esté en las casillas, y quédate tu copia antes de iros.',
+    base: ['lcs-16'],
+    ramos: ['auto'],
+    cta: {
+      titulo: 'Ten a mano el teléfono de tu compañía',
+      texto:
+        'Tras firmar el parte hay que comunicarlo a tu aseguradora. Tenemos los teléfonos de siniestros de las compañías con las que trabajamos, comprobados en su web oficial y listos para guardar en tus contactos.',
+      boton: 'Ver los teléfonos de siniestros',
+      href: '/telefonos-siniestros',
+    },
+    secciones: [
+      {
+        titulo: 'Antes de sacar el bolígrafo',
+        parrafos: [
+          'Si hay heridos, el parte amistoso no basta: llama al 112 y espera a la policía o la guardia civil. El parte sirve para accidentes con daños materiales entre dos vehículos en los que los conductores pueden hablar con calma.',
+          'Aparta los coches si estorban y es seguro, ponte el chaleco y haz fotos antes de moverlos si puedes. Después, rellenad el parte en un sitio tranquilo: con prisa es cuando se marcan casillas que no son.',
+          'Se usa un solo impreso para los dos vehículos. Cada conductor rellena su columna: el vehículo A la azul y el B la amarilla. Da igual quién sea A y quién B: no significa nada sobre la culpa. Escribe con letra clara, mejor en mayúsculas, y apretando: la hoja lleva copia.',
+        ],
+      },
+      {
+        titulo: 'La parte común: casillas 1 a 5',
+        parrafos: [
+          'Arriba van los datos que compartís: la fecha y la hora (1), el lugar lo más exacto posible, con calle, número o punto kilométrico (2), si hay heridos, aunque sean leves (3), si hay daños materiales a otros vehículos u objetos distintos de A y B, como una farola o un coche aparcado (4), y los testigos con nombre y teléfono (5).',
+          'Los testigos valen mucho y casi nadie los apunta. Si alguien lo ha visto, pídele el teléfono antes de que se vaya, aunque diga que tiene prisa.',
+        ],
+      },
+      {
+        titulo: 'Tu columna: casillas 6 a 11',
+        parrafos: [
+          'Cada uno rellena los suyos: el tomador del seguro, que puede no ser el conductor (6); el vehículo, con marca, modelo y matrícula (7); la compañía, el número de póliza y la validez de la carta verde o del certificado de seguro si lo llevas (8); y el conductor, con su permiso de conducir (9).',
+          'Copia la compañía y la póliza del documento del seguro, no de memoria: un número equivocado retrasa el expediente semanas.',
+          'En la casilla 10 marcas con una flecha el punto donde recibió tu coche el primer golpe, y en la 11 describes los daños que se ven. Pon solo lo visible: lo que aparezca después en el taller lo verá el perito.',
+        ],
+      },
+      {
+        titulo: 'Las circunstancias: la casilla 12 es la que más pesa',
+        parrafos: [
+          'Es una lista de diecisiete situaciones —estaba estacionado, salía de un aparcamiento, cambiaba de carril, circulaba por la derecha, no respetó un stop o un semáforo…— y cada conductor marca con una cruz las que le correspondían en el momento del golpe. Sobre todo con esto se reparte después la responsabilidad.',
+          'Marca solo lo que es cierto y deja en blanco lo que no. Al final de la lista hay un recuadro para escribir cuántas casillas has marcado: rellénalo siempre. Así nadie puede añadir una cruz en tu columna después de firmar.',
+          'Si no estás de acuerdo con lo que marca el otro, no firmes todavía: primero hablad. Y si no hay acuerdo, cada uno puede explicarlo en sus observaciones o no firmar el parte, y entonces lo que cuenta son las fotos, los testigos y el atestado si lo hay.',
+        ],
+      },
+      {
+        titulo: 'El croquis y las observaciones: casillas 13 y 14',
+        parrafos: [
+          'El croquis (13) es un dibujo sencillo del momento del choque: el trazado de la calle, los carriles, las señales, la dirección de cada coche con una flecha y su posición cuando chocaron. Pon A y B en cada coche y el nombre de las calles. No hace falta que sea bonito; hace falta que coincida con las casillas marcadas.',
+          'En observaciones (14) cada uno escribe lo que quiera aclarar. Describe hechos —«venía por el carril derecho a velocidad reducida»— y nunca frases de culpa como «ha sido culpa mía» o «no lo vi». Eso no lo decide quien firma el parte: lo deciden las compañías con todo lo anterior.',
+        ],
+      },
+      {
+        titulo: 'Firmar, separar las copias y avisar',
+        parrafos: [
+          'Firmáis los dos en la casilla 15. A partir de ese momento el parte no se toca: cualquier cambio posterior, aunque sea tuyo, le quita valor. Cada conductor se queda con una de las dos hojas.',
+          'El reverso de tu hoja lo rellenas tú solo, después y con calma: cómo pasó con tus palabras, dónde está el coche para el perito y tus datos de contacto. Esa parte no la firma el otro conductor.',
+          'Luego comunícalo a tu compañía. El artículo 16 de la Ley de Contrato de Seguro da siete días desde que conoces el siniestro, salvo que tu póliza te dé más. Manda una foto clara de las dos caras y de las fotos del accidente, y guarda el justificante del envío.',
+        ],
+      },
+      {
+        titulo: 'El parte amistoso en el móvil',
+        parrafos: [
+          'Existe una versión digital del mismo impreso, la app Declaración iDEA, promovida por las aseguradoras: los dos conductores lo completan y lo firman en el móvil y se envía a las compañías. Funciona si los dos la tenéis instalada y vuestras compañías están adheridas, así que no está de más llevar también el de papel en la guantera.',
+          'Si no tienes impreso, pídeselo a tu compañía o a tu corredor: es gratuito. Y si te pilla sin él, apunta al menos los datos de las casillas 1 a 9, haz fotos de todo y de la documentación del otro conductor, y avisa a tu compañía cuanto antes.',
+        ],
+      },
+    ],
+    faq: [
+      {
+        pregunta: '¿Qué pasa si el otro conductor no quiere firmar el parte?',
+        respuesta:
+          'No se le puede obligar. Apunta su matrícula, su compañía si la ves en el cristal o en la documentación, haz fotos y busca testigos. Si hay discusión o el otro se va, llama a la policía local o a la guardia civil para que levanten atestado. Con eso das el parte a tu compañía igual.',
+      },
+      {
+        pregunta: '¿Puedo cambiar algo del parte después de firmarlo?',
+        respuesta:
+          'No en el impreso firmado: una hoja con cambios posteriores pierde valor ante las dos compañías. Lo que quieras añadir, cuéntalo en el reverso de tu hoja o en el escrito que mandes a tu compañía.',
+      },
+      {
+        pregunta: '¿Firmar el parte es reconocer la culpa?',
+        respuesta:
+          'No. El parte describe cómo pasó; la responsabilidad la deciden después las compañías según las circunstancias marcadas y el croquis. Por eso importa marcar solo lo que es cierto y no escribir frases de culpa en observaciones.',
+      },
+      {
+        pregunta: '¿Sirve el parte amistoso con un coche extranjero?',
+        respuesta:
+          'Sí. Es el mismo impreso en toda Europa, con las casillas numeradas igual, así que cada uno puede rellenarlo en su idioma guiándose por los números.',
+      },
+    ],
+  },
   {
     slug: 'como-dar-de-baja-un-seguro-a-tiempo',
     h1: 'Cómo dar de baja un seguro a tiempo, paso a paso',
@@ -524,7 +625,7 @@ export const ARTICULOS: readonly Articulo[] = [
     description:
       'En un accidente, los primeros pasos salvan tiempo después. Desde cómo asegurar el lugar hasta cuándo avisar a la compañía y qué datos guardar.',
     fecha: '2026-09-20',
-    consulta: 'qué hacer si tengo un accidente de coche parte amistoso',
+    consulta: 'qué hacer si tengo un accidente de coche',
     resumen:
       'Los minutos después de un accidente importan. Lo que hagas en el lugar, cómo rellenar el parte y cuándo avisar a la compañía son los pasos que después ahorran tiempo y dinero.',
     ramos: ['auto'],
