@@ -106,6 +106,13 @@ Guzmán, transcripción en Drive `asegura/`). Cron `avisos-cima` (recibo nuevo/d
 tipo; tablas `portal_aviso_cima`/`portal_aviso_silenciado` APLICADAS. Web: fuera `Reveal` (LCP móvil lento 2,5 s → 0,8 s).
 ✅ Borrado (25/09, confirmado por Alberto) el vínculo `16a27091` (hijo, Guzmán Lozano) → ficha del PADRE: lo creó el portal a las 10:10 porque el PADRE añadió el correo del hijo a su propia ficha desde «Mis datos» a las 10:07. **Fase 0 sin hacer:** revalidar vínculos `email_hash` cuando cambia el correo de una ficha.
 
+**(26/09/2026)** 🩺 **CIMA revisado de punta a punta** — 8 pólizas Allianz `ES` (situación desconocida) vencidas 2013-2019
+contaban en vigor (5 clientes solo por ellas): pasadas a `vencida` + asegura#857 (desconocida + vencimiento pasado → `vencida`;
+EV/AN mandan; no se adivina el código). `ES` sigue sin significado confirmado (preguntar a TIREA solo con OK). Actions de GitHub
+se saltó los crons de la mañana y el respaldo de plataforma (09:00 UTC) lo cubrió. 1.ª sincro real de diferencias (12:50 UTC):
+5 nombres a formato propio, 5 nombres ampliados desde CIMA, 3 teléfonos añadidos como secundarios, ningún email tocado; 1 ficha
+con nombre «No» (venía «NO»), a revisar por Alberto. 16 pólizas EV con vencimiento jun-sep/2026 siguen en vigor (probable renovación).
+
 **(26/09/2026)** 🗄️ **CIMA: auditoría «¿se guarda y vuelca todo?»** — Copia cifrada de cada fichero pasa de 30/90 días a **6 años**
 (asegura#855 + UPDATE de las 101 filas existentes; si entra un pull antes del merge, repetir el UPDATE). Único fichero a medias: POL
 Allianz (carga 199) 25/26 — la que falta choca con `uq_clientes_dni_lookup_hash` porque su DNI solo vive en una ficha FUSIONADA
