@@ -208,7 +208,16 @@ async function avisarTelefonosCompartidos(correduriaId: string, lista: Analisis[
   for (const a of lista) {
     for (const d of a.diferencias) {
       if (d.campo !== 'telefono' || (d.accion !== 'anadir' && d.accion !== 'rellenar')) continue
-      const otros = await coincidencias(correduriaId, { telefono: d.cima }, a.c.id)
+      let otros: Awaited<ReturnType<typeof coincidencias>>
+      try {
+        otros = await coincidencias(correduriaId, { telefono: d.cima }, a.c.id)
+      } catch (e) {
+        // Sin poder comprobarlo no se copia solo: pregunta. Y el resto del análisis sigue.
+        console.error('[sincro-cima] teléfono sin comprobar:', a.c.id, e instanceof Error ? e.message : e)
+        d.accion = 'discrepa'
+        d.aviso = 'No se ha podido comprobar si ese teléfono está en otra ficha'
+        continue
+      }
       if (otros.length === 0) continue
       d.accion = 'discrepa'
       d.aviso = `Ese teléfono ya está en ${otros.length === 1 ? 'la ficha' : 'las fichas'} de ${otros.map((o) => o.nombre).join(', ')}`
@@ -265,7 +274,7 @@ async function aplicarCampo(correduriaId: string, a: Analisis, d: DiferenciaCima
   switch (d.campo) {
     case 'nombre': {
       // `formatear` reescribe lo que YA tiene la ficha; los demás, lo de CIMA. Siempre en «Nombre Propio».
-      const p = d.accion === 'formatear' ? { nombre: a.c.nombre, apellidos: a.c.apellidos } : a.cima.nombrePartes
+      const p = d.accion === 'formatear' ? { nombre: a.c.nombre ?? '', apellidos: a.c.apellidos ?? '' } : a.cima.nombrePartes
       if (!p || !p.nombre.trim()) return { campo: d.campo, ok: false, motivo: 'CIMA no separa nombre y apellidos' }
       await db.cliente.update({
         where: { id: clienteId },
