@@ -13,6 +13,12 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-26** · `docs/AUDITORIA-2026-09.md` · pasada ligera diaria: heartbeat sano (2 matices sin
+  cruzar umbral: `ses_transporte` crónico, `sivra_mercado_booking` 42,4h sin `ok=true`), correduría
+  sana, backlog de PRs sano (0 abiertos), reconciliación de memoria sin huecos. Hallazgo de carril 2
+  (pricing: `oscilantes` 10→103 + salto 478€→1.019€ de `prop_house_sevillana` en 2026-09-30 sin
+  justificación de mercado) va a PR draft aparte + Telegram · commit de esta auditoría
+
 - **2026-09-25** · `docs/CONTEXTO-SESIONES.md`, `docs/AUDITORIA-2026-09.md` · 1 entrada de memoria
   nueva agrupando 4 fixes de correduría/portal sin anotar (#3524, #3526, #3528, #3533: WhatsApp del
   enlace de datos, DNI/permiso vs conductor, input de documentos en móvil, siniestros en lenguaje
