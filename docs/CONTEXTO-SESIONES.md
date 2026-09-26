@@ -707,6 +707,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Cepo de frontmatter: hueco `>- texto` cerrado (lo encontró `verificador-esceptico`)
+Primer uso real del agente: rompió las 3 aserciones del cepo (rojas) y halló que `description: >- texto`
+(YAML inválido) pasaba en verde. Añadida la guarda en `test/regression-skills-frontmatter.test.ts`, vista en rojo.
+
 ## (26/09/2026) Portal del cliente (asegura-portal) · barra inferior a lo Smoobu
 - Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero
   en plataforma y en /correduria y se deshizo (el PR #3659 queda sin cambios en plataforma).
