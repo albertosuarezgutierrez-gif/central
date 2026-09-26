@@ -50,6 +50,7 @@ export {
   descripcionDias,
   diasHastaVencimiento,
   fechaLimiteOposicion,
+  textoPlazoOposicion,
   fechaLimiteComunicacionAseguradora,
   comunicacionEnPlazo,
   urgenciaRenovacion,
