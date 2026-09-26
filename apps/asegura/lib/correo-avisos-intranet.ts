@@ -87,6 +87,8 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
   // No sale por aquí (el cumpleaños tiene su propio correo, `correo-felicitacion.ts`); la etiqueta
   // existe porque el Record lo exige.
   felicitacion: { uno: 'una felicitación', varios: 'felicitaciones' },
+  // Ni compañía ni número: el cambio de compañía, si lo es, se explica DENTRO (la campana lo dice).
+  poliza_emitida: { uno: 'una póliza nueva', varios: 'pólizas nuevas' },
 }
 
 /** Un aviso, reducido a lo único que el correo necesita: su clase. */

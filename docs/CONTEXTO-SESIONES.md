@@ -17,6 +17,12 @@ símbolos analizados (META vetado por `detectarSuplantaciones` — precio mío m
 IBKR, cazado por el guardián, cero contaminación); compras paper BKNG/ORCL/SQM. Solo bitácora +
 Telegram, sin tocar código. Detalle en `docs/AGENTES-BITACORA.md`.
 
+**(26/09/2026)** Aviso «póliza emitida» (campana del portal + correo de la intranet, mismo catálogo): póliza en vigor
+nueva del tomador desde el corte 26/09 (≤30 días), clave compañía+número (la emitida y la que trae CIMA = un aviso);
+si sustituye a otra, la campana dice «sustituye a tu póliza anterior de X, que se da de baja». El correo no lleva
+compañía ni número. Push al móvil NO incluido. Agente de la correduría: 6 revisiones nuevas (paso 2c; la 1 = cambios
+de compañía sin anulación, caso Pablo Guzmán). Pablo se emite desde la intranet (nuevo precio, efecto 29/09).
+
 **(26/09/2026)** Diferencias con CIMA, reglas de Alberto: teléfono nuevo → se AÑADE solo como secundario (si ya
 está en otra ficha, pregunta con aviso); nombre de ficha en MAYÚSCULAS → «Nombre Propio» solo; nombre al que CIMA
 le quita un nombre de pila (Moncosi: no era mayúsculas, faltaba «Carlos") y carné a ±1 día ya NO son diferencias.

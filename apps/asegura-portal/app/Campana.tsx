@@ -205,6 +205,8 @@ function nombreFuente(f: Avisos['fuentesIlegibles'][number]): string {
       return 'lo que tienes pendiente de firmar'
     case 'felicitaciones':
       return 'las felicitaciones'
+    case 'polizas_nuevas':
+      return 'tus pólizas nuevas'
   }
 }
 
