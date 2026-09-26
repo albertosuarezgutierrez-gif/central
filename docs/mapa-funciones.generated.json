@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-26T11:11:03Z",
-  "sha": "530b6463ab5360c169c75c20cff38768bb55015d",
+  "generadoEn": "2026-09-26T12:16:10Z",
+  "sha": "ac5c7d8661c81921389c4a6a616871c2b175680d",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -13558,7 +13558,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 793
+          "linea": 796
         },
         {
           "nombre": "numero",
@@ -13566,7 +13566,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 798
+          "linea": 801
         },
         {
           "nombre": "esObjeto",
@@ -13574,7 +13574,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 802
+          "linea": 805
         },
         {
           "nombre": "coincideCompania",
@@ -13582,7 +13582,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 806
+          "linea": 809
         }
       ],
       "tablas": [
@@ -13592,7 +13592,7 @@
         "polizas"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "060b11c811ec"
+      "hash": "96b16081ffb2"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/faltan-producto/route.ts",
@@ -13763,7 +13763,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 488
+          "linea": 491
         },
         {
           "nombre": "respuestaGastoBloqueado",
@@ -13771,7 +13771,7 @@
           "exportada": false,
           "params": "gasto: Extract<GastoEmision<never>, { ok: false }>",
           "retorno": null,
-          "linea": 506,
+          "linea": 509,
           "resumen": "El libro dijo que no. **Sin llamada al vendor**, y por eso se contesta con dos códigos distintos: se arreglan en sitios distintos. - `sin_libro` (503): no se ha podido leer `codeoscopic_consumo`. Es u"
         },
         {
@@ -13780,7 +13780,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 523,
+          "linea": 526,
           "resumen": "Solo claves de la lista blanca y valores con la forma que el vendor acepta (mismas reglas que `revisarPersona`): un municipio no numérico o una fecha en formato español llegarían al PATCH y volverían "
         },
         {
@@ -13789,7 +13789,7 @@
           "exportada": false,
           "params": "campo: CampoPersona, s: string",
           "retorno": "string | null",
-          "linea": 542
+          "linea": 545
         },
         {
           "nombre": "respuestaSigueFaltando",
@@ -13797,7 +13797,7 @@
           "exportada": false,
           "params": "campos: CampoPersona[], mensajeVendor: string",
           "retorno": null,
-          "linea": 560
+          "linea": 563
         },
         {
           "nombre": "registrarFaltaProducto",
@@ -13805,7 +13805,7 @@
           "exportada": false,
           "params": "correduriaId: string, tarificacionId: string, campos: CampoProducto[]",
           "retorno": null,
-          "linea": 588,
+          "linea": 591,
           "resumen": "Telemetría de `faltan_producto` por COMPAÑÍA (20/09/2026): saber a qué compañías les falta cobertura del Product Form Library, no solo que «alguna vez pasa». Reutiliza `seguros.operational_events` (ge"
         },
         {
@@ -13814,7 +13814,7 @@
           "exportada": false,
           "params": "c: Extract<ResultadoCompletar, { estado: 'no_aplicado' }>",
           "retorno": null,
-          "linea": 606
+          "linea": 609
         }
       ],
       "tablas": [
@@ -13827,7 +13827,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/oferta",
-      "hash": "dd6d716ddc68"
+      "hash": "a9eb92bac397"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/precalificar-auto-nuevo/route.ts",
@@ -18034,7 +18034,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, entrada: { id: string; actor: string },",
           "retorno": "Promise<ResultadoContacto>",
-          "linea": 501
+          "linea": 503
         },
         {
           "nombre": "editarCliente",
@@ -18042,7 +18042,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, edicion: EdicionCliente, actor: string,",
           "retorno": "Promise<ResultadoEdicion>",
-          "linea": 567,
+          "linea": 569,
           "resumen": "Aplica una edición ya revisada por las reglas puras. Si toca identidad, exige que `documentoId` sea un documento de tipo DNI, recibido, DE ESTE cliente: un documento de otra ficha no acredita nada."
         },
         {
@@ -18051,7 +18051,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 674
+          "linea": 676
         },
         {
           "nombre": "polizasVivasDe",
@@ -18059,7 +18059,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string",
           "retorno": "Promise<number | null>",
-          "linea": 687,
+          "linea": 689,
           "resumen": "Cuántas pólizas VIVAS tiene la ficha. Devuelve `null` cuando la consulta falla, y ese `null` NO se colapsa con 0 aguas arriba: sin saberlo, no se descarta. Un `?? 0` aquí sería dar vía libre a un borr"
         },
         {
@@ -18068,7 +18068,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, actor: string, motivo?: unknown,",
           "retorno": "Promise<ResultadoDescarte>",
-          "linea": 705,
+          "linea": 707,
           "resumen": "Descarta una ficha: deja de salir en el buscador, la lista y los contadores. Reversible con `restaurarCliente`. `yaEstaba: true` cuando la ficha ya estaba descartada: no es un error (el resultado pedi"
         },
         {
@@ -18077,7 +18077,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, actor: string, motivo?: unknown,",
           "retorno": "Promise<ResultadoDescarte>",
-          "linea": 756,
+          "linea": 758,
           "resumen": "Devuelve una ficha descartada a la cartera. No toca nada más de la ficha."
         },
         {
@@ -18086,7 +18086,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, porque: string",
           "retorno": "Promise<void>",
-          "linea": 795,
+          "linea": 797,
           "resumen": "Reactiva una ficha descartada porque ha vuelto a ser un cliente de verdad: ha entrado una póliza suya. Idempotente y sin ruido — si ya estaba activa no escribe nada. Es la contrapartida de la guarda: "
         },
         {
@@ -18095,7 +18095,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: Record<string, unknown>, actor: string,",
           "retorno": "Promise<ResultadoAlta>",
-          "linea": 825,
+          "linea": 827,
           "resumen": "Alta manual = `lead`, `prospecto`. Antes de crear, busca por DNI, teléfono y email: un DNI repetido es la misma persona y NO se crea; un teléfono o email repetidos pueden ser otra persona y se crea so"
         },
         {
@@ -18104,7 +18104,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, tipo: TipoHistorial, texto: string",
           "retorno": "Promise<void>",
-          "linea": 909,
+          "linea": 911,
           "resumen": "Deja constancia en `historial_interno` (tabla del CRM, 0 filas hasta hoy). Best-effort a propósito: el cambio ya está hecho, y un historial caído no puede deshacerlo ni presentarlo como fallido."
         },
         {
@@ -18113,7 +18113,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, tipo: unknown, texto: unknown,",
           "retorno": "Promise<ResultadoHistorial>",
-          "linea": 930,
+          "linea": 932,
           "resumen": "Anotar una fila de historial COMO OPERACIÓN (puerto `POST /api/operador/cliente/historial`): un contacto que llega por un canal —formulario web sobre una ficha que ya existía, p. ej.— y cuyo único ras"
         }
       ],
@@ -18121,7 +18121,7 @@
         "historial_interno"
       ],
       "rutaApi": null,
-      "hash": "814dcf33438a"
+      "hash": "1141fc4cceb0"
     },
     {
       "ruta": "apps/asegura/lib/cartera-ficha.ts",
@@ -21512,7 +21512,7 @@
         "set"
       ],
       "rutaApi": null,
-      "hash": "76ea357ea17f"
+      "hash": "070c67b7d636"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/emitir-iban.ts",
@@ -21804,7 +21804,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ecc10550ce5d"
+      "hash": "9470f63fd520"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/error-vendor.ts",
@@ -92250,7 +92250,7 @@
           "exportada": true,
           "params": "req: NextRequest, context: { params: Promise<{ bookingId: string }> }",
           "retorno": null,
-          "linea": 72
+          "linea": 67
         }
       ],
       "tablas": [
@@ -92259,7 +92259,7 @@
         "set"
       ],
       "rutaApi": "/api/sivra/mensajes/[bookingId]",
-      "hash": "537557705a72"
+      "hash": "155f7a9601c9"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/auto-reply/route.ts",
@@ -92594,7 +92594,7 @@
         "next"
       ],
       "rutaApi": "/api/sivra/mensajes/seed-aprendizaje",
-      "hash": "dff075bb3da2"
+      "hash": "41e893b0b02d"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/telegram-webhook/route.ts",
@@ -112992,7 +112992,7 @@
           "exportada": false,
           "params": "v: unknown,",
           "retorno": "",
-          "linea": 1053
+          "linea": 1054
         },
         {
           "nombre": "interpretarOferta",
@@ -113000,7 +113000,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaOferta",
-          "linea": 1074,
+          "linea": 1075,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -113009,7 +113009,7 @@
           "exportada": true,
           "params": "p: { tarificacionId: string compania: string categoria: string /** Producto y prima de la fila pulsada: desempatan cuando la compañía da varios * precios del mismo nivel (`encontrarPrecio` de asegura, 25/09/2026). */ producto?: string prima",
           "retorno": "Promise<RespuestaOferta>",
-          "linea": 1150,
+          "linea": 1151,
           "resumen": "`POST /api/operador/codeoscopic/oferta` — confirma con la compañía el precio de `tarificacionId` (id de `seguros.tarificaciones`) para la `compania`/`categoria` elegidas en pantalla. NO reintenta."
         },
         {
@@ -113018,7 +113018,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaProductForm",
-          "linea": 1217,
+          "linea": 1218,
           "resumen": "PURO: la respuesta HTTP → los estados del `dataCallback`. Sin red, testeable."
         },
         {
@@ -113027,7 +113027,7 @@
           "exportada": true,
           "params": "peticion: { method?: string path: string params?: unknown[] body?: Record<string, unknown> }",
           "retorno": "Promise<RespuestaProductForm>",
-          "linea": 1232,
+          "linea": 1233,
           "resumen": "`POST /api/operador/codeoscopic/product-form` — relay del `dataCallback` del widget hacia el proxy gratis de asegura. `peticion` es la petición TAL CUAL la pide el widget (`{method?, path, params?, bo"
         },
         {
@@ -113036,7 +113036,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "SolicitudEmisionVista[]",
-          "linea": 1315,
+          "linea": 1316,
           "resumen": "PURO. Una entrada que no tenga forma de solicitud se descarta; un veredicto que no se reconoce cae a `desconocido`, nunca a `aprobada`."
         },
         {
@@ -113045,7 +113045,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaEmitir",
-          "linea": 1339,
+          "linea": 1341,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -113054,7 +113054,7 @@
           "exportada": true,
           "params": "p: { projectId: string campos: Record<string, unknown> actor?: string primaAnual?: number | null /** La máscara (`ES91…1332`) de la cuenta de la ficha que el corredor ha visto y * aprobado. Sin ella asegura no manda la cuenta de la ficha: c",
           "retorno": "Promise<RespuestaEmitir>",
-          "linea": 1408,
+          "linea": 1410,
           "resumen": "`POST /api/operador/codeoscopic/emitir` — **el Submit real**. Exige que `projectId` tenga ya una oferta confirmada (`ofertaAsegura()`). NO reintenta: un fallo de red aquí no dice que no se haya emitid"
         },
         {
@@ -113063,7 +113063,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FormularioGuardado | null",
-          "linea": 1531
+          "linea": 1533
         },
         {
           "nombre": "opcionalPrecio",
@@ -113071,7 +113071,7 @@
           "exportada": false,
           "params": "v: unknown, leer: (x: unknown) => T | null",
           "retorno": "T | null | undefined",
-          "linea": 1560,
+          "linea": 1562,
           "resumen": "Un campo OPCIONAL del precio, con sus TRES estados sin colapsar: - la clave no viene → `undefined` = «asegura no lo manda» (columna que todavía no existe, o un despliegue más viejo del otro lado). - l"
         },
         {
@@ -113080,7 +113080,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "Precio[] | null",
-          "linea": 1564
+          "linea": 1566
         },
         {
           "nombre": "interpretarTarificacionGuardada",
@@ -113088,7 +113088,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaTarificacionGuardada",
-          "linea": 1591,
+          "linea": 1593,
           "resumen": "PURO: la respuesta HTTP → los estados de la pantalla. Sin red, testeable."
         },
         {
@@ -113097,7 +113097,7 @@
           "exportada": true,
           "params": "polizaId: string",
           "retorno": "Promise<RespuestaTarificacionGuardada>",
-          "linea": 1637,
+          "linea": 1639,
           "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         },
         {
@@ -113106,7 +113106,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "RangoCapital | null",
-          "linea": 1708
+          "linea": 1710
         },
         {
           "nombre": "interpretarLimitesHogar",
@@ -113114,7 +113114,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaLimitesHogar",
-          "linea": 1717,
+          "linea": 1719,
           "resumen": "Puro: la respuesta del puerto → lo que pinta la pantalla."
         },
         {
@@ -113123,7 +113123,7 @@
           "exportada": true,
           "params": "p: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> referencia?: string solicitadoPor?: string }",
           "retorno": "Promise<RespuestaLimitesHogar>",
-          "linea": 1741
+          "linea": 1743
         },
         {
           "nombre": "interpretarCoberturas",
@@ -113131,7 +113131,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaCoberturas",
-          "linea": 1794,
+          "linea": 1796,
           "resumen": "Lee la respuesta del puerto. Pura: se testea sin red. `incluida` ausente es `null` («ver el texto»), nunca `false`."
         },
         {
@@ -113140,7 +113140,7 @@
           "exportada": true,
           "params": "projectId: string, offerId: string",
           "retorno": "Promise<RespuestaCoberturas>",
-          "linea": 1814,
+          "linea": 1816,
           "resumen": "`GET /api/operador/codeoscopic/coberturas` — gratis, no cotiza ni confirma nada."
         },
         {
@@ -113149,7 +113149,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "OfertaImportable | null",
-          "linea": 1867
+          "linea": 1869
         },
         {
           "nombre": "interpretarVistaImportacion",
@@ -113157,7 +113157,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "VistaImportacion",
-          "linea": 1885
+          "linea": 1887
         },
         {
           "nombre": "vistaImportacionAsegura",
@@ -113165,7 +113165,7 @@
           "exportada": true,
           "params": "projectId: string, polizaId: string",
           "retorno": "Promise<VistaImportacion>",
-          "linea": 1906
+          "linea": 1908
         },
         {
           "nombre": "interpretarImportacion",
@@ -113173,7 +113173,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaImportar",
-          "linea": 1917
+          "linea": 1919
         },
         {
           "nombre": "importarProyectoAsegura",
@@ -113181,12 +113181,12 @@
           "exportada": true,
           "params": "p: { projectId: string; polizaId: string; quoteId: string }",
           "retorno": "Promise<RespuestaImportar>",
-          "linea": 1938
+          "linea": 1940
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "284ec185fe99"
+      "hash": "064c90a1495b"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -115374,7 +115374,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "3297603aec32"
+      "hash": "21086015a1a2"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cortesia.ts",
@@ -116062,7 +116062,7 @@
           "exportada": true,
           "params": "hechos: { id: number; propertyId: string; hecho: string }[]",
           "retorno": "Promise<void>",
-          "linea": 111,
+          "linea": 110,
           "resumen": "Un mensaje por hecho, con botones. Se mandan de uno en uno a propósito: confirmar en bloque es aprobar sin leer, y aquí cada fila acaba en el prompt de todos los huéspedes de ese piso."
         }
       ],
@@ -116070,7 +116070,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "cb39f3ac90af"
+      "hash": "635c66a67ad9"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/horarios.ts",
@@ -121861,6 +121861,28 @@
       "hash": "ec38f3fa72a3"
     },
     {
+      "ruta": "apps/plataforma/lib/smoobu-paginas.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Lectura PAGINADA de `/api/reservations/{id}/messages` de Smoobu. Módulo PURO (sin `@/`, sin red): recibe el lector de UNA página para poder probarlo con `node --test`. 🚨 Smoobu devuelve el hilo en páginas de 25, de MÁS ANTIGUO a más nuevo (`page`, `page_size`, `page_count`, `total_items`). Leer sol",
+      "exporta": [
+        "leerTodasLasPaginas"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerTodasLasPaginas",
+          "kind": "function",
+          "exportada": true,
+          "params": "leerPagina: (page: number) => Promise<Pagina>, maxPaginas = MAX_PAGINAS_MENSAJES,",
+          "retorno": "Promise<any[] | null>",
+          "linea": 21,
+          "resumen": "Lee todas las páginas y devuelve los mensajes en orden. Devuelve `null` si CUALQUIER página falla o viene con forma rara: un hilo a medias es peor que ninguno, porque su último mensaje no es el último"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b83b179813d1"
+    },
+    {
       "ruta": "apps/plataforma/lib/smoobu-puente-legacy.ts",
       "ambito": "apps/plataforma",
       "resumen": "Decisión pura del puente legacy de Smoobu (ver el comentario 🌉 en `lib/smoobu.ts`). GET /api/rates da 401 con HMAC (ticket Smoobu #1864141, sin resolver) pero el esquema legacy (header `Api-Key` plano) sigue funcionando hasta su sunset del 25/09/2026 — confirmado a mano el 15/09/2026 (legacy 200, H",
@@ -121888,7 +121910,8 @@
       "exporta": [
         "getSmoobuCredenciales",
         "getSmoobuKey",
-        "smoobuFetch"
+        "smoobuFetch",
+        "smoobuMensajesReserva"
       ],
       "funciones": [
         {
@@ -121897,7 +121920,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<Credenciales>",
-          "linea": 29
+          "linea": 30
         },
         {
           "nombre": "getSmoobuKey",
@@ -121905,7 +121928,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string>",
-          "linea": 58,
+          "linea": 59,
           "resumen": "Sigue exportada porque varias rutas la usan solo para comprobar «¿hay key configurada?» antes de seguir. Para HABLAR con Smoobu, `smoobuFetch`."
         },
         {
@@ -121914,15 +121937,24 @@
           "exportada": true,
           "params": "pathOrUrl: string, init: RequestInit = {}",
           "retorno": "Promise<Response>",
-          "linea": 68,
+          "linea": 69,
           "resumen": "fetch a Smoobu firmado con HMAC-SHA256. `pathOrUrl` puede ser ruta ('/api/...') o URL completa. Se firma el METHOD, el PATH, la query ORDENADA, el sello de tiempo, un nonce único y el hash del cuerpo "
+        },
+        {
+          "nombre": "smoobuMensajesReserva",
+          "kind": "function",
+          "exportada": true,
+          "params": "bookingId: string | number",
+          "retorno": "Promise<any[] | null>",
+          "linea": 119,
+          "resumen": "Hilo COMPLETO de una reserva (todas las páginas de `/messages`, de más antiguo a más nuevo). `null` = no se pudo leer entero. Ver `lib/smoobu-paginas.ts` para por qué la página 1 sola miente."
         }
       ],
       "tablas": [
         "pms_connections"
       ],
       "rutaApi": null,
-      "hash": "0d94469b21a7"
+      "hash": "aca6a0a14a06"
     },
     {
       "ruta": "apps/plataforma/lib/subastas-ingesta.ts",
@@ -158616,7 +158648,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3787,
-    "funciones": 12143
+    "archivos": 3788,
+    "funciones": 12145
   }
 }
