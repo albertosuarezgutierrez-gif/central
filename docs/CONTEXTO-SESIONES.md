@@ -714,6 +714,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Pablo Guzmán: correo de emisión ENVIADO con PDF (verificado en BD)
+- 18:29 UTC `emision_con_poliza` a Pablo (Allianz 61089620) con `Póliza.pdf` (402 KB, archivado y visible en su portal).
+  El 400 de la descarga era la falta de `x-client-app`/`x-user-email` (PR #3685). Correo con resumen compañía/cobertura/efecto/prima.
+- Baja de la Mapfre en `solicitada`: al firmar Pablo sale sola a CCORREDOR@mapfre.com. Pendiente: verificar firma→comunicada.
+
 ## (26/09/2026) Correduría: la póliza original adjunta al correo de emisión + «Documentos de tu póliza» en el portal
 - El correo de emisión prometía el PDF y no lo llevaba. Ahora va adjunto si está (o se trae de Codeoscopic al pulsar
   «Enviar al cliente»); si no, el cron `asegura /api/cron/polizas-pdf` (:20 cada hora) lo manda cuando llegue.
