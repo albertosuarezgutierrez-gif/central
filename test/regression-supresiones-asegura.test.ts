@@ -172,7 +172,10 @@ test('el bloque está MONTADO en la pantalla y suma al contador de «Hoy»', () 
   // a arreglar: la solicitud existiría y no la vería nadie.
   const src = leer(CLIENTE)
   assert.match(src, /<Supresiones onContador=\{setNSupresiones\} \/>/)
-  assert.match(src, /agregarContadores\(\[nPartes, nSupresiones/)
+  // Desde el 26/09/2026 el badge de «Hoy» se construye desde `colasIncid`
+  // (una sola lista para el badge y la franja): supresiones tiene que estar ahí.
+  assert.match(src, /const colasIncid = \[[^\]]*\bnSupresiones\b/)
+  assert.match(src, /agregarContadores\(\[\.\.\.colasIncid, nTareasHoy\]\)/)
 })
 
 test('la escritura separa «no se hizo por esto» de «no se pudo hacer»', () => {

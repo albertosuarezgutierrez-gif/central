@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(26/09/2026)** Correduría · lotes 3+4 (PR #3707): «siguiente paso» en la ficha (`siguientePaso()` de
+module-seguros), DNI/carnés plegados, «Más» partida en Cumplimiento/Referencia, renovaciones 90 d plegadas en Cartera, y
+**un solo contador en Hoy**: el badge = `colasIncid` + tareas, y la celda «avisos» de la franja suma las mismas colas
+(guardián `test/regression-hoy-contador-unico.test.ts`, visto en rojo). Decisiones de Alberto: **NO** medir uso
+(`correduria_uso_ui` descartada: «mi negocio es muy básico»); Hoy NO se rehace como cola única (el cockpit del 23/09 se queda).
+
 **(26/09/2026)** Correduría · revisión UX de TODAS las pantallas (PR #3699 Relaciones, mergeado) → 4 lotes aprobados
 por Alberto («haz todas»). Lote 1 (este PR): bug del alta de auto (aviso a «3» → «2c»), la causa técnica de PII fuera de
 la cabecera (queda en `title`), ~60 botones/summaries a 44 px, bloques de Hoy sin trabajo en una línea o `null`
