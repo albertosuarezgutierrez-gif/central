@@ -329,6 +329,14 @@
   de evento CONFIRMADO con corpus caducado (>7 días, el motor las tarifica genérico) — no se ha
   medido si el ritmo de 24/día está bajando ese backlog o solo conteniéndolo; fallos: —;
   PRs/commits: — (solo bitácora + BD).
+
+- **2026-09-16 · psd2-health-check** · hizo: consulta de frescura (agregado OK: último mov. 15/09,
+  mov_30d 45 vs 59 prev, `psd2_sin_fecha` 0) + revisión de `conexiones_banco.ultimo_avisos` de las
+  vinculadas — la de BBVA trae aviso SIN prefijo ℹ️ (401 `Session is closed` de hoy 06:00 UTC).
+  Confirmado contra `semaforoFeed()` real (`apps/plataforma/lib/psd2-semaforo.ts`): `roto`.
+  Anotado en CONTEXTO-SESIONES.md, alerta Telegram enviada (`/api/internal/alerta`) y latido `ok:true`
+  con el parte. dudas: —; fallos: —. PRs/commits: commit directo a `main` (solo docs).
+
 - **2026-09-15 · pricing-agente** · hizo: ciclo semanal completo, 4 pisos (sesión interactiva,
   continuó el 14/09 interrumpido). Cerró Hallazgo 1 del 14/09 (Sentinel) con `canal-aviso.sh`.
   Afinó Hallazgo 2: confirmado en vivo que `/api/rates` de Smoobu 401 en LOS 4 PISOS, no solo
