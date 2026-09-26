@@ -47,6 +47,17 @@ export function detectCategory(text: string): string | null {
   return null
 }
 
+const RE_RECO = /recomien|recommend|qué hacer|what to do|restaurante|restaurant|visit|ver en|things to do/i
+
+// ¿La pregunta va al recomendador web (`recomendar.ts`, que NO lee la ficha del piso)? Solo si no
+// es una pregunta OPERATIVA del apartamento. Caso 154692216 (26/09/2026): «¿podemos dejar las
+// maletas…? Así podemos visitar Sevilla» casaba «visit» y el recomendador contestó «claro, avisa al
+// propietario» + bares, saltándose el bloque de consignas de la ficha. Lo operativo manda.
+export function vaARecomendador(pregunta: string, categoria: string): boolean {
+  if (categoria === 'faq') return true
+  return categoria === 'general' && RE_RECO.test(pregunta)
+}
+
 // Detecta el idioma en que ESCRIBE el huésped (es lo que mandará la respuesta). El regex anterior
 // solo miraba tildes/keywords → "Nos iremos sobre las 10.30" (español sin tildes) caía a inglés.
 // Ahora puntúa marcadores ES vs EN; si no hay señal clara, usa `fallback` (p.ej. idioma de Smoobu).

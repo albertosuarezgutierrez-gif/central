@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
 import { bloqueEquipaje, CONSIGNAS_RED, CONSIGNA_POR_ZONA, zonaDePiso } from './equipaje.ts'
-import { detectCategory } from './reglas.ts'
+import { detectCategory, vaARecomendador } from './reglas.ts'
 import { contieneDatoInventado } from './guardrail.ts'
 
 test('bloqueEquipaje deja claro que NO hay servicio de consigna', () => {
@@ -73,4 +73,14 @@ test('la web de Castellar (busto) tampoco dispara el guardrail', () => {
   const ficha = bloqueEquipaje('prop_luxury_busto')
   const reply = `Puedes dejarlas en ${CONSIGNA_POR_ZONA.busto[0].nombre} (${CONSIGNA_POR_ZONA.busto[0].web}).`
   assert.equal(contieneDatoInventado(reply, ficha), false)
+})
+
+test('maletas + «visitar Sevilla» NO va al recomendador web (caso 154692216)', () => {
+  const q = 'Séria posible solo dejar las maletas en el apartamento cuando llegamos? Y así podemos visitar Sevilla más cómodos.'
+  const cat = detectCategory(q) || 'general'
+  assert.strictEqual(cat, 'equipaje')
+  assert.strictEqual(vaARecomendador(q, cat), false)
+  // Una recomendación de verdad sigue yendo al recomendador.
+  const r = '¿Qué nos recomiendas visitar en Sevilla?'
+  assert.strictEqual(vaARecomendador(r, detectCategory(r) || 'general'), true)
 })

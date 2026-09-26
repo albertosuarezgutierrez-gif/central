@@ -683,6 +683,11 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+
+## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
+- Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).
+- Fix: `vaARecomendador()` en `reglas.ts` — solo categoría `faq` o `general`+RE_RECO; lo operativo (equipaje, check-in, acceso…) va a `decidir` con ficha. Cepo en `equipaje.test.ts` (visto en rojo).
+
 ## (26/09/2026) SIVRA · auditoría del guardián y del motor de precios (PR en rama `claude/sivra-pricing-audit-4p18t0`)
 - Avisos «reserva X% bajo mercado»: 14/15 entraron al precio que publicábamos → el guardián ya dice si es «a nuestro precio» o «descuento de canal»; Agoda/Expedia/Airbnb (`amount_gross = amount`, sin bruto real) ya no se comparan como bruto.
 - Causa del precio bajo lejano: `apply` castigaba dos veces la nota baja (liga + `quality_factor` contra la nota del corpus ENTERO). Ahora contra la nota de la liga: Busto Reform 0,84→0,93 · Luxury 0,88→0,94 · Dúplex 0,91→0,94.
