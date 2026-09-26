@@ -317,7 +317,7 @@ a {
    se cambia aquí. El nombre lo lee el lector de pantalla del `.sr-marca`. */
 .marca-palabra {
   display: block;
-  height: 20px;
+  height: 22px;
   aspect-ratio: 6.834;
   background: var(--brand);
   -webkit-mask: url('/brand/logotipo-asegura.svg') center / contain no-repeat;
@@ -427,7 +427,7 @@ a {
     height: 10px;
   }
   .marca-palabra {
-    height: 17px;
+    height: 19px;
   }
   .hdr-caja {
     gap: var(--e2);

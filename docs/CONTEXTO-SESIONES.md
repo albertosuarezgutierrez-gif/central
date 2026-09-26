@@ -707,6 +707,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (26/09/2026) Grupo ASegura: el logotipo «se veía poco» (portal + web)
+- Causa: Quicksand 300 a 18-20 px de alto = trazo <1 px. `logotipo-asegura.svg` (las dos copias, idénticas) lleva ahora
+  `stroke="currentColor" stroke-width="3"` → ≈ semibold sin redibujar. Alto: portal 18→22 px (≤639: 19; ≤380 sigue 14),
+  web 20→22 (móvil 17→19). Web medida con Playwright a 320/360/390/1024: sin desborde. El PNG de correo NO se tocó.
+
 ## (26/09/2026) Portal del cliente (asegura-portal) · barra inferior a lo Smoobu
 - Alberto quería el diseño de la app de Smoobu para la APP DEL CLIENTE, no para plataforma: se probó primero
   en plataforma y en /correduria y se deshizo (el PR #3659 queda sin cambios en plataforma).
