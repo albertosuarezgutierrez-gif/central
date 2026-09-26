@@ -699,6 +699,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+
+## (26/09/2026) Plan: importar proyectos de Avant2 (fila 13) + emitir desde Telegram (fase 3)
+- Spec en `docs/superpowers/specs/2026-09-26-importar-avant2-y-emitir-telegram-design.md`. Nada construido.
+- Hallazgo: `/emitir` NO necesita línea previa en `codeoscopic_consumo`; basta enlazar proyecto→póliza en `codeoscopic_projects` (el requisito venía de la FK de `tarificaciones`). Fila 13 corregida.
+- Orden: fila 13 → fila 5 (timeouts, requisito previo) → fase 3a (resumen construido en servidor + botón `cas_emitir` de un solo uso con huella) → 3b (correcciones por chat).
+- Pablo Guzmán (Mapfre `0008414300069` vence 29/09): se emite A MANO en Avant2, no espera a esto.
+
 ## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
 - Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).
 - Fix: `vaARecomendador()` en `reglas.ts` — solo categoría `faq` o `general`+RE_RECO; lo operativo (equipaje, check-in, acceso…) va a `decidir` con ficha. Cepo en `equipaje.test.ts` (visto en rojo).
