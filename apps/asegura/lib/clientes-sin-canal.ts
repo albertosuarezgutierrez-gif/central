@@ -108,7 +108,7 @@ import { POLIZA_ESTADOS_VIGENTES, sqlCarteraEnVigor } from '@central/module-segu
 import { prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
-import { sqlPrimaDeRecibo } from './recibos-vigencia'
+import { sqlPrimaDeRecibo, sqlVencimientoConRecibos } from './recibos-vigencia'
 
 /** Tope de filas leídas. La cartera viva son decenas, no miles: si algún día se
  *  pasa de aquí, se declara `truncado` y los recuentos pasan a «no comprobado»
@@ -476,8 +476,8 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
           -- (Sin acentos graves aquí dentro: cierran el template literal.)
           count(*) filter (where p.estado::text = any(${VIGENTES}))::int
             as polizas_que_renuevan,
-          min(p.fecha_vencimiento) filter (
-            where p.fecha_vencimiento >= current_date
+          min(ev.venc) filter (
+            where ev.venc >= current_date
               and p.estado::text = any(${VIGENTES})
           ) as proximo_vencimiento,
           count(*) filter (where p.fecha_vencimiento is null)::int as polizas_sin_fecha,
@@ -489,6 +489,8 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
           )::int as polizas_sin_prima
         from polizas p
         cross join lateral (select ${sqlPrimaDeRecibo('p', hoy)} as prima) pr
+        -- Vencimiento real: una Allianz renovada solo avanza en su recibo cobrado.
+        cross join lateral (select ${sqlVencimientoConRecibos('p', hoy)} as venc) ev
         where p.cliente_id = c.id
           and p.correduria_id = c.correduria_id
           -- EN VIGOR (origen CIMA y estado vigente): la cadena es constante,

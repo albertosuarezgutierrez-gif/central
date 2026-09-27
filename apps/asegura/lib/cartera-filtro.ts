@@ -51,7 +51,7 @@ import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { registrarErrorCartera } from './error-cartera'
 import { siguientesAcciones } from './acciones-listado'
-import { recibosVigenciaDe } from './recibos-vigencia'
+import { recibosVigenciaDe, sqlVencimientoConRecibos } from './recibos-vigencia'
 
 // ─── Cotas de seguridad ──────────────────────────────────────────────────────
 // Ninguna consulta escanea sin techo. Las dos cotas están MUY por encima de lo
@@ -221,14 +221,18 @@ const LATERAL_VIVAS = Prisma.sql`
       and ${CARTERA_VIVA_P}
   ) v on true`
 
-function condVencimiento(r: RangoVencimiento): Prisma.Sql {
+function condVencimiento(r: RangoVencimiento, hoy: Date): Prisma.Sql {
   if (r.modo === 'sin_fecha') return Prisma.sql`p.fecha_vencimiento is null`
+  // El vencimiento REAL (27/09/2026): si la fecha de la póliza ya pasó y hay un
+  // recibo anual cobrado posterior, vence donde acaba ese recibo. Allianz no
+  // avanza la fecha al renovar; sin esto una renovada salía en «vencidas».
+  const venc = sqlVencimientoConRecibos('p', iso(hoyUtc(hoy)))
   if (r.modo === 'vencidas') {
     return Prisma.sql`p.fecha_vencimiento is not null
-      and p.fecha_vencimiento >= ${r.desde}::date and p.fecha_vencimiento < ${r.antesDe}::date`
+      and ${venc} >= ${r.desde}::date and ${venc} < ${r.antesDe}::date`
   }
   return Prisma.sql`p.fecha_vencimiento is not null
-    and p.fecha_vencimiento >= ${r.desde}::date and p.fecha_vencimiento <= ${r.hasta}::date`
+    and ${venc} >= ${r.desde}::date and ${venc} <= ${r.hasta}::date`
 }
 
 /**
@@ -277,7 +281,7 @@ function condicionesCliente(
   if (f.ramos.length) dePoliza.push(Prisma.sql`p.tipo::text in (${enLista(f.ramos)})`)
   if (f.companias.length) dePoliza.push(Prisma.sql`p.aseguradora in (${enLista(f.companias)})`)
   if (f.estados.length) dePoliza.push(Prisma.sql`p.estado::text in (${enLista(f.estados)})`)
-  if (f.vence) dePoliza.push(condVencimiento(rangoVentana(f.vence, hoy)))
+  if (f.vence) dePoliza.push(condVencimiento(rangoVentana(f.vence, hoy), hoy))
   if (dePoliza.length) {
     conds.push(Prisma.sql`exists (
       select 1 from polizas p

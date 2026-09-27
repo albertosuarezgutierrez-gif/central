@@ -79,6 +79,6 @@ test('🚨 «Vencidas» tiene SUELO de anualidad, igual que Renovaciones (21/09/
   assert.match(FUENTE, /DIAS_ANUALIDAD/)
   assert.match(
     FUENTE,
-    /fecha_vencimiento >= \$\{r\.desde\}::date and p\.fecha_vencimiento < \$\{r\.antesDe\}::date/,
+    /\$\{venc\} >= \$\{r\.desde\}::date and \$\{venc\} < \$\{r\.antesDe\}::date/,
   )
 })
