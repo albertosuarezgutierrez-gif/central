@@ -1,0 +1,30 @@
+{
+ "sesion": "a669ba90-2035-5d79-8bfd-a55dff6033fc",
+ "inicio": "2026-09-27T06:05:12.658Z",
+ "fin": "2026-09-27T06:05:34.522Z",
+ "llamadas": 6,
+ "categorias": {
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 1,
+   "chars_in": 59,
+   "chars_out": 3622,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__add_repo": 1
+   }
+  },
+  "bash": {
+   "llamadas": 5,
+   "chars_in": 1505,
+   "chars_out": 24007,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 5
+   }
+  }
+ }
+}
