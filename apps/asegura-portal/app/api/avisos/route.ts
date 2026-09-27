@@ -10,6 +10,7 @@ import { obligacionesDeIdentidad } from '@/lib/obligaciones'
 import { peticionesDeIdentidad } from '@/lib/peticiones'
 import { partesAvisoDeIdentidad } from '@/lib/partes-aviso'
 import { polizasNuevasDeIdentidad } from '@/lib/polizas-nuevas'
+import { polizasModificadasDeIdentidad } from '@/lib/polizas-modificadas'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -38,7 +39,7 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets, firmas, felicitaciones, polizasNuevas, partes, polizasModificadas] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
     peticionesDeIdentidad(identidad.id),
@@ -55,6 +56,8 @@ export async function GET() {
     // Octava: las pólizas nuevas (emitidas o recién llegadas por CIMA), con el cambio de compañía si lo es.
     polizasNuevasDeIdentidad(identidad.id),
     partesAvisoDeIdentidad(identidad.id),
+    // Décima: cambios en sus pólizas (precio, fechas, coberturas, baja, documentación nueva).
+    polizasModificadasDeIdentidad(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
@@ -68,6 +71,7 @@ export async function GET() {
   if (felicitaciones.status === 'rejected') console.error('[avisos] felicitaciones ilegibles', felicitaciones.reason)
   if (polizasNuevas.status === 'rejected') console.error('[avisos] pólizas nuevas ilegibles', polizasNuevas.reason)
   if (partes.status === 'rejected') console.error('[avisos] partes ilegibles', partes.reason)
+  if (polizasModificadas.status === 'rejected') console.error('[avisos] cambios de póliza ilegibles', polizasModificadas.reason)
   // `null` del puente = no se pudo mirar (no «no hay»).
   const firmasLeidas = firmas.status === 'fulfilled' && firmas.value !== null
     ? firmas.value.anulaciones.map((a) => ({ id: a.id, compania: a.compania }))
@@ -83,6 +87,7 @@ export async function GET() {
     felicitaciones: felicitaciones.status === 'fulfilled' ? felicitaciones.value : null,
     polizasNuevas: polizasNuevas.status === 'fulfilled' ? polizasNuevas.value : null,
     partes: partes.status === 'fulfilled' ? partes.value : null,
+    polizasModificadas: polizasModificadas.status === 'fulfilled' ? polizasModificadas.value : null,
     hoy: new Date(),
   })
 

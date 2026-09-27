@@ -15,6 +15,8 @@ import {
   type CarnetParaAviso,
   type FirmaParaAviso,
   type PolizaNuevaParaAviso,
+  type PolizaModificadaParaAviso,
+  type ParteParaAviso,
   type Aviso,
 } from '@central/module-seguros-portal'
 
@@ -64,6 +66,10 @@ export type Pendiente = {
   firmas: FirmaParaAviso[]
   /** Pólizas nuevas del tomador (`polizasNuevasParaAviso`). Opcional: quien no lo trae no avisa de ellas. */
   polizasNuevas?: PolizaNuevaParaAviso[]
+  /** Pólizas del tomador con un cambio reciente (`polizasModificadasParaAviso`). */
+  polizasModificadas?: PolizaModificadaParaAviso[]
+  /** Partes del portal abiertos o descartados hace poco (`partesParaAviso`). */
+  partes?: ParteParaAviso[]
 }
 
 /**
@@ -89,6 +95,8 @@ export function avisosNuevos(
     carnets: p.carnets,
     firmas: p.firmas,
     polizasNuevas: p.polizasNuevas ?? [],
+    polizasModificadas: p.polizasModificadas ?? [],
+    partes: p.partes ?? [],
     hoy,
   })
   if (fuentesIlegibles.length > 0) return null

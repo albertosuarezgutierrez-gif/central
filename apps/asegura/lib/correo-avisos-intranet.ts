@@ -90,7 +90,18 @@ export const ETIQUETA_POR_TIPO: Record<TipoAviso, EtiquetaCorreo> = {
   // Ni compañía ni número: el cambio de compañía, si lo es, se explica DENTRO (la campana lo dice).
   poliza_emitida: { uno: 'una póliza nueva', varios: 'pólizas nuevas' },
   parte_actualizado: { uno: 'novedades de un parte de siniestro', varios: 'novedades de tus partes de siniestro' },
+  // Ni qué cambió ni cuánto: precio, fechas o una baja se ven DENTRO (la campana lo dice).
+  poliza_modificada: { uno: 'cambios en una de tus pólizas', varios: 'pólizas con cambios' },
 }
+
+/**
+ * 📱 La invitación a usar la app (Alberto, 27/09/2026: «hay que convencer al cliente de que use la
+ * app»). Cada correo es la ocasión de pasarle al canal que no depende de que abra el correo: el
+ * portal instalado en el móvil, con los avisos al momento. Una frase y sin insistir: el botón de
+ * instalar y el de activar avisos ya están dentro, en la cabecera del portal.
+ */
+export const INVITACION_APP =
+  'Consejo: añade tu área de clientes a la pantalla de inicio del móvil (botón «Instalar» al entrar) y activa las notificaciones. Así te enteras al momento de cualquier cambio en tus seguros, sin esperar a este correo.'
 
 /** Un aviso, reducido a lo único que el correo necesita: su clase. */
 export type AvisoParaCorreo = { tipo: TipoAviso }
@@ -186,6 +197,8 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
     '',
     comoSeEntra,
     '',
+    INVITACION_APP,
+    '',
     'Un saludo,',
     'Grupo ASegura',
   ].join('\n')
@@ -197,6 +210,7 @@ export function cuerpoAvisosIntranet(d: DatosAvisosIntranet): CuerpoCorreo {
     ...(ademas ? [`<p>${escapar(ademas)}</p>`] : []),
     `<p><a href="${escapar(d.enlace)}" style="display:inline-block;padding:10px 16px;border-radius:8px;background:#2563eb;color:#fff;text-decoration:none">Entrar en mi área de clientes</a></p>`,
     `<p style="color:#555;font-size:13px">${escapar(comoSeEntra)}</p>`,
+    `<p style="background:#eef3fe;border-radius:8px;padding:10px 12px;font-size:14px">📱 ${escapar(INVITACION_APP)}</p>`,
     '<p>Un saludo,<br>Grupo ASegura</p>',
     '</div>',
   ].join('')

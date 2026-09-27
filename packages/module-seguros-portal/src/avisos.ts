@@ -18,6 +18,7 @@ import { entraEnVentana } from './obligacion.ts'
 import type { EstadoAutorizacion } from './autorizacion.ts'
 import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
 import type { ParteParaAviso } from './parte-aviso.ts'
+import { textoPolizaModificada, type PolizaModificadaParaAviso } from './poliza-cambios.ts'
 
 export const TIPOS_AVISO = [
   'peticion_recibida',
@@ -32,6 +33,7 @@ export const TIPOS_AVISO = [
   'felicitacion',
   'poliza_emitida',
   'parte_actualizado',
+  'poliza_modificada',
 ] as const
 export type TipoAviso = (typeof TIPOS_AVISO)[number]
 
@@ -69,7 +71,7 @@ export type Aviso = {
   href: string
 }
 
-export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes'] as const
+export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas'] as const
 export type FuenteAviso = (typeof FUENTES_AVISO)[number]
 
 /** Lo mínimo que la campana necesita de una autorización; el resto de `AutorizacionVista` no se mira. */
@@ -172,6 +174,12 @@ export type EntradaAvisos = {
    * podido mirar. Ausente = esta superficie no lo consulta (no cuenta para el «!»).
    */
   partes?: ParteParaAviso[] | null
+  /**
+   * Pólizas del tomador con un cambio reciente (`polizasModificadasParaAviso`): precio, fechas,
+   * coberturas, baja, documentación nueva… `null` = no se ha podido mirar. Ausente = esta superficie
+   * no lo consulta (no cuenta para el «!»).
+   */
+  polizasModificadas?: PolizaModificadaParaAviso[] | null
   hoy: Date
 }
 
@@ -214,6 +222,8 @@ export const HREF_POR_TIPO: Record<TipoAviso, string> = {
   poliza_emitida: '/boveda',
   // La lista de partes vive en la pestaña de siniestros de la bóveda.
   parte_actualizado: '/boveda?vista=siniestro',
+  // El detalle de la póliza (precio, fechas, documentos) vive en «Mis seguros».
+  poliza_modificada: '/boveda',
 }
 
 const FECHA = new Intl.DateTimeFormat('es-ES', { day: 'numeric', month: 'long', timeZone: 'UTC' })
@@ -516,9 +526,20 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     }
   }
 
+  if (x.polizasModificadas === null) {
+    fuentesIlegibles.push('polizas_modificadas')
+  } else {
+    for (const p of x.polizasModificadas ?? []) {
+      avisos.push({ tipo: 'poliza_modificada', id: p.id, ...textoPolizaModificada(p), href: HREF_POR_TIPO.poliza_modificada })
+    }
+  }
+
   // Las fuentes que ESTA superficie consulta: una ausente (`undefined`) no cuenta para el «!».
   const ausentes =
-    (x.felicitaciones === undefined ? 1 : 0) + (x.polizasNuevas === undefined ? 1 : 0) + (x.partes === undefined ? 1 : 0)
+    (x.felicitaciones === undefined ? 1 : 0) +
+    (x.polizasNuevas === undefined ? 1 : 0) +
+    (x.partes === undefined ? 1 : 0) +
+    (x.polizasModificadas === undefined ? 1 : 0)
   return {
     avisos,
     fuentesIlegibles,
