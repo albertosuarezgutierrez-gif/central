@@ -23,8 +23,8 @@
     "title": "Pourquoi choisir House Sevillana",
     "items": {
       "parking": {
-        "title": "Parking privé sur place",
-        "body": "Se garer dans la vieille ville de Séville est compliqué. Ici, votre place est incluse, sans frais supplémentaires ni temps perdu à chercher."
+        "title": "Parking privé tout proche",
+        "body": "Se garer dans la vieille ville de Séville est compliqué. Vous avez une place de garage privée à San Juan de la Palma, à quelques minutes à pied de la maison, sans frais supplémentaires."
       },
       "capacity": {
         "title": "6 chambres et 4 salles de bains",
@@ -56,7 +56,7 @@
     },
     "amenitiesTitle": "Équipements",
     "amenities": [
-      "Parking privé sur place",
+      "Parking privé tout proche",
       "Wifi gratuit dans toute la maison",
       "Climatisation dans toutes les pièces",
       "Cuisine entièrement équipée (four, micro-ondes, frigo, cafetière)",
@@ -136,7 +136,7 @@
     "items": [
       {
         "q": "House Sevillana dispose-t-elle d'un parking privé ?",
-        "a": "Oui. La maison dispose d'un parking privé sur place, chose rare dans la vieille ville de Séville. La place est incluse dans le prix, sans frais supplémentaires ni recherche de stationnement payant."
+        "a": "Oui. La maison dispose d'une place de garage privée à San Juan de la Palma, à quelques minutes à pied de la maison, chose rare dans la vieille ville de Séville. La place est incluse dans le prix, sans frais supplémentaires."
       },
       {
         "q": "Pour combien de personnes ?",

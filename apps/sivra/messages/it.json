@@ -23,8 +23,8 @@
     "title": "Perché scegliere House Sevillana",
     "items": {
       "parking": {
-        "title": "Parcheggio privato in struttura",
-        "body": "Parcheggiare nel centro storico di Siviglia è complicato. Qui hai il tuo posto incluso, senza costi extra né perdite di tempo a cercare."
+        "title": "Parcheggio privato vicinissimo",
+        "body": "Parcheggiare nel centro storico di Siviglia è complicato. Hai un posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa, senza costi extra."
       },
       "capacity": {
         "title": "6 camere e 4 bagni",
@@ -56,7 +56,7 @@
     },
     "amenitiesTitle": "Servizi",
     "amenities": [
-      "Parcheggio privato in struttura",
+      "Parcheggio privato vicinissimo",
       "Wi-Fi gratuito in tutta la casa",
       "Aria condizionata in tutte le stanze",
       "Cucina completamente attrezzata (forno, microonde, frigo, macchina del caffè)",
@@ -136,7 +136,7 @@
     "items": [
       {
         "q": "House Sevillana ha un parcheggio privato?",
-        "a": "Sì. La casa dispone di parcheggio privato in struttura, una rarità nel centro storico di Siviglia. Il posto è incluso nel prezzo, senza costi aggiuntivi e senza dover cercare parcheggio a pagamento."
+        "a": "Sì. La casa dispone di un posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa, una rarità nel centro storico di Siviglia. Il posto è incluso nel prezzo, senza costi aggiuntivi."
       },
       {
         "q": "Per quante persone è House Sevillana?",

@@ -753,6 +753,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) House Sevillana: el parking NO está en el edificio — está en San Juan de la Palma
+Alberto: «parking no está en el mismo edificio, está en San Juan de la Palma». La web lo afirmaba en ES/EN/IT
+(portada, /parking, sus JSON-LD) y también sivra/messages ×5 y la skill `seo-house-sevillana`. Corregido a
+«plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie»; guardián nuevo
+`test/regression-house-sevillana-parking.test.ts` (visto en rojo). ⚠️ Sin tocar y dudoso: sivra/messages y la
+skill dicen que la plaza está «incluida en el precio», mientras /parking dice que sus condiciones se confirman al reservar.
+
 ## (27/09/2026) Pricing: SUELO de fin de semana sin mercado medido (House 29-30/01/2027 vendido a 300€)
 - La reserva de House 29-31/01/2027 (600€) entró al `min_price`: el motor tenía 436/456€ el 19/09 y el raíl lo bajó a 300 en dos pasadas.
 - Causa: el finde solo subía por `anclaMercadoFecha` (≥5 comps fiables de ESA fecha); sin ellos, viernes/sábado = martes.

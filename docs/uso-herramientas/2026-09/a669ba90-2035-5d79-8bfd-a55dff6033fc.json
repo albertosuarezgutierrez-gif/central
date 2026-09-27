@@ -1,59 +1,61 @@
 {
  "sesion": "a669ba90-2035-5d79-8bfd-a55dff6033fc",
  "inicio": "2026-09-27T06:05:12.658Z",
- "fin": "2026-09-27T06:41:25.620Z",
- "llamadas": 65,
+ "fin": "2026-09-27T07:29:30.777Z",
+ "llamadas": 90,
  "categorias": {
   "mcp:Claude_Code_Remote": {
-   "llamadas": 2,
-   "chars_in": 247,
-   "chars_out": 3730,
+   "llamadas": 3,
+   "chars_in": 293,
+   "chars_out": 5213,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Claude_Code_Remote__add_repo": 1,
-    "mcp__Claude_Code_Remote__send_later": 1
+    "mcp__Claude_Code_Remote__send_later": 1,
+    "mcp__Claude_Code_Remote__delete_trigger": 1
    }
   },
   "bash": {
-   "llamadas": 38,
-   "chars_in": 20564,
-   "chars_out": 145359,
+   "llamadas": 49,
+   "chars_in": 22604,
+   "chars_out": 150963,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 38
+    "Bash": 49
    }
   },
   "otro": {
-   "llamadas": 11,
-   "chars_in": 680,
-   "chars_out": 90647,
+   "llamadas": 19,
+   "chars_in": 696,
+   "chars_out": 188317,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "ToolSearch": 6,
-    "ReadNotifications": 3,
+    "ReadNotifications": 11,
     "Skill": 2
    }
   },
   "mcp:github": {
-   "llamadas": 11,
-   "chars_in": 5152,
-   "chars_out": 17218,
+   "llamadas": 13,
+   "chars_in": 5398,
+   "chars_out": 20760,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 2,
+   "chars_citados": 3125,
    "tools": {
     "mcp__github__list_pull_requests": 1,
     "mcp__github__create_pull_request": 2,
     "mcp__github__subscribe_pr_activity": 2,
     "mcp__github__update_pull_request": 2,
     "mcp__github__unsubscribe_pr_activity": 1,
-    "mcp__github__pull_request_read": 3
+    "mcp__github__pull_request_read": 4,
+    "mcp__github__merge_pull_request": 1
    }
   },
   "escritura": {
@@ -68,14 +70,14 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 1,
-   "chars_in": 43,
-   "chars_out": 546,
-   "errores": 0,
+   "llamadas": 4,
+   "chars_in": 186,
+   "chars_out": 14455,
+   "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Vercel__web_fetch_vercel_url": 1
+    "mcp__Vercel__web_fetch_vercel_url": 4
    }
   }
  }

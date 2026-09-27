@@ -22,21 +22,21 @@ const PARES: readonly Trio[] = [
     'Casa con parcheggio privato nel centro di Siviglia | House Sevillana',
   ],
   [
-    'Alojamiento en el casco histórico de Sevilla con plaza de garaje privada en el propio edificio. 290 m², 6 dormitorios, hasta 12 personas. Llega en coche sin buscar aparcamiento.',
-    'Accommodation in Seville&#39;s historic centre with a private garage space in the building itself. 290 m², 6 bedrooms, sleeps up to 12. Drive in without hunting for a parking space.',
-    'Alloggio nel centro storico di Siviglia con posto auto privato nello stesso edificio. 290 m², 6 camere, fino a 12 persone. Arrivi in auto senza cercare parcheggio.',
+    'Alojamiento en el casco histórico de Sevilla con plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie. 290 m², 6 dormitorios, hasta 12 personas. Llega en coche sin buscar aparcamiento.',
+    'Accommodation in Seville&#39;s historic centre with a private garage space in San Juan de la Palma, a few minutes&#39; walk away. 290 m², 6 bedrooms, sleeps up to 12. Drive in without hunting for a parking space.',
+    'Alloggio nel centro storico di Siviglia con posto auto privato a San Juan de la Palma, a pochi minuti a piedi. 290 m², 6 camere, fino a 12 persone. Arrivi in auto senza cercare parcheggio.',
   ],
   [
-    'Plaza de garaje privada en el propio edificio, en pleno casco histórico. Llega en coche y olvídate de aparcar.',
-    'A private garage space in the building itself, right in the historic centre. Drive here and forget about parking.',
-    'Posto auto privato nello stesso edificio, in pieno centro storico. Arrivi in auto e ti dimentichi del parcheggio.',
+    'Plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie de la casa, en pleno casco histórico. Llega en coche y olvídate de aparcar.',
+    'A private garage space in San Juan de la Palma, a few minutes&#39; walk from the house, right in the historic centre. Drive here and forget about parking.',
+    'Posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa, in pieno centro storico. Arrivi in auto e ti dimentichi del parcheggio.',
   ],
 
   // ── Datos estructurados (bloque entero: se traduce de una pieza) ─────────────
   [
-    '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿House Sevillana tiene parking privado?","acceptedAnswer":{"@type":"Answer","text":"Sí. Hay una plaza de garaje privada en el mismo edificio, reservable junto con la estancia. Es de las pocas casas turísticas del casco histórico de Sevilla con aparcamiento propio."}},{"@type":"Question","name":"¿Afecta la Zona de Bajas Emisiones de Sevilla a mi coche?","acceptedAnswer":{"@type":"Answer","text":"La Zona de Bajas Emisiones de Sevilla es únicamente la Isla de la Cartuja, al noroeste de la ciudad, y solo restringe de lunes a viernes no festivos de 7:00 a 19:00. Los vehículos con distintivo 0, ECO, C o B acceden libremente. El casco histórico, donde está House Sevillana, no forma parte de esa ZBE: tiene su propio régimen de tráfico restringido, así que conviene consultar la ruta de llegada al reservar."}},{"@type":"Question","name":"¿Cuánto cuesta la plaza de garaje?","acceptedAnswer":{"@type":"Answer","text":"Las condiciones de la plaza se confirman directamente con el propietario al reservar. Reservando en housesevillana.es hablas con Alberto sin intermediarios."}}]}',
-    '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does House Sevillana have private parking?","acceptedAnswer":{"@type":"Answer","text":"Yes. There is a private garage space in the same building, bookable together with your stay. It is one of the few licensed holiday homes in Seville\'s historic centre with parking of its own."}},{"@type":"Question","name":"Does Seville\'s Low Emission Zone affect my car?","acceptedAnswer":{"@type":"Answer","text":"Seville\'s Low Emission Zone covers only Isla de la Cartuja, to the north-west of the city, and it restricts access solely Monday to Friday on working days, from 07:00 to 19:00. Vehicles with a 0, ECO, C or B emissions label enter freely. The historic centre, where House Sevillana is, is not part of that zone: it has its own restricted-traffic rules, so it is worth checking your arrival route when you book."}},{"@type":"Question","name":"How much does the garage space cost?","acceptedAnswer":{"@type":"Answer","text":"The terms for the space are confirmed directly with the owner when you book. Booking at housesevillana.es means talking to Alberto with nobody in between."}}]}',
-    '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"House Sevillana ha un parcheggio privato?","acceptedAnswer":{"@type":"Answer","text":"Sì. C\'è un posto auto privato nello stesso edificio, prenotabile insieme al soggiorno. È una delle poche case vacanza del centro storico di Siviglia con parcheggio proprio."}},{"@type":"Question","name":"La Zona a Basse Emissioni di Siviglia riguarda la mia auto?","acceptedAnswer":{"@type":"Answer","text":"La Zona a Basse Emissioni di Siviglia comprende soltanto l\'Isla de la Cartuja, a nord-ovest della città, e limita l\'accesso solo dal lunedì al venerdì non festivi, dalle 7:00 alle 19:00. I veicoli con bollino 0, ECO, C o B entrano liberamente. Il centro storico, dove si trova House Sevillana, non fa parte di quella zona: ha regole di traffico limitato proprie, quindi conviene chiedere il percorso di arrivo al momento della prenotazione."}},{"@type":"Question","name":"Quanto costa il posto auto?","acceptedAnswer":{"@type":"Answer","text":"Le condizioni del posto auto si confermano direttamente con il proprietario al momento della prenotazione. Prenotando su housesevillana.es parli con Alberto senza intermediari."}}]}',
+    '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿House Sevillana tiene parking privado?","acceptedAnswer":{"@type":"Answer","text":"Sí. Hay una plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie de la casa, reservable junto con la estancia. Es de las pocas casas turísticas del casco histórico de Sevilla con aparcamiento propio."}},{"@type":"Question","name":"¿Afecta la Zona de Bajas Emisiones de Sevilla a mi coche?","acceptedAnswer":{"@type":"Answer","text":"La Zona de Bajas Emisiones de Sevilla es únicamente la Isla de la Cartuja, al noroeste de la ciudad, y solo restringe de lunes a viernes no festivos de 7:00 a 19:00. Los vehículos con distintivo 0, ECO, C o B acceden libremente. El casco histórico, donde está House Sevillana, no forma parte de esa ZBE: tiene su propio régimen de tráfico restringido, así que conviene consultar la ruta de llegada al reservar."}},{"@type":"Question","name":"¿Cuánto cuesta la plaza de garaje?","acceptedAnswer":{"@type":"Answer","text":"Las condiciones de la plaza se confirman directamente con el propietario al reservar. Reservando en housesevillana.es hablas con Alberto sin intermediarios."}}]}',
+    '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Does House Sevillana have private parking?","acceptedAnswer":{"@type":"Answer","text":"Yes. There is a private garage space in San Juan de la Palma, a few minutes\' walk from the house, bookable together with your stay. It is one of the few licensed holiday homes in Seville\'s historic centre with parking of its own."}},{"@type":"Question","name":"Does Seville\'s Low Emission Zone affect my car?","acceptedAnswer":{"@type":"Answer","text":"Seville\'s Low Emission Zone covers only Isla de la Cartuja, to the north-west of the city, and it restricts access solely Monday to Friday on working days, from 07:00 to 19:00. Vehicles with a 0, ECO, C or B emissions label enter freely. The historic centre, where House Sevillana is, is not part of that zone: it has its own restricted-traffic rules, so it is worth checking your arrival route when you book."}},{"@type":"Question","name":"How much does the garage space cost?","acceptedAnswer":{"@type":"Answer","text":"The terms for the space are confirmed directly with the owner when you book. Booking at housesevillana.es means talking to Alberto with nobody in between."}}]}',
+    '{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"House Sevillana ha un parcheggio privato?","acceptedAnswer":{"@type":"Answer","text":"Sì. C\'è un posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa, prenotabile insieme al soggiorno. È una delle poche case vacanza del centro storico di Siviglia con parcheggio proprio."}},{"@type":"Question","name":"La Zona a Basse Emissioni di Siviglia riguarda la mia auto?","acceptedAnswer":{"@type":"Answer","text":"La Zona a Basse Emissioni di Siviglia comprende soltanto l\'Isla de la Cartuja, a nord-ovest della città, e limita l\'accesso solo dal lunedì al venerdì non festivi, dalle 7:00 alle 19:00. I veicoli con bollino 0, ECO, C o B entrano liberamente. Il centro storico, dove si trova House Sevillana, non fa parte di quella zona: ha regole di traffico limitato proprie, quindi conviene chiedere il percorso di arrivo al momento della prenotazione."}},{"@type":"Question","name":"Quanto costa il posto auto?","acceptedAnswer":{"@type":"Answer","text":"Le condizioni del posto auto si confermano direttamente con il proprietario al momento della prenotazione. Prenotando su housesevillana.es parli con Alberto senza intermediari."}}]}',
   ],
 
   // ── Navegación ───────────────────────────────────────────────────────────────
@@ -50,19 +50,19 @@ const PARES: readonly Trio[] = [
     'Arriva in auto nel centro di Siviglia',
   ],
   [
-    'Plaza de garaje privada en el propio edificio, en pleno casco histórico. Aparcas una vez y el resto del viaje es a pie.',
-    'A private garage space in the building itself, right in the historic centre. Park once and do the rest of the trip on foot.',
-    'Posto auto privato nello stesso edificio, in pieno centro storico. Parcheggi una volta e il resto del viaggio è a piedi.',
+    'Plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie de la casa. Aparcas una vez y el resto del viaje es a pie.',
+    'A private garage space in San Juan de la Palma, a few minutes&#39; walk from the house. Park once and do the rest of the trip on foot.',
+    'Posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa. Parcheggi una volta e il resto del viaggio è a piedi.',
   ],
   [
-    'Quien viene a Sevilla en coche descubre pronto el mismo problema: el casco histórico es un laberinto de calles estrechas, con tráfico restringido y prácticamente sin sitio donde dejar el coche. La mayoría de los alojamientos del centro resuelven esto mandándote a un aparcamiento público a diez minutos andando, con maletas.',
-    'Anyone who drives to Seville runs into the same problem: the historic centre is a maze of narrow streets with restricted traffic and almost nowhere to leave the car. Most places to stay in the centre solve this by sending you to a public car park ten minutes away on foot, luggage in hand.',
-    'Chi arriva a Siviglia in auto scopre presto lo stesso problema: il centro storico è un labirinto di strade strette, a traffico limitato e praticamente senza posto dove lasciare l&#39;auto. La maggior parte degli alloggi del centro risolve mandandoti in un parcheggio pubblico a dieci minuti a piedi, con le valigie.',
+    'Quien viene a Sevilla en coche descubre pronto el mismo problema: el casco histórico es un laberinto de calles estrechas, con tráfico restringido y prácticamente sin sitio donde dejar el coche. La mayoría de los alojamientos del centro resuelven esto mandándote a un aparcamiento público de pago, sin plaza garantizada.',
+    'Anyone who drives to Seville runs into the same problem: the historic centre is a maze of narrow streets with restricted traffic and almost nowhere to leave the car. Most places to stay in the centre solve this by sending you to a paid public car park with no space guaranteed.',
+    'Chi arriva a Siviglia in auto scopre presto lo stesso problema: il centro storico è un labirinto di strade strette, a traffico limitato e praticamente senza posto dove lasciare l&#39;auto. La maggior parte degli alloggi del centro risolve mandandoti in un parcheggio pubblico a pagamento, senza posto garantito.',
   ],
   [
-    '<strong>House Sevillana tiene una plaza de garaje privada en el propio edificio</strong>, reservable junto con la estancia. Es de las pocas casas turísticas del casco antiguo que puede decir eso, y es lo que más agradecen los huéspedes que llegan conduciendo.',
-    '<strong>House Sevillana has a private garage space in the building itself</strong>, bookable together with your stay. It is one of the few licensed holiday homes in the old town that can say that, and it is what guests arriving by car appreciate most.',
-    '<strong>House Sevillana ha un posto auto privato nello stesso edificio</strong>, prenotabile insieme al soggiorno. È una delle poche case vacanza del centro storico che può dirlo, ed è ciò che apprezzano di più gli ospiti che arrivano in auto.',
+    '<strong>House Sevillana tiene una plaza de garaje privada en San Juan de la Palma</strong>, a pocos minutos a pie de la casa y reservable junto con la estancia. Es de las pocas casas turísticas del casco antiguo con plaza propia, y es lo que más agradecen los huéspedes que llegan conduciendo.',
+    '<strong>House Sevillana has a private garage space in San Juan de la Palma</strong>, a few minutes&#39; walk from the house and bookable together with your stay. It is one of the few licensed holiday homes in the old town with a space of its own, and it is what guests arriving by car appreciate most.',
+    '<strong>House Sevillana ha un posto auto privato a San Juan de la Palma</strong>, a pochi minuti a piedi dalla casa e prenotabile insieme al soggiorno. È una delle poche case vacanza del centro storico con un posto proprio, ed è ciò che apprezzano di più gli ospiti che arrivano in auto.',
   ],
 
   // ── Bloque de ventajas ───────────────────────────────────────────────────────
@@ -71,11 +71,11 @@ const PARES: readonly Trio[] = [
     'Why it matters so much in Seville',
     'Perché conta così tanto a Siviglia',
   ],
-  ['🚗 Aparcas dentro del edificio', '🚗 You park inside the building', '🚗 Parcheggi dentro l&#39;edificio'],
+  ['🚗 Tu plaza, sin buscar hueco', '🚗 Your own space, no circling', '🚗 Il tuo posto, senza cercare'],
   [
-    'Del coche a la casa, sin arrastrar maletas por la calle ni buscar hueco de madrugada.',
-    'Straight from the car to the house — no dragging suitcases down the street, no circling for a space at midnight.',
-    'Dall&#39;auto alla casa, senza trascinare le valigie per strada né cercare posto a notte fonda.',
+    'Plaza privada en San Juan de la Palma, a pocos minutos a pie: nada de dar vueltas buscando aparcamiento de madrugada.',
+    'A private space in San Juan de la Palma, a few minutes&#39; walk away: no circling for a space at midnight.',
+    'Posto privato a San Juan de la Palma, a pochi minuti a piedi: niente giri a vuoto per cercare parcheggio a notte fonda.',
   ],
   ['🚶 Todo a pie desde la puerta', '🚶 Everything on foot from the door', '🚶 Tutto a piedi dalla porta'],
   [
@@ -146,9 +146,9 @@ const PARES: readonly Trio[] = [
   ],
   ['¿Cuántos coches caben?', 'How many cars fit?', 'Quante auto ci stanno?'],
   [
-    'Es una plaza de garaje privada en el edificio. Si viajáis en varios coches, dilo al reservar y Alberto te indica las alternativas del entorno antes de que llegues.',
-    'It is one private garage space in the building. If you are travelling in more than one car, say so when you book and Alberto will tell you the nearby alternatives before you arrive.',
-    'È un posto auto privato nell&#39;edificio. Se viaggiate con più auto, dillo al momento della prenotazione e Alberto ti indica le alternative in zona prima che arriviate.',
+    'Es una plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie de la casa. Si viajáis en varios coches, dilo al reservar y Alberto te indica las alternativas del entorno antes de que llegues.',
+    'It is one private garage space in San Juan de la Palma, a few minutes&#39; walk from the house. If you are travelling in more than one car, say so when you book and Alberto will tell you the nearby alternatives before you arrive.',
+    'È un posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa. Se viaggiate con più auto, dillo al momento della prenotazione e Alberto ti indica le alternative in zona prima che arriviate.',
   ],
   [
     '¿Y si vengo en furgoneta o con un coche grande?',
