@@ -1,0 +1,103 @@
+{
+ "sesion": "b931f883-c21b-5d5e-b73e-19a76dc46a91",
+ "inicio": "2026-09-27T08:06:51.653Z",
+ "fin": "2026-09-27T08:14:53.491Z",
+ "llamadas": 89,
+ "categorias": {
+  "otro": {
+   "llamadas": 14,
+   "chars_in": 13382,
+   "chars_out": 1994,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 9,
+    "SubagentHandback": 4
+   }
+  },
+  "bash": {
+   "llamadas": 30,
+   "chars_in": 7092,
+   "chars_out": 44798,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 30
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 9,
+   "chars_in": 960,
+   "chars_out": 78789,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 6,
+    "Grep": 3
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 4,
+   "chars_in": 14903,
+   "chars_out": 15751,
+   "errores": 0,
+   "archivos_citados": 10,
+   "chars_citados": 973738,
+   "tools": {
+    "Agent": 4
+   }
+  },
+  "sql": {
+   "llamadas": 15,
+   "chars_in": 6922,
+   "chars_out": 32978,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 15
+   }
+  },
+  "mcp:github": {
+   "llamadas": 13,
+   "chars_in": 3257,
+   "chars_out": 153923,
+   "errores": 0,
+   "archivos_citados": 86,
+   "chars_citados": 2353814,
+   "tools": {
+    "mcp__github__list_pull_requests": 2,
+    "mcp__github__actions_list": 1,
+    "mcp__github__pull_request_read": 9,
+    "mcp__github__create_pull_request": 1
+   }
+  },
+  "mcp:Supabase-asegura": {
+   "llamadas": 2,
+   "chars_in": 50,
+   "chars_out": 3888,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase-asegura__get_project_url": 1,
+    "mcp__Supabase-asegura__list_tables": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 2,
+   "chars_in": 5587,
+   "chars_out": 68901,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 2
+   }
+  }
+ }
+}
