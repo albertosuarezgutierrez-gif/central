@@ -734,6 +734,9 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## Inicio: pinchar una reserva del calendario muestra su detalle (27/09/2026)
+- Tarjeta «Pisos» de `/inicio`: las barras son botones; al pincharlas se abre debajo huésped, piso, entrada/salida, noches, pax, importe (€/n) y portal. Nuevo cliente `inicio/CalendarioReservas.tsx`; `Barra` lleva `reserva` e `incomes.amount` entra como `importe` (null = «sin dato», no 0 €).
+
 ## (26/09/2026) SEO grupoasegura.es: 4 guías de dificultad 0 (PRs #3704, #3708, #3709)
 - Mergeadas: `/carta-baja-seguro` (herramienta) + `/blog/como-rellenar-parte-amistoso` (#3704); `/blog/dar-de-baja-seguro-coche` y `/blog/defensor-del-asegurado` (#3708). En #3709: `/blog/como-saber-que-seguros-tengo` (CTA al gestor).
 - Criterio: búsquedas de intención de problema con KD 0 medidas en OpenSEO (quedan ~216 créditos), nunca términos comerciales genéricos donde pujan las compañías.
