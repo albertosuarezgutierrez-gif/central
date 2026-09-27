@@ -763,6 +763,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Portal: quien figura en una póliza (propietario, conductor, asegurado…) la ve
+- Decisión de Alberto: el interviniente ve ESA póliza con los datos del tomador y puede dar parte; nunca las otras del tomador. Nueva lista `CarteraPortal.intervinientes` (grupo «Figuras en su póliza»). Regla pura en `apps/asegura-portal/lib/intervinientes.ts`; IBAN/DNI/documentos siempre fuera (el portal no los carga). Cepo: `test/regression-portal-intervinientes.test.ts` (visto en rojo, 6 mutaciones).
+- Solo funciona si el interviniente tiene `portal_vinculo`: Nieves Rodríguez aún no tiene acceso al portal.
+
 ## (27/09/2026) El bot de seguros ya HACE cosas: tarea, llamada, nota, siniestro, portal (PR #3748)
 - Tools `proponer_tarea`/`registrar_llamada`/`anotar_nota`/`abrir_siniestro`/`invitar_portal` → tabla `correduria_asistente_accion` (aplicada) → botón «✅ Hacer» (un uso, 15 min, `from.id`, interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA`) → mismos puertos que la ficha. Portal: comprueba `invitable` antes de ofrecer (es un correo real). Sin respuesta = «incierta».
 - Documento de ASEGURADORA por Telegram: el contable ya no lo archiva/contabiliza solo; pregunta «🧾 Es mío (gasto) / 🛡️ De un cliente» (`posible_seguro`, antes de `archivarEImputar`).

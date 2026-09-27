@@ -30,7 +30,8 @@ async function companiaDelParte(identidadId: string, polizaId: string | null, de
   }
   if (polizaId) {
     const c = await carteraDeIdentidad(identidadId)
-    const p = [...c.propias, ...c.autorizadas].flatMap((t) => t.polizas).find((x) => x.id === polizaId)
+    // `intervinientes` también: quien figura en la póliza puede dar parte de ella (27/09/2026).
+    const p = [...c.propias, ...c.autorizadas, ...c.intervinientes].flatMap((t) => t.polizas).find((x) => x.id === polizaId)
     return p?.compania?.trim() || null
   }
   return null
