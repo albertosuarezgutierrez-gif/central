@@ -14,6 +14,16 @@ import { eur } from './dinero.ts'
 
 /** Lo que llevan dentro los documentos que Alberto subió a Telegram hace poco. */
 export const MINUTOS_DOCUMENTO_RECIENTE = 60
+
+/**
+ * Nota para el system del asistente cuando hay documentos de la correduría sin usar (27/09/2026). Sin ella
+ * la IA no sabe que Alberto acaba de subir una póliza —la subida y el botón «de un cliente» no son turnos
+ * del chat— y a «créale oportunidad» contesta «¿a quién?». `null` = no se pudo mirar: no se afirma nada.
+ */
+export function avisoDocumentosPendientes(n: number | null): string | null {
+  if (n === null || n <= 0) return null
+  return `DOCUMENTOS PENDIENTES: Alberto ha subido ${n === 1 ? 'un documento' : `${n} documentos`} de la correduría en los últimos ${MINUTOS_DOCUMENTO_RECIENTE} minutos que aún no se han usado. Si pide abrir una oportunidad, crear el lead o «lo de la póliza» sin decir de quién, NO le preguntes el nombre: llama a proponer_oportunidad SIN clienteId y con usarDocumentos=true (el sistema lee el tomador del documento).`
+}
 /** Días antes del vencimiento en que toca la primera llamada de una póliza de la competencia. */
 export const DIAS_ANTES_VENCIMIENTO = 60
 

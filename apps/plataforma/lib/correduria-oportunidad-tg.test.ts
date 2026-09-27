@@ -397,3 +397,15 @@ test('revisión: si el webhook revienta se desmarca el update, y el asistente en
   const cron = readFileSync(fileURLToPath(new URL('../app/api/cron/correduria-renovaciones/route.ts', import.meta.url)), 'utf8')
   assert.match(cron, /Promise\.all\(\[\n\s+vencimientosAsegura/)
 })
+
+test('con una póliza de la correduría sin usar, el asistente sabe que está ahí y no pregunta «¿a quién?»', async () => {
+  const { avisoDocumentosPendientes } = await import('./correduria-oportunidad-tg.ts')
+  assert.equal(avisoDocumentosPendientes(null), null)
+  assert.equal(avisoDocumentosPendientes(0), null)
+  const t = avisoDocumentosPendientes(1) ?? ''
+  assert.match(t, /SIN clienteId y con usarDocumentos=true/)
+  assert.match(t, /NO le preguntes el nombre/)
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  assert.match(src, /historial\.memoria, avisoDocumentosPendientes\(pendientes\)\]/)
+  assert.match(src, /destino = 'correduria' AND usado_at IS NULL/)
+})
