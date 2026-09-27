@@ -171,13 +171,13 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 150 | 19.895 | 13.531.167 | 0 | 0 |
-| `otro` | 146 | 4.990 | 16.701.548 | 8.082.644 | 0 |
-| `mcp:github` | 135 | 4.089 | 3.636.914 | 42.737.457 | 67 |
+| `bash` | 150 | 19.929 | 13.559.591 | 0 | 0 |
+| `otro` | 146 | 5.003 | 16.766.576 | 8.082.644 | 0 |
+| `mcp:github` | 135 | 4.114 | 3.657.396 | 42.738.641 | 67 |
 | `lectura-directa` | 138 | 3.916 | 8.352.400 | 0 | 0 |
-| `escritura` | 113 | 2.503 | 40.087.929 | 0 | 0 |
+| `escritura` | 113 | 2.506 | 40.177.160 | 0 | 0 |
 | `sql` | 96 | 2.050 | 934.320 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 83 | 947 | 218.863 | 3.171.734 | 10 |
+| `mcp:Claude_Code_Remote` | 83 | 955 | 221.057 | 3.193.171 | 10 |
 | `mcp:Vercel` | 32 | 396 | 627.240 | 198.719 | 7 |
 | `mcp:Booking-com` | 13 | 369 | 1.534.696 | 0 | 0 |
 | `mcp:Gmail` | 18 | 265 | 417.825 | 0 | 2 |
@@ -189,9 +189,9 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Google_Drive` | 8 | 49 | 59.913 | 0 | 12 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
+| `mcp:OpenSEO` | 2 | 46 | 38.961 | 0 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
 | `agente:Explore` | 16 | 43 | 21.469 | 938.735 | 0 |
-| `mcp:OpenSEO` | 2 | 43 | 37.392 | 0 | 0 |
 | `mcp:Resend` | 4 | 41 | 11.662 | 0 | 0 |
 | `agente:agente-mecanico` | 13 | 33 | 33.925 | 774.297 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
