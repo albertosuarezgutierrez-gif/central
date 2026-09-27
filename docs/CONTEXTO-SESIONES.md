@@ -753,6 +753,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) El bot de seguros ya HACE cosas: tarea, llamada, nota, siniestro, portal (PR #3748)
+- Tools `proponer_tarea`/`registrar_llamada`/`anotar_nota`/`abrir_siniestro`/`invitar_portal` → tabla `correduria_asistente_accion` (aplicada) → botón «✅ Hacer» (un uso, 15 min, `from.id`, interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA`) → mismos puertos que la ficha. Portal: comprueba `invitable` antes de ofrecer (es un correo real). Sin respuesta = «incierta».
+- Documento de ASEGURADORA por Telegram: el contable ya no lo archiva/contabiliza solo; pregunta «🧾 Es mío (gasto) / 🛡️ De un cliente» (`posible_seguro`, antes de `archivarEImputar`).
+- El atajo `seguro:`/`/seguros` ya no se lo come un retoque pendiente del agente de huéspedes.
+
 ## (27/09/2026) Auditoría correduría ↔ bot de Telegram + arreglos (PR #3748)
 - Uso real medido: 11 turnos; cada paso de una emisión rehacía buscar+ficha (el historial no guardaba ids) y pasaba el nº de póliza como polizaId.
 - Arreglado: reply a un mensaje 🛡️/de seguros ya llega al asistente (antes se descartaba); memoria de ids + 4 turnos; nuevas `mi_dia` (tareas, llamadas, siniestros) y `oportunidades_cliente`; ficha a 14k caracteres; 7 vueltas; compañías/impagados/recibos devueltos/vencimientos enrutan a correduría; «hoy» y tope diario en hora de Madrid; fallos de reglas ya no dicen «no hay»; alta de oportunidad sin respuesta = «incierta»; docs recientes priorizan los de correduría.

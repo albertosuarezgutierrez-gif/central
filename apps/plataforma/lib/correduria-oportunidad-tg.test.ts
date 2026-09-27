@@ -122,7 +122,8 @@ test('el webhook desvía a la correduría el documento con pie de correduría y 
   assert.match(bloque, /esParaCorreduria\(pie\)/)
   assert.match(bloque, /if \(aCorreduria\)[\s\S]*return NextResponse\.json/)
   // El botón «Abrir» escribe en la cartera: solo lo pulsa el titular.
-  assert.match(src, /action === 'oport'\) && String\(cb\.from/)
+  assert.match(src, /action === 'oport'[^)]*\) && String\(cb\.from/)
+  assert.match(src, /action === 'acc'[^)]*\) && String\(cb\.from/)
 })
 
 // ── Auditoría del bot (27/09/2026): lo que hacía que el asistente perdiera o malinterpretara mensajes ──
@@ -176,4 +177,63 @@ test('el webhook manda los reply de la correduría al asistente ANTES del catch-
   const catchAll = src.indexOf('// C) Catch-all del agente de CONTABILIDAD')
   assert.ok(reply > 0 && reply < catchAll)
   assert.ok(src.indexOf('await registrarDocumentoTg(') > src.indexOf('const rapido ='))
+})
+
+// ── Acciones del día a día (27/09/2026) ──
+import { prepararAccion, resultadoAccion, textoAccion } from './correduria-acciones-tg.ts'
+import { esAseguradora } from './correduria-asistente.ts'
+
+test('tarea: exige fecha futura y qué hacer; el tipo desconocido cae a llamada', () => {
+  assert.equal(prepararAccion('tarea', { oportunidadId: 'o', observaciones: 'x' }, HOY).ok, false)
+  assert.equal(prepararAccion('tarea', { oportunidadId: 'o', fecha: '2026-09-01', observaciones: 'x' }, HOY).ok, false)
+  const r = prepararAccion('tarea', { oportunidadId: 'o', fecha: '2026-10-01', observaciones: 'Llamar para hogar', tipo: 'fax' }, HOY)
+  assert.ok(r.ok)
+  assert.equal(r.accion.cuerpo.tipo, 'llamada')
+  assert.equal(r.accion.cuerpo.fechaLimite, '2026-10-01')
+  assert.equal('actor' in r.accion.cuerpo, false, 'el actor lo pone el servidor al pulsar')
+})
+
+test('llamada: otro_dia pide fecha futura; no_interesa pide motivo del módulo', () => {
+  assert.equal(prepararAccion('llamada', { oportunidadId: 'o', resultado: 'otro_dia' }, HOY).ok, false)
+  assert.ok(prepararAccion('llamada', { oportunidadId: 'o', resultado: 'otro_dia', volverEl: '2026-10-02' }, HOY).ok)
+  assert.equal(prepararAccion('llamada', { oportunidadId: 'o', resultado: 'no_interesa', motivo: 'le da igual' }, HOY).ok, false)
+  assert.ok(prepararAccion('llamada', { oportunidadId: 'o', resultado: 'no_interesa', motivo: 'precio' }, HOY).ok)
+  assert.equal(prepararAccion('llamada', { oportunidadId: 'o', resultado: 'no_interesa', motivo: 'otro' }, HOY).ok, false)
+})
+
+test('siniestro: tipo del catálogo, fecha no futura y descripción; el portal avisa de que es un correo', () => {
+  assert.equal(prepararAccion('siniestro', { polizaId: 'p', tipo: 'golpe', fechaHora: '2026-09-20', descripcion: 'Golpe en un aparcamiento' }, HOY).ok, false)
+  assert.equal(prepararAccion('siniestro', { polizaId: 'p', tipo: 'colision', fechaHora: '2026-10-20', descripcion: 'Golpe en un aparcamiento' }, HOY).ok, false)
+  const s = prepararAccion('siniestro', { polizaId: 'p', tipo: 'colision', fechaHora: '2026-09-20 18:30', descripcion: 'Golpe por detrás en un semáforo' }, HOY)
+  assert.ok(s.ok)
+  assert.equal(s.accion.cuerpo.fechaHora, '2026-09-20T18:30')
+  const p = prepararAccion('portal', { clienteId: 'c' }, HOY)
+  assert.ok(p.ok)
+  assert.match(textoAccion('Ana', p.accion), /manda un correo al cliente/)
+})
+
+test('resultado de una acción: sin respuesta clara es «no sé si se ha hecho», y en el portal avisa del doble correo', () => {
+  assert.equal(resultadoAccion('nota', 200, { estado: 'ok' }, 'u').estado, 'hecha')
+  assert.equal(resultadoAccion('tarea', 422, { estado: 'invalido', motivo: 'La fecha límite no puede estar en el pasado.' }, 'u').estado, 'rechazada')
+  const inc = resultadoAccion('portal', 0, null, 'u')
+  assert.equal(inc.estado, 'incierta')
+  assert.match(inc.texto, /dos correos/)
+})
+
+test('esAseguradora: el emisor decide si se pregunta «gasto o cliente»', () => {
+  assert.equal(esAseguradora('Línea Directa Aseguradora S.A.'), true)
+  assert.equal(esAseguradora('MAPFRE ESPAÑA'), true)
+  assert.equal(esAseguradora('Mercadona S.A.'), false)
+  assert.equal(esAseguradora(null), false)
+})
+
+test('webhook: documento de aseguradora pregunta ANTES de archivar, y el atajo de seguros no es un retoque (lee el FUENTE)', () => {
+  const doc = readFileSync(fileURLToPath(new URL('./contable/documentos.ts', import.meta.url)), 'utf8')
+  assert.ok(doc.indexOf("tipo: 'posible_seguro'") < doc.indexOf('archivarEImputar(cuentaId'), 'la pregunta va antes de archivar')
+  const wh = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
+  assert.match(wh, /manejarDocumentoTg\(cuentaId, file\.buffer, file\.mimeType, file\.fileName, \{ docId \}\)/)
+  const b = wh.slice(wh.indexOf('// B) Respuesta de texto'))
+  const atajo = b.indexOf("if (tienePrefijo(msg.text || '')) {")
+  assert.ok(atajo > 0 && atajo < b.indexOf('getPendiente(bookingId)'), 'el atajo se mira antes que el retoque')
+  assert.match(wh, /prefix === 'cdoc'[\s\S]{0,200}cb\.from\?\.id/)
 })

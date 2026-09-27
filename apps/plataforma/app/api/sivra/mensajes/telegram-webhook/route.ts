@@ -21,7 +21,7 @@ import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
-import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, registrarDocumentoTg, albumDeCorreduria } from '@/lib/correduria-asistente-telegram'
+import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, registrarDocumentoTg, albumDeCorreduria, resolverDocumentoDudoso } from '@/lib/correduria-asistente-telegram'
 import { clasificarDestino, conCita, esRespuestaACorreduria, tienePrefijo } from '@/lib/correduria-asistente'
 import { turnoDeNota } from '@/lib/correduria-asistente'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
@@ -779,7 +779,7 @@ export async function POST(req: NextRequest) {
       // Emitir y corregir la ficha escriben en la cartera: exigen que pulse la PERSONA autorizada, no
       // solo que el botón esté en su chat (en un grupo cualquiera podría pulsar). En un chat privado,
       // el id del chat es el de la persona.
-      if ((action === 'emitir' || action === 'corregir' || action === 'oport') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+      if ((action === 'emitir' || action === 'corregir' || action === 'oport' || action === 'acc') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
         await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
         return NextResponse.json({ ok: true })
       }
@@ -795,6 +795,19 @@ export async function POST(req: NextRequest) {
       }
       const toast = await resolverBotonCorreduria(action, args[0] || '')
       await tgAnswerCallback(cb.id, toast)
+      return NextResponse.json({ ok: true })
+    }
+
+    // ── Documento de aseguradora: ¿gasto de Alberto o de un cliente? (cdoc_gasto / cdoc_cli) ──
+    if (prefix === 'cdoc') {
+      if (String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+        await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
+        return NextResponse.json({ ok: true })
+      }
+      await tgAnswerCallback(cb.id, action === 'gasto' ? '⏳ Lo proceso como gasto…' : 'Apartado para la correduría')
+      if (cb.message?.message_id) await tgEditMessage(cb.message.message_id, escapeHtml(cb.message.text ?? '')).catch(() => {})
+      const arg = args[0] || ''
+      after(() => resolverDocumentoDudoso(action, arg).then(() => undefined))
       return NextResponse.json({ ok: true })
     }
 
@@ -988,6 +1001,12 @@ export async function POST(req: NextRequest) {
       if (cuentaId) await manejarPatrimonioTg(cuentaId, (msg.text || '').trim())
       return NextResponse.json({ ok: true })
     }
+    // Lo mismo con el atajo de la correduría («seguro: …», «/seguros …»): nunca es un retoque del
+    // borrador de un huésped, aunque el modo respuesta siga abierto.
+    if (tienePrefijo(msg.text || '')) {
+      await manejarCorreduriaTg((msg.text || '').trim())
+      return NextResponse.json({ ok: true })
+    }
     // Nota a un 👎 del asistente de la correduría («asistente seguros · turno N»).
     const turnoNota = turnoDeNota(String(msg.reply_to_message.text))
     if (turnoNota !== null) {
@@ -1084,13 +1103,14 @@ export async function POST(req: NextRequest) {
         // casi a la vez y miran esta fila para saber adónde van.
         const rapido = pie !== '' && (tienePrefijo(pie) || clasificarDestino(pie) === 'correduria')
         const aCorreduria = rapido || (pie !== '' && await esParaCorreduria(pie)) || await albumDeCorreduria(grupo)
-        await registrarDocumentoTg({ fileId: adj.fileId, nombre: adj.nameHint, mime: adj.mimeHint, mediaGroupId: grupo, destino: aCorreduria ? 'correduria' : 'contable' })
+        const docId = await registrarDocumentoTg({ fileId: adj.fileId, nombre: adj.nameHint, mime: adj.mimeHint, mediaGroupId: grupo, destino: aCorreduria ? 'correduria' : 'contable' })
         if (aCorreduria) {
           if (pie) await manejarCorreduriaTg(pie)
           return NextResponse.json({ ok: true })
         }
         const file = await descargarTelegram(adj.fileId, adj.mimeHint, adj.nameHint)
-        if (file) await manejarDocumentoTg(cuentaId, file.buffer, file.mimeType, file.fileName)
+        // Con docId, un documento de ASEGURADORA pregunta antes si es gasto de Alberto o de un cliente.
+        if (file) await manejarDocumentoTg(cuentaId, file.buffer, file.mimeType, file.fileName, { docId })
         else await tgSend('No pude descargar el archivo de Telegram. Reinténtalo.').catch(() => {})
         return NextResponse.json({ ok: true })
       }

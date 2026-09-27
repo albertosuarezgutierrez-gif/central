@@ -110,6 +110,7 @@ export type NombreHerramienta =
   | 'buscar' | 'ficha_cliente' | 'ficha_poliza' | 'vencimientos' | 'impagados'
   | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision'
   | 'proponer_correccion' | 'proponer_oportunidad' | 'mi_dia' | 'oportunidades_cliente'
+  | 'proponer_tarea' | 'registrar_llamada' | 'anotar_nota' | 'abrir_siniestro' | 'invitar_portal'
 
 const fn = (name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'function',
@@ -162,6 +163,38 @@ export const HERRAMIENTAS = [
       numeroPoliza: { type: 'string' },
       fechaPrimerPaso: { type: 'string', description: 'Solo si Alberto dice cuándo llamarle (aaaa-mm-dd)' },
     }, ['clienteId']),
+  fn('proponer_tarea', 'Propón una TAREA de seguimiento en una oportunidad («llama a Juan el jueves», «mándale la comparativa el lunes»). Las tareas cuelgan de una oportunidad: sácala de oportunidades_cliente; si no tiene ninguna, propón primero abrir una. Alberto la crea con un botón.',
+    {
+      oportunidadId: { type: 'string', description: 'uuid de la oportunidad (de oportunidades_cliente)' },
+      tipo: { type: 'string', enum: ['llamada', 'tarea', 'email', 'whatsapp'] },
+      fecha: { type: 'string', description: 'aaaa-mm-dd; calcula la fecha real a partir de «el jueves», «mañana»… con la fecha de hoy' },
+      observaciones: { type: 'string', description: 'Qué hay que hacer, en una frase' },
+    }, ['oportunidadId', 'fecha', 'observaciones']),
+  fn('registrar_llamada', 'Registra el RESULTADO de una llamada a un lead/cliente sobre una oportunidad. El sistema pone solo el siguiente paso (quiere_precio → tarea de preparar precio; otro_dia → nueva llamada; no_contesta → reintento; no_interesa → se aparca). Alberto lo confirma con un botón.',
+    {
+      oportunidadId: { type: 'string' },
+      resultado: { type: 'string', enum: ['quiere_precio', 'otro_dia', 'no_contesta', 'no_interesa'] },
+      volverEl: { type: 'string', description: 'Solo con otro_dia: aaaa-mm-dd' },
+      motivo: { type: 'string', enum: ['precio', 'competidor', 'coberturas', 'cliente_desiste', 'sin_respuesta', 'no_contactable', 'ya_asegurado', 'otro'], description: 'Solo con no_interesa' },
+      nota: { type: 'string' },
+    }, ['oportunidadId', 'resultado']),
+  fn('anotar_nota', 'Anota una NOTA en el historial de la ficha de un cliente (lo que Alberto te dicte: «me ha dicho que se casa en junio», «prefiere que le escriban por la tarde»). Alberto la confirma con un botón.',
+    {
+      clienteId: { type: 'string' },
+      texto: { type: 'string' },
+      tipoNota: { type: 'string', enum: ['nota', 'contacto', 'gestion'], description: 'contacto = habló con el cliente; gestion = hizo algo por él; nota = lo demás' },
+    }, ['clienteId', 'texto']),
+  fn('abrir_siniestro', 'Propón ABRIR un siniestro (parte) en una póliza viva del cliente. Necesitas: póliza (polizaId de ficha_cliente), tipo, cuándo pasó y qué pasó; si falta algo, pregúntalo. Alberto lo abre con un botón. Abrirlo aquí NO lo comunica a la compañía.',
+    {
+      polizaId: { type: 'string' },
+      tipo: { type: 'string', enum: ['colision', 'lunas', 'robo_vehiculo', 'danos_propios', 'asistencia_viaje', 'danos_agua', 'incendio', 'robo_hogar', 'rotura_cristales', 'electrico', 'fenomenos', 'rc', 'defensa_juridica', 'salud', 'fallecimiento', 'otro'] },
+      fechaHora: { type: 'string', description: 'aaaa-mm-dd o aaaa-mm-dd hh:mm' },
+      descripcion: { type: 'string' },
+      lugarCiudad: { type: 'string' },
+      seConsideraCulpable: { type: 'boolean' },
+    }, ['polizaId', 'tipo', 'fechaHora', 'descripcion']),
+  fn('invitar_portal', 'Propón mandar al cliente el correo con el enlace a su portal (ve sus seguros, recibos y partes). Primero se comprueba si puede entrar (correo en la ficha, que no sea ambiguo). Alberto lo manda con un botón: ES UN CORREO AL CLIENTE, no lo propongas sin que Alberto lo pida.',
+    { clienteId: { type: 'string' } }, ['clienteId']),
 ] as const
 
 /** Argumentos de una llamada, parseados sin lanzar. `null` = la IA mandó basura. */
@@ -207,6 +240,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     '- La búsqueda por DNI, teléfono o email solo alcanza a una parte de las fichas (lo dice cada bloque): si no aparece, di que no lo encuentras por ese dato y prueba por nombre o matrícula; NUNCA digas que no es cliente.',
     '- Tú no mandas mensajes a clientes ni anulas pólizas: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
     '- Oportunidades: puedes PROPONER abrir una con proponer_oportunidad (lead o cliente que tiene un seguro con otra compañía). Si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true. Necesitas la ficha: si no sabes de quién es, pregúntale el nombre y búscalo; si no tiene ficha, dile que la cree en /correduria. NUNCA digas que está abierta: eso solo lo confirma el sistema tras el botón.',
+    '- Acciones del día a día (todas con botón que pulsa Alberto): proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro, invitar_portal. Úsalas cuando Alberto te lo pida («apunta que…», «llámale el jueves», «ha tenido un golpe con el coche…»). Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy. NUNCA digas que está hecho: eso lo confirma el sistema tras el botón.',
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: dile que los cambie en la ficha.',
@@ -255,6 +289,12 @@ export function rastroArgs(nombre: string, args: Record<string, unknown> | null)
   if (nombre === 'proponer_correccion') {
     // Qué campos se tocaron, nunca sus valores: una dirección o un apellido son datos personales.
     return { clienteId: args.clienteId, campos: Object.keys(args).filter((k) => k !== 'clienteId') }
+  }
+  // Texto de una nota o de un parte: dato personal del cliente, no va al rastro que sobrevive a la purga.
+  if (nombre === 'anotar_nota') return { clienteId: args.clienteId, tipoNota: args.tipoNota ?? 'nota', texto: '[texto]' }
+  if (nombre === 'abrir_siniestro') return { polizaId: args.polizaId, tipo: args.tipo, descripcion: '[texto]' }
+  if (nombre === 'proponer_tarea' || nombre === 'registrar_llamada') {
+    return { oportunidadId: args.oportunidadId, tipo: args.tipo, resultado: args.resultado, fecha: args.fecha ?? args.volverEl }
   }
   if (nombre === 'proponer_oportunidad') {
     // El ramo y si usó documentos, sí; compañía, prima o nº de póliza, no (son del contrato de un tercero).
@@ -313,7 +353,7 @@ export function memoriaIds(rastros: readonly unknown[]): string | null {
     for (const x of r as RastroGuardado[]) {
       if (!x || x.ok !== true || typeof x.args !== 'object' || x.args === null) continue
       const a = x.args as Record<string, unknown>
-      for (const k of ['clienteId', 'polizaId', 'projectId', 'quoteId']) poner(k, a[k])
+      for (const k of ['clienteId', 'polizaId', 'oportunidadId', 'projectId', 'quoteId']) poner(k, a[k])
     }
   }
   if (vistos.size === 0) return null
@@ -324,4 +364,10 @@ export function memoriaIds(rastros: readonly unknown[]): string | null {
 /** La fecha de hoy en Madrid (aaaa-mm-dd). `toISOString()` da el día anterior entre las 00:00 y las 02:00. */
 export function hoyMadrid(ahora: Date = new Date()): string {
   return ahora.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+}
+
+/** Aseguradoras: si el emisor de un documento es una, puede ser un seguro de Alberto (gasto) o de un cliente. */
+const ASEGURADORAS = /\b(mapfre|allianz|occident|catalana occidente|reale|generali|axa|l[ií]nea directa|mutua madrile\w+|pelayo|liberty|zurich|santa ?luc[ií]a|helvetia|fiatc|asisa|sanitas|adeslas|dkv|fidelidade|verti|qualitas|mgs|caser|segurcaixa|vidacaixa|ocaso|plus ultra|seguros bilbao|nationale nederlanden|metlife|aegon|asefa|arag|das|hiscox|chubb|aig|markel|direct seguros|genesis|regal|mutua general|lagun aro|seguros? )/i
+export function esAseguradora(nombre: string | null | undefined): boolean {
+  return ASEGURADORAS.test(nombre ?? '')
 }

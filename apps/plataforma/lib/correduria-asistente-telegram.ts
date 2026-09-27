@@ -23,7 +23,12 @@ import {
   interpretarTareasHoy, leadsCompetenciaAsegura, oportunidadesClienteAsegura, tareasHoyAsegura, type LecturaDocumentoOportunidad,
 } from '@/lib/seguimiento-asegura'
 import { carteraAsegura } from '@/lib/cartera-asegura'
-import { descargarTelegram } from '@/lib/contable/telegram'
+import { crearTareaAsegura, registrarLlamadaAsegura, oportunidadAsegura, interpretarOportunidad, rotuloRamo } from '@/lib/seguimiento-asegura'
+import { historialClienteAsegura } from '@/lib/cliente-edicion-asegura'
+import { abrirSiniestroAsegura } from '@/lib/siniestros-asegura'
+import { explicarPortal, interpretarPortal, invitarPortalAsegura, portalAsegura } from '@/lib/portal-cliente-asegura'
+import { prepararAccion, resultadoAccion, textoAccion, type TipoAccion } from './correduria-acciones-tg'
+import { descargarTelegram, getCuentaTelegram, manejarDocumentoTg } from '@/lib/contable/telegram'
 import { cuerpoAlta, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, resultadoAlta, textoAlta, type Alta } from './correduria-oportunidad-tg'
 import {
   documentoQueAcredita, edicionDeCambios, faltaValorActual, huellaAntes, prepararCorreccion, resultadoCorreccion, textoCorreccion,
@@ -232,6 +237,16 @@ async function ejecutar(
       return proponerCorreccion(args, ctx.turnoId)
     case 'proponer_oportunidad':
       return proponerOportunidad(args, ctx.turnoId)
+    case 'proponer_tarea':
+      return proponerAccion('tarea', args, ctx.turnoId)
+    case 'registrar_llamada':
+      return proponerAccion('llamada', args, ctx.turnoId)
+    case 'anotar_nota':
+      return proponerAccion('nota', args, ctx.turnoId)
+    case 'abrir_siniestro':
+      return proponerAccion('siniestro', args, ctx.turnoId)
+    case 'invitar_portal':
+      return proponerAccion('portal', args, ctx.turnoId)
     default:
       return { texto: `ERROR: herramienta desconocida ${nombre}.`, ok: false }
   }
@@ -531,11 +546,40 @@ async function aplicarCorreccion(id: number): Promise<string> {
  */
 export async function registrarDocumentoTg(
   d: { fileId: string; nombre: string; mime: string; mediaGroupId: string | null; destino: 'contable' | 'correduria' },
-): Promise<void> {
-  await prisma.$executeRaw(Prisma.sql`
+): Promise<number | null> {
+  const [fila] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
     INSERT INTO correduria_asistente_documento (file_id, nombre, mime, media_group_id, destino)
-    VALUES (${d.fileId}, ${d.nombre.slice(0, 200)}, ${d.mime.slice(0, 100)}, ${d.mediaGroupId}, ${d.destino})`)
-    .catch((e) => console.error('[correduria-oportunidad-tg] no se pudo apuntar el documento', e))
+    VALUES (${d.fileId}, ${d.nombre.slice(0, 200)}, ${d.mime.slice(0, 100)}, ${d.mediaGroupId}, ${d.destino})
+    RETURNING id`)
+    .catch((e) => { console.error('[correduria-oportunidad-tg] no se pudo apuntar el documento', e); return [] as { id: bigint }[] })
+  return fila ? Number(fila.id) : null
+}
+
+/**
+ * Botones `cdoc_*` del documento de aseguradora. «Es mío» → lo procesa el contable como siempre (archiva
+ * y contabiliza); «De un cliente» → queda para la correduría y no se toca como gasto. Nunca lanza.
+ */
+export async function resolverDocumentoDudoso(accion: string, arg: string): Promise<string> {
+  const id = Number(arg)
+  if (!Number.isInteger(id) || id <= 0) return 'Botón no válido'
+  const [doc] = await prisma.$queryRaw<{ file_id: string; nombre: string | null; mime: string | null; destino: string }[]>(Prisma.sql`
+    SELECT file_id, nombre, mime, destino FROM correduria_asistente_documento WHERE id = ${id}`).catch(() => [])
+  if (!doc) return 'No encuentro ese documento'
+  if (accion === 'cli') {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_documento SET destino = 'correduria', usado_at = NULL, creado_at = now() WHERE id = ${id}`).catch(() => {})
+    await tgSend('🛡️ Vale, es de la correduría: no lo toco como gasto. Dime de quién es y qué hago (p. ej. «ábrele una oportunidad a Juan Pérez con esto»).').catch(() => {})
+    return 'Apartado para la correduría'
+  }
+  if (accion === 'gasto') {
+    const cuentaId = await getCuentaTelegram()
+    if (!cuentaId) return 'Sin cuenta'
+    const file = await descargarTelegram(doc.file_id, doc.mime ?? '', doc.nombre ?? '')
+    if (!file) { await tgSend('No he podido volver a bajar el documento de Telegram. Mándamelo otra vez.').catch(() => {}); return 'No se pudo descargar' }
+    await manejarDocumentoTg(cuentaId, file.buffer, file.mimeType, file.fileName)
+    return 'Lo proceso como gasto'
+  }
+  return 'Botón no válido'
 }
 
 /** ¿Otro documento del mismo álbum ya se fue a la correduría? (El pie solo viaja en el primero.) */
@@ -651,6 +695,120 @@ async function abrirOportunidad(id: number): Promise<string> {
     WHERE id = ${id}`).catch((e) => console.error('[correduria-oportunidad-tg] no se pudo cerrar la fila', id, e))
   await decir(fin.texto)
   return fin.estado === 'abierta' ? 'Oportunidad abierta 🎯' : fin.estado === 'incierta' ? 'No sé si se ha abierto' : 'No se ha abierto'
+}
+
+// ── Acciones del día a día (27/09/2026): tarea, llamada, nota, siniestro, portal → botón «Hacer» ──
+
+/**
+ * De quién es y la ficha a la que enlazar, leído del puerto (no de lo que diga la IA). Un string = por
+ * qué no se pudo leer, y entonces no se propone: un botón sobre una ficha que no se ha podido mirar es
+ * una apuesta.
+ */
+async function contextoAccion(tipo: TipoAccion, args: Record<string, unknown>): Promise<{ quien: string; clienteId: string } | string> {
+  if (tipo === 'tarea' || tipo === 'llamada') {
+    const id = idValido(args.oportunidadId)
+    if (!id) return ERROR_NO_UUID
+    const r = await oportunidadAsegura(id).then((x) => interpretarOportunidad(x.status, x.json)).catch(() => null)
+    if (!r) return 'no he podido leer la oportunidad'
+    if (r.estado === 'no_encontrado') return 'no existe esa oportunidad (búscala con oportunidades_cliente)'
+    if (r.estado !== 'ok') return `no he podido leer la oportunidad (${r.estado === 'error' ? r.motivo : r.estado})`
+    return { quien: `${r.cliente ?? 'cliente'} · oportunidad de ${rotuloRamo(r.oportunidad.ramo)}`, clienteId: r.oportunidad.clienteId }
+  }
+  if (tipo === 'siniestro') {
+    const id = idValido(args.polizaId)
+    if (!id) return ERROR_NO_UUID
+    const r = await polizaAsegura(id).catch(() => null)
+    if (!r) return 'no he podido leer la póliza'
+    if (r.estado === 'no_encontrado') return 'no existe esa póliza'
+    if (r.estado !== 'ok') return `no he podido leer la póliza (${r.estado})`
+    const p = r.poliza
+    return { quien: `${p.cliente.nombre} · ${p.aseguradora} ${p.numeroPoliza ?? ''}`.trim(), clienteId: p.cliente.id }
+  }
+  const id = idValido(args.clienteId)
+  if (!id) return ERROR_NO_UUID
+  const r = await fichaAsegura(id).catch(() => null)
+  if (!r) return 'no he podido leer la ficha'
+  if (r.estado === 'no_encontrado') return 'no existe esa ficha'
+  if (r.estado !== 'ok') return `no he podido leer la ficha (${r.estado})`
+  return { quien: r.ficha.nombre ?? 'cliente', clienteId: id }
+}
+
+async function proponerAccion(tipo: TipoAccion, args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    return { texto: `NO DISPONIBLE: las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}). Dile a Alberto que lo haga en la ficha (/correduria).`, ok: true }
+  }
+  const ctx = await contextoAccion(tipo, args)
+  if (typeof ctx === 'string') return { texto: `NO SE PUEDE PROPONER: ${ctx}.`, ok: false }
+  const prep = prepararAccion(tipo, args, hoyMadrid())
+  if (!prep.ok) return { texto: `NO SE PUEDE PROPONER: ${prep.motivo}. Pregúntaselo a Alberto.`, ok: true }
+
+  // El portal manda un correo real: antes de ofrecer el botón se pregunta si esa ficha puede entrar.
+  if (tipo === 'portal') {
+    const e = await portalAsegura(ctx.clienteId).then((x) => interpretarPortal(x.status, x.json)).catch(() => null)
+    if (!e || e.estado !== 'ok') return { texto: `ERROR: no he podido comprobar si puede entrar al portal${e && 'motivo' in e ? ` (${e.motivo})` : ''}. No propongas el envío todavía.`, ok: false }
+    if (e.portal.estado !== 'invitable') {
+      const f = explicarPortal(e.portal)
+      return { texto: `NO SE PUEDE INVITAR: ${f.titulo}. ${f.queHacer}`, ok: true }
+    }
+  }
+
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_accion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
+    WHERE estado = 'propuesta' AND caduca_at <= now()`).catch(() => {})
+  const [fila] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
+    INSERT INTO correduria_asistente_accion (turno_id, tipo, cliente_id, cuerpo, caduca_at)
+    VALUES (${turnoId}, ${tipo}, ${ctx.clienteId}::uuid, ${JSON.stringify(prep.accion.cuerpo)}::jsonb,
+            now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
+    RETURNING id`)
+  const enviado = await tgSendButtons(textoAccion(ctx.quien, prep.accion), [[
+    { texto: tipo === 'portal' ? '📧 Enviar' : '✅ Hacer', callback: `cas_acc:${fila.id}` },
+    { texto: '✖️ No', callback: `cas_accno:${fila.id}` },
+  ]]).catch(() => null)
+  if (enviado === null) {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_accion SET estado = 'descartada', decidida_at = now(), cuerpo = NULL WHERE id = ${fila.id}`).catch(() => {})
+    return { texto: 'ERROR: no he podido mandar la propuesta con el botón a Telegram. Dile que lo intente otra vez o lo haga en la ficha.', ok: false }
+  }
+  return { texto: `Propuesta enviada a Alberto con su botón (${MINUTOS_PROPUESTA} minutos, un solo uso). NO digas que está hecho: dile que revise y pulse.`, ok: true }
+}
+
+/** Botón «Hacer». Escribe por el mismo puerto que la ficha. Nunca lanza; cada salida deja mensaje. */
+async function hacerAccion(id: number): Promise<string> {
+  const decir = (t: string) => tgSend(t, { html: true }).catch(() => {})
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    await decir(`🛡️ Las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}): no se ha hecho nada.`)
+    return 'Apagado: no se hace nada'
+  }
+  const [fila] = await prisma.$queryRaw<{ tipo: TipoAccion; cliente_id: string | null; cuerpo: Record<string, unknown> }[]>(Prisma.sql`
+    UPDATE correduria_asistente_accion SET estado = 'aplicando', decidida_at = now()
+    WHERE id = ${id} AND estado = 'propuesta' AND caduca_at > now()
+    RETURNING tipo, cliente_id::text AS cliente_id, cuerpo`).catch(() => [] as { tipo: TipoAccion; cliente_id: string | null; cuerpo: Record<string, unknown> }[])
+  if (!fila) {
+    const [actual] = await prisma.$queryRaw<{ estado: string; caducado: boolean }[]>(Prisma.sql`
+      SELECT estado, caduca_at <= now() AS caducado FROM correduria_asistente_accion WHERE id = ${id}`).catch(() => [])
+    if (actual?.estado === 'propuesta' && actual.caducado) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE correduria_asistente_accion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL WHERE id = ${id} AND estado = 'propuesta'`).catch(() => {})
+      return `Caducado (${MINUTOS_PROPUESTA} min): no se hace nada`
+    }
+    return actual ? 'Ya estaba decidida' : 'No encuentro esa propuesta'
+  }
+  const cuerpo = { ...fila.cuerpo, actor: ACTOR_EMISION_TG }
+  const llamada = fila.tipo === 'tarea' ? crearTareaAsegura(cuerpo)
+    : fila.tipo === 'llamada' ? registrarLlamadaAsegura(cuerpo)
+    : fila.tipo === 'nota' ? historialClienteAsegura(cuerpo)
+    : fila.tipo === 'siniestro' ? abrirSiniestroAsegura(cuerpo)
+    : invitarPortalAsegura(cuerpo)
+  const r = await llamada.catch((e) => ({ status: 0, json: { motivo: e instanceof Error ? e.message.slice(0, 120) : 'fallo' } }))
+  const fin = resultadoAccion(fila.tipo, r.status, r.json, fila.cliente_id ? urlCliente(fila.cliente_id) : '/correduria')
+  const json = r.json as { motivo?: unknown; estado?: unknown } | null
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_accion
+    SET estado = ${fin.estado}, cuerpo = NULL,
+        resultado = ${JSON.stringify({ status: r.status, estado: json?.estado ?? null, motivo: json?.motivo ?? null })}::jsonb
+    WHERE id = ${id}`).catch((e) => console.error('[correduria-acciones-tg] no se pudo cerrar la fila', id, e))
+  await decir(fin.texto)
+  return fin.estado === 'hecha' ? 'Hecho ✅' : fin.estado === 'incierta' ? 'No sé si se ha hecho' : 'No se ha hecho'
 }
 
 // ── Un turno ─────────────────────────────────────────────────────────────────────────────────────
@@ -781,6 +939,13 @@ export async function resolverBotonCorreduria(accion: string, arg: string): Prom
   }
   if (accion === 'corregir') return aplicarCorreccion(id)
   if (accion === 'oport') return abrirOportunidad(id)
+  if (accion === 'acc') return hacerAccion(id)
+  if (accion === 'accno') {
+    const n = await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_accion SET estado = 'descartada', decidida_at = now(), cuerpo = NULL
+      WHERE id = ${id} AND estado = 'propuesta'`).catch(() => 0)
+    return n ? 'Descartado: no se hace nada' : 'Ya estaba decidido'
+  }
   if (accion === 'oportno') {
     const n = await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_asistente_oportunidad SET estado = 'descartada', decidida_at = now(), alta = NULL

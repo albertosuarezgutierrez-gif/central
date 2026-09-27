@@ -11,6 +11,7 @@ import { guardarAcciones, ejecutarAccion, descartarAccion } from './acciones'
 import { procesarDocumento } from './documentos'
 import { resumenDocumento, accionConciliar, matchDeCruce } from './documentos-tipos'
 import { logTurno } from './memoria'
+import { eur } from '@/lib/dinero'
 import { aiTranscribe } from '@/lib/ai-client'
 
 // cuenta_id de Alberto (único operador). Mismo criterio que facturas-scan / resumen-semanal.
@@ -35,11 +36,12 @@ export async function manejarTextoLibreTg(cuentaId: string, texto: string): Prom
 // Foto de ticket / PDF de factura → extrae (maquinaria canónica) → propone conciliar con botón.
 export async function manejarDocumentoTg(
   cuentaId: string, buffer: Buffer, mimeType: string, fileName: string,
+  opts: { docId?: number | null } = {},
 ): Promise<void> {
   await logTurno(cuentaId, 'telegram', 'user', `[documento: ${fileName || mimeType}]`)
   let doc
   try {
-    doc = await procesarDocumento(cuentaId, buffer, mimeType, fileName)
+    doc = await procesarDocumento(cuentaId, buffer, mimeType, fileName, { preguntarSiSeguro: typeof opts.docId === 'number' })
   } catch {
     await tgSend('No pude leer el documento. Prueba con una foto más nítida o un PDF.').catch(() => {})
     return
@@ -51,6 +53,18 @@ export async function manejarDocumentoTg(
   if (doc.tipo === 'extracto_tarjeta') {
     await tgSend(escapeHtml(doc.resumen)).catch(() => {})
     await logTurno(cuentaId, 'telegram', 'assistant', doc.resumen)
+    return
+  }
+
+  // Documento de una aseguradora: ¿seguro de Alberto (gasto) o de un cliente/lead? Lo decide él.
+  if (doc.tipo === 'posible_seguro') {
+    const f = doc.factura
+    const txt = `📄 Leído: ${escapeHtml(f.proveedor)} · ${f.fecha.split('-').reverse().join('/')} · ${eur(f.total)}${f.numero ? ` · nº ${escapeHtml(f.numero)}` : ''}.\n🛡️ Es de una aseguradora. ¿Es un seguro TUYO (lo archivo y contabilizo como gasto) o de un cliente o lead de la correduría (no lo toco como gasto)?`
+    await logTurno(cuentaId, 'telegram', 'assistant', '[documento de aseguradora: pregunta gasto/cliente]')
+    await tgSendButtons(txt, [[
+      { texto: '🧾 Es mío (gasto)', callback: `cdoc_gasto:${opts.docId}` },
+      { texto: '🛡️ De un cliente', callback: `cdoc_cli:${opts.docId}` },
+    ]]).catch(() => {})
     return
   }
 
