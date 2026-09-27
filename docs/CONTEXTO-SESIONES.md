@@ -753,6 +753,15 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) `claude-seo-ai` evaluado → descartado; arreglada la tarjeta de compartir (og:image)
+Repo `Hainrixz/claude-seo-ai` probado contra builds locales de asegura-web y housesevillana: sus notas sin
+Claude dejan fuera las categorías de más peso (F sin significado) → **ni plugin ni workflow** (PR #3731 cerrado).
+Su hallazgo real: **las páginas con `openGraph` propio salían SIN `og:image`** (Next no hereda la de
+`opengraph-image.tsx` si el hijo declara `openGraph`). Arreglado con `OG_IMAGEN` (`asegura-web/lib/sitio.ts`)
++ `lib/og-imagen.test.ts`, y en housesevillana `app/tarjeta.ts` + `app/tarjeta.test.ts` (la portada la
+reescribe el agente SEO: el test exige que diga la misma imagen). ⚠️ La imagen de housesevillana vive en
+Google Drive (`lh3.googleusercontent`): frágil; desde el contenedor da 403, sin verificar en producción.
+
 ## (27/09/2026) asegura-web: móvil OPCIONAL en «avísame antes de que venza» (PR #3730, mergeado)
 - Campo «Móvil (opcional)» + 2ª casilla SIN marcar «que me llaméis» (solo aparece con móvil): el consentimiento de escribir no cubre llamar (Ley 11/2022 art. 66). Consentimiento pasa a `web-aviso-v2`.
 - `seguros.aviso_web.telefono` (cifrado `v1:`, CHECK) — **migración ya aplicada en prod** (`2026-09-27_aviso_web_telefono.sql`, aditiva).

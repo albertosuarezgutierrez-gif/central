@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
-import { url } from '@/lib/sitio'
+import { OG_IMAGEN, url } from '@/lib/sitio'
 import { fichaFaq, migas, jsonLd } from '@/lib/seo'
 import type { Ramo } from '@/lib/ramos'
 import CartaBaja from '@/components/CartaBaja'
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
   description:
     'Rellena tus datos y descarga la carta para no renovar tu seguro de coche, hogar o salud. Te decimos el último día para enviarla. Gratis y sin registro.',
   alternates: { canonical: url('/carta-baja-seguro') },
-  openGraph: { title: TITULO, url: url('/carta-baja-seguro'), type: 'website' },
+  openGraph: { title: TITULO, url: url('/carta-baja-seguro'), type: 'website', images: [OG_IMAGEN] },
 }
 
 const panel: CSSProperties = {

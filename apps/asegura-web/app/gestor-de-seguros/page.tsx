@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { MEDIADOR, normaPorId, citaLegible } from '@central/module-seguros'
 import { GESTOR } from '@/lib/gestor'
 import { articuloPorSlug } from '@/lib/articulos'
-import { PORTAL_URL, url } from '@/lib/sitio'
+import { PORTAL_URL, OG_IMAGEN, url } from '@/lib/sitio'
 import { fichaFaq, migas, jsonLd } from '@/lib/seo'
 import CalculadoraVencimientos from '@/components/CalculadoraVencimientos'
 import EnlaceMedido from '@/components/EnlaceMedido'
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
   title: GESTOR.title,
   description: GESTOR.description,
   alternates: { canonical: url(GESTOR.ruta) },
-  openGraph: { title: GESTOR.title, description: GESTOR.description, url: url(GESTOR.ruta), type: 'website' },
+  openGraph: { title: GESTOR.title, description: GESTOR.description, url: url(GESTOR.ruta), type: 'website', images: [OG_IMAGEN] },
 }
 
 const panel: CSSProperties = {
