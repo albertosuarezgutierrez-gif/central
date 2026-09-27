@@ -1,19 +1,20 @@
 {
  "sesion": "28e5554e-5e57-5954-9996-3cc565346c49",
  "inicio": "2026-09-27T06:37:26.911Z",
- "fin": "2026-09-27T06:39:22.262Z",
- "llamadas": 54,
+ "fin": "2026-09-27T07:26:51.289Z",
+ "llamadas": 72,
  "categorias": {
   "otro": {
-   "llamadas": 5,
-   "chars_in": 443,
-   "chars_out": 858,
+   "llamadas": 7,
+   "chars_in": 16006,
+   "chars_out": 980,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 4
+    "ToolSearch": 4,
+    "SubagentHandback": 2
    }
   },
   "agente:general-purpose": {
@@ -28,14 +29,14 @@
    }
   },
   "bash": {
-   "llamadas": 10,
-   "chars_in": 4267,
-   "chars_out": 46051,
+   "llamadas": 17,
+   "chars_in": 11866,
+   "chars_out": 80688,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 10
+    "Bash": 17
    }
   },
   "mcp:Claude_Code_Remote": {
@@ -50,14 +51,15 @@
    }
   },
   "mcp:idealista": {
-   "llamadas": 32,
-   "chars_in": 5385,
-   "chars_out": 398411,
+   "llamadas": 41,
+   "chars_in": 5907,
+   "chars_out": 492216,
    "errores": 14,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__idealista__search_properties": 32
+    "mcp__idealista__search_properties": 32,
+    "mcp__idealista__property_detail": 9
    }
   },
   "sql": {
