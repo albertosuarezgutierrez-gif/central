@@ -1,0 +1,104 @@
+{
+ "sesion": "2a800d66-10a9-5008-9e5a-4f9cd12c0765",
+ "inicio": "2026-09-27T05:39:39.885Z",
+ "fin": "2026-09-27T05:50:21.580Z",
+ "llamadas": 66,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 6883,
+   "chars_out": 285,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "SubagentHandback": 1,
+    "ToolSearch": 1
+   }
+  },
+  "bash": {
+   "llamadas": 22,
+   "chars_in": 5827,
+   "chars_out": 15371,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 22
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 24,
+   "chars_in": 2377,
+   "chars_out": 150155,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 10,
+    "Grep": 14
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2104,
+   "chars_out": 2316,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 9,
+   "chars_in": 5701,
+   "chars_out": 14070,
+   "errores": 2,
+   "archivos_citados": 9,
+   "chars_citados": 1986018,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__pull_request_read": 4,
+    "mcp__github__search_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__add_issue_comment": 1,
+    "mcp__github__update_pull_request": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 3,
+   "chars_in": 580,
+   "chars_out": 2668,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 3
+   }
+  },
+  "escritura": {
+   "llamadas": 3,
+   "chars_in": 5811,
+   "chars_out": 873259,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 3
+   }
+  }
+ }
+}
