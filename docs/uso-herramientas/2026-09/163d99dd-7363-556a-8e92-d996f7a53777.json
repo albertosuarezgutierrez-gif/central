@@ -1,0 +1,56 @@
+{
+ "sesion": "163d99dd-7363-556a-8e92-d996f7a53777",
+ "inicio": "2026-09-27T05:54:26.309Z",
+ "fin": "2026-09-27T05:56:42.257Z",
+ "llamadas": 18,
+ "categorias": {
+  "bash": {
+   "llamadas": 9,
+   "chars_in": 2484,
+   "chars_out": 15069,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 9
+   }
+  },
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 196,
+   "chars_out": 380,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 5,
+   "chars_in": 2382,
+   "chars_out": 9876,
+   "errores": 0,
+   "archivos_citados": 6,
+   "chars_citados": 1718522,
+   "tools": {
+    "mcp__github__pull_request_read": 2,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__add_issue_comment": 1,
+    "mcp__github__update_pull_request": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 255,
+   "chars_out": 347,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 1
+   }
+  }
+ }
+}
