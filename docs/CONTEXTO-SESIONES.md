@@ -734,6 +734,18 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) asegura-web: página «Seguro de patinete eléctrico» (`/seguros/patinete-electrico`)
+- OpenSEO: «seguro patinete electrico» 27.100/mes KD 8, «seguro patinete» 6.600 KD 0, «seguro vmp» 1.000 KD 4 — la de más volumen de todo el sitio.
+- Base legal citada: Ley 5/2025 + RD 52/2026 (BOE 30/01/2026, registro DGT de vehículos personales ligeros); sin certificar vendidos antes del 22/01/2024 circulan hasta el 22/01/2027. Sin cifras de multa.
+- Mismo patrón que impago: opción `patinete-electrico` en web + plataforma, pie sí/cabecera no, sin widget de ventana. Mismo PR #3714.
+- ⚠️ Supone que Alberto tiene compañía que lo suscriba; si no, el lead entra y no hay producto.
+
+## (27/09/2026) asegura-web: página de ramo «Seguro de impago de alquiler» (`/seguros/impago-alquiler`)
+- Alberto confirma que SÍ lo vende. Medido con OpenSEO: «seguro de impago de alquiler» 5.400/mes KD 15, «seguro impago alquiler» 3.600 KD 10, «…precio» 480 KD 4 — la mayor demanda comercial con dificultad baja encontrada hasta ahora.
+- Ramo nuevo en `lib/ramos.ts` (producto, cuenta en la portada), pie sí / cabecera no (`FUERA_DE_CABECERA`).
+- Lead: `impago-alquiler` añadido a `TIPOS_SEGURO` (web) Y `TIPOS_SEGURO_LEAD` (plataforma) a la vez — si no, 422 y lead perdido.
+- Sin widget de ventana (`RAMOS_SIN_VENTANA`): su aviso sale por `RAMO_WEB_A_TIPO` de asegura, que no conoce el ramo. Pendiente si se quiere: añadirlo allí y quitarlo de la lista.
+
 ## (26/09/2026) SEO grupoasegura.es: 4 guías de dificultad 0 (PRs #3704, #3708, #3709)
 - Mergeadas: `/carta-baja-seguro` (herramienta) + `/blog/como-rellenar-parte-amistoso` (#3704); `/blog/dar-de-baja-seguro-coche` y `/blog/defensor-del-asegurado` (#3708). En #3709: `/blog/como-saber-que-seguros-tengo` (CTA al gestor).
 - Criterio: búsquedas de intención de problema con KD 0 medidas en OpenSEO (quedan ~216 créditos), nunca términos comerciales genéricos donde pujan las compañías.
