@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
-import { url } from '@/lib/sitio'
+import { OG_IMAGEN, url } from '@/lib/sitio'
 import { fichaFaq, migas, jsonLd } from '@/lib/seo'
 import type { Ramo } from '@/lib/ramos'
 import Formulario from '@/components/Formulario'
@@ -34,6 +34,7 @@ export const metadata: Metadata = {
     'Plazos legales al dar un parte: 7 días para comunicarlo, 40 para el pago mínimo. Qué hace tu corredor y qué hacer si la compañía deniega o no contesta.',
   alternates: { canonical: url('/siniestro') },
   openGraph: {
+    images: [OG_IMAGEN],
     title: 'Qué hacer si tienes un siniestro',
     url: url('/siniestro'),
     type: 'article',

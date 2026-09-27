@@ -55,6 +55,17 @@ export const SITIO_URL = (process.env.NEXT_PUBLIC_SITIO_URL || 'https://grupoase
 export const PORTAL_URL = (process.env.NEXT_PUBLIC_PORTAL_URL || 'https://clientes.grupoasegura.es').replace(/\/+$/, '')
 
 /** URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`). */
+/**
+ * Tarjeta de compartir (WhatsApp, LinkedIn, Telegram) para las páginas que
+ * declaran su propio `openGraph`. 🚨 Next NO hereda la imagen de
+ * `app/opengraph-image.tsx` en cuanto una página pone `openGraph` en su
+ * `metadata`: el objeto hijo sustituye al del padre ENTERO, imagen incluida.
+ * Medido el 27/09/2026 — los ramos, el blog y las guías salían sin `og:image`.
+ * Por eso toda página con `openGraph` lleva `images: [OG_IMAGEN]` (lo vigila
+ * `lib/og-imagen.test.ts`), y `opengraph-image.tsx` lee de aquí su tamaño.
+ */
+export const OG_IMAGEN = { url: '/opengraph-image', width: 1200, height: 630 } as const
+
 export function url(ruta: string): string {
   return `${SITIO_URL}${ruta.startsWith('/') ? ruta : `/${ruta}`}`
 }

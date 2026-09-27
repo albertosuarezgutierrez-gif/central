@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { MOTOR_RESERVAS } from '../reservas'
+import { TARJETA } from '../tarjeta'
 const H = `<!DOCTYPE html><html lang="es">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -8,6 +9,7 @@ const H = `<!DOCTYPE html><html lang="es">
 <link rel="canonical" href="https://www.housesevillana.es/que-ver"/>
 <meta property="og:title" content="Qué ver en Sevilla — Guía 2025"/>
 <meta property="og:url" content="https://www.housesevillana.es/que-ver"/>
+${TARJETA}
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,sans-serif;color:#1a1a1a;line-height:1.6}
 .hero{background:linear-gradient(135deg,#1a3a5c,#2d5a8e);color:white;padding:50px 24px;text-align:center}

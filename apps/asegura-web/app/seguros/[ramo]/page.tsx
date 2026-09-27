@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { articulosDeRamo } from '@/lib/articulos'
 import { RAMOS, SOLO_INTENCION, ramoPorSlug } from '@/lib/ramos'
-import { url } from '@/lib/sitio'
+import { OG_IMAGEN, url } from '@/lib/sitio'
 import { fichaFaq, fichaServicio, migas, jsonLd } from '@/lib/seo'
 import Formulario from '@/components/Formulario'
 import VentanaRenovacion from '@/components/VentanaRenovacion'
@@ -32,6 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     description: ramo.description,
     alternates: { canonical: url(`/seguros/${ramo.slug}`) },
     openGraph: {
+      images: [OG_IMAGEN],
       title: ramo.title,
       description: ramo.description,
       url: url(`/seguros/${ramo.slug}`),
