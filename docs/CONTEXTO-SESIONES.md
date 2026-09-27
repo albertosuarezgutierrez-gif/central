@@ -18,7 +18,20 @@ verificada releyendo el archivo tras el commit) + retoma y cierra el PR #3131 (s
 nunca mergeado — el mismo fallo "cepo sin ver fallar" que su propio guardarraíl describe, ahora
 aplicado a `SKILL.md`). Diagnóstico: sin hallazgos nuevos que pidan tocar un prompt (mercado-booking
 y facturas-correo tienen patrones repetidos, pero son de auditoría/código o decisión de Alberto, no
-del agente). Backlog de PRs abiertos: 47, el más antiguo #2318 (05/09, 22 días).
+del agente). Backlog de PRs abiertos: 47 al hacer la pasada; 44 de ellos los cerró después la
+revisión de #3713 por orden de Alberto.
+
+**(27/09/2026)** Revisión del PR #3713 (mergeado): el «hueco de memoria 05-13/09» era falso (formato distinto
+de fecha), y el mapa de funciones indexaba el cliente Prisma local — corregidos; `next build` OK en las 4 apps
+tocadas. Alberto ordenó cerrar los **44 PRs de rutinas estancados**: cerrados sin mergear, ramas conservadas
+(reabribles). BBVA/Enable Banking: lo mira Alberto.
+
+**(27/09/2026)** Auditoría PROFUNDA: código 12/12 sano (~9.093 tests), fix `transpilePackages` en 5 apps
+(ia-rest/alquiler/asegura/asegura-portal/housesevillana importaban `@central/*` sin declararlo — riesgo de
+build, no de tipos). 🔴 **44 PRs `claude/*` zombis abiertos (05-24/09, hasta 22 días)**: su código YA está
+en `main` por otra vía (verificado en 3 casos), el automerge los descarta bien mismo, pero nadie los
+cierra. (El «hueco de memoria 05-13/09» que se dijo aquí era FALSO: esas entradas están, con formato
+`- **título (dd/mm/aaaa).**` que el grep de `**(dd/mm` no veía.) Pendiente: Alberto decide cierre masivo.
 
 **(26/09/2026)** Correduría · lotes 3+4 (PR #3707): «siguiente paso» en la ficha (`siguientePaso()` de
 module-seguros), DNI/carnés plegados, «Más» partida en Cumplimiento/Referencia, renovaciones 90 d plegadas en Cartera, y
@@ -741,6 +754,9 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+
+## (27/09/2026) Inicio: pinchar una reserva del calendario muestra su detalle (PR #3716)
+- Tarjeta «Pisos» de `/inicio`: las barras son botones; al pincharlas se abre debajo huésped, piso, entrada/salida, noches, pax, importe (€/n) y portal. Nuevo cliente `inicio/CalendarioReservas.tsx`; `Barra` lleva `reserva` e `incomes.amount` entra como `importe` (null = «sin dato», no 0 €).
 
 ## (27/09/2026) asegura-web: página «Seguro de patinete eléctrico» (`/seguros/patinete-electrico`)
 - OpenSEO: «seguro patinete electrico» 27.100/mes KD 8, «seguro patinete» 6.600 KD 0, «seguro vmp» 1.000 KD 4 — la de más volumen de todo el sitio.
