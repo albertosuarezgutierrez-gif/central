@@ -23,6 +23,7 @@
 //   se escribe aquí — y entonces sí es un argumento de venta, no una promesa a medias.
 
 import { MOTOR_RESERVAS } from '../reservas'
+import { TARJETA } from '../tarjeta'
 
 export const HTML = `<!DOCTYPE html><html lang="es">
 <head>
@@ -37,6 +38,7 @@ export const HTML = `<!DOCTYPE html><html lang="es">
 <meta property="og:title" content="Casa con parking privado en el centro de Sevilla | House Sevillana"/>
 <meta property="og:description" content="Plaza de garaje privada en el propio edificio, en pleno casco histórico. Llega en coche y olvídate de aparcar."/>
 <meta property="og:url" content="https://www.housesevillana.es/parking"/>
+${TARJETA}
 <meta property="og:type" content="website"/>
 <meta property="og:locale" content="es_ES"/>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿House Sevillana tiene parking privado?","acceptedAnswer":{"@type":"Answer","text":"Sí. Hay una plaza de garaje privada en el mismo edificio, reservable junto con la estancia. Es de las pocas casas turísticas del casco histórico de Sevilla con aparcamiento propio."}},{"@type":"Question","name":"¿Afecta la Zona de Bajas Emisiones de Sevilla a mi coche?","acceptedAnswer":{"@type":"Answer","text":"La Zona de Bajas Emisiones de Sevilla es únicamente la Isla de la Cartuja, al noroeste de la ciudad, y solo restringe de lunes a viernes no festivos de 7:00 a 19:00. Los vehículos con distintivo 0, ECO, C o B acceden libremente. El casco histórico, donde está House Sevillana, no forma parte de esa ZBE: tiene su propio régimen de tráfico restringido, así que conviene consultar la ruta de llegada al reservar."}},{"@type":"Question","name":"¿Cuánto cuesta la plaza de garaje?","acceptedAnswer":{"@type":"Answer","text":"Las condiciones de la plaza se confirman directamente con el propietario al reservar. Reservando en housesevillana.es hablas con Alberto sin intermediarios."}}]}</script>

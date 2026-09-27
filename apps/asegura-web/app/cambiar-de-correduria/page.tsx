@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
-import { url } from '@/lib/sitio'
+import { OG_IMAGEN, url } from '@/lib/sitio'
 import { fichaFaq, migas, jsonLd } from '@/lib/seo'
 import type { Ramo } from '@/lib/ramos'
 import Formulario from '@/components/Formulario'
@@ -24,6 +24,7 @@ export const metadata: Metadata = {
     'Puedes cambiar de mediador sin tocar tu póliza: mismas coberturas, mismo precio y mismo número. Cómo funciona el cambio de correduría, vivas donde vivas.',
   alternates: { canonical: url('/cambiar-de-correduria') },
   openGraph: {
+    images: [OG_IMAGEN],
     title: 'Cambiar de correduría sin cambiar de seguro',
     url: url('/cambiar-de-correduria'),
     type: 'article',

@@ -62,8 +62,6 @@ del puesto 12 al 6 en algo que ya te ve Google rinde más que inventar un térmi
 - La propiedad es **`sc-domain:`** (Dominio). `https://housesevillana.es/` sería OTRA propiedad
   distinta, con otros datos. Usa la cadena exacta que devuelva el `GET`.
 
-**Auditoría técnica semanal (27/09/2026):** `.github/workflows/seo-medicion.yml` (domingo 05:17 UTC) deja en el artefacto `seo-housesevillana` dos notas 0-100 —Google y citabilidad en IA— con sus hallazgos. Úsala para priorizar; `unscored` = no medido, nunca 0. Su `fix` NO se usa: no conoce el diccionario ES→EN/IT de la landing.
-
 ## Decision tree: cómo abordar cada petición
 
 Cuando Alberto pida algo, identifica en qué bloque cae y carga **solo** los archivos de referencia necesarios. No cargues todo de golpe.

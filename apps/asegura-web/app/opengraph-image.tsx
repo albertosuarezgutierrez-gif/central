@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { MARCA_ASEGURA } from '@central/brand'
 import { MEDIADOR } from '@central/module-seguros'
-import { AMBITO } from '@/lib/sitio'
+import { AMBITO, OG_IMAGEN } from '@/lib/sitio'
 
 // Tarjeta que se ve cuando alguien pega un enlace de la web en WhatsApp,
 // LinkedIn o Telegram — que es, para una correduría local, por donde llega
@@ -13,14 +13,14 @@ import { AMBITO } from '@/lib/sitio'
 // enseñando la vieja sin que falle nada — exactamente lo que el resto de esta
 // app evita leyendo siempre de la fuente.
 //
-// Next aplica esta imagen a TODA página que no declare la suya, así que una
-// sola pieza cubre la portada, los seis ramos y las legales.
+// Next aplica esta imagen a toda página que NO declare `openGraph` propio; las
+// que sí lo declaran la piden con `images: [OG_IMAGEN]` (ver `lib/sitio.ts`).
 //
 // ⚠️ Satori (el motor de `next/og`) NO entiende `oklch()`. De la paleta solo se
 // usan aquí los tokens que están en hex; el blanco del texto es una decisión de
 // composición sobre fondo de marca, no un token que falte.
 
-export const size = { width: 1200, height: 630 }
+export const size = { width: OG_IMAGEN.width, height: OG_IMAGEN.height }
 export const contentType = 'image/png'
 export const alt = `${MEDIADOR.marca} · Correduría de seguros en ${AMBITO.nacional}`
 

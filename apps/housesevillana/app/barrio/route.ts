@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { MOTOR_RESERVAS } from '../reservas'
+import { TARJETA } from '../tarjeta'
 const H = `<!DOCTYPE html><html lang="es">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
@@ -9,6 +10,7 @@ const H = `<!DOCTYPE html><html lang="es">
 <meta property="og:title" content="Barrio Macarena Sevilla | House Sevillana"/>
 <meta property="og:description" content="Vive la Sevilla de verdad. Murallas almohades, iglesias barrocas y tabernas de siempre, desde San Julián."/>
 <meta property="og:url" content="https://www.housesevillana.es/barrio"/>
+${TARJETA}
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Article","headline":"El barrio de la Macarena en Sevilla, desde San Julián","author":{"@type":"Organization","name":"House Sevillana"},"publisher":{"@type":"Organization","name":"House Sevillana","url":"https://www.housesevillana.es"}}</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
