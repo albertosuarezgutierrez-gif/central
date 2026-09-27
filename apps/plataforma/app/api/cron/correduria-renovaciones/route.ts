@@ -17,6 +17,8 @@ import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
+import { interpretarTareasHoy, tareasHoyAsegura } from '@/lib/seguimiento-asegura'
+import { bloqueLlamadasHoy } from '@/lib/correduria/llamadas-hoy'
 import {
   claveAviso, detalleRenovaciones, emisionesDeHoy, mensajeRenovaciones, type HitoId, type PolizaAviso,
 } from '@/lib/correduria/renovaciones-aviso'
@@ -72,7 +74,15 @@ export async function GET(req: NextRequest) {
   )
 
   const emisiones = emisionesDeHoy(polizas, yaAvisados)
-  const mensaje = mensajeRenovaciones(emisiones)
+  const renovaciones = mensajeRenovaciones(emisiones)
+  // Las tareas del día (llamadas de oportunidades, incluidas las de pólizas de la competencia que
+  // vencen) van en ESTE mismo mensaje: Alberto pidió menos avisos. Un fallo de lectura se dice.
+  const rT = await tareasHoyAsegura().catch(() => ({ status: 502, json: null }))
+  const tareas = interpretarTareasHoy(rT.status, rT.json)
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+  const llamadas = tareas.estado === 'sin_configurar' ? null
+    : bloqueLlamadasHoy(tareas.estado === 'ok' ? tareas.tareas.filter((t) => t.fechaLimite <= hoy) : null, hoy)
+  const mensaje = [renovaciones, llamadas].filter(Boolean).join('\n\n') || null
 
   // El orden importa: primero se manda y solo se marca lo que se ha mandado.
   // Al revés, un fallo de Telegram dejaría avisos marcados que nadie ha visto

@@ -2020,7 +2020,13 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
 - Callbacks `cas_bien|cas_mal|cas_regla|cas_reglano|cas_emitir|cas_emitirno|cas_corregir|cas_corregirno` en el webhook. Son RESPUESTAS, no avisos
   proactivos: por eso usan `tgSend` directo y no están en el catálogo de `/telegram`.
 - **Sin resumen diario propio a propósito:** las renovaciones ya llegan en `correduria.renovaciones` y
-  Alberto pidió menos avisos. «¿Qué tengo hoy?» se lo contesta el asistente a demanda.
+  Alberto pidió menos avisos. Desde el 27/09/2026 las **tareas del día** (llamadas de oportunidades, también las
+  de pólizas de la competencia que vencen) van DENTRO de ese mismo mensaje (`lib/correduria/llamadas-hoy.ts`),
+  no en uno nuevo; «no se pudieron leer» se dice. «¿Qué tengo hoy?» sigue contestándose a demanda.
+- **Webhook (27/09/2026):** `telegram_update_visto` descarta los reintentos de Telegram (misma pregunta
+  contestada dos veces) y el asistente corre en `after()`: Telegram recibe su 200 al momento. Tras abrir una
+  oportunidad con documentos, botón «📎 Guardar en la ficha» (un solo uso) y enlace a la pantalla de
+  tarificar del ramo — **enlace, no botón**: tarificar gasta y confirma allí.
 
 ## 🔔 Panel «Avisos Telegram» (`/telegram`) — el interruptor de lo que manda el bot (01/09/2026, PR #1924)
 Alberto: «las notificaciones de Telegram son muchas». El bot emitía desde **~57 ficheros** sin

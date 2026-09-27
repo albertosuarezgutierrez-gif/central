@@ -258,6 +258,12 @@ export function resultadoAltaLead(status: number, json: unknown): { estado: 'cre
   return { estado: 'rechazado', texto: `✋ No he creado la ficha: ${escapar(motivo)}` }
 }
 
+/** La pantalla que pide precio de ese ramo en la ficha (cada una confirma y cuenta el gasto). `null` = no hay. */
+export function rutaTarificar(ramo: string): string | null {
+  const r: Record<string, string> = { auto: 'auto-nuevo', moto: 'moto-nuevo', hogar: 'hogar-nuevo', vida: 'vida-nuevo', salud: 'salud-nuevo', decesos: 'decesos-nuevo' }
+  return r[ramo] ?? null
+}
+
 function escapar(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 }

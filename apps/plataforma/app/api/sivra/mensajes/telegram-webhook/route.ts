@@ -140,6 +140,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true })
   }
 
+  // Telegram reintenta un update si no recibe el 200 a tiempo: sin esto, una pregunta lenta se
+  // contestaba (y proponía botones) dos veces. Si la BD no responde se procesa igual: perder un
+  // mensaje de Alberto es peor que contestarlo dos veces.
+  if (await updateYaVisto(body.update_id)) return NextResponse.json({ ok: true })
+
   // ── Agente Instagram/blog de ia-rest (bot compartido) ────────────────────
   // El webhook del bot apunta AQUÍ, pero los callbacks ig_*/blog_*/briefing_*
   // y los mensajes "/ig ..." los maneja ia-rest → reenviar tal cual (con el
@@ -779,7 +784,7 @@ export async function POST(req: NextRequest) {
       // Emitir y corregir la ficha escriben en la cartera: exigen que pulse la PERSONA autorizada, no
       // solo que el botón esté en su chat (en un grupo cualquiera podría pulsar). En un chat privado,
       // el id del chat es el de la persona.
-      if ((action === 'emitir' || action === 'corregir' || action === 'oport' || action === 'acc') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+      if ((action === 'emitir' || action === 'corregir' || action === 'oport' || action === 'acc' || action === 'guardar') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
         await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
         return NextResponse.json({ ok: true })
       }
@@ -1004,7 +1009,8 @@ export async function POST(req: NextRequest) {
     // Lo mismo con el atajo de la correduría («seguro: …», «/seguros …»): nunca es un retoque del
     // borrador de un huésped, aunque el modo respuesta siga abierto.
     if (tienePrefijo(msg.text || '')) {
-      await manejarCorreduriaTg((msg.text || '').trim())
+      const t = (msg.text || '').trim()
+      after(() => manejarCorreduriaTg(t))
       return NextResponse.json({ ok: true })
     }
     // Nota a un 👎 del asistente de la correduría («asistente seguros · turno N»).
@@ -1071,7 +1077,8 @@ export async function POST(req: NextRequest) {
   if (msg?.reply_to_message && (msg.text || '').trim() && String(msg.chat?.id || '') === String(process.env.TELEGRAM_CHAT_ID || '')) {
     const citado = String(msg.reply_to_message.text ?? msg.reply_to_message.caption ?? '')
     if (esRespuestaACorreduria(citado)) {
-      await manejarCorreduriaTg(conCita(msg.text, citado))
+      const t = conCita(msg.text, citado)
+      after(() => manejarCorreduriaTg(t))
       return NextResponse.json({ ok: true })
     }
   }
@@ -1105,7 +1112,7 @@ export async function POST(req: NextRequest) {
         const aCorreduria = pieDeCorreduria(pie) || await albumDeCorreduria(grupo)
         const docId = await registrarDocumentoTg({ fileId: adj.fileId, nombre: adj.nameHint, mime: adj.mimeHint, mediaGroupId: grupo, destino: aCorreduria ? 'correduria' : 'contable' })
         if (aCorreduria) {
-          if (pie) await manejarCorreduriaTg(pie)
+          if (pie) after(() => manejarCorreduriaTg(pie))
           return NextResponse.json({ ok: true })
         }
         const file = await descargarTelegram(adj.fileId, adj.mimeHint, adj.nameHint)
@@ -1130,6 +1137,20 @@ export async function POST(req: NextRequest) {
 // patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el
 // contable, que es quien atendía todo el texto libre hasta el 26/09/2026.
 async function enrutarTextoLibre(cuentaId: string, texto: string): Promise<void> {
-  if (await esParaCorreduria(texto)) { await manejarCorreduriaTg(texto); return }
+  // El asistente puede tardar (herramientas, documentos): Telegram recibe su 200 ya y él sigue en `after`.
+  if (await esParaCorreduria(texto)) { after(() => manejarCorreduriaTg(texto)); return }
   await manejarTextoLibreTg(cuentaId, texto)
+}
+
+/** `true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa). */
+async function updateYaVisto(updateId: unknown): Promise<boolean> {
+  if (typeof updateId !== 'number' || !Number.isInteger(updateId)) return false
+  const filas = await prisma.$queryRaw<{ update_id: bigint }[]>(Prisma.sql`
+    INSERT INTO telegram_update_visto (update_id) VALUES (${updateId}) ON CONFLICT DO NOTHING RETURNING update_id`)
+    .catch(() => null)
+  if (filas === null) return false
+  if (updateId % 200 === 0) {
+    await prisma.$executeRaw(Prisma.sql`DELETE FROM telegram_update_visto WHERE visto_at < now() - interval '3 days'`).catch(() => {})
+  }
+  return filas.length === 0
 }

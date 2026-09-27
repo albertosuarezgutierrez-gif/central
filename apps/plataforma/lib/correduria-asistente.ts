@@ -18,7 +18,7 @@ const PROPIAS = /\b(p[oó]lizas?|siniestros?|renovaci(?:[oó]n|ones)|tomador(?:e
 
 /** Palabras de la correduría que TAMBIÉN usa el contable (un recibo de Mapfre puede ser un gasto propio):
  *  solo deciden si no hay ninguna palabra contable. */
-const PROPIAS_SUAVES = /\b(impagad\w*|recibos? devuelt\w*|vencimientos?|mapfre|allianz|occident|reale|generali|axa|l[ií]nea directa|mutua madrile\w+|pelayo|liberty|zurich|santa ?luc[ií]a|helvetia|fiatc|asisa|sanitas|adeslas|dkv|fidelidade)\b/i
+const PROPIAS_SUAVES = /\b(impagad\w*|recibos? devuelt\w*|vencimientos?|le he llamado|he llamado a|no (?:me )?(?:lo )?coge|no contesta|no le interesa|que le llame|vuelva a llamar|volver a llamar|quiere precio|mapfre|allianz|occident|reale|generali|axa|l[ií]nea directa|mutua madrile\w+|pelayo|liberty|zurich|santa ?luc[ií]a|helvetia|fiatc|asisa|sanitas|adeslas|dkv|fidelidade)\b/i
 
 /** Matrícula española moderna (1234ABC / 1234 ABC). Un gasto no se pregunta por matrícula. */
 const MATRICULA = /\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/i

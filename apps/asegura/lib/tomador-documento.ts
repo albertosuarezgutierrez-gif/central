@@ -64,6 +64,25 @@ export async function tomadorDe(l: LecturaPoliza): Promise<Tomador> {
     }
   }
 
+  // Póliza de auto sin DNI indexado: el mismo vehículo en la cartera es otra pista. Es una PISTA (el coche
+  // pudo cambiar de dueño), así que va a `posibles` y decide Alberto.
+  const matricula = typeof l.datos.matricula === 'string' ? l.datos.matricula.toUpperCase().replace(/[^A-Z0-9]/g, '') : ''
+  if (c && matricula.length >= 6) {
+    try {
+      const filas = await db.$queryRaw<{ id: string; nombre: string; tipo: string; activo: boolean }[]>`
+        select distinct on (cl.id) cl.id::text as id, trim(cl.nombre || ' ' || cl.apellidos) as nombre, cl.tipo::text as tipo, cl.activo
+        from polizas p join clientes cl on cl.id = p.cliente_id
+        where p.correduria_id = ${c.id}::uuid and p.merged_into_poliza_id is null and cl.merged_into_cliente_id is null
+          and upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g')) = ${matricula}
+        limit 6`
+      const ya = new Set([...(porDni ?? []), ...(posibles ?? [])].map((x) => x.id))
+      const nuevas = filas.filter((f) => !ya.has(f.id)).map((f) => ({ ...f, nombre: `${f.nombre} (misma matrícula)` }))
+      posibles = [...(posibles ?? []), ...nuevas]
+    } catch {
+      // sin la pista de la matrícula no se afirma nada: `posibles` se queda como estaba
+    }
+  }
+
   let sello: string | null = null
   try { sello = sellarAltaLead(alta) } catch { sello = null }
   return { nombre, conDni: alta.dni !== null, coincidencias: porDni, posibles, sello }

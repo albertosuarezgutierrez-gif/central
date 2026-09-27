@@ -17,7 +17,7 @@ import { polizaAsegura } from '@/lib/poliza-asegura'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
 import { emitirAsegura, importarProyectoAsegura, vistaImportacionAsegura } from '@/lib/retarificar-asegura'
 import { editarClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
-import { documentosAsegura, leerDocumentoOportunidadAsegura } from '@/lib/documentos-asegura'
+import { documentosAsegura, leerDocumentoOportunidadAsegura, subirDocumentoAsegura } from '@/lib/documentos-asegura'
 import {
   accionOportunidadAsegura, colaLlamadas, interpretarLeads, interpretarLecturaOportunidad, interpretarOportunidadesCliente,
   interpretarTareasHoy, leadsCompetenciaAsegura, oportunidadesClienteAsegura, tareasHoyAsegura, type LecturaDocumentoOportunidad,
@@ -29,7 +29,7 @@ import { abrirSiniestroAsegura } from '@/lib/siniestros-asegura'
 import { explicarPortal, interpretarPortal, invitarPortalAsegura, portalAsegura } from '@/lib/portal-cliente-asegura'
 import { prepararAccion, resultadoAccion, textoAccion, type TipoAccion } from './correduria-acciones-tg'
 import { descargarTelegram, getCuentaTelegram, manejarDocumentoTg } from '@/lib/contable/telegram'
-import { cuerpoAlta, explicarQuien, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, quienEsDelDocumento, resultadoAlta, resultadoAltaLead, textoAlta, textoAltaLead, type Alta } from './correduria-oportunidad-tg'
+import { cuerpoAlta, explicarQuien, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, quienEsDelDocumento, resultadoAlta, rutaTarificar, resultadoAltaLead, textoAlta, textoAltaLead, type Alta } from './correduria-oportunidad-tg'
 import {
   documentoQueAcredita, edicionDeCambios, faltaValorActual, huellaAntes, prepararCorreccion, resultadoCorreccion, textoCorreccion,
   urlCliente, type Cambio, type FichaActual,
@@ -596,7 +596,7 @@ export async function albumDeCorreduria(mediaGroupId: string | null): Promise<bo
 }
 
 /** Lee los documentos de la última hora. `null` = no se ha podido mirar (≠ `[]`, «no subió nada»). */
-async function lecturasRecientes(opts: { tomador?: boolean } = {}): Promise<LecturaDocumentoOportunidad[] | null> {
+async function lecturasRecientes(opts: { tomador?: boolean } = {}, usados?: number[]): Promise<LecturaDocumentoOportunidad[] | null> {
   const filas = await prisma.$queryRaw<{ id: bigint; file_id: string; nombre: string | null; mime: string | null }[]>(Prisma.sql`
     SELECT id, file_id, nombre, mime FROM correduria_asistente_documento
     WHERE creado_at >= now() - make_interval(mins => ${MINUTOS_DOCUMENTO_RECIENTE}::int)
@@ -614,6 +614,7 @@ async function lecturasRecientes(opts: { tomador?: boolean } = {}): Promise<Lect
       .then((r) => interpretarLecturaOportunidad(r.status, r.json))
       .catch((e): LecturaDocumentoOportunidad => ({ estado: 'error', motivo: e instanceof Error && e.name === 'TimeoutError' ? 'la lectura ha tardado demasiado' : 'fallo al leerlo' }))
     out.push(l)
+    if (l.estado === 'ok') usados?.push(Number(f.id))
     // Si el contable preguntó «¿gasto o cliente?» y nadie contestó, ya está contestado: es de la correduría.
     await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_asistente_documento SET usado_at = now(), decision = COALESCE(decision, 'cliente') WHERE id = ${f.id}`).catch(() => {})
@@ -646,8 +647,9 @@ async function proponerOportunidad(args: Record<string, unknown>, turnoId: numbe
   }
 
   let lecturas: LecturaDocumentoOportunidad[] | null = null
+  const documentos: number[] = []
   if (usarDocumentos) {
-    lecturas = await lecturasRecientes({ tomador: !clienteId })
+    lecturas = await lecturasRecientes({ tomador: !clienteId }, documentos)
     if (lecturas === null) return { texto: 'ERROR: no he podido mirar qué documentos ha subido. Pídele los datos o que lo abra en la ficha.', ok: false }
     if (lecturas.length === 0) {
       return { texto: `NO VEO DOCUMENTOS: no ha subido ninguno en los últimos ${MINUTOS_DOCUMENTO_RECIENTE} minutos. Pídele que lo vuelva a mandar o que te dicte de quién es, ramo, compañía, vencimiento y prima.`, ok: true }
@@ -675,9 +677,9 @@ async function proponerOportunidad(args: Record<string, unknown>, turnoId: numbe
     UPDATE correduria_asistente_oportunidad SET estado = 'caducada', decidida_at = now(), alta = NULL, lead = NULL
     WHERE estado = 'propuesta' AND (cliente_id = ${clienteId}::uuid OR lead IS NOT NULL OR caduca_at <= now())`).catch(() => {})
   const [fila] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
-    INSERT INTO correduria_asistente_oportunidad (turno_id, cliente_id, alta, lead, caduca_at)
+    INSERT INTO correduria_asistente_oportunidad (turno_id, cliente_id, alta, lead, documentos, caduca_at)
     VALUES (${turnoId}, ${clienteId}::uuid, ${JSON.stringify(prep.alta)}::jsonb, ${lead ? JSON.stringify(lead) : null}::jsonb,
-            now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
+            ${documentos}::bigint[], now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
     RETURNING id`)
   const texto = lead ? textoAltaLead(lead.nombre, prep.alta) : textoAlta(nombre ?? 'este cliente', prep.alta)
   const enviado = await tgSendButtons(texto, [[
@@ -708,11 +710,11 @@ async function abrirOportunidad(id: number): Promise<string> {
     await decir(`🛡️ Las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}): no se ha abierto nada.`)
     return 'Apagado: no se abre nada'
   }
-  type Fila = { cliente_id: string | null; alta: Alta; lead: { nombre: string; sello: string } | null }
+  type Fila = { cliente_id: string | null; alta: Alta; lead: { nombre: string; sello: string } | null; documentos: bigint[] | null }
   const [fila] = await prisma.$queryRaw<Fila[]>(Prisma.sql`
     UPDATE correduria_asistente_oportunidad SET estado = 'aplicando', decidida_at = now()
     WHERE id = ${id} AND estado = 'propuesta' AND caduca_at > now()
-    RETURNING cliente_id::text AS cliente_id, alta, lead`).catch(() => [] as Fila[])
+    RETURNING cliente_id::text AS cliente_id, alta, lead, documentos`).catch(() => [] as Fila[])
   if (!fila) {
     const [actual] = await prisma.$queryRaw<{ estado: string; caducado: boolean }[]>(Prisma.sql`
       SELECT estado, caduca_at <= now() AS caducado FROM correduria_asistente_oportunidad WHERE id = ${id}`).catch(() => [])
@@ -754,6 +756,7 @@ async function abrirOportunidad(id: number): Promise<string> {
         resultado = ${JSON.stringify({ status: r.status, id: json?.id ?? null, motivo: json?.motivo ?? null })}::jsonb
     WHERE id = ${id}`).catch((e) => console.error('[correduria-oportunidad-tg] no se pudo cerrar la fila', id, e))
   await decir(fin.texto)
+  if (fin.estado === 'abierta') await ofrecerSiguientes(id, clienteId, fila.alta, (fila.documentos ?? []).length).catch(() => {})
   return fin.estado === 'abierta' ? 'Oportunidad abierta 🎯' : fin.estado === 'incierta' ? 'No sé si se ha abierto' : 'No se ha abierto'
 }
 
@@ -1001,6 +1004,59 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
 // ── Botones y notas ──────────────────────────────────────────────────────────────────────────────
 
 /** Callback `cas_*`. Devuelve el texto del toast. */
+/**
+ * Tras abrir la oportunidad: guardar en la ficha la póliza que se leyó (antes había que volver a subirla
+ * en /correduria) y el enlace para tarificar ese ramo. Tarificar gasta dinero, así que es un ENLACE a la
+ * pantalla que lo hace con su propia confirmación, nunca un botón que cotice desde aquí.
+ */
+async function ofrecerSiguientes(oportId: number, clienteId: string, alta: Alta, nDocs: number): Promise<void> {
+  const ruta = rutaTarificar(alta.ramo)
+  const tarificar = ruta ? `${urlCliente(clienteId)}/${ruta}` : null
+  const lineas = [tarificar ? `💶 Para pedir precio: ${tarificar}` : null].filter(Boolean) as string[]
+  if (nDocs > 0) {
+    await tgSendButtons(
+      [`📎 ¿Guardo en su ficha ${nDocs === 1 ? 'el documento que subiste' : `los ${nDocs} documentos que subiste`}?`, ...lineas].join('\n'),
+      [[{ texto: '📎 Guardar en la ficha', callback: `cas_guardar:${oportId}` }]],
+    )
+  } else if (lineas.length) {
+    await tgSend(lineas.join('\n'))
+  }
+}
+
+/** Botón «Guardar en la ficha». Un solo uso (`documentos_guardados_at`). Nunca lanza. */
+async function guardarDocumentosEnFicha(oportId: number): Promise<string> {
+  const decir = (t: string) => tgSend(t, { html: true }).catch(() => {})
+  const [fila] = await prisma.$queryRaw<{ cliente_id: string | null; documentos: bigint[] | null }[]>(Prisma.sql`
+    UPDATE correduria_asistente_oportunidad SET documentos_guardados_at = now()
+    WHERE id = ${oportId} AND estado = 'abierta' AND documentos_guardados_at IS NULL
+    RETURNING cliente_id::text AS cliente_id, documentos`).catch(() => [])
+  if (!fila || !fila.cliente_id) return 'Ya estaba hecho (o no encuentro la oportunidad)'
+  const ids = (fila.documentos ?? []).map(Number)
+  const docs = ids.length === 0 ? [] : await prisma.$queryRaw<{ id: bigint; file_id: string; nombre: string | null; mime: string | null }[]>(Prisma.sql`
+    SELECT id, file_id, nombre, mime FROM correduria_asistente_documento WHERE id = ANY(${ids}::bigint[])`).catch(() => null)
+  if (docs === null || docs.length === 0) {
+    await decir('✋ No he podido recuperar los documentos (se borran a los 30 días). Súbelos en la ficha → 📎 Documentos.')
+    return 'Sin documentos'
+  }
+  let bien = 0
+  const fallos: string[] = []
+  for (const d of docs) {
+    const file = await descargarTelegram(d.file_id, d.mime ?? '', d.nombre ?? '')
+    if (!file) { fallos.push(`${d.nombre ?? 'documento'}: no se pudo bajar de Telegram`); continue }
+    const form = new FormData()
+    form.set('fichero', new Blob([new Uint8Array(file.buffer)], { type: file.mimeType }), file.fileName)
+    form.set('clienteId', fila.cliente_id)
+    form.set('tipo', 'otro')
+    form.set('notas', 'Póliza que tiene con otra compañía (subida por Telegram para abrir la oportunidad)')
+    const r = await subirDocumentoAsegura(form).catch(() => ({ status: 0, json: null }))
+    if (r.status >= 200 && r.status < 300) bien++
+    else fallos.push(`${d.nombre ?? 'documento'}: ${r.status === 0 || r.status >= 500 ? 'no sé si se ha guardado, míralo en la ficha' : `rechazado (HTTP ${r.status})`}`)
+  }
+  const partes = [bien > 0 ? `✅ ${bien} documento${bien === 1 ? '' : 's'} guardado${bien === 1 ? '' : 's'} en la ficha.` : null, ...fallos.map((f) => `⚠️ ${escapeHtml(f)}`)]
+  await decir([...partes.filter(Boolean), urlCliente(fila.cliente_id)].join('\n'))
+  return bien > 0 ? 'Guardado 📎' : 'No se ha guardado'
+}
+
 export async function resolverBotonCorreduria(accion: string, arg: string): Promise<string> {
   const id = Number(arg)
   if (!Number.isInteger(id) || id <= 0) return 'Botón no válido'
@@ -1012,6 +1068,7 @@ export async function resolverBotonCorreduria(accion: string, arg: string): Prom
   }
   if (accion === 'corregir') return aplicarCorreccion(id)
   if (accion === 'oport') return abrirOportunidad(id)
+  if (accion === 'guardar') return guardarDocumentosEnFicha(id)
   if (accion === 'acc') return hacerAccion(id)
   if (accion === 'accno') {
     const n = await prisma.$executeRaw(Prisma.sql`

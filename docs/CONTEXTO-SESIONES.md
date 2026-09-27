@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — «Añade todo» (mismo PR #3765): dedupe de `update_id` + asistente en `after()`, voz de llamadas
+(«no contesta», «no le interesa»…) → correduría, «📎 Guardar en la ficha» tras abrir, enlace a tarificar (no botón:
+gasta), tareas de hoy DENTRO del aviso de renovaciones (sin aviso nuevo, Alberto pidió menos), y matrícula como
+pista del tomador (a `posibles`). Migración `telegram_update_visto_y_documentos` aplicada.
+
 **(27/09/2026)** — PR #3765: el asistente de Telegram ya no pregunta «¿de qué lead?» teniendo la póliza delante:
 asegura lee el tomador (`leer-documento?tomador=1`), lo busca por DNI **y por nombre** y devuelve un sello cifrado
 (`lib/sello-alta-lead.ts`, exige `v1:`); si no está, botón «Crear lead y abrir». El DNI nunca sale de asegura.

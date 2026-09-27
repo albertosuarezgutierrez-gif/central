@@ -336,6 +336,54 @@ test('proponer_oportunidad ya no exige clienteId y el lead se crea con el sello 
   assert.deepEqual(h?.function.parameters.required, [])
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   assert.match(src, /altaClienteAsegura\(\{ sello: fila\.lead\.sello/)
-  assert.match(src, /lecturasRecientes\(\{ tomador: !clienteId \}\)/)
+  assert.match(src, /lecturasRecientes\(\{ tomador: !clienteId \}, documentos\)/)
   assert.match(src, /decision = COALESCE\(decision, 'cliente'\)/)
+})
+
+// ── «Añade todo» (27/09/2026): reintentos, respuesta rápida, voz de llamadas, guardar, mañana, tarificar ──
+import { rutaTarificar } from './correduria-oportunidad-tg.ts'
+import { bloqueLlamadasHoy } from './correduria/llamadas-hoy.ts'
+
+test('las notas de voz de una llamada van a la correduría, no al contable', () => {
+  for (const t of ['le he llamado y no le interesa', 'no contesta, vuelve a llamar el martes', 'Pepe quiere precio del coche']) {
+    assert.equal(clasificarDestino(t), 'correduria', t)
+  }
+  // con una palabra contable manda el contable (un «he llamado al banco» no es de la correduría)
+  assert.notEqual(clasificarDestino('he llamado al banco por el cargo'), 'correduria')
+})
+
+test('webhook: descarta reintentos de Telegram y contesta rápido a la correduría (lee el FUENTE)', () => {
+  const src = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
+  const visto = src.indexOf('if (await updateYaVisto(body.update_id))')
+  assert.ok(visto > 0 && visto < src.indexOf('const cbData'), 'la deduplicación va antes de enrutar nada')
+  assert.match(src, /ON CONFLICT DO NOTHING RETURNING update_id/)
+  // sin BD se procesa igual (perder un mensaje es peor que contestarlo dos veces)
+  assert.match(src, /if \(filas === null\) return false/)
+  // ningún manejarCorreduriaTg se espera dentro de la petición
+  assert.doesNotMatch(src, /await manejarCorreduriaTg\(/)
+  assert.match(src, /action === 'guardar'\) && String\(cb\.from/)
+})
+
+test('tras abrir: guardar en la ficha es de un solo uso y tarificar es un ENLACE (no cotiza desde Telegram)', () => {
+  assert.equal(rutaTarificar('auto'), 'auto-nuevo')
+  assert.equal(rutaTarificar('hogar'), 'hogar-nuevo')
+  assert.equal(rutaTarificar('responsabilidad_civil'), null)
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  assert.match(src, /WHERE id = \$\{oportId\} AND estado = 'abierta' AND documentos_guardados_at IS NULL/)
+  assert.doesNotMatch(src.slice(src.indexOf('async function ofrecerSiguientes'), src.indexOf('async function guardarDocumentosEnFicha')), /cotizar|retarificar/i)
+})
+
+test('mañana: las tareas de hoy van dentro del aviso de renovaciones, y «no se pudo leer» se dice', () => {
+  const t = (o: Partial<Parameters<typeof bloqueLlamadasHoy>[0] extends readonly (infer T)[] | null ? T : never>) => ({
+    id: 'x', tipo: 'llamada', prioridad: 'media', observaciones: 'Llamar por su póliza', fechaLimite: '2026-09-27', oportunidadId: 'o', clienteId: 'c', cliente: 'Pepe *Ruiz*', ramo: 'auto', ...o,
+  })
+  assert.equal(bloqueLlamadasHoy([], '2026-09-27'), null)
+  assert.match(bloqueLlamadasHoy(null, '2026-09-27') ?? '', /NO significa que no haya/)
+  const b = bloqueLlamadasHoy([t({}), t({ fechaLimite: '2026-09-20', cliente: 'Ana' })], '2026-09-27') ?? ''
+  assert.match(b, /Tareas de hoy \(2\)/)
+  assert.match(b, /Ana.*atrasada/)
+  assert.doesNotMatch(b, /\*Ruiz\*/) // un nombre con * no rompe el Markdown
+  const cron = readFileSync(fileURLToPath(new URL('../app/api/cron/correduria-renovaciones/route.ts', import.meta.url)), 'utf8')
+  assert.match(cron, /bloqueLlamadasHoy\(/)
+  assert.match(cron, /\[renovaciones, llamadas\]\.filter\(Boolean\)/)
 })
