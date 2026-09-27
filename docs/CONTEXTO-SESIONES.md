@@ -777,6 +777,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Materiales Llido fusionada; Martin = contacto de Gymcisa
+`fusionar_clientes`: Materiales Llido Gomez S.l. (bf96c9e0 → bcd1f34a, mismo CIF+tel, OK de Alberto). Martin (fichas
+52886ff1 cliente + 2a6c38e9 lead, nº 11091 del volcado) = persona de contacto de Gymcisa: renombrado a «Martin», física,
+relación «Empleado/a» con Gymcisa ya existente. ⏸️ Su fusión la bloquea `dni_sin_indice` (el lead tiene DNI sin hash):
+se hace tras pulsar el backfill del índice de DNI en /correduria/mantenimiento. No se forzó la guarda.
+
 ## (27/09/2026) Correduría: fichas de EMPRESA normalizadas (solo BD, sin PR)
 59 fichas de sociedad (SL/SA/CB/comunidad/grupo) → `tipo_persona='juridica'`, razón social entera en `nombre`,
 `apellidos=''` (estaban partidas «Transportes»/«Martin Toscano S.l.», o repetidas «Maxiberia S.L»/«Maxiberia S.L»),
