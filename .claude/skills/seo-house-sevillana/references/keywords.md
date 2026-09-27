@@ -19,7 +19,6 @@ USP único, tráfico cualificado.
 - casa con parking en el centro de sevilla
 - alquiler vacacional sevilla con aparcamiento
 - piso turístico sevilla con garaje
-- apartamento centro sevilla parking incluido
 - donde alojarse sevilla con coche
 
 ### Cluster 2: Capacidad / grupos

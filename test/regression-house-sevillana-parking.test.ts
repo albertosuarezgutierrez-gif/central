@@ -43,6 +43,25 @@ test('ningún texto sitúa el parking dentro del edificio de la casa', () => {
   assert.deepEqual(malos, [], 'El parking está en San Juan de la Palma, no en el edificio')
 })
 
+/** El precio de la plaza NO está decidido: Alberto se guarda la opción de cobrarla (27/09/2026). */
+const PRECIO_PROMETIDO =
+  /parking incluido|plaza est[aá] incluida|incluida en el precio|sin coste (extra|adicional)|included in the price|no extra (fees|cost)|incluse? dans le prix|sans frais suppl|im Preis enthalten|ohne Aufpreis|incluso nel prezzo|senza costi (extra|aggiuntivi)/i
+
+test('nadie promete que la plaza sea gratis: sus condiciones se confirman al reservar', () => {
+  const malos: string[] = []
+  for (const f of ficheros()) {
+    readFileSync(join(ROOT, f), 'utf8')
+      .split('\n')
+      .forEach((l, i) => {
+        // Solo frases sobre la plaza, y no las PREGUNTAS («¿La plaza está incluida en el precio?»).
+        const sobrePlaza = /parking|plaza|garaje|garage|space|spot|place|stellplatz|posto/i.test(l)
+        const esPregunta = /\?(<\/summary>)?['",]*$/.test(l.trim())
+        if (PRECIO_PROMETIDO.test(l) && sobrePlaza && !esPregunta) malos.push(`${f}:${i + 1}`)
+      })
+  }
+  assert.deepEqual(malos, [], 'El parking puede cobrarse aparte: no se promete incluido')
+})
+
 test('la página /parking dice dónde está de verdad', () => {
   const html = readFileSync(join(ROOT, 'apps/housesevillana/app/parking/contenido.ts'), 'utf8')
   assert.match(html, /San Juan de la Palma/)
