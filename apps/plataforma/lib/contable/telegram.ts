@@ -61,10 +61,12 @@ export async function manejarDocumentoTg(
     const f = doc.factura
     const txt = `📄 Leído: ${escapeHtml(f.proveedor)} · ${f.fecha.split('-').reverse().join('/')} · ${eur(f.total)}${f.numero ? ` · nº ${escapeHtml(f.numero)}` : ''}.\n🛡️ Es de una aseguradora. ¿Es un seguro TUYO (lo archivo y contabilizo como gasto) o de un cliente o lead de la correduría (no lo toco como gasto)?`
     await logTurno(cuentaId, 'telegram', 'assistant', '[documento de aseguradora: pregunta gasto/cliente]')
-    await tgSendButtons(txt, [[
+    const enviado = await tgSendButtons(txt, [[
       { texto: '🧾 Es mío (gasto)', callback: `cdoc_gasto:${opts.docId}` },
       { texto: '🛡️ De un cliente', callback: `cdoc_cli:${opts.docId}` },
-    ]]).catch(() => {})
+    ]]).catch(() => null)
+    // Sin la pregunta el documento se quedaría sin procesar y sin decir nada: se avisa sin botones.
+    if (enviado === null) await tgSend(`${txt}\n⚠️ No he podido poner los botones: vuelve a mandármelo.`).catch(() => {})
     return
   }
 

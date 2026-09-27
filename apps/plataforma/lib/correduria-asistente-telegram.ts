@@ -562,9 +562,13 @@ export async function registrarDocumentoTg(
 export async function resolverDocumentoDudoso(accion: string, arg: string): Promise<string> {
   const id = Number(arg)
   if (!Number.isInteger(id) || id <= 0) return 'Botón no válido'
-  const [doc] = await prisma.$queryRaw<{ file_id: string; nombre: string | null; mime: string | null; destino: string }[]>(Prisma.sql`
-    SELECT file_id, nombre, mime, destino FROM correduria_asistente_documento WHERE id = ${id}`).catch(() => [])
-  if (!doc) return 'No encuentro ese documento'
+  if (accion !== 'cli' && accion !== 'gasto') return 'Botón no válido'
+  // Un solo uso: dos pulsaciones (o un reintento de Telegram) no procesan el gasto dos veces.
+  const decision = accion === 'cli' ? 'cliente' : 'gasto'
+  const [doc] = await prisma.$queryRaw<{ file_id: string; nombre: string | null; mime: string | null }[]>(Prisma.sql`
+    UPDATE correduria_asistente_documento SET decision = ${decision}
+    WHERE id = ${id} AND decision IS NULL RETURNING file_id, nombre, mime`).catch(() => [])
+  if (!doc) return 'Ya estaba decidido (o no lo encuentro)'
   if (accion === 'cli') {
     await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_asistente_documento SET destino = 'correduria', usado_at = NULL, creado_at = now() WHERE id = ${id}`).catch(() => {})
@@ -863,6 +867,13 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
   await prisma.$executeRaw(Prisma.sql`
     UPDATE correduria_asistente_turno SET pregunta = NULL, respuesta = NULL, nota = NULL
     WHERE creado_at < now() - make_interval(days => ${DIAS_RETENCION_TEXTO}::int) AND pregunta IS NOT NULL`).catch(() => {})
+  // Propuestas que nadie pulsó y documentos subidos hace más de un mes: fuera.
+  await prisma.$executeRaw(Prisma.sql`
+    DELETE FROM correduria_asistente_accion WHERE estado = 'propuesta' AND caduca_at < now() - interval '1 day'`).catch(() => {})
+  await prisma.$executeRaw(Prisma.sql`
+    DELETE FROM correduria_asistente_oportunidad WHERE estado = 'propuesta' AND caduca_at < now() - interval '1 day'`).catch(() => {})
+  await prisma.$executeRaw(Prisma.sql`
+    DELETE FROM correduria_asistente_documento WHERE creado_at < now() - interval '30 days'`).catch(() => {})
 
   const [turno] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
     INSERT INTO correduria_asistente_turno (pregunta) VALUES (${enmascarar(pregunta)}) RETURNING id`)

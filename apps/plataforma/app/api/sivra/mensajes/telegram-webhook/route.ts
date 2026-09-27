@@ -22,7 +22,7 @@ import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } 
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
 import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, registrarDocumentoTg, albumDeCorreduria, resolverDocumentoDudoso } from '@/lib/correduria-asistente-telegram'
-import { clasificarDestino, conCita, esRespuestaACorreduria, tienePrefijo } from '@/lib/correduria-asistente'
+import { conCita, esRespuestaACorreduria, pieDeCorreduria, tienePrefijo } from '@/lib/correduria-asistente'
 import { turnoDeNota } from '@/lib/correduria-asistente'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
@@ -1099,10 +1099,10 @@ export async function POST(req: NextRequest) {
         // «añádelo a oportunidades».
         const pie = (msg.caption || '').trim()
         const grupo = msg.media_group_id ? String(msg.media_group_id) : null
-        // Lo determinista se decide y se APUNTA antes de cualquier espera: las demás fotos del álbum llegan
-        // casi a la vez y miran esta fila para saber adónde van.
-        const rapido = pie !== '' && (tienePrefijo(pie) || clasificarDestino(pie) === 'correduria')
-        const aCorreduria = rapido || (pie !== '' && await esParaCorreduria(pie)) || await albumDeCorreduria(grupo)
+        // Solo un pie INEQUÍVOCO desvía el documento (`pieDeCorreduria`, sin IA ni «turno reciente»): un gasto
+        // desviado por error no se archiva nunca. Lo demás va al contable, que con docId PREGUNTA si el
+        // emisor es una aseguradora. Se decide sin esperas: las otras fotos del álbum miran esta fila.
+        const aCorreduria = pieDeCorreduria(pie) || await albumDeCorreduria(grupo)
         const docId = await registrarDocumentoTg({ fileId: adj.fileId, nombre: adj.nameHint, mime: adj.mimeHint, mediaGroupId: grupo, destino: aCorreduria ? 'correduria' : 'contable' })
         if (aCorreduria) {
           if (pie) await manejarCorreduriaTg(pie)

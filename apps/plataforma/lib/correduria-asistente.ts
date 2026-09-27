@@ -14,7 +14,11 @@
 const PREFIJO = /^\s*(?:\/seguros?\b|seguros?\s*[:,]|correduri[aá]\s*[:,])/i
 
 /** Palabras que solo tienen sentido en la correduría (el contable no las maneja). */
-const PROPIAS = /\b(p[oó]lizas?|siniestros?|renovaci(?:[oó]n|ones)|tomador(?:es)?|asegurad[oa]s?|retarific\w*|codeoscopic|avant2|cima|eiac|tirea|coberturas?|franquicia|carta verde|anulaci[oó]n(?:es)? de p[oó]liza|oportunidad(?:es)?|leads?|impagad\w*|recibos? devuelt\w*|vencimientos?|mapfre|allianz|occident|reale|generali|axa|l[ií]nea directa|mutua madrile\w+|pelayo|liberty|zurich|santa ?luc[ií]a|helvetia|fiatc|asisa|sanitas|adeslas|dkv|fidelidade)\b/i
+const PROPIAS = /\b(p[oó]lizas?|siniestros?|renovaci(?:[oó]n|ones)|tomador(?:es)?|asegurad[oa]s?|retarific\w*|codeoscopic|avant2|cima|eiac|tirea|coberturas?|franquicia|carta verde|anulaci[oó]n(?:es)? de p[oó]liza|oportunidad(?:es)?|leads?)\b/i
+
+/** Palabras de la correduría que TAMBIÉN usa el contable (un recibo de Mapfre puede ser un gasto propio):
+ *  solo deciden si no hay ninguna palabra contable. */
+const PROPIAS_SUAVES = /\b(impagad\w*|recibos? devuelt\w*|vencimientos?|mapfre|allianz|occident|reale|generali|axa|l[ií]nea directa|mutua madrile\w+|pelayo|liberty|zurich|santa ?luc[ií]a|helvetia|fiatc|asisa|sanitas|adeslas|dkv|fidelidade)\b/i
 
 /** Matrícula española moderna (1234ABC / 1234 ABC). Un gasto no se pregunta por matrícula. */
 const MATRICULA = /\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/i
@@ -35,6 +39,7 @@ export function clasificarDestino(texto: string): Destino {
   if (PROPIAS.test(t)) return 'correduria'
   // Lo contable ANTES que la matrícula: «1500 kWh» o «2000 BTC» parecen una matrícula y no lo son.
   if (CONTABLES.test(t)) return 'contable'
+  if (PROPIAS_SUAVES.test(t)) return 'correduria'
   if (MATRICULA.test(t)) return 'correduria'
   return 'dudoso'
 }
@@ -322,7 +327,8 @@ export function costeConservador(tokens: number): number {
 export function esRespuestaACorreduria(citado: string): boolean {
   const t = citado.trim()
   if (!t) return false
-  if (/^(?:🛡️|🛡|🎯|✏️|🚀)/u.test(t)) return true
+  // ✏️ NO: el aviso de retoque del agente de huéspedes también empieza así.
+  if (/^(?:🛡️|🛡|🎯|🧾|🚀)/u.test(t)) return true
   return clasificarDestino(t) === 'correduria'
 }
 
@@ -370,4 +376,16 @@ export function hoyMadrid(ahora: Date = new Date()): string {
 const ASEGURADORAS = /\b(mapfre|allianz|occident|catalana occidente|reale|generali|axa|l[ií]nea directa|mutua madrile\w+|pelayo|liberty|zurich|santa ?luc[ií]a|helvetia|fiatc|asisa|sanitas|adeslas|dkv|fidelidade|verti|qualitas|mgs|caser|segurcaixa|vidacaixa|ocaso|plus ultra|seguros bilbao|nationale nederlanden|metlife|aegon|asefa|arag|das|hiscox|chubb|aig|markel|direct seguros|genesis|regal|mutua general|lagun aro|seguros? )/i
 export function esAseguradora(nombre: string | null | undefined): boolean {
   return ASEGURADORAS.test(nombre ?? '')
+}
+
+/**
+ * ¿El PIE de un documento lo manda a la correduría sin pasar por el contable? Solo si lo dice sin
+ * ambigüedad: el atajo («seguro: …») o que hable de un lead, cliente u oportunidad. Un pie como «recibo
+ * Mapfre hogar» NO: puede ser un seguro de Alberto, y para eso el contable ya pregunta con botones.
+ * Tampoco cuenta el «acabo de hablar con el asistente» ni la IA: un gasto desviado aquí no se archiva nunca.
+ */
+export function pieDeCorreduria(pie: string): boolean {
+  const t = pie.trim()
+  if (!t) return false
+  return PREFIJO.test(t) || /\b(leads?|leds|oportunidad(?:es)?|cliente|clientes|p[oó]liza de (?:un|una|mi) cliente)\b/i.test(t)
 }

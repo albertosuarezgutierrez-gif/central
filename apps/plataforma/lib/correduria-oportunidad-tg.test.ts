@@ -119,7 +119,7 @@ test('el webhook desvía a la correduría el documento con pie de correduría y 
   const i = src.indexOf('const adj = adjuntoDeMensaje(msg)')
   const bloque = src.slice(i, src.indexOf('manejarDocumentoTg(', i))
   assert.match(bloque, /registrarDocumentoTg\(/)
-  assert.match(bloque, /esParaCorreduria\(pie\)/)
+  assert.match(bloque, /pieDeCorreduria\(pie\)/)
   assert.match(bloque, /if \(aCorreduria\)[\s\S]*return NextResponse\.json/)
   // El botón «Abrir» escribe en la cartera: solo lo pulsa el titular.
   assert.match(src, /action === 'oport'[^)]*\) && String\(cb\.from/)
@@ -130,7 +130,7 @@ test('el webhook desvía a la correduría el documento con pie de correduría y 
 import { conCita, esRespuestaACorreduria, hoyMadrid, memoriaIds, ERROR_NO_UUID } from './correduria-asistente.ts'
 
 test('las frases típicas de la correduría ya no se van al contable', () => {
-  for (const t of ['recibo devuelto por el banco de Pablo', 'lo de la Mapfre de Juan', 'impagados de este mes', 'vencimientos de octubre']) {
+  for (const t of ['recibos devueltos de Pablo', 'lo de la Mapfre de Juan', 'impagados de este mes', 'vencimientos de octubre']) {
     assert.equal(clasificarDestino(t), 'correduria', t)
   }
   // «seguro» a secas (= «estoy seguro», o el seguro PROPIO) no basta: lo decide la IA o el contable
@@ -176,7 +176,9 @@ test('el webhook manda los reply de la correduría al asistente ANTES del catch-
   const reply = src.indexOf('esRespuestaACorreduria(citado)')
   const catchAll = src.indexOf('// C) Catch-all del agente de CONTABILIDAD')
   assert.ok(reply > 0 && reply < catchAll)
-  assert.ok(src.indexOf('await registrarDocumentoTg(') > src.indexOf('const rapido ='))
+  // Un documento se va directo a la correduría SOLO por lo que dice su pie, no por una marca de aseguradora
+  assert.match(src, /const aCorreduria = pieDeCorreduria\(pie\) \|\| await albumDeCorreduria\(grupo\)/)
+  assert.ok(src.indexOf('await registrarDocumentoTg(') > src.indexOf('const aCorreduria ='))
 })
 
 // ── Acciones del día a día (27/09/2026) ──
@@ -236,4 +238,19 @@ test('webhook: documento de aseguradora pregunta ANTES de archivar, y el atajo d
   const atajo = b.indexOf("if (tienePrefijo(msg.text || '')) {")
   assert.ok(atajo > 0 && atajo < b.indexOf('getPendiente(bookingId)'), 'el atajo se mira antes que el retoque')
   assert.match(wh, /prefix === 'cdoc'[\s\S]{0,200}cb\.from\?\.id/)
+})
+
+// ── Revisión 27/09/2026: un gasto propio con nombre de aseguradora NO se desvía a la correduría ──
+import { pieDeCorreduria } from './correduria-asistente.ts'
+
+test('pie de documento: solo lead/cliente/oportunidad (o prefijo) lo manda a la correduría', () => {
+  for (const t of ['recibo Mapfre hogar', 'seguro del coche', 'factura Allianz', '']) assert.equal(pieDeCorreduria(t), false, t)
+  for (const t of ['seguro de un lead', 'póliza de un cliente', 'añade en oportunidades', 'de un leds']) assert.equal(pieDeCorreduria(t), true, t)
+  // el texto libre con una aseguradora y palabras de gasto se lo queda el contable
+  assert.notEqual(clasificarDestino('recibo Mapfre hogar pagado con la tarjeta'), 'correduria')
+})
+
+test('el botón gasto/cliente es de un solo uso (lee el FUENTE)', () => {
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  assert.match(src, /SET decision = \$\{decision\}\s+WHERE id = \$\{id\} AND decision IS NULL RETURNING/)
 })

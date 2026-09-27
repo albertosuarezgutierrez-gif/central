@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — Revisión PR #3748 (asistente correduría). Bloqueante corregido: un documento con pie que nombra
+aseguradora («recibo Mapfre hogar») ya NO se desvía a la correduría; solo `pieDeCorreduria()` (prefijo o lead/cliente/
+oportunidad) o el álbum. Aseguradoras → `PROPIAS_SUAVES` (tras las contables). Botón gasto/cliente de un solo uso
+(columna `decision`, migración aplicada). Purga de propuestas caducadas y documentos >30 días. Pendiente conocido:
+sin dedupe de `update_id` y presupuesto de tiempo del webhook con 7 vueltas.
+
 **(27/09/2026)** — Limpieza de rutinas: **prospección comercial ya solo deja BORRADORES** también para ia-rest (enviaba correo comercial sin OK; prompt editado por API). Borrados el recordatorio «Graphify vs grafo» y 6 check-ins caducados; otros 8 desactivados los bloqueó el clasificador (no consumen). **Pendiente de Alberto en la UI** (creadas por `http_api`, la API no deja editarlas): Booking a 1 pasada/día (`30 8 * * *`), trading-analista a 1 (`15 23 * * 1-5`), y activar «Idealista radar (diario)» con su conector. Graphify NO está en `.mcp.json`: es conector de cuenta, se quita en claude.ai → Conectores.
 
 **(27/09/2026)** — Idealista por conector: **la rutina `idealista-radar` no había corrido NUNCA** (sin trigger, cero latidos) aunque su skill se decía «la única vía» desde el 24/09; lo que llenaba el corpus eran las alertas de correo (19 correos ese día). Se amplía a **Asturias (L-X-V), Cantabria (M-J-S) y Cádiz (D)** además de Huelva diario; centros nuevos en `CENTROS` medidos contra anuncios reales del conector (Llanes y Cudillero, términos alargados, necesitaban más radio). Guardián `test/regression-idealista-radar-nucleos.test.ts` (lee la tabla de la skill; visto en rojo). Primera pasada real a mano: 285 casas en 12 núcleos, latido OK. Trigger `trig_01HneHebAVaM6HoLzJ1DKhUS` creado **en pausa**: la API no adjunta conectores → Alberto añade Idealista + repo + envs en la UI y lo activa. No quitar las alertas de correo hasta ver latidos verdes.
