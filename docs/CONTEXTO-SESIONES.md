@@ -16,8 +16,8 @@
 (ia-rest/alquiler/asegura/asegura-portal/housesevillana importaban `@central/*` sin declararlo — riesgo de
 build, no de tipos). 🔴 **44 PRs `claude/*` zombis abiertos (05-24/09, hasta 22 días)**: su código YA está
 en `main` por otra vía (verificado en 3 casos), el automerge los descarta bien mismo, pero nadie los
-cierra — y por eso `CONTEXTO-SESIONES.md` tiene un HUECO real de memoria del 05 al 13/09 (9 días). 3ª vez
-que se señala (20/09, 06/09). Pendiente: Alberto decide cierre masivo. 3 huecos de CLAUDE.md corregidos.
+cierra. (El «hueco de memoria 05-13/09» que se dijo aquí era FALSO: esas entradas están, con formato
+`- **título (dd/mm/aaaa).**` que el grep de `**(dd/mm` no veía.) Pendiente: Alberto decide cierre masivo.
 
 **(26/09/2026)** Correduría · lotes 3+4 (PR #3707): «siguiente paso» en la ficha (`siguientePaso()` de
 module-seguros), DNI/carnés plegados, «Más» partida en Cumplimiento/Referencia, renovaciones 90 d plegadas en Cartera, y

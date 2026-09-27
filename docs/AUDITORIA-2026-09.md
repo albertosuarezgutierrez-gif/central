@@ -599,7 +599,7 @@ tipos. **Corregido en el acto** (bajo riesgo, mecánico, verificado contra `pack
 app): las 5 líneas de `transpilePackages` ahora incluyen lo que ya se importa. Va en el PR de esta
 pasada para que la CI lo confirme.
 
-### 🔴 Backlog de PRs de rutinas — TERCERA vez que se señala, y esta vez con el daño confirmado
+### 🟡 Backlog de PRs de rutinas — TERCERA vez que se señala (higiene, sin daño de memoria)
 `list_pull_requests` (state=open) devuelve **44 PRs** de ramas `claude/*`, fechados 05/09→24/09/2026
 (hasta **22 días** de antigüedad). El vigilante `rutinas-automerge.yml` está vivo (runs en verde cada
 pocos minutos), pero prácticamente ninguno de los 44 cumple sus condiciones — confirmado leyendo el
@@ -615,12 +615,11 @@ log real de su última pasada (run `36285928582`), no solo su conclusión:
   re-disparados sobre el sha del bot) y otro (#3106, #3100) lleva **8 días** con «CI 24/31 —
   pendiente» sin completar nunca — mismo síntoma "Expected para siempre" que ya documenta el
   `CLAUDE.md` raíz para pushes con el token de la App.
-- **Daño confirmado, no solo teórico:** `docs/CONTEXTO-SESIONES.md` en `main` salta directamente del
-  14/09/2026 al 26/08/2026 rotado — **faltan enteros los registros del 05 al 13/09/2026** (9 días),
-  atrapados en estos PRs nunca mergeados (#2318/#2319/#2322/#2327/#2412/#2414/#2483/#2484/#2488/
-  #2534/#2573/#2627/#2741/#2757/#2868/#2877/#2883, entre otros). El código real de esos días SÍ llegó
-  a producción (por los PRs limpios que lo reemplazaron); lo perdido es la narrativa de memoria de
-  esos 9 días, salvo lo que se pueda rescatar leyendo el cuerpo de esos PRs a mano.
+- ~~Daño confirmado: faltan en `CONTEXTO-SESIONES.md` los registros del 05 al 13/09/2026.~~ **FALSO,
+  corregido en la revisión del PR (27/09/2026):** esas entradas SÍ están en `main` (≈300 menciones de
+  esas fechas, p. ej. líneas con «(13/09/2026)», «(07/09/2026)», «(05/09/2026)»), pero con el formato
+  `- **título (dd/mm/aaaa).**` y no `**(dd/mm/aaaa)**`, que era lo único que buscaba el grep. Los PRs
+  zombis no han atrapado memoria que falte en `main`.
 - **Ya se señaló, con el mismo diagnóstico, el 20/09/2026** (46 PRs entonces, hasta 16 días) y de
   nuevo antes en `CLAUDE.md` raíz (caso del 06/09, PR #2434). El hueco de `docs/uso-herramientas/*`
   en el allowlist que se propuso el 20/09 **ya está corregido** en `rutinas-automerge.yml` — pero el
