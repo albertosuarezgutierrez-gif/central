@@ -47,6 +47,12 @@ description: Agente PROGRAMADO semanal (domingo) que mejora los prompts de los a
   las skills de agentes (typo, ruta de archivo movida, nombre de tabla renombrado) que NO
   cambian comportamiento. Cada una deja línea en `docs/AUTO-APLICADOS.md` (mismo formato
   que la auditoría). Máximo 5 por pasada (guardarraíl 4).
+- **La poda y el auto-informe NO viajan con un cambio de comportamiento.** El paso 6
+  (bitácora, `FEEDBACK-AGENTES.md`, `CONTEXTO-SESIONES.md`) va en **su propio PR** que
+  solo toca esos `docs/` de registro, para que lo mergee solo `rutinas-automerge.yml`.
+  Si ese PR toca además cualquier `.claude/**`, el automerge lo descarta entero, se queda
+  en draft, a la semana entra en conflicto y la siguiente pasada re-diagnostica el mismo
+  rango desde cero: pasó cuatro domingos seguidos (#2413 → #2864 → #3131 → #3721).
 
 ## Pasos (crea un TodoWrite por bloque)
 
@@ -87,7 +93,12 @@ description: Agente PROGRAMADO semanal (domingo) que mejora los prompts de los a
 
 6. **Mantenimiento y cierre.**
    - Poda de `AGENTES-BITACORA.md`: elimina las entradas procesadas y actualiza "Última
-     poda" (fecha + nº de entradas del rango).
+     poda" (fecha + nº de entradas del rango). **La poda está hecha cuando está en
+     `main`, no cuando está en tu commit:** al empezar la pasada, comprueba en
+     `origin/main` que el rango de la pasada anterior ya no está; si sigue, busca su PR
+     (abierto, en conflicto o cerrado sin mergear) y arréglalo antes de podar otra vez.
+     Las podas del 23/08, 30/08, 13/09 y 20/09 se declararon hechas y ninguna llegó a
+     `main` — el "cepo que no se ha visto fallar" de `CLAUDE.md`, en la propia bitácora.
    - `FEEDBACK-AGENTES.md`: mueve las pendientes atendidas a "Procesadas" con su marca
      (`✅ procesado <fecha> → PR #xxx` o `→ sin acción: <motivo>`).
    - Añade TU PROPIA entrada de auto-informe en la bitácora (el entrenador también es un
