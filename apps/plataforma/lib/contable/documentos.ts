@@ -11,6 +11,7 @@
 // lo has pagado». Casos reales: la factura de lavandería de 780,10€ del 03/08 (el cargo entró en la
 // BD el 06/08, un día DESPUÉS de que el agente lo negara) y la factura 47/2026 de 278,30€ del 06/08
 // (Kutxabank llegaba entonces al 05/08). Regla del CLAUDE.md: dato que no hay ≠ dato que no se ha mirado.
+import { esAseguradora } from '../correduria-asistente'
 import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
@@ -26,6 +27,9 @@ export type DocProcesado =
   | { ok: false; motivo: string }
   | { ok: true; tipo: 'factura'; factura: FacturaDoc; cruce: CruceDoc; archivo: ArchivoFactura }
   | { ok: true; tipo: 'extracto_tarjeta'; resumen: string; driveUrl?: string }
+  /** Documento de una ASEGURADORA por Telegram: puede ser un seguro de Alberto (gasto) o de un cliente o
+   *  lead de la correduría. No se archiva ni se contabiliza hasta que él lo diga con un botón. */
+  | { ok: true; tipo: 'posible_seguro'; factura: FacturaDoc }
 
 // Ventana ancha para el «existe, pero en otra fecha»: un recibo domiciliado puede cargarse bastante
 // después de la fecha de la factura. Se PREGUNTA, no se concilia solo.
@@ -171,6 +175,7 @@ async function procesarExcel(
 
 export async function procesarDocumento(
   cuentaId: string, buffer: Buffer, mimeType: string, fileName = '',
+  opts: { preguntarSiSeguro?: boolean } = {},
 ): Promise<DocProcesado> {
   if (RE_EXCEL.test(fileName) || MIME_EXCEL.test(mimeType)) {
     return await procesarExcel(cuentaId, buffer, mimeType, fileName)
@@ -206,6 +211,11 @@ export async function procesarDocumento(
     }
     return interp
   }
+
+  // Póliza o recibo de una aseguradora subido por Telegram (27/09/2026): puede ser de un cliente o lead de la
+  // correduría, y archivarlo e imputarlo como gasto de Alberto sería meter en su libro el contrato de un
+  // tercero. Se para aquí, ANTES de archivar, y se pregunta.
+  if (opts.preguntarSiSeguro && esAseguradora(interp.factura.proveedor)) return { ok: true, tipo: 'posible_seguro', factura: interp.factura }
 
   // Archivar en Drive + imputar al libro de gastos ANTES de cruzar con el banco: es lo que Alberto
   // da por hecho al subir una factura («que me la lea, me la contabilice y me la archive»), y hasta

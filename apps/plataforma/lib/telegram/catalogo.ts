@@ -586,7 +586,7 @@ export const AVISOS: AvisoTelegram[] = [
     id: 'correduria.cima-respaldo', categoria: 'correduria',
     titulo: 'Respaldo del pull de CIMA',
     que: 'El pull de GitHub Actions no ha corrido y plataforma lo lanza por su cuenta: avisa si lo consigue (la primera vez), si falla o si el respaldo no está configurado.',
-    cuando: 'A las 08:00 y 14:00 UTC, solo si Actions no ha traído CIMA',
+    cuando: 'A las 09:00, 14:00 y 18:30 UTC, solo si Actions no ha traído CIMA',
   },
   {
     id: 'correduria.cima-liq', categoria: 'correduria',
@@ -621,7 +621,7 @@ export const AVISOS: AvisoTelegram[] = [
   {
     id: 'correduria.lead-nuevo', categoria: 'correduria',
     titulo: 'Lead nuevo desde la web',
-    que: 'Alguien ha pedido presupuesto en /seguros: sus datos, qué quiere y el enlace a su ficha (o que no se pudo registrar).',
+    que: 'Alguien ha pedido presupuesto en la web (grupoasegura.es): sus datos, qué quiere y el enlace a su ficha (o que no se pudo registrar).',
     cuando: 'Al llegar un formulario',
   },
   {
