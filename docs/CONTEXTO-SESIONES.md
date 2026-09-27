@@ -765,6 +765,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Correduría: fichas de EMPRESA normalizadas (solo BD, sin PR)
+59 fichas de sociedad (SL/SA/CB/comunidad/grupo) → `tipo_persona='juridica'`, razón social entera en `nombre`,
+`apellidos=''` (estaban partidas «Transportes»/«Martin Toscano S.l.», o repetidas «Maxiberia S.L»/«Maxiberia S.L»),
+espacios dobles fuera. GLOBAL 2 INSTALACIONES TÉCNICAS ya sale entera. NO tocadas a propósito: «Martin/Gymcisa Sl»
+×2 (¿persona de contacto o empresa?). Duplicados SIN fusionar: Carne Alam S.L y JUMOYCOR S.L tienen DOS CIF
+distintos (no se funden); Materiales Llido Gomez S.l. ×2 = mismo CIF+tel, leads sin pólizas → candidato a lote.
+
 ## (27/09/2026) Vigía de ingesta: «renovaciones sin llegar» por compañía
 - Nueva señal en el vigía `correduria_ingesta` (Telegram + /correduria): pólizas en vigor vencidas hace >15 días sin recibo del periodo nuevo, agrupadas por compañía (`renovacionesSinLlegar`, module-seguros/ingesta.ts; lectura en apps/asegura/lib/ingesta.ts). Hoy: Mapfre 10 (desde 05/06). El primer pase tras desplegar suena una vez. Alberto: Mapfre ya manda, se espera a que complete esta semana (borrador a CIMA SAU-24238 en Gmail, sin enviar).
 
