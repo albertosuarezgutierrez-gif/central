@@ -757,6 +757,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Correduría: sustitución futura = un seguro, buscador de relaciones, fichas descartadas con póliza viva (PR #3756)
+- Portal: Allianz→Occident de Víctor de la Fuente (efecto 01/11) salían dos «En vigor». La vieja se retira de la bóveda ya; la fila nueva dice «Empieza el… / Hasta entonces, Allianz». La hoja QR sigue enseñando la que cubre HOY (`carteraALaVista(c, { soloSiYaCubre })`).
+- Buscador de relaciones decía «nadie» sobre fichas YA relacionadas (Studium como «Empleado/a» del volcado): ahora las nombra con su tipo.
+- «Descartar» ya no deja descartar a quien es INTERVINIENTE de una póliza viva. Reactivadas en BD 7 fichas descartadas con póliza viva (Nieves Rodríguez, Pablo Guzmán, La Ponde, Monte Carmelo 68, Úrsula Navarro, CP Cancionera 4, Mª del Mar Guzmán). Causa: la ingesta CIMA (repo `asegura`) no llama a `reactivarPorPoliza`.
+- Auditoría abierta: 16 pólizas vigentes con vencimiento pasado (13 Mapfre/Allianz, CIMA no trae la renovación; oculta el Toyota 8022KXY de Víctor en «En vigor»); 17 relaciones «Empleado/a» del volcado; 31 gemelas volcado+CIMA.
+- Pendiente de decisión: que los intervinientes vean en el portal las pólizas donde aparecen (propuesto: nivel mínimo, sin prima/recibos/datos del tomador).
+
 ## (27/09/2026) Portal: un cambio de compañía con efecto futuro ya no sale como dos seguros
 - Moto 4897FTM de Víctor de la Fuente: Allianz→Occident (efecto 01/11/2026) salían las DOS «En vigor». `sustituidasARetirar` esperaba a que la nueva empezara; ya no: la vieja se retira de la lista en cuanto hay enlace (nueva vigente, vieja sin pendientes). La fila nueva dice «Empieza el…» + «Hasta entonces, Allianz»; la ficha, «Pasas de… Hasta ese día te sigue cubriendo…».
 - Abierto (no tocado): Toyota 8022KXY Mapfre tiene `fecha_vencimiento` 18/06/2026 en BD pero CIMA dice EV → `vigenciaPoliza` = no_vigente y el filtro «En vigor» la oculta. La renovación tácita no llegó por CIMA. Y el cliente 722315d3 no tiene ningún `portal_vinculo`.

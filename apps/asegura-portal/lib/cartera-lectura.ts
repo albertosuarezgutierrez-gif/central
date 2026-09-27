@@ -348,8 +348,12 @@ function nivelDeVinculo(v: string): Nivel {
  * La cartera para PINTAR la lista (bóveda, hoja QR): sin las pólizas ya sustituidas. Los permisos
  * (partes, ficha, recordatorios) usan la cartera entera, nunca esta.
  */
-export function carteraALaVista(c: CarteraPortal): CarteraPortal {
-  const quitar = (ts: TitularPortal[]) => ts.map((t) => ({ ...t, polizas: t.polizas.filter((p) => p.sustituidaPor === null) }))
+export function carteraALaVista(c: CarteraPortal, opciones: { soloSiYaCubre?: boolean } = {}, hoy: Date = new Date()): CarteraPortal {
+  // 🚨 `soloSiYaCubre` (hoja QR): la que se enseña tras un accidente es la que cubre HOY. Mientras la
+  // sustituta no ha empezado, la vieja se queda. La bóveda, en cambio, la retira ya (una sola fila).
+  const aunCubre = (p: PolizaPortal) => opciones.soloSiYaCubre === true && p.sustituidaPor?.desde != null && p.sustituidaPor.desde > hoy
+  const quitar = (ts: TitularPortal[]) =>
+    ts.map((t) => ({ ...t, polizas: t.polizas.filter((p) => p.sustituidaPor === null || aunCubre(p)) }))
   return { ...c, propias: quitar(c.propias), autorizadas: quitar(c.autorizadas) }
 }
 
