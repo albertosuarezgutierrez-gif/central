@@ -14,18 +14,27 @@ export function mismaCompania(a: string | null, b: string | null): 'misma' | 'ot
 /**
  * ¿Es el MISMO seguro? La identidad es el nº de póliza; la compañía es solo la
  * etiqueta (regla «agrupar por identidad»). Con número en los dos lados manda
- * el número; si falta en alguno, se cae a la compañía.
+ * el número; si no, la matrícula (el coche); si tampoco, la compañía.
  */
-export type SeguroOportunidad = { aseguradora: string | null; numeroPoliza?: string | null }
+export type SeguroOportunidad = { aseguradora: string | null; numeroPoliza?: string | null; matricula?: string | null }
 export function mismoSeguro(a: SeguroOportunidad, b: SeguroOportunidad): 'misma' | 'otra' | 'no_se' {
-  const x = claveNumero(a.numeroPoliza), y = claveNumero(b.numeroPoliza)
+  const x = claveNumeroPoliza(a.numeroPoliza), y = claveNumeroPoliza(b.numeroPoliza)
   if (x && y) return x === y ? 'misma' : 'otra'
+  const mx = claveMatricula(a.matricula), my = claveMatricula(b.matricula)
+  if (mx && my) return mx === my ? 'misma' : 'otra'
   return mismaCompania(a.aseguradora, b.aseguradora)
 }
 
-function claveNumero(s: string | null | undefined): string | null {
+/** Nº de póliza compactado (mayúsculas, solo letras y cifras, sin ceros delante). `null` = demasiado corto para fiarse. */
+export function claveNumeroPoliza(s: string | null | undefined): string | null {
   const t = (s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '').replace(/^0+/, '')
   return t.length >= 4 ? t : null
+}
+
+/** Matrícula compactada (mayúsculas, sin espacios ni guiones). `null` = no hay una fiable. */
+export function claveMatricula(s: string | null | undefined): string | null {
+  const t = (s ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  return t.length >= 5 && t.length <= 10 ? t : null
 }
 
 const RELLENO = new Set(['seguros', 'seguro', 'mutua', 'compania', 'de', 'y', 'reaseguros', 'aseguradora', 'sa', 's', 'a', 'la', 'el', 'grupo'])

@@ -159,6 +159,7 @@ type Resultado =
 
 export default function AutoNuevo({
   clienteId,
+  matriculaInicial = '',
   etiquetaCliente,
   faltanInicial,
   garajes,
@@ -173,6 +174,8 @@ export default function AutoNuevo({
   companias,
 }: {
   clienteId: string
+  /** Leída del documento por el asistente de Telegram (`?matricula=`). */
+  matriculaInicial?: string
   etiquetaCliente: string
   /** `null` = no se ha podido precalificar la persona · `[]` = revisado, nada falta. */
   faltanInicial: Reparo[] | null
@@ -220,7 +223,7 @@ export default function AutoNuevo({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const [matricula, setMatricula] = useState('')
+  const [matricula, setMatricula] = useState(matriculaInicial)
   const [matriculacion, setMatriculacion] = useState('')
   // true = la fecha la ha puesto la ESTIMACIÓN por matrícula, no el corredor:
   // se pinta como tal y se recalcula si cambia la matrícula. En cuanto el

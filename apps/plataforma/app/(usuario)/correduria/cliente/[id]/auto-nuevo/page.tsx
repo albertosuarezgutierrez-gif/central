@@ -29,8 +29,11 @@ export const maxDuration = 180
  * en asegura): sin póliza que retarificar no hay compañía anterior que
  * declarar, así que no lleva el bonus por antigüedad de una retarificación.
  */
-export default async function AutoNuevoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function AutoNuevoPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id: clienteId } = await params
+  // `?matricula=` la trae el asistente de Telegram, leída de la póliza: no se teclea otra vez.
+  const mq = (await searchParams).matricula
+  const matriculaInicial = typeof mq === 'string' ? mq.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) : ''
 
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
@@ -101,6 +104,7 @@ export default async function AutoNuevoPage({ params }: { params: Promise<{ id: 
       )}
       <AutoNuevo
         clienteId={clienteId}
+        matriculaInicial={matriculaInicial}
         etiquetaCliente={pre.pre.etiquetaCliente}
         faltanInicial={pre.pre.faltan}
         garajes={garajes.estado === 'ok' ? garajes.opciones : []}

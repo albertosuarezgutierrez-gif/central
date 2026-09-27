@@ -1,3 +1,4 @@
+import { claveMatricula } from './compania-oportunidad.ts'
 // packages/module-seguros/src/oportunidad-seguimiento.ts
 //
 // El SEGUIMIENTO de una oportunidad (Fase 1 de ASegura OS, PR B, 23/09/2026):
@@ -243,6 +244,9 @@ export type AltaValida = {
   prima: number | null
   /** Nº de la póliza que tiene hoy: es lo que distingue dos seguros del mismo ramo. */
   numeroPoliza: string | null
+  /** El coche (auto/moto): identifica el seguro cuando falta el número y da nombre a la oportunidad. */
+  matricula: string | null
+  vehiculo: string | null
   /** El primer paso: nace con él, o no nace. */
   tarea: TareaValida
 }
@@ -255,7 +259,7 @@ export type AltaValida = {
  * de Vencimientos: eso lo dice la pantalla, no se inventa una fecha.
  */
 export function validarAltaOportunidad(
-  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; tipoTarea?: unknown; fechaTarea?: unknown; nota?: unknown },
+  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; matricula?: unknown; vehiculo?: unknown; tipoTarea?: unknown; fechaTarea?: unknown; nota?: unknown },
   hoy: Date,
 ): { ok: true; alta: AltaValida } | { ok: false; motivo: string } {
   const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
@@ -279,6 +283,8 @@ export function validarAltaOportunidad(
       aseguradora: campos.valores.aseguradora ?? null,
       prima: campos.valores.prima ?? null,
       numeroPoliza: texto(d.numeroPoliza, 60),
+      matricula: claveMatricula(texto(d.matricula, 20)),
+      vehiculo: texto(d.vehiculo, 80),
       tarea: t.tarea,
     },
   }

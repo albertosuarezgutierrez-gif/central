@@ -277,6 +277,9 @@ export type OportunidadDeCliente = Oportunidad & {
   aseguradora: string | null
   /** Nº de la póliza que tiene hoy (`null` = no consta). */
   numeroPoliza: string | null
+  /** El coche (auto/moto), si se leyó al abrirla. */
+  matricula: string | null
+  vehiculo: string | null
   /** `null` = no consta: nunca 0,00€. */
   prima: number | null
   creada: string
@@ -321,6 +324,8 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
       cerradaAt: texto(r.cerradaAt),
       aseguradora: texto(r.aseguradora),
       numeroPoliza: texto(r.numeroPoliza),
+      matricula: texto(r.matricula),
+      vehiculo: texto(r.vehiculo),
       prima: numero(r.prima),
       creada,
       proximaTarea: ptTipo && ptFecha ? { tipo: ptTipo, fechaLimite: ptFecha } : null,
@@ -615,6 +620,11 @@ export type LecturaDocumentoOportunidad =
       numeroPoliza: string | null
       vence: string | null
       prima: number | null
+      /** El coche, si es de auto (`null` = no consta). */
+      matricula?: string | null
+      vehiculo?: string | null
+      /** Pólizas EN VIGOR de nuestra cartera con ese número: con alguna, ya es nuestra. `null` = no se ha podido mirar. */
+      enCartera?: PolizaNuestra[] | null
       /** Solo si se pidió (`?tomador=1`). */
       tomador?: TomadorLeido
     }
@@ -625,6 +635,8 @@ export type LecturaDocumentoOportunidad =
  * que ya lo tienen (buscado allí dentro) y `sello` es el alta cifrada para crear el lead.
  * `coincidencias: null` = no se ha podido mirar o el documento no trae DNI (≠ `[]`, «no está»).
  */
+export type PolizaNuestra = { polizaId: string; clienteId: string; aseguradora: string | null }
+
 export type FichaTomador = { id: string; nombre: string; tipo: string; activo: boolean }
 export type TomadorLeido = {
   nombre: string | null
@@ -675,8 +687,19 @@ export function interpretarLecturaOportunidad(status: number, json: unknown): Le
   if (Object.values(r).every(v => v === null)) {
     return { estado: 'error', motivo: 'el documento se ha leído pero no trae ramo, compañía, vencimiento ni prima' }
   }
+  const extra = {
+    matricula: txt(o.matricula),
+    vehiculo: txt(o.vehiculo),
+    enCartera: Array.isArray(o.enCartera)
+      ? o.enCartera.flatMap((x): PolizaNuestra[] => {
+          const p = x !== null && typeof x === 'object' ? (x as Record<string, unknown>) : null
+          const polizaId = txt(p?.polizaId), clienteId = txt(p?.clienteId)
+          return polizaId && clienteId ? [{ polizaId, clienteId, aseguradora: txt(p?.aseguradora) }] : []
+        })
+      : null,
+  }
   const tomador = interpretarTomador(o.tomador)
-  return tomador ? { estado: 'ok', ...r, tomador } : { estado: 'ok', ...r }
+  return tomador ? { estado: 'ok', ...r, ...extra, tomador } : { estado: 'ok', ...r, ...extra }
 }
 
 /** La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50». */

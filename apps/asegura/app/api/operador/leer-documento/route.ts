@@ -3,6 +3,8 @@ import { operadorAutorizado } from '@/lib/operador'
 import { leerPoliza, revisarFichero } from '@/lib/documentos/extraer-poliza'
 import { auditado } from '@/lib/auditoria'
 import { tomadorDe } from '@/lib/tomador-documento'
+import { correduriaUnica } from '@/lib/cartera'
+import { polizaEnCartera } from '@/lib/poliza-en-cartera'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -24,6 +26,10 @@ export const maxDuration = 120
  *   tomador —su nombre, las fichas con ese DNI y las que se llaman igual— y un `sello` opaco con
  *   el alta cifrada para `POST /api/operador/cliente`. El DNI se busca aquí dentro
  *   y viaja solo cifrado: plataforma nunca lo ve en claro.
+ * - `enCartera` (27/09/2026): las pólizas EN VIGOR con ese mismo número. Con
+ *   alguna, no es una oportunidad: ya es nuestra. `null` = no se ha podido mirar.
+ * - `matricula`/`vehiculo`: identifican el coche (dos coches del mismo cliente)
+ *   y dan nombre a la oportunidad. Son del riesgo, no de la persona.
  * - «No se pudo leer» es 422 con motivo, nunca 200 con todo a null: eso se
  *   pintaría como «el documento no trae nada».
  */
@@ -45,8 +51,16 @@ export const POST = auditado(async (req: Request) => {
   if (r.fase === 'ninguno') return NextResponse.json({ error: r.motivo }, { status: 422 })
 
   const d = r.datos
-  const tomador = new URL(req.url).searchParams.get('tomador') === '1' ? await tomadorDe({ ramo: r.ramo, tipoLectura: r.fase, datos: r.datos as unknown as Record<string, string | number | null> }) : undefined
+  const [tomador, enCartera] = await Promise.all([
+    new URL(req.url).searchParams.get('tomador') === '1' ? tomadorDe({ ramo: r.ramo, tipoLectura: r.fase, datos: r.datos as unknown as Record<string, string | number | null> }) : undefined,
+    correduriaUnica().then((c) => (c ? polizaEnCartera(c.id, d.numeroPoliza) : null)).catch(() => null),
+  ])
+  const auto = r.fase === 'auto' ? r.datos : null
+  const vehiculo = auto ? [auto.marca, auto.modelo].filter(Boolean).join(' ').trim() || null : null
   return NextResponse.json({
+    enCartera,
+    matricula: auto?.matricula ?? null,
+    vehiculo,
     ...(tomador ? { tomador } : {}),
     leido: true,
     fuente: r.fuente,

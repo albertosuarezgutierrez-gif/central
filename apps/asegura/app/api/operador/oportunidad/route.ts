@@ -57,7 +57,7 @@ export const POST = auditado(async (req: Request) => {
       if (typeof b.clienteId !== 'string') return NextResponse.json({ estado: 'invalido', motivo: 'falta clienteId' }, { status: 422 })
       const r = await crearOportunidad(correduria.id, b.clienteId, {
         ramo: b.ramo, estado: b.estado, fechaFinVigencia: b.fechaFinVigencia, aseguradora: b.aseguradora,
-        prima: b.prima, numeroPoliza: b.numeroPoliza, tipoTarea: b.tipoTarea, fechaTarea: b.fechaTarea, nota: b.nota,
+        prima: b.prima, numeroPoliza: b.numeroPoliza, matricula: b.matricula, vehiculo: b.vehiculo, tipoTarea: b.tipoTarea, fechaTarea: b.fechaTarea, nota: b.nota,
       }, actorDe(b))
       if (!r.ok) return NextResponse.json({ estado: r.estado, motivo: r.motivo, ...('id' in r ? { id: r.id } : {}) }, { status: r.status })
       return NextResponse.json({ estado: 'ok', id: r.id }, { status: 201 })

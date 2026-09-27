@@ -179,6 +179,9 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
 
 function Resumen({ o }: { o: OportunidadDeCliente }) {
   const partes: string[] = []
+  // Dos oportunidades de auto del mismo cliente se distinguen por el coche.
+  const coche = [o.vehiculo, o.matricula].filter(Boolean).join(' ')
+  if (coche) partes.push(coche)
   if (o.aseguradora) partes.push(`con ${o.aseguradora}`)
   if (o.prima !== null) partes.push(eur(o.prima))
   partes.push(o.fechaFinVigencia ? `vence ${fmt(o.fechaFinVigencia)}` : 'sin fecha de vencimiento (no entra en Vencimientos)')
