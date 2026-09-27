@@ -753,6 +753,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Logotipo «Grupo ASegura» más grueso (stroke 6) y PNG del correo regenerado
+- Alberto: en el correo de cumpleaños «Grupo ASegura» se veía muy fino. Causa: `logotipo-asegura-correo.png` seguía siendo el Quicksand 300 original; #3675 engordó el SVG (stroke 3) pero no regeneró el PNG.
+- SVG (web + portal) a stroke 6 (≈ Quicksand 700; tinta y 26-123 dentro del viewBox) y PNG 660×97 regenerado desde él con headless_shell. Afecta a felicitación y correos de emisión (`LOGO_CORREO`).
+- Nota en `CLAUDE.md`: al tocar el trazo del SVG, regenerar también el PNG.
+
 ## (27/09/2026) Catastro automático para los 4 pisos turísticos
 - `properties` gana `ref_catastral` + `catastro_m2/anio/uso/direccion/cp/estado/detalle/revisado_at` (migración `2026-09-27_properties_catastro.sql`, aplicada; Dúplex sembrado con 5029006TG3452G0019BG).
 - Job semanal `/api/cron/catastro-pisos` (lunes 06:40 UTC): reutiliza `consultarHogar` de la correduría; solo consulta pisos no `ok`; por dirección solo acepta un inmueble único (si un portal devuelve varios, `elegir`). Bustos Tavera 22 y Socorro 24 tienen UNA referencia por edificio (Alberto): si varios pisos comparten referencia se marcan `compartida` (m² del edificio, no del piso). Datos solo se escriben con `ok`.
