@@ -58,9 +58,10 @@
 
 ## Última poda
 
-2026-09-27 · pasada semanal (rango 30/08→27/09 — **saltada casi 4 semanas**: no consta ninguna
-pasada del entrenador entre el 30/08 y hoy pese al cron dominical; ~90 entradas de bitácora
-procesadas y podadas, más el bloque suelto bajo el header "Entradas pendientes de procesar" que
+2026-09-27 · pasada semanal (rango 30/08→27/09; ~90 entradas de bitácora procesadas y podadas,
+**primera poda que llega a `main` desde el 30/08** — el trigger corrió todos los domingos, pero
+sus PRs #2413/#2864/#3131/#3721 mezclaban poda y `SKILL.md`, el automerge los descartaba y nunca
+se mergearon; corregido en `SKILL.md` por #3725), más el bloque suelto bajo el header "Entradas pendientes de procesar" que
 llevaba semanas sin fusionarse con el resto — unificado en un único flujo). Preflight canal 200 OK.
 Sin pendientes en `docs/FEEDBACK-AGENTES.md`. `correduria_asistente_turno`/`_regla` (fuente nueva
 del 26/09) sin filas todavía — feature recién nacida, sin señal que dé.

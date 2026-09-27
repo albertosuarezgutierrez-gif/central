@@ -12,14 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(27/09/2026)** 🎓 **agentes-entrenador: pasada saltada casi 4 semanas (30/08→27/09).** Sin pasada
-desde el 30/08 pese al cron dominical. Poda real de `docs/AGENTES-BITACORA.md` (~90 entradas,
-verificada releyendo el archivo tras el commit) + retoma y cierra el PR #3131 (stale desde el 20/09,
-nunca mergeado — el mismo fallo "cepo sin ver fallar" que su propio guardarraíl describe, ahora
-aplicado a `SKILL.md`). Diagnóstico: sin hallazgos nuevos que pidan tocar un prompt (mercado-booking
-y facturas-correo tienen patrones repetidos, pero son de auditoría/código o decisión de Alberto, no
-del agente). Backlog de PRs abiertos: 47 al hacer la pasada; 44 de ellos los cerró después la
-revisión de #3713 por orden de Alberto.
+**(27/09/2026)** 🎓 **agentes-entrenador: el trigger corría cada domingo, pero sus PRs nunca se
+mergeaban.** #2413→#2864→#3131→#3721 mezclaban la poda de la bitácora (registro) con cambios a su
+`SKILL.md`; `rutinas-automerge` descarta cualquier PR con `.claude/**`, se quedaban en draft y la pasada
+siguiente re-diagnosticaba el mismo rango («4 semanas sin pasada» era FALSO). Separado: poda en #3724 y
+regla nueva en #3725 (registro en PR propio + comprobar en `origin/main` que la poda anterior aterrizó),
+ambos mergeados. Sin cambios de prompt en otros agentes. ⚠️ El trigger lleva `ALERTA_TOKEN` en claro.
 
 **(27/09/2026)** Revisión del PR #3713 (mergeado): el «hueco de memoria 05-13/09» era falso (formato distinto
 de fecha), y el mapa de funciones indexaba el cliente Prisma local — corregidos; `next build` OK en las 4 apps
