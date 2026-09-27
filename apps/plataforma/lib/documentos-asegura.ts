@@ -73,9 +73,9 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-async function cabeceras(): Promise<Record<string, string> | null> {
+async function cabeceras(actor?: string): Promise<Record<string, string> | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
-  return secret ? await cabecerasPuerto(secret) : null
+  return secret ? await cabecerasPuerto(secret, actor) : null
 }
 
 export type Destino = { clienteId?: string | null; polizaId?: string | null; siniestroId?: string | null }
@@ -104,8 +104,8 @@ export async function documentosAsegura(d: Destino): Promise<Documentos> {
 }
 
 /** Reenvía el formulario (fichero + destino + tipo + notas) tal cual a asegura. */
-export async function subirDocumentoAsegura(form: FormData): Promise<{ status: number; json: unknown }> {
-  const h = await cabeceras()
+export async function subirDocumentoAsegura(form: FormData, actor?: string): Promise<{ status: number; json: unknown }> {
+  const h = await cabeceras(actor)
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   const res = await fetch(`${urlAsegura()}/api/operador/documentos`, {
     method: 'POST',
@@ -184,12 +184,14 @@ export async function descargarDocumentoAsegura(id: string): Promise<Response | 
  */
 export async function leerDocumentoOportunidadAsegura(
   f: { contenido: Buffer; mimeType: string; nombre: string },
+  opts: { tomador?: boolean } = {},
 ): Promise<{ status: number; json: unknown }> {
   const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   const form = new FormData()
   form.set('fichero', new Blob([new Uint8Array(f.contenido)], { type: f.mimeType }), f.nombre)
-  const res = await fetch(`${urlAsegura()}/api/operador/leer-documento`, {
+  // `tomador=1`: quién es y si ya tiene ficha (solo lo pide el asistente de Telegram, servidor a servidor).
+  const res = await fetch(`${urlAsegura()}/api/operador/leer-documento${opts.tomador ? '?tomador=1' : ''}`, {
     method: 'POST',
     headers: h,
     body: form,

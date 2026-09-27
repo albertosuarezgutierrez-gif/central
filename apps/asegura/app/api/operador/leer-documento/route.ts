@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { leerPoliza, revisarFichero } from '@/lib/documentos/extraer-poliza'
 import { auditado } from '@/lib/auditoria'
+import { tomadorDe } from '@/lib/tomador-documento'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,6 +20,10 @@ export const maxDuration = 120
  *   formulario y es él quien lo guarda.
  * - **No devuelve datos personales** (tomador, DNI, nacimiento, dirección): la
  *   oportunidad no los necesita y viajarían al navegador para nada.
+ * - `?tomador=1` (27/09/2026, asistente de Telegram): además dice QUIÉN es el
+ *   tomador —su nombre, las fichas con ese DNI y las que se llaman igual— y un `sello` opaco con
+ *   el alta cifrada para `POST /api/operador/cliente`. El DNI se busca aquí dentro
+ *   y viaja solo cifrado: plataforma nunca lo ve en claro.
  * - «No se pudo leer» es 422 con motivo, nunca 200 con todo a null: eso se
  *   pintaría como «el documento no trae nada».
  */
@@ -40,7 +45,9 @@ export const POST = auditado(async (req: Request) => {
   if (r.fase === 'ninguno') return NextResponse.json({ error: r.motivo }, { status: 422 })
 
   const d = r.datos
+  const tomador = new URL(req.url).searchParams.get('tomador') === '1' ? await tomadorDe({ ramo: r.ramo, tipoLectura: r.fase, datos: r.datos as unknown as Record<string, string | number | null> }) : undefined
   return NextResponse.json({
+    ...(tomador ? { tomador } : {}),
     leido: true,
     fuente: r.fuente,
     ramo: r.ramo,
@@ -50,3 +57,4 @@ export const POST = auditado(async (req: Request) => {
     primaAnual: d.primaAnual,
   })
 })
+

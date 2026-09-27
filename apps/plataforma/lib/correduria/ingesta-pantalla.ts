@@ -24,7 +24,12 @@
 // vive en `ingesta-cima.ts` (servidor) y la pinta `Ingesta.tsx` (cliente).
 // ────────────────────────────────────────────────────────────────────────────
 import type { SaludIngesta, SilencioEntidad } from '@central/module-seguros'
-import { DIAS_AVISO_PURGA, HORAS_PULL_MUDO, HORAS_RECHAZO_RECIENTE } from '@central/module-seguros'
+import {
+  DIAS_AVISO_PURGA,
+  DIAS_GRACIA_RENOVACION,
+  HORAS_PULL_MUDO,
+  HORAS_RECHAZO_RECIENTE,
+} from '@central/module-seguros'
 
 // ⚠️ Aquí NO se importa `MotivoError` de `app/(usuario)/correduria/estado-puerto`
 // aunque los motivos sean los mismos: ese fichero se alcanza por el alias `@/`,
@@ -179,6 +184,7 @@ export type SenalIngesta = {
     | 'caja_negra'
     | 'cobertura'
     | 'parciales'
+    | 'renovaciones'
   tipo: 'perdida' | 'hueco'
   titulo: string
   detalle: string
@@ -265,6 +271,26 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
     })
   }
 
+  // ⏳ Renovaciones que no llegan: SOLO cuando hay alguna. `undefined` (puerto
+  // viejo) no pinta nada; `null` va abajo, con los huecos.
+  const renov = s.renovacionesSinLlegar ?? []
+  if (renov.length > 0) {
+    const total = renov.reduce((n, r) => n + r.polizas, 0)
+    const fecha = (iso: string | null) => {
+      const m = iso === null ? null : /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+      return m ? `${m[3]}/${m[2]}` : 'fecha no legible'
+    }
+    out.push({
+      clave: 'renovaciones', tipo: 'perdida', n: total,
+      titulo: `${total} renovación(es) sin llegar por CIMA: ` +
+        renov.map(r => `${r.entidadNombre ?? r.entidad} ${r.polizas}`).join(' · '),
+      detalle:
+        renov.map(r => `${r.entidadNombre ?? r.entidad}: vencidas desde ${fecha(r.vencimientoMasAntiguo)}`).join(' · ') +
+        `. Pólizas en vigor con el vencimiento pasado hace más de ${DIAS_GRACIA_RENOVACION} días y sin recibo ni ` +
+        'póliza nueva del periodo siguiente: el portal ya no las da «En vigor». Reclámalo a la compañía / CIMA.',
+    })
+  }
+
   const rechazos = rechazosRecientes(s)
   if (rechazos.length > 0) {
     const total = rechazos.reduce((n, r) => n + r.n, 0)
@@ -334,6 +360,13 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       titulo: 'Sin comprobar si algún fichero confirmado se dejó objetos sin guardar',
       detalle:
         'Es la pérdida que no se puede volver a pedir, así que no saberlo es lo más caro de esta lista.',
+    })
+  }
+  if (s.renovacionesSinLlegar === null) {
+    out.push({
+      clave: 'renovaciones', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar si hay renovaciones que no han llegado',
+      detalle: 'No significa que hayan llegado todas: significa que hoy no se ha podido mirar.',
     })
   }
   if (s.huerfanas !== null && s.huerfanas > 0 && s.huerfanasReparto === null) {
@@ -476,7 +509,15 @@ export function tituloIngesta(v: VistaIngesta | null): string {
   const s = (v as Extract<VistaIngesta, { estado: 'ok' }>).salud
   const mudas = companiasMudas(s.silencio)
   if (mudas.length > 0) return `${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos`
-  if (ver === 'incidencia') return 'Se están perdiendo datos de CIMA'
+  if (ver === 'incidencia') {
+    // Si lo ÚNICO medido son renovaciones que no llegan, se dice eso: «se están
+    // perdiendo datos» mandaría a buscar un fichero atascado que no existe.
+    const perdidas = senalesIngesta(s).filter(x => x.tipo === 'perdida')
+    if (perdidas.length > 0 && perdidas.every(x => x.clave === 'renovaciones')) {
+      return 'Hay renovaciones que no han llegado por CIMA'
+    }
+    return 'Se están perdiendo datos de CIMA'
+  }
   return 'La ingesta de CIMA solo se ha podido comprobar a medias'
 }
 

@@ -14,6 +14,16 @@
 >
 **(27/09/2026)** — Portal de clientes, 2ª vuelta tras revisión (architect) del #3760: 10 hallazgos corregidos (parte al AUTOR y no al tomador, obligación vieja ya no calla el vencimiento del año, ex-clientes no reciben cambios, cortacircuitos también por campo, prima anual/bruta por separado —foto v2—, sin doble aviso de parte/siniestro ni de vencimiento derivado, cron `degradado` si el detector falla). Nuevo: push `poliza_modificada` (CHECK aplicado), autorizados con «Acceso total» ven los cambios en campana+push, recordatorio único de vencimiento a 2 días si no entró, y 3 señales de adopción en el embudo (medido: 13 avisados/30d, 1 entró por el enlace, 0 con push). La invitación en tandas YA existía (#3295).
 
+**(27/09/2026)** — «Añade todo» (mismo PR #3765): dedupe de `update_id` + asistente en `after()`, voz de llamadas
+(«no contesta», «no le interesa»…) → correduría, «📎 Guardar en la ficha» tras abrir, enlace a tarificar (no botón:
+gasta), tareas de hoy DENTRO del aviso de renovaciones (sin aviso nuevo, Alberto pidió menos), y matrícula como
+pista del tomador (a `posibles`). Migración `telegram_update_visto_y_documentos` aplicada.
+
+**(27/09/2026)** — PR #3765: el asistente de Telegram ya no pregunta «¿de qué lead?» teniendo la póliza delante:
+asegura lee el tomador (`leer-documento?tomador=1`), lo busca por DNI **y por nombre** y devuelve un sello cifrado
+(`lib/sello-alta-lead.ts`, exige `v1:`); si no está, botón «Crear lead y abrir». El DNI nunca sale de asegura.
+Revisión architect: 6.582 fichas con DNI sin hash → «su DNI no aparece» ≠ «no está»; por eso los homónimos
+los decide Alberto (`leadNuevo`). Migración `..._oportunidad_lead.sql` aplicada. Pendiente: backfill del hash de DNI.
 **(27/09/2026)** — Portal de clientes: **«cualquier modificación de su póliza» → campana + correo** (decisión 15/09 que no se cumplía). Detector diario (`apps/asegura/lib/poliza-cambios-detector.ts`, antes del cron `avisos-intranet`) saca FOTO de cada póliza viva y guarda cambios de estado/fechas/prima/forma de pago/coberturas/documento nuevo/siniestro en `seguros.portal_poliza_cambio` (SQL `2026-09-27b`, **APLICADA**); aviso `poliza_modificada` en el catálogo común (semilla silenciosa, «completar ≠ cambiar», cortacircuitos si cambia >30 % a la vez). Además: los partes ya salen por correo, y el vencimiento se deriva de la póliza para quien nunca abrió la bóveda (3 hoy), con sello compartido para no repetirlo. El correo invita a instalar la app y activar avisos. Push de cambios de póliza: NO incluido.
 
 **(27/09/2026)** — Revisión PR #3748 (asistente correduría). Bloqueante corregido: un documento con pie que nombra
@@ -766,6 +776,9 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+
+## (27/09/2026) Vigía de ingesta: «renovaciones sin llegar» por compañía
+- Nueva señal en el vigía `correduria_ingesta` (Telegram + /correduria): pólizas en vigor vencidas hace >15 días sin recibo del periodo nuevo, agrupadas por compañía (`renovacionesSinLlegar`, module-seguros/ingesta.ts; lectura en apps/asegura/lib/ingesta.ts). Hoy: Mapfre 10 (desde 05/06). El primer pase tras desplegar suena una vez. Alberto: Mapfre ya manda, se espera a que complete esta semana (borrador a CIMA SAU-24238 en Gmail, sin enviar).
 
 ## (27/09/2026) Pólizas «vencidas» que sí estaban en vigor: Allianz (recibos) y Mapfre (sin datos)
 - Allianz no manda POL por CIMA pero sí REC: el recibo 2027 cobrado no movía el vencimiento. Nuevo pg_cron `seguros-avanzar-vencimientos-recibo` (06:30 UTC, función `seguros.avanzar_vencimientos_por_recibo()`, SQL en apps/asegura/prisma/sql/2026-09-27_renovacion_por_recibo.sql, APLICADO): solo avanza pólizas YA vencidas (el recibo de renovación llega semanas antes; avanzar antes borraría el aviso de no-renovación). 4 Allianz avanzadas.

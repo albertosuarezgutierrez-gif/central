@@ -28,8 +28,9 @@ import type {
   FicheroEnCuarentena,
   FicheroParcial,
   CampoImportanteSinLeer,
+  RenovacionSinLlegar,
 } from '@central/module-seguros'
-import { HORAS_RECHAZO_RECIENTE } from '@central/module-seguros'
+import { DIAS_GRACIA_RENOVACION, HORAS_RECHAZO_RECIENTE, sqlCarteraEnVigor } from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 export type EstadoIngestaPuerto =
@@ -78,6 +79,12 @@ export type EstadoIngestaPuerto =
        * hoy no hay ninguno conocido.
        */
       camposImportantes: CampoImportanteSinLeer[] | null
+      /**
+       * Pólizas en vigor con el vencimiento pasado hace más de
+       * `DIAS_GRACIA_RENOVACION` días y sin NADA del periodo siguiente, por
+       * compañía. `[]` = se miró y no hay; `null` = no se pudo mirar.
+       */
+      renovacionesSinLlegar: RenovacionSinLlegar[] | null
     }
 
 /** Crudo EIAC guardado por una incidencia y todavía sin reprocesar. */
@@ -614,8 +621,53 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       }
     })
 
+    // 8. ⏳ RENOVACIONES QUE NO LLEGAN (27/09/2026). Mapfre dejó 10 pólizas
+    //    `activa` con el vencimiento pasado y ni POL ni recibo del periodo
+    //    siguiente, y ninguna señal de arriba lo veía (no hay fichero atascado ni
+    //    huérfana: sencillamente no llegó). Criterio:
+    //    - cartera EN VIGOR (`sqlCarteraEnVigor`: viva + estado vigente + sin
+    //      sustituir) y sin fusionar;
+    //    - vencimiento anterior a hoy − gracia (el recibo/POL puede llegar tarde);
+    //    - y SIN recibo cobrado/pendiente/emitido que venza DESPUÉS del
+    //      vencimiento de la póliza: esos los avanza solo el pg_cron
+    //      `avanzar_vencimientos_por_recibo()` de la BD (Allianz), así que no son
+    //      avería. Mismas situaciones que usa esa función, a propósito.
+    //    Un vencimiento NULL no entra: es «no se sabe», no «vencida».
+    const renovacionesSinLlegar = await leerONull<RenovacionSinLlegar[]>(async () => {
+      const r = await db.$queryRawUnsafe<
+        Array<{ entidad: string | null; nombre: string | null; polizas: bigint | null; desde: string | null }>
+      >(`
+        SELECT p.codigo_entidad_dgs AS entidad,
+               MAX(c.nombre_comun) AS nombre,
+               COUNT(*) AS polizas,
+               to_char(MIN(p.fecha_vencimiento), 'YYYY-MM-DD') AS desde
+        FROM polizas p
+        LEFT JOIN companias_dgs c ON c.codigo_dgs = p.codigo_entidad_dgs
+        WHERE ${sqlCarteraEnVigor('p')}
+          AND p.merged_into_poliza_id IS NULL
+          AND p.fecha_vencimiento IS NOT NULL
+          AND p.fecha_vencimiento < CURRENT_DATE - $1::int
+          AND NOT EXISTS (
+            SELECT 1 FROM poliza_recibos rc
+            WHERE rc.poliza_id = p.id
+              AND rc.situacion::text IN ('cobrado', 'pendiente', 'emitido')
+              AND rc.fecha_vencimiento IS NOT NULL
+              AND (rc.fecha_vencimiento AT TIME ZONE 'UTC')::date > p.fecha_vencimiento
+          )
+        GROUP BY p.codigo_entidad_dgs
+        ORDER BY COUNT(*) DESC
+      `, DIAS_GRACIA_RENOVACION)
+      return r.map(f => ({
+        entidad: f.entidad ?? 'desconocida',
+        entidadNombre: f.nombre,
+        polizas: Number(f.polizas ?? 0),
+        vencimientoMasAntiguo: f.desde,
+      }))
+    })
+
     const fila = huerfanasRaw[0]
     return {
+      renovacionesSinLlegar,
       crudo,
       cobertura,
       camposImportantes,
