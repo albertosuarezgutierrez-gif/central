@@ -753,6 +753,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Catastro automático para los 4 pisos turísticos
+- `properties` gana `ref_catastral` + `catastro_m2/anio/uso/direccion/cp/estado/detalle/revisado_at` (migración `2026-09-27_properties_catastro.sql`, aplicada; Dúplex sembrado con 5029006TG3452G0019BG).
+- Job semanal `/api/cron/catastro-pisos` (lunes 06:40 UTC): reutiliza `consultarHogar` de la correduría; solo consulta pisos no `ok`; por dirección solo acepta un inmueble único (Bustos Tavera 22 tiene dos pisos → `elegir`, pide la referencia). Datos solo se escriben con `ok`.
+- ⚠️ El Catastro rechaza el contenedor de Claude y pg_net (400 «No se puede procesar»): no se ha visto correr en real; se verá tras el primer lunes (o disparándolo a mano en prod).
+
 ## (27/09/2026) Pricing: SUELO de fin de semana sin mercado medido (House 29-30/01/2027 vendido a 300€)
 - La reserva de House 29-31/01/2027 (600€) entró al `min_price`: el motor tenía 436/456€ el 19/09 y el raíl lo bajó a 300 en dos pasadas.
 - Causa: el finde solo subía por `anclaMercadoFecha` (≥5 comps fiables de ESA fecha); sin ellos, viernes/sábado = martes.
