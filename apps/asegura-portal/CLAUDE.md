@@ -1238,6 +1238,16 @@ ruta, la bóveda y el botón de la ficha. Las autorizadas sin ese alcance siguen
 (`soloTelefonos`): llamar a la grúa del coche de tu padre no es actuar en su nombre. Cepo en
 `test/regression-portal-autorizacion.test.ts`.
 
+**Con heridos, el parte manda a llamar YA, no a esperar a que Alberto lo abra (26/09/2026).** Si
+`hay_heridos` es `true`, el formulario pinta un aviso fijo con **enlace `tel:112`** antes de enviar —
+la urgencia médica no puede depender de que alguien mire una bandeja. Al enviarse, `lib/partes-siniestro.ts`
+dispara además un Telegram INMEDIATO a Alberto (`aviso-parte-nuevo.ts` en `@central/module-seguros-portal`,
+por `tgSend` directo — no es un aviso proactivo catalogado en `lib/telegram/catalogo.ts`, es la respuesta a
+la acción del cliente) en vez de esperar al digest — es el mismo principio que
+`correduria-recibo` en `apps/plataforma/CLAUDE.md`: hay clases de aviso que caducan. El formulario también
+gana una **cámara directa** (`capture="environment"` en el input de fotos) para no obligar a buscar en la
+galería con las manos ocupadas en el lugar del accidente.
+
 Lo protege **`test/regression-portal-parte-siniestro.test.ts`** (raíz, `node --test`): la forma de
 `comunicadoACompania`, el atajo `\.estado !== 'enviado'`, las frases afirmativas prohibidas, el
 «ya no te cubren», el colapso del tri-estado y un cepo POSITIVO (alguien tiene que usar `comunicado`,

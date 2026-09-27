@@ -1,64 +1,64 @@
 {
   "novedades": [
     {
-      "titulo": "Plan de marketing y captación de Grupo ASegura",
-      "fecha": "04/09/2026"
+      "titulo": "💸 Huésped de House (5-7/02/2027, 9-10 pax): «la web sale más cara que Booking» — diagnóstico, sin tocar código",
+      "fecha": "19/09/2026"
     },
     {
-      "titulo": "📞 Llamar · WhatsApp · escribir al lado del nombre, y UN solo criterio de WhatsApp",
-      "fecha": "04/09/2026"
+      "titulo": "🩹 16 pólizas duplicadas en la cartera CIMA de Occident/Mapfre/Allianz, y por qué",
+      "fecha": "17/09/2026"
     },
     {
-      "titulo": "🎟 La intranet del cliente deja de ser solo para clientes",
-      "fecha": "04/09/2026"
+      "titulo": "🔓 Causa real de los 500 del Submit (proyecto 40685793): un `product.options` que nunca se mandaba",
+      "fecha": "17/09/2026"
     },
     {
-      "titulo": "🏠 La escalera del Catastro para hogar, y un agujero que salió por el camino",
-      "fecha": "04/09/2026"
+      "titulo": "Matrícula→vehículo para la correduría: `@central/core-vehiculos` creado, proveedor APIVehículo",
+      "fecha": "15/09/2026"
     },
     {
-      "titulo": "📄 Subir una póliza no lee nada porque FALTA LA CLAVE DE IA, no porque el PDF sea malo",
-      "fecha": "04/09/2026"
+      "titulo": "🛡️ Resuelto el bloqueo de Sentinel sobre `ALERTA_TOKEN`",
+      "fecha": "14/09/2026"
     },
     {
-      "titulo": "🚑 CIMA NO da campos por ramo para el siniestro (medido sobre las 67 filas reales, 04/09/2026).",
-      "fecha": "04/09/2026"
+      "titulo": "🍪 Consentimiento unificado: asegura-web, ia-rest y housesevillana migradas a `@central/core-consent`",
+      "fecha": "14/09/2026"
     },
     {
-      "titulo": "🧹 Borrado el mail de Alberto de dos fichas ajenas",
-      "fecha": "04/09/2026"
+      "titulo": "🚨 El aviso de \"siniestros nuevos\" mentía: \"ya están abiertos\" cuando 11 de 12 venían `cerrado`",
+      "fecha": "14/09/2026"
     },
     {
-      "titulo": "🚨 Los dos 🚨 «reserva que Smoobu NO tiene» eran FALSOS otra vez",
-      "fecha": "04/09/2026"
+      "titulo": "🛡️ Sentinel bloquea TODAS las rutinas programadas que usan `ALERTA_TOKEN` por curl",
+      "fecha": "14/09/2026"
     },
     {
-      "titulo": "🧠 El control de calidad ya ve lo que Alberto responde a mano",
-      "fecha": "04/09/2026"
+      "titulo": "🇮🇹 `detectLang` marcaba italiano correcto como \"deriva al español\"",
+      "fecha": "13/09/2026"
     },
     {
-      "titulo": "🛡️ /correduria: seis peticiones de Alberto desde el móvil, PR #2259",
-      "fecha": "04/09/2026"
+      "titulo": "🚗 Identificar pólizas por matrícula/dirección, no por nº de póliza — regla permanente (13-14/09/2026, PR #2912, MERGEADO).",
+      "fecha": "14/09/2026"
     },
     {
-      "titulo": "🔁 «Sigue habiendo duplicidad»",
-      "fecha": "04/09/2026"
+      "titulo": "🚑 Parte de siniestro: zona del daño tocable + autorrelleno + «ha pasado ahora mismo»",
+      "fecha": "13/09/2026"
     },
     {
-      "titulo": "✍️ El nombre comercial es «Grupo ASegura», con A y S mayúsculas",
-      "fecha": "04/09/2026"
+      "titulo": "🔔 Aviso Telegram al iniciar sesión en la intranet",
+      "fecha": "13/09/2026"
     },
     {
-      "titulo": "💬 Un «Muchísimas gracias, un saludo» no salía solo, y por DOS motivos, no uno",
-      "fecha": "04/09/2026"
+      "titulo": "📡 Manuel contestó: el webhook de Codeoscopic EXISTE pero apunta a su CRM y descarta el payload real",
+      "fecha": "13/09/2026"
     },
     {
-      "titulo": "🧠 «No aprende»: medido y arreglado — pero el trigram SOLO no valía",
-      "fecha": "04/09/2026"
+      "titulo": "🛡️ Sentinel [SOMBRA] permitía en silencio un exfil crítico en sesión desatendida — corregido",
+      "fecha": "13/09/2026"
     },
     {
-      "titulo": "🏠 Los 10 ramos ya despliegan SUS campos, y hogar los saca del Catastro",
-      "fecha": "04/09/2026"
+      "titulo": "docs(memoria): PR #2882 (fix Sentinel [SOMBRA]) mergeado",
+      "fecha": "13/09/2026"
     }
   ]
 }

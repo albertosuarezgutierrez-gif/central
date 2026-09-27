@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-26T20:40:37Z",
+  "generadoEn": "2026-09-27T02:24:11Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -362,11 +362,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "asegura-web": {
         "estado": "no",
@@ -420,7 +420,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "asegura-web": {
         "estado": "no",
@@ -482,11 +482,11 @@
       },
       "housesevillana": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "no",
@@ -524,11 +524,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "asegura-web": {
         "estado": "no",
@@ -690,7 +690,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-web": {
         "estado": "no",
@@ -960,7 +960,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "asegura-web": {
         "estado": "no",
@@ -1010,7 +1010,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "asegura-portal": {
         "estado": "no",
@@ -1762,7 +1762,7 @@
       },
       "alquiler": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "asegura": {
         "estado": "no",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 125
+        "evidencias": 128
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 105
+        "evidencias": 106
       },
       "asegura-web": {
         "estado": "usado",
@@ -2252,11 +2252,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 32
+        "evidencias": 35
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "asegura-web": {
         "estado": "no",
@@ -2306,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 27
+        "evidencias": 31
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 83
+        "evidencias": 84
       },
       "asegura-web": {
         "estado": "usado",
