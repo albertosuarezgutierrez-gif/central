@@ -168,8 +168,8 @@ export type PolizaPortal = {
   /** La póliza a la que sustituye, SOLO si este lector también la ve. `null` = ninguna o no visible. */
   sustituyeA: { compania: string; fechaVencimiento: Date | null } | null
   /**
-   * 🚨 La que ocupa su sitio, cuando esta ya se RETIRA DE LA LISTA (`sustituidasARetirar`: la nueva ha
-   * empezado, está vigente, este lector la ve y esta no tiene nada pendiente). Retirar de la lista no
+   * 🚨 La que ocupa su sitio, cuando esta ya se RETIRA DE LA LISTA (`sustituidasARetirar`: la nueva está
+   * vigente, aunque aún no haya empezado, este lector la ve y esta no tiene nada pendiente). Retirar de la lista no
    * quita el acceso: la ficha, los partes y los recibos siguen siendo suyos. Por eso la póliza sigue
    * en `TitularPortal.polizas` y solo `carteraALaVista()` la quita, para PINTAR la bóveda.
    */
@@ -348,8 +348,12 @@ function nivelDeVinculo(v: string): Nivel {
  * La cartera para PINTAR la lista (bóveda, hoja QR): sin las pólizas ya sustituidas. Los permisos
  * (partes, ficha, recordatorios) usan la cartera entera, nunca esta.
  */
-export function carteraALaVista(c: CarteraPortal): CarteraPortal {
-  const quitar = (ts: TitularPortal[]) => ts.map((t) => ({ ...t, polizas: t.polizas.filter((p) => p.sustituidaPor === null) }))
+export function carteraALaVista(c: CarteraPortal, opciones: { soloSiYaCubre?: boolean } = {}, hoy: Date = new Date()): CarteraPortal {
+  // 🚨 `soloSiYaCubre` (hoja QR): la que se enseña tras un accidente es la que cubre HOY. Mientras la
+  // sustituta no ha empezado, la vieja se queda. La bóveda, en cambio, la retira ya (una sola fila).
+  const aunCubre = (p: PolizaPortal) => opciones.soloSiYaCubre === true && p.sustituidaPor?.desde != null && p.sustituidaPor.desde > hoy
+  const quitar = (ts: TitularPortal[]) =>
+    ts.map((t) => ({ ...t, polizas: t.polizas.filter((p) => p.sustituidaPor === null || aunCubre(p)) }))
   return { ...c, propias: quitar(c.propias), autorizadas: quitar(c.autorizadas) }
 }
 
@@ -895,11 +899,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       suyas.map((p) => ({
         id: p.id,
         sustituyeAId: p.sustituyeAId,
-        fechaInicio: p.fechaInicio,
         vigente: p.vigencia === 'vigente',
         conPendientes: (p.siniestrosAbiertos?.length ?? 0) > 0 || (p.recibos?.devueltos ?? 0) > 0,
       })),
-      new Date(),
     )
     for (const p of suyas) {
       const v = p.sustituyeAId === null ? undefined : porId.get(p.sustituyeAId)

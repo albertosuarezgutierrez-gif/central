@@ -223,12 +223,20 @@ const CORREO_CORREDURIA = 'hola@grupoasegura.es'
  * 🚨 La fecha que cuenta es la del CAMBIO (inicio de la nueva), no el vencimiento de la vieja:
  * pueden no coincidir (Reale empezó el 22/09 y Mapfre vencía el 24/09). Sin inicio, no se inventa.
  */
-export function textoSustitucion(p: PolizaPortal): string | null {
+export function textoSustitucion(p: PolizaPortal, hoy: Date = new Date()): string | null {
   const v = p.sustituyeA
   if (v === null) return null
   const f = fechaEs(p.fechaInicio)
   if (f === null) return `Sustituye a tu seguro de ${v.compania}`
+  if (empiezaMasAdelante(p, hoy)) return `Pasas de ${v.compania} a ${p.compania} el ${f}. Hasta ese día te sigue cubriendo ${v.compania}`
   return `Te cambiaste de ${v.compania} a ${p.compania} el ${f}`
+}
+
+/** La póliza aún no ha empezado: su efecto es posterior a HOY (por día, no por hora). */
+export function empiezaMasAdelante(p: Pick<PolizaPortal, 'fechaInicio'>, hoy: Date = new Date()): boolean {
+  const i = p.fechaInicio
+  if (i === null) return false
+  return Date.UTC(i.getUTCFullYear(), i.getUTCMonth(), i.getUTCDate()) > Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate())
 }
 
 /**

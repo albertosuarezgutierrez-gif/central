@@ -689,7 +689,15 @@ function motivoLimpio(v: unknown): string | null {
 async function polizasVivasDe(correduriaId: string, clienteId: string): Promise<number | null> {
   try {
     return await prismaAsegura().poliza.count({
-      where: { AND: [{ clienteId, correduriaId, mergedIntoPolizaId: null }, WHERE_CARTERA_VIVA] },
+      // Tomador O interviniente (propietario, conductor, asegurado…). Solo por tomador, se
+      // descartaba a la propietaria del coche de su marido (27/09/2026, Nieves Rodríguez, Toyota
+      // 8022KXY): su ficha desaparecía del buscador y de las relaciones con la póliza en vigor.
+      where: {
+        AND: [
+          { correduriaId, mergedIntoPolizaId: null, OR: [{ clienteId }, { intervinientes: { some: { clienteId } } }] },
+          WHERE_CARTERA_VIVA,
+        ],
+      },
     })
   } catch (e) {
     console.error('[cartera-edicion] no se pudieron contar las pólizas vivas:', e instanceof Error ? e.message : e)

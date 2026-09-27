@@ -779,6 +779,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Documento con pie de correduría («seguro de un lead…») o de un álbum ya desviado NO pasa por el contable. «oportunidad(es)»/«lead(s)» enrutan a la correduría.
 - Tablas `correduria_asistente_documento` + `_oportunidad` (aplicadas). Lógica pura en `lib/correduria-oportunidad-tg.ts` (+12 cepos, vistos en rojo).
 - ⚠️ Depende del interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA` (el mismo de emitir/corregir). Si el lead no tiene ficha, el asistente manda a crearla en /correduria.
+## (27/09/2026) Correduría: sustitución futura = un seguro, buscador de relaciones, fichas descartadas con póliza viva (PR #3756)
+- Portal: Allianz→Occident de Víctor de la Fuente (efecto 01/11) salían dos «En vigor». La vieja se retira de la bóveda ya; la fila nueva dice «Empieza el… / Hasta entonces, Allianz». La hoja QR sigue enseñando la que cubre HOY (`carteraALaVista(c, { soloSiYaCubre })`).
+- Buscador de relaciones decía «nadie» sobre fichas YA relacionadas (Studium como «Empleado/a» del volcado): ahora las nombra con su tipo.
+- «Descartar» ya no deja descartar a quien es INTERVINIENTE de una póliza viva. Reactivadas en BD 7 fichas descartadas con póliza viva (Nieves Rodríguez, Pablo Guzmán, La Ponde, Monte Carmelo 68, Úrsula Navarro, CP Cancionera 4, Mª del Mar Guzmán). Causa: la ingesta CIMA (repo `asegura`) no llama a `reactivarPorPoliza`.
+- Auditoría abierta: 16 pólizas vigentes con vencimiento pasado (13 Mapfre/Allianz, CIMA no trae la renovación; oculta el Toyota 8022KXY de Víctor en «En vigor»); 17 relaciones «Empleado/a» del volcado; 31 gemelas volcado+CIMA.
+- Pendiente de decisión: que los intervinientes vean en el portal las pólizas donde aparecen (propuesto: nivel mínimo, sin prima/recibos/datos del tomador).
+
 ## (27/09/2026) Logotipo «Grupo ASegura» más grueso (stroke 6) y PNG del correo regenerado
 - Alberto: en el correo de cumpleaños «Grupo ASegura» se veía muy fino. Causa: `logotipo-asegura-correo.png` seguía siendo el Quicksand 300 original; #3675 engordó el SVG (stroke 3) pero no regeneró el PNG.
 - SVG (web + portal) a stroke 6 (≈ Quicksand 700; tinta y 26-123 dentro del viewBox) y PNG 660×97 regenerado desde él con headless_shell. Afecta a felicitación y correos de emisión (`LOGO_CORREO`).

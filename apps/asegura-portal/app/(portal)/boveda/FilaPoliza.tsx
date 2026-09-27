@@ -3,7 +3,7 @@ import Link from 'next/link'
 import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { fechaEs } from '@/lib/fechas'
 
-import { ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBien } from './PolizaVista'
+import { empiezaMasAdelante, ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBien } from './PolizaVista'
 
 /**
  * Una póliza en la LISTA: una fila, no una tarjeta.
@@ -58,6 +58,9 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
     .filter(Boolean)
     .join(' · ')
   const devueltos = p.recibos?.devueltos ?? 0
+  // Aún no ha empezado (un cambio de compañía con efecto futuro): «En vigor» mentiría, y la que la
+  // cubre hasta ese día ya no sale aparte (`sustituidasARetirar`), así que lo dice esta fila.
+  const empieza = empiezaMasAdelante(p) ? fechaEs(p.fechaInicio) : null
 
   return (
     <li
@@ -84,10 +87,18 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
                 {devueltos === 1 ? 'Recibo devuelto' : `${devueltos} recibos devueltos`}
               </span>
             )}
-            <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>
-              {ESTADO[p.estado] ?? p.estado}
-            </span>
-            {p.sustituyeA && <span className="chip">Sustituye a {p.sustituyeA.compania}</span>}
+            {empieza ? (
+              <span className="chip">Empieza el {empieza}</span>
+            ) : (
+              <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>
+                {ESTADO[p.estado] ?? p.estado}
+              </span>
+            )}
+            {p.sustituyeA && (
+              <span className="chip">
+                {empieza ? `Hasta entonces, ${p.sustituyeA.compania}` : `Sustituye a ${p.sustituyeA.compania}`}
+              </span>
+            )}
           </span>
         </span>
         {/* Decorativo: lo que anuncia que se puede entrar es que la fila ENTERA
