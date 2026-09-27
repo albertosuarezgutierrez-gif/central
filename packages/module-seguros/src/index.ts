@@ -935,3 +935,4 @@ export {
   type DniFusion,
   type RevisionElecciones,
 } from './fusion-fichas.ts'
+export { mismaCompania } from './compania-oportunidad.ts'

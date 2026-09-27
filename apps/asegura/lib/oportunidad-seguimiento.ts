@@ -22,6 +22,7 @@
 
 import {
   aplicarAccion,
+  mismaCompania,
   planLlamada,
   validarAltaOportunidad,
   validarEdicionOportunidad,
@@ -561,7 +562,8 @@ export const ORIGEN_MANUAL = 'ficha:manual'
 /**
  * Abre una oportunidad a mano con su primer paso, en UNA transacción:
  * oportunidad + tarea + historial. Si el cliente ya tiene una ABIERTA del
- * mismo ramo, no se abre otra (409 con su id): dos oportunidades del mismo
+ * mismo ramo y de la misma compañía (o sin compañía en un lado), no se abre
+ * otra (409 con su id); de otra compañía es otro seguro y sí se abre: dos oportunidades del mismo
  * seguro son dos listas de tareas que se pisan. El candado por cliente+ramo
  * pone en fila un doble clic.
  */
@@ -582,11 +584,14 @@ export async function crearOportunidad(
       where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`)
     if (!cli) return { tipo: 'sin_cliente' as const }
     await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`oportunidad:${clienteId}:${a.ramo}`}))`)
-    const [ya] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
-      select id::text as id from oportunidades
+    const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null }[]>(Prisma.sql`
+      select id::text as id, nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora from oportunidades
       where correduria_id = ${correduriaId}::uuid and cliente_id = ${clienteId}::uuid
         and tipo::text = ${a.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
-      order by created_at limit 1`)
+      order by created_at`)
+    // Otra compañía = otro seguro (el segundo coche): se abre aparte. Sin
+    // compañía en un lado no se sabe, y ante la duda cuenta como la misma.
+    const ya = abiertas.find(o => mismaCompania(a.aseguradora, o.aseguradora) !== 'otra')
     if (ya) return { tipo: 'duplicada' as const, id: ya.id }
     const competencia = a.aseguradora ? JSON.stringify({ aseguradora: a.aseguradora }) : null
     const [o] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
@@ -644,12 +649,13 @@ export async function editarOportunidad(
     // Cambiar el ramo no puede colar lo que el alta impide: dos abiertas del mismo seguro.
     if (c.ramo !== undefined && c.ramo !== fila.ramo) {
       await tx.$executeRaw(Prisma.sql`select pg_advisory_xact_lock(hashtext(${`oportunidad:${fila.clienteId}:${c.ramo}`}))`)
-      const [otra] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
-        select id::text as id from oportunidades
+      const abiertas = await tx.$queryRaw<{ id: string; aseguradora: string | null }[]>(Prisma.sql`
+        select id::text as id, nullif(trim(poliza_competencia->>'aseguradora'), '') as aseguradora from oportunidades
         where correduria_id = ${correduriaId}::uuid and cliente_id = ${fila.clienteId}::uuid and id <> ${id}::uuid
-          and tipo::text = ${c.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
-        limit 1`)
-      if (otra) {
+          and tipo::text = ${c.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')`)
+      // Misma regla que al crear: de otra compañía es otro seguro y convive.
+      const compania = c.aseguradora !== undefined ? c.aseguradora : fila.aseguradora
+      if (abiertas.some(o => mismaCompania(compania, o.aseguradora) !== 'otra')) {
         return { ok: false as const, estado: 'conflicto' as const, motivo: `Ya tiene otra oportunidad de ${c.ramo.replace('_', ' ')} abierta: sigue esa o descarta una.`, status: 409 as const }
       }
     }

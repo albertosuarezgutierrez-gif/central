@@ -8,7 +8,7 @@
 // Mismo principio que la corrección de ficha: la IA PROPONE, el servidor junta lo dictado con lo leído
 // de los documentos recientes, lo enseña y Alberto lo abre con un botón de un solo uso. La escritura va
 // por el mismo puerto que el botón «Abrir» de la ficha (`accion: 'crear'`), que vuelve a validar.
-import { RAMOS_OPORTUNIDAD, type RamoOportunidad } from '@central/module-seguros'
+import { mismaCompania, RAMOS_OPORTUNIDAD, type RamoOportunidad } from '@central/module-seguros'
 import { rotuloRamo, textoAltaOportunidad, type LecturaDocumentoOportunidad, type TomadorLeido } from './seguimiento-asegura.ts'
 import { eur } from './dinero.ts'
 
@@ -213,14 +213,7 @@ export function cambiosSobreExistente(a: Alta, e: Existente): CambioOportunidad[
  * Sin compañía en alguno de los dos lados no se sabe (`no_se`): decide Alberto, avisado.
  */
 export function mismaPoliza(docAseguradora: string | null, existente: string | null): 'misma' | 'otra' | 'no_se' {
-  const clave = (s: string | null) => {
-    const vacias = new Set(['seguros', 'seguro', 'mutua', 'compania', 'de', 'y', 'reaseguros', 'aseguradora', 'sa', 's', 'a', 'la', 'el', 'grupo'])
-    const t = (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter((w) => w && !vacias.has(w))
-    return t[0] ?? null
-  }
-  const a = clave(docAseguradora), b = clave(existente)
-  if (!a || !b) return 'no_se'
-  return a === b ? 'misma' : 'otra'
+  return mismaCompania(docAseguradora, existente)
 }
 
 export function cuerpoEdicion(oportunidadId: string, cambios: readonly CambioOportunidad[], actor: string): Record<string, unknown> {

@@ -1066,7 +1066,7 @@ async function ofrecerSobreExistente(oportId: number, clienteId: string, existen
   if (!e) lineas.push('No he podido leer la que ya tiene, así que no te propongo cambiarla: revísala en la ficha.')
   else if (misma === 'otra') {
     // Otro seguro del mismo ramo (otro coche): actualizar pisaría la oportunidad que ya tiene.
-    lineas.push(`🚗 Parece OTRO seguro: el documento es de <b>${escapeHtml(alta.aseguradora ?? '')}</b> y la oportunidad que ya tiene es de <b>${escapeHtml(e.aseguradora ?? '')}</b>. No lo mezclo con ella. Hoy la cartera solo admite una oportunidad abierta de ${escapeHtml(alta.ramo.replace('_', ' '))} por cliente: si es otro vehículo, anótalo en la ficha.`)
+    lineas.push(`🚗 Parece OTRO seguro: el documento es de <b>${escapeHtml(alta.aseguradora ?? '')}</b> y la oportunidad que ya tiene es de <b>${escapeHtml(e.aseguradora ?? '')}</b>. No lo mezclo con ella.`)
   } else if (cambios.length === 0) lineas.push('La que ya tiene coincide con el documento: no hay nada que actualizar.')
   else {
     lineas.push('✏️ ¿Actualizo la que ya tiene con lo leído del documento?', textoCambios(cambios))

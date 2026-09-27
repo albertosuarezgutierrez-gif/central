@@ -8,9 +8,11 @@ const crear = src.slice(src.indexOf('export async function crearOportunidad'), s
 const editar = src.slice(src.indexOf('export async function editarOportunidad'), src.indexOf('export type OportunidadDeCliente'))
 const lista = src.slice(src.indexOf('export async function oportunidadesDeCliente'), src.indexOf('async function anotarEnFicha'))
 
-test('crear: no abre una segunda del mismo ramo mientras haya una abierta', () => {
+test('crear: no abre una segunda del mismo ramo y compañía mientras haya una abierta', () => {
   assert.match(crear, /tipo::text = \$\{a\.ramo\} and estado::text in \('competencia', 'en_negociacion', 'pendiente_cliente'\)/)
   assert.match(crear, /pg_advisory_xact_lock/)
+  // De otra compañía es otro seguro (el segundo coche): sí se abre. Sin compañía cuenta como la misma.
+  assert.match(crear, /abiertas\.find\(o => mismaCompania\(a\.aseguradora, o\.aseguradora\) !== 'otra'\)/)
 })
 
 test('crear: oportunidad, primer paso e historial en la MISMA transacción', () => {
@@ -38,6 +40,7 @@ test('el historial no guarda la compañía tecleada ni la nota: solo que cambió
 
 test('editar: cambiar el ramo tampoco cuela una segunda abierta del mismo seguro', () => {
   assert.match(editar, /id <> \$\{id\}::uuid\s+and tipo::text = \$\{c\.ramo\} and estado::text in \('competencia', 'en_negociacion', 'pendiente_cliente'\)/)
+  assert.match(editar, /abiertas\.some\(o => mismaCompania\(compania, o\.aseguradora\) !== 'otra'\)/)
 })
 
 test('la próxima tarea de la ficha es la misma que lista «Hoy» (solo seguimiento)', () => {
