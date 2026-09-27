@@ -72,7 +72,7 @@ export function toPropertyId(_apartmentId: unknown, apartmentName: string): stri
 // manuales; eso lo cubre la consulta en vivo. true = libre · false = ocupado · null = no se pudo mirar.
 //  - 'vispera': ¿alguien duerme la noche anterior a `fecha`? (entra antes y sale en/después de `fecha`)
 //  - 'entrada': ¿alguien entra el mismo día `fecha`?
-async function libreSegunCalendario(
+export async function libreSegunCalendario(
   propertyId: string, bookingId: string, que: 'vispera' | 'entrada', fecha: string,
 ): Promise<boolean | null> {
   if (!propertyId.startsWith('prop_') || !fecha) return null

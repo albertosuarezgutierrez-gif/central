@@ -29,9 +29,9 @@ import { Prisma } from '@prisma/client'
 import { smoobuFetch } from '@/lib/smoobu'
 import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
-import { toPropertyId } from '@/lib/sivra/agente-huesped/contexto'
+import { toPropertyId, libreSegunCalendario } from '@/lib/sivra/agente-huesped/contexto'
 import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
-import { entradaMismoDiaLibre, sumarDias, restarDias, estanciasFiables } from '@/lib/sivra/agente-huesped/disponibilidad'
+import { entradaMismoDiaLibre, sumarDias, restarDias, estanciasFiables, combinarFuentes } from '@/lib/sivra/agente-huesped/disponibilidad'
 import { parseGuestAppUrl, fetchGuiaSecciones } from '@/lib/sivra/agente-huesped/guest-app'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { mensajesDebidos, hitosBloqueantes, cubreAlHuesped, type HitoRegistrado, type ReservaMin } from './decidir'
@@ -133,18 +133,25 @@ function chekinDeSecciones(secciones: { texto: string }[] | null): string {
 }
 
 // ¿Queda libre el día de la salida (nadie entra ese día)? true/false verificado · null = no se pudo
-// comprobar → la plantilla NO ofrece las 12:00 (mismo criterio conservador que el agente).
-async function lateOferta(apartmentId: unknown, departure: string, bookingId: string): Promise<boolean | null> {
-  if (!apartmentId || !departure) return null
-  try {
-    const d: any = await smoobuFetch(
-      `/api/reservations?apartmentId=${apartmentId}&arrivalFrom=${departure}&arrivalTo=${departure}&pageSize=100`,
-      { cache: 'no-store' },
-    ).then(r => r.json())
-    const est = estanciasFiables(d, { apartmentId: String(apartmentId), campo: 'arrival', desde: departure, hasta: departure })
-    if (est === null) return null
-    return entradaMismoDiaLibre(departure, est, bookingId)
-  } catch { return null }
+// comprobar → la plantilla NO ofrece las 12:00 (mismo criterio conservador que el agente). Misma
+// regla que el agente: calendario volcado (`incomes`) como fuente principal + Smoobu en vivo de
+// refuerzo; basta una que diga ocupado.
+async function lateOferta(apartmentId: unknown, propertyId: string, departure: string, bookingId: string): Promise<boolean | null> {
+  if (!departure) return null
+  const calendario = await libreSegunCalendario(propertyId, bookingId, 'entrada', departure)
+  let vivo: boolean | null = null
+  if (apartmentId) {
+    try {
+      const d: any = await smoobuFetch(
+        `/api/reservations?apartmentId=${apartmentId}&arrivalFrom=${departure}&arrivalTo=${departure}&pageSize=100`,
+        { cache: 'no-store' },
+      ).then(r => r.json())
+      const est = estanciasFiables(d, { apartmentId: String(apartmentId), campo: 'arrival', desde: departure, hasta: departure })
+      if (est !== null) vivo = entradaMismoDiaLibre(departure, est, bookingId)
+    } catch { /* vivo queda null: no verificado */ }
+  }
+  const { posible, chequeado } = combinarFuentes(calendario, vivo)
+  return chequeado ? posible : null
 }
 
 // Vigía de cobertura: quién llega sin sus instrucciones. Devuelve una nota para el latido, o null.
@@ -300,7 +307,7 @@ export async function pasadaMensajesProgramados(deadline = Date.now() + 280_000)
         chekinUrl = chekinDeSecciones(secciones)
       }
 
-      const late = deb.tipo === 'vispera_salida' ? await lateOferta(b?.apartment?.id, r.checkOut, bookingId) : null
+      const late = deb.tipo === 'vispera_salida' ? await lateOferta(b?.apartment?.id, propertyId, r.checkOut, bookingId) : null
 
       const datos: DatosPlantilla = {
         guestName: String(b?.['guest-name'] || b?.guestName || '').trim(),
