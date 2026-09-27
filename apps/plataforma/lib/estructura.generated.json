@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-27T05:27:06Z",
+  "generadoEn": "2026-09-27T09:16:16Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 125
+        "evidencias": 126
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 106
+        "evidencias": 108
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 92
+        "evidencias": 94
       },
       "rrhh": {
         "estado": "no",
@@ -2306,11 +2306,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 28
+        "evidencias": 29
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 84
+        "evidencias": 86
       },
       "asegura-web": {
         "estado": "usado",
@@ -5045,6 +5045,7 @@
       "/api/cron/borme-ingesta",
       "/api/cron/briefing",
       "/api/cron/canario-lead",
+      "/api/cron/catastro-pisos",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
       "/api/cron/cima-pull-respaldo",
@@ -5545,6 +5546,8 @@
       "seguros.polizas",
       "seguros.portal_aviso_enviado",
       "seguros.portal_enlace_directo",
+      "seguros.portal_poliza_cambio",
+      "seguros.portal_poliza_foto",
       "seguros.presupuesto",
       "seguros.presupuesto_evento",
       "seguros.presupuesto_opcion",
@@ -5746,8 +5749,11 @@
       "contable_feedback",
       "contable_log",
       "contable_memoria",
+      "correduria_asistente_accion",
       "correduria_asistente_correccion",
+      "correduria_asistente_documento",
       "correduria_asistente_emision",
+      "correduria_asistente_oportunidad",
       "correduria_asistente_regla",
       "correduria_asistente_turno",
       "correduria_avisos_renovacion",
@@ -5994,7 +6000,7 @@
     {
       "id": "idealista-radar",
       "name": "idealista-radar",
-      "description": "Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa en la costa de Huelva con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide \"mira Idealista en la costa\". Sin secretos."
+      "description": "Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa (costa de Huelva a diario; Asturias, Cantabria y Cádiz por turnos) con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide \"mira Idealista en la costa\". Sin secretos."
     },
     {
       "id": "inversion-inmueble",
@@ -6565,7 +6571,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1493,
+    "apis": 1494,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
