@@ -1,0 +1,103 @@
+{
+ "sesion": "ddd3043b-dfe0-5c68-b7cb-30421f938c83",
+ "inicio": "2026-09-27T09:09:55.127Z",
+ "fin": "2026-09-27T09:14:02.075Z",
+ "llamadas": 38,
+ "categorias": {
+  "otro": {
+   "llamadas": 6,
+   "chars_in": 744,
+   "chars_out": 1277,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 4,
+    "PushNotification": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 4,
+   "chars_in": 386,
+   "chars_out": 62825,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 4
+   }
+  },
+  "bash": {
+   "llamadas": 6,
+   "chars_in": 871,
+   "chars_out": 1939,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 6
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 9,
+   "chars_in": 694,
+   "chars_out": 54863,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__search_threads": 5,
+    "mcp__Gmail__get_thread": 3
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 5,
+   "chars_in": 478,
+   "chars_out": 11659,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 4,
+    "mcp__Google-Drive__read_file_content": 1
+   }
+  },
+  "sql": {
+   "llamadas": 4,
+   "chars_in": 1611,
+   "chars_out": 10869,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 4
+   }
+  },
+  "escritura": {
+   "llamadas": 1,
+   "chars_in": 1526,
+   "chars_out": 14801,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 3,
+   "chars_in": 1531,
+   "chars_out": 332,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1
+   }
+  }
+ }
+}
