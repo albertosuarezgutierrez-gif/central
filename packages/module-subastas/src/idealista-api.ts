@@ -191,6 +191,27 @@ const CENTROS: Array<[RegExp, CentroBusqueda]> = [
   [/bormujos/, { lat: 37.373, lng: -6.072, distancia: 4000 }],
   [/utrera/, { lat: 37.185, lng: -5.781, distancia: 6000 }],
   [/sevilla/, { lat: 37.389, lng: -5.984, distancia: 7000 }],
+  // Costa norte — núcleos de la rutina `idealista-radar` (27/09/2026). Van por
+  // MUNICIPIO de costa (el nombre que reconoce la lente 🌊, `costa-norte.ts`)
+  // y ANTES que Gijón/Avilés/Oviedo para que no los capture un patrón genérico.
+  [/llanes/, { lat: 43.42, lng: -4.755, distancia: 9000 }],
+  [/ribadesella/, { lat: 43.462, lng: -5.059, distancia: 7000 }],
+  [/colunga|lastres/, { lat: 43.495, lng: -5.29, distancia: 7000 }],
+  [/villaviciosa/, { lat: 43.481, lng: -5.436, distancia: 8000 }],
+  [/castrillon|piedras blancas/, { lat: 43.563, lng: -5.948, distancia: 5000 }],
+  [/cudillero/, { lat: 43.563, lng: -6.146, distancia: 8000 }],
+  [/luarca|valdes/, { lat: 43.543, lng: -6.536, distancia: 8000 }],
+  [/navia/, { lat: 43.54, lng: -6.722, distancia: 6000 }],
+  [/tapia de casariego/, { lat: 43.57, lng: -6.944, distancia: 6000 }],
+  [/san vicente de la barquera/, { lat: 43.385, lng: -4.399, distancia: 7000 }],
+  [/comillas/, { lat: 43.386, lng: -4.292, distancia: 6000 }],
+  [/suances/, { lat: 43.433, lng: -4.043, distancia: 6000 }],
+  [/pielagos|liencres/, { lat: 43.455, lng: -3.945, distancia: 6000 }],
+  [/ribamontan al mar|\bsomo\b|loredo/, { lat: 43.46, lng: -3.73, distancia: 6000 }],
+  [/noja/, { lat: 43.489, lng: -3.525, distancia: 5000 }],
+  [/santona/, { lat: 43.444, lng: -3.458, distancia: 5000 }],
+  [/laredo/, { lat: 43.41, lng: -3.418, distancia: 5000 }],
+  [/castro urdiales/, { lat: 43.385, lng: -3.215, distancia: 7000 }],
   // Asturias
   [/belmonte de miranda/, { lat: 43.279, lng: -6.216, distancia: 8000 }],
   [/pravia/, { lat: 43.49, lng: -6.11, distancia: 7000 }],

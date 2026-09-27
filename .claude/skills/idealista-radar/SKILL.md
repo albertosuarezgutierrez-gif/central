@@ -1,6 +1,6 @@
 ---
 name: idealista-radar
-description: Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa en la costa de Huelva con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide "mira Idealista en la costa". Sin secretos.
+description: Rutina PROGRAMADA diaria que busca CASAS de 3+ dormitorios cerca de la playa (costa de Huelva a diario; Asturias, Cantabria y Cádiz por turnos) con el conector de Idealista y las mete en el corpus `mercado_comparables` (radar de subastas/chollos/lente 🌊). Sustituye a las alertas de correo de Idealista (Fotocasa sigue por correo). Úsala al disparo diario o si Alberto pide "mira Idealista en la costa". Sin secretos.
 ---
 
 # Radar de Idealista por conector (costa de Huelva)
@@ -12,10 +12,14 @@ más— los saca el cron `subastas-mercado` sobre el corpus, igual que con los c
 
 ## Por qué existes (24/09/2026)
 
-Alberto quitó las alertas de correo de Idealista: solo cubrían las búsquedas que él guardaba a mano.
-Un conector solo se usa desde una sesión, no desde un cron, así que esto es una rutina. **Desde ese
-día eres la única vía por la que entra Idealista al corpus**: si no corres, el radar de casas de
-playa calla y ese silencio se lee como «no hay nada».
+Las alertas de correo de Idealista solo cubren las búsquedas que Alberto guarda a mano. Un conector
+solo se usa desde una sesión, no desde un cron, así que esto es una rutina: **si no corres, el radar
+de casas de playa calla y ese silencio se lee como «no hay nada».**
+
+⚠️ **La skill se escribió el 24/09/2026 pero NADIE la programó hasta el 27/09** (sin rutina, sin un
+solo latido `subastas_idealista`), mientras aquí se afirmaba que ya era «la única vía». Lo que
+sostuvo el corpus esos días fueron las alertas de correo, que siguen llegando (19 correos el 27/09).
+**Alberto quita las alertas de correo solo después de ver varios latidos en verde**, no antes.
 
 ## 🚨 No romper
 
@@ -36,27 +40,61 @@ playa calla y ese silencio se lee como «no hay nada».
 
 ## Pasos
 
-### 1. Busca cada núcleo (`search_properties`)
+### 1. Busca los núcleos de HOY (`search_properties`)
 Parámetros fijos: `country: "es"`, `locale: "es-ES"`, `operation: "SALE"`, **`propertyType: "CHALET"`**
 (casas, chalets, adosados y pareados; no pisos) y `maxResults: 50`.
 `query` = `casa o chalet de 3 o más dormitorios cerca de la playa en <búsqueda>`.
 
-| nucleo (se manda tal cual) | búsqueda |
-|---|---|
-| Isla Canela | Isla Canela, Ayamonte |
-| Isla Cristina | Isla Cristina, Huelva |
-| Islantilla | Islantilla, Huelva |
-| La Antilla | La Antilla, Lepe |
-| El Rompido | El Rompido, Cartaya |
-| El Portil | El Portil, Punta Umbría |
-| Punta Umbría | Punta Umbría, Huelva |
-| Mazagón | Mazagón, Moguer |
-| Matalascañas | Matalascañas, Almonte |
+**Turnos (día de la semana en hora de Madrid):** Huelva **todos los días**; además, lunes/miércoles/viernes
+Asturias, martes/jueves/sábado Cantabria y domingo Cádiz. Cada pasada son ≤19 búsquedas: el corpus es
+idempotente y una bajada del norte se detecta como mucho con dos días de retraso, que no justifica
+triplicar el coste de cada sesión.
 
-Criterios de Alberto: costa de Huelva, cerca de la playa, **3 o más dormitorios**, mejor casa que
-piso. Si falta un núcleo, no lo añadas aquí sin darle antes su centro en `CENTROS`
+| turno | nucleo (se manda tal cual) | búsqueda |
+|---|---|---|
+| diario | Isla Canela | Isla Canela, Ayamonte |
+| diario | Isla Cristina | Isla Cristina, Huelva |
+| diario | Islantilla | Islantilla, Huelva |
+| diario | La Antilla | La Antilla, Lepe |
+| diario | El Rompido | El Rompido, Cartaya |
+| diario | El Portil | El Portil, Punta Umbría |
+| diario | Punta Umbría | Punta Umbría, Huelva |
+| diario | Mazagón | Mazagón, Moguer |
+| diario | Matalascañas | Matalascañas, Almonte |
+| L-X-V | Llanes | Llanes, Asturias |
+| L-X-V | Ribadesella | Ribadesella, Asturias |
+| L-X-V | Colunga | Colunga, Asturias |
+| L-X-V | Villaviciosa | Villaviciosa, Asturias |
+| L-X-V | Gijón | Somió, Gijón |
+| L-X-V | Castrillón | Castrillón, Asturias |
+| L-X-V | Cudillero | Cudillero, Asturias |
+| L-X-V | Luarca | Luarca, Valdés |
+| L-X-V | Navia | Navia, Asturias |
+| L-X-V | Tapia de Casariego | Tapia de Casariego, Asturias |
+| M-J-S | San Vicente de la Barquera | San Vicente de la Barquera, Cantabria |
+| M-J-S | Comillas | Comillas, Cantabria |
+| M-J-S | Suances | Suances, Cantabria |
+| M-J-S | Piélagos | Liencres, Piélagos |
+| M-J-S | Ribamontán al Mar | Somo, Ribamontán al Mar |
+| M-J-S | Noja | Noja, Cantabria |
+| M-J-S | Santoña | Santoña, Cantabria |
+| M-J-S | Laredo | Laredo, Cantabria |
+| M-J-S | Castro Urdiales | Castro Urdiales, Cantabria |
+| D | Conil | Conil de la Frontera, Cádiz |
+| D | La Barrosa | La Barrosa, Chiclana de la Frontera |
+| D | Los Caños de Meca | Los Caños de Meca, Barbate |
+| D | El Palmar | El Palmar, Vejer de la Frontera |
+| D | Zahara de los Atunes | Zahara de los Atunes, Barbate |
+
+**Gijón se busca por «Somió, Gijón» a propósito:** con «Gijón» a secas el conector devolvió casas de
+Langreo (27/09/2026). El núcleo que se manda sigue siendo «Gijón».
+
+Criterios de Alberto: cerca de la playa (en el norte, a ≤25-30 min), **3 o más dormitorios**, casa y
+no piso, mejor adosado. Si falta un núcleo, no lo añadas aquí sin darle antes su centro en `CENTROS`
 (`packages/module-subastas/src/idealista-api.ts`): sin centro, el servidor rechaza la búsqueda (error
-en `porNucleo`).
+en `porNucleo`). Lo vigila `test/regression-idealista-radar-nucleos.test.ts`, que lee esta tabla.
+Y en el norte el `nucleo` tiene que ser un MUNICIPIO de costa de `costa-norte.ts`: es lo que hace
+saltar la lente 🌊.
 
 ### 2. Escribe (una llamada por núcleo)
 ```
@@ -69,9 +107,9 @@ actualiza el precio, y si el precio ha bajado lo registra como bajada.
 ```
 bash scripts/canal-aviso.sh POST /api/internal/latido '{"agente":"subastas_idealista","ok":<true|false>,"detalle":"<parte>"}'
 ```
-`ok = true` solo si escribiste en al menos la mitad de los núcleos. En el `detalle`, por este orden:
+`ok = true` solo si escribiste en al menos la mitad de los núcleos de HOY. En el `detalle`, por este orden:
 anuncios escritos y núcleos buscados · ⚠️ núcleos sin respuesta del conector · fuera de zona · errores.
-Ejemplo: `«41 casas en 9/9 núcleos · 3 fuera de zona descartadas»`.
+Ejemplo: `«41 casas en 19/19 núcleos (Huelva + Asturias) · 3 fuera de zona descartadas»`.
 
 ### 4. Cierra
 Pon una línea en `docs/AGENTES-BITACORA.md` con los núcleos, los anuncios escritos y lo que falló.
