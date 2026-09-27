@@ -16,7 +16,7 @@
 import { computeEmailLookupHash, decryptField, encryptField } from '@central/module-seguros-pii'
 import { generarTokenEnlace, hashTokenEnlace, tokenEnlaceValido } from '@central/module-seguros-portal'
 import { prismaAsegura } from './asegura-db'
-import { altaCliente } from './cartera-edicion'
+import { altaCliente, anadirContacto, coincidencias } from './cartera-edicion'
 import { crearEnlaceDirecto } from './avisos-intranet'
 import { enlacePortal } from './avisos-intranet-reglas'
 import { Prisma } from './generated/asegura-client'
@@ -87,9 +87,9 @@ export async function solicitarAviso(correduriaId: string, body: unknown): Promi
   const tokenConfirmar = generarTokenEnlace()
   const tokenBaja = generarTokenEnlace()
   await db.$executeRaw(Prisma.sql`
-    insert into aviso_web (correduria_id, nombre, email, email_lookup_hash, ramo, ramo_web, vence,
+    insert into aviso_web (correduria_id, nombre, email, email_lookup_hash, telefono, ramo, ramo_web, vence,
       consentimiento_version, token_confirmacion_hash, confirmacion_expira_en, token_baja, token_baja_hash)
-    values (${correduriaId}::uuid, ${s.nombre}, ${encryptField(s.email)}, ${hash}, cast(${s.ramo} as tipo_seguro),
+    values (${correduriaId}::uuid, ${s.nombre}, ${encryptField(s.email)}, ${hash}, ${s.telefono ? encryptField(s.telefono) : null}, cast(${s.ramo} as tipo_seguro),
       ${s.ramoWeb}, ${s.vence}::date, ${CONSENTIMIENTO_VERSION}, ${await hashTokenEnlace(tokenConfirmar)},
       now() + make_interval(hours => ${HORAS_CONFIRMACION}::int), ${encryptField(tokenBaja)}, ${await hashTokenEnlace(tokenBaja)})`)
 
@@ -120,6 +120,12 @@ export type ResultadoConfirmacion =
       /** Cómo se llama el seguro para una persona («hogar», o lo que escribió en «Otro»). */
       seguro: string
       vence: string
+      /**
+       * El móvil que dejó con consentimiento de llamada: `null` = no dejó; `anadido` a la ficha;
+       * `ya_estaba` en ella; `en_otra_ficha` = ese número lo tiene OTRA persona y NO se ha tocado
+       * (nadie ha verificado el número: no decide de quién es la ficha ni se funde nada por él).
+       */
+      movil: 'anadido' | 'ya_estaba' | 'en_otra_ficha' | 'no_anadido' | null
     }
   | { estado: 'no_valido' }
   | { estado: 'desactivado' }
@@ -128,6 +134,7 @@ type FilaAviso = {
   id: string
   nombre: string
   email: string
+  telefono: string | null
   ramo: string
   ramoWeb: string
   vence: Date
@@ -143,7 +150,7 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
   if (!tokenEnlaceValido(token)) return { estado: 'no_valido' }
   const db = prismaAsegura()
   const [f] = await db.$queryRaw<FilaAviso[]>(Prisma.sql`
-    select id, nombre, email, ramo::text as ramo, ramo_web as "ramoWeb", vence, confirmado_en as "confirmadoEn", cliente_id as "clienteId",
+    select id, nombre, email, telefono, ramo::text as ramo, ramo_web as "ramoWeb", vence, confirmado_en as "confirmadoEn", cliente_id as "clienteId",
            confirmacion_expira_en < now() as caducada, baja_en is not null as baja
     from aviso_web
     where correduria_id = ${correduriaId}::uuid and token_confirmacion_hash = ${await hashTokenEnlace(token)}`)
@@ -151,14 +158,17 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
   const vence = f.vence.toISOString().slice(0, 10)
   const seguro = nombreDelSeguro(f.ramo, f.ramoWeb)
   if (f.confirmadoEn && f.clienteId) {
-    return { estado: 'ok', yaEstaba: true, ficha: { id: f.clienteId, nueva: false, nombre: f.nombre, varias: false }, ramo: f.ramo, seguro, vence }
+    return { estado: 'ok', yaEstaba: true, ficha: { id: f.clienteId, nueva: false, nombre: f.nombre, varias: false }, ramo: f.ramo, seguro, vence, movil: null }
   }
   if (f.caducada) return { estado: 'no_valido' }
 
   const email = decryptField(f.email)
   if (!email) throw new Error('aviso_web_email_ilegible')
+  const telefono = f.telefono ? decryptField(f.telefono) : null
 
   // Ficha: nueva como lead, o la que ya tiene ese correo. Con varias, la primera — y se avisa.
+  // 🚨 El móvil NO entra en el alta: nadie lo ha verificado (el doble opt-in confirma el correo) y
+  // buscar ficha por él podría colgar el aviso de otra persona. Se añade después, a esta ficha.
   // ⚠️ `altaCliente` abre su propia transacción, así que va FUERA de la de abajo: si esa fallara,
   // queda un lead sin oportunidad. El reintento del mismo enlace lo recupera (la ficha se encuentra
   // por el correo) y la respuesta de error pide reintentar; no se deja silencioso.
@@ -205,10 +215,25 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
     await tx.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${ficha.id}::uuid, cast('contacto' as tipo_historial_interno),
-              ${`Confirmó en la web el aviso de vencimiento: seguro de ${seguro}, vence el ${ciclo}. Le escribiremos a 70 y 45 días.`})`)
+              ${`Confirmó en la web el aviso de vencimiento: seguro de ${seguro}, vence el ${ciclo}. Le escribiremos a 70 y 45 días.${telefono ? ' Dejó móvil y acepta que le llamemos para la renovación.' : ''}`})`)
     return false
   })
-  return { estado: 'ok', yaEstaba, ficha, ramo: f.ramo, seguro, vence: ciclo }
+  const movil = !yaEstaba && telefono ? await movilALaFicha(correduriaId, ficha.id, telefono) : null
+  return { estado: 'ok', yaEstaba, ficha, ramo: f.ramo, seguro, vence: ciclo, movil }
+}
+
+/** Fuera de la transacción: si falla, el aviso ya está confirmado y el Telegram lo dice; no se reintenta. */
+async function movilALaFicha(correduriaId: string, clienteId: string, telefono: string): Promise<'anadido' | 'ya_estaba' | 'en_otra_ficha' | 'no_anadido'> {
+  try {
+    const otros = await coincidencias(correduriaId, { telefono })
+    if (otros.some((o) => o.id === clienteId)) return 'ya_estaba'
+    if (otros.length > 0) return 'en_otra_ficha'
+    const r = await anadirContacto(correduriaId, clienteId, { tipo: 'telefono', valor: telefono, etiqueta: 'móvil', actor: 'web' })
+    return r.ok ? 'anadido' : 'no_anadido'
+  } catch {
+    console.error('[aviso-web] no se pudo añadir el móvil a la ficha')
+    return 'no_anadido'
+  }
 }
 
 // ─── 3. Baja ────────────────────────────────────────────────────────────────

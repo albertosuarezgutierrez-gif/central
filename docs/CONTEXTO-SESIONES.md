@@ -12,14 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(27/09/2026)** 🎓 **agentes-entrenador: pasada saltada casi 4 semanas (30/08→27/09).** Sin pasada
-desde el 30/08 pese al cron dominical. Poda real de `docs/AGENTES-BITACORA.md` (~90 entradas,
-verificada releyendo el archivo tras el commit) + retoma y cierra el PR #3131 (stale desde el 20/09,
-nunca mergeado — el mismo fallo "cepo sin ver fallar" que su propio guardarraíl describe, ahora
-aplicado a `SKILL.md`). Diagnóstico: sin hallazgos nuevos que pidan tocar un prompt (mercado-booking
-y facturas-correo tienen patrones repetidos, pero son de auditoría/código o decisión de Alberto, no
-del agente). Backlog de PRs abiertos: 47 al hacer la pasada; 44 de ellos los cerró después la
-revisión de #3713 por orden de Alberto.
+**(27/09/2026)** 🎓 **agentes-entrenador: el trigger corría cada domingo, pero sus PRs nunca se
+mergeaban.** #2413→#2864→#3131→#3721 mezclaban la poda de la bitácora (registro) con cambios a su
+`SKILL.md`; `rutinas-automerge` descarta cualquier PR con `.claude/**`, se quedaban en draft y la pasada
+siguiente re-diagnosticaba el mismo rango («4 semanas sin pasada» era FALSO). Separado: poda en #3724 y
+regla nueva en #3725 (registro en PR propio + comprobar en `origin/main` que la poda anterior aterrizó),
+ambos mergeados. Sin cambios de prompt en otros agentes. ⚠️ El trigger lleva `ALERTA_TOKEN` en claro.
 
 **(27/09/2026)** Revisión del PR #3713 (mergeado): el «hueco de memoria 05-13/09» era falso (formato distinto
 de fecha), y el mapa de funciones indexaba el cliente Prisma local — corregidos; `next build` OK en las 4 apps
@@ -763,6 +761,16 @@ Su hallazgo real: **las páginas con `openGraph` propio salían SIN `og:image`**
 + `lib/og-imagen.test.ts`, y en housesevillana `app/tarjeta.ts` + `app/tarjeta.test.ts` (la portada la
 reescribe el agente SEO: el test exige que diga la misma imagen). ⚠️ La imagen de housesevillana vive en
 Google Drive (`lh3.googleusercontent`): frágil; desde el contenedor da 403, sin verificar en producción.
+
+## (27/09/2026) asegura-web: móvil OPCIONAL en «avísame antes de que venza» (PR #3730, mergeado)
+- Campo «Móvil (opcional)» + 2ª casilla SIN marcar «que me llaméis» (solo aparece con móvil): el consentimiento de escribir no cubre llamar (Ley 11/2022 art. 66). Consentimiento pasa a `web-aviso-v2`.
+- `seguros.aviso_web.telefono` (cifrado `v1:`, CHECK) — **migración ya aplicada en prod** (`2026-09-27_aviso_web_telefono.sql`, aditiva).
+- 🚨 El móvil NO verifica nada: al confirmar se AÑADE a la ficha decidida por el correo (`anadirContacto`), nunca busca/funde fichas; si está en otra ficha no se toca y el Telegram lo avisa.
+
+## (27/09/2026) Agente huésped: early check-in dicho «libre» con la víspera OCUPADA
+- Reserva 157252361 (Duplex Center, llega 28/09): el borrador decía «la noche anterior está libre» y la 150035011 (stephen martin) SALÍA el 28 (medido en `incomes`). No se envió (needs_human).
+- La consulta a Smoobu usaba `apartments[]`+`from/to` en /api/reservations; causa exacta no medible sin clave. Ahora: `apartmentId`+`departureFrom/To` (early) y `arrivalFrom/To` (late), y `estanciasFiables()` devuelve null (= no verificado) si la lista viene paginada o con estancias fuera de ventana.
+- Alberto: «tienes el calendario volcado» → `incomes` (webhook Smoobu en tiempo real) pasa a fuente PRINCIPAL; Smoobu en vivo queda de refuerzo (bloqueos). `combinarFuentes()`: una que diga ocupado manda. `lateOferta` de los mensajes programados usa la misma regla (calendario + Smoobu). Cepo visto en rojo.
 
 ## (27/09/2026) Inicio: pinchar una reserva del calendario muestra su detalle (PR #3716)
 - Tarjeta «Pisos» de `/inicio`: las barras son botones; al pincharlas se abre debajo huésped, piso, entrada/salida, noches, pax, importe (€/n) y portal. Nuevo cliente `inicio/CalendarioReservas.tsx`; `Barra` lleva `reserva` e `incomes.amount` entra como `importe` (null = «sin dato», no 0 €).

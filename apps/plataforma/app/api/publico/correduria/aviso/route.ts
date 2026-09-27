@@ -24,6 +24,14 @@ const NOMBRE_RAMO: Record<string, string> = {
   auto: 'auto', hogar: 'hogar', comunidades: 'comunidad', comercio: 'comercio', responsabilidad_civil: 'responsabilidad civil',
 }
 
+// El número NO viaja en el Telegram (como el correo): se ve en la ficha.
+const MOVIL: Record<string, string> = {
+  anadido: '📞 Dejó móvil y acepta que le llames: añadido a la ficha.',
+  ya_estaba: '📞 Acepta que le llames; su móvil ya estaba en la ficha.',
+  en_otra_ficha: '📞⚠️ Acepta que le llames, pero ese móvil ya está en OTRA ficha y no se ha tocado. Revísalo antes de llamar.',
+  no_anadido: '📞⚠️ Acepta que le llames, pero no se pudo añadir el móvil a la ficha.',
+}
+
 export async function POST(req: NextRequest) {
   const accion = new URL(req.url).searchParams.get('accion') as Accion | null
   if (!accion || !ACCIONES.includes(accion)) return NextResponse.json({ ok: false, motivo: 'Acción no válida.' }, { status: 400 })
@@ -68,6 +76,7 @@ export async function POST(req: NextRequest) {
           ? `🆕 Ficha nueva (lead): <a href="${urlFichaCliente(ficha.id)}">abrir ficha</a>`
           : `♻️ Ya estaba en la cartera como <b>${escapeHtml(ficha.nombre)}</b>: <a href="${urlFichaCliente(ficha.id)}">abrir ficha</a>`,
         ...(ficha.varias ? ['⚠️ Ese correo está en VARIAS fichas: se ha colgado de la primera. Revisa si hay duplicado.'] : []),
+        ...(MOVIL[String(j.movil)] ? [MOVIL[String(j.movil)]!] : []),
         'Le escribiremos a 70 y 45 días del vencimiento con acceso a su área.',
       ]
       await tgAviso('correduria.aviso-web', lineas.join('\n')).catch(() => {})
