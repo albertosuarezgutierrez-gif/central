@@ -27,7 +27,7 @@ import type { ResultadoEscritura } from './cliente-edicion-asegura'
 
 // ─── Formulario ──────────────────────────────────────────────────────────────
 
-export const TIPOS_SEGURO_LEAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'comunidades', 'comercio', 'flota', 'responsabilidad-civil', 'impago-alquiler', 'patinete-electrico', 'otros'] as const
+export const TIPOS_SEGURO_LEAD = ['auto', 'moto', 'hogar', 'vida', 'salud', 'comunidades', 'comercio', 'flota', 'responsabilidad-civil', 'decesos', 'seguro-perro', 'impago-alquiler', 'patinete-electrico', 'otros'] as const
 export type TipoSeguroLead = (typeof TIPOS_SEGURO_LEAD)[number]
 
 export const ETIQUETA_TIPO_SEGURO: Record<TipoSeguroLead, string> = {
@@ -40,6 +40,8 @@ export const ETIQUETA_TIPO_SEGURO: Record<TipoSeguroLead, string> = {
   comercio: 'Comercio / empresa',
   flota: 'Flota de vehículos',
   'responsabilidad-civil': 'Responsabilidad civil',
+  decesos: 'Decesos',
+  'seguro-perro': 'Seguro de perro',
   'impago-alquiler': 'Impago de alquiler',
   'patinete-electrico': 'Patinete eléctrico',
   otros: 'Otro seguro',
