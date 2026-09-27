@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-27T10:56:13Z",
-  "sha": "011c8001f2714b42528e20f9f0b3db910f94cea8",
+  "generadoEn": "2026-09-27T13:50:45Z",
+  "sha": "4260ad3300e650402d863e5fa3f00d914e51aaf1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -7940,7 +7940,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "VinculoPortal | null",
-          "linea": 318,
+          "linea": 329,
           "resumen": "La columna es `text` con un CHECK en la BD, pero un despliegue viejo o una escritura por otro camino pueden dejar cualquier cosa: lo que no se reconoce es «no se sabe», nunca el estado que menos moles"
         },
         {
@@ -7949,7 +7949,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Nivel",
-          "linea": 368,
+          "linea": 379,
           "resumen": "`nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo."
         },
         {
@@ -7958,7 +7958,7 @@
           "exportada": true,
           "params": "c: CarteraPortal, opciones: { soloSiYaCubre?: boolean } = {}, hoy: Date = new Date()",
           "retorno": "CarteraPortal",
-          "linea": 376,
+          "linea": 387,
           "resumen": "La cartera para PINTAR la lista (bóveda, hoja QR): sin las pólizas ya sustituidas. Los permisos (partes, ficha, recordatorios) usan la cartera entera, nunca esta."
         },
         {
@@ -7967,7 +7967,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CarteraPortal | null>",
-          "linea": 385
+          "linea": 396
         },
         {
           "nombre": "claveGemela",
@@ -7975,7 +7975,7 @@
           "exportada": false,
           "params": "clienteId: string, numeroPoliza: string | null, tipo: string | null, fechaInicio: Date | null,",
           "retorno": "string | null",
-          "linea": 411,
+          "linea": 422,
           "resumen": "La clave con la que se empareja una póliza con su GEMELA duplicada. Los CUATRO campos van juntos y ninguno sobra: `clienteId` para que el emparejamiento no pueda cruzar dos fichas, `numeroPoliza` porq"
         },
         {
@@ -7984,7 +7984,7 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "boolean",
-          "linea": 440,
+          "linea": 451,
           "resumen": "¿Queda un sobre `v1:` SIN abrir tras intentar descifrar? Entonces la dirección EXISTE y solo no se puede leer aquí: la ficha no puede afirmar que falta."
         },
         {
@@ -7993,7 +7993,7 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "unknown",
-          "linea": 446
+          "linea": 457
         },
         {
           "nombre": "carteraDeIdentidad",
@@ -8001,7 +8001,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<CarteraPortal>",
-          "linea": 457
+          "linea": 468
         },
         {
           "nombre": "listaCoberturas",
@@ -8009,7 +8009,7 @@
           "exportada": false,
           "params": "cobs: Array<{ descripcion: string | null; codigo: string | null; capitalAsegurado: string | null }>,",
           "retorno": "",
-          "linea": 1152,
+          "linea": 1184,
           "resumen": "Nombre y capital de cada cobertura, alineados. Un capital 0, vacío o que no se sabe leer sale `null` («no informado»), nunca «0,00€»."
         },
         {
@@ -8018,7 +8018,7 @@
           "exportada": false,
           "params": "lista: ReciboFila[]",
           "retorno": "RecibosPortal",
-          "linea": 1169
+          "linea": 1201
         },
         {
           "nombre": "polizasParaParte",
@@ -8026,7 +8026,7 @@
           "exportada": true,
           "params": "c: Pick<CarteraPortal, 'propias' | 'autorizadas' | 'intervinientes'>",
           "retorno": "Set<string>",
-          "linea": 1192,
+          "linea": 1224,
           "resumen": "Las pólizas sobre las que esta cartera puede DAR UN PARTE: todas las propias y, de las autorizadas, solo las que traen el alcance `partes` (`puedeDarParte`). Una sola fuente para la ruta que lo crea y"
         },
         {
@@ -8035,7 +8035,7 @@
           "exportada": false,
           "params": "a: Date | null, b: Date | null",
           "retorno": "Date | null",
-          "linea": 1202,
+          "linea": 1234,
           "resumen": "La más tardía de dos caducidades, donde `null` = no caduca (gana siempre)."
         },
         {
@@ -8044,13 +8044,13 @@
           "exportada": true,
           "params": "p: Pick<PolizaPortal, 'vigencia' | 'renovacionSinConfirmar'>",
           "retorno": "boolean",
-          "linea": 1209,
+          "linea": 1241,
           "resumen": "Cuenta como «en vigor» para la lista, el parte y los avisos: vigente, sin fecha (no se sabe) o con la renovación sin confirmar. Lo único que sale es lo que la compañía da por terminado."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "63ddf84189d7"
+      "hash": "5cd99dd2b7ee"
     },
     {
       "ruta": "apps/asegura-portal/lib/catastro-sugerencias.ts",
@@ -17509,7 +17509,7 @@
           "exportada": true,
           "params": "env: string | undefined = process.env.ASEGURA_AVISOS_ACTIVOS",
           "retorno": "boolean",
-          "linea": 99,
+          "linea": 102,
           "resumen": "El interruptor, puro y aparte para poder razonarlo de un vistazo: cualquier valor que no sea exactamente `'1'` (incluido `undefined`, `'true'` o `'0'`) deja el cron en modo cuenta. La ambigüedad se re"
         },
         {
@@ -17518,7 +17518,7 @@
           "exportada": true,
           "params": "p: { activos: boolean; forzarContar: boolean }",
           "retorno": "boolean",
-          "linea": 104,
+          "linea": 107,
           "resumen": "`?contar=1` fuerza el ensayo aunque los avisos estén activos."
         },
         {
@@ -17527,7 +17527,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 109,
+          "linea": 112,
           "resumen": "Medianoche UTC: las columnas `date` de Postgres llegan así."
         },
         {
@@ -17536,7 +17536,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 118,
+          "linea": 121,
           "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa: `null` significa «no se ha podido leer», y quien llama lo cuenta como «sin canal» en vez de como «este cliente no tiene email». Mismo criter"
         },
         {
@@ -17545,7 +17545,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "v is string",
-          "linea": 130,
+          "linea": 133,
           "resumen": "Una dirección que no tiene forma de dirección no es un canal: es basura con forma de dato."
         },
         {
@@ -17554,7 +17554,7 @@
           "exportada": true,
           "params": "c: ClienteConEmails",
           "retorno": "string | null",
-          "linea": 144,
+          "linea": 147,
           "resumen": "El email al que escribir: principal → el más antiguo de `cliente_emails` → la columna suelta de la ficha. `null` = no hay a quién escribir (o está de baja)."
         },
         {
@@ -17563,7 +17563,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, polizaId: string,",
           "retorno": "Promise<IntervinienteFicha[] | null>",
-          "linea": 172,
+          "linea": 175,
           "resumen": "Los intervinientes de ESTA póliza, ya descifrados, en la forma que espera `contactoEfectivo()`. Copia deliberadamente acotada de `leerIntervinientes` de `cartera-ficha.ts` (no exportada desde allí): a"
         },
         {
@@ -17572,7 +17572,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string,",
           "retorno": "Promise<",
-          "linea": 233,
+          "linea": 236,
           "resumen": "Las personas de referencia declaradas en `cliente_relaciones` del tomador, con SU PROPIO email ya resuelto (mismas reglas que `destinatarioDeCliente`: baja de correo respetada, principal primero). Exc"
         },
         {
@@ -17581,13 +17581,13 @@
           "exportada": true,
           "params": "opts: { hoy?: Date forzarContar?: boolean /** Presupuesto de envío en ms. Por debajo del `maxDuration` de la ruta. */ presupuestoMs?: number /** Reloj inyectable (tests). Por defecto `Date.now`. */ ahoraMs?: () => number } = {}",
           "retorno": "Promise<ResumenAvisos>",
-          "linea": 288,
+          "linea": 291,
           "resumen": "Una pasada del cron. Lanza (no devuelve un resumen tranquilizador) cuando el proceso NO puede hacer su trabajo —sin cartera, sin proveedor de correo, sin remitente—, para que el endpoint responda 503 "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2765b33128ff"
+      "hash": "83f7fa3eb6a3"
     },
     {
       "ruta": "apps/asegura/lib/backfill-contacto.ts",
@@ -18624,7 +18624,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 108,
+          "linea": 110,
           "resumen": "Descifra sin convertir un fallo en una ausencia silenciosa. Los valores cifrados llevan el prefijo `v1:`. Si no lo llevan, es que están en claro (así llegaron algunos del volcado) y se devuelven tal c"
         },
         {
@@ -18633,7 +18633,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 119,
+          "linea": 121,
           "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null."
         },
         {
@@ -18642,7 +18642,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 123
+          "linea": 125
         },
         {
           "nombre": "fechaIso",
@@ -18650,7 +18650,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 127
+          "linea": 129
         },
         {
           "nombre": "buscarClientes",
@@ -18658,7 +18658,7 @@
           "exportada": true,
           "params": "correduriaId: string, termino: string, limite = 20,",
           "retorno": "Promise<ClienteEncontrado[]>",
-          "linea": 150,
+          "linea": 152,
           "resumen": "Busca clientes por nombre o apellidos. Nombre y apellidos van EN CLARO en la base, así que esta búsqueda no depende del índice ciego — que es justo lo que la hace fiable: si fallara la clave de lookup"
         },
         {
@@ -18667,7 +18667,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, dniLookupHash: string | null, idsPolizas: string[], numeros: Map<string, string | null>,",
           "retorno": "Promise<DatosDePolizas | null>",
-          "linea": 453,
+          "linea": 455,
           "resumen": "Lo que CIMA dejó en los intervinientes de sus pólizas que son ÉL — por DNI (`nif_lookup_hash` = `dni_lookup_hash`), nunca por nombre ni por `cliente_id`: CIMA engancha el interviniente a veces a una f"
         },
         {
@@ -18676,7 +18676,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, fechaNacimiento: string | null,",
           "retorno": "Promise<CarnetFicha[] | null>",
-          "linea": 496
+          "linea": 498
         },
         {
           "nombre": "listarDeclaradas",
@@ -18684,7 +18684,7 @@
           "exportada": false,
           "params": "correduriaId: string, clienteId: string, numerosPropios: Set<string>,",
           "retorno": "Promise<PolizaDeclaradaFicha[] | null>",
-          "linea": 545,
+          "linea": 547,
           "resumen": "Las pólizas que esta ficha ha APORTADO desde el portal del cliente. El vínculo ficha↔identidad es 1:N por el lado de la identidad (una identidad puede casar con varias fichas — empresa + su administra"
         },
         {
@@ -18693,7 +18693,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<FichaCliente | null>",
-          "linea": 602,
+          "linea": 604,
           "resumen": "La ficha entera de un cliente en UNA consulta: quién es, cómo se le llama, qué tiene contratado, cómo va de recibos y qué siniestros arrastra. Es el corazón del «pincho en el nombre y lo tengo todo». "
         },
         {
@@ -18702,7 +18702,7 @@
           "exportada": false,
           "params": "tipo: string, datos: Record<string, unknown> | null, datosGemela: unknown, coberturas: string[] | null = null",
           "retorno": "ObjetoAsegurado",
-          "linea": 891,
+          "linea": 897,
           "resumen": "El objeto de la póliza; si CIMA no lo informa y la gemela del volcado sí, el de la gemela con una nota que dice de dónde sale. «Cifrado» manda sobre «no informado» (la dirección existe, solo que no se"
         },
         {
@@ -18711,7 +18711,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, tomadorId: string, idsPolizas: string[], /** NIF del tomador (índice ciego). Una fila con el MISMO NIF es el tomador * aunque CIMA la cuelgue de otra ficha suya duplicada: mismo id",
           "retorno": "Promise<IntervinienteFicha[] | null>",
-          "linea": 917,
+          "linea": 923,
           "resumen": "Los intervinientes de las pólizas del cliente, ya descifrados. Nombre, teléfono y email del interviniente van cifrados (95 de 95 en las pólizas vivas). Cuando CIMA lo enlaza a su PROPIA ficha (`client"
         },
         {
@@ -18720,7 +18720,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 983,
+          "linea": 989,
           "resumen": "`true` si el valor venía cifrado y NO se ha podido abrir. Distinto de vacío."
         },
         {
@@ -18729,7 +18729,7 @@
           "exportada": false,
           "params": "db: ReturnType<typeof prismaAsegura>, correduriaId: string, polizaId: string, matricula: string | null, datos: Record<string, unknown> | null, datosGemela: Record<string, unknown> | null,",
           "retorno": "Promise<VehiculoConocido>",
-          "linea": 1012,
+          "linea": 1018,
           "resumen": "- por eso cada una viaja con su procedencia y NUNCA se elige sola. Si la consulta falla, `versiones` queda `[]` y marca/modelo siguen valiendo: no se tumba la pantalla por no haber podido mirar el his"
         },
         {
@@ -18738,7 +18738,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<OrigenRetarificacion | null>",
-          "linea": 1075
+          "linea": 1081
         },
         {
           "nombre": "clienteOrigenDe",
@@ -18746,7 +18746,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string,",
           "retorno": "Promise<ClienteOrigen | null>",
-          "linea": 1225,
+          "linea": 1231,
           "resumen": "La persona de una ficha, SIN pasar por ninguna póliza — para una oportunidad nueva sobre un cliente que hoy no tiene ninguna (hogar desde el Catastro, no desde una póliza de la cartera). Misma discipl"
         },
         {
@@ -18755,8 +18755,16 @@
           "exportada": true,
           "params": "v: string | null",
           "retorno": "string | null",
-          "linea": 1275,
+          "linea": 1281,
           "resumen": "La fecha de nacimiento se guardó como texto cifrado y no siempre en ISO (fue `date` antes). Se aceptan `aaaa-mm-dd` y `dd/mm/aaaa`; cualquier otra cosa es `null` — no se adivina el orden de un `01/02/"
+        },
+        {
+          "nombre": "recibosVigencia",
+          "kind": "function",
+          "exportada": false,
+          "params": "rs: Array<{ claseRecibo: string | null; situacion: unknown; primaTotal: string | null; fechaVencimiento: Date | null }> | undefined,",
+          "retorno": "ReciboVigencia[]",
+          "linea": 1291
         }
       ],
       "tablas": [
@@ -18764,7 +18772,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "6aa0b4c77a1e"
+      "hash": "b195ef7bb657"
     },
     {
       "ruta": "apps/asegura/lib/cartera-filtro.ts",
@@ -18782,7 +18790,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 134
+          "linea": 140
         },
         {
           "nombre": "hoyUtc",
@@ -18790,7 +18798,7 @@
           "exportada": true,
           "params": "ahora: Date = new Date()",
           "retorno": "Date",
-          "linea": 140,
+          "linea": 146,
           "resumen": "Medianoche UTC de hoy: el mismo criterio que `lib/cartera.ts`, para que dos pantallas de la misma cartera no discrepen por la zona horaria del servidor."
         },
         {
@@ -18799,7 +18807,7 @@
           "exportada": true,
           "params": "v: VentanaVencimiento, ahora: Date = new Date()",
           "retorno": "RangoVencimiento",
-          "linea": 152,
+          "linea": 158,
           "resumen": "La ventana de vencimiento traducida a fechas concretas. Se resuelve en JS (y no con `current_date`) para que el rango sea el mismo que se puede enseñar en la pantalla y el mismo que se prueba en el te"
         },
         {
@@ -18808,7 +18816,7 @@
           "exportada": false,
           "params": "grupo: GrupoCartera",
           "retorno": "Prisma.Sql",
-          "linea": 175,
+          "linea": 181,
           "resumen": "`p` es el alias de `polizas`. La cadena es constante y no lleva nada del usuario: `Prisma.raw` aquí no abre ninguna puerta."
         },
         {
@@ -18817,7 +18825,7 @@
           "exportada": false,
           "params": "valores: readonly string[]",
           "retorno": "Prisma.Sql",
-          "linea": 183,
+          "linea": 189,
           "resumen": "Lista de literales como `in (…)`, cada valor PARAMETRIZADO. `compania` y `provincia` son texto libre del usuario y nunca se interpolan."
         },
         {
@@ -18826,7 +18834,7 @@
           "exportada": false,
           "params": "r: RangoVencimiento",
           "retorno": "Prisma.Sql",
-          "linea": 218
+          "linea": 224
         },
         {
           "nombre": "condicionesCliente",
@@ -18834,7 +18842,7 @@
           "exportada": false,
           "params": "correduriaId: string, f: FiltroCartera, hoy: Date, soloGrupoYTexto: boolean,",
           "retorno": "Prisma.Sql[]",
-          "linea": 235,
+          "linea": 241,
           "resumen": "Las condiciones sobre el CLIENTE. `soloGrupoYTexto` es lo que separa la lista de las facetas: las facetas se calculan sobre el grupo + el texto e IGNORAN el resto de filtros (ver `facetasDe`), así que"
         },
         {
@@ -18843,16 +18851,16 @@
           "exportada": true,
           "params": "correduriaId: string, f: FiltroCartera, hoy: Date = new Date(),",
           "retorno": "Promise<ListadoCartera>",
-          "linea": 330,
+          "linea": 337,
           "resumen": "El listado con su total, sus pólizas y sus facetas. @param hoy inyectable para poder probar las ventanas de vencimiento."
         },
         {
           "nombre": "polizasDeClientes",
           "kind": "function",
           "exportada": false,
-          "params": "correduriaId: string, grupo: GrupoCartera, ids: string[],",
+          "params": "correduriaId: string, grupo: GrupoCartera, ids: string[], hoy: Date = new Date(),",
           "retorno": "Promise<",
-          "linea": 406,
+          "linea": 413,
           "resumen": "Las pólizas del grupo, de los clientes de ESTA página. Nunca de toda la cartera."
         },
         {
@@ -18861,7 +18869,7 @@
           "exportada": false,
           "params": "correduriaId: string, ids: string[],",
           "retorno": "Promise<Map<string,",
-          "linea": 473,
+          "linea": 491,
           "resumen": "Si se puede contactar con cada cliente de la página. Va en su propia consulta y con su propio `catch` a propósito: si las tablas de contactos no se pueden leer, la respuesta es «no se sabe» (`null`) p"
         },
         {
@@ -18870,7 +18878,7 @@
           "exportada": false,
           "params": "correduriaId: string, f: FiltroCartera, hoy: Date,",
           "retorno": "Promise<",
-          "linea": 513,
+          "linea": 531,
           "resumen": "Las facetas de los desplegables. 🎯 **Decisión deliberada: se calculan sobre el GRUPO + el texto `q`, e IGNORAN el resto de filtros.** Es lo que hace que, ya filtrando por «auto», el desplegable de co"
         }
       ],
@@ -18885,7 +18893,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "7163b974a083"
+      "hash": "65f3b01aec73"
     },
     {
       "ruta": "apps/asegura/lib/cartera-fusion.ts",
@@ -19075,7 +19083,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 114
+          "linea": 115
         },
         {
           "nombre": "fechaIso",
@@ -19083,7 +19091,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 118
+          "linea": 119
         },
         {
           "nombre": "descifrar",
@@ -19091,7 +19099,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 123,
+          "linea": 124,
           "resumen": "Descifra sin convertir un fallo en «no tiene teléfono»."
         },
         {
@@ -19100,7 +19108,7 @@
           "exportada": false,
           "params": "texto: string | null",
           "retorno": "number | null",
-          "linea": 134,
+          "linea": 135,
           "resumen": "Importe del EIAC: solo la forma medida (`NNN.NN`). Cualquier otra → null."
         },
         {
@@ -19109,7 +19117,7 @@
           "exportada": false,
           "params": "correduriaId: string, hoy: Date",
           "retorno": "Promise<Set<string>>",
-          "linea": 153,
+          "linea": 154,
           "resumen": "Pólizas con un descarte TEMPORAL vigente (`retencion_descartes.vence_at > now()`): alguien ya gestionó esta llamada y pidió no verla un tiempo. No es «resuelto» — si el recibo sigue sin cobrar cuando "
         },
         {
@@ -19118,7 +19126,7 @@
           "exportada": true,
           "params": "correduriaId: string, hoy: Date = new Date(),",
           "retorno": "Promise<ColaRetencion>",
-          "linea": 165
+          "linea": 166
         },
         {
           "nombre": "descartarRetencion",
@@ -19126,7 +19134,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string, actor: string, motivo: string | null, dias: number = DIAS_DESCARTE_DEFECTO,",
           "retorno": "Promise<DescarteRetencion>",
-          "linea": 341,
+          "linea": 352,
           "resumen": "Quita una póliza de \"Hay que llamar\" durante `dias` (por defecto 10, tope 30): NO la resuelve. Si al caducar el descarte el recibo sigue en `devuelto` o `pendiente` vencido, `colaRetencion` la vuelve "
         },
         {
@@ -19135,7 +19143,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<number>",
-          "linea": 389,
+          "linea": 400,
           "resumen": "Pólizas VIVAS (las que entran por CIMA) de las que la compañía no ha mandado ni un recibo. Es el hueco que la pantalla tiene que declarar: sin este número, una cola de impagados vacía se leería como «"
         }
       ],
@@ -19146,7 +19154,7 @@
         "retencion_descartes"
       ],
       "rutaApi": null,
-      "hash": "01b552a8183e"
+      "hash": "f9a9b32305d0"
     },
     {
       "ruta": "apps/asegura/lib/cartera-intervinientes.ts",
@@ -19256,7 +19264,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 190,
+          "linea": 191,
           "resumen": "Hoy en Madrid, `YYYY-MM-DD`: la horquilla pesa la antigüedad de cada caso."
         },
         {
@@ -19265,7 +19273,7 @@
           "exportada": false,
           "params": "motivo: string",
           "retorno": "EstimacionFicha",
-          "linea": 202,
+          "linea": 203,
           "resumen": "Qué se enseña cuando NO se han podido leer los casos. Los ceros de `fuente` aquí no dicen «no hay»: dicen «no se ha podido contar», y por eso van SIEMPRE acompañados de la etiqueta, que es lo que la p"
         },
         {
@@ -19274,7 +19282,7 @@
           "exportada": false,
           "params": "input: { correduriaId: string ramo: string /** La que se estima: queda fuera de sus propios casos, no se compara consigo misma. */ polizaId: string primaActual: number | null riesgo: RiesgoAEstimar tx: EjecutorLectura }",
           "retorno": "Promise<EstimacionFicha>",
-          "linea": 226,
+          "linea": 227,
           "resumen": "La estimación de una póliza: reúne los casos, construye la horquilla y dice si merece la pena gastar los 0,50€ de una cotización de verdad. 🚨 Solo LEE la base de datos. No llama a Codeoscopic ni de l"
         },
         {
@@ -19283,7 +19291,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 260
+          "linea": 261
         },
         {
           "nombre": "ilegible",
@@ -19291,7 +19299,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "boolean",
-          "linea": 269
+          "linea": 270
         },
         {
           "nombre": "esObjetoPlano",
@@ -19299,7 +19307,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 272
+          "linea": 273
         },
         {
           "nombre": "texto",
@@ -19307,7 +19315,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 275
+          "linea": 276
         },
         {
           "nombre": "fechaIso",
@@ -19315,7 +19323,7 @@
           "exportada": false,
           "params": "d: Date | null | undefined",
           "retorno": "string | null",
-          "linea": 278
+          "linea": 279
         },
         {
           "nombre": "num",
@@ -19323,7 +19331,7 @@
           "exportada": false,
           "params": "d: unknown",
           "retorno": "number | null",
-          "linea": 281
+          "linea": 282
         },
         {
           "nombre": "datosConDireccion",
@@ -19331,7 +19339,7 @@
           "exportada": true,
           "params": "datos: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 288,
+          "linea": 289,
           "resumen": "La dirección del riesgo va cifrada en `datos_especificos`; se descifra si se puede."
         },
         {
@@ -19340,12 +19348,12 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string",
           "retorno": "Promise<FichaPoliza | null>",
-          "linea": 297
+          "linea": 298
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "c024676c54f1"
+      "hash": "200fc9e2f610"
     },
     {
       "ruta": "apps/asegura/lib/cartera-recaptacion.ts",
@@ -19969,7 +19977,7 @@
           "exportada": false,
           "params": "",
           "retorno": "Date",
-          "linea": 151
+          "linea": 153
         },
         {
           "nombre": "resumenCartera",
@@ -19977,7 +19985,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ResumenCartera>",
-          "linea": 156
+          "linea": 158
         },
         {
           "nombre": "vencimientosProximos",
@@ -19985,7 +19993,7 @@
           "exportada": true,
           "params": "correduriaId: string, dias: number = DIAS_HORIZONTE_RENOVACION, hoyRef: Date = hoyUtc(), diasAtras: number = DIAS_ANUALIDAD,",
           "retorno": "Promise<ListaVencimientos>",
-          "linea": 262,
+          "linea": 264,
           "resumen": "Pólizas vigentes de la ventana de renovación, ordenadas por urgencia real (la fecha, no la etiqueta del estado). Es la lista de llamadas de la semana. 🚨 LA VENTANA EMPIEZA EN EL PASADO, y el día que "
         },
         {
@@ -19994,7 +20002,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<Map<string, string>>",
-          "linea": 397,
+          "linea": 442,
           "resumen": "`YYYY-MM-DD` del último fichero de CIMA descargado de cada compañía (código DGS)."
         },
         {
@@ -20003,7 +20011,7 @@
           "exportada": true,
           "params": "correduriaId: string, hoyRef: Date = hoyUtc(), diasAtras: number = DIAS_ANUALIDAD,",
           "retorno": "Promise<number | null>",
-          "linea": 434,
+          "linea": 479,
           "resumen": "Cuántas pólizas de la CARTERA VIVA figuran VIGENTES arrastrando un vencimiento anterior a la ventana de recuperación (más de una anualidad en el pasado). No son trabajo de hoy y por eso no entran en l"
         },
         {
@@ -20012,7 +20020,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 460,
+          "linea": 517,
           "resumen": "La única correduría de la base (medido: 1 fila). Lanza si hubiera más de una."
         },
         {
@@ -20021,7 +20029,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 469,
+          "linea": 526,
           "resumen": "`datos_especificos` es JSON libre: puede llegar como array, número o null. Solo se mira si de verdad es un objeto."
         },
         {
@@ -20030,7 +20038,7 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "Record<string, unknown> | null",
-          "linea": 484,
+          "linea": 541,
           "resumen": "- sin clave, o con una clave que no abre ese registro → `objetoAsegurado` verá el `v1:` intacto y lo dirá como **«cifrado»**, que NO es «sin dato». Lo que no puede pasar nunca es que un fallo de desci"
         }
       ],
@@ -20041,7 +20049,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "f58e4a3515a2"
+      "hash": "e0dda637166c"
     },
     {
       "ruta": "apps/asegura/lib/clientes-sin-canal.ts",
@@ -20060,7 +20068,7 @@
           "exportada": true,
           "params": "tieneEmail: boolean, tieneTelefono: boolean, canalEnPoliza = 0, contactoDeOtros = 0, contactoDeAllegados = 0,",
           "retorno": "EstadoCanal",
-          "linea": 286,
+          "linea": 287,
           "resumen": "Puro: el estado se deriva de dónde hay contacto, no se guarda en ninguna parte. El orden de las preguntas importa —lo de la ficha manda sobre lo de la póliza, y lo suyo sobre lo de un tercero— porque "
         },
         {
@@ -20069,7 +20077,7 @@
           "exportada": true,
           "params": "filas: ClienteCanal[]",
           "retorno": "ClienteCanal[]",
-          "linea": 315
+          "linea": 316
         },
         {
           "nombre": "nombreEnClaro",
@@ -20077,7 +20085,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 330,
+          "linea": 331,
           "resumen": "Un nombre que empieza por `v1:` es un blob cifrado, no un nombre. Pintarlo sería enseñar basura; mandarlo, sacar PII sin poder leerla. Se descarta y la persona cuenta solo en el recuento."
         },
         {
@@ -20086,7 +20094,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaContacto[]",
-          "linea": 339,
+          "linea": 340,
           "resumen": "Las fichas llegan como `jsonb`. Una fila rota se descarta (sigue contada en `contactoDeOtros`), nunca se inventa un nombre."
         },
         {
@@ -20095,7 +20103,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "FichaAllegado[]",
-          "linea": 357,
+          "linea": 358,
           "resumen": "Igual que `leerFichas`, pero conservando el parentesco. Una fila sin parentesco legible se descarta: «llama a alguien» sin decir quién es no ayuda a nadie, y sigue contada en `contactoDeAllegados`."
         },
         {
@@ -20104,7 +20112,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 374,
+          "linea": 375,
           "resumen": "Los hashes que trae una fila, ya deduplicados por la SQL."
         },
         {
@@ -20113,7 +20121,7 @@
           "exportada": false,
           "params": "clienteId: string, hashes: readonly { hash: string; principal: boolean }[], porHash: Map<string, Candidato[]>,",
           "retorno": "EstadoPortalCliente",
-          "linea": 401,
+          "linea": 402,
           "resumen": "De todos los correos conocidos de un cliente, ¿alguno le lleva a SU ficha? 🚨 Lectura OPTIMISTA a propósito: basta con que UNO le identifique. Es la pregunta de esta pantalla —«¿hay forma de que este "
         },
         {
@@ -20122,7 +20130,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<ClientesSinCanal>",
-          "linea": 416
+          "linea": 417
         }
       ],
       "tablas": [
@@ -20136,7 +20144,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "2a00077b8c8e"
+      "hash": "5b1b426269be"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/archivar-documento.ts",
@@ -26103,16 +26111,17 @@
           "exportada": true,
           "params": "correduriaId: string, año: number",
           "retorno": "Promise<",
-          "linea": 23
+          "linea": 28
         }
       ],
       "tablas": [
         "clientes",
         "companias_dgs",
+        "lateral",
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "48f450fdaf7c"
+      "hash": "5cf5d89fbb90"
     },
     {
       "ruta": "apps/asegura/lib/linea-base.ts",
@@ -26195,7 +26204,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 49
+          "linea": 50
         },
         {
           "nombre": "peticionesPrecioAbiertas",
@@ -26203,7 +26212,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string",
           "retorno": "Promise<PeticionAbierta[] | 'sin_ficha'>",
-          "linea": 58,
+          "linea": 59,
           "resumen": "Las peticiones abiertas de esta identidad, para pintar «ya lo pediste»."
         },
         {
@@ -26212,7 +26221,7 @@
           "exportada": true,
           "params": "correduriaId: string, identidadId: string, polizaId: string, cuerpo: unknown,",
           "retorno": "Promise<ResultadoPeticionPrecio>",
-          "linea": 71
+          "linea": 72
         }
       ],
       "tablas": [
@@ -26223,7 +26232,7 @@
         "polizas"
       ],
       "rutaApi": null,
-      "hash": "68384ea9deeb"
+      "hash": "ae78e056f664"
     },
     {
       "ruta": "apps/asegura/lib/migracion-decision.ts",
@@ -27392,6 +27401,51 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "5ce96342068e"
+    },
+    {
+      "ruta": "apps/asegura/lib/recibos-vigencia.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Prima y vencimiento «con recibos», para las lecturas que NO son la ficha. Allianz (medido 27/09/2026) no manda la prima en el EIAC de póliza (`prima_anual`/`prima_bruta` = NULL) ni avanza `fecha_vencimiento` al renovar: lo único que llega es el recibo anual (`clase_recibo` CA/NP) en `poliza_recibos`",
+      "exporta": [
+        "recibosVigenciaDe",
+        "sqlPrimaDeRecibo",
+        "sqlVencimientoConRecibos"
+      ],
+      "funciones": [
+        {
+          "nombre": "recibosVigenciaDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, polizaIds: readonly string[],",
+          "retorno": "Promise<Map<string, ReciboVigencia[]>>",
+          "linea": 22,
+          "resumen": "Los recibos de anualidad (CA/NP) de esas pólizas, agrupados por póliza."
+        },
+        {
+          "nombre": "sqlPrimaDeRecibo",
+          "kind": "function",
+          "exportada": true,
+          "params": "alias: string, hoy: string",
+          "retorno": "Prisma.Sql",
+          "linea": 60,
+          "resumen": "La prima del recibo anual, en SQL — equivalente al segundo brazo de `primaConRecibos`: solo con fraccionamiento `anual`; recibos CA/NP no anulados, con fin de periodo y un importe positivo bien formad"
+        },
+        {
+          "nombre": "sqlVencimientoConRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "alias: string, hoy: string",
+          "retorno": "Prisma.Sql",
+          "linea": 87,
+          "resumen": "El vencimiento real, en SQL — equivalente a `vencimientoConRecibos`: si el de la póliza ya pasó y hay un recibo CA/NP COBRADO que acaba después, vence donde acaba el último de ellos. Un pendiente o de"
+        }
+      ],
+      "tablas": [
+        "anulado",
+        "poliza_recibos"
+      ],
+      "rutaApi": null,
+      "hash": "e93f14867ac6"
     },
     {
       "ruta": "apps/asegura/lib/retarificar-cartera.ts",
@@ -74495,12 +74549,12 @@
           "exportada": false,
           "params": "{ a }: { a: Aviso }",
           "retorno": null,
-          "linea": 243
+          "linea": 247
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2753c26df26a"
+      "hash": "1ba5a1907de0"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabContactos.tsx",
@@ -153263,12 +153317,21 @@
           "resumen": "Una RC no tiene bien: tiene MODALIDAD. Lo que la describe («de qué es») son las coberturas contratadas — locativa, patronal/accidentes de trabajo, explotación… y eso vive en `poliza_coberturas`, no en"
         },
         {
+          "nombre": "tituloRc",
+          "kind": "function",
+          "exportada": false,
+          "params": "o: ObjetoAsegurado",
+          "retorno": "ObjetoAsegurado",
+          "linea": 331,
+          "resumen": "Cuando CIMA manda la RC propiamente dicha como una cobertura más («Responsabilidad civil caballos», «Defensa penal…», «Liberación de gastos»), el título es SOLO esa («RC caballos»): lo demás son garan"
+        },
+        {
           "nombre": "porCoberturas",
           "kind": "function",
           "exportada": false,
           "params": "coberturas: EntradaObjeto['coberturas'], nota: string | null",
           "retorno": "ObjetoAsegurado",
-          "linea": 324,
+          "linea": 345,
           "resumen": "Describe una póliza por las coberturas contratadas, que es lo único que hay cuando no existe ficha del bien."
         },
         {
@@ -153277,13 +153340,13 @@
           "exportada": false,
           "params": "d: Record<string, unknown>, coberturas: EntradaObjeto['coberturas'],",
           "retorno": "ObjetoAsegurado",
-          "linea": 344,
+          "linea": 365,
           "resumen": "Ramos sin plantilla propia: se aprovecha lo que haya, sin inventar etiquetas."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0d5abd14a587"
+      "hash": "fddcc4f5e484"
     },
     {
       "ruta": "packages/module-seguros/src/oportunidad-seguimiento.ts",
@@ -155573,7 +155636,9 @@
         "urgenciaRenovacion",
         "etiquetaUrgencia",
         "primaReferencia",
-        "primaEnRiesgo"
+        "primaEnRiesgo",
+        "primaConRecibos",
+        "vencimientoConRecibos"
       ],
       "funciones": [
         {
@@ -155682,11 +155747,46 @@
           "retorno": "",
           "linea": 200,
           "resumen": "Suma de primas conocidas + cuántas no lo son. Nunca «X €» a secas cuando falta información."
+        },
+        {
+          "nombre": "recibosAnuales",
+          "kind": "function",
+          "exportada": false,
+          "params": "recibos: ReciboVigencia[]",
+          "retorno": "Array<ReciboVigencia &",
+          "linea": 225,
+          "resumen": "Recibos de anualidad (cartera o nueva producción) que no se han anulado."
+        },
+        {
+          "nombre": "primaConRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { primaAnual?: number | null; primaBruta?: number | null; fraccionamiento?: string | null }, recibos: ReciboVigencia[], hoyIso: string,",
+          "retorno": "",
+          "linea": 240,
+          "resumen": "Prima de la póliza, y si la compañía no la manda en la póliza, la del recibo anual. Allianz (medido 27/09/2026: 11 de las 12 vivas sin prima) informa la prima SOLO en el recibo de cartera, nunca en el"
+        },
+        {
+          "nombre": "importeReciboPositivo",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: string | null",
+          "retorno": "number | null",
+          "linea": 258
+        },
+        {
+          "nombre": "vencimientoConRecibos",
+          "kind": "function",
+          "exportada": true,
+          "params": "fechaVencimiento: string | null, recibos: ReciboVigencia[], hoyIso: string,",
+          "retorno": "string | null",
+          "linea": 271,
+          "resumen": "Vencimiento real cuando la póliza ya renovó y la compañía solo mandó el recibo: si el vencimiento de la póliza ya pasó y hay un recibo anual COBRADO que cubre más allá, la póliza vence donde acaba ese"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b011b1d1b330"
+      "hash": "f353aa6cb26d"
     },
     {
       "ruta": "packages/module-seguros/src/vigencia.ts",
@@ -160797,7 +160897,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3821,
-    "funciones": 12334
+    "archivos": 3822,
+    "funciones": 12343
   }
 }
