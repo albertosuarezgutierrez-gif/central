@@ -31,7 +31,7 @@ import { escapeHtml, tgAviso } from '@/lib/telegram'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { toPropertyId } from '@/lib/sivra/agente-huesped/contexto'
 import { horarioPiso } from '@/lib/sivra/agente-huesped/horarios'
-import { entradaMismoDiaLibre, sumarDias, restarDias } from '@/lib/sivra/agente-huesped/disponibilidad'
+import { entradaMismoDiaLibre, sumarDias, restarDias, estanciasFiables } from '@/lib/sivra/agente-huesped/disponibilidad'
 import { parseGuestAppUrl, fetchGuiaSecciones } from '@/lib/sivra/agente-huesped/guest-app'
 import { enviarAlHuesped } from '@/lib/sivra/agente-huesped/enviar'
 import { mensajesDebidos, hitosBloqueantes, cubreAlHuesped, type HitoRegistrado, type ReservaMin } from './decidir'
@@ -137,12 +137,11 @@ function chekinDeSecciones(secciones: { texto: string }[] | null): string {
 async function lateOferta(apartmentId: unknown, departure: string, bookingId: string): Promise<boolean | null> {
   if (!apartmentId || !departure) return null
   try {
-    const hasta = sumarDias(departure, 2) || departure
     const d: any = await smoobuFetch(
-      `/api/reservations?apartments[]=${apartmentId}&from=${departure}&to=${hasta}&showCancellation=false&pageSize=100`,
+      `/api/reservations?apartmentId=${apartmentId}&arrivalFrom=${departure}&arrivalTo=${departure}&pageSize=100`,
       { cache: 'no-store' },
     ).then(r => r.json())
-    const est: any[] | null = Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : null
+    const est = estanciasFiables(d, { apartmentId: String(apartmentId), campo: 'arrival', desde: departure, hasta: departure })
     if (est === null) return null
     return entradaMismoDiaLibre(departure, est, bookingId)
   } catch { return null }

@@ -9,7 +9,7 @@ import { listarHechos } from './hechos'
 import { listarOrdenes } from '../extras/orden-limpieza'
 import { avisarConflictoGuia } from './conflictos'
 import { horarioPiso } from './horarios'
-import { nocheAnteriorLibre, restarDias, entradaMismoDiaLibre, sumarDias } from './disponibilidad'
+import { nocheAnteriorLibre, entradaMismoDiaLibre, sumarDias, estanciasFiables } from './disponibilidad'
 import { setEnviados, corregirAtribucion, atribuirEmisor } from './atribucion'
 import { bloqueParking } from './parking'
 import { bloqueEquipaje } from './equipaje'
@@ -65,6 +65,22 @@ export function toPropertyId(_apartmentId: unknown, apartmentName: string): stri
   if (n.includes('luxury')) return 'prop_luxury_busto'
   if (n.includes('duplex') || n.includes('center')) return 'prop_duplex_center'
   return 'all'
+}
+
+// ¿Hay en `incomes` otra reserva del piso que SALE (o ENTRA) ese día? Fallo de consulta → false: esta
+// fuente solo puede QUITAR disponibilidad, nunca darla, y la en vivo ya decidió «chequeado».
+async function ocupadoSegunIncomes(
+  propertyId: string, bookingId: string, que: 'salida' | 'entrada', fecha: string,
+): Promise<boolean> {
+  if (!propertyId.startsWith('prop_')) return false
+  const col = que === 'salida' ? Prisma.sql`"checkOut"` : Prisma.sql`"checkIn"`
+  const filas = await prisma.$queryRaw<{ x: number }[]>(Prisma.sql`
+    SELECT 1 AS x FROM incomes
+    WHERE "propertyId" = ${propertyId} AND "reservationId" <> ${bookingId}
+      AND ${col}::date = ${fecha}::date
+    LIMIT 1
+  `).catch(() => [])
+  return filas.length > 0
 }
 
 export async function construirContexto(bookingId: string, lang: string): Promise<Contexto | null> {
@@ -167,14 +183,23 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   let earlyCheckinPosible = false
   let earlyCheckinChequeado = false
   if (apartmentId && arrivalDate) {
-    const desde = restarDias(arrivalDate, 30) || arrivalDate
-    const estancias: any[] | null = await smoobuFetch(
-      `/api/reservations?apartments[]=${apartmentId}&from=${desde}&to=${arrivalDate}&showCancellation=false&pageSize=100`,
+    // Quien ocupa la víspera SALE en/después del día de llegada → se filtra por salida (filtro que ya
+    // usan los crons de limpieza), y estanciasFiables() rechaza la lista si Smoobu ignoró el filtro.
+    const hasta = sumarDias(arrivalDate, 30) || arrivalDate
+    const estancias = await smoobuFetch(
+      `/api/reservations?apartmentId=${apartmentId}&departureFrom=${arrivalDate}&departureTo=${hasta}&pageSize=100`,
       { cache: 'no-store' },
-    ).then(r => r.json()).then(d => (Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : [])).catch(() => null)
+    ).then(r => r.json())
+      .then(d => estanciasFiables(d, { apartmentId, campo: 'departure', desde: arrivalDate, hasta }))
+      .catch(() => null)
     if (estancias !== null) {
       earlyCheckinChequeado = true
       earlyCheckinPosible = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
+    }
+    // Segunda fuente: nuestros ingresos sincronizados de Smoobu. Si ahí alguien sale ese día, la
+    // víspera está ocupada diga lo que diga la consulta en vivo (caso 157252361, 26/09/2026).
+    if (earlyCheckinPosible && await ocupadoSegunIncomes(propertyId, bookingId, 'salida', arrivalDate)) {
+      earlyCheckinPosible = false
     }
   }
 
@@ -185,14 +210,18 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   let lateCheckoutPosible = false
   let lateCheckoutChequeado = false
   if (apartmentId && departureDate) {
-    const hasta = sumarDias(departureDate, 2) || departureDate
-    const estanciasSalida: any[] | null = await smoobuFetch(
-      `/api/reservations?apartments[]=${apartmentId}&from=${departureDate}&to=${hasta}&showCancellation=false&pageSize=100`,
+    const estanciasSalida = await smoobuFetch(
+      `/api/reservations?apartmentId=${apartmentId}&arrivalFrom=${departureDate}&arrivalTo=${departureDate}&pageSize=100`,
       { cache: 'no-store' },
-    ).then(r => r.json()).then(d => (Array.isArray(d?.bookings) ? d.bookings : Array.isArray(d?.data) ? d.data : [])).catch(() => null)
+    ).then(r => r.json())
+      .then(d => estanciasFiables(d, { apartmentId, campo: 'arrival', desde: departureDate, hasta: departureDate }))
+      .catch(() => null)
     if (estanciasSalida !== null) {
       lateCheckoutChequeado = true
       lateCheckoutPosible = entradaMismoDiaLibre(departureDate, estanciasSalida, bookingId)
+    }
+    if (lateCheckoutPosible && await ocupadoSegunIncomes(propertyId, bookingId, 'entrada', departureDate)) {
+      lateCheckoutPosible = false
     }
   }
 
