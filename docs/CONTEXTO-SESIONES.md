@@ -741,6 +741,9 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Inicio: pinchar una reserva del calendario muestra su detalle (PR #3716)
+- Tarjeta «Pisos» de `/inicio`: las barras son botones; al pincharlas se abre debajo huésped, piso, entrada/salida, noches, pax, importe (€/n) y portal. Nuevo cliente `inicio/CalendarioReservas.tsx`; `Barra` lleva `reserva` e `incomes.amount` entra como `importe` (null = «sin dato», no 0 €).
+
 ## (27/09/2026) asegura-web: página «Seguro de patinete eléctrico» (`/seguros/patinete-electrico`)
 - OpenSEO: «seguro patinete electrico» 27.100/mes KD 8, «seguro patinete» 6.600 KD 0, «seguro vmp» 1.000 KD 4 — la de más volumen de todo el sitio.
 - Base legal citada: Ley 5/2025 + RD 52/2026 (BOE 30/01/2026, registro DGT de vehículos personales ligeros); sin certificar vendidos antes del 22/01/2024 circulan hasta el 22/01/2027. Sin cifras de multa.
