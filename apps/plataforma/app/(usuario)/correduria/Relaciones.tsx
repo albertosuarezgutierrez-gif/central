@@ -408,7 +408,7 @@ export default function Relaciones({
         key={preseleccion?.n ?? 0}
         clienteId={clienteId}
         nombreFicha={nombreFicha}
-        yaRelacionados={lista ? lista.map((r) => r.relacionadoId) : []}
+        yaRelacionados={lista ? lista.map((r) => ({ id: r.relacionadoId, tipo: r.tipo })) : []}
         ocupado={ocupado === 'add'}
         onCrear={(body) => ejecutar('add', 'POST', body)}
         onAlta={altaPersona}
@@ -1068,7 +1068,8 @@ type Candidato = { id: string; nombre: string; tipo: string; polizas: number }
 function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAlta, tipoPersona, preseleccion }: {
   clienteId: string
   nombreFicha: string
-  yaRelacionados: string[]
+  /** Las que ya tienen relación: no se ofrecen, pero si la búsqueda las encuentra se DICE (con qué tipo). */
+  yaRelacionados: { id: string; tipo: string }[]
   ocupado: boolean
   onCrear: (body: Record<string, unknown>) => Promise<RespuestaRelaciones>
   /** Alta de una ficha que todavía no existe, para la persona de contacto. */
@@ -1154,8 +1155,15 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAl
     )
   }
 
+  const tipoYa = new Map(yaRelacionados.map((r) => [r.id, r.tipo]))
   const candidatos = busqueda?.estado === 'ok'
-    ? busqueda.clientes.filter((c) => c.id !== clienteId && !yaRelacionados.includes(c.id))
+    ? busqueda.clientes.filter((c) => c.id !== clienteId && !tipoYa.has(c.id))
+    : []
+  // 🚨 Encontradas pero ya relacionadas (27/09/2026, Víctor de la Fuente → «Studium»): decir «nadie
+  // en la cartera» sobre una ficha que SÍ está —relacionada con un tipo equivocado, del volcado— manda
+  // a darla de alta otra vez, que es un duplicado. Se nombran y se dice dónde cambiar el tipo.
+  const yaEncontradas = busqueda?.estado === 'ok'
+    ? busqueda.clientes.filter((c) => tipoYa.has(c.id)).map((c) => ({ ...c, tipoRelacion: tipoYa.get(c.id) ?? '' }))
     : []
 
   return (
@@ -1187,9 +1195,18 @@ function Anadir({ clienteId, nombreFicha, yaRelacionados, ocupado, onCrear, onAl
       {busqueda?.estado === 'ok' && !busqueda.buscado && (
         <div style={{ fontSize: 12, color: 'var(--muted)' }}>Término demasiado corto: escribe algo más.</div>
       )}
-      {busqueda?.estado === 'ok' && busqueda.buscado && candidatos.length === 0 && (
+      {yaEncontradas.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: 'var(--muted)', display: 'grid', gap: 4 }}>
+          {yaEncontradas.map((c) => (
+            <li key={c.id} style={{ overflowWrap: 'anywhere' }}>
+              <strong>{c.nombre}</strong> ya está relacionada como «{c.tipoRelacion}». Si el tipo no es ese, cámbialo en su tarjeta, arriba.
+            </li>
+          ))}
+        </ul>
+      )}
+      {busqueda?.estado === 'ok' && busqueda.buscado && candidatos.length === 0 && yaEncontradas.length === 0 && (
         <div style={{ display: 'grid', gap: 6, fontSize: 12, color: 'var(--muted)' }}>
-          <span>Nadie en la cartera con «{busqueda.termino}» que no esté ya relacionado.</span>
+          <span>Nadie en la cartera con «{busqueda.termino}».</span>
           <div>
             <button type="button" onClick={() => setModoAlta(true)} style={btnStyle('secundario', 'sm')}>
               ➕ Darla de alta y vincularla a {nombreFicha}

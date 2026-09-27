@@ -47,18 +47,15 @@ test('🚨 una vieja con dos nuevas del mismo coche: no se elige ninguna, se cue
   assert.deepEqual(r.duplicidades.map((d) => [d.aId, d.bId]), [['reale', 'allianz']])
 })
 
-test('🚨 portal: la vieja sale de la LISTA solo con la nueva empezada, vigente y visible, y sin nada pendiente', () => {
-  const hoy = new Date('2026-09-23T12:00:00Z')
-  const vieja = { id: 'mapfre', sustituyeAId: null, fechaInicio: new Date('2020-09-24'), vigente: true, conPendientes: false }
-  const nueva = { id: 'reale', sustituyeAId: 'mapfre', fechaInicio: new Date('2026-09-22'), vigente: true, conPendientes: false }
-  assert.deepEqual([...sustituidasARetirar([vieja, nueva], hoy)], [['mapfre', 'reale']])
-  // La nueva aún no ha empezado (la moto de Occident, desde el 01/11): se ven las dos.
-  assert.equal(sustituidasARetirar([vieja, { ...nueva, fechaInicio: new Date('2026-11-01') }], hoy).size, 0)
+test('🚨 portal: la vieja sale de la LISTA con la nueva vigente y visible, y sin nada pendiente', () => {
+  const vieja = { id: 'mapfre', sustituyeAId: null, vigente: true, conPendientes: false }
+  const nueva = { id: 'reale', sustituyeAId: 'mapfre', vigente: true, conPendientes: false }
+  assert.deepEqual([...sustituidasARetirar([vieja, nueva])], [['mapfre', 'reale']])
   // La vieja tiene un siniestro abierto o un recibo devuelto: sigue a la vista.
-  assert.equal(sustituidasARetirar([{ ...vieja, conPendientes: true }, nueva], hoy).size, 0)
+  assert.equal(sustituidasARetirar([{ ...vieja, conPendientes: true }, nueva]).size, 0)
   // La nueva no es visible para este lector, o ya no está vigente: la vieja no se esconde.
-  assert.equal(sustituidasARetirar([vieja], hoy).size, 0)
-  assert.equal(sustituidasARetirar([vieja, { ...nueva, vigente: false }], hoy).size, 0)
+  assert.equal(sustituidasARetirar([vieja]).size, 0)
+  assert.equal(sustituidasARetirar([vieja, { ...nueva, vigente: false }]).size, 0)
 })
 
 test('una renovación ya encadenada por poliza_padre_id no es una sustitución', () => {

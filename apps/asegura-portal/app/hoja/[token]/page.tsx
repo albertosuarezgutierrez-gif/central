@@ -121,7 +121,7 @@ export default async function Hoja({ params }: { params: Promise<{ token: string
   if (hoja && hoja.anuladaEn === null) {
     const hoy = new Date()
     const [cartera, misDeclaradas] = await Promise.all([
-      carteraDeIdentidad(hoja.identidadId).then(carteraALaVista),
+      carteraDeIdentidad(hoja.identidadId).then((c) => carteraALaVista(c, { soloSiYaCubre: true }, hoy)),
       declaradasDeIdentidad(hoja.identidadId),
     ])
     // 🚨 Regla 5 de `hoja-qr.ts`: solo lo que sigue en vigor. «Todas mis

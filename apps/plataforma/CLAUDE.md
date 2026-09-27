@@ -1981,6 +1981,23 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   que la emisión; escribe por `PATCH /api/operador/cliente` (auditado) con actor `agente:asistente-telegram` en cuerpo y
   cabecera. Solo `ok` es «corregida»; un fallo de red dice «no sé si se ha guardado». Tabla
   `correduria_asistente_correccion` (aplicada). Cepos en `lib/correduria-correccion-tg.test.ts`.
+- **🎯 Abrir oportunidades por chat (27/09/2026) — `lib/correduria-oportunidad-tg.ts`.** `proponer_oportunidad(clienteId,
+  usarDocumentos?, ramo?, compania?, prima?, vence?, …)`: con `usarDocumentos` lee (por `leer-documento` de asegura) los
+  documentos que Alberto subió al chat en la última hora — de ellos solo se guarda el `file_id` en
+  `correduria_asistente_documento`, nunca el fichero. Lo dictado manda sobre lo leído; un vencimiento ya pasado NO se usa
+  (se dice); primer paso = llamada 60 d antes del vencimiento (mínimo mañana). Botón `cas_oport:<id>` (un solo uso, 15 min,
+  filtro `from.id`, mismo interruptor que emitir/corregir) → `accionOportunidadAsegura({accion:'crear', estado:'competencia'})`.
+  En el webhook, un documento cuyo pie va a la correduría (o de un álbum ya desviado) **no pasa por el contable**.
+- **Auditoría 27/09/2026:** un **reply** a un mensaje de la correduría (🛡️/🎯/✏️/🚀 o texto que `clasificarDestino` manda a
+  correduría) va al asistente con la cita (`esRespuestaACorreduria` + `conCita`, bloque C0 del webhook) — antes el catch-all lo
+  descartaba. El historial son 4 turnos/30 min y lleva los **ids** ya consultados (`memoriaIds`, solo de llamadas ok). Herramientas
+  de lectura `mi_dia` y `oportunidades_cliente`. Fechas y tope diario en hora de Madrid (`hoyMadrid`).
+- **🧾 Acciones por chat (27/09/2026) — `lib/correduria-acciones-tg.ts`.** `proponer_tarea`, `registrar_llamada`, `anotar_nota`,
+  `abrir_siniestro`, `invitar_portal`: la IA propone, `prepararAccion` valida lo que no necesita BD, el servidor lee de quién es
+  (oportunidad/póliza/ficha) y manda botón `cas_acc:<id>` (un uso, 15 min, `from.id`, mismo interruptor). Escribe por los mismos
+  puertos que la ficha con actor `agente:asistente-telegram`. `invitar_portal` pregunta antes si la ficha es `invitable`. Tabla
+  `correduria_asistente_accion` (aplicada). **Documento de aseguradora** por Telegram → `procesarDocumento(..., {preguntarSiSeguro})`
+  devuelve `posible_seguro` ANTES de archivar y pregunta con `cdoc_gasto`/`cdoc_cli` (`resolverDocumentoDudoso`).
 - **Reparto del texto libre** (`clasificarDestino`, puro y testeado en `lib/correduria-asistente.ts`):
   atajo `seguro:` / `/seguros` → siempre correduría; palabras propias (póliza, siniestro, renovación,
   CIMA…) o una matrícula → correduría; palabras contables → contable; lo demás («¿qué tiene Pablo

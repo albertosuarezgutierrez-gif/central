@@ -6,6 +6,7 @@ import { carteraDeIdentidad, polizasParaParte, type PolizaPortal } from '@/lib/c
 import { eur } from '@/lib/dinero'
 import { documentosDePoliza } from '@/lib/documentos-poliza'
 import { fechaEs } from '@/lib/fechas'
+import { rolesLegibles } from '@/lib/intervinientes'
 import { getIdentidad } from '@/lib/session'
 
 import {
@@ -62,6 +63,8 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   // las ajenas, no de un parámetro: quién es el titular lo decide la BD.
   let poliza: PolizaPortal | null = null
   let deOtro: string | null = null
+  /** Papeles de esta identidad en la póliza, si la ve por FIGURAR en ella. `null` = no es el caso. */
+  let figuraComo: string[] | null = null
   for (const t of cartera.propias) {
     const encontrada = t.polizas.find((p) => p.id === id)
     if (encontrada) poliza = encontrada
@@ -72,6 +75,18 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
       if (encontrada) {
         poliza = encontrada
         deOtro = t.nombre
+      }
+    }
+  }
+  // Tercera lista ya autorizada: pólizas de otro tomador donde FIGURA (propietario,
+  // conductor…). Igual que arriba, el id de la URL solo filtra lo que ya se ha leído.
+  if (!poliza) {
+    for (const t of cartera.intervinientes) {
+      const encontrada = t.polizas.find((p) => p.id === id)
+      if (encontrada) {
+        poliza = encontrada
+        deOtro = t.nombre
+        figuraComo = t.interviniente?.rolesPorPoliza[encontrada.id] ?? []
       }
     }
   }
@@ -98,6 +113,13 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
         {p.numeroPoliza && ` · Póliza ${p.numeroPoliza}`}
         {deOtro && ` · de ${deOtro}`}
       </p>
+      {figuraComo !== null && (
+        <p className="suave" style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.5, overflowWrap: 'anywhere' }}>
+          {figuraComo.length > 0
+            ? `Ves esta póliza porque figuras en ella como ${rolesLegibles(figuraComo)}.`
+            : 'Ves esta póliza porque figuras en ella.'}
+        </p>
+      )}
 
       <div className="chips" style={{ marginBottom: 20 }}>
         <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>{ESTADO[p.estado] ?? p.estado}</span>
