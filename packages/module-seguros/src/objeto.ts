@@ -285,10 +285,10 @@ function objetoResponsabilidadCivil(
   d: Record<string, unknown>,
   coberturas: EntradaObjeto['coberturas'],
 ): ObjetoAsegurado {
-  const porCiMa = porCoberturas(
+  const porCiMa = tituloRc(porCoberturas(
     coberturas,
     'Una RC no asegura un bien: lo que la identifica son sus modalidades (coberturas contratadas).',
-  )
+  ))
 
   // Una RC de mascotas SÍ tiene un bien identificable: el animal. Las
   // coberturas dicen la MODALIDAD (igual en dos pólizas de perros de la misma
@@ -317,6 +317,27 @@ function objetoResponsabilidadCivil(
     detalle: null,
     nota: 'Modalidad anotada a mano por el corredor: la compañía no ha mandado coberturas por CIMA.',
   }
+}
+
+const PREFIJO_RC = /^(responsabilidad\s+civil|r\.\s?c\.?|rc)(?=\s|$)\s*/i
+
+/**
+ * Cuando CIMA manda la RC propiamente dicha como una cobertura más («Responsabilidad
+ * civil caballos», «Defensa penal…», «Liberación de gastos»), el título es SOLO esa
+ * («RC caballos»): lo demás son garantías accesorias que se ven en el desglose de
+ * la póliza, no lo que la identifica. Si ninguna cobertura se nombra como RC (p.ej.
+ * «Básica, Locativa, Patronal»), las modalidades siguen siendo el título.
+ */
+function tituloRc(o: ObjetoAsegurado): ObjetoAsegurado {
+  const todas = o.coberturas ?? []
+  const rc = todas.filter(c => PREFIJO_RC.test(c))
+  if (rc.length === 0) return o
+  const visibles = rc.slice(0, 3).map(c => {
+    const resto = c.replace(PREFIJO_RC, '').trim()
+    return resto === '' ? 'RC' : `RC ${resto}`
+  })
+  const otras = todas.length - visibles.length
+  return { ...o, titulo: visibles.join(', '), detalle: otras > 0 ? `+${otras} coberturas` : null }
 }
 
 /** Describe una póliza por las coberturas contratadas, que es lo único que hay

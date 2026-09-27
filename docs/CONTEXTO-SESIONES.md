@@ -763,6 +763,9 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Título de la RC = solo la RC
+- `module-seguros/objeto.ts` `tituloRc()`: si una cobertura se nombra «Responsabilidad civil…/R.C./RC», la tarjeta titula «RC caballos» y el resto (defensa penal, liberación de gastos) queda como «+N coberturas» y en el desglose de la póliza. Sin cobertura así, sigue el título por modalidades.
+
 ## (27/09/2026) El bot de seguros ya HACE cosas: tarea, llamada, nota, siniestro, portal (PR #3748)
 - Tools `proponer_tarea`/`registrar_llamada`/`anotar_nota`/`abrir_siniestro`/`invitar_portal` → tabla `correduria_asistente_accion` (aplicada) → botón «✅ Hacer» (un uso, 15 min, `from.id`, interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA`) → mismos puertos que la ficha. Portal: comprueba `invitable` antes de ofrecer (es un correo real). Sin respuesta = «incierta».
 - Documento de ASEGURADORA por Telegram: el contable ya no lo archiva/contabiliza solo; pregunta «🧾 Es mío (gasto) / 🛡️ De un cliente» (`posible_seguro`, antes de `archivarEImputar`).

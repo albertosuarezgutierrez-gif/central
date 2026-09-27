@@ -97,6 +97,24 @@ test('RC: con más de tres coberturas se resume el resto sin ocultarlo', () => {
   assert.equal(o.detalle, '+2 coberturas')
 })
 
+test('RC: si una cobertura ES la RC, el título es solo esa y el resto va al desglose', () => {
+  const o = objetoAsegurado({
+    tipo: 'responsabilidad_civil',
+    coberturas: ['Responsabilidad civil caballos', 'Defensa penal y reclamación de daños', 'Liberación de gastos'],
+  })
+  assert.equal(o.titulo, 'RC caballos')
+  assert.equal(o.detalle, '+2 coberturas')
+  assert.deepEqual(o.coberturas, ['Responsabilidad civil caballos', 'Defensa penal y reclamación de daños', 'Liberación de gastos'])
+})
+
+test('RC: «R.C.» o «RC» a secas también se reconocen como la modalidad', () => {
+  assert.equal(objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: ['R.C. Explotación', 'Defensa jurídica'] }).titulo, 'RC Explotación')
+  assert.equal(objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: ['Responsabilidad Civil'] }).titulo, 'RC')
+  assert.equal(objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: ['Responsabilidad Civil'] }).detalle, null)
+  // «Rcoberturas» no es RC: el prefijo exige palabra entera.
+  assert.equal(objetoAsegurado({ tipo: 'responsabilidad_civil', coberturas: ['Rcoberturas'] }).titulo, 'Rcoberturas')
+})
+
 test('RC: el desglose entero viaja en `coberturas`, sin truncar a 3 ni comas', () => {
   const o = objetoAsegurado({
     tipo: 'responsabilidad_civil',
