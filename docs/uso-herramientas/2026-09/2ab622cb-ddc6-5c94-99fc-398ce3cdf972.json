@@ -1,0 +1,19 @@
+{
+ "sesion": "2ab622cb-ddc6-5c94-99fc-398ce3cdf972",
+ "inicio": "2026-09-27T12:45:39.647Z",
+ "fin": "2026-09-27T12:45:43.678Z",
+ "llamadas": 2,
+ "categorias": {
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 794,
+   "chars_out": 4589,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
+   }
+  }
+ }
+}
