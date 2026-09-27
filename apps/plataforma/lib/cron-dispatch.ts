@@ -122,6 +122,8 @@ export const CRON_JOBS: CronJob[] = [
   // «previsión floja» a ~30 días del mes. Tras el sync de Smoobu de las 05:00/05:15 a propósito:
   // la foto se toma con el calendario ya fresco del día.
   { path: '/api/cron/prevision-pisos', schedule: '50 5 * * *' },
+  // m²/año/uso de los pisos desde el Catastro (lunes). Solo consulta los que no están en `ok`.
+  { path: '/api/cron/catastro-pisos', schedule: '40 6 * * 1' },
   { path: '/api/sivra/limpiadoras/auto-sessions', schedule: '0 5 * * *' },
   { path: '/api/sivra/limpiadoras/auto-assign', schedule: '30 5 * * *' },
   { path: '/api/sivra/limpiadoras/alerta-ventana', schedule: '0 8 * * *' },

@@ -161,6 +161,17 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
 | **Latido** | Cierra con `POST /api/internal/latido` (`rrhh_compliance`) desde el 02/09/2026 — `ok:true` = roadmap leído e informe con la lista de 🔴 pendientes generado. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
+### 23. Radar de Idealista por conector — *CREADA 27/09/2026, PAUSADA hasta que Alberto la complete en la UI*
+> Trigger `trig_01HneHebAVaM6HoLzJ1DKhUS` («Idealista radar (diario)», `CRON_TZ=Europe/Madrid 51 7 * * *`,
+> sesión nueva por disparo). La skill `idealista-radar` existía desde el 24/09 pero **nadie la había
+> programado**: cero latidos `subastas_idealista` hasta la pasada manual del 27/09 (285 casas en 12
+> núcleos de Huelva y Cádiz). **Mismo muro que 8-bis:** la API no deja adjuntar conectores en esta
+> organización, así que se creó sin el de Idealista y **se dejó en pausa** para no quemar una sesión
+> diaria que no puede buscar. Falta, en la UI: conector **Idealista** (solo ese), repo `central`, las
+> dos líneas `PLATAFORMA_URL=` / `ALERTA_TOKEN=` en el prompt (ver el workaround de env vars) y
+> activarla. Turnos: Huelva a diario; Asturias L-X-V; Cantabria M-J-S; Cádiz D.
+> **Las alertas de correo de Idealista NO se quitan** hasta ver varios latidos en verde.
+
 ### 8-bis. Mercado real por fecha (SIVRA / Booking) — *ACTIVA desde el 08/08/2026*
 > Creada a mano por Alberto («SIVRA mercado booking (diario)») tras dos meses de latido en «sin
 > ninguna señal registrada» — que era el diagnóstico correcto: no existía. **No se pudo crear por
@@ -238,10 +249,10 @@ caza lo que las sesiones del día no anotaron a mano.
 | | |
 |---|---|
 | **Cuándo** | L-V, **11:00 CEST** (`0 9 * * 1-5` UTC) |
-| **Prompt** | Vive en la config del trigger (`claude.ai/code → Rutinas`), **no** en una skill del repo — por eso esta rutina tardó en tener ficha. Flujo: busca en Gmail (enviados + borradores) para no duplicar contactos, **envía** los emails de captación de ia-rest, **crea borradores** (sin enviar) para ialimp, y manda un resumen por Telegram. |
+| **Prompt** | Vive en la config del trigger (`claude.ai/code → Rutinas`), **no** en una skill del repo — por eso esta rutina tardó en tener ficha. Flujo: busca en Gmail (enviados + borradores) para no duplicar contactos, **crea borradores** (sin enviar) para ia-rest e ialimp (hasta el 26/09 ia-rest se enviaba directo), y manda un resumen por Telegram. |
 | **MCPs / envs** | **Gmail** (conector claude.ai — buscar histórico, enviar, crear borradores). Para el aviso: `PLATAFORMA_URL` + `ALERTA_TOKEN` en las Instrucciones de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram"; si faltan, el resumen se omite). |
-| **Qué hace** | Prospección comercial diaria de las dos verticales SaaS: ia-rest (Voice POS hostelería) en modo **envío directo**; ialimp (limpiezas) en modo **borrador para revisión**. La deduplicación se hace contra el propio Gmail (enviados/borradores), por lo que el conector Gmail es un **requisito duro**. |
-| **Verificar** | El chat muestra el resumen de contactados/borradores; en Gmail aparecen los enviados de ia-rest y los borradores de ialimp del día. |
+| **Qué hace** | Prospección comercial diaria de las dos verticales SaaS: **las dos en modo borrador para revisión** desde el 27/09/2026 (antes ia-rest enviaba directo: correo comercial no solicitado sin OK de Alberto, contra la regla de comunicaciones salientes y el art. 21 LSSI; prompt del trigger editado por API ese día). La deduplicación se hace contra el propio Gmail (enviados/borradores), por lo que el conector Gmail es un **requisito duro**. |
+| **Verificar** | El chat muestra el resumen de contactados/borradores; en Gmail aparecen los borradores de ia-rest y de ialimp del día (ninguno enviado). |
 
 > ⚠️ **Incidente 22/07/2026 — run abortado por "faltan dos piezas de infraestructura" → RE-DIAGNOSTICADO.**
 > Un run reportó dos bloqueos: (1) conector Gmail deshabilitado (`enabledInChat: false`) y (2) `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` sin definir. Verificación del 22/07 en sesión:

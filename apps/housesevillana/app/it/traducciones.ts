@@ -82,10 +82,10 @@ export const TRADUCCIONES: Record<string, string> = {
     'Una casa sivigliana da vivere',
   '290 m&sup2; reformados con materiales nobles en el coraz&oacute;n del casco hist&oacute;rico. Pensada para grupos y familias que quieren espacio, comodidad y autenticidad.':
     '290 m&sup2; ristrutturati con materiali pregiati nel cuore del centro storico. Pensata per gruppi e famiglie che cercano spazio, comfort e autenticità.',
-  'Parking privado en el edificio':
-    'Parcheggio privato nell\'edificio',
-  'Rars&iacute;simo en el casco antiguo de Sevilla. 1 plaza de garaje en el propio edificio, reservable con tu estancia. Aparcar en zona hist&oacute;rica ya no es un problema.':
-    'Rarissimo nel centro storico di Siviglia. Un posto auto nell\'edificio stesso, prenotabile con il soggiorno. Parcheggiare nel centro storico smette di essere un problema.',
+  'Parking privado muy cerca':
+    'Parcheggio privato vicinissimo',
+  'Rars&iacute;simo en el casco antiguo de Sevilla. 1 plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie, reservable con tu estancia. Aparcar en zona hist&oacute;rica ya no es un problema.':
+    'Rarissimo nel centro storico di Siviglia. Un posto auto privato a San Juan de la Palma, a pochi minuti a piedi, prenotabile con il soggiorno. Parcheggiare nel centro storico smette di essere un problema.',
   '6 dormitorios dobles':
     '6 camere matrimoniali',
   'Todos con camas de matrimonio. Capacidad real para hasta 12 personas sin perder comodidad ni privacidad.':
@@ -160,8 +160,8 @@ export const TRADUCCIONES: Record<string, string> = {
     'Chiedi su WhatsApp',
   '&iquest;Tiene parking privado House Sevillana?':
     'House Sevillana ha un parcheggio privato?',
-  'S&iacute;. Dispone de una plaza de garaje privado en el mismo edificio, reservable con tu estancia. Aparcar en el casco antiguo de Sevilla es muy complicado y costoso &mdash; esta es nuestra ventaja m&aacute;s valorada por los hu&eacute;spedes que llegan en coche.':
-    'Sì. C\'è un posto auto privato nell\'edificio stesso, prenotabile con il soggiorno. Parcheggiare nel centro storico di Siviglia è complicato e costoso &mdash; è la caratteristica più apprezzata da chi arriva in auto.',
+  'S&iacute;. Dispone de una plaza de garaje privado en San Juan de la Palma, a pocos minutos a pie de la casa, reservable con tu estancia. Aparcar en el casco antiguo de Sevilla es muy complicado y costoso &mdash; esta es nuestra ventaja m&aacute;s valorada por los hu&eacute;spedes que llegan en coche.':
+    'Sì. C\'è un posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa, prenotabile con il soggiorno. Parcheggiare nel centro storico di Siviglia è complicato e costoso &mdash; è la caratteristica più apprezzata da chi arriva in auto.',
   '&iquest;Para cu&aacute;ntas personas es House Sevillana?':
     'Quante persone ospita House Sevillana?',
   '6 dormitorios dobles para hasta 12 personas. Perfecta para grupos de amigos, familias numerosas multigeneracionales o varias parejas que viajan juntas a Sevilla. Si eres menos de 6 personas, tambi&eacute;n es una opci&oacute;n excepcional por el espacio y el precio por persona.':

@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — Limpieza de rutinas: **prospección comercial ya solo deja BORRADORES** también para ia-rest (enviaba correo comercial sin OK; prompt editado por API). Borrados el recordatorio «Graphify vs grafo» y 6 check-ins caducados; otros 8 desactivados los bloqueó el clasificador (no consumen). **Pendiente de Alberto en la UI** (creadas por `http_api`, la API no deja editarlas): Booking a 1 pasada/día (`30 8 * * *`), trading-analista a 1 (`15 23 * * 1-5`), y activar «Idealista radar (diario)» con su conector. Graphify NO está en `.mcp.json`: es conector de cuenta, se quita en claude.ai → Conectores.
+
+**(27/09/2026)** — Idealista por conector: **la rutina `idealista-radar` no había corrido NUNCA** (sin trigger, cero latidos) aunque su skill se decía «la única vía» desde el 24/09; lo que llenaba el corpus eran las alertas de correo (19 correos ese día). Se amplía a **Asturias (L-X-V), Cantabria (M-J-S) y Cádiz (D)** además de Huelva diario; centros nuevos en `CENTROS` medidos contra anuncios reales del conector (Llanes y Cudillero, términos alargados, necesitaban más radio). Guardián `test/regression-idealista-radar-nucleos.test.ts` (lee la tabla de la skill; visto en rojo). Primera pasada real a mano: 285 casas en 12 núcleos, latido OK. Trigger `trig_01HneHebAVaM6HoLzJ1DKhUS` creado **en pausa**: la API no adjunta conectores → Alberto añade Idealista + repo + envs en la UI y lo activa. No quitar las alertas de correo hasta ver latidos verdes.
+
 **(27/09/2026)** 🎓 **agentes-entrenador: el trigger corría cada domingo, pero sus PRs nunca se
 mergeaban.** #2413→#2864→#3131→#3721 mezclaban la poda de la bitácora (registro) con cambios a su
 `SKILL.md`; `rutinas-automerge` descarta cualquier PR con `.claude/**`, se quedaban en draft y la pasada
@@ -769,6 +773,23 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Documento con pie de correduría («seguro de un lead…») o de un álbum ya desviado NO pasa por el contable. «oportunidad(es)»/«lead(s)» enrutan a la correduría.
 - Tablas `correduria_asistente_documento` + `_oportunidad` (aplicadas). Lógica pura en `lib/correduria-oportunidad-tg.ts` (+12 cepos, vistos en rojo).
 - ⚠️ Depende del interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA` (el mismo de emitir/corregir). Si el lead no tiene ficha, el asistente manda a crearla en /correduria.
+## (27/09/2026) Logotipo «Grupo ASegura» más grueso (stroke 6) y PNG del correo regenerado
+- Alberto: en el correo de cumpleaños «Grupo ASegura» se veía muy fino. Causa: `logotipo-asegura-correo.png` seguía siendo el Quicksand 300 original; #3675 engordó el SVG (stroke 3) pero no regeneró el PNG.
+- SVG (web + portal) a stroke 6 (≈ Quicksand 700; tinta y 26-123 dentro del viewBox) y PNG 660×97 regenerado desde él con headless_shell. Afecta a felicitación y correos de emisión (`LOGO_CORREO`).
+- Nota en `CLAUDE.md`: al tocar el trazo del SVG, regenerar también el PNG.
+
+## (27/09/2026) Catastro automático para los 4 pisos turísticos
+- `properties` gana `ref_catastral` + `catastro_m2/anio/uso/direccion/cp/estado/detalle/revisado_at` (migración `2026-09-27_properties_catastro.sql`, aplicada; Dúplex sembrado con 5029006TG3452G0019BG).
+- Job semanal `/api/cron/catastro-pisos` (lunes 06:40 UTC): reutiliza `consultarHogar` de la correduría; solo consulta pisos no `ok`; por dirección solo acepta un inmueble único (si un portal devuelve varios, `elegir`). Bustos Tavera 22 y Socorro 24 tienen UNA referencia por edificio (Alberto): si varios pisos comparten referencia se marcan `compartida` (m² del edificio, no del piso). Datos solo se escriben con `ok`.
+- ⚠️ El Catastro rechaza el contenedor de Claude y pg_net (400 «No se puede procesar»): no se ha visto correr en real; se verá tras el primer lunes (o disparándolo a mano en prod).
+
+## (27/09/2026) House Sevillana: el parking NO está en el edificio — está en San Juan de la Palma
+Alberto: «parking no está en el mismo edificio, está en San Juan de la Palma». La web lo afirmaba en ES/EN/IT
+(portada, /parking, sus JSON-LD) y también sivra/messages ×5 y la skill `seo-house-sevillana`. Corregido a
+«plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie»; guardián nuevo
+`test/regression-house-sevillana-parking.test.ts` (visto en rojo). ⚠️ Sin tocar y dudoso: sivra/messages y la
+skill decían «incluida en el precio»: Alberto se guarda la opción de COBRARLA → retirado; ahora «las condiciones se
+confirman al reservar» en todos los idiomas, y el mismo guardián falla si alguien vuelve a prometerla gratis.
 
 ## (27/09/2026) Pricing: SUELO de fin de semana sin mercado medido (House 29-30/01/2027 vendido a 300€)
 - La reserva de House 29-31/01/2027 (600€) entró al `min_price`: el motor tenía 436/456€ el 19/09 y el raíl lo bajó a 300 en dos pasadas.
