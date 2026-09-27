@@ -12,7 +12,7 @@ export type ConsultaPiso =
   | { por: 'direccion'; direccion: string; municipio: string; provincia: string }
 
 export type ResultadoPiso = {
-  estado: 'ok' | 'elegir' | 'no_encontrado' | 'direccion_ilegible' | 'error'
+  estado: 'ok' | 'compartida' | 'elegir' | 'no_encontrado' | 'direccion_ilegible' | 'error'
   referencia: string | null
   m2: number | null
   anio: number | null
@@ -57,4 +57,27 @@ export function resultadoDePiso(r: RespuestaHogar): ResultadoPiso {
     case 'error':
       return { estado: 'error', ...VACIO, detalle: r.motivo.slice(0, 300) }
   }
+}
+
+/**
+ * Varios pisos con la MISMA referencia = el Catastro los tiene como un solo inmueble (Bustos
+ * Tavera 22: Luxury y Reform son un edificio entero con una única referencia). Sus m² son los del
+ * edificio, no los de cada piso: se marcan `compartida` para que nadie los lea como tamaño del piso.
+ * Devuelve, por id de piso, el detalle a escribir.
+ */
+export function referenciasCompartidas(pisos: Array<{ id: string; nombre: string; referencia: string | null }>): Map<string, string> {
+  const porRef = new Map<string, Array<{ id: string; nombre: string }>>()
+  for (const p of pisos) {
+    if (!p.referencia) continue
+    const g = porRef.get(p.referencia) ?? []
+    g.push(p)
+    porRef.set(p.referencia, g)
+  }
+  const out = new Map<string, string>()
+  for (const g of porRef.values()) {
+    if (g.length < 2) continue
+    const nombres = g.map(x => x.nombre).join(', ')
+    for (const p of g) out.set(p.id, `referencia compartida por ${g.length} pisos (${nombres}): los m² son del edificio entero, no de este piso`)
+  }
+  return out
 }

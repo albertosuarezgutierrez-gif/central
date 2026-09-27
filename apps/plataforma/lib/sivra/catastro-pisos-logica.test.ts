@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { consultaDePiso, resultadoDePiso } from './catastro-pisos-logica.ts'
+import { consultaDePiso, referenciasCompartidas, resultadoDePiso } from './catastro-pisos-logica.ts'
 
 test('catastro pisos: con referencia manda la referencia', () => {
   assert.deepEqual(
@@ -40,4 +40,15 @@ test('catastro pisos: un fallo no se convierte en dato', () => {
     assert.equal(r.anio, null)
     assert.notEqual(r.estado, 'ok')
   }
+})
+
+test('catastro pisos: dos pisos con la misma referencia se marcan compartidos (m² del edificio)', () => {
+  const m = referenciasCompartidas([
+    { id: 'lux', nombre: 'Luxury Busto', referencia: 'R1' },
+    { id: 'ref', nombre: 'Busto Reform', referencia: 'R1' },
+    { id: 'dup', nombre: 'Duplex Center', referencia: 'R2' },
+    { id: 'hs', nombre: 'House sevillana', referencia: null },
+  ])
+  assert.deepEqual([...m.keys()].sort(), ['lux', 'ref'])
+  assert.match(m.get('lux') ?? '', /edificio entero/)
 })

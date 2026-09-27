@@ -755,7 +755,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 ## (27/09/2026) Catastro automático para los 4 pisos turísticos
 - `properties` gana `ref_catastral` + `catastro_m2/anio/uso/direccion/cp/estado/detalle/revisado_at` (migración `2026-09-27_properties_catastro.sql`, aplicada; Dúplex sembrado con 5029006TG3452G0019BG).
-- Job semanal `/api/cron/catastro-pisos` (lunes 06:40 UTC): reutiliza `consultarHogar` de la correduría; solo consulta pisos no `ok`; por dirección solo acepta un inmueble único (Bustos Tavera 22 tiene dos pisos → `elegir`, pide la referencia). Datos solo se escriben con `ok`.
+- Job semanal `/api/cron/catastro-pisos` (lunes 06:40 UTC): reutiliza `consultarHogar` de la correduría; solo consulta pisos no `ok`; por dirección solo acepta un inmueble único (si un portal devuelve varios, `elegir`). Bustos Tavera 22 y Socorro 24 tienen UNA referencia por edificio (Alberto): si varios pisos comparten referencia se marcan `compartida` (m² del edificio, no del piso). Datos solo se escriben con `ok`.
 - ⚠️ El Catastro rechaza el contenedor de Claude y pg_net (400 «No se puede procesar»): no se ha visto correr en real; se verá tras el primer lunes (o disparándolo a mano en prod).
 
 ## (27/09/2026) Pricing: SUELO de fin de semana sin mercado medido (House 29-30/01/2027 vendido a 300€)

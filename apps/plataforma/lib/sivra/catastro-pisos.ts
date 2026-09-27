@@ -3,14 +3,14 @@
 // están en `ok`: con los cuatro resueltos, la pasada no consulta nada.
 import { prisma } from '@/lib/db'
 import { consultarHogar } from '@/lib/correduria-hogar'
-import { consultaDePiso, resultadoDePiso, type ResultadoPiso } from './catastro-pisos-logica'
+import { consultaDePiso, referenciasCompartidas, resultadoDePiso, type ResultadoPiso } from './catastro-pisos-logica'
 
 type Fila = { id: string; name: string; location: string | null; ref_catastral: string | null }
 
 export async function enriquecerCatastroPisos(): Promise<Array<{ piso: string } & ResultadoPiso>> {
   const pisos = await prisma.$queryRaw<Fila[]>`
     SELECT id, name, location, ref_catastral FROM properties
-     WHERE "smoobuId" IS NOT NULL AND catastro_estado IS DISTINCT FROM 'ok'
+     WHERE "smoobuId" IS NOT NULL AND catastro_estado IS DISTINCT FROM 'ok' AND catastro_estado IS DISTINCT FROM 'compartida'
      ORDER BY id`
   const out: Array<{ piso: string } & ResultadoPiso> = []
   for (const p of pisos) {
@@ -29,6 +29,14 @@ export async function enriquecerCatastroPisos(): Promise<Array<{ piso: string } 
         catastro_cp = COALESCE(${r.cp}, catastro_cp)
       WHERE id = ${p.id}`
     out.push({ piso: p.name, ...r })
+  }
+  // Pisos que comparten referencia: sus m² son del edificio, no del piso (ver `referenciasCompartidas`).
+  const todos = await prisma.$queryRaw<Array<{ id: string; name: string; ref_catastral: string | null }>>`
+    SELECT id, name, ref_catastral FROM properties
+     WHERE "smoobuId" IS NOT NULL AND catastro_estado IN ('ok', 'compartida')`
+  for (const [id, detalle] of referenciasCompartidas(todos.map(t => ({ id: t.id, nombre: t.name, referencia: t.ref_catastral })))) {
+    await prisma.$executeRaw`
+      UPDATE properties SET catastro_estado = 'compartida', catastro_detalle = ${detalle} WHERE id = ${id}`
   }
   return out
 }

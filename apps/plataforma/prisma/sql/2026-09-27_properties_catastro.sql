@@ -7,7 +7,7 @@ ALTER TABLE properties
   ADD COLUMN IF NOT EXISTS catastro_uso text,
   ADD COLUMN IF NOT EXISTS catastro_direccion text,
   ADD COLUMN IF NOT EXISTS catastro_cp text,
-  -- ok · elegir (varios pisos en el portal: hace falta la referencia) · no_encontrado · direccion_ilegible · error
+  -- ok · compartida (varios pisos, una referencia: m² del edificio) · elegir (varios pisos en el portal: hace falta la referencia) · no_encontrado · direccion_ilegible · error
   ADD COLUMN IF NOT EXISTS catastro_estado text,
   ADD COLUMN IF NOT EXISTS catastro_detalle text,
   ADD COLUMN IF NOT EXISTS catastro_revisado_at timestamptz;
