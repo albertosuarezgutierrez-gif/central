@@ -323,3 +323,45 @@ test('🚨 la llave va en el fragmento (no llega al servidor) y un fallo al guar
   assert.ok(cuerpo.indexOf('try {') < cuerpo.indexOf('portalEnlaceDirecto.create('), 'el create va dentro del try')
   assert.match(fuente('apps/asegura-portal/next.config.ts'), /Referrer-Policy[\s\S]*same-origin/)
 })
+
+// ── 27/09/2026: cambios de póliza, partes y vencimientos de quien nunca entró ──
+
+test('los cambios de póliza y los partes llegan al correo (no solo a la campana)', () => {
+  const r = avisosNuevos(
+    pendiente({
+      firmas: [],
+      polizasModificadas: [{ id: 'cam1', polizaId: 'p1', compania: 'Reale', ramo: 'Hogar', campos: ['prima'], estadoNuevo: null }],
+      partes: [{ id: 'pa1', cambio: 'abierto', fechaHecho: '2026-09-10', compania: 'Mapfre', motivoDescarte: null }],
+    }),
+    HOY,
+    new Set(),
+  )
+  assert.ok(r)
+  assert.deepEqual(r.nuevos.map((a) => a.tipo).sort(), ['parte_actualizado', 'poliza_modificada'])
+})
+
+test('el detector de cambios corre ANTES de reunir, y no puede tumbar el correo', () => {
+  const src = fuente('apps/asegura/lib/avisos-intranet.ts')
+  const cuerpo = src.slice(src.indexOf('export async function avisarIntranet('))
+  const det = cuerpo.indexOf('detectarCambiosPolizas(')
+  assert.ok(det > 0 && det < cuerpo.indexOf('reunirPendientes('), 'el cambio de hoy tiene que salir en el correo de hoy')
+  const detector = fuente('apps/asegura/lib/poliza-cambios-detector.ts')
+  assert.match(detector, /catch \(e\)/, 'un fallo del detector no puede dejar sin correo el resto de avisos')
+  assert.match(detector, /cambioMasivo\(/, 'sin cortacircuitos, un cambio de formato de CIMA sería un correo a media cartera')
+})
+
+test('el vencimiento derivado (sin obligación) no se repite cuando nace la obligación', () => {
+  const intranet = fuente('apps/asegura/lib/avisos-intranet.ts')
+  assert.match(intranet, /id: idVencimientoDerivado\(/)
+  assert.match(intranet, /conObligacion\.has\(v\.id\)/, 'con obligación la avisa el cron de vencimientos: dos correos')
+  const venc = fuente('apps/asegura/lib/avisos-vencimiento.ts')
+  assert.match(venc, /obligacion_en_ventana:\$\{idVencimientoDerivado\(/, 'el cron de vencimientos tiene que mirar el sello del derivado')
+})
+
+test('el correo invita a usar la app, y sin prometer nada de precio', async () => {
+  const { INVITACION_APP } = await import('../apps/asegura/lib/correo-avisos-intranet.ts')
+  const c = cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'poliza_modificada' }], total: 1, enlace: 'https://clientes.grupoasegura.es/' })
+  assert.ok(c.texto.includes(INVITACION_APP) && c.html.includes('pantalla de inicio'))
+  assert.match(c.texto, /cambios en una de tus pólizas/)
+  assert.doesNotMatch(INVITACION_APP, /ahorr|precio|oferta|descuento/i)
+})

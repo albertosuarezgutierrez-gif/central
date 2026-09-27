@@ -55,6 +55,7 @@ export {
   DIAS_PREAVISO_TOMADOR,
   DIAS_VENTANA_AVISO,
   fechaAccionable,
+  idVencimientoDerivado,
   entraEnVentana,
   polizaGeneraObligacion,
   obligacionDerivable,
@@ -90,6 +91,11 @@ export { TIPOS_SINIESTRO, ETIQUETA_TIPO_SINIESTRO, opcionesTipoSiniestro, esTipo
 export type { TipoSiniestro } from './tipo-siniestro.ts'
 export type { ParteFilaAviso, ParteParaAviso } from './parte-aviso.ts'
 export type { FilaPolizaNueva, PolizaNuevaParaAviso } from './poliza-nueva.ts'
+export {
+  VERSION_FOTO_POLIZA, DIAS_AVISO_POLIZA_MODIFICADA, CAMPOS_CAMBIO_POLIZA, grupoEstado, fotoDePoliza, leerFoto, camposCambiados, cambioMasivo,
+  polizasModificadasParaAviso, textoPolizaModificada,
+} from './poliza-cambios.ts'
+export type { CampoCambioPoliza, FotoPoliza, FilaFotoPoliza, FilaCambioPoliza, PolizaModificadaParaAviso } from './poliza-cambios.ts'
 export { debeAvisarPush, textoPushObligacion } from './push.ts'
 export {
   normalizarRecordatorio,
