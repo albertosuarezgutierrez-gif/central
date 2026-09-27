@@ -9,7 +9,7 @@ import { listarHechos } from './hechos'
 import { listarOrdenes } from '../extras/orden-limpieza'
 import { avisarConflictoGuia } from './conflictos'
 import { horarioPiso } from './horarios'
-import { nocheAnteriorLibre, entradaMismoDiaLibre, sumarDias, estanciasFiables } from './disponibilidad'
+import { nocheAnteriorLibre, entradaMismoDiaLibre, sumarDias, estanciasFiables, combinarFuentes } from './disponibilidad'
 import { setEnviados, corregirAtribucion, atribuirEmisor } from './atribucion'
 import { bloqueParking } from './parking'
 import { bloqueEquipaje } from './equipaje'
@@ -67,20 +67,28 @@ export function toPropertyId(_apartmentId: unknown, apartmentName: string): stri
   return 'all'
 }
 
-// ¿Hay en `incomes` otra reserva del piso que SALE (o ENTRA) ese día? Fallo de consulta → false: esta
-// fuente solo puede QUITAR disponibilidad, nunca darla, y la en vivo ya decidió «chequeado».
-async function ocupadoSegunIncomes(
-  propertyId: string, bookingId: string, que: 'salida' | 'entrada', fecha: string,
-): Promise<boolean> {
-  if (!propertyId.startsWith('prop_')) return false
-  const col = que === 'salida' ? Prisma.sql`"checkOut"` : Prisma.sql`"checkIn"`
-  const filas = await prisma.$queryRaw<{ x: number }[]>(Prisma.sql`
-    SELECT 1 AS x FROM incomes
-    WHERE "propertyId" = ${propertyId} AND "reservationId" <> ${bookingId}
-      AND ${col}::date = ${fecha}::date
-    LIMIT 1
-  `).catch(() => [])
-  return filas.length > 0
+// ¿Está libre según el CALENDARIO volcado (`incomes`)? Es la fuente principal: la mantiene el webhook
+// de Smoobu en tiempo real (+ cron de red de seguridad) y borra las cancelaciones. No guarda bloqueos
+// manuales; eso lo cubre la consulta en vivo. true = libre · false = ocupado · null = no se pudo mirar.
+//  - 'vispera': ¿alguien duerme la noche anterior a `fecha`? (entra antes y sale en/después de `fecha`)
+//  - 'entrada': ¿alguien entra el mismo día `fecha`?
+async function libreSegunCalendario(
+  propertyId: string, bookingId: string, que: 'vispera' | 'entrada', fecha: string,
+): Promise<boolean | null> {
+  if (!propertyId.startsWith('prop_') || !fecha) return null
+  const cond = que === 'vispera'
+    ? Prisma.sql`"checkIn"::date < ${fecha}::date AND "checkOut"::date >= ${fecha}::date`
+    : Prisma.sql`"checkIn"::date = ${fecha}::date`
+  try {
+    const filas = await prisma.$queryRaw<{ x: number }[]>(Prisma.sql`
+      SELECT 1 AS x FROM incomes
+      WHERE "propertyId" = ${propertyId} AND "reservationId" <> ${bookingId} AND ${cond}
+      LIMIT 1
+    `)
+    return filas.length === 0
+  } catch {
+    return null
+  }
 }
 
 export async function construirContexto(bookingId: string, lang: string): Promise<Contexto | null> {
@@ -173,34 +181,28 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   const horaCheckOut = horario.checkOut
 
   // ¿Se puede confirmar early check-in (gratis)? Solo si la NOCHE ANTERIOR a la llegada está libre
-  // (nadie duerme la víspera; ojo a una reserva que SALE el mismo día). Consultamos las reservas del
-  // piso en una ventana hasta la llegada y lo resolvemos con la función pura `nocheAnteriorLibre`.
-  // OJO: si el fetch/parseo FALLA devolvemos `null` (no `[]`). Un `[]` significaría "no hay reservas
-  // en la ventana" → víspera libre, y `nocheAnteriorLibre([])` diría true. Confundir un fallo de red
-  // con "libre" haría CONFIRMAR una entrada anticipada que no pudimos verificar. Por eso `chequeado`
-  // solo pasa a true cuando de verdad tenemos respuesta de Smoobu.
+  // (ojo a una reserva que SALE el mismo día). Fuente principal: el calendario volcado (`incomes`);
+  // refuerzo: Smoobu en vivo (bloqueos manuales). Una sola que diga ocupado manda; un fallo de las
+  // dos es «no verificado» (chequeado=false), nunca «libre».
   const arrivalDate = String(reserva?.arrival || '').trim()
   let earlyCheckinPosible = false
   let earlyCheckinChequeado = false
-  if (apartmentId && arrivalDate) {
-    // Quien ocupa la víspera SALE en/después del día de llegada → se filtra por salida (filtro que ya
-    // usan los crons de limpieza), y estanciasFiables() rechaza la lista si Smoobu ignoró el filtro.
-    const hasta = sumarDias(arrivalDate, 30) || arrivalDate
-    const estancias = await smoobuFetch(
-      `/api/reservations?apartmentId=${apartmentId}&departureFrom=${arrivalDate}&departureTo=${hasta}&pageSize=100`,
-      { cache: 'no-store' },
-    ).then(r => r.json())
-      .then(d => estanciasFiables(d, { apartmentId, campo: 'departure', desde: arrivalDate, hasta }))
-      .catch(() => null)
-    if (estancias !== null) {
-      earlyCheckinChequeado = true
-      earlyCheckinPosible = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
+  if (arrivalDate) {
+    const calendario = await libreSegunCalendario(propertyId, bookingId, 'vispera', arrivalDate)
+    let vivo: boolean | null = null
+    if (apartmentId) {
+      // Quien ocupa la víspera SALE en/después del día de llegada → filtro por salida (el que ya usan
+      // los crons de limpieza); estanciasFiables() rechaza la lista si Smoobu ignoró el filtro.
+      const hasta = sumarDias(arrivalDate, 30) || arrivalDate
+      const estancias = await smoobuFetch(
+        `/api/reservations?apartmentId=${apartmentId}&departureFrom=${arrivalDate}&departureTo=${hasta}&pageSize=100`,
+        { cache: 'no-store' },
+      ).then(r => r.json())
+        .then(d => estanciasFiables(d, { apartmentId, campo: 'departure', desde: arrivalDate, hasta }))
+        .catch(() => null)
+      if (estancias !== null) vivo = nocheAnteriorLibre(arrivalDate, estancias, bookingId)
     }
-    // Segunda fuente: nuestros ingresos sincronizados de Smoobu. Si ahí alguien sale ese día, la
-    // víspera está ocupada diga lo que diga la consulta en vivo (caso 157252361, 26/09/2026).
-    if (earlyCheckinPosible && await ocupadoSegunIncomes(propertyId, bookingId, 'salida', arrivalDate)) {
-      earlyCheckinPosible = false
-    }
+    ;({ posible: earlyCheckinPosible, chequeado: earlyCheckinChequeado } = combinarFuentes(calendario, vivo))
   }
 
   // ¿Se puede confirmar late check-out? Solo si NADIE entra el mismo día de la salida (si entra, el
@@ -209,20 +211,19 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   const departureDate = String(reserva?.departure || '').trim()
   let lateCheckoutPosible = false
   let lateCheckoutChequeado = false
-  if (apartmentId && departureDate) {
-    const estanciasSalida = await smoobuFetch(
-      `/api/reservations?apartmentId=${apartmentId}&arrivalFrom=${departureDate}&arrivalTo=${departureDate}&pageSize=100`,
-      { cache: 'no-store' },
-    ).then(r => r.json())
-      .then(d => estanciasFiables(d, { apartmentId, campo: 'arrival', desde: departureDate, hasta: departureDate }))
-      .catch(() => null)
-    if (estanciasSalida !== null) {
-      lateCheckoutChequeado = true
-      lateCheckoutPosible = entradaMismoDiaLibre(departureDate, estanciasSalida, bookingId)
+  if (departureDate) {
+    const calendario = await libreSegunCalendario(propertyId, bookingId, 'entrada', departureDate)
+    let vivo: boolean | null = null
+    if (apartmentId) {
+      const estanciasSalida = await smoobuFetch(
+        `/api/reservations?apartmentId=${apartmentId}&arrivalFrom=${departureDate}&arrivalTo=${departureDate}&pageSize=100`,
+        { cache: 'no-store' },
+      ).then(r => r.json())
+        .then(d => estanciasFiables(d, { apartmentId, campo: 'arrival', desde: departureDate, hasta: departureDate }))
+        .catch(() => null)
+      if (estanciasSalida !== null) vivo = entradaMismoDiaLibre(departureDate, estanciasSalida, bookingId)
     }
-    if (lateCheckoutPosible && await ocupadoSegunIncomes(propertyId, bookingId, 'entrada', departureDate)) {
-      lateCheckoutPosible = false
-    }
+    ;({ posible: lateCheckoutPosible, chequeado: lateCheckoutChequeado } = combinarFuentes(calendario, vivo))
   }
 
   const direccion = [apt?.location?.street, apt?.location?.zip, apt?.location?.city]

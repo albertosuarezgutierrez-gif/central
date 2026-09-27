@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { nocheAnteriorLibre, diaAnterior, restarDias, entradaMismoDiaLibre, sumarDias, estanciasFiables } from './disponibilidad.ts'
+import { nocheAnteriorLibre, diaAnterior, restarDias, entradaMismoDiaLibre, sumarDias, estanciasFiables, combinarFuentes } from './disponibilidad.ts'
 
 test('diaAnterior / restarDias', () => {
   assert.equal(diaAnterior('2026-06-26'), '2026-06-25')
@@ -95,4 +95,12 @@ test('estanciasFiables: paginada o ilegible → null', () => {
   assert.equal(estanciasFiables({ page_count: 2, bookings: [] }, o), null)
   assert.equal(estanciasFiables({ error: 'x' }, o), null)
   assert.deepEqual(estanciasFiables({ page_count: 1, bookings: [] }, o), [])
+})
+
+test('combinarFuentes: basta UNA fuente ocupada; sin ninguna mirada no se afirma nada', () => {
+  assert.deepEqual(combinarFuentes(false, true), { posible: false, chequeado: true }) // caso 157252361
+  assert.deepEqual(combinarFuentes(true, false), { posible: false, chequeado: true }) // bloqueo manual
+  assert.deepEqual(combinarFuentes(true, null), { posible: true, chequeado: true })
+  assert.deepEqual(combinarFuentes(null, true), { posible: true, chequeado: true })
+  assert.deepEqual(combinarFuentes(null, null), { posible: false, chequeado: false })
 })

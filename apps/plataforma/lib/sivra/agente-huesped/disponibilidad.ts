@@ -78,3 +78,13 @@ export function estanciasFiables(
     return id == null || String(id) === apt
   })
 }
+
+// Combina las dos fuentes de «¿está libre?»: el CALENDARIO volcado (`incomes`, que el webhook de
+// Smoobu mantiene al día y del que se borran las cancelaciones) y la consulta EN VIVO a Smoobu (la
+// única que ve los bloqueos manuales). true = libre · false = ocupado · null = no se pudo mirar.
+// Basta con que UNA diga ocupado para que lo esté; «libre» exige que al menos una lo haya mirado.
+export function combinarFuentes(calendario: boolean | null, vivo: boolean | null): { posible: boolean; chequeado: boolean } {
+  if (calendario === false || vivo === false) return { posible: false, chequeado: true }
+  if (calendario === true || vivo === true) return { posible: true, chequeado: true }
+  return { posible: false, chequeado: false }
+}
