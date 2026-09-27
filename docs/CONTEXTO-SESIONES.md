@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — PR #3779 (+): el bot lee SOLO el último documento (o su álbum), no todo lo de la hora (la prueba de
+MUSSAP salió con 374,90€ por mezclar dos subidas). Si ya tenía oportunidad del ramo: «✏️ Actualizar la existente»
+(antes→después, un solo uso `actualizada_at`, migración aplicada) y «📎 Guardar en la ficha» también ahí.
+
 **(27/09/2026)** — Tras #3773 el bot ya lee el tomador (Rafael Campa, localizado por DNI), pero el enlace final llevaba a la ficha:
 `resultadoAlta()` enlaza ahora a la oportunidad (`?tab=oportunidades&op=<id>`), también cuando ya había una abierta (409).
 
