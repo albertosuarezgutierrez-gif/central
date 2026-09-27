@@ -378,6 +378,100 @@ export const RAMOS: readonly Ramo[] = [
     ],
   },
   {
+    slug: 'decesos',
+    nombre: 'Decesos',
+    h1: 'Seguro de decesos en toda España',
+    title: 'Seguro de decesos en España',
+    description:
+      'Correduría de seguros en toda España. Seguro de decesos: capital asegurado, cómo sube la prima con la edad, traslados y qué servicios incluye de verdad tu póliza.',
+    intro: [
+      'El seguro de decesos se encarga del sepelio y de los trámites cuando fallece un asegurado, para que la familia no tenga que organizarlo ni adelantar el dinero en el peor momento. Muchas familias lo tienen desde hace décadas, heredado de los padres, y nadie ha vuelto a mirar qué cubre ni cuánto cuesta cada año.',
+      'Somos correduría y trabajamos con varias compañías. Revisamos tu póliza actual antes de proponer nada: a veces lo que conviene es ajustar el capital o la forma de prima, no cambiar de seguro.',
+    ],
+    cubre: [
+      'El capital asegurado: si alcanza para el servicio que se presta hoy en tu localidad o se ha quedado corto con los años, y si la póliza lo actualiza.',
+      'La forma de prima: natural, que sube cada año con la edad, o nivelada, que parte más alta y se mantiene más estable. Es lo que decide cuánto pagarás dentro de veinte años.',
+      'Quién está asegurado: si figuran todos los miembros de la familia, qué pasa con los hijos cuando se independizan y si hay límite de edad para entrar.',
+      'El traslado: si cubre el traslado dentro de España y la repatriación si el fallecimiento ocurre fuera, algo que importa si viajas o tienes familia en otro país.',
+      'Los servicios añadidos que suelen acompañarlo, como gestoría para los trámites, asistencia en viaje o testamento, y si los usas o solo encarecen el recibo.',
+    ],
+    paraQuien: [
+      'Tienes un seguro de decesos desde hace años y el recibo no deja de subir sin que sepas por qué.',
+      'Quieres dejar resuelto el sepelio para que tu familia no tenga que ocuparse ni adelantar el dinero.',
+      'Tienes padres mayores con una póliza antigua y quieres saber qué cubre antes de que haga falta.',
+      'Vives en España con familia en otro país y necesitas que la póliza cubra el traslado.',
+    ],
+    faq: [
+      {
+        pregunta: '¿Por qué sube tanto el seguro de decesos cada año?',
+        respuesta:
+          'Porque la mayoría de las pólizas son de prima natural: el precio se calcula cada año según la edad de los asegurados y el capital, que además se suele actualizar. Las de prima nivelada reparten ese coste y se mantienen más estables. Revisar qué forma tiene la tuya es lo primero para entender el recibo.',
+      },
+      {
+        pregunta: '¿Qué pasa si fallezco sin seguro de decesos?',
+        respuesta:
+          'El sepelio lo contrata y lo paga la familia, y después se puede cargar a la herencia. Lo que aporta el seguro es que la compañía organiza el servicio y lo paga directamente, sin que nadie tenga que adelantarlo ni negociarlo en ese momento.',
+      },
+      {
+        pregunta: '¿Puedo cambiar de compañía el seguro de decesos?',
+        respuesta:
+          'Sí, como cualquier seguro anual: comunicándolo por escrito al menos un mes antes del vencimiento. Antes de hacerlo conviene comparar las condiciones de edad y de carencia de la nueva póliza, porque a ciertas edades cambiar puede salir más caro que ajustar la que tienes.',
+      },
+      {
+        pregunta: '¿Es obligatorio el seguro de decesos?',
+        respuesta:
+          'No. Es un seguro voluntario. Tiene sentido si quieres que la organización y el coste del sepelio no recaigan sobre tu familia.',
+      },
+    ],
+  },
+  {
+    slug: 'seguro-perro',
+    nombre: 'Seguro de perro',
+    h1: 'Seguro de responsabilidad civil para perros en toda España',
+    title: 'Seguro de RC para perros en España',
+    description:
+      'Correduría de seguros en toda España. Seguro de RC para perros: qué exige la Ley de Bienestar Animal, perros potencialmente peligrosos y si tu hogar ya lo cubre.',
+    intro: [
+      'La Ley 7/2023 de bienestar animal establece que quien tiene un perro debe contratar un seguro de responsabilidad civil por los daños que pueda causar a otras personas. Los perros potencialmente peligrosos ya lo tenían obligatorio desde antes, con su propia normativa y su licencia.',
+      'Somos correduría y trabajamos con varias compañías. Miramos primero si tu seguro de hogar ya cubre al perro y en qué condiciones, porque a veces basta con ampliar lo que tienes, y si no, buscamos la póliza que encaja con tu perro.',
+    ],
+    cubre: [
+      'La responsabilidad civil: los daños que el perro cause a otras personas, a otros animales o a bienes ajenos, con el límite por siniestro que fija la póliza.',
+      'Si tu seguro de hogar ya incluye al perro: muchas pólizas lo cubren dentro de la responsabilidad civil familiar, pero con límites bajos o excluyendo razas concretas.',
+      'Los perros potencialmente peligrosos: la licencia municipal exige un seguro específico con una cobertura mínima, y muchas pólizas de hogar los excluyen.',
+      'Coberturas opcionales como veterinario por accidente o enfermedad, robo o extravío y gastos de residencia si tú no puedes cuidarlo, cada una con sus límites.',
+      'Quién queda cubierto: si la póliza responde cuando el perro lo pasea otra persona de la familia o alguien de confianza.',
+    ],
+    paraQuien: [
+      'Tienes perro y quieres saber si ya cumples con la ley con el seguro que tienes.',
+      'Tu perro es de una raza considerada potencialmente peligrosa y necesitas el seguro para la licencia.',
+      'Tu seguro de hogar excluye a tu perro o tiene un límite de responsabilidad civil que se queda corto.',
+      'Vas a adoptar o comprar un perro y quieres dejar hecho el seguro desde el primer día.',
+    ],
+    faq: [
+      {
+        pregunta: '¿Es obligatorio el seguro para perros?',
+        respuesta:
+          'La Ley 7/2023 de bienestar animal obliga a quien tiene un perro a contratar un seguro de responsabilidad civil. La cobertura mínima que debe tener la fijará un desarrollo reglamentario que aún está pendiente, así que conviene revisar lo que exige tu comunidad autónoma. Para los perros potencialmente peligrosos el seguro ya era obligatorio para obtener la licencia.',
+      },
+      {
+        pregunta: '¿Me cubre el seguro de hogar los daños que cause mi perro?',
+        respuesta:
+          'Muchas pólizas de hogar incluyen al perro dentro de la responsabilidad civil familiar, pero no todas, y suelen excluir las razas potencialmente peligrosas o poner un límite bajo. Hay que comprobarlo en las condiciones de tu póliza; si no lo cubre, se puede ampliar o contratar un seguro específico.',
+      },
+      {
+        pregunta: '¿Qué pasa si mi perro muerde a alguien y no tengo seguro?',
+        respuesta:
+          'Respondes tú de los daños, con tu patrimonio: gastos médicos, indemnización y, si hay reclamación, los costes del procedimiento. Además, no tener el seguro que exige la normativa puede suponer una sanción.',
+      },
+      {
+        pregunta: '¿Hace falta un seguro distinto para un perro potencialmente peligroso?',
+        respuesta:
+          'Sí. La licencia municipal para tener un perro potencialmente peligroso exige un seguro de responsabilidad civil con una cobertura mínima propia, y muchas pólizas de hogar no lo incluyen. Te decimos qué te piden en tu municipio y qué póliza lo acredita.',
+      },
+    ],
+  },
+  {
     slug: 'impago-alquiler',
     nombre: 'Impago de alquiler',
     h1: 'Seguro de impago de alquiler para propietarios en toda España',

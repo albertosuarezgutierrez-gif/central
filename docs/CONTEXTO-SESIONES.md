@@ -741,6 +741,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) asegura-web: páginas «Decesos» y «Seguro de perro» (`/seguros/decesos`, `/seguros/seguro-perro`)
+- Alberto: «vendemos seguros de todo tipo» → deja de hacer falta confirmar ramo a ramo.
+- OpenSEO: «seguro de decesos» 9.900/mes KD 19; «seguro responsabilidad civil perro» 2.400 KD 16 + «seguro perro obligatorio» 880 KD 0.
+- Perro: Ley 7/2023 obliga a la RC, pero la cobertura mínima depende de un reglamento AÚN pendiente (27/09) — el copy lo dice así, sin cifra; los PPP ya lo tenían obligatorio para la licencia.
+- Mismo patrón: opción de lead en web + plataforma, pie sí/cabecera no, sin widget de ventana.
+- Siguiente paso acordado: PARAR de crear páginas y medir en Search Console en ~4 semanas (unas 12 URLs nuevas en 3 días).
+
 ## (27/09/2026) asegura-web: página «Seguro de patinete eléctrico» (`/seguros/patinete-electrico`)
 - OpenSEO: «seguro patinete electrico» 27.100/mes KD 8, «seguro patinete» 6.600 KD 0, «seguro vmp» 1.000 KD 4 — la de más volumen de todo el sitio.
 - Base legal citada: Ley 5/2025 + RD 52/2026 (BOE 30/01/2026, registro DGT de vehículos personales ligeros); sin certificar vendidos antes del 22/01/2024 circulan hasta el 22/01/2027. Sin cifras de multa.

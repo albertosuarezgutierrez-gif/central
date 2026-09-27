@@ -130,6 +130,8 @@ export const NAV = [
   { href: '/seguros/auto', texto: 'Auto y moto' },
   { href: '/seguros/vida-y-salud', texto: 'Vida y salud' },
   // 27/09/2026: al pie y fuera de la cabecera (ver `FUERA_DE_CABECERA`).
+  { href: '/seguros/decesos', texto: 'Decesos' },
+  { href: '/seguros/seguro-perro', texto: 'Seguro de perro' },
   { href: '/seguros/impago-alquiler', texto: 'Impago de alquiler' },
   { href: '/seguros/patinete-electrico', texto: 'Patinete eléctrico' },
   // 🚨 Responsabilidad civil EXISTE como página (`RAMOS` la trae, el sitemap la
@@ -192,6 +194,8 @@ const FUERA_DE_CABECERA: readonly string[] = [
   '/seguros/flota',
   '/seguros/responsabilidad-civil-fontaneros',
   '/seguros/responsabilidad-civil-autonomos',
+  '/seguros/decesos',
+  '/seguros/seguro-perro',
   '/seguros/impago-alquiler',
   '/seguros/patinete-electrico',
 ]
