@@ -489,6 +489,9 @@ export async function vencidasFueraDeVentana(
         mergedIntoPolizaId: null,
         estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
         fechaVencimiento: { lt: inicioVentanaRecuperacion(hoyRef, diasAtras) },
+        // El volcado histórico NO es cartera: son leads de 2013-2018 con el
+        // estado sin actualizar. Contarlos aquí multiplica la cifra por 122.
+        ...WHERE_CARTERA_VIVA,
         // Allianz no avanza la fecha al renovar (27/09/2026): si un recibo
         // anual COBRADO la lleva a la ventana o más allá, no es dato viejo —
         // es una renovada, y ya la trata (o la deja fuera) `vencimientosProximos`.
@@ -502,9 +505,6 @@ export async function vencidasFueraDeVentana(
           },
         },
         cliente: { activo: true },
-        // El volcado histórico NO es cartera: son leads de 2013-2018 con el
-        // estado sin actualizar. Contarlos aquí multiplica la cifra por 122.
-        ...WHERE_CARTERA_VIVA,
       },
     })
   } catch (e) {
