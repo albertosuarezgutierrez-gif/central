@@ -52,7 +52,20 @@ export const RAMO_WEB_A_TIPO: Readonly<Record<string, string>> = {
   'responsabilidad-civil': 'responsabilidad_civil',
   'responsabilidad-civil-fontaneros': 'responsabilidad_civil',
   'responsabilidad-civil-autonomos': 'responsabilidad_civil',
+  decesos: 'decesos',
+  // Sin `tipo_seguro` propio: van a «otros», y como en «otros» manda `ramo_web` (ver la baja
+  // en `aviso-web.ts`), un aviso de perro no sustituye a uno de patinete del mismo correo.
+  'seguro-perro': 'otros',
+  'impago-alquiler': 'otros',
+  'patinete-electrico': 'otros',
   otro: 'otros',
+}
+
+/** Nombre en correos de las páginas que caen en «otros»: sin esto dirían «seguro de otros». */
+export const NOMBRE_RAMO_WEB: Readonly<Record<string, string>> = {
+  'seguro-perro': 'perro',
+  'impago-alquiler': 'impago de alquiler',
+  'patinete-electrico': 'patinete eléctrico',
 }
 
 /** Slug del «Otro seguro» del selector de la portada: el visitante escribe cuál. */
@@ -69,6 +82,7 @@ export const NOMBRE_RAMO: Readonly<Record<string, string>> = {
   comunidades: 'comunidad',
   comercio: 'comercio',
   responsabilidad_civil: 'responsabilidad civil',
+  decesos: 'decesos',
 }
 
 /**
@@ -77,7 +91,7 @@ export const NOMBRE_RAMO: Readonly<Record<string, string>> = {
  */
 export function nombreDelSeguro(ramo: string, ramoWeb: string): string {
   if (ramoWeb.startsWith(`${RAMO_WEB_OTRO}:`)) return ramoWeb.slice(RAMO_WEB_OTRO.length + 1)
-  return NOMBRE_RAMO[ramo] ?? ramo
+  return NOMBRE_RAMO_WEB[ramoWeb] ?? NOMBRE_RAMO[ramo] ?? ramo
 }
 
 export type SolicitudAviso = { nombre: string; email: string; ramoWeb: string; ramo: string; vence: string }

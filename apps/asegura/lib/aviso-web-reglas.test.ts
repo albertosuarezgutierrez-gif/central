@@ -46,6 +46,13 @@ test('«otro seguro»: se guarda lo que escribió, solo letras, y cada uno se no
   assert.equal(r.solicitud.ramoWeb, 'otro:patinete eléctrico')
   assert.equal(nombreDelSeguro(r.solicitud.ramo, r.solicitud.ramoWeb), 'patinete eléctrico')
   assert.equal(nombreDelSeguro('responsabilidad_civil', 'responsabilidad-civil-autonomos'), 'responsabilidad civil')
+  // Las páginas que caen en «otros» se nombran por su slug, nunca «seguro de otros».
+  for (const [slug, nombre] of [['seguro-perro', 'perro'], ['impago-alquiler', 'impago de alquiler'], ['patinete-electrico', 'patinete eléctrico']]) {
+    const x = revisarSolicitud({ ...BASE, ramo: slug })
+    assert.ok(x.ok, slug)
+    if (x.ok) assert.equal(nombreDelSeguro(x.solicitud.ramo, x.solicitud.ramoWeb), nombre)
+  }
+  assert.equal(nombreDelSeguro('decesos', 'decesos'), 'decesos')
   for (const c of [undefined, '', 'x', 'entra en http://malo.tld', 'moto 125', '<b>perro</b>', 'a'.repeat(41)]) {
     const m = revisarSolicitud({ ...BASE, ramo: 'otro', cual: c })
     assert.equal(m.ok, false, `cual=${String(c)}`)

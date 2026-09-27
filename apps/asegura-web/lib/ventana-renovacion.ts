@@ -23,11 +23,8 @@ const MS_DIA = 86_400_000
 /**
  * Ramos donde NO se pinta: vida y salud tienen reglas de renovación propias y
  * el esquema de los dos plazos no se da por aplicable sin revisarlo.
- * `decesos`, `seguro-perro`, `impago-alquiler` y `patinete-electrico`, porque el aviso del widget sale por el puerto de asegura
- * (`RAMO_WEB_A_TIPO`) y esos ramos aún no están en su contrato: se pintaría un
- * formulario cuyo envío asegura rechaza.
  */
-export const RAMOS_SIN_VENTANA: readonly string[] = ['vida-y-salud', 'decesos', 'seguro-perro', 'impago-alquiler', 'patinete-electrico']
+export const RAMOS_SIN_VENTANA: readonly string[] = ['vida-y-salud']
 
 export function ramoTieneVentana(slug: string): boolean {
   return !RAMOS_SIN_VENTANA.includes(slug)
