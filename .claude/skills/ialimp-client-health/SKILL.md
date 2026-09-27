@@ -109,9 +109,7 @@ Si hay alertas (⚠️), añade acción recomendada. Si todo verde → "Semana O
 Si hay alertas y `PLATAFORMA_URL` + `ALERTA_TOKEN` están disponibles, envía el resumen
 por el endpoint interno de plataforma (el token de Telegram vive allí, no en la rutina):
 ```
-POST {PLATAFORMA_URL}/api/internal/alerta
-Authorization: Bearer {ALERTA_TOKEN}
-{ "text": "📋 Sique Brilla — semana {FECHA}\n..." }
+bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "📋 Sique Brilla — semana {FECHA}\n..." }'
 ```
 (`ALERTA_TOKEN` = token estrecho que SOLO abre este endpoint. El endpoint también acepta el
 viejo `CRON_SECRET` por compat, pero NO pongas la llave maestra en el prompt de la rutina.)
@@ -139,10 +137,12 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 ## Canal de aviso — protocolo común
 
 **Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
-`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+`bash scripts/canal-aviso.sh GET /api/internal/alerta` — NUNCA reconstruyas el `curl` a mano con
+`${PLATAFORMA_URL}`/`${ALERTA_TOKEN}` literales (bloquea MCP Sentinel en sesión desatendida, ver
+`docs/AVISOS-AGENTES.md`).
 
-- `200` → el canal está vivo, sigue con tu pasada.
-- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+- `HTTP_STATUS:200` → el canal está vivo, sigue con tu pasada.
+- `HTTP_STATUS:401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
   hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
   Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
   `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).

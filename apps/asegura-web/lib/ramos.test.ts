@@ -10,7 +10,7 @@ import assert from 'node:assert/strict'
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { PROHIBIDO, ACOTA_AMBITO } from '@central/module-seguros'
-import { RAMOS, ramoPorSlug, type Ramo } from './ramos.ts'
+import { RAMOS, RAMOS_PRODUCTO, ramoPorSlug, type Ramo } from './ramos.ts'
 
 /** Todo el texto visible de un ramo, en una sola cadena, para barrerlo. */
 function copy(r: Ramo): string {
@@ -209,5 +209,26 @@ test('la portada sigue diciendo que la intranet acepta pólizas de CUALQUIER com
     home,
     /de cualquier compañía/i,
     'la portada ya no dice que acepta pólizas de cualquier compañía: se quedó sin el único argumento que no puede copiar otro corredor',
+  )
+})
+
+// 🚨 Una página de INTENCIÓN de oficio (RC fontaneros) comparte ramo real con
+// otra entrada de RAMOS: no es un producto distinto de la cartera. La cifra
+// pública «Ramos que revisamos» de la portada tiene que contar productos, no
+// páginas, o infla lo que de verdad se lleva. Barre el FUENTE (no `RAMOS.length`
+// a secas) porque el fallo es «se usó la constante equivocada», que ni `tsc`
+// ni un test sobre los datos detecta.
+test('RAMOS_PRODUCTO excluye las páginas de intención, y la portada cuenta con esa lista', () => {
+  assert.ok(RAMOS_PRODUCTO.length < RAMOS.length, 'RAMOS_PRODUCTO debería excluir al menos una página de intención')
+  assert.ok(
+    !RAMOS_PRODUCTO.some((r) => r.slug === 'responsabilidad-civil-fontaneros'),
+    'responsabilidad-civil-fontaneros es una página de intención: no cuenta como producto distinto',
+  )
+
+  const home = readFileSync(join(RAIZ, 'app', 'page.tsx'), 'utf8')
+  assert.match(
+    home,
+    /valor:\s*RAMOS_PRODUCTO\.length,\s*texto:\s*'Ramos que revisamos'/,
+    'la cifra "Ramos que revisamos" de la portada ya no cuenta con RAMOS_PRODUCTO: volvería a contar la RC de fontaneros como un ramo aparte',
   )
 })

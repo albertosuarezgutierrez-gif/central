@@ -198,7 +198,7 @@ export default function ListaCartera({ onContador }: {
         <>
           {describirFiltro(filtro)}
           {datos?.estado === 'ok' && ` — ${datos.total} cliente(s)`}
-          {sel.grupo === 'leads' && ' · el volcado histórico de 2013-2018: no son clientes de hoy.'}
+          {sel.grupo === 'leads' && ' · el volcado histórico de 2013-2018 y las pólizas de CIMA canceladas: no son clientes de hoy.'}
         </>
       }
       accion={
@@ -540,7 +540,7 @@ function Resultado({ datos, cargando, hayFiltro, limpiar, sel, cambiar }: {
               arrastra la página entera en móvil. */}
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
             {datos.clientes.map((c) => (
-              <FilaCliente key={c.id} c={c} />
+              <FilaCliente key={c.id} c={c} grupo={sel.grupo} />
             ))}
           </div>
 
@@ -584,7 +584,7 @@ function etiquetaEstado(v: string): string {
   return ESTADOS.find((e) => e.v === v)?.label ?? v.replace(/_/g, ' ')
 }
 
-function FilaCliente({ c }: { c: ClienteListado }) {
+function FilaCliente({ c, grupo }: { c: ClienteListado; grupo: Seleccion['grupo'] }) {
   // Montaje perezoso: la tabla de pólizas no existe hasta que se abre. Un
   // `<details>` cerrado igualmente crearía todo su DOM (regla de rendimiento).
   const [abierto, setAbierto] = useState(false)
@@ -618,7 +618,10 @@ function FilaCliente({ c }: { c: ClienteListado }) {
       ) : c.polizas.length === 0 ? null : (
         <details onToggle={(e) => setAbierto((e.currentTarget as HTMLDetailsElement).open)} style={{ marginTop: 6 }}>
           <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 44, display: 'flex', alignItems: 'center' }}>
-            {c.polizas.length} póliza(s) en vigor
+            {/* Las pólizas son las de SU grupo: en leads son el volcado o las
+                canceladas de CIMA, y llamarlas «en vigor» sería la mentira que
+                se arregló el 19/09/2026 (Kartenbrot: «1 póliza en vigor · Cancelada»). */}
+            {c.polizas.length} póliza(s) {grupo === 'viva' ? 'en vigor' : 'histórica(s) o cancelada(s)'}
           </summary>
           {abierto && (
             <TablaScroll>

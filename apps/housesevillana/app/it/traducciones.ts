@@ -192,8 +192,8 @@ export const TRADUCCIONES: Record<string, string> = {
     'A pochi passi trovi La Parcer&iacute;a Caf&eacute;, Ojal&aacute; Tapas y Vinos e il Restaurante Condend&ecirc; (200 m). Il mercato dell\'Encarnaci&oacute;n (Las Setas) è a 10 minuti a piedi, con banchi di frutta, verdura e prodotti locali.',
   '&iquest;Cu&aacute;l es la pol&iacute;tica de cancelaci&oacute;n?':
     'Qual è la politica di cancellazione?',
-  'Las condiciones exactas se muestran en el motor de reservas seg&uacute;n las fechas elegidas. Reservando directamente puedes hablar con el propietario para condiciones m&aacute;s flexibles &mdash; algo imposible a trav&eacute;s de las plataformas.':
-    'Le condizioni esatte compaiono nel motore di prenotazione in base alle date scelte. Prenotando direttamente puoi parlare con il proprietario per condizioni più flessibili &mdash; cosa impossibile tramite le piattaforme.',
+  'Cancelaci&oacute;n gratuita hasta 15 d&iacute;as antes de la llegada. Pasado ese plazo, o en caso de no presentarse, se cobra el 100% del importe de la reserva.':
+    'Cancellazione gratuita fino a 15 giorni prima dell\'arrivo. Trascorso tale termine, o in caso di mancata presentazione, viene addebitato il 100% dell\'importo della prenotazione.',
   '&iquest;Por qu&eacute; reservar aqu&iacute; y no en Booking.com?':
     'Perché prenotare qui e non su Booking.com?',
   'Booking.com cobra entre un 15% y un 22% de comisi&oacute;n que repercute en el precio final. Reservando en esta web obtienes el mejor precio garantizado, confirmaci&oacute;n inmediata y trato directo con el propietario para cualquier necesidad antes o durante tu estancia. Sin intermediarios, sin sorpresas.':
@@ -212,8 +212,8 @@ export const TRADUCCIONES: Record<string, string> = {
     'Rapporto diretto con il proprietario',
   'Hablas con Alberto, no con un call center. Flexible con horarios de llegada, parking, peticiones especiales y necesidades del grupo.':
     'Parli con Alberto, non con un call center. Flessibile su orari di arrivo, parcheggio, richieste particolari e necessità del gruppo.',
-  'Sin esperas ni burocracia. Tu reserva confirmada al instante por WhatsApp o email. Condiciones de cancelaci&oacute;n negociables directamente.':
-    'Niente attese né burocrazia. La prenotazione è confermata subito via WhatsApp o email, e le condizioni di cancellazione si concordano direttamente.',
+  'Sin esperas ni burocracia. Tu reserva confirmada al instante por WhatsApp o email. Cancelaci&oacute;n gratuita hasta 15 d&iacute;as antes de la llegada.':
+    'Niente attese né burocrazia. La prenotazione è confermata subito via WhatsApp o email. Cancellazione gratuita fino a 15 giorni prima dell\'arrivo.',
   'Ver disponibilidad y precios':
     'Vedi disponibilità e prezzi',
   'o ll&aacute;manos al':
@@ -293,4 +293,13 @@ export const TRADUCCIONES: Record<string, string> = {
     'Casa con parcheggio in centro',
   'Comprobar disponibilidad':
     'Verifica disponibilità',
+
+  // ── Banner de consentimiento ─────────────────────────────────────────────────
+  // No es un texto suelto: `montarBannerHtml('es')` (packages/core-consent) ya
+  // incrusta las traducciones de los tres idiomas en `language.translations`, y lo
+  // único que cambia entre variantes es qué idioma queda seleccionado por defecto.
+  // Esta clave es ese substring literal del JSON embebido — ver Task D2 del plan
+  // de consentimiento unificado.
+  '"default":"es"':
+    '"default":"it"',
 }

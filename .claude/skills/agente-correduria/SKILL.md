@@ -78,8 +78,12 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
 - **Cobertura DESIGUAL por compañía — no supongas que CIMA lo trae todo (medido 01/09/2026).** Mapfre
   manda recibos pero **ninguna liquidación**; Allianz manda las dos y además un PDF «Cuenta Agente» por
   correo (texto en **EBCDIC**, se decodifica con `cp500`); Occident va por CIMA y lleva meses en **saldo
-  deudor** (comisión negativa, remesa 0,00€ — eso NO es un impago); Reale acaba de adherirse; Generali
-  no tiene acceso CIMA. Un total de comisiones sin decir qué compañías faltan es una cifra falsa.
+  deudor** (comisión negativa, remesa 0,00€ — eso NO es un impago); Reale acaba de adherirse; **Generali empezó a volcar por CIMA el
+  14/09/2026** (su primer POL, y el único fichero de toda la serie con avisos de validación: 12
+  leves) — hasta esa fecha esta línea la daba por fuera de la pasarela, que era cierto el
+  01/09 y dejó de serlo sin que nadie tocara una línea del repo. Un total de comisiones sin decir qué compañías
+  faltan es una cifra falsa, y **quién manda qué se vuelve a MEDIR, no se cita de aquí** —
+  la tabla viva y la consulta están en la skill **`cima-ingesta`**.
 - Dinero SIEMPRE en formato español (`2.162,49€`); regla NULL≠0 de `CLAUDE.md` aplica
   entera (una póliza sin fecha de vencimiento es «sin fecha», no «no vence»).
 - Cambios de comportamiento de esta skill → PR (nunca auto-aplicar desde la rutina);
@@ -127,6 +131,9 @@ escrito (en `references/` por PR, o en la BD cuando exista la tabla de aprendiza
   cuesta 0,50€ por consulta y NO es idempotente** (un reintento = otro proyecto y otro cargo), así que
   **ninguna vigilancia periódica ni botón público tarifica**: se vigila la FECHA (gratis) y se tarifica
   una vez, contra el cupo y el motivo de `seguros.codeoscopic_consumo`.
+- 🔌 **Ingesta de CIMA (la tubería) → skill `cima-ingesta`.** Todo lo de EIAC/TIREA/adaptador,
+  cuarentena, cobertura de campos, caja negra del webhook y el diagnóstico de «la ingesta está
+  muda» vive AHÍ, no aquí. Esta skill es el NEGOCIO; aquella es la tubería que lo alimenta.
 - Contexto de infra/traspaso: `apps/asegura/CLAUDE.md` + `docs/TRASPASO-CORREDURIA.md`.
 - 🚧 **Dos apps, no una.** `apps/asegura` es el panel del **CORREDOR**; `apps/asegura-portal` es el
   portal que ve el **ASEGURADO** (Fase 1 mergeada el 01/09/2026, PR #1965; **su `CLAUDE.md` es la

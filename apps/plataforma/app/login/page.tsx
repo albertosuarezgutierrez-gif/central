@@ -1,111 +1,15 @@
-'use client'
-import { useState, FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
+import { redirect } from 'next/navigation'
+import { getSession } from '@/lib/session'
+import LoginForm from './LoginForm'
 
-export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+// Con sesión válida, /login no pinta el formulario: reenvía a /banca. El acceso directo del
+// móvil de Alberto apunta a /login, y hasta hoy pedía usuario aunque la cookie de 30 días siguiera
+// viva (19/09/2026).
+export const dynamic = 'force-dynamic'
 
-  async function submit(e: FormEvent) {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
-    const res = await fetch('/api/auth/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    })
-    if (res.ok) {
-      router.push('/banca')
-    } else {
-      const data = await res.json().catch(() => ({}))
-      setError(data.error || 'Error al iniciar sesión')
-      setLoading(false)
-    }
-  }
-
-  return (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '24px', background: 'var(--bg)',
-    }}>
-      <div style={{
-        width: '100%', maxWidth: '400px', background: 'var(--surface)',
-        borderRadius: 'var(--radius)', border: '1px solid var(--border)',
-        boxShadow: 'var(--shadow)', padding: '40px 32px',
-      }}>
-        {/* Logo placeholder */}
-        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: '6px',
-            fontSize: '22px', fontWeight: 800, color: 'var(--primary)',
-          }}>
-            <span style={{
-              background: 'var(--primary)', color: '#fff',
-              borderRadius: '6px', padding: '2px 8px', fontSize: '18px',
-            }}>ia</span>
-            <span style={{ color: 'var(--text)' }}>plataforma</span>
-          </div>
-          <p style={{ color: 'var(--muted)', marginTop: '8px', fontSize: '14px' }}>
-            Cuadro de mando consolidado
-          </p>
-        </div>
-
-        <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-          <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
-              Email
-            </label>
-            <input
-              type="email" value={email} onChange={e => setEmail(e.target.value)}
-              required autoComplete="email" autoFocus
-              style={{
-                width: '100%', padding: '10px 12px', border: '1px solid var(--border)',
-                borderRadius: '8px', fontSize: '15px', outline: 'none',
-              }}
-            />
-          </div>
-          <div>
-            <label style={{ display: 'block', fontSize: '14px', fontWeight: 500, marginBottom: '6px' }}>
-              Contraseña
-            </label>
-            <input
-              type="password" value={password} onChange={e => setPassword(e.target.value)}
-              required autoComplete="current-password"
-              style={{
-                width: '100%', padding: '10px 12px', border: '1px solid var(--border)',
-                borderRadius: '8px', fontSize: '15px', outline: 'none',
-              }}
-            />
-          </div>
-
-          {error && (
-            <p style={{ color: 'var(--negative)', fontSize: '14px', background: 'var(--negative-bg)', padding: '10px 12px', borderRadius: '8px' }}>
-              {error}
-            </p>
-          )}
-
-          <button
-            type="submit" disabled={loading}
-            style={{
-              background: 'var(--primary)', color: '#fff', padding: '11px', border: 'none',
-              borderRadius: '8px', fontSize: '15px', fontWeight: 600,
-              opacity: loading ? 0.7 : 1, cursor: 'pointer',
-            }}
-          >
-            {loading ? 'Entrando…' : 'Entrar'}
-          </button>
-
-          <p style={{ textAlign: 'center', fontSize: '14px', color: 'var(--muted)' }}>
-            ¿Sin cuenta?{' '}
-            <Link href="/register" style={{ color: 'var(--primary)', fontWeight: 600 }}>Crear cuenta</Link>
-          </p>
-        </form>
-      </div>
-    </div>
-  )
+export default async function LoginPage() {
+  // Si la BD no responde, mejor el formulario que una pantalla de error: entrar seguirá fallando, pero se ve por qué.
+  const sesion = await getSession().catch(() => null)
+  if (sesion) redirect('/banca')
+  return <LoginForm />
 }

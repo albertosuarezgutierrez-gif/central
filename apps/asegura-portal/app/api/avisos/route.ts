@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server'
 
 import { autorizacionesDeIdentidad } from '@/lib/autorizaciones'
 import { avisosDe, type Avisos } from '@/lib/avisos'
+import { carnetsDeIdentidad } from '@/lib/carnets'
+import { reparosDeMisDatos } from '@/lib/mis-datos'
 import { obligacionesDeIdentidad } from '@/lib/obligaciones'
+import { peticionesDeIdentidad } from '@/lib/peticiones'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -31,23 +34,36 @@ export async function GET() {
     return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
   }
 
-  const [autorizaciones, obligaciones] = await Promise.allSettled([
+  const [autorizaciones, obligaciones, peticiones, datos, carnets] = await Promise.allSettled([
     autorizacionesDeIdentidad(identidad.id),
     obligacionesDeIdentidad(identidad.id),
+    peticionesDeIdentidad(identidad.id),
+    // Esta cuarta sale por el PUENTE a `apps/asegura` (la dirección va cifrada
+    // y esta app no tiene la clave), así que es la que más fácil falla — razón
+    // de más para que vaya en el `allSettled` y no tumbe a las otras tres.
+    reparosDeMisDatos(identidad.id),
+    // Quinta, mismo puente: la fecha de carné y de nacimiento también van cifradas.
+    carnetsDeIdentidad(identidad.id),
   ])
 
   // Se deja rastro del fallo: la respuesta lo declara, pero sin el error en el
   // log nadie sabría POR QUÉ el globo lleva `+`.
   if (autorizaciones.status === 'rejected') console.error('[avisos] autorizaciones ilegibles', autorizaciones.reason)
   if (obligaciones.status === 'rejected') console.error('[avisos] obligaciones ilegibles', obligaciones.reason)
+  if (peticiones.status === 'rejected') console.error('[avisos] peticiones ilegibles', peticiones.reason)
+  if (datos.status === 'rejected') console.error('[avisos] datos de contacto ilegibles', datos.reason)
+  if (carnets.status === 'rejected') console.error('[avisos] carnés ilegibles', carnets.reason)
 
-  const datos: Avisos = avisosDe({
+  const respuesta: Avisos = avisosDe({
     autorizaciones: autorizaciones.status === 'fulfilled' ? autorizaciones.value : null,
     obligaciones: obligaciones.status === 'fulfilled' ? obligaciones.value : null,
+    peticiones: peticiones.status === 'fulfilled' ? peticiones.value.recibidas : null,
+    datos: datos.status === 'fulfilled' ? datos.value : null,
+    carnets: carnets.status === 'fulfilled' ? carnets.value : null,
     hoy: new Date(),
   })
 
   // Sin caché: lo que dice la campana cambia al aceptar o revocar, y una copia
   // guardada seguiría enseñando el aviso ya resuelto.
-  return NextResponse.json(datos, { headers: { 'cache-control': 'no-store' } })
+  return NextResponse.json(respuesta, { headers: { 'cache-control': 'no-store' } })
 }

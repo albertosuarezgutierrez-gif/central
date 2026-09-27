@@ -30,6 +30,11 @@ export const dynamic = 'force-dynamic'
  * 🚨 Lo que NO sale a propósito: tramitador y perito (gestión interna, regla de
  * visibilidad del 03/09/2026) y cualquier campo cifrado. Para llamar al cliente
  * hacen falta su nombre, la compañía, la póliza, cuándo pasó y la referencia.
+ *
+ * 🚨 `estado` SÍ sale desde el 14/09/2026: CIMA manda siniestros de cualquier
+ * estado —medido ese día, 11 de 12 "nuevos" ya venían `cerrado`— y sin este
+ * campo el vigía de plataforma no puede distinguir uno que sigue abierto de
+ * uno que ya está resuelto, y el aviso pedía llamar por los 12.
  */
 export async function GET(req: Request) {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -77,6 +82,7 @@ export async function GET(req: Request) {
           idSiniestroEntidad: true,
           clienteId: true,
           polizaId: true,
+          estado: true,
           cliente: { select: { nombre: true, apellidos: true } },
           poliza: { select: { numeroPoliza: true, aseguradora: true } },
         },
@@ -100,6 +106,7 @@ export async function GET(req: Request) {
         // La referencia de la compañía es la llave para preguntar por él; si
         // solo consta la de la entidad, vale igual.
         referencia: s.referencia ?? s.idSiniestroEntidad,
+        estado: s.estado,
       })),
     })
   } catch (e) {

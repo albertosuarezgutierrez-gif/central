@@ -8,8 +8,11 @@ manipulación del propio `.claude/settings.json`).
 
 ## Estado actual: `SENTINEL_SHADOW=on` (modo sombra)
 
-**No bloquea nada.** Evalúa cada llamada como siempre, pero cuando detectaría
-`ask`/`deny` la deja pasar igualmente y solo lo anota en
+**No bloquea la mayoría de hallazgos.** Evalúa cada llamada como siempre; un `deny`
+duro (`known_malicious`/`feed_blocklist`) nunca se toca, un `ask` con un humano
+delante llega tal cual, y un `ask` CRÍTICO sin nadie delante se deniega (ver
+"Ask crítico + desatendido" más abajo, 13/09/2026) — solo el resto (`ask` de
+severidad alta sin nadie delante) se deja pasar igualmente y se anota en
 `~/.claude/sentinel/stats.json` (contador `would_block`) y añade una nota
 `[SOMBRA]` al contexto de la conversación. Es deliberado y **confirmado
 necesario** (ver "Confirmado" más abajo): este repo tiene mucha automatización
@@ -177,6 +180,52 @@ salvo que se añada primero un mecanismo de timeout/aviso en el propio hook
 (p. ej. que `ask` sin sesión interactiva degrade a `deny` con log, nunca a
 esperar). Activar bloqueo real sin eso convertiría cualquier falso positivo
 (ver punto 3 de arriba) en una Routine muerta y silenciosa.
+
+## Ask crítico + desatendido: ahora deniega, no permite en silencio (13/09/2026)
+
+Hasta hoy, `SENTINEL_SHADOW` bajaba a `allow` TODO `deny`/`ask` por igual,
+incluidos los `deny` duros (`known_malicious`/`feed_blocklist`, pensados para
+ser no-overrideable) y un `ask` crítico de exfiltración de secretos — el aviso
+de Telegram llega DESPUÉS de que el `curl` ya salió. Es el mecanismo que la
+conclusión de arriba pedía («que `ask` sin sesión interactiva degrade a
+`deny` con log, nunca a esperar»), añadido en `sentinel_preflight.py`:
+
+- **`_session_attended()`** lee `CLAUDE_CODE_SESSION_ATTENDED` (env provisto
+  por la plataforma; `SENTINEL_ATTENDED` la sobreescribe para tests).
+  Desconocido/ausente se trata como **NO atendida** — mismo criterio
+  conservador que ya usa `CLAUDE.md` para datos que no se han mirado.
+- **`deny` duro nunca se toca** (ni en shadow): sigue siendo no-overrideable.
+- **`ask` con sesión ATENDIDA**: llega el `ask` real — hay alguien delante
+  para responder, no hace falta shadow.
+- **`ask` con sesión DESATENDIDA y severidad CRITICAL** (exfiltración de
+  secretos, ruta sensible, comando peligroso): se **deniega**, no se permite
+  ni se cuelga. Un job fallido es recuperable; un secreto exfiltrado no.
+- **`ask` con sesión DESATENDIDA y severidad HIGH** (IMDS, escritura de
+  config, red sospechosa — más ambiguos): mantiene el comportamiento
+  original, allow + nota `[SOMBRA]` + `would_block`.
+
+`sentinel_alerta.py` avisa por Telegram en los dos casos de shadow (el nuevo
+`deny` crítico y el `allow` de siempre), no solo en el segundo — antes solo
+miraba `additionalContext` en decisiones `allow`; ahora también mira
+`permissionDecisionReason` cuando la decisión es `deny` y lleva el literal
+`SENTINEL_SHADOW` (un `deny` real sin ese literal —`deny_known`/`deny_feed`/
+`deny_tamper`— nunca dispara este aviso).
+
+Esto SÍ toca el motor `sentinel_preflight.py` (deja de ser copia byte a byte
+del vendor en esta función) — deliberado: es la pieza que la propia
+conclusión de "Confirmado" pedía añadir antes de activar cualquier bloqueo
+real, y mantenerla como una sub-lógica claramente comentada y aislada
+(`_session_attended`, el bloque de `main()`) deja localizable el punto exacto
+de divergencia si algún día hace falta re-verificar contra una versión nueva
+del vendor.
+
+**Pendiente de decidir:** si `CLAUDE_CODE_SESSION_ATTENDED` refleja de verdad
+"Routine/Action sin humano" en todos los casos de este entorno (solo se ha
+observado `=1` en una sesión interactiva propia) — si alguna vez se ve `=0`
+en una sesión que SÍ tiene a Alberto delante, el `ask` crítico se denegaría
+de más (molesto, recuperable) en vez de exfiltrarse (no recuperable), así que
+el fallo es hacia el lado seguro, pero conviene confirmarlo la primera vez
+que una Routine real dispare esta rama.
 
 ## Nota de plataforma (para quien retome esto)
 

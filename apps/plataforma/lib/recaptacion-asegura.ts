@@ -44,6 +44,9 @@ export type ContadoresRecaptacion = {
   totalCandidatos: number
   contactadosSemana: number
   conAperturaORespuestaSemana: number
+  /** Acumulado total de emails (no solo la semana). `null` = no se pudo leer. */
+  emailEnviadosTotal: number | null
+  emailAbiertosTotal: number | null
 }
 
 /**
@@ -86,6 +89,8 @@ function leerContadores(v: unknown): ContadoresRecaptacion {
     totalCandidatos: entero(o.totalCandidatos) ?? 0,
     contactadosSemana: entero(o.contactadosSemana) ?? 0,
     conAperturaORespuestaSemana: entero(o.conAperturaORespuestaSemana) ?? 0,
+    emailEnviadosTotal: entero(o.emailEnviadosTotal),
+    emailAbiertosTotal: entero(o.emailAbiertosTotal),
   }
 }
 
@@ -110,6 +115,55 @@ export function interpretarCola(status: number, json: unknown): Cola {
     // Alberto: sigue viendo el resto de leads).
   }
   return { estado: 'ok', leads, contadores: leerContadores(r.contadores) }
+}
+
+// ── Agrupación por cliente ──────────────────────────────────────────────────
+//
+// El puerto da una fila por PÓLIZA: el mismo cliente con varios seguros
+// (distintos ramos, o el mismo ramo repetido en el volcado) sale como varias
+// filas con el mismo contacto. Alberto: «leads puede haber tenido varios
+// seguros pero contacto es solo uno» — se agrupa por `clienteId` (la ficha,
+// que YA es la identidad correcta: regla «por NIF/ficha, nunca por nombre»
+// del CLAUDE.md — aquí no hay NIF en este feed, pero `clienteId` es la misma
+// idea) para que el contacto (llamada/WhatsApp/email) sea uno por cliente, no
+// uno por póliza. Dos `clienteId` distintos NUNCA se funden aquí, aunque
+// compartan teléfono (podría ser un negocio con varios titulares).
+
+export type GrupoLeadRecaptacion = {
+  clienteId: string
+  cliente: string
+  telefono: string | null
+  email: string | null
+  polizas: LeadRecaptacion[]
+  enCooldown: boolean
+  ultimoContactoEn: string | null
+}
+
+export function agruparLeadsPorCliente(leads: readonly LeadRecaptacion[]): GrupoLeadRecaptacion[] {
+  const mapa = new Map<string, GrupoLeadRecaptacion>()
+  for (const l of leads) {
+    const existente = mapa.get(l.clienteId)
+    if (existente) {
+      existente.polizas.push(l)
+      if (l.enCooldown) existente.enCooldown = true
+      if (existente.telefono === null && l.telefono !== null) existente.telefono = l.telefono
+      if (existente.email === null && l.email !== null) existente.email = l.email
+      if (l.ultimoContactoEn !== null && (existente.ultimoContactoEn === null || l.ultimoContactoEn > existente.ultimoContactoEn)) {
+        existente.ultimoContactoEn = l.ultimoContactoEn
+      }
+      continue
+    }
+    mapa.set(l.clienteId, {
+      clienteId: l.clienteId,
+      cliente: l.cliente,
+      telefono: l.telefono,
+      email: l.email,
+      polizas: [l],
+      enCooldown: l.enCooldown,
+      ultimoContactoEn: l.ultimoContactoEn,
+    })
+  }
+  return [...mapa.values()]
 }
 
 /** El motivo del puerto, en castellano de pantalla. */
@@ -162,7 +216,7 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-async function pedirCon(path: string, init: RequestInit): Promise<{ status: number; json: unknown } | null> {
+async function pedirCon(path: string, init: RequestInit, timeoutMs: number = 8000): Promise<{ status: number; json: unknown } | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
@@ -172,7 +226,7 @@ async function pedirCon(path: string, init: RequestInit): Promise<{ status: numb
       ...(init.body ? { 'content-type': 'application/json' } : {}),
     },
     cache: 'no-store',
-    signal: AbortSignal.timeout(8000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
 }
@@ -214,6 +268,46 @@ export async function enviarEmailRecaptacionAsegura(body: {
     const r = await pedirCon('/api/operador/recaptacion/email', { method: 'POST', body: JSON.stringify(body) })
     if (r === null) return { estado: 'sin_configurar' }
     return interpretarEscrituraRecaptacion(r.status, r.json)
+  } catch {
+    return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ── Envío en LOTE (cron diario) ───────────────────────────────────────────
+
+export type LoteEmail =
+  | { estado: 'ok'; candidatos: number; enviados: number; fallidos: number; detalleFallos: string[] }
+  | { estado: 'sin_configurar' }
+  | { estado: 'error'; motivo: string }
+
+export function interpretarLoteEmail(status: number, json: unknown): LoteEmail {
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  const o = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (o.estado === 'sin_configurar' || status === 503) return { estado: 'sin_configurar' }
+  if (status === 200 && o.estado === 'ok') {
+    return {
+      estado: 'ok',
+      candidatos: entero(o.candidatos) ?? 0,
+      enviados: entero(o.enviados) ?? 0,
+      fallidos: entero(o.fallidos) ?? 0,
+      detalleFallos: Array.isArray(o.detalleFallos) ? o.detalleFallos.filter((x): x is string => typeof x === 'string') : [],
+    }
+  }
+  const motivo = cadena(o.motivo) ?? cadena(o.causa) ?? cadena(o.error)
+  return { estado: 'error', motivo: motivo ?? `HTTP ${status}` }
+}
+
+// Timeout largo a propósito: hasta ~25 envíos secuenciales por Resend, cada
+// uno con su propio timeout interno de 15s en `enviarEmailResend` (asegura).
+// Por encima del `maxDuration=120` de la ruta de asegura, para no cortar la
+// petición antes de que la propia plataforma la corte por su cuenta.
+const TIMEOUT_LOTE_MS = 130_000
+
+export async function enviarLoteEmailRecaptacionAsegura(limite?: number): Promise<LoteEmail> {
+  try {
+    const r = await pedirCon('/api/operador/recaptacion/email-lote', { method: 'POST', body: JSON.stringify({ limite }) }, TIMEOUT_LOTE_MS)
+    if (r === null) return { estado: 'sin_configurar' }
+    return interpretarLoteEmail(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
   }

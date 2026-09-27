@@ -41,7 +41,7 @@ la pieza más difícil —la versión del vehículo— los caminos son, de más 
 | 1 | **La ficha ya lo trae** (`marca`/`modelo`/`version` en texto: 1.422/1.416/1.325 pólizas, medido 01/09) | Gratis, instantáneo | ⬜ por hacer |
 | 2 | **Foto de la ficha técnica** → filtrar por cilindrada + potencia + combustible | Gratis | ⬜ diseñado (§1) |
 | 3 | **Catálogo a mano** marca→modelo→versión | Gratis, 3 clics | ✅ **hecho** (PR #1996) |
-| 4 | **Matrícula** → `GET /vehicles` | Créditos de pago | ⬜ sin contratar |
+| 4 | **Matrícula** → `GET /vehicles` | Créditos de pago (0,12€/consulta) | ✅ **contratado 15/09/2026** — `@central/core-vehiculos` + `POST /api/operador/vehiculo/matricula` (PR #2998), pendiente la prueba real con una matrícula de cartera |
 
 ⚠️ Ojo con el 1: las **80 pólizas de auto VIVAS (CIMA) no lo traen** (solo matrícula). Ese camino
 sirve para el volcado histórico, no para la cartera viva — que es justo la que Alberto quiere
@@ -120,6 +120,72 @@ trae cilindrada, potencia y combustible exactos, que es justo lo que separa vers
 | **Carnet de conducir** | `fechaCarnet` (campo 4a = fecha de expedición del permiso B, en el reverso por categorías) | Ojo: la fecha del carnet **B** es la del reverso, no la de la tarjeta |
 | **Ficha técnica** | `matricula`, `fechaMatriculacion`, marca/modelo/versión, plazas | Ver §1 |
 | **Póliza actual** | `polizaAnterior`, `companiaAnteriorCodigo`, `aniosAsegurado`, bonus declarado | Para un cliente NUEVO es la única fuente; para uno de cartera ya lo tenemos |
+| **Matrícula (foto de la propia placa)** | `marca`/`modelo`/`version`/`potenciaCv`/`potenciaKw`/`cilindradaCc`/`combustible` vía `resolverMatricula()` (camino 4, ya contratado) | Ver §2 bis — más pobre que la ficha técnica pero muchísimo más barata de pedir |
+
+### 2 bis. 💡 Idea de Alberto (15/09/2026): tarificar con SOLO la foto de la matrícula
+
+> *«1) Cliente ya existe: coger datos de APIVehículo y con eso localizar en Codeoscopic datos y
+> tarificar porque ya tenemos todos los datos, si no tenemos algún dato preguntarle solo los
+> necesarios. 2) Cliente web o nuevo: los datos justos y necesarios para dar precio, teniendo
+> APIVehículo con matrícula adelantamos mucho. Lo que habrá que buscar es forma de conectar
+> APIVehículo con los datos de Codeoscopic, ¿no?»*
+
+**Dos flujos, mismo dato de entrada:**
+
+| | Flujo 1 — cliente YA en cartera | Flujo 2 — lead nuevo / web pública |
+|---|---|---|
+| Falta el vehículo | Foto de la matrícula → `resolverMatricula()` | Foto de la matrícula → `resolverMatricula()` |
+| El resto de datos | Ya están en su ficha (`desde-cartera.ts`: persona, dirección, póliza anterior) | No existen — se piden **solo los mínimos que Codeoscopic exige para PRESUPUESTAR** (no los de emitir; ver el principio de §0: fase 1 = mínima fricción) |
+| Qué falta preguntar | Nada, salvo que la precalificación marque un `supuesto` que el cliente quiera corregir | Nombre, DNI/fecha nacimiento, dirección, código postal — lo que hoy `precalificarAuto()` ya no puede suponer sin mentir |
+
+**La pregunta de fondo («¿cómo se conecta APIVehículo con Codeoscopic?») ya tiene respuesta y no
+hace falta inventar nada nuevo: es el MISMO problema que §1 ya resolvió para la ficha técnica, con
+la MISMA función.** `emparejar()` (`lib/codeoscopic/catalogos.ts`) filtra el catálogo
+`GET car/brands/{id}/models/{id}/vehicles` por marca → modelo → cilindrada + potencia + combustible
++ año. APIVehículo devuelve esos mismos cuatro ejes (`cilindradaCc`, `potenciaCv`/`potenciaKw`,
+`combustible`, `fechaMatriculacion` → año) — así que `resolverMatricula()` es sencillamente OTRA
+fuente de entrada a `emparejar()`, no un camino nuevo. Sale 1 candidato → se tarifica; salen 2 o
+más → **decide una persona**, la misma regla ya escrita en §1 y que no se toca.
+
+**Lo único que falta diseñar de verdad:**
+1. **OCR de la matrícula desde la foto** — no hay proveedor Vision elegido (candidato natural:
+   `@central/core-ai`, que ya centraliza el fallback de LLMs del monorepo).
+2. **El listado mínimo de campos de "solo presupuesto"** para el flujo 2 (lead nuevo): hoy
+   `revisarDatosAuto()` sin `{ paraEmitir: true }` ya es esa lista para el resto de datos —
+   comprobar que basta, no reinventarla.
+3. **Coste**: cada foto de matrícula en el flujo 2 (lead sin identidad verificada) cuesta 0,12€
+   de un desconocido que puede no volver — mismo riesgo que ya asume Codeoscopic con el precio
+   gratis, pero aquí el gasto es real desde el primer paso. Poner un límite/rate-limit por
+   IP o sesión antes de abrirlo en la web pública, no después.
+
+### 2 ter. 💡 Segunda idea de Alberto (15/09/2026): venta cruzada de HOGAR al tarificar/emitir AUTO
+
+> *«Al igual que al emitir póliza auto ya sabemos dirección, podemos sacar hasta precio del hogar
+> ¿entiendes la idea?»*
+
+Sí — y es la MISMA jugada que la del §2 bis (cruzar un dato que ya se tiene con un servicio
+gratuito), aplicada al ramo hogar en vez de al vehículo. Al tarificar auto de un cliente de
+cartera ya se conoce su dirección (`clientes.direccion` + CP), y esa dirección es EXACTAMENTE
+la entrada de `precalificarHogar()` de `@central/core-catastro` — ya construida y en producción
+desde el 02/09/2026 para `/correduria/hogar` (verificada contra el 2º-14 de San Vicente 40: 76
+m²/1994, igual que la póliza real del CRM). Con eso:
+
+1. Se cruza la dirección del cliente de auto con el Catastro → m², año, uso, CP (gratis).
+2. Se completa el resto de `HomeRisk` con los mismos supuestos conservadores que ya usa
+   `desde-cartera-hogar.ts` (habitaciones por m², protecciones a `false`, joyas/perros a 0,
+   marcados `optimista` donde corresponda — nada personal ni ningún capital se inventa).
+3. Sale un segundo presupuesto (hogar) sin haber pedido NADA nuevo al cliente.
+
+**Ni siquiera hace falta esperar a nada de lo del §2 bis**: esta pieza ya existe completa hoy
+(precalificación de hogar + Catastro), lo único que falta es EL DISPARADOR — ofrecer el
+presupuesto de hogar automáticamente en el momento de tarificar/emitir auto, en vez de que el
+corredor tenga que ir a `/correduria/hogar` a pedirlo aparte. Es una decisión de UX/flujo, no de
+integración de datos: la integración ya está.
+
+⚠️ **Un matiz que no hay que perderse**: el disparador debería mirar primero si el cliente YA
+tiene una póliza de hogar viva (`retarificabilidad()` ya distingue esto) — cruzar auto→hogar
+tiene sentido para quien NO tiene hogar asegurado con nosotros, no para volver a ofrecérselo a
+quien ya lo tiene.
 
 🔒 **Estas fotos son PII sensible de verdad.** Antes de implementar hay que decidir dónde se guardan
 (Vercel Blob privado, como los EIAC) y **cuánto tiempo**. La ficha de cliente ya tiene el hueco

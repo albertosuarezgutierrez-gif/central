@@ -1,0 +1,257 @@
+{
+ "sesion": "fe9edd40-d8f8-5f1b-8e5f-fff4a66946f7",
+ "inicio": "2026-09-14T10:00:12.280Z",
+ "fin": "2026-09-16T09:02:01.086Z",
+ "llamadas": 1541,
+ "categorias": {
+  "bash": {
+   "llamadas": 595,
+   "chars_in": 185355,
+   "chars_out": 803758,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 595
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 235,
+   "chars_in": 25158,
+   "chars_out": 919858,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 141,
+    "Grep": 90,
+    "Glob": 4
+   }
+  },
+  "escritura": {
+   "llamadas": 97,
+   "chars_in": 166982,
+   "chars_out": 6676080,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 88,
+    "Write": 9
+   }
+  },
+  "mcp:github": {
+   "llamadas": 175,
+   "chars_in": 45659,
+   "chars_out": 613382,
+   "errores": 5,
+   "archivos_citados": 48,
+   "chars_citados": 4581777,
+   "tools": {
+    "mcp__github__pull_request_read": 91,
+    "mcp__github__update_pull_request": 17,
+    "mcp__github__merge_pull_request": 21,
+    "mcp__github__list_pull_requests": 5,
+    "mcp__github__search_pull_requests": 2,
+    "mcp__github__create_pull_request": 23,
+    "mcp__github__subscribe_pr_activity": 5,
+    "mcp__github__get_job_logs": 4,
+    "mcp__github__get_check_run": 2,
+    "mcp__github__actions_list": 4,
+    "mcp__github__actions_get": 1
+   }
+  },
+  "otro": {
+   "llamadas": 214,
+   "chars_in": 43733,
+   "chars_out": 5155191,
+   "errores": 0,
+   "archivos_citados": 17,
+   "chars_citados": 1550560,
+   "tools": {
+    "ToolSearch": 43,
+    "ReadNotifications": 124,
+    "Monitor": 8,
+    "ScheduleWakeup": 17,
+    "Skill": 12,
+    "SendUserFile": 2,
+    "AskUserQuestion": 1,
+    "WebSearch": 2,
+    "SubagentHandback": 5
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 5,
+   "chars_in": 600,
+   "chars_out": 1580,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 4,
+    "mcp__Supabase__apply_migration": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 42,
+   "chars_in": 13371,
+   "chars_out": 131595,
+   "errores": 4,
+   "archivos_citados": 26,
+   "chars_citados": 3102421,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 13,
+    "mcp__Claude_Code_Remote__send_later": 3,
+    "mcp__Claude_Code_Remote__delete_trigger": 4,
+    "mcp__Claude_Code_Remote__list_triggers": 6,
+    "mcp__Claude_Code_Remote__create_trigger": 6,
+    "mcp__Claude_Code_Remote__list_environments": 1,
+    "mcp__Claude_Code_Remote__get_session": 1,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 5,
+    "mcp__Claude_Code_Remote__update_trigger": 2,
+    "mcp__Claude_Code_Remote__add_repo": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 27,
+   "chars_in": 2479,
+   "chars_out": 183443,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 483488,
+   "tools": {
+    "mcp__Vercel__get_project": 2,
+    "mcp__Vercel__list_teams": 3,
+    "mcp__Vercel__get_deployment": 5,
+    "mcp__Vercel__get_runtime_logs": 12,
+    "mcp__Vercel__list_projects": 2,
+    "mcp__Vercel__list_deployments": 3
+   }
+  },
+  "mcp:posthog": {
+   "llamadas": 5,
+   "chars_in": 1320,
+   "chars_out": 31571,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__posthog__exec": 5
+   }
+  },
+  "mcp:Supabase_asegura": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 50,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase_asegura__get_project_url": 1
+   }
+  },
+  "mcp:Google_Drive": {
+   "llamadas": 4,
+   "chars_in": 1132,
+   "chars_out": 4550,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google_Drive__search_files": 2,
+    "mcp__Google_Drive__create_file": 1,
+    "mcp__Google_Drive__read_file_content": 1
+   }
+  },
+  "sql": {
+   "llamadas": 31,
+   "chars_in": 12322,
+   "chars_out": 61073,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 31
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 4,
+   "chars_in": 16611,
+   "chars_out": 17359,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 4
+   }
+  },
+  "mcp:Booking_com": {
+   "llamadas": 48,
+   "chars_in": 14100,
+   "chars_out": 687121,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking_com__accommodations_search": 48
+   }
+  },
+  "mcp:Trivago": {
+   "llamadas": 38,
+   "chars_in": 5938,
+   "chars_out": 24654769,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Trivago__trivago-accommodation-radius-search": 38
+   }
+  },
+  "mcp:Tripadvisor": {
+   "llamadas": 2,
+   "chars_in": 455,
+   "chars_out": 76602,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Tripadvisor__search_hotels": 2
+   }
+  },
+  "mcp:Expedia": {
+   "llamadas": 12,
+   "chars_in": 2592,
+   "chars_out": 119180,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Expedia__search_hotels": 12
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 5,
+   "chars_in": 1127,
+   "chars_out": 24104,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 2,
+    "mcp__Gmail__get_thread": 2,
+    "mcp__Gmail__reply": 1
+   }
+  },
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 3067,
+   "chars_out": 3287,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 13964,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

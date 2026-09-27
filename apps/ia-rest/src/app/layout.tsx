@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import React from 'react'
 import './globals.css'
 import AppBadge from '@/components/AppBadge'
+import ConsentimientoAnalitica from '@/components/ConsentimientoAnalitica'
 
 const BASE_URL = 'https://www.iarest.es'
 
@@ -191,18 +192,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebSite) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdApp) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />
-        {/* Google Analytics 4 — G-EN2YQLRLEX */}
-        <script async src="https://www.googletagmanager.com/gtag/js?id=G-EN2YQLRLEX" />
-        <script dangerouslySetInnerHTML={{ __html: `
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          gtag('config', 'G-EN2YQLRLEX', { page_path: window.location.pathname });
-        `}} />
       </head>
       <body>
         {children}
         <AppBadge />
+        <ConsentimientoAnalitica />
         <script dangerouslySetInnerHTML={{ __html: `
           if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {

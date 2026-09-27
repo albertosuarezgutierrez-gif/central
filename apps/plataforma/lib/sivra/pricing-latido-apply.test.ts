@@ -1,14 +1,16 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  pasadaFiable, detalleApply, avisoSmoobuRechaza,
-  type ParteApply, type FalloEscritura,
+  pasadaFiable, detalleApply, avisoSmoobuRechaza, avisoSmoobuLecturaFalla,
+  type ParteApply, type FalloEscritura, type FalloLectura,
 } from './pricing-latido-apply.ts'
 
 const BASE: ParteApply = {
-  pisos: 4, fechasEscritas: 426, sinTarifar: 0, fallos: [], degradaciones: [], dryRun: false,
+  pisos: 4, fechasEscritas: 426, sinTarifar: 0, fallos: [], fallosLectura: [],
+  degradaciones: [], dryRun: false,
 }
 const FALLO: FalloEscritura = { property: 'prop_house_sevillana', motivo: 'Smoobu POST 401', fechas: 9 }
+const FALLO_LECTURA: FalloLectura = { property: 'prop_house_sevillana', motivo: 'GET 401' }
 
 test('una pasada limpia es fiable', () => {
   assert.equal(pasadaFiable(BASE), true)
@@ -18,6 +20,13 @@ test('🛑 Smoobu rechazando la escritura pone la pasada en ROJO', () => {
   // El eslabón que escribe el precio que ve el huésped. Hasta el 23/08/2026 esto vivía solo en el
   // array `results` de la respuesta HTTP: ni ok:false, ni Telegram, ni latido.
   assert.equal(pasadaFiable({ ...BASE, fallos: [FALLO] }), false)
+})
+
+test('🛑 Smoobu sin responder a la LECTURA también pone la pasada en ROJO', () => {
+  // Hallazgo del 15/09/2026: el 401 de /rates con HMAC llevaba 4+ días saliendo `ok:true` porque
+  // solo se apuntaba en `results`, exactamente el mismo silencio que el de la escritura pero un
+  // eslabón más arriba — aquí ni se llega a decidir un precio.
+  assert.equal(pasadaFiable({ ...BASE, fallosLectura: [FALLO_LECTURA] }), false)
 })
 
 test('una degradación ya declarada también la pone en rojo', () => {
@@ -46,6 +55,24 @@ test('el detalle antepone el rechazo de Smoobu a todo lo demás', () => {
   assert.ok(d.startsWith('🛑 Smoobu RECHAZÓ'), `empieza por: ${d.slice(0, 40)}`)
   assert.match(d, /house_sevillana: Smoobu POST 401/)
   assert.match(d, /9 noche\(s\) sin aplicar/)
+})
+
+test('el detalle antepone el fallo de LECTURA incluso al rechazo de escritura', () => {
+  // Es el fallo más arriba de la cadena: si Smoobu ni deja leer, es lo primero que hay que ver.
+  const d = detalleApply({ ...BASE, fallos: [FALLO], fallosLectura: [FALLO_LECTURA] })
+  assert.ok(d.startsWith('🛑 Smoobu no respondió al LEER'), `empieza por: ${d.slice(0, 50)}`)
+  assert.match(d, /house_sevillana: GET 401/)
+})
+
+test('sin fallos de lectura NO hay aviso de lectura', () => {
+  assert.equal(avisoSmoobuLecturaFalla([]), null)
+})
+
+test('🚨 el aviso de lectura deja claro que no hay propuesta, no solo que no se aplicó', () => {
+  const txt = avisoSmoobuLecturaFalla([FALLO_LECTURA])
+  assert.ok(txt)
+  assert.match(txt, /NO ha podido ni comparar el precio actual/)
+  assert.match(txt, /house_sevillana: GET 401/)
 })
 
 test('el detalle distingue el simulacro de una pasada que escribe', () => {

@@ -10,9 +10,17 @@
  * - **Las lápidas de fusión se excluyen SIEMPRE** (`merged_into_*_id is null`).
  *   Sin eso un cliente fusionado sale dos veces y el recuento miente.
  * - **La definición de cartera viva NO se escribe aquí.** Sale de
- *   `sqlCarteraViva`/`sqlVolcadoHistorico` de `@central/module-seguros`, que es
- *   la única fuente de esa verdad (y que ya tapa el agujero de las pólizas del
- *   volcado que CIMA mantiene al día).
+ *   `sqlCarteraEnVigor`/`sqlCarteraNoEnVigor` de `@central/module-seguros`, que
+ *   es la única fuente de esa verdad (y que ya tapa el agujero de las pólizas
+ *   del volcado que CIMA mantiene al día).
+ *   🚨 **EN VIGOR, no solo «viva» (19/09/2026).** Hasta ese día el grupo se
+ *   derivaba de `sqlCarteraViva` (origen CIMA), que incluye las canceladas: 47
+ *   de las 157 pólizas vivas lo estaban, y 28 clientes que solo tenían pólizas
+ *   canceladas salían en «Cartera viva» — Kartenbrot con «1 póliza en vigor…
+ *   Cancelada», y Víctor De la Fuente con «6 póliza(s) viva(s)» teniendo 4.
+ *   Alberto: «si es cancelada es leads». El grupo `leads` es el complementario
+ *   exacto (volcado histórico + canceladas/no vigentes de CIMA), y las pólizas
+ *   que se pintan bajo cada cliente son las de SU grupo.
  * - **El GRUPO se deriva, no se lee.** `clientes.tipo` dice 2.742 «cliente» y
  *   29.860 «lead» cuando la cartera viva son 80 clientes: es un campo del
  *   volcado que nadie mantiene. Aquí «viva» = el cliente tiene al menos una
@@ -28,8 +36,8 @@
  */
 
 import {
-  sqlCarteraViva,
-  sqlVolcadoHistorico,
+  sqlCarteraEnVigor,
+  sqlCarteraNoEnVigor,
   diasDeVentana,
   type FiltroCartera,
   type GrupoCartera,
@@ -143,10 +151,10 @@ export function rangoVentana(v: VentanaVencimiento, ahora: Date = new Date()): R
 /** `p` es el alias de `polizas`. La cadena es constante y no lleva nada del
  *  usuario: `Prisma.raw` aquí no abre ninguna puerta. */
 function condGrupoPoliza(grupo: GrupoCartera): Prisma.Sql {
-  return Prisma.raw(grupo === 'viva' ? sqlCarteraViva('p') : sqlVolcadoHistorico('p'))
+  return Prisma.raw(grupo === 'viva' ? sqlCarteraEnVigor('p') : sqlCarteraNoEnVigor('p'))
 }
 
-const CARTERA_VIVA_P = Prisma.raw(sqlCarteraViva('p'))
+const CARTERA_VIVA_P = Prisma.raw(sqlCarteraEnVigor('p'))
 
 /** Lista de literales como `in (…)`, cada valor PARAMETRIZADO. `compania` y
  *  `provincia` son texto libre del usuario y nunca se interpolan. */
@@ -170,9 +178,9 @@ const TIENE_TELEFONO = Prisma.sql`(
   or exists (select 1 from cliente_telefonos t where t.cliente_id = c.id and nullif(btrim(t.telefono), '') is not null)
 )`
 
-/** El recuento de pólizas VIVAS del cliente y sus ramos. Es lo que deriva el
+/** El recuento de pólizas EN VIGOR del cliente y sus ramos. Es lo que deriva el
  *  grupo (`> 0` = cartera viva, `= 0` = lead) y de paso llena las dos columnas
- *  del listado, sin una segunda pasada. */
+ *  del listado, sin una segunda pasada. Una cancelada de CIMA no cuenta. */
 const LATERAL_VIVAS = Prisma.sql`
   join lateral (
     select

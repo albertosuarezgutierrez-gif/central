@@ -110,9 +110,7 @@ BOE/BOJA a fecha X"). Idempotente: re-ejecutar no duplica avisos.
 ## Paso 6 — Deja huella del latido (OBLIGATORIO, incluso si fue mal)
 
 ```
-POST {PLATAFORMA_URL}/api/internal/latido
-Authorization: Bearer {ALERTA_TOKEN}
-{ "agente":"fiscal_novedades", "ok":<true|false>, "detalle":"<parte>" }
+bash scripts/canal-aviso.sh POST /api/internal/latido '{ "agente":"fiscal_novedades", "ok":<true|false>, "detalle":"<parte>" }'
 ```
 `ok = true` **si consultaste las fuentes oficiales (AEAT/BOE/BOJA) y comparaste con `IMPORTES_POR_ANIO`**,
 y además pasaste el radar de ayudas (Paso 5) — con o sin cambios: «sin cambios; revisado a fecha X» es
@@ -126,12 +124,11 @@ se lee como «no se dispara» y manda a mirar al sitio equivocado.
 `/operador/agentes` con «sin ninguna señal registrada». Eso es correcto: está mudo. No lo tapes.
 
 ## Canal de aviso — protocolo común
-**Preflight AL ARRANCAR** (no al final): `GET {PLATAFORMA_URL}/api/internal/alerta` con
-`Authorization: Bearer {ALERTA_TOKEN}`. `200` → canal vivo; enviar con
-`POST {PLATAFORMA_URL}/api/internal/alerta` y body `{ "text": "..." }` (el token de Telegram vive en
-Vercel plataforma, esta skill no lo necesita). `401` → canal mudo: según `docs/AVISOS-AGENTES.md`,
-avisa por el push nativo de la sesión empezando por `🔇 SIN TELEGRAM (401):` y deja el aviso entero
-en `docs/AGENTES-BITACORA.md` (`fallos:`). Nunca falles en silencio.
+**Preflight AL ARRANCAR** (no al final): `bash scripts/canal-aviso.sh GET /api/internal/alerta`
+- `HTTP_STATUS:200` → canal vivo; enviar con `bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "..." }'` (el token de Telegram vive en Vercel plataforma, esta skill no lo necesita).
+- `HTTP_STATUS:401` → canal mudo: según `docs/AVISOS-AGENTES.md`, avisa por el push nativo de la sesión empezando por `🔇 SIN TELEGRAM (401):` y deja el aviso entero en `docs/AGENTES-BITACORA.md` (`fallos:`).
+
+Nunca falles en silencio.
 
 ## Reglas
 - **Orientativo**: el módulo no sustituye asesoría fiscal; el vigilante solo mantiene cifras.

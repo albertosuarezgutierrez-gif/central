@@ -2,6 +2,7 @@
 import { useState } from 'react'
 
 import type { CampoMisDatos, LecturaMisDatos } from '@/lib/mis-datos'
+import type { ReparoParaAviso } from '@central/module-seguros-portal'
 
 /**
  * «Mis datos» — el cliente ve y corrige su teléfono, su correo y su dirección
@@ -81,7 +82,14 @@ function vacios(): Valores {
   return { telefono: '', email: '', direccion: '', codigoPostal: '', ciudad: '', provincia: '' }
 }
 
-export function MisDatos({ lectura }: { lectura: LecturaMisDatos }) {
+export function MisDatos({
+  lectura,
+  reparos = [],
+}: {
+  lectura: LecturaMisDatos
+  /** Lo guardado que no cuadra, calculado en el SERVIDOR (`reparosDeContacto`). */
+  reparos?: readonly ReparoParaAviso[]
+}) {
   const leido = lectura.estado === 'ok'
   const original: Valores = leido
     ? {
@@ -132,6 +140,27 @@ export function MisDatos({ lectura }: { lectura: LecturaMisDatos }) {
           un hueco. Cada caso con su frase: el que se arregla en Vercel, el que
           arregla el corredor y el que se arregla reintentando no son el mismo. */}
       {!leido && <p className="mi-direccion-aviso" role="status">{porQueNoSeLee(lectura)}</p>}
+      {/* 🚨 Lo GUARDADO que no cuadra, que no es lo mismo que lo que no se ha
+          podido leer: aquí el dato está, y es el propio dueño quien puede
+          arreglarlo. Hasta el 15/09/2026 este reparo lo veía SOLO Alberto en la
+          ficha del corredor, así que el único que podía corregirlo era el único
+          que no se enteraba. Dice qué columna no cuadra y con qué valor: sin el
+          valor, «revisa tu dirección» obliga a adivinar qué mirar. */}
+      {reparos.length > 0 && (
+        <div className="mi-direccion-aviso" role="status">
+          <p>
+            <strong>Hay {reparos.length === 1 ? 'un dato' : `${reparos.length} datos`} de tu dirección que
+            conviene revisar.</strong> Corrígelo{reparos.length === 1 ? '' : 'los'} aquí abajo y pulsa
+            «Guardar»: se queda actualizado al momento.
+          </p>
+          <ul>
+            {reparos.map((r) => (
+              <li key={r.tipo}>{r.texto}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {leido && lectura.ilegibles.length > 0 && (
         <p className="mi-direccion-aviso" role="status">
           No hemos podido leer {lectura.ilegibles.map((c) => ETIQUETA[c as CampoMisDatos] ?? c).join(' ni ')} que

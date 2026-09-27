@@ -67,11 +67,17 @@ export function textoBaseRecaptacionWhatsapp(d: PersonalizacionRecaptacion): str
 }
 
 /** Misma redacción, adaptada a un asunto+cuerpo de correo (sin el saludo de WhatsApp). */
-export function textoBaseRecaptacionEmail(d: PersonalizacionRecaptacion): { asunto: string; texto: string } {
+export function textoBaseRecaptacionEmail(
+  d: PersonalizacionRecaptacion,
+  opts?: { bajaUrl?: string },
+): { asunto: string; texto: string } {
   const pila = nombreDePila(d.nombre) ?? d.nombre
   const firma = `${MEDIADOR.identidad.nombre.split(' ').slice(0, 2).join(' ')}, de ${MEDIADOR.marca}`
   const conQuien = d.aseguradoraAnterior ? ` que tuviste con ${d.aseguradoraAnterior}` : ''
   const asunto = `¿Sigues con tu seguro de ${d.ramoLegible}?`
+  const despedida = opts?.bajaUrl
+    ? `Si ya no te hace falta o prefieres que no te escriba más, puedes darte de baja aquí: ${opts.bajaUrl}`
+    : 'Si ya no te hace falta o prefieres que no te escriba más, respóndeme y no insisto.'
   const texto = [
     `Hola ${pila}:`,
     '',
@@ -80,7 +86,7 @@ export function textoBaseRecaptacionEmail(d: PersonalizacionRecaptacion): { asun
     'Si te interesa, te paso un precio actualizado sin compromiso. De paso te dejo una herramienta gratis para tener todos tus seguros en un sitio, sean de quien sean:',
     MEDIADOR.identidad.portal,
     '',
-    'Si ya no te hace falta o prefieres que no te escriba más, respóndeme y no insisto.',
+    despedida,
   ].join('\n')
   return { asunto, texto }
 }

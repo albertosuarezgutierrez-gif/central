@@ -155,10 +155,9 @@ Guarda la puntuación en la bitácora de `docs/BUSCADOR-IA.md` junto al candidat
 - **Acción (solo si la hay):**
   - Algo merece ojo humano (modelo cableado muerto/deprecado, candidato nuevo claramente mejor en
     calidad/precio —gratis o de pago—, recorte de free tier) → **aviso Telegram**:
-    `POST {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}` y
-    `{ "text": "🧠 buscador-ia: <resumen con URLs>" }`. Si faltan las envs, omite el aviso (no falles).
-    (`ALERTA_TOKEN` es el token estrecho que SOLO abre este endpoint; el endpoint también acepta el
-    viejo `CRON_SECRET` por compat, pero NO pongas la llave maestra en el prompt.) Si el candidato es
+    `bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "🧠 buscador-ia: <resumen con URLs>" }'`.
+    Si faltan las envs, omite el aviso (no falles). (`ALERTA_TOKEN` es el token estrecho que SOLO abre este endpoint;
+    el endpoint también acepta el viejo `CRON_SECRET` por compat, pero NO pongas la llave maestra en el prompt.) Si el candidato es
     **de pago**, incluye siempre el precio ($/M tokens) en el aviso — Alberto decide con el coste
     delante, esto no es un PR de swap automático (ver regla de pago abajo).
   - El arreglo es **pequeño y seguro** → **PR draft** `claude/buscador-ia-<fecha>`:
@@ -198,10 +197,10 @@ Antes de cerrar, añade UNA entrada arriba del todo de la sección "Entradas pen
 ## Canal de aviso — protocolo común
 
 **Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
-`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+`bash scripts/canal-aviso.sh GET /api/internal/alerta`
 
-- `200` → el canal está vivo, sigue con tu pasada.
-- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+- `HTTP_STATUS:200` → el canal está vivo, sigue con tu pasada.
+- `HTTP_STATUS:401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
   hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
   Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
   `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).

@@ -8,12 +8,15 @@
 > **[Medido]** sale de una consulta a la BD que se cita · **[Sector]** es conocimiento del mercado
 > asegurador español, no medido aquí · **[Suposición]** es un razonamiento que hay que comprobar.
 >
-> 🚫 **Lo que este estudio NO puede hacer, y hay que decirlo antes que nada:** desde el contenedor
-> de la sesión **no hay salida a internet** (política de red del entorno). No se ha podido mirar ni
-> una SERP de Google, ni un volumen de búsqueda, ni un CPC, ni la web de un competidor. Todo lo que
-> aquí se dice sobre *qué hace la competencia* es **[Sector]** o **[Suposición]**, nunca medido. Lo
-> único medido es **tu propia cartera**. Un estudio de competencia que se inventa las cifras del
-> rival es peor que no tenerlo.
+> 🚫 **Lo que este estudio NO podía hacer al redactarse (06/09/2026), y por qué la nota de abajo lo
+> corrige:** se dijo aquí que desde el contenedor de la sesión no había salida a internet y que todo
+> el §2 era `[Sector]`/`[Suposición]`, nunca medido. **Era cierto para el `Bash` de la sesión, no
+> para la herramienta de búsqueda web** — el 15/09/2026 se usó por primera vez y SÍ funciona. No es
+> una SERP en vivo ni da posición/volumen/CPC (eso lo dará GSC cuando haya datos), pero sí lee webs
+> reales de comparadores y corredurías: suficiente para contrastar «¿existe comparador de esto?»,
+> que es la pregunta que más ha fallado en este documento (ver §2.6). Nueva etiqueta:
+> **[Web 15/09]** = contrastado con búsqueda real esa fecha, con sus enlaces citados. Lo que sigue
+> sin `[Web]` sigue siendo `[Sector]`/`[Suposición]` sin comprobar — no lo trates como medido.
 
 ---
 
@@ -155,26 +158,50 @@ el cliente **no está obligado** a contratar el seguro de hogar con el banco que
 (Ley 5/2019 de contratos de crédito inmobiliario, art. 17). Verifica el artículo antes de
 publicarlo, pero el argumento es real y es el que más pólizas de hogar mueve en una correduría.
 
-### 2.3 Comunidades de propietarios — el hueco de verdad
+### 2.3 Comunidades de propietarios — el hueco es más estrecho de lo que aquí se dijo
 
-**[Suposición], y es la apuesta que más me creo de todo el documento.**
+🚨 **Corrección [Web 15/09]: «no hay comparador que venda comunidades» era falso.** Hay varios
+(Segurfer, Seguros-Generales, MiPóliza, SegurosMarina…), alguno trabajando con 20-70 compañías y
+prometiendo un 20-35 % de ahorro. No es un hueco vacío de competencia digital — lo que sigue siendo
+cierto es lo de abajo, pero el argumento «nadie más lo vende» no vale.
 
-- Decide **un administrador de fincas o un presidente**, no un particular a las 23:00 en el móvil.
-- **No hay comparador** que venda comunidades: no es un producto de formulario.
-- La competencia es **local y personal**: quien conoce al administrador se lleva el edificio.
+- Decide **un administrador de fincas o un presidente**, no un particular a las 23:00 en el móvil
+  — esto SÍ sigue siendo la razón real de por qué gana quien tiene la relación, no la web.
+- La competencia es **local y personal**: quien conoce al administrador se lleva el edificio, aunque
+  exista un comparador — el administrador no va a comparar él mismo 40 comunidades por internet.
 - Una comunidad son **muchas pólizas de un solo interlocutor**, y detrás vienen los vecinos.
+- 🆕 **[Web 15/09] El propio administrador de fincas es un cliente potencial aparte**: necesita SU
+  PROPIO seguro de RC profesional (obligatorio si está colegiado) y cada vez más un **D&O** si
+  administra una comunidad grande. Es la misma persona a la que hay que visitar para las
+  comunidades, con un producto propio que venderle a él, no solo a través de él.
 
 Tienes **9 pólizas de RC a 52,15€** [Medido], que es el vecindario de este producto. Y estás en el
 casco de Sevilla, que es todo edificios en comunidad.
 
-**Esto no se gana con SEO. Se gana visitando administradores de fincas.** Es la acción con más
-retorno de todo el documento y no tiene nada que ver con la web.
+**Esto no se gana con SEO puro. Se gana visitando administradores de fincas** — pero una vez
+visitados, una página de comunidades SÍ ayuda a que lo que encuentren de ti online no desentone
+con la conversación que acabas de tener.
 
 ### 2.4 Comercio y pyme — segundo hueco
 
 **[Sector]** el comerciante de barrio no compara en internet: pregunta o le entra un comercial.
 Prima superior a la de particulares y **casi nunca es una sola póliza** (local + RC + a veces
 flota + a veces salud de empleados). Mismo mecanismo que comunidades: territorio y cara.
+
+🆕 **[Web 15/09] Dentro de «pyme» hay un producto concreto que los comparadores generalistas NO
+tocan y que encaja con el resto de la cartera: el paquete de empresa.** Cuando una pyme tiene
+empleados, suele necesitar TRES cosas a la vez, ninguna vendible por un comparador de precio:
+- **Seguro de accidentes de convenio** — obligatorio si el convenio colectivo del sector lo exige
+  (no todas las pymes lo saben, y no tenerlo lo paga el empresario de su bolsillo si hay un
+  accidente). Venta consultiva pura: primero hay que MIRAR el convenio.
+- **Ciberseguro pyme** — mercado en crecimiento (gasto en ciberseguridad España >5.000 M€ en 2026,
+  incidentes +26 % interanual), y **ningún comparador generalista lo vende**: Rastreator/Acierto/
+  Kelisto hacen coche-moto-hogar-salud-vida-decesos-viaje-mascotas-impago de alquiler, ninguno
+  ciberseguro. Lo venden aseguradoras directas + corredores especializados — hueco real.
+- **RC de comercio** (ya la tienes, §2.4 original).
+Es el mismo argumento que §2.3 con administradores: **una pyme visitada compra el paquete, no una
+póliza suelta**, y es justo la clase de venta que un comparador de precio no puede hacer porque
+exige leer un convenio o explicar una cobertura, no comparar un número.
 
 ### 2.5 Salud y decesos — el dato histórico dice que hubo negocio
 
@@ -184,6 +211,57 @@ Del volcado histórico: **salud 4.470 pólizas · decesos 773** [Medido, plan §
 
 **[Sector]** salud tiene una particularidad que le va bien a una correduría pequeña: comisión
 recurrente alta y una permanencia larga. Merece una medición propia antes de invertir nada.
+
+### 2.6 🆕 El hueco que SÍ es de SEO puro: RC profesional de oficios — 15/09/2026
+
+Alberto: *«hay que estar abierto a todo, hay que buscar el hueco que dejan las grandes».* Esto es
+lo que salió de mirarlo de verdad, no de suponerlo.
+
+**[Web 15/09] Confirmado: los grandes comparadores (Rastreator, Acierto, Kelisto) NO venden RC
+profesional de oficios.** Su catálogo es coche/moto/hogar/salud/vida/decesos/viaje/mascotas/impago
+de alquiler — ninguno cubre la RC que necesita un electricista, fontanero, instalador o reformista
+autónomo. Quien SÍ lo vende hoy son webs de nicho pequeñas (miotroseguro.com, riesgoempresas.com,
+unitseguros.com, polizamedica.es) — competencia real pero sin el presupuesto de Ads de un
+comparador nacional. Es, de los ramos mirados hoy, **el único donde «los grandes no están» es
+literalmente cierto**, no una suposición.
+
+Por qué encaja con lo que ya tienes:
+- **Los instaladores eléctricos, de gas, fontanería y climatización están OBLIGADOS por reglamento
+  a tener aval de RC para sacar o renovar el carné profesional** [Web 15/09] — no es una venta de
+  «por si acaso», es un requisito administrativo con fecha. Intención de problema de manual: busca
+  quien lo necesita YA, no quien compara precio.
+- Precio orientativo **150-200 €/año** para un electricista autónomo [Web 15/09] — prima parecida a
+  tu RC actual (319,30 € de media, [Medido]) o algo menor, así que la comisión es del mismo orden.
+  Es **deducible en IRPF/IVA** para el autónomo, un argumento de venta real y verificable (no de
+  precio: de fiscalidad).
+- **Decide UNA persona, rápido** (el propio autónomo), a diferencia de comunidades/pyme donde hay
+  que convencer a un administrador o a un empresario con más pasos — esto sí se puede cerrar sin
+  visita, con una página que responda «¿necesito esto para mi carné?».
+- Ya tienes **9 pólizas de RC** [Medido] en cartera: es ampliar un ramo que conoces, no abrir uno
+  nuevo desde cero.
+
+**Adyacente, mismo mecanismo, mayor ticket, más lento de cerrar:**
+- **Seguro decenal de construcción/reformas** [Web 15/09] — obligatorio por Ley 38/1999 para
+  promotores/constructores antes de entregar obra. Hay corredurías especializadas (ASP, Montico,
+  Gloval) pero ningún comparador generalista; venta B2B, exige relación con constructoras/
+  reformistas, no solo contenido web.
+- **D&O / RC de administradores y directivos** — mencionado en §2.3, mismo patrón: nicho servido por
+  aseguradoras directas y algún corredor especializado, no por comparadores de precio.
+
+**Descartado por ahora, y por qué [Web 15/09]:**
+- **Seguro agrario (olivar, Andalucía)** — hueco real en teoría (encaja geográficamente), pero **ya
+  está servido por corredores especializados asentados** (Anagán y similares) con conocimiento
+  profundo de las subvenciones de la Junta y las líneas del Plan de Seguros Agrarios Combinados.
+  Barrera de entrada alta para un negocio que hoy no tiene ni un cliente agrario. No perseguir salvo
+  que aparezca un cliente real que lo pida.
+
+**Recomendación de esta sesión:** de todo lo mirado hoy, **RC profesional de oficios es el único
+nuevo ángulo con luz verde clara para SEO** (grandes ausentes de verdad, decisión rápida de una
+persona, ticket ya conocido). El resto (pyme/ciberseguro, decenal, D&O) son huecos reales pero
+**de visita y relación, como comunidades** — se preparan como contenido de apoyo, no como motor de
+captación. Antes de escribir nada, **Alberto decide si electricista/fontanero/instalador son los
+oficios correctos** o si hay otro colectivo (autónomos de la construcción en general, peluquerías,
+academias…) que conoce mejor desde el trato diario con clientes.
 
 ---
 
@@ -228,14 +306,28 @@ tiene que decidir algo. Pero esto se decide mirándote a ti: es tu voz, no la m�
 | 1 | **Arreglar la ingesta de Mapfre** | 58 % de la cartera con datos de julio. Sin esto, ni campañas de vencimiento ni saber qué ramo renta | Alberto + `agente-correduria` |
 | 2 | **Llamar a los 57 de auto-sin-hogar** | El canal más barato que existe: ya son clientes. A 68,74€/póliza | Alberto |
 | 3 | **Las 17 que vencen en 90 días** | Conversaciones con fecha, esta semana | Alberto |
-| 4 | **Visitar administradores de fincas de Sevilla** | El hueco real. Sin comparador enfrente | Alberto |
+| 4 | **Visitar administradores de fincas de Sevilla** | El hueco de relación (no de ausencia de comparador — corregido §2.3, 15/09) | Alberto |
 | 5 | **Google Business Profile + reseñas de los 80** | Gratis, y es lo que sale al buscar «correduría Sevilla» | Alberto |
 | 6 | **301 de `/seguros` de plataforma → `grupoasegura.es`** | Hoy compites contigo mismo por tus propias consultas | Claude |
 | 7 | **Reescribir el hero + página de hogar** | Cuando 1-6 estén en marcha y sepamos hacia dónde inclinar | Claude |
-| 8 | **Ads** | Con 48,37€ de comisión media, cualquier CAC de dos dígitos altos se come el primer año y el segundo. **No, todavía** | — |
+| 8 | ✅ **Página de RC profesional para fontaneros** (`/seguros/responsabilidad-civil-fontaneros`) | §2.6, 15/09 — el único hueco de SEO puro confirmado hoy: los grandes no lo venden, decide una persona, ticket ya conocido. Oficio elegido: ver nota abajo | Claude — **hecho, PR pendiente de mergear** |
+| 9 | **Ads** | Con 48,37€ de comisión media, cualquier CAC de dos dígitos altos se come el primer año y el segundo. **No, todavía** | — |
 
-**Lo que este orden dice, y no gusta:** de las ocho acciones, **cinco las tienes que hacer tú y
-ninguna es de software**. La web ya está hecha; lo que falta es cartera y territorio.
+**Lo que este orden dice, y no gusta:** de las nueve acciones, **cinco las tienes que hacer tú y
+solo tres son de software** (la 9, Ads, no la lleva nadie: sigue aparcada). La web ya está hecha;
+lo que falta es cartera y territorio.
+
+🚨 **Por qué fontanero, y con qué confianza (15/09/2026):** Alberto delegó la elección («el oficio
+que veas mejor, menos competencia») pidiendo antes si había un repo/conector que ayudara — **no lo
+hay**: esto es investigación de mercado, no código, y la herramienta que daría la respuesta con
+datos reales (volumen/CPC de Google Keyword Planner, SEMrush o Ahrefs) no está conectada a esta
+sesión. Con `WebSearch` (SERP puntual, sin volumen) se comparó el número de sitios ESPECIALIZADOS
+que ya compiten por la consulta en electricista (8), fontanero (6) y climatización/gas (7):
+fontanero salió con menos, y comparte la misma obligación legal (REBT/RITE) que los otros dos —
+manda a la persona a contratar rápido, sin depender de un comité. **[Suposición]**: la diferencia
+de 6 contra 8 es una muestra de una sola búsqueda por oficio, no una medición de dificultad real;
+si en unos meses (con Search Console dando datos) fontanero no acompaña, el mismo molde
+(`lib/ramos.ts` de `apps/asegura-web`) sirve para electricista o climatización sin rehacer nada.
 
 ---
 
@@ -252,6 +344,24 @@ ninguna es de software**. La web ya está hecha; lo que falta es cartera y terri
 
 ## Bitácora
 
+- **15/09/2026** — Alberto: «hay que estar abierto a todo, hay que buscar el hueco que dejan las
+  grandes». Primera vez que esta sesión usa búsqueda web real (`WebSearch`, no el `Bash` sin
+  salida de antes) → nueva etiqueta `[Web 15/09]`. Corrección: §2.3 «no hay comparador de
+  comunidades» era falso (sí los hay). Confirmado: RC profesional de oficios (electricista,
+  fontanero, instalador) es un hueco real de SEO — los comparadores grandes no lo venden, es
+  obligatorio para el carné, decide una persona rápido (§2.6, nuevo). Mirado y descartado por
+  ahora: seguro agrario/olivar (ya hay especialistas asentados). Adyacentes identificados para
+  visita/relación (no SEO): ciberseguro pyme, seguro de accidentes de convenio, decenal de
+  construcción, D&O de administradores. Acción nº 9 añadida al plan, pendiente de que Alberto
+  valide el oficio antes de escribir contenido.
+- **15/09/2026 (mismo día, 2ª pasada)** — Alberto delegó el oficio («el que veas mejor, menos
+  competencia») y preguntó por un repo/conector: no existe ninguno para esto (es investigación de
+  mercado, no código; sin Keyword Planner/SEMrush/Ahrefs conectados). Comparativa de SERP con
+  `WebSearch` entre electricista/fontanero/climatización-gas → fontanero con menos sitios
+  especialistas compitiendo (6 vs 8 y 7). Construida `/seguros/responsabilidad-civil-fontaneros`
+  en `apps/asegura-web` (mismo molde `RAMOS`, sin ramo nuevo en BD), enlazada en el pie,
+  formulario, sitemap, JSON-LD y mapa de consultas del cron SEO — todo verificado (105 tests +
+  tsc en asegura-web, tests de `consultas.ts` en plataforma).
 - **06/09/2026** — Documento creado. Mediciones nuevas de esta sesión: reparto de multi-póliza
   (57 auto-sin-hogar, 1,38 pólizas/cliente), concentración por entidad (Mapfre 58 %) y ventana de
   vencimientos (17 a 90 días). Las cifras de comisión se reutilizan del plan de marketing, no se

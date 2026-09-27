@@ -150,9 +150,10 @@ query base lo excluiría y nunca se reprocesaría).
   M facturas en cola (`PDF-pendiente`) · revisa la `QUERY` del Apps Script `Facturas a Drive` (que la
   allowlist de remitentes siga puesta, NO se haya revertido a Mapfre-only). NO es OAuth».
 - **Aviso Telegram**: como esta skill corre en una sesión Claude (no en el runtime de plataforma), NO uses
-  el bot directamente — **POST a `{PLATAFORMA_URL}/api/internal/alerta`** con `Authorization: Bearer
-  <ALERTA_TOKEN>` (token estrecho; el endpoint acepta también el viejo `CRON_SECRET` por compat)
-  y `{ "mensaje": "🔴 Extracción de facturas caída N días · M en cola · revisa la QUERY del Apps Script (allowlist, NO OAuth)" }`
+  el bot directamente — usa el endpoint de aviso con el bash wrapper:
+  ```
+  bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "🔴 Extracción de facturas caída N días · M en cola · revisa la QUERY del Apps Script (allowlist, NO OAuth)" }'
+  ```
   (mismo mecanismo que `psd2-health-check`; el bot único vive en plataforma). Mándalo el **primer día** que
   detectes el corte y luego **una vez por semana** mientras siga (no cada pasada): para saber si ya avisaste
   esta semana, mira `ultima_alerta_ts` de la fila `agente_salud` de 0.d.

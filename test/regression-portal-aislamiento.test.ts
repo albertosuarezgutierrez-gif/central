@@ -65,6 +65,10 @@ const EXENTOS = new Set([
   // fila que toca ya lleva su `identidadId` propio (de `portal_obligacion`) y
   // el cruce con la cartera pasa por `portal_vinculo`, igual que el resto.
   'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+  // Mismo caso que arriba: recibe `identidadId` ya resuelto por
+  // `app/api/polizas/route.ts` (que sí pasa por `lib/session`), y su único
+  // `prisma.portalVinculo` va filtrado por ese id — nunca a ciegas.
+  'apps/asegura-portal/lib/aviso-poliza-declarada.ts',
 ])
 
 /**
@@ -83,6 +87,11 @@ const NOMBRA_VINCULO = /portalVinculo/
 const CARTERA_SIN_SESION = new Set([
   'apps/asegura-portal/lib/vinculo.ts',
   'apps/asegura-portal/app/api/cron/avisos-push/route.ts',
+  // El aviso de póliza declarada (17/09/2026): recibe `identidadId` ya resuelto
+  // por quien llama (`app/api/polizas/route.ts`, que sí pasa por `requireIdentidad()`
+  // de `lib/session`) y solo lee el cliente colgado de SU vínculo, nunca de un
+  // `where` suelto.
+  'apps/asegura-portal/lib/aviso-poliza-declarada.ts',
 ])
 
 /** `prisma.portalPoliza…`, `prisma.portalBien…`, `prisma.portalIdentidad…` */

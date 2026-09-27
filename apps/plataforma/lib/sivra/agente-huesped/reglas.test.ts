@@ -7,6 +7,17 @@ test('detectLang cae a inglés', () => assert.equal(detectLang('What is the wifi
 test('detectLang español sin tildes', () => assert.equal(detectLang('Nos iremos sobre las 10.30'), 'es'))
 test('detectLang inglés gana al fallback es', () => assert.equal(detectLang("I'd like to request check-in at 15:00. Is this ok?", 'es'), 'en'))
 test('detectLang ambiguo usa fallback', () => assert.equal(detectLang('👍', 'es'), 'es'))
+// Caso real (reserva 147382671, Daniela — Luxury Busto, 12/09/2026): un borrador correcto en
+// italiano sin ninguna de las palabras "de libro" (ciao/grazie/prego) se leía como español porque
+// la única señal que puntuaba era "con" (preposición compartida con el italiano) y el marcador de
+// IT no reconocía "hai"/"sì"/"che"/"non", frecuentísimas en italiano cotidiano.
+test('detectLang reconoce italiano sin las palabras "de libro"', () => {
+  const texto = 'Buonasera, Daniela! Hai fatto benissimo a chiedere. Sì, quelle richieste su ' +
+    'WhatsApp non vengono da noi: la comunicazione ufficiale con l’alojamiento si fa solo ' +
+    'tramite il chat di Booking o via email, mai su WhatsApp. Ti consiglio di ignorare quei ' +
+    'messaggi e non cliccare su nessun link che ti mandano.'
+  assert.equal(detectLang(texto, 'en'), 'it')
+})
 test('detectCategory wifi', () => assert.equal(detectCategory('what is the wifi password'), 'wifi'))
 test('detectCategory parking', () => assert.equal(detectCategory('¿hay aparcamiento?'), 'parking'))
 test('extractEarlyTime checkout temprano', () => {

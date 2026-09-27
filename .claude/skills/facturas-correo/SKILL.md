@@ -87,9 +87,7 @@ Flujo: Paso 0 (salud+backlog) → 1/1-bis (candidatos Gmail + subidas manuales D
 ## Deja huella del latido (OBLIGATORIO, incluso si fue mal)
 
 ```
-POST {PLATAFORMA_URL}/api/internal/latido
-Authorization: Bearer {ALERTA_TOKEN}
-{ "agente":"facturas_correo", "ok":<true|false>, "detalle":"<parte>" }
+bash scripts/canal-aviso.sh POST /api/internal/latido '{ "agente":"facturas_correo", "ok":<true|false>, "detalle":"<parte>" }'
 ```
 Es el ÚLTIMO acto de la pasada, justo antes del auto-informe (Paso 5 →). `ok = true` **si completaste la
 pasada entera** — candidatos Gmail leídos, clasificados, archivados, **barrido del backlog 4.0 hecho** y

@@ -390,7 +390,13 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
   const res = await fetch(`${urlAsegura()}${path}`, {
     headers: { Authorization: `Bearer ${secret}` },
     cache: 'no-store',
-    signal: AbortSignal.timeout(8000),
+    // 🚨 Más que el `pool_timeout` de Prisma en asegura (10 s), a propósito
+    // (19/09/2026): con 8 s, cuando asegura se quedaba sin conexión (P2024) esta
+    // llamada se rendía ANTES de que asegura respondiera «conexion», y la
+    // pantalla decía «no se pudo llegar a asegura (timeout, DNS o TLS)» — una
+    // causa falsa, que manda a mirar el DNS cuando lo roto era el pool. Es el
+    // mismo 15 s que usan actividad, comisiones y compañías.
+    signal: AbortSignal.timeout(15_000),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
 }

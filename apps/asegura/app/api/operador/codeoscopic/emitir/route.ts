@@ -26,6 +26,7 @@ import {
   ibanValido,
 } from '@/lib/codeoscopic/emitir-iban'
 import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
 
@@ -340,6 +341,20 @@ export async function POST(req: Request) {
   // `forzar`: la precedencia ya está decidida aquí, y así lo que viaja va normalizado.
   const camposEnvio = ibanEnvio ? conCuentaBancaria(camposBase, ibanEnvio, true) : camposBase
 
+  // 🚨 14º 400/500 real (17/09/2026, proyecto 40685793): el Submit exige su
+  // PROPIO `product.options` — consentimientos legales del tomador, DISTINTOS
+  // del `product.options` del ReRate (comisiones/dtos) — y nunca se mandaba.
+  // Confirmado por Juan Manuel Fernández (Codeoscopic): los dos 500 «Unknown
+  // error while waiting…» del 13/09 no eran un fallo del vendor, era este
+  // hueco (`opciones-producto.ts`, `conProductoPorDefecto`). Solo se rellena
+  // si NADIE ya puso `product` (JSON avanzado del corredor manda).
+  // `familiaEnAllianz`: el corredor confirma explícitamente que el tomador YA
+  // tiene familiares asegurados en Allianz (bonificación real) — nunca se
+  // asume por defecto, ver comentario de `conProductoPorDefecto`.
+  const camposConProducto = conProductoPorDefecto(camposEnvio, p.aseguradora, {
+    familiaAllianz: cuerpo.familiaEnAllianz === true,
+  })
+
   // GRATIS: lo que el vendor dice que hace falta. Informativo — no bloquea el
   // Submit si no se pudo leer (un endpoint sin fixture puede tener otra forma
   // de la que se ha adivinado); lo que sí decide si algo faltaba de verdad es
@@ -358,7 +373,7 @@ export async function POST(req: Request) {
   // si el vendor lo listara con ese id, contarlo como ausente dejaría la
   // pantalla pidiendo un IBAN que ya está puesto, sin salida.
   const faltan = (campos ?? [])
-    .filter((c) => c.obligatorio && !(c.id in camposEnvio) && !(c.id === 'iban' && ibanEnvio))
+    .filter((c) => c.obligatorio && !(c.id in camposConProducto) && !(c.id === 'iban' && ibanEnvio))
     .map((c) => c.id)
   if (faltan.length > 0) {
     return NextResponse.json(
@@ -469,7 +484,7 @@ export async function POST(req: Request) {
     correduriaId: correduria.id,
     projectId,
     offerId: p.accepted_offer_id_codeoscopic,
-    campos: camposEnvio,
+    campos: camposConProducto,
     producto: poliza.tipo,
     reintentoConfirmado: cuerpo.reintentoConfirmado === true,
   })
@@ -545,7 +560,7 @@ export async function POST(req: Request) {
           correduriaId: correduria.id,
           projectId,
           offerId: p.accepted_offer_id_codeoscopic,
-          campos: camposEnvio,
+          campos: camposConProducto,
           producto: poliza.tipo,
           // El primer intento acabó en 400 (rechazo, no «quizá emitido»), así
           // que el candado deja pasar; el flag viaja igual por coherencia.
@@ -649,6 +664,20 @@ export async function POST(req: Request) {
   }
 
   // ── El vendor aceptó: se acuña la póliza en NUESTRA BD ──────────────────
+  // Persiste la respuesta CRUDA del Submit (incluido `issuedDocuments[]`, si
+  // el vendor lo manda aquí) en `quote_data` — hasta el 17/09/2026 se
+  // descartaba tras esta petición y no había forma de saber qué documentos
+  // había devuelto una emisión ya pasada. Best-effort: nunca bloquea el acuñado.
+  // 🚨 SIEMPRE `redactarCrudoVendor` antes de guardar: `crudo` trae IBAN/DNI/
+  // email/teléfono del tomador en texto plano (`quote`/`payment`/persona), y
+  // `quote_data` es jsonb sin cifrar (a diferencia de `clientes.iban/dni`).
+  await prisma.$executeRaw`
+    update codeoscopic_projects set quote_data = ${JSON.stringify(redactarCrudoVendor(envio.crudo))}::jsonb
+    where correduria_id = ${correduria.id}::uuid and project_id_codeoscopic = ${projectId}
+  `.catch((e: unknown) => {
+    console.log(`[emitir] no se pudo guardar quote_data del proyecto ${projectId} —`, e instanceof Error ? e.message : String(e))
+  })
+
   const catalogo = await catalogoCompanias()
   const codigoDgs = catalogo?.find((c) => coincideCompania(c.nombreComun, p.aseguradora!))?.codigoDgs ?? null
   if (!codigoDgs) {

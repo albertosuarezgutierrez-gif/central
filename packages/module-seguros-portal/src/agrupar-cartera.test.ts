@@ -6,6 +6,7 @@ import {
   TITULO_GRUPO,
   agruparCartera,
   grupoDeTitular,
+  textoCuentaSeguros,
   type TitularAgrupable,
 } from './agrupar-cartera.ts'
 
@@ -106,4 +107,26 @@ test('todo grupo declarado tiene titulo', () => {
     assert.equal(typeof TITULO_GRUPO[g], 'string')
     assert.notEqual(TITULO_GRUPO[g].trim(), '')
   }
+})
+
+// ── La cifra del bloque plegado (19/09/2026) ───────────────────────────────
+
+test('la cuenta del bloque plegado concuerda en singular y en plural', () => {
+  assert.equal(textoCuentaSeguros(1), '1 seguro')
+  assert.equal(textoCuentaSeguros(2), '2 seguros')
+  assert.equal(textoCuentaSeguros(12), '12 seguros')
+})
+
+test('cero NO se pinta como «0 seguros»', () => {
+  // Un «0» junto a una flecha de desplegar invita a abrir un bloque que no
+  // tiene nada. La pantalla no llega a pintar bloques vacíos (`agruparCartera`
+  // no los devuelve), así que esto es el suelo, no el caso normal.
+  assert.equal(textoCuentaSeguros(0), 'sin seguros')
+})
+
+test('una cuenta imposible no inventa un numero', () => {
+  // Nunca debería llegar, y si llega no se pinta «NaN seguros» ni «-3 seguros»
+  // en la cabecera de la cartera de alguien.
+  assert.equal(textoCuentaSeguros(Number.NaN), 'sin seguros')
+  assert.equal(textoCuentaSeguros(-3), 'sin seguros')
 })

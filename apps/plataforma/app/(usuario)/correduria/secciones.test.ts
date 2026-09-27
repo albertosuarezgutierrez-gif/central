@@ -32,6 +32,15 @@ test('todas las secciones declaradas se resuelven a sí mismas', () => {
   assert.ok(SECCIONES.includes('clientes'))
 })
 
+test('la salud de la ingesta de CIMA tiene sección propia en esta pantalla', () => {
+  // No es un capricho de reparto: el panel equivalente vive en el CRM de origen
+  // (`app.grupoasegura.com/salud-cima`), una app en la que Alberto no entra. Si
+  // esta sección desaparece, la única forma de enterarse de que CIMA ha dejado
+  // de traer datos vuelve a ser un Telegram que se pierde entre otros.
+  assert.ok(SECCIONES.includes('ingesta'))
+  assert.equal(seccionDeParametro('ingesta'), 'ingesta')
+})
+
 test('«a tiempo» NO es trabajo de hoy; las tres urgencias del preaviso sí', () => {
   assert.equal(esAccionable('vencida'), true)
   assert.equal(esAccionable('prorroga_inevitable'), true)

@@ -142,8 +142,9 @@ function Resultado({ r, onElegir }: { r: Respuesta; onElegir: (rc: string) => vo
         </Caja>
       )}
       <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
-        Pedir precio de hogar a Codeoscopic todavía no está conectado (hoy solo auto). Falta comprobar, gratis,
-        si hogar tarifica para nuestra organización (<code>GET /insurance-lines</code>).
+        Este bloque solo consulta el Catastro (gratis, no gasta nada). Para pedir precio de verdad, busca al
+        cliente y en su ficha usa «➕ Presupuestar ▾ → 🏠 Hogar» — ya está conectado con Codeoscopic. El
+        recuadro de abajo dice si hogar tarifica hoy para esta organización.
       </p>
     </div>
   )

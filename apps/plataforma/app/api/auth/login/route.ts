@@ -3,6 +3,9 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { verifyPassword, createSessionToken, COOKIE_NAME, COOKIE_OPTS } from '@/lib/auth'
 import { findActiveAdminByEmail, createAdminToken, ADMIN_COOKIE, ADMIN_COOKIE_OPTS } from '@/lib/superadmin'
+import { rateLimit, getIp } from '@/lib/rate-limit'
+import { registrarSesion } from '@/lib/sesiones-db'
+import { tgAviso } from '@/lib/telegram/avisos'
 
 const Body = z.object({ email: z.string().email(), password: z.string().min(1) })
 
@@ -11,6 +14,19 @@ export async function POST(req: NextRequest) {
   if (!body.success) return NextResponse.json({ error: 'Datos inválidos' }, { status: 400 })
 
   const { email, password } = body.data
+
+  // Doble llave: por IP (frena un bot torpe) y por email (frena fuerza bruta dirigida
+  // a UNA cuenta desde varias IPs). Best-effort por instancia, ver lib/rate-limit.ts.
+  const ip = getIp(req)
+  const porIp = rateLimit(`login:ip:${ip}`, 20, 15 * 60 * 1000)
+  const porEmail = rateLimit(`login:email:${email.toLowerCase()}`, 5, 15 * 60 * 1000)
+  if (!porIp.allowed || !porEmail.allowed) {
+    const retryAfter = Math.max(porIp.retryAfter || 0, porEmail.retryAfter || 0)
+    return NextResponse.json(
+      { error: 'Demasiados intentos. Inténtalo más tarde.' },
+      { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+    )
+  }
 
   const cuenta = await prisma.cuenta.findFirst({
     where: { email: { equals: email.toLowerCase(), mode: 'insensitive' } },
@@ -22,7 +38,10 @@ export async function POST(req: NextRequest) {
   }
 
   const { token, jti } = await createSessionToken(cuenta.id, cuenta.email)
-  await prisma.cuenta.update({ where: { id: cuenta.id }, data: { sessionJti: jti } })
+  await registrarSesion(cuenta.id, jti)
+
+  tgAviso('sistema.acceso-intranet', `🔔 Acceso a la intranet\n${cuenta.nombre} (${cuenta.email})`)
+    .catch(() => {})
 
   const res = NextResponse.json({ ok: true, nombre: cuenta.nombre })
   res.cookies.set(COOKIE_NAME, token, COOKIE_OPTS)

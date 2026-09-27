@@ -28,12 +28,44 @@ export function hashCuerpo(body?: string | null): string {
  * Query canónica: `clave=valor` ordenado alfabéticamente por clave, tal cual
  * (sin URL-encode extra). Sin parámetros devuelve `''` — pero la LÍNEA sigue
  * existiendo en el canonical (por eso el ejemplo POST tiene dos `\n` seguidos).
+ *
+ * 🚨 EXCEPCIÓN NO DOCUMENTADA (15/09/2026): las rutas de `/api/rates` firman con
+ * `apartments[]=<id>` en la URL real (es el formato que exige el propio endpoint,
+ * confirmado en su doc), pero la sección de autenticación HMAC de Smoobu NO trae
+ * ningún ejemplo con parámetros en formato array — comprobado leyendo la página
+ * entera, sin resultado. Diagnóstico (15/09/2026): `/api/rates` lleva 4+ días en
+ * 401 mientras `/api/reservations` (mismo secreto, mismo `smoobuFetch`, sin
+ * parámetros array) funciona sin problema — la única diferencia estructural entre
+ * ambas llamadas es esta.
+ *
+ * Hipótesis de trabajo (backend típico PHP/Node): al verificar la firma, el
+ * servidor reconstruye el query string desde el array YA PARSEADO
+ * (`apartments[]=X` → `{apartments: ['X']}`), y esa reconstrucción por defecto en
+ * PHP y en `qs` (Node) da `apartments[0]=X`, no `apartments[]=X`. Por eso el
+ * CANONICAL (solo para firmar, nunca para la URL real que sí lleva `[]`) reescribe
+ * `clave[]` → `clave[0]`, `clave[1]`... por orden de aparición. Sin ejemplo oficial
+ * que lo confirme — es la hipótesis más plausible tras agotar la documentación
+ * pública, no un dato verificado. Si no resuelve el 401, revertir este bloque es
+ * seguro (deja `apartments[]=X` tal cual, el comportamiento previo).
  */
 export function queryCanonica(params: URLSearchParams | string): string {
   const sp = typeof params === 'string' ? new URLSearchParams(params) : params
+  const indice = new Map<string, number>()
   const pares: [string, string][] = []
-  sp.forEach((valor, clave) => { pares.push([clave, valor]) })
-  pares.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0))
+  sp.forEach((valor, clave) => {
+    if (clave.endsWith('[]')) {
+      const base = clave.slice(0, -2)
+      const i = indice.get(base) ?? 0
+      indice.set(base, i + 1)
+      pares.push([`${base}[${i}]`, valor])
+    } else {
+      pares.push([clave, valor])
+    }
+  })
+  // `numeric: true` para que `clave[2]` ordene antes que `clave[10]` (alfabético
+  // puro los invertiría a partir del 10º valor array — hoy inalcanzable, los 3
+  // callers mandan un único `apartments[]`, pero no debe quedar como una bomba).
+  pares.sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
   return pares.map(([k, v]) => `${k}=${v}`).join('&')
 }
 

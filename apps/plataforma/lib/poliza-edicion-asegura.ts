@@ -1,5 +1,5 @@
 // Reenvío al puerto de asegura para anotar a mano la modalidad de una RC
-// (09-12/09/2026). Mismo patrón que `cliente-edicion-asegura.ts::llamar`.
+// (09-12/09/2026) o la dirección del riesgo de un inmueble (19/09/2026). Mismo patrón que `cliente-edicion-asegura.ts::llamar`.
 
 function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
@@ -23,7 +23,8 @@ async function llamar(path: string, init: RequestInit): Promise<Reenvio> {
   }
 }
 
-/** `PATCH /api/operador/poliza` — modalidad de RC. El `actor` lo pone la ruta (sesión). */
+/** `PATCH /api/operador/poliza` — modalidad de RC o, con `campo: 'direccion_riesgo'`, la dirección del
+ *  riesgo de un inmueble. El `actor` lo pone la ruta (sesión). */
 export function modalidadRcAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/poliza', { method: 'PATCH', body: JSON.stringify(body) })
 }

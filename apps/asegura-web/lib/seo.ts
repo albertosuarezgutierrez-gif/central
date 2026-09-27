@@ -22,7 +22,8 @@ import type { Articulo } from './articulos.ts'
  * local en dos negocios distintos y hunde el posicionamiento que se pretendía.
  *
  * 📌 Lo que NO se declara, y es a propósito:
- *   · `openingHours` mientras `HORARIO` sea `null` (no se ha confirmado).
+ *   · `openingHours` mientras `HORARIO` sea `null`, o sea mientras el horario
+ *     no esté confirmado. Desde el 15/09/2026 SÍ lo está y se declara.
  *   · `aggregateRating`: ver abajo.
  *
  * ✅ `telephone` SÍ se declara desde el 05/09/2026: Alberto confirmó su móvil
@@ -102,7 +103,42 @@ export function fichaNegocio(): Record<string, unknown> {
   // ninguno: un array vacío afirmaría «se miró y no hay», y lo cierto es que
   // todavía no se han dado de alta. Lo vigila `seo-perfiles.test.ts`.
   if (PERFILES.length > 0) ficha.sameAs = [...PERFILES]
+  // 🚨 `logo`/`image` NO son el mismo fichero. `logo` quiere un icono
+  // reconocible fuera de contexto (min. ~112×112, recomendado cuadrado): el
+  // `/icon` que ya genera `app/icon.tsx` — el monograma leído de
+  // `public/brand/marca-asegura.svg` con el AZUL DE MARCA ya sustituido, la
+  // misma pieza que se ve en la pestaña del navegador. `image` es la tarjeta
+  // de 1200×630 de `app/opengraph-image.tsx`, la misma que WhatsApp/LinkedIn
+  // muestran al compartir un enlace. Las dos ya EXISTEN como rutas generadas
+  // por Next (`next/og`): esto no sube ningún fichero nuevo, solo declara lo
+  // que ya se sirve.
+  ficha.logo = url('/icon')
+  ficha.image = url('/opengraph-image')
   return ficha
+}
+
+/**
+ * Ficha `WebSite`. Es el tipo que le dice a un buscador «este dominio es un
+ * sitio», por oposición a `InsuranceAgency` («este NEGOCIO existe»): son
+ * entidades distintas que Google enlaza por `publisher`, igual que un
+ * `Article` enlaza a su `publisher` en vez de repetir la ficha del negocio.
+ *
+ * 🚨 SIN `potentialAction`/`SearchAction` a propósito: esa propiedad declara
+ * un buscador interno del sitio, y esta web no tiene ninguno — inventar la
+ * URL de una búsqueda que no existe es la misma mentira que un `openingHours`
+ * sin horario confirmado, solo que en datos estructurados de sitio en vez de
+ * de negocio.
+ */
+export function fichaWebSite(): Record<string, unknown> {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    '@id': `${SITIO_URL}/#sitio`,
+    url: SITIO_URL,
+    name: MEDIADOR.marca,
+    inLanguage: 'es-ES',
+    publisher: { '@id': `${SITIO_URL}/#correduria` },
+  }
 }
 
 /**

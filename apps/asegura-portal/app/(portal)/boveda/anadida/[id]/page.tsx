@@ -159,6 +159,22 @@ export default async function FichaAnadida({ params }: { params: Promise<{ id: s
           por CIMA es el registro de la correduría y el cliente no lo borra.
           Esta es suya —la subió él— y dejarla ahí cuando ya no vale ensucia la
           única lista donde mira qué tiene asegurado. */}
+      {/* La carta de NO RENOVACIÓN (19/09/2026): solo existe en la ficha de
+          una póliza APORTADA, por lo mismo que «quitarla» — una de la cartera
+          la media la correduría y ahí se habla con Alberto, no se manda una
+          carta sola. La carta se compone y se enseña; no se envía desde aquí. */}
+      <section className="seccion" aria-labelledby="carta-titulo">
+        <h2 id="carta-titulo">Si no quieres renovarla</h2>
+        <p className="linea">
+          Para que una póliza no se renueve hay que decírselo a la compañía por escrito con un mes de
+          antelación al vencimiento. Te preparamos la carta con los datos de esta póliza y te decimos
+          hasta qué día puedes enviarla.
+        </p>
+        <Link href={`/boveda/carta/${p.id}`} className="boton boton-secundario auto">
+          Preparar la carta de no renovación
+        </Link>
+      </section>
+
       <section className="seccion" aria-labelledby="quitar-titulo">
         <h2 id="quitar-titulo">Quitarla de tu bóveda</h2>
         <p className="linea">

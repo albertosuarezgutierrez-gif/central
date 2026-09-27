@@ -184,25 +184,31 @@ test('ningún enlace de plataforma manda a central-asegura para RETARIFICAR auto
       src,
       /central-asegura\.vercel\.app/,
       `${f} enlaza a central-asegura a pelo. Los saltos a asegura pasan por un helper de ` +
-        '`lib/ficha-asegura.ts` y hoy solo queda uno (hogar, que no está portado).',
+        '`lib/ficha-asegura.ts`, y hoy (17/09/2026, auto y hogar ya portados) no queda ninguno vivo.',
     )
   }
 })
 
-test('el único salto que queda a asegura es hogar, y está declarado como tal', () => {
+test('hogar ya NO salta a asegura: el helper de esa URL se borró al portarlo', () => {
   const ficha = leer(FICHA)
-  assert.match(
+  assert.doesNotMatch(
     ficha,
     /export function urlRetarificarHogarAsegura\(/,
-    'hogar sigue retarificándose en asegura (su pantalla pide m², año, capitales y Catastro) y ' +
-      'ese salto tiene su propio helper, con nombre que lo dice. Si se porta, se borra el helper.',
+    'hogar ya se retarifica DENTRO de plataforma (17/09/2026, `RetarificadorHogar.tsx` + ' +
+      '`precalificarHogarRetarificarAsegura()`). Si este helper reaparece, algo ha vuelto a mandar ' +
+      'a asegura en vez de pintar la ficha aquí.',
   )
   const pagina = leer(PAGINA)
   assert.match(
     pagina,
     /ramo === 'hogar'/,
-    'la pantalla interna tiene que ramificar por ramo: con hogar manda al sitio donde HOY funciona, ' +
-      'en vez de fingir que no se puede retarificar.',
+    'la pantalla interna tiene que seguir ramificando por ramo: con hogar pinta ' +
+      '`RetarificadorHogar`, con cualquier otro ramo explica que no se puede retarificar todavía.',
+  )
+  assert.doesNotMatch(
+    pagina,
+    /Retarificar hogar en asegura/,
+    'no puede quedar texto de la pantalla vieja invitando a saltar a asegura para hogar.',
   )
 })
 

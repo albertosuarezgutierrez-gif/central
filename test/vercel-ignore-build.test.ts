@@ -24,7 +24,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
-import { readFileSync, readdirSync } from 'node:fs'
+import { readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs'
 
 const SCRIPT = 'scripts/vercel-ignore-build.mjs'
 const MANIFIESTOS_RAIZ = ['package.json', 'pnpm-lock.yaml', 'pnpm-workspace.yaml']
@@ -127,17 +127,26 @@ function commitsDeUnPaquete(): CommitPaquete[] {
 }
 const commitDeUnPaquete = (): CommitPaquete | null => commitsDeUnPaquete()[0] ?? null
 
+// 🚨 Ya NO hay ninguna app real sin @central/*: housesevillana, la última, pasó a
+// depender de @central/core-consent el 14/09/2026 (Task Group D del plan de
+// consentimiento unificado). Por eso el caso usa una app DE MENTIRA, creada dos
+// niveles bajo la raíz —misma profundidad que `apps/<app>`, que es lo que el script
+// necesita para resolver `../../packages` y `../../scripts/...`— con un
+// `package.json` sin ninguna dependencia `@central/*`, y se borra al terminar.
 test('una app SIN dependencias @central no se reconstruye por un cambio en packages/', (t) => {
-  assert.deepEqual(
-    depsCentrales('apps/housesevillana/package.json'), [],
-    'housesevillana ya declara @central/*: este test hay que replantearlo',
-  )
   const c = commitDeUnPaquete()
   if (!c) return t.skip(`sin commit de un solo package en el historial (shallow=${esSuperficial()})`)
-  if (c.apps.includes('housesevillana')) return t.skip(`${c.sha.slice(0, 7)} toca la propia landing`)
 
-  const r = correr('apps/housesevillana', c.sha)
-  assert.ok(r.salta, `la landing no consume nada: NO debe construir por packages/${c.dir} (${c.sha.slice(0, 7)}).\n${r.salida}`)
+  const dir = mkdtempSync('test/.fixture-sin-central-')
+  try {
+    writeFileSync(`${dir}/package.json`, JSON.stringify({ name: 'fixture-sin-central', dependencies: { next: '^15.0.0' } }))
+    assert.deepEqual(depsCentrales(`${dir}/package.json`), [], 'la fixture no debería declarar @central/* — revisa este test')
+
+    const r = correr(dir, c.sha)
+    assert.ok(r.salta, `una app sin @central/* no debe construir por packages/${c.dir} (${c.sha.slice(0, 7)}).\n${r.salida}`)
+  } finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 test('la app que SÍ consume el package sigue reconstruyéndose', (t) => {

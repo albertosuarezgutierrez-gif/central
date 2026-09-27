@@ -63,9 +63,10 @@ a `fiscal-novedades`). Dos o tres líneas con fuente.
 - Nada de PRs de código: este agente escribe BD + su doc de estado.
 
 ## Canal de aviso — protocolo común
-**Preflight AL ARRANCAR** (no al final): `GET {PLATAFORMA_URL}/api/internal/alerta` con
-`Authorization: Bearer {ALERTA_TOKEN}`. `200` → canal vivo; enviar con
-`POST {PLATAFORMA_URL}/api/internal/alerta` y body `{ "text": "..." }`. `401` → canal mudo:
+**Preflight AL ARRANCAR** (no al final): `bash scripts/canal-aviso.sh GET /api/internal/alerta` — NUNCA reconstruyas el `curl` a mano con
+`${PLATAFORMA_URL}`/`${ALERTA_TOKEN}` literales (bloquea MCP Sentinel en sesión desatendida, ver
+`docs/AVISOS-AGENTES.md`). `HTTP_STATUS:200` → canal vivo; enviar con
+`bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "..." }'`. `HTTP_STATUS:401` → canal mudo:
 según `docs/AVISOS-AGENTES.md`, avisa por el push nativo de la sesión empezando por
 `🔇 SIN TELEGRAM (401):` y deja el aviso entero en `docs/AGENTES-BITACORA.md` (`fallos:`).
 Nunca uses `TELEGRAM_BOT_TOKEN` ni `CRON_SECRET`. Nunca falles en silencio.

@@ -62,9 +62,7 @@ una nota explícita en el informe sugiriendo priorizarlos en el sprint del mes.
 ## Paso 5 — Deja huella del latido (OBLIGATORIO, incluso si fue mal)
 
 ```
-POST {PLATAFORMA_URL}/api/internal/latido
-Authorization: Bearer {ALERTA_TOKEN}
-{ "agente":"rrhh_compliance", "ok":<true|false>, "detalle":"<parte>" }
+bash scripts/canal-aviso.sh POST /api/internal/latido '{ "agente":"rrhh_compliance", "ok":<true|false>, "detalle":"<parte>" }'
 ```
 `ok = true` **si leíste el roadmap y produjiste el informe con la lista de ítems 🔴 pendientes** — que
 haya obligaciones sin implementar NO es un fallo del vigía, es su resultado. `ok = false` si no
@@ -83,9 +81,7 @@ se lee como «no se dispara» y manda a mirar al sitio equivocado.
 - Sin Supabase ni GitHub: esta skill solo lee y genera informe
 - **Telegram** (a través de plataforma, opcional): si hay ítems 🔴 urgentes:
   ```
-  POST {PLATAFORMA_URL}/api/internal/alerta
-  Authorization: Bearer {ALERTA_TOKEN}
-  { "text": "📅 RRHH Compliance — {MES}: {N} obligaciones 🔴 pendientes. Ver el chat." }
+  bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "📅 RRHH Compliance — {MES}: {N} obligaciones 🔴 pendientes. Ver el chat." }'
   ```
   La rutina NO necesita `TELEGRAM_BOT_TOKEN` — el token vive en Vercel plataforma.
 
@@ -104,10 +100,12 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 ## Canal de aviso — protocolo común
 
 **Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
-`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+`bash scripts/canal-aviso.sh GET /api/internal/alerta` — NUNCA reconstruyas el `curl` a mano con
+`${PLATAFORMA_URL}`/`${ALERTA_TOKEN}` literales (bloquea MCP Sentinel en sesión desatendida, ver
+`docs/AVISOS-AGENTES.md`).
 
-- `200` → el canal está vivo, sigue con tu pasada.
-- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+- `HTTP_STATUS:200` → el canal está vivo, sigue con tu pasada.
+- `HTTP_STATUS:401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
   hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
   Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
   `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).

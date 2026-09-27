@@ -292,12 +292,12 @@ const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => string;
   { etiqueta: '🚗 Auto', url: urlAutoNuevo },
   { etiqueta: '🏠 Hogar', url: urlHogarNuevo },
   { etiqueta: '🏍️ Moto', url: urlMotoNuevo },
-  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo, sinVerificar: true },
+  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo },
   { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
-  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo, sinVerificar: true },
+  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo },
 ]
 
-const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para vida, salud y decesos no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
+const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para salud no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
 
 function Acciones({ clienteId }: { clienteId: string }) {
   return (

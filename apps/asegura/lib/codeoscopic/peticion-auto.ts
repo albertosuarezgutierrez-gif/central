@@ -17,7 +17,36 @@ export type DatosAuto = DatosPersona & {
   // ── Persona (va tres veces: tomador, propietario y conductor) ──
   // dni, nombre, apellidos, nacimiento, sexo, estado civil, teléfono y
   // residencia vienen de `DatosPersona` (compartido con hogar).
+  // `fechaCarnet` de aquí es la del TOMADOR y solo se manda como carnet del
+  // conductor cuando NO hay `conductor` propio (ver más abajo).
   fechaCarnet: string
+
+  /**
+   * 🚧 El propietario, SOLO cuando es una persona DISTINTA del tomador
+   * (empresa/cónyuge/hijo…). `undefined`/`null` = «es el mismo tomador», que
+   * sigue siendo el caso normal y el único probado contra el vendor. Con un
+   * propietario propio, `construirPeticionAuto` proyecta esta persona en
+   * `risk.owner` en vez de reutilizar al tomador.
+   *
+   * **Sin verificar contra Codeoscopic**: hasta hoy solo se ha pagado (y
+   * comprobado con un 400 real) el caso tomador=propietario=conductor. Que el
+   * vendor acepte un `owner` distinto del `holder` sin pedir un dato más
+   * (p. ej. el vínculo, o el CIF si es empresa) es una suposición razonable,
+   * no un hecho medido — el primer intento real puede devolver un 400 nuevo,
+   * igual que pasó con `email`/`roadName` (ver `persona.ts`). Y **no cubre
+   * empresas**: `DatosPersona` exige `estadoCivil`, que una persona jurídica
+   * no tiene — un propietario EMPRESA es un caso distinto, sin diseñar.
+   */
+  propietario?: DatosPersona | null
+
+  /**
+   * 🚧 El conductor HABITUAL, SOLO cuando es una persona DISTINTA del
+   * tomador (un hijo, un empleado…). `undefined`/`null` = «conduce el
+   * tomador», el único caso probado. Lleva su PROPIA `fechaCarnet` — es su
+   * carnet, no el del tomador — y por eso no es opcional dentro del objeto.
+   * Misma advertencia de «sin verificar» que `propietario`.
+   */
+  conductor?: (DatosPersona & { fechaCarnet: string }) | null
 
   // ── Vehículo ──
   codigoVehiculo: string // el código Base7 de la VERSIÓN, del catálogo
@@ -118,9 +147,40 @@ export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevisi
   for (const c of ['codigoVehiculo', 'matricula', 'garaje'] as const) {
     if (!texto(d[c])) falta(c)
   }
-  for (const c of ['fechaCarnet', 'fechaMatriculacion', 'fechaEfecto'] as const) {
+  for (const c of ['fechaMatriculacion', 'fechaEfecto'] as const) {
     if (!texto(d[c])) falta(c)
     else if (!RE_FECHA.test(String(d[c]))) r.push({ campo: c, motivo: 'la fecha tiene que ser aaaa-mm-dd' })
+  }
+  // `fechaCarnet` del tomador solo hace falta si además va a ser el conductor
+  // (el caso normal). Con un `conductor` propio, el carnet que cuenta es el suyo.
+  if (!d.conductor) {
+    if (!texto(d.fechaCarnet)) falta('fechaCarnet')
+    else if (!RE_FECHA.test(String(d.fechaCarnet))) r.push({ campo: 'fechaCarnet', motivo: 'la fecha tiene que ser aaaa-mm-dd' })
+  }
+
+  // ── Propietario y conductor distintos del tomador (opcionales) ──
+  if (d.propietario) {
+    const faltanPropietario = revisarPersona(d.propietario)
+    if (faltanPropietario.length > 0) {
+      r.push({
+        campo: 'propietario',
+        motivo: `datos del propietario incompletos: ${faltanPropietario.map((f) => f.campo).join(', ')}`,
+      })
+    }
+  }
+  if (d.conductor) {
+    const faltanConductor = revisarPersona(d.conductor)
+    if (faltanConductor.length > 0) {
+      r.push({
+        campo: 'conductor',
+        motivo: `datos del conductor incompletos: ${faltanConductor.map((f) => f.campo).join(', ')}`,
+      })
+    }
+    if (!texto(d.conductor.fechaCarnet)) {
+      r.push({ campo: 'conductor', motivo: 'el conductor necesita su fecha de carnet' })
+    } else if (!RE_FECHA.test(String(d.conductor.fechaCarnet))) {
+      r.push({ campo: 'conductor', motivo: 'la fecha de carnet del conductor tiene que ser aaaa-mm-dd' })
+    }
   }
   // La fecha de efecto tiene DOS cepos en el vendor y ninguno se arregla después
   // de pagar (`effectiveDate` es de solo lectura): ni anterior a hoy (13/09/2026,
@@ -192,12 +252,19 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
     )
   }
 
-  // 🚨 LA MISMA persona, proyectada IDÉNTICA en los tres papeles. El vendor cruza
-  // por DNI y rechaza con «Two persons have been declared with the same
-  // identification by different data» si un solo campo difiere entre ellos — y
-  // tampoco deja omitir ninguno. Por eso se construye UNA vez y se reutiliza el
-  // mismo objeto, en lugar de escribirlo tres veces y confiar en no equivocarse.
-  const persona = construirPersona(d, { fechaCarnet: d.fechaCarnet })
+  // 🚨 Por DEFECTO, la MISMA persona en los tres papeles (caso probado y
+  // normal). El vendor cruza por DNI y rechaza con «Two persons have been
+  // declared with the same identification by different data» si dos objetos
+  // con el MISMO DNI difieren en un campo — y tampoco deja omitir ninguno. Por
+  // eso, cuando tomador=propietario=conductor, se construye UNA vez y se
+  // reutiliza el mismo objeto en vez de escribirlo tres veces.
+  //
+  // Con `propietario`/`conductor` propios (DNI distinto), esa regla de cruce
+  // no aplica — son personas distintas — pero el resto SÍ: cada una se
+  // construye con `construirPersona` para no reinventar la proyección.
+  const tomador = construirPersona(d, d.conductor ? {} : { fechaCarnet: d.fechaCarnet })
+  const propietario = d.propietario ? construirPersona(d.propietario) : tomador
+  const conductor = d.conductor ? construirPersona(d.conductor, { fechaCarnet: d.conductor.fechaCarnet }) : tomador
 
   const riesgo: Record<string, unknown> = {
     vehicle: { code: d.codigoVehiculo },
@@ -213,8 +280,8 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
     },
     garageType: { id: d.garaje },
     lightTrailer: d.remolqueLigero ?? false,
-    owner: persona,
-    primaryDriver: persona,
+    owner: propietario,
+    primaryDriver: conductor,
     previouslyInsured: d.aseguradoAntes ?? false,
   }
 
@@ -234,7 +301,7 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
   const cuerpo: Record<string, unknown> = {
     insuranceLine: { id: 'Car' },
     effectiveDate: d.fechaEfecto,
-    holder: persona,
+    holder: tomador,
     risk: riesgo,
   }
   // Nuestra referencia, para poder casar después la cotización con el cliente.

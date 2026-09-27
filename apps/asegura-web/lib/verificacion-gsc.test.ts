@@ -1,9 +1,10 @@
 // Guardián de la verificación de Google Search Console.
 //
 // GSC es la única fuente de tráfico SIN SESGO que esta web puede tener: PostHog
-// va detrás del consentimiento de Cookiebot a propósito, así que mide solo a
-// quien acepta, y «cero visitas medidas» no es cero visitas. Sin GSC, cualquier
-// afirmación sobre por qué consultas entra la gente es una opinión.
+// va detrás del consentimiento de nuestro propio banner a propósito, así que
+// mide solo a quien acepta, y «cero visitas medidas» no es cero visitas. Sin
+// GSC, cualquier afirmación sobre por qué consultas entra la gente es una
+// opinión.
 //
 // Lo que se vigila no es que la env esté puesta —eso es cosa de Vercel— sino la
 // FORMA de ponerla: un `|| ''` dejaría `<meta name="google-site-verification"

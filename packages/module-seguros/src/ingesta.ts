@@ -89,6 +89,57 @@ export type EntradaRechazada = {
 /** Un rechazo de hace un mes es historia; uno de hoy es una avería en curso. */
 export const HORAS_RECHAZO_RECIENTE = 24
 
+/**
+ * Crudo EIAC guardado por una incidencia y aún sin reprocesar (mig 0096/0097).
+ *
+ * `purgaInminente` es la señal cara: el TTL va a borrar la ÚLTIMA copia de un
+ * fichero que CIMA ya confirmó a TIREA y no volverá a mandar. Cuando eso pasa
+ * la pérdida es definitiva, así que avisa ANTES, no después.
+ */
+export type CrudoPendiente = {
+  pendientes: number
+  purgaInminente: number
+  /** Antigüedad de la más vieja. `null` = no hay ninguna. */
+  masAntiguaHoras: number | null
+}
+
+/** Campos hoja que CIMA manda frente a los que el mapper no lee NUNCA (mig 0097). */
+export type CoberturaResumen = {
+  hojas: number
+  hojasNuncaLeidas: number
+  porTipo: Array<{ tipoObjeto: string; hojas: number; nuncaLeidas: number }>
+}
+
+/** Cuerpos que Codeoscopic nos mandó y rechazamos, ya capturados (mig 0098). */
+export type CajaNegraCodeoscopic = {
+  /** `false` = la captura existe pero AÚN no ha entrado ningún cuerpo. */
+  capturaActiva: boolean
+  /** Cuerpos DISTINTOS (dedup por hash). Si crece, no es un sondeo. */
+  cuerpos: number
+  /** POSTs totales contando repeticiones. */
+  posts: number
+  horasDesdeUltimo: number | null
+  /** Filas sin cuerpo guardado (faltó la clave de cifrado): no reprocesables. */
+  sinCuerpo: number
+}
+
+/** Última corrida del cron de CIMA. */
+export type UltimoPullIngesta = { horas: number; procesados: number | null }
+
+/**
+ * A partir de aquí el cron se considera MUDO. Mismo umbral que
+ * `PULL_STALE_HORAS` del vigía de origen (26 h): el cron corre dos veces al
+ * día, así que 26 h es «se ha saltado las dos», no «va con retraso».
+ */
+export const HORAS_PULL_MUDO = 26
+
+/**
+ * Ventana de aviso de purga. Debe coincidir con `CRUDO_PURGA_AVISO_DIAS` del
+ * vigía de origen: si aquí fuera menor, el aviso llegaría cuando ya no hay
+ * tiempo de reprocesar.
+ */
+export const DIAS_AVISO_PURGA = 14
+
 export type EntradaSalud = {
   /** Ficheros en cuarentena. Lista vacía = comprobado que no hay. */
   cuarentena: FicheroEnCuarentena[] | null
@@ -126,6 +177,14 @@ export type EntradaSalud = {
    * que llegue nada: ver `silencio-entidad.ts`.
    */
   silencio?: SilencioEntidad[] | null
+  /** Crudo EIAC con incidencia sin reprocesar. `null` = no comprobado. */
+  crudo?: CrudoPendiente | null
+  /** Cobertura de campos. `null` = todavía SIN MEDIR, que no es «lo leemos todo». */
+  cobertura?: CoberturaResumen | null
+  /** Caja negra del webhook. `null` = no comprobada. */
+  cajaNegra?: CajaNegraCodeoscopic | null
+  /** Última corrida del cron. `null` = no consta ninguna. */
+  ultimoPull?: UltimoPullIngesta | null
 }
 
 export type SaludIngesta = {
@@ -156,6 +215,14 @@ export type SaludIngesta = {
   rechazos: EntradaRechazada[] | null
   /** Quién ha dejado de mandar. `null` = no comprobado, nunca «nadie». */
   silencio: SilencioEntidad[] | null
+  /** Crudo pendiente de reproceso. `null` = no comprobado, nunca «no hay». */
+  crudo: CrudoPendiente | null
+  /** Campos que CIMA manda y no leemos. `null` = sin medir, nunca «los leemos todos». */
+  cobertura: CoberturaResumen | null
+  /** Cuerpos rechazados capturados. `null` = no comprobado. */
+  cajaNegra: CajaNegraCodeoscopic | null
+  /** Última corrida del cron. `null` = no consta ninguna. */
+  ultimoPull: UltimoPullIngesta | null
   /** Frases listas para el aviso. Vacío cuando no hay nada que decir. */
   motivos: string[]
 }
@@ -217,6 +284,10 @@ export function saludIngesta(
       primaPerdida: null,
       rechazos: null,
       silencio: null,
+      crudo: null,
+      cobertura: null,
+      cajaNegra: null,
+      ultimoPull: null,
       motivos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
     }
   }
@@ -319,14 +390,87 @@ export function saludIngesta(
   }
   const mudas = (silencio ?? []).filter(x => x.veredicto === 'silencio')
 
+  // 🚨 La QUINTA cara: el cron que deja de correr. Si no hay pull no hay nada
+  // que pueda atascarse, así que las cuatro señales de arriba salen a cero y el
+  // vigía se pondría VERDE con la ingesta parada — el fallo más caro del repo,
+  // un check que aprueba porque la consulta no devolvió nada.
+  const ultimoPull = e.ultimoPull ?? null
+  const cronMudo = ultimoPull !== null && ultimoPull.horas > HORAS_PULL_MUDO
+  if (cronMudo) {
+    motivos.push(
+      `El cron de CIMA lleva ${ultimoPull.horas} h sin completar (umbral ${HORAS_PULL_MUDO} h): ` +
+      'no es que no haya datos, es que no se ha ido a buscarlos',
+    )
+  } else if (e.ultimoPull === null) {
+    // `undefined` = este llamante no pide la señal; `null` = la pidió y falló.
+    // Colapsarlos haría que un llamante viejo empezara a gritar por algo que
+    // nunca preguntó — misma distinción que ya usa `silencio`.
+    motivos.push('No consta ninguna corrida del cron de CIMA. Esto NO es «va bien».')
+  }
+
+  // Crudo en cuarentena: lo que se guardó al confirmar a TIREA y sigue sin
+  // reprocesar. Lo urgente no es el montón, es lo que el TTL va a borrar.
+  const crudo = e.crudo ?? null
+  if (crudo !== null && crudo.purgaInminente > 0) {
+    motivos.push(
+      `${crudo.purgaInminente} fichero(s) en cuarentena se BORRAN en menos de ${DIAS_AVISO_PURGA} días: ` +
+      'es la última copia, CIMA ya los confirmó y no los reenvía',
+    )
+  }
+  if (crudo !== null && crudo.pendientes > 0 && crudo.purgaInminente === 0) {
+    motivos.push(
+      `${crudo.pendientes} fichero(s) de crudo esperando reproceso` +
+      (crudo.masAntiguaHoras !== null ? ` (el más viejo, ${Math.floor(crudo.masAntiguaHoras / 24)} días)` : ''),
+    )
+  }
+  if (e.crudo === null) motivos.push('No se ha podido comprobar la cuarentena de crudo.')
+
+  // Caja negra del webhook: cuerpos que nos mandaron y rechazamos. Es la misma
+  // avería que `rechazos`, pero con el cuerpo guardado — o sea, ACCIONABLE.
+  const cajaNegra = e.cajaNegra ?? null
+  if (cajaNegra !== null && cajaNegra.cuerpos > 0) {
+    motivos.push(
+      `${cajaNegra.cuerpos} cuerpo(s) distintos rechazados de Codeoscopic ya capturados ` +
+      `(${cajaNegra.posts} envíos): se puede mirar su forma y arreglar el schema`,
+    )
+    if (cajaNegra.sinCuerpo > 0) {
+      motivos.push(
+        `${cajaNegra.sinCuerpo} de ellos SIN cuerpo guardado (faltaba la clave de cifrado): no se pueden reprocesar`,
+      )
+    }
+  }
+  if (e.cajaNegra === null) motivos.push('No se ha podido comprobar la caja negra del webhook.')
+
+  // Cobertura de campos: NO entra en `degradada` a propósito. El EIAC trae
+  // cientos de campos y siempre habrá alguno que no leamos; si alarmara, el
+  // vigía estaría rojo para siempre y dejaría de mirarse. Se informa y punto.
+  const cobertura = e.cobertura ?? null
+  if (cobertura !== null && cobertura.hojasNuncaLeidas > 0) {
+    const peor = [...cobertura.porTipo].sort((a, b) => b.nuncaLeidas - a.nuncaLeidas)[0]
+    motivos.push(
+      `CIMA manda ${cobertura.hojas} campos y ${cobertura.hojasNuncaLeidas} no se leen nunca` +
+      (peor ? ` (sobre todo ${peor.tipoObjeto}: ${peor.nuncaLeidas})` : ''),
+    )
+  }
+  if (e.cobertura === null) {
+    motivos.push('Cobertura de campos SIN MEDIR todavía: no equivale a «los leemos todos».')
+  }
+
   const hayPerdida =
     recientes > 0 ||
     (huerfanas !== null && huerfanas > 0) ||
     rechazosRecientes.length > 0 ||
-    mudas.length > 0
+    mudas.length > 0 ||
+    cronMudo ||
+    (crudo !== null && crudo.purgaInminente > 0) ||
+    (cajaNegra !== null && cajaNegra.cuerpos > 0)
   return {
     estado: hayPerdida ? 'degradada' : 'ok',
     silencio,
+    crudo,
+    cobertura,
+    cajaNegra,
+    ultimoPull,
     total,
     recientes,
     porEntidad,

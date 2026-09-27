@@ -68,10 +68,13 @@ test('el honeypot y el tope de comentario coinciden con plataforma', () => {
 test('cada ramo publicado tiene su opción en el desplegable', async () => {
   const { RAMOS } = await import('./ramos.ts')
 
-  // Única excepción, y es de contenido, no de descuido: la página junta vida y
-  // salud porque se venden juntas, pero en el formulario son dos opciones
-  // distintas. Se marca «Vida» y quien viene por salud la cambia en un clic.
-  const JUNTA_DOS_TIPOS = new Set(['vida-y-salud'])
+  // Excepciones, y son de contenido, no de descuido. `vida-y-salud` junta dos
+  // ramos porque se venden juntos, pero en el formulario son dos opciones
+  // distintas: se marca «Vida» y quien viene por salud la cambia en un clic.
+  // `responsabilidad-civil-fontaneros` es página de INTENCIÓN de oficio, no un
+  // ramo nuevo en BD (sigue siendo `responsabilidad_civil`, ver `ramos.ts`):
+  // comparte la opción general del desplegable.
+  const JUNTA_DOS_TIPOS = new Set(['vida-y-salud', 'responsabilidad-civil-fontaneros'])
 
   const sinOpcion = RAMOS.map((r) => r.slug)
     .filter((slug) => !JUNTA_DOS_TIPOS.has(slug))

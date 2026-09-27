@@ -34,7 +34,14 @@ Definición de «viva» (fuente única, no reimplementar):
 el canal más lento que existe para un negocio que necesita pólizas ahora. El SEO va en el
 plan, pero **no primero**.
 
-**(b) Los 32.520 leads no son una lista de marketing. Vía cerrada.**
+**(b) Los 32.520 leads no eran una lista de marketing. Vía CERRADA → ABIERTA el 14/09/2026.**
+
+> ✅ **Actualización 14/09/2026.** Alberto consultó al abogado (`docs/ASEGURA-CONSULTA-ABOGADO.md`
+> §1): base jurídica **interés legítimo (art. 6.1.f RGPD)**, autoriza **email y teléfono**, sin
+> condición especial más allá de identificación del mediador + opt-out. **WhatsApp sigue
+> bloqueado** (no por RGPD: falta WABA propia, `wa_opt_in=0`). El párrafo de abajo describía el
+> problema legal ya resuelto; el problema de **contactabilidad real** (17,2 %) sigue vigente y
+> es ahora la única restricción — no legal, de datos.
 
 | | |
 |---|---|
@@ -395,5 +402,169 @@ lanzamiento de la web**. Lo que queda abierto es un asunto de ia-rest, no de la 
 1. ¿Titular del registrador de `grupoasegura.com` / `.es`?
 2. ¿Número de pólizas nuevas a 6 meses que define el éxito?
 3. ¿Se pide permiso a Mapfre / Allianz / Occident / Reale para usar sus logos?
-4. ¿Base de legitimación y plazo de conservación de las 32.520 fichas históricas? (pregunta ya
-   abierta en `CORREDURIA-INTRANET-IDEAS.md`, sigue sin respuesta)
+4. ~~¿Base de legitimación de las 32.520 fichas históricas?~~ ✅ **Resuelto 14/09/2026** —
+   interés legítimo (art. 6.1.f RGPD), ver §1.2(b) y §7.1. **Sigue abierto el plazo de
+   conservación** (cuánto tiempo se pueden guardar con esa finalidad, art. 5.1.e RGPD) —
+   no se le preguntó al abogado en esta consulta.
+
+---
+
+## 7. Plan ampliado — agente comercial, ROI y redes (14/09/2026)
+
+> Alberto pidió un plan «en condiciones» sobre tres frentes a la vez: agente comercial, criterio
+> tipo CEO para el retorno de cada euro invertido, y venta por redes — con la premisa de que
+> «podemos ir a todo el mundo, empresa, PyME o persona, porque el seguro es muy amplio».
+
+### 7.0 Antes de repartir esfuerzo: la premisa de partida está mal, y hay que decirlo primero
+
+**No vais a todo el mundo. Con 80 clientes y un presupuesto de una persona, "todo el mundo" es la
+forma más segura de no llegar a nadie.** El §2 de `ASEGURA-COMPETENCIA-POSICIONAMIENTO.md` ya lo
+midió: en auto compites contra comparadores con presupuestos de ocho cifras y pierdes por
+definición (40,87€ de comisión/año no paga un clic de esa subasta). El "seguro es muy amplio" es
+cierto como catálogo de producto, **no como plan de captación** — un corredor con una persona
+compite por territorio y relación, no por volumen de tráfico.
+
+Los tres frentes que SÍ tienen hueco medido, y por este orden de esfuerzo/retorno:
+
+| Prioridad | Segmento | Por qué | Fuente |
+|---|---|---|---|
+| **1** | **Los 80 clientes actuales (cross-sell)** | 57 tienen auto sin hogar; CAC = 0€, ya confían en ti | Competencia §0-1 |
+| **2** | **Comunidades de propietarios** | Sin comparador, decide un administrador/presidente, una venta = muchas pólizas | Competencia §2.3 |
+| **3** | **PyME/comercio y flota del propio grupo** | Prima superior, casi nunca una sola póliza, territorio y cara — no formulario | Competencia §2.4, plan Fase 3 |
+| **4** | **Particular nuevo vía hogar** (no auto) | 68,74€/póliza/año, doble margen que auto, permanencia larga | Plan §1.2(c) |
+| — | Auto nuevo captado en frío | **No se persigue.** Se renueva lo que ya hay | Competencia §2.1 |
+
+Esto no es "cerrarse" al particular o a la empresa grande: es no repartir el mismo esfuerzo,
+limitado, entre cinco frentes a la vez cuando cuatro de ellos ya están medidos y uno no.
+
+### 7.1 Agente comercial — qué se puede automatizar de verdad, y qué no
+
+> ✅ **Actualización 14/09/2026 — la consulta ya se mandó y se resolvió.** El abogado autoriza
+> escribir/llamar a las 32.520 fichas históricas por **interés legítimo** (art. 6.1.f RGPD),
+> canales **email y teléfono** (`docs/ASEGURA-CONSULTA-ABOGADO.md` §1). El párrafo original de
+> abajo describe el estado ANTERIOR a la consulta — se deja porque explica por qué hacía falta
+> preguntar antes de construir nada, pero **ya no es el bloqueo vigente**. El bloqueo real hoy es
+> de datos, no legal: de las 32.520, solo **5.594 (17,2 %)** tienen algún email o teléfono — ese
+> es el universo real de un "agente comercial" sobre la base histórica, no las 32.520. Y sigue
+> aplicando siempre, con o sin interés legítimo: identificación del mediador en el primer contacto
+> y opt-out/baja fácil en cada envío (RGPD art. 21, derecho de oposición — no se agota por la base
+> de legitimación).
+
+**Lo que decía este apartado antes de la consulta, para que quede el porqué:** no había ningún
+canal legal para escribir en frío, ni a las 32.520 fichas históricas ni a una lista de empresas
+comprada/scrapeada, sin resolver antes la pregunta 1 de `docs/ASEGURA-CONSULTA-ABOGADO.md`
+(entonces sin enviar). Es gratis comparar con lo que ya hace ia-rest (cold email automático sin
+ese análisis) — pero eso es una vertical de hostelería sin regulador sectorial; una correduría con
+clave DGSFP no tenía ese margen **hasta tener la respuesta del abogado por escrito**, que ya existe.
+
+🚨 **Lo que NO cambia con la respuesta del abogado:**
+- **Una lista de empresas comprada/scrapeada de fuera del grupo sigue sin base propia** — el
+  interés legítimo autorizado es específico de la relación previa con ESTAS 32.520 fichas
+  (antiguos clientes/leads de la propia correduría), no una autorización genérica para comprar
+  datos de terceros.
+- **WhatsApp sigue bloqueado**, y no por RGPD: falta WABA propia de Grupo ASegura y `wa_opt_in=0`
+  en las 32.600 fichas — Meta exige su propio opt-in con independencia de la base legal.
+- El copy sigue sin poder prometer ahorro/precio (RDL 3/2020, `lib/ramos.test.ts`), y cualquier
+  primer contacto sigue necesitando la info precontractual del mediador antes de pedir datos.
+
+**Lo que SÍ es automatizable ya, sin esperar al abogado, porque no es prospección fría:**
+
+1. **"Contactos / recomiéndanos" del portal** (`docs/CORREDURIA-INTRANET-IDEAS.md` idea M,
+   ✅ construida 08/09/2026). El correo lo firma el CLIENTE, no la correduría — es un acto entre
+   personas, no comunicación comercial (art. 21 LSSI queda fuera). Es el único mecanismo de
+   captación activa que hoy no tiene duda legal. **Palanca de agente comercial real: conseguir
+   que los 80 clientes lo usen**, no escribir código nuevo.
+2. **Arreglar el parser de CIMA** (idea J: `tipo_persona` NULL en 32.519/32.600 fichas,
+   `poliza_intervinientes` al 1,7 %). Desbloquea la idea I (empresas y flota) y **multiplica los
+   leads alcanzables dentro de pólizas que YA SON TUYAS** — cónyuge, conductor habitual: cada uno
+   un contacto con motivo verificado, no un desconocido. Coste: una sesión de desarrollo, cero
+   legal nuevo. **Es la acción de mayor retorno por línea de código de todo este plan.**
+3. **El wizard de partes y el calendario de obligaciones** (idea O, ya construidos en su mayoría)
+   no son captación, pero sostienen la retención que financia todo lo demás — un cliente que vive
+   bien un siniestro es el que después usa "Contactos".
+
+**Lo que NO se automatiza aunque técnicamente se pudiera:**
+- Envío masivo de WhatsApp: sin WABA propia y con `wa_opt_in = 0` en las 32.600 fichas, cualquier
+  automatización aquí es simplemente ilegal hoy. No es una cuestión de a qué proveedor conectarlo.
+- Scraping + cold email a empresas (el patrón de `apps/ia-rest/src/lib/lead-hunter-sevilla.ts`)
+  replicado tal cual para seguros: **no**, sin la consulta al abogado resuelta y sin que el propio
+  código documente su base de legitimación (algo que ni siquiera ia-rest hace hoy).
+
+### 7.2 Criterio CEO — cómo se juzga cada euro y cada hora, no solo el marketing
+
+La comparación no es "qué campaña se ve mejor": es **coste por hora/euro invertido frente a
+comisión esperada**, con los dos únicos números que ya tienes medidos (`48,37€` de comisión media
+por póliza/año, `68,74€` en hogar) como denominador de cualquier decisión. Tabla de decisión:
+
+| Acción | Coste | Retorno esperado (con lo medido) | Decisión |
+|---|---|---|---|
+| Llamar a los 57 auto-sin-hogar | 0€, horas de Alberto | 57 × 68,74€ si convierten a hogar = hasta ~3.900€/año | **Hacer ya** |
+| Visitar administradores de fincas | 0€, horas de Alberto | Una comunidad = decenas de pólizas de un interlocutor | **Hacer ya** |
+| Arreglar parser CIMA (idea J) | 1 sesión de dev | Desbloquea I + multiplica leads dentro de cartera propia | **Hacer ya** |
+| Google Business Profile + reseñas | 0€ | Mayor retorno/hora de todo el plan, medido | **Hacer ya** (Fase 0, sigue pendiente) |
+| Contactos/recomiéndanos activado | 0€ (ya construido) | Depende de que Alberto lo pida a los 80 | **Activar, no construir** |
+| SEO de contenido (`seo-asegura`) | horas/semana | 6-12 meses, sin coste directo | En marcha, ritmo semanal |
+| **Ads de pago** | CPC de los más caros del sector | Con 48,37€/póliza/año, un CAC de dos dígitos altos se come el margen del año 1 y 2 | **No, hasta tener CAC real medido (Fase 5)** |
+| Comprar/alquilar una lista de leads de empresas | dinero + riesgo legal | Sin base de legitimación, el "retorno" incluye una sanción posible | **No** |
+
+**Regla de gobierno tipo CFO** (mismo principio que usa `patrimonio-cfo` para el resto del
+patrimonio): **ninguna acción de pago se aprueba sin las dos cifras — coste por lead del canal, y
+tasa de conversión lead→póliza.** Hoy solo tienes la comisión; falta la otra mitad, y eso convierte
+cualquier discusión sobre presupuesto de Ads en prematura. Fase 1 (SLA + estado del lead, § arriba)
+es lo que produce esa segunda cifra — es la razón por la que va antes que cualquier campaña.
+
+### 7.3 Venta por redes sociales
+
+Cubierto en detalle por la skill `seo-asegura` (sección "Redes sociales") y el backlog
+`docs/ASEGURA-SEO-REDES-IDEAS.md`; aquí el resumen de prioridad, con el mismo criterio de retorno:
+
+1. **Google Business Profile** (Fase 0.4-0.5, sigue sin hacer) — gratis, es lo que aparece al
+   buscar "correduría de seguros Sevilla" desde el móvil, y necesita solo la verificación de
+   Alberto. Sigue siendo la acción de mayor retorno por hora de todo el plan.
+2. **LinkedIn del perfil de Alberto** (no página de empresa) — es el canal del nicho que más
+   interesa: empresas y flota. Contenido: la misma intención de problema que la web, en corto. Sin
+   coste salvo tiempo.
+3. **Instagram/Facebook** — solo si hay quien alimente el calendario con regularidad. Una cuenta
+   muerta resta más de lo que suma.
+
+Ninguna publicación sale sin el OK de Alberto para ESE contenido concreto (regla global de
+comunicaciones salientes). El agente `seo-asegura` prepara borradores, nunca publica.
+
+### 7.4 ¿Hace falta pagar un estudio externo?
+
+**No, todavía. [Probable]** Tres motivos:
+
+1. **Ya tienes un diagnóstico medido, específico y gratis** (este documento +
+   `ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`), que un estudio de mercado genérico no puede igualar:
+   sale de tu propia BD, no de medias del sector. Un estudio externo repetiría gran parte de esto
+   con cifras de sector, no las tuyas.
+2. **Lo que falta hoy no se resuelve pagando un estudio, se resuelve con acciones a coste 0**:
+   arreglar Mapfre, llamar a los 57, visitar administradores, activar Contactos, GBP. Ninguna
+   necesita un consultor externo.
+3. **Un estudio de mercado (CPC real, benchmarks de Ads, tamaño de mercado por zona) solo se
+   justifica en la Fase 5** — cuando haya presupuesto real de Ads sobre la mesa y haga falta
+   contrastar el CAC medido internamente contra el mercado. Pagarlo ahora es comprar información
+   que no vas a usar en los próximos 3-6 meses.
+
+Si quieres gastar dinero en algo externo ahora, el mejor candidato no es un estudio de marketing:
+es **la consulta al abogado ya redactada** (`docs/ASEGURA-CONSULTA-ABOGADO.md`) — desbloquea si
+la base histórica se puede usar y cómo, que es la pregunta que condiciona todo lo demás.
+
+### 7.5 Orden de ejecución (las próximas 4-6 semanas)
+
+| Semana | Acción | Quién |
+|---|---|---|
+| 1 | ~~Enviar la consulta al abogado~~ ✅ **Hecho y resuelto 14/09/2026** — interés legítimo autorizado (§7.1) | Alberto |
+| 1-2 | Diseñar el primer envío de email a los **5.594 contactos con dato real** de la base histórica: identificación del mediador + opt-out visible, sin promesa de precio | Claude + Alberto (OK antes de enviar) |
+| 1 | Llamar a los 57 auto-sin-hogar + las 17 que vencen en 90 días | Alberto |
+| 1 | Google Business Profile + pedir reseña a los 80 | Alberto |
+| 1-2 | Fase 1: SLA de contacto + estado del lead en el CRM | Claude |
+| 2 | Arreglar parser CIMA (idea J) | Claude |
+| 2-3 | Empujar "Contactos/recomiéndanos" a los 80 (mensaje, no envío automático) | Alberto |
+| 3-4 | Primera visita a administradores de fincas de Sevilla | Alberto |
+| en paralelo | Ritmo semanal de `seo-asegura` (web + borradores de LinkedIn) | Claude |
+| cuando I se desbloquee | Empresas/flota del propio grupo (Fase 3.2) | Alberto + Claude |
+
+**Criterio de parada de este plan ampliado, igual que el §4 general:** si en 6 semanas ninguna de
+las acciones de "Alberto" se ha hecho, el problema no es de canal ni de herramienta — es de ritmo,
+y no lo arregla escribir más plan.

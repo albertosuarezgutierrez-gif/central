@@ -104,7 +104,12 @@ entender la arquitectura.
 🚨 **32.600 fichas ≠ 32.600 clientes (medido 01/09/2026).** La **cartera VIVA son 80 clientes /
 110 pólizas** (03/09/2026) — las que entran o mantiene CIMA. ⚠️ De esas 110, **42 están `cancelada`**
 y **68 no** (medido 03/09/2026): CIMA manda también las canceladas y la regla de cartera viva no las
-distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. Los ramos:
+distingue, así que un recuento de «vivas» a secas no es un recuento de pólizas en vigor. ✅ **Cerrado el
+19/09/2026:** `esCarteraEnVigor()` / `WHERE_CARTERA_EN_VIGOR` / `sqlCarteraEnVigor()` (mismo fichero
+`cartera-viva.ts`) = viva Y estado en `POLIZA_ESTADOS_VIGENTES`. Es lo que deriva el grupo del listado
+(`cartera-filtro.ts`), el recuento «N póliza(s) viva(s)» y quién entra en «clientes sin canal»
+(`clientes-sin-canal.ts`). Medido ese día: 157 vivas → **105 en vigor, 67 clientes** (eran 95 con el origen
+a secas; Kartenbrot, con una sola póliza cancelada, pasa a leads). Los ramos:
 **auto 81 · hogar 19 · responsabilidad civil 9 · moto 1**. Las otras 28.728 son volcado histórico cargado en
 jun/2026 (`intranet:` 26.117 con vencimientos 2013-2018 y `asegura_app:` 2.611) y **ninguna** vence en los
 últimos 18 meses. Regla de Alberto: **CIMA = cliente actual; el resto = lead** (32.520).
@@ -218,7 +223,7 @@ PASSWORD` sigue rechazando la nueva aunque el host directo `db.<ref>.supabase.co
 el log SIN la URL, así que la pantalla de plataforma dice la causa sin ir a los logs del pooler.
 **Camino de vuelta al origen (solo con `ASEGURA_FUENTE=origen`):** `ASEGURA_DATABASE_URL` — rol `central_asegura`
 (SELECT-only + BYPASSRLS) contra el Supabase congelado de Manuel por el pooler :6543 de eu-central-1; la URL la
-normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` solo). `ASEGURA_OPERADOR_SECRET` — Bearer del
+normaliza `lib/asegura-url.ts` (añade `pgbouncer=true` y, si falta, `connection_limit=5` — **nunca 1**: una instancia de Vercel atiende varias peticiones a la vez con el mismo cliente, y con 1 las ~17 llamadas paralelas de `/correduria` hacían cola hasta el `pool_timeout` y morían en P2024, medido el 19/09/2026). `ASEGURA_OPERADOR_SECRET` — Bearer del
 puerto `/api/operador/resumen` (MISMO valor en el proyecto Vercel `plataforma`). El proyecto sirve
 desde `fra1` (`regions` en vercel.json) para no cruzar el Atlántico hacia la BD.
 Las de las integraciones (CIMA/EIAC, Codeoscopic, WhatsApp) llegan con la transferencia del
@@ -324,9 +329,35 @@ utilizable). Reglas que no se negocian al tocar esto:
 - ⚠️ **`expires_at` llegó a NULL en los 15 precios reales: no sabemos cuánto vale una cotización.**
   Mientras siga así, **un precio ya pagado NO se puede reutilizar** para ahorrarse los 0,50€ — no hay
   forma de saber si sigue vigente. Capturar la caducidad es requisito de cualquier plan de caché.
-- 🔬 **El webhook está SIN ESTRENAR, no roto.** Los dos eventos con `project_not_found` de la BD de
-  Manuel son smoke tests con ids inventados (`999999`, `smoke-fix-webhook`); Codeoscopic no ha
-  enviado nunca uno real, porque solo los dispara al emitir. No se pierda tiempo «arreglando» eso.
+- 🔬 **El webhook EXISTE, apunta al CRM de Manuel y DESCARTA el payload real (13/09/2026, medido
+  por Manuel en su prod).** Codeoscopic lo tiene dado de alta desde el 15/06 (LOO-322) hacia
+  `POST https://app.grupoasegura.com/api/webhooks/codeoscopic`, **HTTP Basic** (credenciales pasadas
+  por Bitwarden Send; viven en las envs del proyecto Vercel `asegura`). Los dos eventos
+  `project_not_found` de la tabla son smoke tests (`999999`, `smoke-fix-webhook`). Pero el emisor REAL
+  (UA `Apache-HttpAsyncClient`/Java, Basic válida, **cada 30-90 min**) manda un **array JSON de 2
+  elementos**, y el receptor del CRM solo entiende un objeto con `project_id`: **acepta con 200 y no
+  persiste el cuerpo**. Lo que sí deja es metadato en `seguros.operational_events`
+  (`codeoscopic_webhook_invalid_payload`, medido el 13/09: **1.671 rechazos desde el 25/06/2026**, uno
+  cada ~30 min, `rootType: array`, `rootLength: 2`, `rootKeys: ["insurance"]`, misma IP): o sea, dos
+  elementos `{ insurance: {...} }` desde ANTES de que nadie emitiera nada — huele a sonda o a volcado
+  periódico de estado, no a notificación de emisión, pero el cuerpo no lo ha visto nadie. Por eso existe
+  `POST /api/webhooks/codeoscopic` en ESTA app (`lib/codeoscopic/webhook.ts`, puro + `route.ts`):
+  guarda TODO cuerpo autenticado tal cual en `codeoscopic_webhook_events` — **un array, una fila por
+  elemento** (mezclar dos en una atribuiría el estado del segundo al proyecto del primero); dedupe por
+  hash como el CRM pero **un repetido SUMA `veces` y mueve `ultimo_at`** (migración
+  `2026-09-13_codeoscopic_webhook_events_veces.sql`, aplicada; con `do nothing` «dejó de mandar» y
+  «manda lo mismo cada 30 min» serían la misma fila) — y **no acuña ni toca ningún proyecto** — la reconciliación sigue en
+  `GET /insurances/{id}`. Envs `CODEOSCOPIC_WEBHOOK_BASIC_USER`/`CODEOSCOPIC_WEBHOOK_BASIC_PASS` — **los
+  mismos nombres que el CRM** (medido en el `contraseñas CODEOSCOPIC.docx` de Drive; la primera versión
+  de este PR las llamó `_USER`/`_PASSWORD` y Alberto lo corrigió), así que se copian 1:1 del proyecto
+  Vercel `asegura`; `CODEOSCOPIC_WEBHOOK_SECRET` es el HMAC anterior a LOO-322 y no se usa (sin ellas
+  503, nunca 200). ⏸️ **Para que reciba algo hacen falta dos pasos que NO son código:** copiar esas
+  dos envs del proyecto `asegura` a `central-asegura`, y que Codeoscopic (JM) repunte la URL a
+  `central-asegura.vercel.app/api/webhooks/codeoscopic` — eso lo pide Alberto, no un agente.
+  ⚠️ `/api/webhooks` **no estaba en `PUBLIC` del middleware**: el webhook de Resend (`/api/webhooks/resend`)
+  recibía el HTML del login desde que existe. Hay cepo (`webhook.test.ts`). Modelo de JM (vía Manuel):
+  emitiendo por API la respuesta del Submit ya trae el estado final; webhook y polling son para
+  emisiones externas o riesgo condicionado. Manuel nunca cerró una emisión, ni en sandbox.
 
 ### El cuerpo de la petición se valida GRATIS antes de gastar
 
@@ -408,6 +439,19 @@ una solicitud (el filtro la excluye).
   acuñar el proyecto pasa a apuntar a la póliza EMITIDA. Y el portal distingue los 5xx: **500 = «report the issue… to the API
   support team» (`soporteapi@avant2.es`, con el `requestId`), 502/503/504 = «try again in a few minutes»**
   (`consejoTrasFallo`). En la web de Allianz Alberto no vio póliza del 40685793 esa mañana.
+  ✅ **CAUSA REAL, confirmada por Codeoscopic el 17/09/2026: no era un 500 del vendor, era un `product.options`
+  que nunca se mandaba.** Juan Manuel Fernández (Product Manager API): «no ha llegado la petición a la compañía
+  y no ha llegado a emitirse» — Allianz exige un formulario previo con 4 preguntas obligatorias
+  (`insuredFamilyInAllianz`, `publicityConsent`, `allianzGroupProductsConsent`, `commercialProfilingConsent`,
+  cada una con valor explícito **aunque su default visual sea «No»**) dentro de `product.options` del propio
+  Submit, y nuestro cuerpo solo mandaba `{quote:{id}, payment:{bankAccount:{iban}}}`. 🚨 **Es un `product.options`
+  DISTINTO del que ya existía**: el de `opciones-producto.ts` (`ALLIANZ_AUTO_320200`, 14 campos técnicos/
+  comerciales) es para `mainQuote.product.options` en el **ReRate** (`/offers`); este es para `product.options`
+  en el **Submit** (`/policy-applications`) y son consentimientos legales del tomador. Arreglado con
+  `conProductoPorDefecto()` (puro, en el mismo fichero): rellena los 4 en `false` —el default del propio
+  formulario, y ninguno se decide a favor del cliente sin que él lo diga— **solo si nadie ya puso `product`**
+  (el JSON avanzado del corredor manda). El proyecto 40685793 quedó inservible (fecha de efecto caducada el
+  14/09) y no se recuperó; el arreglo es para el SIGUIENTE Submit de Allianz.
 
 ### 🔘 El botón «Retarificar» sobre la cartera real (01/09/2026)
 
@@ -912,6 +956,16 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
     `asegura-portal` y en `central-asegura`). Este commit es el que desatasca el redeploy de
     producción de `central-asegura`: los commits recientes no tocaban `apps/asegura/` y el
     `ignoreCommand` los saltaba, así que un simple «Redeploy» del panel repetía el mismo salto.
+  - 🔁 **Y se repitió idéntico el 17/09/2026: rotado el secreto, `/api/portal/documento` y
+    `/api/portal/contacto` seguían en 401 media hora después.** Medido en `get_runtime_logs`: el PR
+    que arreglaba el síntoma (registrar el fallo de la 2ª pasada de extracción) solo tocaba
+    `apps/asegura-portal/`, así que `central-asegura` se quedó en el deployment de producción
+    ANTERIOR a la rotación — la env nueva estaba puesta en Vercel pero nunca se había desplegado.
+    Este mismo commit (tocando `apps/asegura/CLAUDE.md`) es el que fuerza ese redeploy. **Lección que
+    ya iba por la segunda vez: rotar `ASEGURA_PORTAL_PUENTE_SECRET` no basta con guardarlo en las dos
+    envs — hace falta además un commit que TOQUE `apps/asegura/` (o uno de sus packages) para que
+    `central-asegura` lo recoja, porque un «Redeploy» del panel reutiliza el último commit y el
+    `ignoreCommand` lo vuelve a saltar si ese commit no tocaba la app.**
 - **🔑 Rol `prisma_asegura_portal` creado el 02/09/2026 (DDL del portal aplicada).** LOGIN, **NOBYPASSRLS**,
   **sin contraseña** (inerte, como nació `prisma_seguros`). Lee la cartera **por columnas**: un `SELECT` de
   DNI/IBAN/teléfono/email/dirección falla en la BD. SQL en
@@ -1266,9 +1320,103 @@ cartera— cuenta como **`sinCanal`**, que es la verdad, en vez de restarse del 
 `avisada_at` se sella **inmediatamente** tras el envío aceptado: es lo único que impide que un
 reintento mande el mismo aviso dos veces. Si el sello falla se grita `ENVIADO PERO NO SELLADO`.
 
+🚨 **Y desde el 19/09/2026, sin canal del tomador no es «sin canal» a secas: se prueba su PERSONA DE
+REFERENCIA** (Alberto, viendo «Instituto Studium» y «Grupo ELCA 83» en «Clientes sin canal»: «suele
+tener persona de contacto… es la persona de referencia sobre esta póliza»). `emailAlternativo()` de
+`@central/module-seguros` (`contacto-alternativo.ts`) reutiliza `contactoEfectivo()` para la póliza
+(su propio dato mal guardado, o un interviniente ajeno de esa MISMA póliza) y, si eso tampoco da nada,
+consulta `cliente_relaciones` (excluyendo `Sin vínculo`, la misma fuente que el CUARTO sitio de
+`clientes-sin-canal.ts`). El correo a un tercero **nunca se manda como si fuera al propio tomador**:
+`textoAviso()` recibe `paraTercero` y explica de qué póliza y de qué titular se trata, y con qué rol se
+dirige a esa persona. Solo cuando el dato es SUYO (colgado de la póliza y no de su ficha) el correo se
+manda tal cual, porque literalmente es su dirección. `ResumenAvisos.enviadosATercero` cuenta cuántos de
+los `enviados` fueron por esta vía, como subconjunto — no aparte.
+⚠️ **`textoAviso()` vive en `lib/texto-vencimiento.ts`, aparte de `avisos-vencimiento.ts` — es PURO
+a propósito** (mismo patrón que `renovaciones-aviso.ts` de plataforma): `avisos-vencimiento.ts` importa
+`./asegura-db` sin extensión, que `node --test` no resuelve fuera de un bundler, así que un test que
+importe ese fichero directamente revienta con `ERR_MODULE_NOT_FOUND` — no es un fallo de Prisma. La
+lógica de A QUIÉN y CÓMO se dirige el correo se prueba en `texto-vencimiento.test.ts` sin arrastrar nada
+de BD.
+
 Envs nuevas: `CRON_SECRET`, `ASEGURA_AVISOS_ACTIVOS` (**no definir todavía**), `ASEGURA_MAIL_FROM` y
 un proveedor de correo (`RESEND_API_KEY`, o SMTP, o Gmail — lo elige `@central/core-email` solo).
 Guardián: `test/regression-portal-obligaciones.test.ts`.
+
+## 📬 El emisor GENÉRICO de la intranet (15/09/2026) — sin cola, derivado de la campana
+
+`GET /api/cron/avisos-intranet` (diario **08:15** UTC, `vercel.json`): **un** correo por cliente con
+lo que su campana tiene pendiente y todavía no se le ha contado. Dictado de Alberto: *«todo lo que
+sea la intranet de un cliente, que automáticamente hay notificación de algo, modificación, un
+vencimiento, todo, una ITV, una revisión de extintores, lo que sea, eso a esa persona habrá que
+mandarle un correo cortito, educado… con acceso a la intranet directamente»*.
+
+🚨 **La decisión que lo hace genérico: NO hay cola de notificaciones.** El emisor no espera a que
+nadie encole nada — **deriva** lo que hay que avisar del MISMO catálogo que pinta la campana del
+portal (`avisosDe()` de `@central/module-seguros-portal`). Consecuencia buscada: el día que la
+campana aprenda a avisar de algo nuevo, **sale por correo sin tocar `lib/avisos-intranet.ts`**. Con
+una cola habría que acordarse de encolar en cada sitio, y el que se olvidara no rompería nada:
+simplemente ese aviso no saldría nunca. De paso, lo que el cliente ve dentro y lo que le llega por
+correo no pueden divergir, porque es la misma función.
+
+**Y el tipo nuevo no puede colarse sin nombre:** `ETIQUETA_POR_TIPO` (`lib/correo-avisos-intranet.ts`)
+es un `Record<TipoAviso, …>`, así que un tipo sin etiqueta **no compila**. Se vio pasar el 15/09/2026:
+al añadir `datos_por_revisar` el typecheck cazó que `peticion_recibida` llevaba desde el día anterior
+sin etiqueta. Un `switch` con `default: 'algo pendiente'` se lo habría tragado.
+
+🚨 **Lo que el correo NO dice: el TÍTULO del aviso.** La campana dice «ITV de 1234 ABC» o «Renovación
+de la póliza 302…»; eso es justo lo que `CAMPOS_PROHIBIDOS_EN_INVITACION` mantiene fuera de un correo,
+y la dirección la tecleó un humano y puede ser un buzón compartido. Al emisor solo se le pasa
+`{ tipo }`: el cuerpo dice **cuántas cosas hay y de qué CLASE** («un vencimiento próximo», «una
+solicitud de acceso») y el enlace. El detalle se ve DENTRO, cuando la persona ha probado que es ella.
+
+**El sello: `seguros.portal_aviso_enviado`** (`prisma/sql/2026-09-15_portal_aviso_enviado.sql`,
+**APLICADA el 15/09/2026**, cepo del UNIQUE visto morder con `23505` dentro de un bloque revertido).
+Un catálogo derivado no recuerda nada, así que sin sello el cron mandaría lo mismo cada día. La clave
+es `${tipo}:${id_de_la_fila_de_origen}`, **nunca el título**. Un aviso se manda **UNA** vez: no hay
+recordatorio a los N días en la Fase 1 — repetir por defecto es cómo un canal útil se convierte en uno
+que nadie abre. Las obligaciones conservan además su sello viejo (`portal_obligacion.avisada_at`), y
+se respeta.
+
+⏰ **Va 15 minutos DESPUÉS del cron de vencimientos, y no es cosmético:** los dos pueden hablar del
+mismo vencimiento. Con este orden, cuando esta pasada mira, la obligación ya tiene su `avisada_at` y
+aquí ni se cuenta; solapados, serían dos correos a la vez sobre lo mismo.
+
+🚨 **Si una fuente de un cliente no se puede leer, a ESE cliente no se le escribe en esta pasada**
+(`ilegibles` en el resumen). Un correo que dice «tienes 2 avisos» cuando hay 5 es peor que no
+mandarlo: entra, resuelve dos y se va tranquilo.
+
+Mismos cerrojos que el cron de vencimientos: `CRON_SECRET` solo por Bearer, **modo cuenta por
+defecto** (`ASEGURA_AVISOS_ACTIVOS=1`, el mismo interruptor — es UN solo «¿escribimos ya a
+clientes?») y `?contar=1` para el ensayo. Sin portal (`ASEGURA_PORTAL_URL` que no sea https) o sin
+proveedor de correo, **503**, nunca un `enviados: 0` tranquilizador.
+
+### 🏠 «Revisa tu dirección»: el reparo que solo veía Alberto
+
+El primer tipo que estrenó el emisor. `leerSitio()` de `@central/module-seguros` se escribió el
+05/09/2026 para la ficha del corredor, así que un «El código postal guardado («0812») no es un código
+postal español de 5 dígitos» se quedaba **en la pantalla de Alberto** — y el único que puede
+corregirlo es el dueño del dato. Alberto, 15/09/2026, sobre la ficha de un cliente real: *«es lo que
+quiero que notifique por mail e intranet, explicándole cómo modificar su dirección y así tenemos todos
+los datos actualizados»*.
+
+- El aviso lo compone el catálogo (`datos_por_revisar`, → `/boveda?vista=datos`) y **el id es el TIPO
+  de reparo** (`cp_invalido`, `ciudad_sin_letras`, `provincia_no_cuadra`): es la clave del sello, así
+  que tiene que ser estable. El texto puede cambiar sin volver a avisar de lo mismo.
+- 🚨 **Esta fuente no parte de una fila pendiente: hay que IR A MIRAR la ficha.** Por eso se acota a
+  la **cartera viva** (`titularesVivos`, de las pólizas vivas) y no a `clientes`: sobre la tabla
+  entera esto serían 32.600 correos de «revisa tu dirección» a leads de un volcado de 2013-2018. Con
+  cepo.
+- **Medido el 15/09/2026 sobre los 97 titulares vivos: 1 CP inválido y 3 ciudades sin letras.** (El
+  brazo `provincia_no_cuadra` no se midió en SQL: necesita la tabla CP→provincia del código.) O sea,
+  un puñado de correos, no un mailing. Un CP de 4 dígitos **no** es un reparo por sí solo:
+  `cpNormal()` le pone el cero de delante; `0812` sí lo es porque `00` no es ninguna provincia.
+- El MISMO `leerSitio()` juzga la ficha del corredor y la del cliente. Con dos criterios, la pantalla
+  de Alberto marcaría un reparo que la del cliente da por bueno.
+
+Cepos: `test/regression-avisos-intranet.test.ts` (11) y `packages/module-seguros-portal/src/
+avisos.test.ts`. **Seis mutaciones vistas morder**: tipo sin etiqueta, el título colado en el correo,
+el filtro de cartera viva quitado, el sello ignorado, el id del reparo cambiado y la fuente ilegible
+sin declarar.
 
 ## ✉️ «Invitar por correo» — el aviso de acceso pendiente (05/09/2026)
 

@@ -1,0 +1,127 @@
+{
+ "sesion": "8251f5fb-1a3d-5111-9551-cb5e202a3125",
+ "inicio": "2026-09-14T09:04:56.762Z",
+ "fin": "2026-09-14T10:18:39.568Z",
+ "llamadas": 384,
+ "categorias": {
+  "otro": {
+   "llamadas": 67,
+   "chars_in": 14659,
+   "chars_out": 1839241,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 10552,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 14,
+    "PushNotification": 2,
+    "ReadNotifications": 32,
+    "ScheduleWakeup": 11,
+    "ListAgents": 6
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 82,
+   "chars_in": 8185,
+   "chars_out": 585785,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 60,
+    "Glob": 3,
+    "Grep": 19
+   }
+  },
+  "bash": {
+   "llamadas": 103,
+   "chars_in": 24240,
+   "chars_out": 134045,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 103
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 17,
+   "chars_in": 1402,
+   "chars_out": 30794,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 13,
+    "mcp__Gmail__list_labels": 1,
+    "mcp__Gmail__get_thread": 1,
+    "mcp__Gmail__label_thread": 2
+   }
+  },
+  "mcp:Google-Drive": {
+   "llamadas": 25,
+   "chars_in": 2208,
+   "chars_out": 42673,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Google-Drive__search_files": 6,
+    "mcp__Google-Drive__read_file_content": 12,
+    "mcp__Google-Drive__get_file_metadata": 1,
+    "mcp__Google-Drive__copy_file": 6
+   }
+  },
+  "sql": {
+   "llamadas": 15,
+   "chars_in": 6401,
+   "chars_out": 23365,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 15
+   }
+  },
+  "escritura": {
+   "llamadas": 48,
+   "chars_in": 69440,
+   "chars_out": 2421486,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 47,
+    "Write": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 26,
+   "chars_in": 10212,
+   "chars_out": 92139,
+   "errores": 1,
+   "archivos_citados": 12,
+   "chars_citados": 464303,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 20,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__actions_list": 1,
+    "mcp__github__add_issue_comment": 1
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 1,
+   "chars_in": 6879,
+   "chars_out": 7101,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 10552,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

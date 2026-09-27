@@ -50,11 +50,24 @@ test('🚨 la consulta se restringe a la CARTERA VIVA, con los dos brazos de la 
   // primero entrarían las ~32.500 fichas del volcado histórico; sin el segundo
   // se caerían las que CIMA mantiene al día conservando su `import_ref` viejo
   // —y con ellas, clientes enteros (medido 03/09/2026: uno de Reale)—.
+  // Desde el 19/09/2026 esto vigila el lateral de CONTACTOS en las pólizas (la
+  // base entra por «en vigor», que lleva los dos brazos dentro del módulo).
   assert.match(
-    SQL,
+    SQL.slice(SQL.indexOf('left join lateral')),
     /and\s+\(\s*p\.import_ref\s+is\s+null\s+or\s+p\.eiac_xml_hash\s+is\s+not\s+null\s*\)/i,
     'la lista tiene que filtrar por cartera viva con la regla de dos brazos',
   )
+})
+
+test('🚨 quién ENTRA en la lista lo decide «en vigor», no el origen a secas (19/09/2026)', () => {
+  // Medido ese día: 9 de los 10 «ilocalizables» tenían TODAS sus pólizas
+  // canceladas — eran ex-clientes, no clientes a los que no se puede avisar.
+  // El lateral que fija `polizas_cima` usa sqlCarteraEnVigor (origen CIMA Y
+  // estado vigente); la búsqueda de contactos en las pólizas sigue por origen.
+  assert.match(SQL, /sqlCarteraEnVigor\('p'\)/)
+  const base = SQL.slice(0, SQL.indexOf('left join lateral'))
+  assert.match(base, /\$\{Prisma\.raw\(sqlCarteraEnVigor\('p'\)\)\}/, 'el lateral de base tiene que filtrar por en vigor')
+  assert.doesNotMatch(base, /p\.import_ref is null or p\.eiac_xml_hash is not null/i, 'el origen a secas mete a los ex-clientes')
 })
 
 test('🚨 las pólizas y los clientes fusionados no cuentan dos veces', () => {

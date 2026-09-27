@@ -90,3 +90,67 @@ export function motivoMerge(status: number, mensaje: string): string {
   if (status === 404) return 'El PR ya no existe (¿lo has cerrado desde GitHub?).'
   return `GitHub ha respondido ${status}.`
 }
+
+// ─── Mezclar/cerrar el PR — UNA sola vez, para que /correduria y el botón de
+// Telegram decidan igual ────────────────────────────────────────────────────
+// Antes esta lógica vivía solo dentro del route de /correduria. Duplicarla en
+// el webhook de Telegram habría sido dos sitios que pueden divergir sobre qué
+// significa «publicar» (mismo `merge_method`, mismo título de commit, mismo
+// chequeo de que el PR es de la rama del agente).
+
+export const REPO = 'albertosuarezgutierrez-gif/central'
+export const RAMA = 'claude/blog-asegura'
+const API = `https://api.github.com/repos/${REPO}`
+
+function cabeceras(token: string) {
+  return {
+    Authorization: `token ${token}`,
+    'Content-Type': 'application/json',
+    'User-Agent': 'central-blog-asegura',
+    Accept: 'application/vnd.github+json',
+  }
+}
+
+export type DecisionBlogPr =
+  | { ok: true; accion: 'publicar' | 'descartar' }
+  // `httpStatus` refleja la semántica previa (cuando esta lógica vivía en el
+  // route): un PR que no se puede ni LEER o que no es de este agente es un
+  // 400 (culpa del que llama, con un nº de PR viejo/ajeno); un rechazo de
+  // GitHub al intentar mezclar/cerrar es un 502 (GitHub dijo que no).
+  | { ok: false; motivo: string; detalle?: string; httpStatus: 400 | 502 }
+
+/** Mezcla o cierra el PR del agente del blog. Verifica que el PR es de `claude/blog-asegura`. */
+export async function decidirBlogPr(
+  numero: number,
+  accion: 'publicar' | 'descartar',
+  token: string,
+): Promise<DecisionBlogPr> {
+  const info = await fetch(`${API}/pulls/${numero}`, { headers: cabeceras(token), cache: 'no-store' })
+  if (!info.ok) return { ok: false, motivo: motivoMerge(info.status, ''), httpStatus: 400 }
+  const pr = (await info.json()) as { head?: { ref?: string }; title?: string }
+  if (pr.head?.ref !== RAMA) return { ok: false, motivo: 'Ese PR no es del agente del blog.', httpStatus: 400 }
+
+  if (accion === 'descartar') {
+    const r = await fetch(`${API}/pulls/${numero}`, {
+      method: 'PATCH', headers: cabeceras(token), body: JSON.stringify({ state: 'closed' }),
+    })
+    if (!r.ok) {
+      const txt = (await r.text()).slice(0, 200)
+      return { ok: false, motivo: motivoMerge(r.status, txt), detalle: txt, httpStatus: 502 }
+    }
+    return { ok: true, accion: 'descartar' }
+  }
+
+  const r = await fetch(`${API}/pulls/${numero}/merge`, {
+    method: 'PUT',
+    headers: cabeceras(token),
+    body: JSON.stringify({ merge_method: 'squash', commit_title: `${pr.title ?? 'blog'} (#${numero})` }),
+  })
+  if (!r.ok) {
+    const txt = (await r.text()).slice(0, 300)
+    let mensaje = txt
+    try { mensaje = (JSON.parse(txt) as { message?: string }).message ?? txt } catch { /* texto plano */ }
+    return { ok: false, motivo: motivoMerge(r.status, mensaje), detalle: mensaje, httpStatus: 502 }
+  }
+  return { ok: true, accion: 'publicar' }
+}

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 
+import { esRamoInmueble } from '@central/module-seguros-portal'
 import { carteraDeIdentidad, type PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
 import { fechaEs } from '@/lib/fechas'
@@ -114,6 +115,15 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
 
         <dl className="ficha-datos">
           {p.bien.detalles.length > 0 && <Dato etiqueta="Detalles" valor={p.bien.detalles.join(' · ')} />}
+          {/* 🏠 En un hogar la dirección hace de matrícula, y CIMA no la manda:
+              si falta se DICE (regla «dato que no hay ≠ dato no mirado»), en
+              vez de dejar la ficha titulada «Occident · Hogar» sin explicar.
+              Solo en las tuyas: en una ajena `null` también puede ser tu nivel.
+              Y nunca si la dirección EXISTE pero llega cifrada sin clave: eso
+              sería afirmar una ausencia que no se ha comprobado. */}
+          {!deOtro && p.bien.ubicacion === null && !p.bien.ubicacionCifrada && esRamoInmueble(p.ramo) && (
+            <Dato etiqueta="Dirección del inmueble" valor="La compañía no nos la ha comunicado. Tu correduría puede anotarla." />
+          )}
           <Dato etiqueta="Compañía" valor={p.compania} />
           <Dato etiqueta="Tipo de seguro" valor={ramo} />
           {p.numeroPoliza && <Dato etiqueta="Número de póliza" valor={p.numeroPoliza} />}
@@ -183,9 +193,12 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
             interfaz aquí quedaría fuera de esos cepos el día que alguien toque
             una de las dos — y el fallo sería alguien marcando el número de
             urgencias de otra compañía a las tres de la mañana.
-            Se enlaza, que además es donde se elige la póliza del parte. */}
+            Se enlaza, que además es donde se elige la póliza del parte — con
+            esta YA preseleccionada (`?poliza=`): quien llega desde la ficha de
+            un seguro concreto no debería tener que volver a encontrarlo en un
+            desplegable con las demás. */}
         <p style={{ margin: 0 }}>
-          <Link className="boton auto" href="/boveda?vista=siniestro">
+          <Link className="boton auto" href={`/boveda?vista=siniestro&poliza=cartera:${p.id}`}>
             Ver los teléfonos de {p.compania} y dar parte
           </Link>
         </p>

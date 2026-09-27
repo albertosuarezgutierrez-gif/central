@@ -6,6 +6,7 @@ import { RUTAS_LOCALIZADAS, localizar, traducir } from './motor.ts'
 import { TRADUCCIONES as PORTADA_EN } from '../en/traducciones.ts'
 import { TRADUCCIONES as PORTADA_IT } from '../it/traducciones.ts'
 import { EN as PARKING_EN, IT as PARKING_IT } from '../parking/traducciones.ts'
+import { montarBannerHtml } from '@central/core-consent'
 
 // Las páginas se leen como TEXTO, no se importan. Dos motivos distintos que llevan al mismo
 // sitio: `app/route.ts` arrastra `next/server`, que aquí no se resuelve; y el resto importa
@@ -19,7 +20,12 @@ const leer = (ruta: string) => readFileSync(fileURLToPath(new URL(ruta, import.m
 // test siguiera leyendo solo route.ts, sus cadenas quedarían fuera de la red: el diccionario
 // las tendría como claves huérfanas y /en serviría el calendario en castellano sin que salte
 // nada. Es el fallo exacto de PR #1487, detectado en #1495.
-const PORTADA = leer('../route.ts') + leer('../calendario.ts')
+// El banner de consentimiento se interpola con `${montarBannerHtml('es')}` (ver
+// `../route.ts`): a diferencia de `calendario.ts`, su HTML no es texto literal en el
+// fuente — lo produce una función de `@central/core-consent` en tiempo de ejecución. Leer
+// route.ts como texto NO captura ese `"default":"es"`, así que hay que concatenar la
+// salida real de la función — es exactamente el mismo string que `HTML` sirve en producción.
+const PORTADA = leer('../route.ts') + leer('../calendario.ts') + montarBannerHtml('es')
 const PARKING = leer('../parking/contenido.ts')
 
 const IDIOMAS = [

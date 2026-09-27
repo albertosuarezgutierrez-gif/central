@@ -150,14 +150,24 @@ ${precedentesQA}
 MENSAJE DEL HUÉSPED: ${pregunta}
 
 BORRADOR: ${reply}`
-  try {
-    const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0, timeoutMs: HUESPED_TIMEOUT_MS })
-    if (/escalar/i.test(out || '')) return 'ESCALAR'
-    if (/\bok\b/i.test(out || '')) return 'OK'
-    return 'DESCONOCIDO'
-  } catch {
-    return 'DESCONOCIDO'
+  // Un intento y reintento: el 14/09/2026 un timeout SUELTO de esta llamada (15s) bloqueó un
+  // borrador correcto con «control de calidad caído», sin dejar rastro del error real en logs.
+  // Un segundo intento inmediato absorbe el caso típico (blip puntual de un proveedor) sin
+  // esperar a que decida el humano; si el segundo también falla, SÍ se loguea la causa.
+  for (let intento = 1; intento <= 2; intento++) {
+    try {
+      const out = await aiComplete([{ role: 'user' as const, content: user }], { system, maxTokens: 4, temperature: 0, timeoutMs: HUESPED_TIMEOUT_MS })
+      if (/escalar/i.test(out || '')) return 'ESCALAR'
+      if (/\bok\b/i.test(out || '')) return 'OK'
+      return 'DESCONOCIDO'
+    } catch (e) {
+      if (intento === 2) {
+        console.error('[agente-huesped] debeEscalar falló tras 2 intentos:', e instanceof Error ? e.message : e)
+        return 'DESCONOCIDO'
+      }
+    }
   }
+  return 'DESCONOCIDO'
 }
 
 export async function decidir(ctx: Contexto, pregunta: string, categoria: string): Promise<Decision> {

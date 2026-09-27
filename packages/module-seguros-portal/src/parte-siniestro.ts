@@ -60,6 +60,15 @@ export { DIAS_COMUNICACION_LCS } from '@central/module-seguros'
 export const DESCRIPCION_MIN = 15
 export const DESCRIPCION_MAX = 2000
 export const LUGAR_MAX = 200
+/**
+ * Tope de CADA campo de «datos del otro vehículo» (matrícula, conductor,
+ * aseguradora, teléfono). Sin tope, uno de estos campos —que no tienen la
+ * validación del backend que sí tiene `descripcion`— podía por sí solo
+ * empujar `componerDescripcion()` por encima de `DESCRIPCION_MAX` y el error
+ * de «te has pasado de largo» saldría pegado al campo equivocado (la
+ * descripción, no el que de verdad sobra).
+ */
+export const CAMPO_VEHICULO_MAX = 60
 /** Más atrás no se abre un parte por el portal: eso es una conversación con Alberto. */
 export const ANIOS_MAXIMOS_ATRAS = 5
 
@@ -185,6 +194,101 @@ function texto(v: unknown): string | null {
   if (typeof v !== 'string') return null
   const t = v.trim()
   return t === '' ? null : t
+}
+
+/**
+ * Los datos del OTRO vehículo/conductor, para un parte de auto con terceros.
+ *
+ * 🚨 No son columnas nuevas, a propósito: son texto libre igual que
+ * `descripcion`, solo que ESTRUCTURADO por la pantalla. Añadir una columna
+ * (matrícula, aseguradora del tercero…) exige migrar la BD compartida de la
+ * cartera real, y eso pide spec + OK de Alberto antes de código (regla de la
+ * casa). Plegarlo en `descripcion` no pierde nada — Alberto ya lee esa
+ * descripción entera en la ficha del corredor — y no toca el esquema.
+ *
+ * Todos los campos son opcionales: pedirlos obligatorios con el coche
+ * todavía en la cuneta es la misma trampa que ya evita el resto del parte.
+ */
+export type DatosVehiculo = {
+  matriculaPropia?: unknown
+  matriculaTercero?: unknown
+  conductorTercero?: unknown
+  aseguradoraTercero?: unknown
+  telefonoTercero?: unknown
+  /** Códigos de `ZONAS_VEHICULO`. Cualquier valor que no esté en la lista se ignora, no se rechaza el parte por él. */
+  zonasDano?: unknown
+}
+
+/**
+ * Las nueve zonas que ofrece el selector, en el orden en que se pintan (fila
+ * delantera → fila central → fila trasera) y en el que se listan en el texto
+ * final — el orden de TOQUE del cliente no importa, dos partes con las
+ * mismas zonas tienen que producir la MISMA línea de texto.
+ */
+export const ZONAS_VEHICULO = [
+  ['delantera_izquierda', 'Delantera izquierda'],
+  ['delantera', 'Delantera'],
+  ['delantera_derecha', 'Delantera derecha'],
+  ['lateral_izquierdo', 'Lateral izquierdo'],
+  ['techo', 'Techo'],
+  ['lateral_derecho', 'Lateral derecho'],
+  ['trasera_izquierda', 'Trasera izquierda'],
+  ['trasera', 'Trasera'],
+  ['trasera_derecha', 'Trasera derecha'],
+] as const
+export type ZonaVehiculo = (typeof ZONAS_VEHICULO)[number][0]
+
+/** `''`/`undefined`/no-string → `null`. Las matrículas se guardan en MAYÚSCULAS: es como se leen en un parte. */
+function textoVehiculo(v: unknown, mayusculas = false): string | null {
+  const t = texto(v)
+  if (t === null) return null
+  return mayusculas ? t.toUpperCase() : t
+}
+
+/**
+ * `zonas` puede traer cualquier cosa (viene del cliente): solo cuentan los
+ * códigos que están en `ZONAS_VEHICULO`, y salen en el orden FIJO de esa
+ * lista — nunca en el orden en que el cliente tocó, que no es determinista
+ * ni comparable entre dos partes.
+ */
+function textoZonas(zonas: unknown): string | null {
+  if (!Array.isArray(zonas)) return null
+  const presentes = new Set(zonas.filter((z): z is string => typeof z === 'string'))
+  const etiquetas = ZONAS_VEHICULO.filter(([codigo]) => presentes.has(codigo)).map(([, etiqueta]) => etiqueta)
+  return etiquetas.length === 0 ? null : etiquetas.join(', ')
+}
+
+/**
+ * `null` si no hay NINGÚN dato: un bloque de cabecera sin una sola línea
+ * debajo es peor que no añadir nada — parece un desperfecto del texto.
+ */
+export function bloqueDatosVehiculo(d: DatosVehiculo): string | null {
+  const filas: Array<[string, string | null]> = [
+    ['Matrícula propia', textoVehiculo(d.matriculaPropia, true)],
+    ['Matrícula del otro vehículo', textoVehiculo(d.matriculaTercero, true)],
+    ['Conductor del otro vehículo', textoVehiculo(d.conductorTercero)],
+    ['Aseguradora del otro vehículo', textoVehiculo(d.aseguradoraTercero)],
+    ['Teléfono de contacto', textoVehiculo(d.telefonoTercero)],
+    ['Zona del daño', textoZonas(d.zonasDano)],
+  ]
+  const conDato = filas.filter((f): f is [string, string] => f[1] !== null)
+  if (conDato.length === 0) return null
+  return ['Datos del otro vehículo:', ...conDato.map(([k, v]) => `- ${k}: ${v}`)].join('\n')
+}
+
+/**
+ * Compone la descripción final que viaja al backend: lo que ha escrito el
+ * cliente, y DEBAJO —si hay algo— el bloque de datos del otro vehículo.
+ *
+ * Se recorta a `DESCRIPCION_MAX` desde aquí, NUNCA en el backend: si el
+ * backend recortara, el bloque de matrículas (que va al final) sería lo
+ * primero en desaparecer sin que la persona lo viera venir. Aquí, en cambio,
+ * la pantalla puede avisar ANTES de enviar (ver `ParteSiniestro.tsx`).
+ */
+export function componerDescripcion(descripcion: string, vehiculo: DatosVehiculo): string {
+  const bloque = bloqueDatosVehiculo(vehiculo)
+  if (bloque === null) return descripcion
+  return `${descripcion}\n\n${bloque}`.slice(0, DESCRIPCION_MAX)
 }
 
 /**

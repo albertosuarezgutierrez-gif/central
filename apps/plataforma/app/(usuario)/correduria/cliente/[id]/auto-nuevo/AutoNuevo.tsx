@@ -41,6 +41,54 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
 }
 
+/** Los mínimos de una persona (propietario o conductor) cuando NO es el tomador. */
+type PersonaForm = {
+  dni: string
+  nombre: string
+  apellido1: string
+  apellido2: string
+  fechaNacimiento: string
+  sexo: '' | 'hombre' | 'mujer'
+  estadoCivil: string
+  telefono: string
+  /** Solo la usa el conductor: es SU carnet, no el del tomador. */
+  fechaCarnet: string
+}
+
+const PERSONA_VACIA: PersonaForm = {
+  dni: '', nombre: '', apellido1: '', apellido2: '', fechaNacimiento: '', sexo: '', estadoCivil: '', telefono: '', fechaCarnet: '',
+}
+
+/** ¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor. */
+function personaCompleta(p: PersonaForm, conCarnet: boolean): boolean {
+  return (
+    p.dni.trim() !== '' &&
+    p.nombre.trim() !== '' &&
+    p.apellido1.trim() !== '' &&
+    p.fechaNacimiento !== '' &&
+    (p.sexo === 'hombre' || p.sexo === 'mujer') &&
+    p.estadoCivil !== '' &&
+    p.telefono.trim() !== '' &&
+    (!conCarnet || p.fechaCarnet !== '')
+  )
+}
+
+/** La forma que espera `DatosAuto.propietario`/`conductor` en el puerto de asegura. */
+function personaParaPuerto(p: PersonaForm, conCarnet: boolean): Record<string, unknown> {
+  const base: Record<string, unknown> = {
+    dni: p.dni.trim(),
+    nombre: p.nombre.trim(),
+    apellido1: p.apellido1.trim(),
+    fechaNacimiento: p.fechaNacimiento,
+    sexo: p.sexo,
+    estadoCivil: p.estadoCivil,
+    telefono: p.telefono.trim(),
+  }
+  if (p.apellido2.trim() !== '') base.apellido2 = p.apellido2.trim()
+  if (conCarnet) base.fechaCarnet = p.fechaCarnet
+  return base
+}
+
 type Resultado =
   | { estado: 'idle' }
   | { estado: 'cotizando' }
@@ -122,6 +170,15 @@ export default function AutoNuevo({
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
+  // ── Propietario y conductor, SOLO si son distintos del tomador ──────────────
+  // Por defecto tomador=propietario=conductor (el único caso probado contra el
+  // vendor). Si Alberto marca la casilla, se piden los datos MÍNIMOS de esa
+  // persona — nunca se inventan ni se copian del tomador.
+  const [propietarioDistinto, setPropietarioDistinto] = useState(false)
+  const [propietario, setPropietario] = useState<PersonaForm>(PERSONA_VACIA)
+  const [conductorDistinto, setConductorDistinto] = useState(false)
+  const [conductor, setConductor] = useState<PersonaForm>(PERSONA_VACIA)
+
   async function catalogo(qs: string): Promise<Opcion[]> {
     const r = await pedirCatalogo(Object.fromEntries(new URLSearchParams(qs)))
     if (r.estado !== 'ok') throw new Error(r.mensaje)
@@ -189,15 +246,21 @@ export default function AutoNuevo({
     (f) => !RESUELTOS_EN_PANTALLA.has(f.campo as string) && !CAMPOS_A_MANO[f.campo],
   )
 
+  const faltaPropietario = propietarioDistinto && !personaCompleta(propietario, false)
+  const faltaConductor = conductorDistinto && !personaCompleta(conductor, true)
+
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
-    aManoSinRellenar.length > 0
+    aManoSinRellenar.length > 0 || faltaPropietario || faltaConductor
   const puedePulsar = !cotizando && !faltaAlgo && (simulacion || consumoPermite)
 
   async function cotizar() {
     setResultado({ estado: 'cotizando' })
+    const correccionesFinal: Record<string, unknown> = { ...correcciones }
+    if (propietarioDistinto) correccionesFinal.propietario = personaParaPuerto(propietario, false)
+    if (conductorDistinto) correccionesFinal.conductor = personaParaPuerto(conductor, true)
     const r = await pedirCotizacionAuto({
       clienteId,
       resueltos: {
@@ -209,7 +272,7 @@ export default function AutoNuevo({
         fechaMatriculacion: matriculacion,
         garajeEsSupuesto: true,
       },
-      correcciones,
+      correcciones: correccionesFinal,
     })
     switch (r.estado) {
       case 'faltan':
@@ -375,6 +438,32 @@ export default function AutoNuevo({
         )}
       </div>
 
+      <div style={cardStyle}>
+        <CardHeader
+          title="2b · ¿Propietario o conductor distintos?"
+          sub="Por defecto se cotiza como si el tomador fuera también el dueño del coche y quien lo conduce. Marca solo lo que sea distinto de verdad."
+        />
+        <BloquePersona
+          etiqueta="El propietario del coche es otra persona o empresa"
+          activo={propietarioDistinto}
+          onActivo={setPropietarioDistinto}
+          persona={propietario}
+          onPersona={setPropietario}
+          civiles={civiles}
+          conCarnet={false}
+        />
+        <div style={{ height: 12 }} />
+        <BloquePersona
+          etiqueta="El conductor habitual es otra persona (hijo, empleado…)"
+          activo={conductorDistinto}
+          onActivo={setConductorDistinto}
+          persona={conductor}
+          onPersona={setConductor}
+          civiles={civiles}
+          conCarnet
+        />
+      </div>
+
       <div style={{ ...cardStyle, borderColor: simulacion ? 'var(--warning)' : 'var(--negative)', borderWidth: 2 }}>
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
@@ -414,6 +503,77 @@ export default function AutoNuevo({
         )}
         {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} />}
       </div>
+    </div>
+  )
+}
+
+/** El toggle + mini-formulario de una persona (propietario o conductor) cuando no es el tomador. */
+function BloquePersona({
+  etiqueta,
+  activo,
+  onActivo,
+  persona,
+  onPersona,
+  civiles,
+  conCarnet,
+}: {
+  etiqueta: string
+  activo: boolean
+  onActivo: (v: boolean) => void
+  persona: PersonaForm
+  onPersona: (p: PersonaForm) => void
+  civiles: Opcion[]
+  conCarnet: boolean
+}) {
+  function set<K extends keyof PersonaForm>(campo: K, valor: PersonaForm[K]) {
+    onPersona({ ...persona, [campo]: valor })
+  }
+  return (
+    <div>
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, fontWeight: 600 }}>
+        <input type="checkbox" checked={activo} onChange={(e) => onActivo(e.target.checked)} style={{ width: 18, height: 18 }} />
+        {etiqueta}
+      </label>
+      {activo && (
+        <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 10 }}>
+          <Campo etiqueta="DNI/NIF" falta={!persona.dni.trim()}>
+            <input value={persona.dni} onChange={(e) => set('dni', e.target.value)} style={input} />
+          </Campo>
+          <Campo etiqueta="Nombre" falta={!persona.nombre.trim()}>
+            <input value={persona.nombre} onChange={(e) => set('nombre', e.target.value)} style={input} />
+          </Campo>
+          <Campo etiqueta="Primer apellido" falta={!persona.apellido1.trim()}>
+            <input value={persona.apellido1} onChange={(e) => set('apellido1', e.target.value)} style={input} />
+          </Campo>
+          <Campo etiqueta="Segundo apellido" falta={false}>
+            <input value={persona.apellido2} onChange={(e) => set('apellido2', e.target.value)} style={input} />
+          </Campo>
+          <Campo etiqueta="Fecha de nacimiento" falta={!persona.fechaNacimiento}>
+            <input type="date" value={persona.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} style={input} />
+          </Campo>
+          <Campo etiqueta="Sexo" falta={persona.sexo === ''}>
+            <select value={persona.sexo} onChange={(e) => set('sexo', e.target.value as PersonaForm['sexo'])} style={input}>
+              <option value="">Elige</option>
+              <option value="hombre">Hombre</option>
+              <option value="mujer">Mujer</option>
+            </select>
+          </Campo>
+          <Campo etiqueta="Estado civil" falta={persona.estadoCivil === ''}>
+            <select value={persona.estadoCivil} onChange={(e) => set('estadoCivil', e.target.value)} style={input}>
+              <option value="">Elige estado civil</option>
+              {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          </Campo>
+          <Campo etiqueta="Móvil" falta={!persona.telefono.trim()}>
+            <input value={persona.telefono} onChange={(e) => set('telefono', e.target.value)} style={input} />
+          </Campo>
+          {conCarnet && (
+            <Campo etiqueta="Fecha del carnet" falta={!persona.fechaCarnet} ayuda="Es SU carnet, no el del tomador.">
+              <input type="date" value={persona.fechaCarnet} onChange={(e) => set('fechaCarnet', e.target.value)} style={input} />
+            </Campo>
+          )}
+        </div>
+      )}
     </div>
   )
 }

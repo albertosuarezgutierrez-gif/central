@@ -1,10 +1,46 @@
 # 📚 La API de Codeoscopic / Avant2 — leída del portal oficial (01/09/2026)
 
+> 🔑 **`https://portal.api-int.codeoscopic.io/` es LA fuente de la configuración de esta API**
+> (confirmado por Alberto, 17/09/2026). Ante cualquier duda sobre un endpoint, un catálogo, un
+> campo obligatorio o el comportamiento de una compañía — antes de suponer, adivinar o pagar un
+> 400/500 real para descubrirlo — se consulta ese portal. Desde este contenedor está bloqueado por
+> el proxy de la sesión; se consulta con **Claude en Chrome** (sesión de Alberto ya autenticada) y
+> se trae la respuesta aquí. Este documento es el acumulado de esas consultas — se AMPLÍA con cada
+> hallazgo nuevo, no se sustituye.
+
 > **Procedencia:** Alberto exportó el portal de documentación
 > (`portal.api-int.codeoscopic.io`, snapshot MHTML del 01/09/2026 a las 22:06) y de ahí se extrajo
 > el índice completo de operaciones. **Es la primera documentación del fabricante que tenemos**:
 > hasta hoy solo teníamos el traspaso del repo de Manuel, que describe lo que ÉL implementó, no lo
 > que la API ofrece. El fichero no se guarda en el repo (16 MB y es material del proveedor).
+
+> 🚨 **El botón "TRY" del portal NO sirve para consultar datos reales de nuestra cuenta — no hace
+> falta y no hay que meterle credenciales (17/09/2026).** Tres motivos, comprobados el mismo día:
+> 1. Sin credenciales aplicadas el TRY da `Failed to fetch (CORS or Network Issue)`. El portal exige
+>    OAuth2 `client_credentials` (`client_id`+`client_secret`) o `X-Client-App`, y esas claves **no se
+>    escriben en un formulario web** ni se pegan en un chat — es la misma regla que ya protege
+>    `PII_ENCRYPTION_KEY`/`ASEGURA_OPERADOR_SECRET` en el resto del repo.
+> 2. **`portal.api-int.codeoscopic.io` es el entorno INT, no producción** (`api.codeoscopic.io`, sin
+>    `-int`, es donde vive el asunto real y las credenciales que tenemos en Vercel). Aunque se metieran
+>    credenciales ahí, no serían las de esta cuenta.
+> 3. **Y no hace falta: ya tenemos el camino correcto montado.** `apps/asegura/app/api/operador/
+>    codeoscopic/lineas/route.ts` (`GET /insurance-lines`, gratis, sin gastar) corre en producción con
+>    las credenciales reales — la propia `/correduria/hogar` de plataforma ya lo llama y pinta en vivo
+>    si hogar está `disponible`/`ausente`/`desconocido` para Grupo ASegura. **Para saber si hogar
+>    tarifica hoy, se abre esa página — no el portal.**
+>
+> Lo que el portal SÍ deja ver sin credenciales: el **ejemplo estático de la documentación** de
+> `GET /insurance-lines` (no son datos de nuestra cuenta, solo la forma de la respuesta):
+> ```json
+> { "id": "Car", "path": "car", "name": "Autos", "active": true,
+>   "supports": { "rating": true, "policyApplication": true, "policyApplicationsReport": true } }
+> ```
+> Y el texto del propio endpoint: *"If you think any line of insurance is missing, please contact the
+> support team for its activation."* → **`apisupport@codeoscopic.com`** es el canal para pedir que
+> activen un ramo que falte. Otros contactos del portal, para no confundir: `soporteapi@codeoscopic.com`
+> (soporte API general) y `soporteapi@avant2.es` (alta de credenciales nuevas, client_id/secret) son
+> soporte técnico; `comercial@codeoscopic.com` es comercial. Ninguno de los tres se usa sin decisión
+> explícita de Alberto — es la regla de comunicaciones salientes del `CLAUDE.md` raíz.
 
 ## 🚨 Lo que esto CORRIGE de lo que dábamos por sabido
 
@@ -585,6 +621,30 @@ requestId `0d65134e-161833`). Lo que cambia lo que dábamos por sabido:
 (gratis) y, si `policyApplications[]` trae una `Approved` con `policyNumber`, ofrece **acuñarla**
 (`acunarExistente: true`, sin reenviar); con una pendiente no ofrece reintento; solo sin ninguna viva
 se puede reenviar con `reintentoConfirmado: true`. Y el 500 se reporta a soporte con el `requestId`.
+
+## 📞 Lo que NO está en el portal y sí sabía Manuel (13/09/2026)
+
+Respuesta de Manuel (su Claude, medido contra su BD de producción) a las cinco preguntas de Alberto:
+
+- **Nunca se completó una emisión por API en su lado**, ni en sandbox ni en prod: el único proyecto
+  (40058158, auto) se quedó en `cotizacion`. El 500 «Unknown error while waiting…» no lo vieron nunca.
+  Su `submit.ts` hacía lo mismo que hoy `/emitir`: un solo intento, 5xx = «quizá emitido», congelar,
+  reconciliar por `GET /insurances/{id}` (+ polling con backoff 5 min·2ⁿ, tope 60 min, 7 días).
+- **Webhook:** dado de alta por Codeoscopic el 15/06 (LOO-322) → `POST app.grupoasegura.com/api/webhooks/codeoscopic`,
+  HTTP Basic. El emisor real manda **array de 2 elementos cada ~30 min** y el CRM lo descarta con 200
+  sin persistir el cuerpo — solo metadato en `operational_events` (`rootKeys: ["insurance"]`, 1.671
+  rechazos desde el 25/06/2026, anteriores a cualquier emisión nuestra). Receptor nuevo en
+  `apps/asegura` (ver su `CLAUDE.md`).
+- **`issuedDocuments[]`:** su código lo ignoraba a propósito (solo persistía `policyNumber`);
+  `codeoscopic_documents` nunca tuvo writer (épica LOO-151). **La forma exacta del tag `File` se lee del
+  OpenAPI vivo, autenticado con nuestro token OAuth2: `GET {CODEOSCOPIC_BASE_URL}/openapi.json`**
+  (108 paths). ⚠️ Ese host está bloqueado desde el contenedor de Claude (403 del proxy): se lee desde
+  Vercel o con Claude en Chrome.
+- **Contactos y tiempos:** Juan Manuel Fernández (PM API, `juan.fernandez@codeoscopic.com`) — preciso
+  en reunión, **latencia alta por email (hasta 14 días)**; `soporteapi@codeoscopic.com` — SLA de facto
+  mismo día laborable, 2 días máximo; sin status page (los cortes van por email a integradores).
+  **Escalado:** Ángel Blesa Jarque, Director General (`comercial@codeoscopic.com`), firmante del
+  contrato — si hay silencio dos días. DPO: `dpd@codeoscopic.com`.
 
 ## Cabeceras y detalles de cableado que faltaban
 

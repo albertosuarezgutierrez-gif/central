@@ -8,6 +8,7 @@ import {
 } from "@/lib/sivra/mercado-ventanas"
 import {
   planDeVentanas, parsearParametrosPlan, mesesSinBucket, FUENTES_FIABLES, MIN_FECHAS_BUCKET,
+  EDAD_MERCADO_RANCIO,
   type CoberturaVentana,
 } from "@/lib/sivra/mercado-cobertura"
 import { NOMBRE_PORTAL } from "@/lib/sivra/mercado-propios"
@@ -170,7 +171,7 @@ export async function GET(req: NextRequest) {
   const mesesEnPlan = new Set(plan.map(v => v.checkin.slice(0, 7)))
   const mesesCortos = mesesSinBucket(cobertura, fechasEvento, mesesEnPlan)
 
-  const { ventanas, candidatas, recortadas } = planDeVentanas(
+  const { ventanas, candidatas, recortadas, caducadas } = planDeVentanas(
     plan, aforos, cobertura, hoy, max, filtro, { mesesCortos, fechasEvento },
   )
 
@@ -248,6 +249,20 @@ export async function GET(req: NextRequest) {
     )
   }
 
+  // 🚨 Fechas de evento CONFIRMADO con el corpus CADUCADO para el motor. No es lo mismo que «sin
+  // medir»: tienen comps, pero de hace más de `EDAD_MERCADO_RANCIO` días, así que `pricing/apply`
+  // las rechaza y esas noches se quedan con el precio del canal externo. Se declara POR FECHA
+  // porque el otro aviso que existe (`avisoPisosSinTarifar`) es por PISO y solo salta cuando el
+  // piso entero se cae: un piso tarificado con normalidad puede tener sus noches más caras del año
+  // sin tocar, que es exactamente lo que pasó con Semana Santa 2027 del Dúplex.
+  if (caducadas.length) {
+    avisos.push(
+      `${caducadas.length} fecha(s) de evento CONFIRMADO con corpus caducado (>${EDAD_MERCADO_RANCIO}d, ` +
+      `el motor las salta y las tarifica el canal): ` +
+      `${caducadas.map(c => `${c.checkin} (${c.diasSinMedir}d${c.etiqueta ? `, ${c.etiqueta}` : ""})`).join(", ")}`,
+    )
+  }
+
   // Un recorte MUDO se lee como «esto era todo lo que había». Se dice, para que el parte de la
   // rutina pueda distinguir «cubierto» de «cubierto hasta donde cabía en la pasada».
   if (recortadas > 0) {
@@ -271,6 +286,11 @@ export async function GET(req: NextRequest) {
     // de las ventanas de ESTA pasada van a desatascarlos. Va en el contrato para que el parte de
     // la rutina pueda decir «abril-2027 sigue a ciegas» en vez de callarlo.
     meses_sin_bucket: [...mesesCortos].sort(),
+    // Fechas de evento confirmado que el motor ya NO puede tarificar por corpus viejo. Van en el
+    // contrato para que la rutina pueda decir «la Semana Santa lleva 18 días sin medir» en vez de
+    // que se note solo en el precio publicado.
+    eventos_caducados: caducadas,
+    max_edad_mercado_dias: EDAD_MERCADO_RANCIO,
     min_fechas_bucket: MIN_FECHAS_BUCKET,
     pedidas_mes_corto: ventanas.filter(v => v.mesCorto === true).length,
     ventanas,

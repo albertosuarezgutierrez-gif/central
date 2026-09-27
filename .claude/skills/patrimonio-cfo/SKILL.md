@@ -174,11 +174,10 @@ Si en ESTA pasada se detecta algo con plazo, Telegram aparte e inmediato:
   alternativa por activo, el/los escenarios del mes con su recomendación y nº de registro,
   preguntas de intake. Formato español (`2.162,49€`), sin tecnicismos huecos.
 - **Cada recomendación nueva va ADEMÁS en un mensaje propio CON BOTONES de decisión** (desde
-  24/08/2026): `POST {PLATAFORMA_URL}/api/internal/alerta` con body
-  `{"text": "🧭 <titulo> (#<id>)\n<resumen en 2-3 líneas>", "botones": [[
+  24/08/2026): `bash scripts/canal-aviso.sh POST /api/internal/alerta '{"text": "🧭 <titulo> (#<id>)\n<resumen en 2-3 líneas>", "botones": [[
   {"texto":"✅ Acepto","callback":"ptr_ok:<id>"},
   {"texto":"✖️ Descarto","callback":"ptr_no:<id>"},
-  {"texto":"📋 Detalle","callback":"ptr_det:<id>"}]]}` — el webhook registra
+  {"texto":"📋 Detalle","callback":"ptr_det:<id>"}]]}'` — el webhook registra
   `decision_alberto`/`decidido_at` con el toque, sin que Alberto anote nada. Si la respuesta
   trae `botonesDescartados:true` (despliegue viejo sin el prefijo `ptr_`), el aviso salió sin
   teclado: no reintentes, la decisión llegará por el feedback de siempre.
@@ -196,9 +195,10 @@ mejor quede la BD y `patrimonio_recomendaciones`, mejor contesta. Las preguntas 
 disparan pasadas nuevas ni las sustituyen.
 
 ## Canal de aviso — protocolo común
-**Preflight AL ARRANCAR** (no al final): `GET {PLATAFORMA_URL}/api/internal/alerta` con
-`Authorization: Bearer {ALERTA_TOKEN}`. `200` → canal vivo; enviar con
-`POST {PLATAFORMA_URL}/api/internal/alerta` y body `{ "text": "..." }`. `401` → canal mudo:
+**Preflight AL ARRANCAR** (no al final): `bash scripts/canal-aviso.sh GET /api/internal/alerta` — NUNCA reconstruyas el `curl` a mano con
+`${PLATAFORMA_URL}`/`${ALERTA_TOKEN}` literales (bloquea MCP Sentinel en sesión desatendida, ver
+`docs/AVISOS-AGENTES.md`). `HTTP_STATUS:200` → canal vivo; enviar con
+`bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "..." }'`. `HTTP_STATUS:401` → canal mudo:
 según `docs/AVISOS-AGENTES.md`, avisa por el push nativo de la sesión empezando por
 `🔇 SIN TELEGRAM (401):` y deja el aviso entero en `docs/AGENTES-BITACORA.md` (`fallos:`).
 Nunca uses `TELEGRAM_BOT_TOKEN` ni `CRON_SECRET`. Nunca falles en silencio.

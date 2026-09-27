@@ -173,8 +173,19 @@ export default async function PaginaRamo({ params }: Props) {
             una: se marca «Vida», y quien venía por salud la cambia en un clic.
             🚨 `responsabilidad-civil` marcaba «Comercio o empresa» hasta el
             05/09/2026 porque no existía su opción: el lead llegaba diciendo que
-            quería un seguro de comercio, que es un dato plausible y falso. */}
-        <Formulario ramoPorDefecto={ramo.slug === 'vida-y-salud' ? 'vida' : ramo.slug} />
+            quería un seguro de comercio, que es un dato plausible y falso.
+            `responsabilidad-civil-fontaneros` es página de intención, no un
+            ramo nuevo en BD (sigue siendo `responsabilidad_civil`): marca la
+            opción general, igual que vida-y-salud comparte una sola. */}
+        <Formulario
+          ramoPorDefecto={
+            ramo.slug === 'vida-y-salud'
+              ? 'vida'
+              : ramo.slug === 'responsabilidad-civil-fontaneros'
+                ? 'responsabilidad-civil'
+                : ramo.slug
+          }
+        />
       </section>
     </div>
   )

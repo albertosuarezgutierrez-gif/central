@@ -178,3 +178,21 @@ test('🚨 un CP parcial NO cuenta como repetido', () => {
   // postal de verdad y nadie lo notaría.
   assert.equal(componerUbicacion('Portal 11520B', '1152', 'ROTA'), 'Portal 11520B, 1152 ROTA')
 })
+
+// ── `matricula`: SOLO la placa, para autorrellenar — no para la ficha ───────
+
+test('un auto con matrícula la lleva SUELTA en `matricula`, además de dentro de `cosa`', () => {
+  const b = describirBien('auto', { marca: 'Seat', modelo: 'León', matricula: '1234abc' })
+  assert.equal(b.matricula, '1234abc')
+  assert.match(b.cosa ?? '', /1234abc/)
+})
+
+test('un hogar (o cualquier no-vehículo) nunca lleva matrícula, aunque tenga otros datos', () => {
+  const b = describirBien('hogar', { direccion: 'Calle Falsa 1', metrosCuadrados: 90 })
+  assert.equal(b.matricula, null)
+})
+
+test('sin datos, BIEN_VACIO también trae matricula: null', () => {
+  assert.equal(describirBien('auto', {}).matricula, null)
+  assert.equal(describirBien('auto', null).matricula, null)
+})

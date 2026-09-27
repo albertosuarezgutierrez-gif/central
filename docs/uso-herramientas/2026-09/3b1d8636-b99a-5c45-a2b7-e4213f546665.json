@@ -1,0 +1,19 @@
+{
+ "sesion": "3b1d8636-b99a-5c45-a2b7-e4213f546665",
+ "inicio": "2026-09-20T04:57:35.335Z",
+ "fin": "2026-09-20T04:57:43.557Z",
+ "llamadas": 3,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 3,
+   "chars_in": 387,
+   "chars_out": 7106,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 3
+   }
+  }
+ }
+}

@@ -191,3 +191,36 @@ test('emitirAsegura solo manda acunarExistente cuando es true (lee el fuente)', 
   const src = readFileSync(fileURLToPath(new URL('./retarificar-asegura.ts', import.meta.url)), 'utf8')
   assert.match(src, /p\.acunarExistente === true \? \{ acunarExistente: true \} : \{\}/)
 })
+
+test('emitirAsegura solo manda familiaEnAllianz cuando es true (lee el fuente)', () => {
+  const src = readFileSync(fileURLToPath(new URL('./retarificar-asegura.ts', import.meta.url)), 'utf8')
+  assert.match(src, /p\.familiaEnAllianz === true \? \{ familiaEnAllianz: true \} : \{\}/)
+})
+
+// 17/09/2026: la casilla "familia en Allianz" no tiene ningún efecto si el
+// corredor ya pegó un `product` propio en el JSON avanzado (asegura lo
+// respeta tal cual) — la pantalla tiene que avisarlo ANTES de emitir, no
+// dejar creer que se pidió un descuento que asegura ignoró en silencio.
+test('emision.tsx avisa si la casilla de familia en Allianz choca con un `product` del JSON avanzado (lee el fuente)', () => {
+  const src = readFileSync(
+    fileURLToPath(new URL('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx', import.meta.url)),
+    'utf8',
+  )
+  // `yaTraeProduct` (17/09/2026, widget de la Product Form Library) es el
+  // mismo `typeof campos.product === 'object' && campos.product !== null`
+  // de antes, factorizado porque ahora dos guardas lo comparten (familia en
+  // Allianz Y lo guardado del formulario de la compañía).
+  assert.match(src, /const yaTraeProduct = typeof campos\.product === 'object' && campos\.product !== null/)
+  assert.match(src, /esAllianz && familiaAllianz && yaTraeProduct/)
+})
+
+// El mismo aviso, pero para lo guardado del widget de la Product Form
+// Library: si el JSON avanzado ya trae `product`, lo del formulario no viaja
+// — nunca en silencio.
+test('emision.tsx avisa si lo guardado del formulario de la compañía choca con un `product` del JSON avanzado (lee el fuente)', () => {
+  const src = readFileSync(
+    fileURLToPath(new URL('../app/(usuario)/correduria/poliza/[id]/retarificar/emision.tsx', import.meta.url)),
+    'utf8',
+  )
+  assert.match(src, /productOptions !== null && yaTraeProduct/)
+})

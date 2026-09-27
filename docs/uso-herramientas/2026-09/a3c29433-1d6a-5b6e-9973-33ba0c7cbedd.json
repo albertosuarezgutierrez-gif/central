@@ -1,0 +1,90 @@
+{
+ "sesion": "a3c29433-1d6a-5b6e-9973-33ba0c7cbedd",
+ "inicio": "2026-09-13T19:16:40.833Z",
+ "fin": "2026-09-13T19:24:10.159Z",
+ "llamadas": 40,
+ "categorias": {
+  "otro": {
+   "llamadas": 3,
+   "chars_in": 251,
+   "chars_out": 486,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 7,
+   "chars_in": 667,
+   "chars_out": 49198,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 6,
+    "Grep": 1
+   }
+  },
+  "bash": {
+   "llamadas": 18,
+   "chars_in": 3510,
+   "chars_out": 28321,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 18
+   }
+  },
+  "escritura": {
+   "llamadas": 4,
+   "chars_in": 4135,
+   "chars_out": 534147,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 4
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 3,
+   "chars_in": 646,
+   "chars_out": 3820,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 3
+   }
+  },
+  "mcp:github": {
+   "llamadas": 4,
+   "chars_in": 2385,
+   "chars_out": 1264,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__get_file_contents": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1
+   }
+  }
+ }
+}

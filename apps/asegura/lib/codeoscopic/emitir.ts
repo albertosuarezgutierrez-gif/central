@@ -99,6 +99,17 @@ export type Oferta = {
   firmeza: 'firme' | 'condicionado' | 'estimado'
   caducaEn: string | null
   avisos: string[]
+  /**
+   * El `mainQuote` (o el objeto pelado si el vendor no envuelve) TAL CUAL lo
+   * devolvió Codeoscopic al ReRate — sin parsear, sin reshaping. Lo necesita
+   * el Product Form Library (`productForm.render(quote)`) para pintar el
+   * formulario de consentimiento REAL de cada compañía en vez de un catálogo
+   * estático adivinado (ver `opciones-producto.ts`): la forma exacta del
+   * `quote` que exige `render()` es del vendor, y aquí es literalmente el
+   * mismo objeto que ya interpretan `offerId`/`primaEur`/etc. arriba, no una
+   * reconstrucción.
+   */
+  quoteCrudo: unknown
 }
 
 type Json = Record<string, unknown>
@@ -146,6 +157,7 @@ export function leerOferta(raw: unknown): Oferta {
     firmeza,
     caducaEn: str(mainQuote.expirationDate) ?? str(o.expirationDate),
     avisos,
+    quoteCrudo: mainQuote,
   }
 }
 

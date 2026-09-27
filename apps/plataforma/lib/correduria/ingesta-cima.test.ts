@@ -294,3 +294,69 @@ test('🚨 sin listado, la salud lo DICE en vez de callarlo', () => {
   assert.match(r.salud.motivos.join(' · '), /sé cuántas son, no cuáles/)
   assert.equal(r.huerfanasSinAmbito, null)
 })
+
+// ── Las cuatro señales del puerto (crudo, cobertura, caja negra, último pull) ──
+//
+// 🪤 Este bloque nace de un fallo REAL: el 16/09/2026 se mergeó el panel que
+// pinta esas cuatro señales y `interpretarIngesta` no las leía del puerto, así
+// que llegaban como `undefined` al módulo. El módulo hace lo correcto con un
+// `undefined` (= «el llamante no pide la señal», no emite nada), de modo que
+// TODO seguía verde: la pantalla no podía encender el aviso de cron mudo ni
+// aunque el cron llevara una semana muerto, y el Telegram diario tampoco. Un
+// guardián que mira al sitio equivocado es verde el 100 % de las veces.
+//
+// La otra mitad de lo que se vigila aquí es que `undefined` y `null` NO se
+// colapsen: con una `apps/asegura` vieja durante un despliegue la clave no
+// viene, y convertir esa ausencia en `null` fabricaría un «no se ha podido
+// medir» diario sobre una señal que nadie sirve.
+
+const SENALES = {
+  crudo: { pendientes: 5, purgaInminente: 2, masAntiguaHoras: 700 },
+  cobertura: { hojas: 300, hojasNuncaLeidas: 42, porTipo: [{ tipoObjeto: 'POL', hojas: 200, nuncaLeidas: 30 }] },
+  cajaNegra: { capturaActiva: true, cuerpos: 3, posts: 9, horasDesdeUltimo: 1 },
+  ultimoPull: { horas: 40, procesados: 0 },
+}
+
+test('las cuatro señales del puerto LLEGAN a la salud', () => {
+  const r = interpretarIngesta(200, { ...OK, ...SENALES })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.salud.crudo, SENALES.crudo)
+  assert.deepEqual(r.salud.cobertura, SENALES.cobertura)
+  assert.deepEqual(r.salud.cajaNegra, SENALES.cajaNegra)
+  assert.deepEqual(r.salud.ultimoPull, SENALES.ultimoPull)
+})
+
+test('un cron mudo llega al veredicto, que es de lo que se entera Telegram', () => {
+  // 40 h > HORAS_PULL_MUDO (26). Sin el cableado esto seguiría diciendo `ok`.
+  const r = interpretarIngesta(200, { ...OK, ...SENALES, cuarentena: [] })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.notEqual(r.salud.estado, 'ok')
+  assert.match(r.salud.motivos.join(' · '), /cron|pull|muda?o/i)
+})
+
+test('clave AUSENTE es undefined (puerto viejo), no un hueco inventado', () => {
+  const r = interpretarIngesta(200, OK)
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.crudo, null)
+  assert.equal(r.salud.ultimoPull, null)
+  // Y lo que importa: no se inventa un motivo de hueco por algo que no se pidió.
+  assert.equal(r.salud.motivos.some(m => /crudo|cobertura|caja negra|cron/i.test(m)), false)
+})
+
+test('clave PRESENTE pero ilegible sí es un hueco declarado', () => {
+  const r = interpretarIngesta(200, { ...OK, ...SENALES, crudo: { pendientes: 'muchos' } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.crudo, null)
+  assert.equal(r.salud.motivos.some(m => /crudo/i.test(m)), true)
+})
+
+test('un bloque a medias NO se acepta a trozos', () => {
+  const r = interpretarIngesta(200, { ...OK, ...SENALES, cajaNegra: { capturaActiva: true, cuerpos: 3 } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.cajaNegra, null)
+})

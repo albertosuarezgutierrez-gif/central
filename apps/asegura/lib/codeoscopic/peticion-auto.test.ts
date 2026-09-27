@@ -257,6 +257,70 @@ test('el ramo va como «Car» y la referencia nuestra solo si la hay', () => {
   assert.equal(con.externalId, 'cot-000000')
 })
 
+// ─── Propietario y conductor distintos del tomador ───────────────────────────
+const OTRA_PERSONA = {
+  dni: '11111111h',
+  nombre: 'Otra',
+  apellido1: 'Persona',
+  fechaNacimiento: '1990-05-05',
+  sexo: 'mujer' as const,
+  estadoCivil: 'Single',
+  telefono: '611111111',
+}
+
+test('sin propietario/conductor propios, la MISMA persona sigue yendo en los tres papeles', () => {
+  const c = construirPeticionAuto(BASE) as any
+  assert.deepEqual(c.holder, c.risk.owner)
+  assert.deepEqual(c.holder, c.risk.primaryDriver)
+})
+
+test('con propietario distinto, holder y owner NO son la misma persona', () => {
+  const d: DatosAuto = { ...BASE, propietario: OTRA_PERSONA }
+  assert.deepEqual(revisarDatosAuto(d), [])
+  const c = construirPeticionAuto(d) as any
+  assert.equal(c.risk.owner.identificationDocument.id, '11111111H')
+  assert.equal(c.holder.identificationDocument.id, '00000000T')
+  // El conductor sigue siendo el tomador (no se tocó).
+  assert.deepEqual(c.risk.primaryDriver, c.holder)
+})
+
+test('con conductor distinto, el carnet que viaja es el SUYO, no el del tomador', () => {
+  const d: DatosAuto = {
+    ...BASE,
+    conductor: { ...OTRA_PERSONA, fechaCarnet: '2010-02-02' },
+  }
+  // El tomador ya no conduce: su propia `fechaCarnet` no hace falta, aunque siga en `d`.
+  assert.deepEqual(revisarDatosAuto(d), [])
+  const c = construirPeticionAuto(d) as any
+  assert.equal(c.risk.primaryDriver.identificationDocument.id, '11111111H')
+  assert.deepEqual(c.risk.primaryDriver.drivingLicenses, [{ type: { id: 'B' }, date: '2010-02-02', issuingZone: { id: 'Spain' } }])
+  assert.equal(c.holder.drivingLicenses, undefined, 'el tomador ya no necesita carnet: conduce otro')
+})
+
+test('conductor propio sin su fecha de carnet es un reparo', () => {
+  const r = revisarDatosAuto({ ...BASE, conductor: { ...OTRA_PERSONA, fechaCarnet: '' } as any })
+  assert.ok(r.some((x) => x.campo === 'conductor' && /fecha de carnet/.test(x.motivo)))
+})
+
+test('propietario con datos incompletos es un reparo que nombra qué falta, sin gastar', () => {
+  const r = revisarDatosAuto({ ...BASE, propietario: { ...OTRA_PERSONA, dni: '' } })
+  const rep = r.find((x) => x.campo === 'propietario')
+  assert.ok(rep)
+  assert.match(rep!.motivo, /dni/)
+})
+
+test('con propietario Y conductor distintos, los tres papeles son tres personas', () => {
+  const d: DatosAuto = {
+    ...BASE,
+    propietario: { ...OTRA_PERSONA, dni: '22222222j', nombre: 'Propietaria' },
+    conductor: { ...OTRA_PERSONA, dni: '33333333p', nombre: 'Conductor', fechaCarnet: '2015-01-01' },
+  }
+  const c = construirPeticionAuto(d) as any
+  assert.equal(c.holder.identificationDocument.id, '00000000T')
+  assert.equal(c.risk.owner.identificationDocument.id, '22222222J')
+  assert.equal(c.risk.primaryDriver.identificationDocument.id, '33333333P')
+})
+
 // ─── La fecha de efecto: ni antes de hoy ni a más de 90 días (13/09/2026) ────
 test('revisarDatosAuto: la fecha de efecto de AYER se reprocha antes de pagar (proyecto 40685666)', () => {
   const r = revisarDatosAuto({ ...BASE, fechaEfecto: '2026-09-12' }, { hoy: '2026-09-13' })

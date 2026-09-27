@@ -1,0 +1,111 @@
+{
+ "sesion": "743e6d1a-c6b3-50e7-9e18-5a405c74fb86",
+ "inicio": "2026-09-15T11:11:03.483Z",
+ "fin": "2026-09-15T14:48:20.238Z",
+ "llamadas": 228,
+ "categorias": {
+  "otro": {
+   "llamadas": 37,
+   "chars_in": 1976,
+   "chars_out": 1009011,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 61800,
+   "tools": {
+    "Skill": 3,
+    "ToolSearch": 6,
+    "AskUserQuestion": 1,
+    "ReadNotifications": 27
+   }
+  },
+  "bash": {
+   "llamadas": 100,
+   "chars_in": 41927,
+   "chars_out": 208495,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 100
+   }
+  },
+  "sql": {
+   "llamadas": 43,
+   "chars_in": 11561,
+   "chars_out": 76898,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 43
+   }
+  },
+  "mcp:Booking_com": {
+   "llamadas": 4,
+   "chars_in": 1376,
+   "chars_out": 76648,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking_com__accommodations_search": 4
+   }
+  },
+  "escritura": {
+   "llamadas": 11,
+   "chars_in": 10270,
+   "chars_out": 476256,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 11
+   }
+  },
+  "mcp:github": {
+   "llamadas": 24,
+   "chars_in": 10667,
+   "chars_out": 122472,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 33390,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__pull_request_read": 9,
+    "mcp__github__actions_list": 6,
+    "mcp__github__update_pull_request": 1,
+    "mcp__github__get_commit": 1,
+    "mcp__github__add_reply_to_pull_request_comment": 1,
+    "mcp__github__resolve_review_thread": 1,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__unsubscribe_pr_activity": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 7,
+   "chars_in": 3459,
+   "chars_out": 6915,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2,
+    "mcp__Claude_Code_Remote__send_later": 3,
+    "mcp__Claude_Code_Remote__delete_trigger": 2
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 2,
+   "chars_in": 124,
+   "chars_out": 42361,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_deployments": 1,
+    "mcp__Vercel__list_teams": 1
+   }
+  }
+ }
+}

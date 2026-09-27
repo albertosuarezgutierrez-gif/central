@@ -1,0 +1,17 @@
+{
+  "name": "@central/core-vehiculos",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Consulta de datos de vehículo (marca/modelo/versión/potencia) por matrícula. Adaptador intercambiable sobre un proveedor externo (hoy APIVehículo) — nunca acopla la clave ni el endpoint del proveedor a las apps que lo consumen.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test src/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

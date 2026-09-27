@@ -11,6 +11,7 @@ import { RegistrarSW } from './RegistrarSW'
 import { SalirDelPortal } from './SalirDelPortal'
 import { SugerenciaBarra } from './SugerenciaBarra'
 import { SCRIPT_TEMA } from './tema'
+import { WhatsappFlotante } from './WhatsappFlotante'
 
 // Marca activa del portal. Es la de `app.grupoasegura.com` medida del CSS
 // compilado de la app de Manuel (ver `packages/brand/src/marcas/asegura.ts`):
@@ -85,6 +86,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             acaba de recibir un código por correo, así que lo primero que tiene
             que reconocer es la marca. */}
         <header className="marca-barra">
+          {/* La puerta del ☰: vive aquí, en el layout RAÍZ, para que en el
+              móvil el menú de secciones esté en la MISMA barra que la marca en
+              vez de en una segunda franja debajo (que era la mitad de la
+              pantalla vacía por dos veces el mismo alto de cabecera). El
+              layout raíz no sabe si hay sesión ni qué secciones existen —
+              `NavPortal` (dentro de `(portal)/layout.tsx`) porta su botón
+              hasta aquí con `createPortal`; en las páginas públicas el `<span>`
+              se queda vacío y sin tamaño (`display:contents`). */}
+          <span id="portal-menu-slot" className="marca-menu-slot" />
           <span className="marca-escudo">
             <MarcaAsegura alto={15} />
           </span>
@@ -116,6 +126,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </div>
         </header>
         {children}
+        {/* Como en `asegura-web`: "clic para chatear", visible con o sin
+            sesión. No es el canal de login (ese sigue sin WABA). */}
+        <WhatsappFlotante />
         {/* Registra el service worker que Chrome exige para ofrecer instalar la
             app. No cachea nada: ver `public/sw.js`. */}
         <RegistrarSW />

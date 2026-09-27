@@ -102,8 +102,7 @@ error conservador es dar por rota una fuente que funcionaba, no dar por viva una
 ## Paso 5 — Salida (dos carriles)
 - **Texto (siempre):** actualiza `docs/VIGIA-CONECTORES.md` — fecha de pasada SIEMPRE, aunque no
   haya hallazgos (sin fecha no se distingue «pasada limpia» de «rutina muerta»).
-- **Telegram (si hay hallazgo):** `POST {PLATAFORMA_URL}/api/internal/alerta` con
-  `Authorization: Bearer {ALERTA_TOKEN}` y `{ "text": "🔌 conectores-vigia: <resumen con evidencia>" }`.
+- **Telegram (si hay hallazgo):** `bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "🔌 conectores-vigia: <resumen con evidencia>" }'`.
 - **PR draft (si hay trabajo que dejar hecho):** `claude/conectores-vigia-<fecha>`.
 - **Sin hallazgos → sin ruido:** solo el doc con su fecha y un resumen en el chat.
 
@@ -147,10 +146,10 @@ Sin dudas ni fallos → `dudas: —; fallos: —` (el «todo bien» también es 
 ## Canal de aviso — protocolo común
 
 **Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
-`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+`bash scripts/canal-aviso.sh GET /api/internal/alerta`
 
-- `200` → canal vivo, sigue.
-- `401` → canal **mudo**. Según `docs/AVISOS-AGENTES.md`: avisa por el push nativo de la sesión
+- `HTTP_STATUS:200` → canal vivo, sigue.
+- `HTTP_STATUS:401` → canal **mudo**. Según `docs/AVISOS-AGENTES.md`: avisa por el push nativo de la sesión
   empezando por `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md`
   (`fallos:`).
 

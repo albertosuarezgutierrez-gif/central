@@ -81,11 +81,15 @@ const ESTILO: Record<EstadoCanal, { label: string; tono: Tono; color: string; qu
   // 🚨 Estos dos NO son «localizable»: son «hay por dónde tirar», y cada uno
   // pide una acción distinta. Fundirlos con `con_ambos` volvería a esconder el
   // hecho de que HOY no les llega el aviso (04/09/2026).
+  // 🚨 Localizable POR SU PERSONA DE REFERENCIA, no «solo por otra persona»
+  // (19/09/2026). Alberto, al verlos bajo el titular «NO se puede contactar»:
+  // «muchos tienen contactos… es la persona de referencia sobre esta póliza».
+  // Tono neutro: no es una alarma, es a quién llamar.
   contacto_via_tercero: {
-    label: 'Solo por otra persona',
-    tono: 'aviso',
-    color: 'var(--warning)',
-    que: 'Él no tiene contacto, pero sí alguien de su póliza. Llámale para pedirle el correo del tomador: el aviso de vencimiento va al TOMADOR (art. 22 LCS), así que esto NO le deja avisado.',
+    label: 'Por su persona de referencia',
+    tono: 'neutral',
+    color: 'var(--border)',
+    que: 'No hay contacto suyo, pero sí el de su persona de referencia (familiar, administración, alguien de la póliza): con ella se habla. Ojo: el aviso automático de vencimiento lee la ficha del tomador (art. 22 LCS), así que a este cliente hoy se le avisa por esa persona, no por el sistema.',
   },
   canal_en_poliza: {
     label: 'Su contacto está en la póliza',
@@ -286,11 +290,12 @@ export default function SinCanal({
       )}
 
       {rescatables !== null && rescatables > 0 && (
-        <div style={{ border: '1px solid var(--warning)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
-          <Badge tono="aviso">Hay por dónde tirar</Badge>{' '}
-          Otros <strong>{rescatables}</strong> no tienen contacto en su ficha, pero o su propio dato
-          está colgado de la póliza (se copia y listo) o hay otra persona en ella a la que llamar.
-          Salen abajo, marcados.
+        <div style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '10px 12px', marginBottom: 12, fontSize: 13, lineHeight: 1.5 }}>
+          <Badge tono="neutral">Con quién hablar</Badge>{' '}
+          Otros <strong>{rescatables}</strong> no tienen contacto en su propia ficha, pero SÍ se les
+          localiza: o su dato está colgado de la póliza (se copia a la ficha y listo) o tienen una
+          persona de referencia —familiar, administración, alguien de la póliza— a la que llamar.
+          No cuentan como «sin contacto»; salen abajo con el nombre de esa persona.
         </div>
       )}
 

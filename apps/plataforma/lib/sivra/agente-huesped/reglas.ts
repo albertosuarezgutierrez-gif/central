@@ -58,7 +58,7 @@ export function detectLang(
   // Idiomas menos frecuentes: marcadores distintivos (van primero).
   if (/\b(bonjour|merci|est-ce|vous|nous|comment|quand|où|je voudrais)\b/i.test(t)) return 'fr'
   if (/\b(guten|danke|bitte|ich|wir|haben|sind|wie|wann|wo|möchte|können)\b/i.test(t)) return 'de'
-  if (/\b(ciao|grazie|prego|buongiorno|come|quando|dove|vorrei|posso)\b/i.test(t)) return 'it'
+  if (/\b(ciao|grazie|prego|buongiorno|buonasera|come|quando|dove|vorrei|posso|hai|sì|così|però|che|questo|questa|molto|scusa|scusi)\b/i.test(t)) return 'it'
 
   // Español vs inglés por puntuación + palabras frecuentes.
   let es = 0, en = 0

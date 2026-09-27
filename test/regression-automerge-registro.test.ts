@@ -31,6 +31,9 @@ const ESTADO_DE_AGENTES = [
   'docs/BUSCADOR-IA.md',      // buscador-ia
   'docs/FISCAL-AYUDAS.md',    // fiscal-novedades
   'docs/VIGIA-CONECTORES.md', // conectores-vigia
+  // Telemetría del hook `Stop` (scripts/uso-herramientas.mjs), no de un agente concreto, pero
+  // el mismo caso: puro registro que sacaba PRs enteros del carril 1 (detectado 20/09/2026).
+  'docs/uso-herramientas/2026-09/session-ejemplo.json',
 ]
 
 // Ficheros que NUNCA deben colarse como registro: le dicen a un agente qué hacer.

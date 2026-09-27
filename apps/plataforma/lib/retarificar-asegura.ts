@@ -772,6 +772,14 @@ export type RespuestaOferta =
        *  legible; `cuentaAviso` dice por qué (clave PII, CCC inválido, consulta caída). */
       cuenta: CuentaConocida | null
       cuentaAviso: AvisoCuenta | null
+      /**
+       * El `mainQuote` (o el objeto pelado) TAL CUAL lo devolvió Codeoscopic al
+       * ReRate — sin parsear, sin reshaping. Lo necesita el widget de la
+       * Product Form Library (`productForm.render(quote)`) para pintar el
+       * formulario de consentimiento REAL de la compañía antes del Submit. Ver
+       * `apps/asegura/lib/codeoscopic/emitir.ts::Oferta.quoteCrudo`.
+       */
+      quoteCrudo: unknown
     }
 
 /** Por qué no hay cuenta utilizable, cuando asegura lo sabe. `no_comprobada`
@@ -802,7 +810,9 @@ function leerCuenta(v: unknown): CuentaConocida | null {
 /** Hasta 60 s: es una llamada de red al vendor, sin duración documentada. */
 export const TIMEOUT_OFERTA_MS = 60_000
 
-function leerOferta(v: unknown): { offerId: string; primaEur: number | null; firmeza: string; caducaEn: string | null; avisos: string[] } | null {
+function leerOferta(
+  v: unknown,
+): { offerId: string; primaEur: number | null; firmeza: string; caducaEn: string | null; avisos: string[]; quoteCrudo: unknown } | null {
   if (typeof v !== 'object' || v === null) return null
   const x = v as Record<string, unknown>
   if (typeof x.offerId !== 'string') return null
@@ -812,6 +822,11 @@ function leerOferta(v: unknown): { offerId: string; primaEur: number | null; fir
     firmeza: typeof x.firmeza === 'string' ? x.firmeza : 'estimado',
     caducaEn: cadenaONulo(x.caducaEn),
     avisos: Array.isArray(x.avisos) ? x.avisos.filter((a): a is string => typeof a === 'string') : [],
+    // `unknown` a propósito: es el `mainQuote` del vendor, tal cual — reshapearlo
+    // aquí sería adivinar su forma. `null`/`undefined` del transporte se
+    // normalizan a `null` para que el widget sepa distinguir «sin oferta» de
+    // «vacío pero presente».
+    quoteCrudo: x.quoteCrudo ?? null,
   }
 }
 
@@ -920,6 +935,70 @@ export async function ofertaAsegura(p: {
       mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)}). ` +
         'No se sabe si la compañía ha confirmado el precio: mira el consumo antes de repetir.',
     }
+  }
+}
+
+// ─── Product Form Library: el `dataCallback` del widget del vendor ──────────
+//
+// El widget (`AvantProductForm`, iframe de Codeoscopic) NO puede guardar el
+// `access_token` OAuth2 en el navegador — reenvía sus propias sub-peticiones
+// (catálogos, sub-formularios) a un `dataCallback` que nosotros implementamos.
+// Aquí se relaya ESE `dataCallback` hasta `apps/asegura` (que tiene las
+// credenciales de servidor), exactamente con el mismo patrón —y las mismas
+// razones— que el resto de este fichero: el Bearer no baja al navegador.
+//
+// 🚨 Gratis (ver `lib/codeoscopic/product-form.ts` en asegura): no confirma
+// nada con la compañía ni cotiza, así que no lleva `confirmado: true`.
+
+export const TIMEOUT_PRODUCT_FORM_MS = 20_000
+
+export type RespuestaProductForm =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'error'; mensaje: string }
+  /** La respuesta de Codeoscopic, tal cual — el widget interpreta su propia forma. */
+  | { estado: 'ok'; respuesta: unknown }
+
+/** PURO: la respuesta HTTP → los estados del `dataCallback`. Sin red, testeable. */
+export function interpretarProductForm(status: number, json: unknown): RespuestaProductForm {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 200 && r.estado === 'ok') return { estado: 'ok', respuesta: r.respuesta ?? null }
+  if (r.estado === 'sin_configurar' || status === 503) {
+    return { estado: 'sin_configurar', mensaje: cadenaONulo(r.mensaje) ?? 'El puerto de Codeoscopic con asegura no está configurado.' }
+  }
+  return { estado: 'error', mensaje: cadenaONulo(r.mensaje) ?? `error ${status}` }
+}
+
+/**
+ * `POST /api/operador/codeoscopic/product-form` — relay del `dataCallback`
+ * del widget hacia el proxy gratis de asegura. `peticion` es la petición TAL
+ * CUAL la pide el widget (`{method?, path, params?, body?}`): no se reshapea,
+ * el vendor decide su propia forma dentro de `/product-form-requests`.
+ */
+export async function productFormAsegura(peticion: {
+  method?: string
+  path: string
+  params?: unknown[]
+  body?: Record<string, unknown>
+}): Promise<RespuestaProductForm> {
+  try {
+    const r = await pedir(
+      '/api/operador/codeoscopic/product-form',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(peticion),
+      },
+      TIMEOUT_PRODUCT_FORM_MS,
+    )
+    if (r === null) {
+      return {
+        estado: 'sin_configurar',
+        mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).',
+      }
+    }
+    return interpretarProductForm(r.status, r.json)
+  } catch (e) {
+    return { estado: 'error', mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})` }
   }
 }
 
@@ -1086,6 +1165,10 @@ export async function emitirAsegura(p: {
   /** El proyecto YA cuenta una solicitud APROBADA con nº de póliza: asegura la
    *  acuña en la cartera y NO manda ningún Submit. */
   acunarExistente?: boolean
+  /** El corredor confirma que el tomador YA tiene familiares asegurados en
+   *  Allianz (bonificación real de cartera). NUNCA se manda por defecto — ver
+   *  `conProductoPorDefecto` en asegura, que es quien decide el valor final. */
+  familiaEnAllianz?: boolean
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1102,6 +1185,7 @@ export async function emitirAsegura(p: {
           ...(p.cuentaConfirmada ? { cuentaConfirmada: p.cuentaConfirmada } : {}),
           ...(p.reintentoConfirmado === true ? { reintentoConfirmado: true } : {}),
           ...(p.acunarExistente === true ? { acunarExistente: true } : {}),
+          ...(p.familiaEnAllianz === true ? { familiaEnAllianz: true } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,

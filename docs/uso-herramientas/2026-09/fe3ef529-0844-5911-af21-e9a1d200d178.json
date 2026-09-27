@@ -1,0 +1,19 @@
+{
+ "sesion": "fe3ef529-0844-5911-af21-e9a1d200d178",
+ "inicio": "2026-09-14T07:50:31.313Z",
+ "fin": "2026-09-14T07:50:31.313Z",
+ "llamadas": 1,
+ "categorias": {
+  "agente:general": {
+   "llamadas": 1,
+   "chars_in": 1341,
+   "chars_out": 1587,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  }
+ }
+}

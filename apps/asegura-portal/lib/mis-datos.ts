@@ -39,7 +39,8 @@
  * de los dos se le enseña a la persona como «guardado», ni una lectura fallida
  * como «no consta».
  */
-import type { EstadoConfirmacionContacto } from '@central/module-seguros-portal'
+import type { EstadoConfirmacionContacto, ReparoParaAviso } from '@central/module-seguros-portal'
+import { leerSitio, textoReparoSitio } from '@central/module-seguros'
 
 import { PORTAL_PUENTE_TIEMPO_MS } from './puente-config'
 
@@ -233,4 +234,46 @@ export async function confirmarMisDatos(identidadId: string): Promise<ResultadoC
   } finally {
     clearTimeout(reloj)
   }
+}
+
+/**
+ * Lo que NO cuadra en la dirección guardada de esta persona, para la campana.
+ *
+ * 🚨 Existe porque el reparo lo veía SOLO Alberto. `leerSitio()` se estrenó el
+ * 05/09/2026 en la ficha del corredor (`/correduria/cliente/[id]`), así que un
+ * «El código postal guardado («0812») no es un código postal español de 5
+ * dígitos» se quedaba en su pantalla — y el único que puede corregirlo es el
+ * dueño del dato. Alberto, 15/09/2026: «es lo que quiero que notifique por mail
+ * e intranet, explicándole cómo modificar su dirección».
+ *
+ * La MISMA función que juzga la ficha del corredor juzga esto: con dos
+ * criterios, la pantalla de Alberto marcaría un reparo que la del cliente no, y
+ * el cliente entraría a corregir algo que su portal da por bueno.
+ *
+ * **Lanza** si no se ha podido mirar (puente caído, sin configurar, varias
+ * fichas). Quien llama lo declara en `fuentesIlegibles`: «tus datos están bien»
+ * no se afirma sobre una ficha que nadie ha leído. `sin_ficha` sí devuelve `[]`
+ * — no es que no se sepa, es que no hay ficha nuestra con datos que revisar.
+ */
+export async function reparosDeMisDatos(identidadId: string): Promise<ReparoParaAviso[]> {
+  const lectura = await leerMisDatos(identidadId)
+  if (lectura.estado === 'sin_ficha') return []
+  if (lectura.estado !== 'ok') throw new Error(`mis_datos_${lectura.estado}`)
+  return reparosDeContacto(lectura.contacto)
+}
+
+/**
+ * Los reparos de un contacto ya leído. Puro y en el SERVIDOR: lo llaman la
+ * campana (arriba) y la propia pantalla de «Mis datos», que lo recibe como
+ * prop en vez de importar `@central/module-seguros` en el navegador — ese
+ * paquete arrastra la cartera entera al bundle de una pantalla que solo
+ * necesita tres frases.
+ */
+export function reparosDeContacto(contacto: Record<CampoMisDatos, string | null>): ReparoParaAviso[] {
+  const { reparos } = leerSitio({
+    codigoPostal: contacto.codigoPostal,
+    ciudad: contacto.ciudad,
+    provincia: contacto.provincia,
+  })
+  return reparos.map((r) => ({ tipo: r.tipo, texto: textoReparoSitio(r) }))
 }

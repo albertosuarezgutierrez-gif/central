@@ -1,14 +1,16 @@
 // Política de cookies.
 //
-// El listado de cookies NO se escribe a mano: lo publica Cookiebot a partir de
-// lo que su rastreo encuentra de verdad en el dominio (`cd.js`). Una lista
-// escrita a mano envejece el día que se añade una herramienta y entonces dice
-// algo falso sobre datos personales, que es peor que no decir nada.
+// El listado de abajo son las CATEGORÍAS que declara nuestro propio banner
+// (`@central/core-consent`), no un rastreo automático del dominio — Cookiebot
+// generaba esa tabla sola a partir de `cd.js`; nuestro CMP no lo hace, así que
+// aquí se describe a mano lo que cada categoría cubre. Es deliberadamente
+// genérico (categorías, no cookies individuales con nombre y caducidad) para
+// no prometer un detalle que no se mantiene solo.
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { VERSION_TEXTOS_WEB, FECHA_TEXTOS_WEB } from '@central/module-seguros'
 import { url } from '@/lib/sitio'
-import { COOKIEBOT_ID } from '@/lib/analitica'
+import { POSTHOG_KEY } from '@/lib/analitica'
 import BotonCookies from '@/components/BotonCookies'
 
 export const metadata: Metadata = {
@@ -47,31 +49,42 @@ export default function Cookies() {
       </p>
 
       <h2>Qué cookies hay exactamente</h2>
-      {COOKIEBOT_ID ? (
-        <>
-          {/* Lo pinta Cookiebot en el cliente a partir de su rastreo del dominio. */}
-          <script
-            id="CookieDeclaration"
-            src={`https://consent.cookiebot.com/${COOKIEBOT_ID}/cd.js`}
-            type="text/javascript"
-            async
-          />
-          <noscript>
-            <p>
-              El listado detallado se carga con JavaScript. Si lo tienes desactivado, escríbenos y te lo enviamos.
-            </p>
-          </noscript>
-        </>
-      ) : (
-        // 🚨 Sin gestor de consentimiento configurado NO se mide nada (ver
-        // `lib/analitica.ts`). Se dice, en vez de dejar el hueco en blanco: un
-        // apartado vacío se lee como «no hay cookies», que sería afirmar algo
-        // que nadie ha comprobado.
-        <p>
-          El listado detallado aún no está publicado en esta web. Mientras tanto no se activa ninguna cookie de
-          medición: solo funcionan las imprescindibles para servir la página.
-        </p>
-      )}
+      <table style={{ width: '100%', borderCollapse: 'collapse', margin: '16px 0' }}>
+        <thead>
+          <tr>
+            <th style={{ textAlign: 'left', borderBottom: '1px solid var(--borde, #ddd)', padding: '8px 12px 8px 0' }}>
+              Categoría
+            </th>
+            <th style={{ textAlign: 'left', borderBottom: '1px solid var(--borde, #ddd)', padding: '8px 0' }}>
+              Para qué se usa
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style={{ padding: '8px 12px 8px 0', verticalAlign: 'top' }}>Necesarias</td>
+            <td style={{ padding: '8px 0', verticalAlign: 'top' }}>
+              Recuerdan tu elección de cookies (qué aceptaste y cuándo). No se pueden desactivar: sin ellas el
+              banner te lo preguntaría en cada visita.
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: '8px 12px 8px 0', verticalAlign: 'top' }}>Estadística</td>
+            <td style={{ padding: '8px 0', verticalAlign: 'top' }}>
+              {POSTHOG_KEY
+                ? 'PostHog (analítica propia, alojada en la Unión Europea): nos dice qué páginas se visitan más, de forma anónima.'
+                : 'Ahora mismo esta categoría no tiene ninguna herramienta activa detrás.'}
+            </td>
+          </tr>
+          <tr>
+            <td style={{ padding: '8px 12px 8px 0', verticalAlign: 'top' }}>Marketing</td>
+            <td style={{ padding: '8px 0', verticalAlign: 'top' }}>
+              Esta web no usa hoy ninguna cookie de marketing. Si en algún momento se activa una, aparecerá aquí
+              antes de que se instale.
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <h2>Tus datos</h2>
       <p>

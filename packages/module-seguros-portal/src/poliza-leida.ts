@@ -168,7 +168,7 @@ function numero(v: unknown): number | null {
   return n
 }
 
-function fechaIso(v: unknown): string | null {
+export function fechaIso(v: unknown): string | null {
   const t = texto(v)
   if (t === null) return null
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t)
@@ -178,6 +178,46 @@ function fechaIso(v: unknown): string | null {
   // Rechaza los días que el Date «arregla» solo (2026-02-31 → 3 de marzo).
   if (d.toISOString().slice(0, 10) !== t) return null
   return t
+}
+
+function esBisiesto(anio: number): boolean {
+  return (anio % 4 === 0 && anio % 100 !== 0) || anio % 400 === 0
+}
+
+/** El aniversario de un día/mes en un año concreto. Un 29 de febrero cae al 28
+ *  en un año no bisiesto: el contrato no deja de vencer solo porque el año no
+ *  tenga ese día. */
+function fechaAniversario(anio: number, mes: number, dia: number): Date {
+  const diaClamp = mes === 2 && dia === 29 && !esBisiesto(anio) ? 28 : dia
+  return new Date(Date.UTC(anio, mes - 1, diaClamp))
+}
+
+/**
+ * El día y mes de VENCIMIENTO de un seguro anual renovable son los mismos que
+ * los de su fecha de EFECTO (o de emisión): el contrato se renueva cada año en
+ * esa fecha. Dictado de Alberto (19/09/2026), sobre una póliza cuyo único
+ * documento era el contrato original de 2017 y no traía ningún vencimiento
+ * vigente: «los contratos de seguros son anuales renovables… la fecha de
+ * emisión es fecha de vencimiento».
+ *
+ * 🚨 Es un dato CALCULADO, no leído: solo se usa cuando el documento NO trae
+ * un vencimiento explícito. Si lo trae, ese manda siempre — esta función ni
+ * se llama.
+ *
+ * Devuelve la PRÓXIMA ocurrencia de ese día/mes a partir de `hoy` (incluido):
+ * si ya pasó este año, el año que viene.
+ */
+export function vencimientoDesdeEfecto(fechaEfecto: unknown, hoy: Date = new Date()): string | null {
+  const t = fechaIso(fechaEfecto)
+  if (t === null) return null
+  const [, , mesStr, diaStr] = /^(\d{4})-(\d{2})-(\d{2})$/.exec(t) as RegExpExecArray
+  const mes = Number(mesStr)
+  const dia = Number(diaStr)
+  const medianocheHoy = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate()))
+  const anioBase = hoy.getUTCFullYear()
+  const candidato = fechaAniversario(anioBase, mes, dia)
+  const vencimiento = candidato.getTime() >= medianocheHoy.getTime() ? candidato : fechaAniversario(anioBase + 1, mes, dia)
+  return vencimiento.toISOString().slice(0, 10)
 }
 
 function ramo(v: unknown): RamoPoliza | null {

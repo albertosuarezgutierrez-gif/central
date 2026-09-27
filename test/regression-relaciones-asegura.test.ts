@@ -18,8 +18,11 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
+  autorizacionViva,
   explicarEstadoAutorizacion,
+  explicarSentidoAcceso,
   fechaLarga,
+  insigniaAcceso,
   interpretarRelaciones,
   leerAutorizacion,
   leerRelacion,
@@ -161,4 +164,75 @@ test('`autorizaVer` es el resumen de «¿lo ve HOY?» y viaja junto al bloque, s
 test('las fechas se pintan en español legible; una ilegible se devuelve tal cual', () => {
   assert.equal(fechaLarga('2027-09-03T10:00:00.000Z'), '3 de septiembre de 2027')
   assert.equal(fechaLarga('mañana'), 'mañana')
+})
+
+// ─── Los DOS sentidos, cada uno con su estado (15/09/2026) ───────────────────
+//
+// 🚨 El fallo que cierra este bloque: hasta hoy del sentido de VUELTA solo
+// cruzaba el puerto `puedeVer`, un booleano de «¿lo ve HOY?». Con eso, una
+// autorización anotada y pendiente de aceptar era indistinguible de no haber
+// ninguna — las dos pintaban «no». Alberto anotó las de Esquiansa→Juan Manuel y
+// Francisca→Juan Manuel, la pantalla no cambió de aspecto, y la conclusión
+// razonable fue «no se ha hecho nada». Lo que sí había cambiado (estado
+// `pendiente`, esperando que él acepte en su portal) no se veía en ningún sitio.
+
+test('🚨 `autorizacionInversa`: el sentido de vuelta trae su estado, no solo un sí/no', () => {
+  const r = leerRelacion({
+    ...CONYUGE,
+    puedeVer: false,
+    autorizacionInversa: { ...VIGENTE, estado: 'pendiente' },
+  })
+  assert.equal(r?.puedeVer, false, 'pendiente NO abre datos')
+  assert.equal(r?.autorizacionInversa?.estado, 'pendiente', 'pero la hay, y la pantalla tiene que poder decirlo')
+})
+
+test('🚨 la clave que NO viene es `undefined` («no lo sé»), nunca `null` («no hay»)', () => {
+  // Un asegura sin desplegar todavía no manda el campo. Decir «no hay
+  // autorización» con eso sería inventarse una ausencia: es el mismo fallo que
+  // esta tanda arregla, un escalón más abajo.
+  assert.equal(leerRelacion(CONYUGE)?.autorizacionInversa, undefined)
+  assert.equal(leerRelacion({ ...CONYUGE, autorizacionInversa: null })?.autorizacionInversa, null)
+})
+
+test('🚨 la insignia distingue los TRES estados, y «ve» manda sobre el resumen', () => {
+  assert.deepEqual(insigniaAcceso(VIGENTE as never, true), { icono: '🔓', etiqueta: 'SÍ VE', tono: 've' })
+  // El estado que no existía en pantalla: hay consentimiento y NO ve nada.
+  const p = insigniaAcceso({ ...VIGENTE, estado: 'pendiente' } as never, false)
+  assert.equal(p.etiqueta, 'ANOTADA · AÚN NO VE')
+  assert.equal(p.tono, 'espera', 'ni el verde del «sí» ni el gris del «no»')
+  assert.equal(insigniaAcceso(null, false).etiqueta, 'NO VE')
+  assert.equal(insigniaAcceso({ ...VIGENTE, estado: 'revocada' } as never, false).etiqueta, 'NO VE · REVOCADA')
+  assert.equal(insigniaAcceso({ ...VIGENTE, estado: 'caducada' } as never, false).etiqueta, 'NO VE · CADUCADA')
+  // El hueco tiene tono propio: un «no consta» no se pinta con el gris del «no».
+  assert.deepEqual(insigniaAcceso(undefined, false), { icono: '❔', etiqueta: 'NO CONSTA', tono: 'duda' })
+  // Si el puerto dice que lo ve, ninguna rama puede decir «no ve».
+  assert.equal(insigniaAcceso(undefined, true).etiqueta, 'SÍ VE')
+  assert.equal(insigniaAcceso(null, true).etiqueta, 'SÍ VE')
+})
+
+test('🚨 con el dato ausente la frase NO afirma que no haya autorización', () => {
+  const t = explicarSentidoAcceso(undefined, 'Juan Manuel', 'Esquiansa', false)
+  assert.match(t, /no consta/i)
+  assert.doesNotMatch(t, /no hay ninguna autorización/i)
+  // Y con el dato presente manda la frase de siempre, clavada al literal: si se
+  // compara contra `explicarEstadoAutorizacion` el test repite la
+  // implementación y no puede ponerse rojo nunca.
+  assert.equal(
+    explicarSentidoAcceso(null, 'Juan Manuel', 'Esquiansa', false),
+    'Juan Manuel no ve los seguros de Esquiansa: no hay ninguna autorización.',
+  )
+  // 🚨 `ve` manda sobre el resumen: la frase no puede desmentir a la insignia.
+  assert.match(
+    explicarSentidoAcceso(null, 'Juan Manuel', 'Esquiansa', true),
+    /^Juan Manuel ve los seguros de Esquiansa \(aquí no consta ninguna anotada\)\.$/,
+  )
+  assert.match(explicarSentidoAcceso(undefined, 'Juan Manuel', 'Esquiansa', true), /ve los seguros de Esquiansa/)
+})
+
+test('«viva» es vigente o pendiente: una pendiente también se puede retirar', () => {
+  assert.equal(autorizacionViva(VIGENTE as never), true)
+  assert.equal(autorizacionViva({ ...VIGENTE, estado: 'pendiente' } as never), true)
+  assert.equal(autorizacionViva({ ...VIGENTE, estado: 'revocada' } as never), false)
+  assert.equal(autorizacionViva(null), false)
+  assert.equal(autorizacionViva(undefined), false)
 })

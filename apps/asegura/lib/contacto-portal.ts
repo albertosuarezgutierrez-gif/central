@@ -100,8 +100,14 @@ async function fichasDeIdentidad(correduriaId: string, identidadId: string): Pro
   return filas.map((f) => f.cliente_id)
 }
 
-/** Resuelve la ficha de la identidad; el error de vínculos NO se colapsa con `sin_ficha`. */
-async function fichaPropiaDe(
+/**
+ * Resuelve la ficha de la identidad; el error de vínculos NO se colapsa con
+ * `sin_ficha`. Exportada: `lib/documento-portal.ts` la reutiliza para saber en
+ * qué ficha cuelga un documento que sube el cliente — es la MISMA pregunta
+ * («¿de qué ficha es esta identidad?») y una segunda copia divergiría del
+ * desempate de `decidirFichaPropia` sin que nada avisara.
+ */
+export async function fichaPropiaDe(
   correduriaId: string,
   identidadId: string,
 ): Promise<{ estado: 'ok'; clienteId: string } | { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }> {

@@ -12,9 +12,8 @@ import type { ReactNode } from 'react'
 import Link from 'next/link'
 import { MARCA_ASEGURA, emitirRootCss, emitirVariables, emitirVariablesOscuras } from '@central/brand'
 import { MEDIADOR, lineaIdentificacion, telefonoLegible, whatsappUrl } from '@central/module-seguros'
-import { NAV, SITIO_URL } from '@/lib/sitio'
-import { fichaNegocio, jsonLd } from '@/lib/seo'
-import { COOKIEBOT_ID } from '@/lib/analitica'
+import { HORARIO, NAV, SITIO_URL } from '@/lib/sitio'
+import { fichaNegocio, fichaWebSite, jsonLd } from '@/lib/seo'
 import Analitica from '@/components/Analitica'
 import Cabecera from '@/components/Cabecera'
 import Whatsapp from '@/components/Whatsapp'
@@ -97,10 +96,10 @@ export const metadata: Metadata = {
   //
   // Por qué está aquí y no en un fichero suelto: GSC es la ÚNICA fuente de
   // tráfico sin sesgo que puede tener esta web. PostHog va detrás del
-  // consentimiento de Cookiebot a propósito (`lib/analitica.ts`), así que mide
-  // solo a quien acepta — y «cero visitas medidas» NO es cero visitas, es el
-  // `NULL` que `CLAUDE.md` prohíbe colapsar. Sin GSC no hay forma de saber por
-  // qué consultas entra nadie.
+  // consentimiento de nuestro propio banner a propósito (`lib/analitica.ts`),
+  // así que mide solo a quien acepta — y «cero visitas medidas» NO es cero
+  // visitas, es el `NULL` que `CLAUDE.md` prohíbe colapsar. Sin GSC no hay
+  // forma de saber por qué consultas entra nadie.
   //
   // 🚨 Es `undefined` cuando la env no está, no una cadena vacía: una etiqueta
   // `<meta content="">` es peor que no ponerla — Google la lee como un intento
@@ -122,24 +121,16 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             colores por defecto antes de que cargue el CSS de la app. */}
         <style dangerouslySetInnerHTML={{ __html: CSS_MARCA }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaNegocio()) }} />
-        {/* Gestor de consentimiento. Va en el <head> y no con `next/script`
-            para que el banner salga antes de que React hidrate: un banner que
-            aparece cuando la persona ya ha navegado llega tarde a lo único que
-            tiene que hacer. Si falta el `data-cbid` no se monta NADA — y sin
-            él tampoco arranca PostHog (`lib/analitica.ts`). */}
-        {COOKIEBOT_ID ? (
-          <script
-            id="Cookiebot"
-            src="https://consent.cookiebot.com/uc.js"
-            data-cbid={COOKIEBOT_ID}
-            data-blockingmode="auto"
-            type="text/javascript"
-            async
-          />
-        ) : null}
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(fichaWebSite()) }} />
       </head>
       <body>
-        {/* Solo escucha el consentimiento y, si lo hay, arranca la medición. */}
+        {/* Gestor de consentimiento propio (vanilla-cookieconsent, vía
+            @central/core-consent): monta el banner y, solo si el visitante
+            acepta la categoría de estadística, arranca PostHog. Ya NO depende
+            de una credencial de un CMP externo — la única forma
+            de que esta web no pida consentimiento sería no montar este
+            componente, y eso lo vigila el guardián de fuente
+            `test/regression-analitica-fail-closed.test.ts`. */}
         <Analitica />
 
         <Cabecera marca={MEDIADOR.marca} />
@@ -169,6 +160,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 <a href={whatsappUrl(`Hola ${MEDIADOR.marca}, tengo una consulta.`)} target="_blank" rel="noopener noreferrer">
                   WhatsApp
                 </a>
+                {/* El horario se pinta aquí Y va al `openingHours` del JSON-LD,
+                    los dos desde `HORARIO`: publicar una hora en la web y otra
+                    en los datos estructurados es la contradicción que Google
+                    penaliza. Se omite entero mientras no esté confirmado —
+                    `null` significa «no se sabe», no «no atendemos». */}
+                {HORARIO ? (
+                  <>
+                    <br />
+                    {HORARIO.texto}
+                  </>
+                ) : null}
               </p>
             </div>
             <div>

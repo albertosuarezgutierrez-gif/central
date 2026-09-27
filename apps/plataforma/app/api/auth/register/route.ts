@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { hashPassword, createSessionToken, COOKIE_NAME, COOKIE_OPTS } from '@/lib/auth'
+import { registrarSesion } from '@/lib/sesiones-db'
 
 const Body = z.object({
   nombre: z.string().min(1).max(80),
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   })
 
   const { token, jti } = await createSessionToken(cuenta.id, cuenta.email)
-  await prisma.cuenta.update({ where: { id: cuenta.id }, data: { sessionJti: jti } })
+  await registrarSesion(cuenta.id, jti)
 
   const res = NextResponse.json({ ok: true, nombre: cuenta.nombre }, { status: 201 })
   res.cookies.set(COOKIE_NAME, token, COOKIE_OPTS)

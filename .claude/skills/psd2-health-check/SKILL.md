@@ -93,9 +93,7 @@ Evalúa:
 2. Si `PLATAFORMA_URL` + `ALERTA_TOKEN` están disponibles en la sesión, envía la alerta
    por el endpoint interno de plataforma (no necesitas TELEGRAM_BOT_TOKEN):
    ```
-   POST {PLATAFORMA_URL}/api/internal/alerta
-   Authorization: Bearer {ALERTA_TOKEN}
-   { "text": "⚠️ PSD2 sync lleva {N} días sin datos nuevos. Último mov: {fecha}. Revisar EB_PIS_ENABLED en Vercel." }
+   bash scripts/canal-aviso.sh POST /api/internal/alerta '{ "text": "⚠️ PSD2 sync lleva {N} días sin datos nuevos. Último mov: {fecha}. Revisar EB_PIS_ENABLED en Vercel." }'
    ```
    (`ALERTA_TOKEN` = token estrecho que SOLO abre este endpoint; el endpoint acepta también el
    viejo `CRON_SECRET` por compat, pero NO pongas la llave maestra en el prompt.)
@@ -111,9 +109,7 @@ Muestra en el chat:
 ## Paso 4 — Deja huella del latido (OBLIGATORIO, incluso si fue mal)
 
 ```
-POST {PLATAFORMA_URL}/api/internal/latido
-Authorization: Bearer {ALERTA_TOKEN}
-{ "agente":"psd2_health_check", "ok":<true|false>, "detalle":"<parte>" }
+bash scripts/canal-aviso.sh POST /api/internal/latido '{ "agente":"psd2_health_check", "ok":<true|false>, "detalle":"<parte>" }'
 ```
 `ok = true` **si pudiste ejecutar la consulta de frescura y dar un veredicto** — aunque el veredicto sea
 anomalía: el latido dice que el VIGÍA funcionó, no que el banco esté bien (la anomalía va por
@@ -149,10 +145,12 @@ procesar" de `docs/AGENTES-BITACORA.md` (3-5 líneas máx.):
 ## Canal de aviso — protocolo común
 
 **Preflight AL ARRANCAR** (no al final, cuando ya tengas algo que contar):
-`GET {PLATAFORMA_URL}/api/internal/alerta` con `Authorization: Bearer {ALERTA_TOKEN}`.
+`bash scripts/canal-aviso.sh GET /api/internal/alerta` — NUNCA reconstruyas el `curl` a mano con
+`${PLATAFORMA_URL}`/`${ALERTA_TOKEN}` literales (bloquea MCP Sentinel en sesión desatendida, ver
+`docs/AVISOS-AGENTES.md`).
 
-- `200` → el canal está vivo, sigue con tu pasada.
-- `401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
+- `HTTP_STATUS:200` → el canal está vivo, sigue con tu pasada.
+- `HTTP_STATUS:401` → el canal está **mudo** (el token de ESTE entorno no coincide con el de Vercel `plataforma`;
   hay un entorno por rutina y se desincronizan de uno en uno). El cuerpo trae `causa` y `remedio`.
   Entonces, según `docs/AVISOS-AGENTES.md`: avisa por el **push nativo** de la sesión empezando por
   `🔇 SIN TELEGRAM (401):` y deja el aviso **entero** en `docs/AGENTES-BITACORA.md` (`fallos:`).

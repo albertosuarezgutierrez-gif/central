@@ -162,3 +162,23 @@ test('un tipo desconocido no revienta ni inventa: cae a «no informado»', () =>
   const o = objetoAsegurado({ tipo: 'ramo_que_no_existe', datos: null, coberturas: null })
   assert.equal(o.estado, 'no_informado')
 })
+
+test('inmueble con dirección anotada a mano: se dice que no vino de la compañía', () => {
+  const o = objetoAsegurado({ tipo: 'hogar', datos: { direccion: 'Calle Socorro 24', cp: '41003', localidad: 'Sevilla', direccionOrigen: 'manual' }, coberturas: null })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'Calle Socorro 24')
+  assert.match(o.nota ?? '', /anotada a mano/)
+})
+
+test('inmueble con dirección de la compañía: sin nota de «a mano»', () => {
+  const o = objetoAsegurado({ tipo: 'hogar', datos: { direccion: 'Calle Socorro 24', cp: '41003', localidad: 'Sevilla' }, coberturas: null })
+  assert.equal(o.nota, null)
+})
+
+test('«comunidades» (el enum de la BD) se describe como inmueble y lee la dirección', () => {
+  const o = objetoAsegurado({ tipo: 'comunidades', datos: { direccion: 'Calle Betis 10', direccionOrigen: 'manual' }, coberturas: null })
+  assert.equal(o.estado, 'conocido')
+  assert.equal(o.titulo, 'Calle Betis 10')
+  const sin = objetoAsegurado({ tipo: 'comunidades', datos: { nViviendas: 12 }, coberturas: null })
+  assert.equal(sin.titulo, 'Comunidad')
+})

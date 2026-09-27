@@ -10,19 +10,24 @@
  *   (art. 19 de la Ley 16/2018). La carga de la prueba la tiene el mediador, y
  *   por eso la fila se sella con la versión EXACTA del texto que se enseñó.
  * - **`avisos`** y **`comercial`** — esos SÍ son consentimiento (art. 6.1.a
- *   RGPD) y hoy **no se piden en ninguna pantalla**. Mientras no exista la
- *   casilla, escribir una fila `otorgado: true` sería fabricar una prueba de
- *   algo que la persona nunca marcó: exactamente el fallo que estas filas
- *   existen para evitar. El aviso de vencimiento se presta hoy por el contrato
- *   de mediación (art. 6.1.b), no por consentimiento.
+ *   RGPD). `comercial` tiene casilla desde el 19/09/2026 (pestaña «Mis
+ *   datos» del portal, `ConsentimientoComercial.tsx`, escrita por
+ *   `POST /api/consentimiento`); `avisos` sigue **sin pedirse en ninguna
+ *   pantalla**. Mientras no exista su casilla, escribir una fila
+ *   `otorgado: true` sería fabricar una prueba de algo que la persona nunca
+ *   marcó: exactamente el fallo que estas filas existen para evitar. El aviso
+ *   de vencimiento se presta hoy por el contrato de mediación (art. 6.1.b), no
+ *   por consentimiento.
  *
  * Regla al tocar esto: **una fila solo se escribe si la pantalla lo enseñó**.
- * Si alguien añade `avisos` o `comercial`, va con su casilla en la UI en el
- * MISMO PR, y `otorgado` refleja lo que marcó la persona, no lo que conviene.
+ * Si alguien añade `avisos`, va con su casilla en la UI en el MISMO PR, y
+ * `otorgado` refleja lo que marcó la persona, no lo que conviene.
  *
  * La tabla es **append-only**: nunca se actualiza una fila. Retirar un
  * consentimiento es añadir otra con `otorgado: false`, para que la historia
- * completa quede reconstruible.
+ * completa quede reconstruible. Por eso el estado VIGENTE de `comercial` es
+ * la ÚLTIMA fila de ese tipo (`consentimientoVigente()`), no «alguna fila
+ * otorgada»: `necesitaRegistro()` sirve para acreditaciones, no para esto.
  */
 
 /** Los tres tipos del CHECK de `seguros.portal_consentimiento.tipo`. */
@@ -30,10 +35,57 @@ export const TIPOS_CONSENTIMIENTO = ['avisos', 'comercial', 'lds_art19'] as cons
 export type TipoConsentimiento = (typeof TIPOS_CONSENTIMIENTO)[number]
 
 /**
- * Los tipos que el portal ESCRIBE hoy. Los otros existen en la BD pero no se
- * emiten porque no hay pantalla que los pida (ver cabecera).
+ * Los tipos que el portal ESCRIBE hoy. `avisos` existe en la BD pero no se
+ * emite porque no hay pantalla que lo pida (ver cabecera).
  */
-export const TIPOS_QUE_SE_REGISTRAN: readonly TipoConsentimiento[] = ['lds_art19']
+export const TIPOS_QUE_SE_REGISTRAN: readonly TipoConsentimiento[] = ['lds_art19', 'comercial']
+
+/**
+ * La casilla de `comercial`, palabra por palabra, y su versión.
+ *
+ * Vive aquí y no en el componente por lo mismo que el resto del copy regulado
+ * del monorepo: para que un test lo barra (`revisarCopy`) y para que la fila
+ * de la BD selle EXACTAMENTE el texto que la persona marcó. Si el texto
+ * cambia de fondo, sube la versión; una casilla marcada sobre el texto viejo
+ * no consiente el nuevo.
+ *
+ * 🚨 Es una casilla INDEPENDIENTE y desmarcada por defecto (art. 7.2 RGPD y
+ * criterio de la AEPD sobre casillas premarcadas): usar el portal no la marca,
+ * subir una póliza no la marca. Y lo que autoriza es que la correduría CONTACTE
+ * con una propuesta; la propuesta en sí, cuando llegue, va con su análisis
+ * (RDL 3/2020) — eso no lo sustituye ninguna casilla.
+ */
+export const VERSION_TEXTO_COMERCIAL = '2026-09-c1'
+export const TEXTO_CONSENTIMIENTO_COMERCIAL =
+  'Quiero que la correduría revise los seguros que tengo guardados aquí y me contacte, cuando se acerque un vencimiento, con una propuesta sin compromiso. Puedo retirarlo cuando quiera desde esta misma pantalla.'
+
+/** Una fila con su momento, para saber cuál es la última. */
+export type ConsentimientoConFecha = ConsentimientoGuardado & { creadoEn: Date }
+
+/**
+ * Estado VIGENTE de un consentimiento revocable: lo que dice la fila más
+ * reciente de ese tipo. `null` = nunca se le ha preguntado (no es «no»: la
+ * pantalla tiene que enseñar la casilla, no dar por hecho el rechazo).
+ *
+ * Con `versionActual`, una última fila marcada sobre OTRA versión del texto
+ * también devuelve `null`: una casilla marcada sobre el texto viejo no
+ * consiente el nuevo, así que la pantalla la vuelve a enseñar desmarcada. Sin
+ * el parámetro se contesta solo por el valor (para quien no tenga versión).
+ */
+export function consentimientoVigente(
+  guardados: readonly ConsentimientoConFecha[],
+  tipo: TipoConsentimiento,
+  versionActual?: string,
+): boolean | null {
+  let ultima: ConsentimientoConFecha | null = null
+  for (const c of guardados) {
+    if (c.tipo !== tipo) continue
+    if (!ultima || c.creadoEn.getTime() > ultima.creadoEn.getTime()) ultima = c
+  }
+  if (!ultima) return null
+  if (versionActual !== undefined && ultima.versionTexto !== versionActual) return null
+  return ultima.otorgado
+}
 
 /** Lo mínimo de una fila ya guardada para decidir si hace falta otra. */
 export type ConsentimientoGuardado = {

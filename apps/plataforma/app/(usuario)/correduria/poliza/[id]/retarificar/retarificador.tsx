@@ -1392,6 +1392,31 @@ export default function Retarificador({
             />
           </Campo>
         </div>
+
+        {/* 🔧 Nº de póliza anterior — corrección MANUAL y opcional (18/09/2026). Por defecto
+            el servidor manda el nº de póliza ENTERO de la ficha (`poliza.numeroPoliza`), tal cual,
+            para el control de antecedentes de la compañía. Un 400 real de Allianz («Control
+            antecedentes. Revisar últimos 5 dígitos de póliza en compañía informada») sobre un
+            número con ceros de relleno (`0008414300000`) sugiere que esos "últimos 5 dígitos" caen
+            en el padding en vez del serial real — sin confirmarlo con más de un caso no se cablea
+            ninguna regla de recorte automática. Este campo deja probarlo AQUÍ, sobre esta
+            tarificación, sin tocar el cálculo por defecto de nadie más: vacío = como siempre. */}
+        <div style={{ marginTop: 16 }}>
+          <Campo
+            id="c-polizaAnterior"
+            etiqueta="Nº de póliza anterior (opcional)"
+            falta={false}
+            ayuda="Por defecto se manda el número de la póliza actual tal cual está en la ficha. Corrígelo solo si la compañía rechaza el «control de antecedentes» y quieres probar con otra forma del número — por ejemplo, sin los ceros de relleno."
+          >
+            <input
+              id="c-polizaAnterior"
+              type="text"
+              value={correcciones.polizaAnterior ?? ''}
+              onChange={(e) => setCorrecciones((c) => ({ ...c, polizaAnterior: e.target.value }))}
+              style={{ minHeight: 44 }}
+            />
+          </Campo>
+        </div>
       </Paso>
 
       {/* ── Paso 3 · el disparo ────────────────────────────────────────────── */}

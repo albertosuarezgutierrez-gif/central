@@ -14,7 +14,13 @@ export {
   sqlVolcadoHistorico,
   WHERE_CARTERA_VIVA,
   WHERE_VOLCADO_HISTORICO,
+  esCarteraEnVigor,
+  esCarteraNoEnVigor,
+  sqlCarteraEnVigor,
+  sqlCarteraNoEnVigor,
+  WHERE_CARTERA_EN_VIGOR,
   type EntradaCarteraViva,
+  type EntradaCarteraEnVigor,
 } from './cartera-viva.ts'
 
 export {
@@ -59,10 +65,20 @@ export {
 } from './rc-modalidad.ts'
 
 export {
+  RAMOS_CON_DIRECCION_RIESGO,
+  admiteDireccionRiesgo,
+  validarDireccionRiesgo,
+  type DireccionRiesgo,
+  type ValidacionDireccionRiesgo,
+} from './direccion-riesgo.ts'
+
+export {
   saludIngesta,
   detalleSalud,
   DIAS_CUARENTENA_RECIENTE,
   HORAS_RECHAZO_RECIENTE,
+  HORAS_PULL_MUDO,
+  DIAS_AVISO_PURGA,
   DIAS_RECORDATORIO_INGESTA,
   decidirAvisoIngesta,
   repartirHuerfanas,
@@ -73,6 +89,10 @@ export {
   type EntradaSalud,
   type FicheroEnCuarentena,
   type EntradaRechazada,
+  type CrudoPendiente,
+  type CoberturaResumen,
+  type CajaNegraCodeoscopic,
+  type UltimoPullIngesta,
   type MotivoAviso,
   type DecisionAviso,
   type PolizaHuerfana,
@@ -172,6 +192,11 @@ export {
   type FilasIntervinientes,
   type PersonaDePolizas,
 } from './intervinientes.ts'
+export {
+  emailAlternativo,
+  type AllegadoConEmail,
+  type EmailAlternativo,
+} from './contacto-alternativo.ts'
 export {
   FRACCIONES,
   etiquetaFraccionamiento,
@@ -391,6 +416,7 @@ export {
   type ProximoVencimiento,
   type ResumenFicha,
 } from './ficha-resumen.ts'
+export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
 export {
   parseFiltroCartera,
   filtroActivo,
@@ -555,3 +581,13 @@ export { nombreDePila } from './nombre-de-pila.ts'
 
 export { COOLDOWN_DIAS, enCooldown, textoBaseRecaptacionWhatsapp, textoBaseRecaptacionEmail } from './recaptacion.ts'
 export type { EnvioRecienteRecaptacion, PersonalizacionRecaptacion } from './recaptacion.ts'
+
+export {
+  AREAS_CONTACTO,
+  areaContacto,
+  etiquetaArea,
+  ordenarContactos,
+  contactoDestacado,
+  type AreaContacto,
+  type ContactoCompania,
+} from './compania-contactos.ts'

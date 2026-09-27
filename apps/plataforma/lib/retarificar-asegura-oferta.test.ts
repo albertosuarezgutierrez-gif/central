@@ -23,6 +23,34 @@ test('un 422 faltan_vendor llega a la pantalla como huecos, no como error', () =
   assert.deepEqual(r.noReconocidos, ['The `policyApplications` body part is required.'])
 })
 
+// El widget de la Product Form Library necesita el `mainQuote` TAL CUAL del
+// ReRate (`productForm.render(quote)`); esto comprueba que el puerto de
+// plataforma lo deja pasar sin reshaping, ni siquiera para saber su forma.
+test('un 200 ok propaga quoteCrudo sin tocarlo', () => {
+  const quoteCrudo = { id: 'Q7601460', product: { id: 10, options: [] } }
+  const r = interpretarOferta(200, {
+    estado: 'ok',
+    projectId: '40769244',
+    oferta: { offerId: 'Q7601460', primaEur: 319.02, firmeza: 'firme', caducaEn: null, avisos: [], quoteCrudo },
+    cuenta: null,
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.deepEqual(r.quoteCrudo, quoteCrudo)
+})
+
+test('un 200 ok sin quoteCrudo (respuesta vieja de asegura) no rompe: null', () => {
+  const r = interpretarOferta(200, {
+    estado: 'ok',
+    projectId: '40769244',
+    oferta: { offerId: 'Q7601460', primaEur: 319.02, firmeza: 'firme', caducaEn: null, avisos: [] },
+    cuenta: null,
+  })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.quoteCrudo, null)
+})
+
 test('sugeridos, noReconocidos y faltan con forma rara degradan, no rompen la pantalla', () => {
   const r = interpretarOferta(422, {
     ...FALTAN,

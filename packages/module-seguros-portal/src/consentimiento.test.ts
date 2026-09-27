@@ -1,9 +1,14 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 
+import { revisarCopy } from '@central/module-seguros'
+
 import {
+  TEXTO_CONSENTIMIENTO_COMERCIAL,
   TIPOS_CONSENTIMIENTO,
   TIPOS_QUE_SE_REGISTRAN,
+  VERSION_TEXTO_COMERCIAL,
+  consentimientoVigente,
   necesitaRegistro,
   normalizarIp,
   normalizarUserAgent,
@@ -16,10 +21,48 @@ test('los tipos son exactamente los del CHECK de la tabla', () => {
   assert.deepEqual([...TIPOS_CONSENTIMIENTO], ['avisos', 'comercial', 'lds_art19'])
 })
 
-test('hoy SOLO se registra lds_art19: los otros dos no tienen casilla en ninguna pantalla', () => {
-  // Guardián de una decisión, no de una implementación: escribir `avisos` o
-  // `comercial` sin que la persona los haya marcado es fabricar una prueba.
-  assert.deepEqual([...TIPOS_QUE_SE_REGISTRAN], ['lds_art19'])
+test('se registran lds_art19 y comercial; `avisos` sigue sin casilla en ninguna pantalla', () => {
+  // Guardián de una decisión, no de una implementación: escribir `avisos` sin
+  // que la persona lo haya marcado es fabricar una prueba. `comercial` entró
+  // el 19/09/2026 CON su casilla (`ConsentimientoComercial.tsx`).
+  assert.deepEqual([...TIPOS_QUE_SE_REGISTRAN], ['lds_art19', 'comercial'])
+})
+
+test('el texto de la casilla comercial no promete precio ni acota ámbito, y tiene versión', () => {
+  assert.deepEqual(revisarCopy(TEXTO_CONSENTIMIENTO_COMERCIAL), [])
+  assert.match(VERSION_TEXTO_COMERCIAL, /^\d{4}-\d{2}-c\d+$/)
+  // Dice qué autoriza y que se puede retirar: las dos cosas que exige el art. 7 RGPD.
+  assert.match(TEXTO_CONSENTIMIENTO_COMERCIAL, /retirar/i)
+  assert.match(TEXTO_CONSENTIMIENTO_COMERCIAL, /sin compromiso/i)
+})
+
+test('el consentimiento VIGENTE es la última fila, no «alguna otorgada»: retirar deja false', () => {
+  const t = (iso: string) => new Date(iso)
+  const filas = [
+    { tipo: 'comercial', otorgado: true, versionTexto: '2026-09-c1', creadoEn: t('2026-09-01T10:00:00Z') },
+    { tipo: 'comercial', otorgado: false, versionTexto: '2026-09-c1', creadoEn: t('2026-09-05T10:00:00Z') },
+    { tipo: 'lds_art19', otorgado: true, versionTexto: '2026-09-v4', creadoEn: t('2026-09-09T10:00:00Z') },
+  ]
+  assert.equal(consentimientoVigente(filas, 'comercial'), false)
+  // El orden de llegada no importa: manda la fecha.
+  assert.equal(consentimientoVigente([...filas].reverse(), 'comercial'), false)
+  assert.equal(consentimientoVigente(filas.slice(0, 1), 'comercial'), true)
+})
+
+test('una marca sobre el texto VIEJO no vale para el nuevo: con la versión actual distinta, null', () => {
+  const filas = [{ tipo: 'comercial', otorgado: true, versionTexto: '2026-09-c0', creadoEn: new Date('2026-09-01T10:00:00Z') }]
+  assert.equal(consentimientoVigente(filas, 'comercial', '2026-09-c1'), null)
+  assert.equal(consentimientoVigente(filas, 'comercial', '2026-09-c0'), true)
+  // Sin versión pedida se contesta por el valor, como antes.
+  assert.equal(consentimientoVigente(filas, 'comercial'), true)
+})
+
+test('nunca preguntado es null, no false: la pantalla tiene que enseñar la casilla', () => {
+  assert.equal(consentimientoVigente([], 'comercial'), null)
+  assert.equal(
+    consentimientoVigente([{ tipo: 'lds_art19', otorgado: true, versionTexto: 'v', creadoEn: new Date() }], 'comercial'),
+    null,
+  )
 })
 
 test('sin filas previas hay que registrar', () => {

@@ -154,12 +154,20 @@ export default function Privacidad() {
                 <td>Atender tus derechos y tus reclamaciones</td>
                 <td>Obligación legal (art. 6.1.c RGPD)</td>
               </tr>
+              <tr>
+                <td>
+                  Revisar los seguros que guardas y contactarte con una propuesta cuando se acerque un
+                  vencimiento — <strong>solo si marcas la casilla</strong> de «Mis datos»
+                </td>
+                <td>Tu consentimiento (art. 6.1.a RGPD), independiente del resto del servicio y revocable desde la misma casilla</td>
+              </tr>
             </tbody>
           </table>
         </div>
         <p className="legal-nota">
-          No usamos tus datos del portal para enviarte publicidad. Si algún día se hiciera, sería con
-          un consentimiento aparte, pedido antes y revocable.
+          Usar el portal, subir una póliza o guardar tus seguros no nos autoriza a enviarte propuestas ni
+          publicidad. Eso solo ocurre si marcas la casilla de propuestas en «Mis datos», que nace sin
+          marcar; desmarcarla lo retira, con la misma facilidad, y guardamos ambas cosas con su fecha.
         </p>
       </section>
 

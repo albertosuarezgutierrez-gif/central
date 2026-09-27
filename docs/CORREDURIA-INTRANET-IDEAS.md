@@ -235,6 +235,53 @@ deja anotado para que no se repita la cifra vieja sin medirla. Sigue siendo cier
 pequeña, así que antes de construir un ramo entero conviene que Alberto diga si quiere crecer ahí —
 pero ya no es una apuesta a ciegas: hay un cliente real de ese tipo y un libro histórico detrás.
 
+### P. «La única app para abrir un siniestro» — posicionamiento, NO construido 🟡 (13/09/2026)
+
+Alberto, mientras se construía el selector de zonas del daño del parte: *«idea es la única app para
+apertura siniestros, puede ser buena opción para posicionarse»*. Anotado para más adelante —
+*«añade idea ya apañaremos publicidad, SEO etc.»*: no se toca código ni copy de marketing hoy.
+
+🚨 **Choca de frente con una decisión ya escrita, y hay que resolver esa tensión ANTES de vender
+la idea, no después.** El dictado de Alberto del 05/09/2026 (`apps/asegura-portal/CLAUDE.md`, «Los
+DOS caminos del parte») es que el parte del portal **no abre nada en la compañía** — es mediación,
+no comunicación directa, y la pantalla lo dice con todas las letras («todavía NO está comunicado a
+tu compañía»). Posicionarse como «LA app para abrir tu siniestro» solo es honesto si el parte
+**dispara de verdad** la apertura (integración con la compañía — EIAC, API del ramo, WhatsApp
+propio verificado…), no si sigue siendo «nos enteramos nosotros y te hacemos seguimiento». Vender
+la promesa sin el mecanismo real es la misma familia de fallo que el resto de este documento: un
+titular que no se sostiene en el dato.
+
+Qué haría falta para que la promesa fuera cierta (sin construir nada de esto todavía):
+- Un canal directo y automatizable hacia cada compañía (hoy son teléfonos y un WhatsApp de Occident,
+  verificados a mano uno a uno — ver `apps/asegura-portal/CLAUDE.md`, sección de canales).
+- O una integración EIAC de siniestros (hoy CIMA solo trae pólizas y recibos, no hay ingesta de
+  siniestros automatizada — ver `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md`).
+- Sin uno de los dos, «la única app para abrir tu siniestro» sería SEO sobre una promesa vacía.
+
+📌 Pendiente: decidir con Alberto si el mecanismo real se persigue (y con qué coste/plazo) antes de
+que `seo-asegura` o cualquier campaña use este ángulo.
+
+### Q. El gestor como imán de leads — carta de baja, casilla comercial y solapamientos ✅ CONSTRUIDO (19/09/2026)
+
+Sale de valorar un prompt de consultoría SEO que Alberto trajo ese día («Gestor y Agregador de
+Pólizas Gratuito»). Spec: `docs/superpowers/specs/2026-09-19-asegura-gestor-polizas-seo-design.md`.
+- ✅ **Carta de no renovación** (`/boveda/carta/[id]`, solo pólizas DECLARADAS): plazo por
+  `fechaAccionable()`, huecos visibles para lo que no sabemos (NIF, localidad), copiar/imprimir/
+  `mailto:` sin destinatario. **No se envía desde el portal.** Al lado, la alternativa H (cambio de
+  mediador) como enlace a la explicación de la web; el trámite firmado sigue siendo spec + OK.
+- ✅ **Casilla `comercial`** en «Mis datos» (`ConsentimientoComercial.tsx` + `POST /api/consentimiento`):
+  independiente, nace desmarcada, append-only, `VERSION_TEXTO_COMERCIAL`. Es lo que faltaba para
+  que subir una póliza y pedir una propuesta fueran dos actos distintos. `avisos` sigue sin casilla.
+- ✅ **Coberturas repetidas** (`detectarSolapamientos`, 3 familias, solo pólizas propias): informa
+  («está en dos pólizas»), no juzga («te sobra»). Con cero no se pinta nada.
+- ✅ **Landing `/gestor-de-seguros`** en la web + calculadora de vencimientos sin registro + artículo
+  «cómo dar de baja un seguro a tiempo» con CTA a la carta.
+- 🔴 **Descartado con motivo**: semáforo de precio (idea F, muestra minúscula + asesoramiento),
+  reseñas automatizadas, referidos con premio (§M), «teléfonos de todas las compañías».
+- ⏳ **De Alberto**: encender el aviso de vencimiento (sin él la landing dice «te lo enseña», no «te
+  avisamos») y verificar los canales de baja por compañía (`apps/asegura-web/lib/companias-baja.ts`,
+  todo `verificado: false` porque la red bloquea los cinco dominios).
+
 ## Preguntas abiertas para Alberto
 
 - ¿A qué te referías con *«si se vende pólizas se puede aparentar en este y otros temas»*?
