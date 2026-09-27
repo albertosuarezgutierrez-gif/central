@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-27T13:50:45Z",
-  "sha": "4260ad3300e650402d863e5fa3f00d914e51aaf1",
+  "generadoEn": "2026-09-27T19:13:37Z",
+  "sha": "e379bf372dbfe6d40097b565589c64c940e4da4c",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -6564,7 +6564,7 @@
           "exportada": false,
           "params": "",
           "retorno": "boolean",
-          "linea": 44
+          "linea": 46
         },
         {
           "nombre": "yaInstalada",
@@ -6572,7 +6572,7 @@
           "exportada": false,
           "params": "",
           "retorno": "boolean",
-          "linea": 50
+          "linea": 52
         },
         {
           "nombre": "avisar",
@@ -6580,7 +6580,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 62
+          "linea": 64
         },
         {
           "nombre": "arrancar",
@@ -6588,7 +6588,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 66
+          "linea": 68
         },
         {
           "nombre": "instalar",
@@ -6596,7 +6596,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 94,
+          "linea": 96,
           "resumen": "Lanza el diálogo del navegador. El evento se consume UNA vez, salga como salga."
         },
         {
@@ -6605,7 +6605,7 @@
           "exportada": true,
           "params": "",
           "retorno": "EstadoInstalacion",
-          "linea": 114,
+          "linea": 116,
           "resumen": "Se decide en el cliente y después de montar: en el servidor no hay navegador que preguntar, y pintarlo en el HTML haría que parpadeara para quien ya tiene la app. Por eso durante la hidratación devuel"
         },
         {
@@ -6614,7 +6614,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 139,
+          "linea": 141,
           "resumen": "El glifo de «Compartir» de iOS, dibujado. 🚨 No es decoración: en iPhone el aviso no puede hacer nada, solo EXPLICAR un gesto, y «toca Compartir» a secas no le dice nada a quien no sabe cómo se llama "
         },
         {
@@ -6623,13 +6623,13 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 161,
-          "resumen": "Las instrucciones de iPhone/iPad, las mismas palabras en la franja y en la campana."
+          "linea": 175,
+          "resumen": "Las instrucciones de iPhone/iPad, en PASOS numerados y según el navegador. 🚨 Desde iOS 26 Safari ya NO enseña Compartir en la barra: queda dentro del menú «···» que hay junto a la dirección (27/09/20"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "64aa4850fd6b"
+      "hash": "cde8fa8a2a53"
     },
     {
       "ruta": "apps/asegura-portal/app/InstalarBoton.tsx",
@@ -6653,13 +6653,13 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 97,
+          "linea": 98,
           "resumen": "En línea, no de una librería: es un icono, y el portal lo abre gente desde el móvil con datos. Trazo con `currentColor` para que siga al tema. La flecha hacia abajo entrando en la bandeja: «bajar a es"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "72669f0ece29"
+      "hash": "3b7da017a200"
     },
     {
       "ruta": "apps/asegura-portal/app/InstalarEnBarra.tsx",
@@ -9383,6 +9383,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "ff7a8d853b07"
+    },
+    {
+      "ruta": "apps/asegura-portal/lib/navegador-ios.ts",
+      "ambito": "apps/asegura-portal",
+      "exporta": [
+        "navegadorIOS"
+      ],
+      "funciones": [
+        {
+          "nombre": "navegadorIOS",
+          "kind": "function",
+          "exportada": true,
+          "params": "ua: string",
+          "retorno": "NavegadorIOS",
+          "linea": 10,
+          "resumen": "Qué navegador de iPhone/iPad es, porque cada uno esconde Compartir en un sitio distinto (lo usa `InstruccionesIOS` de `app/instalacion.tsx`). Todos son WebKit por dentro, pero la barra es de cada uno:"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "711c19aedbd7"
     },
     {
       "ruta": "apps/asegura-portal/lib/obligaciones.ts",
@@ -160897,7 +160918,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3822,
-    "funciones": 12343
+    "archivos": 3823,
+    "funciones": 12344
   }
 }
