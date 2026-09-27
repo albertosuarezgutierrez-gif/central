@@ -765,6 +765,9 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Vigía de ingesta: «renovaciones sin llegar» por compañía
+- Nueva señal en el vigía `correduria_ingesta` (Telegram + /correduria): pólizas en vigor vencidas hace >15 días sin recibo del periodo nuevo, agrupadas por compañía (`renovacionesSinLlegar`, module-seguros/ingesta.ts; lectura en apps/asegura/lib/ingesta.ts). Hoy: Mapfre 10 (desde 05/06). El primer pase tras desplegar suena una vez. Alberto: Mapfre ya manda, se espera a que complete esta semana (borrador a CIMA SAU-24238 en Gmail, sin enviar).
+
 ## (27/09/2026) Pólizas «vencidas» que sí estaban en vigor: Allianz (recibos) y Mapfre (sin datos)
 - Allianz no manda POL por CIMA pero sí REC: el recibo 2027 cobrado no movía el vencimiento. Nuevo pg_cron `seguros-avanzar-vencimientos-recibo` (06:30 UTC, función `seguros.avanzar_vencimientos_por_recibo()`, SQL en apps/asegura/prisma/sql/2026-09-27_renovacion_por_recibo.sql, APLICADO): solo avanza pólizas YA vencidas (el recibo de renovación llega semanas antes; avanzar antes borraría el aviso de no-renovación). 4 Allianz avanzadas.
 - Mapfre: 10 pólizas vencidas sin ningún dato de renovación (Mapfre mudo 23/06→25/09, aún sin POL). Portal: `renovacionSinConfirmar` → «Renovación sin confirmar» en vez de esconderlas de «En vigor» (Toyota de Víctor). Vigía de ingesta con señal por compañía: en curso (PR aparte).

@@ -342,3 +342,42 @@ test('🚨 la cobertura se rotula como RUTAS distintas y con cuántas compañía
   assert.match(x!.titulo, /457 de 563 campos distintos/)
   assert.match(x!.detalle, /Vistos en 3 compañía\(s\)/)
 })
+
+// ── Renovaciones que no llegan (27/09/2026) ─────────────────────────────────
+
+const mapfreRenov = { entidad: 'C0058', entidadNombre: 'Mapfre', polizas: 10, vencimientoMasAntiguo: '2026-06-05' }
+
+test('renovaciones: con alguna, sale como PÉRDIDA con compañía, número y fecha', () => {
+  const s = saludIngesta({ cuarentena: [], renovacionesSinLlegar: [mapfreRenov] })
+  const r = senalesIngesta(s).filter(x => x.clave === 'renovaciones')
+  assert.equal(r.length, 1)
+  assert.equal(r[0].tipo, 'perdida')
+  assert.equal(r[0].n, 10)
+  assert.match(r[0].titulo, /Mapfre 10/)
+  assert.match(r[0].detalle, /vencidas desde 05\/06/)
+  assert.equal(hayPerdida(s), true)
+})
+
+test('renovaciones: `[]` NO pinta nada (la pantalla solo enseña errores)', () => {
+  const s = saludIngesta({ cuarentena: [], renovacionesSinLlegar: [] })
+  assert.equal(senalesIngesta(s).some(x => x.clave === 'renovaciones'), false)
+})
+
+test('renovaciones: `null` es HUECO, no «han llegado todas»', () => {
+  const s = saludIngesta({ cuarentena: [], renovacionesSinLlegar: null })
+  const r = senalesIngesta(s).filter(x => x.clave === 'renovaciones')
+  assert.equal(r.length, 1)
+  assert.equal(r[0].tipo, 'hueco')
+})
+
+test('renovaciones: si son lo ÚNICO medido, el título lo dice (no «se pierden datos»)', () => {
+  const s = saludIngesta({
+    cuarentena: [], renovacionesSinLlegar: [mapfreRenov],
+    rechazos: [], silencio: [], crudo: { pendientes: 0, purgaInminente: 0, masAntiguaHoras: null },
+    cobertura: { rutas: 0, rutasNuncaLeidas: 0, entidadesObservadas: 1, porTipo: [] },
+    cajaNegra: { capturaActiva: true, cuerpos: 0, posts: 0, horasDesdeUltimo: null, sinCuerpo: 0 },
+    ultimoPull: { horas: 3, procesados: 1 }, parciales: [],
+  })
+  const v = { estado: 'ok' as const, salud: s, huerfanasTruncadas: false, huerfanasSinAmbito: null }
+  assert.equal(tituloIngesta(v), 'Hay renovaciones que no han llegado por CIMA')
+})
