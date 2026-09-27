@@ -26,8 +26,8 @@
 (`primaConRecibos`/`vencimientoConRecibos` + SQL gemelo en `apps/asegura/lib/recibos-vigencia.ts`) en ficha, póliza, listado,
 impagados, renovaciones, avisos, libro-registro (recibo del AÑO del libro), mejorar-precio, sin-canal y portal del cliente.
 Guardián `test/regression-prima-con-recibos.test.ts`. BD a mano: 043673655 cancelada/AN; 054914837 con 2 CA de ePac (`origen=manual`).
-**Pendiente:** (1) los filtros «vencidas/vence en N días» (`condVencimiento` de `cartera-filtro`) y `proximo_vencimiento` de
-sin-canal siguen con la fecha cruda — cambiarlo exige tocar dos tests que fijan esa SQL; (2) el correo de aviso pone prima neta
+Filtros «vencidas/vence en N días» y `proximo_vencimiento` de sin-canal también con el recibo (PR siguiente; hoy 0 cambios medidos
+porque el pg_cron `seguros-avanzar-vencimientos-recibo` ya avanza la fecha — esto es la red si falla). **Pendiente:** (2) el correo de aviso pone prima neta
 o, si cae al recibo, el total con impuestos bajo el mismo rótulo; (3) check-in 28/09 07:00 UTC: ver si CIMA devolvió la 043673655 a EV.
 
 **(27/09/2026)** — PR #3779 (+): el bot lee SOLO el último documento (o su álbum), no todo lo de la hora (la prueba de

@@ -333,7 +333,7 @@ test('🚨 la renovación se calcula SOLO sobre pólizas en estado que renueva',
   // La fecha de renovación filtra por estado, no solo por fecha futura.
   assert.match(
     SQL,
-    /min\(p\.fecha_vencimiento\) filter \(\s*\n\s*where p\.fecha_vencimiento >= current_date\s*\n\s*and p\.estado::text = any\(/,
+    /min\(ev\.venc\) filter \(\s*\n\s*where ev\.venc >= current_date\s*\n\s*and p\.estado::text = any\(/,
   )
 })
 
