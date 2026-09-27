@@ -753,6 +753,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Pricing: SUELO de fin de semana sin mercado medido (House 29-30/01/2027 vendido a 300€)
+- La reserva de House 29-31/01/2027 (600€) entró al `min_price`: el motor tenía 436/456€ el 19/09 y el raíl lo bajó a 300 en dos pasadas.
+- Causa: el finde solo subía por `anclaMercadoFecha` (≥5 comps fiables de ESA fecha); sin ellos, viernes/sábado = martes.
+- Fix: `lib/sivra/pricing-suelo-finde.ts` → suelo `min_price × 1,15` en noches de vie/sáb SIN ancla medida y SIN evento (mercado: finde ≈1,17× la mediana del mes). Cableado en `pricing/apply` tras el suelo estacional; techos de mercado/ADR y `max_price` siguen mandando.
+- Datos corregidos en BD (confirmado por Alberto): `propiedades` Casa Socorro → Calle Socorro 24; Luxury Busto y Bustos Reforma → Calle Bustos Tavera 22 (en `propiedades` y `properties.location`). Pendiente: dirección del Dúplex («Sevilla centro»), `tiene_parking` de Socorro y aforo de Luxury (`propiedades` 1 hab/4 pax vs `properties` 2 hab/5 pax).
+
 ## (27/09/2026) `claude-seo-ai` evaluado → descartado; arreglada la tarjeta de compartir (og:image)
 Repo `Hainrixz/claude-seo-ai` probado contra builds locales de asegura-web y housesevillana: sus notas sin
 Claude dejan fuera las categorías de más peso (F sin significado) → **ni plugin ni workflow** (PR #3731 cerrado).
