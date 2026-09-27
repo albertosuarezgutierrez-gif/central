@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** Auditoría PROFUNDA: código 12/12 sano (~9.093 tests), fix `transpilePackages` en 5 apps
+(ia-rest/alquiler/asegura/asegura-portal/housesevillana importaban `@central/*` sin declararlo — riesgo de
+build, no de tipos). 🔴 **44 PRs `claude/*` zombis abiertos (05-24/09, hasta 22 días)**: su código YA está
+en `main` por otra vía (verificado en 3 casos), el automerge los descarta bien mismo, pero nadie los
+cierra. (El «hueco de memoria 05-13/09» que se dijo aquí era FALSO: esas entradas están, con formato
+`- **título (dd/mm/aaaa).**` que el grep de `**(dd/mm` no veía.) Pendiente: Alberto decide cierre masivo.
+
 **(26/09/2026)** Correduría · lotes 3+4 (PR #3707): «siguiente paso» en la ficha (`siguientePaso()` de
 module-seguros), DNI/carnés plegados, «Más» partida en Cumplimiento/Referencia, renovaciones 90 d plegadas en Cartera, y
 **un solo contador en Hoy**: el badge = `colasIncid` + tareas, y la celda «avisos» de la franja suma las mismas colas
@@ -734,8 +741,20 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
-## Inicio: pinchar una reserva del calendario muestra su detalle (27/09/2026)
+## (27/09/2026) Inicio: pinchar una reserva del calendario muestra su detalle (PR #3716)
 - Tarjeta «Pisos» de `/inicio`: las barras son botones; al pincharlas se abre debajo huésped, piso, entrada/salida, noches, pax, importe (€/n) y portal. Nuevo cliente `inicio/CalendarioReservas.tsx`; `Barra` lleva `reserva` e `incomes.amount` entra como `importe` (null = «sin dato», no 0 €).
+
+## (27/09/2026) asegura-web: página «Seguro de patinete eléctrico» (`/seguros/patinete-electrico`)
+- OpenSEO: «seguro patinete electrico» 27.100/mes KD 8, «seguro patinete» 6.600 KD 0, «seguro vmp» 1.000 KD 4 — la de más volumen de todo el sitio.
+- Base legal citada: Ley 5/2025 + RD 52/2026 (BOE 30/01/2026, registro DGT de vehículos personales ligeros); sin certificar vendidos antes del 22/01/2024 circulan hasta el 22/01/2027. Sin cifras de multa.
+- Mismo patrón que impago: opción `patinete-electrico` en web + plataforma, pie sí/cabecera no, sin widget de ventana. Mismo PR #3714.
+- ⚠️ Supone que Alberto tiene compañía que lo suscriba; si no, el lead entra y no hay producto.
+
+## (27/09/2026) asegura-web: página de ramo «Seguro de impago de alquiler» (`/seguros/impago-alquiler`)
+- Alberto confirma que SÍ lo vende. Medido con OpenSEO: «seguro de impago de alquiler» 5.400/mes KD 15, «seguro impago alquiler» 3.600 KD 10, «…precio» 480 KD 4 — la mayor demanda comercial con dificultad baja encontrada hasta ahora.
+- Ramo nuevo en `lib/ramos.ts` (producto, cuenta en la portada), pie sí / cabecera no (`FUERA_DE_CABECERA`).
+- Lead: `impago-alquiler` añadido a `TIPOS_SEGURO` (web) Y `TIPOS_SEGURO_LEAD` (plataforma) a la vez — si no, 422 y lead perdido.
+- Sin widget de ventana (`RAMOS_SIN_VENTANA`): su aviso sale por `RAMO_WEB_A_TIPO` de asegura, que no conoce el ramo. Pendiente si se quiere: añadirlo allí y quitarlo de la lista.
 
 ## (26/09/2026) SEO grupoasegura.es: 4 guías de dificultad 0 (PRs #3704, #3708, #3709)
 - Mergeadas: `/carta-baja-seguro` (herramienta) + `/blog/como-rellenar-parte-amistoso` (#3704); `/blog/dar-de-baja-seguro-coche` y `/blog/defensor-del-asegurado` (#3708). En #3709: `/blog/como-saber-que-seguros-tengo` (CTA al gestor).

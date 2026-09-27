@@ -13,6 +13,13 @@
 
 ## Registro (lo más reciente arriba)
 
+- **2026-09-27** · `docs/AUDITORIA-2026-09.md`, `docs/CONTEXTO-SESIONES.md`, `apps/asegura/CLAUDE.md`,
+  `apps/asegura-portal/CLAUDE.md`, `apps/plataforma/CLAUDE.md` · pasada PROFUNDA semanal: sección
+  "Pasada PROFUNDA — 27/09/2026" + entrada de memoria + 3 huecos de documentación cerrados (features
+  del 26/09 sin reflejar en el CLAUDE.md de su app). Nota: `CLAUDE.md` es comportamiento, así que por
+  la regla del carril 1 esto viaja en el PR draft de carril 2 de esta pasada (junto con el código),
+  no auto-mergeado — el entorno de tarea no permite push directo a `main` · commit de esta auditoría
+
 - **2026-09-26** · `docs/AUDITORIA-2026-09.md` · pasada ligera diaria: heartbeat sano (2 matices sin
   cruzar umbral: `ses_transporte` crónico, `sivra_mercado_booking` 42,4h sin `ok=true`), correduría
   sana, backlog de PRs sano (0 abiertos), reconciliación de memoria sin huecos. Hallazgo de carril 2

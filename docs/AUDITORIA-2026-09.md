@@ -566,4 +566,126 @@ explícitamente, no se afirma que no haya pendientes.
 informe + aviso Telegram. El resto no cruza el umbral de PR (nada `⛔`, nada 🔴).
 
 ---
-<!-- verificado: 2026-09-26 -->
+
+## 🔍 Pasada PROFUNDA — 27/09/2026
+
+**Rango:** 58 commits desde la pasada ligera del 26/09 (`1a17282`) hasta hoy (`5fcc29a`), casi todo
+correduría (`apps/asegura`, `apps/asegura-portal`, `apps/asegura-web`, `/correduria` de plataforma:
+«siguiente paso» en la ficha, parte con heridos→112 + Telegram inmediato + cámara, carta de baja de
+seguro, traer póliza/PDF de Codeoscopic por DNI, 4 lotes de UX). Entorno de tarea de GitHub, rama
+asignada `claude/focused-gates-dcng04`; todo el trabajo de esta pasada va en un único PR (draft) —
+mezcla carril 1 y carril 2, así que no auto-mergea y espera tu revisión completa.
+
+### 🟢 Código: sano, 12/12 apps limpias, ~9.093 tests, 0 fallos
+Delegado a un agente (verificación completa, sin tocar código): `pnpm install --frozen-lockfile` en
+sync; `auditar-estructura.mjs --check` **NO** estaba desfasado (se desfasó después, al tocar
+`estructura.ts` en esta misma pasada — regenerado, ver carril 1); `pnpm test` limpio (~9.093 tests
+entre raíz/packages/apps, 0 fallos); los 12 typechecks de la matriz (con los DOS schemas de
+`asegura`) limpios; QA-check de ia-rest «820 archivos, sin problemas»; lint 0 errores/1.224 warnings
+(línea con el baseline documentado); `ignoreCommand` + `--sin-previews` correctos en las 13 apps;
+matriz de `tests.yml` (13) == `ls apps/` (13).
+
+### 🟡 Hallazgo de código real: 5 apps con imports `@central/*` fuera de `transpilePackages`
+El mismo agente cruzó cada dep `@central/*` de `package.json` contra `transpilePackages` de
+`next.config.*` (dirección inversa —imports sin declarar— sin discrepancias). Encontró **paquetes
+declarados e importados que faltaban en `transpilePackages`** en `ia-rest` (`core-consent`),
+`alquiler` (`module-materiales`), `asegura` (`core-ai`, `core-email`, `core-vehiculos`,
+`module-seguros-portal`) y `asegura-portal` (`core-ai`, `core-catastro`, `core-email`,
+`core-identity`, `core-telegram`, `module-seguros`, `module-seguros-pii`, `module-seguros-portal`);
+`housesevillana` no tenía `transpilePackages` en absoluto pese a importar `core-consent`. Como estos
+paquetes compilan desde `./src/index.ts` sin build propio, Next necesita transpilarlos — `tsc` no lo
+detecta (por eso pasó desapercibido con typecheck limpio) y es un riesgo de *build* de Next, no de
+tipos. **Corregido en el acto** (bajo riesgo, mecánico, verificado contra `package.json` real de cada
+app): las 5 líneas de `transpilePackages` ahora incluyen lo que ya se importa. Va en el PR de esta
+pasada para que la CI lo confirme.
+
+### 🟡 Backlog de PRs de rutinas — TERCERA vez que se señala (higiene, sin daño de memoria)
+`list_pull_requests` (state=open) devuelve **44 PRs** de ramas `claude/*`, fechados 05/09→24/09/2026
+(hasta **22 días** de antigüedad). El vigilante `rutinas-automerge.yml` está vivo (runs en verde cada
+pocos minutos), pero prácticamente ninguno de los 44 cumple sus condiciones — confirmado leyendo el
+log real de su última pasada (run `36285928582`), no solo su conclusión:
+- **La inmensa mayoría** («fuera de la lista: <decenas de ficheros>») son ramas tan viejas y sin
+  rebasar que su diff contra `main` arrastra código de apps enteras (`asegura-portal`, `asegura-web`,
+  RRHH…) que YA SE MERGEÓ por otra vía — verificado con `git log` en 3 casos concretos: el fichero
+  `mensajes-prog/cobertura.ts` de PR #2318 se mergeó de verdad por **#2320**; `codeoscopic/documentos-emitidos.ts`
+  de PR #3348 por **#3336/#3339**; `correduria/casar-banco.ts` de PR #3157/#3419 por **#3418**. Son
+  PRs **zombis**: su código ya está en `main` por otro camino, y el automerge los descarta
+  correctamente (no son "solo registro"), pero nadie los cierra nunca.
+- Otro grupo (#3286, #3135, #3092) está `mergeStateStatus=BLOCKED` (checks required nunca
+  re-disparados sobre el sha del bot) y otro (#3106, #3100) lleva **8 días** con «CI 24/31 —
+  pendiente» sin completar nunca — mismo síntoma "Expected para siempre" que ya documenta el
+  `CLAUDE.md` raíz para pushes con el token de la App.
+- ~~Daño confirmado: faltan en `CONTEXTO-SESIONES.md` los registros del 05 al 13/09/2026.~~ **FALSO,
+  corregido en la revisión del PR (27/09/2026):** esas entradas SÍ están en `main` (≈300 menciones de
+  esas fechas, p. ej. líneas con «(13/09/2026)», «(07/09/2026)», «(05/09/2026)»), pero con el formato
+  `- **título (dd/mm/aaaa).**` y no `**(dd/mm/aaaa)**`, que era lo único que buscaba el grep. Los PRs
+  zombis no han atrapado memoria que falte en `main`.
+- **Ya se señaló, con el mismo diagnóstico, el 20/09/2026** (46 PRs entonces, hasta 16 días) y de
+  nuevo antes en `CLAUDE.md` raíz (caso del 06/09, PR #2434). El hueco de `docs/uso-herramientas/*`
+  en el allowlist que se propuso el 20/09 **ya está corregido** en `rutinas-automerge.yml` — pero el
+  problema de fondo (PRs viejos que se convierten en zombis por staleness) sigue sin resolverse y el
+  backlog no ha bajado de tamaño en una semana.
+- **Acción de Alberto, concreta:** decidir cierre masivo de los PRs zombis (su código ya está en
+  `main` por otra vía — cerrarlos no pierde nada de código, solo el rastro de memoria de esos días,
+  que puede rescatarse antes si interesa) y, para el grupo `BLOCKED`/"CI pendiente", o forzar un push
+  con contenido real (procedimiento del `CLAUDE.md` raíz) o cerrarlos también. **No se ha cerrado
+  ninguno desde esta sesión** — es una decisión de volumen y de "¿quiero rescatar algo de esos 9 días
+  de memoria primero?" que solo puede tomar Alberto.
+
+### 🟡 Heartbeat de crons/agentes (2-bis) — dos matices, ninguno nuevo pero uno empeora
+`agente_latidos` completo (49 filas) revisado. `ses_transporte` sigue crónico (conocido, pendiente de
+Alberto en el portal SES). `psd2_health_check` sigue con la sesión BBVA `CLOSED` en Enable Banking
+—13 días sin movimientos de esa cuenta, ya avisado por Telegram varias veces desde el 13/09— sin
+resolver: sigue pendiente que Alberto reconecte BBVA. **`sivra_mercado_booking` empeora**: 60,4 h sin
+un `ok=true` (última pasada buena 24/09 13:46 UTC; era 42,4 h ayer), aunque su propio detalle dice
+que sí trajo 237 comparables reales — solo falla en las 4 ventanas de "escaparate propio" (los 4
+pisos, sin disponibilidad esas fechas exactas). Umbral diario 30 h ya superado ×2; si mañana sigue
+en rojo, escala a acción. `agente_reparaciones`: sin intentos en 7 días.
+
+### 🟢 Correduría (2-quater): sano, con el backlog de cuarentena ya conocido
+`cima_pull_completed` cada ~1-3h (último 26/09 18:31, `queueDepth=159`, `processed=0` en las últimas
+3 pasadas — mismo backlog de cuarentena documentado desde hace semanas, C0468/8-92361, no nuevo).
+Codeoscopic: 14 cotizaciones/7d, 5,50€, 3 descartadas — normal. Aislamiento verificado por el agente
+de seguridad: los 7 ficheros nuevos del rango (`traer-pdf`, `buscar-proyectos`, `siniestros` del
+portal, `aviso-parte-nuevo`…) filtran correctamente por `correduriaUnica()`/cartera del cliente; cero
+secretos con fallback a literal. Los 8 guardianes de aislamiento/gasto en verde en `pnpm test`.
+🟡 Nota de método (no regresión): el patrón dominante de ámbito en `apps/asegura` es
+`correduriaUnica()` (lanza si hay >1 correduría en `seguros.corredurias`), no `lib/tenant`
+—consistente con el resto del código de la app, y el cepo estático de aislamiento solo dispara sobre
+SQL con el literal `seguros.<tabla>`, así que queda mayormente dormido para este código. No es un
+hallazgo nuevo del rango, es una aclaración de cómo funciona la protección real.
+
+### 🟢 Salud del precio (2bis): sano y mejorando
+`rail_baja_roto=0` · `bajo_minimo=0` · `rail_alza_sin_justificar=0` · `horas_desde_ultima_pasada=1,8h`
+· `noches_ultima_pasada=132`. `oscilantes=47`, bajando de 103 ayer y de 10 anteayer — el serrucho
+sigue en mejora, no es un hallazgo nuevo. Las 4 palancas sanas (`enabled`/`apply_enabled=true`,
+`min_price` puesto, `antelacion_k=0`).
+
+### Deps y seguridad
+`pnpm audit --prod`: 19 vulnerabilidades (9 high, 10 moderate), **ninguna nueva** — todas transitivas
+ya conocidas (xlsx/ialimp no explotable, nodemailer, qs vía googleapis, sharp/browserslist/file-type),
+sin commits al rango que toquen manifiestos de dependencias.
+
+### Reconciliación memoria/skills — 3 huecos de documentación cerrados (carril 1)
+`apps/asegura/CLAUDE.md` (búsqueda de póliza por DNI del tomador + traer PDF de póliza emitida,
+26/09), `apps/asegura-portal/CLAUDE.md` (parte con heridos → 112 + Telegram inmediato + cámara
+directa, 26/09) y `apps/plataforma/CLAUDE.md` (4 lotes de UX de la ficha/listado de correduría,
+26/09) no reflejaban features ya mergeadas del mismo día — encontrado por el agente de seguridad al
+contrastar el `git log` del rango contra el texto. Corregido en esta pasada. `apps/asegura-web` no
+necesitaba tocarse (páginas de contenido SEO sin arquitectura nueva). También se corrigió
+`apps/plataforma/lib/estructura.ts::VERTICALES`: las entradas `asegura` y `asegura-web` describían el
+estado ANTERIOR al traspaso del 02/09 (cartera "en el Supabase de Manuel, en traspaso") y un dominio
+equivocado (`grupoasegura.com`, que es del CRM de Manuel — `asegura-web` sirve `.es`). Regenerado
+`estructura.generated.json`/`ARQUITECTURA.generated.md`/`mapa-funciones.generated.json`.
+
+No se ha podido listar las sesiones del rango (`list_sessions` no disponible en esta pasada) — se
+dice explícitamente, no se afirma que no haya pendientes sueltos de conversación.
+
+**Carril 1** (memoria/docs, esta entrada + `AUTO-APLICADOS.md` + los 3 huecos de CLAUDE.md).
+**Carril 2** (código: `transpilePackages` × 5 apps, ya corregido; backlog de 44 PRs zombis, 🔴,
+decisión de Alberto). Como la rama de esta tarea no permite push directo a `main`, TODO va en un
+único PR draft (mezclar carril 1+2 en el mismo PR es más seguro que forzar dos ramas bajo este
+harness) + aviso Telegram inmediato por el hallazgo 🔴.
+
+---
+<!-- verificado: 2026-09-27 -->
