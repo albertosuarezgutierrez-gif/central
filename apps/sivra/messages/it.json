@@ -24,7 +24,7 @@
     "items": {
       "parking": {
         "title": "Parcheggio privato vicinissimo",
-        "body": "Parcheggiare nel centro storico di Siviglia è complicato. Hai un posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa, senza costi extra."
+        "body": "Parcheggiare nel centro storico di Siviglia è complicato. Hai un posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa. Le condizioni del posto te le confermiamo alla prenotazione."
       },
       "capacity": {
         "title": "6 camere e 4 bagni",
@@ -136,7 +136,7 @@
     "items": [
       {
         "q": "House Sevillana ha un parcheggio privato?",
-        "a": "Sì. La casa dispone di un posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa, una rarità nel centro storico di Siviglia. Il posto è incluso nel prezzo, senza costi aggiuntivi."
+        "a": "Sì. La casa dispone di un posto auto privato a San Juan de la Palma, a pochi minuti a piedi dalla casa, una rarità nel centro storico di Siviglia. Le condizioni del posto si confermano alla prenotazione."
       },
       {
         "q": "Per quante persone è House Sevillana?",
