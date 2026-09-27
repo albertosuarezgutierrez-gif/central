@@ -9,6 +9,7 @@ import { factorLastMinute } from "@/lib/sivra/pricing-lastminute"
 import { factorAntelacion } from "@/lib/sivra/pricing-antelacion"
 import { premioMercadoFecha } from "@/lib/sivra/pricing-premio-mercado"
 import { anclaMercadoFecha } from "@/lib/sivra/pricing-ancla-fecha"
+import { sueloFinde } from "@/lib/sivra/pricing-suelo-finde"
 import { techoMercado, acotarPorTecho } from "@/lib/sivra/pricing-techo-mercado"
 import { descongelar, detalleDescongeladas, HORAS_SALTO_NUESTRO, esSaltoNuestro, esDescensoNuestro } from "@/lib/sivra/pricing-descongelar"
 import { baseSaltoEvento, objetivoSaltoEvento } from "@/lib/sivra/pricing-base-evento"
@@ -1195,6 +1196,15 @@ export async function POST(req: NextRequest) {
         let sf = Math.round(r.min_price * factor)
         if (r.max_price != null) sf = Math.min(sf, r.max_price)
         target = Math.max(target, sf)
+      }
+      // Suelo de FIN DE SEMANA sin mercado medido de la fecha (ver pricing-suelo-finde.ts): sin él,
+      // viernes y sábado caían al mismo min_price que un martes (House 29-30/01/2027 vendido a 300€).
+      {
+        let sFinde = sueloFinde({ fecha: date, minPrice: r.min_price, fechaMedida: anclaF > 0, factorEvento: evFactor })
+        if (sFinde != null) {
+          if (r.max_price != null) sFinde = Math.min(sFinde, r.max_price)
+          target = Math.max(target, sFinde)
+        }
       }
       // Salto de evento: una fecha de evento CONOCIDA (puente/Feria/S.Santa) sube a su precio de
       // GOLPE, sin esperar a la rampa de ±20%/día — un evento del calendario no es ruido. Solo al

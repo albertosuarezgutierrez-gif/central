@@ -9,7 +9,7 @@ import { notFound } from 'next/navigation'
 import { normaPorId, citaLegible } from '@central/module-seguros'
 import { ARTICULOS, articuloPorSlug } from '@/lib/articulos'
 import { ramoPorSlug } from '@/lib/ramos'
-import { PORTAL_URL, url } from '@/lib/sitio'
+import { PORTAL_URL, OG_IMAGEN, url } from '@/lib/sitio'
 import { fichaArticulo, fichaFaq, migas, jsonLd } from '@/lib/seo'
 import EnlaceMedido from '@/components/EnlaceMedido'
 
@@ -26,6 +26,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
     description: a.description,
     alternates: { canonical: url(`/blog/${a.slug}`) },
     openGraph: {
+      images: [OG_IMAGEN],
       type: 'article',
       title: a.title,
       description: a.description,

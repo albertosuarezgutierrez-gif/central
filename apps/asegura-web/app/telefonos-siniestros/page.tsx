@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
-import { url } from '@/lib/sitio'
+import { OG_IMAGEN, url } from '@/lib/sitio'
 import { fichaFaq, migas, jsonLd } from '@/lib/seo'
 import type { Ramo } from '@/lib/ramos'
 import { hrefTel, telefonosParaPublicar, whatsappLegible } from '@/lib/telefonos-companias'
@@ -27,6 +27,7 @@ export const metadata: Metadata = {
     'Los teléfonos de siniestros de las aseguradoras, comprobados en su web oficial y con fecha. Y qué hacer además de llamar: plazos de la ley y qué guardar.',
   alternates: { canonical: url('/telefonos-siniestros') },
   openGraph: {
+    images: [OG_IMAGEN],
     title: 'Teléfonos para dar parte a tu aseguradora',
     url: url('/telefonos-siniestros'),
     type: 'article',
