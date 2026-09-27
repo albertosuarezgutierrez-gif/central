@@ -59,9 +59,9 @@ export const TRADUCCIONES: Record<string, string> = {
   'Una casa sevillana para vivirla': 'A Sevillian house made for living in',
   '290 m&sup2; reformados con materiales nobles en el coraz&oacute;n del casco hist&oacute;rico. Pensada para grupos y familias que quieren espacio, comodidad y autenticidad.':
     '290 m&sup2; refurbished with fine materials in the heart of the historic centre. Designed for groups and families who want space, comfort and something genuine.',
-  'Parking privado en el edificio': 'Private parking in the building',
-  'Rars&iacute;simo en el casco antiguo de Sevilla. 1 plaza de garaje en el propio edificio, reservable con tu estancia. Aparcar en zona hist&oacute;rica ya no es un problema.':
-    'Extremely rare in Seville&#39;s old town. One garage space in the building itself, bookable with your stay. Parking in the historic centre stops being a problem.',
+  'Parking privado muy cerca': 'Private parking close by',
+  'Rars&iacute;simo en el casco antiguo de Sevilla. 1 plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie, reservable con tu estancia. Aparcar en zona hist&oacute;rica ya no es un problema.':
+    'Extremely rare in Seville&#39;s old town. One private garage space in San Juan de la Palma, a few minutes&#39; walk away, bookable with your stay. Parking in the historic centre stops being a problem.',
   '6 dormitorios dobles': '6 double bedrooms',
   'Todos con camas de matrimonio. Capacidad real para hasta 12 personas sin perder comodidad ni privacidad.':
     'All with double beds. Genuine room for up to 12 people without losing comfort or privacy.',
@@ -110,8 +110,8 @@ export const TRADUCCIONES: Record<string, string> = {
     'Cannot find your answer? Message us on WhatsApp and we will reply the same day.',
   'Preguntar por WhatsApp': 'Ask on WhatsApp',
   '&iquest;Tiene parking privado House Sevillana?': 'Does House Sevillana have private parking?',
-  'S&iacute;. Dispone de una plaza de garaje privado en el mismo edificio, reservable con tu estancia. Aparcar en el casco antiguo de Sevilla es muy complicado y costoso &mdash; esta es nuestra ventaja m&aacute;s valorada por los hu&eacute;spedes que llegan en coche.':
-    'Yes. There is a private garage space in the building itself, bookable with your stay. Parking in Seville&#39;s old town is difficult and expensive &mdash; this is the feature guests arriving by car value most.',
+  'S&iacute;. Dispone de una plaza de garaje privado en San Juan de la Palma, a pocos minutos a pie de la casa, reservable con tu estancia. Aparcar en el casco antiguo de Sevilla es muy complicado y costoso &mdash; esta es nuestra ventaja m&aacute;s valorada por los hu&eacute;spedes que llegan en coche.':
+    'Yes. There is a private garage space in San Juan de la Palma, a few minutes&#39; walk from the house, bookable with your stay. Parking in Seville&#39;s old town is difficult and expensive &mdash; this is the feature guests arriving by car value most.',
   '&iquest;Para cu&aacute;ntas personas es House Sevillana?': 'How many people does House Sevillana sleep?',
   '6 dormitorios dobles para hasta 12 personas. Perfecta para grupos de amigos, familias numerosas multigeneracionales o varias parejas que viajan juntas a Sevilla. Si eres menos de 6 personas, tambi&eacute;n es una opci&oacute;n excepcional por el espacio y el precio por persona.':
     'Six double bedrooms for up to 12 guests. Ideal for groups of friends, large multi-generational families or several couples travelling to Seville together. For smaller parties it still works beautifully, given the space and the price per person.',

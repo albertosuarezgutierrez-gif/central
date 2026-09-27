@@ -23,8 +23,8 @@
     "title": "Warum House Sevillana",
     "items": {
       "parking": {
-        "title": "Privater Parkplatz auf dem Grundstück",
-        "body": "Parken in Sevillas Altstadt ist ein Albtraum. Hier ist Ihr Stellplatz im Preis enthalten — ohne Aufpreis und ohne stundenlange Suche."
+        "title": "Privatparkplatz ganz in der Nähe",
+        "body": "Parken in Sevillas Altstadt ist ein Albtraum. Sie haben einen privaten Garagenstellplatz in San Juan de la Palma, wenige Gehminuten vom Haus entfernt — ohne Aufpreis."
       },
       "capacity": {
         "title": "6 Schlafzimmer und 4 Bäder",
@@ -56,7 +56,7 @@
     },
     "amenitiesTitle": "Ausstattung",
     "amenities": [
-      "Privater Parkplatz auf dem Grundstück",
+      "Privatparkplatz ganz in der Nähe",
       "Kostenloses WLAN im ganzen Haus",
       "Klimaanlage in allen Räumen",
       "Voll ausgestattete Küche (Backofen, Mikrowelle, Kühlschrank, Kaffeemaschine)",
@@ -136,7 +136,7 @@
     "items": [
       {
         "q": "Hat House Sevillana einen privaten Parkplatz?",
-        "a": "Ja. Das Haus verfügt über einen privaten Parkplatz auf dem Grundstück — eine Seltenheit in Sevillas Altstadt. Der Stellplatz ist im Preis enthalten, ohne Aufpreis und ohne Suche nach kostenpflichtigen Parkplätzen."
+        "a": "Ja. Das Haus verfügt über einen privaten Garagenstellplatz in San Juan de la Palma, wenige Gehminuten vom Haus entfernt — eine Seltenheit in Sevillas Altstadt. Der Stellplatz ist im Preis enthalten, ohne Aufpreis."
       },
       {
         "q": "Für wie viele Personen ist House Sevillana?",

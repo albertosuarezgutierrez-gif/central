@@ -45,7 +45,7 @@
 ## Amenities y equipamiento
 
 **Diferenciadores principales** (USPs para SEO):
-- ⭐ **Parking privado en el propio alojamiento** (rarísimo en casco antiguo de Sevilla — usar siempre como gancho)
+- ⭐ **Parking privado en San Juan de la Palma, a pocos minutos a pie de la casa** (rarísimo en casco antiguo de Sevilla — usar siempre como gancho)
 - ⭐ Terraza con vistas a la ciudad
 - ⭐ Jardín y patio interior
 - ⭐ Capacidad para grupos grandes en pleno centro

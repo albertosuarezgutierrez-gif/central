@@ -75,8 +75,8 @@ CTA: Consultar fechas
 
 **4 value props**:
 ```
-🚗 Parking privado en propio alojamiento
-Aparcar en el casco antiguo de Sevilla es complicado. Aquí tienes tu plaza incluida.
+🚗 Parking privado en San Juan de la Palma
+Aparcar en el casco antiguo de Sevilla es complicado. Tienes una plaza de garaje privada a pocos minutos a pie.
 
 🛏️ 6 dormitorios y 4 baños
 Espacio real para familias multigeneracionales y grupos de hasta 12 personas.
@@ -99,8 +99,8 @@ CTA: Check availability
 
 **4 value props**:
 ```
-🚗 Private parking on-site
-Parking in Seville's old town is a nightmare. Here you have your own spot included.
+🚗 Private parking in San Juan de la Palma
+Parking in Seville's old town is a nightmare. You have your own garage space just a few minutes' walk away.
 
 🛏️ 6 bedrooms, 4 bathrooms
 Real space for multigenerational families and groups up to 12.
