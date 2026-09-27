@@ -179,20 +179,24 @@ export function detectarSustituciones(polizas: readonly PolizaParaSustitucion[])
 
 /**
  * Lo que ve el cliente, POR LECTOR (ya filtrado por lo que ese lector puede ver): qué vieja se retira
- * de la LISTA porque su sustituta ocupa su sitio. Solo se retira si la nueva está en la misma lista,
- * ya ha EMPEZADO y está vigente, y la vieja no tiene nada pendiente (un siniestro abierto, un recibo
- * devuelto): hasta entonces las dos se enseñan. Esconder de la lista no quita el acceso — la ficha,
- * los partes y los recibos de la vieja siguen siendo suyos. Devuelve `viejaId → nuevaId`.
+ * de la LISTA porque su sustituta ocupa su sitio. Solo se retira si la nueva está en la misma lista y
+ * está vigente, y la vieja no tiene nada pendiente (un siniestro abierto, un recibo devuelto). Esconder
+ * de la lista no quita el acceso — la ficha, los partes y los recibos de la vieja siguen siendo suyos.
+ * Devuelve `viejaId → nuevaId`.
+ *
+ * 🚨 NO espera a que la nueva EMPIECE (27/09/2026). Hasta ese día se esperaba, y la moto de Occident
+ * (desde el 01/11/2026) salía junto a la Allianz que sustituye: dos seguros «En vigor» del mismo
+ * vehículo, que es justo lo que esto existe para evitar. El tramo hasta el cambio lo cuenta la fila
+ * de la nueva («Empieza el…», «Hasta entonces, Allianz»), no una segunda fila.
  */
 export function sustituidasARetirar(
-  polizas: readonly { id: string; sustituyeAId: string | null; fechaInicio: Date | null; vigente: boolean; conPendientes: boolean }[],
-  hoy: Date,
+  polizas: readonly { id: string; sustituyeAId: string | null; vigente: boolean; conPendientes: boolean }[],
 ): Map<string, string> {
   const porId = new Map(polizas.map((p) => [p.id, p]))
   const retirar = new Map<string, string>()
   for (const n of polizas) {
     const v = n.sustituyeAId === null ? undefined : porId.get(n.sustituyeAId)
-    if (v === undefined || !n.vigente || n.fechaInicio === null || n.fechaInicio > hoy || v.conPendientes) continue
+    if (v === undefined || !n.vigente || v.conPendientes) continue
     retirar.set(v.id, n.id)
   }
   return retirar

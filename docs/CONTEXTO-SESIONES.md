@@ -757,6 +757,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Portal: un cambio de compañía con efecto futuro ya no sale como dos seguros
+- Moto 4897FTM de Víctor de la Fuente: Allianz→Occident (efecto 01/11/2026) salían las DOS «En vigor». `sustituidasARetirar` esperaba a que la nueva empezara; ya no: la vieja se retira de la lista en cuanto hay enlace (nueva vigente, vieja sin pendientes). La fila nueva dice «Empieza el…» + «Hasta entonces, Allianz»; la ficha, «Pasas de… Hasta ese día te sigue cubriendo…».
+- Abierto (no tocado): Toyota 8022KXY Mapfre tiene `fecha_vencimiento` 18/06/2026 en BD pero CIMA dice EV → `vigenciaPoliza` = no_vigente y el filtro «En vigor» la oculta. La renovación tácita no llegó por CIMA. Y el cliente 722315d3 no tiene ningún `portal_vinculo`.
+
 ## (27/09/2026) Logotipo «Grupo ASegura» más grueso (stroke 6) y PNG del correo regenerado
 - Alberto: en el correo de cumpleaños «Grupo ASegura» se veía muy fino. Causa: `logotipo-asegura-correo.png` seguía siendo el Quicksand 300 original; #3675 engordó el SVG (stroke 3) pero no regeneró el PNG.
 - SVG (web + portal) a stroke 6 (≈ Quicksand 700; tinta y 26-123 dentro del viewBox) y PNG 660×97 regenerado desde él con headless_shell. Afecta a felicitación y correos de emisión (`LOGO_CORREO`).

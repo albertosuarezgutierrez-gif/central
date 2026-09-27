@@ -168,8 +168,8 @@ export type PolizaPortal = {
   /** La póliza a la que sustituye, SOLO si este lector también la ve. `null` = ninguna o no visible. */
   sustituyeA: { compania: string; fechaVencimiento: Date | null } | null
   /**
-   * 🚨 La que ocupa su sitio, cuando esta ya se RETIRA DE LA LISTA (`sustituidasARetirar`: la nueva ha
-   * empezado, está vigente, este lector la ve y esta no tiene nada pendiente). Retirar de la lista no
+   * 🚨 La que ocupa su sitio, cuando esta ya se RETIRA DE LA LISTA (`sustituidasARetirar`: la nueva está
+   * vigente, aunque aún no haya empezado, este lector la ve y esta no tiene nada pendiente). Retirar de la lista no
    * quita el acceso: la ficha, los partes y los recibos siguen siendo suyos. Por eso la póliza sigue
    * en `TitularPortal.polizas` y solo `carteraALaVista()` la quita, para PINTAR la bóveda.
    */
@@ -895,11 +895,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       suyas.map((p) => ({
         id: p.id,
         sustituyeAId: p.sustituyeAId,
-        fechaInicio: p.fechaInicio,
         vigente: p.vigencia === 'vigente',
         conPendientes: (p.siniestrosAbiertos?.length ?? 0) > 0 || (p.recibos?.devueltos ?? 0) > 0,
       })),
-      new Date(),
     )
     for (const p of suyas) {
       const v = p.sustituyeAId === null ? undefined : porId.get(p.sustituyeAId)
