@@ -753,6 +753,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Pricing: SUELO de fin de semana sin mercado medido (House 29-30/01/2027 vendido a 300€)
+- La reserva de House 29-31/01/2027 (600€) entró al `min_price`: el motor tenía 436/456€ el 19/09 y el raíl lo bajó a 300 en dos pasadas.
+- Causa: el finde solo subía por `anclaMercadoFecha` (≥5 comps fiables de ESA fecha); sin ellos, viernes/sábado = martes.
+- Fix: `lib/sivra/pricing-suelo-finde.ts` → suelo `min_price × 1,15` en noches de vie/sáb SIN ancla medida y SIN evento (mercado: finde ≈1,17× la mediana del mes). Cableado en `pricing/apply` tras el suelo estacional; techos de mercado/ADR y `max_price` siguen mandando.
+- ⚠️ Visto de paso, sin tocar: `propiedades` «Casa Socorro» (Smoobu 352007) tiene dirección Bustos Tavera 22 y `tiene_parking=false` (tabla demo, confusión de dirección del CLAUDE.md raíz).
+
 ## (27/09/2026) asegura-web: móvil OPCIONAL en «avísame antes de que venza» (PR #3730, mergeado)
 - Campo «Móvil (opcional)» + 2ª casilla SIN marcar «que me llaméis» (solo aparece con móvil): el consentimiento de escribir no cubre llamar (Ley 11/2022 art. 66). Consentimiento pasa a `web-aviso-v2`.
 - `seguros.aviso_web.telefono` (cifrado `v1:`, CHECK) — **migración ya aplicada en prod** (`2026-09-27_aviso_web_telefono.sql`, aditiva).
