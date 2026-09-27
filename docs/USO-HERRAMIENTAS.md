@@ -167,31 +167,32 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 155 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 169 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 150 | 19.895 | 13.531.167 | 0 | 0 |
-| `otro` | 146 | 4.990 | 16.701.548 | 8.082.644 | 0 |
-| `mcp:github` | 135 | 4.089 | 3.636.914 | 42.737.457 | 67 |
-| `lectura-directa` | 138 | 3.916 | 8.352.400 | 0 | 0 |
-| `escritura` | 113 | 2.503 | 40.087.929 | 0 | 0 |
-| `sql` | 96 | 2.050 | 934.320 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 83 | 947 | 218.863 | 3.171.734 | 10 |
-| `mcp:Vercel` | 32 | 396 | 627.240 | 198.719 | 7 |
+| `bash` | 164 | 20.453 | 13.943.072 | 0 | 0 |
+| `otro` | 158 | 5.091 | 16.888.216 | 8.082.644 | 0 |
+| `mcp:github` | 147 | 4.187 | 3.717.304 | 44.862.421 | 72 |
+| `lectura-directa` | 148 | 4.006 | 8.522.763 | 0 | 0 |
+| `escritura` | 120 | 2.536 | 40.876.855 | 0 | 0 |
+| `sql` | 103 | 2.103 | 967.968 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 91 | 980 | 226.545 | 3.193.171 | 12 |
+| `mcp:Vercel` | 33 | 400 | 630.853 | 198.719 | 9 |
 | `mcp:Booking-com` | 13 | 369 | 1.534.696 | 0 | 0 |
 | `mcp:Gmail` | 18 | 265 | 417.825 | 0 | 2 |
-| `mcp:Supabase` | 58 | 184 | 19.551 | 0 | 1 |
+| `mcp:Supabase` | 64 | 193 | 20.417 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
-| `agente:general-purpose` | 24 | 82 | 53.165 | 869.964 | 0 |
+| `agente:general-purpose` | 27 | 88 | 57.994 | 1.004.221 | 0 |
+| `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `mcp:Google-Drive` | 9 | 66 | 65.845 | 0 | 2 |
 | `agente:agente-architect` | 16 | 56 | 46.717 | 1.504.560 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Google_Drive` | 8 | 49 | 59.913 | 0 | 12 |
+| `agente:Explore` | 18 | 46 | 23.104 | 1.190.429 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
+| `mcp:OpenSEO` | 2 | 46 | 38.961 | 0 | 0 |
 | `mcp:Trivago` | 2 | 44 | 7.210.577 | 0 | 1 |
-| `agente:Explore` | 16 | 43 | 21.469 | 938.735 | 0 |
-| `mcp:OpenSEO` | 2 | 43 | 37.392 | 0 | 0 |
 | `mcp:Resend` | 4 | 41 | 11.662 | 0 | 0 |
 | `agente:agente-mecanico` | 13 | 33 | 33.925 | 774.297 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
@@ -203,7 +204,6 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:Supabase_asegura` | 5 | 5 | 1.947 | 0 | 0 |
 | `mcp:openrouter` | 2 | 5 | 14.639 | 0 | 0 |
-| `mcp:idealista` | 1 | 3 | 8.773 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
 | `mcp:Google_Calendar` | 1 | 1 | 272 | 0 | 0 |
