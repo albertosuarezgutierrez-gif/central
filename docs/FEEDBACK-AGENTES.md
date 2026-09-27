@@ -16,6 +16,16 @@
   local de Socorro que son deducibles — esperaba que los cruzara con perfil-fiscal
 -->
 
+- [ ] **2026-09-27 · mercado-booking** · latido en rojo desde hace ≥3 días (66,4 h sin
+  `ok=true`, umbral 30 h ×2,2, empeorando cada pasada) aunque la rutina SÍ trae comparables
+  reales (237 en 24 ventanas, 0 fallos de conector). La única causa es que las 4 ventanas de
+  "escaparate propio" (Busto Reform, Dúplex, Luxury Busto, House Sevillana, 03/10/2027)
+  devuelven `hotel_names_no_availability` — no hay disponibilidad para medir el propio
+  anuncio esa fecha, que no es un fallo de la rutina. Propuesta: que el criterio de `ok` no
+  cuente como fallo una ventana de escaparate sin disponibilidad (distinguirla de "sin
+  respuesta del conector"/"sin precio utilizable", que sí son fallos reales). Detectado en dos
+  pasadas seguidas de `/auditoria-diaria` (agente heartbeat 2-bis).
+
 ## Procesadas
 
 - [x] **2026-08-14 · agente contable (vigilantes del extracto de tarjeta)** · la «🔎 Revisión de la
