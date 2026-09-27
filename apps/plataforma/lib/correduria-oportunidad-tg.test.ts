@@ -101,7 +101,6 @@ test('el cuerpo es el del botón «Abrir» de la ficha: nace «por contactar» c
 test('el resultado distingue abierta, duplicada y rechazada', () => {
   assert.equal(resultadoAlta(201, { estado: 'ok', id: 'o1' }, 'u').estado, 'abierta')
   assert.equal(resultadoAlta(409, { estado: 'duplicada', motivo: 'Ya tiene una de auto.', id: 'o0' }, 'u').estado, 'duplicada')
-  assert.equal(resultadoAlta(0, { motivo: 'fallo' }, 'u').estado, 'rechazada')
   assert.equal(resultadoAlta(422, { motivo: 'Elige el ramo.' }, 'u').estado, 'rechazada')
 })
 
@@ -124,4 +123,57 @@ test('el webhook desvía a la correduría el documento con pie de correduría y 
   assert.match(bloque, /if \(aCorreduria\)[\s\S]*return NextResponse\.json/)
   // El botón «Abrir» escribe en la cartera: solo lo pulsa el titular.
   assert.match(src, /action === 'oport'\) && String\(cb\.from/)
+})
+
+// ── Auditoría del bot (27/09/2026): lo que hacía que el asistente perdiera o malinterpretara mensajes ──
+import { conCita, esRespuestaACorreduria, hoyMadrid, memoriaIds, ERROR_NO_UUID } from './correduria-asistente.ts'
+
+test('las frases típicas de la correduría ya no se van al contable', () => {
+  for (const t of ['recibo devuelto por el banco de Pablo', 'lo de la Mapfre de Juan', 'impagados de este mes', 'vencimientos de octubre']) {
+    assert.equal(clasificarDestino(t), 'correduria', t)
+  }
+  // «seguro» a secas (= «estoy seguro», o el seguro PROPIO) no basta: lo decide la IA o el contable
+  assert.notEqual(clasificarDestino('seguro que es gasto de los pisos'), 'correduria')
+  assert.equal(clasificarDestino('seguros de coche que pago'), 'dudoso')
+})
+
+test('un reply a un mensaje de la correduría vuelve al asistente, con la cita', () => {
+  // Sin ninguna palabra de seguros: cuenta que lo dijo el asistente (🛡️/🎯).
+  assert.equal(esRespuestaACorreduria('🛡️ Sí, tiene cónyuge: María Antonia.'), true)
+  assert.equal(esRespuestaACorreduria('🎯 ¿Abro esto para Ana?'), true)
+  assert.equal(esRespuestaACorreduria('📄 Leído: Mercadona · 12,40€'), false)
+  assert.match(conCita('¿y su mujer?', '🛡️ Pablo…'), /Responde a este mensaje tuyo: «🛡️ Pablo…»/)
+})
+
+test('la memoria de ids trae los de consultas que salieron bien y nada inventado', () => {
+  const c = '0af158d6-61fa-42a0-bd83-3cf6ec539529'
+  const m = memoriaIds([
+    [{ nombre: 'ficha_cliente', ok: true, args: { clienteId: c } }],
+    [{ nombre: 'preparar_emision', ok: false, args: { polizaId: '11111111-2222-4333-8444-555555555555', projectId: '40842815' } },
+     { nombre: 'preparar_emision', ok: true, args: { polizaId: '9588dad8-893f-4c27-af63-60a53b755d3b', projectId: '40842815', quoteId: 'Q2024306868' } }],
+  ])
+  assert.ok(m)
+  assert.match(m!, new RegExp(c))
+  assert.match(m!, /Q2024306868/)
+  assert.doesNotMatch(m!, /11111111-2222/)
+  assert.equal(memoriaIds([[{ ok: true, args: { clienteId: 'Pablo' } }], null]), null)
+  assert.match(ERROR_NO_UUID, /número de póliza/)
+})
+
+test('«hoy» es el de Madrid, no el de UTC', () => {
+  assert.equal(hoyMadrid(new Date('2026-09-26T23:30:00Z')), '2026-09-27')
+})
+
+test('un alta sin respuesta clara es «incierta», nunca «no se ha abierto»', () => {
+  assert.equal(resultadoAlta(0, null, 'u').estado, 'incierta')
+  assert.equal(resultadoAlta(502, { motivo: 'x' }, 'u').estado, 'incierta')
+  assert.match(resultadoAlta(0, null, 'u').texto, /No sé si se ha abierto/)
+})
+
+test('el webhook manda los reply de la correduría al asistente ANTES del catch-all (lee el FUENTE)', () => {
+  const src = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
+  const reply = src.indexOf('esRespuestaACorreduria(citado)')
+  const catchAll = src.indexOf('// C) Catch-all del agente de CONTABILIDAD')
+  assert.ok(reply > 0 && reply < catchAll)
+  assert.ok(src.indexOf('await registrarDocumentoTg(') > src.indexOf('const rapido ='))
 })

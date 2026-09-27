@@ -1,8 +1,7 @@
 // Asistente de la CORREDURÍA por Telegram (fase 1, 26/09/2026) — parte PURA (sin `@/` ni prisma →
 // node --test). Alberto le pregunta por clientes, pólizas, vencimientos o impagados y el asistente
-// contesta leyendo la cartera por el puerto de asegura. No escribe en la cartera ni habla con nadie
-// que no sea Alberto. Desde la fase 3a PREPARA emisiones: la emite Alberto con un botón
-// (`correduria-emision-tg.ts`).
+// contesta leyendo la cartera por el puerto de asegura. Solo habla con Alberto. Lo que escribe en la
+// cartera (emitir, corregir la ficha, abrir una oportunidad) lo PROPONE y lo aplica Alberto con un botón.
 //
 // Tres reglas de la casa que viven aquí y no en el prompt, porque un prompt se puede saltar:
 // - Lo que NO trae una herramienta es «no consta», nunca «no tiene» (dato no mirado ≠ dato que no hay).
@@ -15,7 +14,7 @@
 const PREFIJO = /^\s*(?:\/seguros?\b|seguros?\s*[:,]|correduri[aá]\s*[:,])/i
 
 /** Palabras que solo tienen sentido en la correduría (el contable no las maneja). */
-const PROPIAS = /\b(p[oó]lizas?|siniestros?|renovaci(?:[oó]n|ones)|tomador(?:es)?|asegurad[oa]s?|retarific\w*|codeoscopic|avant2|cima|eiac|tirea|coberturas?|franquicia|carta verde|anulaci[oó]n(?:es)? de p[oó]liza|oportunidad(?:es)?|leads?)\b/i
+const PROPIAS = /\b(p[oó]lizas?|siniestros?|renovaci(?:[oó]n|ones)|tomador(?:es)?|asegurad[oa]s?|retarific\w*|codeoscopic|avant2|cima|eiac|tirea|coberturas?|franquicia|carta verde|anulaci[oó]n(?:es)? de p[oó]liza|oportunidad(?:es)?|leads?|impagad\w*|recibos? devuelt\w*|vencimientos?|mapfre|allianz|occident|reale|generali|axa|l[ií]nea directa|mutua madrile\w+|pelayo|liberty|zurich|santa ?luc[ií]a|helvetia|fiatc|asisa|sanitas|adeslas|dkv|fidelidade)\b/i
 
 /** Matrícula española moderna (1234ABC / 1234 ABC). Un gasto no se pregunta por matrícula. */
 const MATRICULA = /\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/i
@@ -110,7 +109,7 @@ export function paraIA(valor: unknown, max = 7000): string {
 export type NombreHerramienta =
   | 'buscar' | 'ficha_cliente' | 'ficha_poliza' | 'vencimientos' | 'impagados'
   | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision'
-  | 'proponer_correccion' | 'proponer_oportunidad'
+  | 'proponer_correccion' | 'proponer_oportunidad' | 'mi_dia' | 'oportunidades_cliente'
 
 const fn = (name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'function',
@@ -120,12 +119,15 @@ const fn = (name: NombreHerramienta, description: string, properties: Record<str
 export const HERRAMIENTAS = [
   fn('buscar', 'Busca en la cartera por nombre, DNI, teléfono, email, matrícula, número de póliza o dirección. Devuelve clientes con su clienteId. Úsala SIEMPRE antes de ficha_cliente si no tienes el id.',
     { q: { type: 'string', description: 'Término a buscar' } }, ['q']),
-  fn('ficha_cliente', 'Ficha completa de un cliente: datos, pólizas (con polizaId), contactos y tareas.',
+  fn('ficha_cliente', 'Ficha completa de un cliente: datos, pólizas (con su polizaId interno), siniestros, contactos y relaciones. Sus oportunidades y tareas NO vienen aquí: usa oportunidades_cliente.',
     { clienteId: { type: 'string' } }, ['clienteId']),
   fn('ficha_poliza', 'Ficha de una póliza: coberturas, recibos, siniestros e historial.',
     { polizaId: { type: 'string' } }, ['polizaId']),
   fn('vencimientos', 'Pólizas que vencen en los próximos N días (máx. 120).',
     { dias: { type: 'integer', description: 'Días hacia delante (1-120)' } }, ['dias']),
+  fn('mi_dia', 'Lo que Alberto tiene que hacer HOY en la correduría: tareas de sus oportunidades (vencidas y de hoy), llamadas de renovación que tocan y siniestros abiertos. Úsala para «¿qué tengo hoy?», «¿a quién llamo?», «¿qué hay pendiente?».'),
+  fn('oportunidades_cliente', 'Oportunidades de venta (leads) de un cliente: ramo, estado, compañía y prima actuales, vencimiento y su próximo paso.',
+    { clienteId: { type: 'string' } }, ['clienteId']),
   fn('impagados', 'Recibos sin cobrar y pólizas en riesgo (cola de retención), con resumen.'),
   fn('anulaciones_pendientes', 'Pólizas sustituidas por otra de otra compañía cuya anulación sigue pendiente.'),
   fn('proponer_regla', 'Propón guardar una PREFERENCIA de trabajo de Alberto (cómo quiere las respuestas o un criterio del negocio). NUNCA datos de un cliente concreto. Alberto la confirma con un botón.',
@@ -135,7 +137,7 @@ export const HERRAMIENTAS = [
     { numero: { type: 'integer' } }, ['numero']),
   fn('preparar_emision', 'Prepara la EMISIÓN de un precio que Alberto ya confirmó en la web de Avant2 para una póliza de la cartera. NO emite: el sistema le manda a Alberto un resumen con un botón y es él quien pulsa. Si el proyecto tiene varios precios emitibles te devuelve la lista para que le preguntes cuál (y vuelves a llamar con quoteId).',
     {
-      polizaId: { type: 'string', description: 'La póliza que se sustituye (sácala de ficha_cliente)' },
+      polizaId: { type: 'string', description: 'El polizaId INTERNO (uuid) de la póliza que se sustituye, sacado de ficha_cliente. NO el número de póliza de la compañía.' },
       projectId: { type: 'string', description: 'Número del proyecto de Avant2 (solo cifras)' },
       quoteId: { type: 'string', description: 'Opcional: el precio elegido (Q…) cuando hay varios' },
     }, ['polizaId', 'projectId']),
@@ -177,6 +179,8 @@ export function diasValidos(v: unknown): number {
 }
 
 /** Id de cliente/póliza: uuid. Evita que la IA meta una ruta o un nombre en la URL del puerto. */
+export const ERROR_NO_UUID = 'ERROR: eso no es un id interno. Parece un número de póliza o un nombre: usa buscar/ficha_cliente y pasa el polizaId/clienteId (uuid) que devuelven.'
+
 export function idValido(v: unknown): string | null {
   const s = typeof v === 'string' ? v.trim() : ''
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s) ? s.toLowerCase() : null
@@ -199,7 +203,9 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     '- Si una herramienta falla o devuelve error, dilo: «no he podido leer X ahora mismo». Un fallo NO es «no hay nada».',
     '- Un campo a null significa «no consta / no se sabe», nunca 0 ni «no tiene». Si una lista trae `total` mayor que las filas que ves, di que hay más.',
     '- Si una búsqueda da varios clientes posibles, enuméralos y pregunta cuál; no elijas tú.',
-    '- No puedes anular ni enviar nada a nadie: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
+    '- Para «¿qué tengo hoy?», «¿a quién llamo?» o «¿qué hay pendiente?» usa mi_dia. Las oportunidades de un cliente, con oportunidades_cliente.',
+    '- La búsqueda por DNI, teléfono o email solo alcanza a una parte de las fichas (lo dice cada bloque): si no aparece, di que no lo encuentras por ese dato y prueba por nombre o matrícula; NUNCA digas que no es cliente.',
+    '- Tú no mandas mensajes a clientes ni anulas pólizas: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
     '- Oportunidades: puedes PROPONER abrir una con proponer_oportunidad (lead o cliente que tiene un seguro con otra compañía). Si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true. Necesitas la ficha: si no sabes de quién es, pregúntale el nombre y búscalo; si no tiene ficha, dile que la cree en /correduria. NUNCA digas que está abierta: eso solo lo confirma el sistema tras el botón.',
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',
@@ -216,7 +222,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
 // ── Límites ──────────────────────────────────────────────────────────────────────────────────────
 
 /** Vueltas máximas del bucle herramienta→IA por pregunta. Una pregunta normal usa 2-3. */
-export const MAX_VUELTAS = 5
+export const MAX_VUELTAS = 7
 /** Preguntas máximas al día: tope duro contra un bucle o un reenvío masivo, aparte del tope en €. */
 export const MAX_TURNOS_DIA = 150
 /** Días que se guarda el TEXTO de preguntas y respuestas; después queda solo el rastro de acceso. */
@@ -264,4 +270,58 @@ export const PRECIO_CONSERVADOR_1K = 0.001
 
 export function costeConservador(tokens: number): number {
   return +((Math.max(0, tokens) * PRECIO_CONSERVADOR_1K) / 1000).toFixed(6)
+}
+
+// ── Conversación ─────────────────────────────────────────────────────────────────────────────────
+
+/**
+ * ¿Es la RESPUESTA (reply) de Alberto a un mensaje de la correduría? Deslizar sobre una respuesta 🛡️
+ * o sobre un aviso de seguros y escribir («¿y su mujer?») se perdía: el webhook descartaba todo reply
+ * que no fuera de un flujo conocido. Solo cuenta lo que el propio bot dijo de la correduría.
+ */
+export function esRespuestaACorreduria(citado: string): boolean {
+  const t = citado.trim()
+  if (!t) return false
+  if (/^(?:🛡️|🛡|🎯|✏️|🚀)/u.test(t)) return true
+  return clasificarDestino(t) === 'correduria'
+}
+
+/** La pregunta con el mensaje al que responde, para que la IA sepa de qué se habla. */
+export function conCita(texto: string, citado: string): string {
+  const c = citado.trim().replace(/\s+/g, ' ').slice(0, 600)
+  return c ? `${texto.trim()}\n\n(Responde a este mensaje tuyo: «${c}»)` : texto.trim()
+}
+
+type RastroGuardado = { nombre?: unknown; args?: unknown; ok?: unknown }
+
+/**
+ * Los ids que ya salieron en las consultas recientes (cliente, póliza, proyecto, precio). Sin esto,
+ * cada mensaje («la Mapfre», «anual», «1») obligaba a la IA a buscar al cliente otra vez desde cero:
+ * el historial guardaba el texto, no los ids. Solo los de llamadas que funcionaron, y validados.
+ */
+export function memoriaIds(rastros: readonly unknown[]): string | null {
+  const vistos = new Map<string, Set<string>>()
+  const poner = (k: string, v: unknown) => {
+    const s = typeof v === 'string' ? v.trim() : ''
+    const valido = k === 'projectId' ? /^\d{4,12}$/.test(s) : k === 'quoteId' ? /^Q\d{4,15}$/.test(s) : idValido(s) !== null
+    if (!valido) return
+    if (!vistos.has(k)) vistos.set(k, new Set())
+    vistos.get(k)!.add(s)
+  }
+  for (const r of rastros) {
+    if (!Array.isArray(r)) continue
+    for (const x of r as RastroGuardado[]) {
+      if (!x || x.ok !== true || typeof x.args !== 'object' || x.args === null) continue
+      const a = x.args as Record<string, unknown>
+      for (const k of ['clienteId', 'polizaId', 'projectId', 'quoteId']) poner(k, a[k])
+    }
+  }
+  if (vistos.size === 0) return null
+  const partes = [...vistos].map(([k, v]) => `${k}: ${[...v].slice(-3).join(', ')}`)
+  return `Ids ya consultados en esta conversación (reutilízalos en vez de volver a buscar si hablamos de lo mismo): ${partes.join(' · ')}`
+}
+
+/** La fecha de hoy en Madrid (aaaa-mm-dd). `toISOString()` da el día anterior entre las 00:00 y las 02:00. */
+export function hoyMadrid(ahora: Date = new Date()): string {
+  return ahora.toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
 }

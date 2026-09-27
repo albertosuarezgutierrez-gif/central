@@ -18,7 +18,11 @@ import { vencimientosAsegura } from '@/lib/cartera-asegura'
 import { emitirAsegura, importarProyectoAsegura, vistaImportacionAsegura } from '@/lib/retarificar-asegura'
 import { editarClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
 import { documentosAsegura, leerDocumentoOportunidadAsegura } from '@/lib/documentos-asegura'
-import { accionOportunidadAsegura, interpretarLecturaOportunidad, type LecturaDocumentoOportunidad } from '@/lib/seguimiento-asegura'
+import {
+  accionOportunidadAsegura, colaLlamadas, interpretarLeads, interpretarLecturaOportunidad, interpretarOportunidadesCliente,
+  interpretarTareasHoy, leadsCompetenciaAsegura, oportunidadesClienteAsegura, tareasHoyAsegura, type LecturaDocumentoOportunidad,
+} from '@/lib/seguimiento-asegura'
+import { carteraAsegura } from '@/lib/cartera-asegura'
 import { descargarTelegram } from '@/lib/contable/telegram'
 import { cuerpoAlta, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, resultadoAlta, textoAlta, type Alta } from './correduria-oportunidad-tg'
 import {
@@ -30,7 +34,7 @@ import {
   textoResumen, urlPoliza, type ResumenEmision,
 } from './correduria-emision-tg'
 import {
-  apagado, clasificarDestino, costeConservador, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
+  apagado, clasificarDestino, costeConservador, ERROR_NO_UUID, hoyMadrid, memoriaIds, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
   leerArgumentos, leerClasificacion, MAX_TURNOS_DIA, MAX_VUELTAS, paraIA, preguntaNota, reglaConDatoPersonal,
   sinPrefijo, SYSTEM_CLASIFICADOR, systemAsistente,
 } from './correduria-asistente'
@@ -56,7 +60,7 @@ export async function esParaCorreduria(texto: string): Promise<boolean> {
   if (d !== 'dudoso') return d === 'correduria'
   // Seguimiento de una conversación («¿y su mujer?»): si el asistente contestó hace poco, sigue él.
   const reciente = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
-    SELECT count(*) AS n FROM correduria_asistente_turno WHERE creado_at >= now() - interval '10 minutes'`)
+    SELECT count(*) AS n FROM correduria_asistente_turno WHERE creado_at >= now() - interval '10 minutes' AND ok`)
     .then((r) => Number(r[0]?.n ?? 0) > 0).catch(() => false)
   if (reciente) return true
   const or = openrouterConfigPasarela()
@@ -86,18 +90,19 @@ async function coste(modelo: string, usage: { prompt_tokens?: number; completion
 
 // ── Reglas aprendidas ────────────────────────────────────────────────────────────────────────────
 
-async function reglasActivas(): Promise<{ id: number; texto: string }[]> {
+/** `null` = no se han podido leer (≠ `[]`, «todavía no hay»): no se dice que no hay reglas. */
+async function reglasActivas(): Promise<{ id: number; texto: string }[] | null> {
   return prisma.$queryRaw<{ id: bigint; texto: string }[]>(Prisma.sql`
     SELECT id, texto FROM correduria_asistente_regla WHERE estado = 'activa' ORDER BY id`)
     .then((rs) => rs.map((r) => ({ id: Number(r.id), texto: r.texto })))
-    .catch(() => [])
+    .catch(() => null)
 }
 
 // ── Herramientas ─────────────────────────────────────────────────────────────────────────────────
 
 /** Ejecuta una herramienta. Devuelve el texto que verá la IA (ya enmascarado) y si fue bien. */
 async function ejecutar(
-  nombre: string, args: Record<string, unknown> | null, ctx: { turnoId: number; reglas: { id: number; texto: string }[] },
+  nombre: string, args: Record<string, unknown> | null, ctx: { turnoId: number; reglas: { id: number; texto: string }[] | null },
 ): Promise<{ texto: string; ok: boolean }> {
   if (args === null) return { texto: 'ERROR: argumentos ilegibles. Repite la llamada con JSON válido.', ok: false }
   const fallo = (r: { estado: string; motivo?: unknown }) =>
@@ -126,24 +131,55 @@ async function ejecutar(
     }
     case 'ficha_cliente': {
       const id = idValido(args.clienteId)
-      if (!id) return { texto: 'ERROR: clienteId no válido. Usa buscar para obtenerlo.', ok: false }
+      if (!id) return { texto: ERROR_NO_UUID, ok: false }
       const r = await fichaAsegura(id)
       if (r.estado === 'no_encontrado') return { texto: 'No existe ninguna ficha con ese id.', ok: true }
       if (r.estado !== 'ok') return fallo(r)
-      return { texto: paraIA(r.ficha), ok: true }
+      return { texto: paraIA(r.ficha, 14000), ok: true }
     }
     case 'ficha_poliza': {
       const id = idValido(args.polizaId)
-      if (!id) return { texto: 'ERROR: polizaId no válido. Sácalo de ficha_cliente.', ok: false }
+      if (!id) return { texto: ERROR_NO_UUID, ok: false }
       const r = await polizaAsegura(id)
       if (r.estado === 'no_encontrado') return { texto: 'No existe ninguna póliza con ese id.', ok: true }
       if (r.estado !== 'ok') return fallo(r)
-      return { texto: paraIA(r.poliza), ok: true }
+      return { texto: paraIA(r.poliza, 14000), ok: true }
     }
     case 'vencimientos': {
       const r = await vencimientosAsegura(diasValidos(args.dias), 12_000)
       if (r.estado !== 'ok') return fallo(r)
       return { texto: paraIA(r), ok: true }
+    }
+    case 'mi_dia': {
+      const hoy = hoyMadrid()
+      const [rT, rL, cartera] = await Promise.all([
+        tareasHoyAsegura().catch(() => ({ status: 502, json: null })),
+        leadsCompetenciaAsegura(90).catch(() => ({ status: 502, json: null })),
+        carteraAsegura().catch(() => null),
+      ])
+      const tareas = interpretarTareasHoy(rT.status, rT.json)
+      const leads = interpretarLeads(rL.status, rL.json)
+      return {
+        ok: tareas.estado === 'ok' || leads.estado === 'ok',
+        texto: paraIA({
+          hoy,
+          tareas: tareas.estado === 'ok'
+            ? { total: tareas.tareas.length, truncado: tareas.truncado, filas: tareas.tareas.slice(0, 30).map((t) => ({ ...t, vencida: t.fechaLimite < hoy })) }
+            : `ERROR: no se han podido leer (${tareas.estado === 'error' ? tareas.motivo : tareas.estado}). NO digas que no hay tareas.`,
+          llamadasRenovacion: leads.estado === 'ok'
+            ? (() => { const c = colaLlamadas(leads.leads); return { total: c.length, filas: c.slice(0, 20) } })()
+            : `ERROR: no se han podido leer (${leads.estado === 'error' ? leads.motivo : leads.estado}).`,
+          siniestrosAbiertos: cartera?.estado === 'ok' ? cartera.siniestrosAbiertos : 'no se ha podido leer',
+        }, 10000),
+      }
+    }
+    case 'oportunidades_cliente': {
+      const id = idValido(args.clienteId)
+      if (!id) return { texto: ERROR_NO_UUID, ok: false }
+      const r = await oportunidadesClienteAsegura(id).catch(() => ({ status: 502, json: null }))
+      const l = interpretarOportunidadesCliente(r.status, r.json)
+      if (l.estado !== 'ok') return fallo(l as { estado: string; motivo?: unknown })
+      return { texto: paraIA({ total: l.oportunidades.length, truncado: l.truncado, oportunidades: l.oportunidades }), ok: true }
     }
     case 'impagados': {
       const r = await impagadosAsegura()
@@ -171,16 +207,19 @@ async function ejecutar(
       }
       const [fila] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
         INSERT INTO correduria_asistente_regla (texto, origen_turno) VALUES (${regla}, ${ctx.turnoId}) RETURNING id`)
-      await tgSendButtons(`🧠 ¿Apunto esta regla para siempre?\n<i>${escapeHtml(regla)}</i>`, [[
+      const enviado = await tgSendButtons(`🧠 ¿Apunto esta regla para siempre?\n<i>${escapeHtml(regla)}</i>`, [[
         { texto: '✅ Apúntala', callback: `cas_regla:${fila.id}` },
         { texto: '✖️ No', callback: `cas_reglano:${fila.id}` },
-      ]]).catch(() => {})
+      ]]).catch(() => null)
+      if (enviado === null) return { texto: 'ERROR: no he podido mandar la propuesta con el botón. Díselo a Alberto; no está guardada.', ok: false }
       return { texto: 'Propuesta enviada; Alberto la confirmará con un botón. No digas que ya está guardada.', ok: true }
     }
     case 'listar_reglas':
+      if (ctx.reglas === null) return { texto: 'ERROR: no he podido leer las reglas ahora mismo. NO digas que no hay.', ok: false }
       return { texto: ctx.reglas.length ? ctx.reglas.map((r, i) => `${i + 1}. ${r.texto}`).join('\n') : 'Todavía no hay reglas aprendidas.', ok: true }
     case 'olvidar_regla': {
       const n = Math.round(Number(args.numero))
+      if (ctx.reglas === null) return { texto: 'ERROR: no he podido leer las reglas ahora mismo. No olvides nada todavía.', ok: false }
       const regla = ctx.reglas[n - 1]
       if (!regla) return { texto: `No hay regla número ${args.numero}.`, ok: true }
       await prisma.$executeRaw(Prisma.sql`
@@ -210,7 +249,7 @@ async function prepararEmision(args: Record<string, unknown>, turnoId: number): 
       ok: true,
     }
   }
-  if (!polizaId) return { texto: 'ERROR: polizaId no válido. Sácalo de ficha_cliente.', ok: false }
+  if (!polizaId) return { texto: ERROR_NO_UUID, ok: false }
   const projectId = proyectoValido(args.projectId)
   if (!projectId) return { texto: 'ERROR: projectId tiene que ser el número del proyecto de Avant2 (solo cifras). Pídeselo a Alberto.', ok: false }
   const q = typeof args.quoteId === 'string' ? args.quoteId.trim() : ''
@@ -513,7 +552,11 @@ async function lecturasRecientes(): Promise<LecturaDocumentoOportunidad[] | null
   const filas = await prisma.$queryRaw<{ id: bigint; file_id: string; nombre: string | null; mime: string | null }[]>(Prisma.sql`
     SELECT id, file_id, nombre, mime FROM correduria_asistente_documento
     WHERE creado_at >= now() - make_interval(mins => ${MINUTOS_DOCUMENTO_RECIENTE}::int)
-    ORDER BY id DESC LIMIT 3`).catch(() => null)
+      AND (usado_at IS NULL OR usado_at >= now() - interval '15 minutes')
+      AND (destino = 'correduria' OR NOT EXISTS (
+        SELECT 1 FROM correduria_asistente_documento d2
+        WHERE d2.destino = 'correduria' AND d2.creado_at >= now() - make_interval(mins => ${MINUTOS_DOCUMENTO_RECIENTE}::int)))
+    ORDER BY id DESC LIMIT 4`).catch(() => null)
   if (filas === null) return null
   const out: LecturaDocumentoOportunidad[] = []
   for (const f of filas.reverse()) {
@@ -607,27 +650,34 @@ async function abrirOportunidad(id: number): Promise<string> {
         resultado = ${JSON.stringify({ status: r.status, id: json?.id ?? null, motivo: json?.motivo ?? null })}::jsonb
     WHERE id = ${id}`).catch((e) => console.error('[correduria-oportunidad-tg] no se pudo cerrar la fila', id, e))
   await decir(fin.texto)
-  return fin.estado === 'abierta' ? 'Oportunidad abierta 🎯' : 'No se ha abierto'
+  return fin.estado === 'abierta' ? 'Oportunidad abierta 🎯' : fin.estado === 'incierta' ? 'No sé si se ha abierto' : 'No se ha abierto'
 }
 
 // ── Un turno ─────────────────────────────────────────────────────────────────────────────────────
 
 async function turnosDeHoy(): Promise<number | null> {
   return prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
-    SELECT count(*) AS n FROM correduria_asistente_turno WHERE creado_at >= date_trunc('day', now())`)
+    SELECT count(*) AS n FROM correduria_asistente_turno WHERE creado_at >= (date_trunc('day', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid')`)
     .then((r) => Number(r[0]?.n ?? 0)).catch(() => null)
 }
 
-/** Las dos últimas preguntas de la última media hora: contexto para «¿y su mujer?». */
-async function historialReciente(): Promise<NimToolMessage[]> {
-  const filas = await prisma.$queryRaw<{ pregunta: string | null; respuesta: string | null }[]>(Prisma.sql`
-    SELECT pregunta, respuesta FROM correduria_asistente_turno
+/**
+ * Las cuatro últimas preguntas de la última media hora (contexto para «¿y su mujer?», «la Mapfre», «1»)
+ * y los ids que ya salieron en ellas, para no volver a buscar al cliente en cada mensaje.
+ */
+async function historialReciente(): Promise<{ mensajes: NimToolMessage[]; memoria: string | null }> {
+  const filas = await prisma.$queryRaw<{ pregunta: string | null; respuesta: string | null; herramientas: unknown }[]>(Prisma.sql`
+    SELECT pregunta, respuesta, herramientas FROM correduria_asistente_turno
     WHERE creado_at >= now() - interval '30 minutes' AND ok AND pregunta IS NOT NULL AND respuesta IS NOT NULL
-    ORDER BY id DESC LIMIT 2`).catch(() => [])
-  return filas.reverse().flatMap((f) => [
-    { role: 'user' as const, content: f.pregunta },
-    { role: 'assistant' as const, content: f.respuesta },
-  ])
+    ORDER BY id DESC LIMIT 4`).catch(() => [])
+  const orden = filas.reverse()
+  return {
+    mensajes: orden.flatMap((f) => [
+      { role: 'user' as const, content: f.pregunta },
+      { role: 'assistant' as const, content: f.respuesta },
+    ]),
+    memoria: memoriaIds(orden.map((f) => f.herramientas)),
+  }
 }
 
 /** Texto libre de Alberto para la correduría → contesta por Telegram. Nunca lanza. */
@@ -663,10 +713,13 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
   const turnoId = Number(turno.id)
 
   const reglas = await reglasActivas()
-  const system = systemAsistente(reglas.map((r) => r.texto), new Date().toISOString().slice(0, 10))
+  const historial = await historialReciente()
+  const system = [systemAsistente((reglas ?? []).map((r) => r.texto), hoyMadrid()), historial.memoria]
+    .concat(reglas === null ? ['(No se han podido leer las preferencias aprendidas: si Alberto pregunta por ellas, dilo.)'] : [])
+    .filter(Boolean).join('\n\n')
   // A la IA va la pregunta TAL CUAL (si Alberto busca por DNI, la IA necesita el DNI para buscarlo;
   // el proveedor es de retención cero). Enmascarada queda solo en el registro y en Telegram.
-  const mensajes: NimToolMessage[] = [...(await historialReciente()), { role: 'user', content: pregunta }]
+  const mensajes: NimToolMessage[] = [...historial.mensajes, { role: 'user', content: pregunta }]
   const rastro: Rastro[] = []
   const t0 = Date.now()
   const { model, fallbacks } = modelosPorDefecto()

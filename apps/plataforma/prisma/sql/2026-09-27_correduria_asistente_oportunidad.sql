@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS correduria_asistente_oportunidad (
   cliente_id    uuid NOT NULL,
   alta          jsonb,
   estado        text NOT NULL DEFAULT 'propuesta'
-                CHECK (estado IN ('propuesta', 'aplicando', 'abierta', 'duplicada', 'rechazada', 'caducada', 'descartada')),
+                CHECK (estado IN ('propuesta', 'aplicando', 'abierta', 'duplicada', 'rechazada', 'incierta', 'caducada', 'descartada')),
   creada_at     timestamptz NOT NULL DEFAULT now(),
   caduca_at     timestamptz NOT NULL,
   decidida_at   timestamptz,
@@ -41,3 +41,8 @@ GRANT SELECT, INSERT, UPDATE ON correduria_asistente_documento, correduria_asist
 GRANT USAGE, SELECT ON SEQUENCE correduria_asistente_documento_id_seq, correduria_asistente_oportunidad_id_seq TO prisma_plataforma;
 -- La póliza de un tercero no se expone por la API de Supabase: fuera anon/authenticated.
 REVOKE ALL ON correduria_asistente_documento, correduria_asistente_oportunidad FROM anon, authenticated;
+
+-- Añadido el mismo día: `incierta` (la cartera no contestó bien; el alta pudo guardarse).
+ALTER TABLE correduria_asistente_oportunidad DROP CONSTRAINT IF EXISTS correduria_asistente_oportunidad_estado_check;
+ALTER TABLE correduria_asistente_oportunidad ADD CONSTRAINT correduria_asistente_oportunidad_estado_check
+  CHECK (estado IN ('propuesta', 'aplicando', 'abierta', 'duplicada', 'rechazada', 'incierta', 'caducada', 'descartada'));

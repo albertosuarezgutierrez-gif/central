@@ -1988,6 +1988,10 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   (se dice); primer paso = llamada 60 d antes del vencimiento (mínimo mañana). Botón `cas_oport:<id>` (un solo uso, 15 min,
   filtro `from.id`, mismo interruptor que emitir/corregir) → `accionOportunidadAsegura({accion:'crear', estado:'competencia'})`.
   En el webhook, un documento cuyo pie va a la correduría (o de un álbum ya desviado) **no pasa por el contable**.
+- **Auditoría 27/09/2026:** un **reply** a un mensaje de la correduría (🛡️/🎯/✏️/🚀 o texto que `clasificarDestino` manda a
+  correduría) va al asistente con la cita (`esRespuestaACorreduria` + `conCita`, bloque C0 del webhook) — antes el catch-all lo
+  descartaba. El historial son 4 turnos/30 min y lleva los **ids** ya consultados (`memoriaIds`, solo de llamadas ok). Herramientas
+  de lectura `mi_dia` y `oportunidades_cliente`. Fechas y tope diario en hora de Madrid (`hoyMadrid`).
 - **Reparto del texto libre** (`clasificarDestino`, puro y testeado en `lib/correduria-asistente.ts`):
   atajo `seguro:` / `/seguros` → siempre correduría; palabras propias (póliza, siniestro, renovación,
   CIMA…) o una matrícula → correduría; palabras contables → contable; lo demás («¿qué tiene Pablo

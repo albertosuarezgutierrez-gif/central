@@ -163,10 +163,14 @@ export function textoAlta(nombreCliente: string, a: Alta): string {
 }
 
 /** Qué se le dice a Alberto tras pulsar, con el enlace a la ficha. */
-export function resultadoAlta(status: number, json: unknown, url: string): { estado: 'abierta' | 'duplicada' | 'rechazada'; texto: string } {
+export function resultadoAlta(status: number, json: unknown, url: string): { estado: 'abierta' | 'duplicada' | 'rechazada' | 'incierta'; texto: string } {
   const t = textoAltaOportunidad(status, json)
   if (t.ok) return { estado: 'abierta', texto: `✅ ${escapar(t.texto)}\n${url}` }
   if (status === 409) return { estado: 'duplicada', texto: `ℹ️ ${escapar(t.texto)} No he abierto otra.\n${url}` }
+  // Sin respuesta o con un 5xx el alta pudo guardarse: decir «no se ha abierto» invitaría a duplicarla.
+  if (status === 0 || status >= 500) {
+    return { estado: 'incierta', texto: `⚠️ No sé si se ha abierto (la cartera no ha contestado bien). Mira la ficha antes de repetirlo: si se guardó, al repetir te avisará de que ya existe.\n${url}` }
+  }
   return { estado: 'rechazada', texto: `✋ No se ha abierto: ${escapar(t.texto)}\n${url}` }
 }
 

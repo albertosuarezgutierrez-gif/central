@@ -22,6 +22,7 @@ import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } 
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
 import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, registrarDocumentoTg, albumDeCorreduria } from '@/lib/correduria-asistente-telegram'
+import { clasificarDestino, conCita, esRespuestaACorreduria, tienePrefijo } from '@/lib/correduria-asistente'
 import { turnoDeNota } from '@/lib/correduria-asistente'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
@@ -1045,6 +1046,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // C0) Respuesta (reply) de Alberto a un mensaje de la CORREDURÍA que no consumió ningún flujo de arriba:
+  //     deslizar sobre una respuesta 🛡️ o un aviso de seguros y escribir («¿y su mujer?») se perdía en
+  //     silencio, porque el catch-all de abajo descarta todo reply. Va al asistente con la cita delante.
+  if (msg?.reply_to_message && (msg.text || '').trim() && String(msg.chat?.id || '') === String(process.env.TELEGRAM_CHAT_ID || '')) {
+    const citado = String(msg.reply_to_message.text ?? msg.reply_to_message.caption ?? '')
+    if (esRespuestaACorreduria(citado)) {
+      await manejarCorreduriaTg(conCita(msg.text, citado))
+      return NextResponse.json({ ok: true })
+    }
+  }
+
   // C) Catch-all del agente de CONTABILIDAD: mensaje suelto de Alberto que NO consumió ningún flujo
   //    anterior (ni callback, ni reply de force_reply). Va AL FINAL a propósito, para no secuestrar
   //    los flujos pago_/mov_/hsp_/deduccion_ ni las respuestas force_reply del agente de huéspedes.
@@ -1068,7 +1080,10 @@ export async function POST(req: NextRequest) {
         // «añádelo a oportunidades».
         const pie = (msg.caption || '').trim()
         const grupo = msg.media_group_id ? String(msg.media_group_id) : null
-        const aCorreduria = (pie !== '' && await esParaCorreduria(pie)) || await albumDeCorreduria(grupo)
+        // Lo determinista se decide y se APUNTA antes de cualquier espera: las demás fotos del álbum llegan
+        // casi a la vez y miran esta fila para saber adónde van.
+        const rapido = pie !== '' && (tienePrefijo(pie) || clasificarDestino(pie) === 'correduria')
+        const aCorreduria = rapido || (pie !== '' && await esParaCorreduria(pie)) || await albumDeCorreduria(grupo)
         await registrarDocumentoTg({ fileId: adj.fileId, nombre: adj.nameHint, mime: adj.mimeHint, mediaGroupId: grupo, destino: aCorreduria ? 'correduria' : 'contable' })
         if (aCorreduria) {
           if (pie) await manejarCorreduriaTg(pie)
