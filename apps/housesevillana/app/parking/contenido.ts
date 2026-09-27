@@ -29,19 +29,19 @@ export const HTML = `<!DOCTYPE html><html lang="es">
 <head>
 <meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>Casa con parking privado en el centro de Sevilla | House Sevillana</title>
-<meta name="description" content="Alojamiento en el casco histórico de Sevilla con plaza de garaje privada en el propio edificio. 290 m², 6 dormitorios, hasta 12 personas. Llega en coche sin buscar aparcamiento."/>
+<meta name="description" content="Alojamiento en el casco histórico de Sevilla con plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie. 290 m², 6 dormitorios, hasta 12 personas. Llega en coche sin buscar aparcamiento."/>
 <link rel="canonical" href="https://www.housesevillana.es/parking"/>
 <link rel="alternate" hreflang="es" href="https://www.housesevillana.es/parking"/>
 <link rel="alternate" hreflang="en" href="https://www.housesevillana.es/en/parking"/>
 <link rel="alternate" hreflang="it" href="https://www.housesevillana.es/it/parking"/>
 <link rel="alternate" hreflang="x-default" href="https://www.housesevillana.es/parking"/>
 <meta property="og:title" content="Casa con parking privado en el centro de Sevilla | House Sevillana"/>
-<meta property="og:description" content="Plaza de garaje privada en el propio edificio, en pleno casco histórico. Llega en coche y olvídate de aparcar."/>
+<meta property="og:description" content="Plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie de la casa, en pleno casco histórico. Llega en coche y olvídate de aparcar."/>
 <meta property="og:url" content="https://www.housesevillana.es/parking"/>
 ${TARJETA}
 <meta property="og:type" content="website"/>
 <meta property="og:locale" content="es_ES"/>
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿House Sevillana tiene parking privado?","acceptedAnswer":{"@type":"Answer","text":"Sí. Hay una plaza de garaje privada en el mismo edificio, reservable junto con la estancia. Es de las pocas casas turísticas del casco histórico de Sevilla con aparcamiento propio."}},{"@type":"Question","name":"¿Afecta la Zona de Bajas Emisiones de Sevilla a mi coche?","acceptedAnswer":{"@type":"Answer","text":"La Zona de Bajas Emisiones de Sevilla es únicamente la Isla de la Cartuja, al noroeste de la ciudad, y solo restringe de lunes a viernes no festivos de 7:00 a 19:00. Los vehículos con distintivo 0, ECO, C o B acceden libremente. El casco histórico, donde está House Sevillana, no forma parte de esa ZBE: tiene su propio régimen de tráfico restringido, así que conviene consultar la ruta de llegada al reservar."}},{"@type":"Question","name":"¿Cuánto cuesta la plaza de garaje?","acceptedAnswer":{"@type":"Answer","text":"Las condiciones de la plaza se confirman directamente con el propietario al reservar. Reservando en housesevillana.es hablas con Alberto sin intermediarios."}}]}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"¿House Sevillana tiene parking privado?","acceptedAnswer":{"@type":"Answer","text":"Sí. Hay una plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie de la casa, reservable junto con la estancia. Es de las pocas casas turísticas del casco histórico de Sevilla con aparcamiento propio."}},{"@type":"Question","name":"¿Afecta la Zona de Bajas Emisiones de Sevilla a mi coche?","acceptedAnswer":{"@type":"Answer","text":"La Zona de Bajas Emisiones de Sevilla es únicamente la Isla de la Cartuja, al noroeste de la ciudad, y solo restringe de lunes a viernes no festivos de 7:00 a 19:00. Los vehículos con distintivo 0, ECO, C o B acceden libremente. El casco histórico, donde está House Sevillana, no forma parte de esa ZBE: tiene su propio régimen de tráfico restringido, así que conviene consultar la ruta de llegada al reservar."}},{"@type":"Question","name":"¿Cuánto cuesta la plaza de garaje?","acceptedAnswer":{"@type":"Answer","text":"Las condiciones de la plaza se confirman directamente con el propietario al reservar. Reservando en housesevillana.es hablas con Alberto sin intermediarios."}}]}</script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Georgia,serif;color:#1a1a1a;line-height:1.7}
@@ -78,15 +78,15 @@ nav a{color:white;text-decoration:none;font-family:Arial,sans-serif;font-size:13
 <div class="breadcrumb"><a href="/">Inicio</a> › Parking</div>
 <div class="hero">
   <h1>Llega en coche al centro de Sevilla</h1>
-  <p>Plaza de garaje privada en el propio edificio, en pleno casco histórico. Aparcas una vez y el resto del viaje es a pie.</p>
+  <p>Plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie de la casa. Aparcas una vez y el resto del viaje es a pie.</p>
 </div>
 <div class="container">
-  <p>Quien viene a Sevilla en coche descubre pronto el mismo problema: el casco histórico es un laberinto de calles estrechas, con tráfico restringido y prácticamente sin sitio donde dejar el coche. La mayoría de los alojamientos del centro resuelven esto mandándote a un aparcamiento público a diez minutos andando, con maletas.</p>
-  <p><strong>House Sevillana tiene una plaza de garaje privada en el propio edificio</strong>, reservable junto con la estancia. Es de las pocas casas turísticas del casco antiguo que puede decir eso, y es lo que más agradecen los huéspedes que llegan conduciendo.</p>
+  <p>Quien viene a Sevilla en coche descubre pronto el mismo problema: el casco histórico es un laberinto de calles estrechas, con tráfico restringido y prácticamente sin sitio donde dejar el coche. La mayoría de los alojamientos del centro resuelven esto mandándote a un aparcamiento público de pago, sin plaza garantizada.</p>
+  <p><strong>House Sevillana tiene una plaza de garaje privada en San Juan de la Palma</strong>, a pocos minutos a pie de la casa y reservable junto con la estancia. Es de las pocas casas turísticas del casco antiguo con plaza propia, y es lo que más agradecen los huéspedes que llegan conduciendo.</p>
 
   <h2>Por qué importa tanto en Sevilla</h2>
   <div class="poi-grid">
-    <div class="poi"><h3>🚗 Aparcas dentro del edificio</h3><p>Del coche a la casa, sin arrastrar maletas por la calle ni buscar hueco de madrugada.</p></div>
+    <div class="poi"><h3>🚗 Tu plaza, sin buscar hueco</h3><p>Plaza privada en San Juan de la Palma, a pocos minutos a pie: nada de dar vueltas buscando aparcamiento de madrugada.</p></div>
     <div class="poi"><h3>🚶 Todo a pie desde la puerta</h3><p>Catedral a 10 min, Real Alcázar a 12, Torre del Oro a 14 y Plaza de España a 15. El coche se queda quieto.</p></div>
     <div class="poi"><h3>✈️ Aeropuerto a 11 km</h3><p>SVQ está a 16-20 min en taxi o VTC. Si alquilas coche allí, ya sabes dónde lo dejas.</p></div>
     <div class="poi"><h3>🧳 Pensado para grupos</h3><p>290 m², 6 dormitorios y 4 baños para hasta 12 personas. La casa entera para vosotros.</p></div>
@@ -108,7 +108,7 @@ nav a{color:white;text-decoration:none;font-family:Arial,sans-serif;font-size:13
   </details>
   <details>
     <summary>¿Cuántos coches caben?</summary>
-    <p>Es una plaza de garaje privada en el edificio. Si viajáis en varios coches, dilo al reservar y Alberto te indica las alternativas del entorno antes de que llegues.</p>
+    <p>Es una plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie de la casa. Si viajáis en varios coches, dilo al reservar y Alberto te indica las alternativas del entorno antes de que llegues.</p>
   </details>
   <details>
     <summary>¿Y si vengo en furgoneta o con un coche grande?</summary>

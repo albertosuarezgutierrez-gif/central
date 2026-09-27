@@ -10,7 +10,7 @@
 
 **Calle Socorro 24, 41003 Sevilla — barrio de San Julián**, distrito Casco Antiguo
 (37.395904, -5.987431). La calle va de la Plaza de San Román a la Plaza de San Marcos. 290 m²,
-6 dormitorios, 4 baños, patio andaluz, azotea y **plaza de garaje privada en el edificio** (el argumento nº 1: aparcar en el
+6 dormitorios, 4 baños, patio andaluz, azotea y **plaza de garaje privada en San Juan de la Palma, a pocos minutos a pie** (⚠️ NO está en el edificio: corregido por Alberto el 27/09/2026; lo vigila `test/regression-house-sevillana-parking.test.ts`) (el argumento nº 1: aparcar en el
 casco antiguo es un dolor). Licencia **VFT/SE/01179**, obligatoria y visible en la web.
 
 > 🚨 **NO es Bustos Tavera 22.** Esa es la dirección de OTROS DOS pisos del grupo — *Luxury

@@ -63,7 +63,7 @@ const PAGINAS = [
       'Preguntas frecuentes',
       'Consultar disponibilidad',
       'Plaza de garaje privada',
-      'Aparcas dentro del edificio',
+      'Tu plaza, sin buscar hueco',
       'Zona de Bajas Emisiones de Sevilla es únicamente',
     ],
   },
