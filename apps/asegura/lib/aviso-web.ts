@@ -166,10 +166,9 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
   if (!email) throw new Error('aviso_web_email_ilegible')
   const telefono = f.telefono ? decryptField(f.telefono) : null
 
-  // Ficha: nueva como lead, o la que ya tiene ese correo. 🚨 El móvil NO entra en el alta: nadie lo ha
-  // verificado (el doble opt-in confirma el correo) y buscar ficha por él podría colgar el aviso de
-  // otra persona. Se añade después, a la ficha ya decidida por el correo.
   // Ficha: nueva como lead, o la que ya tiene ese correo. Con varias, la primera — y se avisa.
+  // 🚨 El móvil NO entra en el alta: nadie lo ha verificado (el doble opt-in confirma el correo) y
+  // buscar ficha por él podría colgar el aviso de otra persona. Se añade después, a esta ficha.
   // ⚠️ `altaCliente` abre su propia transacción, así que va FUERA de la de abajo: si esa fallara,
   // queda un lead sin oportunidad. El reintento del mismo enlace lo recupera (la ficha se encuentra
   // por el correo) y la respuesta de error pide reintentar; no se deja silencioso.
