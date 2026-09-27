@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-27T05:27:06Z",
-  "sha": "608da187db1c5a6343a7580eb462b682aabc8fd1",
+  "generadoEn": "2026-09-27T05:41:33Z",
+  "sha": "df47050320bd8d8a17075a5ddd10e7c6193a70e1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12269,13 +12269,13 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Ramo | null",
-          "linea": 563,
+          "linea": 658,
           "resumen": "Devuelve un ramo por su slug, o `null` si no existe (nunca un ramo de relleno)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9fe15437f3dc"
+      "hash": "4fa728929fc9"
     },
     {
       "ruta": "apps/asegura-web/lib/seo.ts",
@@ -12386,7 +12386,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a5529f23e7d1"
+      "hash": "426a3d6415d9"
     },
     {
       "ruta": "apps/asegura-web/lib/ventana-renovacion.ts",
@@ -12403,7 +12403,7 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "boolean",
-          "linea": 29
+          "linea": 32
         },
         {
           "nombre": "diaUtc",
@@ -12411,7 +12411,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 53
+          "linea": 56
         },
         {
           "nombre": "restarDias",
@@ -12419,7 +12419,7 @@
           "exportada": false,
           "params": "d: Date, n: number",
           "retorno": "Date",
-          "linea": 57
+          "linea": 60
         },
         {
           "nombre": "enAnio",
@@ -12427,7 +12427,7 @@
           "exportada": false,
           "params": "d: Date, anio: number",
           "retorno": "Date",
-          "linea": 62,
+          "linea": 65,
           "resumen": "Mismo día y mes en otro año; un 29 de febrero cae al 28 si el año no es bisiesto."
         },
         {
@@ -12436,13 +12436,13 @@
           "exportada": true,
           "params": "vence: string, hoy: Date",
           "retorno": "Ventana | null",
-          "linea": 73,
+          "linea": 76,
           "resumen": "`vence` en `AAAA-MM-DD`. Si la fecha ya pasó se usa su próximo aniversario: la gente copia la fecha de la póliza, que suele ser la del primer año, y la póliza se prorroga sola cada año en el mismo día"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "75bb17e2d81e"
+      "hash": "bfd0483aa7e4"
     },
     {
       "ruta": "apps/asegura/app/(usuario)/cartera/[clienteId]/hogar-nuevo/page.tsx",
@@ -110438,7 +110438,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 64
+          "linea": 66
         },
         {
           "nombre": "tipoSeguroLead",
@@ -110446,7 +110446,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TipoSeguroLead | null",
-          "linea": 68
+          "linea": 70
         },
         {
           "nombre": "revisarLeadWeb",
@@ -110454,7 +110454,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "LeadRevisado",
-          "linea": 79,
+          "linea": 81,
           "resumen": "Revisa lo que llega del formulario. Un solo motivo cada vez, con su campo, para que la pantalla señale la casilla. `motivo: 'bot'` = honeypot relleno: la ruta responde 200 «recibido» SIN hacer nada (n"
         },
         {
@@ -110463,7 +110463,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadWeb, 'tipoSeguro' | 'comentario'>",
           "retorno": "string",
-          "linea": 122,
+          "linea": 124,
           "resumen": "Lo que va en `notas` de la ficha nueva (y al historial del alta, que lo repite)."
         },
         {
@@ -110472,7 +110472,7 @@
           "exportada": true,
           "params": "lead: LeadWeb",
           "retorno": "string",
-          "linea": 131,
+          "linea": 133,
           "resumen": "El historial tipo `contacto` que se anota en una ficha que YA existía. Lleva el teléfono/email tecleados: pueden ser distintos de los de la ficha (es justo por lo que se ha encontrado), y Alberto nece"
         },
         {
@@ -110481,7 +110481,7 @@
           "exportada": true,
           "params": "r: ResultadoEscritura",
           "retorno": "ResultadoLead",
-          "linea": 156
+          "linea": 158
         },
         {
           "nombre": "urlFichaCliente",
@@ -110489,7 +110489,7 @@
           "exportada": true,
           "params": "id: string, base: string = process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_POR_DEFECTO",
           "retorno": "string",
-          "linea": 181
+          "linea": 183
         },
         {
           "nombre": "textoTelegramLead",
@@ -110497,13 +110497,13 @@
           "exportada": true,
           "params": "a: AvisoLead",
           "retorno": "string",
-          "linea": 202,
+          "linea": 204,
           "resumen": "HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b19c756bf6ed"
+      "hash": "a8c8591eb05c"
     },
     {
       "ruta": "apps/plataforma/lib/libro-registro-asegura.ts",
