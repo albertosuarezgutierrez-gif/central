@@ -13,7 +13,7 @@ SET search_path = seguros, public;
 CREATE TABLE IF NOT EXISTS seguros.portal_aviso_cima (
   identidad_id uuid NOT NULL REFERENCES seguros.portal_identidad(id) ON DELETE CASCADE,
   clave        text NOT NULL CHECK (length(clave) <= 300),
-  tipo         text NOT NULL CHECK (tipo IN ('base', 'recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva')),
+  tipo         text NOT NULL CHECK (tipo IN ('base', 'recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva', 'poliza_modificada')),
   enviado      boolean NOT NULL DEFAULT false,
   creado_en    timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (identidad_id, clave)
@@ -21,7 +21,7 @@ CREATE TABLE IF NOT EXISTS seguros.portal_aviso_cima (
 
 CREATE TABLE IF NOT EXISTS seguros.portal_aviso_silenciado (
   identidad_id uuid NOT NULL REFERENCES seguros.portal_identidad(id) ON DELETE CASCADE,
-  tipo         text NOT NULL CHECK (tipo IN ('recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva')),
+  tipo         text NOT NULL CHECK (tipo IN ('recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva', 'poliza_modificada')),
   creado_en    timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (identidad_id, tipo)
 );

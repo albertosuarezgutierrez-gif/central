@@ -12,6 +12,31 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — PR #3779 (+): el bot lee SOLO el último documento (o su álbum), no todo lo de la hora (la prueba de
+MUSSAP salió con 374,90€ por mezclar dos subidas). Si ya tenía oportunidad del ramo: «✏️ Actualizar la existente»
+(antes→después, un solo uso `actualizada_at`, migración aplicada) y «📎 Guardar en la ficha» también ahí.
+
+**(27/09/2026)** — Tras #3773 el bot ya lee el tomador (Rafael Campa, localizado por DNI), pero el enlace final llevaba a la ficha:
+`resultadoAlta()` enlaza ahora a la oportunidad (`?tab=oportunidades&op=<id>`), también cuando ya había una abierta (409).
+
+**(27/09/2026)** — PR #3773: tras desplegar #3765 el bot seguía preguntando «¿a quién?» con la póliza de MUSSAP subida:
+la subida y el botón «de un cliente» no son turnos del chat. `avisoDocumentosPendientes()` mete en el system cuántos
+documentos de la correduría (última hora, sin usar) hay y ordena `proponer_oportunidad` sin clienteId + usarDocumentos.
+
+**(27/09/2026)** — Portal de clientes, 2ª vuelta tras revisión (architect) del #3760: 10 hallazgos corregidos (parte al AUTOR y no al tomador, obligación vieja ya no calla el vencimiento del año, ex-clientes no reciben cambios, cortacircuitos también por campo, prima anual/bruta por separado —foto v2—, sin doble aviso de parte/siniestro ni de vencimiento derivado, cron `degradado` si el detector falla). Nuevo: push `poliza_modificada` (CHECK aplicado), autorizados con «Acceso total» ven los cambios en campana+push, recordatorio único de vencimiento a 2 días si no entró, y 3 señales de adopción en el embudo (medido: 13 avisados/30d, 1 entró por el enlace, 0 con push). La invitación en tandas YA existía (#3295).
+
+**(27/09/2026)** — «Añade todo» (mismo PR #3765): dedupe de `update_id` + asistente en `after()`, voz de llamadas
+(«no contesta», «no le interesa»…) → correduría, «📎 Guardar en la ficha» tras abrir, enlace a tarificar (no botón:
+gasta), tareas de hoy DENTRO del aviso de renovaciones (sin aviso nuevo, Alberto pidió menos), y matrícula como
+pista del tomador (a `posibles`). Migración `telegram_update_visto_y_documentos` aplicada.
+
+**(27/09/2026)** — PR #3765: el asistente de Telegram ya no pregunta «¿de qué lead?» teniendo la póliza delante:
+asegura lee el tomador (`leer-documento?tomador=1`), lo busca por DNI **y por nombre** y devuelve un sello cifrado
+(`lib/sello-alta-lead.ts`, exige `v1:`); si no está, botón «Crear lead y abrir». El DNI nunca sale de asegura.
+Revisión architect: 6.582 fichas con DNI sin hash → «su DNI no aparece» ≠ «no está»; por eso los homónimos
+los decide Alberto (`leadNuevo`). Migración `..._oportunidad_lead.sql` aplicada. Pendiente: backfill del hash de DNI.
+**(27/09/2026)** — Portal de clientes: **«cualquier modificación de su póliza» → campana + correo** (decisión 15/09 que no se cumplía). Detector diario (`apps/asegura/lib/poliza-cambios-detector.ts`, antes del cron `avisos-intranet`) saca FOTO de cada póliza viva y guarda cambios de estado/fechas/prima/forma de pago/coberturas/documento nuevo/siniestro en `seguros.portal_poliza_cambio` (SQL `2026-09-27b`, **APLICADA**); aviso `poliza_modificada` en el catálogo común (semilla silenciosa, «completar ≠ cambiar», cortacircuitos si cambia >30 % a la vez). Además: los partes ya salen por correo, y el vencimiento se deriva de la póliza para quien nunca abrió la bóveda (3 hoy), con sello compartido para no repetirlo. El correo invita a instalar la app y activar avisos. Push de cambios de póliza: NO incluido.
+
 **(27/09/2026)** — Revisión PR #3748 (asistente correduría). Bloqueante corregido: un documento con pie que nombra
 aseguradora («recibo Mapfre hogar») ya NO se desvía a la correduría; solo `pieDeCorreduria()` (prefijo o lead/cliente/
 oportunidad) o el álbum. Aseguradoras → `PROPIAS_SUAVES` (tras las contables). Botón gasto/cliente de un solo uso
@@ -766,6 +791,30 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (27/09/2026) Título de la RC = solo la RC
 - `module-seguros/objeto.ts` `tituloRc()`: si una cobertura se nombra «Responsabilidad civil…/R.C./RC», la tarjeta titula «RC caballos» y el resto (defensa penal, liberación de gastos) queda como «+N coberturas» y en el desglose de la póliza. Sin cobertura así, sigue el título por modalidades.
 - Precio de la moto (Allianz 045981539): Allianz NO manda prima en el EIAC de póliza, solo en el recibo CA (11 de 12 vivas sin prima, todas Allianz). `primaConRecibos()`/`vencimientoConRecibos()` (module-seguros) la toman del recibo anual si la póliza no la trae (solo pago anual) y corrigen el vencimiento si hay CA cobrado posterior. Aplicado en `cartera-ficha.ts` y `cartera-poliza.ts` de asegura. - Auditoría: 043673655 anulada en ePac (impago) → cancelada a mano; 054914837 sin recibos en CIMA → 2 CA copiados de ePac (`origen=manual`); 10 Mapfre EV con vencimiento pasado sin renovación por CIMA → aviso rojo en tarjeta. Regla fijada en `apps/asegura/CLAUDE.md` + skill `correduria-crm` (punto 0).
+
+## (27/09/2026) Materiales Llido fusionada; Martin = contacto de Gymcisa
+`fusionar_clientes`: Materiales Llido Gomez S.l. (bf96c9e0 → bcd1f34a, mismo CIF+tel, OK de Alberto). Martin (fichas
+52886ff1 cliente + 2a6c38e9 lead, nº 11091 del volcado) = persona de contacto de Gymcisa: renombrado a «Martin», física,
+relación «Empleado/a» con Gymcisa ya existente. ⏸️ Su fusión la bloquea `dni_sin_indice` (el lead tiene DNI sin hash):
+se hace tras pulsar el backfill del índice de DNI en /correduria/mantenimiento. No se forzó la guarda.
+
+## (27/09/2026) Correduría: fichas de EMPRESA normalizadas (solo BD, sin PR)
+59 fichas de sociedad (SL/SA/CB/comunidad/grupo) → `tipo_persona='juridica'`, razón social entera en `nombre`,
+`apellidos=''` (estaban partidas «Transportes»/«Martin Toscano S.l.», o repetidas «Maxiberia S.L»/«Maxiberia S.L»),
+espacios dobles fuera. GLOBAL 2 INSTALACIONES TÉCNICAS ya sale entera. NO tocadas a propósito: «Martin/Gymcisa Sl»
+×2 (¿persona de contacto o empresa?). Duplicados SIN fusionar: Carne Alam S.L y JUMOYCOR S.L tienen DOS CIF
+distintos (no se funden); Materiales Llido Gomez S.l. ×2 = mismo CIF+tel, leads sin pólizas → candidato a lote.
+
+## (27/09/2026) Vigía de ingesta: «renovaciones sin llegar» por compañía
+- Nueva señal en el vigía `correduria_ingesta` (Telegram + /correduria): pólizas en vigor vencidas hace >15 días sin recibo del periodo nuevo, agrupadas por compañía (`renovacionesSinLlegar`, module-seguros/ingesta.ts; lectura en apps/asegura/lib/ingesta.ts). Hoy: Mapfre 10 (desde 05/06). El primer pase tras desplegar suena una vez. Alberto: Mapfre ya manda, se espera a que complete esta semana (borrador a CIMA SAU-24238 en Gmail, sin enviar).
+
+## (27/09/2026) Pólizas «vencidas» que sí estaban en vigor: Allianz (recibos) y Mapfre (sin datos)
+- Allianz no manda POL por CIMA pero sí REC: el recibo 2027 cobrado no movía el vencimiento. Nuevo pg_cron `seguros-avanzar-vencimientos-recibo` (06:30 UTC, función `seguros.avanzar_vencimientos_por_recibo()`, SQL en apps/asegura/prisma/sql/2026-09-27_renovacion_por_recibo.sql, APLICADO): solo avanza pólizas YA vencidas (el recibo de renovación llega semanas antes; avanzar antes borraría el aviso de no-renovación). 4 Allianz avanzadas.
+- Mapfre: 10 pólizas vencidas sin ningún dato de renovación (Mapfre mudo 23/06→25/09, aún sin POL). Portal: `renovacionSinConfirmar` → «Renovación sin confirmar» en vez de esconderlas de «En vigor» (Toyota de Víctor). Vigía de ingesta con señal por compañía: en curso (PR aparte).
+
+## (27/09/2026) Portal: quien figura en una póliza (propietario, conductor, asegurado…) la ve
+- Decisión de Alberto: el interviniente ve ESA póliza con los datos del tomador y puede dar parte; nunca las otras del tomador. Nueva lista `CarteraPortal.intervinientes` (grupo «Figuras en su póliza»). Regla pura en `apps/asegura-portal/lib/intervinientes.ts`; IBAN/DNI/documentos siempre fuera (el portal no los carga). Cepo: `test/regression-portal-intervinientes.test.ts` (visto en rojo, 6 mutaciones).
+- Solo funciona si el interviniente tiene `portal_vinculo`: Nieves Rodríguez aún no tiene acceso al portal.
 
 ## (27/09/2026) El bot de seguros ya HACE cosas: tarea, llamada, nota, siniestro, portal (PR #3748)
 - Tools `proponer_tarea`/`registrar_llamada`/`anotar_nota`/`abrir_siniestro`/`invitar_portal` → tabla `correduria_asistente_accion` (aplicada) → botón «✅ Hacer» (un uso, 15 min, `from.id`, interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA`) → mismos puertos que la ficha. Portal: comprueba `invitable` antes de ofrecer (es un correo real). Sin respuesta = «incierta».

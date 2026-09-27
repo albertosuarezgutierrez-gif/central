@@ -24,6 +24,7 @@ import {
   type UltimoPullIngesta,
   type FicheroParcial,
   type CampoImportanteSinLeer,
+  type RenovacionSinLlegar,
 } from '@central/module-seguros'
 import { cabecerasPuerto } from '../puerto-actor.ts'
 
@@ -272,6 +273,24 @@ function esListaCamposImportantes(v: unknown): boolean {
   return Array.isArray(v) && v.every(esCampoImportante)
 }
 
+/**
+ * Renovaciones que no han llegado, por compañía. Todo-o-nada: una fila rara
+ * degrada la lista ENTERA a `null` (hueco). Quedarse con las legibles daría menos
+ * compañías de las que hay — y la que falta sería justo la que viene rara.
+ */
+function esRenovacion(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.entidad === 'string'
+    && (o.entidadNombre === null || typeof o.entidadNombre === 'string')
+    && entero(o.polizas)
+    && (o.vencimientoMasAntiguo === null || typeof o.vencimientoMasAntiguo === 'string')
+}
+
+function esListaRenovaciones(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esRenovacion)
+}
+
 function esCajaNegra(v: unknown): boolean {
   if (typeof v !== 'object' || v === null) return false
   const o = v as Record<string, unknown>
@@ -353,6 +372,10 @@ export function interpretarIngesta(
       // conocido» — `saludIngesta` no distingue: sin lista, no avisa nada, que
       // es lo correcto: no hay avería que declarar por esto.
       camposImportantes: señal<CampoImportanteSinLeer[]>(r, 'camposImportantes', esListaCamposImportantes) ?? undefined,
+      // ⏳ Tres estados, sin colapsar: ausente (`central-asegura` anterior al
+      // 27/09/2026) = no se pide, no es hueco; `null`/ilegible = hueco; `[]` =
+      // se miró y no hay ninguna.
+      renovacionesSinLlegar: señal<RenovacionSinLlegar[]>(r, 'renovacionesSinLlegar', esListaRenovaciones),
     }),
     huerfanasTruncadas: huerfanas.estado === 'ok' && huerfanas.truncado,
     huerfanasSinAmbito: huerfanas.estado === 'ok' ? huerfanas.ocultasOtroAmbito : null,

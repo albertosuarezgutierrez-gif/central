@@ -50,7 +50,7 @@ import {
   type IntervinienteFicha,
   type ReciboVigencia,
 } from '@central/module-seguros'
-import { DIAS_VENTANA_AVISO, entraEnVentana, TIPOS_RECORDATORIO_PROPIO } from '@central/module-seguros-portal'
+import { DIAS_VENTANA_AVISO, entraEnVentana, idVencimientoDerivado, TIPOS_RECORDATORIO_PROPIO } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import {
   LIMITE_OBLIGACIONES,
@@ -432,6 +432,16 @@ export async function ejecutarAvisosVencimiento(opts: {
       break
     }
     const poliza = o.polizaId ? porId.get(o.polizaId) : undefined
+    // Ya se le avisó de ESTE vencimiento por el correo de la intranet cuando aún no tenía obligación
+    // (`idVencimientoDerivado`, 27/09/2026): se sella sin mandarle el mismo aviso otra vez.
+    if (poliza && o.polizaId && !soloContar) {
+      const clave = `obligacion_en_ventana:${idVencimientoDerivado(o.polizaId, o.fechaEvento)}`
+      const ya = await db.portalAvisoEnviado.findFirst({ where: { clienteId: poliza.cliente.id, clave }, select: { id: true } })
+      if (ya) {
+        await db.portalObligacion.update({ where: { id: o.id }, data: { avisadaAt: new Date() } })
+        continue
+      }
+    }
     let destino = poliza ? destinatarioDeCliente(poliza.cliente) : null
     let paraTercero: ParaTercero | null = null
 

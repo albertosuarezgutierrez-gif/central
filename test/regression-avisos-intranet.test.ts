@@ -323,3 +323,81 @@ test('🚨 la llave va en el fragmento (no llega al servidor) y un fallo al guar
   assert.ok(cuerpo.indexOf('try {') < cuerpo.indexOf('portalEnlaceDirecto.create('), 'el create va dentro del try')
   assert.match(fuente('apps/asegura-portal/next.config.ts'), /Referrer-Policy[\s\S]*same-origin/)
 })
+
+// ── 27/09/2026: cambios de póliza, partes y vencimientos de quien nunca entró ──
+
+test('los cambios de póliza y los partes llegan al correo (no solo a la campana)', () => {
+  const r = avisosNuevos(
+    pendiente({
+      firmas: [],
+      polizasModificadas: [{ id: 'cam1', polizaId: 'p1', compania: 'Reale', ramo: 'Hogar', campos: ['prima'], estadoNuevo: null }],
+      partes: [{ id: 'pa1', cambio: 'abierto', fechaHecho: '2026-09-10', compania: 'Mapfre', motivoDescarte: null }],
+    }),
+    HOY,
+    new Set(),
+  )
+  assert.ok(r)
+  assert.deepEqual(r.nuevos.map((a) => a.tipo).sort(), ['parte_actualizado', 'poliza_modificada'])
+})
+
+test('el detector de cambios corre ANTES de reunir, y no puede tumbar el correo', () => {
+  const src = fuente('apps/asegura/lib/avisos-intranet.ts')
+  const cuerpo = src.slice(src.indexOf('export async function avisarIntranet('))
+  const det = cuerpo.indexOf('detectarCambiosPolizas(')
+  assert.ok(det > 0 && det < cuerpo.indexOf('reunirPendientes('), 'el cambio de hoy tiene que salir en el correo de hoy')
+  const detector = fuente('apps/asegura/lib/poliza-cambios-detector.ts')
+  assert.match(detector, /catch \(e\)/, 'un fallo del detector no puede dejar sin correo el resto de avisos')
+  assert.match(detector, /cambioMasivo\(/, 'sin cortacircuitos, un cambio de formato de CIMA sería un correo a media cartera')
+})
+
+test('el vencimiento derivado (sin obligación) no se repite cuando nace la obligación', () => {
+  const intranet = fuente('apps/asegura/lib/avisos-intranet.ts')
+  assert.match(intranet, /id: idVencimientoDerivado\(/)
+  assert.match(intranet, /conObligacion\.has\(`\$\{v\.id\}/, 'con obligación la avisa el cron de vencimientos: dos correos')
+  const venc = fuente('apps/asegura/lib/avisos-vencimiento.ts')
+  assert.match(venc, /obligacion_en_ventana:\$\{idVencimientoDerivado\(/, 'el cron de vencimientos tiene que mirar el sello del derivado')
+})
+
+test('el correo invita a usar la app, y sin prometer nada de precio', async () => {
+  const { INVITACION_APP } = await import('../apps/asegura/lib/correo-avisos-intranet.ts')
+  const c = cuerpoAvisosIntranet({ nombre: null, avisos: [{ tipo: 'poliza_modificada' }], total: 1, enlace: 'https://clientes.grupoasegura.es/' })
+  assert.ok(c.texto.includes(INVITACION_APP) && c.html.includes('pantalla de inicio'))
+  assert.match(c.texto, /cambios en una de tus pólizas/)
+  assert.doesNotMatch(INVITACION_APP, /ahorr|precio|oferta|descuento/i)
+})
+
+test('el recordatorio de vencimiento: una vez, solo a quien no entró, y sin duplicar caminos', () => {
+  const src = fuente('apps/asegura/lib/avisos-intranet.ts')
+  assert.match(src, /debeRecordarVencimiento\(\{ fechaAccionable: c\.accionable, avisadoEn: c\.avisadoEn, ultimoAcceso: ultimoDe\.get/)
+  assert.match(src, /id: `\$\{c\.baseId\}:recordatorio`/, 'el recordatorio se sella aparte del primer aviso')
+  assert.match(src, /conObligacionAvisada\.has\(v\.id\)/, 'el mismo vencimiento por los dos caminos: un recordatorio')
+  assert.match(src, /pv\.origen <> 'corredor'/, 'mirar el portal como corredor no cuenta como que el cliente entró')
+})
+
+test('push y campana: los cambios de póliza de un tercero solo con «Acceso total» vigente', () => {
+  const lib = fuente('apps/asegura-portal/lib/polizas-modificadas.ts')
+  assert.match(lib, /alcance: 'total'/)
+  assert.match(lib, /autorizacionVigente\(a, hoy\)/)
+  const cron = fuente('apps/asegura-portal/app/api/cron/avisos-cima/route.ts')
+  assert.match(cron, /polizasModificadasDeIdentidad\(identidadId\)/)
+  assert.match(cron, /nuevas,\s*modificadas,\s*\)/)
+})
+
+test('revisión #3760: parte a quien lo dio, obligación por fecha, sin doble aviso, detector honesto', () => {
+  const src = fuente('apps/asegura/lib/avisos-intranet.ts')
+  // #1 el parte va a la ficha de su AUTOR (vínculo único, nunca el del corredor), no al tomador.
+  assert.match(src, /const autor = fichaDeAutor\.get\(x\.identidadId\)/)
+  assert.match(src, /partesPorCliente\.set\(autor,/)
+  // #2 una obligación vieja no calla el vencimiento de este año.
+  assert.match(src, /conObligacion\.has\(`\$\{v\.id\}\|\$\{dia\(v\.fechaVencimiento\)\}`\)/)
+  // #5 un vencimiento ya avisado como derivado no vuelve a salir por su obligación.
+  assert.match(src, /pvSellado\.has\(`\$\{clienteId\}\|obligacion_en_ventana:\$\{idVencimientoDerivado\(o\.polizaId, o\.fechaEvento\)\}`\)/)
+  const det = fuente('apps/asegura/lib/poliza-cambios-detector.ts')
+  // #6 el siniestro de un parte del portal ya tiene su aviso. #10 solo documentos que se pueden abrir.
+  assert.match(det, /!siniestroDeParte\.has\(s\.id\)/)
+  assert.match(det, /contenido: \{ not: null \}/)
+  assert.match(det, /mismaFoto\(antes, ahora\)/)
+  // #9 un detector caído no deja el cron en «ok».
+  const ruta = fuente('apps/asegura/app/api/cron/avisos-intranet/route.ts')
+  assert.match(ruta, /c\.error \|\| c\.masivo \? 'degradado' : 'ok'/)
+})

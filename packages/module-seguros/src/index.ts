@@ -118,6 +118,8 @@ export {
   repartirHuerfanas,
   textoHuerfanas,
   TOPE_POLIZAS_TELEGRAM,
+  DIAS_GRACIA_RENOVACION,
+  textoRenovacionesSinLlegar,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
@@ -136,6 +138,7 @@ export {
   type GrupoHuerfanas,
   type RepartoHuerfanas,
   type CampoImportanteSinLeer,
+  type RenovacionSinLlegar,
 } from './ingesta.ts'
 export {
   veredictoEntidad,
@@ -521,6 +524,7 @@ export {
 export {
   ACTIVIDADES,
   PASOS_EMBUDO,
+  PASOS_ADOPCION,
   VENTANAS_ACTIVIDAD,
   DIAS_ACTIVIDAD_DEFECTO,
   POR_PAGINA_ACTIVIDAD,

@@ -66,6 +66,7 @@ import {
   type Nivel,
 } from '@central/module-seguros-portal'
 import {
+  esEstadoVigente,
   importeEiac,
   interpretarCapital,
   primaConRecibos,
@@ -81,6 +82,7 @@ import { decryptField } from '@central/module-seguros-pii'
 
 import { prisma } from './db'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
+import { camposDeInterviniente, figurasEnPolizas, nivelMasAlto, ordenarRoles } from './intervinientes'
 import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
@@ -171,6 +173,13 @@ export type PolizaPortal = {
   fechaVencimiento: Date | null
   estado: string
   vigencia: Vigencia
+  /**
+   * 🚨 En vigor según la compañía (estado vigente, entra por CIMA) pero con el vencimiento ya
+   * pasado y sin renovación informada (27/09/2026: Mapfre estuvo tres meses sin mandar nada y
+   * sus pólizas desaparecían de «En vigor» como si hubieran caducado). No se sabe si se renovó:
+   * se enseña como «Renovación sin confirmar», nunca como vencida.
+   */
+  renovacionSinConfirmar: boolean
   /** CIMA la ha traído. `false` = emitida por nosotros y la compañía aún no la confirma. */
   confirmadaCima: boolean
   /** Id de la póliza a la que esta sustituye (cambio de compañía). Interno: sirve para cruzar. */
@@ -288,6 +297,15 @@ export type TitularPortal = {
     /** `'dueno'` = no es una autorización: es su EMPRESA (relación `Dueño`). No se «deja de ver». */
     via?: 'dueno'
   }
+  /**
+   * Presente SOLO en `intervinientes`: la identidad FIGURA en estas pólizas del
+   * tomador (propietaria, conductora…) sin ser su tomadora. `roles` es la unión
+   * para la cabecera; `rolesPorPoliza` lo que dice la ficha de cada una.
+   */
+  interviniente?: {
+    roles: string[]
+    rolesPorPoliza: Record<string, string[]>
+  }
   polizas: PolizaPortal[]
 }
 
@@ -327,6 +345,13 @@ export type CarteraPortal = {
   /** Fichas de OTROS que han autorizado a ver sus pólizas (`portal_autorizacion`). */
   autorizadas: TitularPortal[]
   /**
+   * Pólizas de OTROS tomadores donde una ficha PROPIA de la identidad figura
+   * como interviniente (`poliza_intervinientes`), agrupadas por tomador. SOLO
+   * esas pólizas, nunca las demás del tomador. Decisión de Alberto, 27/09/2026:
+   * quien figura en una póliza la ve como su tomador y puede dar parte de ella.
+   */
+  intervinientes: TitularPortal[]
+  /**
    * Las autorizaciones que esta lectura ha USADO de verdad, para que el
    * llamante lo anote en el registro de accesos que ve el otorgante
    * (`registrarUso` de `lib/autorizaciones`). Vacío = no se abrió nada ajeno.
@@ -346,6 +371,7 @@ const SIN_VINCULO: CarteraPortal = {
   correduria: null,
   propias: [],
   autorizadas: [],
+  intervinientes: [],
   autorizacionesUsadas: [],
 }
 
@@ -364,7 +390,7 @@ export function carteraALaVista(c: CarteraPortal, opciones: { soloSiYaCubre?: bo
   const aunCubre = (p: PolizaPortal) => opciones.soloSiYaCubre === true && p.sustituidaPor?.desde != null && p.sustituidaPor.desde > hoy
   const quitar = (ts: TitularPortal[]) =>
     ts.map((t) => ({ ...t, polizas: t.polizas.filter((p) => p.sustituidaPor === null || aunCubre(p)) }))
-  return { ...c, propias: quitar(c.propias), autorizadas: quitar(c.autorizadas) }
+  return { ...c, propias: quitar(c.propias), autorizadas: quitar(c.autorizadas), intervinientes: quitar(c.intervinientes) }
 }
 
 export async function carteraDeSesion(): Promise<CarteraPortal | null> {
@@ -591,10 +617,51 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   }
   const autorizadosIds = [...new Set([...porOtorgante.keys(), ...otorganteDePoliza.values()])]
 
+  // ── Pólizas AJENAS donde FIGURA (27/09/2026) ──────────────────────────────
+  //
+  // Decisión de Alberto: quien figura como interviniente en una póliza
+  // (propietario del coche, conductor, asegurado…) la ve como su tomador y puede
+  // dar parte. Caso fundacional: Nieves, propietaria del Toyota cuya póliza es
+  // de Víctor, no la veía.
+  //
+  // 🔒 La frontera es la MISMA que la de las propias: solo se buscan filas cuyo
+  // `cliente_id` es una ficha de `portal_vinculo` de ESTA identidad
+  // (`propiosIds`). Y se traen solo ESAS pólizas por id —nunca «las del tomador»
+  // por `cliente_id`—, así que las demás del tomador ni se leen. El cepo
+  // `test/regression-portal-intervinientes.test.ts` falla si este `where` deja
+  // de nombrar `propiosIds`.
+  const filasInterviniente =
+    propiosIds.length === 0
+      ? []
+      : await prisma.polizaInterviniente.findMany({
+          where: { clienteId: { in: propiosIds } },
+          select: { polizaId: true, clienteId: true, rol: true },
+        })
+  const polizasDondeFigura =
+    filasInterviniente.length === 0
+      ? []
+      : await prisma.poliza.findMany({
+          where: {
+            AND: [
+              {
+                id: { in: [...new Set(filasInterviniente.map((f) => f.polizaId))] },
+                clienteId: { notIn: propiosIds },
+                mergedIntoPolizaId: null,
+              },
+              WHERE_CARTERA_VIVA,
+            ],
+          },
+          select: { id: true, clienteId: true },
+        })
+  const idsDondeFigura = polizasDondeFigura.map((p) => p.id)
+  const tomadoresIds = [...new Set(polizasDondeFigura.map((p) => p.clienteId))]
+
   const todosIds = [...propiosIds, ...autorizadosIds, ...representadasIds]
   const [clientes, polizas] = await Promise.all([
     prisma.cliente.findMany({
-      where: { id: { in: todosIds }, mergedIntoClienteId: null },
+      // Los tomadores de las pólizas donde figura entran SOLO aquí (su nombre y
+      // su tipo), no en el `clienteId: { in }` de las pólizas de abajo.
+      where: { id: { in: [...todosIds, ...tomadoresIds] }, mergedIntoClienteId: null },
       // `tipoPersona` decide QUÉ se sirve de una ficha ajena: una sociedad no
       // tiene datos personales, así que quien la representa ve su CIF y su
       // cuenta y puede actuar por ella. Sin este campo, la bóveda serviría una
@@ -606,8 +673,12 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       // `WHERE_CARTERA_VIVA` va DENTRO del `AND`: es un `OR` de dos brazos y
       // dejarlo suelto al lado del resto mezclaría las ramas (devolvería
       // pólizas de otros clientes con `import_ref IS NULL`).
+      // Las de un tomador ajeno donde figura entran por ID, nunca por su ficha.
       where: {
-        AND: [{ clienteId: { in: todosIds }, mergedIntoPolizaId: null }, WHERE_CARTERA_VIVA],
+        AND: [
+          { OR: [{ clienteId: { in: todosIds } }, { id: { in: idsDondeFigura } }], mergedIntoPolizaId: null },
+          WHERE_CARTERA_VIVA,
+        ],
       },
       orderBy: [{ fechaVencimiento: 'desc' }, { createdAt: 'desc' }],
     }),
@@ -825,6 +896,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       fechaVencimiento,
       estado: p.estado,
       vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento }, hoy),
+      renovacionSinConfirmar:
+        esEstadoVigente(p.estado) &&
+        p.eiacXmlHash !== null &&
+        vigenciaPoliza({ estado: p.estado, fechaVencimiento }, hoy) === 'no_vigente',
       confirmadaCima: p.idPolizaEntidad !== null,
       sustituyeAId: p.polizaOrigenId !== null && sustituidas.has(p.polizaOrigenId) ? p.polizaOrigenId : null,
       // Los dos se deciden POR LECTOR en `titular()`, con lo que ese lector puede ver.
@@ -1039,12 +1114,46 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     })
   }
 
+  // Las pólizas donde FIGURA, agrupadas por tomador. La regla (qué abre, con qué
+  // nivel y qué campos NO) vive pura y testeada en `lib/intervinientes.ts`.
+  // Lo que ya se sirve por una autorización o por ser dueño no se duplica.
+  const figuras = figurasEnPolizas({
+    filas: filasInterviniente,
+    polizas: polizasDondeFigura,
+    propiosIds,
+    nivelPorCliente,
+    yaVisibles: new Set(autorizadas.flatMap((t) => t.polizas.map((p) => p.id))),
+  })
+  const intervinientes: TitularPortal[] = []
+  for (const tomadorId of tomadoresIds) {
+    // `null` para cualquier póliza del tomador donde no figura: `titular()` la deja FUERA.
+    const t = titular(tomadorId, 'tarjeta', (polizaId) => {
+      const f = figuras.get(polizaId)
+      return f !== undefined && f.tomadorId === tomadorId ? camposDeInterviniente(f.nivel) : null
+    })
+    if (t === null || t.polizas.length === 0) continue
+    const rolesPorPoliza: Record<string, string[]> = {}
+    const niveles: Nivel[] = []
+    for (const p of t.polizas) {
+      const f = figuras.get(p.id)
+      if (f === undefined) continue
+      rolesPorPoliza[p.id] = f.roles
+      niveles.push(f.nivel)
+    }
+    intervinientes.push({
+      ...t,
+      nivel: nivelMasAlto(niveles),
+      interviniente: { roles: ordenarRoles(Object.values(rolesPorPoliza).flat()), rolesPorPoliza },
+    })
+  }
+
   return {
     vinculada: vinculos.length > 0,
     vinculo,
     correduria: correduria?.nombre ?? null,
     propias,
     autorizadas,
+    intervinientes,
     autorizacionesUsadas,
   }
 }
@@ -1112,10 +1221,12 @@ function recibosDePoliza(lista: ReciboFila[]): RecibosPortal {
  * Una sola fuente para la ruta que lo crea y la pantalla que lo ofrece: si
  * divergen, se ofrece una póliza que luego se rechaza con 403.
  */
-export function polizasParaParte(c: Pick<CarteraPortal, 'propias' | 'autorizadas'>): Set<string> {
+export function polizasParaParte(c: Pick<CarteraPortal, 'propias' | 'autorizadas' | 'intervinientes'>): Set<string> {
   return new Set([
     ...c.propias.flatMap((t) => t.polizas.map((p) => p.id)),
     ...c.autorizadas.flatMap((t) => t.autorizacion?.partes ?? []),
+    // Figurar en la póliza da derecho a dar parte de ella (decisión de Alberto, 27/09/2026).
+    ...c.intervinientes.flatMap((t) => t.polizas.map((p) => p.id)),
   ])
 }
 
@@ -1123,4 +1234,10 @@ export function polizasParaParte(c: Pick<CarteraPortal, 'propias' | 'autorizadas
 function caducaMasTarde(a: Date | null, b: Date | null): Date | null {
   if (a === null || b === null) return null
   return b.getTime() > a.getTime() ? b : a
+}
+
+/** Cuenta como «en vigor» para la lista, el parte y los avisos: vigente, sin fecha (no se sabe)
+ *  o con la renovación sin confirmar. Lo único que sale es lo que la compañía da por terminado. */
+export function cuentaComoEnVigor(p: Pick<PolizaPortal, 'vigencia' | 'renovacionSinConfirmar'>): boolean {
+  return p.vigencia !== 'no_vigente' || p.renovacionSinConfirmar
 }

@@ -301,9 +301,9 @@ export function avisoWebAsegura(accion: 'solicitar' | 'confirmar' | 'baja', body
   return llamar(`/api/operador/aviso-web?accion=${accion}`, { method: 'POST', body: JSON.stringify(body ?? {}) })
 }
 
-/** `POST /api/operador/cliente` — alta. */
-export function altaClienteAsegura(body: Record<string, unknown>): Promise<Reenvio> {
-  return llamar('/api/operador/cliente', { method: 'POST', body: JSON.stringify(body) })
+/** `POST /api/operador/cliente` — alta. `actor` como en `editarClienteAsegura` (agente sin sesión). */
+export function altaClienteAsegura(body: Record<string, unknown>, actor?: string): Promise<Reenvio> {
+  return llamar('/api/operador/cliente', { method: 'POST', body: JSON.stringify(body) }, actor)
 }
 
 /** `DELETE /api/operador/cliente` — DESCARTA la ficha (borrado suave, reversible). */

@@ -18,7 +18,7 @@ const PROPIAS = /\b(p[oó]lizas?|siniestros?|renovaci(?:[oó]n|ones)|tomador(?:e
 
 /** Palabras de la correduría que TAMBIÉN usa el contable (un recibo de Mapfre puede ser un gasto propio):
  *  solo deciden si no hay ninguna palabra contable. */
-const PROPIAS_SUAVES = /\b(impagad\w*|recibos? devuelt\w*|vencimientos?|mapfre|allianz|occident|reale|generali|axa|l[ií]nea directa|mutua madrile\w+|pelayo|liberty|zurich|santa ?luc[ií]a|helvetia|fiatc|asisa|sanitas|adeslas|dkv|fidelidade)\b/i
+const PROPIAS_SUAVES = /\b(impagad\w*|recibos? devuelt\w*|vencimientos?|le he llamado|he llamado a|no (?:me )?(?:lo )?coge|no contesta|no le interesa|que le llame|vuelva a llamar|volver a llamar|quiere precio|mapfre|allianz|occident|reale|generali|axa|l[ií]nea directa|mutua madrile\w+|pelayo|liberty|zurich|santa ?luc[ií]a|helvetia|fiatc|asisa|sanitas|adeslas|dkv|fidelidade)\b/i
 
 /** Matrícula española moderna (1234ABC / 1234 ABC). Un gasto no se pregunta por matrícula. */
 const MATRICULA = /\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/i
@@ -159,7 +159,7 @@ export const HERRAMIENTAS = [
     }, ['clienteId']),
   fn('proponer_oportunidad', 'Propón ABRIR una oportunidad de venta (lead) para un cliente o lead de la cartera: p. ej. Alberto sube la póliza que tiene con otra compañía y dice «añádelo a oportunidades». NO escribe: el sistema le manda el resumen con un botón y es él quien la abre. Con usarDocumentos=true lee los documentos que Alberto ha subido al chat en la última hora (ramo, compañía, vencimiento, prima, nº de póliza). Lo que Alberto dicte manda sobre lo leído; nunca inventes un valor.',
     {
-      clienteId: { type: 'string', description: 'La ficha (sácala de buscar). Si no sabes de quién es, pregúntaselo a Alberto.' },
+      clienteId: { type: 'string', description: 'La ficha (sácala de buscar). NO lo pases si Alberto ha subido el documento y no dice de quién es: con usarDocumentos=true lo busco por el tomador.' },
       usarDocumentos: { type: 'boolean', description: 'true si Alberto se refiere a lo que acaba de subir' },
       ramo: { type: 'string', enum: ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] },
       compania: { type: 'string', description: 'Compañía con la que está ahora' },
@@ -167,7 +167,8 @@ export const HERRAMIENTAS = [
       vence: { type: 'string', description: 'Vencimiento de su póliza actual (aaaa-mm-dd)' },
       numeroPoliza: { type: 'string' },
       fechaPrimerPaso: { type: 'string', description: 'Solo si Alberto dice cuándo llamarle (aaaa-mm-dd)' },
-    }, ['clienteId']),
+      leadNuevo: { type: 'boolean', description: 'SOLO si el sistema te enseñó fichas con ese nombre y Alberto ha dicho que no es ninguna de ellas' },
+    }, []),
   fn('proponer_tarea', 'Propón una TAREA de seguimiento en una oportunidad («llama a Juan el jueves», «mándale la comparativa el lunes»). Las tareas cuelgan de una oportunidad: sácala de oportunidades_cliente; si no tiene ninguna, propón primero abrir una. Alberto la crea con un botón.',
     {
       oportunidadId: { type: 'string', description: 'uuid de la oportunidad (de oportunidades_cliente)' },
@@ -244,7 +245,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     '- Para «¿qué tengo hoy?», «¿a quién llamo?» o «¿qué hay pendiente?» usa mi_dia. Las oportunidades de un cliente, con oportunidades_cliente.',
     '- La búsqueda por DNI, teléfono o email solo alcanza a una parte de las fichas (lo dice cada bloque): si no aparece, di que no lo encuentras por ese dato y prueba por nombre o matrícula; NUNCA digas que no es cliente.',
     '- Tú no mandas mensajes a clientes ni anulas pólizas: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
-    '- Oportunidades: puedes PROPONER abrir una con proponer_oportunidad (lead o cliente que tiene un seguro con otra compañía). Si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true. Necesitas la ficha: si no sabes de quién es, pregúntale el nombre y búscalo; si no tiene ficha, dile que la cree en /correduria. NUNCA digas que está abierta: eso solo lo confirma el sistema tras el botón.',
+    '- Oportunidades: puedes PROPONER abrir una con proponer_oportunidad (lead o cliente que tiene un seguro con otra compañía). Si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true. Si ha subido el documento y NO dice de quién es, NO le preguntes el nombre: llama SIN clienteId y con usarDocumentos=true; el sistema lee el tomador, lo busca por su DNI y, si no está en la cartera, le propone crear el lead y abrir la oportunidad con un solo botón. Pregúntale solo si el sistema te lo pide (varias fichas, documento sin DNI o sin tomador). NUNCA digas que está abierta ni que el lead está creado: eso solo lo confirma el sistema tras el botón.',
     '- Acciones del día a día (todas con botón que pulsa Alberto): proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro, invitar_portal. Úsalas cuando Alberto te lo pida («apunta que…», «llámale el jueves», «ha tenido un golpe con el coche…»). Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy. NUNCA digas que está hecho: eso lo confirma el sistema tras el botón.',
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',

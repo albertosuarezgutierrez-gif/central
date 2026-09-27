@@ -43,7 +43,11 @@ export async function GET(req: Request) {
     const correduria = await correduriaUnica()
     if (!correduria) throw new Error('sin_correduria')
     const resumen = await avisarIntranet(correduria.id, { forzarContar })
-    return NextResponse.json({ estado: 'ok', ...resumen })
+    // Si el detector de cambios de póliza falló o saltó el cortacircuitos, la pasada NO es «ok»: los
+    // correos salieron, pero los cambios de hoy no se han mirado (o se han descartado a propósito).
+    const c = resumen.cambiosPoliza
+    if (c.error || c.masivo) console.error('[avisos-intranet] detector de cambios degradado', { error: c.error, masivo: c.masivo })
+    return NextResponse.json({ estado: c.error || c.masivo ? 'degradado' : 'ok', ...resumen })
   } catch (e) {
     // 503 y no 200: «no he podido mirar» no puede leerse como «hoy no tocaba
     // nadie». Un check que se pone verde porque no miró es el fallo más caro.

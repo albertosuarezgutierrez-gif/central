@@ -1,0 +1,138 @@
+// Pólizas AJENAS donde la identidad FIGURA como interviniente (27/09/2026).
+//
+// Decisión de Alberto: si una persona figura en `seguros.poliza_intervinientes`
+// de una póliza —propietaria del coche, conductor habitual u ocasional,
+// asegurada…— tiene derecho a ver ESA póliza con los mismos datos que ve el
+// tomador, y a dar un parte de ella. Caso fundacional: Nieves es PROPIETARIA
+// del Toyota cuya póliza tiene de tomador a Víctor, y no la veía.
+//
+// Aquí vive la regla PURA (qué pólizas, con qué nivel, qué papel); la lectura de
+// la BD está en `carteraDeIdentidad` (`lib/cartera-lectura.ts`), que parte de
+// `portal_vinculo` de la identidad y solo busca intervinientes cuyo `cliente_id`
+// es una ficha PROPIA de ella. Las reglas que esto fija, cada una con su test:
+//
+//   1. Solo la póliza donde figura: jamás «las demás del tomador».
+//   2. Si el tomador es propio, no es de aquí (ya está en `propias`).
+//   3. Si la póliza ya se sirve por otro camino (autorización, empresa del
+//      dueño), no se duplica.
+//   4. Nivel = el MÁS ALTO de los vínculos propios que figuran en esa póliza.
+//   5. Los campos son los del tomador en ese nivel, MENOS lo que es de la
+//      PERSONA del tomador y no del contrato: IBAN, DNI, documentos, y actuar
+//      por él (peticiones, autorizar a terceros). Figurar en su póliza no te
+//      convierte en él.
+
+import { camposVisibles, NIVELES, type CamposVisibles, type Nivel } from '@central/module-seguros-portal'
+
+export type FilaInterviniente = { polizaId: string; clienteId: string | null; rol: string }
+/** Una póliza candidata, ya filtrada a cartera VIVA y sin lápida de fusión. */
+export type PolizaDeTomador = { id: string; clienteId: string }
+
+export type FiguraEnPoliza = {
+  /** El tomador (`polizas.cliente_id`), que nunca es una ficha propia. */
+  tomadorId: string
+  nivel: Nivel
+  /** Papeles de la identidad en esa póliza, sin repetir y en el orden de `ORDEN_ROLES`. */
+  roles: string[]
+}
+
+/** Del papel que más dice al que menos: es el orden en que se nombran en la ficha. */
+const ORDEN_ROLES = ['propietario', 'asegurado', 'conductor_habitual', 'conductor_ocasional', 'beneficiario', 'contacto']
+
+function rangoNivel(n: Nivel): number {
+  return (NIVELES as readonly string[]).indexOf(n)
+}
+
+export function nivelMasAlto(niveles: readonly Nivel[]): Nivel {
+  let mejor: Nivel = 'tarjeta'
+  for (const n of niveles) if (rangoNivel(n) > rangoNivel(mejor)) mejor = n
+  return mejor
+}
+
+/**
+ * Qué pólizas ajenas abre figurar en ellas, póliza a póliza.
+ *
+ * 🚨 `propiosIds` se vuelve a comprobar aquí aunque la consulta ya filtre por
+ * ellos: una fila de interviniente de OTRO cliente que se colara (un `where`
+ * reescrito, un `OR` mal puesto) no abre nada.
+ */
+export function figurasEnPolizas(args: {
+  filas: readonly FilaInterviniente[]
+  polizas: readonly PolizaDeTomador[]
+  propiosIds: readonly string[]
+  nivelPorCliente: ReadonlyMap<string, Nivel>
+  /** Pólizas que esta identidad ya ve por otro camino (autorizadas, empresas del dueño). */
+  yaVisibles: ReadonlySet<string>
+}): Map<string, FiguraEnPoliza> {
+  const propios = new Set(args.propiosIds)
+  const tomadorDe = new Map(args.polizas.map((p) => [p.id, p.clienteId]))
+  const acumulado = new Map<string, { tomadorId: string; niveles: Nivel[]; roles: Set<string> }>()
+
+  for (const f of args.filas) {
+    if (f.clienteId === null || !propios.has(f.clienteId)) continue
+    const tomadorId = tomadorDe.get(f.polizaId)
+    // Sin póliza candidata (no viva, fusionada o inexistente) no hay nada que abrir.
+    if (tomadorId === undefined) continue
+    if (propios.has(tomadorId)) continue
+    if (args.yaVisibles.has(f.polizaId)) continue
+    const nivel = args.nivelPorCliente.get(f.clienteId) ?? 'tarjeta'
+    const g = acumulado.get(f.polizaId)
+    if (g) {
+      g.niveles.push(nivel)
+      g.roles.add(f.rol)
+    } else {
+      acumulado.set(f.polizaId, { tomadorId, niveles: [nivel], roles: new Set([f.rol]) })
+    }
+  }
+
+  const out = new Map<string, FiguraEnPoliza>()
+  for (const [polizaId, g] of acumulado) {
+    out.set(polizaId, {
+      tomadorId: g.tomadorId,
+      nivel: nivelMasAlto(g.niveles),
+      roles: ordenarRoles([...g.roles]),
+    })
+  }
+  return out
+}
+
+export function ordenarRoles(roles: readonly string[]): string[] {
+  const r = (x: string) => {
+    const i = ORDEN_ROLES.indexOf(x)
+    return i === -1 ? ORDEN_ROLES.length : i
+  }
+  return [...new Set(roles)].sort((a, b) => r(a) - r(b) || a.localeCompare(b))
+}
+
+/**
+ * Lo que ve un interviniente: lo del tomador en ese nivel, sin lo que es de la
+ * PERSONA del tomador. Hoy ninguna pantalla del portal pinta IBAN ni DNI (el
+ * schema del portal ni siquiera declara esas columnas), pero el flag se apaga
+ * aquí para que el día que alguien los pinte por `CamposVisibles`, un
+ * interviniente no los herede.
+ */
+export function camposDeInterviniente(nivel: Nivel): CamposVisibles {
+  return {
+    ...camposVisibles(nivel),
+    iban: false,
+    dniTomador: false,
+    documentos: false,
+    crearPeticiones: false,
+    autorizarTerceros: false,
+  }
+}
+
+const ROL_LEGIBLE: Record<string, string> = {
+  propietario: 'propietario',
+  asegurado: 'asegurado',
+  conductor_habitual: 'conductor habitual',
+  conductor_ocasional: 'conductor ocasional',
+  beneficiario: 'beneficiario',
+  contacto: 'persona de contacto',
+}
+
+/** «propietario y conductor ocasional». Un papel que no se conoce sale tal cual, sin guiones bajos. */
+export function rolesLegibles(roles: readonly string[]): string {
+  const t = ordenarRoles(roles).map((r) => ROL_LEGIBLE[r] ?? r.replace(/_/g, ' '))
+  if (t.length <= 1) return t[0] ?? ''
+  return `${t.slice(0, -1).join(', ')} y ${t[t.length - 1]}`
+}

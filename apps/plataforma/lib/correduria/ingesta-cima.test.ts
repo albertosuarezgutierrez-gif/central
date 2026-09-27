@@ -418,3 +418,32 @@ test('🚨 la cobertura con la forma VIEJA (filas) se rechaza: no se publica inf
   assert.equal(r.salud.cobertura, null)
   assert.equal(r.salud.motivos.some(m => /SIN MEDIR/.test(m)), true)
 })
+
+// ── Renovaciones que no llegan (27/09/2026) ─────────────────────────────────
+
+const RENOV = [{ entidad: 'C0058', entidadNombre: 'Mapfre', polizas: 10, vencimientoMasAntiguo: '2026-06-05' }]
+
+test('renovaciones: el puerto las manda → degradan y viajan a la salud', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], renovacionesSinLlegar: RENOV })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.salud.estado, 'degradada')
+  assert.deepEqual(r.salud.renovacionesSinLlegar, RENOV)
+})
+
+test('renovaciones: puerto viejo (clave ausente) = no se pide, NO es hueco', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.renovacionesSinLlegar, undefined)
+  assert.ok(!r.salud.huecos.some(h => /renovaciones/.test(h)))
+})
+
+test('🚨 renovaciones: una fila ilegible degrada la lista ENTERA a null (hueco), no a []', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [],
+    renovacionesSinLlegar: [...RENOV, { entidad: 'C0109', polizas: 'dos' }],
+  })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.renovacionesSinLlegar, null)
+  assert.ok(r.salud.huecos.some(h => /renovaciones/.test(h)))
+})

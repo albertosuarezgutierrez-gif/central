@@ -221,13 +221,13 @@ export async function embudoPortal(correduriaId: string): Promise<EmbudoPortal> 
   const cid = correduriaId
 
   // El conjunto base, repetido en cada cuenta a propósito: una CTE compartida
-  // obligaría a una sola consulta, y entonces un fallo las anularía las cinco.
+  // obligaría a una sola consulta, y entonces un fallo las anularía todas.
   const clientesVivos = Prisma.sql`
     select distinct p.cliente_id
     from polizas p
     where p.correduria_id = ${cid}::uuid and ${viva}`
 
-  const [clientes, conEmail, invitados, hanEntrado, activos30] = await Promise.all([
+  const [clientes, conEmail, invitados, hanEntrado, activos30, avisados30, entraronPorAviso30, conPush] = await Promise.all([
     contar('clientes', Prisma.sql`select count(*)::bigint as n from (${clientesVivos}) v`),
     contar(
       'conEmail',
@@ -268,9 +268,45 @@ export async function embudoPortal(correduriaId: string): Promise<EmbudoPortal> 
           where pv.cliente_id = v.cliente_id and pv.correduria_id = ${cid}::uuid
             and pi.ultimo_acceso_en >= now() - interval '30 days')`,
     ),
+    contar(
+      'avisados30',
+      // El tipo lo escribe `correo-avisos-intranet.ts` al llamar a `enviarCorreoSeguido`.
+      // Solo `enviado`: un fallido no es un aviso que alguien haya podido leer.
+      Prisma.sql`
+        select count(*)::bigint as n
+        from (${clientesVivos}) v
+        where exists (
+          select 1 from correo_envio ce
+          where ce.cliente_id = v.cliente_id and ce.correduria_id = ${cid}::uuid
+            and ce.tipo = 'aviso_intranet' and ce.estado = 'enviado'
+            and ce.creado_en >= now() - interval '30 days')`,
+    ),
+    contar(
+      'entraronPorAviso30',
+      Prisma.sql`
+        select count(*)::bigint as n
+        from (${clientesVivos}) v
+        where exists (
+          select 1 from portal_enlace_directo ed
+          where ed.cliente_id = v.cliente_id and ed.correduria_id = ${cid}::uuid
+            and ed.usado_en >= now() - interval '30 days')`,
+    ),
+    contar(
+      'conPush',
+      // Nunca el vínculo del CORREDOR (`origen = 'corredor'`): es suyo, no del
+      // cliente, y su móvil con push activado no dice nada de la adopción.
+      Prisma.sql`
+        select count(*)::bigint as n
+        from (${clientesVivos}) v
+        where exists (
+          select 1 from portal_vinculo pv
+          join portal_push_suscripcion ps on ps.identidad_id = pv.identidad_id
+          where pv.cliente_id = v.cliente_id and pv.correduria_id = ${cid}::uuid
+            and pv.origen <> 'corredor')`,
+    ),
   ])
 
-  return { clientes, conEmail, invitados, hanEntrado, activos30 }
+  return { clientes, conEmail, invitados, hanEntrado, activos30, avisados30, entraronPorAviso30, conPush }
 }
 
 /** El muro entero: eventos de la ventana pedida + el embudo. */

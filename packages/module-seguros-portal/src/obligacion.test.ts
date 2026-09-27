@@ -250,3 +250,15 @@ test('el atajo y el motivo no pueden separarse', () => {
     }
   }
 })
+
+test('recordatorio de vencimiento: a ≤2 días, ≥2 días tras el primero y solo si no ha entrado', async () => {
+  const { debeRecordarVencimiento } = await import('./obligacion.ts')
+  const hoy = new Date('2026-10-10T08:15:00Z')
+  const base = { fechaAccionable: new Date('2026-10-11T00:00:00Z'), avisadoEn: new Date('2026-10-05T08:15:00Z'), ultimoAcceso: null, hoy }
+  assert.equal(debeRecordarVencimiento(base), true)
+  assert.equal(debeRecordarVencimiento({ ...base, fechaAccionable: new Date('2026-10-14T00:00:00Z') }), false)
+  assert.equal(debeRecordarVencimiento({ ...base, fechaAccionable: new Date('2026-10-09T00:00:00Z') }), false)
+  assert.equal(debeRecordarVencimiento({ ...base, avisadoEn: new Date('2026-10-09T08:15:00Z') }), false)
+  assert.equal(debeRecordarVencimiento({ ...base, ultimoAcceso: new Date('2026-10-06T10:00:00Z') }), false)
+  assert.equal(debeRecordarVencimiento({ ...base, ultimoAcceso: new Date('2026-09-01T10:00:00Z') }), true)
+})

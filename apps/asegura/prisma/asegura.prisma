@@ -1163,6 +1163,30 @@ model PortalAvisoEnviado {
   @@map("portal_aviso_enviado")
 }
 
+/// Última foto de cada póliza viva, para derivar «hay cambios en tu póliza» (27/09/2026).
+model PortalPolizaFoto {
+  polizaId      String   @id @map("poliza_id") @db.Uuid
+  correduriaId  String   @map("correduria_id") @db.Uuid
+  foto          Json
+  actualizadaEn DateTime @default(now()) @map("actualizada_en") @db.Timestamptz(6)
+
+  @@map("portal_poliza_foto")
+}
+
+/// Un cambio de póliza que se le cuenta al cliente (campana + correo de la intranet).
+model PortalPolizaCambio {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  polizaId     String   @map("poliza_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  campos       String[]
+  estadoNuevo  String?  @map("estado_nuevo")
+  detectadoEn  DateTime @default(now()) @map("detectado_en") @db.Timestamptz(6)
+
+  @@index([clienteId, detectadoEn(sort: Desc)], map: "idx_portal_poliza_cambio_cliente")
+  @@map("portal_poliza_cambio")
+}
+
 /// Enlace de acceso directo del correo de avisos (un solo uso, 72 h; solo el hash del token).
 model PortalEnlaceDirecto {
   id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid

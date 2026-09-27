@@ -554,8 +554,8 @@ export const AVISOS: AvisoTelegram[] = [
   // ── 🛡️ Correduría ─────────────────────────────────────────────────────────
   {
     id: 'correduria.renovaciones', categoria: 'correduria',
-    titulo: 'Pólizas que vencen',
-    que: 'Las pólizas de la cartera que renuevan pronto (aviso legal de 1 mes).',
+    titulo: 'Pólizas que vencen y tareas del día',
+    que: 'Las pólizas de la cartera que renuevan pronto (aviso legal de 1 mes) y, en el mismo mensaje, las llamadas y tareas de oportunidades que tocan hoy.',
     cuando: 'Todos los días a las 08:30',
   },
   {

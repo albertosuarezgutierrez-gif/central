@@ -17,6 +17,8 @@ import { prisma } from '@/lib/db'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
+import { interpretarTareasHoy, tareasHoyAsegura } from '@/lib/seguimiento-asegura'
+import { bloqueLlamadasHoy } from '@/lib/correduria/llamadas-hoy'
 import {
   claveAviso, detalleRenovaciones, emisionesDeHoy, mensajeRenovaciones, type HitoId, type PolizaAviso,
 } from '@/lib/correduria/renovaciones-aviso'
@@ -33,7 +35,11 @@ const AGENTE = 'correduria_renovaciones'
 export async function GET(req: NextRequest) {
   if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const cartera = await vencimientosAsegura(DIAS_VENTANA, 40_000)
+  // En paralelo: en serie, cartera (40 s) + tareas (15 s) rozaban el maxDuration de 60 s.
+  const [cartera, rT] = await Promise.all([
+    vencimientosAsegura(DIAS_VENTANA, 40_000),
+    tareasHoyAsegura().catch(() => ({ status: 502, json: null })),
+  ])
 
   // «Sin configurar» no es un fallo: el puerto todavía no está conectado. Se
   // registra como pasada NO buena igualmente, para que el vigía no dé por
@@ -72,7 +78,14 @@ export async function GET(req: NextRequest) {
   )
 
   const emisiones = emisionesDeHoy(polizas, yaAvisados)
-  const mensaje = mensajeRenovaciones(emisiones)
+  const renovaciones = mensajeRenovaciones(emisiones)
+  // Las tareas del día (llamadas de oportunidades, incluidas las de pólizas de la competencia que
+  // vencen) van en ESTE mismo mensaje: Alberto pidió menos avisos. Un fallo de lectura se dice.
+  const tareas = interpretarTareasHoy(rT.status, rT.json)
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+  const llamadas = tareas.estado === 'sin_configurar' ? null
+    : bloqueLlamadasHoy(tareas.estado === 'ok' ? tareas.tareas.filter((t) => t.fechaLimite <= hoy) : null, hoy)
+  const mensaje = [renovaciones, llamadas].filter(Boolean).join('\n\n') || null
 
   // El orden importa: primero se manda y solo se marca lo que se ha mandado.
   // Al revés, un fallo de Telegram dejaría avisos marcados que nadie ha visto

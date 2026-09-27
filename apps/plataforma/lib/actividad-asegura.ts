@@ -65,6 +65,11 @@ function embudoDe(bruto: unknown): EmbudoPortal {
     invitados: cuenta(e?.invitados),
     hanEntrado: cuenta(e?.hanEntrado),
     activos30: cuenta(e?.activos30),
+    // Un asegura anterior a estas tres señales no las manda: salen `null`
+    // («sin dato»), nunca 0, que se leería como «nadie tiene push».
+    avisados30: cuenta(e?.avisados30),
+    entraronPorAviso30: cuenta(e?.entraronPorAviso30),
+    conPush: cuenta(e?.conPush),
   }
 }
 
