@@ -7,6 +7,8 @@ import {
   definicionActividad,
   etiquetaActividad,
   mayorCaidaEmbudo,
+  PASOS_ADOPCION,
+  PASOS_EMBUDO,
   nuevosDesde,
   parseFiltroActividad,
   riesgoActividad,
@@ -20,7 +22,11 @@ const EMBUDO_VACIO: EmbudoPortal = {
   invitados: null,
   hanEntrado: null,
   activos30: null,
+  avisados30: null,
+  entraronPorAviso30: null,
+  conPush: null,
 }
+const SIN_SENALES = { avisados30: null, entraronPorAviso30: null, conPush: null }
 
 test('los tipos no se repiten y todos tienen rótulo', () => {
   const vistos = new Set<string>()
@@ -93,7 +99,7 @@ test('solo se aceptan las ventanas que la pantalla ofrece', () => {
 test('la mayor caída del embudo es el escalón donde más gente se queda', () => {
   // Cifras del orden de las reales (80 clientes vivos, 44 con correo): el peor
   // salto es el primero, y por eso «invita a más gente» no sería el consejo.
-  const e: EmbudoPortal = { clientes: 80, conEmail: 44, invitados: 40, hanEntrado: 6, activos30: 2 }
+  const e: EmbudoPortal = { clientes: 80, conEmail: 44, invitados: 40, hanEntrado: 6, activos30: 2, ...SIN_SENALES }
   const peor = mayorCaidaEmbudo(e)
   assert.equal(peor?.desde.clave, 'clientes')
   assert.equal(peor?.hasta.clave, 'conEmail')
@@ -101,7 +107,7 @@ test('la mayor caída del embudo es el escalón donde más gente se queda', () =
 })
 
 test('cuando el cuello está en medio, señala el de en medio', () => {
-  const e: EmbudoPortal = { clientes: 80, conEmail: 78, invitados: 70, hanEntrado: 6, activos30: 2 }
+  const e: EmbudoPortal = { clientes: 80, conEmail: 78, invitados: 70, hanEntrado: 6, activos30: 2, ...SIN_SENALES }
   const peor = mayorCaidaEmbudo(e)
   assert.equal(peor?.desde.clave, 'invitados')
   assert.equal(peor?.hasta.clave, 'hanEntrado')
@@ -115,7 +121,7 @@ test('sin cuentas no se señala ningún escalón', () => {
 test('un hueco en medio no inventa una caída con el escalón de al lado', () => {
   // `conEmail: null` es «no se pudo contar». Saltárselo y medir clientes→invitados
   // daría una caída de 40 que no ha medido nadie.
-  const e: EmbudoPortal = { clientes: 80, conEmail: null, invitados: 40, hanEntrado: 39, activos30: 38 }
+  const e: EmbudoPortal = { clientes: 80, conEmail: null, invitados: 40, hanEntrado: 39, activos30: 38, ...SIN_SENALES }
   const peor = mayorCaidaEmbudo(e)
   assert.equal(peor?.desde.clave, 'invitados')
   assert.equal(peor?.pierde, 1)
@@ -128,4 +134,16 @@ test('«nuevos desde» distingue no saber cuándo miraste de que todo sea nuevo'
   assert.equal(nuevosDesde(eventos, 'ayer por la tarde'), null)
   assert.equal(nuevosDesde(eventos, '2026-09-11T12:00:00.000Z'), 1)
   assert.equal(nuevosDesde(eventos, '2026-09-12T23:00:00.000Z'), 0)
+})
+
+test('las señales de adopción no entran en la cadena del embudo', () => {
+  // Si entraran, la «mayor caída» restaría activos − avisados, que no mide nada.
+  const cadena = new Set(PASOS_EMBUDO.map((p) => p.clave))
+  for (const p of PASOS_ADOPCION) assert.equal(cadena.has(p.clave), false, `${p.clave} está en la cadena`)
+  assert.deepEqual(
+    PASOS_ADOPCION.map((p) => p.clave),
+    ['avisados30', 'entraronPorAviso30', 'conPush'],
+  )
+  const e: EmbudoPortal = { clientes: 80, conEmail: 78, invitados: 70, hanEntrado: 6, activos30: 2, avisados30: 0, entraronPorAviso30: 0, conPush: 0 }
+  assert.equal(mayorCaidaEmbudo(e)?.desde.clave, 'invitados')
 })

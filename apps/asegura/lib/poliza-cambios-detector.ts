@@ -15,6 +15,7 @@ import {
   cambioMasivo,
   fotoDePoliza,
   leerFoto,
+  mismaFoto,
   type FotoPoliza,
 } from '@central/module-seguros-portal'
 import { WHERE_CARTERA_VIVA } from '@central/module-seguros'
@@ -56,14 +57,19 @@ export async function detectarCambiosPolizas(correduriaId: string): Promise<Resu
     if (polizas.length === 0) return resumen
     const ids = polizas.map((p) => p.id)
 
-    const [docs, guardadas] = await Promise.all([
-      // Solo lo que el cliente VE, y no lo que subió él mismo con un parte (eso ya lo sabe).
+    const [docs, guardadas, deParte] = await Promise.all([
+      // Solo lo que el cliente VE y puede abrir (con fichero: el portal no lista los que solo tienen
+      // metadatos), y no lo que subió él mismo con un parte (eso ya lo sabe).
       db.documento.findMany({
-        where: { correduriaId, polizaId: { in: ids }, visiblePorCliente: true, portalParteId: null },
+        where: { correduriaId, polizaId: { in: ids }, visiblePorCliente: true, portalParteId: null, contenido: { not: null } },
         select: { id: true, polizaId: true },
       }),
       db.portalPolizaFoto.findMany({ where: { polizaId: { in: ids } }, select: { polizaId: true, foto: true } }),
+      // Los siniestros que nacen de un parte del portal ya tienen su propio aviso («tu parte ya está
+      // abierto»): contarlos aquí mandaría el mismo hecho dos veces.
+      db.portalParteSiniestro.findMany({ where: { siniestroId: { not: null } }, select: { siniestroId: true } }),
     ])
+    const siniestroDeParte = new Set(deParte.map((d) => d.siniestroId!))
     const docsPor = new Map<string, string[]>()
     for (const d of docs) if (d.polizaId) docsPor.set(d.polizaId, [...(docsPor.get(d.polizaId) ?? []), d.id])
     const fotoPor = new Map(guardadas.map((g) => [g.polizaId, leerFoto(g.foto)]))
@@ -81,7 +87,7 @@ export async function detectarCambiosPolizas(correduriaId: string): Promise<Resu
         fraccionamiento: p.fraccionamiento ? String(p.fraccionamiento) : null,
         coberturas: p.coberturasRel,
         documentosVisibles: docsPor.get(p.id) ?? [],
-        siniestros: p.siniestros.map((s) => ({ id: s.id, estado: String(s.estado) })),
+        siniestros: p.siniestros.filter((s) => !siniestroDeParte.has(s.id)).map((s) => ({ id: s.id, estado: String(s.estado) })),
       })
       const antes = fotoPor.get(p.id) ?? null
       if (antes === null) {
@@ -90,7 +96,7 @@ export async function detectarCambiosPolizas(correduriaId: string): Promise<Resu
         continue
       }
       comparadas += 1
-      if (JSON.stringify(antes) === JSON.stringify(ahora)) continue
+      if (mismaFoto(antes, ahora)) continue
       nuevas.push({ polizaId: p.id, foto: ahora })
       const campos = camposCambiados(antes, ahora)
       if (campos.length > 0) {
@@ -98,7 +104,7 @@ export async function detectarCambiosPolizas(correduriaId: string): Promise<Resu
       }
     }
 
-    if (cambioMasivo(cambios.length, comparadas)) {
+    if (cambioMasivo(cambios, comparadas)) {
       resumen.masivo = true
       console.error(
         `[asegura/poliza-cambios] ${cambios.length} de ${comparadas} pólizas «cambian» a la vez: se re-siembra SIN avisar (¿cambio de formato de CIMA?)`,

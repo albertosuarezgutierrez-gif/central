@@ -79,6 +79,9 @@ y `portal_aviso_silenciado` (tipos apagados; interruptores en `ActivarPush.tsx`)
 - 🚨 Semilla silenciosa por póliza **y lista** + ventana de 45 días: sin ellas, la primera pasada (o
   pasar de «Solo ver» a «Acceso total») mandaría el historial entero como novedad. La clave de un paso
   de tramitación es su **código EIAC** (`PasoTramitacion.codigo`), nunca el texto traducido.
+- **`poliza_modificada` (27/09/2026)**: cambios de póliza de `portal_poliza_cambio` (los detecta
+  `apps/asegura`); propias y ajenas con «Acceso total» vigente (`lib/polizas-modificadas.ts`, la misma
+  lectura que la campana). El texto del push no nombra al titular ajeno; la campana sí.
 - Entrega al menos una vez; presupuesto de 50 s (`cortado` en la respuesta). Sin rotación: con cientos
   de suscripciones habrá que añadir cursor. Cepos: `avisos-cima.test.ts` y
   `test/regression-portal-avisos-cima.test.ts` (vistos morder).

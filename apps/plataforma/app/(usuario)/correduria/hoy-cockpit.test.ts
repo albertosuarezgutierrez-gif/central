@@ -9,7 +9,7 @@ test('una tarea vencida se dice vencida, no «hoy»', () => {
 })
 
 test('sin invitar: un «no se sabe» no se resta como si fuera 0', () => {
-  const base = { clientes: 80, conEmail: 52, invitados: 5, hanEntrado: 4, activos30: 4 }
+  const base = { clientes: 80, conEmail: 52, invitados: 5, hanEntrado: 4, activos30: 4, avisados30: null, entraronPorAviso30: null, conPush: null }
   assert.equal(sinInvitar(base), 47)
   assert.equal(sinInvitar({ ...base, invitados: null }), null)
   assert.equal(sinInvitar({ ...base, conEmail: null }), null)

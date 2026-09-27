@@ -1652,6 +1652,17 @@ defecto** (`ASEGURA_AVISOS_ACTIVOS=1`, el mismo interruptor — es UN solo «¿e
 clientes?») y `?contar=1` para el ensayo. Sin portal (`ASEGURA_PORTAL_URL` que no sea https) o sin
 proveedor de correo, **503**, nunca un `enviados: 0` tranquilizador.
 
+### 🔄 «Hay cambios en tu póliza», partes y vencimientos (27/09/2026, PRs #3760 + siguiente)
+
+`lib/poliza-cambios-detector.ts` corre al principio de este cron: foto diaria de la cartera viva en
+`portal_poliza_foto` → cambios en `portal_poliza_cambio` (regla pura `camposCambiados` en
+module-seguros-portal: completar ≠ cambiar, ya de baja/vencida no avisa, siniestros de un parte del
+portal y documentos sin fichero no cuentan). Cortacircuitos `cambioMasivo` (>30 % total o >10 % en un
+mismo campo → se re-siembra sin avisar y el cron responde `estado: 'degradado'`). El parte se avisa
+a quien lo DIO (su vínculo único), no al tomador. Vencimiento DERIVADO de la póliza (`pv:`) para quien
+no tiene obligación de ESE vencimiento, y UN recordatorio a 2 días solo si no entró al portal
+(`debeRecordarVencimiento`). Cepos en `test/regression-avisos-intranet.test.ts`.
+
 ### 🏠 «Revisa tu dirección»: el reparo que solo veía Alberto
 
 El primer tipo que estrenó el emisor. `leerSitio()` de `@central/module-seguros` se escribió el
