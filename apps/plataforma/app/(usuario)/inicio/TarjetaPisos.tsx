@@ -6,12 +6,12 @@ import { getPLMensual } from '@/lib/sivra/pl-mensual'
 import { computarPrevision } from '@/lib/sivra/prevision-pisos'
 import { paxDe } from '@/lib/sivra/limpieza-intranet'
 import { eur } from '@/lib/dinero'
-import { TablaScroll } from '@/components/ui'
 import { estimacionMes, sumarDias, ventanaCalendario, type Movimiento, type ReservaCal } from '@/lib/inicio-resumen'
+import { TablaScroll } from '@/components/ui'
+import CalendarioReservas from './CalendarioReservas'
 import { Aviso, NoDisponible, Tarjeta, subTitulo } from './piezas'
 
 const DIAS = 14
-const LETRA = ['D', 'L', 'M', 'X', 'J', 'V', 'S']
 const MES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
 
 function hoyMadrid(): string {
@@ -45,8 +45,8 @@ async function CalendarioPisos() {
   const ids = PROPS_CALENDARIO.map(p => p.id)
   const fin = sumarDias(hoy, DIAS)
 
-  const reservas = await prisma.$queryRaw<Array<{ propertyId: string; guestName: string | null; checkIn: Date | null; checkOut: Date | null; portal: string | null; adults: number | null; children: number | null }>>`
-      SELECT "propertyId", "guestName", "checkIn", "checkOut", portal::text AS portal, adults, children
+  const reservas = await prisma.$queryRaw<Array<{ propertyId: string; guestName: string | null; checkIn: Date | null; checkOut: Date | null; portal: string | null; adults: number | null; children: number | null; amount: number | null }>>`
+      SELECT "propertyId", "guestName", "checkIn", "checkOut", portal::text AS portal, adults, children, amount::float8 AS amount
       FROM incomes
       WHERE "propertyId" = ANY(${ids}::text[])
         AND "checkIn" < ${new Date(`${fin}T00:00:00Z`)} AND "checkOut" >= ${new Date(`${hoy}T00:00:00Z`)}
@@ -55,7 +55,7 @@ async function CalendarioPisos() {
   const d = (x: Date | null) => (x ? new Date(x).toISOString().slice(0, 10) : null)
   const res: ReservaCal[] = (reservas ?? []).flatMap(r => {
     const i = d(r.checkIn); const o = d(r.checkOut)
-    return i && o ? [{ propertyId: r.propertyId, huesped: r.guestName, checkIn: i, checkOut: o, portal: r.portal, pax: paxDe(r.adults, r.children) }] : []
+    return i && o ? [{ propertyId: r.propertyId, huesped: r.guestName, checkIn: i, checkOut: o, portal: r.portal, pax: paxDe(r.adults, r.children), importe: r.amount }] : []
   })
   const v = ventanaCalendario(res, ids, hoy, DIAS)
   const movs = [
@@ -81,42 +81,10 @@ async function CalendarioPisos() {
             )}
           </div>
 
-          <TablaScroll>
-            <div role="table" aria-label={`Ocupación de los próximos ${DIAS} días`} style={{ display: 'grid', gridTemplateColumns: `120px repeat(${DIAS}, minmax(34px, 1fr))`, minWidth: 600, fontSize: 12, border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-              <div role="row" style={{ display: 'contents' }}>
-                <div style={{ background: 'var(--bg)', borderBottom: '1px solid var(--border)' }} />
-                {v.dias.map((dia, i) => {
-                  const w = new Date(`${dia}T12:00:00Z`).getUTCDay()
-                  return (
-                    <div key={dia} role="columnheader" style={{ textAlign: 'center', padding: '6px 0', background: w === 0 || w === 6 ? 'var(--border)' : 'var(--bg)', borderBottom: '1px solid var(--border)', color: i === 0 ? 'var(--primary)' : 'var(--muted)', fontWeight: i === 0 ? 700 : 400 }}>
-                      {LETRA[w]}<br />{Number(dia.slice(8))}
-                    </div>
-                  )
-                })}
-              </div>
-              {PROPS_CALENDARIO.map(p => (
-                <div key={p.id} role="row" style={{ display: 'contents' }}>
-                  <div role="rowheader" style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0 10px', height: 40, borderBottom: '1px solid var(--border)', fontWeight: 600, position: 'sticky', left: 0, background: 'var(--surface)', zIndex: 1 }}>
-                    <span aria-hidden style={{ width: 8, height: 8, borderRadius: 999, background: p.color, flexShrink: 0 }} />{p.label}
-                  </div>
-                  <div style={{ gridColumn: `2 / span ${DIAS}`, position: 'relative', height: 40, borderBottom: '1px solid var(--border)' }}>
-                    {(v.barras.get(p.id) ?? []).map((b, i) => (
-                      <div key={i} title={`${b.huesped ?? 'Reserva'} · ${PORTAL_LABELS[(b.portal ?? '').toUpperCase()] ?? b.portal ?? 'sin portal'}`} style={{
-                        position: 'absolute', top: 7, height: 26,
-                        left: `calc(${(b.desde / DIAS) * 100}% + ${b.cortadaIzq ? 0 : 4}px)`,
-                        width: `calc(${((b.hasta - b.desde) / DIAS) * 100}% - ${b.cortadaIzq ? 4 : 8}px)`,
-                        borderRadius: 6, background: PORTAL_COLORS[(b.portal ?? '').toUpperCase()] ?? PORTAL_COLORS.OTRO,
-                        color: '#fff', fontSize: 11, fontWeight: 600, padding: '0 7px', display: 'flex', alignItems: 'center',
-                        overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis',
-                      }}>
-                        {b.huesped ?? ''}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </TablaScroll>
+          <CalendarioReservas
+            dias={v.dias}
+            filas={PROPS_CALENDARIO.map(p => ({ id: p.id, label: p.label, color: p.color, barras: v.barras.get(p.id) ?? [] }))}
+          />
           {portales.length > 0 && (
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 12, color: 'var(--muted)' }}>
               {portales.map(pt => (

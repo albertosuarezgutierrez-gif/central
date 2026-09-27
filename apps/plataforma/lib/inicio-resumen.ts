@@ -73,6 +73,8 @@ export type ReservaCal = {
   checkOut: string  // 'AAAA-MM-DD' (día de salida, esa noche ya no se duerme)
   portal: string | null
   pax: number | null
+  /** Importe de la reserva en €. `null`/ausente = no se sabe (no es 0 €). */
+  importe?: number | null
 }
 
 export type Barra = {
@@ -84,6 +86,8 @@ export type Barra = {
   cortadaIzq: boolean
   portal: string | null
   huesped: string | null
+  /** La reserva completa, para el detalle al pinchar la barra. */
+  reserva: ReservaCal
 }
 
 export type Movimiento = { propertyId: string; huesped: string | null; pax: number | null }
@@ -121,7 +125,7 @@ export function ventanaCalendario(reservas: ReservaCal[], pisos: string[], hoy: 
     const desde = Math.max(0, diffDias(hoy, r.checkIn))
     const hasta = Math.min(n, diffDias(hoy, r.checkOut))
     if (hasta <= desde) continue
-    barras.get(r.propertyId)!.push({ desde, hasta, cortadaIzq: r.checkIn < hoy, portal: r.portal, huesped: r.huesped })
+    barras.get(r.propertyId)!.push({ desde, hasta, cortadaIzq: r.checkIn < hoy, portal: r.portal, huesped: r.huesped, reserva: r })
     const set = ocupadas.get(r.propertyId)!
     for (let i = desde; i < hasta; i++) set.add(i)
   }

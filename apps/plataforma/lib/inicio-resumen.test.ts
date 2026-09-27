@@ -63,6 +63,12 @@ test('una reserva que empezó antes se corta por la izquierda y la del borde der
   assert.deepEqual([b2.desde, b2.hasta, b2.cortadaIzq], [11, 14, false])
 })
 
+test('cada barra lleva su reserva entera (fechas reales, no las recortadas) para el detalle al pinchar', () => {
+  const v = ventanaCalendario([r('a', '2026-09-20', '2026-09-26', { importe: 480, pax: 3 })], ['a'], HOY)
+  const [b] = v.barras.get('a')!
+  assert.deepEqual([b.reserva.checkIn, b.reserva.checkOut, b.reserva.importe, b.reserva.pax], ['2026-09-20', '2026-09-26', 480, 3])
+})
+
 test('entradas y salidas de hoy y mañana, y noches libres por piso', () => {
   const v = ventanaCalendario(
     [r('a', HOY, '2026-09-28'), r('b', '2026-09-22', '2026-09-25', { huesped: 'Novak' })],

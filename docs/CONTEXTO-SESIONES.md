@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** Revisión del PR #3713 (mergeado): el «hueco de memoria 05-13/09» era falso (formato distinto
+de fecha), y el mapa de funciones indexaba el cliente Prisma local — corregidos; `next build` OK en las 4 apps
+tocadas. Alberto ordenó cerrar los **44 PRs de rutinas estancados**: cerrados sin mergear, ramas conservadas
+(reabribles). BBVA/Enable Banking: lo mira Alberto.
+
 **(27/09/2026)** Auditoría PROFUNDA: código 12/12 sano (~9.093 tests), fix `transpilePackages` en 5 apps
 (ia-rest/alquiler/asegura/asegura-portal/housesevillana importaban `@central/*` sin declararlo — riesgo de
 build, no de tipos). 🔴 **44 PRs `claude/*` zombis abiertos (05-24/09, hasta 22 días)**: su código YA está
@@ -740,6 +745,9 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+
+## (27/09/2026) Inicio: pinchar una reserva del calendario muestra su detalle (PR #3716)
+- Tarjeta «Pisos» de `/inicio`: las barras son botones; al pincharlas se abre debajo huésped, piso, entrada/salida, noches, pax, importe (€/n) y portal. Nuevo cliente `inicio/CalendarioReservas.tsx`; `Barra` lleva `reserva` e `incomes.amount` entra como `importe` (null = «sin dato», no 0 €).
 
 ## (27/09/2026) asegura-web: páginas «Decesos» y «Seguro de perro» (`/seguros/decesos`, `/seguros/seguro-perro`)
 - Alberto: «vendemos seguros de todo tipo» → deja de hacer falta confirmar ramo a ramo.
