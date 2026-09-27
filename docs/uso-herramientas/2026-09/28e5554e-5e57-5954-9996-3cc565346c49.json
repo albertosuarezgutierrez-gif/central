@@ -1,0 +1,75 @@
+{
+ "sesion": "28e5554e-5e57-5954-9996-3cc565346c49",
+ "inicio": "2026-09-27T06:37:26.911Z",
+ "fin": "2026-09-27T06:39:22.262Z",
+ "llamadas": 54,
+ "categorias": {
+  "otro": {
+   "llamadas": 5,
+   "chars_in": 443,
+   "chars_out": 858,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 4
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 4325,
+   "chars_out": 4749,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "bash": {
+   "llamadas": 10,
+   "chars_in": 4267,
+   "chars_out": 46051,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 10
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 1,
+   "chars_in": 13,
+   "chars_out": 1485,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__list_triggers": 1
+   }
+  },
+  "mcp:idealista": {
+   "llamadas": 32,
+   "chars_in": 5385,
+   "chars_out": 398411,
+   "errores": 14,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__idealista__search_properties": 32
+   }
+  },
+  "sql": {
+   "llamadas": 4,
+   "chars_in": 699,
+   "chars_out": 6560,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 4
+   }
+  }
+ }
+}
