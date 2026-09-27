@@ -63,6 +63,10 @@ export async function POST(req: NextRequest) {
         await logTurno(session.id, 'web', 'assistant', doc.resumen)
         return NextResponse.json({ respuesta: doc.resumen, guardados: [], acciones: [] })
       }
+      // En la web no se pregunta (no se pasa `preguntarSiSeguro`); el tipo existe por Telegram.
+      if (doc.tipo === 'posible_seguro') {
+        return NextResponse.json({ respuesta: 'Es un documento de una aseguradora: dímelo por Telegram o súbelo en la ficha del cliente si es de la correduría.', guardados: [], acciones: [] })
+      }
       const respuesta = resumenDocumento(doc.factura, doc.cruce, doc.archivo)
       const prop = accionConciliar(doc.factura, matchDeCruce(doc.cruce))
       const acciones = prop ? await guardarAcciones(session.id, [prop]) : []

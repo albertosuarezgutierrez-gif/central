@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — Revisión PR #3748 (asistente correduría). Bloqueante corregido: un documento con pie que nombra
+aseguradora («recibo Mapfre hogar») ya NO se desvía a la correduría; solo `pieDeCorreduria()` (prefijo o lead/cliente/
+oportunidad) o el álbum. Aseguradoras → `PROPIAS_SUAVES` (tras las contables). Botón gasto/cliente de un solo uso
+(columna `decision`, migración aplicada). Purga de propuestas caducadas y documentos >30 días. Pendiente conocido:
+sin dedupe de `update_id` y presupuesto de tiempo del webhook con 7 vueltas.
+
 **(27/09/2026)** — Limpieza de rutinas: **prospección comercial ya solo deja BORRADORES** también para ia-rest (enviaba correo comercial sin OK; prompt editado por API). Borrados el recordatorio «Graphify vs grafo» y 6 check-ins caducados; otros 8 desactivados los bloqueó el clasificador (no consumen). **Pendiente de Alberto en la UI** (creadas por `http_api`, la API no deja editarlas): Booking a 1 pasada/día (`30 8 * * *`), trading-analista a 1 (`15 23 * * 1-5`), y activar «Idealista radar (diario)» con su conector. Graphify NO está en `.mcp.json`: es conector de cuenta, se quita en claude.ai → Conectores.
 
 **(27/09/2026)** — Idealista por conector: **la rutina `idealista-radar` no había corrido NUNCA** (sin trigger, cero latidos) aunque su skill se decía «la única vía» desde el 24/09; lo que llenaba el corpus eran las alertas de correo (19 correos ese día). Se amplía a **Asturias (L-X-V), Cantabria (M-J-S) y Cádiz (D)** además de Huelva diario; centros nuevos en `CENTROS` medidos contra anuncios reales del conector (Llanes y Cudillero, términos alargados, necesitaban más radio). Guardián `test/regression-idealista-radar-nucleos.test.ts` (lee la tabla de la skill; visto en rojo). Primera pasada real a mano: 285 casas en 12 núcleos, latido OK. Trigger `trig_01HneHebAVaM6HoLzJ1DKhUS` creado **en pausa**: la API no adjunta conectores → Alberto añade Idealista + repo + envs en la UI y lo activa. No quitar las alertas de correo hasta ver latidos verdes.
@@ -757,16 +763,28 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) El bot de seguros ya HACE cosas: tarea, llamada, nota, siniestro, portal (PR #3748)
+- Tools `proponer_tarea`/`registrar_llamada`/`anotar_nota`/`abrir_siniestro`/`invitar_portal` → tabla `correduria_asistente_accion` (aplicada) → botón «✅ Hacer» (un uso, 15 min, `from.id`, interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA`) → mismos puertos que la ficha. Portal: comprueba `invitable` antes de ofrecer (es un correo real). Sin respuesta = «incierta».
+- Documento de ASEGURADORA por Telegram: el contable ya no lo archiva/contabiliza solo; pregunta «🧾 Es mío (gasto) / 🛡️ De un cliente» (`posible_seguro`, antes de `archivarEImputar`).
+- El atajo `seguro:`/`/seguros` ya no se lo come un retoque pendiente del agente de huéspedes.
+
+## (27/09/2026) Auditoría correduría ↔ bot de Telegram + arreglos (PR #3748)
+- Uso real medido: 11 turnos; cada paso de una emisión rehacía buscar+ficha (el historial no guardaba ids) y pasaba el nº de póliza como polizaId.
+- Arreglado: reply a un mensaje 🛡️/de seguros ya llega al asistente (antes se descartaba); memoria de ids + 4 turnos; nuevas `mi_dia` (tareas, llamadas, siniestros) y `oportunidades_cliente`; ficha a 14k caracteres; 7 vueltas; compañías/impagados/recibos devueltos/vencimientos enrutan a correduría; «hoy» y tope diario en hora de Madrid; fallos de reglas ya no dicen «no hay»; alta de oportunidad sin respuesta = «incierta»; docs recientes priorizan los de correduría.
+- PENDIENTE (propuesto a Alberto): escrituras por chat con botón (tarea, llamada, nota, abrir siniestro, invitar portal); webhook sin `after()`/dedupe de update_id; avisos de asegura-portal fuera del catálogo; retoque pendiente de huéspedes secuestra el siguiente mensaje.
+
+## (27/09/2026) Telegram: la póliza de un lead ya se abre como OPORTUNIDAD (no como gasto)
+- Caso: Alberto subió la póliza de Línea Directa de un lead; el contable buscó un cargo de 691,24€ y el asistente dijo que no sabía abrir oportunidades.
+- Nuevo: herramienta `proponer_oportunidad` del asistente (lee los docs subidos en la última hora por `file_id`, lo dictado manda) → botón «🎯 Abrir» de un solo uso → mismo puerto que la ficha (`accion:'crear'`, nace «por contactar», llamada 60 d antes del vencimiento; vencimiento pasado se descarta y se dice).
+- Documento con pie de correduría («seguro de un lead…») o de un álbum ya desviado NO pasa por el contable. «oportunidad(es)»/«lead(s)» enrutan a la correduría.
+- Tablas `correduria_asistente_documento` + `_oportunidad` (aplicadas). Lógica pura en `lib/correduria-oportunidad-tg.ts` (+12 cepos, vistos en rojo).
+- ⚠️ Depende del interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA` (el mismo de emitir/corregir). Si el lead no tiene ficha, el asistente manda a crearla en /correduria.
 ## (27/09/2026) Correduría: sustitución futura = un seguro, buscador de relaciones, fichas descartadas con póliza viva (PR #3756)
 - Portal: Allianz→Occident de Víctor de la Fuente (efecto 01/11) salían dos «En vigor». La vieja se retira de la bóveda ya; la fila nueva dice «Empieza el… / Hasta entonces, Allianz». La hoja QR sigue enseñando la que cubre HOY (`carteraALaVista(c, { soloSiYaCubre })`).
 - Buscador de relaciones decía «nadie» sobre fichas YA relacionadas (Studium como «Empleado/a» del volcado): ahora las nombra con su tipo.
 - «Descartar» ya no deja descartar a quien es INTERVINIENTE de una póliza viva. Reactivadas en BD 7 fichas descartadas con póliza viva (Nieves Rodríguez, Pablo Guzmán, La Ponde, Monte Carmelo 68, Úrsula Navarro, CP Cancionera 4, Mª del Mar Guzmán). Causa: la ingesta CIMA (repo `asegura`) no llama a `reactivarPorPoliza`.
 - Auditoría abierta: 16 pólizas vigentes con vencimiento pasado (13 Mapfre/Allianz, CIMA no trae la renovación; oculta el Toyota 8022KXY de Víctor en «En vigor»); 17 relaciones «Empleado/a» del volcado; 31 gemelas volcado+CIMA.
 - Pendiente de decisión: que los intervinientes vean en el portal las pólizas donde aparecen (propuesto: nivel mínimo, sin prima/recibos/datos del tomador).
-
-## (27/09/2026) Portal: un cambio de compañía con efecto futuro ya no sale como dos seguros
-- Moto 4897FTM de Víctor de la Fuente: Allianz→Occident (efecto 01/11/2026) salían las DOS «En vigor». `sustituidasARetirar` esperaba a que la nueva empezara; ya no: la vieja se retira de la lista en cuanto hay enlace (nueva vigente, vieja sin pendientes). La fila nueva dice «Empieza el…» + «Hasta entonces, Allianz»; la ficha, «Pasas de… Hasta ese día te sigue cubriendo…».
-- Abierto (no tocado): Toyota 8022KXY Mapfre tiene `fecha_vencimiento` 18/06/2026 en BD pero CIMA dice EV → `vigenciaPoliza` = no_vigente y el filtro «En vigor» la oculta. La renovación tácita no llegó por CIMA. Y el cliente 722315d3 no tiene ningún `portal_vinculo`.
 
 ## (27/09/2026) Logotipo «Grupo ASegura» más grueso (stroke 6) y PNG del correo regenerado
 - Alberto: en el correo de cumpleaños «Grupo ASegura» se veía muy fino. Causa: `logotipo-asegura-correo.png` seguía siendo el Quicksand 300 original; #3675 engordó el SVG (stroke 3) pero no regeneró el PNG.
