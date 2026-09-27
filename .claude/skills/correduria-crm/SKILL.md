@@ -27,6 +27,13 @@ real medido, orden de trabajo). Después, según lo que toques:
 
 ## 🚨 No romper
 
+0. **Prima, vencimiento, estado y título: la póliza de CIMA miente por compañía (27/09/2026).**
+   Prima → `primaConRecibos()`, vencimiento → `vencimientoConRecibos()` (`module-seguros/vencimientos.ts`),
+   nunca `primaReferencia()` sola: Allianz solo da prima y renovación en el recibo CA; Mapfre deja pólizas
+   en EV sin fecha nueva (se avisa «Renovación sin confirmar», no se inventa); CIMA puede decir EV de una
+   anulada (se cambia a mano con nota en `historial_interno`, la verdad es el portal de la compañía). La
+   RC se titula solo por la cobertura que ES la RC («RC caballos», `tituloRc()` en `objeto.ts`); el resto
+   va al desglose. Detalle en `apps/asegura/CLAUDE.md` § «Prima y vencimiento».
 1. **Dos caras, dos apps.** Corredor en `apps/plataforma` (`/correduria`); cliente en
    `apps/asegura-portal` (rol `prisma_asegura_portal` sin BYPASSRLS, secreto propio). Nunca una
    pantalla compartida con permisos. En el portal el aislamiento **lo da el código**, no RLS.
