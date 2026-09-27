@@ -7,6 +7,7 @@ import { fichaCliente } from '@/lib/cartera-ficha'
 import { altaCliente, descartarCliente, editarCliente, restaurarCliente } from '@/lib/cartera-edicion'
 import type { EdicionCliente } from '@central/module-seguros'
 import { auditado } from '@/lib/auditoria'
+import { abrirSelloAltaLead } from '@/lib/sello-alta-lead'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,7 +66,9 @@ export const POST = auditado(async (req: Request) => {
       if (!r.ok) return NextResponse.json(sinStatus(r), { status: r.status })
       return NextResponse.json({ estado: 'ok', activo: r.activo, yaEstaba: r.yaEstaba })
     }
-    const r = await altaCliente(correduria.id, body, actorDe(body))
+    const entrada = conSello(body)
+    if (!entrada) return NextResponse.json({ estado: 'invalido', motivo: 'El sello del documento no vale o ha caducado: vuelve a subir el documento.' }, { status: 422 })
+    const r = await altaCliente(correduria.id, entrada, actorDe(body))
     if (!r.ok) return NextResponse.json(sinStatus(r), { status: r.status })
     return NextResponse.json({ estado: 'ok', id: r.id }, { status: 201 })
   } catch (e) {
@@ -126,6 +129,22 @@ export const PATCH = auditado(async (req: Request) => {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente', e) }, { status: 500 })
   }
 })
+
+/**
+ * Alta con `sello` (de `leer-documento?tomador=1`): nombre, DNI y nacimiento salen del sello y NO se
+ * pueden pisar desde fuera; teléfono y email sí se aceptan (Alberto puede dictarlos). Sin `forzar`: si
+ * ese DNI ya está en otra ficha, 409 y que decida él. `null` = sello inválido o caducado.
+ */
+function conSello(b: Record<string, unknown>): Record<string, unknown> | null {
+  if (b.sello === undefined) return b
+  if (typeof b.sello !== 'string') return null
+  const a = abrirSelloAltaLead(b.sello)
+  if (!a) return null
+  return {
+    nombre: a.nombre, apellidos: a.apellidos, dni: a.dni ?? undefined, fechaNacimiento: a.fechaNacimiento ?? undefined,
+    telefono: b.telefono, email: b.email, fuente: a.fuente, forzar: false,
+  }
+}
 
 function actorDe(b: Record<string, unknown>): string {
   return typeof b.actor === 'string' && b.actor.trim() !== '' ? b.actor.trim().slice(0, 120) : 'plataforma'

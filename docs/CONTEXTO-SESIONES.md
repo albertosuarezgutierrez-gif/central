@@ -12,6 +12,16 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — «Añade todo» (mismo PR #3765): dedupe de `update_id` + asistente en `after()`, voz de llamadas
+(«no contesta», «no le interesa»…) → correduría, «📎 Guardar en la ficha» tras abrir, enlace a tarificar (no botón:
+gasta), tareas de hoy DENTRO del aviso de renovaciones (sin aviso nuevo, Alberto pidió menos), y matrícula como
+pista del tomador (a `posibles`). Migración `telegram_update_visto_y_documentos` aplicada.
+
+**(27/09/2026)** — PR #3765: el asistente de Telegram ya no pregunta «¿de qué lead?» teniendo la póliza delante:
+asegura lee el tomador (`leer-documento?tomador=1`), lo busca por DNI **y por nombre** y devuelve un sello cifrado
+(`lib/sello-alta-lead.ts`, exige `v1:`); si no está, botón «Crear lead y abrir». El DNI nunca sale de asegura.
+Revisión architect: 6.582 fichas con DNI sin hash → «su DNI no aparece» ≠ «no está»; por eso los homónimos
+los decide Alberto (`leadNuevo`). Migración `..._oportunidad_lead.sql` aplicada. Pendiente: backfill del hash de DNI.
 **(27/09/2026)** — Portal de clientes: **«cualquier modificación de su póliza» → campana + correo** (decisión 15/09 que no se cumplía). Detector diario (`apps/asegura/lib/poliza-cambios-detector.ts`, antes del cron `avisos-intranet`) saca FOTO de cada póliza viva y guarda cambios de estado/fechas/prima/forma de pago/coberturas/documento nuevo/siniestro en `seguros.portal_poliza_cambio` (SQL `2026-09-27b`, **APLICADA**); aviso `poliza_modificada` en el catálogo común (semilla silenciosa, «completar ≠ cambiar», cortacircuitos si cambia >30 % a la vez). Además: los partes ya salen por correo, y el vencimiento se deriva de la póliza para quien nunca abrió la bóveda (3 hoy), con sello compartido para no repetirlo. El correo invita a instalar la app y activar avisos. Push de cambios de póliza: NO incluido.
 
 **(27/09/2026)** — Revisión PR #3748 (asistente correduría). Bloqueante corregido: un documento con pie que nombra

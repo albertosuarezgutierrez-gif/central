@@ -254,3 +254,146 @@ test('el botón gasto/cliente es de un solo uso (lee el FUENTE)', () => {
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   assert.match(src, /SET decision = \$\{decision\}\s+WHERE id = \$\{id\} AND decision IS NULL RETURNING/)
 })
+
+// ── Segunda prueba real (27/09/2026): la póliza de MUSSAP de un lead. El bot preguntó «¿de qué lead se
+// trata?» teniendo el documento delante. Ahora lee el tomador, lo busca por DNI y propone crear el lead. ──
+import { explicarQuien, quienEsDelDocumento, resultadoAltaLead, textoAltaLead } from './correduria-oportunidad-tg.ts'
+import { interpretarLecturaOportunidad, interpretarTomador } from './seguimiento-asegura.ts'
+
+const conTomador = (t: Partial<NonNullable<Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>['tomador']>>) =>
+  leida({ tomador: { nombre: 'Pepe Ruiz Gil', conDni: true, coincidencias: [], posibles: [], sello: 'v1:SELLO', ...t } })
+
+test('de quién es el documento: nuevo, existe, varios, sin DNI, sin poder mirar, sin tomador', () => {
+  const f = (id: string, nombre: string, activo = true) => ({ id, nombre, tipo: 'lead', activo })
+  assert.deepEqual(quienEsDelDocumento([conTomador({})]), { tipo: 'nuevo', nombre: 'Pepe Ruiz Gil', sello: 'v1:SELLO' })
+  assert.deepEqual(quienEsDelDocumento([conTomador({ coincidencias: [f('u1', 'PEPE RUIZ')] })]), { tipo: 'existe', id: 'u1', nombre: 'PEPE RUIZ' })
+  assert.equal(quienEsDelDocumento([conTomador({ coincidencias: [f('a', 'x'), f('b', 'y')] })]).tipo, 'varios')
+  // una ficha DESCARTADA con ese DNI no recibe la oportunidad sin preguntar
+  assert.equal(quienEsDelDocumento([conTomador({ coincidencias: [f('u1', 'PEPE', false)] })]).tipo, 'varios')
+  // «no se pudo mirar» NO es «no está»: nunca se ofrece crear otra ficha
+  assert.equal(quienEsDelDocumento([conTomador({ coincidencias: null })]).tipo, 'sin_comprobar')
+  assert.equal(quienEsDelDocumento([conTomador({ sello: null })]).tipo, 'sin_comprobar')
+  assert.equal(quienEsDelDocumento([conTomador({ nombre: null })]).tipo, 'sin_tomador')
+  assert.equal(quienEsDelDocumento([leida()]).tipo, 'sin_leer')
+  assert.equal(quienEsDelDocumento([{ estado: 'error', motivo: 'x' }]).tipo, 'sin_leer')
+  assert.match(explicarQuien({ tipo: 'sin_comprobar', nombre: 'Pepe', conDni: true }) ?? '', /NO digas que no está/)
+  assert.match(explicarQuien({ tipo: 'sin_comprobar', nombre: 'Pepe', conDni: false }) ?? '', /NO trae DNI/)
+  assert.equal(explicarQuien({ tipo: 'nuevo', nombre: 'Pepe', sello: 's' }), null)
+})
+
+test('sin DNI en la cartera NO basta para crear: si hay fichas con ese nombre, decide Alberto', () => {
+  // el volcado tiene fichas con DNI y sin índice ciego: «su DNI no aparece» no es «no está»
+  const conPosible = conTomador({ posibles: [{ id: 'viejo', nombre: 'PEPE RUIZ GIL', tipo: 'lead', activo: true }] })
+  const q = quienEsDelDocumento([conPosible])
+  assert.ok(q.tipo === 'varios' && !q.porDni)
+  assert.match(explicarQuien(q) ?? '', /leadNuevo=true/)
+  // Alberto dice que no es ninguno → ahora sí se crea
+  assert.equal(quienEsDelDocumento([conPosible], true).tipo, 'nuevo')
+  // no se pudo buscar por nombre → no se afirma nada
+  assert.equal(quienEsDelDocumento([conTomador({ posibles: null })]).tipo, 'sin_comprobar')
+})
+
+test('documentos de DOS personas en la misma hora: no se mezclan', () => {
+  const q = quienEsDelDocumento([conTomador({}), conTomador({ nombre: 'Ana Sanz' })])
+  assert.equal(q.tipo, 'varias_personas')
+  // la misma persona escrita con otra grafía no cuenta como dos
+  assert.equal(quienEsDelDocumento([conTomador({}), conTomador({ nombre: 'PEPE RUIZ GIL' })]).tipo, 'nuevo')
+})
+
+test('el tomador del puerto: el DNI nunca se lee aunque venga, y basura → sin coincidencias', () => {
+  const t = interpretarTomador({ nombre: 'Pepe', conDni: true, dni: '12345678Z', coincidencias: [{ id: 'u', nombre: 'P', tipo: 'lead' }, 'x'], sello: 'v1:S' })
+  assert.deepEqual(t, { nombre: 'Pepe', conDni: true, coincidencias: [{ id: 'u', nombre: 'P', tipo: 'lead', activo: true }], posibles: null, sello: 'v1:S' })
+  // un sello en claro (sin cifrar) se descarta: no hay alta posible
+  assert.equal(interpretarTomador({ nombre: 'Pepe', sello: '{"a":{"dni":"12345678Z"}}' })?.sello, null)
+  assert.equal(interpretarTomador({ nombre: 'Pepe', coincidencias: 'nada' })?.coincidencias, null)
+  const l = interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto', compania: 'MUSSAP', tomador: { nombre: 'Pepe', conDni: false, coincidencias: null, sello: null } })
+  assert.ok(l.estado === 'ok' && l.tomador?.nombre === 'Pepe')
+  // sin pedirlo no aparece la clave (la lectura de la ficha sigue igual)
+  assert.ok(!('tomador' in interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto' })))
+})
+
+test('crear el lead: 201 → id; 409 → no duplica; sin respuesta → «no sé», nunca «no se ha creado»', () => {
+  assert.deepEqual(resultadoAltaLead(201, { estado: 'ok', id: 'nuevo' }), { estado: 'creado', id: 'nuevo' })
+  const d = resultadoAltaLead(409, { coincidencias: [{ nombre: 'Pepe Ruiz' }] })
+  assert.ok(d.estado === 'duplicado' && d.texto.includes('Pepe Ruiz'))
+  assert.equal(resultadoAltaLead(502, { motivo: 'red' }).estado, 'incierto')
+  assert.equal(resultadoAltaLead(0, null).estado, 'incierto')
+  assert.equal(resultadoAltaLead(503, { estado: 'sin_configurar' }).estado, 'rechazado')
+  assert.equal(resultadoAltaLead(422, { motivo: 'sello caducado' }).estado, 'rechazado')
+})
+
+test('el mensaje del lead nuevo dice que no está y no enseña el DNI', () => {
+  const r = prepararAlta({}, [leida()], HOY)
+  assert.ok(r.ok)
+  const t = textoAltaLead('Pepe <Ruiz>', r.alta)
+  assert.match(t, /No encuentro a .* en la cartera \(ni por DNI ni por nombre\)/)
+  assert.match(t, /Pepe &lt;Ruiz&gt;/)
+  assert.match(t, /el DNI no se muestra/)
+})
+
+test('proponer_oportunidad ya no exige clienteId y el lead se crea con el sello (lee el FUENTE)', () => {
+  const h = HERRAMIENTAS.find((x) => x.function.name === 'proponer_oportunidad')
+  assert.deepEqual(h?.function.parameters.required, [])
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  assert.match(src, /altaClienteAsegura\(\{ sello: fila\.lead\.sello/)
+  assert.match(src, /lecturasRecientes\(\{ tomador: !clienteId \}, documentos\)/)
+  assert.match(src, /decision = COALESCE\(decision, 'cliente'\)/)
+})
+
+// ── «Añade todo» (27/09/2026): reintentos, respuesta rápida, voz de llamadas, guardar, mañana, tarificar ──
+import { rutaTarificar } from './correduria-oportunidad-tg.ts'
+import { bloqueLlamadasHoy } from './correduria/llamadas-hoy.ts'
+
+test('las notas de voz de una llamada van a la correduría, no al contable', () => {
+  for (const t of ['le he llamado y no le interesa', 'no contesta, vuelve a llamar el martes', 'Pepe quiere precio del coche']) {
+    assert.equal(clasificarDestino(t), 'correduria', t)
+  }
+  // con una palabra contable manda el contable (un «he llamado al banco» no es de la correduría)
+  assert.notEqual(clasificarDestino('he llamado al banco por el cargo'), 'correduria')
+})
+
+test('webhook: descarta reintentos de Telegram y contesta rápido a la correduría (lee el FUENTE)', () => {
+  const src = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
+  const visto = src.indexOf('if (await updateYaVisto(body.update_id))')
+  assert.ok(visto > 0 && visto < src.indexOf('const cbData'), 'la deduplicación va antes de enrutar nada')
+  assert.match(src, /ON CONFLICT DO NOTHING RETURNING update_id/)
+  // sin BD se procesa igual (perder un mensaje es peor que contestarlo dos veces)
+  assert.match(src, /if \(filas === null\) return false/)
+  // ningún manejarCorreduriaTg se espera dentro de la petición: el único await es el de correduriaSegura (en after)
+  assert.equal(src.match(/await manejarCorreduriaTg\(/g)?.length, 1)
+  assert.match(src, /async function correduriaSegura[^]*?await manejarCorreduriaTg\(texto\)\.catch/)
+  assert.match(src, /action === 'guardar'\) && String\(cb\.from/)
+})
+
+test('tras abrir: guardar en la ficha es de un solo uso y tarificar es un ENLACE (no cotiza desde Telegram)', () => {
+  assert.equal(rutaTarificar('auto'), 'auto-nuevo')
+  assert.equal(rutaTarificar('hogar'), 'hogar-nuevo')
+  assert.equal(rutaTarificar('responsabilidad_civil'), null)
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  assert.match(src, /WHERE id = \$\{oportId\} AND estado = 'abierta' AND documentos_guardados_at IS NULL/)
+  assert.doesNotMatch(src.slice(src.indexOf('async function ofrecerSiguientes'), src.indexOf('async function guardarDocumentosEnFicha')), /cotizar|retarificar/i)
+})
+
+test('mañana: las tareas de hoy van dentro del aviso de renovaciones, y «no se pudo leer» se dice', () => {
+  const t = (o: Partial<Parameters<typeof bloqueLlamadasHoy>[0] extends readonly (infer T)[] | null ? T : never>) => ({
+    id: 'x', tipo: 'llamada', prioridad: 'media', observaciones: 'Llamar por su póliza', fechaLimite: '2026-09-27', oportunidadId: 'o', clienteId: 'c', cliente: 'Pepe *Ruiz*', ramo: 'auto', ...o,
+  })
+  assert.equal(bloqueLlamadasHoy([], '2026-09-27'), null)
+  assert.match(bloqueLlamadasHoy(null, '2026-09-27') ?? '', /NO significa que no haya/)
+  const b = bloqueLlamadasHoy([t({}), t({ fechaLimite: '2026-09-20', cliente: 'Ana' })], '2026-09-27') ?? ''
+  assert.match(b, /Tareas de hoy \(2\)/)
+  assert.match(b, /Ana.*atrasada/)
+  assert.doesNotMatch(b, /\*Ruiz\*/) // un nombre con * no rompe el Markdown
+  const cron = readFileSync(fileURLToPath(new URL('../app/api/cron/correduria-renovaciones/route.ts', import.meta.url)), 'utf8')
+  assert.match(cron, /bloqueLlamadasHoy\(/)
+  assert.match(cron, /\[renovaciones, llamadas\]\.filter\(Boolean\)/)
+})
+
+test('revisión: si el webhook revienta se desmarca el update, y el asistente en after avisa si falla (lee el FUENTE)', () => {
+  const src = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
+  assert.match(src, /catch \(e\) \{\n\s+\/\/ Si revienta a mitad, se desmarca[^\n]*\n\s+await olvidarUpdate\(body\.update_id\)/)
+  assert.doesNotMatch(src, /after\(\(\) => manejarCorreduriaTg/)
+  assert.match(src, /if \(action === 'guardar'\) \{\n\s+await tgAnswerCallback/)
+  const cron = readFileSync(fileURLToPath(new URL('../app/api/cron/correduria-renovaciones/route.ts', import.meta.url)), 'utf8')
+  assert.match(cron, /Promise\.all\(\[\n\s+vencimientosAsegura/)
+})
