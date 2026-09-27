@@ -12,6 +12,13 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** Auditoría PROFUNDA: código 12/12 sano (~9.093 tests), fix `transpilePackages` en 5 apps
+(ia-rest/alquiler/asegura/asegura-portal/housesevillana importaban `@central/*` sin declararlo — riesgo de
+build, no de tipos). 🔴 **44 PRs `claude/*` zombis abiertos (05-24/09, hasta 22 días)**: su código YA está
+en `main` por otra vía (verificado en 3 casos), el automerge los descarta bien mismo, pero nadie los
+cierra. (El «hueco de memoria 05-13/09» que se dijo aquí era FALSO: esas entradas están, con formato
+`- **título (dd/mm/aaaa).**` que el grep de `**(dd/mm` no veía.) Pendiente: Alberto decide cierre masivo.
+
 **(26/09/2026)** Correduría · lotes 3+4 (PR #3707): «siguiente paso» en la ficha (`siguientePaso()` de
 module-seguros), DNI/carnés plegados, «Más» partida en Cumplimiento/Referencia, renovaciones 90 d plegadas en Cartera, y
 **un solo contador en Hoy**: el badge = `colasIncid` + tareas, y la celda «avisos» de la franja suma las mismas colas

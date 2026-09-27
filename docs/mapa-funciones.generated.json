@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-26T20:40:37Z",
-  "sha": "e0da9c50e8c42b53dabf544abcc3fc1343addb44",
+  "generadoEn": "2026-09-27T05:27:06Z",
+  "sha": "608da187db1c5a6343a7580eb462b682aabc8fd1",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -107111,7 +107111,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "eb08826035d4"
+      "hash": "dd95deafb576"
     },
     {
       "ruta": "apps/plataforma/lib/export-rgpd-asegura.ts",

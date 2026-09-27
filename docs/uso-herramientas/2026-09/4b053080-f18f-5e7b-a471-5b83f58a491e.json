@@ -1,0 +1,107 @@
+{
+ "sesion": "4b053080-f18f-5e7b-a471-5b83f58a491e",
+ "inicio": "2026-09-27T02:09:24.217Z",
+ "fin": "2026-09-27T02:27:59.118Z",
+ "llamadas": 190,
+ "categorias": {
+  "otro": {
+   "llamadas": 16,
+   "chars_in": 14570,
+   "chars_out": 3676,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 5,
+    "SubagentHandback": 2,
+    "ListAgents": 6,
+    "PushNotification": 1
+   }
+  },
+  "bash": {
+   "llamadas": 107,
+   "chars_in": 26171,
+   "chars_out": 303191,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 107
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 2,
+   "chars_in": 8751,
+   "chars_out": 9125,
+   "errores": 0,
+   "archivos_citados": 20,
+   "chars_citados": 537030,
+   "tools": {
+    "Agent": 2
+   }
+  },
+  "sql": {
+   "llamadas": 7,
+   "chars_in": 3973,
+   "chars_out": 20265,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 7
+   }
+  },
+  "mcp:github": {
+   "llamadas": 13,
+   "chars_in": 6674,
+   "chars_out": 85563,
+   "errores": 2,
+   "archivos_citados": 7,
+   "chars_citados": 1734814,
+   "tools": {
+    "mcp__github__list_pull_requests": 2,
+    "mcp__github__actions_list": 2,
+    "mcp__github__pull_request_read": 6,
+    "mcp__github__actions_get": 1,
+    "mcp__github__get_job_logs": 1,
+    "mcp__github__create_pull_request": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 30,
+   "chars_in": 2832,
+   "chars_out": 96362,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 26,
+    "Grep": 4
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 2,
+   "chars_in": 57,
+   "chars_out": 1854,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1,
+    "mcp__Supabase__get_advisors": 1
+   }
+  },
+  "escritura": {
+   "llamadas": 13,
+   "chars_in": 21822,
+   "chars_out": 1736044,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 13
+   }
+  }
+ }
+}

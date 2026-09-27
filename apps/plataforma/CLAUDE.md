@@ -1840,6 +1840,22 @@ para los mismos datos.
 ⚠️ **`test/regression-clientes-sin-canal.test.ts` exigía el literal `<SinCanal />`.** Se relajó a
 `/<SinCanal[\s/>]/`: lo que ese test vigila es que el bloque SIGA MONTADO en la pantalla, no su firma.
 
+### 🧹 UX de la ficha y del listado — 4 lotes en un día (26/09/2026)
+Cuatro PRs de pulido sobre lo ya construido, sin tocar arquitectura: **lotes 1-2** (`ebba066`) — botones a
+44px táctiles, bloques vacíos en una línea en vez de card completa, filas resumidas en varias tablas y fix
+del bug de alta de auto; **`Relaciones.tsx`** (`b6d2504`) — personas de la ficha con resumen por fila y
+gestión plegada (antes la lista de relaciones ocupaba la ficha entera aunque solo hubiera un cónyuge);
+**lotes 3-4** (`2b546ad`) — en Clientes el badge cuenta solo la recaptación (el total del listado no es
+trabajo); en Cartera las renovaciones a 90 días se pliegan (ya viven en Vencimientos y las urgentes en
+Hoy); en «Más» se agrupa Formación/IPID/RGPD bajo «Cumplimiento» y Compañías/radar bajo «Referencia»; en
+la ficha del cliente, DNI/nacimiento/carnés se pliegan tras «DNI y carnés» (se abre solo si un carné
+caduca); y **«Siguiente paso»** — una frase y un botón bajo el nombre del cliente, derivados de lo que la
+ficha ya sabe (recibo devuelto → llamar; vence dentro del preaviso sin presupuesto → mirar precio; auto/moto
+sin hogar → presupuestar hogar), regla pura `siguientePaso()` en `@central/module-seguros`. De paso, **Hoy
+pasa a un solo contador**: el badge de la pestaña y la celda de la franja suman las mismas colas
+(`colasIncid` + tareas), donde antes sumaban conjuntos distintos y podían no coincidir — guardián
+`test/regression-hoy-contador-unico.test.ts`.
+
 ### 🔎 Listado FILTRABLE de la cartera — el vocabulario, y el campo que MIENTE (03/09/2026)
 Alberto: *«quiero filtro por todo, ramo, tipo cliente (con póliza, leads…), porque quiero filtrar por
 clientes y [que suban] las pólizas en vigor que haya»*. Lo primero que hay que saber: **eso no era un

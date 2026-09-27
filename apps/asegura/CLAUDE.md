@@ -1063,6 +1063,12 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
   `SubmitPolicyApplication` y sigue en plazo, y deja `codeoscopic_projects` listo para `/emitir`. El tomador
   se comprueba por `dni_lookup_hash` (sin dato → bloquea, no «coincide»). Regla pura en
   `lib/codeoscopic/importar.ts`, probada contra la forma real del proyecto 40842815.
+- **🔎 `POST /api/operador/poliza/traer-pdf` (26/09/2026) — encontrar la póliza en Codeoscopic sin
+  `projectId`.** Cuando la ficha no tiene el proyecto enlazado, cae a `lib/codeoscopic/buscar-proyectos.ts`:
+  busca por `GET /insurances?holderIdentification=` con el DNI del tomador, y de los proyectos que
+  devuelve solo acepta el que tenga el número de póliza contra el que ya se emitió (nunca «el más
+  reciente» a ciegas). Con eso resuelto, sigue el mismo camino de `lib/codeoscopic/traer-pdf-emitido.ts`
+  (Fase 1, `documentosEmitidos()`) para bajar el PDF de `issuedDocuments[]` y archivarlo.
 - **🗑 `GET/POST /api/operador/supresiones` (05/09/2026) — la cola del art. 17 RGPD.** Las solicitudes
   de supresión que llegan por el portal del cliente, para que Alberto las conteste desde
   `plataforma` → `/correduria`. 🚨 **No es una cola de borrados: es una cola de RESPUESTAS con un plazo
