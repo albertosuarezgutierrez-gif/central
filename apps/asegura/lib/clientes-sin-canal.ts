@@ -108,6 +108,7 @@ import { POLIZA_ESTADOS_VIGENTES, sqlCarteraEnVigor } from '@central/module-segu
 import { prediccionDeVinculo, type Candidato } from '@central/module-seguros-portal'
 import { Prisma } from './generated/asegura-client'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
+import { sqlPrimaDeRecibo } from './recibos-vigencia'
 
 /** Tope de filas leídas. La cartera viva son decenas, no miles: si algún día se
  *  pasa de aquí, se declara `truncado` y los recuentos pasan a «no comprobado»
@@ -428,6 +429,7 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
   // Copia mutable para la interpolación de Prisma: `POLIZA_ESTADOS_VIGENTES` es
   // `readonly` (`as const`) y el driver espera un array normal.
   const VIGENTES: string[] = [...POLIZA_ESTADOS_VIGENTES]
+  const hoy = new Date().toISOString().slice(0, 10)
 
   // 🚨 El filtro de cartera viva es la línea que separa los ~80 clientes de hoy
   // de las ~32.500 fichas del volcado histórico. No se toca.
@@ -479,9 +481,14 @@ export async function clientesSinCanal(correduriaId: string): Promise<ClientesSi
               and p.estado::text = any(${VIGENTES})
           ) as proximo_vencimiento,
           count(*) filter (where p.fecha_vencimiento is null)::int as polizas_sin_fecha,
-          sum(coalesce(p.prima_anual, p.prima_bruta))::float8 as prima,
-          count(*) filter (where p.prima_anual is null and p.prima_bruta is null)::int as polizas_sin_prima
+          -- Si la póliza no trae ninguna, la del recibo anual: Allianz solo la
+          -- manda ahí (27/09/2026). Pago fraccionado = sin dato, como antes.
+          sum(coalesce(p.prima_anual, p.prima_bruta, pr.prima))::float8 as prima,
+          count(*) filter (
+            where p.prima_anual is null and p.prima_bruta is null and pr.prima is null
+          )::int as polizas_sin_prima
         from polizas p
+        cross join lateral (select ${sqlPrimaDeRecibo('p', hoy)} as prima) pr
         where p.cliente_id = c.id
           and p.correduria_id = c.correduria_id
           -- EN VIGOR (origen CIMA y estado vigente): la cadena es constante,

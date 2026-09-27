@@ -14,6 +14,8 @@ import {
   fechaLimiteOposicion,
   primaEnRiesgo,
   primaReferencia,
+  primaConRecibos,
+  vencimientoConRecibos,
   urgenciaRenovacion,
 } from './vencimientos.ts'
 
@@ -152,4 +154,49 @@ test('textoPlazoOposicion: con plazo dice hasta cuándo; dentro del mes, que ya 
   assert.equal(textoPlazoOposicion('2026-09-29', -1), null)
   assert.equal(textoPlazoOposicion('29/09/2026', 3), null)
   assert.equal(textoPlazoOposicion('2026-02-31', 90), null)
+})
+
+// ── Allianz: prima y renovación solo en el recibo (27/09/2026) ──────────────
+const moto = { claseRecibo: 'CA', situacion: 'cobrado', primaTotal: '303.34', fechaVencimiento: '2027-08-01T00:00:00.000Z' }
+
+test('primaConRecibos: sin prima en la póliza, anual, se toma la del recibo de cartera', () => {
+  assert.deepEqual(primaConRecibos({ primaAnual: null, primaBruta: null, fraccionamiento: 'anual' }, [moto], '2026-09-27'), { prima: 303.34, deRecibo: true })
+})
+
+test('primaConRecibos: la prima de la póliza manda sobre el recibo', () => {
+  assert.deepEqual(primaConRecibos({ primaBruta: 630.48, fraccionamiento: 'anual' }, [moto], '2026-09-27'), { prima: 630.48, deRecibo: false })
+})
+
+test('primaConRecibos: fraccionada, un recibo es un trozo de la prima — no se usa', () => {
+  assert.deepEqual(primaConRecibos({ primaAnual: null, fraccionamiento: 'mensual' }, [moto], '2026-09-27'), { prima: null, deRecibo: false })
+  assert.deepEqual(primaConRecibos({ primaAnual: null, fraccionamiento: null }, [moto], '2026-09-27'), { prima: null, deRecibo: false })
+})
+
+test('primaConRecibos: anulados, fraccionarios y extornos no cuentan', () => {
+  const r = [
+    { ...moto, situacion: 'anulado' },
+    { ...moto, claseRecibo: 'FR' },
+    { ...moto, primaTotal: '-50.00' },
+  ]
+  assert.deepEqual(primaConRecibos({ fraccionamiento: 'anual' }, r, '2026-09-27'), { prima: null, deRecibo: false })
+})
+
+test('primaConRecibos: el periodo vigente gana a la renovación ya emitida', () => {
+  const r = [
+    { ...moto, primaTotal: '320.00', situacion: 'pendiente', fechaVencimiento: '2028-08-01' },
+    moto,
+  ]
+  assert.equal(primaConRecibos({ fraccionamiento: 'anual' }, r, '2026-09-27').prima, 303.34)
+})
+
+test('vencimientoConRecibos: vencida y con recibo cobrado posterior → vence donde acaba el recibo', () => {
+  assert.equal(vencimientoConRecibos('2026-08-01', [moto], '2026-09-27'), '2027-08-01')
+})
+
+test('vencimientoConRecibos: un recibo pendiente no prueba la renovación', () => {
+  assert.equal(vencimientoConRecibos('2026-08-01', [{ ...moto, situacion: 'pendiente' }], '2026-09-27'), '2026-08-01')
+})
+
+test('vencimientoConRecibos: si aún no ha vencido, no se toca', () => {
+  assert.equal(vencimientoConRecibos('2026-11-01', [{ ...moto, fechaVencimiento: '2027-11-01' }], '2026-09-27'), '2026-11-01')
 })

@@ -8,8 +8,9 @@ import {
   diasHastaVencimiento,
   inicioVentanaRecuperacion,
   objetoAsegurado,
-  primaReferencia,
+  primaConRecibos,
   retarificabilidad,
+  vencimientoConRecibos,
   urgenciaRenovacion,
   type ObjetoAsegurado,
   type Retarificabilidad,
@@ -22,6 +23,7 @@ import { registrarErrorCartera, type CausaErrorCartera } from './error-cartera'
 import { contactosDe, type Contacto } from './cartera-busqueda'
 import { LIMITE_VENCIMIENTOS, cribaTruncada } from './cartera-techos.ts'
 import { ultimosContactosRenovacion } from './cartera-renovaciones-contacto.ts'
+import { recibosVigenciaDe } from './recibos-vigencia'
 
 /**
  * Lecturas de la Fase 1 sobre la cartera real. Reglas que no se negocian:
@@ -274,12 +276,32 @@ export async function vencimientosProximos(
   hasta.setUTCDate(hasta.getUTCDate() + dias)
   // El borde izquierdo NO es `hoyRef`: es hoy menos una anualidad.
   const desde = inicioVentanaRecuperacion(hoyRef, diasAtras)
+  // Los recibos llevan `timestamptz`: el día `hasta` entero es `< hasta + 1`.
+  const hastaExclusivo = new Date(hasta)
+  hastaExclusivo.setUTCDate(hastaExclusivo.getUTCDate() + 1)
   const filas = await db.poliza.findMany({
     where: {
       correduriaId,
       mergedIntoPolizaId: null,
       estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
-      fechaVencimiento: { gte: desde, lte: hasta },
+      // 🚨 Allianz no avanza `fecha_vencimiento` al renovar: solo manda el
+      // recibo anual (27/09/2026). Una fecha de hace más de una anualidad con un
+      // recibo CA/NP COBRADO que acaba dentro de la ventana es una renovación de
+      // ESTA ventana, no dato a depurar. Quien decide de verdad es
+      // `vencimientoConRecibos`, más abajo; esto es solo la criba.
+      OR: [
+        { fechaVencimiento: { gte: desde, lte: hasta } },
+        {
+          fechaVencimiento: { lt: desde },
+          recibos: {
+            some: {
+              claseRecibo: { in: ['CA', 'NP'] },
+              situacion: 'cobrado',
+              fechaVencimiento: { gte: desde, lt: hastaExclusivo },
+            },
+          },
+        },
+      ],
       // Una ficha descartada no genera llamadas de renovación. (Hoy no puede
       // haber ninguna aquí —no se descarta lo que tiene pólizas vivas—, pero
       // «vigente con fecha futura» no es exactamente «cartera viva», así que el
@@ -304,6 +326,27 @@ export async function vencimientosProximos(
   // llama a un cliente antes de que se le prorrogue la póliza sola.
   const truncado = cribaTruncada(filas.length, LIMITE_VENCIMIENTOS)
 
+  // El vencimiento REAL: si la fecha de la póliza ya pasó y hay un recibo anual
+  // COBRADO posterior, la póliza renovó y vence donde acaba ese recibo. Una
+  // renovada cuyo recibo la lleva más allá del horizonte NO es trabajo de hoy:
+  // sale de la lista (antes aparecía como «vencida» sin estarlo). Una sola
+  // consulta de recibos para toda la lista.
+  const recibos = await recibosVigenciaDe(correduriaId, filas.map(f => f.id))
+  const hoyIso = hoyRef.toISOString()
+  const desdeIso = desde.toISOString().slice(0, 10)
+  const hastaIso = hasta.toISOString().slice(0, 10)
+  const enVentana = filas
+    .map(f => {
+      const recs = recibos.get(f.id) ?? []
+      const venc = vencimientoConRecibos((f.fechaVencimiento as Date).toISOString(), recs, hoyIso) as string
+      return { ...f, vencimiento: new Date(`${venc.slice(0, 10)}T00:00:00Z`), recibosAnuales: recs }
+    })
+    .filter(f => {
+      const d = f.vencimiento.toISOString().slice(0, 10)
+      return d >= desdeIso && d <= hastaIso
+    })
+    .sort((a, b) => a.vencimiento.getTime() - b.vencimiento.getTime())
+
   // Coberturas SOLO de los ramos que las necesitan para identificarse.
   //
   // No lleva techo propio A PROPÓSITO: es una consulta DERIVADA de la lista de
@@ -313,7 +356,7 @@ export async function vencimientosProximos(
   // aquí, el síntoma sería otro (un objeto asegurado incompleto, no una póliza
   // que falta), y mezclarlo en el mismo `truncado` haría que la pantalla dijera
   // lo que no es.
-  const idsPorCoberturas = filas
+  const idsPorCoberturas = enVentana
     .filter(f => (RAMOS_DESCRITOS_POR_COBERTURAS as readonly string[]).includes(String(f.tipo)))
     .map(f => f.id)
   const coberturasPorPoliza = new Map<string, string[]>()
@@ -336,7 +379,7 @@ export async function vencimientosProximos(
   // tres veces por el mismo teléfono.
   const contactos = await contactosDe(
     correduriaId,
-    [...new Set(filas.map(f => f.cliente.id))],
+    [...new Set(enVentana.map(f => f.cliente.id))],
   )
 
   // `null` general = no se pudo consultar el historial de contactos: no se
@@ -345,7 +388,7 @@ export async function vencimientosProximos(
   // conservador (el cooldown nunca oculta una fila por error).
   const ultimosContactos = await ultimosContactosRenovacion(
     correduriaId,
-    filas.map(f => f.id),
+    enVentana.map(f => f.id),
   ).catch(() => new Map<string, Date>())
 
   // Último fichero de CIMA por compañía. Es lo que distingue «vencida sin
@@ -355,8 +398,8 @@ export async function vencimientosProximos(
   // mapa entero = no se pudo mirar, y la fila sale sin fecha (no se afirma).
   const ultimoFichero = await ultimoFicheroPorCompania(correduriaId).catch(() => null)
 
-  const polizas = filas.map(f => {
-    const vencimiento = f.fechaVencimiento as Date
+  const polizas = enVentana.map(f => {
+    const vencimiento = f.vencimiento
     const diasRestantes = diasHastaVencimiento(vencimiento, hoyRef)
     return {
       id: f.id,
@@ -368,10 +411,12 @@ export async function vencimientosProximos(
       fechaVencimiento: vencimiento.toISOString().slice(0, 10),
       dias: diasRestantes,
       urgencia: urgenciaRenovacion(diasRestantes),
-      prima: primaReferencia({
+      // Allianz solo manda la prima en el recibo anual (27/09/2026).
+      prima: primaConRecibos({
         primaAnual: f.primaAnual === null ? null : Number(f.primaAnual),
         primaBruta: f.primaBruta === null ? null : Number(f.primaBruta),
-      }),
+        fraccionamiento: f.fraccionamiento === null ? null : String(f.fraccionamiento),
+      }, f.recibosAnuales, hoyIso).prima,
       fraccionamiento: f.fraccionamiento === null ? null : String(f.fraccionamiento),
       objeto: objetoAsegurado({
         tipo: String(f.tipo),
@@ -444,10 +489,22 @@ export async function vencidasFueraDeVentana(
         mergedIntoPolizaId: null,
         estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
         fechaVencimiento: { lt: inicioVentanaRecuperacion(hoyRef, diasAtras) },
-        cliente: { activo: true },
         // El volcado histórico NO es cartera: son leads de 2013-2018 con el
         // estado sin actualizar. Contarlos aquí multiplica la cifra por 122.
         ...WHERE_CARTERA_VIVA,
+        // Allianz no avanza la fecha al renovar (27/09/2026): si un recibo
+        // anual COBRADO la lleva a la ventana o más allá, no es dato viejo —
+        // es una renovada, y ya la trata (o la deja fuera) `vencimientosProximos`.
+        NOT: {
+          recibos: {
+            some: {
+              claseRecibo: { in: ['CA', 'NP'] },
+              situacion: 'cobrado',
+              fechaVencimiento: { gte: inicioVentanaRecuperacion(hoyRef, diasAtras) },
+            },
+          },
+        },
+        cliente: { activo: true },
       },
     })
   } catch (e) {

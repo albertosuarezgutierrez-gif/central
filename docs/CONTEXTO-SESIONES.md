@@ -788,6 +788,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Título de la RC = solo la RC
+- `module-seguros/objeto.ts` `tituloRc()`: si una cobertura se nombra «Responsabilidad civil…/R.C./RC», la tarjeta titula «RC caballos» y el resto (defensa penal, liberación de gastos) queda como «+N coberturas» y en el desglose de la póliza. Sin cobertura así, sigue el título por modalidades.
+- Precio de la moto (Allianz 045981539): Allianz NO manda prima en el EIAC de póliza, solo en el recibo CA (11 de 12 vivas sin prima, todas Allianz). `primaConRecibos()`/`vencimientoConRecibos()` (module-seguros) la toman del recibo anual si la póliza no la trae (solo pago anual) y corrigen el vencimiento si hay CA cobrado posterior. Aplicado en `cartera-ficha.ts` y `cartera-poliza.ts` de asegura. - Auditoría: 043673655 anulada en ePac (impago) → cancelada a mano; 054914837 sin recibos en CIMA → 2 CA copiados de ePac (`origen=manual`); 10 Mapfre EV con vencimiento pasado sin renovación por CIMA → aviso rojo en tarjeta. Regla fijada en `apps/asegura/CLAUDE.md` + skill `correduria-crm` (punto 0).
+
 ## (27/09/2026) Materiales Llido fusionada; Martin = contacto de Gymcisa
 `fusionar_clientes`: Materiales Llido Gomez S.l. (bf96c9e0 → bcd1f34a, mismo CIF+tel, OK de Alberto). Martin (fichas
 52886ff1 cliente + 2a6c38e9 lead, nº 11091 del volcado) = persona de contacto de Gymcisa: renombrado a «Martin», física,

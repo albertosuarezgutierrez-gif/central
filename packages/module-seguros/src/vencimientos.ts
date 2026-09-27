@@ -210,3 +210,74 @@ export function primaEnRiesgo(
   }
   return { total: Math.round(total * 100) / 100, conocidas, sinPrima }
 }
+
+/** Lo mínimo de un recibo para deducir de él prima y vencimiento. */
+export type ReciboVigencia = {
+  claseRecibo: string | null
+  situacion: string | null
+  /** Importe tal como llega del EIAC (`"303.34"`). */
+  primaTotal: string | null
+  /** Fin del periodo que cubre el recibo, `YYYY-MM-DD…`. */
+  fechaVencimiento: string | null
+}
+
+/** Recibos de anualidad (cartera o nueva producción) que no se han anulado. */
+function recibosAnuales(recibos: ReciboVigencia[]): Array<ReciboVigencia & { fin: string }> {
+  return recibos
+    .filter((r) => (r.claseRecibo === 'CA' || r.claseRecibo === 'NP') && r.situacion !== 'anulado' && r.fechaVencimiento)
+    .map((r) => ({ ...r, fin: r.fechaVencimiento!.slice(0, 10) }))
+}
+
+/**
+ * Prima de la póliza, y si la compañía no la manda en la póliza, la del recibo
+ * anual. Allianz (medido 27/09/2026: 11 de las 12 vivas sin prima) informa la
+ * prima SOLO en el recibo de cartera, nunca en el EIAC de póliza. Solo vale con
+ * pago ANUAL: un recibo fraccionado es un trozo de la prima, no la prima. Se
+ * toma el recibo cuyo periodo acaba antes a partir de hoy (el vigente o, si aún
+ * no ha llegado, el de la renovación ya emitida); si todos quedaron atrás, el
+ * último.
+ */
+export function primaConRecibos(
+  p: { primaAnual?: number | null; primaBruta?: number | null; fraccionamiento?: string | null },
+  recibos: ReciboVigencia[],
+  hoyIso: string,
+): { prima: number | null; deRecibo: boolean } {
+  const propia = primaReferencia(p)
+  if (propia !== null) return { prima: propia, deRecibo: false }
+  if (p.fraccionamiento !== 'anual') return { prima: null, deRecibo: false }
+  const hoy = hoyIso.slice(0, 10)
+  const anuales = recibosAnuales(recibos)
+    .map((r) => ({ ...r, importe: importeReciboPositivo(r.primaTotal) }))
+    .filter((r): r is typeof r & { importe: number } => r.importe !== null)
+  if (anuales.length === 0) return { prima: null, deRecibo: false }
+  const futuros = anuales.filter((r) => r.fin >= hoy).sort((a, b) => a.fin.localeCompare(b.fin))
+  const elegido = futuros[0] ?? anuales.sort((a, b) => b.fin.localeCompare(a.fin))[0]
+  return { prima: elegido.importe, deRecibo: true }
+}
+
+function importeReciboPositivo(t: string | null): number | null {
+  if (typeof t !== 'string' || !/^\d+(\.\d{1,2})?$/.test(t.trim())) return null
+  const n = Number(t.trim())
+  return n > 0 ? n : null
+}
+
+/**
+ * Vencimiento real cuando la póliza ya renovó y la compañía solo mandó el
+ * recibo: si el vencimiento de la póliza ya pasó y hay un recibo anual COBRADO
+ * que cubre más allá, la póliza vence donde acaba ese recibo. Un recibo
+ * pendiente o devuelto no prueba la renovación: entonces se deja la fecha tal
+ * cual (vencida), que es lo que hay que mirar.
+ */
+export function vencimientoConRecibos(
+  fechaVencimiento: string | null,
+  recibos: ReciboVigencia[],
+  hoyIso: string,
+): string | null {
+  if (fechaVencimiento === null) return null
+  const venc = fechaVencimiento.slice(0, 10)
+  if (venc >= hoyIso.slice(0, 10)) return fechaVencimiento
+  const posterior = recibosAnuales(recibos)
+    .filter((r) => r.situacion === 'cobrado' && r.fin > venc)
+    .sort((a, b) => b.fin.localeCompare(a.fin))[0]
+  return posterior ? posterior.fin : fechaVencimiento
+}

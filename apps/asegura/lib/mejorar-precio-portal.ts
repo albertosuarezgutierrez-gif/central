@@ -28,6 +28,7 @@ import { sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { fichasDeIdentidad } from './contacto-portal'
 import { Prisma } from './generated/asegura-client'
+import { sqlPrimaDeRecibo, sqlVencimientoConRecibos } from './recibos-vigencia'
 
 /** Marca de origen en `oportunidades.info_riesgo`. La leen la idempotencia y la lectura de peticiones abiertas. */
 export const ORIGEN_PORTAL_PRECIO = 'portal:mejorar-precio'
@@ -81,20 +82,24 @@ export async function pedirMejorarPrecio(
   if (fichas.length === 0) return { estado: 'sin_ficha' }
 
   const db = prismaAsegura()
+  const hoy = hoyMadrid()
+  // Allianz no manda prima en la póliza ni avanza su vencimiento al renovar:
+  // solo el recibo anual (27/09/2026). Sin esto, una Allianz renovada seguiría
+  // «vencida» aquí mientras el portal —que ya lee el recibo— le enseña el
+  // botón con la fecha nueva, y la petición rebotaría con `fuera_de_ventana`.
   const [p] = await db.$queryRaw<{
     clienteId: string; ramo: string; compania: string | null; numeroPoliza: string | null
     fechaVencimiento: string | null; prima: string | null
   }[]>(Prisma.sql`
     select p.cliente_id::text as "clienteId", p.tipo::text as ramo, p.aseguradora as compania,
-           p.numero_poliza as "numeroPoliza", to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as "fechaVencimiento",
-           nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima
+           p.numero_poliza as "numeroPoliza", to_char(${sqlVencimientoConRecibos('p', hoy)}, 'YYYY-MM-DD') as "fechaVencimiento",
+           coalesce(nullif(coalesce(p.prima_bruta, p.prima_anual), 0), ${sqlPrimaDeRecibo('p', hoy)})::text as prima
     from polizas p
     where p.id = ${polizaId}::uuid and p.correduria_id = ${correduriaId}::uuid
       and p.merged_into_poliza_id is null
       and p.cliente_id in (${Prisma.join(fichas.map(f => Prisma.sql`${f}::uuid`))})
       and ${Prisma.raw(sqlCarteraEnVigor('p'))}`)
   if (!p) return { estado: 'no_encontrada' }
-  const hoy = hoyMadrid()
   if (!p.fechaVencimiento || !enVentanaVencimientos(diasHastaVencimientoPortal(p.fechaVencimiento, hoy))) {
     return { estado: 'fuera_de_ventana' }
   }

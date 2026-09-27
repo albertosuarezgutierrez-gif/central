@@ -17,7 +17,9 @@ import {
   etiquetaFormaPago,
   importeEiac,
   objetoAsegurado,
-  primaReferencia,
+  primaConRecibos,
+  vencimientoConRecibos,
+  type ReciboVigencia,
   recargoFraccionamiento,
   evolucionPrima,
   type VeredictoPrima,
@@ -727,6 +729,7 @@ export async function fichaCliente(
   }
 
   const recibosPorPoliza = new Map<string, typeof recibos>()
+  const hoyIso = new Date().toISOString()
   for (const r of recibos) {
     const lista = recibosPorPoliza.get(r.polizaId) ?? []
     lista.push(r)
@@ -826,11 +829,14 @@ export async function fichaCliente(
         numeroPoliza: p.numeroPoliza ?? null,
         estado: String(p.estado),
         fechaInicio: fechaIso(p.fechaInicio),
-        fechaVencimiento: fechaIso(p.fechaVencimiento),
-        prima: primaReferencia({
+        // Allianz manda prima y renovación solo en el recibo de cartera: sin esto la
+        // moto salía sin precio y «Vence 01/08/2026» ya renovada (27/09/2026).
+        fechaVencimiento: vencimientoConRecibos(fechaIso(p.fechaVencimiento), recibosVigencia(recibosPorPoliza.get(p.id)), hoyIso),
+        prima: primaConRecibos({
           primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
           primaBruta: p.primaBruta === null ? null : Number(p.primaBruta),
-        }),
+          fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+        }, recibosVigencia(recibosPorPoliza.get(p.id)), hoyIso).prima,
         fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
         objeto: objetoConGemela(String(p.tipo), datos, esCarteraViva(p) && p.numeroPoliza ? gemelas.get(p.numeroPoliza) : undefined, coberturasPorPoliza.get(p.id) ?? null),
         matricula,
@@ -1280,4 +1286,15 @@ export function normalizarFecha(v: string | null): string | null {
   const es = t.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
   if (es) return `${es[3]}-${es[2]}-${es[1]}`
   return null
+}
+
+function recibosVigencia(
+  rs: Array<{ claseRecibo: string | null; situacion: unknown; primaTotal: string | null; fechaVencimiento: Date | null }> | undefined,
+): ReciboVigencia[] {
+  return (rs ?? []).map((r) => ({
+    claseRecibo: r.claseRecibo ?? null,
+    situacion: r.situacion === null ? null : String(r.situacion),
+    primaTotal: r.primaTotal,
+    fechaVencimiento: fechaIso(r.fechaVencimiento),
+  }))
 }

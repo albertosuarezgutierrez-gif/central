@@ -36,6 +36,8 @@
  */
 
 import {
+  primaConRecibos,
+  vencimientoConRecibos,
   sqlCarteraEnVigor,
   sqlCarteraNoEnVigor,
   diasDeVentana,
@@ -49,6 +51,7 @@ import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { registrarErrorCartera } from './error-cartera'
 import { siguientesAcciones } from './acciones-listado'
+import { recibosVigenciaDe } from './recibos-vigencia'
 
 // ─── Cotas de seguridad ──────────────────────────────────────────────────────
 // Ninguna consulta escanea sin techo. Las dos cotas están MUY por encima de lo
@@ -64,10 +67,13 @@ export type PolizaListado = {
   tipo: string
   aseguradora: string
   numeroPoliza: string | null
-  /** 'YYYY-MM-DD'. `null` = la compañía no ha informado la fecha, NO «no vence». */
+  /** 'YYYY-MM-DD'. `null` = la compañía no ha informado la fecha, NO «no vence».
+   *  Si la póliza ya venció y hay un recibo anual COBRADO posterior (Allianz no
+   *  avanza la fecha al renovar), es el fin de ese recibo. */
   fechaVencimiento: string | null
   estado: string
-  /** `prima_bruta ?? prima_anual`. `null` = SIN DATO (Allianz no la informa por EIAC). */
+  /** `prima_bruta ?? prima_anual`, y si no hay, la del recibo anual (pago anual).
+   *  `null` = SIN DATO. */
   prima: number | null
 }
 
@@ -318,6 +324,7 @@ type FilaPoliza = {
   fecha_vencimiento: string | null
   estado: string
   prima: number | null
+  fraccionamiento: string | null
 }
 
 type FilaFaceta = { faceta: string; v: string; n: number }
@@ -358,7 +365,7 @@ export async function listarCartera(
 
   const ids = filas.map((x) => x.id)
   const [porCliente, contactos] = await Promise.all([
-    polizasDeClientes(correduriaId, f.grupo, ids),
+    polizasDeClientes(correduriaId, f.grupo, ids, hoy),
     contactosDeClientes(correduriaId, ids),
   ])
 
@@ -407,6 +414,7 @@ async function polizasDeClientes(
   correduriaId: string,
   grupo: GrupoCartera,
   ids: string[],
+  hoy: Date = new Date(),
 ): Promise<{ polizas: Map<string, PolizaListado[]>; truncado: boolean }> {
   const polizas = new Map<string, PolizaListado[]>()
   if (!ids.length) return { polizas, truncado: false }
@@ -427,7 +435,8 @@ async function polizasDeClientes(
       -- nadie ha comprobado— en vez de «sin dato». Es el mismo criterio que ya
       -- aplica primaReferencia en la ficha de la póliza; si algún día una
       -- prima de 0€ fuera real, se distinguirá en origen, no aquí.
-      nullif(coalesce(prima_bruta, prima_anual), 0)::float8 as prima
+      nullif(coalesce(prima_bruta, prima_anual), 0)::float8 as prima,
+      fraccionamiento::text as fraccionamiento
     from (
       select p.*, row_number() over (
         partition by p.cliente_id order by p.fecha_vencimiento desc nulls last, p.id
@@ -441,9 +450,15 @@ async function polizasDeClientes(
     where rn <= ${MAX_POLIZAS_POR_CLIENTE + 1}
     order by cliente_id, rn
   `
+  // Allianz manda prima y renovación solo en el recibo anual (27/09/2026). Una
+  // sola consulta para las pólizas de la página, no una por póliza.
+  const recibos = await recibosVigenciaDe(correduriaId, filas.map((p) => p.id))
+  const hoyIso = hoy.toISOString()
   let truncado = false
   for (const p of filas) {
     const lista = polizas.get(p.cliente_id) ?? []
+    const recs = recibos.get(p.id) ?? []
+    const venc = vencimientoConRecibos(p.fecha_vencimiento, recs, hoyIso)
     if (lista.length >= MAX_POLIZAS_POR_CLIENTE) {
       truncado = true
       continue
@@ -453,9 +468,12 @@ async function polizasDeClientes(
       tipo: p.tipo,
       aseguradora: p.aseguradora,
       numeroPoliza: p.numero_poliza,
-      fechaVencimiento: p.fecha_vencimiento,
+      fechaVencimiento: venc === null ? null : venc.slice(0, 10),
       estado: p.estado,
-      prima: p.prima === null ? null : Number(p.prima),
+      prima:
+        p.prima !== null
+          ? Number(p.prima)
+          : primaConRecibos({ fraccionamiento: p.fraccionamiento }, recs, hoyIso).prima,
     })
     polizas.set(p.cliente_id, lista)
   }

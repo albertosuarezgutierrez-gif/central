@@ -3,10 +3,15 @@
 //
 // Lleva el nombre del tomador (el puerto ya lo sirve en otras pantallas) y NO su DNI: el documento no
 // cruza el puerto. Una prima 0 guardada no es una prima (`nullif`): sale vacía, «no consta».
+//
+// Allianz (27/09/2026) no manda prima en la póliza ni avanza el vencimiento al renovar: solo el recibo
+// anual. Por eso la prima cae a la del recibo (pago anual) y el vencimiento —el que se pinta Y el que
+// decide si estuvo en vigor ese año— es el del último recibo anual COBRADO si el de la póliza ya pasó.
 
 import { sqlCarteraViva } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
+import { sqlPrimaDeRecibo, sqlVencimientoConRecibos } from './recibos-vigencia'
 
 export type FilaLibro = {
   numeroPoliza: string | null
@@ -22,21 +27,26 @@ export type FilaLibro = {
 
 export async function libroRegistro(correduriaId: string, año: number): Promise<{ estado: 'ok'; año: number; filas: FilaLibro[] }> {
   const viva = Prisma.raw(sqlCarteraViva('p'))
+  // El recibo que cuenta es el del año del libro, no el de hoy: el libro de
+  // 2025 no puede enseñar la prima de la anualidad 2026-27.
+  const hoyReal = new Date().toISOString().slice(0, 10)
+  const hoy = año < Number(hoyReal.slice(0, 4)) ? `${año}-12-31` : hoyReal
   const filas = await prismaAsegura().$queryRaw<FilaLibro[]>`
     select p.numero_poliza as "numeroPoliza",
            coalesce(cd.nombre_comun, cd.nombre_cima, p.codigo_entidad_dgs, p.aseguradora) as compania,
            p.tipo::text as ramo,
            nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as tomador,
            to_char(p.fecha_efecto_inicial, 'YYYY-MM-DD') as efecto,
-           to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as vencimiento,
+           to_char(ev.vencimiento, 'YYYY-MM-DD') as vencimiento,
            p.estado::text as estado,
-           nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::float as prima
+           coalesce(nullif(coalesce(p.prima_bruta, p.prima_anual), 0), ${sqlPrimaDeRecibo('p', hoy)})::float as prima
     from polizas p
+    cross join lateral (select ${sqlVencimientoConRecibos('p', hoy)} as vencimiento) ev
     left join clientes c on c.id = p.cliente_id
     left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
     where p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null and ${viva}
       and (p.fecha_efecto_inicial is null or p.fecha_efecto_inicial <= make_date(${año}::int, 12, 31))
-      and (p.fecha_vencimiento is null or p.fecha_vencimiento >= make_date(${año}::int, 1, 1))
+      and (ev.vencimiento is null or ev.vencimiento >= make_date(${año}::int, 1, 1))
     order by compania nulls last, p.numero_poliza`
   return { estado: 'ok', año, filas }
 }

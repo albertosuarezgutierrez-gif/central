@@ -56,6 +56,9 @@ export {
   urgenciaRenovacion,
   etiquetaUrgencia,
   primaReferencia,
+  primaConRecibos,
+  vencimientoConRecibos,
+  type ReciboVigencia,
   primaEnRiesgo,
   type UrgenciaRenovacion,
 } from './vencimientos.ts'

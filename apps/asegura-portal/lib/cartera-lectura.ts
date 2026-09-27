@@ -65,7 +65,18 @@ import {
   type CamposVisibles,
   type Nivel,
 } from '@central/module-seguros-portal'
-import { esEstadoVigente, importeEiac, interpretarCapital, sustituidasARetirar, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
+import {
+  esEstadoVigente,
+  importeEiac,
+  interpretarCapital,
+  primaConRecibos,
+  sustituidasARetirar,
+  vencimientoConRecibos,
+  vigenciaPoliza,
+  WHERE_CARTERA_VIVA,
+  type ReciboVigencia,
+  type Vigencia,
+} from '@central/module-seguros'
 
 import { decryptField } from '@central/module-seguros-pii'
 
@@ -762,6 +773,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               primaTotal: true,
               fechaEmision: true,
               fechaVencimiento: true,
+              // CA/NP: el recibo de anualidad. Allianz manda la prima y la
+              // renovación SOLO ahí (27/09/2026). Tiene GRANT desde el 02/09.
+              claseRecibo: true,
               // 🚨 `formaPago` NO se pide: es un código del EIAC (`CC`/`OF`/`TA`).
               // Ver la cabecera de `ReciboPortal`.
             },
@@ -830,6 +844,22 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const aPortal = (p: (typeof polizas)[number], ve: CamposVisibles): PolizaPortal => {
     const cobs = coberturasPor.get(p.id) ?? []
     const recs = recibosPor.get(p.id) ?? []
+    // Allianz no manda prima en la póliza ni avanza su vencimiento al renovar:
+    // solo el recibo anual (27/09/2026). Los recibos son los de ESTA póliza,
+    // ya leídos arriba bajo el mismo `polizaIds` autorizado: no se amplía nada.
+    const recsVig: ReciboVigencia[] = recs.map((r) => ({
+      claseRecibo: r.claseRecibo ?? null,
+      situacion: r.situacion === null ? null : String(r.situacion),
+      primaTotal: r.primaTotal,
+      fechaVencimiento: r.fechaVencimiento ? r.fechaVencimiento.toISOString() : null,
+    }))
+    const hoyIso = hoy.toISOString()
+    const vencIso = vencimientoConRecibos(p.fechaVencimiento ? p.fechaVencimiento.toISOString() : null, recsVig, hoyIso)
+    const fechaVencimiento =
+      vencIso === null ? null : p.fechaVencimiento && vencIso === p.fechaVencimiento.toISOString() ? p.fechaVencimiento : new Date(`${vencIso.slice(0, 10)}T00:00:00Z`)
+    const primaAnual = p.primaAnual === null ? null : Number(p.primaAnual)
+    const primaBruta = p.primaBruta === null ? null : Number(p.primaBruta)
+    const deRecibo = primaConRecibos({ primaAnual, primaBruta, fraccionamiento: p.fraccionamiento }, recsVig, hoyIso)
     // El historial se ordena AQUÍ y no en el `orderBy` de Prisma: en Postgres
     // un `DESC` implica `NULLS FIRST`, así que los siniestros sin fecha se
     // colarían arriba y enterrarían los que sí la tienen. Es la misma trampa
@@ -863,13 +893,13 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       ramo: p.tipo,
       numeroPoliza: ve.numeroPoliza ? p.numeroPoliza : null,
       fechaInicio: p.fechaInicio,
-      fechaVencimiento: p.fechaVencimiento,
+      fechaVencimiento,
       estado: p.estado,
-      vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento: p.fechaVencimiento }, hoy),
+      vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento }, hoy),
       renovacionSinConfirmar:
         esEstadoVigente(p.estado) &&
         p.eiacXmlHash !== null &&
-        vigenciaPoliza({ estado: p.estado, fechaVencimiento: p.fechaVencimiento }, hoy) === 'no_vigente',
+        vigenciaPoliza({ estado: p.estado, fechaVencimiento }, hoy) === 'no_vigente',
       confirmadaCima: p.idPolizaEntidad !== null,
       sustituyeAId: p.polizaOrigenId !== null && sustituidas.has(p.polizaOrigenId) ? p.polizaOrigenId : null,
       // Los dos se deciden POR LECTOR en `titular()`, con lo que ese lector puede ver.
@@ -880,8 +910,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       prima: ve.prima
         ? {
             // `Decimal` de Prisma → número ANTES de formatear; null se queda null.
-            anual: p.primaAnual === null ? null : Number(p.primaAnual),
-            bruta: p.primaBruta === null ? null : Number(p.primaBruta),
+            anual: primaAnual,
+            // El `prima_total` del recibo es lo que el cliente paga (con
+            // impuestos): por eso, si sale de ahí, va en `bruta`.
+            bruta: deRecibo.deRecibo ? deRecibo.prima : primaBruta,
             mensual: p.primaMensual === null ? null : Number(p.primaMensual),
             fraccionamiento: p.fraccionamiento,
           }

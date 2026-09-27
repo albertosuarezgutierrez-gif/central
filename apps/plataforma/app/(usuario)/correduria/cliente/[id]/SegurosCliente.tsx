@@ -168,6 +168,10 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     if (vigente && p.fechaVencimiento) {
       const d = dias(p.fechaVencimiento.slice(0, 10), ctx.hoy)
       if (d >= 0 && d <= 45) avisos.push({ texto: `Vence en ${d} día(s)`, tono: 'aviso' })
+      // En vigor para la compañía pero con la fecha ya pasada: la renovación no ha llegado
+      // por CIMA (ni la fecha nueva ni el recibo). No se inventa la fecha: se avisa
+      // (27/09/2026: 10 de Mapfre así desde junio, entre ellas un Mercedes GLC).
+      if (d < 0) avisos.push({ texto: 'Renovación sin confirmar por la compañía', tono: 'malo' })
     }
     if (o) {
       avisos.push({ texto: `Seguimiento: ${ROTULO_ESTADO[o.estado]}`, tono: 'info' })
