@@ -67,6 +67,9 @@ export function estanciasFiables(
   const lista = Array.isArray(resp?.bookings) ? resp.bookings : Array.isArray(resp?.data) ? resp.data : null
   if (!lista) return null
   if (Number(resp?.page_count ?? 1) > 1) return null // truncada: lo que falta podría ser la que ocupa
+  // Página LLENA sin page_count fiable: puede faltar la siguiente. Las consultas piden pageSize=100
+  // para ventanas de días; llegar a 100 ya no es un caso normal, es una señal de filtro ignorado.
+  if (lista.length >= 100) return null
   for (const e of lista) {
     const f = e?.[opts.campo]
     if (typeof f !== 'string' || f < opts.desde || f > opts.hasta) return null

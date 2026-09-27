@@ -104,3 +104,8 @@ test('combinarFuentes: basta UNA fuente ocupada; sin ninguna mirada no se afirma
   assert.deepEqual(combinarFuentes(null, true), { posible: true, chequeado: true })
   assert.deepEqual(combinarFuentes(null, null), { posible: false, chequeado: false })
 })
+
+test('estanciasFiables: página llena sin page_count → null (podría estar cortada)', () => {
+  const llena = Array.from({ length: 100 }, (_, i) => ({ id: i, arrival: '2026-09-30', departure: '2026-10-02', apartment: { id: 1 } }))
+  assert.equal(estanciasFiables({ bookings: llena }, { apartmentId: 1, campo: 'arrival', desde: '2026-09-30', hasta: '2026-09-30' }), null)
+})
