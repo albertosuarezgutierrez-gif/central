@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — Portal de clientes, 2ª vuelta tras revisión (architect) del #3760: 10 hallazgos corregidos (parte al AUTOR y no al tomador, obligación vieja ya no calla el vencimiento del año, ex-clientes no reciben cambios, cortacircuitos también por campo, prima anual/bruta por separado —foto v2—, sin doble aviso de parte/siniestro ni de vencimiento derivado, cron `degradado` si el detector falla). Nuevo: push `poliza_modificada` (CHECK aplicado), autorizados con «Acceso total» ven los cambios en campana+push, recordatorio único de vencimiento a 2 días si no entró, y 3 señales de adopción en el embudo (medido: 13 avisados/30d, 1 entró por el enlace, 0 con push). La invitación en tandas YA existía (#3295).
+
 **(27/09/2026)** — «Añade todo» (mismo PR #3765): dedupe de `update_id` + asistente en `after()`, voz de llamadas
 («no contesta», «no le interesa»…) → correduría, «📎 Guardar en la ficha» tras abrir, enlace a tarificar (no botón:
 gasta), tareas de hoy DENTRO del aviso de renovaciones (sin aviso nuevo, Alberto pidió menos), y matrícula como

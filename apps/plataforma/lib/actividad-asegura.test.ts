@@ -6,7 +6,7 @@ import { interpretarActividad } from './actividad-asegura.ts'
 const OK = {
   estado: 'ok',
   total: 3,
-  embudo: { clientes: 80, conEmail: 44, invitados: 40, hanEntrado: 6, activos30: 2 },
+  embudo: { clientes: 80, conEmail: 44, invitados: 40, hanEntrado: 6, activos30: 2, avisados30: 13, entraronPorAviso30: 1, conPush: 0 },
   eventos: [
     { id: 'a1', tipo: 'acceso', fecha: '2026-09-12T09:00:00.000Z', clienteId: 'c1', cliente: 'Ana Ruiz', texto: null },
   ],
@@ -20,6 +20,10 @@ test('una respuesta buena se lee entera', () => {
   assert.equal(r.eventos[0].cliente, 'Ana Ruiz')
   assert.equal(r.total, 3)
   assert.equal(r.embudo.hanEntrado, 6)
+  assert.equal(r.embudo.avisados30, 13)
+  assert.equal(r.embudo.entraronPorAviso30, 1)
+  // Un 0 que SÍ llega es «contado y no hay»: se respeta, no se vuelve null.
+  assert.equal(r.embudo.conPush, 0)
   assert.equal(r.ilegibles, 0)
 })
 
@@ -66,7 +70,19 @@ test('el embudo entero ausente no se inventa a ceros', () => {
     invitados: null,
     hanEntrado: null,
     activos30: null,
+    avisados30: null,
+    entraronPorAviso30: null,
+    conPush: null,
   })
+})
+
+test('un asegura que aún no manda las señales de adopción no las pinta a 0', () => {
+  const r = interpretarActividad({ ...OK, embudo: { clientes: 80, conEmail: 44, invitados: 40, hanEntrado: 6, activos30: 2, conPush: '3' } })
+  assert.equal(r.ok, true)
+  if (!r.ok) return
+  assert.equal(r.embudo.avisados30, null)
+  assert.equal(r.embudo.entraronPorAviso30, null)
+  assert.equal(r.embudo.conPush, null)
 })
 
 test('una fila sin id, sin fecha o con fecha inválida se CUENTA, no desaparece', () => {

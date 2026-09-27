@@ -28,7 +28,7 @@
 import { etiquetaRamo } from './poliza-leida.ts'
 
 /** Sube este número si cambia lo que entra en la foto: las viejas se re-siembran en silencio. */
-export const VERSION_FOTO_POLIZA = 1
+export const VERSION_FOTO_POLIZA = 2
 
 /** Días que el aviso sigue en la campana desde que se detectó el cambio. */
 export const DIAS_AVISO_POLIZA_MODIFICADA = 14
@@ -43,8 +43,13 @@ export type FotoPoliza = {
   estado: string
   fechaInicio: string | null
   fechaVencimiento: string | null
-  /** Importe con dos decimales, o `null`. */
-  prima: string | null
+  /**
+   * Las DOS primas por separado, con dos decimales o `null` (v2, 27/09/2026). Mezclarlas en una
+   * (`anual ?? bruta`) hacía que la anual llegando después de la bruta —son cifras distintas en 108
+   * de 133 pólizas— saliera como «ha cambiado el precio».
+   */
+  primaAnual: string | null
+  primaBruta: string | null
   formaPago: string | null
   /** `codigo|capital|franquicia`, ordenadas. */
   coberturas: string[]
@@ -93,7 +98,8 @@ export function fotoDePoliza(f: FilaFotoPoliza): FotoPoliza {
     estado: grupoEstado(f.estado),
     fechaInicio: dia(f.fechaInicio),
     fechaVencimiento: dia(f.fechaVencimiento),
-    prima: importe(f.primaAnual) ?? importe(f.primaBruta),
+    primaAnual: importe(f.primaAnual),
+    primaBruta: importe(f.primaBruta),
     formaPago: f.fraccionamiento?.trim() || null,
     coberturas: [...new Set(f.coberturas.map((c) => `${limpio(c.codigo)}|${limpio(c.capitalAsegurado)}|${limpio(c.franquicia)}`))].sort(),
     documentos: [...new Set(f.documentosVisibles)].sort(),
@@ -118,10 +124,14 @@ const cambiaValor = (a: string | null, b: string | null): boolean => a !== null 
  * (aunque la foto sí haya cambiado: por ejemplo, CIMA completando la prima).
  */
 export function camposCambiados(antes: FotoPoliza, ahora: FotoPoliza): CampoCambioPoliza[] {
+  // 🚨 Una póliza que YA estaba de baja o vencida no avisa de nada más: su tomador es un lead
+  // (regla de Alberto) y un documento o una fecha que CIMA corrige no es asunto suyo. La transición
+  // A la baja sí avisa: `antes` aún era vigente.
+  if (antes.estado === 'baja' || antes.estado === 'vencida') return []
   const c = new Set<CampoCambioPoliza>()
   if (antes.estado !== ahora.estado) c.add('estado')
   if (cambiaValor(antes.fechaInicio, ahora.fechaInicio) || cambiaValor(antes.fechaVencimiento, ahora.fechaVencimiento)) c.add('fechas')
-  if (cambiaValor(antes.prima, ahora.prima)) c.add('prima')
+  if (cambiaValor(antes.primaAnual, ahora.primaAnual) || cambiaValor(antes.primaBruta, ahora.primaBruta)) c.add('prima')
   if (cambiaValor(antes.formaPago, ahora.formaPago)) c.add('forma_pago')
   // Coberturas que llegan por primera vez (lista vacía antes) son CIMA completando, no un cambio.
   if (antes.coberturas.length > 0 && ahora.coberturas.length > 0 && antes.coberturas.join('\n') !== ahora.coberturas.join('\n')) c.add('coberturas')
@@ -134,14 +144,26 @@ export function camposCambiados(antes: FotoPoliza, ahora: FotoPoliza): CampoCamb
   return CAMPOS_CAMBIO_POLIZA.filter((k) => c.has(k))
 }
 
+/** Misma foto, sin depender del orden de claves (jsonb lo cambia al guardar). */
+export function mismaFoto(a: FotoPoliza, b: FotoPoliza): boolean {
+  const canon = (f: FotoPoliza) => JSON.stringify(Object.keys(f).sort().map((k) => [k, (f as Record<string, unknown>)[k]]))
+  return canon(a) === canon(b)
+}
+
 /**
  * 🚨 El cortacircuitos. Si en una sola pasada «cambia» una parte grande de la cartera, lo más
  * probable no es que 50 clientes hayan tocado su póliza el mismo día: es que CIMA (o un despliegue)
  * ha cambiado el FORMATO de un campo. Avisar sería mandar un correo falso a media cartera. En ese
  * caso se re-siembra sin avisar y quien llama lo deja escrito en el log y en el resumen.
  */
-export function cambioMasivo(conCambios: number, comparadas: number): boolean {
-  return conCambios > Math.max(5, Math.ceil(comparadas * 0.3))
+export function cambioMasivo(cambios: readonly { campos: readonly string[] }[], comparadas: number): boolean {
+  if (cambios.length > Math.max(5, Math.ceil(comparadas * 0.3))) return true
+  // Y por CAMPO: un cambio de formato de UNA compañía (sus coberturas escritas de otra forma) no
+  // llega al 30 % de la cartera, pero sí se ve como el mismo campo cambiando en muchas a la vez.
+  const tope = Math.max(5, Math.ceil(comparadas * 0.1))
+  const porCampo = new Map<string, number>()
+  for (const c of cambios) for (const k of c.campos) porCampo.set(k, (porCampo.get(k) ?? 0) + 1)
+  return [...porCampo.values()].some((n) => n > tope)
 }
 
 /** Una fila de `portal_poliza_cambio` con lo que hace falta para nombrar la póliza. */
@@ -153,6 +175,11 @@ export type FilaCambioPoliza = {
   detectadoEn: Date
   compania: string | null
   tipo: string | null
+  /**
+   * La póliza es de OTRA persona que te dio «Acceso total» (27/09/2026). Su nombre, o `null` si no
+   * consta. Ausente = es tuya. Solo se usa en la campana: el push y el correo no llevan nombres.
+   */
+  titularAjeno?: string | null
 }
 
 export type PolizaModificadaParaAviso = {
@@ -164,6 +191,8 @@ export type PolizaModificadaParaAviso = {
   campos: CampoCambioPoliza[]
   /** Grupo de estado nuevo si el estado es uno de los cambios. */
   estadoNuevo: string | null
+  /** Ver `FilaCambioPoliza.titularAjeno`. Ausente = tuya. */
+  titularAjeno?: string | null
 }
 
 const esCampo = (x: string): x is CampoCambioPoliza => (CAMPOS_CAMBIO_POLIZA as readonly string[]).includes(x)
@@ -190,6 +219,7 @@ export function polizasModificadasParaAviso(filas: readonly FilaCambioPoliza[], 
       ramo: etiquetaRamo(f.tipo),
       campos: CAMPOS_CAMBIO_POLIZA.filter((k) => union.has(k)),
       estadoNuevo: campos.includes('estado') ? f.estadoNuevo : (ya?.estadoNuevo ?? null),
+      ...(f.titularAjeno !== undefined ? { titularAjeno: f.titularAjeno?.trim() || null } : {}),
     })
   }
   return [...por.values()]
@@ -211,7 +241,11 @@ function enumerar(p: readonly string[]): string {
 
 /** Título y detalle de la campana. Sin importes, sin número de póliza. */
 export function textoPolizaModificada(p: PolizaModificadaParaAviso): { titulo: string; detalle: string } {
-  const cual = `tu póliza${p.ramo ? ` de ${p.ramo}` : ''}${p.compania ? ` con ${p.compania}` : ''}`
+  const deQue = `${p.ramo ? ` de ${p.ramo}` : ''}${p.compania ? ` con ${p.compania}` : ''}`
+  const cual =
+    p.titularAjeno === undefined
+      ? `tu póliza${deQue}`
+      : `la póliza${deQue} de ${p.titularAjeno ?? 'quien te dio acceso'}`
   if (p.campos.includes('estado')) {
     const que =
       p.estadoNuevo === 'baja'
@@ -239,4 +273,14 @@ export function textoPolizaModificada(p: PolizaModificadaParaAviso): { titulo: s
     'Revísalo en «Mis seguros».',
   ].filter(Boolean)
   return { titulo: `Hay cambios en ${cual}`, detalle: frases.join(' ') }
+}
+
+/**
+ * El texto del PUSH (pantalla de bloqueo): sin nombres, sin importes, sin número de póliza. Para una
+ * póliza ajena no se nombra al titular, igual que los avisos de CIMA («que sigues»).
+ */
+export function textoPushPolizaModificada(p: PolizaModificadaParaAviso): string {
+  if (p.titularAjeno === undefined) return `${textoPolizaModificada(p).titulo}.`
+  const deQue = [p.ramo, p.compania].filter(Boolean).join(', ')
+  return `Hay cambios en la póliza${deQue ? ` (${deQue})` : ''} que sigues.`
 }

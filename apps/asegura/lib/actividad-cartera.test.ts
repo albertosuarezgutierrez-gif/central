@@ -75,10 +75,23 @@ test('cada cuenta del embudo falla por su cuenta y devuelve null, nunca 0', () =
   const cuerpo = FUENTE.slice(FUENTE.indexOf('async function contar'), FUENTE.indexOf('export async function embudoPortal'))
   assert.match(cuerpo, /catch[\s\S]*?return null/)
   assert.equal(/catch[\s\S]*?return 0/.test(cuerpo), false, 'una cuenta que falla devuelve 0')
-  // Y las cinco pasan por `contar`, que ya captura dentro: ninguna se consulta
-  // a pelo, porque un `$queryRaw` suelto ahí tumbaría el embudo entero.
+  // Y las ocho (cinco escalones + tres señales de adopción) pasan por `contar`,
+  // que ya captura dentro: ninguna se consulta a pelo, porque un `$queryRaw`
+  // suelto ahí tumbaría el embudo entero.
   const cuentas = FUENTE.match(/contar\(\s*'/g) ?? []
-  assert.equal(cuentas.length, 5, 'las cinco cuentas del embudo pasan por `contar`')
+  assert.equal(cuentas.length, 8, 'las ocho cuentas del embudo pasan por `contar`')
+})
+
+test('las señales de adopción cuentan lo que dicen contar', () => {
+  const embudo = FUENTE.slice(FUENTE.indexOf('export async function embudoPortal'))
+  // Avisados: solo los correos de aviso que SALIERON; un fallido no lo ha leído nadie.
+  assert.match(embudo, /ce\.tipo = 'aviso_intranet' and ce\.estado = 'enviado'/)
+  assert.match(embudo, /ce\.creado_en >= now\(\) - interval '30 days'/)
+  // Entraron por aviso: el enlace directo USADO, no el emitido.
+  assert.match(embudo, /ed\.usado_en >= now\(\) - interval '30 days'/)
+  // Push: nunca por el vínculo del corredor, que no es el cliente.
+  assert.match(embudo, /join portal_push_suscripcion ps on ps\.identidad_id = pv\.identidad_id/)
+  assert.match(embudo, /pv\.origen <> 'corredor'/)
 })
 
 test('un evento sin ficha conserva su `cliente_id` nulo', () => {
