@@ -241,6 +241,8 @@ export type AltaValida = {
   fechaFinVigencia: string | null
   aseguradora: string | null
   prima: number | null
+  /** Nº de la póliza que tiene hoy: es lo que distingue dos seguros del mismo ramo. */
+  numeroPoliza: string | null
   /** El primer paso: nace con él, o no nace. */
   tarea: TareaValida
 }
@@ -253,7 +255,7 @@ export type AltaValida = {
  * de Vencimientos: eso lo dice la pantalla, no se inventa una fecha.
  */
 export function validarAltaOportunidad(
-  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; tipoTarea?: unknown; fechaTarea?: unknown; nota?: unknown },
+  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; tipoTarea?: unknown; fechaTarea?: unknown; nota?: unknown },
   hoy: Date,
 ): { ok: true; alta: AltaValida } | { ok: false; motivo: string } {
   const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
@@ -276,6 +278,7 @@ export function validarAltaOportunidad(
       fechaFinVigencia: campos.valores.fechaFinVigencia ?? null,
       aseguradora: campos.valores.aseguradora ?? null,
       prima: campos.valores.prima ?? null,
+      numeroPoliza: texto(d.numeroPoliza, 60),
       tarea: t.tarea,
     },
   }

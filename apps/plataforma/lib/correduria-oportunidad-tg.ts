@@ -8,7 +8,7 @@
 // Mismo principio que la corrección de ficha: la IA PROPONE, el servidor junta lo dictado con lo leído
 // de los documentos recientes, lo enseña y Alberto lo abre con un botón de un solo uso. La escritura va
 // por el mismo puerto que el botón «Abrir» de la ficha (`accion: 'crear'`), que vuelve a validar.
-import { mismaCompania, RAMOS_OPORTUNIDAD, type RamoOportunidad } from '@central/module-seguros'
+import { mismoSeguro, RAMOS_OPORTUNIDAD, type RamoOportunidad } from '@central/module-seguros'
 import { rotuloRamo, textoAltaOportunidad, type LecturaDocumentoOportunidad, type TomadorLeido } from './seguimiento-asegura.ts'
 import { eur } from './dinero.ts'
 
@@ -141,7 +141,7 @@ export function prepararAlta(
 export function cuerpoAlta(clienteId: string, a: Alta, actor: string): Record<string, unknown> {
   return {
     accion: 'crear', clienteId, ramo: a.ramo, estado: 'competencia',
-    fechaFinVigencia: a.fechaFinVigencia, aseguradora: a.aseguradora, prima: a.prima,
+    fechaFinVigencia: a.fechaFinVigencia, aseguradora: a.aseguradora, prima: a.prima, numeroPoliza: a.numeroPoliza,
     tipoTarea: 'llamada', fechaTarea: a.fechaTarea,
     nota: a.numeroPoliza ? `Póliza actual nº ${a.numeroPoliza} (desde Telegram)` : 'Alta desde Telegram',
     actor,
@@ -212,8 +212,11 @@ export function cambiosSobreExistente(a: Alta, e: Existente): CambioOportunidad[
  * actualizar (27/09/2026: un recibo de Línea Directa de otro coche habría pisado la oportunidad de MUSSAP).
  * Sin compañía en alguno de los dos lados no se sabe (`no_se`): decide Alberto, avisado.
  */
-export function mismaPoliza(docAseguradora: string | null, existente: string | null): 'misma' | 'otra' | 'no_se' {
-  return mismaCompania(docAseguradora, existente)
+export function mismaPoliza(
+  doc: { aseguradora: string | null; numeroPoliza: string | null },
+  existente: { aseguradora: string | null; numeroPoliza: string | null },
+): 'misma' | 'otra' | 'no_se' {
+  return mismoSeguro(doc, existente)
 }
 
 export function cuerpoEdicion(oportunidadId: string, cambios: readonly CambioOportunidad[], actor: string): Record<string, unknown> {

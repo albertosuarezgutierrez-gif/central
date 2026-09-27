@@ -95,6 +95,8 @@ test('el cuerpo es el del botón «Abrir» de la ficha: nace «por contactar» c
   assert.equal(b.tipoTarea, 'llamada')
   assert.equal(b.fechaTarea, '2026-12-05')
   assert.match(String(b.nota), /05209179001-00/)
+  // El nº viaja aparte: es lo que distingue dos seguros del mismo ramo (dos coches).
+  assert.equal(b.numeroPoliza, '05209179001-00')
   assert.equal(b.actor, 'agente:asistente-telegram')
 })
 
@@ -447,13 +449,16 @@ test('actualizar: resultado honesto y el flujo cableado (lee el FUENTE)', async 
 
 test('otro seguro del mismo ramo (otro coche) NO se ofrece como «actualizar la existente»', async () => {
   const { mismaPoliza } = await import('./correduria-oportunidad-tg.ts')
-  assert.equal(mismaPoliza('Línea Directa Aseguradora S.A.', 'MUSSAP'), 'otra')
-  assert.equal(mismaPoliza('MUSSAP Mutua de Seguros y Reaseguros a P.F.', 'Mussap'), 'misma')
-  assert.equal(mismaPoliza('Línea Directa', 'LINEA DIRECTA ASEGURADORA'), 'misma')
-  assert.equal(mismaPoliza('Mapfre', null), 'no_se')
-  assert.equal(mismaPoliza(null, 'Mapfre'), 'no_se')
+  const s = (aseguradora: string | null, numeroPoliza: string | null = null) => ({ aseguradora, numeroPoliza })
+  assert.equal(mismaPoliza(s('Línea Directa Aseguradora S.A.'), s('MUSSAP')), 'otra')
+  assert.equal(mismaPoliza(s('MUSSAP Mutua de Seguros y Reaseguros a P.F.'), s('Mussap')), 'misma')
+  assert.equal(mismaPoliza(s('Línea Directa'), s('LINEA DIRECTA ASEGURADORA')), 'misma')
+  assert.equal(mismaPoliza(s('Mapfre'), s(null)), 'no_se')
+  assert.equal(mismaPoliza(s(null), s('Mapfre')), 'no_se')
+  // Dos coches en la MISMA compañía: el nº de póliza los separa.
+  assert.equal(mismaPoliza(s('MUSSAP', '111222'), s('MUSSAP', '333444')), 'otra')
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   // al ofrecer: con otra compañía no hay botón; y al pulsar se vuelve a comprobar
   assert.match(src, /else if \(misma === 'otra'\) \{/)
-  assert.match(src, /if \(mismaPoliza\(fila\.alta\.aseguradora, e\.aseguradora\) === 'otra'\) \{/)
+  assert.match(src, /if \(mismaPoliza\(fila\.alta, e\) === 'otra'\) \{/)
 })

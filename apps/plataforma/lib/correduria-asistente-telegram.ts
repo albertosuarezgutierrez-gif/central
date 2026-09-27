@@ -1062,15 +1062,15 @@ async function ofrecerSobreExistente(oportId: number, clienteId: string, existen
     SELECT nombre FROM correduria_asistente_documento WHERE id = ANY(${docIds}::bigint[]) ORDER BY id`).catch(() => null)
   const lineas: string[] = []
   const botones: { texto: string; callback: string }[] = []
-  const misma = e ? mismaPoliza(alta.aseguradora, e.aseguradora) : 'no_se'
+  const misma = e ? mismaPoliza(alta, e) : 'no_se'
   if (!e) lineas.push('No he podido leer la que ya tiene, así que no te propongo cambiarla: revísala en la ficha.')
   else if (misma === 'otra') {
     // Otro seguro del mismo ramo (otro coche): actualizar pisaría la oportunidad que ya tiene.
-    lineas.push(`🚗 Parece OTRO seguro: el documento es de <b>${escapeHtml(alta.aseguradora ?? '')}</b> y la oportunidad que ya tiene es de <b>${escapeHtml(e.aseguradora ?? '')}</b>. No lo mezclo con ella.`)
+    lineas.push(`🚗 Es OTRO seguro (${alta.numeroPoliza && e.numeroPoliza ? `póliza nº ${escapeHtml(alta.numeroPoliza)}, la que ya tiene es la nº ${escapeHtml(e.numeroPoliza)}` : `${escapeHtml(alta.aseguradora ?? '')}, la que ya tiene es de ${escapeHtml(e.aseguradora ?? '')}`}): no lo mezclo con ella.`)
   } else if (cambios.length === 0) lineas.push('La que ya tiene coincide con el documento: no hay nada que actualizar.')
   else {
     lineas.push('✏️ ¿Actualizo la que ya tiene con lo leído del documento?', textoCambios(cambios))
-    if (misma === 'no_se') lineas.push('⚠️ La que ya tiene no dice compañía: actualiza SOLO si es este mismo seguro (no otro vehículo).')
+    if (misma === 'no_se') lineas.push('⚠️ No consta ni el nº de póliza ni la compañía en los dos lados: actualiza SOLO si es este mismo seguro (no otro vehículo).')
     botones.push({ texto: '✏️ Actualizar la existente', callback: `cas_actualizar:${oportId}` })
   }
   if (docIds.length > 0 && nombres !== null && nombres.length > 0) {
@@ -1101,8 +1101,8 @@ async function actualizarExistente(oportId: number): Promise<string> {
   const url = `${urlCliente(fila.cliente_id)}?tab=oportunidades&op=${encodeURIComponent(fila.existente)}`
   const cerrar = () => prisma.$executeRaw(Prisma.sql`UPDATE correduria_asistente_oportunidad SET alta = NULL WHERE id = ${oportId}`).catch(() => {})
   if (!e) { await cerrar(); await decir(`✋ No he podido leer la oportunidad ahora: no la toco.\n${url}`); return 'No se ha actualizado' }
-  if (mismaPoliza(fila.alta.aseguradora, e.aseguradora) === 'otra') {
-    await cerrar(); await decir(`✋ Es de otra compañía que la oportunidad que ya tiene: no la piso.\n${url}`); return 'No se actualiza: otro seguro'
+  if (mismaPoliza(fila.alta, e) === 'otra') {
+    await cerrar(); await decir(`✋ Es otro seguro (otra póliza o compañía) que la oportunidad que ya tiene: no la piso.\n${url}`); return 'No se actualiza: otro seguro'
   }
   const cambios = cambiosSobreExistente(fila.alta, { aseguradora: e.aseguradora, prima: e.prima, fechaFinVigencia: e.fechaFinVigencia })
   if (cambios.length === 0) { await cerrar(); await decir(`ℹ️ Ya coincide con el documento: nada que cambiar.\n${url}`); return 'Sin cambios' }

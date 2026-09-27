@@ -275,6 +275,8 @@ export function interpretarOportunidad(status: number, json: unknown): LecturaOp
 
 export type OportunidadDeCliente = Oportunidad & {
   aseguradora: string | null
+  /** Nº de la póliza que tiene hoy (`null` = no consta). */
+  numeroPoliza: string | null
   /** `null` = no consta: nunca 0,00€. */
   prima: number | null
   creada: string
@@ -318,6 +320,7 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
       aparcadaHasta: texto(r.aparcadaHasta),
       cerradaAt: texto(r.cerradaAt),
       aseguradora: texto(r.aseguradora),
+      numeroPoliza: texto(r.numeroPoliza),
       prima: numero(r.prima),
       creada,
       proximaTarea: ptTipo && ptFecha ? { tipo: ptTipo, fechaLimite: ptFecha } : null,
