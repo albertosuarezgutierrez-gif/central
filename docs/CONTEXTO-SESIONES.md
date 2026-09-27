@@ -753,6 +753,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Catastro automático para los 4 pisos turísticos
+- `properties` gana `ref_catastral` + `catastro_m2/anio/uso/direccion/cp/estado/detalle/revisado_at` (migración `2026-09-27_properties_catastro.sql`, aplicada; Dúplex sembrado con 5029006TG3452G0019BG).
+- Job semanal `/api/cron/catastro-pisos` (lunes 06:40 UTC): reutiliza `consultarHogar` de la correduría; solo consulta pisos no `ok`; por dirección solo acepta un inmueble único (si un portal devuelve varios, `elegir`). Bustos Tavera 22 y Socorro 24 tienen UNA referencia por edificio (Alberto): si varios pisos comparten referencia se marcan `compartida` (m² del edificio, no del piso). Datos solo se escriben con `ok`.
+- ⚠️ El Catastro rechaza el contenedor de Claude y pg_net (400 «No se puede procesar»): no se ha visto correr en real; se verá tras el primer lunes (o disparándolo a mano en prod).
+
 ## (27/09/2026) House Sevillana: el parking NO está en el edificio — está en San Juan de la Palma
 Alberto: «parking no está en el mismo edificio, está en San Juan de la Palma». La web lo afirmaba en ES/EN/IT
 (portada, /parking, sus JSON-LD) y también sivra/messages ×5 y la skill `seo-house-sevillana`. Corregido a
