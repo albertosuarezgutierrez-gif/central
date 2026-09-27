@@ -734,6 +734,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) asegura-web: página «Seguro de patinete eléctrico» (`/seguros/patinete-electrico`)
+- OpenSEO: «seguro patinete electrico» 27.100/mes KD 8, «seguro patinete» 6.600 KD 0, «seguro vmp» 1.000 KD 4 — la de más volumen de todo el sitio.
+- Base legal citada: Ley 5/2025 + RD 52/2026 (BOE 30/01/2026, registro DGT de vehículos personales ligeros); sin certificar vendidos antes del 22/01/2024 circulan hasta el 22/01/2027. Sin cifras de multa.
+- Mismo patrón que impago: opción `patinete-electrico` en web + plataforma, pie sí/cabecera no, sin widget de ventana. Mismo PR #3714.
+- ⚠️ Supone que Alberto tiene compañía que lo suscriba; si no, el lead entra y no hay producto.
+
 ## (27/09/2026) asegura-web: página de ramo «Seguro de impago de alquiler» (`/seguros/impago-alquiler`)
 - Alberto confirma que SÍ lo vende. Medido con OpenSEO: «seguro de impago de alquiler» 5.400/mes KD 15, «seguro impago alquiler» 3.600 KD 10, «…precio» 480 KD 4 — la mayor demanda comercial con dificultad baja encontrada hasta ahora.
 - Ramo nuevo en `lib/ramos.ts` (producto, cuenta en la portada), pie sí / cabecera no (`FUERA_DE_CABECERA`).

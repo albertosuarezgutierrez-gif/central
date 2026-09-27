@@ -426,6 +426,53 @@ export const RAMOS: readonly Ramo[] = [
     ],
   },
   {
+    slug: 'patinete-electrico',
+    nombre: 'Patinete eléctrico',
+    h1: 'Seguro obligatorio de patinete eléctrico en toda España',
+    title: 'Seguro de patinete eléctrico en España',
+    description:
+      'Correduría de seguros en toda España. Seguro obligatorio de patinete eléctrico: registro en la DGT, responsabilidad civil, límites y qué más conviene cubrir.',
+    intro: [
+      'La Ley 5/2025 extendió el seguro obligatorio de responsabilidad civil a los patinetes eléctricos y al resto de vehículos personales ligeros. El Real Decreto 52/2026 creó el registro de la DGT donde se inscriben: con la inscripción el patinete recibe su número y su etiqueta, y con ese número se asegura.',
+      'Somos correduría y trabajamos con varias compañías. Miramos tu patinete, cómo lo usas y si ya tienes otra póliza que pueda incluirlo, y te decimos qué te exige la ley y qué es opcional antes de hablar de primas.',
+    ],
+    cubre: [
+      'La responsabilidad civil obligatoria: los daños que causes a otras personas o a sus bienes circulando con el patinete, que es lo que exige la ley.',
+      'La inscripción en el registro de la DGT: el número y el certificado que la compañía te pide para emitir la póliza, y si tu modelo tiene certificado de circulación.',
+      'Si tu seguro de hogar ya cubre algo del patinete: la responsabilidad civil de la vida privada no suele servir como seguro obligatorio de un vehículo, y conviene comprobarlo en la póliza.',
+      'Las coberturas opcionales: robo, daños al propio patinete, accidentes del conductor y defensa jurídica, cada una con su límite y su franquicia.',
+      'Quién conduce: si la póliza cubre a cualquier persona que use el patinete o solo a quien figura en ella, algo que importa cuando lo usa más de una persona en casa.',
+    ],
+    paraQuien: [
+      'Tienes un patinete eléctrico y no sabes si ya estás obligado a asegurarlo ni qué necesitas antes.',
+      'Te acabas de comprar uno y quieres dejar hechos el registro y el seguro a la vez.',
+      'En casa hay más de un patinete o lo usan varias personas, y quieres saber cómo se asegura cada uno.',
+      'Usas el patinete para ir a trabajar o para repartir, y quieres comprobar que la póliza cubre ese uso.',
+    ],
+    faq: [
+      {
+        pregunta: '¿Es obligatorio el seguro del patinete eléctrico?',
+        respuesta:
+          'Sí. La Ley 5/2025 obliga a asegurar la responsabilidad civil de los patinetes eléctricos y demás vehículos personales ligeros, y el Real Decreto 52/2026, en vigor desde el 30 de enero de 2026, creó el registro de la DGT en el que se inscriben para poder asegurarlos. Circular sin seguro puede suponer una sanción, y los daños que causes los pagarías tú.',
+      },
+      {
+        pregunta: '¿Qué necesito para asegurar mi patinete?',
+        respuesta:
+          'Inscribirlo en el Registro de Vehículos Personales Ligeros de la DGT, que te da un número, una etiqueta identificativa y un certificado de inscripción. Con ese número la compañía emite la póliza. Para inscribirlo te pedirán los datos del modelo y, si lo tiene, su certificado de circulación.',
+      },
+      {
+        pregunta: '¿Y si mi patinete no tiene certificado de circulación?',
+        respuesta:
+          'Los modelos sin certificar vendidos antes del 22 de enero de 2024 pueden seguir circulando hasta el 22 de enero de 2027 si se inscriben en el registro, y también hay que asegurarlos. A partir de esa fecha solo podrán circular los que tengan certificado.',
+      },
+      {
+        pregunta: '¿Me vale el seguro de hogar para el patinete?',
+        respuesta:
+          'Normalmente no como seguro obligatorio: la responsabilidad civil del hogar es la de la vida privada y suele excluir los vehículos a motor. Algunas compañías ofrecen ampliarla al patinete, pero hay que comprobar que la póliza acredita la cobertura que exige la ley.',
+      },
+    ],
+  },
+  {
     slug: 'responsabilidad-civil',
     nombre: 'Responsabilidad civil',
     h1: 'Seguro de responsabilidad civil en toda España',

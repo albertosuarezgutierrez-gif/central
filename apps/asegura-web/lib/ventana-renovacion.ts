@@ -23,11 +23,11 @@ const MS_DIA = 86_400_000
 /**
  * Ramos donde NO se pinta: vida y salud tienen reglas de renovación propias y
  * el esquema de los dos plazos no se da por aplicable sin revisarlo.
- * `impago-alquiler`, porque el aviso del widget sale por el puerto de asegura
- * (`RAMO_WEB_A_TIPO`) y ese ramo aún no está en su contrato: se pintaría un
+ * `impago-alquiler` y `patinete-electrico`, porque el aviso del widget sale por el puerto de asegura
+ * (`RAMO_WEB_A_TIPO`) y esos ramos aún no están en su contrato: se pintaría un
  * formulario cuyo envío asegura rechaza.
  */
-export const RAMOS_SIN_VENTANA: readonly string[] = ['vida-y-salud', 'impago-alquiler']
+export const RAMOS_SIN_VENTANA: readonly string[] = ['vida-y-salud', 'impago-alquiler', 'patinete-electrico']
 
 export function ramoTieneVentana(slug: string): boolean {
   return !RAMOS_SIN_VENTANA.includes(slug)
