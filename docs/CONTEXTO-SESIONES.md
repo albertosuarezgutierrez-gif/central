@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — PR #3773: tras desplegar #3765 el bot seguía preguntando «¿a quién?» con la póliza de MUSSAP subida:
+la subida y el botón «de un cliente» no son turnos del chat. `avisoDocumentosPendientes()` mete en el system cuántos
+documentos de la correduría (última hora, sin usar) hay y ordena `proponer_oportunidad` sin clienteId + usarDocumentos.
+
 **(27/09/2026)** — «Añade todo» (mismo PR #3765): dedupe de `update_id` + asistente en `after()`, voz de llamadas
 («no contesta», «no le interesa»…) → correduría, «📎 Guardar en la ficha» tras abrir, enlace a tarificar (no botón:
 gasta), tareas de hoy DENTRO del aviso de renovaciones (sin aviso nuevo, Alberto pidió menos), y matrícula como
@@ -774,9 +778,6 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
-
-### (27/09/2026) Asistente correduría: sabe que hay una póliza pendiente
-Tras #3765, Alberto subió la póliza de MUSSAP, pulsó «de un cliente» y dijo «crea oportunidad»: el bot preguntó «¿a quién?». Causa: la subida y el botón no son turnos del chat, la IA no sabía que había documento. Ahora `avisoDocumentosPendientes()` mete en el system cuántos documentos de la correduría de la última hora siguen sin usar y le ordena llamar `proponer_oportunidad` sin clienteId + usarDocumentos. Cepo visto en rojo.
 
 ## (27/09/2026) Vigía de ingesta: «renovaciones sin llegar» por compañía
 - Nueva señal en el vigía `correduria_ingesta` (Telegram + /correduria): pólizas en vigor vencidas hace >15 días sin recibo del periodo nuevo, agrupadas por compañía (`renovacionesSinLlegar`, module-seguros/ingesta.ts; lectura en apps/asegura/lib/ingesta.ts). Hoy: Mapfre 10 (desde 05/06). El primer pase tras desplegar suena una vez. Alberto: Mapfre ya manda, se espera a que complete esta semana (borrador a CIMA SAU-24238 en Gmail, sin enviar).
