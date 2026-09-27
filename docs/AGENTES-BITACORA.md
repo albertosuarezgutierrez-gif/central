@@ -120,3 +120,4 @@ y el auto-informe del entrenador del 16/08). Backlog de PRs abiertos: **4**
 aplicado: caveat en `facturas-correo/SKILL.md` sobre comprobar el estado existente antes de
 copiar/sobrescribir (2 fallos propios de la semana con la misma raíz — ver entrada de esta pasada
 arriba).
+- 27/09/2026 · idealista-radar (pasada manual de arranque) · 12/13 núcleos (Huelva 8/9 + Cádiz 4/4), 285 casas escritas, 17 fuera de zona · Matalascañas sin respuesta (bloqueo de permisos en el subagente) · norte validado en local, pendiente de desplegar centros.

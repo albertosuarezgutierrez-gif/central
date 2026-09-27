@@ -83,11 +83,13 @@ triplicar el coste de cada sesión.
 | D | Conil | Conil de la Frontera, Cádiz |
 | D | La Barrosa | La Barrosa, Chiclana de la Frontera |
 | D | Los Caños de Meca | Los Caños de Meca, Barbate |
-| D | El Palmar | El Palmar, Vejer de la Frontera |
+| D | El Palmar | playa de El Palmar de Vejer |
 | D | Zahara de los Atunes | Zahara de los Atunes, Barbate |
 
 **Gijón se busca por «Somió, Gijón» a propósito:** con «Gijón» a secas el conector devolvió casas de
-Langreo (27/09/2026). El núcleo que se manda sigue siendo «Gijón».
+Langreo (27/09/2026). El núcleo que se manda sigue siendo «Gijón». Igual con **El Palmar**: «El Palmar,
+Vejer de la Frontera» devolvió 50 casas del pueblo de Vejer (a 7 km de la playa, todas descartadas
+como fuera de zona); si vuelve a pasar con la búsqueda nueva, anótalo en el latido, no lo fuerces.
 
 Criterios de Alberto: cerca de la playa (en el norte, a ≤25-30 min), **3 o más dormitorios**, casa y
 no piso, mejor adosado. Si falta un núcleo, no lo añadas aquí sin darle antes su centro en `CENTROS`

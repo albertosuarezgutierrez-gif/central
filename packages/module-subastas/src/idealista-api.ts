@@ -194,12 +194,15 @@ const CENTROS: Array<[RegExp, CentroBusqueda]> = [
   // Costa norte — núcleos de la rutina `idealista-radar` (27/09/2026). Van por
   // MUNICIPIO de costa (el nombre que reconoce la lente 🌊, `costa-norte.ts`)
   // y ANTES que Gijón/Avilés/Oviedo para que no los capture un patrón genérico.
-  [/llanes/, { lat: 43.42, lng: -4.755, distancia: 9000 }],
+  // Llanes y Cudillero son términos alargados (Nueva/Pría a ~13 km del casco de
+  // Llanes; Ballota a ~15 km del puerto de Cudillero): centro y radio medidos
+  // contra los anuncios reales del conector del 27/09/2026, no contra el casco.
+  [/llanes/, { lat: 43.42, lng: -4.78, distancia: 12000 }],
   [/ribadesella/, { lat: 43.462, lng: -5.059, distancia: 7000 }],
   [/colunga|lastres/, { lat: 43.495, lng: -5.29, distancia: 7000 }],
   [/villaviciosa/, { lat: 43.481, lng: -5.436, distancia: 8000 }],
   [/castrillon|piedras blancas/, { lat: 43.563, lng: -5.948, distancia: 5000 }],
-  [/cudillero/, { lat: 43.563, lng: -6.146, distancia: 8000 }],
+  [/cudillero/, { lat: 43.56, lng: -6.22, distancia: 9000 }],
   [/luarca|valdes/, { lat: 43.543, lng: -6.536, distancia: 8000 }],
   [/navia/, { lat: 43.54, lng: -6.722, distancia: 6000 }],
   [/tapia de casariego/, { lat: 43.57, lng: -6.944, distancia: 6000 }],

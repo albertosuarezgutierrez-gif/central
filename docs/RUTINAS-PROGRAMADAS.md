@@ -161,6 +161,17 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
 | **Latido** | Cierra con `POST /api/internal/latido` (`rrhh_compliance`) desde el 02/09/2026 — `ok:true` = roadmap leído e informe con la lista de 🔴 pendientes generado. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
+### 8-ter. Radar de Idealista por conector — *CREADA 27/09/2026, PAUSADA hasta que Alberto la complete en la UI*
+> Trigger `trig_01HneHebAVaM6HoLzJ1DKhUS` («Idealista radar (diario)», `CRON_TZ=Europe/Madrid 51 7 * * *`,
+> sesión nueva por disparo). La skill `idealista-radar` existía desde el 24/09 pero **nadie la había
+> programado**: cero latidos `subastas_idealista` hasta la pasada manual del 27/09 (285 casas en 12
+> núcleos de Huelva y Cádiz). **Mismo muro que 8-bis:** la API no deja adjuntar conectores en esta
+> organización, así que se creó sin el de Idealista y **se dejó en pausa** para no quemar una sesión
+> diaria que no puede buscar. Falta, en la UI: conector **Idealista** (solo ese), repo `central`, las
+> dos líneas `PLATAFORMA_URL=` / `ALERTA_TOKEN=` en el prompt (ver el workaround de env vars) y
+> activarla. Turnos: Huelva a diario; Asturias L-X-V; Cantabria M-J-S; Cádiz D.
+> **Las alertas de correo de Idealista NO se quitan** hasta ver varios latidos en verde.
+
 ### 8-bis. Mercado real por fecha (SIVRA / Booking) — *ACTIVA desde el 08/08/2026*
 > Creada a mano por Alberto («SIVRA mercado booking (diario)») tras dos meses de latido en «sin
 > ninguna señal registrada» — que era el diagnóstico correcto: no existía. **No se pudo crear por
