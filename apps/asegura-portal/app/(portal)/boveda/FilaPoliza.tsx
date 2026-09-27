@@ -89,6 +89,8 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
             )}
             {empieza ? (
               <span className="chip">Empieza el {empieza}</span>
+            ) : p.renovacionSinConfirmar ? (
+              <span className="chip aviso">Renovación sin confirmar</span>
             ) : (
               <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>
                 {ESTADO[p.estado] ?? p.estado}
