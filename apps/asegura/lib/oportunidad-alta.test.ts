@@ -12,7 +12,10 @@ test('crear: no abre una segunda del mismo ramo y compañía mientras haya una a
   assert.match(crear, /tipo::text = \$\{a\.ramo\} and estado::text in \('competencia', 'en_negociacion', 'pendiente_cliente'\)/)
   assert.match(crear, /pg_advisory_xact_lock/)
   // Otro nº de póliza (o sin él, otra compañía) es otro seguro: sí se abre. Sin dato cuenta como el mismo.
-  assert.match(crear, /poliza_competencia->>'numeroPoliza'/)
+  // El número vive en la columna numero_poliza (y el CRM viejo lo dejaba en nPoliza): se leen las dos.
+  assert.match(crear, /sqlNumeroPoliza\(''\)/)
+  assert.match(crear, /info_riesgo, numero_poliza\)/)
+  assert.match(src, /coalesce\(nullif\(trim\(\$\{p\}numero_poliza\), ''\), nullif\(trim\(\$\{p\}poliza_competencia->>'nPoliza'\), ''\)/)
   assert.match(crear, /abiertas\.find\(o => mismoSeguro\(a, o\) !== 'otra'\)/)
 })
 
@@ -41,7 +44,7 @@ test('el historial no guarda la compañía tecleada ni la nota: solo que cambió
 
 test('editar: cambiar el ramo tampoco cuela una segunda abierta del mismo seguro', () => {
   assert.match(editar, /id <> \$\{id\}::uuid\s+and tipo::text = \$\{c\.ramo\} and estado::text in \('competencia', 'en_negociacion', 'pendiente_cliente'\)/)
-  assert.match(editar, /abiertas\.some\(o => mismoSeguro\(\{ aseguradora: compania, numeroPoliza: fila\.numeroPoliza \}, o\) !== 'otra'\)/)
+  assert.match(editar, /abiertas\.some\(o => mismoSeguro\(\{ aseguradora: compania, numeroPoliza: fila\.numeroPoliza, matricula: fila\.matricula \}, o\) !== 'otra'\)/)
 })
 
 test('la próxima tarea de la ficha es la misma que lista «Hoy» (solo seguimiento)', () => {

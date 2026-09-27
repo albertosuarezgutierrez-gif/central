@@ -34,6 +34,9 @@ export type Alta = {
   /** `null` = no consta (o lo leído ya había pasado: ver `venceDescartado`). */
   fechaFinVigencia: string | null
   numeroPoliza: string | null
+  /** El coche (auto/moto): distingue dos seguros del mismo cliente y da nombre a la oportunidad. */
+  matricula?: string | null
+  vehiculo?: string | null
   fechaTarea: string
   /** Vencimiento leído que ya pasó: no se usa (la póliza se habrá renovado) y se dice. */
   venceDescartado: string | null
@@ -89,7 +92,7 @@ export function prepararAlta(
   hoy: string,
 ): PreparacionAlta {
   const leidas = (lecturas ?? []).flatMap((l) => (l.estado === 'ok' ? [l] : []))
-  const primero = <K extends 'ramo' | 'compania' | 'numeroPoliza' | 'vence' | 'prima'>(k: K) =>
+  const primero = <K extends 'ramo' | 'compania' | 'numeroPoliza' | 'vence' | 'prima' | 'matricula' | 'vehiculo'>(k: K) =>
     leidas.map((l) => l[k]).find((v) => v !== null) ?? null
 
   const ramoDictado = RAMOS_OPORTUNIDAD.find((r) => r === args.ramo) ?? null
@@ -127,6 +130,8 @@ export function prepararAlta(
       prima: prima(args.prima) ?? primero('prima'),
       fechaFinVigencia: vence,
       numeroPoliza: texto(args.numeroPoliza, 60) ?? primero('numeroPoliza'),
+      matricula: texto(args.matricula, 20) ?? primero('matricula'),
+      vehiculo: primero('vehiculo'),
       fechaTarea: pasoDictado ?? fechaPrimerPaso(vence, hoy),
       venceDescartado,
       documentos: lecturas === null ? null : {
@@ -142,6 +147,7 @@ export function cuerpoAlta(clienteId: string, a: Alta, actor: string): Record<st
   return {
     accion: 'crear', clienteId, ramo: a.ramo, estado: 'competencia',
     fechaFinVigencia: a.fechaFinVigencia, aseguradora: a.aseguradora, prima: a.prima, numeroPoliza: a.numeroPoliza,
+    matricula: a.matricula ?? null, vehiculo: a.vehiculo ?? null,
     tipoTarea: 'llamada', fechaTarea: a.fechaTarea,
     nota: a.numeroPoliza ? `Póliza actual nº ${a.numeroPoliza} (desde Telegram)` : 'Alta desde Telegram',
     actor,
@@ -160,6 +166,8 @@ export function textoAlta(nombreCliente: string, a: Alta): string {
     `• Vence: ${a.fechaFinVigencia ? fechaEs(a.fechaFinVigencia) : 'no consta'}`,
   ]
   if (a.numeroPoliza) l.push(`• Póliza actual nº ${escapar(a.numeroPoliza)}`)
+  const coche = [a.vehiculo, a.matricula].filter(Boolean).join(' · ')
+  if (coche) l.push(`• Vehículo: ${escapar(coche)}`)
   l.push(`• Primer paso: llamada el ${fechaEs(a.fechaTarea)}`)
   if (a.venceDescartado) {
     l.push(`⚠️ El documento dice que vencía el ${fechaEs(a.venceDescartado)}, que ya pasó: se habrá renovado, así que no lo pongo. Corrígelo en la ficha cuando lo sepas.`)
@@ -213,8 +221,8 @@ export function cambiosSobreExistente(a: Alta, e: Existente): CambioOportunidad[
  * Sin compañía en alguno de los dos lados no se sabe (`no_se`): decide Alberto, avisado.
  */
 export function mismaPoliza(
-  doc: { aseguradora: string | null; numeroPoliza: string | null },
-  existente: { aseguradora: string | null; numeroPoliza: string | null },
+  doc: { aseguradora: string | null; numeroPoliza: string | null; matricula?: string | null },
+  existente: { aseguradora: string | null; numeroPoliza: string | null; matricula?: string | null },
 ): 'misma' | 'otra' | 'no_se' {
   return mismoSeguro(doc, existente)
 }
@@ -324,6 +332,26 @@ export function resultadoAltaLead(status: number, json: unknown): { estado: 'cre
   }
   const motivo = typeof o?.motivo === 'string' ? o.motivo : `HTTP ${status}`
   return { estado: 'rechazado', texto: `✋ No he creado la ficha: ${escapar(motivo)}` }
+}
+
+/**
+ * ¿La póliza del documento ya la llevamos? (en nuestra cartera EN VIGOR, por su nº). Entonces no es una
+ * oportunidad: abrirla sería venderle lo que ya tiene. `null` = no es nuestra o no se ha podido mirar.
+ */
+export function polizaYaNuestra(lecturas: readonly LecturaDocumentoOportunidad[] | null): { numero: string | null; clienteId: string; aseguradora: string | null } | null {
+  for (const l of lecturas ?? []) {
+    if (l.estado !== 'ok') continue
+    const p = l.enCartera?.[0]
+    if (p) return { numero: l.numeroPoliza, clienteId: p.clienteId, aseguradora: p.aseguradora }
+  }
+  return null
+}
+
+/** Enlace a tarificar ese ramo; en auto lleva la matrícula para no teclearla otra vez. */
+export function enlaceTarificar(urlFicha: string, a: Pick<Alta, 'ramo' | 'matricula'>): string | null {
+  const ruta = rutaTarificar(a.ramo)
+  if (!ruta) return null
+  return a.ramo === 'auto' && a.matricula ? `${urlFicha}/${ruta}?matricula=${encodeURIComponent(a.matricula)}` : `${urlFicha}/${ruta}`
 }
 
 /** La pantalla que pide precio de ese ramo en la ficha (cada una confirma y cuenta el gasto). `null` = no hay. */

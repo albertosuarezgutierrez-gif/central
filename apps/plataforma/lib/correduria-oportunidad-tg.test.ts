@@ -462,3 +462,43 @@ test('otro seguro del mismo ramo (otro coche) NO se ofrece como «actualizar la 
   assert.match(src, /else if \(misma === 'otra'\) \{/)
   assert.match(src, /if \(mismaPoliza\(fila\.alta, e\) === 'otra'\) \{/)
 })
+
+test('«ya es nuestra»: con la póliza en nuestra cartera en vigor no se propone abrir nada', async () => {
+  const { polizaYaNuestra } = await import('./correduria-oportunidad-tg.ts')
+  assert.equal(polizaYaNuestra([leida({ enCartera: [] })]), null)
+  assert.equal(polizaYaNuestra([leida({ enCartera: null })]), null, 'no se ha podido mirar ≠ es nuestra')
+  assert.deepEqual(polizaYaNuestra([leida({ enCartera: [{ polizaId: 'p1', clienteId: 'c1', aseguradora: 'Reale' }] })]),
+    { numero: '05209179001-00', clienteId: 'c1', aseguradora: 'Reale' })
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  const proponer = src.slice(src.indexOf('async function proponerOportunidad'), src.indexOf('/** Botón «Abrir».'))
+  // Se comprueba ANTES de preparar el alta y de mandar el botón.
+  assert.ok(proponer.indexOf('polizaYaNuestra(lecturas)') > 0 && proponer.indexOf('polizaYaNuestra(lecturas)') < proponer.indexOf('prepararAlta('))
+})
+
+test('la lectura trae el coche y «en cartera»; la oportunidad lo lleva y lo enseña', async () => {
+  const { interpretarLecturaOportunidad } = await import('./seguimiento-asegura.ts')
+  const l = interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto', compania: 'Línea Directa', matricula: '0194DRY', vehiculo: 'Chevrolet Aveo',
+    enCartera: [{ polizaId: 'p', clienteId: 'c', aseguradora: 'X' }, { basura: 1 }] })
+  assert.ok(l.estado === 'ok')
+  assert.equal(l.matricula, '0194DRY')
+  assert.equal(l.enCartera?.length, 1)
+  assert.equal(interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto' }).estado === 'ok' && (interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto' }) as { enCartera?: unknown }).enCartera, null)
+  const r = prepararAlta({}, [leida({ matricula: '0194DRY', vehiculo: 'Chevrolet Aveo' })], HOY)
+  assert.ok(r.ok)
+  assert.equal(cuerpoAlta('c1', r.alta, 'x').matricula, '0194DRY')
+  assert.match(textoAlta('Rafael', r.alta), /Vehículo: Chevrolet Aveo · 0194DRY/)
+})
+
+test('tarificar auto lleva la matrícula leída; los demás ramos, el enlace de siempre', async () => {
+  const { enlaceTarificar } = await import('./correduria-oportunidad-tg.ts')
+  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'auto', matricula: '0194DRY' }), 'https://x/c/1/auto-nuevo?matricula=0194DRY')
+  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'hogar', matricula: '0194DRY' }), 'https://x/c/1/hogar-nuevo')
+  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'otros', matricula: null }), null)
+})
+
+test('documento marcado «de un cliente»: el asistente propone solo, sin preguntar «¿qué hago?»', () => {
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  const cli = src.slice(src.indexOf("if (accion === 'cli') {"), src.indexOf("if (accion === 'gasto') {"))
+  assert.match(cli, /manejarCorreduriaTg\(ORDEN_DOCUMENTO_CLIENTE\)/)
+  assert.doesNotMatch(cli, /Dime qué hago/)
+})

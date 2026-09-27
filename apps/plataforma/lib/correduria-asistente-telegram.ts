@@ -29,7 +29,7 @@ import { abrirSiniestroAsegura } from '@/lib/siniestros-asegura'
 import { explicarPortal, interpretarPortal, invitarPortalAsegura, portalAsegura } from '@/lib/portal-cliente-asegura'
 import { prepararAccion, resultadoAccion, textoAccion, type TipoAccion } from './correduria-acciones-tg'
 import { descargarTelegram, getCuentaTelegram, manejarDocumentoTg } from '@/lib/contable/telegram'
-import { avisoDocumentosPendientes, cambiosSobreExistente, mismaPoliza, cuerpoAlta, cuerpoEdicion, explicarQuien, resultadoEdicion, textoCambios, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, quienEsDelDocumento, resultadoAlta, rutaTarificar, resultadoAltaLead, textoAlta, textoAltaLead, type Alta } from './correduria-oportunidad-tg'
+import { avisoDocumentosPendientes, cambiosSobreExistente, mismaPoliza, cuerpoAlta, cuerpoEdicion, explicarQuien, resultadoEdicion, textoCambios, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, quienEsDelDocumento, resultadoAlta, enlaceTarificar, polizaYaNuestra, resultadoAltaLead, textoAlta, textoAltaLead, type Alta } from './correduria-oportunidad-tg'
 import {
   documentoQueAcredita, edicionDeCambios, faltaValorActual, huellaAntes, prepararCorreccion, resultadoCorreccion, textoCorreccion,
   urlCliente, type Cambio, type FichaActual,
@@ -572,7 +572,10 @@ export async function resolverDocumentoDudoso(accion: string, arg: string): Prom
   if (accion === 'cli') {
     await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_asistente_documento SET destino = 'correduria', usado_at = NULL, creado_at = now() WHERE id = ${id}`).catch(() => {})
-    await tgSend('🛡️ Vale, es de la correduría: no lo toco como gasto. Dime qué hago (p. ej. «ábrele una oportunidad»): leo el tomador del documento, lo busco y, si no está, te propongo crear el lead.').catch(() => {})
+    // No se le pregunta «¿qué hago?»: el asistente lee el documento y propone él (con botón; nada se escribe
+    // sin que Alberto pulse). Si ya es nuestra o de otro seguro, lo dice.
+    await tgSend('🛡️ Vale, es de la correduría: no lo toco como gasto. Lo leo y te propongo qué hacer.').catch(() => {})
+    await manejarCorreduriaTg(ORDEN_DOCUMENTO_CLIENTE).catch(() => tgSend('⚠️ No he podido leerlo ahora. Dime «ábrele una oportunidad» y lo intento otra vez.').catch(() => {}))
     return 'Apartado para la correduría'
   }
   if (accion === 'gasto') {
@@ -585,6 +588,9 @@ export async function resolverDocumentoDudoso(accion: string, arg: string): Prom
   }
   return 'Botón no válido'
 }
+
+/** Lo que «dice» Alberto al marcar un documento como de un cliente: el asistente propone sin preguntar. */
+export const ORDEN_DOCUMENTO_CLIENTE = 'Te acabo de pasar el documento de un cliente: léelo y propónme la oportunidad (usa el documento; no me preguntes lo que ya pone).'
 
 /** ¿Otro documento del mismo álbum ya se fue a la correduría? (El pie solo viaja en el primero.) */
 export async function albumDeCorreduria(mediaGroupId: string | null): Promise<boolean> {
@@ -672,6 +678,15 @@ async function proponerOportunidad(args: Record<string, unknown>, turnoId: numbe
     if (q.tipo === 'existe') { clienteId = q.id; nombre = q.nombre; delDocumento = ` El documento es de ${q.nombre}, que YA tiene ficha (por su DNI).` }
     else if (q.tipo === 'nuevo') { lead = { nombre: q.nombre, sello: q.sello }; nombre = q.nombre }
     else return { texto: 'ERROR: no he sabido de quién es el documento. Pregúntale el nombre.', ok: false }
+  }
+
+  // La póliza ya es NUESTRA (cartera en vigor): no hay nada que vender.
+  const nuestra = polizaYaNuestra(lecturas)
+  if (nuestra) {
+    return {
+      texto: `YA ES NUESTRA: la póliza${nuestra.numero ? ` nº ${nuestra.numero}` : ''}${nuestra.aseguradora ? ` (${nuestra.aseguradora})` : ''} está en nuestra cartera en vigor, así que NO es una oportunidad y no propongo abrirla. Díselo a Alberto con el enlace a la ficha del cliente: ${urlCliente(nuestra.clienteId)}`,
+      ok: true,
+    }
   }
 
   const prep = prepararAlta(args, lecturas, hoyMadrid())
@@ -1031,8 +1046,7 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
  * pantalla que lo hace con su propia confirmación, nunca un botón que cotice desde aquí.
  */
 async function ofrecerSiguientes(oportId: number, clienteId: string, alta: Alta, docIds: number[]): Promise<void> {
-  const ruta = rutaTarificar(alta.ramo)
-  const tarificar = ruta ? `${urlCliente(clienteId)}/${ruta}` : null
+  const tarificar = enlaceTarificar(urlCliente(clienteId), alta)
   const lineas = [tarificar ? `💶 Para pedir precio: ${tarificar}` : null].filter(Boolean) as string[]
   // Se nombran los ficheros: entre lo leído puede haber algo que no es de este cliente (una factura, la
   // póliza de otro subida en la misma hora) y el botón no puede guardarlo a ciegas.
