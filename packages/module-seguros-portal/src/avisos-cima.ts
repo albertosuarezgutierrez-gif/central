@@ -33,8 +33,9 @@
 import { etiquetaEstadoSiniestro } from './siniestro-historial.ts'
 import type { TramitacionSiniestro } from './siniestro-tramitacion.ts'
 import type { PolizaNuevaParaAviso } from './poliza-nueva.ts'
+import { textoPushPolizaModificada, type PolizaModificadaParaAviso } from './poliza-cambios.ts'
 
-export const TIPOS_AVISO_CIMA = ['recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva'] as const
+export const TIPOS_AVISO_CIMA = ['recibo_nuevo', 'recibo_devuelto', 'siniestro', 'poliza_nueva', 'poliza_modificada'] as const
 export type TipoAvisoCima = (typeof TIPOS_AVISO_CIMA)[number]
 
 /** Lo que se sella además de los tipos: la semilla. Los dos van al CHECK de la tabla. */
@@ -45,6 +46,7 @@ export const ETIQUETA_AVISO_CIMA: Record<TipoAvisoCima, string> = {
   recibo_devuelto: 'Recibo devuelto',
   siniestro: 'Novedades de un siniestro',
   poliza_nueva: 'Póliza nueva',
+  poliza_modificada: 'Cambios en una póliza',
 }
 
 /** Más viejo que esto (por su fecha propia) no es una novedad, aunque no esté sellado. */
@@ -173,6 +175,22 @@ export function eventosPolizasNuevas(nuevas: readonly PolizaNuevaParaAviso[]): E
   })
 }
 
+/**
+ * «Hay cambios en tu póliza» por push (27/09/2026). Los cambios ya vienen con su ventana
+ * (`polizasModificadasParaAviso`) y la foto inicial no genera ninguno, así que no hace falta semilla.
+ * La clave es el id del cambio más reciente: un cambio posterior de la misma póliza vuelve a avisar.
+ */
+export function eventosPolizasModificadas(mods: readonly PolizaModificadaParaAviso[]): EventoCima[] {
+  return mods.map((m) => ({
+    clave: `mod:${m.id}`,
+    tipo: 'poliza_modificada' as const,
+    polizaId: m.polizaId,
+    lista: 'polizas' as const,
+    fecha: null,
+    texto: textoPushPolizaModificada(m),
+  }))
+}
+
 export type PlanAvisos = {
   /** Lo que se notifica. */
   enviar: EventoCima[]
@@ -197,6 +215,8 @@ export function planificarAvisos(
   hoy: Date,
   /** Pólizas nuevas del tomador (`polizasNuevasParaAviso`). Sin semilla: la regla ya filtra lo viejo. */
   nuevas: readonly PolizaNuevaParaAviso[] = [],
+  /** Pólizas con cambios (`polizasModificadasParaAviso`). Sin semilla: la regla ya acota la ventana. */
+  modificadas: readonly PolizaModificadaParaAviso[] = [],
 ): PlanAvisos {
   const enviar: EventoCima[] = []
   const sellarSiempre: { clave: string; tipo: string }[] = []
@@ -220,7 +240,7 @@ export function planificarAvisos(
       enviar.push(e)
     }
   }
-  for (const e of eventosPolizasNuevas(nuevas)) {
+  for (const e of [...eventosPolizasNuevas(nuevas), ...eventosPolizasModificadas(modificadas)]) {
     if (selladas.has(e.clave) || vistas.has(e.clave)) continue
     vistas.add(e.clave)
     if (silenciados.has(e.tipo)) sellarSiempre.push({ clave: e.clave, tipo: e.tipo })

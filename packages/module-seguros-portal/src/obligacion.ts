@@ -33,7 +33,8 @@ export function idVencimientoDerivado(polizaId: string, fechaVencimiento: Date):
 }
 
 /**
- * Un ÚNICO disparo, a 7 días o menos de la fecha accionable. Una cadencia de
+ * Un ÚNICO disparo, a 7 días o menos de la fecha accionable (más UN recordatorio
+ * si no ha entrado: `debeRecordarVencimiento`, 27/09/2026). Una cadencia de
  * recordatorios («a 30, a 15, a 7…») es una decisión de producto que necesita
  * datos de apertura que hoy no existen; empezar con tres avisos y descubrir
  * después que sobraban dos ya ha quemado la bandeja del cliente.
@@ -43,6 +44,33 @@ export const DIAS_VENTANA_AVISO = 7
 export function entraEnVentana(x: { fechaAccionable: Date; hoy: Date }): boolean {
   const faltan = Math.round((diaUtc(x.fechaAccionable).getTime() - diaUtc(x.hoy).getTime()) / MS_DIA)
   return faltan >= 0 && faltan <= DIAS_VENTANA_AVISO
+}
+
+/**
+ * Días antes de la fecha accionable en los que se RECUERDA el vencimiento (27/09/2026).
+ *
+ * El primer aviso sale a 7 días. Si el cliente no ha entrado al portal desde entonces, a 2 días se le
+ * escribe UNA vez más: pasada la fecha accionable ya no puede oponerse a la prórroga (art. 22 LCS),
+ * así que es el último momento útil. Solo uno: más sería cómo un canal útil deja de abrirse.
+ */
+export const DIAS_RECORDATORIO_VENCIMIENTO = 2
+
+/** Días mínimos entre el primer aviso y el recordatorio: dos correos seguidos no son un recordatorio. */
+export const DIAS_MIN_ENTRE_AVISOS = 2
+
+export function debeRecordarVencimiento(x: {
+  fechaAccionable: Date
+  /** Cuándo salió el primer aviso por correo. */
+  avisadoEn: Date
+  /** Último acceso al portal de cualquiera de sus identidades. `null` = nunca ha entrado. */
+  ultimoAcceso: Date | null
+  hoy: Date
+}): boolean {
+  const faltan = Math.round((diaUtc(x.fechaAccionable).getTime() - diaUtc(x.hoy).getTime()) / MS_DIA)
+  if (faltan < 0 || faltan > DIAS_RECORDATORIO_VENCIMIENTO) return false
+  if (x.hoy.getTime() - x.avisadoEn.getTime() < DIAS_MIN_ENTRE_AVISOS * MS_DIA) return false
+  // Entró después del primer aviso: lo ha visto. No se le insiste.
+  return x.ultimoAcceso === null || x.ultimoAcceso.getTime() < x.avisadoEn.getTime()
 }
 
 /**

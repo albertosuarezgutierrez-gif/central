@@ -210,6 +210,17 @@ export type EmbudoPortal = {
   hanEntrado: number | null
   /** Cuántos han entrado en los últimos 30 días. */
   activos30: number | null
+  /**
+   * Señales de adopción (27/09/2026, «hay que convencer al cliente de que use la app»).
+   * NO son escalones de la cadena de arriba —un avisado no tiene por qué estar «después» de
+   * un activo—, así que viven en `PASOS_ADOPCION` y `mayorCaidaEmbudo` no las mira.
+   */
+  /** Clientes a los que salió ≥1 correo de aviso de la intranet (`correo_envio`, `aviso_intranet`, enviado) en 30 días. */
+  avisados30: number | null
+  /** Clientes que entraron por el enlace directo de un aviso (`portal_enlace_directo.usado_en`) en 30 días. */
+  entraronPorAviso30: number | null
+  /** Clientes cuya identidad del portal (vínculo propio, no el del corredor) tiene avisos push activados. */
+  conPush: number | null
 }
 
 export type PasoEmbudo = {
@@ -225,6 +236,17 @@ export const PASOS_EMBUDO: readonly PasoEmbudo[] = [
   { clave: 'invitados', label: 'Con acceso', ayuda: 'Tienen una identidad del portal casada con su ficha.' },
   { clave: 'hanEntrado', label: 'Han entrado', ayuda: 'Alguna vez, desde que existe el registro de accesos.' },
   { clave: 'activos30', label: 'Activos 30d', ayuda: 'Han entrado en los últimos 30 días.' },
+]
+
+/**
+ * Las señales de adopción, aparte de la cadena: se pintan junto al embudo pero no
+ * entran en `mayorCaidaEmbudo`, porque restar «activos» menos «avisados» no mide
+ * ninguna caída.
+ */
+export const PASOS_ADOPCION: readonly PasoEmbudo[] = [
+  { clave: 'avisados30', label: 'Avisados 30d', ayuda: 'Recibieron un correo de aviso de la intranet en 30 días.' },
+  { clave: 'entraronPorAviso30', label: 'Entraron por aviso', ayuda: 'Pulsaron el enlace directo de un aviso en 30 días.' },
+  { clave: 'conPush', label: 'Con avisos push', ayuda: 'Activaron las notificaciones del portal en algún dispositivo.' },
 ]
 
 /**

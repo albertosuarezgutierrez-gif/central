@@ -72,11 +72,32 @@ test('una foto de otra versión no se compara: se re-siembra', () => {
   assert.deepEqual(leerFoto(JSON.parse(JSON.stringify(foto()))), foto())
 })
 
-test('el cortacircuitos salta con media cartera a la vez, no con unas pocas', () => {
-  assert.equal(cambioMasivo(3, 100), false)
-  assert.equal(cambioMasivo(30, 100), false)
-  assert.equal(cambioMasivo(31, 100), true)
-  assert.equal(cambioMasivo(6, 8), true)
+test('el cortacircuitos salta con media cartera a la vez o con un mismo campo en muchas', () => {
+  const n = (k: number, campo = 'prima') => Array.from({ length: k }, (_, i) => ({ campos: [i % 2 ? campo : 'fechas'] }))
+  assert.equal(cambioMasivo(n(3), 100), false)
+  assert.equal(cambioMasivo(n(31), 100), true)
+  // 20 pólizas con coberturas cambiadas de golpe (10 % de 200 = 20 → 21 salta).
+  const cob = Array.from({ length: 21 }, () => ({ campos: ['coberturas'] }))
+  assert.equal(cambioMasivo(cob, 200), true)
+  assert.equal(cambioMasivo(cob.slice(0, 20), 200), false)
+})
+
+test('la prima anual que llega después de la bruta no es un cambio de precio', () => {
+  assert.deepEqual(camposCambiados(foto({ primaAnual: null, primaBruta: 300 }), foto({ primaAnual: 320, primaBruta: 300 })), [])
+  assert.deepEqual(camposCambiados(foto({ primaBruta: 300 }), foto({ primaBruta: 310 })), ['prima'])
+})
+
+test('una póliza ya de baja o vencida no avisa de nada más', () => {
+  assert.deepEqual(camposCambiados(foto({ estado: 'cancelada' }), foto({ estado: 'cancelada', documentosVisibles: ['d1', 'd9'] })), [])
+  assert.deepEqual(camposCambiados(foto({ estado: 'vencida' }), foto({ estado: 'activa', primaAnual: 999 })), [])
+})
+
+test('mismaFoto no depende del orden de las claves', async () => {
+  const { mismaFoto } = await import('./poliza-cambios.ts')
+  const a = foto()
+  const b = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(a).reverse())))
+  assert.equal(mismaFoto(a, b), true)
+  assert.equal(mismaFoto(a, foto({ primaAnual: 1 })), false)
 })
 
 const hoy = new Date('2026-09-27T10:00:00Z')
@@ -119,3 +140,24 @@ test('la campana lo pinta y una fuente ilegible se declara', () => {
   assert.deepEqual(ilegible.fuentesIlegibles, ['polizas_modificadas'])
   assert.equal(ilegible.globo, '0+')
 })
+
+test('push: la propia dice qué cambió; la ajena no nombra al titular', async () => {
+  const { textoPushPolizaModificada } = await import('./poliza-cambios.ts')
+  const { planificarAvisos } = await import('./avisos-cima.ts')
+  const [propia] = polizasModificadasParaAviso([fila('a', 'p1', ['prima'], 1)], hoy)
+  const [ajena] = polizasModificadasParaAviso([{ ...fila('b', 'p2', ['coberturas'], 1), titularAjeno: 'María' }], hoy)
+  assert.match(textoPushPolizaModificada(propia!), /Hay cambios en tu póliza/)
+  assert.doesNotMatch(textoPushPolizaModificada(ajena!), /María/)
+  assert.match(textoPushPolizaModificada(ajena!), /que sigues/)
+  // En la campana sí se nombra (la ve quien ya tiene acceso total).
+  assert.match(textPolizaTitulo(ajena!), /de María/)
+  const plan = planificarAvisos([], new Set(['mod:a']), new Set(), hoy, [], [propia!, ajena!])
+  assert.deepEqual(plan.enviar.map((e) => e.clave), ['mod:b'])
+  const silenciado = planificarAvisos([], new Set(), new Set(['poliza_modificada']), hoy, [], [propia!])
+  assert.deepEqual(silenciado.enviar, [])
+  assert.deepEqual(silenciado.sellarSiempre.map((s) => s.clave), ['mod:a'])
+})
+
+function textPolizaTitulo(p: Parameters<typeof textoPolizaModificada>[0]): string {
+  return textoPolizaModificada(p).titulo
+}

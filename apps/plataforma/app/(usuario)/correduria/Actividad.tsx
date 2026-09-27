@@ -6,10 +6,12 @@ import {
   etiquetaActividad,
   mayorCaidaEmbudo,
   nuevosDesde,
+  PASOS_ADOPCION,
   PASOS_EMBUDO,
   riesgoActividad,
   VENTANAS_ACTIVIDAD,
   type EmbudoPortal,
+  type PasoEmbudo,
   type QuienActividad,
 } from '@central/module-seguros'
 
@@ -194,31 +196,9 @@ function Embudo({ e }: { e: EmbudoPortal }) {
           gap: 8,
         }}
       >
-        {PASOS_EMBUDO.map((p) => {
-          const n = e[p.clave]
-          const cuelloAqui = peor?.hasta.clave === p.clave
-          return (
-            <div
-              key={p.clave}
-              title={p.ayuda}
-              style={{
-                border: '1px solid var(--border)',
-                borderColor: cuelloAqui ? 'var(--warning)' : 'var(--border)',
-                borderRadius: 10,
-                padding: 10,
-                minWidth: 0,
-              }}
-            >
-              <div style={{ fontSize: 12, color: 'var(--muted)' }}>{p.label}</div>
-              <div style={{ fontSize: 22, fontWeight: 600 }}>
-                {/* 🚨 «—» y no «0»: una cuenta que no se pudo hacer pintada como
-                    cero diría que nadie ha entrado, que es justo la frase sobre
-                    la que se decidiría ponerse a invitar a gente que ya está. */}
-                {n == null ? <span style={{ color: 'var(--muted)' }}>—</span> : n}
-              </div>
-            </div>
-          )
-        })}
+        {PASOS_EMBUDO.map((p) => (
+          <Casilla key={p.clave} paso={p} n={e[p.clave]} resaltar={peor?.hasta.clave === p.clave} />
+        ))}
       </div>
 
       {peor ? (
@@ -231,11 +211,62 @@ function Embudo({ e }: { e: EmbudoPortal }) {
           No se puede señalar dónde está el cuello: faltan cuentas por hacer (las que salen como «—»).
         </p>
       )}
+
+      {/* Señales de adopción: aparte de la cadena, porque no son escalones
+          sucesivos (un avisado no está «después» de un activo) y
+          `mayorCaidaEmbudo` no las mira. */}
+      <div style={{ fontSize: 13, fontWeight: 600, margin: '14px 0 6px' }}>¿Lo están usando?</div>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))',
+          gap: 8,
+        }}
+      >
+        {PASOS_ADOPCION.map((p) => (
+          <Casilla key={p.clave} paso={p} n={e[p.clave]} resaltar={false} textoNulo="sin dato" />
+        ))}
+      </div>
+
       <p style={sutil}>
-        Para invitar a alguien, entra en su ficha → pestaña Contactos → «Portal del cliente». Ahí se
-        comprueba antes si su correo resuelve a una sola ficha.
+        Para invitar a alguien, entra en su ficha → pestaña Contactos → «Portal del cliente», o usa
+        «Invitar al portal», aquí debajo. En los dos casos se comprueba antes si su correo resuelve a
+        una sola ficha.
       </p>
     </>
+  )
+}
+
+function Casilla({
+  paso,
+  n,
+  resaltar,
+  textoNulo = '—',
+}: {
+  paso: PasoEmbudo
+  n: number | null
+  resaltar: boolean
+  textoNulo?: string
+}) {
+  return (
+    <div
+      title={paso.ayuda}
+      style={{
+        border: '1px solid var(--border)',
+        borderColor: resaltar ? 'var(--warning)' : 'var(--border)',
+        borderRadius: 10,
+        padding: 10,
+        minWidth: 0,
+      }}
+    >
+      <div style={{ fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{paso.label}</div>
+      <div style={{ fontSize: 22, fontWeight: 600 }}>
+        {/* 🚨 Nunca «0» para una cuenta que no se pudo hacer: diría que nadie ha
+            entrado, que es justo la frase sobre la que se decidiría ponerse a
+            invitar a gente que ya está. */}
+        {n == null ? <span style={{ color: 'var(--muted)', fontSize: 15, fontWeight: 400 }}>{textoNulo}</span> : n}
+      </div>
+    </div>
   )
 }
 

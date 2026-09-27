@@ -45,6 +45,7 @@ import {
   DIAS_AVISO_POLIZA_MODIFICADA, polizasModificadasParaAviso, type FilaCambioPoliza,
   DIAS_AVISO_PARTE, partesParaAviso, type ParteFilaAviso,
   fechaAccionable, idVencimientoDerivado, TIPOS_RECORDATORIO_PROPIO,
+  debeRecordarVencimiento, DIAS_RECORDATORIO_VENCIMIENTO,
 } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
@@ -174,7 +175,7 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
         avisadaAt: null,
         fechaAccionable: { gte: new Date(hoy.getTime() - MS_DIA), lte: limiteVentana },
       },
-      select: { id: true, identidadId: true, titulo: true, fechaAccionable: true, polizaId: true, repiteCadaMeses: true },
+      select: { id: true, identidadId: true, titulo: true, fechaAccionable: true, fechaEvento: true, polizaId: true, repiteCadaMeses: true },
     }),
   ])
 
@@ -345,11 +346,20 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     })
   }
 
+  // Los vencimientos ya avisados como DERIVADOS de la póliza (`pv:`), para no repetirlos cuando
+  // después nace su obligación en el portal y el cron de vencimientos no la llegó a sellar.
+  const sellosPv = await db.portalAvisoEnviado.findMany({
+    where: { correduriaId, clave: { startsWith: 'obligacion_en_ventana:pv:' }, enviadoEn: { gte: new Date(hoy.getTime() - 60 * MS_DIA) } },
+    select: { clienteId: true, clave: true, enviadoEn: true },
+  })
+  const pvSellado = new Set(sellosPv.map((x) => `${x.clienteId}|${x.clave}`))
+
   const identidadesServidas = new Set<string>()
   for (const o of obligaciones) {
     // Con póliza, por la póliza; sin ella, por el vínculo de su identidad.
     const clienteId = o.polizaId ? clientePorPoliza.get(o.polizaId) : clientePorIdentidad.get(o.identidadId)
     if (!clienteId || !fichaPorId.has(clienteId)) continue
+    if (o.polizaId && pvSellado.has(`${clienteId}|obligacion_en_ventana:${idVencimientoDerivado(o.polizaId, o.fechaEvento)}`)) continue
     if (o.polizaId === null) identidadesServidas.add(o.identidadId)
     dame(clienteId).obligaciones.push({ id: o.id, titulo: o.titulo, fechaAccionable: o.fechaAccionable, repiteCadaMeses: o.repiteCadaMeses })
   }
@@ -439,18 +449,22 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     },
     select: { id: true, clienteId: true, tipo: true, aseguradora: true, fechaVencimiento: true },
   })
+  // 🚨 Solo cuenta la obligación de ESTE vencimiento (mismo día): una del año pasado —el cliente
+  // entró una vez y no ha vuelto— se queda con su fecha vieja y su `avisada_at`, y si contara, este
+  // vencimiento no lo avisaría nadie.
+  const dia = (d: Date) => d.toISOString().slice(0, 10)
   const conObligacion = new Set(
     vencen.length === 0
       ? []
       : (
           await db.portalObligacion.findMany({
             where: { polizaId: { in: vencen.map((v) => v.id) }, tipo: { notIn: [...TIPOS_RECORDATORIO_PROPIO] } },
-            select: { polizaId: true },
+            select: { polizaId: true, fechaEvento: true },
           })
-        ).map((o) => o.polizaId),
+        ).map((o) => `${o.polizaId}|${dia(o.fechaEvento)}`),
   )
   for (const v of vencen) {
-    if (!v.fechaVencimiento || conObligacion.has(v.id) || !fichaPorId.has(v.clienteId)) continue
+    if (!v.fechaVencimiento || conObligacion.has(`${v.id}|${dia(v.fechaVencimiento)}`) || !fichaPorId.has(v.clienteId)) continue
     const accionable = fechaAccionable(v.fechaVencimiento)
     if (!entraEnVentana({ fechaAccionable: accionable, hoy })) continue
     dame(v.clienteId).obligaciones.push({
@@ -459,6 +473,79 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
       fechaAccionable: accionable,
       repiteCadaMeses: null,
     })
+  }
+
+  // RECORDATORIO del vencimiento (27/09/2026): a 2 días de la fecha accionable, UNA vez, y solo a
+  // quien no ha entrado al portal desde el primer aviso (`debeRecordarVencimiento`). Cubre los dos
+  // orígenes del primer aviso: la obligación del portal (sellada en `avisada_at` por el cron de
+  // vencimientos) y el vencimiento derivado de la póliza (sellado aquí como `pv:`). Su id lleva
+  // `:recordatorio`, así que se sella aparte y no se repite.
+  const hastaRecordatorio = new Date(hoy.getTime() + (DIAS_RECORDATORIO_VENCIMIENTO + 1) * MS_DIA)
+  const [yaAvisadas] = await Promise.all([
+    db.portalObligacion.findMany({
+      where: {
+        avisadaAt: { not: null },
+        // Solo el VENCIMIENTO de la póliza (el recibo y los recordatorios propios no se insisten).
+        tipo: 'poliza',
+        fechaAccionable: { gte: new Date(hoy.getTime() - MS_DIA), lte: hastaRecordatorio },
+      },
+      select: { id: true, polizaId: true, titulo: true, fechaAccionable: true, avisadaAt: true },
+    }),
+  ])
+  type Candidata = { clienteId: string; baseId: string; titulo: string; accionable: Date; avisadoEn: Date }
+  const candidatas: Candidata[] = []
+  const polizasAvisadas =
+    yaAvisadas.length === 0
+      ? []
+      : await db.poliza.findMany({
+          where: { id: { in: yaAvisadas.map((o) => o.polizaId!) }, correduriaId, mergedIntoPolizaId: null, ...WHERE_CARTERA_EN_VIGOR },
+          select: { id: true, clienteId: true },
+        })
+  const tomadorDe = new Map(polizasAvisadas.map((p) => [p.id, p.clienteId]))
+  const conObligacionAvisada = new Set<string>()
+  for (const o of yaAvisadas) {
+    const clienteId = o.polizaId ? tomadorDe.get(o.polizaId) : undefined
+    if (!clienteId || !o.avisadaAt) continue
+    conObligacionAvisada.add(o.polizaId!)
+    candidatas.push({ clienteId, baseId: o.id, titulo: o.titulo, accionable: o.fechaAccionable, avisadoEn: o.avisadaAt })
+  }
+  // `obligacion_en_ventana:pv:<polizaId>:<YYYY-MM-DD>` → el vencimiento que ya se avisó.
+  const pvPorPoliza = new Map<string, { clienteId: string; dia: string; enviadoEn: Date }>()
+  for (const s of sellosPv) {
+    const m = /^obligacion_en_ventana:pv:([0-9a-f-]{36}):(\d{4}-\d{2}-\d{2})$/.exec(s.clave)
+    if (m) pvPorPoliza.set(m[1]!, { clienteId: s.clienteId, dia: m[2]!, enviadoEn: s.enviadoEn })
+  }
+  if (pvPorPoliza.size > 0) {
+    const vigentes = await db.poliza.findMany({
+      where: { id: { in: [...pvPorPoliza.keys()] }, correduriaId, mergedIntoPolizaId: null, ...WHERE_CARTERA_EN_VIGOR },
+      select: { id: true, clienteId: true, aseguradora: true, fechaVencimiento: true },
+    })
+    for (const v of vigentes) {
+      const pv = pvPorPoliza.get(v.id)!
+      // El mismo vencimiento avisado por los dos caminos (derivado y, después, su obligación): uno solo.
+      if (conObligacionAvisada.has(v.id)) continue
+      // Si el vencimiento cambió (renovada, corregida por CIMA), el aviso viejo ya no vale para recordar.
+      if (!v.fechaVencimiento || v.clienteId !== pv.clienteId || v.fechaVencimiento.toISOString().slice(0, 10) !== pv.dia) continue
+      candidatas.push({
+        clienteId: v.clienteId, baseId: idVencimientoDerivado(v.id, v.fechaVencimiento),
+        titulo: `Renovación de tu seguro con ${v.aseguradora}`, accionable: fechaAccionable(v.fechaVencimiento), avisadoEn: pv.enviadoEn,
+      })
+    }
+  }
+  const aRecordar = candidatas.filter((c) => fichaPorId.has(c.clienteId) && debeRecordarVencimiento({ fechaAccionable: c.accionable, avisadoEn: c.avisadoEn, ultimoAcceso: null, hoy }))
+  if (aRecordar.length > 0) {
+    // El último acceso de CUALQUIER identidad vinculada a la ficha (sin el vínculo temporal del corredor).
+    const accesos = await db.$queryRaw<{ clienteId: string; ultimo: Date | null }[]>`
+      select pv.cliente_id::text as "clienteId", max(pi.ultimo_acceso_en) as ultimo
+      from portal_vinculo pv join portal_identidad pi on pi.id = pv.identidad_id
+      where pv.correduria_id = ${correduriaId}::uuid and pv.origen <> 'corredor'
+        and pv.cliente_id = any(${[...new Set(aRecordar.map((c) => c.clienteId))]}::uuid[])
+      group by pv.cliente_id`
+    const ultimoDe = new Map(accesos.map((a) => [a.clienteId, a.ultimo]))
+    for (const c of aRecordar) {
+      if (!debeRecordarVencimiento({ fechaAccionable: c.accionable, avisadoEn: c.avisadoEn, ultimoAcceso: ultimoDe.get(c.clienteId) ?? null, hoy })) continue
+      dame(c.clienteId).obligaciones.push({ id: `${c.baseId}:recordatorio`, titulo: c.titulo, fechaAccionable: c.accionable, repiteCadaMeses: null })
+    }
   }
 
   // Pólizas con un CAMBIO reciente (27/09/2026): precio, fechas, coberturas, baja, documentos…
@@ -482,12 +569,33 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
   }
 
   // Partes del portal abiertos con la compañía o descartados (hasta el 27/09/2026 solo salían en
-  // la campana). Al tomador de la póliza del parte; sin póliza de cartera no hay a quién escribir.
+  // la campana). 🚨 A QUIEN LO DIO, no al tomador: un autorizado (el hijo) puede dar parte de la
+  // póliza de su madre, y es él quien lo ve en su campana y quien espera la respuesta. Se llega a su
+  // ficha por su vínculo, con la MISMA regla que los recordatorios sin póliza: exactamente una
+  // ficha y nunca el vínculo del corredor. Si no, no se escribe (se ve en su campana igual).
   const desdeParte = new Date(hoy.getTime() - DIAS_AVISO_PARTE * MS_DIA)
   const partes = await db.portalParteSiniestro.findMany({
     where: { polizaId: { not: null }, OR: [{ abiertoEnCompaniaAt: { gte: desdeParte } }, { descartadoAt: { gte: desdeParte } }] },
-    select: { id: true, polizaId: true, fechaHecho: true, abiertoEnCompaniaAt: true, descartadoAt: true, motivoDescarte: true },
+    select: { id: true, identidadId: true, polizaId: true, fechaHecho: true, abiertoEnCompaniaAt: true, descartadoAt: true, motivoDescarte: true },
   })
+  const autores = [...new Set(partes.map((x) => x.identidadId))]
+  const vinculosAutor =
+    autores.length === 0
+      ? []
+      : await db.portalVinculo.findMany({
+          where: { identidadId: { in: autores }, correduriaId, origen: { not: 'corredor' } },
+          select: { identidadId: true, clienteId: true },
+        })
+  const fichasDeAutor = new Map<string, Set<string>>()
+  for (const v of vinculosAutor) fichasDeAutor.set(v.identidadId, (fichasDeAutor.get(v.identidadId) ?? new Set()).add(v.clienteId))
+  const fichaDeAutor = new Map([...fichasDeAutor].filter(([, f]) => f.size === 1).map(([i, f]) => [i, [...f][0]!]))
+  const faltan = [...new Set(fichaDeAutor.values())].filter((c) => !fichaPorId.has(c))
+  if (faltan.length > 0) {
+    for (const f of await db.cliente.findMany({
+      where: { id: { in: faltan }, correduriaId, mergedIntoClienteId: null },
+      select: { id: true, nombre: true, apellidos: true, codigoPostal: true, ciudad: true, provincia: true, fechaNacimiento: true },
+    })) fichaPorId.set(f.id, f)
+  }
   const polizasDeParte =
     partes.length === 0
       ? []
@@ -499,12 +607,13 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
   const partesPorCliente = new Map<string, ParteFilaAviso[]>()
   for (const x of partes) {
     const pol = x.polizaId ? polizaDeParte.get(x.polizaId) : undefined
-    if (!pol || !fichaPorId.has(pol.clienteId)) continue
+    const autor = fichaDeAutor.get(x.identidadId)
+    if (!pol || !autor || !fichaPorId.has(autor)) continue
     const fila: ParteFilaAviso = {
       id: x.id, fechaHecho: x.fechaHecho, abiertoEnCompaniaAt: x.abiertoEnCompaniaAt, descartadoAt: x.descartadoAt,
       motivoDescarte: x.motivoDescarte, compania: pol.aseguradora,
     }
-    partesPorCliente.set(pol.clienteId, [...(partesPorCliente.get(pol.clienteId) ?? []), fila])
+    partesPorCliente.set(autor, [...(partesPorCliente.get(autor) ?? []), fila])
   }
   for (const [clienteId, filas] of partesPorCliente) {
     const lista = partesParaAviso(filas, hoy)
