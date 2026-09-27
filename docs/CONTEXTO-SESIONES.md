@@ -755,6 +755,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Medición SEO semanal con `claude-seo-ai` (solo `audit`)
+Evaluado el repo `Hainrixz/claude-seo-ai` (MIT, sin deps, sin telemetría, v0.2.0). **NO se instala como
+plugin** (34 skills en cada sesión, hooks PreToolUse en cada Write/Bash, y su `fix` escribiría sin conocer
+el diccionario ES→EN/IT de housesevillana ni `ramos.test.ts`). Se usa su action, fijada por SHA, en
+`.github/workflows/seo-medicion.yml` (domingo 05:17 UTC) contra grupoasegura.es y housesevillana.es:
+dos notas (Google / IA) en el resumen + artefacto. El contenedor de Claude NO alcanza esos hosts (curl 000),
+por eso va en Actions. Enlazado desde `seo-asegura` y `seo-house-sevillana`. Pendiente: ver el primer run.
+
 ## (27/09/2026) Inicio: pinchar una reserva del calendario muestra su detalle (PR #3716)
 - Tarjeta «Pisos» de `/inicio`: las barras son botones; al pincharlas se abre debajo huésped, piso, entrada/salida, noches, pax, importe (€/n) y portal. Nuevo cliente `inicio/CalendarioReservas.tsx`; `Barra` lleva `reserva` e `incomes.amount` entra como `importe` (null = «sin dato», no 0 €).
 

@@ -89,6 +89,7 @@ canal propio que se toca cada tres semanas no produce nada.
 | **SERP en vivo** (Serper) | Quién ocupa el top-10 de cada consulta objetivo (`references/keywords.md` = `CONSULTAS` de plataforma, un cepo los compara) y si estamos | ✅ Desde el 08/09/2026, fila `fuente='serp'`. `propia: null` = fuera del top-10, que NO es posición 0. Sin créditos en Serper la fila sale `error` |
 | **PostHog** (`eu.i.posthog.com`) | Visitas, páginas, origen | 🟢 Vivo desde 05/09/2026 — **pero solo mide a quien ACEPTA el banner**. ✅ Desde el 08/09 el cron la lee por HogQL: fila `fuente='posthog'` |
 | **BD `seguros`** | Leads reales del formulario y su estado | 🟢 Vivo |
+| **Auditoría técnica** (`seo-medicion.yml`) | Dos notas 0-100, Google y citabilidad en IA (GEO/AEO), + hallazgos | 🟡 Desde 27/09/2026: domingo 05:17 UTC, artefacto `seo-grupoasegura` del run. Nota `unscored` = no medido, nunca 0. **Solo `audit`**: el `fix` de esa herramienta no se usa |
 
 **Cómo se lee la foto** (Supabase MCP, `execute_sql`, proyecto `wswbehlcuxqxyinousql`):
 
