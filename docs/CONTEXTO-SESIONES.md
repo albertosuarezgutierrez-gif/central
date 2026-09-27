@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — Portal asegura: instrucciones de instalar en iPhone decían «toca Compartir en la barra»; en Safari iOS 26 Compartir está dentro de «···». Texto corregido en `apps/asegura-portal/app/instalacion.tsx` (`InstruccionesIOS`) + cepo en `lib/pwa.test.ts` (visto en rojo). Rama `claude/new-session-an4ry0`.
+
 **(27/09/2026)** — PR #3762 **MERGEADO**: título RC = solo «RC + tipo» (`tituloRc`), y prima/vencimiento desde el recibo anual CA/NP
 (`primaConRecibos`/`vencimientoConRecibos` + SQL gemelo en `apps/asegura/lib/recibos-vigencia.ts`) en ficha, póliza, listado,
 impagados, renovaciones, avisos, libro-registro (recibo del AÑO del libro), mejorar-precio, sin-canal y portal del cliente.

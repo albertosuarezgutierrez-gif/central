@@ -116,6 +116,13 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
     /<IconoCompartir \/>/,
     'se perdió el dibujo del botón Compartir: en iPhone el aviso solo puede explicar el gesto',
   )
+  // iOS 26: Compartir ya no está en la barra de Safari sino dentro de «···».
+  // Sin nombrar ese menú, el aviso manda a buscar un botón que no se ve.
+  assert.match(
+    almacen,
+    /<strong>···<\/strong> junto a la dirección/,
+    'las instrucciones de iOS dejaron de nombrar el menú «···»: en iOS 26 Compartir está ahí dentro',
+  )
   // Y el botón enseña esas instrucciones en su globo (no un texto propio que se
   // desvíe), con `role="dialog"` y cierre por Escape: en iPhone es lo ÚNICO que
   // explica cómo instalar.

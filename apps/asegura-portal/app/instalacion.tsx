@@ -157,12 +157,21 @@ export function IconoCompartir() {
   )
 }
 
-/** Las instrucciones de iPhone/iPad, las mismas palabras en la franja y en la campana. */
+/**
+ * Las instrucciones de iPhone/iPad.
+ *
+ * 🚨 Desde iOS 26 Safari ya NO enseña Compartir en la barra: queda dentro del
+ * menú «···» que hay junto a la dirección (27/09/2026, Alberto en su iPhone:
+ * «toca Compartir en la barra» mandaba a buscar un botón que no estaba). Se
+ * nombra primero «···» y se deja el atajo para quien aún lo tenga a la vista
+ * (iOS anteriores, Chrome con el icono en la barra).
+ */
 export function InstruccionesIOS() {
   return (
     <>
-      Añade «Mis seguros» a la pantalla de inicio: toca <IconoCompartir /> <strong>Compartir</strong> en
-      la barra de tu navegador y elige <strong>«Añadir a pantalla de inicio»</strong>.
+      Añade «Mis seguros» a la pantalla de inicio: toca <strong>···</strong> junto a la dirección, luego{' '}
+      <IconoCompartir /> <strong>Compartir</strong> y elige <strong>«Añadir a pantalla de inicio»</strong>{' '}
+      (si no sale, desliza hacia abajo). Si ya ves <IconoCompartir /> en la barra, tócalo directamente.
     </>
   )
 }
