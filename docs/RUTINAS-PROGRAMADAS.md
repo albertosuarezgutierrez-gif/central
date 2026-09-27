@@ -161,7 +161,7 @@ caza lo que las sesiones del día no anotaron a mano.
 | **Verificar** | El chat muestra el informe de compliance con la lista de ítems 🔴 pendientes. |
 | **Latido** | Cierra con `POST /api/internal/latido` (`rrhh_compliance`) desde el 02/09/2026 — `ok:true` = roadmap leído e informe con la lista de 🔴 pendientes generado. Sin `ALERTA_TOKEN` → 401 → rojo en `/operador/agentes` («sin ninguna señal registrada»): mudo, no roto. |
 
-### 8-ter. Radar de Idealista por conector — *CREADA 27/09/2026, PAUSADA hasta que Alberto la complete en la UI*
+### 23. Radar de Idealista por conector — *CREADA 27/09/2026, PAUSADA hasta que Alberto la complete en la UI*
 > Trigger `trig_01HneHebAVaM6HoLzJ1DKhUS` («Idealista radar (diario)», `CRON_TZ=Europe/Madrid 51 7 * * *`,
 > sesión nueva por disparo). La skill `idealista-radar` existía desde el 24/09 pero **nadie la había
 > programado**: cero latidos `subastas_idealista` hasta la pasada manual del 27/09 (285 casas en 12
