@@ -175,13 +175,58 @@ export function textoAlta(nombreCliente: string, a: Alta): string {
 /** Qué se le dice a Alberto tras pulsar, con el enlace a la ficha. */
 export function resultadoAlta(status: number, json: unknown, url: string): { estado: 'abierta' | 'duplicada' | 'rechazada' | 'incierta'; texto: string } {
   const t = textoAltaOportunidad(status, json)
-  if (t.ok) return { estado: 'abierta', texto: `✅ ${escapar(t.texto)}\n${url}` }
-  if (status === 409) return { estado: 'duplicada', texto: `ℹ️ ${escapar(t.texto)} No he abierto otra.\n${url}` }
+  // Con id, el enlace lleva a ESA oportunidad desplegada en la ficha (el mismo `?op=` que usan «Hoy» y Vencimientos).
+  const aOportunidad = t.id ? `${url}?tab=oportunidades&op=${encodeURIComponent(t.id)}` : url
+  if (t.ok) return { estado: 'abierta', texto: `✅ ${escapar(t.texto)}\n${aOportunidad}` }
+  if (status === 409) return { estado: 'duplicada', texto: `ℹ️ ${escapar(t.texto)} No he abierto otra.\n${aOportunidad}` }
   // Sin respuesta o con un 5xx el alta pudo guardarse: decir «no se ha abierto» invitaría a duplicarla.
   if (status === 0 || status >= 500) {
     return { estado: 'incierta', texto: `⚠️ No sé si se ha abierto (la cartera no ha contestado bien). Mira la ficha antes de repetirlo: si se guardó, al repetir te avisará de que ya existe.\n${url}` }
   }
   return { estado: 'rechazada', texto: `✋ No se ha abierto: ${escapar(t.texto)}\n${url}` }
+}
+
+// ── Ya tenía una abierta: actualizarla con lo leído (27/09/2026) ──
+// Alberto subió la póliza de un cliente que ya tenía oportunidad de auto: «ya tiene una, sigue esa» dejaba
+// la póliza nueva sin usar. Se ofrece corregir la existente con lo leído, enseñando el antes y el después.
+
+export type Existente = { aseguradora: string | null; prima: number | null; fechaFinVigencia: string | null }
+export type CambioOportunidad = { campo: 'aseguradora' | 'prima' | 'fechaFinVigencia'; antes: string | number | null; despues: string | number }
+
+/**
+ * Qué cambiaría en la existente. Solo lo que el documento SÍ trae y difiere: un «no consta» leído nunca
+ * borra un dato que la oportunidad ya tiene.
+ */
+export function cambiosSobreExistente(a: Alta, e: Existente): CambioOportunidad[] {
+  const c: CambioOportunidad[] = []
+  const igual = (x: string | null, y: string) => (x ?? '').trim().toLowerCase() === y.trim().toLowerCase()
+  if (a.aseguradora && !igual(e.aseguradora, a.aseguradora)) c.push({ campo: 'aseguradora', antes: e.aseguradora, despues: a.aseguradora })
+  if (a.prima !== null && (e.prima === null || Math.abs(e.prima - a.prima) >= 0.005)) c.push({ campo: 'prima', antes: e.prima, despues: a.prima })
+  if (a.fechaFinVigencia && (e.fechaFinVigencia ?? '').slice(0, 10) !== a.fechaFinVigencia) c.push({ campo: 'fechaFinVigencia', antes: e.fechaFinVigencia, despues: a.fechaFinVigencia })
+  return c
+}
+
+export function cuerpoEdicion(oportunidadId: string, cambios: readonly CambioOportunidad[], actor: string): Record<string, unknown> {
+  const b: Record<string, unknown> = { accion: 'editar', id: oportunidadId, actor }
+  for (const c of cambios) b[c.campo] = c.despues
+  return b
+}
+
+const ROTULO_CAMPO: Record<CambioOportunidad['campo'], string> = { aseguradora: 'Compañía', prima: 'Prima', fechaFinVigencia: 'Vence' }
+const valorCampo = (c: CambioOportunidad['campo'], v: string | number | null) =>
+  v === null ? 'no consta' : c === 'prima' ? eur(Number(v)) : c === 'fechaFinVigencia' ? fechaEs(String(v).slice(0, 10)) : escapar(String(v))
+
+export function textoCambios(cambios: readonly CambioOportunidad[]): string {
+  return cambios.map((c) => `• ${ROTULO_CAMPO[c.campo]}: ${valorCampo(c.campo, c.antes)} → <b>${valorCampo(c.campo, c.despues)}</b>`).join('\n')
+}
+
+/** Tras pulsar «Actualizar». Sin respuesta o 5xx: pudo guardarse, así que no se dice que no. */
+export function resultadoEdicion(status: number, json: unknown, url: string): { estado: 'hecha' | 'rechazada' | 'incierta'; texto: string } {
+  const o = json && typeof json === 'object' ? (json as Record<string, unknown>) : null
+  if (status === 200 && o?.estado === 'ok') return { estado: 'hecha', texto: `✅ Oportunidad actualizada con los datos del documento.\n${url}` }
+  if (status === 0 || status >= 500) return { estado: 'incierta', texto: `⚠️ No sé si se ha actualizado (la cartera no ha contestado bien). Mírala antes de repetirlo.\n${url}` }
+  const motivo = typeof o?.motivo === 'string' ? o.motivo : `HTTP ${status}`
+  return { estado: 'rechazada', texto: `✋ No se ha actualizado: ${escapar(motivo)}\n${url}` }
 }
 
 // ── De quién es el documento (27/09/2026) ──

@@ -29,7 +29,7 @@ import { abrirSiniestroAsegura } from '@/lib/siniestros-asegura'
 import { explicarPortal, interpretarPortal, invitarPortalAsegura, portalAsegura } from '@/lib/portal-cliente-asegura'
 import { prepararAccion, resultadoAccion, textoAccion, type TipoAccion } from './correduria-acciones-tg'
 import { descargarTelegram, getCuentaTelegram, manejarDocumentoTg } from '@/lib/contable/telegram'
-import { avisoDocumentosPendientes, cuerpoAlta, explicarQuien, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, quienEsDelDocumento, resultadoAlta, rutaTarificar, resultadoAltaLead, textoAlta, textoAltaLead, type Alta } from './correduria-oportunidad-tg'
+import { avisoDocumentosPendientes, cambiosSobreExistente, cuerpoAlta, cuerpoEdicion, explicarQuien, resultadoEdicion, textoCambios, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, quienEsDelDocumento, resultadoAlta, rutaTarificar, resultadoAltaLead, textoAlta, textoAltaLead, type Alta } from './correduria-oportunidad-tg'
 import {
   documentoQueAcredita, edicionDeCambios, faltaValorActual, huellaAntes, prepararCorreccion, resultadoCorreccion, textoCorreccion,
   urlCliente, type Cambio, type FichaActual,
@@ -597,14 +597,20 @@ export async function albumDeCorreduria(mediaGroupId: string | null): Promise<bo
 
 /** Lee los documentos de la última hora. `null` = no se ha podido mirar (≠ `[]`, «no subió nada»). */
 async function lecturasRecientes(opts: { tomador?: boolean } = {}, usados?: number[]): Promise<LecturaDocumentoOportunidad[] | null> {
+  // Solo el ÚLTIMO documento (o su álbum): con todo lo de la última hora, dos subidas de la misma póliza
+  // sumaban o mezclaban datos (27/09/2026: prima 374,90€ con una póliza de 192,19€).
   const filas = await prisma.$queryRaw<{ id: bigint; file_id: string; nombre: string | null; mime: string | null }[]>(Prisma.sql`
-    SELECT id, file_id, nombre, mime FROM correduria_asistente_documento
-    WHERE creado_at >= now() - make_interval(mins => ${MINUTOS_DOCUMENTO_RECIENTE}::int)
-      AND (usado_at IS NULL OR usado_at >= now() - interval '15 minutes')
-      AND (destino = 'correduria' OR NOT EXISTS (
-        SELECT 1 FROM correduria_asistente_documento d2
-        WHERE d2.destino = 'correduria' AND d2.creado_at >= now() - make_interval(mins => ${MINUTOS_DOCUMENTO_RECIENTE}::int)))
-    ORDER BY id DESC LIMIT 4`).catch(() => null)
+    WITH cand AS (
+      SELECT id, file_id, nombre, mime, media_group_id FROM correduria_asistente_documento
+      WHERE creado_at >= now() - make_interval(mins => ${MINUTOS_DOCUMENTO_RECIENTE}::int)
+        AND (usado_at IS NULL OR usado_at >= now() - interval '15 minutes')
+        AND (destino = 'correduria' OR NOT EXISTS (
+          SELECT 1 FROM correduria_asistente_documento d2
+          WHERE d2.destino = 'correduria' AND d2.creado_at >= now() - make_interval(mins => ${MINUTOS_DOCUMENTO_RECIENTE}::int)))
+    ), ultimo AS (SELECT id, media_group_id FROM cand ORDER BY id DESC LIMIT 1)
+    SELECT c.id, c.file_id, c.nombre, c.mime FROM cand c, ultimo u
+    WHERE c.id = u.id OR (u.media_group_id IS NOT NULL AND c.media_group_id = u.media_group_id)
+    ORDER BY c.id DESC LIMIT 4`).catch(() => null)
   if (filas === null) return null
   const out: LecturaDocumentoOportunidad[] = []
   for (const f of filas.reverse()) {
@@ -750,13 +756,16 @@ async function abrirOportunidad(id: number): Promise<string> {
     .catch((e) => ({ status: 0, json: { motivo: e instanceof Error ? e.message.slice(0, 120) : 'fallo' } }))
   const fin = resultadoAlta(r.status, r.json, urlCliente(clienteId))
   const json = r.json as { id?: unknown; motivo?: unknown } | null
+  const existenteId = fin.estado === 'duplicada' && typeof json?.id === 'string' ? json.id : null
+  // Con una duplicada se guarda `alta` un rato: es lo que «Actualizar la existente» escribirá.
   await prisma.$executeRaw(Prisma.sql`
     UPDATE correduria_asistente_oportunidad
-    SET estado = ${fin.estado}, alta = NULL, lead = NULL, cliente_id = ${clienteId}::uuid,
+    SET estado = ${fin.estado}, alta = ${existenteId ? JSON.stringify(fila.alta) : null}::jsonb, lead = NULL, cliente_id = ${clienteId}::uuid,
         resultado = ${JSON.stringify({ status: r.status, id: json?.id ?? null, motivo: json?.motivo ?? null })}::jsonb
     WHERE id = ${id}`).catch((e) => console.error('[correduria-oportunidad-tg] no se pudo cerrar la fila', id, e))
   await decir(fin.texto)
   if (fin.estado === 'abierta') await ofrecerSiguientes(id, clienteId, fila.alta, (fila.documentos ?? []).map(Number)).catch(() => {})
+  if (existenteId) await ofrecerSobreExistente(id, clienteId, existenteId, fila.alta, (fila.documentos ?? []).map(Number)).catch(() => {})
   return fin.estado === 'abierta' ? 'Oportunidad abierta 🎯' : fin.estado === 'incierta' ? 'No sé si se ha abierto' : 'No se ha abierto'
 }
 
@@ -947,6 +956,9 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
     WHERE lead IS NOT NULL AND (estado <> 'propuesta' OR caduca_at <= now())
       AND (estado <> 'aplicando' OR decidida_at < now() - interval '1 hour')`).catch(() => {})
   await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_oportunidad SET alta = NULL
+    WHERE estado = 'duplicada' AND alta IS NOT NULL AND decidida_at < now() - make_interval(mins => ${MINUTOS_PROPUESTA}::int)`).catch(() => {})
+  await prisma.$executeRaw(Prisma.sql`
     DELETE FROM correduria_asistente_documento WHERE creado_at < now() - interval '30 days'`).catch(() => {})
 
   const [turno] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
@@ -1037,12 +1049,69 @@ async function ofrecerSiguientes(oportId: number, clienteId: string, alta: Alta,
   }
 }
 
+/**
+ * Ya tenía una abierta del mismo ramo: se ofrece actualizarla con lo leído (antes → después) y guardar el
+ * documento en su ficha. Sin poder leer la existente no se ofrece actualizar: sin el «antes» sería a ciegas.
+ */
+async function ofrecerSobreExistente(oportId: number, clienteId: string, existenteId: string, alta: Alta, docIds: number[]): Promise<void> {
+  const r = await oportunidadesClienteAsegura(clienteId).catch(() => ({ status: 0, json: null }))
+  const lista = interpretarOportunidadesCliente(r.status, r.json)
+  const e = lista.estado === 'ok' ? lista.oportunidades.find((o) => o.id === existenteId) ?? null : null
+  const cambios = e ? cambiosSobreExistente(alta, { aseguradora: e.aseguradora, prima: e.prima, fechaFinVigencia: e.fechaFinVigencia }) : []
+  const nombres = docIds.length === 0 ? [] : await prisma.$queryRaw<{ nombre: string | null }[]>(Prisma.sql`
+    SELECT nombre FROM correduria_asistente_documento WHERE id = ANY(${docIds}::bigint[]) ORDER BY id`).catch(() => null)
+  const lineas: string[] = []
+  const botones: { texto: string; callback: string }[] = []
+  if (!e) lineas.push('No he podido leer la que ya tiene, así que no te propongo cambiarla: revísala en la ficha.')
+  else if (cambios.length === 0) lineas.push('La que ya tiene coincide con el documento: no hay nada que actualizar.')
+  else {
+    lineas.push('✏️ ¿Actualizo la que ya tiene con lo leído del documento?', textoCambios(cambios))
+    botones.push({ texto: '✏️ Actualizar la existente', callback: `cas_actualizar:${oportId}` })
+  }
+  if (docIds.length > 0 && nombres !== null && nombres.length > 0) {
+    lineas.push(`📎 ¿Guardo en su ficha ${nombres.length === 1 ? 'este documento' : `estos ${nombres.length} documentos`}?`, ...nombres.map((n) => `• ${escapeHtml(n.nombre ?? 'documento sin nombre')}`))
+    botones.push({ texto: '📎 Guardar en la ficha', callback: `cas_guardar:${oportId}` })
+  }
+  if (botones.length) await tgSendButtons(lineas.join('\n'), [botones])
+  else await tgSend(lineas.join('\n'), { html: true })
+}
+
+/** Botón «Actualizar la existente». Un solo uso (`actualizada_at`) y con caducidad. Nunca lanza. */
+async function actualizarExistente(oportId: number): Promise<string> {
+  const decir = (t: string) => tgSend(t, { html: true }).catch(() => {})
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    await decir(`🛡️ Las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}): no se ha cambiado nada.`)
+    return 'Apagado: no se cambia nada'
+  }
+  const [fila] = await prisma.$queryRaw<{ cliente_id: string | null; alta: Alta | null; existente: string | null }[]>(Prisma.sql`
+    UPDATE correduria_asistente_oportunidad SET actualizada_at = now()
+    WHERE id = ${oportId} AND estado = 'duplicada' AND actualizada_at IS NULL AND alta IS NOT NULL
+      AND decidida_at > now() - make_interval(mins => ${MINUTOS_PROPUESTA}::int)
+    RETURNING cliente_id::text AS cliente_id, alta, resultado->>'id' AS existente`).catch(() => [])
+  if (!fila || !fila.cliente_id || !fila.alta || !fila.existente) return 'Ya estaba hecho o ha caducado'
+  // El «antes» se vuelve a leer ahora: entre el mensaje y el clic alguien pudo tocarla en la ficha.
+  const r0 = await oportunidadesClienteAsegura(fila.cliente_id).catch(() => ({ status: 0, json: null }))
+  const lista = interpretarOportunidadesCliente(r0.status, r0.json)
+  const e = lista.estado === 'ok' ? lista.oportunidades.find((o) => o.id === fila.existente) ?? null : null
+  const url = `${urlCliente(fila.cliente_id)}?tab=oportunidades&op=${encodeURIComponent(fila.existente)}`
+  const cerrar = () => prisma.$executeRaw(Prisma.sql`UPDATE correduria_asistente_oportunidad SET alta = NULL WHERE id = ${oportId}`).catch(() => {})
+  if (!e) { await cerrar(); await decir(`✋ No he podido leer la oportunidad ahora: no la toco.\n${url}`); return 'No se ha actualizado' }
+  const cambios = cambiosSobreExistente(fila.alta, { aseguradora: e.aseguradora, prima: e.prima, fechaFinVigencia: e.fechaFinVigencia })
+  if (cambios.length === 0) { await cerrar(); await decir(`ℹ️ Ya coincide con el documento: nada que cambiar.\n${url}`); return 'Sin cambios' }
+  const r = await accionOportunidadAsegura(cuerpoEdicion(fila.existente, cambios, ACTOR_EMISION_TG))
+    .catch(() => ({ status: 0, json: null }))
+  const fin = resultadoEdicion(r.status, r.json, url)
+  await cerrar()
+  await decir(fin.estado === 'hecha' ? `${fin.texto.split('\n')[0]}\n${textoCambios(cambios)}\n${url}` : fin.texto)
+  return fin.estado === 'hecha' ? 'Actualizada ✏️' : fin.estado === 'incierta' ? 'No sé si se ha actualizado' : 'No se ha actualizado'
+}
+
 /** Botón «Guardar en la ficha». Un solo uso (`documentos_guardados_at`). Nunca lanza. */
 async function guardarDocumentosEnFicha(oportId: number): Promise<string> {
   const decir = (t: string) => tgSend(t, { html: true }).catch(() => {})
   const [fila] = await prisma.$queryRaw<{ cliente_id: string | null; documentos: bigint[] | null }[]>(Prisma.sql`
     UPDATE correduria_asistente_oportunidad SET documentos_guardados_at = now()
-    WHERE id = ${oportId} AND estado = 'abierta' AND documentos_guardados_at IS NULL
+    WHERE id = ${oportId} AND estado IN ('abierta', 'duplicada') AND documentos_guardados_at IS NULL
     RETURNING cliente_id::text AS cliente_id, documentos`).catch(() => [])
   if (!fila || !fila.cliente_id) return 'Ya estaba hecho (o no encuentro la oportunidad)'
   const ids = (fila.documentos ?? []).map(Number)
@@ -1083,6 +1152,7 @@ export async function resolverBotonCorreduria(accion: string, arg: string): Prom
   if (accion === 'corregir') return aplicarCorreccion(id)
   if (accion === 'oport') return abrirOportunidad(id)
   if (accion === 'guardar') return guardarDocumentosEnFicha(id)
+  if (accion === 'actualizar') return actualizarExistente(id)
   if (accion === 'acc') return hacerAccion(id)
   if (accion === 'accno') {
     const n = await prisma.$executeRaw(Prisma.sql`

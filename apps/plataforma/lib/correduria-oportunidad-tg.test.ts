@@ -362,7 +362,7 @@ test('webhook: descarta reintentos de Telegram y contesta rápido a la corredur�
   // ningún manejarCorreduriaTg se espera dentro de la petición: el único await es el de correduriaSegura (en after)
   assert.equal(src.match(/await manejarCorreduriaTg\(/g)?.length, 1)
   assert.match(src, /async function correduriaSegura[^]*?await manejarCorreduriaTg\(texto\)\.catch/)
-  assert.match(src, /action === 'guardar'\) && String\(cb\.from/)
+  assert.match(src, /action === 'guardar' \|\| action === 'actualizar'\) && String\(cb\.from/)
 })
 
 test('tras abrir: guardar en la ficha es de un solo uso y tarificar es un ENLACE (no cotiza desde Telegram)', () => {
@@ -370,7 +370,7 @@ test('tras abrir: guardar en la ficha es de un solo uso y tarificar es un ENLACE
   assert.equal(rutaTarificar('hogar'), 'hogar-nuevo')
   assert.equal(rutaTarificar('responsabilidad_civil'), null)
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
-  assert.match(src, /WHERE id = \$\{oportId\} AND estado = 'abierta' AND documentos_guardados_at IS NULL/)
+  assert.match(src, /WHERE id = \$\{oportId\} AND estado IN \('abierta', 'duplicada'\) AND documentos_guardados_at IS NULL/)
   assert.doesNotMatch(src.slice(src.indexOf('async function ofrecerSiguientes'), src.indexOf('async function guardarDocumentosEnFicha')), /cotizar|retarificar/i)
 })
 
@@ -408,4 +408,39 @@ test('con una póliza de la correduría sin usar, el asistente sabe que está ah
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   assert.match(src, /historial\.memoria, avisoDocumentosPendientes\(pendientes\)\]/)
   assert.match(src, /destino = 'correduria' AND usado_at IS NULL/)
+})
+
+test('el enlace tras abrir (o si ya había una) lleva a la OPORTUNIDAD, no solo a la ficha', () => {
+  assert.match(resultadoAlta(201, { estado: 'ok', id: 'o1' }, 'https://x/correduria/cliente/c1').texto, /cliente\/c1\?tab=oportunidades&op=o1/)
+  assert.match(resultadoAlta(409, { estado: 'duplicada', motivo: 'Ya tiene una de auto.', id: 'o0' }, 'https://x/correduria/cliente/c1').texto, /\?tab=oportunidades&op=o0/)
+  // sin id (fallo incierto) se queda en la ficha: no hay oportunidad a la que llevar
+  assert.doesNotMatch(resultadoAlta(0, null, 'https://x/correduria/cliente/c1').texto, /op=/)
+})
+
+test('ya tenía una abierta: solo se cambia lo que el documento trae y difiere; un «no consta» no borra', async () => {
+  const { cambiosSobreExistente, cuerpoEdicion, textoCambios } = await import('./correduria-oportunidad-tg.ts')
+  const alta = { ramo: 'auto', aseguradora: 'MUSSAP', prima: 192.19, fechaFinVigencia: '2026-10-20', numeroPoliza: null, fechaTarea: '2026-09-28', venceDescartado: null, documentos: null } as const
+  const c = cambiosSobreExistente(alta as never, { aseguradora: 'mussap', prima: 374.9, fechaFinVigencia: null })
+  assert.deepEqual(c.map((x) => x.campo), ['prima', 'fechaFinVigencia'])
+  assert.equal(cambiosSobreExistente({ ...alta, prima: null, aseguradora: null, fechaFinVigencia: null } as never, { aseguradora: 'X', prima: 1, fechaFinVigencia: '2026-01-01' }).length, 0)
+  assert.deepEqual(cuerpoEdicion('o1', c, 'a'), { accion: 'editar', id: 'o1', actor: 'a', prima: 192.19, fechaFinVigencia: '2026-10-20' })
+  assert.match(textoCambios(c), /374,90€ → <b>192,19€<\/b>/)
+})
+
+test('actualizar: resultado honesto y el flujo cableado (lee el FUENTE)', async () => {
+  const { resultadoEdicion } = await import('./correduria-oportunidad-tg.ts')
+  assert.equal(resultadoEdicion(200, { estado: 'ok' }, 'u').estado, 'hecha')
+  assert.equal(resultadoEdicion(0, null, 'u').estado, 'incierta')
+  assert.equal(resultadoEdicion(409, { motivo: 'Está ganada' }, 'u').estado, 'rechazada')
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  // solo el último documento (o su álbum), nunca todo lo de la hora
+  assert.match(src, /ultimo AS \(SELECT id, media_group_id FROM cand ORDER BY id DESC LIMIT 1\)/)
+  // un solo uso y con caducidad
+  assert.match(src, /WHERE id = \$\{oportId\} AND estado = 'duplicada' AND actualizada_at IS NULL AND alta IS NOT NULL/)
+  // sin leer la existente no se ofrece actualizar
+  assert.match(src, /if \(!e\) lineas\.push\('No he podido leer la que ya tiene/)
+  // guardar en ficha también cuando ya tenía una
+  assert.match(src, /estado IN \('abierta', 'duplicada'\) AND documentos_guardados_at IS NULL/)
+  const hook = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
+  assert.match(hook, /action === 'guardar' \|\| action === 'actualizar'\) && String\(cb\.from/)
 })
