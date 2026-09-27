@@ -27,7 +27,10 @@ export type FilaLibro = {
 
 export async function libroRegistro(correduriaId: string, año: number): Promise<{ estado: 'ok'; año: number; filas: FilaLibro[] }> {
   const viva = Prisma.raw(sqlCarteraViva('p'))
-  const hoy = new Date().toISOString().slice(0, 10)
+  // El recibo que cuenta es el del año del libro, no el de hoy: el libro de
+  // 2025 no puede enseñar la prima de la anualidad 2026-27.
+  const hoyReal = new Date().toISOString().slice(0, 10)
+  const hoy = año < Number(hoyReal.slice(0, 4)) ? `${año}-12-31` : hoyReal
   const filas = await prismaAsegura().$queryRaw<FilaLibro[]>`
     select p.numero_poliza as "numeroPoliza",
            coalesce(cd.nombre_comun, cd.nombre_cima, p.codigo_entidad_dgs, p.aseguradora) as compania,
