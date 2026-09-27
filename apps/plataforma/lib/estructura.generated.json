@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-27T05:27:06Z",
+  "generadoEn": "2026-09-27T07:49:29Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5045,6 +5045,7 @@
       "/api/cron/borme-ingesta",
       "/api/cron/briefing",
       "/api/cron/canario-lead",
+      "/api/cron/catastro-pisos",
       "/api/cron/categorizar-movimientos",
       "/api/cron/cima-liq",
       "/api/cron/cima-pull-respaldo",
@@ -6565,7 +6566,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1493,
+    "apis": 1494,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
