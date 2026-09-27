@@ -339,9 +339,16 @@ export default async function Boveda({
     t.polizas.map((p) => ({ id: p.id, opcion: opcionCartera(p, companias, t.nombre, t.nombre) })),
   )
   const telefonosAjenos = opcionesAutorizadas.filter((o) => !conParte.has(o.id)).map((o) => o.opcion)
+  // Las pólizas donde FIGURA (propietario, conductor…): figurar da derecho a dar
+  // parte (27/09/2026). Se filtran igual por `conParte` para que la lista y la
+  // ruta no puedan divergir.
+  const opcionesInterviniente = cartera.intervinientes.flatMap((t) =>
+    t.polizas.filter((p) => conParte.has(p.id)).map((p) => opcionCartera(p, companias, t.nombre, t.nombre)),
+  )
   const polizasParte: PolizaOpcionParte[] = [
     ...cartera.propias.flatMap((t) => t.polizas.map((p) => opcionCartera(p, companias, undefined, t.nombre))),
     ...opcionesAutorizadas.filter((o) => conParte.has(o.id)).map((o) => o.opcion),
+    ...opcionesInterviniente,
     ...declaradas.map((p) => ({
       valor: `declarada:${p.id}`,
       // 🚨 El cruce es por nombre EXACTO y aquí es donde más falla, a propósito:
@@ -629,6 +636,21 @@ export default async function Boveda({
           </GrupoPlegable>
         )),
       )}
+
+      {/* Pólizas de OTRO tomador donde figura (27/09/2026): propietario del
+          coche, conductor… Solo ESAS pólizas, un plegable por tomador. Van con
+          `grupo="autorizadas"` a propósito: así no llevan la baldosa «Al año»,
+          que pintaría como suyo lo que paga el tomador. */}
+      {cartera.intervinientes.map((t) => (
+        <GrupoPlegable
+          key={`figura-${t.clienteId}`}
+          antetitulo="Figuras en su póliza"
+          titulo={t.nombre}
+          cuenta={t.polizas.length}
+        >
+          <Titular titular={t} grupo="autorizadas" conNombre={false} hoy={hoy} />
+        </GrupoPlegable>
+      ))}
 
         </>
       )}
