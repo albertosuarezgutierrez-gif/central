@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** 🎓 **agentes-entrenador: pasada saltada casi 4 semanas (30/08→27/09).** Sin pasada
+desde el 30/08 pese al cron dominical. Poda real de `docs/AGENTES-BITACORA.md` (~90 entradas,
+verificada releyendo el archivo tras el commit) + retoma y cierra el PR #3131 (stale desde el 20/09,
+nunca mergeado — el mismo fallo "cepo sin ver fallar" que su propio guardarraíl describe, ahora
+aplicado a `SKILL.md`). Diagnóstico: sin hallazgos nuevos que pidan tocar un prompt (mercado-booking
+y facturas-correo tienen patrones repetidos, pero son de auditoría/código o decisión de Alberto, no
+del agente). Backlog de PRs abiertos: 47, el más antiguo #2318 (05/09, 22 días).
+
 **(26/09/2026)** Correduría · lotes 3+4 (PR #3707): «siguiente paso» en la ficha (`siguientePaso()` de
 module-seguros), DNI/carnés plegados, «Más» partida en Cumplimiento/Referencia, renovaciones 90 d plegadas en Cartera, y
 **un solo contador en Hoy**: el badge = `colasIncid` + tareas, y la celda «avisos» de la franja suma las mismas colas
