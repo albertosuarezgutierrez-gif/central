@@ -209,6 +209,9 @@ function AvisoPorCorreo({ ramo, cual, vence, origen }: { ramo: string; cual: str
   const faltaCual = ramo === RAMO_OTRO && cual.trim().length < 2
   const [estado, setEstado] = useState<EstadoAviso>({ fase: 'idle' })
   const [consentimiento, setConsentimiento] = useState(false)
+  const [movil, setMovil] = useState('')
+  const [llamada, setLlamada] = useState(false)
+  const conMovil = movil.trim() !== ''
 
   async function enviar(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -216,7 +219,7 @@ function AvisoPorCorreo({ ramo, cual, vence, origen }: { ramo: string; cual: str
     const fd = new FormData(e.currentTarget)
     const email = String(fd.get('email') ?? '').trim()
     setEstado({ fase: 'enviando' })
-    const r = await llamarAviso('solicitar', { nombre: fd.get('nombre'), email, ramo, cual, vence, consentimiento, web: fd.get('web') })
+    const r = await llamarAviso('solicitar', { nombre: fd.get('nombre'), email, telefono: movil, consentimientoLlamada: conMovil && llamada, ramo, cual, vence, consentimiento, web: fd.get('web') })
     if (r.ok) {
       medir('aviso_solicitado', { ramo })
       setEstado({ fase: 'ok', email })
@@ -255,6 +258,20 @@ function AvisoPorCorreo({ ramo, cual, vence, origen }: { ramo: string; cual: str
           <input id="aviso-email" name="email" type="email" inputMode="email" autoComplete="email" className="f-in" style={mal('email')} />
         </div>
       </div>
+      <div style={{ marginTop: 12 }}>
+        <label className="f-lab" htmlFor="aviso-movil">Móvil <span className="tenue">(opcional)</span></label>
+        <input
+          id="aviso-movil"
+          name="telefono"
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          className="f-in"
+          value={movil}
+          onChange={(e) => setMovil(e.target.value)}
+          style={mal('telefono')}
+        />
+      </div>
       {/* Campo trampa: fuera de pantalla, sin tabulación. Solo un bot lo rellena. */}
       <div aria-hidden style={{ position: 'absolute', left: -9999, width: 1, height: 1, overflow: 'hidden' }}>
         <label htmlFor="aviso-web">No rellenar</label>
@@ -272,9 +289,22 @@ function AvisoPorCorreo({ ramo, cual, vence, origen }: { ramo: string; cual: str
           de este seguro. Puedo darme de baja con un clic en cada correo.
         </span>
       </label>
+      {/* Llamar NO lo cubre la casilla de escribir (Ley 11/2022, art. 66): la suya, sin marcar, y solo si deja el móvil. */}
+      {conMovil && (
+        <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.5, margin: '0 0 10px', cursor: 'pointer', ...mal('consentimientoLlamada') }}>
+          <input
+            type="checkbox"
+            checked={llamada}
+            onChange={(e) => setLlamada(e.target.checked)}
+            style={{ width: 20, height: 20, marginTop: 2, flexShrink: 0 }}
+          />
+          <span>Y acepto que me llaméis a ese móvil para ayudarme con la renovación de este seguro.</span>
+        </label>
+      )}
       <p style={{ fontSize: 12.5, lineHeight: 1.55, color: 'var(--muted)', margin: '0 0 14px' }}>
         <strong>Responsable:</strong> {MEDIADOR.identidad.nombre} (Grupo ASegura). <strong>Finalidad:</strong> avisarte
-        antes del vencimiento y, al confirmar tu correo, abrirte ficha para poder ayudarte con la renovación.{' '}
+        antes del vencimiento y, al confirmar tu correo, abrirte ficha para poder ayudarte con la renovación; si nos
+        dejas el móvil y lo aceptas, llamarte para eso mismo.{' '}
         <strong>Legitimación:</strong> tu consentimiento. <strong>Conservación:</strong> los avisos, hasta que te des de baja; tu
         ficha, un año desde el último contacto si no llegamos a trabajar juntos; sin confirmar, la solicitud se borra. <strong>Derechos:</strong> escribiendo a {MEDIADOR.identidad.email}, y
         reclamación ante la AEPD. <Link href="/legal/privacidad">Información completa</Link>.
@@ -290,7 +320,7 @@ function AvisoPorCorreo({ ramo, cual, vence, origen }: { ramo: string; cual: str
         </p>
       )}
       <div className="hero-cta" style={{ marginTop: 0 }}>
-        <button type="submit" className="btn btn-brand" style={{ minHeight: 44 }} disabled={!ramo || faltaCual || !consentimiento || estado.fase === 'enviando'}>
+        <button type="submit" className="btn btn-brand" style={{ minHeight: 44 }} disabled={!ramo || faltaCual || !consentimiento || (conMovil && !llamada) || estado.fase === 'enviando'}>
           {estado.fase === 'enviando' ? 'Enviando…' : 'Avisadme por correo'}
         </button>
         <EnlaceMedido href={PORTAL_URL} origen={origen} className="btn btn-outline" style={{ minHeight: 44 }}>

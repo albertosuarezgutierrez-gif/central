@@ -32,6 +32,24 @@ test('🚨 sin consentimiento EXPLÍCITO no hay suscripción', () => {
   }
 })
 
+test('móvil opcional: sin él vale; con él exige su PROPIO consentimiento de llamada', () => {
+  const sin = revisarSolicitud(BASE)
+  assert.ok(sin.ok)
+  assert.equal(sin.solicitud.telefono, null)
+  assert.ok(revisarSolicitud({ ...BASE, telefono: '   ' }).ok, 'en blanco = no lo ha dejado')
+  const con = revisarSolicitud({ ...BASE, telefono: '+34 612 34 56 78', consentimientoLlamada: true })
+  assert.ok(con.ok)
+  assert.equal(con.solicitud.telefono, '612345678')
+  // 🚨 El consentimiento de escribirle no cubre llamarle (Ley 11/2022, art. 66).
+  for (const c of [undefined, false, 'true', 'on', 1]) {
+    const r = revisarSolicitud({ ...BASE, telefono: '612345678', consentimientoLlamada: c })
+    assert.equal(r.ok, false, `consentimientoLlamada=${String(c)} no puede valer`)
+    if (!r.ok) assert.equal(r.campo, 'consentimientoLlamada')
+  }
+  const malo = revisarSolicitud({ ...BASE, telefono: '12345', consentimientoLlamada: true })
+  assert.equal(!malo.ok && malo.campo, 'telefono')
+})
+
 test('🚨 el nombre no admite URLs ni texto libre (iría dentro de un correo a una dirección ajena)', () => {
   for (const n of ['Tu póliza está anulada, entra en http://malo.tld', 'Ana <b>', 'x'.repeat(61), 'Ana 123']) {
     assert.equal(revisarSolicitud({ ...BASE, nombre: n }).ok, false, n)
