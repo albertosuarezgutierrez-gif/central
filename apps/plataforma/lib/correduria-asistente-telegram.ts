@@ -29,7 +29,7 @@ import { abrirSiniestroAsegura } from '@/lib/siniestros-asegura'
 import { explicarPortal, interpretarPortal, invitarPortalAsegura, portalAsegura } from '@/lib/portal-cliente-asegura'
 import { prepararAccion, resultadoAccion, textoAccion, type TipoAccion } from './correduria-acciones-tg'
 import { descargarTelegram, getCuentaTelegram, manejarDocumentoTg } from '@/lib/contable/telegram'
-import { cuerpoAlta, explicarQuien, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, quienEsDelDocumento, resultadoAlta, rutaTarificar, resultadoAltaLead, textoAlta, textoAltaLead, type Alta } from './correduria-oportunidad-tg'
+import { avisoDocumentosPendientes, cuerpoAlta, explicarQuien, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, quienEsDelDocumento, resultadoAlta, rutaTarificar, resultadoAltaLead, textoAlta, textoAltaLead, type Alta } from './correduria-oportunidad-tg'
 import {
   documentoQueAcredita, edicionDeCambios, faltaValorActual, huellaAntes, prepararCorreccion, resultadoCorreccion, textoCorreccion,
   urlCliente, type Cambio, type FichaActual,
@@ -901,6 +901,15 @@ async function historialReciente(): Promise<{ mensajes: NimToolMessage[]; memori
   }
 }
 
+/** Documentos de la correduría de la última hora sin usar. `null` = no se ha podido mirar. */
+async function documentosPendientes(): Promise<number | null> {
+  return prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+    SELECT count(*) AS n FROM correduria_asistente_documento
+    WHERE destino = 'correduria' AND usado_at IS NULL
+      AND creado_at >= now() - make_interval(mins => ${MINUTOS_DOCUMENTO_RECIENTE}::int)`)
+    .then((r) => Number(r[0]?.n ?? 0)).catch(() => null)
+}
+
 /** Texto libre de Alberto para la correduría → contesta por Telegram. Nunca lanza. */
 export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> {
   const pregunta = sinPrefijo(textoOriginal) || textoOriginal.trim()
@@ -947,8 +956,8 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
   const turnoId = Number(turno.id)
 
   const reglas = await reglasActivas()
-  const historial = await historialReciente()
-  const system = [systemAsistente((reglas ?? []).map((r) => r.texto), hoyMadrid()), historial.memoria]
+  const [historial, pendientes] = await Promise.all([historialReciente(), documentosPendientes()])
+  const system = [systemAsistente((reglas ?? []).map((r) => r.texto), hoyMadrid()), historial.memoria, avisoDocumentosPendientes(pendientes)]
     .concat(reglas === null ? ['(No se han podido leer las preferencias aprendidas: si Alberto pregunta por ellas, dilo.)'] : [])
     .filter(Boolean).join('\n\n')
   // A la IA va la pregunta TAL CUAL (si Alberto busca por DNI, la IA necesita el DNI para buscarlo;
