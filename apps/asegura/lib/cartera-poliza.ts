@@ -16,7 +16,8 @@ import {
   etiquetaFormaPago,
   importeEiac,
   objetoAsegurado,
-  primaReferencia,
+  primaConRecibos,
+  vencimientoConRecibos,
   recargoFraccionamiento,
   evolucionPrima,
   type EvolucionPrima,
@@ -431,7 +432,16 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
   // objeto de hogar y la del volcado sí. Lo que no traiga ninguna sigue a
   // `null` — un 0 aquí torcería la horquilla.
   const riesgoHogar = elegirRiesgo(hogarDeDatos(datos, 'poliza'), hogarDeDatos(datosGemela, 'gemela'))
-  const prima = primaReferencia({ primaAnual: num(p.primaAnual), primaBruta: num(p.primaBruta) })
+  // Allianz manda prima y renovación solo en el recibo de cartera (27/09/2026).
+  const hoyIso = new Date().toISOString()
+  const recibosVig = p.recibos.map((r) => ({
+    claseRecibo: r.claseRecibo ?? null, situacion: r.situacion === null ? null : String(r.situacion),
+    primaTotal: r.primaTotal, fechaVencimiento: fechaIso(r.fechaVencimiento),
+  }))
+  const prima = primaConRecibos({
+    primaAnual: num(p.primaAnual), primaBruta: num(p.primaBruta),
+    fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+  }, recibosVig, hoyIso).prima
   // Solo se estima lo RETARIFICABLE: la pregunta que responde esto es «¿gasto
   // los 0,50€ de una cotización?», y no se puede gastar en algo que no se puede
   // pedir (un ramo que Codeoscopic no sirve, o una póliza cancelada). Cuando no,
@@ -476,7 +486,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     viva: esCarteraViva(p),
     fechaEfectoInicial: fechaIso(p.fechaEfectoInicial),
     fechaInicio: fechaIso(p.fechaInicio),
-    fechaVencimiento: fechaIso(p.fechaVencimiento),
+    fechaVencimiento: vencimientoConRecibos(fechaIso(p.fechaVencimiento), recibosVig, hoyIso),
     prima,
     primaAnual: num(p.primaAnual),
     primaBruta: num(p.primaBruta),
