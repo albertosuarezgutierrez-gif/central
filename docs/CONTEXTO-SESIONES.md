@@ -760,6 +760,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - `seguros.aviso_web.telefono` (cifrado `v1:`, CHECK) — **migración ya aplicada en prod** (`2026-09-27_aviso_web_telefono.sql`, aditiva).
 - 🚨 El móvil NO verifica nada: al confirmar se AÑADE a la ficha decidida por el correo (`anadirContacto`), nunca busca/funde fichas; si está en otra ficha no se toca y el Telegram lo avisa.
 
+## (27/09/2026) Agente huésped: early check-in dicho «libre» con la víspera OCUPADA
+- Reserva 157252361 (Duplex Center, llega 28/09): el borrador decía «la noche anterior está libre» y la 150035011 (stephen martin) SALÍA el 28 (medido en `incomes`). No se envió (needs_human).
+- La consulta a Smoobu usaba `apartments[]`+`from/to` en /api/reservations; causa exacta no medible sin clave. Ahora: `apartmentId`+`departureFrom/To` (early) y `arrivalFrom/To` (late), y `estanciasFiables()` devuelve null (= no verificado) si la lista viene paginada o con estancias fuera de ventana.
+- Alberto: «tienes el calendario volcado» → `incomes` (webhook Smoobu en tiempo real) pasa a fuente PRINCIPAL; Smoobu en vivo queda de refuerzo (bloqueos). `combinarFuentes()`: una que diga ocupado manda. `lateOferta` de los mensajes programados usa la misma regla (calendario + Smoobu). Cepo visto en rojo.
+
 ## (27/09/2026) Inicio: pinchar una reserva del calendario muestra su detalle (PR #3716)
 - Tarjeta «Pisos» de `/inicio`: las barras son botones; al pincharlas se abre debajo huésped, piso, entrada/salida, noches, pax, importe (€/n) y portal. Nuevo cliente `inicio/CalendarioReservas.tsx`; `Barra` lleva `reserva` e `incomes.amount` entra como `importe` (null = «sin dato», no 0 €).
 

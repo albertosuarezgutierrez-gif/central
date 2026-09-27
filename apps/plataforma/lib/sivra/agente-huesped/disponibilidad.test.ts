@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { nocheAnteriorLibre, diaAnterior, restarDias, entradaMismoDiaLibre, sumarDias } from './disponibilidad.ts'
+import { nocheAnteriorLibre, diaAnterior, restarDias, entradaMismoDiaLibre, sumarDias, estanciasFiables, combinarFuentes } from './disponibilidad.ts'
 
 test('diaAnterior / restarDias', () => {
   assert.equal(diaAnterior('2026-06-26'), '2026-06-25')
@@ -73,4 +73,39 @@ test('las cancelaciones no ocupan (late check-out)', () => {
 
 test('sin fecha de salida fiable → conservador (NO libre)', () => {
   assert.equal(entradaMismoDiaLibre('', []), false)
+})
+
+test('estanciasFiables: filtra por piso y conserva la que sale el día de llegada', () => {
+  const resp = { page_count: 1, bookings: [
+    { id: 'A', arrival: '2026-09-25', departure: '2026-09-28', apartment: { id: 1 } },
+    { id: 'B', arrival: '2026-09-26', departure: '2026-09-29', apartment: { id: 2 } },
+  ] }
+  const est = estanciasFiables(resp, { apartmentId: 1, campo: 'departure', desde: '2026-09-28', hasta: '2026-10-28' })
+  assert.deepEqual(est?.map(e => e.id), ['A'])
+  assert.equal(nocheAnteriorLibre('2026-09-28', est!, 'X'), false)
+})
+
+test('estanciasFiables: filtro ignorado (estancia fuera de ventana) → null, no «libre»', () => {
+  const resp = { bookings: [{ id: 'V', arrival: '2026-08-01', departure: '2026-08-03', apartment: { id: 1 } }] }
+  assert.equal(estanciasFiables(resp, { apartmentId: 1, campo: 'departure', desde: '2026-09-28', hasta: '2026-10-28' }), null)
+})
+
+test('estanciasFiables: paginada o ilegible → null', () => {
+  const o = { apartmentId: 1, campo: 'arrival' as const, desde: '2026-09-30', hasta: '2026-09-30' }
+  assert.equal(estanciasFiables({ page_count: 2, bookings: [] }, o), null)
+  assert.equal(estanciasFiables({ error: 'x' }, o), null)
+  assert.deepEqual(estanciasFiables({ page_count: 1, bookings: [] }, o), [])
+})
+
+test('combinarFuentes: basta UNA fuente ocupada; sin ninguna mirada no se afirma nada', () => {
+  assert.deepEqual(combinarFuentes(false, true), { posible: false, chequeado: true }) // caso 157252361
+  assert.deepEqual(combinarFuentes(true, false), { posible: false, chequeado: true }) // bloqueo manual
+  assert.deepEqual(combinarFuentes(true, null), { posible: true, chequeado: true })
+  assert.deepEqual(combinarFuentes(null, true), { posible: true, chequeado: true })
+  assert.deepEqual(combinarFuentes(null, null), { posible: false, chequeado: false })
+})
+
+test('estanciasFiables: página llena sin page_count → null (podría estar cortada)', () => {
+  const llena = Array.from({ length: 100 }, (_, i) => ({ id: i, arrival: '2026-09-30', departure: '2026-10-02', apartment: { id: 1 } }))
+  assert.equal(estanciasFiables({ bookings: llena }, { apartmentId: 1, campo: 'arrival', desde: '2026-09-30', hasta: '2026-09-30' }), null)
 })

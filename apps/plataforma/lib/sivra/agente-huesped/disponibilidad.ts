@@ -51,3 +51,43 @@ export function entradaMismoDiaLibre(checkOut: string, estancias: Estancia[], se
   }
   return true
 }
+
+// ¿Podemos FIARNOS de la lista que devolvió Smoobu para decidir disponibilidad? Devuelve las estancias
+// DE ESTE PISO, o null (= «no verificado») si la respuesta no se entiende, viene paginada o trae
+// estancias fuera de la ventana pedida — señal de que Smoobu ignoró el filtro.
+//
+// Caso fundacional (26/09/2026, reserva 157252361, Duplex Center): el agente dijo «la noche anterior
+// está libre» cuando otra reserva (150035011) SALÍA ese mismo día. La consulta usaba `apartments[]` y
+// `from`/`to`, que en /api/reservations no están garantizados, y una lista vacía o incompleta se leía
+// como «libre». Aquí un filtro ignorado degrada a «no verificado», nunca a «libre».
+export function estanciasFiables(
+  resp: any,
+  opts: { apartmentId: string | number; campo: 'arrival' | 'departure'; desde: string; hasta: string },
+): Estancia[] | null {
+  const lista = Array.isArray(resp?.bookings) ? resp.bookings : Array.isArray(resp?.data) ? resp.data : null
+  if (!lista) return null
+  if (Number(resp?.page_count ?? 1) > 1) return null // truncada: lo que falta podría ser la que ocupa
+  // Página LLENA sin page_count fiable: puede faltar la siguiente. Las consultas piden pageSize=100
+  // para ventanas de días; llegar a 100 ya no es un caso normal, es una señal de filtro ignorado.
+  if (lista.length >= 100) return null
+  for (const e of lista) {
+    const f = e?.[opts.campo]
+    if (typeof f !== 'string' || f < opts.desde || f > opts.hasta) return null
+  }
+  const apt = String(opts.apartmentId)
+  // Sin id de piso en la estancia no se descarta: ante la duda, cuenta como ocupación.
+  return lista.filter((e: any) => {
+    const id = e?.apartment?.id ?? e?.apartmentId
+    return id == null || String(id) === apt
+  })
+}
+
+// Combina las dos fuentes de «¿está libre?»: el CALENDARIO volcado (`incomes`, que el webhook de
+// Smoobu mantiene al día y del que se borran las cancelaciones) y la consulta EN VIVO a Smoobu (la
+// única que ve los bloqueos manuales). true = libre · false = ocupado · null = no se pudo mirar.
+// Basta con que UNA diga ocupado para que lo esté; «libre» exige que al menos una lo haya mirado.
+export function combinarFuentes(calendario: boolean | null, vivo: boolean | null): { posible: boolean; chequeado: boolean } {
+  if (calendario === false || vivo === false) return { posible: false, chequeado: true }
+  if (calendario === true || vivo === true) return { posible: true, chequeado: true }
+  return { posible: false, chequeado: false }
+}
