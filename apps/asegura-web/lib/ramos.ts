@@ -378,6 +378,54 @@ export const RAMOS: readonly Ramo[] = [
     ],
   },
   {
+    slug: 'impago-alquiler',
+    nombre: 'Impago de alquiler',
+    h1: 'Seguro de impago de alquiler para propietarios en toda España',
+    title: 'Seguro de impago de alquiler en España',
+    description:
+      'Correduría de seguros en toda España. Seguro de impago de alquiler: meses de renta cubiertos, carencia, estudio del inquilino y defensa jurídica en el desahucio.',
+    intro: [
+      'Si alquilas una vivienda, el riesgo que más pesa no es una avería: es que el inquilino deje de pagar y el desahucio tarde meses. El seguro de impago de alquiler responde de las rentas que no cobras y, según la póliza, de los gastos del procedimiento para recuperar la vivienda.',
+      'Somos correduría y trabajamos con varias compañías. Antes de hablar de primas miramos el contrato, la renta y a quién vas a alquilar, porque cada compañía estudia al inquilino a su manera y de ese estudio depende que la póliza se pueda contratar y con qué condiciones.',
+    ],
+    cubre: [
+      'Cuántos meses de renta responde la póliza por siniestro y desde qué mes impagado empieza a pagar: es la cifra que marca cuánto tiempo aguantas sin cobrar.',
+      'El periodo de carencia: los días desde la contratación en que un impago todavía no está cubierto, y si desaparece cuando el seguro se contrata a la vez que se firma el contrato.',
+      'El estudio de solvencia del inquilino: qué documentación pide la compañía (nóminas, contrato de trabajo, declaración de la renta) y si hace falta aprobarlo antes de firmar.',
+      'La defensa jurídica: si incluye el procedimiento de desahucio y la reclamación de las rentas, con abogado y procurador, y con qué límite de gastos.',
+      'Los daños que deja el inquilino al irse (actos vandálicos) y los suministros impagados: muchas pólizas los incluyen solo como garantía opcional y con su propio límite.',
+      'Qué pasa en la renovación si ya ha habido un impago, y si la póliza sigue al contrato cuando cambia el inquilino.',
+    ],
+    paraQuien: [
+      'Vas a alquilar tu vivienda y quieres tener cubierto el peor escenario antes de entregar las llaves.',
+      'Ya tienes un inquilino y quieres asegurar las rentas de un contrato que está en vigor.',
+      'Tienes varias viviendas alquiladas y prefieres que sea una persona quien revise cada contrato y cada inquilino.',
+      'Tu póliza actual se renueva y no sabes cuántos meses cubre de verdad ni qué documentación te van a pedir si hay un impago.',
+    ],
+    faq: [
+      {
+        pregunta: '¿Qué cubre un seguro de impago de alquiler?',
+        respuesta:
+          'La garantía principal son las rentas que el inquilino deja de pagar, durante un número de meses que fija la póliza. Suelen acompañarla la defensa jurídica para el desahucio y la reclamación de la deuda, y como opciones los daños por actos vandálicos y los suministros impagados. Qué incluye exactamente y con qué límites lo dice cada póliza, y es lo que revisamos antes de contratar.',
+      },
+      {
+        pregunta: '¿Se puede contratar con el inquilino ya dentro de la vivienda?',
+        respuesta:
+          'Muchas compañías lo admiten, pero suelen pedir que esté al corriente de pago y, en algunos casos, un estudio de solvencia igual que para un contrato nuevo. La carencia inicial suele ser más larga en ese caso. Lo comprobamos compañía por compañía con tu contrato delante.',
+      },
+      {
+        pregunta: '¿Qué pasa si la compañía rechaza al inquilino?',
+        respuesta:
+          'Si el estudio de solvencia sale negativo, esa póliza no se puede emitir para ese inquilino. Como correduría podemos presentarlo a otra compañía con criterios distintos, o ver con qué garantía adicional o avalista encaja. Por eso conviene hacer el estudio antes de firmar el contrato de alquiler, no después.',
+      },
+      {
+        pregunta: '¿La prima del seguro de impago desgrava?',
+        respuesta:
+          'Si declaras los ingresos del alquiler en el IRPF, las primas de los seguros de la vivienda alquilada se restan como gasto de esos rendimientos, y entre ellas la del seguro de impago. Confírmalo con tu asesor fiscal al hacer la declaración.',
+      },
+    ],
+  },
+  {
     slug: 'responsabilidad-civil',
     nombre: 'Responsabilidad civil',
     h1: 'Seguro de responsabilidad civil en toda España',

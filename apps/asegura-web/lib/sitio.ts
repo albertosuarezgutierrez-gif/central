@@ -129,6 +129,8 @@ export const NAV = [
   { href: '/seguros/flota', texto: 'Flota de vehículos' },
   { href: '/seguros/auto', texto: 'Auto y moto' },
   { href: '/seguros/vida-y-salud', texto: 'Vida y salud' },
+  // 27/09/2026: al pie y fuera de la cabecera (ver `FUERA_DE_CABECERA`).
+  { href: '/seguros/impago-alquiler', texto: 'Impago de alquiler' },
   // 🚨 Responsabilidad civil EXISTE como página (`RAMOS` la trae, el sitemap la
   // lista) y hasta el 07/09/2026 no la enlazaba NADIE: ni la cabecera, ni el
   // pie, ni las páginas hermanas. Una página que solo aparece en el sitemap es
@@ -189,6 +191,7 @@ const FUERA_DE_CABECERA: readonly string[] = [
   '/seguros/flota',
   '/seguros/responsabilidad-civil-fontaneros',
   '/seguros/responsabilidad-civil-autonomos',
+  '/seguros/impago-alquiler',
 ]
 
 export const NAV_CABECERA = NAV.filter(

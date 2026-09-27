@@ -734,6 +734,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) asegura-web: página de ramo «Seguro de impago de alquiler» (`/seguros/impago-alquiler`)
+- Alberto confirma que SÍ lo vende. Medido con OpenSEO: «seguro de impago de alquiler» 5.400/mes KD 15, «seguro impago alquiler» 3.600 KD 10, «…precio» 480 KD 4 — la mayor demanda comercial con dificultad baja encontrada hasta ahora.
+- Ramo nuevo en `lib/ramos.ts` (producto, cuenta en la portada), pie sí / cabecera no (`FUERA_DE_CABECERA`).
+- Lead: `impago-alquiler` añadido a `TIPOS_SEGURO` (web) Y `TIPOS_SEGURO_LEAD` (plataforma) a la vez — si no, 422 y lead perdido.
+- Sin widget de ventana (`RAMOS_SIN_VENTANA`): su aviso sale por `RAMO_WEB_A_TIPO` de asegura, que no conoce el ramo. Pendiente si se quiere: añadirlo allí y quitarlo de la lista.
+
 ## (26/09/2026) SEO grupoasegura.es: 4 guías de dificultad 0 (PRs #3704, #3708, #3709)
 - Mergeadas: `/carta-baja-seguro` (herramienta) + `/blog/como-rellenar-parte-amistoso` (#3704); `/blog/dar-de-baja-seguro-coche` y `/blog/defensor-del-asegurado` (#3708). En #3709: `/blog/como-saber-que-seguros-tengo` (CTA al gestor).
 - Criterio: búsquedas de intención de problema con KD 0 medidas en OpenSEO (quedan ~216 créditos), nunca términos comerciales genéricos donde pujan las compañías.
