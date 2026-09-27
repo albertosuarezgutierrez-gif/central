@@ -20,6 +20,7 @@ import { eur } from '@/lib/dinero'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { leerIngestaCima, saludDesdeRespuesta } from '@/lib/correduria/ingesta-cima'
+import { senalesIngesta } from '@/lib/correduria/ingesta-pantalla'
 import {
   detalleSalud,
   decidirAvisoIngesta,
@@ -145,19 +146,32 @@ export async function GET(req: NextRequest) {
     const mudas = (salud.silencio ?? []).filter(e => e.veredicto === 'silencio')
     // Un hueco NO se anuncia como una pérdida: mandaría a buscar un dato que
     // nadie ha dicho que falte, y a la tercera vez se ignora el mensaje entero.
+    // ⏳ Si lo único medido son renovaciones que no llegan (27/09/2026), el
+    // titular lo dice: «se están perdiendo datos» mandaría a buscar un fichero
+    // atascado que no existe. La línea con compañías y fechas va en los motivos.
+    // Se decide con las MISMAS señales que pinta /correduria: dos criterios de
+    // «qué es pérdida» acabarían diciendo cosas distintas del mismo hecho.
+    const perdidas = senalesIngesta(salud).filter(x => x.tipo === 'perdida')
+    const soloRenovaciones = !soloHuecos && !mudas.length && perdidas.length > 0 &&
+      perdidas.every(x => x.clave === 'renovaciones')
     const titular = soloHuecos
       ? '🛡️ <b>La ingesta de CIMA solo se ha podido comprobar a medias</b>'
       : mudas.length
         ? `🛡️ <b>${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos</b>`
-        : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
+        : soloRenovaciones
+          ? '⏳ <b>Renovaciones que no llegan por CIMA</b>'
+          : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
     const recado = soloHuecos
       ? '\n\nNo se ha medido ninguna pérdida, pero tampoco se ha podido mirar todo: ' +
         'esto NO es «va bien», es «no lo sé».'
       : mudas.length
         ? '\n\nNo hay nada atascado que reprocesar: sencillamente no llega. ' +
           'Compruébalo en CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.'
-        : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
-          'y su comisión tampoco.'
+        : soloRenovaciones
+          ? '\n\nSon pólizas en vigor que ya vencieron y de las que no ha llegado ni el recibo ' +
+            'ni la póliza renovada: el portal del cliente ya no las enseña «En vigor».'
+          : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
+            'y su comisión tampoco.'
     // Con pérdida medida, los huecos siguen importando: dicen que el recuento
     // de arriba es un SUELO. Van al final para no tapar lo accionable.
     const sinComprobar = !soloHuecos && salud.huecos.length > 0

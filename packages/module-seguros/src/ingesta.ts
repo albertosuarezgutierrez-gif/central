@@ -254,6 +254,44 @@ export type CampoImportanteSinLeer = {
   vecesVisto: number
 }
 
+/**
+ * ⏳ Pólizas de cartera EN VIGOR cuyo vencimiento pasó hace más de
+ * `DIAS_GRACIA_RENOVACION` días sin que llegara NADA del periodo siguiente: ni la
+ * póliza renovada (POL) ni un recibo cobrado/pendiente/emitido que venza después.
+ * Agrupadas por COMPAÑÍA, porque el síntoma es de la compañía, no de la póliza.
+ *
+ * 🚨 Caso fundacional (27/09/2026): 10 pólizas de Mapfre `activa` en cartera viva
+ * con el vencimiento pasado (junio-septiembre) y ningún dato de renovación —Mapfre
+ * no mandó nada por CIMA del 23/06 al 25/09 y aún no manda POL—. Ninguna de las
+ * otras señales lo veía: no hay fichero atascado (no llegó ninguno), ni huérfana
+ * (no hay recibo que cuelgue), ni silencio (Mapfre volvió a mandar el 25/09). La
+ * única consecuencia visible fue que el portal dejó de pintarlas «En vigor», y
+ * eso no lo mira nadie como una alarma.
+ *
+ * Lo que la regla de Allianz (`seguros.avanzar_vencimientos_por_recibo()`, pg_cron
+ * 06:30) arregla sola —hay recibo del periodo siguiente— NO sale aquí: la consulta
+ * excluye exactamente esos casos, así que lo que queda es lo que nadie va a
+ * arreglar solo.
+ */
+export type RenovacionSinLlegar = {
+  /** Código DGS de la compañía (`C0058`). `desconocida` si la póliza no lo trae. */
+  entidad: string
+  /** Nombre común (`companias_dgs`). `null` = no consta: se cita el código. */
+  entidadNombre: string | null
+  /** Pólizas afectadas de esa compañía. */
+  polizas: number
+  /** El vencimiento más antiguo (ISO, solo día). `null` = no legible. */
+  vencimientoMasAntiguo: string | null
+}
+
+/**
+ * Días de gracia tras el vencimiento antes de dar la renovación por «no llegada»:
+ * el recibo o la POL de renovación pueden entrar unos días tarde por CIMA, y el
+ * pg_cron de renovación por recibo corre a diario. Con menos, avisaría de
+ * renovaciones que simplemente van con retraso normal.
+ */
+export const DIAS_GRACIA_RENOVACION = 15
+
 export type EntradaSalud = {
   /** Ficheros en cuarentena. Lista vacía = comprobado que no hay. */
   cuarentena: FicheroEnCuarentena[] | null
@@ -312,6 +350,13 @@ export type EntradaSalud = {
    * separado — si no se pudo medir, simplemente no se manda ninguno.
    */
   camposImportantes?: CampoImportanteSinLeer[]
+  /**
+   * Renovaciones que no han llegado, por compañía (ver `RenovacionSinLlegar`).
+   * **Tres estados:** `undefined` = el llamante no pide la señal (puerto viejo) ·
+   * `null` = se pidió y no se pudo leer (hueco, y se dice) · `[]` = se miró y no
+   * hay ninguna.
+   */
+  renovacionesSinLlegar?: RenovacionSinLlegar[] | null
 }
 
 export type SaludIngesta = {
@@ -379,6 +424,45 @@ export type SaludIngesta = {
    * fichero). Vacío = ninguno conocido hoy, no «no se ha mirado».
    */
   avisosImportantes: string[]
+  /**
+   * Renovaciones que no han llegado, por compañía, de más a menos pólizas.
+   * `undefined` = no se pidió (no es hueco) · `null` = no se pudo mirar (hueco) ·
+   * `[]` = se miró y no hay. NO se colapsan: la firma del aviso y la pantalla
+   * dicen cosas distintas en cada caso.
+   */
+  renovacionesSinLlegar?: RenovacionSinLlegar[] | null
+}
+
+/** `2026-06-18` → `18/06`. Una fecha ilegible no se inventa: `null`. */
+function diaMes(iso: string | null): string | null {
+  if (iso === null) return null
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso)
+  return m ? `${m[3]}/${m[2]}` : null
+}
+
+/**
+ * La línea del aviso de renovaciones que no han llegado. Cadena vacía si no hay
+ * ninguna (o no se miró): quien llama decide el hueco, esto solo redacta.
+ *
+ * «⏳ Renovaciones sin llegar: Mapfre 10 póliza(s) (vencidas desde 18/06). Sin
+ * recibo ni póliza nueva por CIMA: reclamar a la compañía / CIMA.»
+ */
+export function textoRenovacionesSinLlegar(lista: RenovacionSinLlegar[] | null | undefined): string {
+  if (!lista || lista.length === 0) return ''
+  const partes = lista.map(r => {
+    const quien = r.entidadNombre ?? r.entidad
+    const desde = diaMes(r.vencimientoMasAntiguo)
+    return `${quien} ${r.polizas} póliza(s)` + (desde ? ` (vencidas desde ${desde})` : ' (fecha de vencimiento no legible)')
+  })
+  return `⏳ Renovaciones sin llegar: ${partes.join(' · ')}. ` +
+    'Sin recibo ni póliza nueva por CIMA: reclamar a la compañía / CIMA.'
+}
+
+/** Normaliza y ordena: más pólizas primero; a igualdad, el código. */
+function ordenarRenovaciones(lista: RenovacionSinLlegar[]): RenovacionSinLlegar[] {
+  return lista
+    .filter(r => r.polizas > 0)
+    .sort((a, b) => b.polizas - a.polizas || a.entidad.localeCompare(b.entidad))
 }
 
 /** Un valor de cajón (vacío, guiones, «desconocido») es ausencia, no dato. */
@@ -447,6 +531,7 @@ export function saludIngesta(
       motivos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
       huecos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
       avisosImportantes: [],
+      renovacionesSinLlegar: null,
     }
   }
 
@@ -670,7 +755,24 @@ export function saludIngesta(
     hueco('No se ha podido comprobar si algún fichero confirmado se dejó objetos sin guardar.')
   }
 
+  // ⏳ La SÉPTIMA cara: la compañía manda (o ha vuelto a mandar), pero no manda
+  // las RENOVACIONES. Pólizas en vigor con el vencimiento pasado y nada del
+  // periodo siguiente. Es pérdida medida (degrada): son pólizas que el portal ya
+  // no da «En vigor» y de las que nadie sabe si siguen cubiertas.
+  const renovacionesSinLlegar = e.renovacionesSinLlegar === undefined
+    ? undefined
+    : Array.isArray(e.renovacionesSinLlegar)
+      ? ordenarRenovaciones(e.renovacionesSinLlegar)
+      : null
+  if (renovacionesSinLlegar && renovacionesSinLlegar.length > 0) {
+    motivos.push(textoRenovacionesSinLlegar(renovacionesSinLlegar))
+  } else if (renovacionesSinLlegar === null) {
+    // `undefined` (puerto viejo) no es hueco; `null` (se pidió y falló), sí.
+    hueco('No se ha podido comprobar si hay renovaciones que no han llegado por CIMA.')
+  }
+
   const hayPerdida =
+    (renovacionesSinLlegar !== undefined && renovacionesSinLlegar !== null && renovacionesSinLlegar.length > 0) ||
     recientes > 0 ||
     (huerfanas !== null && huerfanas > 0) ||
     rechazosRecientes.length > 0 ||
@@ -705,6 +807,7 @@ export function saludIngesta(
     motivos,
     huecos,
     avisosImportantes,
+    renovacionesSinLlegar,
   }
 }
 
@@ -858,7 +961,20 @@ export function firmaAvisoIngesta(salud: SaludIngesta): string {
   const pull = salud.ultimoPull === null
     ? '?'
     : salud.ultimoPull.horas > HORAS_PULL_MUDO ? 'mudo' : 'ok'
-  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}:${pull}`
+  // ⏳ Renovaciones sin llegar: QUÉ compañías y CUÁNTAS pólizas de cada una. Va
+  // entre corchetes y al final a propósito: `decidirAvisoIngesta` compara con
+  // `startsWith`, así que sin el cierre `]` «C0058=1» pasaría por prefijo de
+  // «C0058=10» y un cambio de 10 a 1 no sonaría. `null` (no se pudo mirar) → `[?]`,
+  // distinto de `[]` (se miró, ninguna). `undefined` (el puerto no ofrece la
+  // señal) → `[]`: no entra en el diagnóstico, igual que una firma guardada antes
+  // de que existiera (ver `normalizarFirmaIngesta`).
+  const renov = salud.renovacionesSinLlegar === null
+    ? '[?]'
+    : `[${(salud.renovacionesSinLlegar ?? [])
+        .map(r => `${r.entidad}=${r.polizas}`)
+        .sort()
+        .join(',')}]`
+  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}:${pull}:${renov}`
 }
 
 /**
@@ -867,10 +983,18 @@ export function firmaAvisoIngesta(salud: SaludIngesta): string {
  * corría», que es lo que decía el vigía cuando las escribió (si no, el motivo
  * del aviso lo habría dicho). Sin esto, el primer despliegue haría sonar un
  * «cambio» falso y reiniciaría la antigüedad de las averías abiertas.
+ *
+ * Las anteriores al 27/09/2026 no traían el tramo de renovaciones (seis tramos):
+ * se leen como `[]`, «ninguna», que es lo único que podían decir. Así, el primer
+ * despliegue con renovaciones pendientes SÍ suena como cambio (es un aviso que
+ * nadie ha recibido nunca) y sin ellas no hace ruido.
  */
 export function normalizarFirmaIngesta(firma: string | null): string | null {
   if (firma === null) return null
-  return firma.split(':').length === 5 ? `${firma}:ok` : firma
+  const tramos = firma.split(':').length
+  if (tramos === 5) return `${firma}:ok:[]`
+  if (tramos === 6) return `${firma}:[]`
+  return firma
 }
 
 /**

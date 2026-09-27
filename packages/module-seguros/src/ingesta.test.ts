@@ -13,8 +13,11 @@ import {
   repartirHuerfanas,
   textoHuerfanas,
   TOPE_POLIZAS_TELEGRAM,
+  DIAS_GRACIA_RENOVACION,
+  textoRenovacionesSinLlegar,
   type PolizaHuerfana,
   type FicheroParcial,
+  type RenovacionSinLlegar,
 } from './ingesta.ts'
 
 const f = (tipo: string, entidad: string, dias: number) => ({ tipo, entidad, dias })
@@ -819,7 +822,11 @@ test('firma: «no consta ninguna corrida» y «el cron corre» no dan la misma f
 
 test('firma: una firma guardada en el formato viejo (sin el cron) no hace sonar un «cambio» falso', () => {
   const hoy = firmaAvisoIngesta(degradada({ horas: 3, procesados: 2 }))
-  const vieja = hoy.slice(0, hoy.lastIndexOf(':')) // lo que había en el latido antes del despliegue
+  // Lo que había en el latido antes del 23/09: sin el tramo del cron NI el de
+  // renovaciones (27/09), o sea cinco tramos.
+  const sinRenov = hoy.slice(0, hoy.lastIndexOf(':'))
+  const vieja = sinRenov.slice(0, sinRenov.lastIndexOf(':'))
+  assert.equal(vieja.split(':').length, 5)
   assert.equal(normalizarFirmaIngesta(vieja), hoy)
   const d = decidirAvisoIngesta({
     firmaAnterior: normalizarFirmaIngesta(vieja),
@@ -861,4 +868,122 @@ test('respaldo: sin dato del último pull NO dispara (no sé ≠ está parado)',
   assert.deepEqual(decidirRespaldoPull(null), { disparar: false, motivo: 'sin_dato', horas: null })
   assert.deepEqual(decidirRespaldoPull(undefined), { disparar: false, motivo: 'sin_dato', horas: null })
   assert.deepEqual(decidirRespaldoPull({ horas: Number.NaN, procesados: null }), { disparar: false, motivo: 'sin_dato', horas: null })
+})
+
+// ── Renovaciones que no llegan (27/09/2026) ─────────────────────────────────
+// Caso real: 10 pólizas de Mapfre en vigor, vencidas de junio a septiembre, sin
+// POL ni recibo del periodo siguiente. Ninguna otra señal lo veía.
+
+const mapfre: RenovacionSinLlegar = {
+  entidad: 'C0058', entidadNombre: 'Mapfre', polizas: 10, vencimientoMasAntiguo: '2026-06-18',
+}
+const allianz: RenovacionSinLlegar = {
+  entidad: 'C0109', entidadNombre: 'Allianz', polizas: 2, vencimientoMasAntiguo: '2026-08-01',
+}
+
+test('renovaciones: la gracia es de 15 días', () => {
+  assert.equal(DIAS_GRACIA_RENOVACION, 15)
+})
+
+test('🚨 renovaciones sin llegar DEGRADAN aunque todo lo demás esté limpio', () => {
+  const s = saludIngesta({ cuarentena: [], renovacionesSinLlegar: [mapfre] })
+  assert.equal(s.estado, 'degradada')
+  assert.match(detalleSalud(s), /DEGRADADA/)
+  assert.match(detalleSalud(s), /Renovaciones sin llegar: Mapfre 10 póliza\(s\) \(vencidas desde 18\/06\)/)
+})
+
+test('renovaciones: el texto dice compañía, cuántas, desde cuándo y qué hacer', () => {
+  assert.equal(
+    textoRenovacionesSinLlegar([mapfre]),
+    '⏳ Renovaciones sin llegar: Mapfre 10 póliza(s) (vencidas desde 18/06). ' +
+      'Sin recibo ni póliza nueva por CIMA: reclamar a la compañía / CIMA.',
+  )
+})
+
+test('renovaciones: sin nombre se cita el código DGS; sin fecha no se inventa una', () => {
+  const t = textoRenovacionesSinLlegar([{ entidad: 'C0072', entidadNombre: null, polizas: 1, vencimientoMasAntiguo: null }])
+  assert.match(t, /C0072 1 póliza\(s\) \(fecha de vencimiento no legible\)/)
+})
+
+test('renovaciones: se ordenan de más a menos pólizas y las de 0 no cuentan', () => {
+  const s = saludIngesta({
+    cuarentena: [],
+    renovacionesSinLlegar: [allianz, { ...mapfre }, { entidad: 'C0613', entidadNombre: 'Reale', polizas: 0, vencimientoMasAntiguo: null }],
+  })
+  assert.deepEqual(s.renovacionesSinLlegar?.map(r => r.entidad), ['C0058', 'C0109'])
+})
+
+test('renovaciones `[]` = se miró y no hay: ni alarma ni hueco', () => {
+  const s = saludIngesta({ cuarentena: [], renovacionesSinLlegar: [] })
+  assert.equal(s.estado, 'ok')
+  assert.deepEqual(s.huecos, [])
+  assert.deepEqual(s.renovacionesSinLlegar, [])
+})
+
+test('🚨 renovaciones `null` NO es «ninguna»: es un hueco y lo dice el parte', () => {
+  const s = saludIngesta({ cuarentena: [], renovacionesSinLlegar: null })
+  assert.equal(s.estado, 'parcial')
+  assert.equal(s.renovacionesSinLlegar, null)
+  assert.match(detalleSalud(s), /renovaciones que no han llegado/)
+})
+
+test('renovaciones sin pedir (`undefined`, puerto viejo) no inventa un hueco', () => {
+  const s = saludIngesta({ cuarentena: [] })
+  assert.equal(s.estado, 'ok')
+  assert.equal(s.renovacionesSinLlegar, undefined)
+})
+
+test('sin_datos deja las renovaciones en null, no en lista vacía', () => {
+  assert.equal(saludIngesta({ cuarentena: null }).renovacionesSinLlegar, null)
+})
+
+// La firma: sobre una ingesta YA degradada por otra causa, para que el estado no
+// delate el cambio y solo la firma pueda hacerlo (mismo método que el cron).
+const conRenov = (renovacionesSinLlegar: RenovacionSinLlegar[] | null | undefined) =>
+  saludIngesta({ cuarentena: [f('SIN', 'C0468', 2)], ultimoPull: { horas: 3, procesados: 1 }, renovacionesSinLlegar })
+
+const suena = (antes: string, ahora: string) =>
+  decidirAvisoIngesta({
+    firmaAnterior: antes,
+    firmaActual: ahora,
+    ultimoAvisoEn: new Date('2026-09-26T06:45:00Z'),
+    hoy: new Date('2026-09-27T06:45:00Z'),
+  }).avisar
+
+test('firma: aparece una compañía con renovaciones sin llegar → suena', () => {
+  assert.equal(suena(firmaAvisoIngesta(conRenov([])), firmaAvisoIngesta(conRenov([mapfre]))), true)
+})
+
+test('firma: cambia el NÚMERO de pólizas (10 → 1) → suena, y no se lo come el prefijo', () => {
+  const diez = firmaAvisoIngesta(conRenov([mapfre]))
+  const una = firmaAvisoIngesta(conRenov([{ ...mapfre, polizas: 1 }]))
+  assert.notEqual(diez, una)
+  assert.equal(suena(diez, una), true)
+})
+
+test('firma: cambia el CONJUNTO de compañías (se resuelve una) → suena', () => {
+  assert.equal(
+    suena(firmaAvisoIngesta(conRenov([mapfre, allianz])), firmaAvisoIngesta(conRenov([mapfre]))),
+    true,
+  )
+})
+
+test('firma: mismo conjunto y mismos números → misma firma (no repite)', () => {
+  assert.equal(
+    firmaAvisoIngesta(conRenov([mapfre, allianz])),
+    firmaAvisoIngesta(conRenov([{ ...allianz }, { ...mapfre, vencimientoMasAntiguo: '2026-06-20' }])),
+  )
+})
+
+test('firma: «no se pudo mirar» (null) y «ninguna» ([]) no dan la misma firma', () => {
+  assert.notEqual(firmaAvisoIngesta(conRenov(null)), firmaAvisoIngesta(conRenov([])))
+})
+
+test('firma: una firma de seis tramos (antes del 27/09) se lee como «ninguna»', () => {
+  const hoy = firmaAvisoIngesta(conRenov([]))
+  const vieja = hoy.slice(0, hoy.lastIndexOf(':'))
+  assert.equal(vieja.split(':').length, 6)
+  assert.equal(normalizarFirmaIngesta(vieja), hoy)
+  // Y con Mapfre pendiente, el primer despliegue SÍ suena: nadie lo ha avisado nunca.
+  assert.equal(suena(normalizarFirmaIngesta(vieja)!, firmaAvisoIngesta(conRenov([mapfre]))), true)
 })
