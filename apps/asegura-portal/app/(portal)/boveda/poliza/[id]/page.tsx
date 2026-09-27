@@ -122,7 +122,11 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
       )}
 
       <div className="chips" style={{ marginBottom: 20 }}>
-        <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>{ESTADO[p.estado] ?? p.estado}</span>
+        {p.renovacionSinConfirmar ? (
+          <span className="chip aviso">Renovación sin confirmar</span>
+        ) : (
+          <span className={`chip${p.vigencia === 'vigente' ? ' ok' : ''}`}>{ESTADO[p.estado] ?? p.estado}</span>
+        )}
         {!p.confirmadaCima && <span className="chip aviso">pendiente de confirmación por la compañía</span>}
         {/* `null` = tu nivel no llega a los siniestros de esta póliza; NO se
             pinta nada, porque un chip que dijera «no visible» le contaría a un
@@ -161,12 +165,14 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
           <Dato
             etiqueta="Vencimiento"
             valor={
-              vence ??
+              (vence && p.renovacionSinConfirmar
+                ? `Vencía el ${vence}. La compañía la sigue dando en vigor, pero aún no nos ha enviado la renovación. Si tienes dudas, pregúntanos`
+                : vence) ??
               (p.vigencia === 'pendiente'
                 ? 'No lo sabemos: no podemos avisarte ni confirmarte que siga en vigor'
                 : 'No lo sabemos, así que no podemos avisarte')
             }
-            ojo={vence === null}
+            ojo={vence === null || p.renovacionSinConfirmar}
           />
           {/* `prima === null` = el nivel no la enseña → se oculta. Lo que el
               cliente PAGA es la bruta; si no está, la neta y se dice que lo es. */}

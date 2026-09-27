@@ -65,7 +65,7 @@ import {
   type CamposVisibles,
   type Nivel,
 } from '@central/module-seguros-portal'
-import { importeEiac, interpretarCapital, sustituidasARetirar, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
+import { esEstadoVigente, importeEiac, interpretarCapital, sustituidasARetirar, vigenciaPoliza, WHERE_CARTERA_VIVA, type Vigencia } from '@central/module-seguros'
 
 import { decryptField } from '@central/module-seguros-pii'
 
@@ -162,6 +162,13 @@ export type PolizaPortal = {
   fechaVencimiento: Date | null
   estado: string
   vigencia: Vigencia
+  /**
+   * 🚨 En vigor según la compañía (estado vigente, entra por CIMA) pero con el vencimiento ya
+   * pasado y sin renovación informada (27/09/2026: Mapfre estuvo tres meses sin mandar nada y
+   * sus pólizas desaparecían de «En vigor» como si hubieran caducado). No se sabe si se renovó:
+   * se enseña como «Renovación sin confirmar», nunca como vencida.
+   */
+  renovacionSinConfirmar: boolean
   /** CIMA la ha traído. `false` = emitida por nosotros y la compañía aún no la confirma. */
   confirmadaCima: boolean
   /** Id de la póliza a la que esta sustituye (cambio de compañía). Interno: sirve para cruzar. */
@@ -859,6 +866,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       fechaVencimiento: p.fechaVencimiento,
       estado: p.estado,
       vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento: p.fechaVencimiento }, hoy),
+      renovacionSinConfirmar:
+        esEstadoVigente(p.estado) &&
+        p.eiacXmlHash !== null &&
+        vigenciaPoliza({ estado: p.estado, fechaVencimiento: p.fechaVencimiento }, hoy) === 'no_vigente',
       confirmadaCima: p.idPolizaEntidad !== null,
       sustituyeAId: p.polizaOrigenId !== null && sustituidas.has(p.polizaOrigenId) ? p.polizaOrigenId : null,
       // Los dos se deciden POR LECTOR en `titular()`, con lo que ese lector puede ver.
@@ -1191,4 +1202,10 @@ export function polizasParaParte(c: Pick<CarteraPortal, 'propias' | 'autorizadas
 function caducaMasTarde(a: Date | null, b: Date | null): Date | null {
   if (a === null || b === null) return null
   return b.getTime() > a.getTime() ? b : a
+}
+
+/** Cuenta como «en vigor» para la lista, el parte y los avisos: vigente, sin fecha (no se sabe)
+ *  o con la renovación sin confirmar. Lo único que sale es lo que la compañía da por terminado. */
+export function cuentaComoEnVigor(p: Pick<PolizaPortal, 'vigencia' | 'renovacionSinConfirmar'>): boolean {
+  return p.vigencia !== 'no_vigente' || p.renovacionSinConfirmar
 }

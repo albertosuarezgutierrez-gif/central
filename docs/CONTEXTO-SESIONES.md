@@ -763,6 +763,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Pólizas «vencidas» que sí estaban en vigor: Allianz (recibos) y Mapfre (sin datos)
+- Allianz no manda POL por CIMA pero sí REC: el recibo 2027 cobrado no movía el vencimiento. Nuevo pg_cron `seguros-avanzar-vencimientos-recibo` (06:30 UTC, función `seguros.avanzar_vencimientos_por_recibo()`, SQL en apps/asegura/prisma/sql/2026-09-27_renovacion_por_recibo.sql, APLICADO): solo avanza pólizas YA vencidas (el recibo de renovación llega semanas antes; avanzar antes borraría el aviso de no-renovación). 4 Allianz avanzadas.
+- Mapfre: 10 pólizas vencidas sin ningún dato de renovación (Mapfre mudo 23/06→25/09, aún sin POL). Portal: `renovacionSinConfirmar` → «Renovación sin confirmar» en vez de esconderlas de «En vigor» (Toyota de Víctor). Vigía de ingesta con señal por compañía: en curso (PR aparte).
+
 ## (27/09/2026) Portal: quien figura en una póliza (propietario, conductor, asegurado…) la ve
 - Decisión de Alberto: el interviniente ve ESA póliza con los datos del tomador y puede dar parte; nunca las otras del tomador. Nueva lista `CarteraPortal.intervinientes` (grupo «Figuras en su póliza»). Regla pura en `apps/asegura-portal/lib/intervinientes.ts`; IBAN/DNI/documentos siempre fuera (el portal no los carga). Cepo: `test/regression-portal-intervinientes.test.ts` (visto en rojo, 6 mutaciones).
 - Solo funciona si el interviniente tiene `portal_vinculo`: Nieves Rodríguez aún no tiene acceso al portal.
