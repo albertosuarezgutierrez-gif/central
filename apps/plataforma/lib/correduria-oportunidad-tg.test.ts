@@ -444,3 +444,16 @@ test('actualizar: resultado honesto y el flujo cableado (lee el FUENTE)', async 
   const hook = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
   assert.match(hook, /action === 'guardar' \|\| action === 'actualizar'\) && String\(cb\.from/)
 })
+
+test('otro seguro del mismo ramo (otro coche) NO se ofrece como «actualizar la existente»', async () => {
+  const { mismaPoliza } = await import('./correduria-oportunidad-tg.ts')
+  assert.equal(mismaPoliza('Línea Directa Aseguradora S.A.', 'MUSSAP'), 'otra')
+  assert.equal(mismaPoliza('MUSSAP Mutua de Seguros y Reaseguros a P.F.', 'Mussap'), 'misma')
+  assert.equal(mismaPoliza('Línea Directa', 'LINEA DIRECTA ASEGURADORA'), 'misma')
+  assert.equal(mismaPoliza('Mapfre', null), 'no_se')
+  assert.equal(mismaPoliza(null, 'Mapfre'), 'no_se')
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  // al ofrecer: con otra compañía no hay botón; y al pulsar se vuelve a comprobar
+  assert.match(src, /else if \(misma === 'otra'\) \{/)
+  assert.match(src, /if \(mismaPoliza\(fila\.alta\.aseguradora, e\.aseguradora\) === 'otra'\) \{/)
+})

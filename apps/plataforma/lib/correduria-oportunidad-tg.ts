@@ -206,6 +206,23 @@ export function cambiosSobreExistente(a: Alta, e: Existente): CambioOportunidad[
   return c
 }
 
+/**
+ * ¿El documento es la MISMA póliza que la oportunidad abierta, u otro seguro del mismo ramo (otro coche)?
+ * La oportunidad solo guarda la compañía, así que se decide por ella: distinta ⇒ `otra` y NO se ofrece
+ * actualizar (27/09/2026: un recibo de Línea Directa de otro coche habría pisado la oportunidad de MUSSAP).
+ * Sin compañía en alguno de los dos lados no se sabe (`no_se`): decide Alberto, avisado.
+ */
+export function mismaPoliza(docAseguradora: string | null, existente: string | null): 'misma' | 'otra' | 'no_se' {
+  const clave = (s: string | null) => {
+    const vacias = new Set(['seguros', 'seguro', 'mutua', 'compania', 'de', 'y', 'reaseguros', 'aseguradora', 'sa', 's', 'a', 'la', 'el', 'grupo'])
+    const t = (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter((w) => w && !vacias.has(w))
+    return t[0] ?? null
+  }
+  const a = clave(docAseguradora), b = clave(existente)
+  if (!a || !b) return 'no_se'
+  return a === b ? 'misma' : 'otra'
+}
+
 export function cuerpoEdicion(oportunidadId: string, cambios: readonly CambioOportunidad[], actor: string): Record<string, unknown> {
   const b: Record<string, unknown> = { accion: 'editar', id: oportunidadId, actor }
   for (const c of cambios) b[c.campo] = c.despues
