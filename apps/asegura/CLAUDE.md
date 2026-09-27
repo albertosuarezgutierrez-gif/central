@@ -142,6 +142,22 @@ tiene que evitar por diseño: el dashboard **no pinta KPIs a 0** mientras no hay
 mientras tanto. El estado sale de `lib/estado-migracion.ts`, un helper puro con **tres**
 salidas (`error` / `no migrado` / `migrado`), nunca dos.
 
+## 💶 Prima y vencimiento: la póliza MIENTE por compañía — léelos con los recibos (27/09/2026)
+Medido sobre las 107 vivas en vigor, cada compañía falla distinto y **ninguna pantalla puede leer
+`prima_anual`/`prima_bruta`/`fecha_vencimiento` de `seguros.polizas` a pelo**:
+- **Allianz** no manda la prima en el EIAC de póliza (11 de 12 vivas sin prima, todas suyas) ni
+  avanza el vencimiento al renovar: las dos cosas solo vienen en el recibo de cartera (CA/NP).
+  Hay pólizas suyas de las que CIMA **no ha mandado ni un recibo** (054914837, copiados a mano
+  desde ePac con `origen='manual'`).
+- **Mapfre** deja la póliza en `EV` pero sin fecha nueva ni recibo de renovación desde junio/2026
+  (10 vivas «vencidas»). Eso NO se deduce: se avisa («Renovación sin confirmar por la compañía»).
+- **CIMA puede decir `EV` de una póliza ANULADA** (043673655: anulada 01/06/2026 por impago en
+  ePac). La verdad es el portal de la compañía; el cambio a mano va con nota en `historial_interno`.
+Regla: prima → `primaConRecibos()`, vencimiento → `vencimientoConRecibos()` (`@central/module-seguros`,
+`vencimientos.ts`), nunca `primaReferencia()` sola en código nuevo que pinte una póliza viva. Un
+recibo fraccionado es un TROZO de la prima (solo se usa con pago anual); un recibo pendiente no
+prueba la renovación. Lo vigila `test/regression-prima-con-recibos.test.ts`.
+
 ## 🖥️ ESTA APP NO ES UNA PANTALLA — la pantalla de Alberto es `plataforma` (01/09/2026)
 
 > Dictado por Alberto: *«asegura hay que meterlo en correduría, yo solo uso UNA página; es un proyecto
