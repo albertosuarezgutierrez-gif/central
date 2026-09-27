@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-27T05:27:06Z",
-  "sha": "608da187db1c5a6343a7580eb462b682aabc8fd1",
+  "generadoEn": "2026-09-27T06:46:14Z",
+  "sha": "48a8b07ae59970271048f768c7db889b82197524",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11111,7 +11111,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "ArticuloPagina",
@@ -11119,12 +11119,12 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ slug: string }> }",
           "retorno": null,
-          "linea": 45
+          "linea": 46
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a7a8fe915e7c"
+      "hash": "12aa654b5fe8"
     },
     {
       "ruta": "apps/asegura-web/app/blog/page.tsx",
@@ -11169,12 +11169,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 97
+          "linea": 98
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "249d2c050e9e"
+      "hash": "7e66fdbbe4dc"
     },
     {
       "ruta": "apps/asegura-web/app/carta-baja-seguro/page.tsx",
@@ -11194,7 +11194,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a729bf4390d6"
+      "hash": "5338ece3b73a"
     },
     {
       "ruta": "apps/asegura-web/app/gestor-de-seguros/page.tsx",
@@ -11231,7 +11231,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e4fcbd0a5870"
+      "hash": "577f8e0e0024"
     },
     {
       "ruta": "apps/asegura-web/app/icon.tsx",
@@ -11365,7 +11365,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "681ef36a3916"
+      "hash": "100c838b6941"
     },
     {
       "ruta": "apps/asegura-web/app/opengraph-image.tsx",
@@ -11385,7 +11385,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "66ab65da3cfd"
+      "hash": "b016f4694878"
     },
     {
       "ruta": "apps/asegura-web/app/page.tsx",
@@ -11506,12 +11506,12 @@
           "exportada": true,
           "params": "{ params }: Props",
           "retorno": null,
-          "linea": 50
+          "linea": 51
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b7e63a8d96a4"
+      "hash": "e0b32e216148"
     },
     {
       "ruta": "apps/asegura-web/app/siniestro/page.tsx",
@@ -11526,12 +11526,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 124
+          "linea": 125
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69e7d1ceb6f9"
+      "hash": "7e78b971a5d7"
     },
     {
       "ruta": "apps/asegura-web/app/sitemap.ts",
@@ -11595,7 +11595,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 57
+          "linea": 58
         },
         {
           "nombre": "mismoNumero",
@@ -11603,7 +11603,7 @@
           "exportada": false,
           "params": "siniestros: string | null, whatsapp: string",
           "retorno": "boolean",
-          "linea": 84,
+          "linea": 85,
           "resumen": "El WhatsApp es la misma línea que la de dar parte (Occident): se dice sin repetir el número."
         },
         {
@@ -11612,12 +11612,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 90
+          "linea": 91
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3068f6601a7b"
+      "hash": "ff9a87d4fbad"
     },
     {
       "ruta": "apps/asegura-web/components/Analitica.tsx",
@@ -11918,7 +11918,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "376212da70cd"
+      "hash": "f9bd2a5a48e3"
     },
     {
       "ruta": "apps/asegura-web/components/Whatsapp.tsx",
@@ -12021,7 +12021,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d19eef279c23"
+      "hash": "7cedacd4dc7e"
     },
     {
       "ruta": "apps/asegura-web/lib/calculadora-vencimientos.ts",
@@ -12269,13 +12269,13 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Ramo | null",
-          "linea": 563,
+          "linea": 752,
           "resumen": "Devuelve un ramo por su slug, o `null` si no existe (nunca un ramo de relleno)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9fe15437f3dc"
+      "hash": "372f25bbd47e"
     },
     {
       "ruta": "apps/asegura-web/lib/seo.ts",
@@ -12380,13 +12380,12 @@
           "exportada": true,
           "params": "ruta: string",
           "retorno": "string",
-          "linea": 58,
-          "resumen": "URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`)."
+          "linea": 69
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a5529f23e7d1"
+      "hash": "351c0a8f7111"
     },
     {
       "ruta": "apps/asegura-web/lib/ventana-renovacion.ts",
@@ -16990,7 +16989,7 @@
           "exportada": true,
           "params": "ramo: string, ramoWeb: string",
           "retorno": "string",
-          "linea": 78,
+          "linea": 92,
           "resumen": "Cómo se nombra el seguro en correos, historial y Telegram. Para «otro» es lo que escribió el visitante (guardado en `ramo_web` como `otro:<texto>`); para el resto, el nombre del ramo."
         },
         {
@@ -16999,7 +16998,7 @@
           "exportada": true,
           "params": "iso: unknown",
           "retorno": "Date | null",
-          "linea": 88,
+          "linea": 107,
           "resumen": "`AAAA-MM-DD` → medianoche UTC, o `null` si no es una fecha real."
         },
         {
@@ -17008,7 +17007,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "Revision",
-          "linea": 97
+          "linea": 116
         },
         {
           "nombre": "diaUtc",
@@ -17016,7 +17015,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 122
+          "linea": 150
         },
         {
           "nombre": "enAnio",
@@ -17024,7 +17023,7 @@
           "exportada": false,
           "params": "d: Date, anio: number",
           "retorno": "Date",
-          "linea": 127,
+          "linea": 155,
           "resumen": "Mismo día y mes en otro año; un 29 de febrero cae al 28 si el año no es bisiesto."
         },
         {
@@ -17033,7 +17032,7 @@
           "exportada": true,
           "params": "vence: Date, hoy: Date",
           "retorno": "Date",
-          "linea": 137,
+          "linea": 165,
           "resumen": "El vencimiento del ciclo que todavía se puede decidir: el primer aniversario cuyo último día para oponerse (vence − 30) no ha pasado. Una póliza se prorroga cada año el mismo día."
         },
         {
@@ -17042,7 +17041,7 @@
           "exportada": true,
           "params": "d: Date, n: number",
           "retorno": "Date",
-          "linea": 144
+          "linea": 172
         },
         {
           "nombre": "iso",
@@ -17050,7 +17049,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 146
+          "linea": 174
         },
         {
           "nombre": "avisoQueToca",
@@ -17058,7 +17057,7 @@
           "exportada": true,
           "params": "p: { vence: Date; hoy: Date; aviso1Para: string | null; aviso2Para: string | null }",
           "retorno": "AvisoQueToca",
-          "linea": 156,
+          "linea": 184,
           "resumen": "Qué aviso toca hoy, o `null`. `aviso1Para`/`aviso2Para` son los vencimientos (`AAAA-MM-DD`) para los que ya salió cada uno. Si alguien se apunta tarde (a menos de 45 días) solo recibe el 2; si se apun"
         },
         {
@@ -17067,7 +17066,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 171
+          "linea": 199
         },
         {
           "nombre": "fechaLarga",
@@ -17075,7 +17074,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 175
+          "linea": 203
         },
         {
           "nombre": "exigirHttps",
@@ -17083,7 +17082,7 @@
           "exportada": false,
           "params": "...urls: string[]",
           "retorno": "void",
-          "linea": 179
+          "linea": 207
         },
         {
           "nombre": "html",
@@ -17091,7 +17090,7 @@
           "exportada": false,
           "params": "parrafos: string[], boton: { href: string; texto: string } | null, pie: string[]",
           "retorno": "string",
-          "linea": 184
+          "linea": 212
         },
         {
           "nombre": "cuerpoConfirmacion",
@@ -17099,7 +17098,7 @@
           "exportada": true,
           "params": "d: { nombre: string; ramo: string; vence: Date; enlaceConfirmar: string }",
           "retorno": "CuerpoCorreo",
-          "linea": 196
+          "linea": 224
         },
         {
           "nombre": "cuerpoAviso",
@@ -17107,7 +17106,7 @@
           "exportada": true,
           "params": "d: { tipo: 'aviso1' | 'aviso2' nombre: string ramo: string vence: Date hoy: Date enlacePortal: string directo: boolean enlaceBaja: string }",
           "retorno": "CuerpoCorreo",
-          "linea": 214
+          "linea": 242
         },
         {
           "nombre": "urlWeb",
@@ -17115,7 +17114,7 @@
           "exportada": true,
           "params": "base: string | undefined = process.env.ASEGURA_WEB_URL",
           "retorno": "string",
-          "linea": 275,
+          "linea": 303,
           "resumen": "URL pública de la web (donde viven las páginas de confirmar y darse de baja)."
         },
         {
@@ -17124,7 +17123,7 @@
           "exportada": true,
           "params": "base: string, ruta: '/aviso/confirmar' | '/aviso/baja', token: string",
           "retorno": "string",
-          "linea": 280,
+          "linea": 308,
           "resumen": "El token va en el fragmento `#`: no viaja en la petición HTTP, así que no queda en ningún log."
         },
         {
@@ -17133,12 +17132,12 @@
           "exportada": true,
           "params": "env: string | undefined = process.env.ASEGURA_AVISOS_WEB_ACTIVOS",
           "retorno": "boolean",
-          "linea": 284
+          "linea": 312
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "842ba8573db9"
+      "hash": "467897e4de46"
     },
     {
       "ruta": "apps/asegura/lib/aviso-web.ts",
@@ -17175,7 +17174,16 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<ResultadoConfirmacion>",
-          "linea": 140
+          "linea": 147
+        },
+        {
+          "nombre": "movilALaFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, telefono: string",
+          "retorno": "Promise<'anadido' | 'ya_estaba' | 'en_otra_ficha' | 'no_anadido'>",
+          "linea": 226,
+          "resumen": "Fuera de la transacción: si falla, el aviso ya está confirmado y el Telegram lo dice; no se reintenta."
         },
         {
           "nombre": "bajaAviso",
@@ -17183,7 +17191,7 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<",
-          "linea": 217,
+          "linea": 242,
           "resumen": "Siempre «ok» hacia fuera: no se revela si la llave existía."
         },
         {
@@ -17192,7 +17200,7 @@
           "exportada": true,
           "params": "correduriaId: string, opciones: { hoy?: Date; forzarContar?: boolean } = {}",
           "retorno": "Promise<ResumenAvisosWeb>",
-          "linea": 257,
+          "linea": 282,
           "resumen": "Lanza si falta el portal o el correo: «no he podido» no puede leerse como «hoy no tocaba nadie»."
         }
       ],
@@ -17203,7 +17211,7 @@
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "dd9cd86afc2c"
+      "hash": "8269b30e33b6"
     },
     {
       "ruta": "apps/asegura/lib/avisos-intranet-reglas.ts",
@@ -28224,12 +28232,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 82
+          "linea": 84
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "96b76e1a7faf"
+      "hash": "a8d0741f6b1c"
     },
     {
       "ruta": "apps/housesevillana/app/en/parking/route.ts",
@@ -28432,12 +28440,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 71
+          "linea": 73
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "34b583ec73a4"
+      "hash": "4d939d68c9e9"
     },
     {
       "ruta": "apps/housesevillana/app/robots.txt/route.ts",
@@ -79636,6 +79644,50 @@
       "hash": "166ae335d925"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/CalendarioReservas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CalendarioReservas"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: string",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "noches",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ReservaCal",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "portalDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ReservaCal",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "CalendarioReservas",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ dias, filas }: { dias: string[]; filas: Fila[] }",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a346e9a9e75f"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/inicio/loading.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -79956,7 +80008,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 135
+          "linea": 103
         }
       ],
       "tablas": [
@@ -79964,7 +80016,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "5b3605b827ed"
+      "hash": "e36096e6aee6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/inversion/page.tsx",
@@ -90771,12 +90823,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 35
         }
       ],
       "tablas": [],
       "rutaApi": "/api/publico/correduria/aviso",
-      "hash": "a1ae0a4b2752"
+      "hash": "63df81cfd52b"
     },
     {
       "ruta": "apps/plataforma/app/api/publico/correduria/consentimiento/route.ts",
@@ -109652,7 +109704,7 @@
           "exportada": true,
           "params": "dia: string, n: number",
           "retorno": "string",
-          "linea": 103,
+          "linea": 107,
           "resumen": "Suma `n` días a 'AAAA-MM-DD' en UTC (sin saltos por cambio de hora)."
         },
         {
@@ -109661,7 +109713,7 @@
           "exportada": false,
           "params": "a: string, b: string",
           "retorno": "number",
-          "linea": 109
+          "linea": 113
         },
         {
           "nombre": "ventanaCalendario",
@@ -109669,7 +109721,7 @@
           "exportada": true,
           "params": "reservas: ReservaCal[], pisos: string[], hoy: string, n = 14",
           "retorno": "Ventana",
-          "linea": 113
+          "linea": 117
         },
         {
           "nombre": "sumaONull",
@@ -109677,7 +109729,7 @@
           "exportada": false,
           "params": "xs: (number | null)[]",
           "retorno": "number | null",
-          "linea": 168
+          "linea": 172
         },
         {
           "nombre": "resumenBolsa",
@@ -109685,7 +109737,7 @@
           "exportada": true,
           "params": "posiciones: PosicionBolsa[]",
           "retorno": "ResumenDivisaBolsa[]",
-          "linea": 174,
+          "linea": 178,
           "resumen": "Una línea por divisa: sumar dólares con euros daría una cifra plausible y falsa."
         },
         {
@@ -109694,7 +109746,7 @@
           "exportada": true,
           "params": "actualizado: Date, ahora: Date",
           "retorno": "boolean",
-          "linea": 186
+          "linea": 190
         },
         {
           "nombre": "importeDivisa",
@@ -109702,7 +109754,7 @@
           "exportada": true,
           "params": "n: number, divisa: string",
           "retorno": "string",
-          "linea": 191,
+          "linea": 195,
           "resumen": "Importe en su divisa, formato español: `1.234,56€` / `1.234,56 $`."
         },
         {
@@ -109711,7 +109763,7 @@
           "exportada": true,
           "params": "f: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string }",
           "retorno": "string",
-          "linea": 203
+          "linea": 207
         },
         {
           "nombre": "proximosCargos",
@@ -109719,7 +109771,7 @@
           "exportada": true,
           "params": "recurrentes: RecurrenteBanco[], hoy: string, dias = 7",
           "retorno": "ProximoCargo[]",
-          "linea": 219,
+          "linea": 223,
           "resumen": "Próximas apariciones de los recurrentes en (hoy, hoy+dias], con la MISMA regla que `proyectar()` de `lib/tesoreria-core.ts` (última fecha + intervalo, saltando lo ya pasado), para que la lista y el sa"
         },
         {
@@ -109728,13 +109780,13 @@
           "exportada": true,
           "params": "polizas: T[], ventana = 60",
           "retorno": "",
-          "linea": 243,
+          "linea": 247,
           "resumen": "Vencimientos de la correduría para la tarjeta del Inicio. El puerto mira también una anualidad HACIA ATRÁS (para que una póliza vencida sin gestionar no desaparezca), así que `dias` puede ser negativo"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "910364b5c369"
+      "hash": "6577c466ed7b"
     },
     {
       "ruta": "apps/plataforma/lib/intercompany-mapeo.ts",
@@ -110438,7 +110490,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 64
+          "linea": 68
         },
         {
           "nombre": "tipoSeguroLead",
@@ -110446,7 +110498,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TipoSeguroLead | null",
-          "linea": 68
+          "linea": 72
         },
         {
           "nombre": "revisarLeadWeb",
@@ -110454,7 +110506,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "LeadRevisado",
-          "linea": 79,
+          "linea": 83,
           "resumen": "Revisa lo que llega del formulario. Un solo motivo cada vez, con su campo, para que la pantalla señale la casilla. `motivo: 'bot'` = honeypot relleno: la ruta responde 200 «recibido» SIN hacer nada (n"
         },
         {
@@ -110463,7 +110515,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadWeb, 'tipoSeguro' | 'comentario'>",
           "retorno": "string",
-          "linea": 122,
+          "linea": 126,
           "resumen": "Lo que va en `notas` de la ficha nueva (y al historial del alta, que lo repite)."
         },
         {
@@ -110472,7 +110524,7 @@
           "exportada": true,
           "params": "lead: LeadWeb",
           "retorno": "string",
-          "linea": 131,
+          "linea": 135,
           "resumen": "El historial tipo `contacto` que se anota en una ficha que YA existía. Lleva el teléfono/email tecleados: pueden ser distintos de los de la ficha (es justo por lo que se ha encontrado), y Alberto nece"
         },
         {
@@ -110481,7 +110533,7 @@
           "exportada": true,
           "params": "r: ResultadoEscritura",
           "retorno": "ResultadoLead",
-          "linea": 156
+          "linea": 160
         },
         {
           "nombre": "urlFichaCliente",
@@ -110489,7 +110541,7 @@
           "exportada": true,
           "params": "id: string, base: string = process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_POR_DEFECTO",
           "retorno": "string",
-          "linea": 181
+          "linea": 185
         },
         {
           "nombre": "textoTelegramLead",
@@ -110497,13 +110549,13 @@
           "exportada": true,
           "params": "a: AvisoLead",
           "retorno": "string",
-          "linea": 202,
+          "linea": 206,
           "resumen": "HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b19c756bf6ed"
+      "hash": "a54ce84af5cf"
     },
     {
       "ruta": "apps/plataforma/lib/libro-registro-asegura.ts",
@@ -116146,6 +116198,7 @@
       "resumen": "lib/sivra/agente-huesped/contexto.ts — ensambla el contexto de una reserva.",
       "exporta": [
         "toPropertyId",
+        "libreSegunCalendario",
         "construirContexto"
       ],
       "funciones": [
@@ -116167,20 +116220,30 @@
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
+          "nombre": "libreSegunCalendario",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string, bookingId: string, que: 'vispera' | 'entrada', fecha: string,",
+          "retorno": "Promise<boolean | null>",
+          "linea": 75,
+          "resumen": "¿Está libre según el CALENDARIO volcado (`incomes`)? Es la fuente principal: la mantiene el webhook de Smoobu en tiempo real (+ cron de red de seguridad) y borra las cancelaciones. No guarda bloqueos "
+        },
+        {
           "nombre": "construirContexto",
           "kind": "function",
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 70
+          "linea": 94
         }
       ],
       "tablas": [
+        "incomes",
         "mensajes_aprendizaje",
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "21086015a1a2"
+      "hash": "598b66bb2857"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cortesia.ts",
@@ -116301,7 +116364,9 @@
         "diaAnterior",
         "nocheAnteriorLibre",
         "sumarDias",
-        "entradaMismoDiaLibre"
+        "entradaMismoDiaLibre",
+        "estanciasFiables",
+        "combinarFuentes"
       ],
       "funciones": [
         {
@@ -116347,11 +116412,29 @@
           "retorno": "boolean",
           "linea": 44,
           "resumen": "¿Hay otra reserva que ENTRA el mismo día en que este huésped SALE? Si la hay, el piso necesita turnover (limpieza + entrada de otro huésped) ese día → no hay margen para un late check-out. Espejo de n"
+        },
+        {
+          "nombre": "estanciasFiables",
+          "kind": "function",
+          "exportada": true,
+          "params": "resp: any, opts: { apartmentId: string | number; campo: 'arrival' | 'departure'; desde: string; hasta: string },",
+          "retorno": "Estancia[] | null",
+          "linea": 63,
+          "resumen": "¿Podemos FIARNOS de la lista que devolvió Smoobu para decidir disponibilidad? Devuelve las estancias DE ESTE PISO, o null (= «no verificado») si la respuesta no se entiende, viene paginada o trae esta"
+        },
+        {
+          "nombre": "combinarFuentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "calendario: boolean | null, vivo: boolean | null",
+          "retorno": "",
+          "linea": 89,
+          "resumen": "Combina las dos fuentes de «¿está libre?»: el CALENDARIO volcado (`incomes`, que el webhook de Smoobu mantiene al día y del que se borran las cancelaciones) y la consulta EN VIVO a Smoobu (la única qu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a567e2b04035"
+      "hash": "da8da15cd193"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/enviar.ts",
@@ -119803,10 +119886,10 @@
           "nombre": "lateOferta",
           "kind": "function",
           "exportada": false,
-          "params": "apartmentId: unknown, departure: string, bookingId: string",
+          "params": "apartmentId: unknown, propertyId: string, departure: string, bookingId: string",
           "retorno": "Promise<boolean | null>",
-          "linea": 137,
-          "resumen": "¿Queda libre el día de la salida (nadie entra ese día)? true/false verificado · null = no se pudo comprobar → la plantilla NO ofrece las 12:00 (mismo criterio conservador que el agente)."
+          "linea": 139,
+          "resumen": "¿Queda libre el día de la salida (nadie entra ese día)? true/false verificado · null = no se pudo comprobar → la plantilla NO ofrece las 12:00 (mismo criterio conservador que el agente). Misma regla q"
         },
         {
           "nombre": "revisarCoberturaDePasada",
@@ -119814,7 +119897,7 @@
           "exportada": false,
           "params": "reservas: any[], hoy: string, activos: Set<string>, yaHechosPorReserva: Map<string, HitoRegistrado[]>,",
           "retorno": "Promise<string | null>",
-          "linea": 155,
+          "linea": 161,
           "resumen": "Vigía de cobertura: quién llega sin sus instrucciones. Devuelve una nota para el latido, o null. 🚨 NO puede tumbar la pasada ni dejarla sin latido: es un observador. Si su propia consulta falla, lo D"
         },
         {
@@ -119823,7 +119906,7 @@
           "exportada": true,
           "params": "deadline = Date.now() + 280_000",
           "retorno": "Promise<Resumen>",
-          "linea": 216
+          "linea": 222
         }
       ],
       "tablas": [
@@ -119835,7 +119918,7 @@
         "sivra_codigos_acceso"
       ],
       "rutaApi": null,
-      "hash": "da91930919f7"
+      "hash": "dfb81d559344"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/plantillas.ts",
@@ -159553,7 +159636,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3806,
-    "funciones": 12220
+    "archivos": 3807,
+    "funciones": 12228
   }
 }
