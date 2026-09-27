@@ -1,0 +1,35 @@
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
+
+process.env.PII_ENCRYPTION_KEY ??= 'a'.repeat(64)
+const { abrirSelloAltaLead, leerContenidoSello, sellarAltaLead, HORAS_SELLO } = await import('./sello-alta-lead.ts')
+
+const alta = { nombre: 'Juan', apellidos: 'Pérez López', dni: '12345678Z', tipoPersona: 'fisica' as const, fechaNacimiento: null, fuente: 'venta_directa' as const }
+
+test('el sello va cifrado (el DNI no se ve) y se abre dentro de asegura', () => {
+  const s = sellarAltaLead(alta, 1_000)
+  assert.ok(!s.includes('12345678Z'))
+  assert.deepEqual(abrirSelloAltaLead(s, 2_000), alta)
+})
+
+test('caducado, del futuro, de otro propósito o manipulado → null', () => {
+  const json = (o: object) => JSON.stringify({ p: 'alta-lead', v: 1, t: 0, a: alta, ...o })
+  assert.equal(leerContenidoSello(json({}), HORAS_SELLO * 3_600_000 + 1), null)
+  assert.equal(leerContenidoSello(json({ t: 10 * 60_000 }), 0), null)
+  assert.equal(leerContenidoSello(json({ p: 'otra-cosa' }), 1), null)
+  assert.equal(leerContenidoSello(json({ a: { ...alta, nombre: ' ' } }), 1), null)
+  assert.equal(leerContenidoSello('no es json', 1), null)
+  assert.equal(abrirSelloAltaLead('basura', 1), null)
+  assert.deepEqual(leerContenidoSello(json({}), 1), alta)
+})
+
+test('el DNI no sale del puerto en claro y el alta con sello no se deja pisar (lee el FUENTE)', () => {
+  const leer = readFileSync(fileURLToPath(new URL('../app/api/operador/leer-documento/route.ts', import.meta.url)), 'utf8')
+  const dev = leer.slice(leer.indexOf('return { nombre, conDni'))
+  assert.doesNotMatch(dev.split('\n')[0], /dni:/)
+  const cli = readFileSync(fileURLToPath(new URL('../app/api/operador/cliente/route.ts', import.meta.url)), 'utf8')
+  assert.match(cli, /nombre: a\.nombre, apellidos: a\.apellidos, dni: a\.dni \?\? undefined/)
+  assert.match(cli, /forzar: false/)
+})

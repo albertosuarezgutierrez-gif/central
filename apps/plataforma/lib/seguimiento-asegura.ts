@@ -612,8 +612,37 @@ export type LecturaDocumentoOportunidad =
       numeroPoliza: string | null
       vence: string | null
       prima: number | null
+      /** Solo si se pidió (`?tomador=1`). */
+      tomador?: TomadorLeido
     }
   | { estado: 'error'; motivo: string }
+
+/**
+ * Quién es el tomador del documento, según asegura. El DNI NO viaja: `coincidencias` son las fichas
+ * que ya lo tienen (buscado allí dentro) y `sello` es el alta cifrada para crear el lead.
+ * `coincidencias: null` = no se ha podido mirar o el documento no trae DNI (≠ `[]`, «no está»).
+ */
+export type TomadorLeido = {
+  nombre: string | null
+  conDni: boolean
+  coincidencias: { id: string; nombre: string; tipo: string }[] | null
+  sello: string | null
+}
+
+export function interpretarTomador(v: unknown): TomadorLeido | undefined {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return undefined
+  const o = v as Record<string, unknown>
+  const nombre = typeof o.nombre === 'string' && o.nombre.trim() !== '' ? o.nombre.trim().slice(0, 160) : null
+  const coincidencias = Array.isArray(o.coincidencias)
+    ? o.coincidencias.flatMap((c) => {
+        const x = c as Record<string, unknown> | null
+        return x && typeof x.id === 'string' && typeof x.nombre === 'string'
+          ? [{ id: x.id, nombre: x.nombre.slice(0, 160), tipo: typeof x.tipo === 'string' ? x.tipo : '' }] : []
+      })
+    : null
+  const sello = typeof o.sello === 'string' && o.sello.length > 0 && o.sello.length < 4000 ? o.sello : null
+  return { nombre, conDni: o.conDni === true, coincidencias, sello }
+}
 
 /**
  * Lo que devuelve el puerto `leer-documento`. Un campo con forma rara se queda en
@@ -638,7 +667,8 @@ export function interpretarLecturaOportunidad(status: number, json: unknown): Le
   if (Object.values(r).every(v => v === null)) {
     return { estado: 'error', motivo: 'el documento se ha leído pero no trae ramo, compañía, vencimiento ni prima' }
   }
-  return { estado: 'ok', ...r }
+  const tomador = interpretarTomador(o.tomador)
+  return tomador ? { estado: 'ok', ...r, tomador } : { estado: 'ok', ...r }
 }
 
 /** La prima como la teclearía Alberto, para el campo de texto: «1200,5» → «1200,50». */

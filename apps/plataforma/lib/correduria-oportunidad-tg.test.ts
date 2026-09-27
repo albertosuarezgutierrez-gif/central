@@ -254,3 +254,64 @@ test('el botón gasto/cliente es de un solo uso (lee el FUENTE)', () => {
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   assert.match(src, /SET decision = \$\{decision\}\s+WHERE id = \$\{id\} AND decision IS NULL RETURNING/)
 })
+
+// ── Segunda prueba real (27/09/2026): la póliza de MUSSAP de un lead. El bot preguntó «¿de qué lead se
+// trata?» teniendo el documento delante. Ahora lee el tomador, lo busca por DNI y propone crear el lead. ──
+import { explicarQuien, quienEsDelDocumento, resultadoAltaLead, textoAltaLead } from './correduria-oportunidad-tg.ts'
+import { interpretarLecturaOportunidad, interpretarTomador } from './seguimiento-asegura.ts'
+
+const conTomador = (t: Partial<NonNullable<Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>['tomador']>>) =>
+  leida({ tomador: { nombre: 'Pepe Ruiz Gil', conDni: true, coincidencias: [], sello: 'SELLO', ...t } })
+
+test('de quién es el documento: nuevo, existe, varios, sin DNI, sin poder mirar, sin tomador', () => {
+  assert.deepEqual(quienEsDelDocumento([conTomador({})]), { tipo: 'nuevo', nombre: 'Pepe Ruiz Gil', sello: 'SELLO' })
+  assert.deepEqual(quienEsDelDocumento([conTomador({ coincidencias: [{ id: 'u1', nombre: 'PEPE RUIZ', tipo: 'lead' }] })]), { tipo: 'existe', id: 'u1', nombre: 'PEPE RUIZ' })
+  assert.equal(quienEsDelDocumento([conTomador({ coincidencias: [{ id: 'a', nombre: 'x', tipo: '' }, { id: 'b', nombre: 'y', tipo: '' }] })]).tipo, 'varios')
+  // «no se pudo mirar» NO es «no está»: nunca se ofrece crear otra ficha
+  assert.equal(quienEsDelDocumento([conTomador({ coincidencias: null })]).tipo, 'sin_comprobar')
+  assert.equal(quienEsDelDocumento([conTomador({ sello: null })]).tipo, 'sin_comprobar')
+  assert.equal(quienEsDelDocumento([conTomador({ nombre: null })]).tipo, 'sin_tomador')
+  assert.equal(quienEsDelDocumento([leida()]).tipo, 'sin_leer')
+  assert.equal(quienEsDelDocumento([{ estado: 'error', motivo: 'x' }]).tipo, 'sin_leer')
+  assert.match(explicarQuien({ tipo: 'sin_comprobar', nombre: 'Pepe', conDni: true }) ?? '', /NO digas que no está/)
+  assert.match(explicarQuien({ tipo: 'sin_comprobar', nombre: 'Pepe', conDni: false }) ?? '', /NO trae DNI/)
+  assert.equal(explicarQuien({ tipo: 'nuevo', nombre: 'Pepe', sello: 's' }), null)
+})
+
+test('el tomador del puerto: el DNI nunca se lee aunque venga, y basura → sin coincidencias', () => {
+  const t = interpretarTomador({ nombre: 'Pepe', conDni: true, dni: '12345678Z', coincidencias: [{ id: 'u', nombre: 'P', tipo: 'lead' }, 'x'], sello: 'S' })
+  assert.deepEqual(t, { nombre: 'Pepe', conDni: true, coincidencias: [{ id: 'u', nombre: 'P', tipo: 'lead' }], sello: 'S' })
+  assert.equal(interpretarTomador({ nombre: 'Pepe', coincidencias: 'nada' })?.coincidencias, null)
+  const l = interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto', compania: 'MUSSAP', tomador: { nombre: 'Pepe', conDni: false, coincidencias: null, sello: null } })
+  assert.ok(l.estado === 'ok' && l.tomador?.nombre === 'Pepe')
+  // sin pedirlo no aparece la clave (la lectura de la ficha sigue igual)
+  assert.ok(!('tomador' in interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto' })))
+})
+
+test('crear el lead: 201 → id; 409 → no duplica; sin respuesta → «no sé», nunca «no se ha creado»', () => {
+  assert.deepEqual(resultadoAltaLead(201, { estado: 'ok', id: 'nuevo' }), { estado: 'creado', id: 'nuevo' })
+  const d = resultadoAltaLead(409, { coincidencias: [{ nombre: 'Pepe Ruiz' }] })
+  assert.ok(d.estado === 'duplicado' && d.texto.includes('Pepe Ruiz'))
+  assert.equal(resultadoAltaLead(502, { motivo: 'red' }).estado, 'incierto')
+  assert.equal(resultadoAltaLead(0, null).estado, 'incierto')
+  assert.equal(resultadoAltaLead(503, { estado: 'sin_configurar' }).estado, 'rechazado')
+  assert.equal(resultadoAltaLead(422, { motivo: 'sello caducado' }).estado, 'rechazado')
+})
+
+test('el mensaje del lead nuevo dice que no está y no enseña el DNI', () => {
+  const r = prepararAlta({}, [leida()], HOY)
+  assert.ok(r.ok)
+  const t = textoAltaLead('Pepe <Ruiz>', r.alta)
+  assert.match(t, /no está en la cartera/)
+  assert.match(t, /Pepe &lt;Ruiz&gt;/)
+  assert.match(t, /el DNI no se muestra/)
+})
+
+test('proponer_oportunidad ya no exige clienteId y el lead se crea con el sello (lee el FUENTE)', () => {
+  const h = HERRAMIENTAS.find((x) => x.function.name === 'proponer_oportunidad')
+  assert.deepEqual(h?.function.parameters.required, [])
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  assert.match(src, /altaClienteAsegura\(\{ sello: fila\.lead\.sello/)
+  assert.match(src, /lecturasRecientes\(\{ tomador: !clienteId \}\)/)
+  assert.match(src, /decision = COALESCE\(decision, 'cliente'\)/)
+})

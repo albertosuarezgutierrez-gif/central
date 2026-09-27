@@ -24,12 +24,12 @@ import {
 } from '@/lib/seguimiento-asegura'
 import { carteraAsegura } from '@/lib/cartera-asegura'
 import { crearTareaAsegura, registrarLlamadaAsegura, oportunidadAsegura, interpretarOportunidad, rotuloRamo } from '@/lib/seguimiento-asegura'
-import { historialClienteAsegura } from '@/lib/cliente-edicion-asegura'
+import { altaClienteAsegura, historialClienteAsegura } from '@/lib/cliente-edicion-asegura'
 import { abrirSiniestroAsegura } from '@/lib/siniestros-asegura'
 import { explicarPortal, interpretarPortal, invitarPortalAsegura, portalAsegura } from '@/lib/portal-cliente-asegura'
 import { prepararAccion, resultadoAccion, textoAccion, type TipoAccion } from './correduria-acciones-tg'
 import { descargarTelegram, getCuentaTelegram, manejarDocumentoTg } from '@/lib/contable/telegram'
-import { cuerpoAlta, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, resultadoAlta, textoAlta, type Alta } from './correduria-oportunidad-tg'
+import { cuerpoAlta, explicarQuien, MINUTOS_DOCUMENTO_RECIENTE, prepararAlta, quienEsDelDocumento, resultadoAlta, resultadoAltaLead, textoAlta, textoAltaLead, type Alta } from './correduria-oportunidad-tg'
 import {
   documentoQueAcredita, edicionDeCambios, faltaValorActual, huellaAntes, prepararCorreccion, resultadoCorreccion, textoCorreccion,
   urlCliente, type Cambio, type FichaActual,
@@ -572,7 +572,7 @@ export async function resolverDocumentoDudoso(accion: string, arg: string): Prom
   if (accion === 'cli') {
     await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_asistente_documento SET destino = 'correduria', usado_at = NULL, creado_at = now() WHERE id = ${id}`).catch(() => {})
-    await tgSend('🛡️ Vale, es de la correduría: no lo toco como gasto. Dime de quién es y qué hago (p. ej. «ábrele una oportunidad a Juan Pérez con esto»).').catch(() => {})
+    await tgSend('🛡️ Vale, es de la correduría: no lo toco como gasto. Dime qué hago (p. ej. «ábrele una oportunidad»): leo el tomador del documento, lo busco y, si no está, te propongo crear el lead.').catch(() => {})
     return 'Apartado para la correduría'
   }
   if (accion === 'gasto') {
@@ -596,7 +596,7 @@ export async function albumDeCorreduria(mediaGroupId: string | null): Promise<bo
 }
 
 /** Lee los documentos de la última hora. `null` = no se ha podido mirar (≠ `[]`, «no subió nada»). */
-async function lecturasRecientes(): Promise<LecturaDocumentoOportunidad[] | null> {
+async function lecturasRecientes(opts: { tomador?: boolean } = {}): Promise<LecturaDocumentoOportunidad[] | null> {
   const filas = await prisma.$queryRaw<{ id: bigint; file_id: string; nombre: string | null; mime: string | null }[]>(Prisma.sql`
     SELECT id, file_id, nombre, mime FROM correduria_asistente_documento
     WHERE creado_at >= now() - make_interval(mins => ${MINUTOS_DOCUMENTO_RECIENTE}::int)
@@ -610,17 +610,19 @@ async function lecturasRecientes(): Promise<LecturaDocumentoOportunidad[] | null
   for (const f of filas.reverse()) {
     const file = await descargarTelegram(f.file_id, f.mime ?? '', f.nombre ?? '')
     if (!file) { out.push({ estado: 'error', motivo: 'no he podido bajarlo de Telegram' }); continue }
-    const l = await leerDocumentoOportunidadAsegura({ contenido: file.buffer, mimeType: file.mimeType, nombre: file.fileName })
+    const l = await leerDocumentoOportunidadAsegura({ contenido: file.buffer, mimeType: file.mimeType, nombre: file.fileName }, opts)
       .then((r) => interpretarLecturaOportunidad(r.status, r.json))
       .catch((e): LecturaDocumentoOportunidad => ({ estado: 'error', motivo: e instanceof Error && e.name === 'TimeoutError' ? 'la lectura ha tardado demasiado' : 'fallo al leerlo' }))
     out.push(l)
-    await prisma.$executeRaw(Prisma.sql`UPDATE correduria_asistente_documento SET usado_at = now() WHERE id = ${f.id}`).catch(() => {})
+    // Si el contable preguntó «¿gasto o cliente?» y nadie contestó, ya está contestado: es de la correduría.
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_documento SET usado_at = now(), decision = COALESCE(decision, 'cliente') WHERE id = ${f.id}`).catch(() => {})
   }
   return out
 }
 
 async function proponerOportunidad(args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
-  const clienteId = idValido(args.clienteId)
+  let clienteId = idValido(args.clienteId)
   // Mismo interruptor que la emisión y la corrección: UN solo «¿escribe el asistente en la cartera?».
   if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
     return {
@@ -628,41 +630,71 @@ async function proponerOportunidad(args: Record<string, unknown>, turnoId: numbe
       ok: true,
     }
   }
-  if (!clienteId) return { texto: 'ERROR: clienteId no válido. Usa buscar para obtenerlo; si no sabes de quién es, pregúntaselo a Alberto.', ok: false }
-  const ficha = await fichaAsegura(clienteId)
-  if (ficha.estado === 'no_encontrado') return { texto: 'No existe ninguna ficha con ese id.', ok: true }
-  if (ficha.estado !== 'ok') return { texto: `ERROR: no he podido leer la ficha (${ficha.estado}). No propongas nada todavía.`, ok: false }
+  const usarDocumentos = args.usarDocumentos === true
+  if (!clienteId && args.clienteId !== undefined && args.clienteId !== null && args.clienteId !== '') {
+    return { texto: 'ERROR: clienteId no válido. Usa buscar para obtenerlo, o no lo pases y usa usarDocumentos=true para que lo busque por el documento.', ok: false }
+  }
+  if (!clienteId && !usarDocumentos) {
+    return { texto: 'ERROR: sin clienteId hace falta usarDocumentos=true (lo busco por el tomador del documento). Si no hay documento, pregúntale el nombre y búscalo.', ok: false }
+  }
+  let nombre: string | null = null
+  if (clienteId) {
+    const ficha = await fichaAsegura(clienteId)
+    if (ficha.estado === 'no_encontrado') return { texto: 'No existe ninguna ficha con ese id.', ok: true }
+    if (ficha.estado !== 'ok') return { texto: `ERROR: no he podido leer la ficha (${ficha.estado}). No propongas nada todavía.`, ok: false }
+    nombre = ficha.ficha.nombre ?? 'este cliente'
+  }
 
   let lecturas: LecturaDocumentoOportunidad[] | null = null
-  if (args.usarDocumentos === true) {
-    lecturas = await lecturasRecientes()
+  if (usarDocumentos) {
+    lecturas = await lecturasRecientes({ tomador: !clienteId })
     if (lecturas === null) return { texto: 'ERROR: no he podido mirar qué documentos ha subido. Pídele los datos o que lo abra en la ficha.', ok: false }
     if (lecturas.length === 0) {
-      return { texto: `NO VEO DOCUMENTOS: no ha subido ninguno en los últimos ${MINUTOS_DOCUMENTO_RECIENTE} minutos. Pídele que lo vuelva a mandar o que te dicte ramo, compañía, vencimiento y prima.`, ok: true }
+      return { texto: `NO VEO DOCUMENTOS: no ha subido ninguno en los últimos ${MINUTOS_DOCUMENTO_RECIENTE} minutos. Pídele que lo vuelva a mandar o que te dicte de quién es, ramo, compañía, vencimiento y prima.`, ok: true }
     }
   }
-  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
-  const prep = prepararAlta(args, lecturas, hoy)
+
+  // Sin ficha dicha: de quién es lo dice el documento (asegura busca el DNI; aquí no llega).
+  let lead: { nombre: string; sello: string } | null = null
+  let delDocumento = ''
+  if (!clienteId) {
+    const q = quienEsDelDocumento(lecturas ?? [])
+    const porQue = explicarQuien(q)
+    if (porQue) return { texto: porQue, ok: true }
+    if (q.tipo === 'existe') { clienteId = q.id; nombre = q.nombre; delDocumento = ` El documento es de ${q.nombre}, que YA tiene ficha (por su DNI).` }
+    else if (q.tipo === 'nuevo') { lead = { nombre: q.nombre, sello: q.sello }; nombre = q.nombre }
+    else return { texto: 'ERROR: no he sabido de quién es el documento. Pregúntale el nombre.', ok: false }
+  }
+
+  const prep = prepararAlta(args, lecturas, hoyMadrid())
   if (!prep.ok) return { texto: `NO SE PUEDE PROPONER: ${prep.motivo}.`, ok: true }
 
   await prisma.$executeRaw(Prisma.sql`
-    UPDATE correduria_asistente_oportunidad SET estado = 'caducada', decidida_at = now(), alta = NULL
-    WHERE estado = 'propuesta' AND (cliente_id = ${clienteId}::uuid OR caduca_at <= now())`).catch(() => {})
+    UPDATE correduria_asistente_oportunidad SET estado = 'caducada', decidida_at = now(), alta = NULL, lead = NULL
+    WHERE estado = 'propuesta' AND (cliente_id = ${clienteId}::uuid OR lead IS NOT NULL OR caduca_at <= now())`).catch(() => {})
   const [fila] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
-    INSERT INTO correduria_asistente_oportunidad (turno_id, cliente_id, alta, caduca_at)
-    VALUES (${turnoId}, ${clienteId}::uuid, ${JSON.stringify(prep.alta)}::jsonb, now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
+    INSERT INTO correduria_asistente_oportunidad (turno_id, cliente_id, alta, lead, caduca_at)
+    VALUES (${turnoId}, ${clienteId}::uuid, ${JSON.stringify(prep.alta)}::jsonb, ${lead ? JSON.stringify(lead) : null}::jsonb,
+            now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
     RETURNING id`)
-  const enviado = await tgSendButtons(textoAlta(ficha.ficha.nombre ?? 'este cliente', prep.alta), [[
-    { texto: '🎯 Abrir', callback: `cas_oport:${fila.id}` },
+  const texto = lead ? textoAltaLead(lead.nombre, prep.alta) : textoAlta(nombre ?? 'este cliente', prep.alta)
+  const enviado = await tgSendButtons(texto, [[
+    { texto: lead ? '🎯 Crear lead y abrir' : '🎯 Abrir', callback: `cas_oport:${fila.id}` },
     { texto: '✖️ No', callback: `cas_oportno:${fila.id}` },
   ]]).catch(() => null)
   if (enviado === null) {
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE correduria_asistente_oportunidad SET estado = 'descartada', decidida_at = now(), alta = NULL WHERE id = ${fila.id}`).catch(() => {})
+      UPDATE correduria_asistente_oportunidad SET estado = 'descartada', decidida_at = now(), alta = NULL, lead = NULL WHERE id = ${fila.id}`).catch(() => {})
     return { texto: 'ERROR: no he podido mandar la propuesta con el botón a Telegram. Dile que lo intente otra vez o la abra en la ficha.', ok: false }
   }
+  if (lead) {
+    return {
+      texto: `Propuesta enviada: ${lead.nombre} NO está en la cartera (su DNI no aparece), así que el botón crea el lead y le abre la oportunidad (${MINUTOS_PROPUESTA} minutos, un solo uso). NO digas que está hecho: dile que revise y pulse.`,
+      ok: true,
+    }
+  }
   return {
-    texto: `Propuesta enviada a Alberto con el botón «Abrir» (${MINUTOS_PROPUESTA} minutos, un solo uso). NO digas que está abierta: dile que revise los datos y pulse.`,
+    texto: `Propuesta enviada a Alberto con el botón «Abrir» (${MINUTOS_PROPUESTA} minutos, un solo uso).${delDocumento} NO digas que está abierta: dile que revise los datos y pulse.`,
     ok: true,
   }
 }
@@ -674,10 +706,11 @@ async function abrirOportunidad(id: number): Promise<string> {
     await decir(`🛡️ Las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}): no se ha abierto nada.`)
     return 'Apagado: no se abre nada'
   }
-  const [fila] = await prisma.$queryRaw<{ cliente_id: string; alta: Alta }[]>(Prisma.sql`
+  type Fila = { cliente_id: string | null; alta: Alta; lead: { nombre: string; sello: string } | null }
+  const [fila] = await prisma.$queryRaw<Fila[]>(Prisma.sql`
     UPDATE correduria_asistente_oportunidad SET estado = 'aplicando', decidida_at = now()
     WHERE id = ${id} AND estado = 'propuesta' AND caduca_at > now()
-    RETURNING cliente_id::text AS cliente_id, alta`).catch(() => [] as { cliente_id: string; alta: Alta }[])
+    RETURNING cliente_id::text AS cliente_id, alta, lead`).catch(() => [] as Fila[])
   if (!fila) {
     const [actual] = await prisma.$queryRaw<{ estado: string; caducado: boolean }[]>(Prisma.sql`
       SELECT estado, caduca_at <= now() AS caducado FROM correduria_asistente_oportunidad WHERE id = ${id}`).catch(() => [])
@@ -688,13 +721,34 @@ async function abrirOportunidad(id: number): Promise<string> {
     }
     return actual ? 'Ya estaba decidida' : 'No encuentro esa propuesta'
   }
-  const r = await accionOportunidadAsegura(cuerpoAlta(fila.cliente_id, fila.alta, ACTOR_EMISION_TG))
+  let clienteId = fila.cliente_id
+  if (!clienteId) {
+    // Lead nuevo: primero la ficha (con el sello de asegura: el DNI no pasa por aquí), luego la oportunidad.
+    const r0 = fila.lead
+      ? await altaClienteAsegura({ sello: fila.lead.sello, actor: ACTOR_EMISION_TG }, ACTOR_EMISION_TG)
+      : { status: 422, json: { motivo: 'la propuesta no trae ni ficha ni lead' } }
+    const a = resultadoAltaLead(r0.status, r0.json)
+    if (a.estado !== 'creado') {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE correduria_asistente_oportunidad
+        SET estado = ${a.estado === 'incierto' ? 'incierta' : a.estado === 'duplicado' ? 'duplicada' : 'rechazada'}, alta = NULL, lead = NULL,
+            resultado = ${JSON.stringify({ paso: 'alta_ficha', status: r0.status })}::jsonb
+        WHERE id = ${id}`).catch((e) => console.error('[correduria-oportunidad-tg] no se pudo cerrar la fila', id, e))
+      await decir(a.texto)
+      return a.estado === 'incierto' ? 'No sé si se ha creado la ficha' : 'No se ha creado la ficha'
+    }
+    clienteId = a.id
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_oportunidad SET cliente_id = ${clienteId}::uuid, lead = NULL WHERE id = ${id}`).catch(() => {})
+    await decir(`👤 Lead creado: <b>${escapeHtml(fila.lead?.nombre ?? '')}</b>\n${urlCliente(clienteId)}`)
+  }
+  const r = await accionOportunidadAsegura(cuerpoAlta(clienteId, fila.alta, ACTOR_EMISION_TG))
     .catch((e) => ({ status: 0, json: { motivo: e instanceof Error ? e.message.slice(0, 120) : 'fallo' } }))
-  const fin = resultadoAlta(r.status, r.json, urlCliente(fila.cliente_id))
+  const fin = resultadoAlta(r.status, r.json, urlCliente(clienteId))
   const json = r.json as { id?: unknown; motivo?: unknown } | null
   await prisma.$executeRaw(Prisma.sql`
     UPDATE correduria_asistente_oportunidad
-    SET estado = ${fin.estado}, alta = NULL,
+    SET estado = ${fin.estado}, alta = NULL, lead = NULL,
         resultado = ${JSON.stringify({ status: r.status, id: json?.id ?? null, motivo: json?.motivo ?? null })}::jsonb
     WHERE id = ${id}`).catch((e) => console.error('[correduria-oportunidad-tg] no se pudo cerrar la fila', id, e))
   await decir(fin.texto)
