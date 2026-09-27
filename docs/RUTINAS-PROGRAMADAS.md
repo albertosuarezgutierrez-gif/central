@@ -249,10 +249,10 @@ caza lo que las sesiones del día no anotaron a mano.
 | | |
 |---|---|
 | **Cuándo** | L-V, **11:00 CEST** (`0 9 * * 1-5` UTC) |
-| **Prompt** | Vive en la config del trigger (`claude.ai/code → Rutinas`), **no** en una skill del repo — por eso esta rutina tardó en tener ficha. Flujo: busca en Gmail (enviados + borradores) para no duplicar contactos, **envía** los emails de captación de ia-rest, **crea borradores** (sin enviar) para ialimp, y manda un resumen por Telegram. |
+| **Prompt** | Vive en la config del trigger (`claude.ai/code → Rutinas`), **no** en una skill del repo — por eso esta rutina tardó en tener ficha. Flujo: busca en Gmail (enviados + borradores) para no duplicar contactos, **crea borradores** (sin enviar) para ia-rest e ialimp (hasta el 26/09 ia-rest se enviaba directo), y manda un resumen por Telegram. |
 | **MCPs / envs** | **Gmail** (conector claude.ai — buscar histórico, enviar, crear borradores). Para el aviso: `PLATAFORMA_URL` + `ALERTA_TOKEN` en las Instrucciones de la rutina (**NUNCA** `TELEGRAM_BOT_TOKEN`/`CHAT_ID` directos — ver "Arquitectura de notificaciones Telegram"; si faltan, el resumen se omite). |
-| **Qué hace** | Prospección comercial diaria de las dos verticales SaaS: ia-rest (Voice POS hostelería) en modo **envío directo**; ialimp (limpiezas) en modo **borrador para revisión**. La deduplicación se hace contra el propio Gmail (enviados/borradores), por lo que el conector Gmail es un **requisito duro**. |
-| **Verificar** | El chat muestra el resumen de contactados/borradores; en Gmail aparecen los enviados de ia-rest y los borradores de ialimp del día. |
+| **Qué hace** | Prospección comercial diaria de las dos verticales SaaS: **las dos en modo borrador para revisión** desde el 27/09/2026 (antes ia-rest enviaba directo: correo comercial no solicitado sin OK de Alberto, contra la regla de comunicaciones salientes y el art. 21 LSSI; prompt del trigger editado por API ese día). La deduplicación se hace contra el propio Gmail (enviados/borradores), por lo que el conector Gmail es un **requisito duro**. |
+| **Verificar** | El chat muestra el resumen de contactados/borradores; en Gmail aparecen los borradores de ia-rest y de ialimp del día (ninguno enviado). |
 
 > ⚠️ **Incidente 22/07/2026 — run abortado por "faltan dos piezas de infraestructura" → RE-DIAGNOSTICADO.**
 > Un run reportó dos bloqueos: (1) conector Gmail deshabilitado (`enabledInChat: false`) y (2) `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` sin definir. Verificación del 22/07 en sesión:
