@@ -45,8 +45,10 @@ import {
   emailAlternativo,
   etiquetaRol,
   POLIZA_ESTADOS_VIGENTES,
+  primaConRecibos,
   WHERE_CARTERA_VIVA,
   type IntervinienteFicha,
+  type ReciboVigencia,
 } from '@central/module-seguros'
 import { DIAS_VENTANA_AVISO, entraEnVentana, TIPOS_RECORDATORIO_PROPIO } from '@central/module-seguros-portal'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
@@ -58,6 +60,7 @@ import {
   quedaPresupuesto,
 } from './avisos-presupuesto'
 import { textoAviso, type ParaTercero } from './texto-vencimiento'
+import { recibosVigenciaDe } from './recibos-vigencia'
 
 const MS_DIA = 86_400_000
 
@@ -363,6 +366,7 @@ export async function ejecutarAvisosVencimiento(opts: {
           aseguradora: true,
           numeroPoliza: true,
           primaAnual: true,
+          fraccionamiento: true,
           cliente: {
             select: {
               id: true,
@@ -399,6 +403,19 @@ export async function ejecutarAvisosVencimiento(opts: {
     const apiKey = process.env.RESEND_API_KEY?.trim()
     if (!apiKey && !createMailTransporter()) throw new Error('sin_proveedor_email')
     hayProveedor = true
+  }
+
+  // Allianz no manda la prima en la póliza, solo en el recibo anual
+  // (27/09/2026): sin esto su correo sale sin la línea «Prima anual». Una
+  // consulta por correduría (en la práctica, una), nunca por póliza. En el
+  // ensayo no se escribe ningún correo, así que no se lee.
+  const recibosAnuales = new Map<string, ReciboVigencia[]>()
+  if (!soloContar) {
+    const porCorreduria = new Map<string, string[]>()
+    for (const p of polizas) porCorreduria.set(p.correduriaId, [...(porCorreduria.get(p.correduriaId) ?? []), p.id])
+    for (const [correduriaId, ids] of porCorreduria) {
+      for (const [id, recs] of await recibosVigenciaDe(correduriaId, ids)) recibosAnuales.set(id, recs)
+    }
   }
 
   const arranque = opts.ahoraMs ?? (() => Date.now())
@@ -462,7 +479,16 @@ export async function ejecutarAvisosVencimiento(opts: {
       fechaEvento: o.fechaEvento,
       aseguradora: poliza?.aseguradora ?? null,
       numeroPoliza: poliza?.numeroPoliza ?? null,
-      primaAnual: poliza?.primaAnual != null ? Number(poliza.primaAnual) : null,
+      // La prima NETA de la póliza, como siempre; si no la trae, la del recibo
+      // anual (pago anual). Un 0 guardado no es una prima.
+      primaAnual:
+        poliza.primaAnual != null && Number(poliza.primaAnual) > 0
+          ? Number(poliza.primaAnual)
+          : primaConRecibos(
+              { fraccionamiento: poliza.fraccionamiento === null ? null : String(poliza.fraccionamiento) },
+              recibosAnuales.get(poliza.id) ?? [],
+              hoy.toISOString(),
+            ).prima,
       paraTercero,
     })
 

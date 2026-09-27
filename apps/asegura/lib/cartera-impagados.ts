@@ -26,7 +26,7 @@ import {
   retencion,
   resumirRetencion,
   retarificabilidad,
-  primaReferencia,
+  primaConRecibos,
   type EstadoRetencion,
   type SituacionRecibo,
   type ResumenRetencion,
@@ -35,6 +35,7 @@ import {
 import { decryptField } from '@central/module-seguros-pii'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { LIMITE_RECIBOS_IMPAGO, cribaTruncada } from './cartera-techos.ts'
+import { recibosVigenciaDe } from './recibos-vigencia'
 
 // 🚨 Las situaciones que significan «este dinero no ha entrado» son DOS, y no
 // son lo mismo (medido el 01/09/2026: 1 devuelto y 25 pendientes):
@@ -203,6 +204,7 @@ export async function colaRetencion(
           estado: true,
           primaAnual: true,
           primaBruta: true,
+          fraccionamiento: true,
           datosEspecificos: true,
           cliente: {
             select: { id: true, nombre: true, apellidos: true, telefono: true, tipo: true },
@@ -262,6 +264,10 @@ export async function colaRetencion(
   }
 
   const descartadas = await polizasDescartadas(correduriaId, hoy)
+  // Allianz no manda la prima en la póliza, solo en el recibo anual
+  // (27/09/2026). TODOS los CA/NP de estas pólizas —no solo los impagados de
+  // arriba—, en una sola consulta.
+  const recibosAnuales = await recibosVigenciaDe(correduriaId, [...porPoliza.keys()])
 
   const filas: ClienteEnRiesgo[] = []
   for (const r of porPoliza.values()) {
@@ -292,10 +298,15 @@ export async function colaRetencion(
       aseguradora: p.aseguradora,
       numeroPoliza: p.numeroPoliza ?? null,
       matricula,
-      prima: primaReferencia({
-        primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
-        primaBruta: p.primaBruta === null ? null : Number(p.primaBruta),
-      }),
+      prima: primaConRecibos(
+        {
+          primaAnual: p.primaAnual === null ? null : Number(p.primaAnual),
+          primaBruta: p.primaBruta === null ? null : Number(p.primaBruta),
+          fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
+        },
+        recibosAnuales.get(p.id) ?? [],
+        hoy.toISOString(),
+      ).prima,
       importeRecibo: importeRecibo(r.primaTotal),
       fechaRecibo: fecha,
       situacionRecibo: situacion,
