@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
 
+import { navegadorIOS } from '@/lib/navegador-ios'
+
 /**
  * Lo que la instalación de la app tiene de COMPARTIDO entre la franja «Tenlo a
  * mano» (retirada el 08/09/2026) y la entrada «Instalar» de la campana
@@ -158,20 +160,62 @@ export function IconoCompartir() {
 }
 
 /**
- * Las instrucciones de iPhone/iPad.
+ * Las instrucciones de iPhone/iPad, en PASOS numerados y según el navegador.
  *
  * 🚨 Desde iOS 26 Safari ya NO enseña Compartir en la barra: queda dentro del
  * menú «···» que hay junto a la dirección (27/09/2026, Alberto en su iPhone:
- * «toca Compartir en la barra» mandaba a buscar un botón que no estaba). Se
- * nombra primero «···» y se deja el atajo para quien aún lo tenga a la vista
- * (iOS anteriores, Chrome con el icono en la barra).
+ * «toca Compartir en la barra» mandaba a buscar un botón que no estaba). Y en
+ * iPhone no hay atajo: Apple no deja que una web lance la instalación como en
+ * Android, así que esto es lo ÚNICO que tiene el cliente. Pasos cortos y con el
+ * dibujo, no un párrafo: el portal lo abre gente de 50-70 años.
+ *
+ * Solo se pinta tras pulsar el botón (cliente), así que leer `navigator` en el
+ * render no descuadra la hidratación.
  */
 export function InstruccionesIOS() {
+  const nav = typeof navigator === 'undefined' ? 'safari' : navegadorIOS(navigator.userAgent)
+  const final = (
+    <li>
+      Baja y elige <strong>«Añadir a pantalla de inicio»</strong>.
+    </li>
+  )
+  if (nav === 'chrome') {
+    return (
+      <ol className="instalar-pasos">
+        <li>
+          Toca <IconoCompartir /> <strong>Compartir</strong> en la barra de la dirección.
+        </li>
+        {final}
+      </ol>
+    )
+  }
+  if (nav === 'otro') {
+    return (
+      <ol className="instalar-pasos">
+        <li>
+          Abre el menú del navegador (<strong>···</strong> o <strong>☰</strong>).
+        </li>
+        <li>
+          Toca <IconoCompartir /> <strong>Compartir</strong>.
+        </li>
+        {final}
+      </ol>
+    )
+  }
   return (
     <>
-      Añade «Mis seguros» a la pantalla de inicio: toca <strong>···</strong> junto a la dirección, luego{' '}
-      <IconoCompartir /> <strong>Compartir</strong> y elige <strong>«Añadir a pantalla de inicio»</strong>{' '}
-      (si no sale, desliza hacia abajo). Si ya ves <IconoCompartir /> en la barra, tócalo directamente.
+      <ol className="instalar-pasos">
+        <li>
+          Toca <strong>···</strong> junto a la dirección.
+        </li>
+        <li>
+          Toca <IconoCompartir /> <strong>Compartir</strong>.
+        </li>
+        {final}
+      </ol>
+      <p className="instalar-nota">
+        Si ya ves <IconoCompartir /> en la barra, empieza por el paso 2.
+      </p>
     </>
   )
 }

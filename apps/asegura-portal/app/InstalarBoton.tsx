@@ -79,9 +79,10 @@ export function InstalarBoton() {
       {ios && abierto && (
         <div className="instalar-globo" id={idGlobo} role="dialog" aria-label="Cómo instalar en iPhone o iPad">
           <strong>Tenlo a mano</strong>
-          <p>
+          <div className="instalar-globo-cuerpo">
+            <p>Añade «Mis seguros» a la pantalla de inicio:</p>
             <InstruccionesIOS />
-          </p>
+          </div>
           <button type="button" className="instalar-globo-cerrar" onClick={() => setAbierto(false)}>
             Entendido
           </button>

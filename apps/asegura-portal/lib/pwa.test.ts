@@ -123,6 +123,12 @@ test('la oferta cubre iPhone, donde NO hay evento de instalación', () => {
     /<strong>···<\/strong> junto a la dirección/,
     'las instrucciones de iOS dejaron de nombrar el menú «···»: en iOS 26 Compartir está ahí dentro',
   )
+  // Cada navegador de iPhone esconde Compartir en otro sitio: las instrucciones
+  // tienen que decidir por el navegador, no dar una sola frase para todos.
+  assert.match(almacen, /navegadorIOS\(navigator\.userAgent\)/, 'las instrucciones de iOS ya no miran qué navegador es')
+  assert.match(almacen, /nav === 'chrome'/, 'se perdió la rama de Chrome en iPhone (Compartir en la barra de la dirección)')
+  // Pasos numerados, no un párrafo.
+  assert.match(almacen, /<ol className="instalar-pasos">/, 'las instrucciones de iOS dejaron de ser pasos numerados')
   // Y el botón enseña esas instrucciones en su globo (no un texto propio que se
   // desvíe), con `role="dialog"` y cierre por Escape: en iPhone es lo ÚNICO que
   // explica cómo instalar.

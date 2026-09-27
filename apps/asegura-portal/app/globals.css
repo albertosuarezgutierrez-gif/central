@@ -3160,12 +3160,49 @@ h1 em {
   display: block;
   font-size: 14px;
 }
-.instalar-globo p {
+.instalar-globo-cuerpo {
   margin: 4px 0 12px;
   font-size: 13px;
   line-height: 1.45;
   color: var(--muted);
 }
+.instalar-globo-cuerpo p { margin: 0; }
+/* Pasos numerados con el número en círculo: se siguen mejor que un párrafo. */
+.instalar-pasos {
+  list-style: none;
+  counter-reset: paso;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  color: var(--text);
+  font-size: 14px;
+}
+.instalar-pasos li {
+  counter-increment: paso;
+  position: relative;
+  padding-left: 32px;
+  min-height: 22px;
+}
+/* El número va absoluto y no como pista de grid: el `<li>` mezcla texto,
+ * `<strong>` y el `<svg>`, y en un grid cada trozo sería una celda. */
+.instalar-pasos li::before {
+  content: counter(paso);
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.instalar-globo-cuerpo .instalar-nota { margin-top: 8px; font-size: 12px; }
 /* El glifo de Compartir, dentro de la frase. Sin medidas un `<svg>` se pinta a
  * 300×150 px y revienta el globo: no hereda el tamaño del texto como una letra.
  * `vertical-align: -2px` lo sienta en la línea base en vez de dejarlo flotando. */
