@@ -11,7 +11,7 @@
 // 🚨 Los textos citan plazos y nada más. No prometen ahorro ni afirman qué pasa si la compañía no
 // avisa a tiempo: eso no está confirmado jurídicamente y sería asesorar.
 
-import { normalizarEmail, normalizarNombre } from '@central/module-seguros'
+import { normalizarEmail, normalizarNombre, normalizarTelefono } from '@central/module-seguros'
 
 export const DIAS_AVISO_1 = 70
 export const DIAS_AVISO_2 = 45
@@ -35,7 +35,7 @@ export const DIAS_PURGA_SIN_CONFIRMAR = 30
  */
 const NOMBRE_SEGURO = /^[\p{L} .'-]{1,60}$/u
 /** Versión del texto de consentimiento que muestra la web. Si cambia el texto, cambia la versión. */
-export const CONSENTIMIENTO_VERSION = 'web-aviso-v1'
+export const CONSENTIMIENTO_VERSION = 'web-aviso-v2'
 
 const MS_DIA = 86_400_000
 
@@ -94,7 +94,12 @@ export function nombreDelSeguro(ramo: string, ramoWeb: string): string {
   return NOMBRE_RAMO_WEB[ramoWeb] ?? NOMBRE_RAMO[ramo] ?? ramo
 }
 
-export type SolicitudAviso = { nombre: string; email: string; ramoWeb: string; ramo: string; vence: string }
+/**
+ * `telefono` es OPCIONAL y solo existe con su propio consentimiento de llamada (v2, 27/09/2026): el
+ * de «escribirme» no cubre una llamada comercial (Ley 11/2022, art. 66). Sin esa casilla el móvil
+ * se rechaza en vez de guardarse sin poder usarse.
+ */
+export type SolicitudAviso = { nombre: string; email: string; telefono: string | null; ramoWeb: string; ramo: string; vence: string }
 
 export type Revision = { ok: true; solicitud: SolicitudAviso } | { ok: false; motivo: string; campo: string }
 
@@ -115,6 +120,15 @@ export function revisarSolicitud(body: unknown): Revision {
   if (!NOMBRE_SEGURO.test(nombre.valor)) return { ok: false, motivo: 'Escribe solo tu nombre, con letras.', campo: 'nombre' }
   const email = normalizarEmail(b.email)
   if (!email.ok) return { ok: false, motivo: email.motivo, campo: 'email' }
+  let telefono: string | null = null
+  if (typeof b.telefono === 'string' && b.telefono.trim() !== '') {
+    const t = normalizarTelefono(b.telefono)
+    if (!t.ok) return { ok: false, motivo: t.motivo, campo: 'telefono' }
+    if (b.consentimientoLlamada !== true) {
+      return { ok: false, motivo: 'Marca la casilla para que podamos llamarte, o deja el móvil en blanco.', campo: 'consentimientoLlamada' }
+    }
+    telefono = t.valor
+  }
   const ramoWeb = typeof b.ramo === 'string' ? b.ramo.trim() : ''
   const ramo = RAMO_WEB_A_TIPO[ramoWeb]
   if (!ramo) return { ok: false, motivo: 'Ramo no válido.', campo: 'ramo' }
@@ -130,7 +144,7 @@ export function revisarSolicitud(body: unknown): Revision {
   if (anio < 1990 || anio > new Date().getUTCFullYear() + 2) return { ok: false, motivo: 'Fecha de vencimiento no válida.', campo: 'vence' }
   // El consentimiento tiene que venir marcado de forma EXPLÍCITA: `true`, no «algo que parezca sí».
   if (b.consentimiento !== true) return { ok: false, motivo: 'Tienes que aceptar que te escribamos para avisarte.', campo: 'consentimiento' }
-  return { ok: true, solicitud: { nombre: nombre.valor, email: email.valor, ramoWeb: ramoWebGuardado, ramo, vence: String(b.vence).trim() } }
+  return { ok: true, solicitud: { nombre: nombre.valor, email: email.valor, telefono, ramoWeb: ramoWebGuardado, ramo, vence: String(b.vence).trim() } }
 }
 
 function diaUtc(d: Date): Date {
