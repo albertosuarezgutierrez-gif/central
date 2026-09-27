@@ -16,6 +16,16 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-09-27 · mercado-booking** · hizo: segunda pasada diaria del día — 238 comparables reales
+  de Booking en las 24 ventanas de mercado del plan (`max=24`, `candidatas=508`, `recortadas=484` —
+  no agota el plan; ventanas casi todas de evento Q1 2027 en Santa Cruz/Betis-Sevilla + una de
+  octubre 2026); paso 2-bis (escaparate propio) 2/4 medidas (Dúplex center 545,84€/3n y HOUSE
+  SEVILLANA 2.328€/3n), Busto Reform y Luxury Busto sin disponibilidad en Booking para 06-08/10 —
+  hueco del conector, contado como `escaparateSinRespuesta`, no como "el canal cuadra"; 2 anuncios
+  propios de HOUSE SEVILLANA detectados y descartados de los comparables de mercado (aforo 12,
+  ventanas 2027-02-23/25 y 2027-02-28/03-02) antes de escribir. Latido `ok:true`. dudas: —;
+  fallos: —; PRs/commits: — (solo escritura vía `/api/sivra/mercado/ingest`; este commit solo anota
+  la bitácora y `CONTEXTO-SESIONES.md`).
 - **2026-09-27 · facturas-correo** · hizo: pasada disparada por trigger. Salud Vía B OK
   (`dias_caido=1`, última copia 26/09 en `_buzon_pdf`); Vía A (`gmail-adjuntos`) sigue sin
   provisionar (`CONNECTION_CLOSED`, no bloquea). Barrido 4.0 (`v_facturas_sin_cargo`): 0 filas
