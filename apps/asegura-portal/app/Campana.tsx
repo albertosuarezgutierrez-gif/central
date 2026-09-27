@@ -209,6 +209,8 @@ function nombreFuente(f: Avisos['fuentesIlegibles'][number]): string {
       return 'tus pólizas nuevas'
     case 'partes':
       return 'tus partes de siniestro'
+    case 'polizas_modificadas':
+      return 'los cambios de tus pólizas'
   }
 }
 

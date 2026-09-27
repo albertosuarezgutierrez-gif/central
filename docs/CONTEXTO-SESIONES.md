@@ -22,6 +22,7 @@ asegura lee el tomador (`leer-documento?tomador=1`), lo busca por DNI **y por no
 (`lib/sello-alta-lead.ts`, exige `v1:`); si no está, botón «Crear lead y abrir». El DNI nunca sale de asegura.
 Revisión architect: 6.582 fichas con DNI sin hash → «su DNI no aparece» ≠ «no está»; por eso los homónimos
 los decide Alberto (`leadNuevo`). Migración `..._oportunidad_lead.sql` aplicada. Pendiente: backfill del hash de DNI.
+**(27/09/2026)** — Portal de clientes: **«cualquier modificación de su póliza» → campana + correo** (decisión 15/09 que no se cumplía). Detector diario (`apps/asegura/lib/poliza-cambios-detector.ts`, antes del cron `avisos-intranet`) saca FOTO de cada póliza viva y guarda cambios de estado/fechas/prima/forma de pago/coberturas/documento nuevo/siniestro en `seguros.portal_poliza_cambio` (SQL `2026-09-27b`, **APLICADA**); aviso `poliza_modificada` en el catálogo común (semilla silenciosa, «completar ≠ cambiar», cortacircuitos si cambia >30 % a la vez). Además: los partes ya salen por correo, y el vencimiento se deriva de la póliza para quien nunca abrió la bóveda (3 hoy), con sello compartido para no repetirlo. El correo invita a instalar la app y activar avisos. Push de cambios de póliza: NO incluido.
 
 **(27/09/2026)** — Revisión PR #3748 (asistente correduría). Bloqueante corregido: un documento con pie que nombra
 aseguradora («recibo Mapfre hogar») ya NO se desvía a la correduría; solo `pieDeCorreduria()` (prefijo o lead/cliente/
@@ -773,6 +774,10 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+
+## (27/09/2026) Pólizas «vencidas» que sí estaban en vigor: Allianz (recibos) y Mapfre (sin datos)
+- Allianz no manda POL por CIMA pero sí REC: el recibo 2027 cobrado no movía el vencimiento. Nuevo pg_cron `seguros-avanzar-vencimientos-recibo` (06:30 UTC, función `seguros.avanzar_vencimientos_por_recibo()`, SQL en apps/asegura/prisma/sql/2026-09-27_renovacion_por_recibo.sql, APLICADO): solo avanza pólizas YA vencidas (el recibo de renovación llega semanas antes; avanzar antes borraría el aviso de no-renovación). 4 Allianz avanzadas.
+- Mapfre: 10 pólizas vencidas sin ningún dato de renovación (Mapfre mudo 23/06→25/09, aún sin POL). Portal: `renovacionSinConfirmar` → «Renovación sin confirmar» en vez de esconderlas de «En vigor» (Toyota de Víctor). Vigía de ingesta con señal por compañía: en curso (PR aparte).
 
 ## (27/09/2026) Portal: quien figura en una póliza (propietario, conductor, asegurado…) la ve
 - Decisión de Alberto: el interviniente ve ESA póliza con los datos del tomador y puede dar parte; nunca las otras del tomador. Nueva lista `CarteraPortal.intervinientes` (grupo «Figuras en su póliza»). Regla pura en `apps/asegura-portal/lib/intervinientes.ts`; IBAN/DNI/documentos siempre fuera (el portal no los carga). Cepo: `test/regression-portal-intervinientes.test.ts` (visto en rojo, 6 mutaciones).

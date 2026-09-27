@@ -8,7 +8,7 @@ import {
 
 import { companiasConCanal } from '@/lib/canales-compania'
 import { carnetsDeIdentidad } from '@/lib/carnets'
-import { carteraALaVista, carteraDeIdentidad, polizasParaParte, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
+import { carteraALaVista, carteraDeIdentidad, cuentaComoEnVigor, polizasParaParte, type PolizaPortal, type TitularPortal } from '@/lib/cartera-lectura'
 import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
 import { listarContactosPropios } from '@/lib/contactos-propios'
 import { prisma } from '@/lib/db'
@@ -179,7 +179,7 @@ export default async function Boveda({
             // Solo las SUYAS: el recibo devuelto de una póliza que le dejan ver lo paga su titular.
             recibosDevueltos: cartera.propias.flatMap((t) =>
               t.polizas
-                .filter((p) => p.vigencia !== 'no_vigente' && (p.recibos?.devueltos ?? 0) > 0)
+                .filter((p) => cuentaComoEnVigor(p) && (p.recibos?.devueltos ?? 0) > 0)
                 .map((p) => ({
                   polizaId: p.id,
                   etiqueta: [RAMO[p.ramo] ?? p.ramo, p.compania, p.bien.matricula ?? p.bien.cosa ?? p.bien.ubicacion]
@@ -254,7 +254,7 @@ export default async function Boveda({
                 // confusión», Alberto, 09/09/2026). `pendiente` —sin fecha, no
                 // se sabe— SÍ entra: esconder lo que no se sabe sería decidir
                 // por la persona que su seguro caducó.
-                .filter((p) => p.vigencia !== 'no_vigente')
+                .filter((p) => cuentaComoEnVigor(p))
                 .map((p) => ({ valor: `cartera:${p.id}`, ramo: p.ramo, matricula: p.bien.matricula })),
             ),
             ...declaradas.map((p) => ({
@@ -833,7 +833,7 @@ function Titular({
       <FiltroVigencia
         filas={titular.polizas.map((p) => ({
           key: p.id,
-          enVigor: p.vigencia !== 'no_vigente',
+          enVigor: cuentaComoEnVigor(p),
           nodo: <FilaPoliza key={p.id} p={p} deOtro={grupo === 'autorizadas' ? titular.nombre : null} />,
         }))}
       />

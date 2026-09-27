@@ -42,15 +42,19 @@
 import {
   estadoPeticion, entraEnVentana, DIAS_VENTANA_AVISO, HORAS_ENLACE_DIRECTO, HREF_POR_TIPO, generarTokenEnlace, hashTokenEnlace, urlEnlaceDirecto,
   CORTE_AVISO_POLIZA_NUEVA, DIAS_AVISO_POLIZA_NUEVA, polizasNuevasParaAviso, type FilaPolizaNueva,
+  DIAS_AVISO_POLIZA_MODIFICADA, polizasModificadasParaAviso, type FilaCambioPoliza,
+  DIAS_AVISO_PARTE, partesParaAviso, type ParteFilaAviso,
+  fechaAccionable, idVencimientoDerivado, TIPOS_RECORDATORIO_PROPIO,
 } from '@central/module-seguros-portal'
 import { computeEmailLookupHash } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
-import { WHERE_CARTERA_VIVA, leerSitio, textoReparoSitio, caducidadCarnet, sqlCarteraEnVigor } from '@central/module-seguros'
+import { WHERE_CARTERA_VIVA, WHERE_CARTERA_EN_VIGOR, leerSitio, textoReparoSitio, caducidadCarnet, sqlCarteraEnVigor } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { avisosActivos, destinatarioDeCliente, esSoloContar } from './avisos-vencimiento'
 import { descifrarCampo } from './cartera-edicion'
 import { cuerpoAvisosIntranet, enviarAvisosIntranet } from './correo-avisos-intranet'
 import { avisosNuevos, claveAviso, enlacePortal, type Pendiente } from './avisos-intranet-reglas'
+import { detectarCambiosPolizas, type ResumenCambiosPoliza } from './poliza-cambios-detector'
 
 const MS_DIA = 86_400_000
 
@@ -80,6 +84,8 @@ export type ResumenAvisosIntranet = {
   sinFicha: number
   /** true = no se ha enviado nada, solo se ha contado. */
   soloContar: boolean
+  /** La pasada del detector de cambios de póliza, que corre antes (`poliza-cambios-detector.ts`). */
+  cambiosPoliza: ResumenCambiosPoliza
 }
 
 function nombreDe(c: { nombre: string | null; apellidos: string | null } | null | undefined): string | null {
@@ -421,6 +427,90 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
     if (lista.length > 0) dame(clienteId).polizasNuevas = lista
   }
 
+  // Vencimientos de quien NO tiene obligación en el portal (27/09/2026). Las obligaciones nacen al
+  // abrir la bóveda, así que el cliente que nunca ha entrado —la mayoría— no recibía NINGÚN aviso de
+  // renovación. Se derivan aquí de la póliza EN VIGOR con la misma fecha accionable (art. 22 LCS) y
+  // la misma ventana; solo si no hay ya una obligación de esa póliza (la avisa el cron de
+  // vencimientos). Su id (`idVencimientoDerivado`) lo mira ese cron para no repetirlo si entra después.
+  const vencen = await db.poliza.findMany({
+    where: {
+      correduriaId, mergedIntoPolizaId: null, ...WHERE_CARTERA_EN_VIGOR,
+      fechaVencimiento: { gte: hoy, lte: new Date(hoy.getTime() + (DIAS_VENTANA_AVISO + 31) * MS_DIA) },
+    },
+    select: { id: true, clienteId: true, tipo: true, aseguradora: true, fechaVencimiento: true },
+  })
+  const conObligacion = new Set(
+    vencen.length === 0
+      ? []
+      : (
+          await db.portalObligacion.findMany({
+            where: { polizaId: { in: vencen.map((v) => v.id) }, tipo: { notIn: [...TIPOS_RECORDATORIO_PROPIO] } },
+            select: { polizaId: true },
+          })
+        ).map((o) => o.polizaId),
+  )
+  for (const v of vencen) {
+    if (!v.fechaVencimiento || conObligacion.has(v.id) || !fichaPorId.has(v.clienteId)) continue
+    const accionable = fechaAccionable(v.fechaVencimiento)
+    if (!entraEnVentana({ fechaAccionable: accionable, hoy })) continue
+    dame(v.clienteId).obligaciones.push({
+      id: idVencimientoDerivado(v.id, v.fechaVencimiento),
+      titulo: `Renovación de tu seguro con ${v.aseguradora}`,
+      fechaAccionable: accionable,
+      repiteCadaMeses: null,
+    })
+  }
+
+  // Pólizas con un CAMBIO reciente (27/09/2026): precio, fechas, coberturas, baja, documentos…
+  // Los escribe el detector justo antes de esta lectura. Un aviso por póliza (la regla pura junta
+  // los de la ventana) y solo al TOMADOR, que es quien lo contrató.
+  const cambios = await db.$queryRaw<(Omit<FilaCambioPoliza, 'detectadoEn'> & { clienteId: string; detectadoEn: Date })[]>`
+    select c.id::text as id, c.poliza_id::text as "polizaId", c.cliente_id::text as "clienteId", c.campos, c.estado_nuevo as "estadoNuevo",
+      c.detectado_en as "detectadoEn", coalesce(cd.nombre_comun, p.aseguradora) as compania, p.tipo::text as tipo
+    from portal_poliza_cambio c join polizas p on p.id = c.poliza_id
+      left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
+    where c.correduria_id = ${correduriaId}::uuid and c.detectado_en >= ${new Date(hoy.getTime() - DIAS_AVISO_POLIZA_MODIFICADA * MS_DIA)}
+      and p.merged_into_poliza_id is null and p.cliente_id = c.cliente_id`
+  const cambiosPorCliente = new Map<string, FilaCambioPoliza[]>()
+  for (const { clienteId, ...f } of cambios) {
+    if (!fichaPorId.has(clienteId)) continue
+    cambiosPorCliente.set(clienteId, [...(cambiosPorCliente.get(clienteId) ?? []), f])
+  }
+  for (const [clienteId, filas] of cambiosPorCliente) {
+    const lista = polizasModificadasParaAviso(filas, hoy)
+    if (lista.length > 0) dame(clienteId).polizasModificadas = lista
+  }
+
+  // Partes del portal abiertos con la compañía o descartados (hasta el 27/09/2026 solo salían en
+  // la campana). Al tomador de la póliza del parte; sin póliza de cartera no hay a quién escribir.
+  const desdeParte = new Date(hoy.getTime() - DIAS_AVISO_PARTE * MS_DIA)
+  const partes = await db.portalParteSiniestro.findMany({
+    where: { polizaId: { not: null }, OR: [{ abiertoEnCompaniaAt: { gte: desdeParte } }, { descartadoAt: { gte: desdeParte } }] },
+    select: { id: true, polizaId: true, fechaHecho: true, abiertoEnCompaniaAt: true, descartadoAt: true, motivoDescarte: true },
+  })
+  const polizasDeParte =
+    partes.length === 0
+      ? []
+      : await db.poliza.findMany({
+          where: { id: { in: partes.map((x) => x.polizaId!) }, correduriaId, mergedIntoPolizaId: null },
+          select: { id: true, clienteId: true, aseguradora: true },
+        })
+  const polizaDeParte = new Map(polizasDeParte.map((x) => [x.id, x]))
+  const partesPorCliente = new Map<string, ParteFilaAviso[]>()
+  for (const x of partes) {
+    const pol = x.polizaId ? polizaDeParte.get(x.polizaId) : undefined
+    if (!pol || !fichaPorId.has(pol.clienteId)) continue
+    const fila: ParteFilaAviso = {
+      id: x.id, fechaHecho: x.fechaHecho, abiertoEnCompaniaAt: x.abiertoEnCompaniaAt, descartadoAt: x.descartadoAt,
+      motivoDescarte: x.motivoDescarte, compania: pol.aseguradora,
+    }
+    partesPorCliente.set(pol.clienteId, [...(partesPorCliente.get(pol.clienteId) ?? []), fila])
+  }
+  for (const [clienteId, filas] of partesPorCliente) {
+    const lista = partesParaAviso(filas, hoy)
+    if (lista.length > 0) dame(clienteId).partes = lista
+  }
+
   return { pendientes: [...por.values()], identidadesServidas }
 }
 
@@ -513,6 +603,8 @@ export async function avisarIntranet(
   if (!enlace) throw new Error('sin_portal')
 
   const db = prismaAsegura()
+  // Antes de reunir: así el cambio que se detecta hoy sale en el correo de hoy. No lanza.
+  const cambiosPoliza = await detectarCambiosPolizas(correduriaId)
   const { pendientes, identidadesServidas } = await reunirPendientes(correduriaId, hoy)
 
   const resumen: ResumenAvisosIntranet = {
@@ -524,6 +616,7 @@ export async function avisarIntranet(
     ilegibles: 0,
     sinFicha: 0,
     soloContar,
+    cambiosPoliza,
   }
 
   // Los recordatorios propios que no llegaron a ningún `Pendiente` porque su

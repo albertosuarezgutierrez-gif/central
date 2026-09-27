@@ -16,6 +16,16 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-09-27 · mercado-booking** · hizo: pasada diaria completa — 235 comparables reales de
+  Booking en las 24 ventanas de mercado del plan (tope `max=24`, quedaron 484 ventanas casando el
+  filtro para pasadas siguientes; mayoría fechas de evento Q4 2026/Q1 2027 — FIBES TIS2026, Betis y
+  Sevilla FC, calendario); paso 2-bis (escaparate propio) 2/4 ventanas medidas (Dúplex center y
+  HOUSE SEVILLANA), 2 sin disponibilidad esas fechas en Booking (Busto Reform, Luxury Busto) — hueco
+  del conector, no fallo; 5 anuncios propios de HOUSE SEVILLANA detectados y descartados de los
+  comparables de mercado (aforo 12, ventanas 10-06, 01-17, 01-31, 02-07, 02-14) antes de escribir.
+  Latido `ok:true`. dudas: —; fallos: —; PRs/commits: — (solo escritura vía `/api/sivra/mercado/ingest`,
+  este commit solo anota la bitácora).
+
 <!-- Los agentes insertan aquí. Ejemplo:
 - **2026-08-23 · psd2-health-check** · hizo: pasada a petición de Alberto (banner «3 días sin
   movimientos»); feed PSD2 VIVO — las 2 conexiones `vinculada` con sync OK hoy 08:23, último mov

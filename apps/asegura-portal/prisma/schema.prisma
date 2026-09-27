@@ -953,6 +953,20 @@ model Poliza {
   @@schema("seguros")
 }
 
+/// «Hay cambios en tu póliza» (27/09/2026): lo escribe `apps/asegura`; aquí solo se lee (GRANT SELECT).
+model PortalPolizaCambio {
+  id           String   @id @db.Uuid
+  correduriaId String   @map("correduria_id") @db.Uuid
+  polizaId     String   @map("poliza_id") @db.Uuid
+  clienteId    String   @map("cliente_id") @db.Uuid
+  campos       String[]
+  estadoNuevo  String?  @map("estado_nuevo")
+  detectadoEn  DateTime @map("detectado_en") @db.Timestamptz(6)
+
+  @@map("portal_poliza_cambio")
+  @@schema("seguros")
+}
+
 model PolizaCobertura {
   id                  String    @id @db.Uuid
   correduriaId        String    @map("correduria_id") @db.Uuid

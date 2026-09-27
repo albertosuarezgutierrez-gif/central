@@ -125,7 +125,9 @@ test('🚨 una póliza que ya no está en vigor no sugiere ITV', () => {
   // nada: simplemente aparece una sugerencia de un coche que ya no es suyo.
   assert.match(
     src,
-    /\.filter\(\(p\) => p\.vigencia !== 'no_vigente'\)/,
+    // `cuentaComoEnVigor` (27/09/2026) deja pasar además la «renovación sin confirmar»: la
+    // compañía la sigue dando en vigor, así que su coche sigue siendo suyo.
+    /\.filter\(\(p\) => (?:p\.vigencia !== 'no_vigente'|cuentaComoEnVigor\(p\))\)/,
     'las precargas de ITV tienen que partir de las pólizas en vigor',
   )
 })

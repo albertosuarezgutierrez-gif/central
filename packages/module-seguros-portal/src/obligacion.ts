@@ -23,6 +23,16 @@ export function fechaAccionable(fechaEvento: Date): Date {
 }
 
 /**
+ * El id del vencimiento que el correo de la intranet DERIVA de la póliza cuando el cliente no tiene
+ * obligación en el portal (nunca ha abierto su bóveda: 27/09/2026). Es la clave con la que se sella
+ * (`obligacion_en_ventana:<esto>`), y el cron de vencimientos la mira antes de mandar la suya: si el
+ * cliente entra después y nace la obligación, no le llega el mismo vencimiento dos veces.
+ */
+export function idVencimientoDerivado(polizaId: string, fechaVencimiento: Date): string {
+  return `pv:${polizaId}:${diaUtc(fechaVencimiento).toISOString().slice(0, 10)}`
+}
+
+/**
  * Un ÚNICO disparo, a 7 días o menos de la fecha accionable. Una cadencia de
  * recordatorios («a 30, a 15, a 7…») es una decisión de producto que necesita
  * datos de apertura que hoy no existen; empezar con tres avisos y descubrir
