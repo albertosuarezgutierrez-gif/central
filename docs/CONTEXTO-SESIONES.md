@@ -753,6 +753,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (27/09/2026) Telegram: la póliza de un lead ya se abre como OPORTUNIDAD (no como gasto)
+- Caso: Alberto subió la póliza de Línea Directa de un lead; el contable buscó un cargo de 691,24€ y el asistente dijo que no sabía abrir oportunidades.
+- Nuevo: herramienta `proponer_oportunidad` del asistente (lee los docs subidos en la última hora por `file_id`, lo dictado manda) → botón «🎯 Abrir» de un solo uso → mismo puerto que la ficha (`accion:'crear'`, nace «por contactar», llamada 60 d antes del vencimiento; vencimiento pasado se descarta y se dice).
+- Documento con pie de correduría («seguro de un lead…») o de un álbum ya desviado NO pasa por el contable. «oportunidad(es)»/«lead(s)» enrutan a la correduría.
+- Tablas `correduria_asistente_documento` + `_oportunidad` (aplicadas). Lógica pura en `lib/correduria-oportunidad-tg.ts` (+12 cepos, vistos en rojo).
+- ⚠️ Depende del interruptor `CORREDURIA_ASISTENTE_EMISION_ACTIVA` (el mismo de emitir/corregir). Si el lead no tiene ficha, el asistente manda a crearla en /correduria.
+
 ## (27/09/2026) Pricing: SUELO de fin de semana sin mercado medido (House 29-30/01/2027 vendido a 300€)
 - La reserva de House 29-31/01/2027 (600€) entró al `min_price`: el motor tenía 436/456€ el 19/09 y el raíl lo bajó a 300 en dos pasadas.
 - Causa: el finde solo subía por `anclaMercadoFecha` (≥5 comps fiables de ESA fecha); sin ellos, viernes/sábado = martes.

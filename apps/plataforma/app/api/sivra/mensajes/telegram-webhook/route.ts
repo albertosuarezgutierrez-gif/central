@@ -21,7 +21,7 @@ import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
-import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton } from '@/lib/correduria-asistente-telegram'
+import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, registrarDocumentoTg, albumDeCorreduria } from '@/lib/correduria-asistente-telegram'
 import { turnoDeNota } from '@/lib/correduria-asistente'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
 import { manejarPatrimonioTg, resolverRecomendacionTg, detalleRecomendacionTg } from '@/lib/patrimonio-telegram'
@@ -778,7 +778,7 @@ export async function POST(req: NextRequest) {
       // Emitir y corregir la ficha escriben en la cartera: exigen que pulse la PERSONA autorizada, no
       // solo que el botón esté en su chat (en un grupo cualquiera podría pulsar). En un chat privado,
       // el id del chat es el de la persona.
-      if ((action === 'emitir' || action === 'corregir') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+      if ((action === 'emitir' || action === 'corregir' || action === 'oport') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
         await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
         return NextResponse.json({ ok: true })
       }
@@ -1061,6 +1061,19 @@ export async function POST(req: NextRequest) {
       }
       const adj = adjuntoDeMensaje(msg)
       if (adj) {
+        // Documento de la correduría (27/09/2026): la póliza de un lead que Alberto sube para abrirle una
+        // oportunidad NO es un gasto. Si el pie lo dice («seguro de un lead…»), o es parte de un álbum cuyo
+        // primer documento ya fue a la correduría, no pasa por el contable. Sin pie, el contable lo lee como
+        // siempre, pero queda apuntado (solo el file_id) para que el asistente lo lea si luego Alberto escribe
+        // «añádelo a oportunidades».
+        const pie = (msg.caption || '').trim()
+        const grupo = msg.media_group_id ? String(msg.media_group_id) : null
+        const aCorreduria = (pie !== '' && await esParaCorreduria(pie)) || await albumDeCorreduria(grupo)
+        await registrarDocumentoTg({ fileId: adj.fileId, nombre: adj.nameHint, mime: adj.mimeHint, mediaGroupId: grupo, destino: aCorreduria ? 'correduria' : 'contable' })
+        if (aCorreduria) {
+          if (pie) await manejarCorreduriaTg(pie)
+          return NextResponse.json({ ok: true })
+        }
         const file = await descargarTelegram(adj.fileId, adj.mimeHint, adj.nameHint)
         if (file) await manejarDocumentoTg(cuentaId, file.buffer, file.mimeType, file.fileName)
         else await tgSend('No pude descargar el archivo de Telegram. Reinténtalo.').catch(() => {})

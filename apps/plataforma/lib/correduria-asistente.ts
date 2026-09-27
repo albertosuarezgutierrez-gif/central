@@ -15,7 +15,7 @@
 const PREFIJO = /^\s*(?:\/seguros?\b|seguros?\s*[:,]|correduri[aá]\s*[:,])/i
 
 /** Palabras que solo tienen sentido en la correduría (el contable no las maneja). */
-const PROPIAS = /\b(p[oó]lizas?|siniestros?|renovaci(?:[oó]n|ones)|tomador(?:es)?|asegurad[oa]s?|retarific\w*|codeoscopic|avant2|cima|eiac|tirea|coberturas?|franquicia|carta verde|anulaci[oó]n(?:es)? de p[oó]liza)\b/i
+const PROPIAS = /\b(p[oó]lizas?|siniestros?|renovaci(?:[oó]n|ones)|tomador(?:es)?|asegurad[oa]s?|retarific\w*|codeoscopic|avant2|cima|eiac|tirea|coberturas?|franquicia|carta verde|anulaci[oó]n(?:es)? de p[oó]liza|oportunidad(?:es)?|leads?)\b/i
 
 /** Matrícula española moderna (1234ABC / 1234 ABC). Un gasto no se pregunta por matrícula. */
 const MATRICULA = /\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/i
@@ -110,7 +110,7 @@ export function paraIA(valor: unknown, max = 7000): string {
 export type NombreHerramienta =
   | 'buscar' | 'ficha_cliente' | 'ficha_poliza' | 'vencimientos' | 'impagados'
   | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision'
-  | 'proponer_correccion'
+  | 'proponer_correccion' | 'proponer_oportunidad'
 
 const fn = (name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'function',
@@ -148,6 +148,17 @@ export const HERRAMIENTAS = [
       provincia: { type: 'string' },
       nombre: { type: 'string', description: 'Solo si Alberto corrige el nombre (exige DNI archivado en la ficha)' },
       apellidos: { type: 'string', description: 'Solo si Alberto corrige los apellidos (exige DNI archivado en la ficha)' },
+    }, ['clienteId']),
+  fn('proponer_oportunidad', 'Propón ABRIR una oportunidad de venta (lead) para un cliente o lead de la cartera: p. ej. Alberto sube la póliza que tiene con otra compañía y dice «añádelo a oportunidades». NO escribe: el sistema le manda el resumen con un botón y es él quien la abre. Con usarDocumentos=true lee los documentos que Alberto ha subido al chat en la última hora (ramo, compañía, vencimiento, prima, nº de póliza). Lo que Alberto dicte manda sobre lo leído; nunca inventes un valor.',
+    {
+      clienteId: { type: 'string', description: 'La ficha (sácala de buscar). Si no sabes de quién es, pregúntaselo a Alberto.' },
+      usarDocumentos: { type: 'boolean', description: 'true si Alberto se refiere a lo que acaba de subir' },
+      ramo: { type: 'string', enum: ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] },
+      compania: { type: 'string', description: 'Compañía con la que está ahora' },
+      prima: { type: 'number', description: 'Prima anual actual en euros' },
+      vence: { type: 'string', description: 'Vencimiento de su póliza actual (aaaa-mm-dd)' },
+      numeroPoliza: { type: 'string' },
+      fechaPrimerPaso: { type: 'string', description: 'Solo si Alberto dice cuándo llamarle (aaaa-mm-dd)' },
     }, ['clienteId']),
 ] as const
 
@@ -188,7 +199,8 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     '- Si una herramienta falla o devuelve error, dilo: «no he podido leer X ahora mismo». Un fallo NO es «no hay nada».',
     '- Un campo a null significa «no consta / no se sabe», nunca 0 ni «no tiene». Si una lista trae `total` mayor que las filas que ves, di que hay más.',
     '- Si una búsqueda da varios clientes posibles, enuméralos y pregunta cuál; no elijas tú.',
-    '- No puedes anular ni enviar nada a nadie: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho; él la aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
+    '- No puedes anular ni enviar nada a nadie: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
+    '- Oportunidades: puedes PROPONER abrir una con proponer_oportunidad (lead o cliente que tiene un seguro con otra compañía). Si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true. Necesitas la ficha: si no sabes de quién es, pregúntale el nombre y búscalo; si no tiene ficha, dile que la cree en /correduria. NUNCA digas que está abierta: eso solo lo confirma el sistema tras el botón.',
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: dile que los cambie en la ficha.',
@@ -237,6 +249,10 @@ export function rastroArgs(nombre: string, args: Record<string, unknown> | null)
   if (nombre === 'proponer_correccion') {
     // Qué campos se tocaron, nunca sus valores: una dirección o un apellido son datos personales.
     return { clienteId: args.clienteId, campos: Object.keys(args).filter((k) => k !== 'clienteId') }
+  }
+  if (nombre === 'proponer_oportunidad') {
+    // El ramo y si usó documentos, sí; compañía, prima o nº de póliza, no (son del contrato de un tercero).
+    return { clienteId: args.clienteId, ramo: args.ramo, usarDocumentos: args.usarDocumentos === true, campos: Object.keys(args).filter((k) => k !== 'clienteId') }
   }
   const fuera: Record<string, unknown> = {}
   for (const k of ['clienteId', 'polizaId', 'dias', 'numero', 'projectId', 'quoteId']) if (k in args) fuera[k] = args[k]

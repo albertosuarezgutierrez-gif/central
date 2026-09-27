@@ -163,7 +163,9 @@ test('escribe por el puerto auditado, firmado por el asistente en el cuerpo Y en
 test('el webhook exige la persona autorizada también para corregir', () => {
   const wh = fuente('../app/api/sivra/mensajes/telegram-webhook/route.ts')
   const rama = wh.slice(wh.indexOf("if (prefix === 'cas')"))
-  const filtro = rama.indexOf("(action === 'emitir' || action === 'corregir') && String(cb.from?.id")
+  // Que el filtro cubra también `corregir` (y lo que se añada después, p. ej. `oport`), no su forma exacta.
+  const m = rama.match(/\(action === 'emitir' \|\| action === 'corregir'(?: \|\| action === '\w+')*\) && String\(cb\.from\?\.id/)
+  const filtro = m?.index ?? -1
   assert.ok(filtro > 0)
   assert.ok(filtro < rama.indexOf('resolverBotonCorreduria('))
 })
