@@ -261,12 +261,15 @@ import { explicarQuien, quienEsDelDocumento, resultadoAltaLead, textoAltaLead } 
 import { interpretarLecturaOportunidad, interpretarTomador } from './seguimiento-asegura.ts'
 
 const conTomador = (t: Partial<NonNullable<Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>['tomador']>>) =>
-  leida({ tomador: { nombre: 'Pepe Ruiz Gil', conDni: true, coincidencias: [], sello: 'SELLO', ...t } })
+  leida({ tomador: { nombre: 'Pepe Ruiz Gil', conDni: true, coincidencias: [], posibles: [], sello: 'v1:SELLO', ...t } })
 
 test('de quién es el documento: nuevo, existe, varios, sin DNI, sin poder mirar, sin tomador', () => {
-  assert.deepEqual(quienEsDelDocumento([conTomador({})]), { tipo: 'nuevo', nombre: 'Pepe Ruiz Gil', sello: 'SELLO' })
-  assert.deepEqual(quienEsDelDocumento([conTomador({ coincidencias: [{ id: 'u1', nombre: 'PEPE RUIZ', tipo: 'lead' }] })]), { tipo: 'existe', id: 'u1', nombre: 'PEPE RUIZ' })
-  assert.equal(quienEsDelDocumento([conTomador({ coincidencias: [{ id: 'a', nombre: 'x', tipo: '' }, { id: 'b', nombre: 'y', tipo: '' }] })]).tipo, 'varios')
+  const f = (id: string, nombre: string, activo = true) => ({ id, nombre, tipo: 'lead', activo })
+  assert.deepEqual(quienEsDelDocumento([conTomador({})]), { tipo: 'nuevo', nombre: 'Pepe Ruiz Gil', sello: 'v1:SELLO' })
+  assert.deepEqual(quienEsDelDocumento([conTomador({ coincidencias: [f('u1', 'PEPE RUIZ')] })]), { tipo: 'existe', id: 'u1', nombre: 'PEPE RUIZ' })
+  assert.equal(quienEsDelDocumento([conTomador({ coincidencias: [f('a', 'x'), f('b', 'y')] })]).tipo, 'varios')
+  // una ficha DESCARTADA con ese DNI no recibe la oportunidad sin preguntar
+  assert.equal(quienEsDelDocumento([conTomador({ coincidencias: [f('u1', 'PEPE', false)] })]).tipo, 'varios')
   // «no se pudo mirar» NO es «no está»: nunca se ofrece crear otra ficha
   assert.equal(quienEsDelDocumento([conTomador({ coincidencias: null })]).tipo, 'sin_comprobar')
   assert.equal(quienEsDelDocumento([conTomador({ sello: null })]).tipo, 'sin_comprobar')
@@ -278,9 +281,30 @@ test('de quién es el documento: nuevo, existe, varios, sin DNI, sin poder mirar
   assert.equal(explicarQuien({ tipo: 'nuevo', nombre: 'Pepe', sello: 's' }), null)
 })
 
+test('sin DNI en la cartera NO basta para crear: si hay fichas con ese nombre, decide Alberto', () => {
+  // el volcado tiene fichas con DNI y sin índice ciego: «su DNI no aparece» no es «no está»
+  const conPosible = conTomador({ posibles: [{ id: 'viejo', nombre: 'PEPE RUIZ GIL', tipo: 'lead', activo: true }] })
+  const q = quienEsDelDocumento([conPosible])
+  assert.ok(q.tipo === 'varios' && !q.porDni)
+  assert.match(explicarQuien(q) ?? '', /leadNuevo=true/)
+  // Alberto dice que no es ninguno → ahora sí se crea
+  assert.equal(quienEsDelDocumento([conPosible], true).tipo, 'nuevo')
+  // no se pudo buscar por nombre → no se afirma nada
+  assert.equal(quienEsDelDocumento([conTomador({ posibles: null })]).tipo, 'sin_comprobar')
+})
+
+test('documentos de DOS personas en la misma hora: no se mezclan', () => {
+  const q = quienEsDelDocumento([conTomador({}), conTomador({ nombre: 'Ana Sanz' })])
+  assert.equal(q.tipo, 'varias_personas')
+  // la misma persona escrita con otra grafía no cuenta como dos
+  assert.equal(quienEsDelDocumento([conTomador({}), conTomador({ nombre: 'PEPE RUIZ GIL' })]).tipo, 'nuevo')
+})
+
 test('el tomador del puerto: el DNI nunca se lee aunque venga, y basura → sin coincidencias', () => {
-  const t = interpretarTomador({ nombre: 'Pepe', conDni: true, dni: '12345678Z', coincidencias: [{ id: 'u', nombre: 'P', tipo: 'lead' }, 'x'], sello: 'S' })
-  assert.deepEqual(t, { nombre: 'Pepe', conDni: true, coincidencias: [{ id: 'u', nombre: 'P', tipo: 'lead' }], sello: 'S' })
+  const t = interpretarTomador({ nombre: 'Pepe', conDni: true, dni: '12345678Z', coincidencias: [{ id: 'u', nombre: 'P', tipo: 'lead' }, 'x'], sello: 'v1:S' })
+  assert.deepEqual(t, { nombre: 'Pepe', conDni: true, coincidencias: [{ id: 'u', nombre: 'P', tipo: 'lead', activo: true }], posibles: null, sello: 'v1:S' })
+  // un sello en claro (sin cifrar) se descarta: no hay alta posible
+  assert.equal(interpretarTomador({ nombre: 'Pepe', sello: '{"a":{"dni":"12345678Z"}}' })?.sello, null)
   assert.equal(interpretarTomador({ nombre: 'Pepe', coincidencias: 'nada' })?.coincidencias, null)
   const l = interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto', compania: 'MUSSAP', tomador: { nombre: 'Pepe', conDni: false, coincidencias: null, sello: null } })
   assert.ok(l.estado === 'ok' && l.tomador?.nombre === 'Pepe')
@@ -302,7 +326,7 @@ test('el mensaje del lead nuevo dice que no está y no enseña el DNI', () => {
   const r = prepararAlta({}, [leida()], HOY)
   assert.ok(r.ok)
   const t = textoAltaLead('Pepe <Ruiz>', r.alta)
-  assert.match(t, /no está en la cartera/)
+  assert.match(t, /No encuentro a .* en la cartera \(ni por DNI ni por nombre\)/)
   assert.match(t, /Pepe &lt;Ruiz&gt;/)
   assert.match(t, /el DNI no se muestra/)
 })

@@ -167,6 +167,7 @@ export const HERRAMIENTAS = [
       vence: { type: 'string', description: 'Vencimiento de su póliza actual (aaaa-mm-dd)' },
       numeroPoliza: { type: 'string' },
       fechaPrimerPaso: { type: 'string', description: 'Solo si Alberto dice cuándo llamarle (aaaa-mm-dd)' },
+      leadNuevo: { type: 'boolean', description: 'SOLO si el sistema te enseñó fichas con ese nombre y Alberto ha dicho que no es ninguna de ellas' },
     }, []),
   fn('proponer_tarea', 'Propón una TAREA de seguimiento en una oportunidad («llama a Juan el jueves», «mándale la comparativa el lunes»). Las tareas cuelgan de una oportunidad: sácala de oportunidades_cliente; si no tiene ninguna, propón primero abrir una. Alberto la crea con un botón.',
     {

@@ -622,10 +622,14 @@ export type LecturaDocumentoOportunidad =
  * que ya lo tienen (buscado allí dentro) y `sello` es el alta cifrada para crear el lead.
  * `coincidencias: null` = no se ha podido mirar o el documento no trae DNI (≠ `[]`, «no está»).
  */
+export type FichaTomador = { id: string; nombre: string; tipo: string; activo: boolean }
 export type TomadorLeido = {
   nombre: string | null
   conDni: boolean
-  coincidencias: { id: string; nombre: string; tipo: string }[] | null
+  /** Fichas con ese DNI. */
+  coincidencias: FichaTomador[] | null
+  /** Fichas que se llaman igual (sin comprobar DNI): pueden ser la misma persona o un homónimo. */
+  posibles: FichaTomador[] | null
   sello: string | null
 }
 
@@ -633,15 +637,16 @@ export function interpretarTomador(v: unknown): TomadorLeido | undefined {
   if (v === null || typeof v !== 'object' || Array.isArray(v)) return undefined
   const o = v as Record<string, unknown>
   const nombre = typeof o.nombre === 'string' && o.nombre.trim() !== '' ? o.nombre.trim().slice(0, 160) : null
-  const coincidencias = Array.isArray(o.coincidencias)
-    ? o.coincidencias.flatMap((c) => {
+  const fichas = (v: unknown): FichaTomador[] | null => Array.isArray(v)
+    ? v.flatMap((c) => {
         const x = c as Record<string, unknown> | null
         return x && typeof x.id === 'string' && typeof x.nombre === 'string'
-          ? [{ id: x.id, nombre: x.nombre.slice(0, 160), tipo: typeof x.tipo === 'string' ? x.tipo : '' }] : []
+          ? [{ id: x.id, nombre: x.nombre.slice(0, 160), tipo: typeof x.tipo === 'string' ? x.tipo : '', activo: x.activo !== false }] : []
       })
     : null
-  const sello = typeof o.sello === 'string' && o.sello.length > 0 && o.sello.length < 4000 ? o.sello : null
-  return { nombre, conDni: o.conDni === true, coincidencias, sello }
+  // Un sello en claro (sin `v1:`) no se acepta: sería el DNI viajando sin cifrar.
+  const sello = typeof o.sello === 'string' && o.sello.startsWith('v1:') && o.sello.length < 4000 ? o.sello : null
+  return { nombre, conDni: o.conDni === true, coincidencias: fichas(o.coincidencias), posibles: fichas(o.posibles), sello }
 }
 
 /**

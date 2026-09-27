@@ -658,7 +658,7 @@ async function proponerOportunidad(args: Record<string, unknown>, turnoId: numbe
   let lead: { nombre: string; sello: string } | null = null
   let delDocumento = ''
   if (!clienteId) {
-    const q = quienEsDelDocumento(lecturas ?? [])
+    const q = quienEsDelDocumento(lecturas ?? [], args.leadNuevo === true)
     const porQue = explicarQuien(q)
     if (porQue) return { texto: porQue, ok: true }
     if (q.tipo === 'existe') { clienteId = q.id; nombre = q.nombre; delDocumento = ` El documento es de ${q.nombre}, que YA tiene ficha (por su DNI).` }
@@ -669,6 +669,8 @@ async function proponerOportunidad(args: Record<string, unknown>, turnoId: numbe
   const prep = prepararAlta(args, lecturas, hoyMadrid())
   if (!prep.ok) return { texto: `NO SE PUEDE PROPONER: ${prep.motivo}.`, ok: true }
 
+  // Una propuesta viva por ficha, y UN lead nuevo a la vez: dos botones «crear lead» abiertos son dos
+  // documentos distintos y es fácil pulsar el que no era.
   await prisma.$executeRaw(Prisma.sql`
     UPDATE correduria_asistente_oportunidad SET estado = 'caducada', decidida_at = now(), alta = NULL, lead = NULL
     WHERE estado = 'propuesta' AND (cliente_id = ${clienteId}::uuid OR lead IS NOT NULL OR caduca_at <= now())`).catch(() => {})
@@ -748,7 +750,7 @@ async function abrirOportunidad(id: number): Promise<string> {
   const json = r.json as { id?: unknown; motivo?: unknown } | null
   await prisma.$executeRaw(Prisma.sql`
     UPDATE correduria_asistente_oportunidad
-    SET estado = ${fin.estado}, alta = NULL, lead = NULL,
+    SET estado = ${fin.estado}, alta = NULL, lead = NULL, cliente_id = ${clienteId}::uuid,
         resultado = ${JSON.stringify({ status: r.status, id: json?.id ?? null, motivo: json?.motivo ?? null })}::jsonb
     WHERE id = ${id}`).catch((e) => console.error('[correduria-oportunidad-tg] no se pudo cerrar la fila', id, e))
   await decir(fin.texto)
@@ -926,6 +928,12 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
     DELETE FROM correduria_asistente_accion WHERE estado = 'propuesta' AND caduca_at < now() - interval '1 day'`).catch(() => {})
   await prisma.$executeRaw(Prisma.sql`
     DELETE FROM correduria_asistente_oportunidad WHERE estado = 'propuesta' AND caduca_at < now() - interval '1 day'`).catch(() => {})
+  // El sello del lead (DNI cifrado) no se queda en filas que ya no van a usarlo.
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_oportunidad
+    SET lead = NULL, estado = CASE estado WHEN 'propuesta' THEN 'caducada' WHEN 'aplicando' THEN 'incierta' ELSE estado END
+    WHERE lead IS NOT NULL AND (estado <> 'propuesta' OR caduca_at <= now())
+      AND (estado <> 'aplicando' OR decidida_at < now() - interval '1 hour')`).catch(() => {})
   await prisma.$executeRaw(Prisma.sql`
     DELETE FROM correduria_asistente_documento WHERE creado_at < now() - interval '30 days'`).catch(() => {})
 
@@ -1013,7 +1021,7 @@ export async function resolverBotonCorreduria(accion: string, arg: string): Prom
   }
   if (accion === 'oportno') {
     const n = await prisma.$executeRaw(Prisma.sql`
-      UPDATE correduria_asistente_oportunidad SET estado = 'descartada', decidida_at = now(), alta = NULL
+      UPDATE correduria_asistente_oportunidad SET estado = 'descartada', decidida_at = now(), alta = NULL, lead = NULL
       WHERE id = ${id} AND estado = 'propuesta'`).catch(() => 0)
     return n ? 'Descartada: no se abre nada' : 'Ya estaba decidida'
   }

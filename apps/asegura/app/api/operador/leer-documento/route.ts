@@ -2,10 +2,7 @@ import { NextResponse } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { leerPoliza, revisarFichero } from '@/lib/documentos/extraer-poliza'
 import { auditado } from '@/lib/auditoria'
-import { prepararAltaDesdeDocumento } from '@central/module-seguros'
-import { correduriaUnica } from '@/lib/cartera'
-import { coincidencias } from '@/lib/cartera-edicion'
-import { sellarAltaLead } from '@/lib/sello-alta-lead'
+import { tomadorDe } from '@/lib/tomador-documento'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -24,7 +21,7 @@ export const maxDuration = 120
  * - **No devuelve datos personales** (tomador, DNI, nacimiento, dirección): la
  *   oportunidad no los necesita y viajarían al navegador para nada.
  * - `?tomador=1` (27/09/2026, asistente de Telegram): además dice QUIÉN es el
- *   tomador —su nombre y las fichas que ya tienen ese DNI— y un `sello` opaco con
+ *   tomador —su nombre, las fichas con ese DNI y las que se llaman igual— y un `sello` opaco con
  *   el alta cifrada para `POST /api/operador/cliente`. El DNI se busca aquí dentro
  *   y viaja solo cifrado: plataforma nunca lo ve en claro.
  * - «No se pudo leer» es 422 con motivo, nunca 200 con todo a null: eso se
@@ -48,7 +45,7 @@ export const POST = auditado(async (req: Request) => {
   if (r.fase === 'ninguno') return NextResponse.json({ error: r.motivo }, { status: 422 })
 
   const d = r.datos
-  const tomador = new URL(req.url).searchParams.get('tomador') === '1' ? await tomadorDe(r) : undefined
+  const tomador = new URL(req.url).searchParams.get('tomador') === '1' ? await tomadorDe({ ramo: r.ramo, tipoLectura: r.fase, datos: r.datos as unknown as Record<string, string | number | null> }) : undefined
   return NextResponse.json({
     ...(tomador ? { tomador } : {}),
     leido: true,
@@ -61,26 +58,3 @@ export const POST = auditado(async (req: Request) => {
   })
 })
 
-/**
- * `coincidencias: null` = no se ha podido mirar (≠ `[]`, «se miró y no está»). Sin DNI no se busca:
- * el nombre solo no identifica a nadie (homónimos), eso lo decide Alberto con el buscador.
- */
-async function tomadorDe(r: Exclude<Awaited<ReturnType<typeof leerPoliza>>, { fase: 'ninguno' }>) {
-  const { alta } = prepararAltaDesdeDocumento({
-    ramo: r.ramo, tipoLectura: r.fase, datos: r.datos as unknown as Record<string, string | number | null>,
-  })
-  if (!alta) return { nombre: null, conDni: false, coincidencias: null, sello: null }
-  const nombre = `${alta.nombre} ${alta.apellidos}`.trim()
-  let encontradas: { id: string; nombre: string; tipo: string }[] | null = null
-  if (alta.dni) {
-    try {
-      const c = await correduriaUnica()
-      if (c) encontradas = (await coincidencias(c.id, { dni: alta.dni })).map(({ id, nombre: n, tipo }) => ({ id, nombre: n, tipo }))
-    } catch {
-      encontradas = null
-    }
-  }
-  let sello: string | null = null
-  try { sello = sellarAltaLead(alta) } catch { sello = null }
-  return { nombre, conDni: alta.dni !== null, coincidencias: encontradas, sello }
-}

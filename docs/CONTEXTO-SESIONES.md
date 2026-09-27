@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — PR #3765: el asistente de Telegram ya no pregunta «¿de qué lead?» teniendo la póliza delante:
+asegura lee el tomador (`leer-documento?tomador=1`), lo busca por DNI **y por nombre** y devuelve un sello cifrado
+(`lib/sello-alta-lead.ts`, exige `v1:`); si no está, botón «Crear lead y abrir». El DNI nunca sale de asegura.
+Revisión architect: 6.582 fichas con DNI sin hash → «su DNI no aparece» ≠ «no está»; por eso los homónimos
+los decide Alberto (`leadNuevo`). Migración `..._oportunidad_lead.sql` aplicada. Pendiente: backfill del hash de DNI.
+
 **(27/09/2026)** — Revisión PR #3748 (asistente correduría). Bloqueante corregido: un documento con pie que nombra
 aseguradora («recibo Mapfre hogar») ya NO se desvía a la correduría; solo `pieDeCorreduria()` (prefijo o lead/cliente/
 oportunidad) o el álbum. Aseguradoras → `PROPIAS_SUAVES` (tras las contables). Botón gasto/cliente de un solo uso

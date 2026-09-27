@@ -182,21 +182,38 @@ export function resultadoAlta(status: number, json: unknown, url: string): { est
 export type QuienDocumento =
   | { tipo: 'sin_leer' }
   | { tipo: 'sin_tomador' }
+  /** Documentos de más de una persona en la misma hora: no se mezclan datos de una con la ficha de otra. */
+  | { tipo: 'varias_personas'; nombres: string[] }
   | { tipo: 'existe'; id: string; nombre: string }
-  | { tipo: 'varios'; fichas: { id: string; nombre: string }[] }
+  | { tipo: 'varios'; fichas: { id: string; nombre: string }[]; porDni: boolean }
   | { tipo: 'nuevo'; nombre: string; sello: string }
   /** Sin DNI en el documento, o sin poder mirar: no se afirma que no esté. */
   | { tipo: 'sin_comprobar'; nombre: string; conDni: boolean }
 
-/** El primer documento leído que trae tomador manda (el pie de un álbum va en el primero). */
-export function quienEsDelDocumento(lecturas: readonly LecturaDocumentoOportunidad[]): QuienDocumento {
+const normal = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9ñ]+/g, ' ').trim()
+
+/**
+ * De quién es lo subido. «Su DNI no aparece» NO es «no está»: hay fichas del volcado con DNI y sin
+ * índice ciego, así que antes de ofrecer una ficha nueva se mira también por el nombre (`posibles`),
+ * y si hay alguno decide Alberto (`confirmadoNuevo` = ya ha dicho que no es ninguno de esos).
+ */
+export function quienEsDelDocumento(lecturas: readonly LecturaDocumentoOportunidad[], confirmadoNuevo = false): QuienDocumento {
   const leidas = lecturas.flatMap((l) => (l.estado === 'ok' && l.tomador ? [l.tomador] : []))
   if (leidas.length === 0) return { tipo: 'sin_leer' }
-  const t: TomadorLeido | undefined = leidas.find((x) => x.nombre !== null)
-  if (!t || !t.nombre) return { tipo: 'sin_tomador' }
+  const conNombre = leidas.filter((x): x is TomadorLeido & { nombre: string } => x.nombre !== null)
+  if (conNombre.length === 0) return { tipo: 'sin_tomador' }
+  const distintos = [...new Map(conNombre.map((x) => [normal(x.nombre), x.nombre])).values()]
+  if (distintos.length > 1) return { tipo: 'varias_personas', nombres: distintos }
+  const t = conNombre[0]
   if (t.coincidencias === null) return { tipo: 'sin_comprobar', nombre: t.nombre, conDni: t.conDni }
-  if (t.coincidencias.length === 1) return { tipo: 'existe', id: t.coincidencias[0].id, nombre: t.coincidencias[0].nombre }
-  if (t.coincidencias.length > 1) return { tipo: 'varios', fichas: t.coincidencias.map(({ id, nombre }) => ({ id, nombre })) }
+  const activas = t.coincidencias.filter((c) => c.activo)
+  if (t.coincidencias.length === 1 && activas.length === 1) return { tipo: 'existe', id: activas[0].id, nombre: activas[0].nombre }
+  if (t.coincidencias.length > 0) return { tipo: 'varios', fichas: t.coincidencias.map(({ id, nombre, activo }) => ({ id, nombre: activo ? nombre : `${nombre} (descartada)` })), porDni: true }
+  // Nadie con ese DNI. Antes de crear, los que se llaman igual (o no se pudo mirar por nombre).
+  if (!confirmadoNuevo) {
+    if (t.posibles === null) return { tipo: 'sin_comprobar', nombre: t.nombre, conDni: t.conDni }
+    if (t.posibles.length > 0) return { tipo: 'varios', fichas: t.posibles.map(({ id, nombre, activo }) => ({ id, nombre: activo ? nombre : `${nombre} (descartada)` })), porDni: false }
+  }
   if (!t.sello) return { tipo: 'sin_comprobar', nombre: t.nombre, conDni: t.conDni }
   return { tipo: 'nuevo', nombre: t.nombre, sello: t.sello }
 }
@@ -206,9 +223,12 @@ export function explicarQuien(q: QuienDocumento): string | null {
   switch (q.tipo) {
     case 'sin_leer': return 'NO SE PUEDE PROPONER: no he podido leer de quién es ningún documento. Pregúntale a Alberto el nombre y búscalo.'
     case 'sin_tomador': return 'NO SE PUEDE PROPONER: el documento no dice quién es el tomador. Pregúntale a Alberto el nombre y búscalo.'
-    case 'varios': return `VARIAS FICHAS con el DNI del documento: ${q.fichas.map((f) => `${f.nombre} (${f.id})`).join('; ')}. Pregúntale a Alberto cuál y vuelve a llamar con ese clienteId.`
+    case 'varias_personas': return `NO SE PUEDE PROPONER: en la última hora ha subido documentos de varias personas (${q.nombres.join(', ')}). Pregúntale de cuál es y pásame su clienteId (búscalo), o que suba solo el de esa persona.`
+    case 'varios': return q.porDni
+      ? `VARIAS FICHAS con el DNI del documento: ${q.fichas.map((f) => `${f.nombre} (${f.id})`).join('; ')}. Pregúntale a Alberto cuál y vuelve a llamar con ese clienteId.`
+      : `NO ESTÁ POR DNI, PERO HAY FICHAS CON ESE NOMBRE: ${q.fichas.map((f) => `${f.nombre} (${f.id})`).join('; ')}. Pueden ser la misma persona (fichas antiguas sin DNI indexado) o un homónimo. Pregúntale a Alberto: si es alguna, vuelve a llamar con su clienteId; si no es ninguna, vuelve a llamar con leadNuevo=true.`
     case 'sin_comprobar': return q.conDni
-      ? `NO SE HA PODIDO COMPROBAR si ${q.nombre} está en la cartera (la búsqueda por DNI ha fallado). Búscalo con buscar por el nombre; NO digas que no está.`
+      ? `NO SE HA PODIDO COMPROBAR si ${q.nombre} está en la cartera (la búsqueda ha fallado). Búscalo con buscar por el nombre; NO digas que no está.`
       : `El documento es de ${q.nombre} pero NO trae DNI, así que no puedo comprobar si está ni crear su ficha. Búscalo con buscar por el nombre; si no está, pídele a Alberto el teléfono o el email para darlo de alta en /correduria.`
     default: return null
   }
@@ -217,7 +237,7 @@ export function explicarQuien(q: QuienDocumento): string | null {
 /** El mensaje con el botón cuando además hay que crear la ficha. */
 export function textoAltaLead(nombre: string, a: Alta): string {
   const base = textoAlta(nombre, a).split('\n')
-  base[0] = `🎯 <b>${escapar(nombre)}</b> no está en la cartera (busqué su DNI). ¿Creo el lead y le abro esta oportunidad?`
+  base[0] = `🎯 No encuentro a <b>${escapar(nombre)}</b> en la cartera (ni por DNI ni por nombre). ¿Creo el lead y le abro esta oportunidad?`
   base.splice(1, 0, '• Ficha nueva: nombre y DNI tal como vienen en el documento (el DNI no se muestra aquí).')
   return base.join('\n')
 }
@@ -232,7 +252,7 @@ export function resultadoAltaLead(status: number, json: unknown): { estado: 'cre
   }
   if (status === 503 && o?.estado === 'sin_configurar') return { estado: 'rechazado', texto: '✋ No he creado la ficha: la cartera no está conectada.' }
   if (status === 0 || status >= 500) {
-    return { estado: 'incierto', texto: '⚠️ No sé si se ha creado la ficha (la cartera no ha contestado bien). Búscalo en /correduria antes de repetirlo; si se creó, al repetir te avisará de que ya existe. No he abierto la oportunidad.' }
+    return { estado: 'incierto', texto: '⚠️ No sé si se ha creado la ficha (la cartera no ha contestado bien). Búscalo en /correduria antes de repetirlo; si se creó, al repetir te avisará de que ya existe. No he abierto la oportunidad. Para repetirlo, vuelve a subir la póliza.' }
   }
   const motivo = typeof o?.motivo === 'string' ? o.motivo : `HTTP ${status}`
   return { estado: 'rechazado', texto: `✋ No he creado la ficha: ${escapar(motivo)}` }

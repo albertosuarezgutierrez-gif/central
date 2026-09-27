@@ -16,7 +16,10 @@ type Contenido = { p: string; v: 1; t: number; a: AltaDesdeDocumento }
 
 export function sellarAltaLead(a: AltaDesdeDocumento, ahora = Date.now()): string {
   const c: Contenido = { p: PROPOSITO, v: 1, t: ahora, a }
-  return encryptField(JSON.stringify(c))
+  const s = encryptField(JSON.stringify(c))
+  // Sin clave PII `encryptField` devuelve el texto tal cual: eso sería el DNI en claro camino de plataforma.
+  if (!s.startsWith('v1:')) throw new Error('sin clave PII: no se sella')
+  return s
 }
 
 /** El contenido ya descifrado → el alta, o `null` si no es un sello de alta, está mal o caducó. */
@@ -33,6 +36,8 @@ export function leerContenidoSello(json: string, ahora = Date.now()): AltaDesdeD
 }
 
 export function abrirSelloAltaLead(sello: string, ahora = Date.now()): AltaDesdeDocumento | null {
+  // `decryptField` devuelve tal cual lo que no empieza por `v1:`: un JSON en claro pasaría por sello.
+  if (!sello.startsWith('v1:')) return null
   let json: string
   try { json = decryptField(sello) } catch { return null }
   return leerContenidoSello(json, ahora)
