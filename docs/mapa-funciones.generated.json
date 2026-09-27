@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-27T05:27:06Z",
-  "sha": "608da187db1c5a6343a7580eb462b682aabc8fd1",
+  "generadoEn": "2026-09-27T08:36:27Z",
+  "sha": "80dcb0d6c3ab3e2d54aa71e127247200883251cf",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -11111,7 +11111,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 39
+          "linea": 40
         },
         {
           "nombre": "ArticuloPagina",
@@ -11119,12 +11119,12 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ slug: string }> }",
           "retorno": null,
-          "linea": 45
+          "linea": 46
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a7a8fe915e7c"
+      "hash": "12aa654b5fe8"
     },
     {
       "ruta": "apps/asegura-web/app/blog/page.tsx",
@@ -11169,12 +11169,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 97
+          "linea": 98
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "249d2c050e9e"
+      "hash": "7e66fdbbe4dc"
     },
     {
       "ruta": "apps/asegura-web/app/carta-baja-seguro/page.tsx",
@@ -11194,7 +11194,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a729bf4390d6"
+      "hash": "5338ece3b73a"
     },
     {
       "ruta": "apps/asegura-web/app/gestor-de-seguros/page.tsx",
@@ -11231,7 +11231,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e4fcbd0a5870"
+      "hash": "577f8e0e0024"
     },
     {
       "ruta": "apps/asegura-web/app/icon.tsx",
@@ -11365,7 +11365,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "681ef36a3916"
+      "hash": "100c838b6941"
     },
     {
       "ruta": "apps/asegura-web/app/opengraph-image.tsx",
@@ -11385,7 +11385,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "66ab65da3cfd"
+      "hash": "b016f4694878"
     },
     {
       "ruta": "apps/asegura-web/app/page.tsx",
@@ -11506,12 +11506,12 @@
           "exportada": true,
           "params": "{ params }: Props",
           "retorno": null,
-          "linea": 50
+          "linea": 51
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b7e63a8d96a4"
+      "hash": "e0b32e216148"
     },
     {
       "ruta": "apps/asegura-web/app/siniestro/page.tsx",
@@ -11526,12 +11526,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 124
+          "linea": 125
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "69e7d1ceb6f9"
+      "hash": "7e78b971a5d7"
     },
     {
       "ruta": "apps/asegura-web/app/sitemap.ts",
@@ -11595,7 +11595,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 57
+          "linea": 58
         },
         {
           "nombre": "mismoNumero",
@@ -11603,7 +11603,7 @@
           "exportada": false,
           "params": "siniestros: string | null, whatsapp: string",
           "retorno": "boolean",
-          "linea": 84,
+          "linea": 85,
           "resumen": "El WhatsApp es la misma línea que la de dar parte (Occident): se dice sin repetir el número."
         },
         {
@@ -11612,12 +11612,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 90
+          "linea": 91
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3068f6601a7b"
+      "hash": "ff9a87d4fbad"
     },
     {
       "ruta": "apps/asegura-web/components/Analitica.tsx",
@@ -11918,7 +11918,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "376212da70cd"
+      "hash": "f9bd2a5a48e3"
     },
     {
       "ruta": "apps/asegura-web/components/Whatsapp.tsx",
@@ -12021,7 +12021,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d19eef279c23"
+      "hash": "7cedacd4dc7e"
     },
     {
       "ruta": "apps/asegura-web/lib/calculadora-vencimientos.ts",
@@ -12269,13 +12269,13 @@
           "exportada": true,
           "params": "slug: string",
           "retorno": "Ramo | null",
-          "linea": 563,
+          "linea": 752,
           "resumen": "Devuelve un ramo por su slug, o `null` si no existe (nunca un ramo de relleno)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9fe15437f3dc"
+      "hash": "372f25bbd47e"
     },
     {
       "ruta": "apps/asegura-web/lib/seo.ts",
@@ -12380,13 +12380,12 @@
           "exportada": true,
           "params": "ruta: string",
           "retorno": "string",
-          "linea": 58,
-          "resumen": "URL absoluta a partir de una ruta interna (`/seguros/hogar` → `https://…/seguros/hogar`)."
+          "linea": 69
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a5529f23e7d1"
+      "hash": "351c0a8f7111"
     },
     {
       "ruta": "apps/asegura-web/lib/ventana-renovacion.ts",
@@ -16990,7 +16989,7 @@
           "exportada": true,
           "params": "ramo: string, ramoWeb: string",
           "retorno": "string",
-          "linea": 78,
+          "linea": 92,
           "resumen": "Cómo se nombra el seguro en correos, historial y Telegram. Para «otro» es lo que escribió el visitante (guardado en `ramo_web` como `otro:<texto>`); para el resto, el nombre del ramo."
         },
         {
@@ -16999,7 +16998,7 @@
           "exportada": true,
           "params": "iso: unknown",
           "retorno": "Date | null",
-          "linea": 88,
+          "linea": 107,
           "resumen": "`AAAA-MM-DD` → medianoche UTC, o `null` si no es una fecha real."
         },
         {
@@ -17008,7 +17007,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "Revision",
-          "linea": 97
+          "linea": 116
         },
         {
           "nombre": "diaUtc",
@@ -17016,7 +17015,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 122
+          "linea": 150
         },
         {
           "nombre": "enAnio",
@@ -17024,7 +17023,7 @@
           "exportada": false,
           "params": "d: Date, anio: number",
           "retorno": "Date",
-          "linea": 127,
+          "linea": 155,
           "resumen": "Mismo día y mes en otro año; un 29 de febrero cae al 28 si el año no es bisiesto."
         },
         {
@@ -17033,7 +17032,7 @@
           "exportada": true,
           "params": "vence: Date, hoy: Date",
           "retorno": "Date",
-          "linea": 137,
+          "linea": 165,
           "resumen": "El vencimiento del ciclo que todavía se puede decidir: el primer aniversario cuyo último día para oponerse (vence − 30) no ha pasado. Una póliza se prorroga cada año el mismo día."
         },
         {
@@ -17042,7 +17041,7 @@
           "exportada": true,
           "params": "d: Date, n: number",
           "retorno": "Date",
-          "linea": 144
+          "linea": 172
         },
         {
           "nombre": "iso",
@@ -17050,7 +17049,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 146
+          "linea": 174
         },
         {
           "nombre": "avisoQueToca",
@@ -17058,7 +17057,7 @@
           "exportada": true,
           "params": "p: { vence: Date; hoy: Date; aviso1Para: string | null; aviso2Para: string | null }",
           "retorno": "AvisoQueToca",
-          "linea": 156,
+          "linea": 184,
           "resumen": "Qué aviso toca hoy, o `null`. `aviso1Para`/`aviso2Para` son los vencimientos (`AAAA-MM-DD`) para los que ya salió cada uno. Si alguien se apunta tarde (a menos de 45 días) solo recibe el 2; si se apun"
         },
         {
@@ -17067,7 +17066,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 171
+          "linea": 199
         },
         {
           "nombre": "fechaLarga",
@@ -17075,7 +17074,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 175
+          "linea": 203
         },
         {
           "nombre": "exigirHttps",
@@ -17083,7 +17082,7 @@
           "exportada": false,
           "params": "...urls: string[]",
           "retorno": "void",
-          "linea": 179
+          "linea": 207
         },
         {
           "nombre": "html",
@@ -17091,7 +17090,7 @@
           "exportada": false,
           "params": "parrafos: string[], boton: { href: string; texto: string } | null, pie: string[]",
           "retorno": "string",
-          "linea": 184
+          "linea": 212
         },
         {
           "nombre": "cuerpoConfirmacion",
@@ -17099,7 +17098,7 @@
           "exportada": true,
           "params": "d: { nombre: string; ramo: string; vence: Date; enlaceConfirmar: string }",
           "retorno": "CuerpoCorreo",
-          "linea": 196
+          "linea": 224
         },
         {
           "nombre": "cuerpoAviso",
@@ -17107,7 +17106,7 @@
           "exportada": true,
           "params": "d: { tipo: 'aviso1' | 'aviso2' nombre: string ramo: string vence: Date hoy: Date enlacePortal: string directo: boolean enlaceBaja: string }",
           "retorno": "CuerpoCorreo",
-          "linea": 214
+          "linea": 242
         },
         {
           "nombre": "urlWeb",
@@ -17115,7 +17114,7 @@
           "exportada": true,
           "params": "base: string | undefined = process.env.ASEGURA_WEB_URL",
           "retorno": "string",
-          "linea": 275,
+          "linea": 303,
           "resumen": "URL pública de la web (donde viven las páginas de confirmar y darse de baja)."
         },
         {
@@ -17124,7 +17123,7 @@
           "exportada": true,
           "params": "base: string, ruta: '/aviso/confirmar' | '/aviso/baja', token: string",
           "retorno": "string",
-          "linea": 280,
+          "linea": 308,
           "resumen": "El token va en el fragmento `#`: no viaja en la petición HTTP, así que no queda en ningún log."
         },
         {
@@ -17133,12 +17132,12 @@
           "exportada": true,
           "params": "env: string | undefined = process.env.ASEGURA_AVISOS_WEB_ACTIVOS",
           "retorno": "boolean",
-          "linea": 284
+          "linea": 312
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "842ba8573db9"
+      "hash": "467897e4de46"
     },
     {
       "ruta": "apps/asegura/lib/aviso-web.ts",
@@ -17175,7 +17174,16 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<ResultadoConfirmacion>",
-          "linea": 140
+          "linea": 147
+        },
+        {
+          "nombre": "movilALaFicha",
+          "kind": "function",
+          "exportada": false,
+          "params": "correduriaId: string, clienteId: string, telefono: string",
+          "retorno": "Promise<'anadido' | 'ya_estaba' | 'en_otra_ficha' | 'no_anadido'>",
+          "linea": 226,
+          "resumen": "Fuera de la transacción: si falla, el aviso ya está confirmado y el Telegram lo dice; no se reintenta."
         },
         {
           "nombre": "bajaAviso",
@@ -17183,7 +17191,7 @@
           "exportada": true,
           "params": "correduriaId: string, token: unknown",
           "retorno": "Promise<",
-          "linea": 217,
+          "linea": 242,
           "resumen": "Siempre «ok» hacia fuera: no se revela si la llave existía."
         },
         {
@@ -17192,7 +17200,7 @@
           "exportada": true,
           "params": "correduriaId: string, opciones: { hoy?: Date; forzarContar?: boolean } = {}",
           "retorno": "Promise<ResumenAvisosWeb>",
-          "linea": 257,
+          "linea": 282,
           "resumen": "Lanza si falta el portal o el correo: «no he podido» no puede leerse como «hoy no tocaba nadie»."
         }
       ],
@@ -17203,7 +17211,7 @@
         "oportunidades"
       ],
       "rutaApi": null,
-      "hash": "dd9cd86afc2c"
+      "hash": "8269b30e33b6"
     },
     {
       "ruta": "apps/asegura/lib/avisos-intranet-reglas.ts",
@@ -28224,12 +28232,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 82
+          "linea": 84
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "96b76e1a7faf"
+      "hash": "a8d0741f6b1c"
     },
     {
       "ruta": "apps/housesevillana/app/en/parking/route.ts",
@@ -28293,7 +28301,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1e9369ee6251"
+      "hash": "b5f4d7d5d0d2"
     },
     {
       "ruta": "apps/housesevillana/app/i18n/motor.ts",
@@ -28432,12 +28440,12 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 71
+          "linea": 73
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "34b583ec73a4"
+      "hash": "4d939d68c9e9"
     },
     {
       "ruta": "apps/housesevillana/app/robots.txt/route.ts",
@@ -28496,7 +28504,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "6a5d72af07c8"
+      "hash": "aca4b70540c9"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
@@ -79636,6 +79644,50 @@
       "hash": "166ae335d925"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/inicio/CalendarioReservas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CalendarioReservas"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "d: string",
+          "retorno": null,
+          "linea": 14
+        },
+        {
+          "nombre": "noches",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ReservaCal",
+          "retorno": null,
+          "linea": 15
+        },
+        {
+          "nombre": "portalDe",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "r: ReservaCal",
+          "retorno": null,
+          "linea": 16
+        },
+        {
+          "nombre": "CalendarioReservas",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ dias, filas }: { dias: string[]; filas: Fila[] }",
+          "retorno": null,
+          "linea": 18
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "a346e9a9e75f"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/inicio/loading.tsx",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -79956,7 +80008,7 @@
           "exportada": false,
           "params": "",
           "retorno": null,
-          "linea": 135
+          "linea": 103
         }
       ],
       "tablas": [
@@ -79964,7 +80016,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "5b3605b827ed"
+      "hash": "e36096e6aee6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/inversion/page.tsx",
@@ -85726,7 +85778,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/contable/chat",
-      "hash": "f45b24ca8136"
+      "hash": "765558595bba"
     },
     {
       "ruta": "apps/plataforma/app/api/contable/feedback/route.ts",
@@ -88023,6 +88075,25 @@
       ],
       "rutaApi": "/api/cron/canario-lead",
       "hash": "9f565c7b28e0"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/cron/catastro-pisos/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [],
+      "funciones": [
+        {
+          "nombre": "handler",
+          "kind": "function",
+          "exportada": false,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 10,
+          "resumen": "🏛️ m², año de construcción y uso de los pisos turísticos desde el Catastro → `properties.catastro_*`. Semanal (lib/cron-dispatch.ts). Solo consulta los pisos que no están en `ok`; el porqué de cada u"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/cron/catastro-pisos",
+      "hash": "259f3925e833"
     },
     {
       "ruta": "apps/plataforma/app/api/cron/categorizar-movimientos/route.ts",
@@ -90771,12 +90842,12 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 27
+          "linea": 35
         }
       ],
       "tablas": [],
       "rutaApi": "/api/publico/correduria/aviso",
-      "hash": "a1ae0a4b2752"
+      "hash": "63df81cfd52b"
     },
     {
       "ruta": "apps/plataforma/app/api/publico/correduria/consentimiento/route.ts",
@@ -93149,7 +93220,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string, nombre: string",
           "retorno": "Promise<void>",
-          "linea": 51,
+          "linea": 52,
           "resumen": "Ofrece el botón tras aprobar un mensaje que habla de un extra. No manda nada por su cuenta."
         },
         {
@@ -93158,7 +93229,7 @@
           "exportada": false,
           "params": "bookingId: string, codigo: string",
           "retorno": "Promise<",
-          "linea": 68,
+          "linea": 69,
           "resumen": "Manda la orden de verdad. Devuelve el texto con el que se reescribe el mensaje del botón."
         },
         {
@@ -93167,7 +93238,7 @@
           "exportada": false,
           "params": "bookingId: string, pend: Pendiente",
           "retorno": "Promise<ContextoRedaccion>",
-          "linea": 94
+          "linea": 95
         },
         {
           "nombre": "getPendiente",
@@ -93175,7 +93246,7 @@
           "exportada": false,
           "params": "bookingId: string",
           "retorno": "Promise<Pendiente | null>",
-          "linea": 124
+          "linea": 125
         },
         {
           "nombre": "POST",
@@ -93183,7 +93254,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 129
+          "linea": 130
         },
         {
           "nombre": "enrutarTextoLibre",
@@ -93191,7 +93262,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1084,
+          "linea": 1132,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         }
       ],
@@ -93219,7 +93290,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "ee42428ca721"
+      "hash": "0711c7bfae59"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -93743,7 +93814,7 @@
           "exportada": false,
           "params": "x: number, lo: number, hi: number",
           "retorno": null,
-          "linea": 55
+          "linea": 56
         },
         {
           "nombre": "fmt",
@@ -93751,7 +93822,7 @@
           "exportada": false,
           "params": "d: Date",
           "retorno": null,
-          "linea": 56
+          "linea": 57
         },
         {
           "nombre": "GET",
@@ -93759,7 +93830,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 75,
+          "linea": 76,
           "resumen": "dryRun=true por defecto en ambos, así que un GET sin params nunca escribe."
         },
         {
@@ -93768,7 +93839,7 @@
           "exportada": true,
           "params": "req: NextRequest",
           "retorno": null,
-          "linea": 79
+          "linea": 80
         }
       ],
       "tablas": [
@@ -93791,7 +93862,7 @@
         "recent"
       ],
       "rutaApi": "/api/sivra/pricing/apply",
-      "hash": "be39e04f198a"
+      "hash": "ade9847b4871"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/pricing/canal/route.ts",
@@ -100957,7 +101028,7 @@
           "exportada": false,
           "params": "m: FilaMov",
           "retorno": "MovCandidato",
-          "linea": 48
+          "linea": 52
         },
         {
           "nombre": "cargosDelImporte",
@@ -100965,7 +101036,7 @@
           "exportada": false,
           "params": "cuentaId: string, f: FacturaDoc, dias: number, /** `posterior`: solo cargos del día de la factura en adelante (ver VENTANA_ANCHA). */ ventana: 'centrada' | 'posterior' = 'centrada',",
           "retorno": "Promise<FilaMov[]>",
-          "linea": 57,
+          "linea": 61,
           "resumen": "Cargos del MISMO importe (al céntimo) dentro de una ventana de días. READ-ONLY: réplica de la SELECT de factura-ocr.ts::casarFactura pero SIN el UPDATE (aquí solo proponemos; el UPDATE lo hace accione"
         },
         {
@@ -100974,7 +101045,7 @@
           "exportada": false,
           "params": "cuentaId: string",
           "retorno": "Promise<CoberturaBanco[]>",
-          "linea": 83,
+          "linea": 87,
           "resumen": "Hasta qué fecha llega el extracto de cada cuenta VIVA. Es lo que convierte un «no lo encuentro» en un «todavía no me ha llegado» (regla del CLAUDE.md: dato que no hay ≠ dato que no se ha mirado)."
         },
         {
@@ -100983,7 +101054,7 @@
           "exportada": false,
           "params": "a: string, b: string",
           "retorno": null,
-          "linea": 97
+          "linea": 101
         },
         {
           "nombre": "buscarCruce",
@@ -100991,7 +101062,7 @@
           "exportada": false,
           "params": "cuentaId: string, f: FacturaDoc, tolDias = 7",
           "retorno": "Promise<CruceDoc>",
-          "linea": 101,
+          "linea": 105,
           "resumen": "Cruza la factura contra los movimientos y devuelve CUÁL de los cinco desenlaces es (ver CruceDoc)."
         },
         {
@@ -101000,16 +101071,16 @@
           "exportada": false,
           "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string,",
           "retorno": "Promise<DocProcesado>",
-          "linea": 138,
+          "linea": 142,
           "resumen": "Hoja de cálculo subida al chat: el lector de facturas no sabe abrirla (devolvería «no he podido leer el documento», que es falso). Hoy el Excel que Alberto sube es el MISMO listado de la tarjeta que e"
         },
         {
           "nombre": "procesarDocumento",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName = '',",
+          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName = '', opts: { preguntarSiSeguro?: boolean } = {},",
           "retorno": "Promise<DocProcesado>",
-          "linea": 172
+          "linea": 176
         }
       ],
       "tablas": [
@@ -101017,7 +101088,7 @@
         "movimientos_bancarios"
       ],
       "rutaApi": null,
-      "hash": "bcdee5cbdf88"
+      "hash": "1e27862a9b9c"
     },
     {
       "ruta": "apps/plataforma/lib/contable/extracto-tarjeta.ts",
@@ -101596,7 +101667,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<string | null>",
-          "linea": 17,
+          "linea": 18,
           "resumen": "cuenta_id de Alberto (único operador). Mismo criterio que facturas-scan / resumen-semanal."
         },
         {
@@ -101605,7 +101676,7 @@
           "exportada": false,
           "params": "id: string, siLabel = '✅ Confirmar'",
           "retorno": "",
-          "linea": 22
+          "linea": 23
         },
         {
           "nombre": "manejarTextoLibreTg",
@@ -101613,16 +101684,16 @@
           "exportada": true,
           "params": "cuentaId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 27,
+          "linea": 28,
           "resumen": "Texto libre de Alberto → cerebro → responde y, si propone acciones, manda botones de confirmación."
         },
         {
           "nombre": "manejarDocumentoTg",
           "kind": "function",
           "exportada": true,
-          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string,",
+          "params": "cuentaId: string, buffer: Buffer, mimeType: string, fileName: string, opts: { docId?: number | null } = {},",
           "retorno": "Promise<void>",
-          "linea": 36,
+          "linea": 37,
           "resumen": "Foto de ticket / PDF de factura → extrae (maquinaria canónica) → propone conciliar con botón."
         },
         {
@@ -101631,7 +101702,7 @@
           "exportada": true,
           "params": "cuentaId: string, accion: 'ok' | 'no', accionId: string,",
           "retorno": "Promise<string>",
-          "linea": 70,
+          "linea": 86,
           "resumen": "Confirmar / descartar una acción propuesta desde Telegram (callback cont_ok / cont_no)."
         },
         {
@@ -101640,7 +101711,7 @@
           "exportada": true,
           "params": "fileId: string, mimeHint = '', nameHint = '',",
           "retorno": "Promise<",
-          "linea": 80,
+          "linea": 96,
           "resumen": "Descarga un fichero de Telegram por file_id (getFile → download del CDN de Telegram)."
         },
         {
@@ -101649,7 +101720,7 @@
           "exportada": true,
           "params": "msg: any",
           "retorno": "",
-          "linea": 108,
+          "linea": 124,
           "resumen": "Nota de voz / audio de un mensaje de Telegram (message.voice = .oga opus, message.audio = fichero)."
         },
         {
@@ -101658,7 +101729,7 @@
           "exportada": true,
           "params": "cuentaId: string, buffer: Buffer, fileName: string, mimeType: string, // Quién atiende lo transcrito: por defecto el contable; el webhook pasa su enrutador para que // una nota de voz sobre un cliente llegue al asistente de la correduría co",
           "retorno": "Promise<void>",
-          "linea": 117,
+          "linea": 133,
           "resumen": "Transcribe una nota de voz (Groq Whisper) y la trata como si Alberto la hubiera escrito."
         },
         {
@@ -101667,7 +101738,7 @@
           "exportada": true,
           "params": "msg: any",
           "retorno": "",
-          "linea": 131,
+          "linea": 147,
           "resumen": "Extrae el file_id + pistas de mime/nombre de un mensaje de Telegram (foto o documento). null si no hay."
         },
         {
@@ -101676,7 +101747,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<void>",
-          "linea": 151,
+          "linea": 167,
           "resumen": "Onboarding (spec §8): mensaje guía. La memoria se construye después con lo que Alberto cuente (canal APRENDER del cerebro), sin sembrar datos sensibles a mano."
         },
         {
@@ -101685,7 +101756,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 156,
+          "linea": 172,
           "resumen": "¿Es un comando de arranque del agente contable? (/contable, \"empezar contable\"…)"
         }
       ],
@@ -101693,7 +101764,7 @@
         "cuentas"
       ],
       "rutaApi": null,
-      "hash": "1f271d8e4147"
+      "hash": "59165d50449d"
     },
     {
       "ruta": "apps/plataforma/lib/contexto-defensa.ts",
@@ -101794,12 +101865,89 @@
       "hash": "63542126a5fe"
     },
     {
+      "ruta": "apps/plataforma/lib/correduria-acciones-tg.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Acciones del día a día desde el asistente de la correduría por Telegram (27/09/2026) — parte PURA (sin `@/` ni prisma → node --test). La parte con BD y red vive en `correduria-asistente-telegram.ts`. Alberto: «tiene que ser mi asistente». Cinco acciones que hasta hoy solo se hacían en /correduria: c",
+      "exporta": [
+        "prepararAccion",
+        "textoAccion",
+        "resultadoAccion"
+      ],
+      "funciones": [
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max: number",
+          "retorno": "string | null",
+          "linea": 30
+        },
+        {
+          "nombre": "fechaValida",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 34
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 41
+        },
+        {
+          "nombre": "escapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 43
+        },
+        {
+          "nombre": "prepararAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoAccion, args: Record<string, unknown>, hoy: string",
+          "retorno": "Preparacion",
+          "linea": 52,
+          "resumen": "Lo que manda la IA → el cuerpo del puerto y el resumen. Aquí se valida lo que no necesita la BD (enums, fechas, textos vacíos); lo demás (que la oportunidad esté abierta, que la póliza sea de esta cor"
+        },
+        {
+          "nombre": "textoAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "quien: string, a: Accion",
+          "retorno": "string",
+          "linea": 131,
+          "resumen": "El mensaje con el botón. `quien` es lo que identifica la ficha (nombre, póliza, ramo…)."
+        },
+        {
+          "nombre": "resultadoAccion",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: TipoAccion, status: number, json: unknown, url: string,",
+          "retorno": "",
+          "linea": 137,
+          "resumen": "Qué se le dice a Alberto tras pulsar. Sin respuesta clara: «no sé si se ha hecho», nunca «no se ha hecho»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b9c4c1811fd5"
+    },
+    {
       "ruta": "apps/plataforma/lib/correduria-asistente-telegram.ts",
       "ambito": "apps/plataforma",
       "resumen": "Asistente de la correduría por Telegram — parte con BD, red e IA. La lógica que se puede probar vive en `correduria-asistente.ts` (pura, con tests); aquí solo se cablea. Privacidad (decisión 26/09/2026): los datos de clientes solo van a OpenRouter con `data_collection: 'deny'` y `zdr: true`. Si eso ",
       "exporta": [
         "esParaCorreduria",
         "emitirDesdeBoton",
+        "registrarDocumentoTg",
+        "resolverDocumentoDudoso",
+        "albumDeCorreduria",
         "manejarCorreduriaTg",
         "resolverBotonCorreduria",
         "guardarNotaCorreduria"
@@ -101811,7 +101959,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Promise<boolean>",
-          "linea": 47,
+          "linea": 59,
           "resumen": "¿Este texto libre es para el asistente de la correduría? Determinista primero; lo dudoso lo decide una IA con las mismas garantías de privacidad. Cualquier fallo → contable (lo de siempre)."
         },
         {
@@ -101820,7 +101968,7 @@
           "exportada": false,
           "params": "modelo: string, usage: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number } | undefined",
           "retorno": "Promise<number>",
-          "linea": 78,
+          "linea": 90,
           "resumen": "Coste real por catálogo; si el catálogo no conoce el modelo, una estimación ALTA, nunca 0."
         },
         {
@@ -101829,15 +101977,16 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<",
-          "linea": 86
+          "linea": 99,
+          "resumen": "`null` = no se han podido leer (≠ `[]`, «todavía no hay»): no se dice que no hay reglas."
         },
         {
           "nombre": "ejecutar",
           "kind": "function",
           "exportada": false,
-          "params": "nombre: string, args: Record<string, unknown> | null, ctx: { turnoId: number; reglas: { id: number; texto: string }[] },",
+          "params": "nombre: string, args: Record<string, unknown> | null, ctx: { turnoId: number; reglas: { id: number; texto: string }[] | null },",
           "retorno": "Promise<",
-          "linea": 96,
+          "linea": 109,
           "resumen": "Ejecuta una herramienta. Devuelve el texto que verá la IA (ya enmascarado) y si fue bien."
         },
         {
@@ -101846,7 +101995,7 @@
           "exportada": false,
           "params": "args: Record<string, unknown>, turnoId: number",
           "retorno": "Promise<",
-          "linea": 200
+          "linea": 259
         },
         {
           "nombre": "cerrarEmision",
@@ -101854,7 +102003,7 @@
           "exportada": false,
           "params": "id: number, estado: string, resultado: Record<string, unknown>",
           "retorno": "Promise<void>",
-          "linea": 264
+          "linea": 323
         },
         {
           "nombre": "emitirDesdeBoton",
@@ -101862,7 +102011,7 @@
           "exportada": true,
           "params": "arg: string",
           "retorno": "Promise<void>",
-          "linea": 275,
+          "linea": 334,
           "resumen": "Botón «Emitir». Corre DESPUÉS de contestar a Telegram (`after()` en el webhook): el Submit puede tardar minutos. Nunca lanza y nunca reintenta. Cada salida manda un mensaje: un botón que se pulsa y no"
         },
         {
@@ -101871,7 +102020,7 @@
           "exportada": false,
           "params": "args: Record<string, unknown>, turnoId: number",
           "retorno": "Promise<",
-          "linea": 353
+          "linea": 412
         },
         {
           "nombre": "fichaActual",
@@ -101879,7 +102028,7 @@
           "exportada": false,
           "params": "clienteId: string",
           "retorno": "Promise<FichaActual | string>",
-          "linea": 420,
+          "linea": 479,
           "resumen": "La ficha tal como está, en la forma que compara la huella. Un string = por qué no se pudo leer."
         },
         {
@@ -101888,8 +102037,87 @@
           "exportada": false,
           "params": "id: number",
           "retorno": "Promise<string>",
-          "linea": 436,
+          "linea": 495,
           "resumen": "Botón «Corregir». Escribe por el puerto auditado de asegura. Nunca lanza; cada salida deja mensaje."
+        },
+        {
+          "nombre": "registrarDocumentoTg",
+          "kind": "function",
+          "exportada": true,
+          "params": "d: { fileId: string; nombre: string; mime: string; mediaGroupId: string | null; destino: 'contable' | 'correduria' },",
+          "retorno": "Promise<number | null>",
+          "linea": 547,
+          "resumen": "Apunta un documento que Alberto ha subido al chat (solo su `file_id`: el fichero sigue en Telegram). `destino` = quién lo atendió. Nunca lanza: sin apunte, el asistente dirá que no ve documentos."
+        },
+        {
+          "nombre": "resolverDocumentoDudoso",
+          "kind": "function",
+          "exportada": true,
+          "params": "accion: string, arg: string",
+          "retorno": "Promise<string>",
+          "linea": 562,
+          "resumen": "Botones `cdoc_*` del documento de aseguradora. «Es mío» → lo procesa el contable como siempre (archiva y contabiliza); «De un cliente» → queda para la correduría y no se toca como gasto. Nunca lanza."
+        },
+        {
+          "nombre": "albumDeCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "mediaGroupId: string | null",
+          "retorno": "Promise<boolean>",
+          "linea": 590,
+          "resumen": "¿Otro documento del mismo álbum ya se fue a la correduría? (El pie solo viaja en el primero.)"
+        },
+        {
+          "nombre": "lecturasRecientes",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "Promise<LecturaDocumentoOportunidad[] | null>",
+          "linea": 599,
+          "resumen": "Lee los documentos de la última hora. `null` = no se ha podido mirar (≠ `[]`, «no subió nada»)."
+        },
+        {
+          "nombre": "proponerOportunidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "args: Record<string, unknown>, turnoId: number",
+          "retorno": "Promise<",
+          "linea": 622
+        },
+        {
+          "nombre": "abrirOportunidad",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: number",
+          "retorno": "Promise<string>",
+          "linea": 671,
+          "resumen": "Botón «Abrir». Escribe por el mismo puerto que la ficha. Nunca lanza; cada salida deja mensaje."
+        },
+        {
+          "nombre": "contextoAccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipo: TipoAccion, args: Record<string, unknown>",
+          "retorno": "Promise<",
+          "linea": 711,
+          "resumen": "De quién es y la ficha a la que enlazar, leído del puerto (no de lo que diga la IA). Un string = por qué no se pudo leer, y entonces no se propone: un botón sobre una ficha que no se ha podido mirar e"
+        },
+        {
+          "nombre": "proponerAccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "tipo: TipoAccion, args: Record<string, unknown>, turnoId: number",
+          "retorno": "Promise<",
+          "linea": 740
+        },
+        {
+          "nombre": "hacerAccion",
+          "kind": "function",
+          "exportada": false,
+          "params": "id: number",
+          "retorno": "Promise<string>",
+          "linea": 780,
+          "resumen": "Botón «Hacer». Escribe por el mismo puerto que la ficha. Nunca lanza; cada salida deja mensaje."
         },
         {
           "nombre": "turnosDeHoy",
@@ -101897,16 +102125,16 @@
           "exportada": false,
           "params": "",
           "retorno": "Promise<number | null>",
-          "linea": 484
+          "linea": 820
         },
         {
           "nombre": "historialReciente",
           "kind": "function",
           "exportada": false,
           "params": "",
-          "retorno": "Promise<NimToolMessage[]>",
-          "linea": 491,
-          "resumen": "Las dos últimas preguntas de la última media hora: contexto para «¿y su mujer?»."
+          "retorno": "Promise<",
+          "linea": 830,
+          "resumen": "Las cuatro últimas preguntas de la última media hora (contexto para «¿y su mujer?», «la Mapfre», «1») y los ids que ya salieron en ellas, para no volver a buscar al cliente en cada mensaje."
         },
         {
           "nombre": "manejarCorreduriaTg",
@@ -101914,7 +102142,7 @@
           "exportada": true,
           "params": "textoOriginal: string",
           "retorno": "Promise<void>",
-          "linea": 503,
+          "linea": 846,
           "resumen": "Texto libre de Alberto para la correduría → contesta por Telegram. Nunca lanza."
         },
         {
@@ -101923,7 +102151,7 @@
           "exportada": true,
           "params": "accion: string, arg: string",
           "retorno": "Promise<string>",
-          "linea": 589,
+          "linea": 942,
           "resumen": "Callback `cas_*`. Devuelve el texto del toast."
         },
         {
@@ -101932,24 +102160,27 @@
           "exportada": true,
           "params": "turnoId: number, nota: string",
           "retorno": "Promise<void>",
-          "linea": 625,
+          "linea": 992,
           "resumen": "Respuesta de Alberto al «¿qué ha fallado?» de un 👎."
         }
       ],
       "tablas": [
+        "correduria_asistente_accion",
         "correduria_asistente_correccion",
+        "correduria_asistente_documento",
         "correduria_asistente_emision",
+        "correduria_asistente_oportunidad",
         "correduria_asistente_regla",
         "correduria_asistente_turno",
         "jsonb_array_elements"
       ],
       "rutaApi": null,
-      "hash": "b01ade749bdf"
+      "hash": "3fbc7afbc6c7"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-asistente.ts",
       "ambito": "apps/plataforma",
-      "resumen": "Asistente de la CORREDURÍA por Telegram (fase 1, 26/09/2026) — parte PURA (sin `@/` ni prisma → node --test). Alberto le pregunta por clientes, pólizas, vencimientos o impagados y el asistente contesta leyendo la cartera por el puerto de asegura. No escribe en la cartera ni habla con nadie que no se",
+      "resumen": "Asistente de la CORREDURÍA por Telegram (fase 1, 26/09/2026) — parte PURA (sin `@/` ni prisma → node --test). Alberto le pregunta por clientes, pólizas, vencimientos o impagados y el asistente contesta leyendo la cartera por el puerto de asegura. Solo habla con Alberto. Lo que escribe en la cartera ",
       "exporta": [
         "clasificarDestino",
         "tienePrefijo",
@@ -101966,7 +102197,13 @@
         "preguntaNota",
         "turnoDeNota",
         "rastroArgs",
-        "costeConservador"
+        "costeConservador",
+        "esRespuestaACorreduria",
+        "conCita",
+        "memoriaIds",
+        "hoyMadrid",
+        "esAseguradora",
+        "pieDeCorreduria"
       ],
       "funciones": [
         {
@@ -101975,7 +102212,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "Destino",
-          "linea": 32,
+          "linea": 35,
           "resumen": "Reparto del texto libre entre el asistente de la correduría y el contable. Determinista y testeado; solo lo `dudoso` (p. ej. «¿qué tiene Pablo Guzmán?») pasa por la IA clasificadora."
         },
         {
@@ -101984,7 +102221,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "boolean",
-          "linea": 44,
+          "linea": 48,
           "resumen": "¿Lleva el atajo explícito? Con el asistente apagado, así se sabe a quién decirle que lo está."
         },
         {
@@ -101993,7 +102230,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 49,
+          "linea": 53,
           "resumen": "La pregunta sin el atajo delante."
         },
         {
@@ -102002,7 +102239,7 @@
           "exportada": true,
           "params": "respuesta: string | null | undefined",
           "retorno": "'correduria' | 'contable'",
-          "linea": 61
+          "linea": 65
         },
         {
           "nombre": "enmascarar",
@@ -102010,7 +102247,7 @@
           "exportada": true,
           "params": "texto: string",
           "retorno": "string",
-          "linea": 72,
+          "linea": 76,
           "resumen": "DNI/NIE → `…769Q`, IBAN → `ES…1234`, tarjeta → `…1234`. Se aplica a TODO lo que sale de una herramienta antes de que lo vea la IA, y otra vez a la respuesta antes de Telegram (por si la IA reconstruye"
         },
         {
@@ -102019,7 +102256,7 @@
           "exportada": false,
           "params": "digitos: string",
           "retorno": "boolean",
-          "linea": 87
+          "linea": 91
         },
         {
           "nombre": "paraIA",
@@ -102027,7 +102264,7 @@
           "exportada": true,
           "params": "valor: unknown, max = 7000",
           "retorno": "string",
-          "linea": 101,
+          "linea": 105,
           "resumen": "JSON compacto, enmascarado y recortado para la IA. Los `null` SE QUEDAN: son «no consta», y quitarlos haría que un campo desconocido desapareciera. El corte se DICE."
         },
         {
@@ -102036,7 +102273,7 @@
           "exportada": false,
           "params": "name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []",
           "retorno": null,
-          "linea": 115
+          "linea": 120
         },
         {
           "nombre": "leerArgumentos",
@@ -102044,7 +102281,7 @@
           "exportada": true,
           "params": "raw: string | undefined",
           "retorno": "Record<string, unknown> | null",
-          "linea": 155,
+          "linea": 206,
           "resumen": "Argumentos de una llamada, parseados sin lanzar. `null` = la IA mandó basura."
         },
         {
@@ -102053,7 +102290,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "number",
-          "linea": 163
+          "linea": 214
         },
         {
           "nombre": "idValido",
@@ -102061,8 +102298,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 169,
-          "resumen": "Id de cliente/póliza: uuid. Evita que la IA meta una ruta o un nombre en la URL del puerto."
+          "linea": 222
         },
         {
           "nombre": "reglaConDatoPersonal",
@@ -102070,7 +102306,7 @@
           "exportada": true,
           "params": "regla: string",
           "retorno": "boolean",
-          "linea": 175,
+          "linea": 228,
           "resumen": "Una regla que es en realidad un dato de cliente (DNI, teléfono, IBAN, email, matrícula) no se guarda."
         },
         {
@@ -102079,7 +102315,7 @@
           "exportada": true,
           "params": "reglas: readonly string[], hoyIso: string",
           "retorno": "string",
-          "linea": 182
+          "linea": 235
         },
         {
           "nombre": "apagado",
@@ -102087,7 +102323,7 @@
           "exportada": true,
           "params": "valor: string | undefined",
           "retorno": "boolean",
-          "linea": 214,
+          "linea": 271,
           "resumen": "¿El interruptor de apagado está echado? Cualquier valor «sí» en `CORREDURIA_ASISTENTE_APAGADO`."
         },
         {
@@ -102096,7 +102332,7 @@
           "exportada": true,
           "params": "turnoId: number",
           "retorno": "string",
-          "linea": 219,
+          "linea": 276,
           "resumen": "Texto del botón de feedback y del force_reply que liga la nota con su turno."
         },
         {
@@ -102105,7 +102341,7 @@
           "exportada": true,
           "params": "textoCitado: string",
           "retorno": "number | null",
-          "linea": 223
+          "linea": 280
         },
         {
           "nombre": "rastroArgs",
@@ -102113,7 +102349,7 @@
           "exportada": true,
           "params": "nombre: string, args: Record<string, unknown> | null",
           "retorno": "Record<string, unknown>",
-          "linea": 233,
+          "linea": 290,
           "resumen": "Lo que queda en el rastro de acceso de cada consulta. Los ids y los días se guardan; el TEXTO libre (lo que se buscó, la regla propuesta) no, porque sobreviviría a la purga de 90 días con el mismo dat"
         },
         {
@@ -102122,12 +102358,65 @@
           "exportada": true,
           "params": "tokens: number",
           "retorno": "number",
-          "linea": 249
+          "linea": 316
+        },
+        {
+          "nombre": "esRespuestaACorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "citado: string",
+          "retorno": "boolean",
+          "linea": 327,
+          "resumen": "¿Es la RESPUESTA (reply) de Alberto a un mensaje de la correduría? Deslizar sobre una respuesta 🛡️ o sobre un aviso de seguros y escribir («¿y su mujer?») se perdía: el webhook descartaba todo reply "
+        },
+        {
+          "nombre": "conCita",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, citado: string",
+          "retorno": "string",
+          "linea": 336,
+          "resumen": "La pregunta con el mensaje al que responde, para que la IA sepa de qué se habla."
+        },
+        {
+          "nombre": "memoriaIds",
+          "kind": "function",
+          "exportada": true,
+          "params": "rastros: readonly unknown[]",
+          "retorno": "string | null",
+          "linea": 348,
+          "resumen": "Los ids que ya salieron en las consultas recientes (cliente, póliza, proyecto, precio). Sin esto, cada mensaje («la Mapfre», «anual», «1») obligaba a la IA a buscar al cliente otra vez desde cero: el "
+        },
+        {
+          "nombre": "hoyMadrid",
+          "kind": "function",
+          "exportada": true,
+          "params": "ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 371,
+          "resumen": "La fecha de hoy en Madrid (aaaa-mm-dd). `toISOString()` da el día anterior entre las 00:00 y las 02:00."
+        },
+        {
+          "nombre": "esAseguradora",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string | null | undefined",
+          "retorno": "boolean",
+          "linea": 377
+        },
+        {
+          "nombre": "pieDeCorreduria",
+          "kind": "function",
+          "exportada": true,
+          "params": "pie: string",
+          "retorno": "boolean",
+          "linea": 387,
+          "resumen": "¿El PIE de un documento lo manda a la correduría sin pasar por el contable? Solo si lo dice sin ambigüedad: el atajo («seguro: …») o que hable de un lead, cliente u oportunidad. Un pie como «recibo Ma"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2530832e12e8"
+      "hash": "81a87d3f4dcd"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-correccion-tg.ts",
@@ -102425,6 +102714,116 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "26facc26efe0"
+    },
+    {
+      "ruta": "apps/plataforma/lib/correduria-oportunidad-tg.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Abrir una OPORTUNIDAD desde el asistente de la correduría por Telegram (27/09/2026) — parte PURA (sin `@/` ni prisma → node --test). La parte con BD y red vive en `correduria-asistente-telegram.ts`. Caso fundacional: Alberto subió por Telegram la póliza de Línea Directa de un lead y escribió «seguro",
+      "exporta": [
+        "fechaPrimerPaso",
+        "prepararAlta",
+        "cuerpoAlta",
+        "textoAlta",
+        "resultadoAlta"
+      ],
+      "funciones": [
+        {
+          "nombre": "fecha",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 38
+        },
+        {
+          "nombre": "sumarDias",
+          "kind": "function",
+          "exportada": false,
+          "params": "iso: string, dias: number",
+          "retorno": "string",
+          "linea": 45
+        },
+        {
+          "nombre": "texto",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown, max = 120",
+          "retorno": "string | null",
+          "linea": 51
+        },
+        {
+          "nombre": "prima",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 55
+        },
+        {
+          "nombre": "fechaPrimerPaso",
+          "kind": "function",
+          "exportada": true,
+          "params": "vence: string | null, hoy: string",
+          "retorno": "string",
+          "linea": 64,
+          "resumen": "El primer paso: una llamada {@link DIAS_ANTES_VENCIMIENTO} días antes de que venza su póliza actual, que es cuando se le puede ofrecer algo; nunca antes de mañana. Sin vencimiento, mañana."
+        },
+        {
+          "nombre": "prepararAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "args: Record<string, unknown>, lecturas: readonly LecturaDocumentoOportunidad[] | null, hoy: string,",
+          "retorno": "PreparacionAlta",
+          "linea": 76,
+          "resumen": "Lo dictado por Alberto (args de la IA) MANDA sobre lo leído de los documentos, igual que en el formulario de la ficha: si él dijo la prima, esa vale más que la del papel. De los documentos se toma el "
+        },
+        {
+          "nombre": "cuerpoAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string, a: Alta, actor: string",
+          "retorno": "Record<string, unknown>",
+          "linea": 131,
+          "resumen": "El cuerpo que espera el puerto de asegura (`accion: 'crear'`), el mismo que manda la ficha."
+        },
+        {
+          "nombre": "fechaEs",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "iso: string",
+          "retorno": null,
+          "linea": 141
+        },
+        {
+          "nombre": "textoAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombreCliente: string, a: Alta",
+          "retorno": "string",
+          "linea": 144,
+          "resumen": "El mensaje con el botón. Lo que no consta se dice; nada se rellena para que quede bonito."
+        },
+        {
+          "nombre": "resultadoAlta",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown, url: string",
+          "retorno": "",
+          "linea": 166,
+          "resumen": "Qué se le dice a Alberto tras pulsar, con el enlace a la ficha."
+        },
+        {
+          "nombre": "escapar",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 177
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "122e3bc94dee"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-puerto.ts",
@@ -104982,7 +105381,7 @@
           "exportada": false,
           "params": "campo: string, min: number, max: number",
           "retorno": "Set<number> | null",
-          "linea": 232,
+          "linea": 234,
           "resumen": "Un campo cron → conjunto de valores permitidos; null = '*' (sin restricción). Soporta listas, rangos y pasos combinados ('25,55', '8-15', '*/3', '30 8,14,20', '1-5')."
         },
         {
@@ -104991,7 +105390,7 @@
           "exportada": true,
           "params": "schedule: string, fecha: Date",
           "retorno": "boolean",
-          "linea": 262,
+          "linea": 264,
           "resumen": "¿La expresión (5 campos: minuto hora día-mes mes día-semana, en UTC) casa este minuto?"
         },
         {
@@ -105000,7 +105399,7 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "Date",
-          "linea": 284
+          "linea": 286
         },
         {
           "nombre": "ventanaMinutos",
@@ -105008,7 +105407,7 @@
           "exportada": true,
           "params": "anterior: Date | null, ahora: Date, capMinutos = 15",
           "retorno": "Date[]",
-          "linea": 292,
+          "linea": 294,
           "resumen": "Minutos pendientes de procesar: (anterior, ahora], con tope de capMinutos hacia atrás para no re-disparar media mañana tras una pausa larga. Sin cursor (anterior=null) → solo el actual. El catch-up es"
         },
         {
@@ -105017,13 +105416,13 @@
           "exportada": true,
           "params": "minutos: Date[], jobs: CronJob[] = CRON_JOBS",
           "retorno": "CronJob[]",
-          "linea": 304,
+          "linea": 306,
           "resumen": "Jobs que tocan en alguno de los minutos de la ventana (cada job como mucho una vez, aunque la ventana cubra varios de sus disparos — p. ej. */3 tras un catch-up)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "d63860c7f396"
+      "hash": "975746df7587"
     },
     {
       "ruta": "apps/plataforma/lib/cuadre-tarjetas.ts",
@@ -109652,7 +110051,7 @@
           "exportada": true,
           "params": "dia: string, n: number",
           "retorno": "string",
-          "linea": 103,
+          "linea": 107,
           "resumen": "Suma `n` días a 'AAAA-MM-DD' en UTC (sin saltos por cambio de hora)."
         },
         {
@@ -109661,7 +110060,7 @@
           "exportada": false,
           "params": "a: string, b: string",
           "retorno": "number",
-          "linea": 109
+          "linea": 113
         },
         {
           "nombre": "ventanaCalendario",
@@ -109669,7 +110068,7 @@
           "exportada": true,
           "params": "reservas: ReservaCal[], pisos: string[], hoy: string, n = 14",
           "retorno": "Ventana",
-          "linea": 113
+          "linea": 117
         },
         {
           "nombre": "sumaONull",
@@ -109677,7 +110076,7 @@
           "exportada": false,
           "params": "xs: (number | null)[]",
           "retorno": "number | null",
-          "linea": 168
+          "linea": 172
         },
         {
           "nombre": "resumenBolsa",
@@ -109685,7 +110084,7 @@
           "exportada": true,
           "params": "posiciones: PosicionBolsa[]",
           "retorno": "ResumenDivisaBolsa[]",
-          "linea": 174,
+          "linea": 178,
           "resumen": "Una línea por divisa: sumar dólares con euros daría una cifra plausible y falsa."
         },
         {
@@ -109694,7 +110093,7 @@
           "exportada": true,
           "params": "actualizado: Date, ahora: Date",
           "retorno": "boolean",
-          "linea": 186
+          "linea": 190
         },
         {
           "nombre": "importeDivisa",
@@ -109702,7 +110101,7 @@
           "exportada": true,
           "params": "n: number, divisa: string",
           "retorno": "string",
-          "linea": 191,
+          "linea": 195,
           "resumen": "Importe en su divisa, formato español: `1.234,56€` / `1.234,56 $`."
         },
         {
@@ -109711,7 +110110,7 @@
           "exportada": true,
           "params": "f: { estado: 'sin_configurar' } | { estado: 'error'; motivo: string }",
           "retorno": "string",
-          "linea": 203
+          "linea": 207
         },
         {
           "nombre": "proximosCargos",
@@ -109719,7 +110118,7 @@
           "exportada": true,
           "params": "recurrentes: RecurrenteBanco[], hoy: string, dias = 7",
           "retorno": "ProximoCargo[]",
-          "linea": 219,
+          "linea": 223,
           "resumen": "Próximas apariciones de los recurrentes en (hoy, hoy+dias], con la MISMA regla que `proyectar()` de `lib/tesoreria-core.ts` (última fecha + intervalo, saltando lo ya pasado), para que la lista y el sa"
         },
         {
@@ -109728,13 +110127,13 @@
           "exportada": true,
           "params": "polizas: T[], ventana = 60",
           "retorno": "",
-          "linea": 243,
+          "linea": 247,
           "resumen": "Vencimientos de la correduría para la tarjeta del Inicio. El puerto mira también una anualidad HACIA ATRÁS (para que una póliza vencida sin gestionar no desaparezca), así que `dias` puede ser negativo"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "910364b5c369"
+      "hash": "6577c466ed7b"
     },
     {
       "ruta": "apps/plataforma/lib/intercompany-mapeo.ts",
@@ -110438,7 +110837,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string",
-          "linea": 64
+          "linea": 68
         },
         {
           "nombre": "tipoSeguroLead",
@@ -110446,7 +110845,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "TipoSeguroLead | null",
-          "linea": 68
+          "linea": 72
         },
         {
           "nombre": "revisarLeadWeb",
@@ -110454,7 +110853,7 @@
           "exportada": true,
           "params": "body: unknown",
           "retorno": "LeadRevisado",
-          "linea": 79,
+          "linea": 83,
           "resumen": "Revisa lo que llega del formulario. Un solo motivo cada vez, con su campo, para que la pantalla señale la casilla. `motivo: 'bot'` = honeypot relleno: la ruta responde 200 «recibido» SIN hacer nada (n"
         },
         {
@@ -110463,7 +110862,7 @@
           "exportada": true,
           "params": "lead: Pick<LeadWeb, 'tipoSeguro' | 'comentario'>",
           "retorno": "string",
-          "linea": 122,
+          "linea": 126,
           "resumen": "Lo que va en `notas` de la ficha nueva (y al historial del alta, que lo repite)."
         },
         {
@@ -110472,7 +110871,7 @@
           "exportada": true,
           "params": "lead: LeadWeb",
           "retorno": "string",
-          "linea": 131,
+          "linea": 135,
           "resumen": "El historial tipo `contacto` que se anota en una ficha que YA existía. Lleva el teléfono/email tecleados: pueden ser distintos de los de la ficha (es justo por lo que se ha encontrado), y Alberto nece"
         },
         {
@@ -110481,7 +110880,7 @@
           "exportada": true,
           "params": "r: ResultadoEscritura",
           "retorno": "ResultadoLead",
-          "linea": 156
+          "linea": 160
         },
         {
           "nombre": "urlFichaCliente",
@@ -110489,7 +110888,7 @@
           "exportada": true,
           "params": "id: string, base: string = process.env.NEXT_PUBLIC_APP_URL || URL_PLATAFORMA_POR_DEFECTO",
           "retorno": "string",
-          "linea": 181
+          "linea": 185
         },
         {
           "nombre": "textoTelegramLead",
@@ -110497,13 +110896,13 @@
           "exportada": true,
           "params": "a: AvisoLead",
           "retorno": "string",
-          "linea": 202,
+          "linea": 206,
           "resumen": "HTML de Telegram (parse_mode HTML): todo lo que teclea el usuario pasa por `escapeHtml`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b19c756bf6ed"
+      "hash": "a54ce84af5cf"
     },
     {
       "ruta": "apps/plataforma/lib/libro-registro-asegura.ts",
@@ -116146,6 +116545,7 @@
       "resumen": "lib/sivra/agente-huesped/contexto.ts — ensambla el contexto de una reserva.",
       "exporta": [
         "toPropertyId",
+        "libreSegunCalendario",
         "construirContexto"
       ],
       "funciones": [
@@ -116167,20 +116567,30 @@
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
+          "nombre": "libreSegunCalendario",
+          "kind": "function",
+          "exportada": true,
+          "params": "propertyId: string, bookingId: string, que: 'vispera' | 'entrada', fecha: string,",
+          "retorno": "Promise<boolean | null>",
+          "linea": 75,
+          "resumen": "¿Está libre según el CALENDARIO volcado (`incomes`)? Es la fuente principal: la mantiene el webhook de Smoobu en tiempo real (+ cron de red de seguridad) y borra las cancelaciones. No guarda bloqueos "
+        },
+        {
           "nombre": "construirContexto",
           "kind": "function",
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 70
+          "linea": 94
         }
       ],
       "tablas": [
+        "incomes",
         "mensajes_aprendizaje",
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "21086015a1a2"
+      "hash": "598b66bb2857"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cortesia.ts",
@@ -116301,7 +116711,9 @@
         "diaAnterior",
         "nocheAnteriorLibre",
         "sumarDias",
-        "entradaMismoDiaLibre"
+        "entradaMismoDiaLibre",
+        "estanciasFiables",
+        "combinarFuentes"
       ],
       "funciones": [
         {
@@ -116347,11 +116759,29 @@
           "retorno": "boolean",
           "linea": 44,
           "resumen": "¿Hay otra reserva que ENTRA el mismo día en que este huésped SALE? Si la hay, el piso necesita turnover (limpieza + entrada de otro huésped) ese día → no hay margen para un late check-out. Espejo de n"
+        },
+        {
+          "nombre": "estanciasFiables",
+          "kind": "function",
+          "exportada": true,
+          "params": "resp: any, opts: { apartmentId: string | number; campo: 'arrival' | 'departure'; desde: string; hasta: string },",
+          "retorno": "Estancia[] | null",
+          "linea": 63,
+          "resumen": "¿Podemos FIARNOS de la lista que devolvió Smoobu para decidir disponibilidad? Devuelve las estancias DE ESTE PISO, o null (= «no verificado») si la respuesta no se entiende, viene paginada o trae esta"
+        },
+        {
+          "nombre": "combinarFuentes",
+          "kind": "function",
+          "exportada": true,
+          "params": "calendario: boolean | null, vivo: boolean | null",
+          "retorno": "",
+          "linea": 89,
+          "resumen": "Combina las dos fuentes de «¿está libre?»: el CALENDARIO volcado (`incomes`, que el webhook de Smoobu mantiene al día y del que se borran las cancelaciones) y la consulta EN VIVO a Smoobu (la única qu"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a567e2b04035"
+      "hash": "da8da15cd193"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/enviar.ts",
@@ -118147,6 +118577,71 @@
       "hash": "569d890e48ed"
     },
     {
+      "ruta": "apps/plataforma/lib/sivra/catastro-pisos-logica.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/catastro-pisos-logica.ts — qué se escribe en `properties.catastro_*` según lo que conteste el Catastro. PURO (solo tipos) → testeable con node --test. Regla del repo «dato que NO hay ≠ dato que NO se ha mirado»: los datos solo se escriben con `estado: 'ok'`. Cualquier otro desenlace deja m",
+      "exporta": [
+        "consultaDePiso",
+        "resultadoDePiso",
+        "referenciasCompartidas"
+      ],
+      "funciones": [
+        {
+          "nombre": "consultaDePiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "p: { refCatastral: string | null; location: string | null }",
+          "retorno": "ConsultaPiso | null",
+          "linea": 26,
+          "resumen": "Con referencia manda la referencia; sin ella, la dirección «Calle X 24, 41003 Sevilla»."
+        },
+        {
+          "nombre": "resultadoDePiso",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: RespuestaHogar",
+          "retorno": "ResultadoPiso",
+          "linea": 40
+        },
+        {
+          "nombre": "referenciasCompartidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "pisos: Array<{ id: string; nombre: string; referencia: string | null }>",
+          "retorno": "Map<string, string>",
+          "linea": 68,
+          "resumen": "Varios pisos con la MISMA referencia = el Catastro los tiene como un solo inmueble (Bustos Tavera 22: Luxury y Reform son un edificio entero con una única referencia). Sus m² son los del edificio, no "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "b612571435d2"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/catastro-pisos.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/catastro-pisos.ts — rellena `properties.catastro_*` de los pisos turísticos desde el Catastro (servicio libre, mismo adaptador que la correduría). Solo mira los pisos que aún no están en `ok`: con los cuatro resueltos, la pasada no consulta nada.",
+      "exporta": [
+        "enriquecerCatastroPisos"
+      ],
+      "funciones": [
+        {
+          "nombre": "enriquecerCatastroPisos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<Array<",
+          "linea": 10
+        }
+      ],
+      "tablas": [
+        "compartida",
+        "properties"
+      ],
+      "rutaApi": null,
+      "hash": "2db1b576cc56"
+    },
+    {
       "ruta": "apps/plataforma/lib/sivra/cobros-ota-db.ts",
       "ambito": "apps/plataforma",
       "resumen": "lib/sivra/cobros-ota-db.ts — lectura de BD para el vigilante de cobros OTA. Separado de cobros-ota.ts (puro, testeable con node --test) para que la parte pura no arrastre el import de prisma/@/lib/db (que rompe el type-stripping de node --test).",
@@ -119803,10 +120298,10 @@
           "nombre": "lateOferta",
           "kind": "function",
           "exportada": false,
-          "params": "apartmentId: unknown, departure: string, bookingId: string",
+          "params": "apartmentId: unknown, propertyId: string, departure: string, bookingId: string",
           "retorno": "Promise<boolean | null>",
-          "linea": 137,
-          "resumen": "¿Queda libre el día de la salida (nadie entra ese día)? true/false verificado · null = no se pudo comprobar → la plantilla NO ofrece las 12:00 (mismo criterio conservador que el agente)."
+          "linea": 139,
+          "resumen": "¿Queda libre el día de la salida (nadie entra ese día)? true/false verificado · null = no se pudo comprobar → la plantilla NO ofrece las 12:00 (mismo criterio conservador que el agente). Misma regla q"
         },
         {
           "nombre": "revisarCoberturaDePasada",
@@ -119814,7 +120309,7 @@
           "exportada": false,
           "params": "reservas: any[], hoy: string, activos: Set<string>, yaHechosPorReserva: Map<string, HitoRegistrado[]>,",
           "retorno": "Promise<string | null>",
-          "linea": 155,
+          "linea": 161,
           "resumen": "Vigía de cobertura: quién llega sin sus instrucciones. Devuelve una nota para el latido, o null. 🚨 NO puede tumbar la pasada ni dejarla sin latido: es un observador. Si su propia consulta falla, lo D"
         },
         {
@@ -119823,7 +120318,7 @@
           "exportada": true,
           "params": "deadline = Date.now() + 280_000",
           "retorno": "Promise<Resumen>",
-          "linea": 216
+          "linea": 222
         }
       ],
       "tablas": [
@@ -119835,7 +120330,7 @@
         "sivra_codigos_acceso"
       ],
       "rutaApi": null,
-      "hash": "da91930919f7"
+      "hash": "dfb81d559344"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/mensajes-prog/plantillas.ts",
@@ -121978,6 +122473,38 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f10c83e4b3d1"
+    },
+    {
+      "ruta": "apps/plataforma/lib/sivra/pricing-suelo-finde.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "lib/sivra/pricing-suelo-finde.ts — SUELO de fin de semana cuando la fecha NO tiene mercado medido. POR QUÉ (27/09/2026, reserva de House Sevillana 29-31/01/2027 por 600€). El finde solo se encarecía por el ancla de la FECHA exacta (`pricing-ancla-fecha.ts`), que exige ≥5 comps fiables de ESE día. Si",
+      "exporta": [
+        "esNocheFinde",
+        "sueloFinde"
+      ],
+      "funciones": [
+        {
+          "nombre": "esNocheFinde",
+          "kind": "function",
+          "exportada": true,
+          "params": "fecha: string",
+          "retorno": "boolean",
+          "linea": 26,
+          "resumen": "Noche de viernes o sábado. `fecha` = 'YYYY-MM-DD' (la noche que empieza ese día)."
+        },
+        {
+          "nombre": "sueloFinde",
+          "kind": "function",
+          "exportada": true,
+          "params": "i: SueloFindeInput, factor = FACTOR_SUELO_FINDE",
+          "retorno": "number | null",
+          "linea": 41,
+          "resumen": "Suelo del finde en base (sin markup), o `null` si no aplica."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "d682ed0deb4b"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/pricing-techo-adr.ts",
@@ -124958,7 +125485,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "43fda135c0d6"
+      "hash": "9f3d2f4919fd"
     },
     {
       "ruta": "apps/plataforma/lib/telegram/preferencias.ts",
@@ -156295,7 +156822,7 @@
           "exportada": true,
           "params": "zona: string | null | undefined",
           "retorno": "CentroBusqueda | null",
-          "linea": 207,
+          "linea": 231,
           "resumen": "Centro de búsqueda de un municipio/zona vigilada. `null` si la zona no está en la tabla — la llamada NO se hace (mejor no gastar cuota en una búsqueda mal centrada que inventar coordenadas)."
         },
         {
@@ -156304,13 +156831,13 @@
           "exportada": true,
           "params": "usadasEsteMes: number, maxPorPasada = 3",
           "retorno": "number",
-          "linea": 232,
+          "linea": 256,
           "resumen": "Cuántas llamadas puede gastar UNA pasada del cron, dado lo ya consumido este mes. Devuelve 0 cuando el presupuesto (menos el margen) está agotado."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9d5f2f69bec4"
+      "hash": "5d8e6f2b0e8f"
     },
     {
       "ruta": "packages/module-subastas/src/idealista-mcp.ts",
@@ -159553,7 +160080,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3806,
-    "funciones": 12220
+    "archivos": 3813,
+    "funciones": 12268
   }
 }
