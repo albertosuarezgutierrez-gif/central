@@ -12,6 +12,9 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — Tras #3773 el bot ya lee el tomador (Rafael Campa, localizado por DNI), pero el enlace final llevaba a la ficha:
+`resultadoAlta()` enlaza ahora a la oportunidad (`?tab=oportunidades&op=<id>`), también cuando ya había una abierta (409).
+
 **(27/09/2026)** — PR #3773: tras desplegar #3765 el bot seguía preguntando «¿a quién?» con la póliza de MUSSAP subida:
 la subida y el botón «de un cliente» no son turnos del chat. `avisoDocumentosPendientes()` mete en el system cuántos
 documentos de la correduría (última hora, sin usar) hay y ordena `proponer_oportunidad` sin clienteId + usarDocumentos.

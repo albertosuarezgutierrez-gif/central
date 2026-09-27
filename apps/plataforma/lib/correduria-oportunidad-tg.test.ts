@@ -409,3 +409,10 @@ test('con una póliza de la correduría sin usar, el asistente sabe que está ah
   assert.match(src, /historial\.memoria, avisoDocumentosPendientes\(pendientes\)\]/)
   assert.match(src, /destino = 'correduria' AND usado_at IS NULL/)
 })
+
+test('el enlace tras abrir (o si ya había una) lleva a la OPORTUNIDAD, no solo a la ficha', () => {
+  assert.match(resultadoAlta(201, { estado: 'ok', id: 'o1' }, 'https://x/correduria/cliente/c1').texto, /cliente\/c1\?tab=oportunidades&op=o1/)
+  assert.match(resultadoAlta(409, { estado: 'duplicada', motivo: 'Ya tiene una de auto.', id: 'o0' }, 'https://x/correduria/cliente/c1').texto, /\?tab=oportunidades&op=o0/)
+  // sin id (fallo incierto) se queda en la ficha: no hay oportunidad a la que llevar
+  assert.doesNotMatch(resultadoAlta(0, null, 'https://x/correduria/cliente/c1').texto, /op=/)
+})
