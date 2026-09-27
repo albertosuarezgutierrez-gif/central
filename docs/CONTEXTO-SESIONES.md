@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** — Correduría: un cliente puede tener VARIAS oportunidades abiertas del mismo ramo si son de compañías distintas (segundo coche: MUSSAP + Línea Directa de Rafael Campa). Regla en asegura `crearOportunidad`/`editarOportunidad`: 409 `duplicada` solo si hay una abierta del ramo con la MISMA compañía o sin compañía en un lado (ante la duda, la misma). Comparación única `mismaCompania()` en `@central/module-seguros`; plataforma `mismaPoliza` la reutiliza. Después (mismo PR #3792): la identidad es el **nº de póliza** (`mismoSeguro()`), guardado en `poliza_competencia.numeroPoliza` al abrir; sin número en un lado se cae a la compañía. Y el prompt del bot: con documento reciente no pregunta nada, lo lee.
+
 **(27/09/2026)** — Recibo Línea Directa de Rafael Campa (OTRO coche, 0194DRY): el 409 «ya tiene una de auto» habría ofrecido
 «Actualizar la existente» y pisado la de MUSSAP. `mismaPoliza()` compara compañía: distinta ⇒ sin botón y se dice. Pendiente
 (decisión de Alberto): varias oportunidades de auto por cliente, una por vehículo/póliza (hoy asegura admite una por ramo).
