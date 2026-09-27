@@ -54,3 +54,8 @@ test('palabras del nombre: sin acentos, sin comas ni partículas', async () => {
   const { palabrasNombre } = await import('./palabras-nombre.ts')
   assert.deepEqual(palabrasNombre('RUIZ GIL, José de la Peña'), ['ruiz', 'gil', 'jose', 'pena'])
 })
+
+test('la pista de la matrícula nunca convierte «no se pudo mirar por nombre» (null) en «no hay» ([]) (lee el FUENTE)', () => {
+  const src = readFileSync(fileURLToPath(new URL('./tomador-documento.ts', import.meta.url)), 'utf8')
+  assert.match(src, /if \(nuevas\.length > 0\) posibles = \[\.\.\.\(posibles \?\? \[\]\), \.\.\.nuevas\]/)
+})

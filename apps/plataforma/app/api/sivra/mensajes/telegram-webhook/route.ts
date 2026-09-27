@@ -144,6 +144,16 @@ export async function POST(req: NextRequest) {
   // contestaba (y proponía botones) dos veces. Si la BD no responde se procesa igual: perder un
   // mensaje de Alberto es peor que contestarlo dos veces.
   if (await updateYaVisto(body.update_id)) return NextResponse.json({ ok: true })
+  try {
+    return await procesarUpdate(req, body)
+  } catch (e) {
+    // Si revienta a mitad, se desmarca: así el reintento de Telegram SÍ se procesa.
+    await olvidarUpdate(body.update_id)
+    throw e
+  }
+}
+
+async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
 
   // ── Agente Instagram/blog de ia-rest (bot compartido) ────────────────────
   // El webhook del bot apunta AQUÍ, pero los callbacks ig_*/blog_*/briefing_*
@@ -798,6 +808,13 @@ export async function POST(req: NextRequest) {
         after(() => emitirDesdeBoton(arg))
         return NextResponse.json({ ok: true })
       }
+      // Guardar baja y sube ficheros (segundos por documento): se contesta el botón ya y se trabaja después.
+      if (action === 'guardar') {
+        await tgAnswerCallback(cb.id, '⏳ Guardando en la ficha…')
+        const arg = args[0] || ''
+        after(() => resolverBotonCorreduria('guardar', arg).then(() => {}).catch((e) => console.error('[tg] guardar', e)))
+        return NextResponse.json({ ok: true })
+      }
       const toast = await resolverBotonCorreduria(action, args[0] || '')
       await tgAnswerCallback(cb.id, toast)
       return NextResponse.json({ ok: true })
@@ -1010,7 +1027,7 @@ export async function POST(req: NextRequest) {
     // borrador de un huésped, aunque el modo respuesta siga abierto.
     if (tienePrefijo(msg.text || '')) {
       const t = (msg.text || '').trim()
-      after(() => manejarCorreduriaTg(t))
+      after(() => correduriaSegura(t))
       return NextResponse.json({ ok: true })
     }
     // Nota a un 👎 del asistente de la correduría («asistente seguros · turno N»).
@@ -1078,7 +1095,7 @@ export async function POST(req: NextRequest) {
     const citado = String(msg.reply_to_message.text ?? msg.reply_to_message.caption ?? '')
     if (esRespuestaACorreduria(citado)) {
       const t = conCita(msg.text, citado)
-      after(() => manejarCorreduriaTg(t))
+      after(() => correduriaSegura(t))
       return NextResponse.json({ ok: true })
     }
   }
@@ -1112,7 +1129,7 @@ export async function POST(req: NextRequest) {
         const aCorreduria = pieDeCorreduria(pie) || await albumDeCorreduria(grupo)
         const docId = await registrarDocumentoTg({ fileId: adj.fileId, nombre: adj.nameHint, mime: adj.mimeHint, mediaGroupId: grupo, destino: aCorreduria ? 'correduria' : 'contable' })
         if (aCorreduria) {
-          if (pie) after(() => manejarCorreduriaTg(pie))
+          if (pie) after(() => correduriaSegura(pie))
           return NextResponse.json({ ok: true })
         }
         const file = await descargarTelegram(adj.fileId, adj.mimeHint, adj.nameHint)
@@ -1138,7 +1155,7 @@ export async function POST(req: NextRequest) {
 // contable, que es quien atendía todo el texto libre hasta el 26/09/2026.
 async function enrutarTextoLibre(cuentaId: string, texto: string): Promise<void> {
   // El asistente puede tardar (herramientas, documentos): Telegram recibe su 200 ya y él sigue en `after`.
-  if (await esParaCorreduria(texto)) { after(() => manejarCorreduriaTg(texto)); return }
+  if (await esParaCorreduria(texto)) { after(() => correduriaSegura(texto)); return }
   await manejarTextoLibreTg(cuentaId, texto)
 }
 
@@ -1153,4 +1170,17 @@ async function updateYaVisto(updateId: unknown): Promise<boolean> {
     await prisma.$executeRaw(Prisma.sql`DELETE FROM telegram_update_visto WHERE visto_at < now() - interval '3 days'`).catch(() => {})
   }
   return filas.length === 0
+}
+
+async function olvidarUpdate(updateId: unknown): Promise<void> {
+  if (typeof updateId !== 'number' || !Number.isInteger(updateId)) return
+  await prisma.$executeRaw(Prisma.sql`DELETE FROM telegram_update_visto WHERE update_id = ${updateId}`).catch(() => {})
+}
+
+/** El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto. */
+async function correduriaSegura(texto: string): Promise<void> {
+  await manejarCorreduriaTg(texto).catch(async (e) => {
+    console.error('[tg] asistente de la correduría', e)
+    await tgSend('⚠️ El asistente de la correduría ha fallado con ese mensaje; repítemelo.').catch(() => {})
+  })
 }

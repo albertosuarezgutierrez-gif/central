@@ -756,7 +756,7 @@ async function abrirOportunidad(id: number): Promise<string> {
         resultado = ${JSON.stringify({ status: r.status, id: json?.id ?? null, motivo: json?.motivo ?? null })}::jsonb
     WHERE id = ${id}`).catch((e) => console.error('[correduria-oportunidad-tg] no se pudo cerrar la fila', id, e))
   await decir(fin.texto)
-  if (fin.estado === 'abierta') await ofrecerSiguientes(id, clienteId, fila.alta, (fila.documentos ?? []).length).catch(() => {})
+  if (fin.estado === 'abierta') await ofrecerSiguientes(id, clienteId, fila.alta, (fila.documentos ?? []).map(Number)).catch(() => {})
   return fin.estado === 'abierta' ? 'Oportunidad abierta 🎯' : fin.estado === 'incierta' ? 'No sé si se ha abierto' : 'No se ha abierto'
 }
 
@@ -1009,13 +1009,18 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
  * en /correduria) y el enlace para tarificar ese ramo. Tarificar gasta dinero, así que es un ENLACE a la
  * pantalla que lo hace con su propia confirmación, nunca un botón que cotice desde aquí.
  */
-async function ofrecerSiguientes(oportId: number, clienteId: string, alta: Alta, nDocs: number): Promise<void> {
+async function ofrecerSiguientes(oportId: number, clienteId: string, alta: Alta, docIds: number[]): Promise<void> {
   const ruta = rutaTarificar(alta.ramo)
   const tarificar = ruta ? `${urlCliente(clienteId)}/${ruta}` : null
   const lineas = [tarificar ? `💶 Para pedir precio: ${tarificar}` : null].filter(Boolean) as string[]
-  if (nDocs > 0) {
+  // Se nombran los ficheros: entre lo leído puede haber algo que no es de este cliente (una factura, la
+  // póliza de otro subida en la misma hora) y el botón no puede guardarlo a ciegas.
+  const nombres = docIds.length === 0 ? [] : await prisma.$queryRaw<{ nombre: string | null }[]>(Prisma.sql`
+    SELECT nombre FROM correduria_asistente_documento WHERE id = ANY(${docIds}::bigint[]) ORDER BY id`).catch(() => null)
+  if (docIds.length > 0 && nombres !== null) {
+    const lista = nombres.map((n) => `• ${escapeHtml(n.nombre ?? 'documento sin nombre')}`)
     await tgSendButtons(
-      [`📎 ¿Guardo en su ficha ${nDocs === 1 ? 'el documento que subiste' : `los ${nDocs} documentos que subiste`}?`, ...lineas].join('\n'),
+      [`📎 ¿Guardo en su ficha ${docIds.length === 1 ? 'este documento' : `estos ${docIds.length} documentos`}?`, ...lista, ...lineas].join('\n'),
       [[{ texto: '📎 Guardar en la ficha', callback: `cas_guardar:${oportId}` }]],
     )
   } else if (lineas.length) {
@@ -1048,7 +1053,7 @@ async function guardarDocumentosEnFicha(oportId: number): Promise<string> {
     form.set('clienteId', fila.cliente_id)
     form.set('tipo', 'otro')
     form.set('notas', 'Póliza que tiene con otra compañía (subida por Telegram para abrir la oportunidad)')
-    const r = await subirDocumentoAsegura(form).catch(() => ({ status: 0, json: null }))
+    const r = await subirDocumentoAsegura(form, ACTOR_EMISION_TG).catch(() => ({ status: 0, json: null }))
     if (r.status >= 200 && r.status < 300) bien++
     else fallos.push(`${d.nombre ?? 'documento'}: ${r.status === 0 || r.status >= 500 ? 'no sé si se ha guardado, míralo en la ficha' : `rechazado (HTTP ${r.status})`}`)
   }

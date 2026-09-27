@@ -77,7 +77,8 @@ export async function tomadorDe(l: LecturaPoliza): Promise<Tomador> {
         limit 6`
       const ya = new Set([...(porDni ?? []), ...(posibles ?? [])].map((x) => x.id))
       const nuevas = filas.filter((f) => !ya.has(f.id)).map((f) => ({ ...f, nombre: `${f.nombre} (misma matrícula)` }))
-      posibles = [...(posibles ?? []), ...nuevas]
+      // Sin coincidencias no se toca: `null` («no se pudo mirar por nombre») no puede volverse `[]`.
+      if (nuevas.length > 0) posibles = [...(posibles ?? []), ...nuevas]
     } catch {
       // sin la pista de la matrícula no se afirma nada: `posibles` se queda como estaba
     }

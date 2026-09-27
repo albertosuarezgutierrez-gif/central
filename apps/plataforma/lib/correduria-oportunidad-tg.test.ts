@@ -359,8 +359,9 @@ test('webhook: descarta reintentos de Telegram y contesta rápido a la corredur�
   assert.match(src, /ON CONFLICT DO NOTHING RETURNING update_id/)
   // sin BD se procesa igual (perder un mensaje es peor que contestarlo dos veces)
   assert.match(src, /if \(filas === null\) return false/)
-  // ningún manejarCorreduriaTg se espera dentro de la petición
-  assert.doesNotMatch(src, /await manejarCorreduriaTg\(/)
+  // ningún manejarCorreduriaTg se espera dentro de la petición: el único await es el de correduriaSegura (en after)
+  assert.equal(src.match(/await manejarCorreduriaTg\(/g)?.length, 1)
+  assert.match(src, /async function correduriaSegura[^]*?await manejarCorreduriaTg\(texto\)\.catch/)
   assert.match(src, /action === 'guardar'\) && String\(cb\.from/)
 })
 
@@ -386,4 +387,13 @@ test('mañana: las tareas de hoy van dentro del aviso de renovaciones, y «no se
   const cron = readFileSync(fileURLToPath(new URL('../app/api/cron/correduria-renovaciones/route.ts', import.meta.url)), 'utf8')
   assert.match(cron, /bloqueLlamadasHoy\(/)
   assert.match(cron, /\[renovaciones, llamadas\]\.filter\(Boolean\)/)
+})
+
+test('revisión: si el webhook revienta se desmarca el update, y el asistente en after avisa si falla (lee el FUENTE)', () => {
+  const src = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
+  assert.match(src, /catch \(e\) \{\n\s+\/\/ Si revienta a mitad, se desmarca[^\n]*\n\s+await olvidarUpdate\(body\.update_id\)/)
+  assert.doesNotMatch(src, /after\(\(\) => manejarCorreduriaTg/)
+  assert.match(src, /if \(action === 'guardar'\) \{\n\s+await tgAnswerCallback/)
+  const cron = readFileSync(fileURLToPath(new URL('../app/api/cron/correduria-renovaciones/route.ts', import.meta.url)), 'utf8')
+  assert.match(cron, /Promise\.all\(\[\n\s+vencimientosAsegura/)
 })
