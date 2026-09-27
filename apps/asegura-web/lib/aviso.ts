@@ -12,7 +12,7 @@
 export const RAMO_OTRO = 'otro'
 
 /** Versión del texto de consentimiento de abajo. Tiene que coincidir con `CONSENTIMIENTO_VERSION` de asegura. */
-export const CONSENTIMIENTO_VERSION = 'web-aviso-v1'
+export const CONSENTIMIENTO_VERSION = 'web-aviso-v2'
 
 /** El token viaja en el fragmento (`#t=…`): no llega al servidor en la petición de la página ni queda en logs. */
 export function tokenDelFragmento(hash: string): string | null {
