@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(27/09/2026)** Revisión del PR #3713 (mergeado): el «hueco de memoria 05-13/09» era falso (formato distinto
+de fecha), y el mapa de funciones indexaba el cliente Prisma local — corregidos; `next build` OK en las 4 apps
+tocadas. Alberto ordenó cerrar los **44 PRs de rutinas estancados**: cerrados sin mergear, ramas conservadas
+(reabribles). BBVA/Enable Banking: lo mira Alberto.
+
 **(27/09/2026)** Auditoría PROFUNDA: código 12/12 sano (~9.093 tests), fix `transpilePackages` en 5 apps
 (ia-rest/alquiler/asegura/asegura-portal/housesevillana importaban `@central/*` sin declararlo — riesgo de
 build, no de tipos). 🔴 **44 PRs `claude/*` zombis abiertos (05-24/09, hasta 22 días)**: su código YA está
