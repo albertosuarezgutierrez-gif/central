@@ -89,6 +89,7 @@ test('🪤 datos ilegibles o avisados como incorrectos → NO se autoriza (prepa
 })
 
 test('🪤 los datos confirmados van DENTRO del documento firmado (y por tanto de su huella) y en el evento', () => {
-  assert.match(src, /\}\) \+ '\\n\\n' \+ anexoDatosFirmados\(datos\)/)
+  // Tras el documento van la cuenta (solo su máscara) y los datos con el texto EXACTO de la casilla marcada.
+  assert.match(src, /\}\) \+ '\\n\\n' \+ lineaCuentaDocumento\(cuenta\) \+ '\\n\\n' \+ anexoDatosFirmados\(datos, textoAutorizacion\(!!f\.ipidHuella\)\)/)
   assert.match(firmar, /datosConfirmados: true, datosHuella: c\.datos\.huella/)
 })

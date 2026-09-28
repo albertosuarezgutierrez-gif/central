@@ -26,7 +26,8 @@ import {
   ibanEnmascarado,
   ibanValido,
 } from '@/lib/codeoscopic/emitir-iban'
-import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { cuentaDeFicha, origenCuentaAceptada, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { cuentaDistintaDeLaFirmada, polizaParaCuenta } from '@/lib/presupuesto-cuenta'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { documentoTomador, fraccionamientoDeOferta, matriculaProyecto } from '@/lib/codeoscopic/importar'
 import {
@@ -503,7 +504,25 @@ export const POST = auditado(async (req: Request) => {
       { status: 422 },
     )
   }
-  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, ctx.polizaOrigenId, ctx.clienteId) : SIN_CUENTA
+  // Si el cliente firmó en el portal una cuenta NUEVA, la de su ficha va primero (no la de la póliza vieja).
+  const aceptada = await origenCuentaAceptada(correduria.id, p.tarificacion_id)
+  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, polizaParaCuenta(ctx.polizaOrigenId, aceptada?.origen ?? null), ctx.clienteId) : SIN_CUENTA
+  // 🚨 Si la cuenta que se va a mandar (tecleada o de la ficha) NO es la que firmó en el portal, no se emite.
+  const cuentaAEnviar = ibanHumano ?? ficha.iban
+  if (cuentaDistintaDeLaFirmada(cuentaAEnviar, aceptada?.mascara)) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'faltan_campos',
+        mensaje:
+          `El cliente firmó la domiciliación en la cuenta ${aceptada!.mascara}, pero ${ibanHumano !== null ? 'la tecleada es' : 'la ficha da'} ${ibanEnmascarado(cuentaAEnviar!)}. ` +
+          'Usa la cuenta que firmó (pídesela si no la tienes). No se ha emitido nada.',
+        faltan: ['iban'],
+        campos: null,
+      },
+      { status: 422 },
+    )
+  }
   const decision = decidirCuentaEnvio({ ibanTecleado, ibanJson, ficha, cuentaConfirmada: cuerpo.cuentaConfirmada })
   if (decision.tipo === 'confirmar') {
     // La ficha tiene cuenta y nadie la ha confirmado: se pide ANTES de gastar

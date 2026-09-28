@@ -2,16 +2,19 @@ import { NextResponse } from 'next/server'
 import { normalizarIp, normalizarUserAgent } from '@central/module-seguros-portal'
 import { tgSend } from '@central/core-telegram'
 
-import { MOTIVO_SIN_CASILLA, firmarAceptacion, pedirCodigoAceptacion, prepararAceptacion } from '@/lib/presupuesto-firma'
+import {
+  MOTIVO_SIN_CASILLA, MOTIVO_SIN_CUENTA, firmarAceptacion, leerEntradaCuenta, pedirCodigoAceptacion, prepararAceptacion,
+} from '@/lib/presupuesto-firma'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
 /**
  * POST /api/presupuesto/firma — el cliente firma su aceptación de opción (pieza 4).
- *   { accion: 'preparar', presupuestoId, opcionId }            → documento + hash
+ *   { accion: 'preparar', presupuestoId, opcionId, cuenta? }   → sin cuenta, la de su ficha ENMASCARADA; con ella, documento + hash
+ *     (`cuenta`: { eleccion: 'ficha' } | { eleccion: 'otra', iban }. El IBAN viaja a asegura, que lo valida; aquí no se registra.)
  *   { accion: 'codigo', presupuestoId, opcionId }              → código de 6 cifras a su correo
- *   { accion: 'firmar', presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados: true } → firma la aceptación
+ *   { accion: 'firmar', presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados: true, cuenta } → firma la aceptación
  *
  * La identidad sale de la SESIÓN, nunca del cuerpo. 🚨 La vista de corredor
  * es de solo lectura: Alberto no firma una aceptación por el cliente (403).
@@ -40,9 +43,12 @@ export async function POST(req: Request) {
 
   if (b.accion === 'preparar') {
     // Preparar es solo lectura: se permite a la vista de corredor.
-    const r = await prepararAceptacion(identidad.id, presupuestoId, opcionId)
+    const r = await prepararAceptacion(identidad.id, presupuestoId, opcionId, leerEntradaCuenta(b.cuenta))
     if (!r) return NextResponse.json({ estado: 'error' }, { status: 502 })
-    return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : r.estado === 'no_encontrado' || r.estado === 'sin_ficha' ? 404 : r.estado === 'error' ? 502 : 409 })
+    const status = r.estado === 'ok' || r.estado === 'elegir_cuenta' ? 200
+      : r.estado === 'sin_cuenta' || r.estado === 'iban_invalido' ? 422
+      : r.estado === 'no_encontrado' || r.estado === 'sin_ficha' ? 404 : r.estado === 'error' ? 502 : 409
+    return NextResponse.json(r, { status })
   }
 
   // Para código y firma: veto de corredor
@@ -68,6 +74,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ estado: 'reintentar', motivo: MOTIVO_SIN_CASILLA }, { status: 422 })
     }
 
+    // Sin cuenta no se firma: se corta aquí y, otra vez, en asegura (que valida el IBAN y decide).
+    const cuenta = leerEntradaCuenta(b.cuenta)
+    if (!cuenta) return NextResponse.json({ estado: 'reintentar', motivo: MOTIVO_SIN_CUENTA }, { status: 422 })
+
     const r = await firmarAceptacion(identidad.id, presupuestoId, opcionId, {
       codigo,
       nombre,
@@ -75,6 +85,7 @@ export async function POST(req: Request) {
       ip: normalizarIp(req.headers.get('x-forwarded-for')),
       userAgent: normalizarUserAgent(req.headers.get('user-agent')),
       datosConfirmados: true,
+      cuenta,
     })
 
     if (r.estado === 'aceptado') {

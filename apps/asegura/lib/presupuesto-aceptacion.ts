@@ -21,6 +21,11 @@ import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { fichaPropiaDe } from './contacto-portal'
 import { ipidDeOpcion } from './ipid'
+import { encryptField } from '@central/module-seguros-pii'
+import { cuentaDeFicha, type CuentaFicha } from './codeoscopic/cuenta-ficha'
+import {
+  lineaCuentaAviso, lineaCuentaDocumento, lineaCuentaHistorial, mascaraCuenta, resolverCuentaFirma, textoAutorizacion, type CuentaElegida,
+} from './presupuesto-cuenta'
 import { estadoEmailDeFicha } from './email-ficha'
 import {
   MAX_TEXTO_REPORTE, TEXTO_CONFIRMACION_DATOS, URL_PLATAFORMA_DEFECTO, anexoDatosFirmados, avisoAceptacion, avisoDatosIncorrectos,
@@ -57,6 +62,8 @@ type Fila = {
   nCompanias: number
   /** Huella de la ficha IPID vigente de la opción (misma clave que el enlace del portal). */
   ipidHuella: string | null
+  /** Las fichas IPID que el portal enseñaba en CADA opción del presupuesto (null = esa no tenía). */
+  ipidsMostrados: { opcionId: string; compania: string; producto: string | null; huella: string | null }[]
   /** La petición que viajó a Codeoscopic: de ella salen los datos que el cliente confirma. */
   peticion: unknown
   /** El cliente dijo que un dato no es correcto: no se acepta desde el portal hasta retarificar. */
@@ -64,7 +71,7 @@ type Fila = {
 }
 
 async function leer(correduriaId: string, clienteId: string, presupuestoId: string, opcionId: string): Promise<Fila | null> {
-  const [f] = await prismaAsegura().$queryRaw<Omit<Fila, 'ipidHuella'>[]>`
+  const [f] = await prismaAsegura().$queryRaw<Omit<Fila, 'ipidHuella' | 'ipidsMostrados'>[]>`
     select p.id::text as id, p.cliente_id::text as "clienteId", p.poliza_id::text as "polizaId", p.ramo,
            trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
            p.creado_at as "creadoAt", p.vence_el as "venceEl", p.enviado_at as "enviadoAt", p.visto_at as "vistoAt",
@@ -90,12 +97,23 @@ async function leer(correduriaId: string, clienteId: string, presupuestoId: stri
       left join companias_dgs cda on cda.codigo_dgs = pol.codigo_entidad_dgs
     where p.id = ${presupuestoId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid`
   if (!f) return null
+  // Misma clave (compañía + producto) que usa el portal para pintar el enlace de cada tarjeta.
+  const opciones = await prismaAsegura().$queryRaw<{ id: string; compania: string; producto: string | null }[]>`
+    select id::text as id, compania, producto from presupuesto_opcion where presupuesto_id = ${presupuestoId}::uuid order by id`
+  const ipidsMostrados = await Promise.all(opciones.map(async (o) => ({
+    opcionId: o.id, compania: o.compania, producto: o.producto,
+    huella: (await ipidDeOpcion(correduriaId, o.compania, o.producto))?.sha256 ?? null,
+  })))
   const ipid = await ipidDeOpcion(correduriaId, f.compania, f.producto)
-  return { ...f, ipidHuella: ipid?.sha256 ?? null }
+  return { ...f, ipidHuella: ipid?.sha256 ?? null, ipidsMostrados }
 }
 
 type Compuesto = {
   documento: string
+  /** El texto de la casilla: con «información previa» solo si había IPID de la opción elegida. */
+  confirmacionDatos: string
+  /** La cuenta que se firma, enmascarada. Nunca el IBAN. */
+  cuenta: Pick<CuentaElegida, 'origen' | 'mascara'>
   /** Los datos cotizados que el cliente confirma; van DENTRO del documento y de su huella. */
   datos: Extract<DatosCotizados, { estado: 'ok' }>
   documentoHash: string
@@ -105,7 +123,7 @@ type Compuesto = {
   sinAnulacion: string | null
 }
 
-function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado: 'ok' }>): Compuesto | null {
+function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado: 'ok' }>, cuenta: CuentaElegida): Compuesto | null {
   const prima = f.prima === null ? null : Number(f.prima)
   if (prima === null || !Number.isFinite(prima)) return null
   const firmeza = f.firmeza === 'firme' || f.firmeza === 'condicionado' ? f.firmeza : 'estimado'
@@ -144,10 +162,13 @@ function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado:
     },
     necesidades: f.necesidades,
     ipid: f.ipidHuella ? { huella: f.ipidHuella } : null,
-  }) + '\n\n' + anexoDatosFirmados(datos)
+  }) + '\n\n' + lineaCuentaDocumento(cuenta) + '\n\n' + anexoDatosFirmados(datos, textoAutorizacion(!!f.ipidHuella))
   // La huella cubre las DOS cartas: si cambia cualquiera, no se firma lo que no se leyó.
   // Los datos cotizados van DENTRO de `documento`, así que también los cubre.
-  return { documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion, datos }
+  return {
+    documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion, datos,
+    confirmacionDatos: textoAutorizacion(!!f.ipidHuella), cuenta: { origen: cuenta.origen, mascara: cuenta.mascara },
+  }
 }
 
 type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
@@ -179,21 +200,44 @@ function datosDe(f: Fila): Extract<DatosCotizados, { estado: 'ok' }> | BloqueoDa
   return d.estado === 'ok' ? d : { estado: 'sin_datos', motivo: d.motivo }
 }
 
+/** Lo que el portal puede saber de la cuenta de la ficha: la MÁSCARA, nunca el IBAN. */
+export type CuentaFichaPortal = { mascara: string | null; aviso: CuentaFicha['aviso'] }
+
+/** La entrada del cliente: `eleccion` 'ficha' | 'otra' y, con 'otra', el IBAN tecleado. No se fía de nada. */
+export type EntradaCuenta = { eleccion: unknown; iban: unknown }
+
+type FalloCuenta = { estado: 'sin_cuenta' | 'iban_invalido'; motivo: string; cuentaFicha: CuentaFichaPortal }
+
+/** La cuenta de la ficha; la de la póliza solo si es SUYA y está en vigor (si no, ni su máscara se enseña). */
+async function cuentaDe(correduriaId: string, clienteId: string, f: Fila): Promise<{ ficha: CuentaFicha; portal: CuentaFichaPortal }> {
+  const ficha = await cuentaDeFicha(correduriaId, f.polizaApta ? f.polizaId : null, clienteId)
+  return { ficha, portal: { mascara: mascaraCuenta(ficha.iban), aviso: ficha.aviso } }
+}
+
 export type ResultadoPreparar =
-  | ({ estado: 'ok'; consentimiento: string; confirmacionDatos: string } & Omit<Compuesto, 'datos'> & { datos: GrupoDatos[] })
+  | ({ estado: 'ok'; consentimiento: string; cuentaFicha: CuentaFichaPortal } & Omit<Compuesto, 'datos'> & { datos: GrupoDatos[] })
+  /** Todavía no ha elegido cuenta: se le enseña la de su ficha (enmascarada) o se le pide una. */
+  | { estado: 'elegir_cuenta'; cuentaFicha: CuentaFichaPortal }
+  | FalloCuenta
   | { estado: 'sin_precio' }
   | BloqueoDatos
   | Exclude<Base, { f: Fila }>
 
 /** Lo que el cliente va a firmar con esa opción. No escribe nada. */
-export async function prepararAceptacion(correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string): Promise<ResultadoPreparar> {
+export async function prepararAceptacion(
+  correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string, entrada: EntradaCuenta | null = null,
+): Promise<ResultadoPreparar> {
   const b = await base(correduriaId, identidadId, presupuestoId, opcionId)
   if (!('f' in b)) return b
   const d = datosDe(b.f)
   if (d.estado !== 'ok') return d
-  const c = componer(b.f, hoyMadrid(), d)
+  const { ficha, portal } = await cuentaDe(correduriaId, b.clienteId, b.f)
+  if (!entrada) return { estado: 'elegir_cuenta', cuentaFicha: portal }
+  const rc = resolverCuentaFirma({ fichaIban: ficha.iban, eleccion: entrada.eleccion, ibanNuevo: entrada.iban })
+  if (!rc.ok) return { estado: rc.estado, motivo: rc.motivo, cuentaFicha: portal }
+  const c = componer(b.f, hoyMadrid(), d, rc.cuenta)
   if (!c) return { estado: 'sin_precio' }
-  return { estado: 'ok', consentimiento: TEXTO_CONSENTIMIENTO, confirmacionDatos: TEXTO_CONFIRMACION_DATOS, ...c, datos: c.datos.grupos }
+  return { estado: 'ok', consentimiento: TEXTO_CONSENTIMIENTO, cuentaFicha: portal, ...c, datos: c.datos.grupos }
 }
 
 export type ResultadoCodigo =
@@ -265,6 +309,10 @@ export type ResultadoFirma =
   | { estado: 'sin_precio' }
   /** Sin la casilla «He revisado mis datos…» marcada no se firma: lo decide el SERVIDOR, no la pantalla. */
   | { estado: 'sin_confirmar_datos' }
+  /** Sin cuenta válida no se firma (la compañía no emite sin ella). */
+  | Omit<FalloCuenta, 'cuentaFicha'>
+  /** La clave PII no está: el IBAN no se guarda en claro, y sin guardarlo no se firma. */
+  | { estado: 'sin_cifrado' }
   | BloqueoDatos
   | Exclude<Base, { f: Fila }>
 
@@ -273,7 +321,10 @@ export async function firmarAceptacion(
   identidadId: string,
   presupuestoId: string,
   opcionId: string,
-  datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean },
+  datos: {
+    codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean
+    cuenta: EntradaCuenta | null
+  },
 ): Promise<ResultadoFirma> {
   // La casilla va lo PRIMERO: antes de tocar la BD y antes de gastar un intento del código.
   if (datos.datosConfirmados !== true) return { estado: 'sin_confirmar_datos' }
@@ -283,6 +334,23 @@ export async function firmarAceptacion(
   // Fail-closed: con los datos ilegibles o avisados como incorrectos, no se autoriza la emisión.
   const dc = datosDe(f)
   if (dc.estado !== 'ok') return dc
+  // Fail-closed, y ANTES de gastar un intento del código: sin cuenta válida no se firma.
+  const { ficha: cuentaFichaActual } = await cuentaDe(correduriaId, clienteId, f)
+  const rc = datos.cuenta
+    ? resolverCuentaFirma({ fichaIban: cuentaFichaActual.iban, eleccion: datos.cuenta.eleccion, ibanNuevo: datos.cuenta.iban })
+    : resolverCuentaFirma({ fichaIban: null, eleccion: null, ibanNuevo: null })
+  if (!rc.ok) return { estado: rc.estado, motivo: rc.motivo }
+  const cuenta = rc.cuenta
+  // La nueva se guarda CIFRADA. `encryptField` sin clave devuelve el texto tal cual: eso no se escribe.
+  let cuentaCifrada: string | null = null
+  if (cuenta.origen === 'nueva') {
+    try {
+      cuentaCifrada = encryptField(cuenta.iban)
+    } catch {
+      cuentaCifrada = null
+    }
+    if (!cuentaCifrada || !cuentaCifrada.startsWith('v1:')) return { estado: 'sin_cifrado' }
+  }
   // Control exclusivo: sin código no hay firma, aunque la sesión esté abierta.
   if (!f.otpHash || !f.otpExpira) return { estado: 'sin_codigo' }
   // El intento se gasta ANTES de comparar y en una sola sentencia.
@@ -296,7 +364,7 @@ export async function firmarAceptacion(
   if (!nombreCoincide(datos.nombre, f.tomador)) return { estado: 'nombre_no_coincide' }
 
   const hoy = hoyMadrid()
-  const c = componer(f, hoy, dc)
+  const c = componer(f, hoy, dc, cuenta)
   if (!c) return { estado: 'sin_precio' }
   // Se firma lo que se leyó: si el documento (o la carta de anulación) ya no es el enseñado, no.
   if (c.documentoHash !== datos.documentoHash) return { estado: 'documento_cambiado' }
@@ -345,8 +413,18 @@ export async function firmarAceptacion(
         values (${presupuestoId}::uuid, 'aceptado', 'cliente', ${JSON.stringify({
           opcionId, conAnulacion: !!c.anulacion,
           // Lo que confirmó con la casilla, y la huella de los datos que tenía delante.
-          datosConfirmados: true, datosHuella: c.datos.huella, confirmacion: TEXTO_CONFIRMACION_DATOS,
+          datosConfirmados: true, datosHuella: c.datos.huella, confirmacion: c.confirmacionDatos,
+          // Solo la máscara: el IBAN vive cifrado en la ficha, no en el registro de eventos.
+          cuenta: c.cuenta,
+          // Información previa (RDL 3/2020): qué fichas IPID enseñaba el portal, y la de la elegida.
+          ipidElegida: f.ipidHuella, ipidsMostrados: f.ipidsMostrados,
         })}::jsonb)`
+      if (cuentaCifrada) {
+        const n = await tx.$executeRaw`
+          update clientes set cuenta_bancaria = ${cuentaCifrada}
+          where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
+        if (n === 0) throw new Error('la ficha del cliente no se pudo actualizar con la cuenta')
+      }
       if (c.anulacion && anulacionId && evidenciaAnulacion && f.polizaId) {
         // La anulación nace firmada, pero la cola no la propone hasta que el presupuesto esté emitido.
         await tx.$executeRaw`
@@ -372,12 +450,20 @@ export async function firmarAceptacion(
 
   anotarCambio({ entidad: 'presupuesto', id: presupuestoId, campo: 'aceptado', antes: null, despues: opcionId })
   if (anulacionId) anotarCambio({ entidad: 'anulacion', id: anulacionId, campo: 'estado', antes: null, despues: 'firmada' })
+  if (cuentaCifrada) {
+    anotarCambio({
+      entidad: 'cliente', id: clienteId, campo: 'cuenta_bancaria',
+      antes: cuentaFichaActual.origen === 'cliente' ? mascaraCuenta(cuentaFichaActual.iban) : null, despues: cuenta.mascara,
+    })
+  }
   try {
     await db.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
       values (${correduriaId}::uuid, ${clienteId}::uuid, ${f.polizaId}::uuid, cast('gestion' as tipo_historial_interno),
               ${`El cliente aceptó en el portal el presupuesto de ${f.compania}${c.anulacion ? ' y firmó la anulación de su póliza actual' : ''}. ` +
-                `Confirmó con la casilla los datos con los que se calculó el precio y autorizó la emisión (huella ${c.datos.huella.slice(0, 12)}).`})`
+                `Confirmó con la casilla los datos con los que se calculó el precio y autorizó la emisión (huella ${c.datos.huella.slice(0, 12)}). ` +
+                `${lineaCuentaHistorial(c.cuenta)} ` +
+                (f.ipidHuella ? 'Tenía en el portal la ficha IPID de la opción.' : 'No había ficha IPID de la opción en el portal: hay que mandársela antes de emitir.')})`
   } catch (e) {
     console.error('[presupuesto-aceptacion] historial no anotado:', e instanceof Error ? e.message : e)
   }
@@ -386,6 +472,7 @@ export async function firmarAceptacion(
     primaEur: f.prima === null ? null : Number(f.prima), franquiciaEur: f.franquicia === null ? null : Number(f.franquicia),
     datos: c.datos, anulacionCompania: c.anulacion?.compania ?? null, sinAnulacion: c.sinAnulacion,
     enlaceFicha: enlaceFichaCliente(clienteId, urlPlataforma()),
+    confirmacion: c.confirmacionDatos, cuenta: lineaCuentaAviso(c.cuenta), ipidMostrado: !!f.ipidHuella,
   })
   return { estado: 'aceptado', aceptadoEl: hoy, conAnulacion: !!c.anulacion, aviso, anulacionId: c.anulacion ? anulacionId : null }
 }

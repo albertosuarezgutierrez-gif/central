@@ -20,9 +20,10 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /**
  * /api/portal/presupuesto — el cliente elige y firma su presupuesto (spec 2026-09-21, PR 4).
- *   POST { accion:'preparar', identidadId, presupuestoId, opcionId } → el documento a firmar (no escribe)
+ *   POST { accion:'preparar', identidadId, presupuestoId, opcionId, cuenta? } → sin `cuenta`, la de su ficha
+ *        ENMASCARADA (`elegir_cuenta`); con `cuenta: { eleccion:'ficha'|'otra', iban? }`, el documento a firmar (no escribe)
  *        { accion:'codigo',   identidadId, presupuestoId, opcionId }
- *        { accion:'firmar',   identidadId, presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados, ip?, userAgent? }
+ *        { accion:'firmar',   identidadId, presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados, cuenta, ip?, userAgent? }
  *        { accion:'datos',    identidadId, presupuestoId }          → «Revisa tus datos» (no escribe)
  *        { accion:'datos_incorrectos', identidadId, presupuestoId, texto } → avisa; cierra la firma desde el portal
  *        { accion:'resumen_ia',  identidadId, presupuestoId }                          → resumen IA (cacheado)
@@ -36,6 +37,8 @@ const STATUS: Record<string, number> = {
   documento_cambiado: 409, sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422,
   nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, error: 503,
   sin_datos: 409, datos_en_revision: 409, sin_confirmar_datos: 422, invalido: 422, limite: 429,
+  // La cuenta: elegirla es un paso más (200); sin ella o con un IBAN que no cuadra, no se firma.
+  elegir_cuenta: 200, sin_cuenta: 422, iban_invalido: 422, sin_cifrado: 503,
   // `no_disponible` de la IA es una respuesta completa (el portal dice «no está disponible ahora»), no un fallo.
   no_disponible: 200,
 }
@@ -53,6 +56,11 @@ export const POST = auditado(async (req: Request) => {
     if (!UUID.test(identidadId) || !UUID.test(presupuestoId) || (!sinOpcion && !UUID.test(opcionId))) {
       return NextResponse.json({ estado: 'invalido' }, { status: 422 })
     }
+    // El IBAN llega en claro: se valida en `presupuesto-cuenta.ts` y no se registra en ningún log.
+    const c = b?.cuenta && typeof b.cuenta === 'object' ? (b.cuenta as Record<string, unknown>) : null
+    const cuenta = c
+      ? { eleccion: c.eleccion, iban: typeof c.iban === 'string' ? c.iban.slice(0, 64) : null }
+      : null
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
     if (b?.accion === 'datos') {
@@ -79,7 +87,7 @@ export const POST = auditado(async (req: Request) => {
       return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
     }
     if (b?.accion === 'preparar') {
-      const r = await prepararAceptacion(correduria.id, identidadId, presupuestoId, opcionId)
+      const r = await prepararAceptacion(correduria.id, identidadId, presupuestoId, opcionId, cuenta)
       return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
     }
     if (b?.accion === 'codigo') {
@@ -93,6 +101,8 @@ export const POST = auditado(async (req: Request) => {
         codigo, nombre, documentoHash,
         // Solo un `true` literal: un «sí», un 1 o un campo ausente NO confirman los datos.
         datosConfirmados: b.datosConfirmados === true,
+        // Sin cuenta válida, `firmarAceptacion` corta ANTES de gastar el código (fail-closed).
+        cuenta,
         ip: typeof b.ip === 'string' ? b.ip.slice(0, 100) : null,
         userAgent: typeof b.userAgent === 'string' ? b.userAgent.slice(0, 300) : null,
       })
