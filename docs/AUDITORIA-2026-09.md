@@ -688,4 +688,55 @@ decisión de Alberto). Como la rama de esta tarea no permite push directo a `mai
 harness) + aviso Telegram inmediato por el hallazgo 🔴.
 
 ---
-<!-- verificado: 2026-09-27 -->
+
+## ✅ Pasada ligera — 28/09/2026
+
+**Rango:** desde la profunda del 27/09 (09:22, `d4f695e`) hasta `5eaa5dc` — sesión muy activa de
+la correduría (ficha de cliente, sustituciones, bot de Telegram) y el ciclo semanal de pricing.
+Memoria: los commits del rango ya tienen entrada en `CONTEXTO-SESIONES.md`, verificado contra el
+`git log` — carril 1 de reconciliación de texto, vacío.
+
+**Heartbeat (2-bis):** 🟢 sano. Los 47 agentes con latido reciente están `ok=true`; los únicos con
+`horas_sin_ok` altas (`seo_correduria` 167,6 h, `trading_h10` 167,4 h, `paper-tracker` 166,1 h,
+`psd2_health_check` 121 h) son rutinas SEMANALES con umbral 192 h — dentro de rango, no hallazgo.
+`ses_transporte` sigue `ok=false` sin `ultimo_ok_at`: es el pendiente YA declarado por Alberto
+(04/09/2026, «déjalo rojo, es un pendiente real» — sin establecimientos de alta, Chekin cubre hoy).
+Sin reparaciones automáticas en curso (`agente_reparaciones` vacío en los últimos 7 días).
+
+**🔴 Backlog de PRs (2-ter) — hallazgo nuevo, carril 2.** El PR #3755 (auditoría ligera del
+27/09-II, `docs/AUDITORIA-2026-09.md` + `docs/FEEDBACK-AGENTES.md`) lleva **>24 h** sin mergear
+pese a tocar solo ficheros de registro. Causa encontrada en el LOG del propio workflow
+(`run 36390964621`, PR #3755): `docs/FEEDBACK-AGENTES.md` — el checklist de rendimiento para
+`agentes-entrenador`, registro puro igual que `AGENTES-BITACORA.md` — **no estaba en la lista
+`es_registro()`** de `.github/workflows/rutinas-automerge.yml`, así que el bot lo trata como
+"toca algo que no es registro" y nunca lo mergea. Mismo patrón que el fallo del 21/08/2026 con
+`docs/VIGIA-*.md`/`docs/BUSCADOR-IA.md`, repetido porque nadie añadió esta línea cuando
+`agentes-entrenador` empezó a escribir en ese fichero. **Corregido en esta pasada:** añadida la
+ruta a `es_registro()` + a `ESTADO_DE_AGENTES` de `test/regression-automerge-registro.test.ts`
+(visto en ROJO sin el fix, verde con él — `node --test`). PR #3755 se auto-mergeará solo en
+cuanto este PR aterrice en `main`. Resto del backlog sano: `rutinas-automerge.yml` corriendo con
+normalidad (>15 runs/hora), otros 4 PRs abiertos son de código (#3826 <20 min de quietud, #3820/
+#3810/#3808 mezclan código y docs — carril 2 legítimo, no bloqueado por este bug).
+
+**Correduría (2-quater):** 🟢 sano. `correduria_ingesta`/`correduria_renovaciones` con latido
+fresco (<2 h). CIMA sigue entrando (`cima_pull_completed` hace 13,6 h, `queueDepth=165` estable —
+es la cuarentena ya conocida y en seguimiento, no un cambio). Gasto Codeoscopic trivial: 12
+cotizaciones/7d, 4,50€, 3 descartadas. Los 4 guardianes de aislamiento (`regression-asegura-
+aislamiento`, `regression-portal-aislamiento`, `regression-asegura-operador-publico`,
+`regression-correduria-puerto`) sin cambios en el rango. `agente-correduria` sigue pausada a
+propósito (sin entrada nueva en `AGENTES-BITACORA.md`).
+
+**Salud del precio (2bis):** 🟠 `oscilantes=56`, sigue empeorando (era 47 ayer, 10 antes, 103 hace
+varios días) — tendencia a vigilar, no cruza umbral de Telegram. Resto sano: `rail_baja_roto=0`,
+`bajo_minimo=0`, `rail_alza_sin_justificar=0`, `horas_desde_ultima_pasada=7,7h`,
+`noches_ultima_pasada=41`, las 4 palancas `enabled`/`apply_enabled=true` con suelo puesto y
+`antelacion_k=0` en las 4. Anotado en `docs/FEEDBACK-AGENTES.md` para el entrenador semanal —
+no se toca el comportamiento del agente desde aquí.
+
+**Carril 1:** vacío (memoria ya al día). **Carril 2:** el fix de `es_registro()` (workflow +
+test) — código de infra de bajo riesgo, con su cepo visto en rojo antes del fix. Único PR draft
+(el harness de esta tarea no permite push directo a `main`) + aviso Telegram por el hallazgo del
+automerge (un vigilante que no mergea lo que dice mergear es justo el caso que exige aviso).
+
+---
+<!-- verificado: 2026-09-28 -->

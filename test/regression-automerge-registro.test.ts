@@ -31,6 +31,9 @@ const ESTADO_DE_AGENTES = [
   'docs/BUSCADOR-IA.md',      // buscador-ia
   'docs/FISCAL-AYUDAS.md',    // fiscal-novedades
   'docs/VIGIA-CONECTORES.md', // conectores-vigia
+  // Checklist de rendimiento para `agentes-entrenador`: la auditoría solo ANOTA hallazgos aquí,
+  // nunca cambia comportamiento (28/09/2026, PR #3755 atascado >24h por faltar esta línea).
+  'docs/FEEDBACK-AGENTES.md',
   // Telemetría del hook `Stop` (scripts/uso-herramientas.mjs), no de un agente concreto, pero
   // el mismo caso: puro registro que sacaba PRs enteros del carril 1 (detectado 20/09/2026).
   'docs/uso-herramientas/2026-09/session-ejemplo.json',

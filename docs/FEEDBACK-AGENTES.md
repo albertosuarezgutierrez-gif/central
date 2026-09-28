@@ -16,6 +16,13 @@
   local de Socorro que son deducibles — esperaba que los cruzara con perfil-fiscal
 -->
 
+- [ ] **2026-09-28 · pricing (ciclo semanal SIVRA)** · `oscilantes` (noches con ≥3 cambios de
+  dirección en la misma pasada) lleva varias pasadas subiendo: 10 → 47 (27/09) → 56 (28/09), en
+  vez de converger. Resto de la salud del precio sano (sin raíl roto, sin bajo mínimo). Propuesta
+  para revisar: el motor puede estar en un ciclo límite en algunas fechas — mirar si el paso de
+  redondeo o el ancla `ref24` amplifica pequeñas oscilaciones de mercado. Detectado en dos pasadas
+  seguidas de `/auditoria-diaria` (bloque 2bis).
+
 ## Procesadas
 
 - [x] **2026-08-14 · agente contable (vigilantes del extracto de tarjeta)** · la «🔎 Revisión de la
