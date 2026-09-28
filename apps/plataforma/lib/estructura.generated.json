@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-28T16:26:55Z",
+  "generadoEn": "2026-09-28T17:50:00Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 136
+        "evidencias": 140
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 110
+        "evidencias": 113
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 101
+        "evidencias": 104
       },
       "rrhh": {
         "estado": "no",
@@ -3975,6 +3975,7 @@
       "/api/cron/avisos-intranet",
       "/api/cron/avisos-vencimiento",
       "/api/cron/avisos-web",
+      "/api/cron/coberturas-backfill",
       "/api/cron/felicitaciones",
       "/api/cron/polizas-pdf",
       "/api/cron/revision-anual",
@@ -4070,6 +4071,7 @@
       "/api/operador/poliza/traer-pdf",
       "/api/operador/portal/invitaciones",
       "/api/operador/presupuesto",
+      "/api/operador/presupuesto/seguimiento",
       "/api/operador/quejas",
       "/api/operador/recaptacion",
       "/api/operador/recaptacion/email",
@@ -4141,6 +4143,7 @@
       "/api/polizas/[id]/carta",
       "/api/polizas/[id]/documentos/[documentoId]",
       "/api/polizas/[id]/reintentar",
+      "/api/presupuesto/actividad",
       "/api/presupuesto/carta",
       "/api/presupuesto/datos",
       "/api/presupuesto/firma",
@@ -5067,6 +5070,7 @@
       "/api/cron/correduria-ingesta",
       "/api/cron/correduria-partes",
       "/api/cron/correduria-renovaciones",
+      "/api/cron/correduria-seguimiento-presupuestos",
       "/api/cron/correduria-siniestros",
       "/api/cron/correduria-sustituciones",
       "/api/cron/correo-digest",
@@ -6581,7 +6585,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1501,
+    "apis": 1505,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
