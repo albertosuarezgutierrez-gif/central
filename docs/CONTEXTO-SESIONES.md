@@ -842,6 +842,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Correduría: el CP rellena solo la ciudad (y la provincia)
+- Tabla CP→municipio incrustada (`apps/plataforma/lib/municipios-por-cp.json`, 11.254 CP, INE+CNIG; solo servidor)
+  vía `GET /api/correduria/codigo-postal`. Campo `CiudadPorCp.tsx` en alta de cliente, edición de dirección y
+  dirección del riesgo: 1 municipio → se pone; varios → desplegable (+ «Otra…»). No pisa la ficha al abrirla;
+  si la ciudad guardada contradice al CP lo avisa debajo (caso 41011 + «ESPARTINAS»: 41011 es Sevilla).
+- La provincia ahora se sobrescribe con la del CP al teclear un CP completo (antes solo si estaba vacía).
+
 ## (28/09/2026) Matrícula de ESTE mes: la fecha ya se estima (moto y auto) + garaje por defecto en moto
 - `2121NST` no rellenaba nada: la tabla de series solo tiene meses CERRADOS (acaba en NRY, agosto), así que
   toda matrícula del mes en curso daba `null`. `fechaMatriculacionEstimada(m, hoy)` extrapola al ritmo medio

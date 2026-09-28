@@ -9,6 +9,7 @@ import { campoDesdeTermino, interpretarEscritura, textoMotivo, type ResultadoEsc
 import { RAMOS_PRESUPUESTO } from '@/lib/ficha-asegura'
 import { ConIcono } from './iconos'
 import DireccionConfirmable from './DireccionConfirmable'
+import CiudadPorCp from './CiudadPorCp'
 
 /**
  * Alta de un cliente de la correduría desde plataforma.
@@ -47,7 +48,9 @@ export default function NuevoCliente({ q }: { q?: string }) {
   function set<K extends keyof Form>(k: K, v: string) {
     setF((prev) => {
       const next = { ...prev, [k]: v }
-      if (k === 'codigoPostal' && prev.provincia.trim() === '') {
+      // CP completo → su provincia, aunque hubiera otra: una provincia que contradice
+      // al CP es el error que más se ha visto (386 fichas «Tarragona» con CP 41xxx).
+      if (k === 'codigoPostal' && /^\d{5}$/.test(v.trim())) {
         const p = provinciaPorCp(v)
         if (p) next.provincia = p
       }
@@ -141,7 +144,7 @@ export default function NuevoCliente({ q }: { q?: string }) {
             <input value={f.codigoPostal} onChange={(e) => set('codigoPostal', e.target.value)} inputMode="numeric" maxLength={5} placeholder="41003" style={campo} />
           </Campo>
           <Campo label="Ciudad" mal={campoMal === 'ciudad'}>
-            <input value={f.ciudad} onChange={(e) => set('ciudad', e.target.value)} style={campo} />
+            <CiudadPorCp cp={f.codigoPostal} ciudad={f.ciudad} onCiudad={(v) => set('ciudad', v)} style={campo} />
           </Campo>
           <Campo label="Provincia" mal={campoMal === 'provincia'}>
             <input value={f.provincia} onChange={(e) => set('provincia', e.target.value)} style={campo} />
