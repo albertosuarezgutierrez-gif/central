@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert'
-import { detectLang, detectCategory, extractEarlyTime, PARKING_SPOTS, esSolicitudLateCheckout, esDespedida, esHechoDelPiso, tipoHueco, contieneDatoPersonal, interpretarDestilado } from './reglas.ts'
+import { detectLang, detectCategory, extractEarlyTime, PARKING_SPOTS, esSolicitudLateCheckout, esDespedida, esHechoDelPiso, tipoHueco, contieneDatoPersonal, interpretarDestilado, esAutomatico, esPlantillaHost } from './reglas.ts'
 
 test('detectLang detecta español', () => assert.equal(detectLang('Hola, ¿a qué hora es el check-in?'), 'es'))
 test('detectLang cae a inglés', () => assert.equal(detectLang('What is the wifi password?'), 'en'))
@@ -198,4 +198,20 @@ test('esPlantillaHost: bienvenidas/despedidas sí, firma del huésped no', async
   assert.equal(esPlantillaHost('Hola Justine, gracias por avisarnos de la hora de llegada, nos vemos.', 'Justine'), false)
   // Sin nombre en el texto.
   assert.equal(esPlantillaHost('¿Ya está disponible el piso?', 'Justine Delbos'), false)
+})
+
+// Revisión del PR #3828: los tres casos en que un mensaje REAL del huésped se perdía o se clasificaba mal.
+test('esAutomatico: una pregunta corta sobre el self check-in NO es plantilla', () => {
+  assert.equal(esAutomatico('', 'Hi, how does the self check-in work?'), false)
+})
+test('esPlantillaHost: el huésped que se presenta con su nombre NO es plantilla', () => {
+  assert.equal(esPlantillaHost('Hello, this is Justine Delbos, we land at 15:00 and would like to know how to get in', 'Justine Delbos'), false)
+  assert.equal(esPlantillaHost('Hola, soy Justine Delbos. Llegamos a las 15:00, ¿cómo entramos al piso?', 'Justine Delbos'), false)
+  assert.equal(esPlantillaHost('Bienvenue, Justine Delbos ! Nous sommes ravis de vous accueillir', 'Justine Delbos'), true)
+})
+test('detectCategory acceso: palabras con tilde, plurales y keybox', () => {
+  assert.equal(detectCategory('où est la clé ?'), 'acceso')
+  assert.equal(detectCategory('¿cuál es el código?'), 'acceso')
+  assert.equal(detectCategory('the codes do not work'), 'acceso')
+  assert.equal(detectCategory('where is the keybox'), 'acceso')
 })

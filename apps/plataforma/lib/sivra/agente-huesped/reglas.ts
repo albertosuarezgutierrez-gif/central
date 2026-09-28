@@ -39,7 +39,8 @@ export function detectCategory(text: string): string | null {
   // parking/acceso/general. Era el tema más repetido de «general» en septiembre de 2026.
   if (/whats\s?app|phishing|fraud|fraude|estafa|\bscam|arnaque|truffa|betrug|oplichting|frode/.test(t)) return 'seguridad'
   if (/\b(wifi|wi-fi|wlan|internet|contraseña|password|clave)\b/.test(t)) return 'wifi'
-  if (/\b(llaves?|keys?|clé|schlüssel|chiave|lockbox|código|code|caja|puerta|abrir|entrar|acceso)\b/.test(t)) return 'acceso'
+  // Límites con \p{L} y no \b: en JS \b no ve «é»/«ó» como letra y «clé»/«código» no casaban nunca.
+  if (/(?<!\p{L})(llaves?|keys?|keybox|clés?|schlüssel|chiavi|chiave|lockbox|códigos?|codes?|caja|puerta|abrir|entrar|acceso)(?!\p{L})/u.test(t)) return 'acceso'
   if (/check.?in|llegada|arrival|hora de entrada|from what time|a qué hora llegar/.test(t)) return 'checkin'
   // Equipaje ANTES que checkout: "dónde dejar las maletas" contiene "dejar" (patrón de checkout).
   if (/maleta|equipaje|luggage|consigna|locker|baggage|valig|bagagl|gep[aä]ck|guardar (las |mis )?(maletas|bolsas|cosas)/.test(t)) return 'equipaje'
@@ -256,10 +257,11 @@ export function esAutomatico(subject: string, text: string): boolean {
   if ((subject || '').trim() !== '') return true
   const t = text || ''
   // Frases propias de las plantillas de Smoobu: bastan por sí solas.
-  if (/disponible para tu reserva|enregistrement en ligne disponible|self.?check.?in/i.test(t)) return true
+  if (/disponible para tu reserva|enregistrement en ligne disponible/i.test(t)) return true
   // Las genéricas, solo en textos largos: un huésped que escribe «ya hice el online check-in»
   // (corto) no puede quedarse sin respuesta por mencionarlo.
-  return t.length >= 120 && /check.?in online|online.?check.?in|registro online|online.?registrierung|registrazione online/i.test(t)
+  // «self check-in» también va aquí: «Hi, how does the self check-in work?» es una pregunta real.
+  return t.length >= 120 && /check.?in online|online.?check.?in|self.?check.?in|registro online|online.?registrierung|registrazione online/i.test(t)
 }
 
 function sinAcentos(s: string): string {
@@ -278,6 +280,8 @@ export function esPlantillaHost(texto: string, guestName: string): boolean {
   const t = sinAcentos(texto)
   const i = t.indexOf(partes.join(' '))
   if (i < 0 || i > 80) return false
+  // Un huésped que se PRESENTA («Hello, this is Justine Delbos, we land at 15:00…») no es plantilla.
+  if (/\b(this is|i am|i'?m|my name is|soy|me llamo|je suis|c'?est|moi c'?est|ich bin|mein name ist|sono|mi chiamo|ik ben|sou|eu sou)\s*$/.test(t.slice(0, i))) return false
   const resto = t.slice(i + partes.join(' ').length)
   return /^\s?[,!.]/.test(resto) && resto.length >= 20
 }
