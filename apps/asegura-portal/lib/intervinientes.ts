@@ -157,7 +157,7 @@ export function figuraEnPropias(args: {
 
 /**
  * Papeles de las fichas PROPIAS en cualquier póliza, sin «tomador». Sirve para las que la
- * identidad ve por otro camino y donde ADEMÁS figura: caso Esquiansa (28/09/2026), BMW
+ * identidad ve por otro camino y donde ADEMÁS figura: caso real (28/09/2026): coche
  * de su sociedad con él de conductor habitual según CIMA; la ve como dueño, pero su
  * figura en el contrato es la de conductor, y eso es lo que se le dice.
  */

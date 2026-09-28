@@ -120,14 +120,14 @@ test('figuraChip', () => {
   assert.equal(figuraChip([]), '')
 })
 
-test('rolesPropiosPorPoliza: caso Esquiansa, conductor habitual del BMW de su sociedad', () => {
+test('rolesPropiosPorPoliza: conductor habitual del coche de su sociedad', () => {
   const r = rolesPropiosPorPoliza(
     [
-      { polizaId: 'bmw', clienteId: 'c-juanma', rol: 'conductor_habitual' },
-      { polizaId: 'bmw', clienteId: 'c-otro', rol: 'propietario' },
+      { polizaId: 'coche-empresa', clienteId: 'c-admin', rol: 'conductor_habitual' },
+      { polizaId: 'coche-empresa', clienteId: 'c-otro', rol: 'propietario' },
     ],
-    ['c-juanma'],
+    ['c-admin'],
   )
-  assert.deepEqual(r.get('bmw'), ['conductor_habitual'])
-  assert.equal(figuraChip(r.get('bmw') ?? []), 'Conductor habitual')
+  assert.deepEqual(r.get('coche-empresa'), ['conductor_habitual'])
+  assert.equal(figuraChip(r.get('coche-empresa') ?? []), 'Conductor habitual')
 })

@@ -1126,7 +1126,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     })
   }
 
-  // Las que ve por permiso o por ser dueño y donde ADEMÁS figura (Esquiansa: su BMW, él
+  // Las que ve por permiso o por ser dueño y donde ADEMÁS figura (el coche de su sociedad, él
   // conductor habitual): se le dice su papel. Las demás autorizadas no llevan `figura`.
   const rolesSuyos = rolesPropiosPorPoliza(filasInterviniente, propiosIds)
   for (const t of autorizadas) {
