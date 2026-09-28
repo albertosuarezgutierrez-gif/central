@@ -3796,7 +3796,7 @@ h1 em {
   pointer-events: none;
   background: color-mix(in oklab, var(--bg) 55%, transparent);
 }
-.carga-as-marca { display: inline-flex; animation: carga-as-late 1.1s ease-in-out infinite; }
+.carga-as-marca { display: inline-flex; animation: carga-as-late 1s ease-in-out infinite; }
 .carga-as-texto {
   position: absolute;
   width: 1px; height: 1px;
@@ -3806,7 +3806,7 @@ h1 em {
 }
 @keyframes carga-as-entra { to { opacity: 1; } }
 @keyframes carga-as-late {
-  0%, 100% { transform: scale(0.92); opacity: 0.55; }
+  0%, 100% { transform: scale(0.9); opacity: 0.3; }
   50% { transform: scale(1); opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
