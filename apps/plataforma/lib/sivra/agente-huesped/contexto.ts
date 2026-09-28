@@ -18,7 +18,10 @@ import { bloqueEquipaje } from './equipaje'
 import { bloqueLlegada } from './llegada'
 import { bloqueSalida } from './salida'
 
-export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string }
+// `emisor`: las señales CRUDAS de Smoobu con las que se decidió `from` (y qué campos traía el
+// mensaje). Solo diagnóstico: el 28/09/2026 (reserva 154692216) mensajes escritos por Alberto
+// fuera de Smoobu entraron como del huésped y no había forma de ver por qué.
+export type MensajeHist = { id: string; from: 'guest' | 'host'; text: string; ts: string; emisor?: Record<string, unknown> }
 export type Aprendizaje = { categoria: string; pregunta_norm: string; respuesta_final: string }
 export type Contexto = {
   bookingId: string
@@ -124,6 +127,7 @@ export async function construirContexto(bookingId: string, lang: string): Promis
       from: atribuirEmisor(m),   // `type`/`sent_by_owner` nativos de Smoobu (no solo `sent_by_owner`)
       text: asunto ? `${asunto}\n${cuerpo}`.trim() : cuerpo,
       ts: m.created_at || m.createdAt || '',
+      emisor: { type: m.type ?? null, sent_by_owner: m.sent_by_owner ?? null, sender: m.sender ?? null, campos: Object.keys(m || {}) },
     }
   }).filter(m => m.text)
 

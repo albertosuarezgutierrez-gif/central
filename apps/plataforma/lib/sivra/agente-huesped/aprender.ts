@@ -10,10 +10,12 @@ import { tgSend } from '@/lib/telegram'
 export async function logMensaje(p: {
   bookingId: string; propertyId: string; categoria: string; pregunta: string; respuesta: string
   fuente: string; confidence: number; sentimiento: string; needs_human: boolean; auto_sent: boolean; edited: boolean
+  emisor?: Record<string, unknown> | null
 }): Promise<void> {
+  const emisor = p.emisor ? JSON.stringify(p.emisor) : null
   await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO mensajes_log (booking_id, property_id, categoria, pregunta, respuesta, fuente, confidence, sentimiento, needs_human, auto_sent, edited)
-    VALUES (${p.bookingId}, ${p.propertyId}, ${p.categoria}, ${p.pregunta}, ${p.respuesta}, ${p.fuente}, ${p.confidence}, ${p.sentimiento}, ${p.needs_human}, ${p.auto_sent}, ${p.edited})
+    INSERT INTO mensajes_log (booking_id, property_id, categoria, pregunta, respuesta, fuente, confidence, sentimiento, needs_human, auto_sent, edited, emisor_raw)
+    VALUES (${p.bookingId}, ${p.propertyId}, ${p.categoria}, ${p.pregunta}, ${p.respuesta}, ${p.fuente}, ${p.confidence}, ${p.sentimiento}, ${p.needs_human}, ${p.auto_sent}, ${p.edited}, ${emisor}::jsonb)
   `).catch(() => {})
 }
 

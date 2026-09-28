@@ -44,6 +44,15 @@ export async function procesarMensajeHuesped(
   // La pregunta: la que pasa el llamador (fiable) o, si no, la última del historial.
   const pregunta = (opts.pregunta || ultimoGuest?.text || '').trim()
   const msgId = opts.msgId || ultimoGuest?.id || ''
+  // Diagnóstico de atribución (va a `mensajes_log.emisor_raw`): de dónde vino la pregunta y con qué
+  // señales de Smoobu se decidió que era del huésped. Sin esto no se puede saber por qué un mensaje
+  // del anfitrión escrito fuera de Smoobu se procesa como del huésped.
+  const enHilo = [...ctx0.historial].reverse().find(h => normalizarTexto(h.text) === normalizarTexto(pregunta))
+  const emisorDiag = {
+    origen: opts.msgId?.startsWith('correo:') ? 'correo' : opts.pregunta ? 'sondeo' : 'historial',
+    en_hilo: enHilo ? { from: enHilo.from, ...(enHilo.emisor || {}) } : null,
+    ultimo_del_hilo: ctx0.historial.at(-1)?.from ?? null,
+  }
   if (!pregunta) return { accion: 'sin_mensaje_huesped' }
 
   // Defensa anti-duplicado robusta (independiente del id de Smoobu): si YA ENVIAMOS una respuesta
@@ -188,7 +197,7 @@ export async function procesarMensajeHuesped(
     const { auto: puedeAuto } = decidirAutoEnvio(dec)
     if (puedeAuto) {
       const ok = await enviarAlHuesped(ctx.reservationId, dec.reply)
-      await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false })
+      await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: false, auto_sent: ok, edited: false, emisor: emisorDiag })
       // Si el envío falló, liberamos el reclamo para reintentar en el próximo sondeo.
       if (!ok) await liberarMensaje(dedupKey)
       // Copia informativa a Telegram de lo que se ha enviado solo (Alberto no tiene que hacer nada).
@@ -198,7 +207,7 @@ export async function procesarMensajeHuesped(
     }
 
     await proponerPorTelegram(ctx, pregunta, dec)
-    await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: dec.needs_human, auto_sent: false, edited: false })
+    await logMensaje({ bookingId, propertyId: ctx.propertyId, categoria: dec.categoria, pregunta, respuesta: dec.reply, fuente: dec.fuente, confidence: dec.confidence, sentimiento: dec.sentimiento, needs_human: dec.needs_human, auto_sent: false, edited: false, emisor: emisorDiag })
     // 4) MODO NOCHE (05/09/2026). Fuera del horario de atención, el borrador se queda en Telegram
     //    hasta que Alberto lo vea — y si escala a las 23:30, el huésped no recibe NADA hasta las
     //    09:00. Ese silencio es indistinguible, desde el código, de una conversación atendida. El
