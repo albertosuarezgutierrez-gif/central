@@ -818,6 +818,9 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) E2E `playwright / portal` de asegura rojo en todos los PRs = bypass de Vercel caducado
+Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCEL_PROTECTION_BYPASS_SECRET` de GitHub ya no vale → todo acaba en `vercel.com/login`; rojo desde el 04/09 (paso del proyecto al equipo de Alberto). F3 «aceptar precio» NI corre: se salta por faltar `E2E_SUPABASE_URL` (el comentario del bot lo culpaba por texto cableado). PR asegura#863 (draft): preflight que lo dice en 1 s + comentario con recuento real. **Pendiente de Alberto:** copiar el «Protection Bypass for Automation» del proyecto Vercel `asegura` al secreto de GitHub y relanzar.
+
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.
 - Motivo: todo a 0 comandas y el aviso NO pasa por el panel /telegram (lo manda la edge function directa), así que no se podía apagar desde allí. Reactivar: `cron.alter_job(21, active := true)`.
