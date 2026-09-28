@@ -784,7 +784,12 @@ async function abrirOportunidad(id: number): Promise<string> {
     WHERE id = ${id}`).catch((e) => console.error('[correduria-oportunidad-tg] no se pudo cerrar la fila', id, e))
   await decir(fin.texto)
   if (fin.estado === 'abierta') await ofrecerSiguientes(id, clienteId, fila.alta, (fila.documentos ?? []).map(Number)).catch(() => {})
-  if (existenteId) await ofrecerSobreExistente(id, clienteId, existenteId, fila.alta, (fila.documentos ?? []).map(Number)).catch(() => {})
+  if (existenteId) {
+    await ofrecerSobreExistente(id, clienteId, existenteId, fila.alta).catch(() => {})
+    // Ya tenía la oportunidad: los documentos se guardan SOLOS en su ficha (28/09/2026, Alberto). Con
+    // botón se quedaban sin guardar si no se pulsaba, y no avisaba (Rafael Campa: 3 envíos, 0 guardados).
+    await guardarDocumentosEnFicha(id).catch(() => {})
+  }
   return fin.estado === 'abierta' ? 'Oportunidad abierta 🎯' : fin.estado === 'incierta' ? 'No sé si se ha abierto' : 'No se ha abierto'
 }
 
@@ -1142,16 +1147,15 @@ async function ofrecerSiguientes(oportId: number, clienteId: string, alta: Alta,
 }
 
 /**
- * Ya tenía una abierta del mismo ramo: se ofrece actualizarla con lo leído (antes → después) y guardar el
- * documento en su ficha. Sin poder leer la existente no se ofrece actualizar: sin el «antes» sería a ciegas.
+ * Ya tenía una abierta del mismo ramo: se ofrece actualizarla con lo leído (antes → después). Los documentos
+ * NO se ofrecen: se guardan solos (`guardarDocumentosEnFicha`, en `abrirOportunidad`). Sin poder leer la
+ * existente no se ofrece actualizar: sin el «antes» sería a ciegas.
  */
-async function ofrecerSobreExistente(oportId: number, clienteId: string, existenteId: string, alta: Alta, docIds: number[]): Promise<void> {
+async function ofrecerSobreExistente(oportId: number, clienteId: string, existenteId: string, alta: Alta): Promise<void> {
   const r = await oportunidadesClienteAsegura(clienteId).catch(() => ({ status: 0, json: null }))
   const lista = interpretarOportunidadesCliente(r.status, r.json)
   const e = lista.estado === 'ok' ? lista.oportunidades.find((o) => o.id === existenteId) ?? null : null
   const cambios = e ? cambiosSobreExistente(alta, { aseguradora: e.aseguradora, prima: e.prima, fechaFinVigencia: e.fechaFinVigencia }) : []
-  const nombres = docIds.length === 0 ? [] : await prisma.$queryRaw<{ nombre: string | null }[]>(Prisma.sql`
-    SELECT nombre FROM correduria_asistente_documento WHERE id = ANY(${docIds}::bigint[]) ORDER BY id`).catch(() => null)
   const lineas: string[] = []
   const botones: { texto: string; callback: string }[] = []
   const misma = e ? mismaPoliza(alta, e) : 'no_se'
@@ -1164,10 +1168,6 @@ async function ofrecerSobreExistente(oportId: number, clienteId: string, existen
     lineas.push('✏️ ¿Actualizo la que ya tiene con lo leído del documento?', textoCambios(cambios))
     if (misma === 'no_se') lineas.push('⚠️ No consta ni el nº de póliza ni la compañía en los dos lados: actualiza SOLO si es este mismo seguro (no otro vehículo).')
     botones.push({ texto: '✏️ Actualizar la existente', callback: `cas_actualizar:${oportId}` })
-  }
-  if (docIds.length > 0 && nombres !== null && nombres.length > 0) {
-    lineas.push(`📎 ¿Guardo en su ficha ${nombres.length === 1 ? 'este documento' : `estos ${nombres.length} documentos`}?`, ...nombres.map((n) => `• ${escapeHtml(n.nombre ?? 'documento sin nombre')}`))
-    botones.push({ texto: '📎 Guardar en la ficha', callback: `cas_guardar:${oportId}` })
   }
   if (botones.length) await tgSendButtons(lineas.join('\n'), [botones])
   else await tgSend(lineas.join('\n'), { html: true })

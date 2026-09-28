@@ -867,6 +867,7 @@ Los dos botones (ficha y cabecera de /correduria) saltaban a `asegura/cartera/su
 Ficha → su pestaña Documentos con tipo «póliza». Cabecera → pantalla propia `/correduria/subir-poliza`
 (lee por `leer-documento` con tomador; `sello` no llega al navegador) → póliza nuestra / ficha / alta.
 Cepo `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo 4/5 brazos).
+Telegram: si la oportunidad ya existía («duplicada»), los documentos se guardan SOLOS en la ficha (antes botón que nadie pulsaba: Rafael Campa, 3 envíos, 0 guardados).
 
 ## (29/09/2026) Presupuesto por garantías — entregas 3-4 + las 6 ideas (cliente, parrilla, Telegram)
 - Portal: «Todas las opciones» con logos, filtros de garantías PRESELECCIONADOS con las necesidades (`garantiasDeNecesidades`),
