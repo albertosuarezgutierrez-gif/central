@@ -1,30 +1,30 @@
 {
  "sesion": "af30f52b-6656-5aba-99e2-0d7be06a0f98",
  "inicio": "2026-09-28T08:27:42.550Z",
- "fin": "2026-09-28T09:03:53.834Z",
- "llamadas": 120,
+ "fin": "2026-09-28T09:35:57.285Z",
+ "llamadas": 135,
  "categorias": {
   "bash": {
-   "llamadas": 64,
-   "chars_in": 41054,
-   "chars_out": 203180,
+   "llamadas": 68,
+   "chars_in": 41739,
+   "chars_out": 204043,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 64
+    "Bash": 68
    }
   },
   "otro": {
-   "llamadas": 13,
-   "chars_in": 959,
-   "chars_out": 77740,
+   "llamadas": 20,
+   "chars_in": 1144,
+   "chars_out": 116997,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 12,
-    "ReadNotifications": 1
+    "ToolSearch": 15,
+    "ReadNotifications": 5
    }
   },
   "mcp:Supabase": {
@@ -113,15 +113,17 @@
    }
   },
   "mcp:Gmail": {
-   "llamadas": 2,
-   "chars_in": 106,
-   "chars_out": 11537,
+   "llamadas": 6,
+   "chars_in": 5644,
+   "chars_out": 12521,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Gmail__search_threads": 1,
-    "mcp__Gmail__get_thread": 1
+    "mcp__Gmail__get_thread": 1,
+    "mcp__Gmail__create_draft": 3,
+    "mcp__Gmail__update_draft": 1
    }
   }
  }
