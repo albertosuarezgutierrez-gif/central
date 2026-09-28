@@ -189,6 +189,12 @@ En este orden, y **sin saltarse el paso 0**:
   11 pasaban de 1 candidato a 2 → ambiguo → cuarentena. La guarda no es «es Plus
   Ultra» sino **«su número la identifica sola»**: 216 rellenadas, 26 fuera.
 
+- 🔕 **Un rescate por fuera del pull (`ingerir-manual`, `cima-rescate-lote`) NO emite parte** (28/09/2026):
+  el aviso de «ficheros confirmados con objetos sin guardar» seguía cantando 46 objetos que ya estaban
+  en cartera. Tras un rescate, comprueba objeto a objeto (recibo por `id_recibo`+DGS, póliza por número+DGS
+  sin duplicado) y emite `cima_residuo_resuelto_manual` con `{ficheroId, motivo}`: el vigía solo apaga el
+  fichero con un cierre POSTERIOR a su último parte.
+
 ## Lo que la pantalla enseña (y lo que NO alarma a propósito)
 
 `/correduria` de plataforma pinta cuatro señales de la ingesta, y **solo cuando
