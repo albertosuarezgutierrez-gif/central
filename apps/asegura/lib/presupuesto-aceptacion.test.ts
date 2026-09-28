@@ -53,8 +53,8 @@ test('🪤 retirar un presupuesto aceptado desiste su anulación en la MISMA tra
 })
 
 test('🪤 lo firmado cita lo que el cliente tuvo delante: recuento del presupuesto y versión vigente de los textos', () => {
-  assert.match(src, /count\(\*\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id\) as "nOpciones"/)
-  assert.match(src, /count\(distinct lower\(trim\(x\.compania\)\)\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id\) as "nCompanias"/)
+  assert.match(src, /count\(\*\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id and x\.oculta_at is null\) as "nOpciones"/)
+  assert.match(src, /count\(distinct lower\(trim\(x\.compania\)\)\)::int from presupuesto_opcion x where x\.presupuesto_id = p\.id and x\.oculta_at is null\) as "nCompanias"/)
   assert.match(src, /versionTextos: VERSION_TEXTOS_LEGALES/)
   assert.match(src, /informacionMediador: `\$\{MEDIADOR\.identidad\.portal\}\/legal\/mediador`/)
 })

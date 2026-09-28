@@ -341,8 +341,9 @@ async function leerOpciones(presupuestoId: string, correduriaId: string): Promis
   // Solo id y clave: el PDF se sirve aparte, en /api/ipid/[id].
   const fichas = await prisma.ipid.findMany({ where: { correduriaId, retiradoAt: null }, select: { id: true, clave: true } })
   const ipidPorClave = new Map(fichas.map((f) => [f.clave, f.id]))
+  // 🚨 `ocultaAt: null` SIEMPRE: lo que el corredor quitó antes de enviar no lo ve el cliente.
   const filas = await prisma.presupuestoOpcion.findMany({
-    where: { presupuestoId },
+    where: { presupuestoId, ocultaAt: null },
     orderBy: { orden: 'asc' },
     select: {
       id: true,
