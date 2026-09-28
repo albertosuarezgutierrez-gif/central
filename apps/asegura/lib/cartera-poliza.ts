@@ -42,6 +42,7 @@ import type { SiniestroFicha } from './cartera-ficha'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
 import { historialRiesgo } from './cartera-historial-riesgo'
 import type { EslabonHistorial } from '@central/module-seguros'
+import { contratoCima, type ContratoCima } from './cartera-poliza-contrato'
 
 export type CoberturaFicha = {
   orden: number | null
@@ -125,7 +126,18 @@ export type FichaPoliza = {
   coberturas: CoberturaFicha[]
   recibos: RecibosPoliza
   /** Todos, del más reciente al más antiguo. */
-  listaRecibos: ReciboResumen[]
+  listaRecibos: ReciboFichaPoliza[]
+  /**
+   * Fechas del contrato que manda CIMA (asegura#864). Cada una `null` = CIMA
+   * aún no la ha mandado para esta póliza, no «no tiene».
+   */
+  fechasContrato: { emision: string | null; efectoActual: string | null; situacion: string | null; solicitud: string | null }
+  /**
+   * Cobro, contrato, riesgos y beneficiarios de `datos_especificos`, por LISTA
+   * BLANCA (`contratoCima`). El IBAN NO cruza: solo sus 4 últimos dígitos.
+   * `null` = la ficha no trae ninguna de esas claves.
+   */
+  contrato: ContratoCima | null
   siniestros: SiniestroFicha[]
   intervinientes: IntervinienteFicha[] | null
   /** `null` = no se pudo contar. `0` = la tabla existe y no hay ninguno (hoy: 0 en TODA la base). */
@@ -176,6 +188,15 @@ export type FichaPoliza = {
     sustituidaAt: string | null
     seguimiento: SeguimientoSustitucion
   }
+}
+
+/** El recibo de la lista, con la remesa y la comisión que la ingesta guarda desde asegura#861. */
+export type ReciboFichaPoliza = ReciboResumen & {
+  idRemesa: string | null
+  gestionCobro: string | null
+  claseComision: string | null
+  baseComision: number | null
+  retencionIrpf: number | null
 }
 
 export type PolizaRelacionada = {
@@ -305,6 +326,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       ramoDgs: true, estado: true, situacion: true, origen: true, importRef: true, eiacXmlHash: true,
       polizaOrigenId: true, sustituidaAt: true,
       fechaEfectoInicial: true, fechaInicio: true, fechaVencimiento: true,
+      fechaEmision: true, fechaEfectoActual: true, fechaSituacion: true, fechaSolicitud: true,
       primaAnual: true, primaBruta: true, primaMensual: true, fraccionamiento: true, datosEspecificos: true,
       cliente: { select: { id: true, nombre: true, apellidos: true } },
       coberturasRel: {
@@ -312,7 +334,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         orderBy: { numeroOrden: 'asc' },
       },
       recibos: {
-        select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEmision: true, fechaVencimiento: true, formaPago: true },
+        select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEmision: true, fechaVencimiento: true, formaPago: true,
+          idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true },
         orderBy: { fechaEmision: 'desc' },
       },
       siniestros: { select: SELECT_SINIESTRO, orderBy: { fechaHora: 'desc' } },
@@ -512,10 +535,20 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       modalidad: c.modalidadValoracion ?? null, detalle: extraerDetalleCobertura(c.datosExtra),
     })),
     recibos: resumirRecibos(recibosCrudos),
-    listaRecibos: recibosCrudos.map((r) => ({
-      id: r.id, situacion: (r.situacion ?? '').trim() || 'sin_informar', importe: importeEiac(r.primaTotal),
-      fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, formaPago: etiquetaFormaPago(r.formaPago),
-    })),
+    listaRecibos: p.recibos.map((x, i) => {
+      const r = recibosCrudos[i]
+      return {
+        id: r.id, situacion: (r.situacion ?? '').trim() || 'sin_informar', importe: importeEiac(r.primaTotal),
+        fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, formaPago: etiquetaFormaPago(r.formaPago),
+        idRemesa: texto(x.idRemesa), gestionCobro: texto(x.gestionCobro), claseComision: texto(x.claseComision),
+        baseComision: num(x.baseComision), retencionIrpf: num(x.retencionIrpf),
+      }
+    }),
+    fechasContrato: {
+      emision: fechaIso(p.fechaEmision), efectoActual: fechaIso(p.fechaEfectoActual),
+      situacion: fechaIso(p.fechaSituacion), solicitud: fechaIso(p.fechaSolicitud),
+    },
+    contrato: contratoCima(p.datosEspecificos, descifrar),
     siniestros: p.siniestros.map(mapSiniestro),
     datosCompania: leerDatosCompaniaCima(p.datosEspecificos),
     evolucionPrima: evolucionPrima({
