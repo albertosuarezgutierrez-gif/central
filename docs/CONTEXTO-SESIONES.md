@@ -14,6 +14,11 @@
 >
 **(28/09/2026)** — 📭 Webhook de Codeoscopic: las 4 emisiones reales (17-28/09) NO han generado ni un aviso. Medido: desde el 17/09 llega un POST cada ~30 min a `app.grupoasegura.com` que la RUTA del CRM (no el middleware: `/api/webhooks/codeoscopic` ya es pública) rechaza con 401 — `webhook_signature_invalid`, cabecera presente, `authUserPresente:false`: el USUARIO de la Basic Auth no es el nuestro. Las peticiones con credenciales válidas (proyectos de 6 cifras, «Codeoscopic-Juanma») sí pasaban → Codeoscopic tiene DOS altas del webhook con credenciales distintas; no se arregla con código, hay que alinear credenciales con Codeoscopic (pendiente del OK de Alberto). Parece un solo aviso reintentándose en cola. Cero pérdida en cartera (las emisiones se cierran sin el aviso). Nueva señal del vigía `emisionesSinAviso` (>24 h emitida, 30 días, sin evento) → degrada + Telegram por cambio de firma (8º tramo, normalizador 7→8); hoy salta con 40769244/40804066/40841279.
 
+**(28/09/2026)** — Correo de aviso de vencimiento: «Prima anual» llevaba la NETA de la póliza o, si no la traía, el TOTAL del
+recibo, bajo el mismo rótulo. Ahora siempre la total (bruta de la póliza → recibo anual, vía `primaConRecibos`) y el rótulo dice
+«(impuestos incluidos)». Cepos en `texto-vencimiento.test.ts` y `regression-prima-con-recibos.test.ts` (vistos en rojo). Check-in
+043673655: hasta las 07:00 UTC no había entrado ningún fichero CIMA desde el 27/09 09:01 → re-armado 28/09 12:30 UTC.
+
 **(28/09/2026)** — `facturas-correo`: pasada de rutina sin novedades que archivar. Vía B sana
 (`dias_caido=0`), `agente_salud` actualizado. Sin candidatos nuevos en correo ni subidas manuales.
 Backlog persistente revisado y confirmado sin resolver: ASECON 181,50€ (factura 1-001804, renta
@@ -834,6 +839,14 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Caso 1 (auto particular): el tomador ve «Tomador y conductor habitual» y el propietario «Propietario». ⚠️ Esa póliza está DOS veces en BD (mismo número con y sin ceros a la izquierda, ambas activas): gemela sin fundir, no tocada aquí.
 - Caso 2 (auto de empresa): tomador la sociedad; CIMA trae al administrador como conductor_habitual. Él la ve como DUEÑO («Tu sociedad») y ahí no salía papel → `rolesPropiosPorPoliza()` pinta también la figura en autorizadas/empresas cuando figura. (Identificadores de ambos casos en la conversación de sesión, no aquí: PII.)
 - Ingesta CIMA (asegura#859, mergeado 28/09): guarda TODAS las figuras — un papel por fila (índice `(correduria,poliza,nif_lookup_hash,rol)` ya aplicado en `seguros`), propietario empresa, asegurado = tomador (sin contacto). ⏸️ Falta reprocesar los 36 POL de Drive con `cima-rescate-lote` (lote cifrado preparado en la sesión, no lanzado): hasta entonces los datos viejos siguen sin el 2º papel.
+
+## (28/09/2026) Agente de huéspedes: dejaba de responderse a sí mismo (reserva 154692216)
+- Nuestros envíos reaparecen en Smoobu sin emisor; el anti-eco solo conocía `mensajes_log` (borrador), no acuses, programados ni lo editado en Telegram → 5 ecos en 4 días, 2 contestados solos al huésped, y el eco pisó en la cola la pregunta real.
+- Tabla `mensajes_enviados` (aplicada) escrita por `enviarAlHuespedDetallado` (salida única) + textos fijos de guardia en `enviados`.
+- Acuse «lo estamos revisando» ya no sale el día de salida; se cierra el peldaño y se avisa a Alberto.
+- 2ª tanda: filtro de plantillas (`esPlantillaHost`: nombre completo al principio = bienvenida/despedida nuestra; 8 contestadas solas en sep), categorías con `\b` + seguridad/camas/avisos (el phishing caía en «parking» por «card»), `mensajes_log.respuesta_enviada` + `edited` real + vista `v_agente_huesped_calidad`, aviso de antigüedad en el prompt (>6 h), y lo aprobado SIN editar entra como hecho `propuesto` con botones.
+- ⚠️ Estado de limpieza NO consultable: `cleaning_sessions.started_at/completed_at` siempre NULL en los 4 pisos (nadie marca «terminada»). Botón «Piso listo» para Vanesa DESCARTADO por Alberto: la limpieza se gestiona desde oficina y avisarían tarde → no montar.
+- Revisión antes de merge: «self check-in» corto y el huésped que se presenta («this is Justine Delbos…») ya no se tragan como plantilla; `acceso` casa «clé/código/codes/keybox» (`\b` no ve tildes en JS).
 
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.

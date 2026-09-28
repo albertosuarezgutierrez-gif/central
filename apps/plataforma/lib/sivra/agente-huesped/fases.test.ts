@@ -32,3 +32,14 @@ test('el early check-in aplica en pre-llegada y el día de llegada', () => {
   assert.equal(aplicaEarlyCheckin('en-estancia'), false)
   assert.equal(aplicaEarlyCheckin('post-estancia'), false)
 })
+
+test('bloqueAntiguedad: solo avisa pasadas 6 h y nunca inventa una fecha', async () => {
+  const { bloqueAntiguedad } = await import('./fases.ts')
+  const ahora = new Date('2026-09-28T07:15:00Z')
+  assert.equal(bloqueAntiguedad('2026-09-28T05:00:00Z', ahora), '')
+  assert.equal(bloqueAntiguedad(undefined, ahora), '')
+  assert.equal(bloqueAntiguedad('no-es-fecha', ahora), '')
+  const b = bloqueAntiguedad('2026-09-27T16:14:00Z', ahora)   // caso 154692216: 15 h antes
+  assert.match(b, /hace 15 h/)
+  assert.match(b, /SIGUE VIGENTE/)
+})

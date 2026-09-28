@@ -127,3 +127,9 @@ export function textoAcuse(lang: string, urgente: boolean): string {
 export function textoUltimoRecurso(lang: string): string {
   return ULTIMO_RECURSO[normalizarIdioma(lang)]
 }
+
+/** Todos los textos fijos que el modo noche puede mandar (todos los idiomas): el cruce anti-eco los
+ *  trata como nuestros aunque su envío no llegara a quedar registrado en `mensajes_enviados`. */
+export function textosNocheTodos(): string[] {
+  return [...Object.values(ACUSE).flatMap(t => [t.normal, t.urgente]), ...Object.values(ULTIMO_RECURSO)]
+}

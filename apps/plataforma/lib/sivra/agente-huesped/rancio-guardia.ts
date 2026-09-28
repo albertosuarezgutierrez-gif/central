@@ -8,6 +8,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { tgSend, tgSendButtons, escapeHtml, type Boton } from '@/lib/telegram'
 import { enviarAlHuesped } from './enviar'
+import { smoobuFetch } from '@/lib/smoobu'
 import { esModoNoche } from './noche'
 import { minutosAtencion, peldanoRancio, textoEspera, MIN_RECORDATORIO, MIN_ACUSE_ESPERA } from './rancio'
 
@@ -22,6 +23,16 @@ type Fila = {
   recordatorio_at: Date | null
   acuse_espera_at: Date | null
   no_requiere_respuesta: boolean
+}
+
+// ¿Hoy es el día de salida o posterior? `undefined` si Smoobu no responde o no trae la fecha: en la
+// duda se acusa como siempre, porque callar ante un huésped que espera es el fallo caro.
+async function estanciaAcabando(bookingId: string, ahora: Date): Promise<boolean | undefined> {
+  const r: any = await smoobuFetch(`/api/reservations/${bookingId}`, { cache: 'no-store' })
+    .then(x => (x.ok ? x.json() : null)).catch(() => null)
+  const salida = String(r?.departure || '').slice(0, 10)
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(salida)) return undefined
+  return ahora.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' }) >= salida
 }
 
 function recorte(t: string, n: number): string {
@@ -100,12 +111,29 @@ export async function barrerPendientesRancios(): Promise<{ recordados: number; a
   let acusados = 0
   for (const f of filas) {
     const minutos = minutosAtencion(new Date(f.created_at), ahora)
+    // Solo se pregunta a Smoobu cuando el acuse está en juego: es lo único que depende de la fecha.
+    const tocaAcuse = !f.acuse_espera_at && minutos >= MIN_ACUSE_ESPERA
+    const acabando = tocaAcuse ? await estanciaAcabando(f.booking_id, ahora) : undefined
     const peldano = peldanoRancio({
       minutos,
       recordado: !!f.recordatorio_at,
       acusado: !!f.acuse_espera_at,
       noRequiereRespuesta: !!f.no_requiere_respuesta,
+      estanciaAcabando: acabando,
     })
+    if (tocaAcuse && acabando === true) {
+      // Se cierra el peldaño SIN enviar: si la fila siguiera con `acuse_espera_at` NULL, volvería al
+      // prefiltro cada 3 min y, con el LIMIT 20 por antigüedad, acabaría quitándole el turno a los
+      // pendientes nuevos. El recordatorio a Alberto sí sale si aún no se había dado.
+      if (peldano === 'recordatorio') { await recordar(f, minutos); recordados++ }
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE mensajes_pendientes_tg
+        SET acuse_espera_at = now(), recordatorio_at = COALESCE(recordatorio_at, now())
+        WHERE booking_id = ${f.booking_id}
+      `).catch(() => {})
+      await tgSend(`🧳 Reserva ${f.booking_id}: <b>no le mando el «lo estamos revisando»</b> — hoy es su día de salida. El borrador sigue en tu cola por si quieres contestar o descartarlo.`).catch(() => {})
+      continue
+    }
     if (peldano === 'acuse') { if (await acusarEspera(f, minutos)) acusados++ }
     else if (peldano === 'recordatorio') { await recordar(f, minutos); recordados++ }
   }

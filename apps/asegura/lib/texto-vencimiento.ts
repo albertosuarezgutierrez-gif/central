@@ -44,7 +44,7 @@ export function textoAviso(d: DatosCorreo): { asunto: string; texto: string; htm
   const detalle = [
     d.aseguradora ? `Compañía: ${d.aseguradora}` : null,
     d.numeroPoliza ? `Nº de póliza: ${d.numeroPoliza}` : null,
-    d.primaAnual !== null ? `Prima anual: ${eur(d.primaAnual)}` : null,
+    d.primaAnual !== null ? `Prima anual (impuestos incluidos): ${eur(d.primaAnual)}` : null,
   ].filter((x): x is string => x !== null)
 
   const tercero = d.paraTercero ?? null
