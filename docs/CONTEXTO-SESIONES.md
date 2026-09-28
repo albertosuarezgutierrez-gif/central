@@ -7964,3 +7964,12 @@ Fuera: datos de terceros (cifrados) y `ref_mediador_cima`. ⚠️ Los campos nue
 falta reprocesar los 46 SIN (lote cifrado ya en la rama temporal `cima-lote-sin-2026-09-28` del repo asegura; el
 clasificador bloquea leer la clave → lo lanza Alberto con `scratchpad/cima/clave.txt`). Borrar después ramas
 `cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` y los runs de `cima-rescate-lote`.
+
+## (28/09/2026) Recibos DEVUELTOS: CIMA no los trae (salvo C0468) → el correo de la compañía va por delante
+Reale avisó por correo (`contabilidad.mediadores@reale.es`) de la devolución del recibo 690041622859 (póliza
+3021700291186, 184,58€, renovación 19/09); en `seguros.poliza_recibos` seguía `cobrado`, así que la acción
+urgente, el borrador al cliente y el portal (todo lee `situacion='devuelto'`) no saltaban. El triaje SÍ lo
+clasificó `correduria-recibo` y avisó. Medido: solo C0468 manda devoluciones por CIMA (3); Reale/Mapfre/Generali 0.
+Propuesta con OK de Alberto: lector del correo por compañía → marca de devolución APARTE (no pisar `situacion`,
+CIMA la reescribe) + la devolución de un recibo de renovación abre retención como la anulación. Sin código aún.
+Hecho a mano en BD: oportunidad de retención e35e511c + llamada alta 29/09 («¿vendió el coche o es precio?»).
