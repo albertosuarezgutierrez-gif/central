@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — ⏳ asegura-portal: el indicador de carga (`CargaAsegura`: `loading.tsx` + `CargandoEnlace`) vuelve al monograma «AS» en línea (`MarcaAsegura`, 40 px) en vez del logotipo «Grupo ASegura» (Alberto: «queda más elegante»). Deshace el cambio del 26/09.
+
 **(28/09/2026)** — 🔎 Buscador de /correduria, 2ª tanda: oportunidades ACTIVAS y aparcadas por separado (la aparcada no se destaca), siguiente paso con fecha (y «atrasada»), resultados ordenados (con oportunidad → cartera viva → volcado; «no se sabe» nunca sube), «+ abrir oportunidad» si no tiene ninguna, y las lecturas de `enriquecer()` en paralelo. Helpers puros `orden-hallazgos.ts` (asegura) y `oportunidades-buscador.ts` (plataforma), cepos vistos en rojo.
 
 **(28/09/2026)** — 🔎 Buscador de /correduria: cada ficha muestra sus **oportunidades abiertas** (competencia/en_negociacion/pendiente_cliente, igual que la ficha), enlazando a `?tab=oportunidades`. asegura (`cartera-busqueda.ts`) lo cuenta; plataforma lo parsea con `null` = no se sabe (no 0). Cepo en `test/regression-correduria-puerto.test.ts`.
