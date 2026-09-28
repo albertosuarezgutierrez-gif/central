@@ -1234,15 +1234,20 @@ export async function tarificarDesdeBoton(arg: string): Promise<void> {
     await decir(`✋ Tope de ${MAX_TARIFICACIONES_DIA} precios al día por Telegram alcanzado: no se ha pedido nada (0€). Si hace falta, pídelo en la ficha del cliente.`)
     return
   }
-  // El tope va también DENTRO del reclamo: dos botones distintos pulsados a la vez no pasan del tope.
+  // El tope va también DENTRO del reclamo, y detrás de un candado de transacción: sin él, dos botones
+  // pulsados a la vez leen el mismo recuento (cada UPDATE tiene su foto) y los dos pasan del tope.
   // (Sin comentarios SQL con \${…} dentro: un parámetro dentro de un comentario descuadra el bind.)
-  const [fila] = await prisma.$queryRaw<FilaTarif[]>(Prisma.sql`
+  const [, reclamo] = await prisma.$transaction([
+    prisma.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext('correduria_asistente_tarificacion:tope'))`),
+    prisma.$queryRaw<FilaTarif[]>(Prisma.sql`
     UPDATE correduria_asistente_tarificacion SET estado = 'pidiendo', decidida_at = now()
     WHERE id = ${id} AND estado = 'propuesta' AND caduca_at > now()
       AND (SELECT count(*) FROM correduria_asistente_tarificacion
            WHERE estado IN ('pidiendo', 'hecha', 'incierta')
              AND decidida_at >= (date_trunc('day', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid')) < ${MAX_TARIFICACIONES_DIA}
-    RETURNING cliente_id::text AS cliente_id, ramo, cuerpo, prima_actual::float8 AS prima_actual`).catch(() => [] as FilaTarif[])
+    RETURNING cliente_id::text AS cliente_id, ramo, cuerpo, prima_actual::float8 AS prima_actual`),
+  ]).catch(() => [0, [] as FilaTarif[]] as const)
+  const [fila] = reclamo
   if (!fila) {
     const [actual] = await prisma.$queryRaw<{ estado: string; caducado: boolean }[]>(Prisma.sql`
       SELECT estado, caduca_at <= now() AS caducado FROM correduria_asistente_tarificacion WHERE id = ${id}`).catch(() => [])

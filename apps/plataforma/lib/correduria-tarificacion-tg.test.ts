@@ -244,4 +244,7 @@ test('limpieza: la propuesta vencida pierde el cuerpo y la «pidiendo» colgada 
   assert.match(turno.slice(0, 4000), /await limpiarTarificaciones\(\)/)
   // Y el tope va también DENTRO del reclamo (dos botones a la vez no pasan del tope).
   assert.match(src, /SET estado = 'pidiendo'[\s\S]{0,200}AND caduca_at > now\(\)\s+AND \(SELECT count\(\*\) FROM correduria_asistente_tarificacion[\s\S]{0,250}\) < \$\{MAX_TARIFICACIONES_DIA\}/)
+  // …y en la MISMA transacción que un candado: sin él, cada UPDATE cuenta sobre su propia foto y dos
+  // pulsaciones simultáneas pasan las dos (hallazgo de Graphify, PR #3924).
+  assert.match(src, /prisma\.\$transaction\(\[\s*prisma\.\$executeRaw\(Prisma\.sql`SELECT pg_advisory_xact_lock\(hashtext\('correduria_asistente_tarificacion:tope'\)\)`\),\s*prisma\.\$queryRaw<FilaTarif\[\]>\(Prisma\.sql`\s*UPDATE correduria_asistente_tarificacion SET estado = 'pidiendo'/)
 })
