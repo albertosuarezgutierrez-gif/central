@@ -1,0 +1,89 @@
+{
+ "sesion": "f4a4b4d8-fed6-5e6c-87ee-accbf3f969de",
+ "inicio": "2026-09-28T05:18:59.775Z",
+ "fin": "2026-09-28T05:23:39.369Z",
+ "llamadas": 112,
+ "categorias": {
+  "otro": {
+   "llamadas": 25,
+   "chars_in": 2641,
+   "chars_out": 3021,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 5,
+    "ScheduleWakeup": 10,
+    "ReadNotifications": 7,
+    "ListAgents": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 7,
+   "chars_in": 628,
+   "chars_out": 160927,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 7
+   }
+  },
+  "bash": {
+   "llamadas": 8,
+   "chars_in": 1129,
+   "chars_out": 15045,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 8
+   }
+  },
+  "sql": {
+   "llamadas": 20,
+   "chars_in": 5288,
+   "chars_out": 89645,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 9881,
+   "tools": {
+    "mcp__Supabase__execute_sql": 20
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 4,
+   "chars_in": 24127,
+   "chars_out": 24975,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 4
+   }
+  },
+  "mcp:Booking-com": {
+   "llamadas": 42,
+   "chars_in": 11022,
+   "chars_out": 759026,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Booking-com__accommodations_search": 42
+   }
+  },
+  "mcp:Trivago": {
+   "llamadas": 6,
+   "chars_in": 894,
+   "chars_out": 4033888,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Trivago__trivago-accommodation-radius-search": 6
+   }
+  }
+ }
+}
