@@ -817,7 +817,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (28/09/2026) Poner nombre a una ficha SIN NOMBRE sin exigir DNI
 - Alberto no podía nombrar un lead «(sin nombre)»: la única edición era «Editar identidad» (fondo de Contactos) y exigía DNI recibido. La BD guarda el marcador literal `'(sin nombre)'` (14 fichas).
 - `module-seguros`: `nombrePendiente()` + `revisarEdicion(e, { fichaSinNombre })` → en ficha sin nombre, nombre+apellidos sin documento; DNI/fecha y corregir un nombre existente siguen documentados. asegura decide la excepción con la BD (`cartera-edicion.ts`), no el cliente. Historial: «rellenada sin documento».
-- Plataforma: `PonerNombre.tsx` (✏️ junto al título, solo si la ficha no tiene nombre). Branch `claude/edit-name-ot9hkz`.
+- Plataforma: `PonerNombre.tsx` (✏️ junto al título, solo si la ficha no tiene nombre). PR #3816 (mergeado).
 
 ## (27/09/2026) Título de la RC = solo la RC
 - `module-seguros/objeto.ts` `tituloRc()`: si una cobertura se nombra «Responsabilidad civil…/R.C./RC», la tarjeta titula «RC caballos» y el resto (defensa penal, liberación de gastos) queda como «+N coberturas» y en el desglose de la póliza. Sin cobertura así, sigue el título por modalidades.
