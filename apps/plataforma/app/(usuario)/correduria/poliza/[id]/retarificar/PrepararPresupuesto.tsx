@@ -101,8 +101,9 @@ function Preparado({ p, token }: { p: PresupuestoPreparado; token: string }) {
   return (
     <section style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
       <p style={{ margin: '0 0 8px' }}>
-        <strong>Presupuesto preparado</strong> · {p.opciones.length} de {p.preciosTotales} precios ·
-        caduca el {new Date(p.venceEl).toLocaleDateString('es-ES')}
+        <strong>Presupuesto preparado</strong> · {p.opciones.length} recomendadas
+        {p.enLista !== null ? ` + ${p.enLista} más en su lista` : ''} · de {p.preciosTotales} precios
+        {p.ocultas ? ` · ${p.ocultas} ocultas` : ''} · caduca el {new Date(p.venceEl).toLocaleDateString('es-ES')}
       </p>
 
       {avisos.map((a) => (

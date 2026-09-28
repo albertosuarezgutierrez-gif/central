@@ -15,7 +15,7 @@ import { createHash, randomInt, randomUUID } from 'node:crypto'
 import { FirmaPropia, TEXTO_CONSENTIMIENTO, nombreCoincide } from '@central/core-firma'
 import {
   MEDIADOR, VERSION_TEXTOS_LEGALES, admiteDecision, anulacionPorCambio, cartaAnulacion, documentoAceptacion, esCambioCompania,
-  ESTADOS_ANULACION_ABIERTA, POLIZA_ESTADOS_VIGENTES, estadoPresupuesto,
+  ESTADOS_ANULACION_ABIERTA, POLIZA_ESTADOS_VIGENTES, claveProducto, estadoPresupuesto,
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
@@ -86,23 +86,32 @@ async function leer(correduriaId: string, clienteId: string, presupuestoId: stri
                     and pol.estado::text = any(${VIGENTES}::text[]), false) as "polizaApta",
            exists (select 1 from anulacion an where an.poliza_id = p.poliza_id
                      and an.estado = any(${ABIERTAS}::text[])) as "expedienteAbierto",
-           (select count(*)::int from presupuesto_opcion x where x.presupuesto_id = p.id) as "nOpciones",
-           (select count(distinct lower(trim(x.compania)))::int from presupuesto_opcion x where x.presupuesto_id = p.id) as "nCompanias",
+           (select count(*)::int from presupuesto_opcion x where x.presupuesto_id = p.id and x.oculta_at is null) as "nOpciones",
+           (select count(distinct lower(trim(x.compania)))::int from presupuesto_opcion x where x.presupuesto_id = p.id and x.oculta_at is null) as "nCompanias",
            (select t.peticion from tarificaciones t where t.id = p.tarificacion_id and t.correduria_id = p.correduria_id) as peticion,
            exists (select 1 from presupuesto_evento ev where ev.presupuesto_id = p.id and ev.tipo = ${TIPO_DATOS_INCORRECTOS}) as "datosEnRevision"
     from presupuesto p
       join clientes c on c.id = p.cliente_id
-      join presupuesto_opcion o on o.presupuesto_id = p.id and o.id = ${opcionId}::uuid
+      join presupuesto_opcion o on o.presupuesto_id = p.id and o.id = ${opcionId}::uuid and o.oculta_at is null
       left join polizas pol on pol.id = p.poliza_id
       left join companias_dgs cda on cda.codigo_dgs = pol.codigo_entidad_dgs
     where p.id = ${presupuestoId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid`
   if (!f) return null
   // Misma clave (compañía + producto) que usa el portal para pintar el enlace de cada tarjeta.
   const opciones = await prismaAsegura().$queryRaw<{ id: string; compania: string; producto: string | null }[]>`
-    select id::text as id, compania, producto from presupuesto_opcion where presupuesto_id = ${presupuestoId}::uuid order by id`
+    select id::text as id, compania, producto from presupuesto_opcion
+    where presupuesto_id = ${presupuestoId}::uuid and oculta_at is null order by id`
+  // Desde que se congelan TODAS (29/09/2026) hay decenas de opciones y muchas comparten producto: el
+  // IPID se busca UNA vez por compañía+producto, no una por opción.
+  const huellas = new Map<string, Promise<string | null>>()
+  const huellaDe = (compania: string, producto: string | null) => {
+    const k = claveProducto(compania, producto) ?? `sin-clave|${compania}|${producto ?? ''}`
+    if (!huellas.has(k)) huellas.set(k, ipidDeOpcion(correduriaId, compania, producto).then((i) => i?.sha256 ?? null))
+    return huellas.get(k)!
+  }
   const ipidsMostrados = await Promise.all(opciones.map(async (o) => ({
     opcionId: o.id, compania: o.compania, producto: o.producto,
-    huella: (await ipidDeOpcion(correduriaId, o.compania, o.producto))?.sha256 ?? null,
+    huella: await huellaDe(o.compania, o.producto),
   })))
   const ipid = await ipidDeOpcion(correduriaId, f.compania, f.producto)
   return { ...f, ipidHuella: ipid?.sha256 ?? null, ipidsMostrados }

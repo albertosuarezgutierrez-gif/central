@@ -44,6 +44,16 @@ test('el camino feliz devuelve el presupuesto y su enlace', () => {
   assert.equal(r.presupuesto.opciones.length, 1)
   assert.equal(r.presupuesto.preciosTotales, 12)
   assert.equal(r.token, 'a'.repeat(64))
+  // Una asegura anterior no manda `enLista`: eso es «no consta», no «no hay más».
+  assert.equal(r.presupuesto.enLista, null)
+})
+
+test('enLista y ocultas viajan cuando asegura los manda', () => {
+  const r = interpretarPreparado(200, { ...OK, presupuesto: { ...OK.presupuesto, enLista: 28, ocultas: 2 } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.presupuesto.enLista, 28)
+  assert.equal(r.presupuesto.ocultas, 2)
 })
 
 test('un 401 es «los secretos no coinciden», no «no hay presupuestos»', () => {

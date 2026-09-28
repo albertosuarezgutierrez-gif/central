@@ -43,10 +43,14 @@ async function propio(correduriaId: string, identidadId: string, presupuestoId: 
   return f ? { ...f, clienteId: ficha.clienteId } : { estado: 'no_encontrado' }
 }
 
-/** Las opciones congeladas, en la forma que ve la IA: SOLO datos de producto. */
-async function opcionesIA(presupuestoId: string): Promise<OpcionIA[]> {
+/**
+ * Las opciones congeladas, en la forma que ve la IA: SOLO datos de producto. Nunca las ocultas.
+ * `soloPortada`: el resumen habla de las RECOMENDADAS — desde que se congelan todas (29/09/2026)
+ * serían decenas, y un resumen de 30 opciones ni cabe en 400 tokens ni ayuda a nadie a decidir.
+ */
+async function opcionesIA(presupuestoId: string, soloPortada = false): Promise<OpcionIA[]> {
   const filas = await prismaAsegura().presupuestoOpcion.findMany({
-    where: { presupuestoId },
+    where: { presupuestoId, ocultaAt: null, ...(soloPortada ? { NOT: { papeles: { isEmpty: true } } } : {}) },
     orderBy: { orden: 'asc' },
     select: { id: true, compania: true, producto: true, modalidad: true, primaEur: true, franquiciaEur: true, coberturas: true },
   })
@@ -96,7 +100,7 @@ export async function resumenIA(correduriaId: string, identidadId: string, presu
     return { estado: 'no_disponible', aviso: AVISO_IA }
   }
 
-  const opciones = await opcionesIA(presupuestoId)
+  const opciones = await opcionesIA(presupuestoId, true)
   if (opciones.length === 0) return { estado: 'no_disponible', aviso: AVISO_IA }
 
   let texto: string

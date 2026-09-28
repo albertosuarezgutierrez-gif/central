@@ -860,6 +860,15 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Presupuesto por garantías — entrega 2: el presupuesto congela TODAS las opciones
+- Entrega 1 mergeada (#3907). Entrega 2: `prepararPresupuesto` congela todos los precios (portada primero, resto por prima,
+  ocultas al final con `oculta_at`); `ocultar {companias, precios}` en el POST y `accion:'ocultar'|'mostrar'` en el PATCH
+  (solo antes de avisar; portada no se oculta — CHECK `portada_no_oculta`). Migración `2026-09-29b_presupuesto_opcion_todas.sql`
+  APLICADA (+ GRANT al portal). Todo lector filtra `oculta_at` (cepo `lib/presupuesto-opcion-oculta.test.ts`, visto en rojo).
+- Resumen IA = solo portada; IPID deduplicado por producto. El presupuesto de Manuel (2 opciones) NO cambia: hay que prepararlo de nuevo.
+- Pendiente: entrega 3 (portal: filtro + comparar), 4 (parrilla plataforma + ocultar). Decesos/salud/vida no preparan presupuesto aún
+  (`RAMOS_CON_COMPARATIVA` = auto/moto/hogar: faltan sus niveles de cobertura).
+
 ## (28/09/2026) Presupuesto por garantías — entrega 1: catálogo + coberturas de TODOS los precios
 - Alberto: «no puedes mandar una propuesta con dos precios sin sentido» (Manuel: 31 precios de 5 compañías → 2 de Allianz,
   por `elegirPortada`). Decidido: el cliente ve todo + recomendadas, filtro por garantías en parrilla y portal, TODOS los ramos

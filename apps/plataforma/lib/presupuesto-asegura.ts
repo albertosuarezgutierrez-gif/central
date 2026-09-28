@@ -37,8 +37,13 @@ export type PresupuestoPreparado = {
   lecturaActual: string
   motivoSinEquivalente: string | null
   avisoEscala: string | null
+  /** Las recomendadas (portada). */
   opciones: OpcionPresupuesto[]
   preciosTotales: number
+  /** Cuántas más ve el cliente debajo («ver todas»). `null` = asegura no lo dice (versión anterior). */
+  enLista: number | null
+  /** Cuántas quitó el corredor. `null` = no consta. */
+  ocultas: number | null
 }
 
 export type RespuestaPreparar =
@@ -133,6 +138,8 @@ export function interpretarPreparado(status: number, json: unknown): RespuestaPr
       avisoEscala: cadena(q.avisoEscala),
       opciones,
       preciosTotales: num(q.preciosTotales) ?? opciones.length,
+      enLista: num(q.enLista),
+      ocultas: num(q.ocultas),
     },
   }
 }
