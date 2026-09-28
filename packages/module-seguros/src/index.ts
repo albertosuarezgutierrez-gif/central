@@ -970,3 +970,14 @@ export {
   type RamoGarantias,
 } from './catalogo-garantias.ts'
 export { estadoDe, filtrarPorGarantias, interruptoresGarantias, type InterruptorGarantia, type OpcionFiltrable, type ResultadoFiltro } from './filtro-garantias.ts'
+export {
+  garantiasDeNecesidades,
+  capitalServicio,
+  cambiosFrenteActual,
+  seguimientoPendiente,
+  HORAS_SIN_ABRIR,
+  HORAS_SIN_ELEGIR,
+  type CambiosFrenteActual,
+  type EtapaSeguimiento,
+  type PresupuestoParaSeguimiento,
+} from './presupuesto-ayudas.ts'

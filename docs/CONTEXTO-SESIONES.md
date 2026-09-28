@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — ⏳ asegura-portal: el indicador de carga (`CargaAsegura`: `loading.tsx` + `CargandoEnlace`) vuelve al monograma «AS» en línea (`MarcaAsegura`, 40 px) en vez del logotipo «Grupo ASegura» (Alberto: «queda más elegante»). Deshace el cambio del 26/09.
+
 **(28/09/2026)** — 🔎 Buscador de /correduria, 2ª tanda: oportunidades ACTIVAS y aparcadas por separado (la aparcada no se destaca), siguiente paso con fecha (y «atrasada»), resultados ordenados (con oportunidad → cartera viva → volcado; «no se sabe» nunca sube), «+ abrir oportunidad» si no tiene ninguna, y las lecturas de `enriquecer()` en paralelo. Helpers puros `orden-hallazgos.ts` (asegura) y `oportunidades-buscador.ts` (plataforma), cepos vistos en rojo.
 
 **(28/09/2026)** — 🔎 Buscador de /correduria: cada ficha muestra sus **oportunidades abiertas** (competencia/en_negociacion/pendiente_cliente, igual que la ficha), enlazando a `?tab=oportunidades`. asegura (`cartera-busqueda.ts`) lo cuenta; plataforma lo parsea con `null` = no se sabe (no 0). Cepo en `test/regression-correduria-puerto.test.ts`.
@@ -860,7 +862,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
-
+## (29/09/2026) Presupuesto por garantías — entregas 3-4 + las 6 ideas (cliente, parrilla, Telegram)
+- Portal: «Todas las opciones» con logos, filtros de garantías PRESELECCIONADOS con las necesidades (`garantiasDeNecesidades`),
+  «qué cambia frente a tu seguro», capital de decesos, comparar 2 con IA y elegir cualquiera; telemetría `actividad_cliente`.
+- Plataforma: `FiltroGarantias` en las parrillas (auto/moto/hogar/decesos/salud/vida) + ocultar fila/compañía antes de preparar;
+  cron `correduria-seguimiento-presupuestos` (08/13/18 UTC, en `cron-dispatch.ts`): Telegram si no consta abierto 48 h o sin elegir 72 h.
+- Asegura: cron `coberturas-backfill` (horario, gratis) recupera `oferta_id` de precios viejos y lee sus coberturas; puerto
+  `GET /api/operador/presupuesto/seguimiento` + PATCH `seguimiento_avisado`. Pendiente: medir en real el primer backfill.
 ## (28/09/2026) Portal asegurado: «27500 m²» en la póliza de Calle Socorro 24
 - CIMA manda `metrosCuadrados: "275.00"`; `entero()` de `module-seguros-portal/src/bien-asegurado.ts` quitaba todo lo no-dígito → 27.500 m². Ahora acepta decimal (`275.00`/`90,5`, redondea) o miles (`1.234`); lo demás calla. Cepo en `bien-asegurado.test.ts`, visto en rojo.
 

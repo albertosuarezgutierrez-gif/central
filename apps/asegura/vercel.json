@@ -37,6 +37,10 @@
     {
       "path": "/api/cron/polizas-pdf",
       "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/coberturas-backfill",
+      "schedule": "17 * * * *"
     }
   ]
 }

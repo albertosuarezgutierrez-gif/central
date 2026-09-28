@@ -1,0 +1,97 @@
+// La parrilla de precios del corredor, filtrable por garantías y con «ocultar al cliente» (28/09/2026).
+// PURO: lo importa el client component `FiltroGarantias.tsx` y lo vigila su `.test.ts`.
+//
+// Sale de la tarificación GUARDADA (`GET /api/operador/codeoscopic/tarificacion`, gratis), no de la
+// respuesta del POST de tarificar: solo la guardada trae el uuid de cada precio (`precioId`, la clave
+// para ocultarlo) y sus garantías, que asegura lee EN SEGUNDO PLANO justo después de tarificar.
+//
+// 🚨 Tres estados de las garantías que no se colapsan:
+//   `undefined` → asegura no manda el campo (versión anterior): no hay filtro, y se dice.
+//   `null`      → aún no se han leído sus coberturas: «Leyendo coberturas…», nunca «no incluye».
+//   objeto      → el dato.
+
+import { capitalServicio, type GarantiasClasificadas, type OpcionFiltrable } from '@central/module-seguros'
+import type { Precio } from './retarificar-asegura.ts'
+import type { OcultarPresupuesto } from './presupuesto-asegura.ts'
+
+export type OpcionParrilla = OpcionFiltrable & {
+  producto: string | null
+  categoria: string | null
+  franquiciaEur: number | null
+  firmeza: string
+  /** Decesos: el capital del servicio leído de los avisos. `null` = no viene o no se entiende (nunca 0). */
+  capitalServicioEur: number | null
+}
+
+export type EstadoCoberturas =
+  /** Ningún precio trae el campo: asegura no lo manda. */
+  | 'no_manda'
+  /** Todos con `garantias: null`: se están leyendo. */
+  | 'leyendo'
+  /** Unos sí y otros todavía no. */
+  | 'parcial'
+  | 'listas'
+
+/**
+ * Los precios guardados → opciones filtrables. Un precio SIN `precioId` no se puede ocultar ni
+ * señalar sin inventarse una clave, así que no entra: se cuenta en `sinId` y la pantalla lo dice.
+ */
+export function opcionesDeParrilla(precios: readonly Precio[]): { opciones: OpcionParrilla[]; sinId: number; estado: EstadoCoberturas } {
+  const opciones: OpcionParrilla[] = []
+  let sinId = 0
+  let conCampo = 0
+  let leidas = 0
+  for (const p of precios) {
+    if (!p.precioId) {
+      sinId++
+      continue
+    }
+    const garantias: GarantiasClasificadas | null = p.garantias ?? null
+    if (p.garantias !== undefined) conCampo++
+    if (garantias) leidas++
+    opciones.push({
+      id: p.precioId,
+      compania: p.compania ?? 'Sin compañía',
+      primaEur: typeof p.primaEur === 'number' && Number.isFinite(p.primaEur) ? p.primaEur : null,
+      garantias,
+      producto: p.producto ?? null,
+      categoria: p.categoria ?? null,
+      franquiciaEur: typeof p.franquiciaEur === 'number' ? p.franquiciaEur : null,
+      firmeza: p.firmeza ?? 'estimado',
+      capitalServicioEur: capitalServicio(p.avisos ?? null),
+    })
+  }
+  const estado: EstadoCoberturas =
+    opciones.length === 0 || conCampo === 0 ? 'no_manda' : leidas === 0 ? 'leyendo' : leidas < opciones.length ? 'parcial' : 'listas'
+  return { opciones, sinId, estado }
+}
+
+/** La compañía sin mayúsculas ni espacios de más (misma regla que `claveCompania` de asegura). */
+export function claveCompania(c: string): string {
+  return c.trim().replace(/\s+/g, ' ').toLocaleLowerCase('es')
+}
+
+export function estaOculta(o: { id: string; compania: string }, ocultas: { companias: ReadonlySet<string>; precios: ReadonlySet<string> }): boolean {
+  return ocultas.precios.has(o.id) || ocultas.companias.has(claveCompania(o.compania))
+}
+
+/**
+ * Lo que se manda a preparar. `undefined` = no se oculta nada. Las compañías viajan con el nombre
+ * tal cual lo trae la tarificación (asegura las compara sin mayúsculas).
+ */
+export function ocultarParaPreparar(
+  opciones: readonly { id: string; compania: string }[],
+  ocultas: { companias: ReadonlySet<string>; precios: ReadonlySet<string> },
+): OcultarPresupuesto | undefined {
+  const companias = [...new Set(opciones.filter((o) => ocultas.companias.has(claveCompania(o.compania))).map((o) => o.compania))]
+  const precios = opciones.filter((o) => ocultas.precios.has(o.id) && !ocultas.companias.has(claveCompania(o.compania))).map((o) => o.id)
+  return companias.length === 0 && precios.length === 0 ? undefined : { companias, precios }
+}
+
+/** ¿Queda alguna opción CON PRIMA a la vista del cliente? (asegura contestaría 422 `todas_ocultas`). */
+export function quedaAlgunaVisible(
+  opciones: readonly { id: string; compania: string; primaEur: number | null }[],
+  ocultas: { companias: ReadonlySet<string>; precios: ReadonlySet<string> },
+): boolean {
+  return opciones.some((o) => o.primaEur !== null && !estaOculta(o, ocultas))
+}

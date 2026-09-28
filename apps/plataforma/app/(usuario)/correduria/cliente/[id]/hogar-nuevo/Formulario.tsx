@@ -20,7 +20,7 @@ import { FlaskConical, Loader2, Pencil, X } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
 import { CeldaCompania } from '../../../CeldaCompania'
-import PrepararPresupuesto from '../../../poliza/[id]/retarificar/PrepararPresupuesto'
+import FiltroGarantias from '../../../FiltroGarantias'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { eur } from '@/lib/dinero'
@@ -348,7 +348,7 @@ export default function Formulario({
           </p>
         )}
 
-        {resultado.estado === 'ok' && <Precios r={resultado} />}
+        {resultado.estado === 'ok' && <Precios r={resultado} clienteId={clienteId} />}
       </div>
     </div>
   )
@@ -538,7 +538,7 @@ function deTexto(f: Fila, t: string): unknown {
 
 // ─── El resultado ────────────────────────────────────────────────────────────
 
-function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
+function Precios({ r, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; clienteId: string }) {
   // Emitir a un cliente NUEVO (28/09/2026): asegura enlazó el proyecto a la ficha y a
   // esta tarificación al confirmar el precio, así que no hace falta póliza previa.
   const [abierta, setAbierta] = useState<string | null>(null)
@@ -619,7 +619,7 @@ function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
           )
         })}
       {cotizacionIdDe(r.guardado) !== null && (
-        <PrepararPresupuesto tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
+        <FiltroGarantias ramo="hogar" origen={{ clienteId, ramo: 'hogar' }} tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
       )}
       {r.supuestos.length > 0 && (
         <>

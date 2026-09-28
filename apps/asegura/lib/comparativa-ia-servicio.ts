@@ -29,10 +29,10 @@ export const TIPO_PIDE_LLAMADA = 'pide_llamada'
 const MAX_LLAMADAS_DIA = 3
 const TIMEOUT_IA_MS = 20_000
 
-type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
+export type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
 type Propio = { clienteId: string; ramo: string; tomador: string; retirado: boolean }
 
-async function propio(correduriaId: string, identidadId: string, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {
+export async function propio(correduriaId: string, identidadId: string, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {
   if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
   const ficha = await fichaPropiaDe(correduriaId, identidadId)
   if (ficha.estado !== 'ok') return ficha
@@ -65,11 +65,11 @@ async function opcionesIA(presupuestoId: string, soloPortada = false): Promise<O
   }))
 }
 
-async function anotarEvento(presupuestoId: string, tipo: string, detalle: Record<string, unknown>): Promise<void> {
+export async function anotarEvento(presupuestoId: string, tipo: string, detalle: Record<string, unknown>): Promise<void> {
   await prismaAsegura().presupuestoEvento.create({ data: { presupuestoId, tipo, origen: 'cliente', detalle: detalle as object } })
 }
 
-async function contarDesde(presupuestoId: string, tipo: string, desde: Date): Promise<number> {
+export async function contarDesde(presupuestoId: string, tipo: string, desde: Date): Promise<number> {
   return prismaAsegura().presupuestoEvento.count({ where: { presupuestoId, tipo, ocurridoAt: { gte: desde } } })
 }
 

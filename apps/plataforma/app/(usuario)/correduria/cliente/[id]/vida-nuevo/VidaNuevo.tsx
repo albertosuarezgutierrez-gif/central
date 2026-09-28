@@ -16,6 +16,7 @@ import { FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { CeldaCompania } from '../../../CeldaCompania'
 import { ConIcono } from '../../../iconos'
+import FiltroGarantias from '../../../FiltroGarantias'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/vida-nuevo-asegura'
 import { pedirPrecalificacionVida, pedirCotizacionVida } from './acciones'
@@ -258,7 +259,7 @@ export default function VidaNuevo({
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} />}
+        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} clienteId={clienteId} />}
       </div>
     </div>
   )
@@ -296,7 +297,7 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
   )
 }
 
-function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean }) {
+function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }) {
   return (
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
@@ -342,6 +343,9 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
           </tbody>
         </table>
       </div>
+      {/* Filtro por garantías + ocultar + preparar el presupuesto. Esta respuesta no trae el id de la
+          cotización guardada, así que se usa la última REAL guardada, y solo si es de ahora mismo. */}
+      {!r.simulado && <FiltroGarantias ramo="vida" origen={{ clienteId, ramo: 'vida' }} tarificacionId={null} simulado={false} />}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
       )}
