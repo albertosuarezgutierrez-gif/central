@@ -245,3 +245,24 @@ test('🚨 una env de correo que falta NO invita a reintentar; una avería del p
   assert.match(averia, /vuelve a intentarlo/i, 'esta SÍ se reintenta: hubo proveedor y dijo que no')
   assert.notEqual(averia, falta)
 })
+
+test('otrasFichas: se leen con su nombre; ausente o mal formado es `null`, no «no hay»', () => {
+  assert.equal(leerPortal({ estado: 'resuelve_a_otra' })?.otrasFichas, null)
+  assert.equal(leerPortal({ estado: 'resuelve_a_otra', otrasFichas: 'x' })?.otrasFichas, null)
+  const r = leerPortal({
+    estado: 'resuelve_a_otra',
+    otrasFichas: [{ clienteId: 'b', nombre: 'Antonio Antonio', principal: true }, { nombre: 'sin id' }, { clienteId: 'c', nombre: '' }],
+  })
+  assert.deepEqual(r?.otrasFichas, [
+    { clienteId: 'b', nombre: 'Antonio Antonio', principal: true },
+    { clienteId: 'c', nombre: null, principal: false },
+  ])
+})
+
+test('resuelve_a_otra y ambiguo explican que tampoco hay WhatsApp', () => {
+  for (const estado of ['resuelve_a_otra', 'ambiguo'] as const) {
+    const f = explicarPortal({ estado, ultimoAccesoEn: null, identidades: 0, emailInvitacion: null, otrasFichas: null })
+    assert.equal(f.accion, 'ninguna')
+    assert.match(f.queHacer, /Tampoco por WhatsApp/)
+  }
+})

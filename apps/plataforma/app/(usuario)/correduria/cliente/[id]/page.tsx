@@ -10,6 +10,7 @@ import CorreosCliente from './CorreosCliente'
 import DescartarCliente from './DescartarCliente'
 import FichasDuplicadas from './FichasDuplicadas'
 import FichaTabs, { tabDeParametro } from './FichaTabs'
+import { detallesAccesos } from './tabs'
 import TabContactos from './TabContactos'
 import TabPolizas from './TabPolizas'
 import TabPendiente from './TabPendiente'
@@ -133,15 +134,20 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       <FichaTabs
         clienteId={ficha.id}
         activa={tab}
-        contadores={{
-          resumen: { n: reparto.conNosotros.length, texto: n => `${n} con nosotros` },
-          oportunidades: { n: abiertas, texto: n => `${n} abierta(s)` },
-          pendiente: accion.estado === 'accion' && accion.urgente ? { n: 1, tono: 'malo', texto: () => 'urgente' } : undefined,
-          polizas: { n: ficha.polizas.length, texto: n => `${n} en total` },
-          contactos: { n: personas === null ? null : personas.length },
-          documentos: { n: resumen.documentosPendientes, tono: 'aviso', texto: n => `${n} pedido(s)` },
-          correos: { n: ficha.correos === null ? null : ficha.correos.length },
-        }}
+        detalles={detallesAccesos({
+          conNosotros: reparto.conNosotros.length,
+          oportunidadesAbiertas: abiertas,
+          pendiente: accion.estado === 'accion' ? { estado: 'accion', urgente: accion.urgente } : accion,
+          polizas: ficha.polizas.length,
+          telefonos: ficha.contactos === null ? null : ficha.contactos.telefonos.length,
+          emails: ficha.contactos === null ? null : ficha.contactos.emails.length,
+          personas: personas === null ? null : personas.length,
+          documentos: ficha.documentos === null ? null : ficha.documentos.length,
+          documentosPedidos: resumen.documentosPendientes,
+          correos: ficha.correos === null ? null : ficha.correos.length,
+          notas: ficha.notas === null ? null : ficha.notas.lista.length + (ficha.notas.antigua ? 1 : 0),
+          historial: ficha.historial === null ? null : ficha.historial.length,
+        })}
       />
 
       {tab === 'oportunidades' && (

@@ -113,6 +113,15 @@ export type FichaPortal = {
    * sino a dónde lleva.
    */
   emailInvitacion: string | null
+  /**
+   * Solo en `ambiguo` y `resuelve_a_otra`: las OTRAS fichas que se quedan ese
+   * correo, para que la pantalla diga cuál es y lleve a ella (28/09/2026 —
+   * «no se le puede invitar: su correo lleva a OTRA ficha», sin decir cuál,
+   * dejaba a Alberto buscando a ciegas). Principales primero, que son las que
+   * ganan. `nombre: null` = no se pudo leer (o es de otra correduría: su
+   * nombre no sale de aquí). Ausente en el resto de estados.
+   */
+  otrasFichas?: { clienteId: string; nombre: string | null; principal: boolean }[]
 }
 
 export type FalloInvitacion =
@@ -225,9 +234,12 @@ export async function estadoPortalDeFicha(correduriaId: string, clienteId: strin
   }
   if (correo.estado === 'ilegible') return { estado: 'ilegible', ultimoAccesoEn: null, identidades, emailInvitacion: null }
 
-  const prediccion = await prediccionVinculo(correo.email, clienteId)
+  const { prediccion, candidatos } = await prediccionVinculo(correo.email, clienteId)
   return {
     estado: prediccion,
+    ...(prediccion === 'ambiguo' || prediccion === 'resuelve_a_otra'
+      ? { otrasFichas: await otrasFichasDe(correduriaId, clienteId, candidatos) }
+      : {}),
     ultimoAccesoEn: null,
     identidades,
     // 🚨 Solo cuando la predicción dice que ese correo trae a ESTA ficha. En
@@ -245,7 +257,7 @@ export async function estadoPortalDeFicha(correduriaId: string, clienteId: strin
 async function prediccionVinculo(
   email: string,
   clienteId: string,
-): Promise<'invitable' | 'ambiguo' | 'resuelve_a_otra' | 'no_comprobado'> {
+): Promise<{ prediccion: 'invitable' | 'ambiguo' | 'resuelve_a_otra' | 'no_comprobado'; candidatos: Candidato[] }> {
   // 🚨 `computeEmailLookupHash` NORMALIZA POR DENTRO, así que se le pasa el
   // correo crudo. Normalizarlo aquí antes sería una segunda ruta de
   // normalización, y dos normalizaciones que se separen un día producen hashes
@@ -262,11 +274,11 @@ async function prediccionVinculo(
     hash = computeEmailLookupHash(email)
   } catch (e) {
     console.error('[invitacion-portal] la clave del índice ciego está mal formada:', e instanceof Error ? e.message : e)
-    return 'no_comprobado'
+    return { prediccion: 'no_comprobado', candidatos: [] }
   }
   if (hash === null) {
     console.error('[invitacion-portal] sin índice ciego para ese correo (falta clave o no tiene forma de email)')
-    return 'no_comprobado'
+    return { prediccion: 'no_comprobado', candidatos: [] }
   }
 
   let candidatos: Candidato[]
@@ -274,12 +286,45 @@ async function prediccionVinculo(
     candidatos = await candidatosDe(hash)
   } catch (e) {
     console.error('[invitacion-portal] no se pudieron leer los candidatos:', e instanceof Error ? e.message : e)
-    return 'no_comprobado'
+    return { prediccion: 'no_comprobado', candidatos: [] }
   }
   // La decisión vive en `@central/module-seguros-portal` y la comparte con la
   // lista de contactabilidad: dos copias de esta regla darían dos respuestas
   // distintas sobre el mismo cliente sin que fallara nada.
-  return prediccionDeVinculo(candidatos, clienteId)
+  return { prediccion: prediccionDeVinculo(candidatos, clienteId), candidatos }
+}
+
+/**
+ * Las otras fichas que reclaman el correo, con su nombre si son de ESTA
+ * correduría. Un fallo al leer nombres no tumba el estado: se devuelven sin él.
+ */
+async function otrasFichasDe(
+  correduriaId: string,
+  clienteId: string,
+  candidatos: Candidato[],
+): Promise<{ clienteId: string; nombre: string | null; principal: boolean }[]> {
+  const porFicha = new Map<string, Candidato>()
+  for (const c of candidatos) {
+    if (c.clienteId === clienteId) continue
+    const previo = porFicha.get(c.clienteId)
+    if (!previo || (c.principal && !previo.principal)) porFicha.set(c.clienteId, c)
+  }
+  const otras = [...porFicha.values()].sort((a, b) => Number(b.principal) - Number(a.principal))
+  const propias = otras.filter((c) => c.correduriaId === correduriaId).map((c) => c.clienteId)
+  const nombres = new Map<string, string>()
+  try {
+    const filas = await prismaAsegura().cliente.findMany({
+      where: { id: { in: propias }, correduriaId, mergedIntoClienteId: null },
+      select: { id: true, nombre: true, apellidos: true },
+    })
+    for (const f of filas) {
+      const n = [f.nombre, f.apellidos].filter((x) => typeof x === 'string' && x.trim() !== '').join(' ').trim()
+      if (n !== '') nombres.set(f.id, n)
+    }
+  } catch (e) {
+    console.error('[invitacion-portal] no se pudieron leer los nombres de las otras fichas:', e instanceof Error ? e.message : e)
+  }
+  return otras.map((c) => ({ clienteId: c.clienteId, nombre: nombres.get(c.clienteId) ?? null, principal: c.principal }))
 }
 
 /**

@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — Ficha cliente correduría: (1) las baldosas de acceso dicen algo siempre que se sepa (`detallesAccesos` en `cliente/[id]/tabs.ts`, puro+test): Contactos = «2 teléfonos · 1 correo · 3 personas» (antes solo personas de pólizas), ceros leídos se dicen, `null` no se pinta. (2) Portal «su correo lleva a OTRA ficha»: asegura devuelve `otrasFichas` (id+nombre, solo de la propia correduría) y la ficha las enlaza. El WhatsApp sigue oculto A PROPÓSITO en ese estado (el portal entra por correo → acabaría en la otra ficha); ahora se dice. Medido: 92 fichas con correo `es_principal` en `cliente_emails` pero sin hash en `clientes` porque el backfill no escribe choques → todas `resuelve_a_otra`; se arreglan fusionando/corrigiendo, no con código.
+
 **(28/09/2026)** — Ficha↔CIMA: el email nuevo de CIMA se AÑADE como secundario (`email:anadir`, antes `discrepa`) salvo que esté en OTRA ficha (`avisarContactosCompartidos`, el email vincula el portal). «Berta del la fuentes rojas» NO era solo mayúsculas: dos erratas; nueva acción automática `corregir` (mismas palabras, ≤1 letra por palabra, ≥ la mitad idénticas). «Maria Lopez»/«Mario Lopes» sigue preguntando. PR #3802.
 
 **(28/09/2026)** — Bot de oportunidades: un vencimiento leído que ya pasó (recibo del periodo anterior) ya no se descarta: se proyecta a la siguiente renovación anual (`siguienteRenovacion`, máx. 2 años; 29/02→28/02) y se dice en el mensaje. Caso: recibo Línea Directa 0194DRY «Vigencia 18/11/24 al 18/11/25» → vence 18/11/2026. Ojo: la fecha de la CARTA (03/02/25) no es la del periodo.

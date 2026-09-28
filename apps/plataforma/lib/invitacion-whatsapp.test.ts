@@ -16,6 +16,7 @@ function portal(p: Partial<PortalCartera> = {}): PortalCartera {
     ultimoAccesoEn: null,
     identidades: 0,
     emailInvitacion: 'ana@example.com',
+    otrasFichas: null,
     ...p,
   }
 }

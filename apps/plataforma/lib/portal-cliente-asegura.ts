@@ -62,6 +62,27 @@ export type PortalCartera = {
    * teclear un correo que no recibirá ningún código.
    */
   emailInvitacion: string | null
+  /**
+   * Solo en `ambiguo`/`resuelve_a_otra`: las OTRAS fichas que se quedan su
+   * correo, para enlazarlas. `null` = asegura no lo manda (versión anterior o
+   * no se pudo leer): la pantalla no nombra ninguna, que no es «no hay».
+   */
+  otrasFichas: OtraFicha[] | null
+}
+
+export type OtraFicha = { clienteId: string; nombre: string | null; principal: boolean }
+
+function leerOtrasFichas(v: unknown): OtraFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const r: OtraFicha[] = []
+  for (const x of v) {
+    if (typeof x !== 'object' || x === null) continue
+    const o = x as Record<string, unknown>
+    const id = cadena(o.clienteId)
+    if (id === null) continue
+    r.push({ clienteId: id, nombre: cadena(o.nombre), principal: o.principal === true })
+  }
+  return r
 }
 
 function cadena(v: unknown): string | null {
@@ -102,6 +123,7 @@ export function leerPortal(v: unknown): PortalCartera | null {
     // se lee como `null` —«no se sabe cuál»—, que es justo lo que apaga el
     // canal de WhatsApp en vez de inventarse una dirección.
     emailInvitacion: cadena(o.emailInvitacion),
+    otrasFichas: leerOtrasFichas(o.otrasFichas),
   }
 }
 
@@ -278,7 +300,7 @@ export function explicarPortal(p: PortalCartera): FrasePortal {
       return {
         titulo: 'No se le puede invitar todavía: su correo está en más de una ficha',
         queHacer:
-          'El portal no sabría cuál enseñarle, así que entraría y vería una bóveda VACÍA, sin ningún error: peor que no invitarle. Se arregla resolviendo el duplicado (fusionar o corregir la otra ficha), no reintentando.',
+          'El portal no sabría cuál enseñarle, así que entraría y vería una bóveda VACÍA, sin ningún error: peor que no invitarle. Se arregla resolviendo el duplicado (fusionar o corregir la otra ficha), no reintentando. Tampoco por WhatsApp: el portal se abre con el correo y le llevaría al mismo sitio.',
         accion: 'ninguna',
         tono: 'aviso',
       }
@@ -286,7 +308,7 @@ export function explicarPortal(p: PortalCartera): FrasePortal {
       return {
         titulo: 'No se le puede invitar todavía: su correo lleva a OTRA ficha',
         queHacer:
-          'Con ese correo el portal no le traería aquí, así que entraría y no vería sus pólizas. Revisa si hay una ficha duplicada suya y resuélvela antes de escribirle.',
+          'Con ese correo el portal no le traería aquí, así que entraría y no vería sus pólizas. Si esa otra ficha es él mismo, fusiónalas; si es otra persona, corrige el correo de la que no es. Tampoco por WhatsApp: el portal se abre con el correo y le llevaría a esa otra ficha.',
         accion: 'ninguna',
         tono: 'aviso',
       }
