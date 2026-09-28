@@ -1750,6 +1750,65 @@ export async function tarificacionGuardadaAsegura(polizaId: string): Promise<Res
   }
 }
 
+/** La última tarificación de un cliente NUEVO (sin póliza), para retomarla sin pagar otra vez. */
+export type TarificacionNuevaGuardada = {
+  cotizacionId: string
+  projectId: string
+  creadaEn: string
+  fechaEfecto: string | null
+  /** Efecto ya pasado: la compañía no confirma ni emite. No se ofrece retomarla. */
+  caducada: boolean
+  precios: Precio[]
+}
+
+export type RespuestaTarificacionNueva =
+  | { estado: 'sin_configurar'; mensaje: string }
+  | { estado: 'error'; motivo: MotivoPuerto; mensaje: string }
+  | { estado: 'ninguna' }
+  | { estado: 'ok'; guardada: TarificacionNuevaGuardada }
+
+/** PURO: la respuesta de `GET .../tarificacion?clienteId=&ramo=` → estados de la pantalla. */
+export function interpretarTarificacionNueva(status: number, json: unknown): RespuestaTarificacionNueva {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado', mensaje: MOTIVOS_PUERTO.secreto_rechazado }
+  if (status === 200 && r.estado === 'ninguna') return { estado: 'ninguna' }
+  if (status === 200 && r.estado === 'ok') {
+    const precios = leerPreciosGuardados(r.precios)
+    if (!precios || typeof r.cotizacionId !== 'string' || typeof r.projectId !== 'string') {
+      return { estado: 'error', motivo: 'respuesta_ilegible', mensaje: MOTIVOS_PUERTO.respuesta_ilegible }
+    }
+    return {
+      estado: 'ok',
+      guardada: {
+        cotizacionId: r.cotizacionId,
+        projectId: r.projectId,
+        creadaEn: cadenaONulo(r.creadaEn) ?? '',
+        fechaEfecto: cadenaONulo(r.fechaEfecto),
+        caducada: r.caducada === true,
+        precios,
+      },
+    }
+  }
+  if (r.estado === 'sin_configurar') return { estado: 'sin_configurar', mensaje: cadenaONulo(r.mensaje) ?? 'Codeoscopic no está configurado en central-asegura.' }
+  const detalle = describirCausaAsegura(typeof r.causa === 'string' ? r.causa : undefined)
+  return { estado: 'error', motivo: 'asegura_error', mensaje: [cadenaONulo(r.mensaje), detalle].filter((x): x is string => !!x).join(' — ') || `error ${status}` }
+}
+
+/** `GET .../tarificacion?clienteId=&ramo=` — **gratis**, solo lee lo ya pagado. */
+export async function tarificacionNuevaGuardadaAsegura(clienteId: string, ramo: 'auto' | 'moto' | 'hogar'): Promise<RespuestaTarificacionNueva> {
+  try {
+    const r = await pedir(
+      `/api/operador/codeoscopic/tarificacion?clienteId=${encodeURIComponent(clienteId)}&ramo=${ramo}`,
+      { method: 'GET' },
+      TIMEOUT_TARIFICACION_GUARDADA_MS,
+    )
+    if (r === null) return { estado: 'sin_configurar', mensaje: 'El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).' }
+    return interpretarTarificacionNueva(r.status, r.json)
+  } catch (e) {
+    return { estado: 'error', motivo: 'red', mensaje: `${MOTIVOS_PUERTO.red} (${e instanceof Error ? e.message : String(e)})` }
+  }
+}
+
 // ─── Nota sobre los tipos duplicados ─────────────────────────────────────────
 //
 // `Opcion`, `Reparo`, `Supuesto`, `Precio` y `Fallo` existen también en
