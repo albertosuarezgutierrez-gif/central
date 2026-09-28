@@ -119,6 +119,14 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo }: { poli
                   Ya está emitida
                 </button>
               )}
+              {p.opciones > 0 && p.estado !== 'retirado' && p.estado !== 'caducado' && (
+                // Solo descarga: no avisa a nadie. En pestaña nueva y sin `download`: si falla, se ve el error en vez de
+                // guardarse un «pdf» que dentro es un JSON.
+                <a href={`/api/correduria/presupuesto/pdf?id=${encodeURIComponent(p.id)}`} target="_blank" rel="noopener"
+                  style={{ ...btnStyle('secundario'), display: 'inline-flex', alignItems: 'center', minHeight: 44, textDecoration: 'none' }}>
+                  Descargar PDF
+                </a>
+              )}
               {a.retirar && (
                 <button type="button" disabled={!libre} style={btnStyle('sutil')} onClick={() => {
                   if (p.estado === 'aceptado' && !window.confirm('El cliente ya lo ACEPTÓ y firmó. Si firmó también la anulación de su póliza actual, se desiste: no saldrá a la compañía. ¿Retirar?')) return

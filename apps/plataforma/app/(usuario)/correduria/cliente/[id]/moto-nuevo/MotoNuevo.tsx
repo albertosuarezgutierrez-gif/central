@@ -27,7 +27,7 @@ import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
-import type { TarificacionNuevaGuardada } from '@/lib/retarificar-asegura'
+import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
@@ -177,14 +177,40 @@ export default function MotoNuevo({
   // La parrilla vivía solo en memoria: al cerrar la pestaña no había forma de preparar el
   // presupuesto ni de emitir sin volver a pagar. Gratis: solo lee lo ya guardado.
   const [guardada, setGuardada] = useState<TarificacionNuevaGuardada | null>(null)
+  // La moto de la última petición de precio (28/09/2026, Alberto: «ya tienes los datos»): se precarga
+  // para volver a pedir precio corrigiendo solo lo que cambió (garaje, km…). Vale aunque sus precios
+  // hayan caducado: la moto no caduca. Solo rellena lo que el corredor aún no ha tocado.
+  const [previo, setPrevio] = useState<VehiculoGuardado | null>(null)
+  const [usarPrevio, setUsarPrevio] = useState(false)
   useEffect(() => {
     if (poliza !== null) return
     let vivo = true
     pedirTarificacionGuardadaMoto({ clienteId })
-      .then((r) => { if (vivo && r.estado === 'ok' && !r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada) })
+      .then((r) => {
+        if (!vivo || r.estado !== 'ok') return
+        if (!r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada)
+        const v = r.guardada.vehiculo
+        if (!v) return
+        setPrevio(v)
+        setUsarPrevio(true)
+        setCodigoVehiculo((c) => c || v.codigoVehiculo)
+        if (v.matricula) setMatricula((m) => m || v.matricula!)
+        if (v.fechaMatriculacion) {
+          setMatriculacion((f) => f || v.fechaMatriculacion!)
+          setMatriculacionEstimada(false)
+        }
+        // Los km solo si se DECLARARON: la media supuesta no se convierte en un dato del cliente.
+        if (v.kmAnuales !== null && v.kmAnuales !== KM_ANUALES_SUPUESTOS) {
+          setKmAnuales((k) => k || String(v.kmAnuales))
+        }
+      })
       .catch(() => {})
     return () => { vivo = false }
   }, [clienteId, poliza])
+  function elegirOtraMoto() {
+    setUsarPrevio(false)
+    setCodigoVehiculo('')
+  }
   const retomar = (g: TarificacionNuevaGuardada) =>
     setResultado({
       estado: 'ok',
@@ -228,6 +254,7 @@ export default function MotoNuevo({
   }
 
   async function alElegirMarca(id: string) {
+    setUsarPrevio(false)
     setMarcaId(id)
     setModeloId('')
     setCodigoVehiculo('')
@@ -470,7 +497,17 @@ export default function MotoNuevo({
       <div style={cardStyle}>
         <CardHeader title="1 · La moto" sub="Marca, modelo, combustible y versión: todo del catálogo de Codeoscopic, gratis." />
         {fallo && <p style={{ color: 'var(--negative)', fontSize: 13 }}>{fallo}</p>}
+        {usarPrevio && previo && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 10, fontSize: 13 }}>
+            <span>
+              <strong>La misma moto que la última vez</strong>
+              {previo.matricula ? ` · ${previo.matricula}` : ''} · versión {previo.codigoVehiculo}. Corrige solo lo que haya cambiado.
+            </span>
+            <button type="button" onClick={elegirOtraMoto} style={{ ...btnStyle('sutil'), minHeight: 44 }}>Elegir otra moto</button>
+          </div>
+        )}
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
+          {!(usarPrevio && previo) && (<>
           <Campo etiqueta="Marca" falta={false}>
             <SelectorBuscable
               valor={marcaId}
@@ -519,6 +556,7 @@ export default function MotoNuevo({
               style={input}
             />
           </Campo>
+          </>)}
           {poliza ? (
             <Campo etiqueta="Matrícula" falta={false} ayuda="Sale de la póliza: no se cambia aquí.">
               <input value={matricula || 'La de la póliza'} readOnly style={{ ...input, opacity: 0.8 }} />

@@ -7964,3 +7964,17 @@ Fuera: datos de terceros (cifrados) y `ref_mediador_cima`. ⚠️ Los campos nue
 falta reprocesar los 46 SIN (lote cifrado ya en la rama temporal `cima-lote-sin-2026-09-28` del repo asegura; el
 clasificador bloquea leer la clave → lo lanza Alberto con `scratchpad/cima/clave.txt`). Borrar después ramas
 `cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` y los runs de `cima-rescate-lote`.
+
+## (28/09/2026) Presupuesto en PDF descargable desde la ficha del cliente
+Botón «Descargar PDF» en cada presupuesto (`PresupuestosPoliza`, ficha de cliente y de póliza) → plataforma
+`/api/correduria/presupuesto/pdf` → asegura `GET /api/operador/presupuesto/pdf` (pdf-lib, `lib/presupuesto-pdf.ts` puro +
+`presupuesto-pdf-datos.ts`). Mismas opciones y primas que ve el cliente en el portal (sin ocultas), datos del cálculo
+(matrícula, km, garaje), necesidades y pie legal; SIN DNI/IBAN/dirección, sin avisos internos de la compañía y sin enlace
+con token. Solo descarga: no avisa a nadie. Caso Manuel Piña (moto 2121NST): su único presupuesto (366dbbba) es de la
+tarificación vieja (15.000 km, sin garaje) — hay que retarificar antes de mandarle un PDF.
+Diseño de marca: Quicksand/Nunito Sans embebidas (`@pdf-lib/fontkit`), logotipo y logos de compañía en PNG base64
+(`presupuesto-pdf-recursos.ts`, regenerar al cambiar un logo). Y el carné: cliente NUEVO con carné B en la ficha ya no se
+lo pide el bot (auto y moto caían a la «fecha del conductor», que para una ficha sin póliza es null).
+El PDF abre con «Revisa tus datos» (los mismos grupos que el portal, `leerDatosCotizados`, DNI enmascarado); las
+recomendadas (con papel) van en tarjeta y el resto en tabla compacta (`repartirOpciones`). DNI ENTERO en el PDF (va al propio
+tomador para revisar la emisión; `leerDatosCotizados(..., {documentoCompleto})`, portal y firma siguen enmascarados).
