@@ -1,8 +1,10 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { Pencil } from 'lucide-react'
 import { MODALIDADES_RC } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
+import { FILA } from '@/app/(usuario)/correduria/iconos'
 
 /**
  * «¿Qué tipo de RC es?» — cuando la compañía no manda coberturas por CIMA,
@@ -24,7 +26,7 @@ export default function EditarModalidadRc({ polizaId, informadoPorCima }: { poli
   if (!abierto) {
     return (
       <button type="button" onClick={() => setAbierto(true)} style={btnStyle('secundario', 'sm')}>
-        ✏️ ¿Qué tipo de RC es?
+        <span style={FILA}><Pencil size={16} strokeWidth={1.75} /> ¿Qué tipo de RC es?</span>
       </button>
     )
   }

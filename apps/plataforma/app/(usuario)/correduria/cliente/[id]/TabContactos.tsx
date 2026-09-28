@@ -521,8 +521,8 @@ function Portal({ clienteId, nombre, telefonos }: {
             {enviando
               ? 'enviando…'
               : frase.accion === 'invitar'
-                ? '✉️ Invitarle al portal por correo'
-                : '✉️ Reenviarle el enlace por correo'}
+                ? 'Invitarle al portal por correo'
+                : 'Reenviarle el enlace por correo'}
           </button>
         )}
 

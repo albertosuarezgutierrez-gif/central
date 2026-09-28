@@ -1,7 +1,9 @@
 'use client'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { House } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { FILA } from '@/app/(usuario)/correduria/iconos'
 import DireccionConfirmable from '../../DireccionConfirmable'
 
 /**
@@ -31,7 +33,7 @@ export default function EditarDireccionRiesgo({ polizaId, esHogar }: { polizaId:
   if (!abierto) {
     return (
       <button type="button" onClick={() => setAbierto(true)} style={btnStyle('secundario', 'sm')}>
-        🏠 Anotar la dirección del inmueble
+        <span style={FILA}><House size={16} strokeWidth={1.75} /> Anotar la dirección del inmueble</span>
       </button>
     )
   }

@@ -225,7 +225,7 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
       <Resumen o={o} />
       <div style={{ color: o.proximaTarea === null || vencida ? 'var(--negative)' : 'var(--text)' }}>
         {o.proximaTarea === null
-          ? (aparcada ? 'Sin paso pendiente (aparcada).' : '⚠️ Sin siguiente paso: nadie la va a mirar. Ponle una tarea en «Gestionar».')
+          ? (aparcada ? 'Sin paso pendiente (aparcada).' : 'Sin siguiente paso: nadie la va a mirar. Ponle una tarea en «Gestionar».')
           : `Siguiente: ${o.proximaTarea.tipo} el ${fmt(o.proximaTarea.fechaLimite)}${vencida ? ' (vencida)' : ''}`}
       </div>
       {/* UN botón por fila (26/09/2026, «muy poco clara y muy extensa»): Corregir,
@@ -398,7 +398,7 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void leerDocumento(f) }}
         />
         <button type="button" disabled={leyendo} onClick={() => fichero.current?.click()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, justifySelf: 'start' }}>
-          {leyendo ? 'Leyendo el documento…' : '📎 Rellenar desde póliza, recibo o foto'}
+          {leyendo ? 'Leyendo el documento…' : 'Rellenar desde póliza, recibo o foto'}
         </button>
         {lectura && <div role="status" style={{ color: lectura.ok ? 'var(--positive)' : 'var(--negative)' }}>{lectura.texto}</div>}
         {!lectura && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento y prima. No se guarda el documento.</div>}
