@@ -167,21 +167,21 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 174 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 176 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 169 | 21.315 | 14.669.268 | 0 | 0 |
-| `otro` | 164 | 5.334 | 17.511.194 | 8.187.555 | 0 |
-| `mcp:github` | 153 | 4.321 | 3.792.082 | 45.538.785 | 72 |
-| `lectura-directa` | 153 | 4.114 | 8.731.036 | 0 | 0 |
+| `bash` | 171 | 21.420 | 14.743.457 | 0 | 0 |
+| `otro` | 166 | 5.357 | 17.574.141 | 8.187.555 | 0 |
+| `mcp:github` | 155 | 4.344 | 3.799.884 | 45.538.785 | 72 |
+| `lectura-directa` | 155 | 4.129 | 8.750.613 | 0 | 0 |
 | `escritura` | 126 | 2.573 | 41.082.901 | 0 | 0 |
-| `sql` | 106 | 2.178 | 1.005.096 | 2.348.760 | 8 |
-| `mcp:Claude_Code_Remote` | 94 | 1.042 | 234.913 | 3.193.171 | 12 |
+| `sql` | 107 | 2.187 | 1.011.794 | 2.348.760 | 8 |
+| `mcp:Claude_Code_Remote` | 96 | 1.050 | 236.637 | 3.193.171 | 12 |
 | `mcp:Booking-com` | 15 | 421 | 1.744.830 | 0 | 0 |
-| `mcp:Vercel` | 34 | 408 | 638.133 | 198.719 | 10 |
+| `mcp:Vercel` | 34 | 411 | 644.043 | 198.719 | 10 |
 | `mcp:Gmail` | 20 | 276 | 432.672 | 0 | 2 |
-| `mcp:Supabase` | 66 | 205 | 20.934 | 0 | 2 |
+| `mcp:Supabase` | 67 | 206 | 21.032 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
 | `agente:general-purpose` | 29 | 90 | 60.222 | 1.133.042 | 0 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
@@ -196,8 +196,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Resend` | 4 | 41 | 11.662 | 0 | 0 |
 | `agente:agente-mecanico` | 13 | 33 | 33.925 | 774.297 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
+| `agente:rastreador-codigo` | 15 | 21 | 7.310 | 97.949 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
-| `agente:rastreador-codigo` | 14 | 20 | 7.033 | 97.949 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
 | `agente:general` | 7 | 9 | 5.242 | 231.483 | 0 |
