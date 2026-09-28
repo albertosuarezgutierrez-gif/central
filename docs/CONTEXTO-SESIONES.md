@@ -860,6 +860,15 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Comisiones FIRMADAS por compañía: tabla `seguros.comision_pactada` + bloque en Datos
+- Tabla (aplicada en prod) con compañía, producto (= `ramoEntidad` de CIMA), modalidad, **acuerdo** ('directo' o
+  nombre de asociación), % 1º año / cartera, `vigente_desde` (fila nueva por cuadro, nunca UPDATE) y fuente.
+  Sembrada: Allianz C0109, producto 1434 RC PYME (22,5 % Vida privada, 17,5 % el resto) desde 28/10/2026.
+- Cruce puro `lineasComision()` (module-seguros): recibos NP/CA contra lo firmado (±0,5 puntos); con asociación
+  vigente se compara contra ella y sale el extra sobre el directo. `sin-cuadro`/`sin-recibos`/`por-modalidad` ≠ cuadra.
+- Puerto `GET /api/operador/comisiones-pactadas` → `ComisionesPactadas.tsx` junto a «Contactos por compañía».
+- Pendiente: cargar los cuadros de auto/moto/hogar de Allianz y del resto (hoy solo hay % real). Carga por SQL, sin formulario.
+
 ## (28/09/2026) Telegram de la correduría ya ENVÍA presupuestos (rescata la tarificación guardada)
 - #3888 mergeado (retomar sin pagar la última tarificación de moto de un cliente nuevo). Nueva herramienta
   `enviar_presupuesto`: el servidor rescata la tarificación guardada (vigente y con primas), exige portal invitable/ya_entra

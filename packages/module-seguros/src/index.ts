@@ -174,6 +174,19 @@ export type { HogarLeido } from './documento-hogar.ts'
 
 export { importeEiac, sumarImportesEiac } from './importe-eiac.ts'
 export {
+  ACUERDO_DIRECTO,
+  TOLERANCIA_PUNTOS,
+  lineasComision,
+  pctRecibo,
+  resolverCuadro,
+  type CuadroFila,
+  type EntradaCuadro,
+  type ExtraAcuerdo,
+  type LineaComision,
+  type ReciboComision,
+  type VeredictoComision,
+} from './comision-pactada.ts'
+export {
   interpretarCapital,
   extraerDetalleCobertura,
   type CapitalCobertura,

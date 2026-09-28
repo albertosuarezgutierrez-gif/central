@@ -175,3 +175,19 @@ export async function marcarContactoAsegura(contactoId: string): Promise<Reenvio
     return { status: 502, json: { estado: 'error', motivo: 'red' } }
   }
 }
+
+/** Cuadro de comisiones pactado cruzado con los recibos de CIMA (`GET /api/operador/comisiones-pactadas`). */
+export async function comisionesPactadasAsegura(): Promise<Reenvio> {
+  const h = await cabeceras()
+  if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/comisiones-pactadas`, {
+      headers: h,
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
+    return { status: res.status, json: await res.json().catch(() => null) }
+  } catch {
+    return { status: 502, json: { estado: 'error', motivo: 'red' } }
+  }
+}

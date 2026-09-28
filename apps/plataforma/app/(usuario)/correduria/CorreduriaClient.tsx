@@ -24,6 +24,7 @@ import Calidad from './Calidad'
 import SinCanal from './SinCanal'
 import ExportRgpd from './ExportRgpd'
 import Companias from './Companias'
+import ComisionesPactadas from './ComisionesPactadas'
 import RadarRecibos from './RadarRecibos'
 import PartesPortal from './PartesPortal'
 import Supresiones from './Supresiones'
@@ -683,6 +684,9 @@ export default function CorreduriaClient() {
         {/* Directorio de contacto por compañía, minado del correo. Sin
             contador: es referencia, no trabajo pendiente. */}
         <Companias />
+
+        {/* Cuadro de comisiones firmado por compañía frente al % real de los recibos. Referencia, sin contador. */}
+        <ComisionesPactadas />
 
         {/* Qué compañías reconocidas nunca han avisado de un recibo por correo
             (20/09/2026). Sin contador: es radar, no trabajo pendiente. */}
