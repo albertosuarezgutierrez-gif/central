@@ -2,6 +2,7 @@ import Link from 'next/link'
 
 import type { PolizaPortal } from '@/lib/cartera-lectura'
 import { fechaEs } from '@/lib/fechas'
+import { figuraChip } from '@/lib/intervinientes'
 
 import { empiezaMasAdelante, ESTADO, IconoRamo, RAMO, tituloDePoliza, tituloEsBien } from './PolizaVista'
 
@@ -96,6 +97,9 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
                 {ESTADO[p.estado] ?? p.estado}
               </span>
             )}
+            {/* Tu figura en la póliza (28/09/2026): «Tomador», «Propietario»… Sin
+                papel conocido no se pinta nada: no se inventa uno. */}
+            {p.figura && p.figura.length > 0 && <span className="chip">{figuraChip(p.figura)}</span>}
             {p.sustituyeA && (
               <span className="chip">
                 {empieza ? `Hasta entonces, ${p.sustituyeA.compania}` : `Sustituye a ${p.sustituyeA.compania}`}

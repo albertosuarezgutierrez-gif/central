@@ -12,6 +12,14 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — `facturas-correo`: pasada de rutina sin novedades que archivar. Vía B sana
+(`dias_caido=0`), `agente_salud` actualizado. Sin candidatos nuevos en correo ni subidas manuales.
+Backlog persistente revisado y confirmado sin resolver: ASECON 181,50€ (factura 1-001804, renta
+personal) SIN cargo en banco jul-sep — coincide con el aviso de impago de ASECON, para decisión de
+Alberto (pago + `destino` si se archiva); 2 Endesa Socorro 24 en `PDF-pendiente` (solo enlace al
+portal, sin adjunto) — una ya conciliada por banco, falta el PDF. `v_facturas_sin_cargo`: 0 filas
+sin revisar. Detalle en `docs/AGENTES-BITACORA.md`.
+
 **(28/09/2026)** — Alerta «Se están perdiendo datos de CIMA»: el bloque de 46 objetos (REC 40 · POL 6) y la caja negra de Codeoscopic (131 envíos) eran FALSOS POSITIVOS. Medido: los 52 recibos en review están en `poliza_recibos` y las 6 pólizas (comunidades/embarcaciones) en cartera sin duplicado, todo entrado con el rescate del 24/09, que NO emite parte nuevo → el vigía se quedaba con el del 15/09. Fix: el vigía (`apps/asegura/lib/ingesta.ts`) respeta un `cima_residuo_resuelto_manual` POSTERIOR al último parte (el REC 261 del 12/07 ya lo tenía y se ignoraba); emitidos los 5 cierres tras comprobar objeto a objeto. Codeoscopic: el receptor ya acepta el array desde el 19/09 08:07 (2 eventos guardados, `project_not_found`); fila de la caja negra marcada `reprocesado_at`. Real y pendiente: Mapfre sin POL (10 renovaciones) → reclamar en ticket SAU-24238. PR #3821 **MERGEADO** (1579a34).
 
 **(28/09/2026)** — Ficha cliente correduría: (1) las baldosas de acceso dicen algo siempre que se sepa (`detallesAccesos` en `cliente/[id]/tabs.ts`, puro+test): Contactos = «2 teléfonos · 1 correo · 3 personas» (antes solo personas de pólizas), ceros leídos se dicen, `null` no se pinta. (2) Portal «su correo lleva a OTRA ficha»: asegura devuelve `otrasFichas` (id+nombre, solo de la propia correduría) y la ficha las enlaza. El WhatsApp sigue oculto A PROPÓSITO en ese estado (el portal entra por correo → acabaría en la otra ficha); ahora se dice. Medido: 92 fichas con correo `es_principal` en `cliente_emails` pero sin hash en `clientes` porque el backfill no escribe choques → todas `resuelve_a_otra`; se arreglan fusionando/corrigiendo, no con código. PR #3812 **MERGEADO** (8150fce).
@@ -826,6 +834,16 @@ firmado en `documentos` de la póliza (visible en su portal) y le manda correo c
 justificante al cliente» en plataforma (póliza → anulación) = reenvío manual. Pendiente: pulsarlo para Pablo (y decidir
 Victor/Jose, también firmados sin justificante).
 Mismo PR: el portal reabre el campo del código si hay uno vigente (`codigoCaducaEn`) y enseña «Bajas que has firmado» 60 días.
+⚠️ Ese día Mapfre contestó que CCORREDOR@mapfre.com es SOLO comercial: las bajas de Pablo y Jose NO están comunicadas.
+`recibe_anulaciones` de Mapfre a false, CCORREDOR re-etiquetado comercial; mapfre@mapfre.es probado → Resend «suppressed» (no
+entrega). Borradores en Gmail a jmreal@mapfre.com (comercial) preguntando el buzón de bajas. Los otros 4 buzones «general» sin verificar.
+
+## (28/09/2026) asegura-portal: la FIGURA del cliente en cada póliza
+- Alberto: «indicar en la app cliente la figura que tiene en la póliza». Chip en la fila de la bóveda («Tomador», «Tomador y conductor habitual», «Propietario») y frase en la ficha («En esta póliza figuras como…» / «…como propietario. El tomador es X.»).
+- `figuraEnPropias()` + `figuraChip()` en `apps/asegura-portal/lib/intervinientes.ts`; `PolizaPortal.figura` (solo propias e intervinientes; las autorizadas no la llevan: las ve por permiso).
+- Caso 1 (auto particular): el tomador ve «Tomador y conductor habitual» y el propietario «Propietario». ⚠️ Esa póliza está DOS veces en BD (mismo número con y sin ceros a la izquierda, ambas activas): gemela sin fundir, no tocada aquí.
+- Caso 2 (auto de empresa): tomador la sociedad; CIMA trae al administrador como conductor_habitual. Él la ve como DUEÑO («Tu sociedad») y ahí no salía papel → `rolesPropiosPorPoliza()` pinta también la figura en autorizadas/empresas cuando figura. (Identificadores de ambos casos en la conversación de sesión, no aquí: PII.)
+- Ingesta CIMA (asegura#859, mergeado 28/09): guarda TODAS las figuras — un papel por fila (índice `(correduria,poliza,nif_lookup_hash,rol)` ya aplicado en `seguros`), propietario empresa, asegurado = tomador (sin contacto). ⏸️ Falta reprocesar los 36 POL de Drive con `cima-rescate-lote` (lote cifrado preparado en la sesión, no lanzado): hasta entonces los datos viejos siguen sin el 2º papel.
 
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.

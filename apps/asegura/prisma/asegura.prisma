@@ -138,6 +138,7 @@ enum IntervinienteRol {
   contacto
   beneficiario
   asegurado
+  pagador
 
   @@map("interviniente_rol")
 }
