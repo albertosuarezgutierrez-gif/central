@@ -148,6 +148,13 @@ export type TarificacionParaEmitir = {
   clienteId: string | null
   ramo: string | null
   peticion: unknown
+  /**
+   * `tarificaciones.poliza_id`: la póliza que esta cotización retarificaba. Si NO es
+   * null, el proyecto no es negocio nuevo aunque haya perdido su `poliza_id` (ver
+   * `proyecto_liberado` en `resolverContextoEmision`). Obligatorio a propósito: quien
+   * llama tiene que leerlo, no puede olvidarse.
+   */
+  polizaId: string | null
 }
 
 /** La ficha del cliente del proyecto (camino NUEVO), leída con correduría y no fusionada. */
@@ -179,12 +186,26 @@ export function resolverContextoEmision(e: {
   poliza: PolizaParaEmitir | null
   tarificacion: TarificacionParaEmitir | null
   ficha?: FichaParaEmitir | null
+  /**
+   * Solo en sustitución y solo cuando `poliza` no se ha podido leer: `true` si la póliza
+   * existe pero su tomador está fusionado en otra ficha (`merged_into_cliente_id`). Así el
+   * 404 dice la causa de verdad en vez de «la póliza ya no existe».
+   */
+  polizaTomadorFusionado?: boolean
   cifrar?: (texto: string) => string
 }): ResultadoContexto {
   const { proyecto, poliza } = e
 
   if (proyecto.polizaId) {
     if (!poliza) {
+      if (e.polizaTomadorFusionado === true) {
+        return {
+          ok: false,
+          status: 404,
+          causa: 'tomador_fusionado',
+          mensaje: 'el tomador de esta póliza se fusionó en otra ficha: retarifica desde la ficha buena',
+        }
+      }
       return { ok: false, status: 404, causa: 'otro', mensaje: 'la póliza enlazada a este proyecto ya no existe' }
     }
     if (proyecto.clienteId && proyecto.clienteId !== poliza.clienteId) {
@@ -220,6 +241,21 @@ export function resolverContextoEmision(e: {
         status: 404,
         causa: 'otro',
         mensaje: 'la tarificación de este proyecto no se encuentra en esta correduría (o es simulada)',
+      }
+    }
+    // 🚨 Proyecto LIBERADO (28/09/2026): `/oferta` e `/importar` ponen a null el
+    // `poliza_id` de los demás proyectos no emitidos de una póliza cuando otro la
+    // retarifica. Ese proyecto se queda con cliente + tarificación y parecería negocio
+    // nuevo; emitirlo acuñaría una póliza SIN baja de la anterior (doble seguro). La
+    // tarificación recuerda de qué póliza venía: si la tiene, no es nuevo.
+    if (t.polizaId) {
+      return {
+        ok: false,
+        status: 409,
+        causa: 'proyecto_liberado',
+        mensaje:
+          'esta cotización era la retarificación de una póliza y ahora la retarifica otro proyecto: ' +
+          'vuelve a confirmar la oferta desde la póliza',
       }
     }
     if (t.clienteId && t.clienteId !== proyecto.clienteId) {
@@ -300,6 +336,73 @@ export function corteIdentidadNuevo(hashTomador: string | null, hashFicha: strin
     return 'el DNI del tomador del proyecto no es el de la ficha del cliente: no se emite'
   }
   return null
+}
+
+// ── Duplicado del modo NUEVO ────────────────────────────────────────────────
+
+/** Póliza en vigor con la misma matrícula en CUALQUIER ficha de la correduría. */
+export type PolizaMismaMatricula = { id: string; numeroPoliza: string | null; mismoCliente: boolean }
+
+export type Duplicado = { causa: 'ya_en_cartera' | 'ya_emitido'; mensaje: string; polizas?: string[] }
+
+/** `••••1186`: basta para que el corredor la reconozca, no identifica a nadie. */
+export function enmascararNumeroPoliza(n: string | null): string | null {
+  const limpio = (n ?? '').replace(/\s+/g, '')
+  if (!limpio) return null
+  return `••••${limpio.length > 4 ? limpio.slice(-4) : ''}`
+}
+
+/**
+ * Decide si un proyecto NUEVO es un duplicado. En auto/moto con matrícula se miran
+ * SIEMPRE las dos cosas —póliza en vigor con esa matrícula en toda la correduría Y
+ * proyecto `emitida` reciente del cliente y ramo— porque un nuevo que acabó
+ * `emitido_sin_acunar` no deja póliza en cartera. Sin matrícula (u otro ramo) solo
+ * cuenta el proyecto reciente: `mismaMatricula` tiene que llegar vacío.
+ *
+ * De una póliza de OTRA ficha solo se dice que existe, su id y su número enmascarado:
+ * nada de esa persona.
+ */
+export function decidirDuplicadoNuevo(e: {
+  tipo: string
+  matricula: string | null
+  mismaMatricula: PolizaMismaMatricula[]
+  proyectosRecientes: string[]
+}): Duplicado | null {
+  const motor = (e.tipo === 'auto' || e.tipo === 'moto') && !!e.matricula
+  const partes: string[] = []
+  let causa: Duplicado['causa'] | null = null
+  let polizas: string[] | undefined
+
+  if (motor && e.mismaMatricula.length > 0) {
+    causa = 'ya_en_cartera'
+    polizas = e.mismaMatricula.map((m) => m.id)
+    const propias = e.mismaMatricula.filter((m) => m.mismoCliente)
+    const ajenas = e.mismaMatricula.filter((m) => !m.mismoCliente)
+    if (propias.length > 0) {
+      const n = propias[0].numeroPoliza
+      partes.push(
+        `Este cliente ya tiene en vigor ${propias.length === 1 ? 'una póliza' : `${propias.length} pólizas`} de la matrícula ${e.matricula}` +
+          `${n ? ` (nº ${n})` : ''}: emite desde esa póliza para que se tramite la baja.`,
+      )
+    }
+    if (ajenas.length > 0) {
+      const n = enmascararNumeroPoliza(ajenas[0].numeroPoliza)
+      partes.push(
+        `La matrícula ${e.matricula} ya está asegurada en OTRA ficha de la cartera ` +
+          `(${ajenas.length === 1 ? 'póliza' : `${ajenas.length} pólizas, la primera`} ${n ?? `id ${ajenas[0].id}`}): ` +
+          'comprueba si es el mismo vehículo antes de emitir.',
+      )
+    }
+  }
+  if (e.proyectosRecientes.length > 0) {
+    causa ??= 'ya_emitido'
+    partes.push(
+      `A este cliente ya se le emitió otra póliza de ${e.tipo} por Codeoscopic en los últimos 30 días ` +
+        `(proyecto ${e.proyectosRecientes[0]}): puede ser un duplicado.`,
+    )
+  }
+  if (!causa) return null
+  return { causa, mensaje: partes.join(' '), ...(polizas ? { polizas } : {}) }
 }
 
 function esObjeto(v: unknown): v is Record<string, unknown> {

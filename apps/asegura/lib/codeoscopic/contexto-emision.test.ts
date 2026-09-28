@@ -4,7 +4,9 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import {
   corteIdentidadNuevo,
+  decidirDuplicadoNuevo,
   emisionNuevoActiva,
+  enmascararNumeroPoliza,
   resolverContextoEmision,
   riesgoDeTarificacion,
   tipoDeRamo,
@@ -52,7 +54,7 @@ test('contexto NUEVO: polizaOrigenId null, tipo del ramo y riesgo de la tarifica
   const r = resolverContextoEmision({
     proyecto: PROYECTO_NUEVO,
     poliza: null,
-    tarificacion: { clienteId: 'cli-1', ramo: 'moto', peticion: PETICION_AUTO },
+    tarificacion: { clienteId: 'cli-1', ramo: 'moto', peticion: PETICION_AUTO, polizaId: null },
     ficha: { clienteId: 'cli-1', dniLookupHash: 'h' },
   })
   assert.equal(r.ok, true)
@@ -96,11 +98,38 @@ test('tarificación de otro cliente que el del proyecto → error', () => {
   const r = resolverContextoEmision({
     proyecto: PROYECTO_NUEVO,
     poliza: null,
-    tarificacion: { clienteId: 'cli-9', ramo: 'auto', peticion: PETICION_AUTO },
+    tarificacion: { clienteId: 'cli-9', ramo: 'auto', peticion: PETICION_AUTO, polizaId: null },
     ficha: { clienteId: 'cli-1', dniLookupHash: 'h' },
   })
   assert.equal(r.ok, false)
   if (!r.ok) assert.equal(r.causa, 'cliente_distinto')
+})
+
+test('proyecto LIBERADO (su tarificación retarificaba una póliza) → 409 proyecto_liberado, nunca modo nuevo', () => {
+  const r = resolverContextoEmision({
+    proyecto: PROYECTO_NUEVO,
+    poliza: null,
+    tarificacion: { clienteId: 'cli-1', ramo: 'auto', peticion: PETICION_AUTO, polizaId: 'pol-vieja' },
+    ficha: { clienteId: 'cli-1', dniLookupHash: 'h' },
+  })
+  assert.equal(r.ok, false, 'un proyecto liberado se emitiría como NUEVO: póliza sin baja de la anterior')
+  if (r.ok) return
+  assert.equal(r.status, 409)
+  assert.equal(r.causa, 'proyecto_liberado')
+  assert.match(r.mensaje, /vuelve a confirmar la oferta desde la póliza/)
+})
+
+test('sustitución con el tomador FUSIONADO → 404 que lo dice, no «la póliza ya no existe»', () => {
+  const base = { proyecto: { polizaId: 'pol-1', clienteId: null, tarificacionId: null }, poliza: null, tarificacion: null }
+  const fus = resolverContextoEmision({ ...base, polizaTomadorFusionado: true })
+  assert.equal(fus.ok, false)
+  if (fus.ok) return
+  assert.equal(fus.status, 404)
+  assert.equal(fus.causa, 'tomador_fusionado')
+  assert.match(fus.mensaje, /se fusionó en otra ficha: retarifica desde la ficha buena/)
+  const nada = resolverContextoEmision(base)
+  assert.equal(nada.ok, false)
+  if (!nada.ok) assert.match(nada.mensaje, /ya no existe/)
 })
 
 test('sin póliza y sin cliente+tarificación → el 409 de siempre', () => {
@@ -119,7 +148,7 @@ test('modo nuevo sin ficha (o fusionada) → 404; ramo que no mapea → 422, nun
   const sinFicha = resolverContextoEmision({
     proyecto: PROYECTO_NUEVO,
     poliza: null,
-    tarificacion: { clienteId: 'cli-1', ramo: 'auto', peticion: PETICION_AUTO },
+    tarificacion: { clienteId: 'cli-1', ramo: 'auto', peticion: PETICION_AUTO, polizaId: null },
     ficha: null,
   })
   assert.equal(sinFicha.ok, false)
@@ -127,7 +156,7 @@ test('modo nuevo sin ficha (o fusionada) → 404; ramo que no mapea → 422, nun
   const raro = resolverContextoEmision({
     proyecto: PROYECTO_NUEVO,
     poliza: null,
-    tarificacion: { clienteId: 'cli-1', ramo: 'patinete', peticion: {} },
+    tarificacion: { clienteId: 'cli-1', ramo: 'patinete', peticion: {}, polizaId: null },
     ficha: { clienteId: 'cli-1', dniLookupHash: 'h' },
   })
   assert.equal(raro.ok, false)
@@ -190,6 +219,39 @@ test('interruptor del modo nuevo: solo CODEOSCOPIC_EMISION_NUEVO=1 lo enciende',
   assert.equal(emisionNuevoActiva({ CODEOSCOPIC_EMISION_NUEVO: '1' }), true)
 })
 
+test('duplicado auto/moto: póliza en vigor Y proyecto reciente se miran los DOS', () => {
+  // Sin póliza en cartera (el nuevo anterior acabó `emitido_sin_acunar`) el proyecto reciente basta.
+  const soloProyecto = decidirDuplicadoNuevo({ tipo: 'auto', matricula: '1234ABC', mismaMatricula: [], proyectosRecientes: ['P9'] })
+  assert.ok(soloProyecto, 'auto con matrícula tiene que mirar también el proyecto emitido reciente')
+  assert.equal(soloProyecto!.causa, 'ya_emitido')
+  const ambos = decidirDuplicadoNuevo({
+    tipo: 'moto', matricula: '1234ABC',
+    mismaMatricula: [{ id: 'pol-1', numeroPoliza: '3021700291186', mismoCliente: true }],
+    proyectosRecientes: ['P9'],
+  })
+  assert.equal(ambos!.causa, 'ya_en_cartera')
+  assert.deepEqual(ambos!.polizas, ['pol-1'])
+  assert.match(ambos!.mensaje, /emite desde esa póliza/)
+  assert.match(ambos!.mensaje, /P9/)
+  assert.equal(decidirDuplicadoNuevo({ tipo: 'auto', matricula: '1234ABC', mismaMatricula: [], proyectosRecientes: [] }), null)
+  assert.equal(decidirDuplicadoNuevo({ tipo: 'hogar', matricula: null, mismaMatricula: [], proyectosRecientes: ['P1'] })!.causa, 'ya_emitido')
+})
+
+test('duplicado: matrícula en OTRA ficha → ya_en_cartera con nº enmascarado, sin datos de esa ficha', () => {
+  const d = decidirDuplicadoNuevo({
+    tipo: 'auto', matricula: '1234ABC',
+    mismaMatricula: [{ id: 'pol-ajena', numeroPoliza: '3021700291186', mismoCliente: false }],
+    proyectosRecientes: [],
+  })
+  assert.ok(d)
+  assert.equal(d!.causa, 'ya_en_cartera')
+  assert.match(d!.mensaje, /OTRA ficha/)
+  assert.match(d!.mensaje, /••••1186/)
+  assert.ok(!d!.mensaje.includes('3021700291186'), 'el número completo de otra ficha no sale')
+  assert.equal(enmascararNumeroPoliza(null), null)
+  assert.equal(enmascararNumeroPoliza('12'), '••••')
+})
+
 // ── Cepos de FUENTE: lo que vigilan vive en SQL/rutas que no se pueden importar sin Prisma ──
 
 const RAIZ = join(import.meta.dirname, '../..')
@@ -226,16 +288,43 @@ test('emitir/route: todo `from tarificaciones` filtra por correduria_id', () => 
   for (const q of qs) assert.match(q, /correduria_id\s*=/, `consulta sin correduría: ${q.slice(0, 120)}`)
 })
 
-test('emitir/route: toda lectura de clientes excluye fichas fusionadas', () => {
+test('emitir/route: toda lectura de clientes excluye fichas fusionadas (salvo el diagnóstico booleano)', () => {
   const qs = consultasCon(EMITIR, /(from|join) clientes/)
   assert.ok(qs.length >= 2)
-  for (const q of qs) assert.match(q, /merged_into_cliente_id is null/, `consulta sin filtro de fusión: ${q.slice(0, 120)}`)
+  const DIAG = /select c\.merged_into_cliente_id is not null as tomador_fusionado\s+from/
+  const diagnosticos = qs.filter((q) => DIAG.test(q))
+  assert.equal(diagnosticos.length, 1, 'un único diagnóstico de fusión, que solo devuelve el booleano')
+  for (const q of qs) {
+    if (DIAG.test(q)) continue
+    assert.match(q, /merged_into_cliente_id is null/, `consulta sin filtro de fusión: ${q.slice(0, 120)}`)
+  }
+})
+
+test('emitir/route: la tarificación se lee CON su poliza_id y llega a resolverContextoEmision', () => {
+  const q = consultasCon(EMITIR, /from tarificaciones/)[0]
+  assert.match(q, /t\.poliza_id::text as poliza_id/)
+  assert.match(EMITIR, /polizaId: tar\.poliza_id/)
+  assert.match(EMITIR, /polizaTomadorFusionado: tomadorFusionado/)
+})
+
+test('emitir/route: la matrícula se busca en TODA la correduría, no solo en el cliente', () => {
+  const q = consultasCon(EMITIR, /datos_especificos->>'matricula'/)[0]
+  assert.ok(q, 'falta la consulta por matrícula')
+  const where = q.slice(q.indexOf('where'))
+  assert.doesNotMatch(where, /p\.cliente_id = \$\{ctx\.clienteId\}::uuid\s+and/, 'la matrícula no puede filtrar por el cliente del proyecto')
+  assert.match(q, /as mismo_cliente/)
+  assert.match(q, /merged_into_poliza_id is null/)
+  // Y la consulta de proyectos recientes NO depende del ramo/matrícula: se hace siempre.
+  const iRecientes = EMITIR.indexOf('const recientes = await')
+  const iMismas = EMITIR.indexOf('const mismas =')
+  assert.ok(iRecientes > iMismas && iMismas > 0)
+  assert.doesNotMatch(EMITIR.slice(iMismas, iRecientes), /\} else \{/, 'proyectos recientes no puede ir en un else del motor')
 })
 
 test('emitir/route: modo nuevo detrás de su interruptor, identidad y duplicado ANTES de acuñar', () => {
   const iInterruptor = EMITIR.indexOf('emisionNuevoActiva()')
   const iIdentidad = EMITIR.indexOf('corteIdentidadNuevo(')
-  const iDuplicado = EMITIR.indexOf("causa: 'ya_en_cartera'")
+  const iDuplicado = EMITIR.indexOf('decidirDuplicadoNuevo(')
   const iAcunar = EMITIR.indexOf('if (cuerpo.acunarExistente === true)')
   const iSubmit = EMITIR.indexOf('await enviarEmision(')
   for (const [n, i] of Object.entries({ iInterruptor, iIdentidad, iDuplicado, iAcunar, iSubmit })) assert.ok(i > 0, n)
@@ -252,5 +341,6 @@ test('oferta/route: sin literal auto de relleno, y graba cliente_id + tarificaci
   assert.match(insert, /cliente_id = coalesce\(codeoscopic_projects\.cliente_id, excluded\.cliente_id\)/)
   assert.match(insert, /tarificacion_id = excluded\.tarificacion_id/)
   // El 422 del ramo va ANTES del ReRate.
-  assert.ok(OFERTA.indexOf("causa: 'ramo_desconocido'") < OFERTA.indexOf('reRate('))
+  // (buscado por regex y no como literal: el cepo del libro de gasto confunde el literal con una llamada)
+  assert.ok(OFERTA.indexOf("causa: 'ramo_desconocido'") < OFERTA.search(/\breRate\s*\(/))
 })

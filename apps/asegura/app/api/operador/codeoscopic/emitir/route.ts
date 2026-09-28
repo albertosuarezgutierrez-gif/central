@@ -29,7 +29,13 @@ import {
 import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { documentoTomador, fraccionamientoDeOferta, matriculaProyecto } from '@/lib/codeoscopic/importar'
-import { corteIdentidadNuevo, emisionNuevoActiva, resolverContextoEmision } from '@/lib/codeoscopic/contexto-emision'
+import {
+  corteIdentidadNuevo,
+  decidirDuplicadoNuevo,
+  emisionNuevoActiva,
+  resolverContextoEmision,
+  type Duplicado,
+} from '@/lib/codeoscopic/contexto-emision'
 import { sqlCarteraEnVigor } from '@central/module-seguros'
 import { Prisma } from '@prisma/client'
 import { computeDniLookupHash } from '@central/module-seguros-pii'
@@ -160,10 +166,23 @@ export const POST = auditado(async (req: Request) => {
           and c.correduria_id = ${correduria.id}::uuid and c.merged_into_cliente_id is null
       `
     : []
+  // Diagnóstico, no lectura de ficha: si la póliza no se ha podido leer, ¿es porque
+  // su tomador está fusionado? Solo devuelve un booleano — nada de la ficha fusionada.
+  const tomadorFusionado =
+    p.poliza_id && polizas.length === 0
+      ? (
+          await prisma.$queryRaw<{ tomador_fusionado: boolean }[]>`
+            select c.merged_into_cliente_id is not null as tomador_fusionado
+            from polizas pol join clientes c on c.id = pol.cliente_id
+            where pol.id = ${p.poliza_id}::uuid and pol.correduria_id = ${correduria.id}::uuid
+              and c.correduria_id = ${correduria.id}::uuid
+          `
+        )[0]?.tomador_fusionado === true
+      : false
   const modoNuevo = !p.poliza_id && !!p.cliente_id && !!p.tarificacion_id
   const tarificaciones = modoNuevo
-    ? await prisma.$queryRaw<{ cliente_id: string | null; ramo: string | null; peticion: unknown }[]>`
-        select t.cliente_id::text as cliente_id, t.ramo, t.peticion
+    ? await prisma.$queryRaw<{ cliente_id: string | null; ramo: string | null; peticion: unknown; poliza_id: string | null }[]>`
+        select t.cliente_id::text as cliente_id, t.ramo, t.peticion, t.poliza_id::text as poliza_id
         from tarificaciones t
         where t.id = ${p.tarificacion_id}::uuid and t.correduria_id = ${correduria.id}::uuid and t.simulado = false
       `
@@ -190,8 +209,9 @@ export const POST = auditado(async (req: Request) => {
           sustituida: pol.sustituida,
         }
       : null,
-    tarificacion: tar ? { clienteId: tar.cliente_id, ramo: tar.ramo, peticion: tar.peticion } : null,
+    tarificacion: tar ? { clienteId: tar.cliente_id, ramo: tar.ramo, peticion: tar.peticion, polizaId: tar.poliza_id } : null,
     ficha: fic ? { clienteId: fic.id, dniLookupHash: fic.dni_lookup_hash } : null,
+    polizaTomadorFusionado: tomadorFusionado,
   })
   if (!resuelto.ok) {
     return NextResponse.json({ estado: 'error', causa: resuelto.causa, mensaje: resuelto.mensaje }, { status: resuelto.status })
@@ -266,10 +286,12 @@ export const POST = auditado(async (req: Request) => {
   // de que ya lo tiene, así que:
   //   (i) identidad FAIL-CLOSED: DNI del tomador del proyecto == índice ciego de
   //       la ficha, y los dos presentes (un proyecto ilegible tampoco pasa);
-  //  (ii) duplicado: auto/moto con póliza EN VIGOR del cliente con la misma
-  //       matrícula → 409 `ya_en_cartera` (se emite desde ESA póliza para que se
-  //       tramite la baja); resto de ramos (o sin matrícula legible): otro
-  //       proyecto `emitida` del mismo cliente y producto en 30 días → 409.
+  //  (ii) duplicado (decisión pura: `decidirDuplicadoNuevo`): en auto/moto con
+  //       matrícula se miran SIEMPRE las dos cosas — póliza EN VIGOR con esa
+  //       matrícula en TODA la correduría (no solo este cliente; de otra ficha solo
+  //       se dice que existe, con el nº enmascarado) Y proyecto `emitida` del mismo
+  //       cliente y producto en 30 días (un nuevo que acabó `emitido_sin_acunar` no
+  //       deja póliza en cartera). Resto de ramos (o sin matrícula): solo lo segundo.
   //       Saltable con `duplicadoConfirmado: true`, que queda en el log.
   if (ctx.modo === 'nuevo') {
     const corte = corteIdentidadNuevo(hashTomador, ctx.dniLookupHash)
@@ -280,44 +302,35 @@ export const POST = auditado(async (req: Request) => {
     const matricula =
       (crudoPrevio ? matriculaProyecto(crudoPrevio) : null) ??
       (typeof ctx.riesgo?.matricula === 'string' ? ctx.riesgo.matricula : null)
-    let duplicado: { causa: 'ya_en_cartera' | 'ya_emitido'; mensaje: string; polizas?: string[] } | null = null
+    let duplicado: Duplicado | null = null
     try {
-      if ((ctx.tipo === 'auto' || ctx.tipo === 'moto') && matricula) {
-        const mismas = await prisma.$queryRaw<{ id: string; numero_poliza: string | null }[]>(Prisma.sql`
-          select p.id::text as id, p.numero_poliza
-          from polizas p join clientes c on c.id = p.cliente_id
-          where p.correduria_id = ${correduria.id}::uuid and p.cliente_id = ${ctx.clienteId}::uuid
-            and c.correduria_id = ${correduria.id}::uuid and c.merged_into_cliente_id is null
-            and upper(regexp_replace(coalesce(p.datos_especificos->>'matricula', ''), '[^A-Za-z0-9]', '', 'g')) = ${matricula}
-            and ${Prisma.raw(sqlCarteraEnVigor('p'))}
-        `)
-        if (mismas.length > 0) {
-          duplicado = {
-            causa: 'ya_en_cartera',
-            mensaje:
-              `Este cliente ya tiene en vigor ${mismas.length === 1 ? 'una póliza' : `${mismas.length} pólizas`} de la matrícula ${matricula}` +
-              `${mismas[0].numero_poliza ? ` (nº ${mismas[0].numero_poliza})` : ''}: emite desde esa póliza para que se tramite la baja.`,
-            polizas: mismas.map((m) => m.id),
-          }
-        }
-      } else {
-        const recientes = await prisma.$queryRaw<{ project_id_codeoscopic: string }[]>`
-          select cp.project_id_codeoscopic
-          from codeoscopic_projects cp
-          where cp.correduria_id = ${correduria.id}::uuid and cp.cliente_id = ${ctx.clienteId}::uuid
-            and cp.producto::text = ${ctx.tipo} and cp.estado = 'emitida'
-            and cp.project_id_codeoscopic <> ${projectId}
-            and cp.updated_at > now() - interval '30 days'
-        `
-        if (recientes.length > 0) {
-          duplicado = {
-            causa: 'ya_emitido',
-            mensaje:
-              `A este cliente ya se le emitió otra póliza de ${ctx.tipo} por Codeoscopic en los últimos 30 días ` +
-              `(proyecto ${recientes[0].project_id_codeoscopic}): puede ser un duplicado.`,
-          }
-        }
-      }
+      const mismas =
+        (ctx.tipo === 'auto' || ctx.tipo === 'moto') && matricula
+          ? await prisma.$queryRaw<{ id: string; numero_poliza: string | null; mismo_cliente: boolean }[]>(Prisma.sql`
+              select p.id::text as id, p.numero_poliza, (p.cliente_id = ${ctx.clienteId}::uuid) as mismo_cliente
+              from polizas p join clientes c on c.id = p.cliente_id
+              where p.correduria_id = ${correduria.id}::uuid and p.merged_into_poliza_id is null
+                and c.correduria_id = ${correduria.id}::uuid and c.merged_into_cliente_id is null
+                and upper(regexp_replace(coalesce(p.datos_especificos->>'matricula', ''), '[^A-Za-z0-9]', '', 'g')) = ${matricula}
+                and ${Prisma.raw(sqlCarteraEnVigor('p'))}
+              order by (p.cliente_id = ${ctx.clienteId}::uuid) desc
+              limit 20
+            `)
+          : []
+      const recientes = await prisma.$queryRaw<{ project_id_codeoscopic: string }[]>`
+        select cp.project_id_codeoscopic
+        from codeoscopic_projects cp
+        where cp.correduria_id = ${correduria.id}::uuid and cp.cliente_id = ${ctx.clienteId}::uuid
+          and cp.producto::text = ${ctx.tipo} and cp.estado = 'emitida'
+          and cp.project_id_codeoscopic <> ${projectId}
+          and cp.updated_at > now() - interval '30 days'
+      `
+      duplicado = decidirDuplicadoNuevo({
+        tipo: ctx.tipo,
+        matricula,
+        mismaMatricula: mismas.map((m) => ({ id: m.id, numeroPoliza: m.numero_poliza, mismoCliente: m.mismo_cliente })),
+        proyectosRecientes: recientes.map((r) => r.project_id_codeoscopic),
+      })
     } catch (e) {
       // Un duplicado que no se ha podido comprobar no es «no hay duplicado».
       console.log(`[emitir] proyecto ${projectId}: no se pudo comprobar el duplicado —`, e instanceof Error ? e.message : String(e))
