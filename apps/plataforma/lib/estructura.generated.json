@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-28T06:05:56Z",
+  "generadoEn": "2026-09-28T10:04:57Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -5789,6 +5789,7 @@
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_conflictos_guia",
+      "mensajes_enviados",
       "mensajes_guia_cache",
       "mensajes_guia_gaps",
       "mensajes_hechos",

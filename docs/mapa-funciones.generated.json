@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T09:07:55Z",
-  "sha": "d20cbff39a6ebd039333c8405708087a2bf5e044",
+  "generadoEn": "2026-09-28T10:04:57Z",
+  "sha": "8bca59fc22098be8de3cedb8c564d5e4652f9c50",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -17638,7 +17638,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f79bb6cb9acd"
+      "hash": "c0b438f2e96d"
     },
     {
       "ruta": "apps/asegura/lib/backfill-contacto.ts",
@@ -28455,7 +28455,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "095e1576ac52"
+      "hash": "55c8926b16cf"
     },
     {
       "ruta": "apps/asegura/lib/tomador-documento.ts",
@@ -74196,7 +74196,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "1e0764faee2a"
+      "hash": "8d903a0e7d35"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/PedirDatos.tsx",
@@ -74879,6 +74879,7 @@
       "resumen": "Las pestañas de la ficha del cliente, sin JSX. Vive aparte de `FichaTabs.tsx` para que `tabDeParametro` sea comprobable con `node --test`, que no sabe importar `.tsx`. Es la función que impide que un `?tab=` inventado (o un enlace viejo) deje la ficha en blanco. /",
       "exporta": [
         "tabDeParametro",
+        "contarPersonas",
         "detallesAccesos"
       ],
       "funciones": [
@@ -74892,12 +74893,21 @@
           "resumen": "Un `?tab=` desconocido (o ausente) no falla: cae a «Resumen»."
         },
         {
+          "nombre": "contarPersonas",
+          "kind": "function",
+          "exportada": true,
+          "params": "personas: readonly { fichaId: string | null }[] | null, relaciones: readonly { relacionadoId: string }[] | null,",
+          "retorno": "number | null",
+          "linea": 72,
+          "resumen": "Cuántas PERSONAS tiene la ficha: las de sus pólizas más los vínculos declarados (familia, empresa…) que no salen ya en una póliza — la misma lista que pinta el bloque «Personas» de Contactos. Hasta el"
+        },
+        {
           "nombre": "plural",
           "kind": "arrow",
           "exportada": false,
           "params": "n: number, uno: string, varios: string",
           "retorno": null,
-          "linea": 64
+          "linea": 82
         },
         {
           "nombre": "detallesAccesos",
@@ -74905,13 +74915,13 @@
           "exportada": true,
           "params": "d: DatosAccesos",
           "retorno": "Partial<Record<TabFicha, DetalleAcceso>>",
-          "linea": 67,
+          "linea": 85,
           "resumen": "El texto corto bajo cada baldosa. Pura: la prueba `regression-ficha-cliente-pestanas`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "10646f939e64"
+      "hash": "a830cfe0884b"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/VerDniCompleto.tsx",
@@ -93363,7 +93373,7 @@
       ],
       "tablas": [],
       "rutaApi": "/api/sivra/mensajes/auto-reply",
-      "hash": "33800cedab3e"
+      "hash": "7b5b092686d8"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/diagnostico-guia/route.ts",
@@ -93716,7 +93726,7 @@
           "exportada": false,
           "params": "cuentaId: string, texto: string",
           "retorno": "Promise<void>",
-          "linea": 1156,
+          "linea": 1149,
           "resumen": "Texto libre de Alberto (escrito o transcrito de una nota de voz) → correduría o contable. El patrimonial ya se desvía antes; aquí solo se decide entre estos dos, y ante cualquier duda gana el contable"
         },
         {
@@ -93725,7 +93735,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<boolean>",
-          "linea": 1163,
+          "linea": 1156,
           "resumen": "`true` = este update ya se procesó (reintento de Telegram). Sin id o sin BD → `false` (se procesa)."
         },
         {
@@ -93734,7 +93744,7 @@
           "exportada": false,
           "params": "updateId: unknown",
           "retorno": "Promise<void>",
-          "linea": 1175
+          "linea": 1168
         },
         {
           "nombre": "correduriaSegura",
@@ -93742,7 +93752,7 @@
           "exportada": false,
           "params": "texto: string",
           "retorno": "Promise<void>",
-          "linea": 1181,
+          "linea": 1174,
           "resumen": "El asistente corre en `after`: un error ya no da 500 (ni reintento), así que se le dice a Alberto."
         }
       ],
@@ -93771,7 +93781,7 @@
         "trading_watchlist"
       ],
       "rutaApi": "/api/sivra/mensajes/telegram-webhook",
-      "hash": "aa237ae81aaa"
+      "hash": "a2603e2348a6"
     },
     {
       "ruta": "apps/plataforma/app/api/sivra/mensajes/webhook/route.ts",
@@ -116962,6 +116972,7 @@
       "resumen": "lib/sivra/agente-huesped/aprender.ts — log, aprendizaje, gaps y config de autonomía.",
       "exporta": [
         "logMensaje",
+        "marcarEnviadoLog",
         "aprenderCorreccion",
         "registrarGap"
       ],
@@ -116975,12 +116986,21 @@
           "linea": 10
         },
         {
+          "nombre": "marcarEnviadoLog",
+          "kind": "function",
+          "exportada": true,
+          "params": "bookingId: string, textoFinal: string",
+          "retorno": "Promise<boolean | null>",
+          "linea": 24,
+          "resumen": "Marca como enviado el último borrador de la reserva y guarda el texto que salió DE VERDAD. Hasta el 28/09/2026 solo se ponía `auto_sent = true`: el texto editado en Telegram se perdía y `edited` era s"
+        },
+        {
           "nombre": "aprenderCorreccion",
           "kind": "function",
           "exportada": true,
-          "params": "p: { propertyId: string; categoria: string; pregunta: string; respuestaFinal: string; huecoGuia?: boolean }",
+          "params": "p: { propertyId: string; categoria: string; pregunta: string; respuestaFinal: string; huecoGuia?: boolean /** `false` = Alberto aprobó el borrador de la IA sin tocarlo. `true`/`null` = lo escribió o no se sabe. */ editado?: boolean | null }",
           "retorno": "Promise<void>",
-          "linea": 36,
+          "linea": 54,
           "resumen": "Guarda lo que Alberto aprueba o corrige. DOS destinos, no uno: · HECHO del piso (`mensajes_hechos`) si el huésped preguntaba algo y la respuesta enseña algo de la vivienda → permanente, va SIEMPRE al "
         },
         {
@@ -116989,7 +117009,7 @@
           "exportada": true,
           "params": "propertyId: string, pregunta: string",
           "retorno": "Promise<void>",
-          "linea": 63,
+          "linea": 94,
           "resumen": "Registra un hueco de la guía (incrementa el contador si ya existía esa pregunta para el piso). El match es por PARECIDO, no por igualdad (04/09/2026). Con `=` exacto, los cuatro avisos de phishing de "
         }
       ],
@@ -116999,7 +117019,7 @@
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "629a9b1fffc0"
+      "hash": "adee518158db"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/atribucion.ts",
@@ -117322,7 +117342,7 @@
           "exportada": false,
           "params": "html: string",
           "retorno": "string",
-          "linea": 56
+          "linea": 59
         },
         {
           "nombre": "toPropertyId",
@@ -117330,7 +117350,7 @@
           "exportada": true,
           "params": "_apartmentId: unknown, apartmentName: string",
           "retorno": "string",
-          "linea": 61,
+          "linea": 64,
           "resumen": "Mapea apartmentId/nombre de Smoobu → property_id interno (prop_*)."
         },
         {
@@ -117339,7 +117359,7 @@
           "exportada": true,
           "params": "propertyId: string, bookingId: string, que: 'vispera' | 'entrada', fecha: string,",
           "retorno": "Promise<boolean | null>",
-          "linea": 75,
+          "linea": 78,
           "resumen": "¿Está libre según el CALENDARIO volcado (`incomes`)? Es la fuente principal: la mantiene el webhook de Smoobu en tiempo real (+ cron de red de seguridad) y borra las cancelaciones. No guarda bloqueos "
         },
         {
@@ -117348,16 +117368,17 @@
           "exportada": true,
           "params": "bookingId: string, lang: string",
           "retorno": "Promise<Contexto | null>",
-          "linea": 94
+          "linea": 97
         }
       ],
       "tablas": [
         "incomes",
         "mensajes_aprendizaje",
+        "mensajes_enviados",
         "mensajes_log"
       ],
       "rutaApi": null,
-      "hash": "598b66bb2857"
+      "hash": "774d4e56b36e"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/cortesia.ts",
@@ -117445,7 +117466,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4c87bc7730cc"
+      "hash": "2c4fd2056b30"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/destilar.ts",
@@ -117565,8 +117586,17 @@
           "exportada": true,
           "params": "reservationId: string, messageBody: string, subject = '',",
           "retorno": "Promise<ResultadoEnvio>",
-          "linea": 12,
+          "linea": 14,
           "resumen": "solo se incluye `subject` si se pasa explícitamente (algunos canales de email lo aprovechan)."
+        },
+        {
+          "nombre": "registrarEnviado",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string, cuerpo: string, asunto: string",
+          "retorno": "Promise<void>",
+          "linea": 47,
+          "resumen": "Todo lo que sale hacia el huésped pasa por aquí, así que aquí se anota (28/09/2026). Smoobu devuelve nuestros mensajes en el hilo SIN marca de emisor, y sin este registro el agente tomaba por pregunta"
         },
         {
           "nombre": "enviarAlHuesped",
@@ -117574,13 +117604,15 @@
           "exportada": true,
           "params": "reservationId: string, messageBody: string, subject = ''",
           "retorno": "Promise<boolean>",
-          "linea": 37,
+          "linea": 57,
           "resumen": "Envoltura booleana para los llamadores automáticos (crons, guardias) que solo reintentan."
         }
       ],
-      "tablas": [],
+      "tablas": [
+        "mensajes_enviados"
+      ],
       "rutaApi": null,
-      "hash": "4e4e309c154d"
+      "hash": "d0d039152bd8"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/equipaje.ts",
@@ -117700,7 +117732,8 @@
       "resumen": "lib/sivra/agente-huesped/fases.ts — fase temporal de una reserva (pura y testeable). El DÍA DE LLEGADA es un caso propio y NO \"en-estancia\": el huésped puede no haber entrado aún (llega esa misma tarde), así que las preguntas de entrada anticipada / dónde dejar el equipaje siguen aplicando. Tratar e",
       "exporta": [
         "faseReserva",
-        "aplicaEarlyCheckin"
+        "aplicaEarlyCheckin",
+        "bloqueAntiguedad"
       ],
       "funciones": [
         {
@@ -117719,11 +117752,20 @@
           "retorno": "boolean",
           "linea": 24,
           "resumen": "El early check-in tiene sentido ANTES de entrar: en los días previos Y el propio día de llegada. En-estancia y post-estancia no aplica (el huésped ya entró / ya se fue)."
+        },
+        {
+          "nombre": "bloqueAntiguedad",
+          "kind": "function",
+          "exportada": true,
+          "params": "preguntaTs: string | undefined, ahora: Date = new Date()",
+          "retorno": "string",
+          "linea": 32,
+          "resumen": "¿Cuánto hace que el huésped escribió? Un borrador de una pregunta de ayer tiene que saberlo: la de Justine (154692216) preguntaba el día de llegada si ya podía entrar, y un borrador del día de salida "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "38977a777c6a"
+      "hash": "c472c333a2da"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/guardrail.ts",
@@ -117979,7 +118021,7 @@
           "nombre": "guardarHecho",
           "kind": "function",
           "exportada": true,
-          "params": "p: { propertyId: string pregunta: string hecho: string origen?: 'alberto' | 'historico' estado?: 'confirmado' | 'propuesto' bookingRef?: string }",
+          "params": "p: { propertyId: string pregunta: string hecho: string origen?: 'alberto' | 'historico' | 'agente' estado?: 'confirmado' | 'propuesto' bookingRef?: string }",
           "retorno": "Promise<number | null>",
           "linea": 28,
           "resumen": "Guarda un hecho. `estado` = 'confirmado' cuando lo enseña Alberto; 'propuesto' cuando sale del minado del histórico y todavía tiene que confirmarlo (un hecho falso aprendido del histórico se propagarí"
@@ -117998,7 +118040,7 @@
         "mensajes_hechos"
       ],
       "rutaApi": null,
-      "hash": "83efd9426c48"
+      "hash": "a27c89fc707f"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/hilo.ts",
@@ -118348,7 +118390,8 @@
         "esModoNoche",
         "esUrgenciaNocturna",
         "textoAcuse",
-        "textoUltimoRecurso"
+        "textoUltimoRecurso",
+        "textosNocheTodos"
       ],
       "funciones": [
         {
@@ -118403,11 +118446,20 @@
           "retorno": "string",
           "linea": 127,
           "resumen": "Último recurso: derivar al portal de reserva tras MINUTOS_ULTIMO_RECURSO sin respuesta."
+        },
+        {
+          "nombre": "textosNocheTodos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string[]",
+          "linea": 133,
+          "resumen": "Todos los textos fijos que el modo noche puede mandar (todos los idiomas): el cruce anti-eco los trata como nuestros aunque su envío no llegara a quedar registrado en `mensajes_enviados`."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7bc824138cff"
+      "hash": "1295a1348094"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/orquestador.ts",
@@ -118432,7 +118484,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "27b85d3bf988"
+      "hash": "a2eb6d8e5475"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/parking.ts",
@@ -118515,12 +118567,21 @@
       ],
       "funciones": [
         {
+          "nombre": "estanciaAcabando",
+          "kind": "function",
+          "exportada": false,
+          "params": "bookingId: string, ahora: Date",
+          "retorno": "Promise<boolean | undefined>",
+          "linea": 30,
+          "resumen": "¿Hoy es el día de salida o posterior? `undefined` si Smoobu no responde o no trae la fecha: en la duda se acusa como siempre, porque callar ante un huésped que espera es el fallo caro."
+        },
+        {
           "nombre": "recorte",
           "kind": "function",
           "exportada": false,
           "params": "t: string, n: number",
           "retorno": "string",
-          "linea": 27
+          "linea": 38
         },
         {
           "nombre": "recordar",
@@ -118528,7 +118589,7 @@
           "exportada": false,
           "params": "f: Fila, minutos: number",
           "retorno": "Promise<void>",
-          "linea": 36,
+          "linea": 47,
           "resumen": "Vuelve a poner el borrador delante de Alberto, con los mismos botones que la propuesta original (que a estas alturas ya ha bajado en el hilo de Telegram). Sale por `tgSend*` y NO por `tgAviso*` a prop"
         },
         {
@@ -118537,7 +118598,7 @@
           "exportada": false,
           "params": "f: Fila, minutos: number",
           "retorno": "Promise<boolean>",
-          "linea": 61,
+          "linea": 72,
           "resumen": "Peldaño 2: el huésped deja de estar a oscuras. No responde su pregunta (no la sabemos: por eso escaló), solo dice que se está mirando."
         },
         {
@@ -118546,7 +118607,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<",
-          "linea": 82,
+          "linea": 93,
           "resumen": "Barrido de PENDIENTES RANCIOS. Solo en horario de atención: de noche manda `noche-guardia`, que ya acusa recibo al escalar y tiene su propio último recurso para las urgencias."
         }
       ],
@@ -118554,7 +118615,7 @@
         "mensajes_pendientes_tg"
       ],
       "rutaApi": null,
-      "hash": "d9007e02b52c"
+      "hash": "dbbbf40ec793"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/rancio.ts",
@@ -118563,7 +118624,8 @@
       "exporta": [
         "minutosAtencion",
         "peldanoRancio",
-        "textoEspera"
+        "textoEspera",
+        "textosEsperaTodos"
       ],
       "funciones": [
         {
@@ -118588,7 +118650,7 @@
           "nombre": "peldanoRancio",
           "kind": "function",
           "exportada": true,
-          "params": "p: { minutos: number recordado: boolean acusado: boolean noRequiereRespuesta: boolean }",
+          "params": "p: { minutos: number recordado: boolean acusado: boolean noRequiereRespuesta: boolean /** Hoy es el día de salida o posterior (hora de Madrid). `undefined` = no se sabe. */ estanciaAcabando?: boolean }",
           "retorno": "PeldanoRancio",
           "linea": 80,
           "resumen": "¿Qué toca hacer con un pendiente? Un solo peldaño por pasada, y el acuse manda sobre el recordatorio (si llevamos 4 h, lo urgente es que el huésped deje de estar a oscuras). `noRequiereRespuesta` (un "
@@ -118599,7 +118661,7 @@
           "exportada": false,
           "params": "lang: string",
           "retorno": "Idioma",
-          "linea": 93
+          "linea": 99
         },
         {
           "nombre": "textoEspera",
@@ -118607,13 +118669,22 @@
           "exportada": true,
           "params": "lang: string",
           "retorno": "string",
-          "linea": 111,
+          "linea": 117,
           "resumen": "Acuse de ESPERA (peldaño 2), en el idioma del huésped."
+        },
+        {
+          "nombre": "textosEsperaTodos",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "string[]",
+          "linea": 122,
+          "resumen": "Todos los acuses de espera (todos los idiomas), para el cruce anti-eco."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5e626706e5d2"
+      "hash": "cb6f3cfb79c3"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/recomendar.ts",
@@ -118684,6 +118755,7 @@
         "esHechoDelPiso",
         "paresPregRespuesta",
         "esAutomatico",
+        "esPlantillaHost",
         "tipoHueco",
         "contieneDatoPersonal",
         "interpretarDestilado"
@@ -118703,7 +118775,8 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "string | null",
-          "linea": 34
+          "linea": 36,
+          "resumen": "Palabras cortas con límite de palabra: sin él, «car» casaba «card»/«carte» y un aviso de phishing sobre la tarjeta acababa en `parking` (8 de 10 «parking» de sep-2026 no hablaban de aparcar)."
         },
         {
           "nombre": "vaARecomendador",
@@ -118711,7 +118784,7 @@
           "exportada": true,
           "params": "pregunta: string, categoria: string",
           "retorno": "boolean",
-          "linea": 56,
+          "linea": 67,
           "resumen": "¿La pregunta va al recomendador web (`recomendar.ts`, que NO lee la ficha del piso)? Solo si no es una pregunta OPERATIVA del apartamento. Caso 154692216 (26/09/2026): «¿podemos dejar las maletas…? As"
         },
         {
@@ -118720,7 +118793,7 @@
           "exportada": false,
           "params": "lista: string",
           "retorno": null,
-          "linea": 81,
+          "linea": 92,
           "resumen": "Palabras sueltas con acentos: `\\b` de JS no ve la frontera tras «ã»/«é», así que se delimita por letras."
         },
         {
@@ -118729,7 +118802,7 @@
           "exportada": true,
           "params": "text: string, fallback: string = 'en'",
           "retorno": "string",
-          "linea": 88,
+          "linea": 99,
           "resumen": "Idioma en que ESCRIBE el huésped. `fallback` = idioma de la reserva (o 'en'): es lo que se devuelve cuando el texto no da señal propia. Cualquier código vale; los que no se detectan por texto (sueco, "
         },
         {
@@ -118738,7 +118811,7 @@
           "exportada": true,
           "params": "txt: string",
           "retorno": "boolean",
-          "linea": 117,
+          "linea": 128,
           "resumen": "¿El texto da señal PROPIA de español? detectLang cae al fallback cuando el mensaje no puntúa en ningún idioma (un emoji, «Très bien», «Tack»), así que aquí el fallback es 'en': solo devuelve true si e"
         },
         {
@@ -118747,7 +118820,7 @@
           "exportada": true,
           "params": "pregunta: string, lang: string",
           "retorno": "boolean",
-          "linea": 124,
+          "linea": 135,
           "resumen": "¿Hay que pedir traducción del mensaje del huésped? Se decide por el TEXTO, no solo por el idioma de respuesta: `ctx.lang` hereda el idioma de la reserva cuando el mensaje no da señal, y un «Très bien "
         },
         {
@@ -118756,7 +118829,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 130,
+          "linea": 141,
           "resumen": "Una «traducción» que vuelve igual que el original es que ya estaba en español → sin línea 🔁."
         },
         {
@@ -118765,7 +118838,7 @@
           "exportada": true,
           "params": "original: string, traduccion: string",
           "retorno": "string",
-          "linea": 131
+          "linea": 142
         },
         {
           "nombre": "lineaTraduccion",
@@ -118773,7 +118846,7 @@
           "exportada": true,
           "params": "traduccion: string, imprescindible: boolean, esc: (s: string) => string",
           "retorno": "string",
-          "linea": 139,
+          "linea": 150,
           "resumen": "La línea 🔁 del aviso. `imprescindible` = el texto está seguro en otro idioma (lang ≠ es): si la traducción falló ahí, el hueco se DECLARA en vez de callarse — un aviso sin la línea se lee como «ya es"
         },
         {
@@ -118782,7 +118855,7 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 151
+          "linea": 162
         },
         {
           "nombre": "esDespedida",
@@ -118790,7 +118863,7 @@
           "exportada": true,
           "params": "text: string",
           "retorno": "boolean",
-          "linea": 197
+          "linea": 208
         },
         {
           "nombre": "esHechoDelPiso",
@@ -118798,7 +118871,7 @@
           "exportada": true,
           "params": "pregunta: string, respuesta: string",
           "retorno": "boolean",
-          "linea": 213
+          "linea": 224
         },
         {
           "nombre": "paresPregRespuesta",
@@ -118806,7 +118879,7 @@
           "exportada": true,
           "params": "msgs: MsgMin[]",
           "retorno": "ParQA[]",
-          "linea": 230,
+          "linea": 241,
           "resumen": "Empareja cada pregunta del huésped con la PRIMERA respuesta humana del anfitrión que viene después. Descarta los automáticos de Smoobu (confirmaciones, recordatorios: son plantillas, no conocimiento) "
         },
         {
@@ -118815,8 +118888,25 @@
           "exportada": true,
           "params": "subject: string, text: string",
           "retorno": "boolean",
-          "linea": 245,
+          "linea": 256,
           "resumen": "Los automáticos de Smoobu/Booking llevan ASUNTO; los mensajes escritos a mano, no."
+        },
+        {
+          "nombre": "sinAcentos",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 267
+        },
+        {
+          "nombre": "esPlantillaHost",
+          "kind": "function",
+          "exportada": true,
+          "params": "texto: string, guestName: string",
+          "retorno": "boolean",
+          "linea": 277,
+          "resumen": "¿Es una PLANTILLA nuestra (bienvenida, despedida, aviso) que Smoobu devuelve sin marca de emisor? Las plantillas se dirigen al huésped por su nombre COMPLETO al principio y siguen hablando («Bienvenue"
         },
         {
           "nombre": "tipoHueco",
@@ -118824,7 +118914,7 @@
           "exportada": true,
           "params": "dec: EscaladoMin | null | undefined",
           "retorno": "TipoHueco",
-          "linea": 268
+          "linea": 307
         },
         {
           "nombre": "contieneDatoPersonal",
@@ -118832,7 +118922,7 @@
           "exportada": true,
           "params": "txt: string",
           "retorno": "boolean",
-          "linea": 296
+          "linea": 335
         },
         {
           "nombre": "interpretarDestilado",
@@ -118840,12 +118930,12 @@
           "exportada": true,
           "params": "bruto: string",
           "retorno": "string",
-          "linea": 318
+          "linea": 357
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b4475036dbc0"
+      "hash": "d15cd4d1b2d5"
     },
     {
       "ruta": "apps/plataforma/lib/sivra/agente-huesped/retoque.ts",
@@ -161187,6 +161277,6 @@
   ],
   "resumen": {
     "archivos": 3827,
-    "funciones": 12367
+    "funciones": 12376
   }
 }
