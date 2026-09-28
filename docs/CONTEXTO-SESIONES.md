@@ -860,6 +860,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+
+## (28/09/2026) Portal asegurado: «27500 m²» en la póliza de Calle Socorro 24
+- CIMA manda `metrosCuadrados: "275.00"`; `entero()` de `module-seguros-portal/src/bien-asegurado.ts` quitaba todo lo no-dígito → 27.500 m². Ahora acepta decimal (`275.00`/`90,5`, redondea) o miles (`1.234`); lo demás calla. Cepo en `bien-asegurado.test.ts`, visto en rojo.
+
 ## (29/09/2026) Presupuesto de DECESOS, SALUD y VIDA (rótulos reales del portal de Codeoscopic)
 - `nivelCobertura` reconoce salud (Básica < Con copago < Sin copago < Con reembolso), decesos (Tarifa
   natural/mixta/nivelada/personalizada) y vida (Vida-Riesgo), medidos en los ejemplos del portal (Alberto por Claude en Chrome).

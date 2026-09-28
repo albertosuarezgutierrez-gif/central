@@ -117,11 +117,20 @@ function esPartidaDeCobertura(c: unknown): boolean {
 /** El sobre de `@central/module-seguros-pii`: `v1:iv:cipher:tag` en base64. */
 const VERSION_CIFRADO = /^v\d+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+$/
 
-/** Un entero positivo, o `null`. Un 0 metros cuadrados es un hueco, no un piso. */
+/**
+ * Un entero positivo, o `null`. Un 0 metros cuadrados es un hueco, no un piso.
+ * 🚨 CIMA manda los metros con DECIMALES (`"275.00"`): quitar todo lo que no
+ * fuera dígito los convertía en 27.500 m² (28/09/2026). Solo se aceptan
+ * `275`, `275.00`/`275,5` (decimal, se redondea) y `1.234` (miles); cualquier
+ * otra forma es ilegible y calla, en vez de inventar un número plausible.
+ */
 function entero(d: Record<string, unknown>, clave: string): number | null {
-  const t = campo(d, clave)
-  if (t === null) return null
-  const n = Number(t.replace(/[^\d]/g, ''))
+  const t = campo(d, clave)?.trim()
+  if (!t) return null
+  let n: number
+  if (/^\d+([.,]\d{1,2})?$/.test(t)) n = Math.round(Number(t.replace(',', '.')))
+  else if (/^\d{1,3}(\.\d{3})+$/.test(t)) n = Number(t.replace(/\./g, ''))
+  else return null
   return Number.isFinite(n) && n > 0 ? n : null
 }
 
