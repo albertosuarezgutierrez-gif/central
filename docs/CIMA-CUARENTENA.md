@@ -162,7 +162,7 @@ Las dos que se daban por perdidas, leídas de la tabla de pólizas, no del log:
 
 | Compañía | Nº de póliza | Cliente | Ramo | Vencimiento | Alta |
 |---|---|---|---|---|---|
-| **Occident** (C0468) | `8-5.874.010-V` | Jose Enrique | 251 · embarcaciones | 29/05/2027 | 17/09/2026 |
+| **Occident** (C0468) | `[nº de póliza retirado]` | Jose Enrique | 251 · embarcaciones | 29/05/2027 | 17/09/2026 |
 | **Generali** (C0072) | `6E-G-475000053` | Monte carmelo 68 | 2161 · comunidades | 02/11/2027 | 17/09/2026 |
 
 Las dos `activa` / `EV`, `import_ref` a NULL y con `eiac_xml_hash`: cartera viva **y en vigor**, no
@@ -197,7 +197,7 @@ No hay ningún otro fichero con déficit ni sin confirmar.
 
 **De la póliza que falta no tenemos el número**: vivía en el XML y el crudo ya no está. Lo que sí
 consta es el envío — Occident, mediador `M00171`, **20/06/2026**, tres pólizas — y las **dos** que sí
-entraron, `BIDS024032` y `548820576`. Con eso se identifica la tercera en la intranet de la compañía
+entraron, `[nº de póliza retirado]` y `[nº de póliza retirado]`. Con eso se identifica la tercera en la intranet de la compañía
 sin pedirle nada a nadie.
 
 ⚠️ **Lo que esta medición NO cubre: los recibos.** `cima_ficheros` solo lleva contadores de
@@ -242,7 +242,7 @@ dejaba declarado como «sin medir, que no es lo mismo que medido a cero». Son *
 
 Los 3 SIN de Allianz que se habían señalado **no están en esta señal** (su `estado` es `review`, que
 es la *cuarentena*, otra cosa) y además **ya no les falta nada**: su siniestro `660560623` de la
-póliza `031698897` lo entregó entero el fichero del 30/04 el 24/06 a las 14:16:27 —
+póliza `[nº de póliza retirado]` lo entregó entero el fichero del 30/04 el 24/06 a las 14:16:27 —
 `cima_siniestro_persisted`— tres horas después de que la póliza naciera (10:12:14). Sus filas en
 `review` son la foto del PRIMER intento, que es justo el fallo de método que este documento ya
 describe un apartado más arriba. **Ninguno de los 4 tiene fila en `cima_cuarentena_crudo`** (0 por
@@ -262,7 +262,7 @@ la compañía».
 **Las 6 pólizas que reclaman los recibos rechazados existen las 6, y las 6 por duplicado**, las dos
 filas con `codigo_entidad_dgs = 'C0468'`: una del volcado histórico del 21/06 y otra creada por CIMA
 el 15/09 o el 17/09, con minutos de diferencia respecto al recibo que luego no supo cuál elegir
-(`548325602` nació a las 10:17:28 y sus recibos se rechazaron entre las 10:17:46 y las 10:18:16).
+(`[nº de póliza retirado]` nació a las 10:17:28 y sus recibos se rechazaron entre las 10:17:46 y las 10:18:16).
 
 ### El alcance, que es mayor que los 40 recibos
 
@@ -272,7 +272,7 @@ y siempre en silencio:
 
 | Compañía | DGS | Números afectados |
 |---|---|---|
-| Occident | C0468 | **10** (`548271155`, `548325602`, `8-6.226.669-V`, `BIDP019061`, `BIDP023227`, `BIDP036783`, `BIDQ020971`, `BIDS018699`, `BIDT001398`, `GPAEA0200043`) |
+| Occident | C0468 | **10** (`[nº de póliza retirado]`, `[nº de póliza retirado]`, `[nº de póliza retirado]`, `[nº de póliza retirado]`, `[nº de póliza retirado]`, `[nº de póliza retirado]`, `[nº de póliza retirado]`, `[nº de póliza retirado]`, `[nº de póliza retirado]`, `GPAEA0200043`) |
 | Mapfre | C0058 | **8** |
 | Allianz | C0109 | **1** |
 
@@ -304,7 +304,7 @@ tests del emparejador):
 vaciaba `codigo_entidad_dgs` en la fila histórica de cada par. La revisión le encontró **seis**
 defectos, y el peor era la premisa: usaba `import_ref IS NOT NULL` como «es del volcado», cuando
 `CLAUDE.md` ya documenta que **una póliza que CIMA mantiene al día conserva su `import_ref`** (la
-`3021700291186` de Reale). Esa fila habría perdido su DGS y se habría quedado muda para siempre —
+`[nº de póliza retirado]` de Reale). Esa fila habría perdido su DGS y se habría quedado muda para siempre —
 el arreglo causando exactamente el daño que venía a reparar. El criterio bueno es `esCarteraViva()`
 = `import_ref IS NULL OR eiac_xml_hash IS NOT NULL`.
 

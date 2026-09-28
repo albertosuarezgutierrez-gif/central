@@ -9,7 +9,7 @@ test('reparto: el atajo y las palabras de la correduría van al asistente', () =
   assert.equal(clasificarDestino('seguro: ¿qué tiene Pablo Guzmán?'), 'correduria')
   assert.equal(clasificarDestino('/seguros impagados'), 'correduria')
   assert.equal(clasificarDestino('¿cuándo vence la póliza de Moncosi?'), 'correduria')
-  assert.equal(clasificarDestino('¿de quién es la 8737HVF?'), 'correduria')
+  assert.equal(clasificarDestino('¿de quién es la 6666JJJ?'), 'correduria')
   assert.equal(clasificarDestino('renovaciones de esta semana'), 'correduria')
 })
 
@@ -46,7 +46,7 @@ test('🔒 enmascara DNI, NIE, IBAN y tarjeta', () => {
   // 16 cifras que no pasan el dígito de control: un nº de póliza, se queda entero.
   assert.equal(enmascarar('póliza 1234567812345678'), 'póliza 1234567812345678')
   // Lo que no es dato personal se queda: teléfono (hace falta para llamar), póliza, CIF.
-  assert.equal(enmascarar('tel 634766644 póliza 0008414300069 CIF B12345678'), 'tel 634766644 póliza 0008414300069 CIF B12345678')
+  assert.equal(enmascarar('tel 634766644 póliza 0008400000008 CIF B12345678'), 'tel 634766644 póliza 0008400000008 CIF B12345678')
 })
 
 test('🔒 paraIA enmascara y avisa del recorte', () => {
@@ -70,7 +70,7 @@ test('🔒 una «regla» con datos de cliente no se guarda', () => {
   assert.equal(reglaConDatoPersonal('el teléfono de Pablo es 634766644'), true)
   assert.equal(reglaConDatoPersonal('su DNI es 28347769Q'), true)
   assert.equal(reglaConDatoPersonal('escríbele a pjgulo@gmail.com'), true)
-  assert.equal(reglaConDatoPersonal('la 8737HVF es de Pablo'), true)
+  assert.equal(reglaConDatoPersonal('la 6666JJJ es de Pablo'), true)
   assert.equal(reglaConDatoPersonal('dame siempre el total anual primero'), false)
 })
 

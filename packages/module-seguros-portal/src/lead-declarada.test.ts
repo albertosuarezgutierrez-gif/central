@@ -19,7 +19,7 @@ function entrada(p: Partial<EntradaLead> = {}): EntradaLead {
   return {
     id: 'a',
     compania: 'Generali',
-    numeroPoliza: '04Z113777894',
+    numeroPoliza: '04Z115550004',
     ramo: 'auto',
     fechaVencimiento: new Date('2027-04-03T00:00:00Z'),
     confirmadaPorUsuario: true,
@@ -119,11 +119,11 @@ test('🚨 el mismo contrato escrito de dos formas es el MISMO número', () => {
   // El PDF de la compañía lo escribe con espacios o guiones y la cartera sin
   // ellos. Compararlos crudos da dos pólizas distintas, y eso significa
   // ofrecerle a un cliente exactamente lo que ya le has vendido.
-  const canon = normalizarNumeroPoliza('04Z113777894')
-  assert.equal(normalizarNumeroPoliza('04Z11 3777894'), canon)
-  assert.equal(normalizarNumeroPoliza('04-Z11-3777894'), canon)
-  assert.equal(normalizarNumeroPoliza('04z11.3777894'), canon)
-  assert.equal(normalizarNumeroPoliza(' 04Z11/3777894 '), canon)
+  const canon = normalizarNumeroPoliza('04Z115550004')
+  assert.equal(normalizarNumeroPoliza('04Z11 5550004'), canon)
+  assert.equal(normalizarNumeroPoliza('04-Z11-5550004'), canon)
+  assert.equal(normalizarNumeroPoliza('04z11.5550004'), canon)
+  assert.equal(normalizarNumeroPoliza(' 04Z11/5550004 '), canon)
 })
 
 test('🚨 sin número es `null`, nunca una cadena vacía', () => {

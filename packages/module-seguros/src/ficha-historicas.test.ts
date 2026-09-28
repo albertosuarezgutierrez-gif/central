@@ -10,13 +10,13 @@ const BASE: HistoricaAgrupable = {
   estado: 'en_renovacion',
   fechaVencimiento: '2023-10-07',
   prima: 201,
-  bien: 'mat:3935GPY',
+  bien: 'mat:5555HHH',
 }
 
 const fila = (p: Partial<HistoricaAgrupable> & { id: string }): HistoricaAgrupable => ({ ...BASE, ...p })
 
 test('el caso real: dos filas del volcado que solo difieren en la prima son UNA línea', () => {
-  // FORD FOCUS 3935GPY: `asegura_app:pol2:14569` (201€) y `:15128` (210€).
+  // FORD FOCUS 5555HHH: `asegura_app:pol2:14569` (201€) y `:15128` (210€).
   const g = agruparHistoricas([fila({ id: 'a', prima: 201 }), fila({ id: 'b', prima: 210 })])
   assert.equal(g.length, 1)
   assert.deepEqual(g[0].filas.map(f => f.id), ['a', 'b'])
@@ -52,7 +52,7 @@ test('vencimiento, estado, compañía y número forman parte de la identidad', (
     { fechaVencimiento: null },
     { estado: 'vencida' },
     { aseguradora: 'REALE' },
-    { numeroPoliza: '14656587' },
+    { numeroPoliza: '14600016' },
     { tipo: 'hogar' },
   ]
   for (const p of pares) {

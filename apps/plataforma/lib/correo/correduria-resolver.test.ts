@@ -64,12 +64,12 @@ test('resolverCorreoAseguradora: devuelve la resolución cuando asegura la manda
         'POST https://asegura.test/api/operador/correo/resolver': () => ({
           ok: true,
           status: 200,
-          json: { estado: 'ok', resueltos: [{ clienteId: 'c1', polizaId: 'p1', numeroPoliza: '04Z113777894' }] },
+          json: { estado: 'ok', resueltos: [{ clienteId: 'c1', polizaId: 'p1', numeroPoliza: '04Z115550004' }] },
         }),
       },
       async () => {
-        const r = await resolverCorreoAseguradora('04Z11-3777894')
-        assert.deepEqual(r, [{ clienteId: 'c1', polizaId: 'p1', numeroPoliza: '04Z113777894' }])
+        const r = await resolverCorreoAseguradora('04Z11-5550004')
+        assert.deepEqual(r, [{ clienteId: 'c1', polizaId: 'p1', numeroPoliza: '04Z115550004' }])
       },
     ),
   ))

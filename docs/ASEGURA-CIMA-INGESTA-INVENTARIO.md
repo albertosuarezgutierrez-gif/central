@@ -43,7 +43,7 @@ Reglas que deja, todas con cepo visto en rojo:
 prima dudosa; papeles: propietario 195 · conductor ocasional 98 · habitual 28 · asegurado 7 · contacto 122 · pagador 0.
 
 **Resultado del reproceso (run 36403813502, 28/09 09:29-09:35 UTC, verde):** 158 de 159 pólizas CIMA
-actualizadas (la que falta, `061089620`, llegó por CIMA después de la copia de Drive: coge los campos en su
+actualizadas (la que falta, `[nº de póliza retirado]`, llegó por CIMA después de la copia de Drive: coge los campos en su
 próxima entrega); 158 con fechas de emisión/efecto actual, `riesgos[]`, cobro e IBAN (últimos 4); **0 IBAN en
 claro**; papeles: propietario 195→208 · conductor habitual 28→90 · asegurado 7→33 · **pagador 0→26** · contacto
 122→121 · ocasional 98. Prima dudosa: 0 (todas las fraccionadas eran de compañías medidas o traían anualizada).

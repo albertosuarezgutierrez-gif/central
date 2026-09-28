@@ -39,7 +39,7 @@ test('GET ok interpreta leads y contadores', () => {
         ramo: 'otros',
         ramoLegible: 'comunidades',
         aseguradoraAnterior: 'Plus Ultra',
-        numeroPoliza: 'BIDP023227',
+        numeroPoliza: 'BIDP000028',
         telefono: '600111222',
         email: null,
         prima: 123.45,

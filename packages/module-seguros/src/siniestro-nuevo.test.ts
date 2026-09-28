@@ -22,7 +22,7 @@ function sin(id: string, entradoEn: string, extra: Partial<SiniestroEntrante> = 
     cliente: 'GLOBAL 2 INSTALACIONES TÉCNICAS',
     clienteId: 'c-1',
     compania: 'Allianz',
-    poliza: '058325150',
+    poliza: '058300014',
     referencia: '670760710',
     estado: 'abierto',
     ...extra,

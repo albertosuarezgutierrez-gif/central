@@ -100,7 +100,7 @@ test('más de media palabra cambiada, otra persona o una inicial → SIGUE pregu
   assert.deepEqual(acc('A Ruiz', 'B Ruiz'), ['discrepa'])
 })
 
-test('esPolizaDeCoche: la moto que CIMA manda como auto NO es del carné B (0007001052485, 28/09/2026)', () => {
+test('esPolizaDeCoche: la moto que CIMA manda como auto NO es del carné B (0007000000007, 28/09/2026)', () => {
   assert.equal(esPolizaDeCoche('auto', { riesgos: [{ categoriaVehiculo: 'TU', claseVehiculo: 'TU' }] }), true)
   assert.equal(esPolizaDeCoche('auto', { riesgos: [{ categoriaVehiculo: 'MO', claseVehiculo: 'MT' }] }), false)
   assert.equal(esPolizaDeCoche('auto', { riesgos: [{ claseVehiculo: 'MT' }] }), false)

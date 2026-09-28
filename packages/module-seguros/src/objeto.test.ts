@@ -20,9 +20,9 @@ test('auto: sin matrícula lo dice, no lo calla', () => {
 })
 
 test('auto: `vehiculo` trae la matrícula, no una descripción — no se pinta como modelo', () => {
-  const o = objetoAsegurado({ tipo: 'auto', datos: { vehiculo: '5979GWV' } })
+  const o = objetoAsegurado({ tipo: 'auto', datos: { vehiculo: '8888LLL' } })
   assert.equal(o.estado, 'conocido')
-  assert.equal(o.titulo, '5979GWV')
+  assert.equal(o.titulo, '8888LLL')
   assert.match(o.nota ?? '', /marca ni modelo/i)
 })
 
@@ -44,7 +44,7 @@ test('los valores de cajón se tratan como ausencia, no como dato', () => {
 })
 
 test('pareceMatricula acepta formatos reales y rechaza texto', () => {
-  assert.equal(pareceMatricula('5979GWV'), true)
+  assert.equal(pareceMatricula('8888LLL'), true)
   assert.equal(pareceMatricula('CA1506AV'), true)
   assert.equal(pareceMatricula('1234 ABC'), true)
   assert.equal(pareceMatricula('Furgoneta'), false)
