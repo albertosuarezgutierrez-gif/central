@@ -187,3 +187,18 @@ test('🪤 las necesidades se leen; ausentes = null (no se puede avisar); solo e
   assert.equal(necesidadesEditables('aceptado'), false)
   assert.equal(necesidadesEditables('retirado'), false)
 })
+
+test('cotizacionIdDe: solo con la copia guardada hay de qué preparar el presupuesto', async () => {
+  const { cotizacionIdDe } = await import('./presupuesto-asegura.ts')
+  assert.equal(cotizacionIdDe({ estado: 'guardada', cotizacionId: 't1' }), 't1')
+  assert.equal(cotizacionIdDe({ estado: 'fallo', cotizacionId: 't1' }), null)
+  assert.equal(cotizacionIdDe(null), null)
+  assert.equal(cotizacionIdDe(undefined), null)
+})
+
+test('leerPresupuestoEnLista: el ramo viaja, y si asegura no lo manda es null', async () => {
+  const { leerPresupuestoEnLista } = await import('./presupuesto-asegura.ts')
+  const base = { id: 'a', estado: 'borrador', creadoAt: 'x', venceEl: 'y' }
+  assert.equal(leerPresupuestoEnLista({ ...base, ramo: 'moto' })?.ramo, 'moto')
+  assert.equal(leerPresupuestoEnLista(base)?.ramo, null)
+})

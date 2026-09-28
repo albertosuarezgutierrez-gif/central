@@ -16,6 +16,7 @@ import TabPolizas from './TabPolizas'
 import TabPendiente from './TabPendiente'
 import NotasCliente from './NotasCliente'
 import OportunidadesCliente from './OportunidadesCliente'
+import PresupuestosPoliza from '../../poliza/[id]/PresupuestosPoliza'
 import SegurosCliente from './SegurosCliente'
 import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
@@ -158,6 +159,9 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
             polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
           />
         </Tarjeta>
+      )}
+      {tab === 'oportunidades' && (
+        <PresupuestosPoliza clienteId={ficha.id} />
       )}
 
       {tab === 'pendiente' && <TabPendiente accion={accion} resumen={resumen} vivas={porClase.viva} clienteId={ficha.id} />}
