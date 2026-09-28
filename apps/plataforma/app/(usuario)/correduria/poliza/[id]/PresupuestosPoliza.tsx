@@ -120,8 +120,9 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo }: { poli
                 </button>
               )}
               {p.opciones > 0 && p.estado !== 'retirado' && p.estado !== 'caducado' && (
-                // Solo descarga: no avisa a nadie. Lo manda Alberto por donde quiera.
-                <a href={`/api/correduria/presupuesto/pdf?id=${encodeURIComponent(p.id)}`} download
+                // Solo descarga: no avisa a nadie. En pestaña nueva y sin `download`: si falla, se ve el error en vez de
+                // guardarse un «pdf» que dentro es un JSON.
+                <a href={`/api/correduria/presupuesto/pdf?id=${encodeURIComponent(p.id)}`} target="_blank" rel="noopener"
                   style={{ ...btnStyle('secundario'), display: 'inline-flex', alignItems: 'center', minHeight: 44, textDecoration: 'none' }}>
                   Descargar PDF
                 </a>

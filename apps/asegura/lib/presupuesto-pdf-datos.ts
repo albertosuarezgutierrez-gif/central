@@ -25,8 +25,9 @@ export async function datosPdfPresupuesto(correduriaId: string, id: string): Pro
     select peticion from tarificaciones
     where correduria_id = ${correduriaId}::uuid and id = ${p.tarificacionId}::uuid`
 
-  // Los mismos grupos que «Revisa tus datos» del portal; ilegible → null (el PDF lo dice).
-  const leidos = leerDatosCotizados(tarif?.peticion, p.ramo)
+  // Los mismos grupos que «Revisa tus datos» del portal, pero con el DNI ENTERO: el PDF va al propio
+  // tomador para que compruebe los datos de la emisión. Ilegible → null (el PDF lo dice).
+  const leidos = leerDatosCotizados(tarif?.peticion, p.ramo, { documentoCompleto: true })
 
   return {
     cliente: [cliente?.nombre, cliente?.apellidos].map((s) => s?.trim()).filter(Boolean).join(' ') || 'Cliente',

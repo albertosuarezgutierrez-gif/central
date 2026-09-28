@@ -387,7 +387,7 @@ export function precalificarAuto(
     estadoCivil: limpio(resueltos.estadoCivilId) ?? undefined,
     telefono: limpio(cliente.telefono)?.replace(/\s/g, '') ?? undefined,
     email: limpio(cliente.email) ?? undefined,
-    fechaCarnet: limpio(cliente.fechaCarnet) ?? carnetBDeFicha(cliente.carnets) ?? undefined,
+    fechaCarnet: limpio(cliente.fechaCarnet) ?? undefined,
     cpResidencia: limpio(cliente.codigoPostal),
     municipioResidenciaId: resueltos.municipioId,
     nombreVia: nombreViaDeFicha ?? undefined,

@@ -63,3 +63,14 @@ test('logo por la primera palabra; sin logo → null (se pinta la inicial, nunca
   assert.equal(claveLogo('MAPFRE'), 'mapfre')
   assert.equal(claveLogo('Plus Ultra'), null)
 })
+
+test('el PDF lleva el DNI entero; el portal y la firma siguen enmascarados (misma huella)', async () => {
+  const { leerDatosCotizados } = await import('./datos-cotizados.ts')
+  const per = { name: 'Ana', surname: 'Ruiz', identificationDocument: { id: '12345678-z' }, birthDate: '1990-01-02' }
+  const pet = { holder: per, risk: { primaryDriver: per, registrationPlate: '1234ABC' } }
+  const dni = (d: ReturnType<typeof leerDatosCotizados>) => d.estado === 'ok' ? d.grupos[0].filas.find((f) => f.etiqueta === 'DNI/NIE')?.valor : null
+  assert.equal(dni(leerDatosCotizados(pet, 'auto', { documentoCompleto: true })), '12345678Z')
+  const portal = leerDatosCotizados(pet, 'auto')
+  assert.equal(dni(portal), '***78Z')
+  assert.equal(portal.estado === 'ok' && portal.huella, (() => { const d = leerDatosCotizados(pet, 'auto', {}); return d.estado === 'ok' && d.huella })())
+})

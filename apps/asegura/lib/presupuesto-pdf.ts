@@ -3,9 +3,9 @@
 // PURO (sin BD): recibe los datos ya leídos. Las opciones son las MISMAS que ve el cliente en el
 // portal (congeladas, sin las ocultas) y en el mismo orden, con la misma prima (`prima_eur`).
 //
-// 🚨 Lo que NO lleva, a propósito: DNI, IBAN, dirección ni las observaciones internas de la
-// compañía (`avisos`: «esta póliza quedará bloqueada…» es para el corredor, no para el cliente).
-// Y ningún enlace con token: el token solo existe en claro en el mensaje que sale, y un PDF se reenvía.
+// 🚨 Va al PROPIO tomador para que compruebe los datos de la emisión (Alberto, 28/09/2026): por eso lleva
+// su DNI entero y, en hogar, la dirección del riesgo. Lo que NO lleva: IBAN, las observaciones internas de
+// la compañía (`avisos`: «esta póliza quedará bloqueada…» es para el corredor) ni ningún enlace con token.
 
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
@@ -79,7 +79,11 @@ export function nombreFicheroPresupuesto(d: Pick<DatosPdfPresupuesto, 'cliente' 
 /** Lo que la fuente no tiene (un emoji) se cambia por «?» en vez de romper el PDF. */
 function paraFuente(font: PDFFont, t: string): string {
   const validos = new Set(font.getCharacterSet())
-  return Array.from(t.replace(/\r/g, '').replace(/\t/g, ' ')).map((c) => (c === '\n' || validos.has(c.codePointAt(0)!) ? c : '?')).join('')
+  const cabe = (c: string) => c === '\n' || validos.has(c.codePointAt(0)!)
+  // Una letra con un diacrítico que la fuente no trae (ș, ł, č…) cae a su letra base antes que a «?».
+  return Array.from(t.replace(/\r/g, '').replace(/\t/g, ' '))
+    .map((c) => (cabe(c) ? c : (() => { const b = c.normalize('NFD')[0] ?? ''; return b && cabe(b) ? b : '?' })()))
+    .join('')
 }
 
 function partir(font: PDFFont, texto: string, tam: number, ancho: number): string[] {
@@ -108,6 +112,14 @@ export function repartirOpciones<T extends { papeles: string[] }>(opciones: T[])
   const hay = opciones.some((o) => o.papeles.length > 0)
   const enTarjeta = (o: T, i: number) => (hay ? o.papeles.length > 0 : i < 3)
   return { tarjetas: opciones.filter(enTarjeta), resto: opciones.filter((o, i) => !enTarjeta(o, i)) }
+}
+
+/** Una sola línea: lo que no cabe se corta con «…». */
+function recortar(font: PDFFont, t: string, tam: number, w: number): string {
+  let s = paraFuente(font, t)
+  if (font.widthOfTextAtSize(s, tam) <= w) return s
+  while (s.length > 1 && font.widthOfTextAtSize(`${s}…`, tam) > w) s = s.slice(0, -1)
+  return `${s.trimEnd()}…`
 }
 
 const A4: [number, number] = [595.28, 841.89]
@@ -177,8 +189,8 @@ export async function pdfPresupuesto(d: DatosPdfPresupuesto): Promise<Uint8Array
 
   linea(`Tu presupuesto de seguro de ${RAMOS[d.ramo] ?? d.ramo}`, M, y - 20, f.titulo, 20)
   y -= 32
-  linea(`Para ${d.cliente}`, M, y - 11, f.negrita, 11)
-  y -= 17
+  parrafo(`Para ${d.cliente}`, f.negrita, 11, TEXTO, M, ancho, 1.5)
+  y -= 1
   linea(`Precios válidos hasta el ${fechaCorta(d.venceEl)}`, M, y - 9.5, f.normal, 9.5, TENUE)
   y -= 22
 
@@ -191,7 +203,12 @@ export async function pdfPresupuesto(d: DatosPdfPresupuesto): Promise<Uint8Array
     const pad = 14
     const colW = (ancho - pad * 2 - 20) / 2
     // Cada grupo en la columna que vaya más corta.
-    const altoGrupo = (g: GrupoDatos) => 16 + g.filas.reduce((a, fl) => a + 11.5 * partir(f.normal, paraFuente(f.normal, `${fl.etiqueta}: ${fl.valor}`), 9, colW).length, 0) + 8
+    const lineasValor = (fl: { etiqueta: string; valor: string }) => {
+      const wEt = f.normal.widthOfTextAtSize(paraFuente(f.normal, `${fl.etiqueta}: `), 9)
+      return { wEt, valor: partir(f.negrita, paraFuente(f.negrita, fl.valor), 9, colW - wEt) }
+    }
+    // El MISMO cálculo que el pintado: si no, un valor largo se sale de la caja.
+    const altoGrupo = (g: GrupoDatos) => 16 + g.filas.reduce((a, fl) => a + 11.5 * Math.max(1, lineasValor(fl).valor.length), 0) + 8
     const cols: GrupoDatos[][] = [[], []]
     const alturas = [0, 0]
     for (const g of d.datosCalculo) {
@@ -213,10 +230,8 @@ export async function pdfPresupuesto(d: DatosPdfPresupuesto): Promise<Uint8Array
         linea(g.titulo, x, yy - 9.5, f.titulo, 9.5)
         yy -= 16
         for (const fl of g.filas) {
-          const et = `${fl.etiqueta}: `
-          const wEt = f.normal.widthOfTextAtSize(paraFuente(f.normal, et), 9)
-          const valor = partir(f.negrita, paraFuente(f.negrita, fl.valor), 9, colW - wEt)
-          linea(et, x, yy - 9, f.normal, 9, TENUE)
+          const { wEt, valor } = lineasValor(fl)
+          linea(`${fl.etiqueta}: `, x, yy - 9, f.normal, 9, TENUE)
           valor.forEach((v, n) => linea(v, x + wEt, yy - 9 - n * 11.5, f.negrita, 9))
           yy -= 11.5 * Math.max(1, valor.length)
         }
@@ -271,7 +286,7 @@ export async function pdfPresupuesto(d: DatosPdfPresupuesto): Promise<Uint8Array
       const ini = o.compania.trim().charAt(0).toUpperCase() || '?'
       linea(ini, M + pad + 13 - f.titulo.widthOfTextAtSize(paraFuente(f.titulo, ini), 12) / 2, yLogo - 17, f.titulo, 12, PRIMARIO)
     }
-    linea(o.compania, M + pad, yLogo - 40, f.normal, 8, TENUE)
+    linea(recortar(f.normal, o.compania, 8, colLogo), M + pad, yLogo - 40, f.normal, 8, TENUE)
 
     // Precio.
     const precio = o.primaEur === null ? '—' : eur(o.primaEur)

@@ -14,8 +14,13 @@ export async function GET(req: Request) {
   const guarda = await exigirCorreduria()
   if (!guarda.ok) return guarda.respuesta
   const id = new URL(req.url).searchParams.get('id') ?? ''
-  const r = await descargarPdfPresupuestoAsegura(id).catch(() => null)
-  if (!r) return NextResponse.json({ error: 'asegura sin configurar o sin respuesta' }, { status: 503 })
+  let r: Response | null
+  try {
+    r = await descargarPdfPresupuestoAsegura(id)
+  } catch {
+    return NextResponse.json({ error: 'asegura no ha respondido (red o tiempo agotado): vuelve a intentarlo' }, { status: 502 })
+  }
+  if (!r) return NextResponse.json({ error: 'falta ASEGURA_OPERADOR_SECRET en plataforma' }, { status: 503 })
   if (!r.ok || r.headers.get('content-type')?.split(';')[0]?.trim() !== 'application/pdf') {
     return NextResponse.json({ error: `asegura respondió ${r.status}` }, { status: r.ok ? 502 : r.status })
   }
