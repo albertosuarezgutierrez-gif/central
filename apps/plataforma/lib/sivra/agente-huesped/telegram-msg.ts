@@ -128,6 +128,9 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   if (noRespuesta) botones.push([{ texto: '🚫 No responder', callback: `hsp_skip:${ctx.bookingId}` }])
   // Ya contestado a mano (Smoobu/Booking/WhatsApp): cierra el pendiente sin enviar nada.
   else botones.push([{ texto: '✋ Ya respondido', callback: `hsp_done:${ctx.bookingId}` }])
+  // El «mensaje del huésped» lo escribió Alberto fuera de Smoobu y llegó sin marca de emisor
+  // (reserva 154692216): se registra como nuestro para que el anti-eco no vuelva a tomarlo por pregunta.
+  botones.push([{ texto: '🙋 Ese mensaje es mío', callback: `hsp_mine:${ctx.bookingId}` }])
   // Retocar: aplicar una instrucción corta sobre el borrador (no reescribir entero).
   if (dec.reply) botones.push([{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${ctx.bookingId}` }])
   // Acción contextual: conceder late/early si la categoría lo pide.
@@ -180,6 +183,10 @@ export async function confirmarEnviado(messageId: number | null, texto: string):
 
 export async function confirmarRespondidoFuera(messageId: number | null): Promise<void> {
   if (messageId) await tgEditMessage(messageId, '✋ Respondido fuera del agente — pendiente cerrado, no se envió nada.')
+}
+
+export async function confirmarEsMio(messageId: number | null): Promise<void> {
+  if (messageId) await tgEditMessage(messageId, '🙋 Anotado: ese mensaje era tuyo, no del huésped. Pendiente cerrado y no volveré a tomarlo por pregunta.')
 }
 
 export async function confirmarDescartado(messageId: number | null): Promise<void> {
