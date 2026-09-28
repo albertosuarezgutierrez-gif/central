@@ -13,7 +13,7 @@ test('ficha vacía → todo se RELLENA; el nombre igual (tildes/mayúsculas) no 
 test('datos distintos → DISCREPA con los dos valores; los iguales no salen', () => {
   const f: FichaParaCima = { nombre: 'Juan Perez', fechaNacimiento: '1980-03-04', fechaNacimientoIlegible: false, carnets: ['2001-05-05'], telefonos: ['611223344', '600112233'], emails: ['otro@ej.es'] }
   const d = compararConCima(f, cima)
-  assert.deepEqual(d.map((x) => `${x.campo}:${x.accion}`), ['nombre:discrepa', 'fechaCarnet:discrepa', 'email:discrepa'])
+  assert.deepEqual(d.map((x) => `${x.campo}:${x.accion}`), ['nombre:discrepa', 'fechaCarnet:discrepa', 'email:anadir'])
   assert.equal(d[0].ficha, 'Juan Perez')
   assert.equal(d[2].cima, 'Pablo@Ej.es')
 })
@@ -51,9 +51,9 @@ test('teléfono distinto → se AÑADE (no pregunta); el que ya está en la fich
   assert.deepEqual(d.map((x) => `${x.campo}:${x.accion}:${x.cima}`), ['telefono:anadir:954172716'])
 })
 
-test('email distinto SIGUE preguntando: vincula el portal del cliente', () => {
+test('email distinto de CIMA → se AÑADE como segundo email, sin preguntar', () => {
   const d = compararConCima({ ...vacia, emails: ['alfredo.pont@phh.es'] }, { ...soloNombre, emails: ['apontdelgadodecos@gmail.com'] })
-  assert.deepEqual(d.map((x) => `${x.campo}:${x.accion}`), ['email:discrepa'])
+  assert.deepEqual(d.map((x) => `${x.campo}:${x.accion}:${x.cima}`), ['email:anadir:apontdelgadodecos@gmail.com'])
 })
 
 test('a CIMA le falta un nombre que la ficha tiene → no es diferencia (la ficha está más completa)', () => {
@@ -85,4 +85,17 @@ test('CIMA dice MÁS que la ficha y la contiene → completar con lo de CIMA, si
   assert.deepEqual(compararConCima({ ...vacia, nombre: 'J Perez Lopez' }, { ...soloNombre, nombre: 'JUAN PEREZ LOPEZ' }).map((x) => x.accion), ['completar'])
   // Si no la contiene, sigue siendo una discrepancia de verdad.
   assert.deepEqual(compararConCima({ ...vacia, nombre: 'Maria Gonzalez' }, { ...soloNombre, nombre: 'CARMEN BAENA RUIZ' }).map((x) => x.accion), ['discrepa'])
+})
+
+test('nombre con erratas y en minúsculas → corregir con el de CIMA, sin preguntar', () => {
+  const d = compararConCima({ ...vacia, nombre: 'Berta del la fuentes rojas' }, { ...soloNombre, nombre: 'BERTA DE LA FUENTE ROJAS' })
+  assert.deepEqual(d.map((x) => `${x.accion}:${x.cima}`), ['corregir:Berta de la Fuente Rojas'])
+  assert.deepEqual(compararConCima({ ...vacia, nombre: 'Juan Peres' }, { ...soloNombre, nombre: 'Juan Perez' }).map((x) => x.accion), ['corregir'])
+})
+
+test('más de media palabra cambiada, otra persona o una inicial → SIGUE preguntando', () => {
+  const acc = (f: string, c: string) => compararConCima({ ...vacia, nombre: f }, { ...soloNombre, nombre: c }).map((x) => x.accion)
+  assert.deepEqual(acc('Maria Lopez', 'Mario Lopes'), ['discrepa'])
+  assert.deepEqual(acc('Ana Ruiz Gil', 'Eva Ruiz Gil'), ['discrepa'])
+  assert.deepEqual(acc('A Ruiz', 'B Ruiz'), ['discrepa'])
 })
