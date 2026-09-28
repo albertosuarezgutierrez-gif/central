@@ -835,6 +835,18 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Baja firmada en el portal → justificante al cliente + archivo en su póliza
+Auditoría de la baja Mapfre de Pablo Guzmán Pueyo: SÍ firmó (28/09 10:18) y la carta llegó a Mapfre (Resend delivered).
+El 26/09 no pudo: 3 códigos, 0 «Firmar» — perdía sesión/estado al salir a leer el código (iPhone). Y tras firmar no recibía NADA.
+Nuevo `apps/asegura/lib/justificante-anulacion.ts`: tras la firma (after(), detrás del envío a la compañía) archiva el PDF
+firmado en `documentos` de la póliza (visible en su portal) y le manda correo con PDF+txt. Idempotente. Botón «Mandar
+justificante al cliente» en plataforma (póliza → anulación) = reenvío manual. Pendiente: pulsarlo para Pablo (y decidir
+Victor/Jose, también firmados sin justificante).
+Mismo PR: el portal reabre el campo del código si hay uno vigente (`codigoCaducaEn`) y enseña «Bajas que has firmado» 60 días.
+⚠️ Ese día Mapfre contestó que CCORREDOR@mapfre.com es SOLO comercial: las bajas de Pablo y Jose NO están comunicadas.
+`recibe_anulaciones` de Mapfre a false, CCORREDOR re-etiquetado comercial; mapfre@mapfre.es probado → Resend «suppressed» (no
+entrega). Borradores en Gmail a jmreal@mapfre.com (comercial) preguntando el buzón de bajas. Los otros 4 buzones «general» sin verificar.
+
 ## (28/09/2026) asegura-portal: la FIGURA del cliente en cada póliza
 - Alberto: «indicar en la app cliente la figura que tiene en la póliza». Chip en la fila de la bóveda («Tomador», «Tomador y conductor habitual», «Propietario») y frase en la ficha («En esta póliza figuras como…» / «…como propietario. El tomador es X.»).
 - `figuraEnPropias()` + `figuraChip()` en `apps/asegura-portal/lib/intervinientes.ts`; `PolizaPortal.figura` (solo propias e intervinientes; las autorizadas no la llevan: las ve por permiso).

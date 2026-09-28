@@ -47,6 +47,8 @@ export type Anulacion = {
   confirmadaAt: string | null
   /** Firmada junto a un presupuesto aceptado cuya póliza nueva aún no consta emitida: no se comunica todavía. */
   esperaEmision: boolean
+  /** Firmada en el portal (firma electrónica con carta guardada): hay justificante que mandar al cliente. */
+  firmaElectronica: boolean
   siguiente: SiguientePasoAnulacion | null
 }
 
@@ -54,7 +56,7 @@ type Fila = {
   id: string; polizaId: string; clienteId: string; nombre: string | null; apellidos: string | null; numeroPoliza: string | null
   compania: string | null; tipo: TipoAnulacion; solicitadaPor: string; motivo: MotivoAnulacion; motivoTexto: string | null
   fechaEfecto: string; estado: EstadoAnulacion; creada: Date; firmadaAt: Date | null; firmaNota: string | null
-  comunicadaAt: Date | null; confirmadaAt: Date | null; esperaEmision: boolean
+  comunicadaAt: Date | null; confirmadaAt: Date | null; esperaEmision: boolean; firmaElectronica: boolean
 }
 
 function mapear(f: Fila, hoy: string): Anulacion {
@@ -67,6 +69,7 @@ function mapear(f: Fila, hoy: string): Anulacion {
     firmadaAt: f.firmadaAt?.toISOString() ?? null, firmaNota: f.firmaNota,
     comunicadaAt: f.comunicadaAt?.toISOString() ?? null, confirmadaAt: f.confirmadaAt?.toISOString() ?? null,
     esperaEmision: f.esperaEmision,
+    firmaElectronica: f.firmaElectronica,
     siguiente: f.esperaEmision && f.estado === 'firmada'
       ? { texto: 'Espera a que la compañía emita la póliza nueva (márcalo en su presupuesto): hasta entonces no se comunica.', alerta: false }
       : siguientePasoAnulacion({ estado: f.estado, fechaEfecto: f.fechaEfecto, compania: f.compania }, hoy),
@@ -79,7 +82,8 @@ const SELECT = Prisma.sql`
          a.motivo, a.motivo_texto as "motivoTexto", to_char(a.fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto", a.estado,
          a.created_at as creada, a.firmada_at as "firmadaAt", a.firma_nota as "firmaNota",
          a.comunicada_at as "comunicadaAt", a.confirmada_at as "confirmadaAt",
-         (a.presupuesto_id is not null and not exists (select 1 from presupuesto pr where pr.id = a.presupuesto_id and pr.emitido_at is not null)) as "esperaEmision"
+         (a.presupuesto_id is not null and not exists (select 1 from presupuesto pr where pr.id = a.presupuesto_id and pr.emitido_at is not null)) as "esperaEmision",
+         (a.firma_id is not null and a.carta_texto is not null) as "firmaElectronica"
   from anulacion a join polizas p on p.id = a.poliza_id left join clientes c on c.id = a.cliente_id`
 
 /** Los expedientes de una póliza, el más reciente primero. */
