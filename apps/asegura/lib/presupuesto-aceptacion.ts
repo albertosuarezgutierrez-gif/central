@@ -22,6 +22,10 @@ import { anotarCambio } from './auditoria'
 import { fichaPropiaDe } from './contacto-portal'
 import { ipidDeOpcion } from './ipid'
 import { estadoEmailDeFicha } from './email-ficha'
+import {
+  MAX_TEXTO_REPORTE, TEXTO_CONFIRMACION_DATOS, URL_PLATAFORMA_DEFECTO, anexoDatosFirmados, avisoAceptacion, avisoDatosIncorrectos,
+  enlaceFichaCliente, leerDatosCotizados, type DatosCotizados, type GrupoDatos,
+} from './datos-cotizados'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 export const MINUTOS_CODIGO = 10
@@ -53,6 +57,10 @@ type Fila = {
   nCompanias: number
   /** Huella de la ficha IPID vigente de la opción (misma clave que el enlace del portal). */
   ipidHuella: string | null
+  /** La petición que viajó a Codeoscopic: de ella salen los datos que el cliente confirma. */
+  peticion: unknown
+  /** El cliente dijo que un dato no es correcto: no se acepta desde el portal hasta retarificar. */
+  datosEnRevision: boolean
 }
 
 async function leer(correduriaId: string, clienteId: string, presupuestoId: string, opcionId: string): Promise<Fila | null> {
@@ -72,7 +80,9 @@ async function leer(correduriaId: string, clienteId: string, presupuestoId: stri
            exists (select 1 from anulacion an where an.poliza_id = p.poliza_id
                      and an.estado = any(${ABIERTAS}::text[])) as "expedienteAbierto",
            (select count(*)::int from presupuesto_opcion x where x.presupuesto_id = p.id) as "nOpciones",
-           (select count(distinct lower(trim(x.compania)))::int from presupuesto_opcion x where x.presupuesto_id = p.id) as "nCompanias"
+           (select count(distinct lower(trim(x.compania)))::int from presupuesto_opcion x where x.presupuesto_id = p.id) as "nCompanias",
+           (select t.peticion from tarificaciones t where t.id = p.tarificacion_id and t.correduria_id = p.correduria_id) as peticion,
+           exists (select 1 from presupuesto_evento ev where ev.presupuesto_id = p.id and ev.tipo = ${TIPO_DATOS_INCORRECTOS}) as "datosEnRevision"
     from presupuesto p
       join clientes c on c.id = p.cliente_id
       join presupuesto_opcion o on o.presupuesto_id = p.id and o.id = ${opcionId}::uuid
@@ -86,6 +96,8 @@ async function leer(correduriaId: string, clienteId: string, presupuestoId: stri
 
 type Compuesto = {
   documento: string
+  /** Los datos cotizados que el cliente confirma; van DENTRO del documento y de su huella. */
+  datos: Extract<DatosCotizados, { estado: 'ok' }>
   documentoHash: string
   /** La anulación que se firmaría con ella. `null` = no se anula nada en este acto. */
   anulacion: { compania: string; numeroPoliza: string; fechaEfecto: string; carta: string; advertencia: string | null } | null
@@ -93,7 +105,7 @@ type Compuesto = {
   sinAnulacion: string | null
 }
 
-function componer(f: Fila, hoy: string): Compuesto | null {
+function componer(f: Fila, hoy: string, datos: Extract<DatosCotizados, { estado: 'ok' }>): Compuesto | null {
   const prima = f.prima === null ? null : Number(f.prima)
   if (prima === null || !Number.isFinite(prima)) return null
   const firmeza = f.firmeza === 'firme' || f.firmeza === 'condicionado' ? f.firmeza : 'estimado'
@@ -132,9 +144,10 @@ function componer(f: Fila, hoy: string): Compuesto | null {
     },
     necesidades: f.necesidades,
     ipid: f.ipidHuella ? { huella: f.ipidHuella } : null,
-  })
+  }) + '\n\n' + anexoDatosFirmados(datos)
   // La huella cubre las DOS cartas: si cambia cualquiera, no se firma lo que no se leyó.
-  return { documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion }
+  // Los datos cotizados van DENTRO de `documento`, así que también los cubre.
+  return { documento, documentoHash: huella(documento + '\n\n' + (anulacion?.carta ?? '')), anulacion, sinAnulacion, datos }
 }
 
 type SinFicha = { estado: 'sin_ficha' } | { estado: 'varias_fichas' } | { estado: 'error'; causa: string }
@@ -153,18 +166,34 @@ async function base(correduriaId: string, identidadId: string, presupuestoId: st
   return { f, clienteId: ficha.clienteId }
 }
 
+/** El cliente dijo que un dato no es correcto (evento append-only de `presupuesto_evento`). */
+export const TIPO_DATOS_INCORRECTOS = 'datos_incorrectos'
+const MOTIVO_EN_REVISION = 'Nos has dicho que un dato no es correcto. Te llamamos para corregirlo; no se emite nada hasta entonces.'
+
+/** Los dos cierres fail-closed de los datos: ilegibles o avisados como incorrectos. */
+type BloqueoDatos = { estado: 'sin_datos'; motivo: string } | { estado: 'datos_en_revision'; motivo: string }
+
+function datosDe(f: Fila): Extract<DatosCotizados, { estado: 'ok' }> | BloqueoDatos {
+  if (f.datosEnRevision) return { estado: 'datos_en_revision', motivo: MOTIVO_EN_REVISION }
+  const d = leerDatosCotizados(f.peticion, f.ramo)
+  return d.estado === 'ok' ? d : { estado: 'sin_datos', motivo: d.motivo }
+}
+
 export type ResultadoPreparar =
-  | ({ estado: 'ok'; consentimiento: string } & Compuesto)
+  | ({ estado: 'ok'; consentimiento: string; confirmacionDatos: string } & Omit<Compuesto, 'datos'> & { datos: GrupoDatos[] })
   | { estado: 'sin_precio' }
+  | BloqueoDatos
   | Exclude<Base, { f: Fila }>
 
 /** Lo que el cliente va a firmar con esa opción. No escribe nada. */
 export async function prepararAceptacion(correduriaId: string, identidadId: string, presupuestoId: string, opcionId: string): Promise<ResultadoPreparar> {
   const b = await base(correduriaId, identidadId, presupuestoId, opcionId)
   if (!('f' in b)) return b
-  const c = componer(b.f, hoyMadrid())
+  const d = datosDe(b.f)
+  if (d.estado !== 'ok') return d
+  const c = componer(b.f, hoyMadrid(), d)
   if (!c) return { estado: 'sin_precio' }
-  return { estado: 'ok', consentimiento: TEXTO_CONSENTIMIENTO, ...c }
+  return { estado: 'ok', consentimiento: TEXTO_CONSENTIMIENTO, confirmacionDatos: TEXTO_CONFIRMACION_DATOS, ...c, datos: c.datos.grupos }
 }
 
 export type ResultadoCodigo =
@@ -234,6 +263,9 @@ export type ResultadoFirma =
   | { estado: 'nombre_no_coincide' }
   | { estado: 'documento_cambiado' }
   | { estado: 'sin_precio' }
+  /** Sin la casilla «He revisado mis datos…» marcada no se firma: lo decide el SERVIDOR, no la pantalla. */
+  | { estado: 'sin_confirmar_datos' }
+  | BloqueoDatos
   | Exclude<Base, { f: Fila }>
 
 export async function firmarAceptacion(
@@ -241,11 +273,16 @@ export async function firmarAceptacion(
   identidadId: string,
   presupuestoId: string,
   opcionId: string,
-  datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null },
+  datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean },
 ): Promise<ResultadoFirma> {
+  // La casilla va lo PRIMERO: antes de tocar la BD y antes de gastar un intento del código.
+  if (datos.datosConfirmados !== true) return { estado: 'sin_confirmar_datos' }
   const b = await base(correduriaId, identidadId, presupuestoId, opcionId)
   if (!('f' in b)) return b
   const { f, clienteId } = b
+  // Fail-closed: con los datos ilegibles o avisados como incorrectos, no se autoriza la emisión.
+  const dc = datosDe(f)
+  if (dc.estado !== 'ok') return dc
   // Control exclusivo: sin código no hay firma, aunque la sesión esté abierta.
   if (!f.otpHash || !f.otpExpira) return { estado: 'sin_codigo' }
   // El intento se gasta ANTES de comparar y en una sola sentencia.
@@ -259,7 +296,7 @@ export async function firmarAceptacion(
   if (!nombreCoincide(datos.nombre, f.tomador)) return { estado: 'nombre_no_coincide' }
 
   const hoy = hoyMadrid()
-  const c = componer(f, hoy)
+  const c = componer(f, hoy, dc)
   if (!c) return { estado: 'sin_precio' }
   // Se firma lo que se leyó: si el documento (o la carta de anulación) ya no es el enseñado, no.
   if (c.documentoHash !== datos.documentoHash) return { estado: 'documento_cambiado' }
@@ -305,7 +342,11 @@ export async function firmarAceptacion(
       await tx.$executeRaw`update presupuesto_opcion set elegida_at = now() where id = ${opcionId}::uuid and presupuesto_id = ${presupuestoId}::uuid`
       await tx.$executeRaw`
         insert into presupuesto_evento (presupuesto_id, tipo, origen, detalle)
-        values (${presupuestoId}::uuid, 'aceptado', 'cliente', ${JSON.stringify({ opcionId, conAnulacion: !!c.anulacion })}::jsonb)`
+        values (${presupuestoId}::uuid, 'aceptado', 'cliente', ${JSON.stringify({
+          opcionId, conAnulacion: !!c.anulacion,
+          // Lo que confirmó con la casilla, y la huella de los datos que tenía delante.
+          datosConfirmados: true, datosHuella: c.datos.huella, confirmacion: TEXTO_CONFIRMACION_DATOS,
+        })}::jsonb)`
       if (c.anulacion && anulacionId && evidenciaAnulacion && f.polizaId) {
         // La anulación nace firmada, pero la cola no la propone hasta que el presupuesto esté emitido.
         await tx.$executeRaw`
@@ -335,12 +376,99 @@ export async function firmarAceptacion(
     await db.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
       values (${correduriaId}::uuid, ${clienteId}::uuid, ${f.polizaId}::uuid, cast('gestion' as tipo_historial_interno),
-              ${`El cliente aceptó en el portal el presupuesto de ${f.compania}${c.anulacion ? ' y firmó la anulación de su póliza actual' : ''}.`})`
+              ${`El cliente aceptó en el portal el presupuesto de ${f.compania}${c.anulacion ? ' y firmó la anulación de su póliza actual' : ''}. ` +
+                `Confirmó con la casilla los datos con los que se calculó el precio y autorizó la emisión (huella ${c.datos.huella.slice(0, 12)}).`})`
   } catch (e) {
     console.error('[presupuesto-aceptacion] historial no anotado:', e instanceof Error ? e.message : e)
   }
-  const aviso = `✍️ ${f.tomador} ha ACEPTADO el presupuesto de ${f.ramo} (${f.compania}). Emítelo: no hay cobertura hasta entonces.` +
-    (c.anulacion ? ` Firmó también la anulación de su póliza de ${c.anulacion.compania}, que saldrá a tu OK cuando la nueva conste emitida.` : '') +
-    (c.sinAnulacion ? ` ⚠️ ${c.sinAnulacion}` : '')
+  const aviso = avisoAceptacion({
+    tomador: f.tomador, ramo: f.ramo, compania: f.compania, producto: f.producto,
+    primaEur: f.prima === null ? null : Number(f.prima), franquiciaEur: f.franquicia === null ? null : Number(f.franquicia),
+    datos: c.datos, anulacionCompania: c.anulacion?.compania ?? null, sinAnulacion: c.sinAnulacion,
+    enlaceFicha: enlaceFichaCliente(clienteId, urlPlataforma()),
+  })
   return { estado: 'aceptado', aceptadoEl: hoy, conAnulacion: !!c.anulacion, aviso, anulacionId: c.anulacion ? anulacionId : null }
+}
+
+const urlPlataforma = () => process.env.PLATAFORMA_URL?.trim() || URL_PLATAFORMA_DEFECTO
+
+// ─── «Revisa tus datos» fuera de la firma: leerlos y avisar de uno que no es correcto ──────────
+
+type Propio = {
+  clienteId: string; ramo: string; tomador: string; peticion: unknown
+  datosEnRevision: boolean; retirado: boolean; emitido: boolean
+}
+
+/** El presupuesto, solo si es de la ficha de esta identidad. Mismo reparto que `base`, sin opción. */
+async function propio(correduriaId: string, identidadId: string, presupuestoId: string): Promise<Propio | { estado: 'no_encontrado' } | SinFicha> {
+  if (!UUID.test(presupuestoId)) return { estado: 'no_encontrado' }
+  const ficha = await fichaPropiaDe(correduriaId, identidadId)
+  if (ficha.estado !== 'ok') return ficha
+  const [f] = await prismaAsegura().$queryRaw<Omit<Propio, 'clienteId'>[]>`
+    select p.ramo, trim(concat(c.nombre, ' ', coalesce(c.apellidos, ''))) as tomador,
+           (select t.peticion from tarificaciones t where t.id = p.tarificacion_id and t.correduria_id = p.correduria_id) as peticion,
+           exists (select 1 from presupuesto_evento ev where ev.presupuesto_id = p.id and ev.tipo = ${TIPO_DATOS_INCORRECTOS}) as "datosEnRevision",
+           (p.retirado_at is not null) as retirado, (p.emitido_at is not null) as emitido
+    from presupuesto p join clientes c on c.id = p.cliente_id
+    where p.id = ${presupuestoId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${ficha.clienteId}::uuid`
+  return f ? { ...f, clienteId: ficha.clienteId } : { estado: 'no_encontrado' }
+}
+
+export type ResultadoDatos =
+  | { estado: 'ok'; datos: GrupoDatos[]; confirmacionDatos: string; enRevision: boolean }
+  | { estado: 'sin_datos'; motivo: string; enRevision: boolean }
+  | { estado: 'no_encontrado' } | SinFicha
+
+/** Los datos con los que se calculó el precio, para el bloque «Revisa tus datos». No escribe nada. */
+export async function datosCotizadosDelPresupuesto(correduriaId: string, identidadId: string, presupuestoId: string): Promise<ResultadoDatos> {
+  const p = await propio(correduriaId, identidadId, presupuestoId)
+  if ('estado' in p) return p
+  const d = leerDatosCotizados(p.peticion, p.ramo)
+  if (d.estado !== 'ok') return { estado: 'sin_datos', motivo: d.motivo, enRevision: p.datosEnRevision }
+  return { estado: 'ok', datos: d.grupos, confirmacionDatos: TEXTO_CONFIRMACION_DATOS, enRevision: p.datosEnRevision }
+}
+
+export const MAX_REPORTES_DIA = 3
+
+export type ResultadoReporte =
+  /** `aviso`: el Telegram para Alberto; lo manda el portal, que es quien tiene el bot. */
+  | { estado: 'ok'; aviso: string }
+  | { estado: 'invalido' } | { estado: 'limite' } | { estado: 'no_admite'; motivo: string }
+  | { estado: 'no_encontrado' } | SinFicha
+
+/**
+ * «Hay un dato que no es correcto»: queda en `presupuesto_evento` (append-only; con él la firma
+ * desde el portal queda cerrada, ver `datosDe`) y en el historial interno de la ficha. El aviso a
+ * Alberto lo manda el portal por Telegram con el texto que devuelve esto.
+ */
+export async function reportarDatosIncorrectos(
+  correduriaId: string, identidadId: string, presupuestoId: string, textoCrudo: string,
+): Promise<ResultadoReporte> {
+  const texto = textoCrudo.trim().slice(0, MAX_TEXTO_REPORTE)
+  if (texto.length < 3) return { estado: 'invalido' }
+  const p = await propio(correduriaId, identidadId, presupuestoId)
+  if ('estado' in p) return p
+  if (p.retirado || p.emitido) return { estado: 'no_admite', motivo: 'Este presupuesto ya no admite cambios: escríbenos o llámanos.' }
+  const db = prismaAsegura()
+  const [n] = await db.$queryRaw<{ n: number }[]>`
+    select count(*)::int as n from presupuesto_evento
+    where presupuesto_id = ${presupuestoId}::uuid and tipo = ${TIPO_DATOS_INCORRECTOS} and ocurrido_at > now() - interval '1 day'`
+  if ((n?.n ?? 0) >= MAX_REPORTES_DIA) return { estado: 'limite' }
+  await db.$executeRaw`
+    insert into presupuesto_evento (presupuesto_id, tipo, origen, detalle)
+    values (${presupuestoId}::uuid, ${TIPO_DATOS_INCORRECTOS}, 'cliente', ${JSON.stringify({ texto })}::jsonb)`
+  anotarCambio({ entidad: 'presupuesto', id: presupuestoId, campo: 'datos_incorrectos', antes: null, despues: 'avisado' })
+  try {
+    await db.$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+      values (${correduriaId}::uuid, ${p.clienteId}::uuid, cast('incidencia' as tipo_historial_interno),
+              ${`El cliente dice en el portal que un dato del presupuesto de ${p.ramo} no es correcto: «${texto}». ` +
+                'No puede aceptarlo desde el portal hasta retarificar con el dato bueno.'})`
+  } catch (e) {
+    console.error('[presupuesto-aceptacion] historial del dato incorrecto no anotado:', e instanceof Error ? e.message : e)
+  }
+  return {
+    estado: 'ok',
+    aviso: avisoDatosIncorrectos({ tomador: p.tomador, ramo: p.ramo, texto, enlaceFicha: enlaceFichaCliente(p.clienteId, urlPlataforma()) }),
+  }
 }

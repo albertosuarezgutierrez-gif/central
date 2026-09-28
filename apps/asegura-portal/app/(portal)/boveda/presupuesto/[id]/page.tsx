@@ -8,6 +8,9 @@ import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fec
 import { Plegable } from './RestoDeOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
 import { DatosParaContratar } from './DatosParaContratar'
+import { RevisaTusDatos } from './RevisaTusDatos'
+import { MOTIVO_EN_REVISION, MOTIVO_SIN_DATOS, datosCotizados, datosListosParaAceptar } from '@/lib/presupuesto-firma'
+import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
 import { datosParaContratar } from '@/lib/datos-emision'
 import { getIdentidad } from '@/lib/session'
 
@@ -87,8 +90,16 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const p = r.presupuesto
   // Qué falta para emitir (§4bis): solo mientras se puede contratar. `null` = no se pudo mirar.
   const mostrarDatos = !p.retirado && !p.caducado && p.emitidoAt === null && p.enviadoAt !== null
-  const identidad = mostrarDatos ? await getIdentidad() : null
-  const datos = identidad ? await datosParaContratar(identidad.id, p.id) : null
+  // «Revisa tus datos»: mientras no esté emitido ni retirado. `null` = no se han podido leer.
+  const mostrarCotizados = !p.retirado && p.emitidoAt === null
+  const identidad = mostrarDatos || mostrarCotizados ? await getIdentidad() : null
+  const datos = identidad && mostrarDatos ? await datosParaContratar(identidad.id, p.id) : null
+  const cotizados = identidad && mostrarCotizados ? await datosCotizados(identidad.id, p.id) : null
+  // Fail-closed: sin datos legibles (o con un aviso de error pendiente) no se ofrece aceptar.
+  const bloqueoDatos = datosListosParaAceptar(cotizados)
+    ? null
+    : cotizados?.enRevision ? MOTIVO_EN_REVISION
+    : cotizados?.estado === 'sin_datos' ? cotizados.motivo : MOTIVO_SIN_DATOS
   const portada = p.opciones.filter((o) => o.esPortada)
   const resto = p.opciones.filter((o) => !o.esPortada)
   const companias = new Set(portada.map((o) => o.compania)).size
@@ -119,6 +130,16 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           Estás viendo esta pantalla como la ve el cliente. Abrirla así no cuenta como que él la haya
           abierto.
         </p>
+      )}
+
+      {/* ARRIBA del todo: los datos con los que se calculó el precio (dictado de Alberto, 28/09/2026). */}
+      {mostrarCotizados && (
+        <RevisaTusDatos
+          presupuestoId={p.id}
+          datos={cotizados}
+          corredor={p.vistaDeCorredor}
+          telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+        />
       )}
 
       {p.necesidades && (
@@ -171,6 +192,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
                 prima={o.primaEur}
                 compania={o.compania}
                 corredor={p.vistaDeCorredor}
+                bloqueoDatos={bloqueoDatos}
               />
             )}
           </section>

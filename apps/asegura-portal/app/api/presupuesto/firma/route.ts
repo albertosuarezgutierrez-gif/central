@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { normalizarIp, normalizarUserAgent } from '@central/module-seguros-portal'
 import { tgSend } from '@central/core-telegram'
 
-import { firmarAceptacion, pedirCodigoAceptacion, prepararAceptacion } from '@/lib/presupuesto-firma'
+import { MOTIVO_SIN_CASILLA, firmarAceptacion, pedirCodigoAceptacion, prepararAceptacion } from '@/lib/presupuesto-firma'
 import { requireIdentidad } from '@/lib/session'
 
 export const runtime = 'nodejs'
@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
  * POST /api/presupuesto/firma — el cliente firma su aceptación de opción (pieza 4).
  *   { accion: 'preparar', presupuestoId, opcionId }            → documento + hash
  *   { accion: 'codigo', presupuestoId, opcionId }              → código de 6 cifras a su correo
- *   { accion: 'firmar', presupuestoId, opcionId, codigo, nombre } → firma la aceptación
+ *   { accion: 'firmar', presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados: true } → firma la aceptación
  *
  * La identidad sale de la SESIÓN, nunca del cuerpo. 🚨 La vista de corredor
  * es de solo lectura: Alberto no firma una aceptación por el cliente (403).
@@ -62,6 +62,11 @@ export async function POST(req: Request) {
     if (!/^\d{6}$/.test(codigo) || nombre === '' || !/^[0-9a-f]{64}$/.test(documentoHash)) {
       return NextResponse.json({ estado: 'reintentar', motivo: 'Revisa el código (6 cifras), tu nombre y el documento.' }, { status: 422 })
     }
+    // «He revisado mis datos, son correctos y autorizo la emisión»: sin la casilla no se firma.
+    // Se corta aquí y, otra vez, en asegura (que es quien decide): la pantalla no es la guarda.
+    if (b.datosConfirmados !== true) {
+      return NextResponse.json({ estado: 'reintentar', motivo: MOTIVO_SIN_CASILLA }, { status: 422 })
+    }
 
     const r = await firmarAceptacion(identidad.id, presupuestoId, opcionId, {
       codigo,
@@ -69,6 +74,7 @@ export async function POST(req: Request) {
       documentoHash,
       ip: normalizarIp(req.headers.get('x-forwarded-for')),
       userAgent: normalizarUserAgent(req.headers.get('user-agent')),
+      datosConfirmados: true,
     })
 
     if (r.estado === 'aceptado') {

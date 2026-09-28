@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { interpretarCodigo, interpretarFirma, interpretarPreparar } from './presupuesto-firma.ts'
+import { datosListosParaAceptar, interpretarCodigo, interpretarDatosCotizados, interpretarFirma, interpretarPreparar } from './presupuesto-firma.ts'
 
 test('🪤 solo un 200 con fecha es «aceptado»: un 401, un 5xx o un corte NO', () => {
   assert.deepEqual(interpretarFirma(200, { estado: 'aceptado', aceptadoEl: '2026-09-23' }), { estado: 'aceptado', aceptadoEl: '2026-09-23', aviso: null })
@@ -31,7 +31,7 @@ test('🪤 el código: «enviado» exige correo; sin_correo_configurado no es cu
 test('🪤 preparar: documentoHash válido y documento OK', () => {
   const r = interpretarPreparar(200, {
     estado: 'ok',
-    consentimiento: 'Acepto',
+    consentimiento: 'Acepto', confirmacionDatos: 'He revisado mis datos',
     documento: 'Este es el documento',
     documentoHash: 'a'.repeat(64),
     anulacion: null,
@@ -45,7 +45,7 @@ test('🪤 preparar: documentoHash válido y documento OK', () => {
 test('🪤 preparar con documentoHash inválido → null', () => {
   const r = interpretarPreparar(200, {
     estado: 'ok',
-    consentimiento: 'Acepto',
+    consentimiento: 'Acepto', confirmacionDatos: 'He revisado mis datos',
     documento: 'Doc',
     documentoHash: 'invalid',
     anulacion: null,
@@ -71,9 +71,37 @@ test('🪤 la vista de corredor no firma: el veto va ANTES de llamar al puente',
 
 test('🪤 una carta de anulación a medias no se enseña para firmar', async () => {
   const { interpretarPreparar } = await import('./presupuesto-firma.ts')
-  const ok = { estado: 'ok', consentimiento: 'c', documento: 'd', documentoHash: 'a'.repeat(64), anulacion: null, sinAnulacion: null }
+  const ok = { estado: 'ok', consentimiento: 'c', confirmacionDatos: 'He revisado mis datos', documento: 'd', documentoHash: 'a'.repeat(64), anulacion: null, sinAnulacion: null }
   assert.equal(interpretarPreparar(200, ok)?.estado, 'ok')
   assert.equal(interpretarPreparar(200, { ...ok, anulacion: { compania: 'Mapfre', numeroPoliza: '1', fechaEfecto: '2026-12-31', carta: '' } }), null)
   assert.equal(interpretarPreparar(200, { ...ok, anulacion: { compania: 'Mapfre', numeroPoliza: '1', fechaEfecto: 'mañana', carta: 'x' } }), null)
   assert.equal(interpretarPreparar(401, {}), null)
+})
+
+// ─── «Revisa tus datos» (28/09/2026) ──────────────────────────────────────────
+const pagina = readFileSync(new URL('../app/(portal)/boveda/presupuesto/[id]/page.tsx', import.meta.url), 'utf8')
+const rutaFirma = readFileSync(new URL('../app/api/presupuesto/firma/route.ts', import.meta.url), 'utf8')
+
+test('🪤 datos ilegibles → no se ofrece aceptar (fail-closed), también ante un 5xx o una forma rara', () => {
+  const ok = { estado: 'ok', datos: [{ titulo: 'Tomador', filas: [{ etiqueta: 'DNI/NIE', valor: '***78Z' }] }], confirmacionDatos: 'He revisado…', enRevision: false }
+  assert.equal(datosListosParaAceptar(interpretarDatosCotizados(200, ok)), true)
+  assert.equal(datosListosParaAceptar(interpretarDatosCotizados(503, ok)), false)
+  assert.equal(datosListosParaAceptar(interpretarDatosCotizados(200, { estado: 'sin_datos', motivo: 'x' })), false)
+  assert.equal(datosListosParaAceptar(interpretarDatosCotizados(200, { ...ok, datos: [] })), false)
+  assert.equal(datosListosParaAceptar(interpretarDatosCotizados(200, { ...ok, enRevision: true })), false)
+  assert.equal(datosListosParaAceptar(null), false)
+  // La página se lo pasa a cada «Elegir esta opción».
+  assert.match(pagina, /bloqueoDatos=\{bloqueoDatos\}/)
+  assert.match(pagina, /const bloqueoDatos = datosListosParaAceptar\(cotizados\)\s*\? null/)
+})
+
+test('🪤 sin la casilla, el portal tampoco manda la firma, y el rechazo del servidor se traduce', () => {
+  assert.match(rutaFirma, /if \(b\.datosConfirmados !== true\) \{\s*return NextResponse\.json\(\{ estado: 'reintentar', motivo: MOTIVO_SIN_CASILLA \}/)
+  assert.equal(interpretarFirma(422, { estado: 'sin_confirmar_datos' }).estado, 'reintentar')
+  assert.equal(interpretarFirma(409, { estado: 'sin_datos' }).estado, 'no_disponible')
+  assert.equal(interpretarFirma(409, { estado: 'datos_en_revision' }).estado, 'no_disponible')
+  // `preparar` sin el texto de la casilla no se enseña para firmar.
+  const prep = { estado: 'ok', consentimiento: 'c', documento: 'd', documentoHash: 'a'.repeat(64), anulacion: null }
+  assert.equal(interpretarPreparar(200, prep), null)
+  assert.equal(interpretarPreparar(200, { ...prep, confirmacionDatos: 'He revisado…' })?.estado, 'ok')
 })

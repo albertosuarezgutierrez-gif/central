@@ -13,19 +13,23 @@ import { eur } from '@/lib/dinero'
  *  - La vista de corredor lee pero no firma (el servidor también lo niega).
  *  - Un error al firmar NO se pinta como «aceptada»: se dice que no se sabe.
  */
-type PasoRev = { paso: 'revisar'; consentimiento: string; documento: string; documentoHash: string; anulacion: { compania: string; numeroPoliza: string; fechaEfecto: string; carta: string; advertencia: string | null } | null; sinAnulacion: string | null }
-type PasoCodigo = { paso: 'codigo'; email: string; minutos: number; consentimiento: string; documentoHash: string }
+type PasoRev = { paso: 'revisar'; consentimiento: string; confirmacionDatos: string; documento: string; documentoHash: string; anulacion: { compania: string; numeroPoliza: string; fechaEfecto: string; carta: string; advertencia: string | null } | null; sinAnulacion: string | null }
+type PasoCodigo = { paso: 'codigo'; email: string; minutos: number; consentimiento: string; confirmacionDatos: string; documentoHash: string }
 
-export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corredor }: {
+export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos }: {
   presupuestoId: string
   opcionId: string
   prima: number | null
   compania: string
   corredor: boolean
+  /** Por qué no se puede aceptar por los datos (ilegibles o avisados como incorrectos). `null` = se puede. */
+  bloqueoDatos: string | null
 }) {
   const [paso, setPaso] = useState<{ paso: 'inicio' } | PasoRev | PasoCodigo | { paso: 'aceptada'; aceptadoEl: string }>({ paso: 'inicio' })
   const [codigo, setCodigo] = useState('')
   const [nombre, setNombre] = useState('')
+  // «He revisado mis datos…»: sin marcarla no se firma (y el servidor lo vuelve a exigir).
+  const [confirma, setConfirma] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
 
@@ -48,10 +52,13 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
     const r = await enviar({ accion: 'preparar' })
     setOcupado(false)
 
-    if (r?.status === 200 && r.j.estado === 'ok' && typeof r.j.documento === 'string') {
+    // Sin el texto de la casilla no se ofrece firmar: la firma exige confirmar los datos.
+    if (r?.status === 200 && r.j.estado === 'ok' && typeof r.j.documento === 'string'
+      && typeof r.j.confirmacionDatos === 'string' && r.j.confirmacionDatos.trim()) {
       setPaso({
         paso: 'revisar',
         consentimiento: typeof r.j.consentimiento === 'string' ? r.j.consentimiento : '',
+        confirmacionDatos: r.j.confirmacionDatos,
         documento: r.j.documento,
         documentoHash: typeof r.j.documentoHash === 'string' ? r.j.documentoHash : '',
         anulacion: (typeof r.j.anulacion === 'object' && r.j.anulacion !== null) ? {
@@ -88,7 +95,10 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
     setOcupado(false)
 
     if (r?.j.estado === 'codigo_enviado' && typeof r.j.email === 'string') {
-      setPaso({ paso: 'codigo', email: r.j.email, minutos: typeof r.j.minutos === 'number' ? r.j.minutos : 10, consentimiento: paso.consentimiento, documentoHash: paso.documentoHash })
+      setPaso({
+        paso: 'codigo', email: r.j.email, minutos: typeof r.j.minutos === 'number' ? r.j.minutos : 10,
+        consentimiento: paso.consentimiento, confirmacionDatos: paso.confirmacionDatos, documentoHash: paso.documentoHash,
+      })
       setCodigo('')
       return
     }
@@ -107,7 +117,7 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
     if (paso.paso !== 'codigo') return
     setOcupado(true)
     setAviso(null)
-    const r = await enviar({ accion: 'firmar', codigo, nombre, documentoHash: paso.documentoHash })
+    const r = await enviar({ accion: 'firmar', codigo, nombre, documentoHash: paso.documentoHash, datosConfirmados: confirma })
     setOcupado(false)
 
     if (r?.j.estado === 'aceptado' && typeof r.j.aceptadoEl === 'string') {
@@ -139,6 +149,16 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
   }
 
   const puedeAceptar = prima !== null
+
+  // Fail-closed: con los datos ilegibles o avisados como incorrectos no se ofrece aceptar.
+  if (bloqueoDatos !== null) {
+    return (
+      <article className="vencimiento-tarjeta">
+        <strong style={{ fontSize: 15 }}>Elegir esta opción</strong>
+        <p className="pendiente" style={{ margin: 0, fontSize: 14 }}>{bloqueoDatos}</p>
+      </article>
+    )
+  }
 
   return (
     <article className="vencimiento-tarjeta">
@@ -219,9 +239,16 @@ export function AceptarOpcion({ presupuestoId, opcionId, prima, compania, corred
                 <input className="campo" autoComplete="name" value={nombre} onChange={(e) => setNombre(e.target.value)} />
               </label>
               {paso.consentimiento && <p className="suave" style={{ margin: 0, fontSize: 13 }}>{paso.consentimiento}</p>}
+              <label style={{ display: 'flex', gap: 10, alignItems: 'flex-start', fontSize: 14, minHeight: 44, cursor: 'pointer' }}>
+                <input
+                  type="checkbox" checked={confirma} onChange={(e) => setConfirma(e.target.checked)}
+                  style={{ width: 22, height: 22, flex: '0 0 auto', marginTop: 1 }}
+                />
+                <span>{paso.confirmacionDatos} <span className="suave">(los de «Revisa tus datos», arriba)</span></span>
+              </label>
               <button
                 type="button" className="boton" style={{ minHeight: 48 }}
-                disabled={ocupado || codigo.length !== 6 || nombre.trim() === ''} onClick={firmar}
+                disabled={ocupado || codigo.length !== 6 || nombre.trim() === '' || !confirma} onClick={firmar}
               >
                 {ocupado ? 'Firmando…' : 'Firmar y aceptar'}
               </button>
