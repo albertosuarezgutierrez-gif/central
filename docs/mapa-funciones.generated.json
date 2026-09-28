@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T06:05:56Z",
-  "sha": "58b0aa1efe15168fe1d54d2130262ab263621d0e",
+  "generadoEn": "2026-09-28T09:07:55Z",
+  "sha": "d20cbff39a6ebd039333c8405708087a2bf5e044",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -3680,13 +3680,13 @@
           "exportada": true,
           "params": "{ p, deOtro }: { p: PolizaPortal; deOtro: string | null }",
           "retorno": null,
-          "linea": 38,
+          "linea": 39,
           "resumen": "Una póliza en la LISTA: una fila, no una tarjeta. 🚨 Por qué cambió (05/09/2026). Alberto, mirando su propia bóveda: «muy sucia la página… resumen de lo q es, icono de ramo, datos principal, y ya pinc"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9bd4f5ea6693"
+      "hash": "0969ebfa6db6"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/FiltroVigencia.tsx",
@@ -4303,13 +4303,13 @@
           "exportada": false,
           "params": "{ etiqueta, valor, ojo }: { etiqueta: string; valor: string; ojo?: boolean }",
           "retorno": null,
-          "linea": 282,
+          "linea": 285,
           "resumen": "Una fila de la ficha. `ojo` para lo que cambia lo que el cliente puede esperar."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "82fe14e56b4c"
+      "hash": "41d3938f88cf"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/PolizaVista.tsx",
@@ -7940,7 +7940,7 @@
           "exportada": false,
           "params": "v: string | null",
           "retorno": "VinculoPortal | null",
-          "linea": 329,
+          "linea": 335,
           "resumen": "La columna es `text` con un CHECK en la BD, pero un despliegue viejo o una escritura por otro camino pueden dejar cualquier cosa: lo que no se reconoce es «no se sabe», nunca el estado que menos moles"
         },
         {
@@ -7949,7 +7949,7 @@
           "exportada": false,
           "params": "v: string",
           "retorno": "Nivel",
-          "linea": 379,
+          "linea": 385,
           "resumen": "`nivel` es `text` en la BD (CHECK). Un valor fuera del vocabulario cae al nivel MÁS bajo."
         },
         {
@@ -7958,7 +7958,7 @@
           "exportada": true,
           "params": "c: CarteraPortal, opciones: { soloSiYaCubre?: boolean } = {}, hoy: Date = new Date()",
           "retorno": "CarteraPortal",
-          "linea": 387,
+          "linea": 393,
           "resumen": "La cartera para PINTAR la lista (bóveda, hoja QR): sin las pólizas ya sustituidas. Los permisos (partes, ficha, recordatorios) usan la cartera entera, nunca esta."
         },
         {
@@ -7967,7 +7967,7 @@
           "exportada": true,
           "params": "",
           "retorno": "Promise<CarteraPortal | null>",
-          "linea": 396
+          "linea": 402
         },
         {
           "nombre": "claveGemela",
@@ -7975,7 +7975,7 @@
           "exportada": false,
           "params": "clienteId: string, numeroPoliza: string | null, tipo: string | null, fechaInicio: Date | null,",
           "retorno": "string | null",
-          "linea": 422,
+          "linea": 428,
           "resumen": "La clave con la que se empareja una póliza con su GEMELA duplicada. Los CUATRO campos van juntos y ninguno sobra: `clienteId` para que el emparejamiento no pueda cruzar dos fichas, `numeroPoliza` porq"
         },
         {
@@ -7984,7 +7984,7 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "boolean",
-          "linea": 451,
+          "linea": 457,
           "resumen": "¿Queda un sobre `v1:` SIN abrir tras intentar descifrar? Entonces la dirección EXISTE y solo no se puede leer aquí: la ficha no puede afirmar que falta."
         },
         {
@@ -7993,7 +7993,7 @@
           "exportada": false,
           "params": "datos: unknown",
           "retorno": "unknown",
-          "linea": 457
+          "linea": 463
         },
         {
           "nombre": "carteraDeIdentidad",
@@ -8001,7 +8001,7 @@
           "exportada": true,
           "params": "identidadId: string",
           "retorno": "Promise<CarteraPortal>",
-          "linea": 468
+          "linea": 474
         },
         {
           "nombre": "listaCoberturas",
@@ -8009,7 +8009,7 @@
           "exportada": false,
           "params": "cobs: Array<{ descripcion: string | null; codigo: string | null; capitalAsegurado: string | null }>,",
           "retorno": "",
-          "linea": 1184,
+          "linea": 1207,
           "resumen": "Nombre y capital de cada cobertura, alineados. Un capital 0, vacío o que no se sabe leer sale `null` («no informado»), nunca «0,00€»."
         },
         {
@@ -8018,7 +8018,7 @@
           "exportada": false,
           "params": "lista: ReciboFila[]",
           "retorno": "RecibosPortal",
-          "linea": 1201
+          "linea": 1224
         },
         {
           "nombre": "polizasParaParte",
@@ -8026,7 +8026,7 @@
           "exportada": true,
           "params": "c: Pick<CarteraPortal, 'propias' | 'autorizadas' | 'intervinientes'>",
           "retorno": "Set<string>",
-          "linea": 1224,
+          "linea": 1247,
           "resumen": "Las pólizas sobre las que esta cartera puede DAR UN PARTE: todas las propias y, de las autorizadas, solo las que traen el alcance `partes` (`puedeDarParte`). Una sola fuente para la ruta que lo crea y"
         },
         {
@@ -8035,7 +8035,7 @@
           "exportada": false,
           "params": "a: Date | null, b: Date | null",
           "retorno": "Date | null",
-          "linea": 1234,
+          "linea": 1257,
           "resumen": "La más tardía de dos caducidades, donde `null` = no caduca (gana siempre)."
         },
         {
@@ -8044,13 +8044,13 @@
           "exportada": true,
           "params": "p: Pick<PolizaPortal, 'vigencia' | 'renovacionSinConfirmar'>",
           "retorno": "boolean",
-          "linea": 1241,
+          "linea": 1264,
           "resumen": "Cuenta como «en vigor» para la lista, el parte y los avisos: vigente, sin fecha (no se sabe) o con la renovación sin confirmar. Lo único que sale es lo que la compañía da por terminado."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5cd99dd2b7ee"
+      "hash": "b41dafe7fc31"
     },
     {
       "ruta": "apps/asegura-portal/lib/catastro-sugerencias.ts",
@@ -8975,7 +8975,10 @@
         "figurasEnPolizas",
         "ordenarRoles",
         "camposDeInterviniente",
-        "rolesLegibles"
+        "rolesLegibles",
+        "figuraEnPropias",
+        "rolesPropiosPorPoliza",
+        "figuraChip"
       ],
       "funciones": [
         {
@@ -9026,13 +9029,40 @@
           "exportada": true,
           "params": "roles: readonly string[]",
           "retorno": "string",
-          "linea": 134,
+          "linea": 136,
           "resumen": "«propietario y conductor ocasional». Un papel que no se conoce sale tal cual, sin guiones bajos."
+        },
+        {
+          "nombre": "figuraEnPropias",
+          "kind": "function",
+          "exportada": true,
+          "params": "args: { polizaIds: readonly string[] filas: readonly FilaInterviniente[] propiosIds: readonly string[] }",
+          "retorno": "Map<string, string[]>",
+          "linea": 149,
+          "resumen": "La FIGURA de la identidad en cada póliza PROPIA (28/09/2026). Alberto: «hay que indicar en la app la figura que tiene en la póliza». En una propia es siempre tomador, más los papeles con que figure ad"
+        },
+        {
+          "nombre": "rolesPropiosPorPoliza",
+          "kind": "function",
+          "exportada": true,
+          "params": "filas: readonly FilaInterviniente[], propiosIds: readonly string[],",
+          "retorno": "Map<string, string[]>",
+          "linea": 164,
+          "resumen": "Papeles de las fichas PROPIAS en cualquier póliza, sin «tomador». Sirve para las que la identidad ve por otro camino y donde ADEMÁS figura: caso real (28/09/2026): coche de su sociedad con él de condu"
+        },
+        {
+          "nombre": "figuraChip",
+          "kind": "function",
+          "exportada": true,
+          "params": "roles: readonly string[]",
+          "retorno": "string",
+          "linea": 179,
+          "resumen": "«Tomador y conductor habitual»: para un chip, con mayúscula inicial. `''` si no hay papel."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "391a03e19617"
+      "hash": "ed4988e6526e"
     },
     {
       "ruta": "apps/asegura-portal/lib/invitaciones.ts",
@@ -25810,7 +25840,7 @@
         "viva"
       ],
       "rutaApi": null,
-      "hash": "57cf790e8fa6"
+      "hash": "13502967ad42"
     },
     {
       "ruta": "apps/asegura/lib/invitacion-portal-lote.ts",
@@ -152778,7 +152808,7 @@
           "exportada": true,
           "params": "rol: string",
           "retorno": "string",
-          "linea": 65
+          "linea": 66
         },
         {
           "nombre": "contactoEfectivo",
@@ -152786,7 +152816,7 @@
           "exportada": true,
           "params": "tomador: { telefono: string | null; email: string | null }, intervinientes: IntervinienteFicha[] | null,",
           "retorno": "ContactoEfectivo",
-          "linea": 108,
+          "linea": 109,
           "resumen": "A quién se llama. Manda la ficha del tomador; si no tiene, **su propio dato colgado de la póliza**; y solo después el primer interviniente (por prioridad de rol) que sí tenga. `intervinientes === null"
         },
         {
@@ -152795,7 +152825,7 @@
           "exportada": false,
           "params": "rol: string",
           "retorno": "number",
-          "linea": 150
+          "linea": 151
         },
         {
           "nombre": "filasIntervinientes",
@@ -152803,7 +152833,7 @@
           "exportada": true,
           "params": "tomador: { polizaId: string; fichaId: string | null; nombre: string | null }, lista: IntervinienteFicha[] | null,",
           "retorno": "FilasIntervinientes",
-          "linea": 178
+          "linea": 179
         },
         {
           "nombre": "personasDePolizas",
@@ -152811,7 +152841,7 @@
           "exportada": true,
           "params": "intervinientes: IntervinienteFicha[] | null, polizas: readonly { id: string; etiqueta: string }[], relaciones: readonly { relacionadoId: string; tipo: string }[] | null,",
           "retorno": "PersonaDePolizas[] | null",
-          "linea": 269
+          "linea": 270
         },
         {
           "nombre": "normalizarNombre",
@@ -152819,7 +152849,7 @@
           "exportada": false,
           "params": "n: string | null",
           "retorno": "string | undefined",
-          "linea": 342,
+          "linea": 343,
           "resumen": "Un nombre para compararlo con otro: sin espacios de más, sin tildes, en minúsculas."
         },
         {
@@ -152828,13 +152858,13 @@
           "exportada": false,
           "params": "lista: PersonaDePolizas[]",
           "retorno": "void",
-          "linea": 359,
+          "linea": 360,
           "resumen": "Marca las filas que comparten nombre con otra. 🚨 Caso fundacional (03/09/2026, ficha de José Suárez Salas): «María Antonia Gutiérrez Alcalá» salía DOS veces, con las mismas tres matrículas. No era un"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99462f31996b"
+      "hash": "a1a6f3d44c2b"
     },
     {
       "ruta": "packages/module-seguros/src/ipid.ts",
@@ -161157,6 +161187,6 @@
   ],
   "resumen": {
     "archivos": 3827,
-    "funciones": 12364
+    "funciones": 12367
   }
 }

@@ -818,6 +818,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) asegura-portal: la FIGURA del cliente en cada póliza
+- Alberto: «indicar en la app cliente la figura que tiene en la póliza». Chip en la fila de la bóveda («Tomador», «Tomador y conductor habitual», «Propietario») y frase en la ficha («En esta póliza figuras como…» / «…como propietario. El tomador es X.»).
+- `figuraEnPropias()` + `figuraChip()` en `apps/asegura-portal/lib/intervinientes.ts`; `PolizaPortal.figura` (solo propias e intervinientes; las autorizadas no la llevan: las ve por permiso).
+- Caso 1 (auto particular): el tomador ve «Tomador y conductor habitual» y el propietario «Propietario». ⚠️ Esa póliza está DOS veces en BD (mismo número con y sin ceros a la izquierda, ambas activas): gemela sin fundir, no tocada aquí.
+- Caso 2 (auto de empresa): tomador la sociedad; CIMA trae al administrador como conductor_habitual. Él la ve como DUEÑO («Tu sociedad») y ahí no salía papel → `rolesPropiosPorPoliza()` pinta también la figura en autorizadas/empresas cuando figura. (Identificadores de ambos casos en la conversación de sesión, no aquí: PII.)
+- Ingesta CIMA (asegura#859, mergeado 28/09): guarda TODAS las figuras — un papel por fila (índice `(correduria,poliza,nif_lookup_hash,rol)` ya aplicado en `seguros`), propietario empresa, asegurado = tomador (sin contacto). ⏸️ Falta reprocesar los 36 POL de Drive con `cima-rescate-lote` (lote cifrado preparado en la sesión, no lanzado): hasta entonces los datos viejos siguen sin el 2º papel.
+
 ## (28/09/2026) Agente de huéspedes: dejaba de responderse a sí mismo (reserva 154692216)
 - Nuestros envíos reaparecen en Smoobu sin emisor; el anti-eco solo conocía `mensajes_log` (borrador), no acuses, programados ni lo editado en Telegram → 5 ecos en 4 días, 2 contestados solos al huésped, y el eco pisó en la cola la pregunta real.
 - Tabla `mensajes_enviados` (aplicada) escrita por `enviarAlHuespedDetallado` (salida única) + textos fijos de guardia en `enviados`.

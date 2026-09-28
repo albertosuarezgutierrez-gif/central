@@ -90,6 +90,7 @@ En absoluto Luxury «empeora» (29→33); en porcentaje mejora (39% → 35%).
 | 31/08/2026 | 1,33× (23/94) | 1,40× (40/93) | 1,34× (38/95) | 1,25× (33/93) | 30-31% | Los 4 bajan. **Condición 2 CUMPLIDA** (cobertura >25%). La 1 no: ninguno ≤1,2×. La 3 sigue sin medir (n=1). Sin Telegram |
 | 07/09/2026 | 0,91× (12/91) | **1,40× (33/90)** | 1,03× (9/92) | 0,91× (17/90) | 30% | **Convergencia terminada en 3 pisos**: cada uno aterriza en SU `target_pctl` (0,40/0,40/0,50). House sigue en 1,40× y tiene `antelacion_k=1` — la palanca que el 27/08 se apagó en los cuatro. ⚠️ El barrido lleva 9 de 10 días midiendo SOLO jul-ago 2027 |
 | 14/09/2026 | 0,91× (13/91) | 1,47× (33/90) | 1,03× (10/92) | 0,88× (18/90) | 30% | ✅ `antelacion_k` de House **vuelve a 0**. Los 3 convergidos, quietos. El 1,47× de House **no es que suba: es que ya no nos engañábamos** — su `channel_markup` pasó de 1,056 a 1,20 el 12/09 y su neto BAJÓ. ⚠️ Cobertura clavada al 30% tres semanas; barrido sigue monotemático |
+| 28/09/2026 | 0,87× (2/106) | 1,33× (27/107) | 0,91× (8/106) | 0,82× (6/105) | 34-35% | 🎉 **Cobertura se mueve por primera vez en 3 semanas** (30%→34-35%): la prioridad jul-ago 2027 del barrido se quitó (100%→0-5% de los comps del día desde el 19/09) y el calendario vuelve a refrescarse entero. House sigue bajando (1,47×→1,33×, «más caros que todos» 37%→25%). **Fuga de canal: n=1→4** (busto/duplex/luxury), las tres nuevas también negativas. **Sin fila el 21/09** (la sesión se desvió a un problema de guardado en el editor de la propia rutina) — esta compara contra 14/09 |
 
 #### Lectura del 31/08/2026
 
@@ -230,13 +231,17 @@ Con eso dicho, y contando solo lo que sigue vivo hoy:
 | 17/08 | 5 | 13 | 415,00€ | 1 |
 | 24/08 | 4 | 11 | 529,00€ | 3 |
 | 31/08 | 17 | 49 | 230,00€ | 1 |
-| 07/09 | 24 | 70 | 125,00€ | **6, y subiendo** |
+| 07/09 | 21 | 60 | 116,00€ | 9 (8 en incomes) — la fila de la semana pasada ya lo predecía |
+| 14/09 | 18 | 52 | 212,00€ | 2 |
+| 21/09 | 26 | 69 | 158,00€ | 5 |
+| 28/09 | — | — | — | *semana en curso, no cerrada: contar sus reservas ahora infla la próxima fila* |
 
 **El volumen se ha multiplicado y el ADR se ha hundido**, que es exactamente lo que uno espera tras
 bajar precios un 20-26%. Los ingresos de la semana salen por encima (49 x 230 = 11.270,00€ y
-70 x 125 = 8.750,00€, contra 5.395,00€ y 5.819,00€ de las dos semanas de agosto), pero **esto sigue
+70 x 116 = 6.960,00€, contra 5.395,00€ y 5.819,00€ de las dos semanas de agosto), pero **esto sigue
 sin ser una prueba**: no hay contrafactual, la mezcla de pisos y aforos cambia, las noches son
-futuras y —ahora se sabe— la cifra de la ultima semana aun va a bajar.
+futuras. La fila del 07/09 confirma lo que se avisó: de 24 reservas iniciales quedan 21 vivas, con
+9 canceladas — la serie sigue reescribiéndose hacia atrás, así que la de 21/09 también bajará.
 
 #### Las tres condiciones
 
@@ -247,6 +252,43 @@ futuras y —ahora se sabe— la cifra de la ultima semana aun va a bajar.
   dias). Mientras siga asi, ese 30% no va a subir: es corpus que se renueva en una esquina del
   calendario y envejece en el resto.
 - **3 — fuga de canal medida:** sigue en **n=1**.
+
+#### Lectura del 28/09/2026 — la cobertura se mueve por fin, y la fuga de canal deja de ser n=1
+
+**Se quitó la prioridad jul-ago 2027 del barrido.** Medido: entre el 19/09 y el 27/09 el corpus del
+día está en 0-5% de comps de esa ventana (era 100% cuatro de los últimos seis días la semana
+pasada). Con eso, la cobertura del calendario lejano sube por primera vez en tres semanas: **30% →
+34-35%** en los cuatro pisos.
+
+**House sigue bajando**: 1,47× → **1,33×**, y «más caros que todos los comps» cae de 37% a 25%. Los
+otros tres siguen en su sitio (0,87× / 0,91× / 0,82×, target_pctl 0,40 / 0,40 / 0,50).
+
+**Fuga de canal: n=1 → n=4.** Tres coincidencias nuevas entre `pricing_escaparate` e `incomes`
+(busto 01/10 −10%, dúplex 22/09 −24%, luxury 05/09 −47%), todas en la misma dirección que la de
+enero: el huésped paga menos de lo publicado. Sigue siendo poco para hablar de un porcentaje fijo
+—van de −10% a −47%— pero ya no es una sola observación.
+
+⚠️ **Y una cuarta coincidencia se descartó, no se promedió.** Busto 25/03/2027 tenía reserva de 3
+noches pero el escaparate medido era de una estancia de 2, así que el «precio por noche» que salía
+(1.664,00€) no es comparable con nada: es el error de la regla de la casa —comparar noches
+distintas infla el número sin que nada falle— visto en directo. Se dejó fuera del cálculo.
+
+⚠️ **El latido de hoy (`sivra_mercado_booking`) está en `ok:false`**, pero no por el mercado: los
+236 comps y las 24/24 ventanas pedidas llegaron bien. Lo que falló es la medición del ESCAPARATE
+propio — las 4 ventanas (Busto Reform, Dúplex Center, Luxury Busto, House Sevillana) devolvieron
+`hotel_names_no_availability` para el 06/10/2026. Puede ser que los cuatro estén vendidos esa noche
+(plausible y bueno) o un fallo real de la consulta; no se ha mirado más porque no afecta a los
+números de esta fila — pero si sigue en rojo la semana que viene, hay que mirarlo.
+
+**Sin fila la semana pasada (21/09).** Esta compara contra la del 14/09, no contra una intermedia
+que no se escribió — el hueco queda anotado, no rellenado a posteriori con datos reconstruidos.
+
+##### Las tres condiciones, hoy
+
+- **1 — ratio ≤ ~1,2×:** sigue en **3 de 4**. House más cerca (1,33×), no dentro aún.
+- **2 — cobertura > 25%:** cumplida y **por fin en tendencia**, no estancada: 34-35%.
+- **3 — fuga de canal medida:** **n=4**, ya no n=1. Sigue sin ser suficiente para fijar un
+  porcentaje, pero el patrón (huésped paga menos) se repite en los cuatro pisos con datos.
 
 ### La consulta (reproducible tal cual)
 
