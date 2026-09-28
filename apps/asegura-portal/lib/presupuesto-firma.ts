@@ -79,6 +79,13 @@ export function interpretarFirma(status: number, j: unknown): ResultadoFirma {
     return { estado: 'no_disponible', motivo: typeof o.motivo === 'string' ? o.motivo : NO_ADMITE }
   }
   if (o.estado === 'sin_precio') return { estado: 'no_disponible', motivo: 'La opción no tiene precio. Escríbeme para revisarla.' }
+  // La cuenta la exige el SERVIDOR: sin una válida no se firma, y se le dice qué corregir.
+  if (o.estado === 'sin_cuenta' || o.estado === 'iban_invalido') {
+    return { estado: 'reintentar', motivo: typeof o.motivo === 'string' && o.motivo.trim() ? o.motivo : MOTIVO_SIN_CUENTA }
+  }
+  if (o.estado === 'sin_cifrado') {
+    return { estado: 'no_disponible', motivo: 'Ahora mismo no podemos guardar tu cuenta de forma segura. Inténtalo más tarde o llámanos.' }
+  }
   // La casilla la exige el SERVIDOR: si llega sin marcar, se le pide que la marque.
   if (o.estado === 'sin_confirmar_datos') return { estado: 'reintentar', motivo: MOTIVO_SIN_CASILLA }
   // Fail-closed: datos ilegibles o avisados como incorrectos → no se autoriza nada desde aquí.
@@ -87,6 +94,7 @@ export function interpretarFirma(status: number, j: unknown): ResultadoFirma {
   return { estado: 'error' }
 }
 
+export const MOTIVO_SIN_CUENTA = 'Indica la cuenta en la que quieres domiciliar los recibos: sin ella la compañía no emite la póliza.'
 export const MOTIVO_SIN_CASILLA = 'Marca la casilla confirmando que has revisado tus datos: sin ella no se puede aceptar.'
 export const MOTIVO_SIN_DATOS =
   'No hemos podido leer los datos con los que se calculó tu precio. Llámanos y lo revisamos contigo: no se emite nada hasta entonces.'
@@ -120,9 +128,17 @@ async function llamar(ruta: string, init: RequestInit): Promise<{ status: number
   }
 }
 
+/** Lo que el portal sabe de la cuenta de la ficha: SOLO la máscara («**** 1234»), nunca el IBAN. */
+export type CuentaFichaPortal = { mascara: string | null; aviso: 'ilegible' | 'invalida' | 'no_comprobada' | null }
+/** Lo que el cliente elige: la de su ficha, u otra que teclea (va al servidor en claro, y solo allí). */
+export type EntradaCuenta = { eleccion: 'ficha' } | { eleccion: 'otra'; iban: string }
+
 export type PreparadoAceptacion = {
   estado: 'ok'
   consentimiento: string
+  /** La cuenta que va en el documento, enmascarada. */
+  cuenta: { origen: 'ficha' | 'nueva'; mascara: string }
+  cuentaFicha: CuentaFichaPortal
   /** El texto de la casilla «He revisado mis datos…», el mismo que queda en el documento firmado. */
   confirmacionDatos: string
   documento: string
@@ -130,8 +146,25 @@ export type PreparadoAceptacion = {
   anulacion: { compania: string; numeroPoliza: string; fechaEfecto: string; carta: string; advertencia: string | null } | null
   sinAnulacion: string | null
 } | {
+  /** Aún no ha elegido cuenta (o la que dio no vale): se le enseña la de su ficha enmascarada, o se le pide una. */
+  estado: 'elegir_cuenta' | 'sin_cuenta' | 'iban_invalido'
+  cuentaFicha: CuentaFichaPortal
+  motivo?: string
+} | {
   estado: 'no_encontrado' | 'no_admite' | 'sin_precio' | 'sin_ficha' | 'varias_fichas' | 'sin_datos' | 'datos_en_revision' | 'error'
   motivo?: string
+}
+
+const MASCARA = /^\*\*\*\* [A-Z0-9]{4}$/
+const AVISOS_CUENTA = ['ilegible', 'invalida', 'no_comprobada'] as const
+
+/** `null` = forma rara. Una máscara que no es «**** XXXX» NO se pinta: podría ser el IBAN entero. */
+function leerCuentaFicha(v: unknown): CuentaFichaPortal | null {
+  const c = obj(v)
+  const mascara = c.mascara === null || c.mascara === undefined ? null : typeof c.mascara === 'string' && MASCARA.test(c.mascara) ? c.mascara : undefined
+  if (mascara === undefined) return null
+  const aviso = (AVISOS_CUENTA as readonly unknown[]).includes(c.aviso) ? (c.aviso as CuentaFichaPortal['aviso']) : null
+  return { mascara, aviso }
 }
 
 export function interpretarPreparar(status: number, j: unknown): PreparadoAceptacion | null {
@@ -150,8 +183,19 @@ export function interpretarPreparar(status: number, j: unknown): PreparadoAcepta
       anulacion = { compania: a.compania, numeroPoliza: a.numeroPoliza, fechaEfecto: a.fechaEfecto, carta: a.carta,
         advertencia: typeof a.advertencia === 'string' ? a.advertencia : null }
     }
+    // Sin la cuenta enmascarada no se enseña para firmar: el documento la cita y el servidor la exige.
+    const cu = obj(o.cuenta)
+    if ((cu.origen !== 'ficha' && cu.origen !== 'nueva') || typeof cu.mascara !== 'string' || !MASCARA.test(cu.mascara)) return null
+    const cuentaFicha = leerCuentaFicha(o.cuentaFicha)
+    if (!cuentaFicha) return null
     return { estado: 'ok', consentimiento: o.consentimiento, confirmacionDatos: o.confirmacionDatos, documento: o.documento, documentoHash: o.documentoHash, anulacion,
-      sinAnulacion: typeof o.sinAnulacion === 'string' ? o.sinAnulacion : null }
+      sinAnulacion: typeof o.sinAnulacion === 'string' ? o.sinAnulacion : null,
+      cuenta: { origen: cu.origen, mascara: cu.mascara }, cuentaFicha }
+  }
+  if (o.estado === 'elegir_cuenta' || o.estado === 'sin_cuenta' || o.estado === 'iban_invalido') {
+    const cuentaFicha = leerCuentaFicha(o.cuentaFicha)
+    if (!cuentaFicha) return null
+    return { estado: o.estado, cuentaFicha, motivo: typeof o.motivo === 'string' ? o.motivo : undefined }
   }
   if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas' || o.estado === 'no_admite' || o.estado === 'sin_precio'
     || o.estado === 'sin_datos' || o.estado === 'datos_en_revision') {
@@ -161,8 +205,12 @@ export function interpretarPreparar(status: number, j: unknown): PreparadoAcepta
   return null
 }
 
-export async function prepararAceptacion(identidadId: string, presupuestoId: string, opcionId: string): Promise<PreparadoAceptacion | null> {
-  const r = await llamar('/api/portal/presupuesto', { method: 'POST', body: JSON.stringify({ accion: 'preparar', identidadId, presupuestoId, opcionId }) })
+export async function prepararAceptacion(
+  identidadId: string, presupuestoId: string, opcionId: string, cuenta: EntradaCuenta | null = null,
+): Promise<PreparadoAceptacion | null> {
+  const r = await llamar('/api/portal/presupuesto', {
+    method: 'POST', body: JSON.stringify({ accion: 'preparar', identidadId, presupuestoId, opcionId, ...(cuenta ? { cuenta } : {}) }),
+  })
   return r ? interpretarPreparar(r.status, r.json) : null
 }
 
@@ -178,7 +226,10 @@ export async function firmarAceptacion(
   identidadId: string,
   presupuestoId: string,
   opcionId: string,
-  datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean },
+  datos: {
+    codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean
+    cuenta: EntradaCuenta
+  },
 ): Promise<ResultadoFirma> {
   const r = await llamar('/api/portal/presupuesto', {
     method: 'POST',
@@ -188,6 +239,17 @@ export async function firmarAceptacion(
   const res = interpretarFirma(r.status, r.json)
   if (res.estado === 'error') console.warn('[portal/presupuesto] respuesta no esperada al firmar:', r.status, obj(r.json).estado)
   return res
+}
+
+/**
+ * La cuenta que manda el navegador, sin fiarse de nada. `null` = no hay una elección legible. El IBAN
+ * se recorta de tamaño y se pasa tal cual: lo valida asegura (módulo 97), que es quien decide.
+ */
+export function leerEntradaCuenta(v: unknown): EntradaCuenta | null {
+  const c = obj(v)
+  if (c.eleccion === 'ficha') return { eleccion: 'ficha' }
+  if (c.eleccion === 'otra' && typeof c.iban === 'string' && c.iban.trim()) return { eleccion: 'otra', iban: c.iban.trim().slice(0, 64) }
+  return null
 }
 
 // ─── «Revisa tus datos» ──────────────────────────────────────────────────────

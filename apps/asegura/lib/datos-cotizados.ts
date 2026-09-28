@@ -211,8 +211,8 @@ export function textoDatos(grupos: GrupoDatos[]): string {
 }
 
 /** Lo que se añade al documento de aceptación: los datos + la declaración de la casilla. */
-export function anexoDatosFirmados(datos: Extract<DatosCotizados, { estado: 'ok' }>): string {
-  return `${datos.texto}\n\nEl tomador ha marcado: «${TEXTO_CONFIRMACION_DATOS}» ` +
+export function anexoDatosFirmados(datos: Extract<DatosCotizados, { estado: 'ok' }>, confirmacion: string = TEXTO_CONFIRMACION_DATOS): string {
+  return `${datos.texto}\n\nEl tomador ha marcado: «${confirmacion}» ` +
     'El precio y la póliza dependen de estos datos: si alguno no fuera correcto, hay que corregirlo antes de emitir.'
 }
 
@@ -243,18 +243,32 @@ export type EntradaAvisoAceptacion = {
   anulacionCompania: string | null
   sinAnulacion: string | null
   enlaceFicha: string
+  /** El texto de la casilla que marcó (con o sin «información previa»). Por defecto, el de los datos. */
+  confirmacion?: string
+  /** `lineaCuentaAviso()`: SOLO la máscara. `undefined` = el flujo no la pidió. */
+  cuenta?: string
+  /** ¿Tenía la ficha IPID de la opción elegida? `undefined` = no se dice. */
+  ipidMostrado?: boolean
 }
 
 /** El aviso de ACEPTACIÓN a Alberto: quién, qué opción, franquicia, los datos que confirmó y el enlace. */
 export function avisoAceptacion(e: EntradaAvisoAceptacion): string {
   const opcion = [e.compania, e.producto].filter(Boolean).join(' · ')
+  const extras = [
+    ...(e.cuenta ? [`Domiciliación — ${escaparHtml(e.cuenta)}`] : []),
+    ...(e.ipidMostrado === undefined ? [] : [e.ipidMostrado
+      ? 'IPID: tenía en el portal la ficha informativa de esta opción.'
+      : '⚠️ IPID: no había ficha informativa de esta opción en el portal. Mándasela ANTES de emitir.']),
+  ]
+  if (extras.length > 0) extras.push('')
   return [
     `✍️ <b>${escaparHtml(e.tomador)}</b> ha ACEPTADO el presupuesto de ${escaparHtml(e.ramo)}. Emítelo: no hay cobertura hasta entonces.`,
     `Opción: ${escaparHtml(opcion)} — ${escaparHtml(eur(e.primaEur))}/año`,
     // null = el producto no declara franquicia. JAMÁS «sin franquicia».
     `Franquicia: ${e.franquiciaEur === null ? 'no la declara el producto' : escaparHtml(eur(e.franquiciaEur))}`,
     '',
-    `Datos confirmados por el cliente («${escaparHtml(TEXTO_CONFIRMACION_DATOS)}»):`,
+    ...extras,
+    `Datos confirmados por el cliente («${escaparHtml(e.confirmacion ?? TEXTO_CONFIRMACION_DATOS)}»):`,
     lineasDatosHtml(e.datos.grupos),
     ...(e.anulacionCompania ? ['', `Firmó también la anulación de su póliza de ${escaparHtml(e.anulacionCompania)}, que saldrá a tu OK cuando la nueva conste emitida.`] : []),
     ...(e.sinAnulacion ? ['', `⚠️ ${escaparHtml(e.sinAnulacion)}`] : []),

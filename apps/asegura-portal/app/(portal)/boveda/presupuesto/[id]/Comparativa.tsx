@@ -17,6 +17,9 @@ import {
   type SinEquivalente,
 } from '@/lib/presupuesto-vista'
 
+/** Lo que se dice cuando una opción no tiene ficha IPID subida. No bloquea la aceptación. */
+export const TEXTO_SIN_IPID = 'La ficha informativa de este producto te la enviamos antes de emitir.'
+
 /**
  * Las piezas de la comparativa. Componentes de SERVIDOR: aquí no hay estado ni
  * interacción, solo lo que se afirma — y lo que se afirma lo decide
@@ -193,10 +196,11 @@ export function Garantias({ o, actual }: { o: OpcionCliente; actual: ActualClien
         </ul>
       )}
 
-      {/* La ficha IPID es la que cita la aceptación firmada: se enseña con la opción, no aparte. */}
+      {/* La ficha IPID (información previa, RDL 3/2020) es la que cita la aceptación firmada: se enseña
+          con la opción, no aparte. Sin ella no se bloquea: se dice, y la aceptación registra que no estaba. */}
       {o.ipidId
-        ? <p style={{ margin: '8px 0 0' }}><a href={`/api/ipid/${o.ipidId}`} target="_blank" rel="noopener noreferrer">Ficha de información del producto (IPID) de {o.compania} ↗</a></p>
-        : <p className="suave" style={{ margin: '8px 0 0' }}>Todavía no tengo la ficha de información del producto (IPID) de esta opción. Pídemela antes de aceptar.</p>}
+        ? <p style={{ margin: '8px 0 0' }}><a href={`/api/ipid/${o.ipidId}`} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-flex', alignItems: 'center', minHeight: 44, overflowWrap: 'anywhere' }}>Ficha informativa del producto (IPID) de {o.compania} ↗</a></p>
+        : <p className="suave" style={{ margin: '8px 0 0' }}>{TEXTO_SIN_IPID}</p>}
 
       {/* La comparación es de NOMBRES de garantía, no de capitales: el snapshot
           congela las coberturas como textos sueltos. Decirlo es la diferencia
