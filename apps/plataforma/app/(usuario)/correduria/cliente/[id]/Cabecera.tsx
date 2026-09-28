@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { Cake, CarFront, Heart, IdCard, Lock, Mail, MapPin, Phone, type LucideIcon } from 'lucide-react'
 import { contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { estadoCaducidadCarnet, urlRetarificar, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
@@ -63,8 +64,8 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                   </span>
                 </details>
                 {conyuge && (
-                  <span title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
-                    💍 <Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
+                  <span style={FILA} title={`${conyuge.nombre} es cónyuge/pareja de hecho de ${ficha.nombre}`}>
+                    <Ico i={Heart} /><Link href={`/correduria/cliente/${conyuge.relacionadoId}`}>{conyuge.nombre}</Link>
                   </span>
                 )}
               </span>}
@@ -103,7 +104,7 @@ function SiguientePaso({ ficha, resumen, tiposVivos }: { ficha: Ficha; resumen: 
   const fondo = paso.tono === 'urgente' ? 'var(--negative-bg)' : paso.tono === 'aviso' ? 'var(--warning-bg)' : 'var(--primary-light)'
   const accion =
     paso.accion.tipo === 'llamar'
-      ? (tel ? <a href={`tel:${tel.replace(/\s/g, '')}`} style={{ ...btnStyle('primario'), textDecoration: 'none' }}>📞 Llamar</a> : <span style={{ fontSize: 13, color: 'var(--muted)' }}>sin teléfono en la ficha ni en sus pólizas</span>)
+      ? (tel ? <a href={`tel:${tel.replace(/\s/g, '')}`} style={{ ...btnStyle('primario'), textDecoration: 'none' }}><Phone size={16} strokeWidth={1.75} aria-hidden /> Llamar</a> : <span style={{ fontSize: 13, color: 'var(--muted)' }}>sin teléfono en la ficha ni en sus pólizas</span>)
       : paso.accion.tipo === 'retarificar'
         ? <BtnLink href={urlRetarificar(paso.accion.polizaId)} variante="primario">Mirar precio</BtnLink>
         : <BtnLink href={`/correduria/cliente/${ficha.id}/hogar-nuevo`} variante="primario">Presupuestar hogar</BtnLink>
@@ -408,7 +409,7 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
   const deOtro = (via: ContactoEfectivo['viaTelefono']) =>
     via === 'tomador_en_poliza' ? (
       <span style={{ fontSize: 11, color: 'var(--warning)' }} title="Está en un interviniente de su póliza, no en su ficha: el aviso de vencimiento lee la ficha, así que hoy no le sale. Cópialo a su ficha.">
-        {' '}(📇 en su póliza, no en su ficha)
+        {' '}(en su póliza, no en su ficha)
       </span>
     ) : via === 'interviniente' && quien ? (
       <span style={{ fontSize: 11 }}>
@@ -443,8 +444,8 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
       ) : (
         // Cifrado-que-no-abre y sin-teléfono son cosas distintas y se arreglan
         // en sitios distintos (la clave PII vs. pedírselo al cliente).
-        <span title={c.telefonoIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
-          📞 {c.telefonoIlegible ? '🔒 cifrado' : `sin teléfono${coletilla}`}
+        <span style={FILA} title={c.telefonoIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : `No consta teléfono en su ficha${ef.intervinientesSinMirar ? '' : ' ni en la de ninguno de sus intervinientes'}`}>
+          <Ico i={c.telefonoIlegible ? Lock : Phone} />{c.telefonoIlegible ? 'cifrado' : `sin teléfono${coletilla}`}
         </span>
       )}
       {ef.email ? (
@@ -454,11 +455,11 @@ function Contacto({ nombre, esCliente, c, intervinientes, piiClave, contactos, p
           {mas(masEmail)}
         </span>
       ) : (
-        <span title={c.emailIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : 'No consta email'}>
-          ✉️ {c.emailIlegible ? '🔒 cifrado' : 'sin email'}
+        <span style={FILA} title={c.emailIlegible ? `Está guardado pero no se puede descifrar: ${causaPii}` : 'No consta email'}>
+          <Ico i={c.emailIlegible ? Lock : Mail} />{c.emailIlegible ? 'cifrado' : 'sin email'}
         </span>
       )}
-      {sitio && <span>📍 {sitio}</span>}
+      {sitio && <span style={FILA}><Ico i={MapPin} />{sitio}</span>}
     </>
   )
 }
@@ -477,28 +478,28 @@ function Identidad({ identidad, clienteId, dePolizas }: { identidad: IdentidadFi
   return (
     <>
       {identidad.dniIlegible ? (
-        <span title="Está guardado pero cifrado con una clave que asegura no puede abrir">🪪 DNI cifrado</span>
+        <span style={FILA} title="Está guardado pero cifrado con una clave que asegura no puede abrir"><Ico i={IdCard} />DNI cifrado</span>
       ) : identidad.dniEnmascarado ? (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span title="El DNI completo no sale de asegura por diseño: para verlo entero, pide un código de un solo uso">
-            🪪 {identidad.dniEnmascarado}
+          <span style={FILA} title="El DNI completo no sale de asegura por diseño: para verlo entero, pide un código de un solo uso">
+            <Ico i={IdCard} />{identidad.dniEnmascarado}
           </span>
           <VerDniCompleto clienteId={clienteId} />
         </span>
       ) : (
-        <span style={{ color: 'var(--muted)' }} title="No consta DNI en la ficha">🪪 sin DNI</span>
+        <span style={{ ...FILA, color: 'var(--muted)' }} title="No consta DNI en la ficha"><Ico i={IdCard} />sin DNI</span>
       )}
       {identidad.fechaNacimientoIlegible ? (
-        <span title="Está guardada pero cifrada con una clave que asegura no puede abrir">🎂 cifrada</span>
+        <span style={FILA} title="Está guardada pero cifrada con una clave que asegura no puede abrir"><Ico i={Cake} />cifrada</span>
       ) : identidad.fechaNacimiento ? (
-        <span>🎂 {fmt(identidad.fechaNacimiento)}</span>
+        <span style={FILA}><Ico i={Cake} />{fmt(identidad.fechaNacimiento)}</span>
       ) : dePolizas?.fechaNacimiento ? (
         // No está en su ficha pero sí en su póliza de CIMA (el interviniente con su DNI).
-        <span title={`No está en la ficha: la trae su póliza${dePolizas.polizaNacimiento ? ` nº ${dePolizas.polizaNacimiento}` : ''} (CIMA)`}>
-          🎂 {fmt(dePolizas.fechaNacimiento)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>(póliza)</span>
+        <span style={FILA} title={`No está en la ficha: la trae su póliza${dePolizas.polizaNacimiento ? ` nº ${dePolizas.polizaNacimiento}` : ''} (CIMA)`}>
+          <Ico i={Cake} />{fmt(dePolizas.fechaNacimiento)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>(póliza)</span>
         </span>
       ) : (
-        <span style={{ color: 'var(--muted)' }} title="No consta fecha de nacimiento">🎂 sin fecha</span>
+        <span style={{ ...FILA, color: 'var(--muted)' }} title="No consta fecha de nacimiento"><Ico i={Cake} />sin fecha</span>
       )}
     </>
   )
@@ -518,17 +519,17 @@ function Carnets({ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePoli
     // se enseña la fecha y no se inventa «B».
     if (dePolizas?.fechaCarnet) {
       return (
-        <span title={`No está en la ficha: la trae su póliza${dePolizas.polizaCarnet ? ` nº ${dePolizas.polizaCarnet}` : ''} (CIMA), sin tipo de carné`}>
-          🚦 carné · {fmt(dePolizas.fechaCarnet)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>(póliza)</span>
+        <span style={FILA} title={`No está en la ficha: la trae su póliza${dePolizas.polizaCarnet ? ` nº ${dePolizas.polizaCarnet}` : ''} (CIMA), sin tipo de carné`}>
+          <Ico i={CarFront} />carné · {fmt(dePolizas.fechaCarnet)} <span style={{ fontSize: 11, color: 'var(--muted)' }}>(póliza)</span>
         </span>
       )
     }
     return (
       <span
-        style={{ color: 'var(--muted)' }}
+        style={{ ...FILA, color: 'var(--muted)' }}
         title={dePolizas ? 'No consta en su ficha ni en sus pólizas: la compañía no la manda por CIMA si no declara conductor' : 'No consta ningún carné de conducir en su ficha'}
       >
-        🚦 sin carné registrado
+        <Ico i={CarFront} />sin carné registrado
       </span>
     )
   }
@@ -548,9 +549,9 @@ function Carnets({ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePoli
           <span
             key={k.id}
             title={`Carné ${k.tipo} · ${cad}`}
-            style={aviso ? { color: 'var(--warning)' } : est === 'sin_renovacion' ? { color: 'var(--muted)' } : undefined}
+            style={{ ...FILA, ...(aviso ? { color: 'var(--warning)' } : est === 'sin_renovacion' ? { color: 'var(--muted)' } : {}) }}
           >
-            🚦 {k.tipo} ·{' '}
+            <Ico i={CarFront} />{k.tipo} ·{' '}
             {k.fechaIlegible ? 'fecha cifrada' : k.fechaExpedicion ? fmt(k.fechaExpedicion) : 'sin fecha'}
             {aviso ? ' (caduca pronto)' : est === 'sin_renovacion' ? ' (renovación no registrada)' : null}
           </span>
@@ -558,4 +559,14 @@ function Carnets({ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePoli
       })}
     </span>
   )
+}
+
+// ── Icono de dato ───────────────────────────────────────────────────────────
+// Los datos de la cabecera llevan el mismo icono lucide fino que la pestaña
+// Contactos y los botones de llamar/escribir (28/09/2026: con emojis, esta zona
+// se veía de otra aplicación).
+const FILA = { display: 'inline-flex', alignItems: 'center', gap: 5 } as const
+
+function Ico({ i: I }: { i: LucideIcon }) {
+  return <I size={14} strokeWidth={1.75} aria-hidden style={{ flex: '0 0 auto' }} />
 }

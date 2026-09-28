@@ -107,8 +107,8 @@ export default function VerDniCompleto({ clienteId }: { clienteId: string }) {
 
   return (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-      <button type="button" onClick={pedirCodigo} disabled={paso === 'pidiendo'} style={btnStyle('secundario', 'sm')} title="Pide un código de un solo uso a tu Telegram para ver el DNI completo">
-        {paso === 'pidiendo' ? 'Pidiendo código…' : '🔓 Ver DNI completo'}
+      <button type="button" onClick={pedirCodigo} disabled={paso === 'pidiendo'} style={{ ...btnStyle('sutil', 'sm'), color: 'var(--primary)' }} title="Pide un código de un solo uso a tu Telegram para ver el DNI completo">
+        {paso === 'pidiendo' ? 'Pidiendo código…' : 'Ver completo'}
       </button>
       {error && <span style={{ fontSize: 11, color: 'var(--negative)' }}>{error}</span>}
     </span>
