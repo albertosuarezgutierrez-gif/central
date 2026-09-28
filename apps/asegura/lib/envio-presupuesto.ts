@@ -24,7 +24,10 @@
 import { calcularVencimiento, correoPresupuesto, estadoPresupuesto, mensajePresupuestoWhatsapp } from '@central/module-seguros'
 import { generarTokenVista, hashTokenVista } from '@central/module-seguros-portal'
 
+import { computeEmailLookupHash } from '@central/module-seguros-pii'
+
 import { prismaAsegura } from './asegura-db'
+import { crearEnlaceDirecto } from './avisos-intranet'
 import { datosParaEmitir } from './datos-emision'
 import { MOTIVO_REMITENTE, rechazoDeRemitente } from './correo-invitacion-portal'
 import { estadoEmailDeFicha } from './email-ficha'
@@ -156,7 +159,10 @@ export async function avisarPresupuesto(
     return { estado: 'enlace', mensaje, whatsapp: `https://wa.me/?text=${encodeURIComponent(mensaje)}` }
   }
 
-  const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', ficha.email, correoPresupuesto(datos))
+  // Acceso directo a la intranet (un solo uso, 24 h): el botón entra sin código y cae en la carátula,
+  // que con sesión lleva al presupuesto. Si no se puede atar al correo, va el enlace de siempre.
+  const directo = await enlaceDirectoPresupuesto(correduriaId, p.clienteId, ficha.email, enlace)
+  const envio = await mandarCorreo(correduriaId, p.clienteId, 'presupuesto_aviso', ficha.email, correoPresupuesto({ ...datos, enlaceDirecto: directo }))
   if (envio !== 'enviado') {
     // No salió: se devuelve la llave anterior para que el enlace que el cliente ya tuviera siga abriendo.
     await db.presupuesto.updateMany({ where: { id: p.id, tokenHash: nuevoHash }, data: { tokenHash: p.tokenHash, canalAviso: p.canalAviso } })
@@ -176,6 +182,23 @@ export async function avisarPresupuesto(
     },
   })
   return { estado: 'enviado', email: ficha.email, venceEl: venceSiSale.toISOString() }
+}
+
+/**
+ * La llave de acceso directo del correo, con destino la carátula de ESTE presupuesto. `null` = no se
+ * pudo atar al correo (sin `PII_LOOKUP_KEY`) o guardar: el correo sale con el enlace de siempre.
+ */
+async function enlaceDirectoPresupuesto(correduriaId: string, clienteId: string, correo: string, caratula: string): Promise<string | null> {
+  let hash: string | null = null
+  try {
+    hash = computeEmailLookupHash(correo)
+  } catch {
+    hash = null
+  }
+  if (!hash) return null
+  const u = new URL(caratula)
+  const r = await crearEnlaceDirecto(correduriaId, clienteId, correo, hash, u.pathname, u.origin).catch(() => null)
+  return r?.directo ? r.enlace : null
 }
 
 /**
