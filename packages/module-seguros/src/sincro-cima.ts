@@ -231,6 +231,32 @@ function claveEmail(v: string): string {
  * Para teléfono/email se compara el PRIMERO que manda CIMA contra TODOS los de
  * la ficha: si ya lo tiene en cualquier posición, no hay diferencia.
  */
+/** Categorías/clases de vehículo de CIMA que son moto o ciclomotor. */
+const CLASES_MOTO = new Set(['MO', 'MT', 'CI'])
+
+/**
+ * ¿La fecha de carné de esta póliza es la del carné B? Solo si es un COCHE.
+ * El `tipo` de la póliza NO basta: CIMA manda las motos en el ramo de autos
+ * (DGS 241) y 11 pólizas vivas con moto estaban como `tipo = 'auto'` (28/09/2026,
+ * BMW C 400 GT de 0007001052485): su fecha es la del carné A y se comparaba
+ * con el B. Manda el vehículo (`categoriaVehiculo`/`claseVehiculo`), en la
+ * raíz o en cualquier riesgo; ante una moto, no es del B.
+ */
+export function esPolizaDeCoche(tipo: string | null | undefined, datosEspecificos: unknown): boolean {
+  if (String(tipo) !== 'auto') return false
+  const d = datosEspecificos && typeof datosEspecificos === 'object' ? (datosEspecificos as Record<string, unknown>) : {}
+  const riesgos = Array.isArray(d.riesgos) ? d.riesgos : []
+  for (const r of [d, ...riesgos]) {
+    if (!r || typeof r !== 'object') continue
+    const o = r as Record<string, unknown>
+    for (const k of ['categoriaVehiculo', 'claseVehiculo']) {
+      const v = o[k]
+      if (typeof v === 'string' && CLASES_MOTO.has(v.trim().toUpperCase())) return false
+    }
+  }
+  return true
+}
+
 export function compararConCima(ficha: FichaParaCima, cima: DatosCima): DiferenciaCima[] {
   const out: DiferenciaCima[] = []
 
