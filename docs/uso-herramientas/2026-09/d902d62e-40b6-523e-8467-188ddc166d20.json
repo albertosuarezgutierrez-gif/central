@@ -1,51 +1,81 @@
 {
  "sesion": "d902d62e-40b6-523e-8467-188ddc166d20",
  "inicio": "2026-09-28T17:41:21.511Z",
- "fin": "2026-09-28T17:42:58.808Z",
- "llamadas": 9,
+ "fin": "2026-09-28T18:17:41.554Z",
+ "llamadas": 72,
  "categorias": {
   "bash": {
-   "llamadas": 6,
-   "chars_in": 3438,
-   "chars_out": 18418,
+   "llamadas": 27,
+   "chars_in": 12523,
+   "chars_out": 59824,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 6
+    "Bash": 27
    }
   },
   "otro": {
-   "llamadas": 1,
-   "chars_in": 67,
-   "chars_out": 126,
+   "llamadas": 23,
+   "chars_in": 835,
+   "chars_out": 239384,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1
+    "ToolSearch": 4,
+    "ReadNotifications": 17,
+    "SendUserFile": 2
    }
   },
   "mcp:github": {
-   "llamadas": 1,
-   "chars_in": 859,
-   "chars_out": 91,
+   "llamadas": 9,
+   "chars_in": 3189,
+   "chars_out": 13437,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__github__create_pull_request": 1
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__pull_request_read": 3,
+    "mcp__github__merge_pull_request": 2
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 1,
-   "chars_in": 73,
-   "chars_out": 239,
+   "llamadas": 9,
+   "chars_in": 1359,
+   "chars_out": 2601,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2,
+    "mcp__Claude_Code_Remote__send_later": 4,
+    "mcp__Claude_Code_Remote__delete_trigger": 1,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 2
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 2,
+   "chars_in": 242,
+   "chars_out": 3882,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_deployments": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 77,
+   "chars_out": 80888,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Read": 2
    }
   }
  }
