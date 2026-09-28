@@ -151,7 +151,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       />
 
       {tab === 'oportunidades' && (
-        <Tarjeta titulo="💼 Oportunidades">
+        <Tarjeta titulo="Oportunidades">
           <OportunidadesCliente
             clienteId={ficha.id}
             telefono={contacto.telefono ?? null}
@@ -178,20 +178,20 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
 
       {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
       {tab === 'documentos' && (
-        <Tarjeta titulo="📎 Documentos">
+        <Tarjeta titulo="Documentos">
           <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} />
         </Tarjeta>
       )}
 
       {/* `null` ≠ «no se le ha escrito»: lo dice el propio componente. */}
       {tab === 'correos' && (
-        <Tarjeta titulo="✉️ Correos enviados">
+        <Tarjeta titulo="Correos enviados">
           <CorreosCliente correos={ficha.correos} />
         </Tarjeta>
       )}
 
       {tab === 'notas' && (
-        <Tarjeta titulo="📝 Notas">
+        <Tarjeta titulo="Notas">
           <NotasCliente clienteId={ficha.id} notas={ficha.notas} />
         </Tarjeta>
       )}
@@ -231,7 +231,7 @@ function NoSePudo({ estado }: { estado: { estado: 'sin_configurar' } | { estado:
           </>
         ) : estado.estado === 'sin_configurar' ? (
           <>
-            <h2 style={{ marginTop: 0, fontSize: 16 }}>⏳ El puerto con asegura no está conectado</h2>
+            <h2 style={{ marginTop: 0, fontSize: 16 }}>El puerto con asegura no está conectado</h2>
             <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
               Falta <code>ASEGURA_OPERADOR_SECRET</code> en este proyecto. No significa que el
               cliente no exista: significa que desde aquí no se puede mirar.
@@ -239,7 +239,7 @@ function NoSePudo({ estado }: { estado: { estado: 'sin_configurar' } | { estado:
           </>
         ) : (
           <>
-            <h2 style={{ marginTop: 0, fontSize: 16 }}>⚠️ No se ha podido leer la ficha</h2>
+            <h2 style={{ marginTop: 0, fontSize: 16 }}>No se ha podido leer la ficha</h2>
             <p style={{ fontSize: 13, color: 'var(--muted)', margin: 0 }}>
               {MOTIVOS[estado.motivo] ?? 'motivo desconocido.'} No lo leas como «este cliente no
               tiene nada».

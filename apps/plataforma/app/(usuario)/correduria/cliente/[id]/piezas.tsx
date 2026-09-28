@@ -20,9 +20,9 @@ import { Badge, type Tono } from '@/components/ui'
 // ── Pólizas ─────────────────────────────────────────────────────────────────
 
 export const TIPOS: Record<string, string> = {
-  auto: '🚗 Auto', moto: '🏍️ Moto', hogar: '🏠 Hogar', vida: '🧬 Vida', salud: '🩺 Salud',
-  decesos: '⚱️ Decesos', responsabilidad_civil: '⚖️ R. Civil', comercio: '🏪 Comercio',
-  comunidades: '🏢 Comunidad', otros: '📄 Otros',
+  auto: 'Auto', moto: 'Moto', hogar: 'Hogar', vida: 'Vida', salud: 'Salud',
+  decesos: 'Decesos', responsabilidad_civil: 'R. Civil', comercio: 'Comercio',
+  comunidades: 'Comunidad', otros: 'Otros',
 }
 
 /** Semáforo del estado de una póliza: la FORMA dice vigente/cancelada antes de

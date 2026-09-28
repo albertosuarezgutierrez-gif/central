@@ -1,5 +1,7 @@
+import { Shield, Briefcase, Bell, ClipboardList, Users, Paperclip, Mail, FileText, Clock } from 'lucide-react'
 import { TiraAccesos, type Acceso } from '../../Accesos'
 import { TABS_FICHA, type DetalleAcceso, type TabFicha } from './tabs'
+import { Ico } from '../iconos'
 
 export { tabDeParametro, type TabFicha } from './tabs'
 
@@ -16,16 +18,16 @@ export { tabDeParametro, type TabFicha } from './tabs'
  * lo que no se ha podido leer no se pinta, y un cero leído se dice.
  */
 
-const ACCESOS: Record<TabFicha, { icono: string; titulo: string }> = {
-  resumen: { icono: '🛡️', titulo: 'Sus seguros' },
-  oportunidades: { icono: '💼', titulo: 'Oportunidades' },
-  pendiente: { icono: '🔔', titulo: 'Pendiente' },
-  polizas: { icono: '📋', titulo: 'Todas las pólizas' },
-  contactos: { icono: '👥', titulo: 'Contactos' },
-  documentos: { icono: '📎', titulo: 'Documentos' },
-  correos: { icono: '✉️', titulo: 'Correos' },
-  notas: { icono: '📝', titulo: 'Notas' },
-  historial: { icono: '🕘', titulo: 'Historial' },
+const ACCESOS: Record<TabFicha, { icono: React.ReactNode; titulo: string }> = {
+  resumen: { icono: <Ico i={Shield} />, titulo: 'Sus seguros' },
+  oportunidades: { icono: <Ico i={Briefcase} />, titulo: 'Oportunidades' },
+  pendiente: { icono: <Ico i={Bell} />, titulo: 'Pendiente' },
+  polizas: { icono: <Ico i={ClipboardList} />, titulo: 'Todas las pólizas' },
+  contactos: { icono: <Ico i={Users} />, titulo: 'Contactos' },
+  documentos: { icono: <Ico i={Paperclip} />, titulo: 'Documentos' },
+  correos: { icono: <Ico i={Mail} />, titulo: 'Correos' },
+  notas: { icono: <Ico i={FileText} />, titulo: 'Notas' },
+  historial: { icono: <Ico i={Clock} />, titulo: 'Historial' },
 }
 
 export default function FichaTabs({ clienteId, activa, detalles }: {
