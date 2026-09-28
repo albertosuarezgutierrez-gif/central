@@ -251,7 +251,7 @@ export default function VidaNuevo({
         )}
         {resultado.estado === 'error' && (
           <p style={{ color: 'var(--negative)', fontSize: 13, marginTop: 12, whiteSpace: 'pre-wrap' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}{resultado.mensaje}
+            {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
@@ -306,7 +306,7 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
       )}
       {simulacion && !r.simulado && (
         <p style={{ color: 'var(--negative)', fontSize: 13, marginBottom: 12 }}>
-          ⚠️ Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
+          Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
           como una cotización REAL y comprueba el consumo antes de volver a pulsar.
         </p>
       )}

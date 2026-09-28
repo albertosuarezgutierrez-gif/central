@@ -591,7 +591,7 @@ export default function MotoNuevo({
             <Campo
               etiqueta="Últimos 5 dígitos de la póliza"
               falta={!polizaActualDigitos.trim()}
-              ayuda="⚠️ Mapfre y otras compañías a veces dan dígitos con ceros a propósito para que el competidor no pueda consultar la siniestralidad y así no perder al cliente. Si ves varios ceros seguidos, sospecha: la compañía puede rechazar el control de antecedentes con ese número y el precio se quedará en estimado."
+              ayuda="Mapfre y otras compañías a veces dan dígitos con ceros a propósito para que el competidor no pueda consultar la siniestralidad y así no perder al cliente. Si ves varios ceros seguidos, sospecha: la compañía puede rechazar el control de antecedentes con ese número y el precio se quedará en estimado."
             >
               <input
                 value={polizaActualDigitos}
@@ -660,7 +660,7 @@ export default function MotoNuevo({
         )}
         {resultado.estado === 'error' && (
           <p style={{ color: 'var(--negative)', fontSize: 13, marginTop: 12, whiteSpace: 'pre-wrap' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}{resultado.mensaje}
+            {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
@@ -745,7 +745,7 @@ function Precios({
       )}
       {simulacion && !r.simulado && (
         <p style={{ color: 'var(--negative)', fontSize: 13, marginBottom: 12 }}>
-          ⚠️ Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
+          Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
           como una cotización REAL y comprueba el consumo antes de volver a pulsar.
         </p>
       )}

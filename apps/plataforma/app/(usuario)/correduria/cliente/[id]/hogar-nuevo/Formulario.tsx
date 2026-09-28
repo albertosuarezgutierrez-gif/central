@@ -294,7 +294,7 @@ export default function Formulario({
         )}
         {pre.resumen.optimistas.length > 0 && (
           <p style={{ fontSize: 12, color: 'var(--muted)' }}>
-            ⚠️ {pre.resumen.optimistas.length} de los supuestos ABARATAN el precio (
+            {pre.resumen.optimistas.length} de los supuestos ABARATAN el precio (
             {pre.resumen.optimistas.map((f) => f.etiqueta.toLowerCase()).join(', ')}): si el cliente los desmiente,
             la prima real sube.
           </p>
@@ -329,7 +329,7 @@ export default function Formulario({
 
         {resultado.estado === 'error' && (
           <p style={{ color: 'var(--negative)', fontSize: 13, marginTop: 12, whiteSpace: 'pre-wrap' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}
+            {resultado.tope ? 'Tope alcanzado: ' : ''}
             {resultado.mensaje}
             {resultado.gastoDesconocido && (
               <>

@@ -6,7 +6,9 @@
 // un segundo clic en la propia pantalla: es un correo a un tercero.
 
 import { useState } from 'react'
+import { Mail } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { ConIcono } from '@/app/(usuario)/correduria/iconos'
 
 type Resultado = { ok: boolean; texto: string }
 
