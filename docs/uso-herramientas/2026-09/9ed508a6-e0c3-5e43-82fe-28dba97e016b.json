@@ -1,31 +1,32 @@
 {
  "sesion": "9ed508a6-e0c3-5e43-82fe-28dba97e016b",
  "inicio": "2026-09-28T11:36:51.499Z",
- "fin": "2026-09-28T12:43:31.243Z",
- "llamadas": 76,
+ "fin": "2026-09-28T13:18:52.100Z",
+ "llamadas": 136,
  "categorias": {
   "otro": {
-   "llamadas": 4,
-   "chars_in": 3126,
-   "chars_out": 474,
+   "llamadas": 20,
+   "chars_in": 3416,
+   "chars_out": 203830,
    "errores": 0,
-   "archivos_citados": 0,
-   "chars_citados": 0,
+   "archivos_citados": 3,
+   "chars_citados": 111315,
    "tools": {
     "Skill": 1,
-    "ToolSearch": 2,
-    "SubagentHandback": 1
+    "ToolSearch": 5,
+    "SubagentHandback": 1,
+    "ReadNotifications": 13
    }
   },
   "bash": {
-   "llamadas": 58,
-   "chars_in": 42268,
-   "chars_out": 253938,
+   "llamadas": 80,
+   "chars_in": 54470,
+   "chars_out": 316344,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 58
+    "Bash": 80
    }
   },
   "mcp:Supabase": {
@@ -51,14 +52,19 @@
    }
   },
   "mcp:github": {
-   "llamadas": 1,
-   "chars_in": 118,
-   "chars_out": 2094,
+   "llamadas": 11,
+   "chars_in": 6448,
+   "chars_out": 23284,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 2492,
    "tools": {
-    "mcp__github__list_pull_requests": 1
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__pull_request_read": 3,
+    "mcp__github__actions_list": 1,
+    "mcp__github__merge_pull_request": 2
    }
   },
   "agente:agente-architect": {
@@ -70,6 +76,20 @@
    "chars_citados": 128187,
    "tools": {
     "Agent": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 12,
+   "chars_in": 1564,
+   "chars_out": 7722,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2,
+    "mcp__Claude_Code_Remote__send_later": 4,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 2,
+    "mcp__Claude_Code_Remote__delete_trigger": 4
    }
   }
  }
