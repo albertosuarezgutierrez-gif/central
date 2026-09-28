@@ -819,6 +819,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - `figuraEnPropias()` + `figuraChip()` en `apps/asegura-portal/lib/intervinientes.ts`; `PolizaPortal.figura` (solo propias e intervinientes; las autorizadas no la llevan: las ve por permiso).
 - Ejemplo real: Toyota Corolla de Víctor Manuel De la Fuente → él ve «Tomador y conductor habitual»; Nieves ve «Propietario» (+ «conductor ocasional» en la gemela `5727783313`). ⚠️ Esa póliza sale DOS veces en BD (`0005727783313` y `5727783313`, ambas activas): gemela sin fundir, no tocada aquí.
 - Segundo caso, Esquiansa: BMW 530 (3643GVR, vence 05/10/2026), tomador la sociedad; CIMA trae a Juan Manuel López Benjumea como conductor_habitual. Él la ve como DUEÑO («Tu sociedad») y ahí no salía papel → `rolesPropiosPorPoliza()` pinta también la figura en autorizadas/empresas cuando figura.
+- Ingesta CIMA (asegura#859, mergeado 28/09): guarda TODAS las figuras — un papel por fila (índice `(correduria,poliza,nif_lookup_hash,rol)` ya aplicado en `seguros`), propietario empresa, asegurado = tomador (sin contacto). ⏸️ Falta reprocesar los 36 POL de Drive con `cima-rescate-lote` (lote cifrado preparado en la sesión, no lanzado): hasta entonces los datos viejos siguen sin el 2º papel.
 
 ## (28/09/2026) Poner nombre a una ficha SIN NOMBRE sin exigir DNI
 - Alberto no podía nombrar un lead «(sin nombre)»: la única edición era «Editar identidad» (fondo de Contactos) y exigía DNI recibido. La BD guarda el marcador literal `'(sin nombre)'` (14 fichas).
