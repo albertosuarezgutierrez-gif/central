@@ -9,6 +9,8 @@ import { leerOcultar } from '@/lib/presupuesto-ocultar'
 import { auditado } from '@/lib/auditoria'
 import { avisarPresupuesto, confirmarWhatsapp, marcarEmitido, type FalloEnvio } from '@/lib/envio-presupuesto'
 import { datosParaEmitir } from '@/lib/datos-emision'
+import { marcarSeguimientoAvisado } from '@/lib/presupuesto-seguimiento-servicio'
+import { esEtapa } from '@/lib/presupuesto-seguimiento'
 import type { DatosParaEmitir } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
@@ -30,6 +32,8 @@ const STATUS_FALLO: Record<FalloEnvio, number> = {
  *   PATCH { id, accion:'emitido', actor } → la compañía ya emitió la póliza del presupuesto aceptado
  *   PATCH { id, accion:'necesidades', texto, actor } → anota las exigencias y necesidades del cliente (IDD)
  *   PATCH { id, accion:'ocultar'|'mostrar', opcionId, actor } → quita/devuelve una opción ANTES de avisar
+ *   PATCH { id, accion:'seguimiento_avisado', etapa:'sin_abrir'|'sin_elegir', actor } → ya se avisó a Alberto
+ *         de esa etapa (idempotente). La lista de a quién avisar: GET /api/operador/presupuesto/seguimiento
  *
  * 🚨 NADA DE ESTO SALE AL CLIENTE NI CUESTA UN EURO. Prepara la fila y congela
  * las opciones desde una tarificación YA PAGADA; el envío es el PR 3 y la firma
@@ -144,6 +148,11 @@ export const PATCH = auditado(async (req: Request) => {
       const r = await ocultarOpcion(correduria.id, { id, opcionId, ocultar: cuerpo.accion === 'ocultar', actor })
       const status = r.estado === 'ok' ? 200 : r.motivo === 'no_encontrado' ? 404 : 409
       return NextResponse.json(r, { status })
+    }
+    if (cuerpo?.accion === 'seguimiento_avisado') {
+      if (!esEtapa(cuerpo.etapa)) return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
+      const r = await marcarSeguimientoAvisado(correduria.id, { id, etapa: cuerpo.etapa, actor })
+      return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : 404 })
     }
     if (cuerpo?.accion === 'emitido') {
       const r = await marcarEmitido(correduria.id, { id, actor })

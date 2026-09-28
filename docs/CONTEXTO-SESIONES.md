@@ -860,6 +860,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Presupuesto por garantías — entregas 3-4 + las 6 ideas (cliente, parrilla, Telegram)
+- Portal: «Todas las opciones» con logos, filtros de garantías PRESELECCIONADOS con las necesidades (`garantiasDeNecesidades`),
+  «qué cambia frente a tu seguro», capital de decesos, comparar 2 con IA y elegir cualquiera; telemetría `actividad_cliente`.
+- Plataforma: `FiltroGarantias` en las parrillas (auto/moto/hogar/decesos/salud/vida) + ocultar fila/compañía antes de preparar;
+  cron `correduria-seguimiento-presupuestos` (08/13/18 UTC, en `cron-dispatch.ts`): Telegram si no consta abierto 48 h o sin elegir 72 h.
+- Asegura: cron `coberturas-backfill` (horario, gratis) recupera `oferta_id` de precios viejos y lee sus coberturas; puerto
+  `GET /api/operador/presupuesto/seguimiento` + PATCH `seguimiento_avisado`. Pendiente: medir en real el primer backfill.
+
 ## (29/09/2026) Presupuesto de DECESOS, SALUD y VIDA (rótulos reales del portal de Codeoscopic)
 - `nivelCobertura` reconoce salud (Básica < Con copago < Sin copago < Con reembolso), decesos (Tarifa
   natural/mixta/nivelada/personalizada) y vida (Vida-Riesgo), medidos en los ejemplos del portal (Alberto por Claude en Chrome).

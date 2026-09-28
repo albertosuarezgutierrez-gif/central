@@ -80,3 +80,17 @@ export async function pedirLlamada(identidadId: string, presupuestoId: string): 
   const r = await llamar({ accion: 'llamadme', identidadId, presupuestoId }, PORTAL_PUENTE_TIEMPO_MS)
   return r ? interpretarLlamada(r.status, r.json) : { estado: 'error' }
 }
+
+/**
+ * Telemetría de «Todas las opciones»: qué garantías tiene marcadas el cliente y qué dos opciones
+ * compara. Fire-and-forget — nadie espera la respuesta ni se le enseña un error al cliente. `true`
+ * = el puente respondió 2xx; `false` = no respondió, o respondió otra cosa (se registra y ya).
+ */
+export async function registrarActividad(
+  identidadId: string, presupuestoId: string, e: { garantias: string[]; comparadas: string[] },
+): Promise<boolean> {
+  const r = await llamar({ accion: 'actividad', identidadId, presupuestoId, garantias: e.garantias, comparadas: e.comparadas }, PORTAL_PUENTE_TIEMPO_MS)
+  const ok = r !== null && r.status >= 200 && r.status < 300
+  if (r !== null && !ok) console.warn(`[portal/presupuesto-ia] actividad: el puente respondió ${r.status}`)
+  return ok
+}

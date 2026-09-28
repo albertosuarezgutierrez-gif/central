@@ -4,8 +4,11 @@ import { useState } from 'react'
 
 import { eur } from '@/lib/dinero'
 import {
+  cuerpoPreparar,
   frasePresupuesto,
   interpretarPreparado,
+  mensajeErrorPreparar,
+  type OcultarPresupuesto,
   type PresupuestoPreparado,
 } from '@/lib/presupuesto-asegura'
 
@@ -24,10 +27,19 @@ import {
 export default function PrepararPresupuesto({
   tarificacionId,
   simulado,
+  ocultar,
+  bloqueado,
+  onPreparado,
 }: {
   tarificacionId: string
   /** La cotización de la que sale. Si es simulada, no se podrá enviar nunca. */
   simulado: boolean
+  /** Lo que el corredor quita antes de preparar (lo decide `FiltroGarantias`). `undefined` = nada. */
+  ocultar?: OcultarPresupuesto
+  /** Motivo para NO dejar preparar (p. ej. «has ocultado todas»). `null`/ausente = se puede. */
+  bloqueado?: string | null
+  /** Para que quien lo monta congele sus interruptores: lo preparado ya no cambia. */
+  onPreparado?: () => void
 }) {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -40,13 +52,15 @@ export default function PrepararPresupuesto({
       const res = await fetch('/api/correduria/presupuesto', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ tarificacionId }),
+        body: JSON.stringify(cuerpoPreparar({ tarificacionId, ocultar })),
       })
       const r = interpretarPreparado(res.status, await res.json().catch(() => null))
-      if (r.estado === 'ok') setHecho({ p: r.presupuesto, token: r.token })
-      else if (r.estado === 'sin_configurar') {
+      if (r.estado === 'ok') {
+        setHecho({ p: r.presupuesto, token: r.token })
+        onPreparado?.()
+      } else if (r.estado === 'sin_configurar') {
         setError('El puerto con asegura no está configurado en plataforma (falta ASEGURA_OPERADOR_SECRET).')
-      } else setError(r.detalle ? `${r.motivo}: ${r.detalle}` : r.motivo)
+      } else setError(mensajeErrorPreparar(r))
     } catch {
       // Un fallo de red NO se pinta como «preparado»: eso dejaría a Alberto
       // creyendo que tiene un presupuesto que no existe.
@@ -67,14 +81,31 @@ export default function PrepararPresupuesto({
         Congela las opciones de arriba tal y como se le enseñarían. <strong>No manda nada</strong> y{' '}
         <strong>no vuelve a cotizar</strong>: sale de esta misma consulta, que ya está pagada.
       </p>
+      {ocultar && (
+        <p className="muted" style={{ marginTop: 0 }}>
+          Se le ocultarán{' '}
+          {[
+            ocultar.companias.length ? `${ocultar.companias.length} compañía${ocultar.companias.length === 1 ? '' : 's'} (${ocultar.companias.join(', ')})` : null,
+            ocultar.precios.length ? `${ocultar.precios.length} opción${ocultar.precios.length === 1 ? '' : 'es'} suelta${ocultar.precios.length === 1 ? '' : 's'}` : null,
+          ]
+            .filter(Boolean)
+            .join(' y ')}
+          .
+        </p>
+      )}
       <button
         type="button"
         onClick={preparar}
-        disabled={cargando}
+        disabled={cargando || !!bloqueado}
         style={{ minHeight: 44, padding: '0 16px' }}
       >
         {cargando ? 'Preparando…' : 'Preparar presupuesto'}
       </button>
+      {bloqueado && (
+        <p className="err" style={{ marginTop: 8 }}>
+          {bloqueado}
+        </p>
+      )}
       {simulado && (
         <p className="muted" style={{ marginTop: 8 }}>
           Ojo: esta cotización es <strong>simulada</strong>. El presupuesto se prepara igual para

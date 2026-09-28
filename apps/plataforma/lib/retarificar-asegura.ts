@@ -40,7 +40,7 @@ import { describirCausaAsegura, MOTIVOS_PUERTO, type MotivoPuerto } from './corr
 // de verdad, y son el contrato de `defensaDeCartera()` — que es quien los va a
 // consumir. Duplicarlos aquí sería crear una segunda definición del argumento de
 // una función que ya se importa de ese mismo sitio.
-import type { CompaniaCatalogo, PolizaCliente } from '@central/module-seguros'
+import type { CompaniaCatalogo, GarantiasClasificadas, PolizaCliente } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
@@ -591,6 +591,18 @@ export type Precio = {
    *  `null`/ausente = ninguna oferta lo contiene, o cotización recuperada de BD. */
   ofertaId?: string | null
   avisos?: string[]
+  /**
+   * 🔑 Id de la fila en `seguros.tarificacion_precios` (uuid). SOLO llega en una cotización
+   * RECUPERADA (`GET .../tarificacion`) y es la clave para ocultar esa opción en el presupuesto.
+   * 🚨 NO es `id` (el del vendor, que es el que usa el ReRate): mezclarlos mandaría un uuid
+   * nuestro a Codeoscopic. `undefined` = no viene (respuesta fresca del POST, o asegura antigua).
+   */
+  precioId?: string
+  /**
+   * Garantías clasificadas de este precio. `undefined` = asegura no manda el campo;
+   * `null` = todavía no se han leído sus coberturas («no se sabe», NUNCA «no incluye nada»).
+   */
+  garantias?: GarantiasClasificadas | null
 }
 
 export type Fallo = {
@@ -1653,6 +1665,20 @@ function opcionalPrecio<T>(v: unknown, leer: (x: unknown) => T | null): T | null
   return v === undefined ? undefined : leer(v)
 }
 
+const UUID_PRECIO = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** El jsonb `{version, porClave}` validado por forma. Cualquier otra cosa → `null` («no se sabe»). */
+function leerGarantias(v: unknown): GarantiasClasificadas | null {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.version !== 'number' || typeof o.porClave !== 'object' || o.porClave === null || Array.isArray(o.porClave)) return null
+  const porClave: GarantiasClasificadas['porClave'] = {}
+  for (const [k, e] of Object.entries(o.porClave as Record<string, unknown>)) {
+    if (e === 'si' || e === 'no' || e === 'no_consta') porClave[k] = e
+  }
+  return { version: o.version, porClave }
+}
+
 function leerPreciosGuardados(v: unknown): Precio[] | null {
   if (!Array.isArray(v)) return null
   return v.map((raw): Precio => {
@@ -1663,7 +1689,12 @@ function leerPreciosGuardados(v: unknown): Precio[] | null {
       // en una cotización recuperada esto será `undefined` = «no se sabe». Lo que
       // NO se hace es rellenarlo con la posición: sería una clave que parece
       // estable y no lo es, que es justo lo que se está arreglando.
-      ...(typeof x.id === 'string' && x.id.trim() !== '' ? { id: x.id.trim() } : {}),
+      // Desde el 28/09/2026 asegura manda aquí el uuid de `tarificacion_precios`: ese va a
+      // `precioId`, nunca a `id` (el del vendor, que es el que se manda al ReRate).
+      ...(typeof x.id === 'string' && x.id.trim() !== ''
+        ? UUID_PRECIO.test(x.id.trim()) ? { precioId: x.id.trim().toLowerCase() } : { id: x.id.trim() }
+        : {}),
+      ...(x.garantias === undefined ? {} : { garantias: leerGarantias(x.garantias) }),
       compania: cadenaONulo(x.compania),
       producto: cadenaONulo(x.producto),
       categoria: cadenaONulo(x.categoria),

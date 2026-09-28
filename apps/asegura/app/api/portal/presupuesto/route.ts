@@ -8,6 +8,7 @@ import {
 } from '@/lib/presupuesto-aceptacion'
 import { entregarJustificanteAnulacion } from '@/lib/justificante-anulacion'
 import { pideLlamada, preguntaIA, resumenIA } from '@/lib/comparativa-ia-servicio'
+import { actividadCliente } from '@/lib/presupuesto-actividad-servicio'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
 
@@ -29,6 +30,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  *        { accion:'resumen_ia',  identidadId, presupuestoId }                          → resumen IA (cacheado)
  *        { accion:'pregunta_ia', identidadId, presupuestoId, opcionA, opcionB, pregunta } → respuesta IA (tope diario)
  *        { accion:'llamadme',    identidadId, presupuestoId }                          → «Prefiero que me llaméis»
+ *        { accion:'actividad',   identidadId, presupuestoId, garantias: string[], comparadas: string[] }
+ *             → telemetría: qué garantías marca y qué opciones compara (se recorta al catálogo y a las visibles)
  * Como el resto del puente: NO acepta `clienteId`, la ficha sale de `portal_vinculo`.
  */
 const STATUS: Record<string, number> = {
@@ -52,7 +55,7 @@ export const POST = auditado(async (req: Request) => {
     const identidadId = s('identidadId'), presupuestoId = s('presupuestoId'), opcionId = s('opcionId')
     // `datos` y `datos_incorrectos` son del presupuesto, no de una opción: no piden `opcionId`.
     const sinOpcion = b?.accion === 'datos' || b?.accion === 'datos_incorrectos' || b?.accion === 'resumen_ia' ||
-      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme'
+      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme' || b?.accion === 'actividad'
     if (!UUID.test(identidadId) || !UUID.test(presupuestoId) || (!sinOpcion && !UUID.test(opcionId))) {
       return NextResponse.json({ estado: 'invalido' }, { status: 422 })
     }
@@ -84,6 +87,10 @@ export const POST = auditado(async (req: Request) => {
     }
     if (b?.accion === 'llamadme') {
       const r = await pideLlamada(correduria.id, identidadId, presupuestoId)
+      return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
+    }
+    if (b?.accion === 'actividad') {
+      const r = await actividadCliente(correduria.id, identidadId, presupuestoId, { garantias: b.garantias, comparadas: b.comparadas })
       return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
     }
     if (b?.accion === 'preparar') {
