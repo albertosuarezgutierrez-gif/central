@@ -788,7 +788,8 @@ async function abrirOportunidad(id: number): Promise<string> {
     await ofrecerSobreExistente(id, clienteId, existenteId, fila.alta).catch(() => {})
     // Ya tenía la oportunidad: los documentos se guardan SOLOS en su ficha (28/09/2026, Alberto). Con
     // botón se quedaban sin guardar si no se pulsaba, y no avisaba (Rafael Campa: 3 envíos, 0 guardados).
-    await guardarDocumentosEnFicha(id).catch(() => {})
+    // Sin documentos (alta dictada) no se llama: diría «no he podido recuperarlos» sin haber ninguno.
+    if ((fila.documentos ?? []).length > 0) await guardarDocumentosEnFicha(id).catch(() => {})
   }
   return fin.estado === 'abierta' ? 'Oportunidad abierta 🎯' : fin.estado === 'incierta' ? 'No sé si se ha abierto' : 'No se ha abierto'
 }

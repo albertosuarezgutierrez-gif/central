@@ -392,7 +392,7 @@ test('tras abrir: guardar en la ficha es de un solo uso y tarificar es un ENLACE
 test('duplicada: los documentos se guardan SOLOS en la ficha, sin botón (28/09/2026)', () => {
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   const abrir = src.slice(src.indexOf('async function abrirOportunidad'), src.indexOf('// ── Acciones del día a día'))
-  assert.match(abrir, /if \(existenteId\) \{[\s\S]*?await guardarDocumentosEnFicha\(id\)/)
+  assert.match(abrir, /if \(existenteId\) \{[\s\S]*?if \(\(fila\.documentos \?\? \[\]\)\.length > 0\) await guardarDocumentosEnFicha\(id\)/)
   const existente = src.slice(src.indexOf('async function ofrecerSobreExistente'), src.indexOf('async function actualizarExistente'))
   assert.doesNotMatch(existente, /cas_guardar/, 'no se vuelve a ofrecer el botón: ya se guarda solo')
 })
