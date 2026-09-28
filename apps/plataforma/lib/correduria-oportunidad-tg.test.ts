@@ -11,7 +11,7 @@ import { cuerpoAlta, fechaPrimerPaso, prepararAlta, resultadoAlta, textoAlta } f
 
 const HOY = '2026-09-27'
 const leida = (o: Partial<Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>> = {}): LecturaDocumentoOportunidad => ({
-  estado: 'ok', ramo: 'auto', compania: 'Línea Directa', numeroPoliza: '05209179001-00', vence: '2027-02-03', prima: 691.24, ...o,
+  estado: 'ok', ramo: 'auto', compania: 'Línea Directa', numeroPoliza: '05200000035-00', vence: '2027-02-03', prima: 691.24, ...o,
 })
 
 test('lo leído del documento rellena la oportunidad y el primer paso cae 60 días antes del vencimiento', () => {
@@ -43,7 +43,7 @@ test('de varios documentos se toma el primer valor de cada campo (dos PDFs de la
 })
 
 test('un vencimiento que ya pasó se proyecta a la siguiente renovación anual y se dice', () => {
-  // El recibo real de Línea Directa (0194DRY): «Vigencia 18/11/24 al 18/11/25», carta del 03/02/25.
+  // El recibo real de Línea Directa (2222CCC): «Vigencia 18/11/24 al 18/11/25», carta del 03/02/25.
   const r = prepararAlta({}, [leida({ vence: '2025-11-18' })], HOY)
   assert.ok(r.ok)
   assert.equal(r.alta.venceDescartado, '2025-11-18')
@@ -107,9 +107,9 @@ test('el cuerpo es el del botón «Abrir» de la ficha: nace «por contactar» c
   assert.equal(b.estado, 'competencia')
   assert.equal(b.tipoTarea, 'llamada')
   assert.equal(b.fechaTarea, '2026-12-05')
-  assert.match(String(b.nota), /05209179001-00/)
+  assert.match(String(b.nota), /05200000035-00/)
   // El nº viaja aparte: es lo que distingue dos seguros del mismo ramo (dos coches).
-  assert.equal(b.numeroPoliza, '05209179001-00')
+  assert.equal(b.numeroPoliza, '05200000035-00')
   assert.equal(b.actor, 'agente:asistente-telegram')
 })
 
@@ -481,7 +481,7 @@ test('«ya es nuestra»: con la póliza en nuestra cartera en vigor no se propon
   assert.equal(polizaYaNuestra([leida({ enCartera: [] })]), null)
   assert.equal(polizaYaNuestra([leida({ enCartera: null })]), null, 'no se ha podido mirar ≠ es nuestra')
   assert.deepEqual(polizaYaNuestra([leida({ enCartera: [{ polizaId: 'p1', clienteId: 'c1', aseguradora: 'Reale' }] })]),
-    { numero: '05209179001-00', clienteId: 'c1', aseguradora: 'Reale' })
+    { numero: '05200000035-00', clienteId: 'c1', aseguradora: 'Reale' })
   const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
   const proponer = src.slice(src.indexOf('async function proponerOportunidad'), src.indexOf('/** Botón «Abrir».'))
   // Se comprueba ANTES de preparar el alta y de mandar el botón.
@@ -490,22 +490,22 @@ test('«ya es nuestra»: con la póliza en nuestra cartera en vigor no se propon
 
 test('la lectura trae el coche y «en cartera»; la oportunidad lo lleva y lo enseña', async () => {
   const { interpretarLecturaOportunidad } = await import('./seguimiento-asegura.ts')
-  const l = interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto', compania: 'Línea Directa', matricula: '0194DRY', vehiculo: 'Chevrolet Aveo',
+  const l = interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto', compania: 'Línea Directa', matricula: '2222CCC', vehiculo: 'Chevrolet Aveo',
     enCartera: [{ polizaId: 'p', clienteId: 'c', aseguradora: 'X' }, { basura: 1 }] })
   assert.ok(l.estado === 'ok')
-  assert.equal(l.matricula, '0194DRY')
+  assert.equal(l.matricula, '2222CCC')
   assert.equal(l.enCartera?.length, 1)
   assert.equal(interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto' }).estado === 'ok' && (interpretarLecturaOportunidad(200, { leido: true, ramo: 'auto' }) as { enCartera?: unknown }).enCartera, null)
-  const r = prepararAlta({}, [leida({ matricula: '0194DRY', vehiculo: 'Chevrolet Aveo' })], HOY)
+  const r = prepararAlta({}, [leida({ matricula: '2222CCC', vehiculo: 'Chevrolet Aveo' })], HOY)
   assert.ok(r.ok)
-  assert.equal(cuerpoAlta('c1', r.alta, 'x').matricula, '0194DRY')
-  assert.match(textoAlta('Rafael', r.alta), /Vehículo: Chevrolet Aveo · 0194DRY/)
+  assert.equal(cuerpoAlta('c1', r.alta, 'x').matricula, '2222CCC')
+  assert.match(textoAlta('Rafael', r.alta), /Vehículo: Chevrolet Aveo · 2222CCC/)
 })
 
 test('tarificar auto lleva la matrícula leída; los demás ramos, el enlace de siempre', async () => {
   const { enlaceTarificar } = await import('./correduria-oportunidad-tg.ts')
-  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'auto', matricula: '0194DRY' }), 'https://x/c/1/auto-nuevo?matricula=0194DRY')
-  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'hogar', matricula: '0194DRY' }), 'https://x/c/1/hogar-nuevo')
+  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'auto', matricula: '2222CCC' }), 'https://x/c/1/auto-nuevo?matricula=2222CCC')
+  assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'hogar', matricula: '2222CCC' }), 'https://x/c/1/hogar-nuevo')
   assert.equal(enlaceTarificar('https://x/c/1', { ramo: 'otros', matricula: null }), null)
 })
 

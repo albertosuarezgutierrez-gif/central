@@ -27,10 +27,10 @@ test('con una sola póliza no hay historial que enseñar', () => {
   assert.deepEqual(ordenarHistorialRiesgo([e('a', '2024-01-01'), e('b', '2025-01-01')], 'z'), [])
 })
 
-test('🚨 la copia del volcado de la MISMA póliza no es otro eslabón (caso Kona: 0007001518236 / 7001518236)', () => {
-  const cima = { ...e('cima', '2020-09-24', 'matricula'), aseguradora: 'Mapfre', numeroPoliza: '0007001518236' }
-  const volcado = { ...e('volc', '2020-09-24', 'matricula'), aseguradora: 'Mapfre', numeroPoliza: '7001518236', viva: false }
-  const reale = { ...e('reale', '2026-09-22'), aseguradora: 'Reale', numeroPoliza: '3022600334066' }
+test('🚨 la copia del volcado de la MISMA póliza no es otro eslabón (caso Kona: 0007000000006 / 7000000006)', () => {
+  const cima = { ...e('cima', '2020-09-24', 'matricula'), aseguradora: 'Mapfre', numeroPoliza: '0007000000006' }
+  const volcado = { ...e('volc', '2020-09-24', 'matricula'), aseguradora: 'Mapfre', numeroPoliza: '7000000006', viva: false }
+  const reale = { ...e('reale', '2026-09-22'), aseguradora: 'Reale', numeroPoliza: '3022600000002' }
   const h = ordenarHistorialRiesgo([volcado, cima, reale], 'reale')
   assert.deepEqual(h.map((x) => x.id), ['cima', 'reale'])
 })

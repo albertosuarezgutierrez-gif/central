@@ -76,7 +76,7 @@
   `esCarteraViva()` queda para lo que pregunta por el ORIGEN (gemelas, siniestros, portal).
   El segundo brazo tapa un agujero medido el 03/09/2026 — cuando CIMA trae una póliza que YA estaba en el
   volcado no crea fila nueva: actualiza la vieja y le deja su `import_ref`, así que una póliza que CIMA
-  mantiene al día contaba como lead (hoy afecta a **1** fila: la `3021700291186` de Reale C0613, auto,
+  mantiene al día contaba como lead (hoy afecta a **1** fila: la `[nº de póliza retirado]` de Reale C0613, auto,
   vence 19/09/2027, que dejaba a Reale con «0 pólizas vivas»).
   Las otras 28.728 pólizas son **volcado histórico** (`import_ref` `intranet:` y `asegura_app:`, cargado en
   jun/2026, vencimientos 2013-2018) y **ninguna** tiene vencimiento en los últimos 18 meses. Regla de Alberto:

@@ -431,7 +431,7 @@ test('moto: NINGÚN supuesto rellena un dato personal', () => {
 
 const POLIZA_MOTO: PolizaCartera = {
   ...POLIZA,
-  numeroPoliza: '031698897',
+  numeroPoliza: '031600009',
   codigoEntidadDgs: 'C0109',
   matricula: '1234ABC',
   vehiculo: { marca: 'HONDA', modelo: 'NTV 700', versiones: [] },
@@ -455,7 +455,7 @@ test('moto de cartera: la póliza actual es la ANTERIOR (bonus por antigüedad),
   assert.deepEqual(r.faltan, [])
   assert.equal(r.datos.aseguradoAntes, true)
   assert.equal(r.datos.companiaAnteriorCodigo, 'C0109')
-  assert.equal(r.datos.polizaAnterior, '031698897')
+  assert.equal(r.datos.polizaAnterior, '031600009')
   assert.equal(r.datos.aniosAsegurado, 10)
   assert.equal(r.datos.matricula, '1234ABC')
 })

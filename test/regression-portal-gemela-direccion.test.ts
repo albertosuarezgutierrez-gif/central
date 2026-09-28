@@ -8,7 +8,7 @@
 // escondida en la fila que nadie mira: 11 de las 19 hogar vivas (07/09/2026).
 //
 // 🚨 Rescatarla es fácil de hacer MAL, y el fallo no se ve: medido el mismo día,
-// la póliza `0732200153700` tiene DOS gemelas del mismo cliente con direcciones
+// la póliza `0732200000005` tiene DOS gemelas del mismo cliente con direcciones
 // distintas (41011 con efecto 2016, 41001 con efecto 2022). Emparejar solo por
 // número y quedarse con «la última» pinta la dirección de OTRA casa — sin
 // error, sin hueco, y perfectamente plausible. Es la regla de la casa de

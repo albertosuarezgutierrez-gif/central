@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 // Retarificar una póliza de MOTO de la cartera (23/09/2026). Caso fundacional:
-// la moto de Víctor De la Fuente (Allianz 031698897) salía con modelos de COCHE
+// la moto de Víctor De la Fuente (Allianz 031600009) salía con modelos de COCHE
 // porque CIMA la guardó como `auto`; corregida a `moto`, asegura contestaba 409
 // «hoy solo se retarifica auto y hogar». Estos cepos fijan las tres piezas que
 // lo cierran: el puerto rama moto, la precalificación la sirve, y la pantalla

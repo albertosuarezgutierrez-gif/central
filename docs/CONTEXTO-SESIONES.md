@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — 🔒 Retirados de docs/tests los identificadores REALES de clientes de la correduría (Graphify, PR #3887): 14 matrículas (incl. la del lead de Rafael Campa) y ~45 nº de póliza/IDs CIMA, verificados contra `seguros.polizas` antes de tocar. Tests → valores ficticios con la MISMA forma (ceros, prefijos, separadores; ojo a los asserts de «últimos 4»); docs/memoria → `[matrícula retirada]`/`[nº de póliza retirado]` (un falso en memoria se leería como dato). Siguen en comentarios de código `.ts`, SQL de migraciones, `mapa-funciones.generated.json` y la historia git; los nombres de clientes siguen en la memoria.
+
 **(28/09/2026)** — 🧪 Auditoría del flujo presupuesto→emisión antes de probar con Manuel. Arreglado: (1) el presupuesto con efecto «mañana» nacía CADUCADO (`calcularVencimiento` restaba un día entero; ahora vale hasta el final del día anterior al efecto); (2) `/emitir` no comprobaba que se emitía la opción FIRMADA: ahora 409 si compañía o prima (>2%) no coinciden con `opcion_elegida_id` (fail-closed si no puede leerse); (3) al acuñar se marca el presupuesto `emitido` solo. Pendiente: «Emitir» desde el presupuesto aceptado (hoy solo desde la parrilla en memoria de MotoNuevo — no cerrar esa pestaña); el agente de Telegram no emite a clientes nuevos (`preparar_emision` exige póliza) ni lee presupuestos; 0 IPID subidos.
 
 **(28/09/2026)** — 💳 Presupuesto: CUENTA + IPID al aceptar en el portal y logos de compañía (PR #3879). El cliente elige la cuenta de su ficha (enmascarada) u otra IBAN (módulo 97 en servidor, cifrada `v1:` en `clientes.cuenta_bancaria` en la transacción de la firma, solo máscara en eventos/Telegram, fail-closed antes de gastar el código). Casilla dice «he recibido la información previa» solo si la opción tiene IPID subido. Emitir: cuenta NUEVA firmada va antes que la de la póliza vieja y, si la ficha da otra máscara que la firmada, 422 y se pide teclearla (bloqueante del architect). Pendiente: medir portal a 320 px; menores (hash IBAN en huella).
@@ -34,7 +36,7 @@ Ramas `cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` borradas. Pendiente: b
 **(28/09/2026)** — Correo de aviso de vencimiento: «Prima anual» llevaba la NETA de la póliza o, si no la traía, el TOTAL del
 recibo, bajo el mismo rótulo. Ahora siempre la total (bruta de la póliza → recibo anual, vía `primaConRecibos`) y el rótulo dice
 «(impuestos incluidos)». Cepos en `texto-vencimiento.test.ts` y `regression-prima-con-recibos.test.ts` (vistos en rojo). Check-in
-043673655: hasta las 07:00 UTC no había entrado ningún fichero CIMA desde el 27/09 09:01 → re-armado 28/09 12:30 UTC.
+[nº de póliza retirado]: hasta las 07:00 UTC no había entrado ningún fichero CIMA desde el 27/09 09:01 → re-armado 28/09 12:30 UTC.
 
 **(28/09/2026)** — `facturas-correo`: pasada de rutina sin novedades que archivar. Vía B sana
 (`dias_caido=0`), `agente_salud` actualizado. Sin candidatos nuevos en correo ni subidas manuales.
@@ -50,17 +52,17 @@ sin revisar. Detalle en `docs/AGENTES-BITACORA.md`.
 
 **(28/09/2026)** — Pricing SIVRA (ciclo semanal, agente automático): 4 agentes en paralelo (uno por piso, mismas 12 ventanas que ciclos previos) recogieron mercado real con Booking/Trivago MCP. Verificado por SQL directo: comps hoy en `market_rates` busto=128, duplex=146, luxury=146, house=101 (ninguno a 0). 48/48 propuestas dry-run en `pricing_decisiones`, circuit-breaker sano en los 4. Fecha más caliente: Karol G 11-jun-2027 (mercado crudo 486-1731€ según piso), el tope ±20%/día la está recortando a propósito (convergencia gradual). 2 hallazgos de calidad de dato sin arreglar (self-listing colándose como comp; `mercado/ingest` no distingue Trivago de Booking en `fuente`) anotados en `pricing_aprendizaje` id 82. Telegram enviado. Sin cambios de código.
 
-**(28/09/2026)** — Correduría: la moto HONDA NTV 700 (4897FTM) salía DOS veces en su ficha (Allianz 031698897 vence 01/11/2026 + Occident 549648082) y el «Siguiente paso» avisaba del 01/11. La BD ya estaba bien (Allianz `sustituida_at` 24/09, Occident `poliza_origen_id`→Allianz); fallaba el código, que no leía la sustitución. Ahora: puerto de ficha manda `sustituida`/`sustituyeA`; `clasificarPolizaFicha` tiene la clase `sustituida` (no es viva, no manda el próximo vencimiento); en «Con nosotros» la vieja va DENTRO de la tarjeta de la nueva («🔁 Sustituye a…»); pestaña Pólizas con sección propia. Y `sustituidaAt: null` en las renovaciones de asegura (`vencimientosProximos`, KPIs de preaviso) y en los dos crons de aviso (intranet y vencimiento). Barrido de toda la cartera: 4 cambios enlazados (todos cubiertos) y 1 duplicado real SIN casar — 8737HVF: CIMA trajo la Allianz como `061089620` y no casó con la emitida `61089620` (cero a la izquierda; el emparejado vive en la ingesta del CRM). Fusionada a mano (`poliza_merge_log` lote `emitida-sin-casar-cero-inicial` + nota en `historial_interno`).
+**(28/09/2026)** — Correduría: la moto HONDA NTV 700 ([matrícula retirada]) salía DOS veces en su ficha (Allianz [nº de póliza retirado] vence 01/11/2026 + Occident [nº de póliza retirado]) y el «Siguiente paso» avisaba del 01/11. La BD ya estaba bien (Allianz `sustituida_at` 24/09, Occident `poliza_origen_id`→Allianz); fallaba el código, que no leía la sustitución. Ahora: puerto de ficha manda `sustituida`/`sustituyeA`; `clasificarPolizaFicha` tiene la clase `sustituida` (no es viva, no manda el próximo vencimiento); en «Con nosotros» la vieja va DENTRO de la tarjeta de la nueva («🔁 Sustituye a…»); pestaña Pólizas con sección propia. Y `sustituidaAt: null` en las renovaciones de asegura (`vencimientosProximos`, KPIs de preaviso) y en los dos crons de aviso (intranet y vencimiento). Barrido de toda la cartera: 4 cambios enlazados (todos cubiertos) y 1 duplicado real SIN casar — [matrícula retirada]: CIMA trajo la Allianz como `[nº de póliza retirado]` y no casó con la emitida `[nº de póliza retirado]` (cero a la izquierda; el emparejado vive en la ingesta del CRM). Fusionada a mano (`poliza_merge_log` lote `emitida-sin-casar-cero-inicial` + nota en `historial_interno`).
 
 **(28/09/2026)** — Ficha↔CIMA: el email nuevo de CIMA se AÑADE como secundario (`email:anadir`, antes `discrepa`) salvo que esté en OTRA ficha (`avisarContactosCompartidos`, el email vincula el portal). «Berta del la fuentes rojas» NO era solo mayúsculas: dos erratas; nueva acción automática `corregir` (mismas palabras, ≤1 letra por palabra, ≥ la mitad idénticas). «Maria Lopez»/«Mario Lopes» sigue preguntando. PR #3802.
 
-**(28/09/2026)** — Bot de oportunidades: un vencimiento leído que ya pasó (recibo del periodo anterior) ya no se descarta: se proyecta a la siguiente renovación anual (`siguienteRenovacion`, máx. 2 años; 29/02→28/02) y se dice en el mensaje. Caso: recibo Línea Directa 0194DRY «Vigencia 18/11/24 al 18/11/25» → vence 18/11/2026. Ojo: la fecha de la CARTA (03/02/25) no es la del periodo.
+**(28/09/2026)** — Bot de oportunidades: un vencimiento leído que ya pasó (recibo del periodo anterior) ya no se descarta: se proyecta a la siguiente renovación anual (`siguienteRenovacion`, máx. 2 años; 29/02→28/02) y se dice en el mensaje. Caso: recibo Línea Directa [matrícula retirada] «Vigencia 18/11/24 al 18/11/25» → vence 18/11/2026. Ojo: la fecha de la CARTA (03/02/25) no es la del periodo.
 
 **(27/09/2026)** — Correduría, bot de Telegram «sabe más que Alberto»: (1) si el nº de póliza del documento está en nuestra cartera EN VIGOR (`polizaEnCartera`, asegura `leer-documento` → `enCartera`) contesta «YA ES NUESTRA» y no propone; (2) marcar un documento «de un cliente» ya no pregunta «¿qué hago?»: el asistente propone solo (`ORDEN_DOCUMENTO_CLIENTE`); (3) matrícula y vehículo leídos → identidad (`mismoSeguro`: nº → matrícula → compañía), texto, ficha y `auto-nuevo?matricula=`; (4) eval con las 5 conversaciones reales (`scripts/eval-asistente-correduria.ts`, necesita OPENROUTER_API_KEY; el veredicto puro va en CI). ⚠️ El nº de póliza de una oportunidad vive en la COLUMNA `oportunidades.numero_poliza` (y el CRM viejo lo dejaba en `poliza_competencia.nPoliza`); el #3792 lo escribía en una clave nueva — corregido, se leen las tres. Con eso 1.386/3.680 abiertas ya tienen nº y 1.733 matrícula: no hizo falta backfill.
 
 **(27/09/2026)** — Correduría: un cliente puede tener VARIAS oportunidades abiertas del mismo ramo si son de compañías distintas (segundo coche: MUSSAP + Línea Directa de Rafael Campa). Regla en asegura `crearOportunidad`/`editarOportunidad`: 409 `duplicada` solo si hay una abierta del ramo con la MISMA compañía o sin compañía en un lado (ante la duda, la misma). Comparación única `mismaCompania()` en `@central/module-seguros`; plataforma `mismaPoliza` la reutiliza. Después (mismo PR #3792): la identidad es el **nº de póliza** (`mismoSeguro()`), guardado en `poliza_competencia.numeroPoliza` al abrir; sin número en un lado se cae a la compañía. Y el prompt del bot: con documento reciente no pregunta nada, lo lee.
 
-**(27/09/2026)** — Recibo Línea Directa de Rafael Campa (OTRO coche, 0194DRY): el 409 «ya tiene una de auto» habría ofrecido
+**(27/09/2026)** — Recibo Línea Directa de Rafael Campa (OTRO coche, [matrícula retirada]): el 409 «ya tiene una de auto» habría ofrecido
 «Actualizar la existente» y pisado la de MUSSAP. `mismaPoliza()` compara compañía: distinta ⇒ sin botón y se dice. Pendiente
 (decisión de Alberto): varias oportunidades de auto por cliente, una por vehículo/póliza (hoy asegura admite una por ramo).
 
@@ -69,10 +71,10 @@ sin revisar. Detalle en `docs/AGENTES-BITACORA.md`.
 **(27/09/2026)** — PR #3762 **MERGEADO**: título RC = solo «RC + tipo» (`tituloRc`), y prima/vencimiento desde el recibo anual CA/NP
 (`primaConRecibos`/`vencimientoConRecibos` + SQL gemelo en `apps/asegura/lib/recibos-vigencia.ts`) en ficha, póliza, listado,
 impagados, renovaciones, avisos, libro-registro (recibo del AÑO del libro), mejorar-precio, sin-canal y portal del cliente.
-Guardián `test/regression-prima-con-recibos.test.ts`. BD a mano: 043673655 cancelada/AN; 054914837 con 2 CA de ePac (`origen=manual`).
+Guardián `test/regression-prima-con-recibos.test.ts`. BD a mano: [nº de póliza retirado] cancelada/AN; [nº de póliza retirado] con 2 CA de ePac (`origen=manual`).
 Filtros «vencidas/vence en N días» y `proximo_vencimiento` de sin-canal también con el recibo (PR siguiente; hoy 0 cambios medidos
 porque el pg_cron `seguros-avanzar-vencimientos-recibo` ya avanza la fecha — esto es la red si falla). **Pendiente:** (2) el correo de aviso pone prima neta
-o, si cae al recibo, el total con impuestos bajo el mismo rótulo; (3) check-in 28/09 07:00 UTC: ver si CIMA devolvió la 043673655 a EV.
+o, si cae al recibo, el total con impuestos bajo el mismo rótulo; (3) check-in 28/09 07:00 UTC: ver si CIMA devolvió la [nº de póliza retirado] a EV.
 
 **(27/09/2026)** — PR #3779 (+): el bot lee SOLO el último documento (o su álbum), no todo lo de la hora (la prueba de
 MUSSAP salió con 374,90€ por mezclar dos subidas). Si ya tenía oportunidad del ramo: «✏️ Actualizar la existente»
@@ -255,7 +257,7 @@ Allianz (carga 199) 25/26 — la que falta choca con `uq_clientes_dni_lookup_has
 (1af806b6 → 12f99b7b, «Juan Manuel Durán Ibáñez», **DNIs distintos**; mismo patrón en Hassan Pimienta 0d16579c → cc0d0547).
 ✅ Alberto (DNIs consultados): **misma persona, fusión se mantiene**. asegura#856: si el DNI del fichero solo está en una ficha
 absorbida, `resolveCliente` sigue `merged_into_cliente_id` al superviviente (cadena rota → cuarentena). Reprocesado: póliza
-031769150 actualizada en 12f99b7b, 0 clientes nuevos, fichero sellado. #855 mergeado. Cobertura EIAC (30%): tarea aparte.
+[nº de póliza retirado] actualizada en 12f99b7b, 0 clientes nuevos, fichero sellado. #855 mergeado. Cobertura EIAC (30%): tarea aparte.
 
 **(26/09/2026)** 🏁 **Hilo CIMA/Mapfre cerrado** (Alberto): respaldo del pull a 11:00 + franjas fijas 16:00/20:30 Madrid (#3571),
 clave del respaldo arreglada (401), Mapfre ya vuelca a diario (25/09). Skill `cima-ingesta` al día. Único cabo: pólizas y resto de ramos
@@ -329,7 +331,7 @@ Ninguna orden real, todo paper/simulado. Detalle en `docs/AGENTES-BITACORA.md`.
 
 **(24/09/2026)** — Memoria pedida por Alberto: **Google Drive, carpeta «CIMA», guarda copia de TODO lo de CIMA** (zips del Portal por trimestre). Es la vía para reprocesar cuando el lector aprende un campo (TIREA no reentrega). Inventario de TODOS los campos que trae CIMA, por compañía y sin valores: `docs/CIMA-CAMPOS.md` (941 rutas: POL 470, SIN 275, CEF 108, REC 88). Regla: CIMA trae casi todo el PDF; antes de pedir un dato a mano o decir «no consta», mira si CIMA lo manda.
 
-**(24/09/2026)** — CIMA «trae casi todo el PDF» (Alberto) y no se leía. Con los 2 zip del Portal CIMA en Drive (carpeta «CIMA», 36 POL, 264 pólizas) se midió: el mapper del CRM tiraba anulación (83), póliza reemplazada (4), suplementos (27), «otros datos» (148) y media ficha del inmueble; y las direcciones faltaban porque esas pólizas entraron ANTES del 20/09 (cuando se empezó a leer SituacionRiesgo), no porque la compañía no la mande (María Antonia: comunidad BIDP023227 y hogar Mapfre sí la traen). asegura#851 amplía el mapper (datos personales fuera: texto tapado, «otros datos» de persona y de vida/salud descartados; año en `anioConstruccionCima`; `anulacion:null` en vigor). Central: `leerDatosCompaniaCima` + tarjeta «🏢 Lo que dice la compañía (CIMA)» en la ficha de póliza + portal decide la gemela por contenido. Falta: reprocesar los 36 POL con `cima-rescate-manual` (admite xz) y borrar esos runs.
+**(24/09/2026)** — CIMA «trae casi todo el PDF» (Alberto) y no se leía. Con los 2 zip del Portal CIMA en Drive (carpeta «CIMA», 36 POL, 264 pólizas) se midió: el mapper del CRM tiraba anulación (83), póliza reemplazada (4), suplementos (27), «otros datos» (148) y media ficha del inmueble; y las direcciones faltaban porque esas pólizas entraron ANTES del 20/09 (cuando se empezó a leer SituacionRiesgo), no porque la compañía no la mande (María Antonia: comunidad [nº de póliza retirado] y hogar Mapfre sí la traen). asegura#851 amplía el mapper (datos personales fuera: texto tapado, «otros datos» de persona y de vida/salud descartados; año en `anioConstruccionCima`; `anulacion:null` en vigor). Central: `leerDatosCompaniaCima` + tarjeta «🏢 Lo que dice la compañía (CIMA)» en la ficha de póliza + portal decide la gemela por contenido. Falta: reprocesar los 36 POL con `cima-rescate-manual` (admite xz) y borrar esos runs.
 
 **(24/09/2026)** — Tipografía de marca de Grupo ASegura (parche de Alberto): Quicksand en titulares/menús/botones y Nunito Sans en el cuerpo, sin cursivas, con el logotipo «Grupo ASegura» con el monograma dentro, en la web y el portal; y extendida a `/correduria` de plataforma con next/font, acotada a `.correduria`. De paso, revisión de la fase 2: el aviso «la compañía tiene otro dato» ya no atribuye a CIMA un teléfono que asegura rellena con el de la propia ficha (`telefonoPropio`/`emailPropio`), y las notas conservan los saltos de línea.
 
@@ -492,7 +494,7 @@ Pendiente: Mapfre 2002600520435 (Antonio Cruz Martínez) no está aún en CIMA y
 15/09 (dos REC 299) en cuarentena por pólizas duplicadas que se fusionaron el 17/09; no es el mapper (texto del panel
 corregido). No salen por reconcile (fichero ya `confirmed`) ni por crudo (solo existe desde el 17/09) → hay que bajar los
 2 zips del Portal CIMA y usar `ingerir-manual`. Fusionadas 2 parejas vivas más (solo diferían en puntuación, mismo cliente);
-queda `UV-G-410081428` (Generali) con clientes distintos para Alberto. Skill `cima-ingesta`: el reconcile SÍ está programado.
+queda `[nº de póliza retirado]` (Generali) con clientes distintos para Alberto. Skill `cima-ingesta`: el reconcile SÍ está programado.
 **(23/09/2026)** 🏦 **PR 9: libro de comisiones — el banco casado abono a abono y la cuenta correcta.** #3414 (WhatsApp por
 ramo en plataforma) mergeado. Medido: el cron `cima-liq` elegía cuenta con `LIMIT 1` sin orden y desde el 20/09 escribía
 en una cuenta sin bancos (libro de Alberto congelado); y sus ventanas de 45 días contaban el mismo abono en 2-3 periodos
@@ -637,7 +639,7 @@ plataforma → retarificar hogar, que ofrece «Usar X€» (nunca rellena solo).
 compañía, [Probable] tarifica por dentro): detrás de `CODEOSCOPIC_TARIFICACION_ACTIVA`, `confirmado:true`, libro de consumo con
 motivo `limites_hogar` (coste en env a 0 = sin confirmar, tope propio) y 4ª excepción del guardián de gasto. Falta para `hogar-nuevo`.
 **(23/09/2026)** 🏍️ **Moto como coche: CIMA clasificaba mal 18 motos + carnets en la ficha + plan Avant2.**
-La moto de Víctor (Allianz 031698897) salía con catálogo de coche porque CIMA la guardó como `auto`
+La moto de Víctor (Allianz [nº de póliza retirado]) salía con catálogo de coche porque CIMA la guardó como `auto`
 (Allianz/Mapfre no mandan `ClaseVehiculo='MO'`). 18 pólizas corregidas a `moto` en BD (ids en asegura#848)
 + ingesta parcheada (matrícula ya moto → moto; guarda clase/categoría/Base7/cilindrada en crudo). ⚠️ Ahora
 una `moto` da 409 al retarificar: `retarificar-cartera.ts` solo hace auto/hogar → punto 1 del plan.
@@ -661,7 +663,7 @@ con su sesión en `/api/correduria/codeoscopic-crudo?tipo=carnets-moto`. El ejem
 `fechaCarnetB`); el de moto sigue en `[0]`. Arreglado de paso: el PATCH de `fechaCarnet` tras un 400 (`interprete-400`)
 pisaba el A de una moto con un B de España y se llevaba el resto de carnés.
 #3355 y asegura#848 mergeados (23/09): la ingesta de CIMA ya no devuelve a `auto` las 18 motos corregidas. Moto de Víctor
-(031698897) lista para la 1ª emisión real desde plataforma: faltan en pantalla versión, estado civil y sexo (ficha sin ellos).
+([nº de póliza retirado]) lista para la 1ª emisión real desde plataforma: faltan en pantalla versión, estado civil y sexo (ficha sin ellos).
 **(23/09/2026)** Cableada la descarga del PDF de `issuedDocuments[]` en el flujo REAL de acuñado
 (no solo en el endpoint de diagnóstico): `lib/codeoscopic/archivar-documento.ts` (nuevo,
 compartido) se llama desde `emitir/route.ts` en los dos sitios donde `registrarPolizaEmitida` acuña
@@ -851,12 +853,12 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 
 ## (28/09/2026) Póliza donde la ficha FIGURA sin ser tomador: ya sale en su ficha y en el portal
-Caso: Generali UV-G-410081428 — tomador Francisco Javier Velasco (conductor habitual), GLOBAL 2 propietaria+asegurada;
+Caso: Generali [nº de póliza retirado] — tomador Francisco Javier Velasco (conductor habitual), GLOBAL 2 propietaria+asegurada;
 no salía en la ficha de GLOBAL 2 ni a Pilar (autorizada sobre GLOBAL 2). Medido: 28 pólizas vivas / 22 fichas en ese caso.
 Ficha del corredor: `figuraEn` (`polizasDondeFigura`, por `cliente_id` o DNI) → bloque «Donde figura en pólizas de otro tomador».
 Portal: quien ve una ficha ENTERA (autorización sin póliza suelta o empresa del dueño) ve también donde ESA ficha figura,
 capada como interviniente (`capaInterviniente`, `figurasDeFichasVistas`); cepo en `regression-portal-intervinientes`.
-Confirmado con las condiciones particulares de Generali: tomador y conductor habitual = Francisco Javier; asegurado/propietario = GLOBAL 2 (Citan 1670HRB). La BD está bien. La copia de volcado `UV-G-410.081.428` (con puntos, no viva) cuelga de GLOBAL 2 como tomador.
+Confirmado con las condiciones particulares de Generali: tomador y conductor habitual = Francisco Javier; asegurado/propietario = GLOBAL 2 (Citan [matrícula retirada]). La BD está bien. La copia de volcado `[nº de póliza retirado]` (con puntos, no viva) cuelga de GLOBAL 2 como tomador.
 ✅ Decisión de Alberto (28/09): quien ve la empresa con `ver_economico` ve también prima y recibos de la póliza donde la empresa interviene, aunque el tomador sea una persona física («porque la empresa interviene»). PR #3878, mergeado.
 
 ## (28/09/2026) Correduría: el CP rellena solo la ciudad (y la provincia)
@@ -879,9 +881,9 @@ Confirmado con las condiciones particulares de Generali: tomador y conductor hab
   → `/motorcycle/registration-date`. Hasta que despliegue asegura, plataforma cae a la estimación por serie.
 
 ## (28/09/2026) Sincro CIMA: la fecha de carné de una MOTO se comparaba con el carné B
-- Aviso falso en Manuel León Sotelo (0007001052485, BMW C 400 GT): CIMA manda motos en ramo 241 y en BD quedan `tipo='auto'` (**11 pólizas vivas**). `cimaDe` solo miraba `tipo` → comparaba su fecha (del A) contra el B.
+- Aviso falso en Manuel León Sotelo ([nº de póliza retirado], BMW C 400 GT): CIMA manda motos en ramo 241 y en BD quedan `tipo='auto'` (**11 pólizas vivas**). `cimaDe` solo miraba `tipo` → comparaba su fecha (del A) contra el B.
 - Nuevo `esPolizaDeCoche()` en `@central/module-seguros` (`sincro-cima.ts`): moto si `categoriaVehiculo`/`claseVehiculo` ∈ MO/MT/CI (raíz o riesgos). Test visto en rojo.
-- Francisco Sánchez Torres (UV-G-410032446, Toyota Avensis) NO es este caso: discrepancia real del B, la decide Alberto. Su conductor habitual cuelga de otra ficha (`851b9766…`): posible duplicado.
+- Francisco Sánchez Torres ([nº de póliza retirado], Toyota Avensis) NO es este caso: discrepancia real del B, la decide Alberto. Su conductor habitual cuelga de otra ficha (`851b9766…`): posible duplicado.
 
 ## (28/09/2026) Baja firmada en el portal → justificante al cliente + archivo en su póliza
 Auditoría de la baja Mapfre de Pablo Guzmán Pueyo: SÍ firmó (28/09 10:18) y la carta llegó a Mapfre (Resend delivered).
@@ -941,7 +943,7 @@ Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCE
 
 ## (27/09/2026) Título de la RC = solo la RC
 - `module-seguros/objeto.ts` `tituloRc()`: si una cobertura se nombra «Responsabilidad civil…/R.C./RC», la tarjeta titula «RC caballos» y el resto (defensa penal, liberación de gastos) queda como «+N coberturas» y en el desglose de la póliza. Sin cobertura así, sigue el título por modalidades.
-- Precio de la moto (Allianz 045981539): Allianz NO manda prima en el EIAC de póliza, solo en el recibo CA (11 de 12 vivas sin prima, todas Allianz). `primaConRecibos()`/`vencimientoConRecibos()` (module-seguros) la toman del recibo anual si la póliza no la trae (solo pago anual) y corrigen el vencimiento si hay CA cobrado posterior. Aplicado en `cartera-ficha.ts` y `cartera-poliza.ts` de asegura. - Auditoría: 043673655 anulada en ePac (impago) → cancelada a mano; 054914837 sin recibos en CIMA → 2 CA copiados de ePac (`origen=manual`); 10 Mapfre EV con vencimiento pasado sin renovación por CIMA → aviso rojo en tarjeta. Regla fijada en `apps/asegura/CLAUDE.md` + skill `correduria-crm` (punto 0).
+- Precio de la moto (Allianz [nº de póliza retirado]): Allianz NO manda prima en el EIAC de póliza, solo en el recibo CA (11 de 12 vivas sin prima, todas Allianz). `primaConRecibos()`/`vencimientoConRecibos()` (module-seguros) la toman del recibo anual si la póliza no la trae (solo pago anual) y corrigen el vencimiento si hay CA cobrado posterior. Aplicado en `cartera-ficha.ts` y `cartera-poliza.ts` de asegura. - Auditoría: [nº de póliza retirado] anulada en ePac (impago) → cancelada a mano; [nº de póliza retirado] sin recibos en CIMA → 2 CA copiados de ePac (`origen=manual`); 10 Mapfre EV con vencimiento pasado sin renovación por CIMA → aviso rojo en tarjeta. Regla fijada en `apps/asegura/CLAUDE.md` + skill `correduria-crm` (punto 0).
 
 ## (28/09/2026) Lote email-compartido: 177 fusiones + 8 relaciones Empresa/Empleado giradas
 212 fichas con correo sin índice porque otra ya lo tenía. Emparejadas por índices ciegos de usuario+dominio (mismo
@@ -1000,7 +1002,7 @@ distintos (no se funden); Materiales Llido Gomez S.l. ×2 = mismo CIF+tel, leads
 - Portal: Allianz→Occident de Víctor de la Fuente (efecto 01/11) salían dos «En vigor». La vieja se retira de la bóveda ya; la fila nueva dice «Empieza el… / Hasta entonces, Allianz». La hoja QR sigue enseñando la que cubre HOY (`carteraALaVista(c, { soloSiYaCubre })`).
 - Buscador de relaciones decía «nadie» sobre fichas YA relacionadas (Studium como «Empleado/a» del volcado): ahora las nombra con su tipo.
 - «Descartar» ya no deja descartar a quien es INTERVINIENTE de una póliza viva. Reactivadas en BD 7 fichas descartadas con póliza viva (Nieves Rodríguez, Pablo Guzmán, La Ponde, Monte Carmelo 68, Úrsula Navarro, CP Cancionera 4, Mª del Mar Guzmán). Causa: la ingesta CIMA (repo `asegura`) no llama a `reactivarPorPoliza`.
-- Auditoría abierta: 16 pólizas vigentes con vencimiento pasado (13 Mapfre/Allianz, CIMA no trae la renovación; oculta el Toyota 8022KXY de Víctor en «En vigor»); 17 relaciones «Empleado/a» del volcado; 31 gemelas volcado+CIMA.
+- Auditoría abierta: 16 pólizas vigentes con vencimiento pasado (13 Mapfre/Allianz, CIMA no trae la renovación; oculta el Toyota [matrícula retirada] de Víctor en «En vigor»); 17 relaciones «Empleado/a» del volcado; 31 gemelas volcado+CIMA.
 - Pendiente de decisión: que los intervinientes vean en el portal las pólizas donde aparecen (propuesto: nivel mínimo, sin prima/recibos/datos del tomador).
 
 ## (27/09/2026) Logotipo «Grupo ASegura» más grueso (stroke 6) y PNG del correo regenerado
@@ -1115,11 +1117,11 @@ Google Drive (`lh3.googleusercontent`): frágil; desde el contenedor da 403, sin
 - Botón «📥 Traer póliza de Codeoscopic» en la ficha de póliza (plataforma) → `POST asegura /api/operador/poliza/traer-pdf`
   {polizaId, projectId?}. Gratis (GET). Exige que el nº de la solicitud aprobada = el de la póliza (si no, 422 y no guarda).
 - El cron `polizas-pdf` además archiva solo (sin correo) el PDF de las emitidas con proyecto enlazado y sin PDF (90 días).
-- Drive POLIZAS EMITIDAS: Reale 3022600334066 (proyecto 40804066, enlazado → cron) · Occident 549648082 (40841279, a mano) ·
+- Drive POLIZAS EMITIDAS: Reale [nº de póliza retirado] (proyecto 40804066, enlazado → cron) · Occident [nº de póliza retirado] (40841279, a mano) ·
   2002600520435 (sin nº de proyecto conocido).
 
 ## (26/09/2026) Pablo Guzmán: correo de emisión ENVIADO con PDF (verificado en BD)
-- 18:29 UTC `emision_con_poliza` a Pablo (Allianz 61089620) con `Póliza.pdf` (402 KB, archivado y visible en su portal).
+- 18:29 UTC `emision_con_poliza` a Pablo (Allianz [nº de póliza retirado]) con `Póliza.pdf` (402 KB, archivado y visible en su portal).
   El 400 de la descarga era la falta de `x-client-app`/`x-user-email` (PR #3685). Correo con resumen compañía/cobertura/efecto/prima.
 - Baja de la Mapfre en `solicitada`: al firmar Pablo sale sola a CCORREDOR@mapfre.com. Pendiente: verificar firma→comunicada.
 
@@ -1134,7 +1136,7 @@ Google Drive (`lh3.googleusercontent`): frágil; desde el contenedor da 403, sin
   ya propone «Póliza» primero). Así se cargan las emitidas que están en Drive `ASEGURA/POLIZAS EMITIDAS` (PR #3683 → sigue).
 
 ## (26/09/2026) Correduría: tras emitir, correo al cliente + baja firmada que sale SOLA a la compañía
-Primera emisión por Telegram hecha (Pablo Guzmán, Allianz 61089620). Alberto pidió: correo moderno al cliente + firma
+Primera emisión por Telegram hecha (Pablo Guzmán, Allianz [nº de póliza retirado]). Alberto pidió: correo moderno al cliente + firma
 de la baja de la anterior + envío automático a la compañía. **Casi todo existía** (expediente `anulacion`, firma en portal,
 cola de aprobaciones). Nuevo: `trasEmision()` al acuñar (abre la baja YA y manda UN correo sin datos de cartera),
 `enviarAnulacionTrasFirma` (única excepción a «aprobar»: firmada + `no_renovacion`/`sustitucion` + buzón recordado),
@@ -1226,7 +1228,7 @@ Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes`
 - Spec en `docs/superpowers/specs/2026-09-26-importar-avant2-y-emitir-telegram-design.md`. Nada construido.
 - Hallazgo: `/emitir` NO necesita línea previa en `codeoscopic_consumo`; basta enlazar proyecto→póliza en `codeoscopic_projects` (el requisito venía de la FK de `tarificaciones`). Fila 13 corregida.
 - Orden: fila 13 → fila 5 (timeouts, requisito previo) → fase 3a (resumen construido en servidor + botón `cas_emitir` de un solo uso con huella) → 3b (correcciones por chat).
-- Pablo Guzmán (Mapfre `0008414300069` vence 29/09): se emite A MANO en Avant2, no espera a esto.
+- Pablo Guzmán (Mapfre `[nº de póliza retirado]` vence 29/09): se emite A MANO en Avant2, no espera a esto.
 
 ## (26/09/2026) Agente huésped: «dejar maletas + visitar Sevilla» caía al recomendador web
 - Reserva 154692216 (House Sevillana): el borrador decía «claro, avisa al propietario» + bares. Causa: `RE_RECO` casaba «visit» y mandaba la pregunta a `recomendar.ts`, que NO lee la ficha (ni el bloque de consignas).
@@ -1240,7 +1242,7 @@ Secuela: el guardado fallido dejó la fila hija con el correo nuevo y `clientes`
 - Pendiente: decidir el bucket mensual entre-semana/finde antes de recalibrar antelación; doc de `pricing-comps-liga.ts:20` dice tope 10% y el clamp es 0,75.
 
 ## (25/09/2026) Correduría · emisión: el doc decía «sin envío al vendor» y ya emite
-- Medido en BD: 2 proyectos `emitida` (Allianz 17/09 pól. 61048939, Reale 23/09). Corregidos `apps/asegura/CLAUDE.md` («flag que nunca se activó»), `CORREDURIA-CRM-VISION.md` §4/§9 y la skill `correduria-crm`.
+- Medido en BD: 2 proyectos `emitida` (Allianz 17/09 pól. [nº de póliza retirado], Reale 23/09). Corregidos `apps/asegura/CLAUDE.md` («flag que nunca se activó»), `CORREDURIA-CRM-VISION.md` §4/§9 y la skill `correduria-crm`.
 - Límite real: solo se emite desde «Retarificar» de una póliza auto/moto. Negocio nuevo (`*-nuevo`), hogar/vida/salud/decesos y proyectos hechos a mano en Avant2 (p. ej. 40842815, Allianz de Pablo Guzmán Pueyo, ML 250) NO se emiten ni importan por id → se emiten en Avant2 y entran por CIMA.
 - «📄 Subir póliza» NO escribe `polizas` (solo documento + `portal_poliza_declarada`): no sirve para registrar una emitida fuera.
 - Pendiente con spec + OK: importar proyecto de Avant2 por id y emitir negocio nuevo.
@@ -1731,7 +1733,7 @@ en verde. Diagnóstico, propuesta y prompt de Chrome en `docs/ASEGURA-POSTHOG-SO
 Vigilar: `cima-health-alert` falló 1 vez (20/09) con 401 — si repite hoy, es avería.
 
 **(21/09/2026)** **«Duplicidad» en el volcado histórico de la ficha** (PR #3259, mergeado). Alberto, con
-la captura: dos FORD FOCUS 3935GPY idénticos (mismo vencimiento 07/10/2023, sin número) cambiando
+la captura: dos FORD FOCUS [matrícula retirada] idénticos (mismo vencimiento 07/10/2023, sin número) cambiando
 solo la prima (210€/201€). **No era la consulta**: son dos filas reales del volcado de junio de 2026
 (`asegura_app:pol2:14569` y `:15128`). Medido: **84 grupos / 188 filas / 77 clientes**, y **0 tocan
 la cartera viva** — ruido de pantalla, no recuento mal hecho. Solo 23 grupos son byte-idénticos; el
@@ -1991,7 +1993,7 @@ con `CONCURRENTLY` — `polizasSinRecibo()`, que corre en cada carga de la cola 
 plan idéntico. Es la regla del propio fichero aplicada a sí mismo — un índice que el plan no usa solo
 paga escrituras. ⏸️ **Sin tocar y sigue siendo de Alberto:** RLS (89 tablas, 0 políticas — en bloque con
 BYPASSRLS no daría error, VACIARÍA el portal en silencio). 🚨 **Y lo de «2 pólizas de CIMA que purgan el
-17/10» era FALSO, corregido el mismo día:** entraron solas en el reconcile del 17/09 (`8-5.874.010-V` de
+17/10» era FALSO, corregido el mismo día:** entraron solas en el reconcile del 17/09 (`[nº de póliza retirado]` de
 Occident y `6E-G-475000053` de Generali, las dos activas y en vigor). Se leyó el evento del PRIMER intento
 y se llamó «el estado»; el estado está en `cima_ficheros`/`polizas`, no en el log. No se mandó ningún correo.
 El residuo real sobre los 147 ficheros es **1 póliza** (Occident `M00171`, 20/06, crudo ya purgado) y los
@@ -2414,7 +2416,7 @@ Manuel (Codeoscopic) sobre catálogos por compañía sigue SIN enviar — probab
 **(17/09/2026)** Codeoscopic · **primera emisión real con éxito** tras el fix del PR #3045
 (`conProductoPorDefecto`, consentimientos de Allianz en el Submit). Proyecto nuevo 40769244
 (Pilar Franco Ruz) → `estado=emitida`, oferta Q2021593788, sin error. Referencia de compañía
-61048939, recibo domiciliado en su cuenta habitual. Queda "pendiente de confirmación por CIMA"
+[nº de póliza retirado], recibo domiciliado en su cuenta habitual. Queda "pendiente de confirmación por CIMA"
 (normal, es la ingesta async). El proyecto viejo 40685793 sigue `error` y no se toca — es historia.
 Causa raíz cerrada de verdad: el bug no era del vendor, era el `product.options` del Submit que
 faltaba.
@@ -2465,11 +2467,11 @@ del índice o no se pudo comprobar). Migración `2026-09-15_seo_correduria_seman
 en el informe). 66/66 tests seo-correduria, tsc limpio.
 
 **(16/09/2026)** ASegura · **CIMA: carga masiva de Occident con 4/44 pólizas perdidas en review —
-causa, fix Y red de seguridad, los tres en `asegura`** (BIDP023227 entre ellas; PRs #829 y #830,
+causa, fix Y red de seguridad, los tres en `asegura`** ([nº de póliza retirado] entre ellas; PRs #829 y #830,
 mergeados). Occident («ya está descargada») y CIMA (SAU-24103) tenían razón: el fichero
 `C0468_M00171_POL_199_1_20260915…` consta `confirmed`/`review_parcial` (40/44); las 4
 (`RiesgoComunidades` ×3, `RiesgoEmbarcaciones` ×1) cayeron en `tipo_seguro_no_clasificable` — el
-`idPolizaEntidad` SÍ queda en `source_event_id` del evento (`<hash>:BIDP023227:review`), no hace
+`idPolizaEntidad` SÍ queda en `source_event_id` del evento (`<hash>:[nº de póliza retirado]:review`), no hace
 falta descifrar nada para identificarlas. **Gotcha estructural**: el pipeline confirma el fichero a
 TIREA en cuanto ≥1 póliza persiste (aquí 40 de 44), y confirmar saca el fichero de la cola de CIMA
 **para siempre** — con 0 copia propia del crudo, lo que cae en review solo se recupera pidiéndole a
@@ -2695,7 +2697,7 @@ PR #2933. Sin código tocado, solo doc.
   Rescate manual de Generali C0072 (PR #835, `POST /api/internal/cima/ingerir-manual`) destapó que
   `matchIncomingCimaPoliza` comparaba `aseguradora` como texto libre (Plus Ultra/Catalana
   Occidente/Occident son la MISMA entidad C0468) y que el fallback podía robarle el número a una
-  póliza ya identificada (`549212323`/`549215784` fusionadas en una fila). Arreglado en PR #837
+  póliza ya identificada (`[nº de póliza retirado]`/`[nº de póliza retirado]` fusionadas en una fila). Arreglado en PR #837
   (match por `codigoEntidadDgs` + núcleo Occident LOO-973 + fallback nunca pisa un número propio,
   8 tests verificados en rojo antes del fix). Repuestas las 16 pólizas ya duplicadas (repo `asegura`,
   `poliza_merge_log`/`cliente_merge_log`, con `verificacion_humana_alberto` cuando hacía falta —
@@ -2935,7 +2937,7 @@ PR #2933. Sin código tocado, solo doc.
   el endpoint `email.opened`/`email.clicked` en el dashboard de Resend, y probar un envío real.
 
 - **🕵️ Pólizas "zombi" del volcado + revertido un arreglo propio equivocado (12/09/2026).** Alberto
-  reportó BIDP023227 (Comunidades, Plus Ultra) «no aparece, es de catalana»: corregí su
+  reportó [nº de póliza retirado] (Comunidades, Plus Ultra) «no aparece, es de catalana»: corregí su
   `codigo_entidad_dgs` de C0468→C0517 pensando que era un fallo puntual, y era un error — **215
   pólizas "Plus Ultra" + 101 "Catalana Occidente" + 21 "Occident" (337 en total) usan TODAS C0468**
   en el volcado: así registra el grupo, no la entidad legal exacta. Revertido. Criterio útil que
@@ -3302,7 +3304,7 @@ PR #2933. Sin código tocado, solo doc.
 
 - **🐛 «Qué asegura» de una RC seguía «sin informar» con coberturas REALES de CIMA (12/09/2026, PR
   #2730 + fix).** El PR #2730 añadió modalidad manual de RC para cuando CIMA no manda coberturas —
-  pero Alberto probó sobre la RC de Gabriel Duran Martinez (Occident 549570971, la del caso
+  pero Alberto probó sobre la RC de Gabriel Duran Martinez (Occident [nº de póliza retirado], la del caso
   fundacional) y seguía igual. Causa real, distinta: `objetoConGemela()` de
   `apps/asegura/lib/cartera-ficha.ts` (la ficha del CLIENTE, `/correduria/cliente/[id]`) pasaba
   `coberturas: null` SIEMPRE a `objetoAsegurado()` — un hardcode preexistente, no relacionado con el
@@ -3425,7 +3427,7 @@ PR #2933. Sin código tocado, solo doc.
   enlace ya no apunta a `#calendario-titulo` (borrado) sino a `/boveda`. Tests y `apps/asegura-portal/CLAUDE.md`
   actualizados; typecheck + `node --test` en verde.
 
-- **🩹 Póliza BIDV004566 (Occident, GLOBAL 2 INSTALACIONES TÉCNICAS): faltaba en cartera, causa medida
+- **🩹 Póliza [nº de póliza retirado] (Occident, GLOBAL 2 INSTALACIONES TÉCNICAS): faltaba en cartera, causa medida
   (09/09/2026).** El fichero EIAC llegó el 23/06 y quedó en cuarentena (`operational_events`:
   `reviewReasons: tipo_seguro_no_clasificable`) porque `seguros.tipo_seguro` no tenía valor para el
   ramo 211 (accidentes). No era Fly ni la allowlist de entidad que sugería el brief de Manuel para
@@ -3566,7 +3568,7 @@ PR #2933. Sin código tocado, solo doc.
   (auditoría 02/09). Cepos vistos en rojo en asegura y en el puerto de plataforma. PR #2651.
 
 - **Título de póliza específico para RC de perros y similares (09/09/2026).** Alberto: la ficha de la
-  RC de Occident (548238086) salía como «Occident · Responsabilidad civil» a secas, y hay miles de
+  RC de Occident ([nº de póliza retirado]) salía como «Occident · Responsabilidad civil» a secas, y hay miles de
   tipos de RC distintos. `tituloDePoliza` (`apps/asegura-portal/.../PolizaVista.tsx`) cae ahora a la
   cobertura que ESPECIALIZA el ramo genérico (ej. «Responsabilidad civil perros») antes de caer a
   `Compañía · Ramo`. Lógica pura y testeada en `coberturaEspecificaDeRamo()` de
@@ -3889,7 +3891,7 @@ PR #2933. Sin código tocado, solo doc.
 - **✅ Mergeado y PROBADO en producción (07/09/2026, PR #2571 → `6a567537`).** Los 12 requeridos en
   verde y desplegado (`dpl_Et6yoY…`, target production, READY; el portal responde 200 sirviendo ese
   deployment). Medido contra la cartera real: la póliza de la captura de Alberto —Occident
-  547875907, RC— tiene **10 coberturas y las 10 con nombre**, o sea el «y 6 más» que él veía eran
+  [nº de póliza retirado], RC— tiene **10 coberturas y las 10 con nombre**, o sea el «y 6 más» que él veía eran
   R.C. Cruzada, Post-trabajos, Defensa penal y reclamación de daños, Defensa ante la inspección de
   trabajo, R.C. Profesional técnico dependiente y Liberación de gastos. Y los helpers, ejecutados
   con los siniestros REALES: «Alcala de Guadaira (Sevilla) · Chinita salta al parabrisas
@@ -6070,7 +6072,7 @@ PR #2933. Sin código tocado, solo doc.
   no el modelo»: **falso** — las 80 pólizas de auto vivas traen matrícula, marca Y modelo (la de la captura,
   `SMART / FORFOUR`); lo único que no trae ninguna es la **versión**. Ahora marca y modelo se preseleccionan
   desde la ficha y las versiones del histórico se enseñan como PISTAS con su procedencia, sin autoseleccionarse
-  jamás — la misma matrícula puede traer dos que se contradigan (medido en `0432GLT`). (2) El aviso rojo
+  jamás — la misma matrícula puede traer dos que se contradigan (medido en `[matrícula retirada]`). (2) El aviso rojo
   «Tarificación apagada… cuesta 0,50€» se pintaba aunque `CODEOSCOPIC_SIMULACION` estuviera puesta, y la
   simulación es el **paso 0 de `cotizar()`, antes** del interruptor de gasto: el botón cotizaba gratis mientras
   la pantalla decía lo contrario. Ya lo dice bien, y qué precio es simulado lo decide la RESPUESTA (`simulado`
@@ -6089,7 +6091,7 @@ PR #2933. Sin código tocado, solo doc.
 
 - **Correduría: «Global2» y «GLOBAL 2 INSTALACIONES TÉCNICAS» eran el mismo cliente (03/09/2026).**
   Alberto lo vio en el buscador de `/correduria`. Fusionadas por SQL (lote 4, `2026-09-03_fusion_poliza_comun_lote4.sql`,
-  51 lápidas en total, 0 pólizas colgando): la identidad es la RC 547875907 (Occident en CIMA / Plus Ultra en el
+  51 lápidas en total, 0 pólizas colgando): la identidad es la RC [nº de póliza retirado] (Occident en CIMA / Plus Ultra en el
   volcado); el nombre y el teléfono no la cazaban. La viva hereda email, CP y ciudad (Salteras) y las 2 pólizas
   (incluida la Generali de auto, que CIMA no trae). El buscador relaciona ahora hermanas por **póliza común**
   (solo si una de las dos es de CIMA: por número a secas hay 2.123 pares falsos, «pendiente»/«NOLOSE» incluidos).
@@ -6135,7 +6137,7 @@ PR #2933. Sin código tocado, solo doc.
   la raíz («agrupar por IDENTIDAD, nunca por la etiqueta») y como reglas 12-13 de la skill
   `correduria-crm` (con la del tomador, que tampoco es un interviniente). **Mergeado (#2145) y
   probado contra la BD**: la tarjeta de GLOBAL 2 pinta 3 filas, una por conductor con su matrícula,
-  y la persona que sale en dos pólizas (la activa y la cancelada del 6930FBP) colapsa en UNA. En la
+  y la persona que sale en dos pólizas (la activa y la cancelada del [matrícula retirada]) colapsa en UNA. En la
   cartera hay 260 fichas con intervinientes y solo 2 con varias personas identificadas por NIF: el
   arreglo es barato hoy y protege el día que CIMA mande NIF en más filas (hoy 407 de 426 no lo traen).
 
@@ -6148,7 +6150,7 @@ PR #2933. Sin código tocado, solo doc.
   con 7 cepos, dos mordidos. En GLOBAL 2 salen sus tres conductores de un vistazo.
 
 - **🏢 GLOBAL 2: el titular no salía en su propia póliza (02/09/2026, noche).** Alberto, revisando la
-  6930FBP: «¿no aparece propietario la empresa?». Cierto — el **tomador NO es un interviniente** (es el
+  [matrícula retirada]: «¿no aparece propietario la empresa?». Cierto — el **tomador NO es un interviniente** (es el
   `cliente_id` de la póliza), así que la tarjeta, que solo pintaba `poliza_intervinientes`, dejaba fuera
   a la empresa titular en las 4 pólizas vivas de GLOBAL 2. Ahora va delante y con su rótulo
   (`filasIntervinientes`, con cepo). Dos hallazgos más de la misma ficha: la consulta de intervinientes
@@ -6552,7 +6554,7 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 
 - **Agujero medido:** cuando la ingesta de CIMA trae una póliza que YA existía en el volcado, actualiza la
   fila vieja y le deja su `import_ref`. Esa póliza —que CIMA mantiene al día— contaba como *lead*.
-  Caso: `3021700291186` de **Reale (C0613)**, vence 19/09/2027, suplemento EIAC el 25/08. Reale figuraba
+  Caso: `[nº de póliza retirado]` de **Reale (C0613)**, vence 19/09/2027, suplemento EIAC el 25/08. Reale figuraba
   con **0 vivas** y su cliente era invisible en CRM y portal. Cartera real: **80 clientes / 110 pólizas**
   (no 79/109); volcado 28.728. Ramos: auto 81 · hogar 19 · RC 9 · moto 1; 42 canceladas, 68 no.
 
@@ -7520,7 +7522,7 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
 - Idea suya: «las compañías me escriben y dan información». Cierto y medible. `mediadores@occidentinforma.com`
   manda **un correo por movimiento de póliza** con nº de póliza, cliente y contrato `M00171`;
   `mediador@allianz.es` manda cartera No Vida, Cuenta Agente y anulaciones por impago **con adjunto**.
-- ✅ **La 549147797 NO está anulada**: es una RC profesional del «Instituto Técnico Superior de
+- ✅ **La [nº de póliza retirado] NO está anulada**: es una RC profesional del «Instituto Técnico Superior de
   Informática Studium» **emitida el 27/06/2025**, un año antes del arranque de la ingesta. Confirma que
   las huérfanas son cartera pre-CIMA, no bajas.
 - 📇 **Mapa de claves** (en la skill): Mapfre `5239640` · Allianz **código 18638 / clave PA342520**,

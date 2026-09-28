@@ -224,7 +224,7 @@ const HUERFANA = {
   entidad: 'C0468',
   entidadNombre: 'Occident',
   clave: 'M00171',
-  idPolizaEntidad: 'BIDP036783',
+  idPolizaEntidad: 'BIDP000029',
   recibos: 2,
   siniestros: 0,
   prima: 470.76,
@@ -239,7 +239,7 @@ test('el puerto de huérfanas responde bien: la lista llega entera', () => {
   assert.equal(h.estado, 'ok')
   if (h.estado !== 'ok') return
   assert.equal(h.polizas.length, 1)
-  assert.equal(h.polizas[0].idPolizaEntidad, 'BIDP036783')
+  assert.equal(h.polizas[0].idPolizaEntidad, 'BIDP000029')
   assert.equal(h.truncado, false)
   assert.equal(h.ocultasOtroAmbito, 0)
 })
@@ -286,7 +286,7 @@ test('la lista llega hasta la salud, repartida por lo que hay que hacer', () => 
       ocultasOtroAmbito: 0,
       polizas: [
         HUERFANA,
-        { ...HUERFANA, idPolizaEntidad: '549570971', enCartera: 'viva' },
+        { ...HUERFANA, idPolizaEntidad: '549000025', enCartera: 'viva' },
       ],
     } as never,
   )

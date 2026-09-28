@@ -120,7 +120,7 @@ deja su `import_ref` viejo (`poliza-matching.ts` casa por número + compañía; 
 La regla correcta, única y testeada en `packages/module-seguros/src/cartera-viva.ts` de
 `@central/module-seguros` (`esCarteraViva()`, `WHERE_CARTERA_VIVA`, `sqlCarteraViva()`), es
 **`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`** — el hash solo lo escribe el pipeline EIAC, o sea
-«CIMA ha tocado esta fila». Hoy cambia **1** póliza: la `3021700291186` de **Reale (C0613)**, auto, vence
+«CIMA ha tocado esta fila». Hoy cambia **1** póliza: la `[nº de póliza retirado]` de **Reale (C0613)**, auto, vence
 19/09/2027, con `import_ref` `asegura_app:pol2:15143` y suplemento EIAC (proceso 133) del 25/08/2026 — con
 la regla vieja **Reale figuraba con 0 pólizas vivas** y ese cliente era invisible en el CRM y en el portal.
 `import_ref = ''` sigue contando como volcado (0 filas hoy).
@@ -147,11 +147,11 @@ Medido sobre las 107 vivas en vigor, cada compañía falla distinto y **ninguna 
 `prima_anual`/`prima_bruta`/`fecha_vencimiento` de `seguros.polizas` a pelo**:
 - **Allianz** no manda la prima en el EIAC de póliza (11 de 12 vivas sin prima, todas suyas) ni
   avanza el vencimiento al renovar: las dos cosas solo vienen en el recibo de cartera (CA/NP).
-  Hay pólizas suyas de las que CIMA **no ha mandado ni un recibo** (054914837, copiados a mano
+  Hay pólizas suyas de las que CIMA **no ha mandado ni un recibo** ([nº de póliza retirado], copiados a mano
   desde ePac con `origen='manual'`).
 - **Mapfre** deja la póliza en `EV` pero sin fecha nueva ni recibo de renovación desde junio/2026
   (10 vivas «vencidas»). Eso NO se deduce: se avisa («Renovación sin confirmar por la compañía»).
-- **CIMA puede decir `EV` de una póliza ANULADA** (043673655: anulada 01/06/2026 por impago en
+- **CIMA puede decir `EV` de una póliza ANULADA** ([nº de póliza retirado]: anulada 01/06/2026 por impago en
   ePac). La verdad es el portal de la compañía; el cambio a mano va con nota en `historial_interno`.
 Regla: prima → `primaConRecibos()`, vencimiento → `vencimientoConRecibos()` (`@central/module-seguros`,
 `vencimientos.ts`), nunca `primaReferencia()` sola en código nuevo que pinte una póliza viva. Un
@@ -337,7 +337,7 @@ GitHub Actions (cron 5:30 y 11:30)
   EN SANDBOX (jun/2026, contacto juan.fernandez@codeoscopic.com) sin cerrar la batería
   Quote→preemisión→Submit→webhook. ✅ **El flag de emisión SÍ está encendido en producción (medido en
   BD el 25/09/2026):** `codeoscopic_projects` tiene 2 proyectos `emitida` (Allianz 17/09, póliza
-  `61048939`; Reale 23/09) y las pólizas acuñadas con `origen='emitida_codeoscopic'`. Esta línea decía
+  `[nº de póliza retirado]`; Reale 23/09) y las pólizas acuñadas con `origen='emitida_codeoscopic'`. Esta línea decía
   «tras un flag que nunca se activó» y era falsa desde el 11/09. Lo que sigue sin cerrar es la validación
   de idempotencia de punta a punta:
   ⚠️ **Condición que sigue abierta con el flag encendido:** el envío es idempotente por dentro
@@ -820,7 +820,7 @@ adjunta (`emision_con_poliza`); si no, el correo dice «te la enviaremos» y el 
 trae y la manda (`poliza_pdf`) SOLO a quien recibió el correo de emisión DE ESA PÓLIZA — todo por
 `correo_envio.poliza_id` (SQL `2026-09-26_correo_envio_poliza.sql`), nunca por cliente. Ventana 14 días; lo que caduca
 sin PDF se loguea (aún sin Telegram: asegura no tiene canal). 🚨 La descarga del fichero (`descargarFicheroVendor`) lleva
-TAMBIÉN `x-client-app`/`x-user-email`: sin ellas devolvía 400 en producción (61089620, 26/09/2026) pese a que el portal dice «solo el Bearer». Los PDF que archiva el agente llevan
+TAMBIÉN `x-client-app`/`x-user-email`: sin ellas devolvía 400 en producción ([nº de póliza retirado], 26/09/2026) pese a que el portal dice «solo el Bearer». Los PDF que archiva el agente llevan
 `visible_por_cliente = true`: el cliente los ve y descarga en el portal («Documentos de tu póliza», solo pólizas PROPIAS,
 `apps/asegura-portal/lib/documentos-poliza.ts`).
 📮 **Buzón de bajas = el contacto `general` de cada compañía (decisión de Alberto, 26/09/2026)**, marcado en BD con
@@ -1288,7 +1288,7 @@ NO tocan la cartera viva (leads del volcado, donde el fijo compartido suele ser 
 🧩 **Lote 4 (03/09/2026, `2026-09-03_fusion_poliza_comun_lote4.sql`): «Global2» → «GLOBAL 2
 INSTALACIONES TÉCNICAS», 51 fichas fusionadas en total.** Alberto la vio en el buscador y dictó «mismo
 cliente». Se escapó a los tres lotes porque el nombre no casaba y ninguna tenía teléfono; lo que las
-identifica es la RC **547875907** (Occident en CIMA, «Plus Ultra» —marca absorbida por Occident— en el
+identifica es la RC **[nº de póliza retirado]** (Occident en CIMA, «Plus Ultra» —marca absorbida por Occident— en el
 volcado). Medido antes de fusionar: era **el único par** de toda la base con una póliza de CIMA
 repetida en otra ficha. Dos lecciones que quedan cableadas:
 - **El buscador ya relaciona hermanas por PÓLIZA común, no solo por teléfono** (`hermanasDe` en
@@ -1504,7 +1504,7 @@ recibo y NO tiene valor por defecto:
 | `pendiente` | cualquiera | 🟠 `sin_confirmar` | **NADIE ha dicho que se devolviera.** Se mira en el portal de la compañía; NO se llama al cliente |
 | (ambas) | sin fecha | ❔ `sin_fecha` | No se sabe desde cuándo; va casi el primero por si es el más viejo |
 
-🚨 **Caso fundacional (03/09/2026): la ficha de María Alcalá (hogar Mapfre `0732000113003`) decía
+🚨 **Caso fundacional (03/09/2026): la ficha de María Alcalá (hogar Mapfre `[nº de póliza retirado]`) decía
 «🔴 Sin cobertura · hace 56 días»** sobre un recibo de 225,97€ en situación **`pendiente`**, DOMICILIADO
 (`forma_pago='CC'`), en una póliza **en vigor** hasta 2027 — y cuya fila no se tocaba desde la carga
 inicial del 24/06 mientras CIMA seguía entrando con normalidad (128 ficheros, el último del 30/08; 8

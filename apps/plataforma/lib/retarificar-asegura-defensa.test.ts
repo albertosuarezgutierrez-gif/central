@@ -48,7 +48,7 @@ const POLIZA_MAPFRE_VIVA = {
   estado: 'activa',
   viva: true,
   ramo: 'auto',
-  numeroPoliza: '3021700291186',
+  numeroPoliza: '3021700000001',
 }
 
 // ─── El cepo caro: campo ausente ≠ lista vacía ───────────────────────────────
