@@ -152,7 +152,7 @@ const DOC_LEGIBLE: Record<string, string> = {
 /** Documentos que subió y lo que no casa con ellos. Sin contraste posible se dice; nunca «todo cuadra» por defecto. */
 function Verificacion({ s }: { s: SolicitudDatos }) {
   if (s.documentos === null) {
-    return <div style={{ margin: '6px 0', fontSize: 13, color: 'var(--muted)' }}>📎 No se ha podido saber qué documentos subió: míralo en Documentos.</div>
+    return <div style={{ margin: '6px 0', fontSize: 13, color: 'var(--muted)' }}>No se ha podido saber qué documentos subió: míralo en Documentos.</div>
   }
   const n = s.documentos.length
   const docs = s.documentos
@@ -160,8 +160,8 @@ function Verificacion({ s }: { s: SolicitudDatos }) {
     <div style={{ margin: '6px 0', display: 'grid', gap: 4, fontSize: 13 }}>
       <div>
         {n === 0
-          ? '📎 No ha subido documentos: todo es declarado.'
-          : `📎 Subió ${n} documento${n === 1 ? '' : 's'} (${docs.map((d) => DOC_LEGIBLE[d.tipo] ?? 'documento').join(', ')}): los tienes en Documentos.`}
+          ? 'No ha subido documentos: todo es declarado.'
+          : `Subió ${n} documento${n === 1 ? '' : 's'} (${docs.map((d) => DOC_LEGIBLE[d.tipo] ?? 'documento').join(', ')}): los tienes en Documentos.`}
       </div>
       {n > 0 && s.discrepancias === null && <div style={{ color: 'var(--muted)' }}>No se ha podido contrastar lo declarado con sus documentos.</div>}
       {n > 0 && s.discrepancias !== null && s.discrepancias.length === 0 && (

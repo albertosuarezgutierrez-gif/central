@@ -253,7 +253,7 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
   /** La regla anterior, para una versión de asegura que no manda `estado`. */
   cliente: boolean
 }) {
-  const etiqueta = estado ? estado.etiqueta : cliente ? '✅ Cliente (CIMA)' : '🕐 Lead'
+  const etiqueta = estado ? estado.etiqueta : cliente ? 'Cliente (CIMA)' : 'Lead'
   const esCliente = estado ? estado.estado === 'cliente' : cliente
   const title = estado ? estado.motivo : cliente ? 'tiene póliza viva por CIMA o su ficha es de tipo cliente' : 'sin póliza viva por CIMA'
   // Segmentación visual (Occident pinta un badge de segmento junto al nombre,
@@ -311,7 +311,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
       <details style={{ position: 'relative' }}>
         <summary style={{ ...btnStyle('primario', 'sm'), minHeight: 44, listStyle: 'none', userSelect: 'none' }}>
-          ➕ Nueva oportunidad ▾
+          + Nueva oportunidad ▾
         </summary>
         <div
           role="menu"
@@ -341,7 +341,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
             title="Le interesa pero aún no hay que tarificar (u otro ramo): se apunta con su primer paso, sin gastar nada"
             style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 10px', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none', borderTop: '1px solid var(--border)', marginTop: 4 }}
           >
-            📝 Sin precio, solo seguimiento
+            Sin precio, solo seguimiento
           </Link>
           <p style={{ margin: '6px 4px 2px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }} title={AVISO_SIN_VERIFICAR}>
             🚧 = esquema sin verificar

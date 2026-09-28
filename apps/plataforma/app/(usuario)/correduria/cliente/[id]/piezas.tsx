@@ -1,10 +1,12 @@
 import Link from 'next/link'
+import { Phone, Lock } from 'lucide-react'
 import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { Badge, type Tono } from '@/components/ui'
+import { Ico } from '../../iconos'
 
 /**
  * Piezas compartidas por las pestañas de la ficha del cliente.
@@ -192,11 +194,11 @@ function Intervinientes({ lista, polizaIds }: { lista: IntervinienteFicha[] | nu
         <div key={`${i.rol}-${n}`}>
           <span style={{ textTransform: 'capitalize' }}>{etiquetaRol(i.rol)}</span>:{' '}
           {i.fichaId ? (
-            <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link>
+            <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? <><Ico i={Lock} size={12} /> cifrado</> : 'sin nombre')}</Link>
           ) : (
-            i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')
+            i.nombre ?? (i.nombreIlegible ? <><Ico i={Lock} size={12} /> cifrado</> : 'sin nombre')
           )}
-          {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`}>📞</a></>}
+          {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`} title="Llamar"><Ico i={Phone} size={12} /></a></>}
         </div>
       ))}
     </div>
