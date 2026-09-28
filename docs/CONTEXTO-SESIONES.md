@@ -824,7 +824,8 @@ El 26/09 no pudo: 3 códigos, 0 «Firmar» — perdía sesión/estado al salir a
 Nuevo `apps/asegura/lib/justificante-anulacion.ts`: tras la firma (after(), detrás del envío a la compañía) archiva el PDF
 firmado en `documentos` de la póliza (visible en su portal) y le manda correo con PDF+txt. Idempotente. Botón «Mandar
 justificante al cliente» en plataforma (póliza → anulación) = reenvío manual. Pendiente: pulsarlo para Pablo (y decidir
-Victor/Jose, también firmados sin justificante); y el bug de UX del paso del código en el portal (no arreglado aquí).
+Victor/Jose, también firmados sin justificante).
+Mismo PR: el portal reabre el campo del código si hay uno vigente (`codigoCaducaEn`) y enseña «Bajas que has firmado» 60 días.
 
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.

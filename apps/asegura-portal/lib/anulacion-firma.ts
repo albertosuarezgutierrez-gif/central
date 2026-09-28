@@ -22,9 +22,24 @@ export type AnulacionPendiente = {
   carta: string | null
   /** Huella de la carta que se enseña: vuelve al firmar para que no se firme otra distinta. */
   cartaHash: string | null
+  /** Hasta cuándo vale el código ya mandado (ISO). Con él la tarjeta abre directamente el campo del código. */
+  codigoCaducaEn: string | null
 }
 
-export type LecturaPendientes = { anulaciones: AnulacionPendiente[]; consentimiento: string }
+/** Una baja ya firmada: se enseña con su estado en vez de desaparecer al recargar. */
+export type AnulacionFirmada = {
+  id: string
+  numeroPoliza: string | null
+  compania: string | null
+  tipo: string
+  fechaEfecto: string
+  estado: 'firmada' | 'comunicada' | 'confirmada'
+  firmadaEl: string
+  comunicadaEl: string | null
+  confirmadaEl: string | null
+}
+
+export type LecturaPendientes = { anulaciones: AnulacionPendiente[]; consentimiento: string; firmadas: AnulacionFirmada[] }
 
 export type ResultadoCodigo =
   | { estado: 'codigo_enviado'; email: string; minutos: number }
@@ -49,7 +64,7 @@ function obj(j: unknown): Record<string, unknown> {
 /** `null` = no se pudo saber (puente caído): NO es «no tienes nada pendiente». */
 export function interpretarPendientes(status: number, j: unknown): LecturaPendientes | null {
   const o = obj(j)
-  if (status === 409 && (o.estado === 'sin_ficha' || o.estado === 'varias_fichas')) return { anulaciones: [], consentimiento: '' }
+  if (status === 409 && (o.estado === 'sin_ficha' || o.estado === 'varias_fichas')) return { anulaciones: [], consentimiento: '', firmadas: [] }
   if (status !== 200 || o.estado !== 'ok' || !Array.isArray(o.anulaciones) || typeof o.consentimiento !== 'string') return null
   const anulaciones = o.anulaciones.flatMap((a): AnulacionPendiente[] => {
     const x = obj(a)
@@ -62,9 +77,25 @@ export function interpretarPendientes(status: number, j: unknown): LecturaPendie
       fechaEfecto: x.fechaEfecto,
       carta: typeof x.carta === 'string' && x.carta.trim() !== '' ? x.carta : null,
       cartaHash: typeof x.cartaHash === 'string' && /^[0-9a-f]{64}$/.test(x.cartaHash) ? x.cartaHash : null,
+      codigoCaducaEn: typeof x.codigoCaducaEn === 'string' && !Number.isNaN(Date.parse(x.codigoCaducaEn)) ? x.codigoCaducaEn : null,
     }]
   })
-  return { anulaciones, consentimiento: o.consentimiento }
+  // Un asegura anterior no manda `firmadas`: entonces no se enseña nada (no se afirma que no haya).
+  const firmadas = (Array.isArray(o.firmadas) ? o.firmadas : []).flatMap((a): AnulacionFirmada[] => {
+    const x = obj(a)
+    const estado = x.estado
+    if (typeof x.id !== 'string' || typeof x.tipo !== 'string' || typeof x.fechaEfecto !== 'string' || !FECHA.test(x.fechaEfecto)) return []
+    if (typeof x.firmadaEl !== 'string' || !FECHA.test(x.firmadaEl)) return []
+    if (estado !== 'firmada' && estado !== 'comunicada' && estado !== 'confirmada') return []
+    const fecha = (v: unknown) => (typeof v === 'string' && FECHA.test(v) ? v : null)
+    return [{
+      id: x.id, tipo: x.tipo, fechaEfecto: x.fechaEfecto, estado, firmadaEl: x.firmadaEl,
+      numeroPoliza: typeof x.numeroPoliza === 'string' ? x.numeroPoliza : null,
+      compania: typeof x.compania === 'string' ? x.compania : null,
+      comunicadaEl: fecha(x.comunicadaEl), confirmadaEl: fecha(x.confirmadaEl),
+    }]
+  })
+  return { anulaciones, consentimiento: o.consentimiento, firmadas }
 }
 
 const NO_ENCONTRADA = 'Esta anulación ya no está pendiente de tu firma. Recarga la página.'

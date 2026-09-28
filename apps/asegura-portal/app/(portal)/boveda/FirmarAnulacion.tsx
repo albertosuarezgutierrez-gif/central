@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 
-import type { AnulacionPendiente } from '@/lib/anulacion-firma'
+import type { AnulacionFirmada, AnulacionPendiente } from '@/lib/anulacion-firma'
 import { avisarPendienteResuelto } from './PendienteDeTi'
 
 /**
@@ -16,21 +16,63 @@ import { avisarPendienteResuelto } from './PendienteDeTi'
  *    en la evidencia de la firma; aquí no se escribe una copia.
  *  - La vista de corredor lee pero no firma (el servidor también lo niega).
  *  - Un error al firmar NO se pinta como «firmada»: se dice que no se sabe.
+ *  - Si ya hay un código vivo, la tarjeta abre en el campo del código: en el móvil, salir a leer el
+ *    correo recarga la página, y volver al botón hacía pedir otro código que anulaba el leído.
+ *  - Lo ya firmado no desaparece: sale abajo con su estado (firmada → enviada → confirmada).
  */
-export function FirmarAnulacion({ anulaciones, consentimiento, corredor }: {
+export function FirmarAnulacion({ anulaciones, firmadas, consentimiento, corredor }: {
   anulaciones: AnulacionPendiente[]
+  firmadas: AnulacionFirmada[]
   consentimiento: string
   corredor: boolean
 }) {
-  if (anulaciones.length === 0) return null
+  if (anulaciones.length === 0 && firmadas.length === 0) return null
   return (
-    <section className="seccion" aria-labelledby="firma-titulo">
-      <h2 id="firma-titulo">Pendiente de tu firma</h2>
-      <div style={{ display: 'grid', gap: 12 }}>
-        {anulaciones.map((a) => <Tarjeta key={a.id} a={a} consentimiento={consentimiento} corredor={corredor} />)}
-      </div>
-    </section>
+    <>
+      {anulaciones.length > 0 && (
+        <section className="seccion" aria-labelledby="firma-titulo">
+          <h2 id="firma-titulo">Pendiente de tu firma</h2>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {anulaciones.map((a) => <Tarjeta key={a.id} a={a} consentimiento={consentimiento} corredor={corredor} />)}
+          </div>
+        </section>
+      )}
+      {firmadas.length > 0 && (
+        <section className="seccion" aria-labelledby="firmadas-titulo">
+          <h2 id="firmadas-titulo">Bajas que has firmado</h2>
+          <div style={{ display: 'grid', gap: 12 }}>
+            {firmadas.map((f) => <Firmada key={f.id} f={f} />)}
+          </div>
+        </section>
+      )}
+    </>
   )
+}
+
+function Firmada({ f }: { f: AnulacionFirmada }) {
+  const titulo = f.tipo === 'no_renovacion' ? 'No renovar tu póliza' : 'Baja de tu póliza'
+  const poliza = [f.compania, f.numeroPoliza ? `nº ${f.numeroPoliza}` : null].filter(Boolean).join(' · ')
+  const compania = f.compania ?? 'la compañía'
+  const estado =
+    f.estado === 'confirmada'
+      ? `${compania} ha confirmado la baja${f.confirmadaEl ? ` (${fecha(f.confirmadaEl)})` : ''}.`
+      : f.estado === 'comunicada'
+        ? `Enviada a ${compania}${f.comunicadaEl ? ` el ${fecha(f.comunicadaEl)}` : ''}. Te avisamos cuando la confirme.`
+        : `Nosotros se la comunicamos a ${compania} y te avisamos cuando la confirme.`
+  return (
+    <article className="vencimiento-tarjeta">
+      <div style={{ display: 'grid', gap: 2 }}>
+        <strong style={{ fontSize: 15, overflowWrap: 'anywhere' }}>✓ {titulo}{poliza ? ` · ${poliza}` : ''}</strong>
+        <span className="suave" style={{ fontSize: 13 }}>Firmada el {fecha(f.firmadaEl)} · con efecto el {fecha(f.fechaEfecto)}</span>
+      </div>
+      <p style={{ margin: 0, fontSize: 14 }}>{estado}</p>
+      <p className="suave" style={{ margin: 0, fontSize: 13 }}>La carta firmada está en los documentos de esa póliza y te la mandamos por correo.</p>
+    </article>
+  )
+}
+
+function hora(iso: string): string {
+  return new Date(iso).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Madrid' })
 }
 
 function fecha(iso: string): string {
@@ -40,11 +82,16 @@ function fecha(iso: string): string {
 
 type Paso =
   | { paso: 'inicio' }
-  | { paso: 'codigo'; email: string; minutos: number }
+  /** `email: null` = el código se pidió antes de recargar: no sabemos a qué dirección enmascarada, solo hasta cuándo vale. */
+  | { paso: 'codigo'; email: string | null; minutos: number; hasta?: string }
   | { paso: 'firmada'; firmadaEl: string }
 
 function Tarjeta({ a, consentimiento, corredor }: { a: AnulacionPendiente; consentimiento: string; corredor: boolean }) {
-  const [paso, setPaso] = useState<Paso>({ paso: 'inicio' })
+  const [paso, setPaso] = useState<Paso>(() =>
+    a.codigoCaducaEn && Date.parse(a.codigoCaducaEn) > Date.now()
+      ? { paso: 'codigo', email: null, minutos: 0, hasta: a.codigoCaducaEn }
+      : { paso: 'inicio' },
+  )
   const [codigo, setCodigo] = useState('')
   const [nombre, setNombre] = useState('')
   const [ocupado, setOcupado] = useState(false)
@@ -134,7 +181,10 @@ function Tarjeta({ a, consentimiento, corredor }: { a: AnulacionPendiente; conse
           ) : (
             <div style={{ display: 'grid', gap: 10 }}>
               <p className="suave" style={{ margin: 0, fontSize: 14 }}>
-                Te hemos mandado un código a {paso.email}. Caduca en {paso.minutos} minutos.
+                {paso.email
+                  ? `Te hemos mandado un código a ${paso.email}. Caduca en ${paso.minutos} minutos.`
+                  : `Ya te mandamos un código a tu correo. Vale hasta las ${paso.hasta ? hora(paso.hasta) : '—'}.`}
+                {' '}Puedes ir al correo y volver: el código sigue valiendo aquí.
               </p>
               <label style={{ display: 'grid', gap: 4, fontSize: 14 }}>
                 Código

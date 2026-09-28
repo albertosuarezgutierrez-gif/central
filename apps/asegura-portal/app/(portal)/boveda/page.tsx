@@ -499,7 +499,7 @@ export default async function Boveda({
           <AvisoContacto lectura={contacto} />
 
           {/* Lo único que el cliente TIENE que hacer y que tiene fecha: su firma. */}
-          {firmas && <FirmarAnulacion anulaciones={firmas.anulaciones} consentimiento={firmas.consentimiento} corredor={Boolean(identidad.corredor)} />}
+          {firmas && <FirmarAnulacion anulaciones={firmas.anulaciones} firmadas={firmas.firmadas} consentimiento={firmas.consentimiento} corredor={Boolean(identidad.corredor)} />}
 
           {/* «Tus vencimientos» (pieza 1-5): solo si algo SUYO renueva en 60
               días; si no, no pinta nada y el alta sigue arriba. */}
