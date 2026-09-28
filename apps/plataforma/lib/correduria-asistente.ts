@@ -23,6 +23,11 @@ const PROPIAS_SUAVES = /\b(impagad\w*|recibos? devuelt\w*|vencimientos?|le he ll
 /** Matrícula española moderna (1234ABC / 1234 ABC). Un gasto no se pregunta por matrícula. */
 const MATRICULA = /\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/i
 
+/** Pedir precio de un seguro (28/09/2026): «presupuesto», «precio» o «cotiza» junto a moto/coche/seguro. Sin
+ *  esto, «presupuesto» (palabra contable) mandaba «presupuesto de la moto de Pablo» al contable. */
+const PIDE_PRECIO = /\b(presupuest\w*|precios?|cotiz\w*|tarific\w*)\b/i
+const GASTO_PROPIO = /\b(factura\w*|pagad\w*|pagu[eé]|cargo\w*|recibo\w*)\b/i
+const OBJETO_SEGURO = /\b(motos?|coches?|seguros?|veh[ií]culos?|furgonetas?|turismos?|scooter)\b/i
 /** «Presupuesto de la moto / del coche / del seguro…»: de la correduría aunque «presupuesto» sea contable. */
 const PRESUPUESTO_SEGURO = /\bpresupuestos?\s+(?:de[l]?\s+|para\s+)?(?:la\s+|el\s+|su\s+)?(?:moto|coche|auto|veh[ií]culo|hogar|casa|seguro|p[oó]liza)\b/i
 
@@ -40,6 +45,8 @@ export function clasificarDestino(texto: string): Destino {
   if (!t) return 'contable'
   if (PREFIJO.test(t)) return 'correduria'
   if (PROPIAS.test(t)) return 'correduria'
+  // Un gasto propio («factura del seguro del coche, precio 320€») sigue siendo del contable.
+  if (PIDE_PRECIO.test(t) && OBJETO_SEGURO.test(t) && !GASTO_PROPIO.test(t)) return 'correduria'
   // «Presupuesto» es también del contable; con matrícula o un ramo de seguro al lado es de la correduría.
   if (PRESUPUESTO_SEGURO.test(t) || (/\bpresupuestos?\b/i.test(t) && MATRICULA.test(t) && !/\bkwh\b/i.test(t))) return 'correduria'
   // Lo contable ANTES que la matrícula: «1500 kWh» o «2000 BTC» parecen una matrícula y no lo son.
@@ -121,6 +128,7 @@ export type NombreHerramienta =
   | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision'
   | 'proponer_correccion' | 'proponer_oportunidad' | 'mi_dia' | 'oportunidades_cliente'
   | 'proponer_tarea' | 'registrar_llamada' | 'anotar_nota' | 'abrir_siniestro' | 'invitar_portal' | 'enviar_presupuesto'
+  | 'vehiculo_catalogo' | 'proponer_tarificacion'
 
 const fn = (name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'function',
@@ -206,6 +214,32 @@ export const HERRAMIENTAS = [
     }, ['polizaId', 'tipo', 'fechaHora', 'descripcion']),
   fn('invitar_portal', 'Propón mandar al cliente el correo con el enlace a su portal (ve sus seguros, recibos y partes). Primero se comprueba si puede entrar (correo en la ficha, que no sea ambiguo). Alberto lo manda con un botón: ES UN CORREO AL CLIENTE, no lo propongas sin que Alberto lo pida.',
     { clienteId: { type: 'string' } }, ['clienteId']),
+  fn('vehiculo_catalogo', 'Catálogo de vehículos de Codeoscopic (GRATIS). Úsalo para encontrar marca, modelo, combustible y versión antes de proponer_tarificacion. Coche: marcas → modelos(marcaId) → motores → versiones(marcaId, modeloId, motor). Moto: los mismos con -moto (motores-moto es fijo: Gasolina, Diésel, Otros). Con filtro devuelve solo lo que casa con lo que dijo Alberto.',
+    {
+      tipo: { type: 'string', enum: ['marcas', 'modelos', 'motores', 'versiones', 'marcas-moto', 'modelos-moto', 'motores-moto', 'versiones-moto'] },
+      marcaId: { type: 'string' }, modeloId: { type: 'string' }, motor: { type: 'string', description: 'id del combustible (de motores)' },
+      filtro: { type: 'string', description: 'Lo que dijo Alberto («ibiza», «1.5 tsi»), para acotar' },
+    }, ['tipo']),
+  fn('proponer_tarificacion', 'Propón PEDIR PRECIO de COCHE (ramo auto) o MOTO para un cliente o lead de la cartera, con lo que Alberto te ha DICTADO. NO pide nada: el servidor resuelve cada dato contra los catálogos, y si falta algo te devuelve «FALTAN DATOS» con la lista (pregúntaselo a Alberto y vuelve a llamar con TODO lo anterior más lo nuevo). Cuando esté completo, Alberto recibe el resumen con el botón «Pedir precio (0,50€)». Pasa marca/modelo/versión/combustible como ids de vehiculo_catalogo o tal cual los dijo. Nunca inventes un dato personal ni el historial.',
+    {
+      ramo: { type: 'string', enum: ['auto', 'moto'] },
+      clienteId: { type: 'string', description: 'La ficha (de buscar). Si es un lead nuevo, primero hay que abrirle ficha en la intranet.' },
+      marca: { type: 'string' }, modelo: { type: 'string' }, motor: { type: 'string', description: 'Combustible' }, version: { type: 'string' },
+      matricula: { type: 'string' },
+      fechaMatriculacion: { type: 'string', description: 'Solo si Alberto la dice; si no, se saca de la matrícula' },
+      garaje: { type: 'string', description: 'Solo si Alberto lo dice (si no, se supone vía pública)' },
+      estadoCivil: { type: 'string', description: 'Solo si la ficha no lo trae o Alberto lo dice' },
+      municipio: { type: 'string', description: 'Municipio donde circula, si el sistema pregunta cuál' },
+      dni: { type: 'string' }, nombre: { type: 'string' }, apellido1: { type: 'string' }, apellido2: { type: 'string' },
+      sexo: { type: 'string', enum: ['hombre', 'mujer'] },
+      fechaNacimiento: { type: 'string', description: 'dd/mm/aaaa' }, fechaCarnet: { type: 'string', description: 'dd/mm/aaaa' },
+      telefono: { type: 'string', description: 'Móvil' },
+      companiaAnterior: { type: 'string', description: 'Seguro ACTUAL: compañía. Con él van TODOS: polizaAnterior, aniosAsegurado, aniosEnCompania, aniosSinSiniestros' },
+      polizaAnterior: { type: 'string' },
+      aniosAsegurado: { type: 'integer' }, aniosEnCompania: { type: 'integer' }, aniosSinSiniestros: { type: 'integer' },
+      siniestrosUltimos5: { type: 'integer', description: 'Solo si Alberto lo dice' },
+      primaActual: { type: 'number', description: 'Lo que paga hoy al año, si lo dice (para comparar)' },
+    }, ['ramo', 'clienteId']),
   fn('enviar_presupuesto', 'Rescata la ÚLTIMA tarificación ya pagada de un cliente SIN póliza (oportunidad nueva) para ese ramo, prepara el presupuesto y le manda el correo para que elija la opción en su portal. Necesitas sus exigencias y necesidades (qué quiere asegurar y qué le importa): si Alberto no las ha dicho, PREGÚNTASELAS, nunca las inventes. Alberto lo manda con un botón: ES UN CORREO AL CLIENTE.',
     {
       clienteId: { type: 'string', description: 'La ficha (sácala de buscar; la matrícula también sirve para buscar)' },
@@ -258,6 +292,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     '- Tú no mandas mensajes a clientes ni anulas pólizas: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
     '- Oportunidades: puedes PROPONER abrir una con proponer_oportunidad (lead o cliente que tiene un seguro con otra compañía). Si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true. Si ha subido el documento y NO dice de quién es, NO le preguntes el nombre: llama SIN clienteId y con usarDocumentos=true; el sistema lee el tomador, lo busca por su DNI y, si no está en la cartera, le propone crear el lead y abrir la oportunidad con un solo botón. Pregúntale solo si el sistema te lo pide (varias fichas, documento sin DNI o sin tomador). Tú sabes más que él de ese documento: si hay uno reciente y pide una oportunidad —también «otra», «la segunda», «del mismo cliente», «abre oportunidad» a secas— pasa usarDocumentos=true y NO le preguntes ramo, compañía, prima, vencimiento ni si es otro seguro: lo lee el sistema del documento y decide solo si es el mismo seguro que una que ya tenga (por nº de póliza, matrícula y compañía). Si el sistema contesta YA ES NUESTRA, díselo con el enlace: esa póliza ya la llevamos y no se abre nada. NUNCA digas que está abierta ni que el lead está creado: eso solo lo confirma el sistema tras el botón.',
     '- Acciones del día a día (todas con botón que pulsa Alberto): proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro, invitar_portal, enviar_presupuesto («rescata/mándale el presupuesto de la moto»). Úsalas cuando Alberto te lo pida («apunta que…», «llámale el jueves», «ha tenido un golpe con el coche…»). Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy. NUNCA digas que está hecho: eso lo confirma el sistema tras el botón.',
+    '- Pedir precio de COCHE o MOTO: busca al cliente, usa vehiculo_catalogo para el vehículo y llama a proponer_tarificacion con lo que Alberto dijo. Si contesta FALTAN DATOS, pregúntale a Alberto exactamente eso y vuelve a llamar con todo. El botón cuesta 0,50€ y lo pulsa él; el precio le llega solo a él (nada sale al cliente). NUNCA digas que ya has pedido el precio.',
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: dile que los cambie en la ficha.',
@@ -313,6 +348,11 @@ export function rastroArgs(nombre: string, args: Record<string, unknown> | null)
   if (nombre === 'proponer_tarea' || nombre === 'registrar_llamada') {
     return { oportunidadId: args.oportunidadId, tipo: args.tipo, resultado: args.resultado, fecha: args.fecha ?? args.volverEl }
   }
+  if (nombre === 'proponer_tarificacion') {
+    // DNI, teléfono, fechas y matrícula son datos personales: al rastro solo van el cliente, el ramo y QUÉ se dijo.
+    return { clienteId: args.clienteId, ramo: args.ramo, campos: Object.keys(args).filter((k) => k !== 'clienteId' && k !== 'ramo') }
+  }
+  if (nombre === 'vehiculo_catalogo') return { tipo: args.tipo, marcaId: args.marcaId, modeloId: args.modeloId, motor: args.motor }
   if (nombre === 'proponer_oportunidad') {
     // El ramo y si usó documentos, sí; compañía, prima o nº de póliza, no (son del contrato de un tercero).
     return { clienteId: args.clienteId, ramo: args.ramo, usarDocumentos: args.usarDocumentos === true, campos: Object.keys(args).filter((k) => k !== 'clienteId') }

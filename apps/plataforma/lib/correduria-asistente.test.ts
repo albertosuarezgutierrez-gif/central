@@ -116,3 +116,13 @@ test('el coste sin catálogo nunca es 0', () => {
 test('el id de póliza se normaliza a minúsculas (la huella del resumen se rehace con poliza_id::text)', () => {
   assert.equal(idValido('9588DAD8-893F-4C27-AF63-60A53B755D3B'), '9588dad8-893f-4c27-af63-60a53b755d3b')
 })
+
+test('clasificarDestino: pedir precio de moto/coche/seguro va a la correduría; el presupuesto de otra cosa, al contable', () => {
+  for (const t of [
+    'presupuesto de la moto de Pablo Guzmán',
+    'pídeme precio del seguro de coche de Juan',
+    'cotiza el coche de María',
+    '¿me sacas precio para la moto de su hijo?',
+  ]) assert.equal(clasificarDestino(t), 'correduria', t)
+  for (const t of ['presupuesto de la reforma del piso', 'precio de la luz este mes', 'factura del seguro del coche, precio 320€']) assert.equal(clasificarDestino(t), 'contable', t)
+})
