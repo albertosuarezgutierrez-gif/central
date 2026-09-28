@@ -30,6 +30,7 @@ export default function ListaPrecios<P extends PrecioLista>({
   puedeEmitir,
   motivoNoEmitir,
   emision,
+  detalle,
 }: {
   precios: P[]
   simulado: boolean
@@ -38,6 +39,8 @@ export default function ListaPrecios<P extends PrecioLista>({
   motivoNoEmitir?: string
   /** El panel de emisión de un precio; `cerrar` lo pliega. */
   emision?: (p: P, cerrar: () => void) => ReactNode
+  /** Datos ramo-específicos que aparecen debajo de la cobertura (p. ej. franquicia doble para hogar). */
+  detalle?: (p: P) => ReactNode
 }) {
   const [abierta, setAbierta] = useState<string | null>(null)
   // De la más barata a la más cara; sin prima, al final. La clave es el id del vendor o la
@@ -68,6 +71,7 @@ export default function ListaPrecios<P extends PrecioLista>({
                   <div style={{ color: 'var(--muted)', fontSize: 12 }}>
                     {p.franquiciaEur === null || p.franquiciaEur === undefined ? 'franquicia no declarada' : p.franquiciaEur === 0 ? 'sin franquicia' : `franquicia ${eur(p.franquiciaEur)}`}
                   </div>
+                  {detalle && <div style={{ fontSize: 12, marginTop: 4 }}>{detalle(p)}</div>}
                   {!todasEstimadas && p.firmeza !== 'firme' && (
                     <Badge tono="aviso" title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge>
                   )}
