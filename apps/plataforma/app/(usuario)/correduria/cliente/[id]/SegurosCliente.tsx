@@ -77,9 +77,9 @@ type Aviso = { texto: string; tono: 'malo' | 'aviso' | 'info' }
 
 function Cubo({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {
   return (
-    <section style={{ display: 'grid', gap: 10 }}>
+    <section style={{ display: 'grid', gap: 12 }}>
       <div>
-        <h2 style={{ margin: 0, fontSize: 16 }}>{titulo}</h2>
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{titulo}</h2>
         {nota && <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>{nota}</p>}
       </div>
       {children}
@@ -88,7 +88,7 @@ function Cubo({ titulo, nota, children }: { titulo: string; nota?: string; child
 }
 
 function Rejilla({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: 10 }}>{children}</div>
+  return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: 12 }}>{children}</div>
 }
 
 function Vacio({ children, aviso }: { children: React.ReactNode; aviso?: boolean }) {
