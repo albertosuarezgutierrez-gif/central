@@ -25,6 +25,7 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
+import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
 import type { TarificacionNuevaGuardada } from '@/lib/retarificar-asegura'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
@@ -159,6 +160,7 @@ export default function MotoNuevo({
   const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
   // Por defecto «vía pública», como en auto (Alberto, 25/09 y 28/09/2026): el
   // caso más común y el conservador para la prima.
+  const [kmAnuales, setKmAnuales] = useState('')
   const [garaje, setGaraje] = useState(
     () => (garajes.find((g) => /v[ií]a\s+p[uú]blica/i.test(g.nombre)) ?? garajes.find((g) => /\bcalle\b/i.test(g.nombre)))?.id ?? '',
   )
@@ -274,6 +276,10 @@ export default function MotoNuevo({
 
   const faltaVersion = !codigoVehiculo
   const faltaGaraje = !garaje
+  // Km al año: vacío = no se ha preguntado (asegura supone la media y lo marca como supuesto). Se parsea con
+  // `kilometrosDesdeTexto`, no con `Number()`: «5.000» es 5000, no 5.
+  const kmLeidos = kilometrosDesdeTexto(kmAnuales)
+  const kmInvalido = kmAnuales.trim() !== '' && kmLeidos === null
   const faltaCivil = !estadoCivilId
   const faltaMunicipio = !municipioId
   // En modo póliza la matrícula la pone asegura desde la póliza: no se exige aquí.
@@ -346,7 +352,7 @@ export default function MotoNuevo({
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
   const faltaAlgo =
     faltaVersion || faltaGaraje || faltaCivil || faltaMunicipio || faltaMatricula || faltaMatriculacion ||
-    faltaMotoAnterior || aManoSinRellenar.length > 0 || faltaHistorial
+    faltaMotoAnterior || aManoSinRellenar.length > 0 || faltaHistorial || kmInvalido
     // En modo póliza, un hueco que no se arregla aquí (compañía o nº anterior,
     // CP de circulación, matrícula) también apaga el botón: el servidor lo
     // rechazaría igual, y el botón encendido prometería un precio que no llega.
@@ -364,6 +370,7 @@ export default function MotoNuevo({
     const correccionesFinal: Record<string, unknown> = {
       ...correcciones,
       ...(experienciaConduccion === 'OtherMotorcycle' ? { motoAnteriorCodigo: motoAnteriorCodigo.trim() } : {}),
+      ...(kmLeidos !== null ? { kmAnuales: kmLeidos } : {}),
     }
     if (tieneSeguroActual) {
       correccionesFinal.aseguradoAntes = true
@@ -550,6 +557,20 @@ export default function MotoNuevo({
               <option value="">Elige garaje</option>
               {garajes.map((g) => <option key={g.id} value={g.id}>{g.nombre}</option>)}
             </select>
+          </Campo>
+          <Campo
+            etiqueta="Kilómetros al año"
+            falta={kmInvalido}
+            faltaTexto="no se entiende como kilometraje (dígitos, y el punto solo como separador de miles)"
+            ayuda={`Si lo dejas vacío se supone la media (${KM_ANUALES_SUPUESTOS.toLocaleString('es-ES')}) y se marca como supuesto. Es factor de precio: pon lo que declare el cliente.`}
+          >
+            <input
+              inputMode="numeric"
+              value={kmAnuales}
+              onChange={(e) => setKmAnuales(e.target.value)}
+              placeholder={`${KM_ANUALES_SUPUESTOS.toLocaleString('es-ES')} (media)`}
+              style={input}
+            />
           </Campo>
           <Campo
             etiqueta="Experiencia de conducción"
