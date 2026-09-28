@@ -252,6 +252,10 @@ export function resultadoEmision(r: RespuestaEmitir, urlIntranet: string): { est
         texto: `✖️ No se ha emitido nada: faltan datos (${esc(r.faltan.join(', ') || 'sin detallar')}).${r.mensaje ? ` ${esc(r.mensaje)}` : ''} Complétalos y emite desde la intranet: ${urlIntranet}`,
       }
     case 'sin_configurar':
+    case 'duplicado':
+    case 'bloqueado':
+    case 'nuevo_apagado':
+      // Los tres últimos son cortes de asegura ANTES del Submit: consta que no salió nada.
       return { estado: 'rechazada', texto: `✖️ No se ha emitido nada: ${esc(r.mensaje)}` }
     case 'en_vuelo':
     case 'reintento_sin_confirmar':

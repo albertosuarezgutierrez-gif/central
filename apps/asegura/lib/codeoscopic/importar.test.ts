@@ -103,5 +103,7 @@ test('una póliza ya sustituida no se vuelve a sustituir: lo bloquean el import 
   const emi = leer('../../app/api/operador/codeoscopic/emitir/route.ts')
   assert.match(emi, /sustituida_at is not null or exists \(select 1 from polizas s where s\.poliza_origen_id = pol\.id\)/)
   // Y la guarda va ANTES del envío.
-  assert.ok(emi.indexOf('if (poliza.sustituida)') > 0 && emi.indexOf('if (poliza.sustituida)') < emi.indexOf('enviarEmision('))
+  // (Desde el 28/09/2026 la póliza llega vía `ctx`, y la guarda solo aplica en modo sustitución.)
+  const guarda = "if (ctx.modo === 'sustitucion' && ctx.sustituida)"
+  assert.ok(emi.indexOf(guarda) > 0 && emi.indexOf(guarda) < emi.indexOf('enviarEmision('))
 })

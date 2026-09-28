@@ -29,6 +29,7 @@ import { conLibroDeEmision, type GastoEmision } from '@/lib/codeoscopic/libro-em
 import { RE_FECHA, RE_TELEFONO } from '@/lib/codeoscopic/persona'
 import { fechaEfectoCaducada, reparoFechaCaducada, mensajeFechaCaducada, motivoFechaEfectoInvalida } from '@/lib/codeoscopic/fecha-efecto'
 import { auditado } from '@/lib/auditoria'
+import { tipoDeRamo } from '@/lib/codeoscopic/contexto-emision'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -142,11 +143,12 @@ export const POST = auditado(async (req: Request) => {
       poliza_id: string | null
       cliente_id: string | null
       producto: string | null
+      ramo: string | null
     }[]
   >`
     select t.correduria_id::text as correduria_id, t.project_id_codeoscopic,
            t.poliza_id::text as poliza_id, t.cliente_id::text as cliente_id,
-           pol.tipo::text as producto
+           pol.tipo::text as producto, t.ramo
     from tarificaciones t
     left join polizas pol on pol.id = t.poliza_id
     where t.id = ${tarificacionId}::uuid and t.simulado = false
@@ -164,6 +166,22 @@ export const POST = auditado(async (req: Request) => {
         mensaje: 'no se encuentra esa cotización real (o es una simulada, que no se puede confirmar)',
       },
       { status: 404 },
+    )
+  }
+
+  // El ramo del proyecto: el de la póliza que se retarifica o, sin póliza
+  // (cliente NUEVO, 28/09/2026), el de la tarificación por lista blanca del enum.
+  // 🚨 Hasta hoy caía a `'auto'`: un hogar nuevo quedaba grabado como auto y se
+  // habría acuñado como auto. Lo que no mapea corta AQUÍ, antes del ReRate.
+  const producto = t.producto ?? tipoDeRamo(t.ramo)
+  if (!producto) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'ramo_desconocido',
+        mensaje: `el ramo de esta cotización («${t.ramo ?? 'sin ramo'}») no es un tipo de póliza emitible: no se confirma nada con la compañía`,
+      },
+      { status: 422 },
     )
   }
 
@@ -333,7 +351,7 @@ export const POST = auditado(async (req: Request) => {
               projectId,
               precio.id,
               precio.productId,
-              productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania, t.producto),
+              productOptionsCorredor ?? precio.productOptions ?? opcionesPorDefecto(compania, producto),
               fechaEfectoCorregida,
             ),
         )
@@ -422,23 +440,27 @@ export const POST = auditado(async (req: Request) => {
     // (D2) al acuñar la póliza. Esta cotización nació en `tarificaciones` (tabla
     // nueva del 03/09), así que hasta este ReRate no tenía fila ahí.
     //
-    // 🚨 `producto` sale de LA PÓLIZA (`t.producto`, `polizas.tipo`), no de un
-    // literal: hasta el 12/09/2026 esto llevaba `'auto'` fijo, así que un
-    // ReRate de hogar/RC dejaba esta fila de bookkeeping mintiendo sobre el
-    // ramo (nadie la relee hoy para decidir nada, pero es el mismo fallo que
-    // el resto del repo llama «basura con forma de dato»). Sin póliza enlazada
-    // (`t.producto` NULL) cae a `'auto'` — el placeholder de siempre, nunca un
-    // ramo inventado sobre datos que sí existen.
+    // 🚨 `producto` sale de LA PÓLIZA (`t.producto`, `polizas.tipo`) o, sin
+    // póliza, del ramo de la tarificación (`tipoDeRamo`, lista blanca) — nunca
+    // de un literal. Hasta el 28/09/2026 caía a `'auto'` sin póliza, y ahora
+    // esta fila es la que `/emitir` usa para emitir a un cliente NUEVO.
+    //
+    // `cliente_id` + `tarificacion_id` (28/09/2026): con ellos `/emitir` sabe de
+    // quién es un proyecto SIN póliza y de dónde sacar ramo y riesgo. El cliente
+    // no se pisa si ya estaba (coalesce); la tarificación, sí: es la del último ReRate.
     await prisma.$executeRaw`
       insert into codeoscopic_projects (
-        correduria_id, project_id_codeoscopic, producto, poliza_id, aseguradora,
-        accepted_offer_id_codeoscopic, estado
+        correduria_id, project_id_codeoscopic, producto, poliza_id, cliente_id, tarificacion_id,
+        aseguradora, accepted_offer_id_codeoscopic, estado
       ) values (
-        ${t.correduria_id}::uuid, ${projectId}, ${t.producto ?? 'auto'}::tipo_seguro,
-        ${t.poliza_id}::uuid, ${compania}, ${oferta.offerId}, 'preemision'
+        ${t.correduria_id}::uuid, ${projectId}, ${producto}::tipo_seguro,
+        ${t.poliza_id}::uuid, ${t.cliente_id}::uuid, ${tarificacionId}::uuid,
+        ${compania}, ${oferta.offerId}, 'preemision'
       )
       on conflict (correduria_id, project_id_codeoscopic) do update
         set poliza_id = coalesce(codeoscopic_projects.poliza_id, excluded.poliza_id),
+            cliente_id = coalesce(codeoscopic_projects.cliente_id, excluded.cliente_id),
+            tarificacion_id = excluded.tarificacion_id,
             producto = excluded.producto,
             aseguradora = excluded.aseguradora,
             accepted_offer_id_codeoscopic = excluded.accepted_offer_id_codeoscopic,

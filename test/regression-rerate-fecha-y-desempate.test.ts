@@ -15,7 +15,7 @@ test('reRate manda la fecha de efecto en mainQuote cuando se le pasa', () => {
   const src = leer('apps/asegura/lib/codeoscopic/emitir.ts')
   assert.match(src, /effectiveDate: fechaEfecto/)
   const ruta = leer('apps/asegura/app/api/operador/codeoscopic/oferta/route.ts')
-  assert.match(ruta, /opcionesPorDefecto\(compania, t\.producto\),\s*fechaEfectoCorregida,/)
+  assert.match(ruta, /opcionesPorDefecto\(compania, producto\),\s*fechaEfectoCorregida,/)
 })
 
 test('la pantalla de emisión manda producto, prima y la fecha elegida', () => {
