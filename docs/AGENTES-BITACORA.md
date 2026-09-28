@@ -14,6 +14,15 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-28 · mercado-booking** · hizo: SEGUNDA pasada del día (el trigger diario ya se había
+  disparado y registrado a las 11:12, PR #3830) — 237 comparables reales de Booking en las 24/24
+  ventanas de mercado pedidas (mismo recorte `max=24` sobre los 508 candidatas/484 recortadas de
+  hoy; mismas ventanas de evento Q1 2027). El `ingest` es idempotente por día, así que no duplica
+  filas en `market_rates`; sí quedó un segundo latido `ok:false` (mismo motivo: escaparate 0/4,
+  las 4 ventanas propias de 2026-10-06 siguen `hotel_names_no_availability`, no se cambiaron
+  fechas). Sin novedad frente a la pasada de las 11:12: no se avisó a Alberto. dudas: por qué se
+  disparó dos veces el mismo día (revisar el trigger programado); fallos: —; PRs/commits: —
+  (solo escritura vía `/api/sivra/mercado/ingest` + este commit de bitácora).
 - **2026-09-28 · mercado-booking** · hizo: pasada diaria — 236 comparables reales de Booking en
   las 24/24 ventanas de mercado pedidas (`max=24`, `candidatas=508`, `recortadas=484`, no agota el
   plan; casi todas evento Q1 2027 Centro histórico/Triana + Congreso SEC oct26); 4 anuncios propios
