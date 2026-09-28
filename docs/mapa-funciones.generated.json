@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T09:07:55Z",
-  "sha": "d20cbff39a6ebd039333c8405708087a2bf5e044",
+  "generadoEn": "2026-09-28T09:49:31Z",
+  "sha": "b9af5ae7657d58c432076ecd2100da6b5f212ebc",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -17638,7 +17638,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "f79bb6cb9acd"
+      "hash": "c0b438f2e96d"
     },
     {
       "ruta": "apps/asegura/lib/backfill-contacto.ts",
@@ -28455,7 +28455,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "095e1576ac52"
+      "hash": "55c8926b16cf"
     },
     {
       "ruta": "apps/asegura/lib/tomador-documento.ts",

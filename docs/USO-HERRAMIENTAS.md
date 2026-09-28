@@ -167,25 +167,25 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 182 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 184 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 177 | 21.787 | 15.029.739 | 0 | 0 |
-| `otro` | 171 | 5.465 | 17.691.451 | 8.187.555 | 0 |
-| `mcp:github` | 159 | 4.377 | 3.815.838 | 46.143.157 | 72 |
-| `lectura-directa` | 160 | 4.151 | 8.856.513 | 0 | 0 |
-| `escritura` | 128 | 2.583 | 41.304.205 | 0 | 0 |
-| `sql` | 112 | 2.273 | 1.060.558 | 2.351.230 | 8 |
-| `mcp:Claude_Code_Remote` | 99 | 1.063 | 238.239 | 3.193.171 | 12 |
-| `mcp:Booking-com` | 16 | 469 | 1.965.008 | 0 | 0 |
+| `bash` | 179 | 21.842 | 15.048.838 | 0 | 0 |
+| `otro` | 174 | 5.500 | 17.771.947 | 8.196.212 | 0 |
+| `mcp:github` | 161 | 4.402 | 3.843.738 | 46.397.758 | 72 |
+| `lectura-directa` | 163 | 4.175 | 8.882.896 | 0 | 0 |
+| `escritura` | 131 | 2.589 | 41.531.529 | 0 | 0 |
+| `sql` | 113 | 2.294 | 1.067.123 | 2.351.230 | 8 |
+| `mcp:Claude_Code_Remote` | 100 | 1.066 | 238.697 | 3.193.171 | 13 |
+| `mcp:Booking-com` | 17 | 493 | 2.070.224 | 0 | 0 |
 | `mcp:Vercel` | 35 | 412 | 644.368 | 198.719 | 10 |
-| `mcp:Gmail` | 20 | 276 | 432.672 | 0 | 2 |
+| `mcp:Gmail` | 21 | 285 | 446.394 | 0 | 2 |
 | `mcp:Supabase` | 70 | 214 | 21.345 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
-| `agente:general-purpose` | 31 | 98 | 71.062 | 1.133.042 | 0 |
+| `agente:general-purpose` | 32 | 99 | 71.099 | 1.133.042 | 0 |
+| `mcp:Google-Drive` | 11 | 77 | 76.216 | 0 | 2 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
-| `mcp:Google-Drive` | 10 | 71 | 68.760 | 0 | 2 |
 | `agente:agente-architect` | 21 | 64 | 52.244 | 1.639.814 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Google_Drive` | 9 | 53 | 61.337 | 0 | 14 |
@@ -196,7 +196,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Resend` | 4 | 41 | 11.662 | 0 | 0 |
 | `agente:agente-mecanico` | 13 | 33 | 33.925 | 774.297 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
-| `agente:rastreador-codigo` | 15 | 21 | 7.310 | 97.949 | 0 |
+| `agente:rastreador-codigo` | 15 | 22 | 7.550 | 297.156 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
