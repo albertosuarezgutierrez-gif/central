@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T13:58:21Z",
-  "sha": "b39cd3cf461f1ab41275292df7381fceffa371f3",
+  "generadoEn": "2026-09-28T14:41:35Z",
+  "sha": "2d8ea399e9ca09da7a3877ed4b69ba045ad439a0",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -15296,13 +15296,13 @@
           "exportada": true,
           "params": "req: Request",
           "retorno": null,
-          "linea": 22,
-          "resumen": "`GET /api/operador/codeoscopic/tarificacion?polizaId=` — la ÚLTIMA cotización REAL ya guardada de esta póliza, para \"retomarla\" en pantalla sin volver a pagar el `POST /insurances` que ya se pagó (11/"
+          "linea": 23,
+          "resumen": "`GET /api/operador/codeoscopic/tarificacion?polizaId=` (o `?clienteId=&ramo=` para un cliente NUEVO, 28/09/2026) — la ÚLTIMA cotización REAL ya guardada de esta póliza, para \"retomarla\" en pantalla si"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/tarificacion",
-      "hash": "babd7f24877f"
+      "hash": "ffbd28e03e68"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/vida-nuevo/route.ts",
@@ -24907,7 +24907,8 @@
       "ambito": "apps/asegura",
       "resumen": "Lee la ÚLTIMA cotización REAL ya guardada de una póliza, para poder \"retomarla\" en pantalla sin volver a pagar el `POST /insurances` que ya se pagó. Impuro (BD) — hermano de `cotizaciones.ts`, que es quien la escribió. 🚨 Recuperar el precio NO sustituye al ReRate: `expires_at` llega a NULL en la re",
       "exporta": [
-        "ultimaTarificacionRealAuto"
+        "ultimaTarificacionRealAuto",
+        "ultimaTarificacionNueva"
       ],
       "funciones": [
         {
@@ -24920,12 +24921,29 @@
           "resumen": "La última tarificación REAL (no simulada) de auto guardada para esta póliza en ESTA correduría. `null` = no hay ninguna — no es un error, es que todavía no se ha pedido precio nunca para esta póliza."
         },
         {
+          "nombre": "ultimaTarificacionNueva",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, clienteId: string, ramo: RamoRetomable,",
+          "retorno": "Promise<Omit<TarificacionGuardada, 'formulario'> | null>",
+          "linea": 77,
+          "resumen": "La última tarificación REAL de un cliente SIN póliza (oportunidad nueva) para ese ramo, para retomarla sin volver a pagar (28/09/2026: la parrilla solo vivía en memoria de la pantalla, y al cerrarla n"
+        },
+        {
+          "nombre": "cargarPrecios",
+          "kind": "function",
+          "exportada": false,
+          "params": "t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }",
+          "retorno": "Promise<Omit<TarificacionGuardada, 'formulario'>>",
+          "linea": 100
+        },
+        {
           "nombre": "numero",
           "kind": "function",
           "exportada": false,
           "params": "v: number | string | null",
           "retorno": "number | null",
-          "linea": 110
+          "linea": 145
         }
       ],
       "tablas": [
@@ -24933,7 +24951,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "b61525933e05"
+      "hash": "6e8b03af6ef2"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/tipo-via-catastro.ts",
@@ -75654,7 +75672,8 @@
       "exporta": [
         "pedirCatalogo",
         "pedirPrecalificacionMoto",
-        "pedirCotizacionMoto"
+        "pedirCotizacionMoto",
+        "pedirTarificacionGuardadaMoto"
       ],
       "funciones": [
         {
@@ -75663,7 +75682,7 @@
           "exportada": true,
           "params": "params: Record<string, string>",
           "retorno": "Promise<RespuestaCatalogo>",
-          "linea": 20,
+          "linea": 21,
           "resumen": "Un catálogo del vendor (marcas, modelos, versiones, experiencia…). **Gratis.**"
         },
         {
@@ -75672,7 +75691,7 @@
           "exportada": true,
           "params": "entrada: { clienteId: string }",
           "retorno": "Promise<RespuestaPrecalificacionMotoNueva>",
-          "linea": 25,
+          "linea": 26,
           "resumen": "La ficha de la persona (municipios, estado civil, huecos, consumo). **Gratis.**"
         },
         {
@@ -75681,13 +75700,22 @@
           "exportada": true,
           "params": "entrada: { clienteId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> }",
           "retorno": "Promise<RespuestaRetarificar>",
-          "linea": 35,
+          "linea": 36,
           "resumen": "🚨 **CUESTA 0,50€ REALES.** `confirmado: true` lo pone `cotizarMotoNuevaAsegura()`, en el servidor y en un solo sitio — no se acepta desde el cliente. 🚫 No reintenta."
+        },
+        {
+          "nombre": "pedirTarificacionGuardadaMoto",
+          "kind": "function",
+          "exportada": true,
+          "params": "entrada: { clienteId: string }",
+          "retorno": "Promise<RespuestaTarificacionNueva>",
+          "linea": 50,
+          "resumen": "La última tarificación de moto de este cliente, para retomarla sin pagar otra vez. **Gratis.**"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8d65cdc3048a"
+      "hash": "1ed8cf1ce8ef"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx",
@@ -75702,7 +75730,7 @@
           "exportada": false,
           "params": "n: number | null | undefined",
           "retorno": "string",
-          "linea": 34
+          "linea": 35
         },
         {
           "nombre": "MotoNuevo",
@@ -75710,7 +75738,7 @@
           "exportada": true,
           "params": "{ clienteId, etiquetaCliente, faltanInicial, garajes, civiles, municipios, municipiosMotivo, estadoCivilMoto, consumo, simulacion, companias, poliza = null, }: { poliza?: PolizaMoto | null clienteId: string etiquetaCliente: string /** `null",
           "retorno": null,
-          "linea": 94
+          "linea": 95
         },
         {
           "nombre": "hoyLocal",
@@ -75718,7 +75746,7 @@
           "exportada": false,
           "params": "",
           "retorno": "string",
-          "linea": 760,
+          "linea": 797,
           "resumen": "Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes."
         },
         {
@@ -75727,7 +75755,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 765
+          "linea": 802
         },
         {
           "nombre": "Campo",
@@ -75735,7 +75763,7 @@
           "exportada": false,
           "params": "{ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 770
+          "linea": 807
         },
         {
           "nombre": "Contador",
@@ -75743,7 +75771,7 @@
           "exportada": false,
           "params": "{ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion: boolean }",
           "retorno": null,
-          "linea": 783
+          "linea": 820
         },
         {
           "nombre": "Precios",
@@ -75751,7 +75779,7 @@
           "exportada": false,
           "params": "{ r, simulacion, emitible = false, sustituye = true, }: { r: Extract<Resultado, { estado: 'ok' }> simulacion: boolean /** Desde el 28/09/2026 también sin póliza: asegura emite a un cliente NUEVO con el * proyecto enlazado a la ficha y a la ",
           "retorno": null,
-          "linea": 802
+          "linea": 839
         }
       ],
       "tablas": [
@@ -75759,7 +75787,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "ed42b789d4a4"
+      "hash": "37b85ee899c6"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/page.tsx",
@@ -76404,12 +76432,12 @@
           "exportada": false,
           "params": "{ a }: { a: Aviso }",
           "retorno": null,
-          "linea": 254
+          "linea": 258
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b96687095b62"
+      "hash": "cbb76db9450a"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/TabContactos.tsx",
@@ -107145,7 +107173,7 @@
           "exportada": false,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 66
+          "linea": 67
         },
         {
           "nombre": "porFecha",
@@ -107153,7 +107181,7 @@
           "exportada": false,
           "params": "a: string | null, b: string | null",
           "retorno": "number",
-          "linea": 70
+          "linea": 71
         },
         {
           "nombre": "proximoAniversario",
@@ -107161,7 +107189,7 @@
           "exportada": true,
           "params": "iso: string | null, hoy: Date",
           "retorno": "string | null",
-          "linea": 84,
+          "linea": 85,
           "resumen": "El próximo aniversario (hoy incluido) de una fecha de vencimiento ya pasada: un seguro anual renueva el mismo día cada año, así que un «vence 24/10/2023» anotado hace años dice «le toca el 24/10/2026»"
         },
         {
@@ -107170,7 +107198,7 @@
           "exportada": true,
           "params": "iso: string | null, hoy: Date",
           "retorno": "string | null",
-          "linea": 106,
+          "linea": 107,
           "resumen": "La fecha que se enseña para el vencimiento de una OPORTUNIDAD. Si venció hace menos de un año es una renovación que se acaba de pasar: se deja tal cual (atrasada, que es lo que hay que ver). Si es más"
         },
         {
@@ -107179,7 +107207,7 @@
           "exportada": false,
           "params": "s: SeguroCliente, hoy: Date",
           "retorno": "string | null",
-          "linea": 114
+          "linea": 115
         },
         {
           "nombre": "repartirSegurosCliente",
@@ -107187,7 +107215,15 @@
           "exportada": true,
           "params": "{ polizas, declaradas, oportunidades, hoy = new Date() }: { polizas: PolizaFicha[] declaradas: PolizaDeclaradaFicha[] | null /** `null` = no se pudieron leer. */ oportunidades: OportunidadDeCliente[] | null /** Por defecto `new Date()`; par",
           "retorno": "RepartoSeguros",
-          "linea": 123
+          "linea": 124
+        },
+        {
+          "nombre": "otraMatricula",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: string | null, b: string | null",
+          "retorno": "boolean",
+          "linea": 257
         },
         {
           "nombre": "estaHuerfana",
@@ -107195,13 +107231,13 @@
           "exportada": true,
           "params": "o: OportunidadDeCliente",
           "retorno": "boolean",
-          "linea": 252,
+          "linea": 263,
           "resumen": "Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "12be37e4ccd1"
+      "hash": "94d1073e545c"
     },
     {
       "ruta": "apps/plataforma/lib/correduria/sustituciones-aviso.ts",
@@ -116879,6 +116915,8 @@
         "emitirAsegura",
         "interpretarTarificacionGuardada",
         "tarificacionGuardadaAsegura",
+        "interpretarTarificacionNueva",
+        "tarificacionNuevaGuardadaAsegura",
         "interpretarLimitesHogar",
         "limitesHogarAsegura",
         "interpretarCoberturas",
@@ -117227,12 +117265,30 @@
           "resumen": "`GET /api/operador/codeoscopic/tarificacion` — la última cotización real guardada de esta póliza. **Gratis.** `estado: 'ninguna'` no es un fallo."
         },
         {
+          "nombre": "interpretarTarificacionNueva",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "RespuestaTarificacionNueva",
+          "linea": 1771,
+          "resumen": "PURO: la respuesta de `GET .../tarificacion?clienteId=&ramo=` → estados de la pantalla."
+        },
+        {
+          "nombre": "tarificacionNuevaGuardadaAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "clienteId: string, ramo: 'auto' | 'moto' | 'hogar'",
+          "retorno": "Promise<RespuestaTarificacionNueva>",
+          "linea": 1798,
+          "resumen": "`GET .../tarificacion?clienteId=&ramo=` — **gratis**, solo lee lo ya pagado."
+        },
+        {
           "nombre": "rangoCapital",
           "kind": "function",
           "exportada": false,
           "params": "v: unknown",
           "retorno": "RangoCapital | null",
-          "linea": 1800
+          "linea": 1859
         },
         {
           "nombre": "interpretarLimitesHogar",
@@ -117240,7 +117296,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaLimitesHogar",
-          "linea": 1809,
+          "linea": 1868,
           "resumen": "Puro: la respuesta del puerto → lo que pinta la pantalla."
         },
         {
@@ -117249,7 +117305,7 @@
           "exportada": true,
           "params": "p: { polizaId: string resueltos?: Record<string, unknown> correcciones?: Record<string, unknown> referencia?: string solicitadoPor?: string }",
           "retorno": "Promise<RespuestaLimitesHogar>",
-          "linea": 1833
+          "linea": 1892
         },
         {
           "nombre": "interpretarCoberturas",
@@ -117257,7 +117313,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaCoberturas",
-          "linea": 1886,
+          "linea": 1945,
           "resumen": "Lee la respuesta del puerto. Pura: se testea sin red. `incluida` ausente es `null` («ver el texto»), nunca `false`."
         },
         {
@@ -117266,7 +117322,7 @@
           "exportada": true,
           "params": "projectId: string, offerId: string",
           "retorno": "Promise<RespuestaCoberturas>",
-          "linea": 1906,
+          "linea": 1965,
           "resumen": "`GET /api/operador/codeoscopic/coberturas` — gratis, no cotiza ni confirma nada."
         },
         {
@@ -117275,7 +117331,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "DireccionEmision | null",
-          "linea": 1971
+          "linea": 2030
         },
         {
           "nombre": "leerTitular",
@@ -117283,7 +117339,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "TitularProyecto | null",
-          "linea": 1984
+          "linea": 2043
         },
         {
           "nombre": "leerOfertaImportable",
@@ -117291,7 +117347,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "OfertaImportable | null",
-          "linea": 2000
+          "linea": 2059
         },
         {
           "nombre": "interpretarVistaImportacion",
@@ -117299,7 +117355,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "VistaImportacion",
-          "linea": 2018
+          "linea": 2077
         },
         {
           "nombre": "vistaImportacionAsegura",
@@ -117307,7 +117363,7 @@
           "exportada": true,
           "params": "projectId: string, polizaId: string",
           "retorno": "Promise<VistaImportacion>",
-          "linea": 2045
+          "linea": 2104
         },
         {
           "nombre": "interpretarImportacion",
@@ -117315,7 +117371,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "RespuestaImportar",
-          "linea": 2056
+          "linea": 2115
         },
         {
           "nombre": "importarProyectoAsegura",
@@ -117323,12 +117379,12 @@
           "exportada": true,
           "params": "p: { projectId: string; polizaId: string; quoteId: string }",
           "retorno": "Promise<RespuestaImportar>",
-          "linea": 2077
+          "linea": 2136
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bcca7e5d2601"
+      "hash": "e3a0b471c029"
     },
     {
       "ruta": "apps/plataforma/lib/rrhh-operador.ts",
@@ -163741,6 +163797,6 @@
   ],
   "resumen": {
     "archivos": 3857,
-    "funciones": 12605
+    "funciones": 12611
   }
 }
