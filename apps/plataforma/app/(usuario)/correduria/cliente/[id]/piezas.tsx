@@ -394,7 +394,7 @@ function motivoNoRetarificable(p: PolizaFicha): string {
  * bloque y con «No la gestionamos» en cada fila — el mismo chip que ya usa
  * el portal del cliente, para que el corredor no las confunda con una viva.
  *
- * 🚨 `null` ≠ `[]`: `null` es «no se ha podido leer si aportó algo» (falló
+ * IMPORTANTE: `null` ≠ `[]`: `null` es «no se ha podido leer si aportó algo» (falló
  * `portal_vinculo` o la tabla), `[]` es «se ha mirado y no ha aportado
  * ninguna». Colapsarlos en el mismo hueco mudo diría «no hay nada» sobre un
  * fallo de lectura — la regla NULL≠0 del CLAUDE.md raíz.
