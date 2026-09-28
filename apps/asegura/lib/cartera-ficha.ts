@@ -508,6 +508,8 @@ export async function polizasDondeFigura(
     where: {
       AND: [
         { id: { in: [...rolesPor.keys()] }, correduriaId, mergedIntoPolizaId: null, NOT: { clienteId } },
+        // Una ficha duplicada con el MISMO DNI no es «otro tomador»: es él (se ve en «Fichas duplicadas»).
+        ...(dniLookupHash ? [{ NOT: { cliente: { dniLookupHash } } }] : []),
         WHERE_CARTERA_VIVA,
       ],
     },
@@ -526,7 +528,8 @@ export async function polizasDondeFigura(
     estado: String(p.estado),
     fechaVencimiento: p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null,
     enVigor: esCarteraEnVigor({ ...p, estado: String(p.estado) }),
-    tomador: { id: p.cliente.id, nombre: `${p.cliente.nombre} ${p.cliente.apellidos}`.trim() },
+    // Tomador fusionado → se enlaza a su destino, no a la lápida.
+    tomador: { id: p.cliente.mergedIntoClienteId ?? p.cliente.id, nombre: `${p.cliente.nombre} ${p.cliente.apellidos}`.trim() },
     roles: [...(rolesPor.get(p.id) ?? [])].sort(),
   }))
 }

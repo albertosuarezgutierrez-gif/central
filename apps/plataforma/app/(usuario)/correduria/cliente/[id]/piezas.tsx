@@ -436,7 +436,7 @@ export function PolizasDondeFigura({ polizas }: { polizas: PolizaFiguraFicha[] |
               <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
                 <td style={td}>
                   <Link href={`/correduria/poliza/${p.id}`}>
-                    {TIPOS[p.tipo] ?? p.tipo} · {p.aseguradora || 'sin compañía'}
+                    {p.tipo ? (TIPOS[p.tipo] ?? p.tipo) : 'sin ramo'} · {p.aseguradora || 'sin compañía'}
                   </Link>
                   <div style={sub}>
                     {p.numeroPoliza ?? 'sin número'}

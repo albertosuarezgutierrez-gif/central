@@ -707,7 +707,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           where: { clienteId: { in: fichasVistasEnteras } },
           select: { polizaId: true, clienteId: true, rol: true },
         })
-  const tomadoresYaServidos = [...propiosIds, ...autorizadosIds, ...representadasIds]
+  // Solo las fichas que se ven ENTERAS: un otorgante que concedió UNA póliza suelta no «sirve» sus
+  // demás pólizas, así que excluirlo aquí haría desaparecer la furgoneta de todas partes.
+  const tomadoresYaServidos = [...propiosIds, ...porOtorgante.keys(), ...representadasIds]
   const polizasFiguraAjena =
     filasFiguraAjena.length === 0
       ? []

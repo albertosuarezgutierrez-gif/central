@@ -365,7 +365,8 @@ function leerBienDeclarada(v: unknown): BienDeclarada {
 
 export type PolizaFiguraFicha = {
   id: string
-  tipo: string
+  /** `null` = no llegó; no se rellena con el cajón «otro». */
+  tipo: string | null
   aseguradora: string
   numeroPoliza: string | null
   estado: string
@@ -386,7 +387,7 @@ export function leerFiguraEn(v: unknown): PolizaFiguraFicha[] | null {
     if (typeof d.id !== 'string' || !t || typeof t.id !== 'string') continue
     out.push({
       id: d.id,
-      tipo: cadena(d.tipo) ?? 'otro',
+      tipo: cadena(d.tipo),
       aseguradora: cadena(d.aseguradora) ?? '',
       numeroPoliza: cadena(d.numeroPoliza),
       estado: cadena(d.estado) ?? '',
