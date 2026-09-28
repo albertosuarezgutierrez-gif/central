@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T06:05:56Z",
-  "sha": "58b0aa1efe15168fe1d54d2130262ab263621d0e",
+  "generadoEn": "2026-09-28T07:18:25Z",
+  "sha": "5eaa5dcb055c82affcbb3353206b3eda021c94ea",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -25810,7 +25810,7 @@
         "viva"
       ],
       "rutaApi": null,
-      "hash": "57cf790e8fa6"
+      "hash": "13502967ad42"
     },
     {
       "ruta": "apps/asegura/lib/invitacion-portal-lote.ts",
