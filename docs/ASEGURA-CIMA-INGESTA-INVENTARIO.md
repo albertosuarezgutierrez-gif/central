@@ -42,6 +42,16 @@ Reglas que deja, todas con cepo visto en rojo:
 **Foto de ANTES del reproceso (28/09, 09:25 UTC):** 159 pólizas CIMA; 0 con fecha de emisión, riesgos, cobro o
 prima dudosa; papeles: propietario 195 · conductor ocasional 98 · habitual 28 · asegurado 7 · contacto 122 · pagador 0.
 
+**Resultado del reproceso (run 36403813502, 28/09 09:29-09:35 UTC, verde):** 158 de 159 pólizas CIMA
+actualizadas (la que falta, `061089620`, llegó por CIMA después de la copia de Drive: coge los campos en su
+próxima entrega); 158 con fechas de emisión/efecto actual, `riesgos[]`, cobro e IBAN (últimos 4); **0 IBAN en
+claro**; papeles: propietario 195→208 · conductor habitual 28→90 · asegurado 7→33 · **pagador 0→26** · contacto
+122→121 · ocasional 98. Prima dudosa: 0 (todas las fraccionadas eran de compañías medidas o traían anualizada).
+⚠️ **C0109 (27 pólizas) no manda NINGÚN importe en sus POL**: `prima_anual` NULL es lo correcto, no un fallo de
+la ingesta; su prima solo se puede sacar de los recibos. Limpieza: logs del run borrados y ficheros del lote
+borrados del contenedor; la rama temporal `cima-lote-2026-09-28` (lote CIFRADO) no se pudo borrar desde la
+sesión (el proxy corta el push de borrado) → borrarla a mano en GitHub, junto con el run (sus inputs llevan la clave).
+
 **Dónde se pinta (central):** figura del cliente en cada póliza en el portal (central#3820); ficha de póliza,
 recibos y siniestros de `/correduria` y ficha de póliza del portal (PR de «pintar datos CIMA», 28/09).
 
