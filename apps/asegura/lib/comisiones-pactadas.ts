@@ -1,7 +1,7 @@
 import { lineasComision, type CuadroFila, type LineaComision, type ReciboComision } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 
-// Cuadro de comisiones pactado (`seguros.comision_pactada`) contra el % que la compañía ha aplicado en
+// Cuadro de comisiones pactado (tabla `comision_pactada`) contra el % que la compañía ha aplicado en
 // los recibos de CIMA de los últimos 24 meses. El cruce lo hace `lineasComision` (module-seguros).
 
 /** Techo de recibos leídos; si se alcanza, la respuesta lo dice (`truncado`) en vez de dar el % por completo. */
@@ -24,7 +24,7 @@ export async function comisionesPactadas(correduriaId: string, hoy: string): Pro
       select compania_codigo_dgs as "companiaCodigo", producto, producto_nombre as "productoNombre", modalidad,
              acuerdo, pct_nueva::text as "pctNueva", pct_cartera::text as "pctCartera",
              to_char(vigente_desde, 'YYYY-MM-DD') as "vigenteDesde", fuente
-      from seguros.comision_pactada`,
+      from comision_pactada`,
     // Solo recibos que ha traído CIMA (`eiac_xml_hash`): los del volcado histórico no son de este cuadro.
     db.$queryRaw<(Omit<ReciboComision, 'producto'> & { producto: string | null })[]>`
       select r.codigo_entidad_dgs as "companiaCodigo",
@@ -32,8 +32,8 @@ export async function comisionesPactadas(correduriaId: string, hoy: string): Pro
              p.datos_especificos -> 'producto' ->> 'descripcionRamo' as "productoNombre",
              to_char(r.fecha_efecto_actual, 'YYYY-MM-DD') as fecha,
              r.clase_recibo as clase, r.comision_bruta as comision, r.prima_neta as prima
-      from seguros.poliza_recibos r
-      join seguros.polizas p on p.id = r.poliza_id
+      from poliza_recibos r
+      join polizas p on p.id = r.poliza_id
       where r.correduria_id = ${correduriaId}::uuid
         and r.eiac_xml_hash is not null
         and r.codigo_entidad_dgs is not null

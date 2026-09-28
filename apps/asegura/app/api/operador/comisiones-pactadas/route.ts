@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 /**
  * GET /api/operador/comisiones-pactadas — cuadro de comisiones firmado con cada compañía
- * (`seguros.comision_pactada`) cruzado con el % que aplican los recibos de CIMA. Solo lectura: el
+ * (tabla `comision_pactada`) cruzado con el % que aplican los recibos de CIMA. Solo lectura: el
  * cuadro se carga por migración SQL a partir de la comunicación de la compañía.
  */
 export async function GET(req: Request) {
