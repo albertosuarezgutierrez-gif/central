@@ -11,7 +11,7 @@ const DATOS = {
   matricula: '1234ABC', // clave vieja del riesgo principal: no es del contrato
   gestionCobro: 'CO', formaPago: 'CC', iban: IBAN_CIFRADO, ibanUltimos4: '1332', bic: 'CAIXESBBXXX',
   titularCuentaDistinto: true, duracion: 'AN', clasePoliza: 'IN',
-  mediador: { clase: 'CO', codigoInterno: '0170', nombre: 'GRUPO ASEGURA' },
+  mediador: { clase: 'CO', codigoInterno: '0170', nombre: 'Grupo ASegura' },
   producto: { modalidad: '12', descripcion: 'HOGAR PLUS' },
   primaAnualDudosa: true, primaTotalFichero: '190.29',
   riesgos: [

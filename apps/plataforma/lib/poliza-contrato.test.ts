@@ -74,7 +74,7 @@ test('gestión de cobro legible; un código desconocido se dice con su código',
 
 test('filas del contrato: fechas, producto, mediador; lo ausente no sale', () => {
   const filas = filasContrato(
-    leerContrato({ producto: { modalidad: '12', descripcion: 'HOGAR PLUS' }, mediador: { nombre: 'GRUPO ASEGURA', codigoInterno: '0170' }, duracion: 'AN' }),
+    leerContrato({ producto: { modalidad: '12', descripcion: 'HOGAR PLUS' }, mediador: { nombre: 'Grupo ASegura', codigoInterno: '0170' }, duracion: 'AN' }),
     leerFechasContrato({ emision: '2026-01-15', efectoActual: '2026-07-06', situacion: null, solicitud: null }),
   )
   assert.deepEqual(filas.map((f) => f.etiqueta), ['Emisión', 'Efecto actual', 'Producto', 'Duración', 'Mediador'])

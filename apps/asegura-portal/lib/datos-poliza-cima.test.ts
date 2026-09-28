@@ -22,7 +22,7 @@ const CIMA = {
   producto: { modalidad: 'M001', descripcion: 'HOGAR PLUS', ramoEntidad: '12', descripcionRamo: 'MULTIRRIESGO HOGAR' },
   comisiones: [{ clase: 'NP', bruta: '12.50' }],
   comisionAnual: '25.00',
-  mediador: { clase: 'CO', codigoInterno: '0170', nombre: 'GRUPO ASEGURA' },
+  mediador: { clase: 'CO', codigoInterno: '0170', nombre: 'Grupo ASegura' },
   riesgos: [
     { id: 'R1', numeroOrden: '1', tipo: 'hogar', descripcion: 'Piso', inicio: '2026-01-01', fin: '2027-01-01', direccion: 'v1:ZGlyZWNjaW9u:eA==:eQ==' },
     { id: 'R2', tipo: 'hogar' },
