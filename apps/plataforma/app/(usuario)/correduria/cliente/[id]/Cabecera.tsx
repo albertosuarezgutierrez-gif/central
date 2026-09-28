@@ -41,7 +41,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
           <div style={{ minWidth: 0 }}>
             <PageHeader
               titulo={ficha.nombre}
-              sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              sub={<span style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
                 {/* El estado lo DERIVA asegura de los hechos (cliente · con presupuesto ·
                     lead · ex-cliente) y lo trae con su motivo. Sin él (asegura viejo),
                     la regla de siempre: CIMA engancha pólizas por DNI a una ficha que
@@ -52,10 +52,12 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                 <Contacto nombre={ficha.nombre} esCliente={esCliente} c={ficha.contacto} intervinientes={ficha.intervinientes} piiClave={ficha.piiClave} contactos={ficha.contactos} polizas={ficha.polizas} />
                 {/* DNI, nacimiento y carnés se consultan, no se trabajan: plegados
                     (26/09/2026, en móvil la línea ocupaba 5-6 renglones). */}
-                {/* Abierto de serie si un carné caduca o ya caducó: un aviso no se pliega. */}
-                <details style={{ display: 'inline-block' }} open={(ficha.carnets ?? []).some(k => estadoCaducidadCarnet(k.fechaCaducidad, new Date().toISOString().slice(0, 10)) !== 'vigente' && k.fechaCaducidad !== null)}>
-                  <summary style={{ cursor: 'pointer', color: 'var(--muted)', minHeight: 44 }}>DNI y carnés</summary>
-                  <span style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 4 }}>
+                {/* Abierto de serie si un carné caduca o ya caducó: un aviso no se pliega.
+                    En su propia línea: abierto e inline, estiraba la fila y la chapa de
+                    estado salía como un círculo gigante (captura de Alberto, 28/09/2026). */}
+                <details style={{ flexBasis: '100%' }} open={(ficha.carnets ?? []).some(k => estadoCaducidadCarnet(k.fechaCaducidad, new Date().toISOString().slice(0, 10)) !== 'vigente' && k.fechaCaducidad !== null)}>
+                  <summary style={{ cursor: 'pointer', color: 'var(--muted)', minHeight: 44, lineHeight: '44px' }}>DNI y carnés</summary>
+                  <span style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}>
                     <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} />
                     <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />
                   </span>
