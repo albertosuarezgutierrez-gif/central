@@ -8,6 +8,7 @@
 import { useState } from 'react'
 import { FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
+import { CeldaCompania } from '../../../CeldaCompania'
 import { ConIcono } from '../../../iconos'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/decesos-nuevo-asegura'
@@ -302,18 +303,17 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
         {r.restantesHoy !== null ? <> · quedan hoy {r.restantesHoy}.</> : <> · el libro de consumo no se ha mirado (no hacía falta).</>}
       </p>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 460 }}>
           <thead>
             <tr>
-              <th style={th}>Compañía</th><th style={th}>Producto</th><th style={th}>Cobertura</th>
+              <th style={th}>Aseguradora</th><th style={th}>Cobertura</th>
               <th style={th}>Prima anual</th><th style={th}>Franquicia</th><th style={th}>Firmeza</th>
             </tr>
           </thead>
           <tbody>
             {r.precios.map((p, i) => (
               <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}>{p.compania ?? '—'}</td>
-                <td style={td}>{p.producto ?? '—'}</td>
+                <td style={td}><CeldaCompania compania={p.compania} producto={p.producto} /></td>
                 <td style={td}>{p.categoria ?? <span style={{ color: 'var(--muted)' }}>sin declarar</span>}</td>
                 <td style={td}>
                   <strong>{euroODash(p.primaEur)}</strong>

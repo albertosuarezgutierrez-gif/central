@@ -34,7 +34,7 @@ import {
 import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 
 import { pedirCatalogo, pedirCotizacionAuto } from './acciones'
-import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
+import { CeldaCompania } from '../../../CeldaCompania'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 
 function euroODash(n: number | null | undefined): string {
@@ -1276,30 +1276,9 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
           </thead>
           <tbody>
             {r.precios.map((p, i) => {
-              const logo = logoCompania(p.compania)
-              const producto = nombreProductoSinCia(p.compania, p.producto)
               return (
               <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {logo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={logo.src}
-                        alt=""
-                        style={{ height: Math.round(18 * logo.escala), maxWidth: 52, objectFit: 'contain', flexShrink: 0 }}
-                      />
-                    ) : (
-                      <Badge tono="neutral">{(p.compania ?? '—').slice(0, 2).toUpperCase()}</Badge>
-                    )}
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.compania ?? '—'}</div>
-                      {producto && (
-                        <div style={{ color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap' }}>{producto}</div>
-                      )}
-                    </div>
-                  </div>
-                </td>
+                <td style={td}><CeldaCompania compania={p.compania} producto={p.producto} /></td>
                 <td style={td}>{p.categoria ?? <span style={{ color: 'var(--muted)' }}>sin declarar</span>}</td>
                 <td style={td}>
                   <strong>{euroODash(p.primaEur)}</strong>
