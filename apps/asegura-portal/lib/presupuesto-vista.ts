@@ -293,14 +293,12 @@ function limpiar(xs: readonly string[]): string[] {
  * puede dar por traída. Sin sobre legible, `[]` = no constan (como siempre).
  */
 export function coberturasDeJson(v: unknown): string[] {
-  if (v && typeof v === 'object' && !Array.isArray(v)) {
-    const s = v as Record<string, unknown>
-    if ((s.estado !== 'leidas' && s.estado !== 'vacias') || !Array.isArray(s.lista)) return []
-    return s.lista.flatMap((x) => {
-      const o = x && typeof x === 'object' ? (x as Record<string, unknown>) : {}
-      return o.incluida === true && typeof o.nombre === 'string' && o.nombre.trim() ? [o.nombre.trim()] : []
-    })
-  }
+  // 🚨 Las coberturas de Codeoscopic (objeto `{estado, lista}`) NO entran en la
+  // comparación con la póliza actual: su vocabulario no es el de CIMA («Lunas» vs
+  // «Rotura de lunas») y un «ver texto» (incluida=null) no es «no la tiene». Cruzarlas
+  // pintaría como «pierdes» garantías que la oferta sí trae. Se enseñan en la tabla
+  // de coberturas (`tabla-coberturas.ts`); aquí quedan «no constan», como antes.
+  if (v && typeof v === 'object' && !Array.isArray(v)) return []
   if (!Array.isArray(v)) return []
   const out: string[] = []
   for (const x of v) {

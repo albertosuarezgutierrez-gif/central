@@ -24,12 +24,12 @@ test('el límite de preguntas se distingue de un fallo', () => {
   assert.deepEqual(interpretarLlamada(502, null), { estado: 'error' })
 })
 
-test('coberturasDeJson con sobre: solo las incluidas cuentan como garantías de la opción', () => {
+test('coberturasDeJson con sobre de Codeoscopic: NO entra en la comparación con la póliza actual (vocabulario distinto; «ver texto» no es «no la tiene»)', () => {
   const sobre = { estado: 'leidas', lista: [
     { nombre: 'Lunas', incluida: true, texto: null },
     { nombre: 'Sustitución', incluida: false, texto: null },
     { nombre: 'Asistencia', incluida: null, texto: 'km 0' },
   ] }
-  assert.deepEqual(coberturasDeJson(sobre), ['Lunas'])
+  assert.deepEqual(coberturasDeJson(sobre), [])
   assert.deepEqual(coberturasDeJson({ estado: 'fallo', lista: null }), [])
 })
