@@ -4,7 +4,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import {
-  backfillCoberturasTarificacion, ofertaDeFila, pasadaBackfillCoberturas, planOfertas,
+  backfillCoberturasTarificacion, ofertaDeFila, pasadaBackfillCoberturas, planOfertas, planOpciones,
   type CabeceraBackfill, type DepsBackfill, type FilaSinOferta, type ResumenBackfill,
 } from './backfill-coberturas.ts'
 import type { Precio } from './respuesta.ts'
@@ -146,4 +146,36 @@ test('pasada: sin presupuesto de tiempo no empieza ninguna', async () => {
   })
   assert.equal(llamadas, 0)
   assert.equal(total.sinTiempo, 2)
+})
+
+const ASIST = [{ etiqueta: 'Asistencia en viaje', valor: 'Estándar' }]
+
+test('planOpciones: casada → sus opciones; sin casar → sin_precio; relectura fallida → fallo (lista null)', () => {
+  const t = '2026-09-28T19:00:00.000Z'
+  const precios = [precio({ referenciaVendor: 'R-1', opciones: ASIST }), precio({ referenciaVendor: 'R-2', compania: 'Mapfre', opciones: null })]
+  const plan = planOpciones([fila({ id: 'a', referenciaVendor: 'R-1' }), fila({ id: 'b', referenciaVendor: 'R-2', compania: 'Mapfre' }), fila({ id: 'c', compania: 'Nadie' })], precios, t)
+  assert.deepEqual(plan.map((p) => [p.id, p.sobre.estado, p.sobre.lista]), [
+    ['a', 'leidas', ASIST], ['b', 'no_manda', null], ['c', 'sin_precio', null],
+  ])
+  assert.deepEqual(planOpciones([fila({ id: 'a' })], null, t).map((p) => [p.sobre.estado, p.sobre.lista]), [['fallo', null]])
+})
+
+test('backfill: opciones con UNA sola relectura compartida con las ofertas', async () => {
+  const d = doble({ filas: [fila({ id: 'a', referenciaVendor: 'R-1' })], precios: [precio({ referenciaVendor: 'R-1', ofertaId: 'of-1', opciones: ASIST })] })
+  const escritas: { id: string; estado: string }[] = []
+  d.deps.sinOpciones = async () => [fila({ id: 'a', referenciaVendor: 'R-1' }), fila({ id: 'z', compania: 'Nadie' })]
+  d.deps.escribirOpciones = async (id, sobre) => { escritas.push({ id, estado: sobre.estado }); return 1 }
+  const r = await backfillCoberturasTarificacion(IDS, d.deps)
+  assert.equal(d.refrescos, 1)
+  assert.deepEqual(escritas, [{ id: 'a', estado: 'leidas' }, { id: 'z', estado: 'sin_precio' }])
+  assert.equal(r.opciones, 2)
+})
+
+test('backfill: solo faltan opciones (coberturas ya leídas) → relee igualmente', async () => {
+  const d = doble({ filas: [], precios: [precio({ referenciaVendor: 'R-1', opciones: ASIST })] })
+  d.deps.sinOpciones = async () => [fila({ id: 'a', referenciaVendor: 'R-1' })]
+  d.deps.escribirOpciones = async () => 1
+  const r = await backfillCoberturasTarificacion(IDS, d.deps)
+  assert.equal(d.refrescos, 1)
+  assert.equal(r.opciones, 1)
 })
