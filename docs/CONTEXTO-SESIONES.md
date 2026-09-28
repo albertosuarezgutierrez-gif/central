@@ -860,6 +860,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Comisiones FIRMADAS por compañía: tabla `seguros.comision_pactada` + bloque en Datos
+- Tabla (aplicada en prod) con compañía, producto (= `ramoEntidad` de CIMA), modalidad, **acuerdo** ('directo' o
+  nombre de asociación), % 1º año / cartera, `vigente_desde` (fila nueva por cuadro, nunca UPDATE) y fuente.
+  Sembrada: Allianz C0109, producto 1434 RC PYME (22,5 % Vida privada, 17,5 % el resto) desde 28/10/2026.
+- Cruce puro `lineasComision()` (module-seguros): recibos NP/CA contra lo firmado (±0,5 puntos); con asociación
+  vigente se compara contra ella y sale el extra sobre el directo. `sin-cuadro`/`sin-recibos`/`por-modalidad` ≠ cuadra.
+- Puerto `GET /api/operador/comisiones-pactadas` → `ComisionesPactadas.tsx` junto a «Contactos por compañía».
+- Pendiente: cargar los cuadros de auto/moto/hogar de Allianz y del resto (hoy solo hay % real). Carga por SQL, sin formulario.
 ## (28/09/2026) Correo de presupuesto: diseño de marca + acceso directo a la intranet (#3900)
 - El correo «Tu presupuesto está listo» usa la plantilla de cumpleaños (logo, botón, 3 pasos) y el botón entra DIRECTO al
   portal con la llave de un solo uso y 24 h (`crearEnlaceDirecto`); al pie, el enlace de siempre (código). Firmar sigue con código.
