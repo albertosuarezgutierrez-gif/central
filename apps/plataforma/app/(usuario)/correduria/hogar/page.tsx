@@ -52,14 +52,14 @@ function RamoHogar({ l }: { l: LineasCodeoscopic }) {
   if (l.estado === 'sin_configurar') {
     return (
       <div style={base}>
-        ❔ <strong>Cotizar en Codeoscopic:</strong> sin comprobar — {l.mensaje ?? 'falta la conexión con asegura'}.
+        <Info size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--muted)' }} /> <strong>Cotizar en Codeoscopic:</strong> sin comprobar — {l.mensaje ?? 'falta la conexión con asegura'}.
       </div>
     )
   }
   if (l.estado === 'error') {
     return (
       <div style={base}>
-        ⚠️ <strong>Cotizar en Codeoscopic:</strong> no se ha podido preguntar qué ramos tarifica ({l.motivo}).
+        <AlertTriangle size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--warning)' }} /> <strong>Cotizar en Codeoscopic:</strong> no se ha podido preguntar qué ramos tarifica ({l.motivo}).
         No significa que hogar no esté.
       </div>
     )

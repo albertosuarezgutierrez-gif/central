@@ -409,7 +409,7 @@ export function PolizasDeclaradas({ declaradas }: { declaradas: PolizaDeclaradaF
   }
   if (declaradas.length === 0) return null
   return (
-    <Tarjeta titulo={`📥 Aportadas desde el portal (${declaradas.length})`}>
+    <Tarjeta titulo={`Aportadas desde el portal (${declaradas.length})`}>
       <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>
         Las ha subido el propio cliente en su portal. No las gestiona Grupo ASegura: sirven para
         saber con quién tiene el seguro y cuándo le vence, de cara a ofrecerle cambiarse.
