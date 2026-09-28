@@ -77,6 +77,12 @@ export type Hallazgo = {
   polizasCima: number | null
   /** Vencimiento más lejano. `null` = ninguna póliza informa fecha. */
   ultimoVencimiento: string | null
+  /**
+   * Oportunidades ABIERTAS (competencia, en negociación, pendiente del cliente;
+   * aparcadas incluidas, igual que el contador de la ficha). `null` = no se
+   * pudo contar, NO 0.
+   */
+  oportunidadesAbiertas: number | null
   /** Cartera viva / volcado histórico / no se sabe. Derivado, no del enum. */
   vitalidad: Vitalidad
   /** Otras fichas sin fusionar con su mismo teléfono. `null` = no se miró. */
@@ -283,6 +289,7 @@ function hallazgoSinEnriquecer(
     ...base,
     polizasCima: null,
     ultimoVencimiento: null,
+    oportunidadesAbiertas: null,
     vitalidad: 'desconocida',
     hermanas: null,
     aviso: null,
@@ -808,6 +815,28 @@ async function senalesDe(
   }
 }
 
+/** `null` = la consulta falló. Un Map vacío = se miró y no hay ninguna. */
+async function oportunidadesAbiertasDe(
+  correduriaId: string,
+  ids: string[],
+): Promise<Map<string, number> | null> {
+  if (ids.length === 0) return new Map()
+  try {
+    const db = prismaAsegura()
+    const filas = await db.$queryRaw<{ cliente_id: string; n: number }[]>`
+      select cliente_id::text as cliente_id, count(*)::int as n
+      from oportunidades
+      where correduria_id = ${correduriaId}::uuid
+        and cliente_id::text = any(${ids}::text[])
+        and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      group by cliente_id
+    `
+    return new Map(filas.map((f) => [f.cliente_id, Number(f.n)]))
+  } catch {
+    return null
+  }
+}
+
 type HermanaCruda = {
   de: string
   id: string
@@ -998,6 +1027,7 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
   // la viva» hay que saber si de verdad lo es.
   const todos = [...new Set([...ids, ...(crudas ?? []).map((h) => h.id)])]
   const senales = await senalesDe(correduriaId, todos)
+  const oportunidades = await oportunidadesAbiertasDe(correduriaId, ids)
 
   const senalDe = (id: string): Senales =>
     senales === null ? { polizasCima: null, ultimoVencimiento: null } : (senales.get(id) ?? { polizasCima: 0, ultimoVencimiento: null })
@@ -1025,6 +1055,7 @@ async function enriquecer(correduriaId: string, bloques: BloqueResultados[]): Pr
       const s = senalDe(h.clienteId)
       h.polizasCima = s.polizasCima
       h.ultimoVencimiento = s.ultimoVencimiento
+      h.oportunidadesAbiertas = oportunidades === null ? null : (oportunidades.get(h.clienteId) ?? 0)
       h.vitalidad = vitalidadFicha(s)
       h.hermanas = crudas === null ? null : [...(porFicha.get(h.clienteId)?.values() ?? [])]
       h.aviso = avisoHermanas(h.vitalidad, h.hermanas)
