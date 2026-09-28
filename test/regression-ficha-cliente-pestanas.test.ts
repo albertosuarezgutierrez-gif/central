@@ -118,3 +118,13 @@ test('los accesos dicen algo: contactos cuenta teléfonos, correos y personas; n
   assert.equal(detallesAccesos({ ...base, telefonos: 0, emails: 0, personas: 0 }).contactos?.texto, 'sin teléfono ni correo')
   assert.equal(detallesAccesos({ ...base, pendiente: { estado: 'accion', urgente: true } }).pendiente?.tono, 'malo')
 })
+
+test('contarPersonas: pólizas + vínculos declarados, sin contar dos veces; null si falta una lista', async () => {
+  const { contarPersonas } = await import('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/tabs.ts')
+  // Antonio Lozano: nadie en su póliza y 3 vínculos (empresa, Manuel y uno sin nombre).
+  assert.equal(contarPersonas([], Array.from({ length: 3 }, (_, i) => ({ relacionadoId: `r${i}` }))), 3)
+  // Quien sale en una póliza Y tiene vínculo declarado es UNA persona.
+  assert.equal(contarPersonas([{ fichaId: 'a' }, { fichaId: null }], [{ relacionadoId: 'a' }, { relacionadoId: 'b' }]), 3)
+  assert.equal(contarPersonas(null, []), null)
+  assert.equal(contarPersonas([], null), null)
+})
