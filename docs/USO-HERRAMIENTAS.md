@@ -167,36 +167,36 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 182 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 187 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 177 | 21.787 | 15.029.739 | 0 | 0 |
-| `otro` | 171 | 5.465 | 17.691.451 | 8.187.555 | 0 |
-| `mcp:github` | 159 | 4.377 | 3.815.838 | 46.143.157 | 72 |
-| `lectura-directa` | 160 | 4.151 | 8.856.513 | 0 | 0 |
-| `escritura` | 128 | 2.583 | 41.304.205 | 0 | 0 |
-| `sql` | 112 | 2.273 | 1.060.558 | 2.351.230 | 8 |
-| `mcp:Claude_Code_Remote` | 99 | 1.063 | 238.239 | 3.193.171 | 12 |
-| `mcp:Booking-com` | 16 | 469 | 1.965.008 | 0 | 0 |
-| `mcp:Vercel` | 35 | 412 | 644.368 | 198.719 | 10 |
-| `mcp:Gmail` | 20 | 276 | 432.672 | 0 | 2 |
-| `mcp:Supabase` | 70 | 214 | 21.345 | 0 | 2 |
+| `bash` | 182 | 22.072 | 15.241.695 | 0 | 0 |
+| `otro` | 177 | 5.584 | 17.957.065 | 8.251.229 | 0 |
+| `mcp:github` | 165 | 4.448 | 3.873.123 | 46.805.112 | 74 |
+| `lectura-directa` | 164 | 4.208 | 8.903.749 | 0 | 0 |
+| `escritura` | 134 | 2.625 | 42.174.298 | 0 | 0 |
+| `sql` | 115 | 2.351 | 1.095.010 | 2.351.230 | 8 |
+| `mcp:Claude_Code_Remote` | 104 | 1.097 | 243.995 | 3.391.122 | 13 |
+| `mcp:Booking-com` | 17 | 493 | 2.070.224 | 0 | 0 |
+| `mcp:Vercel` | 38 | 423 | 648.544 | 198.719 | 10 |
+| `mcp:Gmail` | 22 | 291 | 449.524 | 0 | 2 |
+| `mcp:Supabase` | 72 | 218 | 21.548 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
-| `agente:general-purpose` | 31 | 98 | 71.062 | 1.133.042 | 0 |
+| `agente:general-purpose` | 32 | 99 | 71.099 | 1.133.042 | 0 |
+| `mcp:Google-Drive` | 11 | 77 | 76.216 | 0 | 2 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
-| `mcp:Google-Drive` | 10 | 71 | 68.760 | 0 | 2 |
 | `agente:agente-architect` | 21 | 64 | 52.244 | 1.639.814 | 0 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Google_Drive` | 9 | 53 | 61.337 | 0 | 14 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |
 | `agente:Explore` | 18 | 47 | 23.726 | 1.223.223 | 0 |
+| `mcp:Resend` | 5 | 47 | 14.139 | 0 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `mcp:OpenSEO` | 2 | 46 | 38.961 | 0 | 0 |
-| `mcp:Resend` | 4 | 41 | 11.662 | 0 | 0 |
 | `agente:agente-mecanico` | 13 | 33 | 33.925 | 774.297 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
-| `agente:rastreador-codigo` | 15 | 21 | 7.310 | 97.949 | 0 |
+| `agente:rastreador-codigo` | 15 | 22 | 7.550 | 297.156 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `mcp:Expedia` | 1 | 12 | 29.795 | 0 | 0 |
