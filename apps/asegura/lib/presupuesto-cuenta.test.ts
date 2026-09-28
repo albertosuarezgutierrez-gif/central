@@ -104,3 +104,12 @@ test('🪤 firmar sin cuenta válida corta ANTES de gastar un intento del códig
   const intento = fuente.indexOf('firma_otp_intentos = firma_otp_intentos + 1')
   assert.ok(corte > 0 && intento > 0 && corte < intento, 'el corte por cuenta tiene que ir antes de gastar el código')
 })
+
+test('🪤 al emitir, una cuenta NUEVA firmada en el portal va antes que la de la póliza vieja', async () => {
+  const { polizaParaCuenta } = await import('./presupuesto-cuenta.ts')
+  assert.equal(polizaParaCuenta('pol-vieja', 'nueva'), null)
+  assert.equal(polizaParaCuenta('pol-vieja', 'ficha'), 'pol-vieja')
+  assert.equal(polizaParaCuenta('pol-vieja', null), 'pol-vieja')
+  const emitir = readFileSync(fileURLToPath(new URL('../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url)), 'utf8')
+  assert.match(emitir, /cuentaDeFicha\(correduria\.id, polizaParaCuenta\(ctx\.polizaOrigenId, origenAceptado\)/)
+})

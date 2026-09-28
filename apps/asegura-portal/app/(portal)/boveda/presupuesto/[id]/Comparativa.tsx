@@ -1,6 +1,7 @@
 import { MEDIADOR, NO_EXCLUSIVIDAD } from '@central/module-seguros'
 
 import { eur } from '@/lib/dinero'
+import { LogoCompania } from './LogoCompania'
 import { NombrarCorredor } from './NombrarCorredor'
 import type { ActualCliente, OpcionCliente } from '@/lib/presupuesto'
 import {
@@ -55,6 +56,7 @@ export function Actual({ actual }: { actual: ActualCliente | null }) {
   return (
     <section className="seccion">
       <p className="antetitulo">Lo que tienes hoy</p>
+      <LogoCompania nombre={actual.compania} />
       <h2 style={{ margin: '2px 0 10px' }}>{actual.compania}</h2>
       <dl className="ficha-datos">
         {actual.bien !== null && (
@@ -107,6 +109,7 @@ export function Tarjeta({ o, caducado }: { o: OpcionCliente; caducado: boolean }
   return (
     <article className="presu-tarjeta" data-caducado={caducado ? 'si' : undefined}>
       {papel !== null && <p className="presu-papel">{papel}</p>}
+      <LogoCompania nombre={o.compania} />
       <h3 className="presu-compania">{o.compania}</h3>
       <p className="presu-producto">
         {o.producto}

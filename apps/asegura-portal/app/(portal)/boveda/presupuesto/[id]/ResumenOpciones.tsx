@@ -5,6 +5,7 @@ import { eur } from '@/lib/dinero'
 import { AVISO_IA, TEXTO_IA_NO_DISPONIBLE } from '@/lib/presupuesto-ia-textos'
 import { TEXTO_CELDA, montarTabla, type ColumnaTabla, type EstadoCelda } from '@/lib/tabla-coberturas'
 import { CompararIA } from './CompararIA'
+import { LogoCompania } from './LogoCompania'
 
 export type OpcionResumen = ColumnaTabla & { primaEur: number | null; franquiciaEur: number | null }
 
@@ -94,6 +95,7 @@ export function ResumenOpciones({ presupuestoId, opciones, corredor, telefono }:
                   <th scope="col" style={{ ...celdaCabecera, position: 'sticky', left: 0, zIndex: 1, textAlign: 'left' }}>Cobertura</th>
                   {opciones.map((o) => (
                     <th key={o.id} scope="col" style={celdaCabecera}>
+                      <span style={{ display: 'flex', justifyContent: 'center', marginBottom: 4 }}><LogoCompania nombre={o.compania} alto={22} /></span>
                       <span style={{ display: 'block', fontWeight: 600, overflowWrap: 'anywhere' }}>{o.compania}</span>
                       <span className="suave" style={{ display: 'block', fontSize: 12, fontWeight: 400 }}>{o.primaEur === null ? 'sin precio' : eur(o.primaEur)}</span>
                     </th>

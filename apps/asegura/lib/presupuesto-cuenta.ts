@@ -85,3 +85,13 @@ export const TEXTO_CONFIRMACION_CON_IPID =
 export function textoAutorizacion(conIpid: boolean): string {
   return conIpid ? TEXTO_CONFIRMACION_CON_IPID : TEXTO_CONFIRMACION_DATOS
 }
+
+/**
+ * 🚨 La póliza cuyas cuentas van primero al emitir. Si el cliente firmó una cuenta
+ * NUEVA en el portal, esa se guardó en `clientes.cuenta_bancaria` (3.º en el orden):
+ * con la póliza vieja delante, se domiciliaría en la cuenta que acaba de cambiar.
+ * Sin póliza, la ficha del cliente gana.
+ */
+export function polizaParaCuenta(polizaOrigenId: string | null, origenAceptado: 'nueva' | 'ficha' | null): string | null {
+  return origenAceptado === 'nueva' ? null : polizaOrigenId
+}

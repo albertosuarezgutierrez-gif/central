@@ -26,7 +26,8 @@ import {
   ibanEnmascarado,
   ibanValido,
 } from '@/lib/codeoscopic/emitir-iban'
-import { cuentaDeFicha, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { cuentaDeFicha, origenCuentaAceptada, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { polizaParaCuenta } from '@/lib/presupuesto-cuenta'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { documentoTomador, fraccionamientoDeOferta, matriculaProyecto } from '@/lib/codeoscopic/importar'
 import {
@@ -503,7 +504,9 @@ export const POST = auditado(async (req: Request) => {
       { status: 422 },
     )
   }
-  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, ctx.polizaOrigenId, ctx.clienteId) : SIN_CUENTA
+  // Si el cliente firmó en el portal una cuenta NUEVA, la de su ficha va primero (no la de la póliza vieja).
+  const origenAceptado = ibanHumano === null ? await origenCuentaAceptada(correduria.id, p.tarificacion_id) : null
+  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, polizaParaCuenta(ctx.polizaOrigenId, origenAceptado), ctx.clienteId) : SIN_CUENTA
   const decision = decidirCuentaEnvio({ ibanTecleado, ibanJson, ficha, cuentaConfirmada: cuerpo.cuentaConfirmada })
   if (decision.tipo === 'confirmar') {
     // La ficha tiene cuenta y nadie la ha confirmado: se pide ANTES de gastar
