@@ -58,3 +58,11 @@ test('el desplegable de compañías degrada a texto libre si el directorio no se
   assert.match(fuente, /companias === null \? \(/)
   assert.match(fuente, /Código DGS/)
 })
+
+test('MotoNuevo: los km al año van como corrección solo si se escriben (vacío = supuesto de la media)', () => {
+  const src = readFileSync(new URL('../apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx', import.meta.url), 'utf8')
+  assert.match(src, /const kmLeidos = kilometrosDesdeTexto\(kmAnuales\)/)
+  assert.match(src, /\.\.\.\(kmLeidos !== null \? \{ kmAnuales: kmLeidos \} : \{\}\),/)
+  // Un km mal escrito apaga el botón: no se paga un precio con un dato que no se ha entendido.
+  assert.match(src, /faltaHistorial \|\| kmInvalido/)
+})
