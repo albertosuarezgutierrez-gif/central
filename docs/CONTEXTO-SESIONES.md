@@ -814,6 +814,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) asegura-portal: la FIGURA del cliente en cada póliza
+- Alberto: «indicar en la app cliente la figura que tiene en la póliza». Chip en la fila de la bóveda («Tomador», «Tomador y conductor habitual», «Propietario») y frase en la ficha («En esta póliza figuras como…» / «…como propietario. El tomador es X.»).
+- `figuraEnPropias()` + `figuraChip()` en `apps/asegura-portal/lib/intervinientes.ts`; `PolizaPortal.figura` (solo propias e intervinientes; las autorizadas no la llevan: las ve por permiso).
+- Ejemplo real: Toyota Corolla de Víctor Manuel De la Fuente → él ve «Tomador y conductor habitual»; Nieves ve «Propietario» (+ «conductor ocasional» en la gemela `5727783313`). ⚠️ Esa póliza sale DOS veces en BD (`0005727783313` y `5727783313`, ambas activas): gemela sin fundir, no tocada aquí.
+
 ## (28/09/2026) Poner nombre a una ficha SIN NOMBRE sin exigir DNI
 - Alberto no podía nombrar un lead «(sin nombre)»: la única edición era «Editar identidad» (fondo de Contactos) y exigía DNI recibido. La BD guarda el marcador literal `'(sin nombre)'` (14 fichas).
 - `module-seguros`: `nombrePendiente()` + `revisarEdicion(e, { fichaSinNombre })` → en ficha sin nombre, nombre+apellidos sin documento; DNI/fecha y corregir un nombre existente siguen documentados. asegura decide la excepción con la BD (`cartera-edicion.ts`), no el cliente. Historial: «rellenada sin documento».

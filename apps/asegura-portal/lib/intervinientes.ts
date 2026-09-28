@@ -36,7 +36,7 @@ export type FiguraEnPoliza = {
 }
 
 /** Del papel que más dice al que menos: es el orden en que se nombran en la ficha. */
-const ORDEN_ROLES = ['propietario', 'asegurado', 'conductor_habitual', 'conductor_ocasional', 'beneficiario', 'contacto']
+const ORDEN_ROLES = ['tomador', 'propietario', 'asegurado', 'conductor_habitual', 'conductor_ocasional', 'beneficiario', 'contacto']
 
 function rangoNivel(n: Nivel): number {
   return (NIVELES as readonly string[]).indexOf(n)
@@ -122,6 +122,7 @@ export function camposDeInterviniente(nivel: Nivel): CamposVisibles {
 }
 
 const ROL_LEGIBLE: Record<string, string> = {
+  tomador: 'tomador',
   propietario: 'propietario',
   asegurado: 'asegurado',
   conductor_habitual: 'conductor habitual',
@@ -135,4 +136,32 @@ export function rolesLegibles(roles: readonly string[]): string {
   const t = ordenarRoles(roles).map((r) => ROL_LEGIBLE[r] ?? r.replace(/_/g, ' '))
   if (t.length <= 1) return t[0] ?? ''
   return `${t.slice(0, -1).join(', ')} y ${t[t.length - 1]}`
+}
+
+/**
+ * La FIGURA de la identidad en cada póliza PROPIA (28/09/2026). Alberto: «hay que
+ * indicar en la app la figura que tiene en la póliza». En una propia es siempre
+ * tomador, más los papeles con que figure además en `poliza_intervinientes`
+ * (Víctor: tomador y conductor habitual de su Toyota). Solo cuentan filas cuyo
+ * `clienteId` es una ficha propia: el papel de OTRA persona en su póliza no es suyo.
+ */
+export function figuraEnPropias(args: {
+  polizaIds: readonly string[]
+  filas: readonly FilaInterviniente[]
+  propiosIds: readonly string[]
+}): Map<string, string[]> {
+  const propios = new Set(args.propiosIds)
+  const out = new Map<string, string[]>(args.polizaIds.map((id) => [id, ['tomador']]))
+  for (const f of args.filas) {
+    if (f.clienteId === null || !propios.has(f.clienteId)) continue
+    out.get(f.polizaId)?.push(f.rol)
+  }
+  for (const [id, roles] of out) out.set(id, ordenarRoles(roles))
+  return out
+}
+
+/** «Tomador y conductor habitual»: para un chip, con mayúscula inicial. `''` si no hay papel. */
+export function figuraChip(roles: readonly string[]): string {
+  const t = rolesLegibles(roles)
+  return t.charAt(0).toUpperCase() + t.slice(1)
 }

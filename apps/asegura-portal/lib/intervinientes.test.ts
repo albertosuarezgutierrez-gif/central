@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { camposDeInterviniente, figurasEnPolizas, nivelMasAlto, rolesLegibles } from './intervinientes.ts'
+import { camposDeInterviniente, figuraChip, figuraEnPropias, figurasEnPolizas, nivelMasAlto, rolesLegibles } from './intervinientes.ts'
 
 const NIEVES = 'c-nieves'
 const VICTOR = 'c-victor'
@@ -97,4 +97,25 @@ test('rolesLegibles', () => {
   assert.equal(rolesLegibles(['propietario']), 'propietario')
   assert.equal(rolesLegibles(['conductor_ocasional', 'propietario']), 'propietario y conductor ocasional')
   assert.equal(rolesLegibles(['contacto', 'asegurado', 'propietario']), 'propietario, asegurado y persona de contacto')
+})
+
+test('figuraEnPropias: tomador siempre, más sus papeles; nunca los de otra persona', () => {
+  const f = figuraEnPropias({
+    polizaIds: ['toyota', 'hogar'],
+    propiosIds: [VICTOR],
+    filas: [
+      { polizaId: 'toyota', clienteId: NIEVES, rol: 'propietario' },
+      { polizaId: 'toyota', clienteId: VICTOR, rol: 'conductor_habitual' },
+      { polizaId: 'ajena', clienteId: VICTOR, rol: 'conductor_ocasional' },
+    ],
+  })
+  assert.deepEqual(f.get('toyota'), ['tomador', 'conductor_habitual'])
+  assert.deepEqual(f.get('hogar'), ['tomador'])
+  assert.equal(f.has('ajena'), false)
+})
+
+test('figuraChip', () => {
+  assert.equal(figuraChip(['conductor_habitual', 'tomador']), 'Tomador y conductor habitual')
+  assert.equal(figuraChip(['propietario']), 'Propietario')
+  assert.equal(figuraChip([]), '')
 })
