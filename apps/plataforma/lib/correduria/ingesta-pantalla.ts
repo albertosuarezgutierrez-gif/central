@@ -523,6 +523,23 @@ export function hayQueEnsenar(v: VistaIngesta | null): boolean {
 }
 
 /** El titular de la tarjeta. Nunca promete calma sobre algo que no se ha mirado. */
+/**
+ * ¿Las pérdidas medidas son SOLO de las que no tienen fichero atascado detrás
+ * (renovaciones que no llegan, emisiones sin aviso del webhook)? Entonces
+ * «se están perdiendo datos de CIMA» mandaría a buscar algo que no existe.
+ * La usan el título de la pantalla Y el titular del Telegram: con dos
+ * criterios, los dos dirían cosas distintas del mismo hecho.
+ */
+export function sinFicheroAtascado(
+  perdidas: Array<Pick<SenalIngesta, 'clave'>>,
+): 'renovaciones' | 'emisiones' | 'ambas' | null {
+  if (perdidas.length === 0) return null
+  const renov = perdidas.some(x => x.clave === 'renovaciones')
+  const emis = perdidas.some(x => x.clave === 'emisiones_sin_aviso')
+  if (!perdidas.every(x => x.clave === 'renovaciones' || x.clave === 'emisiones_sin_aviso')) return null
+  return renov && emis ? 'ambas' : renov ? 'renovaciones' : 'emisiones'
+}
+
 export function tituloIngesta(v: VistaIngesta | null): string {
   const ver = veredictoIngesta(v)
   if (ver === null) return 'Comprobando la ingesta de CIMA…'
@@ -534,14 +551,11 @@ export function tituloIngesta(v: VistaIngesta | null): string {
   if (ver === 'incidencia') {
     // Si lo ÚNICO medido son renovaciones que no llegan, se dice eso: «se están
     // perdiendo datos» mandaría a buscar un fichero atascado que no existe.
-    const perdidas = senalesIngesta(s).filter(x => x.tipo === 'perdida')
-    if (perdidas.length > 0 && perdidas.every(x => x.clave === 'renovaciones')) {
-      return 'Hay renovaciones que no han llegado por CIMA'
-    }
+    const sinAtasco = sinFicheroAtascado(senalesIngesta(s).filter(x => x.tipo === 'perdida'))
+    if (sinAtasco === 'renovaciones') return 'Hay renovaciones que no han llegado por CIMA'
     // Igual con el webhook de Codeoscopic: no es CIMA, y no hay fichero que buscar.
-    if (perdidas.length > 0 && perdidas.every(x => x.clave === 'emisiones_sin_aviso')) {
-      return 'El webhook de Codeoscopic no avisa de las emisiones'
-    }
+    if (sinAtasco === 'emisiones') return 'El webhook de Codeoscopic no avisa de las emisiones'
+    if (sinAtasco === 'ambas') return 'Hay renovaciones sin llegar y emisiones sin aviso de Codeoscopic'
     return 'Se están perdiendo datos de CIMA'
   }
   return 'La ingesta de CIMA solo se ha podido comprobar a medias'

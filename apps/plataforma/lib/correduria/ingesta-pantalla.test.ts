@@ -1,5 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import {
   interpretarVistaIngesta,
   veredictoIngesta,
@@ -9,6 +11,7 @@ import {
   senalesIngesta,
   hayPerdida,
   hayHuecos,
+  sinFicheroAtascado,
 } from './ingesta-pantalla.ts'
 import { saludIngesta, silencioPorEntidad } from '@central/module-seguros'
 
@@ -415,4 +418,21 @@ test('emisiones sin aviso: si son lo ÚNICO medido, el título no culpa a CIMA',
   })
   const v = { estado: 'ok' as const, salud: s, huerfanasTruncadas: false, huerfanasSinAmbito: null }
   assert.equal(tituloIngesta(v), 'El webhook de Codeoscopic no avisa de las emisiones')
+})
+
+test('sinFicheroAtascado: solo renovaciones, solo emisiones, las dos, o algo más', () => {
+  assert.equal(sinFicheroAtascado([]), null)
+  assert.equal(sinFicheroAtascado([{ clave: 'renovaciones' }]), 'renovaciones')
+  assert.equal(sinFicheroAtascado([{ clave: 'emisiones_sin_aviso' }]), 'emisiones')
+  assert.equal(sinFicheroAtascado([{ clave: 'renovaciones' }, { clave: 'emisiones_sin_aviso' }]), 'ambas')
+  // Con cualquier pérdida de CIMA de verdad, el titular vuelve a ser el de CIMA.
+  assert.equal(sinFicheroAtascado([{ clave: 'emisiones_sin_aviso' }, { clave: 'cuarentena' }]), null)
+})
+
+test('🚨 el titular del Telegram usa la MISMA función que el título de la pantalla', () => {
+  // Con dos criterios, pantalla y alarma dirían cosas distintas del mismo hecho.
+  const ruta = readFileSync(
+    join(import.meta.dirname, '..', '..', 'app', 'api', 'cron', 'correduria-ingesta', 'route.ts'), 'utf8')
+  assert.match(ruta, /sinFicheroAtascado\(perdidas\)/)
+  assert.match(ruta, /El webhook de Codeoscopic no avisa de las emisiones/)
 })
