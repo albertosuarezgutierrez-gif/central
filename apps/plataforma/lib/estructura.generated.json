@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-28T13:15:04Z",
+  "generadoEn": "2026-09-28T15:42:41Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 133
+        "evidencias": 134
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 99
+        "evidencias": 101
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 38
+        "evidencias": 39
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4031,6 +4031,7 @@
       "/api/operador/codeoscopic/tarificacion",
       "/api/operador/codeoscopic/vida-nuevo",
       "/api/operador/comisiones",
+      "/api/operador/comisiones-pactadas",
       "/api/operador/companias",
       "/api/operador/companias/contacto/[id]",
       "/api/operador/contactos-movil",
@@ -4994,6 +4995,7 @@
       "/api/correduria/codeoscopic-diagnostico",
       "/api/correduria/codigo-postal",
       "/api/correduria/comisiones",
+      "/api/correduria/comisiones-pactadas",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
       "/api/correduria/companias/contactado",
@@ -5513,6 +5515,7 @@
       "seguros.codeoscopic_product_forms",
       "seguros.codeoscopic_projects",
       "seguros.codeoscopic_webhook_events",
+      "seguros.comision_pactada",
       "seguros.compania_contactos",
       "seguros.companias_dgs",
       "seguros.consent_logs",
@@ -6578,7 +6581,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1499,
+    "apis": 1501,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
