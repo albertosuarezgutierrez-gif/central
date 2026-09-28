@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T10:11:46Z",
-  "sha": "006e4735755b7b231ff15549368f4f0edae374b3",
+  "generadoEn": "2026-09-28T10:44:47Z",
+  "sha": "cb6dea79bcd4a676c69d0532bdcbe1b078f10800",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -28222,7 +28222,7 @@
           "exportada": false,
           "params": "v: string | null | undefined",
           "retorno": "string | null",
-          "linea": 63
+          "linea": 64
         },
         {
           "nombre": "fichasVivas",
@@ -28230,7 +28230,7 @@
           "exportada": false,
           "params": "correduriaId: string, soloCliente?: string",
           "retorno": null,
-          "linea": 76,
+          "linea": 77,
           "resumen": "Fichas con alguna póliza de cartera viva y DNI conocido, CON lo que hace falta para compararlas (contactos y carnés B) en la MISMA consulta. 🚨 Todo va en bloque a propósito (25/09/2026): la primera v"
         },
         {
@@ -28239,7 +28239,7 @@
           "exportada": false,
           "params": "correduriaId: string, vivas: Viva[]",
           "retorno": "Promise<Map<string, FilaInterviniente[]>>",
-          "linea": 122,
+          "linea": 123,
           "resumen": "Los intervinientes de TODAS las pólizas vivas, en una sola consulta."
         },
         {
@@ -28248,7 +28248,7 @@
           "exportada": false,
           "params": "c: Viva, porPoliza: Map<string, FilaInterviniente[]>",
           "retorno": "DatosCimaInterno | null",
-          "linea": 139
+          "linea": 140
         },
         {
           "nombre": "fichaDe",
@@ -28256,7 +28256,7 @@
           "exportada": false,
           "params": "c: Viva",
           "retorno": "FichaParaCima",
-          "linea": 176,
+          "linea": 178,
           "resumen": "Lo que dice la ficha, con la MISMA regla que `listarContactos`: las tablas hijas mandan y, si están vacías, vale la columna espejo de `clientes`. Un valor cifrado que no se abre podría ser justo el de"
         },
         {
@@ -28265,7 +28265,7 @@
           "exportada": false,
           "params": "correduriaId: string",
           "retorno": "Promise<Set<string>>",
-          "linea": 192
+          "linea": 194
         },
         {
           "nombre": "avisarContactosCompartidos",
@@ -28273,7 +28273,7 @@
           "exportada": false,
           "params": "correduriaId: string, lista: Analisis[]",
           "retorno": "Promise<void>",
-          "linea": 209,
+          "linea": 211,
           "resumen": "Un teléfono o email que CIMA manda y que YA está en otra ficha no se copia solo: puede ser el matrimonio o el padre (legítimo) o un error de CIMA, y los dos son puerta de entrada al portal (el email h"
         },
         {
@@ -28282,7 +28282,7 @@
           "exportada": false,
           "params": "correduriaId: string, soloCliente?: string",
           "retorno": "Promise<",
-          "linea": 231
+          "linea": 233
         },
         {
           "nombre": "estadoSincroCima",
@@ -28290,7 +28290,7 @@
           "exportada": true,
           "params": "correduriaId: string",
           "retorno": "Promise<EstadoSincro>",
-          "linea": 252
+          "linea": 254
         },
         {
           "nombre": "aplicarCampo",
@@ -28298,7 +28298,7 @@
           "exportada": false,
           "params": "correduriaId: string, a: Analisis, d: DiferenciaCima, actor: string",
           "retorno": "Promise<ResultadoAplicar>",
-          "linea": 273,
+          "linea": 275,
           "resumen": "Escribe en la ficha el valor de CIMA de UN campo. No decide si debe: eso lo hace quien llama."
         },
         {
@@ -28307,7 +28307,7 @@
           "exportada": true,
           "params": "correduriaId: string, modo: 'rellenar' | 'volcar', actor: string,",
           "retorno": "Promise<",
-          "linea": 329,
+          "linea": 331,
           "resumen": "`rellenar` = lo automático (huecos, teléfonos y emails nuevos, nombres por formatear o con erratas) · `volcar` = eso + todo lo que difiere (CIMA manda, incluidas las decididas antes), SALVO lo que lle"
         },
         {
@@ -28316,7 +28316,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, campo: CampoCima, decision: 'usar_cima' | 'mantener', actor: string, /** El valor de CIMA que Alberto tenía en pantalla: se decide sobre ESE, no sobre el de ahora. */ valorVisto: string,",
           "retorno": "Promise<",
-          "linea": 354,
+          "linea": 356,
           "resumen": "La decisión de Alberto sobre UNA diferencia de UNA ficha."
         }
       ],
@@ -28324,7 +28324,7 @@
         "cima_decisiones"
       ],
       "rutaApi": null,
-      "hash": "01dfc3004659"
+      "hash": "c138767e248e"
     },
     {
       "ruta": "apps/asegura/lib/siniestro-detalle-cima.ts",
@@ -29349,7 +29349,7 @@
         "next"
       ],
       "rutaApi": null,
-      "hash": "aca4b70540c9"
+      "hash": "442c0fc3ff01"
     },
     {
       "ruta": "apps/housesevillana/app/sitemap.xml/route.ts",
@@ -155836,6 +155836,7 @@
         "mismoNombre",
         "fechaCima",
         "claveTelefono",
+        "esPolizaDeCoche",
         "compararConCima",
         "huellaDecisionCima",
         "esCampoCima"
@@ -155958,13 +155959,21 @@
           "linea": 225
         },
         {
+          "nombre": "esPolizaDeCoche",
+          "kind": "function",
+          "exportada": true,
+          "params": "tipo: string | null | undefined, datosEspecificos: unknown",
+          "retorno": "boolean",
+          "linea": 245,
+          "resumen": "¿La fecha de carné de esta póliza es la del carné B? Solo si es un COCHE. El `tipo` de la póliza NO basta: CIMA manda las motos en el ramo de autos (DGS 241) y 11 pólizas vivas con moto estaban como `"
+        },
+        {
           "nombre": "compararConCima",
           "kind": "function",
           "exportada": true,
           "params": "ficha: FichaParaCima, cima: DatosCima",
           "retorno": "DiferenciaCima[]",
-          "linea": 234,
-          "resumen": "Las diferencias entre la ficha y CIMA. Orden estable (el de `CAMPOS_CIMA`). Para teléfono/email se compara el PRIMERO que manda CIMA contra TODOS los de la ficha: si ya lo tiene en cualquier posición,"
+          "linea": 260
         },
         {
           "nombre": "huellaDecisionCima",
@@ -155972,7 +155981,7 @@
           "exportada": true,
           "params": "campo: CampoCima, valorCima: string",
           "retorno": "string",
-          "linea": 289,
+          "linea": 315,
           "resumen": "Huella de UNA decisión «mantener el mío»: campo + valor de CIMA normalizado. Si CIMA manda después OTRO valor distinto, la huella cambia y se vuelve a avisar — lo decidido fue sobre ese valor, no sobr"
         },
         {
@@ -155981,12 +155990,12 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "v is CampoCima",
-          "linea": 298
+          "linea": 324
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2a465ffbdfa2"
+      "hash": "a540c9c2c168"
     },
     {
       "ruta": "packages/module-seguros/src/siniestro-intervinientes.ts",
@@ -162142,6 +162151,6 @@
   ],
   "resumen": {
     "archivos": 3836,
-    "funciones": 12460
+    "funciones": 12461
   }
 }
