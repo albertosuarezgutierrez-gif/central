@@ -1,4 +1,6 @@
+import { Building2, Waves } from 'lucide-react'
 import { rotuloAnulacionCima, type DatosCompaniaCima } from '@central/module-seguros'
+import { ConIcono } from '@/app/(usuario)/correduria/iconos'
 
 /**
  * Lo que la compañía dice de esta póliza por CIMA y no es el objeto asegurado

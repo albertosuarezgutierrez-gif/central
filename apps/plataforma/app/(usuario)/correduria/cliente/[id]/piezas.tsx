@@ -400,9 +400,9 @@ function motivoNoRetarificable(p: PolizaFicha): string {
 export function PolizasDeclaradas({ declaradas }: { declaradas: PolizaDeclaradaFicha[] | null }) {
   if (declaradas === null) {
     return (
-      <Tarjeta titulo="📥 Aportadas desde el portal">
+      <Tarjeta titulo="Aportadas desde el portal">
         <p style={{ color: 'var(--muted)', fontSize: 12, margin: 0 }}>
-          ⚠️ No se han podido leer. No significa que no haya aportado ninguna.
+          No se han podido leer. No significa que no haya aportado ninguna.
         </p>
       </Tarjeta>
     )
