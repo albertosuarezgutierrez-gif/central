@@ -68,7 +68,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   // La clasificación es PURA y vive en `@central/module-seguros` con test: qué
   // cuenta como viva decide el titular de la cabecera, el contador de la
   // pestaña y qué tabla la pinta, y las tres tienen que decir lo mismo.
-  const porClase: Record<ClasePolizaFicha, PolizaFicha[]> = { viva: [], pendiente_cima: [], cancelada: [], historica: [] }
+  const porClase: Record<ClasePolizaFicha, PolizaFicha[]> = { viva: [], pendiente_cima: [], cancelada: [], sustituida: [], historica: [] }
   for (const p of ficha.polizas) porClase[clasificarPolizaFicha(p)].push(p)
 
   const oportunidades: OportunidadDeCliente[] | null = ops.estado === 'ok' ? ops.oportunidades : null

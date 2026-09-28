@@ -34,12 +34,19 @@ import type { RecibosPoliza } from './recibos.ts'
  * ha traído es `pendiente_cima` —no viva, y no genera avisos—, que es cosa
  * distinta de estar cancelada (docs/CORREDURIA-CRM-VISION.md §5).
  */
-export type ClasePolizaFicha = 'viva' | 'pendiente_cima' | 'cancelada' | 'historica'
+export type ClasePolizaFicha = 'viva' | 'pendiente_cima' | 'cancelada' | 'sustituida' | 'historica'
 
 export type PolizaResumible = {
   id: string
   viva: boolean
   confirmadaCima: boolean
+  /**
+   * Otra póliza la sustituye (cambio de compañía ya emitido). Sigue cubriendo
+   * hasta su vencimiento, pero NO se renueva: contarla como viva duplicaba el
+   * seguro y avisaba de un vencimiento que ya no hay que gestionar (la moto de
+   * Allianz pasada a Occident, 28/09/2026). Ausente = `false`.
+   */
+  sustituida?: boolean
   estado: string
   /** ISO `YYYY-MM-DD`. `null` = la póliza no tiene fecha registrada (1.194 así en la cartera). */
   fechaVencimiento: string | null
@@ -56,6 +63,7 @@ export function clasificarPolizaFicha(p: PolizaResumible): ClasePolizaFicha {
   if (!p.confirmadaCima) return 'pendiente_cima'
   // `.trim()`: un espacio de más en el enum no puede esconder una cancelada.
   if ((p.estado ?? '').trim() === 'cancelada') return 'cancelada'
+  if (p.sustituida === true) return 'sustituida'
   return 'viva'
 }
 
@@ -86,6 +94,8 @@ export type ResumenFicha = {
     vivas: number
     pendientesCima: number
     canceladas: number
+    /** En vigor hasta su vencimiento, pero ya sustituidas por otra: no son «vivas». */
+    sustituidas: number
     historicas: number
     total: number
   }
@@ -159,6 +169,7 @@ export function resumenFicha(entrada: {
   let vivas = 0
   let pendientesCima = 0
   let canceladas = 0
+  let sustituidas = 0
   let historicas = 0
   let vivasSinFechaVencimiento = 0
 
@@ -170,6 +181,7 @@ export function resumenFicha(entrada: {
     switch (clasificarPolizaFicha(p)) {
       case 'pendiente_cima': pendientesCima++; continue
       case 'cancelada': canceladas++; continue
+      case 'sustituida': sustituidas++; continue
       case 'historica': historicas++; continue
       case 'viva': vivas++; break
     }
@@ -198,7 +210,7 @@ export function resumenFicha(entrada: {
   const hayInforme = conRecibos.some(p => (p.recibos?.total ?? 0) > 0)
 
   return {
-    conteo: { vivas, pendientesCima, canceladas, historicas, total: polizas.length },
+    conteo: { vivas, pendientesCima, canceladas, sustituidas, historicas, total: polizas.length },
     recibos: {
       devueltos: hayInforme ? conRecibos.reduce((s, p) => s + (p.recibos?.devueltos ?? 0), 0) : null,
       pendientes: hayInforme ? conRecibos.reduce((s, p) => s + (p.recibos?.pendientes ?? 0), 0) : null,

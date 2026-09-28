@@ -33,6 +33,11 @@ export type SeguroCliente =
       oportunidad: OportunidadDeCliente | null
       /** Viene del volcado histórico: su fecha es de hace años, solo vale el día y el mes. */
       historica?: true
+      /**
+       * La póliza a la que ESTA sustituye (cambio de compañía ya emitido). Va dentro de
+       * la tarjeta de la nueva: dos tarjetas del mismo bien se leían como dos seguros.
+       */
+      sustituye?: PolizaFicha
     }
   | { clase: 'oportunidad'; id: string; oportunidad: OportunidadDeCliente }
   | { clase: 'declarada'; id: string; declarada: PolizaDeclaradaFicha }
@@ -129,10 +134,13 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
   const historicas: PolizaFicha[] = []
   // Viva perdida a la competencia que el corredor QUITÓ de Oportunidades (se puede recuperar).
   const vivasDescartadas: PolizaFicha[] = []
+  // Viva ya sustituida por otra (cambio de compañía emitido): se pinta DENTRO de la nueva.
+  const sustituidas: PolizaFicha[] = []
 
   for (const p of polizas) {
     if (!p.viva) { historicas.push(p); continue }
     const estado = p.estado.trim()
+    if (p.sustituida && !PERDIDA_A_COMPETENCIA.has(estado) && estado !== 'fin_riesgo') { sustituidas.push(p); continue }
     const s = { clase: 'poliza' as const, id: p.id, poliza: p, oportunidad: null }
     if (estado === 'fin_riesgo') yaNoExiste.push(s)
     else if (PERDIDA_A_COMPETENCIA.has(estado)) {
@@ -144,6 +152,13 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
     // lo contrario — que es como ya la cuenta la cabecera de la ficha.
     else conNosotros.push(s)
   }
+  for (const v of sustituidas) {
+    const nueva = conNosotros.find(s => s.clase === 'poliza' && s.poliza.sustituyeA === v.id && !s.sustituye)
+    // Sin la nueva a la vista (otra ficha, o ya no viva) la vieja se queda con nosotros:
+    // cubre hasta su vencimiento, y su tarjeta dice que está sustituida.
+    if (nueva && nueva.clase === 'poliza') nueva.sustituye = v
+    else conNosotros.push({ clase: 'poliza', id: v.id, poliza: v, oportunidad: null })
+  }
 
   // Del volcado histórico, la más reciente de cada ramo del que no sepamos nada más
   // nuevo: ni póliza viva (con nosotros, perdida o en `fin_riesgo`), ni una aportada
@@ -153,6 +168,7 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
   const ramosVivos = new Set<string>([
     ...conNosotros.flatMap(s => (s.clase === 'poliza' ? [s.poliza.tipo] : [])),
     ...enCompetencia.map(s => s.poliza.tipo),
+    ...sustituidas.map(p => p.tipo),
     ...yaNoExiste.flatMap(s => (s.clase === 'poliza' ? [s.poliza.tipo] : [])),
     ...(declaradas ?? []).flatMap(d => (d.ramo ? [d.ramo] : [])),
     ...(oportunidades ?? [])

@@ -230,6 +230,15 @@ export type PolizaFicha = {
    * no cuenta como cliente ni genera avisos (visión del CRM §5).
    */
   confirmadaCima: boolean
+  /**
+   * Otra póliza la sustituye (cambio de compañía emitido: `sustituida_at`, o alguna
+   * póliza la apunta con `poliza_origen_id`). Sigue cubriendo hasta su vencimiento,
+   * pero NO se renueva: la ficha no la cuenta como viva ni avisa de su vencimiento
+   * (la moto de Allianz que ya era de Occident avisaba «vence el 01/11», 28/09/2026).
+   */
+  sustituida: boolean
+  /** La póliza a la que ESTA sustituye (`poliza_origen_id`), o `null`. */
+  sustituyeA: string | null
   /** Quitada de «Oportunidades» por el corredor (solo volcado histórico); `null` = sigue siendo lead. */
   leadDescartado: { fecha: string; motivo: string | null } | null
   /** Solo las de auto con matrícula se pueden retarificar hoy. */
@@ -649,6 +658,8 @@ export async function fichaCliente(
           idPolizaEntidad: true,
           leadDescartadoAt: true,
           leadDescartadoMotivo: true,
+          sustituidaAt: true,
+          polizaOrigenId: true,
         },
         orderBy: { fechaVencimiento: 'desc' },
       },
@@ -842,6 +853,8 @@ export async function fichaCliente(
         matricula,
         viva: esCarteraViva(p),
         confirmadaCima: esCarteraViva(p) && p.idPolizaEntidad !== null,
+        sustituida: p.sustituidaAt !== null || c.polizas.some((q) => q.polizaOrigenId === p.id),
+        sustituyeA: p.polizaOrigenId ?? null,
         // Quitada de «Oportunidades» a mano (solo volcado histórico). `null` = sigue siendo lead.
         leadDescartado: p.leadDescartadoAt ? { fecha: p.leadDescartadoAt.toISOString(), motivo: p.leadDescartadoMotivo } : null,
         retarificable: retarificacion.retarificable,

@@ -1,0 +1,109 @@
+{
+ "sesion": "6ba79954-09f1-5a19-82dc-fca853de174f",
+ "inicio": "2026-09-28T04:30:54.341Z",
+ "fin": "2026-09-28T05:10:59.043Z",
+ "llamadas": 128,
+ "categorias": {
+  "otro": {
+   "llamadas": 13,
+   "chars_in": 912,
+   "chars_out": 153166,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 5,
+    "SubagentHandback": 1,
+    "ReadNotifications": 6
+   }
+  },
+  "bash": {
+   "llamadas": 74,
+   "chars_in": 38878,
+   "chars_out": 209801,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 74
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 12,
+   "chars_in": 5066,
+   "chars_out": 7856,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__subscribe_pr_activity": 2,
+    "mcp__github__add_issue_comment": 1,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__pull_request_read": 2,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__unsubscribe_pr_activity": 1
+   }
+  },
+  "sql": {
+   "llamadas": 9,
+   "chars_in": 9418,
+   "chars_out": 26794,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 9
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 886,
+   "chars_out": 1106,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 14,
+   "chars_in": 1575,
+   "chars_out": 78148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 5,
+    "Read": 9
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 4,
+   "chars_in": 632,
+   "chars_out": 4380,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__send_later": 2,
+    "mcp__Claude_Code_Remote__add_repo": 1,
+    "mcp__Claude_Code_Remote__register_repo_root": 1
+   }
+  }
+ }
+}

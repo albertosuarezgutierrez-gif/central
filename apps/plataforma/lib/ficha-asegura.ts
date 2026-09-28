@@ -92,6 +92,14 @@ export type PolizaFicha = {
    * lo que le mandan (y si no manda el campo, cae a `viva`).
    */
   confirmadaCima: boolean
+  /**
+   * Otra póliza la sustituye (cambio de compañía ya emitido). Cubre hasta su
+   * vencimiento pero no se renueva: ni cuenta como viva ni avisa de vencimiento.
+   * Sin el campo (asegura viejo) vale `false`, que es lo de antes.
+   */
+  sustituida: boolean
+  /** La póliza a la que ESTA sustituye, o `null`. */
+  sustituyeA: string | null
   retarificable: boolean
   /** Por qué ramo se retarifica (auto/hogar), por qué NO, y de dónde salen los
    *  datos del riesgo. `null` = la versión desplegada de asegura aún no lo manda:
@@ -755,6 +763,8 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       leadDescartado: leerLeadDescartado(p.leadDescartado),
       // Sin el campo (asegura viejo) vale `viva`: es lo que se pintaba antes.
       confirmadaCima: typeof p.confirmadaCima === 'boolean' ? p.confirmadaCima : p.viva === true,
+      sustituida: p.sustituida === true,
+      sustituyeA: cadena(p.sustituyeA),
       retarificable: p.retarificable === true,
       retarificacion: leerRetarificacion(p.retarificacion),
       recibos: leerRecibos(p.recibos),

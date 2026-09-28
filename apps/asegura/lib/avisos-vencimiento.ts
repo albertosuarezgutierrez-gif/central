@@ -352,6 +352,8 @@ export async function ejecutarAvisosVencimiento(opts: {
           ...WHERE_CARTERA_VIVA,
           mergedIntoPolizaId: null,
           estado: { in: [...POLIZA_ESTADOS_VIGENTES] },
+          // Sustituida por otra (cambio de compañía emitido): no se renueva, no se le avisa.
+          sustituidaAt: null,
           // 🚨 Y la ficha del TOMADOR tiene que seguir viva. `activo = false` son
           // las ~26.800 fichas descartadas del volcado (leads sin ningún dato de
           // contacto): escribirle a una es mandar un correo de vencimiento a

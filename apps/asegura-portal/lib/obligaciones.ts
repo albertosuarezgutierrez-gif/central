@@ -19,7 +19,7 @@ import {
   type Procedencia,
 } from '@central/module-seguros-portal'
 
-import { carteraDeIdentidad, type CarteraPortal } from './cartera-lectura'
+import { carteraALaVista, carteraDeIdentidad, type CarteraPortal } from './cartera-lectura'
 import { prisma } from './db'
 import { avanzarRecordatoriosRecurrentesDeIdentidad } from './recordatorios'
 import { getIdentidad } from './session'
@@ -74,7 +74,9 @@ export async function sincronizarObligacionesDeIdentidad(
   //    de si la identidad está vinculada o no, al revés que lo de abajo.
   await avanzarRecordatoriosRecurrentesDeIdentidad(identidadId)
 
-  const c = cartera ?? (await carteraDeIdentidad(identidadId))
+  // Siempre sin las sustituidas: su vencimiento no se gestiona (cambio de compañía ya emitido).
+  // La bóveda ya pasa la cartera filtrada; sin ella se filtra aquí, o la vieja volvería al calendario.
+  const c = carteraALaVista(cartera ?? (await carteraDeIdentidad(identidadId)))
 
   // 2) Las de la CARTERA. Sin vínculo NO se toca nada de esto: no es «esta
   // identidad no tiene vencimientos», es «no sabemos qué ficha de la cartera
