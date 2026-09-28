@@ -12,7 +12,7 @@ import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
 import { tgAvisoBotones } from '@/lib/telegram'
 import { reponerVentanaPin } from '@/lib/domotica/reponer-ventana'
 import { PREFIJO_CALLBACK_DOMOTICA, ACCION_VENTANA, textoResultadoReponer } from '@/lib/domotica/reponer-ventana-puro'
-import { confirmarEnviado, confirmarDescartado, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
+import { confirmarEnviado, confirmarDescartado, confirmarRespondidoFuera, reproponerBorrador } from '@/lib/sivra/agente-huesped/telegram-msg'
 import { aprenderCorreccion, marcarEnviadoLog } from '@/lib/sivra/agente-huesped/aprender'
 import { resolverHecho } from '@/lib/sivra/agente-huesped/hechos'
 import { aplicarRetoque } from '@/lib/sivra/agente-huesped/retoque'
@@ -990,6 +990,13 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       await confirmarDescartado(pend.tg_message_id)
       await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
       return NextResponse.json({ ok: true, skipped: true })
+    }
+    if (action === 'done') {
+      // Alberto ya contestó fuera del agente: se olvida el pendiente (sin recordatorio ni acuse).
+      await tgAnswerCallback(cb.id, 'Cerrado — ya respondido')
+      await confirmarRespondidoFuera(pend.tg_message_id)
+      await prisma.$executeRaw(Prisma.sql`DELETE FROM mensajes_pendientes_tg WHERE booking_id = ${bookingId}`).catch(() => {})
+      return NextResponse.json({ ok: true, respondidoFuera: true })
     }
     if (action === 'edit') {
       await tgAnswerCallback(cb.id, 'Escribe tu idea')
