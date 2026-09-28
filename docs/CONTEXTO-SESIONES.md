@@ -842,6 +842,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Asistente Telegram: pedir precio de coche/moto por audio (fase 1)
+- `vehiculo_catalogo` (gratis) + `proponer_tarificacion` → pregunta lo que falta y manda el resumen de lo declarado con
+  botón `cas_tarif` «Pedir precio (0,50€)» (un uso, 15 min, `from.id`, tope 10/día, interruptor de emitir). Al pulsar,
+  `cotizar{Auto,Moto}NuevaAsegura` UNA vez → top 3 con franquicia/firmeza + comparación con lo que paga + venta cruzada solo
+  para Alberto. Tabla `correduria_asistente_tarificacion` APLICADA. «presupuesto de la moto…» ya no va al contable.
+- Pendiente fases 2-3 (propuesta al cliente con IPID y datos declarados, envío con botón, seguimiento a 5 días,
+  aceptación→emitir) **tras mergear #3868** (portal «Revisa tus datos», otra sesión). Solo clientes sin póliza del ramo.
+
 ## (28/09/2026) Correduría: el CP rellena solo la ciudad (y la provincia)
 - Tabla CP→municipio incrustada (`apps/plataforma/lib/municipios-por-cp.json`, 11.254 CP, INE+CNIG; solo servidor)
   vía `GET /api/correduria/codigo-postal`. Campo `CiudadPorCp.tsx` en alta de cliente, edición de dirección y
