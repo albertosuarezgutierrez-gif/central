@@ -1,5 +1,6 @@
 import Link from 'next/link'
-import { Cake, CarFront, Heart, IdCard, Lock, Mail, MapPin, Phone, type LucideIcon } from 'lucide-react'
+import { Cake, CarFront, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
+import { Ico, FILA } from '../../iconos'
 import { contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { estadoCaducidadCarnet, urlRetarificar, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
@@ -559,14 +560,4 @@ function Carnets({ carnets, dePolizas }: { carnets: CarnetFicha[] | null; dePoli
       })}
     </span>
   )
-}
-
-// ── Icono de dato ───────────────────────────────────────────────────────────
-// Los datos de la cabecera llevan el mismo icono lucide fino que la pestaña
-// Contactos y los botones de llamar/escribir (28/09/2026: con emojis, esta zona
-// se veía de otra aplicación).
-const FILA = { display: 'inline-flex', alignItems: 'center', gap: 5 } as const
-
-function Ico({ i: I }: { i: LucideIcon }) {
-  return <I size={14} strokeWidth={1.75} aria-hidden style={{ flex: '0 0 auto' }} />
 }
