@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T19:07:12Z",
-  "sha": "43cb4fba79e57e9bd59bcbb2b7265afbf0fa5c60",
+  "generadoEn": "2026-09-28T19:33:59Z",
+  "sha": "c10305395dca1d9603aef1dc84b9677f87b5a744",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -22209,8 +22209,8 @@
           "exportada": true,
           "params": "quote: unknown",
           "retorno": "OpcionLegible[] | null",
-          "linea": 24,
-          "resumen": "`formattedOptions` de la cotización. `null` = el vendor no las manda (no «sin opciones»)."
+          "linea": 28,
+          "resumen": "`formattedOptions` de la cotización. `null` = el vendor no las manda (no «sin opciones»). 🚨 El spec las pone en `product.formattedOptions` (referencia 2026-09, fila 7): leer solo `quote.formattedOpti"
         },
         {
           "nombre": "leerCoberturas",
@@ -22218,7 +22218,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "Cobertura[]",
-          "linea": 38,
+          "linea": 47,
           "resumen": "Respuesta de `/coverages` (array suelto o `{ items|coverages: [...] }`)."
         },
         {
@@ -22227,12 +22227,12 @@
           "exportada": true,
           "params": "opciones: OpcionLegible[] | null, leidasAt: string",
           "retorno": "SobreOpciones",
-          "linea": 70
+          "linea": 79
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5f03dbe15d07"
+      "hash": "0d4de56c01c3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/config.ts",
@@ -29284,7 +29284,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { tarificacionId?: string | null polizaId?: string | null claveNivelActual?: string | null /** Lo que el corredor quita antes de preparar (compañías enteras o precios sueltos). */ ocultar?: Ocultar actor: stri",
           "retorno": "Promise<ResultadoPreparar>",
-          "linea": 129,
+          "linea": 130,
           "resumen": "Prepara un presupuesto en BORRADOR desde una tarificación ya pagada. `claveNivelActual` es el nivel de cobertura de la póliza que el cliente tiene hoy, si quien llama lo sabe. **No se adivina aquí**: "
         },
         {
@@ -29293,7 +29293,7 @@
           "exportada": false,
           "params": "cab: Cabecera, opciones: OpcionPreparada[], presupuestoMs: number",
           "retorno": "Promise<SobreCoberturas[] | null>",
-          "linea": 421,
+          "linea": 441,
           "resumen": "Las coberturas de las opciones congeladas, leídas de Codeoscopic. `null` = no se intenta: tarificación simulada (su proyecto no existe en el vendor), sin `project_id`, modo simulación o sin credencial"
         },
         {
@@ -29302,7 +29302,7 @@
           "exportada": false,
           "params": "correduriaId: string, e: { tarificacionId?: string | null; polizaId?: string | null }",
           "retorno": "Promise<Cabecera | null>",
-          "linea": 457,
+          "linea": 477,
           "resumen": "La tarificación de la que sale el presupuesto: la pedida por id, o la ÚLTIMA de esa póliza. 🚨 Se admite una SIMULADA a propósito, y no es un descuido: sirve para recorrer la pantalla sin gastar 0,50€"
         },
         {
@@ -29311,7 +29311,7 @@
           "exportada": false,
           "params": "correduriaId: string, polizaId: string | null, claveNivelActual: string | null,",
           "retorno": "Promise<LecturaActual>",
-          "linea": 523,
+          "linea": 543,
           "resumen": "Qué se sabe de la cobertura que el cliente tiene HOY. Hoy solo se distingue «la compañía no manda el desglose» de «lo manda y no sabemos clasificarlo»: traducir las coberturas EIAC a un nivel es la ta"
         },
         {
@@ -29320,7 +29320,7 @@
           "exportada": true,
           "params": "peticion: unknown",
           "retorno": "Date | null",
-          "linea": 540
+          "linea": 560
         },
         {
           "nombre": "numero",
@@ -29328,7 +29328,7 @@
           "exportada": false,
           "params": "v: string | number | null | { toString(): string }",
           "retorno": "number | null",
-          "linea": 549,
+          "linea": 569,
           "resumen": "Prisma devuelve `numeric` como string. Se convierte en UN solo sitio."
         },
         {
@@ -29337,7 +29337,7 @@
           "exportada": true,
           "params": "correduriaId: string, filtro: { clienteId?: string | null; polizaId?: string | null }, hoy: Date = new Date(),",
           "retorno": "Promise<PresupuestoEnLista[] | null>",
-          "linea": 589,
+          "linea": 609,
           "resumen": "Los presupuestos de un cliente o de una póliza. `null` = **no se ha podido leer**, nunca `[]`. Un fallo de consulta pintado como lista vacía diría «no le has preparado ninguno» sobre una cartera que s"
         },
         {
@@ -29346,7 +29346,7 @@
           "exportada": false,
           "params": "opciones: { primaEur: unknown }[]",
           "retorno": "number | null",
-          "linea": 632,
+          "linea": 652,
           "resumen": "La prima más baja de las congeladas. `null` si no hay ninguna legible."
         },
         {
@@ -29355,7 +29355,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 646,
+          "linea": 666,
           "resumen": "Las respuestas del cuestionario IDD, solo para la auditoría del evento: claves y valores cortos de texto (son ids de opción, nunca texto libre del cliente). Lo que no cuadra no se guarda."
         },
         {
@@ -29364,7 +29364,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; texto: unknown; actor: string; respuestas?: unknown },",
           "retorno": "Promise<ResultadoNecesidades>",
-          "linea": 663,
+          "linea": 683,
           "resumen": "Anota (o corrige) las exigencias y necesidades del cliente. Solo mientras no esté aceptado ni retirado: lo que el cliente firmó cita el texto de ese momento y no se reescribe después."
         },
         {
@@ -29373,7 +29373,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; motivo: string; actor: string },",
           "retorno": "Promise<ResultadoRetirar>",
-          "linea": 696,
+          "linea": 716,
           "resumen": "Retira un presupuesto. **Exige motivo**, igual que la BD (`retirado_con_motivo`): una fila retirada sin decir por qué no explica nada el día que el cliente pregunte por qué su enlace ya no abre. No bo"
         },
         {
@@ -29382,17 +29382,19 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; opcionId: string; ocultar: boolean; actor: string },",
           "retorno": "Promise<ResultadoOcultarOpcion>",
-          "linea": 747,
+          "linea": 767,
           "resumen": "Oculta (o vuelve a mostrar) UNA opción de un presupuesto en borrador. Solo antes de avisar al cliente: después, lo que vio es lo que vio, y quitárselo por debajo cambiaría lo que puede firmar. Una rec"
         }
       ],
       "tablas": [
         "anulacion",
+        "presupuesto",
+        "presupuesto_evento",
         "tarificacion_precios",
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "e82a76a4fb53"
+      "hash": "f55b8c3aa5eb"
     },
     {
       "ruta": "apps/asegura/lib/puente-portal.ts",
@@ -106023,7 +106025,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a749d4d047a5"
+      "hash": "e12d25cc4dfb"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-correccion-tg.ts",
