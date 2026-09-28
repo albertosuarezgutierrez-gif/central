@@ -35,7 +35,7 @@ function fuentes(dir: string): string[] {
 /** Cada consulta de lectura sobre la tabla: Prisma (`presupuestoOpcion.findX/count`) o SQL (`from|join`). */
 export function lecturasSinFiltro(nombre: string, src: string): string[] {
   const fallos: string[] = []
-  const prisma = /presupuestoOpcion\.(findMany|findFirst|findUnique|count|aggregate|groupBy)\s*\(/g
+  const prisma = /presupuestoOpcion\.(findMany|findFirst|findFirstOrThrow|findUnique|findUniqueOrThrow|count|aggregate|groupBy)\s*\(/g
   for (const m of src.matchAll(prisma)) {
     const ventana = src.slice(m.index!, m.index! + 400)
     if (!/ocultaAt/.test(ventana) && !ventana.includes(EXENTA)) fallos.push(`${nombre}: ${m[0]}`)
@@ -75,6 +75,7 @@ test('el detector caza una lectura sin filtro, Prisma y SQL', () => {
   assert.equal(lecturasSinFiltro('x', 'select id from presupuesto_opcion where presupuesto_id = $1').length, 1)
   assert.equal(lecturasSinFiltro('x', 'db.presupuestoOpcion.findMany({ where: { presupuestoId, ocultaAt: null } })').length, 0)
   assert.equal(lecturasSinFiltro('x', 'join presupuesto_opcion o on o.id = p.opcion_elegida_id').length, 0)
+  assert.equal(lecturasSinFiltro('x', 'db.presupuestoOpcion.findFirstOrThrow({ where: { id } })').length, 1)
   // Dos subconsultas seguidas: el filtro de la segunda no puede tapar a la primera.
   assert.equal(lecturasSinFiltro('x',
     '(select count(*) from presupuesto_opcion x where x.p = p.id) as "n",\n' +
@@ -83,6 +84,7 @@ test('el detector caza una lectura sin filtro, Prisma y SQL', () => {
 
 test('leerOcultar: ausente = nada; mal formado = null (no se ignora en silencio)', () => {
   assert.deepEqual(leerOcultar(undefined), OCULTAR_VACIO)
+  assert.ok(Object.isFrozen(OCULTAR_VACIO.companias), 'el vacío compartido no se puede mutar')
   assert.deepEqual(leerOcultar({ companias: [' Allianz '] }), { companias: ['Allianz'], precios: [] })
   assert.equal(leerOcultar({ precios: ['no-es-un-uuid'] }), null)
   assert.equal(leerOcultar({ companias: 'Allianz' }), null)

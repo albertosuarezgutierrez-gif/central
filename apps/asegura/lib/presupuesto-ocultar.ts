@@ -11,7 +11,11 @@ const MAX_ENTRADAS = 200
 
 export type Ocultar = { companias: string[]; precios: string[] }
 
-export const OCULTAR_VACIO: Ocultar = { companias: [], precios: [] }
+/** Congelado: es compartido, y un `push` sobre él ocultaría cosas en todos los presupuestos siguientes. */
+export const OCULTAR_VACIO: Readonly<Ocultar> = Object.freeze({
+  companias: Object.freeze([]) as unknown as string[],
+  precios: Object.freeze([]) as unknown as string[],
+})
 
 /** La compañía comparada sin mayúsculas ni espacios de más: «Allianz » y «allianz» son la misma. */
 export function claveCompania(c: string | null | undefined): string {
@@ -23,7 +27,7 @@ export function claveCompania(c: string | null | undefined): string {
  * roto que se ignorara en silencio enseñaría al cliente justo lo que el corredor quiso quitar).
  */
 export function leerOcultar(v: unknown): Ocultar | null {
-  if (v === undefined || v === null) return OCULTAR_VACIO
+  if (v === undefined || v === null) return { companias: [], precios: [] }
   if (typeof v !== 'object' || Array.isArray(v)) return null
   const o = v as Record<string, unknown>
   const lista = (x: unknown): string[] | null => {
