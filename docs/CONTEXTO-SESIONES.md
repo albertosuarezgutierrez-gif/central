@@ -842,6 +842,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Póliza donde la ficha FIGURA sin ser tomador: ya sale en su ficha y en el portal
+Caso: Generali UV-G-410081428 — tomador Francisco Javier Velasco (conductor habitual), GLOBAL 2 propietaria+asegurada;
+no salía en la ficha de GLOBAL 2 ni a Pilar (autorizada sobre GLOBAL 2). Medido: 28 pólizas vivas / 22 fichas en ese caso.
+Ficha del corredor: `figuraEn` (`polizasDondeFigura`, por `cliente_id` o DNI) → bloque «Donde figura en pólizas de otro tomador».
+Portal: quien ve una ficha ENTERA (autorización sin póliza suelta o empresa del dueño) ve también donde ESA ficha figura,
+capada como interviniente (`capaInterviniente`, `figurasDeFichasVistas`); cepo en `regression-portal-intervinientes`.
+Ojo: GLOBAL 2 conserva una copia de volcado `UV-G-410.081.428` (con puntos, no viva). ¿Tomador real = Francisco o GLOBAL 2? Solo lo dice el XML de CIMA.
+
 ## (28/09/2026) Matrícula de ESTE mes: la fecha ya se estima (moto y auto) + garaje por defecto en moto
 - `2121NST` no rellenaba nada: la tabla de series solo tiene meses CERRADOS (acaba en NRY, agosto), así que
   toda matrícula del mes en curso daba `null`. `fechaMatriculacionEstimada(m, hoy)` extrapola al ritmo medio
