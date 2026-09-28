@@ -134,3 +134,18 @@ export function coberturasDeSobre(v: unknown): { estado: EstadoCoberturas | 'no_
   if (estado === 'fallo' || estado === 'sin_oferta') return { estado, lista: null }
   return { estado: 'no_intentado', lista: null }
 }
+
+/**
+ * El sobre ya guardado en `tarificacion_precios.coberturas` (29/09/2026), listo para reutilizar al
+ * preparar un presupuesto SIN volver a pedírselo al vendor. Solo vale si la compañía RESPONDIÓ
+ * (`leidas`/`vacias`); un `fallo` o un `sin_oferta` guardados se vuelven a intentar por el camino de
+ * siempre (casar con el proyecto), así que aquí devuelven `null` = «no hay sobre reutilizable».
+ */
+export function sobreReutilizable(v: unknown): SobreCoberturas | null {
+  const { estado, lista } = coberturasDeSobre(v)
+  if (estado !== 'leidas' && estado !== 'vacias') return null
+  const s = v as Record<string, unknown>
+  const leidasAt = typeof s.leidasAt === 'string' && s.leidasAt.trim() ? s.leidasAt : null
+  if (!leidasAt) return null
+  return { estado, lista, leidasAt }
+}

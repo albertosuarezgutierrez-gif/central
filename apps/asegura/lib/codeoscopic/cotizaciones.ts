@@ -262,12 +262,14 @@ export async function guardarCotizacion(
     // transacción entera se deshaga: nunca una cabecera suelta.
     if (!id) throw new Error('cotizacion_sin_id: el insert de la cabecera no devolvió fila')
 
+    // `oferta_id` (29/09/2026): la oferta de la que sale el precio. Con ella se leen
+    // después sus coberturas GRATIS (`coberturas-tarificacion.ts`). NULL = no la tiene.
     for (const p of e.cotizacion.precios) {
       await tx.$executeRaw`
         insert into seguros.tarificacion_precios (
           tarificacion_id, compania, producto, modalidad, categoria,
           prima_eur, entrada_eur, franquicia_eur, firmeza, requiere_rerate,
-          referencia_vendor, avisos
+          referencia_vendor, avisos, oferta_id
         ) values (
           ${id}::uuid,
           ${p.compania},
@@ -280,7 +282,8 @@ export async function guardarCotizacion(
           ${p.firmeza},
           ${p.requiereReRate},
           ${p.referenciaVendor},
-          ${JSON.stringify(p.avisos ?? [])}::jsonb
+          ${JSON.stringify(p.avisos ?? [])}::jsonb,
+          ${p.ofertaId ?? null}
         )
       `
     }

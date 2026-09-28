@@ -860,6 +860,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Presupuesto por garantías — entrega 1: catálogo + coberturas de TODOS los precios
+- Alberto: «no puedes mandar una propuesta con dos precios sin sentido» (Manuel: 31 precios de 5 compañías → 2 de Allianz,
+  por `elegirPortada`). Decidido: el cliente ve todo + recomendadas, filtro por garantías en parrilla y portal, TODOS los ramos
+  tarificables (auto, moto, hogar, decesos, salud, vida). Plan: `docs/superpowers/plans/2026-09-28-presupuesto-filtro-garantias.md`.
+- Entrega 1: `catalogo-garantias.ts` + `filtro-garantias.ts` (module-seguros; no reconocido = no_consta, nunca «no»);
+  `tarificacion_precios.{oferta_id, coberturas, garantias}` (aplicada); coberturas leídas gratis en `after()` tras tarificar.
+
 ## (28/09/2026) Comisiones FIRMADAS por compañía: tabla `seguros.comision_pactada` + bloque en Datos
 - Tabla (aplicada en prod) con compañía, producto (= `ramoEntidad` de CIMA), modalidad, **acuerdo** ('directo' o
   nombre de asociación), % 1º año / cartera, `vigente_desde` (fila nueva por cuadro, nunca UPDATE) y fuente.
