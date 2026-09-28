@@ -57,7 +57,12 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
   },
   contexto: {
     tags: ['contexto', 'vision', 'barato'],
-    lista: ['google/gemini-2.5-flash', 'google/gemini-flash-1.5'],
+    // `google/gemini-2.5-flash` deja de darse a API keys NUEVAS (buscador-ia, 28/09/2026): Google
+    // enruta el tráfico estándar a `gemini-3.6-flash`. Nuestra key es antigua y puede seguir
+    // sirviendo con cuota "grandfathered", pero no hay garantía — se antepone el sucesor vigente
+    // (`gemini-3.8-flash`, el mismo al que ya resuelve `gemini-flash-latest` en la cadena directa,
+    // confirmado vivo) y se deja el viejo de suplente, no se retira.
+    lista: ['google/gemini-3.8-flash', 'google/gemini-2.5-flash', 'google/gemini-flash-1.5'],
   },
   general: {
     tags: ['general', 'barato'],
@@ -71,7 +76,11 @@ const PREFERIDOS: Record<string, { tags: string[]; lista: string[] }> = {
     // está limpia. Preferencia por capacidad de OCR sobre precio: de estas
     // cifras sale la puja máxima, y equivocarse cuesta decenas de miles de €.
     tags: ['registral', 'vision', 'documentos'],
+    // Mismo motivo que `contexto` (buscador-ia, 28/09/2026): `gemini-2.5-flash` deja de darse a
+    // key nuevas. Aquí el listón es más alto que en `contexto` — «equivocarse cuesta decenas de
+    // miles de €» — así que el sucesor entra PRIMERO en vez de solo documentarlo.
     lista: [
+      'google/gemini-3.8-flash',
       'google/gemini-2.5-flash',
       'google/gemini-2.5-pro',
       'anthropic/claude-sonnet-4.5',

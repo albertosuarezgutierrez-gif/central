@@ -16,6 +16,13 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-09-28 · buscador-ia** · hizo: pasada semanal — watch de deprecación (texto/visión/
+  embeddings), Paso 1.5 (OpenRouter) y descubrimiento. Hallazgo: `gemini-2.5-flash` (1er preferido
+  de `contexto`/`registral` en `PREFERIDOS` del cron `ia-director-refresh`) deja de darse a keys
+  nuevas de Google; curado anteponiendo `gemini-3.8-flash` (mismo id ya vivo en la cadena directa)
+  en las dos listas, sin retirar el viejo. Groq de pago sin presupuesto sigue abierto (hallazgo del
+  21/09, sin novedad esta semana, no se repite Telegram). dudas: —; fallos: —; PRs/commits: ver PR
+  de esta rama (`apps/plataforma/app/api/cron/ia-director-refresh/route.ts` + `docs/BUSCADOR-IA.md`).
 - **2026-09-27 · mercado-booking** · hizo: segunda pasada diaria del día — 238 comparables reales
   de Booking en las 24 ventanas de mercado del plan (`max=24`, `candidatas=508`, `recortadas=484` —
   no agota el plan; ventanas casi todas de evento Q1 2027 en Santa Cruz/Betis-Sevilla + una de
