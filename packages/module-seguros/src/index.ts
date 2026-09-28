@@ -931,6 +931,7 @@ export {
   ETIQUETA_GRUPO_FUSION,
   compararFichas,
   identidadFusion,
+  dniIlegibleSinIndice,
   revisarElecciones,
   type GrupoFusion,
   type ValorFusion,
