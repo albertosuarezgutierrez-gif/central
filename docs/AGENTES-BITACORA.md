@@ -14,6 +14,8 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-28 · pricing-agente** · hizo: ciclo semanal completo de los 4 pisos, delegado a 4 agentes en paralelo (uno por piso, mismas 12 ventanas que ciclos anteriores: oct26-jul27 1 finde/mes + Semana Santa + Feria + Karol G). Verificación obligatoria por SQL directo (no solo autoinforme): busto=128, duplex=146, luxury=146, house=101 comps nuevos en `market_rates`, ningún piso a 0. 48/48 propuestas dry-run en `pricing_decisiones`, circuit-breaker sano en los 4. Aprendizaje registrado en `pricing_aprendizaje` id 82. Telegram enviado con el resumen y la línea de comps por piso; dudas: —; fallos: — (1 timeout SSL transitorio en luxury, resuelto al reintentar). Hallazgos de calidad de dato sin arreglar aún (self-listing colándose como comp propio; `mercado/ingest` no distingue Trivago de Booking en `fuente`) — quedan anotados en `pricing_aprendizaje` id 82 para un ciclo futuro. PRs/commits: commit directo a `main` (esta pasada no tocó código, solo BD + Telegram).
+
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
 - **2026-09-27 · mercado-booking** · hizo: segunda pasada diaria del día — 238 comparables reales
