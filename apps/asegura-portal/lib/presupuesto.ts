@@ -44,13 +44,14 @@
 // desde fuera de este fichero.
 
 import { formatoTokenVistaValido, hashTokenVista } from '@central/module-seguros-portal'
-import { WHERE_CARTERA_VIVA, claveProducto } from '@central/module-seguros'
+import { WHERE_CARTERA_VIVA, claveProducto, type GarantiasClasificadas } from '@central/module-seguros'
 import { decryptField } from '@central/module-seguros-pii'
 
 import { hashCanal } from './auth'
 import { prisma } from './db'
 import { getIdentidad } from './session'
 import { coberturasDeOpcion, type CoberturasOpcion } from './tabla-coberturas'
+import { garantiasDeJson } from './todas-las-opciones'
 import { coberturasDeJson, leerFirmeza, leerSinEquivalente, esPapel, type Firmeza, type PapelPortada, type SinEquivalente } from './presupuesto-vista'
 
 // ─── Lo que la pantalla necesita ─────────────────────────────────────────────
@@ -75,6 +76,9 @@ export type OpcionCliente = {
   /** Las coberturas de la compañía con sus TRES estados (sí / no / ver texto), para la tabla.
    *  `lista: null` = no constan (no se intentó o no se pudieron leer). */
   coberturasDetalle: CoberturasOpcion
+  /** Coberturas llevadas al catálogo del ramo (`presupuesto_opcion.garantias`).
+   *  🚨 `null` = no clasificada (o con forma rara): el filtro la trata como `no_consta`, nunca `no`. */
+  garantias: GarantiasClasificadas | null
   papeles: PapelPortada[]
   /** La de menor importe NO comparte cobertura con la actual. Se pinta. */
   coberturaDistinta: boolean
@@ -358,6 +362,7 @@ async function leerOpciones(presupuestoId: string, correduriaId: string): Promis
       firmeza: true,
       avisos: true,
       coberturas: true,
+      garantias: true,
       papeles: true,
     },
   })
@@ -377,6 +382,7 @@ async function leerOpciones(presupuestoId: string, correduriaId: string): Promis
       avisos: coberturasDeJson(f.avisos),
       coberturas: coberturasDeJson(f.coberturas),
       coberturasDetalle: coberturasDeOpcion(f.coberturas),
+      garantias: garantiasDeJson(f.garantias),
       papeles,
       // `coberturaDistinta` tampoco se congela: se deriva de que la opción haga
       // de «menor importe» sin que ninguna haga de equivalente, que es

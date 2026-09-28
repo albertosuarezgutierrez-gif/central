@@ -5,13 +5,13 @@ import { presupuestoDeSesion } from '@/lib/presupuesto'
 import { TEXTO_AJENO, TEXTO_VINCULO_AMBIGUO, textoCaducidad } from '@/lib/presupuesto-vista'
 
 import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fecha } from './Comparativa'
-import { Plegable } from './RestoDeOpciones'
+import { TodasLasOpciones } from './TodasLasOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
 import { DatosParaContratar } from './DatosParaContratar'
 import { RevisaTusDatos } from './RevisaTusDatos'
 import { ResumenOpciones } from './ResumenOpciones'
 import { MOTIVO_EN_REVISION, MOTIVO_SIN_DATOS, datosCotizados, datosListosParaAceptar } from '@/lib/presupuesto-firma'
-import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
+import { MEDIADOR, ramoDeCatalogo, telefonoLegible } from '@central/module-seguros'
 import { datosParaContratar } from '@/lib/datos-emision'
 import { getIdentidad } from '@/lib/session'
 
@@ -104,6 +104,8 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const portada = p.opciones.filter((o) => o.esPortada)
   const resto = p.opciones.filter((o) => !o.esPortada)
   const companias = new Set(portada.map((o) => o.compania)).size
+  // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones».
+  const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
 
   return (
     <>
@@ -195,7 +197,6 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       </section>
 
       {portada.map((o) => {
-        const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
         return (
           <section className="seccion" key={`g-${o.id}`}>
             <Garantias o={o} actual={p.actual} />
@@ -216,21 +217,21 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       {/* La comparativa es la portada (§4.1): lo que falta para contratar va debajo. */}
       {mostrarDatos && <DatosParaContratar datos={datos} corredor={p.vistaDeCorredor} />}
 
-      {/* Cerrado por defecto y con montaje perezoso (regla de rendimiento).
-          ⚠️ Hoy `resto` está SIEMPRE vacío: el preparador congela solo las
-          opciones de portada y la lista larga se quedó en la tarificación, que
-          el portal no puede leer (§5.1: el cliente ve el snapshot y nada más).
-          Cuando se congelen todas, esto las pinta sin tocar nada. */}
+      {/* «Todas las opciones»: la lista entera (portada incluida, marcada «Recomendada») con los
+          interruptores de garantías, paginada. Solo si hay algo más que la portada: si no, sería la
+          misma lista dos veces. */}
       {resto.length > 0 && (
-        <section className="seccion">
-          <Plegable titulo={`Ver el resto de opciones (${resto.length})`}>
-            <div className="presu-tarjetas">
-              {resto.map((o) => (
-                <Tarjeta key={o.id} o={o} caducado={p.caducado} />
-              ))}
-            </div>
-          </Plegable>
-        </section>
+        <TodasLasOpciones
+          presupuestoId={p.id}
+          ramo={ramoDeCatalogo(p.ramo)}
+          opciones={p.opciones}
+          necesidades={p.necesidades}
+          coberturasActual={p.actual?.coberturas ?? null}
+          corredor={p.vistaDeCorredor}
+          puedeAceptar={puedeAceptar}
+          bloqueoDatos={bloqueoDatos}
+          telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+        />
       )}
 
       <Salidas
