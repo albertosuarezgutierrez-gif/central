@@ -36,7 +36,7 @@ export type FiguraEnPoliza = {
 }
 
 /** Del papel que más dice al que menos: es el orden en que se nombran en la ficha. */
-const ORDEN_ROLES = ['tomador', 'propietario', 'asegurado', 'conductor_habitual', 'conductor_ocasional', 'beneficiario', 'contacto']
+const ORDEN_ROLES = ['tomador', 'propietario', 'asegurado', 'conductor_habitual', 'conductor_ocasional', 'pagador', 'beneficiario', 'contacto']
 
 function rangoNivel(n: Nivel): number {
   return (NIVELES as readonly string[]).indexOf(n)
@@ -127,6 +127,7 @@ const ROL_LEGIBLE: Record<string, string> = {
   asegurado: 'asegurado',
   conductor_habitual: 'conductor habitual',
   conductor_ocasional: 'conductor ocasional',
+  pagador: 'pagador',
   beneficiario: 'beneficiario',
   contacto: 'persona de contacto',
 }

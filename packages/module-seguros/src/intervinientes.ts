@@ -60,6 +60,7 @@ const ROLES: Record<string, string> = {
   contacto: 'persona de contacto',
   beneficiario: 'beneficiario',
   asegurado: 'asegurado',
+  pagador: 'pagador (paga los recibos)',
 }
 
 export function etiquetaRol(rol: string): string {
@@ -67,7 +68,7 @@ export function etiquetaRol(rol: string): string {
 }
 
 /** Por quién se pregunta primero cuando hay varios: el de contacto, luego quien conduce. */
-const PRIORIDAD_CONTACTO = ['contacto', 'conductor_habitual', 'propietario', 'asegurado', 'conductor_ocasional', 'beneficiario']
+const PRIORIDAD_CONTACTO = ['contacto', 'conductor_habitual', 'propietario', 'asegurado', 'pagador', 'conductor_ocasional', 'beneficiario']
 
 export type ContactoEfectivo = {
   telefono: string | null
