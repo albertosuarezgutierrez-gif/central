@@ -32,6 +32,23 @@ test('identidad: solo el DNI decide, y sin uno de los dos no se afirma nada', ()
   assert.equal(identidadFusion(d('h1'), d(null, true)), 'dni_sin_indice')
 })
 
+test('🪤 un DNI ILEGIBLE no bloquea para siempre: cuenta como «sin comprobar»; uno legible sin índice, sí', () => {
+  const d = (hash: string | null, tieneDni: boolean, ilegible = false) => ({ hash, tieneDni, ilegible })
+  // «Antonio Antonio» con Antonio Lozano Lanagran (28/09/2026): el DNI de una no descifra.
+  assert.equal(identidadFusion(d('h1', true), d(null, true, true)), 'sin_comprobar')
+  assert.equal(identidadFusion(d(null, true, true), d('h1', true)), 'sin_comprobar')
+  assert.equal(identidadFusion(d(null, true, true), d(null, true, true)), 'sin_comprobar')
+  assert.equal(identidadFusion(d(null, true, true), d(null, true)), 'sin_comprobar')
+  // Legible pero sin índice (el centinela, o falta el backfill): sigue bloqueado.
+  assert.equal(identidadFusion(d('h1', true), d(null, true, false)), 'dni_sin_indice')
+  assert.equal(identidadFusion(d(null, true), d(null, true)), 'dni_sin_indice')
+  // Con índice en las dos, decide el índice aunque ahora no se pueda descifrar
+  // (una clave mal puesta no puede abrir la puerta a fundir dos personas).
+  assert.equal(identidadFusion(d('h1', true, true), d('h2', true)), 'dni_distinto')
+  // Un DNI con índice que «no se lee» no es ilegible: se leyó para indexarlo.
+  assert.equal(identidadFusion(d('h1', true, true), d(null, true)), 'dni_sin_indice')
+})
+
 test('una cuenta enmascarada se compara por su valor completo', () => {
   const c = compararFichas(
     { cuenta_bancaria: { valor: '•••• 1234', ilegible: false, clave: 'ES1100001234' } },

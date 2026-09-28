@@ -833,6 +833,15 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Fusión de fichas: el DNI ILEGIBLE ya no bloquea para siempre
+`identidadFusion` (`@central/module-seguros`) y `seguros.fusionar_clientes` distinguen **DNI ilegible** (no descifra con la
+clave funcionando, o no tiene forma de documento; sin índice) de **legible sin índice**. El ilegible cuenta como
+`sin_comprobar` (exige `confirmarSinDni`); el legible sin índice sigue en `dni_sin_indice`. La app pasa el valor CIFRADO
+exacto en el 7º argumento `p_dni_ilegibles`; la BD exige que coincida con la fila y que no tenga índice
+(`dni_ilegible_no_coincide`) y lo anota en `cliente_merge_log.deps_repointed->'dni_ilegible'`. Si la superviviente es la
+ilegible y la otra tiene DNI legible, se queda el legible con su índice. Firma de 6 args = envoltorio con el comportamiento
+viejo. **Migración `fusionar_clientes_dni_ilegible` YA APLICADA en prod** (probada antes en transacción revertida, 6 casos).
+
 ## (28/09/2026) asegura-portal: la FIGURA del cliente en cada póliza
 - Alberto: «indicar en la app cliente la figura que tiene en la póliza». Chip en la fila de la bóveda («Tomador», «Tomador y conductor habitual», «Propietario») y frase en la ficha («En esta póliza figuras como…» / «…como propietario. El tomador es X.»).
 - `figuraEnPropias()` + `figuraChip()` en `apps/asegura-portal/lib/intervinientes.ts`; `PolizaPortal.figura` (solo propias e intervinientes; las autorizadas no la llevan: las ve por permiso).

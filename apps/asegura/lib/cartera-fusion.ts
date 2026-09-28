@@ -11,8 +11,10 @@
 // Lo que cruza el puerto: el DNI ENMASCARADO y la cuenta con solo sus 4
 // últimas cifras. Para decidir si son la misma persona basta; el dato entero no.
 import { Prisma } from './generated/asegura-client'
+import { decryptField, encryptField, looksLikeDniNieCif } from '@central/module-seguros-pii'
 import {
   compararFichas,
+  dniIlegibleSinIndice,
   enmascararDni,
   esCarteraViva,
   identidadFusion,
@@ -65,6 +67,8 @@ export type FichaFusion = {
   nombre: string
   tipo: string
   dniEnmascarado: string | null
+  /** Tiene DNI, sin índice, y no se puede leer (no descifra o no es un documento). */
+  dniIlegible: boolean
   polizas: number
   polizasVivas: number
   telefonos: number
@@ -115,6 +119,32 @@ function valores(c: Fila): Partial<Record<GrupoFusion, ValorFusion>> {
   }
 }
 
+/** La clave de cifrado funciona: sin esto, «no descifra» sería «falta la clave», no un dato ilegible. */
+function clavePiiOperativa(): boolean {
+  try {
+    return decryptField(encryptField('canario')) === 'canario'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * El DNI guardado no se puede leer: no descifra (con la clave funcionando) o lo
+ * que hay no tiene forma de documento («X», «PENDIENTE»). Es el mismo criterio
+ * que deja la ficha como `ilegible` en el backfill del índice, que por eso nunca
+ * se lo pondrá. Si la clave no funciona, NO es ilegible: es que no se sabe.
+ */
+function dniIlegible(v: string | null | undefined): boolean {
+  if (typeof v !== 'string' || v.trim() === '') return false
+  if (campoIlegible(v)) return clavePiiOperativa()
+  const t = descifrarCampo(v)
+  return t === null || !looksLikeDniNieCif(t)
+}
+
+function dniDe(c: Fila) {
+  return { hash: c.dniLookupHash, tieneDni: !!c.dni?.trim(), ilegible: dniIlegible(c.dni) }
+}
+
 function resumen(c: Fila): FichaFusion {
   const nombre = `${c.nombre ?? ''} ${c.apellidos ?? ''}`.trim() || 'sin nombre'
   return {
@@ -122,6 +152,7 @@ function resumen(c: Fila): FichaFusion {
     nombre,
     tipo: String(c.tipo),
     dniEnmascarado: enmascararDni(descifrarCampo(c.dni)),
+    dniIlegible: dniIlegibleSinIndice(dniDe(c)),
     polizas: c.polizas.length,
     polizasVivas: c.polizas.filter((p) => esCarteraViva(p)).length,
     telefonos: Math.max(c._count.telefonos, c.telefono ? 1 : 0),
@@ -158,22 +189,25 @@ export type ResultadoComparacion =
   | { estado: 'no_encontrado' }
   | { estado: 'invalido'; motivo: string }
 
-export async function compararParaFusion(correduriaId: string, supId: string, lapId: string): Promise<ResultadoComparacion> {
-  if (supId === lapId) return { estado: 'invalido', motivo: 'Es la misma ficha.' }
+async function comparar(correduriaId: string, supId: string, lapId: string) {
+  if (supId === lapId) return { estado: 'invalido' as const, motivo: 'Es la misma ficha.' }
   const [s, l] = await Promise.all([leer(correduriaId, supId), leer(correduriaId, lapId)])
-  if (!s || !l) return { estado: 'no_encontrado' }
-  return {
-    estado: 'ok',
-    comparacion: {
-      superviviente: resumen(s),
-      absorbida: resumen(l),
-      identidad: identidadFusion(
-        { hash: s.dniLookupHash, tieneDni: !!s.dni?.trim() },
-        { hash: l.dniLookupHash, tieneDni: !!l.dni?.trim() },
-      ),
-      campos: compararFichas(valores(s), valores(l)),
-    },
+  if (!s || !l) return { estado: 'no_encontrado' as const }
+  const comparacion: ComparacionFusion = {
+    superviviente: resumen(s),
+    absorbida: resumen(l),
+    identidad: identidadFusion(dniDe(s), dniDe(l)),
+    campos: compararFichas(valores(s), valores(l)),
   }
+  // Los DNI ilegibles viajan a la BD con su valor CIFRADO exacto: la función lo
+  // comprueba contra la fila y lo guarda en el registro de la fusión.
+  const dniIlegibles = [s, l].filter((c) => dniIlegibleSinIndice(dniDe(c))).map((c) => c.dni as string)
+  return { estado: 'ok' as const, comparacion, dniIlegibles }
+}
+
+export async function compararParaFusion(correduriaId: string, supId: string, lapId: string): Promise<ResultadoComparacion> {
+  const r = await comparar(correduriaId, supId, lapId)
+  return r.estado === 'ok' ? { estado: 'ok', comparacion: r.comparacion } : r
 }
 
 export type ResultadoFusion =
@@ -188,6 +222,7 @@ const MOTIVOS_BD: Record<string, ResultadoFusion> = {
     estado: 'conflicto',
     motivo: 'Las dos fichas tienen DNI pero a alguna le falta el índice, así que no se puede comprobar que sea el mismo. Escribe el índice del DNI en Correduría → Mantenimiento y vuelve a intentarlo.',
   },
+  dni_ilegible_no_coincide: { estado: 'conflicto', motivo: 'El DNI de una de las fichas ha cambiado mientras tanto. Recarga y vuelve a comparar.' },
   uq_clientes_dni_lookup_hash: {
     estado: 'conflicto',
     motivo: 'Hay una TERCERA ficha de cliente con este mismo DNI. Fusiona primero esa; no se ha tocado nada.',
@@ -200,8 +235,9 @@ const MOTIVOS_BD: Record<string, ResultadoFusion> = {
 /**
  * Fusiona `lapId` en `supId`. Recompara en el momento (no se fía de lo que vio
  * la pantalla) y exige que cada grupo elegido siga siendo «distinto».
- * `confirmarSinDni`: si una de las dos no tiene DNI, la identidad no se puede
- * comprobar por el identificador y la fusión exige que el corredor lo diga.
+ * `confirmarSinDni`: si una de las dos no tiene DNI (o lo tiene ilegible), la
+ * identidad no se puede comprobar por el identificador y la fusión exige que el
+ * corredor lo diga.
  */
 export async function fusionar(
   correduriaId: string,
@@ -211,13 +247,13 @@ export async function fusionar(
   confirmarSinDni: boolean,
   actor: string,
 ): Promise<ResultadoFusion> {
-  const cmp = await compararParaFusion(correduriaId, supId, lapId)
+  const cmp = await comparar(correduriaId, supId, lapId)
   if (cmp.estado !== 'ok') return cmp
-  const { identidad, campos, absorbida } = cmp.comparacion
+  const { identidad, campos, absorbida, superviviente } = cmp.comparacion
   if (identidad === 'dni_distinto') return MOTIVOS_BD.dni_contradictorio
   if (identidad === 'dni_sin_indice') return MOTIVOS_BD.dni_sin_indice
   if (identidad === 'sin_comprobar' && !confirmarSinDni) {
-    return { estado: 'invalido', motivo: 'Una de las dos fichas no tiene DNI: confirma que son la misma persona.' }
+    return { estado: 'invalido', motivo: 'Una de las dos fichas no tiene DNI (o no se puede leer): confirma que son la misma persona.' }
   }
   const r = revisarElecciones(deAbsorbida, campos)
   if (!r.ok) {
@@ -226,13 +262,16 @@ export async function fusionar(
       motivo: r.motivo === 'grupo_desconocido' ? `Campo no permitido: ${r.grupo}.` : `En «${r.grupo}» ya no hay dos valores distintos: recarga.`,
     }
   }
+  const ilegibles = [superviviente, absorbida].filter((f) => f.dniIlegible).map((f) => `«${f.nombre}»`)
   const justificacion =
     identidad === 'mismo_dni'
       ? `Mismo DNI. Confirmado por ${actor} desde la ficha, eligiendo campo a campo.`
-      : `Sin DNI en alguna de las dos: ${actor} confirmó que «${absorbida.nombre}» es la misma persona.`
+      : ilegibles.length > 0
+        ? `DNI ilegible en ${ilegibles.join(' y ')} (se guarda cifrado en el registro de la fusión): ${actor} confirmó que «${absorbida.nombre}» es la misma persona.`
+        : `Sin DNI en alguna de las dos: ${actor} confirmó que «${absorbida.nombre}» es la misma persona.`
   try {
     const filas = await prismaAsegura().$queryRaw<{ res: Record<string, unknown> }[]>(
-      Prisma.sql`select fusionar_clientes(${correduriaId}::uuid, ${supId}::uuid, ${lapId}::uuid, ${r.deAbsorbida}::text[], ${justificacion}, ${actor}) as res`,
+      Prisma.sql`select fusionar_clientes(${correduriaId}::uuid, ${supId}::uuid, ${lapId}::uuid, ${r.deAbsorbida}::text[], ${justificacion}, ${actor}, ${cmp.dniIlegibles}::text[]) as res`,
     )
     const res = filas[0]?.res ?? {}
     return {
