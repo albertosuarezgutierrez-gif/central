@@ -1,10 +1,11 @@
 import Link from 'next/link'
-import { contactoEfectivo, etiquetaRol, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
+import { contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { estadoCaducidadCarnet, urlRetarificar, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
+import PonerNombre from './PonerNombre'
 import { fmt, TIPOS } from './piezas'
 
 /**
@@ -66,6 +67,10 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                 )}
               </span>}
             />
+            {/* Ficha sin nombre: se rellena aquí, sin DNI (el nombre que ya existe sigue pidiéndolo). */}
+            {ficha.identidad && nombrePendiente(ficha.identidad.nombre) && (
+              <PonerNombre clienteId={ficha.id} apellidos={ficha.identidad.apellidos} />
+            )}
           </div>
         </div>
       </div>

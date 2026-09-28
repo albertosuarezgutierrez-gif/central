@@ -108,7 +108,8 @@ export const DELETE = auditado(async (req: Request) => {
 // PATCH /api/operador/cliente — EDICIÓN. Lo libre (dirección, CP, ciudad,
 // provincia, notas) entra tal cual; la identidad (DNI, nombre, apellidos,
 // fecha de nacimiento) SOLO con `documentoId` de un DNI recibido de este
-// cliente (422 `documento_requerido` / `documento_no_acredita` si no).
+// cliente (422 `documento_requerido` / `documento_no_acredita` si no). Excepción:
+// en una ficha SIN NOMBRE se pueden poner nombre y apellidos sin documento.
 export const PATCH = auditado(async (req: Request) => {
   if (!operadorAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   try {

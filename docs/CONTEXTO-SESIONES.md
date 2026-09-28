@@ -814,6 +814,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Poner nombre a una ficha SIN NOMBRE sin exigir DNI
+- Alberto no podía nombrar un lead «(sin nombre)»: la única edición era «Editar identidad» (fondo de Contactos) y exigía DNI recibido. La BD guarda el marcador literal `'(sin nombre)'` (14 fichas).
+- `module-seguros`: `nombrePendiente()` + `revisarEdicion(e, { fichaSinNombre })` → en ficha sin nombre, nombre+apellidos sin documento; DNI/fecha y corregir un nombre existente siguen documentados. asegura decide la excepción con la BD (`cartera-edicion.ts`), no el cliente. Historial: «rellenada sin documento».
+- Plataforma: `PonerNombre.tsx` (✏️ junto al título, solo si la ficha no tiene nombre). Branch `claude/edit-name-ot9hkz`.
+
 ## (27/09/2026) Título de la RC = solo la RC
 - `module-seguros/objeto.ts` `tituloRc()`: si una cobertura se nombra «Responsabilidad civil…/R.C./RC», la tarjeta titula «RC caballos» y el resto (defensa penal, liberación de gastos) queda como «+N coberturas» y en el desglose de la póliza. Sin cobertura así, sigue el título por modalidades.
 - Precio de la moto (Allianz 045981539): Allianz NO manda prima en el EIAC de póliza, solo en el recibo CA (11 de 12 vivas sin prima, todas Allianz). `primaConRecibos()`/`vencimientoConRecibos()` (module-seguros) la toman del recibo anual si la póliza no la trae (solo pago anual) y corrigen el vencimiento si hay CA cobrado posterior. Aplicado en `cartera-ficha.ts` y `cartera-poliza.ts` de asegura. - Auditoría: 043673655 anulada en ePac (impago) → cancelada a mano; 054914837 sin recibos en CIMA → 2 CA copiados de ePac (`origen=manual`); 10 Mapfre EV con vencimiento pasado sin renovación por CIMA → aviso rojo en tarjeta. Regla fijada en `apps/asegura/CLAUDE.md` + skill `correduria-crm` (punto 0).

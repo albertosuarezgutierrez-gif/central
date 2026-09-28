@@ -10,6 +10,7 @@ import {
   etiquetasIdentidad,
   provinciaPorCp,
   revisarEdicion,
+  nombrePendiente,
   type DocumentoResumen,
   type EdicionCliente,
 } from '@central/module-seguros'
@@ -303,6 +304,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
             Para cambiar {rot.documento}, {rot.nombre.toLowerCase()} o {rot.fecha.toLowerCase()} hace falta
             el {rot.pedir} en la ficha (regla: se pide documentado). Ahora mismo no hay ningún {rot.pedir} recibido
             en 📎 Documentos.
+            {nombrePendiente(identidad.nombre) && ' Para PONER el nombre a esta ficha sin nombre no hace falta: usa «✏️ Poner nombre» bajo el título.'}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <button type="button" disabled={ocupado} onClick={() => void pedirDni()} style={btnStyle('secundario')}>Pedir {rot.pedir}</button>

@@ -298,6 +298,7 @@ export {
   normalizarCp,
   provinciaPorCp,
   revisarEdicion,
+  nombrePendiente,
   documentoAcredita,
   documentosAcreditativos,
   textoHistorialEdicion,

@@ -15,6 +15,7 @@ import {
   provinciaPorCp,
   revisarAlta,
   revisarEdicion,
+  nombrePendiente,
   textoHistorialEdicion,
   FUENTES_ORIGEN,
   FUENTES_CANAL,
@@ -209,4 +210,23 @@ test('sin clasificar NO es «física»: se queda el rótulo neutro', () => {
   assert.equal(etiquetasIdentidad(null).documento, 'DNI / NIE / CIF')
   assert.equal(etiquetasIdentidad(null).fecha, 'Fecha de nacimiento')
   assert.equal(etiquetasIdentidad('fisica').documento, 'DNI / NIE / CIF')
+})
+
+test('ficha SIN NOMBRE: poner nombre y apellidos no exige documento; lo demás, sí (28/09/2026)', () => {
+  assert.equal(nombrePendiente('(sin nombre)'), true)
+  assert.equal(nombrePendiente('  (Sin  Nombre) '), true)
+  assert.equal(nombrePendiente(''), true)
+  assert.equal(nombrePendiente(null), true)
+  assert.equal(nombrePendiente('Eduardo'), false)
+
+  const ok = revisarEdicion({ identidad: { nombre: 'Eduardo', apellidos: 'Santos' } }, { fichaSinNombre: true })
+  assert.equal(ok.ok, true)
+  if (ok.ok) assert.equal(textoHistorialEdicion(ok, { actor: 'a' }).includes('sin documento'), true)
+  // Con nombre ya puesto, la regla de siempre.
+  assert.deepEqual(revisarEdicion({ identidad: { nombre: 'Eduardo' } }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
+  // DNI o fecha colados en la misma edición: documento.
+  assert.deepEqual(revisarEdicion({ identidad: { nombre: 'Eduardo', dni: '12345678Z' } }, { fichaSinNombre: true }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
+  assert.deepEqual(revisarEdicion({ identidad: { nombre: 'Eduardo', fechaNacimiento: '1/1/1980' } }, { fichaSinNombre: true }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
+  // Solo apellidos dejaría el marcador de nombre: documento.
+  assert.deepEqual(revisarEdicion({ identidad: { apellidos: 'Santos' } }, { fichaSinNombre: true }), { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO })
 })
