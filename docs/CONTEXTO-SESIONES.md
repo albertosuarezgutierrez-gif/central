@@ -12,6 +12,7 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — Migración gemini-2.5-flash cerrada (PR que absorbe #3808): medido en OpenRouter, `google/gemini-3.8-flash` vivo servido por Google Vertex/AI Studio (0,75/3,75 $/M estándar vs 0,30/2,50 del 2.5 → ~2,5× en prompt). Hueco que #3808 no veía: `apps/asegura/lib/documentos/leer-doc-solicitud.ts` (lectura de DNI/carné) tenía 2.5 como modelo ÚNICO sin suplentes → moría el 16/10; ahora por defecto 3.8. Ojo: si Vercel `asegura` define `OPENROUTER_VISION_MODEL`, manda ella.
 **(28/09/2026)** — `buscador-ia`: `gemini-2.5-flash` (1er preferido de `contexto`/`registral` en el
 cron `ia-director-refresh`) deja de darse a API keys nuevas de Google (enruta a `gemini-3.6-flash`);
 curado anteponiendo `gemini-3.8-flash` en las dos listas, sin retirar el viejo. Groq de pago sin

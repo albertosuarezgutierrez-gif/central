@@ -71,7 +71,9 @@ export async function leerDocSolicitud(buffer: Buffer, mime: string, nombre = ''
       // y un modelo de visión explícito (Gemini se sirve por Vertex, que cumple esa política).
       const salida = await conTiempo(
         openrouterVision({ apiKey }, INSTRUCCION, [{ data: buffer.toString('base64'), mediaType: mime }], PETICION, {
-          model: process.env.OPENROUTER_VISION_MODEL || 'google/gemini-2.5-flash',
+          // `gemini-2.5-flash` se apaga el 16/10/2026 y aquí no hay cadena de suplentes: sin
+          // sucesor, la lectura de fotos moriría ese día. 3.8 lo sirve Google (Vertex/AI Studio).
+          model: process.env.OPENROUTER_VISION_MODEL || 'google/gemini-3.8-flash',
           privacidad: true,
           signal: AbortSignal.timeout(TIEMPO_MS),
         }),
