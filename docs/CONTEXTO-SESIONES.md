@@ -7787,3 +7787,12 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   falla — no es nuestro (nosotros: Prisma + central_asegura). Preguntar a Manuel en el traspaso.
 - Además: 🛡️ Correduría entra por fin en el menú de plataforma (PR #1907, guardián incluido) —
   «no me sale correduría»: /correduria nunca estuvo en NAV_NEGOCIO.
+
+## (28/09/2026) Portal: TODO el siniestro al cliente (deroga la regla del 03/09)
+Alberto: «el seguro es suyo, tiene que saber todo». La ficha del siniestro en asegura-portal pinta «Detalle del
+siniestro» (declaración, culpa, papel, DAA, reserva con aclaración, recobros, expedientes, asistencias, tramitador y
+perito). `detalleSiniestroCompania()` en module-seguros-portal; GRANT por columnas a `prisma_asegura_portal` aplicado.
+Fuera: datos de terceros (cifrados) y `ref_mediador_cima`. ⚠️ Los campos nuevos CIMA de siniestros están a 0/101:
+falta reprocesar los 46 SIN (lote cifrado ya en la rama temporal `cima-lote-sin-2026-09-28` del repo asegura; el
+clasificador bloquea leer la clave → lo lanza Alberto con `scratchpad/cima/clave.txt`). Borrar después ramas
+`cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` y los runs de `cima-rescate-lote`.

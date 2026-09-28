@@ -1184,6 +1184,22 @@ Cepos: `siniestro-historial.test.ts` (17) y tres en `test/regression-portal-visi
 la recorte—, **vistos morder** con las tres mutaciones (sacarla del historial, recortarla a 80
 caracteres y colar `reservaImporte` en el schema).
 
+## 🗂 TODO el siniestro para el cliente (28/09/2026) — deroga la regla del 03/09
+
+Alberto: *«el seguro es suyo, tiene que saber todo; contra más información le demos, menos necesita de
+nosotros»*. La ficha de cada siniestro pinta además «Detalle del siniestro»: fecha de declaración, culpa
+(`posicion_cima` traducida: CU/RE/IN; NA y códigos raros no se pintan), papel (causante/perjudicado),
+parte amistoso, **reserva** (con la aclaración «lo que aparta, no lo que va a pagar») y su desglose,
+recobros, expedientes, riesgo/coberturas afectadas, vehículo, marca-modelo del contrario, asistencias,
+descripción de CIMA y **tramitador y perito** con sus contactos. Traduce `detalleSiniestroCompania()`
+(`module-seguros-portal/src/siniestro-detalle.ts`). GRANT por columnas aplicado el 28/09 ANTES del schema.
+🚫 **Siguen fuera, por ser de TERCEROS:** matrícula y conductor del contrario y el nombre de la persona
+física de una asistencia — llegan cifrados (`v1:`) y `textoClaro` los descarta; el prestador solo sale si
+es empresa. Tampoco `contacto_*_cima` (cifrados) ni `ref_mediador_cima` (sin grant). Las secciones de
+abajo que dicen «sin tramitador/perito/reserva/culpa» quedan superadas en eso. Cepos en
+`test/regression-portal-visibilidad.test.ts` y `siniestro-detalle.test.ts` (tres mutaciones vistas morder).
+⚠️ Los campos nuevos de CIMA solo llegan tras reprocesar los SIN (a 28/09: 0 de 101 rellenos).
+
 ## 🧭 Cómo va el siniestro según la COMPAÑÍA (24/09/2026)
 
 El CRM guarda desde el 24/09/2026 lo que la compañía manda por EIAC (`situaciones_cima`, `acciones_cima`,
