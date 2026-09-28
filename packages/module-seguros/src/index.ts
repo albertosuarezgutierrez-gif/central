@@ -770,6 +770,7 @@ export {
   eurEs,
   FIRMEZAS,
   FRANQUICIAS,
+  FAMILIAS_SIN_ESCALA_DE_COBERTURA,
   FILTRO_PRECIOS_VACIO,
   type FamiliaNivel,
   type Nivel,

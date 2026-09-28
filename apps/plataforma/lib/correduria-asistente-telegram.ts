@@ -875,8 +875,9 @@ async function proponerAccion(tipo: TipoAccion, args: Record<string, unknown>, t
  * reales y efecto vigente; si no, la frase de por qué no (nunca un «no hay» por un fallo de lectura).
  */
 async function tarificacionPresupuesto(clienteId: string, ramoArg: unknown): Promise<{ tarificacionId: string; resumen: string } | string> {
-  const ramo = ramoArg === 'auto' || ramoArg === 'moto' || ramoArg === 'hogar' ? ramoArg : null
-  if (!ramo) return 'ramo no válido (auto, moto u hogar)'
+  const RAMOS = ['auto', 'moto', 'hogar', 'decesos', 'salud', 'vida'] as const
+  const ramo = RAMOS.find((r) => r === ramoArg) ?? null
+  if (!ramo) return `ramo no válido (${RAMOS.join(', ')})`
   const r = await tarificacionNuevaGuardadaAsegura(clienteId, ramo)
   if (r.estado === 'ninguna') return `no hay ninguna tarificación de ${ramo} guardada para este cliente sin póliza: hay que tarificar primero en su ficha`
   if (r.estado !== 'ok') return `no he podido leer la tarificación guardada (${r.mensaje})`
