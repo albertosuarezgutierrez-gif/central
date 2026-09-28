@@ -126,6 +126,11 @@ export async function proponerPorTelegram(ctx: Contexto, pregunta: string, dec: 
   // Cierre de conversación (gracias/perfecto…): el agente avisa de que no hace falta responder y deja
   // descartar sin enviar nada (además de Enviar de cortesía, que sigue arriba).
   if (noRespuesta) botones.push([{ texto: '🚫 No responder', callback: `hsp_skip:${ctx.bookingId}` }])
+  // Ya contestado a mano (Smoobu/Booking/WhatsApp): cierra el pendiente sin enviar nada.
+  else botones.push([{ texto: '✋ Ya respondido', callback: `hsp_done:${ctx.bookingId}` }])
+  // El «mensaje del huésped» lo escribió Alberto fuera de Smoobu y llegó sin marca de emisor
+  // (reserva 154692216): se registra como nuestro para que el anti-eco no vuelva a tomarlo por pregunta.
+  botones.push([{ texto: '🙋 Ese mensaje es mío', callback: `hsp_mine:${ctx.bookingId}` }])
   // Retocar: aplicar una instrucción corta sobre el borrador (no reescribir entero).
   if (dec.reply) botones.push([{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${ctx.bookingId}` }])
   // Acción contextual: conceder late/early si la categoría lo pide.
@@ -160,7 +165,7 @@ export async function reproponerBorrador(
     `\n\nRevísalo y dale a ✅ Enviar, o sigue ajustando.`
   const botones: Boton[][] = [
     [{ texto: '✅ Enviar', callback: `hsp_send:${pend.booking_id}` }, { texto: '✏️ Modificar', callback: `hsp_edit:${pend.booking_id}` }],
-    [{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${pend.booking_id}` }],
+    [{ texto: '🔧 Retocar sobre el borrador', callback: `hsp_tune:${pend.booking_id}` }, { texto: '✋ Ya respondido', callback: `hsp_done:${pend.booking_id}` }],
   ]
   const mid = await tgAvisoBotones('huespedes.borrador', cuerpo, botones)
   // Guarda el nuevo borrador como pendiente (el ✅ Enviar mandará ESTE texto) y resetea los modos.
@@ -174,6 +179,14 @@ export async function reproponerBorrador(
 
 export async function confirmarEnviado(messageId: number | null, texto: string): Promise<void> {
   if (messageId) await tgEditMessage(messageId, `✅ Enviado al huésped:\n\n${escapeHtml(texto)}`)
+}
+
+export async function confirmarRespondidoFuera(messageId: number | null): Promise<void> {
+  if (messageId) await tgEditMessage(messageId, '✋ Respondido fuera del agente — pendiente cerrado, no se envió nada.')
+}
+
+export async function confirmarEsMio(messageId: number | null): Promise<void> {
+  if (messageId) await tgEditMessage(messageId, '🙋 Anotado: ese mensaje era tuyo, no del huésped. Pendiente cerrado y no volveré a tomarlo por pregunta.')
 }
 
 export async function confirmarDescartado(messageId: number | null): Promise<void> {

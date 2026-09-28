@@ -25,7 +25,15 @@ import { Ico, FILA } from '../../../iconos'
 import { pedirOferta, pedirEmision, pedirCatalogo, pedirCoberturas } from './acciones'
 import type { RespuestaCoberturas } from '@/lib/retarificar-asegura'
 import { ProductFormWidget } from './ProductFormWidget'
-import type { AvisoCuenta, CuentaConocida, Opcion, SolicitudEmisionVista, TrasEmision } from '@/lib/retarificar-asegura'
+import type {
+  AvisoCuenta,
+  CausaBloqueo,
+  CausaDuplicado,
+  CuentaConocida,
+  Opcion,
+  SolicitudEmisionVista,
+  TrasEmision,
+} from '@/lib/retarificar-asegura'
 import { lineasTrasEmision } from '@/lib/tras-emision-texto'
 import { fechaEs } from '@/lib/ficha-asegura'
 
@@ -106,6 +114,21 @@ type EstadoPanel =
   | { paso: 'faltan_producto'; campos: string[]; quoteCrudo: unknown; mensaje: string }
   /** `reintento`: con qué volver a llamar a asegura (sin confirmar) para que
    *  enseñe el estado del proyecto en vez de mandar al ReRate. */
+  /** Cliente NUEVO (28/09/2026): asegura cree que es un duplicado y no ha enviado
+   *  nada. El corredor puede emitir igualmente (`duplicadoConfirmado`). */
+  | {
+      paso: 'duplicado'
+      causa: CausaDuplicado
+      mensaje: string
+      polizas: string[]
+      projectId: string
+      cuenta: CuentaConocida | null
+      cuentaAviso: AvisoCuenta | null
+    }
+  /** asegura se niega antes de enviar y no hay nada que confirmar aquí. */
+  | { paso: 'bloqueado'; causa: CausaBloqueo; mensaje: string }
+  /** Interruptor `CODEOSCOPIC_EMISION_NUEVO` apagado: reintentar no sirve. */
+  | { paso: 'nuevo_apagado'; mensaje: string }
   | {
       paso: 'error'
       mensaje: string
@@ -113,6 +136,18 @@ type EstadoPanel =
       consejo?: string
       reintento?: { projectId: string; cuenta: CuentaConocida | null; cuentaAviso: AvisoCuenta | null }
     }
+
+const TITULO_DUPLICADO: Record<CausaDuplicado, string> = {
+  ya_en_cartera: 'Esta matrícula ya está asegurada en la cartera',
+  ya_emitido: 'A este cliente ya se le emitió una póliza de este ramo hace menos de 30 días',
+}
+
+const TITULO_BLOQUEO: Record<CausaBloqueo, string> = {
+  identidad: 'El DNI del tomador no cuadra con la ficha',
+  proyecto_liberado: 'Este proyecto ya no está enlazado a la póliza que sustituía',
+  cliente_distinto: 'El proyecto es de otro cliente',
+  tomador_fusionado: 'El tomador se fusionó en otra ficha',
+}
 
 function euroODash(n: number | null): string {
   return n === null || !Number.isFinite(n) ? '—' : eur(n)
@@ -313,6 +348,7 @@ export function Emision({
   producto = null,
   fechaEfecto = null,
   ofertaImportada = null,
+  sustituye = true,
   onCerrar,
 }: {
   /** Ausente cuando la oferta viene importada de Avant2: ahí no hay cotización nuestra. */
@@ -328,6 +364,8 @@ export function Emision({
   /** Oferta ya aceptada al importar un proyecto hecho en Avant2 (fila 13, 26/09/2026):
    *  el panel arranca en el paso de emitir, sin ReRate. */
   ofertaImportada?: Omit<Extract<EstadoPanel, { paso: 'oferta' }>, 'paso'> | null
+  /** `false` para un cliente NUEVO (sin póliza que sustituir): no hay carta de baja. */
+  sustituye?: boolean
   onCerrar: () => void
 }) {
   const [estado, setEstado] = useState<EstadoPanel>(
@@ -497,7 +535,7 @@ export function Emision({
     projectId: string,
     cuenta: CuentaConocida | null,
     aviso: AvisoCuenta | null,
-    opciones: { reintentoConfirmado?: boolean; acunarExistente?: boolean } = {},
+    opciones: { reintentoConfirmado?: boolean; acunarExistente?: boolean; duplicadoConfirmado?: boolean } = {},
   ) {
     let campos: Record<string, unknown>
     try {
@@ -551,7 +589,20 @@ export function Emision({
       reintentoConfirmado: opciones.reintentoConfirmado === true,
       acunarExistente: opciones.acunarExistente === true,
       familiaEnAllianz: esAllianz && familiaAllianz,
+      duplicadoConfirmado: opciones.duplicadoConfirmado === true,
     })
+    if (r.estado === 'duplicado') {
+      setEstado({ paso: 'duplicado', causa: r.causa, mensaje: r.mensaje, polizas: r.polizas, projectId, cuenta, cuentaAviso: aviso })
+      return
+    }
+    if (r.estado === 'bloqueado') {
+      setEstado({ paso: 'bloqueado', causa: r.causa, mensaje: r.mensaje })
+      return
+    }
+    if (r.estado === 'nuevo_apagado') {
+      setEstado({ paso: 'nuevo_apagado', mensaje: r.mensaje })
+      return
+    }
     if (r.estado === 'reintento_sin_confirmar') {
       setEstado({
         paso: 'reintento_sin_confirmar',
@@ -979,7 +1030,9 @@ export function Emision({
               Emitir la póliza
             </button>
             <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
-              Al emitir, el cliente recibe un correo con su nuevo seguro y la carta de baja de la póliza anterior para firmar en el portal.
+              {sustituye
+                ? 'Al emitir, el cliente recibe un correo con su nuevo seguro y la carta de baja de la póliza anterior para firmar en el portal.'
+                : 'Al emitir, el cliente recibe un correo con su nuevo seguro.'}
             </p>
             {estado.cuenta && !cuentaDecidida(estado.cuenta, cuentaOk, iban) && (
               <p className="muted" style={{ fontSize: 12, margin: '6px 0 0' }}>
@@ -1072,6 +1125,55 @@ export function Emision({
       {estado.paso === 'emitido_sin_acunar' && (
         <div className="err" style={{ marginTop: 14 }}>
           <Ico i={AlertTriangle} /> {estado.mensaje}
+        </div>
+      )}
+
+      {estado.paso === 'duplicado' && (
+        <div style={{ marginTop: 14, border: '2px solid var(--warn)', borderRadius: 10, padding: 12 }}>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+            <Ico i={AlertTriangle} /> {TITULO_DUPLICADO[estado.causa]}. No se ha emitido nada.
+          </p>
+          <p style={{ margin: '6px 0 0' }}>{estado.mensaje}</p>
+          {estado.polizas.length > 1 && (
+            <p className="muted" style={{ margin: '6px 0 0', fontSize: 12 }}>
+              {estado.polizas.length} pólizas en vigor con esta matrícula.
+            </p>
+          )}
+          <button
+            type="button"
+            className="ghost"
+            style={{ marginTop: 10, minHeight: 44 }}
+            onClick={() => {
+              const ok = window.confirm(
+                estado.causa === 'ya_en_cartera'
+                  ? '¿Seguro que es otro vehículo o una póliza distinta? Si es el mismo, emitir ahora deja DOS seguros sobre él.'
+                  : '¿Seguro que es una póliza distinta de la emitida hace menos de 30 días? Emitir ahora puede duplicarla.',
+              )
+              if (ok) emitir(estado.projectId, estado.cuenta, estado.cuentaAviso, { duplicadoConfirmado: true })
+            }}
+          >
+            Emitir igualmente
+          </button>
+        </div>
+      )}
+
+      {estado.paso === 'bloqueado' && (
+        <div className="err" style={{ marginTop: 14 }}>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+            <Ico i={OctagonAlert} /> {TITULO_BLOQUEO[estado.causa]}. No se ha emitido nada.
+          </p>
+          <p style={{ margin: '6px 0 0' }}>{estado.mensaje}</p>
+        </div>
+      )}
+
+      {estado.paso === 'nuevo_apagado' && (
+        <div className="err" style={{ marginTop: 14 }}>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700 }}>
+            <Ico i={OctagonAlert} /> La emisión a clientes nuevos está apagada.
+          </p>
+          <p className="muted" style={{ margin: '6px 0 0', fontSize: 13 }}>
+            No se ha enviado nada. Hasta que se encienda en central-asegura, esta póliza se emite a mano en Avant2.
+          </p>
         </div>
       )}
 

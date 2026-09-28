@@ -1331,6 +1331,37 @@ export type RespuestaEmitir =
     }
   | { estado: 'ok'; referenciaVendor: string | null; acunado: unknown; cuenta: CuentaConocida | null; trasEmision: TrasEmision | null }
   | { estado: 'emitido_sin_acunar'; mensaje: string; referenciaVendor?: string | null }
+  /** 409 · cliente NUEVO (28/09/2026): asegura cree que es un duplicado y NO ha enviado
+   *  nada. `ya_en_cartera` = la matrícula ya tiene póliza en vigor (quizá en otra ficha:
+   *  el mensaje trae su nº ENMASCARADO); `ya_emitido` = otro proyecto emitido del mismo
+   *  cliente y ramo en 30 días. Se salta reenviando con `duplicadoConfirmado: true`. */
+  | { estado: 'duplicado'; causa: CausaDuplicado; mensaje: string; polizas: string[] }
+  /** 409/404 · asegura se niega ANTES de enviar nada y no hay nada que confirmar:
+   *  hay que arreglar el origen (ficha, DNI, retarificar desde la ficha buena). */
+  | { estado: 'bloqueado'; causa: CausaBloqueo; mensaje: string }
+  /** 503 · el interruptor `CODEOSCOPIC_EMISION_NUEVO` está apagado. No es una avería
+   *  pasajera: reintentar no sirve hasta que se encienda. */
+  | { estado: 'nuevo_apagado'; mensaje: string }
+
+export type CausaDuplicado = 'ya_en_cartera' | 'ya_emitido'
+export type CausaBloqueo = 'identidad' | 'proyecto_liberado' | 'cliente_distinto' | 'tomador_fusionado'
+
+/** Lo que se le dice al corredor por cada causa nueva de `/emitir` (cliente nuevo). */
+export const TEXTO_CAUSA_EMITIR: Record<CausaDuplicado | CausaBloqueo, string> = {
+  ya_en_cartera: 'Esta matrícula ya tiene una póliza en vigor en la cartera.',
+  ya_emitido: 'A este cliente ya se le emitió otra póliza de este ramo en los últimos 30 días.',
+  identidad: 'El DNI del tomador del proyecto no coincide con el de la ficha (o la ficha no tiene DNI).',
+  proyecto_liberado:
+    'Este proyecto se hizo para sustituir una póliza y ya no está enlazado a ella: emitirlo como cliente nuevo dejaría dos seguros. Retarifica desde la póliza.',
+  cliente_distinto: 'El proyecto, la póliza o la tarificación son de otro cliente distinto al de esta ficha.',
+  tomador_fusionado: 'El tomador de esta póliza se fusionó en otra ficha: retarifica desde la ficha buena.',
+}
+
+/** Quita la coletilla técnica (`duplicadoConfirmado: true`) que asegura añade para
+ *  quien llama al puerto a mano: en pantalla la confirmación es un botón. */
+function sinColetillaTecnica(m: string): string {
+  return m.replace(/\s*Si aun así es una póliza nueva, confirma con `duplicadoConfirmado: true`\.?\s*$/, '').trim()
+}
 
 export type SolicitudEmisionVista = {
   id: string | null
@@ -1386,6 +1417,28 @@ export function interpretarEmitir(status: number, json: unknown): RespuestaEmiti
   }
   if (status === 409 && r.causa === 'en-vuelo') {
     return { estado: 'en_vuelo', mensaje: cadenaONulo(r.mensaje) ?? 'Ya hay un envío de este proyecto en curso.' }
+  }
+  if (status === 409 && (r.causa === 'ya_en_cartera' || r.causa === 'ya_emitido')) {
+    const causa: CausaDuplicado = r.causa
+    const m = cadenaONulo(r.mensaje)
+    return {
+      estado: 'duplicado',
+      causa,
+      mensaje: (m ? sinColetillaTecnica(m) : '') || TEXTO_CAUSA_EMITIR[causa],
+      polizas: Array.isArray(r.polizas) ? r.polizas.filter((x): x is string => typeof x === 'string') : [],
+    }
+  }
+  if (
+    (status === 409 && (r.causa === 'identidad' || r.causa === 'proyecto_liberado' || r.causa === 'cliente_distinto')) ||
+    (status === 404 && r.causa === 'tomador_fusionado')
+  ) {
+    const causa = r.causa as CausaBloqueo
+    return { estado: 'bloqueado', causa, mensaje: cadenaONulo(r.mensaje) ?? TEXTO_CAUSA_EMITIR[causa] }
+  }
+  // El interruptor del modo NUEVO comparte `causa: 'apagado'` con el general; lo
+  // distingue el nombre de su variable en el mensaje (asegura no manda otra señal).
+  if (status === 503 && r.causa === 'apagado' && /CODEOSCOPIC_EMISION_NUEVO/.test(cadenaONulo(r.mensaje) ?? '')) {
+    return { estado: 'nuevo_apagado', mensaje: 'La emisión a clientes nuevos está apagada en central-asegura (CODEOSCOPIC_EMISION_NUEVO). No se ha enviado nada.' }
   }
   if (status === 409 && r.causa === 'reintento_sin_confirmar') {
     return {
@@ -1459,6 +1512,9 @@ export async function emitirAsegura(p: {
    *  Allianz (bonificación real de cartera). NUNCA se manda por defecto — ver
    *  `conProductoPorDefecto` en asegura, que es quien decide el valor final. */
   familiaEnAllianz?: boolean
+  /** Cliente NUEVO: el corredor ha visto el 409 `ya_en_cartera`/`ya_emitido` y
+   *  confirma que es otra póliza. Solo se manda cuando es true. */
+  duplicadoConfirmado?: boolean
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1476,6 +1532,7 @@ export async function emitirAsegura(p: {
           ...(p.reintentoConfirmado === true ? { reintentoConfirmado: true } : {}),
           ...(p.acunarExistente === true ? { acunarExistente: true } : {}),
           ...(p.familiaEnAllianz === true ? { familiaEnAllianz: true } : {}),
+          ...(p.duplicadoConfirmado === true ? { duplicadoConfirmado: true } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,

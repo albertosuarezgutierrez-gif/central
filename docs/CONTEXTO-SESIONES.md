@@ -850,6 +850,13 @@ Portal: quien ve una ficha ENTERA (autorización sin póliza suelta o empresa de
 capada como interviniente (`capaInterviniente`, `figurasDeFichasVistas`); cepo en `regression-portal-intervinientes`.
 Confirmado con las condiciones particulares de Generali: tomador y conductor habitual = Francisco Javier; asegurado/propietario = GLOBAL 2 (Citan 1670HRB). La BD está bien. La copia de volcado `UV-G-410.081.428` (con puntos, no viva) cuelga de GLOBAL 2 como tomador.
 
+## (28/09/2026) Correduría: el CP rellena solo la ciudad (y la provincia)
+- Tabla CP→municipio incrustada (`apps/plataforma/lib/municipios-por-cp.json`, 11.254 CP, INE+CNIG; solo servidor)
+  vía `GET /api/correduria/codigo-postal`. Campo `CiudadPorCp.tsx` en alta de cliente, edición de dirección y
+  dirección del riesgo: 1 municipio → se pone; varios → desplegable (+ «Otra…»). No pisa la ficha al abrirla;
+  si la ciudad guardada contradice al CP lo avisa debajo (caso 41011 + «ESPARTINAS»: 41011 es Sevilla).
+- La provincia ahora se sobrescribe con la del CP al teclear un CP completo (antes solo si estaba vacía).
+
 ## (28/09/2026) Matrícula de ESTE mes: la fecha ya se estima (moto y auto) + garaje por defecto en moto
 - `2121NST` no rellenaba nada: la tabla de series solo tiene meses CERRADOS (acaba en NRY, agosto), así que
   toda matrícula del mes en curso daba `null`. `fechaMatriculacionEstimada(m, hoy)` extrapola al ritmo medio
@@ -897,7 +904,7 @@ clave no prueba nada con una clave equivocada (hallazgo de code-review; cepo `ap
 - Ingesta CIMA (asegura#859, mergeado 28/09): guarda TODAS las figuras — un papel por fila (índice `(correduria,poliza,nif_lookup_hash,rol)` ya aplicado en `seguros`), propietario empresa, asegurado = tomador (sin contacto). ⏸️ Falta reprocesar los 36 POL de Drive con `cima-rescate-lote` (lote cifrado preparado en la sesión, no lanzado): hasta entonces los datos viejos siguen sin el 2º papel.
 
 ## (28/09/2026) E2E `playwright / portal` de asegura rojo en todos los PRs = bypass de Vercel caducado
-Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCEL_PROTECTION_BYPASS_SECRET` de GitHub ya no vale → todo acaba en `vercel.com/login`; rojo desde el 04/09 (paso del proyecto al equipo de Alberto). F3 «aceptar precio» NI corre: se salta por faltar `E2E_SUPABASE_URL` (el comentario del bot lo culpaba por texto cableado). PR asegura#863 (draft): preflight que lo dice en 1 s + comentario con recuento real. ✅ Secreto copiado el mismo día: E2E en verde (14 ok · 0 fallidos · 12 saltados). Los 12 saltados (F3 incluido) esperan `E2E_SUPABASE_URL`/`E2E_SUPABASE_SERVICE_ROLE_KEY` — decisión de Alberto (crean usuarios en Auth).
+Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCEL_PROTECTION_BYPASS_SECRET` de GitHub ya no vale → todo acaba en `vercel.com/login`; rojo desde el 04/09 (paso del proyecto al equipo de Alberto). F3 «aceptar precio» NI corre: se salta por faltar `E2E_SUPABASE_URL` (el comentario del bot lo culpaba por texto cableado). PR asegura#863 (draft): preflight que lo dice en 1 s + comentario con recuento real. ✅ Secreto copiado el mismo día: E2E en verde (14 ok · 0 fallidos · 12 saltados). Los 12 saltados (F3 incluido) esperan `E2E_SUPABASE_URL`/`E2E_SUPABASE_SERVICE_ROLE_KEY` — decisión de Alberto (crean usuarios en Auth). Después: Dependabot npm (#836→#866) rojo en `test + build` por **tsx 4.23**, no por libphonenumber: con tsx 4.22 la librería se cargaba sin metadata en los tests y el `catch→true` de `isValidTelefono` lo aceptaba todo; 2 tests validaban números no ES. asegura#867 (mergeado): tsx 4.23.13 + tests corregidos + cepo (rojo con 4.22); #866 mergeado sin ticket (squash f48abc2). ⚠️ `pnpm-lock.yaml` también: Vercel instala con pnpm frozen. Pendiente: el `catch→true` (fail-open) de `isValidTelefono`.
 
 ## (28/09/2026) Agente de huéspedes: dejaba de responderse a sí mismo (reserva 154692216)
 - Nuestros envíos reaparecen en Smoobu sin emisor; el anti-eco solo conocía `mensajes_log` (borrador), no acuses, programados ni lo editado en Telegram → 5 ecos en 4 días, 2 contestados solos al huésped, y el eco pisó en la cola la pregunta real.
@@ -906,6 +913,13 @@ Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCE
 - 2ª tanda: filtro de plantillas (`esPlantillaHost`: nombre completo al principio = bienvenida/despedida nuestra; 8 contestadas solas en sep), categorías con `\b` + seguridad/camas/avisos (el phishing caía en «parking» por «card»), `mensajes_log.respuesta_enviada` + `edited` real + vista `v_agente_huesped_calidad`, aviso de antigüedad en el prompt (>6 h), y lo aprobado SIN editar entra como hecho `propuesto` con botones.
 - ⚠️ Estado de limpieza NO consultable: `cleaning_sessions.started_at/completed_at` siempre NULL en los 4 pisos (nadie marca «terminada»). Botón «Piso listo» para Vanesa DESCARTADO por Alberto: la limpieza se gestiona desde oficina y avisarían tarde → no montar.
 - Revisión antes de merge: «self check-in» corto y el huésped que se presenta («this is Justine Delbos…») ya no se tragan como plantilla; `acceso` casa «clé/código/codes/keybox» (`\b` no ve tildes en JS).
+
+## (28/09/2026) Agente de huéspedes: «olvidar» lo que ya respondió Alberto a mano
+- El pendiente de `mensajes_pendientes_tg` solo se cerraba con los botones de Telegram: si se contesta desde Smoobu/Booking seguía vivo → recordatorio a los 45 min y acuse «lo estamos revisando» al huésped a las 3 h sobre una conversación ya atendida.
+- Botón **✋ Ya respondido** (`hsp_done`) en propuesta, re-propuesta y recordatorio: borra el pendiente sin enviar nada. Y el barrido de rancios (`rancio-guardia`) mira el hilo antes de recordar/acusar: si tras la pregunta hay un mensaje del host que no es nuestro ni plantilla (`respondidoFuera()`, puro y testeado), cierra y avisa por Telegram con el texto visto.
+- Pendiente de 154692216 (Justine) borrado a mano en BD. ⚠️ Hallazgo sin arreglar: los mensajes que Alberto escribió en ese hilo («Hemos corroborado…», «Tiene mi tlf…») entraron como DEL HUÉSPED y generaron borradores → atribución de emisor de Smoobu falla para mensajes del host escritos fuera (¿Booking extranet?). Sin el JSON crudo de Smoobu no se ha podido medir. Quedan 11 pendientes zombis (ago-sep) ya acusados, inertes.
+- PR #3849 mergeado. Después: 11 zombis BORRADOS, y `mensajes_log.emisor_raw` (jsonb, aplicada) guarda origen (sondeo/historial/correo) + `type`/`sent_by_owner`/`sender`/campos crudos de Smoobu del mensaje tomado como pregunta → la próxima vez que un mensaje de Alberto entre como huésped, `SELECT emisor_raw FROM mensajes_log` dice por qué.
+- Botón **🙋 Ese mensaje es mío** (`hsp_mine`) en la propuesta: mete la «pregunta» en `mensajes_enviados` (el anti-eco la trata como del host desde entonces) y cierra el pendiente. Es el arreglo manual hasta tener datos de `emisor_raw` para el automático.
 
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.

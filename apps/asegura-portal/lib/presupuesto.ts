@@ -50,6 +50,7 @@ import { decryptField } from '@central/module-seguros-pii'
 import { hashCanal } from './auth'
 import { prisma } from './db'
 import { getIdentidad } from './session'
+import { coberturasDeOpcion, type CoberturasOpcion } from './tabla-coberturas'
 import { coberturasDeJson, leerFirmeza, leerSinEquivalente, esPapel, type Firmeza, type PapelPortada, type SinEquivalente } from './presupuesto-vista'
 
 // ─── Lo que la pantalla necesita ─────────────────────────────────────────────
@@ -71,6 +72,9 @@ export type OpcionCliente = {
   avisos: string[]
   /** Las garantías congeladas. Vacío = **no se congelaron**, no «no cubre nada». */
   coberturas: string[]
+  /** Las coberturas de la compañía con sus TRES estados (sí / no / ver texto), para la tabla.
+   *  `lista: null` = no constan (no se intentó o no se pudieron leer). */
+  coberturasDetalle: CoberturasOpcion
   papeles: PapelPortada[]
   /** La de menor importe NO comparte cobertura con la actual. Se pinta. */
   coberturaDistinta: boolean
@@ -371,6 +375,7 @@ async function leerOpciones(presupuestoId: string, correduriaId: string): Promis
       firmeza: leerFirmeza(f.firmeza),
       avisos: coberturasDeJson(f.avisos),
       coberturas: coberturasDeJson(f.coberturas),
+      coberturasDetalle: coberturasDeOpcion(f.coberturas),
       papeles,
       // `coberturaDistinta` tampoco se congela: se deriva de que la opción haga
       // de «menor importe» sin que ninguna haga de equivalente, que es

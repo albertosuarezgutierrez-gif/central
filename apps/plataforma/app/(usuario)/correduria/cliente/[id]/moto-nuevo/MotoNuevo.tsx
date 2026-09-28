@@ -750,7 +750,7 @@ export default function MotoNuevo({
             {simulacion ? 'Descartar y simular de cero' : 'Descartar y pedir precio de cero — cuesta 0,50€'}
           </button>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible={poliza !== null} />}
+        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible sustituye={poliza !== null} />}
       </div>
     </div>
   )
@@ -803,11 +803,16 @@ function Precios({
   r,
   simulacion,
   emitible = false,
+  sustituye = true,
 }: {
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
-  /** Solo en modo póliza (23/09/2026): emitir exige una póliza de la cartera a la que colgar la nueva. */
+  /** Desde el 28/09/2026 también sin póliza: asegura emite a un cliente NUEVO con el
+   *  proyecto enlazado a la ficha y a la tarificación (antes exigía una póliza de la
+   *  cartera a la que colgar la nueva). */
   emitible?: boolean
+  /** `true` si hay póliza anterior que sustituir (carta de baja); `false` = cliente nuevo. */
+  sustituye?: boolean
 }) {
   const [abierta, setAbierta] = useState<string | null>(null)
   const cotizacionId = cotizacionIdDe(r.guardado)
@@ -870,7 +875,7 @@ function Precios({
                             ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
                             : 'Confirmar con la compañía y emitir'
                       }
-                      style={{ ...btnStyle('secundario', 'sm') }}
+                      style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}
                     >
                       {abierta === `${p.compania}-${p.producto}-${i}` ? 'Ocultar' : 'Emitir'}
                     </button>
@@ -893,6 +898,7 @@ function Precios({
               categoria={p.categoria ?? ''}
               primaEur={p.primaEur ?? null}
               producto={p.producto ?? null}
+              sustituye={sustituye}
               onCerrar={() => setAbierta(null)}
             />
           )

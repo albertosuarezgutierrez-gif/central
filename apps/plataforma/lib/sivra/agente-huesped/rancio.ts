@@ -122,3 +122,28 @@ export function textoEspera(lang: string): string {
 export function textosEsperaTodos(): string[] {
   return Object.values(ESPERA)
 }
+
+/**
+ * ¿Se le respondió al huésped FUERA del agente (Smoobu, Booking, WhatsApp…) desde que se propuso el
+ * borrador? Caso (28/09/2026, reserva 154692216): Alberto contestó a mano y el pendiente siguió vivo,
+ * así que el barrido le volvía a poner el borrador delante y podía mandarle al huésped «lo estamos
+ * revisando» sobre una conversación ya atendida.
+ *
+ * Cuando se crea el pendiente el último mensaje del hilo es del huésped (el orquestador sale si es
+ * del host). Se recorre el hilo desde el final saltando lo automático (nuestros acuses/programados y
+ * las plantillas de Smoobu): si lo primero que aparece es un mensaje del host escrito por una persona,
+ * alguien respondió. Si aparece antes uno del huésped, sigue pendiente. Devuelve el texto de esa
+ * respuesta (para enseñárselo a Alberto al cerrar) o `null`.
+ */
+export function respondidoFuera(
+  historial: { from: 'guest' | 'host'; text: string }[],
+  esAutomatico: (texto: string) => boolean,
+): string | null {
+  for (let i = (historial || []).length - 1; i >= 0; i--) {
+    const m = historial[i]
+    if (!m?.text?.trim()) continue
+    if (m.from === 'guest') return null
+    if (!esAutomatico(m.text)) return m.text
+  }
+  return null
+}

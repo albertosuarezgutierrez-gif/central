@@ -24,6 +24,7 @@ import {
   type ResultadoEscritura,
 } from '@/lib/cliente-edicion-asegura'
 import DireccionConfirmable from './DireccionConfirmable'
+import CiudadPorCp from './CiudadPorCp'
 
 /**
  * Editar la IDENTIDAD de un cliente de la correduría, desde la ficha de
@@ -87,9 +88,9 @@ export function EditarDireccion({ clienteId, contacto }: {
   function set<K extends keyof Libre>(k: K, v: string) {
     setF((prev) => {
       const next = { ...prev, [k]: v }
-      // Al teclear el CP se rellena la provincia si está vacía: es la que se
-      // corrigió a mano en 32 fichas el 02/09/2026.
-      if (k === 'codigoPostal' && prev.provincia.trim() === '') {
+      // CP completo → su provincia, aunque hubiera otra: una provincia que contradice
+      // al CP es el error que más se ha visto (386 fichas «Tarragona» con CP 41xxx).
+      if (k === 'codigoPostal' && /^\d{5}$/.test(v.trim())) {
         const p = provinciaPorCp(v)
         if (p) next.provincia = p
       }
@@ -156,7 +157,7 @@ export function EditarDireccion({ clienteId, contacto }: {
             <input value={f.codigoPostal} onChange={(e) => set('codigoPostal', e.target.value)} inputMode="numeric" maxLength={5} placeholder="41003" style={campo} />
           </Campo>
           <Campo label="Ciudad" mal={campoMal === 'ciudad'}>
-            <input value={f.ciudad} onChange={(e) => set('ciudad', e.target.value)} style={campo} />
+            <CiudadPorCp cp={f.codigoPostal} ciudad={f.ciudad} onCiudad={(v) => set('ciudad', v)} style={campo} />
           </Campo>
           <Campo label="Provincia" mal={campoMal === 'provincia'}>
             <input value={f.provincia} onChange={(e) => set('provincia', e.target.value)} style={campo} />

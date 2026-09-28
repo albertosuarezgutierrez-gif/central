@@ -64,3 +64,31 @@ test('🪤 lo firmado cita las necesidades guardadas, y solo se reescriben antes
   const pres = readFileSync(new URL('./presupuesto.ts', import.meta.url), 'utf8')
   assert.match(pres, /where: \{ id: fila\.id, correduriaId, aceptadoAt: null, retiradoAt: null \},\s*data: \{ necesidades: v\.valor/)
 })
+
+// ─── «Revisa tus datos» (28/09/2026) ──────────────────────────────────────────
+const ruta = readFileSync(new URL('../app/api/portal/presupuesto/route.ts', import.meta.url), 'utf8')
+
+test('🪤 aceptar SIN la casilla se rechaza en el SERVIDOR, antes de tocar la BD o gastar el código', () => {
+  const casilla = firmar.indexOf("if (datos.datosConfirmados !== true) return { estado: 'sin_confirmar_datos' }")
+  const baseIdx = firmar.indexOf('await base(correduriaId')
+  const gasto = firmar.indexOf('set firma_otp_intentos = firma_otp_intentos + 1')
+  assert.ok(casilla > 0 && casilla < baseIdx && casilla < gasto, 'la casilla va lo primero')
+  // El puente solo acepta un `true` literal: un «sí», un 1 o un campo ausente no confirman.
+  assert.match(ruta, /datosConfirmados: b\.datosConfirmados === true,/)
+})
+
+test('🪤 datos ilegibles o avisados como incorrectos → NO se autoriza (preparar ni firmar)', () => {
+  const datosDe = src.slice(src.indexOf('function datosDe'), src.indexOf('export type ResultadoPreparar'))
+  assert.match(datosDe, /if \(f\.datosEnRevision\) return \{ estado: 'datos_en_revision'/)
+  assert.match(datosDe, /d\.estado === 'ok' \? d : \{ estado: 'sin_datos'/)
+  const prep = src.slice(src.indexOf('export async function prepararAceptacion'), src.indexOf('export type ResultadoCodigo'))
+  const corte = prep.indexOf("if (d.estado !== 'ok') return d")
+  assert.ok(corte > 0 && corte < prep.indexOf('componer('), 'preparar corta antes de componer')
+  const cierre = firmar.indexOf("if (dc.estado !== 'ok') return dc")
+  assert.ok(cierre > 0 && cierre < firmar.indexOf('set firma_otp_intentos = firma_otp_intentos + 1'), 'se cierra antes de gastar el código')
+})
+
+test('🪤 los datos confirmados van DENTRO del documento firmado (y por tanto de su huella) y en el evento', () => {
+  assert.match(src, /\}\) \+ '\\n\\n' \+ anexoDatosFirmados\(datos\)/)
+  assert.match(firmar, /datosConfirmados: true, datosHuella: c\.datos\.huella/)
+})
