@@ -1,55 +1,56 @@
 {
  "sesion": "f4a4b4d8-fed6-5e6c-87ee-accbf3f969de",
  "inicio": "2026-09-28T05:18:59.775Z",
- "fin": "2026-09-28T05:23:39.369Z",
- "llamadas": 112,
+ "fin": "2026-09-28T05:53:48.004Z",
+ "llamadas": 216,
  "categorias": {
   "otro": {
-   "llamadas": 25,
-   "chars_in": 2641,
-   "chars_out": 3021,
+   "llamadas": 57,
+   "chars_in": 20668,
+   "chars_out": 55890,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "Skill": 2,
     "ToolSearch": 5,
-    "ScheduleWakeup": 10,
-    "ReadNotifications": 7,
-    "ListAgents": 1
+    "ScheduleWakeup": 22,
+    "ReadNotifications": 22,
+    "ListAgents": 2,
+    "SubagentHandback": 4
    }
   },
   "lectura-directa": {
-   "llamadas": 7,
-   "chars_in": 628,
-   "chars_out": 160927,
+   "llamadas": 10,
+   "chars_in": 826,
+   "chars_out": 169838,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Read": 7
+    "Read": 10
    }
   },
   "bash": {
-   "llamadas": 8,
-   "chars_in": 1129,
-   "chars_out": 15045,
+   "llamadas": 33,
+   "chars_in": 17280,
+   "chars_out": 56566,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 8
+    "Bash": 33
    }
   },
   "sql": {
-   "llamadas": 20,
-   "chars_in": 5288,
-   "chars_out": 89645,
+   "llamadas": 37,
+   "chars_in": 13351,
+   "chars_out": 111408,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 9881,
    "tools": {
-    "mcp__Supabase__execute_sql": 20
+    "mcp__Supabase__execute_sql": 37
    }
   },
   "agente:general-purpose": {
@@ -64,25 +65,52 @@
    }
   },
   "mcp:Booking-com": {
-   "llamadas": 42,
-   "chars_in": 11022,
-   "chars_out": 759026,
+   "llamadas": 48,
+   "chars_in": 13244,
+   "chars_out": 880711,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Booking-com__accommodations_search": 42
+    "mcp__Booking-com__accommodations_search": 48
    }
   },
   "mcp:Trivago": {
-   "llamadas": 6,
-   "chars_in": 894,
-   "chars_out": 4033888,
+   "llamadas": 9,
+   "chars_in": 1344,
+   "chars_out": 5987446,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Trivago__trivago-accommodation-radius-search": 6
+    "mcp__Trivago__trivago-accommodation-radius-search": 9
+   }
+  },
+  "escritura": {
+   "llamadas": 9,
+   "chars_in": 82369,
+   "chars_out": 882853,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Write": 7,
+    "Edit": 2
+   }
+  },
+  "mcp:github": {
+   "llamadas": 9,
+   "chars_in": 2792,
+   "chars_out": 20551,
+   "errores": 0,
+   "archivos_citados": 6,
+   "chars_citados": 2417490,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 5,
+    "mcp__github__update_pull_request": 1
    }
   }
  }
