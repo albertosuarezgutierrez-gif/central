@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { decidirCiudad } from './codigo-postal-auto.ts'
+import { ciudadDelCp, decidirCiudad } from './codigo-postal-auto.ts'
 
 const TABLA = JSON.parse(readFileSync(new URL('./municipios-por-cp.json', import.meta.url), 'utf8')) as Record<string, string>
 const muni = (cp: string) => TABLA[cp]?.split('|') ?? null
@@ -36,4 +36,12 @@ test('varios y la escrita no casa → vacía y obliga a elegir', () => {
 test('CP desconocido → no se toca nada', () => {
   assert.equal(decidirCiudad(null, 'Sevilla'), null)
   assert.equal(decidirCiudad([], 'Sevilla'), null)
+})
+
+test('aviso: la ciudad guardada contradice a un CP de un solo municipio', () => {
+  assert.equal(ciudadDelCp(['Sevilla'], 'ESPARTINAS'), null)
+  assert.equal(ciudadDelCp(['Sevilla'], 'SEVILLA'), 'Sevilla')
+  assert.equal(ciudadDelCp(['Hortigüela', 'Villoruebo'], 'hortiguela'), 'Hortigüela')
+  assert.equal(ciudadDelCp(null, 'Sevilla'), null)
+  assert.equal(ciudadDelCp(['Sevilla'], '  '), null)
 })

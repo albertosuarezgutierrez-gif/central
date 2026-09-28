@@ -13,11 +13,17 @@ export type DecisionCiudad = { ciudad: string; elegir: boolean } | null
 const plano = (s: string) =>
   s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, ' ').trim()
 
+/** El municipio de la lista que ES la ciudad escrita (sin tildes ni mayúsculas), o `null`. */
+export function ciudadDelCp(municipios: string[] | null, ciudad: string): string | null {
+  const c = plano(ciudad)
+  if (!c || !municipios) return null
+  return municipios.find((m) => plano(m) === c) ?? null
+}
+
 export function decidirCiudad(municipios: string[] | null, ciudadActual: string): DecisionCiudad {
   if (!municipios || municipios.length === 0) return null
   if (municipios.length === 1) return { ciudad: municipios[0], elegir: false }
-  const actual = plano(ciudadActual)
-  const casa = actual ? municipios.find((m) => plano(m) === actual) : undefined
+  const casa = ciudadDelCp(municipios, ciudadActual)
   return casa ? { ciudad: casa, elegir: false } : { ciudad: '', elegir: true }
 }
 

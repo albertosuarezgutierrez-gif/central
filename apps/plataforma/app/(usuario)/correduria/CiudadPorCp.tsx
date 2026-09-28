@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { cpCompleto, decidirCiudad } from '@/lib/codigo-postal-auto'
+import { ciudadDelCp, cpCompleto, decidirCiudad } from '@/lib/codigo-postal-auto'
 
 /**
  * Campo «Ciudad» que se rellena solo con el código postal: un municipio → se
@@ -58,8 +58,10 @@ export default function CiudadPorCp({ cp, ciudad, onCiudad, style }: {
   }, [cp])
 
   const varios = municipios && municipios.length > 1 ? municipios : null
-  const casa = municipios ? decidirCiudad(municipios, ciudad) : null
-  const encaja = !!casa && !casa.elegir && casa.ciudad !== '' && ciudad.trim() !== ''
+  // Casa solo si la ciudad escrita ES uno de los municipios del CP: con uno solo,
+  // decidirCiudad devolvería ese municipio escribas lo que escribas.
+  const casa = ciudadDelCp(municipios, ciudad)
+  const encaja = casa !== null
   const usarSelect = !!varios && !libre && (ciudad.trim() === '' || encaja)
   const noCasa = municipios && ciudad.trim() !== '' && !encaja
 
@@ -67,7 +69,7 @@ export default function CiudadPorCp({ cp, ciudad, onCiudad, style }: {
     <>
       {usarSelect ? (
         <select
-          value={encaja ? casa!.ciudad : ''}
+          value={casa ?? ''}
           onChange={(e) => {
             if (e.target.value === OTRA) { setLibre(true); onCiudad('') } else onCiudad(e.target.value)
           }}
