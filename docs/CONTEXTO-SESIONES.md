@@ -854,7 +854,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   fija el precio. Algunas la hacen ya al estimar. Descartado preguntar a TIREA (spec 2026-09-01 §3 actualizada).
 - Medido en `tarificacion_precios`: Reale avisa «PENDIENTE REALIZAR CONSULTA SINCO» (79/89 auto); Occident
   «compañía no sinco sin certificado» (supeditada); Mutua «descuentos de siniestralidad»; el resto no dice nada.
-- Rafael Campa (lead): oportunidad auto 64bb5081 completada por SQL desde Drive (MUSSAP 2083935, 0194DRY, vence
+- Rafael Campa (lead): oportunidad auto completada por SQL desde Drive (MUSSAP, vence
   20/10/2026, 374,90€). Pendiente con OK de Alberto: presupuestar auto eligiendo la póliza/historial de cada coche
   y el bug de `oportunidad-presupuesto.ts:52` (con 2 auto abiertas cuelga todo de la más antigua).
 
