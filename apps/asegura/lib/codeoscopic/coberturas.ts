@@ -20,10 +20,19 @@ const obj = (v: unknown): Record<string, unknown> =>
 const txt = (v: unknown): string | null =>
   typeof v === 'string' && v.trim() !== '' ? v.trim() : typeof v === 'number' ? String(v) : null
 
-/** `formattedOptions` de la cotización. `null` = el vendor no las manda (no «sin opciones»). */
+/**
+ * `formattedOptions` de la cotización. `null` = el vendor no las manda (no «sin opciones»).
+ * 🚨 El spec las pone en `product.formattedOptions` (referencia 2026-09, fila 7): leer solo
+ * `quote.formattedOptions` dio `no_manda` en los 249 precios reales (28/09/2026). Se miran los dos.
+ */
 export function leerOpcionesLegibles(quote: unknown): OpcionLegible[] | null {
   const q = obj(quote)
-  const fuente = Array.isArray(q.formattedOptions) ? q.formattedOptions : null
+  const producto = obj(q.product)
+  const fuente = Array.isArray(q.formattedOptions)
+    ? q.formattedOptions
+    : Array.isArray(producto.formattedOptions)
+      ? producto.formattedOptions
+      : null
   if (fuente === null) return null
   const out: OpcionLegible[] = []
   for (const o of fuente) {

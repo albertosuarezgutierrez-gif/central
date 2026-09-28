@@ -1,44 +1,44 @@
 {
  "sesion": "84f76820-3d00-5766-9455-65a996a106a2",
  "inicio": "2026-09-28T09:41:09.781Z",
- "fin": "2026-09-28T18:02:51.265Z",
- "llamadas": 2422,
+ "fin": "2026-09-28T19:22:25.661Z",
+ "llamadas": 2532,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 232,
-   "chars_in": 27342,
-   "chars_out": 2180421,
+   "llamadas": 254,
+   "chars_in": 29731,
+   "chars_out": 2261698,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 27,
-    "Read": 203,
-    "Glob": 2
+    "Grep": 36,
+    "Read": 213,
+    "Glob": 5
    }
   },
   "bash": {
-   "llamadas": 1396,
-   "chars_in": 682334,
-   "chars_out": 4797280,
+   "llamadas": 1442,
+   "chars_in": 711168,
+   "chars_out": 4938783,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1396
+    "Bash": 1442
    }
   },
   "otro": {
-   "llamadas": 219,
-   "chars_in": 153989,
-   "chars_out": 1928548,
+   "llamadas": 231,
+   "chars_in": 156702,
+   "chars_out": 2027466,
    "errores": 0,
    "archivos_citados": 30,
    "chars_citados": 2636640,
    "tools": {
-    "ToolSearch": 37,
-    "ReadNotifications": 137,
-    "SubagentHandback": 28,
+    "ToolSearch": 40,
+    "ReadNotifications": 145,
+    "SubagentHandback": 29,
     "Skill": 4,
     "AskUserQuestion": 3,
     "Artifact": 6,
@@ -48,20 +48,20 @@
    }
   },
   "mcp:github": {
-   "llamadas": 92,
-   "chars_in": 50610,
-   "chars_out": 209370,
+   "llamadas": 100,
+   "chars_in": 55828,
+   "chars_out": 210578,
    "errores": 2,
    "archivos_citados": 11,
    "chars_citados": 1768791,
    "tools": {
-    "mcp__github__create_pull_request": 15,
+    "mcp__github__create_pull_request": 18,
     "mcp__github__list_pull_requests": 3,
     "mcp__github__update_pull_request": 6,
     "mcp__github__pull_request_read": 26,
-    "mcp__github__merge_pull_request": 15,
+    "mcp__github__merge_pull_request": 17,
     "mcp__github__add_issue_comment": 5,
-    "mcp__github__subscribe_pr_activity": 11,
+    "mcp__github__subscribe_pr_activity": 14,
     "mcp__github__unsubscribe_pr_activity": 3,
     "mcp__github__add_reply_to_pull_request_comment": 1,
     "mcp__github__get_job_logs": 4,
@@ -95,15 +95,15 @@
    }
   },
   "escritura": {
-   "llamadas": 338,
-   "chars_in": 632077,
-   "chars_out": 6854846,
+   "llamadas": 341,
+   "chars_in": 636014,
+   "chars_out": 6866070,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Edit": 256,
-    "Write": 82
+    "Edit": 257,
+    "Write": 84
    }
   },
   "agente:general-purpose": {
@@ -118,14 +118,15 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 19,
-   "chars_in": 2221,
-   "chars_out": 82787,
+   "llamadas": 24,
+   "chars_in": 2801,
+   "chars_out": 86968,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Vercel__list_deployments": 19
+    "mcp__Vercel__list_deployments": 20,
+    "mcp__Vercel__get_runtime_logs": 4
    }
   },
   "agente:Explore": {
@@ -151,26 +152,27 @@
    }
   },
   "sql": {
-   "llamadas": 44,
-   "chars_in": 17511,
-   "chars_out": 48661,
+   "llamadas": 52,
+   "chars_in": 19733,
+   "chars_out": 81682,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 44
+    "mcp__Supabase__execute_sql": 52
    }
   },
   "mcp:Supabase": {
-   "llamadas": 3,
-   "chars_in": 987,
-   "chars_out": 423,
+   "llamadas": 8,
+   "chars_in": 2559,
+   "chars_out": 4993,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Supabase__list_projects": 1,
-    "mcp__Supabase__apply_migration": 2
+    "mcp__Supabase__apply_migration": 3,
+    "mcp__Supabase__query_logs": 4
    }
   },
   "mcp:Resend": {
@@ -187,14 +189,14 @@
    }
   },
   "agente:rastreador-codigo": {
-   "llamadas": 1,
-   "chars_in": 1870,
-   "chars_out": 2064,
+   "llamadas": 2,
+   "chars_in": 2952,
+   "chars_out": 2212,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 24552,
    "tools": {
-    "Agent": 1
+    "Agent": 2
    }
   },
   "agente:Plan": {
