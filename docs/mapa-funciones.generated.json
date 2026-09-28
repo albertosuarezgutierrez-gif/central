@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T15:42:41Z",
-  "sha": "a7e830687b0bf4072f87a99b61d61ae76acded0f",
+  "generadoEn": "2026-09-28T16:26:55Z",
+  "sha": "b2896df90152d8c2bd3b8c33eab968514de46484",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -13706,13 +13706,13 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ clienteId: string }> }",
           "retorno": null,
-          "linea": 37,
+          "linea": 38,
           "resumen": "Cotiza HOGAR para un cliente que HOY no tiene ninguna póliza: una oportunidad nueva, presupuestada desde el Catastro (`/correduria/hogar` en plataforma → aquí, botón «Pedir precio real ↗»). **Esta rut"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cartera/cliente/[clienteId]/hogar-nuevo",
-      "hash": "2efdde267693"
+      "hash": "23f96a290f2e"
     },
     {
       "ruta": "apps/asegura/app/api/cartera/documentos/route.ts",
@@ -13751,13 +13751,13 @@
           "exportada": true,
           "params": "req: Request, ctx: { params: Promise<{ polizaId: string }> }",
           "retorno": null,
-          "linea": 34,
+          "linea": 35,
           "resumen": "Retarifica una póliza de la cartera. **Esta ruta GASTA 0,50€ por llamada.** Es la única de `/api/cartera/*` que cuesta dinero, y por eso es `POST`, nunca un `GET` que un prefetch del navegador pueda d"
         }
       ],
       "tablas": [],
       "rutaApi": "/api/cartera/polizas/[polizaId]/retarificar",
-      "hash": "0464e50643c6"
+      "hash": "e5623993e635"
     },
     {
       "ruta": "apps/asegura/app/api/cron/avisos-intranet/route.ts",
@@ -14409,12 +14409,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 105
+          "linea": 109
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/auto-nuevo",
-      "hash": "72c1ed4bc861"
+      "hash": "b0cfffe6bb08"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/catalogos/route.ts",
@@ -14508,12 +14508,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 75
+          "linea": 79
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/decesos-nuevo",
-      "hash": "91982fe665f0"
+      "hash": "ff312d68f8fd"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/documentos/route.ts",
@@ -14622,12 +14622,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 156
+          "linea": 160
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/hogar-nuevo",
-      "hash": "a36e842da598"
+      "hash": "bb2bdba80fce"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/importar/route.ts",
@@ -14756,12 +14756,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 106
+          "linea": 110
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/moto-nuevo",
-      "hash": "b61d68b3b369"
+      "hash": "806ec21c56dc"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/oferta/route.ts",
@@ -15237,12 +15237,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 139
+          "linea": 143
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/retarificar",
-      "hash": "d98cba3a1377"
+      "hash": "5134aab83178"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/salud-nuevo/route.ts",
@@ -15255,12 +15255,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 74
+          "linea": 78
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/salud-nuevo",
-      "hash": "f62030cafbec"
+      "hash": "2c404cbdae84"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/sonda/route.ts",
@@ -15315,12 +15315,12 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 78
+          "linea": 82
         }
       ],
       "tablas": [],
       "rutaApi": "/api/operador/codeoscopic/vida-nuevo",
-      "hash": "37ca7fe1175c"
+      "hash": "bf2f8102afe8"
     },
     {
       "ruta": "apps/asegura/app/api/operador/comisiones-pactadas/route.ts",
@@ -21689,7 +21689,8 @@
       "exporta": [
         "casarPrecio",
         "leerCoberturasDeOpciones",
-        "coberturasDeSobre"
+        "coberturasDeSobre",
+        "sobreReutilizable"
       ],
       "funciones": [
         {
@@ -21735,11 +21736,87 @@
           "retorno": "",
           "linea": 115,
           "resumen": "Lee lo guardado en `presupuesto_opcion.coberturas`. Devuelve la lista SOLO si la compañía respondió (`leidas` o `vacias`); en cualquier otro caso `null` = «no constan». El `[]` desnudo (default de la "
+        },
+        {
+          "nombre": "sobreReutilizable",
+          "kind": "function",
+          "exportada": true,
+          "params": "v: unknown",
+          "retorno": "SobreCoberturas | null",
+          "linea": 144,
+          "resumen": "El sobre ya guardado en `tarificacion_precios.coberturas` (29/09/2026), listo para reutilizar al preparar un presupuesto SIN volver a pedírselo al vendor. Solo vale si la compañía RESPONDIÓ (`leidas`/"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3ce2c7437799"
+      "hash": "b57d3ae2c438"
+    },
+    {
+      "ruta": "apps/asegura/lib/codeoscopic/coberturas-tarificacion.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Coberturas y garantías de CADA precio de una tarificación, leídas GRATIS de Codeoscopic (29/09/2026, entrega 1 de docs/superpowers/plans/2026-09-28-presupuesto-filtro-garantias.md). Tras tarificar, cada fila de `seguros.tarificacion_precios` trae su `oferta_id`. Aquí se hace `GET /insurances/{projec",
+      "exporta": [
+        "completarCoberturasTarificacion",
+        "tarificacionACompletar"
+      ],
+      "funciones": [
+        {
+          "nombre": "vacio",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "",
+          "retorno": "ResumenCoberturasTarificacion",
+          "linea": 70
+        },
+        {
+          "nombre": "conTope",
+          "kind": "function",
+          "exportada": false,
+          "params": "p: Promise<T>, ms: number",
+          "retorno": "Promise<T>",
+          "linea": 73,
+          "resumen": "Una promesa con tope de tiempo. Pasado el tope, rechaza (y cuenta como `fallo`)."
+        },
+        {
+          "nombre": "mensaje",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "e: unknown",
+          "retorno": null,
+          "linea": 83
+        },
+        {
+          "nombre": "completarCoberturasTarificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "ids: { correduriaId: string; tarificacionId: string }, deps: Partial<DepsCoberturasTarificacion> = {},",
+          "retorno": "Promise<ResumenCoberturasTarificacion>",
+          "linea": 89,
+          "resumen": "Lee y guarda las coberturas (y sus garantías) de los precios de una tarificación que aún no las tienen. Nunca lanza."
+        },
+        {
+          "nombre": "tarificacionACompletar",
+          "kind": "function",
+          "exportada": true,
+          "params": "r: ResultadoCotizacion, correduriaId: string,",
+          "retorno": "",
+          "linea": 166,
+          "resumen": "Qué tarificación hay que completar tras un `cotizar()`: solo una REAL que se guardó. Una simulada o una que no quedó guardada no tiene filas que completar."
+        },
+        {
+          "nombre": "depsReales",
+          "kind": "function",
+          "exportada": false,
+          "params": "ids: { correduriaId: string; tarificacionId: string }",
+          "retorno": "Promise<DepsCoberturasTarificacion>",
+          "linea": 177
+        }
+      ],
+      "tablas": [
+        "seguros"
+      ],
+      "rutaApi": null,
+      "hash": "7122f3a683f9"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/coberturas.ts",
@@ -22238,7 +22315,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 293,
+          "linea": 296,
           "resumen": "El texto de un error, sin suponer que sea un `Error`."
         },
         {
@@ -22247,7 +22324,7 @@
           "exportada": true,
           "params": "e: EntradaCotizacion, enTransaccion: EnTransaccion = transaccionPrisma,",
           "retorno": "Promise<Guardado>",
-          "linea": 308,
+          "linea": 311,
           "resumen": "El mismo guardado, pero que NO LANZA NUNCA. 🚨 Ésta es la que usa el embudo, y el porqué es de negocio: cuando se llega aquí el cliente YA ha pagado los 0,50€ y YA tiene su precio en pantalla. Perderl"
         }
       ],
@@ -22255,7 +22332,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "35c9e9884a09"
+      "hash": "3159f7d2bb39"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/cotizar.ts",
@@ -24949,7 +25026,7 @@
           "exportada": true,
           "params": "correduriaId: string, polizaId: string,",
           "retorno": "Promise<TarificacionGuardada | null>",
-          "linea": 46,
+          "linea": 52,
           "resumen": "La última tarificación REAL (no simulada) de auto guardada para esta póliza en ESTA correduría. `null` = no hay ninguna — no es un error, es que todavía no se ha pedido precio nunca para esta póliza."
         },
         {
@@ -24958,7 +25035,7 @@
           "exportada": true,
           "params": "correduriaId: string, clienteId: string, ramo: RamoRetomable,",
           "retorno": "Promise<Omit<TarificacionGuardada, 'formulario'> | null>",
-          "linea": 77,
+          "linea": 83,
           "resumen": "La última tarificación REAL de un cliente SIN póliza (oportunidad nueva) para ese ramo, para retomarla sin volver a pagar (28/09/2026: la parrilla solo vivía en memoria de la pantalla, y al cerrarla n"
         },
         {
@@ -24967,7 +25044,7 @@
           "exportada": false,
           "params": "t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }",
           "retorno": "Promise<Omit<TarificacionGuardada, 'formulario'>>",
-          "linea": 100
+          "linea": 106
         },
         {
           "nombre": "numero",
@@ -24975,7 +25052,16 @@
           "exportada": false,
           "params": "v: number | string | null",
           "retorno": "number | null",
-          "linea": 145
+          "linea": 156
+        },
+        {
+          "nombre": "garantiasDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "GarantiasClasificadas | null",
+          "linea": 163,
+          "resumen": "El jsonb de `garantias`, validado por forma. Cualquier otra cosa es `null` («no se sabe»)."
         }
       ],
       "tablas": [
@@ -24983,7 +25069,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "6e8b03af6ef2"
+      "hash": "4bfd62985e55"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/tipo-via-catastro.ts",
@@ -28601,16 +28687,16 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { tarificacionId?: string | null polizaId?: string | null claveNivelActual?: string | null actor: string },",
           "retorno": "Promise<ResultadoPreparar>",
-          "linea": 114,
+          "linea": 115,
           "resumen": "Prepara un presupuesto en BORRADOR desde una tarificación ya pagada. `claveNivelActual` es el nivel de cobertura de la póliza que el cliente tiene hoy, si quien llama lo sabe. **No se adivina aquí**: "
         },
         {
           "nombre": "coberturasDeLasOpciones",
           "kind": "function",
           "exportada": false,
-          "params": "cab: Cabecera, opciones: OpcionPreparada[]",
+          "params": "cab: Cabecera, opciones: OpcionPreparada[], presupuestoMs: number",
           "retorno": "Promise<SobreCoberturas[] | null>",
-          "linea": 334,
+          "linea": 355,
           "resumen": "Las coberturas de las opciones congeladas, leídas de Codeoscopic. `null` = no se intenta: tarificación simulada (su proyecto no existe en el vendor), sin `project_id`, modo simulación o sin credencial"
         },
         {
@@ -28619,7 +28705,7 @@
           "exportada": false,
           "params": "correduriaId: string, e: { tarificacionId?: string | null; polizaId?: string | null }",
           "retorno": "Promise<Cabecera | null>",
-          "linea": 370,
+          "linea": 391,
           "resumen": "La tarificación de la que sale el presupuesto: la pedida por id, o la ÚLTIMA de esa póliza. 🚨 Se admite una SIMULADA a propósito, y no es un descuido: sirve para recorrer la pantalla sin gastar 0,50€"
         },
         {
@@ -28628,7 +28714,7 @@
           "exportada": false,
           "params": "correduriaId: string, polizaId: string | null, claveNivelActual: string | null,",
           "retorno": "Promise<LecturaActual>",
-          "linea": 436,
+          "linea": 457,
           "resumen": "Qué se sabe de la cobertura que el cliente tiene HOY. Hoy solo se distingue «la compañía no manda el desglose» de «lo manda y no sabemos clasificarlo»: traducir las coberturas EIAC a un nivel es la ta"
         },
         {
@@ -28637,7 +28723,7 @@
           "exportada": true,
           "params": "peticion: unknown",
           "retorno": "Date | null",
-          "linea": 453
+          "linea": 474
         },
         {
           "nombre": "numero",
@@ -28645,7 +28731,7 @@
           "exportada": false,
           "params": "v: string | number | null | { toString(): string }",
           "retorno": "number | null",
-          "linea": 462,
+          "linea": 483,
           "resumen": "Prisma devuelve `numeric` como string. Se convierte en UN solo sitio."
         },
         {
@@ -28654,7 +28740,7 @@
           "exportada": true,
           "params": "correduriaId: string, filtro: { clienteId?: string | null; polizaId?: string | null }, hoy: Date = new Date(),",
           "retorno": "Promise<PresupuestoEnLista[] | null>",
-          "linea": 502,
+          "linea": 523,
           "resumen": "Los presupuestos de un cliente o de una póliza. `null` = **no se ha podido leer**, nunca `[]`. Un fallo de consulta pintado como lista vacía diría «no le has preparado ninguno» sobre una cartera que s"
         },
         {
@@ -28663,7 +28749,7 @@
           "exportada": false,
           "params": "opciones: { primaEur: unknown }[]",
           "retorno": "number | null",
-          "linea": 545,
+          "linea": 566,
           "resumen": "La prima más baja de las congeladas. `null` si no hay ninguna legible."
         },
         {
@@ -28672,7 +28758,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 559,
+          "linea": 580,
           "resumen": "Las respuestas del cuestionario IDD, solo para la auditoría del evento: claves y valores cortos de texto (son ids de opción, nunca texto libre del cliente). Lo que no cuadra no se guarda."
         },
         {
@@ -28681,7 +28767,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; texto: unknown; actor: string; respuestas?: unknown },",
           "retorno": "Promise<ResultadoNecesidades>",
-          "linea": 576,
+          "linea": 597,
           "resumen": "Anota (o corrige) las exigencias y necesidades del cliente. Solo mientras no esté aceptado ni retirado: lo que el cliente firmó cita el texto de ese momento y no se reescribe después."
         },
         {
@@ -28690,7 +28776,7 @@
           "exportada": true,
           "params": "correduriaId: string, entrada: { id: string; motivo: string; actor: string },",
           "retorno": "Promise<ResultadoRetirar>",
-          "linea": 609,
+          "linea": 630,
           "resumen": "Retira un presupuesto. **Exige motivo**, igual que la BD (`retirado_con_motivo`): una fila retirada sin decir por qué no explica nada el día que el cliente pregunte por qué su enlace ya no abre. No bo"
         }
       ],
@@ -28700,7 +28786,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "47871a0ea90b"
+      "hash": "5282018e5877"
     },
     {
       "ruta": "apps/asegura/lib/puente-portal.ts",
@@ -153456,6 +153542,66 @@
       "hash": "cd8f2c716f67"
     },
     {
+      "ruta": "packages/module-seguros/src/catalogo-garantias.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "Catálogo NORMALIZADO de garantías por ramo y el clasificador que lleva a él las coberturas que manda cada compañía (28/09/2026). PURO. Cada compañía llama distinto a lo mismo («Asistencia en viaje», «Grúa y asistencia»…). Para que el cliente —o Alberto en su parrilla— marque «Lunas» y vea qué compañ",
+      "exporta": [
+        "claveCobertura",
+        "clasificarCoberturas",
+        "noReconocidas",
+        "ramoDeCatalogo"
+      ],
+      "funciones": [
+        {
+          "nombre": "claveCobertura",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "string",
+          "linea": 37,
+          "resumen": "Misma normalización que la tabla de coberturas del portal: sin tildes, minúsculas, sin signos."
+        },
+        {
+          "nombre": "clavesDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "ramo: RamoGarantias, nombre: string",
+          "retorno": "string[]",
+          "linea": 116,
+          "resumen": "Las claves del catálogo que describe UNA cobertura (normalmente una; «Rotura de faro/Casco» → una)."
+        },
+        {
+          "nombre": "clasificarCoberturas",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null",
+          "retorno": "GarantiasClasificadas",
+          "linea": 132,
+          "resumen": "Lleva las coberturas de UN precio al catálogo del ramo. Todas las claves salen en el resultado: `si` (reconocida e incluida) · `no` (reconocida y marcada NO incluida) · `no_consta` (el resto). Varias "
+        },
+        {
+          "nombre": "noReconocidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null",
+          "retorno": "string[]",
+          "linea": 145,
+          "resumen": "Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones."
+        },
+        {
+          "nombre": "ramoDeCatalogo",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: string | null | undefined",
+          "retorno": "RamoGarantias | null",
+          "linea": 152
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "ebdccb9a2fab"
+    },
+    {
       "ruta": "packages/module-seguros/src/cliente-edicion.ts",
       "ambito": "packages/module-seguros",
       "resumen": "Editar y dar de alta un cliente de la correduría: las REGLAS, sin BD. Dictado de Alberto (02/09/2026): el contacto (varios teléfonos y emails, la dirección) se cambia libremente; los datos de IDENTIDAD —DNI, nombre, apellidos, fecha de nacimiento— «tendrá que solicitarlo documentado»: solo se tocan ",
@@ -155210,6 +155356,54 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "f08abe5402cb"
+    },
+    {
+      "ruta": "packages/module-seguros/src/filtro-garantias.ts",
+      "ambito": "packages/module-seguros",
+      "resumen": "El filtro por garantías de la parrilla y del presupuesto (28/09/2026). PURO. Marcas «Lunas» + «Asistencia» y quedan las opciones que las INCLUYEN, de la más barata a la más cara. 🚨 Una opción de la que no sabemos si incluye una garantía marcada (`no_consta`) NO desaparece en silencio: sale aparte, ",
+      "exporta": [
+        "estadoDe",
+        "filtrarPorGarantias",
+        "interruptoresGarantias"
+      ],
+      "funciones": [
+        {
+          "nombre": "estadoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "o: OpcionFiltrable, clave: string",
+          "retorno": "EstadoGarantia",
+          "linea": 27
+        },
+        {
+          "nombre": "porPrima",
+          "kind": "function",
+          "exportada": false,
+          "params": "a: T, b: T",
+          "retorno": "number",
+          "linea": 31
+        },
+        {
+          "nombre": "filtrarPorGarantias",
+          "kind": "function",
+          "exportada": true,
+          "params": "opciones: readonly T[], requeridas: readonly string[], extra: { companias?: readonly string[] } = {},",
+          "retorno": "ResultadoFiltro<T>",
+          "linea": 40
+        },
+        {
+          "nombre": "interruptoresGarantias",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias, opciones: readonly OpcionFiltrable[]",
+          "retorno": "InterruptorGarantia[]",
+          "linea": 66,
+          "resumen": "Los interruptores que tiene sentido enseñar: las garantías del catálogo que ALGUNA opción incluye, con cuántas la incluyen. Una garantía que ninguna opción dice incluir no se ofrece (marcarla dejaría "
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "3bc9a8479164"
     },
     {
       "ruta": "packages/module-seguros/src/formacion.ts",
@@ -164112,7 +164306,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3864,
-    "funciones": 12637
+    "archivos": 3867,
+    "funciones": 12654
   }
 }
