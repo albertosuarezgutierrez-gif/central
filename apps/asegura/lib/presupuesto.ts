@@ -35,7 +35,6 @@ import { refrescarProyecto } from './codeoscopic/emitir'
 import { leerCoberturasDeOpciones, sobreReutilizable, type SobreCoberturas } from './codeoscopic/coberturas-presupuesto'
 import { completarCoberturasTarificacion } from './codeoscopic/coberturas-tarificacion'
 import { OCULTAR_VACIO, estaOculta, ordenResto, type Ocultar } from './presupuesto-ocultar'
-import { TIPO_DATOS_INCORRECTOS } from './presupuesto-aceptacion'
 
 /**
  * Por qué no se ha podido situar la cobertura que el cliente tiene HOY.
@@ -155,11 +154,13 @@ export async function prepararPresupuesto(
 
   // Si el cliente ya dijo en el portal que un dato de ESTA tarificación está mal, sus precios no
   // valen: se retarifica con el dato bueno, no se le vuelve a mandar lo mismo (28/09/2026).
+  // El tipo va en literal a propósito: importar TIPO_DATOS_INCORRECTOS arrastra presupuesto-aceptacion
+  // (y con él Prisma) a los tests que cargan este módulo. El test comprueba que coinciden.
   const [marcada] = await db.$queryRaw<{ n: number }[]>`
     select count(*)::int as n from presupuesto_evento e
     join presupuesto p on p.id = e.presupuesto_id
     where p.tarificacion_id = ${cab.id}::uuid and p.correduria_id = ${correduriaId}::uuid
-      and e.tipo = ${TIPO_DATOS_INCORRECTOS}`
+      and e.tipo = 'datos_incorrectos'`
   if ((marcada?.n ?? 0) > 0) {
     return {
       estado: 'error',

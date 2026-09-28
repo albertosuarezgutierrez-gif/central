@@ -15,9 +15,12 @@ const cuerpo = src.slice(src.indexOf('export async function prepararPresupuesto(
 test('prepararPresupuesto se niega si el cliente marcó un dato incorrecto en ESA tarificación', () => {
   assert.match(
     cuerpo,
-    /from presupuesto_evento e\s+join presupuesto p on p\.id = e\.presupuesto_id\s+where p\.tarificacion_id = \$\{cab\.id\}::uuid and p\.correduria_id = \$\{correduriaId\}::uuid\s+and e\.tipo = \$\{TIPO_DATOS_INCORRECTOS\}/,
+    /from presupuesto_evento e\s+join presupuesto p on p\.id = e\.presupuesto_id\s+where p\.tarificacion_id = \$\{cab\.id\}::uuid and p\.correduria_id = \$\{correduriaId\}::uuid\s+and e\.tipo = 'datos_incorrectos'`/,
   )
   assert.match(cuerpo, /motivo: 'datos_incorrectos'/)
+  // El literal tiene que ser el mismo tipo que escribe el portal.
+  const aceptacion = readFileSync(join(import.meta.dirname, 'presupuesto-aceptacion.ts'), 'utf8')
+  assert.match(aceptacion, /export const TIPO_DATOS_INCORRECTOS = 'datos_incorrectos'/)
 })
 
 test('la negativa va ANTES de completar coberturas (no se gasta nada en una tarificación que no vale)', () => {
