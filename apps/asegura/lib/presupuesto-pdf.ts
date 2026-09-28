@@ -10,6 +10,7 @@
 import { PDFDocument, rgb, type PDFFont, type PDFImage, type PDFPage, type RGB } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
 import { eur } from './dinero.ts'
+import type { GrupoDatos } from './datos-cotizados.ts'
 import { LOGOS, LOGOTIPO, NUNITO_400, NUNITO_700, QUICKSAND_700 } from './presupuesto-pdf-recursos.ts'
 
 export type OpcionPdf = {
@@ -31,7 +32,11 @@ export type DatosPdfPresupuesto = {
   ramo: string
   creadoAt: Date
   venceEl: Date
-  vehiculo: { matricula: string | null; kmAnuales: number | null; garaje: string | null } | null
+  /**
+   * «Revisa tus datos»: los MISMOS grupos que ve el cliente en el portal (`leerDatosCotizados`, DNI ya
+   * enmascarado). `null` = no se han podido leer, y el PDF lo dice en vez de callarlo.
+   */
+  datosCalculo: GrupoDatos[] | null
   necesidades: string | null
   opciones: OpcionPdf[]
   mediador: { marca: string; nombre: string; claveDgsfp: string; domicilio: string; email: string | null }
@@ -60,23 +65,8 @@ export function coberturasIncluidas(json: unknown): string[] {
   return salida
 }
 
-/** El id del catálogo de garajes, en castellano. Lo que no se reconoce no se pinta (`null`). */
-export function rotuloGaraje(id: string | null): string | null {
-  if (!id) return null
-  // Moto trae ids de texto («NoGarage»); auto, números del catálogo que aquí no se traducen.
-  const t = id.toLowerCase()
-  if (t === 'nogarage') return 'Sin garaje'
-  if (/private|individual/.test(t)) return 'Garaje privado'
-  if (/collective|shared|community/.test(t)) return 'Garaje colectivo'
-  return null
-}
-
 export function fechaCorta(d: Date): string {
   return d.toLocaleDateString('es-ES', { timeZone: 'Europe/Madrid', day: '2-digit', month: '2-digit', year: 'numeric' })
-}
-
-function miles(n: number): string {
-  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
 /** El nombre del fichero: sin tildes ni espacios, para que no se rompa en ningún correo. */
@@ -111,6 +101,13 @@ function partir(font: PDFFont, texto: string, tam: number, ancho: number): strin
 export function claveLogo(compania: string): string | null {
   const k = compania.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase().split(/[\s,.]+/)[0]
   return k && LOGOS[k] ? k : null
+}
+
+/** Tarjetas = las recomendadas (con papel); sin ninguna, las 3 primeras. El resto va en tabla. Orden intacto. */
+export function repartirOpciones<T extends { papeles: string[] }>(opciones: T[]): { tarjetas: T[]; resto: T[] } {
+  const hay = opciones.some((o) => o.papeles.length > 0)
+  const enTarjeta = (o: T, i: number) => (hay ? o.papeles.length > 0 : i < 3)
+  return { tarjetas: opciones.filter(enTarjeta), resto: opciones.filter((o, i) => !enTarjeta(o, i)) }
 }
 
 const A4: [number, number] = [595.28, 841.89]
@@ -185,27 +182,60 @@ export async function pdfPresupuesto(d: DatosPdfPresupuesto): Promise<Uint8Array
   linea(`Precios válidos hasta el ${fechaCorta(d.venceEl)}`, M, y - 9.5, f.normal, 9.5, TENUE)
   y -= 22
 
-  // ── Datos del cálculo ──
-  const datos: string[] = []
-  if (d.vehiculo?.matricula) datos.push(`Matrícula ${d.vehiculo.matricula}`)
-  if (d.vehiculo && d.vehiculo.kmAnuales !== null) datos.push(`${miles(d.vehiculo.kmAnuales)} km al año`)
-  if (d.vehiculo?.garaje) datos.push(d.vehiculo.garaje)
-  if (datos.length) {
-    const alto = 54
+  // ── Revisa tus datos (lo mismo que el cliente ve primero en el portal) ──
+  if (d.datosCalculo === null || d.datosCalculo.length === 0) {
+    cabe(40)
+    parrafo('No hemos podido leer los datos con los que se calculó este precio. Llámanos y los revisamos contigo antes de contratar.', f.negrita, 9.5, PRIMARIO)
+    y -= 14
+  } else {
+    const pad = 14
+    const colW = (ancho - pad * 2 - 20) / 2
+    // Cada grupo en la columna que vaya más corta.
+    const altoGrupo = (g: GrupoDatos) => 16 + g.filas.reduce((a, fl) => a + 11.5 * partir(f.normal, paraFuente(f.normal, `${fl.etiqueta}: ${fl.valor}`), 9, colW).length, 0) + 8
+    const cols: GrupoDatos[][] = [[], []]
+    const alturas = [0, 0]
+    for (const g of d.datosCalculo) {
+      const k = alturas[0] <= alturas[1] ? 0 : 1
+      cols[k].push(g)
+      alturas[k] += altoGrupo(g)
+    }
+    // Cabecera (título + frase) = 44; el aviso del pie necesita su propia franja.
+    const alto = pad + 44 + Math.max(...alturas) + 20
     cabe(alto)
-    pagina.drawRectangle({ x: M, y: y - alto, width: ancho, height: alto, color: SUAVE })
-    linea('Datos con los que lo hemos calculado', M + 14, y - 18, f.titulo, 10.5, PRIMARIO)
-    linea(datos.join('   ·   '), M + 14, y - 33, f.negrita, 10)
-    linea('Si alguno no es correcto, dínoslo antes de contratar: cambia el precio.', M + 14, y - 46, f.normal, 8.5, TENUE)
-    y -= alto + 20
+    const arriba = y
+    pagina.drawRectangle({ x: M, y: arriba - alto, width: ancho, height: alto, color: SUAVE })
+    linea('Revisa tus datos', M + pad, arriba - pad - 11, f.titulo, 12, PRIMARIO)
+    linea('Son los datos con los que las compañías han calculado tu precio: el precio y la póliza dependen de ellos.', M + pad, arriba - pad - 26, f.normal, 8.5, TENUE)
+    cols.forEach((col, k) => {
+      const x = M + pad + k * (colW + 20)
+      let yy = arriba - pad - 44
+      for (const g of col) {
+        linea(g.titulo, x, yy - 9.5, f.titulo, 9.5)
+        yy -= 16
+        for (const fl of g.filas) {
+          const et = `${fl.etiqueta}: `
+          const wEt = f.normal.widthOfTextAtSize(paraFuente(f.normal, et), 9)
+          const valor = partir(f.negrita, paraFuente(f.negrita, fl.valor), 9, colW - wEt)
+          linea(et, x, yy - 9, f.normal, 9, TENUE)
+          valor.forEach((v, n) => linea(v, x + wEt, yy - 9 - n * 11.5, f.negrita, 9))
+          yy -= 11.5 * Math.max(1, valor.length)
+        }
+        yy -= 8
+      }
+    })
+    linea('Si alguno no es correcto, dínoslo antes de contratar: cambia el precio.', M + pad, arriba - alto + 10, f.negrita, 8.5, PRIMARIO)
+    y = arriba - alto - 20
   }
 
   // ── Opciones ──
+  // Como el portal: en tarjeta las recomendadas (las que tienen papel: más barata, mejor cubierta,
+  // equivalente); el resto, en una tabla compacta. Sin ninguna recomendada, las 3 primeras.
+  const { tarjetas, resto: otras } = repartirOpciones(d.opciones)
   cabe(30)
-  linea(d.opciones.length === 1 ? 'Tu opción' : `Tus ${d.opciones.length} opciones`, M, y - 14, f.titulo, 14)
+  linea(tarjetas.length === d.opciones.length ? (d.opciones.length === 1 ? 'Tu opción' : `Tus ${d.opciones.length} opciones`) : 'Nuestras recomendaciones', M, y - 14, f.titulo, 14)
   y -= 26
 
-  for (const o of d.opciones) {
+  for (const o of tarjetas) {
     const pad = 12
     const colLogo = 92
     const colPrecio = 110
@@ -268,6 +298,40 @@ export async function pdfPresupuesto(d: DatosPdfPresupuesto): Promise<Uint8Array
       for (const l of cobLineas) { linea(l, xTexto, yy - 8, f.normal, 8); yy -= 10.5 }
     }
     y = arriba - alto - 10
+  }
+
+  if (otras.length) {
+    y -= 8
+    cabe(60)
+    linea(`Otras ${otras.length} opciones`, M, y - 13, f.titulo, 13)
+    y -= 24
+    const cCompania = M + 8, cModalidad = M + 128, cTipo = M + 350, cPrecio = A4[0] - M - 8
+    const cabecera = () => {
+      pagina.drawRectangle({ x: M, y: y - 18, width: ancho, height: 18, color: SUAVE })
+      linea('Compañía', cCompania, y - 12.5, f.negrita, 8, PRIMARIO)
+      linea('Modalidad', cModalidad, y - 12.5, f.negrita, 8, PRIMARIO)
+      linea('Tipo', cTipo, y - 12.5, f.negrita, 8, PRIMARIO)
+      const t = 'Precio al año'
+      linea(t, cPrecio - f.negrita.widthOfTextAtSize(t, 8), y - 12.5, f.negrita, 8, PRIMARIO)
+      y -= 18
+    }
+    cabecera()
+    for (const o of otras) {
+      const mod = partir(f.normal, paraFuente(f.normal, o.modalidad ?? o.producto), 8.5, cTipo - cModalidad - 10)
+      const alto = 8 + 11 * mod.length
+      if (y - alto < M + PIE) { nuevaPagina(); cabecera() }
+      linea(partir(f.negrita, paraFuente(f.negrita, o.compania), 8.5, cModalidad - cCompania - 10)[0] ?? '', cCompania, y - 12, f.negrita, 8.5)
+      mod.forEach((l, n) => linea(l, cModalidad, y - 12 - n * 11, f.normal, 8.5))
+      if (o.categoria) linea(partir(f.normal, paraFuente(f.normal, o.categoria), 8.5, 90)[0] ?? '', cTipo, y - 12, f.normal, 8.5, TENUE)
+      const precio = (o.primaEur === null ? '—' : eur(o.primaEur)) + (o.firmeza !== 'firme' ? ' *' : '')
+      linea(precio, cPrecio - f.negrita.widthOfTextAtSize(paraFuente(f.negrita, precio), 8.5), y - 12, f.negrita, 8.5)
+      y -= alto
+      pagina.drawRectangle({ x: M, y, width: ancho, height: 0.5, color: BORDE })
+    }
+    if (otras.some((o) => o.firmeza !== 'firme')) {
+      y -= 4
+      parrafo('* Precio estimado por la compañía.', f.normal, 7.5, TENUE)
+    }
   }
 
   // ── Necesidades ──

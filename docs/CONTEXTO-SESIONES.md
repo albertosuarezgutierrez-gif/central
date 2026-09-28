@@ -7975,3 +7975,5 @@ tarificación vieja (15.000 km, sin garaje) — hay que retarificar antes de man
 Diseño de marca: Quicksand/Nunito Sans embebidas (`@pdf-lib/fontkit`), logotipo y logos de compañía en PNG base64
 (`presupuesto-pdf-recursos.ts`, regenerar al cambiar un logo). Y el carné: cliente NUEVO con carné B en la ficha ya no se
 lo pide el bot (auto y moto caían a la «fecha del conductor», que para una ficha sin póliza es null).
+El PDF abre con «Revisa tus datos» (los mismos grupos que el portal, `leerDatosCotizados`, DNI enmascarado); las
+recomendadas (con papel) van en tarjeta y el resto en tabla compacta (`repartirOpciones`).

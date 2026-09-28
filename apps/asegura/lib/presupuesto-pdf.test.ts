@@ -1,14 +1,17 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
-import { coberturasIncluidas, nombreFicheroPresupuesto, pdfPresupuesto, rotuloGaraje, type DatosPdfPresupuesto } from './presupuesto-pdf.ts'
+import { coberturasIncluidas, nombreFicheroPresupuesto, pdfPresupuesto, repartirOpciones, type DatosPdfPresupuesto } from './presupuesto-pdf.ts'
 
 const base: DatosPdfPresupuesto = {
   cliente: 'Manuel Antonio Piña Franco',
   ramo: 'moto',
   creadoAt: new Date('2026-09-28T19:00:00Z'),
   venceEl: new Date('2026-10-12T19:00:00Z'),
-  vehiculo: { matricula: '2121NST', kmAnuales: 5000, garaje: 'Garaje privado' },
+  datosCalculo: [
+    { titulo: 'Tomador', filas: [{ etiqueta: 'Nombre', valor: 'Manuel Antonio Piña Franco' }, { etiqueta: 'DNI', valor: '*****678Z' }] },
+    { titulo: 'Vehículo', filas: [{ etiqueta: 'Matrícula', valor: '2121NST' }, { etiqueta: 'Kilómetros al año', valor: '5.000' }] },
+  ],
   necesidades: null,
   opciones: [
     { compania: 'Allianz', producto: 'Allianz Motos', modalidad: 'ALLIANZ MOTO BÁSICO', categoria: 'Terceros', primaEur: 188.37, franquiciaEur: null, firmeza: 'estimado', papeles: ['mas_barata'], coberturas: ['Responsabilidad civil obligatoria'] },
@@ -26,11 +29,14 @@ test('coberturas: solo las incluidas, sin repetir, y un JSON raro no revienta', 
   assert.deepEqual(coberturasIncluidas('basura'), [])
 })
 
-test('garaje: solo se traduce lo que se reconoce; un id numérico de auto no se inventa', () => {
-  assert.equal(rotuloGaraje('NoGarage'), 'Sin garaje')
-  assert.equal(rotuloGaraje('PrivateGarage'), 'Garaje privado')
-  assert.equal(rotuloGaraje('3'), null)
-  assert.equal(rotuloGaraje(null), null)
+test('tarjetas = las recomendadas; sin ninguna, las 3 primeras; el orden no se toca', () => {
+  const o = (papeles: string[], n: number) => ({ n, papeles })
+  const r = repartirOpciones([o([], 1), o(['mas_barata'], 2), o([], 3), o(['mejor_cubierta'], 4)])
+  assert.deepEqual(r.tarjetas.map((x) => x.n), [2, 4])
+  assert.deepEqual(r.resto.map((x) => x.n), [1, 3])
+  const s = repartirOpciones([o([], 1), o([], 2), o([], 3), o([], 4)])
+  assert.deepEqual(s.tarjetas.map((x) => x.n), [1, 2, 3])
+  assert.deepEqual(s.resto.map((x) => x.n), [4])
 })
 
 test('nombre del fichero sin tildes ni espacios', () => {
@@ -40,6 +46,9 @@ test('nombre del fichero sin tildes ni espacios', () => {
 test('genera un PDF con prima nula, franquicia y caracteres fuera de WinAnsi', async () => {
   const bytes = await pdfPresupuesto({ ...base, necesidades: 'Quiere asistencia en viaje 🚀' })
   assert.equal(Buffer.from(bytes.slice(0, 5)).toString(), '%PDF-')
+  // Datos ilegibles: se genera igual (y dice que no se han podido leer).
+  const sin = await pdfPresupuesto({ ...base, datosCalculo: null })
+  assert.equal(Buffer.from(sin.slice(0, 5)).toString(), '%PDF-')
 })
 
 test('el PDF no pinta los avisos internos de la compañía ni un enlace con token', () => {

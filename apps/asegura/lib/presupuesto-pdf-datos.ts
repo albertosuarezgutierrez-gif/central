@@ -3,8 +3,8 @@
 
 import { MEDIADOR } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
-import { extraerVehiculoGuardado, extraerFormularioAuto } from './codeoscopic/formulario-guardado'
-import { coberturasIncluidas, rotuloGaraje, type DatosPdfPresupuesto } from './presupuesto-pdf'
+import { leerDatosCotizados } from './datos-cotizados'
+import { coberturasIncluidas, type DatosPdfPresupuesto } from './presupuesto-pdf'
 
 function numero(v: unknown): number | null {
   if (v === null || v === undefined) return null
@@ -25,19 +25,15 @@ export async function datosPdfPresupuesto(correduriaId: string, id: string): Pro
     select peticion from tarificaciones
     where correduria_id = ${correduriaId}::uuid and id = ${p.tarificacionId}::uuid`
 
-  let vehiculo: DatosPdfPresupuesto['vehiculo'] = null
-  if (p.ramo === 'auto' || p.ramo === 'moto') {
-    const v = extraerVehiculoGuardado(tarif?.peticion)
-    const garaje = rotuloGaraje(extraerFormularioAuto(tarif?.peticion)?.garaje ?? null)
-    if (v || garaje) vehiculo = { matricula: v?.matricula ?? null, kmAnuales: v?.kmAnuales ?? null, garaje }
-  }
+  // Los mismos grupos que «Revisa tus datos» del portal; ilegible → null (el PDF lo dice).
+  const leidos = leerDatosCotizados(tarif?.peticion, p.ramo)
 
   return {
     cliente: [cliente?.nombre, cliente?.apellidos].map((s) => s?.trim()).filter(Boolean).join(' ') || 'Cliente',
     ramo: p.ramo,
     creadoAt: p.creadoAt,
     venceEl: p.venceEl,
-    vehiculo,
+    datosCalculo: leidos.estado === 'ok' ? leidos.grupos : null,
     necesidades: p.necesidades,
     opciones: p.opciones.map((o) => ({
       compania: o.compania,
