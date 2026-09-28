@@ -284,8 +284,21 @@ function limpiar(xs: readonly string[]): string[] {
   return out
 }
 
-/** Lee el jsonb de `coberturas` sin fiarse de su forma. */
+/**
+ * Lee el jsonb de `coberturas` sin fiarse de su forma.
+ *
+ * Desde la fase 2 las coberturas llegan en un SOBRE (`{ estado, lista }`, ver `tabla-coberturas.ts`).
+ * Para la comparación con la póliza actual solo cuentan las que la compañía dice que INCLUYE: una
+ * `incluida: false` no es una garantía que la opción traiga, y una `null` («ver texto») tampoco se
+ * puede dar por traída. Sin sobre legible, `[]` = no constan (como siempre).
+ */
 export function coberturasDeJson(v: unknown): string[] {
+  // 🚨 Las coberturas de Codeoscopic (objeto `{estado, lista}`) NO entran en la
+  // comparación con la póliza actual: su vocabulario no es el de CIMA («Lunas» vs
+  // «Rotura de lunas») y un «ver texto» (incluida=null) no es «no la tiene». Cruzarlas
+  // pintaría como «pierdes» garantías que la oferta sí trae. Se enseñan en la tabla
+  // de coberturas (`tabla-coberturas.ts`); aquí quedan «no constan», como antes.
+  if (v && typeof v === 'object' && !Array.isArray(v)) return []
   if (!Array.isArray(v)) return []
   const out: string[] = []
   for (const x of v) {

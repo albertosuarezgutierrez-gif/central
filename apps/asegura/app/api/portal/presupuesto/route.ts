@@ -3,8 +3,11 @@ import { after, NextResponse } from 'next/server'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
-import { firmarAceptacion, pedirCodigoAceptacion, prepararAceptacion } from '@/lib/presupuesto-aceptacion'
+import {
+  datosCotizadosDelPresupuesto, firmarAceptacion, pedirCodigoAceptacion, prepararAceptacion, reportarDatosIncorrectos,
+} from '@/lib/presupuesto-aceptacion'
 import { entregarJustificanteAnulacion } from '@/lib/justificante-anulacion'
+import { pideLlamada, preguntaIA, resumenIA } from '@/lib/comparativa-ia-servicio'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
 
@@ -19,7 +22,12 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  * /api/portal/presupuesto — el cliente elige y firma su presupuesto (spec 2026-09-21, PR 4).
  *   POST { accion:'preparar', identidadId, presupuestoId, opcionId } → el documento a firmar (no escribe)
  *        { accion:'codigo',   identidadId, presupuestoId, opcionId }
- *        { accion:'firmar',   identidadId, presupuestoId, opcionId, codigo, nombre, documentoHash, ip?, userAgent? }
+ *        { accion:'firmar',   identidadId, presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados, ip?, userAgent? }
+ *        { accion:'datos',    identidadId, presupuestoId }          → «Revisa tus datos» (no escribe)
+ *        { accion:'datos_incorrectos', identidadId, presupuestoId, texto } → avisa; cierra la firma desde el portal
+ *        { accion:'resumen_ia',  identidadId, presupuestoId }                          → resumen IA (cacheado)
+ *        { accion:'pregunta_ia', identidadId, presupuestoId, opcionA, opcionB, pregunta } → respuesta IA (tope diario)
+ *        { accion:'llamadme',    identidadId, presupuestoId }                          → «Prefiero que me llaméis»
  * Como el resto del puente: NO acepta `clienteId`, la ficha sale de `portal_vinculo`.
  */
 const STATUS: Record<string, number> = {
@@ -27,6 +35,9 @@ const STATUS: Record<string, number> = {
   sin_email: 422, sin_correo_configurado: 503, fallo_envio: 502, espera: 429, limite_codigos: 429,
   documento_cambiado: 409, sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422,
   nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, error: 503,
+  sin_datos: 409, datos_en_revision: 409, sin_confirmar_datos: 422, invalido: 422, limite: 429,
+  // `no_disponible` de la IA es una respuesta completa (el portal dice «no está disponible ahora»), no un fallo.
+  no_disponible: 200,
 }
 
 export const POST = auditado(async (req: Request) => {
@@ -36,11 +47,37 @@ export const POST = auditado(async (req: Request) => {
     const b = (await req.json().catch(() => null)) as Record<string, unknown> | null
     const s = (k: string) => (typeof b?.[k] === 'string' ? (b[k] as string).trim() : '')
     const identidadId = s('identidadId'), presupuestoId = s('presupuestoId'), opcionId = s('opcionId')
-    if (!UUID.test(identidadId) || !UUID.test(presupuestoId) || !UUID.test(opcionId)) {
+    // `datos` y `datos_incorrectos` son del presupuesto, no de una opción: no piden `opcionId`.
+    const sinOpcion = b?.accion === 'datos' || b?.accion === 'datos_incorrectos' || b?.accion === 'resumen_ia' ||
+      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme'
+    if (!UUID.test(identidadId) || !UUID.test(presupuestoId) || (!sinOpcion && !UUID.test(opcionId))) {
       return NextResponse.json({ estado: 'invalido' }, { status: 422 })
     }
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
+    if (b?.accion === 'datos') {
+      const r = await datosCotizadosDelPresupuesto(correduria.id, identidadId, presupuestoId)
+      // `sin_datos` es una respuesta completa (el portal la pinta y cierra la firma), no un fallo.
+      return NextResponse.json(r, { status: r.estado === 'sin_datos' ? 200 : STATUS[r.estado] ?? 500 })
+    }
+    if (b?.accion === 'datos_incorrectos') {
+      const r = await reportarDatosIncorrectos(correduria.id, identidadId, presupuestoId, s('texto'))
+      return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
+    }
+    if (b?.accion === 'resumen_ia') {
+      const r = await resumenIA(correduria.id, identidadId, presupuestoId)
+      return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
+    }
+    if (b?.accion === 'pregunta_ia') {
+      const r = await preguntaIA(correduria.id, identidadId, presupuestoId, {
+        opcionA: s('opcionA'), opcionB: s('opcionB'), pregunta: b.pregunta,
+      })
+      return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
+    }
+    if (b?.accion === 'llamadme') {
+      const r = await pideLlamada(correduria.id, identidadId, presupuestoId)
+      return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
+    }
     if (b?.accion === 'preparar') {
       const r = await prepararAceptacion(correduria.id, identidadId, presupuestoId, opcionId)
       return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
@@ -54,6 +91,8 @@ export const POST = auditado(async (req: Request) => {
       if (!/^\d{6}$/.test(codigo) || !nombre || !/^[0-9a-f]{64}$/.test(documentoHash)) return NextResponse.json({ estado: 'invalido' }, { status: 422 })
       const r = await firmarAceptacion(correduria.id, identidadId, presupuestoId, opcionId, {
         codigo, nombre, documentoHash,
+        // Solo un `true` literal: un «sí», un 1 o un campo ausente NO confirman los datos.
+        datosConfirmados: b.datosConfirmados === true,
         ip: typeof b.ip === 'string' ? b.ip.slice(0, 100) : null,
         userAgent: typeof b.userAgent === 'string' ? b.userAgent.slice(0, 300) : null,
       })

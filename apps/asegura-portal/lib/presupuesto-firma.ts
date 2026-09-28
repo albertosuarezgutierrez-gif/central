@@ -79,8 +79,18 @@ export function interpretarFirma(status: number, j: unknown): ResultadoFirma {
     return { estado: 'no_disponible', motivo: typeof o.motivo === 'string' ? o.motivo : NO_ADMITE }
   }
   if (o.estado === 'sin_precio') return { estado: 'no_disponible', motivo: 'La opción no tiene precio. Escríbeme para revisarla.' }
+  // La casilla la exige el SERVIDOR: si llega sin marcar, se le pide que la marque.
+  if (o.estado === 'sin_confirmar_datos') return { estado: 'reintentar', motivo: MOTIVO_SIN_CASILLA }
+  // Fail-closed: datos ilegibles o avisados como incorrectos → no se autoriza nada desde aquí.
+  if (o.estado === 'sin_datos') return { estado: 'no_disponible', motivo: typeof o.motivo === 'string' ? o.motivo : MOTIVO_SIN_DATOS }
+  if (o.estado === 'datos_en_revision') return { estado: 'no_disponible', motivo: typeof o.motivo === 'string' ? o.motivo : MOTIVO_EN_REVISION }
   return { estado: 'error' }
 }
+
+export const MOTIVO_SIN_CASILLA = 'Marca la casilla confirmando que has revisado tus datos: sin ella no se puede aceptar.'
+export const MOTIVO_SIN_DATOS =
+  'No hemos podido leer los datos con los que se calculó tu precio. Llámanos y lo revisamos contigo: no se emite nada hasta entonces.'
+export const MOTIVO_EN_REVISION = 'Te llamamos para corregirlo; no se emite nada hasta entonces.'
 
 function puente(): { base: string; secret: string } | null {
   const base = process.env.ASEGURA_PUENTE_URL
@@ -113,18 +123,22 @@ async function llamar(ruta: string, init: RequestInit): Promise<{ status: number
 export type PreparadoAceptacion = {
   estado: 'ok'
   consentimiento: string
+  /** El texto de la casilla «He revisado mis datos…», el mismo que queda en el documento firmado. */
+  confirmacionDatos: string
   documento: string
   documentoHash: string
   anulacion: { compania: string; numeroPoliza: string; fechaEfecto: string; carta: string; advertencia: string | null } | null
   sinAnulacion: string | null
 } | {
-  estado: 'no_encontrado' | 'no_admite' | 'sin_precio' | 'sin_ficha' | 'varias_fichas' | 'error'
+  estado: 'no_encontrado' | 'no_admite' | 'sin_precio' | 'sin_ficha' | 'varias_fichas' | 'sin_datos' | 'datos_en_revision' | 'error'
   motivo?: string
 }
 
 export function interpretarPreparar(status: number, j: unknown): PreparadoAceptacion | null {
   const o = obj(j)
   if (status === 200 && o.estado === 'ok') {
+    // Sin el texto de la casilla no se enseña para firmar: la firma exige confirmarlo.
+    if (typeof o.confirmacionDatos !== 'string' || !o.confirmacionDatos.trim()) return null
     if (typeof o.consentimiento !== 'string' || typeof o.documento !== 'string' || !o.documento.trim()
       || typeof o.documentoHash !== 'string' || !/^[0-9a-f]{64}$/.test(o.documentoHash)) return null
     let anulacion: Extract<PreparadoAceptacion, { estado: 'ok' }>['anulacion'] = null
@@ -136,10 +150,11 @@ export function interpretarPreparar(status: number, j: unknown): PreparadoAcepta
       anulacion = { compania: a.compania, numeroPoliza: a.numeroPoliza, fechaEfecto: a.fechaEfecto, carta: a.carta,
         advertencia: typeof a.advertencia === 'string' ? a.advertencia : null }
     }
-    return { estado: 'ok', consentimiento: o.consentimiento, documento: o.documento, documentoHash: o.documentoHash, anulacion,
+    return { estado: 'ok', consentimiento: o.consentimiento, confirmacionDatos: o.confirmacionDatos, documento: o.documento, documentoHash: o.documentoHash, anulacion,
       sinAnulacion: typeof o.sinAnulacion === 'string' ? o.sinAnulacion : null }
   }
-  if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas' || o.estado === 'no_admite' || o.estado === 'sin_precio') {
+  if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas' || o.estado === 'no_admite' || o.estado === 'sin_precio'
+    || o.estado === 'sin_datos' || o.estado === 'datos_en_revision') {
     return { estado: o.estado, motivo: typeof o.motivo === 'string' ? o.motivo : undefined }
   }
   // 401, 5xx, corte o forma rara: no se ha podido leer.
@@ -163,7 +178,7 @@ export async function firmarAceptacion(
   identidadId: string,
   presupuestoId: string,
   opcionId: string,
-  datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null },
+  datos: { codigo: string; nombre: string; documentoHash: string; ip: string | null; userAgent: string | null; datosConfirmados: boolean },
 ): Promise<ResultadoFirma> {
   const r = await llamar('/api/portal/presupuesto', {
     method: 'POST',
@@ -172,5 +187,85 @@ export async function firmarAceptacion(
   if (!r) return { estado: 'error' }
   const res = interpretarFirma(r.status, r.json)
   if (res.estado === 'error') console.warn('[portal/presupuesto] respuesta no esperada al firmar:', r.status, obj(r.json).estado)
+  return res
+}
+
+// ─── «Revisa tus datos» ──────────────────────────────────────────────────────
+//
+// Los datos con los que se CALCULÓ el precio (la petición a la compañía), leídos por asegura. El
+// DNI ya llega enmascarado: aquí no se vuelve a tocar. Y la regla que vigila el cepo: si no se han
+// podido leer, `listos` es false y la aceptación no se ofrece — el cliente no puede autorizar la
+// emisión sobre unos datos que no ha visto.
+
+export type FilaDatoCotizado = { etiqueta: string; valor: string }
+export type GrupoDatosCotizados = { titulo: string; filas: FilaDatoCotizado[] }
+
+export type DatosCotizados =
+  | { estado: 'ok'; grupos: GrupoDatosCotizados[]; confirmacion: string; enRevision: boolean }
+  | { estado: 'sin_datos'; motivo: string; enRevision: boolean }
+
+/** `null` = no se ha podido leer (401, 5xx, corte o forma rara). Se trata igual que `sin_datos`. */
+export function interpretarDatosCotizados(status: number, j: unknown): DatosCotizados | null {
+  const o = obj(j)
+  const enRevision = o.enRevision === true
+  if (status === 200 && o.estado === 'sin_datos') {
+    return { estado: 'sin_datos', motivo: typeof o.motivo === 'string' && o.motivo.trim() ? o.motivo : MOTIVO_SIN_DATOS, enRevision }
+  }
+  if (status !== 200 || o.estado !== 'ok' || !Array.isArray(o.datos) || typeof o.confirmacionDatos !== 'string') return null
+  const grupos: GrupoDatosCotizados[] = []
+  for (const g of o.datos as unknown[]) {
+    const x = obj(g)
+    if (typeof x.titulo !== 'string' || !Array.isArray(x.filas)) return null
+    const filas: FilaDatoCotizado[] = []
+    for (const f of x.filas as unknown[]) {
+      const y = obj(f)
+      if (typeof y.etiqueta !== 'string' || typeof y.valor !== 'string') return null
+      filas.push({ etiqueta: y.etiqueta, valor: y.valor })
+    }
+    if (filas.length > 0) grupos.push({ titulo: x.titulo, filas })
+  }
+  // Un «ok» sin un solo dato no es algo que se pueda confirmar.
+  if (grupos.length === 0) return null
+  return { estado: 'ok', grupos, confirmacion: o.confirmacionDatos, enRevision }
+}
+
+/** ¿Se puede ofrecer aceptar? Solo con los datos leídos y sin un aviso de error pendiente. */
+export function datosListosParaAceptar(d: DatosCotizados | null): boolean {
+  return d !== null && d.estado === 'ok' && !d.enRevision
+}
+
+export async function datosCotizados(identidadId: string, presupuestoId: string): Promise<DatosCotizados | null> {
+  const r = await llamar('/api/portal/presupuesto', { method: 'POST', body: JSON.stringify({ accion: 'datos', identidadId, presupuestoId }) })
+  if (!r) return null
+  const res = interpretarDatosCotizados(r.status, r.json)
+  if (!res) console.warn('[portal/presupuesto] los datos cotizados no se han podido leer:', r.status, obj(r.json).estado)
+  return res
+}
+
+export type ResultadoReporte =
+  /** `aviso`: el Telegram para Alberto que compone asegura. */
+  | { estado: 'ok'; aviso: string | null }
+  | { estado: 'reintentar'; motivo: string }
+  | { estado: 'no_disponible'; motivo: string }
+  | { estado: 'error' }
+
+export function interpretarReporte(status: number, j: unknown): ResultadoReporte {
+  const o = obj(j)
+  if (status === 200 && o.estado === 'ok') return { estado: 'ok', aviso: typeof o.aviso === 'string' && o.aviso.trim() ? o.aviso : null }
+  if (o.estado === 'invalido') return { estado: 'reintentar', motivo: 'Cuéntanos en unas palabras qué dato no es correcto.' }
+  if (o.estado === 'limite') return { estado: 'no_disponible', motivo: 'Ya nos lo has dicho hoy varias veces: te llamamos. Si es urgente, llámanos tú.' }
+  if (o.estado === 'no_admite') return { estado: 'no_disponible', motivo: typeof o.motivo === 'string' ? o.motivo : NO_ADMITE }
+  if (o.estado === 'no_encontrado' || o.estado === 'sin_ficha' || o.estado === 'varias_fichas') return { estado: 'no_disponible', motivo: NO_ENCONTRADO }
+  return { estado: 'error' }
+}
+
+export async function reportarDatosIncorrectos(identidadId: string, presupuestoId: string, texto: string): Promise<ResultadoReporte> {
+  const r = await llamar('/api/portal/presupuesto', {
+    method: 'POST',
+    body: JSON.stringify({ accion: 'datos_incorrectos', identidadId, presupuestoId, texto }),
+  })
+  if (!r) return { estado: 'error' }
+  const res = interpretarReporte(r.status, r.json)
+  if (res.estado === 'error') console.warn('[portal/presupuesto] respuesta no esperada al avisar de un dato:', r.status, obj(r.json).estado)
   return res
 }
