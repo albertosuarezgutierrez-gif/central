@@ -82,7 +82,7 @@ import { decryptField } from '@central/module-seguros-pii'
 
 import { prisma } from './db'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
-import { camposDeInterviniente, figuraEnPropias, figurasEnPolizas, nivelMasAlto, ordenarRoles } from './intervinientes'
+import { camposDeInterviniente, figuraEnPropias, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
 import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
@@ -198,8 +198,8 @@ export type PolizaPortal = {
   cambiosCompania: EslabonHistorial[]
   /**
    * Papeles de ESTA identidad en la póliza (`tomador`, `propietario`, `conductor_habitual`…),
-   * en el orden de `ORDEN_ROLES`. Solo en propias e intervinientes; ausente en las autorizadas
-   * y en las de sus empresas, que ve por un permiso y no por figurar en ellas.
+   * en el orden de `ORDEN_ROLES`. En propias e intervinientes siempre; en las autorizadas y las
+   * de sus empresas solo si ADEMÁS figura en ellas (si no, las ve por permiso y no hay papel).
    */
   figura?: string[]
   /**
@@ -1124,6 +1124,16 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       nivel: etiquetaNivelAlcances(['total']),
       autorizacion: { ids: [], alcances: ['total'], caducaEn: null, partes: t.polizas.map((p) => p.id), via: 'dueno' },
     })
+  }
+
+  // Las que ve por permiso o por ser dueño y donde ADEMÁS figura (Esquiansa: su BMW, él
+  // conductor habitual): se le dice su papel. Las demás autorizadas no llevan `figura`.
+  const rolesSuyos = rolesPropiosPorPoliza(filasInterviniente, propiosIds)
+  for (const t of autorizadas) {
+    for (const p of t.polizas) {
+      const r = rolesSuyos.get(p.id)
+      if (r !== undefined) p.figura = r
+    }
   }
 
   // Las pólizas donde FIGURA, agrupadas por tomador. La regla (qué abre, con qué

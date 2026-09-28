@@ -150,11 +150,25 @@ export function figuraEnPropias(args: {
   filas: readonly FilaInterviniente[]
   propiosIds: readonly string[]
 }): Map<string, string[]> {
-  const propios = new Set(args.propiosIds)
-  const out = new Map<string, string[]>(args.polizaIds.map((id) => [id, ['tomador']]))
-  for (const f of args.filas) {
+  const suyos = rolesPropiosPorPoliza(args.filas, args.propiosIds)
+  return new Map(args.polizaIds.map((id) => [id, ordenarRoles(['tomador', ...(suyos.get(id) ?? [])])]))
+}
+
+/**
+ * Papeles de las fichas PROPIAS en cualquier póliza, sin «tomador». Sirve para las que la
+ * identidad ve por otro camino y donde ADEMÁS figura: caso Esquiansa (28/09/2026), BMW
+ * de su sociedad con él de conductor habitual según CIMA; la ve como dueño, pero su
+ * figura en el contrato es la de conductor, y eso es lo que se le dice.
+ */
+export function rolesPropiosPorPoliza(
+  filas: readonly FilaInterviniente[],
+  propiosIds: readonly string[],
+): Map<string, string[]> {
+  const propios = new Set(propiosIds)
+  const out = new Map<string, string[]>()
+  for (const f of filas) {
     if (f.clienteId === null || !propios.has(f.clienteId)) continue
-    out.get(f.polizaId)?.push(f.rol)
+    out.set(f.polizaId, [...(out.get(f.polizaId) ?? []), f.rol])
   }
   for (const [id, roles] of out) out.set(id, ordenarRoles(roles))
   return out

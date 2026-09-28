@@ -818,6 +818,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Alberto: «indicar en la app cliente la figura que tiene en la póliza». Chip en la fila de la bóveda («Tomador», «Tomador y conductor habitual», «Propietario») y frase en la ficha («En esta póliza figuras como…» / «…como propietario. El tomador es X.»).
 - `figuraEnPropias()` + `figuraChip()` en `apps/asegura-portal/lib/intervinientes.ts`; `PolizaPortal.figura` (solo propias e intervinientes; las autorizadas no la llevan: las ve por permiso).
 - Ejemplo real: Toyota Corolla de Víctor Manuel De la Fuente → él ve «Tomador y conductor habitual»; Nieves ve «Propietario» (+ «conductor ocasional» en la gemela `5727783313`). ⚠️ Esa póliza sale DOS veces en BD (`0005727783313` y `5727783313`, ambas activas): gemela sin fundir, no tocada aquí.
+- Segundo caso, Esquiansa: BMW 530 (3643GVR, vence 05/10/2026), tomador la sociedad; CIMA trae a Juan Manuel López Benjumea como conductor_habitual. Él la ve como DUEÑO («Tu sociedad») y ahí no salía papel → `rolesPropiosPorPoliza()` pinta también la figura en autorizadas/empresas cuando figura.
 
 ## (28/09/2026) Poner nombre a una ficha SIN NOMBRE sin exigir DNI
 - Alberto no podía nombrar un lead «(sin nombre)»: la única edición era «Editar identidad» (fondo de Contactos) y exigía DNI recibido. La BD guarda el marcador literal `'(sin nombre)'` (14 fichas).
