@@ -90,10 +90,17 @@ test('una vez enviado, los días cuentan DESDE EL ENVÍO', () => {
   assert.equal(v.venceEl.toISOString(), '2026-10-06T00:00:00.000Z')
 })
 
-test('🚨 la fecha de efecto RECORTA: un día antes, porque una efecto pasada mata el proyecto', () => {
+test('🚨 la fecha de efecto RECORTA: vale hasta el FINAL del día anterior, porque una efecto pasada mata el proyecto', () => {
   const v = calcularVencimiento({ creadoAt: d('2026-09-21T00:00:00Z'), fechaEfecto: d('2026-09-25T00:00:00Z') })
   assert.equal(v.fuente, 'fecha_efecto')
-  assert.equal(v.venceEl.toISOString(), '2026-09-24T00:00:00.000Z')
+  assert.equal(v.venceEl.toISOString(), '2026-09-25T00:00:00.000Z')
+})
+
+test('🪤 efecto MAÑANA: el presupuesto preparado hoy NO nace caducado (caso Manuel, 28/09/2026)', () => {
+  const hoy = d('2026-09-28T11:30:00Z')
+  const v = calcularVencimiento({ creadoAt: hoy, fechaEfecto: d('2026-09-29T00:00:00Z') })
+  assert.ok(v.venceEl.getTime() > hoy.getTime(), 'vence después de ahora')
+  assert.equal(estadoPresupuesto({ creadoAt: hoy, venceEl: v.venceEl } as never, hoy), 'borrador')
 })
 
 test('manda el MÍNIMO de las tres, no la última que llegue', () => {

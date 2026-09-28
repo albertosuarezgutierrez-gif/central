@@ -114,7 +114,7 @@ export type Vencimiento = {
  * los precios reales tenían `expires_at` a NULL).
  *
  * Tres fuentes:
- * 1. `fechaEfecto − 1 día`. Una fecha de efecto pasada mata el proyecto: el
+ * 1. El final del día anterior al efecto. Una fecha de efecto pasada mata el proyecto: el
  *    ReRate contesta «The effective date cannot be before today» y
  *    `effectiveDate` es de solo lectura (incidente del 13/09/2026).
  * 2. `base + VALIDEZ_PRESUPUESTO_DIAS`, donde `base` es el envío si ya salió y
@@ -132,7 +132,9 @@ export function calcularVencimiento(e: {
   const candidatos: { t: number; fuente: FuenteVencimiento }[] = [
     { t: base.getTime() + VALIDEZ_PRESUPUESTO_DIAS * DIA_MS, fuente: 'validez_casa' },
   ]
-  if (e.fechaEfecto) candidatos.push({ t: e.fechaEfecto.getTime() - DIA_MS, fuente: 'fecha_efecto' })
+  // Hasta el FINAL del día anterior al efecto (= 00:00 UTC del día de efecto), no hasta su comienzo:
+  // restar un día entero hacía que un presupuesto con efecto «mañana» naciera ya caducado (28/09/2026).
+  if (e.fechaEfecto) candidatos.push({ t: e.fechaEfecto.getTime(), fuente: 'fecha_efecto' })
   if (e.expiraOferta) candidatos.push({ t: e.expiraOferta.getTime(), fuente: 'oferta_vendor' })
   // El mínimo. Con empate manda el primero declarado, que es el de la casa:
   // es el único que siempre existe, así que es el que no deja huecos.

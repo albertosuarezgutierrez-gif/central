@@ -26,8 +26,9 @@ import {
   ibanEnmascarado,
   ibanValido,
 } from '@/lib/codeoscopic/emitir-iban'
-import { cuentaDeFicha, origenCuentaAceptada, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
-import { cuentaDistintaDeLaFirmada, polizaParaCuenta } from '@/lib/presupuesto-cuenta'
+import { cuentaDeFicha, origenCuentaAceptada, presupuestoAceptadoDe, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { cuentaDistintaDeLaFirmada, discrepanciaConElegida, polizaParaCuenta } from '@/lib/presupuesto-cuenta'
+import { marcarEmitido } from '@/lib/envio-presupuesto'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { documentoTomador, fraccionamientoDeOferta, matriculaProyecto } from '@/lib/codeoscopic/importar'
 import {
@@ -219,6 +220,40 @@ export const POST = auditado(async (req: Request) => {
   }
   const ctx = resuelto.ctx
 
+  // 🚨 Si el cliente aceptó en el portal un presupuesto de ESTA tarificación, lo que se emite tiene
+  // que ser la opción que FIRMÓ (compañía y prima). Fail-closed: si no se puede mirar, no se emite.
+  let aceptado: Awaited<ReturnType<typeof presupuestoAceptadoDe>>
+  try {
+    aceptado = await presupuestoAceptadoDe(correduria.id, p.tarificacion_id)
+  } catch (e) {
+    console.error('[emitir] no se pudo leer el presupuesto aceptado:', e instanceof Error ? e.message : e)
+    return NextResponse.json(
+      { estado: 'error', causa: 'otro', mensaje: 'No se ha podido comprobar si el cliente firmó un presupuesto de esta tarificación. No se ha emitido nada; reinténtalo.' },
+      { status: 503 },
+    )
+  }
+  if (aceptado) {
+    const motivo = discrepanciaConElegida({
+      companiaProyecto: p.aseguradora,
+      companiaElegida: aceptado.compania,
+      primaEnviada: numero(cuerpo.primaAnual),
+      primaElegida: aceptado.primaEur,
+    })
+    if (motivo) {
+      return NextResponse.json(
+        { estado: 'error', causa: 'otro', mensaje: `No es la opción que firmó el cliente: ${motivo}. Emite desde su fila o mándale otro presupuesto. No se ha emitido nada.` },
+        { status: 409 },
+      )
+    }
+  }
+  /** Cierra el presupuesto aceptado al acuñar la póliza. Best-effort: la póliza ya existe. */
+  const cerrarPresupuesto = async () => {
+    if (!aceptado) return
+    await marcarEmitido(correduria.id, { id: aceptado.id, actor }).catch((e: unknown) =>
+      console.error('[emitir] póliza acuñada pero el presupuesto no se marcó emitido:', e instanceof Error ? e.message : e),
+    )
+  }
+
   // (iii) Interruptor PROPIO del modo nuevo, fail-closed: sin
   // `CODEOSCOPIC_EMISION_NUEVO=1` un proyecto sin póliza sigue sin emitirse,
   // aunque la emisión de sustituciones esté encendida.
@@ -407,6 +442,7 @@ export const POST = auditado(async (req: Request) => {
     )
     // Best-effort: el PDF de la póliza puede venir ya en `issuedDocuments[]` del
     // proyecto que se acaba de leer (`crudoPrevio`) — sin gastar un GET extra.
+    if (acunadoAc.ok) await cerrarPresupuesto()
     const archivadoAc = acunadoAc.ok
       ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunadoAc.polizaId, crudo: crudoPrevio })
       : { documentoGuardado: null, avisoDocumento: null }
@@ -960,6 +996,7 @@ export const POST = auditado(async (req: Request) => {
   // Best-effort: el propio Submit puede traer ya `issuedDocuments[]` en su
   // respuesta (`envio.crudo`) — se descarga y archiva sin gastar otro GET.
   // Un fallo aquí nunca deshace el acuñado que ya se hizo arriba.
+  if (acunado.ok) await cerrarPresupuesto()
   const archivado = acunado.ok
     ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunado.polizaId, crudo: envio.crudo })
     : { documentoGuardado: null, avisoDocumento: null }

@@ -149,3 +149,22 @@ export async function origenCuentaAceptada(correduriaId: string, tarificacionId:
   }
 }
 
+
+export type PresupuestoAceptado = { id: string; compania: string; primaEur: number }
+
+/**
+ * El presupuesto ACEPTADO (sin emitir ni retirar) de esta tarificación y la opción que eligió el
+ * cliente. `null` = no hay ninguno (emisión sin presupuesto, p. ej. retarificar desde la ficha).
+ * 🚨 Si la consulta FALLA, lanza: «no se pudo mirar» no autoriza a emitir sin comprobar.
+ */
+export async function presupuestoAceptadoDe(correduriaId: string, tarificacionId: string | null): Promise<PresupuestoAceptado | null> {
+  if (!tarificacionId) return null
+  const [f] = await prismaAsegura().$queryRaw<{ id: string; compania: string; prima: string }[]>`
+    select p.id::text as id, o.compania, o.prima_eur::text as prima
+    from presupuesto p join presupuesto_opcion o on o.id = p.opcion_elegida_id and o.presupuesto_id = p.id
+    where p.correduria_id = ${correduriaId}::uuid and p.tarificacion_id = ${tarificacionId}::uuid
+      and p.aceptado_at is not null and p.emitido_at is null and p.retirado_at is null
+    order by p.aceptado_at desc
+    limit 1`
+  return f ? { id: f.id, compania: f.compania, primaEur: Number(f.prima) } : null
+}
