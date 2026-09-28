@@ -397,13 +397,13 @@ test('y una lista VACÍA sí es «se miró y no hay»', () => {
 
 test('pedir y reprocesar son DOS acciones distintas y no se cuentan juntas', () => {
   const r = repartirHuerfanas([
-    h('C0468', 'M00171', 'BIDP036783'),
-    h('C0468', 'M00171', '549570971', { enCartera: 'viva' }),
+    h('C0468', 'M00171', 'BIDP000029'),
+    h('C0468', 'M00171', '549000025', { enCartera: 'viva' }),
     h('C0468', 'M00171', 'GPAHS2800735', { enCartera: 'viva', recibos: 0, siniestros: 1 }),
   ])!
   assert.equal(r.totalPedir, 1)
   assert.equal(r.totalReprocesar, 2)
-  assert.deepEqual(r.pedir[0]!.polizas, ['BIDP036783'])
+  assert.deepEqual(r.pedir[0]!.polizas, ['BIDP000029'])
 })
 
 test('🗝️ el reparto es por CLAVE DE MEDIADOR, no por compañía', () => {
@@ -429,11 +429,11 @@ test('una fila fusionada (lápida) no es «la tenemos» ni «no la tenemos»', (
 
 test('la misma póliza citada dos veces es UNA póliza que pedir', () => {
   const r = repartirHuerfanas([
-    h('C0468', 'M00171', '548325602', { recibos: 1 }),
-    h('C0468', 'M00171', '548325602', { recibos: 1, siniestros: 2 }),
+    h('C0468', 'M00171', '548000020', { recibos: 1 }),
+    h('C0468', 'M00171', '548000020', { recibos: 1, siniestros: 2 }),
   ])!
   assert.equal(r.totalPedir, 1)
-  assert.deepEqual(r.pedir[0]!.polizas, ['548325602'])
+  assert.deepEqual(r.pedir[0]!.polizas, ['548000020'])
 })
 
 test('una clave de cajón se trata como ausencia, no como una clave más', () => {
@@ -462,14 +462,14 @@ test('«ningún recibo traía prima» sigue siendo null, nunca 0 €', () => {
 
 test('📣 el texto dice QUÉ HACER y con qué números, no «hay 12»', () => {
   const r = repartirHuerfanas([
-    h('C0468', 'M00171', 'BIDP036783', { entidadNombre: 'Occident' }),
-    h('C0468', 'M00171', '548325602', { entidadNombre: 'Occident' }),
+    h('C0468', 'M00171', 'BIDP000029', { entidadNombre: 'Occident' }),
+    h('C0468', 'M00171', '548000020', { entidadNombre: 'Occident' }),
   ])!
   const t = textoHuerfanas(r)
   assert.match(t, /Pídele a/)
   assert.match(t, /Occident \(C0468\) \/ clave M00171/)
-  assert.match(t, /BIDP036783/)
-  assert.match(t, /548325602/)
+  assert.match(t, /BIDP000029/)
+  assert.match(t, /548000020/)
 })
 
 test('sin nombre en companias_dgs se cita el código DGS y no se inventa marca', () => {

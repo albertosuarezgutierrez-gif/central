@@ -6,7 +6,7 @@ const POLIZA_OK = {
   estado: 'ok',
   poliza: {
     id: 'p1', cliente: { id: 'c1', nombre: 'Jose Suarez Salas' }, tipo: 'hogar', aseguradora: 'Occident',
-    codigoEntidadDgs: 'C0468', numeroPoliza: 'GPDFL0600228', idPolizaEntidad: null, ramoDgs: null, estado: 'activa', situacion: null,
+    codigoEntidadDgs: 'C0468', numeroPoliza: 'GPDFL0000031', idPolizaEntidad: null, ramoDgs: null, estado: 'activa', situacion: null,
     origen: 'cima', viva: true, fechaEfectoInicial: '2015-07-06', fechaInicio: '2026-07-06', fechaVencimiento: '2027-07-06',
     prima: 396.83, primaAnual: 396.83, primaBruta: null, primaMensual: null,
     objeto: { estado: 'no_informado', titulo: null, detalle: null, nota: null },

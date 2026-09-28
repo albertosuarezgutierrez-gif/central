@@ -226,7 +226,7 @@ test('duplicado auto/moto: póliza en vigor Y proyecto reciente se miran los DOS
   assert.equal(soloProyecto!.causa, 'ya_emitido')
   const ambos = decidirDuplicadoNuevo({
     tipo: 'moto', matricula: '1234ABC',
-    mismaMatricula: [{ id: 'pol-1', numeroPoliza: '3021700291186', mismoCliente: true }],
+    mismaMatricula: [{ id: 'pol-1', numeroPoliza: '3021700000001', mismoCliente: true }],
     proyectosRecientes: ['P9'],
   })
   assert.equal(ambos!.causa, 'ya_en_cartera')
@@ -240,14 +240,14 @@ test('duplicado auto/moto: póliza en vigor Y proyecto reciente se miran los DOS
 test('duplicado: matrícula en OTRA ficha → ya_en_cartera con nº enmascarado, sin datos de esa ficha', () => {
   const d = decidirDuplicadoNuevo({
     tipo: 'auto', matricula: '1234ABC',
-    mismaMatricula: [{ id: 'pol-ajena', numeroPoliza: '3021700291186', mismoCliente: false }],
+    mismaMatricula: [{ id: 'pol-ajena', numeroPoliza: '3021700000001', mismoCliente: false }],
     proyectosRecientes: [],
   })
   assert.ok(d)
   assert.equal(d!.causa, 'ya_en_cartera')
   assert.match(d!.mensaje, /OTRA ficha/)
-  assert.match(d!.mensaje, /••••1186/)
-  assert.ok(!d!.mensaje.includes('3021700291186'), 'el número completo de otra ficha no sale')
+  assert.match(d!.mensaje, /••••0001/)
+  assert.ok(!d!.mensaje.includes('3021700000001'), 'el número completo de otra ficha no sale')
   assert.equal(enmascararNumeroPoliza(null), null)
   assert.equal(enmascararNumeroPoliza('12'), '••••')
 })

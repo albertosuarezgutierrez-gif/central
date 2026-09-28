@@ -6,7 +6,7 @@ ese mismo día). Solo lectura: no se hizo ninguna llamada facturable. Las línea
 
 ## Por qué existe
 
-Alberto retarificaba la moto de Víctor De la Fuente (Allianz 031698897, Honda NTV 700) y le salían
+Alberto retarificaba la moto de Víctor De la Fuente (Allianz [nº de póliza retirado], Honda NTV 700) y le salían
 modelos de COCHE. Tres causas encadenadas, de abajo arriba:
 
 1. **CIMA clasificaba motos como `auto`.** La ingesta (repo `asegura`, `eiac-pol-mapper.ts`) solo

@@ -739,7 +739,7 @@ de terceros → 1 fallo; colar la dirección por `cosa` → 3).
 
 **Nadie se sabe su número de póliza de memoria, y menos aún cuando hay que ELEGIR entre varias**
 (caso visto el 13/09/2026: el selector de «A qué póliza» del parte de siniestro los listaba como
-«Occident · Responsabilidad civil · nº 548238086», y Alberto, mirándolo en su propio móvil: *«casi
+«Occident · Responsabilidad civil · nº [nº de póliza retirado]», y Alberto, mirándolo en su propio móvil: *«casi
 nadie sabe el número de póliza»*). Lo que identifica una póliza para una PERSONA es el BIEN, no el
 contrato:
 
