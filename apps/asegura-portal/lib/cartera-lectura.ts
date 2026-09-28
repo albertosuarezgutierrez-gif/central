@@ -82,7 +82,7 @@ import { decryptField } from '@central/module-seguros-pii'
 
 import { prisma } from './db'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
-import { camposDeInterviniente, figurasEnPolizas, nivelMasAlto, ordenarRoles } from './intervinientes'
+import { camposDeInterviniente, figuraEnPropias, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
 import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
@@ -196,6 +196,12 @@ export type PolizaPortal = {
   /** Cambios de compañía de este seguro, de la más antigua a la actual (`lib/historial-companias.ts`).
    *  `[]` = no hay cambio o este lector no ve la otra póliza. Se decide POR LECTOR, como `sustituyeA`. */
   cambiosCompania: EslabonHistorial[]
+  /**
+   * Papeles de ESTA identidad en la póliza (`tomador`, `propietario`, `conductor_habitual`…),
+   * en el orden de `ORDEN_ROLES`. En propias e intervinientes siempre; en las autorizadas y las
+   * de sus empresas solo si ADEMÁS figura en ellas (si no, las ve por permiso y no hay papel).
+   */
+  figura?: string[]
   /**
    * De dónde viene la fila, tal cual está en la BD. NO es para pintarlo: es lo
    * que necesitan aguas abajo (`lib/obligaciones.ts`) para volver a preguntar
@@ -1035,6 +1041,12 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       return titular(id, nivel, camposVisibles(nivel))
     })
     .filter((t): t is TitularPortal => t !== null)
+  const figuraPropia = figuraEnPropias({
+    polizaIds: propias.flatMap((t) => t.polizas.map((p) => p.id)),
+    filas: filasInterviniente,
+    propiosIds,
+  })
+  for (const t of propias) for (const p of t.polizas) p.figura = figuraPropia.get(p.id)
 
   const caducaPorId = new Map(vigentes.map((f) => [f.id, f.caducaEn]))
   const autorizadas: TitularPortal[] = []
@@ -1114,6 +1126,16 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     })
   }
 
+  // Las que ve por permiso o por ser dueño y donde ADEMÁS figura (el coche de su sociedad, él
+  // conductor habitual): se le dice su papel. Las demás autorizadas no llevan `figura`.
+  const rolesSuyos = rolesPropiosPorPoliza(filasInterviniente, propiosIds)
+  for (const t of autorizadas) {
+    for (const p of t.polizas) {
+      const r = rolesSuyos.get(p.id)
+      if (r !== undefined) p.figura = r
+    }
+  }
+
   // Las pólizas donde FIGURA, agrupadas por tomador. La regla (qué abre, con qué
   // nivel y qué campos NO) vive pura y testeada en `lib/intervinientes.ts`.
   // Lo que ya se sirve por una autorización o por ser dueño no se duplica.
@@ -1138,6 +1160,7 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       const f = figuras.get(p.id)
       if (f === undefined) continue
       rolesPorPoliza[p.id] = f.roles
+      p.figura = f.roles
       niveles.push(f.nivel)
     }
     intervinientes.push({
