@@ -13,7 +13,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { EyeOff, Eye, RefreshCw } from 'lucide-react'
 
-import { Badge, btnStyle } from '@/components/ui'
+import { Badge, btnIcono, btnStyle } from '@/components/ui'
+import { CeldaCompania } from './CeldaCompania'
 import { eur } from '@/lib/dinero'
 import { filtrarPorGarantias, interruptoresGarantias, ramoDeCatalogo } from '@central/module-seguros'
 import {
@@ -128,36 +129,38 @@ export default function FiltroGarantias({
       <li
         key={o.id}
         style={{
-          display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between',
-          padding: '8px 0', borderBottom: '1px solid var(--border)', opacity: oculta ? 0.55 : 1,
+          display: 'flex', gap: 10, alignItems: 'center',
+          padding: '10px 0', borderBottom: '1px solid var(--border)', opacity: oculta ? 0.5 : 1, minWidth: 0,
         }}
       >
-        <div style={{ minWidth: 0, flex: '1 1 180px', overflowWrap: 'anywhere' }}>
-          <strong>{o.compania}</strong>
-          {(o.producto || o.categoria) && (
-            <span style={{ color: 'var(--muted)', fontSize: 12 }}> · {[o.producto, o.categoria].filter(Boolean).join(' · ')}</span>
-          )}
-          <div style={{ fontSize: 13 }}>
-            <strong>{o.primaEur === null ? 'sin prima' : eur(o.primaEur)}</strong>
-            {o.franquiciaEur !== null ? <> · franquicia {eur(o.franquiciaEur)}</> : <span style={{ color: 'var(--muted)' }}> · franquicia no declarada</span>}
+        <div style={{ flex: '0 0 76px', minWidth: 0 }}>
+          <CeldaCompania compania={o.compania} producto={o.producto} />
+        </div>
+        <div style={{ flex: '1 1 auto', minWidth: 0, fontSize: 13, lineHeight: 1.3 }}>
+          <div style={{ overflowWrap: 'anywhere' }}>{o.categoria ?? <span style={{ color: 'var(--muted)' }}>cobertura sin declarar</span>}</div>
+          <div style={{ color: 'var(--muted)', fontSize: 12 }}>
+            {o.franquiciaEur === null ? 'franquicia no declarada' : o.franquiciaEur === 0 ? 'sin franquicia' : `franquicia ${eur(o.franquiciaEur)}`}
             {ramoCat === 'decesos' && (
-              o.capitalServicioEur !== null
-                ? <> · capital del servicio {eur(o.capitalServicioEur)}</>
-                : <span style={{ color: 'var(--muted)' }}> · capital del servicio no consta</span>
+              o.capitalServicioEur !== null ? <> · capital {eur(o.capitalServicioEur)}</> : <> · capital no consta</>
             )}
-            {o.firmeza !== 'firme' && <span style={{ color: 'var(--muted)' }}> · {o.firmeza}</span>}
           </div>
-          {oculta && <Badge tono="aviso">{porCompania ? 'compañía oculta al cliente' : 'oculta al cliente'}</Badge>}
+          {oculta && <Badge tono="aviso">{porCompania ? 'compañía oculta' : 'oculta al cliente'}</Badge>}
+        </div>
+        <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
+          <strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{o.primaEur === null ? '—' : eur(o.primaEur)}</strong>
+          {o.firmeza !== 'firme' && <div style={{ color: 'var(--muted)', fontSize: 11 }}>{o.firmeza}</div>}
         </div>
         {!porCompania && (
           <button
             type="button"
             disabled={preparado}
             onClick={() => setOcultosPrecio((s) => alternar(s, o.id))}
-            style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}
+            style={{ ...btnIcono('sutil'), flex: '0 0 auto' }}
             aria-pressed={ocultosPrecio.has(o.id)}
+            aria-label={ocultosPrecio.has(o.id) ? 'Volver a enseñar al cliente' : 'Ocultar al cliente'}
+            title={ocultosPrecio.has(o.id) ? 'Volver a enseñar al cliente' : 'Ocultar al cliente'}
           >
-            {ocultosPrecio.has(o.id) ? <><Eye size={14} /> Mostrar al cliente</> : <><EyeOff size={14} /> Ocultar al cliente</>}
+            {ocultosPrecio.has(o.id) ? <EyeOff size={18} /> : <Eye size={18} />}
           </button>
         )}
       </li>
@@ -170,8 +173,7 @@ export default function FiltroGarantias({
         <strong>Qué verá el cliente</strong>
       </p>
       <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-        Filtra por garantías y quita lo que no quieras enseñarle antes de preparar. Sale de la cotización
-        guardada: <strong>leerla no cuesta nada</strong> y no vuelve a cotizar.
+        Toca el ojo para quitar un precio. Leer esto es gratis: no vuelve a cotizar.
       </p>
 
       {carga.estado === 'cargando' && <p className="muted">Leyendo la cotización guardada…</p>}
@@ -254,7 +256,7 @@ export default function FiltroGarantias({
 
           {companias.length > 1 && (
             <div style={{ marginBottom: 8 }}>
-              <p style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0' }}>Compañías:</p>
+              <p style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0' }}>Compañías (toca para ocultarla entera):</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {companias.map((c) => {
                   const oculta = ocultasCompania.has(c.clave)
@@ -268,7 +270,7 @@ export default function FiltroGarantias({
                       style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, textDecoration: oculta ? 'line-through' : undefined }}
                       title={oculta ? 'Volver a mostrar esta compañía al cliente' : 'Ocultar compañía al cliente'}
                     >
-                      {oculta ? <EyeOff size={14} /> : <Eye size={14} />} {c.nombre} ({c.n}) · {oculta ? 'oculta' : 'Ocultar compañía'}
+                      {oculta ? <EyeOff size={14} /> : <Eye size={14} />} {c.nombre} ({c.n})
                     </button>
                   )
                 })}

@@ -864,6 +864,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Precios de moto/coche nuevo legibles en el móvil
+- La tabla de 5-6 columnas se salía por la derecha y repetía «Mapfre · Motos» en cada fila; debajo, «Qué verá el cliente» pintaba OTRA vez los 31 precios.
+- Ahora: `ListaPrecios.tsx` (logo · cobertura+franquicia · prima · Emitir, de barata a cara, el panel de emitir se abre bajo SU fila) y, con cotización guardada, la lista de emitir va plegada («¿Ya ha dicho que sí?»). `CeldaCompania` = solo logo (nombre si no hay logo); `productoRelevante` quita el producto que solo repite el ramo. Filas de `FiltroGarantias` con el mismo formato y ojo de 44 px.
+- Cepo `apps/plataforma/lib/logo-compania.test.ts` (visto en rojo). Manuel ya retarificó: 31 precios, el más barato Allianz Terceros 216,53€.
+
 ## (28/09/2026) «Subir póliza» ya no saca de plataforma
 Los dos botones (ficha y cabecera de /correduria) saltaban a `asegura/cartera/subir` (otra web/sesión).
 Ficha → su pestaña Documentos con tipo «póliza». Cabecera → pantalla propia `/correduria/subir-poliza`
