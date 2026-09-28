@@ -116,7 +116,7 @@ export type ResultadoPreparar =
     }
 
 /** Los ramos con los que hoy se puede montar una comparativa de verdad. */
-const RAMOS_CON_COMPARATIVA = new Set(['auto', 'moto', 'hogar'])
+const RAMOS_CON_COMPARATIVA = new Set(['auto', 'moto', 'hogar', 'decesos', 'salud', 'vida'])
 
 /**
  * Prepara un presupuesto en BORRADOR desde una tarificación ya pagada.

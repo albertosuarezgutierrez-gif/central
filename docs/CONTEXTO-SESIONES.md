@@ -860,6 +860,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Presupuesto de DECESOS, SALUD y VIDA (rótulos reales del portal de Codeoscopic)
+- `nivelCobertura` reconoce salud (Básica < Con copago < Sin copago < Con reembolso), decesos (Tarifa
+  natural/mixta/nivelada/personalizada) y vida (Vida-Riesgo), medidos en los ejemplos del portal (Alberto por Claude en Chrome).
+- Decesos y vida NO tienen «mejor cubierta» (`FAMILIAS_SIN_ESCALA_DE_COBERTURA`): el rótulo de decesos es el tipo de tarifa,
+  no la cobertura (lo que cambia es el capital del servicio), y la comparativa lo avisa.
+- Presupuesto, tarificación retomable y `enviar_presupuesto` de Telegram admiten los tres ramos. Sin verificar contra una
+  tarificación real (0 guardadas de esos ramos): la primera real confirmará rótulos y coberturas.
+
 ## (29/09/2026) Presupuesto por garantías — entrega 2: el presupuesto congela TODAS las opciones
 - Entrega 1 mergeada (#3907). Entrega 2: `prepararPresupuesto` congela todos los precios (portada primero, resto por prima,
   ocultas al final con `oculta_at`); `ocultar {companias, precios}` en el POST y `accion:'ocultar'|'mostrar'` en el PATCH

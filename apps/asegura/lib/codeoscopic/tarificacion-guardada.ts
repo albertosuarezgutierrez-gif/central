@@ -72,7 +72,7 @@ export async function ultimaTarificacionRealAuto(
 }
 
 /** Ramos de cliente NUEVO cuya tarificación se puede retomar en pantalla. */
-export const RAMOS_RETOMABLES = ['auto', 'moto', 'hogar'] as const
+export const RAMOS_RETOMABLES = ['auto', 'moto', 'hogar', 'decesos', 'salud', 'vida'] as const
 export type RamoRetomable = (typeof RAMOS_RETOMABLES)[number]
 
 /**

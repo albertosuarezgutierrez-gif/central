@@ -11,6 +11,7 @@
  */
 
 import type { Comparativa, FilaPrecio, GrupoCobertura } from './comparativa-precios.ts'
+import { FAMILIAS_SIN_ESCALA_DE_COBERTURA } from './comparativa-precios.ts'
 
 // ─── Estado ──────────────────────────────────────────────────────────────────
 
@@ -255,6 +256,8 @@ function mejorGrupo(grupos: GrupoCobertura[]): GrupoCobertura | null {
   let mejor: GrupoCobertura | null = null
   for (const g of grupos) {
     if (!g.nivel.reconocido) continue
+    // Decesos y vida: el rótulo no mide cobertura, así que no hay «mejor cubierta» que ofrecer.
+    if (FAMILIAS_SIN_ESCALA_DE_COBERTURA.has(g.nivel.familia)) continue
     if (g.masBarataEmitible === null) continue
     if (mejor === null || g.nivel.rango > mejor.nivel.rango) mejor = g
   }

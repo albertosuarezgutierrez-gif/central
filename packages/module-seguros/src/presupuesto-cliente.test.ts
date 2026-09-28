@@ -251,3 +251,12 @@ test('una prima null no se cuela como la más barata', () => {
   const p = elegirPortada(comparativa([grupo('terceros', 1, [fila(null), fila(300)])]), 'terceros')
   assert.equal(p.equivalente?.precio.primaEur, 300)
 })
+
+test('🚨 decesos: no hay «mejor cubierta» por rótulo (la nivelada es más cara, no cubre más)', () => {
+  const mixta = grupo('d_mixta', 20, [fila(21.66)])
+  const nivelada = grupo('d_nivelada', 30, [fila(118.25)])
+  for (const g of [mixta, nivelada]) g.nivel.familia = 'decesos'
+  const p = elegirPortada(comparativa([mixta, nivelada]), null)
+  assert.equal(p.mejorCubierta, null)
+  assert.equal(p.masBarata?.precio.primaEur, 21.66)
+})

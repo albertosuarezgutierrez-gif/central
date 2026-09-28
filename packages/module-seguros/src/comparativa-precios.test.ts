@@ -290,3 +290,33 @@ test('los desplegables se pintan con lo que hay delante, con su cuenta', () => {
     { clave: 'todo_riesgo', label: 'Todo riesgo sin franquicia', n: 1 },
   ])
 })
+
+// ─── Salud, decesos y vida (29/09/2026) ──────────────────────────────────────
+// Rótulos LITERALES de las respuestas de ejemplo del portal de Codeoscopic (burial, health, term-life).
+
+test('salud: Básica < Con copago < Sin copago < Con reembolso, y no cae en la escala de auto', () => {
+  const r = ['Básica', 'Con copago', 'Sin copago', 'Con reembolso'].map((c) => nivelCobertura(c, 'salud'))
+  assert.ok(r.every((n) => n.reconocido && n.familia === 'salud'))
+  assert.deepEqual(r.map((n) => n.rango), [10, 20, 30, 40])
+})
+
+test('decesos: el tipo de tarifa se reconoce, y el aviso dice que NO es cobertura', () => {
+  for (const c of ['Tarifa Natural', 'Tarifa Mixta', 'Tarifa Nivelada', 'Tarifa Personalizada']) {
+    const n = nivelCobertura(c, 'decesos')
+    assert.ok(n.reconocido && n.familia === 'decesos', c)
+  }
+  const c = agruparPrecios(
+    [
+      { compania: 'DKV', categoria: 'Tarifa Mixta', primaEur: 21.66 },
+      { compania: 'Generali', categoria: 'Tarifa Nivelada', primaEur: 118.25 },
+    ],
+    { ramo: 'decesos' },
+  )
+  assert.match(c.avisoEscala ?? '', /tipo de tarifa, no la cobertura/)
+})
+
+test('vida: «Vida-Riesgo» es un nivel; un rótulo desconocido de vida NO cae en auto', () => {
+  assert.equal(nivelCobertura('Vida-Riesgo', 'vida').clave, 'v_riesgo')
+  const raro = nivelCobertura('Terceros', 'vida')
+  assert.equal(raro.reconocido, false)
+})

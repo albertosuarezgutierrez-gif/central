@@ -1795,7 +1795,10 @@ export function interpretarTarificacionNueva(status: number, json: unknown): Res
 }
 
 /** `GET .../tarificacion?clienteId=&ramo=` — **gratis**, solo lee lo ya pagado. */
-export async function tarificacionNuevaGuardadaAsegura(clienteId: string, ramo: 'auto' | 'moto' | 'hogar'): Promise<RespuestaTarificacionNueva> {
+export async function tarificacionNuevaGuardadaAsegura(
+  clienteId: string,
+  ramo: 'auto' | 'moto' | 'hogar' | 'decesos' | 'salud' | 'vida',
+): Promise<RespuestaTarificacionNueva> {
   try {
     const r = await pedir(
       `/api/operador/codeoscopic/tarificacion?clienteId=${encodeURIComponent(clienteId)}&ramo=${ramo}`,

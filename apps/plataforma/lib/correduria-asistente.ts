@@ -209,7 +209,7 @@ export const HERRAMIENTAS = [
   fn('enviar_presupuesto', 'Rescata la ÚLTIMA tarificación ya pagada de un cliente SIN póliza (oportunidad nueva) para ese ramo, prepara el presupuesto y le manda el correo para que elija la opción en su portal. Necesitas sus exigencias y necesidades (qué quiere asegurar y qué le importa): si Alberto no las ha dicho, PREGÚNTASELAS, nunca las inventes. Alberto lo manda con un botón: ES UN CORREO AL CLIENTE.',
     {
       clienteId: { type: 'string', description: 'La ficha (sácala de buscar; la matrícula también sirve para buscar)' },
-      ramo: { type: 'string', enum: ['auto', 'moto', 'hogar'] },
+      ramo: { type: 'string', enum: ['auto', 'moto', 'hogar', 'decesos', 'salud', 'vida'] },
       necesidades: { type: 'string', description: 'Exigencias y necesidades del cliente, tal como las dijo Alberto' },
     }, ['clienteId', 'ramo', 'necesidades']),
 ] as const
