@@ -818,6 +818,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Agente de huéspedes: dejaba de responderse a sí mismo (reserva 154692216)
+- Nuestros envíos reaparecen en Smoobu sin emisor; el anti-eco solo conocía `mensajes_log` (borrador), no acuses, programados ni lo editado en Telegram → 5 ecos en 4 días, 2 contestados solos al huésped, y el eco pisó en la cola la pregunta real.
+- Tabla `mensajes_enviados` (aplicada) escrita por `enviarAlHuespedDetallado` (salida única) + textos fijos de guardia en `enviados`.
+- Acuse «lo estamos revisando» ya no sale el día de salida; se cierra el peldaño y se avisa a Alberto.
+
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.
 - Motivo: todo a 0 comandas y el aviso NO pasa por el panel /telegram (lo manda la edge function directa), así que no se podía apagar desde allí. Reactivar: `cron.alter_job(21, active := true)`.
