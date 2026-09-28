@@ -27,18 +27,18 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
 
   return (
     <>
-      <Cubo titulo={`🛡️ Con nosotros (${conNosotros.length})`}>
+      <Cubo titulo={`Con nosotros (${conNosotros.length})`}>
         {conNosotros.length === 0
           ? <Vacio>Ahora no tiene ningún seguro con nosotros.</Vacio>
           : <Rejilla>{conNosotros.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} />)}</Rejilla>}
       </Cubo>
 
-      <Cubo titulo={`🎯 Oportunidades (${oportunidades.length})`} nota="Lo tiene en otra compañía. Pincha para ver el seguimiento de la venta.">
-        {!reparto.oportunidadesLeidas && <Vacio aviso>⚠️ No se han podido leer sus oportunidades: puede haber más de las que se ven.</Vacio>}
-        {!reparto.declaradasLeidas && <Vacio aviso>⚠️ No se han podido leer las pólizas que aportó desde el portal.</Vacio>}
+      <Cubo titulo={`Oportunidades (${oportunidades.length})`} nota="Lo tiene en otra compañía. Pincha para ver el seguimiento de la venta.">
+        {!reparto.oportunidadesLeidas && <Vacio aviso>No se han podido leer sus oportunidades: puede haber más de las que se ven.</Vacio>}
+        {!reparto.declaradasLeidas && <Vacio aviso>No se han podido leer las pólizas que aportó desde el portal.</Vacio>}
         {oportunidades.length > 0
           ? <Rejilla>{oportunidades.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} eliminable />)}</Rejilla>
-          : reparto.oportunidadesLeidas && <Vacio>Ninguna abierta. <Link href={`/correduria/cliente/${clienteId}?tab=oportunidades`}>➕ Abrir una oportunidad</Link></Vacio>}
+          : reparto.oportunidadesLeidas && <Vacio>Ninguna abierta. <Link href={`/correduria/cliente/${clienteId}?tab=oportunidades`}>+ Abrir una oportunidad</Link></Vacio>}
         {historicas.length > 0 && (
           <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>
             Además, {historicas.length} póliza(s) más del volcado histórico (2013-2018, sin CIMA).{' '}
@@ -63,7 +63,7 @@ export default function SegurosCliente({ reparto, siniestros, clienteId, hoy }: 
       {yaNoExiste.length > 0 && (
         <details style={{ display: 'grid', gap: 10 }}>
           <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 15, fontWeight: 700 }}>
-            🗂️ Ya no existe ({yaNoExiste.length})
+            Ya no existe ({yaNoExiste.length})
           </summary>
           <Rejilla>{yaNoExiste.map(s => <TarjetaSeguro key={s.id} s={s} ctx={ctx} />)}</Rejilla>
         </details>

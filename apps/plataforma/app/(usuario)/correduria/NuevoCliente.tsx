@@ -174,12 +174,12 @@ export default function NuevoCliente({ q }: { q?: string }) {
 function Resultado({ r, ocupado, onForzar }: { r: ResultadoEscritura | null; ocupado: boolean; onForzar: () => void }) {
   if (r === null) return null
   const base: React.CSSProperties = { fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px' }
-  if (r.estado === 'ok') return <div style={{ ...base, color: 'var(--positive)', background: 'var(--positive-bg)' }}>✅ Creado. Abriendo la ficha…</div>
+  if (r.estado === 'ok') return <div style={{ ...base, color: 'var(--positive)', background: 'var(--positive-bg)' }}>Creado. Abriendo la ficha…</div>
   if (r.estado === 'conflicto') {
     const bloquea = coincidenciaBloquea(r.coincidencias) || !r.forzable
     return (
       <div style={{ ...base, color: 'var(--warning)', background: 'var(--warning-bg)' }}>
-        ⚠️ <strong>Ya existe:</strong>
+        <strong>Ya existe:</strong>
         <ul style={{ margin: '4px 0', paddingLeft: 18 }}>
           {r.coincidencias.map((c) => (
             <li key={`${c.por}-${c.id}`}>

@@ -31,7 +31,7 @@ export default function TabPolizas({ porClase, intervinientes, declaradas }: {
 
       {porClase.pendiente_cima.length > 0 && (
         <Polizas
-          titulo={`📝 Emitidas, pendientes de confirmación por CIMA (${porClase.pendiente_cima.length})`}
+          titulo={`Emitidas, pendientes de confirmación por CIMA (${porClase.pendiente_cima.length})`}
           nota="CIMA aún no la ha traído: no cuenta como viva ni genera avisos. Cuando la compañía la mande por CIMA se casará con esta y pasará a «Pólizas vivas»."
           polizas={porClase.pendiente_cima}
           vacio=""
@@ -41,7 +41,7 @@ export default function TabPolizas({ porClase, intervinientes, declaradas }: {
 
       {porClase.sustituida.length > 0 && (
         <Polizas
-          titulo={`🔁 Sustituidas por otra (${porClase.sustituida.length})`}
+          titulo={`Sustituidas por otra (${porClase.sustituida.length})`}
           nota="Cambio de compañía ya emitido: cubren hasta su vencimiento y no se renuevan. No cuentan como vivas ni avisan de su vencimiento."
           polizas={porClase.sustituida}
           vacio=""
