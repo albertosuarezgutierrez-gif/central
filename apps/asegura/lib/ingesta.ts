@@ -545,6 +545,12 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
     //      distinto (medido el 20/09/2026 — `C0468_M00171_POL_199_…` sale con
     //      `13489fbf…` el 15/09 y con `17022c62…` el 17/09), así que agrupar
     //      por hash lo contaba DOS veces.
+    //    - **Un rescate por fuera del pull NO emite parte** (`ingerir-manual`,
+    //      `cima-rescate-lote`): el 24/09/2026 entraron los 46 objetos y el
+    //      aviso siguió cantándolos días después. El cierre lo da un
+    //      `cima_residuo_resuelto_manual` POSTERIOR al último parte, que alguien
+    //      emite tras comprobar objeto a objeto que está en la cartera — un
+    //      apunte explícito, no las columnas que se reescriben solas.
     //    - **Las claves son por tipo de objeto** (`polizasReview`,
     //      `recibosReview`, …), así que se suman por SUFIJO en vez de
     //      enumerarlas: un tipo nuevo entra solo. `zipEntryCount` se excluye a
@@ -569,6 +575,7 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
                  e.payload->>'codigoEntidad' AS entidad,
                  NULLIF(split_part(e.payload->>'nombreFichero', '_', 2), '') AS clave,
                  e.payload->>'stateTo' AS estado,
+                 e.occurred_at,
                  EXTRACT(EPOCH FROM (now() - e.occurred_at)) / 86400 AS dias,
                  (SELECT COALESCE(SUM((p.value)::numeric), 0) FROM jsonb_each(e.payload) p
                    WHERE p.key LIKE '%Count' AND p.key <> 'zipEntryCount'
@@ -583,8 +590,16 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
           ORDER BY e.payload->>'nombreFichero', e.occurred_at DESC
         )
         SELECT fichero, tipo, entidad, clave, declarados, persistidos, en_revision, dias
-        FROM ultimo_parte
+        FROM ultimo_parte u
         WHERE estado = 'confirmed' AND en_revision > 0
+          AND NOT EXISTS (
+            SELECT 1
+            FROM operational_events r
+            JOIN cima_ficheros cf ON cf.id::text = r.payload->>'ficheroId'
+            WHERE r.event_name = 'cima_residuo_resuelto_manual'
+              AND cf.nombre_fichero = u.fichero
+              AND r.occurred_at > u.occurred_at
+          )
         ORDER BY en_revision DESC, dias ASC
       `)
       return r.map(f => ({

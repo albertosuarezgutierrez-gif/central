@@ -75,6 +75,19 @@ test('🚨 se queda el ÚLTIMO parte de cada fichero, y la identidad es el NOMBR
   assert.match(bloque, /ORDER BY e\.payload->>'nombreFichero', e\.occurred_at DESC/)
 })
 
+test('🚨 un cierre manual POSTERIOR al último parte apaga el fichero', () => {
+  // El rescate del 24/09/2026 (`ingerir-manual` / `cima-rescate-lote`) metió
+  // los 46 objetos sin emitir parte nuevo, y el aviso los siguió cantando como
+  // pérdida irreversible. El cierre es un `cima_residuo_resuelto_manual` con
+  // el `ficheroId`, y solo cuenta si es POSTERIOR: uno viejo no tapa un parte
+  // nuevo que vuelva a dejar objetos en revisión.
+  const bloque = FUENTE.slice(FUENTE.indexOf('const parciales = await leerONull'))
+  const consulta = bloque.slice(0, bloque.indexOf('`)'))
+  assert.match(consulta, /NOT EXISTS[\s\S]*event_name = 'cima_residuo_resuelto_manual'/)
+  assert.match(consulta, /cf\.id::text = r\.payload->>'ficheroId'/)
+  assert.match(consulta, /r\.occurred_at > u\.occurred_at/)
+})
+
 test('las claves de recuento se suman por SUFIJO, y `zipEntryCount` queda fuera', () => {
   // Las claves son por tipo de objeto (`polizasReview`, `recibosReview`…): con
   // una lista cerrada, un tipo nuevo se perdería en silencio. Y `zipEntryCount`
