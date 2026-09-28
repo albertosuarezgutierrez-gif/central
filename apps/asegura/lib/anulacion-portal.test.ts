@@ -45,3 +45,18 @@ test('🪤 se firma lo que se leyó: la huella de la carta se compara antes de f
   const comp = firmar.indexOf("if (huella(texto) !== datos.cartaHash) return { estado: 'carta_cambiada' }")
   assert.ok(comp > 0 && comp < firmar.indexOf('new FirmaPropia().firmar('))
 })
+
+test('🪤 tras recargar, el código ya mandado se reabre solo si SIRVE: caducado o sin intentos, no', () => {
+  const f = src.slice(src.indexOf('export function codigoVigente'), src.indexOf('async function firmadasDe'))
+  assert.match(f, /otpIntentos >= MAX_INTENTOS\) return null/, 'un código agotado no se ofrece: diría «teclea el código» y fallaría')
+  assert.match(f, /otpExpira\.getTime\(\) > ahora\.getTime\(\)/, 'un código caducado no se ofrece')
+  assert.match(src, /codigoCaducaEn: codigoVigente\(p, ahora\)/)
+})
+
+test('🪤 las bajas ya firmadas: solo las de ESTA ficha y sin la carta ni la evidencia', () => {
+  const f = src.slice(src.indexOf('async function firmadasDe'), src.indexOf('export async function anulacionesParaFirmar'))
+  assert.match(f, /a\.cliente_id = \$\{clienteId\}::uuid/, 'sin filtro por cliente enseñaría las bajas de otros')
+  assert.match(f, /a\.correduria_id = \$\{correduriaId\}::uuid/)
+  assert.doesNotMatch(f, /carta_texto|firma_otp|doc_hash|evidencia/, 'la lectura del portal no saca la carta ni la firma')
+  assert.match(src, /firmadasDe\(correduriaId, f\.clienteId\)/, 'el cliente sale del vínculo, nunca de la petición')
+})

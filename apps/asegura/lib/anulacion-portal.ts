@@ -45,7 +45,32 @@ export type AnulacionParaFirmar = {
   carta: string | null
   /** Huella de la carta que se enseña: al firmar vuelve, y si la carta ya no es esa, no se firma. */
   cartaHash: string | null
+  /**
+   * Hasta cuándo vale el código ya mandado (ISO), o `null` si no hay uno usable. Con esto el portal abre
+   * directamente el campo del código tras recargar o volver a entrar: en el móvil, salir a leer el correo
+   * recarga la página, y sin esto el cliente volvía al botón, pedía otro código y el que leía ya no valía
+   * (Pablo, 26/09/2026: tres códigos y ningún «Firmar»).
+   */
+  codigoCaducaEn: string | null
 }
+
+/** Una baja que el cliente YA firmó (últimos 60 días): el portal la enseña en vez de hacerla desaparecer. */
+export type AnulacionFirmada = {
+  id: string
+  numeroPoliza: string | null
+  compania: string | null
+  tipo: TipoAnulacion
+  fechaEfecto: string
+  estado: 'firmada' | 'comunicada' | 'confirmada'
+  firmadaEl: string
+  comunicadaEl: string | null
+  confirmadaEl: string | null
+  /** El PDF firmado está archivado en su póliza (lo ve en el portal). `false` = no consta: no se promete. */
+  justificante: boolean
+}
+
+/** Días que una baja firmada sigue a la vista en el portal. */
+export const DIAS_FIRMADAS_VISIBLES = 60
 
 const huella = (texto: string) => createHash('sha256').update(texto, 'utf8').digest('hex')
 
@@ -84,21 +109,48 @@ function sinFicha(f: Ficha): SinFicha | null {
 }
 
 /** `consentimiento` es el texto EXACTO que queda en la evidencia: el portal enseña este, no una copia. */
-export type LecturaParaFirmar = { estado: 'ok'; anulaciones: AnulacionParaFirmar[]; consentimiento: string } | SinFicha
+export type LecturaParaFirmar =
+  | { estado: 'ok'; anulaciones: AnulacionParaFirmar[]; consentimiento: string; firmadas: AnulacionFirmada[] }
+  | SinFicha
+
+/** El código mandado sigue sirviendo: no ha caducado y le quedan intentos. Puro. */
+export function codigoVigente(p: { otpHash: string | null; otpExpira: Date | null; otpIntentos: number }, ahora: Date): string | null {
+  if (!p.otpHash || !p.otpExpira || p.otpIntentos >= MAX_INTENTOS) return null
+  return p.otpExpira.getTime() > ahora.getTime() ? p.otpExpira.toISOString() : null
+}
+
+async function firmadasDe(correduriaId: string, clienteId: string): Promise<AnulacionFirmada[]> {
+  return prismaAsegura().$queryRaw<AnulacionFirmada[]>`
+    select a.id::text as id, p.numero_poliza as "numeroPoliza", p.aseguradora as compania, a.tipo,
+           to_char(a.fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto", a.estado,
+           to_char(a.firmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "firmadaEl",
+           to_char(a.comunicada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "comunicadaEl",
+           to_char(a.confirmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "confirmadaEl",
+           exists (select 1 from documentos d where d.poliza_id = a.poliza_id and d.visible_por_cliente
+                   and d.notas = 'justificante_anulacion:' || a.id::text) as justificante
+    from anulacion a join polizas p on p.id = a.poliza_id
+    where a.correduria_id = ${correduriaId}::uuid and a.cliente_id = ${clienteId}::uuid
+      and a.estado in ('firmada', 'comunicada', 'confirmada') and a.firmada_at is not null
+      and a.firmada_at > now() - make_interval(days => ${DIAS_FIRMADAS_VISIBLES}::int)
+    order by a.firmada_at desc`
+}
 
 export async function anulacionesParaFirmar(correduriaId: string, identidadId: string): Promise<LecturaParaFirmar> {
   const f = await fichaPropiaDe(correduriaId, identidadId)
   if (f.estado !== 'ok') return sinFicha(f)!
   const hoy = hoyMadrid()
-  const filas = await pendientesDe(correduriaId, f.clienteId)
+  const ahora = new Date()
+  const [filas, firmadas] = await Promise.all([pendientesDe(correduriaId, f.clienteId), firmadasDe(correduriaId, f.clienteId)])
   return {
     estado: 'ok',
     consentimiento: TEXTO_CONSENTIMIENTO,
+    firmadas,
     anulaciones: filas.map((p) => {
       const texto = carta(p, hoy)
       return {
         id: p.id, numeroPoliza: p.numeroPoliza, compania: p.compania, ramo: p.ramo, tipo: p.tipo,
         fechaEfecto: p.fechaEfecto, carta: texto, cartaHash: texto ? huella(texto) : null,
+        codigoCaducaEn: codigoVigente(p, ahora),
       }
     }),
   }
