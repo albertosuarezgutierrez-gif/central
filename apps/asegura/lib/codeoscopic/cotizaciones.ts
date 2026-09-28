@@ -28,6 +28,7 @@
 
 import { prisma } from '../tenant.ts'
 import type { Cotizacion } from './respuesta.ts'
+import { sobreOpciones } from './coberturas.ts'
 
 /** Por qué puerta entró la cotización. Es el CHECK de la tabla, en TypeScript. */
 export type PuertaCotizacion = 'corredor' | 'agente' | 'web'
@@ -264,12 +265,15 @@ export async function guardarCotizacion(
 
     // `oferta_id` (29/09/2026): la oferta de la que sale el precio. Con ella se leen
     // después sus coberturas GRATIS (`coberturas-tarificacion.ts`). NULL = no la tiene.
+    // `opciones` (28/09/2026): con qué opciones tarificó el vendor ESTE precio (asistencia
+    // estándar o ampliada…). Venían en la cotización y se tiraban.
+    const leidasAt = new Date().toISOString()
     for (const p of e.cotizacion.precios) {
       await tx.$executeRaw`
         insert into seguros.tarificacion_precios (
           tarificacion_id, compania, producto, modalidad, categoria,
           prima_eur, entrada_eur, franquicia_eur, firmeza, requiere_rerate,
-          referencia_vendor, avisos, oferta_id
+          referencia_vendor, avisos, oferta_id, opciones
         ) values (
           ${id}::uuid,
           ${p.compania},
@@ -283,7 +287,8 @@ export async function guardarCotizacion(
           ${p.requiereReRate},
           ${p.referenciaVendor},
           ${JSON.stringify(p.avisos ?? [])}::jsonb,
-          ${p.ofertaId ?? null}
+          ${p.ofertaId ?? null},
+          ${JSON.stringify(sobreOpciones(p.opciones, leidasAt))}::jsonb
         )
       `
     }
