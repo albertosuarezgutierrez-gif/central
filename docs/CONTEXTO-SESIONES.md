@@ -850,6 +850,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+
+## (28/09/2026) Correduría: la ficha de cliente y 7 pantallas más usan `<Pagina>`
+- «Todo muy junto»: la ficha (`/correduria/cliente/[id]`) no usaba el contenedor del sistema de diseño y salía sin padding, pegada al menú. Ahora `<Pagina ancho="tabla">` (mismo ancho que la lista), cabecera agrupada con gap 14, 24 entre bloques, KPIs con `cardStyle`.
+- Mismo fallo en póliza, compañías, vencimientos, llamada, hogar, mantenimiento y nuevo cliente: arreglado igual. `retarificar` ya tenía su `<main>` propio.
+
 ## (28/09/2026) Póliza donde la ficha FIGURA sin ser tomador: ya sale en su ficha y en el portal
 Caso: Generali UV-G-410081428 — tomador Francisco Javier Velasco (conductor habitual), GLOBAL 2 propietaria+asegurada;
 no salía en la ficha de GLOBAL 2 ni a Pilar (autorizada sobre GLOBAL 2). Medido: 28 pólizas vivas / 22 fichas en ese caso.

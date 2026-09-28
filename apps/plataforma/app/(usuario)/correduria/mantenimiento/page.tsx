@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { AlertTriangle, CheckCircle2, Wrench } from 'lucide-react'
 import { planBackfillDni, planBackfillContacto, type PlanBackfillDni, type PlanBackfillContacto, type CuentaBackfillContacto } from '@/lib/correduria-puerto'
-import { PageHeader } from '@/components/ui'
+import { PageHeader, Pagina } from '@/components/ui'
 import { ConIcono } from '../iconos'
 import EscribirIndiceDni from './EscribirIndiceDni'
 
@@ -28,22 +28,24 @@ export const dynamic = 'force-dynamic'
 export default async function MantenimientoPage() {
   const [plan, contacto] = await Promise.all([planBackfillDni(), planBackfillContacto()])
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div>
-        <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
-        <PageHeader
-          titulo="Mantenimiento de la cartera"
-          icono={<Wrench size={20} strokeWidth={1.75} />}
-          sub={<>
-            Las fichas duplicadas no se fusionan porque el criterio fuerte —mismo NIF— está ciego:
-            hay miles de fichas con el DNI guardado y sin su índice de búsqueda. Aquí se ve cuántas,
-            y cuántas de ellas resultan ser la misma persona dos veces.
-          </>}
-        />
+    <Pagina ancho="tabla">
+      <div style={{ display: 'grid', gap: 16 }}>
+        <div>
+          <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
+          <PageHeader
+            titulo="Mantenimiento de la cartera"
+            icono={<Wrench size={20} strokeWidth={1.75} />}
+            sub={<>
+              Las fichas duplicadas no se fusionan porque el criterio fuerte —mismo NIF— está ciego:
+              hay miles de fichas con el DNI guardado y sin su índice de búsqueda. Aquí se ve cuántas,
+              y cuántas de ellas resultan ser la misma persona dos veces.
+            </>}
+          />
+        </div>
+        <BlindIndexDni plan={plan} />
+        <BlindIndexContacto plan={contacto} />
       </div>
-      <BlindIndexDni plan={plan} />
-      <BlindIndexContacto plan={contacto} />
-    </div>
+    </Pagina>
   )
 }
 

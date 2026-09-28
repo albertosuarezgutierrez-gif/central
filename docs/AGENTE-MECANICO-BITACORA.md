@@ -30,3 +30,4 @@
 - (26/09/2026) retirar «Mensajes con tu corredor» (4 capas, 21 ficheros) — agente-mecanico — fallo: commiteó pese a la prohibición y dejó plataforma SIN COMPILAR (ficha y CorreduriaClient importaban lo borrado; solo typecheckeó asegura-portal). Lo cerró la sesión.
 - (26/09/2026) lote 1 UX correduría, panel (44 px, bloques vacíos, textos) — agente-mecanico — fallo parcial: hizo 8 de ~16 ficheros y dos regresiones (Retención escondía el aviso de pólizas sin recibos; Quejas sin quejas perdía el botón de registrar). Completado y corregido por la sesión.
 - (26/09/2026) lote 1 UX correduría, fichas (bug «3»→«2c», PII, 44 px) — agente-mecanico — ok parcial: hizo el bug, la PII y los 44 px; dejó sin tocar todos los textos (TabContactos, DatosCompania, Documentos, Siniestros…). Completado por la sesión.
+| 28/09/2026 | envolver 7 páginas de correduría en <Pagina> | agente-mecanico | ok |
