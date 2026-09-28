@@ -54,7 +54,7 @@ export default function EliminarDeOportunidades(props: { tipo: 'poliza'; polizaI
   if (!abierto) {
     return (
       <button type="button" onClick={() => setAbierto(true)} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, color: 'var(--negative)', justifySelf: 'start' }}>
-        🗑️ Eliminar
+        Eliminar
       </button>
     )
   }

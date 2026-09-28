@@ -25,6 +25,7 @@ import {
   type FicheroParcial,
   type CampoImportanteSinLeer,
   type RenovacionSinLlegar,
+  type EmisionSinAviso,
 } from '@central/module-seguros'
 import { cabecerasPuerto } from '../puerto-actor.ts'
 
@@ -291,6 +292,19 @@ function esListaRenovaciones(v: unknown): boolean {
   return Array.isArray(v) && v.every(esRenovacion)
 }
 
+/** Emisiones de Codeoscopic sin aviso del webhook. Todo-o-nada, como las renovaciones. */
+function esEmisionSinAviso(v: unknown): boolean {
+  if (typeof v !== 'object' || v === null) return false
+  const o = v as Record<string, unknown>
+  return typeof o.proyecto === 'string'
+    && (o.aseguradora === null || typeof o.aseguradora === 'string')
+    && enteroONulo(o.horas)
+}
+
+function esListaEmisionesSinAviso(v: unknown): boolean {
+  return Array.isArray(v) && v.every(esEmisionSinAviso)
+}
+
 function esCajaNegra(v: unknown): boolean {
   if (typeof v !== 'object' || v === null) return false
   const o = v as Record<string, unknown>
@@ -376,6 +390,9 @@ export function interpretarIngesta(
       // 27/09/2026) = no se pide, no es hueco; `null`/ilegible = hueco; `[]` =
       // se miró y no hay ninguna.
       renovacionesSinLlegar: señal<RenovacionSinLlegar[]>(r, 'renovacionesSinLlegar', esListaRenovaciones),
+      // 📭 Mismos tres estados: ausente (`central-asegura` anterior al 28/09/2026)
+      // no se pide; `null`/ilegible = hueco; `[]` = se miró y no hay.
+      emisionesSinAviso: señal<EmisionSinAviso[]>(r, 'emisionesSinAviso', esListaEmisionesSinAviso),
     }),
     huerfanasTruncadas: huerfanas.estado === 'ok' && huerfanas.truncado,
     huerfanasSinAmbito: huerfanas.estado === 'ok' ? huerfanas.ocultasOtroAmbito : null,

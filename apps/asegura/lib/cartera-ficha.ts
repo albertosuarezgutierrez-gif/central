@@ -41,6 +41,7 @@ import { correosCliente, type CorreoFicha } from './correo-seguimiento'
 import { cotizacionesVivas, historialCliente, notasCliente, type HistorialFila, type NotasCliente } from './cartera-historial'
 import { listarDocumentos } from './cartera-documentos'
 import { SELECT_SINIESTRO, mapSiniestro } from './cartera-siniestros'
+import type { DetalleCimaSiniestro } from './siniestro-detalle-cima'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 import { emailDeFicha } from './email-ficha'
 import { identidadesDeCliente } from './vinculos-portal'
@@ -326,6 +327,14 @@ export type SiniestroFicha = {
     totalPagos: number | null
     posicion: string | null
   } | null
+  /**
+   * Detalle que manda la compañía por CIMA desde el 28/09/2026 (fecha de
+   * declaración, DAA, responsabilidad, reserva desglosada, recobros, convenios,
+   * expedientes, riesgo, vehículos, asistencias, contacto…). PII ya descifrada
+   * en el servidor; lo que no se descifra viaja `null`. `null` entero = CIMA no
+   * manda nada de esto. Ver `siniestro-detalle-cima.ts`.
+   */
+  detalleCima: DetalleCimaSiniestro | null
   /**
    * Terceros y testigos. `null` = no se ha podido consultar (la tabla falló),
    * NUNCA «no hay ninguno» — mismo criterio que `intervinientes` de la ficha.

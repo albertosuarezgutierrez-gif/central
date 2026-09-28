@@ -1,7 +1,9 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
+import { CheckCircle2, TriangleAlert } from 'lucide-react'
 import { provinciaPorCp } from '@central/module-seguros'
 import { conPiso, etiquetaPlanta, TIENE_NUMERO } from '@/lib/correduria/piso-catastro'
+import { ConIcono } from './iconos'
 
 /**
  * El campo de dirección del alta/edición de cliente, con confirmación contra
@@ -231,12 +233,12 @@ function ComprobarPisos({
         </button>
       )}
       {pisos.fase === 'preguntando' && <div style={{ fontSize: 11, color: 'var(--muted)' }}>Consultando el Catastro…</div>}
-      {pisos.fase === 'confirmado' && <div style={{ fontSize: 12, color: 'var(--positive)' }}>✅ {pisos.texto}</div>}
-      {pisos.fase === 'aviso' && <div style={{ fontSize: 12, color: 'var(--muted)' }}>⚠️ {pisos.texto}</div>}
+      {pisos.fase === 'confirmado' && <div style={{ fontSize: 12, color: 'var(--positive)' }}><ConIcono i={CheckCircle2}>{pisos.texto}</ConIcono></div>}
+      {pisos.fase === 'aviso' && <div style={{ fontSize: 12, color: 'var(--muted)' }}><ConIcono i={TriangleAlert}>{pisos.texto}</ConIcono></div>}
       {pisos.fase === 'elegir' && (
         <div>
           <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 6 }}>
-            ✅ El portal existe: {pisos.inmuebles.length} inmuebles en {pisos.via}. ¿Cuál es?
+            <ConIcono i={CheckCircle2}>El portal existe: {pisos.inmuebles.length} inmuebles en {pisos.via}. ¿Cuál es?</ConIcono>
           </div>
           <div style={{ display: 'grid', gap: 6, gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))' }}>
             {pisos.inmuebles.map((i) => (

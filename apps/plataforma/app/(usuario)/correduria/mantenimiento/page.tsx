@@ -1,7 +1,8 @@
 import Link from 'next/link'
-import { Wrench } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Wrench } from 'lucide-react'
 import { planBackfillDni, planBackfillContacto, type PlanBackfillDni, type PlanBackfillContacto, type CuentaBackfillContacto } from '@/lib/correduria-puerto'
 import { PageHeader } from '@/components/ui'
+import { ConIcono } from '../iconos'
 import EscribirIndiceDni from './EscribirIndiceDni'
 
 export const dynamic = 'force-dynamic'
@@ -100,7 +101,7 @@ function BlindIndexDni({ plan }: { plan: PlanBackfillDni }) {
 
       {listo ? (
         <p style={{ margin: 0, fontSize: 13 }}>
-          ✅ No queda nada por hacer: todas las fichas con DNI tienen su índice.
+          <ConIcono i={CheckCircle2} color="var(--positive)">No queda nada por hacer: todas las fichas con DNI tienen su índice.</ConIcono>
         </p>
       ) : (
         <>
@@ -113,11 +114,11 @@ function BlindIndexDni({ plan }: { plan: PlanBackfillDni }) {
           </p>
           {plan.compartidas > 0 && (
             <p style={{ margin: 0, fontSize: 13 }}>
-              🚨 Y {plan.compartidas.toLocaleString('es-ES')} fichas llevan un <strong>DNI centinela</strong>
+              <ConIcono i={AlertTriangle} color="var(--negative)">Y {plan.compartidas.toLocaleString('es-ES')} fichas llevan un <strong>DNI centinela</strong>
               {' '}({plan.gruposCompartidos} documento{plan.gruposCompartidos === 1 ? '' : 's'} escrito
               {plan.gruposCompartidos === 1 ? '' : 's'} en fichas de personas distintas). Ésas no se
               indexan nunca: el documento está mal en alguna de ellas, y escribirlo haría que una búsqueda
-              por ese DNI devolviera a varias personas.
+              por ese DNI devolviera a varias personas.</ConIcono>
             </p>
           )}
           <EscribirIndiceDni pendientes={plan.rellenables} />
@@ -179,7 +180,7 @@ function BlindIndexContacto({ plan }: { plan: PlanBackfillContacto }) {
         </p>
       )}
       {listo ? (
-        <p style={{ margin: 0, fontSize: 13 }}>✅ No queda nada por escribir.</p>
+        <p style={{ margin: 0, fontSize: 13 }}><ConIcono i={CheckCircle2} color="var(--positive)">No queda nada por escribir.</ConIcono></p>
       ) : (
         <EscribirIndiceDni
           pendientes={pendientes}

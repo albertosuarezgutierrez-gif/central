@@ -14,7 +14,7 @@ import { interpretarAviso, textoAviso, type RespuestaAviso } from './relaciones-
 test('un 200 ok es enviado, y la fecha es un extra que no lo tumba', () => {
   const r = interpretarAviso(200, { estado: 'ok', caducaEn: '2027-03-14T00:00:00.000Z' })
   assert.equal(r.estado, 'ok')
-  assert.ok(textoAviso(r, 'Pablo').startsWith('✅'))
+  assert.ok(textoAviso(r, 'Pablo').startsWith('Correo enviado'))
 
   // Sin fecha legible el correo SALIÓ igual: convertirlo en error diría que no
   // se ha escrito uno que ya está enviado.
@@ -52,7 +52,7 @@ test('NINGUN fallo se puede leer como que el correo salio', () => {
   ]
   for (const f of fallos) {
     const t = textoAviso(f, 'Pablo')
-    assert.ok(!t.startsWith('✅'), `${f.estado}: ${t}`)
+    assert.ok(!t.startsWith('Correo enviado'), `${f.estado}: ${t}`)
     assert.ok(!/correo enviado/i.test(t), `${f.estado} no puede decir «correo enviado»: ${t}`)
     // Y no basta con no afirmar el éxito: tiene que decir en voz alta que no ha
     // salido, que es lo que hace que Alberto lo escriba a mano.

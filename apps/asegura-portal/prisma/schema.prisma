@@ -923,6 +923,9 @@ model Poliza {
   numeroPoliza       String?          @map("numero_poliza") @db.VarChar(100)
   fechaInicio        DateTime?        @map("fecha_inicio") @db.Date
   fechaVencimiento   DateTime?        @map("fecha_vencimiento") @db.Date
+  /// Fechas del EIAC (CIMA). El rol del portal tiene GRANT por columna (0103).
+  fechaEmision       DateTime?        @map("fecha_emision") @db.Date
+  fechaEfectoActual  DateTime?        @map("fecha_efecto_actual") @db.Date
   primaAnual         Decimal?         @map("prima_anual") @db.Decimal(10, 2)
   primaMensual       Decimal?         @map("prima_mensual") @db.Decimal(10, 2)
   primaBruta         Decimal?         @map("prima_bruta") @db.Decimal(10, 2)
@@ -1034,6 +1037,22 @@ model Siniestro {
   pagosCima          Json?              @map("pagos_cima")
   indemnizacionCima  Decimal?           @map("indemnizacion_cima") @db.Decimal(12, 2)
   totalPagosCima     Decimal?           @map("total_pagos_cima") @db.Decimal(12, 2)
+  /// TODO el siniestro para el cliente (28/09/2026, «el seguro es suyo, tiene que
+  /// saber todo»). GRANT por columnas aplicado ANTES de declararlas. Siguen FUERA
+  /// `contacto_nombre_cima`/`contacto_telefono_cima` (cifrados) y `ref_mediador_cima`.
+  fechaDeclaracion   DateTime?          @map("fecha_declaracion") @db.Date
+  posicionCima       String?            @map("posicion_cima") @db.VarChar(10)
+  responsabilidadCima String?           @map("responsabilidad_cima") @db.VarChar(40)
+  daaCima            Boolean?           @map("daa_cima")
+  reservaCima        Decimal?           @map("reserva_cima") @db.Decimal(12, 2)
+  reservaDesgloseCima Json?             @map("reserva_desglose_cima")
+  totalRecobrosCima  Decimal?           @map("total_recobros_cima") @db.Decimal(12, 2)
+  expedientesCima    Json?              @map("expedientes_cima")
+  riesgoCima         Json?              @map("riesgo_cima")
+  vehiculoCima       Json?              @map("vehiculo_cima")
+  vehiculoContrarioCima Json?           @map("vehiculo_contrario_cima")
+  asistenciasCima    Json?              @map("asistencias_cima")
+  descripcionCima    String?            @map("descripcion_cima")
   tramitadorNombre   String?            @map("tramitador_nombre") @db.VarChar(255)
   tramitadorTelefono String?            @map("tramitador_telefono") @db.VarChar(30)
   tramitadorEmail    String?            @map("tramitador_email") @db.VarChar(255)

@@ -1,6 +1,7 @@
 'use client'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Trophy } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { prepararAdjunto } from '@/lib/imagen-cliente'
@@ -144,7 +145,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
 
       {lectura?.estado === 'ok' && (
         <>
-          {abiertas.length === 0 && !abriendo && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta. Se abre desde «➕ Nueva oportunidad ▾», arriba.</div>}
+          {abiertas.length === 0 && !abriendo && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta. Se abre desde «+ Nueva oportunidad ▾», arriba.</div>}
           {abiertas.map(o => (
             <FilaAbierta key={o.id} o={o} polizas={polizas} telefono={telefono} desplegada={desplegada === o.id} onAlternar={() => alternar(o.id)} onRecargar={() => void cargar()} onHecho={(t) => { setAviso(t); void cargar() }} />
           ))}
@@ -225,7 +226,7 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
       <Resumen o={o} />
       <div style={{ color: o.proximaTarea === null || vencida ? 'var(--negative)' : 'var(--text)' }}>
         {o.proximaTarea === null
-          ? (aparcada ? 'Sin paso pendiente (aparcada).' : '⚠️ Sin siguiente paso: nadie la va a mirar. Ponle una tarea en «Gestionar».')
+          ? (aparcada ? 'Sin paso pendiente (aparcada).' : 'Sin siguiente paso: nadie la va a mirar. Ponle una tarea en «Gestionar».')
           : `Siguiente: ${o.proximaTarea.tipo} el ${fmt(o.proximaTarea.fechaLimite)}${vencida ? ' (vencida)' : ''}`}
       </div>
       {/* UN botón por fila (26/09/2026, «muy poco clara y muy extensa»): Corregir,
@@ -242,7 +243,7 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
           <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'editar' ? null : 'editar')} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Corregir</button>
           {puedeGanar && (
-            <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'ganar' ? null : 'ganar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>🏆 Ganada</button>
+            <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'ganar' ? null : 'ganar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}><Trophy size={16} strokeWidth={1.75} aria-hidden /> Ganada</button>
           )}
           <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'descartar' ? null : 'descartar')} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }} title="Abierta por error o duplicada. Si el cliente no quiere, usa «Perdida» arriba.">Descartar (error)</button>
         </div>
@@ -398,7 +399,7 @@ function FormAlta({ clienteId, onCancelar, onHecho }: {
           onChange={e => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void leerDocumento(f) }}
         />
         <button type="button" disabled={leyendo} onClick={() => fichero.current?.click()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, justifySelf: 'start' }}>
-          {leyendo ? 'Leyendo el documento…' : '📎 Rellenar desde póliza, recibo o foto'}
+          {leyendo ? 'Leyendo el documento…' : 'Rellenar desde póliza, recibo o foto'}
         </button>
         {lectura && <div role="status" style={{ color: lectura.ok ? 'var(--positive)' : 'var(--negative)' }}>{lectura.texto}</div>}
         {!lectura && !leyendo && <div style={{ fontSize: 11, color: 'var(--muted)' }}>La IA lee ramo, compañía, vencimiento y prima. No se guarda el documento.</div>}

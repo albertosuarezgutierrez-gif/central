@@ -349,6 +349,8 @@ export {
 export type { EstadoSiniestro, SiniestroHistorial, ExplicacionSiniestro } from './siniestro-historial.ts'
 export { tramitacionSiniestro, importeNumero } from './siniestro-tramitacion.ts'
 export type { PasoTramitacion, TramitacionSiniestro } from './siniestro-tramitacion.ts'
+export { detalleSiniestroCompania } from './siniestro-detalle.ts'
+export type { DetalleSiniestroCompania, ContactoGestion } from './siniestro-detalle.ts'
 export {
   SITUACIONES_RECIBO,
   reciboAnulado,

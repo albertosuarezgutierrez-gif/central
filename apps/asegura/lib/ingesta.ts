@@ -29,8 +29,14 @@ import type {
   FicheroParcial,
   CampoImportanteSinLeer,
   RenovacionSinLlegar,
+  EmisionSinAviso,
 } from '@central/module-seguros'
-import { DIAS_GRACIA_RENOVACION, HORAS_RECHAZO_RECIENTE, sqlCarteraEnVigor } from '@central/module-seguros'
+import {
+  DIAS_GRACIA_RENOVACION,
+  HORAS_EMISION_SIN_AVISO,
+  HORAS_RECHAZO_RECIENTE,
+  sqlCarteraEnVigor,
+} from '@central/module-seguros'
 import { aseguraConfigurada, prismaAsegura } from './asegura-db'
 
 export type EstadoIngestaPuerto =
@@ -85,6 +91,12 @@ export type EstadoIngestaPuerto =
        * compañía. `[]` = se miró y no hay; `null` = no se pudo mirar.
        */
       renovacionesSinLlegar: RenovacionSinLlegar[] | null
+      /**
+       * Proyectos emitidos en Codeoscopic hace más de `HORAS_EMISION_SIN_AVISO`
+       * (y menos de 30 días) sin ningún evento de su webhook. `[]` = se miró y
+       * no hay; `null` = no se pudo mirar.
+       */
+      emisionesSinAviso: EmisionSinAviso[] | null
     }
 
 /** Crudo EIAC guardado por una incidencia y todavía sin reprocesar. */
@@ -680,8 +692,40 @@ export async function leerIngesta(): Promise<EstadoIngestaPuerto> {
       }))
     })
 
+    // 9. 📭 Emisiones de Codeoscopic sin aviso de su webhook (28/09/2026). Cuatro
+    //    emitidas y cero eventos: el vendor mandaba, pero con un usuario de Basic
+    //    Auth distinto y el receptor contestaba 401 antes de guardar nada. La
+    //    fecha de emisión es `updated_at` (no hay columna propia): una edición
+    //    posterior solo RETRASA el aviso, nunca lo inventa. Ventana de 30 días
+    //    para que una emisión vieja sin aviso no alarme para siempre.
+    const emisionesSinAviso = await leerONull<EmisionSinAviso[]>(async () => {
+      const r = await db.$queryRawUnsafe<
+        Array<{ proyecto: string | null; aseguradora: string | null; horas: number | null }>
+      >(`
+        SELECT p.project_id_codeoscopic AS proyecto,
+               p.aseguradora,
+               EXTRACT(EPOCH FROM (now() - p.updated_at)) / 3600 AS horas
+        FROM codeoscopic_projects p
+        WHERE p.estado = 'emitida'
+          AND p.project_id_codeoscopic IS NOT NULL
+          AND p.updated_at < now() - ($1 || ' hours')::interval
+          AND p.updated_at > now() - interval '30 days'
+          AND NOT EXISTS (
+            SELECT 1 FROM codeoscopic_webhook_events w
+            WHERE w.project_id_codeoscopic = p.project_id_codeoscopic
+          )
+        ORDER BY p.project_id_codeoscopic
+      `, String(HORAS_EMISION_SIN_AVISO))
+      return r.map(f => ({
+        proyecto: f.proyecto ?? 'desconocido',
+        aseguradora: f.aseguradora,
+        horas: f.horas === null || f.horas === undefined ? null : Math.floor(Number(f.horas)),
+      }))
+    })
+
     const fila = huerfanasRaw[0]
     return {
+      emisionesSinAviso,
       renovacionesSinLlegar,
       crudo,
       cobertura,

@@ -217,3 +217,27 @@ test('la entrada no-string no revienta', () => {
   assert.equal(fechaMatriculacionEstimada(undefined as unknown as string), null)
   assert.equal(fechaMatriculacionEstimada(1234 as unknown as string), null)
 })
+
+test('posterior a la tabla: con `hoy` se acota entre el último hito y hoy', () => {
+  // NST es de septiembre de 2026 y la tabla acaba en agosto (meses cerrados).
+  const r = fechaMatriculacionEstimada('2121NST', '2026-09-28')
+  assert.ok(r)
+  assert.equal(r.metodo, 'extrapolacion_ultimo_tramo')
+  assert.equal(r.hasta, '2026-09-28')
+  assert.ok(r.desde < ULTIMO_HITO_CONOCIDO)
+  assert.ok(r.estimada >= ULTIMO_HITO_CONOCIDO && r.estimada <= '2026-09-28')
+  // Sin `hoy`, sigue sin extrapolar.
+  assert.equal(fechaMatriculacionEstimada('2121NST'), null)
+})
+
+test('posterior a la tabla: una serie que aún no puede existir sigue siendo null', () => {
+  assert.equal(fechaMatriculacionEstimada('1234PBB', '2026-09-28'), null)
+  assert.equal(fechaMatriculacionEstimada('9999ZZZ', '2026-09-28'), null)
+  // `hoy` anterior al último hito o mal formado: no se estima.
+  assert.equal(fechaMatriculacionEstimada('2121NST', '2026-08-15'), null)
+  assert.equal(fechaMatriculacionEstimada('2121NST', 'ayer'), null)
+})
+
+test('dentro de la tabla, `hoy` no cambia nada', () => {
+  assert.deepEqual(fechaMatriculacionEstimada('1234BCD', '2026-09-28'), fechaMatriculacionEstimada('1234BCD'))
+})

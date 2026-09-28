@@ -14,11 +14,14 @@
 //     ninguna ficha de la que sacarlo).
 
 import { useEffect, useState } from 'react'
+import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
+import { ConIcono } from '../../../iconos'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
+import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
@@ -146,7 +149,15 @@ export default function MotoNuevo({
 
   const [matricula, setMatricula] = useState(poliza?.matricula ?? '')
   const [matriculacion, setMatriculacion] = useState(poliza?.fechaMatriculacion ?? '')
-  const [garaje, setGaraje] = useState('')
+  // Igual que en auto: la fecha se deduce de la matrícula (Avant2, gratis; o la
+  // serie nacional mientras tanto). `true` = la puso la estimación, no el corredor.
+  const [matriculacionEstimada, setMatriculacionEstimada] = useState(false)
+  const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
+  // Por defecto «vía pública», como en auto (Alberto, 25/09 y 28/09/2026): el
+  // caso más común y el conservador para la prima.
+  const [garaje, setGaraje] = useState(
+    () => (garajes.find((g) => /v[ií]a\s+p[uú]blica/i.test(g.nombre)) ?? garajes.find((g) => /\bcalle\b/i.test(g.nombre)))?.id ?? '',
+  )
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
@@ -239,6 +250,47 @@ export default function MotoNuevo({
   const faltaMatricula = !poliza && !matricula.trim()
   const faltaMatriculacion = !matriculacion
   const faltaMotoAnterior = experienciaConduccion === 'OtherMotorcycle' && !motoAnteriorCodigo.trim()
+  const estimacion = poliza ? null : fechaMatriculacionEstimada(matricula, hoyLocal())
+
+  // Hermano del efecto de `AutoNuevo.tsx`: con cada matrícula tecleada se
+  // consulta la fecha a Avant2 y, mientras tanto o si no responde, vale la
+  // estimación por la serie nacional. Nunca pisa una fecha tecleada por el
+  // corredor, y en modo póliza no actúa (la fecha sale de la póliza).
+  const puedeRellenarFecha = !poliza && (matriculacion === '' || matriculacionEstimada)
+  useEffect(() => {
+    if (!puedeRellenarFecha) return
+    const placa = matricula.trim()
+    if (placa === '') {
+      if (matriculacionEstimada) {
+        setMatriculacion('')
+        setMatriculacionEstimada(false)
+        setFuenteMatriculacion(null)
+      }
+      return
+    }
+    const local = fechaMatriculacionEstimada(placa, hoyLocal())
+    setMatriculacion(local?.estimada ?? '')
+    setMatriculacionEstimada(local !== null)
+    setFuenteMatriculacion(local ? 'serie' : null)
+    if (placa.length < 6) return
+    let vivo = true
+    const t = setTimeout(async () => {
+      try {
+        const [f] = await catalogo(`tipo=fecha-matriculacion-moto&matricula=${encodeURIComponent(placa)}`)
+        if (!vivo || !f) return
+        setMatriculacion(f.id)
+        setMatriculacionEstimada(true)
+        setFuenteMatriculacion('avant2')
+      } catch {
+        // Avant2 no ha respondido: se queda la estimación por la serie.
+      }
+    }, 500)
+    return () => {
+      vivo = false
+      clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matricula])
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
@@ -439,8 +491,29 @@ export default function MotoNuevo({
               <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
             </Campo>
           )}
-          <Campo etiqueta="Fecha de matriculación" falta={faltaMatriculacion}>
-            <input type="date" value={matriculacion} onChange={(e) => setMatriculacion(e.target.value)} style={input} />
+          <Campo
+            etiqueta="Fecha de matriculación"
+            falta={faltaMatriculacion}
+            ayuda={
+              matriculacionEstimada && fuenteMatriculacion === 'avant2'
+                ? 'Consultada a Avant2 por la matrícula. El propio proveedor la da como aproximada: confírmala con la ficha técnica.'
+                : matriculacionEstimada && estimacion
+                  ? `Estimada por la matrícula (entre ${fechaCorta(estimacion.desde)} y ${fechaCorta(estimacion.hasta)}): no es dato oficial y falla si la moto vino de fuera. Confírmala con la ficha técnica.`
+                  : !poliza && matricula.trim() && !matriculacion && !estimacion
+                    ? 'No se puede estimar por esta matrícula (formato antiguo o muy reciente): tecléala.'
+                    : undefined
+            }
+          >
+            <input
+              type="date"
+              value={matriculacion}
+              onChange={(e) => {
+                setMatriculacion(e.target.value)
+                setMatriculacionEstimada(false)
+                setFuenteMatriculacion(null)
+              }}
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda="Lo elige el corredor; viaja marcado como supuesto.">
             <select value={garaje} onChange={(e) => setGaraje(e.target.value)} style={input}>
@@ -591,7 +664,7 @@ export default function MotoNuevo({
             <Campo
               etiqueta="Últimos 5 dígitos de la póliza"
               falta={!polizaActualDigitos.trim()}
-              ayuda="⚠️ Mapfre y otras compañías a veces dan dígitos con ceros a propósito para que el competidor no pueda consultar la siniestralidad y así no perder al cliente. Si ves varios ceros seguidos, sospecha: la compañía puede rechazar el control de antecedentes con ese número y el precio se quedará en estimado."
+              ayuda="Mapfre y otras compañías a veces dan dígitos con ceros a propósito para que el competidor no pueda consultar la siniestralidad y así no perder al cliente. Si ves varios ceros seguidos, sospecha: la compañía puede rechazar el control de antecedentes con ese número y el precio se quedará en estimado."
             >
               <input
                 value={polizaActualDigitos}
@@ -601,8 +674,8 @@ export default function MotoNuevo({
               />
               {digitosPolizaSospechosos(polizaActualDigitos) && (
                 <p style={{ color: 'var(--negative)', fontSize: 12, fontWeight: 600, margin: '4px 0 0' }}>
-                  🚩 Parece relleno (varios ceros seguidos): probablemente la compañía rechace el control de
-                  antecedentes con este número y el precio se quede en estimado.
+                  <ConIcono i={Flag}>Parece relleno (varios ceros seguidos): probablemente la compañía rechace el control de
+                  antecedentes con este número y el precio se quede en estimado.</ConIcono>
                 </p>
               )}
             </Campo>
@@ -631,8 +704,8 @@ export default function MotoNuevo({
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
           <p style={{ fontSize: 13 }}>
-            🧪 <strong>No se llama a ninguna compañía.</strong> El precio lo inventa central para poder ver la
-            pantalla funcionando. No cuesta nada y no cuenta contra el tope.
+            <ConIcono i={FlaskConical}><strong>No se llama a ninguna compañía.</strong> El precio lo inventa central para poder ver la
+            pantalla funcionando. No cuesta nada y no cuenta contra el tope.</ConIcono>
           </p>
         ) : (
           <p style={{ fontSize: 13 }}>
@@ -660,7 +733,7 @@ export default function MotoNuevo({
         )}
         {resultado.estado === 'error' && (
           <p style={{ color: 'var(--negative)', fontSize: 13, marginTop: 12, whiteSpace: 'pre-wrap' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}{resultado.mensaje}
+            {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
@@ -678,6 +751,17 @@ export default function MotoNuevo({
       </div>
     </div>
   )
+}
+
+/** Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes. */
+function hoyLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function fechaCorta(iso: string): string {
+  const [a, m, d] = iso.split('-')
+  return `${d}/${m}/${a}`
 }
 
 function Campo({ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }) {
@@ -737,7 +821,7 @@ function Precios({
       <EnlaceOportunidad guardado={r.guardado} />
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
-          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>
+          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>
           <p style={{ margin: '4px 0 0', fontSize: 13 }}>
             {r.avisoSimulacion ?? 'Precio inventado por central para probar la pantalla: ninguna compañía lo ha dado y no se ha gastado ni un céntimo.'}
           </p>
@@ -745,7 +829,7 @@ function Precios({
       )}
       {simulacion && !r.simulado && (
         <p style={{ color: 'var(--negative)', fontSize: 13, marginBottom: 12 }}>
-          ⚠️ Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
+          Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
           como una cotización REAL y comprueba el consumo antes de volver a pulsar.
         </p>
       )}

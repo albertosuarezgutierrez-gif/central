@@ -5,6 +5,7 @@
 // (plazo del art. 22 LCS, sin firma no se comunica) las aplica asegura; aquí se pinta lo que dice.
 
 import { useCallback, useEffect, useState } from 'react'
+import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react'
 import {
   ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION, ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION,
   MOTIVOS_ANULACION, SOLICITANTES_ANULACION, TIPOS_ANULACION,
@@ -115,12 +116,15 @@ export default function AnulacionPoliza({ polizaId, vencimiento }: { polizaId: s
       {aviso && (
         <div role="status" style={{ display: 'grid', gap: 4 }}>
           <p style={{ ...NOTA, color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>{aviso.texto}</p>
-          {aviso.advertencia && <p style={{ ...NOTA, color: 'var(--warning)' }}>⚠️ {aviso.advertencia}</p>}
+          {aviso.advertencia && <p style={{ ...NOTA, color: 'var(--warning)' }}><AlertTriangle size={14} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 4, verticalAlign: 'baseline' }} /> {aviso.advertencia}</p>}
         </div>
       )}
 
       {cerradas.map(a => (
-        <p key={a.id} style={NOTA}>Anterior: {ETIQUETA_ESTADO_ANULACION[a.estado]} · efecto {fechaEs(a.fechaEfecto)}</p>
+        <div key={a.id} style={{ display: 'grid', gap: 4 }}>
+          <p style={NOTA}>Anterior: {ETIQUETA_ESTADO_ANULACION[a.estado]} · efecto {fechaEs(a.fechaEfecto)}</p>
+          {a.estado === 'confirmada' && a.firmaElectronica && <Justificante id={a.id} />}
+        </div>
       ))}
     </div>
   )
@@ -141,12 +145,15 @@ function Abierta({ a, ocupado, firmando, nota, setFirmando, setNota, accion }: {
       <ol style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: 0, padding: 0, listStyle: 'none' }}>
         {PASOS.map((p, i) => (
           <li key={p.estado} style={{ fontSize: 12, padding: '4px 8px', borderRadius: 999, border: '1px solid var(--border)',
-            fontWeight: i === actual ? 700 : 400, color: i <= actual ? 'var(--text)' : 'var(--muted)' }}>
-            {i < actual ? '✓ ' : i === actual ? '● ' : ''}{p.texto}
+            fontWeight: i === actual ? 700 : 400, color: i <= actual ? 'var(--text)' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {i < actual && <CheckCircle2 size={14} strokeWidth={1.75} />}
+            {i === actual && <Circle size={14} strokeWidth={1.75} />}
+            {p.texto}
           </li>
         ))}
       </ol>
       {a.firmaNota && <span style={NOTA}>Firma: {a.firmaNota}</span>}
+      {a.firmaElectronica && <Justificante id={a.id} />}
       {a.siguiente && <span style={{ ...NOTA, color: a.siguiente.alerta ? 'var(--negative)' : 'var(--muted)' }}>{a.siguiente.texto}</span>}
 
       {a.estado === 'solicitada' && firmando && (
@@ -182,6 +189,33 @@ function Abierta({ a, ocupado, firmando, nota, setFirmando, setNota, accion }: {
       {a.estado === 'firmada' && a.esperaEmision && <span style={NOTA}>La firmó junto con el presupuesto nuevo: no sale hacia la compañía hasta que marques ese presupuesto como emitido (tarjeta «Presupuestos»). Así el cliente nunca se queda sin seguro si la emisión falla.</span>}
       {a.estado === 'firmada' && !a.esperaEmision && <span style={NOTA}>Si la firmó en el portal, el correo a la compañía con la carta firmada adjunta te espera en «Hoy · Esperan tu OK» y, al enviarlo, pasa sola a «comunicada». Si la mandas tú (firma en papel, o descartaste ese correo), pulsa «Comunicada a la compañía» cuando salga.</span>}
       {a.estado === 'solicitada' && <span style={NOTA}>Sin la firma del cliente no se comunica a la compañía. Si tiene portal, la ve en «Pendiente de tu firma» y firma con un código a su correo; si firma en papel, pulsa «Firma recibida».</span>}
+    </div>
+  )
+}
+
+/** Manda (o reenvía) al cliente su carta firmada con el justificante; sale sola tras firmar en el portal. */
+function Justificante({ id }: { id: string }) {
+  const [ocupado, setOcupado] = useState(false)
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
+  async function mandar() {
+    if (!window.confirm('¿Mandar al cliente por correo su carta de baja firmada con el justificante?')) return
+    setOcupado(true); setAviso(null)
+    try {
+      const r = await fetch('/api/correduria/anulaciones/justificante', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+      const j = (await r.json().catch(() => null)) as { ok?: boolean; texto?: string } | null
+      setAviso({ ok: j?.ok === true, texto: j?.texto ?? 'NO se sabe si ha salido: mira la ficha antes de repetir.' })
+    } catch {
+      setAviso({ ok: false, texto: 'NO se sabe si ha salido: mira la ficha antes de repetir.' })
+    } finally {
+      setOcupado(false)
+    }
+  }
+  return (
+    <div style={{ display: 'grid', gap: 4, justifyItems: 'start' }}>
+      <button type="button" disabled={ocupado} style={btnStyle('sutil')} onClick={() => void mandar()}>
+        {ocupado ? 'Enviando…' : 'Mandar justificante al cliente'}
+      </button>
+      {aviso && <p role="status" style={{ ...NOTA, color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>{aviso.texto}</p>}
     </div>
   )
 }

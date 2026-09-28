@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Pencil } from 'lucide-react'
 import { revisarEdicion } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import { interpretarEscritura, textoMotivo } from '@/lib/cliente-edicion-asegura'
@@ -54,7 +55,7 @@ export default function PonerNombre({ clienteId, apellidos }: { clienteId: strin
   if (!abierto) {
     return (
       <button type="button" onClick={() => setAbierto(true)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }} aria-label="Poner nombre">
-        ✏️ Poner nombre
+        <Pencil size={16} strokeWidth={1.75} aria-hidden /> Poner nombre
       </button>
     )
   }

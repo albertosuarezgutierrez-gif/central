@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { FileSpreadsheet } from 'lucide-react'
+import { FileSpreadsheet, TriangleAlert } from 'lucide-react'
 import { btnStyle, TablaScroll } from '@/components/ui'
+import { ConIcono } from './iconos'
 import { eur } from '@/lib/dinero'
 import Bloque from './Bloque'
 import {
@@ -65,10 +66,10 @@ function Comisiones({ año, comisiones }: { año: number; comisiones: ComisionCo
             </TablaScroll>
           )}
       {sinComprobar > 0 && (
-        <p style={aviso}>⚠️ {sinComprobar} periodo(s) sin comprobar: la última lectura del libro falló y sus importes están fuera del total.</p>
+        <p style={aviso}><ConIcono i={TriangleAlert}>{sinComprobar} periodo(s) sin comprobar: la última lectura del libro falló y sus importes están fuera del total.</ConIcono></p>
       )}
       {sinRetencion > 0 && (
-        <p style={aviso}>⚠️ {sinRetencion} periodo(s) con bruto y sin retención informada: la retención está incompleta.</p>
+        <p style={aviso}><ConIcono i={TriangleAlert}>{sinRetencion} periodo(s) con bruto y sin retención informada: la retención está incompleta.</ConIcono></p>
       )}
     </div>
   )
@@ -195,12 +196,12 @@ export default function InformeMediacion({ año }: { año: number }) {
                     )}
                   {sin.length > 0 && (
                     <p style={aviso}>
-                      ⚠️ Con pólizas en vigor hoy y sin ningún recibo de CIMA en {año}: <strong>{sin.map(n).join(', ')}</strong>. Sus primas no son 0: no constan
-                      (se compara con la cartera de hoy, así que en un año pasado puede salir una compañía que entró después).
+                      <ConIcono i={TriangleAlert}>Con pólizas en vigor hoy y sin ningún recibo de CIMA en {año}: <strong>{sin.map(n).join(', ')}</strong>. Sus primas no son 0: no constan
+                      (se compara con la cartera de hoy, así que en un año pasado puede salir una compañía que entró después).</ConIcono>
                     </p>
                   )}
                   {i.primas.ilegibles > 0 && (
-                    <p style={aviso}>⚠️ {i.primas.ilegibles} recibo(s) cobrado(s) con un importe que no se ha podido leer: fuera del total.</p>
+                    <p style={aviso}><ConIcono i={TriangleAlert}>{i.primas.ilegibles} recibo(s) cobrado(s) con un importe que no se ha podido leer: fuera del total.</ConIcono></p>
                   )}
                   {i.primas.sinFecha > 0 && (
                     <p style={{ fontSize: 12, color: 'var(--muted)', margin: '6px 0 0' }}>

@@ -207,7 +207,7 @@ test('cada desenlace del POST tiene su frase, y ninguna dice que se haya enviado
   const textos = new Set<string>()
   for (const f of FALLOS_INVITACION) {
     const frase = textoInvitacion({ estado: f, motivo: 'motivo del puerto' }, 'Ana')
-    assert.doesNotMatch(frase, /✅/, `${f} no puede leerse como un envío hecho`)
+    assert.doesNotMatch(frase, /^(Correo enviado|Invitación enviada|Enlace reenviado)/, `${f} no puede leerse como un envío hecho`)
     textos.add(frase)
   }
   assert.equal(textos.size, FALLOS_INVITACION.length, 'dos fallos con la misma frase: se han colapsado')

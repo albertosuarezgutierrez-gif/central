@@ -120,6 +120,8 @@ export {
   TOPE_POLIZAS_TELEGRAM,
   DIAS_GRACIA_RENOVACION,
   textoRenovacionesSinLlegar,
+  HORAS_EMISION_SIN_AVISO,
+  textoEmisionesSinAviso,
   type EstadoIngesta,
   type SaludIngesta,
   type EntradaSalud,
@@ -139,6 +141,7 @@ export {
   type RepartoHuerfanas,
   type CampoImportanteSinLeer,
   type RenovacionSinLlegar,
+  type EmisionSinAviso,
 } from './ingesta.ts'
 export {
   veredictoEntidad,
@@ -915,6 +918,7 @@ export {
   fechaCima,
   claveTelefono,
   compararConCima,
+  esPolizaDeCoche,
   huellaDecisionCima,
   esCampoCima,
   type CampoCima,

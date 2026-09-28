@@ -21,7 +21,7 @@ export type Tono = 'malo' | 'aviso' | 'bien'
 
 export type Acceso = {
   id: string
-  icono: string
+  icono: ReactNode
   titulo: string
   /** Una línea con el dato: «12 · 1 devuelto». `null` = no se pinta (no es «0»). */
   detalle?: string | null

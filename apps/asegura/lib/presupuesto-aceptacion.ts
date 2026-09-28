@@ -228,7 +228,7 @@ export async function pedirCodigoAceptacion(correduriaId: string, identidadId: s
 
 export type ResultadoFirma =
   /** `aviso`: el texto para Telegram; lo manda el portal, que es quien tiene el bot. */
-  | { estado: 'aceptado'; aceptadoEl: string; conAnulacion: boolean; aviso: string }
+  | { estado: 'aceptado'; aceptadoEl: string; conAnulacion: boolean; aviso: string; /** La baja firmada con él (para su justificante); no viaja al portal. */ anulacionId: string | null }
   | { estado: 'sin_codigo' } | { estado: 'codigo_caducado' } | { estado: 'demasiados_intentos' }
   | { estado: 'codigo_incorrecto'; quedan: number }
   | { estado: 'nombre_no_coincide' }
@@ -342,5 +342,5 @@ export async function firmarAceptacion(
   const aviso = `✍️ ${f.tomador} ha ACEPTADO el presupuesto de ${f.ramo} (${f.compania}). Emítelo: no hay cobertura hasta entonces.` +
     (c.anulacion ? ` Firmó también la anulación de su póliza de ${c.anulacion.compania}, que saldrá a tu OK cuando la nueva conste emitida.` : '') +
     (c.sinAnulacion ? ` ⚠️ ${c.sinAnulacion}` : '')
-  return { estado: 'aceptado', aceptadoEl: hoy, conAnulacion: !!c.anulacion, aviso }
+  return { estado: 'aceptado', aceptadoEl: hoy, conAnulacion: !!c.anulacion, aviso, anulacionId: c.anulacion ? anulacionId : null }
 }

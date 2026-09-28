@@ -760,3 +760,9 @@ em { font-style: normal; }
   border-bottom: 1px solid color-mix(in oklab, var(--primary) 12%, var(--border)) !important;
 }
 :focus-visible { outline: 3px solid color-mix(in oklab, var(--primary) 50%, transparent); outline-offset: 2px; }
+
+/* Plegable de datos de consulta (DNI y carnés en la ficha): sin el triángulo nativo, con chevron
+   lucide que gira al abrir, igual que el resto de iconos de la correduría. */
+.plegable-dato > summary::-webkit-details-marker { display: none; }
+.plegable-dato > summary .chev { transition: transform .12s ease; }
+.plegable-dato[open] > summary .chev { transform: rotate(90deg); }

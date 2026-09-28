@@ -4,7 +4,9 @@ import Link from 'next/link'
 import { descripcionDias, enCooldownRenovacion, textoAvisoRenovacionWhatsapp, textoPlazoOposicion, DIAS_PREAVISO_TOMADOR, type Retarificabilidad } from '@central/module-seguros'
 import { eur } from '@/lib/dinero'
 import { TablaScroll, Badge, BtnLink, btnStyle, type Tono } from '@/components/ui'
+import { TriangleAlert } from 'lucide-react'
 import { esAccionable, textoListaTruncada, textoVencidasAntiguas } from './secciones'
+import { Ico } from './iconos'
 import AccionesContacto from './AccionesContacto'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from './rotulo-retarificar'
@@ -210,7 +212,7 @@ function AvisoTruncado({ truncado }: { truncado: boolean | null | undefined }) {
         color: truncado === true ? 'var(--warning)' : 'var(--muted)',
       }}
     >
-      {truncado === true ? '⚠️ ' : ''}{texto}
+      {truncado === true ? <Ico i={TriangleAlert} /> : null}{texto}
     </p>
   )
 }
@@ -348,7 +350,7 @@ export default function Renovaciones({ datos, filtro }: {
       {sinRecibir && (
         <details style={{ margin: '0 0 10px' }}>
           <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, minHeight: 44, color: 'var(--warning)' }}>
-            ⚠️ 
+            <Ico i={TriangleAlert} />{' '}
             {sinRecibir.n === 1 ? '1 póliza con la renovación sin recibir' : `${sinRecibir.n} pólizas con la renovación sin recibir`}
             {sinRecibir.prima > 0 && ` · ${eur(sinRecibir.prima)}`}
             {sinRecibir.sinPrima > 0 && ` · ${sinRecibir.sinPrima} sin prima informada`}

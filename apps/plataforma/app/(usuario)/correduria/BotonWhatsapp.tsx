@@ -16,7 +16,7 @@ export const VERDE_WHATSAPP = '#25D366'
  * «se podría poner al lado de los móviles un icono de WhatsApp y me ir al
  * WhatsApp del cliente pulsándolo»).
  *
- * 🚨 Si `urlWhatsapp()` no puede afirmar que el número es un móvil, este
+ * ⚠️ Si `urlWhatsapp()` no puede afirmar que el número es un móvil, este
  * componente devuelve **`null` y no pinta nada**. Ni un enlace (WhatsApp abre
  * igual con un fijo y el «este número no está en WhatsApp» solo se ve DESPUÉS
  * de pulsar) ni un icono apagado (un icono que se ve promete una acción). El

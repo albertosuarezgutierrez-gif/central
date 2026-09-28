@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { Antenna, TriangleAlert } from 'lucide-react'
+import { Antenna, Check, Coins, TriangleAlert } from 'lucide-react'
 import { Badge, Pendiente, TablaScroll } from '@/components/ui'
+import { ConIcono } from './iconos'
 import { eur } from '@/lib/dinero'
 import type { GrupoHuerfanas, SaludIngesta } from '@central/module-seguros'
 import {
@@ -167,7 +168,7 @@ function Estado({ salud, datos }: { salud: SaludIngesta; datos: VistaIngesta }) 
       )}
       {salud.primaPerdida !== null && salud.primaPerdida > 0 && (
         <p style={{ margin: '10px 0 0', fontSize: 13 }}>
-          💶 Prima en los recibos que no se han podido guardar:{' '}
+          <ConIcono i={Coins}>Prima en los recibos que no se han podido guardar:</ConIcono>{' '}
           <strong style={{ color: 'var(--negative)' }}>{eur(salud.primaPerdida)}</strong>
         </p>
       )}
@@ -341,7 +342,7 @@ function Huerfanas({ salud, truncadas, sinAmbito }: {
 
       {truncadas && (
         <p style={{ margin: '10px 0 0', fontSize: 12, color: 'var(--warning)' }}>
-          ⚠️ El listado venía recortado: los recuentos por clave son un mínimo, no el total.
+          <ConIcono i={TriangleAlert}>El listado venía recortado: los recuentos por clave son un mínimo, no el total.</ConIcono>
         </p>
       )}
       {sinAmbito === null ? (
@@ -350,8 +351,8 @@ function Huerfanas({ salud, truncadas, sinAmbito }: {
         </p>
       ) : sinAmbito > 0 ? (
         <p style={{ margin: '6px 0 0', fontSize: 12, color: 'var(--warning)' }}>
-          ⚠️ Hay {sinAmbito} evento(s) de huérfana que no se han podido atribuir a la correduría: no
-          salen en esta lista.
+          <ConIcono i={TriangleAlert}>Hay {sinAmbito} evento(s) de huérfana que no se han podido atribuir a la correduría: no
+          salen en esta lista.</ConIcono>
         </p>
       ) : null}
     </Bloque>
@@ -415,7 +416,7 @@ function Grupo({ g }: { g: GrupoHuerfanas }) {
             font: 'inherit', fontSize: 13, cursor: 'pointer',
           }}
         >
-          {copiado ? 'Copiadas ✓' : 'Copiar los números'}
+          {copiado ? <ConIcono i={Check}>Copiadas</ConIcono> : 'Copiar los números'}
         </button>
       </div>
       <ul

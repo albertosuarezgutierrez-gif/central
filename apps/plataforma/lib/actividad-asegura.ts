@@ -48,7 +48,7 @@ function cadena(v: unknown): string | null {
 /**
  * Una cuenta del embudo.
  *
- * 🚨 Solo un número finito cuenta. Cualquier otra cosa —ausente, `null`,
+ * IMPORTANTE: Solo un número finito cuenta. Cualquier otra cosa —ausente, `null`,
  * basura— es `null`, que la pantalla pinta como «—» y no como un cero. Un 0
  * inventado aquí diría «ninguno de tus clientes ha entrado», que es la frase
  * sobre la que Alberto decidiría ponerse a invitar gente que ya está dentro.

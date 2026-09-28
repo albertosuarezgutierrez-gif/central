@@ -982,12 +982,12 @@ export function urlDecesosNuevo(clienteId: string): string {
  * otra ofrece una opción que la pantalla hermana no conoce.
  */
 export const RAMOS_PRESUPUESTO: { etiqueta: string; url: (clienteId: string) => string; sinVerificar?: boolean }[] = [
-  { etiqueta: '🚗 Auto', url: urlAutoNuevo },
-  { etiqueta: '🏠 Hogar', url: urlHogarNuevo },
-  { etiqueta: '🏍️ Moto', url: urlMotoNuevo },
-  { etiqueta: '❤️‍🩹 Vida', url: urlVidaNuevo },
-  { etiqueta: '🩺 Salud', url: urlSaludNuevo, sinVerificar: true },
-  { etiqueta: '🕊️ Decesos', url: urlDecesosNuevo },
+  { etiqueta: 'Auto', url: urlAutoNuevo },
+  { etiqueta: 'Hogar', url: urlHogarNuevo },
+  { etiqueta: 'Moto', url: urlMotoNuevo },
+  { etiqueta: 'Vida', url: urlVidaNuevo },
+  { etiqueta: 'Salud', url: urlSaludNuevo, sinVerificar: true },
+  { etiqueta: 'Decesos', url: urlDecesosNuevo },
 ]
 
 function leerLeadDescartado(v: unknown): { fecha: string; motivo: string | null } | null {

@@ -111,3 +111,14 @@ test('y viaja de cuántas compañías sale la cifra', () => {
   assert.match(bloque, /COUNT\(DISTINCT codigo_entidad\)/)
   assert.match(bloque, /entidadesObservadas:/)
 })
+
+test('📭 emisiones sin aviso: emitidas, fuera de las 24 h y SIN ningún evento del webhook', () => {
+  // Caso del 28/09/2026: cuatro emitidas, cero eventos (el receptor daba 401).
+  // Sin el NOT EXISTS la señal cantaría todas las emisiones; sin la ventana de
+  // 30 días, una emisión vieja sin aviso alarmaría para siempre.
+  const bloque = FUENTE.slice(FUENTE.indexOf('const emisionesSinAviso = await leerONull'))
+  const consulta = bloque.slice(0, bloque.indexOf('`, String(HORAS_EMISION_SIN_AVISO))'))
+  assert.match(consulta, /p\.estado = 'emitida'/)
+  assert.match(consulta, /NOT EXISTS[\s\S]*codeoscopic_webhook_events w[\s\S]*w\.project_id_codeoscopic = p\.project_id_codeoscopic/)
+  assert.match(consulta, /p\.updated_at > now\(\) - interval '30 days'/)
+})

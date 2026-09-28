@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — 📭 Webhook de Codeoscopic: las 4 emisiones reales (17-28/09) NO han generado ni un aviso. Medido: desde el 17/09 llega un POST cada ~30 min a `app.grupoasegura.com` que la RUTA del CRM (no el middleware: `/api/webhooks/codeoscopic` ya es pública) rechaza con 401 — `webhook_signature_invalid`, cabecera presente, `authUserPresente:false`: el USUARIO de la Basic Auth no es el nuestro. Las peticiones con credenciales válidas (proyectos de 6 cifras, otra alta) sí pasaban → Codeoscopic tiene DOS altas del webhook con credenciales distintas; no se arregla con código, hay que alinear credenciales con Codeoscopic (pendiente del OK de Alberto). Parece un solo aviso reintentándose en cola. Cero pérdida en cartera (las emisiones se cierran sin el aviso). Nueva señal del vigía `emisionesSinAviso` (>24 h emitida, 30 días, sin evento) → degrada + Telegram por cambio de firma (8º tramo, normalizador 7→8); hoy salta con 40769244/40804066/40841279.
+
+**(28/09/2026)** — Auditoría de la ingesta CIMA «sin huecos» + pintar: asegura #859/#860/#861/#862/#864/#865 **MERGEADOS** (papeles por fila, PII fuera de recibos, recibos/CEF, siniestros, pólizas: fechas, `pagador`, cobro cifrado, riesgos, contacto del tomador solo huecos, prima anual L10 con C0058 **Mapfre** + C0072). Migraciones 0100-0104 aplicadas a mano en `seguros`. central#3820 **MERGEADO** (figura en el portal + enum `pagador`). Reproceso de los 36 POL de Drive hecho: 158/159 pólizas con los campos nuevos, pagador 0→26, 0 IBAN en claro; C0109 no manda importes (prima NULL correcta). Pintado en `/correduria` (ficha póliza: contrato/cobro/riesgos/recibos; siniestros: detalle CIMA) y en la ficha del portal: PR de central «pintar datos CIMA». ⚠️ Pendiente a mano: borrar en GitHub la rama `cima-lote-2026-09-28` y el run 36403813502 de `asegura` (el proxy no deja borrar). Detalle: `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md` § Auditoría.
+
 **(28/09/2026)** — Ficha correduría: el acceso «Contactos» cuenta también los vínculos declarados (`contarPersonas` en `cliente/[id]/tabs.ts`, misma lista que el bloque «Personas»; antes solo personas de pólizas → Antonio Lozano salía sin ninguna). Fusionada a mano «Antonio Antonio» (ec2fd283) → Antonio Lozano Lanagran (a3cf7a99): su DNI era ILEGIBLE y `fusionar_clientes` bloquea para siempre con `dni_sin_indice`; se anuló el dni en la misma transacción y el cifrado original quedó en la justificación. Portal ya invitable. Hueco propuesto como tarea aparte.
 
 **(28/09/2026)** — Correo de aviso de vencimiento: «Prima anual» llevaba la NETA de la póliza o, si no la traía, el TOTAL del
@@ -833,6 +837,34 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Matrícula de ESTE mes: la fecha ya se estima (moto y auto) + garaje por defecto en moto
+- `2121NST` no rellenaba nada: la tabla de series solo tiene meses CERRADOS (acaba en NRY, agosto), así que
+  toda matrícula del mes en curso daba `null`. `fechaMatriculacionEstimada(m, hoy)` extrapola al ritmo medio
+  de 12 meses acotado a [último hito, hoy]; una serie imposible (más allá de hoy+20 d al ritmo máximo) sigue `null`.
+- Moto: «¿Dónde duerme?» arranca en «Vía pública», como auto.
+
+## (28/09/2026) Presupuesto de moto: la matrícula ya rellena sola la fecha de matriculación
+- `MotoNuevo.tsx` no tenía el autorrelleno que sí tenía `AutoNuevo.tsx`: se porta igual (estimación por serie
+  al instante + Avant2 a los 500 ms; nunca pisa una fecha tecleada; en modo póliza no actúa).
+- El puerto de catálogos de asegura mandaba siempre `/car/registration-date`: nuevo `tipo=fecha-matriculacion-moto`
+  → `/motorcycle/registration-date`. Hasta que despliegue asegura, plataforma cae a la estimación por serie.
+
+## (28/09/2026) Sincro CIMA: la fecha de carné de una MOTO se comparaba con el carné B
+- Aviso falso en Manuel León Sotelo (0007001052485, BMW C 400 GT): CIMA manda motos en ramo 241 y en BD quedan `tipo='auto'` (**11 pólizas vivas**). `cimaDe` solo miraba `tipo` → comparaba su fecha (del A) contra el B.
+- Nuevo `esPolizaDeCoche()` en `@central/module-seguros` (`sincro-cima.ts`): moto si `categoriaVehiculo`/`claseVehiculo` ∈ MO/MT/CI (raíz o riesgos). Test visto en rojo.
+- Francisco Sánchez Torres (UV-G-410032446, Toyota Avensis) NO es este caso: discrepancia real del B, la decide Alberto. Su conductor habitual cuelga de otra ficha (`851b9766…`): posible duplicado.
+
+## (28/09/2026) Baja firmada en el portal → justificante al cliente + archivo en su póliza
+Auditoría de la baja Mapfre de Pablo Guzmán Pueyo: SÍ firmó (28/09 10:18) y la carta llegó a Mapfre (Resend delivered).
+El 26/09 no pudo: 3 códigos, 0 «Firmar» — perdía sesión/estado al salir a leer el código (iPhone). Y tras firmar no recibía NADA.
+Nuevo `apps/asegura/lib/justificante-anulacion.ts`: tras la firma (after(), detrás del envío a la compañía) archiva el PDF
+firmado en `documentos` de la póliza (visible en su portal) y le manda correo con PDF+txt. Idempotente. Botón «Mandar
+justificante al cliente» en plataforma (póliza → anulación) = reenvío manual. Pendiente: pulsarlo para Pablo (y decidir
+Victor/Jose, también firmados sin justificante).
+Mismo PR: el portal reabre el campo del código si hay uno vigente (`codigoCaducaEn`) y enseña «Bajas que has firmado» 60 días.
+⚠️ Ese día Mapfre contestó que CCORREDOR@mapfre.com es SOLO comercial: las bajas de Pablo y Jose NO están comunicadas.
+`recibe_anulaciones` de Mapfre a false, CCORREDOR re-etiquetado comercial; mapfre@mapfre.es probado → Resend «suppressed» (no
+entrega). Borradores en Gmail a jmreal@mapfre.com (comercial) preguntando el buzón de bajas. Los otros 4 buzones «general» sin verificar.
 ## (28/09/2026) Fusión de fichas: el DNI ILEGIBLE ya no bloquea para siempre
 `identidadFusion` (`@central/module-seguros`) y `seguros.fusionar_clientes` distinguen **DNI ilegible** (no descifra con la
 clave funcionando, o no tiene forma de documento; sin índice) de **legible sin índice**. El ilegible cuenta como
@@ -848,6 +880,9 @@ viejo. **Migración `fusionar_clientes_dni_ilegible` YA APLICADA en prod** (prob
 - Caso 1 (auto particular): el tomador ve «Tomador y conductor habitual» y el propietario «Propietario». ⚠️ Esa póliza está DOS veces en BD (mismo número con y sin ceros a la izquierda, ambas activas): gemela sin fundir, no tocada aquí.
 - Caso 2 (auto de empresa): tomador la sociedad; CIMA trae al administrador como conductor_habitual. Él la ve como DUEÑO («Tu sociedad») y ahí no salía papel → `rolesPropiosPorPoliza()` pinta también la figura en autorizadas/empresas cuando figura. (Identificadores de ambos casos en la conversación de sesión, no aquí: PII.)
 - Ingesta CIMA (asegura#859, mergeado 28/09): guarda TODAS las figuras — un papel por fila (índice `(correduria,poliza,nif_lookup_hash,rol)` ya aplicado en `seguros`), propietario empresa, asegurado = tomador (sin contacto). ⏸️ Falta reprocesar los 36 POL de Drive con `cima-rescate-lote` (lote cifrado preparado en la sesión, no lanzado): hasta entonces los datos viejos siguen sin el 2º papel.
+
+## (28/09/2026) E2E `playwright / portal` de asegura rojo en todos los PRs = bypass de Vercel caducado
+Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCEL_PROTECTION_BYPASS_SECRET` de GitHub ya no vale → todo acaba en `vercel.com/login`; rojo desde el 04/09 (paso del proyecto al equipo de Alberto). F3 «aceptar precio» NI corre: se salta por faltar `E2E_SUPABASE_URL` (el comentario del bot lo culpaba por texto cableado). PR asegura#863 (draft): preflight que lo dice en 1 s + comentario con recuento real. ✅ Secreto copiado el mismo día: E2E en verde (14 ok · 0 fallidos · 12 saltados). Los 12 saltados (F3 incluido) esperan `E2E_SUPABASE_URL`/`E2E_SUPABASE_SERVICE_ROLE_KEY` — decisión de Alberto (crean usuarios en Auth).
 
 ## (28/09/2026) Agente de huéspedes: dejaba de responderse a sí mismo (reserva 154692216)
 - Nuestros envíos reaparecen en Smoobu sin emisor; el anti-eco solo conocía `mensajes_log` (borrador), no acuses, programados ni lo editado en Telegram → 5 ecos en 4 días, 2 contestados solos al huésped, y el eco pisó en la cola la pregunta real.
@@ -7777,3 +7812,12 @@ lateral» y «poca informacion... ni direccion en hogar, ni datos coche en auto�
   falla — no es nuestro (nosotros: Prisma + central_asegura). Preguntar a Manuel en el traspaso.
 - Además: 🛡️ Correduría entra por fin en el menú de plataforma (PR #1907, guardián incluido) —
   «no me sale correduría»: /correduria nunca estuvo en NAV_NEGOCIO.
+
+## (28/09/2026) Portal: TODO el siniestro al cliente (deroga la regla del 03/09)
+Alberto: «el seguro es suyo, tiene que saber todo». La ficha del siniestro en asegura-portal pinta «Detalle del
+siniestro» (declaración, culpa, papel, DAA, reserva con aclaración, recobros, expedientes, asistencias, tramitador y
+perito). `detalleSiniestroCompania()` en module-seguros-portal; GRANT por columnas a `prisma_asegura_portal` aplicado.
+Fuera: datos de terceros (cifrados) y `ref_mediador_cima`. ⚠️ Los campos nuevos CIMA de siniestros están a 0/101:
+falta reprocesar los 46 SIN (lote cifrado ya en la rama temporal `cima-lote-sin-2026-09-28` del repo asegura; el
+clasificador bloquea leer la clave → lo lanza Alberto con `scratchpad/cima/clave.txt`). Borrar después ramas
+`cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` y los runs de `cima-rescate-lote`.

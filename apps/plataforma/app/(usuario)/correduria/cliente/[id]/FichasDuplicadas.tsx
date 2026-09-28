@@ -39,7 +39,7 @@ export default function FichasDuplicadas({ clienteId }: { clienteId: string }) {
       {candidatas.map(c => (
         <div key={c.id} style={{ border: '1px solid var(--warning)', background: 'var(--warning-bg)', borderRadius: 12, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
           <div style={{ fontSize: 13 }}>
-            ⚠️ Hay <strong>otra ficha con el mismo DNI</strong>: {c.nombre} ({c.tipo} · {c.polizas} póliza{c.polizas === 1 ? '' : 's'}). Es la misma persona dos veces.
+            Hay <strong>otra ficha con el mismo DNI</strong>: {c.nombre} ({c.tipo} · {c.polizas} póliza{c.polizas === 1 ? '' : 's'}). Es la misma persona dos veces.
           </div>
           {abierta === c.id
             ? (
@@ -143,7 +143,7 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
   if (sinMover) {
     return (
       <div style={{ display: 'grid', gap: 8, fontSize: 13 }}>
-        <div>✅ Fusionadas. Pero esto <strong>no se ha podido pasar</strong> a la ficha que se queda y sigue colgando de la otra (no se ha perdido):</div>
+        <div>Fusionadas. Pero esto <strong>no se ha podido pasar</strong> a la ficha que se queda y sigue colgando de la otra (no se ha perdido):</div>
         <ul style={{ margin: 0, paddingLeft: 18 }}>
           {Object.entries(sinMover).map(([k, n]) => <li key={k}>{k.replace(/^seguros\./, '')}: {n}</li>)}
         </ul>

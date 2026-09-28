@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { compararConCima, huellaDecisionCima, fechaCima, type FichaParaCima, type DatosCima } from './sincro-cima.ts'
+import { compararConCima, esPolizaDeCoche, huellaDecisionCima, fechaCima, type FichaParaCima, type DatosCima } from './sincro-cima.ts'
 
 const vacia: FichaParaCima = { nombre: 'Pablo Guzman Lozano', fechaNacimiento: null, fechaNacimientoIlegible: false, carnets: [], telefonos: [], emails: [] }
 const cima: DatosCima = { nombre: 'PABLO GUZMÁN LOZANO', fechaNacimiento: '1980-03-04', fechaCarnet: '1999-01-02', telefonos: ['+34 600 11 22 33'], emails: ['Pablo@Ej.es'] }
@@ -98,4 +98,13 @@ test('más de media palabra cambiada, otra persona o una inicial → SIGUE pregu
   assert.deepEqual(acc('Maria Lopez', 'Mario Lopes'), ['discrepa'])
   assert.deepEqual(acc('Ana Ruiz Gil', 'Eva Ruiz Gil'), ['discrepa'])
   assert.deepEqual(acc('A Ruiz', 'B Ruiz'), ['discrepa'])
+})
+
+test('esPolizaDeCoche: la moto que CIMA manda como auto NO es del carné B (0007001052485, 28/09/2026)', () => {
+  assert.equal(esPolizaDeCoche('auto', { riesgos: [{ categoriaVehiculo: 'TU', claseVehiculo: 'TU' }] }), true)
+  assert.equal(esPolizaDeCoche('auto', { riesgos: [{ categoriaVehiculo: 'MO', claseVehiculo: 'MT' }] }), false)
+  assert.equal(esPolizaDeCoche('auto', { riesgos: [{ claseVehiculo: 'MT' }] }), false)
+  assert.equal(esPolizaDeCoche('auto', { claseVehiculo: 'CI' }), false)
+  assert.equal(esPolizaDeCoche('moto', { riesgos: [{ categoriaVehiculo: 'TU' }] }), false)
+  assert.equal(esPolizaDeCoche('auto', null), true)
 })

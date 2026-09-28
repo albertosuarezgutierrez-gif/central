@@ -71,6 +71,7 @@ test('sin bien conocido la fila va sola: no se funde lo que no se puede distingu
 })
 
 test('el usuario ve que son varias filas del volcado, no una póliza inventada', () => {
-  assert.match(piezas, /🔁 \{grupo\.filas\.length\} filas del volcado/)
-  assert.match(tab, /🔁/, 'la nota del bloque explica el símbolo')
+  assert.match(piezas, /filas del volcado/)
+  assert.match(piezas, /RefreshCw.*grupo\.filas\.length|grupo\.filas\.length.*RefreshCw/, 'el icono de refresh explica que son varias filas')
+  assert.match(tab, /RefreshCw|refresh|repetidas|volcado/, 'la nota del bloque explica el símbolo')
 })

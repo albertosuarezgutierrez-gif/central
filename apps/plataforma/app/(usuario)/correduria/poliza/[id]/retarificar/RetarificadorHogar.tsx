@@ -18,7 +18,9 @@
 // de cotizar propia para hogar.
 
 import { useState } from 'react'
+import { AlertTriangle, FlaskConical, OctagonAlert, Pencil } from 'lucide-react'
 import { eur } from '@/lib/dinero'
+import { Ico, FILA } from '../../../iconos'
 import type {
   Fila,
   Opcion,
@@ -377,8 +379,8 @@ export default function RetarificadorHogar({
           </p>
         )}
         {pre.resumen.optimistas.length > 0 && (
-          <p className="muted" style={{ fontSize: 12 }}>
-            ⚠️ {pre.resumen.optimistas.length} de los supuestos ABARATAN el precio (
+          <p className="muted" style={{ ...FILA, fontSize: 12 }}>
+            <Ico i={AlertTriangle} /> {pre.resumen.optimistas.length} de los supuestos ABARATAN el precio (
             {pre.resumen.optimistas.map((f) => f.etiqueta.toLowerCase()).join(', ')}): si el cliente los desmiente,
             la prima real sube.
           </p>
@@ -414,7 +416,7 @@ export default function RetarificadorHogar({
 
         {resultado.estado === 'error' && (
           <p className="err" style={{ marginTop: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}
+            <Ico i={resultado.tope ? OctagonAlert : AlertTriangle} /> {resultado.tope ? 'Tope alcanzado: ' : ''}
             {resultado.mensaje}
             {resultado.gastoDesconocido && (
               <>
@@ -474,8 +476,8 @@ function ViviendaCatastro({
       </p>
       {resumenVivienda(catastro) && <p style={{ margin: '4px 0 0', fontSize: 13 }}>{resumenVivienda(catastro)}</p>}
       {discrepanciaM2(m2Poliza, catastro) && (
-        <p className="err" style={{ margin: '4px 0 0', fontSize: 13 }}>
-          ⚠️ {discrepanciaM2(m2Poliza, catastro)}
+        <p className="err" style={{ ...FILA, margin: '4px 0 0', fontSize: 13 }}>
+          <Ico i={AlertTriangle} /> {discrepanciaM2(m2Poliza, catastro)}
         </p>
       )}
       <p className="muted" style={{ margin: '4px 0 8px', fontSize: 12 }}>
@@ -626,7 +628,7 @@ function RecomendarCapital({
       )}
       {estado !== null && estado !== 'pidiendo' && (estado.estado === 'error' || estado.estado === 'tope' || estado.estado === 'sin_configurar') && (
         <p className="err" style={{ marginTop: 8, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-          {estado.estado === 'tope' ? '🛑 Tope alcanzado: ' : '⚠️ '}
+          <Ico i={estado.estado === 'tope' ? OctagonAlert : AlertTriangle} /> {estado.estado === 'tope' ? 'Tope alcanzado: ' : ''}
           {estado.mensaje}
           {estado.estado === 'error' && estado.gastoDesconocido && (
             <>
@@ -766,7 +768,7 @@ function FilaFicha({
           title={`Corregir ${fila.etiqueta}`}
           style={{ minWidth: 44, minHeight: 44, flex: '0 0 auto' }}
         >
-          ✏️
+          <Ico i={Pencil} />
         </button>
       )}
     </div>
@@ -919,7 +921,7 @@ function Precios({ r, primaActual }: { r: Extract<Resultado, { estado: 'ok' }>; 
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
         <div className="card" style={{ borderColor: 'var(--warn)', background: 'rgba(217, 119, 6, 0.08)', marginBottom: 12 }}>
-          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warn)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>
+          <p style={{ ...FILA, margin: 0, fontWeight: 700, color: 'var(--warn)' }}><Ico i={FlaskConical} /> ESTO ES UNA SIMULACIÓN</p>
           <p style={{ margin: '4px 0 0' }}>
             {r.avisoSimulacion ?? 'Precio inventado por central para probar la pantalla: ninguna compañía lo ha dado y no se ha gastado ni un céntimo.'}
           </p>
