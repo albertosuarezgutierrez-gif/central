@@ -816,6 +816,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
+- Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.
+- Motivo: todo a 0 comandas y el aviso NO pasa por el panel /telegram (lo manda la edge function directa), así que no se podía apagar desde allí. Reactivar: `cron.alter_job(21, active := true)`.
+
 ## (28/09/2026) Poner nombre a una ficha SIN NOMBRE sin exigir DNI
 - Alberto no podía nombrar un lead «(sin nombre)»: la única edición era «Editar identidad» (fondo de Contactos) y exigía DNI recibido. La BD guarda el marcador literal `'(sin nombre)'` (14 fichas).
 - `module-seguros`: `nombrePendiente()` + `revisarEdicion(e, { fichaSinNombre })` → en ficha sin nombre, nombre+apellidos sin documento; DNI/fecha y corregir un nombre existente siguen documentados. asegura decide la excepción con la BD (`cartera-edicion.ts`), no el cliente. Historial: «rellenada sin documento».
