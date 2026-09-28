@@ -864,6 +864,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) «Subir póliza» ya no saca de plataforma
+Los dos botones (ficha y cabecera de /correduria) saltaban a `asegura/cartera/subir` (otra web/sesión).
+Ficha → su pestaña Documentos con tipo «póliza». Cabecera → pantalla propia `/correduria/subir-poliza`
+(lee por `leer-documento` con tomador; `sello` no llega al navegador) → póliza nuestra / ficha / alta.
+Cepo `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo 4/5 brazos).
+Telegram: si la oportunidad ya existía («duplicada»), los documentos se guardan SOLOS en la ficha (antes botón que nadie pulsaba: Rafael Campa, 3 envíos, 0 guardados).
+
 ## (28/09/2026) asegura abría un PrismaClient POR CONSULTA en producción → EMAXCONN en el pooler compartido
 - Primera pasada del backfill de coberturas (18:17 UTC): 172/264 precios con coberturas, el resto abortó con `EMAXCONN` (límite 200 de Supavisor, ~700 conexiones de `prisma_seguros` en 2 min).
 - Causa: `apps/asegura/lib/db.ts` (desde el 02/09, PR #2116) solo guardaba el singleton fuera de producción y el `Proxy` lo resolvía en cada acceso → cliente y pool nuevos por consulta. Afectaba a toda asegura, el cron largo lo destapó.

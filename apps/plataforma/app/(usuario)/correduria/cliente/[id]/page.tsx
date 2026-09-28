@@ -50,7 +50,7 @@ export const dynamic = 'force-dynamic'
  */
 export default async function FichaCorreduriaPage({ params, searchParams }: {
   params: Promise<{ id: string }>
-  searchParams: Promise<{ tab?: string | string[] }>
+  searchParams: Promise<{ tab?: string | string[]; subir?: string | string[] }>
 }) {
   const [{ id }, sp] = await Promise.all([params, searchParams])
   // Las oportunidades van en paralelo con la ficha: deciden el cubo «oportunidad» y el
@@ -188,7 +188,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {/* Documentos: los del cliente y los de sus pólizas/siniestros, con «pedido» */}
       {tab === 'documentos' && (
         <Tarjeta titulo="Documentos">
-          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} />
+          <Documentos clienteId={ficha.id} inicial={ficha.documentos} sugeridos={NECESARIOS_EMISION_AUTO} tipoInicial={sp.subir === 'poliza' ? 'poliza' : undefined} />
         </Tarjeta>
       )}
 

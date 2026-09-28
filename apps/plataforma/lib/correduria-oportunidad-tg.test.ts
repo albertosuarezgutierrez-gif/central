@@ -389,6 +389,14 @@ test('tras abrir: guardar en la ficha es de un solo uso y tarificar es un ENLACE
   assert.doesNotMatch(src.slice(src.indexOf('async function ofrecerSiguientes'), src.indexOf('async function guardarDocumentosEnFicha')), /cotizar|retarificar/i)
 })
 
+test('duplicada: los documentos se guardan SOLOS en la ficha, sin botón (28/09/2026)', () => {
+  const src = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
+  const abrir = src.slice(src.indexOf('async function abrirOportunidad'), src.indexOf('// ── Acciones del día a día'))
+  assert.match(abrir, /if \(existenteId\) \{[\s\S]*?if \(\(fila\.documentos \?\? \[\]\)\.length > 0\) await guardarDocumentosEnFicha\(id\)/)
+  const existente = src.slice(src.indexOf('async function ofrecerSobreExistente'), src.indexOf('async function actualizarExistente'))
+  assert.doesNotMatch(existente, /cas_guardar/, 'no se vuelve a ofrecer el botón: ya se guarda solo')
+})
+
 test('mañana: las tareas de hoy van dentro del aviso de renovaciones, y «no se pudo leer» se dice', () => {
   const t = (o: Partial<Parameters<typeof bloqueLlamadasHoy>[0] extends readonly (infer T)[] | null ? T : never>) => ({
     id: 'x', tipo: 'llamada', prioridad: 'media', observaciones: 'Llamar por su póliza', fechaLimite: '2026-09-27', oportunidadId: 'o', clienteId: 'c', cliente: 'Pepe *Ruiz*', ramo: 'auto', ...o,

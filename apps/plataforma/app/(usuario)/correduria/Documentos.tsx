@@ -29,6 +29,7 @@ export default function Documentos({
   siniestroId,
   inicial,
   sugeridos,
+  tipoInicial,
 }: {
   clienteId?: string | null
   polizaId?: string | null
@@ -36,11 +37,13 @@ export default function Documentos({
   inicial: DocumentoResumen[] | null
   /** Tipos que hacen falta (p. ej. para emitir): se ofrecen primero en «pedir». */
   sugeridos?: readonly TipoDocumento[]
+  /** Tipo preseleccionado al subir (el botón «Subir póliza» de la ficha llega con `poliza`). */
+  tipoInicial?: TipoDocumento
 }) {
   const [lista, setLista] = useState<DocumentoResumen[] | null>(inicial)
   const [ocupado, setOcupado] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
-  const [tipo, setTipo] = useState<TipoDocumento>(sugeridos?.[0] ?? 'poliza')
+  const [tipo, setTipo] = useState<TipoDocumento>(tipoInicial ?? sugeridos?.[0] ?? 'poliza')
   const [notas, setNotas] = useState('')
   const [fichero, setFichero] = useState<File | null>(null)
 

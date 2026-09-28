@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
 import { contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
-import { estadoCaducidadCarnet, urlRetarificar, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
+import { estadoCaducidadCarnet, urlRetarificar, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
 import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
@@ -283,9 +283,8 @@ function EstadoCabecera({ estado, cotizacionesVivas, cliente }: {
 }
 
 // ── Acciones ────────────────────────────────────────────────────────────────
-// Lo que se puede HACER desde la ficha, además de mirar. Subir un documento es
-// gratis (el agente lo lee; el precio se pide aparte) y vive en asegura porque
-// comparte pantalla con la cotización que sale de lo leído.
+// Lo que se puede HACER desde la ficha, además de mirar. «Subir póliza» la guarda
+// en su pestaña Documentos, sin salir de plataforma.
 //
 // 🚨 DOS botones, no ocho (08/09/2026). Hasta hoy la cabecera pintaba siete
 // botones del mismo peso —«Subir póliza» y seis «Presupuestar <ramo>
@@ -355,11 +354,12 @@ function Acciones({ clienteId }: { clienteId: string }) {
           </p>
         </div>
       </details>
-      <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro." style={{ display: 'inline-flex' }}>
-        <BtnLink href={urlSubirPoliza()} variante="secundario" nuevaPestana>
-          <Ico i={FileText} /> Subir póliza ↗
-        </BtnLink>
-      </span>
+      {/* A su pestaña Documentos, DENTRO de plataforma (28/09/2026): antes saltaba a
+          `asegura/cartera/subir`, otra web con otra sesión, y el fichero ni se guardaba.
+          Aquí queda en su ficha. Leerla para una oportunidad está en el menú de al lado. */}
+      <BtnLink href={`/correduria/cliente/${clienteId}?tab=documentos&subir=poliza`} variante="secundario">
+        <Ico i={FileText} /> Subir póliza
+      </BtnLink>
     </div>
   )
 }

@@ -35,9 +35,10 @@ test('la cabecera ofrece los seis ramos dentro de UN menú, no como seis botones
 
 test('los avisos van pegados a lo que avisan, no sueltos entre botones', () => {
   // salud lleva su 🚧 en el propio ítem (vida/decesos ya tienen dato vivo de CIMA, 20/09/2026);
-  // el aviso de «solo auto» va en el title del botón de subir.
+  // «Subir póliza» ya no lleva el aviso de «solo auto» (28/09/2026): no lee, guarda en
+  // Documentos de la ficha — lo vigila regression-subir-poliza-plataforma.
   assert.equal((fuenteRamos.match(/sinVerificar: true/g) ?? []).length, 1)
-  assert.match(acciones, /title="Hoy el agente lee pólizas de AUTO/)
+  assert.match(acciones, /tab=documentos&subir=poliza/)
   assert.doesNotMatch(acciones, /<span style=\{\{ color: 'var\(--muted\)' \}\}/, 'ningún aviso gris suelto en la fila de botones')
 })
 
