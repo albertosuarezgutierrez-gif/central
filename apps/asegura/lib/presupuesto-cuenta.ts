@@ -116,7 +116,7 @@ export const TOLERANCIA_PRIMA = 0.02
 /**
  * 🚨 ¿Lo que se va a emitir es la opción que el cliente FIRMÓ en el portal? Se emite desde la fila
  * que pincha Alberto en la parrilla; sin esto, nada impide mandar otra compañía u otra prima.
- * `null` = coincide (o no hay prima que comparar); texto = el motivo para no emitir.
+ * `null` = coincide; texto = el motivo para no emitir (también si falta la prima: fail-closed).
  */
 export function discrepanciaConElegida(e: {
   companiaProyecto: string
@@ -127,7 +127,9 @@ export function discrepanciaConElegida(e: {
   if (normalizarCompania(e.companiaProyecto) !== normalizarCompania(e.companiaElegida)) {
     return `el cliente firmó ${e.companiaElegida} y este proyecto es de ${e.companiaProyecto}`
   }
-  if (e.primaEnviada !== null && e.primaElegida > 0 && Math.abs(e.primaEnviada - e.primaElegida) / e.primaElegida > TOLERANCIA_PRIMA) {
+  // Sin prima no se puede comprobar lo firmado: fail-closed, no «no hay nada que comparar».
+  if (e.primaEnviada === null) return 'no llega la prima con la que se va a emitir, así que no se puede comprobar contra la firmada'
+  if (e.primaElegida > 0 && Math.abs(e.primaEnviada - e.primaElegida) / e.primaElegida > TOLERANCIA_PRIMA) {
     return `el cliente firmó una prima de ${e.primaElegida.toFixed(2)} € y se va a emitir con ${e.primaEnviada.toFixed(2)} €`
   }
   return null

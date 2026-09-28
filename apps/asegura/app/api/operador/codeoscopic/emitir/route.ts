@@ -442,11 +442,11 @@ export const POST = auditado(async (req: Request) => {
     )
     // Best-effort: el PDF de la póliza puede venir ya en `issuedDocuments[]` del
     // proyecto que se acaba de leer (`crudoPrevio`) — sin gastar un GET extra.
+    if (acunadoAc.ok) await cerrarPresupuesto()
     const archivadoAc = acunadoAc.ok
       ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunadoAc.polizaId, crudo: crudoPrevio })
       : { documentoGuardado: null, avisoDocumento: null }
     // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK).
-    if (acunadoAc.ok) await cerrarPresupuesto()
     const trasAc = acunadoAc.ok ? await trasEmisionConTope(correduria.id, { clienteId: ctx.clienteId, polizaId: acunadoAc.polizaId, polizaOrigenId: ctx.polizaOrigenId }) : null
     return NextResponse.json({
       estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
@@ -996,13 +996,13 @@ export const POST = auditado(async (req: Request) => {
   // Best-effort: el propio Submit puede traer ya `issuedDocuments[]` en su
   // respuesta (`envio.crudo`) — se descarga y archiva sin gastar otro GET.
   // Un fallo aquí nunca deshace el acuñado que ya se hizo arriba.
+  if (acunado.ok) await cerrarPresupuesto()
   const archivado = acunado.ok
     ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunado.polizaId, crudo: envio.crudo })
     : { documentoGuardado: null, avisoDocumento: null }
 
   // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK). Después
   // del archivado: si el PDF ha llegado, el cliente ya lo encuentra al entrar.
-  if (acunado.ok) await cerrarPresupuesto()
   const tras = acunado.ok ? await trasEmisionConTope(correduria.id, { clienteId: ctx.clienteId, polizaId: acunado.polizaId, polizaOrigenId: ctx.polizaOrigenId }) : null
 
   return NextResponse.json({
