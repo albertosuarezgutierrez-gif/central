@@ -31,6 +31,21 @@
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
 
+- **2026-09-28 · facturas-correo** · hizo: pasada disparada por trigger. Salud Vía B OK
+  (`dias_caido=0`, última copia hoy 28/09 en `_buzon_pdf`); `agente_salud` actualizado
+  (`ok=true`). Vía A (`gmail-adjuntos`) sigue `CONNECTION_CLOSED`, no bloquea. Backlog persistente
+  revisado: `Facturas/Revisar` (ASECON factura 1-001804, 181,50€, "estudio-preparación-presentación
+  Renta" a nombre de Alberto — confirmado SIN cargo en banco jul-sep, coincide con el aviso de
+  ASECON de que sigue impagada) y `Facturas/PDF-pendiente` (2 Endesa Socorro 24, Ref
+  P26CON034910794 y P26CON039980996 — solo enlace al portal, sin PDF adjunto en el email; la
+  primera ya está conciliada por banco desde una pasada previa, solo falta el PDF; la segunda aún
+  sin cargo en el banco). Ninguna se pudo resolver (sin browser/OCR ni `gmail-adjuntos`) → se
+  mantienen las etiquetas. `Facturas/Extraccion-fallida`: `list_labels` marcaba 1, pero
+  `search_threads` (la fuente correcta) da 0 — sin backlog real. Barrido 4.0
+  (`v_facturas_sin_cargo`): 0 filas `sin_revisar`. Candidatos Gmail (`newer_than:2d`) y subidas
+  manuales (`_subir_aqui` + raíz 2026): 0 facturas nuevas. dudas: ASECON 181,50€ — ¿se paga? ¿a qué
+  `destino` iría si se archiva (no encaja en pisos/dúplex/seguros)?; fallos: —.
+  PRs/commits: este commit (solo memoria/bitácora, sin cambios de código).
 - **2026-09-27 · mercado-booking** · hizo: segunda pasada diaria del día — 238 comparables reales
   de Booking en las 24 ventanas de mercado del plan (`max=24`, `candidatas=508`, `recortadas=484` —
   no agota el plan; ventanas casi todas de evento Q1 2027 en Santa Cruz/Betis-Sevilla + una de
