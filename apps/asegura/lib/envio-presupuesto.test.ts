@@ -49,3 +49,11 @@ test('🪤 sin necesidades escritas no se avisa, y se comprueba ANTES de rotar e
   const rota = avisar.indexOf('tokenHash: nuevoHash')
   assert.ok(nec > 0 && rota > nec)
 })
+
+test('🪤 el correo lleva acceso directo (tras el compare-and-swap) y el WhatsApp no', () => {
+  const avisar = src.slice(src.indexOf('export async function avisarPresupuesto'), src.indexOf('export async function confirmarWhatsapp'))
+  const llave = avisar.indexOf('await enlaceDirectoPresupuesto(')
+  assert.ok(llave > avisar.indexOf('const rotado = await'), 'la llave solo se crea si este clic ganó el CAS')
+  assert.ok(llave > avisar.indexOf("if (entrada.canal === 'whatsapp_enlace') {\n    const mensaje"), 'el WhatsApp no lleva llave')
+  assert.match(avisar, /correoPresupuesto\(\{ \.\.\.datos, enlaceDirecto: directo \}\)/)
+})

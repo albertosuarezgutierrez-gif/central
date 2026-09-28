@@ -48,3 +48,16 @@ test('🪤 el correo lleva la marca (logo y botón) y el enlace también en text
   assert.match(h, /background:#3364ee[^"]*"[^>]*>Ver mi presupuesto<\/a>/)
   assert.equal(h.match(/clientes\.grupoasegura\.es\/presupuesto\/abc/g)?.length, 3)
 })
+
+test('🪤 con enlace directo: el botón entra sin código, el de siempre queda al pie y firmar sigue con código', () => {
+  const directo = 'https://clientes.grupoasegura.es/#d=jose%40x.es&e=TOKEN'
+  const c = correoPresupuesto({ ...d, enlaceDirecto: directo })
+  assert.match(c.html, /href="https:\/\/clientes\.grupoasegura\.es\/#d=jose%40x\.es&amp;e=TOKEN"[^>]*>Ver mi presupuesto/)
+  assert.match(c.html, /24 horas[^<]*<br><a href="https:\/\/clientes\.grupoasegura\.es\/presupuesto\/abc"/)
+  assert.match(c.html, /fírmala con el código/)
+  assert.match(c.texto, /vale una vez, durante 24 horas/)
+  assert.ok(c.texto.includes(directo) && c.texto.includes(d.enlace))
+  // Sin enlace directo, el de siempre.
+  assert.doesNotMatch(correoPresupuesto(d).html, /#d=/)
+  assert.deepEqual(revisarCopy(c.texto), [])
+})

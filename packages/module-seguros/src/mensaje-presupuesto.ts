@@ -24,6 +24,12 @@ export type DatosAvisoPresupuesto = {
    * ni la cuenta — un correo que pide datos no se distingue de un phishing. `null`/0 = no se menciona.
    */
   faltanDatos?: number | null
+  /**
+   * Enlace de ACCESO DIRECTO a la intranet (un solo uso, 24 h, `enlace-directo.ts` del portal). Si
+   * viene, el botón entra sin código; el enlace de siempre (`enlace`) queda al pie para cuando ya se
+   * haya usado o caducado. Firmar sigue pidiendo su código aparte.
+   */
+  enlaceDirecto?: string | null
 }
 
 /** La línea de «me faltan N datos tuyos», o `null` si no hay que decirla. */
@@ -67,10 +73,14 @@ export function correoPresupuesto(d: DatosAvisoPresupuesto): CorreoPresupuesto {
   const asunto = 'Tu presupuesto de seguro está listo'
   const vence = `Es válido hasta el ${fechaEs(d.venceEl)}.`
   const faltan = lineaDatosQueFaltan(d.faltanDatos)
+  const directo = d.enlaceDirecto?.trim() || null
   const lineas = [
     `${saludo(d.nombre)}:`,
-    'Te he preparado un presupuesto de seguro. Para verlo, abre este enlace y entra con este mismo correo; te llegará un código de acceso.',
-    d.enlace,
+    directo
+      ? 'Te he preparado un presupuesto de seguro. Entra en tu área de clientes con este enlace (vale una vez, durante 24 horas):'
+      : 'Te he preparado un presupuesto de seguro. Para verlo, abre este enlace y entra con este mismo correo; te llegará un código de acceso.',
+    directo ?? d.enlace,
+    ...(directo ? [`Si ese enlace ya no abre, entra aquí con tu correo y te llegará un código: ${d.enlace}`] : []),
     vence,
     faltan,
     'Si tienes cualquier duda, responde a este correo.',
@@ -91,18 +101,18 @@ export function correoPresupuesto(d: DatosAvisoPresupuesto): CorreoPresupuesto {
     `<div style="padding:28px 32px">`,
     `<p style="${titular};font-size:24px;line-height:1.25;color:${AZUL};margin:0 0 14px">${escapar(saludo(d.nombre))}, tu presupuesto está listo</p>`,
     p('Te he preparado un presupuesto de seguro para que elijas la opción que mejor te encaje.'),
-    `<div style="text-align:center;margin:22px 0"><a href="${escapar(d.enlace)}" style="display:inline-block;background:${AZUL};color:#fff;text-decoration:none;${titular};font-size:17px;padding:14px 28px;border-radius:10px">Ver mi presupuesto</a></div>`,
+    `<div style="text-align:center;margin:22px 0"><a href="${escapar(directo ?? d.enlace)}" style="display:inline-block;background:${AZUL};color:#fff;text-decoration:none;${titular};font-size:17px;padding:14px 28px;border-radius:10px">Ver mi presupuesto</a></div>`,
     `<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;background:#f3f5fc;border-radius:10px;margin:0 0 18px"><tr><td style="padding:16px 18px"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse">`,
     paso(1, 'Pulsa «Ver mi presupuesto».'),
-    paso(2, 'Entra con este mismo correo: te llegará un código de acceso.'),
-    paso(3, 'Elige la opción que prefieras y fírmala desde el móvil.'),
+    paso(2, directo ? 'Pulsa «Entrar»: accedes directamente a tu área de clientes.' : 'Entra con este mismo correo: te llegará un código de acceso.'),
+    paso(3, 'Elige la opción que prefieras y fírmala con el código que te llegará al correo.'),
     `</table></td></tr></table>`,
     p(vence, ';font-weight:700'),
     faltan ? p(faltan) : '',
     p('Si tienes cualquier duda, responde a este correo.'),
     `<p style="font-size:16px;line-height:1.5;margin:22px 0 0">Un saludo,<br><strong>Alberto Suárez</strong><br>Grupo ASegura</p>`,
     `</div>`,
-    `<div style="background:#f3f5fc;padding:14px 32px;font-size:12px;line-height:1.5;color:#5a6280">Si el botón no funciona, copia este enlace en el navegador:<br><a href="${escapar(d.enlace)}" style="color:${AZUL};word-break:break-all">${escapar(d.enlace)}</a></div>`,
+    `<div style="background:#f3f5fc;padding:14px 32px;font-size:12px;line-height:1.5;color:#5a6280">${directo ? 'El botón vale una sola vez y durante 24 horas. Si ya no abre, entra aquí con tu correo y te llegará un código:' : 'Si el botón no funciona, copia este enlace en el navegador:'}<br><a href="${escapar(d.enlace)}" style="color:${AZUL};word-break:break-all">${escapar(d.enlace)}</a></div>`,
     `</div></div>`,
   ].join('')
   return { asunto, texto, html }
