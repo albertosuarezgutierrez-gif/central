@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { test } from 'node:test'
 
@@ -18,13 +18,16 @@ const CARPETAS = ['asegura/lib', 'asegura/app', 'asegura-portal/lib', 'asegura-p
 /** Marca para una consulta que NO debe filtrar (p. ej. la que busca la opción para ocultarla). */
 const EXENTA = 'oculta-exenta:'
 
+// Sin `statSync` y sin carpetas ocultas a propósito: en CI los tests de las demás apps corren a la
+// vez y pueden crear y borrar ficheros temporales bajo estas carpetas; un stat sobre uno que ya no
+// está revienta el cepo por algo que no es suyo.
 function fuentes(dir: string): string[] {
   const out: string[] = []
-  for (const e of readdirSync(dir)) {
-    if (e === 'node_modules' || e === 'generated') continue
-    const p = join(dir, e)
-    if (statSync(p).isDirectory()) out.push(...fuentes(p))
-    else if (/\.tsx?$/.test(e) && !/\.test\.tsx?$/.test(e)) out.push(p)
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    if (e.name === 'node_modules' || e.name === 'generated' || e.name.startsWith('.')) continue
+    const p = join(dir, e.name)
+    if (e.isDirectory()) out.push(...fuentes(p))
+    else if (e.isFile() && /\.tsx?$/.test(e.name) && !/\.test\.tsx?$/.test(e.name)) out.push(p)
   }
   return out
 }
