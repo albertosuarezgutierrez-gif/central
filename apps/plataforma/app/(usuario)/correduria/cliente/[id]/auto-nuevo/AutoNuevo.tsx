@@ -34,7 +34,9 @@ import {
 import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 
 import { pedirCatalogo, pedirCotizacionAuto } from './acciones'
-import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
+import { CeldaCompania } from '../../../CeldaCompania'
+import PrepararPresupuesto from '../../../poliza/[id]/retarificar/PrepararPresupuesto'
+import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 
 function euroODash(n: number | null | undefined): string {
@@ -155,6 +157,8 @@ type Resultado =
       precios: Precio[]
       fallos: Fallo[]
       supuestos: Supuesto[]
+      /** Qué pasó con la copia guardada: su `cotizacionId` es de lo que sale el presupuesto. */
+      guardado?: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
@@ -533,7 +537,7 @@ export default function AutoNuevo({
   const faltaMunicipio = !municipioId
   const faltaMatricula = !matricula.trim()
   const faltaMatriculacion = !matriculacion
-  const estimacion = fechaMatriculacionEstimada(matricula)
+  const estimacion = fechaMatriculacionEstimada(matricula, hoyLocal())
 
   // Con cada matrícula (tecleada, pegada o restaurada del borrador) se consulta
   // la fecha a Avant2, gratis; mientras tanto, o si no responde, vale la
@@ -553,7 +557,7 @@ export default function AutoNuevo({
       }
       return
     }
-    const local = fechaMatriculacionEstimada(placa)
+    const local = fechaMatriculacionEstimada(placa, hoyLocal())
     setMatriculacion(local?.estimada ?? '')
     setMatriculacionEstimada(local !== null)
     setFuenteMatriculacion(local ? 'serie' : null)
@@ -701,6 +705,7 @@ export default function AutoNuevo({
           precios: r.precios,
           fallos: r.fallos,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
       default: {
@@ -1207,6 +1212,12 @@ function BloquePersona({
 
 const KM_ANUALES_POR_DEFECTO = 10000
 
+/** Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes. */
+function hoyLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function fechaCorta(iso: string): string {
   const [a, m, d] = iso.split('-')
   return `${d}/${m}/${a}`
@@ -1276,30 +1287,9 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
           </thead>
           <tbody>
             {r.precios.map((p, i) => {
-              const logo = logoCompania(p.compania)
-              const producto = nombreProductoSinCia(p.compania, p.producto)
               return (
               <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    {logo ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={logo.src}
-                        alt=""
-                        style={{ height: Math.round(18 * logo.escala), maxWidth: 52, objectFit: 'contain', flexShrink: 0 }}
-                      />
-                    ) : (
-                      <Badge tono="neutral">{(p.compania ?? '—').slice(0, 2).toUpperCase()}</Badge>
-                    )}
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{p.compania ?? '—'}</div>
-                      {producto && (
-                        <div style={{ color: 'var(--muted)', fontSize: 11, whiteSpace: 'nowrap' }}>{producto}</div>
-                      )}
-                    </div>
-                  </div>
-                </td>
+                <td style={td}><CeldaCompania compania={p.compania} producto={p.producto} /></td>
                 <td style={td}>{p.categoria ?? <span style={{ color: 'var(--muted)' }}>sin declarar</span>}</td>
                 <td style={td}>
                   <strong>{euroODash(p.primaEur)}</strong>
@@ -1315,6 +1305,9 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
           </tbody>
         </table>
       </div>
+      {cotizacionIdDe(r.guardado) !== null && (
+        <PrepararPresupuesto tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
+      )}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
       )}

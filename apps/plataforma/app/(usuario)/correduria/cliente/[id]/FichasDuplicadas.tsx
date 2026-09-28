@@ -13,7 +13,7 @@ import { btnStyle } from '@/components/ui'
  *
  * `null` al consultar = no se ha podido mirar: se dice, no se calla.
  */
-type Ficha = { id: string; nombre: string; tipo: string; dniEnmascarado: string | null; polizas: number; polizasVivas: number; telefonos: number; emails: number }
+type Ficha = { id: string; nombre: string; tipo: string; dniEnmascarado: string | null; dniIlegible?: boolean; polizas: number; polizasVivas: number; telefonos: number; emails: number }
 type Comparacion = { superviviente: Ficha; absorbida: Ficha; identidad: IdentidadFusion; campos: CampoFusion[] }
 
 export default function FichasDuplicadas({ clienteId }: { clienteId: string }) {
@@ -172,7 +172,7 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
             <label key={id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, minHeight: 44 }}>
               <input type="radio" name={`quedar-${otra.id}`} checked={seQueda === id} onChange={() => { setElegidaPorDefecto(true); setSeQueda(id) }} />
               <span style={{ overflowWrap: 'anywhere' }}>
-                {f.nombre} {id === clienteId ? '(esta)' : ''} — {f.tipo} · {f.polizasVivas} viva{f.polizasVivas === 1 ? '' : 's'} de {f.polizas} · DNI {f.dniEnmascarado ?? 'sin DNI'}
+                {f.nombre} {id === clienteId ? '(esta)' : ''} — {f.tipo} · {f.polizasVivas} viva{f.polizasVivas === 1 ? '' : 's'} de {f.polizas} · DNI {f.dniIlegible ? 'ilegible' : f.dniEnmascarado ?? 'sin DNI'}
               </span>
             </label>
           )
@@ -190,7 +190,9 @@ function Comparar({ clienteId, otra, onCerrar, onFusionada }: { clienteId: strin
       {cmp.identidad === 'sin_comprobar' && (
         <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, minHeight: 44 }}>
           <input type="checkbox" checked={confirmo} onChange={e => setConfirmo(e.target.checked)} />
-          Una de las dos no tiene DNI, así que no se puede comprobar. Confirmo que son la misma persona.
+          {cmp.superviviente.dniIlegible || cmp.absorbida.dniIlegible
+            ? 'El DNI de una de las dos no se puede leer (se guardará cifrado en el registro de la fusión), así que no se puede comprobar. Confirmo que son la misma persona.'
+            : 'Una de las dos no tiene DNI, así que no se puede comprobar. Confirmo que son la misma persona.'}
         </label>
       )}
 

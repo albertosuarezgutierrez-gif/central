@@ -16,14 +16,15 @@ import { preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades } 
  * WhatsApp lo manda él desde su móvil (aquí solo se abre con el texto escrito), y por eso
  * «enlazado» no es «enviado» hasta que pulse «Ya lo he mandado».
  */
-export default function PresupuestosPoliza({ polizaId, ramo }: { polizaId: string; ramo?: string | null }) {
+export default function PresupuestosPoliza({ polizaId, clienteId, ramo }: { polizaId?: string; clienteId?: string; ramo?: string | null }) {
+  const filtro = polizaId ? `polizaId=${encodeURIComponent(polizaId)}` : `clienteId=${encodeURIComponent(clienteId ?? '')}`
   const [lista, setLista] = useState<PresupuestoEnLista[] | null | 'error'>(null)
   const [datosEmision, setDatosEmision] = useState<Record<string, unknown>>({})
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
 
   const cargar = useCallback(() => {
-    fetch(`/api/correduria/presupuesto?polizaId=${encodeURIComponent(polizaId)}`, { cache: 'no-store' })
+    fetch(`/api/correduria/presupuesto?${filtro}`, { cache: 'no-store' })
       .then(async (r) => {
         const j = (await r.json().catch(() => null)) as { estado?: string; presupuestos?: unknown[]; datosEmision?: Record<string, unknown> } | null
         if (!r.ok || j?.estado !== 'ok' || !Array.isArray(j.presupuestos)) { setLista('error'); return }
@@ -32,7 +33,7 @@ export default function PresupuestosPoliza({ polizaId, ramo }: { polizaId: strin
         setLista(filas.some((f) => f === null) ? 'error' : (filas as PresupuestoEnLista[]))
       })
       .catch(() => setLista('error'))
-  }, [polizaId])
+  }, [filtro])
   useEffect(() => { cargar() }, [cargar])
 
   async function patch(p: PresupuestoEnLista, cuerpo: Record<string, unknown>, ventana?: Window | null) {
@@ -81,14 +82,14 @@ export default function PresupuestosPoliza({ polizaId, ramo }: { polizaId: strin
         return (
           <div key={p.id} style={{ display: 'grid', gap: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
             <span style={{ fontSize: 14 }}>
-              {ROTULO_ESTADO_PRESUPUESTO[p.estado]} · {p.opciones} opción{p.opciones === 1 ? '' : 'es'}
+              {!polizaId && p.ramo ? `${p.ramo.charAt(0).toUpperCase()}${p.ramo.slice(1)} · ` : ''}{ROTULO_ESTADO_PRESUPUESTO[p.estado]} · {p.opciones} opción{p.opciones === 1 ? '' : 'es'}
               {p.desdeEur !== null ? ` · desde ${eur(p.desdeEur)}` : ''} · vale hasta el {new Date(p.venceEl).toLocaleDateString('es-ES')}
             </span>
             {p.clienteId && p.estado !== 'retirado' && p.estado !== 'emitido' && p.estado !== 'caducado' && (() => {
               const d = fraseDatosEmision(datosEmision[p.clienteId])
               return <span style={{ fontSize: 13, color: d.alerta ? 'var(--negative)' : 'var(--muted)' }}>{d.texto}</span>
             })()}
-            <Necesidades p={p} ramo={ramo ?? null} deshabilitado={!libre} onGuardar={(texto, respuestas) => void patch(p, { accion: 'necesidades', texto, respuestas })} />
+            <Necesidades p={p} ramo={p.ramo ?? ramo ?? null} deshabilitado={!libre} onGuardar={(texto, respuestas) => void patch(p, { accion: 'necesidades', texto, respuestas })} />
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {a.avisar && (
                 <button type="button" disabled={!libre} style={btnStyle('primario')} onClick={() => {

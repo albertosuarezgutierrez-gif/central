@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — 🗂️ CIMA siniestros (SIN) reprocesados. PR #3853 (portal: todo el siniestro al cliente) mergeado (squash, 32 checks verdes). Run `cima-rescate-lote` sobre rama `cima-lote-sin-2026-09-28` (46 ficheros SIN) ✅ 6m21s.
+Recuento en `seguros.siniestros` (101): fecha_declaracion 100, responsabilidad_cima 97, expedientes_cima 61, reserva_cima 39, danos_cima 21, vehiculo_cima 7, asistencias_cima 5, reserva_desglose_cima 4, vehiculo_contrario_cima 2; posicion/situaciones 101.
+**tramitador_nombre, perito_nombre y descripcion_cima = 0** → el lote CIMA no los trae o el parser no los extrae (pendiente revisar).
+Ramas `cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` borradas. Pendiente: borrar runs de `cima-rescate-lote` (inputs con clave); ramas viejas `cima-lote-sin-2409` y `rescate/cima-lote-20260924`; mover la clave a un secret de Actions.
+
 **(28/09/2026)** — 📭 Webhook de Codeoscopic: las 4 emisiones reales (17-28/09) NO han generado ni un aviso. Medido: desde el 17/09 llega un POST cada ~30 min a `app.grupoasegura.com` que la RUTA del CRM (no el middleware: `/api/webhooks/codeoscopic` ya es pública) rechaza con 401 — `webhook_signature_invalid`, cabecera presente, `authUserPresente:false`: el USUARIO de la Basic Auth no es el nuestro. Las peticiones con credenciales válidas (proyectos de 6 cifras, otra alta) sí pasaban → Codeoscopic tiene DOS altas del webhook con credenciales distintas; no se arregla con código, hay que alinear credenciales con Codeoscopic (pendiente del OK de Alberto). Parece un solo aviso reintentándose en cola. Cero pérdida en cartera (las emisiones se cierran sin el aviso). Nueva señal del vigía `emisionesSinAviso` (>24 h emitida, 30 días, sin evento) → degrada + Telegram por cambio de firma (8º tramo, normalizador 7→8); hoy salta con 40769244/40804066/40841279.
 
 **(28/09/2026)** — Auditoría de la ingesta CIMA «sin huecos» + pintar: asegura #859/#860/#861/#862/#864/#865 **MERGEADOS** (papeles por fila, PII fuera de recibos, recibos/CEF, siniestros, pólizas: fechas, `pagador`, cobro cifrado, riesgos, contacto del tomador solo huecos, prima anual L10 con C0058 **Mapfre** + C0072). Migraciones 0100-0104 aplicadas a mano en `seguros`. central#3820 **MERGEADO** (figura en el portal + enum `pagador`). Reproceso de los 36 POL de Drive hecho: 158/159 pólizas con los campos nuevos, pagador 0→26, 0 IBAN en claro; C0109 no manda importes (prima NULL correcta). Pintado en `/correduria` (ficha póliza: contrato/cobro/riesgos/recibos; siniestros: detalle CIMA) y en la ficha del portal: PR de central «pintar datos CIMA». ⚠️ Pendiente a mano: borrar en GitHub la rama `cima-lote-2026-09-28` y el run 36403813502 de `asegura` (el proxy no deja borrar). Detalle: `docs/ASEGURA-CIMA-INGESTA-INVENTARIO.md` § Auditoría.
@@ -844,6 +849,12 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   si la ciudad guardada contradice al CP lo avisa debajo (caso 41011 + «ESPARTINAS»: 41011 es Sevilla).
 - La provincia ahora se sobrescribe con la del CP al teclear un CP completo (antes solo si estaba vacía).
 
+## (28/09/2026) Matrícula de ESTE mes: la fecha ya se estima (moto y auto) + garaje por defecto en moto
+- `2121NST` no rellenaba nada: la tabla de series solo tiene meses CERRADOS (acaba en NRY, agosto), así que
+  toda matrícula del mes en curso daba `null`. `fechaMatriculacionEstimada(m, hoy)` extrapola al ritmo medio
+  de 12 meses acotado a [último hito, hoy]; una serie imposible (más allá de hoy+20 d al ritmo máximo) sigue `null`.
+- Moto: «¿Dónde duerme?» arranca en «Vía pública», como auto.
+
 ## (28/09/2026) Presupuesto de moto: la matrícula ya rellena sola la fecha de matriculación
 - `MotoNuevo.tsx` no tenía el autorrelleno que sí tenía `AutoNuevo.tsx`: se porta igual (estimación por serie
   al instante + Avant2 a los 500 ms; nunca pisa una fecha tecleada; en modo póliza no actúa).
@@ -866,6 +877,16 @@ Mismo PR: el portal reabre el campo del código si hay uno vigente (`codigoCaduc
 ⚠️ Ese día Mapfre contestó que CCORREDOR@mapfre.com es SOLO comercial: las bajas de Pablo y Jose NO están comunicadas.
 `recibe_anulaciones` de Mapfre a false, CCORREDOR re-etiquetado comercial; mapfre@mapfre.es probado → Resend «suppressed» (no
 entrega). Borradores en Gmail a jmreal@mapfre.com (comercial) preguntando el buzón de bajas. Los otros 4 buzones «general» sin verificar.
+## (28/09/2026) Fusión de fichas: el DNI ILEGIBLE ya no bloquea para siempre
+`identidadFusion` (`@central/module-seguros`) y `seguros.fusionar_clientes` distinguen **DNI ilegible** (no descifra con la
+clave funcionando, o no tiene forma de documento; sin índice) de **legible sin índice**. El ilegible cuenta como
+`sin_comprobar` (exige `confirmarSinDni`); el legible sin índice sigue en `dni_sin_indice`. La app pasa el valor CIFRADO
+exacto en el 7º argumento `p_dni_ilegibles`; la BD exige que coincida con la fila y que no tenga índice
+(`dni_ilegible_no_coincide`) y lo anota en `cliente_merge_log.deps_repointed->'dni_ilegible'`. Si la superviviente es la
+ilegible y la otra tiene DNI legible, se queda el legible con su índice. Firma de 6 args = envoltorio con el comportamiento
+viejo. **Migración `fusionar_clientes_dni_ilegible` YA APLICADA en prod** (probada antes en transacción revertida, 6 casos).
+La app solo marca «ilegible» si su clave LEE la cartera (descifra un DNI ya indexado): un ida y vuelta con la propia
+clave no prueba nada con una clave equivocada (hallazgo de code-review; cepo `apps/asegura/lib/cartera-fusion.test.ts`).
 
 ## (28/09/2026) asegura-portal: la FIGURA del cliente en cada póliza
 - Alberto: «indicar en la app cliente la figura que tiene en la póliza». Chip en la fila de la bóveda («Tomador», «Tomador y conductor habitual», «Propietario») y frase en la ficha («En esta póliza figuras como…» / «…como propietario. El tomador es X.»).
@@ -875,7 +896,7 @@ entrega). Borradores en Gmail a jmreal@mapfre.com (comercial) preguntando el buz
 - Ingesta CIMA (asegura#859, mergeado 28/09): guarda TODAS las figuras — un papel por fila (índice `(correduria,poliza,nif_lookup_hash,rol)` ya aplicado en `seguros`), propietario empresa, asegurado = tomador (sin contacto). ⏸️ Falta reprocesar los 36 POL de Drive con `cima-rescate-lote` (lote cifrado preparado en la sesión, no lanzado): hasta entonces los datos viejos siguen sin el 2º papel.
 
 ## (28/09/2026) E2E `playwright / portal` de asegura rojo en todos los PRs = bypass de Vercel caducado
-Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCEL_PROTECTION_BYPASS_SECRET` de GitHub ya no vale → todo acaba en `vercel.com/login`; rojo desde el 04/09 (paso del proyecto al equipo de Alberto). F3 «aceptar precio» NI corre: se salta por faltar `E2E_SUPABASE_URL` (el comentario del bot lo culpaba por texto cableado). PR asegura#863 (draft): preflight que lo dice en 1 s + comentario con recuento real. ✅ Secreto copiado el mismo día: E2E en verde (14 ok · 0 fallidos · 12 saltados). Los 12 saltados (F3 incluido) esperan `E2E_SUPABASE_URL`/`E2E_SUPABASE_SERVICE_ROLE_KEY` — decisión de Alberto (crean usuarios en Auth).
+Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCEL_PROTECTION_BYPASS_SECRET` de GitHub ya no vale → todo acaba en `vercel.com/login`; rojo desde el 04/09 (paso del proyecto al equipo de Alberto). F3 «aceptar precio» NI corre: se salta por faltar `E2E_SUPABASE_URL` (el comentario del bot lo culpaba por texto cableado). PR asegura#863 (draft): preflight que lo dice en 1 s + comentario con recuento real. ✅ Secreto copiado el mismo día: E2E en verde (14 ok · 0 fallidos · 12 saltados). Los 12 saltados (F3 incluido) esperan `E2E_SUPABASE_URL`/`E2E_SUPABASE_SERVICE_ROLE_KEY` — decisión de Alberto (crean usuarios en Auth). Después: Dependabot npm (#836→#866) rojo en `test + build` por **tsx 4.23**, no por libphonenumber: con tsx 4.22 la librería se cargaba sin metadata en los tests y el `catch→true` de `isValidTelefono` lo aceptaba todo; 2 tests validaban números no ES. asegura#867 (mergeado): tsx 4.23.13 + tests corregidos + cepo (rojo con 4.22); #866 mergeado sin ticket (squash f48abc2). ⚠️ `pnpm-lock.yaml` también: Vercel instala con pnpm frozen. Pendiente: el `catch→true` (fail-open) de `isValidTelefono`.
 
 ## (28/09/2026) Agente de huéspedes: dejaba de responderse a sí mismo (reserva 154692216)
 - Nuestros envíos reaparecen en Smoobu sin emisor; el anti-eco solo conocía `mensajes_log` (borrador), no acuses, programados ni lo editado en Telegram → 5 ecos en 4 días, 2 contestados solos al huésped, y el eco pisó en la cola la pregunta real.
@@ -884,6 +905,11 @@ Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCE
 - 2ª tanda: filtro de plantillas (`esPlantillaHost`: nombre completo al principio = bienvenida/despedida nuestra; 8 contestadas solas en sep), categorías con `\b` + seguridad/camas/avisos (el phishing caía en «parking» por «card»), `mensajes_log.respuesta_enviada` + `edited` real + vista `v_agente_huesped_calidad`, aviso de antigüedad en el prompt (>6 h), y lo aprobado SIN editar entra como hecho `propuesto` con botones.
 - ⚠️ Estado de limpieza NO consultable: `cleaning_sessions.started_at/completed_at` siempre NULL en los 4 pisos (nadie marca «terminada»). Botón «Piso listo» para Vanesa DESCARTADO por Alberto: la limpieza se gestiona desde oficina y avisarían tarde → no montar.
 - Revisión antes de merge: «self check-in» corto y el huésped que se presenta («this is Justine Delbos…») ya no se tragan como plantilla; `acceso` casa «clé/código/codes/keybox» (`\b` no ve tildes en JS).
+
+## (28/09/2026) Agente de huéspedes: «olvidar» lo que ya respondió Alberto a mano
+- El pendiente de `mensajes_pendientes_tg` solo se cerraba con los botones de Telegram: si se contesta desde Smoobu/Booking seguía vivo → recordatorio a los 45 min y acuse «lo estamos revisando» al huésped a las 3 h sobre una conversación ya atendida.
+- Botón **✋ Ya respondido** (`hsp_done`) en propuesta, re-propuesta y recordatorio: borra el pendiente sin enviar nada. Y el barrido de rancios (`rancio-guardia`) mira el hilo antes de recordar/acusar: si tras la pregunta hay un mensaje del host que no es nuestro ni plantilla (`respondidoFuera()`, puro y testeado), cierra y avisa por Telegram con el texto visto.
+- Pendiente de 154692216 (Justine) borrado a mano en BD. ⚠️ Hallazgo sin arreglar: los mensajes que Alberto escribió en ese hilo («Hemos corroborado…», «Tiene mi tlf…») entraron como DEL HUÉSPED y generaron borradores → atribución de emisor de Smoobu falla para mensajes del host escritos fuera (¿Booking extranet?). Sin el JSON crudo de Smoobu no se ha podido medir. Quedan 11 pendientes zombis (ago-sep) ya acusados, inertes.
 
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.

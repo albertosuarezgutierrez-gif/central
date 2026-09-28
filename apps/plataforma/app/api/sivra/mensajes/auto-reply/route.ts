@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
   // PENDIENTES RANCIOS — un borrador que escaló EN HORARIO y sigue sin que Alberto lo toque. Mismo
   // motivo para ir aquí arriba y fuera del try grande: si Smoobu falla al listar hilos, un huésped
   // que lleva horas esperando seguiría sin recibir nada. Solo actúa en horario de atención.
-  const rancios = await barrerPendientesRancios().catch(() => ({ recordados: 0, acusados: 0 }))
+  const rancios = await barrerPendientesRancios().catch(() => ({ recordados: 0, acusados: 0, cerrados: 0 }))
 
   const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {

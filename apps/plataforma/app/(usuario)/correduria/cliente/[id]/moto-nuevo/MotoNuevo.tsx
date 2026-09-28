@@ -16,6 +16,9 @@
 import { useEffect, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
+import { CeldaCompania } from '../../../CeldaCompania'
+import PrepararPresupuesto from '../../../poliza/[id]/retarificar/PrepararPresupuesto'
+import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { ConIcono } from '../../../iconos'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
@@ -153,7 +156,11 @@ export default function MotoNuevo({
   // serie nacional mientras tanto). `true` = la puso la estimación, no el corredor.
   const [matriculacionEstimada, setMatriculacionEstimada] = useState(false)
   const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
-  const [garaje, setGaraje] = useState('')
+  // Por defecto «vía pública», como en auto (Alberto, 25/09 y 28/09/2026): el
+  // caso más común y el conservador para la prima.
+  const [garaje, setGaraje] = useState(
+    () => (garajes.find((g) => /v[ií]a\s+p[uú]blica/i.test(g.nombre)) ?? garajes.find((g) => /\bcalle\b/i.test(g.nombre)))?.id ?? '',
+  )
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
@@ -246,7 +253,7 @@ export default function MotoNuevo({
   const faltaMatricula = !poliza && !matricula.trim()
   const faltaMatriculacion = !matriculacion
   const faltaMotoAnterior = experienciaConduccion === 'OtherMotorcycle' && !motoAnteriorCodigo.trim()
-  const estimacion = poliza ? null : fechaMatriculacionEstimada(matricula)
+  const estimacion = poliza ? null : fechaMatriculacionEstimada(matricula, hoyLocal())
 
   // Hermano del efecto de `AutoNuevo.tsx`: con cada matrícula tecleada se
   // consulta la fecha a Avant2 y, mientras tanto o si no responde, vale la
@@ -264,7 +271,7 @@ export default function MotoNuevo({
       }
       return
     }
-    const local = fechaMatriculacionEstimada(placa)
+    const local = fechaMatriculacionEstimada(placa, hoyLocal())
     setMatriculacion(local?.estimada ?? '')
     setMatriculacionEstimada(local !== null)
     setFuenteMatriculacion(local ? 'serie' : null)
@@ -749,6 +756,12 @@ export default function MotoNuevo({
   )
 }
 
+/** Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes. */
+function hoyLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function fechaCorta(iso: string): string {
   const [a, m, d] = iso.split('-')
   return `${d}/${m}/${a}`
@@ -784,13 +797,6 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
       {consumo.veredicto.permitido ? <> · quedan hoy <strong>{consumo.veredicto.restantesHoy}</strong> cotizaciones.</> : <> — {consumo.veredicto.explicacion}</>}
     </p>
   )
-}
-
-/** El id de la cotización guardada: sin él no hay proyecto al que pedir la emisión. */
-function cotizacionIdDe(guardado: unknown): string | null {
-  if (typeof guardado !== 'object' || guardado === null) return null
-  const g = guardado as Record<string, unknown>
-  return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
 }
 
 function Precios({
@@ -829,10 +835,10 @@ function Precios({
         {r.restantesHoy !== null ? <> · quedan hoy {r.restantesHoy}.</> : <> · el libro de consumo no se ha mirado (no hacía falta).</>}
       </p>
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 520 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 460 }}>
           <thead>
             <tr>
-              <th style={th}>Compañía</th><th style={th}>Producto</th><th style={th}>Cobertura</th>
+              <th style={th}>Aseguradora</th><th style={th}>Cobertura</th>
               <th style={th}>Prima anual</th><th style={th}>Franquicia</th><th style={th}>Firmeza</th>
               {emitible && <th style={th}>Emitir</th>}
             </tr>
@@ -840,8 +846,7 @@ function Precios({
           <tbody>
             {r.precios.map((p, i) => (
               <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}>{p.compania ?? '—'}</td>
-                <td style={td}>{p.producto ?? '—'}</td>
+                <td style={td}><CeldaCompania compania={p.compania} producto={p.producto} /></td>
                 <td style={td}>{p.categoria ?? <span style={{ color: 'var(--muted)' }}>sin declarar</span>}</td>
                 <td style={td}>
                   <strong>{euroODash(p.primaEur)}</strong>
@@ -892,6 +897,9 @@ function Precios({
             />
           )
         })}
+      {cotizacionIdDe(r.guardado) !== null && (
+        <PrepararPresupuesto tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
+      )}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
       )}
