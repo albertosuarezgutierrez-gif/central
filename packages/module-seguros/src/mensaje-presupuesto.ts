@@ -57,20 +57,53 @@ function escapar(s: string): string {
 
 export type CorreoPresupuesto = { asunto: string; texto: string; html: string }
 
+// Mismo lenguaje que el correo de cumpleaños (apps/asegura/lib/correo-felicitacion.ts): logo PNG
+// (Gmail y Outlook no pintan SVG), azul de marca en hex (en un correo no hay oklch) y botón grande.
+const LOGO_CORREO = 'https://grupoasegura.es/brand/logotipo-asegura-correo.png'
+const AZUL = '#3364ee'
+const TINTA = '#1b2340'
+
 export function correoPresupuesto(d: DatosAvisoPresupuesto): CorreoPresupuesto {
   const asunto = 'Tu presupuesto de seguro está listo'
+  const vence = `Es válido hasta el ${fechaEs(d.venceEl)}.`
+  const faltan = lineaDatosQueFaltan(d.faltanDatos)
   const lineas = [
     `${saludo(d.nombre)}:`,
     'Te he preparado un presupuesto de seguro. Para verlo, abre este enlace y entra con este mismo correo; te llegará un código de acceso.',
     d.enlace,
-    `Es válido hasta el ${fechaEs(d.venceEl)}.`,
-    lineaDatosQueFaltan(d.faltanDatos),
+    vence,
+    faltan,
     'Si tienes cualquier duda, responde a este correo.',
     'Alberto Suárez · Grupo ASegura',
   ].filter((l): l is string => l !== null)
   const texto = lineas.join('\n\n')
-  const html = lineas
-    .map((l) => (l === d.enlace ? `<p><a href="${escapar(d.enlace)}">Ver mi presupuesto</a></p>` : `<p>${escapar(l)}</p>`))
-    .join('\n')
+
+  const cuerpo = "font-family:'Nunito Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif"
+  const titular = 'font-family:Quicksand,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;font-weight:700'
+  const p = (t: string, extra = '') => `<p style="font-size:16px;line-height:1.6;margin:0 0 14px${extra}">${escapar(t)}</p>`
+  const paso = (n: number, t: string) =>
+    `<tr><td style="width:28px;vertical-align:top;padding:0 0 10px"><span style="display:inline-block;width:22px;height:22px;line-height:22px;border-radius:11px;background:${AZUL};color:#fff;text-align:center;font-size:12px;${titular}">${n}</span></td>` +
+    `<td style="font-size:15px;line-height:1.5;padding:0 0 10px">${escapar(t)}</td></tr>`
+  const html = [
+    `<div style="background:#f3f5fc;padding:24px 12px">`,
+    `<div style="max-width:520px;margin:0 auto;background:#fff;border-radius:14px;overflow:hidden;border:1px solid #e6e9f5;${cuerpo};color:${TINTA}">`,
+    `<div style="padding:28px 32px 20px;border-bottom:4px solid ${AZUL}"><img src="${LOGO_CORREO}" width="220" height="32" alt="Grupo ASegura" style="display:block;width:220px;height:auto;border:0"></div>`,
+    `<div style="padding:28px 32px">`,
+    `<p style="${titular};font-size:24px;line-height:1.25;color:${AZUL};margin:0 0 14px">${escapar(saludo(d.nombre))}, tu presupuesto está listo</p>`,
+    p('Te he preparado un presupuesto de seguro para que elijas la opción que mejor te encaje.'),
+    `<div style="text-align:center;margin:22px 0"><a href="${escapar(d.enlace)}" style="display:inline-block;background:${AZUL};color:#fff;text-decoration:none;${titular};font-size:17px;padding:14px 28px;border-radius:10px">Ver mi presupuesto</a></div>`,
+    `<table role="presentation" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;background:#f3f5fc;border-radius:10px;margin:0 0 18px"><tr><td style="padding:16px 18px"><table role="presentation" cellspacing="0" cellpadding="0" style="border-collapse:collapse">`,
+    paso(1, 'Pulsa «Ver mi presupuesto».'),
+    paso(2, 'Entra con este mismo correo: te llegará un código de acceso.'),
+    paso(3, 'Elige la opción que prefieras y fírmala desde el móvil.'),
+    `</table></td></tr></table>`,
+    p(vence, ';font-weight:700'),
+    faltan ? p(faltan) : '',
+    p('Si tienes cualquier duda, responde a este correo.'),
+    `<p style="font-size:16px;line-height:1.5;margin:22px 0 0">Un saludo,<br><strong>Alberto Suárez</strong><br>Grupo ASegura</p>`,
+    `</div>`,
+    `<div style="background:#f3f5fc;padding:14px 32px;font-size:12px;line-height:1.5;color:#5a6280">Si el botón no funciona, copia este enlace en el navegador:<br><a href="${escapar(d.enlace)}" style="color:${AZUL};word-break:break-all">${escapar(d.enlace)}</a></div>`,
+    `</div></div>`,
+  ].join('')
   return { asunto, texto, html }
 }

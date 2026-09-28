@@ -41,3 +41,10 @@ test('🪤 los datos que faltan se CUENTAN, nunca se piden: ni DNI, ni IBAN, ni 
   assert.doesNotMatch(correoPresupuesto(d).texto, /faltan?/)
   assert.deepEqual(revisarCopy(c.texto), revisarCopy(correoPresupuesto(d).texto))
 })
+
+test('🪤 el correo lleva la marca (logo y botón) y el enlace también en texto por si el botón no abre', () => {
+  const h = correoPresupuesto(d).html
+  assert.match(h, /logotipo-asegura-correo\.png/)
+  assert.match(h, /background:#3364ee[^"]*"[^>]*>Ver mi presupuesto<\/a>/)
+  assert.equal(h.match(/clientes\.grupoasegura\.es\/presupuesto\/abc/g)?.length, 3)
+})
