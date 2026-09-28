@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { Flower2 } from 'lucide-react'
+import { Construction, Flower2 } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { precalificarDecesosNuevaAsegura, catalogoAsegura } from '@/lib/decesos-nuevo-asegura'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
+import { ConIcono } from '../../../iconos'
 import DecesosNuevo from './DecesosNuevo'
 
 export const dynamic = 'force-dynamic'
@@ -39,10 +40,10 @@ export default async function DecesosNuevoPage({ params }: { params: Promise<{ i
           marginTop: 10,
         }}
       >
-        🚧 El contrato de este ramo con Codeoscopic <strong>no está verificado</strong>, y hoy solo cubre
+        <ConIcono i={Construction}>El contrato de este ramo con Codeoscopic <strong>no está verificado</strong>, y hoy solo cubre
         al tomador como único asegurado (sin cobertura familiar). El primer intento real puede fallar con
         un mensaje que pida un campo que hoy no se manda; no reintentes varias veces seguidas — cada
-        intento cuesta 0,50€ reales.
+        intento cuesta 0,50€ reales.</ConIcono>
       </div>
     </div>
   )

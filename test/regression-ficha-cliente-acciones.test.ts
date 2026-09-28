@@ -46,10 +46,10 @@ test('los avisos van pegados a lo que avisan, no sueltos entre botones', () => {
 // el menú de la cabecera, que ofrece los ramos con precio y la opción «sin precio».
 const DIR = join(import.meta.dirname, '..', 'apps/plataforma/app/(usuario)/correduria/cliente/[id]')
 test('abrir una oportunidad tiene UNA sola puerta: el menú de la cabecera', () => {
-  assert.match(acciones, /➕ Nueva oportunidad ▾/, 'el menú se llama como lo que crea')
+  assert.match(acciones, /[\+➕]\s*Nueva oportunidad\s*▾/, 'el menú se llama como lo que crea')
   assert.match(acciones, /oportunidad=nueva/, 'el menú ofrece también la oportunidad sin precio')
   const oportunidades = readFileSync(join(DIR, 'OportunidadesCliente.tsx'), 'utf8')
-  assert.doesNotMatch(oportunidades, />\s*➕ Nueva oportunidad\s*</, 'la tarjeta no repite el botón')
+  assert.doesNotMatch(oportunidades, />\s*[\+➕]\s*Nueva oportunidad\s*</, 'la tarjeta no repite el botón')
   assert.match(oportunidades, /get\('oportunidad'\) === 'nueva'/, 'la tarjeta abre el formulario cuando llega del menú')
   const seguros = readFileSync(join(DIR, 'SegurosCliente.tsx'), 'utf8')
   assert.doesNotMatch(seguros, /Presupuestar auto|urlAutoNuevo/, 'los seguros del cliente no repiten «Presupuestar auto»')

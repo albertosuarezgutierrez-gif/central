@@ -6,7 +6,9 @@
 // familiar).
 
 import { useState } from 'react'
+import { FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
+import { ConIcono } from '../../../iconos'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/decesos-nuevo-asegura'
 import { pedirCotizacionDecesos } from './acciones'
@@ -205,8 +207,8 @@ export default function DecesosNuevo({
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
           <p style={{ fontSize: 13 }}>
-            🧪 <strong>No se llama a ninguna compañía.</strong> El precio lo inventa central para poder ver la
-            pantalla funcionando. No cuesta nada y no cuenta contra el tope.
+            <ConIcono i={FlaskConical}><strong>No se llama a ninguna compañía.</strong> El precio lo inventa central para poder ver la
+            pantalla funcionando. No cuesta nada y no cuenta contra el tope.</ConIcono>
           </p>
         ) : (
           <p style={{ fontSize: 13 }}>
@@ -235,7 +237,7 @@ export default function DecesosNuevo({
         )}
         {resultado.estado === 'error' && (
           <p style={{ color: 'var(--negative)', fontSize: 13, marginTop: 12, whiteSpace: 'pre-wrap' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}{resultado.mensaje}
+            {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
             {resultado.gastoDesconocido && <> <strong>No se sabe si esto se ha cobrado.</strong> Comprueba el consumo antes de volver a pulsar.</>}
           </p>
         )}
@@ -282,7 +284,7 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
-          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>
+          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>
           <p style={{ margin: '4px 0 0', fontSize: 13 }}>
             {r.avisoSimulacion ?? 'Precio inventado por central para probar la pantalla: ninguna compañía lo ha dado y no se ha gastado ni un céntimo.'}
           </p>
@@ -290,7 +292,7 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
       )}
       {simulacion && !r.simulado && (
         <p style={{ color: 'var(--negative)', fontSize: 13, marginBottom: 12 }}>
-          ⚠️ Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
+          Esta pantalla se abrió en modo simulación, pero la respuesta no viene marcada como simulada: trátala
           como una cotización REAL y comprueba el consumo antes de volver a pulsar.
         </p>
       )}

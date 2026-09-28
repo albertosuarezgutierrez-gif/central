@@ -1,10 +1,12 @@
 import Link from 'next/link'
+import { Phone, Lock, RefreshCw } from 'lucide-react'
 import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { Badge, type Tono } from '@/components/ui'
+import { Ico } from '../../iconos'
 
 /**
  * Piezas compartidas por las pestañas de la ficha del cliente.
@@ -20,9 +22,9 @@ import { Badge, type Tono } from '@/components/ui'
 // ── Pólizas ─────────────────────────────────────────────────────────────────
 
 export const TIPOS: Record<string, string> = {
-  auto: '🚗 Auto', moto: '🏍️ Moto', hogar: '🏠 Hogar', vida: '🧬 Vida', salud: '🩺 Salud',
-  decesos: '⚱️ Decesos', responsabilidad_civil: '⚖️ R. Civil', comercio: '🏪 Comercio',
-  comunidades: '🏢 Comunidad', otros: '📄 Otros',
+  auto: 'Auto', moto: 'Moto', hogar: 'Hogar', vida: 'Vida', salud: 'Salud',
+  decesos: 'Decesos', responsabilidad_civil: 'R. Civil', comercio: 'Comercio',
+  comunidades: 'Comunidad', otros: 'Otros',
 }
 
 /** Semáforo del estado de una póliza: la FORMA dice vigente/cancelada antes de
@@ -192,11 +194,11 @@ function Intervinientes({ lista, polizaIds }: { lista: IntervinienteFicha[] | nu
         <div key={`${i.rol}-${n}`}>
           <span style={{ textTransform: 'capitalize' }}>{etiquetaRol(i.rol)}</span>:{' '}
           {i.fichaId ? (
-            <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')}</Link>
+            <Link href={`/correduria/cliente/${i.fichaId}`}>{i.nombre ?? (i.nombreIlegible ? <><Ico i={Lock} size={12} /> cifrado</> : 'sin nombre')}</Link>
           ) : (
-            i.nombre ?? (i.nombreIlegible ? '🔒 cifrado' : 'sin nombre')
+            i.nombre ?? (i.nombreIlegible ? <><Ico i={Lock} size={12} /> cifrado</> : 'sin nombre')
           )}
-          {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`}>📞</a></>}
+          {i.telefono && <> · <a href={`tel:${i.telefono.replace(/\s/g, '')}`} title="Llamar"><Ico i={Phone} size={12} /></a></>}
         </div>
       ))}
     </div>
@@ -230,7 +232,7 @@ function FilasIguales({ grupo }: { grupo: GrupoHistorica<PolizaFicha & { bien: s
       style={{ ...sub, marginTop: 4 }}
       title="El volcado de junio de 2026 trae estas filas con el mismo ramo, bien, compañía, estado y vencimiento, cambiando solo la prima. No se ha borrado ninguna: se enseñan juntas."
     >
-      🔁 {grupo.filas.length} filas del volcado:{' '}
+      <Ico i={RefreshCw} /> {grupo.filas.length} filas del volcado:{' '}
       {grupo.filas.map((f, i) => (
         <span key={f.id}>
           {i > 0 && ' · '}
@@ -269,7 +271,7 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
     return <span style={{ color: 'var(--muted)' }} title="La versión desplegada de asegura no informa este campo">—</span>
   }
   if (p.objeto.estado === 'cifrado') {
-    return <span style={{ color: 'var(--muted)', fontStyle: 'italic' }} title={p.objeto.nota ?? undefined}>🔒 cifrado</span>
+    return <span style={{ color: 'var(--muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }} title={p.objeto.nota ?? undefined}><Ico i={Lock} size={12} /> cifrado</span>
   }
   if (p.objeto.titulo === null && p.objeto.detalle === null) {
     return (
@@ -362,16 +364,16 @@ export function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
       </span>
     )
   }
-  if (r.devueltos > 0) return <span style={{ color: 'var(--negative)' }}>🔴 {r.devueltos} devuelto(s)</span>
-  if (r.pendientes > 0) return <span style={{ color: 'var(--warning)' }} title="Emitido por la compañía y aún sin cargar en cuenta. No es un impago.">🟡 {r.pendientes} al cobro</span>
-  // 🚨 Todos anulados (20 de 109 vivas) se pintaba «🟢 0 cobrado(s)»: cero
+  if (r.devueltos > 0) return <span style={{ color: 'var(--negative)' }}>{r.devueltos} devuelto(s)</span>
+  if (r.pendientes > 0) return <span style={{ color: 'var(--warning)' }} title="Emitido por la compañía y aún sin cargar en cuenta. No es un impago.">{r.pendientes} al cobro</span>
+  // Todos anulados (20 de 109 vivas) se pintaba «0 cobrado(s)»: cero
   // cobros no es estar al día — es una póliza cancelada o sustituida.
   if (r.cobrados === 0 && r.anulados > 0) {
-    return <span style={{ color: 'var(--muted)' }} title="Todos los recibos están anulados: la póliza se canceló o se sustituyó. No hay cobro.">⚪ {r.anulados} anulado(s)</span>
+    return <span style={{ color: 'var(--muted)' }} title="Todos los recibos están anulados: la póliza se canceló o se sustituyó. No hay cobro.">{r.anulados} anulado(s)</span>
   }
   return (
     <span style={{ color: 'var(--muted)' }}>
-      🟢 {r.cobrados} cobrado(s)
+      {r.cobrados} cobrado(s)
       {r.cobradoEur !== null && <div style={sub}>{eur(r.cobradoEur)}</div>}
       {r.ilegibles > 0 && <div style={{ ...sub, color: 'var(--warning)' }}>{r.ilegibles} importe(s) sin poder leer</div>}
     </span>
@@ -392,7 +394,7 @@ function motivoNoRetarificable(p: PolizaFicha): string {
  * bloque y con «No la gestionamos» en cada fila — el mismo chip que ya usa
  * el portal del cliente, para que el corredor no las confunda con una viva.
  *
- * 🚨 `null` ≠ `[]`: `null` es «no se ha podido leer si aportó algo» (falló
+ * IMPORTANTE: `null` ≠ `[]`: `null` es «no se ha podido leer si aportó algo» (falló
  * `portal_vinculo` o la tabla), `[]` es «se ha mirado y no ha aportado
  * ninguna». Colapsarlos en el mismo hueco mudo diría «no hay nada» sobre un
  * fallo de lectura — la regla NULL≠0 del CLAUDE.md raíz.
@@ -400,16 +402,16 @@ function motivoNoRetarificable(p: PolizaFicha): string {
 export function PolizasDeclaradas({ declaradas }: { declaradas: PolizaDeclaradaFicha[] | null }) {
   if (declaradas === null) {
     return (
-      <Tarjeta titulo="📥 Aportadas desde el portal">
+      <Tarjeta titulo="Aportadas desde el portal">
         <p style={{ color: 'var(--muted)', fontSize: 12, margin: 0 }}>
-          ⚠️ No se han podido leer. No significa que no haya aportado ninguna.
+          No se han podido leer. No significa que no haya aportado ninguna.
         </p>
       </Tarjeta>
     )
   }
   if (declaradas.length === 0) return null
   return (
-    <Tarjeta titulo={`📥 Aportadas desde el portal (${declaradas.length})`}>
+    <Tarjeta titulo={`Aportadas desde el portal (${declaradas.length})`}>
       <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>
         Las ha subido el propio cliente en su portal. No las gestiona Grupo ASegura: sirven para
         saber con quién tiene el seguro y cuándo le vence, de cara a ofrecerle cambiarse.

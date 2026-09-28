@@ -5,6 +5,7 @@
 // (plazo del art. 22 LCS, sin firma no se comunica) las aplica asegura; aquí se pinta lo que dice.
 
 import { useCallback, useEffect, useState } from 'react'
+import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react'
 import {
   ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION, ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION,
   MOTIVOS_ANULACION, SOLICITANTES_ANULACION, TIPOS_ANULACION,
@@ -115,7 +116,7 @@ export default function AnulacionPoliza({ polizaId, vencimiento }: { polizaId: s
       {aviso && (
         <div role="status" style={{ display: 'grid', gap: 4 }}>
           <p style={{ ...NOTA, color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>{aviso.texto}</p>
-          {aviso.advertencia && <p style={{ ...NOTA, color: 'var(--warning)' }}>⚠️ {aviso.advertencia}</p>}
+          {aviso.advertencia && <p style={{ ...NOTA, color: 'var(--warning)' }}><AlertTriangle size={14} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 4, verticalAlign: 'baseline' }} /> {aviso.advertencia}</p>}
         </div>
       )}
 
@@ -144,8 +145,10 @@ function Abierta({ a, ocupado, firmando, nota, setFirmando, setNota, accion }: {
       <ol style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: 0, padding: 0, listStyle: 'none' }}>
         {PASOS.map((p, i) => (
           <li key={p.estado} style={{ fontSize: 12, padding: '4px 8px', borderRadius: 999, border: '1px solid var(--border)',
-            fontWeight: i === actual ? 700 : 400, color: i <= actual ? 'var(--text)' : 'var(--muted)' }}>
-            {i < actual ? '✓ ' : i === actual ? '● ' : ''}{p.texto}
+            fontWeight: i === actual ? 700 : 400, color: i <= actual ? 'var(--text)' : 'var(--muted)', display: 'flex', alignItems: 'center', gap: 4 }}>
+            {i < actual && <CheckCircle2 size={14} strokeWidth={1.75} />}
+            {i === actual && <Circle size={14} strokeWidth={1.75} />}
+            {p.texto}
           </li>
         ))}
       </ol>

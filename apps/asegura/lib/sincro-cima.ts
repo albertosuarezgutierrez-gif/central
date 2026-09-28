@@ -1,6 +1,7 @@
 import { encryptField } from '@central/module-seguros-pii'
 import {
   compararConCima,
+  esPolizaDeCoche,
   huellaDecisionCima,
   nombrePropio,
   WHERE_CARTERA_VIVA,
@@ -97,7 +98,7 @@ async function fichasVivas(correduriaId: string, soloCliente?: string) {
       polizas: {
         // Solo cartera VIVA: el volcado de 2013-2018 no es «lo que manda CIMA».
         where: { AND: [{ mergedIntoPolizaId: null }, WHERE_CARTERA_VIVA] },
-        select: { id: true, tipo: true, numeroPoliza: true, fechaInicio: true },
+        select: { id: true, tipo: true, numeroPoliza: true, fechaInicio: true, datosEspecificos: true },
         // Las que no traen fecha, al final: si no, una sin fecha pasaría por la más reciente.
         orderBy: [{ fechaInicio: { sort: 'desc', nulls: 'last' } }],
       },
@@ -154,9 +155,10 @@ function cimaDe(c: Viva, porPoliza: Map<string, FilaInterviniente[]>): DatosCima
       const nac = descifrar(f.fechaNacimiento)
       if (!out.fechaNacimiento && nac) out.fechaNacimiento = nac
       const car = descifrar(f.fechaCarnet)
-      // CIMA no dice el tipo de carné. Solo se toma el del conductor de un AUTO,
+      // CIMA no dice el tipo de carné. Solo se toma el del conductor de un COCHE,
       // que es el B; el de una moto (A, o B para 125 cc) no se sabe de qué es.
-      if (!out.fechaCarnet && car && String(p.tipo) === 'auto') { out.fechaCarnet = car; out.ramoCarnet = 'auto' }
+      // Y moto se mira en el VEHÍCULO: muchas vienen con `tipo = 'auto'`.
+      if (!out.fechaCarnet && car && esPolizaDeCoche(String(p.tipo), p.datosEspecificos)) { out.fechaCarnet = car; out.ramoCarnet = 'auto' }
       const tel = descifrar(f.telefono)
       if (tel) out.telefonos.push(tel)
       const em = descifrar(f.email)

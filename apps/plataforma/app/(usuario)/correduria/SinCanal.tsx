@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { PhoneOff } from 'lucide-react'
+import { Clock, PhoneOff, TriangleAlert } from 'lucide-react'
 import { eur } from '@/lib/dinero'
 import {
   MOTIVOS_PUERTO,
@@ -11,6 +11,7 @@ import {
   type SinCanal,
 } from '@/lib/correduria-puerto'
 import { Badge, Pendiente, type Tono } from '@/components/ui'
+import { ConIcono } from './iconos'
 import Bloque from './Bloque'
 
 /**
@@ -205,8 +206,8 @@ export default function SinCanal({
     return (
       <Bloque titulo="Clientes sin canal de contacto" sub={SUB} Icono={PhoneOff} primero={primero}>
         <p style={pMuted}>
-          ⏳ El puerto con asegura no está conectado. <strong>No lo leas como «se puede avisar a
-          todo el mundo»</strong>: es que desde aquí no se ha podido mirar.
+          <ConIcono i={Clock}>El puerto con asegura no está conectado. <strong>No lo leas como «se puede avisar a
+          todo el mundo»</strong>: es que desde aquí no se ha podido mirar.</ConIcono>
         </p>
       </Bloque>
     )
@@ -216,8 +217,8 @@ export default function SinCanal({
     return (
       <Bloque titulo="Clientes sin canal de contacto" sub={SUB} Icono={PhoneOff} tono="malo" primero={primero}>
         <p style={{ ...pMuted, color: 'var(--negative)' }}>
-          ⚠️ No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} <strong>No significa que todos
-          los clientes sean localizables.</strong>
+          <ConIcono i={TriangleAlert}>No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} <strong>No significa que todos
+          los clientes sean localizables.</strong></ConIcono>
         </p>
       </Bloque>
     )
@@ -264,8 +265,8 @@ export default function SinCanal({
     >
       {datos.truncado && (
         <p style={{ ...pMuted, color: 'var(--warning)', marginBottom: 10 }}>
-          ⚠️ La lista viene recortada, así que los recuentos de arriba <strong>no se han podido
-          comprobar</strong> y saldrían más bajos que la realidad. Lo que se ve abajo es una parte.
+          <ConIcono i={TriangleAlert}>La lista viene recortada, así que los recuentos de arriba <strong>no se han podido
+          comprobar</strong> y saldrían más bajos que la realidad. Lo que se ve abajo es una parte.</ConIcono>
         </p>
       )}
 

@@ -19,7 +19,9 @@
 // ninguna de las dos se puede deshacer sola.
 
 import { useEffect, useRef, useState } from 'react'
+import { AlertTriangle, CheckCircle2, CircleHelp, Info, OctagonAlert, XCircle } from 'lucide-react'
 import { eur } from '@/lib/dinero'
+import { Ico, FILA } from '../../../iconos'
 import { pedirOferta, pedirEmision, pedirCatalogo, pedirCoberturas } from './acciones'
 import type { RespuestaCoberturas } from '@/lib/retarificar-asegura'
 import { ProductFormWidget } from './ProductFormWidget'
@@ -292,7 +294,7 @@ export function CoberturasOferta({ projectId, offerId }: { projectId: string; of
       <ul style={{ margin: '6px 0', paddingLeft: 18, fontSize: 13 }}>
         {r.coberturas.map((c, i) => (
           <li key={i} style={{ overflowWrap: 'anywhere' }}>
-            <span aria-hidden>{c.incluida === true ? '✅ ' : c.incluida === false ? '❌ ' : 'ℹ️ '}</span>
+            <Ico i={c.incluida === true ? CheckCircle2 : c.incluida === false ? XCircle : Info} color={c.incluida === true ? 'var(--positive)' : c.incluida === false ? 'var(--negative)' : undefined} />
             <strong>{c.nombre}</strong>
             {c.incluida === null && !c.texto && <span className="muted"> — sin detalle del vendor</span>}
             {c.texto && <span className="muted"> — {c.texto}</span>}
@@ -629,8 +631,8 @@ export function Emision({
           padding: 12,
         }}
       >
-        <p style={{ margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
-          🚨 Esto llama de verdad a Codeoscopic — sin sandbox
+        <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
+          <Ico i={AlertTriangle} /> Esto llama de verdad a Codeoscopic — sin sandbox
         </p>
         <p style={{ margin: '4px 0 0' }}>
           Un solo intento por paso. Si algo sale raro, el mensaje de la compañía se enseña tal cual:
@@ -698,8 +700,8 @@ export function Emision({
             }}
           />
           {productOptionsRerate !== null && (
-            <p className="ok" style={{ fontSize: 12, margin: '6px 0 0' }}>
-              ✅ {productOptionsRerate.length} opción(es) guardada(s) — pulsa «Reintentar» para confirmar el precio.
+            <p className="ok" style={{ ...FILA, fontSize: 12, margin: '6px 0 0' }}>
+              <Ico i={CheckCircle2} /> {productOptionsRerate.length} opción(es) guardada(s) — pulsa «Reintentar» para confirmar el precio.
             </p>
           )}
           {avisoProductFormRerate && (
@@ -935,8 +937,8 @@ export function Emision({
               }}
             />
             {productOptions !== null && (
-              <p className="ok" style={{ fontSize: 12, margin: '6px 0 0' }}>
-                ✅ {productOptions.length} opción(es) guardada(s) del formulario — se mandan con la emisión.
+              <p className="ok" style={{ ...FILA, fontSize: 12, margin: '6px 0 0' }}>
+                <Ico i={CheckCircle2} /> {productOptions.length} opción(es) guardada(s) del formulario — se mandan con la emisión.
               </p>
             )}
             {avisoProductForm && (
@@ -954,8 +956,8 @@ export function Emision({
               JSON con lo que pida la compañía. Si falta algo, la respuesta dirá exactamente qué
               claves espera — no hay que adivinarlas.
             </p>
-            <p className="err" style={{ fontSize: 12, margin: '4px 0 8px' }}>
-              ⚠️ Si la compañía pide una fecha de efecto, tiene que ser <strong>HOY</strong> (o más
+            <p className="err" style={{ ...FILA, fontSize: 12, margin: '4px 0 8px' }}>
+              <Ico i={AlertTriangle} /> Si la compañía pide una fecha de efecto, tiene que ser <strong>HOY</strong> (o más
               tarde) — nunca una fecha pasada de esta cotización. Las compañías no admiten pólizas
               retroactivas.
             </p>
@@ -1053,7 +1055,7 @@ export function Emision({
 
       {estado.paso === 'emitido' && (
         <div className="ok" style={{ marginTop: 14 }}>
-          ✅ Emitida. {estado.referenciaVendor && <>Referencia de la compañía: {estado.referenciaVendor}. </>}
+          <Ico i={CheckCircle2} /> Emitida. {estado.referenciaVendor && <>Referencia de la compañía: {estado.referenciaVendor}. </>}
           {estado.cuenta ? (
             <>
               Recibo domiciliado en <code>{estado.cuenta.enmascarada}</code>
@@ -1069,7 +1071,7 @@ export function Emision({
 
       {estado.paso === 'emitido_sin_acunar' && (
         <div className="err" style={{ marginTop: 14 }}>
-          ⚠️ {estado.mensaje}
+          <Ico i={AlertTriangle} /> {estado.mensaje}
         </div>
       )}
 
@@ -1078,8 +1080,8 @@ export function Emision({
           {estado.mensaje}
           {estado.quizaEmitido && (
             <>
-              <p style={{ margin: '8px 0 0', fontWeight: 700 }}>
-                ⚠️ Esto NO es un rechazo: Codeoscopic dejó de esperar a la compañía y no se sabe si llegó a
+              <p style={{ ...FILA, margin: '8px 0 0', fontWeight: 700 }}>
+                <Ico i={AlertTriangle} /> Esto NO es un rechazo: Codeoscopic dejó de esperar a la compañía y no se sabe si llegó a
                 emitir. No se ha cobrado nada por el envío.
               </p>
               {estado.consejo && (
@@ -1107,17 +1109,17 @@ export function Emision({
         return (
         <div style={{ marginTop: 14, border: '2px solid var(--warn)', borderRadius: 10, padding: 12 }}>
           {viva ? (
-            <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
-              🛑 La compañía ya tiene una solicitud {viva.veredicto === 'aprobada' ? 'APROBADA' : 'en curso'}
+            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+              <Ico i={OctagonAlert} /> La compañía ya tiene una solicitud {viva.veredicto === 'aprobada' ? 'APROBADA' : 'en curso'}
               {viva.numeroPoliza ? ` · póliza ${viva.numeroPoliza}` : ''} — NO se reenvía
             </p>
           ) : estado.rastro.length > 0 ? (
-            <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
-              🛑 El proyecto YA cuenta una solicitud de emisión en Codeoscopic
+            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+              <Ico i={OctagonAlert} /> El proyecto YA cuenta una solicitud de emisión en Codeoscopic
             </p>
           ) : (
-            <p style={{ margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
-              ⚠️ El último envío acabó sin respuesta clara — no se sabe si la compañía emitió
+            <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--warn)' }}>
+              <Ico i={AlertTriangle} /> El último envío acabó sin respuesta clara — no se sabe si la compañía emitió
             </p>
           )}
           <p style={{ margin: '6px 0 0' }}>{estado.mensaje}</p>
@@ -1140,7 +1142,7 @@ export function Emision({
                     <tr key={s.id ?? i}>
                       <td style={{ padding: '4px 8px' }}><code>{s.id ?? '—'}</code></td>
                       <td style={{ padding: '4px 8px' }}>
-                        {s.veredicto === 'aprobada' ? '🟢 ' : s.veredicto === 'rechazada' ? '🔴 ' : s.veredicto === 'pendiente' ? '🟠 ' : '❔ '}
+                        <Ico i={s.veredicto === 'aprobada' ? CheckCircle2 : s.veredicto === 'rechazada' ? XCircle : s.veredicto === 'pendiente' ? AlertTriangle : CircleHelp} color={s.veredicto === 'aprobada' ? 'var(--positive)' : s.veredicto === 'rechazada' ? 'var(--negative)' : s.veredicto === 'pendiente' ? 'var(--warning)' : undefined} />
                         {s.estadoNombre ?? s.estadoId ?? 'sin estado'}
                         {s.veredicto === 'desconocido' && s.estadoId ? ' (estado no reconocido: míralo en Avant2)' : ''}
                       </td>

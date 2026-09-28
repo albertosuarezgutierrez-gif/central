@@ -1,5 +1,7 @@
 'use client'
 import { useState } from 'react'
+import { CheckCircle2, Clock, Download, Eye, HelpCircle, Paperclip, Trash2, Upload } from 'lucide-react'
+import { Ico, FILA } from './iconos'
 import {
   TIPOS_DOCUMENTO,
   etiquetaEstadoDocumento,
@@ -152,8 +154,8 @@ export default function Documentos({
 
   return (
     <div style={{ display: 'grid', gap: 10 }}>
-      <div style={{ fontSize: 13, color: resumen.estado === 'sin_consultar' ? 'var(--warning)' : 'var(--muted)' }}>
-        {resumen.estado === 'sin_consultar' ? '❔ ' : ''}
+      <div style={{ ...FILA, fontSize: 13, color: resumen.estado === 'sin_consultar' ? 'var(--warning)' : 'var(--muted)' }}>
+        {resumen.estado === 'sin_consultar' ? <Ico i={HelpCircle} /> : null}
         {resumen.titular}
       </div>
 
@@ -184,17 +186,17 @@ export default function Documentos({
               </span>
               <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                 {d.estado !== 'pedido' && (
-                  <a href={`/api/correduria/documentos/${d.id}`} target="_blank" rel="noreferrer" style={btn}>
-                    👁 Ver
+                  <a href={`/api/correduria/documentos/${d.id}`} target="_blank" rel="noreferrer" style={{ ...btn, gap: 6 }}>
+                    <Ico i={Eye} /> Ver
                   </a>
                 )}
                 {d.estado === 'recibido' && (
-                  <button type="button" onClick={() => revisar(d.id)} disabled={ocupado} style={btn}>
-                    ✅ Revisado
+                  <button type="button" onClick={() => revisar(d.id)} disabled={ocupado} style={{ ...btn, gap: 6 }}>
+                    <Ico i={CheckCircle2} /> Revisado
                   </button>
                 )}
-                <button type="button" onClick={() => borrar(d.id)} disabled={ocupado} style={{ ...btn, color: 'var(--negative)' }}>
-                  🗑
+                <button type="button" onClick={() => borrar(d.id)} disabled={ocupado} aria-label="Borrar documento" title="Borrar documento" style={{ ...btn, color: 'var(--negative)' }}>
+                  <Ico i={Trash2} />
                 </button>
               </span>
             </li>
@@ -214,14 +216,14 @@ export default function Documentos({
               style={inp}
             />
           </label>
-          <button type="button" onClick={traerDeCodeoscopic} disabled={ocupado} style={{ ...btn, fontWeight: 600 }}>
-            📥 Traer póliza de Codeoscopic
+          <button type="button" onClick={traerDeCodeoscopic} disabled={ocupado} style={{ ...btn, fontWeight: 600, gap: 6 }}>
+            <Ico i={Download} /> Traer póliza de Codeoscopic
           </button>
         </div>
       )}
 
       <details>
-        <summary style={{ cursor: 'pointer', fontSize: 13, minHeight: 44 }}>📎 Subir o pedir un documento</summary>
+        <summary style={{ ...FILA, cursor: 'pointer', fontSize: 13, minHeight: 44 }}><Ico i={Paperclip} /> Subir o pedir un documento</summary>
         <div style={{ display: 'grid', gap: 8, marginTop: 8, maxWidth: 520 }}>
           <label style={lbl}>
             Tipo
@@ -247,11 +249,11 @@ export default function Documentos({
             <input value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="p. ej. «pedido por WhatsApp el 2/9»" style={inp} />
           </label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" onClick={subir} disabled={ocupado || !fichero} style={{ ...btn, fontWeight: 600 }}>
-              ⬆️ Guardar fichero
+            <button type="button" onClick={subir} disabled={ocupado || !fichero} style={{ ...btn, fontWeight: 600, gap: 6 }}>
+              <Ico i={Upload} /> Guardar fichero
             </button>
-            <button type="button" onClick={pedir} disabled={ocupado} style={btn}>
-              ⏳ Anotar como pedido (sin fichero)
+            <button type="button" onClick={pedir} disabled={ocupado} style={{ ...btn, gap: 6 }}>
+              <Ico i={Clock} /> Anotar como pedido (sin fichero)
             </button>
           </div>
         </div>

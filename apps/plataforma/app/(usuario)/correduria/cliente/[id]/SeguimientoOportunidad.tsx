@@ -134,7 +134,7 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
             color: i === indicePaso ? '#fff' : i < indicePaso ? 'var(--primary)' : 'var(--muted)',
             border: i > indicePaso ? '1px solid var(--border)' : '1px solid transparent',
           }}>
-            {i + 1} · {i === 3 && cerrada ? ROTULO_ESTADO[op.estado] : p.rotulo}{i < indicePaso ? ' ✓' : ''}
+            {i + 1} · {i === 3 && cerrada ? ROTULO_ESTADO[op.estado] : p.rotulo}
           </li>
         ))}
       </ol>

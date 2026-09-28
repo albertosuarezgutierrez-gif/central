@@ -1,6 +1,8 @@
 'use client'
 import { useState } from 'react'
+import { History } from 'lucide-react'
 import { fechaHoraEs, type AnotacionHistorial } from '@/lib/ficha-asegura'
+import { ConIcono } from './iconos'
 
 /**
  * 🕘 Historial de la ficha (edición, alta, relaciones, documentos…), al final
@@ -22,7 +24,7 @@ export default function Historial({ historial }: { historial: AnotacionHistorial
     <div style={{ border: `1px ${historial === null ? 'dashed' : 'solid'} var(--border)`, borderRadius: 12, padding: 14 }}>
       <details onToggle={(e) => setAbierto((e.currentTarget as HTMLDetailsElement).open)}>
         <summary style={{ cursor: 'pointer', fontWeight: 700, fontSize: 14, minHeight: 44 }}>
-          🕘 Historial <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>· {resumen}</span>
+          <ConIcono i={History}>Historial</ConIcono> <span style={{ fontWeight: 400, color: 'var(--muted)', fontSize: 12 }}>· {resumen}</span>
         </summary>
         {abierto && <Contenido historial={historial} />}
       </details>

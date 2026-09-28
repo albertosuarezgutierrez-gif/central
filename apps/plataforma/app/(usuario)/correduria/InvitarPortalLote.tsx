@@ -1,9 +1,10 @@
 'use client'
 import { useState } from 'react'
-import { Mail } from 'lucide-react'
+import { CheckCircle2, Mail } from 'lucide-react'
 
 import { btnStyle } from '@/components/ui'
 import { interpretarCenso, interpretarLote, type Censo, type ResultadoLote } from '@/lib/invitacion-lote'
+import { ConIcono } from './iconos'
 import Bloque from './Bloque'
 
 /**
@@ -162,7 +163,7 @@ function Resultado({ r }: { r: ResultadoLote }) {
   return (
     <div style={{ margin: '0 0 12px' }}>
       <p style={{ margin: 0 }}>
-        ✅ <b>{r.enviados}</b> invitaciones enviadas.
+        <ConIcono i={CheckCircle2} color="var(--positive)"><b>{r.enviados}</b> invitaciones enviadas.</ConIcono>
         {r.descartados > 0 && ` ${r.descartados} ya no tocaban (han entrado o se les invitó mientras tanto).`}
         {r.sinIntentar > 0 && ` Quedan ${r.sinIntentar} para otra tanda.`}
       </p>

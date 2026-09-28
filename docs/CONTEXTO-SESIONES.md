@@ -837,6 +837,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Sincro CIMA: la fecha de carné de una MOTO se comparaba con el carné B
+- Aviso falso en Manuel León Sotelo (0007001052485, BMW C 400 GT): CIMA manda motos en ramo 241 y en BD quedan `tipo='auto'` (**11 pólizas vivas**). `cimaDe` solo miraba `tipo` → comparaba su fecha (del A) contra el B.
+- Nuevo `esPolizaDeCoche()` en `@central/module-seguros` (`sincro-cima.ts`): moto si `categoriaVehiculo`/`claseVehiculo` ∈ MO/MT/CI (raíz o riesgos). Test visto en rojo.
+- Francisco Sánchez Torres (UV-G-410032446, Toyota Avensis) NO es este caso: discrepancia real del B, la decide Alberto. Su conductor habitual cuelga de otra ficha (`851b9766…`): posible duplicado.
+
 ## (28/09/2026) Baja firmada en el portal → justificante al cliente + archivo en su póliza
 Auditoría de la baja Mapfre de Pablo Guzmán Pueyo: SÍ firmó (28/09 10:18) y la carta llegó a Mapfre (Resend delivered).
 El 26/09 no pudo: 3 códigos, 0 «Firmar» — perdía sesión/estado al salir a leer el código (iPhone). Y tras firmar no recibía NADA.

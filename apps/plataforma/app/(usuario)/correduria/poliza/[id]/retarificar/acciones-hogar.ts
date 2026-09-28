@@ -21,7 +21,7 @@ export async function pedirPrecalificacionHogar(entrada: {
 }
 
 /**
- * 🚨 **Pide a Codeoscopic los capitales recomendados** (`POST /home/recommend-limits`).
+ * IMPORTANTE: **Pide a Codeoscopic los capitales recomendados** (`POST /home/recommend-limits`).
  * No es gratis de forma confirmada: asegura la cuenta en el libro de consumo y la
  * pone detrás del interruptor de tarificar. Solo se llama desde un botón.
  */

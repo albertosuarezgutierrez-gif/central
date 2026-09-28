@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { TrendingUp } from 'lucide-react'
+import { Mail, Phone, TrendingUp } from 'lucide-react'
 import Bloque from './Bloque'
 import { Badge, Pendiente, TablaScroll } from '@/components/ui'
+import { Ico } from './iconos'
 import type { ConversionLeadsWeb } from '@/lib/leads-web-conversion-asegura'
 
 /**
@@ -112,7 +113,7 @@ export default function LeadsWebConversion() {
                       </td>
                       <td style={{ padding: '6px 8px' }}>{p.diasDesdeAlta} día{p.diasDesdeAlta === 1 ? '' : 's'}</td>
                       <td style={{ padding: '6px 8px' }}>
-                        {p.tieneTelefono ? '📞 ' : ''}{p.tieneEmail ? '✉️' : ''}
+                        {p.tieneTelefono ? <Ico i={Phone} /> : null}{p.tieneEmail ? <Ico i={Mail} /> : null}
                         {!p.tieneTelefono && !p.tieneEmail && '—'}
                       </td>
                     </tr>

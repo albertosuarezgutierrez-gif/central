@@ -1,7 +1,8 @@
 'use client'
 import { useState } from 'react'
-import { Contact } from 'lucide-react'
+import { Contact, TriangleAlert } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { Ico } from './iconos'
 
 /**
  * «Contactos para el móvil» (23/09/2026): descarga un .vcf con los clientes en
@@ -10,7 +11,7 @@ import { btnStyle } from '@/components/ui'
  * Google (Gmail personal: sin contrato de encargado para datos de clientes).
  */
 export default function ContactosMovil() {
-  const [estado, setEstado] = useState<{ tipo: 'reposo' } | { tipo: 'cargando' } | { tipo: 'ok'; texto: string } | { tipo: 'error'; texto: string }>({ tipo: 'reposo' })
+  const [estado, setEstado] = useState<{ tipo: 'reposo' } | { tipo: 'cargando' } | { tipo: 'ok'; texto: React.ReactNode } | { tipo: 'error'; texto: string }>({ tipo: 'reposo' })
 
   async function descargar() {
     setEstado({ tipo: 'cargando' })
@@ -33,7 +34,10 @@ export default function ContactosMovil() {
       const sinLeer = Number(r.headers.get('x-clientes-sin-leer') ?? 0)
       setEstado({
         tipo: 'ok',
-        texto: `${n} contactos descargados.${sin > 0 ? ` ${sin} sin teléfono ni correo no van.` : ''}${sinLeer > 0 ? ` ⚠️ ${sinLeer} clientes no se pudieron leer y faltan.` : ''}`,
+        texto: <>
+          {n} contactos descargados.{sin > 0 && ` ${sin} sin teléfono ni correo no van.`}
+          {sinLeer > 0 && <> <Ico i={TriangleAlert} /> {sinLeer} clientes no se pudieron leer y faltan.</>}
+        </>,
       })
     } catch {
       setEstado({ tipo: 'error', texto: 'No se ha podido descargar. Inténtalo de nuevo.' })

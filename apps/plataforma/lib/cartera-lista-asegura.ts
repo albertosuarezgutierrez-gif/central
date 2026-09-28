@@ -271,7 +271,7 @@ export function interpretarLista(status: number, json: unknown): ListaCartera {
       : { estado: 'error', motivo: 'respuesta_ilegible' }
   }
 
-  // 🚨 El total NO se inventa. Un listado cuyo total no se puede leer es un
+  // IMPORTANTE: El total NO se inventa. Un listado cuyo total no se puede leer es un
   // listado ilegible: pintar «0 clientes» sería la afirmación tranquilizadora
   // que esta pantalla no puede hacer.
   const total = entero(r.total)

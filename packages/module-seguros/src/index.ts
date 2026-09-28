@@ -918,6 +918,7 @@ export {
   fechaCima,
   claveTelefono,
   compararConCima,
+  esPolizaDeCoche,
   huellaDecisionCima,
   esCampoCima,
   type CampoCima,
