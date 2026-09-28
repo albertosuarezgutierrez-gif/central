@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "npm run prisma:generate && next build",
     "start": "next start",
-    "test": "node --test --test-reporter=dot lib/*.test.ts lib/codeoscopic/*.test.ts lib/documentos/*.test.ts",
+    "test": "node --test lib/*.test.ts lib/codeoscopic/*.test.ts lib/documentos/*.test.ts",
     "lint": "eslint",
     "prisma:generate": "prisma generate && prisma generate --schema prisma/asegura.prisma"
   },
