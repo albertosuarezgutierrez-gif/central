@@ -1,5 +1,5 @@
-import { TiraAccesos, type Acceso, type Tono } from '../../Accesos'
-import { TABS_FICHA, type TabFicha } from './tabs'
+import { TiraAccesos, type Acceso } from '../../Accesos'
+import { TABS_FICHA, type DetalleAcceso, type TabFicha } from './tabs'
 
 export { tabDeParametro, type TabFicha } from './tabs'
 
@@ -12,7 +12,8 @@ export { tabDeParametro, type TabFicha } from './tabs'
  * repite la llamada al puerto de asegura, y prefetchear nueve serían nueve
  * consultas a la cartera por pasar el ratón por encima.
  *
- * El contador `null` NO se pinta: «no se ha podido leer» no es «0».
+ * El texto de cada baldosa sale de `detallesAccesos` (puro, en `tabs.ts`):
+ * lo que no se ha podido leer no se pinta, y un cero leído se dice.
  */
 
 const ACCESOS: Record<TabFicha, { icono: string; titulo: string }> = {
@@ -27,20 +28,18 @@ const ACCESOS: Record<TabFicha, { icono: string; titulo: string }> = {
   historial: { icono: '🕘', titulo: 'Historial' },
 }
 
-export type ContadoresTabs = Partial<Record<TabFicha, { n: number | null; tono?: Tono; texto?: (n: number) => string }>>
-
-export default function FichaTabs({ clienteId, activa, contadores }: {
+export default function FichaTabs({ clienteId, activa, detalles }: {
   clienteId: string
   activa: TabFicha
-  contadores: ContadoresTabs
+  detalles: Partial<Record<TabFicha, DetalleAcceso>>
 }) {
   const accesos: (Acceso & { href: string })[] = TABS_FICHA.map(k => {
-    const c = contadores[k]
+    const d = detalles[k]
     return {
       id: k,
       ...ACCESOS[k],
-      detalle: c && c.n !== null && c.n > 0 ? (c.texto ? c.texto(c.n) : String(c.n)) : null,
-      tono: c?.tono,
+      detalle: d?.texto ?? null,
+      tono: d?.tono,
       href: k === 'resumen' ? `/correduria/cliente/${clienteId}` : `/correduria/cliente/${clienteId}?tab=${k}`,
     }
   })
