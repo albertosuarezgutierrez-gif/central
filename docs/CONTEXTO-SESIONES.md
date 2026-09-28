@@ -868,6 +868,10 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   vigente se compara contra ella y sale el extra sobre el directo. `sin-cuadro`/`sin-recibos`/`por-modalidad` ≠ cuadra.
 - Puerto `GET /api/operador/comisiones-pactadas` → `ComisionesPactadas.tsx` junto a «Contactos por compañía».
 - Pendiente: cargar los cuadros de auto/moto/hogar de Allianz y del resto (hoy solo hay % real). Carga por SQL, sin formulario.
+## (28/09/2026) Correo de presupuesto: diseño de marca + acceso directo a la intranet (#3900)
+- El correo «Tu presupuesto está listo» usa la plantilla de cumpleaños (logo, botón, 3 pasos) y el botón entra DIRECTO al
+  portal con la llave de un solo uso y 24 h (`crearEnlaceDirecto`); al pie, el enlace de siempre (código). Firmar sigue con código.
+  WhatsApp sin llave. Primera prueba real: presupuesto de moto de Manuel Piña enviado por Telegram (`enviar_presupuesto`, #3890).
 
 ## (28/09/2026) Telegram de la correduría ya ENVÍA presupuestos (rescata la tarificación guardada)
 - #3888 mergeado (retomar sin pagar la última tarificación de moto de un cliente nuevo). Nueva herramienta
