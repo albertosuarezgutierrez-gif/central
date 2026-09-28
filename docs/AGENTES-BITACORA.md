@@ -14,6 +14,13 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-28 · trading-analista** · hizo: REPESCA 23:15 UTC (a las 20:15 solo llegó a refrescar el saldo, sin fila
+  en `trading_pasadas`). Pasada completa tras el cierre: NAV 33.360,03€ → /saldo, cartera real (VWCE+CVX) → /cartera,
+  operaciones (0 nuevas) + latido, 24 símbolos → /analizar (0 aperturas paper), /puntuar (104 puntuadas, 0 cerradas),
+  Telegram enviado. dudas: `canal-aviso.sh` pasa el body por argv (tope ~128 KB) y el payload real pesa ~290 KB → hubo
+  que partir /analizar en 3 lotes (puede saltar el aviso «corrió 2 veces», no es reintento); el contraste con 2ª fuente
+  salió todo «sin juzgar» (Stooq/Yahoo solo llegan al 25/09 a esa hora); fallos: `curl` directo denegado por MCP
+  Sentinel (usar siempre `scripts/canal-aviso.sh`); PRs/commits: —
 - **2026-09-28 · mercado-booking** · hizo: SEGUNDA pasada del día (el trigger diario ya se había
   disparado y registrado a las 11:12, PR #3830) — 237 comparables reales de Booking en las 24/24
   ventanas de mercado pedidas (mismo recorte `max=24` sobre los 508 candidatas/484 recortadas de
