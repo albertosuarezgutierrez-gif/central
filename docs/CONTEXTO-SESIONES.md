@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — Ficha correduría: el acceso «Contactos» cuenta también los vínculos declarados (`contarPersonas` en `cliente/[id]/tabs.ts`, misma lista que el bloque «Personas»; antes solo personas de pólizas → Antonio Lozano salía sin ninguna). Fusionada a mano «Antonio Antonio» (ec2fd283) → Antonio Lozano Lanagran (a3cf7a99): su DNI era ILEGIBLE y `fusionar_clientes` bloquea para siempre con `dni_sin_indice`; se anuló el dni en la misma transacción y el cifrado original quedó en la justificación. Portal ya invitable. Hueco propuesto como tarea aparte.
+
 **(28/09/2026)** — Correo de aviso de vencimiento: «Prima anual» llevaba la NETA de la póliza o, si no la traía, el TOTAL del
 recibo, bajo el mismo rótulo. Ahora siempre la total (bruta de la póliza → recibo anual, vía `primaConRecibos`) y el rótulo dice
 «(impuestos incluidos)». Cepos en `texto-vencimiento.test.ts` y `regression-prima-con-recibos.test.ts` (vistos en rojo). Check-in

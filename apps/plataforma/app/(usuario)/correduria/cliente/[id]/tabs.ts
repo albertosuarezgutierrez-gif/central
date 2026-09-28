@@ -61,6 +61,24 @@ export type DatosAccesos = {
 
 export type DetalleAcceso = { texto: string; tono?: 'bien' | 'aviso' | 'malo' }
 
+/**
+ * Cuántas PERSONAS tiene la ficha: las de sus pólizas más los vínculos
+ * declarados (familia, empresa…) que no salen ya en una póliza — la misma
+ * lista que pinta el bloque «Personas» de Contactos. Hasta el 28/09/2026 solo
+ * se contaban las de pólizas, y Antonio Lozano, con 3 vínculos y ninguna
+ * persona en su póliza, salía sin ninguna. Si alguna de las dos listas no se
+ * pudo leer, `null`: contar solo la otra se quedaría corto sin avisar.
+ */
+export function contarPersonas(
+  personas: readonly { fichaId: string | null }[] | null,
+  relaciones: readonly { relacionadoId: string }[] | null,
+): number | null {
+  if (personas === null || relaciones === null) return null
+  const fichas = new Set(personas.map(p => p.fichaId).filter((x): x is string => x !== null))
+  const extra = new Set(relaciones.map(r => r.relacionadoId).filter(id => !fichas.has(id)))
+  return personas.length + extra.size
+}
+
 const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
 
 /** El texto corto bajo cada baldosa. Pura: la prueba `regression-ficha-cliente-pestanas`. */
