@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-27T20:06:21Z",
-  "sha": "b545bf56389f5625b5b7e437f0d7f7bb67d59322",
+  "generadoEn": "2026-09-28T04:50:34Z",
+  "sha": "e6d3b3d7e890381431404e6d311ff317d47b4894",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -103169,6 +103169,7 @@
       "resumen": "Abrir una OPORTUNIDAD desde el asistente de la correduría por Telegram (27/09/2026) — parte PURA (sin `@/` ni prisma → node --test). La parte con BD y red vive en `correduria-asistente-telegram.ts`. Caso fundacional: Alberto subió por Telegram la póliza de Línea Directa de un lead y escribió «seguro",
       "exporta": [
         "avisoDocumentosPendientes",
+        "siguienteRenovacion",
         "fechaPrimerPaso",
         "prepararAlta",
         "cuerpoAlta",
@@ -103203,7 +103204,16 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 51
+          "linea": 52
+        },
+        {
+          "nombre": "siguienteRenovacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "vencido: string, hoy: string",
+          "retorno": "string | null",
+          "linea": 63,
+          "resumen": "El siguiente aniversario de un vencimiento anual que ya pasó (hoy incluido). `null` si hace más de dos renovaciones: tanto tiempo sin papel nuevo, pudo cambiar de compañía o anularla."
         },
         {
           "nombre": "sumarDias",
@@ -103211,7 +103221,7 @@
           "exportada": false,
           "params": "iso: string, dias: number",
           "retorno": "string",
-          "linea": 58
+          "linea": 73
         },
         {
           "nombre": "texto",
@@ -103219,7 +103229,7 @@
           "exportada": false,
           "params": "v: unknown, max = 120",
           "retorno": "string | null",
-          "linea": 64
+          "linea": 79
         },
         {
           "nombre": "prima",
@@ -103227,7 +103237,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 68
+          "linea": 83
         },
         {
           "nombre": "fechaPrimerPaso",
@@ -103235,7 +103245,7 @@
           "exportada": true,
           "params": "vence: string | null, hoy: string",
           "retorno": "string",
-          "linea": 77,
+          "linea": 92,
           "resumen": "El primer paso: una llamada {@link DIAS_ANTES_VENCIMIENTO} días antes de que venza su póliza actual, que es cuando se le puede ofrecer algo; nunca antes de mañana. Sin vencimiento, mañana."
         },
         {
@@ -103244,7 +103254,7 @@
           "exportada": true,
           "params": "args: Record<string, unknown>, lecturas: readonly LecturaDocumentoOportunidad[] | null, hoy: string,",
           "retorno": "PreparacionAlta",
-          "linea": 89,
+          "linea": 104,
           "resumen": "Lo dictado por Alberto (args de la IA) MANDA sobre lo leído de los documentos, igual que en el formulario de la ficha: si él dijo la prima, esa vale más que la del papel. De los documentos se toma el "
         },
         {
@@ -103253,7 +103263,7 @@
           "exportada": true,
           "params": "clienteId: string, a: Alta, actor: string",
           "retorno": "Record<string, unknown>",
-          "linea": 146,
+          "linea": 163,
           "resumen": "El cuerpo que espera el puerto de asegura (`accion: 'crear'`), el mismo que manda la ficha."
         },
         {
@@ -103262,7 +103272,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": null,
-          "linea": 157
+          "linea": 174
         },
         {
           "nombre": "textoAlta",
@@ -103270,7 +103280,7 @@
           "exportada": true,
           "params": "nombreCliente: string, a: Alta",
           "retorno": "string",
-          "linea": 160,
+          "linea": 177,
           "resumen": "El mensaje con el botón. Lo que no consta se dice; nada se rellena para que quede bonito."
         },
         {
@@ -103279,7 +103289,7 @@
           "exportada": true,
           "params": "status: number, json: unknown, url: string",
           "retorno": "",
-          "linea": 184,
+          "linea": 203,
           "resumen": "Qué se le dice a Alberto tras pulsar, con el enlace a la ficha."
         },
         {
@@ -103288,7 +103298,7 @@
           "exportada": true,
           "params": "a: Alta, e: Existente",
           "retorno": "CambioOportunidad[]",
-          "linea": 208,
+          "linea": 227,
           "resumen": "Qué cambiaría en la existente. Solo lo que el documento SÍ trae y difiere: un «no consta» leído nunca borra un dato que la oportunidad ya tiene."
         },
         {
@@ -103297,7 +103307,7 @@
           "exportada": true,
           "params": "doc: { aseguradora: string | null; numeroPoliza: string | null; matricula?: string | null }, existente: { aseguradora: string | null; numeroPoliza: string | null; matricula?: string | null },",
           "retorno": "'misma' | 'otra' | 'no_se'",
-          "linea": 223,
+          "linea": 242,
           "resumen": "¿El documento es la MISMA póliza que la oportunidad abierta, u otro seguro del mismo ramo (otro coche)? La oportunidad solo guarda la compañía, así que se decide por ella: distinta ⇒ `otra` y NO se of"
         },
         {
@@ -103306,7 +103316,7 @@
           "exportada": true,
           "params": "oportunidadId: string, cambios: readonly CambioOportunidad[], actor: string",
           "retorno": "Record<string, unknown>",
-          "linea": 230
+          "linea": 249
         },
         {
           "nombre": "valorCampo",
@@ -103314,7 +103324,7 @@
           "exportada": false,
           "params": "c: CambioOportunidad['campo'], v: string | number | null",
           "retorno": null,
-          "linea": 237
+          "linea": 256
         },
         {
           "nombre": "textoCambios",
@@ -103322,7 +103332,7 @@
           "exportada": true,
           "params": "cambios: readonly CambioOportunidad[]",
           "retorno": "string",
-          "linea": 240
+          "linea": 259
         },
         {
           "nombre": "resultadoEdicion",
@@ -103330,7 +103340,7 @@
           "exportada": true,
           "params": "status: number, json: unknown, url: string",
           "retorno": "",
-          "linea": 245,
+          "linea": 264,
           "resumen": "Tras pulsar «Actualizar». Sin respuesta o 5xx: pudo guardarse, así que no se dice que no."
         },
         {
@@ -103339,7 +103349,7 @@
           "exportada": false,
           "params": "s: string",
           "retorno": null,
-          "linea": 269
+          "linea": 288
         },
         {
           "nombre": "quienEsDelDocumento",
@@ -103347,7 +103357,7 @@
           "exportada": true,
           "params": "lecturas: readonly LecturaDocumentoOportunidad[], confirmadoNuevo = false",
           "retorno": "QuienDocumento",
-          "linea": 276,
+          "linea": 295,
           "resumen": "De quién es lo subido. «Su DNI no aparece» NO es «no está»: hay fichas del volcado con DNI y sin índice ciego, así que antes de ofrecer una ficha nueva se mira también por el nombre (`posibles`), y si"
         },
         {
@@ -103356,7 +103366,7 @@
           "exportada": true,
           "params": "q: QuienDocumento",
           "retorno": "string | null",
-          "linea": 298,
+          "linea": 317,
           "resumen": "Lo que se le dice a la IA cuando no hay una ficha única ni un alta posible. `null` = seguir."
         },
         {
@@ -103365,7 +103375,7 @@
           "exportada": true,
           "params": "nombre: string, a: Alta",
           "retorno": "string",
-          "linea": 314,
+          "linea": 333,
           "resumen": "El mensaje con el botón cuando además hay que crear la ficha."
         },
         {
@@ -103374,7 +103384,7 @@
           "exportada": true,
           "params": "status: number, json: unknown",
           "retorno": "",
-          "linea": 322,
+          "linea": 341,
           "resumen": "Tras pulsar: cómo fue el alta de la ficha. `id` solo si se creó."
         },
         {
@@ -103383,7 +103393,7 @@
           "exportada": true,
           "params": "lecturas: readonly LecturaDocumentoOportunidad[] | null",
           "retorno": "",
-          "linea": 341,
+          "linea": 360,
           "resumen": "¿La póliza del documento ya la llevamos? (en nuestra cartera EN VIGOR, por su nº). Entonces no es una oportunidad: abrirla sería venderle lo que ya tiene. `null` = no es nuestra o no se ha podido mira"
         },
         {
@@ -103392,7 +103402,7 @@
           "exportada": true,
           "params": "urlFicha: string, a: Pick<Alta, 'ramo' | 'matricula'>",
           "retorno": "string | null",
-          "linea": 351,
+          "linea": 370,
           "resumen": "Enlace a tarificar ese ramo; en auto lleva la matrícula para no teclearla otra vez."
         },
         {
@@ -103401,7 +103411,7 @@
           "exportada": true,
           "params": "ramo: string",
           "retorno": "string | null",
-          "linea": 358,
+          "linea": 377,
           "resumen": "La pantalla que pide precio de ese ramo en la ficha (cada una confirma y cuenta el gasto). `null` = no hay."
         },
         {
@@ -103410,12 +103420,12 @@
           "exportada": false,
           "params": "s: string",
           "retorno": "string",
-          "linea": 363
+          "linea": 382
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a776c3cf5d34"
+      "hash": "9e4bc87b611a"
     },
     {
       "ruta": "apps/plataforma/lib/correduria-puerto.ts",
@@ -161063,6 +161073,6 @@
   ],
   "resumen": {
     "archivos": 3826,
-    "funciones": 12355
+    "funciones": 12356
   }
 }
