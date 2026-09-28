@@ -20,7 +20,7 @@ import { eur } from '@/lib/dinero'
 import { isCronAuthorized } from '@/lib/cron-auth'
 import { registrarLatido } from '@/lib/monitoring/latido-escribir'
 import { leerIngestaCima, saludDesdeRespuesta } from '@/lib/correduria/ingesta-cima'
-import { senalesIngesta } from '@/lib/correduria/ingesta-pantalla'
+import { senalesIngesta, sinFicheroAtascado } from '@/lib/correduria/ingesta-pantalla'
 import {
   detalleSalud,
   decidirAvisoIngesta,
@@ -152,26 +152,39 @@ export async function GET(req: NextRequest) {
     // Se decide con las MISMAS señales que pinta /correduria: dos criterios de
     // «qué es pérdida» acabarían diciendo cosas distintas del mismo hecho.
     const perdidas = senalesIngesta(salud).filter(x => x.tipo === 'perdida')
-    const soloRenovaciones = !soloHuecos && !mudas.length && perdidas.length > 0 &&
-      perdidas.every(x => x.clave === 'renovaciones')
+    // 📭 Lo mismo con las emisiones de Codeoscopic sin aviso (28/09/2026): no es
+    // CIMA ni hay fichero atascado. El reparto sale de `sinFicheroAtascado`, la
+    // MISMA función que usa el título de /correduria.
+    const sinAtasco = !soloHuecos && !mudas.length ? sinFicheroAtascado(perdidas) : null
     const titular = soloHuecos
       ? '🛡️ <b>La ingesta de CIMA solo se ha podido comprobar a medias</b>'
       : mudas.length
         ? `🛡️ <b>${mudas.map(m => m.entidad).join(', ')} ha(n) dejado de mandar datos</b>`
-        : soloRenovaciones
+        : sinAtasco === 'renovaciones'
           ? '⏳ <b>Renovaciones que no llegan por CIMA</b>'
-          : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
+          : sinAtasco === 'emisiones'
+            ? '📭 <b>El webhook de Codeoscopic no avisa de las emisiones</b>'
+            : sinAtasco === 'ambas'
+              ? '⏳ <b>Renovaciones que no llegan por CIMA y emisiones sin aviso de Codeoscopic</b>'
+              : '🛡️ <b>Se están perdiendo datos de CIMA</b>'
+    const recadoRenov = 'Son pólizas en vigor que ya vencieron y de las que no ha llegado ni el recibo ' +
+      'ni la póliza renovada: el portal del cliente ya no las enseña «En vigor».'
+    const recadoEmis = 'Las pólizas ya están registradas; lo que no llega es el aviso de Codeoscopic, ' +
+      'que es por donde se sabría de un rechazo o una aprobación tardía. Mira las credenciales del webhook.'
     const recado = soloHuecos
       ? '\n\nNo se ha medido ninguna pérdida, pero tampoco se ha podido mirar todo: ' +
         'esto NO es «va bien», es «no lo sé».'
       : mudas.length
         ? '\n\nNo hay nada atascado que reprocesar: sencillamente no llega. ' +
           'Compruébalo en CIMA/Codeoscopic desde fuera y mira si el adaptador sigue vivo.'
-        : soloRenovaciones
-          ? '\n\nSon pólizas en vigor que ya vencieron y de las que no ha llegado ni el recibo ' +
-            'ni la póliza renovada: el portal del cliente ya no las enseña «En vigor».'
-          : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
-            'y su comisión tampoco.'
+        : sinAtasco === 'renovaciones'
+          ? `\n\n${recadoRenov}`
+          : sinAtasco === 'emisiones'
+            ? `\n\n${recadoEmis}`
+            : sinAtasco === 'ambas'
+              ? `\n\n${recadoRenov} ${recadoEmis}`
+              : '\n\nUn recibo o un siniestro que no entra no aparece en ninguna pantalla, ' +
+                'y su comisión tampoco.'
     // Con pérdida medida, los huecos siguen importando: dicen que el recuento
     // de arriba es un SUELO. Van al final para no tapar lo accionable.
     const sinComprobar = !soloHuecos && salud.huecos.length > 0

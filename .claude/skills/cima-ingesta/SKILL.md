@@ -195,6 +195,11 @@ En este orden, y **sin saltarse el paso 0**:
   sin duplicado) y emite `cima_residuo_resuelto_manual` con `{ficheroId, motivo}`: el vigía solo apaga el
   fichero con un cierre POSTERIOR a su último parte.
 
+- 📭 **«Cero avisos del webhook» NO es «no ha pasado nada» (28/09/2026).** Un 401 de la ruta del webhook
+  corta ANTES de la caja negra, así que un aviso rechazado por credenciales no deja cuerpo capturado: el rastro
+  está en `operational_events` (`webhook_signature_invalid`, con `authUserPresente`). La señal
+  `emisionesSinAviso` del vigía cruza proyectos `emitida` contra `codeoscopic_webhook_events` y lo delata.
+
 ## Lo que la pantalla enseña (y lo que NO alarma a propósito)
 
 `/correduria` de plataforma pinta cuatro señales de la ingesta, y **solo cuando

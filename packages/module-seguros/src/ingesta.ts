@@ -292,6 +292,49 @@ export type RenovacionSinLlegar = {
  */
 export const DIAS_GRACIA_RENOVACION = 15
 
+/**
+ * 📭 Proyecto EMITIDO en Codeoscopic del que su webhook no nos ha dicho nada.
+ *
+ * 🚨 Caso fundacional (28/09/2026): cuatro emisiones reales (Allianz 17/09,
+ * Reale 23/09, moto Occident 26/09, Allianz 28/09) y ni un solo aviso del
+ * webhook en `codeoscopic_webhook_events`. No era silencio del vendor: desde el
+ * 17/09 llegaba un POST cada ~30 min que el receptor rechazaba con 401 (usuario
+ * de la Basic Auth distinto del nuestro, `webhook_signature_invalid`). El 401
+ * corta antes de la caja negra y ninguna señal miraba «emitido sin aviso», así
+ * que «cero avisos» se leía igual que «no ha pasado nada».
+ *
+ * Hoy la emisión se cierra sin depender del aviso (el Submit contesta en el
+ * momento), así que esto no pierde pólizas: pierde el canal por el que llegaría
+ * un rechazo o una aprobación tardía de la compañía. Por eso degrada.
+ */
+export type EmisionSinAviso = {
+  /** Id del proyecto en Codeoscopic. */
+  proyecto: string
+  /** Compañía del proyecto. `null` = no consta. */
+  aseguradora: string | null
+  /** Horas desde que se marcó emitido. `null` = no legible. */
+  horas: number | null
+}
+
+/**
+ * Horas tras la emisión antes de echar de menos el aviso. El vendor manda y
+ * reintenta cada ~30 min: 24 h es «no ha llegado ninguno», no «va con retraso».
+ */
+export const HORAS_EMISION_SIN_AVISO = 24
+
+/**
+ * «📭 2 emisión(es) de Codeoscopic sin aviso de su webhook en más de 24 h
+ * (40769244 Allianz · 40804066 Reale)…». Cadena vacía si no hay ninguna.
+ */
+export function textoEmisionesSinAviso(lista: EmisionSinAviso[] | null | undefined): string {
+  if (!lista || lista.length === 0) return ''
+  const partes = lista.slice(0, 5).map(e => `${e.proyecto}${e.aseguradora ? ` ${e.aseguradora}` : ''}`)
+  const resto = lista.length > 5 ? ` y ${lista.length - 5} más` : ''
+  return `📭 ${lista.length} emisión(es) de Codeoscopic sin aviso de su webhook en más de ` +
+    `${HORAS_EMISION_SIN_AVISO} h (${partes.join(' · ')}${resto}): el aviso no llega o se ` +
+    'rechaza — mira `webhook_signature_invalid` y las credenciales del webhook.'
+}
+
 export type EntradaSalud = {
   /** Ficheros en cuarentena. Lista vacía = comprobado que no hay. */
   cuarentena: FicheroEnCuarentena[] | null
@@ -357,6 +400,11 @@ export type EntradaSalud = {
    * hay ninguna.
    */
   renovacionesSinLlegar?: RenovacionSinLlegar[] | null
+  /**
+   * Emisiones de Codeoscopic sin aviso de su webhook (ver `EmisionSinAviso`).
+   * Mismos tres estados que `renovacionesSinLlegar`.
+   */
+  emisionesSinAviso?: EmisionSinAviso[] | null
 }
 
 export type SaludIngesta = {
@@ -431,6 +479,8 @@ export type SaludIngesta = {
    * dicen cosas distintas en cada caso.
    */
   renovacionesSinLlegar?: RenovacionSinLlegar[] | null
+  /** Emisiones sin aviso del webhook. Mismos tres estados que `renovacionesSinLlegar`. */
+  emisionesSinAviso?: EmisionSinAviso[] | null
 }
 
 /** `2026-06-18` → `18/06`. Una fecha ilegible no se inventa: `null`. */
@@ -532,6 +582,7 @@ export function saludIngesta(
       huecos: ['No se ha podido leer el estado de la ingesta. Esto NO significa que vaya bien.'],
       avisosImportantes: [],
       renovacionesSinLlegar: null,
+      emisionesSinAviso: null,
     }
   }
 
@@ -771,7 +822,24 @@ export function saludIngesta(
     hueco('No se ha podido comprobar si hay renovaciones que no han llegado por CIMA.')
   }
 
+  // 📭 La OCTAVA cara, fuera de CIMA: emitimos por Codeoscopic y su webhook no
+  // dice nada. Solo lo que lleva más de HORAS_EMISION_SIN_AVISO (la consulta ya
+  // filtra; aquí se descarta lo que llegue más fresco por si acaso).
+  const emisionesSinAviso = e.emisionesSinAviso === undefined
+    ? undefined
+    : Array.isArray(e.emisionesSinAviso)
+      ? e.emisionesSinAviso
+          .filter(x => x.horas === null || x.horas >= HORAS_EMISION_SIN_AVISO)
+          .sort((a, b) => a.proyecto.localeCompare(b.proyecto))
+      : null
+  if (emisionesSinAviso && emisionesSinAviso.length > 0) {
+    motivos.push(textoEmisionesSinAviso(emisionesSinAviso))
+  } else if (emisionesSinAviso === null) {
+    hueco('No se ha podido comprobar si las emisiones de Codeoscopic reciben el aviso de su webhook.')
+  }
+
   const hayPerdida =
+    (emisionesSinAviso !== undefined && emisionesSinAviso !== null && emisionesSinAviso.length > 0) ||
     (renovacionesSinLlegar !== undefined && renovacionesSinLlegar !== null && renovacionesSinLlegar.length > 0) ||
     recientes > 0 ||
     (huerfanas !== null && huerfanas > 0) ||
@@ -808,6 +876,7 @@ export function saludIngesta(
     huecos,
     avisosImportantes,
     renovacionesSinLlegar,
+    emisionesSinAviso,
   }
 }
 
@@ -974,7 +1043,12 @@ export function firmaAvisoIngesta(salud: SaludIngesta): string {
         .map(r => `${r.entidad}=${r.polizas}`)
         .sort()
         .join(',')}]`
-  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}:${pull}:${renov}`
+  // 📭 Emisiones sin aviso del webhook: QUÉ proyectos. Mismo formato y mismas
+  // reglas que el tramo de renovaciones (corchetes, `[?]` = no se pudo mirar).
+  const emis = salud.emisionesSinAviso === null
+    ? '[?]'
+    : `[${(salud.emisionesSinAviso ?? []).map(x => x.proyecto).sort().join(',')}]`
+  return `${salud.estado}:${salud.recientes}:${salud.huerfanas ?? '?'}:${silencio}:${pedir}:${pull}:${renov}:${emis}`
 }
 
 /**
@@ -988,12 +1062,16 @@ export function firmaAvisoIngesta(salud: SaludIngesta): string {
  * se leen como `[]`, «ninguna», que es lo único que podían decir. Así, el primer
  * despliegue con renovaciones pendientes SÍ suena como cambio (es un aviso que
  * nadie ha recibido nunca) y sin ellas no hace ruido.
+ *
+ * Las anteriores al 28/09/2026 no traían el tramo de emisiones sin aviso (siete
+ * tramos): se leen como `[]`, con el mismo razonamiento.
  */
 export function normalizarFirmaIngesta(firma: string | null): string | null {
   if (firma === null) return null
   const tramos = firma.split(':').length
-  if (tramos === 5) return `${firma}:ok:[]`
-  if (tramos === 6) return `${firma}:[]`
+  if (tramos === 5) return `${firma}:ok:[]:[]`
+  if (tramos === 6) return `${firma}:[]:[]`
+  if (tramos === 7) return `${firma}:[]`
   return firma
 }
 
