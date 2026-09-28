@@ -1998,6 +1998,12 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   puertos que la ficha con actor `agente:asistente-telegram`. `invitar_portal` pregunta antes si la ficha es `invitable`. Tabla
   `correduria_asistente_accion` (aplicada). **Documento de aseguradora** por Telegram → `procesarDocumento(..., {preguntarSiSeguro})`
   devuelve `posible_seguro` ANTES de archivar y pregunta con `cdoc_gasto`/`cdoc_cli` (`resolverDocumentoDudoso`).
+- **💶 Pedir precio de COCHE o MOTO (28/09/2026) — `lib/correduria-tarificacion-tg.ts`.** `vehiculo_catalogo` (gratis) +
+  `proponer_tarificacion`: el servidor empareja lo dictado con los catálogos (`emparejarOpcion`: con dudas pregunta), devuelve
+  «FALTAN DATOS» hasta tenerlo todo y manda el resumen (DNI enmascarado, supuestos optimistas primero, «0,50€, no sale nada al
+  cliente») con `cas_tarif:<id>`. Al pulsar: mismo interruptor que emitir, tope 10/día contado antes Y dentro del reclamo, un
+  solo uso, UNA llamada a `cotizar{Auto,Moto}NuevaAsegura`, `cuerpo = NULL` al cerrar. Sin precios pudiendo cobrar = `incierta`.
+  Tabla `correduria_asistente_tarificacion` (aplicada). Solo clientes con ficha; conductor = tomador (se declara).
 - **Reparto del texto libre** (`clasificarDestino`, puro y testeado en `lib/correduria-asistente.ts`):
   atajo `seguro:` / `/seguros` → siempre correduría; palabras propias (póliza, siniestro, renovación,
   CIMA…) o una matrícula → correduría; palabras contables → contable; lo demás («¿qué tiene Pablo

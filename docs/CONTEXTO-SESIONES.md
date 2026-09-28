@@ -847,6 +847,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   botón `cas_tarif` «Pedir precio (0,50€)» (un uso, 15 min, `from.id`, tope 10/día, interruptor de emitir). Al pulsar,
   `cotizar{Auto,Moto}NuevaAsegura` UNA vez → top 3 con franquicia/firmeza + comparación con lo que paga + venta cruzada solo
   para Alberto. Tabla `correduria_asistente_tarificacion` APLICADA. «presupuesto de la moto…» ya no va al contable.
+- Revisión architect aplicada: tope diario también DENTRO del UPDATE de reclamo, `pidiendo` colgada >10 min → `incierta`
+  + aviso, «conduce solo el tomador» siempre como supuesto optimista, `garajeEsSupuesto` real. Código en `lib/correduria-tarificacion-tg.ts`.
 - Pendiente fases 2-3 (propuesta al cliente con IPID y datos declarados, envío con botón, seguimiento a 5 días,
   aceptación→emitir) **tras mergear #3868** (portal «Revisa tus datos», otra sesión). Solo clientes sin póliza del ramo.
 
