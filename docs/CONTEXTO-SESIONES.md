@@ -808,6 +808,10 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+### (28/09/2026) Ficha↔CIMA: email nuevo se AÑADE y nombre con erratas se CORRIGE solo
+- Alberto: «si hay dos mail se añade dos mail al cliente». `compararConCima` da `email:anadir` (secundario, sin forzar) en vez de `discrepa`; el mismo chequeo que el teléfono (`avisarContactosCompartidos`): si ese email está en OTRA ficha, pregunta con aviso (el email vincula el portal).
+- «Berta del la fuentes rojas» NO era solo mayúsculas: dos erratas (del→de, fuentes→fuente). Nueva acción `corregir`: mismas palabras, ≤1 letra por palabra, ≥ la mitad idénticas → toma CIMA sin preguntar. «Maria Lopez»/«Mario Lopes» sigue preguntando.
+
 ## (27/09/2026) Título de la RC = solo la RC
 - `module-seguros/objeto.ts` `tituloRc()`: si una cobertura se nombra «Responsabilidad civil…/R.C./RC», la tarjeta titula «RC caballos» y el resto (defensa penal, liberación de gastos) queda como «+N coberturas» y en el desglose de la póliza. Sin cobertura así, sigue el título por modalidades.
 - Precio de la moto (Allianz 045981539): Allianz NO manda prima en el EIAC de póliza, solo en el recibo CA (11 de 12 vivas sin prima, todas Allianz). `primaConRecibos()`/`vencimientoConRecibos()` (module-seguros) la toman del recibo anual si la póliza no la trae (solo pago anual) y corrigen el vencimiento si hay CA cobrado posterior. Aplicado en `cartera-ficha.ts` y `cartera-poliza.ts` de asegura. - Auditoría: 043673655 anulada en ePac (impago) → cancelada a mano; 054914837 sin recibos en CIMA → 2 CA copiados de ePac (`origen=manual`); 10 Mapfre EV con vencimiento pasado sin renovación por CIMA → aviso rojo en tarjeta. Regla fijada en `apps/asegura/CLAUDE.md` + skill `correduria-crm` (punto 0).

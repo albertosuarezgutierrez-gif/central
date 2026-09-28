@@ -96,7 +96,7 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
       tono="aviso"
       Icono={RefreshCcw}
       titulo={n > 0 ? `${n} dato${n === 1 ? '' : 's'} distinto${n === 1 ? '' : 's'} de lo que manda CIMA` : 'Datos de CIMA por copiar'}
-      sub={`Comparadas ${l.fichas} fichas de cartera viva con lo que CIMA manda de esa misma persona (por DNI).${l.rellenos ? ` ${l.rellenos} dato(s) se completan solos cada día (huecos, teléfonos nuevos y nombres en mayúsculas).` : ''}${l.ilegibles ? ` ${l.ilegibles} ficha(s) no se pudieron leer.` : ''}`}
+      sub={`Comparadas ${l.fichas} fichas de cartera viva con lo que CIMA manda de esa misma persona (por DNI).${l.rellenos ? ` ${l.rellenos} dato(s) se completan solos cada día (huecos, teléfonos y emails nuevos, y nombres en mayúsculas o con erratas).` : ''}${l.ilegibles ? ` ${l.ilegibles} ficha(s) no se pudieron leer.` : ''}`}
       accion={
         <button type="button" disabled={ocupado !== null} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}
           onClick={() => { if (confirm('CIMA manda: se copiará lo de CIMA en TODAS las fichas (huecos y diferencias). Los teléfonos/emails anteriores se conservan como secundarios; un teléfono que ya está en otra ficha NO se copia. ¿Seguir?')) void enviar('volcar', { accion: 'volcar' }) }}>

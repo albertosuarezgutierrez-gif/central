@@ -21,9 +21,10 @@ import { anadirContacto, anotarHistorialCliente, campoIlegible, coincidencias, d
  *   - `rellenar`: lo que la ficha no tiene se copia siempre (lo corre el cron).
  *   - `volcar`:   CIMA manda también sobre lo que difiere (una vez, a mano).
  *   - automático (26/09/2026): el teléfono nuevo de CIMA se AÑADE como
- *     secundario, el nombre de CIMA que dice más que el de la ficha se toma
- *     (`completar`) y el nombre en mayúsculas se pone en «Nombre Propio», salvo
- *     que ese teléfono ya esté en OTRA ficha: entonces pregunta (`aviso`).
+ *     secundario (y el email, desde el 28/09/2026), el nombre de CIMA que dice
+ *     más que el de la ficha se toma (`completar`), el que solo corrige erratas
+ *     también (`corregir`) y el nombre en mayúsculas se pone en «Nombre Propio»,
+ *     salvo que ese teléfono o email ya esté en OTRA ficha: entonces pregunta (`aviso`).
  *   Después, cada diferencia se AVISA y decide él: «usar CIMA» o «mantener el
  *   mío» (esto último se recuerda por huella del valor en `cima_decisiones`,
  *   así que si CIMA manda OTRO valor se vuelve a avisar).
@@ -53,7 +54,7 @@ export type EstadoSincro = {
   sinDatosCima: number
   /** Solo `discrepa` no decididas: lo que tiene que mirar Alberto. */
   discrepancias: FichaConCima[]
-  /** Lo que el cron aplicará solo: huecos, teléfonos nuevos y nombres por formatear. */
+  /** Lo que el cron aplicará solo: huecos, teléfonos y emails nuevos, nombres por formatear o con erratas. */
   rellenos: number
   /** Fichas que no se pudieron leer: no es «no hay diferencias». */
   ilegibles: number
@@ -197,31 +198,32 @@ async function huellasDecididas(correduriaId: string): Promise<Set<string>> {
 type Analisis = { c: Viva; cima: DatosCimaInterno; diferencias: DiferenciaCima[] }
 
 /** Lo que se aplica sin preguntar (lo corre el cron). */
-const AUTOMATICAS: readonly DiferenciaCima['accion'][] = ['rellenar', 'anadir', 'completar', 'formatear']
+const AUTOMATICAS: readonly DiferenciaCima['accion'][] = ['rellenar', 'anadir', 'completar', 'formatear', 'corregir']
 
 /**
- * Un teléfono que CIMA manda y que YA está en otra ficha no se copia solo: puede
- * ser el matrimonio o el padre (legítimo) o un error de CIMA, y un teléfono
- * compartido es la puerta de entrada al portal cuando el canal sea WhatsApp.
+ * Un teléfono o email que CIMA manda y que YA está en otra ficha no se copia
+ * solo: puede ser el matrimonio o el padre (legítimo) o un error de CIMA, y los
+ * dos son puerta de entrada al portal (el email hoy; el teléfono con WhatsApp).
  * Pasa a `discrepa` con el nombre de la otra ficha, y decide Alberto.
  */
-async function avisarTelefonosCompartidos(correduriaId: string, lista: Analisis[]): Promise<void> {
+async function avisarContactosCompartidos(correduriaId: string, lista: Analisis[]): Promise<void> {
   for (const a of lista) {
     for (const d of a.diferencias) {
-      if (d.campo !== 'telefono' || (d.accion !== 'anadir' && d.accion !== 'rellenar')) continue
+      if ((d.campo !== 'telefono' && d.campo !== 'email') || (d.accion !== 'anadir' && d.accion !== 'rellenar')) continue
+      const que = d.campo === 'telefono' ? 'teléfono' : 'email'
       let otros: Awaited<ReturnType<typeof coincidencias>>
       try {
-        otros = await coincidencias(correduriaId, { telefono: d.cima }, a.c.id)
+        otros = await coincidencias(correduriaId, { [d.campo]: d.cima }, a.c.id)
       } catch (e) {
         // Sin poder comprobarlo no se copia solo: pregunta. Y el resto del análisis sigue.
-        console.error('[sincro-cima] teléfono sin comprobar:', a.c.id, e instanceof Error ? e.message : e)
+        console.error(`[sincro-cima] ${que} sin comprobar:`, a.c.id, e instanceof Error ? e.message : e)
         d.accion = 'discrepa'
-        d.aviso = 'No se ha podido comprobar si ese teléfono está en otra ficha'
+        d.aviso = `No se ha podido comprobar si ese ${que} está en otra ficha`
         continue
       }
       if (otros.length === 0) continue
       d.accion = 'discrepa'
-      d.aviso = `Ese teléfono ya está en ${otros.length === 1 ? 'la ficha' : 'las fichas'} de ${otros.map((o) => o.nombre).join(', ')}`
+      d.aviso = `Ese ${que} ya está en ${otros.length === 1 ? 'la ficha' : 'las fichas'} de ${otros.map((o) => o.nombre).join(', ')}`
     }
   }
 }
@@ -243,7 +245,7 @@ async function analizar(correduriaId: string, soloCliente?: string): Promise<{ l
       console.error('[sincro-cima] ficha sin leer:', c.id, e instanceof Error ? e.message : e)
     }
   }
-  await avisarTelefonosCompartidos(correduriaId, lista)
+  await avisarContactosCompartidos(correduriaId, lista)
   return { lista, fichas: vivas.length, sinDatos, ilegibles }
 }
 
@@ -313,13 +315,13 @@ async function aplicarCampo(correduriaId: string, a: Analisis, d: DiferenciaCima
   }
   await anotarHistorialCliente(
     correduriaId, clienteId, 'gestion',
-    `${d.accion === 'rellenar' ? 'Completado' : d.accion === 'formatear' ? 'Nombre en formato propio' : 'Actualizado'} desde CIMA: ${d.campo}${a.cima.poliza ? ` (póliza ${a.cima.poliza})` : ''} — ${actor}`,
+    `${d.accion === 'rellenar' ? 'Completado' : d.accion === 'formatear' ? 'Nombre en formato propio' : d.accion === 'corregir' ? 'Errata corregida' : 'Actualizado'} desde CIMA: ${d.campo}${a.cima.poliza ? ` (póliza ${a.cima.poliza})` : ''} — ${actor}`,
   ).catch(() => undefined)
   return { campo: d.campo, ok: true }
 }
 
 /**
- * `rellenar` = lo automático (huecos, teléfonos nuevos, nombres por formatear) ·
+ * `rellenar` = lo automático (huecos, teléfonos y emails nuevos, nombres por formatear o con erratas) ·
  * `volcar` = eso + todo lo que difiere (CIMA manda, incluidas las decididas
  * antes), SALVO lo que lleva `aviso`: un teléfono de otra ficha no se fuerza en
  * bloque. Devuelve lo hecho y lo que no, con su motivo.
