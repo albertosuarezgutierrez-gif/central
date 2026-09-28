@@ -21,6 +21,7 @@ const VEREDICTO: Record<VeredictoComision, { texto: string; tono: Tono; title: s
   'sin-cuadro': { texto: 'Sin cuadro', tono: 'neutral', title: 'No hay cuadro firmado en vigor apuntado: no se puede comprobar.' },
   'sin-recibos': { texto: 'Sin recibos', tono: 'neutral', title: 'Hay cuadro, pero ningún recibo de nueva producción o cartera emitido bajo él.' },
   'por-modalidad': { texto: 'Por modalidad', tono: 'info', title: 'Las modalidades van a % distintos y el recibo de CIMA no dice de cuál es.' },
+  'varios-acuerdos': { texto: 'Varios acuerdos', tono: 'info', title: 'Hay dos asociaciones en vigor para la misma modalidad: no se sabe bajo cuál se emitió el recibo.' },
   cuadra: { texto: 'Cuadra', tono: 'positivo', title: 'Todos los recibos aplican el % firmado (±0,5 puntos).' },
   descuadra: { texto: 'Descuadra', tono: 'negativo', title: 'Hay recibos con un % distinto del firmado: revisar con la compañía.' },
 }

@@ -73,7 +73,26 @@ test('asociación vigente: se compara contra ella y sale el extra sobre el direc
     fila({ pctNueva: 12, pctCartera: 12 }),
     fila({ acuerdo: 'Asociación X', pctNueva: 14, pctCartera: 13.5 }),
   ], [recibo({ comision: '12.00' })], '2026-09-28')
-  assert.equal(l.acuerdoAplicado, 'Asociación X')
+  assert.deepEqual(l.acuerdosAplicados, ['Asociación X'])
   assert.deepEqual(l.extras, [{ modalidad: null, acuerdo: 'Asociación X', puntosNueva: 2, puntosCartera: 1.5 }])
   assert.equal(l.veredicto, 'descuadra')
+})
+
+test('una asociación que solo cubre una modalidad no desplaza al directo de las demás', () => {
+  const [l] = lineasComision([
+    fila({ modalidad: 'A', pctNueva: 12, pctCartera: 12 }),
+    fila({ modalidad: 'B', pctNueva: 12, pctCartera: 12 }),
+    fila({ modalidad: 'A', acuerdo: 'Asociación X', pctNueva: 14, pctCartera: 14 }),
+  ], [recibo({ comision: '12.00' })], '2026-09-28')
+  assert.deepEqual(l.acuerdosAplicados, ['Asociación X', 'directo'])
+  // Con B al 12 % del directo y A al 14 % de la asociación, el recibo no dice de cuál es: nunca «descuadra».
+  assert.equal(l.veredicto, 'por-modalidad')
+})
+
+test('dos asociaciones vigentes en la misma modalidad: sin veredicto', () => {
+  const [l] = lineasComision([
+    fila({ acuerdo: 'Asociación X', pctCartera: 14 }),
+    fila({ acuerdo: 'Asociación Y', pctCartera: 13 }),
+  ], [recibo({ comision: '14.00' })], '2026-09-28')
+  assert.equal(l.veredicto, 'varios-acuerdos')
 })

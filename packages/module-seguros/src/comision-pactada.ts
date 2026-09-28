@@ -50,15 +50,16 @@ export type EntradaCuadro = {
 
 export type ExtraAcuerdo = { modalidad: string | null; acuerdo: string; puntosNueva: number; puntosCartera: number }
 
-export type VeredictoComision = 'sin-cuadro' | 'sin-recibos' | 'por-modalidad' | 'cuadra' | 'descuadra'
+export type VeredictoComision = 'sin-cuadro' | 'sin-recibos' | 'por-modalidad' | 'varios-acuerdos' | 'cuadra' | 'descuadra'
 
 export type LineaComision = {
   companiaCodigo: string
   producto: string
   productoNombre: string | null
   cuadro: EntradaCuadro[]
-  /** Acuerdo contra el que se comparan los recibos: la asociación si hay una vigente, si no el directo. */
-  acuerdoAplicado: string | null
+  /** Acuerdos contra los que se comparan los recibos: por modalidad, la asociación vigente si la hay, si no
+   *  el directo. Vacío = ningún cuadro en vigor. */
+  acuerdosAplicados: string[]
   /** Lo que da cada asociación vigente por encima (o por debajo) del directo vigente. */
   extras: ExtraAcuerdo[]
   real: { recibos: number; pctMin: number; pctMax: number; pctMedio: number } | null
@@ -96,9 +97,25 @@ export function resolverCuadro(filas: readonly CuadroFila[], hoy: string): Entra
   })
 }
 
-function acuerdoAplicado(cuadro: readonly EntradaCuadro[]): string | null {
-  const vigentes = [...new Set(cuadro.filter((e) => e.vigente).map((e) => e.acuerdo))].sort()
-  return vigentes.find((a) => a !== ACUERDO_DIRECTO) ?? (vigentes.includes(ACUERDO_DIRECTO) ? ACUERDO_DIRECTO : null)
+/**
+ * El cuadro que aplica HOY en cada modalidad: la asociación vigente si la hay, si no el directo. Se decide
+ * POR MODALIDAD: una asociación que solo cubre una modalidad no desplaza al directo de las demás.
+ * `null` si alguna modalidad tiene dos asociaciones vigentes a la vez (no se sabe bajo cuál se emitió).
+ */
+function aplicablesPorModalidad(cuadro: readonly EntradaCuadro[]): CuadroFila[] | null {
+  const porModalidad = new Map<string, EntradaCuadro[]>()
+  for (const e of cuadro) {
+    if (!e.vigente) continue
+    const k = e.modalidad ?? ''
+    porModalidad.set(k, [...(porModalidad.get(k) ?? []), e])
+  }
+  const out: CuadroFila[] = []
+  for (const es of porModalidad.values()) {
+    const asociaciones = es.filter((e) => e.acuerdo !== ACUERDO_DIRECTO)
+    if (asociaciones.length > 1) return null
+    out.push((asociaciones[0] ?? es[0]).vigente as CuadroFila)
+  }
+  return out
 }
 
 function extras(cuadro: readonly EntradaCuadro[]): ExtraAcuerdo[] {
@@ -129,8 +146,8 @@ export function lineasComision(filas: readonly CuadroFila[], recibos: readonly R
   return [...productos.entries()]
     .map(([k, p]) => {
       const cuadro = resolverCuadro(filas.filter((f) => `${f.companiaCodigo}|${f.producto}` === k), hoy)
-      const aplicado = acuerdoAplicado(cuadro)
-      const aplicables = cuadro.filter((e) => e.acuerdo === aplicado && e.vigente).map((e) => e.vigente as CuadroFila)
+      const resueltos = aplicablesPorModalidad(cuadro)
+      const aplicables = resueltos ?? []
       // Solo los recibos emitidos bajo el cuadro que se compara: uno anterior se cobró con otro cuadro.
       const desde = aplicables.reduce((m, f) => (f.vigenteDesde > m ? f.vigenteDesde : m), '')
       const conPct = recibos
@@ -150,7 +167,8 @@ export function lineasComision(filas: readonly CuadroFila[], recibos: readonly R
       let veredicto: VeredictoComision
       let fuera = 0
       const tramos = new Set(aplicables.map((f) => `${f.pctNueva}|${f.pctCartera}`))
-      if (aplicables.length === 0) veredicto = 'sin-cuadro'
+      if (resueltos === null) veredicto = 'varios-acuerdos'
+      else if (aplicables.length === 0) veredicto = 'sin-cuadro'
       else if (tramos.size > 1) veredicto = 'por-modalidad'
       else {
         const f = aplicables[0]
@@ -163,7 +181,8 @@ export function lineasComision(filas: readonly CuadroFila[], recibos: readonly R
         }
       }
 
-      return { ...p, cuadro, acuerdoAplicado: aplicado, extras: extras(cuadro), real, veredicto, fuera }
+      const acuerdosAplicados = [...new Set(aplicables.map((f) => f.acuerdo))].sort()
+      return { ...p, cuadro, acuerdosAplicados, extras: extras(cuadro), real, veredicto, fuera }
     })
     .sort((a, b) => a.companiaCodigo.localeCompare(b.companiaCodigo) || a.producto.localeCompare(b.producto))
 }

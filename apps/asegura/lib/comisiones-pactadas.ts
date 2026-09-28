@@ -38,6 +38,8 @@ export async function comisionesPactadas(correduriaId: string, hoy: string): Pro
         and r.eiac_xml_hash is not null
         and r.codigo_entidad_dgs is not null
         and r.fecha_efecto_actual >= now() - interval '24 months'
+      -- Los más recientes primero: si se alcanza el techo, lo que se cae es lo viejo, no lo emitido bajo el cuadro vigente.
+      order by r.fecha_efecto_actual desc
       limit ${LIMITE_RECIBOS}`,
   ])
 
