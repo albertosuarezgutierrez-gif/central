@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Phone, Lock, RefreshCw } from 'lucide-react'
 import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
 import EvolucionPrima from '../../EvolucionPrima'
-import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
+import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type PolizaFiguraFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
 import { eur } from '@/lib/dinero'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { Badge, type Tono } from '@/components/ui'
@@ -399,6 +399,64 @@ function motivoNoRetarificable(p: PolizaFicha): string {
  * ninguna». Colapsarlos en el mismo hueco mudo diría «no hay nada» sobre un
  * fallo de lectura — la regla NULL≠0 del CLAUDE.md raíz.
  */
+/**
+ * Pólizas de OTRO tomador donde este cliente figura (28/09/2026). Alberto: «toda
+ * persona que entre dentro de la póliza automáticamente le aparece». Caso: la
+ * furgoneta de GLOBAL 2 con tomador su conductor — la empresa es propietaria y
+ * asegurada y su ficha no la enseñaba. Se enlaza a la póliza, que es del tomador.
+ */
+export function PolizasDondeFigura({ polizas }: { polizas: PolizaFiguraFicha[] | null }) {
+  if (polizas === null) {
+    return (
+      <Tarjeta titulo="Donde figura en pólizas de otro tomador">
+        <p style={{ color: 'var(--muted)', fontSize: 12, margin: 0 }}>
+          No se han podido leer. No significa que no figure en ninguna.
+        </p>
+      </Tarjeta>
+    )
+  }
+  if (polizas.length === 0) return null
+  return (
+    <Tarjeta titulo={`Donde figura en pólizas de otro tomador (${polizas.length})`}>
+      <p style={{ color: 'var(--muted)', fontSize: 12, marginTop: 0 }}>
+        No es el tomador, pero interviene en ellas (propietario, asegurado, conductor…): también son suyas.
+      </p>
+      <div style={{ overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 560 }}>
+          <thead>
+            <tr style={{ color: 'var(--muted)', textAlign: 'left' }}>
+              <th style={th}>Póliza</th>
+              <th style={th}>Figura como</th>
+              <th style={th}>Tomador</th>
+              <th style={th}>Vence</th>
+            </tr>
+          </thead>
+          <tbody>
+            {polizas.map(p => (
+              <tr key={p.id} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={td}>
+                  <Link href={`/correduria/poliza/${p.id}`}>
+                    {TIPOS[p.tipo] ?? p.tipo} · {p.aseguradora || 'sin compañía'}
+                  </Link>
+                  <div style={sub}>
+                    {p.numeroPoliza ?? 'sin número'}
+                    {!p.enVigor && ` · ${p.estado || 'sin estado'}`}
+                  </div>
+                </td>
+                <td style={td}>{p.roles.length > 0 ? p.roles.map(etiquetaRol).join(', ') : '—'}</td>
+                <td style={td}>
+                  <Link href={`/correduria/cliente/${p.tomador.id}`}>{p.tomador.nombre || 'sin nombre'}</Link>
+                </td>
+                <td style={td}>{p.fechaVencimiento ? p.fechaVencimiento.split('-').reverse().join('/') : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Tarjeta>
+  )
+}
+
 export function PolizasDeclaradas({ declaradas }: { declaradas: PolizaDeclaradaFicha[] | null }) {
   if (declaradas === null) {
     return (

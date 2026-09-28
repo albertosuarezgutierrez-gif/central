@@ -85,7 +85,7 @@ import { decryptField } from '@central/module-seguros-pii'
 import { datosPolizaCima, primaAnualDudosa, type DatosPolizaCima } from './datos-poliza-cima'
 import { prisma } from './db'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
-import { camposDeInterviniente, figuraEnPropias, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
+import { camposDeInterviniente, capaInterviniente, figuraEnPropias, figurasDeFichasVistas, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
 import { empresasDeFichas } from './representacion'
 import { getIdentidad } from './session'
 
@@ -215,6 +215,14 @@ export type PolizaPortal = {
    * de sus empresas solo si ADEMÁS figura en ellas (si no, las ve por permiso y no hay papel).
    */
   figura?: string[]
+  /**
+   * Presente SOLO cuando la póliza cuelga de un titular que NO es su tomador: la
+   * ficha que se ve (una empresa autorizada, la del dueño) FIGURA en ella
+   * (propietaria, asegurada…) y el tomador es otro. `roles` son los de esa
+   * ficha, no los de la identidad; `tomador` = nombre del tomador (`null` si su
+   * ficha no se pudo leer). Los campos van capados como los de un interviniente.
+   */
+  figuraTitular?: { roles: string[]; tomador: string | null }
   /**
    * De dónde viene la fila, tal cual está en la BD. NO es para pintarlo: es lo
    * que necesitan aguas abajo (`lib/obligaciones.ts`) para volver a preguntar
@@ -685,12 +693,54 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
   const idsDondeFigura = polizasDondeFigura.map((p) => p.id)
   const tomadoresIds = [...new Set(polizasDondeFigura.map((p) => p.clienteId))]
 
+  // ── Pólizas de otro tomador donde figura una ficha que ve ENTERA (28/09/2026) ──
+  // Quien ve una ficha entera (autorización sin póliza suelta, o empresa del
+  // dueño) ve también las pólizas donde ESA ficha figura: la furgoneta de GLOBAL 2
+  // cuyo tomador es su conductor. 🔒 Misma frontera que arriba: las filas se
+  // buscan SOLO por esas fichas y las pólizas SOLO por id — nunca «las del
+  // tomador». La regla vive pura en `figurasDeFichasVistas`.
+  const fichasVistasEnteras = [...porOtorgante.keys(), ...representadasIds].filter((id) => !propiosIds.includes(id))
+  const filasFiguraAjena =
+    fichasVistasEnteras.length === 0
+      ? []
+      : await prisma.polizaInterviniente.findMany({
+          where: { clienteId: { in: fichasVistasEnteras } },
+          select: { polizaId: true, clienteId: true, rol: true },
+        })
+  const tomadoresYaServidos = [...propiosIds, ...autorizadosIds, ...representadasIds]
+  const polizasFiguraAjena =
+    filasFiguraAjena.length === 0
+      ? []
+      : await prisma.poliza.findMany({
+          where: {
+            AND: [
+              {
+                id: { in: [...new Set(filasFiguraAjena.map((f) => f.polizaId))] },
+                clienteId: { notIn: tomadoresYaServidos },
+                mergedIntoPolizaId: null,
+              },
+              WHERE_CARTERA_VIVA,
+            ],
+          },
+          select: { id: true, clienteId: true },
+        })
+  const figuraAjena = figurasDeFichasVistas({
+    filas: filasFiguraAjena,
+    polizas: polizasFiguraAjena,
+    fichasVistas: fichasVistasEnteras,
+    tomadoresYaServidos,
+  })
+  const idsFiguraAjena = [...figuraAjena.values()].flatMap((m) => [...m.keys()])
+  const tomadoresFiguraAjena = [
+    ...new Set(polizasFiguraAjena.filter((p) => idsFiguraAjena.includes(p.id)).map((p) => p.clienteId)),
+  ]
+
   const todosIds = [...propiosIds, ...autorizadosIds, ...representadasIds]
   const [clientes, polizas] = await Promise.all([
     prisma.cliente.findMany({
       // Los tomadores de las pólizas donde figura entran SOLO aquí (su nombre y
       // su tipo), no en el `clienteId: { in }` de las pólizas de abajo.
-      where: { id: { in: [...todosIds, ...tomadoresIds] }, mergedIntoClienteId: null },
+      where: { id: { in: [...todosIds, ...tomadoresIds, ...tomadoresFiguraAjena] }, mergedIntoClienteId: null },
       // `tipoPersona` decide QUÉ se sirve de una ficha ajena: una sociedad no
       // tiene datos personales, así que quien la representa ve su CIF y su
       // cuenta y puede actuar por ella. Sin este campo, la bóveda serviría una
@@ -705,7 +755,10 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       // Las de un tomador ajeno donde figura entran por ID, nunca por su ficha.
       where: {
         AND: [
-          { OR: [{ clienteId: { in: todosIds } }, { id: { in: idsDondeFigura } }], mergedIntoPolizaId: null },
+          {
+            OR: [{ clienteId: { in: todosIds } }, { id: { in: [...idsDondeFigura, ...idsFiguraAjena] } }],
+            mergedIntoPolizaId: null,
+          },
           WHERE_CARTERA_VIVA,
         ],
       },
@@ -1064,11 +1117,19 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     // Una ficha fusionada o que ya no existe no se pinta: sin nombre no hay titular.
     const nombre = nombrePor.get(clienteId)
     if (nombre === undefined) return null
+    // Las de otro tomador donde ESTA ficha figura (vacío salvo para fichas vistas enteras).
+    const figura = figuraAjena.get(clienteId)
     const suyas = polizas
-      .filter((p) => p.clienteId === clienteId)
+      .filter((p) => p.clienteId === clienteId || (figura?.has(p.id) ?? false))
       .map((p) => {
         const campos = typeof ve === 'function' ? ve(p.id) : ve
-        return campos === null ? null : aPortal(p, campos)
+        if (campos === null) return null
+        const rolesTitular = p.clienteId === clienteId ? undefined : figura?.get(p.id)
+        if (rolesTitular === undefined) return aPortal(p, campos)
+        // No es su póliza: lo de la PERSONA del tomador (IBAN, DNI, documentos, actuar por él) no se hereda.
+        const fila = aPortal(p, capaInterviniente(campos))
+        fila.figuraTitular = { roles: rolesTitular, tomador: nombrePor.get(p.clienteId) ?? null }
+        return fila
       })
       .filter((x): x is PolizaPortal => x !== null)
     // Sustituciones POR LECTOR (caso José Suárez, 23/09/2026): con lo que este lector ve, nunca antes.

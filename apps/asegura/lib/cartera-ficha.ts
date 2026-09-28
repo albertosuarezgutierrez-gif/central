@@ -32,7 +32,7 @@ import {
 import { decryptField } from '@central/module-seguros-pii'
 import { Prisma } from './generated/asegura-client'
 import { caducidadCarnet, DIAS_PRESUPUESTO_VIVO, enmascararDni, estadoCliente, retarificabilidad, referenciaCatastral, type ContactoCliente, type DocumentoResumen, type EstadoClienteDerivado, type Retarificabilidad } from '@central/module-seguros'
-import { esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
+import { esCarteraEnVigor, esCarteraViva, esVolcadoHistorico, WHERE_CARTERA_VIVA, WHERE_VOLCADO_HISTORICO } from '@central/module-seguros'
 import { RAMOS_DESCRITOS_POR_COBERTURAS } from './cartera'
 import { ordenPolizasFicha } from '@central/module-seguros'
 import { listarContactos, type Identidad } from './cartera-edicion'
@@ -432,6 +432,15 @@ export type FichaCliente = {
    */
   intervinientes: IntervinienteFicha[] | null
   /**
+   * Pólizas de OTRO tomador donde esta ficha FIGURA (propietaria del coche,
+   * asegurada, conductor…). Alberto, 28/09/2026: «toda persona que entre dentro
+   * de la póliza automáticamente le aparece». Caso fundacional: la furgoneta de
+   * GLOBAL 2 (UV-G-410081428, Generali) tiene de tomador a su conductor y GLOBAL 2
+   * figura de propietaria y asegurada — y su ficha no la enseñaba.
+   * `null` = no se pudo consultar. NO es «no figura en ninguna».
+   */
+  figuraEn: PolizaFiguraFicha[] | null
+  /**
    * Los documentos del cliente (propios y de sus pólizas/siniestros), con su
    * estado pedido/recibido/revisado. `null` = no se ha podido consultar.
    */
@@ -453,6 +462,73 @@ export type FichaCliente = {
    * `fechaIlegible: true`, nunca se quita la fila: el carné existe.
    */
   carnets: CarnetFicha[] | null
+}
+
+export type PolizaFiguraFicha = {
+  id: string
+  tipo: string
+  aseguradora: string
+  numeroPoliza: string | null
+  estado: string
+  fechaVencimiento: string | null
+  /** Viva y con estado vigente (`esCarteraEnVigor`): una cancelada se enseña, pero como tal. */
+  enVigor: boolean
+  tomador: { id: string; nombre: string }
+  /** Papeles de ESTA ficha en la póliza, sin repetir. */
+  roles: string[]
+}
+
+/**
+ * Pólizas VIVAS de otro tomador donde la ficha figura en `poliza_intervinientes`,
+ * por su `cliente_id` O por su DNI (índice ciego): CIMA engancha a veces el
+ * interviniente a una ficha duplicada con el mismo DNI, y la identidad es el
+ * DNI, no la fila (regla «agrupar por identidad»).
+ */
+export async function polizasDondeFigura(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  clienteId: string,
+  dniLookupHash: string | null,
+): Promise<PolizaFiguraFicha[]> {
+  const filas = await db.polizaInterviniente.findMany({
+    where: {
+      correduriaId,
+      OR: [{ clienteId }, ...(dniLookupHash ? [{ nifLookupHash: dniLookupHash }] : [])],
+    },
+    select: { polizaId: true, rol: true },
+  })
+  if (filas.length === 0) return []
+  const rolesPor = new Map<string, Set<string>>()
+  for (const f of filas) {
+    const g = rolesPor.get(f.polizaId) ?? new Set<string>()
+    g.add(String(f.rol))
+    rolesPor.set(f.polizaId, g)
+  }
+  const polizas = await db.poliza.findMany({
+    where: {
+      AND: [
+        { id: { in: [...rolesPor.keys()] }, correduriaId, mergedIntoPolizaId: null, NOT: { clienteId } },
+        WHERE_CARTERA_VIVA,
+      ],
+    },
+    select: {
+      id: true, tipo: true, aseguradora: true, numeroPoliza: true, estado: true, fechaVencimiento: true,
+      importRef: true, eiacXmlHash: true, sustituidaAt: true,
+      cliente: { select: { id: true, nombre: true, apellidos: true, mergedIntoClienteId: true } },
+    },
+    orderBy: { fechaVencimiento: 'desc' },
+  })
+  return polizas.map((p) => ({
+    id: p.id,
+    tipo: String(p.tipo),
+    aseguradora: p.aseguradora,
+    numeroPoliza: p.numeroPoliza ?? null,
+    estado: String(p.estado),
+    fechaVencimiento: p.fechaVencimiento ? p.fechaVencimiento.toISOString().slice(0, 10) : null,
+    enVigor: esCarteraEnVigor({ ...p, estado: String(p.estado) }),
+    tomador: { id: p.cliente.id, nombre: `${p.cliente.nombre} ${p.cliente.apellidos}`.trim() },
+    roles: [...(rolesPor.get(p.id) ?? [])].sort(),
+  }))
 }
 
 export type DatosDePolizas = {
@@ -679,7 +755,7 @@ export async function fichaCliente(
   const idsPolizas = c.polizas.map((p) => p.id)
   // Recibos y siniestros de TODAS sus pólizas de una vez. Sin esto la ficha
   // haría una consulta por póliza y con 8 pólizas ya se nota.
-  const [recibos, siniestros, intervinientes] = await Promise.all([
+  const [recibos, siniestros, intervinientes, figuraEn] = await Promise.all([
     idsPolizas.length === 0
       ? Promise.resolve([])
       : db.polizaRecibo.findMany({
@@ -704,6 +780,10 @@ export async function fichaCliente(
       orderBy: { fechaHora: 'desc' },
     }),
     leerIntervinientes(db, correduriaId, clienteId, idsPolizas, c.dniLookupHash ?? null),
+    polizasDondeFigura(db, correduriaId, clienteId, c.dniLookupHash ?? null).catch((e) => {
+      console.error('[ficha] pólizas donde figura:', e instanceof Error ? e.message : e)
+      return null
+    }),
   ])
 
   // 🧬 La copia GEMELA del volcado: 16 de las 109 vivas existen dos veces y en
@@ -812,6 +892,7 @@ export async function fichaCliente(
     // ficha. Nunca viaja la clave, solo el veredicto.
     pii: { clave: estadoClavePii(c.telefono ?? c.email ?? null) },
     intervinientes,
+    figuraEn,
     documentos,
     contactos,
     relaciones,

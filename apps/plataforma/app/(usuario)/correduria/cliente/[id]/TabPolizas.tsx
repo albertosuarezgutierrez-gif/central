@@ -1,5 +1,5 @@
-import type { IntervinienteFicha, PolizaDeclaradaFicha, PolizaFicha } from '@/lib/ficha-asegura'
-import { Polizas, PolizasDeclaradas } from './piezas'
+import type { IntervinienteFicha, PolizaDeclaradaFicha, PolizaFicha, PolizaFiguraFicha } from '@/lib/ficha-asegura'
+import { Polizas, PolizasDeclaradas, PolizasDondeFigura } from './piezas'
 
 /**
  * Todo lo que el cliente tiene contratado, en cuatro bloques que NO son lo
@@ -18,14 +18,17 @@ import { Polizas, PolizasDeclaradas } from './piezas'
  * enseña todas las primas. En las vivas no se agrupa: ahí dos filas iguales son
  * un fallo de conciliación que hay que ver, no esconder.
  */
-export default function TabPolizas({ porClase, intervinientes, declaradas }: {
+export default function TabPolizas({ porClase, intervinientes, declaradas, figuraEn }: {
   porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'sustituida' | 'historica', PolizaFicha[]>
   intervinientes: IntervinienteFicha[] | null
   declaradas: PolizaDeclaradaFicha[] | null
+  figuraEn: PolizaFiguraFicha[] | null
 }) {
   return (
     <>
       <Polizas titulo="Pólizas vivas" polizas={porClase.viva} vacio="Ninguna póliza activa entra hoy por CIMA." intervinientes={intervinientes} />
+
+      <PolizasDondeFigura polizas={figuraEn} />
 
       <PolizasDeclaradas declaradas={declaradas} />
 

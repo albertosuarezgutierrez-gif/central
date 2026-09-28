@@ -100,6 +100,13 @@ export function FilaPoliza({ p, deOtro }: { p: PolizaPortal; deOtro: string | nu
             {/* Tu figura en la póliza (28/09/2026): «Tomador», «Propietario»… Sin
                 papel conocido no se pinta nada: no se inventa uno. */}
             {p.figura && p.figura.length > 0 && <span className="chip">{figuraChip(p.figura)}</span>}
+            {/* La ficha que ves (tu empresa, quien te autorizó) figura en la póliza de OTRO tomador. */}
+            {p.figuraTitular && p.figuraTitular.roles.length > 0 && (
+              <span className="chip">
+                {figuraChip(p.figuraTitular.roles)}
+                {p.figuraTitular.tomador && ` · tomador ${p.figuraTitular.tomador}`}
+              </span>
+            )}
             {p.sustituyeA && (
               <span className="chip">
                 {empieza ? `Hasta entonces, ${p.sustituyeA.compania}` : `Sustituye a ${p.sustituyeA.compania}`}

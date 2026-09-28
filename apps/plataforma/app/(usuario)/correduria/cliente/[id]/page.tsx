@@ -169,7 +169,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {/* Todas las pólizas en tabla, con los siniestros del cliente: la vista de consulta. */}
       {tab === 'polizas' && (
         <>
-          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} />
+          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} figuraEn={ficha.figuraEn} />
           <Siniestros
             lista={ficha.siniestros}
             polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
