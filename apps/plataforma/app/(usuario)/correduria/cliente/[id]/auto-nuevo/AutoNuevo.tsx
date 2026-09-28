@@ -533,7 +533,7 @@ export default function AutoNuevo({
   const faltaMunicipio = !municipioId
   const faltaMatricula = !matricula.trim()
   const faltaMatriculacion = !matriculacion
-  const estimacion = fechaMatriculacionEstimada(matricula)
+  const estimacion = fechaMatriculacionEstimada(matricula, hoyLocal())
 
   // Con cada matrícula (tecleada, pegada o restaurada del borrador) se consulta
   // la fecha a Avant2, gratis; mientras tanto, o si no responde, vale la
@@ -553,7 +553,7 @@ export default function AutoNuevo({
       }
       return
     }
-    const local = fechaMatriculacionEstimada(placa)
+    const local = fechaMatriculacionEstimada(placa, hoyLocal())
     setMatriculacion(local?.estimada ?? '')
     setMatriculacionEstimada(local !== null)
     setFuenteMatriculacion(local ? 'serie' : null)
@@ -1206,6 +1206,12 @@ function BloquePersona({
 }
 
 const KM_ANUALES_POR_DEFECTO = 10000
+
+/** Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes. */
+function hoyLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
 
 function fechaCorta(iso: string): string {
   const [a, m, d] = iso.split('-')

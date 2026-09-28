@@ -837,6 +837,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Matrícula de ESTE mes: la fecha ya se estima (moto y auto) + garaje por defecto en moto
+- `2121NST` no rellenaba nada: la tabla de series solo tiene meses CERRADOS (acaba en NRY, agosto), así que
+  toda matrícula del mes en curso daba `null`. `fechaMatriculacionEstimada(m, hoy)` extrapola al ritmo medio
+  de 12 meses acotado a [último hito, hoy]; una serie imposible (más allá de hoy+20 d al ritmo máximo) sigue `null`.
+- Moto: «¿Dónde duerme?» arranca en «Vía pública», como auto.
+
 ## (28/09/2026) Presupuesto de moto: la matrícula ya rellena sola la fecha de matriculación
 - `MotoNuevo.tsx` no tenía el autorrelleno que sí tenía `AutoNuevo.tsx`: se porta igual (estimación por serie
   al instante + Avant2 a los 500 ms; nunca pisa una fecha tecleada; en modo póliza no actúa).
