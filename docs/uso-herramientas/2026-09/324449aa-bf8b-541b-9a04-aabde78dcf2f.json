@@ -1,18 +1,18 @@
 {
  "sesion": "324449aa-bf8b-541b-9a04-aabde78dcf2f",
  "inicio": "2026-09-28T15:25:58.003Z",
- "fin": "2026-09-28T16:14:02.146Z",
- "llamadas": 29,
+ "fin": "2026-09-28T16:48:54.614Z",
+ "llamadas": 31,
  "categorias": {
   "bash": {
-   "llamadas": 6,
-   "chars_in": 2501,
-   "chars_out": 18919,
+   "llamadas": 8,
+   "chars_in": 3169,
+   "chars_out": 25286,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 6
+    "Bash": 8
    }
   },
   "otro": {
