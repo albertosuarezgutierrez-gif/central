@@ -11,7 +11,7 @@
 // Lo que cruza el puerto: el DNI ENMASCARADO y la cuenta con solo sus 4
 // últimas cifras. Para decidir si son la misma persona basta; el dato entero no.
 import { Prisma } from './generated/asegura-client'
-import { decryptField, encryptField, looksLikeDniNieCif } from '@central/module-seguros-pii'
+import { decryptField, looksLikeDniNieCif } from '@central/module-seguros-pii'
 import {
   compararFichas,
   dniIlegibleSinIndice,
@@ -119,10 +119,23 @@ function valores(c: Fila): Partial<Record<GrupoFusion, ValorFusion>> {
   }
 }
 
-/** La clave de cifrado funciona: sin esto, «no descifra» sería «falta la clave», no un dato ilegible. */
-function clavePiiOperativa(): boolean {
+/**
+ * La clave de cifrado de ESTE proceso lee la cartera de verdad: descifra el DNI
+ * de una ficha que ya tiene índice (se leyó para indexarlo) y sale un documento.
+ * Un ida y vuelta con la propia clave no vale: con una clave válida pero
+ * equivocada (rotación a medias, env de otro proyecto) o sin clave fuera de
+ * producción, sale bien igual, y entonces TODO DNI sin índice pasaría por
+ * ilegible y dos personas distintas se fusionarían con solo marcar la casilla.
+ * Sin una ficha indexada que lo pruebe, no se sabe: cuenta como que no lee.
+ */
+async function claveLeeCartera(correduriaId: string): Promise<boolean> {
   try {
-    return decryptField(encryptField('canario')) === 'canario'
+    const c = await prismaAsegura().cliente.findFirst({
+      where: { correduriaId, dniLookupHash: { not: null }, dni: { startsWith: 'v1:' } },
+      select: { dni: true },
+    })
+    if (!c?.dni) return false
+    return looksLikeDniNieCif(decryptField(c.dni))
   } catch {
     return false
   }
@@ -132,27 +145,27 @@ function clavePiiOperativa(): boolean {
  * El DNI guardado no se puede leer: no descifra (con la clave funcionando) o lo
  * que hay no tiene forma de documento («X», «PENDIENTE»). Es el mismo criterio
  * que deja la ficha como `ilegible` en el backfill del índice, que por eso nunca
- * se lo pondrá. Si la clave no funciona, NO es ilegible: es que no se sabe.
+ * se lo pondrá. Si la clave no lee la cartera, NO es ilegible: es que no se sabe.
  */
-function dniIlegible(v: string | null | undefined): boolean {
-  if (typeof v !== 'string' || v.trim() === '') return false
-  if (campoIlegible(v)) return clavePiiOperativa()
+function dniIlegible(v: string | null | undefined, claveLee: boolean): boolean {
+  if (!claveLee || typeof v !== 'string' || v.trim() === '') return false
+  if (campoIlegible(v)) return true
   const t = descifrarCampo(v)
   return t === null || !looksLikeDniNieCif(t)
 }
 
-function dniDe(c: Fila) {
-  return { hash: c.dniLookupHash, tieneDni: !!c.dni?.trim(), ilegible: dniIlegible(c.dni) }
+function dniDe(c: Fila, claveLee: boolean) {
+  return { hash: c.dniLookupHash, tieneDni: !!c.dni?.trim(), ilegible: dniIlegible(c.dni, claveLee) }
 }
 
-function resumen(c: Fila): FichaFusion {
+function resumen(c: Fila, claveLee = false): FichaFusion {
   const nombre = `${c.nombre ?? ''} ${c.apellidos ?? ''}`.trim() || 'sin nombre'
   return {
     id: c.id,
     nombre,
     tipo: String(c.tipo),
     dniEnmascarado: enmascararDni(descifrarCampo(c.dni)),
-    dniIlegible: dniIlegibleSinIndice(dniDe(c)),
+    dniIlegible: dniIlegibleSinIndice(dniDe(c, claveLee)),
     polizas: c.polizas.length,
     polizasVivas: c.polizas.filter((p) => esCarteraViva(p)).length,
     telefonos: Math.max(c._count.telefonos, c.telefono ? 1 : 0),
@@ -178,7 +191,7 @@ export async function candidatasFusion(correduriaId: string, clienteId: string):
       select: SELECT,
       take: 10,
     })
-    return otras.map(resumen)
+    return otras.map((o) => resumen(o))
   } catch {
     return null
   }
@@ -193,15 +206,16 @@ async function comparar(correduriaId: string, supId: string, lapId: string) {
   if (supId === lapId) return { estado: 'invalido' as const, motivo: 'Es la misma ficha.' }
   const [s, l] = await Promise.all([leer(correduriaId, supId), leer(correduriaId, lapId)])
   if (!s || !l) return { estado: 'no_encontrado' as const }
+  const claveLee = await claveLeeCartera(correduriaId)
   const comparacion: ComparacionFusion = {
-    superviviente: resumen(s),
-    absorbida: resumen(l),
-    identidad: identidadFusion(dniDe(s), dniDe(l)),
+    superviviente: resumen(s, claveLee),
+    absorbida: resumen(l, claveLee),
+    identidad: identidadFusion(dniDe(s, claveLee), dniDe(l, claveLee)),
     campos: compararFichas(valores(s), valores(l)),
   }
   // Los DNI ilegibles viajan a la BD con su valor CIFRADO exacto: la función lo
   // comprueba contra la fila y lo guarda en el registro de la fusión.
-  const dniIlegibles = [s, l].filter((c) => dniIlegibleSinIndice(dniDe(c))).map((c) => c.dni as string)
+  const dniIlegibles = [s, l].filter((c) => dniIlegibleSinIndice(dniDe(c, claveLee))).map((c) => c.dni as string)
   return { estado: 'ok' as const, comparacion, dniIlegibles }
 }
 

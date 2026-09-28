@@ -873,6 +873,8 @@ exacto en el 7º argumento `p_dni_ilegibles`; la BD exige que coincida con la fi
 (`dni_ilegible_no_coincide`) y lo anota en `cliente_merge_log.deps_repointed->'dni_ilegible'`. Si la superviviente es la
 ilegible y la otra tiene DNI legible, se queda el legible con su índice. Firma de 6 args = envoltorio con el comportamiento
 viejo. **Migración `fusionar_clientes_dni_ilegible` YA APLICADA en prod** (probada antes en transacción revertida, 6 casos).
+La app solo marca «ilegible» si su clave LEE la cartera (descifra un DNI ya indexado): un ida y vuelta con la propia
+clave no prueba nada con una clave equivocada (hallazgo de code-review; cepo `apps/asegura/lib/cartera-fusion.test.ts`).
 
 ## (28/09/2026) asegura-portal: la FIGURA del cliente en cada póliza
 - Alberto: «indicar en la app cliente la figura que tiene en la póliza». Chip en la fila de la bóveda («Tomador», «Tomador y conductor habitual», «Propietario») y frase en la ficha («En esta póliza figuras como…» / «…como propietario. El tomador es X.»).
