@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — 📭 Webhook de Codeoscopic: las 4 emisiones reales (17-28/09) NO han generado ni un aviso. Medido: desde el 17/09 llega un POST cada ~30 min a `app.grupoasegura.com` que la RUTA del CRM (no el middleware: `/api/webhooks/codeoscopic` ya es pública) rechaza con 401 — `webhook_signature_invalid`, cabecera presente, `authUserPresente:false`: el USUARIO de la Basic Auth no es el nuestro. Las peticiones con credenciales válidas (proyectos de 6 cifras, «Codeoscopic-Juanma») sí pasaban → Codeoscopic tiene DOS altas del webhook con credenciales distintas; no se arregla con código, hay que alinear credenciales con Codeoscopic (pendiente del OK de Alberto). Parece un solo aviso reintentándose en cola. Cero pérdida en cartera (las emisiones se cierran sin el aviso). Nueva señal del vigía `emisionesSinAviso` (>24 h emitida, 30 días, sin evento) → degrada + Telegram por cambio de firma (8º tramo, normalizador 7→8); hoy salta con 40769244/40804066/40841279.
+
 **(28/09/2026)** — `facturas-correo`: pasada de rutina sin novedades que archivar. Vía B sana
 (`dias_caido=0`), `agente_salud` actualizado. Sin candidatos nuevos en correo ni subidas manuales.
 Backlog persistente revisado y confirmado sin resolver: ASECON 181,50€ (factura 1-001804, renta

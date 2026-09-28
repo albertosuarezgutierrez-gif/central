@@ -182,6 +182,7 @@ export type SenalIngesta = {
     | 'cron'
     | 'crudo'
     | 'caja_negra'
+    | 'emisiones_sin_aviso'
     | 'cobertura'
     | 'parciales'
     | 'renovaciones'
@@ -326,6 +327,20 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
     })
   }
 
+  // 📭 Emisiones de Codeoscopic sin aviso del webhook (ver `EmisionSinAviso`).
+  const emis = s.emisionesSinAviso ?? []
+  if (emis.length > 0) {
+    out.push({
+      clave: 'emisiones_sin_aviso', tipo: 'perdida', n: emis.length,
+      titulo: `${emis.length} emisión(es) de Codeoscopic sin aviso de su webhook`,
+      detalle:
+        emis.map(e => `${e.proyecto}${e.aseguradora ? ` (${e.aseguradora})` : ''}`).join(' · ') +
+        '. Emitidas hace más de un día y el webhook no ha dicho nada: el aviso no llega o se rechaza ' +
+        '(credenciales). La póliza ya está registrada; lo que se pierde es enterarse de un rechazo o una ' +
+        'aprobación tardía de la compañía.',
+    })
+  }
+
   if (s.cajaNegra !== null && s.cajaNegra.cuerpos > 0) {
     out.push({
       clave: 'caja_negra', tipo: 'perdida', n: s.cajaNegra.cuerpos,
@@ -367,6 +382,13 @@ export function senalesIngesta(s: SaludIngesta): SenalIngesta[] {
       clave: 'renovaciones', tipo: 'hueco', n: null,
       titulo: 'Sin comprobar si hay renovaciones que no han llegado',
       detalle: 'No significa que hayan llegado todas: significa que hoy no se ha podido mirar.',
+    })
+  }
+  if (s.emisionesSinAviso === null) {
+    out.push({
+      clave: 'emisiones_sin_aviso', tipo: 'hueco', n: null,
+      titulo: 'Sin comprobar si las emisiones de Codeoscopic reciben su aviso',
+      detalle: 'No significa que lleguen: significa que hoy no se ha podido mirar.',
     })
   }
   if (s.huerfanas !== null && s.huerfanas > 0 && s.huerfanasReparto === null) {
@@ -515,6 +537,10 @@ export function tituloIngesta(v: VistaIngesta | null): string {
     const perdidas = senalesIngesta(s).filter(x => x.tipo === 'perdida')
     if (perdidas.length > 0 && perdidas.every(x => x.clave === 'renovaciones')) {
       return 'Hay renovaciones que no han llegado por CIMA'
+    }
+    // Igual con el webhook de Codeoscopic: no es CIMA, y no hay fichero que buscar.
+    if (perdidas.length > 0 && perdidas.every(x => x.clave === 'emisiones_sin_aviso')) {
+      return 'El webhook de Codeoscopic no avisa de las emisiones'
     }
     return 'Se están perdiendo datos de CIMA'
   }

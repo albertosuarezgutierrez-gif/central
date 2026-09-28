@@ -381,3 +381,38 @@ test('renovaciones: si son lo ÚNICO medido, el título lo dice (no «se pierden
   const v = { estado: 'ok' as const, salud: s, huerfanasTruncadas: false, huerfanasSinAmbito: null }
   assert.equal(tituloIngesta(v), 'Hay renovaciones que no han llegado por CIMA')
 })
+
+// ── 📭 Emisiones de Codeoscopic sin aviso del webhook (28/09/2026) ───────────
+
+const emitida = { proyecto: '40769244', aseguradora: 'Allianz', horas: 262 }
+
+test('emisiones sin aviso: salen como PÉRDIDA con el proyecto y la compañía', () => {
+  const s = saludIngesta({ cuarentena: [], emisionesSinAviso: [emitida] })
+  const r = senalesIngesta(s).filter(x => x.clave === 'emisiones_sin_aviso')
+  assert.equal(r.length, 1)
+  assert.equal(r[0].tipo, 'perdida')
+  assert.match(r[0].detalle, /40769244 \(Allianz\)/)
+})
+
+test('emisiones sin aviso: `null` es HUECO y `[]` no pinta nada', () => {
+  const hueco = senalesIngesta(saludIngesta({ cuarentena: [], emisionesSinAviso: null }))
+    .filter(x => x.clave === 'emisiones_sin_aviso')
+  assert.equal(hueco.length, 1)
+  assert.equal(hueco[0].tipo, 'hueco')
+  assert.equal(
+    senalesIngesta(saludIngesta({ cuarentena: [], emisionesSinAviso: [] })).some(x => x.clave === 'emisiones_sin_aviso'),
+    false,
+  )
+})
+
+test('emisiones sin aviso: si son lo ÚNICO medido, el título no culpa a CIMA', () => {
+  const s = saludIngesta({
+    cuarentena: [], emisionesSinAviso: [emitida],
+    rechazos: [], silencio: [], crudo: { pendientes: 0, purgaInminente: 0, masAntiguaHoras: null },
+    cobertura: { rutas: 0, rutasNuncaLeidas: 0, entidadesObservadas: 1, porTipo: [] },
+    cajaNegra: { capturaActiva: true, cuerpos: 0, posts: 0, horasDesdeUltimo: null, sinCuerpo: 0 },
+    ultimoPull: { horas: 3, procesados: 1 }, parciales: [],
+  })
+  const v = { estado: 'ok' as const, salud: s, huerfanasTruncadas: false, huerfanasSinAmbito: null }
+  assert.equal(tituloIngesta(v), 'El webhook de Codeoscopic no avisa de las emisiones')
+})

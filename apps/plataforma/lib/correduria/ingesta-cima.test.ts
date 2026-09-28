@@ -447,3 +447,30 @@ test('🚨 renovaciones: una fila ilegible degrada la lista ENTERA a null (hueco
   assert.equal(r.salud.renovacionesSinLlegar, null)
   assert.ok(r.salud.huecos.some(h => /renovaciones/.test(h)))
 })
+
+// ── 📭 Emisiones de Codeoscopic sin aviso del webhook (28/09/2026) ───────────
+
+const EMIS = [{ proyecto: '40769244', aseguradora: 'Allianz', horas: 262 }]
+
+test('emisiones sin aviso: el puerto las manda → degradan y viajan a la salud', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [], emisionesSinAviso: EMIS })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.estado, 'degradada')
+  assert.deepEqual(r.salud.emisionesSinAviso, EMIS)
+})
+
+test('emisiones sin aviso: puerto viejo (clave ausente) = no se pide, NO es hueco', () => {
+  const r = interpretarIngesta(200, { estado: 'ok', cuarentena: [] })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.emisionesSinAviso, undefined)
+})
+
+test('🚨 emisiones sin aviso: una fila ilegible degrada la lista ENTERA a null (hueco)', () => {
+  const r = interpretarIngesta(200, {
+    estado: 'ok', cuarentena: [],
+    emisionesSinAviso: [...EMIS, { proyecto: 40804066, aseguradora: 'Reale', horas: 1 }],
+  })
+  if (r.estado !== 'ok') return assert.fail('debía ser ok')
+  assert.equal(r.salud.emisionesSinAviso, null)
+  assert.ok(r.salud.huecos.some(h => /webhook/.test(h)))
+})
