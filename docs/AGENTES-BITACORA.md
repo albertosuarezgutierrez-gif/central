@@ -14,6 +14,19 @@
 > `- **YYYY-MM-DD · <skill>** · hizo: …; dudas: …; fallos: …; PRs/commits: #xxx / SHA / —`
 > Sin dudas ni fallos → escribir `dudas: —; fallos: —` (el "todo bien" también es señal).
 
+- **2026-09-28 · mercado-booking** · hizo: pasada diaria — 236 comparables reales de Booking en
+  las 24/24 ventanas de mercado pedidas (`max=24`, `candidatas=508`, `recortadas=484`, no agota el
+  plan; casi todas evento Q1 2027 Centro histórico/Triana + Congreso SEC oct26); 4 anuncios propios
+  de HOUSE SEVILLANA detectados en las ventanas de aforo 12 (07/19/21/22-mar-2027) y descartados
+  antes de escribir. Paso 2-bis (escaparate propio) 0/4 medidas: las 4 (Busto Reform, Dúplex
+  center, Luxury Busto, HOUSE SEVILLANA) devolvieron `hotel_names_no_availability` para
+  2026-10-06 — mismo patrón recurrente ya diagnosticado el 23-27/09 (ventana fija ocupada; causa de
+  fondo es código del generador de plan, fuera de esta skill, cazado en PR #3713 el 27/09) — hueco
+  del conector, no fallo; no se cambiaron fechas/noches del plan. Latido `ok:false` (regla propia:
+  escaparate sin medir cuenta aunque los comparables de mercado fueran bien). dudas: —; fallos: —;
+  PRs/commits: — (solo escritura vía `/api/sivra/mercado/ingest`; este commit solo anota la
+  bitácora y `CONTEXTO-SESIONES.md`).
+
 - **2026-09-28 · pricing-agente** · hizo: ciclo semanal completo de los 4 pisos, delegado a 4 agentes en paralelo (uno por piso, mismas 12 ventanas que ciclos anteriores: oct26-jul27 1 finde/mes + Semana Santa + Feria + Karol G). Verificación obligatoria por SQL directo (no solo autoinforme): busto=128, duplex=146, luxury=146, house=101 comps nuevos en `market_rates`, ningún piso a 0. 48/48 propuestas dry-run en `pricing_decisiones`, circuit-breaker sano en los 4. Aprendizaje registrado en `pricing_aprendizaje` id 82. Telegram enviado con el resumen y la línea de comps por piso; dudas: —; fallos: — (1 timeout SSL transitorio en luxury, resuelto al reintentar). Hallazgos de calidad de dato sin arreglar aún (self-listing colándose como comp propio; `mercado/ingest` no distingue Trivago de Booking en `fuente`) — quedan anotados en `pricing_aprendizaje` id 82 para un ciclo futuro. PRs/commits: commit directo a `main` (esta pasada no tocó código, solo BD + Telegram).
 
 ## Entradas pendientes de procesar (lo más reciente arriba)
