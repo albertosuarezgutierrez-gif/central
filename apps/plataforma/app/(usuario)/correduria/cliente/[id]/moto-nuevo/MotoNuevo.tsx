@@ -17,6 +17,8 @@ import { useEffect, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { CeldaCompania } from '../../../CeldaCompania'
+import PrepararPresupuesto from '../../../poliza/[id]/retarificar/PrepararPresupuesto'
+import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { ConIcono } from '../../../iconos'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
@@ -787,13 +789,6 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
   )
 }
 
-/** El id de la cotización guardada: sin él no hay proyecto al que pedir la emisión. */
-function cotizacionIdDe(guardado: unknown): string | null {
-  if (typeof guardado !== 'object' || guardado === null) return null
-  const g = guardado as Record<string, unknown>
-  return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
-}
-
 function Precios({
   r,
   simulacion,
@@ -892,6 +887,9 @@ function Precios({
             />
           )
         })}
+      {cotizacionIdDe(r.guardado) !== null && (
+        <PrepararPresupuesto tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
+      )}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
       )}

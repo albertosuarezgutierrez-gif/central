@@ -35,6 +35,8 @@ import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 
 import { pedirCatalogo, pedirCotizacionAuto } from './acciones'
 import { CeldaCompania } from '../../../CeldaCompania'
+import PrepararPresupuesto from '../../../poliza/[id]/retarificar/PrepararPresupuesto'
+import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { SelectorBuscable } from '../../../SelectorBuscable'
 
 function euroODash(n: number | null | undefined): string {
@@ -155,6 +157,8 @@ type Resultado =
       precios: Precio[]
       fallos: Fallo[]
       supuestos: Supuesto[]
+      /** Qué pasó con la copia guardada: su `cotizacionId` es de lo que sale el presupuesto. */
+      guardado?: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
@@ -701,6 +705,7 @@ export default function AutoNuevo({
           precios: r.precios,
           fallos: r.fallos,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
       default: {
@@ -1294,6 +1299,9 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
           </tbody>
         </table>
       </div>
+      {cotizacionIdDe(r.guardado) !== null && (
+        <PrepararPresupuesto tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
+      )}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
       )}

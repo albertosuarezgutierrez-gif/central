@@ -236,6 +236,8 @@ export type PresupuestoEnLista = {
   estado: EstadoPresupuestoLista
   /** `null` si la versión de asegura desplegada no lo manda: entonces no se cruzan los datos para emitir. */
   clienteId: string | null
+  /** Ramo del presupuesto. `null` = asegura no lo manda (versión anterior). */
+  ramo: string | null
   creadoAt: string
   venceEl: string
   enviadoAt: string | null
@@ -262,7 +264,7 @@ export function leerPresupuestoEnLista(v: unknown): PresupuestoEnLista | null {
   const id = s(o.id), estado = s(o.estado), creadoAt = s(o.creadoAt), venceEl = s(o.venceEl)
   if (!id || !estado || !creadoAt || !venceEl || !ESTADOS.includes(estado as EstadoPresupuestoLista)) return null
   return {
-    id, estado: estado as EstadoPresupuestoLista, clienteId: s(o.clienteId), creadoAt, venceEl,
+    id, estado: estado as EstadoPresupuestoLista, clienteId: s(o.clienteId), ramo: s(o.ramo), creadoAt, venceEl,
     enviadoAt: s(o.enviadoAt), enlaceGeneradoAt: s(o.enlaceGeneradoAt), vistoAt: s(o.vistoAt),
     opciones: typeof o.opciones === 'number' ? o.opciones : 0,
     desdeEur: typeof o.desdeEur === 'number' ? o.desdeEur : null,
@@ -342,4 +344,12 @@ export function fraseDatosEmision(v: unknown): { texto: string; alerta: boolean 
   if (ilegibles) partes.push(`⚠ ${ilegibles} dato${ilegibles === 1 ? '' : 's'} no abre${ilegibles === 1 ? '' : 'n'}: revisa la clave PII de asegura`)
   if (!partes.length) return { texto: 'Datos para emitir: completos ✓', alerta: false }
   return { texto: `Datos para emitir: ${partes.join(' · ')}.`, alerta: ilegibles > 0 || cliente.length > 0 }
+}
+
+/** El id de la cotización guardada (`guardado` de la respuesta de cotizar). `null` = no quedó guardada:
+ *  sin él no hay de qué preparar un presupuesto ni a qué pedir la emisión. */
+export function cotizacionIdDe(guardado: unknown): string | null {
+  if (typeof guardado !== 'object' || guardado === null) return null
+  const g = guardado as Record<string, unknown>
+  return g.estado === 'guardada' && typeof g.cotizacionId === 'string' ? g.cotizacionId : null
 }

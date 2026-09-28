@@ -130,8 +130,8 @@ function Preparado({ p, token }: { p: PresupuestoPreparado; token: string }) {
       </ul>
 
       <p className="muted" style={{ marginTop: 0 }}>
-        Queda <strong>preparado, sin enviar</strong>. Para mandárselo, vuelve a la ficha de la póliza →
-        «Presupuestos»: por correo o por WhatsApp, siempre con tu clic.
+        Queda <strong>preparado, sin enviar</strong>. Para mandárselo, ve a «Presupuestos» en la ficha
+        del cliente (u Oportunidades) o de la póliza: por correo o por WhatsApp, siempre con tu clic.
       </p>
     </section>
   )

@@ -19,6 +19,9 @@ import { useState } from 'react'
 import { FlaskConical, Loader2, Pencil, X } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
+import { CeldaCompania } from '../../../CeldaCompania'
+import PrepararPresupuesto from '../../../poliza/[id]/retarificar/PrepararPresupuesto'
+import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { eur } from '@/lib/dinero'
 import type {
   Control as TipoControl,
@@ -76,6 +79,8 @@ type Resultado =
       resumen: string
       precios: Precio[]
       supuestos: Supuesto[]
+      /** Qué pasó con la copia guardada: su `cotizacionId` es de lo que sale el presupuesto. */
+      guardado?: unknown
     }
   | { estado: 'faltan'; faltan: Reparo[] }
   | { estado: 'error'; mensaje: string; tope?: boolean; gastoDesconocido: boolean }
@@ -197,6 +202,7 @@ export default function Formulario({
           resumen: r.resumen,
           precios: r.precios,
           supuestos: r.supuestos,
+          guardado: r.guardado,
         })
         return
       default: {
@@ -551,8 +557,7 @@ function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
         <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 480 }}>
           <thead>
             <tr>
-              <th style={th}>Compañía</th>
-              <th style={th}>Producto</th>
+              <th style={th}>Aseguradora</th>
               <th style={th}>Prima anual</th>
               <th style={th}>Firmeza</th>
             </tr>
@@ -560,8 +565,7 @@ function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
           <tbody>
             {r.precios.map((p, i) => (
               <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}>{p.compania ?? '—'}</td>
-                <td style={td}>{p.producto ?? '—'}</td>
+                <td style={td}><CeldaCompania compania={p.compania} producto={p.producto} /></td>
                 <td style={td}>{euroODash(p.primaEur)}</td>
                 <td style={td}><Badge tono={p.firmeza === 'firme' ? 'positivo' : 'aviso'} title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge></td>
               </tr>
@@ -569,6 +573,9 @@ function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
           </tbody>
         </table>
       </div>
+      {cotizacionIdDe(r.guardado) !== null && (
+        <PrepararPresupuesto tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
+      )}
       {r.supuestos.length > 0 && (
         <>
           <p style={{ color: 'var(--muted)', fontSize: 13, marginTop: 8 }}>Este precio sale con estos supuestos:</p>
