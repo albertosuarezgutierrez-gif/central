@@ -848,7 +848,7 @@ no salía en la ficha de GLOBAL 2 ni a Pilar (autorizada sobre GLOBAL 2). Medido
 Ficha del corredor: `figuraEn` (`polizasDondeFigura`, por `cliente_id` o DNI) → bloque «Donde figura en pólizas de otro tomador».
 Portal: quien ve una ficha ENTERA (autorización sin póliza suelta o empresa del dueño) ve también donde ESA ficha figura,
 capada como interviniente (`capaInterviniente`, `figurasDeFichasVistas`); cepo en `regression-portal-intervinientes`.
-Ojo: GLOBAL 2 conserva una copia de volcado `UV-G-410.081.428` (con puntos, no viva). ¿Tomador real = Francisco o GLOBAL 2? Solo lo dice el XML de CIMA.
+Confirmado con las condiciones particulares de Generali: tomador y conductor habitual = Francisco Javier; asegurado/propietario = GLOBAL 2 (Citan 1670HRB). La BD está bien. La copia de volcado `UV-G-410.081.428` (con puntos, no viva) cuelga de GLOBAL 2 como tomador.
 
 ## (28/09/2026) Matrícula de ESTE mes: la fecha ya se estima (moto y auto) + garaje por defecto en moto
 - `2121NST` no rellenaba nada: la tabla de series solo tiene meses CERRADOS (acaba en NRY, agosto), así que
