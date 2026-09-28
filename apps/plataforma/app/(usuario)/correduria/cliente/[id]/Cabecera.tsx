@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Cake, CarFront, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
+import { Cake, CarFront, ChevronRight, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
 import { contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { estadoCaducidadCarnet, urlRetarificar, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
@@ -57,9 +57,11 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                 {/* Abierto de serie si un carné caduca o ya caducó: un aviso no se pliega.
                     En su propia línea: abierto e inline, estiraba la fila y la chapa de
                     estado salía como un círculo gigante (captura de Alberto, 28/09/2026). */}
-                <details style={{ flexBasis: '100%' }} open={(ficha.carnets ?? []).some(k => estadoCaducidadCarnet(k.fechaCaducidad, new Date().toISOString().slice(0, 10)) !== 'vigente' && k.fechaCaducidad !== null)}>
-                  <summary style={{ cursor: 'pointer', color: 'var(--muted)', minHeight: 44, lineHeight: '44px' }}>DNI y carnés</summary>
-                  <span style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginTop: 4 }}>
+                <details className="plegable-dato" style={{ flexBasis: '100%' }} open={(ficha.carnets ?? []).some(k => estadoCaducidadCarnet(k.fechaCaducidad, new Date().toISOString().slice(0, 10)) !== 'vigente' && k.fechaCaducidad !== null)}>
+                  <summary style={{ cursor: 'pointer', color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: 4, minHeight: 32, fontSize: 13, listStyle: 'none', userSelect: 'none' }}>
+                    <ChevronRight className="chev" size={14} strokeWidth={1.75} aria-hidden />DNI y carnés
+                  </summary>
+                  <span style={{ display: 'flex', gap: '4px 14px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} />
                     <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />
                   </span>
@@ -310,7 +312,7 @@ function Acciones({ clienteId }: { clienteId: string }) {
   return (
     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
       <details style={{ position: 'relative' }}>
-        <summary style={{ ...btnStyle('primario', 'sm'), minHeight: 44, listStyle: 'none', userSelect: 'none' }}>
+        <summary style={{ ...btnStyle('primario'), listStyle: 'none', userSelect: 'none' }}>
           + Nueva oportunidad ▾
         </summary>
         <div
@@ -348,8 +350,8 @@ function Acciones({ clienteId }: { clienteId: string }) {
           </p>
         </div>
       </details>
-      <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro." style={{ minHeight: 44 }}>
-        <BtnLink href={urlSubirPoliza()} variante="secundario" tam="sm" nuevaPestana>
+      <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro." style={{ display: 'inline-flex' }}>
+        <BtnLink href={urlSubirPoliza()} variante="secundario" nuevaPestana>
           <Ico i={FileText} /> Subir póliza ↗
         </BtnLink>
       </span>
