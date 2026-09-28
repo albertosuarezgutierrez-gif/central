@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { leerOpcionesLegibles, leerCoberturas } from './coberturas.ts'
+import { leerOpcionesLegibles, leerCoberturas, sobreOpciones } from './coberturas.ts'
 
 test('leerOpcionesLegibles: saca etiqueta y valor (ejemplo público Mapfre Hogar)', () => {
   const q = {
@@ -36,4 +36,12 @@ test('leerCoberturas: included ausente es null (ver texto), nunca false', () => 
   assert.deepEqual(leerCoberturas({ items: [{ name: 'Robo', included: true }] }), [
     { nombre: 'Robo', incluida: true, texto: null },
   ])
+})
+
+test('sobreOpciones: sin formattedOptions es no_manda con lista null, nunca leidas con []', () => {
+  const t = '2026-09-28T19:00:00.000Z'
+  assert.deepEqual(sobreOpciones(null, t), { estado: 'no_manda', lista: null, leidasAt: t })
+  assert.deepEqual(sobreOpciones([], t), { estado: 'leidas', lista: [], leidasAt: t })
+  const l = [{ etiqueta: 'Asistencia en viaje', valor: 'Estándar' }]
+  assert.deepEqual(sobreOpciones(l, t), { estado: 'leidas', lista: l, leidasAt: t })
 })

@@ -1790,6 +1790,25 @@ export type TarificacionNuevaGuardada = {
   /** Efecto ya pasado: la compañía no confirma ni emite. No se ofrece retomarla. */
   caducada: boolean
   precios: Precio[]
+  /** Coche y moto: el vehículo con el que se pidió, para volver a pedir precio sin dictarlo. `null` = no consta. */
+  vehiculo: VehiculoGuardado | null
+}
+
+export type VehiculoGuardado = { codigoVehiculo: string; matricula: string | null; fechaMatriculacion: string | null; kmAnuales: number | null }
+
+/** PURO: el `vehiculo` de asegura, validado por forma. Sin código de versión no hay vehículo (nunca a medias). */
+export function leerVehiculoGuardado(v: unknown): VehiculoGuardado | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const codigoVehiculo = cadenaONulo(o.codigoVehiculo)
+  if (!codigoVehiculo) return null
+  const km = o.kmAnuales
+  return {
+    codigoVehiculo,
+    matricula: cadenaONulo(o.matricula),
+    fechaMatriculacion: cadenaONulo(o.fechaMatriculacion),
+    kmAnuales: typeof km === 'number' && Number.isFinite(km) && km >= 0 ? km : null,
+  }
 }
 
 export type RespuestaTarificacionNueva =
@@ -1817,6 +1836,7 @@ export function interpretarTarificacionNueva(status: number, json: unknown): Res
         fechaEfecto: cadenaONulo(r.fechaEfecto),
         caducada: r.caducada === true,
         precios,
+        vehiculo: leerVehiculoGuardado(r.vehiculo),
       },
     }
   }

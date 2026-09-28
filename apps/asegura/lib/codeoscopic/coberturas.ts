@@ -56,3 +56,19 @@ export function leerCoberturas(raw: unknown): Cobertura[] {
   }
   return out
 }
+
+/**
+ * Sobre de `tarificacion_precios.opciones` (28/09/2026). `null` de la cotización = el vendor no
+ * mandó `formattedOptions` → `no_manda`, nunca `leidas` con `[]` (eso diría «sin opciones»).
+ */
+export type SobreOpciones = {
+  estado: 'leidas' | 'no_manda' | 'sin_precio' | 'fallo'
+  lista: OpcionLegible[] | null
+  leidasAt: string
+}
+
+export function sobreOpciones(opciones: OpcionLegible[] | null, leidasAt: string): SobreOpciones {
+  return opciones === null
+    ? { estado: 'no_manda', lista: null, leidasAt }
+    : { estado: 'leidas', lista: opciones, leidasAt }
+}

@@ -871,6 +871,11 @@ Ficha → su pestaña Documentos con tipo «póliza». Cabecera → pantalla pro
 Cepo `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo 4/5 brazos).
 Telegram: si la oportunidad ya existía («duplicada»), los documentos se guardan SOLOS en la ficha (antes botón que nadie pulsaba: Rafael Campa, 3 envíos, 0 guardados).
 
+## (28/09/2026) Opciones del producto por precio (asistencia estándar vs ampliada)
+- Avant2 manda `formattedOptions` en cada precio («Asistencia en viaje: Estándar») y se TIRABAN. Nueva columna `seguros.tarificacion_precios.opciones` (sobre `leidas|no_manda|sin_precio|fallo`; NULL = sin intentar), migración `2026-09-28d_…` APLICADA.
+- Se escribe al tarificar y el cron `coberturas-backfill` rellena las viejas releyendo el proyecto (gratis, una relectura compartida).
+- Por qué: Occident auto dice «asistencia amplia opcional (no incluida)» y Allianz tarifica con `travelAssistance=STD`; el filtro trata básica y ampliada igual. Siguiente paso: con el dato medido, separar «asistencia ampliada» en el catálogo.
+
 ## (28/09/2026) asegura abría un PrismaClient POR CONSULTA en producción → EMAXCONN en el pooler compartido
 - Primera pasada del backfill de coberturas (18:17 UTC): 172/264 precios con coberturas, el resto abortó con `EMAXCONN` (límite 200 de Supavisor, ~700 conexiones de `prisma_seguros` en 2 min).
 - Causa: `apps/asegura/lib/db.ts` (desde el 02/09, PR #2116) solo guardaba el singleton fuera de producción y el `Proxy` lo resolvía en cada acceso → cliente y pool nuevos por consulta. Afectaba a toda asegura, el cron largo lo destapó.

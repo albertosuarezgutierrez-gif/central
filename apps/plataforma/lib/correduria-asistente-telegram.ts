@@ -16,7 +16,7 @@ import { buscarAsegura, impagadosAsegura, sustitucionesAsegura } from '@/lib/cor
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { polizaAsegura } from '@/lib/poliza-asegura'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
-import { catalogoAsegura, emitirAsegura, importarProyectoAsegura, porFalloDeRed, tarificacionNuevaGuardadaAsegura, vistaImportacionAsegura, type Opcion, type RespuestaRetarificar, type Supuesto } from '@/lib/retarificar-asegura'
+import { catalogoAsegura, emitirAsegura, importarProyectoAsegura, porFalloDeRed, tarificacionNuevaGuardadaAsegura, vistaImportacionAsegura, type Opcion, type RespuestaRetarificar, type Supuesto, type VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { cotizarAutoNuevaAsegura, precalificarAutoNuevaAsegura } from '@/lib/auto-nuevo-asegura'
 import { cotizarMotoNuevaAsegura, precalificarMotoNuevaAsegura } from '@/lib/moto-nuevo-asegura'
 import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
@@ -1078,12 +1078,21 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
     return m.opcion
   }
 
+  // Sin vehículo dictado: el de la última petición de precio de este cliente y ramo (gratis), si es la
+  // misma matrícula. Solo el vehículo: garaje y km se vuelven a decir, que suele ser lo que se corrige.
+  const previo = !e.marca && !e.modelo && !e.version ? await vehiculoPrevio(clienteId, ramo, e.matricula) : null
+
   // Vehículo: marca → modelo → combustible → versión, cada paso contra su catálogo.
-  const marca = elegir('marca', marcas, e.marca)
+  const marca = previo ? null : elegir('marca', marcas, e.marca)
   const modelo = marca ? elegir('modelo', await catalogoOpciones({ tipo: moto ? 'modelos-moto' : 'modelos', marcaId: marca.id }), e.modelo) : null
-  const motor = elegir('motor', moto ? [...MOTORES_MOTO] : await catalogoOpciones({ tipo: 'motores' }), e.motor)
-  let version: Opcion | null = null
-  if (marca && modelo && motor) {
+  const motor = previo ? null : elegir('motor', moto ? [...MOTORES_MOTO] : await catalogoOpciones({ tipo: 'motores' }), e.motor)
+  let version: Opcion | null = previo ? { id: previo.vehiculo.codigoVehiculo, nombre: previo.vehiculo.codigoVehiculo } : null
+  if (previo) {
+    piezas.push({ campo: 'version', estado: 'ok' })
+    // Sin marca/modelo/combustible asegura no puede cruzar el carné con la cilindrada: se dice, no se calla.
+    if (moto) supuestos.push({ campo: 'tipoCarnet', valor: 'el de la ficha', porque: `no se cruza con la cilindrada al reutilizar la moto (sí se hizo en la petición del ${previo.de})` })
+  }
+  else if (marca && modelo && motor) {
     const versiones = await catalogoOpciones({ tipo: moto ? 'versiones-moto' : 'versiones', marcaId: marca.id, modeloId: modelo.id, motor: motor.id })
     if (!e.version && typeof versiones !== 'string' && versiones.length > 1) {
       piezas.push({ campo: 'version', estado: 'varios', candidatas: versiones })
@@ -1096,23 +1105,25 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
     }
   }
 
-  // Matrícula y su fecha: dicha → Avant2 por la matrícula (gratis) → la serie nacional, declarada como supuesto.
-  piezas.push(e.matricula ? { campo: 'matricula', estado: 'ok' } : { campo: 'matricula', estado: 'falta' })
-  let fechaMatriculacion = e.fechaMatriculacion
-  if (!fechaMatriculacion && e.matricula) {
-    const f = await catalogoOpciones({ tipo: moto ? 'fecha-matriculacion-moto' : 'fecha-matriculacion', matricula: e.matricula })
+  // Matrícula y su fecha: dicha → la de la petición anterior → Avant2 por la matrícula (gratis) → la serie
+  // nacional, declarada como supuesto.
+  const matricula = e.matricula ?? previo?.vehiculo.matricula ?? null
+  piezas.push(matricula ? { campo: 'matricula', estado: 'ok' } : { campo: 'matricula', estado: 'falta' })
+  let fechaMatriculacion = e.fechaMatriculacion ?? previo?.vehiculo.fechaMatriculacion ?? null
+  if (!fechaMatriculacion && matricula) {
+    const f = await catalogoOpciones({ tipo: moto ? 'fecha-matriculacion-moto' : 'fecha-matriculacion', matricula })
     if (typeof f !== 'string' && f[0]) {
       fechaMatriculacion = f[0].id
       supuestos.push({ campo: 'fechaMatriculacion', valor: f[0].id, porque: 'la da Avant2 por la matrícula (aproximada)' })
     } else {
-      const est = fechaMatriculacionEstimada(e.matricula, hoyMadrid())
+      const est = fechaMatriculacionEstimada(matricula, hoyMadrid())
       if (est) {
         fechaMatriculacion = est.estimada
         supuestos.push({ campo: 'fechaMatriculacion', valor: est.estimada, porque: `estimada por la serie de la matrícula (entre ${est.desde} y ${est.hasta})` })
       }
     }
   }
-  if (e.matricula) piezas.push(fechaMatriculacion ? { campo: 'fechaMatriculacion', estado: 'ok' } : { campo: 'fechaMatriculacion', estado: 'falta' })
+  if (matricula) piezas.push(fechaMatriculacion ? { campo: 'fechaMatriculacion', estado: 'ok' } : { campo: 'fechaMatriculacion', estado: 'falta' })
 
   // Garaje: vía pública si no se dice, y dicho como supuesto.
   let garaje: Opcion | null = null
@@ -1146,7 +1157,8 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
   if (e.historial) companiaAnterior = elegir('companiaAnterior', await catalogoOpciones({ tipo: 'companias-anteriores' }), e.historial.compania)
 
   const huecos = [...errores, ...huecosPendientes(piezas, p.faltan, e.persona)]
-  if (huecos.length || !marca || !modelo || !motor || !version || !e.matricula || !fechaMatriculacion || !garaje || !estadoCivil || !municipio || (e.historial && !companiaAnterior)) {
+  const vehiculoOk = previo ? true : !!(marca && modelo && motor)
+  if (huecos.length || !vehiculoOk || !version || !matricula || !fechaMatriculacion || !garaje || !estadoCivil || !municipio || (e.historial && !companiaAnterior)) {
     return {
       texto: `FALTAN DATOS (no se ha propuesto nada, 0€):\n- ${(huecos.length ? huecos : ['revisa los datos del vehículo']).join('\n- ')}\nPregúntaselo a Alberto y vuelve a llamar con TODO lo anterior más lo nuevo.`,
       ok: true,
@@ -1154,10 +1166,11 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
   }
 
   const cuerpo = construirCuerpo({
-    ramo, marcaId: marca.id, modeloId: modelo.id, motor: motor.id, codigoVehiculo: version.id,
-    matricula: e.matricula, fechaMatriculacion, garaje: garaje.id, garajeEsSupuesto, estadoCivilId: estadoCivil.id, municipioId: municipio.id,
+    ramo, marcaId: marca?.id ?? null, modeloId: modelo?.id ?? null, motor: motor?.id ?? null, codigoVehiculo: version.id,
+    matricula, fechaMatriculacion, garaje: garaje.id, garajeEsSupuesto, estadoCivilId: estadoCivil.id, municipioId: municipio.id,
     persona: e.persona,
     historial: e.historial && companiaAnterior ? { ...e.historial, companiaCodigo: companiaAnterior.id } : null,
+    kmAnuales: e.kmAnuales,
   })
   // Los supuestos de asegura que lo dictado ya tapa, fuera: si no, el resumen diría «se supone» de algo que Alberto dijo.
   const tapados = new Set([...Object.keys(cuerpo.correcciones), ...Object.keys(cuerpo.resueltos), 'estadoCivil', 'municipioCirculacionId', 'cpCirculacion'])
@@ -1173,8 +1186,9 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
     RETURNING id`)
   const texto = textoPropuesta({
     ramo, cliente: p.etiquetaCliente || 'cliente',
-    vehiculo: { marca: marca.nombre, modelo: modelo.nombre, motor: motor.nombre, version: version.nombre },
-    matricula: e.matricula, fechaMatriculacion, garaje: garaje.nombre, estadoCivil: estadoCivil.nombre, municipio: municipio.nombre,
+    vehiculo: { marca: marca?.nombre ?? '', modelo: modelo?.nombre ?? '', motor: motor?.nombre ?? '', version: version.nombre },
+    vehiculoPrevioDe: previo?.de ?? null, kmAnuales: e.kmAnuales,
+    matricula, fechaMatriculacion, garaje: garaje.nombre, estadoCivil: estadoCivil.nombre, municipio: municipio.nombre,
     persona: e.persona,
     historial: e.historial && companiaAnterior ? { ...e.historial, compania: companiaAnterior.nombre } : null,
     primaActual: e.primaActual, supuestos: todos,
@@ -1189,6 +1203,21 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
     return { texto: 'ERROR: no he podido mandar la propuesta con el botón a Telegram. Dile que lo intente otra vez o pida el precio en la ficha.', ok: false }
   }
   return { texto: `Propuesta enviada a Alberto con el botón «Pedir precio (0,50€)» (${MINUTOS_PROPUESTA} minutos, un solo uso). NO digas que has pedido el precio: dile que revise los datos y pulse.`, ok: true }
+}
+
+/**
+ * El vehículo de la última petición de precio de este cliente y ramo, si la hay y es la misma matrícula
+ * (o no se ha dicho ninguna). Gratis: solo lee lo ya pagado. Un fallo de lectura = no se reutiliza y se
+ * pregunta el vehículo, que es lo de siempre (nunca se inventa).
+ */
+async function vehiculoPrevio(clienteId: string, ramo: RamoTarif, matricula: string | null): Promise<{ vehiculo: VehiculoGuardado; de: string } | null> {
+  const r = await tarificacionNuevaGuardadaAsegura(clienteId, ramo).catch(() => null)
+  if (!r || r.estado !== 'ok' || !r.guardada.vehiculo) return null
+  const v = r.guardada.vehiculo
+  const igual = (a: string, b: string) => a.replace(/[\s-]/g, '').toUpperCase() === b.replace(/[\s-]/g, '').toUpperCase()
+  if (matricula && (!v.matricula || !igual(matricula, v.matricula))) return null
+  const de = r.guardada.creadaEn ? r.guardada.creadaEn.slice(0, 10).split('-').reverse().join('/') : 'fecha desconocida'
+  return { vehiculo: v, de }
 }
 
 /**

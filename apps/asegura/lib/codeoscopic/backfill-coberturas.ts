@@ -23,6 +23,7 @@ import { clasificarCoberturas, ramoDeCatalogo, type GarantiasClasificadas } from
 import { casarPrecio, type SobreCoberturas } from './coberturas-presupuesto.ts'
 import type { ResumenCoberturasTarificacion } from './coberturas-tarificacion.ts'
 import type { Precio } from './respuesta.ts'
+import { sobreOpciones, type SobreOpciones } from './coberturas.ts'
 
 /** Una fila pendiente (`coberturas is null`) SIN `oferta_id`, con lo necesario para casarla. */
 export type FilaSinOferta = {
@@ -50,9 +51,29 @@ const norm = (s: string | null | undefined) =>
  * no se elige: leer las coberturas de otra oferta sería peor que no leerlas.
  */
 export function ofertaDeFila(f: FilaSinOferta, precios: readonly Precio[]): string | null {
+  return precioDeFila(f, precios)?.ofertaId ?? null
+}
+
+/** El precio del proyecto releído que corresponde a una fila guardada (mismo criterio que la oferta). */
+export function precioDeFila(f: FilaSinOferta, precios: readonly Precio[]): Precio | null {
   const o = { compania: f.compania, producto: f.producto, primaEur: f.primaEur, referenciaVendor: f.referenciaVendor }
-  const precio = casarPrecio(o, precios) ?? casarPrecio(o, precios.filter((p) => norm(p.modalidad) === norm(f.modalidad)))
-  return precio?.ofertaId ?? null
+  return casarPrecio(o, precios) ?? casarPrecio(o, precios.filter((p) => norm(p.modalidad) === norm(f.modalidad)))
+}
+
+/**
+ * Las opciones de cada fila sin leer, a partir del proyecto releído. PURO. `precios === null` (la
+ * relectura falló) → `fallo`; sin precio casado → `sin_precio`. Nunca `leidas` con `[]` inventado.
+ */
+export function planOpciones(
+  filas: readonly FilaSinOferta[],
+  precios: readonly Precio[] | null,
+  leidasAt: string,
+): { id: string; sobre: SobreOpciones }[] {
+  return filas.map((f) => {
+    if (precios === null) return { id: f.id, sobre: { estado: 'fallo', lista: null, leidasAt } }
+    const p = precioDeFila(f, precios)
+    return { id: f.id, sobre: p ? sobreOpciones(p.opciones, leidasAt) : { estado: 'sin_precio', lista: null, leidasAt } }
+  })
 }
 
 /** Reparte las filas sin oferta entre «ya tiene oferta» y «no hay oferta que leer». PURO. */
@@ -81,6 +102,10 @@ export type DepsBackfill = {
   asignarOferta: (id: string, ofertaId: string) => Promise<number>
   /** `update … set coberturas, garantias where id = any(ids) and coberturas is null`. Filas escritas. */
   marcar: (ids: string[], sobre: SobreCoberturas, garantias: GarantiasClasificadas | null) => Promise<number>
+  /** Filas con `opciones is null` (28/09/2026). Opcional: sin ella no se leen opciones. */
+  sinOpciones?: () => Promise<FilaSinOferta[]>
+  /** `update … set opciones where id = … and opciones is null`. Filas escritas. */
+  escribirOpciones?: (id: string, sobre: SobreOpciones) => Promise<number>
   /** La pasada normal sobre las filas que ya tienen oferta. */
   completar: (topeMs: number) => Promise<ResumenCoberturasTarificacion>
   ahora?: () => Date
@@ -94,6 +119,8 @@ export type ResumenBackfill = {
   sinOferta: number
   /** Filas sin oferta cuya relectura del proyecto falló → sobre `fallo`. */
   falloProyecto: number
+  /** Filas a las que se les han escrito las opciones del producto (cualquier estado). */
+  opciones?: number
   /** Lo que devolvió `completarCoberturasTarificacion` (null si no se llegó a llamar). */
   completar: ResumenCoberturasTarificacion | null
   omitido?: 'no_existe' | 'simulada' | 'sin_proyecto' | 'sin_vendor' | 'error'
@@ -125,13 +152,17 @@ export async function backfillCoberturasTarificacion(
     const garantiasSinLista = ramo ? clasificarCoberturas(ramo, null) : null
 
     const filas = await d.sinOferta()
-    if (filas.length > 0) {
-      let precios: Precio[] | null = null
+    const filasOpciones = d.sinOpciones && d.escribirOpciones ? await d.sinOpciones() : []
+    // UNA relectura del proyecto por tarificación, para las dos cosas.
+    let precios: Precio[] | null = null
+    if (filas.length > 0 || filasOpciones.length > 0) {
       try {
         precios = await d.refrescar(cab.projectId)
       } catch (e) {
         console.warn(`[backfill-coberturas] ${ids.tarificacionId}: no se pudo releer el proyecto:`, mensaje(e))
       }
+    }
+    if (filas.length > 0) {
       if (precios === null) {
         // 🚨 `lista: null`, NUNCA `[]`: un fallo pintado como lista vacía diría «no cubre nada».
         r.falloProyecto += await d.marcar(filas.map((f) => f.id), { estado: 'fallo', lista: null, leidasAt: ahora().toISOString() }, garantiasSinLista)
@@ -141,6 +172,13 @@ export async function backfillCoberturasTarificacion(
         if (plan.sinOferta.length > 0) {
           r.sinOferta += await d.marcar(plan.sinOferta, { estado: 'sin_oferta', lista: null, leidasAt: ahora().toISOString() }, garantiasSinLista)
         }
+      }
+    }
+
+    if (filasOpciones.length > 0 && d.escribirOpciones) {
+      r.opciones = 0
+      for (const o of planOpciones(filasOpciones, precios, ahora().toISOString())) {
+        r.opciones += await d.escribirOpciones(o.id, o.sobre)
       }
     }
 
@@ -160,6 +198,7 @@ export type ResumenPasada = {
   ofertasRecuperadas: number
   sinOferta: number
   falloProyecto: number
+  opciones: number
   coberturasLeidas: number
   coberturasFallo: number
   /** Tarificaciones que se quedaron sin tocar porque se agotó el presupuesto de tiempo. */
@@ -187,7 +226,7 @@ export async function pasadaBackfillCoberturas(
   const inicio = Date.now()
 
   const total: ResumenPasada = {
-    tarificaciones: 0, ofertasRecuperadas: 0, sinOferta: 0, falloProyecto: 0,
+    tarificaciones: 0, ofertasRecuperadas: 0, sinOferta: 0, falloProyecto: 0, opciones: 0,
     coberturasLeidas: 0, coberturasFallo: 0, sinTiempo: 0, omitidas: {},
   }
   const ids = await candidatas(correduriaId, limite)
@@ -199,6 +238,7 @@ export async function pasadaBackfillCoberturas(
     total.ofertasRecuperadas += r.ofertasRecuperadas
     total.sinOferta += r.sinOferta
     total.falloProyecto += r.falloProyecto
+    total.opciones += r.opciones ?? 0
     total.coberturasLeidas += r.completar?.leidas ?? 0
     total.coberturasFallo += r.completar?.fallos ?? 0
     if (r.omitido) total.omitidas[r.omitido] = (total.omitidas[r.omitido] ?? 0) + 1
@@ -218,7 +258,7 @@ async function candidatasReales(correduriaId: string, limite: number): Promise<s
     where t.correduria_id = ${correduriaId}::uuid
       and t.simulado = false
       and t.project_id_codeoscopic is not null
-      and exists (select 1 from tarificacion_precios p where p.tarificacion_id = t.id and p.coberturas is null)
+      and exists (select 1 from tarificacion_precios p where p.tarificacion_id = t.id and (p.coberturas is null or p.opciones is null))
     order by t.creado_at desc
     limit ${limite}
   `
@@ -292,6 +332,34 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
           and p.tarificacion_id = ${ids.tarificacionId}::uuid
           and p.id = any(${filas}::uuid[])
           and p.coberturas is null
+      `
+    },
+    async sinOpciones() {
+      const filas = await prisma.$queryRaw<{
+        id: string; compania: string; producto: string; modalidad: string | null; prima_eur: unknown; referencia_vendor: string | null
+      }[]>`
+        select p.id::text as id, p.compania, p.producto, p.modalidad, p.prima_eur, p.referencia_vendor
+        from tarificacion_precios p
+        join tarificaciones t on t.id = p.tarificacion_id
+        where p.tarificacion_id = ${ids.tarificacionId}::uuid
+          and t.correduria_id = ${ids.correduriaId}::uuid
+          and p.opciones is null
+      `
+      return filas.map((f) => ({
+        id: f.id, compania: f.compania, producto: f.producto, modalidad: f.modalidad,
+        primaEur: Number(String(f.prima_eur)), referenciaVendor: f.referencia_vendor,
+      }))
+    },
+    async escribirOpciones(id, sobre) {
+      return prisma.$executeRaw`
+        update tarificacion_precios p
+        set opciones = ${JSON.stringify(sobre)}::jsonb
+        from tarificaciones t
+        where t.id = p.tarificacion_id
+          and t.correduria_id = ${ids.correduriaId}::uuid
+          and p.tarificacion_id = ${ids.tarificacionId}::uuid
+          and p.id = ${id}::uuid
+          and p.opciones is null
       `
     },
     completar: (topeMs) => completarCoberturasTarificacion(ids, { topeMs }),
