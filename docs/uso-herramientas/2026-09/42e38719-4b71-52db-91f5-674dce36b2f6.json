@@ -1,57 +1,63 @@
 {
  "sesion": "42e38719-4b71-52db-91f5-674dce36b2f6",
  "inicio": "2026-09-28T08:52:19.978Z",
- "fin": "2026-09-28T08:58:35.217Z",
- "llamadas": 34,
+ "fin": "2026-09-28T09:34:00.856Z",
+ "llamadas": 57,
  "categorias": {
   "mcp:Claude_Code_Remote": {
-   "llamadas": 4,
-   "chars_in": 304,
-   "chars_out": 4641,
+   "llamadas": 7,
+   "chars_in": 1378,
+   "chars_out": 6758,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Claude_Code_Remote__add_repo": 1,
     "mcp__Claude_Code_Remote__register_repo_root": 1,
-    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2,
+    "mcp__Claude_Code_Remote__send_later": 2,
+    "mcp__Claude_Code_Remote__update_trigger": 1
    }
   },
   "otro": {
-   "llamadas": 2,
-   "chars_in": 317,
-   "chars_out": 632,
+   "llamadas": 13,
+   "chars_in": 467,
+   "chars_out": 183133,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 2
+    "ToolSearch": 4,
+    "ReadNotifications": 9
    }
   },
   "bash": {
-   "llamadas": 18,
-   "chars_in": 12052,
-   "chars_out": 40817,
+   "llamadas": 20,
+   "chars_in": 12410,
+   "chars_out": 41484,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 18
+    "Bash": 20
    }
   },
   "mcp:github": {
-   "llamadas": 9,
-   "chars_in": 4483,
-   "chars_out": 31798,
+   "llamadas": 16,
+   "chars_in": 5942,
+   "chars_out": 50583,
    "errores": 2,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__github__actions_list": 2,
-    "mcp__github__get_job_logs": 3,
-    "mcp__github__actions_get": 1,
+    "mcp__github__actions_list": 4,
+    "mcp__github__get_job_logs": 4,
+    "mcp__github__actions_get": 2,
     "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 2
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__add_issue_comment": 1,
+    "mcp__github__pull_request_read": 1,
+    "mcp__github__actions_run_trigger": 1
    }
   },
   "mcp:Vercel": {
