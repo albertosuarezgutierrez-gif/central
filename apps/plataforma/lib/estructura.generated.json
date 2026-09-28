@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-28T11:57:33Z",
+  "generadoEn": "2026-09-28T12:34:45Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 98
+        "evidencias": 99
       },
       "rrhh": {
         "estado": "no",
@@ -4990,6 +4990,7 @@
       "/api/correduria/clientes",
       "/api/correduria/codeoscopic-crudo",
       "/api/correduria/codeoscopic-diagnostico",
+      "/api/correduria/codigo-postal",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
@@ -6575,7 +6576,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1496,
+    "apis": 1497,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T11:57:33Z",
-  "sha": "fa73531e53a66332ef7b8ff6cb290e001a6c060d",
+  "generadoEn": "2026-09-28T12:34:45Z",
+  "sha": "6e988e13b001460c4655bee25a86eedd8de19392",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -73749,6 +73749,36 @@
       "hash": "84a2b13e9756"
     },
     {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/CiudadPorCp.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "CiudadPorCp"
+      ],
+      "funciones": [
+        {
+          "nombre": "buscar",
+          "kind": "function",
+          "exportada": false,
+          "params": "cp: string",
+          "retorno": "Promise<Resp>",
+          "linea": 14
+        },
+        {
+          "nombre": "CiudadPorCp",
+          "kind": "function",
+          "exportada": true,
+          "params": "{ cp, ciudad, onCiudad, style }: { cp: string ciudad: string onCiudad: (v: string) => void style?: React.CSSProperties }",
+          "retorno": null,
+          "linea": 29
+        }
+      ],
+      "tablas": [
+        "react"
+      ],
+      "rutaApi": null,
+      "hash": "566a5817474b"
+    },
+    {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/auto-nuevo/acciones.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -76078,7 +76108,7 @@
           "exportada": true,
           "params": "{ clienteId, identidad, documentos, }: { clienteId: string identidad: IdentidadFicha | null documentos: DocumentoResumen[] | null }",
           "retorno": null,
-          "linea": 50,
+          "linea": 51,
           "resumen": "Editar la IDENTIDAD de un cliente de la correduría, desde la ficha de plataforma: DNI, nombre, apellidos y fecha de nacimiento, y SOLO con un DNI recibido en la ficha — «se pide documentado» (dictado "
         },
         {
@@ -76087,7 +76117,7 @@
           "exportada": true,
           "params": "{ clienteId, contacto }: { clienteId: string contacto: { direccion: string | null; direccionIlegible: boolean; codigoPostal: string | null; ciudad: string | null; provincia: string | null } }",
           "retorno": null,
-          "linea": 70
+          "linea": 71
         },
         {
           "nombre": "BloqueIdentidad",
@@ -76095,7 +76125,7 @@
           "exportada": false,
           "params": "{ clienteId, identidad, documentos }: { clienteId: string identidad: IdentidadFicha | null documentos: DocumentoResumen[] | null }",
           "retorno": null,
-          "linea": 178
+          "linea": 179
         },
         {
           "nombre": "Aviso",
@@ -76103,7 +76133,7 @@
           "exportada": false,
           "params": "{ r, ok, ocupado, onForzar, textoForzar }: { r: ResultadoEscritura | null ok: string ocupado: boolean onForzar?: () => void textoForzar?: string }",
           "retorno": null,
-          "linea": 348
+          "linea": 349
         },
         {
           "nombre": "Campo",
@@ -76111,7 +76141,7 @@
           "exportada": false,
           "params": "{ label, mal, ayuda, children }: { label: string; mal?: boolean; ayuda?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 395
+          "linea": 396
         }
       ],
       "tablas": [
@@ -76120,7 +76150,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "ded2f989650b"
+      "hash": "bd79d8ac8005"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/EnlaceOportunidad.tsx",
@@ -77128,7 +77158,7 @@
           "exportada": true,
           "params": "{ q }: { q?: string }",
           "retorno": null,
-          "linea": 32
+          "linea": 33
         },
         {
           "nombre": "Resultado",
@@ -77136,7 +77166,7 @@
           "exportada": false,
           "params": "{ r, ocupado, onForzar }: { r: ResultadoEscritura | null; ocupado: boolean; onForzar: () => void }",
           "retorno": null,
-          "linea": 176
+          "linea": 179
         },
         {
           "nombre": "RamoBtn",
@@ -77144,7 +77174,7 @@
           "exportada": false,
           "params": "{ etiqueta, activo, onClick, title }: { etiqueta: string; activo: boolean; onClick: () => void; title?: string }",
           "retorno": null,
-          "linea": 215
+          "linea": 218
         },
         {
           "nombre": "Grupo",
@@ -77152,7 +77182,7 @@
           "exportada": false,
           "params": "{ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 233
+          "linea": 236
         },
         {
           "nombre": "Fila",
@@ -77160,7 +77190,7 @@
           "exportada": false,
           "params": "{ children }: { children: React.ReactNode }",
           "retorno": null,
-          "linea": 243
+          "linea": 246
         },
         {
           "nombre": "Campo",
@@ -77168,12 +77198,12 @@
           "exportada": false,
           "params": "{ label, mal, children }: { label: string; mal?: boolean; children: React.ReactNode }",
           "retorno": null,
-          "linea": 247
+          "linea": 250
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "bb130989ba48"
+      "hash": "8bcc70842791"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/oportunidad/[id]/page.tsx",
@@ -77433,13 +77463,13 @@
           "exportada": true,
           "params": "{ polizaId, esHogar }: { polizaId: string; esHogar: boolean }",
           "retorno": null,
-          "linea": 21,
+          "linea": 22,
           "resumen": "la calle se guarda cifrada allí, con las mismas claves que el volcado, así que el portal del cliente la enseña sin más. No pisa una dirección que ya exista: el puerto devuelve 409."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "8268d1595aec"
+      "hash": "aeb681082868"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/EditarModalidadRc.tsx",
@@ -87624,6 +87654,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/codeoscopic-diagnostico",
       "hash": "3c302b10a90a"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/codigo-postal/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: NextRequest",
+          "retorno": null,
+          "linea": 8,
+          "resumen": "GET /api/correduria/codigo-postal?cp=41011 → { municipios, provincia }. `municipios: null` = CP que la tabla no conoce (se escribe a mano), no «ninguno»."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/codigo-postal",
+      "hash": "e3cf9916cfb7"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/comisiones/confirmar/route.ts",
@@ -101060,6 +101111,75 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "10149628381d"
+    },
+    {
+      "ruta": "apps/plataforma/lib/codigo-postal-auto.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Qué hacer con la ciudad cuando el CP resuelve a municipios (puro, sin BD). - Un municipio → se pone ese. - Varios → si la ciudad escrita ya es uno de ellos, se respeta (con la grafía de la tabla); si no, se vacía y se obliga a ELEGIR: dejar la ciudad vieja junto a un CP nuevo es justo la ficha incoh",
+      "exporta": [
+        "ciudadDelCp",
+        "decidirCiudad",
+        "cpCompleto"
+      ],
+      "funciones": [
+        {
+          "nombre": "plano",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": null,
+          "linea": 13
+        },
+        {
+          "nombre": "ciudadDelCp",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipios: string[] | null, ciudad: string",
+          "retorno": "string | null",
+          "linea": 17,
+          "resumen": "El municipio de la lista que ES la ciudad escrita (sin tildes ni mayúsculas), o `null`."
+        },
+        {
+          "nombre": "decidirCiudad",
+          "kind": "function",
+          "exportada": true,
+          "params": "municipios: string[] | null, ciudadActual: string",
+          "retorno": "DecisionCiudad",
+          "linea": 23
+        },
+        {
+          "nombre": "cpCompleto",
+          "kind": "arrow",
+          "exportada": true,
+          "params": "cp: string",
+          "retorno": null,
+          "linea": 30
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "cabb417249b4"
+    },
+    {
+      "ruta": "apps/plataforma/lib/codigo-postal.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "Código postal → municipio(s). Para que al teclear el CP la ciudad salga sola y, si el CP lo comparten varios municipios, se elija entre ellos. Tabla `municipios-por-cp.json` (11.254 CP, ~300 KB, SOLO servidor: el cliente pregunta a `/api/correduria/codigo-postal`). Fuente: listado CP↔municipio INE (",
+      "exporta": [
+        "municipiosPorCp"
+      ],
+      "funciones": [
+        {
+          "nombre": "municipiosPorCp",
+          "kind": "function",
+          "exportada": true,
+          "params": "cp: string | null | undefined",
+          "retorno": "string[] | null",
+          "linea": 19
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "f8fbd697d9df"
     },
     {
       "ruta": "apps/plataforma/lib/comercio-canonico.ts",
@@ -162415,7 +162535,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3839,
-    "funciones": 12485
+    "archivos": 3843,
+    "funciones": 12493
   }
 }
