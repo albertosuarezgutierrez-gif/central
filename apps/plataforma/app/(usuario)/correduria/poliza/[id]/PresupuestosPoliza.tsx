@@ -16,7 +16,13 @@ import { preguntasNecesidades, textoNecesidades, validarRespuestasNecesidades } 
  * WhatsApp lo manda él desde su móvil (aquí solo se abre con el texto escrito), y por eso
  * «enlazado» no es «enviado» hasta que pulse «Ya lo he mandado».
  */
-export default function PresupuestosPoliza({ polizaId, clienteId, ramo }: { polizaId?: string; clienteId?: string; ramo?: string | null }) {
+export default function PresupuestosPoliza({ polizaId, clienteId, ramo, soloId }: {
+  polizaId?: string
+  clienteId?: string
+  ramo?: string | null
+  /** Solo ESTE presupuesto: se monta justo tras prepararlo para mandarlo sin salir de la pantalla. */
+  soloId?: string
+}) {
   const filtro = polizaId ? `polizaId=${encodeURIComponent(polizaId)}` : `clienteId=${encodeURIComponent(clienteId ?? '')}`
   const [lista, setLista] = useState<PresupuestoEnLista[] | null | 'error'>(null)
   const [datosEmision, setDatosEmision] = useState<Record<string, unknown>>({})
@@ -30,10 +36,10 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo }: { poli
         if (!r.ok || j?.estado !== 'ok' || !Array.isArray(j.presupuestos)) { setLista('error'); return }
         setDatosEmision(j.datosEmision && typeof j.datosEmision === 'object' ? j.datosEmision : {})
         const filas = j.presupuestos.map(leerPresupuestoEnLista)
-        setLista(filas.some((f) => f === null) ? 'error' : (filas as PresupuestoEnLista[]))
+        setLista(filas.some((f) => f === null) ? 'error' : (filas as PresupuestoEnLista[]).filter((f) => !soloId || f.id === soloId))
       })
       .catch(() => setLista('error'))
-  }, [filtro])
+  }, [filtro, soloId])
   useEffect(() => { cargar() }, [cargar])
 
   async function patch(p: PresupuestoEnLista, cuerpo: Record<string, unknown>, ventana?: Window | null) {
@@ -75,7 +81,7 @@ export default function PresupuestosPoliza({ polizaId, clienteId, ramo }: { poli
 
   return (
     <section style={{ display: 'grid', gap: 10, padding: 14, border: '1px solid var(--border)', borderRadius: 12 }}>
-      <strong style={{ fontSize: 15 }}>Presupuestos</strong>
+      <strong style={{ fontSize: 15 }}>{soloId ? 'Mandárselo al cliente' : 'Presupuestos'}</strong>
       {lista.map((p) => {
         const a = accionesPresupuesto(p.estado)
         const libre = ocupado === null

@@ -335,6 +335,7 @@ export default function FiltroGarantias({
           simulado={simulado}
           ocultar={ocultar}
           enviadas={nElegidas}
+          origen={origen}
           bloqueado={bloqueado}
           onPreparado={() => setPreparado(true)}
         />
