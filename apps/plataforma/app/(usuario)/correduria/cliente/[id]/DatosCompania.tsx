@@ -2,8 +2,10 @@
 import Link from 'next/link'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Phone, Mail } from 'lucide-react'
 import { etiquetaRol } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
+import { Ico } from '../iconos'
 import type { DatosCompania } from '@/lib/datos-compania'
 
 /**
@@ -58,8 +60,8 @@ export default function DatosCompania({ clienteId, datos }: { clienteId: string;
         const clave = `${d.tipo}:${d.valor}`
         return (
           <div key={clave} style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-            <span style={{ overflowWrap: 'anywhere' }}>
-              {d.tipo === 'telefono' ? '📞' : '✉️'} {d.valor}{' '}
+            <span style={{ overflowWrap: 'anywhere', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Ico i={d.tipo === 'telefono' ? Phone : Mail} size={14} /> {d.valor}{' '}
               <span style={{ color: 'var(--muted)' }}>· como {etiquetaRol(d.rol).toLowerCase()} en <Link href={`/correduria/poliza/${d.polizaId}`}>su póliza</Link></span>
             </span>
             <button type="button" disabled={ocupado !== null} onClick={() => void anadir(d.tipo, d.valor)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
