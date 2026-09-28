@@ -1,14 +1,17 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { firmarAceptacion, pedirCodigoAceptacion, prepararAceptacion } from '@/lib/presupuesto-aceptacion'
+import { entregarJustificanteAnulacion } from '@/lib/justificante-anulacion'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// after() envía a la compañía y el justificante al cliente: sin margen, la función muere antes de acabar.
+export const maxDuration = 60
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -54,6 +57,21 @@ export const POST = auditado(async (req: Request) => {
         ip: typeof b.ip === 'string' ? b.ip.slice(0, 100) : null,
         userAgent: typeof b.userAgent === 'string' ? b.userAgent.slice(0, 300) : null,
       })
+      if (r.estado === 'aceptado') {
+        const { anulacionId, ...alPortal } = r
+        // La baja firmada junto con el presupuesto también se archiva en su póliza y le llega por correo.
+        if (anulacionId) {
+          after(async () => {
+            try {
+              const j = await entregarJustificanteAnulacion(correduria.id, anulacionId)
+              console.log(`[portal/presupuesto] ${anulacionId} justificante al cliente: ${JSON.stringify(j)}`)
+            } catch (e) {
+              console.error('[portal/presupuesto] el justificante al cliente falló:', e instanceof Error ? e.message : e)
+            }
+          })
+        }
+        return NextResponse.json(alPortal, { status: 200 })
+      }
       return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
     }
     return NextResponse.json({ estado: 'invalido' }, { status: 422 })

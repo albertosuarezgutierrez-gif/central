@@ -7,7 +7,7 @@ import { cuerpoCorreoJustificante, type DatosCorreoJustificante } from './correo
 
 const BASE: DatosCorreoJustificante = {
   nombre: 'Pablo', compania: 'Mapfre', tipo: 'sustitucion', fechaEfecto: '2026-09-29', firmadaEl: '2026-09-28',
-  comunicada: true, enlace: 'https://clientes.grupoasegura.es',
+  comunicada: true, enlace: 'https://clientes.grupoasegura.es', conPdf: true, enPortal: true,
 }
 
 test('dice qué firmó, cuándo y con qué efecto, en fecha española', () => {
@@ -45,4 +45,13 @@ test('escapa lo que viene de la ficha y exige https', () => {
   assert.match(c.html, /&lt;b&gt;Pablo/)
   assert.match(c.html, /A&amp;B &quot;Seguros&quot;/)
   assert.throws(() => cuerpoCorreoJustificante({ ...BASE, enlace: 'http://clientes.grupoasegura.es' }), /enlace_no_https/)
+})
+
+test('🪤 sin PDF o sin archivar no promete lo que no hay', () => {
+  const sinPdf = cuerpoCorreoJustificante({ ...BASE, conPdf: false }).texto
+  assert.doesNotMatch(sinPdf, /justificante de firma electrónica/)
+  assert.match(sinPdf, /el texto exacto que firmaste/)
+  const sinArchivo = cuerpoCorreoJustificante({ ...BASE, enPortal: false }).texto
+  assert.doesNotMatch(sinArchivo, /en la ficha de esa póliza/)
+  assert.match(cuerpoCorreoJustificante(BASE).texto, /en la ficha de esa póliza/)
 })

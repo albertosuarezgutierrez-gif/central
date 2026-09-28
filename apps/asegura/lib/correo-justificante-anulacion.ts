@@ -25,6 +25,10 @@ export type DatosCorreoJustificante = {
   /** `true` = ya salió hacia la compañía; `false` = sale después (espera la emisión o el OK del corredor). */
   comunicada: boolean
   enlace: string
+  /** `false` = no se pudo montar el PDF: sale solo el texto firmado y el correo no promete un PDF. */
+  conPdf: boolean
+  /** `false` = no consta archivado en su póliza: el correo no promete que esté en el área de clientes. */
+  enPortal: boolean
 }
 
 /**
@@ -40,11 +44,16 @@ export function cuerpoCorreoJustificante(d: DatosCorreoJustificante): { asunto: 
     ? `la no renovación de ${seguro} (efecto al vencimiento, el ${fechaEs(d.fechaEfecto)})`
     : `la baja de ${seguro} con efecto el ${fechaEs(d.fechaEfecto)}`
   const asunto = d.tipo === 'no_renovacion' ? 'Tu carta de no renovación, firmada' : 'Tu baja firmada: aquí tienes el justificante'
-  const p1 = `Hemos recibido tu firma del ${fechaEs(d.firmadaEl)} de ${que}. Te adjuntamos el documento firmado con su justificante de firma electrónica: guárdalo.`
+  const adjunto = d.conPdf
+    ? 'Te adjuntamos el documento firmado con su justificante de firma electrónica: guárdalo.'
+    : 'Te adjuntamos el texto exacto que firmaste: guárdalo.'
+  const p1 = `Hemos recibido tu firma del ${fechaEs(d.firmadaEl)} de ${que}. ${adjunto}`
   const p2 = d.comunicada
     ? 'Ya se lo hemos enviado a la compañía. Te avisamos en cuanto nos confirme la baja.'
     : 'Nosotros se lo comunicamos a la compañía y te avisamos en cuanto nos confirme la baja.'
-  const p3 = 'También lo tienes siempre en tu área de clientes, en la ficha de esa póliza.'
+  const p3 = d.enPortal
+    ? 'También lo tienes siempre en tu área de clientes, en la ficha de esa póliza.'
+    : 'Puedes consultar el estado de tus seguros en tu área de clientes.'
   const cierre = 'Si algo no cuadra, responde a este correo y lo vemos contigo.'
   const texto = [saludo, '', p1, '', p2, '', p3, `Tu área de clientes: ${d.enlace}`, '', cierre, '', 'El equipo de Grupo ASegura', `Grupo ASegura · ${REMITENTE_CORREDURIA}`].join('\n')
   const cuerpo = "font-family:'Nunito Sans',system-ui,-apple-system,Segoe UI,Roboto,sans-serif"

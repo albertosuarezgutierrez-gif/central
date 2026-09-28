@@ -40,7 +40,7 @@ export type ResultadoJustificante =
 type Fila = FirmaGuardada & {
   estado: string; tipo: 'no_renovacion' | 'inmediata' | 'sustitucion'; carta: string | null; firmaId: string | null
   polizaId: string; clienteId: string; nombre: string | null; numero: string | null; compania: string | null
-  fechaEfecto: string; firmadaEl: string | null
+  fechaEfecto: string; firmadaEl: string | null; firmadaAt: Date | null
 }
 
 /**
@@ -56,7 +56,7 @@ export async function entregarJustificanteAnulacion(
            a.poliza_id::text as "polizaId", a.cliente_id::text as "clienteId", c.nombre,
            p.numero_poliza as numero, coalesce(cd.nombre_comun, p.aseguradora) as compania,
            to_char(a.fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto",
-           to_char(a.firmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "firmadaEl",
+           to_char(a.firmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "firmadaEl", a.firmada_at as "firmadaAt",
            f.firmante_nombre as firmante, f.metodo, f.sello_tiempo as sello, f.doc_hash as "docHash"
     from anulacion a join polizas p on p.id = a.poliza_id join clientes c on c.id = a.cliente_id
       left join companias_dgs cd on cd.codigo_dgs = p.codigo_entidad_dgs
@@ -92,9 +92,12 @@ export async function entregarJustificanteAnulacion(
 
   let correo: 'enviado' | 'ya_enviado' | 'sin_email' | 'sin_portal' | 'fallo' = 'fallo'
   try {
+    // Por BAJA, no por póliza: una segunda baja firmada de la misma póliza (tras desistir de la primera)
+    // también tiene que llegar. `correo_envio` no guarda la anulación, así que se acota por su firma.
     const [previo] = await db.$queryRaw<{ n: bigint }[]>`
       select count(*)::bigint as n from correo_envio
-      where poliza_id = ${a.polizaId}::uuid and tipo = ${TIPO_CORREO_JUSTIFICANTE} and estado = 'enviado'`
+      where poliza_id = ${a.polizaId}::uuid and tipo = ${TIPO_CORREO_JUSTIFICANTE} and estado = 'enviado'
+        and creado_en >= ${a.firmadaAt ?? new Date(0)}`
     const enlace = enlacePortal()
     const ficha = await estadoEmailDeFicha(correduriaId, a.clienteId)
     if (!opciones.reenviar && Number(previo?.n ?? 0) > 0) correo = 'ya_enviado'
@@ -104,6 +107,7 @@ export async function entregarJustificanteAnulacion(
       const cuerpo = cuerpoCorreoJustificante({
         nombre: a.nombre, compania: a.compania, tipo: a.tipo, fechaEfecto: a.fechaEfecto, firmadaEl: a.firmadaEl,
         comunicada: a.estado !== 'firmada', enlace,
+        conPdf: !!pdf, enPortal: archivo === 'archivado' || archivo === 'ya_estaba',
       })
       const { enviarCorreoSeguido } = await import('./correo-envio')
       const r = await enviarCorreoSeguido({

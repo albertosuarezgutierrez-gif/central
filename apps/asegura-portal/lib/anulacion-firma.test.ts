@@ -61,7 +61,7 @@ test('las bajas ya firmadas se leen con su estado; sin el campo (asegura viejo) 
   const r = interpretarPendientes(200, {
     estado: 'ok', consentimiento: 'T', anulaciones: [],
     firmadas: [
-      { id: 'f1', tipo: 'sustitucion', fechaEfecto: '2026-09-29', estado: 'comunicada', firmadaEl: '2026-09-28', comunicadaEl: '2026-09-28', compania: 'Mapfre', numeroPoliza: '0008' },
+      { id: 'f1', tipo: 'sustitucion', fechaEfecto: '2026-09-29', estado: 'comunicada', firmadaEl: '2026-09-28', comunicadaEl: '2026-09-28', compania: 'Mapfre', numeroPoliza: '0008', justificante: true },
       { id: 'f2', tipo: 'sustitucion', fechaEfecto: '2026-09-29', estado: 'solicitada', firmadaEl: '2026-09-28' },
       { id: 'f3', tipo: 'sustitucion', fechaEfecto: '2026-09-29', estado: 'firmada' },
     ],
@@ -69,5 +69,6 @@ test('las bajas ya firmadas se leen con su estado; sin el campo (asegura viejo) 
   assert.equal(r?.firmadas.length, 1, 'ni una «solicitada» ni una sin fecha de firma pasan por firmada')
   assert.equal(r?.firmadas[0].comunicadaEl, '2026-09-28')
   assert.equal(r?.firmadas[0].confirmadaEl, null)
+  assert.equal(r?.firmadas[0].justificante, true)
   assert.deepEqual(interpretarPendientes(200, { estado: 'ok', consentimiento: 'T', anulaciones: [] })?.firmadas, [])
 })

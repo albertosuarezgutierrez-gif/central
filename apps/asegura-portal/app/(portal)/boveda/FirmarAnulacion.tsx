@@ -66,7 +66,7 @@ function Firmada({ f }: { f: AnulacionFirmada }) {
         <span className="suave" style={{ fontSize: 13 }}>Firmada el {fecha(f.firmadaEl)} · con efecto el {fecha(f.fechaEfecto)}</span>
       </div>
       <p style={{ margin: 0, fontSize: 14 }}>{estado}</p>
-      <p className="suave" style={{ margin: 0, fontSize: 13 }}>La carta firmada está en los documentos de esa póliza y te la mandamos por correo.</p>
+      {f.justificante && <p className="suave" style={{ margin: 0, fontSize: 13 }}>La carta firmada está en los documentos de esa póliza.</p>}
     </article>
   )
 }
@@ -88,7 +88,9 @@ type Paso =
 
 function Tarjeta({ a, consentimiento, corredor }: { a: AnulacionPendiente; consentimiento: string; corredor: boolean }) {
   const [paso, setPaso] = useState<Paso>(() =>
-    a.codigoCaducaEn && Date.parse(a.codigoCaducaEn) > Date.now()
+    // Sin comparar con el reloj aquí: el servidor ya solo lo manda si estaba vivo, y comparar en el
+    // render haría que servidor y navegador eligieran pasos distintos. Si caducó, «Firmar» lo dice.
+    a.codigoCaducaEn
       ? { paso: 'codigo', email: null, minutos: 0, hasta: a.codigoCaducaEn }
       : { paso: 'inicio' },
   )
@@ -146,7 +148,7 @@ function Tarjeta({ a, consentimiento, corredor }: { a: AnulacionPendiente; conse
       <article className="vencimiento-tarjeta">
         <strong style={{ fontSize: 15 }}>{titulo}{poliza ? ` · ${poliza}` : ''}</strong>
         <p style={{ margin: 0, fontSize: 14 }}>
-          Firmada el {fecha(paso.firmadaEl)}. Nosotros se la comunicamos a la compañía y te avisamos cuando la confirme. Te mandamos por correo la carta firmada con su justificante, y la tienes también en la ficha de esta póliza.
+          Firmada el {fecha(paso.firmadaEl)}. Nosotros se la comunicamos a la compañía y te avisamos cuando la confirme.
         </p>
       </article>
     )

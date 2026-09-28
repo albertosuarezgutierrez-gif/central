@@ -3,6 +3,7 @@ import { exigirCorreduria } from '@/lib/correduria-acceso'
 import { mandarJustificante, textoJustificante } from '@/lib/anulaciones-asegura'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 120
 
 /** POST { id } — manda (o reenvía) al cliente su carta de baja firmada con el justificante. */
 export async function POST(req: Request) {

@@ -120,7 +120,10 @@ export default function AnulacionPoliza({ polizaId, vencimiento }: { polizaId: s
       )}
 
       {cerradas.map(a => (
-        <p key={a.id} style={NOTA}>Anterior: {ETIQUETA_ESTADO_ANULACION[a.estado]} · efecto {fechaEs(a.fechaEfecto)}</p>
+        <div key={a.id} style={{ display: 'grid', gap: 4 }}>
+          <p style={NOTA}>Anterior: {ETIQUETA_ESTADO_ANULACION[a.estado]} · efecto {fechaEs(a.fechaEfecto)}</p>
+          {a.estado === 'confirmada' && a.firmaElectronica && <Justificante id={a.id} />}
+        </div>
       ))}
     </div>
   )

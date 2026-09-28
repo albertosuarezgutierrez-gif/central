@@ -37,6 +37,8 @@ export type AnulacionFirmada = {
   firmadaEl: string
   comunicadaEl: string | null
   confirmadaEl: string | null
+  /** Consta archivada en su póliza. Ausente (asegura viejo) = false: no se promete. */
+  justificante: boolean
 }
 
 export type LecturaPendientes = { anulaciones: AnulacionPendiente[]; consentimiento: string; firmadas: AnulacionFirmada[] }
@@ -93,6 +95,7 @@ export function interpretarPendientes(status: number, j: unknown): LecturaPendie
       numeroPoliza: typeof x.numeroPoliza === 'string' ? x.numeroPoliza : null,
       compania: typeof x.compania === 'string' ? x.compania : null,
       comunicadaEl: fecha(x.comunicadaEl), confirmadaEl: fecha(x.confirmadaEl),
+      justificante: x.justificante === true,
     }]
   })
   return { anulaciones, consentimiento: o.consentimiento, firmadas }

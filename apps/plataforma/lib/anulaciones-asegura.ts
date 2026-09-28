@@ -150,7 +150,8 @@ export async function mandarJustificante(id: string, actor: string): Promise<Res
       headers: { ...(await cabecerasPuerto(b.secreto)), 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, actor }),
       cache: 'no-store',
-      signal: AbortSignal.timeout(30_000),
+      // PDF + archivo + correo con los reintentos de Resend: con 30 s un envío lento que SÍ sale se leía como «no se sabe».
+      signal: AbortSignal.timeout(90_000),
     })
     const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
     if (res.status === 404 && j?.estado !== 'no_encontrada') return { ok: false, texto: 'asegura aún no tiene el justificante desplegado.' }

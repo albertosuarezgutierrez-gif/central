@@ -65,6 +65,8 @@ export type AnulacionFirmada = {
   firmadaEl: string
   comunicadaEl: string | null
   confirmadaEl: string | null
+  /** El PDF firmado está archivado en su póliza (lo ve en el portal). `false` = no consta: no se promete. */
+  justificante: boolean
 }
 
 /** Días que una baja firmada sigue a la vista en el portal. */
@@ -123,7 +125,9 @@ async function firmadasDe(correduriaId: string, clienteId: string): Promise<Anul
            to_char(a.fecha_efecto, 'YYYY-MM-DD') as "fechaEfecto", a.estado,
            to_char(a.firmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "firmadaEl",
            to_char(a.comunicada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "comunicadaEl",
-           to_char(a.confirmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "confirmadaEl"
+           to_char(a.confirmada_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "confirmadaEl",
+           exists (select 1 from documentos d where d.poliza_id = a.poliza_id and d.visible_por_cliente
+                   and d.notas = 'justificante_anulacion:' || a.id::text) as justificante
     from anulacion a join polizas p on p.id = a.poliza_id
     where a.correduria_id = ${correduriaId}::uuid and a.cliente_id = ${clienteId}::uuid
       and a.estado in ('firmada', 'comunicada', 'confirmada') and a.firmada_at is not null
