@@ -84,7 +84,7 @@ test('etiquetas de rol en castellano, sin guiones bajos', () => {
 
 const TITULAR = { polizaId: 'p1', fichaId: 'c1', nombre: 'GLOBAL 2 INSTALACIONES TECNICAS' }
 
-test('6930FBP: con un solo conductor habitual, el titular SÍ sale, y el primero', () => {
+test('3333FFF: con un solo conductor habitual, el titular SÍ sale, y el primero', () => {
   const r = filasIntervinientes(TITULAR, [base({ rol: 'conductor_habitual', nombre: 'X', fichaId: 'c9' })])
   assert.equal(r.filas.length, 2)
   assert.equal(r.filas[0].rol, 'tomador')
@@ -94,7 +94,7 @@ test('6930FBP: con un solo conductor habitual, el titular SÍ sale, y el primero
   assert.equal(r.aviso, null)
 })
 
-test('cepo 6930FBP: el titular no puede faltar en la tarjeta', () => {
+test('cepo 3333FFF: el titular no puede faltar en la tarjeta', () => {
   // Este es el fallo que vio Alberto: la empresa titular no aparecía por
   // ningún lado porque CIMA solo manda al conductor.
   const r = filasIntervinientes(TITULAR, [base({ rol: 'conductor_habitual' })])
@@ -144,9 +144,9 @@ test('GLOBAL 2: con tres conductores distintos, se dice de QUÉ póliza sale el 
 // ── Las personas de las pólizas, agrupadas por persona ───────────────────────
 
 const POLIZAS = [
-  { id: 'pA', etiqueta: '6930FBP' },
-  { id: 'pB', etiqueta: '8148DGP' },
-  { id: 'pC', etiqueta: '2922BNJ' },
+  { id: 'pA', etiqueta: '3333FFF' },
+  { id: 'pB', etiqueta: '7777KKK' },
+  { id: 'pC', etiqueta: '3434NNN' },
 ]
 
 test('GLOBAL 2: tres furgonetas, tres conductores, cada uno con su matrícula', () => {
@@ -157,7 +157,7 @@ test('GLOBAL 2: tres furgonetas, tres conductores, cada uno con su matrícula', 
   ], POLIZAS, [])
   assert.equal(r?.length, 3)
   assert.deepEqual(r?.map(p => p.nombre), ['A', 'B', 'C'])
-  assert.deepEqual(r?.[0].papeles, [{ rol: 'conductor_habitual', polizas: ['6930FBP'] }])
+  assert.deepEqual(r?.[0].papeles, [{ rol: 'conductor_habitual', polizas: ['3333FFF'] }])
   assert.equal(r?.[2].email, 'c@x')
 })
 
@@ -167,7 +167,7 @@ test('la misma persona en dos pólizas es UNA fila con las dos matrículas', () 
     base({ polizaId: 'pB', rol: 'conductor_habitual', nombre: 'A', fichaId: 'f1', telefono: '600' }),
   ], POLIZAS, [])
   assert.equal(r?.length, 1)
-  assert.deepEqual(r?.[0].papeles, [{ rol: 'conductor_habitual', polizas: ['6930FBP', '8148DGP'] }])
+  assert.deepEqual(r?.[0].papeles, [{ rol: 'conductor_habitual', polizas: ['3333FFF', '7777KKK'] }])
   // El teléfono aparece en la segunda fila y no se pierde.
   assert.equal(r?.[0].telefono, '600')
 })
@@ -231,7 +231,7 @@ test('la misma persona con y sin NIF no se parte en dos filas', () => {
   ], POLIZAS, [])
   assert.equal(r?.length, 1)
   assert.equal(r?.[0].telefono, '600')
-  assert.deepEqual(r?.[0].papeles[0].polizas, ['6930FBP', '8148DGP'])
+  assert.deepEqual(r?.[0].papeles[0].polizas, ['3333FFF', '7777KKK'])
 })
 
 test('el NIF manda sobre el nombre: mismo NIF con el nombre escrito distinto es UNA', () => {

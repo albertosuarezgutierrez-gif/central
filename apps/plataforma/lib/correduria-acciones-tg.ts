@@ -8,8 +8,8 @@
 // mismos puertos que la ficha, que vuelven a validar (el motivo de un 422 se le dice tal cual).
 import { MOTIVOS_PERDIDA_VENTA, RESULTADOS_LLAMADA, TIPOS_SINIESTRO, TIPOS_TAREA } from '@central/module-seguros'
 
-export type TipoAccion = 'tarea' | 'llamada' | 'nota' | 'siniestro' | 'portal'
-export const TIPOS_ACCION: readonly TipoAccion[] = ['tarea', 'llamada', 'nota', 'siniestro', 'portal']
+export type TipoAccion = 'tarea' | 'llamada' | 'nota' | 'siniestro' | 'portal' | 'presupuesto'
+export const TIPOS_ACCION: readonly TipoAccion[] = ['tarea', 'llamada', 'nota', 'siniestro', 'portal', 'presupuesto']
 
 /** Motivos por los que no le interesa: los mismos que acepta el puerto (sin «error de alta»). */
 export const MOTIVOS_NO_INTERESA = MOTIVOS_PERDIDA_VENTA
@@ -117,6 +117,23 @@ export function prepararAccion(tipo: TipoAccion, args: Record<string, unknown>, 
     }
     case 'portal':
       return { ok: true, accion: { tipo, cuerpo: { clienteId: args.clienteId }, lineas: ['🔑 Mandarle por correo el enlace al portal del cliente (sus seguros, recibos y partes).'] } }
+    case 'presupuesto': {
+      // `tarificacionId` y `resumen` los pone el SERVIDOR tras leer la tarificación guardada; la IA solo
+      // aporta las necesidades (IDD, art. 20 Ley 16/2018: sin ellas asegura no deja avisar).
+      const tarificacionId = texto(args.tarificacionId, 64)
+      if (!tarificacionId) return { ok: false, motivo: 'no hay tarificación guardada que rescatar' }
+      const nec = texto(args.necesidades, 1000)
+      if (!nec || nec.length < 15) return { ok: false, motivo: 'faltan sus exigencias y necesidades (qué quiere asegurar y qué le importa): pregúntaselas a Alberto, no las inventes' }
+      const resumen = (Array.isArray(args.resumen) ? args.resumen : [args.resumen]).filter((x): x is string => typeof x === 'string' && x.trim() !== '')
+      return {
+        ok: true,
+        accion: {
+          tipo,
+          cuerpo: { tarificacionId, necesidades: nec },
+          lineas: ['📨 Preparar el presupuesto y mandarle el correo para que elija en su portal.', ...resumen.map(escapar), `Necesidades: «${escapar(nec)}»`],
+        },
+      }
+    }
   }
 }
 
@@ -129,7 +146,7 @@ const ROTULO_RESULTADO: Record<(typeof RESULTADOS_LLAMADA)[number], string> = {
 
 /** El mensaje con el botón. `quien` es lo que identifica la ficha (nombre, póliza, ramo…). */
 export function textoAccion(quien: string, a: Accion): string {
-  const aviso = a.tipo === 'portal' ? '\n⚠️ Esto SÍ manda un correo al cliente.' : ''
+  const aviso = a.tipo === 'portal' || a.tipo === 'presupuesto' ? '\n⚠️ Esto SÍ manda un correo al cliente.' : ''
   return [`🧾 ¿Lo hago? · ${escapar(quien)}`, ...a.lineas].join('\n') + aviso
 }
 
@@ -145,7 +162,7 @@ export function resultadoAccion(
     return { estado: 'hecha', texto: `✅ ${HECHO[tipo]}${extra}\n${url}` }
   }
   if (status === 0 || status >= 500) {
-    const envio = tipo === 'portal' ? ' No lo repitas sin mirar: el cliente podría recibir dos correos.' : ''
+    const envio = tipo === 'portal' || tipo === 'presupuesto' ? ' No lo repitas sin mirar: el cliente podría recibir dos correos.' : ''
     return { estado: 'incierta', texto: `⚠️ No sé si se ha hecho (la cartera no ha contestado bien${motivo ? `: ${escapar(motivo)}` : ''}). Míralo en la ficha.${envio}\n${url}` }
   }
   return { estado: 'rechazada', texto: `✋ No se ha hecho: ${escapar(motivo ?? `HTTP ${status}`)}\n${url}` }
@@ -157,4 +174,5 @@ const HECHO: Record<TipoAccion, string> = {
   nota: 'Nota anotada en la ficha.',
   siniestro: 'Siniestro abierto en la ficha. Recuerda comunicarlo a la compañía.',
   portal: 'Invitación al portal enviada por correo.',
+  presupuesto: 'Presupuesto enviado: el cliente elige en su portal. Cuando firme te llega el Telegram.',
 }

@@ -91,18 +91,18 @@ test('sin hermanas, o sin poder mirarlas, no se dice nada', () => {
 
 test('🚨 póliza común con OTRO nombre SÍ es un duplicado: la póliza identifica', () => {
   // «Global2» (volcado) y «GLOBAL 2 INSTALACIONES TÉCNICAS» (CIMA) compartían
-  // la RC 547875907 y salían como dos clientes (03/09/2026).
+  // la RC 547000017 y salían como dos clientes (03/09/2026).
   const a = avisoHermanas('sin_fecha', [
-    { clienteId: 'g', nombre: 'GLOBAL 2 INSTALACIONES TÉCNICAS', mismoNombre: false, vitalidad: 'viva', vinculo: 'poliza', poliza: '547875907' },
+    { clienteId: 'g', nombre: 'GLOBAL 2 INSTALACIONES TÉCNICAS', mismoNombre: false, vitalidad: 'viva', vinculo: 'poliza', poliza: '547000017' },
   ])
   assert.equal(a?.clase, 'duplicado')
   assert.equal(a?.preferida?.clienteId, 'g')
-  assert.match(a?.texto ?? '', /547875907/)
+  assert.match(a?.texto ?? '', /547000017/)
 })
 
 test('desde la viva, la gemela por póliza se avisa sin mandar a ningún lado', () => {
   const a = avisoHermanas('viva', [
-    { clienteId: 'h', nombre: 'Global2', mismoNombre: false, vitalidad: 'sin_fecha', vinculo: 'poliza', poliza: '547875907' },
+    { clienteId: 'h', nombre: 'Global2', mismoNombre: false, vitalidad: 'sin_fecha', vinculo: 'poliza', poliza: '547000017' },
   ])
   assert.equal(a?.clase, 'duplicado')
   assert.equal(a?.preferida, null)

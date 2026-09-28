@@ -121,8 +121,8 @@ test('la avería real del 01/09/2026: pérdida medida, con su reparto por clave'
       huerfanas: 2,
       huerfanasResolubles: 1,
       huerfanasDetalle: [
-        { entidad: 'C0468', entidadNombre: 'Occident', clave: '8-92361', idPolizaEntidad: '8-10.745.696-P', recibos: 2, siniestros: 0, prima: 120.5, ultimoEn: '2026-08-30', enCartera: 'ausente' },
-        { entidad: 'C0468', entidadNombre: 'Occident', clave: '8-92361', idPolizaEntidad: '8-10.745.700-P', recibos: 0, siniestros: 1, prima: null, ultimoEn: '2026-08-29', enCartera: 'viva' },
+        { entidad: 'C0468', entidadNombre: 'Occident', clave: '8-92361', idPolizaEntidad: '8-10.000.033-P', recibos: 2, siniestros: 0, prima: 120.5, ultimoEn: '2026-08-30', enCartera: 'ausente' },
+        { entidad: 'C0468', entidadNombre: 'Occident', clave: '8-92361', idPolizaEntidad: '8-10.000.034-P', recibos: 0, siniestros: 1, prima: null, ultimoEn: '2026-08-29', enCartera: 'viva' },
       ],
       primaPerdida: 7721.71,
       rechazos: [],
