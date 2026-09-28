@@ -852,6 +852,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Telegram de la correduría ya ENVÍA presupuestos (rescata la tarificación guardada)
+- #3888 mergeado (retomar sin pagar la última tarificación de moto de un cliente nuevo). Nueva herramienta
+  `enviar_presupuesto`: el servidor rescata la tarificación guardada (vigente y con primas), exige portal invitable/ya_entra
+  y necesidades IDD; botón 📧 de Alberto → preparar → necesidades → email. CHECK `correduria_asistente_accion_tipo_check`
+  ampliado a `presupuesto` (aplicado). «presupuesto de la moto…» / presupuesto+matrícula ya no caen al contable.
+
 ## (28/09/2026) SINCO: lo consulta la COMPAÑÍA vía Codeoscopic al CONFIRMAR precio, no Grupo ASegura
 - Dictado de Alberto: la correduría **no puede** consultar SINCO. El primer precio de Codeoscopic/Avant2 es una
   **estimación** (SINCO cuesta a la compañía); al darle a «permitir»/confirmar, cada compañía hace la consulta y
