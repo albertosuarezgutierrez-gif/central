@@ -230,7 +230,7 @@ function FilasIguales({ grupo }: { grupo: GrupoHistorica<PolizaFicha & { bien: s
       style={{ ...sub, marginTop: 4 }}
       title="El volcado de junio de 2026 trae estas filas con el mismo ramo, bien, compañía, estado y vencimiento, cambiando solo la prima. No se ha borrado ninguna: se enseñan juntas."
     >
-      🔁 {grupo.filas.length} filas del volcado:{' '}
+      {grupo.filas.length} filas del volcado:{' '}
       {grupo.filas.map((f, i) => (
         <span key={f.id}>
           {i > 0 && ' · '}

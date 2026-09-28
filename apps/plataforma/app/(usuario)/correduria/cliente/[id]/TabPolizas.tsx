@@ -64,7 +64,7 @@ export default function TabPolizas({ porClase, intervinientes, declaradas }: {
       {porClase.historica.length > 0 && (
         <Polizas
           titulo={`Volcado histórico (${porClase.historica.length})`}
-          nota="Del volcado de junio de 2026, con vencimientos antiguos. Sirven para saber qué tuvo contratado, no para renovar. El volcado repite el mismo riesgo cambiando solo la prima: esas filas van juntas en una línea (🔁) con todas sus primas, sin borrar ninguna."
+          nota="Del volcado de junio de 2026, con vencimientos antiguos. Sirven para saber qué tuvo contratado, no para renovar. El volcado repite el mismo riesgo cambiando solo la prima: esas filas van juntas en una línea con todas sus primas, sin borrar ninguna."
           polizas={porClase.historica}
           vacio=""
           plegado

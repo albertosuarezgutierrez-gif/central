@@ -144,7 +144,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
 
       {lectura?.estado === 'ok' && (
         <>
-          {abiertas.length === 0 && !abriendo && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta. Se abre desde «➕ Nueva oportunidad ▾», arriba.</div>}
+          {abiertas.length === 0 && !abriendo && <div style={{ color: 'var(--muted)' }}>Ninguna oportunidad abierta. Se abre desde «+ Nueva oportunidad ▾», arriba.</div>}
           {abiertas.map(o => (
             <FilaAbierta key={o.id} o={o} polizas={polizas} telefono={telefono} desplegada={desplegada === o.id} onAlternar={() => alternar(o.id)} onRecargar={() => void cargar()} onHecho={(t) => { setAviso(t); void cargar() }} />
           ))}
