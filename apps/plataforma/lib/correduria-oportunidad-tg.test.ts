@@ -515,3 +515,20 @@ test('documento marcado «de un cliente»: el asistente propone solo, sin pregun
   assert.match(cli, /manejarCorreduriaTg\(ORDEN_DOCUMENTO_CLIENTE\)/)
   assert.doesNotMatch(cli, /Dime qué hago/)
 })
+
+test('presupuesto: «rescata el presupuesto … de la moto 2121NST» va a la correduría', () => {
+  assert.equal(clasificarDestino('rescata el presupuesto de manuel piña franco de la moto 2121NST y mandasela a manuel para que elija'), 'correduria')
+  assert.equal(clasificarDestino('presupuesto del seguro de hogar de Ana'), 'correduria')
+  assert.equal(clasificarDestino('presupuesto de la reforma del baño'), 'contable')
+  assert.ok(HERRAMIENTAS.some((h) => h.function.name === 'enviar_presupuesto'))
+})
+
+test('presupuesto: sin tarificación del servidor o sin necesidades no hay botón; con ellas, avisa del correo', () => {
+  assert.equal(prepararAccion('presupuesto', { clienteId: 'c', necesidades: 'Quiere todo riesgo con franquicia baja' }, HOY).ok, false)
+  assert.equal(prepararAccion('presupuesto', { clienteId: 'c', tarificacionId: 't', necesidades: 'barato' }, HOY).ok, false)
+  const p = prepararAccion('presupuesto', { clienteId: 'c', tarificacionId: 't', resumen: '3 precios', necesidades: 'Quiere terceros ampliado, uso diario' }, HOY)
+  assert.ok(p.ok)
+  assert.deepEqual(p.accion.cuerpo, { tarificacionId: 't', necesidades: 'Quiere terceros ampliado, uso diario' })
+  assert.match(textoAccion('Manuel', p.accion), /manda un correo al cliente/)
+  assert.match(textoAccion('Manuel', p.accion), /3 precios/)
+})
