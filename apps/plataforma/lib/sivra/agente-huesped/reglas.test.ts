@@ -171,3 +171,31 @@ test('detectLang: sin señal propia vale cualquier idioma de reserva (sueco, pol
 test('detectLang: un carácter suelto de otra escritura no decide', () => {
   assert.equal(detectLang('Hello, is it 5€ or 5円 for the laundry?', 'en'), 'en')
 })
+
+// Casos reales de sep-2026 (mensajes_log). «car» casaba «card» y el phishing caía en parking.
+test('detectCategory: seguridad, límites de palabra y avisos', async () => {
+  const { detectCategory } = await import('./reglas.ts')
+  assert.equal(detectCategory('I received 2 messages on whatsapp that are very strange with credit card informations'), 'seguridad')
+  assert.equal(detectCategory('Hola, me ha llegado un WhatsApp en nombre de la reserva para verificar el número de tarjeta'), 'seguridad')
+  assert.equal(detectCategory('Please send me the card details'), null)
+  assert.equal(detectCategory('We need a Place for Parking!'), 'parking')
+  assert.equal(detectCategory('¿Dónde hemos aparcado? ¿nos pueden multar?'), 'parking')
+  assert.equal(detectCategory('Hi, please confirm if there are at least two double beds'), 'camas')
+  assert.equal(detectCategory('Salimos ahora mismo'), 'aviso_salida')
+  assert.equal(detectCategory('Hola, Estamos cerca del piso, llegaremos en 15min'), 'aviso_llegada')
+  assert.equal(detectCategory('what is the wifi password'), 'wifi')
+})
+
+// Plantillas nuestras que Smoobu devuelve sin emisor: el nombre completo va al principio y sigue texto.
+test('esPlantillaHost: bienvenidas/despedidas sí, firma del huésped no', async () => {
+  const { esPlantillaHost } = await import('./reglas.ts')
+  assert.equal(esPlantillaHost('Bienvenue, Justine Delbos ! Nous espérons que votre arrivée à House Sevillana se passe à merveille.', 'Justine Delbos'), true)
+  assert.equal(esPlantillaHost('Obrigado por ficarem connosco, Mafalda Soares Caldas! Esperamos que tenham gostado de Sevilha.', 'Mafalda Soares Caldas'), true)
+  assert.equal(esPlantillaHost('Hola Denís Oropesa, Muchas gracias por reservar con nosotros! Esperamos darle la bienvenida.', 'Denis Oropesa'), true)
+  // Firma al final: es del huésped.
+  assert.equal(esPlantillaHost("Hi there, I didn't get the code yet for the key box for tomorrow night. Stephen Martin", 'Stephen Martin'), false)
+  // Solo nombre de pila: no se decide.
+  assert.equal(esPlantillaHost('Hola Justine, gracias por avisarnos de la hora de llegada, nos vemos.', 'Justine'), false)
+  // Sin nombre en el texto.
+  assert.equal(esPlantillaHost('¿Ya está disponible el piso?', 'Justine Delbos'), false)
+})

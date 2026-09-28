@@ -53,6 +53,7 @@ export type Contexto = {
   historial: MensajeHist[]
   enviados: Set<string>   // respuestas que YA enviamos (normalizadas) — para no respondernos a nosotros
   aprendizajes: Aprendizaje[]
+  preguntaTs?: string     // cuándo escribió el huésped lo que se contesta (lo pone el orquestador)
 }
 
 function strip(html: string): string {
