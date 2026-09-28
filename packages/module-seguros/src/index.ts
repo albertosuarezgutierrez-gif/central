@@ -955,3 +955,17 @@ export {
   type RevisionElecciones,
 } from './fusion-fichas.ts'
 export { claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type SeguroOportunidad } from './compania-oportunidad.ts'
+export {
+  CATALOGO_GARANTIAS,
+  VERSION_CATALOGO,
+  claveCobertura,
+  clasificarCoberturas,
+  noReconocidas,
+  ramoDeCatalogo,
+  type CoberturaParaClasificar,
+  type EstadoGarantia,
+  type GarantiaCatalogo,
+  type GarantiasClasificadas,
+  type RamoGarantias,
+} from './catalogo-garantias.ts'
+export { estadoDe, filtrarPorGarantias, interruptoresGarantias, type InterruptorGarantia, type OpcionFiltrable, type ResultadoFiltro } from './filtro-garantias.ts'
