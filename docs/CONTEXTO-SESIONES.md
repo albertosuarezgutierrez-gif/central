@@ -849,6 +849,7 @@ Ficha del corredor: `figuraEn` (`polizasDondeFigura`, por `cliente_id` o DNI) �
 Portal: quien ve una ficha ENTERA (autorización sin póliza suelta o empresa del dueño) ve también donde ESA ficha figura,
 capada como interviniente (`capaInterviniente`, `figurasDeFichasVistas`); cepo en `regression-portal-intervinientes`.
 Confirmado con las condiciones particulares de Generali: tomador y conductor habitual = Francisco Javier; asegurado/propietario = GLOBAL 2 (Citan 1670HRB). La BD está bien. La copia de volcado `UV-G-410.081.428` (con puntos, no viva) cuelga de GLOBAL 2 como tomador.
+✅ Decisión de Alberto (28/09): quien ve la empresa con `ver_economico` ve también prima y recibos de la póliza donde la empresa interviene, aunque el tomador sea una persona física («porque la empresa interviene»). PR #3878, mergeado.
 
 ## (28/09/2026) Correduría: el CP rellena solo la ciudad (y la provincia)
 - Tabla CP→municipio incrustada (`apps/plataforma/lib/municipios-por-cp.json`, 11.254 CP, INE+CNIG; solo servidor)
