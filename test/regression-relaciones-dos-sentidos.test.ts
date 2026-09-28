@@ -39,7 +39,7 @@ test('🚨 la insignia y la frase salen de los helpers puros, no de un `?:` en e
 test('🚨 cada botón de autorizar vive DENTRO de su sentido, no en una fila común', () => {
   const sentido = fuente.slice(fuente.indexOf('function Sentido('), fuente.indexOf('// ─── Añadir'))
   assert.match(sentido, /Anotar que \{otorga\} autoriza a \{recibe\}/, 'el botón nombra el sentido en el que está')
-  assert.match(sentido, /Invitar a \$\{recibe\} a confirmarlo/, 'y desde ahí se le invita a aceptar')
+  assert.match(sentido, /Invitar a \{recibe\} a confirmarlo/, 'y desde ahí se le invita a aceptar')
   // Los textos con nombres FIJOS eran los dos botones gemelos del final.
   assert.doesNotMatch(fuente, /autoriza a \{nombreFicha\} a ver sus seguros/)
   assert.doesNotMatch(fuente, /\{nombreFicha\} autoriza a \{r\.nombre\} a ver sus seguros/)

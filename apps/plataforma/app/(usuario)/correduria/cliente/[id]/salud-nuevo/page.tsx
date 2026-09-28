@@ -1,8 +1,9 @@
 import Link from 'next/link'
-import { Stethoscope } from 'lucide-react'
+import { Construction, Stethoscope } from 'lucide-react'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { precalificarSaludNuevaAsegura, catalogoAsegura } from '@/lib/salud-nuevo-asegura'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
+import { ConIcono } from '../../../iconos'
 import SaludNuevo from './SaludNuevo'
 
 export const dynamic = 'force-dynamic'
@@ -37,10 +38,10 @@ export default async function SaludNuevoPage({ params }: { params: Promise<{ id:
           marginTop: 10,
         }}
       >
-        🚧 El contrato de este ramo con Codeoscopic <strong>no está verificado</strong>: el primer intento
+        <ConIcono i={Construction}>El contrato de este ramo con Codeoscopic <strong>no está verificado</strong>: el primer intento
         real de cotizar puede fallar con un mensaje que pida un campo que hoy no se manda. Si pasa, no
         reintentes varias veces seguidas — cada intento cuesta 0,50€ reales — y avisa para corregir el
-        formulario.
+        formulario.</ConIcono>
       </div>
     </div>
   )

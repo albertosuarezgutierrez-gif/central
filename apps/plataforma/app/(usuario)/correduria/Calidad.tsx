@@ -1,13 +1,14 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Clock } from 'lucide-react'
 import { agruparCalidad, type IncidenciaCalidad } from '@central/module-seguros'
 import {
   MOTIVOS_PUERTO,
   type CalidadDato,
 } from '@/lib/correduria-puerto'
 import { Badge, Pendiente } from '@/components/ui'
+import { ConIcono } from './iconos'
 import Bloque from './Bloque'
 
 const POR_PAGINA = 50
@@ -65,8 +66,8 @@ export default function Calidad({
     return (
       <Bloque titulo="Calidad del dato" Icono={AlertTriangle} primero={primero}>
         <p style={pMuted}>
-          ⏳ El puerto con asegura no está conectado. <strong>No lo leas como «el dato está
-          perfecto»</strong>: es que desde aquí no se ha podido mirar.
+          <ConIcono i={Clock}>El puerto con asegura no está conectado. <strong>No lo leas como «el dato está
+          perfecto»</strong>: es que desde aquí no se ha podido mirar.</ConIcono>
         </p>
       </Bloque>
     )
@@ -76,8 +77,8 @@ export default function Calidad({
     return (
       <Bloque titulo="Calidad del dato" Icono={AlertTriangle} tono="malo" primero={primero}>
         <p style={{ ...pMuted, color: 'var(--negative)' }}>
-          ⚠️ No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} <strong>No significa que el
-          dato esté bien.</strong>
+          <ConIcono i={AlertTriangle}>No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} <strong>No significa que el
+          dato esté bien.</strong></ConIcono>
         </p>
       </Bloque>
     )
@@ -104,8 +105,8 @@ export default function Calidad({
     >
       {datos.truncado && (
         <p style={{ ...pMuted, color: 'var(--warning)', marginBottom: 10 }}>
-          ⚠️ La lista viene recortada, así que el recuento de arriba <strong>no se ha podido
-          comprobar</strong> completamente.
+          <ConIcono i={AlertTriangle}>La lista viene recortada, así que el recuento de arriba <strong>no se ha podido
+          comprobar</strong> completamente.</ConIcono>
         </p>
       )}
 

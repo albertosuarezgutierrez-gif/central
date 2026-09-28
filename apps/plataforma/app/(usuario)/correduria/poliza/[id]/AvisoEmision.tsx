@@ -6,7 +6,9 @@
 // un segundo clic en la propia pantalla: es un correo a un tercero.
 
 import { useState } from 'react'
+import { Mail } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { ConIcono } from '@/app/(usuario)/correduria/iconos'
 
 type Resultado = { ok: boolean; texto: string }
 
@@ -38,7 +40,7 @@ export default function AvisoEmision({ polizaId }: { polizaId: string }) {
 
   return (
     <div style={{ display: 'grid', gap: 8, padding: 12, border: '1px solid var(--border)', borderRadius: 10 }}>
-      <strong>📧 Correo al cliente y firma de la baja</strong>
+      <strong><ConIcono i={Mail}>Correo al cliente y firma de la baja</ConIcono></strong>
       <span style={{ fontSize: 13, color: 'var(--muted)' }}>
         Un solo correo: su nuevo seguro y el enlace para firmar en el portal la baja de la póliza anterior. Al firmar, la carta sale
         sola a la compañía si su buzón de bajas ya está elegido.

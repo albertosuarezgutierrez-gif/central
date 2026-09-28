@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
-import { CalendarClock, Phone } from 'lucide-react'
+import { CalendarClock, Phone, TriangleAlert } from 'lucide-react'
 import { textoPasoLead } from '@central/module-seguros'
 import { Badge, PageHeader, btnStyle, type Tono } from '@/components/ui'
 import { eur } from '@/lib/dinero'
@@ -17,6 +17,7 @@ import {
   type VentanaLead,
 } from '@/lib/seguimiento-asegura'
 import Renovaciones, { type RespVencimientos } from '../Renovaciones'
+import { Ico } from '../iconos'
 import WhatsappLead from './WhatsappLead'
 
 type Carril = 'clientes' | 'leads'
@@ -118,7 +119,7 @@ function CarrilLeads({ datos }: { datos: LeadsVencimientos | null }) {
         {datos.sinCanalPermitido !== null && datos.sinCanalPermitido > 0 && (
           <> Fuera de la lista: <b>{datos.sinCanalPermitido}</b> con solo correo que nunca fueron clientes (no se les puede escribir).</>
         )}
-        {datos.truncado && <> ⚠️ La lista llegó recortada: hay más de los que se ven.</>}
+        {datos.truncado && <> <Ico i={TriangleAlert} /> La lista llegó recortada: hay más de los que se ven.</>}
         {datos.descartadas > 0 && <> {datos.descartadas} fila(s) del puerto no se han podido leer.</>}
       </div>
 

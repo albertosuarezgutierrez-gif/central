@@ -6,7 +6,9 @@
 // Nada de esto gasta: la vista previa es una lectura y el enlace no llama a ReRate.
 // El único paso con coste y contrato es «Emitir» dentro de `Emision`, con sus guardas.
 import { useState, type ComponentProps } from 'react'
+import { Check } from 'lucide-react'
 import { eur } from '@/lib/dinero'
+import { Ico, FILA } from '../../../iconos'
 import { fechaEs } from '@/lib/ficha-asegura'
 import type { OfertaImportable, VistaImportacion } from '@/lib/retarificar-asegura'
 import { pedirImportacion, pedirVistaImportacion } from './acciones'
@@ -121,8 +123,8 @@ export default function ImportarAvant2({ polizaId }: { polizaId: string }) {
               </ul>
             </div>
           )}
-          {vista.tomador === 'coincide' && <p className="muted">✓ El tomador del proyecto es el cliente de esta póliza (por DNI).</p>}
-          {vista.vehiculo === 'coincide' && <p className="muted">✓ Es el mismo vehículo que el de esta póliza (por matrícula).</p>}
+          {vista.tomador === 'coincide' && <p className="muted" style={FILA}><Ico i={Check} /> El tomador del proyecto es el cliente de esta póliza (por DNI).</p>}
+          {vista.vehiculo === 'coincide' && <p className="muted" style={FILA}><Ico i={Check} /> Es el mismo vehículo que el de esta póliza (por matrícula).</p>}
 
           {vista.ofertas.length === 0 ? (
             <p>

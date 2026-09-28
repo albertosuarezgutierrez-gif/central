@@ -14,7 +14,9 @@ import {
   type DocumentoResumen,
   type EdicionCliente,
 } from '@central/module-seguros'
+import { AlertTriangle, CheckCircle2, Clock, HelpCircle, IdCard, Lock, Paperclip, X } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { Ico, FILA } from './iconos'
 import {
   interpretarEscritura,
   textoMotivo,
@@ -134,7 +136,7 @@ export function EditarDireccion({ clienteId, contacto }: {
     <section style={{ display: 'grid', gap: 10 }}>
       {contacto.direccionIlegible && (
         <div style={pendienteBox}>
-          🔒 La dirección está guardada pero cifrada con una clave que asegura no puede abrir: no se
+          <Ico i={Lock} /> La dirección está guardada pero cifrada con una clave que asegura no puede abrir: no se
           puede mostrar. Si escribes una aquí, sustituirá a la que hay.
         </div>
       )}
@@ -199,9 +201,9 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
       <section style={{ display: 'grid', gap: 10 }}>
         <h3 style={h3}>Identidad</h3>
         <div style={pendienteBox}>
-          ❔ No se ha podido consultar la documentación de esta ficha, y sin saber si hay un DNI
+          <Ico i={HelpCircle} /> No se ha podido consultar la documentación de esta ficha, y sin saber si hay un DNI
           recibido no se puede ofrecer la edición de identidad. Vuelve a cargar la ficha o mira
-          📎 Documentos.
+          <Ico i={Paperclip} /> Documentos.
         </div>
       </section>
     )
@@ -231,7 +233,7 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
       })
       const j = (await res.json().catch(() => null)) as Record<string, unknown> | null
       if (!res.ok || !j || j.estado !== 'ok') return setPedido(`No se pudo anotar el pedido (${String(j?.error ?? j?.motivo ?? res.status)}).`)
-      setPedido('Anotado como pedido: cuando llegue, súbelo en 📎 Documentos y este bloque se habilitará.')
+      setPedido('Anotado como pedido: cuando llegue, súbelo en Documentos y este bloque se habilitará.')
       router.refresh()
     } catch (e) {
       setPedido(e instanceof Error ? e.message : String(e))
@@ -303,8 +305,8 @@ function BloqueIdentidad({ clienteId, identidad, documentos }: {
           <div>
             Para cambiar {rot.documento}, {rot.nombre.toLowerCase()} o {rot.fecha.toLowerCase()} hace falta
             el {rot.pedir} en la ficha (regla: se pide documentado). Ahora mismo no hay ningún {rot.pedir} recibido
-            en 📎 Documentos.
-            {nombrePendiente(identidad.nombre) && ' Para PONER el nombre a esta ficha sin nombre no hace falta: usa «✏️ Poner nombre» bajo el título.'}
+            en Documentos.
+            {nombrePendiente(identidad.nombre) && ' Para PONER el nombre a esta ficha sin nombre no hace falta: usa «Poner nombre» bajo el título.'}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
             <button type="button" disabled={ocupado} onClick={() => void pedirDni()} style={btnStyle('secundario')}>Pedir {rot.pedir}</button>
@@ -352,11 +354,11 @@ function Aviso({ r, ok, ocupado, onForzar, textoForzar }: {
 }) {
   if (r === null) return null
   const base: React.CSSProperties = { fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px' }
-  if (r.estado === 'ok') return <div style={{ ...base, color: 'var(--positive)', background: 'var(--positive-bg)' }}>✅ {ok}</div>
+  if (r.estado === 'ok') return <div style={{ ...base, ...FILA, color: 'var(--positive)', background: 'var(--positive-bg)' }}><Ico i={CheckCircle2} /> {ok}</div>
   if (r.estado === 'conflicto') {
     return (
       <div style={{ ...base, color: 'var(--warning)', background: 'var(--warning-bg)' }}>
-        ⚠️ Ya está en otra ficha:
+        <Ico i={AlertTriangle} /> Ya está en otra ficha:
         <ul style={{ margin: '4px 0', paddingLeft: 18 }}>
           {r.coincidencias.map((c) => (
             <li key={`${c.por}-${c.id}`}>
@@ -379,13 +381,13 @@ function Aviso({ r, ok, ocupado, onForzar, textoForzar }: {
   }
   if (r.estado === 'invalido') {
     const doc = r.motivo === MOTIVO_DOCUMENTO_REQUERIDO
-    return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}>{doc ? '🪪' : '✖'} {textoMotivo(r.motivo)}</div>
+    return <div style={{ ...base, ...FILA, color: 'var(--negative)', background: 'var(--negative-bg)' }}><Ico i={doc ? IdCard : X} /> {textoMotivo(r.motivo)}</div>
   }
   if (r.estado === 'no_encontrado') return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}>Esa ficha ya no está en la cartera (se ha mirado).</div>
   if (r.estado === 'sin_configurar') {
-    return <div style={{ ...base, color: 'var(--muted)', border: '1px dashed var(--border)' }}>⏳ El puerto con asegura no está conectado (falta <code>ASEGURA_OPERADOR_SECRET</code>). No se ha guardado nada.</div>
+    return <div style={{ ...base, ...FILA, color: 'var(--muted)', border: '1px dashed var(--border)' }}><Ico i={Clock} /> El puerto con asegura no está conectado (falta <code>ASEGURA_OPERADOR_SECRET</code>). No se ha guardado nada.</div>
   }
-  return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}>⚠️ No se ha podido guardar: {textoMotivo(r.motivo)} No lo leas como «ya está»: no se ha guardado.</div>
+  return <div style={{ ...base, ...FILA, color: 'var(--negative)', background: 'var(--negative-bg)' }}><Ico i={AlertTriangle} /> No se ha podido guardar: {textoMotivo(r.motivo)} No lo leas como «ya está»: no se ha guardado.</div>
 }
 
 // ─── Piezas ──────────────────────────────────────────────────────────────────

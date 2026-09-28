@@ -1,9 +1,10 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { RefreshCcw } from 'lucide-react'
+import { RefreshCcw, TriangleAlert } from 'lucide-react'
 import { ROTULO_CAMPO_CIMA, type CampoCima } from '@central/module-seguros'
 import { Badge, btnStyle } from '@/components/ui'
+import { Ico } from './iconos'
 import Bloque from './Bloque'
 import { contadorSincroCima, interpretarSincroCima, type LecturaSincroCima } from '@/lib/cima-sincro-asegura'
 
@@ -118,7 +119,7 @@ export default function DiferenciasCima({ onContador }: { onContador?: (n: numbe
                 <div key={clave} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', fontSize: 13, minWidth: 0 }}>
                   <span style={{ minWidth: 0, overflowWrap: 'anywhere', flex: '1 1 220px' }}>
                     <strong>{ROTULO_CAMPO_CIMA[d.campo as CampoCima]}</strong>: ficha «{d.ficha ?? '—'}» · CIMA «{d.cima}»
-                    {d.aviso && <span style={{ display: 'block', color: 'var(--warning)', fontSize: 12 }}>⚠️ {d.aviso}</span>}
+                    {d.aviso && <span style={{ display: 'block', color: 'var(--warning)', fontSize: 12 }}><Ico i={TriangleAlert} /> {d.aviso}</span>}
                   </span>
                   <button type="button" disabled={ocupado !== null} style={{ ...btnStyle('primario', 'sm'), minHeight: 44 }}
                     onClick={() => void enviar(clave, { accion: 'usar_cima', clienteId: f.clienteId, campo: d.campo, valor: d.cima })}>

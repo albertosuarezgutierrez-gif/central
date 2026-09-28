@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
-import { Check, Phone } from 'lucide-react'
+import { Check, Phone, TriangleAlert } from 'lucide-react'
 import { etiquetaActividad, riesgoActividad, type EmbudoPortal, type EventoActividad } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import { interpretarActividad } from '@/lib/actividad-asegura'
@@ -10,6 +10,7 @@ import { colaLlamadas, TIPOS_TAREA_UI, type LeadsVencimientos, type TareasDeHoy 
 import type { VistaIngesta } from '@/lib/correduria/ingesta-pantalla'
 import { agregarContadores, type Contador, type Destino } from './secciones'
 import { cuandoTarea, lineaEstadoIngesta, sinInvitar } from './hoy-cockpit'
+import { ConIcono } from './iconos'
 import PerdidasCartera from './PerdidasCartera'
 import Aprobaciones from './Aprobaciones'
 import Anulaciones from './Anulaciones'
@@ -183,7 +184,7 @@ export default function HoyCockpit({
             {verTodas ? 'Ver menos' : `Ver las ${tareas.tareas.length - MOSTRAR_TAREAS} restantes`}
           </button>
         )}
-        {tareas?.estado === 'ok' && tareas.truncado && <p style={NOTA}>⚠️ Hay más tareas de las que se ven: la lista llegó recortada.</p>}
+        {tareas?.estado === 'ok' && tareas.truncado && <p style={NOTA}><ConIcono i={TriangleAlert}>Hay más tareas de las que se ven: la lista llegó recortada.</ConIcono></p>}
         {tareas?.estado === 'ok' && tareas.descartadas > 0 && <p style={NOTA}>{tareas.descartadas} tarea(s) no se han podido leer y no se muestran.</p>}
         {error && <p role="alert" style={{ ...NOTA, color: 'var(--negative)' }}>{error}</p>}
       </section>

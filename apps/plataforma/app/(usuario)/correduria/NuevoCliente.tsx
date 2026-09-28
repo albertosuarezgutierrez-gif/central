@@ -2,10 +2,12 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { Clock, TriangleAlert, XCircle } from 'lucide-react'
 import { coincidenciaBloquea, provinciaPorCp, revisarAlta } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import { campoDesdeTermino, interpretarEscritura, textoMotivo, type ResultadoEscritura } from '@/lib/cliente-edicion-asegura'
 import { RAMOS_PRESUPUESTO } from '@/lib/ficha-asegura'
+import { ConIcono } from './iconos'
 import DireccionConfirmable from './DireccionConfirmable'
 
 /**
@@ -161,7 +163,7 @@ export default function NuevoCliente({ q }: { q?: string }) {
 
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <button type="submit" disabled={ocupado} style={btnStyle('primario')}>
-          {ramo === null ? 'Dar de alta' : `Dar de alta y presupuestar ${RAMOS_PRESUPUESTO[ramo].etiqueta.replace(/^\S+\s/, '').toLowerCase()}`}
+          {ramo === null ? 'Dar de alta' : `Dar de alta y presupuestar ${RAMOS_PRESUPUESTO[ramo].etiqueta.toLowerCase()}`}
         </button>
         <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>Cancelar</Link>
       </div>
@@ -174,12 +176,12 @@ export default function NuevoCliente({ q }: { q?: string }) {
 function Resultado({ r, ocupado, onForzar }: { r: ResultadoEscritura | null; ocupado: boolean; onForzar: () => void }) {
   if (r === null) return null
   const base: React.CSSProperties = { fontSize: 13, lineHeight: 1.5, borderRadius: 8, padding: '8px 10px' }
-  if (r.estado === 'ok') return <div style={{ ...base, color: 'var(--positive)', background: 'var(--positive-bg)' }}>✅ Creado. Abriendo la ficha…</div>
+  if (r.estado === 'ok') return <div style={{ ...base, color: 'var(--positive)', background: 'var(--positive-bg)' }}>Creado. Abriendo la ficha…</div>
   if (r.estado === 'conflicto') {
     const bloquea = coincidenciaBloquea(r.coincidencias) || !r.forzable
     return (
       <div style={{ ...base, color: 'var(--warning)', background: 'var(--warning-bg)' }}>
-        ⚠️ <strong>Ya existe:</strong>
+        <strong>Ya existe:</strong>
         <ul style={{ margin: '4px 0', paddingLeft: 18 }}>
           {r.coincidencias.map((c) => (
             <li key={`${c.por}-${c.id}`}>
@@ -200,12 +202,12 @@ function Resultado({ r, ocupado, onForzar }: { r: ResultadoEscritura | null; ocu
       </div>
     )
   }
-  if (r.estado === 'invalido') return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}>✖ {textoMotivo(r.motivo)}</div>
+  if (r.estado === 'invalido') return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}><ConIcono i={XCircle}>{textoMotivo(r.motivo)}</ConIcono></div>
   if (r.estado === 'sin_configurar') {
-    return <div style={{ ...base, color: 'var(--muted)', border: '1px dashed var(--border)' }}>⏳ El puerto con asegura no está conectado (falta <code>ASEGURA_OPERADOR_SECRET</code>). No se ha creado nada.</div>
+    return <div style={{ ...base, color: 'var(--muted)', border: '1px dashed var(--border)' }}><ConIcono i={Clock}>El puerto con asegura no está conectado (falta <code>ASEGURA_OPERADOR_SECRET</code>). No se ha creado nada.</ConIcono></div>
   }
   if (r.estado === 'no_encontrado') return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}>asegura respondió «no encontrado» a un alta: revisa el puerto.</div>
-  return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}>⚠️ No se ha podido crear: {textoMotivo(r.motivo)}</div>
+  return <div style={{ ...base, color: 'var(--negative)', background: 'var(--negative-bg)' }}><ConIcono i={TriangleAlert}>No se ha podido crear: {textoMotivo(r.motivo)}</ConIcono></div>
 }
 
 const AVISO_SIN_VERIFICAR = 'El contrato de Codeoscopic para salud no está verificado contra el fabricante (0 pólizas en cartera hoy). El primer intento real puede fallar.'
