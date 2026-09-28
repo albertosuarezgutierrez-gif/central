@@ -1,0 +1,78 @@
+{
+ "sesion": "d1431e08-2d8f-529e-bc01-b14218c42092",
+ "inicio": "2026-09-28T19:40:12.524Z",
+ "fin": "2026-09-28T19:42:15.000Z",
+ "llamadas": 26,
+ "categorias": {
+  "otro": {
+   "llamadas": 4,
+   "chars_in": 236,
+   "chars_out": 453,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 2,
+    "ToolSearch": 2
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 12,
+   "chars_in": 1302,
+   "chars_out": 51885,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 5,
+    "Glob": 2,
+    "Read": 5
+   }
+  },
+  "mcp:Gmail": {
+   "llamadas": 2,
+   "chars_in": 155,
+   "chars_out": 4602,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Gmail__search_threads": 1,
+    "mcp__Gmail__get_thread": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 1,
+   "chars_in": 118,
+   "chars_out": 2080,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1487,
+   "chars_out": 1682,
+   "errores": 0,
+   "archivos_citados": 7,
+   "chars_citados": 118753,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "sql": {
+   "llamadas": 6,
+   "chars_in": 1390,
+   "chars_out": 7182,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 6
+   }
+  }
+ }
+}
