@@ -206,10 +206,26 @@ export type EdicionRevisada =
 export const MOTIVO_DOCUMENTO_REQUERIDO = 'documento_requerido'
 
 /**
+ * ¿La ficha está SIN NOMBRE? Vacío o el marcador literal `(sin nombre)` que la
+ * ingesta escribe porque la columna es NOT NULL (14 fichas el 28/09/2026). Es un
+ * «no lo sé» con forma de dato: se trata como ausencia, nunca como un nombre.
+ */
+export function nombrePendiente(nombre: string | null | undefined): boolean {
+  const s = (nombre ?? '').replace(/\s+/g, ' ').trim().toLowerCase()
+  return s === '' || s === '(sin nombre)' || s === 'sin nombre'
+}
+
+/**
  * Revisa una edición entera. Un solo motivo de rechazo cada vez, con su campo,
  * para que el formulario señale la casilla.
+ *
+ * Excepción a «se pide documentado» (Alberto, 28/09/2026): si la ficha está SIN
+ * NOMBRE (`ctx.fichaSinNombre`, lo decide quien lee la BD con `nombrePendiente`),
+ * poner nombre y apellidos no exige documento: no se corrige una identidad, se
+ * rellena un hueco. DNI y fecha de nacimiento siguen exigiéndolo siempre, y
+ * cambiar un nombre que YA existe, también.
  */
-export function revisarEdicion(e: EdicionCliente): EdicionRevisada {
+export function revisarEdicion(e: EdicionCliente, ctx: { fichaSinNombre?: boolean } = {}): EdicionRevisada {
   const identidad: IdentidadRevisada = {}
   const libre: Partial<Record<CampoLibre, string | null>> = {}
 
@@ -259,7 +275,9 @@ export function revisarEdicion(e: EdicionCliente): EdicionRevisada {
 
   const tocaIdentidad = Object.keys(identidad).length > 0
   if (!tocaIdentidad && Object.keys(libre).length === 0) return { ok: false, motivo: 'No hay nada que cambiar.' }
-  if (tocaIdentidad && !e.documentoId) return { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO }
+  const soloRellenaNombre = ctx.fichaSinNombre === true && identidad.nombre !== undefined
+    && Object.keys(identidad).every((k) => k === 'nombre' || k === 'apellidos')
+  if (tocaIdentidad && !e.documentoId && !soloRellenaNombre) return { ok: false, motivo: MOTIVO_DOCUMENTO_REQUERIDO }
   return { ok: true, identidad, libre, tocaIdentidad }
 }
 
@@ -284,7 +302,7 @@ export function textoHistorialEdicion(
   const partes: string[] = []
   const ident = (Object.keys(r.identidad) as CampoIdentidad[]).map((c) => ETIQUETA_CAMPO[c])
   if (ident.length > 0) {
-    partes.push(`identidad (${ident.join(', ')})${ctx.documentoId ? ` acreditada con el documento ${ctx.documentoId}` : ''}`)
+    partes.push(`identidad (${ident.join(', ')})${ctx.documentoId ? ` acreditada con el documento ${ctx.documentoId}` : ' rellenada sin documento: la ficha no tenía nombre'}`)
   }
   for (const c of Object.keys(r.libre) as CampoLibre[]) {
     const v = r.libre[c]

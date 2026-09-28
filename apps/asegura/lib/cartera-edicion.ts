@@ -36,6 +36,7 @@ import {
   normalizarContacto,
   revisarAlta,
   revisarEdicion,
+  nombrePendiente,
   textoHistorialAlta,
   textoHistorialEdicion,
   tipoDocumento,
@@ -572,14 +573,19 @@ export async function editarCliente(
   edicion: EdicionCliente,
   actor: string,
 ): Promise<ResultadoEdicion> {
-  const r = revisarEdicion(edicion)
-  if (!r.ok) return invalido(r.motivo, r.campo)
+  // Primera pasada sin la ficha: un dato mal tecleado se rechaza sin tocar la BD.
+  const previa = revisarEdicion(edicion, { fichaSinNombre: true })
+  if (!previa.ok) return invalido(previa.motivo, previa.campo)
   try {
     const db = prismaAsegura()
     const c = await clienteDe(correduriaId, clienteId)
     if (!c) return noEncontrado()
+    // La excepción «ficha sin nombre» la decide lo que hay en la BD, nunca quien llama.
+    const r = revisarEdicion(edicion, { fichaSinNombre: nombrePendiente(c.nombre) })
+    if (!r.ok) return invalido(r.motivo, r.campo)
 
-    if (r.tocaIdentidad) {
+    // Sin documento solo llega aquí el caso «rellenar nombre en ficha sin nombre».
+    if (r.tocaIdentidad && edicion.documentoId) {
       const d = await db.documento.findFirst({
         where: { id: edicion.documentoId ?? '', correduriaId, clienteId },
         select: { tipo: true, estado: true },
