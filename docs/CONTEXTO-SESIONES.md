@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — Ficha↔CIMA: el email nuevo de CIMA se AÑADE como secundario (`email:anadir`, antes `discrepa`) salvo que esté en OTRA ficha (`avisarContactosCompartidos`, el email vincula el portal). «Berta del la fuentes rojas» NO era solo mayúsculas: dos erratas; nueva acción automática `corregir` (mismas palabras, ≤1 letra por palabra, ≥ la mitad idénticas). «Maria Lopez»/«Mario Lopes» sigue preguntando. PR #3802.
+
 **(28/09/2026)** — Bot de oportunidades: un vencimiento leído que ya pasó (recibo del periodo anterior) ya no se descarta: se proyecta a la siguiente renovación anual (`siguienteRenovacion`, máx. 2 años; 29/02→28/02) y se dice en el mensaje. Caso: recibo Línea Directa 0194DRY «Vigencia 18/11/24 al 18/11/25» → vence 18/11/2026. Ojo: la fecha de la CARTA (03/02/25) no es la del periodo.
 
 **(27/09/2026)** — Correduría, bot de Telegram «sabe más que Alberto»: (1) si el nº de póliza del documento está en nuestra cartera EN VIGOR (`polizaEnCartera`, asegura `leer-documento` → `enCartera`) contesta «YA ES NUESTRA» y no propone; (2) marcar un documento «de un cliente» ya no pregunta «¿qué hago?»: el asistente propone solo (`ORDEN_DOCUMENTO_CLIENTE`); (3) matrícula y vehículo leídos → identidad (`mismoSeguro`: nº → matrícula → compañía), texto, ficha y `auto-nuevo?matricula=`; (4) eval con las 5 conversaciones reales (`scripts/eval-asistente-correduria.ts`, necesita OPENROUTER_API_KEY; el veredicto puro va en CI). ⚠️ El nº de póliza de una oportunidad vive en la COLUMNA `oportunidades.numero_poliza` (y el CRM viejo lo dejaba en `poliza_competencia.nPoliza`); el #3792 lo escribía en una clave nueva — corregido, se leen las tres. Con eso 1.386/3.680 abiertas ya tienen nº y 1.733 matrícula: no hizo falta backfill.
@@ -807,10 +809,6 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
-
-### (28/09/2026) Ficha↔CIMA: email nuevo se AÑADE y nombre con erratas se CORRIGE solo
-- Alberto: «si hay dos mail se añade dos mail al cliente». `compararConCima` da `email:anadir` (secundario, sin forzar) en vez de `discrepa`; el mismo chequeo que el teléfono (`avisarContactosCompartidos`): si ese email está en OTRA ficha, pregunta con aviso (el email vincula el portal).
-- «Berta del la fuentes rojas» NO era solo mayúsculas: dos erratas (del→de, fuentes→fuente). Nueva acción `corregir`: mismas palabras, ≤1 letra por palabra, ≥ la mitad idénticas → toma CIMA sin preguntar. «Maria Lopez»/«Mario Lopes» sigue preguntando.
 
 ## (27/09/2026) Título de la RC = solo la RC
 - `module-seguros/objeto.ts` `tituloRc()`: si una cobertura se nombra «Responsabilidad civil…/R.C./RC», la tarjeta titula «RC caballos» y el resto (defensa penal, liberación de gastos) queda como «+N coberturas» y en el desglose de la póliza. Sin cobertura así, sigue el título por modalidades.
