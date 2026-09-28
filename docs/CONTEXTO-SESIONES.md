@@ -12,8 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-
 **(28/09/2026)** — Correduría: la moto HONDA NTV 700 (4897FTM) salía DOS veces en su ficha (Allianz 031698897 vence 01/11/2026 + Occident 549648082) y el «Siguiente paso» avisaba del 01/11. La BD ya estaba bien (Allianz `sustituida_at` 24/09, Occident `poliza_origen_id`→Allianz); fallaba el código, que no leía la sustitución. Ahora: puerto de ficha manda `sustituida`/`sustituyeA`; `clasificarPolizaFicha` tiene la clase `sustituida` (no es viva, no manda el próximo vencimiento); en «Con nosotros» la vieja va DENTRO de la tarjeta de la nueva («🔁 Sustituye a…»); pestaña Pólizas con sección propia. Y `sustituidaAt: null` en las renovaciones de asegura (`vencimientosProximos`, KPIs de preaviso) y en los dos crons de aviso (intranet y vencimiento). Barrido de toda la cartera: 4 cambios enlazados (todos cubiertos) y 1 duplicado real SIN casar — 8737HVF: CIMA trajo la Allianz como `061089620` y no casó con la emitida `61089620` (cero a la izquierda; el emparejado vive en la ingesta del CRM). Fusionada a mano (`poliza_merge_log` lote `emitida-sin-casar-cero-inicial` + nota en `historial_interno`).
+
+**(28/09/2026)** — Ficha↔CIMA: el email nuevo de CIMA se AÑADE como secundario (`email:anadir`, antes `discrepa`) salvo que esté en OTRA ficha (`avisarContactosCompartidos`, el email vincula el portal). «Berta del la fuentes rojas» NO era solo mayúsculas: dos erratas; nueva acción automática `corregir` (mismas palabras, ≤1 letra por palabra, ≥ la mitad idénticas). «Maria Lopez»/«Mario Lopes» sigue preguntando. PR #3802.
+
+**(28/09/2026)** — Bot de oportunidades: un vencimiento leído que ya pasó (recibo del periodo anterior) ya no se descarta: se proyecta a la siguiente renovación anual (`siguienteRenovacion`, máx. 2 años; 29/02→28/02) y se dice en el mensaje. Caso: recibo Línea Directa 0194DRY «Vigencia 18/11/24 al 18/11/25» → vence 18/11/2026. Ojo: la fecha de la CARTA (03/02/25) no es la del periodo.
 
 **(27/09/2026)** — Correduría, bot de Telegram «sabe más que Alberto»: (1) si el nº de póliza del documento está en nuestra cartera EN VIGOR (`polizaEnCartera`, asegura `leer-documento` → `enCartera`) contesta «YA ES NUESTRA» y no propone; (2) marcar un documento «de un cliente» ya no pregunta «¿qué hago?»: el asistente propone solo (`ORDEN_DOCUMENTO_CLIENTE`); (3) matrícula y vehículo leídos → identidad (`mismoSeguro`: nº → matrícula → compañía), texto, ficha y `auto-nuevo?matricula=`; (4) eval con las 5 conversaciones reales (`scripts/eval-asistente-correduria.ts`, necesita OPENROUTER_API_KEY; el veredicto puro va en CI). ⚠️ El nº de póliza de una oportunidad vive en la COLUMNA `oportunidades.numero_poliza` (y el CRM viejo lo dejaba en `poliza_competencia.nPoliza`); el #3792 lo escribía en una clave nueva — corregido, se leen las tres. Con eso 1.386/3.680 abiertas ya tienen nº y 1.733 matrícula: no hizo falta backfill.
 
@@ -812,6 +815,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 ## (27/09/2026) Título de la RC = solo la RC
 - `module-seguros/objeto.ts` `tituloRc()`: si una cobertura se nombra «Responsabilidad civil…/R.C./RC», la tarjeta titula «RC caballos» y el resto (defensa penal, liberación de gastos) queda como «+N coberturas» y en el desglose de la póliza. Sin cobertura así, sigue el título por modalidades.
 - Precio de la moto (Allianz 045981539): Allianz NO manda prima en el EIAC de póliza, solo en el recibo CA (11 de 12 vivas sin prima, todas Allianz). `primaConRecibos()`/`vencimientoConRecibos()` (module-seguros) la toman del recibo anual si la póliza no la trae (solo pago anual) y corrigen el vencimiento si hay CA cobrado posterior. Aplicado en `cartera-ficha.ts` y `cartera-poliza.ts` de asegura. - Auditoría: 043673655 anulada en ePac (impago) → cancelada a mano; 054914837 sin recibos en CIMA → 2 CA copiados de ePac (`origen=manual`); 10 Mapfre EV con vencimiento pasado sin renovación por CIMA → aviso rojo en tarjeta. Regla fijada en `apps/asegura/CLAUDE.md` + skill `correduria-crm` (punto 0).
+
+## (28/09/2026) Martin (Gymcisa) fusionado: su DNI del volcado no lo abre la clave
+Backfill de DNI pulsado: 0 rellenables y la ficha lead 2a6c38e9 seguía sin hash → su DNI cifrado es de los 935
+«ilegibles» (no se podrá indexar nunca). Fusionada en 52886ff1 con OK de Alberto: mismo nombre, teléfono y nº 11091 en
+los dos volcados. El cifrado original quedó en `notas` del snapshot de la lápida (cliente_merge_log), no en la viva.
 
 ## (27/09/2026) Materiales Llido fusionada; Martin = contacto de Gymcisa
 `fusionar_clientes`: Materiales Llido Gomez S.l. (bf96c9e0 → bcd1f34a, mismo CIF+tel, OK de Alberto). Martin (fichas

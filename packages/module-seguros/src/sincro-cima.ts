@@ -20,6 +20,11 @@
  *                   datos, coge CIMA»). La persona ya está casada por DNI.
  *   - `formatear` → es el mismo nombre pero la ficha lo tiene TODO en mayúsculas
  *                   (o minúsculas): se reescribe «Nombre Propio» sin preguntar.
+ *   - `corregir`  → es el mismo nombre con una errata por palabra en la ficha
+ *                   («Berta del la fuentes rojas» → «Berta de la Fuente Rojas»,
+ *                   28/09/2026): se toma el de CIMA sin preguntar. Solo con las
+ *                   mismas palabras, cada una a UNA letra como mucho y al menos
+ *                   la mitad idénticas: «Maria Lopez»/«Mario Lopes» sigue preguntando.
  *   - `discrepa`  → los dos lo tienen y NO coinciden: decide Alberto.
  *   - (nada)      → coinciden, o CIMA no lo trae: no hay nada que hacer.
  *
@@ -27,8 +32,11 @@
  * tildes, el de CIMA al que le falta un nombre que la ficha sí tiene («ALFONSO
  * MONCOSI GOMEZ» frente a «Alfonso Carlos Moncosi Gomez»: la ficha está más
  * completa), y la fecha del carné que se va UN día (desfase de zona horaria).
- * El email distinto SIGUE preguntando: un email en la ficha vincula el portal
- * del cliente, y añadir uno a ciegas abre la cartera a quien lo lea.
+ * El email nuevo de CIMA se AÑADE como secundario, igual que el teléfono
+ * (28/09/2026, Alberto: «si hay dos mail se añade dos mail al cliente»). Un
+ * email en la ficha vincula el portal del cliente: por eso quien aplica hace la
+ * misma comprobación que con el teléfono, y si ese email está en OTRA ficha
+ * pregunta.
  *
  * 🚨 Un valor de la ficha que no se puede leer (cifrado con otra clave) NO es
  * un hueco: `ilegible` en la entrada anula el campo — rellenarlo pisaría un
@@ -69,7 +77,7 @@ export type DatosCima = {
 
 export type DiferenciaCima = {
   campo: CampoCima
-  accion: 'rellenar' | 'anadir' | 'completar' | 'formatear' | 'discrepa'
+  accion: 'rellenar' | 'anadir' | 'completar' | 'formatear' | 'corregir' | 'discrepa'
   /** Lo que tiene la ficha (para enseñarlo); `null` en `rellenar`. */
   ficha: string | null
   /** El valor que se escribiría, ya normalizado (en `formatear`, el de la ficha en «Nombre Propio»). */
@@ -130,6 +138,42 @@ function cimaMasCompleta(ficha: string | null, cima: string | null): boolean {
   const nf = claveNombre(ficha)!.split(' ')
   const nc = claveNombre(cima)!.split(' ')
   return nc.length > nf.length || nf.some((w) => w.length === 1 && !nc.includes(w))
+}
+
+/** Distancia de edición ≤ 1 (una letra cambiada, sobrante o que falta). */
+function aUnaLetra(a: string, b: string): boolean {
+  if (a === b) return true
+  if (Math.abs(a.length - b.length) > 1) return false
+  const [c, l] = a.length <= b.length ? [a, b] : [b, a]
+  let i = 0
+  while (i < c.length && c[i] === l[i]) i++
+  return c.length === l.length ? c.slice(i + 1) === l.slice(i + 1) : c.slice(i) === l.slice(i + 1)
+}
+
+/**
+ * Mismas palabras con erratas: igual número de palabras (≥2), cada una casa con
+ * una DISTINTA a una letra como mucho (nunca una inicial), y al menos la mitad
+ * idénticas. La persona ya está casada por DNI; esto solo decide si es errata.
+ */
+function nombreConErratas(ficha: string | null, cima: string | null): boolean {
+  const kf = claveNombre(ficha)
+  const kc = claveNombre(cima)
+  if (!kf || !kc) return false
+  const pf = kf.split(' ')
+  const resto = kc.split(' ')
+  if (pf.length < 2 || pf.length !== resto.length) return false
+  let distintas = 0
+  // Primero las exactas, para que una errata no se quede la palabra que otra necesita entera.
+  for (const w of [...pf].sort((x, y) => Number(resto.includes(y)) - Number(resto.includes(x)))) {
+    let i = resto.indexOf(w)
+    if (i < 0) {
+      i = w.length > 1 ? resto.findIndex((r) => r.length > 1 && aUnaLetra(w, r)) : -1
+      if (i < 0) return false
+      distintas++
+    }
+    resto.splice(i, 1)
+  }
+  return distintas > 0 && distintas * 2 <= pf.length
 }
 
 /** Dos fechas `YYYY-MM-DD` a un día o menos (el carné guardado con desfase de zona horaria). */
@@ -199,6 +243,8 @@ export function compararConCima(ficha: FichaParaCima, cima: DatosCima): Diferenc
       if (ficha.nombre && sinFormatoNombre(ficha.nombre)) {
         out.push({ campo: 'nombre', accion: 'formatear', ficha: ficha.nombre, cima: nombrePropio(ficha.nombre) })
       }
+    } else if (nombreConErratas(ficha.nombre, nombreCima)) {
+      out.push({ campo: 'nombre', accion: 'corregir', ficha: ficha.nombre, cima: nombrePropio(nombreCima) })
     } else out.push({ campo: 'nombre', accion: 'discrepa', ficha: ficha.nombre, cima: nombrePropio(nombreCima) })
   }
 
@@ -229,7 +275,7 @@ export function compararConCima(ficha: FichaParaCima, cima: DatosCima): Diferenc
   if (em && ficha.emails !== null) {
     const propias = ficha.emails.map(claveEmail)
     if (ficha.emails.length === 0) out.push({ campo: 'email', accion: 'rellenar', ficha: null, cima: em })
-    else if (!propias.includes(claveEmail(em))) out.push({ campo: 'email', accion: 'discrepa', ficha: ficha.emails.join(' · '), cima: em })
+    else if (!propias.includes(claveEmail(em))) out.push({ campo: 'email', accion: 'anadir', ficha: ficha.emails.join(' · '), cima: em })
   }
 
   return out
