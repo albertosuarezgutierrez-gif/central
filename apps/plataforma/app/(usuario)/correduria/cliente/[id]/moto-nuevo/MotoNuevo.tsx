@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { CeldaCompania } from '../../../CeldaCompania'
-import PrepararPresupuesto from '../../../poliza/[id]/retarificar/PrepararPresupuesto'
+import FiltroGarantias from '../../../FiltroGarantias'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { ConIcono } from '../../../iconos'
 import { eur } from '@/lib/dinero'
@@ -25,7 +25,8 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
-import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
+import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
+import type { TarificacionNuevaGuardada } from '@/lib/retarificar-asegura'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
@@ -169,6 +170,32 @@ export default function MotoNuevo({
   const [motoAnteriorCodigo, setMotoAnteriorCodigo] = useState('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
+
+  // ── Retomar la última tarificación ya pagada (28/09/2026) ────────────────────
+  // La parrilla vivía solo en memoria: al cerrar la pestaña no había forma de preparar el
+  // presupuesto ni de emitir sin volver a pagar. Gratis: solo lee lo ya guardado.
+  const [guardada, setGuardada] = useState<TarificacionNuevaGuardada | null>(null)
+  useEffect(() => {
+    if (poliza !== null) return
+    let vivo = true
+    pedirTarificacionGuardadaMoto({ clienteId })
+      .then((r) => { if (vivo && r.estado === 'ok' && !r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada) })
+      .catch(() => {})
+    return () => { vivo = false }
+  }, [clienteId, poliza])
+  const retomar = (g: TarificacionNuevaGuardada) =>
+    setResultado({
+      estado: 'ok',
+      coste: '0 € (retomada, ya estaba pagada)',
+      restantesHoy: null,
+      simulado: false,
+      avisoSimulacion: null,
+      resumen: `Tarificación del ${new Date(g.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}${g.fechaEfecto ? ` · efecto ${g.fechaEfecto.split('-').reverse().join('/')}` : ''}`,
+      precios: g.precios,
+      fallos: [],
+      supuestos: [],
+      guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+    })
 
   // ── ¿Tiene seguro EN VIGOR ahora mismo? (fallo real de Alberto, 18/09/2026) ──
   // Igual que en auto: sin esto la compañía cotiza «de calle» y el precio no es
@@ -734,6 +761,16 @@ export default function MotoNuevo({
             <ul style={{ fontSize: 13 }}>{resultado.faltan.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}</ul>
           </div>
         )}
+        {guardada && resultado.estado === 'idle' && (
+          <div style={{ ...cardStyle, marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 14 }}>
+              Ya hay una tarificación de moto de este cliente ({new Date(guardada.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}, {guardada.precios.length} precios{guardada.fechaEfecto ? `, efecto ${guardada.fechaEfecto.split('-').reverse().join('/')}` : ''}).
+            </span>
+            <button type="button" onClick={() => retomar(guardada)} style={{ ...btnStyle('secundario'), minHeight: 44 }}>
+              Retomarla sin pagar
+            </button>
+          </div>
+        )}
         {resultado.estado === 'error' && (
           <p style={{ color: 'var(--negative)', fontSize: 13, marginTop: 12, whiteSpace: 'pre-wrap' }}>
             {resultado.tope ? 'Tope alcanzado: ' : ''}{resultado.mensaje}
@@ -750,7 +787,7 @@ export default function MotoNuevo({
             {simulacion ? 'Descartar y simular de cero' : 'Descartar y pedir precio de cero — cuesta 0,50€'}
           </button>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible={poliza !== null} />}
+        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible sustituye={poliza !== null} clienteId={clienteId} />}
       </div>
     </div>
   )
@@ -803,11 +840,18 @@ function Precios({
   r,
   simulacion,
   emitible = false,
+  sustituye = true,
+  clienteId,
 }: {
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
-  /** Solo en modo póliza (23/09/2026): emitir exige una póliza de la cartera a la que colgar la nueva. */
+  clienteId: string
+  /** Desde el 28/09/2026 también sin póliza: asegura emite a un cliente NUEVO con el
+   *  proyecto enlazado a la ficha y a la tarificación (antes exigía una póliza de la
+   *  cartera a la que colgar la nueva). */
   emitible?: boolean
+  /** `true` si hay póliza anterior que sustituir (carta de baja); `false` = cliente nuevo. */
+  sustituye?: boolean
 }) {
   const [abierta, setAbierta] = useState<string | null>(null)
   const cotizacionId = cotizacionIdDe(r.guardado)
@@ -870,7 +914,7 @@ function Precios({
                             ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
                             : 'Confirmar con la compañía y emitir'
                       }
-                      style={{ ...btnStyle('secundario', 'sm') }}
+                      style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}
                     >
                       {abierta === `${p.compania}-${p.producto}-${i}` ? 'Ocultar' : 'Emitir'}
                     </button>
@@ -893,12 +937,13 @@ function Precios({
               categoria={p.categoria ?? ''}
               primaEur={p.primaEur ?? null}
               producto={p.producto ?? null}
+              sustituye={sustituye}
               onCerrar={() => setAbierta(null)}
             />
           )
         })}
       {cotizacionIdDe(r.guardado) !== null && (
-        <PrepararPresupuesto tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
+        <FiltroGarantias ramo="moto" origen={{ clienteId, ramo: 'moto' }} tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
       )}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>

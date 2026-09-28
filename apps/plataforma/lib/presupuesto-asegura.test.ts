@@ -8,7 +8,50 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { frasePresupuesto, interpretarPreparado, type PresupuestoPreparado } from './presupuesto-asegura.ts'
+import {
+  cuerpoPreparar,
+  frasePresupuesto,
+  interpretarPreparado,
+  mensajeErrorPreparar,
+  normalizarOcultar,
+  type PresupuestoPreparado,
+} from './presupuesto-asegura.ts'
+
+// ─── Ocultar al cliente antes de preparar (28/09/2026) ───────────────────────
+
+const U1 = '0b0f5a3e-1c2d-4e5f-8a9b-0c1d2e3f4a5b'
+
+test('ocultar vacío o ausente NO viaja: nada oculto', () => {
+  assert.equal(normalizarOcultar(undefined), undefined)
+  assert.equal(normalizarOcultar({ companias: [], precios: [] }), undefined)
+  assert.deepEqual(cuerpoPreparar({ tarificacionId: 't1' }), { tarificacionId: 't1' })
+  assert.deepEqual(cuerpoPreparar({ tarificacionId: 't1', ocultar: { companias: [], precios: [] } }), { tarificacionId: 't1' })
+})
+
+test('ocultar se limpia (recorte, sin duplicados, uuid en minúsculas) y viaja en el cuerpo', () => {
+  const c = cuerpoPreparar({ tarificacionId: 't1', ocultar: { companias: [' Allianz ', 'Allianz'], precios: [U1.toUpperCase()] } })
+  assert.deepEqual(c, { tarificacionId: 't1', ocultar: { companias: ['Allianz'], precios: [U1] } })
+})
+
+test('ocultar MAL formado es null: no se adivina (el cliente vería lo que se quiso quitar)', () => {
+  assert.equal(normalizarOcultar('Allianz'), null)
+  assert.equal(normalizarOcultar({ companias: 'Allianz' }), null)
+  assert.equal(normalizarOcultar({ precios: ['no-es-uuid'] }), null)
+  assert.equal(normalizarOcultar({ companias: [''] }), null)
+  assert.equal(normalizarOcultar({ precios: [3] }), null)
+})
+
+test('todas_ocultas se explica como «lo has quitado todo», no como una avería', () => {
+  assert.match(mensajeErrorPreparar({ motivo: 'todas_ocultas' }), /ocultado todas/)
+  assert.doesNotMatch(mensajeErrorPreparar({ motivo: 'todas_ocultas' }), /todas_ocultas/)
+  assert.equal(mensajeErrorPreparar({ motivo: 'sin_opciones', detalle: 'x' }), 'sin_opciones: x')
+})
+
+test('el 422 todas_ocultas de asegura llega como error con su motivo', () => {
+  const r = interpretarPreparado(422, { estado: 'error', motivo: 'todas_ocultas' })
+  assert.equal(r.estado, 'error')
+  if (r.estado === 'error') assert.equal(r.motivo, 'todas_ocultas')
+})
 
 const OPCION = {
   orden: 1,
@@ -44,6 +87,16 @@ test('el camino feliz devuelve el presupuesto y su enlace', () => {
   assert.equal(r.presupuesto.opciones.length, 1)
   assert.equal(r.presupuesto.preciosTotales, 12)
   assert.equal(r.token, 'a'.repeat(64))
+  // Una asegura anterior no manda `enLista`: eso es «no consta», no «no hay más».
+  assert.equal(r.presupuesto.enLista, null)
+})
+
+test('enLista y ocultas viajan cuando asegura los manda', () => {
+  const r = interpretarPreparado(200, { ...OK, presupuesto: { ...OK.presupuesto, enLista: 28, ocultas: 2 } })
+  assert.equal(r.estado, 'ok')
+  if (r.estado !== 'ok') return
+  assert.equal(r.presupuesto.enLista, 28)
+  assert.equal(r.presupuesto.ocultas, 2)
 })
 
 test('un 401 es «los secretos no coinciden», no «no hay presupuestos»', () => {

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { Search, TriangleAlert, Lock, Plus, Hourglass, Phone, Mail } from 'lucide-react'
 import { cardStyle, btnStyle, btnIcono, Badge, type Tono } from '@/components/ui'
 import BotonWhatsapp from './BotonWhatsapp'
+import { resumenOportunidades } from '@/lib/correduria/oportunidades-buscador'
 import { MOTIVOS_PUERTO, type Busqueda, type BloqueResultados, type Hallazgo, type Contacto } from '@/lib/correduria-puerto'
 
 /**
@@ -335,7 +336,9 @@ function Bloque({ b }: { b: BloqueResultados }) {
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
             }}>
               <Vitalidad h={h} />
-              <span>· {h.polizas} póliza(s) · {h.porque}</span>
+              <span>· {h.polizas} póliza(s)</span>
+              <Oportunidades h={h} />
+              <span>· {h.porque}</span>
               {h.contacto !== null &&
                 (h.contacto.telefonoIlegible || h.contacto.emailIlegible) && (
                   <span title="Está guardado pero esta app no puede descifrarlo. Ábrelo en la ficha.">
@@ -387,6 +390,41 @@ function Bloque({ b }: { b: BloqueResultados }) {
  * Cuatro estados, no dos: «sin comprobar» y «sin vencimiento» son distintos de
  * «volcado histórico», y ninguno de los dos entierra la ficha.
  */
+/** Hoy en Madrid, `YYYY-MM-DD`: el mismo huso con el que asegura manda las fechas límite. */
+function hoyMadrid(): string {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Madrid' }).format(new Date())
+}
+
+function Oportunidades({ h }: { h: Hallazgo }) {
+  const r = resumenOportunidades(h, hoyMadrid())
+  // Sin dato no se pinta nada: no se afirma «ninguna».
+  if (r.estado === 'sin_dato') return null
+  const ficha = `/correduria/cliente/${h.clienteId}?tab=oportunidades`
+  return (
+    <>
+      <Link
+        href={h.siguientePaso && r.destacado ? `${ficha}&op=${encodeURIComponent(h.siguientePaso.oportunidadId)}` : ficha}
+        style={{ color: r.destacado ? 'var(--brand)' : 'inherit', fontWeight: r.destacado ? 600 : 400 }}
+      >
+        · {r.texto}
+      </Link>
+      {r.paso && (
+        <span style={r.atrasado ? { color: 'var(--danger)', fontWeight: 600 } : undefined} title={r.atrasado ? 'La tarea ya tenía que estar hecha' : undefined}>
+          · {r.paso}{r.atrasado && ' (atrasada)'}
+        </span>
+      )}
+      {r.ofrecerAbrir && (
+        <Link
+          href={`${ficha}&oportunidad=nueva`}
+          style={{ display: 'inline-flex', alignItems: 'center', gap: 2, minHeight: 44, fontWeight: 600 }}
+        >
+          <Plus size={12} strokeWidth={2} aria-hidden /> abrir oportunidad
+        </Link>
+      )}
+    </>
+  )
+}
+
 function Vitalidad({ h }: { h: Hallazgo }) {
   const cima = h.polizasCima
   const detalle =

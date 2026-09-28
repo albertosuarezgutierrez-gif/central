@@ -7,7 +7,7 @@ import {
   type LineasCodeoscopic,
   type CompaniasCodeoscopic,
 } from '@/lib/correduria-puerto'
-import { PageHeader } from '@/components/ui'
+import { PageHeader, Pagina } from '@/components/ui'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,22 +19,24 @@ export const dynamic = 'force-dynamic'
 export default async function HogarPage() {
   const [lineas, companias] = await Promise.all([lineasCodeoscopic(), companiasCodeoscopic('fidelidade')])
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div>
-        <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
-        <PageHeader
-          titulo="Presupuesto de hogar"
-          icono={<Home size={20} strokeWidth={1.75} />}
-          sub={<>
-            Con la referencia catastral —o la dirección— el Catastro da los m², el año de construcción
-            y el uso, gratis y sin preguntarle nada al cliente.
-          </>}
-        />
+    <Pagina ancho="tabla">
+      <div style={{ display: 'grid', gap: 16 }}>
+        <div>
+          <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
+          <PageHeader
+            titulo="Presupuesto de hogar"
+            icono={<Home size={20} strokeWidth={1.75} />}
+            sub={<>
+              Con la referencia catastral —o la dirección— el Catastro da los m², el año de construcción
+              y el uso, gratis y sin preguntarle nada al cliente.
+            </>}
+          />
+        </div>
+        <HogarCatastro />
+        <RamoHogar l={lineas} />
+        <CompaniasAvant2 c={companias} />
       </div>
-      <HogarCatastro />
-      <RamoHogar l={lineas} />
-      <CompaniasAvant2 c={companias} />
-    </div>
+    </Pagina>
   )
 }
 

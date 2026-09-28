@@ -174,6 +174,19 @@ export type { HogarLeido } from './documento-hogar.ts'
 
 export { importeEiac, sumarImportesEiac } from './importe-eiac.ts'
 export {
+  ACUERDO_DIRECTO,
+  TOLERANCIA_PUNTOS,
+  lineasComision,
+  pctRecibo,
+  resolverCuadro,
+  type CuadroFila,
+  type EntradaCuadro,
+  type ExtraAcuerdo,
+  type LineaComision,
+  type ReciboComision,
+  type VeredictoComision,
+} from './comision-pactada.ts'
+export {
   interpretarCapital,
   extraerDetalleCobertura,
   type CapitalCobertura,
@@ -757,6 +770,7 @@ export {
   eurEs,
   FIRMEZAS,
   FRANQUICIAS,
+  FAMILIAS_SIN_ESCALA_DE_COBERTURA,
   FILTRO_PRECIOS_VACIO,
   type FamiliaNivel,
   type Nivel,
@@ -942,3 +956,28 @@ export {
   type RevisionElecciones,
 } from './fusion-fichas.ts'
 export { claveMatricula, claveNumeroPoliza, mismaCompania, mismoSeguro, type SeguroOportunidad } from './compania-oportunidad.ts'
+export {
+  CATALOGO_GARANTIAS,
+  VERSION_CATALOGO,
+  claveCobertura,
+  clasificarCoberturas,
+  noReconocidas,
+  ramoDeCatalogo,
+  type CoberturaParaClasificar,
+  type EstadoGarantia,
+  type GarantiaCatalogo,
+  type GarantiasClasificadas,
+  type RamoGarantias,
+} from './catalogo-garantias.ts'
+export { estadoDe, filtrarPorGarantias, interruptoresGarantias, type InterruptorGarantia, type OpcionFiltrable, type ResultadoFiltro } from './filtro-garantias.ts'
+export {
+  garantiasDeNecesidades,
+  capitalServicio,
+  cambiosFrenteActual,
+  seguimientoPendiente,
+  HORAS_SIN_ABRIR,
+  HORAS_SIN_ELEGIR,
+  type CambiosFrenteActual,
+  type EtapaSeguimiento,
+  type PresupuestoParaSeguimiento,
+} from './presupuesto-ayudas.ts'

@@ -39,7 +39,16 @@ import { bloqueaEmision } from './defensa-cartera.ts'
 // ─── Niveles de cobertura ────────────────────────────────────────────────────
 
 /** A qué vocabulario pertenece un nivel. Hogar y auto NO comparten escala. */
-export type FamiliaNivel = 'auto' | 'hogar' | 'sin_familia'
+export type FamiliaNivel = 'auto' | 'hogar' | 'salud' | 'decesos' | 'vida' | 'sin_familia'
+
+/**
+ * Las familias cuyo rótulo NO mide cobertura (29/09/2026, medido en los ejemplos del portal de
+ * Codeoscopic). En DECESOS el rótulo es el TIPO DE TARIFA —natural, mixta, nivelada—: cómo evoluciona
+ * la prima con la edad, no qué se cubre (todas dan el servicio; lo que cambia es el capital). En VIDA
+ * todas las ofertas son «Vida-Riesgo» sobre los capitales que se pidieron. Con estas familias no hay
+ * «mejor cubierta» por rótulo: llamarla así sería recomendar la tarifa nivelada por ser la más cara.
+ */
+export const FAMILIAS_SIN_ESCALA_DE_COBERTURA: ReadonlySet<FamiliaNivel> = new Set(['decesos', 'vida'])
 
 export type Nivel = {
   /** Clave estable para la URL y para agrupar. */
@@ -101,7 +110,30 @@ export function nivelCobertura(
     }
   }
   const n = normalizar(categoria)
-  const esHogar = typeof ramo === 'string' && normalizar(ramo) === 'hogar'
+  const r = typeof ramo === 'string' ? normalizar(ramo) : ''
+  const esHogar = r === 'hogar'
+
+  // Salud, decesos y vida: rótulos medidos en los ejemplos del portal (29/09/2026). Un rótulo que
+  // no esté aquí cae al «no reconocido» de abajo, nunca a la escala de auto.
+  if (r === 'salud') {
+    if (n === 'basica') return nivel('s_basica', 'Básica', 10, 'salud', null, categoria)
+    if (n === 'con copago') return nivel('s_copago', 'Con copago', 20, 'salud', null, categoria)
+    if (n === 'sin copago') return nivel('s_sin_copago', 'Sin copago', 30, 'salud', null, categoria)
+    if (n === 'con reembolso') return nivel('s_reembolso', 'Con reembolso', 40, 'salud', null, categoria)
+    return noReconocido(categoria)
+  }
+  if (r === 'decesos') {
+    // El rango solo ordena la lectura (ver FAMILIAS_SIN_ESCALA_DE_COBERTURA).
+    if (n === 'tarifa natural') return nivel('d_natural', 'Tarifa natural', 10, 'decesos', null, categoria)
+    if (n === 'tarifa mixta') return nivel('d_mixta', 'Tarifa mixta', 20, 'decesos', null, categoria)
+    if (n === 'tarifa nivelada') return nivel('d_nivelada', 'Tarifa nivelada', 30, 'decesos', null, categoria)
+    if (n === 'tarifa personalizada') return nivel('d_personalizada', 'Tarifa personalizada', 40, 'decesos', null, categoria)
+    return noReconocido(categoria)
+  }
+  if (r === 'vida') {
+    if (n === 'vida riesgo') return nivel('v_riesgo', 'Vida riesgo', 10, 'vida', null, categoria)
+    return noReconocido(categoria)
+  }
 
   if (!esHogar) {
     if (n === 'terceros') return nivel('terceros', 'Terceros', 10, 'auto', null, categoria)
@@ -132,7 +164,11 @@ export function nivelCobertura(
     if (n === 'todo riesgo') return nivel('h_todo_riesgo', 'Todo riesgo', 35, 'hogar', null, categoria)
   }
 
-  // No reconocido: grupo PROPIO, al final, y dicho. Nunca un cajón «otros».
+  return noReconocido(categoria)
+}
+
+/** No reconocido: grupo PROPIO, al final, y dicho. Nunca un cajón «otros». */
+function noReconocido(categoria: string): Nivel {
   return {
     clave: `x_${clavear(categoria)}`,
     label: categoria.trim(),
@@ -613,6 +649,11 @@ function avisoDeEscala(filas: readonly FilaPrecio[]): string | null {
   if (familias.has('hogar') && companias.size > 1) {
     partes.push(
       'Los niveles de hogar los nombra cada compañía a su manera («Ampliado» de una y «Estándar» de otra no cubren necesariamente lo mismo): compara las garantías, no el rótulo.',
+    )
+  }
+  if (familias.has('decesos')) {
+    partes.push(
+      'En decesos los grupos son el tipo de tarifa, no la cobertura: la nivelada cuesta más hoy pero su prima no sube con la edad, y la natural empieza barata y sube cada año. Lo que cambia la cobertura es el capital del servicio.',
     )
   }
   if (noReconocidos.length > 0) {

@@ -122,7 +122,7 @@ test('una póliza completa no genera ningún aviso', () => {
   const r = prepararDeclaradaDesdeDocumento(
     lectura({
       compania: 'Allianz',
-      numeroPoliza: '3021700291186',
+      numeroPoliza: '3021700000001',
       fechaVencimiento: '2027-03-15',
       matricula: '1234ABC',
     }),

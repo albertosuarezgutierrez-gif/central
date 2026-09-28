@@ -16,7 +16,7 @@ con una ruta que enlace el proyecto con su póliza.
 
 ## Fila 13 — Importar un proyecto hecho a mano en Avant2 ✅ CONSTRUIDA (26/09/2026)
 
-**Caso:** Pablo Guzmán, proyecto `40842815`, sustituye a su Mapfre `0008414300069` (vence
+**Caso:** Pablo Guzmán, proyecto `40842815`, sustituye a su Mapfre `[nº de póliza retirado]` (vence
 29/09/2026). La póliza que se sustituye es el `poliza_id` del enlace, igual que en la retarificación.
 
 **Decisión al construir: el import NO hace ReRate.** Solo se importa un precio que YA trae la acción

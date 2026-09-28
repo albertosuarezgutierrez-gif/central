@@ -77,9 +77,9 @@ type Aviso = { texto: string; tono: 'malo' | 'aviso' | 'info' }
 
 function Cubo({ titulo, nota, children }: { titulo: string; nota?: string; children: React.ReactNode }) {
   return (
-    <section style={{ display: 'grid', gap: 10 }}>
+    <section style={{ display: 'grid', gap: 12 }}>
       <div>
-        <h2 style={{ margin: 0, fontSize: 16 }}>{titulo}</h2>
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{titulo}</h2>
         {nota && <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>{nota}</p>}
       </div>
       {children}
@@ -88,7 +88,7 @@ function Cubo({ titulo, nota, children }: { titulo: string; nota?: string; child
 }
 
 function Rejilla({ children }: { children: React.ReactNode }) {
-  return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: 10 }}>{children}</div>
+  return <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 260px), 1fr))', gap: 12 }}>{children}</div>
 }
 
 function Vacio({ children, aviso }: { children: React.ReactNode; aviso?: boolean }) {
@@ -191,7 +191,10 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     href = `/correduria/cliente/${ctx.clienteId}?tab=oportunidades&op=${o.id}`
     ramo = TIPOS[o.ramo ?? ''] ?? rotuloRamo(o.ramo)
     estado = ROTULO_ESTADO[o.estado]
-    titulo = o.aseguradora ? `Lo tiene en ${o.aseguradora}` : 'Compañía actual sin anotar'
+    // El bien primero (con dos coches, la compañía sola no dice cuál es cuál).
+    const bien = o.vehiculo ?? o.matricula
+    const compania = o.aseguradora ? `Lo tiene en ${o.aseguradora}` : 'Compañía actual sin anotar'
+    titulo = bien ?? compania
     // Un fin de vigencia anotado hace más de un año no es «le vence» en pasado: un seguro
     // anual renueva el mismo día cada año, así que se dice el próximo (y de dónde sale).
     // Uno que venció hace menos se queda tal cual: esa renovación se acaba de pasar.
@@ -201,6 +204,7 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
       : proxima === fin ? `Le vence ${fmt(fin)}`
         : `Le renueva el ${fmt(proxima)} (anotado: ${fmt(fin)})`
     lineas = [
+      bien ? `${compania}${o.numeroPoliza ? ` · nº ${o.numeroPoliza}` : ''}${o.vehiculo && o.matricula ? ` · ${o.matricula}` : ''}` : null,
       [vence, o.prima !== null ? `paga ${eur(o.prima)}` : null].filter(Boolean).join(' · '),
     ]
     avisos.push(...avisosOportunidad(o, ctx.hoy))

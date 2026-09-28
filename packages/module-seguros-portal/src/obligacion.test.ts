@@ -180,7 +180,7 @@ test('el cepo del volcado historico manda sobre el de la vigencia', () => {
 // ── El agujero de la regla de un solo brazo (medido 03/09/2026) ──────────────
 
 test('🚨 una póliza del volcado que CIMA mantiene al día SÍ genera obligación', () => {
-  // `3021700291186` de Reale (C0613): entró en el volcado de junio con su
+  // `3021700000001` de Reale (C0613): entró en el volcado de junio con su
   // `import_ref`, y la ingesta de CIMA la actualiza (suplemento 133 del
   // 25/08/2026) sin quitárselo. Con la regla vieja no avisaba de su vencimiento
   // de 2027 — y con ella se caía el cliente entero de la cartera.

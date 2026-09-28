@@ -28,6 +28,8 @@ const MATRICULA = /\b\d{4}\s?[B-DF-HJ-NP-TV-Z]{3}\b/i
 const PIDE_PRECIO = /\b(presupuest\w*|precios?|cotiz\w*|tarific\w*)\b/i
 const GASTO_PROPIO = /\b(factura\w*|pagad\w*|pagu[eé]|cargo\w*|recibo\w*)\b/i
 const OBJETO_SEGURO = /\b(motos?|coches?|seguros?|veh[ií]culos?|furgonetas?|turismos?|scooter)\b/i
+/** «Presupuesto de la moto / del coche / del seguro…»: de la correduría aunque «presupuesto» sea contable. */
+const PRESUPUESTO_SEGURO = /\bpresupuestos?\s+(?:de[l]?\s+|para\s+)?(?:la\s+|el\s+|su\s+)?(?:moto|coche|auto|veh[ií]culo|hogar|casa|seguro|p[oó]liza)\b/i
 
 /** Palabras del mundo contable: si aparecen y ninguna propia, el mensaje es del contable. */
 const CONTABLES = /\b(gast[oéa]\w*|factura\w*|ingres\w*|movimient\w*|cargo\w*|banco|kutxa|bbva|irpf|hacienda|iva|modelo \d{3}|tarjeta|n[oó]mina|luz|agua|internet|netflix|pisos?|reservas?|booking|airbnb|hu[eé]sped\w*|amortiz\w*|deducci\w*|presupuesto|saldo)\b/i
@@ -45,6 +47,8 @@ export function clasificarDestino(texto: string): Destino {
   if (PROPIAS.test(t)) return 'correduria'
   // Un gasto propio («factura del seguro del coche, precio 320€») sigue siendo del contable.
   if (PIDE_PRECIO.test(t) && OBJETO_SEGURO.test(t) && !GASTO_PROPIO.test(t)) return 'correduria'
+  // «Presupuesto» es también del contable; con matrícula o un ramo de seguro al lado es de la correduría.
+  if (PRESUPUESTO_SEGURO.test(t) || (/\bpresupuestos?\b/i.test(t) && MATRICULA.test(t) && !/\bkwh\b/i.test(t))) return 'correduria'
   // Lo contable ANTES que la matrícula: «1500 kWh» o «2000 BTC» parecen una matrícula y no lo son.
   if (CONTABLES.test(t)) return 'contable'
   if (PROPIAS_SUAVES.test(t)) return 'correduria'
@@ -123,7 +127,7 @@ export type NombreHerramienta =
   | 'buscar' | 'ficha_cliente' | 'ficha_poliza' | 'vencimientos' | 'impagados'
   | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision'
   | 'proponer_correccion' | 'proponer_oportunidad' | 'mi_dia' | 'oportunidades_cliente'
-  | 'proponer_tarea' | 'registrar_llamada' | 'anotar_nota' | 'abrir_siniestro' | 'invitar_portal'
+  | 'proponer_tarea' | 'registrar_llamada' | 'anotar_nota' | 'abrir_siniestro' | 'invitar_portal' | 'enviar_presupuesto'
   | 'vehiculo_catalogo' | 'proponer_tarificacion'
 
 const fn = (name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []) => ({
@@ -236,6 +240,12 @@ export const HERRAMIENTAS = [
       siniestrosUltimos5: { type: 'integer', description: 'Solo si Alberto lo dice' },
       primaActual: { type: 'number', description: 'Lo que paga hoy al año, si lo dice (para comparar)' },
     }, ['ramo', 'clienteId']),
+  fn('enviar_presupuesto', 'Rescata la ÚLTIMA tarificación ya pagada de un cliente SIN póliza (oportunidad nueva) para ese ramo, prepara el presupuesto y le manda el correo para que elija la opción en su portal. Necesitas sus exigencias y necesidades (qué quiere asegurar y qué le importa): si Alberto no las ha dicho, PREGÚNTASELAS, nunca las inventes. Alberto lo manda con un botón: ES UN CORREO AL CLIENTE.',
+    {
+      clienteId: { type: 'string', description: 'La ficha (sácala de buscar; la matrícula también sirve para buscar)' },
+      ramo: { type: 'string', enum: ['auto', 'moto', 'hogar', 'decesos', 'salud', 'vida'] },
+      necesidades: { type: 'string', description: 'Exigencias y necesidades del cliente, tal como las dijo Alberto' },
+    }, ['clienteId', 'ramo', 'necesidades']),
 ] as const
 
 /** Argumentos de una llamada, parseados sin lanzar. `null` = la IA mandó basura. */
@@ -281,7 +291,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     '- La búsqueda por DNI, teléfono o email solo alcanza a una parte de las fichas (lo dice cada bloque): si no aparece, di que no lo encuentras por ese dato y prueba por nombre o matrícula; NUNCA digas que no es cliente.',
     '- Tú no mandas mensajes a clientes ni anulas pólizas: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
     '- Oportunidades: puedes PROPONER abrir una con proponer_oportunidad (lead o cliente que tiene un seguro con otra compañía). Si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true. Si ha subido el documento y NO dice de quién es, NO le preguntes el nombre: llama SIN clienteId y con usarDocumentos=true; el sistema lee el tomador, lo busca por su DNI y, si no está en la cartera, le propone crear el lead y abrir la oportunidad con un solo botón. Pregúntale solo si el sistema te lo pide (varias fichas, documento sin DNI o sin tomador). Tú sabes más que él de ese documento: si hay uno reciente y pide una oportunidad —también «otra», «la segunda», «del mismo cliente», «abre oportunidad» a secas— pasa usarDocumentos=true y NO le preguntes ramo, compañía, prima, vencimiento ni si es otro seguro: lo lee el sistema del documento y decide solo si es el mismo seguro que una que ya tenga (por nº de póliza, matrícula y compañía). Si el sistema contesta YA ES NUESTRA, díselo con el enlace: esa póliza ya la llevamos y no se abre nada. NUNCA digas que está abierta ni que el lead está creado: eso solo lo confirma el sistema tras el botón.',
-    '- Acciones del día a día (todas con botón que pulsa Alberto): proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro, invitar_portal. Úsalas cuando Alberto te lo pida («apunta que…», «llámale el jueves», «ha tenido un golpe con el coche…»). Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy. NUNCA digas que está hecho: eso lo confirma el sistema tras el botón.',
+    '- Acciones del día a día (todas con botón que pulsa Alberto): proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro, invitar_portal, enviar_presupuesto («rescata/mándale el presupuesto de la moto»). Úsalas cuando Alberto te lo pida («apunta que…», «llámale el jueves», «ha tenido un golpe con el coche…»). Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy. NUNCA digas que está hecho: eso lo confirma el sistema tras el botón.',
     '- Pedir precio de COCHE o MOTO: busca al cliente, usa vehiculo_catalogo para el vehículo y llama a proponer_tarificacion con lo que Alberto dijo. Si contesta FALTAN DATOS, pregúntale a Alberto exactamente eso y vuelve a llamar con todo. El botón cuesta 0,50€ y lo pulsa él; el precio le llega solo a él (nada sale al cliente). NUNCA digas que ya has pedido el precio.',
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',

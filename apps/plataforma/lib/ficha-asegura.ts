@@ -206,6 +206,11 @@ export type Ficha = {
    * lo tiene» — y la pantalla lo dice así, no como «nadie lo tiene».
    */
   intervinientes: IntervinienteFicha[] | null
+  /**
+   * Pólizas de OTRO tomador donde este cliente FIGURA (propietario, asegurado,
+   * conductor…). `null` = no llegó (asegura antigua o fallo). NO es «ninguna».
+   */
+  figuraEn: PolizaFiguraFicha[] | null
   /** Documentos del cliente con estado pedido/recibido/revisado. `null` = no informado / no se pudo. */
   documentos: DocumentoResumen[] | null
   /**
@@ -356,6 +361,43 @@ function leerBienDeclarada(v: unknown): BienDeclarada {
     ubicacion: cadena(d.ubicacion),
     detalles: Array.isArray(d.detalles) ? d.detalles.filter((x): x is string => typeof x === 'string') : [],
   }
+}
+
+export type PolizaFiguraFicha = {
+  id: string
+  /** `null` = no llegó; no se rellena con el cajón «otro». */
+  tipo: string | null
+  aseguradora: string
+  numeroPoliza: string | null
+  estado: string
+  fechaVencimiento: string | null
+  enVigor: boolean
+  tomador: { id: string; nombre: string }
+  roles: string[]
+}
+
+/** Igual que `leerDeclaradas`: bloque ausente o con forma rara → `null`, nunca `[]`. */
+export function leerFiguraEn(v: unknown): PolizaFiguraFicha[] | null {
+  if (!Array.isArray(v)) return null
+  const out: PolizaFiguraFicha[] = []
+  for (const fila of v) {
+    if (typeof fila !== 'object' || fila === null) continue
+    const d = fila as Record<string, unknown>
+    const t = typeof d.tomador === 'object' && d.tomador !== null ? (d.tomador as Record<string, unknown>) : null
+    if (typeof d.id !== 'string' || !t || typeof t.id !== 'string') continue
+    out.push({
+      id: d.id,
+      tipo: cadena(d.tipo),
+      aseguradora: cadena(d.aseguradora) ?? '',
+      numeroPoliza: cadena(d.numeroPoliza),
+      estado: cadena(d.estado) ?? '',
+      fechaVencimiento: cadena(d.fechaVencimiento),
+      enVigor: d.enVigor === true,
+      tomador: { id: t.id, nombre: cadena(t.nombre) ?? '' },
+      roles: Array.isArray(d.roles) ? d.roles.filter((x): x is string => typeof x === 'string') : [],
+    })
+  }
+  return out
 }
 
 export type PolizaDeclaradaFicha = {
@@ -800,6 +842,7 @@ export function interpretarFicha(status: number, json: unknown): RespuestaFicha 
       polizas,
       siniestros,
       intervinientes: leerIntervinientes(f.intervinientes),
+      figuraEn: leerFiguraEn(f.figuraEn),
       documentos: leerDocumentos(f.documentos),
       contactos: leerContactos(f.contactos),
       identidad: leerIdentidad(f.identidad),

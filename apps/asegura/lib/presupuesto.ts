@@ -17,6 +17,7 @@ import {
   calcularVencimiento,
   elegirPortada,
   estadoPresupuesto,
+  nivelCobertura,
   validarNecesidades,
   type EstadoPresupuesto,
   type PapelPortada,
@@ -28,6 +29,12 @@ import { generarTokenVista, hashTokenVista } from '@central/module-seguros-porta
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { registrarErrorCartera } from './error-cartera'
+import { resolverConfig, simulacionActiva } from './codeoscopic/config'
+import { peticion } from './codeoscopic/cliente'
+import { refrescarProyecto } from './codeoscopic/emitir'
+import { leerCoberturasDeOpciones, sobreReutilizable, type SobreCoberturas } from './codeoscopic/coberturas-presupuesto'
+import { completarCoberturasTarificacion } from './codeoscopic/coberturas-tarificacion'
+import { OCULTAR_VACIO, estaOculta, ordenResto, type Ocultar } from './presupuesto-ocultar'
 
 /**
  * Por qué no se ha podido situar la cobertura que el cliente tiene HOY.
@@ -56,8 +63,17 @@ export type OpcionPreparada = {
   referenciaVendor: string | null
   avisos: string[]
   papeles: PapelPortada[]
+  /** La fila de `tarificacion_precios` de la que sale (para ocultarla desde la parrilla). */
+  precioId: string
+  /** Garantías clasificadas tras tarificar. `null` = no se clasificaron (el filtro dirá «no consta»). */
+  garantias: unknown
+  /** El corredor la quitó: se congela, pero el cliente no la ve. Nunca es portada. */
+  oculta: boolean
   /** La más barata NO comparte cobertura con la actual. Se pinta. */
   coberturaDistinta: boolean
+  /** Coberturas de la oferta leídas de Codeoscopic. `null` = NO SE INTENTÓ (simulada, sin
+   *  proyecto o vendor apagado); el sobre dice si se leyeron, vinieron vacías o fallaron. */
+  coberturas: SobreCoberturas | null
 }
 
 export type PresupuestoPreparado = {
@@ -76,9 +92,14 @@ export type PresupuestoPreparado = {
   motivoSinEquivalente: SinEquivalente | null
   /** Cuándo los grupos NO son comparables entre sí. Si viene, se PINTA. */
   avisoEscala: string | null
+  /** Las RECOMENDADAS (portada). El resto se congela también, pero no viaja aquí: son decenas. */
   opciones: OpcionPreparada[]
   /** Cuántos precios trajo la tarificación, para poder decir «3 de 12». */
   preciosTotales: number
+  /** Cuántas opciones MÁS ve el cliente debajo de las recomendadas («ver todas»). */
+  enLista: number
+  /** Cuántas quitó el corredor (congeladas y ocultas). */
+  ocultas: number
 }
 
 export type ResultadoPreparar =
@@ -90,11 +111,12 @@ export type ResultadoPreparar =
         | 'sin_precios'
         | 'no_encontrado'
         | 'ramo_no_soportado'
+        | 'todas_ocultas'
       detalle: string
     }
 
 /** Los ramos con los que hoy se puede montar una comparativa de verdad. */
-const RAMOS_CON_COMPARATIVA = new Set(['auto', 'moto', 'hogar'])
+const RAMOS_CON_COMPARATIVA = new Set(['auto', 'moto', 'hogar', 'decesos', 'salud', 'vida'])
 
 /**
  * Prepara un presupuesto en BORRADOR desde una tarificación ya pagada.
@@ -110,9 +132,12 @@ export async function prepararPresupuesto(
     tarificacionId?: string | null
     polizaId?: string | null
     claveNivelActual?: string | null
+    /** Lo que el corredor quita antes de preparar (compañías enteras o precios sueltos). */
+    ocultar?: Ocultar
     actor: string
   },
 ): Promise<ResultadoPreparar> {
+  const ocultar = entrada.ocultar ?? OCULTAR_VACIO
   const db = prismaAsegura()
 
   const cab = await cabecera(correduriaId, entrada)
@@ -134,8 +159,19 @@ export async function prepararPresupuesto(
     }
   }
 
+  // Red de seguridad (29/09/2026): las coberturas de cada precio se leen tras tarificar, en
+  // `after()`. Si aquella pasada no llegó (se cortó, o la tarificación es anterior), se completa
+  // AQUÍ, antes de leer los precios, con parte del presupuesto de tiempo de las coberturas. Nunca
+  // lanza; lo que no dé tiempo sigue por el camino de siempre más abajo.
+  const inicioCoberturas = Date.now()
+  await completarCoberturasTarificacion(
+    { correduriaId, tarificacionId: cab.id },
+    { topeMs: TOPE_RED_SEGURIDAD_MS },
+  )
+
   const filas = await db.$queryRaw<
     {
+      id: string
       compania: string | null
       producto: string | null
       modalidad: string | null
@@ -147,10 +183,12 @@ export async function prepararPresupuesto(
       requiere_rerate: boolean | null
       referencia_vendor: string | null
       avisos: unknown
+      coberturas: unknown
+      garantias: unknown
     }[]
   >`
-    select compania, producto, modalidad, categoria, prima_eur, entrada_eur, franquicia_eur,
-           firmeza, requiere_rerate, referencia_vendor, avisos
+    select id::text as id, compania, producto, modalidad, categoria, prima_eur, entrada_eur, franquicia_eur,
+           firmeza, requiere_rerate, referencia_vendor, avisos, coberturas, garantias
     from tarificacion_precios
     where tarificacion_id = ${cab.id}::uuid
     order by creado_at asc, prima_eur asc nulls last
@@ -164,8 +202,20 @@ export async function prepararPresupuesto(
     }
   }
 
-  // El orden de este array ES la clave estable: `FilaPrecio.indice` apunta aquí.
-  const comparables: PrecioComparable[] = filas.map((f) => ({
+  // 🚨 Lo oculto NO entra en la comparativa: si entrara, la portada podría recomendar justo lo que
+  // el corredor ha quitado. `visibles[k]` es el índice en `filas` de la fila k de la comparativa.
+  const oculta = filas.map((f) => estaOculta(f, ocultar))
+  const visibles = filas.map((_, i) => i).filter((i) => !oculta[i])
+  if (visibles.length === 0) {
+    return {
+      estado: 'error',
+      motivo: 'todas_ocultas',
+      detalle: 'Has ocultado todas las opciones: no queda nada que enseñarle al cliente.',
+    }
+  }
+
+  // El orden de este array ES la clave estable: `FilaPrecio.indice` apunta aquí (y `visibles` a `filas`).
+  const comparables: PrecioComparable[] = visibles.map((i) => filas[i]).map((f) => ({
     compania: f.compania,
     producto: f.producto,
     categoria: f.categoria,
@@ -183,17 +233,17 @@ export async function prepararPresupuesto(
   const lecturaActual = await leerNivelActual(correduriaId, cab.polizaId, entrada.claveNivelActual ?? null)
   const portada = elegirPortada(comparativa, entrada.claveNivelActual ?? null)
 
-  // 🚨 Solo se congelan las de PORTADA. La lista larga («ver todas») se sigue
-  // leyendo de la tarificación: lo que hay que poder reconstruir letra a letra
-  // dentro de seis meses es lo que se le puso DELANTE, no el volcado entero.
+  // Desde el 29/09/2026 se congelan TODAS (antes solo la portada: la moto de Manuel trajo 31 precios
+  // y el cliente vio 2). Portada primero —`papeles <> '{}'`—, después el resto de la más barata a la
+  // más cara, y al final lo oculto, que se guarda para poder reconstruir también lo que NO se enseñó.
   const aCongelar: OpcionPreparada[] = []
   let orden = 0
-  for (const o of portada.opciones) {
-    const cruda = filas[o.fila.indice]
+  const congelar = (i: number, papeles: PapelPortada[], coberturaDistinta: boolean, grupo: string | null) => {
+    const cruda = filas[i]
     const prima = numero(cruda?.prima_eur ?? null)
     // Una opción sin prima no es una opción: no se le enseña a nadie una
     // tarjeta con el precio en blanco, y `prima_eur` es NOT NULL en la tabla.
-    if (!cruda || prima === null) continue
+    if (!cruda || prima === null) return
     orden += 1
     aCongelar.push({
       orden,
@@ -201,7 +251,7 @@ export async function prepararPresupuesto(
       producto: cruda.producto ?? 'Sin producto',
       modalidad: cruda.modalidad,
       categoria: cruda.categoria,
-      grupoCobertura: o.fila.nivel.reconocido ? o.fila.nivel.clave : null,
+      grupoCobertura: grupo,
       primaEur: prima,
       entradaEur: numero(cruda.entrada_eur),
       franquiciaEur: numero(cruda.franquicia_eur),
@@ -209,12 +259,33 @@ export async function prepararPresupuesto(
       requiereRerate: cruda.requiere_rerate ?? true,
       referenciaVendor: cruda.referencia_vendor,
       avisos: Array.isArray(cruda.avisos) ? cruda.avisos.filter((a): a is string => typeof a === 'string') : [],
-      papeles: o.papeles,
-      coberturaDistinta: o.coberturaDistinta,
+      papeles,
+      precioId: cruda.id,
+      garantias: cruda.garantias ?? null,
+      oculta: oculta[i],
+      coberturaDistinta,
+      // Las ya leídas tras tarificar se reutilizan tal cual (`null` = hay que pedirlas).
+      coberturas: sobreReutilizable(cruda.coberturas),
     })
   }
+  const enPortada = new Set<number>()
+  for (const o of portada.opciones) {
+    const i = visibles[o.fila.indice]
+    if (i === undefined) continue
+    enPortada.add(i)
+    congelar(i, o.papeles, o.coberturaDistinta, o.fila.nivel.reconocido ? o.fila.nivel.clave : null)
+  }
+  const nPortada = aCongelar.length
+  const resto = ordenResto(
+    filas.map((f, i) => ({ compania: f.compania, prima: numero(f.prima_eur), oculta: oculta[i] })),
+    enPortada,
+  )
+  for (const i of resto) {
+    const nivel = nivelCobertura(filas[i].categoria, cab.ramo)
+    congelar(i, [], false, nivel.reconocido ? nivel.clave : null)
+  }
 
-  if (aCongelar.length === 0) {
+  if (nPortada === 0) {
     return {
       estado: 'error',
       motivo: 'sin_precios',
@@ -233,6 +304,20 @@ export async function prepararPresupuesto(
     expiraOferta: null,
   })
 
+  // Las coberturas de cada opción (fase 2): GRATIS y best-effort. Si fallan, el presupuesto sale
+  // igual y el sobre de cada opción dice «no se han podido leer» — nunca un `[]` mudo.
+  // Solo se piden las que no venían ya leídas de la tarificación (filas sin `oferta_id`, o cuya
+  // lectura falló), con lo que quede del presupuesto de tiempo.
+  // Solo las de PORTADA: el resto las trae la pasada de después de tarificar, y pedir 30 aquí haría
+  // esperar a Alberto en pantalla por opciones que el cliente quizá ni despliega.
+  const faltan = aCongelar.slice(0, nPortada).filter((o) => o.coberturas === null)
+  if (faltan.length > 0) {
+    const restanteMs = Math.max(0, PRESUPUESTO_COBERTURAS_MS - (Date.now() - inicioCoberturas))
+    const sobres = await coberturasDeLasOpciones(cab, faltan, restanteMs)
+    faltan.forEach((o, i) => { o.coberturas = sobres?.[i] ?? null })
+  }
+
+  const nOcultas = aCongelar.filter((o) => o.oculta).length
   const token = generarTokenVista()
   const tokenHash = await hashTokenVista(token)
 
@@ -263,10 +348,23 @@ export async function prepararPresupuesto(
           referenciaVendor: o.referenciaVendor,
           avisos: o.avisos,
           papeles: o.papeles,
+          precioId: o.precioId,
+          ...(o.garantias !== null ? { garantias: o.garantias as object } : {}),
+          ocultaAt: o.oculta ? creadoAt : null,
+          // Sin intento se deja el default (`[]` desnudo = «no se intentó»); con intento, el SOBRE.
+          ...(o.coberturas ? { coberturas: o.coberturas } : {}),
         })),
       },
       eventos: {
-        create: [{ tipo: 'preparado', origen: 'corredor', detalle: { actor: entrada.actor } }],
+        // Lo ocultado queda en el evento (trazabilidad IDD): qué se decidió no enseñar y cuánto.
+        create: [{
+          tipo: 'preparado',
+          origen: 'corredor',
+          detalle: {
+            actor: entrada.actor,
+            ...(nOcultas > 0 ? { ocultas: { n: nOcultas, companias: ocultar.companias, precios: ocultar.precios } } : {}),
+          },
+        }],
       },
     },
     select: { id: true },
@@ -291,8 +389,10 @@ export async function prepararPresupuesto(
       lecturaActual,
       motivoSinEquivalente: portada.motivoSinEquivalente,
       avisoEscala: portada.avisoEscala,
-      opciones: aCongelar,
+      opciones: aCongelar.slice(0, nPortada),
       preciosTotales: filas.length,
+      enLista: aCongelar.length - nPortada - nOcultas,
+      ocultas: nOcultas,
     },
   }
 }
@@ -304,6 +404,45 @@ type Cabecera = {
   ramo: string
   simulado: boolean
   fechaEfecto: Date | null
+  projectId: string | null
+}
+
+/** Tope de tiempo TOTAL para leer las coberturas: Alberto está esperando en pantalla. */
+const PRESUPUESTO_COBERTURAS_MS = 8_000
+/** De ese tope, lo que puede gastar la red de seguridad de `completarCoberturasTarificacion`. */
+const TOPE_RED_SEGURIDAD_MS = 5_000
+
+/**
+ * Las coberturas de las opciones congeladas, leídas de Codeoscopic. `null` = no se intenta:
+ * tarificación simulada (su proyecto no existe en el vendor), sin `project_id`, modo simulación o
+ * sin credenciales. Son LECTURAS gratis (`GET`), por eso no exigen el interruptor de tarificar —
+ * el mismo criterio que la sonda del token (`ignorarInterruptor`).
+ */
+async function coberturasDeLasOpciones(cab: Cabecera, opciones: OpcionPreparada[], presupuestoMs: number): Promise<SobreCoberturas[] | null> {
+  if (cab.simulado || !cab.projectId || simulacionActiva(process.env)) return null
+  const r = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (r.estado !== 'lista') return null
+  const config = r.config
+  const projectId = cab.projectId
+  try {
+    return await leerCoberturasDeOpciones(
+      opciones,
+      {
+        refrescar: () => refrescarProyecto(config, projectId),
+        coberturas: (ofertaId) =>
+          peticion(config, {
+            metodo: 'GET',
+            path: `/insurances/${encodeURIComponent(projectId)}/offers/${encodeURIComponent(ofertaId)}/coverages`,
+            timeoutMs: config.timeoutGenericoMs,
+          }),
+      },
+      presupuestoMs,
+    )
+  } catch (e) {
+    // `leerCoberturasDeOpciones` no lanza; esto es el cinturón. Sin sobre = «no se intentó».
+    registrarErrorCartera('presupuesto/coberturas', e)
+    return null
+  }
 }
 
 /**
@@ -320,7 +459,7 @@ async function cabecera(correduriaId: string, e: { tarificacionId?: string | nul
   const filas = e.tarificacionId
     ? await db.$queryRaw<FilaCabecera[]>`
         select id::text as id, cliente_id::text as cliente_id, poliza_id::text as poliza_id,
-               ramo, simulado, peticion
+               ramo, simulado, peticion, project_id_codeoscopic::text as project_id
         from tarificaciones
         where correduria_id = ${correduriaId}::uuid and id = ${e.tarificacionId}::uuid
         limit 1
@@ -328,7 +467,7 @@ async function cabecera(correduriaId: string, e: { tarificacionId?: string | nul
     : e.polizaId
       ? await db.$queryRaw<FilaCabecera[]>`
           select id::text as id, cliente_id::text as cliente_id, poliza_id::text as poliza_id,
-                 ramo, simulado, peticion
+                 ramo, simulado, peticion, project_id_codeoscopic::text as project_id
           from tarificaciones
           where correduria_id = ${correduriaId}::uuid and poliza_id = ${e.polizaId}::uuid
           order by creado_at desc
@@ -359,6 +498,7 @@ async function cabecera(correduriaId: string, e: { tarificacionId?: string | nul
     ramo: t.ramo,
     simulado: t.simulado,
     fechaEfecto: fechaEfectoDe(t.peticion),
+    projectId: t.project_id,
   }
 }
 
@@ -369,6 +509,7 @@ type FilaCabecera = {
   ramo: string
   simulado: boolean
   peticion: unknown
+  project_id: string | null
 }
 
 /**
@@ -459,7 +600,7 @@ export async function listarPresupuestos(
       },
       orderBy: { creadoAt: 'desc' },
       take: 50,
-      include: { opciones: { select: { primaEur: true } } },
+      include: { opciones: { where: { ocultaAt: null }, select: { primaEur: true } } },
     })
     return filas.map((p) => ({
       id: p.id,
@@ -592,4 +733,67 @@ export async function retirarPresupuesto(
   })
   for (const a of desistidas) anotarCambio({ entidad: 'anulacion', id: a.id, campo: 'estado', antes: 'firmada', despues: 'desistida' })
   return { estado: 'ok' }
+}
+
+export type ResultadoOcultarOpcion =
+  | { estado: 'ok'; oculta: boolean }
+  | { estado: 'error'; motivo: 'no_encontrado' | 'ya_enviado' | 'es_portada'; detalle: string }
+
+/**
+ * Oculta (o vuelve a mostrar) UNA opción de un presupuesto en borrador. Solo antes de avisar al
+ * cliente: después, lo que vio es lo que vio, y quitárselo por debajo cambiaría lo que puede firmar.
+ * Una recomendada (portada) no se oculta: para eso se prepara otro presupuesto sin ella.
+ */
+export async function ocultarOpcion(
+  correduriaId: string,
+  entrada: { id: string; opcionId: string; ocultar: boolean; actor: string },
+): Promise<ResultadoOcultarOpcion> {
+  const db = prismaAsegura()
+  const p = await db.presupuesto.findFirst({
+    where: { id: entrada.id, correduriaId },
+    select: { id: true, retiradoAt: true, enviadoAt: true, enlaceGeneradoAt: true },
+  })
+  // oculta-exenta: se busca justo para ocultarla o mostrarla, así que tiene que verla en los dos estados.
+  const o = p ? await db.presupuestoOpcion.findFirst({
+    where: { id: entrada.opcionId, presupuestoId: p.id },
+    select: { id: true, papeles: true, ocultaAt: true },
+  }) : null
+  if (!p || !o) return { estado: 'error', motivo: 'no_encontrado', detalle: 'Esa opción no existe en ese presupuesto.' }
+  if (p.retiradoAt !== null || p.enviadoAt !== null || p.enlaceGeneradoAt !== null) {
+    return {
+      estado: 'error',
+      motivo: 'ya_enviado',
+      detalle: 'El cliente ya tiene este presupuesto (o está retirado): no se le cambia lo que ve. Prepara otro.',
+    }
+  }
+  if (entrada.ocultar && o.papeles.length > 0) {
+    return { estado: 'error', motivo: 'es_portada', detalle: 'Es una de las recomendadas: para quitarla, prepara otro presupuesto ocultándola.' }
+  }
+  if ((o.ocultaAt !== null) === entrada.ocultar) return { estado: 'ok', oculta: entrada.ocultar }
+  // La condición de «sin enviar» va DENTRO del UPDATE: si el aviso sale entre la lectura y aquí, no
+  // se toca nada (el cliente ya tiene su lista).
+  const hecho = await db.$transaction(async (tx) => {
+    const r = await tx.presupuestoOpcion.updateMany({
+      where: {
+        id: o.id,
+        presupuesto: { id: p.id, retiradoAt: null, enviadoAt: null, enlaceGeneradoAt: null },
+        ...(entrada.ocultar ? { papeles: { isEmpty: true } } : {}),
+      },
+      data: { ocultaAt: entrada.ocultar ? new Date() : null },
+    })
+    if (r.count === 0) return false
+    await tx.presupuestoEvento.create({
+      data: {
+        presupuestoId: p.id,
+        tipo: entrada.ocultar ? 'opcion_oculta' : 'opcion_mostrada',
+        origen: 'corredor',
+        detalle: { actor: entrada.actor, opcionId: o.id },
+      },
+    })
+    return true
+  })
+  if (!hecho) {
+    return { estado: 'error', motivo: 'ya_enviado', detalle: 'El presupuesto acaba de salir hacia el cliente: ya no se le cambia lo que ve.' }
+  }
+  return { estado: 'ok', oculta: entrada.ocultar }
 }

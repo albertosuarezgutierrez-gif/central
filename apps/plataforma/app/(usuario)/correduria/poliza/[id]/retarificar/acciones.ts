@@ -181,6 +181,8 @@ export async function pedirEmision(entrada: {
   /** El corredor confirma que el tomador YA tiene familiares asegurados en
    *  Allianz (bonificación real). Ver `emitirAsegura`. */
   familiaEnAllianz?: boolean
+  /** Cliente NUEVO: confirma un 409 `ya_en_cartera`/`ya_emitido`. Ver `emitirAsegura`. */
+  duplicadoConfirmado?: boolean
 }): Promise<RespuestaEmitir> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }
@@ -193,6 +195,7 @@ export async function pedirEmision(entrada: {
     reintentoConfirmado: entrada.reintentoConfirmado === true,
     acunarExistente: entrada.acunarExistente === true,
     familiaEnAllianz: entrada.familiaEnAllianz === true,
+    duplicadoConfirmado: entrada.duplicadoConfirmado === true,
   })
 }
 

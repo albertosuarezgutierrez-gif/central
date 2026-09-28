@@ -9,13 +9,14 @@ import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { openrouterChatEx, openrouterChatTools, type NimToolMessage } from '@central/core-ai'
 import { tgSend, tgSendButtons, tgAskForReply, escapeHtml } from '@central/core-telegram'
+import { eur } from '@/lib/dinero'
 import { openrouterConfigPasarela, modelosPorDefecto, getDirectorEstado } from '@/lib/ia-director'
 import { registrarUso, dentroDePresupuestoDiario, estimarTokens, costePorUso } from '@/lib/ai-gateway'
 import { buscarAsegura, impagadosAsegura, sustitucionesAsegura } from '@/lib/correduria-puerto'
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { polizaAsegura } from '@/lib/poliza-asegura'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
-import { catalogoAsegura, emitirAsegura, importarProyectoAsegura, porFalloDeRed, vistaImportacionAsegura, type Opcion, type RespuestaRetarificar, type Supuesto } from '@/lib/retarificar-asegura'
+import { catalogoAsegura, emitirAsegura, importarProyectoAsegura, porFalloDeRed, tarificacionNuevaGuardadaAsegura, vistaImportacionAsegura, type Opcion, type RespuestaRetarificar, type Supuesto } from '@/lib/retarificar-asegura'
 import { cotizarAutoNuevaAsegura, precalificarAutoNuevaAsegura } from '@/lib/auto-nuevo-asegura'
 import { cotizarMotoNuevaAsegura, precalificarMotoNuevaAsegura } from '@/lib/moto-nuevo-asegura'
 import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
@@ -25,6 +26,7 @@ import {
   MAX_TARIFICACIONES_DIA, MOTORES_MOTO, textoPropuesta, TIPOS_CATALOGO, ventaCruzada,
   type Emparejado, type Pieza, type CampoTarif, type RamoTarif, type TipoCatalogo,
 } from './correduria-tarificacion-tg'
+import { interpretarPreparado, prepararPresupuestoAsegura, retirarPresupuestoAsegura, textoAviso } from '@/lib/presupuesto-asegura'
 import { editarClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
 import { documentosAsegura, leerDocumentoOportunidadAsegura, subirDocumentoAsegura } from '@/lib/documentos-asegura'
 import {
@@ -260,6 +262,8 @@ async function ejecutar(
       return vehiculoCatalogo(args)
     case 'proponer_tarificacion':
       return proponerTarificacion(args, ctx.turnoId)
+    case 'enviar_presupuesto':
+      return proponerAccion('presupuesto', args, ctx.turnoId)
     default:
       return { texto: `ERROR: herramienta desconocida ${nombre}.`, ok: false }
   }
@@ -839,14 +843,21 @@ async function proponerAccion(tipo: TipoAccion, args: Record<string, unknown>, t
   }
   const ctx = await contextoAccion(tipo, args)
   if (typeof ctx === 'string') return { texto: `NO SE PUEDE PROPONER: ${ctx}.`, ok: false }
+  if (tipo === 'presupuesto') {
+    const guardada = await tarificacionPresupuesto(ctx.clienteId, args.ramo)
+    if (typeof guardada === 'string') return { texto: `NO SE PUEDE PROPONER: ${guardada}.`, ok: true }
+    args = { ...args, tarificacionId: guardada.tarificacionId, resumen: guardada.resumen }
+  }
   const prep = prepararAccion(tipo, args, hoyMadrid())
   if (!prep.ok) return { texto: `NO SE PUEDE PROPONER: ${prep.motivo}. Pregúntaselo a Alberto.`, ok: true }
 
   // El portal manda un correo real: antes de ofrecer el botón se pregunta si esa ficha puede entrar.
-  if (tipo === 'portal') {
+  // El presupuesto también: el cliente elige en el portal, así que tiene que poder entrar o ser invitable.
+  if (tipo === 'portal' || tipo === 'presupuesto') {
     const e = await portalAsegura(ctx.clienteId).then((x) => interpretarPortal(x.status, x.json)).catch(() => null)
     if (!e || e.estado !== 'ok') return { texto: `ERROR: no he podido comprobar si puede entrar al portal${e && 'motivo' in e ? ` (${e.motivo})` : ''}. No propongas el envío todavía.`, ok: false }
-    if (e.portal.estado !== 'invitable') {
+    const vale = tipo === 'portal' ? e.portal.estado === 'invitable' : e.portal.estado === 'invitable' || e.portal.estado === 'ya_entra'
+    if (!vale) {
       const f = explicarPortal(e.portal)
       return { texto: `NO SE PUEDE INVITAR: ${f.titulo}. ${f.queHacer}`, ok: true }
     }
@@ -861,7 +872,7 @@ async function proponerAccion(tipo: TipoAccion, args: Record<string, unknown>, t
             now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
     RETURNING id`)
   const enviado = await tgSendButtons(textoAccion(ctx.quien, prep.accion), [[
-    { texto: tipo === 'portal' ? '📧 Enviar' : '✅ Hacer', callback: `cas_acc:${fila.id}` },
+    { texto: tipo === 'portal' || tipo === 'presupuesto' ? '📧 Enviar' : '✅ Hacer', callback: `cas_acc:${fila.id}` },
     { texto: '✖️ No', callback: `cas_accno:${fila.id}` },
   ]]).catch(() => null)
   if (enviado === null) {
@@ -870,6 +881,65 @@ async function proponerAccion(tipo: TipoAccion, args: Record<string, unknown>, t
     return { texto: 'ERROR: no he podido mandar la propuesta con el botón a Telegram. Dile que lo intente otra vez o lo haga en la ficha.', ok: false }
   }
   return { texto: `Propuesta enviada a Alberto con su botón (${MINUTOS_PROPUESTA} minutos, un solo uso). NO digas que está hecho: dile que revise y pulse.`, ok: true }
+}
+
+/**
+ * La última tarificación guardada de un cliente nuevo, lista para presupuestar. Solo con precios
+ * reales y efecto vigente; si no, la frase de por qué no (nunca un «no hay» por un fallo de lectura).
+ */
+async function tarificacionPresupuesto(clienteId: string, ramoArg: unknown): Promise<{ tarificacionId: string; resumen: string } | string> {
+  const RAMOS = ['auto', 'moto', 'hogar', 'decesos', 'salud', 'vida'] as const
+  const ramo = RAMOS.find((r) => r === ramoArg) ?? null
+  if (!ramo) return `ramo no válido (${RAMOS.join(', ')})`
+  const r = await tarificacionNuevaGuardadaAsegura(clienteId, ramo)
+  if (r.estado === 'ninguna') return `no hay ninguna tarificación de ${ramo} guardada para este cliente sin póliza: hay que tarificar primero en su ficha`
+  if (r.estado !== 'ok') return `no he podido leer la tarificación guardada (${r.mensaje})`
+  const g = r.guardada
+  if (g.caducada) return `la tarificación guardada tiene el efecto ya pasado (${g.fechaEfecto ?? 'sin fecha'}): hay que volver a tarificar`
+  const primas = g.precios.map((p) => p.primaEur).filter((n): n is number => typeof n === 'number' && n > 0)
+  if (primas.length === 0) return 'la tarificación guardada no tiene ningún precio con prima: no hay nada que enviar'
+  const fecha = g.creadaEn ? g.creadaEn.slice(0, 10).split('-').reverse().join('/') : 'fecha desconocida'
+  const efecto = g.fechaEfecto ? g.fechaEfecto.slice(0, 10).split('-').reverse().join('/') : 'sin efecto'
+  return {
+    tarificacionId: g.cotizacionId,
+    resumen: `Tarificación de ${ramo} del ${fecha}: ${primas.length} precio(s), desde ${eur(Math.min(...primas))} · efecto ${efecto}`,
+  }
+}
+
+/**
+ * Prepara el presupuesto, anota las necesidades y avisa por email. Tres llamadas: si una falla, se dice
+ * en qué paso se quedó. Solo el aviso puede quedar incierto (el correo pudo salir).
+ */
+async function enviarPresupuesto(cuerpo: Record<string, unknown>, url: string): Promise<{ estado: 'hecha' | 'rechazada' | 'incierta'; texto: string; resultado: Record<string, unknown> }> {
+  const actor = String(cuerpo.actor)
+  const fallo = (paso: string, detalle: string) => ({
+    estado: 'rechazada' as const,
+    texto: `🛡️ ❌ No se ha enviado el presupuesto (${paso}): ${escapeHtml(detalle)}. <a href="${url}">Ficha</a>`,
+    resultado: { paso, detalle: detalle.slice(0, 200) },
+  })
+  const pr = await prepararPresupuestoAsegura({ tarificacionId: cuerpo.tarificacionId, actor })
+    .then((x) => interpretarPreparado(x.status, x.json))
+    .catch((e) => ({ estado: 'error' as const, motivo: 'red', detalle: e instanceof Error ? e.message : 'fallo' }))
+  if (pr.estado === 'sin_configurar') return fallo('preparar', 'el puerto con asegura no está configurado')
+  if (pr.estado === 'error') return fallo('preparar', pr.detalle ?? pr.motivo)
+  const id = pr.presupuesto.id
+  if (pr.presupuesto.simulado) return fallo('preparar', 'los precios son simulados, no los ha dado ninguna compañía')
+  const nec = await retirarPresupuestoAsegura({ id, accion: 'necesidades', texto: cuerpo.necesidades, actor }).catch(() => null)
+  if (!nec || nec.status !== 200) {
+    const d = (nec?.json as { detalle?: unknown; motivo?: unknown } | null)
+    return fallo('anotar necesidades', String(d?.detalle ?? d?.motivo ?? 'sin respuesta de asegura'))
+  }
+  const av = await retirarPresupuestoAsegura({ id, accion: 'avisar', canal: 'email', actor }).catch(() => null)
+  if (!av) {
+    return { estado: 'incierta', texto: `🛡️ ⚠️ Presupuesto preparado, pero no sé si el correo ha salido (no respondió asegura). Míralo en la <a href="${url}">ficha</a> antes de repetir.`, resultado: { paso: 'avisar', presupuestoId: id } }
+  }
+  const t = textoAviso(av.status, av.json)
+  if (!t.ok) return fallo('avisar', t.texto)
+  return {
+    estado: 'hecha',
+    texto: `🛡️ ✅ Presupuesto enviado (${pr.presupuesto.opciones.length} opciones). ${escapeHtml(t.texto)} Cuando elija y firme en su portal te llega el aviso. <a href="${url}">Ficha</a>`,
+    resultado: { paso: 'avisar', presupuestoId: id, status: av.status },
+  }
 }
 
 /** Botón «Hacer». Escribe por el mismo puerto que la ficha. Nunca lanza; cada salida deja mensaje. */
@@ -894,6 +964,14 @@ async function hacerAccion(id: number): Promise<string> {
     return actual ? 'Ya estaba decidida' : 'No encuentro esa propuesta'
   }
   const cuerpo = { ...fila.cuerpo, actor: ACTOR_EMISION_TG }
+  if (fila.tipo === 'presupuesto') {
+    const fin = await enviarPresupuesto(cuerpo, fila.cliente_id ? urlCliente(fila.cliente_id) : '/correduria')
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_accion SET estado = ${fin.estado}, cuerpo = NULL, resultado = ${JSON.stringify(fin.resultado)}::jsonb
+      WHERE id = ${id}`).catch((e) => console.error('[correduria-acciones-tg] no se pudo cerrar la fila', id, e))
+    await decir(fin.texto)
+    return fin.estado === 'hecha' ? 'Enviado ✅' : fin.estado === 'incierta' ? 'No sé si ha salido' : 'No se ha enviado'
+  }
   const llamada = fila.tipo === 'tarea' ? crearTareaAsegura(cuerpo)
     : fila.tipo === 'llamada' ? registrarLlamadaAsegura(cuerpo)
     : fila.tipo === 'nota' ? historialClienteAsegura(cuerpo)

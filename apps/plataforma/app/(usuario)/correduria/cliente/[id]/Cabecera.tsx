@@ -4,7 +4,7 @@ import { Ico, FILA } from '../../iconos'
 import { contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { estadoCaducidadCarnet, urlRetarificar, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
 import type { ContactosCliente, IdentidadFicha } from '@/lib/cliente-edicion-asegura'
-import { PageHeader, BtnLink, Badge, btnStyle, type Tono } from '@/components/ui'
+import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/components/ui'
 import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
 import PonerNombre from './PonerNombre'
@@ -35,8 +35,10 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
   // Ramos con alguna póliza VIVA (no canceladas, no volcado). `ficha.polizas`
   // siempre es array (nunca null), así que esto no necesita un tercer estado.
   const tiposVivos = ficha.polizas.filter(p => p.viva).map(p => p.tipo)
+  // Un solo bloque con su propio `gap`: la cabecera, el siguiente paso, las acciones y los titulares
+  // van juntos, y el aire grande (24) queda para separarla de lo que viene debajo.
   return (
-    <>
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 14 }}>
       <div>
         <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
         <div>
@@ -86,7 +88,7 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
       <Acciones clienteId={ficha.id} />
 
       <Titulares resumen={resumen} />
-    </>
+    </div>
   )
 }
 
@@ -112,7 +114,7 @@ function SiguientePaso({ ficha, resumen, tiposVivos }: { ficha: Ficha; resumen: 
         ? <BtnLink href={urlRetarificar(paso.accion.polizaId)} variante="primario">Mirar precio</BtnLink>
         : <BtnLink href={`/correduria/cliente/${ficha.id}/hogar-nuevo`} variante="primario">Presupuestar hogar</BtnLink>
   return (
-    <div role="status" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', margin: '8px 0', padding: '10px 12px', borderRadius: 12, background: fondo, borderLeft: `4px solid ${color}` }}>
+    <div role="status" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px', borderRadius: 12, background: fondo, borderLeft: `4px solid ${color}` }}>
       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', minWidth: 0, flex: '1 1 220px' }}>
         <span style={{ color, marginRight: 6 }}>Siguiente paso ·</span>{paso.texto}
       </span>
@@ -148,7 +150,7 @@ function RamosContratados({ tiposVivos }: { tiposVivos: string[] }) {
 function Titulares({ resumen }: { resumen: ResumenFicha }) {
   const { conteo, recibos, siniestrosAbiertos: abiertos, proximo } = resumen
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 8 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 130px), 1fr))', gap: 12 }}>
       <Kpi label="Pólizas vivas" valor={String(conteo.vivas)} sub={`${conteo.total} en total`} />
       <Kpi
         label="Recibos devueltos"
@@ -235,7 +237,10 @@ function Kpi({ label, valor, sub, color, pequeno }: {
   // cabecera —es la promesa del guardián: lo que exige una llamada no se esconde tras un clic—,
   // pero en fichas bajas. El texto de apoyo va debajo en 11 px y el `title` lo repite entero.
   return (
-    <div title={sub ? `${label}: ${valor} · ${sub}` : undefined} style={{ border: '1px solid var(--border)', borderRadius: 10, padding: '7px 10px', minWidth: 0 }}>
+    // Superficie de `cardStyle` (fondo + sombra, sin borde) desde el 28/09/2026: con el borde fino a
+    // mano eran la única caja de la ficha que no se parecía a las tarjetas de debajo ni a las del
+    // resto de plataforma. Sigue siendo compacta (padding 12/14, no los 20 de `KpiCard`).
+    <div title={sub ? `${label}: ${valor} · ${sub}` : undefined} style={{ ...cardStyle, padding: '12px 14px', minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, flexWrap: 'wrap' }}>
         <span style={{ fontSize: pequeno ? 14 : 18, fontWeight: 800, color: color ?? 'var(--text)', fontVariantNumeric: 'tabular-nums' }}>{valor}</span>
         <span style={{ fontSize: 12, color: 'var(--muted)' }}>{label}</span>

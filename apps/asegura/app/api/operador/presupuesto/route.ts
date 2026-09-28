@@ -4,10 +4,13 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { guardarNecesidades, listarPresupuestos, prepararPresupuesto, retirarPresupuesto } from '@/lib/presupuesto'
+import { guardarNecesidades, listarPresupuestos, ocultarOpcion, prepararPresupuesto, retirarPresupuesto } from '@/lib/presupuesto'
+import { leerOcultar } from '@/lib/presupuesto-ocultar'
 import { auditado } from '@/lib/auditoria'
 import { avisarPresupuesto, confirmarWhatsapp, marcarEmitido, type FalloEnvio } from '@/lib/envio-presupuesto'
 import { datosParaEmitir } from '@/lib/datos-emision'
+import { marcarSeguimientoAvisado } from '@/lib/presupuesto-seguimiento-servicio'
+import { esEtapa } from '@/lib/presupuesto-seguimiento'
 import type { DatosParaEmitir } from '@central/module-seguros'
 
 export const dynamic = 'force-dynamic'
@@ -22,12 +25,15 @@ const STATUS_FALLO: Record<FalloEnvio, number> = {
  * El presupuesto al cliente, por el puerto de operador (plataforma → asegura).
  *
  *   GET   ?clienteId= | ?polizaId=  → los presupuestos ya preparados
- *   POST  { polizaId | tarificacionId, claveNivelActual?, actor } → prepara un BORRADOR
+ *   POST  { polizaId | tarificacionId, claveNivelActual?, ocultar?: {companias?, precios?}, actor } → prepara un BORRADOR
  *   PATCH { id, motivo, actor }     → lo retira (con motivo, siempre)
  *   PATCH { id, accion:'avisar', canal:'email'|'whatsapp_enlace', actor } → avisa al cliente (PR 3)
  *   PATCH { id, accion:'confirmar_whatsapp', actor } → Alberto dice que el WhatsApp ya salió
  *   PATCH { id, accion:'emitido', actor } → la compañía ya emitió la póliza del presupuesto aceptado
  *   PATCH { id, accion:'necesidades', texto, actor } → anota las exigencias y necesidades del cliente (IDD)
+ *   PATCH { id, accion:'ocultar'|'mostrar', opcionId, actor } → quita/devuelve una opción ANTES de avisar
+ *   PATCH { id, accion:'seguimiento_avisado', etapa:'sin_abrir'|'sin_elegir', actor } → ya se avisó a Alberto
+ *         de esa etapa (idempotente). La lista de a quién avisar: GET /api/operador/presupuesto/seguimiento
  *
  * 🚨 NADA DE ESTO SALE AL CLIENTE NI CUESTA UN EURO. Prepara la fila y congela
  * las opciones desde una tarificación YA PAGADA; el envío es el PR 3 y la firma
@@ -88,7 +94,9 @@ export const POST = auditado(async (req: Request) => {
       ? cuerpo.claveNivelActual.trim()
       : null
 
-  if (actor === '' || (polizaId === '' && tarificacionId === '')) {
+  // Un `ocultar` mal formado NO se ignora: el cliente vería justo lo que el corredor quiso quitar.
+  const ocultar = leerOcultar(cuerpo?.ocultar)
+  if (actor === '' || (polizaId === '' && tarificacionId === '') || ocultar === null) {
     return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
   }
 
@@ -101,6 +109,7 @@ export const POST = auditado(async (req: Request) => {
       tarificacionId: tarificacionId || null,
       polizaId: polizaId || null,
       claveNivelActual,
+      ocultar,
       actor,
     })
     if (r.estado === 'error') {
@@ -132,6 +141,18 @@ export const PATCH = auditado(async (req: Request) => {
       const r = await guardarNecesidades(correduria.id, { id, texto: cuerpo.texto, actor, respuestas: cuerpo.respuestas })
       const status = r.estado === 'ok' ? 200 : r.motivo === 'no_encontrado' ? 404 : r.motivo === 'cerrado' ? 409 : 422
       return NextResponse.json(r, { status })
+    }
+    if (cuerpo?.accion === 'ocultar' || cuerpo?.accion === 'mostrar') {
+      const opcionId = typeof cuerpo.opcionId === 'string' ? cuerpo.opcionId.trim() : ''
+      if (opcionId === '') return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
+      const r = await ocultarOpcion(correduria.id, { id, opcionId, ocultar: cuerpo.accion === 'ocultar', actor })
+      const status = r.estado === 'ok' ? 200 : r.motivo === 'no_encontrado' ? 404 : 409
+      return NextResponse.json(r, { status })
+    }
+    if (cuerpo?.accion === 'seguimiento_avisado') {
+      if (!esEtapa(cuerpo.etapa)) return NextResponse.json({ estado: 'error', motivo: 'datos_invalidos' }, { status: 400 })
+      const r = await marcarSeguimientoAvisado(correduria.id, { id, etapa: cuerpo.etapa, actor })
+      return NextResponse.json(r, { status: r.estado === 'ok' ? 200 : 404 })
     }
     if (cuerpo?.accion === 'emitido') {
       const r = await marcarEmitido(correduria.id, { id, actor })

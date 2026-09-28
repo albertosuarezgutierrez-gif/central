@@ -94,6 +94,12 @@ export type Hallazgo = {
   /** Pólizas por CIMA. `null` = no se contó, NO 0. */
   polizasCima: number | null
   ultimoVencimiento: string | null
+  /** Oportunidades activas (abiertas y no aparcadas). `null` = asegura no lo informa o no pudo contarlas, NO 0. */
+  oportunidadesAbiertas: number | null
+  /** Abiertas pero aparcadas. `null` = no se sabe (asegura anterior o fallo), NO 0. */
+  oportunidadesAparcadas: number | null
+  /** Tarea de seguimiento más próxima. `null` = no hay, o no se pudo mirar. */
+  siguientePaso: SiguientePaso | null
   vitalidad: Vitalidad
   /** `null` = asegura no informa hermanas (versión vieja, o no se pudo mirar).
    *  `[]` = se miró y no hay. Pintarlos igual diría «no hay duplicados». */
@@ -106,6 +112,20 @@ export type Hallazgo = {
    * vez de afirmar que no hay forma de contactar.
    */
   contacto: Contacto | null
+}
+
+export type SiguientePaso = { oportunidadId: string; estado: string; tipo: string; fechaLimite: string }
+
+/** Un paso a medias (sin fecha o sin estado) no se pinta: se descarta entero. */
+function siguientePaso(v: unknown): SiguientePaso | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  const oportunidadId = cadena(o.oportunidadId)
+  const estado = cadena(o.estado)
+  const tipo = cadena(o.tipo)
+  const fechaLimite = cadena(o.fechaLimite)
+  if (!oportunidadId || !estado || !tipo || !fechaLimite || !/^\d{4}-\d{2}-\d{2}$/.test(fechaLimite)) return null
+  return { oportunidadId, estado, tipo, fechaLimite }
 }
 
 export type Contacto = {
@@ -215,6 +235,9 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
         porque: cadena(x.porque) ?? '',
         polizasCima: entero(x.polizasCima),
         ultimoVencimiento: cadena(x.ultimoVencimiento),
+        oportunidadesAbiertas: entero(x.oportunidadesAbiertas),
+        oportunidadesAparcadas: entero(x.oportunidadesAparcadas),
+        siguientePaso: siguientePaso(x.siguientePaso),
         vitalidad: vitalidad(x.vitalidad),
         hermanas: hs,
         contacto: interpretarContacto(x.contacto),

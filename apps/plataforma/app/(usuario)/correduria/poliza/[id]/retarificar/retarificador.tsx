@@ -28,7 +28,7 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, TarificacionGuardadaAuto 
 import { eur } from '@/lib/dinero'
 import { pedirCatalogo, pedirCotizacion } from './acciones'
 import { Emision, CoberturasOferta } from './emision'
-import PrepararPresupuesto from './PrepararPresupuesto'
+import FiltroGarantias from '../../../FiltroGarantias'
 import EnlaceOportunidad from '../../../EnlaceOportunidad'
 import { fechaEfectoInicial, fechaEfectoPorDefecto } from '@/lib/fecha-efecto-inicial'
 import { logoCompania, nombreProductoSinCia } from '@/lib/logo-compania'
@@ -1555,6 +1555,7 @@ export default function Retarificador({
             sinCarteraPorque={sinCarteraPorque}
             primaActualEur={primaActualEur}
             ramo={ramo}
+            polizaId={polizaId}
           />
         )}
       </div>
@@ -1571,6 +1572,7 @@ function Precios({
   sinCarteraPorque,
   primaActualEur,
   ramo,
+  polizaId,
 }: {
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
@@ -1580,6 +1582,7 @@ function Precios({
   /** Lo que paga HOY. `null` = la póliza no lo trae; no se pinta 0. */
   primaActualEur: number | null
   ramo: string | null
+  polizaId: string
 }) {
   // Qué fila tiene abierto el panel de emisión real (ver emision.tsx). `null` =
   // ninguna. Vive aquí, no en el padre: es puro estado de pantalla, no algo
@@ -1971,7 +1974,9 @@ function Precios({
           ofrece el botón en vez de ofrecer uno que falla al pulsarlo. */}
       <EnlaceOportunidad guardado={r.guardado} />
       {cotizacionIdDe(r.guardado) !== null && (
-        <PrepararPresupuesto
+        <FiltroGarantias
+          ramo={ramo ?? 'auto'}
+          origen={{ polizaId }}
           tarificacionId={cotizacionIdDe(r.guardado) as string}
           simulado={r.simulado}
         />

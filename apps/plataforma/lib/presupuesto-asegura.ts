@@ -37,8 +37,13 @@ export type PresupuestoPreparado = {
   lecturaActual: string
   motivoSinEquivalente: string | null
   avisoEscala: string | null
+  /** Las recomendadas (portada). */
   opciones: OpcionPresupuesto[]
   preciosTotales: number
+  /** Cuántas más ve el cliente debajo («ver todas»). `null` = asegura no lo dice (versión anterior). */
+  enLista: number | null
+  /** Cuántas quitó el corredor. `null` = no consta. */
+  ocultas: number | null
 }
 
 export type RespuestaPreparar =
@@ -133,6 +138,8 @@ export function interpretarPreparado(status: number, json: unknown): RespuestaPr
       avisoEscala: cadena(q.avisoEscala),
       opciones,
       preciosTotales: num(q.preciosTotales) ?? opciones.length,
+      enLista: num(q.enLista),
+      ocultas: num(q.ocultas),
     },
   }
 }
@@ -209,13 +216,74 @@ export function listarPresupuestosAsegura(q: { clienteId?: string; polizaId?: st
  * 🚨 El `actor` lo pone el SERVIDOR (el email de la sesión) y va el ÚLTIMO del
  * cuerpo: un cliente que mandara su propio `actor` no puede firmar el
  * presupuesto con otro nombre. Mismo patrón que `/api/correduria/partes`.
+ *
+ * `ocultar` (28/09/2026) se valida AQUÍ antes de salir: uno mal formado NO se
+ * quita en silencio —el cliente vería justo lo que el corredor quiso quitar—,
+ * se devuelve 400 sin llamar al puerto. Uno vacío se omite (= nada oculto).
  */
-export function prepararPresupuestoAsegura(cuerpo: Record<string, unknown>): Promise<Reenvio> {
+export async function prepararPresupuestoAsegura(cuerpo: Record<string, unknown>): Promise<Reenvio> {
+  const ocultar = normalizarOcultar(cuerpo.ocultar)
+  if (ocultar === null) {
+    return { status: 400, json: { estado: 'error', motivo: 'datos_invalidos', detalle: 'La lista de lo que se oculta al cliente está mal formada.' } }
+  }
+  const resto: Record<string, unknown> = { ...cuerpo }
+  delete resto.ocultar
   return puerto({
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(cuerpo),
+    body: JSON.stringify(ocultar ? { ocultar, ...resto } : resto), // `actor` sigue el último
   })
+}
+
+// ─── Ocultar al cliente antes de preparar (28/09/2026) ───────────────────────
+
+/** Lo que el corredor quita del presupuesto: compañías enteras (por nombre) y precios sueltos (uuid de `tarificacion_precios`). */
+export type OcultarPresupuesto = { companias: string[]; precios: string[] }
+
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const MAX_OCULTAR = 200
+
+/**
+ * PURO. `undefined` = no se oculta nada (ausente o las dos listas vacías) · `null` = MAL formado
+ * (no se adivina) · el objeto limpio (sin duplicados, recortado, uuids en minúsculas). Mismas reglas
+ * que `leerOcultar` de asegura, para que lo que aquí pasa allí no sea un 400.
+ */
+export function normalizarOcultar(v: unknown): OcultarPresupuesto | null | undefined {
+  if (v === undefined || v === null) return undefined
+  if (typeof v !== 'object' || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  const lista = (x: unknown): string[] | null => {
+    if (x === undefined || x === null) return []
+    if (!Array.isArray(x) || x.length > MAX_OCULTAR || !x.every((s) => typeof s === 'string')) return null
+    return [...new Set((x as string[]).map((s) => s.trim()))]
+  }
+  const companias = lista(o.companias)
+  const precios = lista(o.precios)
+  if (companias === null || precios === null) return null
+  if (companias.some((c) => c === '' || c.length > 120)) return null
+  if (precios.some((p) => !UUID.test(p))) return null
+  if (companias.length === 0 && precios.length === 0) return undefined
+  return { companias, precios: precios.map((p) => p.toLowerCase()) }
+}
+
+/** PURO. El cuerpo que manda la pantalla a `/api/correduria/presupuesto` (sin `actor`: lo pone el servidor). */
+export function cuerpoPreparar(e: { tarificacionId: string; ocultar?: OcultarPresupuesto | null }): Record<string, unknown> {
+  const ocultar = normalizarOcultar(e.ocultar ?? undefined)
+  return ocultar ? { tarificacionId: e.tarificacionId, ocultar } : { tarificacionId: e.tarificacionId }
+}
+
+/**
+ * PURO. La frase de un error al preparar. `todas_ocultas` (422 de asegura) no es una avería: es que
+ * se ha quitado todo y no queda nada que enseñar.
+ */
+export function mensajeErrorPreparar(r: { motivo: string; detalle?: string }): string {
+  if (r.motivo === 'todas_ocultas') {
+    return 'Has ocultado todas las opciones: no queda nada que enseñarle al cliente. Vuelve a mostrar al menos una.'
+  }
+  if (r.motivo === 'datos_invalidos') {
+    return `No se ha preparado nada: los datos enviados no son válidos${r.detalle ? ` (${r.detalle})` : ''}.`
+  }
+  return r.detalle ? `${r.motivo}: ${r.detalle}` : r.motivo
 }
 
 export function retirarPresupuestoAsegura(cuerpo: Record<string, unknown>): Promise<Reenvio> {

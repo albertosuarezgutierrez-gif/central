@@ -6,20 +6,20 @@ import { claveRiesgo, detectarSustituciones, solicitudPorSustitucion, sustituida
 function pol(p: Partial<PolizaParaSustitucion> & { id: string }): PolizaParaSustitucion {
   return {
     clienteId: 'jose', ramo: 'auto', numeroPoliza: p.id, fechaInicio: '2020-09-24', fechaVencimiento: '2026-09-24',
-    matricula: '9833LJC', vigente: true, sustituida: false, conOrigen: false, ...p,
+    matricula: '4444GGG', vigente: true, sustituida: false, conOrigen: false, ...p,
   }
 }
 
-// Caso real (23/09/2026): Mapfre 0007001518236 → Reale 3022600334066, mismo Kona.
-const MAPFRE = pol({ id: 'mapfre', numeroPoliza: '0007001518236' })
-const REALE = pol({ id: 'reale', numeroPoliza: '3022600334066', fechaInicio: '2026-09-22', fechaVencimiento: '2027-09-22', matricula: '9833 LJC' })
+// Caso real (23/09/2026): Mapfre 0007000000006 → Reale 3022600000002, mismo Kona.
+const MAPFRE = pol({ id: 'mapfre', numeroPoliza: '0007000000006' })
+const REALE = pol({ id: 'reale', numeroPoliza: '3022600000002', fechaInicio: '2026-09-22', fechaVencimiento: '2027-09-22', matricula: '4444 GGG' })
 
 test('🚨 José: la Reale del mismo coche que empieza al vencer la Mapfre la sustituye', () => {
-  assert.deepEqual(detectarSustituciones([MAPFRE, REALE]), { enlaces: [{ viejaId: 'mapfre', nuevaId: 'reale', riesgo: { tipo: 'matricula', valor: '9833LJC' } }], ambiguas: 0, duplicidades: [] })
+  assert.deepEqual(detectarSustituciones([MAPFRE, REALE]), { enlaces: [{ viejaId: 'mapfre', nuevaId: 'reale', riesgo: { tipo: 'matricula', valor: '4444GGG' } }], ambiguas: 0, duplicidades: [] })
 })
 
 test('la misma póliza escrita dos veces (ceros a la izquierda) no es una sustitución', () => {
-  const volcado = pol({ id: 'volcado', numeroPoliza: '7001518236', fechaInicio: '2026-09-22' })
+  const volcado = pol({ id: 'volcado', numeroPoliza: '7000000006', fechaInicio: '2026-09-22' })
   assert.equal(detectarSustituciones([MAPFRE, volcado]).enlaces.length, 0)
 })
 
@@ -64,8 +64,8 @@ test('una renovación ya encadenada por poliza_padre_id no es una sustitución',
 
 test('🚨 la vieja que CIMA ya renovó sola (vence un año después) también se sustituye', () => {
   // Medido el 23/09/2026: Occident renovada hasta 09/09/2027; Allianz del mismo coche desde 17/09/2026.
-  const occident = pol({ id: 'occ', numeroPoliza: 'GPAFS0900547', fechaInicio: '2015-09-09', fechaVencimiento: '2027-09-09', matricula: '6668 JGF' })
-  const allianz = pol({ id: 'all', numeroPoliza: '61048939', fechaInicio: '2026-09-17', fechaVencimiento: '2027-09-17', matricula: '6668 JGF' })
+  const occident = pol({ id: 'occ', numeroPoliza: 'GPAFS0000030', fechaInicio: '2015-09-09', fechaVencimiento: '2027-09-09', matricula: '1212 MMM' })
+  const allianz = pol({ id: 'all', numeroPoliza: '61000027', fechaInicio: '2026-09-17', fechaVencimiento: '2027-09-17', matricula: '1212 MMM' })
   assert.deepEqual(detectarSustituciones([occident, allianz]).enlaces.map((e) => [e.viejaId, e.nuevaId]), [['occ', 'all']])
   // Y la nueva no «sustituye» a la vieja al revés: la vieja empezó antes.
   assert.equal(detectarSustituciones([occident, allianz]).ambiguas, 0)
@@ -81,7 +81,7 @@ test('la clave del riesgo depende del ramo: catastro o dirección en inmuebles, 
   assert.equal(claveRiesgo({ ...base, ramo: 'hogar', direccion: 'CL San Vicente', cp: '41002' }), null, 'sin número no es un inmueble')
   assert.equal(claveRiesgo({ ...base, ramo: 'vida', nifAsegurado: 'a'.repeat(64) })?.riesgo.tipo, 'asegurado')
   assert.equal(claveRiesgo({ ...base, ramo: 'responsabilidad_civil' }), null)
-  assert.equal(claveRiesgo({ ...base, ramo: 'auto', matricula: '9833LJC' })?.riesgo.valor, '9833LJC')
+  assert.equal(claveRiesgo({ ...base, ramo: 'auto', matricula: '4444GGG' })?.riesgo.valor, '4444GGG')
   assert.equal(claveRiesgo({ ...base, ramo: 'auto', matricula: 'PENDIENTE' }), null, 'un centinela no es una matrícula')
 })
 

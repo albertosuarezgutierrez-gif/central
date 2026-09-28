@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 // Retarificar una póliza de MOTO de la cartera (23/09/2026). Caso fundacional:
-// la moto de Víctor De la Fuente (Allianz 031698897) salía con modelos de COCHE
+// la moto de Víctor De la Fuente (Allianz 031600009) salía con modelos de COCHE
 // porque CIMA la guardó como `auto`; corregida a `moto`, asegura contestaba 409
 // «hoy solo se retarifica auto y hogar». Estos cepos fijan las tres piezas que
 // lo cierran: el puerto rama moto, la precalificación la sirve, y la pantalla
@@ -56,8 +56,10 @@ test('plataforma: en modo póliza un hueco que no se arregla en pantalla apaga e
 test('emisión de moto: el precio de una póliza se puede emitir con el MISMO panel que auto', () => {
   const moto = leer('apps/plataforma/app/(usuario)/correduria/cliente/[id]/moto-nuevo/MotoNuevo.tsx')
   assert.match(moto, /import \{ Emision \} from '\.\.\/\.\.\/\.\.\/poliza\/\[id\]\/retarificar\/emision'/)
-  // Solo en modo póliza (hay una póliza de la cartera a la que colgar la nueva)…
-  assert.match(moto, /emitible=\{poliza !== null\}/)
+  // Desde el 28/09/2026 también sin póliza (cliente NUEVO); la carta de baja solo
+  // se anuncia cuando hay una póliza de la cartera que sustituir…
+  assert.match(moto, /emitible sustituye=\{poliza !== null\}/)
+  assert.match(moto, /sustituye=\{sustituye\}/)
   // …y nunca sobre un precio simulado o sin cotización guardada.
   assert.match(moto, /const puedeEmitir = emitible && !r\.simulado && cotizacionId !== null/)
   assert.match(moto, /guardado: r\.guardado,/, 'sin el `guardado` de la respuesta no hay cotizacionId y el botón nunca se enciende')
@@ -65,7 +67,10 @@ test('emisión de moto: el precio de una póliza se puede emitir con el MISMO pa
 
 test('ReRate: las opciones por defecto de Allianz AUTO no se mandan a una moto', () => {
   const oferta = leer('apps/asegura/app/api/operador/codeoscopic/oferta/route.ts')
-  assert.match(oferta, /opcionesPorDefecto\(compania, t\.producto\)/)
+  // Desde el 28/09/2026 el ramo es el de la póliza O, sin póliza (cliente nuevo), el de la
+  // tarificación: así una moto NUEVA tampoco recibe las opciones de auto.
+  assert.match(oferta, /const producto = t\.producto \?\? tipoDeRamo\(t\.ramo\)/)
+  assert.match(oferta, /opcionesPorDefecto\(compania, producto\)/)
 })
 
 test('carné × cilindrada: las dos vías de moto cruzan el carné con la versión antes de pagar', () => {

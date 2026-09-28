@@ -1300,6 +1300,12 @@ model PresupuestoOpcion {
   avisos         Json      @default("[]")
   papeles        String[]  @default([])
   elegidaAt      DateTime? @map("elegida_at") @db.Timestamptz(6)
+  /// Fila de `tarificacion_precios` de la que sale (sin FK: aquella se reescribe).
+  precioId      String?   @map("precio_id") @db.Uuid
+  /// Garantías clasificadas (`clasificarCoberturas`). NULL = no se clasificó.
+  garantias     Json?
+  /// El corredor la quitó antes de enviar: congelada pero INVISIBLE. Filtra siempre `ocultaAt: null`.
+  ocultaAt      DateTime? @map("oculta_at") @db.Timestamptz(6)
 
   presupuesto Presupuesto @relation(fields: [presupuestoId], references: [id], onDelete: Cascade)
 

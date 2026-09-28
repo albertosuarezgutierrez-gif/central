@@ -1,6 +1,6 @@
 # Recaptación de leads sin vencimiento — diseño
 
-Fecha: 12/09/2026. Decidido con Alberto en sesión (rama `claude/poliza-bidp023227-catalana-sesyfs`).
+Fecha: 12/09/2026. Decidido con Alberto en sesión (rama `claude/poliza-…-catalana-sesyfs`).
 
 ## Contexto
 

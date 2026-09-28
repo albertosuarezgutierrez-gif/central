@@ -47,7 +47,7 @@ dinero al tarificar). Alberto no entra ahí (dictado 01/09/2026).
    **`import_ref IS NULL` O `eiac_xml_hash IS NOT NULL`**. El segundo brazo se añadió el 03/09/2026 porque
    `import_ref IS NULL` a secas se dejaba fuera las pólizas del volcado que CIMA mantiene al día (ver §5:
    la ingesta actualiza la fila vieja y le deja su `import_ref`). Cifras al 03/09/2026: **80 clientes /
-   110 pólizas** vivas, **28.728** de volcado; la fila que destapó el agujero es la `3021700291186` de
+   110 pólizas** vivas, **28.728** de volcado; la fila que destapó el agujero es la `[nº de póliza retirado]` de
    Reale (C0613), que dejaba a Reale con «0 pólizas vivas».
 3. **Todo cambio deja rastro.** `historial_interno` por ficha (quién, cuándo, qué; nunca el valor de
    un dato de identidad), `cliente_merge_log`/`poliza_merge_log` para fusiones, `operational_events`

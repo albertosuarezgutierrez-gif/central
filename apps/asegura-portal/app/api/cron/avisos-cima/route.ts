@@ -171,8 +171,10 @@ function conAccesoTotal(t: TitularPortal): boolean {
 }
 
 function aPolizas(titulares: TitularPortal[], ajena: boolean): PolizaParaAviso[] {
+  // Las de OTRO tomador donde la ficha vista solo figura (`figuraTitular`) no avisan por push:
+  // el acceso total a una ficha no es a las pólizas de un tercero (28/09/2026).
   return titulares.flatMap((t) =>
-    t.polizas.map((p) => ({
+    t.polizas.filter((p) => p.figuraTitular === undefined).map((p) => ({
       id: p.id,
       ramo: p.ramo,
       compania: p.compania,

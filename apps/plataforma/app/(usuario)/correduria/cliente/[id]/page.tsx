@@ -19,6 +19,7 @@ import OportunidadesCliente from './OportunidadesCliente'
 import PresupuestosPoliza from '../../poliza/[id]/PresupuestosPoliza'
 import SegurosCliente from './SegurosCliente'
 import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
+import { Pagina } from '@/components/ui'
 import { interpretarOportunidadesCliente, oportunidadesClienteAsegura, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import { ESTADOS_ABIERTOS, repartirSegurosCliente } from '@/lib/correduria/seguros-cliente'
 
@@ -61,7 +62,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       .catch(() => ({ estado: 'error' as const, motivo: 'red' })),
   ])
 
-  if (r.estado !== 'ok') return <NoSePudo estado={r} />
+  if (r.estado !== 'ok') return <Pagina ancho="tabla"><NoSePudo estado={r} /></Pagina>
 
   const { ficha } = r
   const tab = tabDeParametro(sp.tab)
@@ -114,8 +115,12 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
   // para cuando actúa su contenedor ya ha crecido. Y el desbordamiento NO se ve en `body`: como
   // `LayoutShell` declara `overflowY: 'auto'`, CSS le activa también el eje X y es él quien
   // scrollea. Medido en Chromium el 02/09/2026: 910 → 390 px solo con esta línea.
+  // `<Pagina>` (26/09/2026 → 28/09/2026): sin él la ficha no tenía padding y salía pegada al menú
+  // lateral; es el mismo contenedor —y el mismo ancho— que la lista de la correduría, así que al
+  // entrar en un cliente el borde izquierdo no salta. `gap` 24: con 16 los bloques se leían juntos.
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
+    <Pagina ancho="tabla">
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 24 }}>
       {/* Si la ficha está DESCARTADA se dice arriba del todo, antes que nada:
           está fuera del buscador y de la cartera, y nadie más la ve. `activo`
           a `null` (asegura sin el campo) no pinta nada — no se afirma. */}
@@ -169,7 +174,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {/* Todas las pólizas en tabla, con los siniestros del cliente: la vista de consulta. */}
       {tab === 'polizas' && (
         <>
-          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} />
+          <TabPolizas porClase={porClase} intervinientes={ficha.intervinientes} declaradas={ficha.declaradas} figuraEn={ficha.figuraEn} />
           <Siniestros
             lista={ficha.siniestros}
             polizas={ficha.polizas.map(p => ({ id: p.id, numeroPoliza: p.numeroPoliza, aseguradora: p.aseguradora, tipo: p.tipo, viva: p.viva, confirmadaCima: p.confirmadaCima }))}
@@ -208,6 +213,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           una acción sobre la FICHA, no sobre lo que se esté mirando. */}
       <DescartarCliente clienteId={ficha.id} nombre={ficha.nombre} activo={ficha.activo} polizasVivas={vivas} />
     </div>
+    </Pagina>
   )
 }
 

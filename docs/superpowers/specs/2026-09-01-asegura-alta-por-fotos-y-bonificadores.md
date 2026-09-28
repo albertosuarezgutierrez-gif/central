@@ -215,6 +215,21 @@ partes. Eso no invalida la precalificación —sigue siendo el precio orientativ
 mínima que quiere Alberto—, pero **obliga a decirlo en pantalla**, que es lo que ya hace el aviso
 «puede abaratar el precio».
 
+### ✅ RESUELTO (28/09/2026, Alberto): Grupo ASegura NO consulta SINCO — lo hace la compañía vía Codeoscopic
+
+La correduría no tiene ni tendrá acceso: **cada compañía consulta SINCO a través de Codeoscopic (Avant2)**.
+El primer precio es una **estimación** (la consulta le cuesta dinero a la compañía, así que la mayoría no
+la hace aún); cuando el precio cuadra se da a «permitir»/confirmar en Avant2 y **entonces** la compañía
+consulta SINCO y confirma el precio. Algunas la hacen ya al estimar. En la API ese «confirmar» es el
+**ReRate** (`POST /insurances/{id}/offers`, obligatorio cuando la cotización trae `actions:[ReRate required]`,
+ver `docs/CODEOSCOPIC-API-PORTAL.md` § «El primer precio es SIEMPRE estimado»), ya cableado en
+`/api/operador/codeoscopic/oferta` antes de emitir; su coste sigue sin confirmar (`CODEOSCOPIC_COSTE_RERATE_CENTS`). Por eso nuestro lado es declarar
+bien el historial y tratar el primer precio como orientativo (`firmeza` en `lib/codeoscopic/respuesta.ts`).
+Medido en `seguros.tarificacion_precios` (auto): Reale «PENDIENTE REALIZAR CONSULTA SINCO» en 79 de 89;
+Occident «Emisión SUPEDITADA. Compañía no sinco sin certificado de antecedentes siniestrales»; Mutua
+Madrileña «Descuentos de siniestralidad»; Allianz/Mapfre/Generali/Fiatc/Fidelidade no lo dicen (≠ no lo hacen).
+**No se pregunta a TIREA por esto.** Lo de abajo queda como historia de cómo se razonó.
+
 ### Quién puede consultarlo — y aquí hay que preguntar, no suponer
 
 - Las fuentes públicas dicen «Entidades Aseguradoras» y remiten a un **listado de entidades

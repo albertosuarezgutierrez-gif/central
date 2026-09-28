@@ -10,13 +10,13 @@ test('mensajeSustituciones: una fila con póliza nueva conocida', () => {
   const fila: SustitucionAviso = {
     cliente: 'Pilar Franco Ruz',
     diasSustituida: 4,
-    polizaVieja: { aseguradora: 'Occident', numeroPoliza: 'GPAFS0900547' },
+    polizaVieja: { aseguradora: 'Occident', numeroPoliza: 'GPAFS0000030' },
     polizaNueva: { aseguradora: 'Reale', numeroPoliza: 'R-123' },
   }
   const msg = mensajeSustituciones([fila])
   assert.ok(msg)
   assert.ok(msg.includes('Pilar Franco Ruz'))
-  assert.ok(msg.includes('Occident nº GPAFS0900547'))
+  assert.ok(msg.includes('Occident nº GPAFS0000030'))
   assert.ok(msg.includes('Reale nº R-123'))
   assert.ok(msg.includes('hace 4 días'))
 })

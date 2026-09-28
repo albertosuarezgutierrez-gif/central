@@ -5,9 +5,13 @@ import { presupuestoDeSesion } from '@/lib/presupuesto'
 import { TEXTO_AJENO, TEXTO_VINCULO_AMBIGUO, textoCaducidad } from '@/lib/presupuesto-vista'
 
 import { Actual, Garantias, Mediador, Salidas, SinEquivalenteAviso, Tarjeta, fecha } from './Comparativa'
-import { Plegable } from './RestoDeOpciones'
+import { TodasLasOpciones } from './TodasLasOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
 import { DatosParaContratar } from './DatosParaContratar'
+import { RevisaTusDatos } from './RevisaTusDatos'
+import { ResumenOpciones } from './ResumenOpciones'
+import { MOTIVO_EN_REVISION, MOTIVO_SIN_DATOS, datosCotizados, datosListosParaAceptar } from '@/lib/presupuesto-firma'
+import { MEDIADOR, ramoDeCatalogo, telefonoLegible } from '@central/module-seguros'
 import { datosParaContratar } from '@/lib/datos-emision'
 import { getIdentidad } from '@/lib/session'
 
@@ -87,11 +91,21 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
   const p = r.presupuesto
   // Qué falta para emitir (§4bis): solo mientras se puede contratar. `null` = no se pudo mirar.
   const mostrarDatos = !p.retirado && !p.caducado && p.emitidoAt === null && p.enviadoAt !== null
-  const identidad = mostrarDatos ? await getIdentidad() : null
-  const datos = identidad ? await datosParaContratar(identidad.id, p.id) : null
+  // «Revisa tus datos»: mientras no esté emitido ni retirado. `null` = no se han podido leer.
+  const mostrarCotizados = !p.retirado && p.emitidoAt === null
+  const identidad = mostrarDatos || mostrarCotizados ? await getIdentidad() : null
+  const datos = identidad && mostrarDatos ? await datosParaContratar(identidad.id, p.id) : null
+  const cotizados = identidad && mostrarCotizados ? await datosCotizados(identidad.id, p.id) : null
+  // Fail-closed: sin datos legibles (o con un aviso de error pendiente) no se ofrece aceptar.
+  const bloqueoDatos = datosListosParaAceptar(cotizados)
+    ? null
+    : cotizados?.enRevision ? MOTIVO_EN_REVISION
+    : cotizados?.estado === 'sin_datos' ? cotizados.motivo : MOTIVO_SIN_DATOS
   const portada = p.opciones.filter((o) => o.esPortada)
   const resto = p.opciones.filter((o) => !o.esPortada)
   const companias = new Set(portada.map((o) => o.compania)).size
+  // Las MISMAS condiciones para elegir en la portada y en «Todas las opciones».
+  const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
 
   return (
     <>
@@ -119,6 +133,29 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           Estás viendo esta pantalla como la ve el cliente. Abrirla así no cuenta como que él la haya
           abierto.
         </p>
+      )}
+
+      {/* ARRIBA del todo: los datos con los que se calculó el precio (dictado de Alberto, 28/09/2026). */}
+      {mostrarCotizados && (
+        <RevisaTusDatos
+          presupuestoId={p.id}
+          datos={cotizados}
+          corredor={p.vistaDeCorredor}
+          telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+        />
+      )}
+
+      {/* Tras «Revisa tus datos»: resumen IA + tabla de coberturas por compañía + comparar dos con IA. */}
+      {!p.retirado && portada.length > 0 && (
+        <ResumenOpciones
+          presupuestoId={p.id}
+          corredor={p.vistaDeCorredor}
+          telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+          opciones={portada.map((o) => ({
+            id: o.id, compania: o.compania, producto: o.producto,
+            primaEur: o.primaEur, franquiciaEur: o.franquiciaEur, coberturas: o.coberturasDetalle,
+          }))}
+        />
       )}
 
       {p.necesidades && (
@@ -160,7 +197,6 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       </section>
 
       {portada.map((o) => {
-        const puedeAceptar = !p.caducado && !p.retirado && p.aceptadoAt === null && p.enviadoAt !== null
         return (
           <section className="seccion" key={`g-${o.id}`}>
             <Garantias o={o} actual={p.actual} />
@@ -171,6 +207,7 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
                 prima={o.primaEur}
                 compania={o.compania}
                 corredor={p.vistaDeCorredor}
+                bloqueoDatos={bloqueoDatos}
               />
             )}
           </section>
@@ -180,21 +217,21 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
       {/* La comparativa es la portada (§4.1): lo que falta para contratar va debajo. */}
       {mostrarDatos && <DatosParaContratar datos={datos} corredor={p.vistaDeCorredor} />}
 
-      {/* Cerrado por defecto y con montaje perezoso (regla de rendimiento).
-          ⚠️ Hoy `resto` está SIEMPRE vacío: el preparador congela solo las
-          opciones de portada y la lista larga se quedó en la tarificación, que
-          el portal no puede leer (§5.1: el cliente ve el snapshot y nada más).
-          Cuando se congelen todas, esto las pinta sin tocar nada. */}
+      {/* «Todas las opciones»: la lista entera (portada incluida, marcada «Recomendada») con los
+          interruptores de garantías, paginada. Solo si hay algo más que la portada: si no, sería la
+          misma lista dos veces. */}
       {resto.length > 0 && (
-        <section className="seccion">
-          <Plegable titulo={`Ver el resto de opciones (${resto.length})`}>
-            <div className="presu-tarjetas">
-              {resto.map((o) => (
-                <Tarjeta key={o.id} o={o} caducado={p.caducado} />
-              ))}
-            </div>
-          </Plegable>
-        </section>
+        <TodasLasOpciones
+          presupuestoId={p.id}
+          ramo={ramoDeCatalogo(p.ramo)}
+          opciones={p.opciones}
+          necesidades={p.necesidades}
+          coberturasActual={p.actual?.coberturas ?? null}
+          corredor={p.vistaDeCorredor}
+          puedeAceptar={puedeAceptar}
+          bloqueoDatos={bloqueoDatos}
+          telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+        />
       )}
 
       <Salidas

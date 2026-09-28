@@ -1988,6 +1988,11 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   (se dice); primer paso = llamada 60 d antes del vencimiento (mínimo mañana). Botón `cas_oport:<id>` (un solo uso, 15 min,
   filtro `from.id`, mismo interruptor que emitir/corregir) → `accionOportunidadAsegura({accion:'crear', estado:'competencia'})`.
   En el webhook, un documento cuyo pie va a la correduría (o de un álbum ya desviado) **no pasa por el contable**.
+- **📨 Enviar presupuesto por chat (28/09/2026).** `enviar_presupuesto(clienteId, ramo, necesidades)`: el SERVIDOR busca la
+  última tarificación guardada del cliente nuevo (`tarificacionNuevaGuardadaAsegura`; sin ella, caducada o sin primas → no hay
+  botón) y exige portal `invitable`/`ya_entra`. Botón `cas_acc` 📧 → preparar → necesidades (IDD) → avisar por email; dice en qué
+  paso se quedó si falla, y el aviso sin respuesta es `incierta`. Rutado: «presupuesto de la moto/coche/hogar…» o presupuesto +
+  matrícula van a correduría (antes caían al contable).
 - **Auditoría 27/09/2026:** un **reply** a un mensaje de la correduría (🛡️/🎯/✏️/🚀 o texto que `clasificarDestino` manda a
   correduría) va al asistente con la cita (`esRespuestaACorreduria` + `conCita`, bloque C0 del webhook) — antes el catch-all lo
   descartaba. El historial son 4 turnos/30 min y lleva los **ids** ya consultados (`memoriaIds`, solo de llamadas ok). Herramientas
