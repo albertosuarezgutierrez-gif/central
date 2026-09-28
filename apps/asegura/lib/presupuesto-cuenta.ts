@@ -95,3 +95,13 @@ export function textoAutorizacion(conIpid: boolean): string {
 export function polizaParaCuenta(polizaOrigenId: string | null, origenAceptado: 'nueva' | 'ficha' | null): string | null {
   return origenAceptado === 'nueva' ? null : polizaOrigenId
 }
+
+/**
+ * 🚨 La cuenta que se va a mandar a la compañía ¿es la que firmó? Solo se compara la máscara
+ * (el evento no guarda el IBAN). `true` = NO coincide y no se puede ofrecer sin más: el
+ * cliente firmó otra. Sin máscara firmada o sin cuenta en ficha, no hay nada que comparar.
+ */
+export function cuentaDistintaDeLaFirmada(ibanFicha: string | null, mascaraFirmada: string | null | undefined): boolean {
+  if (!mascaraFirmada || !ibanFicha) return false
+  return mascaraCuenta(ibanFicha) !== mascaraFirmada
+}

@@ -124,23 +124,25 @@ export async function cuentaDeFicha(
 }
 
 /**
- * Qué cuenta firmó el cliente al aceptar en el portal un presupuesto de ESTA
+ * Qué cuenta firmó el cliente (origen y MÁSCARA) al aceptar en el portal un presupuesto de ESTA
  * tarificación: `'nueva'` (la tecleó él; vive cifrada en `clientes.cuenta_bancaria`),
  * `'ficha'` (la que ya teníamos) o `null` (no hay aceptación con cuenta, o no se
  * pudo mirar: entonces manda el orden de siempre).
  */
-export async function origenCuentaAceptada(correduriaId: string, tarificacionId: string | null): Promise<'nueva' | 'ficha' | null> {
+export type CuentaAceptada = { origen: 'nueva' | 'ficha'; mascara: string | null }
+
+export async function origenCuentaAceptada(correduriaId: string, tarificacionId: string | null): Promise<CuentaAceptada | null> {
   if (!tarificacionId) return null
   try {
-    const [e] = await prismaAsegura().$queryRaw<{ origen: string | null }[]>`
-      select ev.detalle->'cuenta'->>'origen' as origen
+    const [e] = await prismaAsegura().$queryRaw<{ origen: string | null; mascara: string | null }[]>`
+      select ev.detalle->'cuenta'->>'origen' as origen, ev.detalle->'cuenta'->>'mascara' as mascara
       from presupuesto_evento ev
       join presupuesto p on p.id = ev.presupuesto_id
       where p.correduria_id = ${correduriaId}::uuid and p.tarificacion_id = ${tarificacionId}::uuid
         and p.aceptado_at is not null and p.retirado_at is null and ev.tipo = 'aceptado'
       order by ev.ocurrido_at desc
       limit 1`
-    return e?.origen === 'nueva' || e?.origen === 'ficha' ? e.origen : null
+    return e?.origen === 'nueva' || e?.origen === 'ficha' ? { origen: e.origen, mascara: e.mascara } : null
   } catch (err) {
     console.error('[cuenta-ficha] no se pudo leer la cuenta aceptada:', err instanceof Error ? err.message : err)
     return null

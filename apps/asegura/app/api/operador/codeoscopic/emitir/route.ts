@@ -27,7 +27,7 @@ import {
   ibanValido,
 } from '@/lib/codeoscopic/emitir-iban'
 import { cuentaDeFicha, origenCuentaAceptada, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
-import { polizaParaCuenta } from '@/lib/presupuesto-cuenta'
+import { cuentaDistintaDeLaFirmada, polizaParaCuenta } from '@/lib/presupuesto-cuenta'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { documentoTomador, fraccionamientoDeOferta, matriculaProyecto } from '@/lib/codeoscopic/importar'
 import {
@@ -505,8 +505,23 @@ export const POST = auditado(async (req: Request) => {
     )
   }
   // Si el cliente firmó en el portal una cuenta NUEVA, la de su ficha va primero (no la de la póliza vieja).
-  const origenAceptado = ibanHumano === null ? await origenCuentaAceptada(correduria.id, p.tarificacion_id) : null
-  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, polizaParaCuenta(ctx.polizaOrigenId, origenAceptado), ctx.clienteId) : SIN_CUENTA
+  const aceptada = ibanHumano === null ? await origenCuentaAceptada(correduria.id, p.tarificacion_id) : null
+  const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, polizaParaCuenta(ctx.polizaOrigenId, aceptada?.origen ?? null), ctx.clienteId) : SIN_CUENTA
+  // 🚨 Si lo que da la ficha NO es la cuenta que firmó en el portal, no se ofrece: se pide teclear la firmada.
+  if (cuentaDistintaDeLaFirmada(ficha.iban, aceptada?.mascara)) {
+    return NextResponse.json(
+      {
+        estado: 'error',
+        causa: 'faltan_campos',
+        mensaje:
+          `El cliente firmó la domiciliación en la cuenta ${aceptada!.mascara}, pero la ficha da ${ibanEnmascarado(ficha.iban!)}. ` +
+          'Teclea la cuenta que firmó (la tienes en su ficha o pídesela). No se ha emitido nada.',
+        faltan: ['iban'],
+        campos: null,
+      },
+      { status: 422 },
+    )
+  }
   const decision = decidirCuentaEnvio({ ibanTecleado, ibanJson, ficha, cuentaConfirmada: cuerpo.cuentaConfirmada })
   if (decision.tipo === 'confirmar') {
     // La ficha tiene cuenta y nadie la ha confirmado: se pide ANTES de gastar

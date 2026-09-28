@@ -111,5 +111,17 @@ test('🪤 al emitir, una cuenta NUEVA firmada en el portal va antes que la de l
   assert.equal(polizaParaCuenta('pol-vieja', 'ficha'), 'pol-vieja')
   assert.equal(polizaParaCuenta('pol-vieja', null), 'pol-vieja')
   const emitir = readFileSync(fileURLToPath(new URL('../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url)), 'utf8')
-  assert.match(emitir, /cuentaDeFicha\(correduria\.id, polizaParaCuenta\(ctx\.polizaOrigenId, origenAceptado\)/)
+  assert.match(emitir, /cuentaDeFicha\(correduria\.id, polizaParaCuenta\(ctx\.polizaOrigenId, aceptada\?\.origen \?\? null\)/)
+})
+
+test('🪤 al emitir NO se ofrece una cuenta cuya máscara no es la firmada', async () => {
+  const { cuentaDistintaDeLaFirmada } = await import('./presupuesto-cuenta.ts')
+  assert.equal(cuentaDistintaDeLaFirmada(BUENO_NORMAL, '**** 1332'), false)
+  assert.equal(cuentaDistintaDeLaFirmada(BUENO_NORMAL, '**** 1111'), true)
+  assert.equal(cuentaDistintaDeLaFirmada(null, '**** 1111'), false)
+  assert.equal(cuentaDistintaDeLaFirmada(BUENO_NORMAL, null), false)
+  const emitir = readFileSync(fileURLToPath(new URL('../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url)), 'utf8')
+  const corte = emitir.indexOf('cuentaDistintaDeLaFirmada(ficha.iban')
+  const decision = emitir.indexOf('decidirCuentaEnvio({')
+  assert.ok(corte > 0 && corte < decision, 'la comprobación va antes de decidir qué cuenta se manda')
 })
