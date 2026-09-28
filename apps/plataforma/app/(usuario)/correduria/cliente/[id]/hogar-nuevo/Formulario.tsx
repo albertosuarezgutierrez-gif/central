@@ -22,6 +22,7 @@ import { ConIcono } from '../../../iconos'
 import { CeldaCompania } from '../../../CeldaCompania'
 import PrepararPresupuesto from '../../../poliza/[id]/retarificar/PrepararPresupuesto'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
+import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { eur } from '@/lib/dinero'
 import type {
   Control as TipoControl,
@@ -538,6 +539,11 @@ function deTexto(f: Fila, t: string): unknown {
 // ─── El resultado ────────────────────────────────────────────────────────────
 
 function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
+  // Emitir a un cliente NUEVO (28/09/2026): asegura enlazó el proyecto a la ficha y a
+  // esta tarificación al confirmar el precio, así que no hace falta póliza previa.
+  const [abierta, setAbierta] = useState<string | null>(null)
+  const cotizacionId = cotizacionIdDe(r.guardado)
+  const puedeEmitir = !r.simulado && cotizacionId !== null
   return (
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
@@ -560,6 +566,7 @@ function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
               <th style={th}>Aseguradora</th>
               <th style={th}>Prima anual</th>
               <th style={th}>Firmeza</th>
+              <th style={th}>Emitir</th>
             </tr>
           </thead>
           <tbody>
@@ -568,11 +575,49 @@ function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
                 <td style={td}><CeldaCompania compania={p.compania} producto={p.producto} /></td>
                 <td style={td}>{euroODash(p.primaEur)}</td>
                 <td style={td}><Badge tono={p.firmeza === 'firme' ? 'positivo' : 'aviso'} title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge></td>
+                <td style={td}>
+                  <button
+                    type="button"
+                    disabled={!puedeEmitir}
+                    onClick={() => {
+                      const id = `${p.compania}-${p.producto}-${i}`
+                      setAbierta(abierta === id ? null : id)
+                    }}
+                    title={
+                      r.simulado
+                        ? 'Simulado: no hay proyecto real de Codeoscopic'
+                        : cotizacionId === null
+                          ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
+                          : 'Confirmar con la compañía y emitir'
+                    }
+                    style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}
+                  >
+                    {abierta === `${p.compania}-${p.producto}-${i}` ? 'Ocultar' : 'Emitir'}
+                  </button>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
+      {puedeEmitir &&
+        r.precios.map((p, i) => {
+          const id = `${p.compania}-${p.producto}-${i}`
+          if (abierta !== id) return null
+          // Cliente NUEVO: no hay póliza anterior, así que no hay carta de baja.
+          return (
+            <Emision
+              key={id}
+              tarificacionId={cotizacionId as string}
+              compania={p.compania ?? ''}
+              categoria={p.categoria ?? ''}
+              primaEur={p.primaEur ?? null}
+              producto={p.producto ?? null}
+              sustituye={false}
+              onCerrar={() => setAbierta(null)}
+            />
+          )
+        })}
       {cotizacionIdDe(r.guardado) !== null && (
         <PrepararPresupuesto tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
       )}
