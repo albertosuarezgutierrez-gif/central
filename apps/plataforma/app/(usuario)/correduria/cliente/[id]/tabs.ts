@@ -32,3 +32,62 @@ export function tabDeParametro(v: string | string[] | undefined): TabFicha {
   if (t && Object.hasOwn(HEREDADAS, t)) return HEREDADAS[t]
   return TABS_FICHA.includes(t as TabFicha) ? (t as TabFicha) : 'resumen'
 }
+
+// ─── Lo que dice cada acceso (28/09/2026) ────────────────────────────────────
+//
+// Alberto: «en los cuadrados debería aparecer información… en contactos este
+// cliente tiene varios». Hasta ahora solo se pintaba un número cuando era > 0, y
+// Contactos contaba únicamente a las PERSONAS de sus pólizas: un cliente con dos
+// teléfonos y un correo salía con la baldosa en blanco.
+//
+// Tres estados, como en toda la ficha: `null` = no se ha podido leer → no se
+// pinta nada (jamás «0»); `0` leído → se dice que no hay; `n` → el dato.
+
+export type DatosAccesos = {
+  conNosotros: number
+  oportunidadesAbiertas: number | null
+  /** `siguienteAccion`: `accion` (con urgencia), `nada` o `sin_comprobar`. */
+  pendiente: { estado: 'accion'; urgente: boolean } | { estado: 'nada' } | { estado: 'sin_comprobar' }
+  polizas: number
+  telefonos: number | null
+  emails: number | null
+  personas: number | null
+  documentos: number | null
+  documentosPedidos: number | null
+  correos: number | null
+  notas: number | null
+  historial: number | null
+}
+
+export type DetalleAcceso = { texto: string; tono?: 'bien' | 'aviso' | 'malo' }
+
+const plural = (n: number, uno: string, varios: string) => `${n} ${n === 1 ? uno : varios}`
+
+/** El texto corto bajo cada baldosa. Pura: la prueba `regression-ficha-cliente-pestanas`. */
+export function detallesAccesos(d: DatosAccesos): Partial<Record<TabFicha, DetalleAcceso>> {
+  const r: Partial<Record<TabFicha, DetalleAcceso>> = {}
+  r.resumen = { texto: d.conNosotros === 0 ? 'ninguno con nosotros' : `${d.conNosotros} con nosotros` }
+  if (d.oportunidadesAbiertas !== null) {
+    r.oportunidades = { texto: d.oportunidadesAbiertas === 0 ? 'ninguna abierta' : plural(d.oportunidadesAbiertas, 'abierta', 'abiertas') }
+  }
+  if (d.pendiente.estado === 'accion') r.pendiente = d.pendiente.urgente ? { texto: 'urgente', tono: 'malo' } : { texto: 'hay algo que hacer', tono: 'aviso' }
+  else if (d.pendiente.estado === 'nada') r.pendiente = { texto: 'al día' }
+  r.polizas = { texto: d.polizas === 0 ? 'ninguna' : `${d.polizas} en total` }
+
+  // Contactos: teléfonos, correos y personas. Lo que no se pudo leer se OMITE,
+  // no se cuenta como cero.
+  const partes = [
+    d.telefonos !== null && d.telefonos > 0 ? plural(d.telefonos, 'teléfono', 'teléfonos') : null,
+    d.emails !== null && d.emails > 0 ? plural(d.emails, 'correo', 'correos') : null,
+    d.personas !== null && d.personas > 0 ? plural(d.personas, 'persona', 'personas') : null,
+  ].filter((x): x is string => x !== null)
+  if (partes.length > 0) r.contactos = { texto: partes.join(' · ') }
+  else if (d.telefonos === 0 && d.emails === 0) r.contactos = { texto: 'sin teléfono ni correo', tono: 'aviso' }
+
+  if (d.documentosPedidos !== null && d.documentosPedidos > 0) r.documentos = { texto: plural(d.documentosPedidos, 'pedido', 'pedidos'), tono: 'aviso' }
+  else if (d.documentos !== null) r.documentos = { texto: d.documentos === 0 ? 'ninguno' : plural(d.documentos, 'documento', 'documentos') }
+  if (d.correos !== null) r.correos = { texto: d.correos === 0 ? 'ninguno enviado' : plural(d.correos, 'enviado', 'enviados') }
+  if (d.notas !== null) r.notas = { texto: d.notas === 0 ? 'ninguna' : plural(d.notas, 'nota', 'notas') }
+  if (d.historial !== null) r.historial = { texto: d.historial === 0 ? 'sin anotaciones' : plural(d.historial, 'anotación', 'anotaciones') }
+  return r
+}

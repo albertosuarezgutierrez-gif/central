@@ -1,4 +1,5 @@
 'use client'
+import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { IdCard, KeyRound, Mail, MapPin, MessageCircle, Pencil, Phone, Star, Users } from 'lucide-react'
@@ -483,6 +484,24 @@ function Portal({ clienteId, nombre, telefonos }: {
           de reenviar (25/09/2026, «no es nada clara»). En los demás estados SÍ
           es la instrucción, y se queda a la vista. */}
       {frase.tono !== 'positivo' && <p style={{ ...sutil, maxWidth: '72ch' }}>{frase.queHacer}</p>}
+
+      {/* QUÉ otra ficha se queda el correo, con enlace (28/09/2026): sin esto,
+          «lleva a OTRA ficha» mandaba a buscarla a ciegas. `null` = asegura no
+          lo ha dicho, y no se nombra ninguna. */}
+      {frase.accion === 'ninguna' && datos.portal.otrasFichas && datos.portal.otrasFichas.length > 0 && (
+        <ul style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 4 }}>
+          {datos.portal.otrasFichas.map(o => (
+            <li key={o.clienteId} style={{ fontSize: 13, overflowWrap: 'anywhere' }}>
+              <Link href={`/correduria/cliente/${o.clienteId}`} style={{ fontWeight: 600 }}>
+                {o.nombre ?? 'Ficha sin nombre legible'}
+              </Link>
+              <span style={{ color: 'var(--muted)' }}>
+                {o.principal ? ' — lo tiene como correo PRINCIPAL' : ' — lo tiene como correo de contacto'}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {/* Las tres acciones en UNA fila y con rótulos cortos: el nombre del
           cliente ya encabeza la ficha, y repetirlo en cada botón es lo que
