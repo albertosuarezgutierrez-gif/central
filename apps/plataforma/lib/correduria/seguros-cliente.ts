@@ -1,5 +1,6 @@
 import type { PolizaDeclaradaFicha, PolizaFicha } from '../ficha-asegura'
 import type { OportunidadDeCliente } from '../seguimiento-asegura'
+import { claveMatricula } from '@central/module-seguros'
 
 /**
  * Los seguros de un cliente en los TRES cubos con los que trabaja una
@@ -196,7 +197,12 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
     // Las abiertas primero: son las que se enganchan a una póliza perdida del mismo ramo.
     const abiertas = oportunidades.filter(abierta)
     for (const o of abiertas) {
-      const hueco = enCompetencia.find(s => s.oportunidad === null && o.ramo !== null && s.poliza.tipo === o.ramo)
+      // Mismo ramo no basta: dos matrículas distintas son dos coches, y engancharla pintaba
+      // el Ford Mondeo de Pelayo de 2015 en vez del Kalos de MUSSAP (Rafael Campa,
+      // 28/09/2026). Solo la matrícula: la compañía y el nº de la oportunidad son los de la
+      // competencia y difieren de los de nuestra póliza perdida aunque sea el mismo seguro.
+      const hueco = enCompetencia.find(s => s.oportunidad === null && o.ramo !== null && s.poliza.tipo === o.ramo
+        && !otraMatricula(o.matricula, s.poliza.matricula))
       if (hueco) hueco.oportunidad = o
       else sueltas.push({ clase: 'oportunidad', id: o.id, oportunidad: o })
     }
@@ -246,6 +252,11 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
     oportunidadesLeidas: oportunidades !== null,
     declaradasLeidas: declaradas !== null,
   }
+}
+
+function otraMatricula(a: string | null, b: string | null): boolean {
+  const x = claveMatricula(a), y = claveMatricula(b)
+  return x !== null && y !== null && x !== y
 }
 
 /** Una oportunidad abierta del cliente sin próxima tarea está huérfana: nadie la va a mover. */
