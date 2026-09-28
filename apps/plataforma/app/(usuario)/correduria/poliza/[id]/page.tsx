@@ -18,7 +18,7 @@ import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { eur } from '@/lib/dinero'
 import { bloqueCobro, etiquetaGestionCobro, filasContrato, lugarRiesgo, primaParaPintar, vigenciaRiesgo, type Fila } from '@/lib/poliza-contrato'
-import { PageHeader } from '@/components/ui'
+import { PageHeader, Pagina } from '@/components/ui'
 // Un solo estilo de panel para toda la correduría: el de la ficha del cliente.
 import { Tarjeta, tarjeta, th, td, sub } from '../../cliente/[id]/piezas'
 import Plegable from './Plegable'
@@ -39,19 +39,20 @@ export default async function PolizaPage({ params, searchParams }: {
   const [{ id }, sp] = await Promise.all([params, searchParams])
   const v = Array.isArray(sp.v) ? sp.v[0] : sp.v
   const r = await polizaAsegura(id)
-  if (r.estado !== 'ok') return <NoSePudo estado={r} />
+  if (r.estado !== 'ok') return <Pagina ancho="tabla"><NoSePudo estado={r} /></Pagina>
   const p = r.poliza
   const cancelada = p.estado === 'cancelada'
   const anul = p.viva && !cancelada ? ventanaAnulacion(p.fechaVencimiento) : null
   const prima = primaParaPintar(p, p.contrato)
 
   return (
-    // `minmax(0, 1fr)` NO es decorativo (mismo caso que la ficha de cliente): sin él la pista
-    // implícita de este grid se dimensiona con su contenido más ancho —las tablas de recibos,
-    // coberturas y siniestros, que declaran `minWidth: 560`— y arrastra la página entera fuera
-    // del móvil. El `overflowX: 'auto'` que las envuelve queda anulado, porque para cuando actúa
-    // su contenedor ya ha crecido. Medido en Chromium el 02/09/2026: 590 → 390 con esta línea.
-    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
+    <Pagina ancho="tabla">
+      {/* `minmax(0, 1fr)` NO es decorativo (mismo caso que la ficha de cliente): sin él la pista
+          implícita de este grid se dimensiona con su contenido más ancho —las tablas de recibos,
+          coberturas y siniestros, que declaran `minWidth: 560`— y arrastra la página entera fuera
+          del móvil. El `overflowX: 'auto'` que las envuelve queda anulado, porque para cuando actúa
+          su contenedor ya ha crecido. Medido en Chromium el 02/09/2026: 590 → 390 con esta línea. */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 16 }}>
       <div>
         <div style={{ fontSize: 13, color: 'var(--muted)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Link href="/correduria">← Correduría</Link>
@@ -92,7 +93,8 @@ export default async function PolizaPage({ params, searchParams }: {
       </div>
 
       <PanelAccesos inicial={v ?? null} accesos={accesosPoliza(p, cancelada)} />
-    </div>
+      </div>
+    </Pagina>
   )
 }
 

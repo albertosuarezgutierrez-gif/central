@@ -1,3 +1,4 @@
+import { Pagina } from '@/components/ui'
 import LlamadaClient from './LlamadaClient'
 
 export const dynamic = 'force-dynamic'
@@ -8,5 +9,5 @@ export const dynamic = 'force-dynamic'
  * botones de resultado que dejan escrito el siguiente paso.
  */
 export default function LlamadaPage() {
-  return <LlamadaClient />
+  return <Pagina ancho="tabla"><LlamadaClient /></Pagina>
 }

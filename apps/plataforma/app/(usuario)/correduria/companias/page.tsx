@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Building2 } from 'lucide-react'
 import { companiasAsegura, interpretarCompanias, type Compania, type Contacto } from '@/lib/companias-asegura'
 import { etiquetaArea } from '@central/module-seguros'
-import { PageHeader } from '@/components/ui'
+import { PageHeader, Pagina } from '@/components/ui'
 import ContactoAcciones from '../ContactoAcciones'
 
 export const dynamic = 'force-dynamic'
@@ -20,28 +20,30 @@ export default async function CompaniasPage() {
   const r = interpretarCompanias(status, json)
 
   return (
-    <div style={{ display: 'grid', gap: 16 }}>
-      <div>
-        <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
-        <PageHeader
-          titulo="Contactos por compañía"
-          icono={<Building2 size={20} strokeWidth={1.75} />}
-          sub="A quién llamar o escribir en cada aseguradora. Minado del correo de Alberto — no es la ficha oficial de la compañía."
-        />
-      </div>
-
-      {r.estado !== 'ok' ? (
-        <div style={tarjeta}>
-          <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
-            No se ha podido comprobar el directorio. No significa que esté vacío.
-            {r.estado === 'error' && <> <strong>{r.motivo}</strong></>}
-            {r.estado === 'sin_configurar' && <> Falta <code>ASEGURA_OPERADOR_SECRET</code> en este proyecto.</>}
-          </p>
+    <Pagina ancho="tabla">
+      <div style={{ display: 'grid', gap: 16 }}>
+        <div>
+          <Link href="/correduria" style={{ fontSize: 13, color: 'var(--muted)' }}>← Correduría</Link>
+          <PageHeader
+            titulo="Contactos por compañía"
+            icono={<Building2 size={20} strokeWidth={1.75} />}
+            sub="A quién llamar o escribir en cada aseguradora. Minado del correo de Alberto — no es la ficha oficial de la compañía."
+          />
         </div>
-      ) : (
-        <ListaCompanias companias={r.companias} />
-      )}
-    </div>
+
+        {r.estado !== 'ok' ? (
+          <div style={tarjeta}>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
+              No se ha podido comprobar el directorio. No significa que esté vacío.
+              {r.estado === 'error' && <> <strong>{r.motivo}</strong></>}
+              {r.estado === 'sin_configurar' && <> Falta <code>ASEGURA_OPERADOR_SECRET</code> en este proyecto.</>}
+            </p>
+          </div>
+        ) : (
+          <ListaCompanias companias={r.companias} />
+        )}
+      </div>
+    </Pagina>
   )
 }
 
