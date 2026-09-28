@@ -12,6 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — Correo de aviso de vencimiento: «Prima anual» llevaba la NETA de la póliza o, si no la traía, el TOTAL del
+recibo, bajo el mismo rótulo. Ahora siempre la total (bruta de la póliza → recibo anual, vía `primaConRecibos`) y el rótulo dice
+«(impuestos incluidos)». Cepos en `texto-vencimiento.test.ts` y `regression-prima-con-recibos.test.ts` (vistos en rojo). Check-in
+043673655: hasta las 07:00 UTC no había entrado ningún fichero CIMA desde el 27/09 09:01 → re-armado 28/09 12:30 UTC.
+
 **(28/09/2026)** — `facturas-correo`: pasada de rutina sin novedades que archivar. Vía B sana
 (`dias_caido=0`), `agente_salud` actualizado. Sin candidatos nuevos en correo ni subidas manuales.
 Backlog persistente revisado y confirmado sin resolver: ASECON 181,50€ (factura 1-001804, renta
