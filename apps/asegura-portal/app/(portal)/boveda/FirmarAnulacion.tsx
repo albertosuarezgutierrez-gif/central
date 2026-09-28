@@ -99,7 +99,7 @@ function Tarjeta({ a, consentimiento, corredor }: { a: AnulacionPendiente; conse
       <article className="vencimiento-tarjeta">
         <strong style={{ fontSize: 15 }}>{titulo}{poliza ? ` · ${poliza}` : ''}</strong>
         <p style={{ margin: 0, fontSize: 14 }}>
-          Firmada el {fecha(paso.firmadaEl)}. Nosotros se la comunicamos a la compañía y te avisamos cuando la confirme.
+          Firmada el {fecha(paso.firmadaEl)}. Nosotros se la comunicamos a la compañía y te avisamos cuando la confirme. Te mandamos por correo la carta firmada con su justificante, y la tienes también en la ficha de esta póliza.
         </p>
       </article>
     )

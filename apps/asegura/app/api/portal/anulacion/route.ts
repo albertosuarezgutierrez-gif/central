@@ -5,6 +5,7 @@ import { correduriaUnica } from '@/lib/cartera'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { anulacionesParaFirmar, firmarAnulacion, pedirCodigoFirma } from '@/lib/anulacion-portal'
 import { enviarAnulacionTrasFirma } from '@/lib/aprobaciones'
+import { entregarJustificanteAnulacion } from '@/lib/justificante-anulacion'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
 
@@ -75,6 +76,13 @@ export const POST = auditado(async (req: Request) => {
             console.log(`[portal/anulacion] ${anulacionId} firmada; envío a la compañía: ${envio.estado}${'motivo' in envio ? ` (${envio.motivo})` : ''}`)
           } catch (e) {
             console.error('[portal/anulacion] firmada; el envío automático falló, queda en la cola:', e instanceof Error ? e.message : e)
+          }
+          // Después del envío a la compañía, para que el correo al cliente diga la verdad («ya se lo hemos enviado»).
+          try {
+            const j = await entregarJustificanteAnulacion(correduria.id, anulacionId)
+            console.log(`[portal/anulacion] ${anulacionId} justificante al cliente: ${JSON.stringify(j)}`)
+          } catch (e) {
+            console.error('[portal/anulacion] firmada; el justificante al cliente falló:', e instanceof Error ? e.message : e)
           }
         })
       }

@@ -147,6 +147,7 @@ function Abierta({ a, ocupado, firmando, nota, setFirmando, setNota, accion }: {
         ))}
       </ol>
       {a.firmaNota && <span style={NOTA}>Firma: {a.firmaNota}</span>}
+      {a.firmaElectronica && <Justificante id={a.id} />}
       {a.siguiente && <span style={{ ...NOTA, color: a.siguiente.alerta ? 'var(--negative)' : 'var(--muted)' }}>{a.siguiente.texto}</span>}
 
       {a.estado === 'solicitada' && firmando && (
@@ -182,6 +183,33 @@ function Abierta({ a, ocupado, firmando, nota, setFirmando, setNota, accion }: {
       {a.estado === 'firmada' && a.esperaEmision && <span style={NOTA}>La firmó junto con el presupuesto nuevo: no sale hacia la compañía hasta que marques ese presupuesto como emitido (tarjeta «Presupuestos»). Así el cliente nunca se queda sin seguro si la emisión falla.</span>}
       {a.estado === 'firmada' && !a.esperaEmision && <span style={NOTA}>Si la firmó en el portal, el correo a la compañía con la carta firmada adjunta te espera en «Hoy · Esperan tu OK» y, al enviarlo, pasa sola a «comunicada». Si la mandas tú (firma en papel, o descartaste ese correo), pulsa «Comunicada a la compañía» cuando salga.</span>}
       {a.estado === 'solicitada' && <span style={NOTA}>Sin la firma del cliente no se comunica a la compañía. Si tiene portal, la ve en «Pendiente de tu firma» y firma con un código a su correo; si firma en papel, pulsa «Firma recibida».</span>}
+    </div>
+  )
+}
+
+/** Manda (o reenvía) al cliente su carta firmada con el justificante; sale sola tras firmar en el portal. */
+function Justificante({ id }: { id: string }) {
+  const [ocupado, setOcupado] = useState(false)
+  const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
+  async function mandar() {
+    if (!window.confirm('¿Mandar al cliente por correo su carta de baja firmada con el justificante?')) return
+    setOcupado(true); setAviso(null)
+    try {
+      const r = await fetch('/api/correduria/anulaciones/justificante', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) })
+      const j = (await r.json().catch(() => null)) as { ok?: boolean; texto?: string } | null
+      setAviso({ ok: j?.ok === true, texto: j?.texto ?? 'NO se sabe si ha salido: mira la ficha antes de repetir.' })
+    } catch {
+      setAviso({ ok: false, texto: 'NO se sabe si ha salido: mira la ficha antes de repetir.' })
+    } finally {
+      setOcupado(false)
+    }
+  }
+  return (
+    <div style={{ display: 'grid', gap: 4, justifyItems: 'start' }}>
+      <button type="button" disabled={ocupado} style={btnStyle('sutil')} onClick={() => void mandar()}>
+        {ocupado ? 'Enviando…' : 'Mandar justificante al cliente'}
+      </button>
+      {aviso && <p role="status" style={{ ...NOTA, color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>{aviso.texto}</p>}
     </div>
   )
 }

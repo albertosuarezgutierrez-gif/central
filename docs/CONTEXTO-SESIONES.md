@@ -818,6 +818,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Baja firmada en el portal → justificante al cliente + archivo en su póliza
+Auditoría de la baja Mapfre de Pablo Guzmán Pueyo: SÍ firmó (28/09 10:18) y la carta llegó a Mapfre (Resend delivered).
+El 26/09 no pudo: 3 códigos, 0 «Firmar» — perdía sesión/estado al salir a leer el código (iPhone). Y tras firmar no recibía NADA.
+Nuevo `apps/asegura/lib/justificante-anulacion.ts`: tras la firma (after(), detrás del envío a la compañía) archiva el PDF
+firmado en `documentos` de la póliza (visible en su portal) y le manda correo con PDF+txt. Idempotente. Botón «Mandar
+justificante al cliente» en plataforma (póliza → anulación) = reenvío manual. Pendiente: pulsarlo para Pablo (y decidir
+Victor/Jose, también firmados sin justificante); y el bug de UX del paso del código en el portal (no arreglado aquí).
+
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.
 - Motivo: todo a 0 comandas y el aviso NO pasa por el panel /telegram (lo manda la edge function directa), así que no se podía apagar desde allí. Reactivar: `cron.alter_job(21, active := true)`.
