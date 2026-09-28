@@ -837,6 +837,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Correduría: el CP rellena solo la ciudad (y la provincia)
+- Tabla CP→municipio incrustada (`apps/plataforma/lib/municipios-por-cp.json`, 11.254 CP, INE+CNIG; solo servidor)
+  vía `GET /api/correduria/codigo-postal`. Campo `CiudadPorCp.tsx` en alta de cliente, edición de dirección y
+  dirección del riesgo: 1 municipio → se pone; varios → desplegable (+ «Otra…»). No pisa la ficha al abrirla;
+  si la ciudad guardada contradice al CP lo avisa debajo (caso 41011 + «ESPARTINAS»: 41011 es Sevilla).
+- La provincia ahora se sobrescribe con la del CP al teclear un CP completo (antes solo si estaba vacía).
+
 ## (28/09/2026) Presupuesto de moto: la matrícula ya rellena sola la fecha de matriculación
 - `MotoNuevo.tsx` no tenía el autorrelleno que sí tenía `AutoNuevo.tsx`: se porta igual (estimación por serie
   al instante + Avant2 a los 500 ms; nunca pisa una fecha tecleada; en modo póliza no actúa).

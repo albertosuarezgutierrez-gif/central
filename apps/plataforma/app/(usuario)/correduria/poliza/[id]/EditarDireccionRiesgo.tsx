@@ -5,6 +5,7 @@ import { House } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { FILA } from '@/app/(usuario)/correduria/iconos'
 import DireccionConfirmable from '../../DireccionConfirmable'
+import CiudadPorCp from '../../CiudadPorCp'
 
 /**
  * «¿Dónde está el inmueble?» — CIMA no manda la dirección del riesgo de
@@ -104,7 +105,7 @@ export default function EditarDireccionRiesgo({ polizaId, esHogar }: { polizaId:
         </label>
         <label style={{ fontSize: 12, color: 'var(--muted)' }}>
           Localidad
-          <input type="text" value={localidad} onChange={e => setLocalidad(e.target.value)} maxLength={80} placeholder="Sevilla" style={campo} />
+          <CiudadPorCp cp={cp} ciudad={localidad} onCiudad={setLocalidad} style={campo} />
         </label>
       </div>
       <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>
