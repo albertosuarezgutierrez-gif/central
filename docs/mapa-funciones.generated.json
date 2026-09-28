@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T13:15:04Z",
-  "sha": "4d54b9661c00c52ae4c375b3d314c377d1dbb63f",
+  "generadoEn": "2026-09-28T13:58:21Z",
+  "sha": "b39cd3cf461f1ab41275292df7381fceffa371f3",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -14550,7 +14550,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "string | null",
-          "linea": 985
+          "linea": 1022
         },
         {
           "nombre": "numero",
@@ -14558,7 +14558,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "number | null",
-          "linea": 990
+          "linea": 1027
         },
         {
           "nombre": "esObjeto",
@@ -14566,7 +14566,7 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "v is Record<string, unknown>",
-          "linea": 994
+          "linea": 1031
         },
         {
           "nombre": "coincideCompania",
@@ -14574,7 +14574,7 @@
           "exportada": false,
           "params": "nombreComun: string, aseguradora: string",
           "retorno": "boolean",
-          "linea": 998
+          "linea": 1035
         }
       ],
       "tablas": [
@@ -14585,7 +14585,7 @@
         "tarificaciones"
       ],
       "rutaApi": "/api/operador/codeoscopic/emitir",
-      "hash": "fffdabf59514"
+      "hash": "18728841f80d"
     },
     {
       "ruta": "apps/asegura/app/api/operador/codeoscopic/faltan-producto/route.ts",
@@ -22322,7 +22322,8 @@
       "resumen": "La cuenta de cargo que YA conocemos de un cliente, para no pedírsela otra vez al emitir. Impuro (BD): la parte pura vive en `emitir-iban.ts`. 🚨 Medido el 12/09/2026, tras el duodécimo 400 («The bank account is mandatory…»): la primera versión miraba SOLO `polizas.cuenta_bancaria` y `clientes.cuenta",
       "exporta": [
         "cuentaDeFicha",
-        "origenCuentaAceptada"
+        "origenCuentaAceptada",
+        "presupuestoAceptadoDe"
       ],
       "funciones": [
         {
@@ -22341,6 +22342,15 @@
           "params": "correduriaId: string, tarificacionId: string | null",
           "retorno": "Promise<CuentaAceptada | null>",
           "linea": 134
+        },
+        {
+          "nombre": "presupuestoAceptadoDe",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, tarificacionId: string | null",
+          "retorno": "Promise<PresupuestoAceptado | null>",
+          "linea": 160,
+          "resumen": "El presupuesto ACEPTADO (sin emitir ni retirar) de esta tarificación y la opción que eligió el cliente. `null` = no hay ninguno (emisión sin presupuesto, p. ej. retarificar desde la ficha). 🚨 Si la c"
         }
       ],
       "tablas": [
@@ -22349,10 +22359,11 @@
         "poliza_recibos",
         "polizas",
         "presupuesto",
-        "presupuesto_evento"
+        "presupuesto_evento",
+        "presupuesto_opcion"
       ],
       "rutaApi": null,
-      "hash": "a240b22bed70"
+      "hash": "7697eaf9867f"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/desde-cartera-decesos.ts",
@@ -28369,7 +28380,8 @@
         "lineaCuentaHistorial",
         "textoAutorizacion",
         "polizaParaCuenta",
-        "cuentaDistintaDeLaFirmada"
+        "cuentaDistintaDeLaFirmada",
+        "discrepanciaConElegida"
       ],
       "funciones": [
         {
@@ -28443,11 +28455,28 @@
           "retorno": "boolean",
           "linea": 104,
           "resumen": "🚨 La cuenta que se va a mandar a la compañía ¿es la que firmó? Solo se compara la máscara (el evento no guarda el IBAN). `true` = NO coincide y no se puede ofrecer sin más: el cliente firmó otra. Sin"
+        },
+        {
+          "nombre": "normalizarCompania",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string",
+          "retorno": "string",
+          "linea": 109
+        },
+        {
+          "nombre": "discrepanciaConElegida",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: { companiaProyecto: string companiaElegida: string primaEnviada: number | null primaElegida: number }",
+          "retorno": "string | null",
+          "linea": 121,
+          "resumen": "🚨 ¿Lo que se va a emitir es la opción que el cliente FIRMÓ en el portal? Se emite desde la fila que pincha Alberto en la parrilla; sin esto, nada impide mandar otra compañía u otra prima. `null` = co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "7436f4a77f62"
+      "hash": "e51b6b4e065d"
     },
     {
       "ruta": "apps/asegura/lib/presupuesto.ts",
@@ -156660,7 +156689,7 @@
           "exportada": true,
           "params": "c: Comparativa, claveNivelActual: string | null",
           "retorno": "Portada",
-          "linea": 191,
+          "linea": 193,
           "resumen": "Elige las tres de portada sobre una `Comparativa` ya construida. Es una capa FINA encima de `agruparPrecios`, no un segundo motor: la agrupación por cobertura, el orden y `masBarataEmitible` ya están "
         },
         {
@@ -156669,7 +156698,7 @@
           "exportada": false,
           "params": "grupos: GrupoCobertura[]",
           "retorno": "FilaPrecio | null",
-          "linea": 230,
+          "linea": 232,
           "resumen": "La más barata emitible de TODOS los grupos. Los grupos ya vienen ordenados."
         },
         {
@@ -156678,7 +156707,7 @@
           "exportada": false,
           "params": "grupos: GrupoCobertura[]",
           "retorno": "GrupoCobertura | null",
-          "linea": 252,
+          "linea": 254,
           "resumen": "El grupo de más cobertura. `rango` ordena de menos a más y los niveles NO reconocidos se van al final con rangos centinela (800/900): si se cogiera el `rango` mayor a secas, «no reconocido» ganaría si"
         },
         {
@@ -156687,13 +156716,13 @@
           "exportada": false,
           "params": "pares: readonly (readonly [FilaPrecio | null, PapelPortada])[], coberturaDistinta: boolean,",
           "retorno": "OpcionPortada[]",
-          "linea": 268,
+          "linea": 270,
           "resumen": "Si dos papeles caen en la misma opción se FUNDEN y se dice («es a la vez la equivalente y la más barata»). No se rellena el hueco con una cualquiera para tener tres tarjetas: una tarjeta de relleno es"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4db8130e7d01"
+      "hash": "9d0399a62eec"
     },
     {
       "ruta": "packages/module-seguros/src/prima-evolucion.ts",
@@ -163712,6 +163741,6 @@
   ],
   "resumen": {
     "archivos": 3857,
-    "funciones": 12602
+    "funciones": 12605
   }
 }
