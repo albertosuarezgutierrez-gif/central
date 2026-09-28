@@ -45,3 +45,9 @@ test('sobreOpciones: sin formattedOptions es no_manda con lista null, nunca leid
   const l = [{ etiqueta: 'Asistencia en viaje', valor: 'Estándar' }]
   assert.deepEqual(sobreOpciones(l, t), { estado: 'leidas', lista: l, leidasAt: t })
 })
+
+test('leerOpcionesLegibles: también en product.formattedOptions (donde las pone el spec)', () => {
+  const q = { product: { formattedOptions: [{ label: 'Asistencia en viaje', formattedValue: 'Estándar' }] } }
+  assert.deepEqual(leerOpcionesLegibles(q), [{ etiqueta: 'Asistencia en viaje', valor: 'Estándar' }])
+  assert.equal(leerOpcionesLegibles({ product: {} }), null)
+})
