@@ -26,8 +26,9 @@ import {
   ibanEnmascarado,
   ibanValido,
 } from '@/lib/codeoscopic/emitir-iban'
-import { cuentaDeFicha, origenCuentaAceptada, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
-import { cuentaDistintaDeLaFirmada, polizaParaCuenta } from '@/lib/presupuesto-cuenta'
+import { cuentaDeFicha, origenCuentaAceptada, presupuestoAceptadoDe, SIN_CUENTA } from '@/lib/codeoscopic/cuenta-ficha'
+import { cuentaDistintaDeLaFirmada, discrepanciaConElegida, polizaParaCuenta } from '@/lib/presupuesto-cuenta'
+import { marcarEmitido } from '@/lib/envio-presupuesto'
 import { conProductoPorDefecto } from '@/lib/codeoscopic/opciones-producto'
 import { documentoTomador, fraccionamientoDeOferta, matriculaProyecto } from '@/lib/codeoscopic/importar'
 import {
@@ -218,6 +219,40 @@ export const POST = auditado(async (req: Request) => {
     return NextResponse.json({ estado: 'error', causa: resuelto.causa, mensaje: resuelto.mensaje }, { status: resuelto.status })
   }
   const ctx = resuelto.ctx
+
+  // 🚨 Si el cliente aceptó en el portal un presupuesto de ESTA tarificación, lo que se emite tiene
+  // que ser la opción que FIRMÓ (compañía y prima). Fail-closed: si no se puede mirar, no se emite.
+  let aceptado: Awaited<ReturnType<typeof presupuestoAceptadoDe>>
+  try {
+    aceptado = await presupuestoAceptadoDe(correduria.id, p.tarificacion_id)
+  } catch (e) {
+    console.error('[emitir] no se pudo leer el presupuesto aceptado:', e instanceof Error ? e.message : e)
+    return NextResponse.json(
+      { estado: 'error', causa: 'otro', mensaje: 'No se ha podido comprobar si el cliente firmó un presupuesto de esta tarificación. No se ha emitido nada; reinténtalo.' },
+      { status: 503 },
+    )
+  }
+  if (aceptado) {
+    const motivo = discrepanciaConElegida({
+      companiaProyecto: p.aseguradora,
+      companiaElegida: aceptado.compania,
+      primaEnviada: numero(cuerpo.primaAnual),
+      primaElegida: aceptado.primaEur,
+    })
+    if (motivo) {
+      return NextResponse.json(
+        { estado: 'error', causa: 'otro', mensaje: `No es la opción que firmó el cliente: ${motivo}. Emite desde su fila o mándale otro presupuesto. No se ha emitido nada.` },
+        { status: 409 },
+      )
+    }
+  }
+  /** Cierra el presupuesto aceptado al acuñar la póliza. Best-effort: la póliza ya existe. */
+  const cerrarPresupuesto = async () => {
+    if (!aceptado) return
+    await marcarEmitido(correduria.id, { id: aceptado.id, actor }).catch((e: unknown) =>
+      console.error('[emitir] póliza acuñada pero el presupuesto no se marcó emitido:', e instanceof Error ? e.message : e),
+    )
+  }
 
   // (iii) Interruptor PROPIO del modo nuevo, fail-closed: sin
   // `CODEOSCOPIC_EMISION_NUEVO=1` un proyecto sin póliza sigue sin emitirse,
@@ -411,6 +446,7 @@ export const POST = auditado(async (req: Request) => {
       ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunadoAc.polizaId, crudo: crudoPrevio })
       : { documentoGuardado: null, avisoDocumento: null }
     // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK).
+    if (acunadoAc.ok) await cerrarPresupuesto()
     const trasAc = acunadoAc.ok ? await trasEmisionConTope(correduria.id, { clienteId: ctx.clienteId, polizaId: acunadoAc.polizaId, polizaOrigenId: ctx.polizaOrigenId }) : null
     return NextResponse.json({
       estado: acunadoAc.ok ? 'ok' : 'emitido_sin_acunar',
@@ -966,6 +1002,7 @@ export const POST = auditado(async (req: Request) => {
 
   // Baja de la anterior abierta YA y correo al cliente (la pulsación de «Emitir» es su OK). Después
   // del archivado: si el PDF ha llegado, el cliente ya lo encuentra al entrar.
+  if (acunado.ok) await cerrarPresupuesto()
   const tras = acunado.ok ? await trasEmisionConTope(correduria.id, { clienteId: ctx.clienteId, polizaId: acunado.polizaId, polizaOrigenId: ctx.polizaOrigenId }) : null
 
   return NextResponse.json({

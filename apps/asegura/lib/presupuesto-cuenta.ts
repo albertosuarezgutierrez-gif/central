@@ -105,3 +105,30 @@ export function cuentaDistintaDeLaFirmada(ibanFicha: string | null, mascaraFirma
   if (!mascaraFirmada || !ibanFicha) return false
   return mascaraCuenta(ibanFicha) !== mascaraFirmada
 }
+
+function normalizarCompania(s: string): string {
+  return s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+/** Margen para la prima: céntimos de redondeo, nunca otra opción. */
+export const TOLERANCIA_PRIMA = 0.02
+
+/**
+ * 🚨 ¿Lo que se va a emitir es la opción que el cliente FIRMÓ en el portal? Se emite desde la fila
+ * que pincha Alberto en la parrilla; sin esto, nada impide mandar otra compañía u otra prima.
+ * `null` = coincide (o no hay prima que comparar); texto = el motivo para no emitir.
+ */
+export function discrepanciaConElegida(e: {
+  companiaProyecto: string
+  companiaElegida: string
+  primaEnviada: number | null
+  primaElegida: number
+}): string | null {
+  if (normalizarCompania(e.companiaProyecto) !== normalizarCompania(e.companiaElegida)) {
+    return `el cliente firmó ${e.companiaElegida} y este proyecto es de ${e.companiaProyecto}`
+  }
+  if (e.primaEnviada !== null && e.primaElegida > 0 && Math.abs(e.primaEnviada - e.primaElegida) / e.primaElegida > TOLERANCIA_PRIMA) {
+    return `el cliente firmó una prima de ${e.primaElegida.toFixed(2)} € y se va a emitir con ${e.primaEnviada.toFixed(2)} €`
+  }
+  return null
+}

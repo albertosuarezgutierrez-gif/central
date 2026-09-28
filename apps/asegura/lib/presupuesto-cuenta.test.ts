@@ -126,3 +126,17 @@ test('🪤 al emitir NO se ofrece una cuenta cuya máscara no es la firmada', as
   const decision = emitir.indexOf('decidirCuentaEnvio({')
   assert.ok(corte > 0 && corte < decision, 'la comprobación va antes de decidir qué cuenta se manda')
 })
+
+test('🪤 emitir OTRA opción que la firmada (compañía o prima) se para; la misma, pasa', async () => {
+  const { discrepanciaConElegida } = await import('./presupuesto-cuenta.ts')
+  const base = { companiaProyecto: 'Reale', companiaElegida: 'REALE ', primaEnviada: 300.0, primaElegida: 300.4 }
+  assert.equal(discrepanciaConElegida(base), null)
+  assert.match(discrepanciaConElegida({ ...base, companiaProyecto: 'Mapfre' }) ?? '', /firmó REALE/)
+  assert.match(discrepanciaConElegida({ ...base, primaEnviada: 350 }) ?? '', /prima/)
+  assert.equal(discrepanciaConElegida({ ...base, primaEnviada: null }), null)
+  const emitir = readFileSync(fileURLToPath(new URL('../app/api/operador/codeoscopic/emitir/route.ts', import.meta.url)), 'utf8')
+  const guarda = emitir.indexOf('discrepanciaConElegida({')
+  const submit = emitir.indexOf('solicitadoPor: actor')
+  assert.ok(guarda > 0 && guarda < submit, 'la comprobación va ANTES de mandar nada a la compañía')
+  assert.equal((emitir.match(/if \(acunado(Ac)?\.ok\) await cerrarPresupuesto\(\)/g) ?? []).length, 2, 'los dos caminos de acuñado cierran el presupuesto')
+})
