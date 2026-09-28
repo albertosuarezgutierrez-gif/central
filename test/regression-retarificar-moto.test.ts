@@ -65,7 +65,10 @@ test('emisión de moto: el precio de una póliza se puede emitir con el MISMO pa
 
 test('ReRate: las opciones por defecto de Allianz AUTO no se mandan a una moto', () => {
   const oferta = leer('apps/asegura/app/api/operador/codeoscopic/oferta/route.ts')
-  assert.match(oferta, /opcionesPorDefecto\(compania, t\.producto\)/)
+  // Desde el 28/09/2026 el ramo es el de la póliza O, sin póliza (cliente nuevo), el de la
+  // tarificación: así una moto NUEVA tampoco recibe las opciones de auto.
+  assert.match(oferta, /const producto = t\.producto \?\? tipoDeRamo\(t\.ramo\)/)
+  assert.match(oferta, /opcionesPorDefecto\(compania, producto\)/)
 })
 
 test('carné × cilindrada: las dos vías de moto cruzan el carné con la versión antes de pagar', () => {
