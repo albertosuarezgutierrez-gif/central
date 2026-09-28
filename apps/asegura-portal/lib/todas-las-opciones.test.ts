@@ -60,7 +60,10 @@ test('preseleccion: lo pedido ∩ interruptores disponibles, en su orden', () =>
   // Pide grúa, lunas y robo; «robo» no lo incluye ninguna opción → no hay interruptor → no se marca.
   assert.deepEqual(preseleccion('auto', 'Quiero lunas, grúa y robo', inter), ['asistencia_viaje', 'lunas'])
   assert.deepEqual(preseleccion(null, 'Quiero lunas', inter), [])
-  assert.deepEqual(preseleccion('auto', null, inter), [])
+  // Sin necesidades, la grúa sale marcada igual en coche y moto (si alguna opción la incluye).
+  assert.deepEqual(preseleccion('auto', null, inter), ['asistencia_viaje'])
+  assert.deepEqual(preseleccion('moto', null, interruptoresGarantias('moto', ops)), ['asistencia_viaje'])
+  assert.deepEqual(preseleccion('auto', null, interruptoresGarantias('auto', [{ id: 'b', compania: 'X', primaEur: 1, garantias: G({ lunas: 'si' }) }])), [])
 })
 
 test('alternarGarantia: marca y desmarca conservando el orden de los interruptores', () => {

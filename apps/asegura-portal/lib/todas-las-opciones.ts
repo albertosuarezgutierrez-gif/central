@@ -14,6 +14,7 @@ import {
   capitalServicio,
   clasificarCoberturas,
   garantiasDeNecesidades,
+  preseleccionFija,
   type EstadoGarantia,
   type GarantiasClasificadas,
   type InterruptorGarantia,
@@ -69,7 +70,8 @@ export function garantiasDeActual(ramo: RamoGarantias, coberturas: readonly stri
  */
 export function preseleccion(ramo: RamoGarantias | null, necesidades: string | null | undefined, interruptores: readonly InterruptorGarantia[]): string[] {
   if (ramo === null) return []
-  const pedidas = new Set(garantiasDeNecesidades(ramo, necesidades))
+  // Lo que pidió + lo que sale marcado siempre en su ramo (la grúa en coche y moto).
+  const pedidas = new Set([...garantiasDeNecesidades(ramo, necesidades), ...preseleccionFija(ramo, interruptores)])
   return interruptores.map((i) => i.clave).filter((c) => pedidas.has(c))
 }
 

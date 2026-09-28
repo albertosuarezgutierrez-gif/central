@@ -969,7 +969,7 @@ export {
   type GarantiasClasificadas,
   type RamoGarantias,
 } from './catalogo-garantias.ts'
-export { estadoDe, filtrarPorGarantias, interruptoresGarantias, type InterruptorGarantia, type OpcionFiltrable, type ResultadoFiltro } from './filtro-garantias.ts'
+export { estadoDe, filtrarPorGarantias, interruptoresGarantias, preseleccionFija, GARANTIAS_PRESELECCIONADAS, type InterruptorGarantia, type OpcionFiltrable, type ResultadoFiltro } from './filtro-garantias.ts'
 export {
   garantiasDeNecesidades,
   capitalServicio,

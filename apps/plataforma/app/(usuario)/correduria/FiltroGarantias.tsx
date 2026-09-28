@@ -10,13 +10,13 @@
 // Las coberturas se leen en segundo plano justo después de tarificar, así que lo normal es abrir
 // esto con `garantias: null` en todos: se dice «Leyendo coberturas…», jamás «no incluye».
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, RefreshCw } from 'lucide-react'
 
 import { btnStyle } from '@/components/ui'
 import { CeldaCompania } from './CeldaCompania'
 import { eur } from '@/lib/dinero'
-import { filtrarPorGarantias, interruptoresGarantias, ramoDeCatalogo } from '@central/module-seguros'
+import { filtrarPorGarantias, interruptoresGarantias, preseleccionFija, ramoDeCatalogo } from '@central/module-seguros'
 import {
   claveCompania,
   ocultarParaPreparar,
@@ -96,6 +96,15 @@ export default function FiltroGarantias({
   )
   const ramoCat = ramoDeCatalogo(ramo)
   const interruptores = useMemo(() => (ramoCat ? interruptoresGarantias(ramoCat, opciones) : []), [ramoCat, opciones])
+  // La grúa (coche y moto) sale ya marcada, igual que en el portal del cliente. Una sola vez: si el
+  // corredor la quita, recargar lo guardado no se la vuelve a poner.
+  const preseleccionado = useRef(false)
+  useEffect(() => {
+    if (preseleccionado.current || interruptores.length === 0) return
+    preseleccionado.current = true
+    const fijas = preseleccionFija(ramoCat, interruptores)
+    if (fijas.length > 0) setMarcadas((m) => (m.length > 0 ? m : fijas))
+  }, [ramoCat, interruptores])
   const filtro = useMemo(() => filtrarPorGarantias(opciones, marcadas), [opciones, marcadas])
   const ocultas = useMemo(
     () => ({ companias: new Set<string>(), precios: new Set(opciones.filter((o) => !elegidas.has(o.id)).map((o) => o.id)) }),

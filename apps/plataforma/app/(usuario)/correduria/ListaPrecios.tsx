@@ -108,12 +108,12 @@ export default function ListaPrecios<P extends PrecioLista>({
  * de la más barata a la más cara), repetirla abierta eran dos listas de 31 filas seguidas. Aquí queda
  * solo para emitir cuando el cliente ya ha dicho que sí. Montaje perezoso: sin abrir, no hay DOM.
  */
-export function ListaPreciosPlegada<P extends PrecioLista>(props: Parameters<typeof ListaPrecios<P>>[0]) {
+export function ListaPreciosPlegada<P extends PrecioLista>({ titulo, ...props }: Parameters<typeof ListaPrecios<P>>[0] & { titulo?: string }) {
   const [abierta, setAbierta] = useState(false)
   return (
     <details onToggle={(e) => setAbierta((e.currentTarget as HTMLDetailsElement).open)} style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 8 }}>
       <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontWeight: 600 }}>
-        ¿Ya ha dicho que sí? Emitir uno de los {props.precios.length} precios
+        {titulo ?? `¿Ya ha dicho que sí? Emitir uno de los ${props.precios.length} precios`}
       </summary>
       {abierta && <ListaPrecios {...props} />}
     </details>
