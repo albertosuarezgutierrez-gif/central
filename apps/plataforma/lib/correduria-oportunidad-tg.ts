@@ -31,14 +31,15 @@ export type Alta = {
   ramo: RamoOportunidad
   aseguradora: string | null
   prima: number | null
-  /** `null` = no consta (o lo leído ya había pasado: ver `venceDescartado`). */
+  /** `null` = no consta. Si lo leído ya había pasado, es la siguiente renovación anual (ver `venceDescartado`). */
   fechaFinVigencia: string | null
   numeroPoliza: string | null
   /** El coche (auto/moto): distingue dos seguros del mismo cliente y da nombre a la oportunidad. */
   matricula?: string | null
   vehiculo?: string | null
   fechaTarea: string
-  /** Vencimiento leído que ya pasó: no se usa (la póliza se habrá renovado) y se dice. */
+  /** Vencimiento leído que ya pasó (un recibo del periodo anterior). `fechaFinVigencia` es entonces su
+   *  siguiente aniversario, porque la póliza renueva cada año; se dice en el mensaje. */
   venceDescartado: string | null
   /** Cuántos documentos se leyeron bien / mal. `null` = no se pidió usarlos. */
   documentos: { leidos: number; fallidos: string[] } | null
@@ -53,6 +54,20 @@ function fecha(v: unknown): string | null {
   const s = v.trim()
   const d = new Date(`${s}T00:00:00Z`)
   return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s ? null : s
+}
+
+/**
+ * El siguiente aniversario de un vencimiento anual que ya pasó (hoy incluido). `null` si hace más de
+ * dos renovaciones: tanto tiempo sin papel nuevo, pudo cambiar de compañía o anularla.
+ */
+export function siguienteRenovacion(vencido: string, hoy: string): string | null {
+  const [a, m, d] = vencido.split('-').map(Number)
+  for (let n = 1; n <= 2; n++) {
+    const dia = Math.min(d, new Date(Date.UTC(a + n, m, 0)).getUTCDate()) // 29/02 → 28/02
+    const iso = `${a + n}-${String(m).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+    if (iso >= hoy) return iso
+  }
+  return null
 }
 
 function sumarDias(iso: string, dias: number): string {
@@ -114,7 +129,9 @@ export function prepararAlta(
   }
   const venceBruto = fecha(args.vence) ?? primero('vence')
   const venceDescartado = venceBruto !== null && venceBruto < hoy ? venceBruto : null
-  const vence = venceDescartado ? null : venceBruto
+  // Un recibo viejo dice cuándo acabó ESE periodo; la póliza renueva cada año en la misma fecha. Se
+  // proyecta a la siguiente renovación (18/11/2025 → 18/11/2026) en vez de dejarlo «no consta».
+  const vence = venceDescartado ? siguienteRenovacion(venceDescartado, hoy) : venceBruto
 
   const pasoDictado = fecha(args.fechaPrimerPaso)
   if (args.fechaPrimerPaso !== undefined && args.fechaPrimerPaso !== null && args.fechaPrimerPaso !== '' && !pasoDictado) {
@@ -170,7 +187,9 @@ export function textoAlta(nombreCliente: string, a: Alta): string {
   if (coche) l.push(`• Vehículo: ${escapar(coche)}`)
   l.push(`• Primer paso: llamada el ${fechaEs(a.fechaTarea)}`)
   if (a.venceDescartado) {
-    l.push(`⚠️ El documento dice que vencía el ${fechaEs(a.venceDescartado)}, que ya pasó: se habrá renovado, así que no lo pongo. Corrígelo en la ficha cuando lo sepas.`)
+    l.push(a.fechaFinVigencia
+      ? `ℹ️ El documento es del periodo que acabó el ${fechaEs(a.venceDescartado)}. Renueva cada año, así que pongo la siguiente renovación, el ${fechaEs(a.fechaFinVigencia)}. Si cambió de compañía o la anuló, corrígelo en la ficha.`
+      : `⚠️ El documento dice que vencía el ${fechaEs(a.venceDescartado)}: hace más de dos renovaciones, así que no pongo vencimiento. Corrígelo en la ficha cuando lo sepas.`)
   }
   if (a.documentos) {
     if (a.documentos.leidos > 0) l.push(`📎 Datos leídos de ${a.documentos.leidos} documento${a.documentos.leidos === 1 ? '' : 's'} que subiste. Revísalos antes de abrir.`)

@@ -42,13 +42,26 @@ test('de varios documentos se toma el primer valor de cada campo (dos PDFs de la
   assert.equal(r.alta.aseguradora, 'Línea Directa')
 })
 
-test('un vencimiento que ya pasó NO se usa (se habrá renovado) y se dice', () => {
-  const r = prepararAlta({}, [leida({ vence: '2026-02-03' })], HOY)
+test('un vencimiento que ya pasó se proyecta a la siguiente renovación anual y se dice', () => {
+  // El recibo real de Línea Directa (0194DRY): «Vigencia 18/11/24 al 18/11/25», carta del 03/02/25.
+  const r = prepararAlta({}, [leida({ vence: '2025-11-18' })], HOY)
+  assert.ok(r.ok)
+  assert.equal(r.alta.venceDescartado, '2025-11-18')
+  assert.equal(r.alta.fechaFinVigencia, '2026-11-18')
+  assert.equal(r.alta.fechaTarea, '2026-09-28', 'a menos de 60 días: la llamada es ya')
+  assert.match(textoAlta('X', r.alta), /siguiente renovación, el 18\/11\/2026/)
+})
+
+test('siguienteRenovacion: aniversario siguiente, 29/02 cae en 28/02, y más de dos años sin papel no se adivina', async () => {
+  const { siguienteRenovacion } = await import('./correduria-oportunidad-tg.ts')
+  assert.equal(siguienteRenovacion('2026-02-03', HOY), '2027-02-03')
+  assert.equal(siguienteRenovacion('2024-02-29', '2025-01-10'), '2025-02-28')
+  assert.equal(siguienteRenovacion('2025-11-18', '2027-11-18'), '2027-11-18')
+  assert.equal(siguienteRenovacion('2022-05-01', HOY), null)
+  const r = prepararAlta({}, [leida({ vence: '2022-05-01' })], HOY)
   assert.ok(r.ok)
   assert.equal(r.alta.fechaFinVigencia, null)
-  assert.equal(r.alta.venceDescartado, '2026-02-03')
-  assert.equal(r.alta.fechaTarea, '2026-09-28')
-  assert.match(textoAlta('X', r.alta), /ya pasó/)
+  assert.match(textoAlta('X', r.alta), /más de dos renovaciones/)
 })
 
 test('sin ramo no se propone: ni se inventa ni se cae a «otros»', () => {
