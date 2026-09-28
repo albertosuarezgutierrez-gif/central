@@ -1,40 +1,41 @@
 {
  "sesion": "324449aa-bf8b-541b-9a04-aabde78dcf2f",
  "inicio": "2026-09-28T15:25:58.003Z",
- "fin": "2026-09-28T15:29:21.189Z",
- "llamadas": 12,
+ "fin": "2026-09-28T16:14:02.146Z",
+ "llamadas": 29,
  "categorias": {
   "bash": {
-   "llamadas": 3,
-   "chars_in": 805,
-   "chars_out": 5928,
+   "llamadas": 6,
+   "chars_in": 2501,
+   "chars_out": 18919,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 3
+    "Bash": 6
    }
   },
   "otro": {
-   "llamadas": 1,
-   "chars_in": 117,
-   "chars_out": 230,
+   "llamadas": 2,
+   "chars_in": 174,
+   "chars_out": 336,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "ToolSearch": 1
+    "ToolSearch": 2
    }
   },
   "mcp:Gmail": {
-   "llamadas": 3,
-   "chars_in": 680,
-   "chars_out": 68670,
+   "llamadas": 10,
+   "chars_in": 1803,
+   "chars_out": 236540,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Gmail__search_threads": 3
+    "mcp__Gmail__search_threads": 8,
+    "mcp__Gmail__get_thread": 2
    }
   },
   "mcp:Supabase": {
@@ -49,14 +50,14 @@
    }
   },
   "sql": {
-   "llamadas": 4,
-   "chars_in": 1205,
-   "chars_out": 14343,
+   "llamadas": 10,
+   "chars_in": 2826,
+   "chars_out": 58581,
    "errores": 0,
    "archivos_citados": 5,
    "chars_citados": 1574515,
    "tools": {
-    "mcp__Supabase__execute_sql": 4
+    "mcp__Supabase__execute_sql": 10
    }
   }
  }
