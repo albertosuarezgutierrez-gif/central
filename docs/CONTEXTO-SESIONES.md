@@ -869,6 +869,8 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   cron `correduria-seguimiento-presupuestos` (08/13/18 UTC, en `cron-dispatch.ts`): Telegram si no consta abierto 48 h o sin elegir 72 h.
 - Asegura: cron `coberturas-backfill` (horario, gratis) recupera `oferta_id` de precios viejos y lee sus coberturas; puerto
   `GET /api/operador/presupuesto/seguimiento` + PATCH `seguimiento_avisado`. Pendiente: medir en real el primer backfill.
+## (28/09/2026) Portal asegurado: «27500 m²» en la póliza de Calle Socorro 24
+- CIMA manda `metrosCuadrados: "275.00"`; `entero()` de `module-seguros-portal/src/bien-asegurado.ts` quitaba todo lo no-dígito → 27.500 m². Ahora acepta decimal (`275.00`/`90,5`, redondea) o miles (`1.234`); lo demás calla. Cepo en `bien-asegurado.test.ts`, visto en rojo.
 
 ## (29/09/2026) Presupuesto de DECESOS, SALUD y VIDA (rótulos reales del portal de Codeoscopic)
 - `nivelCobertura` reconoce salud (Básica < Con copago < Sin copago < Con reembolso), decesos (Tarifa

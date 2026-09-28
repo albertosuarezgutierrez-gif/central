@@ -121,6 +121,14 @@ test('los metros y el año solo salen si son creíbles', () => {
   ])
 })
 
+test('los metros de CIMA traen decimales: "275.00" son 275 m², no 27.500', () => {
+  assert.deepEqual(describirBien('hogar', { metrosCuadrados: '275.00' }).detalles, ['275 m²'])
+  assert.deepEqual(describirBien('hogar', { metrosCuadrados: '90,5' }).detalles, ['91 m²'])
+  assert.deepEqual(describirBien('hogar', { metrosCuadrados: '1.234' }).detalles, ['1234 m²'])
+  assert.deepEqual(describirBien('hogar', { metrosCuadrados: 'unos 90' }).detalles, [])
+  assert.deepEqual(describirBien('hogar', { anioConstruccionCima: '2000' }).detalles, ['Construido en 2000'])
+})
+
 test('el ramo desconocido se resuelve por las CLAVES, no se pierde', () => {
   // Un ramo que no esté en las dos listas pero traiga matrícula sigue siendo un
   // vehículo: el catálogo de ramos crece y este fichero no puede quedarse atrás
