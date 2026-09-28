@@ -184,6 +184,10 @@ export const CRON_JOBS: CronJob[] = [
   // Cada 5 min: es un aviso de «acaba de pasar», no un resumen. La marca de
   // agua NO avanza si el Telegram no sale. Ver el fichero de la ruta.
   { path: '/api/cron/correduria-actividad', schedule: '*/5 * * * *' },
+  // Seguimiento de presupuestos enviados (28/09/2026): 08:12, 13:12 y 18:12 UTC — horario de oficina
+  // para que el «¿le llamas?» llegue cuando se puede llamar. Asegura decide qué toca (48 h sin abrir,
+  // 72 h sin elegir, un aviso por etapa); este job solo avisa y marca lo avisado.
+  { path: '/api/cron/correduria-seguimiento-presupuestos', schedule: '12 8,13,18 * * *' },
   // Detector de cambios de la cartera (Fase 2 ASegura OS): 45 min después de cada pull de CIMA.
   { path: '/api/cron/correduria-eventos', schedule: '15 6,12 * * *' },
   // Blog de grupoasegura.es: un artículo cada dos semanas (día 1 y 15, 08:00 UTC).

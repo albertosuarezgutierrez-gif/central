@@ -1,4 +1,4 @@
-// BACKFILL de coberturas de los precios VIEJOS de `seguros.tarificacion_precios` (29/09/2026).
+// BACKFILL de coberturas de los precios VIEJOS de `tarificacion_precios` (29/09/2026).
 //
 // `completarCoberturasTarificacion` solo sabe leer filas CON `oferta_id`, y las guardadas antes del
 // 29/09/2026 no lo tienen (se guardaban sin él): 264 filas con `coberturas is null`, casi todas sin
@@ -214,11 +214,11 @@ async function candidatasReales(correduriaId: string, limite: number): Promise<s
   const { prisma } = await import('../tenant.ts')
   const filas = await prisma.$queryRaw<{ id: string }[]>`
     select t.id::text as id
-    from seguros.tarificaciones t
+    from tarificaciones t
     where t.correduria_id = ${correduriaId}::uuid
       and t.simulado = false
       and t.project_id_codeoscopic is not null
-      and exists (select 1 from seguros.tarificacion_precios p where p.tarificacion_id = t.id and p.coberturas is null)
+      and exists (select 1 from tarificacion_precios p where p.tarificacion_id = t.id and p.coberturas is null)
     order by t.creado_at desc
     limit ${limite}
   `
@@ -245,7 +245,7 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
     async cabecera() {
       const filas = await prisma.$queryRaw<{ simulado: boolean; project_id_codeoscopic: string | null; ramo: string }[]>`
         select simulado, project_id_codeoscopic::text as project_id_codeoscopic, ramo
-        from seguros.tarificaciones
+        from tarificaciones
         where id = ${ids.tarificacionId}::uuid and correduria_id = ${ids.correduriaId}::uuid
       `
       const f = filas[0]
@@ -256,8 +256,8 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
         id: string; compania: string; producto: string; modalidad: string | null; prima_eur: unknown; referencia_vendor: string | null
       }[]>`
         select p.id::text as id, p.compania, p.producto, p.modalidad, p.prima_eur, p.referencia_vendor
-        from seguros.tarificacion_precios p
-        join seguros.tarificaciones t on t.id = p.tarificacion_id
+        from tarificacion_precios p
+        join tarificaciones t on t.id = p.tarificacion_id
         where p.tarificacion_id = ${ids.tarificacionId}::uuid
           and t.correduria_id = ${ids.correduriaId}::uuid
           and p.coberturas is null
@@ -270,9 +270,9 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
     },
     async asignarOferta(id, ofertaId) {
       return prisma.$executeRaw`
-        update seguros.tarificacion_precios p
+        update tarificacion_precios p
         set oferta_id = ${ofertaId}
-        from seguros.tarificaciones t
+        from tarificaciones t
         where t.id = p.tarificacion_id
           and t.correduria_id = ${ids.correduriaId}::uuid
           and p.tarificacion_id = ${ids.tarificacionId}::uuid
@@ -283,10 +283,10 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
     },
     async marcar(filas, sobre, garantias) {
       return prisma.$executeRaw`
-        update seguros.tarificacion_precios p
+        update tarificacion_precios p
         set coberturas = ${JSON.stringify(sobre)}::jsonb,
             garantias = ${garantias === null ? null : JSON.stringify(garantias)}::jsonb
-        from seguros.tarificaciones t
+        from tarificaciones t
         where t.id = p.tarificacion_id
           and t.correduria_id = ${ids.correduriaId}::uuid
           and p.tarificacion_id = ${ids.tarificacionId}::uuid

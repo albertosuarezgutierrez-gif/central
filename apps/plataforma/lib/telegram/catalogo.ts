@@ -601,6 +601,12 @@ export const AVISOS: AvisoTelegram[] = [
     cuando: 'Todos los días a las 08:50, y solo cuando ha entrado alguno',
   },
   {
+    id: 'correduria.seguimiento-presupuesto', categoria: 'correduria',
+    titulo: 'Presupuesto enviado sin abrir o sin elegir',
+    que: 'Un cliente al que se le mandó un presupuesto y no consta que lo haya abierto (48 h), o que lo abrió y no ha elegido (72 h): qué garantías miró y qué compañías comparó, con el enlace a su ficha. Un aviso por etapa y presupuesto. Si no se puede leer el seguimiento, lo dice.',
+    cuando: 'A las 10:12, 15:12 y 20:12 (hora de Madrid en verano), solo si hay alguno',
+  },
+  {
     id: 'correduria.actividad-cliente', categoria: 'correduria',
     titulo: 'Actividad de un cliente en el portal',
     que: 'Lo que hace un cliente en su intranet: entrar, pedir el código y no entrar, cambiar su dirección, dar un parte o pedir que se borren sus datos. Un mensaje por pasada, agrupado por cliente, con el enlace a su ficha y sin datos de contacto. La póliza declarada y la sugerencia no van aquí: el portal ya las avisa al instante.',

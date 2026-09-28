@@ -17,7 +17,7 @@ import { useEffect, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { CeldaCompania } from '../../../CeldaCompania'
-import PrepararPresupuesto from '../../../poliza/[id]/retarificar/PrepararPresupuesto'
+import FiltroGarantias from '../../../FiltroGarantias'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { ConIcono } from '../../../iconos'
 import { eur } from '@/lib/dinero'
@@ -787,7 +787,7 @@ export default function MotoNuevo({
             {simulacion ? 'Descartar y simular de cero' : 'Descartar y pedir precio de cero — cuesta 0,50€'}
           </button>
         )}
-        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible sustituye={poliza !== null} />}
+        {resultado.estado === 'ok' && <Precios r={resultado} simulacion={simulacion} emitible sustituye={poliza !== null} clienteId={clienteId} />}
       </div>
     </div>
   )
@@ -841,9 +841,11 @@ function Precios({
   simulacion,
   emitible = false,
   sustituye = true,
+  clienteId,
 }: {
   r: Extract<Resultado, { estado: 'ok' }>
   simulacion: boolean
+  clienteId: string
   /** Desde el 28/09/2026 también sin póliza: asegura emite a un cliente NUEVO con el
    *  proyecto enlazado a la ficha y a la tarificación (antes exigía una póliza de la
    *  cartera a la que colgar la nueva). */
@@ -941,7 +943,7 @@ function Precios({
           )
         })}
       {cotizacionIdDe(r.guardado) !== null && (
-        <PrepararPresupuesto tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
+        <FiltroGarantias ramo="moto" origen={{ clienteId, ramo: 'moto' }} tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
       )}
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
