@@ -273,7 +273,7 @@ function Resultado({ r, accion }: { r: ResultadoDescarte | null; accion: 'descar
             : `No se ha podido ${accion}: ${textoMotivo(r.motivo)}`
   return (
     <p style={{ margin: 0, fontSize: 13, color: 'var(--negative)' }} role="alert">
-      ⚠️ {texto}
+      {texto}
     </p>
   )
 }

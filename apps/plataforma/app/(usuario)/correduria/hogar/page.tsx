@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import HogarCatastro from './HogarCatastro'
-import { Home } from 'lucide-react'
+import { Home, Info, AlertTriangle, CheckCircle2, XCircle } from 'lucide-react'
 import {
   lineasCodeoscopic,
   companiasCodeoscopic,
