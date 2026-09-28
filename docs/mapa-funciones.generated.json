@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T20:09:30Z",
-  "sha": "6cb98ebda2c271e6c3f7a6e4c3ed8c286287ff53",
+  "generadoEn": "2026-09-28T20:31:15Z",
+  "sha": "48abfdf99eb943bc22a7fbc9bfb03965b626beae",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -21174,7 +21174,8 @@
       "exporta": [
         "ofertaDeFila",
         "precioDeFila",
-        "planOpciones",
+        "ofertaParaOpciones",
+        "opcionesDeOferta",
         "planOfertas",
         "backfillCoberturasTarificacion",
         "pasadaBackfillCoberturas"
@@ -21186,7 +21187,7 @@
           "exportada": false,
           "params": "s: string | null | undefined",
           "retorno": null,
-          "linea": 45
+          "linea": 47
         },
         {
           "nombre": "ofertaDeFila",
@@ -21194,7 +21195,7 @@
           "exportada": true,
           "params": "f: FilaSinOferta, precios: readonly Precio[]",
           "retorno": "string | null",
-          "linea": 53,
+          "linea": 55,
           "resumen": "La oferta de una fila vieja. Primero `casarPrecio` tal cual (el criterio del presupuesto); si empata, se vuelve a intentar SOLO entre los precios de la misma modalidad. Con empate también ahí no se el"
         },
         {
@@ -21203,17 +21204,26 @@
           "exportada": true,
           "params": "f: FilaSinOferta, precios: readonly Precio[]",
           "retorno": "Precio | null",
-          "linea": 58,
+          "linea": 60,
           "resumen": "El precio del proyecto releído que corresponde a una fila guardada (mismo criterio que la oferta)."
         },
         {
-          "nombre": "planOpciones",
+          "nombre": "ofertaParaOpciones",
           "kind": "function",
           "exportada": true,
-          "params": "filas: readonly FilaSinOferta[], precios: readonly Precio[] | null, leidasAt: string,",
-          "retorno": "",
-          "linea": 67,
-          "resumen": "Las opciones de cada fila sin leer, a partir del proyecto releído. PURO. `precios === null` (la relectura falló) → `fallo`; sin precio casado → `sin_precio`. Nunca `leidas` con `[]` inventado."
+          "params": "f: FilaSinOferta, precios: readonly Precio[] | null",
+          "retorno": "string | null | 'fallo'",
+          "linea": 70,
+          "resumen": "`null` = no hay oferta (→ `sin_precio`)."
+        },
+        {
+          "nombre": "opcionesDeOferta",
+          "kind": "function",
+          "exportada": true,
+          "params": "raw: unknown",
+          "retorno": "OpcionLegible[] | null",
+          "linea": 81,
+          "resumen": "Las opciones del producto de `GET /insurances/{id}/offers/{offerId}` (28/09/2026). MEDIDO: ni la cotización ni `GET /insurances/{id}` las traen (280 de 280 precios sin ellas); el portal dice que es la"
         },
         {
           "nombre": "planOfertas",
@@ -21221,7 +21231,7 @@
           "exportada": true,
           "params": "filas: readonly FilaSinOferta[], precios: readonly Precio[]",
           "retorno": "PlanOfertas",
-          "linea": 80,
+          "linea": 92,
           "resumen": "Reparte las filas sin oferta entre «ya tiene oferta» y «no hay oferta que leer». PURO."
         },
         {
@@ -21230,7 +21240,16 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 129
+          "linea": 143
+        },
+        {
+          "nombre": "clavesDe",
+          "kind": "function",
+          "exportada": false,
+          "params": "raw: unknown",
+          "retorno": "",
+          "linea": 146,
+          "resumen": "Solo NOMBRES de claves (nivel 1 y `mainQuote.product`), para diagnosticar la forma sin volcar datos."
         },
         {
           "nombre": "backfillCoberturasTarificacion",
@@ -21238,7 +21257,7 @@
           "exportada": true,
           "params": "ids: { correduriaId: string; tarificacionId: string }, deps: Partial<DepsBackfill> = {},",
           "retorno": "Promise<ResumenBackfill>",
-          "linea": 132,
+          "linea": 154,
           "resumen": "Rellena `oferta_id` donde se puede y luego las coberturas. Nunca lanza."
         },
         {
@@ -21247,7 +21266,7 @@
           "exportada": true,
           "params": "correduriaId: string, opts: { limite?: number; presupuestoMs?: number; porTarificacionMs?: number } = {}, deps: { candidatas?: (correduriaId: string, limite: number) => Promise<string[]> backfill?: (ids: { correduriaId: string; tarificacion",
           "retorno": "Promise<ResumenPasada>",
-          "linea": 213,
+          "linea": 257,
           "resumen": "Coge hasta `limite` tarificaciones con filas pendientes (la más reciente primero) y las procesa DE UNA EN UNA dentro de `presupuestoMs`. Una sin tiempo no se empieza."
         },
         {
@@ -21256,7 +21275,7 @@
           "exportada": false,
           "params": "correduriaId: string, limite: number",
           "retorno": "Promise<string[]>",
-          "linea": 253
+          "linea": 297
         },
         {
           "nombre": "depsReales",
@@ -21264,7 +21283,7 @@
           "exportada": false,
           "params": "ids: { correduriaId: string; tarificacionId: string }",
           "retorno": "Promise<DepsBackfill>",
-          "linea": 268
+          "linea": 312
         }
       ],
       "tablas": [
@@ -21272,7 +21291,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "ca54ddc337dc"
+      "hash": "2f8fbdf5cfc9"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/buscar-proyectos.ts",
@@ -22704,7 +22723,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": "string",
-          "linea": 301,
+          "linea": 302,
           "resumen": "El texto de un error, sin suponer que sea un `Error`."
         },
         {
@@ -22713,7 +22732,7 @@
           "exportada": true,
           "params": "e: EntradaCotizacion, enTransaccion: EnTransaccion = transaccionPrisma,",
           "retorno": "Promise<Guardado>",
-          "linea": 316,
+          "linea": 317,
           "resumen": "El mismo guardado, pero que NO LANZA NUNCA. 🚨 Ésta es la que usa el embudo, y el porqué es de negocio: cuando se llega aquí el cliente YA ha pagado los 0,50€ y YA tiene su precio en pantalla. Perderl"
         }
       ],
@@ -22721,7 +22740,7 @@
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "d2255b4d4140"
+      "hash": "2304b6e46634"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/cotizar.ts",
@@ -165741,6 +165760,6 @@
   ],
   "resumen": {
     "archivos": 3890,
-    "funciones": 12778
+    "funciones": 12780
   }
 }

@@ -171,12 +171,12 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 198 | 24.532 | 17.357.748 | 0 | 0 |
-| `otro` | 193 | 6.070 | 19.022.485 | 9.261.240 | 0 |
-| `mcp:github` | 180 | 4.728 | 4.063.631 | 48.368.232 | 81 |
+| `bash` | 198 | 24.541 | 17.367.805 | 0 | 0 |
+| `otro` | 193 | 6.079 | 19.048.972 | 9.261.240 | 0 |
+| `mcp:github` | 180 | 4.731 | 4.063.740 | 48.368.232 | 81 |
 | `lectura-directa` | 176 | 4.567 | 9.920.085 | 0 | 0 |
 | `escritura` | 138 | 2.996 | 44.322.552 | 0 | 0 |
-| `sql` | 125 | 2.489 | 1.153.953 | 2.351.230 | 8 |
+| `sql` | 125 | 2.491 | 1.155.316 | 2.351.230 | 8 |
 | `mcp:Claude_Code_Remote` | 112 | 1.213 | 264.621 | 4.422.616 | 13 |
 | `mcp:Booking-com` | 18 | 517 | 2.180.043 | 0 | 0 |
 | `mcp:Vercel` | 42 | 457 | 676.452 | 198.719 | 11 |
