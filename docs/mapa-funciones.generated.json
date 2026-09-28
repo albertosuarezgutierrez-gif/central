@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-28T19:07:12Z",
-  "sha": "43cb4fba79e57e9bd59bcbb2b7265afbf0fa5c60",
+  "generadoEn": "2026-09-28T19:29:23Z",
+  "sha": "174ed73ba80c149ffb76bb07dccd280252055c26",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -22209,8 +22209,8 @@
           "exportada": true,
           "params": "quote: unknown",
           "retorno": "OpcionLegible[] | null",
-          "linea": 24,
-          "resumen": "`formattedOptions` de la cotización. `null` = el vendor no las manda (no «sin opciones»)."
+          "linea": 28,
+          "resumen": "`formattedOptions` de la cotización. `null` = el vendor no las manda (no «sin opciones»). 🚨 El spec las pone en `product.formattedOptions` (referencia 2026-09, fila 7): leer solo `quote.formattedOpti"
         },
         {
           "nombre": "leerCoberturas",
@@ -22218,7 +22218,7 @@
           "exportada": true,
           "params": "raw: unknown",
           "retorno": "Cobertura[]",
-          "linea": 38,
+          "linea": 47,
           "resumen": "Respuesta de `/coverages` (array suelto o `{ items|coverages: [...] }`)."
         },
         {
@@ -22227,12 +22227,12 @@
           "exportada": true,
           "params": "opciones: OpcionLegible[] | null, leidasAt: string",
           "retorno": "SobreOpciones",
-          "linea": 70
+          "linea": 79
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "5f03dbe15d07"
+      "hash": "0d4de56c01c3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/config.ts",
