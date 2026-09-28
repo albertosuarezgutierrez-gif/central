@@ -455,6 +455,11 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
   // objeto de hogar y la del volcado sí. Lo que no traiga ninguna sigue a
   // `null` — un 0 aquí torcería la horquilla.
   const riesgoHogar = elegirRiesgo(hogarDeDatos(datos, 'poliza'), hogarDeDatos(datosGemela, 'gemela'))
+  // L10 (28/09/2026): si CIMA no dio la prima ANUAL (fraccionada sin anualizada en
+  // una compañía no medida), lo guardado no se presenta como anual en ninguna parte.
+  const primaDudosa = (p.datosEspecificos as { primaAnualDudosa?: unknown } | null)?.primaAnualDudosa === true
+  const primaAnualF = primaDudosa ? null : num(p.primaAnual)
+  const primaBrutaF = primaDudosa ? null : num(p.primaBruta)
   // Allianz manda prima y renovación solo en el recibo de cartera (27/09/2026).
   const hoyIso = new Date().toISOString()
   const recibosVig = p.recibos.map((r) => ({
@@ -462,7 +467,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     primaTotal: r.primaTotal, fechaVencimiento: fechaIso(r.fechaVencimiento),
   }))
   const prima = primaConRecibos({
-    primaAnual: num(p.primaAnual), primaBruta: num(p.primaBruta),
+    primaAnual: primaAnualF, primaBruta: primaBrutaF,
     fraccionamiento: p.fraccionamiento === null ? null : String(p.fraccionamiento),
   }, recibosVig, hoyIso).prima
   // Solo se estima lo RETARIFICABLE: la pregunta que responde esto es «¿gasto
@@ -511,8 +516,8 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
     fechaInicio: fechaIso(p.fechaInicio),
     fechaVencimiento: vencimientoConRecibos(fechaIso(p.fechaVencimiento), recibosVig, hoyIso),
     prima,
-    primaAnual: num(p.primaAnual),
-    primaBruta: num(p.primaBruta),
+    primaAnual: primaAnualF,
+    primaBruta: primaBrutaF,
     primaMensual: num(p.primaMensual),
     objeto: objetoAsegurado({ tipo: String(p.tipo), datos, coberturas: coberturasTexto.length ? coberturasTexto : null }),
     historialRiesgo: historial,
@@ -567,7 +572,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       fraccionamiento,
       formaCobro: etiquetaFormaPago(p.recibos[0]?.formaPago ?? null),
       recargo: recargoFraccionamiento({
-        fraccionamiento, primaAnual: num(p.primaAnual), vencimiento: fechaIso(p.fechaVencimiento),
+        fraccionamiento, primaAnual: primaAnualF, vencimiento: fechaIso(p.fechaVencimiento),
         recibos: recibosCrudos.map((r) => ({ importe: importeEiac(r.primaTotal), fechaEmision: r.fechaEmision, situacion: r.situacion })),
       }),
     },

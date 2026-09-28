@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { contratoCima } from './cartera-poliza-contrato.ts'
 
 // Descifrado de mentira: `v1:ok:<texto>` se lee, cualquier otro `v1:` falla.
@@ -52,4 +53,11 @@ test('ausente no es «no»: titularCuentaDistinto y primaAnualDudosa quedan null
   const c = contratoCima({ formaPago: 'CC' }, descifrar)!
   assert.equal(c.titularCuentaDistinto, null)
   assert.equal(c.primaAnualDudosa, null)
+})
+
+test('fichaPoliza no presenta como anual una prima marcada primaAnualDudosa (lee el fuente)', () => {
+  const fuente = readFileSync(new URL('./cartera-poliza.ts', import.meta.url), 'utf8')
+  assert.match(fuente, /primaAnualDudosa === true/)
+  const trasGuarda = fuente.slice(fuente.indexOf('\n', fuente.indexOf('const primaBrutaF')))
+  assert.doesNotMatch(trasGuarda, /num\(p\.prima(Anual|Bruta)\)/, 'tras la guarda nadie debe volver a leer la prima cruda')
 })
