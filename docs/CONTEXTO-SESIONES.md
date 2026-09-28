@@ -848,6 +848,16 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) SINCO: lo consulta la COMPAÑÍA vía Codeoscopic al CONFIRMAR precio, no Grupo ASegura
+- Dictado de Alberto: la correduría **no puede** consultar SINCO. El primer precio de Codeoscopic/Avant2 es una
+  **estimación** (SINCO cuesta a la compañía); al darle a «permitir»/confirmar, cada compañía hace la consulta y
+  fija el precio. Algunas la hacen ya al estimar. Descartado preguntar a TIREA (spec 2026-09-01 §3 actualizada).
+- Medido en `tarificacion_precios`: Reale avisa «PENDIENTE REALIZAR CONSULTA SINCO» (79/89 auto); Occident
+  «compañía no sinco sin certificado» (supeditada); Mutua «descuentos de siniestralidad»; el resto no dice nada.
+- Rafael Campa (lead): oportunidad auto 64bb5081 completada por SQL desde Drive (MUSSAP 2083935, 0194DRY, vence
+  20/10/2026, 374,90€). Pendiente con OK de Alberto: presupuestar auto eligiendo la póliza/historial de cada coche
+  y el bug de `oportunidad-presupuesto.ts:52` (con 2 auto abiertas cuelga todo de la más antigua).
+
 ## (28/09/2026) Póliza donde la ficha FIGURA sin ser tomador: ya sale en su ficha y en el portal
 Caso: Generali UV-G-410081428 — tomador Francisco Javier Velasco (conductor habitual), GLOBAL 2 propietaria+asegurada;
 no salía en la ficha de GLOBAL 2 ni a Pilar (autorizada sobre GLOBAL 2). Medido: 28 pólizas vivas / 22 fichas en ese caso.
