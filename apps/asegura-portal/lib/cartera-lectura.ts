@@ -13,10 +13,10 @@
 //     (`prima: null` no es «sin prima»: es «no visible en tu nivel».)
 //
 // Y un CUARTO estado que NO es ninguno de los tres: el dato que sencillamente
-// no va en la vista del cliente (tramitador, perito, referencias internas de
-// gestión). Ese no se pinta vacío ni «pendiente»: no existe en el tipo ni en el
-// `select`. Regla de visibilidad de Alberto (03/09/2026), en el CLAUDE.md de
-// esta app; afina —no deroga— la regla del NULL del CLAUDE.md de la raíz.
+// no va en la vista del cliente (referencias internas de gestión, datos de
+// terceros). Ese no se pinta vacío ni «pendiente»: no existe en el tipo ni en
+// el `select`. Desde el 28/09/2026 el tramitador, el perito, la reserva y la
+// culpa SÍ van («el seguro es suyo, tiene que saber todo», Alberto).
 //
 // «Vivas» = las que entran o se MANTIENEN por CIMA, más lo que hemos emitido
 // nosotros y CIMA aún no ha traído — el criterio único de `WHERE_CARTERA_VIVA`
@@ -56,6 +56,8 @@ import {
   tipoSiniestroLegible,
   descripcionSiniestro,
   tramitacionSiniestro,
+  detalleSiniestroCompania,
+  type DetalleSiniestroCompania,
   ordenarRecibos,
   estadoRecibos,
   resumirRecibos,
@@ -117,12 +119,10 @@ export type RecibosPortal = ResumenRecibos & {
 /**
  * Lo que el CLIENTE ve de un siniestro suyo.
  *
- * 🚫 **Aquí NO hay tramitador ni perito, y no es un dato que falte: es gestión
- * del corredor.** Regla de visibilidad del portal (Alberto, 03/09/2026): se
- * oculta lo que al cliente no le cambia nada, y el punto de contacto único es
- * Alberto — el cliente le llama a él, no al tramitador de la compañía. Por eso
- * estos campos no están en el tipo NI en el `select`: no se piden a la BD, así
- * que no hay nada que se pueda pintar «en gris» ni «pendiente» por descuido.
+ * ✅ **Desde el 28/09/2026 SÍ lleva tramitador, perito, reserva y culpa**
+ * (Alberto: «el seguro es suyo, tiene que saber todo»; deroga la regla del
+ * 03/09/2026 que los ocultaba). Viajan dentro de `detalle`, traducidos por
+ * `detalleSiniestroCompania`, que descarta los datos de TERCEROS (cifrados).
  *
  * ⚠️ Esto NO deroga la regla del `CLAUDE.md` de la raíz («dato que NO hay ≠
  * dato que NO se ha mirado»): la afina. Lo que se calla es lo que NO cambia lo
@@ -163,6 +163,14 @@ export type SiniestroPortal = {
    * `siniestro-tramitacion.ts` de `@central/module-seguros-portal`.
    */
   tramitacion: TramitacionSiniestro | null
+  /**
+   * TODO lo demás que cuenta la compañía (28/09/2026): fecha de declaración,
+   * culpa, reserva, expedientes, asistencias, tramitador y perito. `null` = no
+   * informa nada de esto. Los datos de terceros (matrícula/conductor del
+   * contrario, persona física de una asistencia) NO llegan: ver
+   * `siniestro-detalle.ts` de `@central/module-seguros-portal`.
+   */
+  detalle: DetalleSiniestroCompania | null
 }
 
 export type PolizaPortal = {
@@ -836,13 +844,30 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               pagosCima: true,
               indemnizacionCima: true,
               totalPagosCima: true,
+              // Todo el siniestro (28/09/2026, «el seguro es suyo»): se traduce
+              // en `detalleSiniestroCompania`, que descarta lo cifrado (`v1:`).
+              fechaDeclaracion: true,
+              posicionCima: true,
+              responsabilidadCima: true,
+              daaCima: true,
+              reservaCima: true,
+              reservaDesgloseCima: true,
+              totalRecobrosCima: true,
+              expedientesCima: true,
+              riesgoCima: true,
+              vehiculoCima: true,
+              vehiculoContrarioCima: true,
+              asistenciasCima: true,
+              descripcionCima: true,
+              tramitadorNombre: true,
+              tramitadorTelefono: true,
+              tramitadorEmail: true,
+              peritoNombre: true,
+              peritoTelefono: true,
+              peritoEmail: true,
               // No hay hay columna con la fecha de CIERRE: `updated_at` es la
               // última vez que se tocó la fila, no el día que se cerró, y
               // pintarlo como tal sería inventarse una fecha.
-              // Ni tramitador ni perito, a propósito: son gestión del
-              // corredor, no dato del cliente (ver `SiniestroPortal`). El cepo
-              // `test/regression-portal-visibilidad.test.ts` falla si vuelven,
-              // así que ni siquiera se nombran aquí.
             },
             orderBy: { fechaHora: 'desc' },
           }),
@@ -908,6 +933,23 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
               pagos: x.pagosCima,
               totalPagos: x.totalPagosCima,
               indemnizacion: x.indemnizacionCima,
+            }),
+            detalle: detalleSiniestroCompania({
+              fechaDeclaracion: x.fechaDeclaracion,
+              posicion: x.posicionCima,
+              responsabilidad: x.responsabilidadCima,
+              daa: x.daaCima,
+              reserva: x.reservaCima,
+              reservaDesglose: x.reservaDesgloseCima,
+              totalRecobros: x.totalRecobrosCima,
+              expedientes: x.expedientesCima,
+              riesgo: x.riesgoCima,
+              vehiculo: x.vehiculoCima,
+              vehiculoContrario: x.vehiculoContrarioCima,
+              asistencias: x.asistenciasCima,
+              descripcion: x.descripcionCima,
+              tramitador: { nombre: x.tramitadorNombre, telefono: x.tramitadorTelefono, email: x.tramitadorEmail },
+              perito: { nombre: x.peritoNombre, telefono: x.peritoTelefono, email: x.peritoEmail },
             }),
           })),
         )
