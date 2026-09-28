@@ -30,6 +30,7 @@ import {
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { proponerReciboDevuelto } from './aprobaciones'
+import { seguirDevoluciones } from './devoluciones-recibo'
 import { confirmarAnulaciones } from './anulaciones'
 import { abrirAnulacionesPorSustitucion, enlazarSustituciones, ganarOportunidadesEmitidas, liberarPresupuestosEmitidos } from './sustituciones-auto'
 
@@ -217,6 +218,19 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
     // posterior, CIMA la reactivó, o se revisó como «no es pérdida». Sin esto la llamada quedaría
     // vencida en «Tareas de hoy» para siempre, y alguien llamaría a «retener» a quien ya renovó.
     const retencionesCerradas = await cerrarRetencionesResueltas(tx, correduriaId)
+    // Recibos devueltos: la llamada del hito que toca (0/7/25/30 días desde el efecto) y el cierre
+    // de los que ya constan cobrados. Con su punto de guardado: si falla, no tumba la detección.
+    await tx.$executeRaw`savepoint devoluciones`
+    let devoluciones = { tareas: 0, cerradas: 0 }
+    let devolucionesFallidas = false
+    try {
+      devoluciones = await seguirDevoluciones(tx, correduriaId)
+      await tx.$executeRaw`release savepoint devoluciones`
+    } catch (err) {
+      await tx.$executeRaw`rollback to savepoint devoluciones`
+      devolucionesFallidas = true
+      console.error('[eventos-cartera] seguimiento de devoluciones no hecho:', err instanceof Error ? err.message : err)
+    }
     await tx.$executeRaw`
       insert into cartera_foto (correduria_id, foto, tomada_at) values (${correduriaId}::uuid, ${JSON.stringify(actual)}::jsonb, now())
       on conflict (correduria_id) do update set foto = excluded.foto, tomada_at = excluded.tomada_at`
@@ -236,6 +250,9 @@ export async function detectarYGuardar(correduriaId: string): Promise<ResultadoD
       retenciones,
       retencionesFallidas,
       retencionesCerradas,
+      tareasDevolucion: devoluciones.tareas,
+      devolucionesCobradas: devoluciones.cerradas,
+      devolucionesFallidas,
       aprobacionesNuevas,
       aprobacionesFallidas,
       anulacionesConfirmadas: anul.confirmadas,

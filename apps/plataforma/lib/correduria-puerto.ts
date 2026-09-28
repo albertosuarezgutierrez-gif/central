@@ -469,6 +469,41 @@ async function pedirPost(path: string, body: Record<string, unknown>): Promise<{
   return { status: res.status, json: await res.json().catch(() => null) }
 }
 
+/**
+ * `POST /api/operador/recibos/devolucion` — registra las devoluciones que la compañía avisa por correo.
+ * `null` = no se pudo (sin config, red o error del puerto): quien llama lo DICE, no lo da por hecho.
+ */
+export async function registrarDevolucionesAsegura(devoluciones: unknown[], mensajeId: string | null): Promise<{ status: number; json: unknown } | null> {
+  try {
+    const r = await pedirPost('/api/operador/recibos/devolucion', { devoluciones, mensajeId })
+    return r && r.status === 200 ? r : null
+  } catch {
+    return null
+  }
+}
+
+export type ResolucionDevolucion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo: string }
+
+/** `PATCH /api/operador/recibos/devolucion` — «cobrado de nuevo» a mano. El actor lo pone el servidor. */
+export async function resolverDevolucionAsegura(reciboId: string, actor: string): Promise<ResolucionDevolucion> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return { estado: 'sin_configurar' }
+  try {
+    const res = await fetch(`${urlAsegura()}/api/operador/recibos/devolucion`, {
+      method: 'PATCH',
+      headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
+      body: JSON.stringify({ reciboId, actor }),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
+    if (res.status === 200) return { estado: 'ok' }
+    const j = ((await res.json().catch(() => null)) ?? {}) as Record<string, unknown>
+    return { estado: 'error', motivo: typeof j.motivo === 'string' ? j.motivo : `HTTP ${res.status}` }
+  } catch {
+    return { estado: 'error', motivo: 'no se pudo llegar a asegura' }
+  }
+}
+
 export type DescarteRetencion = { estado: 'ok' } | { estado: 'sin_configurar' } | { estado: 'error'; motivo?: string }
 
 /**

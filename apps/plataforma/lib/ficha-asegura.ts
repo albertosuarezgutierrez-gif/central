@@ -35,6 +35,8 @@ export type RecibosPoliza = {
     importe: number | null
     fechaEmision: string | null
     fechaVencimiento: string | null
+    /** Día en que vence la prima (art. 15 LCS). `null` = el puerto no la manda o no se sabe. */
+    fechaEfecto: string | null
     formaPago: string | null
   } | null
 }
@@ -523,6 +525,7 @@ export function leerRecibos(v: unknown): RecibosPoliza | null {
             importe: numero((u as Record<string, unknown>).importe),
             fechaEmision: cadena((u as Record<string, unknown>).fechaEmision),
             fechaVencimiento: cadena((u as Record<string, unknown>).fechaVencimiento),
+            fechaEfecto: cadena((u as Record<string, unknown>).fechaEfecto),
             formaPago: cadena((u as Record<string, unknown>).formaPago),
           }
         : null,

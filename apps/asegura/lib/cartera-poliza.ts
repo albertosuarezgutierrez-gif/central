@@ -197,6 +197,12 @@ export type ReciboFichaPoliza = ReciboResumen & {
   claseComision: string | null
   baseComision: number | null
   retencionIrpf: number | null
+  /**
+   * La compañía avisó POR CORREO de que el banco lo devolvió y aún no consta el cobro
+   * (`recibo_devolucion`). Es lo único que permite marcarlo «cobrado de nuevo» a mano: una devolución
+   * que trae CIMA la resuelve CIMA. `null` = no hay aviso abierto o no se pudo leer.
+   */
+  devolucionCorreo: { fecha: string; motivo: string | null } | null
 }
 
 export type PolizaRelacionada = {
@@ -334,7 +340,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         orderBy: { numeroOrden: 'asc' },
       },
       recibos: {
-        select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEmision: true, fechaVencimiento: true, formaPago: true,
+        select: { id: true, situacion: true, primaTotal: true, primaNeta: true, claseRecibo: true, fechaEfectoInicial: true, fechaEfectoActual: true, fechaEmision: true, fechaVencimiento: true, formaPago: true,
           idRemesa: true, gestionCobro: true, claseComision: true, baseComision: true, retencionIrpf: true },
         orderBy: { fechaEmision: 'desc' },
       },
@@ -493,9 +499,11 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
         },
       })
     : null
+  const devolucionesCorreo = await devolucionesCorreoAbiertas(db, correduriaId, p.recibos.map((r) => r.id))
   const recibosCrudos = p.recibos.map((r) => ({
     id: r.id, situacion: r.situacion === null ? null : String(r.situacion), primaTotal: r.primaTotal,
-    fechaEmision: fechaIso(r.fechaEmision), fechaVencimiento: fechaIso(r.fechaVencimiento), formaPago: r.formaPago,
+    fechaEmision: fechaIso(r.fechaEmision), fechaVencimiento: fechaIso(r.fechaVencimiento), fechaEfecto: fechaIso(r.fechaEfectoActual),
+    formaPago: r.formaPago,
   }))
   const fraccionamiento = p.fraccionamiento === null ? null : String(p.fraccionamiento)
 
@@ -544,9 +552,10 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       const r = recibosCrudos[i]
       return {
         id: r.id, situacion: (r.situacion ?? '').trim() || 'sin_informar', importe: importeEiac(r.primaTotal),
-        fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, formaPago: etiquetaFormaPago(r.formaPago),
+        fechaEmision: r.fechaEmision, fechaVencimiento: r.fechaVencimiento, fechaEfecto: r.fechaEfecto ?? null, formaPago: etiquetaFormaPago(r.formaPago),
         idRemesa: texto(x.idRemesa), gestionCobro: texto(x.gestionCobro), claseComision: texto(x.claseComision),
         baseComision: num(x.baseComision), retencionIrpf: num(x.retencionIrpf),
+        devolucionCorreo: devolucionesCorreo.get(r.id) ?? null,
       }
     }),
     fechasContrato: {
@@ -587,4 +596,24 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       seguimiento: seguimientoSustitucion({ polizaOrigenId: p.polizaOrigenId ?? null, idPolizaEntidad: p.idPolizaEntidad ?? null }),
     },
   }
+}
+
+/** Devoluciones avisadas por correo y aún abiertas, por id de recibo. Un fallo de lectura → mapa vacío (no se ofrece el botón). */
+async function devolucionesCorreoAbiertas(
+  db: ReturnType<typeof prismaAsegura>,
+  correduriaId: string,
+  reciboIds: string[],
+): Promise<Map<string, { fecha: string; motivo: string | null }>> {
+  const out = new Map<string, { fecha: string; motivo: string | null }>()
+  if (reciboIds.length === 0) return out
+  try {
+    const filas = await db.$queryRaw<{ reciboId: string; fecha: string; motivo: string | null }[]>`
+      select recibo_id::text as "reciboId", to_char(fecha_devolucion, 'YYYY-MM-DD') as fecha, motivo
+      from recibo_devolucion
+      where correduria_id = ${correduriaId}::uuid and resuelta_at is null and recibo_id = any(${reciboIds}::uuid[])`
+    for (const f of filas) out.set(f.reciboId, { fecha: f.fecha, motivo: f.motivo })
+  } catch (e) {
+    console.error('[cartera-poliza] devoluciones por correo no leídas:', e instanceof Error ? e.message : e)
+  }
+  return out
 }

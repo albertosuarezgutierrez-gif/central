@@ -13,8 +13,10 @@ function poliza(p: Partial<PolizaAccion> & { recibos?: PolizaAccion['recibos'] }
   }
 }
 const base = { declaradas: [], cotizacionesVivas: 0, tieneCanal: true, hoy }
-const devuelto = (venc: string): PolizaAccion['recibos'] =>
-  ({ total: 1, pendientes: 0, devueltos: 1, ultimo: { situacion: 'devuelto', fechaVencimiento: venc } })
+// El recibo es ANUAL: su efecto es el día en que vence la prima y `fechaVencimiento`, el fin del
+// periodo un año después. El reloj del art. 15 corre desde el efecto.
+const devuelto = (efecto: string): PolizaAccion['recibos'] =>
+  ({ total: 1, pendientes: 0, devueltos: 1, ultimo: { situacion: 'devuelto', fechaEfecto: efecto, fechaVencimiento: `${Number(efecto.slice(0, 4)) + 1}${efecto.slice(4)}` } })
 
 test('🪤 recibo devuelto hace más de un mes: primero, urgente y dice que no tiene cobertura', () => {
   const r = siguienteAccion({ ...base, polizas: [poliza({ fechaVencimiento: '2026-10-10' }), poliza({ id: 'p2', recibos: devuelto('2026-07-01') })] })
@@ -25,6 +27,18 @@ test('🪤 recibo devuelto hace más de un mes: primero, urgente y dice que no t
 test('🪤 un recibo PENDIENTE no es un impago: no dispara la llamada', () => {
   const r = siguienteAccion({ ...base, polizas: [poliza({ recibos: { total: 1, pendientes: 1, devueltos: 0, ultimo: { situacion: 'pendiente', fechaVencimiento: '2026-07-01' } } })] })
   assert.ok(r.estado === 'accion' && r.tipo === 'venta_cruzada')
+})
+
+test('🪤 el plazo corre desde el EFECTO del recibo, no desde el fin de su periodo (28/09/2026)', () => {
+  // Devuelto de mayo en un anual: su `fechaVencimiento` es de 2027, pero lleva meses sin cobertura.
+  const r = siguienteAccion({ ...base, polizas: [poliza({ recibos: devuelto('2026-05-22') })] })
+  assert.ok(r.estado === 'accion' && r.tipo === 'recibo_sin_cobertura')
+})
+
+test('devuelto sin fecha de efecto: no se inventa un plazo', () => {
+  const sinEfecto: PolizaAccion['recibos'] = { total: 1, pendientes: 0, devueltos: 1, ultimo: { situacion: 'devuelto', fechaVencimiento: '2026-07-01' } }
+  const r = siguienteAccion({ ...base, polizas: [poliza({ recibos: sinEfecto })] })
+  assert.ok(!(r.estado === 'accion' && (r.tipo === 'recibo_sin_cobertura' || r.tipo === 'recibo_devuelto')))
 })
 
 test('devuelto reciente: llamar antes de que se suspenda', () => {

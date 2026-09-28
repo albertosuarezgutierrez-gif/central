@@ -981,3 +981,23 @@ export {
   type EtapaSeguimiento,
   type PresupuestoParaSeguimiento,
 } from './presupuesto-ayudas.ts'
+
+export {
+  leerCorreoDevolucion,
+  clasificarMotivoDevolucion,
+  normalizarIdRecibo,
+  type DevolucionLeida,
+  type LecturaCorreoDevolucion,
+  type CorreoDevolucion,
+  type TipoMotivoDevolucion,
+} from './devolucion-correo.ts'
+
+export {
+  ORIGEN_DEVOLUCION,
+  HITOS_DEVOLUCION,
+  hitoDevolucion,
+  suspensionDesde,
+  textoTareaDevolucion,
+  type HitoDevolucion,
+  type EntradaTareaDevolucion,
+} from './seguimiento-devolucion.ts'

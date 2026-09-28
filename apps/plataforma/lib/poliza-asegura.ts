@@ -89,6 +89,11 @@ export type ReciboFicha = {
   fechaEmision: string | null
   fechaVencimiento: string | null
   formaPago: string | null
+  /**
+   * La compañía avisó POR CORREO de la devolución y aún no consta el cobro. `null` = no hay aviso
+   * abierto o asegura no lo manda (versión vieja): entonces no se ofrece «cobrado de nuevo».
+   */
+  devolucionCorreo: { fecha: string; motivo: string | null } | null
 } & ReciboExtraFicha
 
 export type Poliza = {
@@ -410,6 +415,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       listaRecibos.push({
         id: o.id, situacion: cadena(o.situacion) ?? 'sin_informar', importe: numero(o.importe),
         fechaEmision: cadena(o.fechaEmision), fechaVencimiento: cadena(o.fechaVencimiento), formaPago: cadena(o.formaPago),
+        devolucionCorreo: leerDevolucionCorreo(o.devolucionCorreo),
         ...leerReciboExtra(o),
       })
     }
@@ -491,4 +497,11 @@ export async function polizaAsegura(id: string): Promise<RespuestaPoliza> {
   } catch {
     return { estado: 'error', motivo: 'red' }
   }
+}
+
+function leerDevolucionCorreo(v: unknown): { fecha: string; motivo: string | null } | null {
+  if (typeof v !== 'object' || v === null) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.fecha !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(o.fecha)) return null
+  return { fecha: o.fecha, motivo: typeof o.motivo === 'string' && o.motivo !== '' ? o.motivo : null }
 }

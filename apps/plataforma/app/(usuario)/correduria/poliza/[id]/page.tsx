@@ -6,6 +6,7 @@ import EditarDireccionRiesgo from './EditarDireccionRiesgo'
 import EditarModalidadRc from './EditarModalidadRc'
 import AnulacionPoliza from './AnulacionPoliza'
 import AvisoEmision from './AvisoEmision'
+import CobradoDeNuevo from './CobradoDeNuevo'
 import HistorialRiesgo from './HistorialRiesgo'
 import CimaPoliza from './CimaPoliza'
 import PresupuestosPoliza from './PresupuestosPoliza'
@@ -516,7 +517,15 @@ function TablaRecibos({ lista }: { lista: Poliza['listaRecibos'] }) {
             <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
               <td data-label="Emitido" style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
               <td data-label="Vence" style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
-              <td data-rol="cabeza" style={td}>{ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}</td>
+              <td data-rol="cabeza" style={td}>
+                {ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}
+                {x.devolucionCorreo && (
+                  <div style={sub}>
+                    <span title="CIMA aún no lo trae: lo avisó la compañía por correo">aviso por correo del {fmt(x.devolucionCorreo.fecha)}{x.devolucionCorreo.motivo ? ` · ${x.devolucionCorreo.motivo}` : ''}</span>
+                    <CobradoDeNuevo reciboId={x.id} />
+                  </div>
+                )}
+              </td>
               <td data-label="Cobro" style={td}>
                 {x.formaPago ?? <span style={muted}>—</span>}
                 {x.gestionCobro && <div style={sub}>{etiquetaGestionCobro(x.gestionCobro)}</div>}

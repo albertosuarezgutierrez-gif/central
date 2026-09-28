@@ -33,16 +33,22 @@ export const ORIGEN_RECIBO_DEVUELTO = 'recibo_devuelto'
 /** `true` si ha dejado una propuesta nueva. Idempotente por `clave` (una por recibo y vencimiento). */
 export async function proponerReciboDevuelto(tx: Tx, correduriaId: string, reciboId: string, eventoId: string | null): Promise<boolean> {
   if (POLITICA.enviar_correo_cliente === 'prohibido') return false
-  const [r] = await tx.$queryRaw<{ clienteId: string; polizaId: string; ramo: string | null; compania: string | null; numeroPoliza: string | null; importe: string | null; vencimiento: string | null }[]>`
+  const [r] = await tx.$queryRaw<{ clienteId: string; polizaId: string; ramo: string | null; compania: string | null; numeroPoliza: string | null; importe: string | null; vencimiento: string | null; motivoCuenta: boolean }[]>`
     select p.cliente_id::text as "clienteId", p.id::text as "polizaId", p.tipo::text as ramo, p.aseguradora as compania,
            p.numero_poliza as "numeroPoliza", r.prima_total as importe,
-           to_char(r.fecha_vencimiento at time zone 'Europe/Madrid', 'YYYY-MM-DD') as vencimiento
+           -- El recibo VENCE el día de su efecto: desde ahí corre el mes del art. 15 LCS.
+           -- \`fecha_vencimiento\` es el fin del periodo que cubre (un año después en un anual).
+           to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as vencimiento,
+           -- La compañía avisó por correo con un motivo de CUENTA (IBAN o titular): se le pide revisarla.
+           exists (select 1 from recibo_devolucion d where d.correduria_id = r.correduria_id
+                     and d.codigo_entidad_dgs = r.codigo_entidad_dgs and d.id_recibo_norm = ltrim(r.id_recibo, '0')
+                     and d.resuelta_at is null and d.tipo_motivo = 'cuenta') as "motivoCuenta"
     from poliza_recibos r join polizas p on p.id = r.poliza_id
     where r.id = ${reciboId}::uuid and p.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null`
   if (!r) return false
   const b = borradorReciboDevuelto({
     ramo: r.ramo, compania: r.compania, numeroPoliza: r.numeroPoliza,
-    importe: importeEiac(r.importe), vencimiento: r.vencimiento, hoy: new Date(),
+    importe: importeEiac(r.importe), vencimiento: r.vencimiento, hoy: new Date(), motivoCuenta: r.motivoCuenta,
   })
   if (!b) return false
   const ins = await tx.$queryRaw<{ id: string }[]>`
