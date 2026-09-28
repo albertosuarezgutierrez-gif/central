@@ -12,6 +12,21 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — Ficha correduría: el acceso «Contactos» cuenta también los vínculos declarados (`contarPersonas` en `cliente/[id]/tabs.ts`, misma lista que el bloque «Personas»; antes solo personas de pólizas → Antonio Lozano salía sin ninguna). Fusionada a mano «Antonio Antonio» (ec2fd283) → Antonio Lozano Lanagran (a3cf7a99): su DNI era ILEGIBLE y `fusionar_clientes` bloquea para siempre con `dni_sin_indice`; se anuló el dni en la misma transacción y el cifrado original quedó en la justificación. Portal ya invitable. Hueco propuesto como tarea aparte.
+
+**(28/09/2026)** — Correo de aviso de vencimiento: «Prima anual» llevaba la NETA de la póliza o, si no la traía, el TOTAL del
+recibo, bajo el mismo rótulo. Ahora siempre la total (bruta de la póliza → recibo anual, vía `primaConRecibos`) y el rótulo dice
+«(impuestos incluidos)». Cepos en `texto-vencimiento.test.ts` y `regression-prima-con-recibos.test.ts` (vistos en rojo). Check-in
+043673655: hasta las 07:00 UTC no había entrado ningún fichero CIMA desde el 27/09 09:01 → re-armado 28/09 12:30 UTC.
+
+**(28/09/2026)** — `facturas-correo`: pasada de rutina sin novedades que archivar. Vía B sana
+(`dias_caido=0`), `agente_salud` actualizado. Sin candidatos nuevos en correo ni subidas manuales.
+Backlog persistente revisado y confirmado sin resolver: ASECON 181,50€ (factura 1-001804, renta
+personal) SIN cargo en banco jul-sep — coincide con el aviso de impago de ASECON, para decisión de
+Alberto (pago + `destino` si se archiva); 2 Endesa Socorro 24 en `PDF-pendiente` (solo enlace al
+portal, sin adjunto) — una ya conciliada por banco, falta el PDF. `v_facturas_sin_cargo`: 0 filas
+sin revisar. Detalle en `docs/AGENTES-BITACORA.md`.
+
 **(28/09/2026)** — Alerta «Se están perdiendo datos de CIMA»: el bloque de 46 objetos (REC 40 · POL 6) y la caja negra de Codeoscopic (131 envíos) eran FALSOS POSITIVOS. Medido: los 52 recibos en review están en `poliza_recibos` y las 6 pólizas (comunidades/embarcaciones) en cartera sin duplicado, todo entrado con el rescate del 24/09, que NO emite parte nuevo → el vigía se quedaba con el del 15/09. Fix: el vigía (`apps/asegura/lib/ingesta.ts`) respeta un `cima_residuo_resuelto_manual` POSTERIOR al último parte (el REC 261 del 12/07 ya lo tenía y se ignoraba); emitidos los 5 cierres tras comprobar objeto a objeto. Codeoscopic: el receptor ya acepta el array desde el 19/09 08:07 (2 eventos guardados, `project_not_found`); fila de la caja negra marcada `reprocesado_at`. Real y pendiente: Mapfre sin POL (10 renovaciones) → reclamar en ticket SAU-24238. PR #3821 **MERGEADO** (1579a34).
 
 **(28/09/2026)** — Ficha cliente correduría: (1) las baldosas de acceso dicen algo siempre que se sepa (`detallesAccesos` en `cliente/[id]/tabs.ts`, puro+test): Contactos = «2 teléfonos · 1 correo · 3 personas» (antes solo personas de pólizas), ceros leídos se dicen, `null` no se pinta. (2) Portal «su correo lleva a OTRA ficha»: asegura devuelve `otrasFichas` (id+nombre, solo de la propia correduría) y la ficha las enlaza. El WhatsApp sigue oculto A PROPÓSITO en ese estado (el portal entra por correo → acabaría en la otra ficha); ahora se dice. Medido: 92 fichas con correo `es_principal` en `cliente_emails` pero sin hash en `clientes` porque el backfill no escribe choques → todas `resuelve_a_otra`; se arreglan fusionando/corrigiendo, no con código. PR #3812 **MERGEADO** (8150fce).
@@ -827,6 +842,14 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 ## (28/09/2026) E2E `playwright / portal` de asegura rojo en todos los PRs = bypass de Vercel caducado
 Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCEL_PROTECTION_BYPASS_SECRET` de GitHub ya no vale → todo acaba en `vercel.com/login`; rojo desde el 04/09 (paso del proyecto al equipo de Alberto). F3 «aceptar precio» NI corre: se salta por faltar `E2E_SUPABASE_URL` (el comentario del bot lo culpaba por texto cableado). PR asegura#863 (draft): preflight que lo dice en 1 s + comentario con recuento real. ✅ Secreto copiado el mismo día: E2E en verde (14 ok · 0 fallidos · 12 saltados). Los 12 saltados (F3 incluido) esperan `E2E_SUPABASE_URL`/`E2E_SUPABASE_SERVICE_ROLE_KEY` — decisión de Alberto (crean usuarios en Auth).
+
+## (28/09/2026) Agente de huéspedes: dejaba de responderse a sí mismo (reserva 154692216)
+- Nuestros envíos reaparecen en Smoobu sin emisor; el anti-eco solo conocía `mensajes_log` (borrador), no acuses, programados ni lo editado en Telegram → 5 ecos en 4 días, 2 contestados solos al huésped, y el eco pisó en la cola la pregunta real.
+- Tabla `mensajes_enviados` (aplicada) escrita por `enviarAlHuespedDetallado` (salida única) + textos fijos de guardia en `enviados`.
+- Acuse «lo estamos revisando» ya no sale el día de salida; se cierra el peldaño y se avisa a Alberto.
+- 2ª tanda: filtro de plantillas (`esPlantillaHost`: nombre completo al principio = bienvenida/despedida nuestra; 8 contestadas solas en sep), categorías con `\b` + seguridad/camas/avisos (el phishing caía en «parking» por «card»), `mensajes_log.respuesta_enviada` + `edited` real + vista `v_agente_huesped_calidad`, aviso de antigüedad en el prompt (>6 h), y lo aprobado SIN editar entra como hecho `propuesto` con botones.
+- ⚠️ Estado de limpieza NO consultable: `cleaning_sessions.started_at/completed_at` siempre NULL en los 4 pisos (nadie marca «terminada»). Botón «Piso listo» para Vanesa DESCARTADO por Alberto: la limpieza se gestiona desde oficina y avisarían tarde → no montar.
+- Revisión antes de merge: «self check-in» corto y el huésped que se presenta («this is Justine Delbos…») ya no se tragan como plantilla; `acceso` casa «clé/código/codes/keybox» (`\b` no ve tildes en JS).
 
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.

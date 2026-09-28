@@ -368,6 +368,7 @@ export async function ejecutarAvisosVencimiento(opts: {
           aseguradora: true,
           numeroPoliza: true,
           primaAnual: true,
+          primaBruta: true,
           fraccionamiento: true,
           cliente: {
             select: {
@@ -491,16 +492,19 @@ export async function ejecutarAvisosVencimiento(opts: {
       fechaEvento: o.fechaEvento,
       aseguradora: poliza?.aseguradora ?? null,
       numeroPoliza: poliza?.numeroPoliza ?? null,
-      // La prima NETA de la póliza, como siempre; si no la trae, la del recibo
-      // anual (pago anual). Un 0 guardado no es una prima.
-      primaAnual:
-        poliza.primaAnual != null && Number(poliza.primaAnual) > 0
-          ? Number(poliza.primaAnual)
-          : primaConRecibos(
-              { fraccionamiento: poliza.fraccionamiento === null ? null : String(poliza.fraccionamiento) },
-              recibosAnuales.get(poliza.id) ?? [],
-              hoy.toISOString(),
-            ).prima,
+      // Siempre la prima TOTAL (bruta, impuestos incluidos): la de la póliza
+      // si la trae y, si no, la del recibo anual (pago anual). Antes salía la
+      // neta de la póliza o el total del recibo bajo el mismo rótulo — dos
+      // magnitudes distintas como si fueran una. Un 0 guardado no es prima.
+      primaAnual: primaConRecibos(
+        {
+          primaAnual: poliza.primaAnual == null ? null : Number(poliza.primaAnual),
+          primaBruta: poliza.primaBruta == null ? null : Number(poliza.primaBruta),
+          fraccionamiento: poliza.fraccionamiento === null ? null : String(poliza.fraccionamiento),
+        },
+        recibosAnuales.get(poliza.id) ?? [],
+        hoy.toISOString(),
+      ).prima,
       paraTercero,
     })
 
