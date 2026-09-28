@@ -13,7 +13,7 @@ export default function HistorialRiesgo({ lista }: { lista: EslabonRiesgoFicha[]
   if (lista.length === 0) return null
   return (
     <section style={{ display: 'grid', gap: 8 }}>
-      <h2 style={{ fontSize: 16, margin: 0 }}>🔁 Historial del riesgo</h2>
+      <h2 style={{ fontSize: 16, margin: 0 }}>Historial del riesgo</h2>
       <p style={muted}>Las pólizas por las que ha pasado este mismo bien, de la más antigua a la más reciente.</p>
       <ol style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 6 }}>
         {lista.map((e) => (

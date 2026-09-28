@@ -362,16 +362,16 @@ export function CeldaRecibos({ r }: { r: RecibosPoliza | null }) {
       </span>
     )
   }
-  if (r.devueltos > 0) return <span style={{ color: 'var(--negative)' }}>🔴 {r.devueltos} devuelto(s)</span>
-  if (r.pendientes > 0) return <span style={{ color: 'var(--warning)' }} title="Emitido por la compañía y aún sin cargar en cuenta. No es un impago.">🟡 {r.pendientes} al cobro</span>
-  // 🚨 Todos anulados (20 de 109 vivas) se pintaba «🟢 0 cobrado(s)»: cero
+  if (r.devueltos > 0) return <span style={{ color: 'var(--negative)' }}>{r.devueltos} devuelto(s)</span>
+  if (r.pendientes > 0) return <span style={{ color: 'var(--warning)' }} title="Emitido por la compañía y aún sin cargar en cuenta. No es un impago.">{r.pendientes} al cobro</span>
+  // Todos anulados (20 de 109 vivas) se pintaba «0 cobrado(s)»: cero
   // cobros no es estar al día — es una póliza cancelada o sustituida.
   if (r.cobrados === 0 && r.anulados > 0) {
-    return <span style={{ color: 'var(--muted)' }} title="Todos los recibos están anulados: la póliza se canceló o se sustituyó. No hay cobro.">⚪ {r.anulados} anulado(s)</span>
+    return <span style={{ color: 'var(--muted)' }} title="Todos los recibos están anulados: la póliza se canceló o se sustituyó. No hay cobro.">{r.anulados} anulado(s)</span>
   }
   return (
     <span style={{ color: 'var(--muted)' }}>
-      🟢 {r.cobrados} cobrado(s)
+      {r.cobrados} cobrado(s)
       {r.cobradoEur !== null && <div style={sub}>{eur(r.cobradoEur)}</div>}
       {r.ilegibles > 0 && <div style={{ ...sub, color: 'var(--warning)' }}>{r.ilegibles} importe(s) sin poder leer</div>}
     </span>

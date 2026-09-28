@@ -1,7 +1,7 @@
 import { Shield, Briefcase, Bell, ClipboardList, Users, Paperclip, Mail, FileText, Clock } from 'lucide-react'
 import { TiraAccesos, type Acceso } from '../../Accesos'
 import { TABS_FICHA, type DetalleAcceso, type TabFicha } from './tabs'
-import { Ico } from '../iconos'
+import { Ico } from '../../iconos'
 
 export { tabDeParametro, type TabFicha } from './tabs'
 

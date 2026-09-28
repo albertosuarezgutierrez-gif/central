@@ -80,7 +80,7 @@ export default function VerDniCompleto({ clienteId }: { clienteId: string }) {
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         <span style={{ fontWeight: 800 }}>{dni}</span>
         <button type="button" onClick={copiar} style={btnStyle('secundario', 'sm')}>
-          {copiado ? '✓ Copiado' : '📋 Copiar'}
+          {copiado ? 'Copiado' : 'Copiar'}
         </button>
       </span>
     )

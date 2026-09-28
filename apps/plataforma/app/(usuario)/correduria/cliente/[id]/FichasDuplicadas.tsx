@@ -39,7 +39,7 @@ export default function FichasDuplicadas({ clienteId }: { clienteId: string }) {
       {candidatas.map(c => (
         <div key={c.id} style={{ border: '1px solid var(--warning)', background: 'var(--warning-bg)', borderRadius: 12, padding: 12, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 8 }}>
           <div style={{ fontSize: 13 }}>
-            ⚠️ Hay <strong>otra ficha con el mismo DNI</strong>: {c.nombre} ({c.tipo} · {c.polizas} póliza{c.polizas === 1 ? '' : 's'}). Es la misma persona dos veces.
+            Hay <strong>otra ficha con el mismo DNI</strong>: {c.nombre} ({c.tipo} · {c.polizas} póliza{c.polizas === 1 ? '' : 's'}). Es la misma persona dos veces.
           </div>
           {abierta === c.id
             ? (
