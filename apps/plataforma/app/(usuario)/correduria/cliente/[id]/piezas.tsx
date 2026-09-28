@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Phone, Lock } from 'lucide-react'
+import { Phone, Lock, RefreshCw } from 'lucide-react'
 import { agruparHistoricas, etiquetaFraccionamiento, etiquetaRol, ventanaAnulacion, type GrupoHistorica } from '@central/module-seguros'
 import EvolucionPrima from '../../EvolucionPrima'
 import { urlRetarificar, type IntervinienteFicha, type PolizaDeclaradaFicha, type PolizaFicha, type RecibosPoliza } from '@/lib/ficha-asegura'
@@ -232,7 +232,7 @@ function FilasIguales({ grupo }: { grupo: GrupoHistorica<PolizaFicha & { bien: s
       style={{ ...sub, marginTop: 4 }}
       title="El volcado de junio de 2026 trae estas filas con el mismo ramo, bien, compañía, estado y vencimiento, cambiando solo la prima. No se ha borrado ninguna: se enseñan juntas."
     >
-      {grupo.filas.length} filas del volcado:{' '}
+      <Ico i={RefreshCw} /> {grupo.filas.length} filas del volcado:{' '}
       {grupo.filas.map((f, i) => (
         <span key={f.id}>
           {i > 0 && ' · '}
@@ -271,7 +271,7 @@ function ObjetoCelda({ p }: { p: PolizaFicha }) {
     return <span style={{ color: 'var(--muted)' }} title="La versión desplegada de asegura no informa este campo">—</span>
   }
   if (p.objeto.estado === 'cifrado') {
-    return <span style={{ color: 'var(--muted)', fontStyle: 'italic' }} title={p.objeto.nota ?? undefined}>🔒 cifrado</span>
+    return <span style={{ color: 'var(--muted)', fontStyle: 'italic', display: 'flex', alignItems: 'center', gap: 4 }} title={p.objeto.nota ?? undefined}><Ico i={Lock} size={12} /> cifrado</span>
   }
   if (p.objeto.titulo === null && p.objeto.detalle === null) {
     return (
