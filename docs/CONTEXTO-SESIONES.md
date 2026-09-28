@@ -862,6 +862,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) asegura abría un PrismaClient POR CONSULTA en producción → EMAXCONN en el pooler compartido
+- Primera pasada del backfill de coberturas (18:17 UTC): 172/264 precios con coberturas, el resto abortó con `EMAXCONN` (límite 200 de Supavisor, ~700 conexiones de `prisma_seguros` en 2 min).
+- Causa: `apps/asegura/lib/db.ts` (desde el 02/09, PR #2116) solo guardaba el singleton fuera de producción y el `Proxy` lo resolvía en cada acceso → cliente y pool nuevos por consulta. Afectaba a toda asegura, el cron largo lo destapó.
+- Arreglo: `globalForPrisma.prisma ??= new PrismaClient()` siempre; cepo `lib/db.test.ts` (lee el fuente, visto en rojo). Las filas abortadas quedan intactas y el cron de las :17 las reintenta.
+
 ## (29/09/2026) Presupuesto por garantías — entregas 3-4 + las 6 ideas (cliente, parrilla, Telegram)
 - Portal: «Todas las opciones» con logos, filtros de garantías PRESELECCIONADOS con las necesidades (`garantiasDeNecesidades`),
   «qué cambia frente a tu seguro», capital de decesos, comparar 2 con IA y elegir cualquiera; telemetría `actividad_cliente`.
