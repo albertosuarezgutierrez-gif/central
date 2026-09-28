@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { esRamoInmueble } from '@central/module-seguros-portal'
 import { carteraDeIdentidad, polizasParaParte, type PolizaPortal } from '@/lib/cartera-lectura'
 import { eur } from '@/lib/dinero'
+import { vigenciaRiesgo } from '@/lib/datos-poliza-cima'
 import { documentosDePoliza } from '@/lib/documentos-poliza'
 import { fechaEs } from '@/lib/fechas'
 import { rolesLegibles } from '@/lib/intervinientes'
@@ -97,6 +98,11 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
   const documentos = deOtro ? null : await documentosDePoliza(identidad.id, p.id)
   const vence = fechaEs(p.fechaVencimiento)
   const ramo = RAMO[p.ramo] ?? p.ramo
+  // Lo que CIMA manda del contrato, ya filtrado por nivel y por lista blanca
+  // (`lib/datos-poliza-cima.ts`): aquí no llega el `iban` cifrado, solo `•••• 1234`.
+  const dc = p.datosCompania
+  const emitida = fechaEs(p.fechaEmision)
+  const efectoActual = fechaEs(p.fechaEfectoActual)
 
   return (
     <>
@@ -162,7 +168,11 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
           )}
           <Dato etiqueta="Compañía" valor={p.compania} />
           <Dato etiqueta="Tipo de seguro" valor={ramo} />
+          {dc.producto && <Dato etiqueta="Producto" valor={dc.producto} />}
           {p.numeroPoliza && <Dato etiqueta="Número de póliza" valor={p.numeroPoliza} />}
+          {/* Fechas del EIAC: `null` = la compañía no la ha mandado, y no se pinta. */}
+          {emitida && <Dato etiqueta="Fecha de emisión" valor={emitida} />}
+          {efectoActual && <Dato etiqueta="Periodo actual desde" valor={efectoActual} />}
           {/* Sin vencimiento no hay calendario: se dice, porque el silencio
               aquí se lee como «ya te avisaremos» y no vamos a poder. */}
           <Dato
@@ -178,7 +188,19 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
             ojo={vence === null || p.renovacionSinConfirmar}
           />
           {/* `prima === null` = el nivel no la enseña → se oculta. Lo que el
-              cliente PAGA es la bruta; si no está, la neta y se dice que lo es. */}
+              cliente PAGA es la bruta; si no está, la neta y se dice que lo es.
+              🚨 `dudosa`: la compañía manda lo de cada recibo y no la anual, y la
+              lectura ya ha anulado las cifras. Se DICE, sin inventar un anual. */}
+          {p.prima?.dudosa && p.prima.bruta === null && p.prima.anual === null && (
+            <Dato
+              etiqueta="Prima anual"
+              valor={
+                p.recibos !== null
+                  ? 'La compañía no nos ha mandado la prima anual cerrada. Lo que pagas en cada recibo lo tienes abajo, en «Tus recibos de esta póliza».'
+                  : 'La compañía no nos ha mandado la prima anual cerrada.'
+              }
+            />
+          )}
           {p.prima !== null && (p.prima.bruta !== null || p.prima.anual !== null) && (
             <Dato
               etiqueta={p.prima.bruta !== null ? 'Prima anual' : 'Prima neta anual'}
@@ -186,6 +208,33 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
                 p.prima.bruta !== null ? ' (impuestos incluidos)' : ' (sin impuestos)'
               }${p.prima.fraccionamiento ? ` · ${p.prima.fraccionamiento}` : ''}`}
             />
+          )}
+          {/* Cobro: forma de pago y quién pasa los recibos (nivel `recibos`); la cuenta
+              solo como `•••• 1234` (nivel `iban`). Un código que no sabemos leer ya
+              llega a `null` y no se pinta. */}
+          {dc.formaPago && <Dato etiqueta="Forma de pago" valor={dc.formaPago} />}
+          {dc.cuentaCargo && <Dato etiqueta="Cuenta de cargo" valor={dc.cuentaCargo} />}
+          {dc.gestionCobro && <Dato etiqueta="Quién te cobra" valor={dc.gestionCobro} />}
+          {/* Riesgos que detalla la compañía (sin direcciones). `null` = no visible
+              en tu nivel; `[]` = no los ha detallado: en los dos casos no se pinta. */}
+          {dc.riesgos !== null && dc.riesgos.length > 0 && (
+            <>
+              <dt>{dc.riesgos.length === 1 ? 'Riesgo asegurado' : 'Riesgos asegurados'}</dt>
+              <dd>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'grid', gap: 6 }}>
+                  {dc.riesgos.map((r, i) => {
+                    const tipo = r.tipo ? (RAMO[r.tipo] ?? null) : null
+                    const vig = vigenciaRiesgo(r)
+                    return (
+                      <li key={i} style={{ overflowWrap: 'anywhere' }}>
+                        {[tipo, r.descripcion].filter(Boolean).join(' · ') || 'Riesgo'}
+                        {vig && <span className="suave" style={{ display: 'block', fontSize: 13 }}>{vig}</span>}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </dd>
+            </>
           )}
         </dl>
 
