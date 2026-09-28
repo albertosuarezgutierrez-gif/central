@@ -505,17 +505,18 @@ export const POST = auditado(async (req: Request) => {
     )
   }
   // Si el cliente firmó en el portal una cuenta NUEVA, la de su ficha va primero (no la de la póliza vieja).
-  const aceptada = ibanHumano === null ? await origenCuentaAceptada(correduria.id, p.tarificacion_id) : null
+  const aceptada = await origenCuentaAceptada(correduria.id, p.tarificacion_id)
   const ficha = ibanHumano === null ? await cuentaDeFicha(correduria.id, polizaParaCuenta(ctx.polizaOrigenId, aceptada?.origen ?? null), ctx.clienteId) : SIN_CUENTA
-  // 🚨 Si lo que da la ficha NO es la cuenta que firmó en el portal, no se ofrece: se pide teclear la firmada.
-  if (cuentaDistintaDeLaFirmada(ficha.iban, aceptada?.mascara)) {
+  // 🚨 Si la cuenta que se va a mandar (tecleada o de la ficha) NO es la que firmó en el portal, no se emite.
+  const cuentaAEnviar = ibanHumano ?? ficha.iban
+  if (cuentaDistintaDeLaFirmada(cuentaAEnviar, aceptada?.mascara)) {
     return NextResponse.json(
       {
         estado: 'error',
         causa: 'faltan_campos',
         mensaje:
-          `El cliente firmó la domiciliación en la cuenta ${aceptada!.mascara}, pero la ficha da ${ibanEnmascarado(ficha.iban!)}. ` +
-          'Teclea la cuenta que firmó (la tienes en su ficha o pídesela). No se ha emitido nada.',
+          `El cliente firmó la domiciliación en la cuenta ${aceptada!.mascara}, pero ${ibanHumano !== null ? 'la tecleada es' : 'la ficha da'} ${ibanEnmascarado(cuentaAEnviar!)}. ` +
+          'Usa la cuenta que firmó (pídesela si no la tienes). No se ha emitido nada.',
         faltan: ['iban'],
         campos: null,
       },
