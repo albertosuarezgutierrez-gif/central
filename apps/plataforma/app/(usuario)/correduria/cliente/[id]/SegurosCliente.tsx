@@ -160,12 +160,19 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
           ? `Renovaría el ${fmt(renueva)} · último dato: vencía ${fmt(p.fechaVencimiento.slice(0, 10))}`
           : 'Sin fecha de vencimiento: no se sabe cuándo renueva'
         : [p.fechaVencimiento ? `Vence ${fmt(p.fechaVencimiento.slice(0, 10))}` : 'Sin fecha de vencimiento', p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
+      // El cambio de compañía va en la tarjeta de la nueva, no en una segunda del mismo bien.
+      s.sustituye
+        ? `🔁 Sustituye a ${s.sustituye.aseguradora}${s.sustituye.numeroPoliza ? ` nº ${s.sustituye.numeroPoliza}` : ''}${s.sustituye.fechaVencimiento ? `, que cubre hasta el ${fmt(s.sustituye.fechaVencimiento.slice(0, 10))}` : ''}`
+        : null,
     ]
     if (p.recibos?.devueltos) avisos.push({ texto: `${p.recibos.devueltos} recibo(s) devuelto(s)`, tono: 'malo' })
     const sin = ctx.abiertos?.get(p.id) ?? 0
     if (sin > 0) avisos.push({ texto: `${sin} siniestro(s) abierto(s)`, tono: 'aviso' })
     const vigente = p.viva && !['cancelada', 'vencida', 'competencia', 'fin_riesgo'].includes(p.estado.trim())
-    if (vigente && p.fechaVencimiento) {
+    // Sustituida por otra: cubre hasta su vencimiento pero no se renueva, así que ni
+    // «vence en N días» ni «renovación sin confirmar» (la moto Allianz→Occident, 28/09/2026).
+    if (vigente && p.sustituida) avisos.push({ texto: 'Sustituida por otra póliza: no se renueva', tono: 'info' })
+    else if (vigente && p.fechaVencimiento) {
       const d = dias(p.fechaVencimiento.slice(0, 10), ctx.hoy)
       if (d >= 0 && d <= 45) avisos.push({ texto: `Vence en ${d} día(s)`, tono: 'aviso' })
       // En vigor para la compañía pero con la fecha ya pasada: la renovación no ha llegado

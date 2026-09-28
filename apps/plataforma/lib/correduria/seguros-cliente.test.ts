@@ -212,3 +212,27 @@ test('viva cancelada: «Eliminar» la saca de Oportunidades a «descartadas», y
   assert.deepEqual(ids(r.descartadas), ['motoViva'])
   assert.deepEqual(ids(r.historicas), ['moto2015'])
 })
+
+test('la sustituida va DENTRO de la tarjeta de la nueva, no como un segundo seguro (moto Allianz→Occident, 28/09/2026)', () => {
+  const r = repartirSegurosCliente({
+    polizas: [
+      pol('allianz', { tipo: 'moto', aseguradora: 'Allianz', fechaVencimiento: '2026-11-01', sustituida: true }),
+      pol('occident', { tipo: 'moto', aseguradora: 'Occident', fechaVencimiento: '2027-11-01', sustituyeA: 'allianz' }),
+    ],
+    declaradas: [],
+    oportunidades: [],
+  })
+  assert.deepEqual(ids(r.conNosotros), ['occident'])
+  const t = r.conNosotros[0]
+  assert.equal(t.clase === 'poliza' ? t.sustituye?.id : null, 'allianz')
+  assert.deepEqual(ids(r.oportunidades), [])
+})
+
+test('sustituida sin la nueva a la vista sigue con nosotros (cubre hasta su vencimiento)', () => {
+  const r = repartirSegurosCliente({
+    polizas: [pol('vieja', { sustituida: true })],
+    declaradas: [],
+    oportunidades: [],
+  })
+  assert.deepEqual(ids(r.conNosotros), ['vieja'])
+})
