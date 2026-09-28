@@ -74,3 +74,14 @@ test('interruptores: solo garantías que alguna opción incluye, con su recuento
   const i = interruptoresGarantias('auto', [op('A-1', 1, 'si'), op('B-1', 2, 'no'), op('C-1', 3, 'si')])
   assert.deepEqual(i.map((x) => [x.clave, x.conSi]), [['lunas', 2]])
 })
+
+test('decesos, salud y vida también tienen catálogo', () => {
+  const d = clasificarCoberturas('decesos', ['Servicio fúnebre y sepelio', 'Traslado nacional', 'Repatriación desde el extranjero', 'Asistencia psicológica'].map((nombre) => ({ nombre, incluida: true })))
+  for (const c of ['servicio_funerario', 'traslado', 'repatriacion', 'asistencia_psicologica']) assert.equal(d.porClave[c], 'si', c)
+  const s = clasificarCoberturas('salud', ['Especialistas', 'Urgencias 24 h', 'Hospitalización', 'Cobertura dental', 'Reembolso de gastos'].map((nombre) => ({ nombre, incluida: true })))
+  for (const c of ['especialistas', 'urgencias', 'hospitalizacion', 'dental', 'reembolso']) assert.equal(s.porClave[c], 'si', c)
+  const v = clasificarCoberturas('vida', [{ nombre: 'Fallecimiento', incluida: true }, { nombre: 'Fallecimiento por accidente', incluida: false }, { nombre: 'Invalidez absoluta y permanente', incluida: true }])
+  assert.equal(v.porClave.fallecimiento, 'si')
+  assert.equal(v.porClave.fallecimiento_accidente, 'no')
+  assert.equal(v.porClave.invalidez, 'si')
+})

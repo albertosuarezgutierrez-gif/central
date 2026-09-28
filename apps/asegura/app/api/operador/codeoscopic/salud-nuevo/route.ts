@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server'
+import { NextResponse, after } from 'next/server'
 import { operadorAutorizado } from '@/lib/operador'
 import { cotizar } from '@/lib/codeoscopic/cotizar'
+import { completarCoberturasTarificacion, tarificacionACompletar } from '@/lib/codeoscopic/coberturas-tarificacion'
 import { prepararRetarificacionNuevaSalud, respuestaRetarificacion, type CuerpoRetarificacion } from '@/lib/retarificar-cartera'
 import { auditado } from '@/lib/auditoria'
 
@@ -67,6 +68,9 @@ export const POST = auditado(async (req: Request) => {
   }
 
   const r = await cotizar(p.peticion)
+  // Coberturas y garantías de cada precio (GET gratis), DESPUÉS de responder: el precio no espera.
+  const aCompletar = tarificacionACompletar(r, p.peticion.correduriaId)
+  if (aCompletar) after(() => completarCoberturasTarificacion(aCompletar).then(() => undefined))
   const res = respuestaRetarificacion(r, p)
   return NextResponse.json(res.cuerpo, { status: res.status })
 })

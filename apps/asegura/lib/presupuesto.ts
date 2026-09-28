@@ -31,7 +31,8 @@ import { registrarErrorCartera } from './error-cartera'
 import { resolverConfig, simulacionActiva } from './codeoscopic/config'
 import { peticion } from './codeoscopic/cliente'
 import { refrescarProyecto } from './codeoscopic/emitir'
-import { leerCoberturasDeOpciones, type SobreCoberturas } from './codeoscopic/coberturas-presupuesto'
+import { leerCoberturasDeOpciones, sobreReutilizable, type SobreCoberturas } from './codeoscopic/coberturas-presupuesto'
+import { completarCoberturasTarificacion } from './codeoscopic/coberturas-tarificacion'
 
 /**
  * Por qué no se ha podido situar la cobertura que el cliente tiene HOY.
@@ -141,6 +142,16 @@ export async function prepararPresupuesto(
     }
   }
 
+  // Red de seguridad (29/09/2026): las coberturas de cada precio se leen tras tarificar, en
+  // `after()`. Si aquella pasada no llegó (se cortó, o la tarificación es anterior), se completa
+  // AQUÍ, antes de leer los precios, con parte del presupuesto de tiempo de las coberturas. Nunca
+  // lanza; lo que no dé tiempo sigue por el camino de siempre más abajo.
+  const inicioCoberturas = Date.now()
+  await completarCoberturasTarificacion(
+    { correduriaId, tarificacionId: cab.id },
+    { topeMs: TOPE_RED_SEGURIDAD_MS },
+  )
+
   const filas = await db.$queryRaw<
     {
       compania: string | null
@@ -154,10 +165,11 @@ export async function prepararPresupuesto(
       requiere_rerate: boolean | null
       referencia_vendor: string | null
       avisos: unknown
+      coberturas: unknown
     }[]
   >`
     select compania, producto, modalidad, categoria, prima_eur, entrada_eur, franquicia_eur,
-           firmeza, requiere_rerate, referencia_vendor, avisos
+           firmeza, requiere_rerate, referencia_vendor, avisos, coberturas
     from tarificacion_precios
     where tarificacion_id = ${cab.id}::uuid
     order by creado_at asc, prima_eur asc nulls last
@@ -218,7 +230,8 @@ export async function prepararPresupuesto(
       avisos: Array.isArray(cruda.avisos) ? cruda.avisos.filter((a): a is string => typeof a === 'string') : [],
       papeles: o.papeles,
       coberturaDistinta: o.coberturaDistinta,
-      coberturas: null,
+      // Las ya leídas tras tarificar se reutilizan tal cual (`null` = hay que pedirlas).
+      coberturas: sobreReutilizable(cruda.coberturas),
     })
   }
 
@@ -243,8 +256,14 @@ export async function prepararPresupuesto(
 
   // Las coberturas de cada opción (fase 2): GRATIS y best-effort. Si fallan, el presupuesto sale
   // igual y el sobre de cada opción dice «no se han podido leer» — nunca un `[]` mudo.
-  const sobres = await coberturasDeLasOpciones(cab, aCongelar)
-  aCongelar.forEach((o, i) => { o.coberturas = sobres?.[i] ?? null })
+  // Solo se piden las que no venían ya leídas de la tarificación (filas sin `oferta_id`, o cuya
+  // lectura falló), con lo que quede del presupuesto de tiempo.
+  const faltan = aCongelar.filter((o) => o.coberturas === null)
+  if (faltan.length > 0) {
+    const restanteMs = Math.max(0, PRESUPUESTO_COBERTURAS_MS - (Date.now() - inicioCoberturas))
+    const sobres = await coberturasDeLasOpciones(cab, faltan, restanteMs)
+    faltan.forEach((o, i) => { o.coberturas = sobres?.[i] ?? null })
+  }
 
   const token = generarTokenVista()
   const tokenHash = await hashTokenVista(token)
@@ -324,6 +343,8 @@ type Cabecera = {
 
 /** Tope de tiempo TOTAL para leer las coberturas: Alberto está esperando en pantalla. */
 const PRESUPUESTO_COBERTURAS_MS = 8_000
+/** De ese tope, lo que puede gastar la red de seguridad de `completarCoberturasTarificacion`. */
+const TOPE_RED_SEGURIDAD_MS = 5_000
 
 /**
  * Las coberturas de las opciones congeladas, leídas de Codeoscopic. `null` = no se intenta:
@@ -331,7 +352,7 @@ const PRESUPUESTO_COBERTURAS_MS = 8_000
  * sin credenciales. Son LECTURAS gratis (`GET`), por eso no exigen el interruptor de tarificar —
  * el mismo criterio que la sonda del token (`ignorarInterruptor`).
  */
-async function coberturasDeLasOpciones(cab: Cabecera, opciones: OpcionPreparada[]): Promise<SobreCoberturas[] | null> {
+async function coberturasDeLasOpciones(cab: Cabecera, opciones: OpcionPreparada[], presupuestoMs: number): Promise<SobreCoberturas[] | null> {
   if (cab.simulado || !cab.projectId || simulacionActiva(process.env)) return null
   const r = resolverConfig(process.env, { ignorarInterruptor: true })
   if (r.estado !== 'lista') return null
@@ -349,7 +370,7 @@ async function coberturasDeLasOpciones(cab: Cabecera, opciones: OpcionPreparada[
             timeoutMs: config.timeoutGenericoMs,
           }),
       },
-      PRESUPUESTO_COBERTURAS_MS,
+      presupuestoMs,
     )
   } catch (e) {
     // `leerCoberturasDeOpciones` no lanza; esto es el cinturón. Sin sobre = «no se intentó».

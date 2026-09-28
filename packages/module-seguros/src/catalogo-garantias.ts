@@ -14,7 +14,7 @@
 // signos). Los nombres de moto están sacados de coberturas reales de Codeoscopic; los de auto y hogar
 // son el vocabulario del mercado y se afinan con `noReconocidas()`.
 
-export type RamoGarantias = 'auto' | 'moto' | 'hogar'
+export type RamoGarantias = 'auto' | 'moto' | 'hogar' | 'decesos' | 'salud' | 'vida'
 export type EstadoGarantia = 'si' | 'no' | 'no_consta'
 
 export type GarantiaCatalogo = {
@@ -79,6 +79,37 @@ export const CATALOGO_GARANTIAS: Record<RamoGarantias, readonly GarantiaCatalogo
     { clave: 'joyas', etiqueta: 'Joyas y objetos de valor', patrones: [/\bjoyas?\b/, /\bobjetos de valor\b/] },
     { clave: 'defensa_juridica', etiqueta: 'Defensa jurídica', patrones: [/\bdefensa juridica\b/, /\bproteccion juridica\b/] },
   ],
+  decesos: [
+    { clave: 'servicio_funerario', etiqueta: 'Servicio funerario', patrones: [/\bservicio funerario\b/, /\bdecesos\b/, /\bsepelio\b/, /\bfuneral\b/, /\binhumacion\b/, /\bincineracion\b/] },
+    { clave: 'traslado', etiqueta: 'Traslado nacional', patrones: [/\btraslado\b/], excluye: [/\binternacional\b/, /\bextranjero\b/] },
+    { clave: 'repatriacion', etiqueta: 'Repatriación desde el extranjero', patrones: [/\brepatriacion\b/, /\btraslado internacional\b/, /\bextranjero\b/] },
+    { clave: 'asistencia_viaje', etiqueta: 'Asistencia en viaje', patrones: [/\basistencia en viaje\b/, /\bviaje\b/] },
+    { clave: 'gestoria', etiqueta: 'Gestoría y trámites', patrones: [/\bgestoria\b/, /\btramites?\b/, /\btestamento\b/] },
+    { clave: 'asistencia_psicologica', etiqueta: 'Asistencia psicológica', patrones: [/\bpsicolog/, /\bduelo\b/] },
+    { clave: 'segunda_opinion', etiqueta: 'Segunda opinión médica', patrones: [/\bsegunda opinion\b/] },
+    { clave: 'capital_accidente', etiqueta: 'Indemnización por accidente', patrones: [/\baccidente\b/, /\bindemnizacion\b/] },
+  ],
+  salud: [
+    { clave: 'medicina_general', etiqueta: 'Medicina general y pediatría', patrones: [/\bmedicina (general|primaria)\b/, /\bpediatria\b/, /\batencion primaria\b/] },
+    { clave: 'especialistas', etiqueta: 'Especialistas', patrones: [/\bespecialistas?\b/, /\bespecialidades\b/] },
+    { clave: 'urgencias', etiqueta: 'Urgencias', patrones: [/\burgencias?\b/] },
+    { clave: 'pruebas', etiqueta: 'Pruebas diagnósticas', patrones: [/\bpruebas\b/, /\bdiagnostic/, /\banalisis\b/, /\bresonancia\b/] },
+    { clave: 'hospitalizacion', etiqueta: 'Hospitalización y cirugía', patrones: [/\bhospitalizacion\b/, /\bcirugia\b/, /\bintervenciones?\b/, /\bingreso\b/] },
+    { clave: 'parto', etiqueta: 'Embarazo y parto', patrones: [/\bparto\b/, /\bembarazo\b/, /\bmaternidad\b/] },
+    { clave: 'dental', etiqueta: 'Dental', patrones: [/\bdental\b/, /\bodontolog/, /\bbucodental\b/] },
+    { clave: 'fisioterapia', etiqueta: 'Fisioterapia', patrones: [/\bfisioterapia\b/, /\brehabilitacion\b/] },
+    { clave: 'psicologia', etiqueta: 'Psicología', patrones: [/\bpsicolog/] },
+    { clave: 'reembolso', etiqueta: 'Reembolso (médico libre)', patrones: [/\breembolso\b/, /\blibre eleccion\b/] },
+    { clave: 'asistencia_viaje', etiqueta: 'Asistencia en viaje', patrones: [/\bviaje\b/, /\bextranjero\b/] },
+  ],
+  vida: [
+    { clave: 'fallecimiento', etiqueta: 'Fallecimiento', patrones: [/\bfallecimiento\b/, /\bmuerte\b/], excluye: [/\baccidente\b/] },
+    { clave: 'fallecimiento_accidente', etiqueta: 'Fallecimiento por accidente', patrones: [/\b(fallecimiento|muerte) (por|de) accidente\b/, /\baccidente\b.*\b(fallecimiento|muerte)\b/] },
+    { clave: 'invalidez', etiqueta: 'Invalidez absoluta y permanente', patrones: [/\binvalidez\b/, /\bincapacidad permanente\b/, /\bipa\b/] },
+    { clave: 'incapacidad_temporal', etiqueta: 'Incapacidad temporal (baja)', patrones: [/\bincapacidad temporal\b/, /\bbaja laboral\b/] },
+    { clave: 'enfermedades_graves', etiqueta: 'Enfermedades graves', patrones: [/\benfermedades? graves?\b/, /\bcancer\b/] },
+    { clave: 'asistencia', etiqueta: 'Servicios de asistencia', patrones: [/\basistencia\b/, /\bsegunda opinion\b/, /\btestamento\b/] },
+  ],
 }
 
 /** Las claves del catálogo que describe UNA cobertura (normalmente una; «Rotura de faro/Casco» → una). */
@@ -116,6 +147,8 @@ export function noReconocidas(ramo: RamoGarantias, lista: readonly CoberturaPara
 }
 
 /** El ramo del catálogo para un ramo de la cartera, o `null` si no tiene catálogo (no se filtra). */
+const RAMOS_CATALOGO: readonly string[] = ['auto', 'moto', 'hogar', 'decesos', 'salud', 'vida']
+
 export function ramoDeCatalogo(ramo: string | null | undefined): RamoGarantias | null {
-  return ramo === 'auto' || ramo === 'moto' || ramo === 'hogar' ? ramo : null
+  return typeof ramo === 'string' && RAMOS_CATALOGO.includes(ramo) ? (ramo as RamoGarantias) : null
 }

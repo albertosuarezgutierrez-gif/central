@@ -8,11 +8,14 @@
 // precio con la compañía sigue siendo `POST .../oferta`, que se pide igual
 // sobre el `projectId` recuperado.
 
+import type { GarantiasClasificadas } from '@central/module-seguros'
 import { prisma } from '../tenant.ts'
 import { extraerFormularioAuto, type FormularioAutoGuardado } from './formulario-guardado.ts'
 import { fechaEfectoCaducada } from './fecha-efecto.ts'
 
 export type PrecioGuardado = {
+  /** Id de la fila en `tarificacion_precios`: la clave para ocultar/filtrar esa opción. */
+  id: string
   compania: string | null
   producto: string | null
   modalidad: string | null
@@ -22,6 +25,9 @@ export type PrecioGuardado = {
   franquiciaEur: number | null
   firmeza: string
   avisos: string[]
+  /** Garantías clasificadas (`{version, porClave}`). `null` = aún no se han leído sus
+   *  coberturas (o el ramo no tiene catálogo) — «no se sabe», nunca «no incluye nada». */
+  garantias: GarantiasClasificadas | null
 }
 
 export type TarificacionGuardada = {
@@ -100,6 +106,7 @@ export async function ultimaTarificacionNueva(
 async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }): Promise<Omit<TarificacionGuardada, 'formulario'>> {
   const filasPrecios = await prisma.$queryRaw<
     {
+      id: string
       compania: string | null
       producto: string | null
       modalidad: string | null
@@ -109,9 +116,11 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
       franquicia_eur: number | string | null
       firmeza: string | null
       avisos: unknown
+      garantias: unknown
     }[]
   >`
-    select compania, producto, modalidad, categoria, prima_eur, entrada_eur, franquicia_eur, firmeza, avisos
+    select id::text as id, compania, producto, modalidad, categoria, prima_eur, entrada_eur, franquicia_eur,
+           firmeza, avisos, garantias
     from tarificacion_precios
     where tarificacion_id = ${t.id}::uuid
     order by prima_eur asc nulls last
@@ -127,6 +136,7 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
     fechaEfecto,
     caducada: fechaEfectoCaducada(fechaEfecto),
     precios: filasPrecios.map((p) => ({
+      id: p.id,
       compania: p.compania,
       producto: p.producto,
       modalidad: p.modalidad,
@@ -138,6 +148,7 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
       franquiciaEur: numero(p.franquicia_eur),
       firmeza: p.firmeza ?? 'estimado',
       avisos: Array.isArray(p.avisos) ? p.avisos.filter((a): a is string => typeof a === 'string') : [],
+      garantias: garantiasDe(p.garantias),
     })),
   }
 }
@@ -146,4 +157,16 @@ function numero(v: number | string | null): number | null {
   if (v === null) return null
   const n = typeof v === 'number' ? v : Number(v)
   return Number.isFinite(n) ? n : null
+}
+
+/** El jsonb de `garantias`, validado por forma. Cualquier otra cosa es `null` («no se sabe»). */
+function garantiasDe(v: unknown): GarantiasClasificadas | null {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  if (typeof o.version !== 'number' || !o.porClave || typeof o.porClave !== 'object' || Array.isArray(o.porClave)) return null
+  const porClave: GarantiasClasificadas['porClave'] = {}
+  for (const [k, e] of Object.entries(o.porClave as Record<string, unknown>)) {
+    if (e === 'si' || e === 'no' || e === 'no_consta') porClave[k] = e
+  }
+  return { version: o.version, porClave }
 }
