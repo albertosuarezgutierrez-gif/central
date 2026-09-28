@@ -12,9 +12,9 @@ import { MarcaAsegura } from './MarcaAsegura'
  * El 26/09 pasó al nombre completo y el 28/09 volvió al monograma (Alberto:
  * «cambia por AS las cargas, queda más elegante»). Va EN LÍNEA (`MarcaAsegura`):
  * no añade una petición en el momento en que se está esperando a otra.
- * `role="status"` + «Cargando…» visible debajo (28/09/2026, Alberto: «que
- * parpadee para que la gente sepa que está cargando»); el monograma va en
- * `aria-hidden`, así que un lector de pantalla oye «Cargando», no «Grupo ASegura».
+ * El aviso de espera es el latido marcado del «AS» (28/09/2026); «Cargando…»
+ * va oculto a propósito (Alberto: en pantalla «se carga el diseño») y solo lo
+ * oye el lector de pantalla, gracias a `role="status"`.
  */
 export function CargaAsegura({ flotante = false }: { flotante?: boolean }) {
   return (

@@ -3797,12 +3797,12 @@ h1 em {
   background: color-mix(in oklab, var(--bg) 55%, transparent);
 }
 .carga-as-marca { display: inline-flex; animation: carga-as-late 1s ease-in-out infinite; }
-/* Visible a propósito (28/09/2026): el público del portal tiene 50-70 años y un
- * latido solo no siempre se lee como «espera». */
 .carga-as-texto {
-  font-size: 14px;
-  color: var(--muted);
-  letter-spacing: 0.02em;
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 @keyframes carga-as-entra { to { opacity: 1; } }
 @keyframes carga-as-late {
