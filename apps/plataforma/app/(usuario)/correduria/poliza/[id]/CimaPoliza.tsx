@@ -38,7 +38,7 @@ export default function CimaPoliza({ d, vigente }: { d: DatosCompaniaCima | null
 
   return (
     <section style={{ display: 'grid', gap: 8 }}>
-      <h2 style={{ fontSize: 16, margin: 0 }}>🏢 Lo que dice la compañía (CIMA)</h2>
+      <h2 style={{ fontSize: 16, margin: 0 }}><ConIcono i={Building2}>Lo que dice la compañía (CIMA)</ConIcono></h2>
 
       {d.anulacion && <p style={{ margin: 0, fontSize: 14 }}>{rotuloAnulacionCima(d.anulacion, vigente)}</p>}
 
@@ -60,7 +60,7 @@ export default function CimaPoliza({ d, vigente }: { d: DatosCompaniaCima | null
 
       {filasEmb.length > 0 && (
         <>
-          <strong style={{ fontSize: 14 }}>⛵ Embarcación</strong>
+          <strong style={{ fontSize: 14 }}><ConIcono i={Waves}>Embarcación</ConIcono></strong>
           <Filas filas={filasEmb} />
         </>
       )}

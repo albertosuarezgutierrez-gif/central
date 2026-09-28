@@ -169,7 +169,7 @@ function Verificacion({ s }: { s: SolicitudDatos }) {
       )}
       {s.discrepancias && s.discrepancias.length > 0 && (
         <div role="alert" style={{ color: 'var(--negative)', display: 'grid', gap: 2 }}>
-          <strong>⚠️ No casa con sus documentos:</strong>
+          <strong>No casa con sus documentos:</strong>
           {s.discrepancias.map((d) => {
             const campo = s.campos.find((c) => c.clave === d.clave) ?? { clave: d.clave, etiqueta: d.clave }
             return (

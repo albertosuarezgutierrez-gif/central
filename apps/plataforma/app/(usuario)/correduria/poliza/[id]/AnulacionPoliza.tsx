@@ -5,6 +5,7 @@
 // (plazo del art. 22 LCS, sin firma no se comunica) las aplica asegura; aquí se pinta lo que dice.
 
 import { useCallback, useEffect, useState } from 'react'
+import { AlertTriangle, CheckCircle2, Circle } from 'lucide-react'
 import {
   ESTADOS_ANULACION_ABIERTA, ETIQUETA_ESTADO_ANULACION, ETIQUETA_MOTIVO_ANULACION, ETIQUETA_TIPO_ANULACION,
   MOTIVOS_ANULACION, SOLICITANTES_ANULACION, TIPOS_ANULACION,

@@ -272,7 +272,7 @@ function Direccion({ clienteId, c }: { clienteId: string; c: ContactoFicha }) {
           diciendo media dirección sin explicar por qué falta la otra media. */}
       {sitio.reparos.map((r) => (
         <div key={r.tipo} style={{ fontSize: 12, lineHeight: 1.5, color: 'var(--muted)', paddingLeft: 20 }}>
-          ⚠️ {textoReparoSitio(r)}
+          {textoReparoSitio(r)}
         </div>
       ))}
 
