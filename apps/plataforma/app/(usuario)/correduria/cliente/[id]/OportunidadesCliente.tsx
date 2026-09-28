@@ -1,6 +1,7 @@
 'use client'
 import { useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Trophy } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { prepararAdjunto } from '@/lib/imagen-cliente'
@@ -242,7 +243,7 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', borderTop: '1px solid var(--border)', paddingTop: 8 }}>
           <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'editar' ? null : 'editar')} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>Corregir</button>
           {puedeGanar && (
-            <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'ganar' ? null : 'ganar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>🏆 Ganada</button>
+            <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'ganar' ? null : 'ganar')} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}><Trophy size={16} strokeWidth={1.75} aria-hidden /> Ganada</button>
           )}
           <button type="button" disabled={ocupado} onClick={() => setModo(modo === 'descartar' ? null : 'descartar')} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }} title="Abierta por error o duplicada. Si el cliente no quiere, usa «Perdida» arriba.">Descartar (error)</button>
         </div>

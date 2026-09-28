@@ -6,7 +6,9 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
+import { TriangleAlert } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { ConIcono } from './iconos'
 import { textoDesenlace, type Aprobacion, type CuerpoDecision, type Desenlace, type LecturaAprobaciones } from '@/lib/aprobaciones-asegura'
 
 const ORIGEN: Record<string, string> = { recibo_devuelto: 'Recibo devuelto', anulacion: 'Anulación firmada', carta_mediador: 'Nombramiento de mediador firmado' }
@@ -67,7 +69,7 @@ export default function Aprobaciones({ onContador }: { onContador?: (n: number |
     <div style={{ display: 'grid', gap: 6 }}>
       {d.inciertos.map(x => (
         <div key={x.id} style={{ display: 'grid', gap: 6, padding: '8px 12px', borderRadius: 12, border: '1px solid var(--warning)', background: 'var(--surface)' }}>
-          <span style={{ fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>⚠️ Correo a medias · {x.cliente ?? '(ficha sin nombre)'}</span>
+          <span style={{ fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}><ConIcono i={TriangleAlert}>Correo a medias · {x.cliente ?? '(ficha sin nombre)'}</ConIcono></span>
           <span style={{ ...NOTA, overflowWrap: 'anywhere' }}>
             «{x.asunto}» — no se sabe si salió. No se reintenta solo: míralo en Resend y dilo aquí.
           </span>

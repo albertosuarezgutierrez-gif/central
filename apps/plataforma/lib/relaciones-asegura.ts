@@ -463,27 +463,27 @@ export function textoAviso(r: RespuestaAviso, nombre: string): string {
   switch (r.estado) {
     case 'ok':
       return (
-        `✅ Correo enviado a ${nombre}. Sigue pendiente hasta que lo confirme desde el portal` +
+        `Correo enviado a ${nombre}. Sigue pendiente hasta que lo confirme desde el portal` +
         (r.caducaEn ? `, y se cierra solo el ${fechaLarga(r.caducaEn)}` : '') +
         '.'
       )
     case 'sin_email':
-      return `📭 ${nombre} no tiene ningún correo en su ficha (o está de baja de correo): añádeselo y vuelve a intentarlo. No se ha enviado nada.`
+      return `${nombre} no tiene ningún correo en su ficha (o está de baja de correo): añádeselo y vuelve a intentarlo. No se ha enviado nada.`
     case 'sin_pendiente':
-      return `🕐 No hay ninguna autorización pendiente de confirmar para ${nombre}. No se ha enviado nada.`
+      return `No hay ninguna autorización pendiente de confirmar para ${nombre}. No se ha enviado nada.`
     case 'sin_portal':
-      return `⚠️ No se ha enviado: ${textoMotivoRelaciones(r.motivo)}`
+      return `No se ha enviado: ${textoMotivoRelaciones(r.motivo)}`
     case 'error_envio':
-      return `⚠️ El proveedor de correo no aceptó el mensaje, así que NO le ha llegado. Vuelve a intentarlo.`
+      return `El proveedor de correo no aceptó el mensaje, así que NO le ha llegado. Vuelve a intentarlo.`
     case 'remitente_no_verificado':
-      return '⚙️ No se ha enviado y NO sirve reintentarlo: Resend rechaza el remitente porque su dominio no está verificado. Se arregla en resend.com/domains (y en el DNS del dominio).'
+      return 'No se ha enviado y NO sirve reintentarlo: Resend rechaza el remitente porque su dominio no está verificado. Se arregla en resend.com/domains (y en el DNS del dominio).'
     case 'sin_correo_configurado':
       return (
-        `⚙️ No se ha enviado y NO sirve reintentarlo: ${textoMotivoRelaciones(r.motivo)} Se arregla en las ` +
+        `No se ha enviado y NO sirve reintentarlo: ${textoMotivoRelaciones(r.motivo)} Se arregla en las ` +
         'variables del proyecto Vercel central-asegura (y hay que redesplegar).'
       )
     default:
-      return `⚠️ No se ha enviado: ${textoMotivoRelaciones(r.motivo)}`
+      return `No se ha enviado: ${textoMotivoRelaciones(r.motivo)}`
   }
 }
 

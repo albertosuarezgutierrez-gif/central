@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Cake, CarFront, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
+import { Cake, CarFront, Construction, FileText, Heart, IdCard, Lock, Mail, MapPin, Phone } from 'lucide-react'
 import { Ico, FILA } from '../../iconos'
 import { contactoEfectivo, etiquetaRol, nombrePendiente, mensajePresentacionWhatsapp, siguientePaso, type ContactoEfectivo, type EstadoClienteDerivado, type ResumenFicha } from '@central/module-seguros'
 import { estadoCaducidadCarnet, urlRetarificar, urlSubirPoliza, RAMOS_PRESUPUESTO, type CarnetFicha, type DatosDePolizas, type Ficha, type IntervinienteFicha } from '@/lib/ficha-asegura'
@@ -328,11 +328,11 @@ function Acciones({ clienteId }: { clienteId: string }) {
               key={r.etiqueta}
               role="menuitem"
               href={r.url(clienteId)}
-              title={r.sinVerificar ? AVISO_SIN_VERIFICAR : `Oportunidad nueva de ${r.etiqueta.replace(/^\S+\s/, '').toLowerCase()} para este cliente`}
+              title={r.sinVerificar ? AVISO_SIN_VERIFICAR : `Oportunidad nueva de ${r.etiqueta.toLowerCase()} para este cliente`}
               style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44, padding: '0 10px', borderRadius: 8, fontSize: 14, fontWeight: 600, color: 'var(--text)', textDecoration: 'none' }}
             >
               {r.etiqueta}
-              {r.sinVerificar && <span aria-label="esquema sin verificar" style={{ marginLeft: 'auto', fontSize: 12 }}>🚧</span>}
+              {r.sinVerificar && <span title="esquema sin verificar" style={{ marginLeft: 'auto' }}><Ico i={Construction} size={12} /></span>}
             </Link>
           ))}
           <Link
@@ -343,14 +343,14 @@ function Acciones({ clienteId }: { clienteId: string }) {
           >
             Sin precio, solo seguimiento
           </Link>
-          <p style={{ margin: '6px 4px 2px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }} title={AVISO_SIN_VERIFICAR}>
-            🚧 = esquema sin verificar
+          <p style={{ ...FILA, margin: '6px 4px 2px', fontSize: 11, color: 'var(--muted)', lineHeight: 1.4 }} title={AVISO_SIN_VERIFICAR}>
+            <Ico i={Construction} size={11} /> = esquema sin verificar
           </p>
         </div>
       </details>
       <span title="Hoy el agente lee pólizas de AUTO (PDF o foto): vehículo, antigüedad, siniestralidad. Lo enseña, no lo guarda: falta decidir dónde y cuánto tiempo conservar documentos con DNI y matrícula dentro." style={{ minHeight: 44 }}>
         <BtnLink href={urlSubirPoliza()} variante="secundario" tam="sm" nuevaPestana>
-          📄 Subir póliza ↗
+          <Ico i={FileText} /> Subir póliza ↗
         </BtnLink>
       </span>
     </div>

@@ -2,7 +2,8 @@
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { IdCard, KeyRound, Mail, MapPin, MessageCircle, Pencil, Phone, Star, Users } from 'lucide-react'
+import { Eye, IdCard, KeyRound, Mail, MapPin, MessageCircle, Pencil, Phone, Star, Users } from 'lucide-react'
+import { Ico } from '../../iconos'
 import { etiquetaRol, leerSitio, textoReparoSitio, type ContactoCliente, type PersonaDePolizas, type PersonaFicha } from '@central/module-seguros'
 import Bloque from '../../Bloque'
 import ContactosFicha from '../../ContactosFicha'
@@ -362,7 +363,7 @@ function Portal({ clienteId, nombre, telefonos }: {
       if (r.estado === 'ok') {
         if (pestana) pestana.location.href = r.url
         else window.location.assign(r.url)
-        setAvisoVista(`👁 Portal de ${nombre} abierto en otra pestaña (solo lectura, 4 h). Pulsa «Salir» allí al terminar.`)
+        setAvisoVista(`Portal de ${nombre} abierto en otra pestaña (solo lectura, 4 h). Pulsa «Salir» allí al terminar.`)
       } else {
         pestana?.close()
         setAvisoVista(textoVista(r, nombre))
@@ -537,7 +538,7 @@ function Portal({ clienteId, nombre, telefonos }: {
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => setAvisoWa(
-              `📲 WhatsApp abierto con el mensaje escrito para ${nombre} (${wa.telefono}). ` +
+              `WhatsApp abierto con el mensaje escrito para ${nombre} (${wa.telefono}). ` +
               'Aquí NO consta como enviado: eso pasa cuando le des a enviar tú, en WhatsApp.',
             )}
             title={`Abre WhatsApp con el mensaje ya escrito para ${wa.telefono}. Lo envías tú.`}
@@ -560,7 +561,7 @@ function Portal({ clienteId, nombre, telefonos }: {
           style={{ ...btnStyle('sutil'), whiteSpace: 'normal', textAlign: 'left', minHeight: 44 }}
           title={`Abre el portal en otra pestaña exactamente como lo ve ${nombre}. Solo lectura.`}
         >
-          {abriendo ? 'abriendo…' : '👁 Ver su portal'}
+          {abriendo ? 'abriendo…' : <><Ico i={Eye} /> Ver su portal</>}
         </button>
       </div>
       {avisoVista && <p style={{ ...sutil, maxWidth: '72ch', color: 'var(--text)' }}>{avisoVista}</p>}

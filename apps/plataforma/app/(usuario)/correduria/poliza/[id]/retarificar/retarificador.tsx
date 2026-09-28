@@ -16,6 +16,8 @@
 // aquí para que la copia sea UNA y no dos.
 
 import { useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, Check, Clipboard, Clock, FlaskConical, OctagonAlert, X } from 'lucide-react'
+import { Ico, FILA } from '../../../iconos'
 import {
   borrarBorrador,
   claveBorradorRetarificar,
@@ -1462,7 +1464,7 @@ export default function Retarificador({
 
         {simulacion ? (
           <div style={CAJA_SIMULACION}>
-            <strong style={{ color: 'var(--warn)' }}>🧪 No se llama a ninguna compañía.</strong>{' '}
+            <strong style={{ ...FILA, color: 'var(--warn)' }}><Ico i={FlaskConical} /> No se llama a ninguna compañía.</strong>{' '}
             El precio lo inventa central para poder ver la pantalla funcionando. No cuesta nada, no
             se toca el libro de consumo y no se puede enseñar a un cliente.
           </div>
@@ -1540,7 +1542,7 @@ export default function Retarificador({
 
         {resultado.estado === 'error' && (
           <p className="err" style={{ marginTop: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-            {resultado.tope ? '🛑 Tope alcanzado: ' : '⚠️ '}
+            <Ico i={resultado.tope ? OctagonAlert : AlertTriangle} /> {resultado.tope ? 'Tope alcanzado: ' : ''}
             {resultado.mensaje}
           </p>
         )}
@@ -1632,8 +1634,8 @@ function Precios({
             marginBottom: 12,
           }}
         >
-          <p style={{ margin: 0, fontWeight: 800, fontSize: 18, color: 'var(--warn)' }}>
-            🧪 ESTO ES UNA SIMULACIÓN
+          <p style={{ ...FILA, margin: 0, fontWeight: 800, fontSize: 18, color: 'var(--warn)' }}>
+            <Ico i={FlaskConical} /> ESTO ES UNA SIMULACIÓN
           </p>
           <p style={{ margin: '4px 0 0' }}>
             {r.avisoSimulacion ??
@@ -1646,8 +1648,8 @@ function Precios({
       {/* La pantalla se pintó en simulación y la respuesta NO viene marcada:
           se trata como REAL. La duda sobre el dinero se resuelve siempre así. */}
       {simulacion && !r.simulado && (
-        <div className="err" style={{ marginBottom: 12 }}>
-          ⚠️ Esta pantalla se abrió en modo simulación, pero la respuesta{' '}
+        <div className="err" style={{ ...FILA, marginBottom: 12 }}>
+          <Ico i={AlertTriangle} /> Esta pantalla se abrió en modo simulación, pero la respuesta{' '}
           <strong>no viene marcada como simulada</strong>: trátala como una cotización REAL y
           comprueba el consumo antes de volver a pulsar.
         </div>
@@ -1689,8 +1691,8 @@ function Precios({
           compañía los nombra a su manera (el «Todo Riesgo» de un hogar no es el
           de un coche). Cuando eso pasa, el módulo lo dice y aquí se pinta. */}
       {comparativa.avisoEscala && (
-        <p className="muted" style={{ marginTop: 8 }}>
-          ⚠️ {comparativa.avisoEscala}
+        <p className="muted" style={{ ...FILA, marginTop: 8 }}>
+          <Ico i={AlertTriangle} /> {comparativa.avisoEscala}
         </p>
       )}
 
@@ -1930,7 +1932,7 @@ function Precios({
                             }
                             onClick={() => setAbierta(abrirCierra ? null : id)}
                           >
-                            {abrirCierra ? '✕' : '✓'}
+                            <Ico i={abrirCierra ? X : Check} />
                           </button>
                         </td>
                       </tr>
@@ -2108,8 +2110,8 @@ function BannerRecuperada({
       className="card"
       style={{ borderColor: 'var(--ok)', borderWidth: 2, background: 'rgba(22, 163, 74, 0.08)' }}
     >
-      <p style={{ margin: 0, fontWeight: 800, color: 'var(--ok)' }}>
-        📋 Cotización recuperada ({cuando})
+      <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--ok)' }}>
+        <Ico i={Clipboard} /> Cotización recuperada ({cuando})
       </p>
       <p style={{ margin: '4px 0 0' }}>
         Ya se pidió precio para esta póliza y sigue guardado — <strong>no se ha vuelto a cobrar</strong>.
@@ -2143,8 +2145,8 @@ function BannerCaducada({ guardadaPrevia }: { guardadaPrevia: TarificacionGuarda
     : fecha.toLocaleString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
   return (
     <div className="card" style={{ borderColor: 'var(--danger)', borderWidth: 2, background: 'var(--negative-bg)' }}>
-      <p style={{ margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
-        ⏳ La cotización del {cuando} ha caducado
+      <p style={{ ...FILA, margin: 0, fontWeight: 800, color: 'var(--danger)' }}>
+        <Ico i={Clock} /> La cotización del {cuando} ha caducado
       </p>
       <p style={{ margin: '4px 0 0' }}>
         Se pidió con fecha de efecto <strong>{guardadaPrevia.fechaEfecto ?? '(sin fecha)'}</strong>, que ya ha
@@ -2166,8 +2168,8 @@ function BannerSimulacion() {
         background: 'rgba(217, 119, 6, 0.08)',
       }}
     >
-      <p style={{ margin: 0, fontWeight: 800, fontSize: 18, color: 'var(--warn)' }}>
-        🧪 Modo simulación
+      <p style={{ ...FILA, margin: 0, fontWeight: 800, fontSize: 18, color: 'var(--warn)' }}>
+        <Ico i={FlaskConical} /> Modo simulación
       </p>
       <p style={{ margin: '4px 0 0' }}>
         Los precios que salgan aquí <strong>los inventamos nosotros</strong>: no se llama a ninguna

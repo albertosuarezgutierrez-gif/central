@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { RefreshCw } from 'lucide-react'
+import { Clock, RefreshCw, TriangleAlert } from 'lucide-react'
 import { MOTIVOS_PUERTO, type Sustituciones as RespSustituciones, type SustitucionPendiente } from '@/lib/correduria-puerto'
+import { ConIcono } from './iconos'
 import Bloque from './Bloque'
 
 /**
@@ -50,8 +51,8 @@ export default function Sustituciones({
     return (
       <Bloque titulo="Seguimiento de sustituciones" Icono={RefreshCw} primero={primero}>
         <p style={pMuted}>
-          ⏳ El puerto con asegura no está conectado. No lo leas como «no hay ninguna pendiente»: es
-          que desde aquí no se puede mirar.
+          <ConIcono i={Clock}>El puerto con asegura no está conectado. No lo leas como «no hay ninguna pendiente»: es
+          que desde aquí no se puede mirar.</ConIcono>
         </p>
       </Bloque>
     )
@@ -61,7 +62,7 @@ export default function Sustituciones({
     return (
       <Bloque titulo="Seguimiento de sustituciones" Icono={RefreshCw} tono="malo" primero={primero}>
         <p style={{ ...pMuted, color: 'var(--negative)' }}>
-          ⚠️ No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} No significa que no haya ninguna.
+          <ConIcono i={TriangleAlert}>No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} No significa que no haya ninguna.</ConIcono>
         </p>
       </Bloque>
     )

@@ -1,7 +1,9 @@
 'use client'
 import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
+import { Check, Link2 } from 'lucide-react'
 import { btnStyle } from '@/components/ui'
+import { Ico, FILA } from '../../iconos'
 import { interpretarSolicitudesDatos, valorLegible, type SolicitudDatos, type SolicitudesDatos } from '@/lib/seguimiento-asegura'
 import { enlaceWhatsappConMensaje } from '@/lib/telefono-wa'
 import { fmt } from './piezas'
@@ -101,7 +103,7 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
 
       {!nuevo && pendiente && (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <span style={{ color: 'var(--muted)' }}>🔗 Datos pedidos por enlace; sin contestar (caduca el {fmt(pendiente.caduca.slice(0, 10))}).</span>
+          <span style={{ ...FILA, color: 'var(--muted)' }}><Ico i={Link2} size={13} /> Datos pedidos por enlace; sin contestar (caduca el {fmt(pendiente.caduca.slice(0, 10))}).</span>
           <button type="button" disabled={ocupado} onClick={() => void anular(pendiente.id)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>Anular enlace</button>
         </div>
       )}
@@ -109,7 +111,7 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
       {!nuevo && !pendiente && lectura?.estado === 'ok' && (
         <div>
           <button type="button" disabled={ocupado} onClick={() => void crear()} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
-            {ocupado ? 'Creando…' : completada ? '🔗 Pedir otra vez datos por enlace' : '🔗 Pedir datos al cliente por enlace'}
+            {ocupado ? 'Creando…' : <><Ico i={Link2} /> {completada ? 'Pedir otra vez datos por enlace' : 'Pedir datos al cliente por enlace'}</>}
           </button>
         </div>
       )}
@@ -165,7 +167,7 @@ function Verificacion({ s }: { s: SolicitudDatos }) {
       </div>
       {n > 0 && s.discrepancias === null && <div style={{ color: 'var(--muted)' }}>No se ha podido contrastar lo declarado con sus documentos.</div>}
       {n > 0 && s.discrepancias !== null && s.discrepancias.length === 0 && (
-        <div style={{ color: 'var(--positive)' }}>✔ Lo declarado coincide con lo leído en sus documentos.</div>
+        <div style={{ ...FILA, color: 'var(--positive)' }}><Ico i={Check} size={13} /> Lo declarado coincide con lo leído en sus documentos.</div>
       )}
       {s.discrepancias && s.discrepancias.length > 0 && (
         <div role="alert" style={{ color: 'var(--negative)', display: 'grid', gap: 2 }}>

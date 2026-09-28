@@ -1,8 +1,9 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { Target } from 'lucide-react'
+import { AlertTriangle, Check, Clock, Mail, Phone, Target } from 'lucide-react'
 import Bloque from './Bloque'
+import { Ico, FILA } from './iconos'
 import { Badge, btnStyle } from '@/components/ui'
 import { enlaceWhatsappConMensaje } from '@/lib/invitacion-whatsapp'
 import {
@@ -75,8 +76,8 @@ export default function Recaptacion({ onContador }: {
   if (cola.estado === 'sin_configurar') {
     return (
       <Bloque titulo="Recaptación" Icono={Target}>
-        <p style={pMuted}>
-          ⏳ El puerto con asegura no está conectado. <strong>No lo leas como «no hay leads»</strong>:
+        <p style={{ ...pMuted, ...FILA }}>
+          <Ico i={Clock} size={12} /> El puerto con asegura no está conectado. <strong>No lo leas como «no hay leads»</strong>:
           es que desde aquí no se puede mirar.
         </p>
       </Bloque>
@@ -86,8 +87,8 @@ export default function Recaptacion({ onContador }: {
   if (cola.estado === 'error') {
     return (
       <Bloque titulo="Recaptación" Icono={Target} tono="malo">
-        <p style={{ ...pMuted, color: 'var(--negative)' }}>
-          ⚠️ No se ha podido leer la cola: {textoMotivoCola(cola.motivo, cola.causa)}{' '}
+        <p style={{ ...pMuted, ...FILA, color: 'var(--negative)' }}>
+          <Ico i={AlertTriangle} size={12} /> No se ha podido leer la cola: {textoMotivoCola(cola.motivo, cola.causa)}{' '}
           <strong>No significa que no haya leads.</strong>
         </p>
       </Bloque>
@@ -216,8 +217,8 @@ function FilaGrupo({ g }: { g: GrupoLeadRecaptacion }) {
         {g.polizas.map((p) => <div key={p.polizaId}>{textoCuando(p)}</div>)}
       </td>
       <td style={{ padding: '6px 8px' }} data-label="Contacto">
-        {g.telefono && <span>📞 {g.telefono}</span>}
-        {g.email && <span style={{ marginLeft: g.telefono ? 8 : 0 }}>✉️ {g.email}</span>}
+        {g.telefono && <span style={FILA}><Ico i={Phone} size={12} /> {g.telefono}</span>}
+        {g.email && <span style={{ ...FILA, marginLeft: g.telefono ? 8 : 0 }}><Ico i={Mail} size={12} /> {g.email}</span>}
         {!g.telefono && !g.email && '—'}
       </td>
       <td style={{ padding: '6px 8px' }} data-label="Acciones">
@@ -290,7 +291,7 @@ function mensajeSugerido(g: GrupoLeadRecaptacion): string {
 
 function textoEscritura(r: EscrituraRecaptacion): string {
   switch (r.estado) {
-    case 'ok': return 'Enviado ✓'
+    case 'ok': return 'Enviado'
     case 'invalido': return `Error: ${r.motivo}`
     case 'no_encontrado': return 'Error: ficha no encontrada'
     case 'sin_configurar': return 'Error: sin configurar'
@@ -359,7 +360,7 @@ function BotonEmailRecaptacion({ grupo }: { grupo: GrupoLeadRecaptacion }) {
     >
       {estado === 'idle' && 'Email'}
       {estado === 'enviando' && 'Enviando…'}
-      {typeof estado === 'object' && (estado.estado === 'ok' ? 'Enviado ✓' : 'Error, reintenta')}
+      {typeof estado === 'object' && (estado.estado === 'ok' ? <><Ico i={Check} size={12} /> Enviado</> : 'Error, reintenta')}
     </button>
   )
 }

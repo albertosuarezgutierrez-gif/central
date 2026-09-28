@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import Link from 'next/link'
-import { ChevronDown, Download, Eraser, Search, Users } from 'lucide-react'
+import { ArrowRight, ChevronDown, Download, Eraser, Search, Users } from 'lucide-react'
 import {
   ESTADOS,
   MIN_LETRAS_BUSQUEDA,
@@ -15,6 +15,7 @@ import {
 import { eur } from '@/lib/dinero'
 import { MOTIVOS_PUERTO } from '@/lib/correduria-puerto'
 import { Badge, Pendiente, TablaScroll, btnStyle, type Tono } from '@/components/ui'
+import { ConIcono } from './iconos'
 import {
   POR_PAGINA_UI,
   companiasDe,
@@ -612,7 +613,7 @@ function ChipSiguiente({ s }: { s: ClienteListado['siguiente'] }) {
       }}
       title={s.porque}
     >
-      👉 {s.titulo}
+      <ConIcono i={ArrowRight}>{s.titulo}</ConIcono>
     </span>
   )
 }

@@ -6,7 +6,9 @@
 // vendor (no hay campo confirmado donde ponerla).
 
 import { useState } from 'react'
+import { FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
+import { ConIcono } from '../../../iconos'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/salud-nuevo-asegura'
 import { pedirCotizacionSalud } from './acciones'
@@ -215,8 +217,8 @@ export default function SaludNuevo({
         <CardHeader title={simulacion ? '3 · Simular precio' : '3 · Pedir precio'} />
         {simulacion ? (
           <p style={{ fontSize: 13 }}>
-            🧪 <strong>No se llama a ninguna compañía.</strong> El precio lo inventa central para poder ver la
-            pantalla funcionando. No cuesta nada y no cuenta contra el tope.
+            <ConIcono i={FlaskConical}><strong>No se llama a ninguna compañía.</strong> El precio lo inventa central para poder ver la
+            pantalla funcionando. No cuesta nada y no cuenta contra el tope.</ConIcono>
           </p>
         ) : (
           <p style={{ fontSize: 13 }}>
@@ -292,7 +294,7 @@ function Precios({ r, simulacion }: { r: Extract<Resultado, { estado: 'ok' }>; s
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
-          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>
+          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>
           <p style={{ margin: '4px 0 0', fontSize: 13 }}>
             {r.avisoSimulacion ?? 'Precio inventado por central para probar la pantalla: ninguna compañía lo ha dado y no se ha gastado ni un céntimo.'}
           </p>

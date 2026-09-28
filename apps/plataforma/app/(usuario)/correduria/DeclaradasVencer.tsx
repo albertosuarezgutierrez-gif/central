@@ -1,10 +1,11 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { PhoneOutgoing } from 'lucide-react'
+import { Clock, PhoneOutgoing, TriangleAlert } from 'lucide-react'
 import { MOTIVOS_PUERTO } from '@/lib/correduria-puerto'
 import type { DeclaradasVencerAsegura, DeclaradaPorVencer } from '@/lib/cartera-asegura'
 import { Badge } from '@/components/ui'
+import { ConIcono } from './iconos'
 import Bloque from './Bloque'
 import AccionesContacto from './AccionesContacto'
 
@@ -66,8 +67,8 @@ export default function DeclaradasVencer({
     return (
       <Bloque titulo="Otras compañías por vencer" Icono={PhoneOutgoing} primero={primero}>
         <p style={pMuted}>
-          ⏳ El puerto con asegura no está conectado. No lo leas como «no hay nada que renovar»: es
-          que desde aquí no se puede mirar.
+          <ConIcono i={Clock}>El puerto con asegura no está conectado. No lo leas como «no hay nada que renovar»: es
+          que desde aquí no se puede mirar.</ConIcono>
         </p>
       </Bloque>
     )
@@ -77,7 +78,7 @@ export default function DeclaradasVencer({
     return (
       <Bloque titulo="Otras compañías por vencer" Icono={PhoneOutgoing} tono="malo" primero={primero}>
         <p style={{ ...pMuted, color: 'var(--negative)' }}>
-          ⚠️ No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} No significa que no venza nada.
+          <ConIcono i={TriangleAlert}>No se ha podido leer: {MOTIVOS_PUERTO[datos.motivo]} No significa que no venza nada.</ConIcono>
         </p>
       </Bloque>
     )
@@ -128,8 +129,8 @@ export default function DeclaradasVencer({
 
       {sinVincular > 0 && (
         <p style={{ ...pMuted, marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 10 }}>
-          ⚠️ Además hay {sinVincular} póliza(s) declarada(s) en esta ventana cuya identidad del portal
-          todavía no está vinculada a ninguna ficha: no hay a quién llamar todavía.
+          <ConIcono i={TriangleAlert}>Además hay {sinVincular} póliza(s) declarada(s) en esta ventana cuya identidad del portal
+          todavía no está vinculada a ninguna ficha: no hay a quién llamar todavía.</ConIcono>
         </p>
       )}
     </Bloque>

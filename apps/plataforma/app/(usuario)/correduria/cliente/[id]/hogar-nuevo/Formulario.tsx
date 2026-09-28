@@ -16,8 +16,9 @@
 // hasta el botón final.
 
 import { useState } from 'react'
-import { Loader2, Pencil, X } from 'lucide-react'
+import { FlaskConical, Loader2, Pencil, X } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
+import { ConIcono } from '../../../iconos'
 import { eur } from '@/lib/dinero'
 import type {
   Control as TipoControl,
@@ -535,7 +536,7 @@ function Precios({ r }: { r: Extract<Resultado, { estado: 'ok' }> }) {
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
         <div style={{ ...cardStyle, borderColor: 'var(--warning)', background: 'var(--warning-bg)', marginBottom: 12 }}>
-          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}>🧪 ESTO ES UNA SIMULACIÓN</p>
+          <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)' }}><ConIcono i={FlaskConical}>ESTO ES UNA SIMULACIÓN</ConIcono></p>
           <p style={{ margin: '4px 0 0', fontSize: 13 }}>
             {r.avisoSimulacion ?? 'Precio inventado por central para probar la pantalla: ninguna compañía lo ha dado y no se ha gastado ni un céntimo.'}
           </p>

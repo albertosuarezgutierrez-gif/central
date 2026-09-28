@@ -1,7 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Mail, Pencil, Phone, Plus, Star } from 'lucide-react'
+import { Lock, Mail, Pencil, Phone, Plus, Star } from 'lucide-react'
 import {
   ETIQUETAS_EMAIL,
   ETIQUETAS_TELEFONO,
@@ -11,6 +11,7 @@ import {
   type TipoContacto,
 } from '@central/module-seguros'
 import Bloque from './Bloque'
+import { ConIcono } from './iconos'
 import BotonWhatsapp from './BotonWhatsapp'
 import { btnStyle } from '@/components/ui'
 import {
@@ -337,8 +338,8 @@ function EditarUno({ c, ocupado, onGuardar, onPrincipal, onBorrar, onCerrar, onA
       </div>
       {c.ilegible && (
         <div style={pendienteBox}>
-          🔒 Este dato está guardado <strong>cifrado con una clave que asegura no puede abrir</strong>, así que
-          no se puede enseñar. Lo que escribas aquí lo sustituye.
+          <ConIcono i={Lock}>Este dato está guardado <strong>cifrado con una clave que asegura no puede abrir</strong>, así que
+          no se puede enseñar. Lo que escribas aquí lo sustituye.</ConIcono>
         </div>
       )}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

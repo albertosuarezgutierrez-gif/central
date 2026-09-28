@@ -1,8 +1,10 @@
 'use client'
 import { UMBRAL_SUBIDA_GENERAL_PCT, etiquetaVeredictoPrima, type Anualidad, type EvolucionPrima as Evolucion, type VeredictoPrima } from '@central/module-seguros'
+import { AlertTriangle, Coins, TriangleAlert } from 'lucide-react'
 import { eur } from '@/lib/dinero'
 import Link from 'next/link'
 import { fechaEs, type EvolucionPrimaCompacta } from '@/lib/ficha-asegura'
+import { ConIcono, Ico } from './iconos'
 
 /**
  * «¿Por qué ha subido la prima?» — lo que el cliente pregunta al renovar y lo
@@ -66,7 +68,7 @@ function Tarjeta({ evolucion, retarificar }: { evolucion: Evolucion | null; reta
   return (
     <div style={{ border: `1px ${evolucion === null ? 'dashed' : 'solid'} var(--border)`, borderRadius: 12, padding: 14 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 10 }}>
-        <span style={{ fontWeight: 700, fontSize: 14 }}>💶 ¿Por qué ha subido la prima?</span>
+        <span style={{ fontWeight: 700, fontSize: 14 }}><ConIcono i={Coins}>¿Por qué ha subido la prima?</ConIcono></span>
         <Chip evolucion={evolucion} />
       </div>
       {evolucion === null ? (
@@ -101,8 +103,8 @@ function Cuerpo({ evolucion, retarificar }: { evolucion: Evolucion; retarificar?
 
       {evolucion.siniestrosSinFecha > 0 && (
         <p style={{ ...parrafo, ...avisoSinFecha }}>
-          ⚠️ {evolucion.siniestrosSinFecha} siniestro(s) sin fecha: no se sabe a qué anualidad pertenecen, así que no
-          cuentan en ningún ciclo de abajo.
+          <ConIcono i={TriangleAlert}>{evolucion.siniestrosSinFecha} siniestro(s) sin fecha: no se sabe a qué anualidad pertenecen, así que no
+          cuentan en ningún ciclo de abajo.</ConIcono>
         </p>
       )}
 
@@ -141,13 +143,13 @@ function TarjetaAnualidad({ a }: { a: Anualidad }) {
         <div style={sub}>neta {eur(a.primaNeta)}</div>
       )}
       <div style={{ color: incompleta ? 'var(--warning)' : 'var(--muted)', fontSize: 12 }}>
-        {incompleta && '⚠️ '}
+        {incompleta && <Ico i={TriangleAlert} />}
         {a.recibos} recibo(s)
         {a.esperados !== null ? ` de ${a.esperados}` : ' · ciclo sin fraccionamiento informado'}
         {incompleta && a.esperados !== null && a.recibos < a.esperados && ' · ciclo incompleto'}
       </div>
       <div style={{ fontSize: 12, color: a.siniestros > 0 ? 'var(--negative)' : 'var(--muted)' }}>
-        {a.siniestros > 0 ? `🚨 ${a.siniestros} siniestro(s) en el ciclo` : 'sin siniestros fechados en el ciclo'}
+        {a.siniestros > 0 ? <ConIcono i={AlertTriangle}>{a.siniestros} siniestro(s) en el ciclo</ConIcono> : 'sin siniestros fechados en el ciclo'}
       </div>
       {a.suplementos > 0 && <div style={sub}>{a.suplementos} suplemento(s) a mitad de ciclo</div>}
     </li>

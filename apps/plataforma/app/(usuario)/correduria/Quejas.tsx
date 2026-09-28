@@ -1,9 +1,10 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
-import { MessageSquareWarning } from 'lucide-react'
+import { MessageSquareWarning, TriangleAlert } from 'lucide-react'
 import { Badge, btnStyle } from '@/components/ui'
 import { fechaEs } from '@/lib/ficha-asegura'
+import { ConIcono } from './iconos'
 import Bloque from './Bloque'
 import {
   CANALES_QUEJA,
@@ -183,7 +184,7 @@ export default function Quejas({ onContador }: {
     >
       {lectura.estado !== 'ok' && (
         <p style={{ fontSize: 12, color: 'var(--warning)', margin: '0 0 10px' }}>
-          ⚠️ La última recarga falló ({porqueNoSeLee(lectura)}): lo de abajo es la lectura anterior.
+          <ConIcono i={TriangleAlert}>La última recarga falló ({porqueNoSeLee(lectura)}): lo de abajo es la lectura anterior.</ConIcono>
         </p>
       )}
       {mensaje && (
@@ -193,12 +194,12 @@ export default function Quejas({ onContador }: {
       )}
       {ok.truncada && (
         <p style={{ fontSize: 12, color: 'var(--warning)', margin: '0 0 10px' }}>
-          ⚠️ asegura ha devuelto solo las primeras 500: <strong>hay más quejas de las que se ven aquí</strong>.
+          <ConIcono i={TriangleAlert}>asegura ha devuelto solo las primeras 500: <strong>hay más quejas de las que se ven aquí</strong>.</ConIcono>
         </p>
       )}
       {ok.ilegibles > 0 && (
         <p style={{ fontSize: 12, color: 'var(--warning)', margin: '0 0 10px' }}>
-          ⚠️ {ok.ilegibles} queja{ok.ilegibles === 1 ? '' : 's'} llegó con una forma que esta pantalla no entiende. <strong>Está ahí</strong>: míralas en asegura.
+          <ConIcono i={TriangleAlert}>{ok.ilegibles} queja{ok.ilegibles === 1 ? '' : 's'} llegó con una forma que esta pantalla no entiende. <strong>Está ahí</strong>: míralas en asegura.</ConIcono>
         </p>
       )}
 

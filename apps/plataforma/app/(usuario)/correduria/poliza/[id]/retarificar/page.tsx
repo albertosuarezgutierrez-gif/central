@@ -1,4 +1,6 @@
 import Link from 'next/link'
+import { AlertTriangle } from 'lucide-react'
+import { Ico, FILA } from '../../../iconos'
 import { polizaAsegura, type Poliza } from '@/lib/poliza-asegura'
 import {
   catalogoAsegura,
@@ -460,7 +462,7 @@ function Supuestos({
   if (supuestos.length === 0) return null
   return (
     <div className="card">
-      <h2>⚠️ Lo que se ha supuesto</h2>
+      <h2 style={FILA}><Ico i={AlertTriangle} /> Lo que se ha supuesto</h2>
       <p className="muted">
         Ninguno de estos datos está en la ficha. El precio sale con ellos, así que forman parte de
         la letra pequeña: si alguno no es cierto, la prima real cambia.
