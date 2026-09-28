@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
 import {
   costeConservador, rastroArgs, tienePrefijo, apagado, clasificarDestino, diasValidos, enmascarar, idValido, leerArgumentos, leerClasificacion,
@@ -125,4 +126,10 @@ test('clasificarDestino: pedir precio de moto/coche/seguro va a la correduría; 
     '¿me sacas precio para la moto de su hijo?',
   ]) assert.equal(clasificarDestino(t), 'correduria', t)
   for (const t of ['presupuesto de la reforma del piso', 'precio de la luz este mes', 'factura del seguro del coche, precio 320€']) assert.equal(clasificarDestino(t), 'contable', t)
+})
+
+test('enviar_presupuesto: si el cliente avisó de un dato mal, se vuelve a pedir precio, no se reenvía', () => {
+  const src = readFileSync(new URL('./correduria-asistente.ts', import.meta.url), 'utf8')
+  const linea = src.split('\n').find((l) => l.includes("fn('enviar_presupuesto'")) ?? ''
+  assert.match(linea, /dato está mal[\s\S]*NO la uses para reenviar[\s\S]*proponer_tarificacion/)
 })

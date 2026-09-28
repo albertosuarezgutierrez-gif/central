@@ -112,6 +112,7 @@ export type ResultadoPreparar =
         | 'no_encontrado'
         | 'ramo_no_soportado'
         | 'todas_ocultas'
+        | 'datos_incorrectos'
       detalle: string
     }
 
@@ -148,6 +149,25 @@ export async function prepararPresupuesto(
       detalle:
         'No hay ninguna tarificación guardada para eso en esta correduría. Pide precio primero: ' +
         'un presupuesto se monta sobre una cotización ya pagada, no vuelve a cotizar.',
+    }
+  }
+
+  // Si el cliente ya dijo en el portal que un dato de ESTA tarificación está mal, sus precios no
+  // valen: se retarifica con el dato bueno, no se le vuelve a mandar lo mismo (28/09/2026).
+  // El tipo va en literal a propósito: importar TIPO_DATOS_INCORRECTOS arrastra presupuesto-aceptacion
+  // (y con él Prisma) a los tests que cargan este módulo. El test comprueba que coinciden.
+  const [marcada] = await db.$queryRaw<{ n: number }[]>`
+    select count(*)::int as n from presupuesto_evento e
+    join presupuesto p on p.id = e.presupuesto_id
+    where p.tarificacion_id = ${cab.id}::uuid and p.correduria_id = ${correduriaId}::uuid
+      and e.tipo = 'datos_incorrectos'`
+  if ((marcada?.n ?? 0) > 0) {
+    return {
+      estado: 'error',
+      motivo: 'datos_incorrectos',
+      detalle:
+        'El cliente avisó desde el portal de que un dato de esta tarificación no es correcto: ' +
+        'pide precio otra vez con el dato bueno y prepara el presupuesto sobre esa tarificación nueva.',
     }
   }
 
