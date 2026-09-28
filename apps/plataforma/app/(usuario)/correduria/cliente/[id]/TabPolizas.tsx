@@ -19,7 +19,7 @@ import { Polizas, PolizasDeclaradas } from './piezas'
  * un fallo de conciliación que hay que ver, no esconder.
  */
 export default function TabPolizas({ porClase, intervinientes, declaradas }: {
-  porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'historica', PolizaFicha[]>
+  porClase: Record<'viva' | 'pendiente_cima' | 'cancelada' | 'sustituida' | 'historica', PolizaFicha[]>
   intervinientes: IntervinienteFicha[] | null
   declaradas: PolizaDeclaradaFicha[] | null
 }) {
@@ -35,6 +35,17 @@ export default function TabPolizas({ porClase, intervinientes, declaradas }: {
           nota="CIMA aún no la ha traído: no cuenta como viva ni genera avisos. Cuando la compañía la mande por CIMA se casará con esta y pasará a «Pólizas vivas»."
           polizas={porClase.pendiente_cima}
           vacio=""
+          intervinientes={intervinientes}
+        />
+      )}
+
+      {porClase.sustituida.length > 0 && (
+        <Polizas
+          titulo={`🔁 Sustituidas por otra (${porClase.sustituida.length})`}
+          nota="Cambio de compañía ya emitido: cubren hasta su vencimiento y no se renuevan. No cuentan como vivas ni avisan de su vencimiento."
+          polizas={porClase.sustituida}
+          vacio=""
+          plegado
           intervinientes={intervinientes}
         />
       )}

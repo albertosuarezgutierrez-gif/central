@@ -445,6 +445,8 @@ export async function reunirPendientes(correduriaId: string, hoy: Date): Promise
   const vencen = await db.poliza.findMany({
     where: {
       correduriaId, mergedIntoPolizaId: null, ...WHERE_CARTERA_EN_VIGOR,
+      // Sustituida por otra (cambio de compañía emitido): no se renueva, no se avisa.
+      sustituidaAt: null,
       fechaVencimiento: { gte: hoy, lte: new Date(hoy.getTime() + (DIAS_VENTANA_AVISO + 31) * MS_DIA) },
     },
     select: { id: true, clienteId: true, tipo: true, aseguradora: true, fechaVencimiento: true },
