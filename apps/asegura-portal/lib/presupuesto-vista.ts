@@ -284,8 +284,23 @@ function limpiar(xs: readonly string[]): string[] {
   return out
 }
 
-/** Lee el jsonb de `coberturas` sin fiarse de su forma. */
+/**
+ * Lee el jsonb de `coberturas` sin fiarse de su forma.
+ *
+ * Desde la fase 2 las coberturas llegan en un SOBRE (`{ estado, lista }`, ver `tabla-coberturas.ts`).
+ * Para la comparación con la póliza actual solo cuentan las que la compañía dice que INCLUYE: una
+ * `incluida: false` no es una garantía que la opción traiga, y una `null` («ver texto») tampoco se
+ * puede dar por traída. Sin sobre legible, `[]` = no constan (como siempre).
+ */
 export function coberturasDeJson(v: unknown): string[] {
+  if (v && typeof v === 'object' && !Array.isArray(v)) {
+    const s = v as Record<string, unknown>
+    if ((s.estado !== 'leidas' && s.estado !== 'vacias') || !Array.isArray(s.lista)) return []
+    return s.lista.flatMap((x) => {
+      const o = x && typeof x === 'object' ? (x as Record<string, unknown>) : {}
+      return o.incluida === true && typeof o.nombre === 'string' && o.nombre.trim() ? [o.nombre.trim()] : []
+    })
+  }
   if (!Array.isArray(v)) return []
   const out: string[] = []
   for (const x of v) {

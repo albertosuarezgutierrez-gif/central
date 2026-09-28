@@ -9,6 +9,7 @@ import { Plegable } from './RestoDeOpciones'
 import { AceptarOpcion } from './AceptarOpcion'
 import { DatosParaContratar } from './DatosParaContratar'
 import { RevisaTusDatos } from './RevisaTusDatos'
+import { ResumenOpciones } from './ResumenOpciones'
 import { MOTIVO_EN_REVISION, MOTIVO_SIN_DATOS, datosCotizados, datosListosParaAceptar } from '@/lib/presupuesto-firma'
 import { MEDIADOR, telefonoLegible } from '@central/module-seguros'
 import { datosParaContratar } from '@/lib/datos-emision'
@@ -139,6 +140,19 @@ export default async function PresupuestoPage({ params }: { params: Promise<{ id
           datos={cotizados}
           corredor={p.vistaDeCorredor}
           telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+        />
+      )}
+
+      {/* Tras «Revisa tus datos»: resumen IA + tabla de coberturas por compañía + comparar dos con IA. */}
+      {!p.retirado && portada.length > 0 && (
+        <ResumenOpciones
+          presupuestoId={p.id}
+          corredor={p.vistaDeCorredor}
+          telefono={{ tel: MEDIADOR.identidad.telefono, texto: telefonoLegible() }}
+          opciones={portada.map((o) => ({
+            id: o.id, compania: o.compania, producto: o.producto,
+            primaEur: o.primaEur, franquiciaEur: o.franquiciaEur, coberturas: o.coberturasDetalle,
+          }))}
         />
       )}
 

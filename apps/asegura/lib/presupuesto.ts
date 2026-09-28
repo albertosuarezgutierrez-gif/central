@@ -28,6 +28,10 @@ import { generarTokenVista, hashTokenVista } from '@central/module-seguros-porta
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
 import { registrarErrorCartera } from './error-cartera'
+import { resolverConfig, simulacionActiva } from './codeoscopic/config'
+import { peticion } from './codeoscopic/cliente'
+import { refrescarProyecto } from './codeoscopic/emitir'
+import { leerCoberturasDeOpciones, type SobreCoberturas } from './codeoscopic/coberturas-presupuesto'
 
 /**
  * Por qué no se ha podido situar la cobertura que el cliente tiene HOY.
@@ -58,6 +62,9 @@ export type OpcionPreparada = {
   papeles: PapelPortada[]
   /** La más barata NO comparte cobertura con la actual. Se pinta. */
   coberturaDistinta: boolean
+  /** Coberturas de la oferta leídas de Codeoscopic. `null` = NO SE INTENTÓ (simulada, sin
+   *  proyecto o vendor apagado); el sobre dice si se leyeron, vinieron vacías o fallaron. */
+  coberturas: SobreCoberturas | null
 }
 
 export type PresupuestoPreparado = {
@@ -211,6 +218,7 @@ export async function prepararPresupuesto(
       avisos: Array.isArray(cruda.avisos) ? cruda.avisos.filter((a): a is string => typeof a === 'string') : [],
       papeles: o.papeles,
       coberturaDistinta: o.coberturaDistinta,
+      coberturas: null,
     })
   }
 
@@ -232,6 +240,11 @@ export async function prepararPresupuesto(
     // inventa una caducidad del vendor que nadie ha leído.
     expiraOferta: null,
   })
+
+  // Las coberturas de cada opción (fase 2): GRATIS y best-effort. Si fallan, el presupuesto sale
+  // igual y el sobre de cada opción dice «no se han podido leer» — nunca un `[]` mudo.
+  const sobres = await coberturasDeLasOpciones(cab, aCongelar)
+  aCongelar.forEach((o, i) => { o.coberturas = sobres?.[i] ?? null })
 
   const token = generarTokenVista()
   const tokenHash = await hashTokenVista(token)
@@ -263,6 +276,8 @@ export async function prepararPresupuesto(
           referenciaVendor: o.referenciaVendor,
           avisos: o.avisos,
           papeles: o.papeles,
+          // Sin intento se deja el default (`[]` desnudo = «no se intentó»); con intento, el SOBRE.
+          ...(o.coberturas ? { coberturas: o.coberturas } : {}),
         })),
       },
       eventos: {
@@ -304,6 +319,43 @@ type Cabecera = {
   ramo: string
   simulado: boolean
   fechaEfecto: Date | null
+  projectId: string | null
+}
+
+/** Tope de tiempo TOTAL para leer las coberturas: Alberto está esperando en pantalla. */
+const PRESUPUESTO_COBERTURAS_MS = 8_000
+
+/**
+ * Las coberturas de las opciones congeladas, leídas de Codeoscopic. `null` = no se intenta:
+ * tarificación simulada (su proyecto no existe en el vendor), sin `project_id`, modo simulación o
+ * sin credenciales. Son LECTURAS gratis (`GET`), por eso no exigen el interruptor de tarificar —
+ * el mismo criterio que la sonda del token (`ignorarInterruptor`).
+ */
+async function coberturasDeLasOpciones(cab: Cabecera, opciones: OpcionPreparada[]): Promise<SobreCoberturas[] | null> {
+  if (cab.simulado || !cab.projectId || simulacionActiva(process.env)) return null
+  const r = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (r.estado !== 'lista') return null
+  const config = r.config
+  const projectId = cab.projectId
+  try {
+    return await leerCoberturasDeOpciones(
+      opciones,
+      {
+        refrescar: () => refrescarProyecto(config, projectId),
+        coberturas: (ofertaId) =>
+          peticion(config, {
+            metodo: 'GET',
+            path: `/insurances/${encodeURIComponent(projectId)}/offers/${encodeURIComponent(ofertaId)}/coverages`,
+            timeoutMs: config.timeoutGenericoMs,
+          }),
+      },
+      PRESUPUESTO_COBERTURAS_MS,
+    )
+  } catch (e) {
+    // `leerCoberturasDeOpciones` no lanza; esto es el cinturón. Sin sobre = «no se intentó».
+    registrarErrorCartera('presupuesto/coberturas', e)
+    return null
+  }
 }
 
 /**
@@ -320,7 +372,7 @@ async function cabecera(correduriaId: string, e: { tarificacionId?: string | nul
   const filas = e.tarificacionId
     ? await db.$queryRaw<FilaCabecera[]>`
         select id::text as id, cliente_id::text as cliente_id, poliza_id::text as poliza_id,
-               ramo, simulado, peticion
+               ramo, simulado, peticion, project_id_codeoscopic::text as project_id
         from tarificaciones
         where correduria_id = ${correduriaId}::uuid and id = ${e.tarificacionId}::uuid
         limit 1
@@ -328,7 +380,7 @@ async function cabecera(correduriaId: string, e: { tarificacionId?: string | nul
     : e.polizaId
       ? await db.$queryRaw<FilaCabecera[]>`
           select id::text as id, cliente_id::text as cliente_id, poliza_id::text as poliza_id,
-                 ramo, simulado, peticion
+                 ramo, simulado, peticion, project_id_codeoscopic::text as project_id
           from tarificaciones
           where correduria_id = ${correduriaId}::uuid and poliza_id = ${e.polizaId}::uuid
           order by creado_at desc
@@ -359,6 +411,7 @@ async function cabecera(correduriaId: string, e: { tarificacionId?: string | nul
     ramo: t.ramo,
     simulado: t.simulado,
     fechaEfecto: fechaEfectoDe(t.peticion),
+    projectId: t.project_id,
   }
 }
 
@@ -369,6 +422,7 @@ type FilaCabecera = {
   ramo: string
   simulado: boolean
   peticion: unknown
+  project_id: string | null
 }
 
 /**

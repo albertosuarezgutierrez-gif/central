@@ -7,6 +7,7 @@ import {
   datosCotizadosDelPresupuesto, firmarAceptacion, pedirCodigoAceptacion, prepararAceptacion, reportarDatosIncorrectos,
 } from '@/lib/presupuesto-aceptacion'
 import { entregarJustificanteAnulacion } from '@/lib/justificante-anulacion'
+import { pideLlamada, preguntaIA, resumenIA } from '@/lib/comparativa-ia-servicio'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 import { auditado } from '@/lib/auditoria'
 
@@ -24,6 +25,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
  *        { accion:'firmar',   identidadId, presupuestoId, opcionId, codigo, nombre, documentoHash, datosConfirmados, ip?, userAgent? }
  *        { accion:'datos',    identidadId, presupuestoId }          → «Revisa tus datos» (no escribe)
  *        { accion:'datos_incorrectos', identidadId, presupuestoId, texto } → avisa; cierra la firma desde el portal
+ *        { accion:'resumen_ia',  identidadId, presupuestoId }                          → resumen IA (cacheado)
+ *        { accion:'pregunta_ia', identidadId, presupuestoId, opcionA, opcionB, pregunta } → respuesta IA (tope diario)
+ *        { accion:'llamadme',    identidadId, presupuestoId }                          → «Prefiero que me llaméis»
  * Como el resto del puente: NO acepta `clienteId`, la ficha sale de `portal_vinculo`.
  */
 const STATUS: Record<string, number> = {
@@ -32,6 +36,8 @@ const STATUS: Record<string, number> = {
   documento_cambiado: 409, sin_codigo: 409, codigo_caducado: 410, demasiados_intentos: 429, codigo_incorrecto: 422,
   nombre_no_coincide: 422, sin_ficha: 409, varias_fichas: 409, error: 503,
   sin_datos: 409, datos_en_revision: 409, sin_confirmar_datos: 422, invalido: 422, limite: 429,
+  // `no_disponible` de la IA es una respuesta completa (el portal dice «no está disponible ahora»), no un fallo.
+  no_disponible: 200,
 }
 
 export const POST = auditado(async (req: Request) => {
@@ -42,7 +48,8 @@ export const POST = auditado(async (req: Request) => {
     const s = (k: string) => (typeof b?.[k] === 'string' ? (b[k] as string).trim() : '')
     const identidadId = s('identidadId'), presupuestoId = s('presupuestoId'), opcionId = s('opcionId')
     // `datos` y `datos_incorrectos` son del presupuesto, no de una opción: no piden `opcionId`.
-    const sinOpcion = b?.accion === 'datos' || b?.accion === 'datos_incorrectos'
+    const sinOpcion = b?.accion === 'datos' || b?.accion === 'datos_incorrectos' || b?.accion === 'resumen_ia' ||
+      b?.accion === 'pregunta_ia' || b?.accion === 'llamadme'
     if (!UUID.test(identidadId) || !UUID.test(presupuestoId) || (!sinOpcion && !UUID.test(opcionId))) {
       return NextResponse.json({ estado: 'invalido' }, { status: 422 })
     }
@@ -55,6 +62,20 @@ export const POST = auditado(async (req: Request) => {
     }
     if (b?.accion === 'datos_incorrectos') {
       const r = await reportarDatosIncorrectos(correduria.id, identidadId, presupuestoId, s('texto'))
+      return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
+    }
+    if (b?.accion === 'resumen_ia') {
+      const r = await resumenIA(correduria.id, identidadId, presupuestoId)
+      return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
+    }
+    if (b?.accion === 'pregunta_ia') {
+      const r = await preguntaIA(correduria.id, identidadId, presupuestoId, {
+        opcionA: s('opcionA'), opcionB: s('opcionB'), pregunta: b.pregunta,
+      })
+      return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
+    }
+    if (b?.accion === 'llamadme') {
+      const r = await pideLlamada(correduria.id, identidadId, presupuestoId)
       return NextResponse.json(r, { status: STATUS[r.estado] ?? 500 })
     }
     if (b?.accion === 'preparar') {
