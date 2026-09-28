@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — 🧾 Recibos DEVUELTOS: CIMA solo los trae de Occident (C0468); Reale/Mapfre los marca `cobrado` al emitir y la devolución llega solo por CORREO. Lector determinista de esos correos (`devolucion-correo.ts`, Reale/Occident/Mapfre) → puerto `/api/operador/recibos/devolucion` → `seguros.recibo_devolucion` + trigger fail-open en `poliza_recibos` (dato viejo de CIMA no la deshace; uno posterior la resuelve; migración `2026-09-29c` APLICADA y probada con rollback). Seguimiento 0/7/25/30 días desde el EFECTO + cierre como ganada al cobrar; Telegram con cliente/importe/suspensión; botón «Cobrado de nuevo». 🚨 **Todo el sistema contaba el art. 15 desde `fecha_vencimiento` (fin del periodo, +1 año en un anual)**: corregido a `fecha_efecto_actual`. Los 3 devueltos de C0468 no tenían borrador porque entraron antes de la 1ª foto del detector (24/09 12:15), no por bug. Tareas a mano creadas por SQL (Reale e35e511c, Mapfre 6e924882). Pendiente: registrar esas dos devoluciones por el puerto TRAS desplegar (antes, el borrador saldría con la fecha vieja).
+
 **(28/09/2026)** — ⏳ asegura-portal, carga v2: «AS» a 56 px, latido más marcado (opacidad 0,3→1, 1 s) ; «Cargando…» sigue oculto (Alberto: visible «se carga el diseño»). El «Grupo ASegura» que sigue viéndose es la cabecera fija y la pantalla de entrada (esta última pendiente de decidir si pasa a «AS»).
 
 **(28/09/2026)** — ⏳ asegura-portal: el indicador de carga (`CargaAsegura`: `loading.tsx` + `CargandoEnlace`) vuelve al monograma «AS» en línea (`MarcaAsegura`, 40 px) en vez del logotipo «Grupo ASegura» (Alberto: «queda más elegante»). Deshace el cambio del 26/09.
@@ -7964,12 +7966,3 @@ Fuera: datos de terceros (cifrados) y `ref_mediador_cima`. ⚠️ Los campos nue
 falta reprocesar los 46 SIN (lote cifrado ya en la rama temporal `cima-lote-sin-2026-09-28` del repo asegura; el
 clasificador bloquea leer la clave → lo lanza Alberto con `scratchpad/cima/clave.txt`). Borrar después ramas
 `cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` y los runs de `cima-rescate-lote`.
-
-## (28/09/2026) Recibos DEVUELTOS: CIMA no los trae (salvo C0468) → el correo de la compañía va por delante
-Reale avisó por correo (`contabilidad.mediadores@reale.es`) de la devolución del recibo 690041622859 (póliza
-3021700291186, 184,58€, renovación 19/09); en `seguros.poliza_recibos` seguía `cobrado`, así que la acción
-urgente, el borrador al cliente y el portal (todo lee `situacion='devuelto'`) no saltaban. El triaje SÍ lo
-clasificó `correduria-recibo` y avisó. Medido: solo C0468 manda devoluciones por CIMA (3); Reale/Mapfre/Generali 0.
-Propuesta con OK de Alberto: lector del correo por compañía → marca de devolución APARTE (no pisar `situacion`,
-CIMA la reescribe) + la devolución de un recibo de renovación abre retención como la anulación. Sin código aún.
-Hecho a mano en BD: oportunidad de retención e35e511c + llamada alta 29/09 («¿vendió el coche o es precio?»).
