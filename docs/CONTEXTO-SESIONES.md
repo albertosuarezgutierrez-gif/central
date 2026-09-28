@@ -7972,3 +7972,6 @@ Botón «Descargar PDF» en cada presupuesto (`PresupuestosPoliza`, ficha de cli
 (matrícula, km, garaje), necesidades y pie legal; SIN DNI/IBAN/dirección, sin avisos internos de la compañía y sin enlace
 con token. Solo descarga: no avisa a nadie. Caso Manuel Piña (moto 2121NST): su único presupuesto (366dbbba) es de la
 tarificación vieja (15.000 km, sin garaje) — hay que retarificar antes de mandarle un PDF.
+Diseño de marca: Quicksand/Nunito Sans embebidas (`@pdf-lib/fontkit`), logotipo y logos de compañía en PNG base64
+(`presupuesto-pdf-recursos.ts`, regenerar al cambiar un logo). Y el carné: cliente NUEVO con carné B en la ficha ya no se
+lo pide el bot (auto y moto caían a la «fecha del conductor», que para una ficha sin póliza es null).

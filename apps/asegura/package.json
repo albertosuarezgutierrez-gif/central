@@ -20,6 +20,7 @@
     "@central/module-seguros": "workspace:*",
     "@central/module-seguros-pii": "workspace:*",
     "@central/module-seguros-portal": "workspace:*",
+    "@pdf-lib/fontkit": "^1.1.1",
     "@prisma/client": "^5.22.0",
     "bcryptjs": "^2.4.3",
     "jose": "^5.9.3",

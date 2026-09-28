@@ -47,3 +47,10 @@ test('el PDF no pinta los avisos internos de la compañía ni un enlace con toke
   assert.doesNotMatch(src, /\.avisos\b/)
   assert.doesNotMatch(src, /token=/)
 })
+
+test('logo por la primera palabra; sin logo → null (se pinta la inicial, nunca un hueco)', async () => {
+  const { claveLogo } = await import('./presupuesto-pdf.ts')
+  assert.equal(claveLogo('Reale Seguros Generales'), 'reale')
+  assert.equal(claveLogo('MAPFRE'), 'mapfre')
+  assert.equal(claveLogo('Plus Ultra'), null)
+})
