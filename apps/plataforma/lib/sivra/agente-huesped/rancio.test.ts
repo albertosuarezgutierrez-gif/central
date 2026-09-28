@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { minutosAtencion, peldanoRancio, textoEspera, textosEsperaTodos, MIN_RECORDATORIO, MIN_ACUSE_ESPERA } from './rancio.ts'
+import { minutosAtencion, peldanoRancio, respondidoFuera, textoEspera, textosEsperaTodos, MIN_RECORDATORIO, MIN_ACUSE_ESPERA } from './rancio.ts'
 import { esModoNoche } from './noche.ts'
 
 // La cuenta del barrido y la franja del modo noche tienen que ser la MISMA franja. Si divergen, el
@@ -119,4 +119,17 @@ test('enviar.ts anota cada envío con éxito en mensajes_enviados y contexto.ts 
   assert.match(ctx, /FROM mensajes_enviados/)
   assert.match(ctx, /textosEsperaTodos\(\)/)
   assert.match(ctx, /textosNocheTodos\(\)/)
+})
+
+test('respondidoFuera: respuesta manual del host tras la pregunta cierra el pendiente', () => {
+  const auto = (t: string) => t.startsWith('AUTO')
+  const h = (from: 'guest' | 'host', text: string) => ({ from, text })
+  assert.equal(respondidoFuera([h('guest', '¿el piso está listo?'), h('host', 'Sí, ya podéis entrar')], auto), 'Sí, ya podéis entrar')
+  // Automático detrás de la respuesta manual: sigue contando la manual.
+  assert.equal(respondidoFuera([h('guest', 'q'), h('host', 'manual'), h('host', 'AUTO checkout')], auto), 'manual')
+  // Solo automáticos tras la pregunta (acuse, plantilla): sigue pendiente.
+  assert.equal(respondidoFuera([h('guest', 'q'), h('host', 'AUTO acuse')], auto), null)
+  // El huésped volvió a escribir después de la respuesta: pendiente de nuevo.
+  assert.equal(respondidoFuera([h('guest', 'q'), h('host', 'manual'), h('guest', 'otra')], auto), null)
+  assert.equal(respondidoFuera([], auto), null)
 })

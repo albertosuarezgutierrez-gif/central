@@ -899,6 +899,11 @@ Causa medida en el log (PR asegura#861): la preview tiene SSO de Vercel y `VERCE
 - ⚠️ Estado de limpieza NO consultable: `cleaning_sessions.started_at/completed_at` siempre NULL en los 4 pisos (nadie marca «terminada»). Botón «Piso listo» para Vanesa DESCARTADO por Alberto: la limpieza se gestiona desde oficina y avisarían tarde → no montar.
 - Revisión antes de merge: «self check-in» corto y el huésped que se presenta («this is Justine Delbos…») ya no se tragan como plantilla; `acceso` casa «clé/código/codes/keybox» (`\b` no ve tildes en JS).
 
+## (28/09/2026) Agente de huéspedes: «olvidar» lo que ya respondió Alberto a mano
+- El pendiente de `mensajes_pendientes_tg` solo se cerraba con los botones de Telegram: si se contesta desde Smoobu/Booking seguía vivo → recordatorio a los 45 min y acuse «lo estamos revisando» al huésped a las 3 h sobre una conversación ya atendida.
+- Botón **✋ Ya respondido** (`hsp_done`) en propuesta, re-propuesta y recordatorio: borra el pendiente sin enviar nada. Y el barrido de rancios (`rancio-guardia`) mira el hilo antes de recordar/acusar: si tras la pregunta hay un mensaje del host que no es nuestro ni plantilla (`respondidoFuera()`, puro y testeado), cierra y avisa por Telegram con el texto visto.
+- Pendiente de 154692216 (Justine) borrado a mano en BD. ⚠️ Hallazgo sin arreglar: los mensajes que Alberto escribió en ese hilo («Hemos corroborado…», «Tiene mi tlf…») entraron como DEL HUÉSPED y generaron borradores → atribución de emisor de Smoobu falla para mensajes del host escritos fuera (¿Booking extranet?). Sin el JSON crudo de Smoobu no se ha podido medir. Quedan 11 pendientes zombis (ago-sep) ya acusados, inertes.
+
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.
 - Motivo: todo a 0 comandas y el aviso NO pasa por el panel /telegram (lo manda la edge function directa), así que no se podía apagar desde allí. Reactivar: `cron.alter_job(21, active := true)`.
