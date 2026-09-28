@@ -17,6 +17,24 @@ export async function logMensaje(p: {
   `).catch(() => {})
 }
 
+// Marca como enviado el último borrador de la reserva y guarda el texto que salió DE VERDAD.
+// Hasta el 28/09/2026 solo se ponía `auto_sent = true`: el texto editado en Telegram se perdía y
+// `edited` era siempre false (0 de 142 en 30 días), así que no había forma de medir cuántos
+// borradores aprueba Alberto tal cual. Devuelve si se editó; `null` = no se pudo anotar.
+export async function marcarEnviadoLog(bookingId: string, textoFinal: string): Promise<boolean | null> {
+  const filas = await prisma.$queryRaw<{ edited: boolean }[]>(Prisma.sql`
+    UPDATE mensajes_log
+    SET auto_sent = true,
+        respuesta_enviada = ${textoFinal},
+        edited = regexp_replace(lower(coalesce(respuesta, '')), '\\s+', ' ', 'g')
+                 <> regexp_replace(lower(${textoFinal}), '\\s+', ' ', 'g')
+    WHERE booking_id = ${bookingId}
+      AND created_at = (SELECT max(created_at) FROM mensajes_log WHERE booking_id = ${bookingId})
+    RETURNING edited
+  `).catch(() => null)
+  return filas && filas[0] ? filas[0].edited : null
+}
+
 // Guarda lo que Alberto aprueba o corrige. DOS destinos, no uno:
 //   · HECHO del piso (`mensajes_hechos`) si el huésped preguntaba algo y la respuesta enseña algo de
 //     la vivienda → permanente, va SIEMPRE al prompt.
@@ -35,10 +53,23 @@ export async function logMensaje(p: {
 // había prometido aprenderlo, se DICE en vez de dejar creer que quedó aprendido.
 export async function aprenderCorreccion(p: {
   propertyId: string; categoria: string; pregunta: string; respuestaFinal: string; huecoGuia?: boolean
+  /** `false` = Alberto aprobó el borrador de la IA sin tocarlo. `true`/`null` = lo escribió o no se sabe. */
+  editado?: boolean | null
 }): Promise<void> {
   if (p.huecoGuia === true || esHechoDelPiso(p.pregunta, p.respuestaFinal)) {
     const hecho = await destilarHecho({ pregunta: p.pregunta, respuesta: p.respuestaFinal })
     if (hecho) {
+      // Un borrador aprobado SIN tocar lo escribió la IA: aprobar un mensaje para un huésped no es
+      // validar un dato para todos los futuros (caso 154692216: «el piso ya está listo» se habría
+      // guardado como hecho de House Sevillana). Entra `propuesto` y se pregunta con dos botones.
+      if (p.editado === false) {
+        const id = await guardarHecho({ propertyId: p.propertyId, pregunta: p.pregunta, hecho, origen: 'agente', estado: 'propuesto' })
+        if (id) {
+          const { proponerHechos } = await import('./historico')
+          await proponerHechos([{ id, propertyId: p.propertyId, hecho }])
+        }
+        return
+      }
       await guardarHecho({ propertyId: p.propertyId, pregunta: p.pregunta, hecho, origen: 'alberto', estado: 'confirmado' })
       return
     }

@@ -11,6 +11,8 @@ import { avisarConflictoGuia } from './conflictos'
 import { horarioPiso } from './horarios'
 import { nocheAnteriorLibre, entradaMismoDiaLibre, sumarDias, estanciasFiables, combinarFuentes } from './disponibilidad'
 import { setEnviados, corregirAtribucion, atribuirEmisor } from './atribucion'
+import { textosNocheTodos } from './noche'
+import { textosEsperaTodos } from './rancio'
 import { bloqueParking } from './parking'
 import { bloqueEquipaje } from './equipaje'
 import { bloqueLlegada } from './llegada'
@@ -51,6 +53,7 @@ export type Contexto = {
   historial: MensajeHist[]
   enviados: Set<string>   // respuestas que YA enviamos (normalizadas) — para no respondernos a nosotros
   aprendizajes: Aprendizaje[]
+  preguntaTs?: string     // cuándo escribió el huésped lo que se contesta (lo pone el orquestador)
 }
 
 function strip(html: string): string {
@@ -128,12 +131,19 @@ export async function construirContexto(bookingId: string, lang: string): Promis
   // vacío), así que nuestra propia respuesta puede reaparecer en el hilo como si fuera del huésped.
   // Cruzando el historial con nuestros envíos corregimos esa atribución → 'host' (y el agente deja de
   // responderse a sí mismo). Lo consumen el guard `ultimoMsg.from==='host'` y `esEcoPropio`.
+  // `mensajes_enviados` es el registro de TODO lo que sale (acuses, programados, lo editado por
+  // Alberto…); `mensajes_log` se mantiene para lo enviado antes de que ese registro existiera. Los
+  // textos fijos de las guardias van siempre, por si la escritura del registro falló.
   const enviadosRows = await prisma.$queryRaw<{ respuesta: string }[]>(Prisma.sql`
-    SELECT respuesta FROM mensajes_log
-    WHERE booking_id = ${bookingId} AND auto_sent = true AND respuesta <> ''
-    ORDER BY created_at DESC LIMIT 30
+    (SELECT respuesta FROM mensajes_log
+     WHERE booking_id = ${bookingId} AND auto_sent = true AND respuesta <> ''
+     ORDER BY created_at DESC LIMIT 30)
+    UNION ALL
+    (SELECT texto AS respuesta FROM mensajes_enviados
+     WHERE booking_id = ${bookingId}
+     ORDER BY created_at DESC LIMIT 60)
   `).catch(() => [])
-  const enviados = setEnviados(enviadosRows.map((r: { respuesta: string }) => r.respuesta))
+  const enviados = setEnviados([...enviadosRows.map((r: { respuesta: string }) => r.respuesta), ...textosNocheTodos(), ...textosEsperaTodos()])
   // Smoobu manda cada automático POR DUPLICADO (8 de los 25 mensajes del hilo de la reserva
   // 152291091 eran copias) y esas copias se comían la ventana de contexto del modelo.
   const historial = dedupHilo(corregirAtribucion(historialRaw, enviados))

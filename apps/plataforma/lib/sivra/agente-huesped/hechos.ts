@@ -29,7 +29,7 @@ export async function guardarHecho(p: {
   propertyId: string
   pregunta: string
   hecho: string
-  origen?: 'alberto' | 'historico'
+  origen?: 'alberto' | 'historico' | 'agente'
   estado?: 'confirmado' | 'propuesto'
   bookingRef?: string
 }): Promise<number | null> {

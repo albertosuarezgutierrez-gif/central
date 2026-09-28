@@ -1,6 +1,6 @@
 // lib/sivra/agente-huesped/orquestador.ts — procesa el último mensaje del huésped de una reserva.
 import { construirContexto } from './contexto'
-import { detectLang, detectCategory, tipoHueco, vaARecomendador } from './reglas'
+import { detectLang, detectCategory, tipoHueco, vaARecomendador, esAutomatico, esPlantillaHost } from './reglas'
 import { idiomaConocido } from './idiomas'
 import { decidir, type Decision } from './decidir'
 import { decidirAutoEnvio } from './auto'
@@ -12,7 +12,7 @@ import { enviarAlHuesped } from './enviar'
 import { proponerPorTelegram, avisarAutoEnviado } from './telegram-msg'
 import { logMensaje, registrarGap } from './aprender'
 import { claveDedup, claimMensaje, liberarMensaje } from './idempotencia'
-import { esEcoPropio } from './atribucion'
+import { esEcoPropio, normalizarTexto } from './atribucion'
 import { importeSospechoso, hablaDePago } from './extras'
 import { intentarCobroAutomatico } from '@/lib/sivra/extras/cobro-auto'
 import { preciosVigentes } from '@/lib/sivra/extras/catalogo'
@@ -60,6 +60,9 @@ export async function procesarMensajeHuesped(
   // /api/threads, que no marca el emisor; y Smoobu a veces tampoco lo etiqueta). El disparo manual se
   // exime a propósito. Esto cubre el caso aunque nuestro envío aún no figure en el historial de Smoobu.
   if (!esManual && esEcoPropio(pregunta, ctx0.enviados)) return { accion: 'eco_propio' }
+  // Plantillas nuestras o de Smoobu que no pasaron por `enviarAlHuesped` (bienvenidas de Smoobu,
+  // avisos de check-in online): el webhook no filtra por asunto como el sondeo, así que se mira aquí.
+  if (!esManual && (esAutomatico('', pregunta) || esPlantillaHost(pregunta, ctx0.guestName))) return { accion: 'eco_plantilla' }
 
   if (!esManual && ultimoGuest?.ts) {
     const tsGuest = new Date(ultimoGuest.ts)
@@ -118,6 +121,8 @@ export async function procesarMensajeHuesped(
       lang,
       aprendizajes: aprendRelev ?? ctx0.aprendizajes,
       hechos: hechosRelev ? hechosRelev.map(h => h.hecho) : ctx0.hechos,
+      // Solo si lo que se contesta ES ese mensaje: el sondeo puede traer uno más nuevo que el historial.
+      preguntaTs: ultimoGuest && normalizarTexto(ultimoGuest.text) === normalizarTexto(pregunta) ? ultimoGuest.ts || undefined : undefined,
     }
 
     // 1-bis) ¿Es el «sí» a un extra que Alberto ya aprobó en este hilo? Entonces la respuesta es el
