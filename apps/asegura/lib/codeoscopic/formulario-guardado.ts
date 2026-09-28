@@ -80,3 +80,29 @@ export function extraerFormularioAuto(peticion: unknown): FormularioAutoGuardado
     correcciones,
   }
 }
+
+/**
+ * El vehículo de una petición de COCHE o MOTO nueva ya pagada (28/09/2026), para volver a pedir precio
+ * del mismo vehículo sin dictarlo otra vez. `null` si la petición no trae el código de la versión: sin él
+ * no hay vehículo que reutilizar, y no se rellena a medias.
+ */
+export type VehiculoGuardado = {
+  codigoVehiculo: string
+  matricula: string | null
+  fechaMatriculacion: string | null
+  kmAnuales: number | null
+}
+
+export function extraerVehiculoGuardado(peticion: unknown): VehiculoGuardado | null {
+  const risk = obj(obj(peticion).risk)
+  const code = obj(risk.vehicle).code
+  const codigoVehiculo = typeof code === 'string' || typeof code === 'number' ? str(String(code)) : null
+  if (codigoVehiculo === null) return null
+  const km = risk.kilometersPerYear
+  return {
+    codigoVehiculo,
+    matricula: str(risk.registrationPlate),
+    fechaMatriculacion: str(risk.registrationDate),
+    kmAnuales: typeof km === 'number' && Number.isFinite(km) && km >= 0 ? Math.round(km) : null,
+  }
+}

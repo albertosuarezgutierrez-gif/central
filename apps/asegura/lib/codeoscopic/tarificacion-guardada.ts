@@ -10,7 +10,7 @@
 
 import type { GarantiasClasificadas } from '@central/module-seguros'
 import { prisma } from '../tenant.ts'
-import { extraerFormularioAuto, type FormularioAutoGuardado } from './formulario-guardado.ts'
+import { extraerFormularioAuto, extraerVehiculoGuardado, type FormularioAutoGuardado, type VehiculoGuardado } from './formulario-guardado.ts'
 import { fechaEfectoCaducada } from './fecha-efecto.ts'
 
 export type PrecioGuardado = {
@@ -84,7 +84,7 @@ export async function ultimaTarificacionNueva(
   correduriaId: string,
   clienteId: string,
   ramo: RamoRetomable,
-): Promise<Omit<TarificacionGuardada, 'formulario'> | null> {
+): Promise<(Omit<TarificacionGuardada, 'formulario'> & { vehiculo: VehiculoGuardado | null }) | null> {
   const cabeceras = await prisma.$queryRaw<
     { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }[]
   >`
@@ -100,7 +100,9 @@ export async function ultimaTarificacionNueva(
   `
   const t = cabeceras[0]
   if (!t || !t.project_id_codeoscopic) return null
-  return cargarPrecios(t)
+  // El vehículo con el que se pidió (coche y moto): para volver a pedir precio sin dictarlo otra vez.
+  const vehiculo = ramo === 'auto' || ramo === 'moto' ? extraerVehiculoGuardado(t.peticion) : null
+  return { ...(await cargarPrecios(t)), vehiculo }
 }
 
 async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }): Promise<Omit<TarificacionGuardada, 'formulario'>> {

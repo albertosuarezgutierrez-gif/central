@@ -132,6 +132,8 @@ export type EntradaTarificacion = {
   /** `null` = no se ha dicho (se cotiza «de calle»). Nunca a medias. */
   historial: HistorialDeclarado | null
   primaActual: number | null
+  /** Km al año dichos. `null` = no se ha dicho (asegura pone la media como supuesto). */
+  kmAnuales: number | null
 }
 
 function texto(v: unknown, max = 120): string | null {
@@ -241,6 +243,13 @@ export function leerEntrada(args: Record<string, unknown>, hoy: Date = new Date(
     }
   }
 
+  let kmAnuales: number | null = null
+  if (args.kmAnuales !== undefined && args.kmAnuales !== null && args.kmAnuales !== '') {
+    const n = Number(String(args.kmAnuales).replace(/[.\s]/g, ''))
+    if (Number.isInteger(n) && n >= 0 && n <= 200000) kmAnuales = n
+    else errores.push('km al año: tiene que ser un número entero de kilómetros (0-200.000)')
+  }
+
   let primaActual: number | null = null
   if (args.primaActual !== undefined && args.primaActual !== null && args.primaActual !== '') {
     const n = Number(args.primaActual)
@@ -254,7 +263,7 @@ export function leerEntrada(args: Record<string, unknown>, hoy: Date = new Date(
       marca: texto(args.marca), modelo: texto(args.modelo), motor: texto(args.motor), version: texto(args.version, 160),
       fechaMatriculacion: fm.valor ?? null,
       garaje: texto(args.garaje), estadoCivil: texto(args.estadoCivil), municipio: texto(args.municipio),
-      persona, historial, primaActual,
+      persona, historial, primaActual, kmAnuales,
     },
     errores,
   }
@@ -269,9 +278,10 @@ const ETIQUETA_HISTORIAL: Record<string, string> = {
 
 export type Resuelto = {
   ramo: RamoTarif
-  marcaId: string
-  modeloId: string
-  motor: string
+  /** `null` al reutilizar el vehículo de una petición anterior: solo trae el código de la versión. */
+  marcaId: string | null
+  modeloId: string | null
+  motor: string | null
   codigoVehiculo: string
   matricula: string
   fechaMatriculacion: string
@@ -283,6 +293,7 @@ export type Resuelto = {
   persona: PersonaDeclarada
   /** Con el código DGS ya resuelto del catálogo de compañías. */
   historial: (Omit<HistorialDeclarado, 'compania'> & { companiaCodigo: string }) | null
+  kmAnuales: number | null
 }
 
 export type CuerpoTarif = { resueltos: Record<string, unknown>; correcciones: Record<string, unknown> }
@@ -294,7 +305,8 @@ export type CuerpoTarif = { resueltos: Record<string, unknown>; correcciones: Re
  */
 export function construirCuerpo(r: Resuelto): CuerpoTarif {
   const resueltos: Record<string, unknown> = {
-    ...(r.ramo === 'moto' ? { marcaId: r.marcaId, modeloId: r.modeloId, motor: r.motor } : {}),
+    // Sin los tres, asegura no puede cruzar la versión con el carné (lo dice y sigue): nunca a medias.
+    ...(r.ramo === 'moto' && r.marcaId && r.modeloId && r.motor ? { marcaId: r.marcaId, modeloId: r.modeloId, motor: r.motor } : {}),
     codigoVehiculo: r.codigoVehiculo,
     garaje: r.garaje,
     estadoCivilId: r.estadoCivilId,
@@ -305,6 +317,8 @@ export function construirCuerpo(r: Resuelto): CuerpoTarif {
   }
   const correcciones: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(r.persona)) if (v !== undefined && v !== '') correcciones[k] = v
+  // Los km van como corrección (la pantalla de coche hace igual): tapan el supuesto de la media.
+  if (r.kmAnuales !== null) correcciones.kmAnuales = r.kmAnuales
   if (r.historial) {
     correcciones.aseguradoAntes = true
     correcciones.companiaAnteriorCodigo = r.historial.companiaCodigo
@@ -403,6 +417,9 @@ export type Propuesta = {
   persona: PersonaDeclarada
   historial: (Omit<HistorialDeclarado, 'compania'> & { compania: string }) | null
   primaActual: number | null
+  kmAnuales: number | null
+  /** Vehículo reutilizado de una petición anterior: su fecha (dd/mm/aaaa), para decirlo. */
+  vehiculoPrevioDe: string | null
   /** Los de asegura (con `optimista`) y los nuestros. */
   supuestos: readonly Supuesto[]
 }
@@ -438,10 +455,12 @@ export function textoPropuesta(p: Propuesta): string {
   return [
     `💶 <b>Pedir precio de ${p.ramo === 'moto' ? 'MOTO' : 'COCHE'}</b> · ${esc(p.cliente)}`,
     '',
-    `${esc(p.vehiculo.marca)} ${esc(p.vehiculo.modelo)} · ${esc(p.vehiculo.motor)}`,
-    `Versión: ${esc(p.vehiculo.version)}`,
+    ...(p.vehiculoPrevioDe
+      ? [`El mismo vehículo de la petición de precio del ${esc(p.vehiculoPrevioDe)} (versión ${esc(p.vehiculo.version)})`]
+      : [`${esc(p.vehiculo.marca)} ${esc(p.vehiculo.modelo)} · ${esc(p.vehiculo.motor)}`, `Versión: ${esc(p.vehiculo.version)}`]),
     `Matrícula ${esc(p.matricula)} · matriculado ${fecha(p.fechaMatriculacion)}`,
     `Duerme: ${esc(p.garaje)} · circula por ${esc(p.municipio)} · ${esc(p.estadoCivil)}`,
+    p.kmAnuales !== null ? `Km al año: ${String(p.kmAnuales).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}` : null,
     declarados.length ? `Datos que me has dado: ${declarados.join(' · ')}` : 'Datos del tomador: los de su ficha',
     p.historial
       ? `Seguro actual: ${esc(p.historial.compania)} nº ${esc(p.historial.poliza)} · ${p.historial.aniosAsegurado} años asegurado, ${p.historial.aniosEnCompania} en la compañía, ${p.historial.aniosSinSiniestros} sin siniestros`

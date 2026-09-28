@@ -73,7 +73,7 @@ test('leerEntrada: el historial del seguro actual va completo o no va', () => {
 const BASE: Resuelto = {
   ramo: 'moto', marcaId: 'M1', modeloId: 'MO1', motor: 'Gasoline', codigoVehiculo: 'V1', matricula: '1234BCD',
   fechaMatriculacion: '2020-01-01', garaje: 'VP', garajeEsSupuesto: true, estadoCivilId: 'S', municipioId: '41091',
-  persona: { dni: '12345678Z' }, historial: null,
+  persona: { dni: '12345678Z' }, historial: null, kmAnuales: null,
 }
 
 test('construirCuerpo: mismas claves que las pantallas; en moto también marcaId, modeloId y motor', () => {
@@ -133,7 +133,7 @@ test('textoPropuesta: DNI enmascarado, optimistas primero y aviso de 0,50€ sin
     ramo: 'auto', cliente: 'Pepe <Pérez>',
     vehiculo: { marca: 'SEAT', modelo: 'IBIZA', motor: 'Gasolina', version: '1.0 TSI' },
     matricula: '1234BCD', fechaMatriculacion: '2020-01-01', garaje: 'Vía pública', estadoCivil: 'Soltero', municipio: 'Sevilla',
-    persona: { dni: '12345678Z' }, historial: null, primaActual: 400,
+    persona: { dni: '12345678Z' }, historial: null, primaActual: 400, kmAnuales: null, vehiculoPrevioDe: null,
     supuestos: [
       { campo: 'kmAnuales', valor: 10000, porque: 'media' },
       { campo: 'aniosSinSiniestros', valor: 5, porque: 'se presume', optimista: true },
@@ -247,4 +247,33 @@ test('limpieza: la propuesta vencida pierde el cuerpo y la «pidiendo» colgada 
   // …y en la MISMA transacción que un candado: sin él, cada UPDATE cuenta sobre su propia foto y dos
   // pulsaciones simultáneas pasan las dos (hallazgo de Graphify, PR #3924).
   assert.match(src, /prisma\.\$transaction\(\[\s*prisma\.\$executeRaw\(Prisma\.sql`SELECT pg_advisory_xact_lock\(hashtext\('correduria_asistente_tarificacion:tope'\)\)`\),\s*prisma\.\$queryRaw<FilaTarif\[\]>\(Prisma\.sql`\s*UPDATE correduria_asistente_tarificacion SET estado = 'pidiendo'/)
+})
+
+test('km al año: dichos van como corrección (tapan la media); mal escritos se DICEN', () => {
+  assert.equal(leerEntrada({ ramo: 'moto', clienteId: '3f2b8c1e-1234-4abc-9def-0123456789ab', kmAnuales: '5.000' }).entrada.kmAnuales, 5000)
+  assert.equal(leerEntrada({ ramo: 'moto', clienteId: '3f2b8c1e-1234-4abc-9def-0123456789ab' }).entrada.kmAnuales, null)
+  assert.ok(leerEntrada({ ramo: 'moto', clienteId: '3f2b8c1e-1234-4abc-9def-0123456789ab', kmAnuales: 'mucho' }).errores.some((e) => /km al año/.test(e)))
+  assert.equal(construirCuerpo({ ...BASE, kmAnuales: 5000 }).correcciones.kmAnuales, 5000)
+  assert.equal('kmAnuales' in construirCuerpo(BASE).correcciones, false)
+})
+
+test('moto con el vehículo de una petición anterior: sin marca/modelo/motor no se mandan a medias', () => {
+  const m = construirCuerpo({ ...BASE, marcaId: null, modeloId: null, motor: null })
+  assert.equal('marcaId' in m.resueltos, false)
+  assert.equal(m.resueltos.codigoVehiculo, 'V1')
+  const t = textoPropuesta({
+    ramo: 'moto', cliente: 'Manuel', vehiculo: { marca: '', modelo: '', motor: '', version: 'V1' },
+    matricula: '1234BCD', fechaMatriculacion: '2020-01-01', garaje: 'Garaje', estadoCivil: 'Soltero', municipio: 'Sevilla',
+    persona: {}, historial: null, primaActual: null, kmAnuales: 5000, vehiculoPrevioDe: '28/09/2026', supuestos: [],
+  })
+  assert.match(t, /mismo vehículo de la petición de precio del 28\/09\/2026/)
+  assert.match(t, /Km al año: 5\.000/)
+})
+
+test('reutilizar la moto anterior solo con la MISMA matrícula (lee el FUENTE)', async () => {
+  const { readFileSync } = await import('node:fs')
+  const src = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
+  assert.match(src, /if \(matricula && \(!v\.matricula \|\| !igual\(matricula, v\.matricula\)\)\) return null/)
+  // Solo si Alberto no ha dictado el vehículo: lo dictado manda siempre.
+  assert.match(src, /const previo = !e\.marca && !e\.modelo && !e\.version \? await vehiculoPrevio\(/)
 })
