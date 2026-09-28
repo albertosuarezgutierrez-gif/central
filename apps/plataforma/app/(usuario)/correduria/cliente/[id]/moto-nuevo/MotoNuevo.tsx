@@ -25,7 +25,8 @@ import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/l
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
-import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
+import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
+import type { TarificacionNuevaGuardada } from '@/lib/retarificar-asegura'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
@@ -169,6 +170,32 @@ export default function MotoNuevo({
   const [motoAnteriorCodigo, setMotoAnteriorCodigo] = useState('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
+
+  // ── Retomar la última tarificación ya pagada (28/09/2026) ────────────────────
+  // La parrilla vivía solo en memoria: al cerrar la pestaña no había forma de preparar el
+  // presupuesto ni de emitir sin volver a pagar. Gratis: solo lee lo ya guardado.
+  const [guardada, setGuardada] = useState<TarificacionNuevaGuardada | null>(null)
+  useEffect(() => {
+    if (poliza !== null) return
+    let vivo = true
+    pedirTarificacionGuardadaMoto({ clienteId })
+      .then((r) => { if (vivo && r.estado === 'ok' && !r.guardada.caducada && r.guardada.precios.length > 0) setGuardada(r.guardada) })
+      .catch(() => {})
+    return () => { vivo = false }
+  }, [clienteId, poliza])
+  const retomar = (g: TarificacionNuevaGuardada) =>
+    setResultado({
+      estado: 'ok',
+      coste: '0 € (retomada, ya estaba pagada)',
+      restantesHoy: null,
+      simulado: false,
+      avisoSimulacion: null,
+      resumen: `Tarificación del ${new Date(g.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}${g.fechaEfecto ? ` · efecto ${g.fechaEfecto.split('-').reverse().join('/')}` : ''}`,
+      precios: g.precios,
+      fallos: [],
+      supuestos: [],
+      guardado: { estado: 'guardada', cotizacionId: g.cotizacionId },
+    })
 
   // ── ¿Tiene seguro EN VIGOR ahora mismo? (fallo real de Alberto, 18/09/2026) ──
   // Igual que en auto: sin esto la compañía cotiza «de calle» y el precio no es
@@ -732,6 +759,16 @@ export default function MotoNuevo({
           <div style={{ marginTop: 12 }}>
             <Badge tono="positivo">No se ha gastado nada</Badge>
             <ul style={{ fontSize: 13 }}>{resultado.faltan.map((f) => <li key={f.campo}><strong>{f.campo}</strong>: {f.motivo}</li>)}</ul>
+          </div>
+        )}
+        {guardada && resultado.estado === 'idle' && (
+          <div style={{ ...cardStyle, marginTop: 12, display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', justifyContent: 'space-between' }}>
+            <span style={{ fontSize: 14 }}>
+              Ya hay una tarificación de moto de este cliente ({new Date(guardada.creadaEn).toLocaleString('es-ES', { timeZone: 'Europe/Madrid', dateStyle: 'short', timeStyle: 'short' })}, {guardada.precios.length} precios{guardada.fechaEfecto ? `, efecto ${guardada.fechaEfecto.split('-').reverse().join('/')}` : ''}).
+            </span>
+            <button type="button" onClick={() => retomar(guardada)} style={{ ...btnStyle('secundario'), minHeight: 44 }}>
+              Retomarla sin pagar
+            </button>
           </div>
         )}
         {resultado.estado === 'error' && (
