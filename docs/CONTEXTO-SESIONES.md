@@ -842,6 +842,14 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Póliza donde la ficha FIGURA sin ser tomador: ya sale en su ficha y en el portal
+Caso: Generali UV-G-410081428 — tomador Francisco Javier Velasco (conductor habitual), GLOBAL 2 propietaria+asegurada;
+no salía en la ficha de GLOBAL 2 ni a Pilar (autorizada sobre GLOBAL 2). Medido: 28 pólizas vivas / 22 fichas en ese caso.
+Ficha del corredor: `figuraEn` (`polizasDondeFigura`, por `cliente_id` o DNI) → bloque «Donde figura en pólizas de otro tomador».
+Portal: quien ve una ficha ENTERA (autorización sin póliza suelta o empresa del dueño) ve también donde ESA ficha figura,
+capada como interviniente (`capaInterviniente`, `figurasDeFichasVistas`); cepo en `regression-portal-intervinientes`.
+Confirmado con las condiciones particulares de Generali: tomador y conductor habitual = Francisco Javier; asegurado/propietario = GLOBAL 2 (Citan 1670HRB). La BD está bien. La copia de volcado `UV-G-410.081.428` (con puntos, no viva) cuelga de GLOBAL 2 como tomador.
+
 ## (28/09/2026) Correduría: el CP rellena solo la ciudad (y la provincia)
 - Tabla CP→municipio incrustada (`apps/plataforma/lib/municipios-por-cp.json`, 11.254 CP, INE+CNIG; solo servidor)
   vía `GET /api/correduria/codigo-postal`. Campo `CiudadPorCp.tsx` en alta de cliente, edición de dirección y

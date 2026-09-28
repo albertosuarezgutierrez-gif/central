@@ -119,6 +119,14 @@ export default async function FichaPoliza({ params }: { params: Promise<{ id: st
         {p.numeroPoliza && ` · Póliza ${p.numeroPoliza}`}
         {deOtro && ` · de ${deOtro}`}
       </p>
+      {p.figuraTitular && (
+        <p className="suave" style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.5, overflowWrap: 'anywhere' }}>
+          {p.figuraTitular.roles.length > 0
+            ? `${deOtro ?? 'Esta ficha'} figura en esta póliza como ${rolesLegibles(p.figuraTitular.roles)}.`
+            : `${deOtro ?? 'Esta ficha'} figura en esta póliza.`}
+          {p.figuraTitular.tomador && ` El tomador es ${p.figuraTitular.tomador}.`}
+        </p>
+      )}
       {(figuraComo !== null || (p.figura && p.figura.length > 0)) && (
         <p className="suave" style={{ margin: '0 0 16px', fontSize: 14, lineHeight: 1.5, overflowWrap: 'anywhere' }}>
           {figuraComo !== null

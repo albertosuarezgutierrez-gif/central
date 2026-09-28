@@ -111,8 +111,13 @@ export function ordenarRoles(roles: readonly string[]): string[] {
  * interviniente no los herede.
  */
 export function camposDeInterviniente(nivel: Nivel): CamposVisibles {
+  return capaInterviniente(camposVisibles(nivel))
+}
+
+/** Lo mismo sobre unos campos ya decididos (una autorización, la empresa del dueño). */
+export function capaInterviniente(campos: CamposVisibles): CamposVisibles {
   return {
-    ...camposVisibles(nivel),
+    ...campos,
     iban: false,
     dniTomador: false,
     documentos: false,
@@ -179,4 +184,50 @@ export function rolesPropiosPorPoliza(
 export function figuraChip(roles: readonly string[]): string {
   const t = rolesLegibles(roles)
   return t.charAt(0).toUpperCase() + t.slice(1)
+}
+
+/**
+ * Pólizas de OTRO tomador donde figura una ficha que la identidad ya ve ENTERA
+ * (autorizada sin póliza suelta, o empresa de la que es dueño). Alberto,
+ * 28/09/2026: «toda persona que entre dentro de la póliza automáticamente le
+ * aparece». Caso fundacional: la furgoneta de GLOBAL 2 (tomador, su conductor;
+ * GLOBAL 2 propietaria y asegurada) no salía a quien ve GLOBAL 2 por permiso.
+ *
+ * Reglas, cada una con su test:
+ *   1. Solo filas cuyo `clienteId` es una de `fichasVistas`: nunca «las demás del tomador».
+ *   2. Si el tomador ya se sirve (propio, autorizado, empresa), no se repite aquí.
+ *   3. Una póliza cuelga de UNA sola ficha vista (la primera de `fichasVistas`):
+ *      dos fichas vistas en la misma póliza no la pintan dos veces.
+ *
+ * Devuelve, por ficha vista, `polizaId → papeles` de esa ficha en la póliza.
+ */
+export function figurasDeFichasVistas(args: {
+  filas: readonly FilaInterviniente[]
+  polizas: readonly PolizaDeTomador[]
+  fichasVistas: readonly string[]
+  tomadoresYaServidos: readonly string[]
+}): Map<string, Map<string, string[]>> {
+  const orden = new Map(args.fichasVistas.map((id, i) => [id, i]))
+  const servidos = new Set(args.tomadoresYaServidos)
+  const tomadorDe = new Map(args.polizas.map((p) => [p.id, p.clienteId]))
+  const duena = new Map<string, string>()
+  const roles = new Map<string, Set<string>>()
+  for (const f of args.filas) {
+    if (f.clienteId === null || !orden.has(f.clienteId)) continue
+    const tomadorId = tomadorDe.get(f.polizaId)
+    if (tomadorId === undefined || tomadorId === f.clienteId || servidos.has(tomadorId)) continue
+    const actual = duena.get(f.polizaId)
+    if (actual === undefined || (orden.get(f.clienteId) ?? 0) < (orden.get(actual) ?? 0)) {
+      if (actual !== f.clienteId) roles.set(f.polizaId, new Set())
+      duena.set(f.polizaId, f.clienteId)
+    }
+    if (duena.get(f.polizaId) === f.clienteId) roles.get(f.polizaId)?.add(f.rol)
+  }
+  const out = new Map<string, Map<string, string[]>>()
+  for (const [polizaId, fichaId] of duena) {
+    const m = out.get(fichaId) ?? new Map<string, string[]>()
+    m.set(polizaId, ordenarRoles([...(roles.get(polizaId) ?? [])]))
+    out.set(fichaId, m)
+  }
+  return out
 }

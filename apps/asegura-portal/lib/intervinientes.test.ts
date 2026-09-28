@@ -1,6 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { camposDeInterviniente, figuraChip, figuraEnPropias, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, rolesLegibles } from './intervinientes.ts'
+import { camposDeInterviniente, capaInterviniente, figurasDeFichasVistas, figuraChip, figuraEnPropias, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, rolesLegibles } from './intervinientes.ts'
 
 const NIEVES = 'c-nieves'
 const VICTOR = 'c-victor'
@@ -130,4 +130,76 @@ test('rolesPropiosPorPoliza: conductor habitual del coche de su sociedad', () =>
   )
   assert.deepEqual(r.get('coche-empresa'), ['conductor_habitual'])
   assert.equal(figuraChip(r.get('coche-empresa') ?? []), 'Conductor habitual')
+})
+
+// ── Fichas vistas ENTERAS (28/09/2026): la furgoneta de GLOBAL 2 ──────────────
+const GLOBAL2 = 'c-global2'
+const CONDUCTOR = 'c-conductor'
+
+test('quien ve GLOBAL 2 entera ve la furgoneta donde GLOBAL 2 es propietaria y el tomador es el conductor', () => {
+  const r = figurasDeFichasVistas({
+    filas: [
+      { polizaId: 'furgo', clienteId: GLOBAL2, rol: 'propietario' },
+      { polizaId: 'furgo', clienteId: GLOBAL2, rol: 'asegurado' },
+      { polizaId: 'furgo', clienteId: CONDUCTOR, rol: 'conductor_habitual' },
+    ],
+    polizas: [{ id: 'furgo', clienteId: CONDUCTOR }],
+    fichasVistas: [GLOBAL2],
+    tomadoresYaServidos: [GLOBAL2],
+  })
+  assert.deepEqual([...r.keys()], [GLOBAL2])
+  assert.deepEqual(r.get(GLOBAL2)?.get('furgo'), ['propietario', 'asegurado'])
+})
+
+test('solo cuentan filas de las fichas vistas: el papel de otro no abre nada', () => {
+  const r = figurasDeFichasVistas({
+    filas: [{ polizaId: 'furgo', clienteId: CONDUCTOR, rol: 'conductor_habitual' }],
+    polizas: [{ id: 'furgo', clienteId: 'c-otro' }],
+    fichasVistas: [GLOBAL2],
+    tomadoresYaServidos: [],
+  })
+  assert.equal(r.size, 0)
+})
+
+test('si el tomador ya se sirve (propio o autorizado), no se repite', () => {
+  const r = figurasDeFichasVistas({
+    filas: [{ polizaId: 'furgo', clienteId: GLOBAL2, rol: 'propietario' }],
+    polizas: [{ id: 'furgo', clienteId: CONDUCTOR }],
+    fichasVistas: [GLOBAL2],
+    tomadoresYaServidos: [CONDUCTOR],
+  })
+  assert.equal(r.size, 0)
+})
+
+test('sin póliza candidata (no viva / fusionada) no hay nada', () => {
+  const r = figurasDeFichasVistas({
+    filas: [{ polizaId: 'furgo', clienteId: GLOBAL2, rol: 'propietario' }],
+    polizas: [],
+    fichasVistas: [GLOBAL2],
+    tomadoresYaServidos: [],
+  })
+  assert.equal(r.size, 0)
+})
+
+test('dos fichas vistas en la misma póliza: cuelga de UNA (la primera), sin duplicar', () => {
+  const r = figurasDeFichasVistas({
+    filas: [
+      { polizaId: 'furgo', clienteId: 'c-b', rol: 'asegurado' },
+      { polizaId: 'furgo', clienteId: GLOBAL2, rol: 'propietario' },
+    ],
+    polizas: [{ id: 'furgo', clienteId: CONDUCTOR }],
+    fichasVistas: [GLOBAL2, 'c-b'],
+    tomadoresYaServidos: [],
+  })
+  assert.deepEqual([...r.keys()], [GLOBAL2])
+  assert.deepEqual(r.get(GLOBAL2)?.get('furgo'), ['propietario'])
+})
+
+test('capaInterviniente apaga lo de la persona del tomador sobre cualquier nivel', () => {
+  const c = capaInterviniente(camposDeInterviniente('completo'))
+  assert.equal(c.iban, false)
+  assert.equal(c.dniTomador, false)
+  assert.equal(c.documentos, false)
+  assert.equal(c.crearPeticiones, false)
+  assert.equal(c.autorizarTerceros, false)
 })
