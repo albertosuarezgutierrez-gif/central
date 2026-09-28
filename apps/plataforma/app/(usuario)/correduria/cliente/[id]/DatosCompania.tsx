@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Phone, Mail } from 'lucide-react'
 import { etiquetaRol } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
-import { Ico } from '../iconos'
+import { Ico } from '../../iconos'
 import type { DatosCompania } from '@/lib/datos-compania'
 
 /**

@@ -126,7 +126,7 @@ function CompaniasAvant2({ c }: { c: CompaniasCodeoscopic }) {
   if (b.estado === 'presente') {
     return (
       <div style={{ ...base, borderColor: '#4a8' }}>
-        ✅ <strong>Fidelidade está dada de alta en Avant2</strong> (<code>{b.id}</code> · {b.nombre})
+        <CheckCircle2 size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--positive)' }} /> <strong>Fidelidade está dada de alta en Avant2</strong> (<code>{b.id}</code> · {b.nombre})
         {b.ramos.length > 0 ? `, con producto en: ${b.ramos.join(', ')}` : ' — pero sin producto en ningún ramo todavía'}.
         {lista}
       </div>
@@ -135,7 +135,7 @@ function CompaniasAvant2({ c }: { c: CompaniasCodeoscopic }) {
   if (b.estado === 'ausente') {
     return (
       <div style={{ ...base, borderColor: '#c96' }}>
-        🚫 <strong>Fidelidade NO está entre las compañías abiertas</strong> en Avant2
+        <XCircle size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--negative)' }} /> <strong>Fidelidade NO está entre las compañías abiertas</strong> en Avant2
         {b.companias.length > 0 ? ` (hay: ${b.companias.join(', ')})` : ''}. Lo que te han confirmado no se ve
         por API: pídeles que lo revisen.
       </div>
@@ -143,7 +143,7 @@ function CompaniasAvant2({ c }: { c: CompaniasCodeoscopic }) {
   }
   return (
     <div style={base}>
-      ❔ <strong>Compañías en Avant2:</strong> la lista llegó vacía o no se entendió — no se afirma nada.{lista}
+      <Info size={16} strokeWidth={1.75} style={{ display: 'inline-block', marginRight: 8, verticalAlign: 'text-bottom', color: 'var(--muted)' }} /> <strong>Compañías en Avant2:</strong> la lista llegó vacía o no se entendió — no se afirma nada.{lista}
     </div>
   )
 }

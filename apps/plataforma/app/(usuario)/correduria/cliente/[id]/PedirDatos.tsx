@@ -85,8 +85,8 @@ export default function PedirDatos({ oportunidadId, clienteId, telefono = null, 
           <div style={{ fontWeight: 600 }}>Enlace listo (caduca el {fmt(nuevo.caduca.slice(0, 10))}). Mándaselo tú:</div>
           <input readOnly value={nuevo.url} onFocus={(e) => e.currentTarget.select()} style={{ minHeight: 44, padding: '0 8px', borderRadius: 8, border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }} />
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button type="button" onClick={() => void copiar(nuevo.mensaje)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>{copiado ? '✅ Copiado' : '📋 Copiar mensaje'}</button>
-            <a href={waDirecto ?? `https://wa.me/?text=${encodeURIComponent(nuevo.mensaje)}`} target="_blank" rel="noreferrer" style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>💬 WhatsApp</a>
+            <button type="button" onClick={() => void copiar(nuevo.mensaje)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>{copiado ? 'Copiado' : 'Copiar mensaje'}</button>
+            <a href={waDirecto ?? `https://wa.me/?text=${encodeURIComponent(nuevo.mensaje)}`} target="_blank" rel="noreferrer" style={{ ...btnStyle('secundario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>WhatsApp</a>
           </div>
           {!waDirecto && (
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>
@@ -122,7 +122,7 @@ function Respuestas({ s, tarificar, ramo }: { s: SolicitudDatos; tarificar: stri
   return (
     <details open>
       <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontWeight: 600, color: 'var(--positive)' }}>
-        ✅ El cliente contestó{s.completada ? ` el ${fmt(s.completada.slice(0, 10))}` : ''}
+        El cliente contestó{s.completada ? ` el ${fmt(s.completada.slice(0, 10))}` : ''}
       </summary>
       {s.ilegible || !s.respuestas ? (
         <div style={{ color: 'var(--negative)' }}>Sus respuestas no se pueden descifrar aquí (clave de datos personales).</div>
