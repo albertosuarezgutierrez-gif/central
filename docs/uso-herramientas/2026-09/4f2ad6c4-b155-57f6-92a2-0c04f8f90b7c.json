@@ -1,43 +1,93 @@
 {
  "sesion": "4f2ad6c4-b155-57f6-92a2-0c04f8f90b7c",
  "inicio": "2026-09-14T09:02:20.482Z",
- "fin": "2026-09-14T09:05:53.577Z",
- "llamadas": 18,
+ "fin": "2026-09-28T09:25:43.630Z",
+ "llamadas": 81,
  "categorias": {
   "bash": {
-   "llamadas": 4,
-   "chars_in": 8299,
-   "chars_out": 7195,
+   "llamadas": 19,
+   "chars_in": 13321,
+   "chars_out": 20644,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 4
+    "Bash": 19
    }
   },
   "sql": {
-   "llamadas": 10,
-   "chars_in": 4257,
-   "chars_out": 10583,
+   "llamadas": 22,
+   "chars_in": 10656,
+   "chars_out": 22414,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 10
+    "mcp__Supabase__execute_sql": 22
    }
   },
   "mcp:github": {
+   "llamadas": 17,
+   "chars_in": 8127,
+   "chars_out": 85411,
+   "errores": 0,
+   "archivos_citados": 3,
+   "chars_citados": 37120,
+   "tools": {
+    "mcp__github__list_pull_requests": 2,
+    "mcp__github__create_pull_request": 2,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__pull_request_read": 6,
+    "mcp__github__actions_list": 2,
+    "mcp__github__merge_pull_request": 1,
+    "mcp__github__unsubscribe_pr_activity": 1
+   }
+  },
+  "otro": {
+   "llamadas": 14,
+   "chars_in": 392,
+   "chars_out": 218270,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 34628,
+   "tools": {
+    "ReadNotifications": 10,
+    "ToolSearch": 4
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 102,
+   "chars_out": 1723,
+   "errores": 1,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__list_triggers": 1,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1
+   }
+  },
+  "lectura-directa": {
    "llamadas": 4,
-   "chars_in": 3967,
-   "chars_out": 6603,
+   "chars_in": 356,
+   "chars_out": 8958,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__github__list_pull_requests": 1,
-    "mcp__github__create_pull_request": 1,
-    "mcp__github__update_pull_request": 1,
-    "mcp__github__subscribe_pr_activity": 1
+    "Read": 4
+   }
+  },
+  "escritura": {
+   "llamadas": 3,
+   "chars_in": 5737,
+   "chars_out": 79450,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 3
    }
   }
  }
