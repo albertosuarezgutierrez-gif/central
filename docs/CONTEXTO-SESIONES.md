@@ -7964,3 +7964,11 @@ Fuera: datos de terceros (cifrados) y `ref_mediador_cima`. ⚠️ Los campos nue
 falta reprocesar los 46 SIN (lote cifrado ya en la rama temporal `cima-lote-sin-2026-09-28` del repo asegura; el
 clasificador bloquea leer la clave → lo lanza Alberto con `scratchpad/cima/clave.txt`). Borrar después ramas
 `cima-lote-2026-09-28` y `cima-lote-sin-2026-09-28` y los runs de `cima-rescate-lote`.
+
+## (28/09/2026) Presupuesto en PDF descargable desde la ficha del cliente
+Botón «Descargar PDF» en cada presupuesto (`PresupuestosPoliza`, ficha de cliente y de póliza) → plataforma
+`/api/correduria/presupuesto/pdf` → asegura `GET /api/operador/presupuesto/pdf` (pdf-lib, `lib/presupuesto-pdf.ts` puro +
+`presupuesto-pdf-datos.ts`). Mismas opciones y primas que ve el cliente en el portal (sin ocultas), datos del cálculo
+(matrícula, km, garaje), necesidades y pie legal; SIN DNI/IBAN/dirección, sin avisos internos de la compañía y sin enlace
+con token. Solo descarga: no avisa a nadie. Caso Manuel Piña (moto 2121NST): su único presupuesto (366dbbba) es de la
+tarificación vieja (15.000 km, sin garaje) — hay que retarificar antes de mandarle un PDF.

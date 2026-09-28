@@ -205,6 +205,17 @@ async function puerto(init: RequestInit, query = ''): Promise<Reenvio> {
   }
 }
 
+/** El PDF del presupuesto (bytes en streaming). `null` = sin secreto configurado. */
+export async function descargarPdfPresupuestoAsegura(id: string): Promise<Response | null> {
+  const secret = process.env.ASEGURA_OPERADOR_SECRET
+  if (!secret) return null
+  return fetch(`${urlAsegura()}/api/operador/presupuesto/pdf?id=${encodeURIComponent(id)}`, {
+    headers: await cabecerasPuerto(secret),
+    cache: 'no-store',
+    signal: AbortSignal.timeout(50_000),
+  })
+}
+
 export function listarPresupuestosAsegura(q: { clienteId?: string; polizaId?: string }): Promise<Reenvio> {
   const p = new URLSearchParams()
   if (q.clienteId) p.set('clienteId', q.clienteId)
