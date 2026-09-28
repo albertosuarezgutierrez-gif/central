@@ -11,15 +11,14 @@
 // esto con `garantias: null` en todos: se dice «Leyendo coberturas…», jamás «no incluye».
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { EyeOff, Eye, RefreshCw } from 'lucide-react'
+import { Check, RefreshCw } from 'lucide-react'
 
-import { Badge, btnIcono, btnStyle } from '@/components/ui'
+import { btnStyle } from '@/components/ui'
 import { CeldaCompania } from './CeldaCompania'
 import { eur } from '@/lib/dinero'
 import { filtrarPorGarantias, interruptoresGarantias, ramoDeCatalogo } from '@central/module-seguros'
 import {
   claveCompania,
-  estaOculta,
   ocultarParaPreparar,
   opcionesDeParrilla,
   quedaAlgunaVisible,
@@ -52,8 +51,9 @@ export default function FiltroGarantias({
 }) {
   const [carga, setCarga] = useState<Carga>({ estado: 'cargando' })
   const [marcadas, setMarcadas] = useState<string[]>([])
-  const [ocultosPrecio, setOcultosPrecio] = useState<ReadonlySet<string>>(new Set())
-  const [ocultasCompania, setOcultasCompania] = useState<ReadonlySet<string>>(new Set())
+  // Se ELIGE lo que se manda (Alberto, 28/09/2026: «seleccionar las que quiero, no quitar las que no»).
+  // Por dentro se sigue mandando `ocultar` = todo lo NO elegido: asegura no cambia.
+  const [elegidas, setElegidas] = useState<ReadonlySet<string>>(new Set())
   const [preparado, setPreparado] = useState(false)
   const [mostrar, setMostrar] = useState(PAGINA)
   const [verSinDato, setVerSinDato] = useState(false)
@@ -97,21 +97,15 @@ export default function FiltroGarantias({
   const ramoCat = ramoDeCatalogo(ramo)
   const interruptores = useMemo(() => (ramoCat ? interruptoresGarantias(ramoCat, opciones) : []), [ramoCat, opciones])
   const filtro = useMemo(() => filtrarPorGarantias(opciones, marcadas), [opciones, marcadas])
-  const ocultas = { companias: ocultasCompania, precios: ocultosPrecio }
-  const companias = useMemo(() => {
-    const m = new Map<string, { nombre: string; n: number }>()
-    for (const o of opciones) {
-      const k = claveCompania(o.compania)
-      const x = m.get(k)
-      if (x) x.n++
-      else m.set(k, { nombre: o.compania, n: 1 })
-    }
-    return [...m.entries()].map(([clave, v]) => ({ clave, ...v })).sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'))
-  }, [opciones])
+  const ocultas = useMemo(
+    () => ({ companias: new Set<string>(), precios: new Set(opciones.filter((o) => !elegidas.has(o.id)).map((o) => o.id)) }),
+    [opciones, elegidas],
+  )
 
   const ocultar = guardada ? ocultarParaPreparar(opciones, ocultas) : undefined
+  const nElegidas = opciones.filter((o) => elegidas.has(o.id) && o.primaEur !== null).length
   const bloqueado = guardada && opciones.length > 0 && !quedaAlgunaVisible(opciones, ocultas)
-    ? 'Has ocultado todas las opciones: no queda nada que enseñarle al cliente.'
+    ? 'Marca al menos una opción para mandársela al cliente.'
     : null
   const etiquetasMarcadas = interruptores.filter((i) => marcadas.includes(i.clave)).map((i) => i.etiqueta.toLowerCase())
 
@@ -123,49 +117,72 @@ export default function FiltroGarantias({
   }
 
   const fila = (o: OpcionParrilla) => {
-    const oculta = estaOculta(o, ocultas)
-    const porCompania = ocultasCompania.has(claveCompania(o.compania))
+    const marcada = elegidas.has(o.id)
+    const sinPrima = o.primaEur === null
     return (
-      <li
-        key={o.id}
-        style={{
-          display: 'flex', gap: 10, alignItems: 'center',
-          padding: '10px 0', borderBottom: '1px solid var(--border)', opacity: oculta ? 0.5 : 1, minWidth: 0,
-        }}
-      >
-        <div style={{ flex: '0 0 76px', minWidth: 0 }}>
-          <CeldaCompania compania={o.compania} producto={o.producto} />
-        </div>
-        <div style={{ flex: '1 1 auto', minWidth: 0, fontSize: 13, lineHeight: 1.3 }}>
-          <div style={{ overflowWrap: 'anywhere' }}>{o.categoria ?? <span style={{ color: 'var(--muted)' }}>cobertura sin declarar</span>}</div>
-          <div style={{ color: 'var(--muted)', fontSize: 12 }}>
-            {o.franquiciaEur === null ? 'franquicia no declarada' : o.franquiciaEur === 0 ? 'sin franquicia' : `franquicia ${eur(o.franquiciaEur)}`}
-            {ramoCat === 'decesos' && (
-              o.capitalServicioEur !== null ? <> · capital {eur(o.capitalServicioEur)}</> : <> · capital no consta</>
-            )}
-          </div>
-          {oculta && <Badge tono="aviso">{porCompania ? 'compañía oculta' : 'oculta al cliente'}</Badge>}
-        </div>
-        <div style={{ flex: '0 0 auto', textAlign: 'right' }}>
-          <strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{o.primaEur === null ? '—' : eur(o.primaEur)}</strong>
-          {o.firmeza !== 'firme' && <div style={{ color: 'var(--muted)', fontSize: 11 }}>{o.firmeza}</div>}
-        </div>
-        {!porCompania && (
-          <button
-            type="button"
-            disabled={preparado}
-            onClick={() => setOcultosPrecio((s) => alternar(s, o.id))}
-            style={{ ...btnIcono('sutil'), flex: '0 0 auto' }}
-            aria-pressed={ocultosPrecio.has(o.id)}
-            aria-label={ocultosPrecio.has(o.id) ? 'Volver a enseñar al cliente' : 'Ocultar al cliente'}
-            title={ocultosPrecio.has(o.id) ? 'Volver a enseñar al cliente' : 'Ocultar al cliente'}
+      <li key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={marcada}
+          disabled={preparado || sinPrima}
+          onClick={() => setElegidas((s) => alternar(s, o.id))}
+          title={sinPrima ? 'Sin prima: no se puede mandar' : marcada ? 'Quitar del presupuesto' : 'Mandar esta opción'}
+          style={{
+            display: 'flex', gap: 10, alignItems: 'center', width: '100%', minHeight: 56, padding: '10px 4px',
+            background: marcada ? 'var(--primary-light)' : 'transparent', border: 0, textAlign: 'left',
+            color: 'inherit', font: 'inherit', cursor: preparado || sinPrima ? 'default' : 'pointer', minWidth: 0,
+          }}
+        >
+          <span
+            aria-hidden
+            style={{
+              flex: '0 0 24px', height: 24, borderRadius: 6, display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              border: `2px solid ${marcada ? 'var(--primary)' : 'var(--border)'}`, background: marcada ? 'var(--primary)' : 'var(--surface)', color: '#fff',
+            }}
           >
-            {ocultosPrecio.has(o.id) ? <EyeOff size={18} /> : <Eye size={18} />}
-          </button>
-        )}
+            {marcada && <Check size={16} strokeWidth={3} />}
+          </span>
+          <span style={{ flex: '0 0 72px', minWidth: 0 }}>
+            <CeldaCompania compania={o.compania} producto={o.producto} />
+          </span>
+          <span style={{ flex: '1 1 auto', minWidth: 0, fontSize: 13, lineHeight: 1.3 }}>
+            <span style={{ display: 'block', overflowWrap: 'anywhere' }}>{o.categoria ?? <span style={{ color: 'var(--muted)' }}>cobertura sin declarar</span>}</span>
+            <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>
+              {o.franquiciaEur === null ? 'franquicia no declarada' : o.franquiciaEur === 0 ? 'sin franquicia' : `franquicia ${eur(o.franquiciaEur)}`}
+              {ramoCat === 'decesos' && (
+                o.capitalServicioEur !== null ? <> · capital {eur(o.capitalServicioEur)}</> : <> · capital no consta</>
+              )}
+            </span>
+          </span>
+          <span style={{ flex: '0 0 auto', textAlign: 'right' }}>
+            <strong style={{ fontSize: 16, whiteSpace: 'nowrap' }}>{sinPrima ? '—' : eur(o.primaEur as number)}</strong>
+            {o.firmeza !== 'firme' && <span style={{ display: 'block', color: 'var(--muted)', fontSize: 11 }}>{o.firmeza}</span>}
+          </span>
+        </button>
       </li>
     )
   }
+
+  // Atajos de selección: sobre lo que se VE (con el filtro de garantías aplicado).
+  const conPrima = (xs: readonly OpcionParrilla[]) => xs.filter((o) => o.primaEur !== null)
+  const baratas = (xs: readonly OpcionParrilla[]) => [...conPrima(xs)].sort((a, b) => (a.primaEur as number) - (b.primaEur as number))
+  const atajos: { rotulo: string; ids: () => string[] }[] = [
+    { rotulo: 'Las 3 más baratas', ids: () => baratas(filtro.visibles).slice(0, 3).map((o) => o.id) },
+    {
+      rotulo: 'La más barata de cada compañía',
+      ids: () => {
+        const vistas = new Set<string>()
+        return baratas(filtro.visibles).filter((o) => {
+          const k = claveCompania(o.compania)
+          if (vistas.has(k)) return false
+          vistas.add(k)
+          return true
+        }).map((o) => o.id)
+      },
+    },
+    { rotulo: 'Todas las que se ven', ids: () => conPrima(filtro.visibles).map((o) => o.id) },
+  ]
 
   return (
     <section style={{ marginTop: 16, borderTop: '1px solid var(--border)', paddingTop: 12, minWidth: 0 }}>
@@ -173,7 +190,7 @@ export default function FiltroGarantias({
         <strong>Qué verá el cliente</strong>
       </p>
       <p className="muted" style={{ marginTop: 0, fontSize: 13 }}>
-        Toca el ojo para quitar un precio. Leer esto es gratis: no vuelve a cotizar.
+        Marca las opciones que le quieres mandar. Leer esto es gratis: no vuelve a cotizar.
       </p>
 
       {carga.estado === 'cargando' && <p className="muted">Leyendo la cotización guardada…</p>}
@@ -224,8 +241,9 @@ export default function FiltroGarantias({
             <p className="muted" style={{ fontSize: 13 }}>Asegura no manda todavía las garantías de cada precio: se puede ocultar, pero no filtrar.</p>
           )}
           {sinId > 0 && (
-            <p className="muted" style={{ fontSize: 12 }}>
-              {sinId} precio{sinId === 1 ? '' : 's'} llega{sinId === 1 ? '' : 'n'} sin identificador y no se puede{sinId === 1 ? '' : 'n'} ocultar por separado (sí ocultando su compañía).
+            <p className="err" style={{ fontSize: 12 }}>
+              {sinId} precio{sinId === 1 ? '' : 's'} llega{sinId === 1 ? '' : 'n'} sin identificador: no se puede{sinId === 1 ? '' : 'n'} marcar ni quitar, y
+              {sinId === 1 ? ' irá' : ' irán'} en el presupuesto aunque no lo{sinId === 1 ? '' : 's'} marques.
             </p>
           )}
 
@@ -254,26 +272,20 @@ export default function FiltroGarantias({
             </div>
           )}
 
-          {companias.length > 1 && (
+          {opciones.length > 0 && (
             <div style={{ marginBottom: 8 }}>
-              <p style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0' }}>Compañías (toca para ocultarla entera):</p>
+              <p style={{ fontSize: 12, color: 'var(--muted)', margin: '4px 0' }}>Marcar rápido:</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {companias.map((c) => {
-                  const oculta = ocultasCompania.has(c.clave)
-                  return (
-                    <button
-                      key={c.clave}
-                      type="button"
-                      disabled={preparado}
-                      aria-pressed={oculta}
-                      onClick={() => setOcultasCompania((s) => alternar(s, c.clave))}
-                      style={{ ...btnStyle('sutil', 'sm'), minHeight: 44, textDecoration: oculta ? 'line-through' : undefined }}
-                      title={oculta ? 'Volver a mostrar esta compañía al cliente' : 'Ocultar compañía al cliente'}
-                    >
-                      {oculta ? <EyeOff size={14} /> : <Eye size={14} />} {c.nombre} ({c.n})
-                    </button>
-                  )
-                })}
+                {atajos.map((x) => (
+                  <button key={x.rotulo} type="button" disabled={preparado} onClick={() => setElegidas(new Set(x.ids()))} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
+                    {x.rotulo}
+                  </button>
+                ))}
+                {elegidas.size > 0 && (
+                  <button type="button" disabled={preparado} onClick={() => setElegidas(new Set())} style={{ ...btnStyle('sutil', 'sm'), minHeight: 44 }}>
+                    Ninguna
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -281,7 +293,8 @@ export default function FiltroGarantias({
           {opciones.length > 0 && (
             <>
               <p style={{ fontSize: 13, margin: '8px 0 0' }}>
-                <strong>{filtro.visibles.length}</strong> {marcadas.length ? `incluyen ${etiquetasMarcadas.join(' y ')}` : 'opciones'}, de la más barata a la más cara.
+                <strong>{filtro.visibles.length}</strong> {marcadas.length ? `incluyen ${etiquetasMarcadas.join(' y ')}` : 'opciones'}, de la más barata a la más cara ·{' '}
+                <strong>{nElegidas}</strong> marcada{nElegidas === 1 ? '' : 's'} para mandar.
               </p>
               <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>{filtro.visibles.slice(0, mostrar).map(fila)}</ul>
               {filtro.visibles.length > mostrar && (
@@ -309,7 +322,7 @@ export default function FiltroGarantias({
                 </p>
               )}
               <p className="muted" style={{ fontSize: 12 }}>
-                El filtro es para ti: al cliente se le prepara todo lo que no ocultes, y él filtra en su presupuesto.
+                El filtro de garantías es solo para buscar: al cliente le llega lo que marques, y lo que quede marcado aunque el filtro lo esconda.
               </p>
             </>
           )}
@@ -321,6 +334,7 @@ export default function FiltroGarantias({
           tarificacionId={cotizacionPreparar}
           simulado={simulado}
           ocultar={ocultar}
+          enviadas={nElegidas}
           bloqueado={bloqueado}
           onPreparado={() => setPreparado(true)}
         />

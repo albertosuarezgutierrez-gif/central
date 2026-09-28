@@ -30,6 +30,7 @@ export default function PrepararPresupuesto({
   ocultar,
   bloqueado,
   onPreparado,
+  enviadas,
 }: {
   tarificacionId: string
   /** La cotización de la que sale. Si es simulada, no se podrá enviar nunca. */
@@ -40,6 +41,8 @@ export default function PrepararPresupuesto({
   bloqueado?: string | null
   /** Para que quien lo monta congele sus interruptores: lo preparado ya no cambia. */
   onPreparado?: () => void
+  /** Cuántas opciones ELIGIÓ el corredor (modo «marcar lo que se manda»). Ausente = modo antiguo de ocultar. */
+  enviadas?: number
 }) {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -81,7 +84,7 @@ export default function PrepararPresupuesto({
         Congela las opciones de arriba tal y como se le enseñarían. <strong>No manda nada</strong> y{' '}
         <strong>no vuelve a cotizar</strong>: sale de esta misma consulta, que ya está pagada.
       </p>
-      {ocultar && (
+      {enviadas === undefined && ocultar && (
         <p className="muted" style={{ marginTop: 0 }}>
           Se le ocultarán{' '}
           {[
@@ -97,9 +100,9 @@ export default function PrepararPresupuesto({
         type="button"
         onClick={preparar}
         disabled={cargando || !!bloqueado}
-        style={{ minHeight: 44, padding: '0 16px' }}
+        style={{ minHeight: 44, padding: '0 16px', width: '100%', maxWidth: 420 }}
       >
-        {cargando ? 'Preparando…' : 'Preparar presupuesto'}
+        {cargando ? 'Preparando…' : enviadas === undefined ? 'Preparar presupuesto' : `Preparar presupuesto con ${enviadas} opción${enviadas === 1 ? '' : 'es'}`}
       </button>
       {bloqueado && (
         <p className="err" style={{ marginTop: 8 }}>
