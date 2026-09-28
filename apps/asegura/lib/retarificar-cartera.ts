@@ -1389,10 +1389,13 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
       // Fecha de matriculación por la matrícula (`/car/registration-date`, gratis).
       // Lista de 0 o 1 opción: vacía = «el vendor no la encuentra»; un fallo de
       // red NO se degrada a vacía, sale por el `catch` como error.
-      case 'fecha-matriculacion': {
+      // `-moto` va a `/motorcycle/registration-date`, que es endpoint propio.
+      case 'fecha-matriculacion':
+      case 'fecha-matriculacion-moto': {
         const matricula = params.get('matricula')
         if (!matricula) return { estado: 'invalido', mensaje: 'falta matricula' }
-        const f = await fechaMatriculacionDeMatricula(config, matricula, 'car')
+        const ramo = tipo === 'fecha-matriculacion-moto' ? 'motorcycle' : 'car'
+        const f = await fechaMatriculacionDeMatricula(config, matricula, ramo)
         if (f.estado === 'error') throw new Error(f.detalle)
         return { estado: 'ok', opciones: f.estado === 'ok' ? [{ id: f.fecha, nombre: f.fecha }] : [] }
       }
