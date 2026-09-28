@@ -23,7 +23,7 @@ import { clasificarCoberturas, ramoDeCatalogo, type GarantiasClasificadas } from
 import { casarPrecio, type SobreCoberturas } from './coberturas-presupuesto.ts'
 import type { ResumenCoberturasTarificacion } from './coberturas-tarificacion.ts'
 import type { Precio } from './respuesta.ts'
-import { sobreOpciones, type SobreOpciones } from './coberturas.ts'
+import { leerOpcionesLegibles, sobreOpciones, type OpcionLegible, type SobreOpciones } from './coberturas.ts'
 
 /** Una fila pendiente (`coberturas is null`) SIN `oferta_id`, con lo necesario para casarla. */
 export type FilaSinOferta = {
@@ -33,6 +33,8 @@ export type FilaSinOferta = {
   modalidad: string | null
   primaEur: number
   referenciaVendor: string | null
+  /** La oferta ya guardada de la fila (solo la trae `sinOpciones`). */
+  ofertaId?: string | null
 }
 
 export type PlanOfertas = {
@@ -61,19 +63,29 @@ export function precioDeFila(f: FilaSinOferta, precios: readonly Precio[]): Prec
 }
 
 /**
- * Las opciones de cada fila sin leer, a partir del proyecto releído. PURO. `precios === null` (la
- * relectura falló) → `fallo`; sin precio casado → `sin_precio`. Nunca `leidas` con `[]` inventado.
+ * De qué oferta se leen las opciones de una fila. PURO. La guardada manda; si no hay, la del precio
+ * casado en el proyecto releído. `'fallo'` = hacía falta releer el proyecto y la relectura falló;
+ * `null` = no hay oferta (→ `sin_precio`).
  */
-export function planOpciones(
-  filas: readonly FilaSinOferta[],
-  precios: readonly Precio[] | null,
-  leidasAt: string,
-): { id: string; sobre: SobreOpciones }[] {
-  return filas.map((f) => {
-    if (precios === null) return { id: f.id, sobre: { estado: 'fallo', lista: null, leidasAt } }
-    const p = precioDeFila(f, precios)
-    return { id: f.id, sobre: p ? sobreOpciones(p.opciones, leidasAt) : { estado: 'sin_precio', lista: null, leidasAt } }
-  })
+export function ofertaParaOpciones(f: FilaSinOferta, precios: readonly Precio[] | null): string | null | 'fallo' {
+  if (f.ofertaId) return f.ofertaId
+  if (precios === null) return 'fallo'
+  return precioDeFila(f, precios)?.ofertaId ?? null
+}
+
+/**
+ * Las opciones del producto de `GET /insurances/{id}/offers/{offerId}` (28/09/2026). MEDIDO: ni la
+ * cotización ni `GET /insurances/{id}` las traen (280 de 280 precios sin ellas); el portal dice que
+ * es la oferta la que se devuelve «with its product options». Se prueban las formas razonables.
+ */
+export function opcionesDeOferta(raw: unknown): OpcionLegible[] | null {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {}
+  const candidatos = [o, o.mainQuote, o.quote, (o.offer as Record<string, unknown> | undefined)?.mainQuote]
+  for (const c of candidatos) {
+    const r = leerOpcionesLegibles(c)
+    if (r !== null) return r
+  }
+  return null
 }
 
 /** Reparte las filas sin oferta entre «ya tiene oferta» y «no hay oferta que leer». PURO. */
@@ -104,6 +116,8 @@ export type DepsBackfill = {
   marcar: (ids: string[], sobre: SobreCoberturas, garantias: GarantiasClasificadas | null) => Promise<number>
   /** Filas con `opciones is null` (28/09/2026). Opcional: sin ella no se leen opciones. */
   sinOpciones?: () => Promise<FilaSinOferta[]>
+  /** `GET /insurances/{id}/offers/{offerId}` (gratis). `null`/ausente = no se leen opciones. */
+  leerOferta?: ((projectId: string, ofertaId: string) => Promise<unknown>) | null
   /** `update … set opciones where id = … and opciones is null`. Filas escritas. */
   escribirOpciones?: (id: string, sobre: SobreOpciones) => Promise<number>
   /** La pasada normal sobre las filas que ya tienen oferta. */
@@ -127,6 +141,14 @@ export type ResumenBackfill = {
 }
 
 const mensaje = (e: unknown) => (e instanceof Error ? e.message : String(e))
+
+/** Solo NOMBRES de claves (nivel 1 y `mainQuote.product`), para diagnosticar la forma sin volcar datos. */
+function clavesDe(raw: unknown): { raiz: string[]; producto: string[] } {
+  const o = raw && typeof raw === 'object' && !Array.isArray(raw) ? (raw as Record<string, unknown>) : {}
+  const mq = o.mainQuote && typeof o.mainQuote === 'object' ? (o.mainQuote as Record<string, unknown>) : {}
+  const pr = mq.product && typeof mq.product === 'object' ? (mq.product as Record<string, unknown>) : {}
+  return { raiz: Object.keys(o), producto: Object.keys(pr) }
+}
 
 /** Rellena `oferta_id` donde se puede y luego las coberturas. Nunca lanza. */
 export async function backfillCoberturasTarificacion(
@@ -152,10 +174,10 @@ export async function backfillCoberturasTarificacion(
     const garantiasSinLista = ramo ? clasificarCoberturas(ramo, null) : null
 
     const filas = await d.sinOferta()
-    const filasOpciones = d.sinOpciones && d.escribirOpciones ? await d.sinOpciones() : []
-    // UNA relectura del proyecto por tarificación, para las dos cosas.
+    const filasOpciones = d.sinOpciones && d.escribirOpciones && d.leerOferta ? await d.sinOpciones() : []
+    // UNA relectura del proyecto por tarificación, y solo si hace falta: ofertas que recuperar.
     let precios: Precio[] | null = null
-    if (filas.length > 0 || filasOpciones.length > 0) {
+    if (filas.length > 0 || filasOpciones.some((f) => !f.ofertaId)) {
       try {
         precios = await d.refrescar(cab.projectId)
       } catch (e) {
@@ -175,10 +197,32 @@ export async function backfillCoberturasTarificacion(
       }
     }
 
-    if (filasOpciones.length > 0 && d.escribirOpciones) {
+    if (filasOpciones.length > 0 && d.escribirOpciones && d.leerOferta) {
       r.opciones = 0
-      for (const o of planOpciones(filasOpciones, precios, ahora().toISOString())) {
-        r.opciones += await d.escribirOpciones(o.id, o.sobre)
+      const leidas = new Map<string, OpcionLegible[] | null | 'fallo'>()
+      for (const f of filasOpciones) {
+        if (Date.now() - inicio > topeMs) break
+        const leidasAt = ahora().toISOString()
+        const oferta = ofertaParaOpciones(f, precios)
+        let sobre: SobreOpciones
+        if (oferta === 'fallo') sobre = { estado: 'fallo', lista: null, leidasAt }
+        else if (oferta === null) sobre = { estado: 'sin_precio', lista: null, leidasAt }
+        else {
+          if (!leidas.has(oferta)) {
+            try {
+              const raw = await d.leerOferta(cab.projectId, oferta)
+              const ops = opcionesDeOferta(raw)
+              if (ops === null) console.info(`[backfill-coberturas] oferta sin opciones legibles; claves:`, clavesDe(raw))
+              leidas.set(oferta, ops)
+            } catch (e) {
+              console.warn(`[backfill-coberturas] ${ids.tarificacionId}: no se pudo leer la oferta:`, mensaje(e))
+              leidas.set(oferta, 'fallo')
+            }
+          }
+          const ops = leidas.get(oferta)!
+          sobre = ops === 'fallo' ? { estado: 'fallo', lista: null, leidasAt } : sobreOpciones(ops, leidasAt)
+        }
+        r.opciones += await d.escribirOpciones(f.id, sobre)
       }
     }
 
@@ -270,18 +314,27 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
   const { resolverConfig, simulacionActiva } = await import('./config.ts')
   const { refrescarProyecto } = await import('./emitir.ts')
   const { completarCoberturasTarificacion } = await import('./coberturas-tarificacion.ts')
+  const { peticion } = await import('./cliente.ts')
 
   let refrescar: DepsBackfill['refrescar'] = null
+  let leerOferta: DepsBackfill['leerOferta'] = null
   if (!simulacionActiva(process.env)) {
     const r = resolverConfig(process.env, { ignorarInterruptor: true })
     if (r.estado === 'lista') {
       const config = r.config
       refrescar = async (projectId) => (await refrescarProyecto(config, projectId)).precios
+      leerOferta = (projectId, ofertaId) =>
+        peticion(config, {
+          metodo: 'GET',
+          path: `/insurances/${encodeURIComponent(projectId)}/offers/${encodeURIComponent(ofertaId)}`,
+          timeoutMs: config.timeoutGenericoMs,
+        })
     }
   }
 
   return {
     refrescar,
+    leerOferta,
     async cabecera() {
       const filas = await prisma.$queryRaw<{ simulado: boolean; project_id_codeoscopic: string | null; ramo: string }[]>`
         select simulado, project_id_codeoscopic::text as project_id_codeoscopic, ramo
@@ -336,9 +389,9 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
     },
     async sinOpciones() {
       const filas = await prisma.$queryRaw<{
-        id: string; compania: string; producto: string; modalidad: string | null; prima_eur: unknown; referencia_vendor: string | null
+        id: string; compania: string; producto: string; modalidad: string | null; prima_eur: unknown; referencia_vendor: string | null; oferta_id: string | null
       }[]>`
-        select p.id::text as id, p.compania, p.producto, p.modalidad, p.prima_eur, p.referencia_vendor
+        select p.id::text as id, p.compania, p.producto, p.modalidad, p.prima_eur, p.referencia_vendor, p.oferta_id
         from tarificacion_precios p
         join tarificaciones t on t.id = p.tarificacion_id
         where p.tarificacion_id = ${ids.tarificacionId}::uuid
@@ -347,7 +400,7 @@ async function depsReales(ids: { correduriaId: string; tarificacionId: string })
       `
       return filas.map((f) => ({
         id: f.id, compania: f.compania, producto: f.producto, modalidad: f.modalidad,
-        primaEur: Number(String(f.prima_eur)), referenciaVendor: f.referencia_vendor,
+        primaEur: Number(String(f.prima_eur)), referenciaVendor: f.referencia_vendor, ofertaId: f.oferta_id,
       }))
     },
     async escribirOpciones(id, sobre) {
