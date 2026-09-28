@@ -12,6 +12,10 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — 📐 Correduría «todo muy junto»: la ficha de cliente y 7 pantallas más (póliza, compañías, vencimientos, llamada, hogar, mantenimiento, nuevo cliente) no usaban `<Pagina>` y salían sin padding, pegadas al menú. Ahora `<Pagina ancho="tabla">` como la lista; cabecera agrupada, 24 entre bloques, KPIs con `cardStyle`. PR #3893.
+
+**(28/09/2026)** — ↩️ «Retomar sin pagar» en moto nuevo: `GET /api/operador/codeoscopic/tarificacion?clienteId=&ramo=` (asegura, gratis) devuelve la última tarificación REAL de un cliente sin póliza, y MotoNuevo ofrece retomarla (parrilla con Preparar presupuesto y Emitir) — la parrilla ya no depende de no cerrar la pestaña. Auto/hogar tienen el endpoint pero aún no el botón.
+
 **(28/09/2026)** — 🧪 Auditoría del flujo presupuesto→emisión antes de probar con Manuel. Arreglado: (1) el presupuesto con efecto «mañana» nacía CADUCADO (`calcularVencimiento` restaba un día entero; ahora vale hasta el final del día anterior al efecto); (2) `/emitir` no comprobaba que se emitía la opción FIRMADA: ahora 409 si compañía o prima (>2%) no coinciden con `opcion_elegida_id` (fail-closed si no puede leerse); (3) al acuñar se marca el presupuesto `emitido` solo. Pendiente: «Emitir» desde el presupuesto aceptado (hoy solo desde la parrilla en memoria de MotoNuevo — no cerrar esa pestaña); el agente de Telegram no emite a clientes nuevos (`preparar_emision` exige póliza) ni lee presupuestos; 0 IPID subidos.
 
 **(28/09/2026)** — 💳 Presupuesto: CUENTA + IPID al aceptar en el portal y logos de compañía (PR #3879). El cliente elige la cuenta de su ficha (enmascarada) u otra IBAN (módulo 97 en servidor, cifrada `v1:` en `clientes.cuenta_bancaria` en la transacción de la firma, solo máscara en eventos/Telegram, fail-closed antes de gastar el código). Casilla dice «he recibido la información previa» solo si la opción tiene IPID subido. Emitir: cuenta NUEVA firmada va antes que la de la póliza vieja y, si la ficha da otra máscara que la firmada, 422 y se pide teclearla (bloqueante del architect). Pendiente: medir portal a 320 px; menores (hash IBAN en huella).
@@ -850,10 +854,15 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
-
-## (28/09/2026) Correduría: la ficha de cliente y 7 pantallas más usan `<Pagina>`
-- «Todo muy junto»: la ficha (`/correduria/cliente/[id]`) no usaba el contenedor del sistema de diseño y salía sin padding, pegada al menú. Ahora `<Pagina ancho="tabla">` (mismo ancho que la lista), cabecera agrupada con gap 14, 24 entre bloques, KPIs con `cardStyle`.
-- Mismo fallo en póliza, compañías, vencimientos, llamada, hogar, mantenimiento y nuevo cliente: arreglado igual. `retarificar` ya tenía su `<main>` propio.
+## (28/09/2026) SINCO: lo consulta la COMPAÑÍA vía Codeoscopic al CONFIRMAR precio, no Grupo ASegura
+- Dictado de Alberto: la correduría **no puede** consultar SINCO. El primer precio de Codeoscopic/Avant2 es una
+  **estimación** (SINCO cuesta a la compañía); al darle a «permitir»/confirmar, cada compañía hace la consulta y
+  fija el precio. Algunas la hacen ya al estimar. Descartado preguntar a TIREA (spec 2026-09-01 §3 actualizada).
+- Medido en `tarificacion_precios`: Reale avisa «PENDIENTE REALIZAR CONSULTA SINCO» (79/89 auto); Occident
+  «compañía no sinco sin certificado» (supeditada); Mutua «descuentos de siniestralidad»; el resto no dice nada.
+- Rafael Campa (lead): oportunidad auto completada por SQL desde Drive (MUSSAP, vence
+  20/10/2026, 374,90€). Pendiente con OK de Alberto: presupuestar auto eligiendo la póliza/historial de cada coche
+  y el bug de `oportunidad-presupuesto.ts:52` (con 2 auto abiertas cuelga todo de la más antigua).
 
 ## (28/09/2026) Póliza donde la ficha FIGURA sin ser tomador: ya sale en su ficha y en el portal
 Caso: Generali UV-G-410081428 — tomador Francisco Javier Velasco (conductor habitual), GLOBAL 2 propietaria+asegurada;

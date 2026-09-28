@@ -61,7 +61,43 @@ export async function ultimaTarificacionRealAuto(
   `
   const t = cabeceras[0]
   if (!t || !t.project_id_codeoscopic) return null
+  const base = await cargarPrecios(t)
+  return { ...base, formulario: extraerFormularioAuto(t.peticion) }
+}
 
+/** Ramos de cliente NUEVO cuya tarificación se puede retomar en pantalla. */
+export const RAMOS_RETOMABLES = ['auto', 'moto', 'hogar'] as const
+export type RamoRetomable = (typeof RAMOS_RETOMABLES)[number]
+
+/**
+ * La última tarificación REAL de un cliente SIN póliza (oportunidad nueva) para ese ramo, para
+ * retomarla sin volver a pagar (28/09/2026: la parrilla solo vivía en memoria de la pantalla, y al
+ * cerrarla no había forma de preparar el presupuesto ni de emitir). `null` = no hay ninguna.
+ */
+export async function ultimaTarificacionNueva(
+  correduriaId: string,
+  clienteId: string,
+  ramo: RamoRetomable,
+): Promise<Omit<TarificacionGuardada, 'formulario'> | null> {
+  const cabeceras = await prisma.$queryRaw<
+    { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }[]
+  >`
+    select id::text as id, creado_at, project_id_codeoscopic, peticion
+    from tarificaciones
+    where correduria_id = ${correduriaId}::uuid
+      and cliente_id = ${clienteId}::uuid
+      and poliza_id is null
+      and simulado = false
+      and ramo = ${ramo}
+    order by creado_at desc
+    limit 1
+  `
+  const t = cabeceras[0]
+  if (!t || !t.project_id_codeoscopic) return null
+  return cargarPrecios(t)
+}
+
+async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeoscopic: string | null; peticion: unknown }): Promise<Omit<TarificacionGuardada, 'formulario'>> {
   const filasPrecios = await prisma.$queryRaw<
     {
       compania: string | null
@@ -86,7 +122,7 @@ export async function ultimaTarificacionRealAuto(
 
   return {
     cotizacionId: t.id,
-    projectId: t.project_id_codeoscopic,
+    projectId: t.project_id_codeoscopic as string,
     creadaEn: t.creado_at.toISOString(),
     fechaEfecto,
     caducada: fechaEfectoCaducada(fechaEfecto),
@@ -103,7 +139,6 @@ export async function ultimaTarificacionRealAuto(
       firmeza: p.firmeza ?? 'estimado',
       avisos: Array.isArray(p.avisos) ? p.avisos.filter((a): a is string => typeof a === 'string') : [],
     })),
-    formulario: extraerFormularioAuto(t.peticion),
   }
 }
 
