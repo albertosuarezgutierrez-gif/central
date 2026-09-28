@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-28T06:05:56Z",
+  "generadoEn": "2026-09-28T10:11:46Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 130
+        "evidencias": 132
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 108
+        "evidencias": 109
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 95
+        "evidencias": 97
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 34
+        "evidencias": 35
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2310,7 +2310,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 86
+        "evidencias": 87
       },
       "asegura-web": {
         "estado": "usado",
@@ -3981,6 +3981,7 @@
       "/api/operador/actividad",
       "/api/operador/actividad-nueva",
       "/api/operador/anulaciones",
+      "/api/operador/anulaciones/justificante",
       "/api/operador/aprobaciones",
       "/api/operador/aviso-web",
       "/api/operador/backfill-contacto",
@@ -4964,6 +4965,7 @@
       "/api/correduria",
       "/api/correduria/actividad",
       "/api/correduria/anulaciones",
+      "/api/correduria/anulaciones/justificante",
       "/api/correduria/aprobaciones",
       "/api/correduria/backfill-contacto",
       "/api/correduria/backfill-dni",
@@ -5789,6 +5791,7 @@
       "mensajes_aprendizaje",
       "mensajes_auto_config",
       "mensajes_conflictos_guia",
+      "mensajes_enviados",
       "mensajes_guia_cache",
       "mensajes_guia_gaps",
       "mensajes_hechos",
@@ -6572,7 +6575,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1494,
+    "apis": 1496,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

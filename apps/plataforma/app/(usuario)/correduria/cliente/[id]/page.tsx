@@ -10,7 +10,7 @@ import CorreosCliente from './CorreosCliente'
 import DescartarCliente from './DescartarCliente'
 import FichasDuplicadas from './FichasDuplicadas'
 import FichaTabs, { tabDeParametro } from './FichaTabs'
-import { detallesAccesos } from './tabs'
+import { contarPersonas, detallesAccesos } from './tabs'
 import TabContactos from './TabContactos'
 import TabPolizas from './TabPolizas'
 import TabPendiente from './TabPendiente'
@@ -141,7 +141,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
           polizas: ficha.polizas.length,
           telefonos: ficha.contactos === null ? null : ficha.contactos.telefonos.length,
           emails: ficha.contactos === null ? null : ficha.contactos.emails.length,
-          personas: personas === null ? null : personas.length,
+          personas: contarPersonas(personas, ficha.relaciones),
           documentos: ficha.documentos === null ? null : ficha.documentos.length,
           documentosPedidos: resumen.documentosPendientes,
           correos: ficha.correos === null ? null : ficha.correos.length,

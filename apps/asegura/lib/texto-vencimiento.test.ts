@@ -35,5 +35,13 @@ test('🚨 a un TERCERO se le habla en tercera persona y se le dice de qué pól
 
 test('sin datos de compañía/póliza/prima, el detalle no aparece (nada inventado)', () => {
   const { texto } = textoAviso({ ...base, aseguradora: null, numeroPoliza: null, primaAnual: null, paraTercero: null })
-  assert.doesNotMatch(texto, /Compañía:|Nº de póliza:|Prima anual:/)
+  assert.doesNotMatch(texto, /Compañía:|Nº de póliza:|Prima anual/)
+})
+
+test('🚨 la prima del correo dice que es con impuestos (27/09/2026)', () => {
+  // Antes el mismo rótulo «Prima anual» llevaba la neta de la póliza o el total
+  // del recibo según el caso. Ahora es siempre la total, y el rótulo lo dice.
+  const { texto, html } = textoAviso({ ...base, paraTercero: null })
+  assert.match(texto, /Prima anual \(impuestos incluidos\): 300,00/)
+  assert.match(html, /impuestos incluidos/)
 })

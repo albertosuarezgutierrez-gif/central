@@ -4,7 +4,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { procesarMensajeHuesped } from '@/lib/sivra/agente-huesped/orquestador'
 import { construirContexto } from '@/lib/sivra/agente-huesped/contexto'
 import { decidir } from '@/lib/sivra/agente-huesped/decidir'
-import { detectLang, detectCategory } from '@/lib/sivra/agente-huesped/reglas'
+import { detectLang, detectCategory, esAutomatico } from '@/lib/sivra/agente-huesped/reglas'
 import { idiomaConocido } from '@/lib/sivra/agente-huesped/idiomas'
 import { mensajeYaProcesado } from '@/lib/sivra/agente-huesped/idempotencia'
 import { atribuirEmisor } from '@/lib/sivra/agente-huesped/atribucion'
@@ -31,7 +31,7 @@ function strip(html: string): string {
 // asunto vacío y texto plano. (/api/threads NO trae `type` ni `sent_by_owner`, de ahí esta heurística.)
 function esMensajeAutomatico(subject: string, text: string): boolean {
   if (subject.trim() !== '') return true
-  return /check.?in online|disponible para tu reserva|self.?check.?in|c[oó]digo de acceso|how to (check|collect)|where to collect/i.test(text)
+  return esAutomatico('', text) || /c[oó]digo de acceso|how to (check|collect)|where to collect/i.test(text)
 }
 
 // Despedidas / cortesías que no necesitan respuesta.

@@ -80,6 +80,7 @@ import {
 
 import { decryptField } from '@central/module-seguros-pii'
 
+import { datosPolizaCima, primaAnualDudosa, type DatosPolizaCima } from './datos-poliza-cima'
 import { prisma } from './db'
 import { historialCompanias, type EslabonHistorial } from './historial-companias'
 import { camposDeInterviniente, figuraEnPropias, figurasEnPolizas, rolesPropiosPorPoliza, nivelMasAlto, ordenarRoles } from './intervinientes'
@@ -171,6 +172,10 @@ export type PolizaPortal = {
   numeroPoliza: string | null
   fechaInicio: Date | null
   fechaVencimiento: Date | null
+  /** Fecha de emisión de la póliza (EIAC). `null` = la compañía no la ha mandado: no se pinta. */
+  fechaEmision: Date | null
+  /** Desde cuándo corre el periodo actual (EIAC). `null` = no se pinta. */
+  fechaEfectoActual: Date | null
   estado: string
   vigencia: Vigencia
   /**
@@ -213,7 +218,17 @@ export type PolizaPortal = {
    *  (`prima_bruta`: neta + impuestos y recargos, y coincide con `prima_total` del recibo). Medido el
    *  03/09/2026 en la 548238086: anual 67,86€, bruta 73,39€, recibo 73,39€. Enseñar solo la neta al
    *  lado de un recibo mayor parece un error de cuentas. */
-  prima: { anual: number | null; bruta: number | null; mensual: number | null; fraccionamiento: string | null } | null
+  /** 🚨 `dudosa: true` = CIMA marcó `primaAnualDudosa` (póliza fraccionada cuya compañía manda el
+   *  importe del PERIODO): `anual`/`bruta`/`mensual` llegan a `null` A PROPÓSITO aunque la BD guarde
+   *  un número, para que ninguna pantalla lo presente como prima anual. */
+  prima: { anual: number | null; bruta: number | null; mensual: number | null; fraccionamiento: string | null; dudosa?: boolean } | null
+  /**
+   * Lo que CIMA guarda en `datos_especificos` y sirve al cliente (cobro, cuenta
+   * `•••• 1234`, producto, riesgos), ya filtrado por nivel y por LISTA BLANCA en
+   * `lib/datos-poliza-cima.ts`. El JSONB crudo no viaja nunca en este tipo: trae
+   * el `iban` cifrado y las comisiones del corredor.
+   */
+  datosCompania: DatosPolizaCima
   /**
    * `total: 0` = ninguna cobertura informada. `null` = no visible en este nivel.
    *
@@ -863,8 +878,12 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
     const vencIso = vencimientoConRecibos(p.fechaVencimiento ? p.fechaVencimiento.toISOString() : null, recsVig, hoyIso)
     const fechaVencimiento =
       vencIso === null ? null : p.fechaVencimiento && vencIso === p.fechaVencimiento.toISOString() ? p.fechaVencimiento : new Date(`${vencIso.slice(0, 10)}T00:00:00Z`)
-    const primaAnual = p.primaAnual === null ? null : Number(p.primaAnual)
-    const primaBruta = p.primaBruta === null ? null : Number(p.primaBruta)
+    // 🚨 Prima DUDOSA (CIMA, 28/09/2026): la compañía manda el importe del periodo y no la
+    // anual. Lo que haya en `prima_anual`/`prima_bruta` no se presenta como anual en ninguna
+    // pantalla: se anula AQUÍ, en la fuente única, y no en cada consumidor.
+    const dudosa = primaAnualDudosa(p.datosEspecificos)
+    const primaAnual = dudosa || p.primaAnual === null ? null : Number(p.primaAnual)
+    const primaBruta = dudosa || p.primaBruta === null ? null : Number(p.primaBruta)
     const deRecibo = primaConRecibos({ primaAnual, primaBruta, fraccionamiento: p.fraccionamiento }, recsVig, hoyIso)
     // El historial se ordena AQUÍ y no en el `orderBy` de Prisma: en Postgres
     // un `DESC` implica `NULLS FIRST`, así que los siniestros sin fecha se
@@ -900,6 +919,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
       numeroPoliza: ve.numeroPoliza ? p.numeroPoliza : null,
       fechaInicio: p.fechaInicio,
       fechaVencimiento,
+      fechaEmision: p.fechaEmision,
+      fechaEfectoActual: p.fechaEfectoActual,
       estado: p.estado,
       vigencia: vigenciaPoliza({ estado: p.estado, fechaVencimiento }, hoy),
       renovacionSinConfirmar:
@@ -920,8 +941,9 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
             // El `prima_total` del recibo es lo que el cliente paga (con
             // impuestos): por eso, si sale de ahí, va en `bruta`.
             bruta: deRecibo.deRecibo ? deRecibo.prima : primaBruta,
-            mensual: p.primaMensual === null ? null : Number(p.primaMensual),
+            mensual: dudosa || p.primaMensual === null ? null : Number(p.primaMensual),
             fraccionamiento: p.fraccionamiento,
+            ...(dudosa ? { dudosa: true } : {}),
           }
         : null,
       coberturas: ve.coberturas
@@ -932,6 +954,8 @@ export async function carteraDeIdentidad(identidadId: string): Promise<CarteraPo
           }
         : null,
       recibos: ve.recibos ? recibosDePoliza(recs) : null,
+      // Solo de ESTA fila (la de CIMA), no de la gemela del volcado: cobro y producto son del contrato vivo.
+      datosCompania: datosPolizaCima(p.datosEspecificos, ve),
       // 🚨 `null` = NO VISIBLE EN TU NIVEL. `[]` = no hay ninguno abierto. Son
       // cosas distintas y la UI dice cada una con sus palabras. Hasta el
       // 04/09/2026 esto no miraba `ve` y un tercero con el alcance más bajo

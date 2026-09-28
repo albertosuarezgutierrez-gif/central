@@ -334,14 +334,14 @@ const MOTIVO_SIN_EMAIL: Record<'no_encontrado' | 'baja_de_correo' | 'sin_email',
 
 type Adjunto = { nombre: string; contenido: string | Buffer; tipo: string }
 
-type FirmaGuardada = { firmante: string | null; metodo: string | null; sello: Date | null; docHash: string | null }
+export type FirmaGuardada = { firmante: string | null; metodo: string | null; sello: Date | null; docHash: string | null }
 
 /**
  * Lo que se adjunta a la compañía: el ORIGINAL en texto (el que respalda la huella de la firma) y, si hay
  * evidencia, el mismo texto en PDF con el justificante debajo — un `.txt` suelto se lee como un borrador.
  * Si el PDF no se puede montar, sale el original solo: nunca se bloquea un envío por la presentación.
  */
-async function adjuntosFirmados(base: string, texto: string, f: FirmaGuardada | undefined): Promise<Adjunto[]> {
+export async function adjuntosFirmados(base: string, texto: string, f: FirmaGuardada | undefined): Promise<Adjunto[]> {
   const original: Adjunto = { nombre: `${base}.txt`, contenido: texto, tipo: 'text/plain; charset=utf-8' }
   if (!f?.docHash || !f.sello) return [original]
   // El justificante CERTIFICA la huella ante la compañía: si el texto que se adjunta no la cumple, no se certifica nada.
