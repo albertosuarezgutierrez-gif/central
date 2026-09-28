@@ -236,3 +236,20 @@ test('sustituida sin la nueva a la vista sigue con nosotros (cubre hasta su venc
   })
   assert.deepEqual(ids(r.conNosotros), ['vieja'])
 })
+
+test('una abierta de OTRO seguro del mismo ramo no se engancha a la histórica (otro coche, otra matrícula)', () => {
+  const hist = pol('mondeo', { aseguradora: 'Pelayo', numeroPoliza: 'P-HIST-01', matricula: '1111BBB', viva: false, estado: 'recibo_devuelto', fechaVencimiento: '2015-10-20' })
+  const kalos = opo('kalos', { estado: 'en_negociacion', aseguradora: 'MUSSAP', numeroPoliza: 'P-COMP-02', matricula: '2222CCC' })
+  const r = repartirSegurosCliente({ polizas: [hist], declaradas: [], oportunidades: [kalos], hoy: new Date('2026-09-28') })
+  const tarjeta = r.oportunidades.find(s => s.id === 'mondeo')
+  assert.ok(tarjeta && tarjeta.clase === 'poliza')
+  assert.equal(tarjeta.oportunidad, null)
+  assert.ok(r.oportunidades.some(s => s.clase === 'oportunidad' && s.id === 'kalos'))
+})
+
+test('una abierta sin datos que la distingan sigue enganchándose a la histórica del ramo', () => {
+  const hist = pol('mondeo', { aseguradora: 'Pelayo', numeroPoliza: 'P-HIST-01', matricula: '1111BBB', viva: false, estado: 'recibo_devuelto', fechaVencimiento: '2015-10-20' })
+  const r = repartirSegurosCliente({ polizas: [hist], declaradas: [], oportunidades: [opo('o', { estado: 'en_negociacion', aseguradora: null })], hoy: new Date('2026-09-28') })
+  const tarjeta = r.oportunidades.find(s => s.id === 'mondeo')
+  assert.ok(tarjeta && tarjeta.clase === 'poliza' && tarjeta.oportunidad?.id === 'o')
+})

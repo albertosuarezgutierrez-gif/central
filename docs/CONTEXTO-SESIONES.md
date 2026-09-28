@@ -13,6 +13,7 @@
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
 **(28/09/2026)** — 🔒 Retirados de docs/tests los identificadores REALES de clientes de la correduría (Graphify, PR #3887): 14 matrículas (incl. la del lead de Rafael Campa) y ~45 nº de póliza/IDs CIMA, verificados contra `seguros.polizas` antes de tocar. Tests → valores ficticios con la MISMA forma (ceros, prefijos, separadores; ojo a los asserts de «últimos 4»); docs/memoria → `[matrícula retirada]`/`[nº de póliza retirado]` (un falso en memoria se leería como dato). Siguen en comentarios de código `.ts`, SQL de migraciones, `mapa-funciones.generated.json` y la historia git; los nombres de clientes siguen en la memoria.
+**(28/09/2026)** — ↩️ «Retomar sin pagar» en moto nuevo: `GET /api/operador/codeoscopic/tarificacion?clienteId=&ramo=` (asegura, gratis) devuelve la última tarificación REAL de un cliente sin póliza, y MotoNuevo ofrece retomarla (parrilla con Preparar presupuesto y Emitir) — la parrilla ya no depende de no cerrar la pestaña. Auto/hogar tienen el endpoint pero aún no el botón.
 
 **(28/09/2026)** — 🧪 Auditoría del flujo presupuesto→emisión antes de probar con Manuel. Arreglado: (1) el presupuesto con efecto «mañana» nacía CADUCADO (`calcularVencimiento` restaba un día entero; ahora vale hasta el final del día anterior al efecto); (2) `/emitir` no comprobaba que se emitía la opción FIRMADA: ahora 409 si compañía o prima (>2%) no coinciden con `opcion_elegida_id` (fail-closed si no puede leerse); (3) al acuñar se marca el presupuesto `emitido` solo. Pendiente: «Emitir» desde el presupuesto aceptado (hoy solo desde la parrilla en memoria de MotoNuevo — no cerrar esa pestaña); el agente de Telegram no emite a clientes nuevos (`preparar_emision` exige póliza) ni lee presupuestos; 0 IPID subidos.
 
@@ -851,6 +852,16 @@ BD). El vigía `correduria_ingesta` escribió «cron 37 h sin completar» pero l
 puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir minutos de Actions de `central`; país de
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
+
+## (28/09/2026) SINCO: lo consulta la COMPAÑÍA vía Codeoscopic al CONFIRMAR precio, no Grupo ASegura
+- Dictado de Alberto: la correduría **no puede** consultar SINCO. El primer precio de Codeoscopic/Avant2 es una
+  **estimación** (SINCO cuesta a la compañía); al darle a «permitir»/confirmar, cada compañía hace la consulta y
+  fija el precio. Algunas la hacen ya al estimar. Descartado preguntar a TIREA (spec 2026-09-01 §3 actualizada).
+- Medido en `tarificacion_precios`: Reale avisa «PENDIENTE REALIZAR CONSULTA SINCO» (79/89 auto); Occident
+  «compañía no sinco sin certificado» (supeditada); Mutua «descuentos de siniestralidad»; el resto no dice nada.
+- Rafael Campa (lead): oportunidad auto completada por SQL desde Drive (MUSSAP, vence
+  20/10/2026, 374,90€). Pendiente con OK de Alberto: presupuestar auto eligiendo la póliza/historial de cada coche
+  y el bug de `oportunidad-presupuesto.ts:52` (con 2 auto abiertas cuelga todo de la más antigua).
 
 ## (28/09/2026) Póliza donde la ficha FIGURA sin ser tomador: ya sale en su ficha y en el portal
 Caso: Generali [nº de póliza retirado] — tomador Francisco Javier Velasco (conductor habitual), GLOBAL 2 propietaria+asegurada;

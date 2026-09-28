@@ -15,6 +15,7 @@ import {
   type RespuestaPrecalificacionMotoNueva,
   type RespuestaRetarificar,
 } from '@/lib/moto-nuevo-asegura'
+import { tarificacionNuevaGuardadaAsegura, type RespuestaTarificacionNueva } from '@/lib/retarificar-asegura'
 
 /** Un catálogo del vendor (marcas, modelos, versiones, experiencia…). **Gratis.** */
 export async function pedirCatalogo(params: Record<string, string>): Promise<RespuestaCatalogo> {
@@ -43,4 +44,9 @@ export async function pedirCotizacionMoto(entrada: {
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
   })
+}
+
+/** La última tarificación de moto de este cliente, para retomarla sin pagar otra vez. **Gratis.** */
+export async function pedirTarificacionGuardadaMoto(entrada: { clienteId: string }): Promise<RespuestaTarificacionNueva> {
+  return tarificacionNuevaGuardadaAsegura(entrada.clienteId, 'moto')
 }
