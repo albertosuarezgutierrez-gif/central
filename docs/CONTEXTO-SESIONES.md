@@ -838,6 +838,14 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Caso 2 (auto de empresa): tomador la sociedad; CIMA trae al administrador como conductor_habitual. Él la ve como DUEÑO («Tu sociedad») y ahí no salía papel → `rolesPropiosPorPoliza()` pinta también la figura en autorizadas/empresas cuando figura. (Identificadores de ambos casos en la conversación de sesión, no aquí: PII.)
 - Ingesta CIMA (asegura#859, mergeado 28/09): guarda TODAS las figuras — un papel por fila (índice `(correduria,poliza,nif_lookup_hash,rol)` ya aplicado en `seguros`), propietario empresa, asegurado = tomador (sin contacto). ⏸️ Falta reprocesar los 36 POL de Drive con `cima-rescate-lote` (lote cifrado preparado en la sesión, no lanzado): hasta entonces los datos viejos siguen sin el 2º papel.
 
+## (28/09/2026) Agente de huéspedes: dejaba de responderse a sí mismo (reserva 154692216)
+- Nuestros envíos reaparecen en Smoobu sin emisor; el anti-eco solo conocía `mensajes_log` (borrador), no acuses, programados ni lo editado en Telegram → 5 ecos en 4 días, 2 contestados solos al huésped, y el eco pisó en la cola la pregunta real.
+- Tabla `mensajes_enviados` (aplicada) escrita por `enviarAlHuespedDetallado` (salida única) + textos fijos de guardia en `enviados`.
+- Acuse «lo estamos revisando» ya no sale el día de salida; se cierra el peldaño y se avisa a Alberto.
+- 2ª tanda: filtro de plantillas (`esPlantillaHost`: nombre completo al principio = bienvenida/despedida nuestra; 8 contestadas solas en sep), categorías con `\b` + seguridad/camas/avisos (el phishing caía en «parking» por «card»), `mensajes_log.respuesta_enviada` + `edited` real + vista `v_agente_huesped_calidad`, aviso de antigüedad en el prompt (>6 h), y lo aprobado SIN editar entra como hecho `propuesto` con botones.
+- ⚠️ Estado de limpieza NO consultable: `cleaning_sessions.started_at/completed_at` siempre NULL en los 4 pisos (nadie marca «terminada»). Botón «Piso listo» para Vanesa DESCARTADO por Alberto: la limpieza se gestiona desde oficina y avisarían tarde → no montar.
+- Revisión antes de merge: «self check-in» corto y el huésped que se presenta («this is Justine Delbos…») ya no se tragan como plantilla; `acceso` casa «clé/código/codes/keybox» (`\b` no ve tildes en JS).
+
 ## (28/09/2026) Briefing diario de ia.rest a Telegram DESACTIVADO
 - Cron `nim-daily-briefing-9am` (jobid 21, edge `daily-briefing`) pausado en BD (`active=false`) + migración `20260928_desactivar_daily_briefing.sql`.
 - Motivo: todo a 0 comandas y el aviso NO pasa por el panel /telegram (lo manda la edge function directa), así que no se podía apagar desde allí. Reactivar: `cron.alter_job(21, active := true)`.
