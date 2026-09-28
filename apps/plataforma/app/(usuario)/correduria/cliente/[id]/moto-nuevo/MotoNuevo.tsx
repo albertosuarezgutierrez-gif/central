@@ -153,7 +153,11 @@ export default function MotoNuevo({
   // serie nacional mientras tanto). `true` = la puso la estimación, no el corredor.
   const [matriculacionEstimada, setMatriculacionEstimada] = useState(false)
   const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
-  const [garaje, setGaraje] = useState('')
+  // Por defecto «vía pública», como en auto (Alberto, 25/09 y 28/09/2026): el
+  // caso más común y el conservador para la prima.
+  const [garaje, setGaraje] = useState(
+    () => (garajes.find((g) => /v[ií]a\s+p[uú]blica/i.test(g.nombre)) ?? garajes.find((g) => /\bcalle\b/i.test(g.nombre)))?.id ?? '',
+  )
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
@@ -246,7 +250,7 @@ export default function MotoNuevo({
   const faltaMatricula = !poliza && !matricula.trim()
   const faltaMatriculacion = !matriculacion
   const faltaMotoAnterior = experienciaConduccion === 'OtherMotorcycle' && !motoAnteriorCodigo.trim()
-  const estimacion = poliza ? null : fechaMatriculacionEstimada(matricula)
+  const estimacion = poliza ? null : fechaMatriculacionEstimada(matricula, hoyLocal())
 
   // Hermano del efecto de `AutoNuevo.tsx`: con cada matrícula tecleada se
   // consulta la fecha a Avant2 y, mientras tanto o si no responde, vale la
@@ -264,7 +268,7 @@ export default function MotoNuevo({
       }
       return
     }
-    const local = fechaMatriculacionEstimada(placa)
+    const local = fechaMatriculacionEstimada(placa, hoyLocal())
     setMatriculacion(local?.estimada ?? '')
     setMatriculacionEstimada(local !== null)
     setFuenteMatriculacion(local ? 'serie' : null)
@@ -747,6 +751,12 @@ export default function MotoNuevo({
       </div>
     </div>
   )
+}
+
+/** Hoy en la hora del navegador, `YYYY-MM-DD`: acota la estimación de una matrícula de este mes. */
+function hoyLocal(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 }
 
 function fechaCorta(iso: string): string {
