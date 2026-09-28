@@ -875,6 +875,7 @@ Telegram: si la oportunidad ya existía («duplicada»), los documentos se guard
 - Avant2 manda `formattedOptions` en cada precio («Asistencia en viaje: Estándar») y se TIRABAN. Nueva columna `seguros.tarificacion_precios.opciones` (sobre `leidas|no_manda|sin_precio|fallo`; NULL = sin intentar), migración `2026-09-28d_…` APLICADA.
 - Se escribe al tarificar y el cron `coberturas-backfill` rellena las viejas releyendo el proyecto (gratis, una relectura compartida).
 - 1ª pasada (19:17): 249/249 `no_manda` — se leía `quote.formattedOptions` y el spec las pone en `quote.product.formattedOptions`. Arreglado (se miran los dos) y las 249 vueltas a NULL para releer.
+- 2ª pasada (20:17): 280/280 siguen `no_manda` — ni la cotización ni `GET /insurances/{id}` traen opciones. Se leen de `GET …/offers/{offerId}` (una lectura por oferta; forma probada `mainQuote.product.formattedOptions`, y si no casa, el log dice las claves). Al tarificar sin opciones se deja NULL, no `no_manda`.
 - Por qué: Occident auto dice «asistencia amplia opcional (no incluida)» y Allianz tarifica con `travelAssistance=STD`; el filtro trata básica y ampliada igual. Siguiente paso: con el dato medido, separar «asistencia ampliada» en el catálogo.
 
 ## (28/09/2026) asegura abría un PrismaClient POR CONSULTA en producción → EMAXCONN en el pooler compartido
