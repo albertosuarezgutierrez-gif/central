@@ -936,13 +936,13 @@ capada como interviniente (`capaInterviniente`, `figurasDeFichasVistas`); cepo e
 Confirmado con las condiciones particulares de Generali: tomador y conductor habitual = Francisco Javier; asegurado/propietario = GLOBAL 2 (Citan [matrícula retirada]). La BD está bien. La copia de volcado `[nº de póliza retirado]` (con puntos, no viva) cuelga de GLOBAL 2 como tomador.
 ✅ Decisión de Alberto (28/09): quien ve la empresa con `ver_economico` ve también prima y recibos de la póliza donde la empresa interviene, aunque el tomador sea una persona física («porque la empresa interviene»). PR #3878, mergeado.
 
-## (28/09/2026) Asistente Telegram: pedir precio de coche/moto por audio (fase 1)
+## (28/09/2026) Asistente Telegram: pedir precio de coche/moto por audio (fase 1) — PR #3924, mergeado
 - `vehiculo_catalogo` (gratis) + `proponer_tarificacion` → pregunta lo que falta y manda el resumen de lo declarado con
   botón `cas_tarif` «Pedir precio (0,50€)» (un uso, 15 min, `from.id`, tope 10/día, interruptor de emitir). Al pulsar,
   `cotizar{Auto,Moto}NuevaAsegura` UNA vez → top 3 con franquicia/firmeza + comparación con lo que paga + venta cruzada solo
   para Alberto. Tabla `correduria_asistente_tarificacion` APLICADA. «presupuesto de la moto…» ya no va al contable.
 - Revisión architect aplicada: tope diario también DENTRO del UPDATE de reclamo, `pidiendo` colgada >10 min → `incierta`
-  + aviso, «conduce solo el tomador» siempre como supuesto optimista, `garajeEsSupuesto` real. Código en `lib/correduria-tarificacion-tg.ts`.
+  + aviso, «conduce solo el tomador» siempre como supuesto optimista, `garajeEsSupuesto` real; tope serializado con `pg_advisory_xact_lock` (dos pulsaciones a la vez no lo pasan). Código en `lib/correduria-tarificacion-tg.ts`.
 - Pendiente fases 2-3 (propuesta al cliente con IPID y datos declarados, envío con botón, seguimiento a 5 días,
   aceptación→emitir) **tras mergear #3868** (portal «Revisa tus datos», otra sesión). Solo clientes sin póliza del ramo.
 
