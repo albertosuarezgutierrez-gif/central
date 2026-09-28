@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-28T19:07:12Z",
+  "generadoEn": "2026-09-28T20:09:30Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 140
+        "evidencias": 141
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4071,6 +4071,7 @@
       "/api/operador/poliza/traer-pdf",
       "/api/operador/portal/invitaciones",
       "/api/operador/presupuesto",
+      "/api/operador/presupuesto/pdf",
       "/api/operador/presupuesto/seguimiento",
       "/api/operador/quejas",
       "/api/operador/recaptacion",
@@ -5034,6 +5035,7 @@
       "/api/correduria/poliza/traer-pdf",
       "/api/correduria/portal-invitaciones",
       "/api/correduria/presupuesto",
+      "/api/correduria/presupuesto/pdf",
       "/api/correduria/quejas",
       "/api/correduria/radar-recibos",
       "/api/correduria/recaptacion",
@@ -6586,7 +6588,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1505,
+    "apis": 1507,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
