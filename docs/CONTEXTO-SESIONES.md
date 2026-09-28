@@ -837,6 +837,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) Presupuesto de moto: la matrícula ya rellena sola la fecha de matriculación
+- `MotoNuevo.tsx` no tenía el autorrelleno que sí tenía `AutoNuevo.tsx`: se porta igual (estimación por serie
+  al instante + Avant2 a los 500 ms; nunca pisa una fecha tecleada; en modo póliza no actúa).
+- El puerto de catálogos de asegura mandaba siempre `/car/registration-date`: nuevo `tipo=fecha-matriculacion-moto`
+  → `/motorcycle/registration-date`. Hasta que despliegue asegura, plataforma cae a la estimación por serie.
+
 ## (28/09/2026) Sincro CIMA: la fecha de carné de una MOTO se comparaba con el carné B
 - Aviso falso en Manuel León Sotelo (0007001052485, BMW C 400 GT): CIMA manda motos en ramo 241 y en BD quedan `tipo='auto'` (**11 pólizas vivas**). `cimaDe` solo miraba `tipo` → comparaba su fecha (del A) contra el B.
 - Nuevo `esPolizaDeCoche()` en `@central/module-seguros` (`sincro-cima.ts`): moto si `categoriaVehiculo`/`claseVehiculo` ∈ MO/MT/CI (raíz o riesgos). Test visto en rojo.

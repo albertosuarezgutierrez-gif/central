@@ -21,6 +21,7 @@ import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/moto-nuevo-asegura'
 import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
+import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { pedirCatalogo, pedirCotizacionMoto } from './acciones'
 import { pedirCotizacion } from '../../../poliza/[id]/retarificar/acciones'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
@@ -148,6 +149,10 @@ export default function MotoNuevo({
 
   const [matricula, setMatricula] = useState(poliza?.matricula ?? '')
   const [matriculacion, setMatriculacion] = useState(poliza?.fechaMatriculacion ?? '')
+  // Igual que en auto: la fecha se deduce de la matrícula (Avant2, gratis; o la
+  // serie nacional mientras tanto). `true` = la puso la estimación, no el corredor.
+  const [matriculacionEstimada, setMatriculacionEstimada] = useState(false)
+  const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
   const [garaje, setGaraje] = useState('')
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilMoto?.id ?? '')
   const listaMunicipios = municipios ?? []
@@ -241,6 +246,47 @@ export default function MotoNuevo({
   const faltaMatricula = !poliza && !matricula.trim()
   const faltaMatriculacion = !matriculacion
   const faltaMotoAnterior = experienciaConduccion === 'OtherMotorcycle' && !motoAnteriorCodigo.trim()
+  const estimacion = poliza ? null : fechaMatriculacionEstimada(matricula)
+
+  // Hermano del efecto de `AutoNuevo.tsx`: con cada matrícula tecleada se
+  // consulta la fecha a Avant2 y, mientras tanto o si no responde, vale la
+  // estimación por la serie nacional. Nunca pisa una fecha tecleada por el
+  // corredor, y en modo póliza no actúa (la fecha sale de la póliza).
+  const puedeRellenarFecha = !poliza && (matriculacion === '' || matriculacionEstimada)
+  useEffect(() => {
+    if (!puedeRellenarFecha) return
+    const placa = matricula.trim()
+    if (placa === '') {
+      if (matriculacionEstimada) {
+        setMatriculacion('')
+        setMatriculacionEstimada(false)
+        setFuenteMatriculacion(null)
+      }
+      return
+    }
+    const local = fechaMatriculacionEstimada(placa)
+    setMatriculacion(local?.estimada ?? '')
+    setMatriculacionEstimada(local !== null)
+    setFuenteMatriculacion(local ? 'serie' : null)
+    if (placa.length < 6) return
+    let vivo = true
+    const t = setTimeout(async () => {
+      try {
+        const [f] = await catalogo(`tipo=fecha-matriculacion-moto&matricula=${encodeURIComponent(placa)}`)
+        if (!vivo || !f) return
+        setMatriculacion(f.id)
+        setMatriculacionEstimada(true)
+        setFuenteMatriculacion('avant2')
+      } catch {
+        // Avant2 no ha respondido: se queda la estimación por la serie.
+      }
+    }, 500)
+    return () => {
+      vivo = false
+      clearTimeout(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [matricula])
 
   const aMano = (faltanInicial ?? []).filter((f) => f.campo === 'sexo' || CAMPOS_A_MANO[f.campo])
   const aManoSinRellenar = aMano.filter((f) => !(correcciones[f.campo] ?? '').trim())
@@ -441,8 +487,29 @@ export default function MotoNuevo({
               <input value={matricula} onChange={(e) => setMatricula(e.target.value)} placeholder="1234ABC" style={input} />
             </Campo>
           )}
-          <Campo etiqueta="Fecha de matriculación" falta={faltaMatriculacion}>
-            <input type="date" value={matriculacion} onChange={(e) => setMatriculacion(e.target.value)} style={input} />
+          <Campo
+            etiqueta="Fecha de matriculación"
+            falta={faltaMatriculacion}
+            ayuda={
+              matriculacionEstimada && fuenteMatriculacion === 'avant2'
+                ? 'Consultada a Avant2 por la matrícula. El propio proveedor la da como aproximada: confírmala con la ficha técnica.'
+                : matriculacionEstimada && estimacion
+                  ? `Estimada por la matrícula (entre ${fechaCorta(estimacion.desde)} y ${fechaCorta(estimacion.hasta)}): no es dato oficial y falla si la moto vino de fuera. Confírmala con la ficha técnica.`
+                  : !poliza && matricula.trim() && !matriculacion && !estimacion
+                    ? 'No se puede estimar por esta matrícula (formato antiguo o muy reciente): tecléala.'
+                    : undefined
+            }
+          >
+            <input
+              type="date"
+              value={matriculacion}
+              onChange={(e) => {
+                setMatriculacion(e.target.value)
+                setMatriculacionEstimada(false)
+                setFuenteMatriculacion(null)
+              }}
+              style={input}
+            />
           </Campo>
           <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda="Lo elige el corredor; viaja marcado como supuesto.">
             <select value={garaje} onChange={(e) => setGaraje(e.target.value)} style={input}>
@@ -680,6 +747,11 @@ export default function MotoNuevo({
       </div>
     </div>
   )
+}
+
+function fechaCorta(iso: string): string {
+  const [a, m, d] = iso.split('-')
+  return `${d}/${m}/${a}`
 }
 
 function Campo({ etiqueta, falta, faltaTexto, ayuda, children }: { etiqueta: string; falta: boolean; faltaTexto?: string; ayuda?: string; children: React.ReactNode }) {
