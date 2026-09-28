@@ -167,26 +167,26 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 191 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 193 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 186 | 22.835 | 15.793.177 | 0 | 0 |
-| `otro` | 181 | 5.739 | 18.298.010 | 8.497.986 | 0 |
-| `mcp:github` | 168 | 4.554 | 3.970.487 | 47.258.788 | 76 |
-| `lectura-directa` | 166 | 4.410 | 9.254.458 | 0 | 0 |
-| `escritura` | 135 | 2.865 | 43.549.103 | 0 | 0 |
-| `sql` | 118 | 2.387 | 1.108.757 | 2.351.230 | 8 |
-| `mcp:Claude_Code_Remote` | 107 | 1.148 | 256.022 | 4.216.020 | 13 |
+| `bash` | 188 | 23.421 | 16.386.843 | 0 | 0 |
+| `otro` | 183 | 5.812 | 18.459.331 | 8.949.540 | 0 |
+| `mcp:github` | 170 | 4.583 | 3.984.134 | 47.260.034 | 76 |
+| `lectura-directa` | 167 | 4.426 | 9.335.824 | 0 | 0 |
+| `escritura` | 136 | 2.925 | 43.710.998 | 0 | 0 |
+| `sql` | 120 | 2.409 | 1.114.264 | 2.351.230 | 8 |
+| `mcp:Claude_Code_Remote` | 108 | 1.160 | 256.794 | 4.216.020 | 13 |
 | `mcp:Booking-com` | 17 | 493 | 2.070.224 | 0 | 0 |
-| `mcp:Vercel` | 39 | 430 | 651.140 | 198.719 | 10 |
+| `mcp:Vercel` | 39 | 433 | 655.897 | 198.719 | 10 |
 | `mcp:Gmail` | 22 | 291 | 449.524 | 0 | 2 |
-| `mcp:Supabase` | 74 | 222 | 21.846 | 0 | 2 |
+| `mcp:Supabase` | 76 | 225 | 22.045 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
-| `agente:general-purpose` | 33 | 101 | 72.880 | 1.142.431 | 0 |
+| `agente:general-purpose` | 33 | 107 | 79.165 | 1.632.550 | 0 |
 | `mcp:Google-Drive` | 11 | 77 | 76.216 | 0 | 2 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
-| `agente:agente-architect` | 21 | 65 | 52.598 | 1.639.814 | 0 |
+| `agente:agente-architect` | 23 | 69 | 54.691 | 1.804.084 | 0 |
 | `mcp:Google_Drive` | 9 | 56 | 66.293 | 0 | 14 |
 | `mcp:Booking_com` | 3 | 55 | 195.668 | 0 | 0 |
 | `mcp:Trivago` | 3 | 53 | 8.707.439 | 0 | 1 |

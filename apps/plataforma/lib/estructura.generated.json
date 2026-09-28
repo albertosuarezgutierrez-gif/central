@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-28T11:57:33Z",
+  "generadoEn": "2026-09-28T13:15:04Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -960,7 +960,7 @@
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 11
       },
       "asegura-web": {
         "estado": "no",
@@ -2198,11 +2198,11 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 132
+        "evidencias": 133
       },
       "asegura-portal": {
         "estado": "usado",
-        "evidencias": 109
+        "evidencias": 110
       },
       "asegura-web": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 98
+        "evidencias": 99
       },
       "rrhh": {
         "estado": "no",
@@ -2252,7 +2252,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 36
+        "evidencias": 38
       },
       "asegura-portal": {
         "estado": "usado",
@@ -4141,7 +4141,9 @@
       "/api/polizas/[id]/documentos/[documentoId]",
       "/api/polizas/[id]/reintentar",
       "/api/presupuesto/carta",
+      "/api/presupuesto/datos",
       "/api/presupuesto/firma",
+      "/api/presupuesto/ia",
       "/api/push/desuscribir",
       "/api/push/preferencias",
       "/api/push/suscribir",
@@ -4990,6 +4992,7 @@
       "/api/correduria/clientes",
       "/api/correduria/codeoscopic-crudo",
       "/api/correduria/codeoscopic-diagnostico",
+      "/api/correduria/codigo-postal",
       "/api/correduria/comisiones",
       "/api/correduria/comisiones/confirmar",
       "/api/correduria/companias",
@@ -6575,7 +6578,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1496,
+    "apis": 1499,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
