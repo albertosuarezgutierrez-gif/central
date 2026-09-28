@@ -45,9 +45,7 @@ import { btnStyle } from '@/components/ui'
 export default function AccionesCabecera() {
   return (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-      {/* Enlace a una ruta de PLATAFORMA que redirige: la pantalla vive en
-          asegura, pero su URL no se resuelve aquí (sería código de servidor en
-          un bundle de cliente). Ver `subir-poliza/page.tsx`. */}
+      {/* Pantalla de PLATAFORMA (desde el 28/09/2026 ya no redirige a asegura). */}
       <a href="/correduria/subir-poliza" style={{ ...btnStyle('primario'), textDecoration: 'none' }}>
         <FileUp size={15} strokeWidth={1.75} aria-hidden /> Subir póliza
       </a>

@@ -956,12 +956,6 @@ export function urlRetarificar(polizaId: string): string {
   return `/correduria/poliza/${polizaId}/retarificar`
 }
 
-/** Subir una póliza (PDF o foto) para que el agente la lea. Vive en asegura
- *  porque comparte pantalla con la cotización que sale de lo leído. Gratis. */
-export function urlSubirPoliza(): string {
-  return `${urlAsegura()}/cartera/subir`
-}
-
 /**
  * Presupuesto de HOGAR para una oportunidad nueva (sin ninguna póliza en la
  * cartera), **DENTRO de plataforma** desde el 07/09/2026. El riesgo sale del

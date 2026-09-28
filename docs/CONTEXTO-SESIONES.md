@@ -862,6 +862,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (28/09/2026) «Subir póliza» ya no saca de plataforma
+Los dos botones (ficha y cabecera de /correduria) saltaban a `asegura/cartera/subir` (otra web/sesión).
+Ficha → su pestaña Documentos con tipo «póliza». Cabecera → pantalla propia `/correduria/subir-poliza`
+(lee por `leer-documento` con tomador; `sello` no llega al navegador) → póliza nuestra / ficha / alta.
+Cepo `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo 4/5 brazos).
+
 ## (29/09/2026) Presupuesto por garantías — entregas 3-4 + las 6 ideas (cliente, parrilla, Telegram)
 - Portal: «Todas las opciones» con logos, filtros de garantías PRESELECCIONADOS con las necesidades (`garantiasDeNecesidades`),
   «qué cambia frente a tu seguro», capital de decesos, comparar 2 con IA y elegir cualquiera; telemetría `actividad_cliente`.

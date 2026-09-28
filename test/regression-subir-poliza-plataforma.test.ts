@@ -1,0 +1,54 @@
+// Guardián: «Subir póliza» NO saca a Alberto de plataforma. `node --test`.
+//
+// Hasta el 28/09/2026 los dos botones «Subir póliza» (cabecera de /correduria y
+// ficha del cliente) acababan en `asegura/cartera/subir`: otro dominio, otra
+// sesión — «te lleva a otra web». Mismo fallo que retarificar el 03/09
+// (`regression-retarificar-plataforma`). Un `href` a otro dominio compila igual
+// de bien, así que solo lo ve leer el fuente.
+
+import { test } from 'node:test'
+import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+const ROOT = join(import.meta.dirname, '..')
+// Sin comentarios: la historia del bug se cuenta en ellos y no debe contar como enlace.
+const leer = (p: string) => readFileSync(join(ROOT, p), 'utf8')
+  .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1')
+const COR = 'apps/plataforma/app/(usuario)/correduria'
+const PAGINA = `${COR}/subir-poliza/page.tsx`
+const PANTALLA = `${COR}/subir-poliza/SubirPoliza.tsx`
+const CABECERA_FICHA = `${COR}/cliente/[id]/Cabecera.tsx`
+const RUTA_LEER = 'apps/plataforma/app/api/correduria/oportunidad/leer/route.ts'
+
+test('/correduria/subir-poliza es una pantalla, no un redirect a asegura', () => {
+  const s = leer(PAGINA)
+  assert.doesNotMatch(s, /\bredirect\s*\(/, 'la página vuelve a redirigir fuera')
+  assert.doesNotMatch(s, /urlSubirPoliza|cartera\/subir/)
+  assert.match(s, /<SubirPoliza\b/)
+})
+
+test('la pantalla lee por la ruta de plataforma, no por asegura', () => {
+  const s = leer(PANTALLA)
+  assert.match(s, /['"]\/api\/correduria\/oportunidad\/leer['"]/)
+  assert.doesNotMatch(s, /central-asegura|ASEGURA_URL|cartera\/subir/)
+})
+
+test('el botón de la ficha va a su pestaña Documentos, en la misma pestaña', () => {
+  const s = leer(CABECERA_FICHA)
+  const i = s.indexOf('/> Subir póliza')
+  assert.ok(i > 0, 'no está el botón')
+  const tramo = s.slice(Math.max(0, i - 400), i)
+  assert.match(tramo, /tab=documentos&subir=poliza/)
+  assert.doesNotMatch(tramo, /nuevaPestana|urlSubirPoliza/)
+})
+
+test('nadie en plataforma vuelve a enlazar asegura/cartera/subir', () => {
+  assert.doesNotMatch(leer('apps/plataforma/lib/ficha-asegura.ts'), /cartera\/subir/)
+})
+
+test('el sello del tomador (alta cifrada) no viaja al navegador', () => {
+  const s = leer(RUTA_LEER)
+  assert.match(s, /sinSello\(r\.json\)/)
+  assert.match(s, /sello:\s*_sello/)
+})

@@ -1723,13 +1723,13 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
   afirma con el ciclo completo — con 2 de 4 recibos la resta sale negativa y parecería que fraccionar
   ahorra. Bajo «Vence», `ventanaAnulacion()` recuerda que el contrato es anual y solo se deja al
   vencimiento avisando 30 días antes (se pinta cuando faltan ≤60 días).
-- **📄 «Subir póliza o documento ↗»** (botón en la ficha) salta a `asegura/cartera/subir`: el agente lee
-  el PDF/foto y enseña lo leído. Es gratis. **Desde el 09/09/2026 lee cualquier ramo**: detecta el ramo
-  y, si es auto/moto o hogar, lee además sus campos propios (vehículo, o dirección/m²/año/capitales de
-  la vivienda — `lib/documentos/extraer-poliza.ts`, `@central/module-seguros` `documento-auto.ts` /
-  `documento-hogar.ts`); en cualquier otro ramo solo lee lo común a toda póliza (compañía, número,
-  vencimiento, prima) y lo dice, porque hoy no se retarifica ningún otro ramo. **Sigue SIN guardar el
-  fichero** (falta decidir dónde y cuánto tiempo conservar documentos con DNI dentro) — la pantalla lo dice.
+- **📄 «Subir póliza» YA NO sale de plataforma (28/09/2026).** Hasta ese día los dos botones (cabecera de
+  `/correduria` y ficha) saltaban a `asegura/cartera/subir` —otra web, otra sesión—. Ahora: el de la
+  **ficha** abre su pestaña Documentos con tipo «póliza» (`?tab=documentos&subir=poliza`) y el fichero
+  queda guardado; el de la **cabecera** es la pantalla `/correduria/subir-poliza`, que lee el documento
+  por el puerto `leer-documento` (vía `/api/correduria/oportunidad/leer` con `tomador: true`; el `sello`
+  cifrado se quita antes de llegar al navegador) y lleva a la póliza si ya es nuestra, a la ficha del
+  tomador si existe, o al alta. Lo vigila `test/regression-subir-poliza-plataforma.test.ts`.
 - **🔎 Buscador de TODO (`BuscadorCartera.tsx`)**: nombre, matrícula, nº de póliza, DNI, teléfono,
   email, ciudad o código postal, en un solo cuadro. Un término se busca por **todos** los criterios que
   encaje (`41003` es CP y nº de póliza plausibles a la vez).
