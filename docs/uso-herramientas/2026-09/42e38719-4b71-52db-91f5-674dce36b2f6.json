@@ -1,0 +1,69 @@
+{
+ "sesion": "42e38719-4b71-52db-91f5-674dce36b2f6",
+ "inicio": "2026-09-28T08:52:19.978Z",
+ "fin": "2026-09-28T08:58:35.217Z",
+ "llamadas": 34,
+ "categorias": {
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 4,
+   "chars_in": 304,
+   "chars_out": 4641,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__add_repo": 1,
+    "mcp__Claude_Code_Remote__register_repo_root": 1,
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 2
+   }
+  },
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 317,
+   "chars_out": 632,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 2
+   }
+  },
+  "bash": {
+   "llamadas": 18,
+   "chars_in": 12052,
+   "chars_out": 40817,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 18
+   }
+  },
+  "mcp:github": {
+   "llamadas": 9,
+   "chars_in": 4483,
+   "chars_out": 31798,
+   "errores": 2,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__github__actions_list": 2,
+    "mcp__github__get_job_logs": 3,
+    "mcp__github__actions_get": 1,
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 2
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 1,
+   "chars_in": 57,
+   "chars_out": 1039,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__get_project": 1
+   }
+  }
+ }
+}
