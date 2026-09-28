@@ -171,19 +171,19 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 198 | 24.247 | 17.144.890 | 0 | 0 |
-| `otro` | 193 | 5.995 | 18.834.617 | 9.220.202 | 0 |
-| `mcp:github` | 180 | 4.682 | 4.041.270 | 47.923.536 | 78 |
-| `lectura-directa` | 176 | 4.519 | 9.606.129 | 0 | 0 |
-| `escritura` | 138 | 2.988 | 44.306.374 | 0 | 0 |
-| `sql` | 125 | 2.470 | 1.139.610 | 2.351.230 | 8 |
-| `mcp:Claude_Code_Remote` | 112 | 1.203 | 263.718 | 4.216.020 | 13 |
+| `bash` | 198 | 24.413 | 17.267.192 | 0 | 0 |
+| `otro` | 193 | 6.052 | 18.980.166 | 9.261.240 | 0 |
+| `mcp:github` | 180 | 4.718 | 4.058.342 | 48.367.564 | 81 |
+| `lectura-directa` | 176 | 4.560 | 9.652.807 | 0 | 0 |
+| `escritura` | 138 | 2.992 | 44.309.991 | 0 | 0 |
+| `sql` | 125 | 2.481 | 1.148.915 | 2.351.230 | 8 |
+| `mcp:Claude_Code_Remote` | 112 | 1.208 | 264.350 | 4.422.616 | 13 |
 | `mcp:Booking-com` | 18 | 517 | 2.180.043 | 0 | 0 |
-| `mcp:Vercel` | 41 | 450 | 675.053 | 198.719 | 10 |
+| `mcp:Vercel` | 42 | 456 | 676.423 | 198.719 | 11 |
 | `mcp:Gmail` | 22 | 291 | 449.524 | 0 | 2 |
-| `mcp:Supabase` | 79 | 230 | 22.253 | 0 | 2 |
+| `mcp:Supabase` | 79 | 235 | 23.395 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 3 | 159 | 198.596 | 0 | 0 |
-| `agente:general-purpose` | 33 | 114 | 86.079 | 1.825.587 | 0 |
+| `agente:general-purpose` | 34 | 116 | 86.342 | 1.825.587 | 0 |
 | `mcp:Google-Drive` | 11 | 77 | 76.216 | 0 | 2 |
 | `mcp:idealista` | 2 | 76 | 202.543 | 0 | 33 |
 | `agente:agente-architect` | 23 | 70 | 55.163 | 1.805.542 | 0 |
@@ -196,7 +196,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:OpenSEO` | 2 | 46 | 38.961 | 0 | 0 |
 | `agente:agente-mecanico` | 15 | 39 | 40.049 | 797.274 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
-| `agente:rastreador-codigo` | 17 | 25 | 8.895 | 306.912 | 0 |
+| `agente:rastreador-codigo` | 17 | 27 | 9.347 | 333.074 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
 | `agente:general` | 8 | 12 | 8.332 | 512.187 | 0 |
