@@ -167,17 +167,17 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 187 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 189 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 182 | 22.298 | 15.450.828 | 0 | 0 |
-| `otro` | 177 | 5.621 | 18.056.757 | 8.489.163 | 0 |
-| `mcp:github` | 165 | 4.482 | 3.882.640 | 46.813.935 | 74 |
-| `lectura-directa` | 164 | 4.210 | 8.914.652 | 0 | 0 |
-| `escritura` | 134 | 2.636 | 42.225.740 | 0 | 0 |
-| `sql` | 115 | 2.362 | 1.098.353 | 2.351.230 | 8 |
-| `mcp:Claude_Code_Remote` | 104 | 1.109 | 245.941 | 3.391.122 | 13 |
+| `bash` | 184 | 22.555 | 15.574.267 | 0 | 0 |
+| `otro` | 179 | 5.645 | 18.117.911 | 8.489.163 | 0 |
+| `mcp:github` | 166 | 4.489 | 3.887.088 | 46.815.181 | 74 |
+| `lectura-directa` | 166 | 4.319 | 9.112.094 | 0 | 0 |
+| `escritura` | 135 | 2.727 | 42.595.674 | 0 | 0 |
+| `sql` | 116 | 2.374 | 1.104.659 | 2.351.230 | 8 |
+| `mcp:Claude_Code_Remote` | 105 | 1.115 | 246.559 | 3.391.122 | 13 |
 | `mcp:Booking-com` | 17 | 493 | 2.070.224 | 0 | 0 |
 | `mcp:Vercel` | 38 | 425 | 649.498 | 198.719 | 10 |
 | `mcp:Gmail` | 22 | 291 | 449.524 | 0 | 2 |
@@ -194,7 +194,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:Resend` | 5 | 47 | 14.139 | 0 | 0 |
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `mcp:OpenSEO` | 2 | 46 | 38.961 | 0 | 0 |
-| `agente:agente-mecanico` | 13 | 33 | 33.925 | 774.297 | 0 |
+| `agente:agente-mecanico` | 14 | 38 | 39.473 | 797.274 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `agente:rastreador-codigo` | 15 | 22 | 7.550 | 297.156 | 0 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
@@ -204,8 +204,8 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `code-map` | 3 | 5 | 10.551 | 88.901 | 1 |
 | `mcp:Supabase_asegura` | 5 | 5 | 1.947 | 0 | 0 |
 | `mcp:openrouter` | 2 | 5 | 14.639 | 0 | 0 |
+| `mcp:ccd_session` | 2 | 2 | 175 | 0 | 0 |
 | `mcp:Context7` | 1 | 2 | 1.257 | 0 | 0 |
 | `mcp:Tripadvisor` | 1 | 2 | 19.151 | 0 | 0 |
 | `mcp:Google_Calendar` | 1 | 1 | 272 | 0 | 0 |
-| `mcp:ccd_session` | 1 | 1 | 88 | 0 | 0 |
 <!-- ahorro:fin -->
