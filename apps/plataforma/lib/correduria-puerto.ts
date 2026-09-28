@@ -94,6 +94,8 @@ export type Hallazgo = {
   /** Pólizas por CIMA. `null` = no se contó, NO 0. */
   polizasCima: number | null
   ultimoVencimiento: string | null
+  /** Oportunidades abiertas. `null` = asegura no lo informa o no pudo contarlas, NO 0. */
+  oportunidadesAbiertas: number | null
   vitalidad: Vitalidad
   /** `null` = asegura no informa hermanas (versión vieja, o no se pudo mirar).
    *  `[]` = se miró y no hay. Pintarlos igual diría «no hay duplicados». */
@@ -215,6 +217,7 @@ export function interpretarBusqueda(status: number, json: unknown): Busqueda {
         porque: cadena(x.porque) ?? '',
         polizasCima: entero(x.polizasCima),
         ultimoVencimiento: cadena(x.ultimoVencimiento),
+        oportunidadesAbiertas: entero(x.oportunidadesAbiertas),
         vitalidad: vitalidad(x.vitalidad),
         hermanas: hs,
         contacto: interpretarContacto(x.contacto),

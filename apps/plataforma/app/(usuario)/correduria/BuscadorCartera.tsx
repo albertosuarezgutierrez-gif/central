@@ -335,7 +335,17 @@ function Bloque({ b }: { b: BloqueResultados }) {
               display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap',
             }}>
               <Vitalidad h={h} />
-              <span>· {h.polizas} póliza(s) · {h.porque}</span>
+              <span>· {h.polizas} póliza(s)</span>
+              {/* `null` = no se pudo contar: no se pinta, no se afirma «ninguna». */}
+              {h.oportunidadesAbiertas !== null && (
+                <Link
+                  href={`/correduria/cliente/${h.clienteId}?tab=oportunidades`}
+                  style={{ color: h.oportunidadesAbiertas > 0 ? 'var(--brand)' : 'inherit', fontWeight: h.oportunidadesAbiertas > 0 ? 600 : 400 }}
+                >
+                  · {h.oportunidadesAbiertas === 0 ? 'sin oportunidades abiertas' : `${h.oportunidadesAbiertas} oportunidad(es) abierta(s)`}
+                </Link>
+              )}
+              <span>· {h.porque}</span>
               {h.contacto !== null &&
                 (h.contacto.telefonoIlegible || h.contacto.emailIlegible) && (
                   <span title="Está guardado pero esta app no puede descifrarlo. Ábrelo en la ficha.">
