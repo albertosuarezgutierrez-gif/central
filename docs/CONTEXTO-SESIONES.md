@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(28/09/2026)** — ⏳ asegura-portal, carga v2: «AS» a 56 px, latido más marcado (opacidad 0,3→1, 1 s) ; «Cargando…» sigue oculto (Alberto: visible «se carga el diseño»). El «Grupo ASegura» que sigue viéndose es la cabecera fija y la pantalla de entrada (esta última pendiente de decidir si pasa a «AS»).
+
 **(28/09/2026)** — ⏳ asegura-portal: el indicador de carga (`CargaAsegura`: `loading.tsx` + `CargandoEnlace`) vuelve al monograma «AS» en línea (`MarcaAsegura`, 40 px) en vez del logotipo «Grupo ASegura» (Alberto: «queda más elegante»). Deshace el cambio del 26/09.
 
 **(28/09/2026)** — 🔎 Buscador de /correduria, 2ª tanda: oportunidades ACTIVAS y aparcadas por separado (la aparcada no se destaca), siguiente paso con fecha (y «atrasada»), resultados ordenados (con oportunidad → cartera viva → volcado; «no se sabe» nunca sube), «+ abrir oportunidad» si no tiene ninguna, y las lecturas de `enriquecer()` en paralelo. Helpers puros `orden-hallazgos.ts` (asegura) y `oportunidades-buscador.ts` (plataforma), cepos vistos en rojo.
@@ -869,6 +871,11 @@ Ficha → su pestaña Documentos con tipo «póliza». Cabecera → pantalla pro
 Cepo `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo 4/5 brazos).
 Telegram: si la oportunidad ya existía («duplicada»), los documentos se guardan SOLOS en la ficha (antes botón que nadie pulsaba: Rafael Campa, 3 envíos, 0 guardados).
 
+## (28/09/2026) asegura abría un PrismaClient POR CONSULTA en producción → EMAXCONN en el pooler compartido
+- Primera pasada del backfill de coberturas (18:17 UTC): 172/264 precios con coberturas, el resto abortó con `EMAXCONN` (límite 200 de Supavisor, ~700 conexiones de `prisma_seguros` en 2 min).
+- Causa: `apps/asegura/lib/db.ts` (desde el 02/09, PR #2116) solo guardaba el singleton fuera de producción y el `Proxy` lo resolvía en cada acceso → cliente y pool nuevos por consulta. Afectaba a toda asegura, el cron largo lo destapó.
+- Arreglo: `globalForPrisma.prisma ??= new PrismaClient()` siempre; cepo `lib/db.test.ts` (lee el fuente, visto en rojo). Las filas abortadas quedan intactas y el cron de las :17 las reintenta.
+
 ## (29/09/2026) Presupuesto por garantías — entregas 3-4 + las 6 ideas (cliente, parrilla, Telegram)
 - Portal: «Todas las opciones» con logos, filtros de garantías PRESELECCIONADOS con las necesidades (`garantiasDeNecesidades`),
   «qué cambia frente a tu seguro», capital de decesos, comparar 2 con IA y elegir cualquiera; telemetría `actividad_cliente`.
@@ -940,6 +947,16 @@ Portal: quien ve una ficha ENTERA (autorización sin póliza suelta o empresa de
 capada como interviniente (`capaInterviniente`, `figurasDeFichasVistas`); cepo en `regression-portal-intervinientes`.
 Confirmado con las condiciones particulares de Generali: tomador y conductor habitual = Francisco Javier; asegurado/propietario = GLOBAL 2 (Citan [matrícula retirada]). La BD está bien. La copia de volcado `[nº de póliza retirado]` (con puntos, no viva) cuelga de GLOBAL 2 como tomador.
 ✅ Decisión de Alberto (28/09): quien ve la empresa con `ver_economico` ve también prima y recibos de la póliza donde la empresa interviene, aunque el tomador sea una persona física («porque la empresa interviene»). PR #3878, mergeado.
+
+## (28/09/2026) Asistente Telegram: pedir precio de coche/moto por audio (fase 1)
+- `vehiculo_catalogo` (gratis) + `proponer_tarificacion` → pregunta lo que falta y manda el resumen de lo declarado con
+  botón `cas_tarif` «Pedir precio (0,50€)» (un uso, 15 min, `from.id`, tope 10/día, interruptor de emitir). Al pulsar,
+  `cotizar{Auto,Moto}NuevaAsegura` UNA vez → top 3 con franquicia/firmeza + comparación con lo que paga + venta cruzada solo
+  para Alberto. Tabla `correduria_asistente_tarificacion` APLICADA. «presupuesto de la moto…» ya no va al contable.
+- Revisión architect aplicada: tope diario también DENTRO del UPDATE de reclamo, `pidiendo` colgada >10 min → `incierta`
+  + aviso, «conduce solo el tomador» siempre como supuesto optimista, `garajeEsSupuesto` real. Código en `lib/correduria-tarificacion-tg.ts`.
+- Pendiente fases 2-3 (propuesta al cliente con IPID y datos declarados, envío con botón, seguimiento a 5 días,
+  aceptación→emitir) **tras mergear #3868** (portal «Revisa tus datos», otra sesión). Solo clientes sin póliza del ramo.
 
 ## (28/09/2026) Correduría: el CP rellena solo la ciudad (y la provincia)
 - Tabla CP→municipio incrustada (`apps/plataforma/lib/municipios-por-cp.json`, 11.254 CP, INE+CNIG; solo servidor)

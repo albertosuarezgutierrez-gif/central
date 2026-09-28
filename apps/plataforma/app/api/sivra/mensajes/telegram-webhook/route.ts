@@ -21,7 +21,7 @@ import type { ContextoRedaccion } from '@/lib/sivra/agente-huesped/redactar'
 import { aprobarPago, aplazarPago, rechazarFactura, pagarTodo, resumenSemanal } from '@/lib/agente-facturas/pagos'
 import { getMovParaCallback, aprenderReglaMovimiento, enviarMensajeDudoso, sugerirDestinoConContexto, PROP_LABELS } from '@/lib/agente-movimientos'
 import { simboloValido } from '@/lib/trading/cantera'
-import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, registrarDocumentoTg, albumDeCorreduria, resolverDocumentoDudoso } from '@/lib/correduria-asistente-telegram'
+import { esParaCorreduria, manejarCorreduriaTg, resolverBotonCorreduria, guardarNotaCorreduria, emitirDesdeBoton, tarificarDesdeBoton, registrarDocumentoTg, albumDeCorreduria, resolverDocumentoDudoso } from '@/lib/correduria-asistente-telegram'
 import { conCita, esRespuestaACorreduria, pieDeCorreduria, tienePrefijo } from '@/lib/correduria-asistente'
 import { turnoDeNota } from '@/lib/correduria-asistente'
 import { getCuentaTelegram, resolverAccionTg, manejarTextoLibreTg, manejarDocumentoTg, manejarVozTg, descargarTelegram, adjuntoDeMensaje, vozDeMensaje, arrancarOnboarding, esComandoContable } from '@/lib/contable/telegram'
@@ -794,7 +794,7 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
       // Emitir y corregir la ficha escriben en la cartera: exigen que pulse la PERSONA autorizada, no
       // solo que el botón esté en su chat (en un grupo cualquiera podría pulsar). En un chat privado,
       // el id del chat es el de la persona.
-      if ((action === 'emitir' || action === 'corregir' || action === 'oport' || action === 'acc' || action === 'guardar' || action === 'actualizar') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
+      if ((action === 'emitir' || action === 'corregir' || action === 'oport' || action === 'acc' || action === 'guardar' || action === 'actualizar' || action === 'tarif') && String(cb.from?.id ?? '') !== String(process.env.TELEGRAM_CHAT_ID ?? '')) {
         await tgAnswerCallback(cb.id, 'Solo el titular puede hacerlo')
         return NextResponse.json({ ok: true })
       }
@@ -806,6 +806,17 @@ async function procesarUpdate(req: NextRequest, body: any): Promise<Response> {
         }
         const arg = args[0] || ''
         after(() => emitirDesdeBoton(arg))
+        return NextResponse.json({ ok: true })
+      }
+      // «Pedir precio (0,50€)»: se contesta YA y la cotización (hasta 170 s) corre después de responder a
+      // Telegram. El botón de un solo uso impide que un reenvío del webhook pague dos veces.
+      if (action === 'tarif') {
+        await tgAnswerCallback(cb.id, '⏳ Pido el precio…')
+        if (cb.message?.message_id) {
+          await tgEditMessage(cb.message.message_id, `${escapeHtml(cb.message.text ?? '')}\n\n⏳ <i>Pulsado «Pedir precio»: pidiendo…</i>`).catch(() => {})
+        }
+        const arg = args[0] || ''
+        after(() => tarificarDesdeBoton(arg))
         return NextResponse.json({ ok: true })
       }
       // Guardar baja y sube ficheros (segundos por documento): se contesta el botón ya y se trabaja después.

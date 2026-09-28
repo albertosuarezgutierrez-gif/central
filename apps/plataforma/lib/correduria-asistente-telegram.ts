@@ -16,7 +16,16 @@ import { buscarAsegura, impagadosAsegura, sustitucionesAsegura } from '@/lib/cor
 import { fichaAsegura } from '@/lib/ficha-asegura'
 import { polizaAsegura } from '@/lib/poliza-asegura'
 import { vencimientosAsegura } from '@/lib/cartera-asegura'
-import { emitirAsegura, importarProyectoAsegura, tarificacionNuevaGuardadaAsegura, vistaImportacionAsegura } from '@/lib/retarificar-asegura'
+import { catalogoAsegura, emitirAsegura, importarProyectoAsegura, porFalloDeRed, tarificacionNuevaGuardadaAsegura, vistaImportacionAsegura, type Opcion, type RespuestaRetarificar, type Supuesto } from '@/lib/retarificar-asegura'
+import { cotizarAutoNuevaAsegura, precalificarAutoNuevaAsegura } from '@/lib/auto-nuevo-asegura'
+import { cotizarMotoNuevaAsegura, precalificarMotoNuevaAsegura } from '@/lib/moto-nuevo-asegura'
+import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
+import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
+import {
+  construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, filtrarCatalogo, huecosPendientes, leerEntrada,
+  MAX_TARIFICACIONES_DIA, MOTORES_MOTO, textoPropuesta, TIPOS_CATALOGO, ventaCruzada,
+  type Emparejado, type Pieza, type CampoTarif, type RamoTarif, type TipoCatalogo,
+} from './correduria-tarificacion-tg'
 import { interpretarPreparado, prepararPresupuestoAsegura, retirarPresupuestoAsegura, textoAviso } from '@/lib/presupuesto-asegura'
 import { editarClienteAsegura, interpretarEscritura } from '@/lib/cliente-edicion-asegura'
 import { documentosAsegura, leerDocumentoOportunidadAsegura, subirDocumentoAsegura } from '@/lib/documentos-asegura'
@@ -249,6 +258,10 @@ async function ejecutar(
       return proponerAccion('siniestro', args, ctx.turnoId)
     case 'invitar_portal':
       return proponerAccion('portal', args, ctx.turnoId)
+    case 'vehiculo_catalogo':
+      return vehiculoCatalogo(args)
+    case 'proponer_tarificacion':
+      return proponerTarificacion(args, ctx.turnoId)
     case 'enviar_presupuesto':
       return proponerAccion('presupuesto', args, ctx.turnoId)
     default:
@@ -982,6 +995,305 @@ async function hacerAccion(id: number): Promise<string> {
   return fin.estado === 'hecha' ? 'Hecho ✅' : fin.estado === 'incierta' ? 'No sé si se ha hecho' : 'No se ha hecho'
 }
 
+// ── Pedir precio de coche o moto (28/09/2026): la IA propone, el servidor resuelve, Alberto pulsa ──
+
+/** Un catálogo del vendor (gratis). Un string = por qué no se pudo leer: nunca una lista vacía. */
+async function catalogoOpciones(params: Record<string, string>): Promise<Opcion[] | string> {
+  const r = await catalogoAsegura(params).catch((e) => ({ estado: 'error' as const, mensaje: e instanceof Error ? e.message : 'fallo' }))
+  return r.estado === 'ok' ? r.opciones : r.mensaje
+}
+
+async function vehiculoCatalogo(args: Record<string, unknown>): Promise<{ texto: string; ok: boolean }> {
+  const tipo = (TIPOS_CATALOGO as readonly string[]).includes(String(args.tipo)) ? (args.tipo as TipoCatalogo) : null
+  if (!tipo) return { texto: `ERROR: tipo tiene que ser uno de ${TIPOS_CATALOGO.join(', ')}.`, ok: false }
+  const id = (v: unknown) => (typeof v === 'string' || typeof v === 'number') && /^[A-Za-z0-9._-]{1,40}$/.test(String(v).trim()) ? String(v).trim() : null
+  const marcaId = id(args.marcaId)
+  const modeloId = id(args.modeloId)
+  const motor = id(args.motor)
+  let ops: Opcion[] | string
+  if (tipo === 'motores-moto') ops = [...MOTORES_MOTO]
+  else if ((tipo === 'modelos' || tipo === 'modelos-moto') && !marcaId) return { texto: 'ERROR: falta marcaId (sácalo de marcas).', ok: false }
+  else if ((tipo === 'versiones' || tipo === 'versiones-moto') && !(marcaId && modeloId && motor)) return { texto: 'ERROR: para versiones hacen falta marcaId, modeloId y motor.', ok: false }
+  else {
+    const params: Record<string, string> = { tipo }
+    if (marcaId && tipo !== 'marcas' && tipo !== 'marcas-moto' && tipo !== 'motores') params.marcaId = marcaId
+    if (modeloId && tipo.startsWith('versiones')) params.modeloId = modeloId
+    if (motor && tipo.startsWith('versiones')) params.motor = motor
+    ops = await catalogoOpciones(params)
+  }
+  if (typeof ops === 'string') return { texto: `ERROR: no he podido leer el catálogo (${ops}). NO digas que no existe.`, ok: false }
+  const f = filtrarCatalogo(ops, typeof args.filtro === 'string' ? args.filtro : null)
+  return { texto: paraIA({ tipo, total: f.total, mostrados: f.opciones.length, opciones: f.opciones }), ok: true }
+}
+
+function pieza(campo: CampoTarif, e: Emparejado, dicho: string | null): Pieza {
+  if (e.estado === 'uno') return { campo, estado: 'ok' }
+  if (e.estado === 'varios') return { campo, estado: 'varios', candidatas: e.candidatas }
+  return dicho ? { campo, estado: 'no_encontrado', dicho } : { campo, estado: 'falta' }
+}
+
+/** Ramos en vigor del cliente (para la venta cruzada). `null` = no se ha podido leer la ficha. */
+async function ramosVivos(clienteId: string): Promise<string[] | null> {
+  const f = await fichaAsegura(clienteId).catch(() => null)
+  if (!f || f.estado !== 'ok') return null
+  const vigentes = POLIZA_ESTADOS_VIGENTES as readonly string[]
+  return f.ficha.polizas.filter((p) => p.viva && vigentes.includes(p.estado)).map((p) => p.tipo)
+}
+
+async function proponerTarificacion(args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    return { texto: `NO DISPONIBLE: las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}). Dile a Alberto que pida el precio desde la ficha del cliente (/correduria).`, ok: true }
+  }
+  const { entrada: e, errores } = leerEntrada(args)
+  if (!e.ramo || !e.clienteId) return { texto: `ERROR: ${errores.join('; ')}.`, ok: false }
+  const ramo: RamoTarif = e.ramo
+  const moto = ramo === 'moto'
+  const clienteId = e.clienteId
+
+  const [pre, garajes, civiles, marcas] = await Promise.all([
+    moto ? precalificarMotoNuevaAsegura({ clienteId }) : precalificarAutoNuevaAsegura({ clienteId }),
+    catalogoOpciones({ tipo: moto ? 'garajes-moto' : 'garajes' }),
+    catalogoOpciones({ tipo: 'estados-civiles' }),
+    catalogoOpciones({ tipo: moto ? 'marcas-moto' : 'marcas' }),
+  ])
+  if (pre.estado === 'no_encontrado') return { texto: 'NO SE PUEDE: no existe esa ficha en la cartera (búscala con buscar).', ok: true }
+  if (pre.estado !== 'ok') return { texto: `ERROR: no he podido leer la ficha para pedir precio (${pre.mensaje}). NO digas que no se puede: dile que lo intente luego.`, ok: false }
+  const p = pre.pre
+  if (moto && (pre.pre as { moto?: { estado: string } }).moto?.estado === 'ausente') {
+    return { texto: 'NO SE PUEDE: moto no está entre los ramos que Codeoscopic tiene habilitados para Grupo ASegura. Hay que pedírselo a Codeoscopic.', ok: true }
+  }
+  if (p.consumo.estado === 'ok' && !p.consumo.veredicto.permitido) {
+    return { texto: `NO SE PUEDE: ${p.consumo.veredicto.explicacion} (tope del libro de consumo de Codeoscopic).`, ok: true }
+  }
+
+  const piezas: Pieza[] = []
+  const nombres: Record<string, string> = {}
+  const supuestos: Supuesto[] = []
+  const elegir = (campo: CampoTarif, cat: Opcion[] | string, dicho: string | null): Opcion | null => {
+    if (typeof cat === 'string') { piezas.push({ campo, estado: 'error', motivo: cat }); return null }
+    const m = emparejarOpcion(dicho, cat)
+    piezas.push(pieza(campo, m, dicho))
+    if (m.estado !== 'uno') return null
+    nombres[campo] = m.opcion.nombre
+    return m.opcion
+  }
+
+  // Vehículo: marca → modelo → combustible → versión, cada paso contra su catálogo.
+  const marca = elegir('marca', marcas, e.marca)
+  const modelo = marca ? elegir('modelo', await catalogoOpciones({ tipo: moto ? 'modelos-moto' : 'modelos', marcaId: marca.id }), e.modelo) : null
+  const motor = elegir('motor', moto ? [...MOTORES_MOTO] : await catalogoOpciones({ tipo: 'motores' }), e.motor)
+  let version: Opcion | null = null
+  if (marca && modelo && motor) {
+    const versiones = await catalogoOpciones({ tipo: moto ? 'versiones-moto' : 'versiones', marcaId: marca.id, modeloId: modelo.id, motor: motor.id })
+    if (!e.version && typeof versiones !== 'string' && versiones.length > 1) {
+      piezas.push({ campo: 'version', estado: 'varios', candidatas: versiones })
+    } else if (!e.version && typeof versiones !== 'string' && versiones.length === 1) {
+      version = versiones[0]
+      nombres.version = version.nombre
+      piezas.push({ campo: 'version', estado: 'ok' })
+    } else {
+      version = elegir('version', versiones, e.version)
+    }
+  }
+
+  // Matrícula y su fecha: dicha → Avant2 por la matrícula (gratis) → la serie nacional, declarada como supuesto.
+  piezas.push(e.matricula ? { campo: 'matricula', estado: 'ok' } : { campo: 'matricula', estado: 'falta' })
+  let fechaMatriculacion = e.fechaMatriculacion
+  if (!fechaMatriculacion && e.matricula) {
+    const f = await catalogoOpciones({ tipo: moto ? 'fecha-matriculacion-moto' : 'fecha-matriculacion', matricula: e.matricula })
+    if (typeof f !== 'string' && f[0]) {
+      fechaMatriculacion = f[0].id
+      supuestos.push({ campo: 'fechaMatriculacion', valor: f[0].id, porque: 'la da Avant2 por la matrícula (aproximada)' })
+    } else {
+      const est = fechaMatriculacionEstimada(e.matricula, hoyMadrid())
+      if (est) {
+        fechaMatriculacion = est.estimada
+        supuestos.push({ campo: 'fechaMatriculacion', valor: est.estimada, porque: `estimada por la serie de la matrícula (entre ${est.desde} y ${est.hasta})` })
+      }
+    }
+  }
+  if (e.matricula) piezas.push(fechaMatriculacion ? { campo: 'fechaMatriculacion', estado: 'ok' } : { campo: 'fechaMatriculacion', estado: 'falta' })
+
+  // Garaje: vía pública si no se dice, y dicho como supuesto.
+  let garaje: Opcion | null = null
+  let garajeEsSupuesto = true
+  if (typeof garajes === 'string') piezas.push({ campo: 'garaje', estado: 'error', motivo: garajes })
+  else {
+    const g = elegirGaraje(e.garaje, garajes)
+    piezas.push(pieza('garaje', g.resultado, e.garaje))
+    if (g.resultado.estado === 'uno') {
+      garaje = g.resultado.opcion
+      if (g.supuesto) supuestos.push({ campo: 'garaje', valor: garaje.nombre, porque: g.supuesto })
+      garajeEsSupuesto = g.supuesto !== null
+    }
+  }
+
+  // Estado civil: el dicho manda; si no, el de la ficha.
+  let estadoCivil: Opcion | null = null
+  if (e.estadoCivil) estadoCivil = elegir('estadoCivil', civiles, e.estadoCivil)
+  else if (p.estadoCivil) { estadoCivil = p.estadoCivil; piezas.push({ campo: 'estadoCivil', estado: 'ok' }) }
+  else piezas.push({ campo: 'estadoCivil', estado: 'falta' })
+
+  // Municipio de circulación: de los del código postal de la ficha.
+  let municipio: Opcion | null = null
+  if (p.municipios === null) piezas.push({ campo: 'municipio', estado: 'error', motivo: p.municipiosMotivo ?? 'la ficha no tiene código postal' })
+  else if (e.municipio) municipio = elegir('municipio', p.municipios, e.municipio)
+  else if (p.municipios.length === 1) { municipio = p.municipios[0]; piezas.push({ campo: 'municipio', estado: 'ok' }) }
+  else piezas.push(p.municipios.length ? { campo: 'municipio', estado: 'varios', candidatas: p.municipios } : { campo: 'municipio', estado: 'falta' })
+
+  // Compañía del seguro actual → su código DGS, del catálogo de mercado.
+  let companiaAnterior: Opcion | null = null
+  if (e.historial) companiaAnterior = elegir('companiaAnterior', await catalogoOpciones({ tipo: 'companias-anteriores' }), e.historial.compania)
+
+  const huecos = [...errores, ...huecosPendientes(piezas, p.faltan, e.persona)]
+  if (huecos.length || !marca || !modelo || !motor || !version || !e.matricula || !fechaMatriculacion || !garaje || !estadoCivil || !municipio || (e.historial && !companiaAnterior)) {
+    return {
+      texto: `FALTAN DATOS (no se ha propuesto nada, 0€):\n- ${(huecos.length ? huecos : ['revisa los datos del vehículo']).join('\n- ')}\nPregúntaselo a Alberto y vuelve a llamar con TODO lo anterior más lo nuevo.`,
+      ok: true,
+    }
+  }
+
+  const cuerpo = construirCuerpo({
+    ramo, marcaId: marca.id, modeloId: modelo.id, motor: motor.id, codigoVehiculo: version.id,
+    matricula: e.matricula, fechaMatriculacion, garaje: garaje.id, garajeEsSupuesto, estadoCivilId: estadoCivil.id, municipioId: municipio.id,
+    persona: e.persona,
+    historial: e.historial && companiaAnterior ? { ...e.historial, companiaCodigo: companiaAnterior.id } : null,
+  })
+  // Los supuestos de asegura que lo dictado ya tapa, fuera: si no, el resumen diría «se supone» de algo que Alberto dijo.
+  const tapados = new Set([...Object.keys(cuerpo.correcciones), ...Object.keys(cuerpo.resueltos), 'estadoCivil', 'municipioCirculacionId', 'cpCirculacion'])
+  const todos = [...p.supuestos.filter((s) => !tapados.has(s.campo)), ...supuestos]
+
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
+    WHERE estado = 'propuesta' AND (caduca_at <= now() OR (cliente_id = ${clienteId}::uuid AND ramo = ${ramo}))`).catch(() => {})
+  const [fila] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
+    INSERT INTO correduria_asistente_tarificacion (turno_id, cliente_id, ramo, cuerpo, prima_actual, caduca_at)
+    VALUES (${turnoId}, ${clienteId}::uuid, ${ramo}, ${JSON.stringify(cuerpo)}::jsonb, ${e.primaActual},
+            now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
+    RETURNING id`)
+  const texto = textoPropuesta({
+    ramo, cliente: p.etiquetaCliente || 'cliente',
+    vehiculo: { marca: marca.nombre, modelo: modelo.nombre, motor: motor.nombre, version: version.nombre },
+    matricula: e.matricula, fechaMatriculacion, garaje: garaje.nombre, estadoCivil: estadoCivil.nombre, municipio: municipio.nombre,
+    persona: e.persona,
+    historial: e.historial && companiaAnterior ? { ...e.historial, compania: companiaAnterior.nombre } : null,
+    primaActual: e.primaActual, supuestos: todos,
+  })
+  const enviado = await tgSendButtons(texto, [[
+    { texto: '💶 Pedir precio (0,50€)', callback: `cas_tarif:${fila.id}` },
+    { texto: '✖️ No', callback: `cas_tarifno:${fila.id}` },
+  ]]).catch(() => null)
+  if (enviado === null) {
+    await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_tarificacion SET estado = 'descartada', decidida_at = now(), cuerpo = NULL WHERE id = ${fila.id}`).catch(() => {})
+    return { texto: 'ERROR: no he podido mandar la propuesta con el botón a Telegram. Dile que lo intente otra vez o pida el precio en la ficha.', ok: false }
+  }
+  return { texto: `Propuesta enviada a Alberto con el botón «Pedir precio (0,50€)» (${MINUTOS_PROPUESTA} minutos, un solo uso). NO digas que has pedido el precio: dile que revise los datos y pulse.`, ok: true }
+}
+
+/**
+ * Sin fila colgada con datos personales: la propuesta vencida se caduca con `cuerpo = NULL`, y una
+ * `pidiendo` de más de 10 minutos (el `after()` murió o no se pudo cerrar) pasa a `incierta` y se AVISA:
+ * pudo cobrarse y nadie se lo ha dicho a Alberto.
+ */
+async function limpiarTarificaciones(): Promise<void> {
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
+    WHERE estado = 'propuesta' AND caduca_at <= now()`).catch(() => {})
+  const colgadas = await prisma.$queryRaw<{ id: bigint; cliente_id: string }[]>(Prisma.sql`
+    UPDATE correduria_asistente_tarificacion
+    SET estado = 'incierta', cuerpo = NULL, resultado = COALESCE(resultado, '{}'::jsonb) || '{"motivo":"sin cierre tras 10 minutos"}'::jsonb
+    WHERE estado = 'pidiendo' AND decidida_at < now() - interval '10 minutes'
+    RETURNING id, cliente_id::text AS cliente_id`).catch(() => [] as { id: bigint; cliente_id: string }[])
+  for (const c of colgadas) {
+    await tgSend(`⚠️ Una petición de precio se quedó sin respuesta: no sé si se cobraron los 0,50€. NO la repitas; míralo en la ficha: ${urlCliente(c.cliente_id)}`, { html: true }).catch(() => {})
+  }
+}
+
+/** Pedidas hoy (hora de Madrid) que llegaron a salir hacia el vendor. `null` = no se ha podido contar. */
+async function tarificacionesDeHoy(): Promise<number | null> {
+  return prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+    SELECT count(*) AS n FROM correduria_asistente_tarificacion
+    WHERE estado IN ('pidiendo', 'hecha', 'incierta')
+      AND decidida_at >= (date_trunc('day', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid')`)
+    .then((r) => Number(r[0]?.n ?? 0)).catch(() => null)
+}
+
+type FilaTarif = { cliente_id: string; ramo: RamoTarif; cuerpo: { resueltos?: Record<string, unknown>; correcciones?: Record<string, unknown> }; prima_actual: number | null }
+
+/**
+ * Botón «Pedir precio (0,50€)». Corre en `after()` del webhook (la cotización tarda hasta 170 s). Mismo
+ * interruptor que emitir, tope diario contado ANTES de reclamar la fila, un solo uso y UNA sola llamada:
+ * nunca reintenta (cada `POST /insurances` es otro proyecto y otro cargo). Nunca lanza; cada salida avisa.
+ */
+export async function tarificarDesdeBoton(arg: string): Promise<void> {
+  const id = Number(arg)
+  if (!Number.isInteger(id) || id <= 0) return
+  const decir = (t: string) => tgSend(t, { html: true }).catch(() => {})
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    await decir(`🛡️ Las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}): no se ha pedido ningún precio.`)
+    return
+  }
+  const hoy = await tarificacionesDeHoy()
+  if (hoy === null) { await decir('✖️ No he podido comprobar cuántos precios llevas hoy: no se ha pedido nada (0€). Inténtalo en un rato.'); return }
+  if (hoy >= MAX_TARIFICACIONES_DIA) {
+    await decir(`✋ Tope de ${MAX_TARIFICACIONES_DIA} precios al día por Telegram alcanzado: no se ha pedido nada (0€). Si hace falta, pídelo en la ficha del cliente.`)
+    return
+  }
+  // El tope va también DENTRO del reclamo, y detrás de un candado de transacción: sin él, dos botones
+  // pulsados a la vez leen el mismo recuento (cada UPDATE tiene su foto) y los dos pasan del tope.
+  // (Sin comentarios SQL con \${…} dentro: un parámetro dentro de un comentario descuadra el bind.)
+  const [, reclamo] = await prisma.$transaction([
+    prisma.$executeRaw(Prisma.sql`SELECT pg_advisory_xact_lock(hashtext('correduria_asistente_tarificacion:tope'))`),
+    prisma.$queryRaw<FilaTarif[]>(Prisma.sql`
+    UPDATE correduria_asistente_tarificacion SET estado = 'pidiendo', decidida_at = now()
+    WHERE id = ${id} AND estado = 'propuesta' AND caduca_at > now()
+      AND (SELECT count(*) FROM correduria_asistente_tarificacion
+           WHERE estado IN ('pidiendo', 'hecha', 'incierta')
+             AND decidida_at >= (date_trunc('day', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid')) < ${MAX_TARIFICACIONES_DIA}
+    RETURNING cliente_id::text AS cliente_id, ramo, cuerpo, prima_actual::float8 AS prima_actual`),
+  ]).catch(() => [0, [] as FilaTarif[]] as const)
+  const [fila] = reclamo
+  if (!fila) {
+    const [actual] = await prisma.$queryRaw<{ estado: string; caducado: boolean }[]>(Prisma.sql`
+      SELECT estado, caduca_at <= now() AS caducado FROM correduria_asistente_tarificacion WHERE id = ${id}`).catch(() => [])
+    if (actual?.estado === 'propuesta' && !actual.caducado) {
+      await decir(`✋ Tope de ${MAX_TARIFICACIONES_DIA} precios al día por Telegram alcanzado: no se ha pedido nada (0€).`)
+    } else if (actual?.estado === 'propuesta' && actual.caducado) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL WHERE id = ${id} AND estado = 'propuesta'`).catch(() => {})
+      await decir(`⏱️ Esa propuesta ha caducado (${MINUTOS_PROPUESTA} min): no se ha pedido nada (0€). Pídemela otra vez.`)
+    } else if (actual) {
+      await decir(`🛡️ Ese botón ya se usó (estado: ${escapeHtml(actual.estado)}): no se pide otra vez.`)
+    } else {
+      await decir('🛡️ No encuentro esa propuesta: no se ha pedido nada.')
+    }
+    return
+  }
+
+  const url = urlCliente(fila.cliente_id)
+  let res: RespuestaRetarificar
+  try {
+    const entrada = { clienteId: fila.cliente_id, solicitadoPor: ACTOR_EMISION_TG, resueltos: fila.cuerpo?.resueltos, correcciones: fila.cuerpo?.correcciones }
+    res = fila.ramo === 'moto' ? await cotizarMotoNuevaAsegura(entrada) : await cotizarAutoNuevaAsegura(entrada)
+  } catch (e) {
+    // Las dos no lanzan; si algo lo hace, el cargo puede existir: incierta, nunca «no se ha gastado».
+    res = porFalloDeRed(e)
+  }
+  let fin: ReturnType<typeof desenlaceCotizacion>
+  try {
+    fin = desenlaceCotizacion(res, fila.prima_actual, url)
+  } catch (e) {
+    // Ya puede estar cobrado: nunca se calla ni se dice «no se ha gastado».
+    fin = { estado: 'incierta', texto: `⚠️ No he sabido leer la respuesta. Puede haberse cobrado los 0,50€: NO lo repitas. Míralo en la ficha: ${url}`, resumen: { error: e instanceof Error ? e.message.slice(0, 200) : 'fallo' } }
+  }
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE correduria_asistente_tarificacion SET estado = ${fin.estado}, cuerpo = NULL, resultado = ${JSON.stringify(fin.resumen)}::jsonb
+    WHERE id = ${id}`).catch((e) => console.error('[correduria-tarificacion-tg] no se pudo cerrar la fila', id, e))
+  const venta = fin.estado === 'hecha' ? ventaCruzada(await ramosVivos(fila.cliente_id).catch(() => null), fila.ramo) : null
+  await decir([fin.texto, venta].filter(Boolean).join('\n\n'))
+}
+
 // ── Un turno ─────────────────────────────────────────────────────────────────────────────────────
 
 async function turnosDeHoy(): Promise<number | null> {
@@ -1046,6 +1358,7 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
   // Propuestas que nadie pulsó y documentos subidos hace más de un mes: fuera.
   await prisma.$executeRaw(Prisma.sql`
     DELETE FROM correduria_asistente_accion WHERE estado = 'propuesta' AND caduca_at < now() - interval '1 day'`).catch(() => {})
+  await limpiarTarificaciones()
   await prisma.$executeRaw(Prisma.sql`
     DELETE FROM correduria_asistente_oportunidad WHERE estado = 'propuesta' AND caduca_at < now() - interval '1 day'`).catch(() => {})
   // El sello del lead (DNI cifrado) no se queda en filas que ya no van a usarlo.
@@ -1255,6 +1568,12 @@ export async function resolverBotonCorreduria(accion: string, arg: string): Prom
   if (accion === 'guardar') return guardarDocumentosEnFicha(id)
   if (accion === 'actualizar') return actualizarExistente(id)
   if (accion === 'acc') return hacerAccion(id)
+  if (accion === 'tarifno') {
+    const n = await prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_tarificacion SET estado = 'descartada', decidida_at = now(), cuerpo = NULL
+      WHERE id = ${id} AND estado = 'propuesta'`).catch(() => 0)
+    return n ? 'Descartado: no se pide precio (0€)' : 'Ya estaba decidido'
+  }
   if (accion === 'accno') {
     const n = await prisma.$executeRaw(Prisma.sql`
       UPDATE correduria_asistente_accion SET estado = 'descartada', decidida_at = now(), cuerpo = NULL

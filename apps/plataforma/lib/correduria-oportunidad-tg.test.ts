@@ -377,7 +377,7 @@ test('webhook: descarta reintentos de Telegram y contesta rápido a la corredur�
   // ningún manejarCorreduriaTg se espera dentro de la petición: el único await es el de correduriaSegura (en after)
   assert.equal(src.match(/await manejarCorreduriaTg\(/g)?.length, 1)
   assert.match(src, /async function correduriaSegura[^]*?await manejarCorreduriaTg\(texto\)\.catch/)
-  assert.match(src, /action === 'guardar' \|\| action === 'actualizar'\) && String\(cb\.from/)
+  assert.match(src, /action === 'guardar' \|\| action === 'actualizar'(?: \|\| action === '\w+')*\) && String\(cb\.from/)
 })
 
 test('tras abrir: guardar en la ficha es de un solo uso y tarificar es un ENLACE (no cotiza desde Telegram)', () => {
@@ -465,7 +465,7 @@ test('actualizar: resultado honesto y el flujo cableado (lee el FUENTE)', async 
   // guardar en ficha también cuando ya tenía una
   assert.match(src, /estado IN \('abierta', 'duplicada'\) AND documentos_guardados_at IS NULL/)
   const hook = readFileSync(fileURLToPath(new URL('../app/api/sivra/mensajes/telegram-webhook/route.ts', import.meta.url)), 'utf8')
-  assert.match(hook, /action === 'guardar' \|\| action === 'actualizar'\) && String\(cb\.from/)
+  assert.match(hook, /action === 'guardar' \|\| action === 'actualizar'(?: \|\| action === '\w+')*\) && String\(cb\.from/)
 })
 
 test('otro seguro del mismo ramo (otro coche) NO se ofrece como «actualizar la existente»', async () => {
