@@ -12,6 +12,7 @@ import { leerDatosCompaniaPuerto } from '@central/module-seguros'
 import { leerDocumentos } from './documentos-asegura.ts'
 import type { CapitalAsegurado, DetalleCobertura } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { leerContrato, leerFechasContrato, leerReciboExtra, type ContratoFicha, type FechasContratoFicha, type ReciboExtraFicha } from './poliza-contrato.ts'
 
 export type EslabonRiesgoFicha = {
   id: string
@@ -88,7 +89,7 @@ export type ReciboFicha = {
   fechaEmision: string | null
   fechaVencimiento: string | null
   formaPago: string | null
-}
+} & ReciboExtraFicha
 
 export type Poliza = {
   id: string
@@ -156,6 +157,10 @@ export type Poliza = {
    * `sustitucion.seguimiento === 'no_aplica'` con el objeto SÍ presente.
    */
   sustitucion: SustitucionFicha | null
+  /** Fechas de contrato de CIMA (emisión, efecto actual…). `null` = asegura no las manda o no trae ninguna. */
+  fechasContrato: FechasContratoFicha | null
+  /** Cobro, producto, mediador, riesgos, beneficiarios y prima dudosa. `null` = asegura no lo manda. Sin IBAN. */
+  contrato: ContratoFicha | null
 }
 
 export type PolizaRelacionadaFicha = {
@@ -405,6 +410,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       listaRecibos.push({
         id: o.id, situacion: cadena(o.situacion) ?? 'sin_informar', importe: numero(o.importe),
         fechaEmision: cadena(o.fechaEmision), fechaVencimiento: cadena(o.fechaVencimiento), formaPago: cadena(o.formaPago),
+        ...leerReciboExtra(o),
       })
     }
   }
@@ -464,6 +470,8 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       estimacion: leerEstimacion(p.estimacion),
       capitalesHogar: leerCapitalesHogar(p.capitalesHogar),
       sustitucion: leerSustitucion(p.sustitucion),
+      fechasContrato: leerFechasContrato(p.fechasContrato),
+      contrato: leerContrato(p.contrato),
     },
   }
 }

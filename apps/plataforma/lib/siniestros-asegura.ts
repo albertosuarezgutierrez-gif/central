@@ -28,6 +28,7 @@
 
 import type { OrigenSiniestro, TramitacionCruda } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { leerDetalleCima, type DetalleCima } from './siniestro-detalle-cima.ts'
 
 
 /** Un siniestro tal y como lo sirve el puerto de asegura. */
@@ -83,6 +84,14 @@ export type SiniestroCartera = {
    * no manda nada de esto, o asegura no lo manda (versión anterior).
    */
   tramitacionCima: TramitacionCruda | null
+  /**
+   * Detalle que manda la compañía por CIMA desde el 28/09/2026 (declaración,
+   * DAA, responsabilidad, reserva desglosada, recobros, convenios, expedientes,
+   * vehículos, asistencias, contacto…). PII ya descifrada por asegura; un `v1:`
+   * que se colara se tapa como `null` en `leerDetalleCima()`. `null` = CIMA no
+   * manda nada de esto, o asegura es anterior y no lo sirve.
+   */
+  detalleCima: DetalleCima | null
   /**
    * Terceros y testigos. `null` = no se ha podido consultar (o asegura no lo
    * manda) — NUNCA «no hay ninguno», que es `[]`. Exclusivo de siniestros
@@ -209,6 +218,7 @@ export function leerSiniestro(v: unknown): SiniestroCartera | null {
     datosRamo: datosRamoDe(s.datosRamo),
     danosCima: danosCimaDe(s.danosCima),
     tramitacionCima: tramitacionDe(s.tramitacionCima),
+    detalleCima: leerDetalleCima(s.detalleCima),
     terceros: terceros(s.terceros),
   }
 }

@@ -27,7 +27,8 @@ import {
   type IntervinienteEntrada,
   esVolcadoHistorico,
 } from '@central/module-seguros'
-import { encryptField, encryptFieldNullable, decryptFieldNullable } from '@central/module-seguros-pii'
+import { encryptField, encryptFieldNullable, decryptField, decryptFieldNullable } from '@central/module-seguros-pii'
+import { SELECT_DETALLE_CIMA, detalleCimaDeFila, type FilaDetalleCima } from './siniestro-detalle-cima'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
@@ -67,6 +68,7 @@ export const SELECT_SINIESTRO = {
   indemnizacionCima: true,
   totalPagosCima: true,
   posicionCima: true,
+  ...SELECT_DETALLE_CIMA,
   intervinientes: {
     select: {
       id: true,
@@ -94,7 +96,7 @@ type FilaInterviniente = {
   numeroPoliza: string | null
 }
 
-type FilaSiniestro = {
+type FilaSiniestro = FilaDetalleCima & {
   id: string
   clienteId: string
   polizaId: string
@@ -223,6 +225,8 @@ export function mapSiniestro(s: FilaSiniestro): SiniestroFicha {
     datosRamo: datosRamoDeFila(s.datosRamo),
     danosCima: danosCimaDeFila(s.danosCima),
     tramitacionCima: tramitacionDeFila(s),
+    // PII descifrada AQUÍ; lo que no se descifra sale null (nunca `v1:`).
+    detalleCima: detalleCimaDeFila(s, decryptField),
     terceros: s.intervinientes.map(mapInterviniente),
   }
 }

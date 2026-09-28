@@ -17,6 +17,7 @@ import type { ObjetoFicha } from '@/lib/ficha-asegura'
 import { urlRetarificar } from '@/lib/ficha-asegura'
 import { rotuloRetarificar } from '../../rotulo-retarificar'
 import { eur } from '@/lib/dinero'
+import { bloqueCobro, etiquetaGestionCobro, filasContrato, lugarRiesgo, primaParaPintar, vigenciaRiesgo, type Fila } from '@/lib/poliza-contrato'
 import { PageHeader } from '@/components/ui'
 // Un solo estilo de panel para toda la correduría: el de la ficha del cliente.
 import { Tarjeta, tarjeta, th, td, sub } from '../../cliente/[id]/piezas'
@@ -42,6 +43,7 @@ export default async function PolizaPage({ params, searchParams }: {
   const p = r.poliza
   const cancelada = p.estado === 'cancelada'
   const anul = p.viva && !cancelada ? ventanaAnulacion(p.fechaVencimiento) : null
+  const prima = primaParaPintar(p, p.contrato)
 
   return (
     // `minmax(0, 1fr)` NO es decorativo (mismo caso que la ficha de cliente): sin él la pista
@@ -83,7 +85,8 @@ export default async function PolizaPage({ params, searchParams }: {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
         <Dato label="Vence" valor={p.fechaVencimiento ? fmt(p.fechaVencimiento) : null} nota={anul ? (anul.enPlazo ? `para no renovar, avisar antes del ${fmt(anul.limiteAviso)}` : 'plazo de aviso pasado: renueva otro año') : cancelada ? 'cancelada' : undefined} color={anul?.enPlazo && anul.diasParaAvisar <= 60 ? 'var(--warning)' : undefined} />
-        <Dato label="Prima" valor={p.prima !== null ? eur(p.prima) : null} nota={p.primaAnual !== null && p.primaBruta !== null && p.primaAnual !== p.primaBruta ? `neta ${eur(p.primaAnual)} · bruta ${eur(p.primaBruta)}` : undefined} />
+        {/* `primaAnualDudosa`: la del fichero es la del RECIBO y se dice; nunca se presenta como anual. */}
+        <Dato label={prima.etiqueta} valor={prima.valor} nota={prima.nota} />
         <Dato label="Forma de pago" valor={p.pago ? etiquetaFraccionamiento(p.pago.fraccionamiento) : null} nota={p.pago?.formaCobro ?? undefined} />
         <Dato label="Efecto inicial" valor={p.fechaEfectoInicial ? fmt(p.fechaEfectoInicial) : null} nota="antigüedad con la compañía (bonus)" />
       </div>
@@ -101,6 +104,37 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
   const nSiniestros = p.siniestros?.length ?? null
   const abiertos = p.siniestros?.filter(s => s.abierto).length ?? null
   const pedidos = p.listaDocumentos === null ? null : p.listaDocumentos.filter(d => d.estado === 'pedido').length
+  // Un bloque sin ningún dato NO se pinta: «no consta» no es «no tiene».
+  const contrato = filasContrato(p.contrato, p.fechasContrato)
+  const cobro = bloqueCobro(p.contrato)
+  const riesgos = p.contrato?.riesgos ?? []
+  const beneficiarios = p.contrato?.beneficiarios ?? []
+  const extra: (Acceso & { contenido: React.ReactNode })[] = []
+  if (contrato.length > 0 || cobro) {
+    extra.push({
+      id: 'contrato', icono: '📋', titulo: 'Contrato y cobro',
+      detalle: cobro?.filas.find((f) => f.etiqueta === 'Cuenta')?.valor ?? cobro?.filas[0]?.valor ?? null,
+      tono: cobro?.avisoTitular ? 'aviso' : undefined,
+      contenido: (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 260px), 1fr))', gap: 12 }}>
+          {contrato.length > 0 && <Tarjeta titulo="Contrato"><Filas filas={contrato} /></Tarjeta>}
+          {cobro && (
+            <Tarjeta titulo="Cobro">
+              <Filas filas={cobro.filas} />
+              {cobro.avisoTitular && <p style={{ ...muted, color: 'var(--warning)', marginTop: 8 }}>⚠️ {cobro.avisoTitular}</p>}
+            </Tarjeta>
+          )}
+        </div>
+      ),
+    })
+  }
+  if (riesgos.length > 0 || beneficiarios.length > 0) {
+    extra.push({
+      id: 'riesgos', icono: '🧩', titulo: 'Riesgos',
+      detalle: riesgos.length > 0 ? `${riesgos.length}` : `${beneficiarios.length} beneficiario(s)`,
+      contenido: <Tarjeta titulo="Riesgos de la póliza"><Riesgos p={p} /></Tarjeta>,
+    })
+  }
   return [
     {
       id: 'asegura', icono: (TIPOS[p.tipo] ?? '📄').split(' ')[0], titulo: 'Qué asegura',
@@ -119,6 +153,7 @@ function accesosPoliza(p: Poliza, cancelada: boolean): (Acceso & { contenido: Re
         </Tarjeta>
       ),
     },
+    ...extra,
     {
       id: 'coberturas', icono: '🛡️', titulo: 'Coberturas',
       detalle: p.coberturas.length > 0 ? `${p.coberturas.length}` : 'sin detalle de la compañía',
@@ -467,17 +502,36 @@ function Recibos({ p }: { p: Poliza }) {
 const RECIBOS_VISIBLES = 12
 
 function TablaRecibos({ lista }: { lista: Poliza['listaRecibos'] }) {
+  // Columnas nuevas solo si ALGÚN recibo las trae: asegura vieja o recibos anteriores a la ingesta nueva no las tienen.
+  const hayRemesa = lista.some((x) => x.idRemesa)
+  const hayComision = lista.some((x) => x.baseComision !== null || x.claseComision || x.retencionIrpf !== null)
   return (
     <div style={{ overflowX: 'auto' }}>
       <table className="tabla-polizas" style={tabla}>
-        <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Emitido</th><th style={th}>Vence</th><th style={th}>Situación</th><th style={th}>Cobro</th><th style={{ ...th, textAlign: 'right' }}>Importe</th></tr></thead>
+        <thead><tr style={{ color: 'var(--muted)', textAlign: 'left' }}><th style={th}>Emitido</th><th style={th}>Vence</th><th style={th}>Situación</th><th style={th}>Cobro</th>{hayRemesa && <th style={th}>Remesa</th>}{hayComision && <th style={th}>Comisión</th>}<th style={{ ...th, textAlign: 'right' }}>Importe</th></tr></thead>
         <tbody>
           {lista.map(x => (
             <tr key={x.id} style={{ borderTop: '1px solid var(--border)', color: x.situacion === 'anulado' ? 'var(--muted)' : undefined }}>
               <td data-label="Emitido" style={td}>{x.fechaEmision ? fmt(x.fechaEmision) : '—'}</td>
               <td data-label="Vence" style={td}>{x.fechaVencimiento ? fmt(x.fechaVencimiento) : '—'}</td>
               <td data-rol="cabeza" style={td}>{ICONO[x.situacion] ?? '❔'} {ROTULO[x.situacion] ?? x.situacion.replace(/_/g, ' ')}</td>
-              <td data-label="Cobro" style={td}>{x.formaPago ?? <span style={muted}>—</span>}</td>
+              <td data-label="Cobro" style={td}>
+                {x.formaPago ?? <span style={muted}>—</span>}
+                {x.gestionCobro && <div style={sub}>{etiquetaGestionCobro(x.gestionCobro)}</div>}
+              </td>
+              {hayRemesa && <td data-label="Remesa" style={{ ...td, wordBreak: 'break-all' }}>{x.idRemesa ?? <span style={muted}>—</span>}</td>}
+              {hayComision && (
+                <td data-label="Comisión" style={td}>
+                  {x.baseComision !== null ? <span style={{ whiteSpace: 'nowrap' }}>base {eur(x.baseComision)}</span> : <span style={muted}>—</span>}
+                  {(x.claseComision || x.retencionIrpf !== null) && (
+                    <div style={sub}>
+                      {x.claseComision && <span title="Clase de comisión (código EIAC)">clase {x.claseComision}</span>}
+                      {x.claseComision && x.retencionIrpf !== null && ' · '}
+                      {x.retencionIrpf !== null && <span style={{ whiteSpace: 'nowrap' }}>IRPF {eur(x.retencionIrpf)}</span>}
+                    </div>
+                  )}
+                </td>
+              )}
               <td data-label="Importe" style={{ ...td, textAlign: 'right', whiteSpace: 'nowrap' }}>{x.importe === null ? <span style={muted} title="Importe con forma inesperada en el EIAC">ilegible</span> : eur(x.importe)}</td>
             </tr>
           ))}
@@ -521,6 +575,61 @@ function Intervinientes({ p }: { p: Poliza }) {
       {/* Tres estados, no dos: «no se pudo mirar» ≠ «no hay nadie más». */}
       {aviso === 'sin_mirar' && <div style={muted}>Del resto de figuras (propietario, conductor…) no se sabe: asegura no ha podido informarlas.</div>}
       {aviso === 'solo_tomador' && <div style={muted}>La compañía no ha enviado más figuras (propietario, conductor…) por CIMA.</div>}
+    </div>
+  )
+}
+
+/** Lista etiqueta → valor. Solo recibe filas con dato: lo que no consta ni llega aquí. */
+function Filas({ filas }: { filas: Fila[] }) {
+  return (
+    <dl style={{ margin: 0, display: 'grid', gridTemplateColumns: 'minmax(0, max-content) minmax(0, 1fr)', gap: '6px 12px', fontSize: 13 }}>
+      {filas.map((f) => (
+        <div key={f.etiqueta} style={{ display: 'contents' }}>
+          <dt style={{ color: 'var(--muted)' }}>{f.etiqueta}</dt>
+          <dd style={{ margin: 0, minWidth: 0, overflowWrap: 'anywhere' }}>{f.valor}{f.nota && <div style={sub}>{f.nota}</div>}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+/**
+ * Todos los riesgos que manda CIMA (una póliza puede asegurar dos casas o dos
+ * barcos). La dirección llega YA descifrada de asegura, como la del riesgo
+ * principal; si allí no se pudo descifrar se dice, nunca se manda el cifrado.
+ */
+function Riesgos({ p }: { p: Poliza }) {
+  const riesgos = p.contrato?.riesgos ?? []
+  const beneficiarios = p.contrato?.beneficiarios ?? []
+  return (
+    <div style={{ display: 'grid', gap: 10, fontSize: 13 }}>
+      {riesgos.map((r, i) => {
+        const vig = vigenciaRiesgo(r)
+        const lugar = lugarRiesgo(r)
+        return (
+          <div key={r.id ?? i} style={{ borderTop: i ? '1px solid var(--border)' : undefined, paddingTop: i ? 8 : 0, minWidth: 0 }}>
+            <div>
+              <strong>{r.descripcion ?? (r.tipo ? (TIPOS[r.tipo] ?? r.tipo) : `Riesgo ${r.numeroOrden ?? i + 1}`)}</strong>
+              {r.descripcion && r.tipo && <span style={sub}> · {TIPOS[r.tipo] ?? r.tipo}</span>}
+            </div>
+            {lugar && <div style={{ ...muted, overflowWrap: 'anywhere' }}>{lugar}</div>}
+            {r.direccionIlegible && <div style={muted}>🔒 La dirección de este riesgo viene cifrada y asegura no ha podido leerla.</div>}
+            {vig && <div style={sub}>Vigencia {vig}</div>}
+          </div>
+        )
+      })}
+      {beneficiarios.length > 0 && (
+        <div style={{ borderTop: riesgos.length ? '1px solid var(--border)' : undefined, paddingTop: riesgos.length ? 8 : 0 }}>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Beneficiarios</div>
+          {beneficiarios.map((b, i) => (
+            <div key={i} style={{ overflowWrap: 'anywhere' }}>
+              {b.orden && <span style={sub}>{b.orden}. </span>}
+              {b.descripcion ?? b.prestamo ?? '—'}
+              {b.descripcion && b.prestamo && <span style={sub}> · {b.prestamo}</span>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

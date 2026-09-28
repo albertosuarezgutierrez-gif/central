@@ -34,6 +34,14 @@ import Documentos from './Documentos'
 import type { Compania } from '@/lib/companias-asegura'
 import { companiaDeSiniestro, contactoSiniestroDe, tieneAlgoQueEnsenar } from '@/lib/compania-contacto-siniestro'
 import { useCompanias } from './useCompanias'
+import {
+  declaracionTardia,
+  hrefTelefono,
+  textoConvenios,
+  textoDaa,
+  textoResponsabilidad,
+  textoVehiculo,
+} from '@/lib/siniestro-detalle-cima'
 
 /**
  * 🚨 Siniestros DESDE la ficha (cliente o póliza): ver, abrir, anotar el
@@ -302,6 +310,165 @@ function BloqueTramitacion({ t }: { t: SiniestroCartera['tramitacionCima'] }) {
             </li>
           ))}
         </ol>
+      )}
+    </div>
+  )
+}
+
+// ─── Detalle de la compañía (EXCLUSIVO de CIMA, 28/09/2026) ───────────────────
+//
+// Lo que el EIAC de siniestro trae y la ingesta guarda desde el PR 862 del repo asegura. Cada
+// dato `null` = CIMA no lo manda y NO se pinta (ni «0», ni «sin X»). La PII
+// llega descifrada por asegura; un `v1:` ya lo ha tapado `leerDetalleCima()`.
+// Los códigos TIREA (convenio, clase/estado de expediente) van como código:
+// no hay tabla oficial y no se traducen a ojo.
+
+function BloqueDetalleCima({ s }: { s: SiniestroCartera }) {
+  const d = s.detalleCima
+  if (!d) return null
+  const plazo = declaracionTardia(s.fechaHora ?? s.fecha, d.fechaDeclaracion)
+  const cifras: [string, string][] = []
+  const responsabilidad = textoResponsabilidad(d.responsabilidad)
+  if (responsabilidad) cifras.push(['Responsabilidad (compañía)', responsabilidad])
+  const daa = textoDaa(d.daa)
+  if (daa) cifras.push(['Parte amistoso (DAA)', daa])
+  if (d.totalRecobros !== null) cifras.push(['Recobrado por la compañía', eur(d.totalRecobros)])
+  const convenios = textoConvenios(d.convenios)
+  if (convenios) cifras.push(['Convenio entre compañías', convenios])
+  if (d.refMediador) cifras.push(['Referencia del mediador', d.refMediador])
+  const vehiculo = textoVehiculo(d.vehiculo)
+  const tel = hrefTelefono(d.contactoTelefono)
+  const vc = d.vehiculoContrario
+  const vcTexto = vc ? [vc.marcaModelo, vc.matricula].filter(Boolean).join(' · ') : ''
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: 10 }}>
+      <div style={etiqueta}>Datos de la compañía (CIMA)</div>
+
+      {d.fechaDeclaracion && (
+        <div>
+          <span style={muted}>Declarado a la compañía el </span>{fechaEs(d.fechaDeclaracion)}
+          {plazo?.tardia && (
+            <span style={{ ...chipAviso, marginLeft: 6 }} title={`El art. 16 LCS da ${DIAS_COMUNICACION_LCS} días desde el hecho para comunicarlo; la compañía puede reclamar los daños de la demora.`}>
+              ⚠️ {plazo.dias} días después del hecho (art. 16 LCS)
+            </span>
+          )}
+        </div>
+      )}
+
+      {cifras.length > 0 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+          {cifras.map(([label, valor]) => <Dato key={label} label={label} valor={valor} />)}
+        </div>
+      )}
+
+      {d.reservaDesglose && (
+        <div>
+          <div style={etiqueta}>Reserva por coberturas</div>
+          {d.reservaDesglose.coberturas.length > 0 ? (
+            <ul style={listaCima}>
+              {d.reservaDesglose.coberturas.map((c, i) => (
+                <li key={i}>cobertura {c.cobertura}{c.importe !== null ? `: ${eur(c.importe)}` : ''}</li>
+              ))}
+            </ul>
+          ) : (
+            // El texto no seguía el patrón: se enseña tal cual lo manda la compañía.
+            <div style={{ overflowWrap: 'anywhere' }}>{d.reservaDesglose.descripcion}</div>
+          )}
+        </div>
+      )}
+
+      {d.expedientes && (
+        <div>
+          <div style={etiqueta}>Expedientes</div>
+          <ul style={listaCima}>
+            {d.expedientes.map((e, i) => {
+              const importes = [
+                e.importeReserva !== null ? `reserva ${eur(e.importeReserva)}` : null,
+                e.totalPagos !== null ? `pagado ${eur(e.totalPagos)}` : null,
+                e.totalRecobros !== null ? `recobrado ${eur(e.totalRecobros)}` : null,
+              ].filter(Boolean)
+              return (
+                <li key={e.numero ?? i} style={{ overflowWrap: 'anywhere' }}>
+                  {e.numero ?? <span style={muted}>sin número</span>}
+                  {e.clase && <span style={muted}> · clase {e.clase}</span>}
+                  {e.estado && <span style={muted}> · estado {e.estado}</span>}
+                  {e.fechaInicio && <span style={muted}> · desde {fechaEs(e.fechaInicio)}</span>}
+                  {e.fechaFin && <span style={muted}> · hasta {fechaEs(e.fechaFin)}</span>}
+                  {importes.length > 0 && <div>{importes.join(' · ')}</div>}
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
+
+      {d.riesgo && (
+        <div>
+          <div style={etiqueta}>Riesgo afectado</div>
+          {d.riesgo.descripcion && <div style={{ overflowWrap: 'anywhere' }}>{d.riesgo.descripcion}</div>}
+          {d.riesgo.coberturas.length > 0 && (
+            <ul style={listaCima}>
+              {d.riesgo.coberturas.map((c, i) => (
+                <li key={i}>{c.descripcion ?? <span style={muted}>cobertura sin nombre</span>}{c.capital !== null ? `: ${eur(c.capital)}` : ''}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {(vehiculo || d.vehiculo?.conductorNombre || vc) && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10 }}>
+          {(vehiculo || d.vehiculo?.conductorNombre) && (
+            <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+              <div style={etiqueta}>Vehículo del asegurado</div>
+              {vehiculo && <div>{vehiculo}</div>}
+              {d.vehiculo?.conductorNombre && <div><span style={muted}>conductor </span>{d.vehiculo.conductorNombre}</div>}
+            </div>
+          )}
+          {vc && (
+            <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+              <div style={etiqueta}>Vehículo contrario</div>
+              {vcTexto && <div>{vcTexto}</div>}
+              {vc.conductorNombre && <div><span style={muted}>conductor </span>{vc.conductorNombre}</div>}
+              {vc.otros.map((o, i) => (
+                <div key={i}><span style={muted}>{o.descripcion ?? 'dato'} </span>{o.valor}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {d.asistencias && (
+        <div>
+          <div style={etiqueta}>Asistencias</div>
+          <ul style={listaCima}>
+            {d.asistencias.map((a, i) => (
+              <li key={i} style={{ overflowWrap: 'anywhere' }}>
+                {a.descripcion ?? <span style={muted}>asistencia</span>}
+                {a.prestador && <span style={muted}> · {a.prestador}</span>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(d.contactoNombre || d.contactoTelefono || d.contactoObservaciones) && (
+        <div style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+          <div style={etiqueta}>Persona de contacto (compañía)</div>
+          {d.contactoNombre && <div>{d.contactoNombre}</div>}
+          {d.contactoTelefono && (
+            <div>{tel ? <a href={tel} style={{ display: 'inline-block', minHeight: 44, lineHeight: '44px' }}>📞 {d.contactoTelefono}</a> : d.contactoTelefono}</div>
+          )}
+          {d.contactoObservaciones && <div style={{ ...muted, whiteSpace: 'pre-wrap' }}>{d.contactoObservaciones}</div>}
+        </div>
+      )}
+
+      {d.descripcion && (
+        <div>
+          <div style={etiqueta}>Descripción de la compañía</div>
+          <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{d.descripcion}</div>
+        </div>
       )}
     </div>
   )
@@ -693,6 +860,7 @@ function Detalle({ s, documentos, onAnotar, onAnadirTercero, onQuitarTercero, ra
 
       <BloqueDanos danos={s.danosCima} />
       <BloqueTramitacion t={s.tramitacionCima} />
+      <BloqueDetalleCima s={s} />
 
       {propio && (
         <BloqueRamo siniestroId={s.id} ramoPoliza={ramoPoliza} datosRamo={s.datosRamo} onGuardar={onAnotar} />
@@ -1093,6 +1261,7 @@ function cajaMensaje(tono: Mensaje['tono']): React.CSSProperties {
 
 const tarjeta: React.CSSProperties = { border: '1px solid var(--border)', borderRadius: 12, padding: 14 }
 const muted: React.CSSProperties = { color: 'var(--muted)' }
+const listaCima: React.CSSProperties = { margin: '4px 0 0', paddingLeft: 18, fontSize: 13, display: 'grid', gap: 2 }
 const etiqueta: React.CSSProperties = { fontSize: 11, color: 'var(--muted)', fontWeight: 600, marginBottom: 2 }
 const chip: React.CSSProperties = {
   fontSize: 11, padding: '1px 8px', borderRadius: 999, whiteSpace: 'nowrap',
