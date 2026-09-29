@@ -57,6 +57,14 @@ export type DevolucionEntrada = {
 }
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** Fecha de calendario REAL: `2026-02-31` tiene forma pero no existe, y el `::date` tumbaría el lote entero. */
+function fechaValida(s: string | null): s is string {
+  if (s === null || !FECHA.test(s)) return false
+  const d = new Date(`${s}T00:00:00Z`)
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === s
+}
 const texto = (v: unknown, max: number): string | null => (typeof v === 'string' && v.trim() !== '' ? v.trim().slice(0, max) : null)
 
 /** Valida el cuerpo que manda plataforma. Lo que no cuadra se rechaza entero: no se registra «a medias». */
@@ -73,8 +81,8 @@ export function validarDevoluciones(b: unknown): { ok: true; devoluciones: Devol
     const fechaEfecto = texto(d.fechaEfecto, 10)
     if (!codigoDgs || !/^[A-Z]\d{4}$/.test(codigoDgs)) return { ok: false, motivo: 'codigoDgs no válido' }
     if (!idRecibo || !/^[A-Za-z0-9-]+$/.test(idRecibo)) return { ok: false, motivo: 'idRecibo no válido' }
-    if (!fechaDevolucion || !FECHA.test(fechaDevolucion)) return { ok: false, motivo: 'fechaDevolucion no válida' }
-    if (fechaEfecto !== null && !FECHA.test(fechaEfecto)) return { ok: false, motivo: 'fechaEfecto no válida' }
+    if (!fechaValida(fechaDevolucion)) return { ok: false, motivo: 'fechaDevolucion no válida' }
+    if (fechaEfecto !== null && !fechaValida(fechaEfecto)) return { ok: false, motivo: 'fechaEfecto no válida' }
     const importe = typeof d.importe === 'number' && Number.isFinite(d.importe) && d.importe >= 0 ? d.importe : null
     out.push({ codigoDgs, idRecibo, numeroPoliza: texto(d.numeroPoliza, 40), importe, fechaEfecto, fechaDevolucion, motivo: texto(d.motivo, 120) })
   }
@@ -319,7 +327,9 @@ export async function seguirDevoluciones(tx: Tx, correduriaId: string, hoy: Date
         and x.id_recibo_norm = ltrim(r.id_recibo, '0') and x.resuelta_at is null
       limit 1) d on true
     where r.correduria_id = ${correduriaId}::uuid and r.situacion::text = 'devuelto'
-      and p.estado::text = any(${ESTADOS_VIGENTES}::text[])`
+      and p.estado::text = any(${ESTADOS_VIGENTES}::text[])
+    -- Orden fijo: los candados por póliza se toman siempre en el mismo orden.
+    order by p.id, r.id`
   let tareas = 0
   for (const r of recibos) {
     const res = await asegurarTareaDevolucion(tx, correduriaId, {
@@ -374,7 +384,7 @@ export type ResolucionDevolucion = { ok: true } | { ok: false; estado: 'no_encon
  * siguiente pull con su `devuelto`.
  */
 export async function resolverDevolucion(correduriaId: string, reciboId: string, actor: string): Promise<ResolucionDevolucion> {
-  if (!/^[0-9a-f-]{36}$/i.test(reciboId)) return { ok: false, estado: 'invalido', motivo: 'reciboId no válido', status: 422 }
+  if (!UUID.test(reciboId)) return { ok: false, estado: 'invalido', motivo: 'reciboId no válido', status: 422 }
   return prismaAsegura().$transaction(async (tx) => {
     const [r] = await tx.$queryRaw<{ clienteId: string; polizaId: string; situacion: string }[]>`
       select p.cliente_id::text as "clienteId", p.id::text as "polizaId", r.situacion::text as situacion
