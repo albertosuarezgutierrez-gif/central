@@ -33,6 +33,7 @@ import {
   POSTHOG_KEY,
   POSTHOG_HOST,
 } from '@/lib/analitica'
+import { esDispositivoInterno } from '@/lib/interno'
 
 const CONFIG = { categoria: 'statistics' as const, credencial: POSTHOG_KEY }
 
@@ -45,6 +46,14 @@ const CONFIG = { categoria: 'statistics' as const, credencial: POSTHOG_KEY }
 // tiene parada limpia por script suelto, así que retirar el consentimiento
 // deja de cargarlo en la SIGUIENTE visita, no en caliente.
 const GA4_ID = 'G-QP5DTDLJ5F'
+
+function dispositivoInterno(): boolean {
+  try {
+    return esDispositivoInterno(window.location.search, window.localStorage)
+  } catch {
+    return false
+  }
+}
 const CONFIG_GA4 = { categoria: 'statistics' as const, credencial: GA4_ID }
 
 export default function Analitica() {
@@ -78,7 +87,7 @@ export default function Analitica() {
       }
 
       if (puedeCargar({ statistics: acepta }, CONFIG_GA4) && !arrancadoGa4.current) {
-        cargarGa4(GA4_ID)
+        cargarGa4(GA4_ID, dispositivoInterno() ? { traffic_type: 'internal' } : undefined)
         arrancadoGa4.current = true
       }
 
