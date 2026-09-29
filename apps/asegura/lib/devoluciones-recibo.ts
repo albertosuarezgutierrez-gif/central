@@ -464,14 +464,15 @@ export async function darDeBajaPorDevolucion(
     const [r] = await tx.$queryRaw<{
       clienteId: string; polizaId: string; ramo: string; compania: string | null; numeroPoliza: string | null
       estado: string; situacion: string; baja: boolean; efecto: string | null; vencePoliza: string | null
-      importe: string | null; prima: string | null
+      importe: string | null; prima: string | null; matricula: string | null
     }[]>`
       select p.cliente_id::text as "clienteId", p.id::text as "polizaId", p.tipo::text as ramo, p.aseguradora as compania,
              p.numero_poliza as "numeroPoliza", p.estado::text as estado, r.situacion::text as situacion,
              p.baja_verificada_at is not null as baja,
              to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto,
              to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as "vencePoliza",
-             r.prima_total as importe, nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima
+             r.prima_total as importe, nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima,
+             nullif(trim(p.datos_especificos->>'matricula'), '') as matricula
       from poliza_recibos r join polizas p on p.id = r.poliza_id
       where r.id = ${reciboId}::uuid and r.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null
       for update of p`
@@ -544,7 +545,7 @@ export async function darDeBajaPorDevolucion(
         insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_id, info_riesgo)
         values (${correduriaId}::uuid, ${r.clienteId}::uuid, cast(${r.ramo} as tipo_seguro), 'renovacion', 'competencia',
                 ${vence}::date, ${r.prima}::numeric, ${r.polizaId}::uuid,
-                ${JSON.stringify({ origen: 'baja_verificada', polizaId: r.polizaId, companiaAnterior: r.compania, numeroPolizaAnterior: r.numeroPoliza, motivo })}::jsonb)
+                ${JSON.stringify({ origen: 'baja_verificada', polizaId: r.polizaId, companiaAnterior: r.compania, numeroPolizaAnterior: r.numeroPoliza, motivo, ...(r.matricula ? { matricula: r.matricula } : {}) })}::jsonb)
         returning id::text as id`
       oportunidadId = o.id
       await tx.$executeRaw`
