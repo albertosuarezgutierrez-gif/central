@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { MEDIADOR } from '@central/module-seguros'
 import { RAMOS, RAMOS_PRODUCTO } from '@/lib/ramos'
 import { COMPANIAS, COMPANIAS_EN_CARTERA } from '@/lib/companias'
-import { PORTAL_URL, url } from '@/lib/sitio'
+import { CALCULADORA_HIPOTECA, PORTAL_URL, url } from '@/lib/sitio'
 import Formulario from '@/components/Formulario'
 import PanelDemo from '@/components/PanelDemo'
 import Cifras from '@/components/Cifras'
@@ -305,6 +305,14 @@ export default function Home() {
           <VentanaRenovacion
             opciones={RAMOS.filter((r) => ramoTieneVentana(r.slug)).map((r) => ({ slug: r.slug, nombre: r.nombre }))}
           />
+          <Link href={CALCULADORA_HIPOTECA} className="tarjeta" style={{ marginTop: 'var(--e6)' }}>
+            <h3>¿El banco te pide su seguro por la hipoteca?</h3>
+            <p>Calcula lo que te cuesta de verdad: la prima que te cobra menos lo que te bonifica en el interés.</p>
+            <span className="tarjeta-mas">
+              Abrir la calculadora
+              <Flecha />
+            </span>
+          </Link>
         </div>
       </section>
 
