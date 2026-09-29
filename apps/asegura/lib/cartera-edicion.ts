@@ -29,12 +29,14 @@
 
 import {
   WHERE_CARTERA_VIVA,
+  claveTipoCarnet,
   coincidenciaBloquea,
   documentoAcredita,
   estadoDocumento,
   etiquetaContacto,
   normalizarContacto,
   revisarAlta,
+  revisarCarnet,
   revisarEdicion,
   nombrePendiente,
   textoHistorialAlta,
@@ -321,6 +323,32 @@ export async function duplicadoContacto(
   return forzar ? null : conflicto(otros, true)
 }
 
+/**
+ * ¿Tiene YA esta ficha ese valor? (29/09/2026, Alberto: «no se puede duplicar datos de contactos»,
+ * con el mismo móvil dos veces en la ficha de Antonio Cruz). `duplicadoContacto` solo mira OTRAS
+ * fichas; esto mira la propia. Se compara el valor DESCIFRADO y normalizado, no el índice ciego:
+ * cientos de fichas guardan el teléfono en la columna sin hash, y ahí un hash no ve el repetido.
+ * No se fuerza nunca: un número repetido en la misma ficha no aporta nada. `excepto` = la fila que
+ * se está corrigiendo (cambiar un valor por sí mismo no es duplicarlo).
+ */
+async function yaEnLaFicha(correduriaId: string, clienteId: string, tipo: TipoContacto, valor: string, excepto?: string): Promise<Fallo | null> {
+  const cs = await listarContactos(correduriaId, clienteId)
+  if (!cs) return null // sin poder leerla, decide el índice único de la tabla
+  const repetido = (tipo === 'telefono' ? cs.telefonos : cs.emails).some((c) => {
+    if (c.id === excepto || c.valor === null) return false
+    const n = normalizarContacto(tipo, c.valor)
+    return n.ok && n.valor === valor
+  })
+  if (!repetido) return null
+  return {
+    ok: false,
+    estado: 'invalido',
+    motivo: `${tipo === 'telefono' ? 'Ese teléfono' : 'Ese email'} ya está en esta ficha: no se duplica. Si quieres cambiar su etiqueta o hacerlo principal, edita el que ya está.`,
+    campo: tipo,
+    status: 409,
+  }
+}
+
 export async function anadirContacto(
   correduriaId: string,
   clienteId: string,
@@ -332,6 +360,8 @@ export async function anadirContacto(
   try {
     const c = await clienteDe(correduriaId, clienteId)
     if (!c) return noEncontrado()
+    const propio = await yaEnLaFicha(correduriaId, clienteId, tipo, norm.valor)
+    if (propio) return propio
     const dup = await duplicadoContacto(correduriaId, clienteId, tipo, norm.valor, entrada.principal === true, entrada.forzar === true)
     if (dup) return dup
     await bajarColumnaAHija(correduriaId, clienteId, tipo)
@@ -362,6 +392,9 @@ export async function anadirContacto(
     }
   } catch (e) {
     if (esUnicoViolado(e)) {
+      // Dos altas a la vez del mismo valor: el índice único por ficha frena la segunda.
+      const propio = await yaEnLaFicha(correduriaId, clienteId, tipo, norm.valor).catch(() => null)
+      if (propio) return propio
       const otros = await coincidencias(correduriaId, { [tipo]: norm.valor }, clienteId).catch(() => [])
       return conflicto(otros, false)
     }
@@ -439,6 +472,8 @@ export async function cambiarContacto(
       // así que cuenta como distinto: reescribirlo es justo lo que lo arregla.
       const actual = descifrarCampo(t ? t.telefono : m!.email)
       if (norm.valor !== actual) {
+        const propio = await yaEnLaFicha(correduriaId, clienteId, tipo, norm.valor, id)
+        if (propio) return propio
         const dup = await duplicadoContacto(correduriaId, clienteId, tipo, norm.valor, seraPrincipal, entrada.forzar === true)
         if (dup) return dup
         const { cifrado: valorCifrado, hash, mitades } = cifrado(tipo, norm.valor)
@@ -952,6 +987,74 @@ export async function altaCliente(
       const otros = await coincidencias(correduriaId, { dni: a.dni, telefono: a.telefono, email: a.email }).catch(() => [])
       return conflicto(otros, false)
     }
+    return fallo(e)
+  }
+}
+
+// ─── Carnés de conducir ──────────────────────────────────────────────────────
+// `cliente_carnets_conducir`, uno por TIPO: la misma persona puede tener B y A, nunca dos B (eso
+// sería decir dos antigüedades distintas del mismo permiso, y el tarificador cogería una al azar).
+// La fecha va cifrada, como la de nacimiento; el historial no la guarda.
+
+export type ResultadoCarnet = { ok: true; id: string } | Fallo
+
+/** Añade (`id` ausente) o corrige (`id` de un carné de la ficha) un carné: tipo y fecha de expedición. */
+export async function guardarCarnet(
+  correduriaId: string,
+  clienteId: string,
+  entrada: { id?: unknown; tipo: unknown; fecha: unknown; actor: string },
+): Promise<ResultadoCarnet> {
+  try {
+    const db = prismaAsegura()
+    const c = await db.cliente.findFirst({
+      where: { id: clienteId, correduriaId, mergedIntoClienteId: null },
+      select: { fechaNacimiento: true },
+    })
+    if (!c) return noEncontrado()
+    const r = revisarCarnet({
+      tipo: entrada.tipo,
+      fecha: entrada.fecha,
+      fechaNacimiento: descifrarCampo(c.fechaNacimiento),
+      hoy: new Date().toISOString().slice(0, 10),
+    })
+    if (!r.ok) return invalido(r.motivo, r.campo)
+    const id = typeof entrada.id === 'string' && entrada.id.trim() !== '' ? entrada.id.trim() : null
+    const todos = await db.clienteCarnetConducir.findMany({ where: { clienteId, correduriaId }, select: { id: true, tipo: true } })
+    const anterior = id ? todos.find((k) => k.id === id) : null
+    if (id && !anterior) return { ok: false, estado: 'no_encontrado', motivo: 'Ese carné ya no está en la ficha. Recarga.', status: 404 }
+    if (todos.some((k) => k.id !== id && claveTipoCarnet(k.tipo) === r.tipo)) {
+      return { ok: false, estado: 'invalido', motivo: `Ya tiene carné ${r.tipo} en la ficha: cambia su fecha en vez de añadir otro.`, campo: 'tipo', status: 409 }
+    }
+    const data = { tipo: r.tipo, fechaCarnet: encryptField(r.fecha) }
+    const nuevo = id
+      ? (await db.clienteCarnetConducir.update({ where: { id }, data, select: { id: true } })).id
+      : (await db.clienteCarnetConducir.create({ data: { clienteId, correduriaId, ...data }, select: { id: true } })).id
+    const antes = anterior ? claveTipoCarnet(anterior.tipo) : null
+    const que = !anterior ? `Carné ${r.tipo} añadido` : antes !== r.tipo ? `Carné ${antes} cambiado a ${r.tipo}` : `Fecha del carné ${r.tipo} corregida`
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'carnet' })
+    await anotarHistorial(correduriaId, clienteId, 'gestion', `${que} desde plataforma por ${entrada.actor}`)
+    return { ok: true, id: nuevo }
+  } catch (e) {
+    return fallo(e)
+  }
+}
+
+/** Quita un carné de la ficha (el anotado por error). */
+export async function borrarCarnet(
+  correduriaId: string,
+  clienteId: string,
+  entrada: { id: string; actor: string },
+): Promise<ResultadoCarnet> {
+  try {
+    if (!(await clienteDe(correduriaId, clienteId))) return noEncontrado()
+    const db = prismaAsegura()
+    const k = await db.clienteCarnetConducir.findFirst({ where: { id: entrada.id, clienteId, correduriaId }, select: { id: true, tipo: true } })
+    if (!k) return { ok: false, estado: 'no_encontrado', motivo: 'Ese carné ya no está en la ficha. Recarga.', status: 404 }
+    await db.clienteCarnetConducir.delete({ where: { id: k.id } })
+    anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'carnet' })
+    await anotarHistorial(correduriaId, clienteId, 'gestion', `Carné ${claveTipoCarnet(k.tipo)} retirado de la ficha desde plataforma por ${entrada.actor}`)
+    return { ok: true, id: k.id }
+  } catch (e) {
     return fallo(e)
   }
 }
