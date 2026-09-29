@@ -122,15 +122,27 @@ export const AMBITO = {
  * `youtube.com` y `google.com`, así que un perfil entra aquí por la palabra de
  * Alberto. El guardián comprueba la FORMA; que la URL sea suya, no puede.
  *
- * ⏳ Pendiente: la ficha de Google Business (existe y está verificada; falta su
- * URL canónica de Maps). Cuando entre, `geo` también deja de estar bloqueado.
+ * 📍 La ficha de Google Business va en su forma `?cid=`: es el identificador
+ * estable del sitio en Maps. La URL `/maps/place/…/@lat,lng,17z/data=…` que da el
+ * navegador lleva el encuadre del mapa pegado y cambia con cada vista. `cid` es
+ * el ÚNICO parámetro que el guardián admite, y solo en `/maps`.
  */
 export const PERFILES: readonly string[] = [
   // Canal de YouTube. El handle canónico lleva las mayúsculas del monograma
   // («AS» = Alberto Suárez), igual que la marca: YouTube no las distingue, pero
   // en datos estructurados va la forma que el propio canal publica.
   'https://www.youtube.com/@GrupoASegura',
+  // Ficha de Google Business (Maps). CID = 0xc09217e32b3f9bbc de la URL del
+  // sitio, pasado a decimal. Dado por el panel de la ficha el 29/09/2026.
+  'https://www.google.com/maps?cid=13876179666332523452',
 ] as const
+
+/**
+ * Coordenadas del pin de la ficha de Google Business (29/09/2026). Salen de la
+ * propia ficha, no de geocodificar la dirección: `geo` tiene que coincidir con
+ * el pin que Google ya muestra, o la ficha y la web se contradicen.
+ */
+export const GEO = { latitude: 37.3948384, longitude: -5.9904272 } as const
 
 /** Navegación principal. El orden es el de prioridad comercial, no el alfabético. */
 export const NAV = [
