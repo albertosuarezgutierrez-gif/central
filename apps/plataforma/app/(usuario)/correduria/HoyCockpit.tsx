@@ -6,7 +6,7 @@ import { Check, Phone, TriangleAlert } from 'lucide-react'
 import { etiquetaActividad, riesgoActividad, type EmbudoPortal, type EventoActividad } from '@central/module-seguros'
 import { btnStyle } from '@/components/ui'
 import { interpretarActividad } from '@/lib/actividad-asegura'
-import { colaLlamadas, TIPOS_TAREA_UI, type LeadsVencimientos, type TareasDeHoy } from '@/lib/seguimiento-asegura'
+import { TIPOS_TAREA_UI, type TareasDeHoy } from '@/lib/seguimiento-asegura'
 import type { VistaIngesta } from '@/lib/correduria/ingesta-pantalla'
 import { agregarContadores, type Contador, type Destino } from './secciones'
 import { cuandoTarea, lineaEstadoIngesta, sinInvitar } from './hoy-cockpit'
@@ -83,9 +83,10 @@ export default function HoyCockpit({
 
   useEffect(() => {
     cargarTareas()
-    fetch('/api/correduria/leads-competencia?dias=90')
+    // Solo el número (cacheado 5 min): la lista entera eran ~1,4 MB de BD por visita.
+    fetch('/api/correduria/contador?c=llamadas')
       .then(r => (r.ok ? r.json() : null))
-      .then((d: LeadsVencimientos | null) => setLlamadas(d?.estado === 'ok' ? colaLlamadas(d.leads).length : null))
+      .then((d: { estado?: string; n?: number | null } | null) => setLlamadas(d?.estado === 'ok' && typeof d.n === 'number' ? d.n : null))
       .catch(() => setLlamadas(null))
   }, [cargarTareas])
 
