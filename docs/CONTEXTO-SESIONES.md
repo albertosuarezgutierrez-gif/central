@@ -879,6 +879,11 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - Bug: la re-cotización del «previo» de moto perdía el garaje (216,53€ fue «sin garaje»); ya se restaura.
 - Pendiente: entrega 2 (moto con figuras) y 3 (pedir datos a un tercero, emisión→intervinientes, renovación desde póliza, «Pasar la oportunidad a…»). Al abrir una variante se usan las figuras VIGENTES, no la foto de esa variante.
 
+## (29/09/2026) Descuento comercial: visible en la parrilla y ajustable en preemisión (Allianz coche)
+- Parrilla: cada precio enseña su descuento comercial (opciones del producto: Allianz auto CAP 25 % + venta cruzada 25 %, Occident 30 %, Allianz moto/hogar y Generali 0 %). `null` = no leído ≠ `[]`.
+- Preemisión: `descuentos {dtoCap 0-99, dtoVentaCruzada 0-100}` en `/api/operador/codeoscopic/oferta`; límites del formulario real del vendor (repo `asegura`, `product-form-catalog.data.ts`, stage preissuance). Validado y rechazado con 422 ANTES de tocar el proyecto o gastar el ReRate. Solo Allianz coche.
+- [Probable] el descuento sale de la comisión: sin confirmar con Allianz/Codeoscopic. El endpoint de límites vivo es `GET /insurance-lines/{línea}/product-configs/fields?stage=preissuance&priceId=…` (no cableado).
+
 ## (29/09/2026) Garantías de hogar: todo riesgo, restauración estética, animales y asistencia básica/ampliada
 - Catálogo hogar (module-seguros): `todo_riesgo_accidental`, `restauracion_estetica`, `animales`, `asistencia_hogar_ampliada` (texto Fidelidade «ASISTENCIA HOGAR AMPLIADA/BÁSICA»). Opción Fidelidade «Todo riesgo accidental: No» → no.
 - Regla general: cobertura con `incluida` null y texto «(opcional)» → `no`; si el vendor dice `incluida: true`, manda él (Allianz). `asistencia_hogar` excluye «Asistencia en viaje / Accidentes».

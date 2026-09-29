@@ -962,6 +962,8 @@ export {
   VERSION_CATALOGO,
   asistenciaAmpliada,
   asistenciaHogarAmpliada,
+  descuentosDeOpciones,
+  type DescuentoComercial,
   garantiasDeOpciones,
   type OpcionProductoLegible,
   claveCobertura,

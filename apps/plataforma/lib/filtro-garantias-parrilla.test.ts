@@ -6,7 +6,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
 import { interpretarTarificacionNueva } from './retarificar-asegura.ts'
-import { ocultarParaPreparar, opcionesDeParrilla, quedaAlgunaVisible } from './filtro-garantias-parrilla.ts'
+import { ocultarParaPreparar, opcionesDeParrilla, quedaAlgunaVisible, textoDescuentos } from './filtro-garantias-parrilla.ts'
 
 const U = (n: number) => `0b0f5a3e-1c2d-4e5f-8a9b-0c1d2e3f4a5${n}`
 const G = (porClave: Record<string, string>) => ({ version: 1, porClave })
@@ -80,4 +80,14 @@ test('ocultar: compañía entera por nombre (sin repetir sus precios) + precios 
   assert.equal(quedaAlgunaVisible(ops, { companias: new Set(['allianz', 'mapfre', 'reale']), precios: new Set() }), false)
   // Una opción sin prima no cuenta como «algo que enseñar».
   assert.equal(quedaAlgunaVisible([{ id: U(9), compania: 'X', primaEur: null }], { companias: new Set(), precios: new Set() }), false)
+})
+
+test('textoDescuentos: lo que la compañía dice; sin dato no se pinta nada', () => {
+  assert.equal(textoDescuentos([{ etiqueta: 'CAP', pct: 25 }, { etiqueta: 'venta cruzada', pct: 25 }]), 'Dto. comercial 25 % (CAP) · 25 % (venta cruzada)')
+  assert.equal(textoDescuentos([{ etiqueta: 'comercial', pct: 30 }]), 'Dto. comercial 30 %')
+  assert.equal(textoDescuentos([{ etiqueta: 'CAP', pct: 0 }, { etiqueta: 'venta cruzada', pct: 0 }]), 'sin descuento comercial')
+  assert.equal(textoDescuentos([]), null)
+  assert.equal(textoDescuentos(null), null)
+  const { opciones } = opcionesDeParrilla([{ precioId: '11111111-1111-4111-8111-111111111111', compania: 'Allianz', primaEur: 300, descuentos: [{ etiqueta: 'CAP', pct: 25 }] } as never])
+  assert.deepEqual(opciones[0]!.descuentos, [{ etiqueta: 'CAP', pct: 25 }])
 })

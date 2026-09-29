@@ -22,6 +22,7 @@ import {
   ocultarParaPreparar,
   opcionesDeParrilla,
   quedaAlgunaVisible,
+  textoDescuentos,
   type OpcionParrilla,
 } from '@/lib/filtro-garantias-parrilla'
 import PrepararPresupuesto from './poliza/[id]/retarificar/PrepararPresupuesto'
@@ -175,6 +176,9 @@ export default function FiltroGarantias({
                 o.capitalServicioEur !== null ? <> · capital {eur(o.capitalServicioEur)}</> : <> · capital no consta</>
               )}
             </span>
+            {textoDescuentos(o.descuentos) && (
+              <span style={{ display: 'block', color: 'var(--muted)', fontSize: 12 }}>{textoDescuentos(o.descuentos)}</span>
+            )}
             {dif && dif.noIncluye.length > 0 && (
               <span style={{ display: 'block', fontSize: 12 }}>No incluye: {resumirLista(dif.noIncluye)}</span>
             )}

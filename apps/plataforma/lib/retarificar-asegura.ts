@@ -40,7 +40,7 @@ import { describirCausaAsegura, MOTIVOS_PUERTO, type MotivoPuerto } from './corr
 // de verdad, y son el contrato de `defensaDeCartera()` — que es quien los va a
 // consumir. Duplicarlos aquí sería crear una segunda definición del argumento de
 // una función que ya se importa de ese mismo sitio.
-import type { CompaniaCatalogo, GarantiasClasificadas, PolizaCliente } from '@central/module-seguros'
+import type { CompaniaCatalogo, DescuentoComercial, GarantiasClasificadas, PolizaCliente } from '@central/module-seguros'
 import { cabecerasPuerto } from './puerto-actor.ts'
 
 export type { MotivoPuerto }
@@ -603,6 +603,9 @@ export type Precio = {
    * `null` = todavía no se han leído sus coberturas («no se sabe», NUNCA «no incluye nada»).
    */
   garantias?: GarantiasClasificadas | null
+  /** Descuentos comerciales con los que la compañía tarificó este precio. `undefined` = asegura no
+   *  manda el campo; `null` = sus opciones aún no se han leído; `[]` = la compañía no manda ninguno. */
+  descuentos?: DescuentoComercial[] | null
 }
 
 export type Fallo = {
@@ -1178,6 +1181,9 @@ export async function ofertaAsegura(p: {
    *  un `faltan_producto` anterior (`ProductFormWidget::getProductOptions()`,
    *  reenviado TAL CUAL — ver `apps/asegura/.../oferta/route.ts`). */
   productOptions?: unknown[]
+  /** Descuento comercial ajustado por el corredor (Allianz coche). Asegura lo valida con los
+   *  límites del formulario real antes de llamar a la compañía. */
+  descuentos?: { dtoCap?: number; dtoVentaCruzada?: number }
 }): Promise<RespuestaOferta> {
   try {
     const r = await pedir(
@@ -1679,6 +1685,13 @@ function leerGarantias(v: unknown): GarantiasClasificadas | null {
   return { version: o.version, porClave }
 }
 
+/** `descuentos` de un precio guardado, validado. `null` = no se han leído; forma rara → `null`. */
+export function leerDescuentos(v: unknown): DescuentoComercial[] | null {
+  if (!Array.isArray(v)) return null
+  return v.filter((d): d is DescuentoComercial =>
+    !!d && typeof (d as DescuentoComercial).etiqueta === 'string' && typeof (d as DescuentoComercial).pct === 'number' && Number.isFinite((d as DescuentoComercial).pct))
+}
+
 function leerPreciosGuardados(v: unknown): Precio[] | null {
   if (!Array.isArray(v)) return null
   return v.map((raw): Precio => {
@@ -1695,6 +1708,7 @@ function leerPreciosGuardados(v: unknown): Precio[] | null {
         ? UUID_PRECIO.test(x.id.trim()) ? { precioId: x.id.trim().toLowerCase() } : { id: x.id.trim() }
         : {}),
       ...(x.garantias === undefined ? {} : { garantias: leerGarantias(x.garantias) }),
+      ...(x.descuentos === undefined ? {} : { descuentos: leerDescuentos(x.descuentos) }),
       compania: cadenaONulo(x.compania),
       producto: cadenaONulo(x.producto),
       categoria: cadenaONulo(x.categoria),

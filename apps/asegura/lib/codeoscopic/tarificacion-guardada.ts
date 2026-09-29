@@ -8,7 +8,8 @@
 // precio con la compañía sigue siendo `POST .../oferta`, que se pide igual
 // sobre el `projectId` recuperado.
 
-import type { GarantiasClasificadas } from '@central/module-seguros'
+import { descuentosDeOpciones, type DescuentoComercial, type GarantiasClasificadas } from '@central/module-seguros'
+import { listaOpciones } from './coberturas-tarificacion.ts'
 import { prisma } from '../tenant.ts'
 import { extraerFormularioAuto, extraerVehiculoGuardado, type FormularioAutoGuardado, type VehiculoGuardado } from './formulario-guardado.ts'
 import { fechaEfectoCaducada } from './fecha-efecto.ts'
@@ -28,6 +29,9 @@ export type PrecioGuardado = {
   /** Garantías clasificadas (`{version, porClave}`). `null` = aún no se han leído sus
    *  coberturas (o el ramo no tiene catálogo) — «no se sabe», nunca «no incluye nada». */
   garantias: GarantiasClasificadas | null
+  /** Descuentos comerciales con los que la compañía tarificó este precio (opciones del producto).
+   *  `null` = sus opciones aún no se han leído (no «sin descuento»); `[]` = no manda ninguno. */
+  descuentos: DescuentoComercial[] | null
 }
 
 export type TarificacionGuardada = {
@@ -125,10 +129,11 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
       firmeza: string | null
       avisos: unknown
       garantias: unknown
+      opciones: unknown
     }[]
   >`
     select id::text as id, compania, producto, modalidad, categoria, prima_eur, entrada_eur, franquicia_eur,
-           firmeza, avisos, garantias
+           firmeza, avisos, garantias, opciones
     from tarificacion_precios
     where tarificacion_id = ${t.id}::uuid
     order by prima_eur asc nulls last
@@ -157,6 +162,7 @@ async function cargarPrecios(t: { id: string; creado_at: Date; project_id_codeos
       firmeza: p.firmeza ?? 'estimado',
       avisos: Array.isArray(p.avisos) ? p.avisos.filter((a): a is string => typeof a === 'string') : [],
       garantias: garantiasDe(p.garantias),
+      descuentos: descuentosDeOpciones(listaOpciones(p.opciones)),
     })),
   }
 }

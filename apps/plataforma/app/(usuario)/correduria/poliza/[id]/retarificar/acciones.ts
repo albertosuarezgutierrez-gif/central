@@ -143,6 +143,8 @@ export async function pedirOferta(entrada: {
   correcciones?: Record<string, string>
   /** Lo guardado del Product Form Library tras un `faltan_producto` anterior. */
   productOptions?: unknown[]
+  /** Descuento comercial ajustado (Allianz coche). */
+  descuentos?: { dtoCap?: number; dtoVentaCruzada?: number }
 }): Promise<RespuestaOferta> {
   const bloqueo = await sinAccesoCorreduria()
   if (bloqueo) return { estado: 'sin_configurar', mensaje: bloqueo }

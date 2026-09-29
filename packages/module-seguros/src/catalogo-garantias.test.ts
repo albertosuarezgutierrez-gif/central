@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, asistenciaHogarAmpliada, garantiasDeOpciones, noReconocidas } from './catalogo-garantias.ts'
+import { CATALOGO_GARANTIAS, clasificarCoberturas, asistenciaAmpliada, asistenciaHogarAmpliada, descuentosDeOpciones, garantiasDeOpciones, noReconocidas } from './catalogo-garantias.ts'
 import { filtrarPorGarantias, interruptoresGarantias } from './filtro-garantias.ts'
 
 // Nombres REALES de coberturas de moto de Codeoscopic (presupuesto de Manuel, 28/09/2026).
@@ -161,4 +161,17 @@ test('hogar: todo riesgo, restauración estética, animales y asistencia básica
   assert.equal(clasificarCoberturas('hogar', null, [{ etiqueta: 'Todo riesgo accidental', valor: 'No' }]).porClave.todo_riesgo_accidental, 'no')
   // «(opcional)» sin paréntesis o con `incluida` marcada no cambia nada.
   assert.equal(clasificarCoberturas('hogar', [{ nombre: 'Todo riesgo accidental', incluida: null, texto: 'Opcional según capital' }]).porClave.todo_riesgo_accidental, 'no_consta')
+})
+
+test('descuentos comerciales de las opciones: valores REALES; null ≠ [] ≠ 0', () => {
+  assert.deepEqual(descuentosDeOpciones([
+    { etiqueta: 'Descuento comercial % (CAP)', valor: '25' },
+    { etiqueta: 'Descuento comercial % (venta cruzada)', valor: '0' },
+    { etiqueta: 'Tipo de comisión sobre la prima', valor: 'A' },
+  ]), [{ etiqueta: 'CAP', pct: 25 }, { etiqueta: 'venta cruzada', pct: 0 }])
+  assert.deepEqual(descuentosDeOpciones([{ etiqueta: 'Descuento comercial', valor: '30' }]), [{ etiqueta: 'comercial', pct: 30 }])
+  assert.deepEqual(descuentosDeOpciones([{ etiqueta: 'Vehículo Km 0', valor: 'No' }]), [])
+  assert.equal(descuentosDeOpciones(null), null)
+  // 🪤 Vacío no es 0.
+  assert.deepEqual(descuentosDeOpciones([{ etiqueta: 'Descuento comercial', valor: '  ' }]), [])
 })
