@@ -1,8 +1,8 @@
 {
  "sesion": "41ad2a07-c224-528c-a7f8-751825c6928f",
  "inicio": "2026-09-29T09:09:25.222Z",
- "fin": "2026-09-29T09:59:37.302Z",
- "llamadas": 181,
+ "fin": "2026-09-29T10:57:51.982Z",
+ "llamadas": 215,
  "categorias": {
   "lectura-directa": {
    "llamadas": 2,
@@ -17,24 +17,24 @@
    }
   },
   "otro": {
-   "llamadas": 15,
-   "chars_in": 8901,
-   "chars_out": 121157,
+   "llamadas": 28,
+   "chars_in": 9209,
+   "chars_out": 200418,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 53476,
    "tools": {
-    "ToolSearch": 7,
-    "ReadNotifications": 5,
+    "ToolSearch": 11,
+    "ReadNotifications": 14,
     "SubagentHandback": 1,
     "ReportFindings": 1,
     "Skill": 1
    }
   },
   "mcp:github": {
-   "llamadas": 6,
-   "chars_in": 6528,
-   "chars_out": 11435,
+   "llamadas": 10,
+   "chars_in": 7142,
+   "chars_out": 30259,
    "errores": 0,
    "archivos_citados": 1,
    "chars_citados": 2492,
@@ -43,18 +43,20 @@
     "mcp__github__create_pull_request": 1,
     "mcp__github__add_issue_comment": 1,
     "mcp__github__update_pull_request": 2,
-    "mcp__github__actions_list": 1
+    "mcp__github__actions_list": 1,
+    "mcp__github__pull_request_read": 3,
+    "mcp__github__merge_pull_request": 1
    }
   },
   "bash": {
-   "llamadas": 149,
-   "chars_in": 83181,
-   "chars_out": 592685,
+   "llamadas": 158,
+   "chars_in": 84780,
+   "chars_out": 595433,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 149
+    "Bash": 158
    }
   },
   "sql": {
@@ -91,15 +93,30 @@
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 2,
-   "chars_in": 313,
-   "chars_out": 347,
+   "llamadas": 4,
+   "chars_in": 432,
+   "chars_out": 2022,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
-    "mcp__Claude_Code_Remote__send_later": 1
+    "mcp__Claude_Code_Remote__send_later": 1,
+    "mcp__Claude_Code_Remote__unsubscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__delete_trigger": 1
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 6,
+   "chars_in": 784,
+   "chars_out": 16475,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__list_deployments": 4,
+    "mcp__Vercel__create_deployment": 1,
+    "mcp__Vercel__web_fetch_vercel_url": 1
    }
   }
  }
