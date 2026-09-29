@@ -75,33 +75,39 @@ export type EntradaTareaDevolucion = {
 
 const eur = (n: number): string => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€`
 
-/** Texto de la tarea para Alberto (no se le manda al cliente). */
+/**
+ * Texto de la tarea para Alberto (no se le manda al cliente). La PRIMERA línea es el titular que
+ * enseñan las listas (Hoy, Inicio, Telegram); el motivo, qué preguntar y el plazo van debajo.
+ */
 export function textoTareaDevolucion(e: EntradaTareaDevolucion): string {
-  return PREFIJO_TAREA_DEVOLUCION + cuerpoTarea(e)
+  const { titular, detalle } = cuerpoTarea(e)
+  return `${PREFIJO_TAREA_DEVOLUCION}${titular}\n${detalle}`
 }
 
-function cuerpoTarea(e: EntradaTareaDevolucion): string {
+function cuerpoTarea(e: EntradaTareaDevolucion): { titular: string; detalle: string } {
   const seguro = [e.ramo ? e.ramo.replace(/_/g, ' ') : 'seguro', e.compania].filter(Boolean).join(' de ')
   const importe = e.importe !== null ? ` de ${eur(e.importe)}` : ''
-  const efecto = e.fechaEfecto ? ` (efecto ${fechaEs(e.fechaEfecto)})` : ''
+  const efecto = e.fechaEfecto ? `Efecto ${fechaEs(e.fechaEfecto)}.` : ''
   const suspende = suspensionDesde(e.fechaEfecto)
-  const plazo = suspende ? ` La cobertura queda en suspenso el ${fechaEs(suspende)} si no se paga.` : ' Sin fecha de efecto: mira el plazo en el portal de la compañía.'
+  const plazo = suspende ? `La cobertura queda en suspenso el ${fechaEs(suspende)} si no se paga.` : 'Sin fecha de efecto: mira el plazo en el portal de la compañía.'
   const porque =
     e.tipoMotivo === 'cuenta'
-      ? ` Motivo del banco «${e.motivo}»: apunta a la CUENTA o al titular. Confirmar IBAN y titular de la domiciliación y pasar el bueno a la compañía.`
+      ? `Motivo del banco «${e.motivo}»: apunta a la CUENTA o al titular. Confirmar IBAN y titular de la domiciliación y pasar el bueno a la compañía.`
       : e.tipoMotivo === 'cliente_rechaza'
-        ? ` Motivo «${e.motivo}»: lo devolvió el propio cliente. ¿Se va, ha vendido, otra compañía o es precio? Si es precio → presupuesto.`
+        ? `Motivo «${e.motivo}»: lo devolvió el propio cliente. ¿Se va, ha vendido, otra compañía o es precio? Si es precio → presupuesto.`
         : e.tipoMotivo === 'fondos'
-          ? ` Motivo «${e.motivo}»: sin fondos. Acordar cómo pagarlo.`
-          : ` Preguntar: ¿cuenta mal, ha vendido, se ha ido a otra compañía o es precio? Si es precio → presupuesto.`
+          ? `Motivo «${e.motivo}»: sin fondos. Acordar cómo pagarlo.`
+          : 'Preguntar: ¿cuenta mal, ha vendido, se ha ido a otra compañía o es precio? Si es precio → presupuesto.'
+  const recibo = `recibo devuelto${importe} del ${seguro}`
+  const junta = (...partes: string[]) => partes.filter(Boolean).join(' ')
   switch (e.hito) {
     case 'inicial':
-      return `Recibo DEVUELTO${importe} del ${seguro}${efecto}.${porque}${plazo}`
+      return { titular: `Recibo DEVUELTO${importe} del ${seguro}`, detalle: junta(efecto, porque, plazo) }
     case 'segunda_llamada':
-      return `Segunda llamada: el recibo devuelto${importe} del ${seguro}${efecto} sigue sin cobrarse.${porque}${plazo}`
+      return { titular: `Segunda llamada: ${recibo}`, detalle: junta('Sigue sin cobrarse.', efecto, porque, plazo) }
     case 'ultimo_aviso':
-      return `ÚLTIMO AVISO: recibo devuelto${importe} del ${seguro}${efecto}.${plazo}${e.ramo === 'auto' || e.ramo === 'moto' ? ' Sin seguro obligatorio no puede circular.' : ''}`
+      return { titular: `ÚLTIMO AVISO: ${recibo}`, detalle: junta(efecto, plazo, e.ramo === 'auto' || e.ramo === 'moto' ? 'Sin seguro obligatorio no puede circular.' : '') }
     case 'sin_cobertura':
-      return `SIN COBERTURA: el recibo devuelto${importe} del ${seguro}${efecto} no se ha pagado y la cobertura está en suspenso. Si paga, vuelve a estar cubierto a las 24 h.`
+      return { titular: `SIN COBERTURA: ${recibo}`, detalle: junta(efecto, 'No se ha pagado y la cobertura está en suspenso. Si paga, vuelve a estar cubierto a las 24 h.') }
   }
 }

@@ -7,6 +7,7 @@ import { carteraAsegura, vencimientosAsegura } from '@/lib/cartera-asegura'
 import { describirCausaAsegura } from '@/lib/correduria-puerto'
 import { colaLlamadas, interpretarLeads, interpretarTareasHoy, leadsCompetenciaAsegura, tareasHoyAsegura } from '@/lib/seguimiento-asegura'
 import { cuandoTarea } from '../correduria/hoy-cockpit'
+import { resumirTarea } from '@/lib/correduria/resumen-tarea'
 import { Badge } from '@/components/ui'
 import { repartoVencimientos } from '@/lib/inicio-resumen'
 import { Cifra, Cifras, NoDisponible, Tarjeta, fila, subTitulo } from './piezas'
@@ -124,7 +125,7 @@ async function DatosCorreduria() {
                 <Link key={t.id} href={`/correduria/oportunidad/${t.oportunidadId}`} style={fila}>
                   <span style={{ minWidth: 0 }}>
                     <span style={{ display: 'block', fontWeight: 600, overflowWrap: 'anywhere' }}>{t.cliente ?? 'Cliente sin nombre legible'}</span>
-                    <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{[t.ramo, t.observaciones].filter(Boolean).join(' · ') || t.tipo}</span>
+                    <span style={{ display: 'block', fontSize: 12, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{[t.ramo, resumirTarea(t.observaciones).titulo].filter(Boolean).join(' · ') || t.tipo}</span>
                   </span>
                   <Badge tono={c.vencida ? 'negativo' : 'aviso'}>{c.vencida ? `Vencida ${c.texto}` : 'Hoy'}</Badge>
                 </Link>

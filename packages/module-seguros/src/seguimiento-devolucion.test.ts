@@ -34,3 +34,14 @@ test('toda tarea del seguimiento lleva su marca (y solo esas se cierran al pasar
   const t = textoTareaDevolucion({ hito: 'sin_cobertura', ramo: null, compania: null, importe: null, fechaEfecto: null, tipoMotivo: null, motivo: null })
   assert.ok(t.startsWith(PREFIJO_TAREA_DEVOLUCION))
 })
+
+test('la primera línea es un titular corto; el motivo y el plazo van debajo', () => {
+  const base = { ramo: 'responsabilidad_civil', compania: 'Occident', importe: 1234.56, fechaEfecto: '2026-09-19', tipoMotivo: 'cuenta' as const, motivo: 'RAZONES.REG.' }
+  for (const hito of ['inicial', 'segunda_llamada', 'ultimo_aviso', 'sin_cobertura'] as const) {
+    const [titular, ...resto] = textoTareaDevolucion({ ...base, hito }).split('\n')
+    assert.ok(titular.length <= 90, `${hito}: titular de ${titular.length} caracteres`)
+    assert.match(titular, /1\.234,56€/)
+    assert.ok(resto.join(' ').trim().length > 0, `${hito}: sin detalle`)
+    assert.doesNotMatch(titular, /suspenso el|Motivo/)
+  }
+})

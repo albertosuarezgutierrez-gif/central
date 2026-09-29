@@ -8,6 +8,7 @@ import { btnStyle } from '@/components/ui'
 import { interpretarActividad } from '@/lib/actividad-asegura'
 import { TIPOS_TAREA_UI, type TareasDeHoy } from '@/lib/seguimiento-asegura'
 import type { VistaIngesta } from '@/lib/correduria/ingesta-pantalla'
+import { resumirTarea } from '@/lib/correduria/resumen-tarea'
 import { agregarContadores, type Contador, type Destino } from './secciones'
 import { cuandoTarea, lineaEstadoIngesta, sinInvitar } from './hoy-cockpit'
 import { ConIcono } from './iconos'
@@ -165,17 +166,27 @@ export default function HoyCockpit({
         )}
         {tareas?.estado === 'ok' && (verTodas ? tareas.tareas : tareas.tareas.slice(0, MOSTRAR_TAREAS)).map(t => {
           const c = cuandoTarea(t.fechaLimite, hoy)
+          // Un párrafo entero ocupaba diez renglones por fila: en la lista va el titular y el resto, plegado.
+          const r = resumirTarea(t.observaciones)
           return (
             <div key={t.id} style={{ display: 'grid', gridTemplateColumns: '44px minmax(0, 1fr) auto', gap: 10, alignItems: 'center', padding: '6px 0', borderTop: '1px solid var(--border)' }}>
-              <button type="button" disabled={ocupado !== null} onClick={() => void cerrar(t.id)} aria-label={`Marcar hecha: ${t.observaciones}`} title="Marcar hecha" style={{ ...btnStyle('secundario'), width: 44, padding: 0 }}>
+              <button type="button" disabled={ocupado !== null} onClick={() => void cerrar(t.id)} aria-label={`Marcar hecha: ${r.titulo}`} title="Marcar hecha" style={{ ...btnStyle('secundario'), width: 44, padding: 0 }}>
                 <Check size={18} strokeWidth={1.75} />
               </button>
-              <Link href={`/correduria/oportunidad/${t.oportunidadId}`} style={{ display: 'grid', gap: 2, minWidth: 0, color: 'var(--text)', textDecoration: 'none' }}>
-                <span style={{ fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>{rotuloTipo(t.tipo)} · {t.observaciones.split('\n')[0] || '(sin descripción)'}</span>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>
-                  {t.cliente ?? '(ficha sin nombre)'}{t.ramo ? ` · ${t.ramo}` : ''}{t.prioridad === 'alta' ? ' · prioridad alta' : ''}
-                </span>
-              </Link>
+              <div style={{ display: 'grid', minWidth: 0 }}>
+                <Link href={`/correduria/oportunidad/${t.oportunidadId}`} style={{ display: 'grid', gap: 2, minWidth: 0, color: 'var(--text)', textDecoration: 'none' }}>
+                  <span style={{ ...DOS_LINEAS, fontSize: 14, fontWeight: 600, overflowWrap: 'anywhere' }}>{rotuloTipo(t.tipo)} · {r.titulo || '(sin descripción)'}</span>
+                  <span style={{ fontSize: 12, color: 'var(--muted)' }}>
+                    {t.cliente ?? '(ficha sin nombre)'}{t.ramo ? ` · ${t.ramo}` : ''}{t.prioridad === 'alta' ? ' · prioridad alta' : ''}
+                  </span>
+                </Link>
+                {r.detalle && (
+                  <details>
+                    <summary style={{ cursor: 'pointer', minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 12, color: 'var(--primary)' }}>Ver detalle</summary>
+                    <p style={{ margin: '0 0 6px', fontSize: 13, color: 'var(--text)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{r.detalle}</p>
+                  </details>
+                )}
+              </div>
               <span style={{ fontSize: 13, fontWeight: 600, color: c.vencida ? 'var(--negative)' : 'var(--text)' }}>{c.texto}</span>
             </div>
           )
@@ -265,3 +276,5 @@ const CELDA: React.CSSProperties = { display: 'grid', gap: 2, padding: '12px 14p
 const NUM: React.CSSProperties = { fontSize: 24, fontWeight: 800, lineHeight: 1.1 }
 const TITULO: React.CSSProperties = { margin: 0, fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: 'var(--muted)' }
 const NOTA: React.CSSProperties = { margin: 0, fontSize: 13, color: 'var(--muted)' }
+/** Red de seguridad por si el titular aún es largo: nunca más de dos renglones en la lista. */
+const DOS_LINEAS: React.CSSProperties = { display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }
