@@ -79,12 +79,11 @@ export default function CalculadoraBonificacionHipoteca() {
 
       <h1>¿Cuánto te cuesta de verdad el seguro del banco?</h1>
       <p style={{ fontSize: 17, color: 'var(--muted)', maxWidth: 640 }}>
-        Si el banco te rebaja el tipo de la hipoteca por contratar su seguro de vida o de hogar, esa rebaja cuenta.
-        Pon tus cifras y verás lo que te cuesta el seguro <strong style={{ color: 'var(--text)' }}>una vez
-        descontada la bonificación</strong>.
+        Si el banco te rebaja el tipo de la hipoteca por tener sus seguros, esa rebaja cuenta. Pon tus cifras y verás el
+        coste real.
       </p>
 
-      <div style={{ margin: '24px 0', maxWidth: 640 }}>
+      <div style={{ margin: '24px 0 32px' }}>
         <CalculadoraBonificacion />
       </div>
 
