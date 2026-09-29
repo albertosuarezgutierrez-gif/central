@@ -24,12 +24,14 @@ import {
   aplicarAccion,
   mismoSeguro,
   planLlamada,
+  seguroAnteriorDe,
   validarAltaOportunidad,
   validarEdicionOportunidad,
   validarTarea,
   type CambiosOportunidad,
   type EstadoOportunidad,
   type PeticionAccion,
+  type SeguroAnterior,
 } from '@central/module-seguros'
 import { Prisma } from './generated/asegura-client'
 import { prismaAsegura } from './asegura-db'
@@ -603,8 +605,28 @@ export async function crearOportunidad(
     // Otro nº de póliza, o sin él otra compañía = otro seguro (el segundo
     // coche): se abre aparte. Sin dato para saberlo, cuenta como el mismo.
     const ya = abiertas.find(o => mismoSeguro(a, o) !== 'otra')
-    if (ya) return { tipo: 'duplicada' as const, id: ya.id }
-    const competencia = a.aseguradora ? JSON.stringify({ aseguradora: a.aseguradora }) : null
+    if (ya) {
+      // La póliza leída es de ESE seguro: su bonus y su número se quedan en la que ya había
+      // (29/09/2026). Sin esto, subir la póliza de un cliente con la oportunidad ya abierta perdía
+      // lo leído. Número y compañía solo rellenan un hueco; el bonus, más nuevo, sustituye al anterior.
+      const parche = {
+        ...(a.seguroAnterior ? { seguroAnterior: a.seguroAnterior } : {}),
+        ...(a.aseguradora && !ya.aseguradora ? { aseguradora: a.aseguradora } : {}),
+      }
+      const numero = a.numeroPoliza && !ya.numeroPoliza ? a.numeroPoliza : null
+      if (Object.keys(parche).length > 0 || numero) {
+        await tx.$executeRaw(Prisma.sql`
+          update oportunidades set
+            poliza_competencia = coalesce(poliza_competencia, '{}'::jsonb) || ${JSON.stringify(parche)}::jsonb,
+            numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${numero})
+          where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+        return { tipo: 'duplicada' as const, id: ya.id, completada: true }
+      }
+      return { tipo: 'duplicada' as const, id: ya.id, completada: false }
+    }
+    // El historial de la póliza que tiene hoy (lo que da el bonus) viaja con la compañía: es la misma póliza.
+    const comp = { ...(a.aseguradora ? { aseguradora: a.aseguradora } : {}), ...(a.seguroAnterior ? { seguroAnterior: a.seguroAnterior } : {}) }
+    const competencia = Object.keys(comp).length > 0 ? JSON.stringify(comp) : null
     const [o] = await tx.$queryRaw<{ id: string }[]>(Prisma.sql`
       insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_competencia, info_riesgo, numero_poliza)
       values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${a.ramo} as tipo_seguro), 'venta_directa',
@@ -627,7 +649,8 @@ export async function crearOportunidad(
   })
   if (r.tipo === 'sin_cliente') return { ok: false, estado: 'no_encontrado', motivo: 'Ese cliente no es de esta correduría.', status: 404 }
   if (r.tipo === 'duplicada') {
-    return { ok: false, estado: 'duplicada', motivo: `Ya tiene una oportunidad de ${a.ramo.replace('_', ' ')} abierta: sigue esa.`, status: 409, id: r.id }
+    const extra = r.completada ? ' Le he guardado lo leído de la póliza (compañía, nº y bonus que faltaran).' : ''
+    return { ok: false, estado: 'duplicada', motivo: `Ya tiene una oportunidad de ${a.ramo.replace('_', ' ')} abierta: sigue esa.${extra}`, status: 409, id: r.id }
   }
   await anotarEnFicha(correduriaId, clienteId, `Oportunidad ${a.ramo} abierta a mano; primer paso (${a.tarea.tipo}) el ${a.tarea.fechaLimite} — por ${actor}`)
   return { ok: true, id: r.id }
@@ -713,6 +736,8 @@ export type OportunidadDeCliente = OportunidadSeguimiento & {
   /** El coche de esa oportunidad (auto/moto), si se leyó: distingue dos del mismo cliente. */
   matricula: string | null
   vehiculo: string | null
+  /** El historial de la póliza que tiene hoy (lo que da el bonus), si se leyó. */
+  seguroAnterior: SeguroAnterior | null
   prima: number | null
   fuente: string | null
   creada: string
@@ -735,6 +760,7 @@ export async function oportunidadesDeCliente(
   if (!UUID.test(clienteId)) return null
   const filas = await prismaAsegura().$queryRaw<(FilaOportunidad & {
     aseguradora: string | null; numeroPoliza: string | null; matricula: string | null; vehiculo: string | null
+    seguroAnterior: unknown
     prima: number | null; fuente: string | null; creada: Date
     proximaTarea: { tipo: string; fechaLimite: string } | null
   })[]>(Prisma.sql`
@@ -747,6 +773,7 @@ export async function oportunidadesDeCliente(
            ${Prisma.raw(sqlNumeroPoliza('o.'))} as "numeroPoliza",
            nullif(trim(o.info_riesgo->>'matricula'), '') as matricula,
            coalesce(nullif(trim(o.info_riesgo->>'vehiculo'), ''), nullif(trim(concat_ws(' ', o.info_riesgo->>'marca', o.info_riesgo->>'modelo')), '')) as vehiculo,
+           o.poliza_competencia->'seguroAnterior' as "seguroAnterior",
            o.prima_bruta::float8 as prima, o.fuente::text as fuente, o.created_at as creada,
            (select json_build_object('tipo', g.tipo::text,
                      'fechaLimite', to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD'))
@@ -766,6 +793,7 @@ export async function oportunidadesDeCliente(
       numeroPoliza: f.numeroPoliza,
       matricula: f.matricula,
       vehiculo: f.vehiculo,
+      seguroAnterior: seguroAnteriorDe(f.seguroAnterior),
       prima: f.prima,
       fuente: f.fuente,
       creada: f.creada.toISOString(),

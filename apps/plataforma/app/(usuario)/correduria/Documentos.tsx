@@ -1,7 +1,11 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle2, Clock, Download, Eye, HelpCircle, Paperclip, Trash2, Upload } from 'lucide-react'
+import { CheckCircle2, Clock, Download, Eye, HelpCircle, Paperclip, Sparkles, Trash2, Upload } from 'lucide-react'
+import Link from 'next/link'
 import { Ico, FILA } from './iconos'
+import { prepararAdjunto } from '@/lib/imagen-cliente'
+import { interpretarLecturaOportunidad, type LecturaDocumentoOportunidad } from '@/lib/seguimiento-asegura'
+import { FormAlta } from './cliente/[id]/OportunidadesCliente'
 import {
   TIPOS_DOCUMENTO,
   etiquetaEstadoDocumento,
@@ -55,6 +59,48 @@ export default function Documentos({
     if (tipoInicial) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }, [tipoInicial])
 
+  // Una PÓLIZA subida a la ficha de un cliente se lee con IA (29/09/2026, Alberto: «ya que he
+  // subido esa póliza, que se cree como oportunidad»). Solo pólizas y solo en la ficha: cada
+  // lectura es una llamada de pago, y un recibo o un DNI no abren oportunidad.
+  const [lecturaPoliza, setLecturaPoliza] = useState<LecturaDocumentoOportunidad | 'leyendo' | null>(null)
+  const [abrirOportunidad, setAbrirOportunidad] = useState(false)
+  const [oportunidadHecha, setOportunidadHecha] = useState<string | null>(null)
+  const leerPoliza = !!clienteId && !polizaId && !siniestroId
+
+  async function leerPolizaSubida(f: File) {
+    setLecturaPoliza('leyendo')
+    setAbrirOportunidad(false)
+    setOportunidadHecha(null)
+    let status = 0
+    let json: unknown = null
+    try {
+      const a = await prepararAdjunto(f)
+      const res = await fetch('/api/correduria/oportunidad/leer', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName }),
+      })
+      status = res.status
+      json = await res.json().catch(() => null)
+    } catch {
+      json = { error: 'sin conexión' }
+    }
+    setLecturaPoliza(interpretarLecturaOportunidad(status, json))
+  }
+
+  /** Una póliza que YA estaba subida (antes de leerse sola): se baja y se lee igual. */
+  async function leerPolizaGuardada(d: DocumentoResumen) {
+    setLecturaPoliza('leyendo')
+    try {
+      const res = await fetch(`/api/correduria/documentos/${d.id}`)
+      if (!res.ok) { setLecturaPoliza({ estado: 'error', motivo: `no se ha podido abrir el fichero (${res.status})` }); return }
+      const blob = await res.blob()
+      await leerPolizaSubida(new File([blob], d.nombre ?? 'poliza', { type: d.mime ?? blob.type }))
+    } catch {
+      setLecturaPoliza({ estado: 'error', motivo: 'sin conexión' })
+    }
+  }
+
   const destino = { clienteId: clienteId ?? null, polizaId: polizaId ?? null, siniestroId: siniestroId ?? null }
   const resumen = resumenDocumentos(lista)
 
@@ -79,6 +125,7 @@ export default function Documentos({
       const d = j.documento as DocumentoResumen
       setLista((l) => [d, ...(l ?? [])])
       setAviso(j.repetido === true ? 'Guardado. Ojo: este cliente ya tenía un fichero idéntico.' : 'Guardado.')
+      if (tipo === 'poliza' && leerPoliza) void leerPolizaSubida(fichero)
       setFichero(null)
       setNotas('')
     } catch (e) {
@@ -201,6 +248,11 @@ export default function Documentos({
                     <Ico i={Eye} /> Ver
                   </a>
                 )}
+                {leerPoliza && d.tipo === 'poliza' && d.estado !== 'pedido' && (
+                  <button type="button" onClick={() => void leerPolizaGuardada(d)} disabled={ocupado || lecturaPoliza === 'leyendo'} title="La IA la lee (compañía, vencimiento, prima y bonus) para abrir la oportunidad" style={{ ...btn, gap: 6 }}>
+                    <Ico i={Sparkles} /> Leer para oportunidad
+                  </button>
+                )}
                 {d.estado === 'recibido' && (
                   <button type="button" onClick={() => revisar(d.id)} disabled={ocupado} style={{ ...btn, gap: 6 }}>
                     <Ico i={CheckCircle2} /> Revisado
@@ -270,6 +322,72 @@ export default function Documentos({
         </div>
       </details>
       {aviso && <div style={{ fontSize: 13, color: 'var(--warning)' }}>{aviso}</div>}
+      {lecturaPoliza !== null && clienteId && (
+        <PolizaLeida
+          clienteId={clienteId}
+          lectura={lecturaPoliza}
+          abrir={abrirOportunidad}
+          hecha={oportunidadHecha}
+          onAbrir={setAbrirOportunidad}
+          onHecha={setOportunidadHecha}
+        />
+      )}
+    </div>
+  )
+}
+
+/** Lo leído de la póliza recién subida y qué hacer con ello: ya es nuestra, o abrir oportunidad. */
+function PolizaLeida({ clienteId, lectura, abrir, hecha, onAbrir, onHecha }: {
+  clienteId: string
+  lectura: LecturaDocumentoOportunidad | 'leyendo'
+  abrir: boolean
+  hecha: string | null
+  onAbrir: (v: boolean) => void
+  onHecha: (t: string) => void
+}) {
+  const caja: React.CSSProperties = { display: 'grid', gap: 8, border: '1px solid var(--border)', borderRadius: 10, padding: 10, fontSize: 13 }
+  if (lectura === 'leyendo') return <div role="status" style={caja}>Leyendo la póliza con IA para la oportunidad…</div>
+  if (lectura.estado === 'error') {
+    return <div role="status" style={{ ...caja, color: 'var(--negative)' }}>La póliza está guardada, pero no se ha podido leer ({lectura.motivo}). Abre la oportunidad a mano desde «+ Nueva oportunidad».</div>
+  }
+  const oportunidades = `/correduria/cliente/${encodeURIComponent(clienteId)}?tab=oportunidades`
+  if (hecha) {
+    return (
+      <div role="status" style={caja}>
+        <span>{hecha}</span>
+        <Link href={oportunidades} style={{ color: 'var(--primary)', fontWeight: 600, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>Ver sus oportunidades →</Link>
+      </div>
+    )
+  }
+  const nuestra = lectura.enCartera ?? null
+  if (nuestra && nuestra.length > 0) {
+    return (
+      <div style={caja}>
+        <strong>Esta póliza ya es nuestra (en vigor): no es una oportunidad.</strong>
+        {nuestra.map(p => (
+          <Link key={p.polizaId} href={`/correduria/poliza/${encodeURIComponent(p.polizaId)}`} style={{ color: 'var(--primary)', fontWeight: 600, minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
+            Ver póliza{p.aseguradora ? ` de ${p.aseguradora}` : ''} →
+          </Link>
+        ))}
+      </div>
+    )
+  }
+  if (abrir) {
+    return (
+      <FormAlta
+        clienteId={clienteId}
+        inicial={lectura}
+        onCancelar={() => onAbrir(false)}
+        onHecho={(t) => { if (t.ok || t.id) onHecha(t.texto) }}
+      />
+    )
+  }
+  return (
+    <div style={caja}>
+      <span>Póliza leída{lectura.compania ? ` de ${lectura.compania}` : ''}{lectura.numeroPoliza ? ` nº ${lectura.numeroPoliza}` : ''}.{nuestra === null ? ' No se ha podido comprobar si ya es nuestra.' : ''}</span>
+      <button type="button" onClick={() => onAbrir(true)} style={{ ...btn, fontWeight: 600, justifySelf: 'start' }}>
+        Abrir oportunidad con estos datos
+      </button>
     </div>
   )
 }

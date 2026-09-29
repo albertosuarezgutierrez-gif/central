@@ -247,6 +247,8 @@ export type AltaValida = {
   /** El coche (auto/moto): identifica el seguro cuando falta el número y da nombre a la oportunidad. */
   matricula: string | null
   vehiculo: string | null
+  /** Lo que da el bonus (auto/moto), leído de la póliza que tiene hoy. `null` = no se sabe. */
+  seguroAnterior: SeguroAnterior | null
   /** El primer paso: nace con él, o no nace. */
   tarea: TareaValida
 }
@@ -259,7 +261,7 @@ export type AltaValida = {
  * de Vencimientos: eso lo dice la pantalla, no se inventa una fecha.
  */
 export function validarAltaOportunidad(
-  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; matricula?: unknown; vehiculo?: unknown; tipoTarea?: unknown; fechaTarea?: unknown; nota?: unknown },
+  d: { ramo?: unknown; estado?: unknown; fechaFinVigencia?: unknown; aseguradora?: unknown; prima?: unknown; numeroPoliza?: unknown; matricula?: unknown; vehiculo?: unknown; seguroAnterior?: unknown; tipoTarea?: unknown; fechaTarea?: unknown; nota?: unknown },
   hoy: Date,
 ): { ok: true; alta: AltaValida } | { ok: false; motivo: string } {
   const ramo = RAMOS_OPORTUNIDAD.find(r => r === d.ramo)
@@ -285,9 +287,42 @@ export function validarAltaOportunidad(
       numeroPoliza: texto(d.numeroPoliza, 60),
       matricula: claveMatricula(texto(d.matricula, 20)),
       vehiculo: texto(d.vehiculo, 80),
+      seguroAnterior: seguroAnteriorDe(d.seguroAnterior),
       tarea: t.tarea,
     },
   }
+}
+
+/**
+ * El historial de la póliza que tiene hoy (29/09/2026): lo que da el bonus al tarificar auto o
+ * moto. Sale de la lectura de su póliza y se guarda con la oportunidad para no volver a teclearlo.
+ * Tres estados en cada campo: `null` = el documento no lo dice; `0` siniestros es un dato.
+ */
+export type SeguroAnterior = {
+  /** Código DGS de la compañía (C0058), si el documento lo trae literalmente. */
+  codigoDgs: string | null
+  fechaEfecto: string | null
+  aniosSinSiniestros: number | null
+  siniestrosUltimos5: number | null
+}
+
+function entero(v: unknown, max: number): number | null {
+  const n = typeof v === 'string' && /^\d{1,3}$/.test(v.trim()) ? Number(v.trim()) : v
+  return typeof n === 'number' && Number.isInteger(n) && n >= 0 && n <= max ? n : null
+}
+
+/** Lo sanea: un valor con forma rara se queda en `null`; sin ningún dato, `null` entero. */
+export function seguroAnteriorDe(v: unknown): SeguroAnterior | null {
+  if (v === null || typeof v !== 'object' || Array.isArray(v)) return null
+  const o = v as Record<string, unknown>
+  const codigo = typeof o.codigoDgs === 'string' ? o.codigoDgs.trim().toUpperCase() : ''
+  const s: SeguroAnterior = {
+    codigoDgs: /^[CM]\d{4}$/.test(codigo) ? codigo : null,
+    fechaEfecto: fechaIso(o.fechaEfecto),
+    aniosSinSiniestros: entero(o.aniosSinSiniestros, 70),
+    siniestrosUltimos5: entero(o.siniestrosUltimos5, 50),
+  }
+  return Object.values(s).every(x => x === null) ? null : s
 }
 
 export type EdicionValida = {

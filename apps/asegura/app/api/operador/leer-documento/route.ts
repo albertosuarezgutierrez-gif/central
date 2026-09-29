@@ -5,6 +5,7 @@ import { auditado } from '@/lib/auditoria'
 import { tomadorDe } from '@/lib/tomador-documento'
 import { correduriaUnica } from '@/lib/cartera'
 import { polizaEnCartera } from '@/lib/poliza-en-cartera'
+import { seguroAnteriorDe } from '@central/module-seguros'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -28,6 +29,8 @@ export const maxDuration = 120
  *   y viaja solo cifrado: plataforma nunca lo ve en claro.
  * - `enCartera` (27/09/2026): las pólizas EN VIGOR con ese mismo número. Con
  *   alguna, no es una oportunidad: ya es nuestra. `null` = no se ha podido mirar.
+ * - `seguroAnterior` (auto/moto): código DGS, efecto, años sin siniestros y siniestros en 5 años.
+ *   `null` = el documento no dice nada de eso.
  * - `matricula`/`vehiculo`: identifican el coche (dos coches del mismo cliente)
  *   y dan nombre a la oportunidad. Son del riesgo, no de la persona.
  * - «No se pudo leer» es 422 con motivo, nunca 200 con todo a null: eso se
@@ -61,6 +64,11 @@ export const POST = auditado(async (req: Request) => {
     enCartera,
     matricula: auto?.matricula ?? null,
     vehiculo,
+    // Lo que da el bonus (29/09/2026): se guarda con la oportunidad y precarga la tarificación.
+    // Son datos del RIESGO: nada de la persona sale por aquí.
+    seguroAnterior: auto
+      ? seguroAnteriorDe({ codigoDgs: auto.codigoEntidadDgs, fechaEfecto: auto.fechaEfecto, aniosSinSiniestros: auto.aniosSinSiniestros, siniestrosUltimos5: auto.siniestrosUltimos5 })
+      : null,
     ...(tomador ? { tomador } : {}),
     leido: true,
     fuente: r.fuente,
