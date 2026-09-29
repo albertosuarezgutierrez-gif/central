@@ -1,21 +1,21 @@
 {
  "sesion": "d1431e08-2d8f-529e-bc01-b14218c42092",
  "inicio": "2026-09-28T19:40:12.524Z",
- "fin": "2026-09-29T06:19:36.462Z",
- "llamadas": 288,
+ "fin": "2026-09-29T06:51:38.579Z",
+ "llamadas": 355,
  "categorias": {
   "otro": {
-   "llamadas": 54,
-   "chars_in": 17888,
-   "chars_out": 229357,
+   "llamadas": 70,
+   "chars_in": 18042,
+   "chars_out": 346824,
    "errores": 0,
    "archivos_citados": 4,
    "chars_citados": 72611,
    "tools": {
     "Skill": 2,
-    "ToolSearch": 10,
+    "ToolSearch": 12,
     "SubagentHandback": 4,
-    "ReadNotifications": 19,
+    "ReadNotifications": 33,
     "TaskCreate": 7,
     "TaskUpdate": 12
    }
@@ -46,9 +46,9 @@
    }
   },
   "mcp:github": {
-   "llamadas": 11,
-   "chars_in": 5689,
-   "chars_out": 29094,
+   "llamadas": 16,
+   "chars_in": 6290,
+   "chars_out": 54052,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 6507,
@@ -56,8 +56,9 @@
     "mcp__github__list_pull_requests": 2,
     "mcp__github__create_pull_request": 1,
     "mcp__github__update_pull_request": 2,
-    "mcp__github__pull_request_read": 5,
-    "mcp__github__add_issue_comment": 1
+    "mcp__github__pull_request_read": 9,
+    "mcp__github__add_issue_comment": 1,
+    "mcp__github__actions_list": 1
    }
   },
   "agente:rastreador-codigo": {
@@ -83,37 +84,37 @@
    }
   },
   "bash": {
-   "llamadas": 129,
-   "chars_in": 95652,
-   "chars_out": 384435,
+   "llamadas": 172,
+   "chars_in": 123262,
+   "chars_out": 533328,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 129
+    "Bash": 172
    }
   },
   "mcp:Claude_Code_Remote": {
-   "llamadas": 2,
-   "chars_in": 242,
-   "chars_out": 347,
+   "llamadas": 3,
+   "chars_in": 534,
+   "chars_out": 455,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
     "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
-    "mcp__Claude_Code_Remote__send_later": 1
+    "mcp__Claude_Code_Remote__send_later": 2
    }
   },
   "escritura": {
-   "llamadas": 10,
-   "chars_in": 61250,
-   "chars_out": 136316,
+   "llamadas": 12,
+   "chars_in": 70060,
+   "chars_out": 154500,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Write": 9,
+    "Write": 11,
     "Edit": 1
    }
   },
