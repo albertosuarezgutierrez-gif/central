@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 /**
  * Figuras del riesgo (29/09/2026).
  *   POST { accion:'asignar', oportunidadId, rol, clienteId, actor }   → pone a esa ficha en el rol
- *   POST { accion:'nueva', oportunidadId, rol, tipoRelacion, persona:{nombre,apellidos,dni,fechaNacimiento,telefono,email?,sexo?,estadoCivil?}, actor }
+ *   POST { accion:'nueva', oportunidadId, rol, tipoRelacion, persona:{nombre,apellidos,dni,fechaNacimiento,telefono,email?,sexo?,estadoCivil?,fechaCarnet?,tipoCarnet?}, actor }
  *        → alta (lead) + vínculo con el cliente + asignada, sin salir de la oportunidad
  *   DELETE { oportunidadId, rol, actor } → el rol vuelve a ser el del tomador
  */
@@ -33,7 +33,7 @@ export const POST = auditado(async (req: Request) => {
       const persona = typeof b.persona === 'object' && b.persona !== null ? (b.persona as Record<string, unknown>) : {}
       const r = await nuevaPersonaEnRiesgo(correduria.id, { oportunidadId, rol: b.rol, tipoRelacion: b.tipoRelacion, persona, actor })
       return r.ok
-        ? NextResponse.json({ estado: 'ok', clienteId: r.clienteId, existente: r.existente })
+        ? NextResponse.json({ estado: 'ok', clienteId: r.clienteId, existente: r.existente, carnet: r.carnet })
         : NextResponse.json({ estado: 'error', motivo: r.motivo, conflicto: r.conflicto ?? null }, { status: r.status })
     }
     return NextResponse.json({ estado: 'error', motivo: 'accion desconocida' }, { status: 400 })

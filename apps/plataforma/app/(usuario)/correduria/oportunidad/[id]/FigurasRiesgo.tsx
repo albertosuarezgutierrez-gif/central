@@ -16,6 +16,16 @@ import { ramoVariante } from './variante'
 
 type Opcion = { clienteId: string; nombre: string; detalle: string }
 
+/**
+ * ¿Quien entre en ese papel va a conducir? Mismo criterio que `leerRiesgo` de asegura: en coche o
+ * moto conducen los conductores, y el tomador solo si no hay un conductor habitual en otra ficha.
+ */
+function conduceEnRiesgo(rol: RolFigura, ramo: string, figuras: FiguraRiesgo[]): boolean {
+  if (ramo !== 'auto' && ramo !== 'moto') return false
+  if (rol === 'conductor_habitual' || rol === 'conductor_ocasional') return true
+  return rol === 'tomador' && !figuras.some((g) => g.rol === 'conductor_habitual')
+}
+
 export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
   riesgo: Riesgo
   ocupado: boolean
@@ -164,6 +174,8 @@ export default function FigurasRiesgo({ riesgo, ocupado, onCambio, onError }: {
       {nueva && (
         <NuevaPersona
           rol={nueva}
+          ramo={op.ramo}
+          conduce={conduceEnRiesgo(nueva, op.ramo, riesgo.figuras)}
           oportunidadId={op.id}
           clienteNombre={op.clienteNombre}
           onCerrar={() => setNueva(null)}

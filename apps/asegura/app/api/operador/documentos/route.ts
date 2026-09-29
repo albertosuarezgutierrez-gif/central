@@ -81,8 +81,10 @@ export const POST = auditado(async (req: Request) => {
       if (!r.ok) return NextResponse.json({ error: r.motivo }, { status: r.status })
       const clienteId = texto(form.get('clienteId'))
       // Solo lo subido a una FICHA: un documento colgado de una póliza nuestra no es una venta. Un
-      // fichero repetido ya se leyó al subirlo la primera vez: no se paga otra lectura.
-      const oportunidad = clienteId && !polizaId && !texto(form.get('siniestroId')) && !r.repetido
+      // fichero REPETIDO se lee igual: la primera copia pudo subirse antes de que esto existiera (o
+      // fallar al leerse), y saltarlo dejaba la póliza sin oportunidad y sin aviso (Manuel Antonio
+      // Piña, 29/09/2026). No duplica: `crearOportunidad` completa la que ya haya de ese seguro.
+      const oportunidad = clienteId && !polizaId && !texto(form.get('siniestroId'))
         ? await oportunidadDesdeFichero({
             correduriaId: correduria.id,
             clienteSube: clienteId,

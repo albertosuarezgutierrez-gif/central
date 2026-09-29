@@ -1,0 +1,65 @@
+{
+ "sesion": "50b36a3f-8acf-59a7-a5f6-d06bdd90712d",
+ "inicio": "2026-09-29T16:21:40.378Z",
+ "fin": "2026-09-29T16:31:47.921Z",
+ "llamadas": 27,
+ "categorias": {
+  "otro": {
+   "llamadas": 2,
+   "chars_in": 117,
+   "chars_out": 223,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Skill": 1,
+    "ToolSearch": 1
+   }
+  },
+  "lectura-directa": {
+   "llamadas": 5,
+   "chars_in": 464,
+   "chars_out": 35148,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1,
+    "Read": 4
+   }
+  },
+  "bash": {
+   "llamadas": 5,
+   "chars_in": 945,
+   "chars_out": 10786,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 5
+   }
+  },
+  "sql": {
+   "llamadas": 9,
+   "chars_in": 3193,
+   "chars_out": 11968,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 9
+   }
+  },
+  "mcp:Vercel": {
+   "llamadas": 6,
+   "chars_in": 885,
+   "chars_out": 1119,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Vercel__get_runtime_logs": 6
+   }
+  }
+ }
+}
