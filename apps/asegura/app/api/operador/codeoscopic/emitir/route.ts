@@ -46,6 +46,7 @@ import { lectorOferta, opcionesOfertaAceptada } from '@/lib/codeoscopic/opciones
 import { trasEmisionConTope } from '@/lib/tras-emision'
 import { interpretarError400, reparosDe, esCampoPersona, type Interpretacion, type CampoPersona } from '@/lib/codeoscopic/interprete-400'
 import { valoresPersonaDesdeFicha } from '@/lib/codeoscopic/valores-ficha'
+import { copiarFigurasAPoliza, faltanConfirmaciones, leerCambiosDeFiguras, registrarConfirmacion, type Confirmacion } from '@/lib/emision-figuras'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -254,6 +255,66 @@ export const POST = auditado(async (req: Request) => {
       console.error('[emitir] póliza acuñada pero el presupuesto no se marcó emitido:', e instanceof Error ? e.message : e),
     )
   }
+  /** Tras acuñar: las figuras de la variante pasan a la póliza (29/09/2026). Best-effort: la póliza ya existe. */
+  const figurasAPoliza = async (polizaId: string) => {
+    if (!p.tarificacion_id) return
+    await copiarFigurasAPoliza(correduria.id, { polizaId, tarificacionId: p.tarificacion_id, actor }).catch((e: unknown) =>
+      console.error('[emitir] póliza acuñada pero sus figuras no pasaron a intervinientes:', e instanceof Error ? e.message : e),
+    )
+  }
+
+  // ── Emitir con OTRAS personas que la primera variante del riesgo (29/09/2026) ──
+  // Declarar a otro conductor o domicilio para pagar menos es ocultar el riesgo (arts. 10 y 89 LCS).
+  // Si la variante cambia tomador/propietario/conductor o CP respecto a P1, el corredor confirma
+  // antes del Submit y queda en el historial. FAIL-CLOSED: sin poder mirarlo no se emite. Acuñar
+  // una solicitud YA aprobada no envía nada nuevo, así que no se le pregunta.
+  if (p.tarificacion_id && cuerpo.acunarExistente !== true) {
+    const leidos = await leerCambiosDeFiguras(correduria.id, p.tarificacion_id).then(
+      (x) => ({ ok: true as const, x }),
+      (e: unknown) => ({ ok: false as const, e }),
+    )
+    if (!leidos.ok) {
+      console.error('[emitir] no se pudo comprobar las personas del riesgo:', leidos.e instanceof Error ? leidos.e.message : leidos.e)
+      return NextResponse.json(
+        { estado: 'error', causa: 'otro', mensaje: 'No se ha podido comprobar las personas del riesgo: no se ha emitido nada. Vuelve a probar.' },
+        { status: 503 },
+      )
+    }
+    if (leidos.x) {
+      const faltan = faltanConfirmaciones(leidos.x.exigidas, cuerpo.figurasConfirmadas)
+      if (faltan.length > 0) {
+        return NextResponse.json(
+          {
+            estado: 'error',
+            causa: 'confirmar_figuras',
+            mensaje:
+              'Esta variante cambia las personas o el CP del riesgo respecto a la primera. Confirma que es la realidad ' +
+              '(arts. 10 y 89 LCS) antes de emitir. No se ha emitido nada.',
+            cambios: leidos.x.cambios.map((c) => ({ campo: c.campo, antes: c.campo === 'cp' ? c.antes : c.antesNombre, despues: c.campo === 'cp' ? c.despues : c.despuesNombre })),
+            exigidas: leidos.x.exigidas,
+          },
+          { status: 409 },
+        )
+      }
+      const registrado = await registrarConfirmacion(correduria.id, {
+        oportunidadId: leidos.x.oportunidadId,
+        tarificacionId: p.tarificacion_id,
+        cambios: leidos.x.cambios,
+        marcadas: leidos.x.exigidas as Confirmacion[],
+        actor,
+      }).then(() => true, (e: unknown) => {
+        console.error('[emitir] no se pudo dejar constancia de la confirmación:', e instanceof Error ? e.message : e)
+        return false
+      })
+      // Sin constancia no hay prueba de lo que se confirmó: no se emite.
+      if (!registrado) {
+        return NextResponse.json(
+          { estado: 'error', causa: 'otro', mensaje: 'No se ha podido guardar la confirmación en el historial del riesgo: no se ha emitido nada. Vuelve a probar.' },
+          { status: 503 },
+        )
+      }
+    }
+  }
 
   // (iii) Interruptor PROPIO del modo nuevo, fail-closed: sin
   // `CODEOSCOPIC_EMISION_NUEVO=1` un proyecto sin póliza sigue sin emitirse,
@@ -445,7 +506,10 @@ export const POST = auditado(async (req: Request) => {
     )
     // Best-effort: el PDF de la póliza puede venir ya en `issuedDocuments[]` del
     // proyecto que se acaba de leer (`crudoPrevio`) — sin gastar un GET extra.
-    if (acunadoAc.ok) await cerrarPresupuesto()
+    if (acunadoAc.ok) {
+      await cerrarPresupuesto()
+      await figurasAPoliza(acunadoAc.polizaId)
+    }
     const archivadoAc = acunadoAc.ok
       ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunadoAc.polizaId, crudo: crudoPrevio })
       : { documentoGuardado: null, avisoDocumento: null }
@@ -1001,7 +1065,10 @@ export const POST = auditado(async (req: Request) => {
   // Best-effort: el propio Submit puede traer ya `issuedDocuments[]` en su
   // respuesta (`envio.crudo`) — se descarga y archiva sin gastar otro GET.
   // Un fallo aquí nunca deshace el acuñado que ya se hizo arriba.
-  if (acunado.ok) await cerrarPresupuesto()
+  if (acunado.ok) {
+    await cerrarPresupuesto()
+    await figurasAPoliza(acunado.polizaId)
+  }
   const archivado = acunado.ok
     ? await archivarDocumentoEmitido(r.config, { correduriaId: correduria.id, polizaId: acunado.polizaId, crudo: envio.crudo })
     : { documentoGuardado: null, avisoDocumento: null }

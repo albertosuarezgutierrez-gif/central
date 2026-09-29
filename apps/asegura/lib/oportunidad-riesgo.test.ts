@@ -82,3 +82,11 @@ test('no se pide precio en un riesgo cerrado (ni variante ni retarificación de 
 test('el riesgo de una póliza reutiliza la oportunidad que abrió una retarificación de antes', () => {
   assert.match(cuerpoDe('abrirRiesgoDePoliza'), /info_riesgo->>'polizaId' = \$\{e\.polizaId\}/)
 })
+
+test('moto arma propietario y conductor desde SUS fichas (con su carné de moto) y rechaza el ocasional', () => {
+  const c = cuerpoDe('prepararVariante')
+  assert.doesNotMatch(c, /e\.ramo === 'auto' && figuras/, 'las figuras no pueden ser solo de auto')
+  assert.match(c, /personaDeFicha\(correduriaId, id, e\.ramo\)/, 'la ficha de la figura se lee con su ramo')
+  assert.match(c, /e\.ramo === 'moto' && figuras\?\.conductor_ocasional[\s\S]{0,40}return \{ ok: false/)
+  assert.match(cuerpoDe('personaDeFicha'), /carnetMotoDeFicha/, 'en moto el carné del conductor es el de moto')
+})

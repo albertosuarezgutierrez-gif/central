@@ -13,6 +13,14 @@
 
 import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
 
+/** El carné de quien CONDUCE la moto: fecha + tipo (A, A2, A1, AM o B) + zona, y el B si lo tiene. */
+export type CarnetMoto = {
+  fechaCarnet: string
+  tipoCarnet?: string | null
+  zonaCarnet?: string | null
+  fechaCarnetB?: string | null
+}
+
 export type ExperienciaConduccion = 'ThisMotorcycle' | 'OtherMotorcycle'
 
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
@@ -59,6 +67,19 @@ export type DatosMoto = DatosPersona & {
   // ── Cotización ──
   fechaEfecto: string
   referenciaExterna?: string | null
+
+  /**
+   * 🚧 El propietario, SOLO cuando es una persona DISTINTA del tomador (29/09/2026, entrega 2 del
+   * riesgo). Sin él, el tomador va de propietario. **Sin verificar contra el vendor**, igual que en
+   * auto: el primer intento real puede devolver un 400 con el nombre del campo real.
+   */
+  propietario?: DatosPersona | null
+  /**
+   * 🚧 El conductor HABITUAL, SOLO cuando es DISTINTO del tomador, con SU carné (el de moto, si lo
+   * tiene). Con él, el carné del tomador deja de importar. Misma advertencia que `propietario`.
+   * No hay ocasional: el vendor no lo admite en moto.
+   */
+  conductor?: (DatosPersona & CarnetMoto) | null
 }
 
 /** Un problema concreto del formulario, señalando el campo. */
@@ -83,9 +104,36 @@ export function revisarDatosMoto(d: Partial<DatosMoto>): ReparoMoto[] {
   for (const c of ['codigoVehiculo', 'matricula', 'garaje', 'experienciaConduccion'] as const) {
     if (!texto(d[c])) falta(c)
   }
-  for (const c of ['fechaCarnet', 'fechaMatriculacion', 'fechaEfecto'] as const) {
+  // El carné del tomador solo cuenta si además conduce (el caso normal).
+  for (const c of [...(d.conductor ? [] : (['fechaCarnet'] as const)), 'fechaMatriculacion', 'fechaEfecto'] as const) {
     if (!texto(d[c])) falta(c)
     else if (!RE_FECHA.test(String(d[c]))) r.push({ campo: c, motivo: 'la fecha tiene que ser aaaa-mm-dd' })
+  }
+
+  // ── Propietario y conductor distintos del tomador (opcionales) ──
+  if (d.propietario) {
+    const faltan = revisarPersona(d.propietario)
+    if (faltan.length > 0) {
+      r.push({ campo: 'propietario', motivo: `datos del propietario incompletos: ${faltan.map((f) => f.campo).join(', ')}` })
+    }
+  }
+  if (d.conductor) {
+    const faltan = revisarPersona(d.conductor)
+    if (faltan.length > 0) {
+      r.push({ campo: 'conductor', motivo: `datos del conductor incompletos: ${faltan.map((f) => f.campo).join(', ')}` })
+    }
+    if (!texto(d.conductor.fechaCarnet)) r.push({ campo: 'conductor', motivo: 'el conductor necesita la fecha de su carné' })
+    else if (!RE_FECHA.test(String(d.conductor.fechaCarnet))) {
+      r.push({ campo: 'conductor', motivo: 'la fecha de carné del conductor tiene que ser aaaa-mm-dd' })
+    }
+  }
+  // 🚨 Mismo DNI con datos distintos = 400 del vendor («Two persons have been declared with the same
+  // identification by different data»). Si la figura ES el tomador, no es una figura distinta.
+  const dniTomador = String(d.dni ?? '').trim().toUpperCase()
+  for (const [c, p] of [['propietario', d.propietario], ['conductor', d.conductor]] as const) {
+    if (p && dniTomador !== '' && String(p.dni ?? '').trim().toUpperCase() === dniTomador) {
+      r.push({ campo: c, motivo: `el ${c} tiene el mismo DNI que el tomador: si es la misma persona, no lo declares aparte` })
+    }
   }
 
   if (d.kmAnuales === undefined || d.kmAnuales === null) falta('kmAnuales')
@@ -152,14 +200,18 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<str
     )
   }
 
-  // 🚨 LA MISMA persona, proyectada IDÉNTICA en holder/owner/primaryDriver — ver
-  // el motivo en `peticion-auto.ts`.
-  const persona = construirPersona(d, {
-    fechaCarnet: d.fechaCarnet,
-    tipoCarnet: d.tipoCarnet,
-    zonaCarnet: d.zonaCarnet,
-    adicionales: d.fechaCarnetB && d.tipoCarnet && d.tipoCarnet !== 'B' ? [{ tipo: 'B', fecha: d.fechaCarnetB }] : [],
+  // 🚨 Por defecto LA MISMA persona, proyectada IDÉNTICA en holder/owner/primaryDriver — ver el
+  // motivo en `peticion-auto.ts`. Con propietario/conductor propios (DNI distinto) cada uno se
+  // proyecta con `construirPersona`, y el carné que viaja es el de quien conduce.
+  const carnetDe = (c: CarnetMoto) => ({
+    fechaCarnet: c.fechaCarnet,
+    tipoCarnet: c.tipoCarnet,
+    zonaCarnet: c.zonaCarnet,
+    adicionales: c.fechaCarnetB && c.tipoCarnet && c.tipoCarnet !== 'B' ? [{ tipo: 'B', fecha: c.fechaCarnetB }] : [],
   })
+  const persona = construirPersona(d, d.conductor ? {} : carnetDe(d))
+  const propietario = d.propietario ? construirPersona(d.propietario) : persona
+  const conductor = d.conductor ? construirPersona(d.conductor, carnetDe(d.conductor)) : persona
 
   const riesgo: Record<string, unknown> = {
     vehicle: { code: d.codigoVehiculo },
@@ -172,8 +224,8 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<str
       town: { id: d.municipioCirculacionId },
     },
     garageType: { id: d.garaje },
-    owner: persona,
-    primaryDriver: persona,
+    owner: propietario,
+    primaryDriver: conductor,
     drivingExperience: { id: d.experienciaConduccion },
     previouslyInsured: d.aseguradoAntes ?? false,
   }

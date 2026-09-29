@@ -626,7 +626,7 @@ async function prepararMoto(
   }
   const reparoCarnet = await reparoCarnetMoto(
     cfg.config,
-    datos.tipoCarnet,
+    (datos.conductor ?? datos).tipoCarnet, // el carné que cuenta es el de quien CONDUCE
     versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
   )
   if (reparoCarnet) return paraPreparado({ error: 'faltan datos para cotizar', faltan: [reparoCarnet] }, 422)
@@ -1121,7 +1121,7 @@ export async function prepararRetarificacionNuevaMoto(entrada: {
   }
   const reparoCarnet = await reparoCarnetMoto(
     cfg.config,
-    datos.tipoCarnet,
+    (datos.conductor ?? datos).tipoCarnet, // el carné que cuenta es el de quien CONDUCE
     versionMotoElegida(cuerpo.resueltos, datos.codigoVehiculo),
   )
   if (reparoCarnet) {
