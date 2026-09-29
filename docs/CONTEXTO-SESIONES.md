@@ -944,7 +944,7 @@ Hereda el seguro anterior de la última petición pagada del MISMO vehículo (si
 asegura comprueba gratis la dirección de la empresa propietaria (tipo de vía) antes de cobrar. `emitirCompania/Modalidad/PrimaEur` → tras un precio real se prepara la emisión de ESE proyecto y llega el botón «Emitir».
 Lección cara: 7-8 tarificaciones de 0,50€ por campos que se podían ver gratis antes. Toda comprobación posible va ANTES del cobro.
 Allianz avisa «ESTA POLIZA QUEDARÁ BLOQUEADA … INCENDIO-ROBO SIN DAÑOS» ya en el precio; se emitió por Avant2 y quedó bloqueada (borrador a sucursal 209 + CTS Autos Sur, op. 279136633). REGLA de Alberto: con aviso de bloqueo, emitir primero la básica y ampliar después por suplemento con la documentación. `bloqueoCompania()` (module-seguros) lo enseña ANTES de emitir: en la parrilla, el panel de emisión, Telegram y la comparativa del cliente.
-Con `CORREDURIA_ASISTENTE_AUTONOMO` encendido (#4044) el precio se pide sin botón.
+Alberto: «pide el precio pero con mi OK» → el precio (0,50€) va SIEMPRE con botón también en modo autónomo (`PRECIO_SIN_BOTON = false`); el resto del autónomo no cambia.
 
 ## (29/09/2026) Correduría: cuestionario IDD autorrellenado + «Emitir» en cada fila de «Qué verá el cliente»
 - Alberto: el cuestionario de necesidades «no me puede salir»: `deducirNecesidades` (module-seguros) lo contesta con la petición y la opción recomendada, y `autocompletarNecesidades` (asegura) lo GUARDA al preparar el presupuesto y, para los viejos, al listarlos. Nunca pisa lo escrito ni lo aceptado; el texto dice «Deducido de lo presupuestado».

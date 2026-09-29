@@ -261,7 +261,7 @@ export const HERRAMIENTAS = [
       emitirModalidad: { type: 'string', description: 'Con emitirCompania: la modalidad/cobertura que dijo («terceros ampliado incendio robo»)' },
       emitirPrimaEur: { type: 'number', description: 'Con emitirCompania: la prima aproximada que dijo («≈200»)' },
     }, ['ramo', 'clienteId']),
-  fn('precio_hogar', 'Precio de HOGAR (vivienda) para un cliente o lead de la cartera. Con la referencia catastral, o con la dirección completa + municipio + provincia (el sistema la busca en el Catastro; si hay varios pisos te da la lista para preguntar). El sistema rellena la vivienda del Catastro y la ficha y te devuelve «FALTAN DATOS» con cada campo y sus opciones: pregúntaselo a Alberto y vuelve a llamar con la referencia y datos={campo: valor} (TODO lo anterior más lo nuevo). Cuando está completo cuesta 0,50€: el sistema lo pide o le manda el botón a Alberto según el modo, y te lo dice. Nunca inventes un dato de la vivienda.',
+  fn('precio_hogar', 'Precio de HOGAR (vivienda) para un cliente o lead de la cartera. Con la referencia catastral, o con la dirección completa + municipio + provincia (el sistema la busca en el Catastro; si hay varios pisos te da la lista para preguntar). El sistema rellena la vivienda del Catastro y la ficha y te devuelve «FALTAN DATOS» con cada campo y sus opciones: pregúntaselo a Alberto y vuelve a llamar con la referencia y datos={campo: valor} (TODO lo anterior más lo nuevo). Cuando está completo cuesta 0,50€: el sistema le manda el botón a Alberto y es él quien lo pide. Nunca inventes un dato de la vivienda.',
     {
       clienteId: { type: 'string', description: 'La ficha del TOMADOR (de buscar; si es nuevo, alta_cliente antes)' },
       referencia: { type: 'string', description: 'Referencia catastral de 20 caracteres, si la tienes' },
@@ -376,11 +376,12 @@ export function reglaConDatoPersonal(regla: string): boolean {
  * un tercero (presupuesto, portal) siguen con botón: es la regla de comunicaciones salientes de la casa.
  */
 const MODO_AUTONOMO: readonly string[] = [
-  '- Trabajas como el corredor: HACES el trabajo administrativo tú. Las escrituras en la cartera se ejecutan en cuanto llamas a la herramienta (sin botón): alta_cliente, figura_riesgo, proponer_correccion, proponer_oportunidad, proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro y proponer_tarificacion (pide el precio de verdad: 0,50€). Di a Alberto SOLO lo que el sistema confirme como hecho; si devuelve error o «no sé si se ha hecho», dilo tal cual y no lo repitas.',
+  '- Trabajas como el corredor: HACES el trabajo administrativo tú. Las escrituras en la cartera se ejecutan en cuanto llamas a la herramienta (sin botón): alta_cliente, figura_riesgo, proponer_correccion, proponer_oportunidad, proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro. Di a Alberto SOLO lo que el sistema confirme como hecho; si devuelve error o «no sé si se ha hecho», dilo tal cual y no lo repitas.',
+  '- El PRECIO (proponer_tarificacion, precio_hogar) cuesta 0,50€ y va SIEMPRE con botón: tú lo preparas y Alberto recibe el resumen con «Pedir precio (0,50€)». NUNCA digas que ya se ha pedido: dile que revise los datos y pulse (decisión de Alberto, 29/09/2026).',
   '- Lo que sale a un tercero (enviar_presupuesto = correo al cliente, invitar_portal) y emitir (preparar_emision) siguen con BOTÓN: el sistema se lo manda a Alberto y es él quien pulsa. NUNCA digas que se ha enviado o emitido.',
   '- Antes de escribir, asegúrate de que tienes los datos: si falta algo imprescindible (el nombre de un lead, qué papel tiene cada persona), pregúntaselo a Alberto en vez de suponerlo. Nunca inventes un DNI, una fecha ni un teléfono.',
   '- Lead nuevo que pide precio de coche o moto: buscar → si no está, alta_cliente con lo dictado (sin nombre no hay alta: pregúntalo) → proponer_oportunidad (clienteId, ramo) → si el propietario o un conductor no es el tomador, figura_riesgo (con la oportunidad) → vehiculo_catalogo (con filtro; nunca repitas una consulta con los mismos datos; si la versión exacta no sale, pásala tal cual la dijo) → proponer_tarificacion con la oportunidadId. Si contesta FALTAN DATOS, pregúntale exactamente eso.',
-  '- «Cámbiale el propietario / pon de conductor a X»: oportunidades_cliente para la oportunidad → figura_riesgo → proponer_tarificacion con esa oportunidadId (reutiliza el vehículo si ya se pidió precio). El precio te llega en un mensaje aparte.',
+  '- «Cámbiale el propietario / pon de conductor a X»: oportunidades_cliente para la oportunidad → figura_riesgo → proponer_tarificacion con esa oportunidadId (reutiliza el vehículo si ya se pidió precio). A Alberto le llega el botón para pedir el precio.',
   '- Oportunidades con documentos: si Alberto habla de un documento que acaba de subir —también «otra», «la segunda», «del mismo cliente», «abre oportunidad» a secas— pasa usarDocumentos=true y NO le preguntes ramo, compañía, prima, vencimiento ni de quién es: si no dice de quién es, llama SIN clienteId y el sistema lee el tomador, lo busca por DNI y si no está crea el lead. Pregúntale solo si el sistema te lo pide. Si contesta YA ES NUESTRA, díselo con el enlace.',
   '- Antes de escribir, mira si YA está hecho: buscar antes de alta_cliente, oportunidades_cliente antes de abrir otra oportunidad del mismo ramo. Si el sistema dice YA SE HIZO EN UN MENSAJE ANTERIOR, cuéntaselo a Alberto; usa repetir=true SOLO si él pide expresamente hacerlo otra vez.',
   '- forzar=true (teléfono o email que ya tiene otra ficha) SOLO después de que Alberto te conteste, en otro mensaje, que es otra persona. Nunca lo decidas tú en el mismo turno.',
@@ -698,7 +699,7 @@ const FRASES_BOTON: readonly (readonly [string, string])[] = [
 
 /** Herramientas que en modo autónomo se ejecutan sin botón y cuyo texto habla de botón. */
 export const AUTONOMAS_CON_TEXTO_DE_BOTON: readonly string[] = [
-  'proponer_correccion', 'proponer_oportunidad', 'proponer_tarea', 'registrar_llamada', 'anotar_nota', 'abrir_siniestro', 'proponer_tarificacion',
+  'proponer_correccion', 'proponer_oportunidad', 'proponer_tarea', 'registrar_llamada', 'anotar_nota', 'abrir_siniestro',
 ]
 
 /** Las herramientas tal como las ve la IA en cada modo. En autónomo, las escrituras admiten `repetir`. */
