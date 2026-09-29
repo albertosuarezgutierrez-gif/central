@@ -142,6 +142,8 @@ export type Poliza = {
   listaRecibos: ReciboFicha[]
   /** Devoluciones avisadas por correo. `null` = asegura no la manda o no pudo leerla (≠ `[]`, ninguna). */
   historialDevoluciones: DevolucionHistorialFicha[] | null
+  /** Baja verificada por el corredor («el cliente se va»). `null` = no la hay o asegura no la manda. */
+  bajaVerificada: { en: string; por: string | null; motivo: string | null } | null
   /** `null` = asegura no manda la lista (no es «sin siniestros», que es `[]`). */
   siniestros: SiniestroCartera[] | null
   /**
@@ -484,6 +486,7 @@ export function interpretarPoliza(status: number, json: unknown): RespuestaPoliz
       recibos: leerRecibos(p.recibos),
       listaRecibos,
       historialDevoluciones: leerHistorialDevoluciones(p.historialDevoluciones),
+      bajaVerificada: leerBajaVerificada(p.bajaVerificada),
       siniestros,
       historialRiesgo: leerHistorialRiesgo(p.historialRiesgo),
       intervinientes: leerIntervinientes(p.intervinientes),
@@ -552,4 +555,13 @@ function leerDevolucionCorreo(v: unknown): DevolucionCorreoFicha | null {
 
 function fechaIsoOnull(v: unknown): string | null {
   return typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : null
+}
+
+/** La baja verificada del corredor. Sin fecha legible no se afirma nada: `null`. */
+export function leerBajaVerificada(v: unknown): Poliza['bajaVerificada'] {
+  if (!v || typeof v !== 'object') return null
+  const o = v as Record<string, unknown>
+  const en = typeof o.en === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.en) ? o.en : null
+  if (!en) return null
+  return { en, por: typeof o.por === 'string' ? o.por : null, motivo: typeof o.motivo === 'string' ? o.motivo : null }
 }

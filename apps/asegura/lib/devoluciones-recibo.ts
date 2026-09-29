@@ -19,6 +19,7 @@ import {
   POLIZA_ESTADOS_VIGENTES,
   PREFIJO_TAREA_DEVOLUCION,
   clasificarMotivoDevolucion,
+  fechaEs,
   hitoDevolucion,
   importeEiac,
   normalizarIdRecibo,
@@ -29,6 +30,7 @@ import {
 } from '@central/module-seguros'
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
+import { ROTULO_MOTIVO_BAJA, fechaLlamada, vencimientoCompetencia, type MotivoBaja } from './baja-devolucion-reglas'
 
 type Tx = Pick<ReturnType<typeof prismaAsegura>, '$queryRaw' | '$executeRaw'>
 
@@ -425,3 +427,144 @@ export async function resolverDevolucion(correduriaId: string, reciboId: string,
 }
 
 export type { HitoDevolucion }
+
+// ── «El cliente se va» ────────────────────────────────────────────────────────
+
+export type BajaPorDevolucion =
+  | { ok: true; oportunidadId: string | null; vence: string | null; llamada: string; oportunidadExistente: boolean }
+  | { ok: false; estado: 'no_encontrado' | 'conflicto' | 'invalido'; motivo: string; status: number }
+
+/**
+ * El corredor da la póliza por PERDIDA desde su recibo devuelto (Alberto, 29/09/2026: «la clienta ya me
+ * avisó de que esa moto no la iba a tener»). En UNA transacción:
+ *  1. cierra la devolución abierta (si la avisó el correo) como `manual:baja`;
+ *  2. marca la póliza `cancelada` con baja VERIFICADA (columnas propias; un trigger impide que un
+ *     «vigente» de CIMA la reabra) y guarda el estado previo para poder deshacerlo;
+ *  3. pierde la oportunidad del recibo y sus tareas, y rechaza el correo al cliente pendiente de OK;
+ *  4. abre una oportunidad de COMPETENCIA para el aniversario, con la llamada 60 días antes;
+ *  5. lo deja escrito en el historial de la ficha, con de dónde vino cada dato.
+ * Cuando CIMA mande después la baja, el detector la da por explicada (no abre retención ni fuga).
+ */
+function hoyMadrid(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Madrid' })
+}
+
+export async function darDeBajaPorDevolucion(
+  correduriaId: string, reciboId: string, motivo: MotivoBaja, nota: string | null, actor: string, hoy = hoyMadrid(),
+): Promise<BajaPorDevolucion> {
+  if (!UUID.test(reciboId)) return { ok: false, estado: 'invalido', motivo: 'reciboId no válido', status: 422 }
+  return prismaAsegura().$transaction(async (tx) => {
+    const [r] = await tx.$queryRaw<{
+      clienteId: string; polizaId: string; ramo: string; compania: string | null; numeroPoliza: string | null
+      estado: string; situacion: string; baja: boolean; efecto: string | null; vencePoliza: string | null
+      importe: string | null; prima: string | null
+    }[]>`
+      select p.cliente_id::text as "clienteId", p.id::text as "polizaId", p.tipo::text as ramo, p.aseguradora as compania,
+             p.numero_poliza as "numeroPoliza", p.estado::text as estado, r.situacion::text as situacion,
+             p.baja_verificada_at is not null as baja,
+             to_char(r.fecha_efecto_actual at time zone 'Europe/Madrid', 'YYYY-MM-DD') as efecto,
+             to_char(p.fecha_vencimiento, 'YYYY-MM-DD') as "vencePoliza",
+             r.prima_total as importe, nullif(coalesce(p.prima_bruta, p.prima_anual), 0)::text as prima
+      from poliza_recibos r join polizas p on p.id = r.poliza_id
+      where r.id = ${reciboId}::uuid and r.correduria_id = ${correduriaId}::uuid and p.merged_into_poliza_id is null
+      for update of p`
+    if (!r) return { ok: false as const, estado: 'no_encontrado' as const, motivo: 'Ese recibo no es de esta correduría.', status: 404 }
+    if (r.situacion !== 'devuelto') {
+      return { ok: false as const, estado: 'conflicto' as const, motivo: 'Solo se da de baja desde un recibo DEVUELTO.', status: 409 }
+    }
+    if (r.baja || !(POLIZA_ESTADOS_VIGENTES as readonly string[]).includes(r.estado)) {
+      return { ok: false as const, estado: 'conflicto' as const, motivo: 'La póliza ya no está en vigor: no hay nada que dar de baja.', status: 409 }
+    }
+
+    // 1. La devolución por correo, si la hay (una que trae CIMA no tiene fila abierta: 0 es normal).
+    const deCorreo = await tx.$queryRaw<{ fecha: string }[]>`
+      update recibo_devolucion set resuelta_at = now(), resuelta_motivo = 'manual:baja', resuelta_por = ${actor}
+      where correduria_id = ${correduriaId}::uuid and resuelta_at is null
+        and (recibo_id = ${reciboId}::uuid
+             or (id_recibo_norm, codigo_entidad_dgs) = (select ltrim(id_recibo, '0'), codigo_entidad_dgs from poliza_recibos where id = ${reciboId}::uuid))
+      returning to_char(fecha_devolucion, 'YYYY-MM-DD') as fecha`
+
+    // 2. La póliza, anulada ya por nosotros.
+    await tx.$executeRaw`
+      update polizas set baja_verificada_at = now(), baja_verificada_por = ${actor}, baja_motivo = ${motivo},
+             baja_estado_previo = estado::text, estado = 'cancelada', updated_at = now()
+      where id = ${r.polizaId}::uuid`
+    anotarCambio({ entidad: 'poliza', id: r.polizaId, campo: 'estado', antes: r.estado, despues: 'cancelada' })
+
+    // 3. Lo que perseguía el impago: oportunidades de ESA póliza, sus tareas y el correo propuesto.
+    const perdidas = await tx.$queryRaw<{ id: string; estado: string }[]>`
+      select o.id::text as id, o.estado::text as estado from oportunidades o
+      where o.correduria_id = ${correduriaId}::uuid
+        and (o.poliza_id = ${r.polizaId}::uuid or o.info_riesgo->>'polizaId' = ${r.polizaId})
+        and o.estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      for update`
+    for (const o of perdidas) {
+      await tx.$executeRaw`
+        update oportunidades set estado = 'perdida', motivo_perdida = ${motivo}, motivo_perdida_detalle = ${nota},
+               cerrada_at = now(), updated_at = now()
+        where id = ${o.id}::uuid`
+      await tx.$executeRaw`
+        insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+        values (${correduriaId}::uuid, ${o.id}::uuid, 'perder', cast(${o.estado} as estado_comercial), 'perdida',
+                ${JSON.stringify({ motivo, origen: 'baja_verificada', reciboId })}::jsonb, ${actor})`
+    }
+    await tx.$executeRaw`
+      update gestiones set estado = 'cerrada', updated_at = now(),
+             observaciones = observaciones || ${'\n— Cerrada: el cliente se va (baja verificada).'}
+      where correduria_id = ${correduriaId}::uuid and estado <> 'cerrada'
+        and (oportunidad_id in (select o.id from oportunidades o where o.estado::text = 'perdida'
+                                  and (o.poliza_id = ${r.polizaId}::uuid or o.info_riesgo->>'polizaId' = ${r.polizaId}))
+             or (poliza_id = ${r.polizaId}::uuid and origen_trigger = 'central:seguimiento'))`
+    await tx.$executeRaw`
+      update aprobacion set estado = 'rechazada', decidida_at = now(), decidida_por = ${actor},
+             resultado = 'No se envía: el cliente se va (baja verificada).'
+      where correduria_id = ${correduriaId}::uuid and poliza_id = ${r.polizaId}::uuid
+        and origen = ${'recibo_devuelto'} and estado = 'pendiente'`
+
+    // 4. La oportunidad del año que viene. Si ya hay una abierta de ese cliente y ramo, se deja esa.
+    const vence = vencimientoCompetencia(r.efecto, r.vencePoliza, hoy)
+    const llamada = fechaLlamada(vence, hoy)
+    const [abierta] = await tx.$queryRaw<{ id: string }[]>`
+      select id::text as id from oportunidades
+      where correduria_id = ${correduriaId}::uuid and cliente_id = ${r.clienteId}::uuid
+        and tipo::text = ${r.ramo} and estado::text in ('competencia', 'en_negociacion', 'pendiente_cliente')
+      limit 1`
+    let oportunidadId: string | null = abierta?.id ?? null
+    const motivoTxt = ROTULO_MOTIVO_BAJA[motivo]
+    const cia = r.compania ?? 'la compañía'
+    if (!abierta) {
+      const [o] = await tx.$queryRaw<{ id: string }[]>`
+        insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_id, info_riesgo)
+        values (${correduriaId}::uuid, ${r.clienteId}::uuid, cast(${r.ramo} as tipo_seguro), 'renovacion', 'competencia',
+                ${vence}::date, ${r.prima}::numeric, ${r.polizaId}::uuid,
+                ${JSON.stringify({ origen: 'baja_verificada', polizaId: r.polizaId, companiaAnterior: r.compania, numeroPolizaAnterior: r.numeroPoliza, motivo })}::jsonb)
+        returning id::text as id`
+      oportunidadId = o.id
+      await tx.$executeRaw`
+        insert into gestiones (correduria_id, tipo, prioridad, estado, observaciones, fecha_limite, cliente_id, poliza_id, oportunidad_id, origen_trigger)
+        values (${correduriaId}::uuid, cast('llamada' as gestion_tipo), 'media', 'pendiente',
+                ${`Pasarle precio: dejó ${cia} (${motivoTxt}).${vence ? ` Su seguro actual renueva hacia el ${fechaEs(vence)}.` : ''}`},
+                (${llamada}::date + time '23:59:59') at time zone 'Europe/Madrid',
+                ${r.clienteId}::uuid, ${r.polizaId}::uuid, ${o.id}::uuid, 'central:seguimiento')`
+      await tx.$executeRaw`
+        insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
+        values (${correduriaId}::uuid, ${o.id}::uuid, 'creada_baja_verificada', null, 'competencia',
+                ${JSON.stringify({ polizaId: r.polizaId, vence, llamada })}::jsonb, ${actor})`
+    }
+
+    // 5. El rastro en la ficha: de dónde salió cada cosa (correo, CIMA, el corredor).
+    const importe = importeEiac(r.importe)
+    const fuente = deCorreo[0] ? `aviso de la compañía por correo del ${fechaEs(deCorreo[0].fecha)}` : 'CIMA'
+    const texto = [
+      `Póliza ${r.numeroPoliza ?? ''} (${cia}) ANULADA — baja verificada por ${actor}: ${motivoTxt}.`,
+      `Recibo devuelto${importe !== null ? ` de ${importe.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: 'always' })}€` : ''}${r.efecto ? ` (efecto ${fechaEs(r.efecto)})` : ''} sin pagar; devolución conocida por ${fuente}.`,
+      nota ? `Nota: ${nota}` : null,
+      'Pendiente de que CIMA confirme la anulación.',
+      vence ? `Oportunidad de competencia para el ${fechaEs(vence)} (llamada el ${fechaEs(llamada)}).` : `Oportunidad de competencia sin fecha de renovación (llamada el ${fechaEs(llamada)}).`,
+    ].filter(Boolean).join(' ')
+    await tx.$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, poliza_id, tipo, texto)
+      values (${correduriaId}::uuid, ${r.clienteId}::uuid, ${r.polizaId}::uuid, cast('gestion' as tipo_historial_interno), ${texto})`
+    return { ok: true as const, oportunidadId, vence, llamada, oportunidadExistente: !!abierta }
+  })
+}

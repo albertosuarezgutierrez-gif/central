@@ -1006,6 +1006,7 @@ export {
   PREFIJO_TAREA_DEVOLUCION,
   HITOS_DEVOLUCION,
   hitoDevolucion,
+  fechaEs,
   suspensionDesde,
   textoTareaDevolucion,
   type HitoDevolucion,
