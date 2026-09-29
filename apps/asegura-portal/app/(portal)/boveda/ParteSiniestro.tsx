@@ -37,6 +37,8 @@ import { fechaEs } from '@/lib/fechas'
 import * as borrador from '@/lib/parte-borrador'
 import { logoCompania } from '@/lib/logos-companias'
 
+import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
+
 import { EnviarACompania } from './EnviarACompania'
 
 /**
@@ -383,7 +385,21 @@ let contadorClaves = 0
 
 /** ¿Merece la pena reintentarlo? Solo si el fichero en sí vale: lo que falló fue el viaje. */
 function reintentable(e: Elegido): boolean {
-  return revisarDocumento({ type: e.fichero.type, size: e.fichero.size, name: e.fichero.name }) === null
+  return reparoSubida(e.fichero) === null
+}
+
+/**
+ * El reparo de un fichero AL ELEGIRLO: el del servidor y, además, el corte de Vercel para lo que no
+ * se puede encoger (29/09/2026). Una foto grande pasa porque se reduce al enviar; un PDF de 6 MB se
+ * dice ya, no después de haber creado el parte y mandado sin él.
+ */
+function reparoSubida(f: File): string | null {
+  const reparo = revisarDocumento({ type: f.type, size: f.size, name: f.name })
+  if (reparo) return reparo
+  if (!f.type.startsWith('image/') && f.size > MAX_BYTES_SUBIDA) {
+    return `Pesa ${(f.size / 1024 / 1024).toFixed(1)} MB y el máximo es ${MAX_MB} MB. Mándalo con menos resolución, o llámanos y te decimos cómo hacérnoslo llegar.`
+  }
+  return null
 }
 
 /**
@@ -421,8 +437,14 @@ function pesoLegible(bytes: number | null): string | null {
  */
 const ACCEPT = [...MIMES_DOCUMENTO, '.pdf', '.jpg', '.jpeg', '.png', '.webp', '.heic'].join(',')
 
+/**
+ * Lo que de verdad cabe en UNA subida (29/09/2026). El servidor admite `MAX_BYTES_DOCUMENTO`
+ * (10 MB), pero Vercel corta el cuerpo a 4,5 MB antes de llegar a la ruta y responde un 413 sin
+ * motivo. Las fotos se encogen solas en el navegador; esto es lo que se dice y se comprueba.
+ */
+const MAX_BYTES_SUBIDA = Math.min(MAX_BYTES_DOCUMENTO, 4 * 1024 * 1024)
 /** El tope por fichero, en MB, para decirlo en pantalla ANTES de que lo intente. */
-const MAX_MB = MAX_BYTES_DOCUMENTO / 1024 / 1024
+const MAX_MB = MAX_BYTES_SUBIDA / 1024 / 1024
 
 /**
  * Cómo se dice cada estado de un fichero.
@@ -941,7 +963,7 @@ export function ParteSiniestro({
     const hueco = Math.max(0, MAX_ADJUNTOS_POR_PARTE - ocupanPlaza(ficheros))
     const entran = nuevos.slice(0, hueco)
     const añadidos: Elegido[] = entran.map((f) => {
-      const reparo = revisarDocumento({ type: f.type, size: f.size, name: f.name })
+      const reparo = reparoSubida(f)
       // Un fichero rechazado nace en `error` CON su motivo, no se descarta:
       // desaparecer de la lista se lee como «ya está subido».
       return {
@@ -1008,8 +1030,16 @@ export function ParteSiniestro({
     for (const elegido of cuales) {
       setFicheros((f) => f.map((x) => (x.clave === elegido.clave ? { ...x, estado: 'subiendo', motivo: null } : x)))
       try {
+        // Vercel corta el cuerpo a 4,5 MB antes de llegar a la ruta (29/09/2026): una foto de
+        // móvil se encoge aquí, y lo que siga pasando de 4 MB se dice claro en vez de mandarlo.
+        const fichero = await encogerSiHaceFalta(elegido.fichero)
+        if (fichero.size > MAX_BYTES_SUBIDA) {
+          const motivo = `Pesa ${(fichero.size / 1024 / 1024).toFixed(1)} MB y el máximo es ${MAX_MB} MB. Mándalo con menos resolución, o llámanos y te decimos cómo hacérnoslo llegar.`
+          setFicheros((f) => f.map((x) => (x.clave === elegido.clave ? { ...x, estado: 'error', motivo } : x)))
+          continue
+        }
         const body = new FormData()
-        body.append('documento', elegido.fichero)
+        body.append('documento', fichero)
         if (elegido.parteAmistoso) body.append('tipo', 'parte_amistoso')
         const r = await fetch(`/api/siniestros/${idParte}/adjuntos`, { method: 'POST', body })
         if (r.status === 201) {
@@ -1024,7 +1054,9 @@ export function ParteSiniestro({
             ? cuerpo.motivo
             : r.status === 401
               ? 'Se ha cerrado tu sesión, así que este fichero no ha entrado.'
-              : 'No hemos podido guardarlo.'
+              : r.status === 413
+                ? `Pesa demasiado: el máximo es ${MAX_MB} MB.`
+                : 'No hemos podido guardarlo.'
         setFicheros((f) => f.map((x) => (x.clave === elegido.clave ? { ...x, estado: 'error', motivo } : x)))
       } catch {
         setFicheros((f) =>
@@ -2047,7 +2079,7 @@ function Adjuntar({
       </p>
       {/* El límite se dice ANTES, no cuando el fichero ya se ha rechazado. */}
       <p className="editor-ayuda">
-        Admitimos PDF y fotos (JPG, PNG, WEBP o HEIC), hasta {MAX_MB} MB cada uno y un máximo de{' '}
+        Admitimos PDF y fotos (JPG, PNG, WEBP o HEIC), hasta {MAX_MB} MB cada uno (las fotos grandes las reducimos solas) y un máximo de{' '}
         {MAX_ADJUNTOS_POR_PARTE} por parte.
       </p>
 

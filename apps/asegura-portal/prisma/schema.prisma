@@ -108,6 +108,7 @@ model PortalIdentidad {
   pushSuscripciones PortalPushSuscripcion[]
   avisosCima        PortalAvisoCima[]
   avisosSilenciados PortalAvisoSilenciado[]
+  avisosLeidos      PortalAvisoLeido[]
 
   @@map("portal_identidad")
   @@schema("seguros")
@@ -368,6 +369,21 @@ model PortalAvisoSilenciado {
 
   @@id([identidadId, tipo])
   @@map("portal_aviso_silenciado")
+  @@schema("seguros")
+}
+
+/// Aviso de la campana que la persona ya pulsó (29/09/2026): no vuelve a salir. Clave `tipo:id`
+/// (`claveAviso`), solo de tipos descartables. DDL: `prisma/sql/2026-09-29_portal_aviso_leido.sql`.
+/// Solo SELECT e INSERT: un aviso leído no se «des-lee».
+model PortalAvisoLeido {
+  identidadId String   @map("identidad_id") @db.Uuid
+  clave       String
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  identidad PortalIdentidad @relation(fields: [identidadId], references: [id], onDelete: Cascade)
+
+  @@id([identidadId, clave])
+  @@map("portal_aviso_leido")
   @@schema("seguros")
 }
 

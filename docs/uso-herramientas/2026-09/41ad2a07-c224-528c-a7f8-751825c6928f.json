@@ -1,0 +1,106 @@
+{
+ "sesion": "41ad2a07-c224-528c-a7f8-751825c6928f",
+ "inicio": "2026-09-29T09:09:25.222Z",
+ "fin": "2026-09-29T09:59:37.302Z",
+ "llamadas": 181,
+ "categorias": {
+  "lectura-directa": {
+   "llamadas": 2,
+   "chars_in": 224,
+   "chars_out": 48881,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Grep": 1,
+    "Read": 1
+   }
+  },
+  "otro": {
+   "llamadas": 15,
+   "chars_in": 8901,
+   "chars_out": 121157,
+   "errores": 0,
+   "archivos_citados": 2,
+   "chars_citados": 53476,
+   "tools": {
+    "ToolSearch": 7,
+    "ReadNotifications": 5,
+    "SubagentHandback": 1,
+    "ReportFindings": 1,
+    "Skill": 1
+   }
+  },
+  "mcp:github": {
+   "llamadas": 6,
+   "chars_in": 6528,
+   "chars_out": 11435,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__list_pull_requests": 1,
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__add_issue_comment": 1,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__actions_list": 1
+   }
+  },
+  "bash": {
+   "llamadas": 149,
+   "chars_in": 83181,
+   "chars_out": 592685,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 149
+   }
+  },
+  "sql": {
+   "llamadas": 5,
+   "chars_in": 2687,
+   "chars_out": 4465,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 5
+   }
+  },
+  "agente:general-purpose": {
+   "llamadas": 1,
+   "chars_in": 2079,
+   "chars_out": 2266,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 26738,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 511,
+   "chars_out": 16,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__apply_migration": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 313,
+   "chars_out": 347,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 1
+   }
+  }
+ }
+}

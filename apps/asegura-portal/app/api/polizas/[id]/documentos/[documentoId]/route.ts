@@ -1,7 +1,6 @@
-import { NextResponse } from 'next/server'
-
 import { leerDocumentoPoliza } from '@/lib/documentos-poliza'
 import { requireIdentidad } from '@/lib/session'
+import { descargaNoEncontrada, descargaSinSesion } from '@/lib/respuesta-descarga'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -14,17 +13,17 @@ type Ctx = { params: Promise<{ id: string; documentoId: string }> }
  * Mismas cabeceras que los adjuntos del parte: SIEMPRE descarga, mime de la lista cerrada, sin caché
  * compartida y `nosniff`. «No existe», «no es tuyo» y «no se puede servir» se responden igual (404).
  */
-export async function GET(_req: Request, ctx: Ctx) {
+export async function GET(req: Request, ctx: Ctx) {
   let identidad
   try {
     identidad = await requireIdentidad()
   } catch {
-    return NextResponse.json({ error: 'sin_sesion' }, { status: 401 })
+    return descargaSinSesion(req, { error: 'sin_sesion' })
   }
 
   const { id, documentoId } = await ctx.params
   const d = await leerDocumentoPoliza(identidad.id, id, documentoId)
-  if (!d) return NextResponse.json({ error: 'no_encontrado' }, { status: 404 })
+  if (!d) return descargaNoEncontrada(req, { error: 'no_encontrado' })
 
   const ascii = d.nombre.replace(/[^\x20-\x7e]/g, '_').replace(/["\\]/g, '')
   return new Response(new Uint8Array(d.contenido), {
