@@ -472,7 +472,7 @@ async function cerrarEmision(id: number, estado: string, resultado: Record<strin
 // → resumen con botón → `/emitir`. Reutiliza la tabla y el botón `cas_emitir` de la fase 3a; la fila
 // se reconoce por `resumen.tipo = 'nuevo'` y lleva `poliza_id` NULL.
 
-async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
+async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: number | null): Promise<{ texto: string; ok: boolean }> {
   const clienteId = idValido(args.clienteId)
   if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
     return {
@@ -503,7 +503,7 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     return {
       ok: true,
       texto: `Hay varios precios que encajan; pregúntale a Alberto cuál (modalidad y prima) y vuelve a llamar con modalidad y primaEur: ${paraIA(el.precios.slice(0, 12).map((p) => ({
-        compania: p.compania, categoria: p.categoria, producto: p.producto, primaEur: p.primaEur,
+        compania: p.compania, modalidad: p.modalidad ?? null, categoria: p.categoria, producto: p.producto, primaEur: p.primaEur,
         opciones: (p.opciones ?? []).map((o) => o.valor).slice(0, 4),
       })))}`,
     }
@@ -570,6 +570,7 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     compania: p.compania as string,
     categoria: p.categoria as string,
     producto: p.producto ?? null,
+    modalidad: p.modalidad ?? null,
     primaEur: of.primaEur,
     primaParrillaEur: typeof p.primaEur === 'number' ? p.primaEur : null,
     firmeza: of.firmeza,
@@ -1596,7 +1597,21 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
 
   // Compañía del seguro actual → su código DGS, del catálogo de mercado.
   let companiaAnterior: Opcion | null = null
-  if (e.historial) companiaAnterior = elegir('companiaAnterior', await catalogoOpciones({ tipo: 'companias-anteriores' }), e.historial.compania)
+  // Sin historial dictado: el ÚLTIMO declarado para este vehículo (29/09/2026: una variante sin él perdió
+  // la bonificación y el precio pasó de 200 a 360€). Se dice como supuesto, no se calla.
+  const heredado = !e.historial ? await historialHeredado(clienteId, ramo, e.oportunidadId ?? null, e.matricula ?? previo?.vehiculo.matricula ?? null) : null
+  if (heredado) {
+    const cat = await catalogoOpciones({ tipo: 'companias-anteriores' })
+    const op = typeof cat === 'string' ? null : cat.find((o) => o.id === heredado.companiaCodigo) ?? null
+    if (op) {
+      e.historial = { compania: op.nombre, poliza: heredado.poliza, aniosAsegurado: heredado.aniosAsegurado, aniosEnCompania: heredado.aniosEnCompania, aniosSinSiniestros: heredado.aniosSinSiniestros, siniestrosUltimos5: null }
+      companiaAnterior = op
+      nombres.companiaAnterior = op.nombre
+      piezas.push({ campo: 'companiaAnterior', estado: 'ok' })
+      supuestos.push({ campo: 'seguroAnterior', valor: `${op.nombre} ${heredado.poliza}, ${heredado.aniosAsegurado} años, ${heredado.aniosSinSiniestros} sin siniestros`, porque: 'el declarado en la petición de precio anterior de este vehículo' })
+    }
+  }
+  if (e.historial && !companiaAnterior) companiaAnterior = elegir('companiaAnterior', await catalogoOpciones({ tipo: 'companias-anteriores' }), e.historial.compania)
 
   const huecos = [...errores, ...huecosPendientes(piezas, p.faltan, e.persona), ...huecosFig]
   const vehiculoOk = previo ? true : !!(marca && modelo && motor)
@@ -1607,6 +1622,16 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
     }
   }
 
+  // Lo que se emite después, si Alberto lo ha dicho: tras un precio bueno, el bot confirma ESE precio con
+  // la compañía y manda el botón «Emitir». Dos botones, dos decisiones: pedir precio y emitir.
+  const objetivoCompania = typeof args.emitirCompania === 'string' ? args.emitirCompania.trim().slice(0, 60) : ''
+  const objetivo = objetivoCompania
+    ? {
+        compania: objetivoCompania,
+        ...(typeof args.emitirModalidad === 'string' && args.emitirModalidad.trim() ? { modalidad: args.emitirModalidad.trim().slice(0, 80) } : {}),
+        ...(Number.isFinite(Number(args.emitirPrimaEur)) && args.emitirPrimaEur !== null && args.emitirPrimaEur !== undefined ? { primaEur: Number(args.emitirPrimaEur) } : {}),
+      }
+    : null
   const cuerpo = construirCuerpo({
     ramo, marcaId: marca?.id ?? null, modeloId: modelo?.id ?? null, motor: motor?.id ?? null, codigoVehiculo: version.id,
     matricula, fechaMatriculacion, garaje: garaje.id, garajeEsSupuesto, estadoCivilId: estadoCivil.id, municipioId: municipio.id,
@@ -1614,7 +1639,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
     historial: e.historial && companiaAnterior ? { ...e.historial, companiaCodigo: companiaAnterior.id } : null,
     kmAnuales: e.kmAnuales,
   })
-  const cuerpoGuardado = { ...cuerpo, ...(e.oportunidadId ? { oportunidadId: e.oportunidadId, figuras } : {}) }
+  const cuerpoGuardado = { ...cuerpo, ...(e.oportunidadId ? { oportunidadId: e.oportunidadId, figuras } : {}), ...(objetivo ? { objetivo } : {}) }
   // Los supuestos de asegura que lo dictado ya tapa, fuera: si no, el resumen diría «se supone» de algo que Alberto dijo.
   const tapados = new Set([...Object.keys(cuerpo.correcciones), ...Object.keys(cuerpo.resueltos), 'estadoCivil', 'municipioCirculacionId', 'cpCirculacion'])
   const todos = [...p.supuestos.filter((s) => !tapados.has(s.campo)), ...supuestos]
@@ -1640,7 +1665,10 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
     historial: e.historial && companiaAnterior ? { ...e.historial, compania: companiaAnterior.nombre } : null,
     primaActual: e.primaActual, supuestos: todos, figuras: nombresFig, autonomo: ctx.autonomo,
   })
-  return pedirOProponer(fila.id, texto, ctx)
+  const plan = objetivo
+    ? `\n🚀 Si sale bien, te preparo la emisión de ${escapeHtml(objetivo.compania)}${objetivo.modalidad ? ` ${escapeHtml(objetivo.modalidad)}` : ''}${objetivo.primaEur ? ` (≈${objetivo.primaEur}€)` : ''} con su botón «Emitir».`
+    : ''
+  return pedirOProponer(fila.id, texto + plan, ctx)
 }
 
 
@@ -1701,6 +1729,16 @@ async function vehiculoPrevio(clienteId: string, ramo: RamoTarif, matricula: str
   return { vehiculo: v, de }
 }
 
+/** El último seguro anterior declarado para este cliente y vehículo. Un fallo = no se hereda (se pregunta). */
+async function historialHeredado(clienteId: string, ramo: RamoTarif, oportunidadId: string | null, matricula: string | null) {
+  const r = await tarificacionNuevaGuardadaAsegura(clienteId, ramo, oportunidadId ? { oportunidadId } : undefined).catch(() => null)
+  const h = r && r.estado === 'ok' ? r.guardada.historialPrevio : null
+  if (!h) return null
+  const igual = (a: string, b: string) => a.replace(/[\s-]/g, '').toUpperCase() === b.replace(/[\s-]/g, '').toUpperCase()
+  if (matricula && h.matricula && !igual(matricula, h.matricula)) return null
+  return h
+}
+
 /**
  * Sin fila colgada con datos personales: la propuesta vencida se caduca con `cuerpo = NULL`, y una
  * `pidiendo` de más de 10 minutos (el `after()` murió o no se pudo cerrar) pasa a `incierta` y se AVISA:
@@ -1731,7 +1769,7 @@ async function tarificacionesDeHoy(): Promise<number | null> {
 
 type FilaTarif = {
   cliente_id: string; ramo: RamoTarif | 'hogar'; prima_actual: number | null; turno_id?: number | null
-  cuerpo: { resueltos?: Record<string, unknown>; correcciones?: Record<string, unknown>; oportunidadId?: string; figuras?: Record<string, string>; referencia?: string }
+  cuerpo: { resueltos?: Record<string, unknown>; correcciones?: Record<string, unknown>; oportunidadId?: string; figuras?: Record<string, string>; referencia?: string; objetivo?: { compania: string; modalidad?: string; primaEur?: number } }
 }
 
 /**
@@ -1817,6 +1855,20 @@ export async function tarificarDesdeBoton(arg: string): Promise<void> {
   }
   const venta = fin.estado === 'hecha' && fila.ramo !== 'hogar' ? ventaCruzada(await ramosVivos(fila.cliente_id).catch(() => null), fila.ramo) : null
   await decir([fin.texto, venta].filter(Boolean).join('\n\n'))
+  // Precio bueno y emisión pedida: se prepara (confirma el precio con la compañía) y llega el botón «Emitir».
+  const obj = fila.cuerpo?.objetivo
+  if (fin.estado === 'hecha' && obj) {
+    const r = await prepararEmisionNueva({
+      clienteId: fila.cliente_id, ramo: fila.ramo, compania: obj.compania,
+      ...(obj.modalidad ? { modalidad: obj.modalidad } : {}),
+      ...(obj.primaEur !== undefined ? { primaEur: obj.primaEur } : {}),
+      ...(fila.cuerpo?.oportunidadId ? { oportunidadId: fila.cuerpo.oportunidadId } : {}),
+    }, null).catch((e) => ({ ok: false, texto: `ERROR: ${e instanceof Error ? e.message.slice(0, 160) : 'fallo'}` }))
+    // Si el resumen con el botón salió, ya lo tiene; si no, se le dice por qué (sin instrucciones para la IA).
+    if (!/^Resumen enviado/.test(r.texto)) {
+      await decir(`🛡️ Emisión: ${escapeHtml(r.texto.replace(/\s*(Díselo a Alberto[^.]*\.|Dile a Alberto[^.]*\.|NO digas[^.]*\.|Pregúntale a Alberto[^:]*:)/g, ' ').trim())}`)
+    }
+  }
 }
 
 // ── Un turno ─────────────────────────────────────────────────────────────────────────────────────
