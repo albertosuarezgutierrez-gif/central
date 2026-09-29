@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CheckCircle2, Clock, Download, Eye, HelpCircle, Paperclip, Trash2, Upload } from 'lucide-react'
 import { Ico, FILA } from './iconos'
 import {
@@ -46,6 +46,14 @@ export default function Documentos({
   const [tipo, setTipo] = useState<TipoDocumento>(tipoInicial ?? sugeridos?.[0] ?? 'poliza')
   const [notas, setNotas] = useState('')
   const [fichero, setFichero] = useState<File | null>(null)
+
+  // «Subir póliza» de la ficha llega con `tipoInicial`: el formulario se abre y se
+  // trae a la vista. Cerrado y debajo de las baldosas, en el móvil el botón
+  // parecía no hacer nada (29/09/2026).
+  const formRef = useRef<HTMLDetailsElement>(null)
+  useEffect(() => {
+    if (tipoInicial) formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [tipoInicial])
 
   const destino = { clienteId: clienteId ?? null, polizaId: polizaId ?? null, siniestroId: siniestroId ?? null }
   const resumen = resumenDocumentos(lista)
@@ -225,7 +233,7 @@ export default function Documentos({
         </div>
       )}
 
-      <details>
+      <details ref={formRef} open={tipoInicial ? true : undefined} style={{ scrollMarginTop: 16 }}>
         <summary style={{ ...FILA, cursor: 'pointer', fontSize: 13, minHeight: 44 }}><Ico i={Paperclip} /> Subir o pedir un documento</summary>
         <div style={{ display: 'grid', gap: 8, marginTop: 8, maxWidth: 520 }}>
           <label style={lbl}>

@@ -872,6 +872,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) «Subir póliza» de la ficha parecía no hacer nada
+- El enlace (`?tab=documentos&subir=poliza`, #3921) llegaba bien, pero el formulario seguía en un `<details>` CERRADO
+  debajo de las baldosas: en el móvil no cambiaba nada visible. `Documentos.tsx` ahora lo abre y hace `scrollIntoView`
+  cuando llega `tipoInicial`. Cepo nuevo en `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo).
+
 ## (29/09/2026) El riesgo como pantalla: figuras, variantes e historial (entrega 1, PR #3955)
 - `/correduria/oportunidad/[id]` deja de redirigir: cabecera del riesgo, intervinientes (tomador/propietario/conductores desde los vínculos o «+ Nueva persona» en línea), historial P1…Pn con «qué cambió» derivado de la `peticion` (`diferenciasVariante`, module-seguros) y «Nueva variante» → auto/moto-nuevo con `?oportunidad=`.
 - BD: `oportunidad_figura`, `oportunidades.poliza_id`, `tarificaciones.figuras/nota` (SQL `2026-09-29e`, aplicada). La variante se cuelga de la oportunidad dada; nunca abre otra.
