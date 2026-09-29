@@ -46,8 +46,17 @@ test('ruta: solo los ramos con pantalla de tarificar', () => {
 })
 
 test('ruta: con oportunidad abre ESA tarificación, no la última del ramo', () => {
-  const i = { tarificacionId: 't9', oportunidadId: 'o3', origen: 'web' }
+  const i = { tarificacionId: 't9', oportunidadId: 'o3', polizaId: null, origen: 'web' }
   assert.equal(rutaTarificacion('c1', 'moto', i), '/correduria/cliente/c1/moto-nuevo?oportunidad=o3&tarificacion=t9')
   assert.equal(rutaTarificacion('c1', 'moto', { ...i, oportunidadId: null }), '/correduria/cliente/c1/moto-nuevo')
   assert.equal(rutaTarificacion('c1', 'hogar', i), '/correduria/cliente/c1/hogar-nuevo')
+})
+
+test('ruta: una retarificación abre SU póliza, no la pantalla de alta nueva', () => {
+  const i = { tarificacionId: 't9', oportunidadId: null, polizaId: 'p7', origen: 'plataforma' }
+  assert.equal(rutaTarificacion('c1', 'auto', i), '/correduria/poliza/p7/retarificar')
+  // Aunque el ramo no tenga pantalla de alta: la retarificación es de la póliza.
+  assert.equal(rutaTarificacion('c1', null, i), '/correduria/poliza/p7/retarificar')
+  const r = leerListaAvant2(200, { estado: 'ok', proyectos: [{ ...fila, intranet: i }] })
+  assert.ok(r.estado === 'ok' && r.proyectos[0].intranet?.polizaId === 'p7')
 })
