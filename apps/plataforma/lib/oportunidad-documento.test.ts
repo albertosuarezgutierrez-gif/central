@@ -22,3 +22,8 @@ test('🪤 cada desenlace se dice distinto; sin desenlace no se pinta nada', () 
   assert.equal(interpretarOportunidadDocumento(null), null)
   assert.equal(interpretarOportunidadDocumento({ estado: 'raro' }), null)
 })
+
+test('🪤 «actualizada» solo dice que completó algo si de verdad lo hizo', () => {
+  assert.match(interpretarOportunidadDocumento({ estado: 'actualizada', clienteId: 'c1', vence: null, llamada: '2026-09-30', completada: true })!.texto, /completado/)
+  assert.doesNotMatch(interpretarOportunidadDocumento({ estado: 'actualizada', clienteId: 'c1', vence: null, llamada: '2026-09-30', completada: false })!.texto, /completado/)
+})

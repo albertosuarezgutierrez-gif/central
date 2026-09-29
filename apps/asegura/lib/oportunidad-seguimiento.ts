@@ -586,7 +586,7 @@ export async function crearOportunidad(
   hoy: Date = hoyUtc(),
   /** De dónde nace (`info_riesgo.origen`): a mano por defecto; `documento:*` si la abre un documento subido. */
   origen: string = ORIGEN_MANUAL,
-): Promise<{ ok: true; id: string } | Fallo | { ok: false; estado: 'duplicada'; motivo: string; status: 409; id: string }> {
+): Promise<{ ok: true; id: string } | Fallo | { ok: false; estado: 'duplicada'; motivo: string; status: 409; id: string; completada: boolean }> {
   if (!UUID.test(clienteId)) return { ok: false, estado: 'invalido', motivo: 'id de cliente no válido', status: 422 }
   const v = validarAltaOportunidad(datos, hoy)
   if (!v.ok) return { ok: false, estado: 'invalido', motivo: v.motivo, status: 422 }
@@ -661,7 +661,7 @@ export async function crearOportunidad(
   if (r.tipo === 'sin_cliente') return { ok: false, estado: 'no_encontrado', motivo: 'Ese cliente no es de esta correduría.', status: 404 }
   if (r.tipo === 'duplicada') {
     const extra = r.completada ? ' Le he guardado lo leído de la póliza (compañía, nº y bonus que faltaran).' : ''
-    return { ok: false, estado: 'duplicada', motivo: `Ya tiene una oportunidad de ${a.ramo.replace('_', ' ')} abierta: sigue esa.${extra}`, status: 409, id: r.id }
+    return { ok: false, estado: 'duplicada', motivo: `Ya tiene una oportunidad de ${a.ramo.replace('_', ' ')} abierta: sigue esa.${extra}`, status: 409, id: r.id, completada: r.completada }
   }
   const como = origen === ORIGEN_MANUAL ? 'a mano' : 'sola desde un documento subido'
   await anotarEnFicha(correduriaId, clienteId, `Oportunidad ${a.ramo} abierta ${como}; primer paso (${a.tarea.tipo}) el ${a.tarea.fechaLimite} — por ${actor}`)

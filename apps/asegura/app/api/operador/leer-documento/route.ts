@@ -72,20 +72,29 @@ export const POST = auditado(async (req: Request) => {
     correduriaUnica().then((c) => (c ? polizaEnCartera(c.id, d.numeroPoliza) : null)).catch(() => null),
   ])
   let oportunidad: ResultadoOportunidadDocumento | undefined
+  let ficheroGuardado = false
   if (form.get('crear') === '1') {
     const c = await correduriaUnica().catch(() => null)
     if (c) {
       const sube = typeof clienteId === 'string' && clienteId.trim() !== '' ? clienteId.trim() : null
       oportunidad = await oportunidadDesdeLectura({ correduriaId: c.id, clienteSube: sube, lectura: r, origen: 'subir-poliza', actor: req.headers.get('x-actor') ?? 'corredor' })
-      if (oportunidad.estado === 'creada' || oportunidad.estado === 'actualizada') {
-        await guardarDocumento(c.id, { clienteId: oportunidad.clienteId, tipo: 'poliza', nombre: fichero.name, mime: fichero.type, contenido, subidoPor: 'corredor', notas: 'Subida desde «Subir póliza»' }).catch(() => null)
+      // El fichero va a la ficha de la oportunidad, o a la póliza si ya es nuestra. En los demás
+      // desenlaces NO se guarda, y se dice (`ficheroGuardado: false`): que nadie crea que está.
+      const destino = oportunidad.estado === 'creada' || oportunidad.estado === 'actualizada'
+        ? { clienteId: oportunidad.clienteId }
+        : oportunidad.estado === 'ya_nuestra' && enCartera?.[0]
+          ? { polizaId: enCartera[0].polizaId }
+          : null
+      if (destino) {
+        const g = await guardarDocumento(c.id, { ...destino, tipo: 'poliza', nombre: fichero.name, mime: fichero.type, contenido, subidoPor: 'corredor', notas: 'Subida desde «Subir póliza»' }).catch(() => null)
+        ficheroGuardado = g?.ok === true
       }
     }
   }
   const auto = r.fase === 'auto' ? r.datos : null
   const vehiculo = auto ? [auto.marca, auto.modelo].filter(Boolean).join(' ').trim() || null : null
   return NextResponse.json({
-    ...(oportunidad ? { oportunidad } : {}),
+    ...(oportunidad ? { oportunidad, ficheroGuardado } : {}),
     enCartera,
     matricula: auto?.matricula ?? null,
     vehiculo,

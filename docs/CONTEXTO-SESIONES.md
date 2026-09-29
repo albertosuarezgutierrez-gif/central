@@ -910,6 +910,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Correduría: todo documento de seguro subido abre (o completa) su oportunidad
+- Donde se suba (ficha, portal, enlace de datos, «Subir póliza»), un documento de seguro abre sola la oportunidad: llamada 45 días antes del vencimiento, y si no se lee la fecha, tarea para pedirla. PDF con contraseña: se prueba el DNI de la ficha (PR #3994). PR #4015.
+- Si el documento es de otra persona se crea un lead y se relaciona con la ficha desde la que se subió. La ficha se decide por DNI; por nombre solo con las mismas palabras cuando el documento trae DNI y la ficha no. Los leads sin DNI se reusan por nombre exacto.
+- Portal sin ficha vinculada: nunca escribe en una ficha que ya existe. Solo abre lead nuevo si el documento trae DNI; la nota va «sin verificar».
+- Los ficheros repetidos no se releen. DNI y carnés del enlace de datos tampoco pasan otra vez por la IA.
+- Pendiente: las imágenes van a OpenRouter sin tope de gasto (fuera de `ai_usos`).
+
 ## (29/09/2026) Avant2: el «precio confirmado» es el ReRate, y los descuentos van ahí
 - La web de Avant2 dio 106,77€ en Allianz Motos frente a 216,53€ de nuestra API: 20% + 20% de descuento comercial, ReRate y Divina Pastora bien puesta. Nuestra comparativa enseña precios `estimate: true` sin descuento.
 - Checklist vivo de la conexión (confirmado, descuentos por compañía, lo que hay que mirar en la pantalla): `docs/CODEOSCOPIC-PENDIENTES.md`.

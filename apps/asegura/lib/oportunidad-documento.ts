@@ -22,6 +22,7 @@ import {
   decidirFicha,
   esDocumentoDeSeguro,
   fechaLlamada,
+  mismoNombre,
   proximoVencimiento,
   ramoOportunidad,
 } from './oportunidad-documento-reglas'
@@ -37,6 +38,8 @@ export type ResultadoOportunidadDocumento =
       relacionado: boolean
       vence: string | null
       llamada: string
+      /** `actualizada`: se rellenó algún hueco de la que ya había (false = ya lo tenía todo). */
+      completada: boolean
     }
   | { estado: 'ya_nuestra' }
   | { estado: 'no_es_seguro' }
@@ -51,6 +54,11 @@ export type EntradaOportunidadDocumento = {
   /** Dónde se subió, para el rastro: `ficha`, `portal`, `solicitud`, `subir-poliza`… */
   origen: string
   actor: string
+  /**
+   * `false` = quien sube no está comprobado (el portal sin ficha vinculada): un documento sin DNI no
+   * abre lead (sería uno por subida) y lo que caiga en una ficha que ya existe se marca «sin verificar».
+   */
+  verificado?: boolean
   hoy?: Date
 }
 
@@ -114,6 +122,8 @@ export async function oportunidadDesdeLectura(
       coincidencias: cs,
     })
     if (decision.tipo === 'sin_persona') return { estado: 'sin_persona' }
+    const verificado = e.verificado !== false
+    if (!verificado && decision.tipo === 'lead' && !alta?.dni) return { estado: 'sin_persona' }
 
     let clienteId: string
     let clienteNuevo = false
@@ -121,12 +131,17 @@ export async function oportunidadDesdeLectura(
       clienteId = decision.clienteId
     } else {
       if (!alta) return { estado: 'sin_persona' }
-      const lead = alta.dni
+      // Sin DNI, el mismo recibo subido dos veces (o reintentado) no puede abrir dos leads: se reusa
+      // el lead sin DNI que se llama EXACTAMENTE igual.
+      const previo = alta.dni ? null : await leadMismoNombre(e.correduriaId, `${alta.nombre} ${alta.apellidos}`)
+      const lead = previo
+        ? { ok: true as const, id: previo }
+        : alta.dni
         ? await altaCliente(e.correduriaId, { nombre: alta.nombre, apellidos: alta.apellidos, dni: alta.dni, fuente: 'venta_directa' }, e.actor)
         : await altaLeadSinContacto(e.correduriaId, { nombre: alta.nombre, apellidos: alta.apellidos, tipoPersona: alta.tipoPersona ?? null }, e.actor, e.origen)
       if (lead.ok) {
         clienteId = lead.id
-        clienteNuevo = true
+        clienteNuevo = !previo
       } else {
         // El DNI ya estaba en una ficha que la búsqueda no vio: esa es la persona.
         const porDni = 'coincidencias' in lead ? lead.coincidencias?.find((c) => c.por === 'dni') : undefined
@@ -143,7 +158,8 @@ export async function oportunidadDesdeLectura(
         observaciones: 'Documento de su seguro subido desde esta ficha',
         actor: e.actor,
       }).catch(() => null)
-      relacionado = rel?.ok === true
+      // Ya relacionadas de antes (409) también es «relacionado»: la oportunidad está en OTRA ficha.
+      relacionado = rel?.ok === true || rel?.estado === 'conflicto'
     }
 
     const hoy = e.hoy ?? new Date()
@@ -151,6 +167,7 @@ export async function oportunidadDesdeLectura(
     const llamada = fechaLlamada(vence, hoy)
     const prima = typeof d.primaAnual === 'number' && Number.isFinite(d.primaAnual) && d.primaAnual > 0 && d.primaAnual < 1_000_000 ? d.primaAnual : null
     const vehiculo = [txt(d.marca, 40), txt(d.modelo, 40)].filter(Boolean).join(' ') || null
+    const sinVerificar = verificado ? '' : ' — subido desde el portal por alguien sin ficha: SIN VERIFICAR'
     const datos = {
       ramo: ramoOportunidad(r.ramo),
       estado: 'competencia',
@@ -166,15 +183,35 @@ export async function oportunidadDesdeLectura(
       tipoTarea: 'llamada',
       fechaTarea: llamada,
       nota: vence
-        ? `Llamar para su renovación: vence el ${fmt(vence)} (documento subido: ${e.origen})`
-        : `Pedir la fecha de vencimiento: el documento subido (${e.origen}) no la trae legible`,
+        ? `Llamar para su renovación: vence el ${fmt(vence)} (documento subido: ${e.origen})${sinVerificar}`
+        : `Pedir la fecha de vencimiento: el documento subido (${e.origen}) no la trae legible${sinVerificar}`,
     }
     const o = await crearOportunidad(e.correduriaId, clienteId, datos, e.actor, hoy, `documento:${e.origen}`)
-    if (o.ok) return { estado: 'creada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada }
-    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada }
+    if (o.ok) return { estado: 'creada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada, completada: false }
+    if (o.estado === 'duplicada' && 'id' in o) return { estado: 'actualizada', oportunidadId: o.id, clienteId, clienteNuevo, relacionado, vence, llamada, completada: o.completada }
     return { estado: 'error', motivo: o.motivo }
   } catch (err) {
     console.error('[oportunidad-documento] no se pudo abrir la oportunidad:', err instanceof Error ? err.message : err)
     return { estado: 'error', motivo: err instanceof Error ? err.message : String(err) }
   }
+}
+
+/** El lead SIN DNI que se llama exactamente igual (el más antiguo), o null. Solo leads: una ficha
+ * de cliente o con DNI no se toma por nombre. */
+async function leadMismoNombre(correduriaId: string, nombreCompleto: string): Promise<string | null> {
+  const primera = nombreCompleto.trim().split(/\s+/)[0]
+  if (!primera) return null
+  const candidatos = await prismaAsegura().cliente.findMany({
+    where: {
+      correduriaId,
+      mergedIntoClienteId: null,
+      tipo: 'lead',
+      OR: [{ dni: null }, { dni: '' }],
+      AND: [{ OR: [{ nombre: { contains: primera, mode: 'insensitive' } }, { apellidos: { contains: primera, mode: 'insensitive' } }] }],
+    },
+    select: { id: true, nombre: true, apellidos: true },
+    orderBy: { createdAt: 'asc' },
+    take: 200,
+  }).catch(() => [])
+  return candidatos.find((c) => mismoNombre(`${c.nombre ?? ''} ${c.apellidos ?? ''}`, nombreCompleto, { exacto: true }))?.id ?? null
 }

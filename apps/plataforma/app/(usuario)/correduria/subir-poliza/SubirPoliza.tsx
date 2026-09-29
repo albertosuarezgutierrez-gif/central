@@ -28,6 +28,7 @@ export default function SubirPoliza() {
   const [error, setError] = useState<string | null>(null)
   const [lectura, setLectura] = useState<Lectura | null>(null)
   const [oportunidad, setOportunidad] = useState<AvisoOportunidadDocumento | null>(null)
+  const [sinGuardar, setSinGuardar] = useState(false)
 
   async function leer(f: File) {
     setLeyendo(true)
@@ -53,7 +54,10 @@ export default function SubirPoliza() {
     const l = interpretarLecturaOportunidad(status, json)
     if (l.estado === 'error') { setError(`No se ha podido leer: ${l.motivo}.`); return }
     setLectura(l)
-    setOportunidad(interpretarOportunidadDocumento((json as Record<string, unknown> | null)?.oportunidad))
+    const j = json as Record<string, unknown> | null
+    setOportunidad(interpretarOportunidadDocumento(j?.oportunidad))
+    // asegura dice si guardó el fichero; si no lo dice (versión anterior), no se afirma nada.
+    setSinGuardar(j?.oportunidad != null && j?.ficheroGuardado === false)
   }
 
   return (
@@ -84,7 +88,12 @@ export default function SubirPoliza() {
           )}
         </div>
       )}
-      {lectura && <Resultado l={lectura} />}
+      {sinGuardar && (
+        <p role="status" style={{ ...cardStyle, margin: 0, color: 'var(--negative)' }}>
+          El fichero NO se ha guardado en ninguna ficha: súbelo desde la ficha del cliente si quieres conservarlo.
+        </p>
+      )}
+      {lectura && <Resultado l={lectura} conOportunidad={Boolean(oportunidad?.clienteId)} />}
     </div>
   )
 }
@@ -110,7 +119,7 @@ function Fichas({ fichas }: { fichas: FichaTomador[] }) {
   )
 }
 
-function Resultado({ l }: { l: Lectura }) {
+function Resultado({ l, conOportunidad }: { l: Lectura; conOportunidad: boolean }) {
   const t = l.tomador
   const nuestra = l.enCartera ?? null
   const altaHref = `/correduria/cliente/nuevo${t?.nombre ? `?q=${encodeURIComponent(t.nombre)}` : ''}`
@@ -126,7 +135,7 @@ function Resultado({ l }: { l: Lectura }) {
         <Dato k="Tomador" v={t?.nombre ?? null} />
       </div>
 
-      {nuestra && nuestra.length > 0 ? (
+      {conOportunidad ? null : nuestra && nuestra.length > 0 ? (
         <div style={{ display: 'grid', gap: 6 }}>
           <strong>Esta póliza ya es nuestra (en vigor):</strong>
           {nuestra.map(p => (

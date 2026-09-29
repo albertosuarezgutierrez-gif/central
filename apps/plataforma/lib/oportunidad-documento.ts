@@ -28,7 +28,11 @@ export function interpretarOportunidadDocumento(v: unknown): AvisoOportunidadDoc
       const cuando = vence
         ? `vence el ${vence}; llamada el ${llamada ?? '—'}`
         : 'sin vencimiento legible: queda una tarea para pedirlo'
-      const que = o.estado === 'creada' ? 'Oportunidad abierta sola' : 'Ya tenía una oportunidad de este seguro: le he completado lo que faltaba'
+      const que = o.estado === 'creada'
+        ? 'Oportunidad abierta sola'
+        : o.completada === true
+          ? 'Ya tenía una oportunidad de este seguro: le he completado lo que faltaba'
+          : 'Ya tenía una oportunidad de este seguro abierta: sigue esa'
       return { tono: 'ok', texto: `${que}${quien} (${cuando}).`, clienteId }
     }
     case 'ya_nuestra':

@@ -32,6 +32,10 @@ test('🪤 mismo nombre sin orden; el padre no es el hijo', () => {
   assert.equal(mismoNombre('Manuel Piña', 'Manuel Antonio Piña Franco'), true)
   assert.equal(mismoNombre('Manuel Piña Ruiz', 'Manuel Antonio Piña Franco'), false)
   assert.equal(mismoNombre('Manuel', 'Manuel Antonio Piña Franco'), false)
+  // Las partículas no cuentan para el mínimo de dos palabras.
+  assert.equal(mismoNombre('María de la', 'María de la Paz Ruiz'), false)
+  assert.equal(mismoNombre('Manuel Piña', 'Manuel Piña Ruiz', { exacto: true }), false)
+  assert.equal(mismoNombre('PIÑA RUIZ MANUEL', 'Manuel Piña Ruiz', { exacto: true }), true)
 })
 
 const base = { clienteSube: 'yo', nombreFicha: 'Manuel Antonio Piña Franco', dniFicha: '12345678Z', tomador: 'PIÑA FRANCO MANUEL ANTONIO', dniDocumento: null, coincidencias: null }
@@ -43,6 +47,8 @@ test('🪤 decidir ficha: por DNI primero; dos DNI distintos nunca se funden', (
   assert.deepEqual(decidirFicha({ ...base, dniDocumento: '87654321X', coincidencias: [] }), { tipo: 'lead' })
   // Ficha sin DNI y mismo nombre: es ella.
   assert.deepEqual(decidirFicha({ ...base, dniFicha: null, dniDocumento: '87654321X', coincidencias: [] }), { tipo: 'ficha', clienteId: 'yo', porque: 'nombre' })
+  // 🪤 El hijo sin DNI no se queda la póliza del padre, que sí trae el suyo.
+  assert.deepEqual(decidirFicha({ ...base, dniFicha: null, nombreFicha: 'Manuel Piña', tomador: 'Manuel Piña Ruiz', dniDocumento: '87654321X', coincidencias: [] }), { tipo: 'lead' })
 })
 
 test('decidir ficha sin DNI en el documento: por nombre; otra persona = lead', () => {

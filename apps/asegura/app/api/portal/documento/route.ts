@@ -26,7 +26,8 @@ export const maxDuration = 120
  * asegura por `portal_vinculo`. Con el secreto de este puente filtrado, el
  * daño máximo es colgar un documento de la ficha vinculada a la identidad que
  * se dé — no elegir ficha libremente, que es lo que sí podría el secreto del
- * puerto de operador (por eso este endpoint no lo acepta ni lo menciona).
+ * puerto de operador (por eso este endpoint no lo acepta ni lo menciona). Sin ficha vinculada, lo
+ * único que puede escribir es un lead NUEVO (por el DNI del documento) con su fichero.
  */
 export async function POST(req: Request) {
   if (!puentePortalAutorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -57,15 +58,16 @@ export async function POST(req: Request) {
       contenido,
     })
     // Todo documento de seguro abre su oportunidad (29/09/2026), DESPUÉS de contestar: el portal no
-    // espera a la IA. Sin ficha vinculada, el documento no se pierde: se abre el lead del tomador
-    // (por su DNI) y el fichero se guarda en esa ficha nueva.
+    // espera a la IA. Sin ficha vinculada quien sube NO está comprobado: nunca se escribe el fichero
+    // en una ficha que ya existía (se podría colgar un documento en la ficha de otro con solo saber
+    // su DNI); se guarda solo si se abre un lead NUEVO, y la oportunidad lleva «sin verificar».
     const correduriaId = correduria.id
     const fich = { contenido, mime: fichero.type, nombre: fichero.name }
     if (r.estado === 'ok' || r.estado === 'sin_ficha') {
       const clienteSube = r.estado === 'ok' ? r.clienteId : null
       after(async () => {
-        const o = await oportunidadDesdeFichero({ correduriaId, clienteSube, origen: 'portal', actor: 'el cliente, desde el portal', fichero: fich })
-        if (!clienteSube && (o.estado === 'creada' || o.estado === 'actualizada')) {
+        const o = await oportunidadDesdeFichero({ correduriaId, clienteSube, origen: 'portal', actor: 'el cliente, desde el portal', verificado: clienteSube !== null, fichero: fich })
+        if (!clienteSube && (o.estado === 'creada' || o.estado === 'actualizada') && o.clienteNuevo) {
           await guardarDocumento(correduriaId, { clienteId: o.clienteId, tipo, nombre: fich.nombre, mime: fich.mime, contenido, subidoPor: 'cliente' }).catch(() => null)
         }
       })

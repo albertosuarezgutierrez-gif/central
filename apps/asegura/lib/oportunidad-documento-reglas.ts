@@ -62,20 +62,26 @@ export function esDocumentoDeSeguro(d: { compania?: unknown; numeroPoliza?: unkn
   return txt(d.compania) || txt(d.numeroPoliza) || txt(d.fechaVencimiento) || (typeof d.primaAnual === 'number' && d.primaAnual > 0)
 }
 
+// Partículas que no identifican a nadie: «de la» no puede contar como media persona.
+const PARTICULAS = new Set(['de', 'del', 'la', 'las', 'los', 'el', 'y', 'e', 'i'])
 const palabras = (s: string | null | undefined) =>
-  (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9ñ]+/).filter((p) => p.length >= 2)
+  (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().split(/[^a-z0-9ñ]+/).filter((p) => p.length >= 2 && !PARTICULAS.has(p))
 
 /**
  * ¿Es el mismo nombre? Las pólizas escriben «PIÑA FRANCO MANUEL ANTONIO» y la ficha «Manuel Antonio
  * Piña Franco»: se compara por palabras, sin orden. Mismo si TODAS las palabras del nombre más corto
  * están en el otro y son al menos dos. Un padre «Manuel Piña Ruiz» no es su hijo «Manuel Antonio
- * Piña Franco» (falta «ruiz»). Ante la duda, NO es el mismo: duplicar se ve, mezclar no.
+ * Piña Franco» (falta «ruiz»). Ante la duda, NO es el mismo: duplicar se ve, mezclar no. Las
+ * partículas («de», «la», «y»…) no cuentan.
  */
-export function mismoNombre(a: string | null | undefined, b: string | null | undefined): boolean {
+export function mismoNombre(a: string | null | undefined, b: string | null | undefined, opts: { exacto?: boolean } = {}): boolean {
   const pa = new Set(palabras(a))
   const pb = new Set(palabras(b))
   const [corto, largo] = pa.size <= pb.size ? [pa, pb] : [pb, pa]
   if (corto.size < 2) return false
+  // `exacto`: las mismas palabras, sin sobrar ninguna. Es lo que se exige cuando el documento trae un
+  // DNI que la ficha no tiene: «Manuel Piña» (hijo, sin DNI) no se queda la póliza de «Manuel Piña Ruiz».
+  if (opts.exacto && corto.size !== largo.size) return false
   for (const p of corto) if (!largo.has(p)) return false
   return true
 }
@@ -114,7 +120,7 @@ export function decidirFicha(e: {
     }
     // La ficha no tiene DNI guardado (o no se pudo leer) pero se llama igual: es ella. Con OTRO DNI
     // en la ficha, no: es otra persona aunque se llame igual.
-    if (e.clienteSube && !e.dniFicha && mismoNombre(e.tomador, e.nombreFicha)) return { tipo: 'ficha', clienteId: e.clienteSube, porque: 'nombre' }
+    if (e.clienteSube && !e.dniFicha && mismoNombre(e.tomador, e.nombreFicha, { exacto: true })) return { tipo: 'ficha', clienteId: e.clienteSube, porque: 'nombre' }
     return { tipo: 'lead' }
   }
   if (!e.tomador || palabras(e.tomador).length === 0) {

@@ -66,7 +66,7 @@ test('con «subir=poliza» el formulario de Documentos se abre y se trae a la vi
 // solo lo que cuelga de una ficha: un documento de una póliza nuestra o de un siniestro no es una venta.
 test('todo documento subido a una FICHA abre su oportunidad; lo de una póliza o un siniestro, no', () => {
   const ruta = leer('apps/asegura/app/api/operador/documentos/route.ts')
-  assert.match(ruta, /clienteId && !polizaId && !texto\(form\.get\('siniestroId'\)\)\s*\?\s*await oportunidadDesdeFichero\(/)
+  assert.match(ruta, /clienteId && !polizaId && !texto\(form\.get\('siniestroId'\)\) && !r\.repetido\s*\?\s*await oportunidadDesdeFichero\(/)
   const s = leer(`${COR}/Documentos.tsx`)
   assert.match(s, /const leerPoliza = !!clienteId && !polizaId && !siniestroId/)
   assert.match(s, /interpretarOportunidadDocumento\(j\.oportunidad\)/)

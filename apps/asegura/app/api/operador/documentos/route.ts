@@ -62,6 +62,7 @@ export const POST = auditado(async (req: Request) => {
       if (!(fichero instanceof File)) return NextResponse.json({ error: 'falta el fichero' }, { status: 400 })
       const tipo = tipoDocumento(texto(form.get('tipo')))
       const polizaId = texto(form.get('polizaId'))
+      const contenido = Buffer.from(await fichero.arrayBuffer())
       const r = await guardarDocumento(correduria.id, {
         clienteId: texto(form.get('clienteId')),
         polizaId,
@@ -75,18 +76,19 @@ export const POST = auditado(async (req: Request) => {
         subidoPor: 'corredor',
         nombre: fichero.name,
         mime: fichero.type,
-        contenido: Buffer.from(await fichero.arrayBuffer()),
+        contenido,
       })
       if (!r.ok) return NextResponse.json({ error: r.motivo }, { status: r.status })
       const clienteId = texto(form.get('clienteId'))
-      // Solo lo subido a una FICHA: un documento colgado de una póliza nuestra no es una venta.
-      const oportunidad = clienteId && !polizaId && !texto(form.get('siniestroId'))
+      // Solo lo subido a una FICHA: un documento colgado de una póliza nuestra no es una venta. Un
+      // fichero repetido ya se leyó al subirlo la primera vez: no se paga otra lectura.
+      const oportunidad = clienteId && !polizaId && !texto(form.get('siniestroId')) && !r.repetido
         ? await oportunidadDesdeFichero({
             correduriaId: correduria.id,
             clienteSube: clienteId,
             origen: 'ficha',
             actor: req.headers.get('x-actor') ?? 'corredor',
-            fichero: { contenido: Buffer.from(await fichero.arrayBuffer()), mime: fichero.type, nombre: fichero.name },
+            fichero: { contenido, mime: fichero.type, nombre: fichero.name },
           })
         : null
       return NextResponse.json({ estado: 'ok', documento: r.documento, repetido: r.repetido, oportunidad })
