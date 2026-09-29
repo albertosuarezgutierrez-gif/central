@@ -10,7 +10,8 @@ import { subirDocumentoSolicitud } from '@/lib/solicitud-datos'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 // Guardar + leer con IA (hasta ~40 s de visión).
-export const maxDuration = 60
+// Lectura del documento + (en `after()`) la lectura para abrir la oportunidad, dentro del mismo tope.
+export const maxDuration = 120
 
 /**
  * POST (multipart: token, documento) — el cliente sube un documento por el enlace de datos

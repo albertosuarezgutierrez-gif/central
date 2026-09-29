@@ -16,7 +16,8 @@ import { guardarDocumento } from './cartera-documentos'
 import { fichaPropiaDe } from './contacto-portal'
 
 export type ResultadoDocumentoPropio =
-  | { estado: 'ok'; documentoId: string; repetido: boolean }
+  /** `clienteId` es para uso INTERNO (abrir la oportunidad): la ruta no lo devuelve al portal. */
+  | { estado: 'ok'; documentoId: string; repetido: boolean; clienteId: string }
   /** El fichero no vale (tipo o tamaño): lo dice `revisarDocumento()`, no se inventa aquí. */
   | { estado: 'invalido'; motivo: string }
   | { estado: 'sin_ficha' }
@@ -45,5 +46,5 @@ export async function guardarDocumentoPropio(
     if (r.status === 415) return { estado: 'invalido', motivo: r.motivo }
     return { estado: 'error', causa: r.motivo }
   }
-  return { estado: 'ok', documentoId: r.documento.id, repetido: r.repetido }
+  return { estado: 'ok', documentoId: r.documento.id, repetido: r.repetido, clienteId: ficha.clienteId }
 }

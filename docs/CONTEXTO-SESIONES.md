@@ -912,6 +912,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Correduría: todo documento de seguro subido abre (o completa) su oportunidad
+- Donde se suba (ficha, portal, enlace de datos, «Subir póliza»), un documento de seguro abre sola la oportunidad: llamada 45 días antes del vencimiento, y si no se lee la fecha, tarea para pedirla. PDF con contraseña: se prueba el DNI de la ficha (PR #3994). PR #4015.
+- Si el documento es de otra persona se crea un lead y se relaciona con la ficha desde la que se subió. La ficha se decide por DNI; por nombre solo con las mismas palabras cuando el documento trae DNI y la ficha no. Los leads sin DNI se reusan por nombre exacto.
+- Portal sin ficha vinculada: nunca escribe en una ficha que ya existe. Solo abre lead nuevo si el documento trae DNI; la nota va «sin verificar».
+- Los ficheros repetidos no se releen. DNI y carnés del enlace de datos tampoco pasan otra vez por la IA.
+- Pendiente: las imágenes van a OpenRouter sin tope de gasto (fuera de `ai_usos`).
 ## (29/09/2026) Avant2: presupuestos web ↔ plataforma, indiferente dónde se hagan
 - Ficha cliente → Oportunidades → «Presupuestos en Avant2»: lista los proyectos del tomador (web y plataforma, por DNI, gratis) y trae los de la web como tarificación + oportunidad; desde ahí se comparan/mandan/emiten igual.
 - Asegura `GET|POST /api/operador/codeoscopic/proyectos-cliente` (idempotente, tomador por documento, candado por proyecto). Libro de consumo a coste 0, motivo `importada_web`, excluido de `consumoActual` (cepo en regression-asegura-gasto-codeoscopic).

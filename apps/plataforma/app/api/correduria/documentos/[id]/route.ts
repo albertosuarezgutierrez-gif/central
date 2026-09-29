@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exigirCorreduria } from '@/lib/correduria-acceso'
-import { borrarDocumentoAsegura, descargarDocumentoAsegura, revisarDocumentoAsegura } from '@/lib/documentos-asegura'
+import { borrarDocumentoAsegura, descargarDocumentoAsegura, oportunidadDocumentoAsegura, revisarDocumentoAsegura } from '@/lib/documentos-asegura'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// El POST lee el documento con IA para abrir su oportunidad: hasta ~2 min.
+export const maxDuration = 120
 
 type Ctx = { params: Promise<{ id: string }> }
 
@@ -99,4 +100,18 @@ export async function DELETE(_req: NextRequest, ctx: Ctx) {
   const { id } = await ctx.params
   const r = await borrarDocumentoAsegura(id)
   return NextResponse.json(r.json ?? { error: `HTTP ${r.status}` }, { status: r.status })
+}
+
+/** POST — vuelve a leer este documento y abre (o completa) su oportunidad. */
+export async function POST(_req: NextRequest, ctx: Ctx) {
+  const guarda = await exigirCorreduria()
+  if (!guarda.ok) return guarda.respuesta
+  const { id } = await ctx.params
+  try {
+    const r = await oportunidadDocumentoAsegura(id)
+    return NextResponse.json(r.json ?? { error: `HTTP ${r.status}` }, { status: r.status })
+  } catch (e) {
+    const tiempo = e instanceof Error && (e.name === 'TimeoutError' || e.name === 'AbortError')
+    return NextResponse.json({ error: tiempo ? 'la lectura ha tardado demasiado; mira sus oportunidades en un momento' : (e instanceof Error ? e.message : String(e)) }, { status: 502 })
+  }
 }
