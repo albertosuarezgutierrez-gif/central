@@ -321,16 +321,30 @@ export async function reclasificarGarantiasViejas(
     viejas?: (correduriaId: string, limite: number) => Promise<FilaReclasificar[]>
     escribir?: (correduriaId: string, id: string, g: GarantiasClasificadas) => Promise<number>
   } = {},
-): Promise<{ revisadas: number; reclasificadas: number }> {
+): Promise<{ revisadas: number; reclasificadas: number; errores: number; error?: string }> {
+  // 🚨 Nunca lanza: corre en el mismo cron que el backfill de coberturas, y un fallo aquí no puede
+  // dejar sin hacer la pasada que sí llama al vendor (la lectura de coberturas de las cotizaciones).
   const viejas = deps.viejas ?? viejasReales
   const escribir = deps.escribir ?? escribirReal
-  const filas = await viejas(correduriaId, Math.max(1, Math.min(opts.limite ?? 500, 2000)))
-  let reclasificadas = 0
-  for (const f of filas) {
-    const g = garantiasActuales(f)
-    if (g) reclasificadas += await escribir(correduriaId, f.id, g)
+  let filas: FilaReclasificar[]
+  try {
+    filas = await viejas(correduriaId, Math.max(1, Math.min(opts.limite ?? 500, 2000)))
+  } catch (e) {
+    console.warn('[backfill-coberturas] no se pudieron leer las garantías viejas:', mensaje(e))
+    return { revisadas: 0, reclasificadas: 0, errores: 1, error: mensaje(e) }
   }
-  return { revisadas: filas.length, reclasificadas }
+  let reclasificadas = 0
+  let errores = 0
+  for (const f of filas) {
+    try {
+      const g = garantiasActuales(f)
+      if (g) reclasificadas += await escribir(correduriaId, f.id, g)
+    } catch (e) {
+      errores += 1
+      console.warn(`[backfill-coberturas] no se pudo reclasificar ${f.id}:`, mensaje(e))
+    }
+  }
+  return { revisadas: filas.length, reclasificadas, errores }
 }
 
 async function viejasReales(correduriaId: string, limite: number): Promise<FilaReclasificar[]> {
