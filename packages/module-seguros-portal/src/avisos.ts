@@ -69,6 +69,57 @@ export type Aviso = {
   detalle: string
   /** A dónde lleva: SIEMPRE la pantalla donde se resuelve, nunca una acción. */
   href: string
+  /**
+   * Se quita de la campana al pulsarlo (29/09/2026). Solo los INFORMATIVOS (`TIPOS_AVISO_DESCARTABLES`):
+   * los que piden algo en el portal (aceptar, firmar, corregir datos) se van solos al resolverse.
+   */
+  descartable: boolean
+  /**
+   * Con qué se sella como LEÍDO. Por CICLO en lo que se repite (29/09/2026): la fila de un
+   * vencimiento de cartera o de un carné es la MISMA cada año, así que sellar por `tipo:id` a secas
+   * escondería también el del año que viene.
+   */
+  clave: string
+}
+
+/**
+ * Los avisos que se DESCARTAN al pulsarlos (29/09/2026). Alberto: «pinchas, te lleva a la
+ * modificación o te informa de algo, y automáticamente desaparece» — y no desaparecía ninguno.
+ *
+ * 🚨 Solo los que INFORMAN. Los que piden hacer algo en el portal (autorizaciones, peticiones,
+ * datos, firmas, carné caducado) NO están: se van solos cuando se resuelven, y esconderlos al
+ * pulsar dejaría la tarea sin hacer y sin nada que la recuerde. El vencimiento sí está: lo que
+ * haya que decidir se decide fuera del portal, y ya tiene su correo y su push.
+ */
+export const TIPOS_AVISO_DESCARTABLES = [
+  'obligacion_en_ventana',
+  'carnet_en_ventana',
+  'felicitacion',
+  'poliza_emitida',
+  'parte_actualizado',
+  'poliza_modificada',
+] as const satisfies readonly TipoAviso[]
+
+/**
+ * La clave con la que se sella un aviso leído: `tipo:id`, y con la fecha del ciclo cuando la fila se
+ * reutiliza año tras año (vencimiento de la cartera, carné). Si CIMA corrige la fecha dentro de la
+ * ventana el aviso vuelve a salir una vez: repetirlo es mejor que esconder el del año siguiente.
+ */
+export function claveAviso(a: Pick<Aviso, 'tipo' | 'id'>, ciclo?: string): string {
+  return ciclo ? `${a.tipo}:${a.id}@${ciclo}` : `${a.tipo}:${a.id}`
+}
+
+/** ¿Es una clave de un aviso descartable? La ruta que sella no acepta otra cosa. */
+export function esClaveDescartable(clave: string): boolean {
+  if (clave.length > 300) return false
+  const i = clave.indexOf(':')
+  if (i <= 0 || i === clave.length - 1) return false
+  return (TIPOS_AVISO_DESCARTABLES as readonly string[]).includes(clave.slice(0, i))
+}
+
+/** Enlace a la ficha de UNA póliza de la cartera, o la bóveda si no se sabe cuál. */
+function hrefPoliza(polizaId: string | null | undefined, porDefecto: string): string {
+  return polizaId ? `/boveda/poliza/${encodeURIComponent(polizaId)}` : porDefecto
 }
 
 export const FUENTES_AVISO = ['autorizaciones', 'obligaciones', 'peticiones', 'datos', 'carnets', 'firmas', 'felicitaciones', 'polizas_nuevas', 'partes', 'polizas_modificadas'] as const
@@ -95,6 +146,8 @@ export type ObligacionParaAviso = {
   /** Cada cuántos meses se repite, o `null`/ausente si es de una sola vez.
    *  Solo se usa para la forma del id del aviso — ver el comentario de abajo. */
   repiteCadaMeses?: number | null
+  /** La póliza de la CARTERA de la que sale, si sale de una: el aviso lleva a SU ficha. */
+  polizaId?: string | null
 }
 
 /** Lo mínimo de una petición de acceso recibida; el resto de `PeticionRecibida` no se mira. */
@@ -180,6 +233,12 @@ export type EntradaAvisos = {
    * no lo consulta (no cuenta para el «!»).
    */
   polizasModificadas?: PolizaModificadaParaAviso[] | null
+  /**
+   * Claves (`claveAviso`) de los avisos que la persona ya pulsó. Solo quitan DESCARTABLES.
+   * `null`/ausente = no se sabe (o esta superficie no lo mira): se enseñan todos, que repetir un
+   * aviso ya leído es mejor que esconder uno que no lo está.
+   */
+  leidos?: ReadonlySet<string> | null
   hoy: Date
 }
 
@@ -298,7 +357,7 @@ export function textoGlobo(n: number, ilegibles: number, fuentes: number): strin
 }
 
 export function avisosDe(x: EntradaAvisos): Avisos {
-  const avisos: Aviso[] = []
+  const avisos: (Omit<Aviso, 'descartable' | 'clave'> & { ciclo?: string })[] = []
   const fuentesIlegibles: FuenteAviso[] = []
 
   if (x.peticiones === null) {
@@ -396,7 +455,8 @@ export function avisosDe(x: EntradaAvisos): Avisos {
         id: o.repiteCadaMeses ? `${o.id}:${diaIso(o.fechaAccionable)}` : o.id,
         titulo: o.titulo,
         detalle: `Puedes actuar hasta el ${FECHA.format(o.fechaAccionable)}.`,
-        href: HREF_POR_TIPO.obligacion_en_ventana,
+        ciclo: diaIso(o.fechaAccionable),
+        href: hrefPoliza(o.polizaId, HREF_POR_TIPO.obligacion_en_ventana),
       })
     }
   }
@@ -429,6 +489,7 @@ export function avisosDe(x: EntradaAvisos): Avisos {
           id: c.id,
           titulo: `Tu carné de conducir (${c.tipo}) caduca pronto`,
           detalle: `Caduca el ${cuando}. Pide cita en la DGT con tiempo.`,
+          ciclo: c.fechaCaducidad.trim().slice(0, 10),
           href: HREF_POR_TIPO.carnet_en_ventana,
         })
         continue
@@ -530,7 +591,7 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     fuentesIlegibles.push('polizas_modificadas')
   } else {
     for (const p of x.polizasModificadas ?? []) {
-      avisos.push({ tipo: 'poliza_modificada', id: p.id, ...textoPolizaModificada(p), href: HREF_POR_TIPO.poliza_modificada })
+      avisos.push({ tipo: 'poliza_modificada', id: p.id, ...textoPolizaModificada(p), href: hrefPoliza(p.polizaId, HREF_POR_TIPO.poliza_modificada) })
     }
   }
 
@@ -540,9 +601,13 @@ export function avisosDe(x: EntradaAvisos): Avisos {
     (x.polizasNuevas === undefined ? 1 : 0) +
     (x.partes === undefined ? 1 : 0) +
     (x.polizasModificadas === undefined ? 1 : 0)
+  const descartables = new Set<string>(TIPOS_AVISO_DESCARTABLES)
+  const visibles = avisos
+    .map(({ ciclo, ...a }) => ({ ...a, descartable: descartables.has(a.tipo), clave: claveAviso(a, ciclo) }))
+    .filter((a) => !(a.descartable && x.leidos?.has(a.clave)))
   return {
-    avisos,
+    avisos: visibles,
     fuentesIlegibles,
-    globo: textoGlobo(avisos.length, fuentesIlegibles.length, FUENTES_AVISO.length - ausentes),
+    globo: textoGlobo(visibles.length, fuentesIlegibles.length, FUENTES_AVISO.length - ausentes),
   }
 }

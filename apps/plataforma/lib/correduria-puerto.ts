@@ -441,7 +441,7 @@ function urlAsegura(): string {
   return (process.env.ASEGURA_URL || 'https://central-asegura.vercel.app').replace(/\/$/, '')
 }
 
-async function pedir(path: string): Promise<{ status: number; json: unknown } | null> {
+async function pedir(path: string, timeoutMs = 15_000): Promise<{ status: number; json: unknown } | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
@@ -453,12 +453,12 @@ async function pedir(path: string): Promise<{ status: number; json: unknown } | 
     // pantalla decía «no se pudo llegar a asegura (timeout, DNS o TLS)» — una
     // causa falsa, que manda a mirar el DNS cuando lo roto era el pool. Es el
     // mismo 15 s que usan actividad, comisiones y compañías.
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
 }
 
-async function pedirPost(path: string, body: Record<string, unknown>): Promise<{ status: number; json: unknown } | null> {
+async function pedirPost(path: string, body: Record<string, unknown>, timeoutMs = 15_000): Promise<{ status: number; json: unknown } | null> {
   const secret = process.env.ASEGURA_OPERADOR_SECRET
   if (!secret) return null
   const res = await fetch(`${urlAsegura()}${path}`, {
@@ -466,7 +466,7 @@ async function pedirPost(path: string, body: Record<string, unknown>): Promise<{
     headers: { ...(await cabecerasPuerto(secret)), 'content-type': 'application/json' },
     body: JSON.stringify(body),
     cache: 'no-store',
-    signal: AbortSignal.timeout(15_000),
+    signal: AbortSignal.timeout(timeoutMs),
   })
   return { status: res.status, json: await res.json().catch(() => null) }
 }
@@ -675,6 +675,32 @@ export async function diagnosticoProyectoCodeoscopic(projectId: string): Promise
     return interpretarDiagnosticoProyecto(r.status, r.json)
   } catch {
     return { estado: 'error', motivo: 'red' }
+  }
+}
+
+// ─── Presupuestos del cliente en Avant2 (web o plataforma, 29/09/2026) ──────
+
+/**
+ * Lo que contesta asegura, TAL CUAL, con su status: la pantalla distingue «no hay proyectos»
+ * (`ok` con lista vacía) de «no se ha podido mirar» (cualquier otra cosa). Gratis: solo lecturas.
+ * Hasta 11 lecturas al vendor en paralelo, de ahí los 45 s.
+ */
+export async function proyectosAvant2Cliente(clienteId: string): Promise<{ status: number; json: unknown }> {
+  try {
+    const r = await pedir(`/api/operador/codeoscopic/proyectos-cliente?clienteId=${encodeURIComponent(clienteId)}`, 45_000)
+    return r ?? { status: 503, json: { estado: 'error', mensaje: 'falta ASEGURA_OPERADOR_SECRET' } }
+  } catch {
+    return { status: 502, json: { estado: 'error', mensaje: 'no se pudo llegar a asegura' } }
+  }
+}
+
+/** Trae un proyecto de la web de Avant2 como tarificación. No vuelve a tarificar (0€). */
+export async function traerProyectoAvant2(clienteId: string, projectId: string, solicitadoPor: string): Promise<{ status: number; json: unknown }> {
+  try {
+    const r = await pedirPost('/api/operador/codeoscopic/proyectos-cliente', { clienteId, projectId, solicitadoPor }, 30_000)
+    return r ?? { status: 503, json: { estado: 'error', mensaje: 'falta ASEGURA_OPERADOR_SECRET' } }
+  } catch {
+    return { status: 502, json: { estado: 'error', mensaje: 'se cortó la conexión con asegura: recarga la lista antes de repetir' } }
   }
 }
 

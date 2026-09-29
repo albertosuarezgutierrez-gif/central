@@ -17,6 +17,7 @@ import TabPendiente from './TabPendiente'
 import NotasCliente from './NotasCliente'
 import OportunidadesCliente from './OportunidadesCliente'
 import PresupuestosPoliza from '../../poliza/[id]/PresupuestosPoliza'
+import PresupuestosAvant2 from './PresupuestosAvant2'
 import SegurosCliente from './SegurosCliente'
 import { Tarjeta, etiquetaPoliza, tarjeta } from './piezas'
 import { Pagina } from '@/components/ui'
@@ -168,6 +169,7 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
       {tab === 'oportunidades' && (
         <PresupuestosPoliza clienteId={ficha.id} />
       )}
+      {tab === 'oportunidades' && <PresupuestosAvant2 clienteId={ficha.id} />}
 
       {tab === 'pendiente' && <TabPendiente accion={accion} resumen={resumen} vivas={porClase.viva} clienteId={ficha.id} />}
 
