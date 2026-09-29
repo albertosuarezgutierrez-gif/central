@@ -58,5 +58,9 @@ test('asegura: la solicitud se serializa por cliente y «hecha» escribe en la f
   assert.match(lib, /from clientes where id = \$\{ficha\.clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid for update/,
     'dos peticiones a la vez chocan contra el índice de una pendiente por cliente')
   assert.match(lib, /merged_into_cliente_id is null/, 'la cuenta puede acabar en una ficha fusionada')
-  assert.match(lib, /if \(n === 0\) throw/, '«hecha» puede no escribir nada y decir que sí')
+  assert.match(lib, /if \(!viva\) throw/, '«hecha» puede no escribir nada y decir que sí')
+  // Mismo orden de bloqueo al pedir y al resolver (ficha → solicitud): en orden inverso se interbloquean.
+  const resolver = lib.slice(lib.indexOf('export async function resolverCambioCuenta'))
+  const bloqueaFicha = resolver.indexOf('for update')
+  assert.ok(bloqueaFicha !== -1 && bloqueaFicha < resolver.indexOf('update cambio_cuenta_solicitud'), 'resolver bloquea la solicitud antes que la ficha')
 })

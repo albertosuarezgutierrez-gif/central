@@ -124,34 +124,44 @@ export type ResultadoResolverCuenta = { estado: 'ok' } | { estado: 'no_encontrad
 export async function resolverCambioCuenta(correduriaId: string, id: string, estado: ResolucionCambioCuenta, actor: string): Promise<ResultadoResolverCuenta> {
   const db = prismaAsegura()
   const r = await db.$transaction(async (tx) => {
-    const [s] = await tx.$queryRaw<{ clienteId: string; iban: string; mascara: string; cuentaActual: string | null }[]>`
-      update cambio_cuenta_solicitud s set estado = ${estado}, resuelta_at = now(), resuelta_por = ${actor}
-      from clientes c
-      where s.id = ${id}::uuid and s.correduria_id = ${correduriaId}::uuid and s.estado = 'pendiente' and c.id = s.cliente_id
-      returning s.cliente_id::text as "clienteId", s.iban_cifrado as iban, s.mascara, c.cuenta_bancaria as "cuentaActual"`
+    // Mismo orden de bloqueo que `solicitarCambioCuenta` (primero la ficha, luego la solicitud): en
+    // orden inverso, pedir y resolver a la vez podrían interbloquearse.
+    const [base] = await tx.$queryRaw<{ clienteId: string }[]>`
+      select cliente_id::text as "clienteId" from cambio_cuenta_solicitud
+      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'`
+    if (!base) return null
+    // La ficha que queda viva: si se fusionó entre la petición y ahora, la cuenta va a la SUPERVIVIENTE.
+    const [viva] = await tx.$queryRaw<{ id: string; cuenta: string | null }[]>`
+      select id::text as id, cuenta_bancaria as cuenta from clientes
+      where correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null
+        and id = coalesce((select merged_into_cliente_id from clientes where id = ${base.clienteId}::uuid), ${base.clienteId}::uuid)
+      for update`
+    const [s] = await tx.$queryRaw<{ iban: string; mascara: string }[]>`
+      update cambio_cuenta_solicitud set estado = ${estado}, resuelta_at = now(), resuelta_por = ${actor}
+      where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid and estado = 'pendiente'
+      returning iban_cifrado as iban, mascara`
     if (!s) return null
     if (estado === 'hecha') {
-      // Si la ficha se fusionó entre la petición y ahora, la cuenta va a la SUPERVIVIENTE, no a la lápida.
-      const n = await tx.$executeRaw`
+      if (!viva) throw new Error('la ficha del cliente no se pudo actualizar con la cuenta')
+      await tx.$executeRaw`
         update clientes set cuenta_bancaria = ${s.iban}, updated_at = now()
-        where correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null
-          and id = coalesce((select merged_into_cliente_id from clientes where id = ${s.clienteId}::uuid), ${s.clienteId}::uuid)`
-      if (n === 0) throw new Error('la ficha del cliente no se pudo actualizar con la cuenta')
+        where id = ${viva.id}::uuid and correduria_id = ${correduriaId}::uuid`
       // Y en sus pólizas vigentes: la emisión y la retarificación leen primero la cuenta de la póliza,
       // y «hecha» significa que ya se cambió en la compañía. CIMA la volverá a traer igual.
       await tx.$executeRaw`
         update polizas set cuenta_bancaria = ${s.iban}
         where correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null and sustituida_at is null
           and estado::text = any(${[...POLIZA_ESTADOS_VIGENTES] as string[]}::text[])
-          and cliente_id = coalesce((select merged_into_cliente_id from clientes where id = ${s.clienteId}::uuid), ${s.clienteId}::uuid)`
+          and cliente_id = ${viva.id}::uuid`
     }
+    const clienteId = viva?.id ?? base.clienteId
     await tx.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
-      values (${correduriaId}::uuid, ${s.clienteId}::uuid, cast('gestion' as tipo_historial_interno),
+      values (${correduriaId}::uuid, ${clienteId}::uuid, cast('gestion' as tipo_historial_interno),
               ${estado === 'hecha'
                 ? `Cuenta de los recibos cambiada a ${s.mascara} (cambiada en la compañía; lo marca ${actor}).`
                 : `Solicitud de cambio de cuenta a ${s.mascara} descartada (${actor}).`})`
-    return s
+    return { clienteId, mascara: s.mascara, cuentaActual: viva?.cuenta ?? null }
   })
   if (!r) return { estado: 'no_encontrada' }
   if (estado === 'hecha') {
