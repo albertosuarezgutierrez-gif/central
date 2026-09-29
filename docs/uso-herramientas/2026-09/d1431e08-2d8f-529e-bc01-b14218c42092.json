@@ -1,21 +1,21 @@
 {
  "sesion": "d1431e08-2d8f-529e-bc01-b14218c42092",
  "inicio": "2026-09-28T19:40:12.524Z",
- "fin": "2026-09-29T09:24:03.118Z",
- "llamadas": 855,
+ "fin": "2026-09-29T09:54:20.703Z",
+ "llamadas": 914,
  "categorias": {
   "otro": {
-   "llamadas": 131,
-   "chars_in": 63870,
-   "chars_out": 892712,
+   "llamadas": 145,
+   "chars_in": 64120,
+   "chars_out": 1120537,
    "errores": 0,
-   "archivos_citados": 18,
-   "chars_citados": 1053928,
+   "archivos_citados": 20,
+   "chars_citados": 1171163,
    "tools": {
     "Skill": 3,
-    "ToolSearch": 24,
+    "ToolSearch": 27,
     "SubagentHandback": 9,
-    "ReadNotifications": 64,
+    "ReadNotifications": 75,
     "TaskCreate": 11,
     "TaskUpdate": 19,
     "ReportFindings": 1
@@ -48,22 +48,22 @@
    }
   },
   "mcp:github": {
-   "llamadas": 48,
-   "chars_in": 25239,
-   "chars_out": 126411,
+   "llamadas": 68,
+   "chars_in": 30738,
+   "chars_out": 163787,
    "errores": 1,
-   "archivos_citados": 7,
-   "chars_citados": 1689818,
+   "archivos_citados": 8,
+   "chars_citados": 1694004,
    "tools": {
     "mcp__github__list_pull_requests": 2,
-    "mcp__github__create_pull_request": 6,
-    "mcp__github__update_pull_request": 6,
-    "mcp__github__pull_request_read": 21,
-    "mcp__github__add_issue_comment": 1,
+    "mcp__github__create_pull_request": 8,
+    "mcp__github__update_pull_request": 8,
+    "mcp__github__pull_request_read": 27,
+    "mcp__github__add_issue_comment": 3,
     "mcp__github__actions_list": 3,
-    "mcp__github__merge_pull_request": 5,
-    "mcp__github__unsubscribe_pr_activity": 1,
-    "mcp__github__subscribe_pr_activity": 1,
+    "mcp__github__merge_pull_request": 8,
+    "mcp__github__unsubscribe_pr_activity": 4,
+    "mcp__github__subscribe_pr_activity": 3,
     "mcp__github__get_job_logs": 1,
     "mcp__github__add_reply_to_pull_request_comment": 1
    }
@@ -80,25 +80,25 @@
    }
   },
   "sql": {
-   "llamadas": 40,
-   "chars_in": 21085,
-   "chars_out": 41724,
+   "llamadas": 41,
+   "chars_in": 21377,
+   "chars_out": 42402,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 40
+    "mcp__Supabase__execute_sql": 41
    }
   },
   "bash": {
-   "llamadas": 502,
-   "chars_in": 395931,
-   "chars_out": 1703960,
+   "llamadas": 526,
+   "chars_in": 410850,
+   "chars_out": 1771847,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 502
+    "Bash": 526
    }
   },
   "mcp:Claude_Code_Remote": {
