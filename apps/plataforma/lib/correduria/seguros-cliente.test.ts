@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { repartirSegurosCliente, estaHuerfana, proximoAniversario, vencimientoOportunidad } from './seguros-cliente.ts'
+import { repartirSegurosCliente, estaHuerfana, proximoAniversario, vencimientoOportunidad, vencimientoPoliza } from './seguros-cliente.ts'
 import type { PolizaDeclaradaFicha, PolizaFicha } from '../ficha-asegura'
 import type { OportunidadDeCliente } from '../seguimiento-asegura'
 
@@ -252,4 +252,33 @@ test('una abierta sin datos que la distingan sigue enganchándose a la históric
   const r = repartirSegurosCliente({ polizas: [hist], declaradas: [], oportunidades: [opo('o', { estado: 'en_negociacion', aseguradora: null })], hoy: new Date('2026-09-28') })
   const tarjeta = r.oportunidades.find(s => s.id === 'mondeo')
   assert.ok(tarjeta && tarjeta.clase === 'poliza' && tarjeta.oportunidad?.id === 'o')
+})
+
+test('la oportunidad que cuelga de una póliza va a SU tarjeta aunque haya otra del mismo ramo', () => {
+  // Al anotar el vencimiento se abre el seguimiento de ESA póliza: casar por ramo lo pintaba
+  // en la primera tarjeta del ramo y la fecha recién guardada «no salía».
+  const r = repartirSegurosCliente({
+    polizas: [pol('hogarA', { tipo: 'hogar', estado: 'cancelada' }), pol('hogarB', { tipo: 'hogar', estado: 'cancelada' })],
+    declaradas: [],
+    oportunidades: [opo('o1', { ramo: 'hogar', polizaId: 'hogarB' })],
+  })
+  const a = r.oportunidades.find(s => s.id === 'hogarA'), b = r.oportunidades.find(s => s.id === 'hogarB')
+  assert.ok(a?.clase === 'poliza' && a.oportunidad === null)
+  assert.ok(b?.clase === 'poliza' && b.oportunidad?.id === 'o1')
+})
+
+test('vencimiento de la tarjeta: el del seguimiento manda sobre el del volcado', () => {
+  const hoy = new Date('2026-09-29T10:00:00Z')
+  const r = repartirSegurosCliente({
+    polizas: [pol('moto', { viva: false, tipo: 'moto', fechaVencimiento: '2018-03-08' }), pol('auto', { viva: false, fechaVencimiento: null })],
+    declaradas: [],
+    oportunidades: [opo('o1', { ramo: 'moto', fechaFinVigencia: '2027-01-15', polizaId: 'moto' })],
+    hoy,
+  })
+  const moto = r.oportunidades.find(s => s.id === 'moto'), auto = r.oportunidades.find(s => s.id === 'auto')
+  assert.ok(moto?.clase === 'poliza' && auto?.clase === 'poliza')
+  assert.deepEqual(vencimientoPoliza(moto, hoy), { fecha: '2027-01-15', delSeguimiento: true })
+  // Sin seguimiento: el aniversario del volcado; sin fecha, null (nunca una inventada).
+  assert.deepEqual(vencimientoPoliza({ ...moto, oportunidad: null }, hoy), { fecha: '2027-03-08', delSeguimiento: false })
+  assert.deepEqual(vencimientoPoliza(auto, hoy), { fecha: null, delSeguimiento: false })
 })

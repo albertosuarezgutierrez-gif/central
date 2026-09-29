@@ -1,11 +1,12 @@
 import Link from 'next/link'
 import type { RepartoSeguros, SeguroCliente } from '@/lib/correduria/seguros-cliente'
-import { ESTADOS_ABIERTOS, estaHuerfana, proximoAniversario, vencimientoOportunidad } from '@/lib/correduria/seguros-cliente'
+import { ESTADOS_ABIERTOS, estaHuerfana, vencimientoOportunidad, vencimientoPoliza } from '@/lib/correduria/seguros-cliente'
 import { ROTULO_ESTADO, TIPOS_TAREA_UI, rotuloMotivo, rotuloRamo, type OportunidadDeCliente } from '@/lib/seguimiento-asegura'
 import type { SiniestroCartera } from '@/lib/siniestros-asegura'
 import { eur } from '@/lib/dinero'
 import { TIPOS, fmt } from './piezas'
 import EliminarDeOportunidades, { RecuperarLead } from './EliminarDeOportunidades'
+import EditarVencimiento from './EditarVencimiento'
 
 /**
  * Los seguros del cliente en tres cubos, cada uno una tarjeta que se pincha
@@ -113,6 +114,15 @@ const ESTADO_POLIZA: Record<string, string> = {
   vencida: 'Vencida', competencia: 'En la competencia', fin_riesgo: 'Fin del riesgo',
 }
 
+/** «Le vence …» de un vencimiento anotado; uno de hace más de un año se dice por su próxima renovación. */
+function textoVence(anotado: string | null, hoy: Date): string {
+  const fin = anotado?.slice(0, 10) ?? null
+  const proxima = vencimientoOportunidad(fin, hoy)
+  return fin === null || proxima === null ? 'Vencimiento sin anotar'
+    : proxima === fin ? `Le vence ${fmt(fin)}`
+      : `Le renueva el ${fmt(proxima)} (anotado: ${fmt(fin)})`
+}
+
 function rotuloTarea(t: string): string {
   return TIPOS_TAREA_UI.find(x => x.valor === t)?.rotulo ?? t
 }
@@ -152,14 +162,18 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     estado = s.historica ? 'Estuvo con nosotros'
       : p.confirmadaCima ? ESTADO_POLIZA[p.estado.trim()] ?? p.estado.replace(/_/g, ' ') : 'Pendiente de CIMA'
     titulo = p.objeto?.titulo ?? p.matricula ?? (p.numeroPoliza ? `Póliza nº ${p.numeroPoliza}` : 'Sin detalle del bien')
-    const renueva = s.historica ? proximoAniversario(p.fechaVencimiento, ctx.hoy) : null
+    // El vencimiento anotado en su seguimiento (corregido a mano) manda sobre el de la póliza.
+    const venc = vencimientoPoliza(s, ctx.hoy)
+    const volcado = s.historica && p.fechaVencimiento ? `último dato: vencía ${fmt(p.fechaVencimiento.slice(0, 10))}` : null
     lineas = [
       `${p.aseguradora}${p.numeroPoliza ? ` · nº ${p.numeroPoliza}` : ''}${s.historica ? ' (volcado histórico)' : ''}`,
-      s.historica
-        ? renueva && p.fechaVencimiento
-          ? `Renovaría el ${fmt(renueva)} · último dato: vencía ${fmt(p.fechaVencimiento.slice(0, 10))}`
-          : 'Sin fecha de vencimiento: no se sabe cuándo renueva'
-        : [p.fechaVencimiento ? `Vence ${fmt(p.fechaVencimiento.slice(0, 10))}` : 'Sin fecha de vencimiento', p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
+      venc.delSeguimiento
+        ? [textoVence(o?.fechaFinVigencia ?? null, ctx.hoy), volcado ?? (p.prima !== null ? eur(p.prima) : null)].filter(Boolean).join(' · ')
+        : s.historica
+          ? venc.fecha && volcado
+            ? `Renovaría el ${fmt(venc.fecha)} · ${volcado}`
+            : 'Sin fecha de vencimiento: no se sabe cuándo renueva'
+          : [p.fechaVencimiento ? `Vence ${fmt(p.fechaVencimiento.slice(0, 10))}` : 'Sin fecha de vencimiento', p.prima !== null ? eur(p.prima) : null].filter(Boolean).join(' · '),
       // El cambio de compañía va en la tarjeta de la nueva, no en una segunda del mismo bien.
       s.sustituye
         ? `Sustituye a ${s.sustituye.aseguradora}${s.sustituye.numeroPoliza ? ` nº ${s.sustituye.numeroPoliza}` : ''}${s.sustituye.fechaVencimiento ? `, que cubre hasta el ${fmt(s.sustituye.fechaVencimiento.slice(0, 10))}` : ''}`
@@ -198,14 +212,9 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     // Un fin de vigencia anotado hace más de un año no es «le vence» en pasado: un seguro
     // anual renueva el mismo día cada año, así que se dice el próximo (y de dónde sale).
     // Uno que venció hace menos se queda tal cual: esa renovación se acaba de pasar.
-    const fin = o.fechaFinVigencia?.slice(0, 10) ?? null
-    const proxima = vencimientoOportunidad(fin, ctx.hoy)
-    const vence = fin === null || proxima === null ? 'Vencimiento sin anotar'
-      : proxima === fin ? `Le vence ${fmt(fin)}`
-        : `Le renueva el ${fmt(proxima)} (anotado: ${fmt(fin)})`
     lineas = [
       bien ? `${compania}${o.numeroPoliza ? ` · nº ${o.numeroPoliza}` : ''}${o.vehiculo && o.matricula ? ` · ${o.matricula}` : ''}` : null,
-      [vence, o.prima !== null ? `paga ${eur(o.prima)}` : null].filter(Boolean).join(' · '),
+      [textoVence(o.fechaFinVigencia, ctx.hoy), o.prima !== null ? `paga ${eur(o.prima)}` : null].filter(Boolean).join(' · '),
     ]
     avisos.push(...avisosOportunidad(o, ctx.hoy))
   } else {
@@ -246,11 +255,25 @@ function TarjetaSeguro({ s, ctx, eliminable = false }: { s: SeguroCliente; ctx: 
     : s.clase === 'poliza' ? <EliminarDeOportunidades tipo="poliza" polizaId={s.id} oportunidadId={abiertaDe(s.oportunidad)} />
       : s.clase === 'oportunidad' && abiertaDe(s.oportunidad) ? <EliminarDeOportunidades tipo="oportunidad" oportunidadId={s.oportunidad.id} />
         : null
-  if (!quitar) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
+  // El vencimiento es con lo que se llama a la clienta: se corrige aquí mismo, sin entrar al
+  // seguimiento. En una póliza sin seguimiento, guardarlo abre el suyo (29/09/2026).
+  const abierta = eliminable && s.clase !== 'declarada' ? abiertaDe(s.oportunidad) : undefined
+  const vencimiento = !eliminable ? null
+    : s.clase === 'poliza'
+      ? abierta
+        ? <EditarVencimiento oportunidadId={abierta} vence={vencimientoPoliza(s, ctx.hoy).fecha} />
+        : <EditarVencimiento polizaId={s.id} vence={vencimientoPoliza(s, ctx.hoy).fecha} />
+      : s.clase === 'oportunidad' && abierta
+        ? <EditarVencimiento oportunidadId={abierta} vence={vencimientoOportunidad(s.oportunidad.fechaFinVigencia?.slice(0, 10) ?? null, ctx.hoy)} />
+        : null
+  if (!quitar && !vencimiento) return <Link href={href} prefetch={false} style={tarjetaSeguro}>{cuerpo}</Link>
   return (
     <div style={{ ...tarjetaSeguro, gap: 8 }}>
       <Link href={href} prefetch={false} style={{ display: 'grid', gap: 4, alignContent: 'start', color: 'inherit', textDecoration: 'none' }}>{cuerpo}</Link>
-      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, display: 'grid' }}>{quitar}</div>
+      <div style={{ borderTop: '1px solid var(--border)', paddingTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'start' }}>
+        {vencimiento}
+        {quitar && <div style={{ display: 'grid', flex: '1 1 auto' }}>{quitar}</div>}
+      </div>
     </div>
   )
 }

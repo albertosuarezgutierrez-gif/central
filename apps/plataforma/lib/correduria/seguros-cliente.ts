@@ -112,11 +112,20 @@ export function vencimientoOportunidad(iso: string | null, hoy: Date): string | 
   return fin > haceUnAnio ? fin : proxima
 }
 
+/**
+ * El vencimiento que se enseña en la tarjeta de una póliza en Oportunidades: el anotado en su
+ * seguimiento MANDA (lo corrige Alberto cuando el escaneo o el volcado traen mal la fecha, y es
+ * el que dispara el aviso); sin él, el de la póliza (del volcado, corrido a su próximo aniversario).
+ */
+export function vencimientoPoliza(s: Extract<SeguroCliente, { clase: 'poliza' }>, hoy: Date): { fecha: string | null; delSeguimiento: boolean } {
+  const anotado = s.oportunidad?.fechaFinVigencia ?? null
+  if (anotado) return { fecha: vencimientoOportunidad(anotado, hoy), delSeguimiento: true }
+  const p = s.poliza.fechaVencimiento
+  return { fecha: s.historica ? proximoAniversario(p, hoy) : p?.slice(0, 10) ?? null, delSeguimiento: false }
+}
+
 function fechaDe(s: SeguroCliente, hoy: Date): string | null {
-  if (s.clase === 'poliza') {
-    return s.oportunidad?.proximaTarea?.fechaLimite
-      ?? (s.historica ? proximoAniversario(s.poliza.fechaVencimiento, hoy) : s.poliza.fechaVencimiento)
-  }
+  if (s.clase === 'poliza') return s.oportunidad?.proximaTarea?.fechaLimite ?? vencimientoPoliza(s, hoy).fecha
   if (s.clase === 'oportunidad') return s.oportunidad.proximaTarea?.fechaLimite ?? vencimientoOportunidad(s.oportunidad.fechaFinVigencia, hoy)
   return s.declarada.fechaVencimiento
 }
@@ -201,8 +210,11 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
       // el Ford Mondeo de Pelayo de 2015 en vez del Kalos de MUSSAP (Rafael Campa,
       // 28/09/2026). Solo la matrícula: la compañía y el nº de la oportunidad son los de la
       // competencia y difieren de los de nuestra póliza perdida aunque sea el mismo seguro.
-      const hueco = enCompetencia.find(s => s.oportunidad === null && o.ramo !== null && s.poliza.tipo === o.ramo
-        && !otraMatricula(o.matricula, s.poliza.matricula))
+      // La que cuelga de una póliza concreta (renovación, o abierta al anotarle el vencimiento)
+      // va a SU tarjeta: con dos del mismo ramo, casar por ramo la pintaría en la otra.
+      const hueco = enCompetencia.find(s => s.oportunidad === null && o.polizaId != null && s.poliza.id === o.polizaId)
+        ?? enCompetencia.find(s => s.oportunidad === null && o.ramo !== null && s.poliza.tipo === o.ramo
+          && !otraMatricula(o.matricula, s.poliza.matricula))
       if (hueco) hueco.oportunidad = o
       else sueltas.push({ clase: 'oportunidad', id: o.id, oportunidad: o })
     }
