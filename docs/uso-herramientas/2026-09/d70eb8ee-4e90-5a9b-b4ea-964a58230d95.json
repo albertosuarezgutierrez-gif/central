@@ -1,45 +1,48 @@
 {
  "sesion": "d70eb8ee-4e90-5a9b-b4ea-964a58230d95",
  "inicio": "2026-09-29T12:51:19.956Z",
- "fin": "2026-09-29T13:59:32.532Z",
- "llamadas": 178,
+ "fin": "2026-09-29T14:42:06.648Z",
+ "llamadas": 332,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 4,
-   "chars_in": 552,
-   "chars_out": 51519,
+   "llamadas": 35,
+   "chars_in": 4168,
+   "chars_out": 402476,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 3,
-    "Read": 1
+    "Grep": 16,
+    "Read": 18,
+    "Glob": 1
    }
   },
   "bash": {
-   "llamadas": 106,
-   "chars_in": 71037,
-   "chars_out": 340628,
+   "llamadas": 217,
+   "chars_in": 118368,
+   "chars_out": 720299,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 106
+    "Bash": 217
    }
   },
   "otro": {
-   "llamadas": 31,
-   "chars_in": 1114,
-   "chars_out": 314932,
+   "llamadas": 36,
+   "chars_in": 8543,
+   "chars_out": 315532,
    "errores": 0,
    "archivos_citados": 3,
    "chars_citados": 49731,
    "tools": {
-    "ToolSearch": 9,
+    "ToolSearch": 11,
     "TaskCreate": 1,
     "TaskUpdate": 1,
     "Skill": 1,
-    "ReadNotifications": 19
+    "ReadNotifications": 19,
+    "SubagentHandback": 2,
+    "SendMessage": 1
    }
   },
   "mcp:github": {
@@ -72,14 +75,14 @@
    }
   },
   "sql": {
-   "llamadas": 2,
-   "chars_in": 1424,
-   "chars_out": 2262,
+   "llamadas": 8,
+   "chars_in": 4794,
+   "chars_out": 9353,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 2
+    "mcp__Supabase__execute_sql": 8
    }
   },
   "mcp:Claude_Code_Remote": {
@@ -116,6 +119,17 @@
    "chars_citados": 0,
    "tools": {
     "Agent": 2
+   }
+  },
+  "agente:agente-architect": {
+   "llamadas": 1,
+   "chars_in": 4336,
+   "chars_out": 4522,
+   "errores": 0,
+   "archivos_citados": 6,
+   "chars_citados": 191649,
+   "tools": {
+    "Agent": 1
    }
   }
  }
