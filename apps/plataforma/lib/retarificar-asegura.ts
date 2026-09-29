@@ -1600,6 +1600,8 @@ export async function emitirAsegura(p: {
   /** Las casillas que el corredor ha marcado tras el 409 `confirmar_figuras`
    *  (`conductor`/`cp`/`cliente`). Solo viaja si viene. */
   figurasConfirmadas?: string[]
+  /** La oferta que se ENSEÑÓ (Telegram): si la aceptada del proyecto ya es otra, asegura no envía nada (409). */
+  offerIdEsperado?: string
 }): Promise<RespuestaEmitir> {
   try {
     const r = await pedir(
@@ -1619,6 +1621,7 @@ export async function emitirAsegura(p: {
           ...(p.familiaEnAllianz === true ? { familiaEnAllianz: true } : {}),
           ...(p.duplicadoConfirmado === true ? { duplicadoConfirmado: true } : {}),
           ...(Array.isArray(p.figurasConfirmadas) ? { figurasConfirmadas: p.figurasConfirmadas } : {}),
+          ...(p.offerIdEsperado ? { offerIdEsperado: p.offerIdEsperado } : {}),
         }),
       },
       TIMEOUT_EMITIR_MS,

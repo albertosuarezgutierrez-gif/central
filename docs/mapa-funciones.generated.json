@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-29T13:52:25Z",
-  "sha": "8ef335a2dd8fb51e8a34704a3c75e3ed868f5570",
+  "generadoEn": "2026-09-29T15:04:05Z",
+  "sha": "ab364c69c9a4fdb400807581c09294ffae666173",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -12322,6 +12322,26 @@
       "hash": "b9cf8227c510"
     },
     {
+      "ruta": "apps/asegura-web/app/calculadora-bonificacion-hipoteca/page.tsx",
+      "ambito": "apps/asegura-web",
+      "exporta": [
+        "CalculadoraBonificacionHipoteca"
+      ],
+      "funciones": [
+        {
+          "nombre": "CalculadoraBonificacionHipoteca",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 64
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "48a187a0390c"
+    },
+    {
       "ruta": "apps/asegura-web/app/cambiar-de-correduria/page.tsx",
       "ambito": "apps/asegura-web",
       "exporta": [
@@ -12716,7 +12736,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "b8c00e392055"
+      "hash": "a37fafeb5813"
     },
     {
       "ruta": "apps/asegura-web/app/telefonos-siniestros/contacto/[slug]/route.ts",
@@ -12862,6 +12882,26 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "20e5f91d2035"
+    },
+    {
+      "ruta": "apps/asegura-web/components/CalculadoraBonificacion.tsx",
+      "ambito": "apps/asegura-web",
+      "exporta": [
+        "CalculadoraBonificacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "CalculadoraBonificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 27
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "56e2e4a058ba"
     },
     {
       "ruta": "apps/asegura-web/components/CalculadoraVencimientos.tsx",
@@ -13197,6 +13237,45 @@
       "hash": "7cedacd4dc7e"
     },
     {
+      "ruta": "apps/asegura-web/lib/bonificacion-hipoteca.ts",
+      "ambito": "apps/asegura-web",
+      "resumen": "La cuenta de `/calculadora-bonificacion-hipoteca`: cuánto cuesta DE VERDAD el seguro que vende el banco cuando a cambio rebaja el tipo de la hipoteca. bonificación ≈ capital pendiente × puntos / 100 (lo que el banco deja de cobrarte al año) coste real = lo que te cobra por el seguro − bonificación E",
+      "exporta": [
+        "leerNumero",
+        "calcularBonificacion"
+      ],
+      "funciones": [
+        {
+          "nombre": "leerNumero",
+          "kind": "function",
+          "exportada": true,
+          "params": "txt: string",
+          "retorno": "number | null",
+          "linea": 33,
+          "resumen": "«0,5» o «0.5» → 0.5; «40.000» (miles con punto) → 40000. `null` si no es un número ≥ 0."
+        },
+        {
+          "nombre": "calcularBonificacion",
+          "kind": "function",
+          "exportada": true,
+          "params": "e: EntradaBonificacion",
+          "retorno": "ResultadoBonificacion | null",
+          "linea": 44
+        },
+        {
+          "nombre": "redondear",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "n: number",
+          "retorno": null,
+          "linea": 54
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "1365f2fd404e"
+    },
+    {
       "ruta": "apps/asegura-web/lib/calculadora-vencimientos.ts",
       "ambito": "apps/asegura-web",
       "resumen": "La cuenta del widget «¿Cuándo tienes que decidir?» de `/gestor-de-seguros`. Pura, sin fecha implícita, para que se pueda comprobar. 🚨 Es un GANCHO, no un gestor: no guarda nada, no pide registro, no manda nada a ningún servidor. Lo que hace es enseñar la única cuenta que la gente no hace —vencimien",
@@ -13401,13 +13480,13 @@
           "exportada": true,
           "params": "evento: Evento, props: PropsEvento = {}",
           "retorno": "boolean",
-          "linea": 33,
+          "linea": 34,
           "resumen": "Emite el evento a PostHog y a GA4, a cada uno SOLO si está cargado (= hubo consentimiento: `window.gtag` no existe hasta que `cargarGa4()` corre tras aceptar). Sin ninguno, no hace NADA: ni cola, ni l"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "363eaa9c7715"
+      "hash": "6aaff6e371d7"
     },
     {
       "ruta": "apps/asegura-web/lib/panel-demo.ts",
@@ -13580,7 +13659,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4aa023659e5b"
+      "hash": "8e27510572ce"
     },
     {
       "ruta": "apps/asegura-web/lib/ventana-renovacion.ts",
@@ -170231,7 +170310,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3980,
-    "funciones": 13146
+    "archivos": 3983,
+    "funciones": 13151
   }
 }

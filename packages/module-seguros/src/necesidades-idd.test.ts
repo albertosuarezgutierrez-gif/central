@@ -56,3 +56,45 @@ test('una respuesta que no es de la lista no se escribe en la declaración', () 
   assert.ok(!t.includes('Régimen'))
   assert.ok(t.includes('Vivienda: habitual.'))
 })
+
+// ─── Deducir de lo presupuestado (29/09/2026) ────────────────────────────────
+import { deducirNecesidades } from './necesidades-idd.ts'
+
+const HOY = new Date('2026-09-29T00:00:00Z')
+const persona = (id: string, nacimiento = '1980-01-01', carne = '2000-01-01', tipo = 'Dni') => ({
+  identificationDocument: { type: { id: tipo }, id },
+  birthDate: nacimiento,
+  drivingLicenses: [{ date: carne }],
+})
+
+test('deducir moto: completo y válido para el ramo, y dice que es deducido', () => {
+  const tom = persona('00000000T')
+  const d = deducirNecesidades('moto', { holder: tom, risk: { primaryDriver: tom, owner: tom } }, { categoria: 'Terceros ampliado', franquiciaEur: null }, HOY)
+  assert.deepEqual(validarRespuestasNecesidades('moto', d.respuestas), { ok: true, respuestas: d.respuestas })
+  assert.equal(d.respuestas.uso, 'particular')
+  assert.equal(d.respuestas.conductores, 'solo_tomador')
+  assert.equal(d.respuestas.modalidad, 'terceros_ampliado')
+  assert.match(d.otras, /Deducido/)
+})
+
+test('deducir: tomador empresa → uso profesional; conductor distinto → no «solo el tomador»', () => {
+  const emp = { identificationDocument: { type: { id: 'Cif' }, id: 'B12345674' }, name: 'X SL' }
+  const d = deducirNecesidades('auto', { holder: emp, risk: { primaryDriver: persona('00000001R'), owner: emp } }, { categoria: 'Todo riesgo con franquicia', franquiciaEur: 300 }, HOY)
+  assert.equal(d.respuestas.uso, 'profesional')
+  assert.notEqual(d.respuestas.conductores, 'solo_tomador')
+  assert.equal(d.respuestas.modalidad, 'todo_riesgo_franquicia')
+  assert.equal(d.respuestas.franquicia, 'si')
+})
+
+test('deducir: conductor joven o con carné reciente → «jovenes»', () => {
+  const joven = persona('00000000T', '2005-01-01', '2025-01-01')
+  const d = deducirNecesidades('moto', { holder: joven, risk: { primaryDriver: joven } }, null, HOY)
+  assert.equal(d.respuestas.conductores, 'jovenes')
+})
+
+test('deducir hogar y otros ramos: completos y válidos aunque no haya petición legible', () => {
+  for (const ramo of ['hogar', 'vida', 'decesos']) {
+    const d = deducirNecesidades(ramo, null, null, HOY)
+    assert.equal(validarRespuestasNecesidades(ramo, d.respuestas).ok, true, ramo)
+  }
+})

@@ -16,7 +16,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
-import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
+import ListaPrecios from '../../../ListaPrecios'
 import FiltroGarantias from '../../../FiltroGarantias'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { ConIcono } from '../../../iconos'
@@ -1090,10 +1090,19 @@ function Precios({
       </p>
       {cotizacionId !== null ? (
         <>
-          {/* «Qué verá el cliente» ya enseña todos los precios, de la más barata a la más cara:
-              la lista de emitir va plegada debajo para no pintar dos listas iguales seguidas. */}
-          <FiltroGarantias ramo="moto" origen={{ clienteId, ramo: 'moto' }} tarificacionId={cotizacionId} simulado={r.simulado} />
-          {emitible && <ListaPreciosPlegada {...propsLista} />}
+          {/* «Qué verá el cliente» enseña todos los precios y, desde el 29/09/2026, cada fila se emite
+              ahí mismo: ya no hay una segunda lista plegada debajo para emitir. */}
+          <FiltroGarantias ramo="moto" origen={{ clienteId, ramo: 'moto' }} tarificacionId={cotizacionId} simulado={r.simulado} emitir={puedeEmitir ? (o, cerrar) => (
+                <Emision
+                  tarificacionId={cotizacionId as string}
+                  compania={o.compania ?? ''}
+                  categoria={o.categoria ?? ''}
+                  primaEur={o.primaEur}
+                  producto={o.producto}
+                  sustituye={sustituye}
+                  onCerrar={cerrar}
+                />
+              ) : undefined} />
         </>
       ) : (
         <ListaPrecios {...propsLista} />

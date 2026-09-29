@@ -129,7 +129,7 @@ export function paraIA(valor: unknown, max = 7000): string {
 
 export type NombreHerramienta =
   | 'buscar' | 'ficha_cliente' | 'ficha_poliza' | 'vencimientos' | 'impagados'
-  | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision'
+  | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision' | 'preparar_emision_nueva'
   | 'proponer_correccion' | 'proponer_oportunidad' | 'mi_dia' | 'oportunidades_cliente'
   | 'proponer_tarea' | 'registrar_llamada' | 'anotar_nota' | 'abrir_siniestro' | 'invitar_portal' | 'enviar_presupuesto'
   | 'vehiculo_catalogo' | 'proponer_tarificacion' | 'alta_cliente' | 'figura_riesgo'
@@ -165,6 +165,16 @@ export const HERRAMIENTAS = [
       projectId: { type: 'string', description: 'Número del proyecto de Avant2 (solo cifras)' },
       quoteId: { type: 'string', description: 'Opcional: el precio elegido (Q…) cuando hay varios' },
     }, ['polizaId', 'projectId']),
+  fn('preparar_emision_nueva', 'Prepara la EMISIÓN de una póliza NUEVA de coche o moto (cliente sin póliza que sustituir) con un precio de la ÚLTIMA tarificación guardada del cliente. Confirma el precio con la compañía y le manda a Alberto un resumen con un botón: NO emite, es él quien pulsa. Si varios precios encajan te devuelve la lista para que le preguntes cuál.',
+    {
+      clienteId: { type: 'string', description: 'El clienteId INTERNO (uuid) del TOMADOR, sacado de buscar/ficha_cliente' },
+      ramo: { type: 'string', enum: ['moto', 'auto'] },
+      compania: { type: 'string', description: 'Compañía tal cual la dice Alberto (Allianz, Mapfre…)' },
+      modalidad: { type: 'string', description: 'Opcional: palabras de la modalidad o categoría («terceros ampliado», «incendio robo», «todo riesgo»)' },
+      primaEur: { type: 'number', description: 'Opcional: la prima que dice Alberto, para desempatar («la de 200»)' },
+      oportunidadId: { type: 'string', description: 'Opcional: la oportunidad (uuid) si la conoces, para coger la tarificación de ese riesgo' },
+      tarificacionId: { type: 'string', description: 'Opcional: una tarificación concreta (uuid)' },
+    }, ['clienteId', 'ramo', 'compania']),
   fn('proponer_correccion', 'Propón CORREGIR la ficha de un cliente con los valores que Alberto te ha DICTADO en esta conversación (dirección, código postal, ciudad, provincia, nombre o apellidos). NO escribe: el sistema le manda el cambio con un botón y es él quien lo aplica. Pasa solo los campos que cambian, tal cual los dijo; nunca inventes ni completes un valor.',
     {
       clienteId: { type: 'string', description: 'La ficha a corregir (sácala de buscar o ficha_cliente)' },
@@ -393,7 +403,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string, auton
     '- Acciones del día a día (todas con botón que pulsa Alberto): proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro, invitar_portal, enviar_presupuesto («rescata/mándale el presupuesto de la moto»). Úsalas cuando Alberto te lo pida («apunta que…», «llámale el jueves», «ha tenido un golpe con el coche…»). Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy. NUNCA digas que está hecho: eso lo confirma el sistema tras el botón.',
     '- Pedir precio de COCHE o MOTO: busca al cliente PRIMERO. Si buscar no lo encuentra (lead nuevo, sin ficha), NO consultes el catálogo ni nada más: dile a Alberto que no tiene ficha y que sin ficha no se puede pedir precio desde aquí; que la cree en /correduria/cliente/nuevo (o te mande un documento suyo con el DNI) y te vuelva a escribir; y dile ya qué datos le faltan de los que dictó (nombre y apellidos, sexo, teléfono…). Con ficha: usa vehiculo_catalogo para el vehículo (con filtro; nunca repitas una consulta con los mismos datos; si la versión exacta no sale, pásala tal cual la dijo) y llama a proponer_tarificacion con lo que Alberto dijo. Si contesta FALTAN DATOS, pregúntale a Alberto exactamente eso y vuelve a llamar con todo. El botón cuesta 0,50€ y lo pulsa él; el precio le llega solo a él (nada sale al cliente). NUNCA digas que ya has pedido el precio.',
     ]),
-    '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
+    '- Emitir: solo puedes PREPARAR una emisión. Póliza NUEVA de coche o moto (cliente sin póliza que sustituir, precio pedido desde la plataforma) → preparar_emision_nueva con el cliente, el ramo y la compañía (y la modalidad o la prima si las dice). Sustituir una póliza de la cartera con un proyecto hecho en Avant2 → preparar_emision (necesitas la póliza y el número del proyecto; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos. Si para escribir necesitas un DNI que solo tienes tapado («…115R»), pídeselo a Alberto entero.',
     '- Los ids (clienteId, polizaId, oportunidadId, tareaId, siniestroId) son SIEMPRE los uuid que devuelven las herramientas: el polizaId sale de ficha_cliente (busca primero), nunca es el número de póliza de la compañía.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: se cambian con sus herramientas (contacto_cliente, proponer_correccion) o en la ficha.',
@@ -644,7 +654,7 @@ export function textoSinBoton(t: string): string {
 export const HERRAMIENTAS_ESCRITURA: ReadonlySet<string> = new Set([
   'alta_cliente', 'figura_riesgo', 'proponer_correccion', 'proponer_oportunidad', 'proponer_tarea', 'registrar_llamada',
   'anotar_nota', 'abrir_siniestro', 'invitar_portal', 'enviar_presupuesto', 'proponer_tarificacion', 'preparar_emision', 'proponer_regla',
-  'estado_oportunidad', 'cerrar_tarea', 'seguir_siniestro', 'contacto_cliente', 'precio_hogar',
+  'estado_oportunidad', 'cerrar_tarea', 'seguir_siniestro', 'contacto_cliente', 'precio_hogar', 'preparar_emision_nueva',
 ])
 
 /**

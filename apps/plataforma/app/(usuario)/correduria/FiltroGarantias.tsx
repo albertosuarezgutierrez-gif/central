@@ -10,7 +10,7 @@
 // Las coberturas se leen en segundo plano justo después de tarificar, así que lo normal es abrir
 // esto con `garantias: null` en todos: se dice «Leyendo coberturas…», jamás «no incluye».
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Check, RefreshCw } from 'lucide-react'
 
 import { btnStyle } from '@/components/ui'
@@ -43,6 +43,7 @@ export default function FiltroGarantias({
   origen,
   tarificacionId,
   simulado,
+  emitir,
 }: {
   /** Ramo de la parrilla (`auto`, `moto`, `hogar`, `decesos`, `salud`, `vida`). Sin catálogo → sin interruptores. */
   ramo: string | null
@@ -55,8 +56,14 @@ export default function FiltroGarantias({
    */
   tarificacionId: string | null
   simulado: boolean
+  /**
+   * Emitir ESA opción desde la misma fila (29/09/2026, Alberto: «de aquí no puedo emitir»). Sin
+   * ella la fila solo marca para mandar. Lo pinta quien sabe emitir (la pantalla del ramo).
+   */
+  emitir?: (o: OpcionParrilla, cerrar: () => void) => ReactNode
 }) {
   const [carga, setCarga] = useState<Carga>({ estado: 'cargando' })
+  const [emitiendo, setEmitiendo] = useState<string | null>(null)
   const [marcadas, setMarcadas] = useState<string[]>([])
   // Se ELIGE lo que se manda (Alberto, 28/09/2026: «seleccionar las que quiero, no quitar las que no»).
   // Por dentro se sigue mandando `ocultar` = todo lo NO elegido: asegura no cambia.
@@ -143,6 +150,7 @@ export default function FiltroGarantias({
     const dif = diferencias.get(o.id) ?? null
     return (
       <li key={o.id} style={{ borderBottom: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
         <button
           type="button"
           role="checkbox"
@@ -151,7 +159,7 @@ export default function FiltroGarantias({
           onClick={() => setElegidas((s) => alternar(s, o.id))}
           title={sinPrima ? 'Sin prima: no se puede mandar' : marcada ? 'Quitar del presupuesto' : 'Mandar esta opción'}
           style={{
-            display: 'flex', gap: 10, alignItems: 'center', width: '100%', minHeight: 56, padding: '10px 4px',
+            display: 'flex', gap: 10, alignItems: 'center', flex: '1 1 auto', width: '100%', minHeight: 56, padding: '10px 4px',
             background: marcada ? 'var(--primary-light)' : 'transparent', border: 0, textAlign: 'left',
             color: 'inherit', font: 'inherit', cursor: preparado || sinPrima ? 'default' : 'pointer', minWidth: 0,
           }}
@@ -191,6 +199,18 @@ export default function FiltroGarantias({
             {o.firmeza !== 'firme' && <span style={{ display: 'block', color: 'var(--muted)', fontSize: 11 }}>{o.firmeza}</span>}
           </span>
         </button>
+        {emitir && !sinPrima && (
+          <button
+            type="button"
+            onClick={() => setEmitiendo((x) => (x === o.id ? null : o.id))}
+            style={{ ...btnStyle(emitiendo === o.id ? 'secundario' : 'primario', 'sm'), minHeight: 44, flex: '0 0 auto' }}
+            title="Emitir esta opción: el cliente ya ha dicho que sí"
+          >
+            {emitiendo === o.id ? 'Cerrar' : 'Emitir'}
+          </button>
+        )}
+        </div>
+        {emitir && emitiendo === o.id && <div style={{ padding: '4px 0 12px' }}>{emitir(o, () => setEmitiendo(null))}</div>}
       </li>
     )
   }
