@@ -14,8 +14,9 @@ import type { LecturaRiesgo, Riesgo } from '@/lib/riesgo-asegura'
 import { LogoCompaniaEnLinea } from '../../CeldaCompania'
 import FigurasRiesgo from './FigurasRiesgo'
 import HistorialVariantes from './HistorialVariantes'
+import PasarOportunidad from './PasarOportunidad'
 import { fechaEs } from './piezas-riesgo'
-import { etiquetaRiesgo, ramoVariante, rutaVariante, tomadorDelRiesgo } from './variante'
+import { etiquetaRiesgo, ramoVariante, retarificaEnRiesgo, rutaVariante, tomadorDelRiesgo } from './variante'
 
 export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
   const [riesgo, setRiesgo] = useState<Riesgo>(inicial)
@@ -72,6 +73,7 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
             </span>
           }
         />
+        <PasarOportunidad riesgo={riesgo} />
       </div>
 
       {aviso && (
@@ -92,7 +94,7 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
 
       <section style={{ ...cardStyle, display: 'grid', gap: 8 }}>
         <div style={{ fontSize: 14, fontWeight: 600 }}>Nueva variante</div>
-        {ramo && op.polizaId ? (
+        {retarificaEnRiesgo(op.ramo) && op.polizaId ? (
           <>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
               Este riesgo es de una póliza en cartera. En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.
@@ -102,14 +104,16 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
                 <BtnLink href={`/correduria/poliza/${encodeURIComponent(op.polizaId)}/retarificar?${new URLSearchParams({ oportunidad: op.id }).toString()}`} variante="primario">
                   Retarificar con las mismas personas
                 </BtnLink>
-                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Como la póliza de hoy: su tomador, su vehículo y su historial.</span>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Como la póliza de hoy: su tomador, {ramo ? 'su vehículo' : 'su vivienda'} y su historial.</span>
               </div>
+              {ramo && (
               <div style={{ display: 'grid', gap: 4 }}>
                 <BtnLink href={rutaVariante(ramo, tomadorDelRiesgo(riesgo), op.id)} variante="secundario">
                   Con otro tomador
                 </BtnLink>
                 <span style={{ fontSize: 12, color: 'var(--muted)' }}>Con los intervinientes de arriba, como un presupuesto nuevo.</span>
               </div>
+              )}
             </div>
           </>
         ) : ramo ? (

@@ -151,3 +151,55 @@ test('carné B: viaja DETRÁS del de moto (como el ejemplo oficial B + A); el de
   const soloB = construirPeticionMoto({ ...BASE, tipoCarnet: 'B', fechaCarnetB: '1999-06-01' }, 'Motorcycle') as any
   assert.equal(soloB.risk.primaryDriver.drivingLicenses.length, 1)
 })
+
+// ─── Figuras distintas del tomador (entrega 2 del riesgo, 29/09/2026) ─────────
+// Personas inventadas: aquí no entra ningún cliente real.
+const OTRA = {
+  dni: '11111111h',
+  nombre: 'Otra',
+  apellido1: 'Persona',
+  fechaNacimiento: '1960-02-02',
+  sexo: 'mujer' as const,
+  estadoCivil: 'Married',
+  telefono: '611111111',
+}
+
+test('con propietario propio, owner es él y holder/primaryDriver siguen siendo el tomador', () => {
+  const c = construirPeticionMoto({ ...BASE, propietario: OTRA }, LINEA) as any
+  assert.ok(JSON.stringify(c.risk.owner).includes('11111111H'))
+  assert.deepEqual(c.holder, c.risk.primaryDriver)
+  assert.ok(!JSON.stringify(c.holder).includes('11111111H'))
+})
+
+test('con conductor propio, primaryDriver lleva SU carné de moto y el tomador va sin carné', () => {
+  const c = construirPeticionMoto(
+    { ...BASE, conductor: { ...OTRA, fechaCarnet: '2010-03-03', tipoCarnet: 'A', fechaCarnetB: '1990-01-01' } },
+    LINEA,
+  ) as any
+  const drv = JSON.stringify(c.risk.primaryDriver)
+  assert.ok(drv.includes('11111111H') && drv.includes('2010-03-03') && drv.includes('1990-01-01'))
+  assert.ok(!JSON.stringify(c.holder).includes('2005-01-01'), 'el carné del tomador no viaja si no conduce')
+  assert.deepEqual(c.holder, c.risk.owner, 'sin propietario propio, el tomador es el propietario')
+})
+
+test('con conductor propio, al tomador ya no se le exige carné; al conductor sí', () => {
+  const { fechaCarnet: _f, ...sinCarnet } = BASE
+  assert.deepEqual(revisarDatosMoto({ ...sinCarnet, conductor: { ...OTRA, fechaCarnet: '2010-03-03' } }), [])
+  const r = revisarDatosMoto({ ...BASE, conductor: { ...OTRA, fechaCarnet: '' } })
+  assert.ok(r.some((x) => x.campo === 'conductor'))
+})
+
+test('una figura con el MISMO DNI que el tomador se para antes de gastar (400 del vendor)', () => {
+  const r = revisarDatosMoto({ ...BASE, propietario: { ...OTRA, dni: '00000000T' } })
+  assert.ok(r.some((x) => x.campo === 'propietario' && /mismo DNI/.test(x.motivo)))
+})
+
+test('una figura a medias no se declara: el propietario incompleto es un reparo', () => {
+  const r = revisarDatosMoto({ ...BASE, propietario: { ...OTRA, telefono: '' } })
+  assert.ok(r.some((x) => x.campo === 'propietario'))
+})
+
+test('🪤 propietario que ES el conductor (mismo DNI): el MISMO objeto en owner y primaryDriver', () => {
+  const c = construirPeticionMoto({ ...BASE, propietario: OTRA, conductor: { ...OTRA, fechaCarnet: '2010-03-03', tipoCarnet: 'A' } }, LINEA) as any
+  assert.deepEqual(c.risk.owner, c.risk.primaryDriver, 'construido dos veces difiere en el carné: 400 pagado')
+})

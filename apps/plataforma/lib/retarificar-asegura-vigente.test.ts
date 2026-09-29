@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { interpretarRetarificacion } from './retarificar-asegura.ts'
+import { ramoVariante, retarificaEnRiesgo } from '../app/(usuario)/correduria/oportunidad/[id]/variante.ts'
 
 // El 409 con el que asegura corta «Pedir precio» cuando ya hay un proyecto
 // vigente sin emitir (guardián de reutilización, PR #2790). Forma real del
@@ -110,4 +111,49 @@ test('`oportunidadId` y `nota` viajan en el cuerpo del puerto, la nota solo con 
   const cuerpo = LIB.slice(LIB.indexOf('/api/operador/codeoscopic/retarificar'))
   assert.match(cuerpo, /p\.oportunidadId \? \{ oportunidadId: p\.oportunidadId \}/)
   assert.match(cuerpo, /p\.oportunidadId && p\.nota/)
+})
+
+// ─── Hogar, igual que auto/moto (29/09/2026) ─────────────────────────────────
+// Hasta hoy la pantalla de hogar no leía `?oportunidad=`: «Retarificar con las mismas personas»
+// abría el formulario de hogar y la tarificación NO se colgaba del riesgo, sin que nada fallara.
+const PAGINA = codigo('../app/(usuario)/correduria/poliza/[id]/retarificar/page.tsx')
+const HOGAR = codigo('../app/(usuario)/correduria/poliza/[id]/retarificar/RetarificadorHogar.tsx')
+
+test('hogar: la variante del riesgo se carga ANTES de las dos ramas de hogar y llega a las dos', () => {
+  const carga = PAGINA.indexOf('cargarRiesgoDePoliza(')
+  assert.ok(carga > 0, 'la página tiene que leer `?oportunidad=` con `cargarRiesgoDePoliza`')
+  const catastro = PAGINA.indexOf("String(p.tipo).toLowerCase() === 'hogar'")
+  const hogar = PAGINA.indexOf("if (ramo === 'hogar')")
+  assert.ok(catastro > 0 && hogar > 0, 'las dos ramas de hogar siguen en la página')
+  assert.ok(carga < catastro && carga < hogar, 'la variante se lee antes de hogar: si no, hogar cotiza sin colgarse del riesgo')
+  const montajes = PAGINA.match(/<RetarificadorHogar[\s\S]*?\/>/g) ?? []
+  assert.equal(montajes.length, 2, 'hogar se monta en dos sitios (con y sin Catastro)')
+  for (const m of montajes) assert.match(m, /variante=\{oportunidadVariante \?/, 'cada RetarificadorHogar recibe la variante')
+})
+
+test('hogar: «Pedir precio» manda `oportunidadId` y `nota` como auto/moto', () => {
+  const i = HOGAR.indexOf('pedirCotizacion({')
+  assert.ok(i > 0)
+  const llamada = HOGAR.slice(i, HOGAR.indexOf('})', i))
+  assert.match(llamada, /variante: variante \? \{ oportunidadId: variante\.oportunidadId, nota \} : null/)
+  assert.match(HOGAR, /\{variante && <NotaVariante nota=\{nota\} onNota=\{setNota\} \/>\}/)
+})
+
+test('asegura valida el riesgo de la póliza antes de gastar SIN mirar el ramo (vale para hogar)', () => {
+  const ruta = codigo('../../asegura/app/api/operador/codeoscopic/retarificar/route.ts')
+  const desde = ruta.indexOf("const oportunidadId = typeof cuerpo.oportunidadId === 'string'")
+  const valida = ruta.indexOf('validarRiesgoDePoliza(', desde)
+  const gasta = ruta.indexOf('await cotizar(p.peticion)')
+  assert.ok(desde > 0 && valida > desde && gasta > valida, 'validar el riesgo va antes de `cotizar`')
+  const tramo = ruta.slice(ruta.indexOf("if (p.estado === 'corte')"), gasta)
+  assert.doesNotMatch(tramo, /\bramo\b|tipo ===/, 'la validación no puede quedar detrás de una condición de ramo')
+  assert.match(tramo, /causa: 'variante'[\s\S]*gastado: '0,00€'[\s\S]*status: 422/)
+  assert.match(tramo, /contexto = \{ \.\.\.p\.peticion\.contexto, oportunidadId, nota \}/)
+})
+
+test('el riesgo de una póliza de hogar se retarifica dentro de él, pero sin «otro tomador»', () => {
+  for (const r of ['auto', 'moto', 'hogar']) assert.equal(retarificaEnRiesgo(r), true, r)
+  for (const r of ['vida', 'decesos', '']) assert.equal(retarificaEnRiesgo(r), false, r)
+  // hogar-nuevo no lee `?oportunidad=`: «Con otro tomador» sería un presupuesto suelto, sin riesgo.
+  assert.equal(ramoVariante('hogar'), null)
 })

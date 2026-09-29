@@ -850,3 +850,8 @@ export function compararVariantesAsegura(oportunidadId: string, a: string, b: st
 export function riesgoDePolizaAsegura(body: { polizaId: string; actor: string }): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/de-poliza', { method: 'POST', body: JSON.stringify(body) })
 }
+
+/** «Pasar la oportunidad a…»: la oportunidad abierta pasa a llevarla otro cliente. Gratis. */
+export function traspasarOportunidadAsegura(body: { oportunidadId: string; nuevoClienteId: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/traspasar', { method: 'POST', body: JSON.stringify(body) })
+}
