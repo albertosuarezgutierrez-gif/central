@@ -7,19 +7,22 @@
 
 type Trozo = { x: number; w: number; s: string }
 
+/** Puntos de altura dentro de los que dos trozos son la misma línea (el texto va a 10-12 pt). */
+const TOLERANCIA_Y = 2
+
 /** PURO: los trozos de UNA página (x, y, ancho, texto) → líneas. Exportado para el test. */
 export function filasDeTrozos(items: { x: number; y: number; w: number; s: string }[]): string[] {
-  const filas = new Map<number, Trozo[]>()
-  for (const it of items) {
-    const y = Math.round(it.y)
-    const fila = filas.get(y) ?? []
-    fila.push({ x: it.x, w: it.w, s: it.s })
-    filas.set(y, fila)
+  // Misma fila si la altura difiere en menos de TOLERANCIA_Y (redondear partiría 400,4 y 400,6).
+  const filas: { y: number; trozos: Trozo[] }[] = []
+  for (const it of [...items].sort((a, b) => b.y - a.y)) {
+    const ultima = filas[filas.length - 1]
+    if (ultima && ultima.y - it.y <= TOLERANCIA_Y) ultima.trozos.push({ x: it.x, w: it.w, s: it.s })
+    else filas.push({ y: it.y, trozos: [{ x: it.x, w: it.w, s: it.s }] })
   }
-  return [...filas.keys()].sort((a, b) => b - a).map((y) => {
+  return filas.map(({ trozos }) => {
     let out = ''
     let fin: number | null = null
-    for (const t of (filas.get(y) ?? []).sort((a, b) => a.x - b.x)) {
+    for (const t of trozos.sort((a, b) => a.x - b.x)) {
       if (fin !== null) {
         const hueco = t.x - fin
         out += hueco > 8 ? '\t' : hueco > 1.5 ? ' ' : ''

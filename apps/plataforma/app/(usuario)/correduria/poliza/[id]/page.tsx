@@ -528,7 +528,8 @@ const RECIBOS_VISIBLES = 12
 
 /** Suma la comisión de los recibos DEVUELTOS que la traen; `null` si ninguno la trae (no es 0€). */
 function comisionEnRiesgo(lista: Poliza['listaRecibos']): number | null {
-  const con = lista.filter((x) => x.situacion === 'devuelto' && x.comisionBruta !== null)
+  // Solo la POSITIVA: una comisión negativa ya es un extorno (misma regla que el aviso de asegura).
+  const con = lista.filter((x) => x.situacion === 'devuelto' && x.comisionBruta !== null && x.comisionBruta > 0)
   return con.length ? con.reduce((a, x) => a + (x.comisionBruta ?? 0), 0) : null
 }
 
@@ -586,7 +587,7 @@ function TablaRecibos({ lista, wa }: { lista: Poliza['listaRecibos']; wa: Contex
                 {x.situacion === 'devuelto' && wa && (
                   <> <WhatsappReciboDevuelto ctx={wa} importe={x.importe} fechaEfecto={x.fechaEfecto} tipoMotivo={x.devolucionCorreo?.tipoMotivo ?? null} /></>
                 )}
-                {x.situacion === 'devuelto' && x.comisionBruta !== null && (
+                {x.situacion === 'devuelto' && x.comisionBruta !== null && x.comisionBruta > 0 && (
                   <div style={sub} title="Comisión bruta del recibo según CIMA: si no se cobra, la compañía te la descuenta">💸 {eur(x.comisionBruta)} de comisión en riesgo</div>
                 )}
                 {x.devolucionCorreo && (

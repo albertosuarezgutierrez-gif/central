@@ -94,6 +94,7 @@ export function textoAvisoDevolucion(
       const pista = d.tipoMotivo ? PISTA_MOTIVO[d.tipoMotivo] : undefined
       lineas.push(`  Motivo: ${esc(d.motivo)}${pista ? ` (${pista})` : ''}`)
     }
+    if (anuladas) continue
     if (resultados === null) continue
     if (!r) { lineas.push('  ⚠️ asegura no devolvió esta fila: míralo en el correo.'); continue }
     if (r.estado === 'ya_resuelta') {
@@ -113,8 +114,11 @@ export function textoAvisoDevolucion(
   if (lectura.incidencias.length > 0) {
     lineas.push(`ℹ️ ${compania} intentó contactar por ${lectura.incidencias.length === 1 ? 'una incidencia' : 'incidencias'} en el recibo ${lectura.incidencias.map((i) => esc(cola(i.idRecibo))).join(', ')} (no dice que esté devuelto).`)
   }
+  if (anuladas) {
+    lineas.push('ℹ️ No se marca nada en la cartera: la anulación la trae CIMA. Anota el vencimiento para intentar recuperarla.')
+  }
   if (lectura.ilegibles > 0) lineas.push(`⚠️ ${lectura.ilegibles} fila(s) del correo no se han sabido leer: míralo.`)
-  if (resultados === null && n > 0) {
+  if (resultados === null && n > 0 && !anuladas) {
     lineas.push(fallo?.estado === 'rechazado'
       ? `⚠️ asegura RECHAZÓ el registro (${esc(fallo.motivo)}): la ficha y las tareas NO lo saben. Anótalo a mano.`
       : `⚠️ No se pudo confirmar el registro en la cartera (${esc(fallo?.motivo ?? 'asegura no contestó')}): puede que no se haya guardado nada, o solo una parte. Revisa la ficha.`)

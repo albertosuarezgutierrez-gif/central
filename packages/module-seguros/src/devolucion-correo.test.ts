@@ -185,3 +185,14 @@ test('🪤 Allianz sin el texto del PDF: es un aviso que NO se ha leído, no una
   // Otros correos de Allianz (Cuenta Agente, Cartera No Vida) no son de devoluciones.
   assert.equal(leerCorreoDevolucion({ ...ALLIANZ_DEVUELTOS, asunto: 'Cuenta Agente', texto: 'Te adjuntamos la documentación' }), null)
 })
+
+test('Allianz devueltos: el motivo partido entre palabras lleva espacio; un tomador en mayúsculas no se cuela', () => {
+  const base = ALLIANZ_DEVUELTOS.texto
+  const entrePalabras = leerCorreoDevolucion({ ...ALLIANZ_DEVUELTOS, texto: base.replace('DISCONFORM **** **** **', 'ORDEN DEL **** **** **').replace('Apellido,\tE IMPORTE', 'Apellido,\tCLIENTE') })
+  assert.equal(entrePalabras?.devoluciones[0].motivo, 'ORDEN DEL CLIENTE')
+  assert.equal(entrePalabras?.devoluciones[0].tipoMotivo, 'cliente_rechaza')
+  // El motivo cupo en una línea y lo de abajo es el resto de una razón social: no es motivo.
+  const empresa = leerCorreoDevolucion({ ...ALLIANZ_DEVUELTOS, texto: base.replace('Apellido,\tE IMPORTE\t******0000', 'S.L.\t******0000') })
+  assert.equal(empresa?.devoluciones[0].motivo, 'DISCONFORM')
+  assert.equal(empresa?.devoluciones[0].tipoMotivo, 'cliente_rechaza')
+})

@@ -240,8 +240,32 @@ function fechaCartaAllianz(texto: string): string | null {
   return mes < 0 ? null : isoDeFechaEs(`${m[1]}/${mes + 1}/${m[3]}`)
 }
 
-/** Una celda de continuación del motivo: MAYÚSCULAS (el tomador va en «Apellido,»), sin asteriscos. */
+/** Una celda de continuación del motivo: MAYÚSCULAS, sin asteriscos. */
 const CONTINUA_MOTIVO = /^[A-ZÁÉÍÓÚÑ][A-ZÁÉÍÓÚÑ .]*$/
+
+/**
+ * La segunda línea de una fila de devueltos trae, por columnas, [resto del tomador, resto del motivo,
+ * resto de la cuenta]. Solo con las TRES se sabe que la del medio es el motivo: con dos, la primera
+ * puede ser el tomador («S.L.», un apellido en mayúsculas) y pegarla metería su nombre en el motivo.
+ * Entonces el motivo se queda con lo de la primera línea, que ya basta para clasificarlo.
+ */
+function continuacionMotivo(linea: string | undefined): string | null {
+  if (!linea || /^\d{1,3}\s+\d{6,}/.test(linea)) return null
+  const celdas = linea.split('\t').map((x) => x.trim()).filter(Boolean)
+  if (celdas.length !== 3 || !/^\*[*\d\s]*$/.test(celdas[2])) return null
+  return CONTINUA_MOTIVO.test(celdas[1]) ? celdas[1] : null
+}
+
+/**
+ * «DISCONFORM» + «E IMPORTE» es una palabra partida (sin espacio); «NO» + «CONFORME» son dos. Se
+ * pega sin espacio solo si el trozo de abajo empieza por un resto de 1-2 letras tras una palabra larga.
+ */
+function unirMotivo(arriba: string, abajo: string | null): string {
+  if (!abajo || !arriba) return arriba
+  const ultima = arriba.split(' ').pop() ?? ''
+  const primera = abajo.split(' ')[0] ?? ''
+  return ultima.length >= 6 && primera.length <= 2 ? `${arriba}${abajo}` : `${arriba} ${abajo}`
+}
 
 function leerAllianz(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
   if (!esDe(c.remitente, 'allianz.es')) return null
@@ -269,10 +293,7 @@ function leerAllianz(c: CorreoDevolucion): LecturaCorreoDevolucion | null {
     }
     const m = FILA_ALLIANZ_DEVUELTO.exec(l)
     if (!m) { out.ilegibles++; continue }
-    let motivo = m[6].replace(/\*+/g, ' ').replace(/\s+/g, ' ').trim()
-    // El motivo se parte en dos líneas y a veces a mitad de palabra («DISCONFORM» / «E IMPORTE»).
-    const sig = ls[i + 1]?.split('\t').map((x) => x.trim()).find((x) => CONTINUA_MOTIVO.test(x))
-    if (motivo && sig && !/^\d{1,3}\s+\d{6,}/.test(ls[i + 1] ?? '')) motivo = `${motivo}${sig}`
+    const motivo = unirMotivo(m[6].replace(/\*+/g, ' ').replace(/\s+/g, ' ').trim(), continuacionMotivo(ls[i + 1]))
     const limpio = motivoLimpio(motivo)
     out.devoluciones.push({
       codigoDgs: CODIGO.allianz, numeroPoliza: m[1], idRecibo: m[2], importe: importeEs(m[4]),

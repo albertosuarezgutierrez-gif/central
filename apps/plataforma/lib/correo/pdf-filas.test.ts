@@ -15,3 +15,11 @@ test('filas por altura, de arriba abajo; hueco grande = celda, pequeño = espaci
   ])
   assert.deepEqual(filas, ['Nº', '1\t040000001\t600000001\tDISCONFORM ****', 'E IMPORTE'])
 })
+
+test('🪤 dos trozos de la misma línea a 400,4 y 400,6 no se parten en dos filas', () => {
+  const filas = filasDeTrozos([
+    { x: 60, y: 400.4, w: 5, s: '1' },
+    { x: 80, y: 400.6, w: 40, s: '040000001' },
+  ])
+  assert.deepEqual(filas, ['1\t040000001'])
+})

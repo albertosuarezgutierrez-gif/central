@@ -20,7 +20,7 @@ import { rutaDe, ETIQUETAS_INTOCABLES } from './rutas'
 import { anotarHistorialDesdeCorreo, resolverCorreoAseguradora } from './correduria-resolver'
 import { pareceContactoPersonal } from './contacto-sugerido'
 import { esPrimerCorreoDeCorreduria } from './contacto-sugerido-consulta'
-import { leerCorreoDevolucion, type LecturaCorreoDevolucion } from '@central/module-seguros'
+import { MOTIVO_POLIZA_ANULADA, leerCorreoDevolucion, type LecturaCorreoDevolucion } from '@central/module-seguros'
 import { textoPdfPorFilas } from './pdf-filas'
 import { leerResultadosPuerto, textoAvisoDevolucion } from './devolucion-aviso'
 import { registrarDevolucionesAsegura } from '@/lib/correduria-puerto'
@@ -172,8 +172,12 @@ export async function pasadaTriaje(): Promise<Record<string, number>> {
             // Correo de DEVOLUCIÓN que se sabe leer: se registra en la cartera (marca el recibo,
             // abre la llamada) y el aviso dice quién, cuánto y hasta cuándo. Si el puerto no contesta,
             // el aviso sale IGUAL con lo leído del correo y declara que no está registrado.
-            const res = devolucion.devoluciones.length > 0
-              ? await registrarDevolucionesAsegura(devolucion.devoluciones, correo.messageId)
+            // Las pólizas ya ANULADAS por impago (carta de Allianz) no se registran como devolución:
+            // la anulación la trae CIMA, y una devolución abierta de Allianz (resolución a mano) haría
+            // que el trigger siguiera forzando el recibo a «devuelto» por encima del «anulado».
+            const aRegistrar = devolucion.devoluciones.filter((d) => d.motivo !== MOTIVO_POLIZA_ANULADA)
+            const res = aRegistrar.length > 0
+              ? await registrarDevolucionesAsegura(aRegistrar, correo.messageId)
               : null
             const resultados = res?.estado === 'ok' ? leerResultadosPuerto(res.json) : null
             const fallo = res && res.estado !== 'ok' ? res : null

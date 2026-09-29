@@ -62,7 +62,10 @@ test('Allianz: la carta de pólizas ANULADAS no se titula «recibo devuelto»; s
     compania: 'allianz', codigoDgs: 'C0109', incidencias: [], ilegibles: 0,
     devoluciones: [{ codigoDgs: 'C0109', idRecibo: '600000001', numeroPoliza: '040000001', importe: 249.34, fechaEfecto: '2026-06-01', fechaDevolucion: '2026-08-03', motivo: 'Póliza anulada por impago', tipoMotivo: 'otro' }],
   }
-  assert.match(textoAvisoDevolucion(anulada, null, url), /Póliza ANULADA por impago<\/b> — Allianz/)
+  const t = textoAvisoDevolucion(anulada, null, url)
+  assert.match(t, /Póliza ANULADA por impago<\/b> — Allianz/)
+  assert.match(t, /la anulación la trae CIMA/)
+  assert.doesNotMatch(t, /No se pudo confirmar el registro|Comisión en riesgo|suspenso/, 'no se registra: no hay registro que confirmar')
   const sinLeer = textoAvisoDevolucion({ ...anulada, devoluciones: [], ilegibles: 1 }, null, url)
   assert.match(sinLeer, /Aviso de recibos sin leer<\/b> — Allianz/)
   assert.match(sinLeer, /no se han sabido leer/)
