@@ -1,8 +1,8 @@
 {
  "sesion": "41ad2a07-c224-528c-a7f8-751825c6928f",
  "inicio": "2026-09-29T09:09:25.222Z",
- "fin": "2026-09-29T12:40:17.284Z",
- "llamadas": 221,
+ "fin": "2026-09-29T16:11:18.997Z",
+ "llamadas": 224,
  "categorias": {
   "lectura-directa": {
    "llamadas": 2,
@@ -17,15 +17,15 @@
    }
   },
   "otro": {
-   "llamadas": 30,
-   "chars_in": 9302,
-   "chars_out": 202217,
+   "llamadas": 31,
+   "chars_in": 9304,
+   "chars_out": 203744,
    "errores": 0,
    "archivos_citados": 2,
    "chars_citados": 53476,
    "tools": {
     "ToolSearch": 12,
-    "ReadNotifications": 15,
+    "ReadNotifications": 16,
     "SubagentHandback": 1,
     "ReportFindings": 1,
     "Skill": 1
@@ -60,14 +60,14 @@
    }
   },
   "sql": {
-   "llamadas": 7,
-   "chars_in": 3048,
-   "chars_out": 5548,
+   "llamadas": 8,
+   "chars_in": 3199,
+   "chars_out": 6068,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "mcp__Supabase__execute_sql": 7
+    "mcp__Supabase__execute_sql": 8
    }
   },
   "agente:general-purpose": {
@@ -108,9 +108,9 @@
    }
   },
   "mcp:Vercel": {
-   "llamadas": 7,
-   "chars_in": 955,
-   "chars_out": 16628,
+   "llamadas": 8,
+   "chars_in": 1126,
+   "chars_out": 16757,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
@@ -118,7 +118,7 @@
     "mcp__Vercel__list_deployments": 4,
     "mcp__Vercel__create_deployment": 1,
     "mcp__Vercel__web_fetch_vercel_url": 1,
-    "mcp__Vercel__get_runtime_logs": 1
+    "mcp__Vercel__get_runtime_logs": 2
    }
   }
  }
