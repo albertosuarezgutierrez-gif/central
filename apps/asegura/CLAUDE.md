@@ -765,7 +765,11 @@ el mismo punto de guardado: `liberarPresupuestosEmitidos` marca emitido el presu
 compañía elegida, por código DGS) → su anulación FIRMADA en la aceptación pasa sola a la cola; y
 `abrirAnulacionesPorSustitucion` abre `sustitucion`/`solicitada` para las emitidas fuera de presupuesto (web) → aviso
 `anulacion_por_firmar` en la campana y en el correo de la intranet; el correo a la compañía sigue pasando por el OK. Portal: `sustituidasARetirar` la quita de la LISTA (no del acceso) por lector, con la
-nueva empezada y sin siniestros/devueltos pendientes. ⚠️ Medido: CIMA casi no manda el dato del riesgo fuera de motor
+nueva empezada y sin siniestros/devueltos pendientes. 🧾 **Un devuelto de la vieja por un periodo que ya cubre la nueva NO es deuda**
+(29/09/2026, José: la renovación Mapfre del Kona llegó `devuelto` y el portal le pedía pagarla): `devueltoPorSustitucion` (efecto ≥
+vencimiento de la vieja o inicio de la nueva, lo que llegue antes) lo descuenta en el portal antes de `sustituidasARetirar`
+y de «Tienes un recibo devuelto»; el seguimiento de devueltos y la cola de impagos ya excluyen `sustituida_at`. Cepo
+`test/regression-portal-devuelto-sustitucion.test.ts`. ⚠️ Medido: CIMA casi no manda el dato del riesgo fuera de motor
 (hogar 7/34 con dirección, 0 refcat, 0 DNI de asegurado en personas) → capturarlo al emitir es lo que falta.
 💬 **Mensajes del portal: RETIRADOS el 26/09/2026** (Alberto: «con WhatsApp el chat no tiene sentido»). Se borraron
 `lib/mensajes-portal.ts` y el puerto `/api/operador/mensajes`; el cliente escribe por WhatsApp desde la barra inferior del portal.

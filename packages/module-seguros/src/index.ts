@@ -860,7 +860,7 @@ export {
   transicionQuejaValida, validarAltaQueja, validarCierreQueja, validarFechaResolucion, informeSac,
   type EstadoQueja, type CanalQueja, type MotivoQueja, type PlazoQueja, type AltaQueja, type QuejaInforme, type InformeSac,
 } from './queja.ts'
-export { SUSTITUCION_DIAS_ANTES, SUSTITUCION_DIAS_DESPUES, claveRiesgo, detectarSustituciones, solicitudPorSustitucion, sustituidasARetirar, type DuplicidadDetectada, type PolizaParaSustitucion, type ResultadoSustituciones, type RiesgoComun, type SustitucionDetectada } from './sustitucion-auto.ts'
+export { SUSTITUCION_DIAS_ANTES, SUSTITUCION_DIAS_DESPUES, claveRiesgo, detectarSustituciones, devueltoPorSustitucion, solicitudPorSustitucion, sustituidasARetirar, type DuplicidadDetectada, type PolizaParaSustitucion, type ResultadoSustituciones, type RiesgoComun, type SustitucionDetectada } from './sustitucion-auto.ts'
 export { informeMediacion, type ReciboInforme, type FilaInforme, type InformeMediacion } from './informe-mediacion.ts'
 export { HORAS_MINIMAS_IDD, clavePersona, resumenFormacion, validarAltaFormacion, validarBajaFormacion, type BajaFormacion, type RegistroFormacion, type EstadoFormacion, type ResumenPersona, type ResumenFormacion, type AltaFormacion } from './formacion.ts'
 export { MAX_BYTES_IPID, claveProducto, revisarIpid } from './ipid.ts'
