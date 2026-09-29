@@ -255,3 +255,23 @@ test('leerPresupuestoEnLista: el ramo viaja, y si asegura no lo manda es null', 
   assert.equal(leerPresupuestoEnLista({ ...base, ramo: 'moto' })?.ramo, 'moto')
   assert.equal(leerPresupuestoEnLista(base)?.ramo, null)
 })
+
+test('filasCoberturas: una fila por garantía con dato; sin clasificar = no consta, nunca «no»', async () => {
+  const { filasCoberturas, leerPresupuestoEnLista } = await import('./presupuesto-asegura.ts')
+  const p = leerPresupuestoEnLista({
+    id: 'a', estado: 'borrador', creadoAt: 'x', venceEl: 'y', ramo: 'moto',
+    detalle: [
+      { id: 'o1', compania: 'Occident', modalidad: 'Terceros básico', primaEur: 217.57, garantias: { danos_propios: 'no', colision_animales: 'si' } },
+      { id: 'o2', compania: 'Allianz', modalidad: null, primaEur: 215.88, garantias: null },
+      { raro: 1 },
+    ],
+  })
+  assert.equal(p?.detalle?.length, 2)
+  const f = filasCoberturas('moto', p!.detalle!)!
+  assert.deepEqual(f.find((x) => x.clave === 'danos_propios')?.estados, ['no', 'no_consta'])
+  assert.deepEqual(f.find((x) => x.clave === 'colision_animales')?.estados, ['si', 'no_consta'])
+  assert.equal(f.some((x) => x.clave === 'lunas'), false, 'moto no tiene lunas')
+  assert.equal(f.some((x) => x.clave === 'robo'), false, 'todo «no consta» no se pinta')
+  assert.equal(filasCoberturas('responsabilidad_civil', p!.detalle!), null)
+  assert.equal(leerPresupuestoEnLista({ id: 'a', estado: 'borrador', creadoAt: 'x', venceEl: 'y' })?.detalle, null)
+})
