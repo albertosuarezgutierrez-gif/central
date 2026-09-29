@@ -94,6 +94,11 @@ test('el bucle no repite una consulta idéntica y cierra con una respuesta, no c
   const f = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
   assert.match(f, /yaConsultado\.get\(clave\)/)
   assert.match(f, /Se han acabado las consultas de esta pregunta/)
+  assert.match(f, /if \(res\.ok\) yaConsultado\.set/)
+  // El cierre va sin herramientas: con ellas volvía a pedir otra consulta y salía vacío.
+  const cierre = f.slice(f.indexOf('const cierre'), f.indexOf('No he llegado a una respuesta'))
+  assert.match(cierre, /openrouterChatEx\(/)
+  assert.doesNotMatch(cierre, /HERRAMIENTAS/)
 })
 
 test('interruptor de apagado', () => {
