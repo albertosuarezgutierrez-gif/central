@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-28T20:09:30Z",
+  "generadoEn": "2026-09-29T06:58:38Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -2198,7 +2198,7 @@
       },
       "asegura": {
         "estado": "usado",
-        "evidencias": 141
+        "evidencias": 143
       },
       "asegura-portal": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 106
+        "evidencias": 114
       },
       "rrhh": {
         "estado": "no",
@@ -4060,7 +4060,9 @@
       "/api/operador/libro-registro",
       "/api/operador/linea-base",
       "/api/operador/oportunidad",
+      "/api/operador/oportunidad/figuras",
       "/api/operador/oportunidad/llamada",
+      "/api/operador/oportunidad/riesgo",
       "/api/operador/oportunidad/tarea",
       "/api/operador/oportunidad/whatsapp",
       "/api/operador/partes",
@@ -4078,6 +4080,7 @@
       "/api/operador/recaptacion/email",
       "/api/operador/recaptacion/email-lote",
       "/api/operador/recaptacion/whatsapp",
+      "/api/operador/recibos/devolucion",
       "/api/operador/renovaciones/contacto",
       "/api/operador/resumen",
       "/api/operador/retencion/descartar",
@@ -5026,8 +5029,10 @@
       "/api/correduria/libro-registro",
       "/api/correduria/linea-base",
       "/api/correduria/oportunidad",
+      "/api/correduria/oportunidad/figuras",
       "/api/correduria/oportunidad/leer",
       "/api/correduria/oportunidad/llamada",
+      "/api/correduria/oportunidad/riesgo",
       "/api/correduria/oportunidad/tarea",
       "/api/correduria/oportunidad/whatsapp",
       "/api/correduria/partes",
@@ -5041,6 +5046,7 @@
       "/api/correduria/recaptacion",
       "/api/correduria/recaptacion/email",
       "/api/correduria/recaptacion/whatsapp",
+      "/api/correduria/recibo-devolucion",
       "/api/correduria/renovaciones/contacto",
       "/api/correduria/retencion/descartar",
       "/api/correduria/sin-canal",
@@ -5549,6 +5555,7 @@
       "seguros.mensajes",
       "seguros.ofertas_automaticas",
       "seguros.operational_events",
+      "seguros.oportunidad_figura",
       "seguros.oportunidad_historial",
       "seguros.oportunidades",
       "seguros.peticiones",
@@ -5566,6 +5573,7 @@
       "seguros.presupuesto_evento",
       "seguros.presupuesto_opcion",
       "seguros.queja",
+      "seguros.recibo_devolucion",
       "seguros.recordatorios",
       "seguros.renovacion_contactos",
       "seguros.retencion_descartes",
@@ -6588,7 +6596,7 @@
     "packages": 42,
     "capacidades": 23,
     "skills": 43,
-    "apis": 1507,
+    "apis": 1513,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
