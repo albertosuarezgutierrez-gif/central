@@ -54,7 +54,7 @@ import {
   textoResumen, urlPoliza, type ResumenEmision,
 } from './correduria-emision-tg'
 import { textoCasillaFigura } from './figuras-emision-texto'
-import { elegirPrecioNuevo, esResumenNuevo, figurasPendientes, huellaResumenNuevo, precioCaducado, ramoNuevoValido, textoResumenNuevo, type ResumenEmisionNueva } from './correduria-emision-nueva-tg'
+import { decidirEfecto, elegirPrecioNuevo, esResumenNuevo, fechaEfectoDelPrecio, figurasPendientes, huellaResumenNuevo, leerFechaEfecto, precioCaducado, ramoNuevoValido, textoResumenNuevo, type ResumenEmisionNueva } from './correduria-emision-nueva-tg'
 import {
   apagado, clasificarDestino, costeConservador, ERROR_NO_UUID, hoyMadrid, memoriaIds, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
   leerArgumentos, leerClasificacion, MAX_TURNOS_DIA, MAX_VUELTAS, paraIA, preguntaNota, reglaConDatoPersonal,
@@ -496,6 +496,8 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
   const prima = args.primaEur === undefined || args.primaEur === null || !Number.isFinite(primaNum) ? null : primaNum
   const tarificacionPedida = idValido(args.tarificacionId)
   const oportunidadId = idValido(args.oportunidadId)
+  const fe = leerFechaEfecto(args.fechaEfecto)
+  if (!fe.ok) return { texto: `ERROR: ${fe.motivo}. Pregúntale a Alberto la fecha de efecto.`, ok: false }
 
   const g = await tarificacionNuevaGuardadaAsegura(clienteId, ramo, { oportunidadId, tarificacionId: tarificacionPedida })
   if (g.estado === 'ninguna') return { texto: `NO SE PUEDE EMITIR: este cliente no tiene ninguna tarificación de ${ramo} guardada. Hay que pedir precio primero.`, ok: true }
@@ -507,7 +509,12 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
   if (projectEsperado && guardada.projectId !== projectEsperado) {
     return { texto: `NO SE PREPARA: la tarificación guardada (${guardada.projectId}) no es la que se acaba de pedir (${projectEsperado}). Prepárala desde la ficha.`, ok: true }
   }
-  if (guardada.caducada) return { texto: `NO SE PUEDE EMITIR: la tarificación ${guardada.projectId} tiene la fecha de efecto ya pasada. Hay que volver a pedir precio.`, ok: true }
+  // Efecto ya pasado: sin fecha nueva no hay nada que confirmar. Con ella, el ReRate la lleva
+  // (`fechaEfectoCorregida`, lo mismo que la pantalla de emisión) y es la compañía quien dice si rescata el precio.
+  const fechaCorregida = fe.fecha && fe.fecha !== guardada.fechaEfecto?.slice(0, 10) ? fe.fecha : null
+  if (guardada.caducada && !fechaCorregida) {
+    return { texto: `NO SE PUEDE EMITIR todavía: la tarificación ${guardada.projectId} se pidió con efecto ${guardada.fechaEfecto ?? 'sin fecha'}, ya pasado. Pregúntale a Alberto con qué fecha de efecto (a partir de hoy) la quiere y vuelve a llamar con fechaEfecto (aaaa-mm-dd).`, ok: true }
+  }
 
   const el = elegirPrecioNuevo(guardada.precios, compania, texto, prima)
   if (el.tipo === 'no') return { texto: `NO SE PUEDE EMITIR: ${el.motivo}. Díselo a Alberto.`, ok: true }
@@ -550,12 +557,14 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     categoria: p.categoria as string,
     ...(p.producto ? { producto: p.producto } : {}),
     ...(typeof p.primaEur === 'number' ? { primaEur: p.primaEur } : {}),
+    ...(fechaCorregida ? { fechaEfectoCorregida: fechaCorregida } : {}),
   })
   if (of.estado !== 'ok') {
     const detalle = of.estado === 'faltan_vendor'
       ? `la compañía pide datos que no están (${of.faltan.map((f) => (typeof f === 'string' ? f : JSON.stringify(f))).join(', ')})`
       : of.estado === 'faltan_producto' ? `la compañía pide rellenar su formulario (${of.campos.join(', ')})` : of.mensaje
-    return { texto: `NO SE PUEDE EMITIR por aquí: ${detalle}. Se resuelve en la pantalla de emisión: ${urlCliente(clienteId)}`, ok: true }
+    const otraFecha = fechaCorregida ? ` Si el problema es la fecha de efecto (${fechaCorregida}), pregúntale a Alberto otra y vuelve a llamar.` : ''
+    return { texto: `NO SE PUEDE EMITIR por aquí: ${detalle}.${otraFecha} Se resuelve en la pantalla de emisión: ${urlCliente(clienteId)}`, ok: true }
   }
   if (!of.cuenta) {
     const porque = of.cuentaAviso === 'no_comprobada' ? 'no se ha podido leer la cuenta de la ficha'
@@ -564,8 +573,13 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
           : 'la ficha no tiene cuenta de cargo'
     return { texto: `NO SE PUEDE EMITIR por aquí: ${porque}. Que la ponga en la ficha y me lo pida otra vez: ${urlCliente(clienteId)}`, ok: true }
   }
+  // Una fecha pedida que la compañía no ha aplicado no puede salir en el botón como la que se emite.
+  const ef = decidirEfecto({
+    pedida: fechaCorregida, cotizada: guardada.fechaEfecto, cotizadaPasada: guardada.caducada, devuelta: fechaEfectoDelPrecio(of.quoteCrudo),
+  })
+  if (ef.tipo === 'no') return { texto: `NO SE PUEDE EMITIR por aquí: ${ef.motivo}. Emite desde la intranet: ${urlCliente(clienteId)}`, ok: true }
   // Sin prima o sin efecto no hay botón: Alberto firmaría un contrato cuyo precio o fecha no ha visto.
-  if (of.primaEur === null || !guardada.fechaEfecto) {
+  if (of.primaEur === null || !ef.efecto) {
     return { texto: `NO SE PUEDE EMITIR por aquí: la compañía no ha devuelto ${of.primaEur === null ? 'la prima' : 'la fecha de efecto'} legible. Míralo en la intranet: ${urlCliente(clienteId)}`, ok: true }
   }
   const ficha = await fichaAsegura(clienteId).catch(() => null)
@@ -587,7 +601,9 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     primaEur: of.primaEur,
     primaParrillaEur: typeof p.primaEur === 'number' ? p.primaEur : null,
     firmeza: of.firmeza,
-    efecto: guardada.fechaEfecto,
+    efecto: ef.efecto,
+    efectoCotizado: ef.cotizado,
+    efectoDevuelto: ef.devuelto,
     caduca: of.caducaEn,
     avisos: [...(p.avisos ?? []), ...of.avisos].filter((a, i, xs) => xs.indexOf(a) === i).slice(0, 6),
     cuenta: { enmascarada: of.cuenta.enmascarada, descripcion: of.cuenta.descripcion },

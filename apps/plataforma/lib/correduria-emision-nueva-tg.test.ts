@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import {
-  elegirPrecioNuevo, esResumenNuevo, figurasPendientes, huellaResumenNuevo, precioCaducado, ramoNuevoValido, textoResumenNuevo,
+  decidirEfecto, elegirPrecioNuevo, esResumenNuevo, fechaEfectoDelPrecio, figurasPendientes, huellaResumenNuevo, leerFechaEfecto, precioCaducado, ramoNuevoValido, textoResumenNuevo,
   type ResumenEmisionNueva,
 } from './correduria-emision-nueva-tg.ts'
 import type { Precio } from './retarificar-asegura.ts'
@@ -98,6 +98,64 @@ test('figurasPendientes y ramoNuevoValido', () => {
   assert.equal(ramoNuevoValido('hogar'), null)
 })
 
+test('fecha de efecto dictada: aaaa-mm-dd o dd/mm/aaaa; lo que no es una fecha del calendario se rechaza', () => {
+  assert.deepEqual(leerFechaEfecto(undefined), { ok: true, fecha: null })
+  assert.deepEqual(leerFechaEfecto('  '), { ok: true, fecha: null })
+  assert.deepEqual(leerFechaEfecto('2026-10-09'), { ok: true, fecha: '2026-10-09' })
+  assert.deepEqual(leerFechaEfecto('9/10/2026'), { ok: true, fecha: '2026-10-09' })
+  assert.deepEqual(leerFechaEfecto('09/10/2026'), { ok: true, fecha: '2026-10-09' })
+  // El 31 de septiembre no existe: Date lo pasaría al 1 de octubre sin avisar.
+  assert.equal(leerFechaEfecto('2026-09-31').ok, false)
+  assert.equal(leerFechaEfecto('31/09/2026').ok, false)
+  assert.equal(leerFechaEfecto('9 de octubre').ok, false)
+  assert.equal(leerFechaEfecto('2026/10/09').ok, false)
+})
+
+test('fecha del precio confirmado: solo effectiveDate ISO del nivel de arriba', () => {
+  assert.equal(fechaEfectoDelPrecio({ effectiveDate: '2026-10-09T00:00:00Z' }), '2026-10-09')
+  assert.equal(fechaEfectoDelPrecio({ effectiveDate: '09/10/2026' }), null)
+  assert.equal(fechaEfectoDelPrecio({ quote: { effectiveDate: '2026-10-09' } }), null)
+  assert.equal(fechaEfectoDelPrecio(null), null)
+})
+
+test('decidirEfecto: la fecha del botón nunca puede ser una que la compañía no haya aplicado sin que /emitir lo pare', () => {
+  // Sin fecha pedida: la de la tarificación, como siempre.
+  assert.deepEqual(decidirEfecto({ pedida: null, cotizada: '2026-10-01', cotizadaPasada: false, devuelta: '2026-10-01' }),
+    { tipo: 'ok', efecto: '2026-10-01', cotizado: null, devuelto: null })
+  // Sin fecha pedida pero la compañía devuelve OTRA (un ReRate anterior la movió): no.
+  assert.equal(decidirEfecto({ pedida: null, cotizada: '2026-10-01', cotizadaPasada: false, devuelta: '2026-10-09' }).tipo, 'no')
+  // Sin fecha pedida y sin devuelta: la cotizada (no se puede contrastar, como en la web).
+  assert.equal(decidirEfecto({ pedida: null, cotizada: '2026-10-01', cotizadaPasada: false, devuelta: null }).tipo, 'ok')
+  // Pedida y devuelta igual: confirmada (vigente o pasada da igual).
+  for (const cotizadaPasada of [true, false]) {
+    assert.deepEqual(decidirEfecto({ pedida: '2026-10-09', cotizada: '2026-09-22', cotizadaPasada, devuelta: '2026-10-09' }),
+      { tipo: 'ok', efecto: '2026-10-09', cotizado: '2026-09-22', devuelto: '2026-10-09' })
+  }
+  // Devuelta DISTINTA: nunca hay botón.
+  for (const cotizadaPasada of [true, false]) {
+    assert.equal(decidirEfecto({ pedida: '2026-10-09', cotizada: '2026-09-22', cotizadaPasada, devuelta: '2026-10-01' }).tipo, 'no')
+  }
+  // Sin devuelta y cotizada VIGENTE: /emitir no pararía una emisión con la vieja → no.
+  assert.equal(decidirEfecto({ pedida: '2026-10-09', cotizada: '2026-10-01', cotizadaPasada: false, devuelta: null }).tipo, 'no')
+  // Sin devuelta y cotizada PASADA: si no se aplicó, /emitir ve la vieja pasada y corta → sí, como «pedida».
+  assert.deepEqual(decidirEfecto({ pedida: '2026-10-09', cotizada: '2026-09-22', cotizadaPasada: true, devuelta: null }),
+    { tipo: 'ok', efecto: '2026-10-09', cotizado: '2026-09-22', devuelto: null })
+})
+
+test('resumen: «confirmada» solo si la compañía devolvió esa fecha; si no, «pedida»; sin cambio, nada', () => {
+  const conf = textoResumenNuevo({ ...R, efecto: '2026-10-09', efectoCotizado: '2026-09-22', efectoDevuelto: '2026-10-09' })
+  assert.match(conf, /Efecto <b>09\/10\/2026<\/b>/)
+  assert.match(conf, /se cotizó con 22\/09\/2026; la compañía ha confirmado/)
+  const pedida = textoResumenNuevo({ ...R, efecto: '2026-10-09', efectoCotizado: '2026-09-22', efectoDevuelto: null })
+  assert.match(pedida, /se ha PEDIDO y la compañía no la devuelve/)
+  assert.doesNotMatch(pedida, /ha confirmado el precio con la nueva/)
+  assert.doesNotMatch(textoResumenNuevo(R), /se cotizó con/)
+  // La huella cubre los dos campos nuevos (mismo efecto, distinto cotizado/devuelto).
+  const base = { ...R, efecto: '2026-10-09', efectoCotizado: '2026-09-22', efectoDevuelto: null }
+  assert.notEqual(huellaResumenNuevo(base), huellaResumenNuevo({ ...base, efectoCotizado: '2026-09-23' }))
+  assert.notEqual(huellaResumenNuevo(base), huellaResumenNuevo({ ...base, efectoDevuelto: '2026-10-09' }))
+})
+
 // ── Cepos sobre el fuente ────────────────────────────────────────────────────────────────────────
 const tg = readFileSync(fileURLToPath(new URL('./correduria-asistente-telegram.ts', import.meta.url)), 'utf8')
 const prep = tg.slice(tg.indexOf('async function prepararEmisionNueva'), tg.indexOf('async function enviarPropuestaNueva'))
@@ -117,9 +175,21 @@ test('botón: emite exigiendo la oferta del resumen (si otro ReRate la cambió, 
   assert.match(boton, /offerIdEsperado: r\.offerId/)
 })
 
+test('preparar: efecto pasado sin fecha nueva no llega al ReRate; con fecha, viaja al ReRate y la decide la compañía', () => {
+  const corte = prep.indexOf('if (guardada.caducada && !fechaCorregida)')
+  assert.ok(corte > 0 && corte < prep.indexOf('ofertaAsegura('))
+  assert.match(prep, /fechaEfectoCorregida: fechaCorregida/)
+  // La fecha del botón sale de decidirEfecto con lo que DEVOLVIÓ la compañía, y un «no» corta antes del resumen.
+  assert.match(prep, /devuelta: fechaEfectoDelPrecio\(of\.quoteCrudo\)/)
+  assert.ok(prep.indexOf("if (ef.tipo === 'no')") > prep.indexOf('ofertaAsegura(') && prep.indexOf("if (ef.tipo === 'no')") < prep.indexOf('enviarPropuestaNueva('))
+  assert.match(prep, /efecto: ef\.efecto,/)
+  // Una fecha mal escrita corta ANTES de leer nada (ni la tarificación ni el ReRate).
+  assert.ok(prep.indexOf('if (!fe.ok)') < prep.indexOf('tarificacionNuevaGuardadaAsegura('))
+})
+
 test('preparar: sin matrícula, sin prima o sin efecto no hay botón; el resumen viejo caduca ANTES del ReRate', () => {
   assert.match(prep, /if \(!matricula\)/)
-  assert.match(prep, /of\.primaEur === null \|\| !guardada\.fechaEfecto/)
+  assert.match(prep, /of\.primaEur === null \|\| !ef\.efecto/)
   assert.ok(prep.indexOf("SET estado = 'caducada'") > 0 && prep.indexOf("SET estado = 'caducada'") < prep.indexOf('ofertaAsegura('))
 })
 

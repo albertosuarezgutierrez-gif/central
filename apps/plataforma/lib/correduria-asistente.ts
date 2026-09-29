@@ -165,7 +165,7 @@ export const HERRAMIENTAS = [
       projectId: { type: 'string', description: 'Número del proyecto de Avant2 (solo cifras)' },
       quoteId: { type: 'string', description: 'Opcional: el precio elegido (Q…) cuando hay varios' },
     }, ['polizaId', 'projectId']),
-  fn('preparar_emision_nueva', 'Prepara la EMISIÓN de una póliza NUEVA de coche o moto (cliente sin póliza que sustituir) con un precio de la ÚLTIMA tarificación guardada del cliente. Confirma el precio con la compañía y le manda a Alberto un resumen con un botón: NO emite, es él quien pulsa. Si varios precios encajan te devuelve la lista para que le preguntes cuál.',
+  fn('preparar_emision_nueva', 'Prepara la EMISIÓN de una póliza NUEVA de coche o moto (cliente sin póliza que sustituir) con un precio de la ÚLTIMA tarificación guardada del cliente. Confirma el precio con la compañía y le manda a Alberto un resumen con un botón: NO emite, es él quien pulsa. Si varios precios encajan te devuelve la lista para que le preguntes cuál. Si Alberto dice con qué fecha de efecto, pásala en fechaEfecto: el precio se confirma con esa fecha.',
     {
       clienteId: { type: 'string', description: 'El clienteId INTERNO (uuid) del TOMADOR, sacado de buscar/ficha_cliente' },
       ramo: { type: 'string', enum: ['moto', 'auto'] },
@@ -174,6 +174,7 @@ export const HERRAMIENTAS = [
       primaEur: { type: 'number', description: 'Opcional: la prima que dice Alberto, para desempatar («la de 200»)' },
       oportunidadId: { type: 'string', description: 'Opcional: la oportunidad (uuid) si la conoces, para coger la tarificación de ese riesgo' },
       tarificacionId: { type: 'string', description: 'Opcional: una tarificación concreta (uuid)' },
+      fechaEfecto: { type: 'string', description: 'Opcional: la fecha de efecto que dice Alberto (aaaa-mm-dd). Obligatoria si la tarificación guardada tiene el efecto ya pasado; nunca la inventes.' },
     }, ['clienteId', 'ramo', 'compania']),
   fn('proponer_correccion', 'Propón CORREGIR la ficha de un cliente con los valores que Alberto te ha DICTADO en esta conversación (dirección, código postal, ciudad, provincia, nombre o apellidos). NO escribe: el sistema le manda el cambio con un botón y es él quien lo aplica. Pasa solo los campos que cambian, tal cual los dijo; nunca inventes ni completes un valor.',
     {
@@ -414,7 +415,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string, auton
     ]),
     '- Si un precio trae un aviso de que la compañía dejará la póliza BLOQUEADA, díselo a Alberto ANTES de preparar la emisión y recomiéndale emitir primero la modalidad básica (sin la garantía que bloquea) para que el cliente pueda circular, y pedir después la ampliación como suplemento con la documentación.',
     '- Pedir precio para EMITIR («pide precio de la moto de X y emite Allianz terceros ampliado ≈200»): proponer_tarificacion (con la oportunidadId del riesgo si la hay) y emitirCompania/emitirModalidad/emitirPrimaEur. Cuando el precio llega, el sistema prepara solo la emisión y Alberto recibe el botón «Emitir»: NO llames tú a preparar_emision_nueva en ese caso.',
-    '- Emitir: solo puedes PREPARAR una emisión. Póliza NUEVA de coche o moto (cliente sin póliza que sustituir, precio pedido desde la plataforma) → preparar_emision_nueva con el cliente, el ramo y la compañía (y la modalidad o la prima si las dice). Sustituir una póliza de la cartera con un proyecto hecho en Avant2 → preparar_emision (necesitas la póliza y el número del proyecto; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
+    '- Emitir: solo puedes PREPARAR una emisión. Póliza NUEVA de coche o moto (cliente sin póliza que sustituir, precio pedido desde la plataforma) → preparar_emision_nueva con el cliente, el ramo y la compañía (y la modalidad, la prima o la fecha de efecto si las dice). Sustituir una póliza de la cartera con un proyecto hecho en Avant2 → preparar_emision (necesitas la póliza y el número del proyecto; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos. Si para escribir necesitas un DNI que solo tienes tapado («…115R»), pídeselo a Alberto entero.',
     '- Los ids (clienteId, polizaId, oportunidadId, tareaId, siniestroId) son SIEMPRE los uuid que devuelven las herramientas: el polizaId sale de ficha_cliente (busca primero), nunca es el número de póliza de la compañía.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: se cambian con sus herramientas (contacto_cliente, proponer_correccion) o en la ficha.',
