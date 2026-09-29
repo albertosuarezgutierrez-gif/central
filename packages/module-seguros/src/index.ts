@@ -360,6 +360,7 @@ export {
   type RelacionFicha,
 } from './relaciones.ts'
 export { mensajePresentacionWhatsapp, mensajeRenovacionLeadWhatsapp } from './mensaje-whatsapp.ts'
+export { mensajeReciboDevueltoWhatsapp, resumenRiesgo, saludoSegunHora, type EntradaWhatsappDevuelto } from './mensaje-recibo-devuelto.ts'
 export { correoPresupuesto, lineaDatosQueFaltan, mensajePresupuestoWhatsapp, type CorreoPresupuesto, type DatosAvisoPresupuesto } from './mensaje-presupuesto.ts'
 export {
   estadoCliente,
@@ -984,4 +985,25 @@ export {
   type EtapaSeguimiento,
   type PresupuestoParaSeguimiento,
 } from './presupuesto-ayudas.ts'
+
+export {
+  leerCorreoDevolucion,
+  clasificarMotivoDevolucion,
+  normalizarIdRecibo,
+  type DevolucionLeida,
+  type LecturaCorreoDevolucion,
+  type CorreoDevolucion,
+  type TipoMotivoDevolucion,
+} from './devolucion-correo.ts'
+
+export {
+  ORIGEN_DEVOLUCION,
+  PREFIJO_TAREA_DEVOLUCION,
+  HITOS_DEVOLUCION,
+  hitoDevolucion,
+  suspensionDesde,
+  textoTareaDevolucion,
+  type HitoDevolucion,
+  type EntradaTareaDevolucion,
+} from './seguimiento-devolucion.ts'
 export { ROLES_FIGURA, ETIQUETA_ROL, rolesDelRamo, esRolFigura, limpiarFiguras, diferenciasVariante, resumenDiferencias, type RolFigura, type FigurasVariante, type Diferencia } from './variantes-riesgo.ts'

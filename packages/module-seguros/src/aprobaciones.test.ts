@@ -122,3 +122,8 @@ test('envío solo al firmar: una inmediata o sin buzón recordado se queda en la
 test('la política general NO se relaja: la excepción vive aparte y solo para anulaciones firmadas', () => {
   assert.equal(POLITICA.enviar_correo_compania, 'aprobar')
 })
+
+test('motivo de cuenta: pide revisar la cuenta domiciliada; sin él, no lo menciona', () => {
+  assert.match(borradorReciboDevuelto({ ...base, motivoCuenta: true })!.texto, /cuenta correcta/)
+  assert.doesNotMatch(borradorReciboDevuelto(base)!.texto, /cuenta correcta/)
+})

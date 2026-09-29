@@ -20,6 +20,11 @@ export interface CorreoNuevo {
   fecha: Date
   labels: string[]         // etiquetas Gmail que YA lleva (para el skip)
   extracto: string         // asunto + cuerpo truncado ~1500 chars (para la IA)
+  /**
+   * Cuerpo en texto CON sus saltos de línea (hasta ~20.000 chars). El `extracto` los colapsa y las
+   * tablas de los correos de devolución de recibos se leen por líneas (`leerCorreoDevolucion`).
+   */
+  texto?: string
 }
 
 function nuevoCliente(): ImapFlow {
@@ -30,6 +35,7 @@ function nuevoCliente(): ImapFlow {
 }
 
 const EXTRACTO_MAX = 1500
+const TEXTO_MAX = 20_000
 
 export interface SesionTriaje {
   uidValidity: number
@@ -77,6 +83,7 @@ export async function abrirTriaje(): Promise<SesionTriaje> {
           fecha: parsed.date || new Date(),
           labels: Array.from((msg.labels as Set<string> | undefined) ?? []),
           extracto: `${subject}\n${cuerpo}`.slice(0, EXTRACTO_MAX),
+          texto: (parsed.text || '').slice(0, TEXTO_MAX),
         })
         if (out.length >= max) break
       }
