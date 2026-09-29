@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-29T01:03:40Z",
-  "sha": "58790fe02124ede3bb1b464495c568dd2a26eda9",
+  "generadoEn": "2026-09-29T05:29:28Z",
+  "sha": "f7e81143da300f937ff33186e742d64132220497",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -21240,7 +21240,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 143
+          "linea": 146
         },
         {
           "nombre": "clavesDe",
@@ -21248,7 +21248,7 @@
           "exportada": false,
           "params": "raw: unknown",
           "retorno": "",
-          "linea": 146,
+          "linea": 149,
           "resumen": "Solo NOMBRES de claves (nivel 1 y `mainQuote.product`), para diagnosticar la forma sin volcar datos."
         },
         {
@@ -21257,7 +21257,7 @@
           "exportada": true,
           "params": "ids: { correduriaId: string; tarificacionId: string }, deps: Partial<DepsBackfill> = {},",
           "retorno": "Promise<ResumenBackfill>",
-          "linea": 154,
+          "linea": 157,
           "resumen": "Rellena `oferta_id` donde se puede y luego las coberturas. Nunca lanza."
         },
         {
@@ -21266,7 +21266,7 @@
           "exportada": true,
           "params": "correduriaId: string, opts: { limite?: number; presupuestoMs?: number; porTarificacionMs?: number } = {}, deps: { candidatas?: (correduriaId: string, limite: number) => Promise<string[]> backfill?: (ids: { correduriaId: string; tarificacion",
           "retorno": "Promise<ResumenPasada>",
-          "linea": 257,
+          "linea": 260,
           "resumen": "Coge hasta `limite` tarificaciones con filas pendientes (la más reciente primero) y las procesa DE UNA EN UNA dentro de `presupuestoMs`. Una sin tiempo no se empieza."
         },
         {
@@ -21275,7 +21275,7 @@
           "exportada": false,
           "params": "correduriaId: string, limite: number",
           "retorno": "Promise<string[]>",
-          "linea": 297
+          "linea": 300
         },
         {
           "nombre": "depsReales",
@@ -21283,7 +21283,7 @@
           "exportada": false,
           "params": "ids: { correduriaId: string; tarificacionId: string }",
           "retorno": "Promise<DepsBackfill>",
-          "linea": 312
+          "linea": 315
         }
       ],
       "tablas": [
@@ -21291,7 +21291,7 @@
         "tarificaciones"
       ],
       "rutaApi": null,
-      "hash": "2f8fbdf5cfc9"
+      "hash": "a70121392495"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/buscar-proyectos.ts",
@@ -22155,17 +22155,27 @@
       "ambito": "apps/asegura",
       "resumen": "Coberturas y garantías de CADA precio de una tarificación, leídas GRATIS de Codeoscopic (29/09/2026, entrega 1 de docs/superpowers/plans/2026-09-28-presupuesto-filtro-garantias.md). Tras tarificar, cada fila de `seguros.tarificacion_precios` trae su `oferta_id`. Aquí se hace `GET /insurances/{projec",
       "exporta": [
+        "listaOpciones",
         "completarCoberturasTarificacion",
         "tarificacionACompletar"
       ],
       "funciones": [
+        {
+          "nombre": "listaOpciones",
+          "kind": "function",
+          "exportada": true,
+          "params": "sobre: unknown",
+          "retorno": "OpcionProductoLegible[] | null",
+          "linea": 76,
+          "resumen": "`opciones.lista` del sobre guardado, validada. Cualquier otra forma → `null` («no se sabe»)."
+        },
         {
           "nombre": "vacio",
           "kind": "arrow",
           "exportada": false,
           "params": "",
           "retorno": "ResumenCoberturasTarificacion",
-          "linea": 70
+          "linea": 83
         },
         {
           "nombre": "conTope",
@@ -22173,7 +22183,7 @@
           "exportada": false,
           "params": "p: Promise<T>, ms: number",
           "retorno": "Promise<T>",
-          "linea": 73,
+          "linea": 86,
           "resumen": "Una promesa con tope de tiempo. Pasado el tope, rechaza (y cuenta como `fallo`)."
         },
         {
@@ -22182,7 +22192,7 @@
           "exportada": false,
           "params": "e: unknown",
           "retorno": null,
-          "linea": 83
+          "linea": 96
         },
         {
           "nombre": "completarCoberturasTarificacion",
@@ -22190,7 +22200,7 @@
           "exportada": true,
           "params": "ids: { correduriaId: string; tarificacionId: string }, deps: Partial<DepsCoberturasTarificacion> = {},",
           "retorno": "Promise<ResumenCoberturasTarificacion>",
-          "linea": 89,
+          "linea": 102,
           "resumen": "Lee y guarda las coberturas (y sus garantías) de los precios de una tarificación que aún no las tienen. Nunca lanza."
         },
         {
@@ -22199,7 +22209,7 @@
           "exportada": true,
           "params": "r: ResultadoCotizacion, correduriaId: string,",
           "retorno": "",
-          "linea": 166,
+          "linea": 182,
           "resumen": "Qué tarificación hay que completar tras un `cotizar()`: solo una REAL que se guardó. Una simulada o una que no quedó guardada no tiene filas que completar."
         },
         {
@@ -22208,14 +22218,14 @@
           "exportada": false,
           "params": "ids: { correduriaId: string; tarificacionId: string }",
           "retorno": "Promise<DepsCoberturasTarificacion>",
-          "linea": 177
+          "linea": 193
         }
       ],
       "tablas": [
         "seguros"
       ],
       "rutaApi": null,
-      "hash": "7122f3a683f9"
+      "hash": "e84b36054ec3"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/coberturas.ts",
@@ -154958,6 +154968,7 @@
       "exporta": [
         "claveCobertura",
         "clasificarCoberturas",
+        "asistenciaAmpliada",
         "noReconocidas",
         "ramoDeCatalogo"
       ],
@@ -154977,17 +154988,26 @@
           "exportada": false,
           "params": "ramo: RamoGarantias, nombre: string",
           "retorno": "string[]",
-          "linea": 116,
+          "linea": 123,
           "resumen": "Las claves del catálogo que describe UNA cobertura (normalmente una; «Rotura de faro/Casco» → una)."
         },
         {
           "nombre": "clasificarCoberturas",
           "kind": "function",
           "exportada": true,
-          "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null",
+          "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null, opciones?: readonly OpcionProductoLegible[] | null,",
           "retorno": "GarantiasClasificadas",
-          "linea": 132,
+          "linea": 139,
           "resumen": "Lleva las coberturas de UN precio al catálogo del ramo. Todas las claves salen en el resultado: `si` (reconocida e incluida) · `no` (reconocida y marcada NO incluida) · `no_consta` (el resto). Varias "
+        },
+        {
+          "nombre": "asistenciaAmpliada",
+          "kind": "function",
+          "exportada": true,
+          "params": "lista: readonly CoberturaParaClasificar[] | null, opciones?: readonly OpcionProductoLegible[] | null,",
+          "retorno": "EstadoGarantia",
+          "linea": 169,
+          "resumen": "Si el precio lleva asistencia AMPLIADA. PURO. Manda la opción con la que se tarificó (es la elección real); si no la hay, el texto de la cobertura. `no` solo con una señal explícita: la opción dice «E"
         },
         {
           "nombre": "noReconocidas",
@@ -154995,7 +155015,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null",
           "retorno": "string[]",
-          "linea": 145,
+          "linea": 191,
           "resumen": "Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones."
         },
         {
@@ -155004,12 +155024,12 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "RamoGarantias | null",
-          "linea": 152
+          "linea": 198
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ebdccb9a2fab"
+      "hash": "177fcd8bb57e"
     },
     {
       "ruta": "packages/module-seguros/src/cliente-edicion.ts",
@@ -165787,6 +165807,6 @@
   ],
   "resumen": {
     "archivos": 3892,
-    "funciones": 12779
+    "funciones": 12781
   }
 }
