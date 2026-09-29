@@ -93,7 +93,8 @@ export type EstimacionFicha = {
 
 export type FichaPoliza = {
   id: string
-  cliente: { id: string; nombre: string }
+  /** `telefono`: el principal de la ficha, descifrado; `null` = no tiene o no se pudo leer. */
+  cliente: { id: string; nombre: string; telefono: string | null }
   tipo: string
   aseguradora: string
   codigoEntidadDgs: string | null
@@ -202,7 +203,7 @@ export type ReciboFichaPoliza = ReciboResumen & {
    * (`recibo_devolucion`). Es lo único que permite marcarlo «cobrado de nuevo» a mano: una devolución
    * que trae CIMA la resuelve CIMA. `null` = no hay aviso abierto o no se pudo leer.
    */
-  devolucionCorreo: { fecha: string; motivo: string | null } | null
+  devolucionCorreo: { fecha: string; motivo: string | null; tipoMotivo: string | null } | null
 }
 
 export type PolizaRelacionada = {
@@ -334,7 +335,7 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
       fechaEfectoInicial: true, fechaInicio: true, fechaVencimiento: true,
       fechaEmision: true, fechaEfectoActual: true, fechaSituacion: true, fechaSolicitud: true,
       primaAnual: true, primaBruta: true, primaMensual: true, fraccionamiento: true, datosEspecificos: true,
-      cliente: { select: { id: true, nombre: true, apellidos: true } },
+      cliente: { select: { id: true, nombre: true, apellidos: true, telefono: true } },
       coberturasRel: {
         select: { numeroOrden: true, codigo: true, descripcion: true, capitalAsegurado: true, descripcionCapital: true, franquicia: true, fechaInicio: true, fechaFin: true, modalidadValoracion: true, datosExtra: true },
         orderBy: { numeroOrden: 'asc' },
@@ -509,7 +510,10 @@ export async function fichaPoliza(correduriaId: string, polizaId: string): Promi
 
   return {
     id: p.id,
-    cliente: { id: p.cliente.id, nombre: `${p.cliente.nombre} ${p.cliente.apellidos}`.trim() },
+    cliente: {
+      id: p.cliente.id, nombre: `${p.cliente.nombre} ${p.cliente.apellidos}`.trim(),
+      telefono: descifrar(p.cliente.telefono),
+    },
     tipo: String(p.tipo),
     aseguradora: p.aseguradora,
     codigoEntidadDgs: p.codigoEntidadDgs ?? null,
@@ -603,15 +607,15 @@ async function devolucionesCorreoAbiertas(
   db: ReturnType<typeof prismaAsegura>,
   correduriaId: string,
   reciboIds: string[],
-): Promise<Map<string, { fecha: string; motivo: string | null }>> {
-  const out = new Map<string, { fecha: string; motivo: string | null }>()
+): Promise<Map<string, { fecha: string; motivo: string | null; tipoMotivo: string | null }>> {
+  const out = new Map<string, { fecha: string; motivo: string | null; tipoMotivo: string | null }>()
   if (reciboIds.length === 0) return out
   try {
-    const filas = await db.$queryRaw<{ reciboId: string; fecha: string; motivo: string | null }[]>`
-      select recibo_id::text as "reciboId", to_char(fecha_devolucion, 'YYYY-MM-DD') as fecha, motivo
+    const filas = await db.$queryRaw<{ reciboId: string; fecha: string; motivo: string | null; tipoMotivo: string | null }[]>`
+      select recibo_id::text as "reciboId", to_char(fecha_devolucion, 'YYYY-MM-DD') as fecha, motivo, tipo_motivo as "tipoMotivo"
       from recibo_devolucion
       where correduria_id = ${correduriaId}::uuid and resuelta_at is null and recibo_id = any(${reciboIds}::uuid[])`
-    for (const f of filas) out.set(f.reciboId, { fecha: f.fecha, motivo: f.motivo })
+    for (const f of filas) out.set(f.reciboId, { fecha: f.fecha, motivo: f.motivo, tipoMotivo: f.tipoMotivo })
   } catch (e) {
     console.error('[cartera-poliza] devoluciones por correo no leídas:', e instanceof Error ? e.message : e)
   }
