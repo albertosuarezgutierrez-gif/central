@@ -1015,3 +1015,8 @@ export {
 export { ROLES_FIGURA, ETIQUETA_ROL, rolesDelRamo, esRolFigura, limpiarFiguras, diferenciasVariante, resumenDiferencias, type RolFigura, type FigurasVariante, type Diferencia } from './variantes-riesgo.ts'
 
 export { ibanValido, normalizarIban } from './iban.ts'
+export { conMarcaCorreo, LOGO_CORREO_URL, PIE_MARCA_CORREO } from './correo-marca.ts'
+export {
+  CAMPOS_ANIOS_VENDOR, HISTORIAL_MAXIMO, aniosDelCuerpo, aplicarTopesHistorial, topesDelMensaje,
+} from './historial-maximo.ts'
+export type { CampoAniosVendor, TopesHistorial } from './historial-maximo.ts'

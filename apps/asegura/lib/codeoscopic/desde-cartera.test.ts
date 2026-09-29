@@ -218,14 +218,21 @@ test('presumir cero siniestros iguala los años y evita el 400 del detalle de si
   assert.deepEqual(r.faltan.filter((f) => !(HUECOS_EMISION as readonly string[]).includes(f.campo)), [])
 })
 
-// ─── Los supuestos que NO son optimistas tiran a la baja ─────────────────────
+// ─── El historial se declara al máximo ──────────────────────────────────────
 
-test('sin fecha de inicio se presume UN año asegurado — el supuesto más caro', () => {
+test('sin fecha de inicio se declara el MÁXIMO (Alberto, 29/09/2026: la compañía lo contrasta con SINCO)', () => {
   const r = pre({}, { fechaEfectoInicial: null })
-  assert.equal(r.datos.aniosAsegurado, 1)
+  assert.equal(r.datos.aniosAsegurado, 10)
+  assert.equal(r.datos.aniosEnCompania, 10)
   const s = r.supuestos.find((x) => x.campo === 'aniosAsegurado')
-  assert.match(s!.porque, /solo puede mejorar/)
-  assert.notEqual(s!.optimista, true)
+  assert.match(s!.porque, /SINCO/)
+  assert.equal(s!.optimista, true, 'declarar el máximo es un supuesto optimista y se dice')
+})
+
+test('con nosotros poco tiempo: años en la compañía reales, asegurado al máximo', () => {
+  const r = pre({}, { fechaEfectoInicial: '2024-03-01' })
+  assert.equal(r.datos.aniosAsegurado, 10)
+  assert.ok((r.datos.aniosEnCompania as number) < 10)
 })
 
 test('los años asegurado salen de la fecha real cuando la hay', () => {

@@ -3,7 +3,7 @@
 // Alberto sube la póliza del cliente, la IA la lee y la oportunidad guarda compañía, nº y el
 // bonus (años sin siniestros, siniestros en 5 años). Al tarificar ese riesgo no se vuelve a
 // teclear: sale de aquí. Puro y sin E/S: lo que decide qué oportunidad manda está testeado.
-import type { SeguroAnterior } from '@central/module-seguros'
+import { HISTORIAL_MAXIMO, type SeguroAnterior } from '@central/module-seguros'
 import type { OportunidadDeCliente } from './seguimiento-asegura.ts'
 
 export type AnteriorParaTarificar = {
@@ -61,7 +61,7 @@ function normal(s: string): string {
  * Con varias que encajan por nombre, ninguna: elegir una a ojo es inventar la compañía.
  */
 export function codigoCompania(
-  companias: { codigoDgs: string; nombreComun: string; nombreCima: string | null }[],
+  companias: { codigoDgs: string; nombreComun: string; nombreCima?: string | null }[],
   leido: { codigoDgs: string | null; nombre: string | null },
 ): string | null {
   if (leido.codigoDgs) {
@@ -80,13 +80,14 @@ export function codigoCompania(
   return encajan.length === 1 ? encajan[0] : null
 }
 
+export { HISTORIAL_MAXIMO }
+
 /**
  * El historial que se DECLARA al tarificar cuando no se sabe (29/09/2026, dictado de Alberto): el
  * máximo. La compañía lo contrasta con SINCO por el nº de póliza y aplica el bonus real; teclear
  * años a mano no justifica nada y solo mete errores. Lo que SÍ se ha leído de su póliza manda
  * sobre el máximo: declarar 10 años limpios cuando el papel dice 3 sería mentir sabiéndolo.
  */
-export const HISTORIAL_MAXIMO = { aniosAsegurado: 10, aniosEnCompania: 10, aniosSinSiniestros: 10, siniestrosUltimos5: 0 } as const
 
 export type HistorialDeclarado = {
   aniosAsegurado: number

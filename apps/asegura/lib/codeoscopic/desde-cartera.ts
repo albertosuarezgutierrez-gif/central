@@ -35,7 +35,7 @@ import {
 } from './peticion-auto.ts'
 import { revisarDatosMoto, type DatosMoto, type ReparoMoto } from './peticion-moto.ts'
 import { partirDireccion, tipoViaDeFicha } from './direccion.ts'
-import { KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
+import { HISTORIAL_MAXIMO, KM_ANUALES_SUPUESTOS } from '@central/module-seguros'
 import { TIPO_CARNET_SUPUESTO, ZONA_CARNET_SUPUESTA } from './persona.ts'
 
 /** Un valor que NO venía en la ficha y se ha dado por bueno para poder cotizar. */
@@ -199,8 +199,6 @@ export function tipoViaTextoDelTomador(cliente: Pick<ClienteCartera, 'direccion'
  */
 export const KM_ANUALES_POR_DEFECTO = KM_ANUALES_SUPUESTOS
 
-/** Años asegurado que se presumen cuando no consta el inicio de la relación. */
-const ANIOS_ASEGURADO_MINIMOS = 1
 
 /**
  * Nombres de pila que el CRM escribe cuando NO hay nombre. Son centinelas
@@ -305,15 +303,20 @@ function historialDePoliza(
 
   // ── Historial: la póliza que estamos retarificando ES la anterior ──────────
   // Esto no es un supuesto: es el motivo por el que se pulsa el botón.
+  // 29/09/2026 (Alberto): los años asegurado se declaran al MÁXIMO. La compañía los contrasta con
+  // SINCO por el nº de póliza y aplica el bonus real; la antigüedad con NOSOTROS no es la del
+  // conductor (pudo estar asegurado antes en otra), así que solo sirve para «años en la compañía».
   const aniosReales = aniosEntre(limpio(poliza.fechaEfectoInicial), hoy)
+  const aniosEnCompania = aniosReales !== null && aniosReales > 0 ? aniosReales : HISTORIAL_MAXIMO.aniosEnCompania
   const aniosAsegurado =
-    aniosReales !== null && aniosReales > 0
+    aniosReales !== null && aniosReales >= HISTORIAL_MAXIMO.aniosAsegurado
       ? aniosReales
       : (suponer(
           'aniosAsegurado',
-          ANIOS_ASEGURADO_MINIMOS,
-          'no consta desde cuándo está asegurado, así que se cuenta solo un año — ' +
-            'si el dato real aparece, el precio solo puede mejorar',
+          HISTORIAL_MAXIMO.aniosAsegurado,
+          'se declara el máximo: la compañía contrasta el historial con SINCO por el nº de póliza ' +
+            'y aplica el bonus real',
+          true,
         ) as number)
 
   // Siniestralidad: decisión de negocio de Alberto. Ver cabecera del fichero.
@@ -335,7 +338,7 @@ function historialDePoliza(
     companiaAnteriorCodigo: limpio(poliza.codigoEntidadDgs),
     polizaAnterior: limpio(poliza.numeroPoliza),
     aniosAsegurado,
-    aniosEnCompania: aniosAsegurado,
+    aniosEnCompania,
     aniosSinSiniestros,
     siniestrosUltimos5: huboSiniestros ? poliza.siniestrosRegistrados : 0,
   }
