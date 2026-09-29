@@ -157,19 +157,19 @@ export default async function FichaCorreduriaPage({ params, searchParams }: {
         })}
       />
 
+      {/* Una sola lista (29/09/2026): cada oportunidad dice sus precios pedidos y en qué punto está
+          con el cliente; debajo, lo enviado (para mandar y seguir) y lo de Avant2 aún sin traer. */}
       {tab === 'oportunidades' && (
-        <Tarjeta titulo="Oportunidades">
+        <Tarjeta titulo="Oportunidades y presupuestos">
           <OportunidadesCliente
             clienteId={ficha.id}
             telefono={contacto.telefono ?? null}
             polizas={[...porClase.viva, ...porClase.pendiente_cima].map(p => ({ id: p.id, etiqueta: etiquetaPoliza(p) }))}
           />
+          <PresupuestosPoliza clienteId={ficha.id} titulo="Presupuestos al cliente" />
+          <PresupuestosAvant2 clienteId={ficha.id} />
         </Tarjeta>
       )}
-      {tab === 'oportunidades' && (
-        <PresupuestosPoliza clienteId={ficha.id} />
-      )}
-      {tab === 'oportunidades' && <PresupuestosAvant2 clienteId={ficha.id} />}
 
       {tab === 'pendiente' && <TabPendiente accion={accion} resumen={resumen} vivas={porClase.viva} clienteId={ficha.id} />}
 

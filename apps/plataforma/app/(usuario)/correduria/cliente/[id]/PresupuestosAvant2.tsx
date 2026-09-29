@@ -51,12 +51,12 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
   return (
     <section style={CAJA}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
-        <strong style={{ fontSize: 15 }}>Presupuestos en Avant2</strong>
+        <strong style={{ fontSize: 15 }}>En Avant2, sin traer</strong>
         <button type="button" style={btnStyle('secundario', 'sm')} onClick={() => void cargar()} disabled={lista === 'cargando'}>
           {lista === null ? 'Ver los de Avant2' : lista === 'cargando' ? 'Mirando…' : 'Recargar'}
         </button>
       </div>
-      <p style={NOTA}>Los hechos en la web de Avant2 y los hechos aquí, juntos. Mirar y traer es gratis: no se vuelve a tarificar.</p>
+      <p style={NOTA}>Lo tarificado en la web de Avant2 que aún no está aquí. Mirar y traer es gratis: no se vuelve a tarificar.</p>
       {aviso && <p style={{ ...NOTA, color: aviso.ok ? 'var(--positive)' : 'var(--negative)' }}>{aviso.texto}</p>}
       {lista !== null && lista !== 'cargando' && lista.estado === 'error' && (
         <p style={NOTA}>No se han podido mirar ({lista.mensaje}). No quiere decir que no haya ninguno.</p>
@@ -64,11 +64,24 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
       {lista !== null && lista !== 'cargando' && lista.estado === 'ok' && lista.proyectos.length === 0 && (
         <p style={NOTA}>Avant2 no tiene presupuestos a su DNI en el último año (se miran los 10 más recientes).</p>
       )}
-      {lista !== null && lista !== 'cargando' && lista.estado === 'ok' && lista.proyectos.length > 0 && (
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
-          {lista.proyectos.map((p) => <Fila key={p.projectId} p={p} clienteId={clienteId} ocupado={ocupado} traer={traer} />)}
-        </ul>
-      )}
+      {lista !== null && lista !== 'cargando' && lista.estado === 'ok' && lista.proyectos.length > 0 && (() => {
+        // Lo ya traído sale en su oportunidad (o en «sin oportunidad») con el precio de la intranet:
+        // repetirlo aquí con el «mejor» del vendor daba dos primas para el mismo proyecto.
+        const sinTraer = lista.proyectos.filter((p) => !p.intranet)
+        const traidos = lista.proyectos.length - sinTraer.length
+        return (
+          <>
+            {traidos > 0 && <p style={NOTA}>{traidos === 1 ? '1 ya está' : `${traidos} ya están`} en plataforma: sale{traidos === 1 ? '' : 'n'} arriba, en su oportunidad o en «presupuestos sin oportunidad».</p>}
+            {sinTraer.length === 0
+              ? <p style={NOTA}>Nada pendiente de traer.</p>
+              : (
+                <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
+                  {sinTraer.map((p) => <Fila key={p.projectId} p={p} clienteId={clienteId} ocupado={ocupado} traer={traer} />)}
+                </ul>
+              )}
+          </>
+        )
+      })()}
     </section>
   )
 }
