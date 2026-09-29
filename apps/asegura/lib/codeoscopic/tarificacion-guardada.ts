@@ -134,7 +134,7 @@ async function ultimoHistorial(correduriaId: string, clienteId: string, ramo: 'a
   for (const f of filas) {
     const h = extraerHistorialGuardado(f.peticion)
     if (!h) continue
-    if (matricula && h.matricula && limpia(h.matricula) !== limpia(matricula)) continue
+    if (!matricula || !h.matricula || limpia(h.matricula) !== limpia(matricula)) continue
     return h
   }
   return null

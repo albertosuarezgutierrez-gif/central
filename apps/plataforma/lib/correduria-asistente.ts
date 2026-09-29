@@ -256,6 +256,7 @@ export const HERRAMIENTAS = [
       aniosAsegurado: { type: 'integer' }, aniosEnCompania: { type: 'integer' }, aniosSinSiniestros: { type: 'integer' },
       siniestrosUltimos5: { type: 'integer', description: 'Solo si Alberto lo dice' },
       primaActual: { type: 'number', description: 'Lo que paga hoy al año, si lo dice (para comparar)' },
+      sinSeguroAnterior: { type: 'boolean', description: 'true si Alberto dice que NO tiene seguro anterior (así no se hereda el de la petición anterior)' },
       emitirCompania: { type: 'string', description: 'Solo si Alberto quiere EMITIR tras el precio: la compañía (p. ej. «Allianz»). Si el precio sale, le llega el botón «Emitir».' },
       emitirModalidad: { type: 'string', description: 'Con emitirCompania: la modalidad/cobertura que dijo («terceros ampliado incendio robo»)' },
       emitirPrimaEur: { type: 'number', description: 'Con emitirCompania: la prima aproximada que dijo («≈200»)' },

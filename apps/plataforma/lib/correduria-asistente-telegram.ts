@@ -495,6 +495,12 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
   if (g.estado === 'ninguna') return { texto: `NO SE PUEDE EMITIR: este cliente no tiene ninguna tarificación de ${ramo} guardada. Hay que pedir precio primero.`, ok: true }
   if (g.estado !== 'ok') return { texto: `ERROR: no he podido leer la tarificación guardada (${g.mensaje}). No digas que no la hay.`, ok: false }
   const guardada = g.guardada
+  // Encadenada tras un precio: solo ESE proyecto. Si la copia leída es otra (simulada, sin copia, otra
+  // variante), no se prepara nada: el botón confirmaría un precio distinto del que Alberto acaba de ver.
+  const projectEsperado = typeof args.projectIdEsperado === 'string' ? args.projectIdEsperado : null
+  if (projectEsperado && guardada.projectId !== projectEsperado) {
+    return { texto: `NO SE PREPARA: la tarificación guardada (${guardada.projectId}) no es la que se acaba de pedir (${projectEsperado}). Prepárala desde la ficha.`, ok: true }
+  }
   if (guardada.caducada) return { texto: `NO SE PUEDE EMITIR: la tarificación ${guardada.projectId} tiene la fecha de efecto ya pasada. Hay que volver a pedir precio.`, ok: true }
 
   const el = elegirPrecioNuevo(guardada.precios, compania, texto, prima)
@@ -1599,7 +1605,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
   let companiaAnterior: Opcion | null = null
   // Sin historial dictado: el ÚLTIMO declarado para este vehículo (29/09/2026: una variante sin él perdió
   // la bonificación y el precio pasó de 200 a 360€). Se dice como supuesto, no se calla.
-  const heredado = !e.historial ? await historialHeredado(clienteId, ramo, e.oportunidadId ?? null, e.matricula ?? previo?.vehiculo.matricula ?? null) : null
+  const heredado = !e.historial && args.sinSeguroAnterior !== true ? await historialHeredado(clienteId, ramo, e.oportunidadId ?? null, e.matricula ?? previo?.vehiculo.matricula ?? null) : null
   if (heredado) {
     const cat = await catalogoOpciones({ tipo: 'companias-anteriores' })
     const op = typeof cat === 'string' ? null : cat.find((o) => o.id === heredado.companiaCodigo) ?? null
@@ -1608,7 +1614,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
       companiaAnterior = op
       nombres.companiaAnterior = op.nombre
       piezas.push({ campo: 'companiaAnterior', estado: 'ok' })
-      supuestos.push({ campo: 'seguroAnterior', valor: `${op.nombre} ${heredado.poliza}, ${heredado.aniosAsegurado} años, ${heredado.aniosSinSiniestros} sin siniestros`, porque: 'el declarado en la petición de precio anterior de este vehículo' })
+      supuestos.push({ campo: 'seguroAnterior', valor: `${op.nombre} póliza …${heredado.poliza.slice(-4)}, ${heredado.aniosAsegurado} años, ${heredado.aniosSinSiniestros} sin siniestros`, porque: 'el declarado en la petición de precio anterior de este vehículo' })
     }
   }
   if (e.historial && !companiaAnterior) companiaAnterior = elegir('companiaAnterior', await catalogoOpciones({ tipo: 'companias-anteriores' }), e.historial.compania)
@@ -1735,7 +1741,8 @@ async function historialHeredado(clienteId: string, ramo: RamoTarif, oportunidad
   const h = r && r.estado === 'ok' ? r.guardada.historialPrevio : null
   if (!h) return null
   const igual = (a: string, b: string) => a.replace(/[\s-]/g, '').toUpperCase() === b.replace(/[\s-]/g, '').toUpperCase()
-  if (matricula && h.matricula && !igual(matricula, h.matricula)) return null
+  // Solo el MISMO vehículo: sin las dos matrículas no se sabe, y un historial ajeno falsea el precio.
+  if (!matricula || !h.matricula || !igual(matricula, h.matricula)) return null
   return h
 }
 
@@ -1857,13 +1864,18 @@ export async function tarificarDesdeBoton(arg: string): Promise<void> {
   await decir([fin.texto, venta].filter(Boolean).join('\n\n'))
   // Precio bueno y emisión pedida: se prepara (confirma el precio con la compañía) y llega el botón «Emitir».
   const obj = fila.cuerpo?.objetivo
-  if (fin.estado === 'hecha' && obj) {
+  // Solo sobre un precio REAL con proyecto (uno simulado o sin proyecto no se emite).
+  const proyectoNuevo = res.estado === 'ok' && !res.simulado ? res.projectId : null
+  if (fin.estado === 'hecha' && obj && !proyectoNuevo) {
+    await decir('🛡️ Emisión: no la preparo, el precio no trae un proyecto real de la compañía. Prepárala desde la ficha.')
+  } else if (fin.estado === 'hecha' && obj && proyectoNuevo) {
     const r = await prepararEmisionNueva({
+      projectIdEsperado: proyectoNuevo,
       clienteId: fila.cliente_id, ramo: fila.ramo, compania: obj.compania,
       ...(obj.modalidad ? { modalidad: obj.modalidad } : {}),
       ...(obj.primaEur !== undefined ? { primaEur: obj.primaEur } : {}),
       ...(fila.cuerpo?.oportunidadId ? { oportunidadId: fila.cuerpo.oportunidadId } : {}),
-    }, null).catch((e) => ({ ok: false, texto: `ERROR: ${e instanceof Error ? e.message.slice(0, 160) : 'fallo'}` }))
+    }, fila.turno_id ?? null).catch((e) => ({ ok: false, texto: `ERROR: ${e instanceof Error ? e.message.slice(0, 160) : 'fallo'}` }))
     // Si el resumen con el botón salió, ya lo tiene; si no, se le dice por qué (sin instrucciones para la IA).
     if (!/^Resumen enviado/.test(r.texto)) {
       await decir(`🛡️ Emisión: ${escapeHtml(r.texto.replace(/\s*(Díselo a Alberto[^.]*\.|Dile a Alberto[^.]*\.|NO digas[^.]*\.|Pregúntale a Alberto[^:]*:)/g, ' ').trim())}`)

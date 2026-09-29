@@ -156,3 +156,11 @@ test('elegir precio: la modalidad guardada cuenta («incendio robo» casa aunque
   const r = elegirPrecioNuevo([{ compania: 'Allianz', producto: 'Allianz Motos', categoria: 'Terceros ampliado', primaEur: 200.2, modalidad: 'Incendio + Robo' }], 'Allianz', 'incendio robo', 200)
   assert.equal(r.tipo, 'uno')
 })
+
+test('emisión encadenada: solo con proyecto real y SOLO ese proyecto; herencia solo con las dos matrículas iguales', () => {
+  assert.match(tarif, /res\.estado === 'ok' && !res\.simulado \? res\.projectId : null/)
+  assert.match(tarif, /projectIdEsperado: proyectoNuevo/)
+  assert.match(prep, /guardada\.projectId !== projectEsperado/)
+  const her = tg.slice(tg.indexOf('async function historialHeredado'), tg.indexOf('async function historialHeredado') + 800)
+  assert.match(her, /if \(!matricula \|\| !h\.matricula \|\|/)
+})
