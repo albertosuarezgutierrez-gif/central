@@ -5,6 +5,7 @@ import { Landmark } from 'lucide-react'
 import { Badge, btnStyle } from '@/components/ui'
 import Bloque from './Bloque'
 import {
+  avisoAcceso,
   contadorCambiosCuenta,
   interpretarCambiosCuenta,
   type RespuestaCambiosCuenta,
@@ -69,7 +70,8 @@ export default function CambiosCuenta({ onContador }: { onContador?: (n: number 
         method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: s.id, estado }),
       })
       // La fila NO se quita hasta que asegura confirma.
-      if (!res.ok) setMensaje('No se ha podido guardar. Sigue pendiente.')
+      if (res.status === 404) { setMensaje('Esa solicitud ya no está pendiente (el cliente pidió otra cuenta, o ya estaba cerrada).'); await leer() }
+      else if (!res.ok) setMensaje('No se ha podido guardar. Sigue pendiente.')
       else { setIbanes((p) => { const { [s.id]: _, ...resto } = p; return resto }); await leer() }
     } catch {
       setMensaje('No se ha podido guardar. Sigue pendiente.')
@@ -103,6 +105,7 @@ export default function CambiosCuenta({ onContador }: { onContador?: (n: number 
               {' '}· nueva <strong>{ibanes[s.id] ?? s.mascara}</strong>
               {' '}· antes {s.mascaraActual ?? <span style={{ color: 'var(--muted)' }}>sin cuenta en la ficha</span>}
             </div>
+            {avisoAcceso(s.diasAcceso) && <div style={{ fontSize: 13, color: 'var(--warning)', fontWeight: 600 }}>⚠️ {avisoAcceso(s.diasAcceso)}</div>}
             <div style={{ fontSize: 12, color: 'var(--muted)' }}>pedida el {s.pedidaEn.slice(8, 10)}/{s.pedidaEn.slice(5, 7)}/{s.pedidaEn.slice(0, 4)} a las {s.pedidaEn.slice(11, 16)}</div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
               {!ibanes[s.id] && (

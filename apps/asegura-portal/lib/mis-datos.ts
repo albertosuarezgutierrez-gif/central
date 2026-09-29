@@ -292,7 +292,7 @@ export type ResultadoCambioCuenta =
  * carga la compañía: eso lo hace el corredor, y la pantalla lo dice. La ficha la decide asegura por el
  * vínculo de la identidad, como en `guardarMisDatos`.
  */
-export async function pedirCambioCuenta(identidadId: string, iban: string): Promise<ResultadoCambioCuenta> {
+export async function pedirCambioCuenta(identidadId: string, iban: string, identidadCreadaEn: string | null): Promise<ResultadoCambioCuenta> {
   const p = puente()
   if (!p) return { estado: 'sin_puente' }
   const control = new AbortController()
@@ -301,7 +301,7 @@ export async function pedirCambioCuenta(identidadId: string, iban: string): Prom
     const res = await fetch(`${p.base}/api/portal/cuenta`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', authorization: `Bearer ${p.secret}` },
-      body: JSON.stringify({ identidadId, iban }),
+      body: JSON.stringify({ identidadId, iban, identidadCreadaEn }),
       cache: 'no-store',
       signal: control.signal,
     })

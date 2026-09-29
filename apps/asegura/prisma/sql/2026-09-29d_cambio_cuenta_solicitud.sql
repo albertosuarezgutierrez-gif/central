@@ -11,7 +11,10 @@ CREATE TABLE IF NOT EXISTS seguros.cambio_cuenta_solicitud (
   id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   correduria_id   uuid NOT NULL REFERENCES seguros.corredurias(id),
   cliente_id      uuid NOT NULL REFERENCES seguros.clientes(id),
-  identidad_id    text NOT NULL,
+  identidad_id    uuid NOT NULL,
+  -- Cuándo se creó el acceso al portal que la pide. Una identidad recién creada es la señal de
+  -- que alguien con una sesión ajena metió su correo en la ficha y entró con él: la cola lo avisa.
+  identidad_creada_en timestamptz,
   iban_cifrado    text NOT NULL,
   mascara         text NOT NULL,
   estado          text NOT NULL DEFAULT 'pendiente' CHECK (estado IN ('pendiente', 'hecha', 'descartada')),

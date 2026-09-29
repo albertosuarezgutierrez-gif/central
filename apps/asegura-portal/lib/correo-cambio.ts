@@ -55,7 +55,7 @@ export async function enviarCodigoCambioCuenta(destino: string, codigo: string, 
     `Caduca en 10 minutos.\n\n${aviso}`
   const html =
     `<div style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;max-width:420px">` +
-    `<p>Tu código para confirmar que los recibos de tus seguros se carguen en la cuenta <strong>${mascara.replace(/[^\d* ]/g, '')}</strong> es:</p>` +
+    `<p>Tu código para confirmar que los recibos de tus seguros se carguen en la cuenta <strong>${mascara.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</strong> es:</p>` +
     `<p style="font-size:28px;letter-spacing:4px;font-weight:700;margin:16px 0">${codigo.replace(/\D/g, '')}</p>` +
     `<p style="color:#666;font-size:13px">Caduca en 10 minutos. ${aviso}</p>` +
     `</div>`

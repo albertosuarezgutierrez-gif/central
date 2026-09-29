@@ -8,7 +8,7 @@ import { useState } from 'react'
 type Estado =
   | { tipo: 'idle' }
   | { tipo: 'enviando' }
-  | { tipo: 'codigo'; email: string }
+  | { tipo: 'codigo'; email: string; aviso?: string }
   | { tipo: 'hecho'; mascara: string }
   | { tipo: 'aviso'; texto: string }
 
@@ -42,9 +42,10 @@ export default function CambioCuenta() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ iban, email }),
     }).catch(() => null)
-    const j = (await r?.json().catch(() => null)) as { estado?: string } | null
+    const j = (await r?.json().catch(() => null)) as { estado?: string; mensaje?: string } | null
     if (r?.ok && j?.estado === 'codigo_enviado') return setEstado({ tipo: 'codigo', email })
-    setEstado({ tipo: 'aviso', texto: AVISO_CODIGO[j?.estado ?? ''] ?? AVISO_CODIGO.envio_fallido })
+    // El modo corredor (Alberto mirando como el cliente) contesta con su propio `mensaje`: se dice tal cual.
+    setEstado({ tipo: 'aviso', texto: j?.mensaje ?? AVISO_CODIGO[j?.estado ?? ''] ?? AVISO_CODIGO.envio_fallido })
   }
 
   async function confirmar(e: React.FormEvent) {
@@ -55,10 +56,13 @@ export default function CambioCuenta() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ iban, codigo }),
     }).catch(() => null)
-    const j = (await r?.json().catch(() => null)) as { estado?: string; mascara?: string; motivo?: string } | null
+    const j = (await r?.json().catch(() => null)) as { estado?: string; mascara?: string; motivo?: string; mensaje?: string } | null
     if (r?.ok && j?.estado === 'ok' && j.mascara) return setEstado({ tipo: 'hecho', mascara: j.mascara })
     if (r?.ok && j?.estado === 'sin_cambios') return setEstado({ tipo: 'aviso', texto: 'Esa cuenta ya es la que tenemos para tus recibos: no hay nada que cambiar.' })
-    setEstado({ tipo: 'aviso', texto: (j?.estado === 'iban_invalido' && j.motivo) || AVISO_CONFIRMAR[j?.estado ?? ''] || AVISO_CONFIRMAR.error })
+    const texto = j?.mensaje ?? ((j?.estado === 'iban_invalido' && j.motivo) || AVISO_CONFIRMAR[j?.estado ?? ''] || AVISO_CONFIRMAR.error)
+    // Un código mal tecleado se puede volver a escribir: no se obliga a pedir otro (hay 3 por hora).
+    if (j?.estado === 'codigo_no_valido' && j.motivo === 'incorrecto') return setEstado({ tipo: 'codigo', email, aviso: 'Ese código no es correcto. Revísalo y vuelve a escribirlo.' })
+    setEstado({ tipo: 'aviso', texto })
   }
 
   const enviando = estado.tipo === 'enviando'
@@ -126,6 +130,7 @@ export default function CambioCuenta() {
         </form>
       )}
       {estado.tipo === 'aviso' && <p role="status" className="mi-direccion-aviso">{estado.texto}</p>}
+      {estado.tipo === 'codigo' && estado.aviso && <p role="status" className="mi-direccion-aviso">{estado.aviso}</p>}
     </section>
   )
 }

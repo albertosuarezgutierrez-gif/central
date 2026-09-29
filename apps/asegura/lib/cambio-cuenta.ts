@@ -11,6 +11,7 @@
 // compañía, y esa consulta queda anotada.
 
 import { encryptField } from '@central/module-seguros-pii'
+import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
 import { PREFIJO_HISTORIAL_CUENTA_PROPIA } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
@@ -27,7 +28,12 @@ export type ResultadoSolicitudCuenta =
   | { estado: 'sin_ficha' | 'varias_fichas' }
   | { estado: 'error'; causa: string }
 
-export async function solicitarCambioCuenta(correduriaId: string, identidadId: string, ibanBruto: unknown): Promise<ResultadoSolicitudCuenta> {
+export async function solicitarCambioCuenta(
+  correduriaId: string,
+  identidadId: string,
+  ibanBruto: unknown,
+  identidadCreadaEn: Date | null,
+): Promise<ResultadoSolicitudCuenta> {
   const ficha = await fichaPropiaDe(correduriaId, identidadId)
   if (ficha.estado !== 'ok') return ficha
   const db = prismaAsegura()
@@ -37,14 +43,18 @@ export async function solicitarCambioCuenta(correduriaId: string, identidadId: s
   if (!revision.ok) return revision.estado === 'sin_cambios' ? { estado: 'sin_cambios' } : { estado: 'iban_invalido', motivo: revision.motivo }
 
   await db.$transaction(async (tx) => {
+    // En fila por cliente: dos peticiones a la vez (doble clic, dos accesos de la misma ficha) no
+    // pueden chocar contra el índice de «una pendiente por cliente».
+    await tx.$queryRaw`select 1 from clientes where id = ${ficha.clienteId}::uuid and correduria_id = ${correduriaId}::uuid for update`
     // Si ya había una pendiente, la nueva la sustituye: la que vale es la última que dio.
     await tx.$executeRaw`
       update cambio_cuenta_solicitud set estado = 'descartada', resuelta_at = now(), resuelta_por = 'sistema:portal',
              nota = 'Sustituida por otra solicitud del cliente'
       where correduria_id = ${correduriaId}::uuid and cliente_id = ${ficha.clienteId}::uuid and estado = 'pendiente'`
     await tx.$executeRaw`
-      insert into cambio_cuenta_solicitud (correduria_id, cliente_id, identidad_id, iban_cifrado, mascara)
-      values (${correduriaId}::uuid, ${ficha.clienteId}::uuid, ${identidadId}, ${encryptField(revision.iban)}, ${revision.mascara})`
+      insert into cambio_cuenta_solicitud (correduria_id, cliente_id, identidad_id, identidad_creada_en, iban_cifrado, mascara)
+      values (${correduriaId}::uuid, ${ficha.clienteId}::uuid, ${identidadId}::uuid, ${identidadCreadaEn}::timestamptz,
+              ${encryptField(revision.iban)}, ${revision.mascara})`
     await tx.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${ficha.clienteId}::uuid, cast('contacto' as tipo_historial_interno),
@@ -62,6 +72,8 @@ export type SolicitudCuenta = {
   mascaraActual: string | null
   estado: 'pendiente' | 'hecha' | 'descartada'
   pedidaEn: string
+  /** Días que tenía el acceso al portal al pedirla. `null` = no consta. Uno reciente es la señal de riesgo. */
+  diasAcceso: number | null
   resueltaEn: string | null
   resueltaPor: string | null
 }
@@ -72,6 +84,8 @@ export async function colaCambiosCuenta(correduriaId: string): Promise<Solicitud
     select s.id::text as id, s.cliente_id::text as "clienteId",
            nullif(trim(concat_ws(' ', c.nombre, c.apellidos)), '') as cliente,
            s.mascara, s.estado, to_char(s.created_at at time zone 'Europe/Madrid', 'YYYY-MM-DD"T"HH24:MI') as "pedidaEn",
+           case when s.identidad_creada_en is null then null
+                else floor(extract(epoch from (s.created_at - s.identidad_creada_en)) / 86400)::int end as "diasAcceso",
            to_char(s.resuelta_at at time zone 'Europe/Madrid', 'YYYY-MM-DD') as "resueltaEn", s.resuelta_por as "resueltaPor",
            c.cuenta_bancaria as "cuentaActual"
     from cambio_cuenta_solicitud s
@@ -117,9 +131,19 @@ export async function resolverCambioCuenta(correduriaId: string, id: string, est
       returning s.cliente_id::text as "clienteId", s.iban_cifrado as iban, s.mascara, c.cuenta_bancaria as "cuentaActual"`
     if (!s) return null
     if (estado === 'hecha') {
-      await tx.$executeRaw`
+      // Si la ficha se fusionó entre la petición y ahora, la cuenta va a la SUPERVIVIENTE, no a la lápida.
+      const n = await tx.$executeRaw`
         update clientes set cuenta_bancaria = ${s.iban}, updated_at = now()
-        where id = ${s.clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
+        where correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null
+          and id = coalesce((select merged_into_cliente_id from clientes where id = ${s.clienteId}::uuid), ${s.clienteId}::uuid)`
+      if (n === 0) throw new Error('la ficha del cliente no se pudo actualizar con la cuenta')
+      // Y en sus pólizas vigentes: la emisión y la retarificación leen primero la cuenta de la póliza,
+      // y «hecha» significa que ya se cambió en la compañía. CIMA la volverá a traer igual.
+      await tx.$executeRaw`
+        update polizas set cuenta_bancaria = ${s.iban}
+        where correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null and sustituida_at is null
+          and estado::text = any(${[...POLIZA_ESTADOS_VIGENTES] as string[]}::text[])
+          and cliente_id = coalesce((select merged_into_cliente_id from clientes where id = ${s.clienteId}::uuid), ${s.clienteId}::uuid)`
     }
     await tx.$executeRaw`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)

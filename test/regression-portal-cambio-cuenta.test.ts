@@ -16,7 +16,7 @@ test('POST /api/mis-datos/cuenta canjea el código ANTES de pedir el cambio y lo
   const src = sinComentarios(leer('apps/asegura-portal/app/api/mis-datos/cuenta/route.ts'))
   const canje = src.indexOf('comprobarCodigoCambioCuenta(identidad.id, parsed.data.iban, parsed.data.codigo)')
   const corta = src.search(/if \(canje\.estado !== 'valido' \|\| !canje\.iban\) return/)
-  const pide = src.indexOf('pedirCambioCuenta(identidad.id, canje.iban)')
+  const pide = src.indexOf('pedirCambioCuenta(identidad.id, canje.iban,')
   assert.notEqual(canje, -1, 'el cambio de cuenta ya no exige el código')
   assert.notEqual(corta, -1, 'un código no válido no corta la petición')
   assert.ok(canje < pide && corta < pide, 'se pide el cambio ANTES de comprobar el código')
@@ -51,4 +51,12 @@ test('el IBAN completo solo sale por una ruta POST auditada y solo de una pendie
   assert.doesNotMatch(ruta, /export (async function|const) GET/, 'un GET se cachea y se comparte en un enlace')
   const lib = sinComentarios(leer('apps/asegura/lib/cambio-cuenta.ts'))
   assert.match(lib, /estado = 'pendiente'`\s*\n\s*if \(!f\)/, 'se puede leer el IBAN de una solicitud ya cerrada')
+})
+
+test('asegura: la solicitud se serializa por cliente y «hecha» escribe en la ficha viva, no en la lápida', () => {
+  const lib = sinComentarios(leer('apps/asegura/lib/cambio-cuenta.ts'))
+  assert.match(lib, /from clientes where id = \$\{ficha\.clienteId\}::uuid and correduria_id = \$\{correduriaId\}::uuid for update/,
+    'dos peticiones a la vez chocan contra el índice de una pendiente por cliente')
+  assert.match(lib, /merged_into_cliente_id is null/, 'la cuenta puede acabar en una ficha fusionada')
+  assert.match(lib, /if \(n === 0\) throw/, '«hecha» puede no escribir nada y decir que sí')
 })

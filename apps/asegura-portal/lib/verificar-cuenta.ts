@@ -18,6 +18,7 @@ import { hashCanal, hashCodigo } from './auth'
 import { enviarCodigoCambioCuenta } from './correo-cambio'
 import { prisma } from './db'
 import { rateLimit } from './rate-limit'
+import { getIdentidad } from './session'
 
 const MAX_POR_CUENTA = 3
 const MAX_POR_IDENTIDAD = 5
@@ -57,6 +58,13 @@ export async function pedirCodigoCambioCuenta(identidadId: string, email: string
   return (await enviarCodigoCambioCuenta(email.trim(), codigo, mascaraIban(iban))) ? 'codigo_enviado' : 'envio_fallido'
 }
 
+/** La puerta de la ruta: la identidad sale de la cookie, nunca del cuerpo. */
+export async function pedirCodigoCambioCuentaDeSesion(email: string, iban: string): Promise<ResultadoPedirCodigoCuenta | 'sin_sesion'> {
+  const identidad = await getIdentidad()
+  if (!identidad) return 'sin_sesion'
+  return pedirCodigoCambioCuenta(identidad.id, email, iban)
+}
+
 export type ResultadoCanjeCuenta = EstadoCodigo | 'sin_codigo' | 'iban_invalido'
 
 /** Comprueba el código SIN gastarlo; `gastar()` solo si la solicitud llega a guardarse. */
@@ -89,4 +97,10 @@ export async function comprobarCodigoCambioCuenta(
     await prisma.portalCodigo.updateMany({ where: { id: guardado.id, usadoEn: null }, data: { usadoEn: new Date() } })
   }
   return { estado, iban, gastar: estado === 'valido' ? gastar : nada }
+}
+
+/** Cuándo se creó este acceso al portal: asegura lo guarda con la solicitud y la cola avisa si es reciente. */
+export async function identidadCreadaEn(identidadId: string): Promise<string | null> {
+  const i = await prisma.portalIdentidad.findUnique({ where: { id: identidadId }, select: { creadaEn: true } }).catch(() => null)
+  return i ? i.creadaEn.toISOString() : null
 }

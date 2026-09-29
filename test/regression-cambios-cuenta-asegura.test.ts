@@ -15,3 +15,11 @@ test('🪤 no se ha podido leer: el contador es null, nunca 0', () => {
   assert.equal(contadorCambiosCuenta(interpretarCambiosCuenta(502, null)), null)
   assert.equal(contadorCambiosCuenta(interpretarCambiosCuenta(200, { otra: 1 })), null)
 })
+
+test('🪤 un acceso recién creado (o sin fecha) pidiendo cambiar la cuenta se avisa; uno antiguo no', async () => {
+  const { avisoAcceso } = await import('../apps/plataforma/lib/cambios-cuenta-asegura.ts')
+  assert.match(String(avisoAcceso(0)), /menos de un día/)
+  assert.match(String(avisoAcceso(3)), /hace 3 días/)
+  assert.match(String(avisoAcceso(null)), /No consta/)
+  assert.equal(avisoAcceso(200), null)
+})

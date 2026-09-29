@@ -13,6 +13,8 @@ export type SolicitudCuenta = {
   mascaraActual: string | null
   estado: 'pendiente' | 'hecha' | 'descartada'
   pedidaEn: string
+  /** Días que tenía el acceso al portal cuando la pidió. `null` = no consta (no es «antiguo»). */
+  diasAcceso: number | null
   resueltaEn: string | null
   resueltaPor: string | null
 }
@@ -42,10 +44,27 @@ export function interpretarCambiosCuenta(status: number, json: unknown): Respues
     if (!id || !clienteId || !mascara || !pedidaEn || !estado) { ilegibles++; continue }
     solicitudes.push({
       id, clienteId, cliente: txt(o.cliente), mascara, mascaraActual: txt(o.mascaraActual), estado, pedidaEn,
+      diasAcceso: typeof o.diasAcceso === 'number' && Number.isFinite(o.diasAcceso) ? o.diasAcceso : null,
       resueltaEn: txt(o.resueltaEn), resueltaPor: txt(o.resueltaPor),
     })
   }
   return { estado: 'ok', solicitudes, ilegibles }
+}
+
+/** Por debajo de esto, el acceso que pide el cambio es reciente y se avisa. */
+export const DIAS_ACCESO_RECIENTE = 14
+
+/**
+ * PURO. El aviso de que el acceso que pide el cambio es nuevo (o no se sabe cuándo se creó): quien
+ * roba una sesión puede meter su correo en la ficha y entrar con él, así que un acceso recién creado
+ * pidiendo cambiar la cuenta se confirma con el cliente por teléfono antes de tocar nada.
+ */
+export function avisoAcceso(diasAcceso: number | null): string | null {
+  if (diasAcceso === null) return 'No consta cuándo se creó el acceso que lo pide: confírmalo con el cliente por teléfono.'
+  if (diasAcceso < DIAS_ACCESO_RECIENTE) {
+    return `El acceso que lo pide se creó hace ${diasAcceso === 0 ? 'menos de un día' : `${diasAcceso} día${diasAcceso === 1 ? '' : 's'}`}: confírmalo con el cliente por teléfono antes de cambiarla.`
+  }
+  return null
 }
 
 /** Lo que cuenta para el badge: pendientes + las que no se han sabido leer (podrían serlo). */

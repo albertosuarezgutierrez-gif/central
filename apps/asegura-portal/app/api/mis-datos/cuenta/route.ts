@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 import { pedirCambioCuenta } from '@/lib/mis-datos'
 import { requireIdentidad } from '@/lib/session'
-import { comprobarCodigoCambioCuenta } from '@/lib/verificar-cuenta'
+import { comprobarCodigoCambioCuenta, identidadCreadaEn } from '@/lib/verificar-cuenta'
 
 export const runtime = 'nodejs'
 
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   const canje = await comprobarCodigoCambioCuenta(identidad.id, parsed.data.iban, parsed.data.codigo)
   if (canje.estado !== 'valido' || !canje.iban) return NextResponse.json({ estado: 'codigo_no_valido', motivo: canje.estado }, { status: 403 })
 
-  const r = await pedirCambioCuenta(identidad.id, canje.iban)
+  const r = await pedirCambioCuenta(identidad.id, canje.iban, await identidadCreadaEn(identidad.id))
   // El código se gasta solo si la solicitud ha quedado guardada (o ya era su cuenta).
   if (r.estado === 'ok' || r.estado === 'sin_cambios') await canje.gastar()
   const status =

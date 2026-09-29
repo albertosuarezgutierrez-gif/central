@@ -11,7 +11,7 @@ export const runtime = 'nodejs'
 
 /**
  * POST /api/portal/cuenta — el CLIENTE pide cambiar la cuenta de sus recibos. Cuerpo:
- * `{ identidadId, iban }`. El portal ya ha comprobado el código de un solo uso al correo.
+ * `{ identidadId, iban, identidadCreadaEn? }`. El portal ya ha comprobado el código de un solo uso al correo.
  *
  * 🚨 Como `/api/portal/contacto`: no acepta `clienteId` (la ficha sale del vínculo de la identidad) y
  * la respuesta no devuelve el IBAN, solo la máscara.
@@ -27,7 +27,8 @@ export async function POST(req: Request) {
     const correduria = await correduriaUnica()
     if (!correduria) return NextResponse.json({ estado: 'error', causa: 'sin_correduria' }, { status: 500 })
 
-    const r = await solicitarCambioCuenta(correduria.id, identidadId, body?.iban)
+    const creada = typeof body?.identidadCreadaEn === 'string' ? new Date(body.identidadCreadaEn) : null
+    const r = await solicitarCambioCuenta(correduria.id, identidadId, body?.iban, creada && !Number.isNaN(creada.getTime()) ? creada : null)
     const status =
       r.estado === 'ok' || r.estado === 'sin_cambios' ? 200
         : r.estado === 'iban_invalido' ? 422
