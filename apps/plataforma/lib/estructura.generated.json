@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-09-29T13:52:25Z",
+  "generadoEn": "2026-09-29T15:42:08Z",
   "verticales": [
     "almacen",
     "alquiler",
@@ -984,7 +984,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "rrhh": {
         "estado": "usado",
@@ -2226,7 +2226,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 116
+        "evidencias": 117
       },
       "rrhh": {
         "estado": "no",
@@ -5797,6 +5797,7 @@
       "correduria_asistente_correccion",
       "correduria_asistente_documento",
       "correduria_asistente_emision",
+      "correduria_asistente_huella",
       "correduria_asistente_oportunidad",
       "correduria_asistente_regla",
       "correduria_asistente_tarificacion",
