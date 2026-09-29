@@ -184,12 +184,14 @@ export async function descargarDocumentoAsegura(id: string): Promise<Response | 
  */
 export async function leerDocumentoOportunidadAsegura(
   f: { contenido: Buffer; mimeType: string; nombre: string },
-  opts: { tomador?: boolean } = {},
+  opts: { tomador?: boolean; clienteId?: string } = {},
 ): Promise<{ status: number; json: unknown }> {
   const h = await cabeceras()
   if (!h) return { status: 503, json: { estado: 'sin_configurar' } }
   const form = new FormData()
   form.set('fichero', new Blob([new Uint8Array(f.contenido)], { type: f.mimeType }), f.nombre)
+  // PDF con contraseña: asegura prueba el DNI de esta ficha (sin devolverlo nunca).
+  if (opts.clienteId) form.set('clienteId', opts.clienteId)
   // `tomador=1`: quién es y si ya tiene ficha (solo lo pide el asistente de Telegram, servidor a servidor).
   const res = await fetch(`${urlAsegura()}/api/operador/leer-documento${opts.tomador ? '?tomador=1' : ''}`, {
     method: 'POST',

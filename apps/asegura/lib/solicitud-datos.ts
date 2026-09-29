@@ -42,6 +42,7 @@ import { clienteOrigenDe, listarCarnets } from './cartera-ficha'
 import { guardarDocumento } from './cartera-documentos'
 import { revisarDocumento } from '@central/module-seguros'
 import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
+import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TOKEN = /^[A-Za-z0-9_-]{40,60}$/
@@ -317,7 +318,9 @@ export async function subirDocumentoSolicitud(
   if (reservada.length === 0) return { ok: false, estado: 'tope', motivo: `Como máximo ${MAX_DOCS_SOLICITUD} documentos por enlace.` }
 
   // Primero se lee (para saber qué es y archivarlo con su tipo); si la IA falla, se archiva como «otro».
-  const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre)
+  const lectura = await leerDocSolicitud(fichero.contenido, fichero.mime, fichero.nombre, {
+    contrasenas: () => contrasenasDeLaFicha(f.correduriaId, f.clienteId),
+  })
   const leido = lectura.ok ? normalizarLecturaSolicitud(lectura.bruto, ramo, conIdentidad(f.campos)) : { tipo: 'otro' as const, valores: {} }
   const g = await guardarDocumento(f.correduriaId, {
     clienteId: f.clienteId,
