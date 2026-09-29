@@ -7,10 +7,10 @@ import { auditado } from '@/lib/auditoria'
 import { descifrarCampo } from '@/lib/cartera-edicion'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { resolverConfig } from '@/lib/codeoscopic/config'
-import { peticion } from '@/lib/codeoscopic/cliente'
+import { ErrorCodeoscopic, peticion } from '@/lib/codeoscopic/cliente'
 import { leerCotizacion } from '@/lib/codeoscopic/respuesta'
 import { guardarCotizacion } from '@/lib/codeoscopic/cotizaciones'
-import { MOTIVO_IMPORTADA_WEB } from '@/lib/codeoscopic/consumo'
+import { anotarImportadaWeb } from '@/lib/codeoscopic/consumo'
 import { enlazarPresupuestoConOportunidad } from '@/lib/codeoscopic/oportunidad-presupuesto'
 import { completarCoberturasTarificacion } from '@/lib/codeoscopic/coberturas-tarificacion'
 import { esDelTomador, peticionDeProyecto, proyectosDeCliente, resumenProyecto } from '@/lib/codeoscopic/proyectos-cliente'
@@ -50,6 +50,12 @@ async function cliente(clienteId: string): Promise<{ ok: true; c: Cliente } | { 
   return { ok: true, c: { correduriaId: correduria.id, clienteId, dni } }
 }
 
+/** Un fallo del vendor dice qué le pasó al vendor; el clasificador de cartera es para la BD. */
+function causa(e: unknown): string {
+  if (e instanceof ErrorCodeoscopic) return `vendor:${e.clase}${e.status ? ` ${e.status}` : ''}`
+  return registrarErrorCartera('operador/codeoscopic/proyectos-cliente', e)
+}
+
 function config() {
   // Solo lecturas: no exige el interruptor de gasto.
   const r = resolverConfig(process.env, { ignorarInterruptor: true })
@@ -67,8 +73,8 @@ export async function GET(req: Request) {
     const crudos = await proyectosDeCliente(cfg, c.c.dni)
     const ids = crudos.map((p) => p.projectId)
     const enIntranet = ids.length
-      ? await prisma.$queryRaw<{ project_id: string; tarificacion_id: string; solicitado_por: string }[]>`
-          select distinct on (project_id_codeoscopic) project_id_codeoscopic as project_id, id::text as tarificacion_id, solicitado_por
+      ? await prisma.$queryRaw<{ project_id: string; tarificacion_id: string; oportunidad_id: string | null; solicitado_por: string }[]>`
+          select distinct on (project_id_codeoscopic) project_id_codeoscopic as project_id, id::text as tarificacion_id, oportunidad_id::text as oportunidad_id, solicitado_por
           from seguros.tarificaciones
           where correduria_id = ${c.c.correduriaId}::uuid and project_id_codeoscopic = any(${ids}::text[])
           order by project_id_codeoscopic, creado_at`
@@ -80,7 +86,7 @@ export async function GET(req: Request) {
       // `origen`: dónde se TARIFICÓ. Uno traído de la web entra por la puerta del corredor, así que lo
       // delata su `solicitado_por`, que es el que escribe el POST de aquí abajo.
       const intranet = ya
-        ? { tarificacionId: ya.tarificacion_id, origen: ya.solicitado_por.startsWith(SOLICITADO_WEB) ? 'web' : 'plataforma' }
+        ? { tarificacionId: ya.tarificacion_id, oportunidadId: ya.oportunidad_id, origen: ya.solicitado_por.startsWith(SOLICITADO_WEB) ? 'web' : 'plataforma' }
         : null
       if (!p.crudo) return { projectId: p.projectId, error: p.error, intranet }
       try {
@@ -93,7 +99,7 @@ export async function GET(req: Request) {
     })
     return NextResponse.json({ estado: 'ok', proyectos: proyectos.filter((p) => p !== null) })
   } catch (e) {
-    return NextResponse.json({ estado: 'error', mensaje: registrarErrorCartera('operador/codeoscopic/proyectos-cliente', e) }, { status: 502 })
+    return NextResponse.json({ estado: 'error', mensaje: causa(e) }, { status: 502 })
   }
 }
 
@@ -120,6 +126,7 @@ export const POST = auditado(async (req: Request) => {
     const [ya] = await prisma.$queryRaw<{ id: string }[]>`
       select id::text as id from seguros.tarificaciones
       where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${projectId}
+        and cliente_id = ${clienteId}::uuid
       order by creado_at limit 1`
     if (ya) return NextResponse.json({ estado: 'ya_estaba', tarificacionId: ya.id })
 
@@ -154,11 +161,16 @@ export const POST = auditado(async (req: Request) => {
               select id::text as id from seguros.tarificaciones
               where correduria_id = ${correduriaId}::uuid and project_id_codeoscopic = ${projectId} limit 1`
             if (otro) throw new YaImportado(otro.id)
-            await tx.$executeRaw`
-              insert into seguros.codeoscopic_consumo
-                (correduria_id, intento_id, estado, motivo, solicitado_por, coste_cents, project_id_codeoscopic, cerrado_at)
-              values (${correduriaId}::uuid, ${intentoId}::uuid, 'facturable', ${MOTIVO_IMPORTADA_WEB}, ${solicitadoPor}, 0, ${projectId}, now())`
-            return fn(tx)
+            await anotarImportadaWeb(tx, { correduriaId, intentoId, solicitadoPor, projectId })
+            const id = await fn(tx)
+            // La fecha es la del PROYECTO, no la de hoy: un presupuesto viejo traído ahora no puede
+            // pasar por «la última tarificación» del cliente (la pantalla de tarificar retoma esa).
+            if (resumen.creadoEn) {
+              await tx.$executeRaw`
+                update seguros.tarificaciones set creado_at = ${resumen.creadoEn}::timestamptz
+                where id = ${id}::uuid and correduria_id = ${correduriaId}::uuid`
+            }
+            return id
           }),
       )
     } catch (e) {
@@ -173,6 +185,6 @@ export const POST = auditado(async (req: Request) => {
     after(() => completarCoberturasTarificacion({ correduriaId, tarificacionId }).then(() => undefined))
     return NextResponse.json({ estado: 'importada', tarificacionId, ramo: resumen.ramo, oportunidad })
   } catch (e) {
-    return NextResponse.json({ estado: 'error', mensaje: registrarErrorCartera('operador/codeoscopic/proyectos-cliente', e) }, { status: 502 })
+    return NextResponse.json({ estado: 'error', mensaje: causa(e) }, { status: 502 })
   }
 })

@@ -44,3 +44,10 @@ test('ruta: solo los ramos con pantalla de tarificar', () => {
   assert.equal(rutaTarificacion('c1', null), null)
   assert.equal(rutaTarificacion('c1', 'decesos'), null)
 })
+
+test('ruta: con oportunidad abre ESA tarificación, no la última del ramo', () => {
+  const i = { tarificacionId: 't9', oportunidadId: 'o3', origen: 'web' }
+  assert.equal(rutaTarificacion('c1', 'moto', i), '/correduria/cliente/c1/moto-nuevo?oportunidad=o3&tarificacion=t9')
+  assert.equal(rutaTarificacion('c1', 'moto', { ...i, oportunidadId: null }), '/correduria/cliente/c1/moto-nuevo')
+  assert.equal(rutaTarificacion('c1', 'hogar', i), '/correduria/cliente/c1/hogar-nuevo')
+})

@@ -23,6 +23,20 @@ export type Reserva = { intentoId: string; correduriaId: string }
 export const MOTIVO_IMPORTADA_WEB = 'importada_web'
 
 /**
+ * La línea del libro de un presupuesto traído de la web. Va DENTRO de la transacción que guarda la
+ * tarificación (la FK `intento_id` la exige): o se escriben las dos, o ninguna.
+ */
+export async function anotarImportadaWeb(
+  tx: { $executeRaw: typeof prisma.$executeRaw },
+  e: { correduriaId: string; intentoId: string; solicitadoPor: string; projectId: string },
+): Promise<void> {
+  await tx.$executeRaw`
+    insert into seguros.codeoscopic_consumo
+      (correduria_id, intento_id, estado, motivo, solicitado_por, coste_cents, project_id_codeoscopic, cerrado_at)
+    values (${e.correduriaId}::uuid, ${e.intentoId}::uuid, 'facturable', ${MOTIVO_IMPORTADA_WEB}, ${e.solicitadoPor}, 0, ${e.projectId}, now())`
+}
+
+/**
  * Cuenta lo consumido hoy y este mes por esta correduría **en COTIZACIONES**
  * (`POST /insurances`, 0,50€).
  *

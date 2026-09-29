@@ -62,7 +62,7 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
         <p style={NOTA}>No se han podido mirar ({lista.mensaje}). No quiere decir que no haya ninguno.</p>
       )}
       {lista !== null && lista !== 'cargando' && lista.estado === 'ok' && lista.proyectos.length === 0 && (
-        <p style={NOTA}>Avant2 no tiene presupuestos de este cliente en el último año.</p>
+        <p style={NOTA}>Avant2 no tiene presupuestos a su DNI en el último año (se miran los 10 más recientes).</p>
       )}
       {lista !== null && lista !== 'cargando' && lista.estado === 'ok' && lista.proyectos.length > 0 && (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
@@ -75,7 +75,7 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
 
 function Fila({ p, clienteId, ocupado, traer }: { p: ProyectoAvant2; clienteId: string; ocupado: string | null; traer: (p: ProyectoAvant2) => void }) {
   const origen = origenProyecto(p)
-  const ruta = rutaTarificacion(clienteId, p.ramo)
+  const ruta = rutaTarificacion(clienteId, p.ramo, p.intranet)
   return (
     <li style={FILA}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'baseline' }}>
@@ -99,7 +99,7 @@ function Fila({ p, clienteId, ocupado, traer }: { p: ProyectoAvant2; clienteId: 
         </>
       )}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {!p.intranet && !p.error && ruta && (
+        {!p.intranet && !p.error && p.ramo && ruta && (
           <button type="button" style={btnStyle('primario', 'md')} disabled={ocupado !== null} onClick={() => traer(p)}>
             {ocupado === p.projectId ? 'Trayendo…' : 'Traer a plataforma'}
           </button>

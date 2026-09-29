@@ -18,7 +18,7 @@ export type ProyectoAvant2 = {
   /** El proyecto no se pudo leer: se declara, no desaparece. */
   error: string | null
   /** `null` = aún no está en la intranet. `origen` = puerta con la que entró. */
-  intranet: { tarificacionId: string; origen: string } | null
+  intranet: { tarificacionId: string; oportunidadId: string | null; origen: string } | null
 }
 
 export type ListaAvant2 = { estado: 'ok'; proyectos: ProyectoAvant2[] } | { estado: 'error'; mensaje: string }
@@ -46,7 +46,7 @@ function fila(v: unknown): ProyectoAvant2 | null {
     confirmados: n(f.confirmados) ?? 0,
     avant2Url: s(f.avant2Url),
     error: s(f.error),
-    intranet: i && s(i.tarificacionId) ? { tarificacionId: s(i.tarificacionId) as string, origen: s(i.origen) ?? '?' } : null,
+    intranet: i && s(i.tarificacionId) ? { tarificacionId: s(i.tarificacionId) as string, oportunidadId: s(i.oportunidadId), origen: s(i.origen) ?? '?' } : null,
   }
 }
 
@@ -61,9 +61,16 @@ export function leerListaAvant2(status: number, json: unknown): ListaAvant2 {
   return { estado: 'ok', proyectos: filas as ProyectoAvant2[] }
 }
 
-/** Dónde se abre en plataforma una tarificación de ese ramo (la pantalla retoma la última). */
-export function rutaTarificacion(clienteId: string, ramo: string | null): string | null {
-  return ramo === 'auto' || ramo === 'moto' || ramo === 'hogar' ? `/correduria/cliente/${clienteId}/${ramo}-nuevo` : null
+/**
+ * Dónde se abre en plataforma. Auto y moto abren ESA tarificación (`?oportunidad=&tarificacion=`);
+ * sin oportunidad, o en hogar (que no admite abrir una concreta), la pantalla retoma la última del
+ * ramo, que puede ser otra. `null` = ramo sin pantalla de tarificar.
+ */
+export function rutaTarificacion(clienteId: string, ramo: string | null, intranet: ProyectoAvant2['intranet'] = null): string | null {
+  if (ramo !== 'auto' && ramo !== 'moto' && ramo !== 'hogar') return null
+  const base = `/correduria/cliente/${clienteId}/${ramo}-nuevo`
+  if (ramo === 'hogar' || !intranet?.oportunidadId) return base
+  return `${base}?oportunidad=${encodeURIComponent(intranet.oportunidadId)}&tarificacion=${encodeURIComponent(intranet.tarificacionId)}`
 }
 
 /** «Hecho en…»: la puerta `corredor`/`agente` es plataforma; sin fila en la intranet, la web de Avant2. */
