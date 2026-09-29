@@ -1221,6 +1221,7 @@ export async function origenRetarificacion(
           saludo: true,
           codigoPostal: true,
           direccion: true,
+          tipoPersona: true,
         },
       },
     },
@@ -1285,6 +1286,7 @@ export async function origenRetarificacion(
     fechaCarnet: normalizarFecha(descifrar(conductor?.fechaCarnet)),
     direccion: descifrar(p.cliente.direccion),
     email,
+    tipoPersona: p.cliente.tipoPersona === null ? null : String(p.cliente.tipoPersona),
   }
   // Moto tarifica con el carné de MOTO (A/A2/A1/AM), que vive en los carnés de
   // la ficha, no en el conductor de la póliza. Solo se lee donde se usa.
@@ -1358,6 +1360,7 @@ export async function clienteOrigenDe(
       saludo: true,
       codigoPostal: true,
       direccion: true,
+      tipoPersona: true,
     },
   })
   if (!c) return null
@@ -1377,6 +1380,7 @@ export async function clienteOrigenDe(
     email,
     // Para moto nueva: el carné de moto sale de los carnés de la ficha.
     carnets: await listarCarnets(correduriaId, c.id, normalizarFecha(descifrar(c.fechaNacimiento))),
+    tipoPersona: c.tipoPersona === null ? null : String(c.tipoPersona),
   }
   return { cliente, etiqueta: `${c.nombre} ${c.apellidos}`.trim() || 'Cliente' }
 }

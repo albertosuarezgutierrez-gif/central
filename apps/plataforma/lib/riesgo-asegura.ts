@@ -14,6 +14,8 @@ export type FiguraRiesgo = {
   porDefecto: boolean
   /** Lo que le falta en su ficha para cotizar. `null` = no se pudo leer. */
   faltan: string[] | null
+  /** Su ficha es una EMPRESA: va con CIF, sin estado civil, y solo puede ser propietaria. */
+  empresa: boolean
 }
 export type VarianteRiesgo = {
   id: string
@@ -77,6 +79,7 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
       rol: x.rol, clienteId: x.clienteId as string, nombre: txt(x.nombre) ?? 'Sin nombre', vinculo: txt(x.vinculo),
       porDefecto: x.porDefecto === true,
       faltan: Array.isArray(x.faltan) ? x.faltan.filter((c): c is string => typeof c === 'string') : null,
+      empresa: x.empresa === true,
     }]
   })
   const variantes = (Array.isArray(o.variantes) ? o.variantes : []).flatMap((v): VarianteRiesgo[] => {
@@ -151,6 +154,7 @@ export const ROTULO_ROL = ETIQUETA_ROL
 const CAMPO_FALTA: Record<string, string> = {
   dni: 'DNI', nombre: 'nombre', apellido1: 'apellido', fechaNacimiento: 'fecha de nacimiento',
   sexo: 'sexo', telefono: 'móvil', fechaCarnet: 'fecha del carnet', ficha: 'ficha',
+  empresa_no_conduce: 'es una empresa y no puede conducir (asigna un conductor habitual persona)',
 }
 export function textoFaltan(f: string[] | null): string | null {
   if (f === null) return 'No se pudo leer su ficha'

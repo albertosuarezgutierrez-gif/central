@@ -7,7 +7,7 @@
 // `@central/module-seguros`, que es la que comparten el panel del corredor y el
 // portal del asegurado.
 import { MEDIADOR } from '@central/module-seguros'
-import { AMBITO, HORARIO, PERFILES, SITIO_URL, url } from './sitio.ts'
+import { AMBITO, GEO, HORARIO, PERFILES, SITIO_URL, url } from './sitio.ts'
 import { RAMOS, type Ramo } from './ramos.ts'
 import type { Articulo } from './articulos.ts'
 
@@ -83,6 +83,8 @@ export function fichaNegocio(): Record<string, unknown> {
     // (eso lo dice `address`, y sigue siendo Sevilla). Declaraba ciudad y
     // comunidad, o sea que la propia ficha afirmaba que fuera de Andalucía no
     // se atiende. Se media en toda España: el país, y punto.
+    // El pin de la ficha de Google Business, para que web y Maps señalen el mismo punto.
+    geo: { '@type': 'GeoCoordinates', ...GEO },
     areaServed: { '@type': 'Country', name: AMBITO.nacional },
     // La clave DGSFP es lo que distingue a un corredor inscrito de cualquiera
     // que monte una web de seguros. Va como identificador, no como texto suelto.

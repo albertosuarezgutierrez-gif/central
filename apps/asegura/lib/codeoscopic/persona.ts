@@ -193,20 +193,8 @@ export function construirPersona(d: DatosPersona, extra: CarnetExtra = {}): Reco
 
   // La dirección solo viaja si están las DOS mitades: el vendor rechaza el
   // municipio sin código postal. Cuatro productos del grupo de salida la exigen.
-  if (texto(d.cpResidencia) && numero(d.municipioResidenciaId)) {
-    const direccion: Record<string, unknown> = {
-      postalCode: d.cpResidencia,
-      town: { id: d.municipioResidenciaId },
-      primary: true,
-    }
-    // `roadName`/`roadNumber`/`roadType`: el ReRate/Submit de auto los exige (ver
-    // el comentario de cada campo en el tipo). Se mandan si los hay, nunca
-    // inventados — `roadType` es además una referencia de catálogo, nunca texto.
-    if (texto(d.nombreVia)) direccion.roadName = d.nombreVia!.trim()
-    if (texto(d.numeroVia)) direccion.roadNumber = d.numeroVia!.trim()
-    if (texto(d.tipoVia)) direccion.roadType = { id: d.tipoVia!.trim() }
-    persona.addresses = [direccion]
-  }
+  const direccion = direccionDe(d)
+  if (direccion) persona.addresses = [direccion]
 
   // 🔒 Lo que NO se manda, y es deliberado: ocupación, situación laboral y país
   // de nacimiento. No hacen falta ni para el precio ni para emitir.
@@ -222,3 +210,163 @@ export function construirPersona(d: DatosPersona, extra: CarnetExtra = {}): Reco
   // inventa.
   return persona
 }
+
+type Direccion = Pick<DatosPersona, 'cpResidencia' | 'municipioResidenciaId' | 'nombreVia' | 'numeroVia' | 'tipoVia'>
+
+/** `addresses[0]` de una persona (física o jurídica), o `null` si no están las dos mitades. */
+function direccionDe(d: Direccion): Record<string, unknown> | null {
+  if (texto(d.cpResidencia) && numero(d.municipioResidenciaId)) {
+    const direccion: Record<string, unknown> = {
+      postalCode: d.cpResidencia,
+      town: { id: d.municipioResidenciaId },
+      primary: true,
+    }
+    // `roadName`/`roadNumber`/`roadType`: el ReRate/Submit de auto los exige (ver
+    // el comentario de cada campo en el tipo). Se mandan si los hay, nunca
+    // inventados — `roadType` es además una referencia de catálogo, nunca texto.
+    if (texto(d.nombreVia)) direccion.roadName = d.nombreVia!.trim()
+    if (texto(d.numeroVia)) direccion.roadNumber = d.numeroVia!.trim()
+    if (texto(d.tipoVia)) direccion.roadType = { id: d.tipoVia!.trim() }
+    return direccion
+  }
+  return null
+}
+
+// ─── Propietario EMPRESA (persona jurídica, 29/09/2026) ─────────────────────
+//
+// El vendor admite `Cif` en `holder` y `risk.owner` de coche y moto, NUNCA en
+// `primaryDriver`/`secondaryDriver` (docs/CODEOSCOPIC-API-PORTAL.md § Identificación,
+// cita literal del esquema). Una empresa no tiene fecha de nacimiento, sexo ni
+// estado civil: por eso NO es un `DatosPersona` con huecos, es otro tipo.
+//
+// 🚧 **Sin verificar contra el vendor** qué campos de `JuridicalPerson_V1` exige
+// el rol `owner` (el ejemplo de `person-roles` es de persona física). Se manda
+// lo que la ficha tiene —CIF, razón social, teléfono, correo, dirección— y nada
+// inventado (ni forma jurídica ni fecha de constitución). El primer intento real
+// puede devolver un 400 con el campo que falte: `interprete-400` lo traduce.
+
+export type DatosEmpresa = {
+  tipo: 'juridica'
+  cif: string
+  /** Razón social: va en `name`, la única clave de nombre de una jurídica. */
+  razonSocial: string
+  telefono?: string | null
+  email?: string | null
+  cpResidencia?: string | null
+  municipioResidenciaId?: number | null
+  nombreVia?: string | null
+  numeroVia?: string | null
+  tipoVia?: string | null
+}
+
+/** Quien puede ser propietario del vehículo: una persona o una empresa. */
+export type DatosPropietario = DatosPersona | DatosEmpresa
+
+export function esEmpresa(p: unknown): p is DatosEmpresa {
+  return typeof p === 'object' && p !== null && (p as { tipo?: unknown }).tipo === 'juridica'
+}
+
+/** El documento con el que el vendor cruza identidades: DNI de una persona, CIF de una empresa. */
+export function documentoDe(p: Partial<DatosPersona> | Partial<DatosEmpresa> | null | undefined): string {
+  if (!p) return ''
+  const v = esEmpresa(p) ? p.cif : (p as Partial<DatosPersona>).dni
+  return String(v ?? '').trim().toUpperCase().replace(/[\s-]/g, '')
+}
+
+const LETRAS_CIF = 'ABCDEFGHJNPQRSUVW'
+/** Teléfono de una empresa: el vendor admite fijos (`^[9|8|7|6][0-9]{8}$`), no solo móviles. */
+const RE_TELEFONO_EMPRESA = /^[6-9][0-9]{8}$/
+
+/**
+ * ¿Es un CIF español bien formado, con su dígito de control? Se comprueba aquí
+ * porque una errata en el CIF es un 400 del vendor DESPUÉS de cobrar los 0,50€.
+ */
+export function cifValido(v: string | null | undefined): boolean {
+  const c = String(v ?? '').trim().toUpperCase().replace(/[\s-]/g, '')
+  const m = c.match(/^([A-Z])(\d{7})([0-9A-J])$/)
+  if (!m || !LETRAS_CIF.includes(m[1])) return false
+  const d = m[2].split('').map(Number)
+  let suma = 0
+  d.forEach((n, i) => {
+    if (i % 2 === 1) suma += n
+    else {
+      const x = n * 2
+      suma += Math.floor(x / 10) + (x % 10)
+    }
+  })
+  const control = (10 - (suma % 10)) % 10
+  const letra = 'JABCDEFGHI'[control]
+  // Letra obligatoria (P, Q, R, S, N, W), dígito obligatorio (A, B, E, H), el resto cualquiera.
+  if ('PQRSNW'.includes(m[1])) return m[3] === letra
+  if ('ABEH'.includes(m[1])) return m[3] === String(control)
+  return m[3] === String(control) || m[3] === letra
+}
+
+export type ReparoEmpresa = { campo: keyof DatosEmpresa; motivo: string }
+
+/** Lo mínimo para declarar una empresa propietaria sin pagar por un 400 evitable. */
+export function revisarEmpresa(d: Partial<DatosEmpresa>): ReparoEmpresa[] {
+  const r: ReparoEmpresa[] = []
+  if (!texto(d.cif)) r.push({ campo: 'cif', motivo: 'hace falta el CIF de la empresa' })
+  else if (!cifValido(d.cif)) r.push({ campo: 'cif', motivo: 'el CIF no es válido (letra, 7 cifras y control)' })
+  if (!texto(d.razonSocial)) r.push({ campo: 'razonSocial', motivo: 'hace falta la razón social' })
+  if (texto(d.telefono) && !RE_TELEFONO_EMPRESA.test(String(d.telefono).replace(/\s/g, '')))
+    r.push({ campo: 'telefono', motivo: 'tiene que ser un teléfono español de 9 dígitos' })
+  if (numero(d.municipioResidenciaId) && !texto(d.cpResidencia))
+    r.push({ campo: 'cpResidencia', motivo: 'si mandas el municipio, el código postal es obligatorio' })
+  return r
+}
+
+/** `JuridicalPerson_V1`: CIF + razón social, y lo que la ficha tenga de contacto. */
+export function construirEmpresa(d: DatosEmpresa): Record<string, unknown> {
+  const empresa: Record<string, unknown> = {
+    identificationDocument: { type: { id: 'Cif' }, id: documentoDe(d) },
+    name: d.razonSocial.trim(),
+  }
+  const tel = texto(d.telefono) ? d.telefono!.replace(/\s/g, '') : null
+  if (tel && RE_TELEFONO_EMPRESA.test(tel)) empresa.phones = [{ number: tel, primary: true }]
+  if (texto(d.email)) empresa[CLAVE_EMAIL_VENDOR] = [elementoEmail(d.email!)]
+  const direccion = direccionDe(d)
+  if (direccion) empresa.addresses = [direccion]
+  return empresa
+}
+
+/** Los campos que le faltan al propietario, sea persona o empresa (vacío = se puede declarar). */
+export function revisarPropietario(p: DatosPropietario): string[] {
+  return (esEmpresa(p) ? revisarEmpresa(p) : revisarPersona(p)).map((f) => f.campo)
+}
+
+/** El `risk.owner` que viaja: persona física o jurídica. */
+export function construirPropietario(p: DatosPropietario): Record<string, unknown> {
+  return esEmpresa(p) ? construirEmpresa(p) : construirPersona(p)
+}
+
+/**
+ * El TOMADOR empresa (29/09/2026): la ficha de la empresa llega por los mismos campos que una
+ * persona (`dni` = CIF, `nombre` + apellidos = razón social, que en las empresas de la cartera va
+ * entero en `nombre`), y aquí se reinterpreta como `DatosEmpresa`. Lo que la ficha tiene de
+ * contacto y dirección viaja igual; lo que es de persona (nacimiento, sexo, estado civil, carné) no.
+ */
+export function empresaDeTomador(d: Partial<DatosPersona>): DatosEmpresa {
+  return {
+    tipo: 'juridica',
+    cif: String(d.dni ?? '').trim().toUpperCase().replace(/[\s-]/g, ''),
+    razonSocial: [d.nombre, d.apellido1, d.apellido2].filter((x) => texto(x)).map((x) => x!.trim()).join(' '),
+    telefono: d.telefono ?? null,
+    email: d.email ?? null,
+    cpResidencia: d.cpResidencia ?? null,
+    municipioResidenciaId: d.municipioResidenciaId ?? null,
+    nombreVia: d.nombreVia ?? null,
+    numeroVia: d.numeroVia ?? null,
+    tipoVia: d.tipoVia ?? null,
+  }
+}
+
+/** Mismas reglas que `revisarEmpresa`, con el campo con el que la pantalla lo conoce (`dni`, `nombre`). */
+export function revisarTomadorEmpresa(d: Partial<DatosPersona>): ReparoPersona[] {
+  const campo = (c: keyof DatosEmpresa): keyof DatosPersona => (c === 'cif' ? 'dni' : c === 'razonSocial' ? 'nombre' : (c as keyof DatosPersona))
+  return revisarEmpresa(empresaDeTomador(d)).map((x) => ({ campo: campo(x.campo), motivo: x.motivo }))
+}
+
+export const MOTIVO_TOMADOR_EMPRESA_SIN_CONDUCTOR =
+  'el tomador es una empresa y una empresa no conduce: asigna en el riesgo un conductor habitual (una persona)'

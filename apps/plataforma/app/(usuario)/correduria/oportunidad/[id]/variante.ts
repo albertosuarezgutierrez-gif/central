@@ -20,6 +20,8 @@ export type VarianteNueva = {
   nombres: Partial<Record<RolFigura, string>>
   /** Lo que falta en su ficha para cotizar. `null` = no se pudo leer (no «nada falta»). */
   faltan: Partial<Record<RolFigura, string[] | null>>
+  /** Papeles que ocupa una EMPRESA (CIF): sin estado civil; solo puede ser propietaria. */
+  empresas: Partial<Record<RolFigura, boolean>>
 }
 
 export function etiquetaRiesgo(r: Riesgo): string | null {
@@ -35,12 +37,14 @@ export function varianteDeRiesgo(r: Riesgo, tomadorId: string, tarificacionId: s
   const figuras: VarianteNueva['figuras'] = {}
   const nombres: VarianteNueva['nombres'] = {}
   const faltan: VarianteNueva['faltan'] = {}
+  const empresas: VarianteNueva['empresas'] = {}
   for (const f of r.figuras) {
     nombres[f.rol] = f.nombre
     faltan[f.rol] = f.faltan
+    if (f.empresa) empresas[f.rol] = true
     if (f.rol !== 'tomador' && f.clienteId !== tomadorId && r.roles.includes(f.rol)) figuras[f.rol as RolExtra] = f.clienteId
   }
-  return { oportunidadId: r.oportunidad.id, tarificacionId, etiqueta: etiquetaRiesgo(r), figuras, nombres, faltan }
+  return { oportunidadId: r.oportunidad.id, tarificacionId, etiqueta: etiquetaRiesgo(r), figuras, nombres, faltan, empresas }
 }
 
 /** El tomador vigente del riesgo: la figura `tomador` o, si no consta, el cliente de la oportunidad. */
