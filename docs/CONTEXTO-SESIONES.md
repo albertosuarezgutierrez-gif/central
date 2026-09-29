@@ -894,6 +894,11 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Riesgo: tres decisiones cerradas (Alberto: «resuelve como veas»)
+- «Volver» del aviso legal al emitir vuelve a la OFERTA (con cuenta/fecha/tecleado), no cierra el panel.
+- «Pasar la oportunidad a…» se BLOQUEA (409) si esa persona ya tiene otra abierta del mismo ramo: una por cliente+ramo es lo que asume el enganche de presupuestos (mismo candado `oportunidad:<cliente>:<ramo>`).
+- «Retarificar hogar» sin ↗: hogar ya es interno desde el 17/09.
+
 ## (29/09/2026) Riesgo, entrega 2+3: moto con figuras, aviso legal al emitir, figuras→póliza, pasar oportunidad, hogar en el riesgo
 - Moto: propietario/conductor distintos del tomador (`peticion-moto.ts`, carné de MOTO del conductor desde su ficha; mismo DNI propietario=conductor → mismo objeto). Sin probar contra el vendor (1ª cotización real, OK de Alberto).
 - Emitir: 409 `confirmar_figuras` si la variante cambia personas/CP vs la primera del MISMO vehículo, comparando el DNI de lo que VIAJÓ (`emision-figuras-reglas.ts`), no la foto de figuras. Confirmación en historial antes del Submit (fail-closed). Tras acuñar, figuras → `poliza_intervinientes` y `oportunidades.poliza_ganada_id`.

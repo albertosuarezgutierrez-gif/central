@@ -55,3 +55,10 @@ test('la ruta del puerto exige operador y va auditada', () => {
   assert.match(r, /export const POST = auditado\(/)
   assert.match(r, /if \(!operadorAutorizado\(req\)\) return NextResponse\.json\(\{ error: 'No autorizado' \}, \{ status: 401 \}\)/)
 })
+
+test('no se pasa a quien ya tiene otra oportunidad ABIERTA del mismo ramo (una por cliente y ramo)', () => {
+  const t = readFileSync(new URL('./oportunidad-traspaso.ts', import.meta.url), 'utf8')
+  assert.match(t, /pg_advisory_xact_lock\(hashtext\(\$\{`oportunidad:\$\{e\.nuevoClienteId\}:\$\{op\.tipo\}`\}\)\)/, 'mismo candado que el enganche de presupuestos')
+  assert.match(t, /and tipo::text = \$\{op\.tipo\} and id <> \$\{e\.oportunidadId\}::uuid/)
+  assert.match(t, /if \(otra\) \{[\s\S]{0,80}status: 409/)
+})
