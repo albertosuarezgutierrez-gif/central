@@ -931,6 +931,14 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (29/09/2026) Correduría: vencimiento EDITABLE en las tarjetas de Oportunidades de la ficha
+- «Cambiar/Poner vencimiento» en cada tarjeta (`EditarVencimiento.tsx`). Se guarda en el SEGUIMIENTO
+  (`fecha_fin_vigencia`, `accion:'editar'`), que es de donde sale el aviso de 45 días (PR #4019); la póliza
+  del volcado NO se toca. Póliza sin seguimiento → se abre el suyo (`de-poliza`, gratis) y se le pone la fecha.
+- La fecha del seguimiento manda en la tarjeta (`vencimientoPoliza`). El puerto de asegura manda ahora
+  `polizaId` por oportunidad y el reparto casa por él antes que por ramo (con dos del mismo ramo la pintaba en la otra).
+- Pendiente: la abierta por `de-poliza` nace sin tarea («Sin próximo paso») hasta el aviso de #4019.
+
 ## (29/09/2026) Correduría: bot «pedir precio → Emitir» sin gastos inútiles (PR #4047)
 Hereda el seguro anterior de la última petición pagada del MISMO vehículo (sin él la moto de Manuel Piña pasó de 200 a 360€); `sinSeguroAnterior` lo corta.
 asegura comprueba gratis la dirección de la empresa propietaria (tipo de vía) antes de cobrar. `emitirCompania/Modalidad/PrimaEur` → tras un precio real se prepara la emisión de ESE proyecto y llega el botón «Emitir».
