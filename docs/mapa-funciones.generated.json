@@ -1,6 +1,6 @@
 {
-  "generadoEn": "2026-09-29T10:36:04Z",
-  "sha": "75b55282ce5daa22428bc60ab9fa7673fc376135",
+  "generadoEn": "2026-09-29T11:23:09Z",
+  "sha": "a904a612adbc1fd50c365867c53e772bfb4f27ba",
   "archivos": [
     {
       "ruta": "apps/almacen/app/_components/inventario-conteo.tsx",
@@ -4575,20 +4575,20 @@
           "exportada": false,
           "params": "v: unknown",
           "retorno": "CuentaFicha",
-          "linea": 31
+          "linea": 32
         },
         {
           "nombre": "AceptarOpcion",
           "kind": "function",
           "exportada": true,
-          "params": "{ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos }: { presupuestoId: string opcionId: string prima: number | null compania: string corredor: boolean /** Por qué no se puede aceptar por los datos (ilegibles o avisados como ",
+          "params": "{ presupuestoId, opcionId, prima, compania, corredor, bloqueoDatos, perdidas = null }: { presupuestoId: string opcionId: string prima: number | null compania: string corredor: boolean /** Por qué no se puede aceptar por los datos (ilegibles",
           "retorno": null,
-          "linea": 40
+          "linea": 41
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a5e3fc729365"
+      "hash": "8df388ea01c9"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/CompararIA.tsx",
@@ -4641,7 +4641,7 @@
           "exportada": true,
           "params": "{ o, caducado }: { o: OpcionCliente; caducado: boolean }",
           "retorno": null,
-          "linea": 107,
+          "linea": 106,
           "resumen": "🚨 Tres cosas que esta tarjeta no puede dejar de hacer: 1. **El distintivo de firmeza va POR TARJETA**, no en una nota al pie que se lee una vez. Hoy el 100 % de los precios son `estimado`, así que de"
         },
         {
@@ -4650,7 +4650,7 @@
           "exportada": true,
           "params": "{ o, actual }: { o: OpcionCliente; actual: ActualCliente | null }",
           "retorno": null,
-          "linea": 176,
+          "linea": 174,
           "resumen": "🚨 CUATRO estados por línea, no dos, y `no_consta` **nunca** se pinta como `igual`: una garantía que no se sabe si está es lo contrario de una que se sabe que está, y pintarlas igual convierte un huec"
         },
         {
@@ -4659,7 +4659,7 @@
           "exportada": true,
           "params": "{ motivo }: { motivo: SinEquivalente | null }",
           "retorno": null,
-          "linea": 222,
+          "linea": 220,
           "resumen": "Los DOS motivos NO se colapsan: llevan a decisiones distintas."
         },
         {
@@ -4668,7 +4668,7 @@
           "exportada": true,
           "params": "{ companiasEnPortada }: { companiasEnPortada: number }",
           "retorno": null,
-          "linea": 242,
+          "linea": 240,
           "resumen": "Art. 19 de la Ley 16/2018 y el «asesoramiento sobre la base de un análisis objetivo» del RDL 3/2020. Todo sale de `MEDIADOR` de `@central/module-seguros`: 🚨 **ni el nombre ni la clave DGSFP se teclea"
         },
         {
@@ -4677,7 +4677,7 @@
           "exportada": true,
           "params": "{ caducado, hayPolizaActual, presupuestoId, puedeNombrar, corredor }: { caducado: boolean; hayPolizaActual: boolean /** Se puede firmar la carta de nombramiento (no retirado ni emitido ni aceptado). */ presupuestoId: string; puedeNombrar: b",
           "retorno": null,
-          "linea": 290,
+          "linea": 288,
           "resumen": "🚨 DOS salidas con el MISMO peso visual, y esa simetría es el punto: si solo se ofrece «me cambio», el que dice que no se va con las manos vacías; con la carta de mediador, el «no» de hoy es el client"
         },
         {
@@ -4686,12 +4686,12 @@
           "exportada": true,
           "params": "d: Date",
           "retorno": "string",
-          "linea": 337
+          "linea": 335
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "acdf4ccd0862"
+      "hash": "54c64df86f31"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/DatosParaContratar.tsx",
@@ -4725,15 +4725,15 @@
           "nombre": "LogoCompania",
           "kind": "function",
           "exportada": true,
-          "params": "{ nombre, alto = 28 }: { nombre: string; alto?: number }",
+          "params": "{ nombre, alto = 32 }: { nombre: string; alto?: number }",
           "retorno": null,
-          "linea": 8,
-          "resumen": "El logo de la compañía en el presupuesto (mismos ficheros que el parte y la web). Decorativo: el nombre sigue escrito al lado, así que `alt=\"\"`. Sin logo → su inicial, nunca un hueco."
+          "linea": 9,
+          "resumen": "La compañía en el presupuesto: su LOGO, y el nombre escrito solo si no tenemos logo (Alberto, 29/09/2026: «los nombres aparecen dentro del logotipo»). El nombre va en `alt`/`title`, así que el lector "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "99b65e913525"
+      "hash": "3ba1e73a8c8f"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/NombrarCorredor.tsx",
@@ -4768,7 +4768,7 @@
           "exportada": true,
           "params": "{ params }: { params: Promise<{ id: string }> }",
           "retorno": null,
-          "linea": 41,
+          "linea": 42,
           "resumen": "El presupuesto, ya con sesión. **Solo lectura**: en este PR no se elige, no se firma y no sale nada hacia ninguna compañía (eso es el PR 4). Quién lo puede ver lo decide `presupuestoDeSesion()` y **so"
         },
         {
@@ -4777,12 +4777,12 @@
           "exportada": false,
           "params": "{ titulo, children }: { titulo: string; children: React.ReactNode }",
           "retorno": null,
-          "linea": 253
+          "linea": 257
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "92e94a9402ea"
+      "hash": "2b3a5889a898"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/RestoDeOpciones.tsx",
@@ -4824,7 +4824,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "ed006c9d8d68"
+      "hash": "7fc20e06197a"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/presupuesto/[id]/RevisaTusDatos.tsx",
@@ -4881,7 +4881,7 @@
           "exportada": true,
           "params": "{ presupuestoId, ramo, opciones, necesidades, coberturasActual, corredor, puedeAceptar, bloqueoDatos, telefono }: { presupuestoId: string ramo: RamoGarantias | null /** Las no ocultas (el filtro `ocultaAt: null` ya lo aplica `leerOpciones`)",
           "retorno": null,
-          "linea": 42,
+          "linea": 43,
           "resumen": "«Todas las opciones»: la lista ENTERA de precios congelados (la portada incluida, marcada «Recomendada»), con los interruptores de garantías, paginada de 10 en 10. · Los interruptores salen PRESELECCI"
         },
         {
@@ -4890,13 +4890,13 @@
           "exportada": false,
           "params": "{ lista, fila }: { lista: OpcionCliente[]; fila: (o: OpcionCliente) => React.ReactNode }",
           "retorno": null,
-          "linea": 258,
+          "linea": 262,
           "resumen": "Las que no dicen si incluyen lo marcado: también paginadas, dentro del plegable perezoso."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a13b0894cb2d"
+      "hash": "4dc03b780075"
     },
     {
       "ruta": "apps/asegura-portal/app/(portal)/boveda/Recordatorios.tsx",
@@ -9707,21 +9707,39 @@
       "ambito": "apps/asegura-portal",
       "resumen": "El logo de cada compañía para la lista plegable del parte (24/09/2026). Los ficheros de `public/logos/` son los MISMOS que sirve la web pública (`apps/asegura-web/public/logos/`, que a su vez vienen del repo `asegura`): no se descarga ni se dibuja ninguno. Fidelidade y Asisa van en PNG porque es lo ",
       "exporta": [
-        "logoCompania"
+        "logoCompania",
+        "escalaLogo"
       ],
       "funciones": [
+        {
+          "nombre": "primeraPalabra",
+          "kind": "function",
+          "exportada": false,
+          "params": "nombre: string",
+          "retorno": "string",
+          "linea": 28
+        },
         {
           "nombre": "logoCompania",
           "kind": "function",
           "exportada": true,
           "params": "nombre: string",
           "retorno": "string | null",
-          "linea": 24
+          "linea": 37
+        },
+        {
+          "nombre": "escalaLogo",
+          "kind": "function",
+          "exportada": true,
+          "params": "nombre: string",
+          "retorno": "number",
+          "linea": 43,
+          "resumen": "Multiplicador de altura del logo; 1 si no tiene ajuste o no hay logo."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "2250e99d412f"
+      "hash": "6c126b7a59a9"
     },
     {
       "ruta": "apps/asegura-portal/lib/mejorar-precio.ts",
@@ -11707,6 +11725,7 @@
         "garantiasDeActual",
         "preseleccion",
         "alternarGarantia",
+        "avisoPerdidas",
         "paginar",
         "textoVerMas",
         "alternarComparar",
@@ -11756,12 +11775,21 @@
           "resumen": "Marca o desmarca una garantía, conservando el orden de los interruptores."
         },
         {
+          "nombre": "avisoPerdidas",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias | null, opcion: GarantiasClasificadas | null, actual: GarantiasClasificadas | null,",
+          "retorno": "AvisoPerdidas | null",
+          "linea": 99,
+          "resumen": "Lo que el cliente dejaría de tener si acepta ESTA opción, frente a la póliza que tiene hoy. `null` = no hay nada que avisar (o no se puede comparar: sin ramo con catálogo, sin desglose de su póliza o "
+        },
+        {
           "nombre": "paginar",
           "kind": "function",
           "exportada": true,
           "params": "lista: readonly T[], cuantas: number",
           "retorno": "Pagina<T>",
-          "linea": 92,
+          "linea": 113,
           "resumen": "Las `cuantas` primeras, cuántas quedan y cuántas se enseñan tras «Ver 10 más»."
         },
         {
@@ -11770,7 +11798,7 @@
           "exportada": true,
           "params": "quedan: number",
           "retorno": "string | null",
-          "linea": 99,
+          "linea": 120,
           "resumen": "Texto del botón: «Ver 10 más» o, si quedan menos, «Ver 3 más». `null` = no queda nada."
         },
         {
@@ -11779,7 +11807,7 @@
           "exportada": true,
           "params": "sel: readonly string[], id: string",
           "retorno": "string[]",
-          "linea": 106,
+          "linea": 127,
           "resumen": "Marca/desmarca una opción para comparar. Con dos elegidas, una tercera no entra."
         },
         {
@@ -11788,7 +11816,7 @@
           "exportada": true,
           "params": "sel: readonly string[], id: string",
           "retorno": "boolean",
-          "linea": 113,
+          "linea": 134,
           "resumen": "La casilla de una opción NO elegida se deshabilita cuando ya hay dos."
         },
         {
@@ -11797,7 +11825,7 @@
           "exportada": true,
           "params": "o: OpcionParaFila, ctx: { ramo: RamoGarantias | null; actual: GarantiasClasificadas | null; todas?: readonly OpcionParaFila[] },",
           "retorno": "FilaOpcion",
-          "linea": 154
+          "linea": 175
         },
         {
           "nombre": "listaY",
@@ -11805,7 +11833,7 @@
           "exportada": true,
           "params": "xs: readonly string[]",
           "retorno": "string",
-          "linea": 208,
+          "linea": 229,
           "resumen": "«Lunas», «Lunas y Robo», «Lunas, Robo y Grúa»."
         },
         {
@@ -11814,7 +11842,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias | null, claves: readonly string[]",
           "retorno": "string[]",
-          "linea": 213
+          "linea": 234
         },
         {
           "nombre": "textoSinDato",
@@ -11822,7 +11850,7 @@
           "exportada": true,
           "params": "n: number, etiquetas: readonly string[]",
           "retorno": "string",
-          "linea": 220,
+          "linea": 241,
           "resumen": "«3 opciones no dicen si incluyen Lunas» / «1 opción no dice si incluye Lunas y Robo»."
         },
         {
@@ -11831,7 +11859,7 @@
           "exportada": true,
           "params": "n: number, cuantasGarantias: number",
           "retorno": "string | null",
-          "linea": 226,
+          "linea": 247,
           "resumen": "«2 no la incluyen» (una garantía) / «2 no incluyen alguna de ellas» (varias). `null` si 0."
         },
         {
@@ -11840,13 +11868,13 @@
           "exportada": true,
           "params": "b: unknown",
           "retorno": "Actividad | null",
-          "linea": 245,
+          "linea": 266,
           "resumen": "Valida el cuerpo de `POST /api/presupuesto/actividad`. `null` = no se reenvía nada. Las claves de garantía son identificadores del catálogo (`[a-z0-9_]`), nunca texto libre; las comparadas, uuids y co"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "0ac4a5ab1930"
+      "hash": "8029dced2b3c"
     },
     {
       "ruta": "apps/asegura-portal/lib/vencimientos.ts",
@@ -16729,6 +16757,27 @@
       "tablas": [],
       "rutaApi": "/api/operador/portal/invitaciones",
       "hash": "fc6cf9de8087"
+    },
+    {
+      "ruta": "apps/asegura/app/api/operador/presupuesto/garantias-filtradas/route.ts",
+      "ambito": "apps/asegura",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "req: Request",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "GET /api/operador/presupuesto/garantias-filtradas — qué garantías marcan los clientes en el filtro del portal (últimos 90 días, presupuestos distintos, por ramo). Un fallo de lectura es `{estado:'erro"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/operador/presupuesto/garantias-filtradas",
+      "hash": "a58cd2d011a6"
     },
     {
       "ruta": "apps/asegura/app/api/operador/presupuesto/pdf/route.ts",
@@ -25081,7 +25130,7 @@
           "exportada": true,
           "params": "compania: string, ramo: string | null = 'auto'",
           "retorno": "OpcionProducto[] | null",
-          "linea": 58,
+          "linea": 63,
           "resumen": "Opciones por defecto para una compañía, por nombre (contains normalizado, como `encontrarPrecio`). `null` si no hay catálogo para ella — hoy es TODO salvo Allianz auto: ni el resto de compañías ni mot"
         },
         {
@@ -25090,7 +25139,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 87,
+          "linea": 92,
           "resumen": "Lee `{ dtoCap?, dtoVentaCruzada? }` del cuerpo. `null` si no viene nada; lanza nada: lo raro es reparo."
         },
         {
@@ -25099,7 +25148,7 @@
           "exportada": true,
           "params": "base: unknown, pedidos: DescuentosPedidos, origen: 'catalogo' | 'formulario' = 'catalogo',",
           "retorno": "",
-          "linea": 109,
+          "linea": 114,
           "resumen": "PURO. Aplica los descuentos pedidos a las opciones que irán en el ReRate. Solo si esas opciones YA traen el campo (hoy, el catálogo de Allianz auto): meter un `dtoCap` en otra compañía sería declarar "
         },
         {
@@ -25108,7 +25157,7 @@
           "exportada": true,
           "params": "compania: string",
           "retorno": "OpcionProducto[] | null",
-          "linea": 164,
+          "linea": 169,
           "resumen": "Opciones por defecto para `product.options` en el SUBMIT (no en el ReRate: ver `opcionesPorDefecto` de arriba). `null` si no hay catálogo — hoy solo Allianz auto tiene esta captura."
         },
         {
@@ -25117,13 +25166,13 @@
           "exportada": true,
           "params": "campos: Record<string, unknown>, compania: string, opts?: { familiaAllianz?: boolean },",
           "retorno": "Record<string, unknown>",
-          "linea": 183,
+          "linea": 188,
           "resumen": "Añade `product.options` por defecto a `campos` (el cuerpo del Submit) SOLO si nadie ya puso un `product` — el JSON avanzado del corredor manda sobre cualquier default. Puro y testeable aparte de la ru"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "94654ff2e6dc"
+      "hash": "4254696999fd"
     },
     {
       "ruta": "apps/asegura/lib/codeoscopic/opciones.ts",
@@ -28879,6 +28928,51 @@
       ],
       "rutaApi": null,
       "hash": "ee86922e88ff"
+    },
+    {
+      "ruta": "apps/asegura/lib/garantias-filtradas-servicio.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Lectura de BD para `garantias-filtradas.ts`: la actividad del filtro de los últimos 90 días.",
+      "exporta": [
+        "garantiasFiltradas"
+      ],
+      "funciones": [
+        {
+          "nombre": "garantiasFiltradas",
+          "kind": "function",
+          "exportada": true,
+          "params": "correduriaId: string, ahora = new Date()",
+          "retorno": "Promise<GarantiasFiltradas>",
+          "linea": 6
+        }
+      ],
+      "tablas": [
+        "presupuesto",
+        "presupuesto_evento"
+      ],
+      "rutaApi": null,
+      "hash": "cd3a57724635"
+    },
+    {
+      "ruta": "apps/asegura/lib/garantias-filtradas.ts",
+      "ambito": "apps/asegura",
+      "resumen": "Qué garantías filtran los clientes en el portal (29/09/2026), sumado sobre TODOS los presupuestos. PURO: la BD vive en `garantias-filtradas-servicio.ts`. Cuenta PRESUPUESTOS distintos, no eventos: un cliente que marca «Lunas» cinco veces es un cliente interesado en lunas, no cinco. Claves fuera del ",
+      "exporta": [
+        "agregarGarantiasFiltradas"
+      ],
+      "funciones": [
+        {
+          "nombre": "agregarGarantiasFiltradas",
+          "kind": "function",
+          "exportada": true,
+          "params": "eventos: readonly { presupuestoId: string; detalle: unknown }[], ramoPorPresupuesto: ReadonlyMap<string, string>,",
+          "retorno": "GarantiasFiltradas",
+          "linea": 17
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "92614a88bf69"
     },
     {
       "ruta": "apps/asegura/lib/ia.ts",
@@ -78267,7 +78361,7 @@
           "exportada": false,
           "params": "v: string | string[] | undefined",
           "retorno": "string | null",
-          "linea": 24
+          "linea": 25
         },
         {
           "nombre": "HogarNuevoPage",
@@ -78275,7 +78369,7 @@
           "exportada": true,
           "params": "{ params, searchParams, }: { params: Promise<{ id: string }> searchParams: Promise<Record<string, string | string[] | undefined>> }",
           "retorno": null,
-          "linea": 44,
+          "linea": 45,
           "resumen": "**Presupuesto de hogar SIN póliza, DENTRO de `/correduria`.** Hasta el 07/09/2026 el botón «Presupuestar hogar (oportunidad nueva)» saltaba a `apps/asegura` — otro dominio, otro diseño, otra sesión. A"
         },
         {
@@ -78284,13 +78378,13 @@
           "exportada": false,
           "params": "{ clienteId, direccion, municipio, provincia, }: { clienteId: string direccion: string municipio: string provincia: string }",
           "retorno": null,
-          "linea": 181,
+          "linea": 197,
           "resumen": "El buscador de partida: por dirección o por referencia, en GET puro (sin JS)."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "9102d080b7d7"
+      "hash": "de83de8ea836"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/cliente/[id]/loading.tsx",
@@ -79758,7 +79852,7 @@
           "exportada": false,
           "params": "año: number, mesIdx: number",
           "retorno": null,
-          "linea": 91
+          "linea": 92
         },
         {
           "nombre": "fmtFecha",
@@ -79766,7 +79860,7 @@
           "exportada": false,
           "params": "iso: string",
           "retorno": "string",
-          "linea": 96,
+          "linea": 97,
           "resumen": "Fecha siempre en formato español día/mes/año: \"2026-06-03\" → \"03/06/2026\"."
         },
         {
@@ -79775,7 +79869,7 @@
           "exportada": false,
           "params": "n: number",
           "retorno": null,
-          "linea": 146
+          "linea": 147
         },
         {
           "nombre": "CorreduriaClient",
@@ -79783,7 +79877,7 @@
           "exportada": true,
           "params": "",
           "retorno": null,
-          "linea": 148
+          "linea": 149
         },
         {
           "nombre": "SubMas",
@@ -79791,7 +79885,7 @@
           "exportada": false,
           "params": "{ id, titulo, Icono, primero = false }: { id: BloqueMas titulo: string Icono: typeof Antenna primero?: boolean }",
           "retorno": null,
-          "linea": 733
+          "linea": 735
         },
         {
           "nombre": "CarteraResumen",
@@ -79799,7 +79893,7 @@
           "exportada": false,
           "params": "{ cartera }: { cartera: Cartera | null }",
           "retorno": null,
-          "linea": 759
+          "linea": 761
         },
         {
           "nombre": "btnMini",
@@ -79807,7 +79901,7 @@
           "exportada": false,
           "params": "tono: 'ok' | 'neutral' | 'plano' = 'neutral', activo = true",
           "retorno": "React.CSSProperties",
-          "linea": 876,
+          "linea": 878,
           "resumen": "Botón de la ficha de un movimiento del desglose. 🚨 Existe porque estos nueve botones estaban escritos a mano con `padding:'5px 10px'` y sin `minHeight`: ~26px de alto, muy por debajo de los **44px tá"
         },
         {
@@ -79816,12 +79910,12 @@
           "exportada": false,
           "params": "{ info, año, onClose, onChanged }: { info: ModalInfo; año: number; onClose: () => void; onChanged: () => void }",
           "retorno": null,
-          "linea": 894
+          "linea": 896
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "3dcce51dcf9c"
+      "hash": "cc7639c15b65"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/CuadreComisiones.tsx",
@@ -80284,7 +80378,7 @@
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "e1db8f475c6b"
+      "hash": "e1633746a585"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Formacion.tsx",
@@ -80345,6 +80439,27 @@
       "tablas": [],
       "rutaApi": null,
       "hash": "8228d89c444b"
+    },
+    {
+      "ruta": "apps/plataforma/app/(usuario)/correduria/GarantiasFiltradas.tsx",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GarantiasFiltradas"
+      ],
+      "funciones": [
+        {
+          "nombre": "GarantiasFiltradas",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 16,
+          "resumen": "Qué garantías marcan los clientes en el filtro de su presupuesto (portal), sumado sobre todos los presupuestos de los últimos 90 días. Cuenta PRESUPUESTOS distintos, no clics. Es un informe que acumul"
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "54fe2dfbcea3"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/Historial.tsx",
@@ -82613,7 +82728,7 @@
         "react"
       ],
       "rutaApi": null,
-      "hash": "6c515d25e371"
+      "hash": "242eb3f3d31e"
     },
     {
       "ruta": "apps/plataforma/app/(usuario)/correduria/poliza/[id]/retarificar/ImportarAvant2.tsx",
@@ -92903,6 +93018,27 @@
       "tablas": [],
       "rutaApi": "/api/correduria/fugas",
       "hash": "ce1207a7ef9f"
+    },
+    {
+      "ruta": "apps/plataforma/app/api/correduria/garantias-filtradas/route.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "GET"
+      ],
+      "funciones": [
+        {
+          "nombre": "GET",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": null,
+          "linea": 9,
+          "resumen": "GET /api/correduria/garantias-filtradas — qué garantías marcan los clientes en el filtro del portal (últimos 90 días). Read-only."
+        }
+      ],
+      "tablas": [],
+      "rutaApi": "/api/correduria/garantias-filtradas",
+      "hash": "d290cd8ea0b9"
     },
     {
       "ruta": "apps/plataforma/app/api/correduria/impagados/route.ts",
@@ -116447,6 +116583,59 @@
       "hash": "291e1ca50c0b"
     },
     {
+      "ruta": "apps/plataforma/lib/garantias-filtradas-asegura.ts",
+      "ambito": "apps/plataforma",
+      "exporta": [
+        "interpretarGarantiasFiltradas",
+        "garantiasFiltradasAsegura"
+      ],
+      "funciones": [
+        {
+          "nombre": "urlAsegura",
+          "kind": "function",
+          "exportada": false,
+          "params": "",
+          "retorno": "string",
+          "linea": 13
+        },
+        {
+          "nombre": "entero",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "number | null",
+          "linea": 17
+        },
+        {
+          "nombre": "texto",
+          "kind": "arrow",
+          "exportada": false,
+          "params": "v: unknown",
+          "retorno": "string | null",
+          "linea": 18
+        },
+        {
+          "nombre": "interpretarGarantiasFiltradas",
+          "kind": "function",
+          "exportada": true,
+          "params": "status: number, json: unknown",
+          "retorno": "GarantiasFiltradas",
+          "linea": 20
+        },
+        {
+          "nombre": "garantiasFiltradasAsegura",
+          "kind": "function",
+          "exportada": true,
+          "params": "",
+          "retorno": "Promise<GarantiasFiltradas>",
+          "linea": 49
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "0f88360997e2"
+    },
+    {
       "ruta": "apps/plataforma/lib/gastos-recurrentes.ts",
       "ambito": "apps/plataforma",
       "exporta": [
@@ -116518,6 +116707,35 @@
       ],
       "rutaApi": null,
       "hash": "85d05886bd99"
+    },
+    {
+      "ruta": "apps/plataforma/lib/hogar-direccion-ficha.ts",
+      "ambito": "apps/plataforma",
+      "resumen": "La dirección de la FICHA como punto de partida del presupuesto de hogar (29/09/2026). Alberto: «como en todos los de auto tenemos la dirección, le podemos dar precio del hogar». Es un PUNTO DE PARTIDA, no el riesgo: la dirección del tomador no tiene por qué ser la vivienda que se asegura (puede vivi",
+      "exporta": [
+        "direccionDeFicha"
+      ],
+      "funciones": [
+        {
+          "nombre": "limpia",
+          "kind": "function",
+          "exportada": false,
+          "params": "s: string | null",
+          "retorno": "string | null",
+          "linea": 21
+        },
+        {
+          "nombre": "direccionDeFicha",
+          "kind": "function",
+          "exportada": true,
+          "params": "c: ContactoConDireccion | null | undefined",
+          "retorno": "DireccionDeFicha | null",
+          "linea": 26
+        }
+      ],
+      "tablas": [],
+      "rutaApi": null,
+      "hash": "23c2828f42e9"
     },
     {
       "ruta": "apps/plataforma/lib/hogar-nuevo-asegura.ts",
@@ -120324,7 +120542,7 @@
           "exportada": true,
           "params": "e: EstadoPresupuestoLista",
           "retorno": "boolean",
-          "linea": 373,
+          "linea": 374,
           "resumen": "Mientras no esté aceptado, retirado ni caducado, las necesidades se pueden escribir o corregir."
         },
         {
@@ -120333,7 +120551,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "PresupuestoEnLista | null",
-          "linea": 380,
+          "linea": 381,
           "resumen": "Una fila ilegible NO se descarta: devuelve `null` y la lista entera se declara ilegible."
         },
         {
@@ -120342,7 +120560,7 @@
           "exportada": true,
           "params": "e: EstadoPresupuestoLista",
           "retorno": "",
-          "linea": 400,
+          "linea": 401,
           "resumen": "Qué se puede hacer con él. `enlazado` NO es `enviado`: se abrió WhatsApp y no consta que saliera, así que se ofrece «Ya lo he mandado» y se deja volver a avisar."
         },
         {
@@ -120351,7 +120569,7 @@
           "exportada": true,
           "params": "status: number, j: unknown",
           "retorno": "",
-          "linea": 425,
+          "linea": 426,
           "resumen": "La frase del desenlace de «Avisar». Ningún fallo se lee como «ha salido»."
         },
         {
@@ -120360,7 +120578,7 @@
           "exportada": true,
           "params": "v: unknown",
           "retorno": "",
-          "linea": 445
+          "linea": 446
         },
         {
           "nombre": "cotizacionIdDe",
@@ -120368,13 +120586,13 @@
           "exportada": true,
           "params": "guardado: unknown",
           "retorno": "string | null",
-          "linea": 472,
+          "linea": 473,
           "resumen": "El id de la cotización guardada (`guardado` de la respuesta de cotizar). `null` = no quedó guardada: sin él no hay de qué preparar un presupuesto ni a qué pedir la emisión."
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "dc3608187b7e"
+      "hash": "807a40cd1fd3"
     },
     {
       "ruta": "apps/plataforma/lib/pricing-calendar.ts",
@@ -158362,6 +158580,8 @@
       "exporta": [
         "claveCobertura",
         "clasificarCoberturas",
+        "esGarantiaDeLey",
+        "etiquetasGarantiasDeLey",
         "garantiasDeOpciones",
         "asistenciaAmpliada",
         "asistenciaHogarAmpliada",
@@ -158399,12 +158619,29 @@
           "resumen": "Lleva las coberturas de UN precio al catálogo del ramo. Todas las claves salen en el resultado: `si` (reconocida e incluida) · `no` (reconocida y marcada NO incluida) · `no_consta` (el resto). Varias "
         },
         {
+          "nombre": "esGarantiaDeLey",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias, clave: string",
+          "retorno": "boolean",
+          "linea": 221
+        },
+        {
+          "nombre": "etiquetasGarantiasDeLey",
+          "kind": "function",
+          "exportada": true,
+          "params": "ramo: RamoGarantias | null",
+          "retorno": "string[]",
+          "linea": 226,
+          "resumen": "Etiquetas de las garantías de ley del ramo, en el orden del catálogo (para «incluida siempre»)."
+        },
+        {
           "nombre": "garantiasDeOpciones",
           "kind": "function",
           "exportada": true,
           "params": "opciones: readonly OpcionProductoLegible[] | null | undefined",
           "retorno": "Record<string, EstadoGarantia>",
-          "linea": 227,
+          "linea": 251,
           "resumen": "PURO. Lo que las opciones afirman de cada garantía; lo que no afirman, no sale (no es un «no»)."
         },
         {
@@ -158413,7 +158650,7 @@
           "exportada": true,
           "params": "lista: readonly CoberturaParaClasificar[] | null, opciones?: readonly OpcionProductoLegible[] | null,",
           "retorno": "EstadoGarantia",
-          "linea": 258,
+          "linea": 282,
           "resumen": "Si el precio lleva asistencia AMPLIADA. PURO. Manda la opción con la que se tarificó (es la elección real); si no la hay, el texto de la cobertura. `no` solo con una señal explícita: la opción dice «E"
         },
         {
@@ -158422,7 +158659,7 @@
           "exportada": false,
           "params": "c: CoberturaParaClasificar",
           "retorno": "boolean",
-          "linea": 285,
+          "linea": 309,
           "resumen": "Una cobertura que el vendor manda SIN decir si va incluida y cuyo texto la declara «(opcional)»: es un extra que no está en este precio (Fidelidade hogar: «TODO RIESGO ACCIDENTAL (OPCIONAL)…», `inclui"
         },
         {
@@ -158431,7 +158668,7 @@
           "exportada": true,
           "params": "lista: readonly CoberturaParaClasificar[] | null",
           "retorno": "EstadoGarantia",
-          "linea": 290,
+          "linea": 314,
           "resumen": "PURO. Asistencia en el hogar ampliada según el texto (Fidelidade: «ASISTENCIA HOGAR AMPLIADA/BÁSICA»)."
         },
         {
@@ -158440,7 +158677,7 @@
           "exportada": true,
           "params": "texto: string | null | undefined",
           "retorno": "",
-          "linea": 309,
+          "linea": 333,
           "resumen": "Las partes de una cobertura cuyo texto las ENUMERA (Occident: «» Animales cinegéticos y domésticos: Incluida. : CONTRATADA.» Fenómenos atmosféricos con franquicia: Franquicia 600 €. : CONTRATADA»). PU"
         },
         {
@@ -158449,7 +158686,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, lista: readonly CoberturaParaClasificar[] | null",
           "retorno": "string[]",
-          "linea": 333,
+          "linea": 357,
           "resumen": "Nombres que no casan con ninguna garantía del catálogo: la lista para ir afinando patrones."
         },
         {
@@ -158458,7 +158695,7 @@
           "exportada": true,
           "params": "ramo: string | null | undefined",
           "retorno": "RamoGarantias | null",
-          "linea": 340
+          "linea": 364
         },
         {
           "nombre": "descuentosDeOpciones",
@@ -158466,13 +158703,13 @@
           "exportada": true,
           "params": "opciones: readonly OpcionProductoLegible[] | null | undefined",
           "retorno": "DescuentoComercial[] | null",
-          "linea": 353,
+          "linea": 377,
           "resumen": "PURO. Los descuentos comerciales de un precio, leídos de sus opciones (29/09/2026). Medido: Allianz «Descuento comercial % (CAP)» y «(venta cruzada)», Occident y Generali «Descuento comercial». `null`"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "4ccd2f772f45"
+      "hash": "c452b018b23b"
     },
     {
       "ruta": "packages/module-seguros/src/cliente-edicion.ts",
@@ -160472,7 +160709,7 @@
           "exportada": true,
           "params": "ramo: RamoGarantias | null, interruptores: readonly InterruptorGarantia[]",
           "retorno": "string[]",
-          "linea": 82
+          "linea": 83
         },
         {
           "nombre": "diferenciasDeOpcion",
@@ -160480,13 +160717,13 @@
           "exportada": true,
           "params": "ramo: RamoGarantias, opcion: OpcionFiltrable, opciones: readonly OpcionFiltrable[],",
           "retorno": "DiferenciasOpcion | null",
-          "linea": 98,
+          "linea": 99,
           "resumen": "Qué separa a ESTA opción de las demás de la misma parrilla (29/09/2026): «no incluye» y «sin confirmar» solo en las garantías en las que las opciones NO dicen lo mismo. Sirve para que dos precios que "
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "a0e8eb0367b9"
+      "hash": "5e0792fd9c47"
     },
     {
       "ruta": "packages/module-seguros/src/formacion.ts",
@@ -162494,13 +162731,13 @@
           "exportada": true,
           "params": "p: PresupuestoParaSeguimiento, ahora: Date",
           "retorno": "EtapaSeguimiento | null",
-          "linea": 110,
+          "linea": 111,
           "resumen": "La etapa de la que toca avisar ahora, o `null`. Un aviso por etapa y presupuesto, nunca dos. Solo presupuestos que de verdad salieron (`enviadoAt`; un WhatsApp solo «enlazado» no consta como enviado),"
         }
       ],
       "tablas": [],
       "rutaApi": null,
-      "hash": "fe34e77ebd02"
+      "hash": "622c4f36ffac"
     },
     {
       "ruta": "packages/module-seguros/src/presupuesto-cliente.ts",
@@ -169799,7 +170036,7 @@
     }
   ],
   "resumen": {
-    "archivos": 3970,
-    "funciones": 13112
+    "archivos": 3977,
+    "funciones": 13129
   }
 }

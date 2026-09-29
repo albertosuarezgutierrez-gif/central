@@ -167,21 +167,21 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 ## Agregado
 
 <!-- ahorro:inicio -->
-**Uso de herramientas · todo lo medido** — 213 sesión(es) medida(s).
+**Uso de herramientas · todo lo medido** — 214 sesión(es) medida(s).
 
 | Herramienta | Sesiones | Llamadas | Tokens pagados (≈) | Tokens citados (cota sup.) | Errores |
 |---|---:|---:|---:|---:|---:|
-| `bash` | 208 | 26.868 | 19.336.098 | 0 | 0 |
-| `otro` | 203 | 6.546 | 20.174.648 | 9.962.496 | 0 |
-| `mcp:github` | 190 | 4.956 | 4.194.167 | 48.814.648 | 82 |
-| `lectura-directa` | 183 | 4.774 | 10.456.891 | 0 | 0 |
+| `bash` | 209 | 26.936 | 19.403.433 | 0 | 0 |
+| `otro` | 204 | 6.576 | 20.233.442 | 10.155.949 | 0 |
+| `mcp:github` | 191 | 4.968 | 4.203.866 | 48.815.271 | 84 |
+| `lectura-directa` | 184 | 4.792 | 10.472.720 | 0 | 0 |
 | `escritura` | 143 | 3.128 | 45.347.292 | 0 | 0 |
-| `sql` | 131 | 2.619 | 1.223.854 | 2.351.230 | 9 |
-| `mcp:Claude_Code_Remote` | 119 | 1.296 | 274.536 | 4.635.873 | 13 |
+| `sql` | 132 | 2.620 | 1.224.001 | 2.351.230 | 9 |
+| `mcp:Claude_Code_Remote` | 120 | 1.298 | 274.623 | 4.635.873 | 13 |
 | `mcp:Booking-com` | 19 | 540 | 2.272.253 | 0 | 0 |
 | `mcp:Vercel` | 45 | 477 | 712.352 | 198.719 | 11 |
 | `mcp:Gmail` | 23 | 306 | 461.557 | 0 | 5 |
-| `mcp:Supabase` | 83 | 248 | 23.728 | 0 | 2 |
+| `mcp:Supabase` | 84 | 249 | 23.826 | 0 | 2 |
 | `mcp:Interactive-Brokers--IBKR-` | 4 | 209 | 271.466 | 0 | 0 |
 | `agente:general-purpose` | 35 | 124 | 95.458 | 2.259.825 | 0 |
 | `agente:agente-architect` | 27 | 78 | 59.993 | 1.942.704 | 0 |
@@ -195,7 +195,7 @@ fallos duros nuevos (símbolo no resuelto, contaminación entre apps) que la ron
 | `mcp:posthog` | 4 | 46 | 64.464 | 0 | 1 |
 | `mcp:OpenSEO` | 2 | 46 | 38.961 | 0 | 0 |
 | `agente:agente-mecanico` | 16 | 40 | 41.045 | 798.811 | 0 |
-| `agente:rastreador-codigo` | 20 | 36 | 12.025 | 391.953 | 0 |
+| `agente:rastreador-codigo` | 21 | 37 | 12.368 | 391.953 | 0 |
 | `grafo-propio` | 3 | 28 | 7.774 | 74.950 | 2 |
 | `graphify` | 1 | 21 | 38.070 | 437.924 | 0 |
 | `mcp:Claude_Docs` | 1 | 18 | 11.559 | 0 | 0 |
