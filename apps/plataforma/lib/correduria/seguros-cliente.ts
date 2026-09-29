@@ -205,7 +205,10 @@ export function repartirSegurosCliente({ polizas, declaradas, oportunidades, hoy
   if (oportunidades) {
     // Las abiertas primero: son las que se enganchan a una póliza perdida del mismo ramo.
     const abiertas = oportunidades.filter(abierta)
-    for (const o of abiertas) {
+    // Las que cuelgan de una póliza concreta, antes: si no, una sin póliza del mismo ramo podría
+    // quedarse la tarjeta de esa póliza y la suya acabaría suelta.
+    const enOrden = [...abiertas.filter(o => o.polizaId != null), ...abiertas.filter(o => o.polizaId == null)]
+    for (const o of enOrden) {
       // Mismo ramo no basta: dos matrículas distintas son dos coches, y engancharla pintaba
       // el Ford Mondeo de Pelayo de 2015 en vez del Kalos de MUSSAP (Rafael Campa,
       // 28/09/2026). Solo la matrícula: la compañía y el nº de la oportunidad son los de la

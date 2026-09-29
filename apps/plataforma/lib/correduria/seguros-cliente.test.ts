@@ -258,12 +258,13 @@ test('la oportunidad que cuelga de una póliza va a SU tarjeta aunque haya otra 
   // Al anotar el vencimiento se abre el seguimiento de ESA póliza: casar por ramo lo pintaba
   // en la primera tarjeta del ramo y la fecha recién guardada «no salía».
   const r = repartirSegurosCliente({
-    polizas: [pol('hogarA', { tipo: 'hogar', estado: 'cancelada' }), pol('hogarB', { tipo: 'hogar', estado: 'cancelada' })],
+    polizas: [pol('hogarB', { tipo: 'hogar', estado: 'cancelada' }), pol('hogarA', { tipo: 'hogar', estado: 'cancelada' })],
     declaradas: [],
-    oportunidades: [opo('o1', { ramo: 'hogar', polizaId: 'hogarB' })],
+    // `o0` (sin póliza) va delante en la lista: no puede quedarse la tarjeta de `hogarB`.
+    oportunidades: [opo('o0', { ramo: 'hogar' }), opo('o1', { ramo: 'hogar', polizaId: 'hogarB' })],
   })
   const a = r.oportunidades.find(s => s.id === 'hogarA'), b = r.oportunidades.find(s => s.id === 'hogarB')
-  assert.ok(a?.clase === 'poliza' && a.oportunidad === null)
+  assert.ok(a?.clase === 'poliza' && a.oportunidad?.id === 'o0')
   assert.ok(b?.clase === 'poliza' && b.oportunidad?.id === 'o1')
 })
 
