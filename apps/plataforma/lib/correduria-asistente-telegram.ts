@@ -34,7 +34,7 @@ import {
   interpretarTareasHoy, leadsCompetenciaAsegura, oportunidadesClienteAsegura, tareasHoyAsegura, type LecturaDocumentoOportunidad,
 } from '@/lib/seguimiento-asegura'
 import { carteraAsegura } from '@/lib/cartera-asegura'
-import { crearTareaAsegura, registrarLlamadaAsegura, oportunidadAsegura, interpretarOportunidad, rotuloRamo } from '@/lib/seguimiento-asegura'
+import { crearTareaAsegura, registrarLlamadaAsegura, oportunidadAsegura, interpretarOportunidad, rotuloRamo, figuraAsegura, quitarFiguraAsegura, riesgoAsegura } from '@/lib/seguimiento-asegura'
 import { altaClienteAsegura, historialClienteAsegura } from '@/lib/cliente-edicion-asegura'
 import { abrirSiniestroAsegura } from '@/lib/siniestros-asegura'
 import { explicarPortal, interpretarPortal, invitarPortalAsegura, portalAsegura } from '@/lib/portal-cliente-asegura'
@@ -52,8 +52,10 @@ import {
 import {
   apagado, clasificarDestino, costeConservador, ERROR_NO_UUID, hoyMadrid, memoriaIds, DIAS_RETENCION_TEXTO, rastroArgs, tienePrefijo, diasValidos, enmascarar, HERRAMIENTAS, idValido,
   leerArgumentos, leerClasificacion, MAX_TURNOS_DIA, MAX_VUELTAS, paraIA, preguntaNota, reglaConDatoPersonal,
-  sinPrefijo, SYSTEM_CLASIFICADOR, systemAsistente,
+  sinPrefijo, SYSTEM_CLASIFICADOR, systemAsistente, altaParaIA, autonomoActivo, figuraParaIA, textoSinBoton, HERRAMIENTAS_ESCRITURA,
 } from './correduria-asistente'
+import { interpretarRiesgo } from '@/lib/riesgo-asegura'
+import { tomadorDelRiesgo, varianteDeRiesgo, type RolExtra } from '@/app/(usuario)/correduria/oportunidad/[id]/variante'
 
 const APP = 'correduria-asistente'
 /** Proveedores que no guardan ni entrenan con lo que se les manda. */
@@ -117,8 +119,101 @@ async function reglasActivas(): Promise<{ id: number; texto: string }[] | null> 
 // ── Herramientas ─────────────────────────────────────────────────────────────────────────────────
 
 /** Ejecuta una herramienta. Devuelve el texto que verá la IA (ya enmascarado) y si fue bien. */
+/** Segundos que puede pensar un turno antes de contestar con lo que tenga (webhook: 300 s; un precio: ≤170 s). */
+const SEGUNDOS_BUCLE = 70
+/** Lo que tarda como mucho una petición de precio (el vendor responde en ≤170 s) + margen, contra los 300 del webhook. */
+const SEGUNDOS_PRECIO = 185
+const SEGUNDOS_WEBHOOK = 295
+
+type TablaPropuesta = 'correduria_asistente_correccion' | 'correduria_asistente_oportunidad' | 'correduria_asistente_accion'
+
+/**
+ * Desenlace de una escritura sin botón → lo que lee la IA. Se lee el ESTADO que dejó el ejecutor en su fila
+ * (el mismo que usa el botón), no el texto de su toast. Alberto ya ha visto el detalle en su mensaje.
+ */
+async function hecho(tabla: TablaPropuesta, id: number, exito: string, extra = ''): Promise<{ texto: string; ok: boolean }> {
+  const [f] = await prisma.$queryRaw<{ estado: string }[]>(Prisma.sql`
+    SELECT estado FROM ${Prisma.raw(tabla)} WHERE id = ${id}`).catch(() => [] as { estado: string }[])
+  const estado = f?.estado ?? 'desconocido'
+  if (estado === exito) return { texto: `HECHO${extra ? ` (${extra})` : ''}. El sistema ya le ha mandado el detalle a Alberto.`, ok: true }
+  const dudoso = estado === 'incierta' || estado === 'aplicando' || estado === 'desconocido'
+  return {
+    texto: dudoso
+      ? `NO SÉ SI SE HA HECHO (estado: ${estado})${extra ? ` (${extra})` : ''}. NO lo repitas: dile a Alberto que lo mire en la ficha.`
+      : `NO SE HA HECHO (estado: ${estado}). El sistema ya le ha dicho a Alberto por qué; no lo repitas sin que te lo pida.`,
+    ok: false,
+  }
+}
+
+/** Alberto no ha podido ver qué se iba a hacer: no se hace. */
+async function sinVer(tabla: TablaPropuesta, id: number): Promise<{ texto: string; ok: boolean }> {
+  await prisma.$executeRaw(Prisma.sql`
+    UPDATE ${Prisma.raw(tabla)} SET estado = 'descartada', decidida_at = now() WHERE id = ${id} AND estado = 'propuesta'`).catch(() => {})
+  return { texto: 'ERROR: no he podido mandarle a Alberto lo que iba a hacer, así que NO se ha hecho nada. Dile que lo intente otra vez.', ok: false }
+}
+
+/** `alta_cliente`: ficha nueva (lead) con lo dictado, por el mismo puerto que el alta de la pantalla. */
+async function altaDictada(args: Record<string, unknown>): Promise<{ texto: string; ok: boolean }> {
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    return { texto: `NO DISPONIBLE: las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}). Dile a Alberto que la cree en /correduria/cliente/nuevo.`, ok: true }
+  }
+  const campo = (k: string, max = 160) => (typeof args[k] === 'string' && (args[k] as string).trim() !== '' ? (args[k] as string).trim().slice(0, max) : undefined)
+  const cuerpo = {
+    nombre: campo('nombre', 80), apellidos: campo('apellidos'), dni: campo('dni', 20), fechaNacimiento: campo('fechaNacimiento', 20),
+    telefono: campo('telefono', 30), email: campo('email', 120), direccion: campo('direccion', 200), codigoPostal: campo('codigoPostal', 10),
+    ciudad: campo('ciudad', 80), provincia: campo('provincia', 80), fuente: campo('fuente', 30),
+    forzar: args.forzar === true, actor: ACTOR_EMISION_TG,
+  }
+  if (!cuerpo.nombre) return { texto: 'FALTA EL NOMBRE: sin nombre no se da de alta. Pregúntaselo a Alberto.', ok: true }
+  const r = await altaClienteAsegura(cuerpo, ACTOR_EMISION_TG).catch(() => ({ status: 0, json: null }))
+  const fin = altaParaIA(r.status, r.json)
+  if (fin.clienteId && r.status === 201) {
+    await tgSend(`👤 Lead creado: <b>${escapeHtml([cuerpo.nombre, cuerpo.apellidos].filter(Boolean).join(' '))}</b>\n${urlCliente(fin.clienteId)}`).catch(() => null)
+  }
+  return { texto: fin.texto, ok: fin.ok }
+}
+
+/** `figura_riesgo`: propietario o conductor distinto del tomador, por el puerto de la pantalla del riesgo. */
+async function figuraRiesgo(args: Record<string, unknown>): Promise<{ texto: string; ok: boolean }> {
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    return { texto: `NO DISPONIBLE: las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}). Dile a Alberto que lo ponga en la pantalla del riesgo.`, ok: true }
+  }
+  const oportunidadId = idValido(args.oportunidadId)
+  if (!oportunidadId) return { texto: ERROR_NO_UUID, ok: false }
+  const rol = ['propietario', 'conductor_habitual', 'conductor_ocasional'].includes(String(args.rol)) ? String(args.rol) : null
+  if (!rol) return { texto: 'ERROR: rol tiene que ser propietario, conductor_habitual o conductor_ocasional.', ok: false }
+  const quitar = args.quitar === true
+  const base = { oportunidadId, rol, actor: ACTOR_EMISION_TG }
+  let llamada: Promise<{ status: number; json: unknown }>
+  if (quitar) llamada = quitarFiguraAsegura(base)
+  else if (args.clienteId !== undefined && args.clienteId !== null && args.clienteId !== '') {
+    const clienteId = idValido(args.clienteId)
+    if (!clienteId) return { texto: ERROR_NO_UUID, ok: false }
+    llamada = figuraAsegura({ ...base, accion: 'asignar', clienteId })
+  } else {
+    const persona = typeof args.persona === 'object' && args.persona !== null ? (args.persona as Record<string, unknown>) : null
+    if (!persona || typeof persona.nombre !== 'string' || persona.nombre.trim() === '') {
+      return { texto: 'FALTAN DATOS: o el clienteId de su ficha (búscala), o sus datos en persona (al menos nombre y DNI/teléfono). Pregúntaselo a Alberto.', ok: true }
+    }
+    if (typeof args.tipoRelacion !== 'string' || args.tipoRelacion.trim() === '') {
+      return { texto: 'FALTA: qué es esa persona del tomador (hijo/a, cónyuge, empresa…). Pregúntaselo a Alberto; no lo supongas.', ok: true }
+    }
+    llamada = figuraAsegura({ ...base, accion: 'nueva', tipoRelacion: args.tipoRelacion, persona })
+  }
+  const r = await llamada.catch(() => ({ status: 0, json: null }))
+  const fin = figuraParaIA(r.status, r.json, rol, quitar)
+  if (fin.ok && fin.texto.startsWith('HECHO')) await tgSend(`👥 ${escapeHtml(fin.texto.replace(/^HECHO: /, '').replace(/ Ahora proponer_tarificacion.*$/, ''))}`).catch(() => null)
+  return fin
+}
+
+/**
+ * Contexto de un turno. `autonomo` = hace sin botón (salvo emitir y lo que sale a terceros);
+ * `diferidas` = peticiones de precio que se lanzan al terminar el turno (tardan hasta 170 s).
+ */
+type Ctx = { turnoId: number; reglas: { id: number; texto: string }[] | null; autonomo: boolean; diferidas: number[] }
+
 async function ejecutar(
-  nombre: string, args: Record<string, unknown> | null, ctx: { turnoId: number; reglas: { id: number; texto: string }[] | null },
+  nombre: string, args: Record<string, unknown> | null, ctx: Ctx,
 ): Promise<{ texto: string; ok: boolean }> {
   if (args === null) return { texto: 'ERROR: argumentos ilegibles. Repite la llamada con JSON válido.', ok: false }
   const fallo = (r: { estado: string; motivo?: unknown }) =>
@@ -245,25 +340,29 @@ async function ejecutar(
     case 'preparar_emision':
       return prepararEmision(args, ctx.turnoId)
     case 'proponer_correccion':
-      return proponerCorreccion(args, ctx.turnoId)
+      return proponerCorreccion(args, ctx.turnoId, ctx.autonomo)
     case 'proponer_oportunidad':
-      return proponerOportunidad(args, ctx.turnoId)
+      return proponerOportunidad(args, ctx.turnoId, ctx.autonomo)
     case 'proponer_tarea':
-      return proponerAccion('tarea', args, ctx.turnoId)
+      return proponerAccion('tarea', args, ctx.turnoId, ctx.autonomo)
     case 'registrar_llamada':
-      return proponerAccion('llamada', args, ctx.turnoId)
+      return proponerAccion('llamada', args, ctx.turnoId, ctx.autonomo)
     case 'anotar_nota':
-      return proponerAccion('nota', args, ctx.turnoId)
+      return proponerAccion('nota', args, ctx.turnoId, ctx.autonomo)
     case 'abrir_siniestro':
-      return proponerAccion('siniestro', args, ctx.turnoId)
+      return proponerAccion('siniestro', args, ctx.turnoId, ctx.autonomo)
     case 'invitar_portal':
-      return proponerAccion('portal', args, ctx.turnoId)
+      return proponerAccion('portal', args, ctx.turnoId, ctx.autonomo)
     case 'vehiculo_catalogo':
       return vehiculoCatalogo(args)
     case 'proponer_tarificacion':
-      return proponerTarificacion(args, ctx.turnoId)
+      return proponerTarificacion(args, ctx)
     case 'enviar_presupuesto':
-      return proponerAccion('presupuesto', args, ctx.turnoId)
+      return proponerAccion('presupuesto', args, ctx.turnoId, ctx.autonomo)
+    case 'alta_cliente':
+      return ctx.autonomo ? altaDictada(args) : { texto: 'NO DISPONIBLE en modo con botón: dile a Alberto que la cree en /correduria/cliente/nuevo.', ok: true }
+    case 'figura_riesgo':
+      return ctx.autonomo ? figuraRiesgo(args) : { texto: 'NO DISPONIBLE en modo con botón: dile a Alberto que lo ponga en la pantalla del riesgo de la oportunidad.', ok: true }
     default:
       return { texto: `ERROR: herramienta desconocida ${nombre}.`, ok: false }
   }
@@ -426,7 +525,7 @@ export async function emitirDesdeBoton(arg: string): Promise<void> {
 
 // ── Correcciones de la ficha (fase 3b): la IA propone, el servidor valida, Alberto pulsa ─────────
 
-async function proponerCorreccion(args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
+async function proponerCorreccion(args: Record<string, unknown>, turnoId: number, autonomo = false): Promise<{ texto: string; ok: boolean }> {
   const clienteId = idValido(args.clienteId)
   // Mismo interruptor que la emisión: es UN solo «¿escribe el asistente en la cartera?».
   if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
@@ -469,6 +568,13 @@ async function proponerCorreccion(args: Record<string, unknown>, turnoId: number
     VALUES (${turnoId}, ${clienteId}::uuid, ${JSON.stringify(prep.cambios)}::jsonb, ${documento?.id ?? null}::uuid,
             ${huellaAntes(actual, prep.cambios)}, now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
     RETURNING id`)
+  if (autonomo) {
+    // Sin botón: Alberto ve el antes→después y, a continuación, el desenlace que manda `aplicarCorreccion`.
+    const visto = await tgSend(textoSinBoton(textoCorreccion(actual, prep.cambios, documento))).catch(() => null)
+    if (visto === null) return sinVer('correduria_asistente_correccion', Number(fila.id))
+    await aplicarCorreccion(Number(fila.id))
+    return hecho('correduria_asistente_correccion', Number(fila.id), 'aplicada')
+  }
   const enviado = await tgSendButtons(textoCorreccion(actual, prep.cambios, documento), [[
     { texto: '✏️ Corregir', callback: `cas_corregir:${fila.id}` },
     { texto: '✖️ No', callback: `cas_corregirno:${fila.id}` },
@@ -651,7 +757,7 @@ async function lecturasRecientes(opts: { tomador?: boolean } = {}, usados?: numb
   return out
 }
 
-async function proponerOportunidad(args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
+async function proponerOportunidad(args: Record<string, unknown>, turnoId: number, autonomo = false): Promise<{ texto: string; ok: boolean }> {
   let clienteId = idValido(args.clienteId)
   // Mismo interruptor que la emisión y la corrección: UN solo «¿escribe el asistente en la cartera?».
   if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
@@ -720,6 +826,16 @@ async function proponerOportunidad(args: Record<string, unknown>, turnoId: numbe
             ${documentos}::bigint[], now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
     RETURNING id`)
   const texto = lead ? textoAltaLead(lead.nombre, prep.alta) : textoAlta(nombre ?? 'este cliente', prep.alta)
+  if (autonomo) {
+    const visto = await tgSend(textoSinBoton(texto)).catch(() => null)
+    if (visto === null) return sinVer('correduria_asistente_oportunidad', Number(fila.id))
+    await abrirOportunidad(Number(fila.id))
+    // Lo que la IA necesita para seguir (figuras, precio): la ficha y la oportunidad que han quedado.
+    const [fin] = await prisma.$queryRaw<{ cliente_id: string | null; oportunidad: string | null }[]>(Prisma.sql`
+      SELECT cliente_id::text AS cliente_id, resultado ->> 'id' AS oportunidad FROM correduria_asistente_oportunidad WHERE id = ${fila.id}`).catch(() => [])
+    const ids = [fin?.cliente_id ? `clienteId=${fin.cliente_id}` : null, fin?.oportunidad ? `oportunidadId=${fin.oportunidad}` : null].filter(Boolean).join(' ')
+    return hecho('correduria_asistente_oportunidad', Number(fila.id), 'abierta', ids)
+  }
   const enviado = await tgSendButtons(texto, [[
     { texto: lead ? '🎯 Crear lead y abrir' : '🎯 Abrir', callback: `cas_oport:${fila.id}` },
     { texto: '✖️ No', callback: `cas_oportno:${fila.id}` },
@@ -843,7 +959,7 @@ async function contextoAccion(tipo: TipoAccion, args: Record<string, unknown>): 
   return { quien: r.ficha.nombre ?? 'cliente', clienteId: id }
 }
 
-async function proponerAccion(tipo: TipoAccion, args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
+async function proponerAccion(tipo: TipoAccion, args: Record<string, unknown>, turnoId: number, autonomo = false): Promise<{ texto: string; ok: boolean }> {
   if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
     return { texto: `NO DISPONIBLE: las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}). Dile a Alberto que lo haga en la ficha (/correduria).`, ok: true }
   }
@@ -877,6 +993,13 @@ async function proponerAccion(tipo: TipoAccion, args: Record<string, unknown>, t
     VALUES (${turnoId}, ${tipo}, ${ctx.clienteId}::uuid, ${JSON.stringify(prep.accion.cuerpo)}::jsonb,
             now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
     RETURNING id`)
+  // Lo que sale a un tercero (correo del presupuesto, invitación al portal) sigue con botón en los dos modos.
+  if (autonomo && tipo !== 'portal' && tipo !== 'presupuesto') {
+    const visto = await tgSend(textoSinBoton(textoAccion(ctx.quien, prep.accion))).catch(() => null)
+    if (visto === null) return sinVer('correduria_asistente_accion', Number(fila.id))
+    await hacerAccion(Number(fila.id))
+    return hecho('correduria_asistente_accion', Number(fila.id), 'hecha')
+  }
   const enviado = await tgSendButtons(textoAccion(ctx.quien, prep.accion), [[
     { texto: tipo === 'portal' || tipo === 'presupuesto' ? '📧 Enviar' : '✅ Hacer', callback: `cas_acc:${fila.id}` },
     { texto: '✖️ No', callback: `cas_accno:${fila.id}` },
@@ -1040,7 +1163,8 @@ async function ramosVivos(clienteId: string): Promise<string[] | null> {
   return f.ficha.polizas.filter((p) => p.viva && vigentes.includes(p.estado)).map((p) => p.tipo)
 }
 
-async function proponerTarificacion(args: Record<string, unknown>, turnoId: number): Promise<{ texto: string; ok: boolean }> {
+async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Promise<{ texto: string; ok: boolean }> {
+  const turnoId = ctx.turnoId
   if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
     return { texto: `NO DISPONIBLE: las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}). Dile a Alberto que pida el precio desde la ficha del cliente (/correduria).`, ok: true }
   }
@@ -1049,6 +1173,27 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
   const ramo: RamoTarif = e.ramo
   const moto = ramo === 'moto'
   const clienteId = e.clienteId
+
+  // Con riesgo: propietario y conductores salen de sus figuras (fichas). Se lee ANTES de gastar nada.
+  let figuras: Partial<Record<RolExtra, string>> = {}
+  let nombresFig: Partial<Record<RolExtra, string>> = {}
+  const huecosFig: string[] = []
+  if (e.oportunidadId) {
+    const l = await riesgoAsegura(e.oportunidadId).then((x) => interpretarRiesgo(x.status, x.json)).catch(() => null)
+    if (!l || l.estado === 'error') return { texto: `ERROR: no he podido leer el riesgo${l ? ` (${l.motivo})` : ''}. No pidas precio todavía: sin él saldría con el tomador en todos los papeles.`, ok: false }
+    if (l.estado === 'no_encontrado') return { texto: 'NO SE PUEDE: no existe esa oportunidad (búscala con oportunidades_cliente).', ok: true }
+    if (tomadorDelRiesgo(l.riesgo) !== clienteId) return { texto: 'NO SE PUEDE: esa oportunidad es de otro tomador. Usa el clienteId del tomador de esa oportunidad.', ok: true }
+    if (l.riesgo.oportunidad.ramo !== ramo) return { texto: `NO SE PUEDE: esa oportunidad es de ${l.riesgo.oportunidad.ramo}, no de ${ramo}. Usa la oportunidad de ${ramo} (o ábrela).`, ok: true }
+    const v = varianteDeRiesgo(l.riesgo, clienteId, null)
+    figuras = v.figuras
+    for (const rol of Object.keys(figuras) as RolExtra[]) {
+      nombresFig[rol] = v.nombres[rol] ?? 'otra ficha'
+      const falta = v.faltan[rol]
+      // null = no se ha podido leer su ficha: sin saber qué le falta no se gastan 0,50€.
+      if (falta === null || falta === undefined) huecosFig.push(`${rol.replace('_', ' ')} (${v.nombres[rol] ?? 'otra ficha'}): no he podido comprobar su ficha; inténtalo en un rato`)
+      else if (falta.length) huecosFig.push(`${rol.replace('_', ' ')} (${v.nombres[rol] ?? 'otra ficha'}): le falta en su ficha ${falta.join(', ')}`)
+    }
+  }
 
   const [pre, garajes, civiles, marcas] = await Promise.all([
     moto ? precalificarMotoNuevaAsegura({ clienteId }) : precalificarAutoNuevaAsegura({ clienteId }),
@@ -1080,7 +1225,7 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
 
   // Sin vehículo dictado: el de la última petición de precio de este cliente y ramo (gratis), si es la
   // misma matrícula. Solo el vehículo: garaje y km se vuelven a decir, que suele ser lo que se corrige.
-  const previo = !e.marca && !e.modelo && !e.version ? await vehiculoPrevio(clienteId, ramo, e.matricula) : null
+  const previo = !e.marca && !e.modelo && !e.version ? await vehiculoPrevio(clienteId, ramo, e.matricula, e.oportunidadId) : null
 
   // Vehículo: marca → modelo → combustible → versión, cada paso contra su catálogo.
   const marca = previo ? null : elegir('marca', marcas, e.marca)
@@ -1156,7 +1301,7 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
   let companiaAnterior: Opcion | null = null
   if (e.historial) companiaAnterior = elegir('companiaAnterior', await catalogoOpciones({ tipo: 'companias-anteriores' }), e.historial.compania)
 
-  const huecos = [...errores, ...huecosPendientes(piezas, p.faltan, e.persona)]
+  const huecos = [...errores, ...huecosPendientes(piezas, p.faltan, e.persona), ...huecosFig]
   const vehiculoOk = previo ? true : !!(marca && modelo && motor)
   if (huecos.length || !vehiculoOk || !version || !matricula || !fechaMatriculacion || !garaje || !estadoCivil || !municipio || (e.historial && !companiaAnterior)) {
     return {
@@ -1172,16 +1317,21 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
     historial: e.historial && companiaAnterior ? { ...e.historial, companiaCodigo: companiaAnterior.id } : null,
     kmAnuales: e.kmAnuales,
   })
+  const cuerpoGuardado = { ...cuerpo, ...(e.oportunidadId ? { oportunidadId: e.oportunidadId, figuras } : {}) }
   // Los supuestos de asegura que lo dictado ya tapa, fuera: si no, el resumen diría «se supone» de algo que Alberto dijo.
   const tapados = new Set([...Object.keys(cuerpo.correcciones), ...Object.keys(cuerpo.resueltos), 'estadoCivil', 'municipioCirculacionId', 'cpCirculacion'])
   const todos = [...p.supuestos.filter((s) => !tapados.has(s.campo)), ...supuestos]
 
-  await prisma.$executeRaw(Prisma.sql`
-    UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
-    WHERE estado = 'propuesta' AND (caduca_at <= now() OR (cliente_id = ${clienteId}::uuid AND ramo = ${ramo}))`).catch(() => {})
+  // Con botón, una propuesta nueva jubila la anterior del mismo cliente y ramo (dos botones vivos confunden).
+  // Sin botón no: la anterior puede estar ya en la cola de este turno o de otro, y se le dijo a Alberto «PEDIDO».
+  await prisma.$executeRaw(ctx.autonomo
+    ? Prisma.sql`UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
+        WHERE estado = 'propuesta' AND caduca_at <= now()`
+    : Prisma.sql`UPDATE correduria_asistente_tarificacion SET estado = 'caducada', decidida_at = now(), cuerpo = NULL
+        WHERE estado = 'propuesta' AND (caduca_at <= now() OR (cliente_id = ${clienteId}::uuid AND ramo = ${ramo}))`).catch(() => {})
   const [fila] = await prisma.$queryRaw<{ id: bigint }[]>(Prisma.sql`
     INSERT INTO correduria_asistente_tarificacion (turno_id, cliente_id, ramo, cuerpo, prima_actual, caduca_at)
-    VALUES (${turnoId}, ${clienteId}::uuid, ${ramo}, ${JSON.stringify(cuerpo)}::jsonb, ${e.primaActual},
+    VALUES (${turnoId}, ${clienteId}::uuid, ${ramo}, ${JSON.stringify(cuerpoGuardado)}::jsonb, ${e.primaActual},
             now() + make_interval(mins => ${MINUTOS_PROPUESTA}::int))
     RETURNING id`)
   const texto = textoPropuesta({
@@ -1191,8 +1341,30 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
     matricula, fechaMatriculacion, garaje: garaje.nombre, estadoCivil: estadoCivil.nombre, municipio: municipio.nombre,
     persona: e.persona,
     historial: e.historial && companiaAnterior ? { ...e.historial, compania: companiaAnterior.nombre } : null,
-    primaActual: e.primaActual, supuestos: todos,
+    primaActual: e.primaActual, supuestos: todos, figuras: nombresFig, autonomo: ctx.autonomo,
   })
+  if (ctx.autonomo) {
+    // Se pide al terminar el turno (tarda hasta 170 s): el tope diario y el «un solo uso» son los del botón.
+    const descartar = () => prisma.$executeRaw(Prisma.sql`
+      UPDATE correduria_asistente_tarificacion SET estado = 'descartada', decidida_at = now(), cuerpo = NULL WHERE id = ${fila.id}`).catch(() => {})
+    if (ctx.diferidas.length > 0) {
+      await descartar()
+      return { texto: 'UNO POR MENSAJE: ya hay un precio pedido en este mensaje. Dile a Alberto que te pida el siguiente en otro mensaje (no se ha pedido, 0€).', ok: true }
+    }
+    const hoy = await tarificacionesDeHoy()
+    if (hoy === null || hoy >= MAX_TARIFICACIONES_DIA) {
+      await descartar()
+      return { texto: hoy === null ? 'NO SE PUEDE AHORA: no he podido contar los precios de hoy; no se ha pedido nada (0€).' : `TOPE: ya van ${MAX_TARIFICACIONES_DIA} precios hoy por Telegram; no se ha pedido nada (0€). Que lo pida en la ficha.`, ok: true }
+    }
+    const enviado = await tgSend(texto).catch(() => null)
+    if (enviado === null) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE correduria_asistente_tarificacion SET estado = 'descartada', decidida_at = now(), cuerpo = NULL WHERE id = ${fila.id}`).catch(() => {})
+      return { texto: 'ERROR: no he podido mandarle a Alberto el resumen de lo que se va a pedir, así que NO se ha pedido (0€). Dile que lo intente otra vez.', ok: false }
+    }
+    ctx.diferidas.push(Number(fila.id))
+    return { texto: 'PEDIDO: el precio (0,50€) se está pidiendo con esos datos; le llega a Alberto en un mensaje aparte en 1-3 minutos. NO digas ningún precio: aún no lo sabes.', ok: true }
+  }
   const enviado = await tgSendButtons(texto, [[
     { texto: '💶 Pedir precio (0,50€)', callback: `cas_tarif:${fila.id}` },
     { texto: '✖️ No', callback: `cas_tarifno:${fila.id}` },
@@ -1210,8 +1382,10 @@ async function proponerTarificacion(args: Record<string, unknown>, turnoId: numb
  * (o no se ha dicho ninguna). Gratis: solo lee lo ya pagado. Un fallo de lectura = no se reutiliza y se
  * pregunta el vehículo, que es lo de siempre (nunca se inventa).
  */
-async function vehiculoPrevio(clienteId: string, ramo: RamoTarif, matricula: string | null): Promise<{ vehiculo: VehiculoGuardado; de: string } | null> {
-  const r = await tarificacionNuevaGuardadaAsegura(clienteId, ramo).catch(() => null)
+async function vehiculoPrevio(clienteId: string, ramo: RamoTarif, matricula: string | null, oportunidadId: string | null = null): Promise<{ vehiculo: VehiculoGuardado; de: string } | null> {
+  // La del riesgo si la hay; si no, la última del cliente (la de antes de colgarla de una oportunidad).
+  const deRiesgo = oportunidadId ? await tarificacionNuevaGuardadaAsegura(clienteId, ramo, { oportunidadId }).catch(() => null) : null
+  const r = deRiesgo?.estado === 'ok' ? deRiesgo : await tarificacionNuevaGuardadaAsegura(clienteId, ramo).catch(() => null)
   if (!r || r.estado !== 'ok' || !r.guardada.vehiculo) return null
   const v = r.guardada.vehiculo
   const igual = (a: string, b: string) => a.replace(/[\s-]/g, '').toUpperCase() === b.replace(/[\s-]/g, '').toUpperCase()
@@ -1248,7 +1422,10 @@ async function tarificacionesDeHoy(): Promise<number | null> {
     .then((r) => Number(r[0]?.n ?? 0)).catch(() => null)
 }
 
-type FilaTarif = { cliente_id: string; ramo: RamoTarif; cuerpo: { resueltos?: Record<string, unknown>; correcciones?: Record<string, unknown> }; prima_actual: number | null }
+type FilaTarif = {
+  cliente_id: string; ramo: RamoTarif; prima_actual: number | null
+  cuerpo: { resueltos?: Record<string, unknown>; correcciones?: Record<string, unknown>; oportunidadId?: string; figuras?: Record<string, string> }
+}
 
 /**
  * Botón «Pedir precio (0,50€)». Corre en `after()` del webhook (la cotización tarda hasta 170 s). Mismo
@@ -1303,7 +1480,10 @@ export async function tarificarDesdeBoton(arg: string): Promise<void> {
   const url = urlCliente(fila.cliente_id)
   let res: RespuestaRetarificar
   try {
-    const entrada = { clienteId: fila.cliente_id, solicitadoPor: ACTOR_EMISION_TG, resueltos: fila.cuerpo?.resueltos, correcciones: fila.cuerpo?.correcciones }
+    const entrada = {
+      clienteId: fila.cliente_id, solicitadoPor: ACTOR_EMISION_TG, resueltos: fila.cuerpo?.resueltos, correcciones: fila.cuerpo?.correcciones,
+      oportunidadId: fila.cuerpo?.oportunidadId ?? null, figuras: fila.cuerpo?.figuras ?? null,
+    }
     res = fila.ramo === 'moto' ? await cotizarMotoNuevaAsegura(entrada) : await cotizarAutoNuevaAsegura(entrada)
   } catch (e) {
     // Las dos no lanzan; si algo lo hace, el cargo puede existir: incierta, nunca «no se ha gastado».
@@ -1361,6 +1541,7 @@ async function documentosPendientes(): Promise<number | null> {
 
 /** Texto libre de Alberto para la correduría → contesta por Telegram. Nunca lanza. */
 export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> {
+  const inicio = Date.now()
   const pregunta = sinPrefijo(textoOriginal) || textoOriginal.trim()
   if (apagado(process.env.CORREDURIA_ASISTENTE_APAGADO)) {
     await tgSend('🛡️ El asistente de la correduría está apagado ahora mismo.').catch(() => {})
@@ -1410,7 +1591,9 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
 
   const reglas = await reglasActivas()
   const [historial, pendientes] = await Promise.all([historialReciente(), documentosPendientes()])
-  const system = [systemAsistente((reglas ?? []).map((r) => r.texto), hoyMadrid()), historial.memoria, avisoDocumentosPendientes(pendientes)]
+  const autonomo = autonomoActivo(process.env.CORREDURIA_ASISTENTE_AUTONOMO)
+  const diferidas: number[] = []
+  const system = [systemAsistente((reglas ?? []).map((r) => r.texto), hoyMadrid(), autonomo), historial.memoria, avisoDocumentosPendientes(pendientes)]
     .concat(reglas === null ? ['(No se han podido leer las preferencias aprendidas: si Alberto pregunta por ellas, dilo.)'] : [])
     .filter(Boolean).join('\n\n')
   // A la IA va la pregunta TAL CUAL (si Alberto busca por DNI, la IA necesita el DNI para buscarlo;
@@ -1427,6 +1610,8 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
 
   try {
     for (let vuelta = 0; vuelta < MAX_VUELTAS; vuelta++) {
+      // Tope de tiempo: el webhook muere a los 300 s y una petición de precio diferida tarda hasta 170.
+      if (Date.now() - t0 > SEGUNDOS_BUCLE * 1000) break
       const r = await openrouterChatTools(or, mensajes, HERRAMIENTAS as unknown as unknown[], {
         // OpenRouter rechaza con 400 un `models` de más de 3 (ver lib/pasarela.ts).
         system, models: [model, ...fallbacks].slice(0, 3), maxTokens: 900, temperature: 0.2,
@@ -1449,9 +1634,10 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
           mensajes.push({ role: 'tool', tool_call_id: c.id, content: `YA CONSULTADO con estos mismos datos: el resultado es el de antes. NO repitas esta llamada; decide con lo que tienes o pregúntale a Alberto.\n${previa}` })
           continue
         }
-        const res = await ejecutar(c.function?.name ?? '', args, { turnoId, reglas }).catch((e) => ({ texto: `ERROR: ${e instanceof Error ? e.message : 'fallo'}. NO digas que no hay datos.`, ok: false }))
+        const res = await ejecutar(c.function?.name ?? '', args, { turnoId, reglas, autonomo, diferidas }).catch((e) => ({ texto: `ERROR: ${e instanceof Error ? e.message : 'fallo'}. NO digas que no hay datos.`, ok: false }))
         // Solo lo que salió bien: un fallo (red, tiempo) se puede reintentar.
-        if (res.ok) yaConsultado.set(clave, res.texto)
+        // Una lectura que falló se puede reintentar; una ESCRITURA no, salga como salga (pudo aplicarse).
+        if (res.ok || HERRAMIENTAS_ESCRITURA.has(c.function?.name ?? '')) yaConsultado.set(clave, res.texto)
         consultado.push(`${c.function?.name ?? '?'}: ${res.texto.slice(0, 1500)}`)
         rastro.push({ nombre: c.function?.name ?? '?', args: rastroArgs(c.function?.name ?? '', args), ok: res.ok })
         mensajes.push({ role: 'tool', tool_call_id: c.id, content: res.texto })
@@ -1465,7 +1651,7 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
       const cierre = `${pregunta}\n\nLo que ya has consultado:\n${consultado.join('\n\n').slice(-12_000)}\n\nSe han acabado las consultas de esta pregunta: contéstame ya con lo que has averiguado, qué falta y cuál es el siguiente paso concreto.`
       const r = await openrouterChatEx(or, [{ role: 'user', content: cierre }], {
         system, models: [model, ...fallbacks].slice(0, 3), maxTokens: 900, temperature: 0.2,
-        privacidad: true, provider: PROVEEDOR_PRIVADO, signal: AbortSignal.timeout(40_000),
+        privacidad: true, provider: PROVEEDOR_PRIVADO, signal: AbortSignal.timeout(25_000),
       }).catch(() => null)
       if (r) {
         modelo = r.model
@@ -1493,6 +1679,17 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
     { texto: '👎', callback: `cas_mal:${turnoId}` },
   ]]).catch(() => null)
   if (enviado === null) await tgSend(`🛡️ ${escapeHtml(respuesta)}`).catch(() => {})
+  // Los precios pedidos en este turno, uno detrás de otro y después de la respuesta: cada uno avisa solo.
+  for (const id of diferidas) {
+    // Sin tiempo para que acabe dentro del webhook, NO se empieza: una petición cortada a medias puede cobrarse y no avisar.
+    if ((Date.now() - inicio) / 1000 + SEGUNDOS_PRECIO > SEGUNDOS_WEBHOOK) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE correduria_asistente_tarificacion SET estado = 'descartada', decidida_at = now(), cuerpo = NULL WHERE id = ${id} AND estado = 'propuesta'`).catch(() => {})
+      await tgSend('⏱️ No me ha dado tiempo a pedir el precio en este mensaje: NO se ha pedido nada (0€). Pídemelo otra vez en un mensaje corto.').catch(() => {})
+      continue
+    }
+    await tarificarDesdeBoton(String(id)).catch((e) => console.error('[correduria-tg] precio diferido', id, e))
+  }
 }
 
 // ── Botones y notas ──────────────────────────────────────────────────────────────────────────────

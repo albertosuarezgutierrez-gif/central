@@ -1,12 +1,15 @@
 // Asistente de la CORREDURÍA por Telegram (fase 1, 26/09/2026) — parte PURA (sin `@/` ni prisma →
 // node --test). Alberto le pregunta por clientes, pólizas, vencimientos o impagados y el asistente
 // contesta leyendo la cartera por el puerto de asegura. Solo habla con Alberto. Lo que escribe en la
-// cartera (emitir, corregir la ficha, abrir una oportunidad) lo PROPONE y lo aplica Alberto con un botón.
+// cartera lo HACE solo (29/09/2026, Alberto: «tiene que hacerme todo el trabajo»), salvo emitir y lo que
+// sale a un tercero (presupuesto, portal), que siguen con botón. Interruptor: `CORREDURIA_ASISTENTE_AUTONOMO`.
 //
 // Tres reglas de la casa que viven aquí y no en el prompt, porque un prompt se puede saltar:
 // - Lo que NO trae una herramienta es «no consta», nunca «no tiene» (dato no mirado ≠ dato que no hay).
 // - DNI/NIE, IBAN y tarjetas salen ENMASCARADOS hacia Telegram y hacia la IA.
 // - Lo que aprende son PREFERENCIAS de trabajo; los datos de un cliente van a la cartera, no a su memoria.
+
+import { TIPOS_RELACION } from '@central/module-seguros'
 
 // ── ¿Es un mensaje para la correduría? ───────────────────────────────────────────────────────────
 
@@ -128,7 +131,7 @@ export type NombreHerramienta =
   | 'anulaciones_pendientes' | 'proponer_regla' | 'listar_reglas' | 'olvidar_regla' | 'preparar_emision'
   | 'proponer_correccion' | 'proponer_oportunidad' | 'mi_dia' | 'oportunidades_cliente'
   | 'proponer_tarea' | 'registrar_llamada' | 'anotar_nota' | 'abrir_siniestro' | 'invitar_portal' | 'enviar_presupuesto'
-  | 'vehiculo_catalogo' | 'proponer_tarificacion'
+  | 'vehiculo_catalogo' | 'proponer_tarificacion' | 'alta_cliente' | 'figura_riesgo'
 
 const fn = (name: NombreHerramienta, description: string, properties: Record<string, unknown> = {}, required: string[] = []) => ({
   type: 'function',
@@ -223,7 +226,8 @@ export const HERRAMIENTAS = [
   fn('proponer_tarificacion', 'Propón PEDIR PRECIO de COCHE (ramo auto) o MOTO para un cliente o lead de la cartera, con lo que Alberto te ha DICTADO. NO pide nada: el servidor resuelve cada dato contra los catálogos, y si falta algo te devuelve «FALTAN DATOS» con la lista (pregúntaselo a Alberto y vuelve a llamar con TODO lo anterior más lo nuevo). Cuando esté completo, Alberto recibe el resumen con el botón «Pedir precio (0,50€)». Pasa marca/modelo/versión/combustible como ids de vehiculo_catalogo o tal cual los dijo. Si YA se pidió precio antes para ese cliente y ramo (p. ej. para corregir un dato), NO preguntes el vehículo: llámala sin marca/modelo/versión y se reutiliza el de la última petición (misma matrícula). Nunca inventes un dato personal ni el historial.',
     {
       ramo: { type: 'string', enum: ['auto', 'moto'] },
-      clienteId: { type: 'string', description: 'La ficha (de buscar). Si es un lead nuevo, primero hay que abrirle ficha en la intranet.' },
+      clienteId: { type: 'string', description: 'La ficha del TOMADOR (de buscar). Si es un lead nuevo, dale de alta antes con alta_cliente.' },
+      oportunidadId: { type: 'string', description: 'La oportunidad del riesgo. OBLIGATORIA si el propietario o algún conductor no es el tomador (ponlos antes con figura_riesgo): sin ella se cotiza con el tomador en todos los papeles.' },
       marca: { type: 'string' }, modelo: { type: 'string' }, motor: { type: 'string', description: 'Combustible' }, version: { type: 'string' },
       matricula: { type: 'string' },
       kmAnuales: { type: 'integer', description: 'Km al año, solo si Alberto los dice (si no, se supone la media)' },
@@ -241,6 +245,31 @@ export const HERRAMIENTAS = [
       siniestrosUltimos5: { type: 'integer', description: 'Solo si Alberto lo dice' },
       primaActual: { type: 'number', description: 'Lo que paga hoy al año, si lo dice (para comparar)' },
     }, ['ramo', 'clienteId']),
+  fn('alta_cliente', 'Da de ALTA una ficha nueva (lead) con lo que Alberto te ha DICTADO (un lead que le ha escrito por WhatsApp, p. ej.). Úsala solo si buscar no lo encuentra. Hace falta el nombre y al menos DNI/NIE, teléfono o email; nunca inventes ninguno. Si el sistema dice que ya existe una ficha con ese DNI, usa esa. Con un teléfono o email que ya tiene otra ficha, el sistema te lo dice: pregúntale a Alberto si es otra persona y solo entonces repite con forzar=true.',
+    {
+      nombre: { type: 'string' }, apellidos: { type: 'string' },
+      dni: { type: 'string', description: 'DNI o NIE' },
+      fechaNacimiento: { type: 'string', description: 'dd/mm/aaaa' },
+      telefono: { type: 'string' }, email: { type: 'string' },
+      direccion: { type: 'string', description: 'Calle, número, piso' }, codigoPostal: { type: 'string' }, ciudad: { type: 'string' }, provincia: { type: 'string' },
+      fuente: { type: 'string', enum: ['whatsapp', 'recomendacion', 'web', 'venta_directa', 'otros'], description: 'Por dónde llegó (whatsapp si te lo pasa de un WhatsApp)' },
+      forzar: { type: 'boolean', description: 'SOLO si Alberto confirma que es otra persona distinta de la ficha que comparte teléfono/email' },
+    }, ['nombre']),
+  fn('figura_riesgo', 'Pone a una persona en un PAPEL del riesgo (oportunidad) distinto del tomador: propietario del vehículo, conductor habitual u ocasional. Con clienteId si ya tiene ficha (búscala); si no, con persona (la da de alta y la vincula al tomador). Úsala ANTES de proponer_tarificacion cuando el propietario o el conductor no son el tomador. quitar=true devuelve el papel al tomador.',
+    {
+      oportunidadId: { type: 'string', description: 'La oportunidad del riesgo (de oportunidades_cliente)' },
+      rol: { type: 'string', enum: ['propietario', 'conductor_habitual', 'conductor_ocasional'] },
+      clienteId: { type: 'string', description: 'Ficha de esa persona, si ya existe' },
+      tipoRelacion: { type: 'string', enum: [...TIPOS_RELACION], description: 'Qué es del tomador (solo con persona nueva)' },
+      persona: {
+        type: 'object', description: 'Solo si NO tiene ficha: sus datos dictados',
+        properties: {
+          nombre: { type: 'string' }, apellidos: { type: 'string' }, dni: { type: 'string' }, fechaNacimiento: { type: 'string', description: 'dd/mm/aaaa' },
+          telefono: { type: 'string' }, email: { type: 'string' }, sexo: { type: 'string', enum: ['hombre', 'mujer'] }, estadoCivil: { type: 'string' },
+        },
+      },
+      quitar: { type: 'boolean' },
+    }, ['oportunidadId', 'rol']),
   fn('enviar_presupuesto', 'Rescata la ÚLTIMA tarificación ya pagada de un cliente SIN póliza (oportunidad nueva) para ese ramo, prepara el presupuesto y le manda el correo para que elija la opción en su portal. Necesitas sus exigencias y necesidades (qué quiere asegurar y qué le importa): si Alberto no las ha dicho, PREGÚNTASELAS, nunca las inventes. Alberto lo manda con un botón: ES UN CORREO AL CLIENTE. Si el cliente avisó desde el portal de que un dato está mal (garaje, km, conductor…), NO la uses para reenviar: esos precios no valen; pide precio otra vez con proponer_tarificacion y el dato corregido, y solo después enviar_presupuesto.',
     {
       clienteId: { type: 'string', description: 'La ficha (sácala de buscar; la matrícula también sirve para buscar)' },
@@ -279,7 +308,22 @@ export function reglaConDatoPersonal(regla: string): boolean {
 
 // ── Prompt ───────────────────────────────────────────────────────────────────────────────────────
 
-export function systemAsistente(reglas: readonly string[], hoyIso: string): string {
+/**
+ * Lo que dice el prompt cuando el asistente HACE en vez de proponer (29/09/2026). Emitir y lo que sale a
+ * un tercero (presupuesto, portal) siguen con botón: es la regla de comunicaciones salientes de la casa.
+ */
+const MODO_AUTONOMO: readonly string[] = [
+  '- Trabajas como el corredor: HACES el trabajo administrativo tú. Las escrituras en la cartera se ejecutan en cuanto llamas a la herramienta (sin botón): alta_cliente, figura_riesgo, proponer_correccion, proponer_oportunidad, proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro y proponer_tarificacion (pide el precio de verdad: 0,50€). Di a Alberto SOLO lo que el sistema confirme como hecho; si devuelve error o «no sé si se ha hecho», dilo tal cual y no lo repitas.',
+  '- Lo que sale a un tercero (enviar_presupuesto = correo al cliente, invitar_portal) y emitir (preparar_emision) siguen con BOTÓN: el sistema se lo manda a Alberto y es él quien pulsa. NUNCA digas que se ha enviado o emitido.',
+  '- Antes de escribir, asegúrate de que tienes los datos: si falta algo imprescindible (el nombre de un lead, qué papel tiene cada persona), pregúntaselo a Alberto en vez de suponerlo. Nunca inventes un DNI, una fecha ni un teléfono.',
+  '- Lead nuevo que pide precio de coche o moto: buscar → si no está, alta_cliente con lo dictado (sin nombre no hay alta: pregúntalo) → proponer_oportunidad (clienteId, ramo) → si el propietario o un conductor no es el tomador, figura_riesgo (con la oportunidad) → vehiculo_catalogo (con filtro; nunca repitas una consulta con los mismos datos; si la versión exacta no sale, pásala tal cual la dijo) → proponer_tarificacion con la oportunidadId. Si contesta FALTAN DATOS, pregúntale exactamente eso.',
+  '- «Cámbiale el propietario / pon de conductor a X»: oportunidades_cliente para la oportunidad → figura_riesgo → proponer_tarificacion con esa oportunidadId (reutiliza el vehículo si ya se pidió precio). El precio te llega en un mensaje aparte.',
+  '- Oportunidades con documentos: si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true y no le preguntes lo que ya pone. Si el sistema contesta YA ES NUESTRA, díselo con el enlace.',
+  '- Correcciones de la ficha con proponer_correccion: dirección, CP, ciudad, provincia, nombre o apellidos, solo con valores que Alberto te haya dicho. DNI, fecha de nacimiento, teléfonos, emails e IBAN todavía se cambian en la ficha.',
+  '- Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy.',
+]
+
+export function systemAsistente(reglas: readonly string[], hoyIso: string, autonomo = false): string {
   const l = [
     'Eres el asistente de la correduría de seguros de Alberto (Grupo ASegura). Hablas SOLO con Alberto, por Telegram.',
     `Hoy es ${hoyIso}.`,
@@ -290,10 +334,11 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
     '- Si una búsqueda da varios clientes posibles, enuméralos y pregunta cuál; no elijas tú.',
     '- Para «¿qué tengo hoy?», «¿a quién llamo?» o «¿qué hay pendiente?» usa mi_dia. Las oportunidades de un cliente, con oportunidades_cliente.',
     '- La búsqueda por DNI, teléfono o email solo alcanza a una parte de las fichas (lo dice cada bloque): si no aparece, di que no lo encuentras por ese dato y prueba por nombre o matrícula; NUNCA digas que no es cliente.',
-    '- Tú no mandas mensajes a clientes ni anulas pólizas: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
+    ...(autonomo ? MODO_AUTONOMO : ['- Tú no mandas mensajes a clientes ni anulas pólizas: eso se hace en la intranet (/correduria). Lo único que puedes tocar de la cartera es PROPONER una corrección de la ficha con proponer_correccion (dirección, CP, ciudad, provincia, nombre o apellidos), solo con valores que Alberto te haya dicho, o abrir una oportunidad (abajo); él lo aplica con el botón. NUNCA digas que la ficha está corregida antes de que lo confirme el sistema. DNI, fecha de nacimiento, teléfonos, emails e IBAN se cambian en la ficha.',
     '- Oportunidades: puedes PROPONER abrir una con proponer_oportunidad (lead o cliente que tiene un seguro con otra compañía). Si Alberto habla de un documento que acaba de subir, pasa usarDocumentos=true. Si ha subido el documento y NO dice de quién es, NO le preguntes el nombre: llama SIN clienteId y con usarDocumentos=true; el sistema lee el tomador, lo busca por su DNI y, si no está en la cartera, le propone crear el lead y abrir la oportunidad con un solo botón. Pregúntale solo si el sistema te lo pide (varias fichas, documento sin DNI o sin tomador). Tú sabes más que él de ese documento: si hay uno reciente y pide una oportunidad —también «otra», «la segunda», «del mismo cliente», «abre oportunidad» a secas— pasa usarDocumentos=true y NO le preguntes ramo, compañía, prima, vencimiento ni si es otro seguro: lo lee el sistema del documento y decide solo si es el mismo seguro que una que ya tenga (por nº de póliza, matrícula y compañía). Si el sistema contesta YA ES NUESTRA, díselo con el enlace: esa póliza ya la llevamos y no se abre nada. NUNCA digas que está abierta ni que el lead está creado: eso solo lo confirma el sistema tras el botón.',
     '- Acciones del día a día (todas con botón que pulsa Alberto): proponer_tarea, registrar_llamada, anotar_nota, abrir_siniestro, invitar_portal, enviar_presupuesto («rescata/mándale el presupuesto de la moto»). Úsalas cuando Alberto te lo pida («apunta que…», «llámale el jueves», «ha tenido un golpe con el coche…»). Las fechas relativas («el jueves», «mañana») conviértelas tú a aaaa-mm-dd con la fecha de hoy. NUNCA digas que está hecho: eso lo confirma el sistema tras el botón.',
     '- Pedir precio de COCHE o MOTO: busca al cliente PRIMERO. Si buscar no lo encuentra (lead nuevo, sin ficha), NO consultes el catálogo ni nada más: dile a Alberto que no tiene ficha y que sin ficha no se puede pedir precio desde aquí; que la cree en /correduria/cliente/nuevo (o te mande un documento suyo con el DNI) y te vuelva a escribir; y dile ya qué datos le faltan de los que dictó (nombre y apellidos, sexo, teléfono…). Con ficha: usa vehiculo_catalogo para el vehículo (con filtro; nunca repitas una consulta con los mismos datos; si la versión exacta no sale, pásala tal cual la dijo) y llama a proponer_tarificacion con lo que Alberto dijo. Si contesta FALTAN DATOS, pregúntale a Alberto exactamente eso y vuelve a llamar con todo. El botón cuesta 0,50€ y lo pulsa él; el precio le llega solo a él (nada sale al cliente). NUNCA digas que ya has pedido el precio.',
+    ]),
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos.',
     '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: dile que los cambie en la ficha.',
@@ -308,12 +353,20 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string): stri
 
 // ── Límites ──────────────────────────────────────────────────────────────────────────────────────
 
-/** Vueltas máximas del bucle herramienta→IA por pregunta. Una pregunta normal usa 2-3. */
-export const MAX_VUELTAS = 7
+/** Vueltas máximas del bucle herramienta→IA por pregunta. Una pregunta normal usa 2-3; un lead de punta a punta (alta → oportunidad → figura → catálogo → precio), ~8. */
+export const MAX_VUELTAS = 12
 /** Preguntas máximas al día: tope duro contra un bucle o un reenvío masivo, aparte del tope en €. */
 export const MAX_TURNOS_DIA = 150
 /** Días que se guarda el TEXTO de preguntas y respuestas; después queda solo el rastro de acceso. */
 export const DIAS_RETENCION_TEXTO = 90
+
+/**
+ * ¿Hace sin botón? Sí por defecto (Alberto, 29/09/2026); `CORREDURIA_ASISTENTE_AUTONOMO` a un «no»
+ * lo devuelve a proponer con botón. Emitir y lo que sale a terceros llevan botón en los dos modos.
+ */
+export function autonomoActivo(valor: string | undefined): boolean {
+  return !/^(0|false|no|off)$/i.test((valor ?? '').trim())
+}
 
 /** ¿El interruptor de apagado está echado? Cualquier valor «sí» en `CORREDURIA_ASISTENTE_APAGADO`. */
 export function apagado(valor: string | undefined): boolean {
@@ -351,7 +404,12 @@ export function rastroArgs(nombre: string, args: Record<string, unknown> | null)
   }
   if (nombre === 'proponer_tarificacion') {
     // DNI, teléfono, fechas y matrícula son datos personales: al rastro solo van el cliente, el ramo y QUÉ se dijo.
-    return { clienteId: args.clienteId, ramo: args.ramo, campos: Object.keys(args).filter((k) => k !== 'clienteId' && k !== 'ramo') }
+    return { clienteId: args.clienteId, ramo: args.ramo, oportunidadId: args.oportunidadId, campos: Object.keys(args).filter((k) => k !== 'clienteId' && k !== 'ramo' && k !== 'oportunidadId') }
+  }
+  // Alta y figuras: nombre, DNI, teléfono… son datos personales. Al rastro, solo QUÉ se dijo.
+  if (nombre === 'alta_cliente') return { campos: Object.keys(args), forzar: args.forzar === true }
+  if (nombre === 'figura_riesgo') {
+    return { oportunidadId: args.oportunidadId, rol: args.rol, clienteId: args.clienteId, quitar: args.quitar === true, nueva: typeof args.persona === 'object' && args.persona !== null }
   }
   if (nombre === 'vehiculo_catalogo') return { tipo: args.tipo, marcaId: args.marcaId, modeloId: args.modeloId, motor: args.motor }
   if (nombre === 'proponer_oportunidad') {
@@ -442,3 +500,77 @@ export function pieDeCorreduria(pie: string): boolean {
   if (!t) return false
   return PREFIJO.test(t) || /\b(leads?|leds|oportunidad(?:es)?|cliente|clientes|p[oó]liza de (?:un|una|mi) cliente)\b/i.test(t)
 }
+
+// ── Alta y figuras dictadas (29/09/2026) ─────────────────────────────────────────────────────────
+
+type Coincidente = { id: string; nombre: string; por: string }
+
+function coincidentes(json: unknown): Coincidente[] {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
+  const l = Array.isArray(o.coincidencias) ? o.coincidencias : []
+  return l.flatMap((x) => {
+    const c = typeof x === 'object' && x !== null ? (x as Record<string, unknown>) : {}
+    return typeof c.id === 'string' ? [{ id: c.id, nombre: String(c.nombre ?? ''), por: String(c.por ?? '') }] : []
+  })
+}
+
+/**
+ * Respuesta de `POST /api/operador/cliente` → lo que lee la IA. Un DNI repetido es la MISMA persona
+ * (usa esa ficha); un teléfono o email repetidos pueden ser otra (matrimonio, padre e hijo) y solo se
+ * sigue con `forzar` si Alberto lo confirma. Un 5xx o sin respuesta es «no sé si se ha creado»: repetir
+ * a ciegas duplicaría la ficha.
+ */
+export function altaParaIA(status: number, json: unknown): { texto: string; ok: boolean; clienteId: string | null } {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
+  if (status === 201 && typeof o.id === 'string') {
+    return { texto: `HECHO: ficha creada (lead). clienteId=${o.id}. Úsalo para lo siguiente.`, ok: true, clienteId: o.id }
+  }
+  if (status === 409) {
+    const c = coincidentes(json)
+    const porDni = c.find((x) => x.por === 'dni')
+    if (porDni) return { texto: `YA EXISTE: ese DNI es de la ficha de ${porDni.nombre} (clienteId=${porDni.id}). NO se ha creado otra: usa esa.`, ok: true, clienteId: porDni.id }
+    const lista = c.map((x) => `${x.nombre} (clienteId=${x.id}, mismo ${x.por})`).join('; ')
+    return { texto: `NO CREADA: ${lista || 'otra ficha'} comparte ese dato. Pregúntale a Alberto si es la misma persona (usa esa ficha) o es otra (repite con forzar=true).`, ok: true, clienteId: null }
+  }
+  if (status === 0 || status >= 500) {
+    return { texto: 'NO SÉ SI SE HA CREADO (la cartera no ha contestado bien). NO la repitas: dile a Alberto que la busque antes.', ok: false, clienteId: null }
+  }
+  const motivo = typeof o.motivo === 'string' ? o.motivo : `HTTP ${status}`
+  return { texto: `NO CREADA: ${motivo}. Pregúntale a Alberto el dato que falta o está mal.`, ok: true, clienteId: null }
+}
+
+/** Respuesta de `POST/DELETE /api/operador/oportunidad/figuras` → lo que lee la IA. */
+export function figuraParaIA(status: number, json: unknown, rol: string, quitar: boolean): { texto: string; ok: boolean } {
+  const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
+  const papel = rol.replace('_', ' ')
+  if (status === 200 && o.estado === 'ok') {
+    if (quitar) return { texto: `HECHO: el papel de ${papel} vuelve a ser el tomador.`, ok: true }
+    const nueva = typeof o.clienteId === 'string'
+    return {
+      texto: `HECHO: ${papel} puesto en el riesgo${nueva ? ` (${o.existente === true ? 'ya tenía ficha' : 'ficha nueva creada'}: clienteId=${o.clienteId})` : ''}. Ahora proponer_tarificacion con esta oportunidadId.`,
+      ok: true,
+    }
+  }
+  if (status === 0 || status >= 500) return { texto: `NO SÉ SI SE HA PUESTO el ${papel} (la cartera no ha contestado bien). Míralo con oportunidades_cliente antes de repetir.`, ok: false }
+  const motivo = typeof o.motivo === 'string' ? o.motivo : `HTTP ${status}`
+  return { texto: `NO SE HA PUESTO el ${papel}: ${motivo}.`, ok: true }
+}
+
+/**
+ * El resumen que se escribió para el botón («¿Lo hago?», «revisa antes de pulsar»), dicho como lo que es
+ * en modo autónomo: algo que se está haciendo ya. Solo cambia las frases del botón; los datos, iguales.
+ */
+export function textoSinBoton(t: string): string {
+  return t
+    .replace(/¿Abro esta oportunidad para (<b>[^<]*<\/b>)\?/, 'Abro esta oportunidad para $1')
+    .replace('¿Creo el lead y le abro esta oportunidad?', 'Creo el lead y le abro esta oportunidad.')
+    .replace('¿Lo hago? · ', 'Lo hago · ')
+    .replace(' Revisa cada letra antes de pulsar.', '')
+    .replace(' Revísalos antes de abrir.', '')
+}
+
+/** Herramientas que ESCRIBEN: una llamada idéntica en el mismo turno no se repite nunca, salga bien o mal. */
+export const HERRAMIENTAS_ESCRITURA: ReadonlySet<string> = new Set([
+  'alta_cliente', 'figura_riesgo', 'proponer_correccion', 'proponer_oportunidad', 'proponer_tarea', 'registrar_llamada',
+  'anotar_nota', 'abrir_siniestro', 'invitar_portal', 'enviar_presupuesto', 'proponer_tarificacion', 'preparar_emision', 'proponer_regla',
+])

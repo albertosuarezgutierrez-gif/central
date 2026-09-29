@@ -4,6 +4,7 @@ import { test } from 'node:test'
 import {
   costeConservador, rastroArgs, tienePrefijo, apagado, clasificarDestino, diasValidos, enmascarar, idValido, leerArgumentos, leerClasificacion,
   paraIA, reglaConDatoPersonal, sinPrefijo, systemAsistente, turnoDeNota, preguntaNota,
+  altaParaIA, autonomoActivo, figuraParaIA, HERRAMIENTAS,
 } from './correduria-asistente.ts'
 
 test('reparto: el atajo y las palabras de la correduría van al asistente', () => {
@@ -94,7 +95,7 @@ test('el bucle no repite una consulta idéntica y cierra con una respuesta, no c
   const f = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
   assert.match(f, /yaConsultado\.get\(clave\)/)
   assert.match(f, /Se han acabado las consultas de esta pregunta/)
-  assert.match(f, /if \(res\.ok\) yaConsultado\.set/)
+  assert.match(f, /if \(res\.ok \|\| HERRAMIENTAS_ESCRITURA\.has\(c\.function\?\.name \?\? .*\)\) yaConsultado\.set/)
   // El cierre va sin herramientas: con ellas volvía a pedir otra consulta y salía vacío.
   const cierre = f.slice(f.indexOf('const cierre'), f.indexOf('No he llegado a una respuesta'))
   assert.match(cierre, /openrouterChatEx\(/)
@@ -150,4 +151,93 @@ test('enviar_presupuesto: si el cliente avisó de un dato mal, se vuelve a pedir
   const src = readFileSync(new URL('./correduria-asistente.ts', import.meta.url), 'utf8')
   const linea = src.split('\n').find((l) => l.includes("fn('enviar_presupuesto'")) ?? ''
   assert.match(linea, /dato está mal[\s\S]*NO la uses para reenviar[\s\S]*proponer_tarificacion/)
+})
+
+test('autónomo por defecto; solo un «no» explícito lo devuelve al botón (29/09/2026)', () => {
+  assert.equal(autonomoActivo(undefined), true)
+  assert.equal(autonomoActivo(''), true)
+  assert.equal(autonomoActivo('1'), true)
+  assert.equal(autonomoActivo('0'), false)
+  assert.equal(autonomoActivo('no'), false)
+  assert.equal(autonomoActivo('off'), false)
+})
+
+test('prompt autónomo: hace sin botón, pero emitir y lo que sale a un tercero siguen con botón', () => {
+  const a = systemAsistente([], '2026-09-29', true)
+  assert.match(a, /HACES el trabajo administrativo/)
+  assert.match(a, /enviar_presupuesto = correo al cliente, invitar_portal\) y emitir \(preparar_emision\) siguen con BOTÓN/)
+  assert.match(a, /alta_cliente con lo dictado \(sin nombre no hay alta/)
+  assert.doesNotMatch(a, /todas con botón que pulsa Alberto/)
+  const b = systemAsistente([], '2026-09-29')
+  assert.match(b, /todas con botón que pulsa Alberto/)
+  assert.doesNotMatch(b, /HACES el trabajo administrativo/)
+})
+
+test('alta dictada: DNI repetido = esa ficha; teléfono repetido = preguntar; 5xx = no sé', () => {
+  const ok = altaParaIA(201, { estado: 'ok', id: 'c1' })
+  assert.equal(ok.clienteId, 'c1')
+  assert.match(ok.texto, /^HECHO/)
+  const dni = altaParaIA(409, { estado: 'conflicto', coincidencias: [{ id: 'c2', nombre: 'Ana', por: 'dni' }], forzable: false })
+  assert.equal(dni.clienteId, 'c2')
+  assert.match(dni.texto, /^YA EXISTE/)
+  const tel = altaParaIA(409, { estado: 'conflicto', coincidencias: [{ id: 'c3', nombre: 'Luis', por: 'telefono' }], forzable: true })
+  assert.equal(tel.clienteId, null)
+  assert.match(tel.texto, /forzar=true/)
+  const caido = altaParaIA(502, null)
+  assert.equal(caido.ok, false)
+  assert.match(caido.texto, /NO SÉ SI SE HA CREADO/)
+  assert.match(altaParaIA(422, { estado: 'invalido', motivo: 'DNI no válido' }).texto, /DNI no válido/)
+})
+
+test('figura: hecho, fallo de red y rechazo se distinguen', () => {
+  assert.match(figuraParaIA(200, { estado: 'ok', clienteId: 'c9', existente: false }, 'propietario', false).texto, /ficha nueva creada: clienteId=c9/)
+  assert.match(figuraParaIA(200, { estado: 'ok' }, 'conductor_habitual', true).texto, /vuelve a ser el tomador/)
+  assert.equal(figuraParaIA(0, null, 'propietario', false).ok, false)
+  assert.match(figuraParaIA(409, { estado: 'error', motivo: 'ese DNI ya está en la ficha de X' }, 'propietario', false).texto, /ese DNI ya está/)
+})
+
+test('rastro: el alta y la figura no dejan datos personales, solo qué se dijo', () => {
+  const a = rastroArgs('alta_cliente', { nombre: 'Manuel', dni: 'X1234567L', telefono: '600000000' })
+  assert.deepEqual(a, { campos: ['nombre', 'dni', 'telefono'], forzar: false })
+  const f = rastroArgs('figura_riesgo', { oportunidadId: 'o1', rol: 'propietario', persona: { nombre: 'Manuel', dni: 'X1234567L' } })
+  assert.equal(JSON.stringify(f).includes('Manuel'), false)
+  assert.equal(JSON.stringify(f).includes('X1234567L'), false)
+})
+
+test('herramientas nuevas declaradas y el tope de vueltas da para un lead de punta a punta', () => {
+  const nombres = HERRAMIENTAS.map((h) => h.function.name)
+  assert.ok(nombres.includes('alta_cliente'))
+  assert.ok(nombres.includes('figura_riesgo'))
+  const t = HERRAMIENTAS.find((h) => h.function.name === 'proponer_tarificacion')
+  assert.ok(t && 'oportunidadId' in (t.function.parameters.properties as Record<string, unknown>))
+})
+
+test('autonomía en el código: el presupuesto y el portal NUNCA salen sin botón; emitir sigue con botón', () => {
+  const f = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
+  assert.match(f, /if \(autonomo && tipo !== 'portal' && tipo !== 'presupuesto'\)/)
+  const emision = f.slice(f.indexOf('async function prepararEmision'), f.indexOf('async function cerrarEmision'))
+  assert.doesNotMatch(emision, /autonomo/)
+  assert.match(emision, /tgSendButtons/)
+})
+
+test('sin botón: el resumen deja de preguntar «¿lo hago?» y de pedir «revisa antes de pulsar»', async () => {
+  const { textoSinBoton } = await import('./correduria-asistente.ts')
+  assert.equal(textoSinBoton('🎯 ¿Abro esta oportunidad para <b>Ana</b>?\n• Ramo: auto'), '🎯 Abro esta oportunidad para <b>Ana</b>\n• Ramo: auto')
+  assert.equal(textoSinBoton('🧾 ¿Lo hago? · Ana'), '🧾 Lo hago · Ana')
+  assert.equal(textoSinBoton('Se escribe en la ficha y queda en su historial. Revisa cada letra antes de pulsar.'), 'Se escribe en la ficha y queda en su historial.')
+})
+
+test('revisión del modo autónomo: escrituras sin reintento, un precio por mensaje, riesgo del mismo ramo, ficha ilegible frena', async () => {
+  const { HERRAMIENTAS_ESCRITURA } = await import('./correduria-asistente.ts')
+  for (const n of ['alta_cliente', 'figura_riesgo', 'proponer_tarificacion', 'abrir_siniestro']) assert.ok(HERRAMIENTAS_ESCRITURA.has(n), n)
+  assert.equal(HERRAMIENTAS_ESCRITURA.has('buscar'), false)
+  const f = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
+  assert.match(f, /if \(res\.ok \|\| HERRAMIENTAS_ESCRITURA\.has/)
+  assert.match(f, /if \(ctx\.diferidas\.length > 0\)/)
+  assert.match(f, /l\.riesgo\.oportunidad\.ramo !== ramo/)
+  assert.match(f, /if \(falta === null \|\| falta === undefined\) huecosFig\.push/)
+  assert.match(f, /SEGUNDOS_PRECIO > SEGUNDOS_WEBHOOK/)
+  // Ni fuente ni parentesco se inventan.
+  assert.doesNotMatch(f, /campo\('fuente', 30\) \?\?/)
+  assert.doesNotMatch(f, /: 'Otra', persona/)
 })

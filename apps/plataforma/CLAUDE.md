@@ -2003,6 +2003,15 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   puertos que la ficha con actor `agente:asistente-telegram`. `invitar_portal` pregunta antes si la ficha es `invitable`. Tabla
   `correduria_asistente_accion` (aplicada). **Documento de aseguradora** por Telegram → `procesarDocumento(..., {preguntarSiSeguro})`
   devuelve `posible_seguro` ANTES de archivar y pregunta con `cdoc_gasto`/`cdoc_cli` (`resolverDocumentoDudoso`).
+- **🤖 MODO AUTÓNOMO (29/09/2026) — `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo; `0/no/off` = vuelve al botón).**
+  Corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto se HACEN sin botón: se manda el resumen
+  (`textoSinBoton`) y se ejecuta el MISMO ejecutor del botón; lo que la IA oye sale del `estado` de la fila, no del toast.
+  Si el resumen no llega a Telegram, no se hace. El precio se pide al terminar el turno (1 por mensaje, tope diario
+  comprobado antes de decir «PEDIDO», no se empieza si no cabe en los 300 s del webhook). 🚨 **Siguen con botón:**
+  emitir, `enviar_presupuesto` e `invitar_portal` (salen a terceros). Herramientas nuevas `alta_cliente` (alta dictada por
+  el puerto `POST /api/operador/cliente`, sin sello) y `figura_riesgo` (`/api/operador/oportunidad/figuras`);
+  `proponer_tarificacion` con `oportunidadId` cotiza con las figuras del riesgo (mismo tomador y ramo; figura con ficha
+  ilegible = no se cotiza). Una escritura idéntica no se repite en el mismo turno, salga como salga.
 - **💶 Pedir precio de COCHE o MOTO (28/09/2026) — `lib/correduria-tarificacion-tg.ts`.** `vehiculo_catalogo` (gratis) +
   `proponer_tarificacion`: el servidor empareja lo dictado con los catálogos (`emparejarOpcion`: con dudas pregunta), devuelve
   «FALTAN DATOS» hasta tenerlo todo y manda el resumen (DNI enmascarado, supuestos optimistas primero, «0,50€, no sale nada al
