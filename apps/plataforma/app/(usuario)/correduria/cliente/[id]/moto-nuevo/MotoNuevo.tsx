@@ -25,6 +25,7 @@ import type { Compania } from '@/lib/companias-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
+import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
@@ -178,14 +179,12 @@ export default function MotoNuevo({
   // serie nacional mientras tanto). `true` = la puso la estimación, no el corredor.
   const [matriculacionEstimada, setMatriculacionEstimada] = useState(false)
   const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
-  // Por defecto «vía pública», como en auto (Alberto, 25/09 y 28/09/2026): el
-  // caso más común y el conservador para la prima.
+  // Por defecto en GARAJE, nunca en la calle, como en auto (Alberto, 29/09/2026; sustituye a «vía
+  // pública»): es un dato de EMISIÓN, no de precio — viaja como supuesto y se confirma al emitir.
   const [kmAnuales, setKmAnuales] = useState('')
-  const [garaje, setGaraje] = useState(
-    () => (garajes.find((g) => /v[ií]a\s+p[uú]blica/i.test(g.nombre)) ?? garajes.find((g) => /\bcalle\b/i.test(g.nombre)))?.id ?? '',
-  )
-  // ¿Lo ha elegido el corredor? El «vía pública» de arriba es un defecto, no una elección: la moto
-  // guardada puede traer su garaje, y sin esto retomar caía en silencio a vía pública (29/09/2026).
+  const [garaje, setGaraje] = useState(() => garajePorDefecto(garajes)?.id ?? '')
+  // ¿Lo ha elegido el corredor? El garaje de arriba es un defecto, no una elección: la moto
+  // guardada puede traer su garaje, y sin esto retomar caía en silencio al defecto (29/09/2026).
   const garajeElegido = useRef(false)
   const [nota, setNota] = useState('')
   // ── Figuras de la variante (29/09/2026) ─────────────────────────────────────

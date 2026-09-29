@@ -25,6 +25,7 @@ import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
+import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
 import {
   borrarBorrador,
   claveBorradorAutoNuevo,
@@ -237,13 +238,11 @@ export default function AutoNuevo({
   // De dónde sale la fecha estimada: Avant2 (`/car/registration-date`, que el
   // propio proveedor llama aproximada) o, si no responde, la serie nacional.
   const [fuenteMatriculacion, setFuenteMatriculacion] = useState<'avant2' | 'serie' | null>(null)
-  // Por defecto «vía pública» (decisión de Alberto, 25/09/2026): es el caso
-  // más común y el conservador para la prima.
-  const [garaje, setGaraje] = useState(
-    () => (garajes.find((g) => /v[ií]a\s+p[uú]blica/i.test(g.nombre)) ?? garajes.find((g) => /\bcalle\b/i.test(g.nombre)))?.id ?? '',
-  )
-  // «Vía pública» es un defecto, no una elección: el vehículo guardado de una variante puede traer
-  // su garaje, y sin esto retomar caía en silencio a vía pública (29/09/2026).
+  // Por defecto en GARAJE, nunca en la calle (Alberto, 29/09/2026; sustituye a «vía pública» del
+  // 25/09): es un dato de EMISIÓN, no de precio — viaja como supuesto y se confirma al emitir.
+  const [garaje, setGaraje] = useState(() => garajePorDefecto(garajes)?.id ?? '')
+  // El garaje por defecto no es una elección: el vehículo guardado de una variante puede traer
+  // su garaje, y sin esto retomar caía en silencio al defecto (29/09/2026).
   const garajeElegido = useRef(false)
 
   // ── Los tres datos del coche que hasta hoy viajaban SUPUESTOS ─────────────
