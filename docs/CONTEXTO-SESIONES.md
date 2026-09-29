@@ -907,6 +907,9 @@ nunca se quitaban. Ahora: vencimiento y póliza modificada enlazan a `/boveda/po
 (`TIPOS_AVISO_DESCARTABLES`) se sellan al pulsar en `seguros.portal_aviso_leido` (clave `tipo:id`, creada en prod el
 29/09) y desaparecen; los que piden acción (autorización, datos, firma) siguen hasta resolverse. Pendiente: los dos
 «Auto · Allianz» siguen con el mismo título (el título de la obligación no lleva matrícula ni nº de póliza).
+Auditoría de botones del portal (≈85 enlaces, 56 fetch): mismo PR arregla recordatorio sobre póliza donde solo FIGURA
+(403 falso), adjuntos del parte y subir póliza >4,5 MB (corte de Vercel: ahora encoge fotos y avisa), reintento con
+contraseña y retirar supresión mudos al fallar, y el error de desactivar push que ofrecía «activar».
 
 ## (29/09/2026) Correduría: marca «AS» en todos los correos al cliente
 - `conMarcaCorreo()` (`@central/module-seguros`, `correo-marca.ts`): cabecera con logotipo + pie «solo escribimos desde @grupoasegura.es». Se aplica en el punto único `apps/asegura/lib/correo-envio.ts` y en los dos envíos del portal (código, invitación); idempotente (salta si el HTML ya trae el logo).

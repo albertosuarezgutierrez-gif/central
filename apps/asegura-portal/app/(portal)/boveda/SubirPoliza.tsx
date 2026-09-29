@@ -7,6 +7,7 @@ import { useState } from 'react'
 import { avisoDocumentoNoPoliza } from '@central/module-seguros-portal'
 
 import { eur } from '@/lib/dinero'
+import { encogerSiHaceFalta } from '@/lib/encoger-imagen'
 import { fechaEs } from '@/lib/fechas'
 
 import { AnadirPoliza, type PolizaGuardada } from './AnadirPoliza'
@@ -32,6 +33,9 @@ type Resultado = {
    *  la pantalla ofrece escribir otra, nunca la misma. */
   motivo?: 'protegido' | 'contrasena_incorrecta'
 }
+
+/** Lo que cabe en una subida: Vercel corta el cuerpo a 4,5 MB antes de llegar a la ruta. */
+const MAX_BYTES_SUBIDA = 4 * 1024 * 1024
 
 /**
  * La entrada a la bóveda de aportadas: dos caminos para la misma fila.
@@ -85,12 +89,23 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
   const [ficheroProtegido, setFicheroProtegido] = useState<File | null>(null)
   const [contrasena, setContrasena] = useState('')
   const [reintentando, setReintentando] = useState(false)
+  /** Por qué no ha entrado, cuando se sabe (tamaño). `null` = el mensaje genérico. */
+  const [motivoError, setMotivoError] = useState<string | null>(null)
+  const [errorReintento, setErrorReintento] = useState<string | null>(null)
 
   async function subir(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0]
+    const elegido = e.target.files?.[0]
     e.target.value = '' // permite volver a elegir el mismo fichero tras un error
-    if (!f) return
+    if (!elegido) return
+    setMotivoError(null)
     setEstado('subiendo')
+    // Vercel corta el cuerpo a 4,5 MB antes de llegar a la ruta (29/09/2026): una foto se
+    // encoge aquí, y un PDF que siga pasando de 4 MB se dice claro en vez de mandarlo.
+    const f = await encogerSiHaceFalta(elegido)
+    if (f.size > MAX_BYTES_SUBIDA) {
+      setMotivoError(`Pesa ${(f.size / 1024 / 1024).toFixed(1)} MB y el máximo es 4 MB. Escanéala con menos resolución, o añádela a mano.`)
+      return setEstado('error')
+    }
     setResultado(null)
     setGuardadaAMano(null)
     setFicheroProtegido(null)
@@ -105,6 +120,7 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     }
     try {
       const r = await fetch('/api/polizas', { method: 'POST', body })
+      if (r.status === 413) setMotivoError('Pesa demasiado: el máximo es 4 MB. Escanéala con menos resolución, o añádela a mano.')
       if (!r.ok) return setEstado('error')
       const res = (await r.json()) as Resultado
       setResultado(res)
@@ -124,12 +140,17 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
     e.preventDefault()
     if (!ficheroProtegido || !resultado?.id || contrasena.trim() === '') return
     setReintentando(true)
+    setErrorReintento(null)
     const body = new FormData()
     body.append('documento', ficheroProtegido)
     body.append('contrasena', contrasena)
     try {
       const r = await fetch(`/api/polizas/${resultado.id}/reintentar`, { method: 'POST', body })
-      if (!r.ok) return
+      // Antes: `return` sin más, y el botón volvía a «Reintentar» sin decir nada (29/09/2026).
+      if (!r.ok) {
+        setErrorReintento(r.status === 401 ? 'Se ha cerrado tu sesión: vuelve a entrar para reintentarlo.' : 'No hemos podido comprobarla. Inténtalo otra vez en un momento.')
+        return
+      }
       const res = (await r.json()) as Resultado
       setResultado(res)
       // `contrasena_incorrecta` guarda el fichero para poder probar OTRA; en
@@ -141,6 +162,8 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
         setContrasena('')
       }
       router.refresh()
+    } catch {
+      setErrorReintento('No hemos podido comprobarla: revisa tu conexión e inténtalo otra vez.')
     } finally {
       setReintentando(false)
     }
@@ -300,7 +323,7 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
 
           {estado === 'error' && (
             <p className="editor-error" role="alert" style={{ marginTop: 12 }}>
-              No hemos podido subirla. Inténtalo otra vez, o añádela a mano.
+              {motivoError ?? 'No hemos podido subirla. Inténtalo otra vez, o añádela a mano.'}
             </p>
           )}
 
@@ -370,6 +393,11 @@ export function SubirPoliza({ ramos }: { ramos: readonly RamoOpcion[] }) {
                       {reintentando ? 'Comprobando…' : 'Reintentar'}
                     </button>
                   </form>
+                  {errorReintento && (
+                    <p className="editor-error" role="alert" style={{ marginTop: 8 }}>
+                      {errorReintento}
+                    </p>
+                  )}
                 </div>
               ) : resultado.fuente === 'none' && resultado.motivo === 'protegido' ? (
                 // Se ha perdido el fichero de esta sesión (p.ej. se recargó la
