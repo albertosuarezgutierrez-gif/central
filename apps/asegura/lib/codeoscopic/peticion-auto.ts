@@ -9,7 +9,17 @@
 // Las reglas no son adivinadas: salen del builder de Manuel, verificado por él
 // contra el entorno real, y están transcritas en docs/CODEOSCOPIC-TRASPASO-MANUEL.md §3.
 
-import { construirPersona, revisarPersona, RE_EMAIL, type DatosPersona, type CarnetExtra } from './persona.ts'
+import {
+  construirPersona,
+  construirPropietario,
+  documentoDe,
+  revisarPersona,
+  revisarPropietario,
+  RE_EMAIL,
+  type DatosPersona,
+  type DatosPropietario,
+  type CarnetExtra,
+} from './persona.ts'
 import { motivoFechaEfectoInvalida } from './fecha-efecto.ts'
 
 /** Lo que recoge el formulario. Nombres en castellano: es nuestro dominio. */
@@ -66,11 +76,11 @@ export type DatosAuto = DatosPersona & {
    * vendor acepte un `owner` distinto del `holder` sin pedir un dato más
    * (p. ej. el vínculo, o el CIF si es empresa) es una suposición razonable,
    * no un hecho medido — el primer intento real puede devolver un 400 nuevo,
-   * igual que pasó con `email`/`roadName` (ver `persona.ts`). Y **no cubre
-   * empresas**: `DatosPersona` exige `estadoCivil`, que una persona jurídica
-   * no tiene — un propietario EMPRESA es un caso distinto, sin diseñar.
+   * igual que pasó con `email`/`roadName` (ver `persona.ts`). Una EMPRESA
+   * propietaria va como `DatosEmpresa` (CIF, sin nacimiento/sexo/estado civil)
+   * y viaja como `JuridicalPerson_V1` (`construirEmpresa`, 29/09/2026).
    */
-  propietario?: DatosPersona | null
+  propietario?: DatosPropietario | null
 
   /**
    * 🚧 El conductor HABITUAL, SOLO cuando es una persona DISTINTA del
@@ -197,11 +207,11 @@ export function revisarDatosAuto(d: Partial<DatosAuto>, opciones: OpcionesRevisi
 
   // ── Propietario y conductor distintos del tomador (opcionales) ──
   if (d.propietario) {
-    const faltanPropietario = revisarPersona(d.propietario)
+    const faltanPropietario = revisarPropietario(d.propietario)
     if (faltanPropietario.length > 0) {
       r.push({
         campo: 'propietario',
-        motivo: `datos del propietario incompletos: ${faltanPropietario.map((f) => f.campo).join(', ')}`,
+        motivo: `datos del propietario incompletos: ${faltanPropietario.join(', ')}`,
       })
     }
   }
@@ -371,9 +381,9 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
   // 🚨 Si el propietario ES el conductor (mismo DNI), va el MISMO objeto: construido dos veces
   // difiere en el carné y el vendor lo rechaza («Two persons… different data») tras cobrar.
   const propietario = d.propietario
-    ? d.conductor && mismoDni(d.propietario.dni, d.conductor.dni)
+    ? d.conductor && mismoDni(documentoDe(d.propietario), d.conductor.dni)
       ? conductor
-      : construirPersona(d.propietario)
+      : construirPropietario(d.propietario)
     : tomador
 
   const riesgo: Record<string, unknown> = {

@@ -1358,6 +1358,7 @@ export async function clienteOrigenDe(
       saludo: true,
       codigoPostal: true,
       direccion: true,
+      tipoPersona: true,
     },
   })
   if (!c) return null
@@ -1377,6 +1378,7 @@ export async function clienteOrigenDe(
     email,
     // Para moto nueva: el carné de moto sale de los carnés de la ficha.
     carnets: await listarCarnets(correduriaId, c.id, normalizarFecha(descifrar(c.fechaNacimiento))),
+    tipoPersona: c.tipoPersona === null ? null : String(c.tipoPersona),
   }
   return { cliente, etiqueta: `${c.nombre} ${c.apellidos}`.trim() || 'Cliente' }
 }

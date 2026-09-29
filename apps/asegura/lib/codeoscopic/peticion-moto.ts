@@ -11,7 +11,15 @@
 // `POST /insurances` cuesta 0,50€ y NO es idempotente: cada regla que sabemos se
 // comprueba ANTES de gastar, no después.
 
-import { construirPersona, revisarPersona, type DatosPersona } from './persona.ts'
+import {
+  construirPersona,
+  construirPropietario,
+  documentoDe,
+  revisarPersona,
+  revisarPropietario,
+  type DatosPersona,
+  type DatosPropietario,
+} from './persona.ts'
 import { mismoDni } from './peticion-auto.ts'
 
 /** El carné de quien CONDUCE la moto: fecha + tipo (A, A2, A1, AM o B) + zona, y el B si lo tiene. */
@@ -77,8 +85,9 @@ export type DatosMoto = DatosPersona & {
    * 🚧 El propietario, SOLO cuando es una persona DISTINTA del tomador (29/09/2026, entrega 2 del
    * riesgo). Sin él, el tomador va de propietario. **Sin verificar contra el vendor**, igual que en
    * auto: el primer intento real puede devolver un 400 con el nombre del campo real.
+   * Puede ser una EMPRESA (`DatosEmpresa`, CIF): el vendor admite `Cif` en `owner`, no en el conductor.
    */
-  propietario?: DatosPersona | null
+  propietario?: DatosPropietario | null
   /**
    * 🚧 El conductor HABITUAL, SOLO cuando es DISTINTO del tomador, con SU carné (el de moto, si lo
    * tiene). Con él, el carné del tomador deja de importar. Misma advertencia que `propietario`.
@@ -117,9 +126,9 @@ export function revisarDatosMoto(d: Partial<DatosMoto>): ReparoMoto[] {
 
   // ── Propietario y conductor distintos del tomador (opcionales) ──
   if (d.propietario) {
-    const faltan = revisarPersona(d.propietario)
+    const faltan = revisarPropietario(d.propietario)
     if (faltan.length > 0) {
-      r.push({ campo: 'propietario', motivo: `datos del propietario incompletos: ${faltan.map((f) => f.campo).join(', ')}` })
+      r.push({ campo: 'propietario', motivo: `datos del propietario incompletos: ${faltan.join(', ')}` })
     }
   }
   if (d.conductor) {
@@ -136,7 +145,7 @@ export function revisarDatosMoto(d: Partial<DatosMoto>): ReparoMoto[] {
   // identification by different data»). Si la figura ES el tomador, no es una figura distinta.
   const dniTomador = String(d.dni ?? '').trim().toUpperCase()
   for (const [c, p] of [['propietario', d.propietario], ['conductor', d.conductor]] as const) {
-    if (p && dniTomador !== '' && String(p.dni ?? '').trim().toUpperCase() === dniTomador) {
+    if (p && dniTomador !== '' && documentoDe(p) === dniTomador.replace(/[\s-]/g, '')) {
       r.push({ campo: c, motivo: `el ${c} tiene el mismo DNI que el tomador: si es la misma persona, no lo declares aparte` })
     }
   }
@@ -218,9 +227,9 @@ export function construirPeticionMoto(d: DatosMoto, lineaId: string): Record<str
   const conductor = d.conductor ? construirPersona(d.conductor, carnetDe(d.conductor)) : persona
   // Propietario que ES el conductor (mismo DNI): el MISMO objeto, o el vendor rechaza tras cobrar.
   const propietario = d.propietario
-    ? d.conductor && mismoDni(d.propietario.dni, d.conductor.dni)
+    ? d.conductor && mismoDni(documentoDe(d.propietario), d.conductor.dni)
       ? conductor
-      : construirPersona(d.propietario)
+      : construirPropietario(d.propietario)
     : persona
 
   const riesgo: Record<string, unknown> = {

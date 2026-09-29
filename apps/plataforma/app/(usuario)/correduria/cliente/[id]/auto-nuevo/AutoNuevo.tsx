@@ -675,7 +675,7 @@ export default function AutoNuevo({
   const faltaPropietario = propietarioDistintoEf && !personaCompleta(propietario, false)
   const faltaConductor = conductorDistintoEf && !personaCompleta(conductor, true)
   const faltaOcasional = ocasionalDistintoEf && !personaCompleta(ocasional, true)
-  const faltaFigura = ROLES_EXTRA.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null))
+  const faltaFigura = ROLES_EXTRA.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null, variante?.empresas[rol] ?? false))
   // La misma ficha de conductor habitual y de ocasional es UN conductor, no dos (y el vendor rechaza
   // dos personas con el mismo documento, con un 400 que se paga).
   const figuraRepetida = !!figs.conductor_habitual && figs.conductor_habitual === figs.conductor_ocasional
@@ -1095,7 +1095,7 @@ export default function AutoNuevo({
           }
         />
         {figs.propietario ? (
-          <BloqueFigura rol="propietario" nombre={variante?.nombres.propietario ?? null} faltan={variante?.faltan.propietario ?? null}
+          <BloqueFigura rol="propietario" nombre={variante?.nombres.propietario ?? null} faltan={variante?.faltan.propietario ?? null} empresa={variante?.empresas.propietario ?? false}
             persona={figCorr.propietario} onPersona={(p) => setFigCorr((f) => ({ ...f, propietario: p }))} civiles={civiles} />
         ) : (
           <BloquePersona
@@ -1110,7 +1110,7 @@ export default function AutoNuevo({
         )}
         <div style={{ height: 12 }} />
         {figs.conductor_habitual ? (
-          <BloqueFigura rol="conductor_habitual" nombre={variante?.nombres.conductor_habitual ?? null} faltan={variante?.faltan.conductor_habitual ?? null}
+          <BloqueFigura rol="conductor_habitual" nombre={variante?.nombres.conductor_habitual ?? null} faltan={variante?.faltan.conductor_habitual ?? null} empresa={variante?.empresas.conductor_habitual ?? false}
             persona={figCorr.conductor_habitual} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_habitual: p }))} civiles={civiles} />
         ) : (
           <BloquePersona
@@ -1125,7 +1125,7 @@ export default function AutoNuevo({
         )}
         <div style={{ height: 12 }} />
         {figs.conductor_ocasional ? (
-          <BloqueFigura rol="conductor_ocasional" nombre={variante?.nombres.conductor_ocasional ?? null} faltan={variante?.faltan.conductor_ocasional ?? null}
+          <BloqueFigura rol="conductor_ocasional" nombre={variante?.nombres.conductor_ocasional ?? null} faltan={variante?.faltan.conductor_ocasional ?? null} empresa={variante?.empresas.conductor_ocasional ?? false}
             persona={figCorr.conductor_ocasional} onPersona={(p) => setFigCorr((f) => ({ ...f, conductor_ocasional: p }))} civiles={civiles} />
         ) : (
           <BloquePersona

@@ -427,7 +427,7 @@ export default function MotoNuevo({
       aniosSinSiniestros.trim() === '')
 
   // Una figura en otra ficha sin estado civil, o con un hueco de su ficha sin teclear, no cotiza.
-  const faltaFigura = ROLES_MOTO.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null))
+  const faltaFigura = ROLES_MOTO.some((rol) => figs[rol] && !figuraCompleta(figCorr[rol], variante?.faltan[rol] ?? null, variante?.empresas[rol] ?? false))
 
   const cotizando = resultado.estado === 'cotizando'
   const consumoPermite = consumo.estado === 'ok' ? consumo.veredicto.permitido : consumo.estado === 'no_disponible'
@@ -779,7 +779,7 @@ export default function MotoNuevo({
           />
           {ROLES_MOTO.filter((rol) => figs[rol]).map((rol, i) => (
             <div key={rol} style={i > 0 ? { marginTop: 12 } : undefined}>
-              <BloqueFigura rol={rol} nombre={variante?.nombres[rol] ?? null} faltan={variante?.faltan[rol] ?? null}
+              <BloqueFigura rol={rol} nombre={variante?.nombres[rol] ?? null} faltan={variante?.faltan[rol] ?? null} empresa={variante?.empresas[rol] ?? false}
                 persona={figCorr[rol]} onPersona={(p) => setFigCorr((f) => ({ ...f, [rol]: p }))} civiles={civiles} />
             </div>
           ))}

@@ -16,7 +16,10 @@ import { altaCliente } from '@/lib/cartera-edicion'
 import { crearRelacion } from '@/lib/cartera-relaciones'
 import { clienteOrigenDe } from '@/lib/cartera-ficha'
 import { partirApellidos, sexoDeSaludo, carnetBDeFicha, carnetMotoDeFicha } from '@/lib/codeoscopic/desde-cartera'
-import type { DatosPersona } from '@/lib/codeoscopic/persona'
+import type { DatosEmpresa, DatosPersona } from '@/lib/codeoscopic/persona'
+import { resolverConfig } from '@/lib/codeoscopic/config'
+import { municipiosPorCp, tiposDeVia } from '@/lib/codeoscopic/catalogos'
+import { partirDireccion, tipoViaDeFicha } from '@/lib/codeoscopic/direccion'
 import {
   diferenciasVariante,
   esRolFigura,
@@ -38,6 +41,8 @@ export type FiguraRiesgo = {
   porDefecto: boolean
   /** Qué le falta en su ficha para cotizar (sin contar el estado civil). NULL = no se pudo leer. */
   faltan: string[] | null
+  /** Su ficha es una EMPRESA (`tipo_persona = juridica`): va con CIF, sin estado civil, y no conduce. */
+  empresa: boolean
 }
 
 export type VarianteRiesgo = {
@@ -187,14 +192,16 @@ export async function leerRiesgo(correduriaId: string, oportunidadId: string): P
       vinculo: f.cliente_id === op.cliente_id ? null : f.vinculo,
       porDefecto: false,
       faltan: null,
+      empresa: false,
     }))
   if (!figuras.some((f) => f.rol === 'tomador')) {
-    figuras.unshift({ rol: 'tomador', clienteId: op.cliente_id, nombre: nombreDe(op.nombre, op.apellidos), vinculo: null, porDefecto: true, faltan: null })
+    figuras.unshift({ rol: 'tomador', clienteId: op.cliente_id, nombre: nombreDe(op.nombre, op.apellidos), vinculo: null, porDefecto: true, faltan: null, empresa: false })
   }
   for (const f of figuras) {
     const p = await personaDeFicha(correduriaId, f.clienteId, op.tipo === 'moto' ? 'moto' : 'auto').catch(() => null)
     // El carné solo cuenta en un riesgo de vehículo: a un tomador de hogar no se le pide.
     const conduce = (op.tipo === 'auto' || op.tipo === 'moto') && (f.rol === 'conductor_habitual' || f.rol === 'conductor_ocasional' || f.rol === 'tomador')
+    f.empresa = p !== null && p.tipo === 'juridica'
     f.faltan = p === null ? null : faltanDeFigura(p, conduce)
   }
 
@@ -357,7 +364,9 @@ export async function validarVariante(
   return { ok: true }
 }
 
-type PersonaFigura = Partial<DatosPersona> & { fechaCarnet?: string; tipoCarnet?: string; fechaCarnetB?: string }
+type PersonaFigura = Partial<DatosPersona> & { tipo?: undefined; fechaCarnet?: string; tipoCarnet?: string; fechaCarnetB?: string }
+/** Una EMPRESA de la cartera (`tipo_persona = juridica`), con su dirección aún en texto. */
+type EmpresaFigura = Partial<DatosEmpresa> & { tipo: 'juridica'; direccion?: string }
 
 /**
  * Los datos de una figura sacados de SU ficha, para armar la petición en el servidor (el DNI no
@@ -368,11 +377,23 @@ export async function personaDeFicha(
   correduriaId: string,
   clienteId: string,
   ramo: 'auto' | 'moto' = 'auto',
-): Promise<PersonaFigura | null> {
+): Promise<PersonaFigura | EmpresaFigura | null> {
   const o = await clienteOrigenDe(correduriaId, clienteId)
   if (!o) return null
   const c = o.cliente
   const limpio = (v: string | null | undefined) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined)
+  // Una empresa guarda la razón social en `nombre` (+ `apellidos`, vacío en las 72 de la cartera).
+  if (c.tipoPersona === 'juridica') {
+    return {
+      tipo: 'juridica',
+      cif: limpio(c.dni)?.toUpperCase().replace(/[\s-]/g, ''),
+      razonSocial: limpio([c.nombre, c.apellidos].filter(Boolean).join(' ')),
+      telefono: limpio(c.telefono)?.replace(/\s/g, ''),
+      email: limpio(c.email),
+      cpResidencia: limpio(c.codigoPostal),
+      direccion: limpio(c.direccion),
+    }
+  }
   // En MOTO el carné que cuenta es el de moto (A > A2 > A1 > AM) si consta; si no, el B con su tipo
   // declarado, y el servidor corta antes de gastar si esa moto exige carné de moto.
   const deMoto = ramo === 'moto' ? carnetMotoDeFicha(c.carnets) : null
@@ -394,9 +415,17 @@ export async function personaDeFicha(
 }
 
 /** Qué le falta a una figura para poder cotizar (el estado civil lo elige el corredor del catálogo). */
-export function faltanDeFigura(p: PersonaFigura | null, conCarnet: boolean): string[] {
+export function faltanDeFigura(p: PersonaFigura | EmpresaFigura | null, conCarnet: boolean): string[] {
   if (!p) return ['ficha']
   const f: string[] = []
+  // Empresa: CIF y razón social (en los campos de la pantalla, `dni` y `nombre`). Conducir, nunca:
+  // el vendor solo admite Dni/Nie/Passport en el conductor — `empresa_no_conduce` bloquea la figura.
+  if (p.tipo === 'juridica') {
+    if (conCarnet) f.push('empresa_no_conduce')
+    if (!p.cif) f.push('dni')
+    if (!p.razonSocial) f.push('nombre')
+    return f
+  }
   for (const k of ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'sexo', 'telefono'] as const) if (!p[k]) f.push(k)
   if (conCarnet && !p.fechaCarnet) f.push('fechaCarnet')
   return f
@@ -448,6 +477,12 @@ export async function prepararVariante(
       if (!deFicha) return { ok: false, motivo: `no se pudo leer la ficha de la figura ${rol}` }
       const tecleado = typeof correcciones[clave] === 'object' && correcciones[clave] !== null ? (correcciones[clave] as Record<string, unknown>) : {}
       const soloConValor = Object.fromEntries(Object.entries(tecleado).filter(([, v]) => v !== '' && v !== null && v !== undefined))
+      if (deFicha.tipo === 'juridica') {
+        // El vendor no admite un CIF de conductor: se corta aquí, gratis, no tras pagar.
+        if (rol !== 'propietario') return { ok: false, motivo: 'una empresa solo puede ser propietaria: el conductor tiene que ser una persona' }
+        correcciones[clave] = await empresaParaCotizar(deFicha, soloConValor)
+        continue
+      }
       correcciones[clave] = { ...deFicha, ...soloConValor }
       // Moto: un conductor con fecha de carné y sin tipo (tecleada a mano) se declara B EXPLÍCITO,
       // para que `reparoCarnetMoto` lo cruce con la cilindrada antes de pagar en vez de dejarlo pasar.
@@ -456,6 +491,41 @@ export async function prepararVariante(
     }
   }
   return { ok: true, v: { contexto: { oportunidadId, figuras, nota }, correcciones } }
+}
+
+/**
+ * La empresa propietaria lista para la petición: lo tecleado en la pantalla (`dni`/`nombre`, los
+ * mismos campos que una persona) manda sobre la ficha, y la dirección se resuelve contra los
+ * catálogos del vendor (GET gratis). Lo que no se resuelve no viaja: nunca se inventa un municipio
+ * ni un tipo de vía.
+ */
+async function empresaParaCotizar(f: EmpresaFigura, tecleado: Record<string, unknown>): Promise<DatosEmpresa> {
+  const txt = (v: unknown) => (typeof v === 'string' && v.trim() !== '' ? v.trim() : undefined)
+  const { direccion, ...ficha } = f
+  const empresa: DatosEmpresa = {
+    ...ficha,
+    tipo: 'juridica',
+    cif: (txt(tecleado.dni) ?? ficha.cif ?? '').toUpperCase().replace(/[\s-]/g, ''),
+    razonSocial: txt(tecleado.nombre) ?? ficha.razonSocial ?? '',
+    telefono: txt(tecleado.telefono) ?? ficha.telefono,
+  }
+  const cfg = resolverConfig(process.env, { ignorarInterruptor: true })
+  if (cfg.estado !== 'lista' || !empresa.cpResidencia) return empresa
+  try {
+    const municipios = await municipiosPorCp(cfg.config, empresa.cpResidencia)
+    // Un CP con varios municipios no se elige a ciegas: sin municipio no viaja la dirección.
+    if (municipios.length === 1 && Number.isFinite(Number(municipios[0].id))) {
+      empresa.municipioResidenciaId = Number(municipios[0].id)
+      const partida = direccion ? partirDireccion(direccion) : null
+      if (partida?.nombre) empresa.nombreVia = partida.nombre
+      if (partida?.numero) empresa.numeroVia = partida.numero
+      const via = direccion ? tipoViaDeFicha(direccion, await tiposDeVia(cfg.config).catch(() => [])) : null
+      if (via) empresa.tipoVia = via.id
+    }
+  } catch {
+    // Catálogo caído: la empresa viaja sin dirección, que es lo mismo que no tenerla.
+  }
+  return empresa
 }
 
 /** Solo roles conocidos y uuids; el tomador siempre es quien cotiza (el cliente de la ruta). */

@@ -214,3 +214,30 @@ test('🪤 propietario que ES el conductor (mismo DNI): el MISMO objeto en owner
   const c = construirPeticionMoto({ ...BASE, propietario: OTRA, conductor: { ...OTRA, fechaCarnet: '2010-03-03', tipoCarnet: 'A' } }, LINEA) as any
   assert.deepEqual(c.risk.owner, c.risk.primaryDriver, 'construido dos veces difiere en el carné: 400 pagado')
 })
+
+// ─── Propietario EMPRESA (29/09/2026): CIF en `owner`, nunca en el conductor ──
+// CIF inventado con su control correcto (B + 1234567 → 4): ninguna empresa real.
+const EMPRESA = { tipo: 'juridica' as const, cif: 'b-1234567 4', razonSocial: 'Empresa Inventada SL', telefono: '954000000' }
+
+test('una empresa propietaria viaja como persona jurídica con su CIF, y el tomador sigue conduciendo', () => {
+  const c = construirPeticionMoto({ ...BASE, propietario: EMPRESA }, LINEA) as any
+  assert.deepEqual(c.risk.owner.identificationDocument, { type: { id: 'Cif' }, id: 'B12345674' })
+  assert.equal(c.risk.owner.name, 'Empresa Inventada SL')
+  assert.deepEqual(c.risk.owner.phones, [{ number: '954000000', primary: true }], 'un fijo vale para una empresa')
+  for (const k of ['birthDate', 'gender', 'maritalStatus', 'surname', 'drivingLicenses']) {
+    assert.equal(c.risk.owner[k], undefined, `una empresa no lleva ${k}`)
+  }
+  assert.deepEqual(c.holder, c.risk.primaryDriver, 'tomador = conductor, con su carné')
+  assert.equal(c.holder.identificationDocument.type.id, 'Dni')
+})
+
+test('un CIF con el control mal se corta ANTES de pagar', () => {
+  const r = revisarDatosMoto({ ...BASE, propietario: { ...EMPRESA, cif: 'B12345675' } })
+  assert.ok(r.some((x) => x.campo === 'propietario' && /cif/.test(x.motivo)), JSON.stringify(r))
+  assert.throws(() => construirPeticionMoto({ ...BASE, propietario: { ...EMPRESA, cif: 'B12345675' } }, LINEA), /codeoscopic_datos_incompletos/)
+})
+
+test('una empresa sin razón social se corta antes de pagar; con todo, no hay reparos', () => {
+  assert.ok(revisarDatosMoto({ ...BASE, propietario: { ...EMPRESA, razonSocial: ' ' } }).some((x) => x.campo === 'propietario'))
+  assert.deepEqual(revisarDatosMoto({ ...BASE, propietario: EMPRESA }), [])
+})

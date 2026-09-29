@@ -40,12 +40,13 @@ export type CampoFigura = (typeof CAMPOS_FIGURA)[number]
 export const esCampoFigura = (c: string): c is CampoFigura => (CAMPOS_FIGURA as readonly string[]).includes(c)
 
 /**
- * ¿Se puede cotizar con esta figura? Estado civil elegido + lo que falte en su ficha, tecleado.
+ * ¿Se puede cotizar con esta figura? Estado civil elegido (salvo empresa) + lo que falte en su ficha, tecleado.
  * `faltan === null` (no se pudo leer la ficha) solo exige el estado civil: si la ficha no se puede
  * leer, el servidor corta antes de gastar. `ficha` (o un campo que aquí no se teclea) bloquea.
  */
-export function figuraCompleta(p: PersonaForm, faltan: string[] | null): boolean {
-  if (p.estadoCivil === '') return false
+export function figuraCompleta(p: PersonaForm, faltan: string[] | null, empresa = false): boolean {
+  // Una empresa no tiene estado civil: el vendor la declara con su CIF (`JuridicalPerson_V1`).
+  if (p.estadoCivil === '' && !empresa) return false
   if (faltan === null) return true
   return faltan.every((c) => esCampoFigura(c) && (c === 'sexo' ? p.sexo === 'hombre' || p.sexo === 'mujer' : p[c].trim() !== ''))
 }
