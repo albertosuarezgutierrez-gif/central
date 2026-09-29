@@ -191,6 +191,18 @@ export default function CorreduriaClient() {
   const [nCuadre, setNCuadre] = useState<number | null | undefined>(undefined)
   const [, setNClientes] = useState<number | null | undefined>(undefined)
   const [nRecaptacion, setNRecaptacion] = useState<number | null | undefined>(undefined)
+  // Recaptación se monta al abrir Clientes; hasta entonces el badge sale del
+  // contador cacheado (la cola entera eran ~0,8 MB de BD por visita).
+  const clientesVista = vistas.has('clientes')
+  useEffect(() => {
+    if (clientesVista) return
+    let vivo = true
+    fetch('/api/correduria/contador?c=recaptacion')
+      .then(r => (r.ok ? r.json() : null))
+      .then((d: { estado?: string; n?: number | null } | null) => { if (vivo) setNRecaptacion(d?.estado === 'ok' && typeof d.n === 'number' ? d.n : null) })
+      .catch(() => { if (vivo) setNRecaptacion(null) })
+    return () => { vivo = false }
+  }, [clientesVista])
   const [nBlog, setNBlog] = useState<number | null | undefined>(undefined)
   const [nTareasHoy, setNTareasHoy] = useState<number | null | undefined>(undefined)
   // Su contador ya NO se suma en «Hoy» (ver el comentario junto a `agregarContadores`
@@ -488,7 +500,7 @@ export default function CorreduriaClient() {
             cartera, pero comparte pestaña con el listado de clientes porque
             ambos parten de la misma base y compiten por el mismo hueco de
             atención comercial. */}
-        <Recaptacion onContador={setNRecaptacion} />
+        {montada('clientes') && <Recaptacion onContador={setNRecaptacion} />}
 
         {/* De los leads captados por apps/asegura-web, cuántos son hoy cartera
             viva. Sin contador: con 1 lead medido el 15/09/2026 es infraestructura

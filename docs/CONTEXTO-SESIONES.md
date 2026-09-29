@@ -926,6 +926,14 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - 🚧 **Sin verificar contra Codeoscopic** qué más exige `owner` jurídico: la primera cotización real (Manuel Antonio Piña + Global 2, oportunidad moto) lo dirá.
 - **Tomador empresa también** (auto y moto): ficha jurídica en el papel de tomador → `holder` `Cif`, propietaria por defecto la misma empresa, y exige conductor habitual persona en el riesgo (se corta gratis si falta). Así cada papel se puede alternar empresa/particular para comparar precios. Hogar no declara `owner` distinto; vida/salud/decesos, asegurado = persona.
 
+## (29/09/2026) Egress Supabase: /correduria ya no baja listas enteras para pintar contadores
+Diff de pg_stat_statements 11:20→12:51 UTC: las dos consultas top eran `leadsCompetencia` (~3.556 filas, ~1,4 MB)
+y `colaRecaptacion` (~2.200 filas, ~0,8 MB), lanzadas en CADA visita a /correduria solo para el contador de
+llamadas de «Hoy» y el badge de Clientes. Ahora van por `/api/correduria/contador?c=` (solo el número,
+`unstable_cache` 5 min, un fallo no se cachea → «—») y `<Recaptacion>` se monta al abrir Clientes. Cepo:
+`test/regression-egress-contadores.test.ts` (visto rojo por brazo). Menor: introspección `pg_type` de Drizzle del
+CRM de Manuel (`crm_seguros`, ~8,5k filas pero bytes mínimos). Sigue recomendado pasar a Pro antes del ~4 oct.
+
 ## (29/09/2026) Descuento comercial por defecto al 50 % (Allianz coche)
 - Alberto: «dejamos 50 si no da error, por si la compañía va variando descuentos». Prueba en web (40961885): 50+50 = mismo precio que 20+20 en Allianz, Generali aplica ~12 %, sin error. Catálogo Allianz auto `dtoCap`/`dtoVentaCruzada` 25→50 (`DESCUENTO_POR_DEFECTO`), textos de la pantalla de emisión al día.
 - Pendiente: Allianz moto, Generali y Catalana en moto necesitan el id del campo (traer el 40961885 y leer opciones). No confirmado si el descuento sale de la comisión.
