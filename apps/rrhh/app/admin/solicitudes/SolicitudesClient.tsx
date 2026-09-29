@@ -43,6 +43,15 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
     if (!r.ok) { setAviso('No se pudo borrar la solicitud'); return }
     await recargar()
   }
+  // Plegado: se ven siempre las pendientes (hay que resolverlas) y la primera del resto;
+  // lo demás se monta solo al desplegar.
+  const [verTodas, setVerTodas] = useState(false)
+  const idsVisibles = new Set(lista.filter(s => s.estado === 'solicitada').map(s => s.id))
+  const primeraResuelta = lista.find(s => s.estado !== 'solicitada')
+  if (primeraResuelta) idsVisibles.add(primeraResuelta.id)
+  if (editando) idsVisibles.add(editando)
+  const visibles = verTodas ? lista : lista.filter(s => idsVisibles.has(s.id))
+  const plegadas = lista.length - lista.filter(s => idsVisibles.has(s.id)).length
   const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).map(f => f!.slice(0, 10)).join(' → ')
   return (
     <AdminShell activo="solicitudes" logoUrl={logoUrl} nombreEmpresa={nombreEmpresa} colorPrimario={colorPrimario} tieneFichaje={tieneFichaje}>
@@ -54,7 +63,7 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
         </div>
       )}
       <ul className="mt-3 grid list-none gap-2 p-0">
-        {lista.map(s => (
+        {visibles.map(s => (
           <li key={s.id} className="rounded-card border border-line bg-card p-3">
             <strong>{s.empleado_nombre}</strong> · {tipoEtiqueta(s.tipo)} {rango(s) && <span>· {rango(s)}</span>}
             <span className={`ml-2 ${COLOR[s.estado] ?? ''}`}>[{s.estado}]</span>
@@ -108,6 +117,11 @@ export default function SolicitudesClient({ inicial, logoUrl, nombreEmpresa, col
         ))}
         {lista.length === 0 && <li className="text-ink-3">Sin solicitudes</li>}
       </ul>
+      {plegadas > 0 && (
+        <button onClick={() => setVerTodas(v => !v)} className="mt-2 min-h-[44px] w-full bg-paper-2 text-ink-2 hover:bg-line">
+          {verTodas ? 'Plegar ▴' : `Ver ${plegadas} solicitud${plegadas > 1 ? 'es' : ''} más ▾`}
+        </button>
+      )}
     </AdminShell>
   )
 }
