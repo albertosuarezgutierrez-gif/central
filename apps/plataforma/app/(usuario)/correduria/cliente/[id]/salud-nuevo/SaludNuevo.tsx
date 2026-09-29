@@ -12,6 +12,7 @@ import { ConIcono } from '../../../iconos'
 import FiltroGarantias from '../../../FiltroGarantias'
 import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import { eur } from '@/lib/dinero'
+import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/salud-nuevo-asegura'
 import { pedirCotizacionSalud } from './acciones'
 
@@ -68,6 +69,9 @@ export default function SaludNuevo({
   const [capital, setCapital] = useState('')
   const [modalidadDeseada, setModalidadDeseada] = useState('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
+  // Vacía = el servidor pone hoy + 15 días (el precio sigue valiendo al emitir).
+  const [fechaEfecto, setFechaEfecto] = useState('')
+  const limitesEfecto = limitesFechaEfecto()
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
   const faltaCivil = !estadoCivilId
@@ -94,7 +98,7 @@ export default function SaludNuevo({
         // donde ponerla. Solo se manda como CORRECCIÓN informativa, que asegura
         // también descarta al construir la petición.
       },
-      correcciones,
+      correcciones: fechaEfecto !== '' ? { ...correcciones, fechaEfecto } : correcciones,
     })
     switch (r.estado) {
       case 'faltan':
@@ -150,6 +154,9 @@ export default function SaludNuevo({
           </Campo>
           <Campo etiqueta="Modalidad deseada" falta={false} ayuda="Nota para el corredor: NO viaja al vendor (no hay campo confirmado).">
             <input value={modalidadDeseada} onChange={(e) => setModalidadDeseada(e.target.value)} placeholder="p. ej. con dental" style={input} />
+          </Campo>
+          <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
+            <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
           </Campo>
         </div>
       </div>

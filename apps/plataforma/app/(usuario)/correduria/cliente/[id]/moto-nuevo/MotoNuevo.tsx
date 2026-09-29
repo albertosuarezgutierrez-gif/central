@@ -26,6 +26,7 @@ import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '@/lib/seguro-anterior'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
+import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { pedirCatalogo, pedirCotizacionMoto, pedirTarificacionGuardadaMoto } from './acciones'
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
@@ -208,6 +209,9 @@ export default function MotoNuevo({
   const [experienciaConduccion, setExperienciaConduccion] = useState('')
   const [motoAnteriorCodigo, setMotoAnteriorCodigo] = useState('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
+  // Vacía = el servidor pone hoy + 15 días (el precio sigue valiendo al emitir).
+  const [fechaEfecto, setFechaEfecto] = useState('')
+  const limitesEfecto = limitesFechaEfecto()
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
   // ── Retomar la última tarificación ya pagada (28/09/2026) ────────────────────
@@ -455,6 +459,7 @@ export default function MotoNuevo({
       ...correcciones,
       ...(experienciaConduccion === 'OtherMotorcycle' ? { motoAnteriorCodigo: motoAnteriorCodigo.trim() } : {}),
       ...(kmLeidos !== null ? { kmAnuales: kmLeidos } : {}),
+      ...(fechaEfecto !== '' ? { fechaEfecto } : {}),
     }
     if (tieneSeguroActual) {
       correccionesFinal.aseguradoAntes = true
@@ -654,6 +659,9 @@ export default function MotoNuevo({
               }}
               style={input}
             />
+          </Campo>
+          <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
+            <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
           </Campo>
           <Campo etiqueta="¿Dónde duerme?" falta={faltaGaraje} ayuda="Lo elige el corredor; viaja marcado como supuesto.">
             <select value={garaje} onChange={(e) => { garajeElegido.current = true; setGaraje(e.target.value) }} style={input}>

@@ -12,6 +12,7 @@ import { ConIcono } from '../../../iconos'
 import FiltroGarantias from '../../../FiltroGarantias'
 import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import { eur } from '@/lib/dinero'
+import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/decesos-nuevo-asegura'
 import { pedirCotizacionDecesos } from './acciones'
 
@@ -67,6 +68,9 @@ export default function DecesosNuevo({
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivil?.id ?? '')
   const [capital, setCapital] = useState('')
   const [correcciones, setCorrecciones] = useState<Record<string, string>>({})
+  // Vacía = el servidor pone hoy + 15 días (el precio sigue valiendo al emitir).
+  const [fechaEfecto, setFechaEfecto] = useState('')
+  const limitesEfecto = limitesFechaEfecto()
   const [resultado, setResultado] = useState<Resultado>({ estado: 'idle' })
 
   const faltaCivil = !estadoCivilId
@@ -87,7 +91,7 @@ export default function DecesosNuevo({
     const r = await pedirCotizacionDecesos({
       clienteId,
       resueltos: { estadoCivilId, ...(Number(capital) > 0 ? { capital: Number(capital) } : {}) },
-      correcciones,
+      correcciones: fechaEfecto !== '' ? { ...correcciones, fechaEfecto } : correcciones,
     })
     switch (r.estado) {
       case 'faltan':
@@ -140,6 +144,9 @@ export default function DecesosNuevo({
         <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))' }}>
           <Campo etiqueta="Prestación de referencia (€)" falta={false} ayuda="Opcional. Nota para el corredor: NO viaja al vendor (la API no tiene ese campo).">
             <input type="number" min={0} step={500} value={capital} onChange={(e) => setCapital(e.target.value)} placeholder="3000" style={input} />
+          </Campo>
+          <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
+            <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
           </Campo>
         </div>
       </div>

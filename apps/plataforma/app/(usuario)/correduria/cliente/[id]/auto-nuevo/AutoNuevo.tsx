@@ -26,6 +26,7 @@ import { codigoCompania, historialDeclarado, type AnteriorParaTarificar } from '
 import { KM_ANUALES_SUPUESTOS, kilometrosDesdeTexto } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
 import { garajePorDefecto } from '@/lib/supuestos-presupuesto'
+import { AYUDA_FECHA_EFECTO, limitesFechaEfecto } from '@/lib/correduria/fecha-efecto'
 import {
   borrarBorrador,
   claveBorradorAutoNuevo,
@@ -260,6 +261,9 @@ export default function AutoNuevo({
   // el precalificador ya usa la de matriculación como compra).
   const [fechaCompra, setFechaCompra] = useState('')
   const [remolqueLigero, setRemolqueLigero] = useState(false)
+  // Vacía = el servidor pone hoy + 15 días (el precio sigue valiendo al emitir).
+  const [fechaEfecto, setFechaEfecto] = useState('')
+  const limitesEfecto = limitesFechaEfecto()
   const [estadoCivilId, setEstadoCivilId] = useState(estadoCivilAuto?.id ?? '')
   const listaMunicipios = municipios ?? []
   const [municipioId, setMunicipioId] = useState(listaMunicipios.length === 1 ? listaMunicipios[0].id : '')
@@ -731,6 +735,7 @@ export default function AutoNuevo({
     if (kmLeidos !== null) correccionesFinal.kmAnuales = kmLeidos
     if (fechaCompra !== '' && !compraInvalida) correccionesFinal.fechaCompra = fechaCompra
     if (remolqueLigero) correccionesFinal.remolqueLigero = true
+    if (fechaEfecto !== '') correccionesFinal.fechaEfecto = fechaEfecto
     // En blanco NO se manda: el precalificador ya declara el supuesto, y
     // `supuestosVigentes` lo retira en cuanto aquí se elige algo.
     if (zonaCarnet !== '') correccionesFinal.zonaCarnet = zonaCarnet
@@ -955,6 +960,9 @@ export default function AutoNuevo({
                   opción a marcar y decía lo contrario de lo que hace (29/09/2026). */}
               <span style={{ fontSize: 14 }}>Lleva remolque</span>
             </label>
+          </Campo>
+          <Campo etiqueta="Fecha de efecto" falta={false} ayuda={AYUDA_FECHA_EFECTO}>
+            <input type="date" min={limitesEfecto.min} max={limitesEfecto.max} value={fechaEfecto} onChange={(e) => setFechaEfecto(e.target.value)} style={input} />
           </Campo>
         </div>
       </div>
