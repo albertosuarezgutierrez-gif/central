@@ -68,3 +68,19 @@ export function interruptoresGarantias(ramo: RamoGarantias, opciones: readonly O
     .map((g) => ({ clave: g.clave, etiqueta: g.etiqueta, conSi: opciones.filter((o) => estadoDe(o, g.clave) === 'si').length }))
     .filter((i) => i.conSi > 0)
 }
+
+/**
+ * Garantías que salen YA marcadas en el filtro, en la pantalla del corredor y en el portal del
+ * cliente (Alberto, 28/09/2026: «que salga ya seleccionada grúa siempre, todas la incluyen»).
+ * Solo las que tienen interruptor: marcar una que no se ve dejaría un filtro imposible de quitar.
+ */
+export const GARANTIAS_PRESELECCIONADAS: Partial<Record<RamoGarantias, readonly string[]>> = {
+  auto: ['asistencia_viaje'],
+  moto: ['asistencia_viaje'],
+}
+
+export function preseleccionFija(ramo: RamoGarantias | null, interruptores: readonly InterruptorGarantia[]): string[] {
+  if (ramo === null) return []
+  const fijas = new Set(GARANTIAS_PRESELECCIONADAS[ramo] ?? [])
+  return interruptores.map((i) => i.clave).filter((c) => fijas.has(c))
+}

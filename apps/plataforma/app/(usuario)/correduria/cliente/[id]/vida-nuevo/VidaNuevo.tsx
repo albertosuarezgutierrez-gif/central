@@ -14,16 +14,12 @@
 import { useState } from 'react'
 import { FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
-import { CeldaCompania } from '../../../CeldaCompania'
 import { ConIcono } from '../../../iconos'
 import FiltroGarantias from '../../../FiltroGarantias'
+import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/vida-nuevo-asegura'
 import { pedirPrecalificacionVida, pedirCotizacionVida } from './acciones'
-
-function euroODash(n: number | null | undefined): string {
-  return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
-}
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -298,6 +294,13 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
 }
 
 function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }) {
+  const propsLista = {
+    precios: r.precios,
+    simulado: r.simulado,
+    puedeEmitir: false,
+    motivoNoEmitir: 'Sin emisión directa en vida',
+    emision: undefined,
+  }
   return (
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
@@ -319,30 +322,9 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         Coste de esta consulta: {r.coste}
         {r.restantesHoy !== null ? <> · quedan hoy {r.restantesHoy}.</> : <> · el libro de consumo no se ha mirado (no hacía falta).</>}
       </p>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 460 }}>
-          <thead>
-            <tr>
-              <th style={th}>Aseguradora</th><th style={th}>Cobertura</th>
-              <th style={th}>Prima anual</th><th style={th}>Franquicia</th><th style={th}>Firmeza</th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.precios.map((p, i) => (
-              <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}><CeldaCompania compania={p.compania} producto={p.producto} /></td>
-                <td style={td}>{p.categoria ?? <span style={{ color: 'var(--muted)' }}>sin declarar</span>}</td>
-                <td style={td}>
-                  <strong>{euroODash(p.primaEur)}</strong>
-                  {r.simulado && <> <Badge tono="aviso">simulado</Badge></>}
-                </td>
-                <td style={td}>{p.franquiciaEur === null || p.franquiciaEur === undefined ? <span style={{ color: 'var(--muted)' }}>no la declara</span> : euroODash(p.franquiciaEur)}</td>
-                <td style={td}><Badge tono={p.firmeza === 'firme' ? 'positivo' : 'aviso'} title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* Sin emisión directa en este ramo: la lista principal es «Qué verá el cliente»; esta queda
+          plegada por si la cotización guardada no se puede leer. */}
+      {r.simulado ? <ListaPrecios {...propsLista} /> : <ListaPreciosPlegada {...propsLista} titulo={`Ver los ${r.precios.length} precios en lista`} />}
       {/* Filtro por garantías + ocultar + preparar el presupuesto. Esta respuesta no trae el id de la
           cotización guardada, así que se usa la última REAL guardada, y solo si es de ahora mismo. */}
       {!r.simulado && <FiltroGarantias ramo="vida" origen={{ clienteId, ramo: 'vida' }} tarificacionId={null} simulado={false} />}
@@ -380,9 +362,6 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
     </div>
   )
 }
-
-const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', borderBottom: '1px solid var(--border)' }
-const td: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--border)' }
 
 /** Reparos que ESTA pantalla resuelve con un desplegable o una caja. */
 const RESUELTOS_EN_PANTALLA = new Set<string>(['capital', 'duracionAnios', 'fechaEfecto', 'estadoCivil', 'sexo'])

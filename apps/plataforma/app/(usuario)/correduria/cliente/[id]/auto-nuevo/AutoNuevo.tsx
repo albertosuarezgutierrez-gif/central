@@ -20,7 +20,6 @@ import { useEffect, useState } from 'react'
 import { Flag, FlaskConical } from 'lucide-react'
 import { btnStyle, Badge, cardStyle, CardHeader } from '@/components/ui'
 import { ConIcono } from '../../../iconos'
-import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/auto-nuevo-asegura'
 import { digitosPolizaSospechosos } from '@/lib/poliza-digitos-sospechosos'
 import { kilometrosDesdeTexto } from '@central/module-seguros'
@@ -34,15 +33,11 @@ import {
 import { clasificarFaltan } from '@/lib/correduria/campos-faltan'
 
 import { pedirCatalogo, pedirCotizacionAuto } from './acciones'
-import { CeldaCompania } from '../../../CeldaCompania'
+import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import FiltroGarantias from '../../../FiltroGarantias'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
 import { Emision } from '../../../poliza/[id]/retarificar/emision'
 import { SelectorBuscable } from '../../../SelectorBuscable'
-
-function euroODash(n: number | null | undefined): string {
-  return n === null || n === undefined || !Number.isFinite(n) ? '—' : eur(n)
-}
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -1259,9 +1254,26 @@ function Contador({ consumo, simulacion }: { consumo: ConsumoPuerto; simulacion:
 function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; simulacion: boolean; clienteId: string }) {
   // Emitir a un cliente NUEVO (28/09/2026): asegura enlazó el proyecto a la ficha y a
   // esta tarificación al confirmar el precio, así que no hace falta póliza previa.
-  const [abierta, setAbierta] = useState<string | null>(null)
   const cotizacionId = cotizacionIdDe(r.guardado)
   const puedeEmitir = !r.simulado && cotizacionId !== null
+  const propsLista = {
+    precios: r.precios,
+    simulado: r.simulado,
+    puedeEmitir,
+    motivoNoEmitir: r.simulado ? 'Simulado: no hay proyecto real de Codeoscopic' : 'Esta cotización no quedó guardada: no se puede emitir sin su id',
+    // Cliente NUEVO: no hay póliza anterior, así que no hay carta de baja.
+    emision: (p: (typeof r.precios)[number], cerrar: () => void) => (
+      <Emision
+        tarificacionId={cotizacionId as string}
+        compania={p.compania ?? ''}
+        categoria={p.categoria ?? ''}
+        primaEur={p.primaEur ?? null}
+        producto={p.producto ?? null}
+        sustituye={false}
+        onCerrar={cerrar}
+      />
+    ),
+  }
   return (
     <div style={{ marginTop: 12 }}>
       {r.simulado && (
@@ -1283,77 +1295,15 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
         Coste de esta consulta: {r.coste}
         {r.restantesHoy !== null ? <> · quedan hoy {r.restantesHoy}.</> : <> · el libro de consumo no se ha mirado (no hacía falta).</>}
       </p>
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 420 }}>
-          <thead>
-            <tr>
-              <th style={th}>Aseguradora</th><th style={th}>Cobertura</th>
-              <th style={th}>Prima anual</th><th style={th}>Firmeza</th><th style={th}>Emitir</th>
-            </tr>
-          </thead>
-          <tbody>
-            {r.precios.map((p, i) => {
-              return (
-              <tr key={`${p.compania}-${p.producto}-${i}`}>
-                <td style={td}><CeldaCompania compania={p.compania} producto={p.producto} /></td>
-                <td style={td}>{p.categoria ?? <span style={{ color: 'var(--muted)' }}>sin declarar</span>}</td>
-                <td style={td}>
-                  <strong>{euroODash(p.primaEur)}</strong>
-                  {r.simulado && <> <Badge tono="aviso">simulado</Badge></>}
-                  <div style={{ color: 'var(--muted)', fontSize: 11 }}>
-                    {p.franquiciaEur === null || p.franquiciaEur === undefined ? 'franquicia no declarada' : `franquicia ${euroODash(p.franquiciaEur)}`}
-                  </div>
-                </td>
-                <td style={td}><Badge tono={p.firmeza === 'firme' ? 'positivo' : 'aviso'} title={p.avisos?.join(' · ')}>{p.firmeza ?? 'sin determinar'}</Badge></td>
-                <td style={td}>
-                  <button
-                    type="button"
-                    disabled={!puedeEmitir}
-                    onClick={() => {
-                      const id = `${p.compania}-${p.producto}-${i}`
-                      setAbierta(abierta === id ? null : id)
-                    }}
-                    title={
-                      r.simulado
-                        ? 'Simulado: no hay proyecto real de Codeoscopic'
-                        : cotizacionId === null
-                          ? 'Esta cotización no quedó guardada: no se puede emitir sin su id'
-                          : 'Confirmar con la compañía y emitir'
-                    }
-                    style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}
-                  >
-                    {abierta === `${p.compania}-${p.producto}-${i}` ? 'Ocultar' : 'Emitir'}
-                  </button>
-                </td>
-              </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-      {puedeEmitir &&
-        r.precios.map((p, i) => {
-          const id = `${p.compania}-${p.producto}-${i}`
-          if (abierta !== id) return null
-          // Cliente NUEVO: no hay póliza anterior, así que no hay carta de baja.
-          return (
-            <Emision
-              key={id}
-              tarificacionId={cotizacionId as string}
-              compania={p.compania ?? ''}
-              categoria={p.categoria ?? ''}
-              primaEur={p.primaEur ?? null}
-              producto={p.producto ?? null}
-              sustituye={false}
-              onCerrar={() => setAbierta(null)}
-            />
-          )
-        })}
-      {cotizacionIdDe(r.guardado) !== null && (
-        <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionIdDe(r.guardado) as string} simulado={r.simulado} />
-      )}
-      {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
-        <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
+      {cotizacionId !== null ? (
+        <>
+          {/* «Qué verá el cliente» ya enseña todos los precios, de la más barata a la más cara:
+              la lista de emitir va plegada debajo para no pintar dos listas iguales seguidas. */}
+          <FiltroGarantias ramo="auto" origen={{ clienteId, ramo: 'auto' }} tarificacionId={cotizacionId} simulado={r.simulado} />
+          <ListaPreciosPlegada {...propsLista} />
+        </>
+      ) : (
+        <ListaPrecios {...propsLista} />
       )}
       {r.fallos.length > 0 && (
         <details style={{ marginTop: 8 }}>
@@ -1387,7 +1337,5 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
   )
 }
 
-const th: React.CSSProperties = { textAlign: 'left', padding: '8px 10px', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.03em', color: 'var(--muted)', borderBottom: '1px solid var(--border)' }
-const td: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--border)' }
 
 /** Reparos que ESTA pantalla resuelve con un desplegable o una caja. */
