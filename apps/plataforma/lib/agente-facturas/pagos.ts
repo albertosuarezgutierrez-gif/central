@@ -8,6 +8,9 @@ import { eur } from '@/lib/dinero'
 import { Prisma } from '@prisma/client'
 import { listarCandidatosConLimite, marcarProcesado, etiquetarCorreo, quitarEtiqueta, type ListadoCandidatos } from './gmail'
 import { ordenarAdjuntosFactura } from './elegir-adjuntos'
+import { decidirAvisoPago } from './filtro-pago'
+import { cargarTitulares } from './titulares'
+import type { Titular } from './receptor'
 import { aiExtractInvoiceDetallado, type FalloExtraccion } from '@/lib/ai-client'
 import { tgAviso, tgAvisoBotones, tgEditMessage } from '@/lib/telegram'
 import { iniciarPago, estadoPago, disponiblePis } from '@/lib/enablebanking'
@@ -107,6 +110,8 @@ export async function escanearNuevasFacturas(
   let encolados = 0
   /** Message-IDs de correos que SÍ se han podido leer en esta pasada. */
   const resueltos: string[] = []
+  /** Se cargan al primer candidato con importe (una consulta por pasada). */
+  let titulares: Titular[] | undefined
 
   for (let i = 0; i < correos.length; i++) {
     if (deadline && Date.now() > deadline) {
@@ -186,6 +191,15 @@ export async function escanearNuevasFacturas(
     const proveedor = (datos.proveedor as string | null) || correo.from.split('<')[0].trim() || 'Proveedor desconocido'
     const importe = typeof datos.total === 'number' ? datos.total : null
     if (!importe || importe <= 0) { descartados++; continue }
+
+    // Leída y con importe, pero ¿es algo que haya que PAGAR? (ver `filtro-pago.ts`)
+    titulares ??= await cargarTitulares()
+    const decision = decidirAvisoPago(datos, titulares)
+    if (!decision.pagar) {
+      console.log(`[facturas] apartada (${decision.motivo}): ${proveedor} · ${importe} — ${decision.detalle}`)
+      descartados++
+      continue
+    }
 
     const ivaPct = typeof datos.iva_porcentaje === 'number' ? datos.iva_porcentaje : 21
     const base = importe / (1 + ivaPct / 100)
