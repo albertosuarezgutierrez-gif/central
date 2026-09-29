@@ -1,0 +1,30 @@
+{
+ "sesion": "eb56d71f-31ed-5125-8200-7554b6b0adb7",
+ "inicio": "2026-09-29T10:16:55.367Z",
+ "fin": "2026-09-29T10:16:59.713Z",
+ "llamadas": 3,
+ "categorias": {
+  "agente:Explore": {
+   "llamadas": 1,
+   "chars_in": 1377,
+   "chars_out": 1597,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 7643,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "bash": {
+   "llamadas": 2,
+   "chars_in": 777,
+   "chars_out": 5828,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Bash": 2
+   }
+  }
+ }
+}
