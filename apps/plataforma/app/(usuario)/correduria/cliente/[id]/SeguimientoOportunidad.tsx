@@ -177,7 +177,10 @@ export default function SeguimientoOportunidad({ id, telefono = null, onCambio }
         <section style={bloque}>
           <h3 style={tituloBloque}>Datos para tarificar</h3>
           <div>
-            <Link href={`/correduria/cliente/${op.clienteId}/${op.ramo}-nuevo`} style={{ ...btnStyle('primario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
+            {/* Coche y moto se tarifican DESDE EL RIESGO: ahí se eligen tomador, propietario y conductor
+                (empresa o particular) y la variante queda colgada de esta oportunidad. Directo a
+                `…-nuevo` salía sin figuras, siempre con el cliente en todos los papeles (29/09/2026). */}
+            <Link href={op.ramo === 'auto' || op.ramo === 'moto' ? `/correduria/oportunidad/${op.id}` : `/correduria/cliente/${op.clienteId}/${op.ramo}-nuevo`} style={{ ...btnStyle('primario', 'sm'), minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>
               Tarificar {op.ramo === 'auto' ? 'coche' : op.ramo} →
             </Link>
           </div>
