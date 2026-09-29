@@ -46,7 +46,7 @@ declare global {
 
 /** Carga GA4. Sin función de parada: gtag.js no ofrece un opt_out limpio por script suelto,
  * así que el gate real es no cargar el script — igual que ya asumía asegura-web con PostHog. */
-export function cargarGa4(id: string): void {
+export function cargarGa4(id: string, parametros?: Record<string, unknown>): void {
   const s1 = document.createElement('script')
   s1.async = true
   s1.src = urlScriptGa4(id)
@@ -66,7 +66,10 @@ export function cargarGa4(id: string): void {
     window.dataLayer!.push(arguments)
   }
   window.gtag('js', new Date())
-  window.gtag('config', id)
+  // `parametros` va en el MISMO `config` y no en un `set` posterior: el `config` dispara
+  // ya el page_view, y un parámetro que llegue después no lo lleva.
+  if (parametros) window.gtag('config', id, parametros)
+  else window.gtag('config', id)
 }
 
 /** Carga Meta Pixel. Mismo criterio que GA4: sin parada limpia, el gate es no cargar. */
