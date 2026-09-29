@@ -894,6 +894,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Historial de motor al máximo en TODO motor + topes que se aprenden solos
+- auto-nuevo igual que moto (precarga desde la oportunidad + años al máximo plegados). Retarificar de cartera: sin dato,
+  `aniosAsegurado` = 10 (antes 1) y «años en la compañía» = antigüedad real con nosotros. Máximo único: `HISTORIAL_MAXIMO`
+  (`module-seguros/historial-maximo.ts`). Si Codeoscopic da 400 por años altos (NO se cobra), `cotizar()` aprende el tope
+  (`seguros.codeoscopic_topes_historial`, aplicada en prod el 29/09), reintenta UNA vez recortado y lo aplica siempre.
+  Rechazos POR COMPAÑÍA tras cotizar (ya cobrados) NO se aprenden todavía: el formato no está medido.
+
 ## (29/09/2026) La póliza subida a la ficha se lee sola y su bonus precarga la moto
 - Documentos (ficha): subir tipo «póliza» dispara la lectura IA (y «Leer para oportunidad» en las ya subidas) →
   «ya es nuestra» o «Abrir oportunidad con estos datos» (`FormAlta` exportado, con `inicial`). El lector ya sacaba

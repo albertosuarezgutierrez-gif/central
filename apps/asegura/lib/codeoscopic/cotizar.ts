@@ -29,6 +29,8 @@ import { peticion, obtenerToken, ErrorCodeoscopic } from './cliente.ts'
 import { leerCotizacion, type Cotizacion } from './respuesta.ts'
 import { cotizacionSimulada } from './simulacion.ts'
 import { enlazarPresupuestoConOportunidad } from './oportunidad-presupuesto.ts'
+import { aniosDelCuerpo, aplicarTopesHistorial, topesDelMensaje, type TopesHistorial } from '@central/module-seguros'
+import { guardarTopesHistorial, leerTopesHistorial } from './topes-historial.ts'
 import {
   guardarSinTumbar,
   type ContextoCotizacion,
@@ -59,6 +61,8 @@ export type ResultadoCotizacion =
        * que sí. Un `guardado: true` optimista sería justo la mentira barata.
        */
       guardado: Guardado
+      /** Años del seguro anterior recortados a un tope aprendido («totalYearsInsured 10→8»). Vacío = ninguno. */
+      ajustesHistorial?: string[]
     }
   | { ok: false; razon: 'apagado' | 'mal-configurado' | 'sin-libro' | 'tope' | 'vendor'; mensaje: string }
 
@@ -75,6 +79,8 @@ export type PeticionCotizacion = {
    * guarda y el resultado lo dice (`guardado.estado === 'no_intentada'`).
    */
   contexto?: ContextoCotizacion
+  /** Interno: esta petición ya es el reintento tras aprender un tope. Uno solo, nunca en bucle. */
+  reintentoTopes?: boolean
 }
 
 /**
@@ -86,6 +92,8 @@ export type DepsCotizar = {
   guardar?: GuardarCotizacion
   /** Colgar el presupuesto de su oportunidad. Con `guardar` doblado y sin esto, no se enlaza (test). */
   enlazar?: typeof enlazarPresupuestoConOportunidad
+  /** Topes aprendidos del historial. Con `guardar` doblado y sin esto, no se tocan (test). */
+  topes?: { leer: () => Promise<TopesHistorial>; guardar: (t: TopesHistorial, mensaje: string) => Promise<void> }
 }
 
 /**
@@ -272,6 +280,12 @@ export async function cotizar(
   const veredicto = puedeCotizar(consumo, config.topes)
   if (!veredicto.permitido) return { ok: false, razon: 'tope', mensaje: veredicto.explicacion }
 
+  // 4b — Topes APRENDIDOS del historial del seguro anterior (29/09/2026): el máximo declarado se
+  // recorta a lo que el vendor ya rechazó una vez, para que ese 400 no vuelva a salir.
+  const topes = deps.topes ?? (deps.guardar ? null : { leer: leerTopesHistorial, guardar: guardarTopesHistorial })
+  const recorte = topes ? aplicarTopesHistorial(p.cuerpo, await topes.leer()) : { cuerpo: p.cuerpo, cambios: [] }
+  if (recorte.cambios.length > 0) p = { ...p, cuerpo: recorte.cuerpo }
+
   // 5 — Reserva ANTES de llamar
   const intentoId = randomUUID()
   try {
@@ -317,6 +331,7 @@ export async function cotizar(
       coste: eurCents(COSTE_COTIZACION_CENTS),
       restantesHoy: veredicto.restantesHoy - 1,
       guardado,
+      ...(recorte.cambios.length > 0 ? { ajustesHistorial: recorte.cambios } : {}),
     }
   } catch (e) {
     if (e instanceof ErrorCodeoscopic && e.pruebaQueNoHuboCargo) {
@@ -324,6 +339,20 @@ export async function cotizar(
         // Si ni el descarte se puede escribir, la reserva se queda abierta y
         // sigue contando. Conservador a propósito.
       })
+      // Un 400 por años del seguro anterior demasiado altos NO se cobra: se aprende el tope, se
+      // guarda para siempre y se repite UNA vez con el cuerpo recortado. Sin tope legible, o ya
+      // siendo el reintento, el error sale tal cual (y el siguiente clic ya va recortado).
+      if (e.clase === 'validacion' && topes && !p.reintentoTopes) {
+        const aprendidos = topesDelMensaje(e.detalle, aniosDelCuerpo(p.cuerpo))
+        if (Object.keys(aprendidos).length > 0) {
+          await topes.guardar(aprendidos, e.detalle).catch(() => {})
+          const r2 = aplicarTopesHistorial(p.cuerpo, aprendidos)
+          if (r2.cambios.length > 0) {
+            const res = await cotizar({ ...p, cuerpo: r2.cuerpo, reintentoTopes: true }, env, deps)
+            return res.ok ? { ...res, ajustesHistorial: [...recorte.cambios, ...r2.cambios, ...(res.ajustesHistorial ?? [])] } : res
+          }
+        }
+      }
       return { ok: false, razon: 'vendor', mensaje: e.message }
     }
 
