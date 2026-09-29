@@ -5,6 +5,7 @@ import { btnStyle, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { prepararAdjunto } from '@/lib/imagen-cliente'
 import { interpretarLecturaOportunidad, rotuloRamo, type LecturaDocumentoOportunidad, type FichaTomador } from '@/lib/seguimiento-asegura'
+import { interpretarOportunidadDocumento, type AvisoOportunidadDocumento } from '@/lib/oportunidad-documento'
 
 type Lectura = Extract<LecturaDocumentoOportunidad, { estado: 'ok' }>
 
@@ -26,11 +27,13 @@ export default function SubirPoliza() {
   const [leyendo, setLeyendo] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lectura, setLectura] = useState<Lectura | null>(null)
+  const [oportunidad, setOportunidad] = useState<AvisoOportunidadDocumento | null>(null)
 
   async function leer(f: File) {
     setLeyendo(true)
     setError(null)
     setLectura(null)
+    setOportunidad(null)
     let status = 0
     let json: unknown = null
     try {
@@ -38,7 +41,8 @@ export default function SubirPoliza() {
       const res = await fetch('/api/correduria/oportunidad/leer', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName, tomador: true }),
+        // `crear`: abre (o completa) la oportunidad y guarda el fichero en la ficha del tomador (29/09/2026).
+        body: JSON.stringify({ base64: a.base64, mimeType: a.mimeType, fileName: a.fileName, tomador: true, crear: true }),
       })
       status = res.status
       json = await res.json().catch(() => null)
@@ -49,6 +53,7 @@ export default function SubirPoliza() {
     const l = interpretarLecturaOportunidad(status, json)
     if (l.estado === 'error') { setError(`No se ha podido leer: ${l.motivo}.`); return }
     setLectura(l)
+    setOportunidad(interpretarOportunidadDocumento((json as Record<string, unknown> | null)?.oportunidad))
   }
 
   return (
@@ -71,6 +76,14 @@ export default function SubirPoliza() {
         </button>
         {error && <div role="status" style={{ color: 'var(--negative)' }}>{error}</div>}
       </div>
+      {oportunidad && (
+        <div role="status" style={{ ...cardStyle, display: 'grid', gap: 8, color: oportunidad.tono === 'aviso' ? 'var(--negative)' : 'var(--text)' }}>
+          <span>{oportunidad.texto}</span>
+          {oportunidad.clienteId && (
+            <Link href={`/correduria/cliente/${encodeURIComponent(oportunidad.clienteId)}?tab=oportunidades`} style={enlace}>Ver su ficha y la oportunidad →</Link>
+          )}
+        </div>
+      )}
       {lectura && <Resultado l={lectura} />}
     </div>
   )

@@ -584,6 +584,8 @@ export async function crearOportunidad(
   datos: Parameters<typeof validarAltaOportunidad>[0],
   actor: string,
   hoy: Date = hoyUtc(),
+  /** De dónde nace (`info_riesgo.origen`): a mano por defecto; `documento:*` si la abre un documento subido. */
+  origen: string = ORIGEN_MANUAL,
 ): Promise<{ ok: true; id: string } | Fallo | { ok: false; estado: 'duplicada'; motivo: string; status: 409; id: string }> {
   if (!UUID.test(clienteId)) return { ok: false, estado: 'invalido', motivo: 'id de cliente no válido', status: 422 }
   const v = validarAltaOportunidad(datos, hoy)
@@ -614,11 +616,20 @@ export async function crearOportunidad(
         ...(a.aseguradora && !ya.aseguradora ? { aseguradora: a.aseguradora } : {}),
       }
       const numero = a.numeroPoliza && !ya.numeroPoliza ? a.numeroPoliza : null
-      if (Object.keys(parche).length > 0 || numero) {
+      // Vencimiento y prima solo rellenan un hueco (29/09/2026): un documento subido después no pisa
+      // lo que Alberto ya había anotado, pero tampoco se pierde si faltaba.
+      const [huecos] = await tx.$queryRaw<{ sinFecha: boolean; sinPrima: boolean }[]>(Prisma.sql`
+        select fecha_fin_vigencia is null as "sinFecha", prima_bruta is null as "sinPrima"
+        from oportunidades where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid`)
+      const fecha = a.fechaFinVigencia && huecos?.sinFecha ? a.fechaFinVigencia : null
+      const prima = a.prima !== null && huecos?.sinPrima ? a.prima : null
+      if (Object.keys(parche).length > 0 || numero || fecha || prima !== null) {
         await tx.$executeRaw(Prisma.sql`
           update oportunidades set
             poliza_competencia = coalesce(poliza_competencia, '{}'::jsonb) || ${JSON.stringify(parche)}::jsonb,
-            numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${numero})
+            numero_poliza = coalesce(nullif(trim(numero_poliza), ''), ${numero}),
+            fecha_fin_vigencia = coalesce(fecha_fin_vigencia, ${fecha}::date),
+            prima_bruta = coalesce(prima_bruta, ${prima}::numeric)
           where id = ${ya.id}::uuid and correduria_id = ${correduriaId}::uuid`)
         return { tipo: 'duplicada' as const, id: ya.id, completada: true }
       }
@@ -631,7 +642,7 @@ export async function crearOportunidad(
       insert into oportunidades (correduria_id, cliente_id, tipo, fuente, estado, fecha_fin_vigencia, prima_bruta, poliza_competencia, info_riesgo, numero_poliza)
       values (${correduriaId}::uuid, ${clienteId}::uuid, cast(${a.ramo} as tipo_seguro), 'venta_directa',
               cast(${a.estado} as estado_comercial), ${a.fechaFinVigencia}::date, ${a.prima}::numeric,
-              ${competencia}::jsonb, ${JSON.stringify({ origen: ORIGEN_MANUAL, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}) })}::jsonb,
+              ${competencia}::jsonb, ${JSON.stringify({ origen, ...(a.matricula ? { matricula: a.matricula } : {}), ...(a.vehiculo ? { vehiculo: a.vehiculo } : {}) })}::jsonb,
               ${a.numeroPoliza})
       returning id::text as id`)
     await tx.$executeRaw(Prisma.sql`
@@ -643,7 +654,7 @@ export async function crearOportunidad(
     await tx.$executeRaw(Prisma.sql`
       insert into oportunidad_historial (correduria_id, oportunidad_id, accion, estado_antes, estado_despues, detalle, actor)
       values (${correduriaId}::uuid, ${o.id}::uuid, 'creada_mano', null, cast(${a.estado} as estado_comercial),
-              ${JSON.stringify({ ramo: a.ramo, fechaFinVigencia: a.fechaFinVigencia, prima: a.prima, conCompania: a.aseguradora !== null, primerPaso: { tipo: a.tarea.tipo, fecha: a.tarea.fechaLimite } })}::jsonb,
+              ${JSON.stringify({ ramo: a.ramo, fechaFinVigencia: a.fechaFinVigencia, prima: a.prima, conCompania: a.aseguradora !== null, primerPaso: { tipo: a.tarea.tipo, fecha: a.tarea.fechaLimite }, ...(origen !== ORIGEN_MANUAL ? { origen } : {}) })}::jsonb,
               ${actor})`)
     return { tipo: 'ok' as const, id: o.id }
   })
@@ -652,7 +663,8 @@ export async function crearOportunidad(
     const extra = r.completada ? ' Le he guardado lo leído de la póliza (compañía, nº y bonus que faltaran).' : ''
     return { ok: false, estado: 'duplicada', motivo: `Ya tiene una oportunidad de ${a.ramo.replace('_', ' ')} abierta: sigue esa.${extra}`, status: 409, id: r.id }
   }
-  await anotarEnFicha(correduriaId, clienteId, `Oportunidad ${a.ramo} abierta a mano; primer paso (${a.tarea.tipo}) el ${a.tarea.fechaLimite} — por ${actor}`)
+  const como = origen === ORIGEN_MANUAL ? 'a mano' : 'sola desde un documento subido'
+  await anotarEnFicha(correduriaId, clienteId, `Oportunidad ${a.ramo} abierta ${como}; primer paso (${a.tarea.tipo}) el ${a.tarea.fechaLimite} — por ${actor}`)
   return { ok: true, id: r.id }
 }
 

@@ -1,15 +1,19 @@
-import { NextResponse } from 'next/server'
+import { after, NextResponse } from 'next/server'
 
 import { tipoDocumento } from '@central/module-seguros'
 
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { guardarDocumentoPropio } from '@/lib/documento-portal'
+import { guardarDocumento } from '@/lib/cartera-documentos'
+import { oportunidadDesdeFichero } from '@/lib/oportunidad-documento'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { puentePortalAutorizado } from '@/lib/puente-portal'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
+// La lectura con IA para abrir la oportunidad corre en `after()`, tras contestar al portal.
+export const maxDuration = 120
 
 /**
  * POST /api/portal/documento — el CLIENTE sube un fichero (hoy, la póliza que
@@ -52,9 +56,25 @@ export async function POST(req: Request) {
       mime: fichero.type,
       contenido,
     })
+    // Todo documento de seguro abre su oportunidad (29/09/2026), DESPUÉS de contestar: el portal no
+    // espera a la IA. Sin ficha vinculada, el documento no se pierde: se abre el lead del tomador
+    // (por su DNI) y el fichero se guarda en esa ficha nueva.
+    const correduriaId = correduria.id
+    const fich = { contenido, mime: fichero.type, nombre: fichero.name }
+    if (r.estado === 'ok' || r.estado === 'sin_ficha') {
+      const clienteSube = r.estado === 'ok' ? r.clienteId : null
+      after(async () => {
+        const o = await oportunidadDesdeFichero({ correduriaId, clienteSube, origen: 'portal', actor: 'el cliente, desde el portal', fichero: fich })
+        if (!clienteSube && (o.estado === 'creada' || o.estado === 'actualizada')) {
+          await guardarDocumento(correduriaId, { clienteId: o.clienteId, tipo, nombre: fich.nombre, mime: fich.mime, contenido, subidoPor: 'cliente' }).catch(() => null)
+        }
+      })
+    }
     const status =
       r.estado === 'ok' ? 200 : r.estado === 'invalido' ? 415 : r.estado === 'error' ? 503 : 409 // sin_ficha · varias_fichas
-    return NextResponse.json(r, { status })
+    // El `clienteId` NO sale hacia el portal: este puente no devuelve nada de la ficha.
+    const respuesta = r.estado === 'ok' ? { estado: r.estado, documentoId: r.documentoId, repetido: r.repetido } : r
+    return NextResponse.json(respuesta, { status })
   } catch (e) {
     return NextResponse.json(
       { estado: 'error', causa: registrarErrorCartera('portal/documento', e) },

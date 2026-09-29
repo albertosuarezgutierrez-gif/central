@@ -40,6 +40,7 @@ import {
 import { prismaAsegura } from './asegura-db'
 import { altaCliente, anotarHistorialCliente } from './cartera-edicion'
 import { guardarDocumento } from './cartera-documentos'
+import { oportunidadDesdeLectura } from './oportunidad-documento'
 
 export type EntradaPolizaDocumento = {
   lectura: LecturaPoliza
@@ -220,6 +221,10 @@ export async function guardarPolizaDeDocumento(
       declarada.compania ? ')' : ''
     }.`,
   )
+
+  // Todo documento de seguro abre o completa su oportunidad (29/09/2026). Con lo ya leído: no se
+  // vuelve a pagar la IA. Un fallo aquí no deshace nada de lo guardado arriba.
+  await oportunidadDesdeLectura({ correduriaId, clienteSube: clienteId, lectura: entrada.lectura, origen: 'subir-poliza', actor: entrada.actor })
 
   return {
     ok: true,

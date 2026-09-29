@@ -6,11 +6,13 @@ import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { guardarDocumento, listarDocumentos, pedirDocumento } from '@/lib/cartera-documentos'
 import { auditado } from '@/lib/auditoria'
+import { oportunidadDesdeFichero } from '@/lib/oportunidad-documento'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-// Un PDF de 10 MB por el pooler tarda; y esta ruta no gasta nada.
-export const maxDuration = 60
+// Un PDF de 10 MB por el pooler tarda, y un documento subido a una ficha se lee con IA para abrir
+// su oportunidad (hasta ~60 s): 120 s de margen.
+export const maxDuration = 120
 
 /**
  * Documentos de la correduría por el puerto de operador (plataforma → asegura).
@@ -19,9 +21,10 @@ export const maxDuration = 60
  *   POST multipart (fichero + tipo + destino + notas) → guarda el fichero
  *   POST json      ({ pedir: true, tipo, destino, notas }) → deja constancia de un PEDIDO
  *
- * 🚨 Esta ruta NO gasta cotizaciones y NO lee el documento con IA: eso es
- * `/api/cartera/documentos` (cualquier ramo, con lectura extendida en
- * auto/moto y hogar), que sigue siendo aparte a propósito.
+ * 🚨 Esta ruta NO gasta cotizaciones. Desde el 29/09/2026 SÍ lee con IA lo que se sube a una FICHA
+ * (no a una póliza nuestra ni a un siniestro): todo documento de seguro abre o completa una
+ * oportunidad (`oportunidadDesdeFichero`, desenlace en `oportunidad`). Si la lectura falla, el
+ * fichero ya está guardado: la oportunidad nunca tumba la subida.
  * Cuatro estados en la lista: `sin_configurar` · `error` · `ok`. Un `ok` con
  * `documentos: []` es «se miró y no hay», y solo se emite si la consulta fue bien.
  */
@@ -75,7 +78,18 @@ export const POST = auditado(async (req: Request) => {
         contenido: Buffer.from(await fichero.arrayBuffer()),
       })
       if (!r.ok) return NextResponse.json({ error: r.motivo }, { status: r.status })
-      return NextResponse.json({ estado: 'ok', documento: r.documento, repetido: r.repetido })
+      const clienteId = texto(form.get('clienteId'))
+      // Solo lo subido a una FICHA: un documento colgado de una póliza nuestra no es una venta.
+      const oportunidad = clienteId && !polizaId && !texto(form.get('siniestroId'))
+        ? await oportunidadDesdeFichero({
+            correduriaId: correduria.id,
+            clienteSube: clienteId,
+            origen: 'ficha',
+            actor: req.headers.get('x-actor') ?? 'corredor',
+            fichero: { contenido: Buffer.from(await fichero.arrayBuffer()), mime: fichero.type, nombre: fichero.name },
+          })
+        : null
+      return NextResponse.json({ estado: 'ok', documento: r.documento, repetido: r.repetido, oportunidad })
     }
 
     const body = (await req.json().catch(() => null)) as Record<string, unknown> | null

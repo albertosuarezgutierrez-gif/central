@@ -7,6 +7,8 @@ import { correduriaUnica } from '@/lib/cartera'
 import { polizaEnCartera } from '@/lib/poliza-en-cartera'
 import { seguroAnteriorDe } from '@central/module-seguros'
 import { contrasenasDeLaFicha } from '@/lib/documentos/contrasenas-ficha'
+import { oportunidadDesdeLectura, type ResultadoOportunidadDocumento } from '@/lib/oportunidad-documento'
+import { guardarDocumento } from '@/lib/cartera-documentos'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -37,6 +39,9 @@ export const maxDuration = 120
  * - `clienteId` (29/09/2026): si el PDF viene con contraseña, se prueba el DNI de
  *   ESA ficha (las compañías lo usan de contraseña). Se descifra y se prueba aquí
  *   dentro: el DNI no sale en la respuesta ni pasa por plataforma.
+ * - `crear=1` (29/09/2026, pantalla «Subir póliza»): además ABRE la oportunidad (o la completa) y
+ *   guarda el fichero en la ficha a la que va: un documento de seguro subido no se puede perder.
+ *   Sin él, sigue siendo solo lectura (el alta a mano y Telegram deciden ellos).
  * - «No se pudo leer» es 422 con motivo, nunca 200 con todo a null: eso se
  *   pintaría como «el documento no trae nada».
  */
@@ -55,7 +60,8 @@ export const POST = auditado(async (req: Request) => {
   if (reparo) return NextResponse.json({ error: reparo }, { status: 415 })
 
   const clienteId = form.get('clienteId')
-  const r = await leerPoliza(Buffer.from(await fichero.arrayBuffer()), fichero.type, fichero.name, {
+  const contenido = Buffer.from(await fichero.arrayBuffer())
+  const r = await leerPoliza(contenido, fichero.type, fichero.name, {
     contrasenas: typeof clienteId === 'string' && clienteId.trim() !== '' ? () => correduriaUnica().then((c) => (c ? contrasenasDeLaFicha(c.id, clienteId.trim()) : [])) : undefined,
   })
   if (r.fase === 'ninguno') return NextResponse.json({ error: r.motivo }, { status: 422 })
@@ -65,9 +71,21 @@ export const POST = auditado(async (req: Request) => {
     new URL(req.url).searchParams.get('tomador') === '1' ? tomadorDe({ ramo: r.ramo, tipoLectura: r.fase, datos: r.datos as unknown as Record<string, string | number | null> }) : undefined,
     correduriaUnica().then((c) => (c ? polizaEnCartera(c.id, d.numeroPoliza) : null)).catch(() => null),
   ])
+  let oportunidad: ResultadoOportunidadDocumento | undefined
+  if (form.get('crear') === '1') {
+    const c = await correduriaUnica().catch(() => null)
+    if (c) {
+      const sube = typeof clienteId === 'string' && clienteId.trim() !== '' ? clienteId.trim() : null
+      oportunidad = await oportunidadDesdeLectura({ correduriaId: c.id, clienteSube: sube, lectura: r, origen: 'subir-poliza', actor: req.headers.get('x-actor') ?? 'corredor' })
+      if (oportunidad.estado === 'creada' || oportunidad.estado === 'actualizada') {
+        await guardarDocumento(c.id, { clienteId: oportunidad.clienteId, tipo: 'poliza', nombre: fichero.name, mime: fichero.type, contenido, subidoPor: 'corredor', notas: 'Subida desde «Subir póliza»' }).catch(() => null)
+      }
+    }
+  }
   const auto = r.fase === 'auto' ? r.datos : null
   const vehiculo = auto ? [auto.marca, auto.modelo].filter(Boolean).join(' ').trim() || null : null
   return NextResponse.json({
+    ...(oportunidad ? { oportunidad } : {}),
     enCartera,
     matricula: auto?.matricula ?? null,
     vehiculo,

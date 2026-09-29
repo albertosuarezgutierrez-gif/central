@@ -16,6 +16,7 @@
  * El SQL crudo NO prefija `seguros.`: la conexión ya trae `?schema=seguros`.
  */
 import { createHash, randomBytes } from 'node:crypto'
+import { after } from 'next/server'
 import {
   DIAS_SOLICITUD,
   MAX_DOCS_SOLICITUD,
@@ -43,6 +44,7 @@ import { guardarDocumento } from './cartera-documentos'
 import { revisarDocumento } from '@central/module-seguros'
 import { leerDocSolicitud } from './documentos/leer-doc-solicitud'
 import { contrasenasDeLaFicha } from './documentos/contrasenas-ficha'
+import { oportunidadDesdeFichero } from './oportunidad-documento'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const TOKEN = /^[A-Za-z0-9_-]{40,60}$/
@@ -332,6 +334,11 @@ export async function subirDocumentoSolicitud(
     subidoPor: 'cliente',
   })
   if (!g.ok) return { ok: false, estado: g.status === 415 ? 'invalido' : 'error', motivo: g.motivo }
+  // Todo documento de seguro abre o completa su oportunidad (29/09/2026), tras contestar al cliente.
+  // Si es su póliza actual, completa la del presupuesto (misma ficha y ramo: se deduplica).
+  const { correduriaId, clienteId } = f
+  const fich = { contenido: fichero.contenido, mime: fichero.mime, nombre: fichero.nombre }
+  after(() => oportunidadDesdeFichero({ correduriaId, clienteSube: clienteId, origen: 'solicitud', actor: 'el cliente, desde el enlace de datos', fichero: fich }).then(() => undefined))
 
   await prismaAsegura().$transaction(async (tx) => {
     const [fila] = await tx.$queryRaw<{ lecturas: string | null }[]>(Prisma.sql`

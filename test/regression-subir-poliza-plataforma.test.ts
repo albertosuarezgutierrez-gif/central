@@ -61,11 +61,15 @@ test('con «subir=poliza» el formulario de Documentos se abre y se trae a la vi
   assert.match(s, /if \(tipoInicial\) formRef\.current\?\.scrollIntoView\(/)
 })
 
-// 29/09/2026: la póliza subida a la ficha se lee sola y abre oportunidad con su bonus.
-test('Documentos lee con IA SOLO las pólizas de la ficha (cada lectura es de pago)', () => {
+// 29/09/2026 (tarde), decisión de Alberto: TODO documento subido a una FICHA se lee con IA y abre (o
+// completa) su oportunidad — «esa información no se puede perder». Se lee en asegura al guardar, y
+// solo lo que cuelga de una ficha: un documento de una póliza nuestra o de un siniestro no es una venta.
+test('todo documento subido a una FICHA abre su oportunidad; lo de una póliza o un siniestro, no', () => {
+  const ruta = leer('apps/asegura/app/api/operador/documentos/route.ts')
+  assert.match(ruta, /clienteId && !polizaId && !texto\(form\.get\('siniestroId'\)\)\s*\?\s*await oportunidadDesdeFichero\(/)
   const s = leer(`${COR}/Documentos.tsx`)
   assert.match(s, /const leerPoliza = !!clienteId && !polizaId && !siniestroId/)
-  assert.match(s, /if \(tipo === 'poliza' && leerPoliza\) void leerPolizaSubida\(fichero\)/)
+  assert.match(s, /interpretarOportunidadDocumento\(j\.oportunidad\)/)
 })
 
 test('asegura devuelve el bonus leído y la oportunidad lo guarda', () => {
