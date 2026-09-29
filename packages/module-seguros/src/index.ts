@@ -1006,3 +1006,4 @@ export {
   type HitoDevolucion,
   type EntradaTareaDevolucion,
 } from './seguimiento-devolucion.ts'
+export { ROLES_FIGURA, ETIQUETA_ROL, rolesDelRamo, esRolFigura, limpiarFiguras, diferenciasVariante, resumenDiferencias, type RolFigura, type FigurasVariante, type Diferencia } from './variantes-riesgo.ts'

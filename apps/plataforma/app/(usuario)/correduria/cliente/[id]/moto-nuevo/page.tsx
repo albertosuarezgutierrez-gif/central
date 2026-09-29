@@ -5,6 +5,8 @@ import { precalificarMotoNuevaAsegura, catalogoAsegura } from '@/lib/moto-nuevo-
 import { companiasAsegura, interpretarCompanias } from '@/lib/companias-asegura'
 import { Pagina, PageHeader, cardStyle } from '@/components/ui'
 import MotoNuevo from './MotoNuevo'
+import { cargarVariante, FranjaVariante, ErrorVariante } from '../../../oportunidad/[id]/cargar-variante'
+import { paramTexto } from '../../../oportunidad/[id]/variante'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,8 +37,11 @@ export const maxDuration = 180
  * ramo de moto se resuelve SIEMPRE contra `GET /insurance-lines`: por eso
  * esta ficha trae también `pre.moto` y la pantalla avisa si no está disponible.
  */
-export default async function MotoNuevoPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function MotoNuevoPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const { id: clienteId } = await params
+  // Variante de un riesgo (29/09/2026): `?oportunidad=` cuelga la tarificación de esa oportunidad.
+  const sp = await searchParams
+  const carga = await cargarVariante(paramTexto(sp.oportunidad), paramTexto(sp.tarificacion), clienteId, 'moto')
 
   const ficha = await fichaAsegura(clienteId)
   const nombreCliente = ficha.estado === 'ok' ? ficha.ficha.nombre : null
@@ -50,8 +55,19 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
         ← Ficha del cliente
       </Link>
       <PageHeader titulo="Presupuesto de moto" icono={<Bike size={20} strokeWidth={1.75} />} sub={sub} />
+      {carga.estado === 'ok' && <FranjaVariante variante={carga.variante} />}
     </div>
   )
+
+  if (carga.estado === 'error') {
+    return (
+      <Pagina>
+        {cabecera}
+        <ErrorVariante oportunidadId={carga.oportunidadId} mensaje={carga.mensaje} />
+      </Pagina>
+    )
+  }
+  const variante = carga.estado === 'ok' ? carga.variante : null
 
   const [garajes, civiles, pre, companiasResp] = await Promise.all([
     catalogoAsegura({ tipo: 'garajes-moto' }),
@@ -118,6 +134,7 @@ export default async function MotoNuevoPage({ params }: { params: Promise<{ id: 
         consumo={pre.pre.consumo}
         simulacion={pre.pre.simulacion}
         companias={companias}
+        variante={variante}
       />
     </Pagina>
   )

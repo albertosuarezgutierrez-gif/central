@@ -872,6 +872,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) El riesgo como pantalla: figuras, variantes e historial (entrega 1, PR #3955)
+- `/correduria/oportunidad/[id]` deja de redirigir: cabecera del riesgo, intervinientes (tomador/propietario/conductores desde los vínculos o «+ Nueva persona» en línea), historial P1…Pn con «qué cambió» derivado de la `peticion` (`diferenciasVariante`, module-seguros) y «Nueva variante» → auto/moto-nuevo con `?oportunidad=`.
+- BD: `oportunidad_figura`, `oportunidades.poliza_id`, `tarificaciones.figuras/nota` (SQL `2026-09-29e`, aplicada). La variante se cuelga de la oportunidad dada; nunca abre otra.
+- Auto cotiza con figuras de otra ficha (sin verificar contra el vendor: el 1er intento real puede dar un 400 nuevo). Moto sigue con el tomador en todos los papeles (entrega 2).
+- Bug: la re-cotización del «previo» de moto perdía el garaje (216,53€ fue «sin garaje»); ya se restaura.
+- Pendiente: entrega 2 (moto con figuras) y 3 (pedir datos a un tercero, emisión→intervinientes, renovación desde póliza, «Pasar la oportunidad a…»). Al abrir una variante se usan las figuras VIGENTES, no la foto de esa variante.
+
 ## (29/09/2026) Opciones del producto → garantías, «precio no comparable» y opciones en la póliza emitida
 - `garantiasDeOpciones()` (module-seguros): lista CERRADA de etiquetas medidas → sustitución (Allianz «No», Reale «SIN vehículo de sustitución»), retirada de carné (Generali «Sin contratar», Reale «Excluida») y reclamación de multas. La opción manda sobre la lista de coberturas. No se reutilizan los patrones del catálogo: casarían con preguntas («El conductor habitual es hijo de asegurado: No»).
 - `diferenciasDeOpcion()`: «No incluye / Sin confirmar» solo en garantías donde las opciones difieren; en la parrilla (FiltroGarantias) y en el portal (sin repetir lo de «frente a tu seguro actual»).
