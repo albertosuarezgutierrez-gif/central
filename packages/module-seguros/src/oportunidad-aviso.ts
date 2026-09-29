@@ -1,0 +1,109 @@
+// UNA sola regla para toda OPORTUNIDAD (Alberto, 29/09/2026): un seguro que NO está con nosotros y
+// cuyo vencimiento conocemos —venga de una baja por recibo devuelto, de un alta por Telegram, de un
+// lead de competencia, de la recaptación, del «avísame» de la web o de una póliza subida— genera el
+// aviso/tarea a Alberto 45 días antes de ese vencimiento. Antes de eso NO se contacta al cliente, y a
+// un cliente propio nunca se le manda precio por adelantado.
+//
+// Hasta hoy convivían 60, 45 y 70 tecleados en cada fichero; ahora todos leen DIAS_AVISO_OPORTUNIDAD.
+// El guardián `test/regression-oportunidad-45.test.ts` falla si alguien vuelve a teclear el número.
+//
+// ⚠️ NO confundir con `DIAS_PREAVISO_ASEGURADOR` (60, `vencimientos.ts`): ese es el plazo LEGAL de la
+// compañía (art. 22 LCS) sobre las pólizas propias, no cuándo se trabaja una oportunidad.
+//
+// Puro (sin BD ni red): `node --test`.
+
+import type { EstadoOportunidad } from './oportunidad-seguimiento.ts'
+
+/** Días antes del vencimiento en que una oportunidad pasa a Alberto (y no antes se contacta a nadie). */
+export const DIAS_AVISO_OPORTUNIDAD = 45
+
+/** Estados en los que la oportunidad sigue viva; `ganada`/`perdida` no se avisan. */
+export const ESTADOS_OPORTUNIDAD_ABIERTA: readonly EstadoOportunidad[] = ['competencia', 'en_negociacion', 'pendiente_cliente']
+
+const ISO = /^\d{4}-\d{2}-\d{2}$/
+
+function valida(s: string | null | undefined): string | null {
+  if (typeof s !== 'string' || !ISO.test(s)) return null
+  const d = new Date(`${s}T00:00:00Z`)
+  return Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s ? null : s
+}
+
+function sumarDias(iso: string, dias: number): string {
+  const d = new Date(`${iso}T00:00:00Z`)
+  d.setUTCDate(d.getUTCDate() + dias)
+  return d.toISOString().slice(0, 10)
+}
+
+/** Días naturales de `desde` a `hasta` (ISO), negativo si `hasta` es anterior. */
+function diasEntre(desde: string, hasta: string): number {
+  return Math.round((Date.parse(`${hasta}T00:00:00Z`) - Date.parse(`${desde}T00:00:00Z`)) / 86_400_000)
+}
+
+/**
+ * Qué día toca el primer paso de una oportunidad: {@link DIAS_AVISO_OPORTUNIDAD} días antes de su
+ * vencimiento, nunca antes de mañana. Sin vencimiento legible, mañana (hay que pedirlo).
+ */
+export function fechaAvisoOportunidad(vence: string | null | undefined, hoy: string): string {
+  const manana = sumarDias(hoy, 1)
+  const v = valida(vence)
+  if (!v) return manana
+  const antes = sumarDias(v, -DIAS_AVISO_OPORTUNIDAD)
+  return antes > manana ? antes : manana
+}
+
+/**
+ * El vencimiento del CICLO en curso: los seguros se renuevan cada año, así que una fecha pasada se
+ * corre de año en año hasta hoy o después (29/02 → 28/02). `null` si la fecha no se puede leer: no se
+ * inventa un día.
+ */
+export function vencimientoDelCiclo(fecha: string | null | undefined, hoy: string): string | null {
+  const f = valida(fecha)
+  if (!f) return null
+  const [a, m, d] = f.split('-').map(Number)
+  for (let n = 0; n <= 30; n++) {
+    const dia = Math.min(d, new Date(Date.UTC(a + n, m, 0)).getUTCDate())
+    const iso = `${a + n}-${String(m).padStart(2, '0')}-${String(dia).padStart(2, '0')}`
+    if (iso >= hoy) return iso
+  }
+  return null
+}
+
+export type OportunidadParaAviso = {
+  id: string
+  estado: string
+  fechaFinVigencia: string | null
+  /** Aparcada por Alberto hasta ese día: mientras dure, no suena. */
+  aparcadaHasta: string | null
+}
+
+export type AvisoOportunidad = { id: string; vence: string; dias: number }
+
+/**
+ * Qué oportunidades entran HOY en el aviso de 45 días: abiertas, con vencimiento conocido, a
+ * ≤ {@link DIAS_AVISO_OPORTUNIDAD} días de su vencimiento del ciclo, no aparcadas y sin aviso previo
+ * para ESE vencimiento. `yaAvisadas` son claves `id|vence` (ver {@link claveAvisoOportunidad}): un aviso
+ * por oportunidad y ciclo, y el ciclo siguiente vuelve a sonar.
+ */
+export function avisosOportunidadDeHoy(
+  ops: readonly OportunidadParaAviso[],
+  yaAvisadas: ReadonlySet<string>,
+  hoy: string,
+): AvisoOportunidad[] {
+  const out: AvisoOportunidad[] = []
+  for (const o of ops) {
+    if (!(ESTADOS_OPORTUNIDAD_ABIERTA as readonly string[]).includes(o.estado)) continue
+    const aparcada = valida(o.aparcadaHasta)
+    if (aparcada && aparcada > hoy) continue
+    const vence = vencimientoDelCiclo(o.fechaFinVigencia, hoy)
+    if (!vence) continue
+    const dias = diasEntre(hoy, vence)
+    if (dias > DIAS_AVISO_OPORTUNIDAD) continue
+    if (yaAvisadas.has(claveAvisoOportunidad(o.id, vence))) continue
+    out.push({ id: o.id, vence, dias })
+  }
+  return out.sort((a, b) => a.dias - b.dias)
+}
+
+export function claveAvisoOportunidad(id: string, vence: string): string {
+  return `${id}|${vence}`
+}

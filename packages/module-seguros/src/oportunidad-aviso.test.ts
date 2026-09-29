@@ -1,0 +1,51 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import {
+  DIAS_AVISO_OPORTUNIDAD, avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, vencimientoDelCiclo,
+} from './oportunidad-aviso.ts'
+import { DIAS_PRIMER_CONTACTO, siguientePasoLead } from './lead-competencia.ts'
+
+const HOY = '2026-09-29'
+
+test('la regla es 45 días', () => {
+  assert.equal(DIAS_AVISO_OPORTUNIDAD, 45)
+  assert.equal(DIAS_PRIMER_CONTACTO, DIAS_AVISO_OPORTUNIDAD, 'a un lead no se le escribe antes del aviso')
+})
+
+test('fecha del primer paso: 45 días antes, nunca antes de mañana', () => {
+  assert.equal(fechaAvisoOportunidad('2026-12-31', HOY), '2026-11-16')
+  assert.equal(fechaAvisoOportunidad('2026-10-20', HOY), '2026-09-30', 'ventana ya abierta → mañana')
+  assert.equal(fechaAvisoOportunidad(null, HOY), '2026-09-30')
+  assert.equal(fechaAvisoOportunidad('2026-02-30', HOY), '2026-09-30', 'fecha imposible = sin fecha')
+})
+
+test('vencimiento del ciclo: se corre de año en año, 29/02 → 28/02', () => {
+  assert.equal(vencimientoDelCiclo('2026-11-01', HOY), '2026-11-01')
+  assert.equal(vencimientoDelCiclo('2024-10-15', HOY), '2026-10-15')
+  assert.equal(vencimientoDelCiclo('2024-02-29', HOY), '2027-02-28')
+  assert.equal(vencimientoDelCiclo(HOY, HOY), HOY)
+  assert.equal(vencimientoDelCiclo('basura', HOY), null)
+})
+
+test('qué se avisa hoy: abiertas, en ventana, no aparcadas, una vez por ciclo', () => {
+  const base = { aparcadaHasta: null }
+  const ops = [
+    { ...base, id: 'a', estado: 'competencia', fechaFinVigencia: '2026-11-13' }, // 45 d → sí
+    { ...base, id: 'b', estado: 'competencia', fechaFinVigencia: '2026-11-14' }, // 46 d → aún no
+    { ...base, id: 'c', estado: 'ganada', fechaFinVigencia: '2026-10-10' },      // cerrada
+    { ...base, id: 'd', estado: 'en_negociacion', fechaFinVigencia: null },      // sin fecha: no se inventa
+    { id: 'e', estado: 'pendiente_cliente', fechaFinVigencia: '2026-10-10', aparcadaHasta: '2026-10-05' },
+    { ...base, id: 'f', estado: 'competencia', fechaFinVigencia: '2025-10-01' }, // ciclo 2026-10-01 → 2 d
+    { ...base, id: 'g', estado: 'competencia', fechaFinVigencia: '2026-10-20' }, // ya avisada este ciclo
+  ]
+  const r = avisosOportunidadDeHoy(ops, new Set([claveAvisoOportunidad('g', '2026-10-20')]), HOY)
+  assert.deepEqual(r, [{ id: 'f', vence: '2026-10-01', dias: 2 }, { id: 'a', vence: '2026-11-13', dias: 45 }])
+  // El ciclo siguiente vuelve a sonar aunque el anterior se avisara.
+  const r2 = avisosOportunidadDeHoy([ops[6]], new Set([claveAvisoOportunidad('g', '2025-10-20')]), HOY)
+  assert.equal(r2.length, 1)
+})
+
+test('un lead de competencia no recibe el primer contacto antes de los 45 días', () => {
+  assert.equal(siguientePasoLead(46, 0, null).accion, 'esperar')
+  assert.equal(siguientePasoLead(45, 0, null).accion, 'primer_contacto')
+})

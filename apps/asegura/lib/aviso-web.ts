@@ -25,6 +25,8 @@ import {
   HORAS_CONFIRMACION,
   DIAS_PURGA_SIN_CONFIRMAR,
   MAX_SOLICITUDES_DIA,
+  DIAS_AVISO_1,
+  DIAS_AVISO_2,
   MAX_SOLICITUDES_HORA,
   avisoQueToca,
   avisosWebActivos,
@@ -215,7 +217,7 @@ export async function confirmarAviso(correduriaId: string, token: unknown): Prom
     await tx.$executeRaw(Prisma.sql`
       insert into historial_interno (correduria_id, cliente_id, tipo, texto)
       values (${correduriaId}::uuid, ${ficha.id}::uuid, cast('contacto' as tipo_historial_interno),
-              ${`Confirmó en la web el aviso de vencimiento: seguro de ${seguro}, vence el ${ciclo}. Le escribiremos a 70 y 45 días.${telefono ? ' Dejó móvil y acepta que le llamemos para la renovación.' : ''}`})`)
+              ${`Confirmó en la web el aviso de vencimiento: seguro de ${seguro}, vence el ${ciclo}. Le escribiremos a ${DIAS_AVISO_1} y ${DIAS_AVISO_2} días.${telefono ? ' Dejó móvil y acepta que le llamemos para la renovación.' : ''}`})`)
     return false
   })
   const movil = !yaEstaba && telefono ? await movilALaFicha(correduriaId, ficha.id, telefono) : null
