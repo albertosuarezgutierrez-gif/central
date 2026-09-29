@@ -337,6 +337,11 @@ export function borrarContactoAsegura(body: Record<string, unknown>): Promise<Re
   return llamar('/api/operador/cliente/contactos', { method: 'DELETE', body: JSON.stringify(body) })
 }
 
+/** `/api/operador/cliente/carnets` — añadir (POST), corregir (PATCH) o quitar (DELETE) un carné. */
+export function carnetAsegura(method: 'POST' | 'PATCH' | 'DELETE', body: Record<string, unknown>): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/carnets', { method, body: JSON.stringify(body) })
+}
+
 /**
  * `PATCH /api/operador/cliente` — edición. El `actor` del cuerpo lo pone la ruta (sesión); el de la
  * cabecera sale de la sesión salvo que se pase (un agente sin sesión: `agente:<id>`).

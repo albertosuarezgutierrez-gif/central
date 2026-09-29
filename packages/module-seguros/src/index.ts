@@ -517,6 +517,7 @@ export {
   type GrupoHistorica,
 } from './ficha-historicas.ts'
 export { caducidadCarnet, type CaducidadCarnet } from './caducidad-carnet.ts'
+export { TIPOS_CARNET, claveTipoCarnet, revisarCarnet, type CarnetRevisado, type TipoCarnet } from './carnet-ficha.ts'
 export { anioCumpleanos, diaMadrid, esCumpleanos } from './cumpleanos.ts'
 export { ordenarHistorialRiesgo, type EslabonHistorial, type EslabonRiesgo } from './historial-riesgo.ts'
 export { agruparCalidad, esReglaCalidad, ORDEN_REGLAS, REGLAS_CALIDAD, type GrupoCalidad, type IncidenciaCalidad, type ReglaCalidad } from './calidad-dato.ts'

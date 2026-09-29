@@ -947,6 +947,15 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 - **(29/09/2026) Asistente /seguros AUTÓNOMO — fase 1 (decisión de Alberto: «tiene que hacerme todo el trabajo», emitir con botón).** Sin botón: corrección, oportunidad, tarea/llamada/nota/siniestro y precio de coche/moto (se pide al final del turno, 1 por mensaje, tope diario antes de decir «PEDIDO»). Con botón siguen emitir, presupuesto y portal (salen a terceros; regla de comunicaciones del CLAUDE.md). Nuevas: `alta_cliente` (lead dictado, puerto de alta sin sello) y `figura_riesgo` (propietario/conductor ≠ tomador); `proponer_tarificacion` acepta `oportunidadId` y cotiza con las figuras. Interruptor `CORREDURIA_ASISTENTE_AUTONOMO` (sin poner = autónomo). Pendiente fases 2-5: renovaciones, hogar/decesos/salud/vida, anulaciones/IBAN, resto.
 - **(29/09/2026) Asistente /seguros: «no he llegado a una respuesta» con un lead dictado por WhatsApp.** Rastro del turno 26: 2×`buscar` sin ficha y luego 7 vueltas en `vehiculo_catalogo` repitiendo las mismas versiones. Arreglo: consulta idéntica se contesta de memoria («YA CONSULTADO»), pasada final que responde con lo averiguado, y el prompt dice que un lead sin ficha NO sigue al catálogo (crear en `/correduria/cliente/nuevo`). ⏸️ Decisión pendiente de Alberto: crear lead por DICTADO desde Telegram (hoy el alta solo va con sello de documento, a propósito).
 
+## (29/09/2026) Correduría: carnés editables en la ficha + contactos SIN duplicar
+- Carnés: «Añadir/Editar carnés» en «DNI y carnés» (`EditarCarnets.tsx`) → `/api/correduria/cliente/carnets` → puerto
+  `/api/operador/cliente/carnets` (POST/PATCH/DELETE). Uno por tipo, fecha de expedición cifrada, historial sin la fecha;
+  regla pura `revisarCarnet` en module-seguros (no futura, ≥15 años tras nacer). Sin carné, el alta sale rellena con la fecha de su póliza (CIMA) como B.
+- Contactos: `anadirContacto`/`cambiarContacto` rechazan (409) un valor que ESA ficha ya tiene (comparan descifrado: 772 fichas sin hash).
+  Migración `2026-09-29_contactos_sin_duplicar.sql` APLICADA: borrados 11 tel + 278 emails repetidos (277 venían de la fusión,
+  rama sin hash de `fusionar_clientes`) + índice único (ficha, hash). Ojo: borrar un email dispara `portal_vinculo_retira_correo` (0 afectados medido).
+- Pendiente: la rama sin hash de `fusionar_clientes` aún puede copiar un email repetido SIN hash (el índice no lo ve).
+
 ## (29/09/2026) Correduría: vencimiento EDITABLE en las tarjetas de Oportunidades de la ficha
 - «Cambiar/Poner vencimiento» en cada tarjeta (`EditarVencimiento.tsx`). Se guarda en el SEGUIMIENTO
   (`fecha_fin_vigencia`, `accion:'editar'`), que es de donde sale el aviso de 45 días (PR #4019); la póliza

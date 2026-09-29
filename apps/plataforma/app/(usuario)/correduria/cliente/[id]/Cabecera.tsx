@@ -8,6 +8,7 @@ import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/co
 import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
 import PonerNombre from './PonerNombre'
+import EditarCarnets from './EditarCarnets'
 import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
 
@@ -67,6 +68,10 @@ export default function Cabecera({ ficha, resumen }: { ficha: Ficha; resumen: Re
                   <span style={{ display: 'flex', gap: '4px 14px', flexWrap: 'wrap', alignItems: 'center' }}>
                     <Identidad identidad={ficha.identidad} clienteId={ficha.id} dePolizas={ficha.dePolizas} />
                     <Carnets carnets={ficha.carnets} dePolizas={ficha.dePolizas} />
+                    {/* `null` = asegura no manda el bloque: sin saber qué hay, no se ofrece editarlo. */}
+                    {ficha.carnets !== null && (
+                      <EditarCarnets clienteId={ficha.id} carnets={ficha.carnets} fechaPoliza={ficha.dePolizas?.fechaCarnet ?? null} />
+                    )}
                   </span>
                 </details>
                 {conyuge && (
