@@ -92,6 +92,20 @@
   el presupuesto es su base. **Consecuencia operativa: tarificar en masa cuesta dinero** — una
   cotización = una parrilla con todas las compañías; retarificar la cartera viva (~109 pólizas)
   ronda los 54,50€ por pasada. Cualquier automatismo que cotice lleva **contador y tope** de serie.
+- **Alternativas a Avant2 — revisadas y DESCARTADAS el 29/09/2026 (decisión de Alberto).** Criterio:
+  plataforma cotiza por API, así que solo sirve un multitarificador que venda **API abierta**.
+  - **TarifAI (MPM Software, promo FECOR v20260507):** 195€ alta + 0€ hasta 31/12/2026 + 970€/año
+    +IPC desde 2027, usuarios ilimitados, sin coste por cotización. Es **web**, ligada a su ERP segElevia;
+    la oferta no menciona API. Equilibrio frente a 0,50€/cotización ≈ 1.940/año (~160/mes); en sept/2026
+    se hicieron 27. Exige pertenecer a una asociación de FECOR.
+  - **Merlín (ebroker):** gratis para usuarios de ebroker, licencia a medida para el resto; FECOR: 1 año
+    gratis. Web; API pública no documentada.
+  - **PV Taris (Grupo QS / Soft QS):** 28 compañías, dentro de su programa de gestión PV.
+  - **Semmas:** SaaS de gestión que conecta directo con las API de pocas compañías (Reale, FIATC, Sanitas).
+  - Integrar compañía a compañía (sus webservices) = sin coste por consulta, pero un acuerdo y una
+    integración por aseguradora: no compensa con este volumen.
+  Solo se miraron los resúmenes del buscador (las webs de los proveedores las bloquea el proxy): que
+  Merlín/QS no tengan API es **probable, no comprobado**. Revisar si el volumen pasa de ~160/mes.
 
 ### 📜 Contrato técnico de la API — recibido del repo de Manuel (01/09/2026)
 Su Claude contestó al prompt con un traspaso completo, transcrito en
