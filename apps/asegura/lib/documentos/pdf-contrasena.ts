@@ -57,25 +57,28 @@ export async function leerPdfProbando(buffer: Buffer, candidatas: string[]): Pro
     return { ok: false, motivo: 'ilegible' }
   }
   for (const password of ['', ...candidatas]) {
+    const tarea = pdfjsLib.getDocument({
+      data: new Uint8Array(buffer),
+      password,
+      useWorkerFetch: false,
+      isEvalSupported: false,
+      useSystemFonts: true,
+    })
     try {
-      const doc = await pdfjsLib.getDocument({
-        data: new Uint8Array(buffer),
-        password,
-        useWorkerFetch: false,
-        isEvalSupported: false,
-        useSystemFonts: true,
-      }).promise
+      const doc = await tarea.promise
       let texto = ''
       for (let i = 1; i <= doc.numPages; i++) {
         const contenido = await (await doc.getPage(i)).getTextContent()
         texto += contenido.items.map((item) => ('str' in item ? item.str : '')).join(' ') + '\n'
       }
-      await doc.destroy()
       return { ok: true, texto }
     } catch (e) {
       // code 1 = hace falta contraseña, 2 = no es esta → siguiente. Otro fallo = el PDF no se abre.
       const codigo = e && typeof e === 'object' && 'code' in e ? (e as { code: unknown }).code : null
       if (codigo !== 1 && codigo !== 2) return { ok: false, motivo: 'ilegible' }
+    } finally {
+      // Libera la tarea (y el documento, si llegó a abrirse) en TODOS los caminos, no solo en el bueno.
+      await tarea.destroy().catch(() => undefined)
     }
   }
   return { ok: false, motivo: candidatas.length === 0 ? 'sin_candidatas' : 'ninguna_vale' }
