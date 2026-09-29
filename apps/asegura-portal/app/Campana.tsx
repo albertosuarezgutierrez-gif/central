@@ -1,7 +1,7 @@
 'use client'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 
-import type { Avisos } from '@/lib/avisos'
+import type { Aviso, Avisos } from '@/lib/avisos'
 
 import { ActivarPush } from './ActivarPush'
 
@@ -98,6 +98,26 @@ export function Campana() {
     }
   }, [globo])
 
+  // Pulsar un aviso INFORMATIVO lo da por leído (29/09/2026): sale de la lista y del número al
+  // momento y se sella en el servidor para que no vuelva. `keepalive` porque el enlace navega a la
+  // vez y la petición tiene que sobrevivir a la página. Si el sello falla, el aviso vuelve a salir
+  // en la próxima carga: repetirlo es mejor que perderlo.
+  const descartar = useCallback((a: Aviso) => {
+    if (!a.descartable) return
+    setDatos((d) => {
+      if (d === null || d === 'error') return d
+      const avisos = d.avisos.filter((x) => !(x.tipo === a.tipo && x.id === a.id))
+      const resto = d.globo?.endsWith('+') ? `${avisos.length}+` : avisos.length > 0 ? String(avisos.length) : null
+      return { ...d, avisos, globo: d.globo === '!' ? '!' : resto }
+    })
+    void fetch('/api/avisos/leido', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ clave: a.clave }),
+      keepalive: true,
+    }).catch(() => {})
+  }, [])
+
   const n = datos !== null && datos !== 'error' ? datos.avisos.length : null
   const etiqueta =
     globo === null
@@ -127,7 +147,14 @@ export function Campana() {
       </button>
       {abierto && (
         <div className="campana-panel" id={idPanel} role="region" aria-label="Avisos">
-          <Contenido datos={datos} reintentar={cargar} cerrar={() => setAbierto(false)} />
+          <Contenido
+            datos={datos}
+            reintentar={cargar}
+            abrir={(a) => {
+              descartar(a)
+              setAbierto(false)
+            }}
+          />
           <ActivarPush />
         </div>
       )}
@@ -138,11 +165,11 @@ export function Campana() {
 function Contenido({
   datos,
   reintentar,
-  cerrar,
+  abrir,
 }: {
   datos: Avisos | 'error' | null
   reintentar: () => void
-  cerrar: () => void
+  abrir: (a: Aviso) => void
 }) {
   if (datos === null) return <p className="campana-vacio">Mirando qué tienes pendiente…</p>
   if (datos === 'error') {
@@ -165,7 +192,7 @@ function Contenido({
               {/* `<a>` y no `<Link>`: el destino puede llevar `#` a un titular
                   de la misma página, y la navegación blanda de Next no vuelve
                   a hacer scroll al ancla si ya estás en `/boveda`. */}
-              <a className="campana-aviso" href={a.href} onClick={cerrar}>
+              <a className="campana-aviso" href={a.href} onClick={() => abrir(a)}>
                 <span className="campana-aviso-titulo">{a.titulo}</span>
                 <span className="campana-aviso-detalle">{a.detalle}</span>
               </a>

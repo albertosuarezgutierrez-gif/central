@@ -73,6 +73,9 @@ export {
   textoGlobo,
   entraEnVentanaCarnet,
   avisosDe,
+  TIPOS_AVISO_DESCARTABLES,
+  claveAviso,
+  esClaveDescartable,
 } from './avisos.ts'
 export type {
   TipoAviso,

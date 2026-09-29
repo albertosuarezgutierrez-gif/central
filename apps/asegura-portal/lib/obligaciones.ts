@@ -19,7 +19,7 @@ import {
   type Procedencia,
 } from '@central/module-seguros-portal'
 
-import { carteraALaVista, carteraDeIdentidad, type CarteraPortal } from './cartera-lectura'
+import { carteraALaVista, carteraDeIdentidad, type CarteraPortal, type PolizaPortal } from './cartera-lectura'
 import { prisma } from './db'
 import { avanzarRecordatoriosRecurrentesDeIdentidad } from './recordatorios'
 import { getIdentidad } from './session'
@@ -35,6 +35,8 @@ export type ObligacionVista = {
   procedencia: Procedencia
   /** El aviso ya salió. `false` = todavía no, no «no hace falta». */
   avisada: boolean
+  /** La póliza de la cartera de la que sale (`null` = propia o declarada): el aviso enlaza a su ficha. */
+  polizaId: string | null
 }
 
 /**
@@ -132,9 +134,7 @@ export async function sincronizarObligacionesDeIdentidad(
             identidadId,
             polizaId: p.id,
             tipo: 'poliza',
-            // La etiqueta, no el enum: este título es lo que el cliente lee en
-            // «Tu calendario», y `responsabilidad_civil` no es castellano.
-            titulo: `${etiquetaRamo(p.ramo) ?? p.ramo} · ${p.compania}`,
+            titulo: tituloCartera(p),
             fechaEvento: evento,
             fechaAccionable: accionable,
             procedencia: 'compania',
@@ -142,9 +142,7 @@ export async function sincronizarObligacionesDeIdentidad(
           // `avisadaAt` NO se toca: el sello del envío es lo único que impide
           // avisar dos veces de lo mismo.
           update: {
-            // La etiqueta, no el enum: este título es lo que el cliente lee en
-            // «Tu calendario», y `responsabilidad_civil` no es castellano.
-            titulo: `${etiquetaRamo(p.ramo) ?? p.ramo} · ${p.compania}`,
+            titulo: tituloCartera(p),
             fechaEvento: evento,
             fechaAccionable: accionable,
             actualizadaAt: new Date(),
@@ -372,6 +370,17 @@ export async function sincronizarObligacionesDeSesion(): Promise<void> {
   await sincronizarObligacionesDeIdentidad(identidad.id)
 }
 
+/**
+ * El título de un vencimiento de la cartera. La etiqueta, no el enum (`responsabilidad_civil` no es
+ * castellano), y desde el 29/09/2026 con QUÉ se asegura: dos coches con la misma compañía salían en
+ * la campana como dos «Auto · Allianz» idénticos. Sin bien informado, el final del número de póliza.
+ */
+function tituloCartera(p: PolizaPortal): string {
+  const base = `${etiquetaRamo(p.ramo) ?? p.ramo} · ${p.compania}`
+  const cual = p.bien.cosa ?? p.bien.ubicacion ?? (p.numeroPoliza ? `póliza …${p.numeroPoliza.slice(-4)}` : null)
+  return cual ? `${base} · ${cual}` : base
+}
+
 export async function obligacionesDeIdentidad(identidadId: string): Promise<ObligacionVista[]> {
   // 🚨 Sin vínculo, los vencimientos de CARTERA no se pintan (25/09/2026): pueden ser de una ficha
   // que ya no es suya (el caso Lozano/Pueyo). No se BORRAN — el sincronizador no toca nada sin
@@ -390,6 +399,7 @@ export async function obligacionesDeIdentidad(identidadId: string): Promise<Obli
     fechaAccionable: f.fechaAccionable,
     procedencia: f.procedencia,
     avisada: f.avisadaAt !== null,
+    polizaId: f.polizaId,
   }))
 }
 

@@ -9,7 +9,13 @@
  * pisa parámetros ya presentes; cualquier URL que no se pueda parsear se
  * devuelve tal cual (que falle Prisma con su error real, no nosotros antes).
  */
-export const POOL_POR_INSTANCIA = 5
+// 5 → 3 (29/09/2026): la BD compartida tiene 60 conexiones y ~40 las ocupa Supabase en reposo.
+// Al abrir /correduria salen ~20 llamadas al puerto a la vez, repartidas en varias instancias;
+// con 5 por instancia Postgres se quedaba sin huecos (1.217 rechazos «remaining connection slots»
+// en 80 min). Con 3 y más espera en la cola de Prisma, se hace cola en vez de fallar.
+export const POOL_POR_INSTANCIA = 3
+/** Segundos que una consulta espera turno en la cola de Prisma antes de P2024 (defecto de Prisma: 10). */
+export const ESPERA_POOL_S = 20
 
 export function normalizarUrlPooler(url: string): string {
   try {
@@ -28,6 +34,7 @@ export function normalizarUrlPooler(url: string): string {
     // límite manda; y ojo: si el log sigue diciendo «connection limit: 1» tras
     // desplegar esto, es que la cadena de Vercel lo lleva escrito a mano.
     if (!u.searchParams.has('connection_limit')) u.searchParams.set('connection_limit', String(POOL_POR_INSTANCIA))
+    if (!u.searchParams.has('pool_timeout')) u.searchParams.set('pool_timeout', String(ESPERA_POOL_S))
     return u.toString()
   } catch {
     return url

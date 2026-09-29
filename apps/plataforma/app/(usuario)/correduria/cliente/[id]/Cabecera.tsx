@@ -8,6 +8,7 @@ import { PageHeader, BtnLink, Badge, btnStyle, cardStyle, type Tono } from '@/co
 import AccionesContacto from '../../AccionesContacto'
 import VerDniCompleto from './VerDniCompleto'
 import PonerNombre from './PonerNombre'
+import WhatsappReciboDevuelto from '../../poliza/[id]/WhatsappReciboDevuelto'
 import { fmt, TIPOS } from './piezas'
 
 /**
@@ -104,7 +105,27 @@ function SiguientePaso({ ficha, resumen, tiposVivos }: { ficha: Ficha; resumen: 
     ramosVivos: tiposVivos,
   })
   if (!paso) return null
-  const tel = contactoEfectivo({ telefono: ficha.contacto.telefono, email: ficha.contacto.email }, ficha.intervinientes).telefono
+  const ef = contactoEfectivo({ telefono: ficha.contacto.telefono, email: ficha.contacto.email }, ficha.intervinientes)
+  const tel = ef.telefono
+  // Con el recibo devuelto, WhatsApp al lado de «Llamar» (Alberto, 29/09/2026: «por WhatsApp queda
+  // reflejado»). Mismo mensaje y misma nota en la ficha que el botón del recibo en la póliza.
+  const devuelta = paso.accion.tipo === 'llamar' ? ficha.polizas.find(p => p.viva && p.recibos?.ultimo?.situacion === 'devuelto') ?? null : null
+  const tercero = ef.viaTelefono === 'interviniente'
+  const whatsapp = devuelta && tel ? (
+    <WhatsappReciboDevuelto
+      ctx={{
+        clienteId: ficha.id, telefono: tel,
+        quien: tercero && ef.quien ? `${ef.quien.nombre ?? 'otra persona'} (${etiquetaRol(ef.quien.rol).toLowerCase()})` : null,
+        nombre: ficha.nombre, aseguradora: devuelta.aseguradora, tipo: devuelta.tipo,
+        riesgo: devuelta.objeto?.estado === 'conocido' ? { titulo: devuelta.objeto.titulo, detalle: devuelta.objeto.detalle } : null,
+        paraTercero: tercero,
+      }}
+      importe={devuelta.recibos?.ultimo?.importe ?? null}
+      fechaEfecto={devuelta.recibos?.ultimo?.fechaEfecto ?? null}
+      tipoMotivo={null}
+      grande
+    />
+  ) : null
   const color = paso.tono === 'urgente' ? 'var(--negative)' : paso.tono === 'aviso' ? 'var(--warning)' : 'var(--primary)'
   const fondo = paso.tono === 'urgente' ? 'var(--negative-bg)' : paso.tono === 'aviso' ? 'var(--warning-bg)' : 'var(--primary-light)'
   const accion =
@@ -118,7 +139,7 @@ function SiguientePaso({ ficha, resumen, tiposVivos }: { ficha: Ficha; resumen: 
       <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', minWidth: 0, flex: '1 1 220px' }}>
         <span style={{ color, marginRight: 6 }}>Siguiente paso ·</span>{paso.texto}
       </span>
-      {accion}
+      <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>{whatsapp}{accion}</span>
     </div>
   )
 }
