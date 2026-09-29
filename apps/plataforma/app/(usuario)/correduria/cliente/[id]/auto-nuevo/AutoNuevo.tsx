@@ -943,7 +943,7 @@ export default function AutoNuevo({
           >
             <input type="date" value={fechaCompra || matriculacion} onChange={(e) => setFechaCompra(e.target.value === matriculacion ? '' : e.target.value)} style={input} />
           </Campo>
-          <Campo etiqueta="Remolque ligero (< 750 kg)" falta={false} ayuda="La compañía lo pregunta. Por defecto, no.">
+          <Campo etiqueta="Remolque ligero (< 750 kg)" falta={false} ayuda="Márcalo si el cliente lleva remolque. Sin marcar = sin remolque.">
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 44 }}>
               <input
                 type="checkbox"
@@ -951,7 +951,9 @@ export default function AutoNuevo({
                 onChange={(e) => setRemolqueLigero(e.target.checked)}
                 style={{ width: 18, height: 18 }}
               />
-              <span style={{ fontSize: 14 }}>{remolqueLigero ? 'Sí, lleva' : 'No lleva'}</span>
+              {/* Texto fijo: pintar el estado («No lleva») junto a una casilla vacía se leía como la
+                  opción a marcar y decía lo contrario de lo que hace (29/09/2026). */}
+              <span style={{ fontSize: 14 }}>Lleva remolque</span>
             </label>
           </Campo>
         </div>
