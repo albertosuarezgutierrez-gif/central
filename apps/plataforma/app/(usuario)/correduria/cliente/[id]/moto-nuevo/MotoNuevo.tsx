@@ -140,7 +140,7 @@ export default function MotoNuevo({
   consumo: ConsumoPuerto
   simulacion: boolean
   /** `null` = no se ha podido leer el directorio de compañías: se teclea el código a mano. */
-  companias: Compania[] | null
+  companias: Pick<Compania, 'codigoDgs' | 'nombreComun' | 'nombreCima'>[] | null
 }) {
   // ── Vehículo: marca → modelo → combustible → versión, todo del catálogo ────
   const [marcas, setMarcas] = useState<Opcion[]>([])
@@ -277,6 +277,7 @@ export default function MotoNuevo({
     anterior && companias ? codigoCompania(companias, { codigoDgs: sa?.codigoDgs ?? null, nombre: anterior.aseguradora }) ?? '' : '')
   const [companiaActualLibre, setCompaniaActualLibre] = useState(() => (companias === null ? sa?.codigoDgs ?? '' : ''))
   const [polizaActualDigitos, setPolizaActualDigitos] = useState(() => anterior?.numeroPoliza?.replace(/\s+/g, '') ?? '')
+  const [matriculaAnterior, setMatriculaAnterior] = useState('')
   // Los años NO se teclean (29/09/2026, Alberto): se declara el máximo y la compañía aplica el
   // bonus real contrastando el nº de póliza con SINCO. Lo leído de su póliza manda sobre el máximo.
   const historial = historialDeclarado(sa)
@@ -456,6 +457,7 @@ export default function MotoNuevo({
       correccionesFinal.aseguradoAntes = true
       correccionesFinal.companiaAnteriorCodigo = companiaActualElegida
       correccionesFinal.polizaAnterior = polizaActualDigitos.trim()
+      if (matriculaAnterior.trim()) correccionesFinal.matriculaAnterior = matriculaAnterior.trim()
       correccionesFinal.aniosAsegurado = Number(aniosAsegurado)
       correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
@@ -859,6 +861,18 @@ export default function MotoNuevo({
                   antecedentes con este número y el precio se quede en estimado.</ConIcono>
                 </p>
               )}
+            </Campo>
+            <Campo
+              etiqueta="Matrícula de esa póliza"
+                falta={false}
+              ayuda="Solo si la póliza anterior era de OTRO vehículo (moto recién comprada). La compañía busca el historial por esta matrícula: con la de la moto nueva no lo encuentra y no aplica la bonificación. Vacío = la misma matrícula."
+            >
+              <input
+                value={matriculaAnterior}
+                onChange={(e) => setMatriculaAnterior(e.target.value)}
+                placeholder={matricula.trim() ? `La misma (${matricula.trim().toUpperCase()})` : 'La misma'}
+                style={input}
+              />
             </Campo>
           </div>
         )}

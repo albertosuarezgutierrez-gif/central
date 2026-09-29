@@ -894,6 +894,12 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Bonus de moto no aplicado (2121NST): matrícula anterior + lista de compañías de Avant2
+- Medido en `tarificaciones` (3 de Manuel Piña): Mapfre responde «el cliente no aparece asociado a una póliza de otra compañía», Reale ignora el historial, Occident −41% sin verificar. Causa: `previousInsurance.registrationPlate` iba SIEMPRE con la matrícula actual (`peticion-moto.ts`/`peticion-auto.ts`); con vehículo nuevo la compañía no encuentra el historial.
+- Arreglo: campo «Matrícula de esa póliza» (`matriculaAnterior`) en auto-nuevo y moto-nuevo; vacío = la actual. Test que falla sin él.
+- El desplegable de moto leía el directorio de la correduría (14); ahora `/motorcycle/insurance-companies` de Avant2 (`companias-anteriores-moto`), como auto desde el 25/09.
+- Pendiente: aviso «bonificación NO verificada» a partir de los avisos de compañía (propuesto, sin hacer).
+
 ## (29/09/2026) Riesgo, entrega 2+3: moto con figuras, aviso legal al emitir, figuras→póliza, pasar oportunidad, hogar en el riesgo
 - Moto: propietario/conductor distintos del tomador (`peticion-moto.ts`, carné de MOTO del conductor desde su ficha; mismo DNI propietario=conductor → mismo objeto). Sin probar contra el vendor (1ª cotización real, OK de Alberto).
 - Emitir: 409 `confirmar_figuras` si la variante cambia personas/CP vs la primera del MISMO vehículo, comparando el DNI de lo que VIAJÓ (`emision-figuras-reglas.ts`), no la foto de figuras. Confirmación en historial antes del Submit (fail-closed). Tras acuñar, figuras → `poliza_intervinientes` y `oportunidades.poliza_ganada_id`.

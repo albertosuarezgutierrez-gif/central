@@ -98,6 +98,10 @@ export type DatosAuto = DatosPersona & {
   aseguradoAntes?: boolean
   companiaAnteriorCodigo?: string | null // código DGS
   polizaAnterior?: string | null
+  /** Matrícula del vehículo de la póliza ANTERIOR. Con vehículo nuevo no es la actual: la compañía
+   *  busca el historial por esa matrícula y, con la del vehículo nuevo, no lo encuentra (Mapfre:
+   *  «el cliente identificado no aparece asociado…») y el bonus no se aplica. Vacía = la actual. */
+  matriculaAnterior?: string | null
   aniosAsegurado?: number | null
   aniosEnCompania?: number | null
   aniosSinSiniestros?: number | null
@@ -405,7 +409,7 @@ export function construirPeticionAuto(d: DatosAuto): Record<string, unknown> {
     const previa: Record<string, unknown> = {
       policyNumber: d.polizaAnterior,
       previousCompany: { code: d.companiaAnteriorCodigo },
-      registrationPlate: riesgo.registrationPlate,
+      registrationPlate: texto(d.matriculaAnterior) ? d.matriculaAnterior!.toUpperCase().replace(/\s/g, '') : riesgo.registrationPlate,
       totalYearsInsured: d.aniosAsegurado,
       yearsInPreviousCompany: d.aniosEnCompania,
       yearsWithoutAccidents: d.aniosSinSiniestros,

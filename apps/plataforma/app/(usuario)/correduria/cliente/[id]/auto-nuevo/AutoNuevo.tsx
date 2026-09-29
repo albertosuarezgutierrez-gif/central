@@ -313,6 +313,7 @@ export default function AutoNuevo({
   const [companiaActualCodigo, setCompaniaActualCodigo] = useState('')
   const [companiaActualLibre, setCompaniaActualLibre] = useState('')
   const [polizaActualDigitos, setPolizaActualDigitos] = useState('')
+  const [matriculaAnterior, setMatriculaAnterior] = useState('')
   const [aniosAsegurado, setAniosAsegurado] = useState('')
   const [aniosEnCompania, setAniosEnCompania] = useState('')
   const [aniosSinSiniestros, setAniosSinSiniestros] = useState('')
@@ -730,6 +731,7 @@ export default function AutoNuevo({
       correccionesFinal.aseguradoAntes = true
       correccionesFinal.companiaAnteriorCodigo = companiaActualElegida
       correccionesFinal.polizaAnterior = polizaActualDigitos.trim()
+      if (matriculaAnterior.trim()) correccionesFinal.matriculaAnterior = matriculaAnterior.trim()
       correccionesFinal.aniosAsegurado = Number(aniosAsegurado)
       correccionesFinal.aniosEnCompania = Number(aniosEnCompania)
       correccionesFinal.aniosSinSiniestros = Number(aniosSinSiniestros)
@@ -1190,6 +1192,18 @@ export default function AutoNuevo({
                     antecedentes con este número y el precio se quede en estimado.</ConIcono>
                   </p>
                 )}
+              </Campo>
+              <Campo
+                etiqueta="Matrícula de esa póliza"
+                falta={false}
+                ayuda="Solo si la póliza anterior era de OTRO vehículo (coche recién comprado). La compañía busca el historial por esta matrícula: con la del coche nuevo no lo encuentra y no aplica la bonificación. Vacío = la misma matrícula."
+              >
+                <input
+                  value={matriculaAnterior}
+                  onChange={(e) => setMatriculaAnterior(e.target.value)}
+                  placeholder={matricula.trim() ? `La misma (${matricula.trim().toUpperCase()})` : 'La misma'}
+                  style={input}
+                />
               </Campo>
               <Campo etiqueta="Años asegurado sin interrupción" falta={aniosAsegurado.trim() === ''}>
                 <input type="number" min={0} value={aniosAsegurado} onChange={(e) => setAniosAsegurado(e.target.value)} style={input} />

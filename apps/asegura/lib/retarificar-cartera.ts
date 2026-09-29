@@ -139,6 +139,7 @@ import {
   versionesMoto,
   experienciaConduccionMoto,
   tiposDeGarajeMoto,
+  companiasAnterioresMoto,
   tiposDeCarnetMoto,
   limitesCarnetMoto,
   motorDeVersionMoto,
@@ -1455,6 +1456,8 @@ export async function resolverCatalogo(params: URLSearchParams): Promise<Resulta
         return { estado: 'ok', opciones: await tiposDeGarajeMoto(config) }
       case 'carnets-moto':
         return { estado: 'ok', opciones: await tiposDeCarnetMoto(config) }
+      case 'companias-anteriores-moto':
+        return { estado: 'ok', opciones: await companiasAnterioresMoto(config) }
       // Los ramos habilitados para esta organización y, resuelto aquí mismo,
       // si hogar/moto están entre ellos (con su id EXACTO). Tres estados, no dos.
       case 'lineas': {

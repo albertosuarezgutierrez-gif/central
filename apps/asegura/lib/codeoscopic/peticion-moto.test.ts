@@ -98,6 +98,17 @@ test('con historial, el bloque va completo y con el código DGS de la compañía
   assert.equal(c.risk.previousInsurance.totalYearsInsured, 6)
 })
 
+test('la matrícula de la póliza anterior es la del vehículo ANTERIOR si se da (vehículo nuevo)', () => {
+  const c = construirPeticionMoto({ ...CON_HISTORIAL, matriculaAnterior: '9031 ght' }, LINEA) as any
+  assert.equal(c.risk.previousInsurance.registrationPlate, '9031GHT')
+  assert.notEqual(c.risk.previousInsurance.registrationPlate, c.risk.registrationPlate)
+})
+
+test('sin matrícula anterior, la póliza anterior va con la matrícula actual (mismo vehículo)', () => {
+  const c = construirPeticionMoto({ ...CON_HISTORIAL, matriculaAnterior: '  ' }, LINEA) as any
+  assert.equal(c.risk.previousInsurance.registrationPlate, c.risk.registrationPlate)
+})
+
 test('con 2 años limpios de 6 asegurado, el vendor SÍ exige el detalle', () => {
   const d = { ...CON_HISTORIAL, aniosSinSiniestros: 2 }
   assert.equal(exigeDetalleDeSiniestrosMoto(d), true)
