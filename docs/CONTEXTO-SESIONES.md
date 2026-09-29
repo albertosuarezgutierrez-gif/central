@@ -12,11 +12,11 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
-**(29/09/2026)** — 🏦 **Cambio de IBAN desde el portal** (PR en borrador): el cliente pide la cuenta nueva en «Mis datos» con un código
+**(29/09/2026)** — 🏦 **Cambio de IBAN desde el portal** (PR #3969): el cliente pide la cuenta nueva en «Mis datos» con un código
 a su correo de ACCESO (canal verificado, código atado a identidad+IBAN); asegura la deja PENDIENTE cifrada en
-`seguros.cambio_cuenta_solicitud` (migración `2026-09-29d`, **aún sin aplicar**) — NO cambia la ficha. Alberto la ve en «Hoy»
+`seguros.cambio_cuenta_solicitud` (migración `2026-09-29d`, **aplicada 29/09**) — NO cambia la ficha. Alberto la ve en «Hoy»
 (`CambiosCuenta.tsx`), «Ver IBAN» lo da completo (POST auditado), «Hecha» lo copia a `clientes.cuenta_bancaria`. Aviso
-Telegram por el muro de actividad (tipo `cuenta`). Módulo 97 subido a `module-seguros/iban.ts`. Pendiente: revisión architect.
+Telegram por el muro de actividad (tipo `cuenta`). Módulo 97 subido a `module-seguros/iban.ts`. Revisión architect hecha: «Hecha» también escribe la cuenta en sus pólizas vigentes; la cola avisa si el acceso que lo pide es reciente (sesión robada → confirmar por teléfono).
 
 **(29/09/2026)** — 🧾 Devoluciones, 2ª tanda (**PR #3964 MERGEADO**): **Allianz** ya se lee — manda la tabla en un PDF adjunto
 («Rel. recibos ventanilla» = devueltos; «Relacion anulacion polizas por impago» = anuladas). El triaje guarda los PDF SOLO de
