@@ -9,7 +9,7 @@
 //
 // 🚨 Las cuatro son conservadoras: ante la duda NO marcan, NO afirman una pérdida y NO avisan dos veces.
 
-import { CATALOGO_GARANTIAS, claveCobertura, type GarantiasClasificadas, type RamoGarantias } from './catalogo-garantias.ts'
+import { CATALOGO_GARANTIAS, claveCobertura, esGarantiaDeLey, type GarantiasClasificadas, type RamoGarantias } from './catalogo-garantias.ts'
 
 // ─── Necesidades → garantías ─────────────────────────────────────────────────
 
@@ -74,6 +74,7 @@ export function cambiosFrenteActual(
   if (!opcion || !actual) return null
   const r: CambiosFrenteActual = { ganas: [], pierdes: [], sinDato: [] }
   for (const g of CATALOGO_GARANTIAS[ramo]) {
+    if (esGarantiaDeLey(ramo, g.clave)) continue
     const o = opcion.porClave[g.clave] ?? 'no_consta'
     const a = actual.porClave[g.clave] ?? 'no_consta'
     if (o === 'si' && a !== 'si') r.ganas.push(g.etiqueta)

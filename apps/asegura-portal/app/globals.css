@@ -4132,7 +4132,8 @@ button.opcion[aria-pressed="true"] { border-color: var(--primary); background: v
   gap: 6px 12px;
   align-items: center;
 }
-.todas-logo { grid-area: logo; display: flex; align-items: center; max-width: 96px; }
+.todas-de-ley { margin: 0 0 8px; padding: 8px 12px; border-radius: 10px; background: var(--accent-soft, var(--border)); font-size: 14px; font-weight: 600; }
+.todas-logo { grid-area: logo; display: flex; align-items: center; max-width: 120px; }
 .todas-fila-datos { grid-area: datos; display: grid; gap: 2px; min-width: 0; }
 .todas-recomendada { width: fit-content; }
 .todas-compania { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }

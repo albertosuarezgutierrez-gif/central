@@ -6,7 +6,7 @@
 // Solo se descarta del todo lo que dice explícitamente que NO la incluye.
 
 import type { EstadoGarantia, GarantiasClasificadas, RamoGarantias } from './catalogo-garantias.ts'
-import { CATALOGO_GARANTIAS } from './catalogo-garantias.ts'
+import { CATALOGO_GARANTIAS, esGarantiaDeLey } from './catalogo-garantias.ts'
 
 export type OpcionFiltrable = {
   id: string
@@ -65,6 +65,7 @@ export type InterruptorGarantia = { clave: string; etiqueta: string; conSi: numb
  */
 export function interruptoresGarantias(ramo: RamoGarantias, opciones: readonly OpcionFiltrable[]): InterruptorGarantia[] {
   return CATALOGO_GARANTIAS[ramo]
+    .filter((g) => !esGarantiaDeLey(ramo, g.clave))
     .map((g) => ({ clave: g.clave, etiqueta: g.etiqueta, conSi: opciones.filter((o) => estadoDe(o, g.clave) === 'si').length }))
     .filter((i) => i.conSi > 0)
 }
@@ -104,6 +105,7 @@ export function diferenciasDeOpcion(
   const leidas = opciones.filter((o) => o.garantias !== null)
   const r: DiferenciasOpcion = { noIncluye: [], sinConfirmar: [] }
   for (const g of CATALOGO_GARANTIAS[ramo]) {
+    if (esGarantiaDeLey(ramo, g.clave)) continue
     if (new Set(leidas.map((o) => estadoDe(o, g.clave))).size < 2) continue
     const e = estadoDe(opcion, g.clave)
     if (e === 'no') r.noIncluye.push(g.etiqueta)

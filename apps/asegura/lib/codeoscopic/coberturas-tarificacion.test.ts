@@ -145,8 +145,10 @@ test('🚨 fallo de red → estado `fallo`, lista NULL (nunca []) y garantías t
   assert.equal(e.sobre.estado, 'fallo')
   assert.equal(e.sobre.lista, null)
   assert.ok(e.garantias)
-  const estados = new Set(Object.values(e.garantias!.porClave))
-  assert.deepEqual([...estados], ['no_consta'], 'un fallo no puede decir «no incluye» nada')
+  // Todo «no consta» salvo lo que da la LEY (RC obligatoria en auto/moto), que no depende de la compañía.
+  const { rc_obligatoria, ...resto } = e.garantias!.porClave
+  assert.equal(rc_obligatoria, 'si')
+  assert.deepEqual([...new Set(Object.values(resto))], ['no_consta'], 'un fallo no puede decir «no incluye» nada')
 })
 
 test('lista vacía del vendor es `vacias` (un dato), no `fallo`', async () => {

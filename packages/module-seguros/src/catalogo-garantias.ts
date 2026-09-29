@@ -201,7 +201,31 @@ export function clasificarCoberturas(
   for (const [clave, estado] of Object.entries(garantiasDeOpciones(opciones))) {
     if (clave in porClave) porClave[clave] = estado
   }
+  for (const clave of GARANTIAS_DE_LEY[ramo] ?? []) porClave[clave] = 'si'
   return { version: VERSION_CATALOGO, porClave }
+}
+
+/**
+ * Garantías que TODA póliza del ramo lleva por ley (29/09/2026, Alberto: «la RC obligatoria es el
+ * básico básico, eso tiene que entrar por ley»). En auto y moto, la RC obligatoria (LRCSCVM, art. 2):
+ * no hay producto de circulación que se pueda vender sin ella. Por eso NO es un interruptor del filtro
+ * (quitarla o ponerla no cambia nada), no cuenta como diferencia entre opciones y la pantalla la
+ * declara aparte como «incluida siempre». Es la ÚNICA excepción a «sin dato = no consta»: aquí el dato
+ * lo da la ley, no la compañía.
+ */
+export const GARANTIAS_DE_LEY: Partial<Record<RamoGarantias, readonly string[]>> = {
+  auto: ['rc_obligatoria'],
+  moto: ['rc_obligatoria'],
+}
+
+export function esGarantiaDeLey(ramo: RamoGarantias, clave: string): boolean {
+  return (GARANTIAS_DE_LEY[ramo] ?? []).includes(clave)
+}
+
+/** Etiquetas de las garantías de ley del ramo, en el orden del catálogo (para «incluida siempre»). */
+export function etiquetasGarantiasDeLey(ramo: RamoGarantias | null): string[] {
+  if (ramo === null) return []
+  return CATALOGO_GARANTIAS[ramo].filter((g) => esGarantiaDeLey(ramo, g.clave)).map((g) => g.etiqueta)
 }
 
 /**
