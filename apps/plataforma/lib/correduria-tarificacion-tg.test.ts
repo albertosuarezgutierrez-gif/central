@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, huecosPendientes, leerEntrada, textoPropuesta,
-  ventaCruzada, type Resuelto,
+  avisoAlEmitir, construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, fechaFutura, huecosPendientes, leerEntrada,
+  textoPropuesta, ventaCruzada, type Resuelto,
 } from './correduria-tarificacion-tg.ts'
 
 const HOY = new Date('2026-09-28T10:00:00Z')
@@ -26,15 +26,43 @@ test('emparejarOpcion: elige solo sin duda; con varias devuelve candidatas', () 
   assert.deepEqual(emparejarOpcion('', MODELOS), { estado: 'ninguno' })
 })
 
-test('elegirGaraje: sin decirlo, vía pública DECLARADA como supuesto', () => {
-  const cat = [{ id: 'G1', nombre: 'Garaje individual' }, { id: 'VP', nombre: 'Vía pública' }]
+test('elegirGaraje: sin decirlo, en GARAJE (nunca la calle) DECLARADO como supuesto de emisión (29/09/2026)', () => {
+  const cat = [{ id: 'G1', nombre: 'Garaje individual' }, { id: 'VP', nombre: 'Vía pública' }, { id: 'GC', nombre: 'Garaje comunitario' }]
   const g = elegirGaraje(null, cat)
-  assert.deepEqual(g.resultado, { estado: 'uno', opcion: cat[1] })
+  assert.deepEqual(g.resultado, { estado: 'uno', opcion: cat[2] })
   assert.match(g.supuesto ?? '', /no me has dicho/)
-  const dicho = elegirGaraje('garaje individual', cat)
-  assert.deepEqual(dicho.resultado, { estado: 'uno', opcion: cat[0] })
+  assert.match(g.supuesto ?? '', /se confirma con el cliente al emitir/)
+  const dicho = elegirGaraje('vía pública', cat)
+  assert.deepEqual(dicho.resultado, { estado: 'uno', opcion: cat[1] })
   assert.equal(dicho.supuesto, null)
-  assert.deepEqual(elegirGaraje(null, [{ id: 'G1', nombre: 'Garaje' }]).resultado, { estado: 'ninguno' })
+  // Sin ningún garaje en el catálogo no se cae a la calle: se pregunta.
+  assert.deepEqual(elegirGaraje(null, [{ id: 'VP', nombre: 'Vía pública' }, { id: 'C', nombre: 'Calle' }]).resultado, { estado: 'ninguno' })
+})
+
+test('fechaFutura: efecto dicho desde hoy y a ≤90 días; lo demás se DICE', () => {
+  assert.deepEqual(fechaFutura('15/10/2026', HOY), { valor: '2026-10-15' })
+  assert.deepEqual(fechaFutura('2026-09-28', HOY), { valor: '2026-09-28' }, 'hoy vale (el vendor rechaza ANTERIOR a hoy)')
+  assert.deepEqual(fechaFutura(undefined, HOY), {})
+  assert.match(fechaFutura('27/09/2026', HOY).error ?? '', /ya ha pasado/)
+  assert.match(fechaFutura('31/12/2026', HOY).error ?? '', /90 días/)
+  assert.match(fechaFutura('31/02/2027', HOY).error ?? '', /no existe/)
+  assert.match(fechaFutura('mañana', HOY).error ?? '', /dd\/mm\/aaaa/)
+})
+
+test('leerEntrada: sexo deducido solo con sexo; efecto dicho → corrección que tapa el de por defecto', () => {
+  const { entrada: e, errores } = leerEntrada({ ramo: 'auto', clienteId: CID, sexo: 'hombre', sexoDeducido: true, fechaEfecto: '05/10/2026' }, HOY)
+  assert.deepEqual(errores, [])
+  assert.equal(e.sexoDeducido, true)
+  assert.equal(e.fechaEfecto, '2026-10-05')
+  assert.equal(leerEntrada({ ramo: 'auto', clienteId: CID, sexoDeducido: true }, HOY).entrada.sexoDeducido, false, 'sin sexo no hay nada deducido')
+  assert.equal(leerEntrada({ ramo: 'auto', clienteId: CID, sexo: 'mujer' }, HOY).entrada.sexoDeducido, false, 'dicho por Alberto')
+  assert.equal(leerEntrada({ ramo: 'auto', clienteId: CID }, HOY).entrada.fechaEfecto, null)
+})
+
+test('avisoAlEmitir: lo supuesto en el precio se recuerda al emitir; sin saberlo, se pide todo; todo dicho, nada', () => {
+  assert.match(avisoAlEmitir(['sexo', 'estadoCivil', 'garaje', 'garaje']) ?? '', /SUPUESTO: el sexo \(hombre o mujer\), estado civil, dónde duerme \(garaje\)\.$/)
+  assert.match(avisoAlEmitir(null) ?? '', /no sé cuáles se supusieron/)
+  assert.equal(avisoAlEmitir([]), null)
 })
 
 test('leerEntrada: DNI, fechas y móvil validados; lo que no pasa se DICE', () => {
@@ -88,7 +116,9 @@ test('construirCuerpo: mismas claves que las pantallas; en moto también marcaId
   assert.equal('motor' in a.resueltos, false)
   assert.deepEqual(a.correcciones, {
     dni: '12345678Z', aseguradoAntes: true, companiaAnteriorCodigo: 'C0058', polizaAnterior: '9', aniosAsegurado: 5, aniosEnCompania: 2, aniosSinSiniestros: 5,
-  })
+  })  // El efecto dicho viaja como corrección (asegura la aplica y retira su supuesto); sin él, no viaja.
+  assert.equal(construirCuerpo({ ...BASE, fechaEfecto: '2026-10-05' }).correcciones.fechaEfecto, '2026-10-05')
+  assert.equal('fechaEfecto' in m.correcciones, false)
 })
 
 test('construirCuerpo: las claves coinciden con las de AutoNuevo.tsx y MotoNuevo.tsx (lee el FUENTE)', async () => {

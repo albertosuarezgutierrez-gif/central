@@ -2025,6 +2025,13 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   cliente») con `cas_tarif:<id>`. Al pulsar: mismo interruptor que emitir, tope 10/día contado antes Y dentro del reclamo, un
   solo uso, UNA llamada a `cotizar{Auto,Moto}NuevaAsegura`, `cuerpo = NULL` al cerrar. Sin precios pudiendo cobrar = `incierta`.
   Tabla `correduria_asistente_tarificacion` (aplicada). Solo clientes con ficha; conductor = tomador (se declara).
+  🧾 **Datos de EMISIÓN, no de precio (29/09/2026, Alberto).** Sexo, estado civil, dónde duerme, fecha de matriculación y
+  efecto NO se preguntan para dar precio: sin dictar van como SUPUESTOS declarados — sexo deducido del nombre por la IA
+  (`sexoDeducido`; la prima es unisex por ley), **soltero**, **garaje (nunca la calle; comunitario)**, fecha por la matrícula,
+  efecto a 15 días (asegura, `DIAS_EFECTO_PRESUPUESTO_NUEVO`; `fechaEfecto` dictado lo tapa). Defectos en
+  `lib/supuestos-presupuesto.ts`, que comparten AutoNuevo/MotoNuevo. Los campos supuestos se guardan en
+  `resultado.alEmitir` (sin valores) y `preparar_emision_nueva` los recuerda con 🔎 antes del botón; sin saberlo, pide
+  confirmar todo (`avisoAlEmitir(null)`), nunca calla.
 - **Reparto del texto libre** (`clasificarDestino`, puro y testeado en `lib/correduria-asistente.ts`):
   atajo `seguro:` / `/seguros` → siempre correduría; palabras propias (póliza, siniestro, renovación,
   CIMA…) o una matrícula → correduría; palabras contables → contable; lo demás («¿qué tiene Pablo

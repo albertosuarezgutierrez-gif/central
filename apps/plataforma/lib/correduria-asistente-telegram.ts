@@ -24,8 +24,9 @@ import { consultarHogar } from '@/lib/correduria-hogar'
 import { aplicarDatosHogar, faltanHogar, resueltosFinales, textoPropuestaHogar } from './correduria-hogar-tg'
 import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
 import { fechaMatriculacionEstimada } from '@central/module-seguros/matricula'
+import { estadoCivilPorDefecto, SOLO_PARA_EL_PRECIO } from './supuestos-presupuesto'
 import {
-  construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, filtrarCatalogo, huecosPendientes, leerEntrada,
+  avisoAlEmitir, construirCuerpo, desenlaceCotizacion, elegirGaraje, emparejarOpcion, filtrarCatalogo, huecosPendientes, leerEntrada,
   MAX_TARIFICACIONES_DIA, MOTORES_MOTO, textoPropuesta, TIPOS_CATALOGO, ventaCruzada,
   type Emparejado, type Pieza, type CampoTarif, type RamoTarif, type TipoCatalogo,
 } from './correduria-tarificacion-tg'
@@ -557,6 +558,7 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     return { texto: `NO SE PUEDE EMITIR por aquí: la compañía no ha devuelto ${of.primaEur === null ? 'la prima' : 'la fecha de efecto'} legible. Míralo en la intranet: ${urlCliente(clienteId)}`, ok: true }
   }
   const ficha = await fichaAsegura(clienteId).catch(() => null)
+  const revisar = avisoAlEmitir(await supuestosDelPrecio(clienteId, ramo, guardada.projectId))
   const r: ResumenEmisionNueva = {
     tipo: 'nuevo',
     clienteId,
@@ -579,8 +581,22 @@ async function prepararEmisionNueva(args: Record<string, unknown>, turnoId: numb
     cuenta: { enmascarada: of.cuenta.enmascarada, descripcion: of.cuenta.descripcion },
     figurasConfirmadas: [],
     cambiosFiguras: [],
+    revisarAlEmitir: revisar,
   }
   return enviarPropuestaNueva(r, turnoId)
+}
+
+/**
+ * Qué campos SUPUSO el precio de ese proyecto, si se pidió por el chat (`resultado.alEmitir`). `null` = no
+ * se sabe (pedido desde la pantalla, anterior al 29/09/2026 o lectura fallida): el aviso lo dice.
+ */
+async function supuestosDelPrecio(clienteId: string, ramo: string, projectId: string | null): Promise<string[] | null> {
+  if (!projectId) return null
+  const [f] = await prisma.$queryRaw<{ al_emitir: unknown }[]>(Prisma.sql`
+    SELECT resultado->'alEmitir' AS al_emitir FROM correduria_asistente_tarificacion
+    WHERE cliente_id = ${clienteId}::uuid AND ramo = ${ramo} AND resultado->>'projectId' = ${projectId}
+    ORDER BY id DESC LIMIT 1`).catch(() => [] as { al_emitir: unknown }[])
+  return Array.isArray(f?.al_emitir) ? f.al_emitir.filter((c): c is string => typeof c === 'string') : null
 }
 
 async function enviarPropuestaNueva(r: ResumenEmisionNueva, turnoId: number | null): Promise<{ texto: string; ok: boolean }> {
@@ -1567,7 +1583,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
   }
   if (matricula) piezas.push(fechaMatriculacion ? { campo: 'fechaMatriculacion', estado: 'ok' } : { campo: 'fechaMatriculacion', estado: 'falta' })
 
-  // Garaje: vía pública si no se dice, y dicho como supuesto.
+  // Garaje: en garaje si no se dice (nunca la calle), y dicho como supuesto que se confirma al emitir.
   let garaje: Opcion | null = null
   let garajeEsSupuesto = true
   if (typeof garajes === 'string') piezas.push({ campo: 'garaje', estado: 'error', motivo: garajes })
@@ -1576,16 +1592,29 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
     piezas.push(pieza('garaje', g.resultado, e.garaje))
     if (g.resultado.estado === 'uno') {
       garaje = g.resultado.opcion
-      if (g.supuesto) supuestos.push({ campo: 'garaje', valor: garaje.nombre, porque: g.supuesto })
+      if (g.supuesto) supuestos.push({ campo: 'garaje', valor: garaje.nombre, porque: g.supuesto, optimista: true })
       garajeEsSupuesto = g.supuesto !== null
     }
   }
 
-  // Estado civil: el dicho manda; si no, el de la ficha.
+  // Estado civil: el dicho manda; si no, el de la ficha; si no, soltero (Alberto, 29/09/2026), como supuesto.
   let estadoCivil: Opcion | null = null
   if (e.estadoCivil) estadoCivil = elegir('estadoCivil', civiles, e.estadoCivil)
   else if (p.estadoCivil) { estadoCivil = p.estadoCivil; piezas.push({ campo: 'estadoCivil', estado: 'ok' }) }
-  else piezas.push({ campo: 'estadoCivil', estado: 'falta' })
+  else {
+    const soltero = typeof civiles === 'string' ? null : estadoCivilPorDefecto(civiles)
+    if (soltero) {
+      estadoCivil = soltero
+      piezas.push({ campo: 'estadoCivil', estado: 'ok' })
+      supuestos.push({ campo: 'estadoCivil', valor: soltero.nombre, porque: `no me lo has dicho y la ficha no lo tiene; ${SOLO_PARA_EL_PRECIO}` })
+    } else piezas.push(typeof civiles === 'string' ? { campo: 'estadoCivil', estado: 'error', motivo: civiles } : { campo: 'estadoCivil', estado: 'falta' })
+  }
+
+  // Sexo deducido del nombre por la IA: la prima es unisex por ley (Test-Achats, desde el 21/12/2012), así
+  // que no mueve el precio; pero es un dato del contrato y se DICE que es deducido.
+  if (e.sexoDeducido && e.persona.sexo) {
+    supuestos.push({ campo: 'sexo', valor: e.persona.sexo, porque: `deducido del nombre (no cambia la prima); ${SOLO_PARA_EL_PRECIO} con su DNI/NIE` })
+  }
 
   // Municipio de circulación: de los del código postal de la ficha.
   let municipio: Opcion | null = null
@@ -1612,12 +1641,14 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
     matricula, fechaMatriculacion, garaje: garaje.id, garajeEsSupuesto, estadoCivilId: estadoCivil.id, municipioId: municipio.id,
     persona: e.persona,
     historial: e.historial && companiaAnterior ? { ...e.historial, companiaCodigo: companiaAnterior.id } : null,
-    kmAnuales: e.kmAnuales,
+    kmAnuales: e.kmAnuales, fechaEfecto: e.fechaEfecto,
   })
-  const cuerpoGuardado = { ...cuerpo, ...(e.oportunidadId ? { oportunidadId: e.oportunidadId, figuras } : {}) }
   // Los supuestos de asegura que lo dictado ya tapa, fuera: si no, el resumen diría «se supone» de algo que Alberto dijo.
   const tapados = new Set([...Object.keys(cuerpo.correcciones), ...Object.keys(cuerpo.resueltos), 'estadoCivil', 'municipioCirculacionId', 'cpCirculacion'])
   const todos = [...p.supuestos.filter((s) => !tapados.has(s.campo)), ...supuestos]
+  // Lo supuesto se confirma al EMITIR: se guarda (solo los nombres de campo) para recordarlo en ese momento.
+  const alEmitir = [...todos.map((s) => s.campo), ...(figuras.conductor_habitual || figuras.conductor_ocasional ? [] : ['conductor'])]
+  const cuerpoGuardado = { ...cuerpo, alEmitir, ...(e.oportunidadId ? { oportunidadId: e.oportunidadId, figuras } : {}) }
 
   // Con botón, una propuesta nueva jubila la anterior del mismo cliente y ramo (dos botones vivos confunden).
   // Sin botón no: la anterior puede estar ya en la cola de este turno o de otro, y se le dijo a Alberto «PEDIDO».
@@ -1638,7 +1669,7 @@ async function proponerTarificacion(args: Record<string, unknown>, ctx: Ctx): Pr
     matricula, fechaMatriculacion, garaje: garaje.nombre, estadoCivil: estadoCivil.nombre, municipio: municipio.nombre,
     persona: e.persona,
     historial: e.historial && companiaAnterior ? { ...e.historial, compania: companiaAnterior.nombre } : null,
-    primaActual: e.primaActual, supuestos: todos, figuras: nombresFig, autonomo: ctx.autonomo,
+    primaActual: e.primaActual, supuestos: todos, figuras: nombresFig, autonomo: ctx.autonomo, fechaEfecto: e.fechaEfecto,
   })
   return pedirOProponer(fila.id, texto, ctx)
 }
@@ -1731,7 +1762,7 @@ async function tarificacionesDeHoy(): Promise<number | null> {
 
 type FilaTarif = {
   cliente_id: string; ramo: RamoTarif | 'hogar'; prima_actual: number | null; turno_id?: number | null
-  cuerpo: { resueltos?: Record<string, unknown>; correcciones?: Record<string, unknown>; oportunidadId?: string; figuras?: Record<string, string>; referencia?: string }
+  cuerpo: { resueltos?: Record<string, unknown>; correcciones?: Record<string, unknown>; oportunidadId?: string; figuras?: Record<string, string>; referencia?: string; alEmitir?: string[] }
 }
 
 /**
@@ -1807,8 +1838,10 @@ export async function tarificarDesdeBoton(arg: string): Promise<void> {
     // Ya puede estar cobrado: nunca se calla ni se dice «no se ha gastado».
     fin = { estado: 'incierta', texto: `⚠️ No he sabido leer la respuesta. Puede haberse cobrado los 0,50€: NO lo repitas. Míralo en la ficha: ${url}`, resumen: { error: e instanceof Error ? e.message.slice(0, 200) : 'fallo' } }
   }
+  // `projectId` + `alEmitir` (nombres de campo, sin valores) sobreviven al cierre: la emisión los recuerda.
+  const resultado = { ...fin.resumen, ...(res.estado === 'ok' ? { projectId: res.projectId } : {}), ...(Array.isArray(fila.cuerpo?.alEmitir) ? { alEmitir: fila.cuerpo.alEmitir } : {}) }
   await prisma.$executeRaw(Prisma.sql`
-    UPDATE correduria_asistente_tarificacion SET estado = ${fin.estado}, cuerpo = NULL, resultado = ${JSON.stringify(fin.resumen)}::jsonb
+    UPDATE correduria_asistente_tarificacion SET estado = ${fin.estado}, cuerpo = NULL, resultado = ${JSON.stringify(resultado)}::jsonb
     WHERE id = ${id}`).catch((e) => console.error('[correduria-tarificacion-tg] no se pudo cerrar la fila', id, e))
   // Sin cobro (tope, faltan, error antes de llamar): la huella del «PEDIDO» no puede bloquear el reintento.
   if (fin.estado !== 'hecha' && fin.estado !== 'incierta' && fila.turno_id) {

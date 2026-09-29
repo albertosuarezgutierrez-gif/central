@@ -84,6 +84,8 @@ export interface ResumenEmisionNueva {
   cambiosFiguras: CambioFiguras[]
   /** El texto de cada casilla que se confirma, el mismo que enseña la pantalla. */
   casillasFiguras?: string[]
+  /** Lo que el precio SUPUSO y se confirma ahora con el cliente (`avisoAlEmitir`). No es de la compañía. */
+  revisarAlEmitir?: string | null
 }
 
 function canonico(v: unknown): string {
@@ -146,6 +148,7 @@ export function textoResumenNuevo(r: ResumenEmisionNueva): string {
     `Prima confirmada por la compañía: <b>${prima}</b>${cambio} · ${esc(r.firmeza)}`,
     `Efecto ${fecha(r.efecto)} · el precio caduca ${fecha(r.caduca)}`,
     `Cuenta de cargo: ${esc(r.cuenta.enmascarada)}${r.cuenta.descripcion ? ` (${esc(r.cuenta.descripcion)})` : ''}`,
+    ...(r.revisarAlEmitir ? ['', `🔎 ${esc(r.revisarAlEmitir)}`] : []),
     ...(r.avisos.length ? ['', '⚠️ Avisos de la compañía:', ...r.avisos.map((a) => `• ${esc(a)}`)] : []),
     ...figuras,
     '',

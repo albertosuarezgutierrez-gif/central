@@ -15,7 +15,7 @@ import { join } from 'node:path'
 // leyendo el FUENTE.
 //
 // 25/09/2026 — Alberto cambia la decisión del 21/09 («que salga por defecto»):
-// los kilómetros nacen en 10.000, el garaje en «vía pública», la fecha de
+// los kilómetros nacen en 10.000, el garaje en «vía pública» (29/09: en garaje), la fecha de
 // matriculación se ESTIMA por la matrícula (marcada como estimada) y la de
 // compra enseña la de matriculación. Lo que se sigue vigilando: que la
 // estimación nunca pise una fecha tecleada y que se declare como estimada.
@@ -57,8 +57,9 @@ test('los kilómetros nacen en 10.000, visibles y editables', () => {
   assert.doesNotMatch(fuente, /\b15000\b/, 'el supuesto viejo no vuelve como valor')
 })
 
-test('el garaje nace en «vía pública»', () => {
-  assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\s*\(\) => \(garajes\.find\(\(g\) => \/v\[ií\]a\\s\+p\[uú\]blica\/i/)
+test('el garaje nace en GARAJE, nunca en la calle (29/09/2026; antes «vía pública»)', () => {
+  assert.match(fuente, /const \[garaje, setGaraje\] = useState\(\(\) => garajePorDefecto\(garajes\)\?\.id \?\? ''\)/)
+  assert.doesNotMatch(fuente, /garajes\.find\(\(g\) => \/v\[ií\]a/, 'el defecto viejo no vuelve')
 })
 
 test('la fecha de matriculación se estima por la matrícula, sin pisar la del corredor', () => {
