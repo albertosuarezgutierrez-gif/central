@@ -38,3 +38,26 @@ export function textoHistorialCuentaFicha(p: { mascara: string; antes: string | 
   return `Cuenta para pólizas nuevas de la ficha puesta a ${p.mascara} (antes: ${antes}) por ${p.actor}. `
     + 'Es la que usan la emisión y los presupuestos; no cambia la cuenta de sus pólizas en la compañía (cada una conserva la suya).'
 }
+
+/**
+ * Con qué cuenta se compara lo que pide el cliente desde el portal para decir «ya es la tuya». Desde que
+ * el corredor pone la cuenta de la ficha a mano (29/09/2026), la ficha y sus pólizas pueden llevar
+ * cuentas distintas: si la ficha ya es X pero una póliza vigente carga en Z (o no se sabe en cuál), pedir
+ * X SÍ es un cambio y tiene que abrir solicitud. Solo se devuelve la de la ficha si todas coinciden.
+ */
+export function cuentaParaComparar(ficha: string | null, polizas: (string | null)[]): string | null {
+  const f = normalizarIban(ficha)
+  if (!f) return null
+  return polizas.every((p) => normalizarIban(p) === f) ? ficha : null
+}
+
+/**
+ * El IBAN que el cliente firmó al aceptar un presupuesto con cuenta NUEVA vive solo en la ficha (el evento
+ * guarda la máscara). Pisarlo con otra cuenta antes de emitir perdería el dato firmado y `/emitir`
+ * pararía. Devuelve la máscara firmada que se perdería, o `null` si no hay conflicto. Una máscara que no
+ * consta cuenta como conflicto: no se sabe si es la misma.
+ */
+export function presupuestoFirmadoEnOtraCuenta(firmadas: (string | null)[], mascaraNueva: string): string | null {
+  for (const m of firmadas) if (m !== mascaraNueva) return m ?? 'una cuenta que no consta'
+  return null
+}

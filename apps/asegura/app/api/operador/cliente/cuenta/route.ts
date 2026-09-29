@@ -4,14 +4,14 @@ import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
 import { auditado } from '@/lib/auditoria'
-import { cuentaDeFicha, ponerCuentaFicha } from '@/lib/cambio-cuenta'
+import { cuentaFichaVista, ponerCuentaFicha } from '@/lib/cambio-cuenta'
 
 export const dynamic = 'force-dynamic'
 
 // La cuenta de cargo de la FICHA (29/09/2026), la que usan la emisión y el bot de Telegram.
 //
-// GET ?id=  → { estado:'ok', mascara: '**** 0115' | null, ilegible }  (nunca el IBAN entero)
-// PUT { id, iban, actor } → 200 ok {mascara} · 200 sin_cambios · 422 iban_invalido · 404 no_encontrado
+// GET ?id=  → { estado:'ok', mascara: '**** 0115' | null, ilegible, invalida }  (nunca el IBAN entero)
+// PUT { id, iban, actor } → 200 ok {mascara} · 200 sin_cambios · 422 iban_invalido · 409 presupuesto_firmado · 404 no_encontrado
 //
 // Solo la ficha: las pólizas vigentes conservan su cuenta (ver `ponerCuentaFicha`).
 
@@ -23,7 +23,7 @@ export async function GET(req: Request) {
     if (!correduria) return NextResponse.json({ estado: 'error', motivo: 'sin correduría' }, { status: 500 })
     const id = (new URL(req.url).searchParams.get('id') ?? '').trim()
     if (!UUID.test(id)) return NextResponse.json({ estado: 'invalido', motivo: 'Falta el id del cliente.' }, { status: 422 })
-    const r = await cuentaDeFicha(correduria.id, id)
+    const r = await cuentaFichaVista(correduria.id, id)
     return NextResponse.json(r, { status: r.estado === 'no_encontrado' ? 404 : 200 })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente/cuenta', e) }, { status: 500 })
@@ -41,7 +41,7 @@ export const PUT = auditado(async (req: Request) => {
     if (!UUID.test(id)) return NextResponse.json({ estado: 'invalido', motivo: 'Falta el id del cliente.' }, { status: 422 })
     const actor = typeof body?.actor === 'string' && body.actor.trim() !== '' ? body.actor.trim().slice(0, 120) : 'plataforma'
     const r = await ponerCuentaFicha(correduria.id, id, body?.iban, actor)
-    const status = r.estado === 'iban_invalido' ? 422 : r.estado === 'no_encontrado' ? 404 : 200
+    const status = r.estado === 'iban_invalido' ? 422 : r.estado === 'presupuesto_firmado' ? 409 : r.estado === 'no_encontrado' ? 404 : 200
     return NextResponse.json(r, { status })
   } catch (e) {
     return NextResponse.json({ estado: 'error', causa: registrarErrorCartera('operador/cliente/cuenta', e) }, { status: 500 })

@@ -123,9 +123,11 @@ test('el término del buscador cae en la casilla que le toca por su forma', () =
 
 // ─── Cuenta de cargo de la ficha (29/09/2026) ───────────────────────────────────────────────────
 test('cuenta de la ficha: «no tiene» solo si se ha mirado; un fallo nunca se lee como «sin cuenta»', () => {
-  assert.deepEqual(interpretarCuentaFicha(200, { estado: 'ok', mascara: '**** 0115', ilegible: false }), { estado: 'ok', mascara: '**** 0115', ilegible: false })
-  assert.deepEqual(interpretarCuentaFicha(200, { estado: 'ok', mascara: null, ilegible: false }), { estado: 'ok', mascara: null, ilegible: false })
-  assert.deepEqual(interpretarCuentaFicha(200, { estado: 'ok', mascara: null, ilegible: true }), { estado: 'ok', mascara: null, ilegible: true })
+  assert.deepEqual(interpretarCuentaFicha(200, { estado: 'ok', mascara: '**** 0115', ilegible: false, invalida: false }), { estado: 'ok', mascara: '**** 0115', ilegible: false, invalida: false })
+  assert.deepEqual(interpretarCuentaFicha(200, { estado: 'ok', mascara: null, ilegible: false }), { estado: 'ok', mascara: null, ilegible: false, invalida: false })
+  assert.deepEqual(interpretarCuentaFicha(200, { estado: 'ok', mascara: null, ilegible: true }), { estado: 'ok', mascara: null, ilegible: true, invalida: false })
+  // Una cuenta vieja que no pasa el módulo 97 se enseña como tal (la emisión la descarta).
+  assert.equal((interpretarCuentaFicha(200, { estado: 'ok', mascara: '**** 1234', ilegible: false, invalida: true }) as { invalida: boolean }).invalida, true)
   // Un 200 con otra forma (asegura vieja) o un fallo NO es «sin cuenta».
   assert.equal(interpretarCuentaFicha(200, { estado: 'ok' }).estado, 'error')
   assert.equal(interpretarCuentaFicha(502, null).estado, 'error')
@@ -139,4 +141,7 @@ test('poner la cuenta: solo «ok» con máscara es guardada; lo raro es error, n
   assert.equal(interpretarPonerCuenta(200, { estado: 'ok' }).estado, 'error')
   assert.equal(interpretarPonerCuenta(500, { estado: 'error' }).estado, 'error')
   assert.deepEqual(interpretarPonerCuenta(502, null), { estado: 'error', motivo: 'red' })
+  // Un presupuesto firmado con otra cuenta NO es un error genérico ni un éxito: dice cuál firmó.
+  assert.deepEqual(interpretarPonerCuenta(409, { estado: 'presupuesto_firmado', mascara: '**** 1332' }), { estado: 'presupuesto_firmado', mascara: '**** 1332' })
+  assert.equal(interpretarPonerCuenta(409, { estado: 'otra_cosa' }).estado, 'error')
 })

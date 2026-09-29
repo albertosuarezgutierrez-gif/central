@@ -11,12 +11,12 @@
 // compañía, y esa consulta queda anotada.
 
 import { encryptField } from '@central/module-seguros-pii'
-import { POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
+import { ibanValido, POLIZA_ESTADOS_VIGENTES } from '@central/module-seguros'
 import { PREFIJO_HISTORIAL_CUENTA_PROPIA } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
-import { revisarIbanNuevo, textoHistorialCuentaFicha, type ResolucionCambioCuenta } from './cambio-cuenta-reglas.ts'
+import { cuentaParaComparar, presupuestoFirmadoEnOtraCuenta, revisarIbanNuevo, textoHistorialCuentaFicha, type ResolucionCambioCuenta } from './cambio-cuenta-reglas.ts'
 import { descifrarCampo } from './cartera-edicion'
 import { fichaPropiaDe } from './contacto-portal'
 import { mascaraCuenta } from './presupuesto-cuenta.ts'
@@ -39,7 +39,13 @@ export async function solicitarCambioCuenta(
   const db = prismaAsegura()
   const [cli] = await db.$queryRaw<{ cuenta: string | null }[]>`
     select cuenta_bancaria as cuenta from clientes where id = ${ficha.clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
-  const revision = revisarIbanNuevo(ibanBruto, descifrarCampo(cli?.cuenta ?? null))
+  // La ficha puede llevar otra cuenta que sus pólizas (la de lo nuevo): «ya es la tuya» solo si todas coinciden.
+  const polizas = await db.$queryRaw<{ cuenta: string | null }[]>`
+    select cuenta_bancaria as cuenta from polizas
+    where correduria_id = ${correduriaId}::uuid and cliente_id = ${ficha.clienteId}::uuid
+      and merged_into_poliza_id is null and sustituida_at is null
+      and estado::text = any(${[...POLIZA_ESTADOS_VIGENTES] as string[]}::text[])`
+  const revision = revisarIbanNuevo(ibanBruto, cuentaParaComparar(descifrarCampo(cli?.cuenta ?? null), polizas.map((p) => descifrarCampo(p.cuenta))))
   if (!revision.ok) return revision.estado === 'sin_cambios' ? { estado: 'sin_cambios' } : { estado: 'iban_invalido', motivo: revision.motivo }
 
   await db.$transaction(async (tx) => {
@@ -178,23 +184,34 @@ export async function resolverCambioCuenta(correduriaId: string, id: string, est
 // 🚨 Solo la FICHA: a diferencia de «hecha» (que ya se cambió en la compañía), aquí no se sabe nada de
 // la compañía, así que las pólizas vigentes conservan la suya. Y el IBAN no vuelve nunca en claro.
 
-export type CuentaFicha =
-  | { estado: 'ok'; mascara: string | null; ilegible: boolean }
+export type CuentaFichaVista =
+  | { estado: 'ok'; mascara: string | null; ilegible: boolean; invalida: boolean }
   | { estado: 'no_encontrado' }
 
-export async function cuentaDeFicha(correduriaId: string, clienteId: string): Promise<CuentaFicha> {
+/** Distinta de `codeoscopic/cuenta-ficha.ts::cuentaDeFicha` (la que usa la emisión): esta solo enseña. */
+export async function cuentaFichaVista(correduriaId: string, clienteId: string): Promise<CuentaFichaVista> {
   const [c] = await prismaAsegura().$queryRaw<{ cuenta: string | null }[]>`
     select cuenta_bancaria as cuenta from clientes
     where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
   if (!c) return { estado: 'no_encontrado' }
-  const claro = descifrarCampo(c.cuenta)
-  return { estado: 'ok', mascara: mascaraCuenta(claro), ilegible: c.cuenta !== null && c.cuenta.trim() !== '' && claro === null }
+  const leida = descifrarCampo(c.cuenta)
+  // Sin clave (fuera de producción) el cifrado puede volver tal cual: eso no es una cuenta.
+  const claro = leida !== null && leida.startsWith('v1:') ? null : leida
+  const guardada = c.cuenta !== null && c.cuenta.trim() !== ''
+  return {
+    estado: 'ok',
+    mascara: mascaraCuenta(claro),
+    ilegible: guardada && claro === null,
+    // Un CCC viejo del volcado se enmascara igual, pero la emisión lo descarta: decirlo.
+    invalida: claro !== null && !ibanValido(claro),
+  }
 }
 
 export type ResultadoCuentaFicha =
   | { estado: 'ok'; mascara: string }
   | { estado: 'sin_cambios' }
   | { estado: 'iban_invalido'; motivo: string }
+  | { estado: 'presupuesto_firmado'; mascara: string }
   | { estado: 'no_encontrado' }
 
 export async function ponerCuentaFicha(correduriaId: string, clienteId: string, ibanBruto: unknown, actor: string): Promise<ResultadoCuentaFicha> {
@@ -204,9 +221,23 @@ export async function ponerCuentaFicha(correduriaId: string, clienteId: string, 
       where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null
       for update`
     if (!c) return { estado: 'no_encontrado' as const }
-    const actual = descifrarCampo(c.cuenta)
+    const leida = descifrarCampo(c.cuenta)
+    // Sin clave el cifrado puede volver tal cual: eso no es una cuenta (ni para comparar ni para el historial).
+    const actual = leida !== null && leida.startsWith('v1:') ? null : leida
     const revision = revisarIbanNuevo(ibanBruto, actual)
     if (!revision.ok) return revision.estado === 'sin_cambios' ? { estado: 'sin_cambios' as const } : { estado: 'iban_invalido' as const, motivo: revision.motivo }
+    // Un presupuesto aceptado sin emitir con cuenta NUEVA guarda su IBAN solo aquí: no se pisa con otra.
+    const firmadas = await tx.$queryRaw<{ mascara: string | null }[]>`
+      select mascara from (
+        select distinct on (p.id) ev.detalle->'cuenta'->>'origen' as origen, ev.detalle->'cuenta'->>'mascara' as mascara
+        from presupuesto p
+        join presupuesto_evento ev on ev.presupuesto_id = p.id and ev.tipo = 'aceptado'
+        where p.correduria_id = ${correduriaId}::uuid and p.cliente_id = ${clienteId}::uuid
+          and p.aceptado_at is not null and p.emitido_at is null and p.retirado_at is null
+        order by p.id, ev.ocurrido_at desc
+      ) x where origen = 'nueva'`
+    const firmada = presupuestoFirmadoEnOtraCuenta(firmadas.map((f) => f.mascara), revision.mascara)
+    if (firmada !== null) return { estado: 'presupuesto_firmado' as const, mascara: firmada }
     await tx.$executeRaw`
       update clientes set cuenta_bancaria = ${encryptField(revision.iban)}, updated_at = now()
       where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`

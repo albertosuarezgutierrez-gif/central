@@ -220,7 +220,7 @@ export function CuentaCargo({ clienteId }: { clienteId: string }) {
       if (r.estado === 'ok') {
         setIban('')
         setAbierto(false)
-        setLeida({ estado: 'ok', mascara: r.mascara, ilegible: false })
+        setLeida({ estado: 'ok', mascara: r.mascara, ilegible: false, invalida: false })
       }
     } catch {
       setResultado({ estado: 'error', motivo: 'red' })
@@ -237,6 +237,7 @@ export function CuentaCargo({ clienteId }: { clienteId: string }) {
         <span style={{ overflowWrap: 'anywhere' }}>
           {leida === null ? 'Cuenta para pólizas nuevas: consultando…'
             : leida.estado === 'error' ? `Cuenta para pólizas nuevas: no se ha podido consultar (${textoMotivo(leida.motivo)}). No la leas como «no tiene».`
+              : leida.mascara && leida.invalida ? `Cuenta para pólizas nuevas: ${leida.mascara}, pero NO es un IBAN válido (cuenta antigua): la emisión no la usará. Pon la buena.`
               : leida.mascara ? `Cuenta para pólizas nuevas: ${leida.mascara}`
                 : leida.ilegible ? 'Cuenta para pólizas nuevas guardada pero cifrada: no se puede leer. Si pones otra, la sustituye.'
                   : 'Sin cuenta para pólizas nuevas en la ficha (se ha mirado).'}
@@ -272,6 +273,9 @@ export function CuentaCargo({ clienteId }: { clienteId: string }) {
           )}
           {resultado?.estado === 'iban_invalido' && (
             <div style={{ ...FILA, fontSize: 13, color: 'var(--negative)' }}><Ico i={AlertTriangle} /> {resultado.motivo}</div>
+          )}
+          {resultado?.estado === 'presupuesto_firmado' && (
+            <div style={{ ...FILA, fontSize: 13, color: 'var(--negative)' }}><Ico i={AlertTriangle} /> No se ha cambiado: el cliente firmó la cuenta {resultado.mascara} en un presupuesto aceptado que aún no se ha emitido. Emítelo con esa cuenta o retíralo antes.</div>
           )}
           {resultado?.estado === 'error' && (
             <div style={{ ...FILA, fontSize: 13, color: 'var(--negative)' }}><Ico i={AlertTriangle} /> No se ha guardado: {textoMotivo(resultado.motivo)}</div>
