@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(29/09/2026)** — 🔗 Devolución por correo cuyo recibo aún no ha mandado CIMA (Mapfre, renovación sep/2026): el BEFORE INSERT lo marcaba devuelto pero en un INSERT no podía escribir `recibo_devolucion.recibo_id` → quedaba sin enlace para siempre (sin importe ni comisión en la ficha). Trigger AFTER INSERT `recibo_enlaza_devolucion` (migración `2026-09-29g`, **aplicada**; probado en la BD real con rollback, y en rojo desactivándolo). La de Mapfre se enlazará sola cuando CIMA traiga el recibo.
+
 **(29/09/2026)** — 🏦 **Cambio de IBAN desde el portal** (PR #3969): el cliente pide la cuenta nueva en «Mis datos» con un código
 a su correo de ACCESO (canal verificado, código atado a identidad+IBAN); asegura la deja PENDIENTE cifrada en
 `seguros.cambio_cuenta_solicitud` (migración `2026-09-29d`, **aplicada 29/09**) — NO cambia la ficha. Alberto la ve en «Hoy»
@@ -900,6 +902,12 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   (`module-seguros/historial-maximo.ts`). Si Codeoscopic da 400 por años altos (NO se cobra), `cotizar()` aprende el tope
   (`seguros.codeoscopic_topes_historial`, aplicada en prod el 29/09), reintenta UNA vez recortado y lo aplica siempre.
   Rechazos POR COMPAÑÍA tras cotizar (ya cobrados) NO se aprenden todavía: el formato no está medido.
+
+## (29/09/2026) Riesgo: tres decisiones cerradas (Alberto: «resuelve como veas»)
+- «Volver» del aviso legal al emitir vuelve a la OFERTA (con cuenta/fecha/tecleado), no cierra el panel.
+- «Pasar la oportunidad a…» se BLOQUEA (409) si esa persona ya tiene otra abierta del mismo ramo: una por cliente+ramo es lo que asume el enganche de presupuestos (mismo candado `oportunidad:<cliente>:<ramo>`).
+- «Retarificar hogar» sin ↗: hogar ya es interno desde el 17/09.
+
 ## (29/09/2026) Riesgo, entrega 2+3: moto con figuras, aviso legal al emitir, figuras→póliza, pasar oportunidad, hogar en el riesgo
 - Moto: propietario/conductor distintos del tomador (`peticion-moto.ts`, carné de MOTO del conductor desde su ficha; mismo DNI propietario=conductor → mismo objeto). Sin probar contra el vendor (1ª cotización real, OK de Alberto).
 - Emitir: 409 `confirmar_figuras` si la variante cambia personas/CP vs la primera del MISMO vehículo, comparando el DNI de lo que VIAJÓ (`emision-figuras-reglas.ts`), no la foto de figuras. Confirmación en historial antes del Submit (fail-closed). Tras acuñar, figuras → `poliza_intervinientes` y `oportunidades.poliza_ganada_id`.

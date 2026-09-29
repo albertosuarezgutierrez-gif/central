@@ -59,3 +59,14 @@ test('revisión de alto riesgo: guardas que no pueden volver a caer', () => {
   assert.match(src, /estado::text in \('ganada', 'perdida'\)/)
   assert.match(src, /pg_advisory_xact_lock\(hashtext\(\$\{`devolucion:\$\{r\.polizaId\}`\}\)\)/)
 })
+
+test('un recibo que llega NUEVO por CIMA se enlaza a su devolución abierta (AFTER INSERT)', () => {
+  // El BEFORE INSERT lo marca devuelto pero no puede escribir recibo_id (la fila aún no existe);
+  // sin este trigger la devolución se quedaba sin recibo — sin importe ni comisión en la ficha.
+  const sql = leer('apps/asegura/prisma/sql/2026-09-29g_recibo_devolucion_enlace_insert.sql')
+  assert.match(sql, /AFTER INSERT ON seguros\.poliza_recibos/)
+  assert.match(sql, /SET recibo_id = NEW\.id, poliza_id = NEW\.poliza_id/)
+  assert.match(sql, /id_recibo_norm = ltrim\(NEW\.id_recibo, '0'\)/)
+  assert.match(sql, /AND resuelta_at IS NULL\s+AND recibo_id IS NULL/)
+  assert.match(sql, /EXCEPTION WHEN OTHERS THEN\s+RAISE WARNING/)
+})
