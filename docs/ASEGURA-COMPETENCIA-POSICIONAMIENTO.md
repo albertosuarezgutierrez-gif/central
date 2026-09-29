@@ -263,6 +263,60 @@ captación. Antes de escribir nada, **Alberto decide si electricista/fontanero/i
 oficios correctos** o si hay otro colectivo (autónomos de la construcción en general, peluquerías,
 academias…) que conoce mejor desde el trato diario con clientes.
 
+### 2.7 🆕 Acierto.com por dentro, y el «comparador por garantías» — 29/09/2026
+
+> Pedido por Alberto: «está muy bien hecha para SEO; ¿montamos un comparador donde el cliente elige
+> la garantía y salen todas las compañías?». Nueva etiqueta **[OpenSEO 29/09]** = DataForSEO vía el
+> MCP de OpenSEO (mercado España), estimaciones de tráfico, no GSC. `acierto.com` está BLOQUEADO al
+> fetch desde la sesión: su web no se ha leído, solo su huella en Google.
+
+**Quién es.** [Web 29/09] Del grupo alemán **Bauer Media** desde enero de 2021
+([LinkedIn](https://www.linkedin.com/company/acierto-com/)). Es un **comparador-correduría online**,
+no una correduría tradicional con comparador añadido.
+
+**Huella SEO.** [OpenSEO 29/09] **~436.000 visitas orgánicas/mes estimadas, 17.151 keywords**. De las
+60 que más tráfico le dan (sin su marca):
+
+| Sección | % del tráfico de esas 60 |
+|---|---|
+| `/prestamos/` (Cofidis, Moneyman, ASNEF…) | **41 %** |
+| `/seguros-coche/` (comparador + fichas de aseguradora) | 36 % |
+| `/Rastreator/` (página sobre **el competidor**) | 10 % |
+| Moto / hogar / vida | ~6 % (hogar **~1 %**) |
+
+Lo que enseña, en tres patrones:
+1. **Una «money page» por ramo** (`/seguros-coche/comparador/`), nº 1 para «comparador seguro coche»
+   (40.500/mes). Inalcanzable para nosotros: es autoridad de dominio de 15 años, no técnica.
+2. **Una ficha por marca ajena**: `/seguros-coche/aseguradoras/{axa,verti,prima,direct-seguros,
+   linea-directa…}` y hasta `/Rastreator/`. Capta a quien busca el nombre de una compañía. **Este es
+   el patrón copiable**: búsquedas de marca + intención («teléfono siniestros X», «cancelar seguro
+   X», «opiniones X hogar») tienen poca competencia de contenido real y ya tenemos la semilla en
+   `/telefonos-siniestros` (catálogo único `telefonos-companias.ts`).
+3. **Casi la mitad de su tráfico no es seguros**, es crédito al consumo. Su negocio es vender
+   leads/afiliación financiera; el seguro es una línea más. **Hogar le da ~1 %**: confirma §2.2, en
+   hogar la SERP de comparadores está menos peleada.
+
+**El comparador con precio.** [Web 29/09] Ya existe la pieza: Codeoscopic vende **tarificadores web
+HTML de Avant2** para incrustar en la web de la correduría (auto, moto, hogar, comercio)
+([SegurosNews](https://segurosnews.com/mediacion/codeoscopic-lanza-los-tarificadores-web-html-para-corredurias)).
+No hay que construir un multitarificador. Pero **abrirlo al público tal cual está prohibido por la
+regla 3 de `seo-asegura`**: cada cotización cuesta **0,50 €** y no es idempotente, así que un widget
+abierto es una cartera abierta a bots y curiosos. Solo con lead primero (teléfono verificado) +
+límite por IP/día + captcha, y con el coste medido contra la comisión media (48,37 €/año). Y
+[Probable] publicar un ranking de precios convierte la web en canal de venta a distancia con IPID y
+análisis objetivo exigibles (RDL 3/2020): **consulta con el cumplimiento antes de encenderlo**.
+
+**El «desplegable de garantías» — la versión que SÍ recomiendo.** Comparar **coberturas, no precios**:
+el usuario marca lo que quiere (p. ej. hogar: daños estéticos, rotura de vitrocerámica, robo fuera
+de casa, RC ≥ 300.000 €) y ve qué productos de las compañías con las que trabajamos lo incluyen, con
+el condicionado y su fecha de versión como fuente, y el CTA «te lo tarificamos nosotros». Ventajas:
+**0 € por consulta**, no promete precio, es lo que un comparador de precio no enseña, y cada
+combinación relevante puede ser **una página indexable** («seguro de hogar con daños estéticos»).
+Riesgos: el dato es CARO de mantener (cada cambio de condicionado) y un «incluye» falso es
+responsabilidad de la correduría → solo con fuente por celda y fecha, y tres estados (incluye / no
+incluye / **sin revisar**), nunca un hueco pintado como «no cubre». Empezar por **un ramo (hogar) y
+las 4-5 compañías reales de la cartera**, no por «todas».
+
 ---
 
 ## 3. Qué significa esto para la web (y para los textos que no te gustan)
@@ -344,6 +398,7 @@ si en unos meses (con Search Console dando datos) fontanero no acompaña, el mis
 
 ## Bitácora
 
+- **29/09/2026** — §2.7 nuevo: Acierto.com medido con OpenSEO (436k visitas/mes est., 41 % préstamos, hogar ~1 %; patrón copiable = fichas por compañía) y viabilidad del comparador: tarificador web de Avant2 existe pero cuesta 0,50 €/consulta; se recomienda comparador de GARANTÍAS sin precio, empezando por hogar.
 - **15/09/2026** — Alberto: «hay que estar abierto a todo, hay que buscar el hueco que dejan las
   grandes». Primera vez que esta sesión usa búsqueda web real (`WebSearch`, no el `Bash` sin
   salida de antes) → nueva etiqueta `[Web 15/09]`. Corrección: §2.3 «no hay comparador de

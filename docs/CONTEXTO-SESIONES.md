@@ -12,6 +12,8 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(29/09/2026)** — 🔎 Estudio de Acierto.com (Bauer Media): §2.7 de `docs/ASEGURA-COMPETENCIA-POSICIONAMIENTO.md`. OpenSEO: ~436k visitas orgánicas/mes est., 41 % del top es préstamos, hogar ~1 %; patrón copiable = fichas por compañía ajena. Comparador: el tarificador web de Avant2 existe pero cuesta 0,50 €/consulta → recomendado comparador de GARANTÍAS sin precio (hogar primero). Sin código; decide Alberto.
+
 **(29/09/2026)** — 🔑 PDF de póliza con contraseña (= DNI del tomador) subido a la ficha: asegura prueba el DNI de ESA ficha (descifrado dentro, nunca sale) con `pdfjs-dist` (`lib/documentos/pdf-contrasena.ts`). Vale en «Subir documento» de la ficha, en la oportunidad del cliente y en el enlace de datos del presupuesto. Sin ficha (subir-poliza, Telegram) no hay DNI que probar: lo dice. Dos trampas medidas: `pdf-parse` no avisa del cifrado de forma fiable (AES-256 → «bad XRef») → se detecta `/Encrypt`; y `workerSrc = ''` rompe pdfjs 4 en Node («fake worker failed») → el reintento con contraseña del PORTAL y la extracción de nóminas de rrhh estaban rotos igual (medido) → corregidos en el mismo PR #3994.
 
 **(29/09/2026)** — 💬 Ficha del cliente: botón **WhatsApp** junto a «Llamar» en «Siguiente paso» cuando hay recibo devuelto (Alberto prefiere WhatsApp porque queda reflejado). Reutiliza `WhatsappReciboDevuelto` (mismo mensaje de `mensajeReciboDevueltoWhatsapp` y misma nota «WhatsApp abierto» en la ficha); `BotonWhatsapp` gana `rotulo` para pintarse como botón verde.
