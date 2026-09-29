@@ -960,6 +960,7 @@ export {
   CATALOGO_GARANTIAS,
   VERSION_CATALOGO,
   asistenciaAmpliada,
+  asistenciaHogarAmpliada,
   garantiasDeOpciones,
   type OpcionProductoLegible,
   claveCobertura,
