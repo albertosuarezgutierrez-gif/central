@@ -898,7 +898,7 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
 
 ## (29/09/2026) Correduría: marca «AS» en todos los correos al cliente
 - `conMarcaCorreo()` (`@central/module-seguros`, `correo-marca.ts`): cabecera con logotipo + pie «solo escribimos desde @grupoasegura.es». Se aplica en el punto único `apps/asegura/lib/correo-envio.ts` y en los dos envíos del portal (código, invitación); idempotente (salta si el HTML ya trae el logo).
-- `apps/asegura-web/public/brand/avatar-asegura.png` (512 px, trazo fino a petición de Alberto) para el círculo de la bandeja. ⚠️ Ese avatar NO sale del HTML: hay que ponerlo como foto de una cuenta de Google de `hola@grupoasegura.es` (solo Gmail) o vía BIMI (DMARC estricto + VMC/CMC de pago). Pendiente de Alberto.
+- `apps/asegura-web/public/brand/avatar-asegura.png` (512 px). Grosor del «AS» = «opción 2» de Alberto (`stroke-width=1` en ambos `marca-asegura.svg` + `MarcaAsegura.tsx`, cepo en `asegura-web/lib/icono.test.ts`); el logotipo de texto (stroke 6) NO se tocó para el círculo de la bandeja. ⚠️ Ese avatar NO sale del HTML: hay que ponerlo como foto de una cuenta de Google de `hola@grupoasegura.es` (solo Gmail) o vía BIMI (DMARC estricto + VMC/CMC de pago). Pendiente de Alberto.
 
 ## (29/09/2026) Riesgo: tres decisiones cerradas (Alberto: «resuelve como veas»)
 - «Volver» del aviso legal al emitir vuelve a la OFERTA (con cuenta/fecha/tecleado), no cierra el panel.
