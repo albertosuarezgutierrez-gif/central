@@ -37,8 +37,8 @@ export async function pedirCotizacionMoto(entrada: {
   clienteId: string
   resueltos?: Record<string, unknown>
   correcciones?: Record<string, unknown>
-  /** Variante de un riesgo (29/09/2026). En moto, de momento, solo la oportunidad y la nota. */
-  variante?: { oportunidadId: string; nota?: string | null } | null
+  /** Variante de un riesgo (29/09/2026): la oportunidad, sus figuras (rol → ficha) y la nota. Sin ocasional: moto no lo admite. */
+  variante?: { oportunidadId: string; figuras?: Record<string, string>; nota?: string | null } | null
 }): Promise<RespuestaRetarificar> {
   return cotizarMotoNuevaAsegura({
     clienteId: entrada.clienteId,
@@ -46,6 +46,7 @@ export async function pedirCotizacionMoto(entrada: {
     resueltos: entrada.resueltos,
     correcciones: entrada.correcciones,
     oportunidadId: entrada.variante?.oportunidadId ?? null,
+    figuras: entrada.variante?.figuras ?? null,
     nota: entrada.variante?.nota ?? null,
   })
 }

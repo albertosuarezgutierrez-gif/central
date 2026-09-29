@@ -36,6 +36,14 @@ import { pedirCatalogo, pedirCotizacionAuto, pedirTarificacionGuardadaAuto } fro
 import type { TarificacionNuevaGuardada, VehiculoGuardado } from '@/lib/retarificar-asegura'
 import { ROLES_EXTRA, type RolExtra, type VarianteNueva } from '../../../oportunidad/[id]/variante'
 import { NotaVariante } from '../../../oportunidad/[id]/NotaVariante'
+import {
+  CLAVE_FIGURA,
+  PERSONA_VACIA,
+  figuraCompleta,
+  figuraParaPuerto,
+  type PersonaForm,
+} from '../../../oportunidad/[id]/figuras-form'
+import { BloqueFigura } from '../../../oportunidad/[id]/BloqueFigura'
 import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import FiltroGarantias from '../../../FiltroGarantias'
 import { cotizacionIdDe } from '@/lib/presupuesto-asegura'
@@ -55,20 +63,6 @@ const CAMPOS_A_MANO: Record<string, { etiqueta: string; tipo: string } | undefin
   telefono: { etiqueta: 'Móvil', tipo: 'tel' },
   fechaNacimiento: { etiqueta: 'Fecha de nacimiento', tipo: 'date' },
   fechaCarnet: { etiqueta: 'Fecha del carnet', tipo: 'date' },
-}
-
-/** Los mínimos de una persona (propietario o conductor) cuando NO es el tomador. */
-type PersonaForm = {
-  dni: string
-  nombre: string
-  apellido1: string
-  apellido2: string
-  fechaNacimiento: string
-  sexo: '' | 'hombre' | 'mujer'
-  estadoCivil: string
-  telefono: string
-  /** Solo la usa el conductor: es SU carnet, no el del tomador. */
-  fechaCarnet: string
 }
 
 /**
@@ -109,10 +103,6 @@ type BorradorAutoNuevo = {
   siniestrosUltimos5?: string
 }
 
-const PERSONA_VACIA: PersonaForm = {
-  dni: '', nombre: '', apellido1: '', apellido2: '', fechaNacimiento: '', sexo: '', estadoCivil: '', telefono: '', fechaCarnet: '',
-}
-
 /** ¿Están rellenos los campos mínimos? `conCarnet` los exige también para el conductor. */
 function personaCompleta(p: PersonaForm, conCarnet: boolean): boolean {
   return (
@@ -141,47 +131,6 @@ function personaParaPuerto(p: PersonaForm, conCarnet: boolean): Record<string, u
   if (p.apellido2.trim() !== '') base.apellido2 = p.apellido2.trim()
   if (conCarnet) base.fechaCarnet = p.fechaCarnet
   return base
-}
-
-// ── Figuras de una VARIANTE (29/09/2026) ─────────────────────────────────────
-// Con la figura en OTRA ficha, sus datos los pone asegura desde esa ficha. Aquí solo se pide lo
-// que la ficha no trae en forma de compañía: el estado civil (catálogo del vendor) y lo que falte.
-
-/** La clave de `correcciones` que lee el puerto para cada papel. */
-const CLAVE_FIGURA: Record<RolExtra, 'propietario' | 'conductor' | 'conductorOcasional'> = {
-  propietario: 'propietario',
-  conductor_habitual: 'conductor',
-  conductor_ocasional: 'conductorOcasional',
-}
-const ROTULO_FIGURA: Record<RolExtra, string> = {
-  propietario: 'Propietario',
-  conductor_habitual: 'Conductor habitual',
-  conductor_ocasional: 'Conductor ocasional',
-}
-/** Campos de la ficha que se pueden teclear aquí si faltan (`faltanDeFigura` de asegura). */
-const CAMPOS_FIGURA = ['dni', 'nombre', 'apellido1', 'fechaNacimiento', 'sexo', 'telefono', 'fechaCarnet'] as const
-type CampoFigura = (typeof CAMPOS_FIGURA)[number]
-const esCampoFigura = (c: string): c is CampoFigura => (CAMPOS_FIGURA as readonly string[]).includes(c)
-
-/**
- * ¿Se puede cotizar con esta figura? Estado civil elegido + lo que falte en su ficha, tecleado.
- * `faltan === null` (no se pudo leer la ficha) solo exige el estado civil: si la ficha no se puede
- * leer, el servidor corta antes de gastar. `ficha` (o un campo que aquí no se teclea) bloquea.
- */
-export function figuraCompleta(p: PersonaForm, faltan: string[] | null): boolean {
-  if (p.estadoCivil === '') return false
-  if (faltan === null) return true
-  return faltan.every((c) => esCampoFigura(c) && (c === 'sexo' ? p.sexo === 'hombre' || p.sexo === 'mujer' : p[c].trim() !== ''))
-}
-
-/** Solo lo tecleado (con valor) + el estado civil: el resto lo pone asegura desde la ficha. */
-function figuraParaPuerto(p: PersonaForm): Record<string, string> {
-  const out: Record<string, string> = { estadoCivil: p.estadoCivil }
-  for (const k of ['dni', 'nombre', 'apellido1', 'apellido2', 'fechaNacimiento', 'telefono', 'fechaCarnet'] as const) {
-    if (p[k].trim() !== '') out[k] = p[k].trim()
-  }
-  if (p.sexo === 'hombre' || p.sexo === 'mujer') out.sexo = p.sexo
-  return out
 }
 
 type Resultado =
@@ -1383,96 +1332,6 @@ function BloquePersona({
           )}
         </div>
       )}
-    </div>
-  )
-}
-
-/** Un papel que ocupa OTRA ficha: su nombre, su estado civil y solo lo que falte en su ficha. */
-function BloqueFigura({
-  rol,
-  nombre,
-  faltan,
-  persona,
-  onPersona,
-  civiles,
-}: {
-  rol: RolExtra
-  nombre: string | null
-  /** `null` = no se pudo leer su ficha: se deja teclear todo, y lo tecleado manda. */
-  faltan: string[] | null
-  persona: PersonaForm
-  onPersona: (p: PersonaForm) => void
-  civiles: Opcion[]
-}) {
-  function set<K extends keyof PersonaForm>(campo: K, valor: PersonaForm[K]) {
-    onPersona({ ...persona, [campo]: valor })
-  }
-  const conCarnet = rol !== 'propietario'
-  const pedir = (c: CampoFigura) => (faltan === null ? c !== 'fechaCarnet' || conCarnet : faltan.includes(c))
-  const obligatorio = (c: CampoFigura) => faltan !== null && faltan.includes(c)
-  const sinFicha = faltan !== null && faltan.some((c) => !esCampoFigura(c))
-  return (
-    <div>
-      <p style={{ margin: 0, fontSize: 13 }}>
-        <strong>{ROTULO_FIGURA[rol]}:</strong> {nombre ?? 'sin nombre'} <span style={{ color: 'var(--muted)' }}>(de su ficha)</span>
-      </p>
-      {faltan === null && (
-        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--warning)' }}>
-          No se ha podido leer qué le falta en su ficha. Lo que teclees aquí manda; si falta algo, el servidor lo dirá sin cobrar.
-        </p>
-      )}
-      {sinFicha && (
-        <p style={{ margin: '4px 0 0', fontSize: 12, color: 'var(--negative)' }}>
-          Su ficha no se puede usar para cotizar ({faltan!.filter((c) => !esCampoFigura(c)).join(', ')}). Cámbialo en la pantalla del riesgo.
-        </p>
-      )}
-      <div style={{ display: 'grid', gap: 10, gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', marginTop: 8 }}>
-        <Campo etiqueta="Estado civil" falta={persona.estadoCivil === ''} ayuda="La ficha no lo guarda como lo pide la compañía: elígelo.">
-          <select value={persona.estadoCivil} onChange={(e) => set('estadoCivil', e.target.value)} style={input}>
-            <option value="">Elige estado civil</option>
-            {civiles.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
-          </select>
-        </Campo>
-        {pedir('dni') && (
-          <Campo etiqueta="DNI/NIF" falta={obligatorio('dni') && !persona.dni.trim()}>
-            <input value={persona.dni} onChange={(e) => set('dni', e.target.value)} style={input} />
-          </Campo>
-        )}
-        {pedir('nombre') && (
-          <Campo etiqueta="Nombre" falta={obligatorio('nombre') && !persona.nombre.trim()}>
-            <input value={persona.nombre} onChange={(e) => set('nombre', e.target.value)} style={input} />
-          </Campo>
-        )}
-        {pedir('apellido1') && (
-          <Campo etiqueta="Primer apellido" falta={obligatorio('apellido1') && !persona.apellido1.trim()}>
-            <input value={persona.apellido1} onChange={(e) => set('apellido1', e.target.value)} style={input} />
-          </Campo>
-        )}
-        {pedir('fechaNacimiento') && (
-          <Campo etiqueta="Fecha de nacimiento" falta={obligatorio('fechaNacimiento') && !persona.fechaNacimiento}>
-            <input type="date" value={persona.fechaNacimiento} onChange={(e) => set('fechaNacimiento', e.target.value)} style={input} />
-          </Campo>
-        )}
-        {pedir('sexo') && (
-          <Campo etiqueta="Sexo" falta={obligatorio('sexo') && persona.sexo === ''}>
-            <select value={persona.sexo} onChange={(e) => set('sexo', e.target.value as PersonaForm['sexo'])} style={input}>
-              <option value="">Elige</option>
-              <option value="hombre">Hombre</option>
-              <option value="mujer">Mujer</option>
-            </select>
-          </Campo>
-        )}
-        {pedir('telefono') && (
-          <Campo etiqueta="Móvil" falta={obligatorio('telefono') && !persona.telefono.trim()}>
-            <input value={persona.telefono} onChange={(e) => set('telefono', e.target.value)} style={input} />
-          </Campo>
-        )}
-        {conCarnet && pedir('fechaCarnet') && (
-          <Campo etiqueta="Fecha del carnet" falta={obligatorio('fechaCarnet') && !persona.fechaCarnet} ayuda="Es SU carnet, no el del tomador.">
-            <input type="date" value={persona.fechaCarnet} onChange={(e) => set('fechaCarnet', e.target.value)} style={input} />
-          </Campo>
-        )}
-      </div>
     </div>
   )
 }
