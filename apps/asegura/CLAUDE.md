@@ -1236,7 +1236,7 @@ Cuatro endpoints nuevos en `/api/operador/*` (Bearer `ASEGURA_OPERADOR_SECRET`, 
 | Campo | Cómo | Cobertura REAL |
 |---|---|---|
 | nombre / apellidos | LIKE, texto en claro | **32.600 / 32.600** |
-| **matrícula** | LIKE sobre `datos_especificos->>'matricula'`, **en claro** | 4.504 pólizas |
+| **matrícula** | LIKE sobre `polizas.datos_especificos->>'matricula'` **y `oportunidades.info_riesgo->>'matricula'`** (desde 29/09/2026: el coche de un lead solo está ahí), **en claro** | 6.244 pólizas+oportunidades |
 | nº de póliza | LIKE, en claro | 6.895 pólizas |
 | código postal | igualdad, en claro | 16.398 fichas |
 | ciudad | LIKE, en claro | 4.482 fichas |

@@ -458,23 +458,40 @@ async function porCodigoPostal(correduriaId: string, c: Criterio): Promise<Bloqu
 /**
  * La matrícula vive EN CLARO dentro de `datos_especificos`, así que se busca
  * con SQL crudo sobre el JSON — Prisma no filtra por `->>` con `contains`.
+ *
+ * 🚨 Y también en `oportunidades.info_riesgo` (29/09/2026): el coche de un lead
+ * que aún no es póliza solo está ahí. Buscando solo en pólizas, «5655DSM» decía
+ * «nadie coincide» con su oportunidad abierta, y 1.735 matrículas de leads eran
+ * invisibles. Si la ficha sale por las dos, gana la póliza.
  */
 async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueResultados> {
   const db = prismaAsegura()
+  const patron = '%' + c.valor + '%'
   const filas = await db.$queryRaw<
-    { id: string; nombre: string; apellidos: string; tipo: string; matricula: string }[]
+    { id: string; nombre: string; apellidos: string; tipo: string; matricula: string; origen: string }[]
   >`
-    select distinct on (cl.id)
-      cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo,
-      upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g')) as matricula
-    from polizas p
-    join clientes cl on cl.id = p.cliente_id
-    where p.correduria_id = ${correduriaId}::uuid
-      and p.merged_into_poliza_id is null
-      and cl.merged_into_cliente_id is null
-      and cl.activo
-      and upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g'))
-          like ${'%' + c.valor + '%'}
+    select distinct on (m.id) m.id, m.nombre, m.apellidos, m.tipo, m.matricula, m.origen
+    from (
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo, 'poliza' as origen,
+        upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g')) as matricula
+      from polizas p
+      join clientes cl on cl.id = p.cliente_id
+      where p.correduria_id = ${correduriaId}::uuid
+        and p.merged_into_poliza_id is null
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and upper(regexp_replace(p.datos_especificos->>'matricula', '[^A-Za-z0-9]', '', 'g')) like ${patron}
+      union all
+      select cl.id, cl.nombre, cl.apellidos, cl.tipo::text as tipo, 'oportunidad' as origen,
+        upper(regexp_replace(o.info_riesgo->>'matricula', '[^A-Za-z0-9]', '', 'g')) as matricula
+      from oportunidades o
+      join clientes cl on cl.id = o.cliente_id
+      where o.correduria_id = ${correduriaId}::uuid
+        and cl.merged_into_cliente_id is null
+        and cl.activo
+        and upper(regexp_replace(o.info_riesgo->>'matricula', '[^A-Za-z0-9]', '', 'g')) like ${patron}
+    ) m
+    order by m.id, m.origen = 'poliza' desc
     limit ${LIMITE}
   `
   const conteos = await polizasDe(filas.map((f) => f.id))
@@ -484,7 +501,7 @@ async function porMatricula(correduriaId: string, c: Criterio): Promise<BloqueRe
       nombre: `${f.nombre} ${f.apellidos}`.trim(),
       tipo: f.tipo,
       polizas: conteos.get(f.id) ?? 0,
-      porque: `matrícula ${f.matricula}`,
+      porque: f.origen === 'oportunidad' ? `matrícula ${f.matricula} (oportunidad)` : `matrícula ${f.matricula}`,
     }),
   )
   return bloque(c, hallazgos, await coberturaMatricula(correduriaId))
@@ -757,12 +774,18 @@ async function coberturaMatricula(
 ): Promise<{ alcanzables: number; total: number } | null> {
   try {
     const db = prismaAsegura()
+    // Pólizas + oportunidades: las dos fuentes que mira `porMatricula`.
     const filas = await db.$queryRaw<{ con: bigint; total: bigint }[]>`
       select
-        count(*) filter (where datos_especificos->>'matricula' is not null)::bigint as con,
+        count(*) filter (where matricula is not null)::bigint as con,
         count(*)::bigint as total
-      from polizas
-      where correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null
+      from (
+        select datos_especificos->>'matricula' as matricula from polizas
+        where correduria_id = ${correduriaId}::uuid and merged_into_poliza_id is null
+        union all
+        select info_riesgo->>'matricula' from oportunidades
+        where correduria_id = ${correduriaId}::uuid
+      ) m
     `
     const f = filas[0]
     return f ? { alcanzables: Number(f.con), total: Number(f.total) } : null
