@@ -12,6 +12,12 @@
 > qué se hizo, decisiones, pendientes y nº de PR. El detalle ya vive en el PR y en
 > el código — NO re-narrarlo aquí. Fecha SIEMPRE en la primera línea `(dd/mm/aaaa)`.
 >
+**(29/09/2026)** — 🏦 **Cambio de IBAN desde el portal** (PR #3969): el cliente pide la cuenta nueva en «Mis datos» con un código
+a su correo de ACCESO (canal verificado, código atado a identidad+IBAN); asegura la deja PENDIENTE cifrada en
+`seguros.cambio_cuenta_solicitud` (migración `2026-09-29d`, **aplicada 29/09**) — NO cambia la ficha. Alberto la ve en «Hoy»
+(`CambiosCuenta.tsx`), «Ver IBAN» lo da completo (POST auditado), «Hecha» lo copia a `clientes.cuenta_bancaria`. Aviso
+Telegram por el muro de actividad (tipo `cuenta`). Módulo 97 subido a `module-seguros/iban.ts`. Revisión architect hecha: «Hecha» también escribe la cuenta en sus pólizas vigentes; la cola avisa si el acceso que lo pide es reciente (sesión robada → confirmar por teléfono).
+
 **(29/09/2026)** 🧾 **El escaneo de facturas de Gmail ofrecía «✅ Pagar» sobre documentos que no eran deudas** (Ayamonte 2022,
 certificación de GLOBAL 2 de 2025, recibo de moto Allianz, dos prestaciones de Occident, comunidad 2024). La ventana de 7 días
 es la del CORREO, no del documento. Nuevo filtro puro `lib/agente-facturas/filtro-pago.ts` (con cepo visto fallar), antes de
@@ -20,12 +26,13 @@ insertar: aparta >90 días, emitida por un titular, a nombre de tercero por NIF 
 Pilar, duplicados) y 10 pagadas (9 con su cargo en banco + Asecon, pagada a mano por Alberto); quedan 35 pendientes (3.077,97€). `conciliarConBanco` ahora concilia también
 'nueva'/'pendiente_revision' por primera palabra del proveedor. Pendiente: una factura DOMICILIADA sigue ofreciendo «Pagar»;
 `fecha_vencimiento` nunca se rellena; el «Pagar todo» semanal paga lo pendiente sin mirar si ya se cobró por tarjeta.
-**(29/09/2026)** — 🧾 Devoluciones, 2ª tanda (PR pendiente de nº): **Allianz** ya se lee — manda la tabla en un PDF adjunto
+
+**(29/09/2026)** — 🧾 Devoluciones, 2ª tanda (**PR #3964 MERGEADO**): **Allianz** ya se lee — manda la tabla en un PDF adjunto
 («Rel. recibos ventanilla» = devueltos; «Relacion anulacion polizas por impago» = anuladas). El triaje guarda los PDF SOLO de
 `allianz.es` (≤2 MB, ≤3) y los lee por filas con celdas (`lib/correo/pdf-filas.ts`: `pdf-parse` a secas pega las columnas);
 sin tabla legible = aviso «sin leer», nunca «carta vacía». «DISCONFORME» → `cliente_rechaza`. **Comisión en riesgo** = `comision_bruta`
 del recibo (CIMA), en el Telegram y en la ficha (null ≠ 0). **Historial de devoluciones** por póliza (abiertas y resueltas).
-Pendiente: **cambio de IBAN desde el portal con aviso a Alberto** (siguiente PR: código al correo + cola en Hoy; alto riesgo).
+IBAN por portal: ver entrada de arriba.
 
 **(29/09/2026)** 📮 **`envios.grupoasegura.es` retirado de Resend** (OK de Alberto). Todo el correo de Grupo ASegura sale de `hola@grupoasegura.es`
 (muestreo 25-28/09: anulaciones, novedades y códigos, todos desde hola@). Queda borrar sus 3 registros DNS en IONOS

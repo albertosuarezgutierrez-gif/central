@@ -60,6 +60,7 @@ import { Recordatorios } from './Recordatorios'
 import { SubirPoliza } from './SubirPoliza'
 import { GestionContactos } from './GestionContactos'
 import { MisDatos } from './MisDatos'
+import CambioCuenta from './CambioCuenta'
 import { TusDatos } from './TusDatos'
 import { TusVencimientos } from './TusVencimientos'
 import { FirmarAnulacion } from './FirmarAnulacion'
@@ -683,6 +684,7 @@ export default async function Boveda({
       {vista === 'datos' && (
         <>
           <MisDatos lectura={contacto} reparos={contacto.estado === 'ok' ? reparosDeContacto(contacto.contacto) : []} />
+          <CambioCuenta />
           <GestionContactos inicial={contactosLista} />
           <ConsentimientoComercial inicial={consentimientoComercial} />
           <TusDatos inicial={supresiones} />

@@ -11,29 +11,9 @@
 // traduce a un hueco (`faltan_campos: ['iban']`) en vez de enseñarse como
 // fallo del vendor.
 
-/** Sin espacios ni guiones, en mayúsculas. `null` si no queda nada. */
-export function normalizarIban(v: unknown): string | null {
-  if (typeof v !== 'string') return null
-  const limpio = v.replace(/[\s-]/g, '').toUpperCase()
-  return limpio === '' ? null : limpio
-}
-
-/**
- * Forma y dígitos de control (ISO 13616, módulo 97). No se restringe a `ES`:
- * un cliente puede domiciliar en una cuenta extranjera y eso lo decide la
- * compañía, no nosotros.
- */
-export function ibanValido(v: unknown): boolean {
-  const iban = normalizarIban(v)
-  if (!iban || !/^[A-Z]{2}\d{2}[A-Z0-9]{11,30}$/.test(iban)) return false
-  const reordenado = iban.slice(4) + iban.slice(0, 4)
-  let resto = 0
-  for (const ch of reordenado) {
-    const n = ch >= 'A' && ch <= 'Z' ? String(ch.charCodeAt(0) - 55) : ch
-    for (const d of n) resto = (resto * 10 + Number(d)) % 97
-  }
-  return resto === 1
-}
+// El módulo 97 vive en `@central/module-seguros` (lo usa también el portal del cliente).
+import { ibanValido, normalizarIban } from '@central/module-seguros'
+export { ibanValido, normalizarIban }
 
 /** Solo lo que un humano necesita para reconocer la cuenta: país + últimos 4. */
 export function ibanEnmascarado(v: unknown): string {
