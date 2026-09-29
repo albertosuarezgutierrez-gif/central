@@ -24,6 +24,8 @@ export default function Formulario({ token, campos, tercero = false }: { token: 
   const [leidos, setLeidos] = useState<Set<string>>(new Set())
   const siguienteId = useRef(0)
   const subiendo = subidas.some((x) => x.estado === 'subiendo')
+  // Un tercero sin permiso marcado no puede subir nada: el servidor lo rechazaría igual.
+  const sinPermiso = tercero && !consiente
 
   if (estado.tipo === 'hecho') {
     return <p><strong>¡Gracias!</strong> Ya tenemos tus datos. Te escribimos en cuanto tengamos el precio.</p>
@@ -117,15 +119,15 @@ export default function Formulario({ token, campos, tercero = false }: { token: 
           DNI, carné de conducir, permiso de circulación o ficha técnica (y tu póliza actual si la tienes). Foto o PDF, uno o varios. Los guardamos para tu contratación.
         </span>
         {/* El input nativo se oculta (su rótulo lo pone el navegador y no se adapta); se pulsa por la etiqueta. */}
-        <label htmlFor="docs" className="boton-tenue" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', justifySelf: 'start', cursor: subiendo ? 'wait' : 'pointer' }}>
-          {subiendo ? 'Leyendo…' : subidas.length > 0 ? '➕ Subir más' : '📷 Elegir fotos o PDF'}
+        <label htmlFor="docs" className="boton-tenue" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', justifySelf: 'start', cursor: subiendo ? 'wait' : sinPermiso ? 'not-allowed' : 'pointer', opacity: sinPermiso ? 0.5 : 1 }} aria-disabled={sinPermiso}>
+          {sinPermiso ? 'Marca antes el permiso de arriba' : subiendo ? 'Leyendo…' : subidas.length > 0 ? '➕ Subir más' : '📷 Elegir fotos o PDF'}
         </label>
         <input
           id="docs"
           type="file"
           accept="image/*,application/pdf"
           multiple
-          disabled={subiendo || estado.tipo === 'enviando'}
+          disabled={subiendo || sinPermiso || estado.tipo === 'enviando'}
           onChange={(e) => {
             const ficheros = Array.from(e.target.files ?? [])
             e.target.value = ''
@@ -199,7 +201,7 @@ export default function Formulario({ token, campos, tercero = false }: { token: 
       <p className="suave" style={{ margin: 0, fontSize: 13 }}>
         Usamos estos datos solo para prepararte el presupuesto (Grupo ASegura, correduría de seguros).
       </p>
-      <button type="submit" className="boton" style={{ minHeight: 48 }} disabled={estado.tipo === 'enviando' || subiendo || (tercero && !consiente)}>
+      <button type="submit" className="boton" style={{ minHeight: 48 }} disabled={estado.tipo === 'enviando' || subiendo || sinPermiso}>
         {estado.tipo === 'enviando' ? 'Enviando…' : subiendo ? 'Leyendo los documentos…' : tercero ? 'Enviar los datos' : 'Enviar mis datos'}
       </button>
     </form>
