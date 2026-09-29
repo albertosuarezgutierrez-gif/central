@@ -52,6 +52,8 @@ export type Riesgo = {
     vehiculo: string | null
     vence: string | null
     aseguradora: string | null
+    /** `true` = la compañía de HOY (competencia), no la de nuestra oferta. `null` = asegura no lo dice. */
+    aseguradoraActual: boolean | null
     prima: number | null
   }
   roles: RolFigura[]
@@ -119,7 +121,8 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
       oportunidad: {
         id: op.id as string, clienteId: op.clienteId as string, clienteNombre: txt(op.clienteNombre) ?? 'Cliente',
         ramo: txt(op.ramo) ?? 'otros', estado: txt(op.estado) ?? '', polizaId: txt(op.polizaId), matricula: txt(op.matricula),
-        vehiculo: txt(op.vehiculo), vence: txt(op.vence), aseguradora: txt(op.aseguradora), prima: num(op.prima),
+        vehiculo: txt(op.vehiculo), vence: txt(op.vence), aseguradora: txt(op.aseguradora),
+        aseguradoraActual: typeof op.aseguradoraActual === 'boolean' ? op.aseguradoraActual : null, prima: num(op.prima),
       },
       roles: (Array.isArray(o.roles) ? o.roles : []).filter(esRolFigura),
       figuras,

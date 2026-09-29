@@ -131,3 +131,11 @@ test('la variante trae de qué póliza es (null = presupuesto de cliente nuevo)'
   assert.equal(r.riesgo.variantes[0].polizaId, 'pol-1')
   assert.equal(r.riesgo.variantes[1].polizaId, null)
 })
+
+test('aseguradoraActual: la compañía de HOY se distingue de la de la oferta; sin el campo, null', () => {
+  const base = { estado: 'ok', roles: ['tomador'], figuras: [], vinculos: [], variantes: [] }
+  const hoy = interpretarRiesgo(200, { ...base, oportunidad: { ...OP, aseguradora: 'Mapfre', aseguradoraActual: true, prima: 276.69 } })
+  assert.equal(hoy.estado === 'ok' && hoy.riesgo.oportunidad.aseguradoraActual, true)
+  const viejo = interpretarRiesgo(200, { ...base, oportunidad: { ...OP, aseguradora: 'Mapfre' } })
+  assert.equal(viejo.estado === 'ok' && viejo.riesgo.oportunidad.aseguradoraActual, null, 'asegura anterior: no consta')
+})
