@@ -1417,6 +1417,8 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
   // el proveedor es de retención cero). Enmascarada queda solo en el registro y en Telegram.
   const mensajes: NimToolMessage[] = [...historial.mensajes, { role: 'user', content: pregunta }]
   const rastro: Rastro[] = []
+  const yaConsultado = new Map<string, string>()
+  const consultado: string[] = []
   const t0 = Date.now()
   const { model, fallbacks } = modelosPorDefecto()
   let respuesta = ''
@@ -1437,9 +1439,39 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
       mensajes.push({ role: 'assistant', content: r.content ?? null, tool_calls: r.tool_calls })
       for (const c of r.tool_calls) {
         const args = leerArgumentos(c.function?.arguments)
+        // La misma consulta dos veces da lo mismo: se contesta de memoria y se le dice que no repita. El
+        // 29/09/2026 se comió las 7 vueltas pidiendo tres veces las mismas versiones del catálogo.
+        const clave = `${c.function?.name ?? ''}:${JSON.stringify(args)}`
+        const previa = yaConsultado.get(clave)
+        if (previa !== undefined) {
+          // Queda en el rastro: es justo la señal con la que se diagnosticó el bucle.
+          rastro.push({ nombre: `${c.function?.name ?? '?'} (repetida)`, args: rastroArgs(c.function?.name ?? '', args), ok: true })
+          mensajes.push({ role: 'tool', tool_call_id: c.id, content: `YA CONSULTADO con estos mismos datos: el resultado es el de antes. NO repitas esta llamada; decide con lo que tienes o pregúntale a Alberto.\n${previa}` })
+          continue
+        }
         const res = await ejecutar(c.function?.name ?? '', args, { turnoId, reglas }).catch((e) => ({ texto: `ERROR: ${e instanceof Error ? e.message : 'fallo'}. NO digas que no hay datos.`, ok: false }))
+        // Solo lo que salió bien: un fallo (red, tiempo) se puede reintentar.
+        if (res.ok) yaConsultado.set(clave, res.texto)
+        consultado.push(`${c.function?.name ?? '?'}: ${res.texto.slice(0, 1500)}`)
         rastro.push({ nombre: c.function?.name ?? '?', args: rastroArgs(c.function?.name ?? '', args), ok: res.ok })
         mensajes.push({ role: 'tool', tool_call_id: c.id, content: res.texto })
+      }
+    }
+    if (!respuesta) {
+      // Sin vueltas: una última pasada que CONTESTE con lo averiguado (qué falta y el siguiente paso), en
+      // vez de tirar todo lo consultado y devolver un «no he llegado» que no dice nada.
+      // SIN herramientas (chat de texto, historial aplanado): con ellas el modelo volvía a pedir otra
+      // consulta en vez de contestar, y la respuesta salía vacía otra vez.
+      const cierre = `${pregunta}\n\nLo que ya has consultado:\n${consultado.join('\n\n').slice(-12_000)}\n\nSe han acabado las consultas de esta pregunta: contéstame ya con lo que has averiguado, qué falta y cuál es el siguiente paso concreto.`
+      const r = await openrouterChatEx(or, [{ role: 'user', content: cierre }], {
+        system, models: [model, ...fallbacks].slice(0, 3), maxTokens: 900, temperature: 0.2,
+        privacidad: true, provider: PROVEEDOR_PRIVADO, signal: AbortSignal.timeout(40_000),
+      }).catch(() => null)
+      if (r) {
+        modelo = r.model
+        const tokens = r.usage?.total_tokens ?? estimarTokens(system, cierre, r.text)
+        await registrarUso({ app: APP, endpoint: 'chat', proveedor: 'openrouter', modelo: r.model, ok: true, ms: Date.now() - t0, tokens, costeEur: await coste(r.model, r.usage ?? { total_tokens: tokens }) })
+        respuesta = r.text.trim()
       }
     }
     if (!respuesta) respuesta = 'No he llegado a una respuesta con las consultas que me permito por pregunta. Hazme la pregunta más concreta (un cliente o una póliza).'
