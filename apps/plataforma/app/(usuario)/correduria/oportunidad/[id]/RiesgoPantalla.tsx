@@ -11,6 +11,7 @@ import { Badge, BtnLink, PageHeader, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { ROTULO_ESTADO, rotuloRamo } from '@/lib/seguimiento-asegura'
 import type { LecturaRiesgo, Riesgo } from '@/lib/riesgo-asegura'
+import { LogoCompaniaEnLinea } from '../../CeldaCompania'
 import FigurasRiesgo from './FigurasRiesgo'
 import HistorialVariantes from './HistorialVariantes'
 import { fechaEs } from './piezas-riesgo'
@@ -58,7 +59,11 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
             <span style={{ display: 'inline-flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
               <Badge tono={op.estado === 'ganada' ? 'positivo' : op.estado === 'perdida' ? 'negativo' : 'info'}>{estado}</Badge>
               {op.vence && <span>Vence {fechaEs(op.vence)}</span>}
-              {op.aseguradora && <span>· {op.aseguradora}{op.prima !== null ? ` · ${eur(op.prima)}` : ''}</span>}
+              {op.aseguradora && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  · <LogoCompaniaEnLinea compania={op.aseguradora} />{op.prima !== null ? ` · ${eur(op.prima)}` : ''}
+                </span>
+              )}
               {op.polizaId && (
                 <Link href={`/correduria/poliza/${encodeURIComponent(op.polizaId)}`} style={{ color: 'var(--primary)', fontWeight: 600 }}>
                   · ver póliza
@@ -87,7 +92,27 @@ export default function RiesgoPantalla({ inicial }: { inicial: Riesgo }) {
 
       <section style={{ ...cardStyle, display: 'grid', gap: 8 }}>
         <div style={{ fontSize: 14, fontWeight: 600 }}>Nueva variante</div>
-        {ramo ? (
+        {ramo && op.polizaId ? (
+          <>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
+              Este riesgo es de una póliza en cartera. En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.
+            </p>
+            <div style={{ display: 'grid', gap: 8, gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 240px), 1fr))' }}>
+              <div style={{ display: 'grid', gap: 4 }}>
+                <BtnLink href={`/correduria/poliza/${encodeURIComponent(op.polizaId)}/retarificar?${new URLSearchParams({ oportunidad: op.id }).toString()}`} variante="primario">
+                  Retarificar con las mismas personas
+                </BtnLink>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Como la póliza de hoy: su tomador, su vehículo y su historial.</span>
+              </div>
+              <div style={{ display: 'grid', gap: 4 }}>
+                <BtnLink href={rutaVariante(ramo, tomadorDelRiesgo(riesgo), op.id)} variante="secundario">
+                  Con otro tomador
+                </BtnLink>
+                <span style={{ fontSize: 12, color: 'var(--muted)' }}>Con los intervinientes de arriba, como un presupuesto nuevo.</span>
+              </div>
+            </div>
+          </>
+        ) : ramo ? (
           <>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>
               Se pide precio con los intervinientes de arriba. En la siguiente pantalla se confirma; pedir precio cuesta 0,50€.

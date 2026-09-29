@@ -20,6 +20,8 @@ export type VarianteRiesgo = {
   referencia: string
   creadoAt: string
   tomador: { clienteId: string | null; nombre: string | null }
+  /** Póliza retarificada en esta variante (renovación); `null` = presupuesto de cliente nuevo. */
+  polizaId: string | null
   nota: string | null
   simulado: boolean
   fechaEfecto: string | null
@@ -88,6 +90,7 @@ export function interpretarRiesgo(status: number, j: unknown): LecturaRiesgo {
       referencia: txt(x.referencia) ?? '—',
       creadoAt: txt(x.creadoAt) ?? '',
       tomador: { clienteId: txt(t.clienteId), nombre: txt(t.nombre) },
+      polizaId: txt(x.polizaId),
       nota: txt(x.nota),
       simulado: x.simulado === true,
       fechaEfecto: txt(x.fechaEfecto),
@@ -153,4 +156,69 @@ export function textoFaltan(f: string[] | null): string | null {
   if (f === null) return 'No se pudo leer su ficha'
   if (f.length === 0) return null
   return `Falta en su ficha: ${f.map((c) => CAMPO_FALTA[c] ?? c).join(', ')}`
+}
+
+// ─── Comparar dos variantes del riesgo (29/09/2026) ─────────────────────────
+// Lectura PURA de `GET /api/operador/oportunidad/comparar`. Tres estados que no se colapsan:
+// `cambios: null` = «no se puede comparar» · `[]` = «mismos datos» · con filas = lo que cambia.
+// Una compañía sin precio en una de las dos es `null` en esa columna («—»), nunca 0 €.
+
+export type PrecioComparado = { primaEur: number; modalidad: string | null } | null
+export type FilaComparacion = { compania: string; a: PrecioComparado; b: PrecioComparado }
+export type Comparacion = { a: string; b: string; cambios: Diferencia[] | null; companias: FilaComparacion[] }
+export type LecturaComparacion = { estado: 'ok'; comparacion: Comparacion } | { estado: 'no_encontrado' } | { estado: 'error'; motivo: string }
+
+function precioComparado(v: unknown): PrecioComparado {
+  const x = obj(v)
+  const prima = num(x.primaEur)
+  return prima === null ? null : { primaEur: prima, modalidad: txt(x.modalidad) }
+}
+
+export function interpretarComparacion(status: number, j: unknown): LecturaComparacion {
+  const o = obj(j)
+  if (status === 404 || o.estado === 'no_encontrado') return { estado: 'no_encontrado' }
+  if (status !== 200 || o.estado !== 'ok') return { estado: 'error', motivo: txt(o.motivo) ?? txt(o.causa) ?? `HTTP ${status}` }
+  if (!txt(o.a) || !txt(o.b)) return { estado: 'error', motivo: 'respuesta sin variantes' }
+  const cambios = Array.isArray(o.cambios)
+    ? o.cambios.flatMap((c): Diferencia[] => {
+        const d = obj(c)
+        return txt(d.campo) ? [{ campo: d.campo as string, antes: txt(d.antes), despues: txt(d.despues) }] : []
+      })
+    : null
+  const companias = (Array.isArray(o.companias) ? o.companias : []).flatMap((c): FilaComparacion[] => {
+    const x = obj(c)
+    const compania = txt(x.compania)
+    if (!compania) return []
+    const a = precioComparado(x.a)
+    const b = precioComparado(x.b)
+    return a === null && b === null ? [] : [{ compania, a, b }]
+  })
+  return { estado: 'ok', comparacion: { a: o.a as string, b: o.b as string, cambios, companias } }
+}
+
+/** La prima más baja de cada columna (`null` = esa variante no tiene ningún precio). */
+export function mejoresComparacion(filas: readonly FilaComparacion[]): { a: number | null; b: number | null } {
+  const min = (xs: (number | undefined)[]) => {
+    const v = xs.filter((x): x is number => typeof x === 'number')
+    return v.length > 0 ? Math.min(...v) : null
+  }
+  return { a: min(filas.map((f) => f.a?.primaEur)), b: min(filas.map((f) => f.b?.primaEur)) }
+}
+
+/** `b − a` redondeado al céntimo; `null` si falta cualquiera de las dos (no se compara con un hueco). */
+export function diferenciaComparacion(f: FilaComparacion): number | null {
+  if (f.a === null || f.b === null) return null
+  return Math.round((f.b.primaEur - f.a.primaEur) * 100) / 100
+}
+
+/** Las dos marcadas, la más ANTIGUA como `a` (orden de `creadoAt`; sin fecha, la de más abajo en la lista). */
+export function ordenarParaComparar(variantes: readonly VarianteRiesgo[], ids: readonly string[]): [VarianteRiesgo, VarianteRiesgo] | null {
+  if (ids.length !== 2 || ids[0] === ids[1]) return null
+  const elegidas = ids.map((id) => ({ v: variantes.find((x) => x.id === id), i: variantes.findIndex((x) => x.id === id) }))
+  if (elegidas.some((e) => !e.v)) return null
+  const [x, y] = elegidas as { v: VarianteRiesgo; i: number }[]
+  const ta = Date.parse(x.v.creadoAt)
+  const tb = Date.parse(y.v.creadoAt)
+  const xAntes = Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb ? ta < tb : x.i > y.i
+  return xAntes ? [x.v, y.v] : [y.v, x.v]
 }

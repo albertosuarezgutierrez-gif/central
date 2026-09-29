@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   if (fichero.size > MAX_BYTES) {
     return NextResponse.json({ motivo: `«${fichero.name}» pesa demasiado (${(fichero.size / 1024 / 1024).toFixed(1)} MB). Sube una foto o un PDF de menos de 4 MB.` }, { status: 413 })
   }
-  const r = await subirDocPuente(token, fichero)
+  const r = await subirDocPuente(token, fichero, form?.get('consentimiento') === '1')
   if (!r) return NextResponse.json({ error: 'sin_puente' }, { status: 503 })
   return NextResponse.json(r.json ?? { error: `HTTP ${r.status}` }, { status: r.status })
 }

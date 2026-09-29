@@ -884,6 +884,13 @@ facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `d
   debajo de las baldosas: en el móvil no cambiaba nada visible. `Documentos.tsx` ahora lo abre y hace `scrollIntoView`
   cuando llega `tipoInicial`. Cepo nuevo en `test/regression-subir-poliza-plataforma.test.ts` (visto en rojo).
 
+## (29/09/2026) Riesgo: comparar presupuestos, renovar desde la póliza y datos de un familiar (PR entrega 1b)
+- Comparar dos variantes (casillas en el historial): qué cambió + mejor prima por compañía (logos, «—» sin precio). Puerto `GET /oportunidad/comparar`.
+- «Abrir el riesgo de esta póliza» (auto/moto): oportunidad con `poliza_id` y figuras desde intervinientes; reutiliza la que abrió una retarificación vieja (`info_riesgo.polizaId`). Retarificar dentro del riesgo manda `oportunidadId`, validado antes de gastar; riesgo cerrado → 422 sin cotizar.
+- Enlace de datos de una FIGURA (tercero): `solicitud_datos.tercero` + `consentimiento_at` (SQL `2026-09-29f`, aplicada, CHECK probado). Sin casilla de permiso no se guarda nada, ni documentos; no se rellena su DNI.
+- Punto 3 (aviso legal al emitir con otras personas): solo maqueta (artifact SXFpF6pgitP9vWYRNzuQS6), pendiente del visto de Alberto. Idea 1 descartada por Alberto.
+- Regla de Alberto: SIEMPRE logo de la compañía en vez del nombre.
+
 ## (29/09/2026) El riesgo como pantalla: figuras, variantes e historial (entrega 1, PR #3955)
 - `/correduria/oportunidad/[id]` deja de redirigir: cabecera del riesgo, intervinientes (tomador/propietario/conductores desde los vínculos o «+ Nueva persona» en línea), historial P1…Pn con «qué cambió» derivado de la `peticion` (`diferenciasVariante`, module-seguros) y «Nueva variante» → auto/moto-nuevo con `?oportunidad=`.
 - BD: `oportunidad_figura`, `oportunidades.poliza_id`, `tarificaciones.figuras/nota` (SQL `2026-09-29e`, aplicada). La variante se cuelga de la oportunidad dada; nunca abre otra.

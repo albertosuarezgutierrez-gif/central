@@ -750,6 +750,10 @@ export type SolicitudDatos = {
   documentos: { id: string; tipo: string }[] | null
   /** Lo declarado que no casa con sus papeles. `null` = no se ha podido contrastar (≠ «todo cuadra»). */
   discrepancias: { clave: string; declarado: string; documento: string; tipoDocumento: string }[] | null
+  /** De quién son los datos (29/09/2026): la ficha de la persona. `null` = asegura no lo dice. */
+  personaId: string | null
+  /** `true` = de OTRA persona del riesgo (un familiar), no del cliente. `null` = asegura no lo dice. */
+  tercero: boolean | null
 }
 
 export type SolicitudesDatos = { estado: 'ok'; solicitudes: SolicitudDatos[] } | { estado: 'error'; motivo: string }
@@ -794,7 +798,8 @@ export function interpretarSolicitudesDatos(status: number, json: unknown): Soli
           return [{ clave, declarado: String(dd?.declarado ?? ''), documento: String(dd?.documento ?? ''), tipoDocumento: texto(dd?.tipoDocumento) ?? 'otro' }]
         })
       : null
-    solicitudes.push({ id, ramo, estado, caduca: texto(s.caduca) ?? '', completada: texto(s.completada), campos, respuestas, ilegible: s.ilegible === true, documentos, discrepancias })
+    const tercero = typeof s.tercero === 'boolean' ? s.tercero : null
+    solicitudes.push({ id, ramo, estado, caduca: texto(s.caduca) ?? '', completada: texto(s.completada), campos, respuestas, ilegible: s.ilegible === true, documentos, discrepancias, personaId: texto(s.personaId), tercero })
   }
   return { estado: 'ok', solicitudes }
 }
@@ -826,4 +831,14 @@ export function figuraAsegura(body: Record<string, unknown>): Promise<Reenvio> {
 }
 export function quitarFiguraAsegura(body: Record<string, unknown>): Promise<Reenvio> {
   return llamar('/api/operador/oportunidad/figuras', { method: 'DELETE', body: JSON.stringify(body) })
+}
+
+/** Dos variantes del mismo riesgo: qué cambia y el precio de cada compañía en las dos. Gratis. */
+export function compararVariantesAsegura(oportunidadId: string, a: string, b: string): Promise<Reenvio> {
+  const q = new URLSearchParams({ id: oportunidadId, a, b })
+  return llamar(`/api/operador/oportunidad/comparar?${q.toString()}`, { method: 'GET' })
+}
+/** Abre (o devuelve la abierta) la oportunidad de retarificar una póliza. Gratis: no pide precio. */
+export function riesgoDePolizaAsegura(body: { polizaId: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/oportunidad/de-poliza', { method: 'POST', body: JSON.stringify(body) })
 }

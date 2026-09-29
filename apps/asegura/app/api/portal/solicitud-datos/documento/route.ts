@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       nombre: fichero.name || 'documento',
       mime: fichero.type,
       contenido: Buffer.from(await fichero.arrayBuffer()),
-    })
+    }, form?.get('consentimiento') === '1')
     if (r.ok) return NextResponse.json(r)
     const status = r.estado === 'tope' ? 409 : r.estado === 'invalido' ? 415 : r.estado === 'error' ? 503 : 410
     return NextResponse.json(r, { status })

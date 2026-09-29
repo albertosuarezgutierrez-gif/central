@@ -728,6 +728,10 @@ export function interpretarRetarificacion(status: number, json: unknown): Respue
     }
   }
 
+  if (status === 422 && r.causa === 'variante') {
+    // El riesgo no es de esta póliza: asegura corta ANTES del vendor. No es «faltan datos».
+    return { estado: 'error', motivo: 'asegura_error', mensaje: mensajeDe('Este riesgo no es de esta póliza: no se ha pedido precio.'), gastoDesconocido: !cero }
+  }
   if (status === 422) {
     return { estado: 'faltan', faltan: Array.isArray(r.faltan) ? (r.faltan as Reparo[]) : [] }
   }
@@ -920,6 +924,13 @@ export type PeticionRetarificar = {
    * ese gesto, pedir precio con un proyecto vigente se rechaza sin cobrar.
    */
   forzarNuevo?: boolean
+  /**
+   * Variante del RIESGO de esta póliza (29/09/2026): la tarificación se cuelga de esa oportunidad.
+   * asegura comprueba, antes de gastar, que el riesgo es de esta póliza (422 `causa: 'variante'`).
+   */
+  oportunidadId?: string | null
+  /** Nota libre de la variante (≤200), solo con `oportunidadId`. */
+  nota?: string | null
 }
 
 /**
@@ -956,6 +967,8 @@ export async function retarificarAsegura(p: PeticionRetarificar): Promise<Respue
           ...(p.referencia ? { referencia: p.referencia } : {}),
           // Solo viaja cuando es el booleano `true`: el puerto compara con `===`.
           ...(p.forzarNuevo === true ? { forzarNuevo: true } : {}),
+          ...(p.oportunidadId ? { oportunidadId: p.oportunidadId } : {}),
+          ...(p.oportunidadId && p.nota && p.nota.trim() !== '' ? { nota: p.nota.trim().slice(0, 200) } : {}),
         }),
       },
       TIMEOUT_COTIZAR_MS,

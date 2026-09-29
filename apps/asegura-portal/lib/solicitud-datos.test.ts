@@ -33,3 +33,12 @@ test('la subida de un documento: valores propuestos y fallos con motivo, nunca �
   assert.equal(tope.estado === 'fallo' && tope.texto, 'Como máximo 6 documentos por enlace.')
   assert.equal(interpretarDocSubido(502, null).estado, 'fallo')
 })
+
+test('datos de un tercero: la página lo sabe (para pedir el consentimiento); sin la marca, no lo es', async () => {
+  const { interpretarSolicitud } = await import('./solicitud-datos.ts')
+  const campo = { clave: 'dni', etiqueta: 'DNI', tipo: 'texto', obligatorio: true }
+  const t = interpretarSolicitud(200, { estado: 'ok', ramo: 'auto', campos: [campo], tercero: true })
+  assert.equal(t.estado === 'ok' && t.tercero, true)
+  const n = interpretarSolicitud(200, { estado: 'ok', ramo: 'auto', campos: [campo] })
+  assert.equal(n.estado === 'ok' && n.tercero, false)
+})
