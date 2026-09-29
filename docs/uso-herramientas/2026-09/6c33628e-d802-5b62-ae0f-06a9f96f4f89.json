@@ -1,29 +1,124 @@
 {
  "sesion": "6c33628e-d802-5b62-ae0f-06a9f96f4f89",
  "inicio": "2026-09-29T19:42:37.429Z",
- "fin": "2026-09-29T19:42:40.838Z",
- "llamadas": 2,
+ "fin": "2026-09-29T20:19:47.837Z",
+ "llamadas": 143,
  "categorias": {
   "lectura-directa": {
-   "llamadas": 1,
-   "chars_in": 159,
-   "chars_out": 417,
+   "llamadas": 21,
+   "chars_in": 2296,
+   "chars_out": 369838,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Grep": 1
+    "Grep": 2,
+    "Read": 17,
+    "Glob": 2
    }
   },
   "bash": {
-   "llamadas": 1,
-   "chars_in": 136,
-   "chars_out": 2883,
+   "llamadas": 84,
+   "chars_in": 41709,
+   "chars_out": 168456,
    "errores": 0,
    "archivos_citados": 0,
    "chars_citados": 0,
    "tools": {
-    "Bash": 1
+    "Bash": 84
+   }
+  },
+  "otro": {
+   "llamadas": 10,
+   "chars_in": 5688,
+   "chars_out": 116446,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "ToolSearch": 3,
+    "ReadNotifications": 4,
+    "SubagentHandback": 3
+   }
+  },
+  "mcp:Supabase": {
+   "llamadas": 1,
+   "chars_in": 2,
+   "chars_out": 391,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__list_projects": 1
+   }
+  },
+  "sql": {
+   "llamadas": 15,
+   "chars_in": 6947,
+   "chars_out": 16832,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Supabase__execute_sql": 15
+   }
+  },
+  "escritura": {
+   "llamadas": 3,
+   "chars_in": 3941,
+   "chars_out": 908724,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Edit": 3
+   }
+  },
+  "mcp:github": {
+   "llamadas": 4,
+   "chars_in": 6284,
+   "chars_out": 2658,
+   "errores": 0,
+   "archivos_citados": 1,
+   "chars_citados": 2492,
+   "tools": {
+    "mcp__github__create_pull_request": 1,
+    "mcp__github__update_pull_request": 2,
+    "mcp__github__list_pull_requests": 1
+   }
+  },
+  "mcp:Claude_Code_Remote": {
+   "llamadas": 2,
+   "chars_in": 294,
+   "chars_out": 347,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "mcp__Claude_Code_Remote__subscribe_pr_activity": 1,
+    "mcp__Claude_Code_Remote__send_later": 1
+   }
+  },
+  "agente:rastreador-codigo": {
+   "llamadas": 1,
+   "chars_in": 1062,
+   "chars_out": 1256,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 1
+   }
+  },
+  "agente:agente-mecanico": {
+   "llamadas": 2,
+   "chars_in": 5919,
+   "chars_out": 296,
+   "errores": 0,
+   "archivos_citados": 0,
+   "chars_citados": 0,
+   "tools": {
+    "Agent": 2
    }
   }
  }
