@@ -22,6 +22,7 @@
 
 import {
   aplicarAccion,
+  estadoPresupuesto,
   mismoSeguro,
   planLlamada,
   seguroAnteriorDe,
@@ -30,6 +31,7 @@ import {
   validarTarea,
   type CambiosOportunidad,
   type EstadoOportunidad,
+  type EstadoPresupuesto,
   type PeticionAccion,
   type SeguroAnterior,
 } from '@central/module-seguros'
@@ -761,15 +763,12 @@ export type OportunidadDeCliente = OportunidadSeguimiento & {
   presupuestos: ResumenPresupuestos
 }
 
-/** El último presupuesto enviado (o preparado) al cliente: sus hitos, `null` si aún no pasó. */
-export type HitosPresupuesto = {
-  creadoAt: string
-  enviadoAt: string | null
-  vistoAt: string | null
-  aceptadoAt: string | null
-  emitidoAt: string | null
-  retiradoAt: string | null
-}
+/**
+ * El último presupuesto preparado para el cliente. El estado sale de `estadoPresupuesto()`, la MISMA
+ * regla que la lista de presupuestos: con otra, la línea de la oportunidad y la lista de debajo se
+ * contradirían (un enlace de WhatsApp sin confirmar, uno caducado, uno elegido).
+ */
+export type HitosPresupuesto = { creadoAt: string; estado: EstadoPresupuesto }
 
 /** Lo pedido para un riesgo. La mejor prima es la de un precio REAL (lo simulado no cuenta). */
 export type ResumenPresupuestos = {
@@ -795,12 +794,16 @@ export type PresupuestoSinOportunidad = {
 const TECHO_POR_CLIENTE = 50
 const TECHO_SIN_OPORTUNIDAD = 30
 
-type JsonHitos = { creadoAt: string; enviadoAt: string | null; vistoAt: string | null; aceptadoAt: string | null; emitidoAt: string | null; retiradoAt: string | null } | null
+type JsonHitos = {
+  creadoAt: string; venceEl: string; enlaceGeneradoAt: string | null; enviadoAt: string | null; vistoAt: string | null
+  elegidoAt: string | null; aceptadoAt: string | null; emitidoAt: string | null; retiradoAt: string | null
+} | null
 type JsonResumen = { variantes: number; mejorPrima: number | null; mejorCompania: string | null; presupuesto: JsonHitos } | null
 
 /** Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2`). */
 function sqlHitos(filtro: Prisma.Sql): Prisma.Sql {
-  return Prisma.sql`(select json_build_object('creadoAt', pr.creado_at, 'enviadoAt', pr.enviado_at, 'vistoAt', pr.visto_at,
+  return Prisma.sql`(select json_build_object('creadoAt', pr.creado_at, 'venceEl', pr.vence_el, 'enlaceGeneradoAt', pr.enlace_generado_at,
+              'enviadoAt', pr.enviado_at, 'vistoAt', pr.visto_at, 'elegidoAt', pr.elegido_at,
               'aceptadoAt', pr.aceptado_at, 'emitidoAt', pr.emitido_at, 'retiradoAt', pr.retirado_at)
          from presupuesto pr join tarificaciones t2 on t2.id = pr.tarificacion_id and t2.correduria_id = pr.correduria_id
         where ${filtro} order by pr.creado_at desc limit 1)`
@@ -808,7 +811,7 @@ function sqlHitos(filtro: Prisma.Sql): Prisma.Sql {
 
 function hitos(j: JsonHitos): HitosPresupuesto | null {
   if (!j) return null
-  return { creadoAt: j.creadoAt, enviadoAt: j.enviadoAt, vistoAt: j.vistoAt, aceptadoAt: j.aceptadoAt, emitidoAt: j.emitidoAt, retiradoAt: j.retiradoAt }
+  return { creadoAt: j.creadoAt, estado: estadoPresupuesto(j, new Date()) }
 }
 
 function resumenPresupuestos(j: JsonResumen): ResumenPresupuestos {

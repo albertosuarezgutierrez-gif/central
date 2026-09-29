@@ -16,6 +16,9 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
   const [lista, setLista] = useState<ListaAvant2 | 'cargando' | null>(null)
   const [ocupado, setOcupado] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ ok: boolean; texto: string } | null>(null)
+  // Lo traído en esta visita se sigue enseñando aquí (con «Abrir en plataforma»): la lista de
+  // oportunidades de arriba no se recarga sola y, sin esto, el proyecto desaparecería de la ficha.
+  const [traidosAhora, setTraidosAhora] = useState<string[]>([])
 
   async function cargar() {
     setLista('cargando')
@@ -36,7 +39,8 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
       })
       const j = (await r.json().catch(() => null)) as { estado?: string; mensaje?: string } | null
       if (r.ok && (j?.estado === 'importada' || j?.estado === 'ya_estaba')) {
-        setAviso({ ok: true, texto: `Presupuesto ${p.projectId} ya está en plataforma${j.estado === 'ya_estaba' ? ' (ya estaba)' : ''}.` })
+        setTraidosAhora((t) => [...t, p.projectId])
+        setAviso({ ok: true, texto: `Presupuesto ${p.projectId} ya está en plataforma${j.estado === 'ya_estaba' ? ' (ya estaba)' : ''}. Recarga la página para verlo arriba, en su oportunidad.` })
       } else {
         setAviso({ ok: false, texto: `NO traído: ${j?.mensaje ?? `HTTP ${r.status}`}` })
       }
@@ -67,7 +71,7 @@ export default function PresupuestosAvant2({ clienteId }: { clienteId: string })
       {lista !== null && lista !== 'cargando' && lista.estado === 'ok' && lista.proyectos.length > 0 && (() => {
         // Lo ya traído sale en su oportunidad (o en «sin oportunidad») con el precio de la intranet:
         // repetirlo aquí con el «mejor» del vendor daba dos primas para el mismo proyecto.
-        const sinTraer = lista.proyectos.filter((p) => !p.intranet)
+        const sinTraer = lista.proyectos.filter((p) => !p.intranet || traidosAhora.includes(p.projectId))
         const traidos = lista.proyectos.length - sinTraer.length
         return (
           <>

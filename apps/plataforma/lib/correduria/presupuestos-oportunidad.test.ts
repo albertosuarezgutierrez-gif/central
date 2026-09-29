@@ -1,10 +1,10 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  estadoHitos, leerResumenPresupuestos, leerSinOportunidad, rutaSinOportunidad, textoPresupuestos, textoSinOportunidad,
+  leerResumenPresupuestos, leerSinOportunidad, rutaSinOportunidad, textoPresupuestos, textoSinOportunidad,
 } from './presupuestos-oportunidad.ts'
 
-const hitos = { creadoAt: '2026-09-29T13:55:53Z', enviadoAt: null, vistoAt: null, aceptadoAt: null, emitidoAt: null, retiradoAt: null }
+const hitos = { creadoAt: '2026-09-29T13:55:53Z', estado: 'borrador' }
 
 test('resumen: forma real de asegura (medida contra la BD el 29/09/2026)', () => {
   const r = leerResumenPresupuestos({ variantes: 5, mejorPrima: 106.77, mejorCompania: 'Allianz', presupuesto: hitos })
@@ -19,10 +19,13 @@ test('resumen: sin el bloque (asegura vieja) es null, nunca «sin precio»', () 
   assert.equal(leerResumenPresupuestos({ mejorPrima: 1 }), null)
 })
 
-test('hitos: gana el más avanzado', () => {
-  assert.equal(estadoHitos({ ...hitos, enviadoAt: 'x', vistoAt: 'x' }), 'visto')
-  assert.equal(estadoHitos({ ...hitos, enviadoAt: 'x', aceptadoAt: 'x', emitidoAt: 'x' }), 'emitido')
-  assert.equal(estadoHitos({ ...hitos, enviadoAt: 'x', retiradoAt: 'x' }), 'retirado')
+test('estado: el que calcula asegura, con el rótulo de la lista; uno desconocido se dice', () => {
+  const t = (estado: unknown) => textoPresupuestos(leerResumenPresupuestos({ variantes: 1, mejorPrima: 10, mejorCompania: 'X', presupuesto: { ...hitos, estado } })!)
+  // Un WhatsApp abierto sin confirmar NO es «preparado» ni «enviado»; uno caducado no está vivo.
+  assert.match(t('enlazado'), /al cliente: whatsapp abierto · no consta que saliera$/)
+  assert.match(t('caducado'), /al cliente: caducado$/)
+  assert.match(t('elegido'), /al cliente: ha elegido una opción$/)
+  assert.match(t('inventado'), /al cliente: estado no reconocido$/)
 })
 
 test('sin oportunidad: null ≠ [] y una fila rota invalida la lista', () => {

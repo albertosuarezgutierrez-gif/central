@@ -8,14 +8,12 @@
 import { eur } from '../dinero.ts'
 import { ROTULO_ESTADO_PRESUPUESTO, type EstadoPresupuestoLista } from '../presupuesto-asegura.ts'
 
-export type HitosPresupuesto = {
-  creadoAt: string
-  enviadoAt: string | null
-  vistoAt: string | null
-  aceptadoAt: string | null
-  emitidoAt: string | null
-  retiradoAt: string | null
-}
+/**
+ * El último presupuesto preparado para el cliente. El estado lo calcula asegura con la misma regla que
+ * la lista de presupuestos (`estadoPresupuesto()`): aquí no se re-deriva. `null` = un estado que esta
+ * versión no conoce (se dice, no se adivina).
+ */
+export type HitosPresupuesto = { creadoAt: string; estado: EstadoPresupuestoLista | null }
 
 export type ResumenPresupuestos = {
   /** 0 = aún no se ha pedido precio para este riesgo. */
@@ -45,14 +43,8 @@ function leerHitos(v: unknown): HitosPresupuesto | null {
   const h = obj(v)
   const creadoAt = txt(h?.creadoAt)
   if (!h || !creadoAt) return null
-  return {
-    creadoAt,
-    enviadoAt: txt(h.enviadoAt),
-    vistoAt: txt(h.vistoAt),
-    aceptadoAt: txt(h.aceptadoAt),
-    emitidoAt: txt(h.emitidoAt),
-    retiradoAt: txt(h.retiradoAt),
-  }
+  const e = txt(h.estado)
+  return { creadoAt, estado: e !== null && e in ROTULO_ESTADO_PRESUPUESTO ? (e as EstadoPresupuestoLista) : null }
 }
 
 /** `null` = asegura no lo manda (versión anterior): la pantalla no dice nada en vez de «sin precio». */
@@ -87,14 +79,10 @@ export function leerSinOportunidad(v: unknown): PresupuestoSinOportunidad[] | nu
   return out
 }
 
-/** El hito más avanzado del presupuesto, con el mismo vocabulario que la lista de presupuestos. */
-export function estadoHitos(h: HitosPresupuesto): EstadoPresupuestoLista {
-  if (h.emitidoAt) return 'emitido'
-  if (h.retiradoAt) return 'retirado'
-  if (h.aceptadoAt) return 'aceptado'
-  if (h.vistoAt) return 'visto'
-  if (h.enviadoAt) return 'enviado'
-  return 'borrador'
+/** «al cliente: …», con el mismo rótulo que la lista de presupuestos. */
+function alCliente(h: HitosPresupuesto | null): string {
+  if (!h) return 'no enviado al cliente'
+  return h.estado ? `al cliente: ${ROTULO_ESTADO_PRESUPUESTO[h.estado].toLowerCase()}` : 'al cliente: estado no reconocido'
 }
 
 function mejor(prima: number | null, compania: string | null): string | null {
@@ -108,7 +96,7 @@ export function textoPresupuestos(r: ResumenPresupuestos): string {
   const partes = [r.variantes === 1 ? '1 presupuesto pedido' : `${r.variantes} presupuestos pedidos`]
   const m = mejor(r.mejorPrima, r.mejorCompania)
   partes.push(m ?? 'sin precio real')
-  partes.push(r.presupuesto ? `al cliente: ${ROTULO_ESTADO_PRESUPUESTO[estadoHitos(r.presupuesto)].toLowerCase()}` : 'no enviado al cliente')
+  partes.push(alCliente(r.presupuesto))
   return partes.join(' · ')
 }
 
@@ -117,7 +105,7 @@ export function textoSinOportunidad(p: PresupuestoSinOportunidad): string {
   const partes: string[] = [p.polizaId ? 'retarificación de su póliza' : 'alta nueva']
   if (p.simulado) partes.push('simulado (sin precio real)')
   else partes.push(mejor(p.mejorPrima, p.mejorCompania) ?? 'sin precio')
-  partes.push(p.presupuesto ? `al cliente: ${ROTULO_ESTADO_PRESUPUESTO[estadoHitos(p.presupuesto)].toLowerCase()}` : 'no enviado al cliente')
+  partes.push(alCliente(p.presupuesto))
   return partes.join(' · ')
 }
 
