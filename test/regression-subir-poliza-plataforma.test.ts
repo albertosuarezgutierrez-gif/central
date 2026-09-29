@@ -52,3 +52,11 @@ test('el sello del tomador (alta cifrada) no viaja al navegador', () => {
   assert.match(s, /sinSello\(r\.json\)/)
   assert.match(s, /sello:\s*_sello/)
 })
+
+// 29/09/2026: el enlace llegaba bien, pero el formulario seguía en un <details>
+// CERRADO debajo de las baldosas — en el móvil el botón «no funcionaba».
+test('con «subir=poliza» el formulario de Documentos se abre y se trae a la vista', () => {
+  const s = leer(`${COR}/Documentos.tsx`)
+  assert.match(s, /<details ref=\{formRef\} open=\{tipoInicial \? true : undefined\}/)
+  assert.match(s, /if \(tipoInicial\) formRef\.current\?\.scrollIntoView\(/)
+})
