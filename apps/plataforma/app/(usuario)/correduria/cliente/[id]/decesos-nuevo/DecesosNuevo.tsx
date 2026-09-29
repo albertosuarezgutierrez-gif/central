@@ -14,6 +14,7 @@ import ListaPrecios, { ListaPreciosPlegada } from '../../../ListaPrecios'
 import { eur } from '@/lib/dinero'
 import type { Opcion, Reparo, Supuesto, Precio, Fallo, ConsumoPuerto } from '@/lib/decesos-nuevo-asegura'
 import { pedirCotizacionDecesos } from './acciones'
+import { FallosTarificacion } from '../../../FallosTarificacion'
 
 const input: React.CSSProperties = {
   padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8,
@@ -315,21 +316,7 @@ function Precios({ r, simulacion, clienteId }: { r: Extract<Resultado, { estado:
       {!r.simulado && r.precios.some((p) => p.firmeza !== 'firme') && (
         <p style={{ color: 'var(--muted)', fontSize: 12 }}>Los precios marcados como estimado o condicionado no son ofertas cerradas: la compañía puede cambiarlos al verificar los datos.</p>
       )}
-      {r.fallos.length > 0 && (
-        <details style={{ marginTop: 8 }}>
-          <summary style={{ color: 'var(--muted)', cursor: 'pointer', minHeight: 44, fontSize: 12 }}>
-            {r.fallos.length} {r.fallos.length === 1 ? 'producto' : 'productos'} sin precio — ver por qué
-          </summary>
-          <ul style={{ margin: '6px 0 0', fontSize: 13 }}>
-            {r.fallos.map((f, i) => (
-              <li key={`${f.compania}-${i}`}>
-                <strong>{f.compania ?? '—'}</strong>{f.producto ? ` · ${f.producto}` : ''}: {f.motivo ?? 'sin motivo declarado'}
-                {f.tambienDioPrecio && <> <Badge tono="positivo">esta compañía sí dio otro precio</Badge></>}
-              </li>
-            ))}
-          </ul>
-        </details>
-      )}
+      <FallosTarificacion fallos={r.fallos} />
       {r.supuestos.length > 0 && (
         <div style={{ marginTop: 12, borderLeft: '3px solid var(--warning)', paddingLeft: 10 }}>
           <p style={{ color: 'var(--muted)', fontSize: 13, margin: '0 0 4px' }}>Este precio sale con estos supuestos. Si alguno no es cierto, la prima real cambia:</p>

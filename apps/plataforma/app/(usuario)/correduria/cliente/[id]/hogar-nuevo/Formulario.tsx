@@ -584,6 +584,7 @@ function Precios({ r, clienteId }: { r: Extract<Resultado, { estado: 'ok' }>; cl
                   categoria={o.categoria ?? ''}
                   primaEur={o.primaEur}
                   producto={o.producto}
+                  modalidad={o.modalidad}
                   sustituye={false}
                   onCerrar={cerrar}
                 />

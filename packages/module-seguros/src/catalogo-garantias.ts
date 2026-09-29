@@ -31,7 +31,7 @@ export type CoberturaParaClasificar = { nombre: string; incluida: boolean | null
 export type GarantiasClasificadas = { version: number; porClave: Record<string, EstadoGarantia> }
 
 /** Súbelo al cambiar patrones: lo guardado con otra versión se reclasifica desde las coberturas. */
-export const VERSION_CATALOGO = 3
+export const VERSION_CATALOGO = 4
 
 /** Misma normalización que la tabla de coberturas del portal: sin tildes, minúsculas, sin signos. */
 export function claveCobertura(nombre: string): string {
@@ -144,6 +144,40 @@ function clavesDe(ramo: RamoGarantias, nombre: string): string[] {
 /** Garantías que una PARTE de otro bloque puede afirmar por sí sola (su nombre no admite otra lectura). */
 const CLAVES_DE_PARTE: readonly string[] = ['colision_animales', 'fenomenos_atmosfericos']
 
+/** Las RC del vehículo: dentro de un bloque de una de ellas, una parte «RC …» es esa misma RC. */
+const CLAVES_RC: readonly string[] = ['rc_obligatoria', 'rc_voluntaria']
+
+/**
+ * Las claves de UNA parte del texto de un bloque. Dentro de un bloque de RC, una parte «RC …» o
+ * «Responsabilidad civil …» que no nombra otra RC es la RC del propio bloque (29/09/2026, Occident
+ * «RC voluntaria»: «» RC peatón y ciclista: 100.000 €..» RC incendio: Incluida.»). Sin esto, «RC peatón»
+ * no casaba con nada y dejaba en `no_consta` una RC voluntaria que el vendor da por incluida; y
+ * «RC incendio» sigue sin ser la garantía de incendio del vehículo.
+ */
+function clavesDeParte(ramo: RamoGarantias, parte: string, propias: readonly string[]): string[] {
+  const claves = clavesDe(ramo, parte)
+  const rcDelBloque = propias.filter((k) => CLAVES_RC.includes(k))
+  if (rcDelBloque.length === 0 || !/^(rc|responsabilidad civil)\b/.test(claveCobertura(parte))) return claves
+  return claves.some((k) => CLAVES_RC.includes(k)) ? claves : rcDelBloque
+}
+
+/**
+ * Daños propios LIMITADOS a causas concretas, escritos en PROSA (29/09/2026). Mapfre llama «Daños
+ * propios», incluida, a un bloque de su Terceros Ampliado cuyo texto es «Daños Propios por atropello de
+ * animales cinegéticos… - Daños del vehículo asegurado por fenómenos atmosféricos»: no es el todo
+ * riesgo, son dos garantías de parte, y por el nombre ese terceros salía como todo riesgo. PURO.
+ * Devuelve las garantías de parte que nombra el texto, o `null` si no dice «daños propios por
+ * <una de ellas>» (y entonces manda el nombre, como siempre). Si la causa enumera algo más, lo peor que
+ * pasa es que «daños propios» quede en `no_consta`: nunca se afirma un sí que el texto no da.
+ */
+function partesDeDanosLimitados(ramo: RamoGarantias, texto: string | null | undefined): string[] | null {
+  if (typeof texto !== 'string') return null
+  const t = claveCobertura(texto)
+  const causa = /\bdanos propios por (.{1,40})/.exec(t)?.[1]
+  if (!causa || !clavesDe(ramo, causa).some((k) => CLAVES_DE_PARTE.includes(k))) return null
+  return clavesDe(ramo, t).filter((k) => CLAVES_DE_PARTE.includes(k))
+}
+
 const PESO: Record<EstadoGarantia, number> = { no_consta: 0, no: 1, si: 2 }
 
 /**
@@ -164,9 +198,14 @@ export function clasificarCoberturas(
   }
   for (const c of lista ?? []) {
     const estado: EstadoGarantia = c.incluida === true ? 'si' : c.incluida === false || esOpcionalSinMarcar(c) ? 'no' : 'no_consta'
+    const propias = clavesDe(ramo, c.nombre)
     const subs = subcoberturas(c.texto)
     if (subs.length === 0) {
-      for (const clave of clavesDe(ramo, c.nombre)) anotar(clave, estado)
+      // Prosa. «Daños propios por atropello de animales… / por fenómenos atmosféricos» (Mapfre) no es
+      // el todo riesgo: se afirman las partes que nombra y «daños propios» incluido queda sin confirmar.
+      const limitadas = propias.includes('danos_propios') ? partesDeDanosLimitados(ramo, c.texto) : null
+      for (const clave of propias) anotar(clave, limitadas && clave === 'danos_propios' && estado === 'si' ? 'no_consta' : estado)
+      for (const clave of limitadas ?? []) anotar(clave, estado)
       continue
     }
     // El texto enumera lo que lleva DENTRO: manda eso, no el nombre del bloque. Occident llama
@@ -174,14 +213,14 @@ export function clasificarCoberturas(
     // salía «daños propios: sí» en un terceros básico.
     // Una parte solo habla de las garantías del propio bloque y de las que no admiten otra lectura:
     // «Rc incendio» dentro de la RC obligatoria NO es la garantía de incendio del vehículo.
-    const propias = clavesDe(ramo, c.nombre)
     const admitidas = new Set([...propias, ...CLAVES_DE_PARTE])
     const dentro = new Set<string>()
     let todasReconocidas = true
     for (const s of subs) {
       const e: EstadoGarantia = estado === 'si' ? s.estado : estado
-      if (clavesDe(ramo, s.nombre).length === 0) todasReconocidas = false
-      for (const clave of clavesDe(ramo, s.nombre)) {
+      const clavesParte = clavesDeParte(ramo, s.nombre, propias)
+      if (clavesParte.length === 0) todasReconocidas = false
+      for (const clave of clavesParte) {
         if (!admitidas.has(clave)) continue
         if (s.estado !== 'no_consta') dentro.add(clave)
         anotar(clave, e)
@@ -239,6 +278,8 @@ const OPCION_GARANTIA: readonly { clave: string; etiqueta: RegExp }[] = [
   { clave: 'vehiculo_sustitucion', etiqueta: /^(vehiculo|coche) de sustitucion$/ },
   { clave: 'retirada_carnet', etiqueta: /^retirada (del |de )?carne?t?$/ },
   { clave: 'defensa_multas', etiqueta: /^(reclamacion|defensa|recurso) (de |en )?multas$/ },
+  // Reale: «Daños por colisión animal: No».
+  { clave: 'colision_animales', etiqueta: /^danos por colision (con )?animal(es)?$/ },
   // Hogar, Fidelidade: «Todo riesgo accidental: No».
   { clave: 'todo_riesgo_accidental', etiqueta: /^todo riesgo accidental$/ },
 ]

@@ -212,3 +212,26 @@ test('subcoberturas: una parte «NO CONTRATADA» es un no', () => {
   const raro = clasificarCoberturas('moto', [{ nombre: 'Daños propios', incluida: true, texto: '» Franquicia: 300 €.  : CONTRATADA' }])
   assert.equal(raro.porClave.danos_propios, 'no_consta')
 })
+
+// 29/09/2026, proyecto 40975463 (textos REALES). Tres precios que el catálogo leía mal.
+test('Mapfre: «Daños propios por atropello… / por fenómenos» en prosa NO es todo riesgo', () => {
+  // Terceros Ampliado (519,71 €): bloque «Daños propios» incluido, texto corrido sin «»».
+  const g = clasificarCoberturas('auto', [{ nombre: 'Daños propios', incluida: true, texto: 'Daños Propios por atropello de animales cinegéticos… - Daños del vehículo asegurado por fenómenos atmosféricos' }])
+  assert.equal(g.porClave.danos_propios, 'no_consta', 'daños propios limitados a dos causas no son el todo riesgo')
+  assert.equal(g.porClave.colision_animales, 'si')
+  assert.equal(g.porClave.fenomenos_atmosfericos, 'si')
+})
+
+test('Occident: «RC peatón» dentro de la RC voluntaria es la propia RC voluntaria', () => {
+  for (const nombre of ['RC voluntaria', 'Responsabilidad civil voluntaria']) {
+    const g = clasificarCoberturas('auto', [{ nombre, incluida: true, texto: '» RC peatón y ciclista: 100.000 €..» RC incendio: Incluida.' }])
+    assert.equal(g.porClave.rc_voluntaria, 'si', nombre)
+    assert.equal(g.porClave.incendio, 'no_consta', '«RC incendio» no es el incendio del vehículo')
+  }
+})
+
+test('Reale: la opción «Daños por colisión animal: No» es un no de choque con animales', () => {
+  const opciones = [{ etiqueta: 'Daños por colisión animal', valor: 'No' }]
+  assert.deepEqual(garantiasDeOpciones(opciones), { colision_animales: 'no' })
+  assert.equal(clasificarCoberturas('auto', [], opciones).porClave.colision_animales, 'no')
+})
