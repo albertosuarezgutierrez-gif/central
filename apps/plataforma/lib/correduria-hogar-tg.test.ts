@@ -69,3 +69,17 @@ test('hogar: el botón/la cola cotiza hogar con su referencia, y el descarte por
   assert.match(src, /herramienta IN \('proponer_tarificacion', 'precio_hogar'\)/)
   assert.match(src, /return pedirOProponer\(fila\.id, textoPropuestaHogar/)
 })
+
+test('hogar: lo que FALTA se puede dar aunque no sea editable (DNI de un lead), como en la pantalla', () => {
+  const dni = fila('dni', 'texto', { editable: false, falta: 'no está en la ficha', procedencia: null })
+  const r = aplicarDatosHogar(pre([dni], [dni]), { dni: '12345678Z' })
+  assert.deepEqual(r.errores, [])
+  assert.deepEqual(r.correcciones, { dni: '12345678Z' })
+})
+
+test('hogar: el punto de miles se quita, el decimal no', () => {
+  const p = pre([fila('capitalContinente', 'euros')])
+  assert.equal(aplicarDatosHogar(p, { capitalContinente: '150.000' }).correcciones.capitalContinente, 150000)
+  assert.equal(aplicarDatosHogar(p, { capitalContinente: '85000.50' }).correcciones.capitalContinente, 85000.5)
+  assert.equal(aplicarDatosHogar(p, { capitalContinente: '1.200.000,5' }).correcciones.capitalContinente, 1200000.5)
+})

@@ -1191,6 +1191,9 @@ async function ramosVivos(clienteId: string): Promise<string[] | null> {
  * encima → si está completa, la misma fila y el mismo cobro que coche/moto (`pedirOProponer`).
  */
 async function precioHogar(args: Record<string, unknown>, ctx: Ctx): Promise<{ texto: string; ok: boolean }> {
+  if (!emisionTgActiva(process.env[INTERRUPTOR_EMISION])) {
+    return { texto: `NO DISPONIBLE: las escrituras del asistente están apagadas (${INTERRUPTOR_EMISION}). Que lo pida en /correduria (ficha → hogar).`, ok: true }
+  }
   const clienteId = idValido(args.clienteId)
   if (!clienteId) return { texto: ERROR_NO_UUID, ok: false }
   const txt = (k: string) => (typeof args[k] === 'string' && (args[k] as string).trim() !== '' ? (args[k] as string).trim().slice(0, 200) : null)
@@ -1219,6 +1222,7 @@ async function precioHogar(args: Record<string, unknown>, ctx: Ctx): Promise<{ t
   if (pre.estado === 'no_encontrado') return { texto: `NO SE PUEDE: ${pre.mensaje}`, ok: true }
   if (pre.estado !== 'ok') return { texto: `ERROR: no he podido preparar la ficha de hogar (${pre.mensaje}). No se ha pedido nada (0€).`, ok: false }
   const datos = typeof args.datos === 'object' && args.datos !== null && !Array.isArray(args.datos) ? (args.datos as Record<string, unknown>) : {}
+  if (dniEnmascarado(datos.dni)) return { texto: TEXTO_DNI_ENMASCARADO, ok: true }
   const ap = aplicarDatosHogar(pre.pre, datos)
   if (ap.errores.length) {
     return { texto: `NO ENTENDIDO (no se ha pedido nada, 0€):\n- ${ap.errores.join('\n- ')}\nPregúntaselo a Alberto y vuelve a llamar con referencia=${referencia} y TODOS los datos.`, ok: true }
@@ -1517,7 +1521,7 @@ async function tarificacionesDeHoy(): Promise<number | null> {
 }
 
 type FilaTarif = {
-  cliente_id: string; ramo: RamoTarif | 'hogar'; prima_actual: number | null
+  cliente_id: string; ramo: RamoTarif | 'hogar'; prima_actual: number | null; turno_id?: number | null
   cuerpo: { resueltos?: Record<string, unknown>; correcciones?: Record<string, unknown>; oportunidadId?: string; figuras?: Record<string, string>; referencia?: string }
 }
 
@@ -1551,7 +1555,7 @@ export async function tarificarDesdeBoton(arg: string): Promise<void> {
       AND (SELECT count(*) FROM correduria_asistente_tarificacion
            WHERE estado IN ('pidiendo', 'hecha', 'incierta')
              AND decidida_at >= (date_trunc('day', now() AT TIME ZONE 'Europe/Madrid') AT TIME ZONE 'Europe/Madrid')) < ${MAX_TARIFICACIONES_DIA}
-    RETURNING cliente_id::text AS cliente_id, ramo, cuerpo, prima_actual::float8 AS prima_actual`),
+    RETURNING cliente_id::text AS cliente_id, ramo, cuerpo, prima_actual::float8 AS prima_actual, turno_id::float8 AS turno_id`),
   ]).catch(() => [0, [] as FilaTarif[]] as const)
   const [fila] = reclamo
   if (!fila) {
@@ -1597,6 +1601,11 @@ export async function tarificarDesdeBoton(arg: string): Promise<void> {
   await prisma.$executeRaw(Prisma.sql`
     UPDATE correduria_asistente_tarificacion SET estado = ${fin.estado}, cuerpo = NULL, resultado = ${JSON.stringify(fin.resumen)}::jsonb
     WHERE id = ${id}`).catch((e) => console.error('[correduria-tarificacion-tg] no se pudo cerrar la fila', id, e))
+  // Sin cobro (tope, faltan, error antes de llamar): la huella del «PEDIDO» no puede bloquear el reintento.
+  if (fin.estado !== 'hecha' && fin.estado !== 'incierta' && fila.turno_id) {
+    await prisma.$executeRaw(Prisma.sql`
+      DELETE FROM correduria_asistente_huella WHERE turno_id = ${fila.turno_id} AND herramienta IN ('proponer_tarificacion', 'precio_hogar')`).catch(() => {})
+  }
   const venta = fin.estado === 'hecha' && fila.ramo !== 'hogar' ? ventaCruzada(await ramosVivos(fila.cliente_id).catch(() => null), fila.ramo) : null
   await decir([fin.texto, venta].filter(Boolean).join('\n\n'))
 }
@@ -1719,7 +1728,7 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
   const mensajes: NimToolMessage[] = [...historial.mensajes, { role: 'user', content: pregunta }]
   const rastro: Rastro[] = []
   const yaConsultado = new Map<string, string>()
-  const escritasEnTurno = new Set<string>()
+  const conflictosEnTurno = new Set<string>()
   const herramientas = herramientasPara(autonomo)
   const consultado: string[] = []
   const t0 = Date.now()
@@ -1760,20 +1769,22 @@ export async function manejarCorreduriaTg(textoOriginal: string): Promise<void> 
         const escribe = HERRAMIENTAS_ESCRITURA.has(nombreH)
         let res: { texto: string; ok: boolean }
         let huella: string | null = null
-        if (escribe && args?.forzar === true && escritasEnTurno.has(nombreH)) {
+        if (escribe && args?.forzar === true && conflictosEnTurno.has(nombreH)) {
           // El 409 y el forzar en la misma vuelta = la IA contestándose a sí misma lo que tenía que preguntar.
           res = { texto: 'NO: forzar=true solo cuando Alberto te conteste, en OTRO mensaje, que es otra persona. Pregúntaselo ahora y para.', ok: true }
         } else if (escribe && autonomo && args) {
-          huella = huellaEscritura(nombreH, args)
+          huella = huellaEscritura(nombreH, args, process.env.ASEGURA_OPERADOR_SECRET ?? '')
           const libre = await reservarHuella(huella, nombreH, turnoId, args.repetir === true)
           res = libre
             ? await ejecutar(nombreH, args, { turnoId, reglas, autonomo, diferidas }).catch((e) => ({ texto: `NO SÉ SI SE HA HECHO: ${e instanceof Error ? e.message : 'fallo'}. NO lo repitas.`, ok: false }))
-            : { texto: `YA SE HIZO EN UN MENSAJE ANTERIOR (hace menos de ${MINUTOS_HUELLA} min) con estos mismos datos: NO se repite. Díselo a Alberto; solo si él pide expresamente hacerlo otra vez, vuelve a llamar con repetir=true.`, ok: true }
-          if (libre && !dejaHuella(res.texto)) await soltarHuella(huella, turnoId)
+            : { texto: `YA SE INTENTÓ EN UN MENSAJE ANTERIOR (hace menos de ${MINUTOS_HUELLA} min) con estos mismos datos, y se hizo o quedó en duda: NO se repite. Díselo a Alberto (que lo mire en la ficha si quedó en duda); solo si él pide expresamente hacerlo otra vez, vuelve a llamar con repetir=true.`, ok: true }
+          // Con repetir la fila ya protegía una escritura ANTERIOR: no se borra aunque esta no llegue a hacerse.
+          if (libre && args.repetir !== true && !dejaHuella(res.texto)) await soltarHuella(huella, turnoId)
         } else {
           res = await ejecutar(nombreH, args, { turnoId, reglas, autonomo, diferidas }).catch((e) => ({ texto: `ERROR: ${e instanceof Error ? e.message : 'fallo'}. NO digas que no hay datos.`, ok: false }))
         }
-        if (escribe) escritasEnTurno.add(nombreH)
+        // Un conflicto (teléfono/email de otra ficha) solo se fuerza tras preguntar: en ESTE turno, no.
+        if (escribe && /^(NO CREADA|NO AÑADIDO)/.test(res.texto)) conflictosEnTurno.add(nombreH)
         // Solo lo que salió bien: un fallo (red, tiempo) se puede reintentar.
         // Una lectura que falló se puede reintentar; una ESCRITURA no, salga como salga (pudo aplicarse).
         if (res.ok || HERRAMIENTAS_ESCRITURA.has(c.function?.name ?? '')) yaConsultado.set(clave, res.texto)

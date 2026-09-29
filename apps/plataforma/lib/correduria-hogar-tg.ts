@@ -72,7 +72,8 @@ export function aplicarDatosHogar(
   for (const [k, v] of Object.entries(datos)) {
     const f = pre.resumen.filas.find((x) => x.campo === k) ?? pre.resumen.filas.find((x) => normalizar(x.etiqueta) === normalizar(k))
     if (!f) { errores.push(`«${k}» no es un dato de la ficha de hogar`); continue }
-    if (!f.editable) { errores.push(`${f.etiqueta}: no se puede cambiar (sale de ${f.procedencia ?? 'la ficha'})`); continue }
+    // Como la pantalla (`sePuedeTocar`): lo que FALTA se puede dar aunque no sea editable (el DNI de un lead nuevo).
+    if (!f.editable && f.falta === null) { errores.push(`${f.etiqueta}: no se puede cambiar (sale de ${f.procedencia ?? 'la ficha'})`); continue }
     let valor: unknown
     if (f.control === 'opcion' || f.control === 'municipio') {
       const opciones = opcionesDe(pre, f)
@@ -85,7 +86,8 @@ export function aplicarDatosHogar(
       if (b === undefined || (b === null && f.control === 'siNo')) { errores.push(`${f.etiqueta}: dime sí o no`); continue }
       valor = b
     } else if (f.control === 'numero' || f.control === 'euros') {
-      const n = typeof v === 'number' ? v : Number(String(v ?? '').replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, ''))
+      // Solo los puntos de MILES («150.000»); «85000.50» es un decimal y se queda.
+      const n = typeof v === 'number' ? v : Number(String(v ?? '').replace(/\.(?=\d{3}(?!\d))/g, '').replace(',', '.').replace(/[^\d.-]/g, ''))
       if (!Number.isFinite(n) || String(v ?? '').trim() === '') { errores.push(`${f.etiqueta}: «${String(v)}» no es un número`); continue }
       valor = n
     } else {

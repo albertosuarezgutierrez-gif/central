@@ -9,7 +9,7 @@
 // - DNI/NIE, IBAN y tarjetas salen ENMASCARADOS hacia Telegram y hacia la IA.
 // - Lo que aprende son PREFERENCIAS de trabajo; los datos de un cliente van a la cartera, no a su memoria.
 
-import { createHash } from 'node:crypto'
+import { createHash, createHmac } from 'node:crypto'
 import { TIPOS_RELACION } from '@central/module-seguros'
 
 // ── ¿Es un mensaje para la correduría? ───────────────────────────────────────────────────────────
@@ -396,7 +396,7 @@ export function systemAsistente(reglas: readonly string[], hoyIso: string, auton
     '- Emitir: solo puedes PREPARAR una emisión con preparar_emision (necesitas la póliza y el número del proyecto de Avant2; pídeselos si faltan). El sistema le manda a Alberto el resumen con el botón y es él quien emite. NUNCA digas que una póliza está emitida: eso solo lo confirma el sistema tras el botón.',
     '- Los DNI, IBAN y tarjetas llegan enmascarados; no intentes reconstruirlos. Si para escribir necesitas un DNI que solo tienes tapado («…115R»), pídeselo a Alberto entero.',
     '- Los ids (clienteId, polizaId, oportunidadId, tareaId, siniestroId) son SIEMPRE los uuid que devuelven las herramientas: el polizaId sale de ficha_cliente (busca primero), nunca es el número de póliza de la compañía.',
-    '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: dile que los cambie en la ficha.',
+    '- Aprende PREFERENCIAS: cuando Alberto te corrija o te diga cómo quiere algo «siempre», usa proponer_regla. Los datos de un cliente (teléfono, email, dirección…) NO son reglas: se cambian con sus herramientas (contacto_cliente, proponer_correccion) o en la ficha.',
     '- Estilo: español, breve (es un chat de móvil), sin markdown ni tablas. Importes en formato español (2.162,49€). Fechas dd/mm/aaaa.',
   ]
   if (reglas.length) {
@@ -654,6 +654,8 @@ export const HERRAMIENTAS_ESCRITURA: ReadonlySet<string> = new Set([
 export function escrituraParaIA(status: number, json: unknown, que: string): { texto: string; ok: boolean } {
   const o = typeof json === 'object' && json !== null ? (json as Record<string, unknown>) : {}
   if (status >= 200 && status < 300 && (o.estado === 'ok' || o.estado === undefined)) return { texto: `HECHO: ${que}.`, ok: true }
+  // `sin_configurar` (503) es un «no se ha llamado a nadie»: seguro que no se hizo.
+  if (status === 503 && o.estado === 'sin_configurar') return { texto: `NO SE HA HECHO (${que}): la cartera no está configurada.`, ok: true }
   if (status === 0 || status >= 500) return { texto: `NO SÉ SI SE HA HECHO (${que}): la cartera no ha contestado bien. NO lo repitas; dile a Alberto que lo mire en la ficha.`, ok: false }
   const motivo = typeof o.motivo === 'string' ? o.motivo : typeof o.estado === 'string' ? o.estado : `HTTP ${status}`
   return { texto: `NO SE HA HECHO (${que}): ${motivo}.`, ok: true }
@@ -712,8 +714,10 @@ function estable(v: unknown): unknown {
 }
 
 /** Huella de una escritura: hash de la herramienta y sus datos (sin `repetir`, sin mayúsculas ni espacios de más). No guarda el dato. */
-export function huellaEscritura(nombre: string, args: Record<string, unknown>): string {
-  return createHash('sha256').update(`${nombre}\n${JSON.stringify(estable(args))}`).digest('hex')
+export function huellaEscritura(nombre: string, args: Record<string, unknown>, clave = ''): string {
+  // HMAC con un secreto del servidor: un teléfono o un DNI tienen poca entropía y un hash a pelo se revierte por fuerza bruta.
+  const texto = `${nombre}\n${JSON.stringify(estable(args))}`
+  return (clave ? createHmac('sha256', clave) : createHash('sha256')).update(texto).digest('hex')
 }
 
 /**

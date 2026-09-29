@@ -75,6 +75,9 @@ export async function verSiniestro(args: Record<string, unknown>): Promise<Salid
   if (!r) return { texto: 'ERROR: no he podido leer el siniestro. NO digas que no existe.', ok: false }
   if (r.status === 404) return { texto: 'No existe ningún siniestro con ese id.', ok: true }
   if (r.status !== 200) return { texto: `ERROR: no he podido leer el siniestro (HTTP ${r.status}). NO digas que no existe.`, ok: false }
+  // Asegura contesta 200 con `{estado:'error'|'sin_configurar'}`: eso no es «el siniestro está vacío».
+  const est = (r.json as { estado?: unknown } | null)?.estado
+  if (est !== undefined && est !== 'ok') return { texto: `ERROR: no he podido leer el siniestro (${String(est)}). NO digas que no existe.`, ok: false }
   return { texto: paraIA(r.json, 10000), ok: true }
 }
 

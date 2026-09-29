@@ -5,7 +5,7 @@ import {
   costeConservador, rastroArgs, tienePrefijo, apagado, clasificarDestino, diasValidos, enmascarar, idValido, leerArgumentos, leerClasificacion,
   paraIA, reglaConDatoPersonal, sinPrefijo, systemAsistente, turnoDeNota, preguntaNota,
   altaParaIA, autonomoActivo, figuraParaIA, HERRAMIENTAS,
-  herramientasPara, huellaEscritura, dejaHuella, dniEnmascarado, AUTONOMAS_CON_TEXTO_DE_BOTON, HERRAMIENTAS_ESCRITURA,
+  herramientasPara, huellaEscritura, escrituraParaIA, dejaHuella, dniEnmascarado, AUTONOMAS_CON_TEXTO_DE_BOTON, HERRAMIENTAS_ESCRITURA,
 } from './correduria-asistente.ts'
 
 test('reparto: el atajo y las palabras de la correduría van al asistente', () => {
@@ -307,8 +307,21 @@ test('prompt: forzar solo tras respuesta en otro mensaje, ids siempre uuid, DNI 
 
 test('bucle: forzar en el mismo turno se para, y las escrituras autónomas pasan por la huella', () => {
   const src = readFileSync(new URL('./correduria-asistente-telegram.ts', import.meta.url), 'utf8')
-  assert.match(src, /args\?\.forzar === true && escritasEnTurno\.has\(nombreH\)/)
+  assert.match(src, /args\?\.forzar === true && conflictosEnTurno\.has\(nombreH\)/)
+  assert.match(src, /\/\^\(NO CREADA\|NO AÑADIDO\)\/\.test\(res\.texto\)\) conflictosEnTurno\.add/)
+  assert.match(src, /args\.repetir !== true && !dejaHuella\(res\.texto\)\) await soltarHuella/)
   assert.match(src, /escribe && autonomo && args\) \{\s*huella = huellaEscritura/)
   assert.match(src, /herramientasPara\(autonomo\)/)
   assert.match(src, /openrouterChatTools\(or, mensajes, herramientas as/)
+})
+
+test('huella: con secreto (HMAC) no coincide con el hash a pelo', () => {
+  const a = { clienteId: 'x', valor: '600111222' }
+  assert.notEqual(huellaEscritura('contacto_cliente', a, 's3cr3t'), huellaEscritura('contacto_cliente', a))
+  assert.equal(huellaEscritura('contacto_cliente', a, 's3cr3t'), huellaEscritura('contacto_cliente', { ...a, repetir: true }, 's3cr3t'))
+})
+
+test('escritura: 503 sin_configurar es «no se hizo», no «no sé»', () => {
+  assert.match(escrituraParaIA(503, { estado: 'sin_configurar' }, 'x').texto, /^NO SE HA HECHO/)
+  assert.match(escrituraParaIA(502, null, 'x').texto, /^NO SÉ SI/)
 })
