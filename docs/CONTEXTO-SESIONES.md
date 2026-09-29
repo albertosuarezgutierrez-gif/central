@@ -864,6 +864,13 @@ puesta en Vercel plataforma (23/09); activo al desplegar. Pendiente: reducir min
 facturación GitHub Suecia→España. Arquitectura «ASegura OS» aprobada en `docs/ASEGURA-OS-ARQUITECTURA.md`.
 
 
+## (29/09/2026) Parrilla de precios única, marcar lo que se manda y seguimiento con llamada
+- Todos los ramos (moto, coche, hogar, vida, decesos, salud) usan `ListaPrecios.tsx` (logo, cobertura+franquicia, prima); una sola lista abierta («Qué verá el cliente»), la de emitir plegada.
+- `FiltroGarantias`: se MARCA lo que se manda (antes se ocultaba); atajos 3 más baratas / una por compañía / todas. Tras preparar, correo·WhatsApp·PDF en la misma pantalla.
+- Grúa marcada de serie en coche y moto (corredor y portal): `preseleccionFija()` en module-seguros.
+- Seguimiento de presupuestos (48 h sin abrir / 72 h sin elegir) ya avisaba por Telegram; ahora además crea una LLAMADA para hoy en la oportunidad abierta (`tareaDeSeguimiento`, asegura). Cepo `presupuesto-seguimiento-tarea.test.ts`.
+- El portal del cliente YA tenía el diseño del artefacto «Presupuesto por garantías» (TodasLasOpciones); pendiente unificar la fila de precio en una pieza común.
+
 ## (28/09/2026) Precios de moto/coche nuevo legibles en el móvil
 - La tabla de 5-6 columnas se salía por la derecha y repetía «Mapfre · Motos» en cada fila; debajo, «Qué verá el cliente» pintaba OTRA vez los 31 precios.
 - Ahora: `ListaPrecios.tsx` (logo · cobertura+franquicia · prima · Emitir, de barata a cara, el panel de emitir se abre bajo SU fila) y, con cotización guardada, la lista de emitir va plegada («¿Ya ha dicho que sí?»). `CeldaCompania` = solo logo (nombre si no hay logo); `productoRelevante` quita el producto que solo repite el ramo. Filas de `FiltroGarantias` con el mismo formato y ojo de 44 px.
