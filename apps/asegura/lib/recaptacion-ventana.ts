@@ -15,8 +15,10 @@
 // anclar, no hay ventana que calcular — siguen siendo contactables siempre,
 // como ya eran.
 
-/** Días de antelación con los que se abre la ventana de contacto. */
-export const VENTANA_DIAS_ANTIGUO = 45
+import { DIAS_AVISO_OPORTUNIDAD } from '@central/module-seguros'
+
+/** Días de antelación con los que se abre la ventana de contacto: la regla única de las oportunidades. */
+export const VENTANA_DIAS_ANTIGUO = DIAS_AVISO_OPORTUNIDAD
 
 function diasEnMes(mes: number, anio: number): number {
   // Día 0 del mes SIGUIENTE = último día de `mes`. Cubre bisiestos sin tabla.

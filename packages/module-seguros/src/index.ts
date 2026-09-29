@@ -1026,3 +1026,10 @@ export {
   CAMPOS_ANIOS_VENDOR, HISTORIAL_MAXIMO, aniosDelCuerpo, aplicarTopesHistorial, topesDelMensaje,
 } from './historial-maximo.ts'
 export type { CampoAniosVendor, TopesHistorial } from './historial-maximo.ts'
+
+// Regla única de las oportunidades: aviso a Alberto 45 días antes del vencimiento (29/09/2026).
+export {
+  DIAS_AVISO_OPORTUNIDAD, ESTADOS_OPORTUNIDAD_ABIERTA,
+  avisosOportunidadDeHoy, claveAvisoOportunidad, fechaAvisoOportunidad, vencimientoDelCiclo,
+} from './oportunidad-aviso.ts'
+export type { AvisoOportunidad, OportunidadParaAviso } from './oportunidad-aviso.ts'

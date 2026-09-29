@@ -971,6 +971,12 @@ azul desaparecía sobre la baldosa oscura. La página es clara desde el 05/09 (u
 el motivo del oscuro estaba desfasado. Píldora clara (panel 88 % + blur), logo en cobalto; medido con
 Playwright a 1432 y 360 px sin desbordar.
 
+## (29/09/2026) Correduría: regla ÚNICA de oportunidades — aviso a Alberto a 45 días del vencimiento
+- `DIAS_AVISO_OPORTUNIDAD = 45` + `fechaAvisoOportunidad`/`vencimientoDelCiclo`/`avisosOportunidadDeHoy` en `@central/module-seguros` (`oportunidad-aviso.ts`). La leen baja por recibo devuelto (era 60), alta por Telegram (era 60), póliza subida, recaptación (ventana), web (aviso 2) y el 1er contacto a leads de competencia (era 60 → antes se escribía al lead a 60 d).
+- Pasada diaria NUEVA: asegura `GET /api/operador/oportunidades-aviso` (abiertas, ≤45 d del vencimiento del ciclo, no aparcadas) → bloque «🎯 Oportunidades a 45 días» dentro del Telegram diario de `correduria-renovaciones` (menos avisos). Idempotente: `correduria_avisos_renovacion` con hito `oportunidad_45` (poliza_id = id de la oportunidad), un aviso por oportunidad y ciclo; marca solo tras enviar. Sin migración.
+- Se quedan a propósito: aviso-web 70 d (correo a quien se apuntó él mismo, solo plazos), `DIAS_COMPANIA`/`DIAS_PREAVISO_ASEGURADOR` 60 (legal), horizonte 90 de la lista de leads (visibilidad), `DIAS_AVISO_RENOVACION`/`SUSTITUCION_DIAS_ANTES` (cartera propia).
+- Cepo `test/regression-oportunidad-45.test.ts` (literal 45/60 en esos ficheros → rojo; visto rojo en 3 roturas). No se tocó `correduria-asistente-telegram.ts` ni el webhook.
+
 ## (29/09/2026) Egress Supabase: /correduria ya no baja listas enteras para pintar contadores
 Diff de pg_stat_statements 11:20→12:51 UTC: las dos consultas top eran `leadsCompetencia` (~3.556 filas, ~1,4 MB)
 y `colaRecaptacion` (~2.200 filas, ~0,8 MB), lanzadas en CADA visita a /correduria solo para el contador de

@@ -19,8 +19,8 @@ test('sin ninguna fecha legible no se inventa el vencimiento', () => {
   assert.equal(vencimientoCompetencia('2026-13-40', 'basura', '2026-09-29'), null)
 })
 
-test('la llamada va 60 días antes del vencimiento y nunca antes de mañana', () => {
-  assert.equal(fechaLlamada('2027-09-19', '2026-09-29'), '2027-07-21')
+test('la llamada va 45 días antes del vencimiento y nunca antes de mañana', () => {
+  assert.equal(fechaLlamada('2027-09-19', '2026-09-29'), '2027-08-05')
   assert.equal(fechaLlamada('2026-10-15', '2026-09-29'), '2026-09-30')
   assert.equal(fechaLlamada(null, '2026-09-29'), '2026-09-30')
 })

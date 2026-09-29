@@ -8,8 +8,10 @@
 //
 // Aquí no hay BD ni red: lo que decide va testeado en `oportunidad-documento-reglas.test.ts`.
 
-/** Días antes del vencimiento a los que se llama (decisión de Alberto, 29/09/2026). */
-export const DIAS_LLAMADA_ANTES_VENCIMIENTO = 45
+import { DIAS_AVISO_OPORTUNIDAD, fechaAvisoOportunidad } from '@central/module-seguros'
+
+/** Días antes del vencimiento a los que se llama: la regla única de las oportunidades (`@central/module-seguros`). */
+export const DIAS_LLAMADA_ANTES_VENCIMIENTO = DIAS_AVISO_OPORTUNIDAD
 
 const RAMOS = ['auto', 'moto', 'hogar', 'vida', 'salud', 'decesos', 'responsabilidad_civil', 'comercio', 'comunidades', 'accidentes', 'otros'] as const
 export type RamoDocumento = (typeof RAMOS)[number]
@@ -46,11 +48,7 @@ export function proximoVencimiento(fecha: string | null | undefined, hoy: Date):
 
 /** Cuándo llamar: 45 días antes del vencimiento; si eso ya pasó (o no hay fecha), mañana. */
 export function fechaLlamada(vence: string | null, hoy: Date): string {
-  const manana = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth(), hoy.getUTCDate() + 1))
-  if (!vence) return iso(manana)
-  const v = utc(vence)
-  const antes = new Date(Date.UTC(v.getUTCFullYear(), v.getUTCMonth(), v.getUTCDate() - DIAS_LLAMADA_ANTES_VENCIMIENTO))
-  return antes > manana ? iso(antes) : iso(manana)
+  return fechaAvisoOportunidad(vence, iso(hoy))
 }
 
 /**
