@@ -10,7 +10,7 @@ import ContactosFicha from '../../ContactosFicha'
 import { datosDeLaCompania } from '@/lib/datos-compania'
 import DatosCompania from './DatosCompania'
 import BotonWhatsapp, { VERDE_WHATSAPP } from '../../BotonWhatsapp'
-import EditarCliente, { EditarDireccion } from '../../EditarCliente'
+import EditarCliente, { CuentaCargo, EditarDireccion } from '../../EditarCliente'
 import Relaciones from '../../Relaciones'
 import { Badge, btnStyle } from '@/components/ui'
 import {
@@ -158,6 +158,8 @@ export default function TabContactos({ ficha, personas }: {
         cifradoEnEspejo={ficha.contacto.telefonoIlegible || ficha.contacto.emailIlegible}
       >
         <Direccion clienteId={ficha.id} c={ficha.contacto} />
+        {/* La cuenta de los recibos: la leen la emisión y el bot de Telegram (29/09/2026). */}
+        <CuentaCargo clienteId={ficha.id} />
       </ContactosFicha>
 
       {/* Lo que tiene la COMPAÑÍA y nosotros no: se ofrece añadir, nunca sustituye (mandan los nuestros). */}

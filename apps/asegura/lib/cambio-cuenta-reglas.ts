@@ -27,3 +27,14 @@ export function revisarIbanNuevo(bruto: unknown, actual: string | null): Revisio
 /** Estados con los que Alberto cierra una solicitud. */
 export const RESOLUCIONES_CAMBIO_CUENTA = ['hecha', 'descartada'] as const
 export type ResolucionCambioCuenta = (typeof RESOLUCIONES_CAMBIO_CUENTA)[number]
+
+/**
+ * La línea de historial cuando el CORREDOR pone la cuenta de la ficha a mano (29/09/2026). Solo recibe
+ * máscaras: el IBAN en claro no puede acabar en un texto aunque alguien se equivoque de variable.
+ * Deja dicho que la cuenta de sus pólizas en la compañía NO cambia con esto.
+ */
+export function textoHistorialCuentaFicha(p: { mascara: string; antes: string | null; antesIlegible: boolean; actor: string }): string {
+  const antes = p.antes ?? (p.antesIlegible ? 'una cuenta cifrada que no se podía leer' : 'sin cuenta')
+  return `Cuenta para pólizas nuevas de la ficha puesta a ${p.mascara} (antes: ${antes}) por ${p.actor}. `
+    + 'Es la que usan la emisión y los presupuestos; no cambia la cuenta de sus pólizas en la compañía (cada una conserva la suya).'
+}

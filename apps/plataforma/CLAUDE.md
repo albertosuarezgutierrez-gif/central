@@ -1589,6 +1589,10 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
     La ficha nueva nace `lead`; «Cliente (CIMA)» lo da tener pólizas vivas, no el `tipo` (CIMA no lo cambia).
   - `contactos === null` / `identidad === null` = asegura no lo manda (versión anterior o consulta caída): se
     dice, nunca se pinta «sin teléfonos». Un contacto `ilegible` (clave PII) se enseña como «cifrado».
+- **💳 Cuenta para pólizas nuevas (29/09/2026).** `CuentaCargo` (en `EditarCliente.tsx`, montada en Contactos) sobre
+  `/api/correduria/cliente/cuenta` → puerto `cliente/cuenta` de asegura: GET solo enmascarada, PUT con módulo 97,
+  cifrada e historial con máscara. Escribe SOLO `clientes.cuenta_bancaria`: cada póliza conserva la suya (un cliente
+  paga cada seguro de donde quiere). Es la que usan la emisión y el bot de Telegram para lo nuevo.
 - **👪 Relaciones y autorizaciones en la ficha (02/09/2026).** Alberto: «es marido de María Antonia… por si
   autoriza María Antonia que José vea sus seguros». Tarjeta «👪 Relaciones y autorizaciones» (`Relaciones.tsx`) sobre
   el proxy `/api/correduria/cliente/relaciones` (GET/POST/PATCH/DELETE); lector puro `lib/relaciones-asegura.ts`

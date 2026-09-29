@@ -16,7 +16,7 @@ import { PREFIJO_HISTORIAL_CUENTA_PROPIA } from '@central/module-seguros-portal'
 
 import { prismaAsegura } from './asegura-db'
 import { anotarCambio } from './auditoria'
-import { revisarIbanNuevo, type ResolucionCambioCuenta } from './cambio-cuenta-reglas.ts'
+import { revisarIbanNuevo, textoHistorialCuentaFicha, type ResolucionCambioCuenta } from './cambio-cuenta-reglas.ts'
 import { descifrarCampo } from './cartera-edicion'
 import { fichaPropiaDe } from './contacto-portal'
 import { mascaraCuenta } from './presupuesto-cuenta.ts'
@@ -168,4 +168,56 @@ export async function resolverCambioCuenta(correduriaId: string, id: string, est
     anotarCambio({ entidad: 'cliente', id: r.clienteId, campo: 'cuenta_bancaria', antes: mascaraCuenta(descifrarCampo(r.cuentaActual)), despues: r.mascara })
   }
   return { estado: 'ok' }
+}
+
+// ─── La cuenta de la FICHA, puesta por el corredor (29/09/2026) ─────────────────────────────────
+// Alberto recibe la cuenta del cliente (foto de la cartilla, WhatsApp) y la necesita en la ficha para
+// emitir: la emisión y el bot de Telegram la leen de ahí (`codeoscopic/cuenta-ficha.ts`). Hasta hoy
+// solo entraba por el portal (el cliente) o tecleada en la pantalla de emisión, que no la guardaba.
+//
+// 🚨 Solo la FICHA: a diferencia de «hecha» (que ya se cambió en la compañía), aquí no se sabe nada de
+// la compañía, así que las pólizas vigentes conservan la suya. Y el IBAN no vuelve nunca en claro.
+
+export type CuentaFicha =
+  | { estado: 'ok'; mascara: string | null; ilegible: boolean }
+  | { estado: 'no_encontrado' }
+
+export async function cuentaDeFicha(correduriaId: string, clienteId: string): Promise<CuentaFicha> {
+  const [c] = await prismaAsegura().$queryRaw<{ cuenta: string | null }[]>`
+    select cuenta_bancaria as cuenta from clientes
+    where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null`
+  if (!c) return { estado: 'no_encontrado' }
+  const claro = descifrarCampo(c.cuenta)
+  return { estado: 'ok', mascara: mascaraCuenta(claro), ilegible: c.cuenta !== null && c.cuenta.trim() !== '' && claro === null }
+}
+
+export type ResultadoCuentaFicha =
+  | { estado: 'ok'; mascara: string }
+  | { estado: 'sin_cambios' }
+  | { estado: 'iban_invalido'; motivo: string }
+  | { estado: 'no_encontrado' }
+
+export async function ponerCuentaFicha(correduriaId: string, clienteId: string, ibanBruto: unknown, actor: string): Promise<ResultadoCuentaFicha> {
+  const r = await prismaAsegura().$transaction(async (tx) => {
+    const [c] = await tx.$queryRaw<{ cuenta: string | null }[]>`
+      select cuenta_bancaria as cuenta from clientes
+      where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid and merged_into_cliente_id is null
+      for update`
+    if (!c) return { estado: 'no_encontrado' as const }
+    const actual = descifrarCampo(c.cuenta)
+    const revision = revisarIbanNuevo(ibanBruto, actual)
+    if (!revision.ok) return revision.estado === 'sin_cambios' ? { estado: 'sin_cambios' as const } : { estado: 'iban_invalido' as const, motivo: revision.motivo }
+    await tx.$executeRaw`
+      update clientes set cuenta_bancaria = ${encryptField(revision.iban)}, updated_at = now()
+      where id = ${clienteId}::uuid and correduria_id = ${correduriaId}::uuid`
+    const antes = mascaraCuenta(actual)
+    await tx.$executeRaw`
+      insert into historial_interno (correduria_id, cliente_id, tipo, texto)
+      values (${correduriaId}::uuid, ${clienteId}::uuid, cast('gestion' as tipo_historial_interno),
+              ${textoHistorialCuentaFicha({ mascara: revision.mascara, antes, antesIlegible: c.cuenta !== null && c.cuenta.trim() !== '' && actual === null, actor })})`
+    return { estado: 'ok' as const, mascara: revision.mascara, antes }
+  })
+  if (r.estado !== 'ok') return r
+  anotarCambio({ entidad: 'cliente', id: clienteId, campo: 'cuenta_bancaria', antes: r.antes, despues: r.mascara })
+  return { estado: 'ok', mascara: r.mascara }
 }

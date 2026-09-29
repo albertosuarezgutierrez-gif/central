@@ -9,7 +9,9 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
   interpretarContactos,
+  interpretarCuentaFicha,
   interpretarEscritura,
+  interpretarPonerCuenta,
   leerContactos,
   leerIdentidad,
   textoMotivo,
@@ -117,4 +119,24 @@ test('el término del buscador cae en la casilla que le toca por su forma', () =
   assert.equal(campoDesdeTermino('X1234567L'), 'dni')
   assert.equal(campoDesdeTermino('Jose Suarez'), 'nombre')
   assert.equal(campoDesdeTermino('1234BCD'), 'nombre', 'una matrícula no es un DNI ni un teléfono')
+})
+
+// ─── Cuenta de cargo de la ficha (29/09/2026) ───────────────────────────────────────────────────
+test('cuenta de la ficha: «no tiene» solo si se ha mirado; un fallo nunca se lee como «sin cuenta»', () => {
+  assert.deepEqual(interpretarCuentaFicha(200, { estado: 'ok', mascara: '**** 0115', ilegible: false }), { estado: 'ok', mascara: '**** 0115', ilegible: false })
+  assert.deepEqual(interpretarCuentaFicha(200, { estado: 'ok', mascara: null, ilegible: false }), { estado: 'ok', mascara: null, ilegible: false })
+  assert.deepEqual(interpretarCuentaFicha(200, { estado: 'ok', mascara: null, ilegible: true }), { estado: 'ok', mascara: null, ilegible: true })
+  // Un 200 con otra forma (asegura vieja) o un fallo NO es «sin cuenta».
+  assert.equal(interpretarCuentaFicha(200, { estado: 'ok' }).estado, 'error')
+  assert.equal(interpretarCuentaFicha(502, null).estado, 'error')
+  assert.deepEqual(interpretarCuentaFicha(404, { estado: 'no_encontrado' }), { estado: 'error', motivo: 'no_encontrado' })
+})
+
+test('poner la cuenta: solo «ok» con máscara es guardada; lo raro es error, nunca éxito', () => {
+  assert.deepEqual(interpretarPonerCuenta(200, { estado: 'ok', mascara: '**** 0115' }), { estado: 'ok', mascara: '**** 0115' })
+  assert.deepEqual(interpretarPonerCuenta(200, { estado: 'sin_cambios' }), { estado: 'sin_cambios' })
+  assert.equal(interpretarPonerCuenta(422, { estado: 'iban_invalido', motivo: 'mal' }).estado, 'iban_invalido')
+  assert.equal(interpretarPonerCuenta(200, { estado: 'ok' }).estado, 'error')
+  assert.equal(interpretarPonerCuenta(500, { estado: 'error' }).estado, 'error')
+  assert.deepEqual(interpretarPonerCuenta(502, null), { estado: 'error', motivo: 'red' })
 })
