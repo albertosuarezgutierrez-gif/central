@@ -22,6 +22,7 @@
 
 import {
   aplicarAccion,
+  estadoPresupuesto,
   mismoSeguro,
   planLlamada,
   seguroAnteriorDe,
@@ -30,6 +31,7 @@ import {
   validarTarea,
   type CambiosOportunidad,
   type EstadoOportunidad,
+  type EstadoPresupuesto,
   type PeticionAccion,
   type SeguroAnterior,
 } from '@central/module-seguros'
@@ -755,9 +757,71 @@ export type OportunidadDeCliente = OportunidadSeguimiento & {
   creada: string
   /** La tarea pendiente más próxima; `null` = no tiene ninguna (una abierta así está huérfana). */
   proximaTarea: { tipo: string; fechaLimite: string } | null
+  /** La póliza de la que cuelga (renovación/recaptación), o `null`: casa la oportunidad con SU tarjeta. */
+  polizaId: string | null
+  /** Sus precios pedidos (P1…Pn) y el último presupuesto al cliente. `variantes: 0` = aún no se ha pedido precio. */
+  presupuestos: ResumenPresupuestos
+}
+
+/**
+ * El último presupuesto preparado para el cliente. El estado sale de `estadoPresupuesto()`, la MISMA
+ * regla que la lista de presupuestos: con otra, la línea de la oportunidad y la lista de debajo se
+ * contradirían (un enlace de WhatsApp sin confirmar, uno caducado, uno elegido).
+ */
+export type HitosPresupuesto = { creadoAt: string; estado: EstadoPresupuesto }
+
+/** Lo pedido para un riesgo. La mejor prima es la de un precio REAL (lo simulado no cuenta). */
+export type ResumenPresupuestos = {
+  variantes: number
+  mejorPrima: number | null
+  mejorCompania: string | null
+  presupuesto: HitosPresupuesto | null
+}
+
+/** Una tarificación del cliente que no cuelga de ninguna oportunidad (las anteriores al 24/09/2026). */
+export type PresupuestoSinOportunidad = {
+  tarificacionId: string
+  creadoAt: string
+  ramo: string | null
+  /** Retarificación de una póliza suya: se abre en su pantalla de retarificar. */
+  polizaId: string | null
+  simulado: boolean
+  mejorPrima: number | null
+  mejorCompania: string | null
+  presupuesto: HitosPresupuesto | null
 }
 
 const TECHO_POR_CLIENTE = 50
+const TECHO_SIN_OPORTUNIDAD = 30
+
+type JsonHitos = {
+  creadoAt: string; venceEl: string; enlaceGeneradoAt: string | null; enviadoAt: string | null; vistoAt: string | null
+  elegidoAt: string | null; aceptadoAt: string | null; emitidoAt: string | null; retiradoAt: string | null
+} | null
+type JsonResumen = { variantes: number; mejorPrima: number | null; mejorCompania: string | null; presupuesto: JsonHitos } | null
+
+/** Los hitos del último presupuesto de un conjunto de tarificaciones (`filtro` = sobre `t2`). */
+function sqlHitos(filtro: Prisma.Sql): Prisma.Sql {
+  return Prisma.sql`(select json_build_object('creadoAt', pr.creado_at, 'venceEl', pr.vence_el, 'enlaceGeneradoAt', pr.enlace_generado_at,
+              'enviadoAt', pr.enviado_at, 'vistoAt', pr.visto_at, 'elegidoAt', pr.elegido_at,
+              'aceptadoAt', pr.aceptado_at, 'emitidoAt', pr.emitido_at, 'retiradoAt', pr.retirado_at)
+         from presupuesto pr join tarificaciones t2 on t2.id = pr.tarificacion_id and t2.correduria_id = pr.correduria_id
+        where ${filtro} order by pr.creado_at desc limit 1)`
+}
+
+function hitos(j: JsonHitos): HitosPresupuesto | null {
+  if (!j) return null
+  return { creadoAt: j.creadoAt, estado: estadoPresupuesto(j, new Date()) }
+}
+
+function resumenPresupuestos(j: JsonResumen): ResumenPresupuestos {
+  return {
+    variantes: j?.variantes ?? 0,
+    mejorPrima: j?.mejorPrima ?? null,
+    mejorCompania: j?.mejorCompania ?? null,
+    presupuesto: hitos(j?.presupuesto ?? null),
+  }
+}
 
 /**
  * Las oportunidades de UN cliente: abiertas primero (las más nuevas arriba), luego las cerradas más
@@ -775,6 +839,8 @@ export async function oportunidadesDeCliente(
     seguroAnterior: unknown
     prima: number | null; fuente: string | null; creada: Date
     proximaTarea: { tipo: string; fechaLimite: string } | null
+    polizaId: string | null
+    presupuestos: JsonResumen
   })[]>(Prisma.sql`
     select o.id::text as id, o.cliente_id::text as "clienteId", o.tipo::text as ramo, o.estado::text as estado,
            o.fecha_fin_vigencia as "fechaFin", o.motivo_perdida as "motivoPerdida",
@@ -787,13 +853,22 @@ export async function oportunidadesDeCliente(
            coalesce(nullif(trim(o.info_riesgo->>'vehiculo'), ''), nullif(trim(concat_ws(' ', o.info_riesgo->>'marca', o.info_riesgo->>'modelo')), '')) as vehiculo,
            o.poliza_competencia->'seguroAnterior' as "seguroAnterior",
            o.prima_bruta::float8 as prima, o.fuente::text as fuente, o.created_at as creada,
+           o.poliza_id::text as "polizaId",
            (select json_build_object('tipo', g.tipo::text,
                      'fechaLimite', to_char(g.fecha_limite at time zone 'Europe/Madrid', 'YYYY-MM-DD'))
               from gestiones g
              where g.oportunidad_id = o.id and g.correduria_id = o.correduria_id
                and g.origen_trigger = 'central:seguimiento'
                and g.estado::text <> 'cerrada' and g.fecha_limite is not null
-             order by g.fecha_limite limit 1) as "proximaTarea"
+             order by g.fecha_limite limit 1) as "proximaTarea",
+           (select json_build_object(
+                     'variantes', count(distinct t.id)::int,
+                     'mejorPrima', (min(x.prima_eur) filter (where not t.simulado))::float8,
+                     'mejorCompania', (array_agg(x.compania order by x.prima_eur asc) filter (where x.prima_eur is not null and not t.simulado))[1],
+                     'presupuesto', ${sqlHitos(Prisma.sql`t2.oportunidad_id = o.id and pr.correduria_id = o.correduria_id`)})
+              from tarificaciones t
+              left join tarificacion_precios x on x.tarificacion_id = t.id and x.prima_eur is not null
+             where t.oportunidad_id = o.id and t.correduria_id = o.correduria_id) as presupuestos
     from oportunidades o
     where o.correduria_id = ${correduriaId}::uuid and o.cliente_id = ${clienteId}::uuid
     order by (o.estado::text in ('ganada', 'perdida')), o.cerrada_at desc nulls last, o.created_at desc
@@ -810,9 +885,51 @@ export async function oportunidadesDeCliente(
       fuente: f.fuente,
       creada: f.creada.toISOString(),
       proximaTarea: f.proximaTarea,
+      polizaId: f.polizaId,
+      presupuestos: resumenPresupuestos(f.presupuestos),
     })),
     truncado: filas.length > TECHO_POR_CLIENTE,
   }
+}
+
+/**
+ * Lo tarificado para este cliente que no cuelga de ninguna oportunidad: las retarificaciones y altas
+ * anteriores al 24/09/2026, cuando aún no se enlazaban solas. Se ENSEÑAN tal cual, sin abrirles
+ * oportunidad: hacerlo ahora crearía tareas con semanas de retraso. Una retarificación no guarda
+ * `cliente_id`: el tomador es el de la póliza.
+ */
+export async function presupuestosSinOportunidad(
+  correduriaId: string,
+  clienteId: string,
+): Promise<PresupuestoSinOportunidad[] | null> {
+  if (!UUID.test(clienteId)) return null
+  const filas = await prismaAsegura().$queryRaw<{
+    id: string; creadoAt: Date; ramo: string | null; polizaId: string | null; simulado: boolean
+    mejorPrima: number | null; mejorCompania: string | null; presupuesto: JsonHitos
+  }[]>(Prisma.sql`
+    select t.id::text as id, t.creado_at as "creadoAt", t.ramo, t.poliza_id::text as "polizaId", t.simulado,
+           m.prima_eur::float8 as "mejorPrima", m.compania as "mejorCompania",
+           ${sqlHitos(Prisma.sql`t2.id = t.id`)} as presupuesto
+    from tarificaciones t
+    left join polizas pol on pol.id = t.poliza_id and pol.correduria_id = t.correduria_id
+    left join lateral (
+      select x.compania, x.prima_eur from tarificacion_precios x
+       where x.tarificacion_id = t.id and x.prima_eur is not null order by x.prima_eur asc limit 1
+    ) m on true
+    where t.correduria_id = ${correduriaId}::uuid and t.oportunidad_id is null
+      and coalesce(t.cliente_id, pol.cliente_id) = ${clienteId}::uuid
+    order by t.creado_at desc
+    limit ${TECHO_SIN_OPORTUNIDAD}`)
+  return filas.map(f => ({
+    tarificacionId: f.id,
+    creadoAt: f.creadoAt.toISOString(),
+    ramo: f.ramo,
+    polizaId: f.polizaId,
+    simulado: f.simulado,
+    mejorPrima: f.mejorPrima,
+    mejorCompania: f.mejorCompania,
+    presupuesto: hitos(f.presupuesto),
+  }))
 }
 
 async function anotarEnFicha(correduriaId: string, clienteId: string, texto: string): Promise<void> {

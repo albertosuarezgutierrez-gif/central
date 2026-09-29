@@ -1589,6 +1589,10 @@ nueva de la correduría se monta aquí y su dato llega por el puerto `/api/opera
     La ficha nueva nace `lead`; «Cliente (CIMA)» lo da tener pólizas vivas, no el `tipo` (CIMA no lo cambia).
   - `contactos === null` / `identidad === null` = asegura no lo manda (versión anterior o consulta caída): se
     dice, nunca se pinta «sin teléfonos». Un contacto `ilegible` (clave PII) se enseña como «cifrado».
+- **💳 Cuenta para pólizas nuevas (29/09/2026).** `CuentaCargo` (en `EditarCliente.tsx`, montada en Contactos) sobre
+  `/api/correduria/cliente/cuenta` → puerto `cliente/cuenta` de asegura: GET solo enmascarada, PUT con módulo 97,
+  cifrada e historial con máscara. Escribe SOLO `clientes.cuenta_bancaria`: cada póliza conserva la suya (un cliente
+  paga cada seguro de donde quiere). Es la que usan la emisión y el bot de Telegram para lo nuevo.
 - **👪 Relaciones y autorizaciones en la ficha (02/09/2026).** Alberto: «es marido de María Antonia… por si
   autoriza María Antonia que José vea sus seguros». Tarjeta «👪 Relaciones y autorizaciones» (`Relaciones.tsx`) sobre
   el proxy `/api/correduria/cliente/relaciones` (GET/POST/PATCH/DELETE); lector puro `lib/relaciones-asegura.ts`
@@ -2025,6 +2029,14 @@ más que con Alberto. **Desde la fase 3a (26/09/2026) PREPARA emisiones** — ve
   cliente») con `cas_tarif:<id>`. Al pulsar: mismo interruptor que emitir, tope 10/día contado antes Y dentro del reclamo, un
   solo uso, UNA llamada a `cotizar{Auto,Moto}NuevaAsegura`, `cuerpo = NULL` al cerrar. Sin precios pudiendo cobrar = `incierta`.
   Tabla `correduria_asistente_tarificacion` (aplicada). Solo clientes con ficha; conductor = tomador (se declara).
+  🧾 **Datos de EMISIÓN, no de precio (29/09/2026, Alberto).** Sexo, estado civil, dónde duerme, fecha de matriculación y
+  efecto NO se preguntan para dar precio: sin dictar van como SUPUESTOS declarados — sexo deducido del nombre por la IA
+  (`sexoDeducido`; la prima es unisex por ley), **soltero**, **garaje (nunca la calle; comunitario)**, fecha por la matrícula,
+  efecto a 15 días (asegura, `DIAS_EFECTO_PRESUPUESTO_NUEVO`; `fechaEfecto` dictado lo tapa). Defectos en
+  `lib/supuestos-presupuesto.ts`: el garaje también en AutoNuevo/MotoNuevo; el soltero SOLO en el chat (en la pantalla
+  viajaría sin marca de supuesto). Un sexo deducido NO pisa el de la ficha (`aplicarSexoDeducido`). Los campos supuestos se guardan en
+  `resultado.alEmitir` (sin valores) y `preparar_emision_nueva` los recuerda con 🔎 antes del botón; sin saberlo, pide
+  confirmar todo (`avisoAlEmitir(null)`), nunca calla.
 - **Reparto del texto libre** (`clasificarDestino`, puro y testeado en `lib/correduria-asistente.ts`):
   atajo `seguro:` / `/seguros` → siempre correduría; palabras propias (póliza, siniestro, renovación,
   CIMA…) o una matrícula → correduría; palabras contables → contable; lo demás («¿qué tiene Pablo

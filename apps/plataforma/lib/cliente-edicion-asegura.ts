@@ -221,6 +221,10 @@ export function textoMotivo(motivo: string): string {
       return 'la ficha tiene pólizas vivas: no se descarta.'
     case 'red':
       return 'no se pudo llegar a asegura (timeout, DNS o TLS).'
+    case 'no_encontrado':
+      return 'asegura no encuentra esa ficha (¿se ha fusionado con otra?).'
+    case 'sin_configurar':
+      return 'falta la conexión con asegura (ASEGURA_OPERADOR_SECRET).'
     default:
       return motivo
   }
@@ -241,6 +245,51 @@ export function campoDesdeTermino(q: string): CampoTermino {
   const id = compacto.toUpperCase()
   if (/^\d{8}[A-Z]$/.test(id) || /^[XYZ]\d{7}[A-Z]$/.test(id)) return 'dni'
   return 'nombre'
+}
+
+// ─── Cuenta de cargo de la ficha (29/09/2026) ────────────────────────────────
+// La que usan la emisión y el bot. El puerto nunca devuelve el IBAN entero: solo «**** 1234».
+
+export type CuentaFichaLeida =
+  | { estado: 'ok'; mascara: string | null; ilegible: boolean; invalida: boolean }
+  | { estado: 'error'; motivo: string }
+
+/** GET: `mascara: null` sin `ilegible` = se ha mirado y no tiene cuenta; un fallo NUNCA es «sin cuenta».
+ *  `invalida` (una cuenta vieja que no pasa el módulo 97) es opcional: una asegura anterior no la manda. */
+export function interpretarCuentaFicha(status: number, json: unknown): CuentaFichaLeida {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 200 && r.estado === 'ok' && (r.mascara === null || typeof r.mascara === 'string') && typeof r.ilegible === 'boolean') {
+    return { estado: 'ok', mascara: r.mascara as string | null, ilegible: r.ilegible, invalida: r.invalida === true }
+  }
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status === 404) return { estado: 'error', motivo: 'no_encontrado' }
+  if (status === 503) return { estado: 'error', motivo: 'sin_configurar' }
+  return { estado: 'error', motivo: 'respuesta_ilegible' }
+}
+
+export type ResultadoCuentaFicha =
+  | { estado: 'ok'; mascara: string }
+  | { estado: 'sin_cambios' }
+  | { estado: 'iban_invalido'; motivo: string }
+  | { estado: 'presupuesto_firmado'; mascara: string }
+  | { estado: 'error'; motivo: string }
+
+/** PUT: solo `ok` con máscara es «guardada»; lo que no se entiende es un error, nunca un éxito. */
+export function interpretarPonerCuenta(status: number, json: unknown): ResultadoCuentaFicha {
+  const r = (typeof json === 'object' && json !== null ? json : {}) as Record<string, unknown>
+  if (status === 200 && r.estado === 'ok' && typeof r.mascara === 'string') return { estado: 'ok', mascara: r.mascara }
+  if (status === 200 && r.estado === 'sin_cambios') return { estado: 'sin_cambios' }
+  if (status === 422 && r.estado === 'iban_invalido') {
+    return { estado: 'iban_invalido', motivo: typeof r.motivo === 'string' ? r.motivo : 'Ese IBAN no es válido.' }
+  }
+  if (status === 409 && r.estado === 'presupuesto_firmado') {
+    return { estado: 'presupuesto_firmado', mascara: typeof r.mascara === 'string' ? r.mascara : 'una cuenta que no consta' }
+  }
+  if (status === 401 || status === 403) return { estado: 'error', motivo: 'secreto_rechazado' }
+  if (status === 404) return { estado: 'error', motivo: 'no_encontrado' }
+  if (status === 503) return { estado: 'error', motivo: 'sin_configurar' }
+  if (status === 502) return { estado: 'error', motivo: 'red' }
+  return { estado: 'error', motivo: 'respuesta_ilegible' }
 }
 
 // ─── Red (solo desde las rutas API de plataforma) ────────────────────────────
@@ -334,4 +383,14 @@ export function historialClienteAsegura(body: Record<string, unknown>): Promise<
  */
 export function revelarDniAsegura(body: { id: string; actor: string }): Promise<Reenvio> {
   return llamar('/api/operador/cliente/dni', { method: 'POST', body: JSON.stringify(body) })
+}
+
+/** `GET /api/operador/cliente/cuenta` — la cuenta de la ficha, enmascarada. */
+export function cuentaFichaAsegura(clienteId: string): Promise<Reenvio> {
+  return llamar(`/api/operador/cliente/cuenta?id=${encodeURIComponent(clienteId)}`, { method: 'GET' })
+}
+
+/** `PUT /api/operador/cliente/cuenta` — pone la cuenta de la ficha. El `actor` lo pone la ruta (sesión). */
+export function ponerCuentaFichaAsegura(body: { id: string; iban: string; actor: string }): Promise<Reenvio> {
+  return llamar('/api/operador/cliente/cuenta', { method: 'PUT', body: JSON.stringify(body) }, body.actor)
 }

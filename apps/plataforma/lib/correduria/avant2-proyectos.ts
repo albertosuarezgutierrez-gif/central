@@ -17,8 +17,8 @@ export type ProyectoAvant2 = {
   avant2Url: string | null
   /** El proyecto no se pudo leer: se declara, no desaparece. */
   error: string | null
-  /** `null` = aún no está en la intranet. `origen` = puerta con la que entró. */
-  intranet: { tarificacionId: string; oportunidadId: string | null; origen: string } | null
+  /** `null` = aún no está en la intranet. `origen` = puerta con la que entró; `polizaId` = retarificación de esa póliza. */
+  intranet: { tarificacionId: string; oportunidadId: string | null; polizaId: string | null; origen: string } | null
 }
 
 export type ListaAvant2 = { estado: 'ok'; proyectos: ProyectoAvant2[] } | { estado: 'error'; mensaje: string }
@@ -46,7 +46,7 @@ function fila(v: unknown): ProyectoAvant2 | null {
     confirmados: n(f.confirmados) ?? 0,
     avant2Url: s(f.avant2Url),
     error: s(f.error),
-    intranet: i && s(i.tarificacionId) ? { tarificacionId: s(i.tarificacionId) as string, oportunidadId: s(i.oportunidadId), origen: s(i.origen) ?? '?' } : null,
+    intranet: i && s(i.tarificacionId) ? { tarificacionId: s(i.tarificacionId) as string, oportunidadId: s(i.oportunidadId), polizaId: s(i.polizaId), origen: s(i.origen) ?? '?' } : null,
   }
 }
 
@@ -62,11 +62,14 @@ export function leerListaAvant2(status: number, json: unknown): ListaAvant2 {
 }
 
 /**
- * Dónde se abre en plataforma. Auto y moto abren ESA tarificación (`?oportunidad=&tarificacion=`);
- * sin oportunidad, o en hogar (que no admite abrir una concreta), la pantalla retoma la última del
- * ramo, que puede ser otra. `null` = ramo sin pantalla de tarificar.
+ * Dónde se abre en plataforma. Una retarificación, en la pantalla de SU póliza: la de alta nueva
+ * busca una tarificación con cliente y sin póliza, y abría otra o ninguna (bug del 29/09/2026).
+ * Auto y moto abren ESA tarificación (`?oportunidad=&tarificacion=`); sin oportunidad, o en hogar
+ * (que no admite abrir una concreta), la pantalla retoma la última del ramo, que puede ser otra.
+ * `null` = ramo sin pantalla de tarificar.
  */
 export function rutaTarificacion(clienteId: string, ramo: string | null, intranet: ProyectoAvant2['intranet'] = null): string | null {
+  if (intranet?.polizaId) return `/correduria/poliza/${encodeURIComponent(intranet.polizaId)}/retarificar`
   if (ramo !== 'auto' && ramo !== 'moto' && ramo !== 'hogar') return null
   const base = `/correduria/cliente/${clienteId}/${ramo}-nuevo`
   if (ramo === 'hogar' || !intranet?.oportunidadId) return base

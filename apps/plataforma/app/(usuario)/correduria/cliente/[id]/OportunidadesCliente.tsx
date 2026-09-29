@@ -20,6 +20,7 @@ import {
   type OportunidadDeCliente,
   type OportunidadesCliente as Lectura,
 } from '@/lib/seguimiento-asegura'
+import { rutaSinOportunidad, textoPresupuestos, textoSinOportunidad, type PresupuestoSinOportunidad } from '@/lib/correduria/presupuestos-oportunidad'
 import type { SeguroAnterior } from '@central/module-seguros'
 import { fmt } from './piezas'
 import SeguimientoOportunidad from './SeguimientoOportunidad'
@@ -154,6 +155,7 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
           {lectura.descartadas > 0 && (
             <div style={{ fontSize: 11, color: 'var(--muted)' }}>{lectura.descartadas} oportunidad(es) llegaron incompletas y no se pintan.</div>
           )}
+          <SinOportunidad clienteId={clienteId} lista={lectura.sinOportunidad} />
           {cerradas.length > 0 && (
             <div>
               <button type="button" onClick={() => setVerCerradas(v => !v)} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
@@ -175,6 +177,39 @@ export default function OportunidadesCliente({ clienteId, telefono = null, poliz
           onCancelar={() => setAbriendo(false)}
           onHecho={(t) => { setAviso(t); if (t.ok) setAbriendo(false); void cargar() }}
         />
+      )}
+    </div>
+  )
+}
+
+/**
+ * Lo tarificado que no cuelga de ninguna oportunidad (anterior al 24/09/2026, cuando aún no se
+ * enlazaba solo). Va en la misma lista para que no haya precios en un bloque aparte; no se les abre
+ * oportunidad a posteriori, que crearía tareas con semanas de retraso. `undefined` = asegura aún no
+ * lo manda (no se pinta nada); `null` = no se pudo leer (se dice).
+ */
+function SinOportunidad({ clienteId, lista }: { clienteId: string; lista: PresupuestoSinOportunidad[] | null | undefined }) {
+  const [ver, setVer] = useState(false)
+  if (lista === undefined || (lista !== null && lista.length === 0)) return null
+  if (lista === null) return <div style={{ color: 'var(--muted)' }}>No se han podido mirar los presupuestos sin oportunidad: eso no quiere decir que no haya.</div>
+  return (
+    <div>
+      <button type="button" onClick={() => setVer(v => !v)} aria-expanded={ver} style={{ ...btnStyle('secundario', 'sm'), minHeight: 44 }}>
+        {ver ? 'Ocultar' : 'Ver'} presupuestos sin oportunidad ({lista.length})
+      </button>
+      {ver && (
+        <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'grid', gap: 6 }}>
+          {lista.map(p => {
+            const ruta = rutaSinOportunidad(clienteId, p)
+            return (
+              <li key={p.tarificacionId} style={{ borderTop: '1px solid var(--border)', paddingTop: 6, overflowWrap: 'anywhere' }}>
+                <b>{rotuloRamo(p.ramo)}</b> <span style={{ color: 'var(--muted)' }}>{fmt(p.creadoAt.slice(0, 10))}</span>
+                <div>{textoSinOportunidad(p)}</div>
+                {ruta && <a href={ruta} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Abrir →</a>}
+              </li>
+            )
+          })}
+        </ul>
       )}
     </div>
   )
@@ -226,6 +261,7 @@ function FilaAbierta({ o, telefono, polizas, desplegada, onAlternar, onRecargar,
         {aparcada && <span style={{ color: 'var(--muted)' }}>· aparcada hasta el {fmt(o.aparcadaHasta!)}</span>}
       </div>
       <Resumen o={o} />
+      {o.presupuestos && <div>{textoPresupuestos(o.presupuestos)}</div>}
       <div style={{ color: o.proximaTarea === null || vencida ? 'var(--negative)' : 'var(--text)' }}>
         {o.proximaTarea === null
           ? (aparcada ? 'Sin paso pendiente (aparcada).' : 'Sin siguiente paso: nadie la va a mirar. Ponle una tarea en «Gestionar».')
@@ -312,6 +348,7 @@ function FilaCerrada({ o, desplegada, onAlternar, onRecargar }: { o: Oportunidad
       <b>{descartada ? 'Descartada' : ROTULO_ESTADO[o.estado]}</b>
       {cuando && <> el {cuando}</>}
       {o.estado === 'perdida' && !descartada && o.motivoPerdida && <span style={{ color: 'var(--muted)' }}> · {rotuloMotivo(o.motivoPerdida)}{o.competidor ? ` (${o.competidor})` : ''}</span>}
+      {o.presupuestos && o.presupuestos.variantes > 0 && <span style={{ color: 'var(--muted)' }}> · {textoPresupuestos(o.presupuestos)}</span>}
       {' '}<a href={`/correduria/oportunidad/${encodeURIComponent(o.id)}`} style={{ color: 'var(--primary)', display: 'inline-flex', alignItems: 'center', minHeight: 44 }}>Abrir riesgo →</a>
       {desplegada && <div style={{ marginTop: 8 }}><SeguimientoOportunidad id={o.id} onCambio={onRecargar} /></div>}
     </li>

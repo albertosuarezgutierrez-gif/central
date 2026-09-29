@@ -14,6 +14,7 @@
  */
 
 import { cabecerasPuerto } from './puerto-actor.ts'
+import { leerResumenPresupuestos, leerSinOportunidad, type PresupuestoSinOportunidad, type ResumenPresupuestos } from './correduria/presupuestos-oportunidad.ts'
 import {
   MOTIVOS_PERDIDA,
   MOTIVO_DESCARTE,
@@ -289,10 +290,18 @@ export type OportunidadDeCliente = Oportunidad & {
   creada: string
   /** `null` = no tiene tarea pendiente: una abierta así está huérfana y se dice. */
   proximaTarea: { tipo: string; fechaLimite: string } | null
+  /** La póliza de la que cuelga; `null` = ninguna o asegura aún no lo manda (se casa por ramo). */
+  polizaId?: string | null
+  /** Lo pedido para este riesgo (P1…Pn) y su presupuesto al cliente; `null` = asegura no lo manda. */
+  presupuestos?: ResumenPresupuestos | null
 }
 
 export type OportunidadesCliente =
-  | { estado: 'ok'; oportunidades: OportunidadDeCliente[]; truncado: boolean; descartadas: number }
+  | {
+      estado: 'ok'; oportunidades: OportunidadDeCliente[]; truncado: boolean; descartadas: number
+      /** Lo tarificado que no cuelga de ninguna oportunidad; `null` = no se pudo leer. */
+      sinOportunidad?: PresupuestoSinOportunidad[] | null
+    }
   | { estado: 'sin_configurar' }
   | { estado: 'error'; motivo: string }
 
@@ -334,9 +343,11 @@ export function interpretarOportunidadesCliente(status: number, json: unknown): 
       prima: numero(r.prima),
       creada,
       proximaTarea: ptTipo && ptFecha ? { tipo: ptTipo, fechaLimite: ptFecha } : null,
+      polizaId: texto(r.polizaId),
+      presupuestos: leerResumenPresupuestos(r.presupuestos),
     })
   }
-  return { estado: 'ok', oportunidades, truncado: o.truncado === true, descartadas }
+  return { estado: 'ok', oportunidades, truncado: o.truncado === true, descartadas, sinOportunidad: leerSinOportunidad(o.sinOportunidad) }
 }
 
 /** Qué pasa con la respuesta de «abrir oportunidad», en palabras. */

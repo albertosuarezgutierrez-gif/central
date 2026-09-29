@@ -13,6 +13,7 @@ import { normalizarDni, normalizarFechaNacimiento, normalizarTelefono, enmascara
 import { formatoMatricula, normalizarMatricula } from '@central/module-seguros/matricula'
 import type { Opcion, Reparo, RespuestaRetarificar, Supuesto } from './retarificar-asegura.ts'
 import { eur } from './dinero.ts'
+import { garajePorDefecto, SOLO_PARA_EL_PRECIO } from './supuestos-presupuesto.ts'
 
 export type RamoTarif = 'auto' | 'moto'
 
@@ -76,21 +77,18 @@ export function filtrarCatalogo(catalogo: readonly Opcion[], filtro: string | nu
   return { total: lista.length, opciones: lista.slice(0, max) }
 }
 
-const RE_VIA_PUBLICA = /v[ií]a\s+p[uú]blica/i
-const RE_CALLE = /\bcalle\b/i
-
 /**
- * Dónde duerme el vehículo. Si Alberto lo dice, se empareja. Si no, «vía pública» —igual que la pantalla
- * (Alberto, 25/09 y 28/09/2026): el caso más común y el conservador para la prima— y se DECLARA como
- * supuesto, para que no parezca un dato de verdad.
+ * Dónde duerme el vehículo. Si Alberto lo dice, se empareja. Si no, en GARAJE —igual que la pantalla
+ * (Alberto, 29/09/2026: «por defecto NO duerme en la calle»; sustituye a «vía pública» del 25/09)— y se
+ * DECLARA como supuesto, para que no parezca un dato de verdad: se confirma al emitir.
  */
 export function elegirGaraje(texto: string | null | undefined, catalogo: readonly Opcion[]): { resultado: Emparejado; supuesto: string | null } {
   if ((texto ?? '').trim()) return { resultado: emparejarOpcion(texto, catalogo), supuesto: null }
-  const via = catalogo.find((g) => RE_VIA_PUBLICA.test(g.nombre)) ?? catalogo.find((g) => RE_CALLE.test(g.nombre))
-  if (!via) return { resultado: { estado: 'ninguno' }, supuesto: null }
+  const g = garajePorDefecto(catalogo)
+  if (!g) return { resultado: { estado: 'ninguno' }, supuesto: null }
   return {
-    resultado: { estado: 'uno', opcion: via },
-    supuesto: `no me has dicho dónde duerme: «${via.nombre}» (lo más común, y lo conservador para la prima)`,
+    resultado: { estado: 'uno', opcion: g },
+    supuesto: `no me has dicho dónde duerme: «${g.nombre}» por defecto (nunca la calle); ${SOLO_PARA_EL_PRECIO}`,
   }
 }
 
@@ -136,6 +134,10 @@ export type EntradaTarificacion = {
   kmAnuales: number | null
   /** El riesgo (oportunidad) del que cuelga: con él, propietario y conductores salen de sus figuras. */
   oportunidadId: string | null
+  /** `true` = el sexo NO lo dijo Alberto: la IA lo dedujo del nombre (va como supuesto). */
+  sexoDeducido: boolean
+  /** Fecha de efecto DICHA (ISO). `null` = la de por defecto de asegura, que va como supuesto. */
+  fechaEfecto: string | null
 }
 
 function texto(v: unknown, max = 120): string | null {
@@ -219,6 +221,8 @@ export function leerEntrada(args: Record<string, unknown>, hoy: Date = new Date(
   }
   const fm = fechaPasada(args.fechaMatriculacion, 'fecha de matriculación', hoy)
   if (fm.error) errores.push(fm.error)
+  const fe = fechaFutura(args.fechaEfecto, hoy)
+  if (fe.error) errores.push(fe.error)
 
   // Historial del seguro actual: todo o nada.
   const h = {
@@ -269,9 +273,50 @@ export function leerEntrada(args: Record<string, unknown>, hoy: Date = new Date(
       fechaMatriculacion: fm.valor ?? null,
       garaje: texto(args.garaje), estadoCivil: texto(args.estadoCivil), municipio: texto(args.municipio),
       persona, historial, primaActual, kmAnuales, oportunidadId,
+      sexoDeducido: persona.sexo !== undefined && args.sexoDeducido === true,
+      fechaEfecto: fe.valor ?? null,
     },
     errores,
   }
+}
+
+/** Lo más lejos que la compañía admite el efecto (asegura, `fecha-efecto.ts`: 400 real a >90 días). */
+const MAX_DIAS_EFECTO = 90
+
+function isoMadrid(d: Date): string {
+  return d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Madrid' })
+}
+
+/** Fecha de efecto dicha: DD/MM/AAAA o AAAA-MM-DD, real, desde hoy y a ≤90 días (los dos cepos del vendor). */
+export function fechaFutura(v: unknown, hoy: Date): { valor?: string; error?: string } {
+  const s = texto(v, 20)
+  if (!s) return {}
+  const m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/) ?? s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{4})$/)
+  if (!m) return { error: `fecha de efecto «${s}»: dímela como dd/mm/aaaa` }
+  const [a, mes, d] = m[1].length === 4 ? [m[1], m[2], m[3]] : [m[3], m[2], m[1]]
+  const iso = `${a}-${mes.padStart(2, '0')}-${d.padStart(2, '0')}`
+  const f = new Date(`${iso}T00:00:00Z`)
+  if (Number.isNaN(f.getTime()) || f.toISOString().slice(0, 10) !== iso) return { error: `fecha de efecto «${s}»: no existe` }
+  const hoyIso = isoMadrid(hoy)
+  if (iso < hoyIso) return { error: 'fecha de efecto: ya ha pasado (la compañía no admite un efecto anterior a hoy)' }
+  const tope = new Date(`${hoyIso}T00:00:00Z`)
+  tope.setUTCDate(tope.getUTCDate() + MAX_DIAS_EFECTO)
+  if (iso > tope.toISOString().slice(0, 10)) return { error: `fecha de efecto: la compañía no admite más de ${MAX_DIAS_EFECTO} días vista` }
+  return { valor: iso }
+}
+
+/**
+ * El sexo que la IA DEDUJO del nombre solo vale si la ficha no lo tiene: si lo tiene (reparo `sexo`
+ * ausente), la ficha manda y el deducido se descarta — si no, una deducción errónea pisaría un dato
+ * bueno. Con la ficha sin revisar (`null`) se conserva: `huecosPendientes` ya bloquea ese caso.
+ */
+export function aplicarSexoDeducido(persona: PersonaDeclarada, sexoDeducido: boolean, faltanFicha: readonly Reparo[] | null): { persona: PersonaDeclarada; deducido: boolean } {
+  if (!sexoDeducido || !persona.sexo) return { persona, deducido: false }
+  if (faltanFicha !== null && !faltanFicha.some((r) => r.campo === 'sexo')) {
+    const { sexo: _descartado, ...resto } = persona
+    return { persona: resto, deducido: false }
+  }
+  return { persona, deducido: true }
 }
 
 const ETIQUETA_HISTORIAL: Record<string, string> = {
@@ -299,6 +344,8 @@ export type Resuelto = {
   /** Con el código DGS ya resuelto del catálogo de compañías. */
   historial: (Omit<HistorialDeclarado, 'compania'> & { companiaCodigo: string }) | null
   kmAnuales: number | null
+  /** Efecto dicho (ISO); `null` = el de por defecto de asegura. */
+  fechaEfecto?: string | null
 }
 
 export type CuerpoTarif = { resueltos: Record<string, unknown>; correcciones: Record<string, unknown> }
@@ -324,6 +371,8 @@ export function construirCuerpo(r: Resuelto): CuerpoTarif {
   for (const [k, v] of Object.entries(r.persona)) if (v !== undefined && v !== '') correcciones[k] = v
   // Los km van como corrección (la pantalla de coche hace igual): tapan el supuesto de la media.
   if (r.kmAnuales !== null) correcciones.kmAnuales = r.kmAnuales
+  // El efecto dicho tapa el de por defecto (y su supuesto): asegura acepta `fechaEfecto` como corrección.
+  if (r.fechaEfecto) correcciones.fechaEfecto = r.fechaEfecto
   if (r.historial) {
     correcciones.aseguradoAntes = true
     correcciones.companiaAnteriorCodigo = r.historial.companiaCodigo
@@ -429,6 +478,10 @@ export type Propuesta = {
   autonomo?: boolean
   /** Vehículo reutilizado de una petición anterior: su fecha (dd/mm/aaaa), para decirlo. */
   vehiculoPrevioDe: string | null
+  /** Efecto dicho por Alberto (ISO). Sin él, el de por defecto sale entre los supuestos. */
+  fechaEfecto?: string | null
+  /** El sexo lo dedujo la IA: va entre los supuestos, no entre «los datos que me has dado». */
+  sexoDeducido?: boolean
   /** Los de asegura (con `optimista`) y los nuestros. */
   supuestos: readonly Supuesto[]
 }
@@ -437,6 +490,7 @@ const ETIQUETA_SUPUESTO: Record<string, string> = {
   ...ETIQUETA, fechaEfecto: 'fecha de efecto', kmAnuales: 'km al año', tipoCarnet: 'tipo de carnet', zonaCarnet: 'carnet expedido en',
   aseguradoAntes: 'seguro anterior', aniosAsegurado: 'años asegurado', aniosSinSiniestros: 'años sin siniestros',
   aniosEnCompania: 'años en la compañía', conductor: 'quién conduce', experienciaConduccion: 'experiencia con motos', estadoCivil: 'estado civil',
+  nombreVia: 'la calle', numeroVia: 'el número de la calle', cpCirculacion: 'dónde circula',
 }
 
 function valorSupuesto(s: Supuesto): string {
@@ -445,13 +499,26 @@ function valorSupuesto(s: Supuesto): string {
   return String(s.valor)
 }
 
+/**
+ * El recordatorio al EMITIR de lo que el precio SUPUSO (Alberto, 29/09/2026: «esos datos son de emisión,
+ * no para dar precio»). `null` en `campos` = no se sabe qué se supuso (precio pedido fuera del chat o
+ * lectura fallida): se pide confirmar lo de siempre, nunca se calla. Lista vacía = todo dicho, sin aviso.
+ */
+export function avisoAlEmitir(campos: readonly string[] | null): string | null {
+  if (campos === null) {
+    return 'Antes de emitir confirma con el cliente sexo, estado civil, dónde duerme, quién conduce, fecha de matriculación y efecto: no sé cuáles se supusieron en el precio.'
+  }
+  const et = [...new Set(campos)].map((c) => ETIQUETA_SUPUESTO[c] ?? c)
+  return et.length ? `Antes de emitir confirma con el cliente lo que en el precio fue SUPUESTO: ${et.join(', ')}.` : null
+}
+
 /** Lo que se pedirá, con el DNI enmascarado, los supuestos OPTIMISTAS primero y el aviso del gasto. */
 export function textoPropuesta(p: Propuesta): string {
   const per = p.persona
   const declarados = [
     per.dni ? `DNI ${esc(enmascararDni(per.dni) ?? '')}` : null,
     per.nombre || per.apellido1 ? `${esc([per.nombre, per.apellido1, per.apellido2].filter(Boolean).join(' '))}` : null,
-    per.sexo ? per.sexo : null,
+    per.sexo && !p.sexoDeducido ? per.sexo : null,
     per.fechaNacimiento ? `nacimiento ${fecha(per.fechaNacimiento)}` : null,
     per.fechaCarnet ? `carnet ${fecha(per.fechaCarnet)}` : null,
     per.telefono ? `móvil ${esc(per.telefono)}` : null,
@@ -477,6 +544,7 @@ export function textoPropuesta(p: Propuesta): string {
     `Matrícula ${esc(p.matricula)} · matriculado ${fecha(p.fechaMatriculacion)}`,
     `Duerme: ${esc(p.garaje)} · circula por ${esc(p.municipio)} · ${esc(p.estadoCivil)}`,
     p.kmAnuales !== null ? `Km al año: ${String(p.kmAnuales).replace(/\B(?=(\d{3})+(?!\d))/g, '.')}` : null,
+    p.fechaEfecto ? `Efecto: ${fecha(p.fechaEfecto)}` : null,
     declarados.length ? `Datos que me has dado: ${declarados.join(' · ')}` : 'Datos del tomador: los de su ficha',
     ...lineasFig,
     p.historial

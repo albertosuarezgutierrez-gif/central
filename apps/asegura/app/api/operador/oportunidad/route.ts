@@ -3,7 +3,7 @@ import { operadorAutorizado } from '@/lib/operador'
 import { registrarErrorCartera } from '@/lib/error-cartera'
 import { aseguraConfigurada } from '@/lib/asegura-db'
 import { correduriaUnica } from '@/lib/cartera'
-import { cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, leerOportunidad, oportunidadesDeCliente } from '@/lib/oportunidad-seguimiento'
+import { cambiarEstadoOportunidad, crearOportunidad, editarOportunidad, leerOportunidad, oportunidadesDeCliente, presupuestosSinOportunidad } from '@/lib/oportunidad-seguimiento'
 import type { AccionOportunidad } from '@central/module-seguros'
 import { auditado } from '@/lib/auditoria'
 
@@ -12,7 +12,8 @@ export const dynamic = 'force-dynamic'
 /**
  * Seguimiento de UNA oportunidad (Fase 1 de ASegura OS).
  *   GET  ?id=                     → oportunidad + historial (auditoría) + tareas
- *   GET  ?clienteId=              → las oportunidades de ese cliente (abiertas primero)
+ *   GET  ?clienteId=              → las oportunidades de ese cliente (abiertas primero) con sus precios pedidos,
+ *                                   y `sinOportunidad`: lo tarificado que no cuelga de ninguna (`null` = no se pudo leer)
  *   POST { accion:'crear', clienteId, ramo, estado?, fechaFinVigencia?, aseguradora?, prima?, tipoTarea?, fechaTarea, nota?, actor }
  *        → abre una a mano con su primer paso (409 `duplicada` + id si ya hay una abierta del ramo)
  *   POST { accion:'editar', id, ramo?, fechaFinVigencia?, aseguradora?, prima?, actor } → corrige una abierta
@@ -34,7 +35,12 @@ export async function GET(req: Request) {
     if (id === '') {
       const lista = await oportunidadesDeCliente(correduria.id, clienteId)
       if (!lista) return NextResponse.json({ estado: 'invalido', motivo: 'clienteId no válido' }, { status: 422 })
-      return NextResponse.json({ estado: 'ok', ...lista })
+      // Un fallo aquí no tumba las oportunidades: se dice que no se pudo leer (`null`), no «no hay».
+      const sinOportunidad = await presupuestosSinOportunidad(correduria.id, clienteId).catch((e) => {
+        registrarErrorCartera('operador/oportunidad:sin-oportunidad', e)
+        return null
+      })
+      return NextResponse.json({ estado: 'ok', ...lista, sinOportunidad })
     }
     const r = await leerOportunidad(correduria.id, id)
     if (!r) return NextResponse.json({ estado: 'no_encontrado' }, { status: 404 })

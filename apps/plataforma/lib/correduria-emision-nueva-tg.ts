@@ -56,6 +56,61 @@ export function elegirPrecioNuevo(precios: Precio[], compania: string, texto: st
   return candidatos.length === 1 ? { tipo: 'uno', precio: candidatos[0] } : { tipo: 'elegir', precios: candidatos }
 }
 
+/**
+ * La fecha de efecto que dice Alberto («con efecto el 9 de octubre»). Solo se lee la FORMA (aaaa-mm-dd o
+ * dd/mm/aaaa, y que exista en el calendario): si cabe o no ([hoy, hoy+90]) lo decide asegura con la misma
+ * regla que la pantalla, gratis y antes de llamar a la compañía. `null` = no la ha dicho.
+ */
+export function leerFechaEfecto(v: unknown): { ok: true; fecha: string | null } | { ok: false; motivo: string } {
+  if (v === undefined || v === null || (typeof v === 'string' && v.trim() === '')) return { ok: true, fecha: null }
+  const s = typeof v === 'string' ? v.trim() : String(v)
+  const iso = s.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  const es = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
+  const [a, m, d] = iso ? [+iso[1], +iso[2], +iso[3]] : es ? [+es[3], +es[2], +es[1]] : [NaN, NaN, NaN]
+  const t = new Date(Date.UTC(a, m - 1, d))
+  if (!Number.isFinite(t.getTime()) || t.getUTCFullYear() !== a || t.getUTCMonth() !== m - 1 || t.getUTCDate() !== d) {
+    return { ok: false, motivo: `«${s.slice(0, 20)}» no es una fecha de efecto válida (aaaa-mm-dd)` }
+  }
+  return { ok: true, fecha: `${a}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}` }
+}
+
+/** La fecha de efecto que trae el precio confirmado (`mainQuote` del ReRate), si la trae. Forma sin verificar: solo el nivel de arriba. */
+export function fechaEfectoDelPrecio(quoteCrudo: unknown): string | null {
+  if (typeof quoteCrudo !== 'object' || quoteCrudo === null) return null
+  const v = (quoteCrudo as Record<string, unknown>).effectiveDate
+  const f = typeof v === 'string' ? v.slice(0, 10) : null
+  return f && /^\d{4}-\d{2}-\d{2}$/.test(f) ? f : null
+}
+
+export type DecisionEfecto =
+  | { tipo: 'ok'; efecto: string | null; cotizado: string | null; devuelto: string | null }
+  | { tipo: 'no'; motivo: string }
+
+/**
+ * Con qué fecha de efecto puede ir el botón tras confirmar el precio. `/emitir` solo comprueba que la fecha de
+ * la oferta no esté pasada: si la compañía ignoró la fecha pedida y la cotizada sigue VIGENTE, se emitiría con
+ * la cotizada mientras el resumen dice la pedida. Por eso: fecha devuelta distinta → no; sin fecha devuelta, solo
+ * si la cotizada ya pasó (entonces, si no se aplicó la nueva, `/emitir` corta sin enviar nada).
+ */
+export function decidirEfecto(p: { pedida: string | null; cotizada: string | null; cotizadaPasada: boolean; devuelta: string | null }): DecisionEfecto {
+  if (!p.pedida) {
+    // Sin fecha pedida el botón enseña la cotizada: si la compañía devuelve otra (un ReRate anterior del mismo
+    // proyecto la movió), el contrato saldría con la devuelta. Sin devuelta no se puede contrastar (como la web).
+    const cotizada = p.cotizada?.slice(0, 10) ?? null
+    if (p.devuelta && p.devuelta !== cotizada) {
+      return { tipo: 'no', motivo: `la compañía ha confirmado el precio con efecto ${p.devuelta}, no con el ${cotizada ?? 'sin fecha'} de la tarificación guardada` }
+    }
+    return { tipo: 'ok', efecto: p.cotizada, cotizado: null, devuelto: null }
+  }
+  if (p.devuelta && p.devuelta !== p.pedida) {
+    return { tipo: 'no', motivo: `la compañía ha confirmado el precio con efecto ${p.devuelta}, no con el ${p.pedida} que se le pidió` }
+  }
+  if (!p.devuelta && !p.cotizadaPasada) {
+    return { tipo: 'no', motivo: `la compañía no dice con qué fecha de efecto ha confirmado el precio y la cotizada (${p.cotizada ?? 'sin fecha'}) sigue vigente: si no aplicó la nueva, se emitiría con la vieja` }
+  }
+  return { tipo: 'ok', efecto: p.pedida, cotizado: p.cotizada, devuelto: p.devuelta }
+}
+
 /** Lo que Alberto confirma para una póliza NUEVA. Todo sale de asegura; la cuenta llega enmascarada. */
 export interface ResumenEmisionNueva {
   tipo: 'nuevo'
@@ -79,6 +134,10 @@ export interface ResumenEmisionNueva {
   primaParrillaEur: number | null
   firmeza: string
   efecto: string | null
+  /** La fecha con la que se COTIZÓ, si Alberto dictó otra (`efecto` es entonces la pedida). */
+  efectoCotizado?: string | null
+  /** La fecha que devolvió la compañía al confirmar el precio; `null` = no la dice. */
+  efectoDevuelto?: string | null
   caduca: string | null
   avisos: string[]
   cuenta: { enmascarada: string; descripcion: string | null }
@@ -87,6 +146,8 @@ export interface ResumenEmisionNueva {
   cambiosFiguras: CambioFiguras[]
   /** El texto de cada casilla que se confirma, el mismo que enseña la pantalla. */
   casillasFiguras?: string[]
+  /** Lo que el precio SUPUSO y se confirma ahora con el cliente (`avisoAlEmitir`). No es de la compañía. */
+  revisarAlEmitir?: string | null
 }
 
 function canonico(v: unknown): string {
@@ -149,8 +210,12 @@ export function textoResumenNuevo(r: ResumenEmisionNueva): string {
     `Tarificado ${fecha(r.tarificadaEn)}`,
     `<b>${esc(r.compania)}</b> · ${esc(r.categoria)}${r.modalidad ? ` · ${esc(r.modalidad)}` : ''}${r.producto ? ` · ${esc(r.producto)}` : ''}`,
     `Prima confirmada por la compañía: <b>${prima}</b>${cambio} · ${esc(r.firmeza)}`,
-    `Efecto ${fecha(r.efecto)} · el precio caduca ${fecha(r.caduca)}`,
+    `Efecto <b>${fecha(r.efecto)}</b>${!r.efectoCotizado ? ''
+      : r.efectoDevuelto && r.efectoDevuelto === r.efecto
+        ? ` <i>(se cotizó con ${fecha(r.efectoCotizado)}; la compañía ha confirmado el precio con la nueva)</i>`
+        : ` <i>(se cotizó con ${fecha(r.efectoCotizado)}; la nueva se ha PEDIDO y la compañía no la devuelve: si no la aplicó, la emisión se para sola porque la vieja ya pasó)</i>`} · el precio caduca ${fecha(r.caduca)}`,
     `Cuenta de cargo: ${esc(r.cuenta.enmascarada)}${r.cuenta.descripcion ? ` (${esc(r.cuenta.descripcion)})` : ''}`,
+    ...(r.revisarAlEmitir ? ['', `🔎 ${esc(r.revisarAlEmitir)}`] : []),
     ...(r.avisos.length ? ['', '⚠️ Avisos de la compañía:', ...r.avisos.map((a) => `• ${esc(a)}`)] : []),
     ...figuras,
     '',
