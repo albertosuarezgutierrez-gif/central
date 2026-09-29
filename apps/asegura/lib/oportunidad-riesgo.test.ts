@@ -41,3 +41,16 @@ test('cotizar una variante valida la oportunidad y las fichas ANTES de gastar', 
   const ruta = readFileSync(new URL('../app/api/operador/codeoscopic/auto-nuevo/route.ts', import.meta.url), 'utf8')
   assert.ok(ruta.indexOf('prepararVariante(') < ruta.indexOf('await cotizar('), 'la variante se prepara antes del cargo')
 })
+
+test('un DNI que ya existe solo reutiliza la ficha si el nombre casa', () => {
+  const c = cuerpoDe('nuevaPersonaEnRiesgo')
+  assert.match(c, /mismaPersonaPorNombre\(e\.persona, ficha\)/)
+  assert.match(c, /status: 409/)
+})
+
+test('con oportunidadId y sin correduría legible no se cotiza (503, 0,00€)', () => {
+  for (const r of ['auto', 'moto']) {
+    const f = readFileSync(new URL(`../app/api/operador/codeoscopic/${r}-nuevo/route.ts`, import.meta.url), 'utf8')
+    assert.match(f, /if \(!correduria && typeof cuerpo\.oportunidadId === 'string'[\s\S]{0,300}status: 503/, r)
+  }
+})

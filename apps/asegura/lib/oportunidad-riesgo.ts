@@ -11,6 +11,7 @@
  * - Una lectura que falla devuelve `null`, nunca una lista vacía que diría «no hay variantes».
  */
 import { prisma } from '@/lib/tenant'
+import { mismaPersonaPorNombre } from './misma-persona'
 import { altaCliente } from '@/lib/cartera-edicion'
 import { crearRelacion } from '@/lib/cartera-relaciones'
 import { clienteOrigenDe } from '@/lib/cartera-ficha'
@@ -294,6 +295,14 @@ export async function nuevaPersonaEnRiesgo(
     const f = alta as { estado?: string; coincidencias?: Array<{ id: string; por: string }> }
     const mismoDni = f.estado === 'conflicto' ? f.coincidencias?.find((c) => c.por === 'dni') : undefined
     if (!mismoDni) return { ok: false, status: 'status' in alta && typeof alta.status === 'number' ? alta.status : 422, motivo: 'motivo' in alta ? String(alta.motivo) : 'no se pudo dar de alta', conflicto: f.coincidencias }
+    // El DNI identifica, pero un DNI mal tecleado apunta a OTRA persona: si el nombre de esa ficha no
+    // casa con lo escrito, no se usa (se vincularía y cotizaría a un desconocido).
+    const [ficha] = await prisma.$queryRaw<Array<{ nombre: string | null; apellidos: string | null }>>`
+      select nombre, apellidos from seguros.clientes where id = ${mismoDni.id}::uuid and correduria_id = ${correduriaId}::uuid`
+    if (!ficha || !mismaPersonaPorNombre(e.persona, ficha)) {
+      const suyo = ficha ? [ficha.nombre, ficha.apellidos].filter(Boolean).join(' ') : null
+      return { ok: false, status: 409, motivo: `ese DNI ya está en la ficha de ${suyo ?? 'otra persona'}: revisa el DNI o el nombre` }
+    }
     clienteId = mismoDni.id
     existente = true
   }

@@ -87,6 +87,11 @@ export const POST = auditado(async (req: Request) => {
   // VARIANTE de un riesgo (29/09/2026): con `oportunidadId` se cuelga de ESA oportunidad y las
   // figuras (propietario, conductores) se arman desde sus fichas. Gratis, antes de gastar.
   const correduria = await correduriaUnica().catch(() => null)
+  // Con `oportunidadId` y sin poder leer la correduría NO se cotiza: seguir sería pagar con el
+  // tomador en todos los papeles y colgarlo de otra oportunidad.
+  if (!correduria && typeof cuerpo.oportunidadId === 'string' && cuerpo.oportunidadId.trim() !== '') {
+    return NextResponse.json({ estado: 'error', causa: 'variante', mensaje: 'no se pudo comprobar la variante; no se ha pedido precio', gastado: '0,00€' }, { status: 503 })
+  }
   const variante = correduria
     ? await prepararVariante(correduria.id, {
         tomadorId: clienteId,

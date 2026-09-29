@@ -77,8 +77,8 @@ test('usa la clave propia de auto-nuevo, no la de retarificar', () => {
   assert.doesNotMatch(codigo, /claveBorradorRetarificar\(/)
 })
 
-test('la clave lleva el id del cliente: un borrador no pisa al de otro', () => {
-  assert.match(codigo, /claveBorradorAutoNuevo\(\s*clienteId\s*\)/)
+test('la clave lleva el id del cliente (y el del riesgo en una variante): un borrador no pisa al de otro', () => {
+  assert.match(codigo, /claveBorradorAutoNuevo\(\s*clienteId\s*,\s*variante\?\.oportunidadId\s*\)/)
 })
 
 test('las dos pantallas comparten UN mecanismo, no dos copias', () => {

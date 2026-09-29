@@ -9,12 +9,15 @@ import { Badge, BtnLink, cardStyle } from '@/components/ui'
 import { eur } from '@/lib/dinero'
 import { estadoPresupuestoVariante, type Riesgo, type VarianteRiesgo } from '@/lib/riesgo-asegura'
 import { fechaEs } from './piezas-riesgo'
-import { ramoVariante, rutaVariante } from './variante'
+import { ramoVariante, rutaVariante, tomadorDelRiesgo } from './variante'
 
 export default function HistorialVariantes({ riesgo }: { riesgo: Riesgo }) {
   const op = riesgo.oportunidad
   const ramo = ramoVariante(op.ramo)
   const vs = riesgo.variantes
+  // «Abrir» cotiza con los intervinientes VIGENTES del riesgo: solo se ofrece en las variantes cuyo
+  // tomador es el vigente, o la pantalla mezclaría el tomador de P1 con las figuras de hoy.
+  const tomadorVigente = tomadorDelRiesgo(riesgo)
   return (
     <section style={{ ...cardStyle, display: 'grid', gap: 10, minWidth: 0 }}>
       <div>
@@ -25,14 +28,14 @@ export default function HistorialVariantes({ riesgo }: { riesgo: Riesgo }) {
         <p style={{ margin: 0, fontSize: 13, color: 'var(--muted)' }}>Aún no se ha pedido precio para este riesgo.</p>
       ) : (
         <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'grid', gap: 8 }}>
-          {vs.map((v, i) => <Fila key={v.id} v={v} primera={i === vs.length - 1} abrir={ramo && v.tomador.clienteId ? rutaVariante(ramo, v.tomador.clienteId, op.id, v.id) : null} />)}
+          {vs.map((v, i) => <Fila key={v.id} v={v} primera={i === vs.length - 1} abrir={ramo && v.tomador.clienteId === tomadorVigente ? rutaVariante(ramo, tomadorVigente, op.id, v.id) : null} otroTomador={v.tomador.clienteId !== null && v.tomador.clienteId !== tomadorVigente} />)}
         </ul>
       )}
     </section>
   )
 }
 
-function Fila({ v, primera, abrir }: { v: VarianteRiesgo; primera: boolean; abrir: string | null }) {
+function Fila({ v, primera, abrir, otroTomador }: { v: VarianteRiesgo; primera: boolean; abrir: string | null; otroTomador: boolean }) {
   const estado = estadoPresupuestoVariante(v.presupuesto)
   return (
     <li style={{ border: '1px solid var(--border)', borderRadius: 12, padding: 12, display: 'grid', gap: 6, minWidth: 0 }}>
@@ -56,6 +59,9 @@ function Fila({ v, primera, abrir }: { v: VarianteRiesgo; primera: boolean; abri
         <Badge tono={estado === null ? 'neutral' : estado === 'Retirado' ? 'negativo' : estado === 'Emitido' || estado === 'Aceptado' ? 'positivo' : 'info'}>
           {estado ?? 'Sin preparar'}
         </Badge>
+        {otroTomador && (
+          <span style={{ marginLeft: 'auto', color: 'var(--muted)' }}>Para repetirla, pon a {v.tomador.nombre ?? 'su tomador'} de tomador en Intervinientes.</span>
+        )}
         {abrir && (
           <span style={{ marginLeft: 'auto' }}>
             <BtnLink href={abrir} variante="secundario">Abrir</BtnLink>

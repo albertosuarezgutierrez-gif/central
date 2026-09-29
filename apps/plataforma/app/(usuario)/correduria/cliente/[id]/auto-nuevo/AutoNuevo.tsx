@@ -378,7 +378,7 @@ export default function AutoNuevo({
   // `retarificar` (`lib/correduria/borrador-local.ts`, común a las dos).
   //
   // Vive en el navegador, no en `seguros.*`: un borrador no es una cotización.
-  const claveBorrador = claveBorradorAutoNuevo(clienteId)
+  const claveBorrador = claveBorradorAutoNuevo(clienteId, variante?.oportunidadId)
 
   useEffect(() => {
     const b = leerBorrador<BorradorAutoNuevo>(claveBorrador)
